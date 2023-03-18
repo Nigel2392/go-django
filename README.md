@@ -9,7 +9,7 @@ The default ORM we use is [GORM](https://gorm.io/).
 This is because it one of the most popular ORM's for Go, and it is very easy to use.
 
 **Beware!**  
-Most of the code is not tested thoroughly, and there could be bugs present
+Most of the code is not tested thoroughly, and there could be bugs present.  
 If you find any bugs, please report them in the github issues page.
 
 ## Finished:
