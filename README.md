@@ -27,6 +27,6 @@ If you find any bugs, please report them in the github issues page.
 ## In progress:
 - [ ] Admin panel
 - [ ] Forms
-- [ ] Other middlewares (X-Frame-Options, others...)
+- [ ] Middlewares (X-Frame-Options, others...)
 - [ ] Testing
 - [ ] Documentation
