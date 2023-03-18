@@ -129,6 +129,9 @@ func (u *Map[T, T2]) Map() map[T]T2 {
 
 // Length of the underlying map of Map[T, T2]
 func (u *Map[T, T2]) Len() int {
+	if u == nil {
+		return 0
+	}
 	return len(u.values)
 }
 

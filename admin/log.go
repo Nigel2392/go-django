@@ -6,13 +6,14 @@ import (
 
 	"github.com/Nigel2392/go-django/admin/internal/paginator"
 	"github.com/Nigel2392/go-django/auth"
+	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/httputils"
 	"github.com/Nigel2392/go-django/core/httputils/orderedmap"
-	"github.com/Nigel2392/go-django/core/models"
 	"github.com/Nigel2392/go-django/core/modelutils"
 	"github.com/Nigel2392/go-django/core/modelutils/namer"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
+	"github.com/Nigel2392/router/v3/request/response"
 	"gorm.io/gorm"
 )
 
@@ -41,13 +42,54 @@ const (
 	LogActionLogin LogAction = "login"
 )
 
+// LoggableUser is a user that can be logged.
+type LoggableUser struct {
+	ID       int64 `gorm:"primaryKey;autoIncrement;column:id;type:bigint;"`
+	UserID   int64 `gorm:"column:user_id;type:bigint;"`
+	Username string
+	Email    string
+}
+
+// FromUser creates a LoggableUser from a User.
+func LogUser(user *auth.User) *LoggableUser {
+	var u = &LoggableUser{}
+	u.UserID = user.ID
+	u.Username = user.Username
+	u.Email = user.Email
+	return u
+}
+
+// String returns the string representation of the user.
+func (u *LoggableUser) String() string {
+	var a = u.LoginField()
+	if a == "" {
+		return fmt.Sprintf("%v", u.ID)
+	}
+	return a
+}
+
+// Get the value of the currently set login field.
+func (u *LoggableUser) LoginField() string {
+	var a, err = modelutils.GetField(u, auth.USER_MODEL_LOGIN_FIELD, true)
+	if err != nil {
+		return ""
+	}
+	switch ret := a.(type) {
+	case string:
+		return ret
+	default:
+		return fmt.Sprintf("%v", ret)
+	}
+}
+
 // Log is a record of an action performed on a model
 // or on the admin site.
 type Log struct {
 	gorm.Model
 	// The user, if any, that performed the action.
-	User   *auth.User `gorm:"foreignKey:UserID"`
-	UserID models.DefaultIDField
+	User *LoggableUser `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	// The ID of the user that performed the action.
+	UserID int64
 	// The name of the model that the log is for.
 	ModelName string
 	// Package the model resides in.
@@ -81,7 +123,7 @@ func (l *Log) ActionDisplay() string {
 		adder = "deleted"
 	case LogActionUnauthorized:
 		b.WriteString("Unauthorized Access")
-		if l.User != nil && l.User.Username != "" {
+		if l.User != nil && l.User.LoginField() != "" {
 			b.WriteString(" by ")
 			b.WriteString(l.User.Username)
 		}
@@ -96,7 +138,9 @@ func (l *Log) ActionDisplay() string {
 		b.WriteString(" ")
 		// capitalize the first letter of the adder
 	} else {
-		adder = strings.ToUpper(adder[:1]) + adder[1:]
+		if len(adder) > 0 {
+			adder = strings.ToUpper(adder[:1]) + adder[1:]
+		}
 	}
 	b.WriteString(adder)
 	if l.ModelName != "" {
@@ -131,14 +175,15 @@ func (l *Log) String() string {
 // Save the log.
 // Errors will be logged to the AdminSite_Logger automatically.
 func (l *Log) Save() error {
-	var err = admin_db.Save(l).Error
+	var dbItem, err = AdminSite_DB_POOL.ByModel(&Log{})
+	err = dbItem.DB().Save(l).Error
 	if err != nil {
 		AdminSite_Logger.Critical(err)
 	}
 	return err
 }
 
-func modelLog(user *auth.User, model any, action LogAction) *Log {
+func ModelLog(user *auth.User, model any, action LogAction) *Log {
 	var err = user.Refresh()
 	if err != nil {
 		AdminSite_Logger.Critical(err)
@@ -146,7 +191,7 @@ func modelLog(user *auth.User, model any, action LogAction) *Log {
 
 	modelID := modelutils.GetID(model, "ID")
 	l := &Log{
-		User:         user,
+		User:         LogUser(user),
 		ModelName:    modelutils.GetModelDisplay(model),
 		ModelPackage: namer.GetAppName(model),
 		ModelID:      modelID,
@@ -156,9 +201,9 @@ func modelLog(user *auth.User, model any, action LogAction) *Log {
 	return l
 }
 
-func simpleLog(user *auth.User, action LogAction) *Log {
+func SimpleLog(user *auth.User, action LogAction) *Log {
 	l := &Log{
-		User:   user,
+		User:   LogUser(user),
 		Action: action,
 		Meta:   orderedmap.New[string, any](),
 	}
@@ -173,13 +218,13 @@ func logView(rq *request.Request) {
 	}
 
 	var logs = make([]*Log, 0)
-	var page, limit, redirected = paginator.PaginateRequest(rq, &Log{}, adminSite.URL(router.GET, "admin:internal:log").Format(), admin_db,
+	var page, limit, redirected = paginator.PaginateRequest(rq, &Log{}, adminSite.URL(router.GET, "admin:internal:log").Format(), db.GetDefaultDatabase(auth.DB_KEY, AdminSite_DB_POOL).DB(),
 		map[string]string{"search": rq.Request.URL.Query().Get("search")})
 	if redirected {
 		return
 	}
 
-	var tx = admin_db.Order("created_at desc")
+	var tx = db.GetDefaultDatabase(auth.DB_KEY, AdminSite_DB_POOL).DB().Order("created_at desc")
 	// Get query params
 	var searchQuery = rq.Request.URL.Query().Get("search")
 	// Search the database
@@ -198,7 +243,7 @@ func logView(rq *request.Request) {
 
 	rq.Data.Set("has_search", true)
 
-	err = rq.RenderTemplate(template, name)
+	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
 		if rq.Logger != nil {
 			rq.Logger.Critical(err)
@@ -210,7 +255,7 @@ func logGroup() router.Registrar {
 	var rt = router.Group("/download", "download")
 	rt.Get("", func(r *request.Request) {
 		var logs []*Log = make([]*Log, 0)
-		admin_db.Model(Log{}).Preload("User.Groups").Find(&logs)
+		db.GetDefaultDatabase(auth.DB_KEY, AdminSite_DB_POOL).DB().Model(Log{}).Preload("User.Groups").Find(&logs)
 		var json, err = httputils.Jsonify(logs, 2)
 		if err != nil {
 			r.Error(500, err.Error())

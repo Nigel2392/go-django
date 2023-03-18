@@ -242,7 +242,7 @@ func checkPermission(user request.User, perms ...*auth.Permission) bool {
 			permList = append(permList, perm.String())
 		}
 		AdminSite_Logger.Debugf("User %s does not have permission. Metadata: %v\n", u.Username, permList)
-		var log = simpleLog(u, LogActionUnauthorized)
+		var log = SimpleLog(u, LogActionUnauthorized)
 		log.Meta.Set("permissions", permList)
 		log.Save()
 	}
@@ -367,6 +367,9 @@ func GetAdminURLs(m any) *models.AdminURLs {
 func adminSortedApps(r *request.Request) []*menu.Item {
 	var appMap = orderedmap.New[string, *menu.Item]()
 	var user = r.User.(*auth.User)
+	if !user.IsAuthenticated() {
+		return []*menu.Item{}
+	}
 	if user.HasPerms(PermissionViewAdminInternal) {
 		var internal_app_menu = internal_menu_items()
 		appMap.Set(internal_app_menu.Name, internal_app_menu)

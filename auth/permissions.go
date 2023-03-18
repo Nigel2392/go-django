@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/core/httputils"
+	"github.com/Nigel2392/go-django/core/models"
 
 	"gorm.io/gorm"
 )
@@ -14,7 +15,7 @@ import (
 //
 // This will be used application-wide by default.
 type Permission struct {
-	gorm.Model
+	models.Model
 	Name        string   `gorm:"uniqueIndex;not null;size:50"`
 	Description string   `gorm:"size:255"`
 	Groups      []*Group `gorm:"many2many:group_permissions;"`

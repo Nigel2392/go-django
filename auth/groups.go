@@ -3,11 +3,12 @@ package auth
 import (
 	"strings"
 
+	"github.com/Nigel2392/go-django/core/models"
 	"gorm.io/gorm"
 )
 
 type Group struct {
-	gorm.Model
+	models.Model
 	Name        string        `gorm:"uniqueIndex;not null;size:50"`
 	Description string        `gorm:"size:255"`
 	Users       []*User       `gorm:"many2many:user_groups;"`

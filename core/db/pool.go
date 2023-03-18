@@ -8,65 +8,27 @@ import (
 	"gorm.io/gorm"
 )
 
-type databasePoolItem struct {
-	pool   *defaultPool
-	key    DATABASE_KEY
-	db     *gorm.DB
-	models []interface{}
-}
-
-func (m *databasePoolItem) DB() *gorm.DB {
-	return m.db
-}
-
-func (m *databasePoolItem) Models() []interface{} {
-	return m.models
-}
-
-func (m *databasePoolItem) Key() DATABASE_KEY {
-	return m.key
-}
-
-func (m *databasePoolItem) Register(model ...interface{}) error {
-	if m.pool == nil {
-		return errors.New("pool is nil")
-	}
-	return m.pool.Register(m.key, model...)
-}
-
-func (m *databasePoolItem) AutoMigrate() error {
-	if m.pool == nil {
-		return errors.New("pool is nil")
-	}
-	return m.pool.AutoMigrate()
-}
-
 type defaultPool struct {
 	mu        sync.RWMutex
-	databases map[DATABASE_KEY]*databasePoolItem
+	databases map[DATABASE_KEY]PoolItem[*gorm.DB]
 }
 
-func NewPool(defaultDB *gorm.DB) Pool[*gorm.DB] {
+func NewPool(defaultDBItem PoolItem[*gorm.DB]) Pool[*gorm.DB] {
 	var p = &defaultPool{
-		databases: make(map[DATABASE_KEY]*databasePoolItem),
+		databases: make(map[DATABASE_KEY]PoolItem[*gorm.DB]),
 	}
-	p.store(DEFAULT_DATABASE_KEY, &databasePoolItem{
-		db:     defaultDB,
-		models: make([]interface{}, 0),
-		key:    DEFAULT_DATABASE_KEY,
-		pool:   p,
-	})
+	p.store(DEFAULT_DATABASE_KEY, defaultDBItem)
 	return p
 }
 
-func (m *defaultPool) load(key DATABASE_KEY) (value *databasePoolItem, ok bool) {
+func (m *defaultPool) load(key DATABASE_KEY) (value PoolItem[*gorm.DB], ok bool) {
 	m.mu.RLock()
 	value, ok = m.databases[key]
 	m.mu.RUnlock()
 	return
 }
 
-func (m *defaultPool) store(key DATABASE_KEY, value *databasePoolItem) {
+func (m *defaultPool) store(key DATABASE_KEY, value PoolItem[*gorm.DB]) {
 	m.mu.Lock()
 	m.databases[key] = value
 	m.mu.Unlock()
@@ -78,7 +40,7 @@ func (m *defaultPool) Delete(key DATABASE_KEY) {
 	m.mu.Unlock()
 }
 
-func (m *defaultPool) rangeOver(f func(value *databasePoolItem) bool) {
+func (m *defaultPool) rangeOver(f func(value PoolItem[*gorm.DB]) bool) {
 	m.mu.RLock()
 	for _, value := range m.databases {
 		if !f(value) {
@@ -90,8 +52,8 @@ func (m *defaultPool) rangeOver(f func(value *databasePoolItem) bool) {
 
 func (m *defaultPool) AutoMigrate() error {
 	var err error
-	m.rangeOver(func(db *databasePoolItem) bool {
-		err = db.db.AutoMigrate(db.models...)
+	m.rangeOver(func(db PoolItem[*gorm.DB]) bool {
+		err = db.AutoMigrate()
 		return err == nil
 	})
 	return err
@@ -104,7 +66,7 @@ func (m *defaultPool) Register(key DATABASE_KEY, model ...interface{}) error {
 	if !ok {
 		return errors.New("database not found")
 	}
-	db.models = append(db.models, model...)
+	db.Register(model...)
 	return nil
 }
 
@@ -116,20 +78,15 @@ func (m *defaultPool) Get(key DATABASE_KEY) (PoolItem[*gorm.DB], error) {
 	return nil, errors.New("database not found")
 }
 
-func (m *defaultPool) Add(key DATABASE_KEY, DB *gorm.DB) error {
-	m.store(key, &databasePoolItem{
-		key:    key,
-		db:     DB,
-		models: make([]interface{}, 0),
-		pool:   m,
-	})
+func (m *defaultPool) Add(DB PoolItem[*gorm.DB]) error {
+	m.store(DB.Key(), DB)
 	return nil
 }
 
 func (m *defaultPool) ByModel(model interface{}) (PoolItem[*gorm.DB], error) {
 	var db PoolItem[*gorm.DB]
-	m.rangeOver(func(poolItem *databasePoolItem) bool {
-		for _, m := range poolItem.models {
+	m.rangeOver(func(poolItem PoolItem[*gorm.DB]) bool {
+		for _, m := range poolItem.Models() {
 			var aPkg, aName = models.GetMetaData(m)
 			var bPkg, bName = models.GetMetaData(model)
 			if aPkg == bPkg && aName == bName {

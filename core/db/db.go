@@ -28,7 +28,7 @@ type PoolItem[T any] interface {
 
 // A pool of database connections.
 type Pool[T any] interface {
-	Add(DB_KEY DATABASE_KEY, DB T) error
+	Add(DB PoolItem[T]) error
 	Get(DB_KEY DATABASE_KEY) (PoolItem[T], error)
 	ByModel(model interface{}) (PoolItem[T], error)
 	Delete(DB_KEY DATABASE_KEY)
@@ -37,7 +37,7 @@ type Pool[T any] interface {
 	GetDefaultDB() PoolItem[T]
 }
 
-type Manager struct {
+type DatabasePoolItem struct {
 	DEFAULT_DATABASE string
 	DB_NAME          string
 	DB_USER          string
@@ -46,22 +46,40 @@ type Manager struct {
 	DB_PORT          int
 	DB_SSLMODE       string
 	Config           *gorm.Config
-	DB               *gorm.DB
-	pool             Pool[*gorm.DB]
+
+	db     *gorm.DB
+	DBKey  DATABASE_KEY
+	models []interface{}
 }
 
-func (d *Manager) Pool() Pool[*gorm.DB] {
-	if d.pool == nil {
-		d.pool = NewPool(d.DB)
+func (m *DatabasePoolItem) DB() *gorm.DB {
+	if m.db == nil {
+		return m.Init()
 	}
-	return d.pool
+	return m.db
 }
 
-func (d *Manager) AutoMigrate(models ...interface{}) {
-	d.DB.AutoMigrate(models...)
+func (m *DatabasePoolItem) Models() []interface{} {
+	return m.models
 }
 
-func (d *Manager) createSQLDSN() string {
+func (m *DatabasePoolItem) Key() DATABASE_KEY {
+	return m.DBKey
+}
+
+func (m *DatabasePoolItem) Register(model ...interface{}) error {
+	m.models = append(m.models, model...)
+	return nil
+}
+
+func (m *DatabasePoolItem) AutoMigrate() error {
+	if m.db == nil {
+		m.Init()
+	}
+	return m.DB().AutoMigrate(m.Models()...)
+}
+
+func (d *DatabasePoolItem) createSQLDSN() string {
 	var host = d.DB_HOST
 	var port = d.DB_PORT
 	var user = d.DB_USER
@@ -80,7 +98,7 @@ func (d *Manager) createSQLDSN() string {
 	return user + ":" + password + "@tcp(" + host + ":" + strconv.Itoa(port) + ")/" + database + "?charset=utf8&parseTime=True&loc=Local"
 }
 
-func (d *Manager) Init() *gorm.DB {
+func (d *DatabasePoolItem) Init() *gorm.DB {
 	var configuration = &gorm.Config{}
 	if d.Config != nil {
 		configuration = d.Config
@@ -106,7 +124,7 @@ func (d *Manager) Init() *gorm.DB {
 	}
 
 	if db != nil {
-		d.DB = db
+		d.db = db
 		return db
 	}
 
@@ -114,6 +132,6 @@ func (d *Manager) Init() *gorm.DB {
 	if err != nil {
 		panic(err)
 	}
-	d.DB = db
+	d.db = db
 	return db
 }

@@ -80,7 +80,7 @@ func NewModel(base_url string, m any, permsDB *gorm.DB) (*Model, error) {
 		Mdl:         m,
 		Permissions: auth.NewPermissionMap(m),
 	}
-	var fieldVal, err = modelutils.GetField(m, "ID")
+	var fieldVal, err = modelutils.GetField(m, "ID", false)
 	if err != nil {
 		model.URLS.Detail = "/<<id:alphanum>>"
 		model.URLS.Delete = "/<<id:alphanum>>/delete"
@@ -88,15 +88,12 @@ func NewModel(base_url string, m any, permsDB *gorm.DB) (*Model, error) {
 	}
 
 	switch fieldVal.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64,
-		models.Model[int], models.Model[int8], models.Model[int16], models.Model[int32], models.Model[int64],
-		models.Model[uint], models.Model[uint8], models.Model[uint16], models.Model[uint32], models.Model[uint64]:
+	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
 		model.URLS.Detail = "/<<id:int>>"
 		model.URLS.Delete = "/<<id:int>>/delete"
 		goto next
-	case models.Model[models.DefaultIDField],
-		models.Model[uuid.UUID],
-		models.DefaultIDField,
+	case models.Model,
+		models.UUIDField,
 		uuid.UUID:
 		model.URLS.Detail = "/<<id:uuid>>"
 		model.URLS.Delete = "/<<id:uuid>>/delete"

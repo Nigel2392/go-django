@@ -6,7 +6,7 @@ import (
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/fs"
 
-	"github.com/Nigel2392/router/v3/request"
+	"github.com/Nigel2392/router/v3/request/response"
 	"github.com/Nigel2392/router/v3/templates"
 	"gorm.io/gorm"
 )
@@ -45,7 +45,13 @@ var Mail = &email.Manager{}
 //	DB_SSLMODE       string
 //
 //	Config *gorm.Config
-var Database = &db.Manager{Config: &gorm.Config{}}
+
+var DefaultDatabase = &db.DatabasePoolItem{
+	DBKey:  db.DEFAULT_DATABASE_KEY,
+	Config: &gorm.Config{},
+}
+
+var DatabasePool db.Pool[*gorm.DB] = db.NewPool(DefaultDatabase)
 
 // Size of the file queue
 // Hook for when a file is read, or written in the media directory.
@@ -74,12 +80,10 @@ var File = &fs.Manager{}
 //	TEMPLATEFS fs.FS
 var Templates = &templates.Manager{}
 
+// Initialize the core.
 func Init(pool db.Pool[*gorm.DB]) {
-	// Initialize the database
-	Database.Init()
 
-	// Add the default database to the pool.
-	pool.Add(db.DEFAULT_DATABASE_KEY, Database.DB)
+	DefaultDatabase.Init()
 
 	// Set up authentication manager.
 	auth.Init(pool)
@@ -89,6 +93,6 @@ func Init(pool db.Pool[*gorm.DB]) {
 
 	// Set up file manager and request template manager.
 	File.Init()
-	request.TEMPLATE_MANAGER = Templates
+	response.TEMPLATE_MANAGER = Templates
 
 }

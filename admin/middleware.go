@@ -45,7 +45,7 @@ func hasAdminPerms(req *request.Request) (retOk bool) {
 		if !retOk {
 			AdminSite_Logger.Warningf("user with ip %s does not have permission to access admin site\n", req.IP())
 			var user = req.User.(*auth.User)
-			var log = simpleLog(user, LogActionUnauthorized).WithIP(req)
+			var log = SimpleLog(user, LogActionUnauthorized).WithIP(req)
 			log.Meta.Set("url", req.Request.URL.String())
 			log.Save()
 		}

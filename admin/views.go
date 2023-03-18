@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/core/modelutils"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
+	"github.com/Nigel2392/router/v3/request/response"
 	"gorm.io/gorm"
 )
 
@@ -38,7 +39,7 @@ func indexView(rq *request.Request) {
 
 	rq.Data.Set("logs", logs)
 
-	err = rq.RenderTemplate(template, name)
+	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
 		AdminSite_Logger.Critical(err)
 		renderError(rq, "Error rendering template", 500, err)
@@ -104,7 +105,7 @@ func listView(mdl *models.Model, rq *request.Request) {
 	rq.Data.Set("limit_choices", []int{10, 25, 50, 100})
 	rq.Data.Set("limit", limit)
 
-	err = rq.RenderTemplate(template, name)
+	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
 		AdminSite_Logger.Critical(err)
 		renderError(rq, "Error rendering template", 500, err)
@@ -166,9 +167,9 @@ func detailView(mdl *models.Model, rq *request.Request) {
 			_ = s
 			var log *Log
 			if created {
-				log = modelLog(rq.User.(*auth.User), form.Model, LogActionCreate)
+				log = ModelLog(rq.User.(*auth.User), form.Model, LogActionCreate)
 			} else {
-				log = modelLog(rq.User.(*auth.User), form.Model, LogActionUpdate)
+				log = ModelLog(rq.User.(*auth.User), form.Model, LogActionUpdate)
 				log.Meta.Set("updated_fields", form.UpdatedFields)
 			}
 			err = log.Save()
@@ -186,7 +187,7 @@ renderTemplate:
 	rq.Data.Set("id", id)
 	rq.Data.Set("form", form)
 
-	err = rq.RenderTemplate(template, name)
+	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
 		AdminSite_Logger.Critical(err)
 		renderError(rq, "Error rendering template", 500, err)
@@ -233,9 +234,9 @@ func createView(mdl *models.Model, rq *request.Request) {
 			}
 			var log *Log
 			if created {
-				log = modelLog(rq.User.(*auth.User), form.Model, LogActionCreate)
+				log = ModelLog(rq.User.(*auth.User), form.Model, LogActionCreate)
 			} else {
-				log = modelLog(rq.User.(*auth.User), form.Model, LogActionUpdate)
+				log = ModelLog(rq.User.(*auth.User), form.Model, LogActionUpdate)
 				if form.UpdatedFields != nil {
 					log.Meta.Set("updated_fields", form.UpdatedFields)
 				}
@@ -254,7 +255,7 @@ renderTemplate:
 	rq.Data.Set("model", mdl)
 	rq.Data.Set("form", form)
 
-	err = rq.RenderTemplate(template, name)
+	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
 		AdminSite_Logger.Critical(err)
 		renderError(rq, "Error rendering template", 500, err)
@@ -309,7 +310,7 @@ func deleteView(mdl *models.Model, rq *request.Request) {
 			return
 		}
 
-		var mLog = modelLog(rq.User.(*auth.User), m, LogActionDelete)
+		var mLog = ModelLog(rq.User.(*auth.User), m, LogActionDelete)
 		mLog.Meta.Set("ID", id)
 		mLog.Save()
 
@@ -322,7 +323,7 @@ func deleteView(mdl *models.Model, rq *request.Request) {
 	rq.Data.Set("model", mdl)
 	rq.Data.Set("instance", m)
 
-	err = rq.RenderTemplate(template, name)
+	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
 		AdminSite_Logger.Critical(err)
 		renderError(rq, "Error rendering template", 500, err)
@@ -350,7 +351,7 @@ func unauthorizedView(rq *request.Request) {
 
 	rq.ReSetNext()
 
-	err = rq.RenderTemplate(template, name)
+	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
 		AdminSite_Logger.Critical(err)
 		renderError(rq, "Error rendering template", 500, err)
@@ -374,7 +375,7 @@ func loginView(rq *request.Request) {
 			var user, err = auth.Login(rq, login, password)
 			if err != nil {
 				// Log failed login
-				var log = simpleLog(auth.NewUser(login), LogActionLoginFailed)
+				var log = SimpleLog(auth.NewUser(login), LogActionLoginFailed)
 				log.Meta.Set("login", login)
 				log.Meta.Set("database", err.Error())
 				log.Save()
@@ -384,7 +385,7 @@ func loginView(rq *request.Request) {
 				rq.Redirect(rq.URL(router.GET, "admin:login").Format(), 302)
 				return
 			} else {
-				simpleLog(user, LogActionLogin).WithIP(rq).Save()
+				SimpleLog(user, LogActionLogin).WithIP(rq).Save()
 				rq.Data.AddMessage("success", "Successfully logged in")
 				if rq.Next() != "" {
 					rq.Redirect(rq.Next(), 302)
@@ -402,7 +403,7 @@ func loginView(rq *request.Request) {
 				u.Email = login
 				u.Username = login
 			}
-			var log = simpleLog(u, LogActionLoginFailed)
+			var log = SimpleLog(u, LogActionLoginFailed)
 			log.Meta.Set("login", login)
 			log.Meta.Set("error", "Form validation failed")
 			for _, err := range form.Errors {
@@ -417,7 +418,7 @@ func loginView(rq *request.Request) {
 
 	rq.Data.Set("title", "Login")
 	rq.Data.Set("form", form)
-	err = rq.RenderTemplate(template, name)
+	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
 		AdminSite_Logger.Critical(err)
 		renderError(rq, "Error rendering template", 500, err)
@@ -444,7 +445,7 @@ func logoutView(rq *request.Request) {
 	}
 
 	rq.Data.Set("title", "Logout")
-	err = rq.RenderTemplate(template, name)
+	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
 		AdminSite_Logger.Critical(err)
 		renderError(rq, "Error rendering template.", 500, err)
@@ -465,7 +466,7 @@ func renderError(rq *request.Request, err string, code int, errDetail error) {
 	rq.Data.Set("error_code", code)
 	rq.Data.Set("detail", errDetail.Error())
 
-	tErr = rq.RenderTemplate(template, name)
+	tErr = response.RenderTemplate(rq, template, name)
 	if tErr != nil {
 		AdminSite_Logger.Critical(tErr)
 		rq.Error(500, http.StatusText(500))

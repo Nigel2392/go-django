@@ -1,5 +1,5 @@
 # Go-Django
-A web framework built in Go, inspired by Django.
+A web framework built in Go, inspired by Django.  
 This framework is still in development, and is not ready for production use.
 
 ## Information

@@ -8,7 +8,6 @@ import (
 	"github.com/Nigel2392/go-django/core/models"
 	"github.com/Nigel2392/go-django/core/modelutils"
 	"github.com/Nigel2392/router/v3/request"
-	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
@@ -58,7 +57,7 @@ func (f *Form) Save(db *gorm.DB) (bool, error) {
 	}
 
 	var newModel = reflect.New(t).Interface()
-	v, err := modelutils.GetField(f.Model, "ID")
+	v, err := modelutils.GetField(f.Model, "ID", false)
 	if err != nil {
 		return false, err
 	}
@@ -70,22 +69,8 @@ func (f *Form) Save(db *gorm.DB) (bool, error) {
 		err = db.First(newModel, id.Int()).Error
 	case string:
 		err = db.First(newModel, id.String()).Error
-	case models.Model[models.DefaultIDField],
-		models.Model[uuid.UUID]:
+	case models.Model:
 		err = db.First(newModel, id.UUID()).Error
-	case models.Model[string],
-		models.Model[int64],
-		models.Model[int32],
-		models.Model[int16],
-		models.Model[int8],
-		models.Model[int]:
-		err = db.First(newModel, id.Int()).Error
-	case models.Model[uint64],
-		models.Model[uint32],
-		models.Model[uint16],
-		models.Model[uint8],
-		models.Model[uint]:
-		err = db.First(newModel, id.Uint()).Error
 	}
 	if err != nil {
 		return false, err

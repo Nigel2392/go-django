@@ -3,11 +3,11 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/Nigel2392/go-django/core/models"
 	"github.com/Nigel2392/go-django/core/modelutils"
-	"github.com/google/uuid"
 
 	"github.com/Nigel2392/go-django/forms/validators"
 
@@ -20,21 +20,21 @@ import (
 //
 // It is the default model used by the auth.Manager.
 type User struct {
-	models.Model[models.DefaultIDField] `form:"disabled" json:"-"`
-	Email                               string   `gorm:"uniqueIndex;not null;size:255" form:"required:true,type:email"`
-	Username                            string   `gorm:"uniqueIndex;not null;size:75" form:"username required:trues"`
-	Password                            string   `gorm:"not null;size:1024" form:"bcrypt, type:password,custom:onfocus='this.removeAttribute('readonly');'" admin:"protected" json:"-"`
-	FirstName                           string   `gorm:"size:50" form:"first_name"`
-	LastName                            string   `gorm:"size:50" form:"last_name"`
-	IsLoggedIn                          bool     `gorm:"-" form:"-" json:"-"`
-	IsAdministrator                     bool     `form:"needs_admin:true"`
-	IsActive                            bool     `gorm:"default:true"`
-	Groups                              []*Group `gorm:"many2many:user_groups;"`
+	models.Model    `form:"disabled" json:"-"`
+	Email           string   `gorm:"uniqueIndex;not null;size:255" form:"required:true,type:email"`
+	Username        string   `gorm:"uniqueIndex;not null;size:75" form:"username required:trues"`
+	Password        string   `gorm:"not null;size:1024" form:"bcrypt, type:password,custom:onfocus='this.removeAttribute('readonly');'" admin:"protected" json:"-"`
+	FirstName       string   `gorm:"size:50" form:"first_name"`
+	LastName        string   `gorm:"size:50" form:"last_name"`
+	IsLoggedIn      bool     `gorm:"-" form:"-" json:"-"`
+	IsAdministrator bool     `form:"needs_admin:true"`
+	IsActive        bool     `gorm:"default:true"`
+	Groups          []*Group `gorm:"many2many:user_groups;"`
 }
 
 // Get the value of the currently set login field.
 func (u *User) LoginField() string {
-	var a, err = modelutils.GetField(u, USER_MODEL_LOGIN_FIELD)
+	var a, err = modelutils.GetField(u, USER_MODEL_LOGIN_FIELD, true)
 	if err != nil {
 		return ""
 	}
@@ -88,6 +88,11 @@ func (u *User) AppName() string {
 
 // Gorm hooks.
 func (u *User) BeforeSave(tx *gorm.DB) error {
+	if field, err := modelutils.GetField(u, USER_MODEL_LOGIN_FIELD, true); err == nil {
+		if field == "" {
+			return errors.New("The " + USER_MODEL_LOGIN_FIELD + " field cannot be blank.")
+		}
+	}
 	SIGNAL_BEFORE_USER_SAVE.Send(u)
 	return nil
 }
@@ -125,9 +130,14 @@ func (u *User) AfterDelete(tx *gorm.DB) error {
 // Gorm hooks.
 // Add the user to the default group if they are not an admin.
 func (u *User) BeforeCreate(tx *gorm.DB) error {
-	var uuid = uuid.New()
-	u.ID = models.DefaultIDField(uuid)
-	if !u.IsAdministrator {
+	if field, err := modelutils.GetField(u, USER_MODEL_LOGIN_FIELD, true); err == nil {
+		if field == "" {
+			return errors.New("The " + USER_MODEL_LOGIN_FIELD + " field cannot be blank.")
+		}
+	}
+	//	var uuid = uuid.New()
+	//	u.ID = models.DefaultIDField(uuid)
+	if !u.IsAdministrator && len(DEFAULT_USER_GROUP_NAMES) > 0 {
 		tx.Where("LOWER(name) IN ?", DEFAULT_USER_GROUP_NAMES).Find(&u.Groups)
 	}
 	SIGNAL_BEFORE_USER_CREATE.Send(u)
@@ -147,29 +157,29 @@ func (u *User) IsAdmin() bool {
 
 // IsAuthenticated returns true if the user is logged in.
 func (u *User) IsAuthenticated() bool {
-	return u.IsLoggedIn && len(u.ID) > 0
+	return u.IsLoggedIn && u.ID > 0
 }
 
 // Return the string representation of the user.
 func (u *User) String() string {
 	var b strings.Builder
 	b.WriteString(u.string())
-	if u.IsLoggedIn || len(u.ID) > 0 {
+	if u.IsLoggedIn || u.ID > 0 {
 		if !u.IsActive {
 			b.WriteString(" (Inactive)")
 		}
 		if u.IsAdministrator {
 			b.WriteString(" (Admin)")
 		}
-		if len(u.ID) != 0 {
-			b.WriteString(" (ID: " + u.ID.UUID().String() + ")")
+		if u.ID != 0 {
+			b.WriteString(" (ID: " + strconv.Itoa(int(u.ID)) + ")")
 		}
 	}
 	return b.String()
 }
 
 func (u *User) string() string {
-	if u.IsLoggedIn || len(u.ID) > 0 {
+	if u.IsLoggedIn || u.ID > 0 {
 		if u.FirstName != "" && u.LastName != "" {
 			return u.FirstName + " " + u.LastName
 		} else if u.FirstName != "" {
@@ -237,7 +247,7 @@ func (u *User) validateFields() error {
 }
 
 func (u *User) validate() error {
-	var login_field, err = modelutils.GetField(u, USER_MODEL_LOGIN_FIELD)
+	var login_field, err = modelutils.GetField(u, USER_MODEL_LOGIN_FIELD, true)
 	if err != nil {
 		return err
 	}
@@ -316,7 +326,7 @@ func (u *User) SetGroups(db *gorm.DB, groups ...*Group) error {
 		group.Name = strings.ToLower(group.Name)
 		var g *Group = &Group{Name: group.Name}
 		if group.ID == 0 {
-			db.FirstOrCreate(group, g)
+			db.Where(g).FirstOrCreate(g, g)
 			group = g
 		}
 	}

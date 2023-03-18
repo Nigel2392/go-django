@@ -9,15 +9,21 @@ import (
 	"github.com/google/uuid"
 )
 
-func GetField(m any, field string) (any, error) {
+func GetField(m any, field string, strict bool) (any, error) {
 	// fmt.Printf("GetField: %v, %v %T\n", m, field, m)
 	var v = DePtr(reflect.ValueOf(m))
 	if !v.IsValid() {
+		// fmt.Println("GetField: ", v.Kind(), v.Type(), v.IsValid())
 		return nil, errors.New("invalid value")
 	}
 	// fmt.Println("GetField: ", v.Kind(), v.Type())
 	for i := 0; i < v.NumField(); i++ {
-		if strings.EqualFold(v.Type().Field(i).Name, field) {
+		if v.Type().Field(i).Name == field && v.Type().Field(i).IsExported() {
+			return v.Field(i).Interface(), nil
+		}
+		if v.Type().Field(i).IsExported() &&
+			((strict && v.Type().Field(i).Name == field) ||
+				(!strict && strings.EqualFold(v.Type().Field(i).Name, field))) {
 			var f = v.Field(i)
 			if f.Kind() == reflect.Ptr {
 				f = f.Elem()
@@ -34,20 +40,29 @@ func GetField(m any, field string) (any, error) {
 			case reflect.Bool:
 				return f.Bool(), nil
 			default:
+				if !f.IsValid() || !f.CanInterface() {
+					return nil, errors.New("field not found")
+				}
 				switch f.Interface().(type) {
-				case models.DefaultIDField:
-					return f.Interface().(models.DefaultIDField), nil
+				case models.UUIDField:
+					return f.Interface().(models.UUIDField), nil
 				case uuid.UUID:
 					return f.Interface().(uuid.UUID).String(), nil
 				default:
-					return f.Interface(), nil
+					if f.IsValid() {
+						return f.Interface(), nil
+					}
+					return nil, errors.New("field not found")
 				}
 			}
 		}
 		var f = v.Field(i)
 		f = DePtr(f)
 		if f.Kind() == reflect.Struct {
-			var v, err = GetField(f.Interface(), field)
+			if !f.IsValid() || !f.CanInterface() {
+				continue
+			}
+			var v, err = GetField(f.Interface(), field, false)
 			if err == nil {
 				return v, nil
 			}

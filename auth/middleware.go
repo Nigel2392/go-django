@@ -42,7 +42,7 @@ func UserFromRequestPure(r *request.Request) request.User {
 
 // Set the user inside of the request.
 func UserToRequest(r *request.Request, user *User) {
-	r.Session.Set(SESSION_COOKIE_NAME, user.ID.UUID().String())
+	r.Session.Set(SESSION_COOKIE_NAME, user.ID)
 }
 
 // Add a user to a request, if one exists in the session.

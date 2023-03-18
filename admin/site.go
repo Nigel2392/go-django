@@ -15,6 +15,7 @@ import (
 
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
+	"github.com/Nigel2392/router/v3/request/response"
 	"github.com/Nigel2392/router/v3/templates/extensions"
 )
 
@@ -34,11 +35,14 @@ func Initialize(name string, url string, p db.Pool[*gorm.DB], l ...request.Logge
 		AdminSite_Logger = logger.NewLogger(logger.DEBUG, name+" ")
 	}
 
-	p.Register(auth.DB_KEY,
+	var admin_db_item = db.GetDefaultDatabase(auth.DB_KEY, p)
+
+	admin_db_item.Register(
 		&Log{},
+		&LoggableUser{},
 	)
 
-	admin_db = db.GetDefaultDatabase(auth.DB_KEY, p).DB()
+	admin_db = admin_db_item.DB()
 
 	// Register the default admin site permissions.
 	PermissionViewAdminSite.Save(admin_db)
@@ -222,7 +226,7 @@ func URLS() router.Registrar {
 
 	var extensionManager = AdminSite_ExtensionsManager
 	if extensionManager == nil {
-		extensionManager = request.TEMPLATE_MANAGER
+		extensionManager = response.TEMPLATE_MANAGER
 	}
 
 	var extensionViewOptions = &extensions.Options{

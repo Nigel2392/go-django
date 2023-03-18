@@ -161,8 +161,8 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 				tx = setIDSlice[string](tx, ownItemValue, "ID", isPtr)
 			default:
 				// Check if it is of type core.DefaultIDField
-				if fieldType == reflect.TypeOf(coreModels.DefaultIDField{}) {
-					tx = setIDSlice[coreModels.DefaultIDField](tx, ownItemValue, "ID", isPtr)
+				if fieldType == reflect.TypeOf(coreModels.UUIDField{}) {
+					tx = setIDSlice[coreModels.UUIDField](tx, ownItemValue, "ID", isPtr)
 				} else if fieldType == reflect.TypeOf(uuid.UUID{}) {
 					tx = setIDSlice[uuid.UUID](tx, ownItemValue, "ID", isPtr)
 				} else {
@@ -252,89 +252,93 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 			}
 			var f = v.FieldByName(field.Name)
 			var vinter = f.Interface()
-			switch vinter := vinter.(type) {
-			case time.Time:
-				value = vinter.Format("2006-01-02 15:04:05")
-			case *time.Time:
-				value = vinter.Format("2006-01-02 15:04:05")
-			case gorm.Model, coreModels.Model[coreModels.DefaultIDField],
-				coreModels.Model[uuid.UUID], coreModels.Model[uint], coreModels.Model[uint8],
-				coreModels.Model[uint16], coreModels.Model[uint32], coreModels.Model[uint64],
-				coreModels.Model[int], coreModels.Model[int8], coreModels.Model[int16],
-				coreModels.Model[int32], coreModels.Model[int64], coreModels.Model[string]:
+
+			if modelutils.IsActualModel(vinter) {
 				var id = modelutils.GetID(vinter, "ID")
 				value = fmt.Sprintf("%v", id)
 				fieldName = "ID"
 				disabled = true
-			default:
-				var options []*FormField = make([]*FormField, 0)
-				if reflectedType.Kind() == reflect.Ptr {
-					reflectedType = reflectedType.Elem()
-				}
-				var selectedItem = reflect.New(reflectedType).Interface()
-				var err = db.Model(mdl).Association(field.Name).Find(&selectedItem)
-				if err == nil {
-					var id = modelutils.GetID(selectedItem, "ID")
-					if id.IsZero() {
-						goto noSelected
+			} else {
+				switch vinter := vinter.(type) {
+				case time.Time:
+					value = vinter.Format("2006-01-02 15:04:05")
+				case *time.Time:
+					value = vinter.Format("2006-01-02 15:04:05")
+				case gorm.Model, coreModels.Model:
+					var id = modelutils.GetID(vinter, "ID")
+					value = fmt.Sprintf("%v", id)
+					fieldName = "ID"
+					disabled = true
+				default:
+					var options []*FormField = make([]*FormField, 0)
+					if reflectedType.Kind() == reflect.Ptr {
+						reflectedType = reflectedType.Elem()
 					}
-					options = append(options, &FormField{
-						Name:       modelutils.GetName(selectedItem),
-						Label:      modelutils.GetModelDisplay(selectedItem),
-						Value:      id.String(),
-						Selected:   true,
-						NeedsAdmin: needsAdmin,
-					})
-					goto selectOthers
-				noSelected:
-					options = append(options, &FormField{
-						Name:       "none",
-						Label:      "None",
-						Value:      "0",
-						Selected:   true,
-						NeedsAdmin: needsAdmin,
-					})
-				}
-			selectOthers:
-				var otherItems = reflect.MakeSlice(reflect.SliceOf(reflectedType), 0, 0).Interface()
-				var otherVal = modelutils.DePtr(reflect.New(reflectedType))
-				var otherInterface = otherVal.Interface()
-				db.Model(otherInterface).Not(selectedItem).Find(&otherItems)
-				var otherArray = reflect.ValueOf(otherItems)
+					var selectedItem = reflect.New(reflectedType).Interface()
+					var err = db.Model(mdl).Association(field.Name).Find(&selectedItem)
+					if err == nil {
+						var id = modelutils.GetID(selectedItem, "ID")
+						if id.IsZero() {
+							goto noSelected
+						}
+						options = append(options, &FormField{
+							Name:       modelutils.GetName(selectedItem),
+							Label:      modelutils.GetModelDisplay(selectedItem),
+							Value:      id.String(),
+							Selected:   true,
+							NeedsAdmin: needsAdmin,
+						})
+						goto selectOthers
+					noSelected:
+						options = append(options, &FormField{
+							Name:       "none",
+							Label:      "None",
+							Value:      "0",
+							Selected:   true,
+							NeedsAdmin: needsAdmin,
+						})
+					}
+				selectOthers:
+					var otherItems = reflect.MakeSlice(reflect.SliceOf(reflectedType), 0, 0).Interface()
+					var otherVal = modelutils.DePtr(reflect.New(reflectedType))
+					var otherInterface = otherVal.Interface()
+					db.Model(otherInterface).Not(selectedItem).Find(&otherItems)
+					var otherArray = reflect.ValueOf(otherItems)
 
-				for i := 0; i < otherArray.Len(); i++ {
-					var vval = otherArray.Index(i).Interface()
-					var name = modelutils.GetName(vval)
-					var option = &FormField{
+					for i := 0; i < otherArray.Len(); i++ {
+						var vval = otherArray.Index(i).Interface()
+						var name = modelutils.GetName(vval)
+						var option = &FormField{
+							isAdmin:    isAdmin,
+							Name:       name,
+							Label:      modelutils.GetModelDisplay(vval),
+							Value:      modelutils.GetID(vval, "ID").String(),
+							NeedsAdmin: needsAdmin,
+						}
+						options = append(options, option)
+					}
+
+					var f = &FormField{
 						isAdmin:    isAdmin,
-						Name:       name,
-						Label:      modelutils.GetModelDisplay(vval),
-						Value:      modelutils.GetID(vval, "ID").String(),
+						Name:       field.Name,
+						Label:      fieldName,
+						Type:       "fk",
+						Disabled:   disabled,
+						Options:    options,
 						NeedsAdmin: needsAdmin,
 					}
-					options = append(options, option)
+
+					var cls = strings.Split(tagMap.Get("class"), " ")
+					var lblcls = strings.Split(tagMap.Get("label_class"), " ")
+					var divcls = strings.Split(tagMap.Get("div_class"), " ")
+					f.Classes = append(cls, "admin-form-input")
+					f.LabelClasses = append(lblcls, "admin-form-label")
+					f.DivClasses = append(divcls, "admin-form-div")
+
+					fields = append(fields, f)
+
+					continue
 				}
-
-				var f = &FormField{
-					isAdmin:    isAdmin,
-					Name:       field.Name,
-					Label:      fieldName,
-					Type:       "fk",
-					Disabled:   disabled,
-					Options:    options,
-					NeedsAdmin: needsAdmin,
-				}
-
-				var cls = strings.Split(tagMap.Get("class"), " ")
-				var lblcls = strings.Split(tagMap.Get("label_class"), " ")
-				var divcls = strings.Split(tagMap.Get("div_class"), " ")
-				f.Classes = append(cls, "admin-form-input")
-				f.LabelClasses = append(lblcls, "admin-form-label")
-				f.DivClasses = append(divcls, "admin-form-div")
-
-				fields = append(fields, f)
-
-				continue
 			}
 		default:
 			value = getValue(mdl, field.Name)

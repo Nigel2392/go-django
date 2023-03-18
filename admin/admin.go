@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/admin/internal/models"
+	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/httputils"
 	"github.com/Nigel2392/router/v3"
@@ -28,7 +29,7 @@ var AdminSite_URL string = "/admin"
 //
 // This is used to sort the applications in the admin site.
 var ADMIN_APP_ORDER = []string{
-	"Authentication",
+	auth.AUTH_APP_NAME,
 	InternalAppName,
 	ExtensionsAppName,
 }

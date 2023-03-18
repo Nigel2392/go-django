@@ -2,7 +2,6 @@ package auth
 
 import (
 	"errors"
-	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -22,8 +21,7 @@ func GeneratePasswordResetToken(user *User) (string, error) {
 	}
 
 	// Create a token string.
-	var id = strconv.FormatUint(uint64(user.ID.UUID().ID()), 10)
-	fmt.Println(id)
+	var id = strconv.FormatUint(uint64(user.ID), 10)
 	var nowTime = strconv.FormatInt(time.Now().Unix(), 10)
 	var password = secret.FnvHash(user.Password).String()
 	var tokenString = id + "___" + password + "___" + nowTime

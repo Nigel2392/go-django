@@ -39,11 +39,13 @@ func RegisterDefaultDB(db_key DATABASE_KEY, database *gorm.DB) PoolItem[*gorm.DB
 	if !ok {
 		db, ok = db_map.Load(DEFAULT_DATABASE_KEY)
 		if !ok {
-			db = PoolItem[*gorm.DB](&databasePoolItem{
-				key:    DEFAULT_DATABASE_KEY,
+			db = PoolItem[*gorm.DB](&DatabasePoolItem{
+				DBKey:  DEFAULT_DATABASE_KEY,
 				db:     database,
 				models: make([]interface{}, 0),
+				Config: new(gorm.Config),
 			})
+
 			db_map.Store(DEFAULT_DATABASE_KEY, db)
 		}
 	}

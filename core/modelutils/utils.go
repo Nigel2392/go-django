@@ -15,19 +15,18 @@ import (
 // Default models to validate if a given struct is/implements a model.
 var modelTypes []any = []any{
 	gorm.Model{},
-	models.Model[models.DefaultIDField]{},
-	models.Model[uuid.UUID]{},
-	models.Model[string]{},
-	models.Model[int64]{},
-	models.Model[int32]{},
-	models.Model[int16]{},
-	models.Model[int8]{},
-	models.Model[int]{},
-	models.Model[uint64]{},
-	models.Model[uint32]{},
-	models.Model[uint16]{},
-	models.Model[uint8]{},
-	models.Model[uint]{},
+	models.Model{},
+	models.UUIDModel{},
+}
+
+// Returns true if an interface is exactly the type of a model.
+func IsActualModel(m any) bool {
+	for _, modelType := range modelTypes {
+		if reflect.TypeOf(m) == reflect.TypeOf(modelType) {
+			return true
+		}
+	}
+	return false
 }
 
 // Register a model type.
@@ -82,7 +81,7 @@ func (id ID) IsUUID() bool {
 
 // Switch on the database type and perform a WHERE query on the ID field with the appropriate value.
 func (id ID) Switch(m any, IDField string, db *gorm.DB) (*gorm.DB, error) {
-	var idField, err = GetField(m, "ID")
+	var idField, err = GetField(m, "ID", false)
 	if err != nil {
 		return db, err
 	}
@@ -95,8 +94,8 @@ func (id ID) Switch(m any, IDField string, db *gorm.DB) (*gorm.DB, error) {
 		return db.Where("id = ?", id.Uint()), nil
 	case uuid.UUID:
 		return db.Where("id = ?", id.UUID()), nil
-	case models.DefaultIDField:
-		return db.Where("id = ?", models.DefaultIDField(id.UUID())), nil
+	case models.UUIDField:
+		return db.Where("id = ?", models.UUIDField(id.UUID())), nil
 	}
 	return db, fmt.Errorf("unsupported ID type: %s", reflect.TypeOf(idField))
 }
@@ -116,11 +115,38 @@ func (id ID) Cast(to any) (any, error) {
 }
 
 func (id *ID) Scan(value interface{}) error {
-	var vID, ok = value.(string)
-	if !ok {
+	switch value := value.(type) {
+	case string:
+		*id = ID(value)
+	case []byte:
+		*id = ID(string(value))
+	case int64:
+		*id = ID(strconv.FormatInt(value, 10))
+	case int32:
+		*id = ID(strconv.FormatInt(int64(value), 10))
+	case int16:
+		*id = ID(strconv.FormatInt(int64(value), 10))
+	case int8:
+		*id = ID(strconv.FormatInt(int64(value), 10))
+	case int:
+		*id = ID(strconv.FormatInt(int64(value), 10))
+	case uint64:
+		*id = ID(strconv.FormatUint(value, 10))
+	case uint32:
+		*id = ID(strconv.FormatUint(uint64(value), 10))
+	case uint16:
+		*id = ID(strconv.FormatUint(uint64(value), 10))
+	case uint8:
+		*id = ID(strconv.FormatUint(uint64(value), 10))
+	case uint:
+		*id = ID(strconv.FormatUint(uint64(value), 10))
+	case uuid.UUID:
+		*id = ID(value.String())
+	case models.UUIDField:
+		*id = ID(value.UUID().String())
+	default:
 		return fmt.Errorf("failed to scan ID: %s", reflect.TypeOf(value))
 	}
-	*id = ID(vID)
 	return nil
 }
 
@@ -140,8 +166,8 @@ func (id ID) castType(to reflect.Type) (any, error) {
 	default:
 		if to == reflect.TypeOf(uuid.UUID{}) {
 			return id.UUID(), nil
-		} else if to == reflect.TypeOf(models.DefaultIDField{}) {
-			return models.DefaultIDField(id.UUID()), nil
+		} else if to == reflect.TypeOf(models.UUIDField{}) {
+			return models.UUIDField(id.UUID()), nil
 		}
 	}
 	return nil, fmt.Errorf("unsupported type: %s", to.Kind())
