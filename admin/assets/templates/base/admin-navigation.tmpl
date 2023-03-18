@@ -1,0 +1,11 @@
+<div class="admin-nav admin-dark">
+    <ul>
+        <li><a href="{{.Request.URL "admin" }}">Index</a></li>
+        <li><a href="/">Back to Website</a></li>
+        {{ if and (.Request.User) (.Request.User.IsAuthenticated) }}
+            <li><a href="{{.Request.URL "admin:logout" }}">Logout</a></li>
+        {{ else }}
+            <li><a href="{{.Request.URL "admin:login" }}">Login</a></li>
+        {{ end }}
+    </ul>
+</div>

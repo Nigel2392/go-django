@@ -1,0 +1,25 @@
+{{ template "base" . }}
+
+{{ define "title" }} {{index .Data "title"}} {{end}}
+
+{{ define "css" }}{{ end }}
+
+{{ define "content" }}
+
+    <h1 >{{index .Data "title"}}!</h1>
+    <div class="admin-logss w-50">
+        {{$logs := index .Data "logs"}}
+        {{ if eq (len $logs) 0 }}
+            <div class="log-item">
+                <p>There are no logs.</p>
+            </div>
+        {{ else }}
+                {{ range $log := $logs }}
+                    {{template "log-item.tmpl" $log}}
+                {{ end }}
+        {{ end }}
+    </div>
+
+{{ end }}
+
+{{ define "js" }}{{ end }}

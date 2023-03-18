@@ -1,0 +1,22 @@
+{{ template "base" . }}
+
+{{ define "title" }} {{index .Data "title"}} {{end}}
+
+{{ define "css" }}{{ end }}
+
+{{ define "root" }}
+
+    <div class="landing errors">
+        <h1>Unauthorized!</h1>
+        <p>You are not authorized to view this page.</p>
+        <div class="buttons">
+            {{ if or (not .Request.User) (or (not .Request.User) (not .Request.User.IsAuthenticated)) }}
+                <a href="{{.Request.URL "admin:login" }}" class="admin-button margins">Login</a>
+            {{ end }}
+            <a href="/" class="admin-button margins">Home</a>
+        </div>
+    </div>
+
+{{ end }}
+
+{{ define "js" }}{{ end }}

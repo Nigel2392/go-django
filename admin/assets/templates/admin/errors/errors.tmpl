@@ -1,0 +1,15 @@
+{{ template "base" . }}
+
+{{ define "title" }} {{index .Data "title"}} {{end}}
+
+{{ define "root" }}
+
+    <div class="landing errors">
+        <h1>{{ index .Data "error_code" }}: {{ index .Data "error" }}</h1>
+        {{$detail := index .Data "detail"}}
+        {{if $detail}}
+            <p>{{$detail}}</p>
+        {{end}}
+    </div>
+
+{{ end }}

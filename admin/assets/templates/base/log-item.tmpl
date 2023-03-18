@@ -1,0 +1,21 @@
+{{$log := .}}
+<div class="card {{$log.Level}} minw-200">
+    <div class="card-header">
+        <h3>{{$log.ActionDisplay}}</h3>
+    </div>
+    <div class="card-content">
+        {{ if eq $log.Meta.Len 0 }}
+            <p>There is no metadata.</p>
+        {{ else }}
+            <p>Metadata:</p>
+            <ul>
+                {{ range $key := $log.Meta.Keys }}
+                    <li>{{$key}}: {{format ($log.Meta.Get $key)}}</li>
+                {{ end }}
+            </ul>
+        {{ end }}
+    </div>
+    <div class="card-footer">
+        <p>{{$log.CreatedAt|format}}</p>
+    </div>
+</div>

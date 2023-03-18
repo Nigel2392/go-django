@@ -1,0 +1,13 @@
+<div class="admin-sidebar admin-dark">
+    <div class="admin-sidebar-content">
+        <h1 class="admin-sidebar-header overflow-text">{{index .Data "title"|title}}</h1>
+        {{template "app_list.tmpl" .}}
+    </div>
+    <div class="admin-sidebar-footer">
+        {{ if and (.Request.User) (.Request.User.IsAuthenticated) }}
+            <a href="{{.Request.URL "admin:logout" }}" class="admin-button">Logout</a>
+        {{ else }}
+            <a href="{{.Request.URL "admin:login" }}" class="admin-button">Login</a>
+        {{ end }}
+    </div>
+</div>

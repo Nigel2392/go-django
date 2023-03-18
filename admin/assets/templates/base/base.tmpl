@@ -1,0 +1,64 @@
+{{define "base"}}
+<!doctype html>
+<html lang="en">
+    <head>
+        <!-- Required meta tags -->
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+
+        <link rel="stylesheet" href="{{.Request.URL "admin:static" "admin.css"}}">
+        <link rel="stylesheet" href="{{.Request.URL "static" "base.css"}}">
+        
+        <title>{{block "title" .}}{{end}}</title>
+        
+        {{if .Messages}}
+            {{template "messages.tmpl" .Messages}}
+        {{end}}
+        
+        {{block "css" .}}{{end}}
+        <script>
+            function getCookie(name) {
+                var cookieValue = null;
+                if (document.cookie && document.cookie != '') {
+                    var cookies = document.cookie.split(';');
+                    for (var i = 0; i < cookies.length; i++) {
+                        var cookie = cookies[i].trim();
+                        // Does this cookie string begin with the name we want?
+                        if (cookie.substring(0, name.length + 1) == (name + '=')) {
+                            cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                            break;
+                        }
+                    }
+                }
+                return cookieValue;
+            }
+            function setCookie(name, value, days) {
+                var expires = "";
+                if (days) {
+                    var date = new Date();
+                    date.setTime(date.getTime() + (days*24*60*60*1000));
+                    expires = "; expires=" + date.toUTCString();
+                }
+                document.cookie = name + "=" + (value || "")  + expires + "; path=/";
+            }
+        </script>
+    </head>
+    <body>
+        <div class="admin-main">
+            {{template "admin-sidebar.tmpl" .}}
+            <div class="admin-page">
+                {{template "admin-navigation.tmpl" .}}
+                {{block "root" .}}{{end}}
+                <div class="admin-scroll-x">
+                    <div class="admin-container">
+                        <div class="admin-content">
+                            {{block "content" .}}{{end}}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {{block "js" .}}{{end}}
+    </body>
+</html>
+{{end}}

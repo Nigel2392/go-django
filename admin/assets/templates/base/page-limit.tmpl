@@ -1,0 +1,15 @@
+<select name="limit" id="admin-list-page-limit" class="admin-list-page-limit">
+    {{ $limit := index . "limit" }}
+    {{ range $i, $item := index . "limit_choices" }}
+        <option value="{{$item}}" {{if eq $item $limit}}selected{{end}}>{{$item}}</option>
+    {{ end }}
+</select>
+<script>
+    let limitSelect = document.getElementById('admin-list-page-limit');
+    limitSelect.addEventListener("change", function(e){
+        e.preventDefault();
+        let url = new URL(window.location.href);
+        url.searchParams.set('limit', this.value);
+        window.location.href = url.href;
+    })
+</script>

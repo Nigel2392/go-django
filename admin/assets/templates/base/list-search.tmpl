@@ -1,0 +1,7 @@
+<div class="admin-list-search">
+    <form action="{{index .Data "current_url"}}" method="get">
+        {{$val := index .Data "search_query"}}
+        <input class="admin-list-search-input" type="text" name="search" placeholder="Search" {{if $val}}value="{{$val}}"{{end}}>
+        <button class="admin-list-search-button" type="submit">Search</button>
+    </form>
+</div>

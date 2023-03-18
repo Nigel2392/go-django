@@ -1,0 +1,24 @@
+<div class="paginator-container">
+    <div class="paginator">
+        {{$pages := .ElidedPages}}
+        {{if .HasPrev}}
+            <a href="{{.PrevPageURL}}" class="page-item">Previous</a>
+        {{end}}
+        {{if .StartCut}}
+            <a href="{{.FirstPageURL}}" class="page-item">...</a>
+        {{end}}
+        {{range $pages}}
+            {{if .IsCurrent }}
+                <span class="page-item active">{{.Number}}</span>
+            {{else}}
+                <a href="{{.URL}}" class="page-item">{{.Number}}</a>
+            {{end}}
+        {{end}}
+        {{if .EndCut}}
+            <a href="{{.LastPageURL}}" class="page-item">...</a>
+        {{end}}
+        {{if .HasNext}}
+            <a href="{{.NextPageURL}}" class="page-item">Next</a>
+        {{end}}
+    </div>
+</div>

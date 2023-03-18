@@ -1,0 +1,59 @@
+{{ template "base" . }}
+
+{{ define "title" }} {{index .Data "title"}} {{end}}
+
+{{ define "css" }}
+
+{{ end }}
+
+{{ define "content" }}
+
+<div class="admin-list-top">
+    {{if .Request.User.HasPerms (index .Data "model").Permissions.Create}}
+        <a href="{{index .Data "create_url"}}" class="admin-btn">Create</a>
+    {{end}}
+    {{template "page-limit.tmpl" .Data}}
+    {{if index .Data "has_search"}}
+        {{ template "list-search.tmpl" . }}
+    {{end}}
+</div>
+
+<div class="table-container">
+    {{$model_data := index .Data "model_data"}}
+    {{$length := len $model_data}}
+    {{ if ge $length 2 }}
+        <table width="100%">
+            {{ range $i, $item := $model_data }}
+                {{ if eq $i 0 }}
+                    <thead>
+                        <tr>
+                            {{ range $value := $item }}
+                                <th>{{ $value }}</th>
+                            {{ end }}
+                        </tr>
+                    </thead>
+                {{ else }}
+                        <tr>
+                            {{ range $value := $item }}
+                                <td>{{ $value }}</td>
+                            {{ end }}
+                        </tr>
+                {{ end }}
+            {{ end }}
+        </table>
+    {{ else }}
+        <div class="text-center">
+            <h1>No data found</h1>
+        </div>
+    {{ end }}
+</div>
+    
+{{if $pager := index .Data "paginator"}}
+    {{ template "pagination.tmpl" $pager }}
+{{end}}
+
+
+{{ end }}
+
+{{ define "js" }}
+{{ end }}

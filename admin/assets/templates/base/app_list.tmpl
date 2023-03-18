@@ -1,0 +1,40 @@
+{{$apps := (index .Data "apps")}}
+{{ if $apps }}
+    <div class="admin-app-container">
+        {{ range $app := $apps }}
+            {{template "app_item.tmpl" $app}}
+        {{ end }}
+    </div>
+    <script>
+        var dropdown_buttons = document.querySelectorAll('.dropdown-button');
+        for (var i = 0; i < dropdown_buttons.length; i++) {
+            var currentButton = dropdown_buttons[i];
+            var height = currentButton.nextElementSibling.scrollHeight;
+            var cookieActive = getCookie('dropdown-active');
+            if (cookieActive == currentButton.innerText) {
+                currentButton.classList.add('active');
+                currentButton.nextElementSibling.style.maxHeight = "unset";
+            }
+            currentButton.addEventListener('click', function(e) {
+                for (var j = 0; j < dropdown_buttons.length; j++) {
+                    var otherButton = dropdown_buttons[j];
+                    if (otherButton != this) {
+                        otherButton.classList.remove('active');
+                        otherButton.nextElementSibling.style.maxHeight = "0px"
+                    }
+                }
+                var dropdown = this.nextElementSibling;
+                this.classList.toggle('active');
+                if (dropdown.style.maxHeight == "0px" || dropdown.style.maxHeight == "" || !dropdown.style.maxHeight) {
+                    dropdown.style.maxHeight = "unset";
+                    setCookie('dropdown-active', this.innerText, 1);
+                } else {
+                    dropdown.style.maxHeight = "0px";
+                    setCookie('dropdown-active', '', 1);
+                }
+            });
+        }
+    </script>
+{{ else }}
+    <p>There are no apps/models registered</p>
+{{ end }}

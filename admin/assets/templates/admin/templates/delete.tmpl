@@ -1,0 +1,25 @@
+{{ template "base" . }}
+
+{{ define "title" }} {{index .Data "title"}} {{end}}
+
+{{ define "css" }}{{ end }}
+
+
+{{ define "content" }}
+    {{$model := index .Data "model"}}
+    {{$instance := index .Data "instance"}}
+    <div class="delete-container">
+        <h1 class="danger">Are you sure you wish to delete {{format $instance}}?</h1>
+        <div class="buttons w-50">
+            <form action="{{$model.URLS.DeleteURL $instance.ID}}" method="POST" class="w-100 margins">
+                {{.CSRFToken.Input}}
+                <button type="submit" class="admin-button-light danger-button w-100">Yes</button>
+            </form>
+            <a href="{{$model.URLS.DetailURL $instance.ID}}" class="admin-button-light w-100 margins">No</a>
+        </div>
+    </div>
+
+{{ end }}
+
+
+{{ define "js" }}{{ end }}

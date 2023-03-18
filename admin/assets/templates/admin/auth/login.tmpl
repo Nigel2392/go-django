@@ -1,0 +1,41 @@
+{{ template "base" . }}
+
+{{ define "title" }} {{index .Data "title"}} {{end}}
+
+{{ define "css" }}{{ end }}
+
+{{ define "content" }}
+    <div class="landing margins-top-specify" style="--margins:10%">
+        <div class="card default dark-border extra-padding w-25">
+            <div class="card-header">
+                <h3>{{index .Data "title"}}</h3>
+            </div>
+            <hr>
+            <form action="{{.Request.URL "admin:login" }}" method="POST">
+                {{$f := index .Data "form"}}
+                <div class="card-content">
+                    {{if $f.Errors}}
+                        <div class="error">
+                            <p>Login failed.</p>
+                            <p>Please check your credentials.</p>
+                        </div>
+                    {{end}}
+                    {{.CSRFToken.Input}}
+                    <input type="hidden" value="{{.Request.Next}}" name="next">
+                    {{range $f.Fields}}
+                        <div class="field-group">
+                            {{.Label.HTML}}
+                            {{.Field.HTML}}
+                        </div>
+                    {{end}}
+                </div>
+                <div class="card-footer">
+                    <input type="submit" value="Login" class="admin-button-light margins-top ">
+                </div>
+            </form>
+        </div>
+    </div>
+{{ end }}
+
+{{ define "js" }}{{ end }}
+
