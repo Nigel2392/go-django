@@ -245,7 +245,11 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			correctPtrSet(reflectValue.Field(i), v)
 		case "number":
 			// If the field is a number, we need to parse the value to the correct type.
-			var numberValue, err = strconv.ParseFloat(value[0], 64)
+			var (
+				numberValue any
+				err         error
+			)
+			numberValue, err = strconv.ParseFloat(value[0], 64)
 			if err != nil {
 				return nil, errors.New("failed to parse number: " + err.Error())
 			}

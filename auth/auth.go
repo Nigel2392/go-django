@@ -50,12 +50,15 @@ var (
 
 // Initialize the auth package.
 func Init(pool db.Pool[*gorm.DB]) {
-	auth_db = db.GetDefaultDatabase(DB_KEY, pool).DB()
-	auth_db.AutoMigrate(
+	var database = db.GetDefaultDatabase(DB_KEY, pool)
+	auth_db = database.DB()
+	database.Register(
 		&User{},
 		&Group{},
 		&Permission{},
 	)
+
+	database.AutoMigrate()
 }
 
 // Create a new unauthenticated used, with the login field set to the login parameter.

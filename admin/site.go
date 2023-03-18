@@ -38,12 +38,12 @@ func Initialize(name string, url string, p db.Pool[*gorm.DB], l ...request.Logge
 		&Log{},
 	)
 
-	var authDB = db.GetDefaultDatabase(auth.DB_KEY, p).DB()
+	admin_db = db.GetDefaultDatabase(auth.DB_KEY, p).DB()
 
 	// Register the default admin site permissions.
-	PermissionViewAdminSite.Save(authDB)
-	PermissionViewAdminInternal.Save(authDB)
-	PermissionViewAdminExtensions.Save(authDB)
+	PermissionViewAdminSite.Save(admin_db)
+	PermissionViewAdminInternal.Save(admin_db)
+	PermissionViewAdminExtensions.Save(admin_db)
 
 	// Register internal apps.
 	// (Logs, etc...)

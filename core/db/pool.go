@@ -9,6 +9,7 @@ import (
 )
 
 type databasePoolItem struct {
+	pool   *defaultPool
 	key    DATABASE_KEY
 	db     *gorm.DB
 	models []interface{}
@@ -26,6 +27,20 @@ func (m *databasePoolItem) Key() DATABASE_KEY {
 	return m.key
 }
 
+func (m *databasePoolItem) Register(model ...interface{}) error {
+	if m.pool == nil {
+		return errors.New("pool is nil")
+	}
+	return m.pool.Register(m.key, model...)
+}
+
+func (m *databasePoolItem) AutoMigrate() error {
+	if m.pool == nil {
+		return errors.New("pool is nil")
+	}
+	return m.pool.AutoMigrate()
+}
+
 type defaultPool struct {
 	mu        sync.RWMutex
 	databases map[DATABASE_KEY]*databasePoolItem
@@ -38,6 +53,8 @@ func NewPool(defaultDB *gorm.DB) Pool[*gorm.DB] {
 	p.store(DEFAULT_DATABASE_KEY, &databasePoolItem{
 		db:     defaultDB,
 		models: make([]interface{}, 0),
+		key:    DEFAULT_DATABASE_KEY,
+		pool:   p,
 	})
 	return p
 }
@@ -101,8 +118,10 @@ func (m *defaultPool) Get(key DATABASE_KEY) (PoolItem[*gorm.DB], error) {
 
 func (m *defaultPool) Add(key DATABASE_KEY, DB *gorm.DB) error {
 	m.store(key, &databasePoolItem{
+		key:    key,
 		db:     DB,
 		models: make([]interface{}, 0),
+		pool:   m,
 	})
 	return nil
 }

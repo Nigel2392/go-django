@@ -22,6 +22,8 @@ type PoolItem[T any] interface {
 	Key() DATABASE_KEY
 	DB() T
 	Models() []interface{}
+	Register(model ...interface{}) error
+	AutoMigrate() error
 }
 
 // A pool of database connections.

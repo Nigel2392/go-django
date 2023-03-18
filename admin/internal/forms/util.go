@@ -40,23 +40,6 @@ func sliceUp[T any](v reflect.Value, fieldName string) []T {
 	return typSlice
 }
 
-// Set a value to a struct field
-// If the struct field is a pointer, but the value is not, then the value will be set to the pointer
-func correctPtrSet(val1 reflect.Value, val2 any) {
-	var v2 = reflect.ValueOf(val2)
-	if !v2.IsValid() {
-		return
-	}
-	if val1.Kind() == reflect.Ptr && v2.Kind() != reflect.Ptr {
-		val1.Set(reflect.New(val1.Type().Elem()))
-		val1.Elem().Set(v2)
-	} else if val1.Kind() != reflect.Ptr && v2.Kind() == reflect.Ptr {
-		val1.Set(v2.Elem())
-	} else {
-		val1.Set(v2)
-	}
-}
-
 func isNoneField(mdl any, field string) bool {
 	var f, err = getField(mdl, field)
 	if err != nil {
