@@ -13,16 +13,16 @@ Most of the code is not tested thoroughly, and there could be bugs present.
 If you find any bugs, please report them in the github issues page.
 
 ## Finished:
-- [x] Routing
-- [x] Signals
-- [x] Template file system/manager module
-- [x] Media file system/manager module
-- [x] middleware: CSRF protection, Sessions, AllowedHosts
-- [x] Authentication
-- [x] Messages (To the templates)
-- [x] Sending emails
-- [x] Secret keys
-- [x] Admin panel extensions (Embed your own templates!)
+- [X] Routing
+- [X] Signals
+- [X] Template file system/manager module
+- [X] Media file system/manager module
+- [X] middleware: CSRF protection, Sessions, AllowedHosts
+- [X] Authentication
+- [X] Messages (To the templates)
+- [X] Sending emails
+- [X] Secret keys
+- [X] Admin panel extensions (Embed your own templates!)
 
 ## In progress:
 - [ ] Admin panel
