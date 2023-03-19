@@ -366,17 +366,24 @@ func GetAdminURLs(m any) *models.AdminURLs {
 
 func adminSortedApps(r *request.Request) []*menu.Item {
 	var appMap = orderedmap.New[string, *menu.Item]()
+	if r.User == nil {
+		return []*menu.Item{}
+	}
 	var user = r.User.(*auth.User)
 	if !user.IsAuthenticated() {
 		return []*menu.Item{}
 	}
 	if user.HasPerms(PermissionViewAdminInternal) {
 		var internal_app_menu = internal_menu_items()
-		appMap.Set(internal_app_menu.Name, internal_app_menu)
+		if len(internal_app_menu.Children()) > 0 {
+			appMap.Set(internal_app_menu.Name, internal_app_menu)
+		}
 	}
 	if user.HasPerms(PermissionViewAdminExtensions) {
 		var extension_app_menu = extensions_menu_items()
-		appMap.Set(extension_app_menu.Name, extension_app_menu)
+		if len(extension_app_menu.Children()) > 0 {
+			appMap.Set(extension_app_menu.Name, extension_app_menu)
+		}
 	}
 
 	//	var newMenuItem = menu.NewItem("Apps", "", "", 0)

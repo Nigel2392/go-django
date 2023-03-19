@@ -18,6 +18,14 @@ func FilenameFromPath(p string) string {
 	return templates.FilenameFromPath(p)
 }
 
+// DirFromPath gets the directory from a path
+func DirFromPath(p string) string {
+	p = strings.ReplaceAll(p, "\\", "/")
+	var parts = strings.Split(p, "/")
+	parts = parts[:len(parts)-1]
+	return strings.Join(parts, "/")
+}
+
 // NameFromPath gets the filename from a path and removes the extension
 func NameFromPath(p string) string {
 	var name = FilenameFromPath(p)

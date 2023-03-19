@@ -4,8 +4,10 @@ go 1.20
 
 require (
 	github.com/Nigel2392/go-signals v1.0.4
-	github.com/Nigel2392/router/v3 v3.1.6
+	github.com/Nigel2392/router/v3 v3.1.7
 	github.com/Nigel2392/typeutils v1.1.1
+	github.com/alexedwards/scs/gormstore v0.0.0-20230305153148-62e546ce9d2d
+	github.com/alexedwards/scs/v2 v2.5.1
 	github.com/google/uuid v1.3.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	golang.org/x/crypto v0.7.0
