@@ -8,6 +8,8 @@ import (
 	"github.com/Nigel2392/go-django/logger"
 )
 
+// PrettyPrintUsage returns a function that prints the usage of the flag set
+// to the given writer.
 func PrettyPrintUsage(w io.Writer, f *Flags) func() {
 	return func() {
 		if f.Info == "" {
@@ -43,6 +45,7 @@ func PrettyPrintUsage(w io.Writer, f *Flags) func() {
 	}
 }
 
+// If the value is a string, it will be quoted.
 func quoteString(v any) string {
 	if isString(v) {
 		return fmt.Sprintf("\"%v\"", v)
@@ -50,6 +53,7 @@ func quoteString(v any) string {
 	return fmt.Sprintf("%v", v)
 }
 
+// Colorize the given string with the given color.
 func colorizer(w io.Writer, color string, format string, args ...any) (err error) {
 	if len(args) == 0 {
 		_, err = fmt.Fprintf(w, "%s%s%s", color, format, logger.Reset)
@@ -59,6 +63,7 @@ func colorizer(w io.Writer, color string, format string, args ...any) (err error
 	return err
 }
 
+// Colorize the given string with the given color and indent.
 func indentColorizer(w io.Writer, indent int, color string, format string, args ...any) (err error) {
 	if len(args) == 0 {
 		_, err = fmt.Fprintf(w, "%s%s%s%s", strings.Repeat(" ", indent), color, format, logger.Reset)
@@ -68,10 +73,12 @@ func indentColorizer(w io.Writer, indent int, color string, format string, args 
 	return err
 }
 
+// Replace all newlines with a newline and the given indent.
 func newLineReplacer(s string, indent int) string {
 	return strings.Replace(s, "\n", fmt.Sprintf("\n%s", strings.Repeat(" ", indent)), -1)
 }
 
+// Colorize the type of the given value.
 func colorizeType(v any, pref, suff string) string {
 	var b = &strings.Builder{}
 	switch v.(type) {

@@ -4,6 +4,8 @@ github.com/Nigel2392/go-signals v1.0.4 h1:SULZt+6AwtHmQDrt2TTzb1bYeoTr2kSUetN6aI
 github.com/Nigel2392/go-signals v1.0.4/go.mod h1:Olk7MJlZ9gdGPN8bh+OZSe7iOsBixn7biVI7LqoWEIA=
 github.com/Nigel2392/router/v3 v3.1.7 h1:rNwPAVE111S/Oas495K+R+xxiau9pkqD5sZoXXp0TbU=
 github.com/Nigel2392/router/v3 v3.1.7/go.mod h1:TnWlTdVHy77iOavayrx+4Y3TQzMT1c0BxDwdYuMhXLU=
+github.com/Nigel2392/router/v3 v3.2.0 h1:VMiIM6FodwnXBSlOE5fmIzbttumQa0lJFdt3pqqXy6s=
+github.com/Nigel2392/router/v3 v3.2.0/go.mod h1:TnWlTdVHy77iOavayrx+4Y3TQzMT1c0BxDwdYuMhXLU=
 github.com/Nigel2392/routevars v1.1.0 h1:2eM5EuPL3qANM145CoNo+cE2I0OssWvrPkzl2JiZa20=
 github.com/Nigel2392/routevars v1.1.0/go.mod h1:aPEoda1mvbkFa/Rnj9lErveL4RPZkmgh7/SMjL/xx7E=
 github.com/Nigel2392/typeutils v1.1.1 h1:ZL8azlQKOAgHIFeHnvS+RnQ1z/CEG8iEOw1I43RdZMc=

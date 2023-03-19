@@ -6,13 +6,22 @@ import (
 	"strconv"
 )
 
+// Default value for a flag.
 type Value interface {
+	// String returns the string representation of the value.
+	// Beware! This will convert the value to a string if it is not a string.
 	String() string
+	// Int returns the value as an integer.
 	Int() int
+	// Uint returns the value as an unsigned integer.
 	Uint() uint
+	// Float returns the value as a float.
 	Float() float64
+	// Bool returns the value as a boolean.
 	Bool() bool
+	// IsZero returns true if the value is zero.
 	IsZero() bool
+	// Set sets the value.
 	Set(s string) error
 }
 

@@ -6,6 +6,22 @@ import (
 	"reflect"
 )
 
+// A command to add to a flag set.
+//
+// This command will be parsed and handled by the flag set.
+//
+// The default value needs to be set!
+//
+// This is for type assertion of the flag.
+//
+// Available types are:
+//   - string
+//   - bool
+//   - int64
+//   - int
+//   - uint64
+//   - uint
+//   - float64
 type Command struct {
 	Name        string
 	Description string
@@ -15,6 +31,7 @@ type Command struct {
 	value any
 }
 
+// Initialize the command, this will add the command to the std.FlagSet.
 func (c *Command) Init(f *flag.FlagSet) {
 	if c.Default == nil {
 		panic(fmt.Sprintf("Default value for %s is nil", c.Name))
@@ -44,6 +61,8 @@ func (c *Command) Init(f *flag.FlagSet) {
 	}
 }
 
+// Execute the command, this will call the handler function
+// with the value of the parsed command.
 func (c *Command) Execute() error {
 	if c.Handler != nil {
 		return c.Handler(&value{dePtr(c.value)})

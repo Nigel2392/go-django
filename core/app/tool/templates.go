@@ -65,6 +65,11 @@ import (
 var App = app.New(appConfig)
 
 func main() {
+	// There are some default commandline flags registered.
+	// You can add your own flags by using go-django's flag package.
+	// See the help menu for more information. (go run ./src -h)
+
+
 	auth.USER_MODEL_LOGIN_FIELD = "Email"
 
 	admin.Initialize("Admin", "/admin", App.Pool)
@@ -78,6 +83,17 @@ func main() {
 	App.Router.AddGroup(urls)
 
 	App.Router.Get("/", index, "index")
+
+	var _, err = auth.CreateAdminUser(
+		"developer@local.local", // Email
+		"Developer", // Username
+		"root", // First name
+		"toor", // Last name
+		"Developer123!", // Password
+	)
+	if err != nil {
+		fmt.Println(logger.Colorize(logger.Red, fmt.Sprintf("Error creating superuser: %s", err.Error())))
+	}
 
 	var err = App.Run()
 	if err != nil {
@@ -115,7 +131,9 @@ import (
 var env = dotenv.NewEnv(".env")
 
 var appConfig = app.Config{
+	// Secret key for the server.
 	SecretKey:    env.Get("SECRET_KEY", time.Now().Format(time.RFC3339Nano)),
+	// Allowed hosts for the server.
 	AllowedHosts: env.GetAll("ALLOWED_HOSTS", []string{"*"}...),
 	Server: &app.Server{
 		// Server options.
@@ -126,16 +144,22 @@ var appConfig = app.Config{
 		KeyFile:  env.Get("SSL_KEY_FILE", ""),
 	},
 	Middlewares: []router.Middleware{
+		// CSRFToken verification middleware.
 		csrf.Middleware,
+		// Add a logger to the request.
+		// Can be accessed with request.logger
 		middleware.AddLogger,
+		// Print some information about the request to the terminal.
 		middleware.Printer,
 	},
+	// Rate limit middlewares.
 	RateLimitOptions: &middleware.RateLimitOptions{
 		RequestsPerSecond: env.GetInt("REQUESTS_PER_SECOND", 10),
 		BurstMultiplier:   env.GetInt("REQUEST_BURST_MULTIPLIER", 3),
 		CleanExpiry:       5 * time.Minute,
 		CleanInt:          1 * time.Minute,
 	},
+	// Template manager
 	Templates: &templates.Manager{
 		TEMPLATEFS:             os.DirFS(env.Get("TEMPLATE_DIR", "assets/templates/")),
 		BASE_TEMPLATE_SUFFIXES: env.GetAll("TEMPLATE_BASE_SUFFIXES", []string{".tmpl", ".html"}...),
@@ -143,6 +167,7 @@ var appConfig = app.Config{
 		TEMPLATE_DIRS:          env.GetAll("TEMPLATE_DIRS", []string{"templates"}...),
 		USE_TEMPLATE_CACHE:     env.GetBool("TEMPLATE_CACHE", true),
 	},
+	// File system manager (Static/media files)
 	File: &fs.Manager{
 		FS_STATIC_ROOT:     env.Get("STATIC_DIR", "assets/static/"),
 		FS_MEDIA_ROOT:      env.Get("MEDIA_DIR", "assets/media/"),
@@ -150,6 +175,7 @@ var appConfig = app.Config{
 		FS_MEDIA_URL:       env.Get("MEDIA_URL", "/media/"),
 		FS_FILE_QUEUE_SIZE: env.GetInt("FS_FILE_QUEUE_SIZE", 100),
 	},
+	// Default database configuration.
 	DBConfig: &db.DatabasePoolItem{
 		DEFAULT_DATABASE: env.Get("DEFAULT_DATABASE", "sqlite3"),
 		DB_NAME:          env.Get("DB_NAME", "db.sqlite3"),
@@ -160,6 +186,7 @@ var appConfig = app.Config{
 		DB_SSLMODE:       env.Get("DB_SSLMODE", ""),
 		Config:           &gorm.Config{},
 	},
+	// Email settings.
 	Mail: &email.Manager{
 		EMAIL_HOST:     env.Get("EMAIL_HOST", ""),
 		EMAIL_PORT:     env.GetInt("EMAIL_PORT", 25),

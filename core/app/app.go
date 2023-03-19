@@ -37,7 +37,20 @@ func App() *Application {
 }
 
 // Server is the configuration used to initialize the server.
-type Server router.Config
+type Server struct {
+	// The address to listen on
+	Host string
+	Port int
+	// Wether to skip trailing slashes
+	SkipTrailingSlash bool
+	// The server to use
+	Server *http.Server
+	// The handler to use when a route is not found
+	NotFoundHandler router.Handler
+	// SSL options
+	CertFile string
+	KeyFile  string
+}
 
 // RedirectServer is the configuration used to initialize the redirect server.
 // This will only be used if the server is running in SSL mode.
@@ -51,6 +64,12 @@ type RedirectServer struct {
 // Config is the configuration used to initialize the application.
 // You must provide a server configuration!
 type Config struct {
+	// Wether the application is in debug mode.
+	// If true, the application will not use:
+	// - The rate limiter
+	// - The template cache
+	DEBUG bool
+
 	// The hostnames that are allowed to access the application.
 	AllowedHosts []string
 
@@ -223,10 +242,8 @@ func (a *Application) setupSessionManager() {
 func (a *Application) setupRouter() {
 	// Setup the router.
 	// Provide the router with some of the app's settings.
-	a.Router = router.NewRouter(&router.Config{
-		SkipTrailingSlash: true,
-		NotFoundHandler:   a.config.Server.NotFoundHandler,
-	})
+	a.Router = router.NewRouter(true)
+	a.Router.NotFoundHandler = a.config.Server.NotFoundHandler
 
 	a.Router.Use(
 		middleware.AllowedHosts(a.config.AllowedHosts...),

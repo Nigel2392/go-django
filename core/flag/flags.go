@@ -6,10 +6,14 @@ import (
 	"reflect"
 )
 
+// Allowed is the allowed types for a command.
+//
+// This is for type assertion of the flag, but remains unused.
 type Allowed interface {
 	string | bool | int64 | int | uint64 | uint | float64
 }
 
+// A wrapper for the std.FlagSet.
 type Flags struct {
 	Commands []Command
 	errors   ErrorMap
@@ -17,14 +21,17 @@ type Flags struct {
 	Info     string
 }
 
-type ErrorHandling int
+// ErrorHandling is the error handling for the flag set.
+type ErrorHandling flag.ErrorHandling
 
 const (
+	// See std.FlagSet. ContinueOnError is the default.
 	ContinueOnError = ErrorHandling(flag.ContinueOnError)
 	ExitOnError     = ErrorHandling(flag.ExitOnError)
 	PanicOnError    = ErrorHandling(flag.PanicOnError)
 )
 
+// Initialize a new flag set.
 func NewFlags(name string, handling ...ErrorHandling) *Flags {
 	var errHandler ErrorHandling = ContinueOnError
 	if len(handling) > 0 {
@@ -42,14 +49,21 @@ func NewFlags(name string, handling ...ErrorHandling) *Flags {
 	return f
 }
 
+// Check if the FlagSet contains errors after parsing.
 func (f *Flags) HasError() bool {
 	return len(f.errors) > 0
 }
 
+// Return the underlying error map of the flag set.
 func (f *Flags) Errors() ErrorMap {
 	return f.errors
 }
 
+// Register a new command to the flag set.
+//
+// The defaultvalue cannot be nil!
+//
+// This is for type assertion purposes.
 func (f *Flags) Register(name string, defaultValue any, description string, handler func(v Value) error) {
 	var cmd Command = Command{
 		Name:        name,
@@ -60,10 +74,12 @@ func (f *Flags) Register(name string, defaultValue any, description string, hand
 	f.Commands = append(f.Commands, cmd)
 }
 
+// Register a new command to the flag set.
 func (f *Flags) RegisterCommand(cmd Command) {
 	f.Commands = append(f.Commands, cmd)
 }
 
+// Execute the flag set.
 func (f *Flags) Run() (wasRan bool) {
 	for i := range f.Commands {
 		f.Commands[i].Init(f.FlagSet)
@@ -84,17 +100,7 @@ func (f *Flags) Run() (wasRan bool) {
 	return
 }
 
-func newOf(ptr bool, v interface{}) interface{} {
-	if ptr {
-		return reflect.New(reflect.TypeOf(v)).Interface()
-	}
-	return reflect.Zero(reflect.TypeOf(v)).Interface()
-}
-
-func equalsNew(v interface{}) bool {
-	return reflect.DeepEqual(v, newOf(false, v))
-}
-
+// Reports if the flag was present in the arguments.
 func (f *Flags) shouldExecute(name string) bool {
 	found := false
 	f.FlagSet.Visit(func(f *flag.Flag) {
@@ -105,6 +111,20 @@ func (f *Flags) shouldExecute(name string) bool {
 	return found
 }
 
+// Return a new value of the given type.
+func newOf(ptr bool, v interface{}) interface{} {
+	if ptr {
+		return reflect.New(reflect.TypeOf(v)).Interface()
+	}
+	return reflect.Zero(reflect.TypeOf(v)).Interface()
+}
+
+// Check if the given value is equal to a new value of the same type.
+func equalsNew(v interface{}) bool {
+	return reflect.DeepEqual(v, newOf(false, v))
+}
+
+// Check if the given value is equal to a new value of the same type.
 func typesEqual(a, b interface{}) bool {
 	var typeOfA = reflect.TypeOf(a)
 	var typeOfB = reflect.TypeOf(b)
@@ -117,16 +137,19 @@ func typesEqual(a, b interface{}) bool {
 	return typeOfA == typeOfB
 }
 
+// Check if the given value is a bool.
 func isBool(v interface{}) bool {
 	var b bool
 	return typesEqual(v, b)
 }
 
+// Check if the given value is a string.
 func isString(v any) bool {
 	var b string
 	return typesEqual(v, b)
 }
 
+// cast the pointer to the value, recursively.
 func dePtr(v any) any {
 	var typeOf = reflect.TypeOf(v)
 	if typeOf.Kind() == reflect.Ptr {
