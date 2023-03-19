@@ -76,7 +76,7 @@ func (m *DatabasePoolItem) AutoMigrate() error {
 	if m.db == nil {
 		m.Init()
 	}
-	return m.DB().AutoMigrate(m.Models()...)
+	return m.DB().AutoMigrate(m.models...)
 }
 
 func (d *DatabasePoolItem) createSQLDSN() string {

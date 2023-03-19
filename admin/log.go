@@ -53,6 +53,9 @@ type LoggableUser struct {
 // FromUser creates a LoggableUser from a User.
 func LogUser(user *auth.User) *LoggableUser {
 	var u = &LoggableUser{}
+	if user == nil {
+		return u
+	}
 	u.UserID = user.ID
 	u.Username = user.Username
 	u.Email = user.Email
@@ -176,6 +179,10 @@ func (l *Log) String() string {
 // Errors will be logged to the AdminSite_Logger automatically.
 func (l *Log) Save() error {
 	var dbItem, err = AdminSite_DB_POOL.ByModel(&Log{})
+	if dbItem == nil || err != nil {
+		AdminSite_Logger.Critical(err)
+		return err
+	}
 	err = dbItem.DB().Save(l).Error
 	if err != nil {
 		AdminSite_Logger.Critical(err)

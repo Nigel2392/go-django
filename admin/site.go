@@ -37,12 +37,15 @@ func Initialize(name string, url string, p db.Pool[*gorm.DB], l ...request.Logge
 
 	var admin_db_item = db.GetDefaultDatabase(auth.DB_KEY, p)
 
+	admin_db = admin_db_item.DB()
 	admin_db_item.Register(
 		&Log{},
 		&LoggableUser{},
 	)
-
-	admin_db = admin_db_item.DB()
+	var err = admin_db_item.AutoMigrate()
+	if err != nil {
+		panic(err)
+	}
 
 	// Register the default admin site permissions.
 	PermissionViewAdminSite.Save(admin_db)

@@ -241,7 +241,7 @@ func createView(mdl *models.Model, rq *request.Request) {
 					log.Meta.Set("updated_fields", form.UpdatedFields)
 				}
 			}
-			var url, _, _ = getAdminDetailURL(mdl, form.Model)
+			var url, _, _ = getAdminDetailURL(form.Model, modelutils.GetID(form.Model, "ID"))
 			log.Meta.Set("url", url)
 			log.Save()
 

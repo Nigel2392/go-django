@@ -41,7 +41,13 @@ func startProject(v flag.Value) error {
 	if err := createDir("assets/media"); err != nil {
 		return err
 	}
-	if err := createDir("assets/templates/base"); err != nil {
+	if err := createFile("assets/templates/app/index.tmpl", []byte(defaultHTMLTemplate)); err != nil {
+		return err
+	}
+	if err := createFile("assets/templates/base/base.tmpl", []byte(defaultBaseHTMLTemplate)); err != nil {
+		return err
+	}
+	if err := createFile("assets/templates/base/messages.tmpl", []byte(defaultMessagesTemplate)); err != nil {
 		return err
 	}
 	if err := createDir("src/apps"); err != nil {

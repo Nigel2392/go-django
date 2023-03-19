@@ -1,13 +1,73 @@
 package main
 
+var defaultBaseHTMLTemplate = `{{define "base"}}
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{{block "title" .}}{{end}}</title>
+        {{if .Messages}}{{template "messages.tmpl" .Messages}}{{end}}
+        {{block "css" .}}{{end}}
+    </head>
+    <body>
+        {{block "content" .}}{{end}}
+        {{block "js" .}}{{end}}
+    </body>
+</html>
+{{end}}`
+
+var defaultMessagesTemplate = `<section class="messages text-center">
+{{range .}}
+	{{ if eq .Type "success" }}
+		<div class="message bg-success removeself">
+			<div class="font-l">{{.Text}}</div>
+		</div>
+	{{else if eq .Type "error" }}
+		<div class="message bg-danger removeself">
+			<div class="font-l">{{.Text}}</div>
+		</div>
+	{{else if eq .Type "warning" }}
+		<div class="message bg-warning removeself">
+			<div class="font-l">{{.Text}}</div>
+		</div>
+	{{else if eq .Type "info" }}
+		<div class="message bg-info removeself">
+			<div class="font-l">{{.Text}}</div>
+		</div>
+	{{end}}
+{{end}}
+</section>`
+
+var defaultHTMLTemplate = `{{ template "base" . }}
+
+{{ define "title" }} {{index .Data "title"}} {{end}}
+
+{{ define "css" }}{{end}}
+
+{{ define "content" }}
+<h1>Index!</h1>
+{{end}}
+
+{{ define "js" }}{{end}}
+{{template "base.tmpl"}}`
+
 var mainTemplate = `package main
+
+import (
+	"github.com/Nigel2392/go-django/admin"
+	"github.com/Nigel2392/go-django/auth"
+	"github.com/Nigel2392/go-django/core/app"
+	"github.com/Nigel2392/router/v3/request"
+	"github.com/Nigel2392/router/v3/request/response"
+)
 
 var App = app.New(appConfig)
 
 func main() {
 	auth.USER_MODEL_LOGIN_FIELD = "Email"
 
-	admin.Initialize("Admin", "/admin", app.Pool)
+	admin.Initialize("Admin", "/admin", App.Pool)
 	admin.Register(
 		&auth.User{},
 		&auth.Group{},
@@ -17,13 +77,22 @@ func main() {
 	var urls = admin.URLS()
 	App.Router.AddGroup(urls)
 
+	App.Router.Get("/", index, "index")
+
 	var err = App.Run()
 	if err != nil {
 		panic(err)
 	}
 }
 
-`
+func index(req *request.Request) {
+	var err = response.Render(req, "app/index.tmpl")
+	req.Data.Set("title", "Home")
+	if err != nil {
+		req.Error(500, err.Error())
+		return
+	}
+}`
 
 var appConfigTemplate = `package main
 

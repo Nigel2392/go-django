@@ -47,6 +47,9 @@ func hasAdminPerms(req *request.Request) (retOk bool) {
 			if req.User == nil {
 				req.User = &auth.User{}
 			}
+			if !req.User.IsAuthenticated() {
+				req.User = &auth.User{}
+			}
 			var user = req.User.(*auth.User)
 			var log = SimpleLog(user, LogActionUnauthorized).WithIP(req)
 			log.Meta.Set("url", req.Request.URL.String())
