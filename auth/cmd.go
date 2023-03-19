@@ -1,24 +1,23 @@
 package auth
 
 import (
-	"errors"
-	"flag"
-
+	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/typeutils/terminal"
 )
 
+var CreateSuperUserCommand = flag.Command{
+	Name:        "createsuperuser",
+	Description: "Create a super user",
+	Handler:     createSuperUserFunc,
+	Default:     false,
+}
+
 // Shorthand for creating a super user
 // Check if flag -createsuperuser is set
-func CreateSuperUserFlag() error {
-	if auth_db == nil {
-		return errors.New("auth.Manager.auth_db is nil")
-	}
-	var f = flag.Bool("createsuperuser", false, "Create a super user")
-	flag.Parse()
-	if !*f {
+func createSuperUserFunc(v flag.Value) error {
+	if v.IsZero() {
 		return nil
 	}
-
 	// Ask for input
 	var email = terminal.Ask("Email: ", true)
 	var username = terminal.Ask("Username: ", true)

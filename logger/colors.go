@@ -16,6 +16,13 @@ const (
 	BrightBlue   string = "\033[34;1m"
 	BrightPurple string = "\033[35;1m"
 	BrightCyan   string = "\033[36;1m"
+
+	DimRed    string = "\033[31;2m"
+	DimGreen  string = "\033[32;2m"
+	DimYellow string = "\033[33;2m"
+	DimBlue   string = "\033[34;2m"
+	DimPurple string = "\033[35;2m"
+	DimCyan   string = "\033[36;2m"
 )
 
 // Preset colors for use in the logger's Colorize function

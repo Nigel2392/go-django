@@ -5,11 +5,22 @@ import (
 
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
+	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/templates"
 	"gorm.io/gorm"
 )
+
+// Application flags.
+//
+// These are flags which can be added to the application.
+//
+// They exist to centralize the flags used by the application,
+// and possibly other packages.
+func (a *Application) Flags() *flag.Flags {
+	return a.flags
+}
 
 // Add functions to the template.
 func (a *Application) TemplateFuncs(t template.FuncMap) {

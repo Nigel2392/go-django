@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/core/db"
+	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/go-django/forms/validators"
 
 	"github.com/Nigel2392/router/v3/request"
@@ -49,7 +50,7 @@ var (
 )
 
 // Initialize the auth package.
-func Init(pool db.Pool[*gorm.DB]) {
+func Init(pool db.Pool[*gorm.DB], flags *flag.Flags) {
 	var database = db.GetDefaultDatabase(DB_KEY, pool)
 	auth_db = database.DB()
 	database.Register(
@@ -59,6 +60,9 @@ func Init(pool db.Pool[*gorm.DB]) {
 	)
 
 	database.AutoMigrate()
+
+	// Register the createsuperuser command.
+	flags.RegisterCommand(CreateSuperUserCommand)
 }
 
 // Create a new unauthenticated used, with the login field set to the login parameter.

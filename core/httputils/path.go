@@ -23,7 +23,21 @@ func DirFromPath(p string) string {
 	p = strings.ReplaceAll(p, "\\", "/")
 	var parts = strings.Split(p, "/")
 	parts = parts[:len(parts)-1]
-	return strings.Join(parts, "/")
+	var pathParts []string
+	for i, part := range parts {
+		if part == "" {
+			if i == 0 {
+				pathParts = append(pathParts, "/")
+			}
+			continue
+		}
+		pathParts = append(pathParts, part)
+	}
+	var path = strings.Join(pathParts, "/")
+	if path == "" {
+		path = "/"
+	}
+	return path
 }
 
 // NameFromPath gets the filename from a path and removes the extension

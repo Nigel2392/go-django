@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
+	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/go-django/core/secret"
 	"github.com/Nigel2392/go-django/logger"
@@ -125,6 +126,8 @@ type Application struct {
 
 	initted bool
 	config  *Config
+
+	flags *flag.Flags
 }
 
 func New(c Config) *Application {
@@ -169,9 +172,16 @@ func New(c Config) *Application {
 		defaultDatabase: config.DBConfig,
 		Pool:            db.NewPool(config.DBConfig),
 		Logger:          logger.NewLogger(logger.INFO),
+		flags:           flag.NewFlags("Go-Django", flag.ExitOnError),
 	}
+	a.flags.Info = `Go-Django is a web framework written in Go.
+It is inspired by the Django web framework for Python.
+This is Go-Django's default command line interface.`
 
-	auth.Init(a.Pool)
+	__app = a
+	a.initted = true
+
+	auth.Init(a.Pool, a.flags)
 
 	if config.File != nil {
 		a.config.File.Init()
@@ -185,8 +195,6 @@ func New(c Config) *Application {
 
 	response.TEMPLATE_MANAGER = a.config.Templates
 
-	// Define that the app has been initialized.
-	__app = a
 	return a
 }
 
@@ -251,8 +259,11 @@ func (a *Application) setupRouter() {
 // This will start the server and listen for requests.
 // If the server is running in SSL mode, this will also start a redirect server.
 func (a *Application) Run() error {
-	// Run flags
-	auth.CreateSuperUserFlag()
+	if !a.initted {
+		panic("You must call Init() before calling Run()")
+	}
+
+	a.flags.Run()
 
 	if a.config.Templates != nil {
 		var funcMap = make(template.FuncMap)
