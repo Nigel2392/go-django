@@ -10,7 +10,6 @@ import (
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/httputils"
 	"github.com/Nigel2392/go-django/core/httputils/orderedmap"
-	"github.com/Nigel2392/go-django/logger"
 	"gorm.io/gorm"
 
 	"github.com/Nigel2392/router/v3"
@@ -24,80 +23,68 @@ import (
 // This function has to be called before any other admin functions.
 //
 // This will set up the adminsite for use.
-func Initialize(name string, url string, p db.Pool[*gorm.DB], l ...request.Logger) {
-	// Set up the adminsite
-	AdminSite_Name = name
-	AdminSite_URL = url
-	AdminSite_DB_POOL = p
-	if len(l) > 0 {
-		AdminSite_Logger = l[0]
-	} else {
-		AdminSite_Logger = logger.NewLogger(logger.DEBUG, name+" ")
-	}
-
-	var admin_db_item = db.GetDefaultDatabase(auth.DB_KEY, p)
-
-	admin_db = admin_db_item.DB()
-	admin_db_item.Register(
+func (as *AdminSite) Init() {
+	var asDB = as.DB()
+	asDB.Register(
 		&Log{},
 		&LoggableUser{},
 	)
-	var err = admin_db_item.AutoMigrate()
+	var err = asDB.AutoMigrate()
 	if err != nil {
 		panic(err)
 	}
-
+	as.templateManager().TEMPLATEFS = templateFS
 	// Register the default admin site permissions.
-	PermissionViewAdminSite.Save(admin_db)
-	PermissionViewAdminInternal.Save(admin_db)
-	PermissionViewAdminExtensions.Save(admin_db)
+	PermissionViewAdminSite.Save(asDB.DB())
+	PermissionViewAdminInternal.Save(asDB.DB())
+	PermissionViewAdminExtensions.Save(asDB.DB())
 
 	// Register internal apps.
 	// (Logs, etc...)
-	var internalApp = internal_menu_items()
+	var internalApp = as.internal_menu_items()
 
 	// Register default URLs.
-	adminSite = router.Group(url, "admin")
-	adminSite.Get("/unauthorized", unauthorizedView, "unauthorized").Use(defaultDataMiddleware)
-	adminSite.Get("/login", loginView, "login")
-	adminSite.Get("/logout", logoutView, "logout")
+	as.registrar = router.Group(as.URL, "admin")
+	as.registrar.Get("/unauthorized", as.wrapRoute(unauthorizedView), "unauthorized").Use(defaultDataMiddleware(as))
+	as.registrar.Get("/login", as.wrapRoute(loginView), "login")
+	as.registrar.Get("/logout", as.wrapRoute(logoutView), "logout")
 
 	// Register the default admin site view.
-	var rt = adminSite.(*router.Route)
+	var rt = as.registrar.(*router.Route)
 	rt.Method = router.GET
 	rt.HandlerFunc = func(r *request.Request) {
-		if !hasAdminPerms(r) {
-			Unauthorized(r, "You do not have permission to access this page.")
+		if !hasAdminPerms(as, r) {
+			Unauthorized(as, r, "You do not have permission to access this page.")
 			return
 		}
-		defaultDataFunc(r, AdminSite_Name)
-		indexView(r)
+		defaultDataFunc(as, r)
+		indexView(as, r)
 	}
 
 	// Register the default admin site static file handler.
 	var staticFileSysHTTP = http.FS(staticFileSystem)
-	adminSite.Get("/static/<<any>>",
+	as.registrar.Get("/static/<<any>>",
 		router.FromHTTPHandler(
-			http.StripPrefix(fmt.Sprintf("%s/static/", AdminSite_URL),
+			http.StripPrefix(fmt.Sprintf("%s/static/", as.URL),
 				http.FileServer(staticFileSysHTTP))).ServeHTTP,
 		"static")
 
 	// Initialize/register the internal app route.
-	internalRoutes = adminSite.Group(
-		fmt.Sprintf("/%s", InternalAppName),
+	as.internalRegistrar = as.registrar.Group(
+		fmt.Sprintf("/%s", as.InternalAppName),
 		"internal",
-		adminRequiredMiddleware,
-		defaultDataMiddleware,
-		hasPerms(PermissionViewAdminInternal),
+		adminRequiredMiddleware(as),
+		defaultDataMiddleware(as),
+		hasPerms(as, PermissionViewAdminInternal),
 	)
 
 	// Register the internal app's models.
-	for _, m := range adminSite_Internal_Models {
+	for _, m := range as.internal_models {
 		if m != nil && m.model != nil {
 			var dbItem db.PoolItem[*gorm.DB]
 			var err error
-			if dbItem, err = AdminSite_DB_POOL.Get(auth.DB_KEY); err != nil {
-				dbItem, err = AdminSite_DB_POOL.Get(db.DEFAULT_DATABASE_KEY)
+			if dbItem, err = as.DBPool.Get(auth.DB_KEY); err != nil {
+				dbItem, err = as.DBPool.Get(db.DEFAULT_DATABASE_KEY)
 				if err != nil {
 					panic(fmt.Sprintf("admin: could not get default database for %T: %s", m.model, err))
 				}
@@ -106,48 +93,54 @@ func Initialize(name string, url string, p db.Pool[*gorm.DB], l ...request.Logge
 			dbItem.DB().AutoMigrate(m.model)
 		}
 		// Register the internal views/models.
-		register_internal_model(m)
+		as.register_internal_model(m)
 	}
 
 	var internapAppChildren = internalApp.Children()
 
 	// Compare length after registering internal models.
-	if len(adminSite_Internal_Models) != len(internapAppChildren) {
+	if len(as.internal_models) != len(internapAppChildren) {
 		panic("admin: internal app models length mismatch")
 	}
 
 	// Register the internal app's models.
 	for i, menuItem := range internapAppChildren {
-		var rt = internalRoutes.Get(
+		var rt = as.internalRegistrar.Get(
 			menuItem.URL.URLPart,
 			menuItem.Data.(*internalModel).viewFunc,
 			strings.ToLower(menuItem.Name),
 		)
 
-		if adminSite_Internal_Models[i].registrar != nil {
-			rt.AddGroup(adminSite_Internal_Models[i].registrar)
+		if as.internal_models[i].registrar != nil {
+			rt.AddGroup(as.internal_models[i].registrar)
 		}
 	}
 
 }
 
+func (as *AdminSite) wrapRoute(f func(as *AdminSite, r *request.Request)) func(r *request.Request) {
+	return func(r *request.Request) {
+		f(as, r)
+	}
+}
+
 // Register a model to the admin site.
 //
 // These models will then be available in the admin site.
-func Register(m ...any) {
+func (as *AdminSite) Register(m ...any) {
 	for _, m := range m {
 		// Create the model.
-		var db, err = AdminSite_DB_POOL.ByModel(m)
+		var db, err = as.DBPool.ByModel(m)
 		if err != nil {
-			db = AdminSite_DB_POOL.GetDefaultDB()
+			db = as.DB()
 		}
-		model, err := models.NewModel(AdminSite_URL, m, db.DB())
+		model, err := models.NewModel(as.URL, m, db.DB())
 		if err != nil {
-			AdminSite_Logger.Error(err)
+			as.Logger.Error(err)
 			continue
 		}
 		// Add the model to the list of models.
-		adminSite_models = append(adminSite_models, model)
+		as.models = append(as.models, model)
 	}
 }
 
@@ -156,23 +149,23 @@ func Register(m ...any) {
 // # Extensions are separate templates that can be used to add extra functionality
 //
 // These templates are embedded into the admin site's base template.
-func RegisterExtension(ext ...extensions.Extension) {
+func (as *AdminSite) RegisterExtension(ext ...extensions.Extension) {
 	var exts = make([]extensions.Extension, 0)
 	for _, e := range ext {
 		var ok bool = true
-		for _, aE := range adminSite_Extensions {
+		for _, aE := range as.extensions {
 			ok = ok && !(aE.Name() == e.Name())
 		}
 		if ok {
 			exts = append(exts, e)
 			continue
 		}
-		AdminSite_Logger.Warningf("admin: extension %s already registered\n", e.Name())
+		as.Logger.Warningf("admin: extension %s already registered\n", e.Name())
 	}
 	for _, e := range exts {
-		register_extension(e)
+		as.register_extension(e)
 	}
-	adminSite_Extensions = append(adminSite_Extensions, exts...)
+	as.extensions = append(as.extensions, exts...)
 }
 
 // Generate a list of URL patterns for the admin site.
@@ -185,10 +178,10 @@ func RegisterExtension(ext ...extensions.Extension) {
 // In practise, you could add this to the router, and any registrar.
 //
 // Adding it to a registrar will however break the admin site's URLs.
-func URLS() router.Registrar {
+func (as *AdminSite) URLS() router.Registrar {
 
 	var packages = orderedmap.New[string, router.Registrar]()
-	for _, model := range adminSite_models {
+	for _, model := range as.models {
 		// Get the package path of the model.
 		var pkg router.Registrar
 		var ok bool
@@ -198,22 +191,22 @@ func URLS() router.Registrar {
 		}
 
 		// Create the model group.
-		var mdlRoute = pkg.Get(model.URLS.GroupPart, adminHandler(model, listView), model.Name)
+		var mdlRoute = pkg.Get(model.URLS.GroupPart, adminHandler(as, model, listView), model.Name)
 
-		mdlRoute.Get(model.URLS.Detail, adminHandler(model, detailView), "detail")
-		mdlRoute.Post(model.URLS.Detail, adminHandler(model, detailView), "detail")
+		mdlRoute.Get(model.URLS.Detail, adminHandler(as, model, detailView), "detail")
+		mdlRoute.Post(model.URLS.Detail, adminHandler(as, model, detailView), "detail")
 
-		mdlRoute.Get(model.URLS.Create, adminHandler(model, createView), "create")
-		mdlRoute.Post(model.URLS.Create, adminHandler(model, createView), "create")
+		mdlRoute.Get(model.URLS.Create, adminHandler(as, model, createView), "create")
+		mdlRoute.Post(model.URLS.Create, adminHandler(as, model, createView), "create")
 
-		mdlRoute.Get(model.URLS.Delete, adminHandler(model, deleteView), "delete")
-		mdlRoute.Post(model.URLS.Delete, adminHandler(model, deleteView), "delete")
+		mdlRoute.Get(model.URLS.Delete, adminHandler(as, model, deleteView), "delete")
+		mdlRoute.Post(model.URLS.Delete, adminHandler(as, model, deleteView), "delete")
 
 		packages.Set(model.AppName(), pkg)
 
 	}
 
-	for _, mdl := range adminSite_models {
+	for _, mdl := range as.models {
 		var pkg router.Registrar
 		var ok bool
 		pkg, ok = packages.GetOK(mdl.AppName())
@@ -223,33 +216,33 @@ func URLS() router.Registrar {
 		if !ok {
 			panic("package not found")
 		}
-		adminSite.AddGroup(pkg)
+		as.registrar.AddGroup(pkg)
 		packages.Delete(mdl.AppName())
 	}
 
-	var extensionManager = AdminSite_ExtensionsManager
+	var extensionManager = as.ExtensionsManager
 	if extensionManager == nil {
 		extensionManager = response.TEMPLATE_MANAGER
 	}
 
 	var extensionViewOptions = &extensions.Options{
-		BaseManager:      adminSiteManager,
+		BaseManager:      as.templateMgr,
 		ExtensionManager: extensionManager,
 		TemplateName:     "base",
 		BlockName:        "content",
 	}
 
-	var adminSite_ExtensionRegistrar = adminSite.Group(
-		EXTENSION_URL,
+	var adminSite_ExtensionRegistrar = as.registrar.Group(
+		as.ExtensionURL,
 		"extensions",
-		adminRequiredMiddleware, defaultDataMiddleware,
+		adminRequiredMiddleware(as), defaultDataMiddleware(as),
 	)
 
 	adminSite_ExtensionRegistrar.Use(
-		hasPerms(PermissionViewAdminExtensions),
+		hasPerms(as, PermissionViewAdminExtensions),
 	)
 
-	for _, ext := range adminSite_Extensions {
+	for _, ext := range as.extensions {
 		adminSite_ExtensionRegistrar.Get(
 			fmt.Sprintf("/%s", httputils.SimpleSlugify(ext.Name())),
 			extensions.View(extensionViewOptions, ext),
@@ -257,5 +250,5 @@ func URLS() router.Registrar {
 		)
 	}
 
-	return adminSite
+	return as.registrar
 }

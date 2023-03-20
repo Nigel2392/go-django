@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Nigel2392/go-django/admin"
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/app/tool"
 	"github.com/Nigel2392/go-django/core/db"
@@ -119,11 +120,21 @@ type Config struct {
 	//	TEMPLATEFS fs.FS
 	Templates *templates.Manager
 
-	Middlewares            []router.Middleware
-	DefaultTemplateFuncs   template.FuncMap
-	AdminsiteAllowedGroups [][]string
+	Middlewares          []router.Middleware
+	DefaultTemplateFuncs template.FuncMap
+
+	// Adminsite settings
+	// Name and URL of the admin site must be set in order for it to be used.
+	Admin *admin.AdminSite
+
+	// DefaultFlags are the default flags that will be added to the application.
+	// You can add more flags by using the Application.Flags().Register() function.
+	DefaultFlags []*flag.Command
 }
 
+// Application is the main application object.
+//
+// This is used to store all the application data.
 type Application struct {
 	// The secret key for the application.
 	// This is used to encrypt, decrypt, and sign data.
@@ -148,8 +159,15 @@ type Application struct {
 	config  *Config
 
 	flags *flag.Flags
+
+	adminSite *admin.AdminSite
 }
 
+// Initialize a new application.
+//
+// This will set up the database, sessionmanager and other things.
+//
+// This is also where to register extra command-line flags.
 func New(c Config) *Application {
 	var config = &c
 	if config.Server == nil {
@@ -180,11 +198,6 @@ func New(c Config) *Application {
 		key = secret.New(config.SecretKey)
 	}
 
-	// Set up email manager.
-	if config.Mail != nil {
-		config.Mail.Init()
-	}
-
 	// Initialize the application object.
 	var a = &Application{
 		SecretKey:       key,
@@ -198,6 +211,10 @@ func New(c Config) *Application {
 It is inspired by the Django web framework for Python.
 This is Go-Django's default command line interface.`
 
+	for _, f := range config.DefaultFlags {
+		a.flags.RegisterCommand(f)
+	}
+
 	// Initialize default flags
 	a.flags.Register("startapp", "", "Initialize a new application with the given name", tool.StartApp)
 
@@ -210,6 +227,10 @@ This is Go-Django's default command line interface.`
 		a.config.File.Init()
 	}
 
+	if config.Mail != nil {
+		a.config.Mail.Init()
+	}
+
 	a.config.Templates.Init()
 
 	a.setupSessionManager()
@@ -217,6 +238,14 @@ This is Go-Django's default command line interface.`
 	a.setupRouter()
 
 	response.TEMPLATE_MANAGER = a.config.Templates
+
+	if a.config.Admin != nil && a.config.Admin.Name != "" && a.config.Admin.URL != "" {
+		var adminSiteDePtr = *a.config.Admin
+		a.adminSite = &adminSiteDePtr
+		a.adminSite.DBPool = a.Pool
+		a.adminSite.Defaults()
+		a.adminSite.Init()
+	}
 
 	return a
 }
@@ -243,8 +272,8 @@ func (a *Application) setupSessionManager() {
 	a.sessionManager = sessionManager
 }
 
+// Setup the router.
 func (a *Application) setupRouter() {
-	// Setup the router.
 	// Provide the router with some of the app's settings.
 	a.Router = router.NewRouter(true)
 	a.Router.NotFoundHandler = a.config.Server.NotFoundHandler
@@ -277,14 +306,18 @@ func (a *Application) setupRouter() {
 }
 
 // Run the application.
+//
 // This will start the server and listen for requests.
+//
 // If the server is running in SSL mode, this will also start a redirect server.
 func (a *Application) Run() error {
 	if !a.initted {
 		panic("You must call Init() before calling Run()")
 	}
 
-	a.flags.Run()
+	if !a.flags.Ran() {
+		a.flags.Run()
+	}
 
 	if a.config.Templates != nil {
 		var funcMap = make(template.FuncMap)
@@ -299,12 +332,15 @@ func (a *Application) Run() error {
 		a.config.Templates.DEFAULT_FUNCS = funcMap
 	}
 
+	a.Router.AddGroup(a.adminSite.URLS())
+
 	var server = a.server()
 	if a.config.Server.CertFile != "" && a.config.Server.KeyFile != "" {
-		go a.Redirect()
 		// SSL is true, so we will listen on the TLS port.
 		// This will also automatically redirect all HTTP requests to HTTPS.
+		go a.Redirect()
 		a.Logger.Infof("Listening on https://%s\n", server.Addr)
+
 		return server.ListenAndServeTLS(a.config.Server.CertFile, a.config.Server.KeyFile)
 	}
 	a.Logger.Infof("Listening on http://%s\n", server.Addr)
@@ -326,9 +362,11 @@ func (a *Application) server() *http.Server {
 }
 
 // Set up a redirect server to redirect all HTTP requests to HTTPS.
+//
 // This is only used if the SSL config is set to true.
 func (a *Application) Redirect() error {
 	// SSL is true, so we will listen on the TLS port.
+	//
 	// This will also automatically redirect all HTTP requests to HTTPS.
 	if a.config.RedirectServer == nil {
 		var errMsg = "You must specify a redirect server configuration."
@@ -337,10 +375,18 @@ func (a *Application) Redirect() error {
 		return errors.New(errMsg)
 	}
 	// If a redirect server is specified, we will run that in a goroutine.
+	//
 	// This will redirect all HTTP requests to the HTTPS server.
 	var s = &http.Server{
 		Addr:    fmt.Sprintf("%s:%d", a.config.RedirectServer.Host, a.config.RedirectServer.Port),
 		Handler: http.RedirectHandler(a.config.RedirectServer.URL, a.config.RedirectServer.StatusCode),
 	}
 	return s.ListenAndServe()
+}
+
+func (a *Application) Register(toAdmin bool, key db.DATABASE_KEY, models ...any) {
+	a.Pool.Register(key, models...)
+	if toAdmin && a.adminSite != nil {
+		a.adminSite.Register(models...)
+	}
 }

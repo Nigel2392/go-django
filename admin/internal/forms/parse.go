@@ -30,7 +30,7 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 	if !id.IsZero() {
 		newModel = reflect.New(t).Interface()
 		if err := db.First(newModel, id).Error; err != nil {
-			return nil, err
+			return nil, errors.New("could not find model: " + err.Error())
 		}
 	}
 
@@ -82,7 +82,7 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			}
 			var hash, err = auth.BcryptHash(value[0])
 			if err != nil {
-				return nil, err
+				return nil, errors.New("failed to hash field: " + err.Error())
 			}
 			value[0] = string(hash)
 		}
@@ -96,7 +96,7 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			// Check if the struct field implements .FieldValidator
 			var err = validateModelField(modelField, checked)
 			if err != nil {
-				return nil, err
+				return nil, errors.New("failed to validate field: " + err.Error())
 			}
 			modelField.SetBool(checked)
 		case "select":
@@ -139,7 +139,7 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			// Validate the field
 			var err = validateModelField(modelField, v)
 			if err != nil {
-				return nil, err
+				return nil, errors.New("failed to validate field: " + err.Error())
 			}
 
 			// Set the field
@@ -180,7 +180,7 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			// Validate the field
 			var err = validateModelField(modelField, selectedValues)
 			if err != nil {
-				return nil, err
+				return nil, errors.New("failed to validate field: " + err.Error())
 			}
 
 			// Set the field
@@ -190,8 +190,12 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			var selected = value[0]
 
 			// Check if the supplied ID is valid
+			// If it is not, skip the field.
 			if modelutils.ID(selected).IsZero() {
-				return nil, errors.New("invalid ID supplied")
+				if formField.Required {
+					return nil, errors.New("failed to parse field: " + field.Name + " is required")
+				}
+				continue
 			}
 
 			// Find the model
@@ -203,7 +207,7 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			// Validate the field
 			var err = validateModelField(modelField, selectedValue)
 			if err != nil {
-				return nil, err
+				return nil, errors.New("failed to validate field: " + err.Error())
 			}
 
 			// Set the field
@@ -238,7 +242,7 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			// Validate the field
 			var err = validateModelField(modelField, v)
 			if err != nil {
-				return nil, err
+				return nil, errors.New("failed to validate field: " + err.Error())
 			}
 
 			// Set the field
@@ -257,7 +261,7 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			// Validate the field
 			err = validateModelField(modelField, numberValue)
 			if err != nil {
-				return nil, err
+				return nil, errors.New("failed to validate field: " + err.Error())
 			}
 
 			// Set the field
@@ -272,7 +276,7 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			// Validate the field
 			err = validateModelField(modelField, dateValue)
 			if err != nil {
-				return nil, err
+				return nil, errors.New("failed to validate field: " + err.Error())
 			}
 
 			// Set the field
@@ -287,7 +291,7 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			// Validate the field
 			err = validateModelField(modelField, dateValue)
 			if err != nil {
-				return nil, err
+				return nil, errors.New("failed to validate field: " + err.Error())
 			}
 
 			// Set the field
@@ -302,7 +306,7 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 			// Validate the field
 			err = validateModelField(modelField, durationValue)
 			if err != nil {
-				return nil, err
+				return nil, errors.New("failed to validate field: " + err.Error())
 			}
 
 			// Set the field

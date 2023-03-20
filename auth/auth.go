@@ -239,8 +239,3 @@ func HasPerms(user *User, permissions ...*Permission) bool {
 	// Return true if the user has all of the permissions
 	return user.HasPerms(permissions...)
 }
-
-// Verify that a user has the given group
-func HasGroup(user *User, groupName string) bool {
-	return user.HasGroup(groupName)
-}

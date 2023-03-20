@@ -6,7 +6,6 @@ import (
 
 	"github.com/Nigel2392/go-django/admin/internal/paginator"
 	"github.com/Nigel2392/go-django/auth"
-	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/httputils"
 	"github.com/Nigel2392/go-django/core/httputils/orderedmap"
 	"github.com/Nigel2392/go-django/core/modelutils"
@@ -44,7 +43,7 @@ const (
 
 // LoggableUser is a user that can be logged.
 type LoggableUser struct {
-	ID       int64 `gorm:"primaryKey;autoIncrement;column:id;type:bigint;"`
+	gorm.Model
 	UserID   int64 `gorm:"column:user_id;type:bigint;"`
 	Username string
 	Email    string
@@ -177,23 +176,23 @@ func (l *Log) String() string {
 
 // Save the log.
 // Errors will be logged to the AdminSite_Logger automatically.
-func (l *Log) Save() error {
-	var dbItem, err = AdminSite_DB_POOL.ByModel(&Log{})
+func (l *Log) Save(a *AdminSite) error {
+	var dbItem, err = a.DBPool.ByModel(&Log{})
 	if dbItem == nil || err != nil {
-		AdminSite_Logger.Critical(err)
+		a.Logger.Critical(err)
 		return err
 	}
 	err = dbItem.DB().Save(l).Error
 	if err != nil {
-		AdminSite_Logger.Critical(err)
+		a.Logger.Critical(err)
 	}
 	return err
 }
 
-func ModelLog(user *auth.User, model any, action LogAction) *Log {
+func ModelLog(as *AdminSite, user *auth.User, model any, action LogAction) *Log {
 	var err = user.Refresh()
 	if err != nil {
-		AdminSite_Logger.Critical(err)
+		as.Logger.Critical(err)
 	}
 
 	modelID := modelutils.GetID(model, "ID")
@@ -217,52 +216,54 @@ func SimpleLog(user *auth.User, action LogAction) *Log {
 	return l
 }
 
-func logView(rq *request.Request) {
-	var template, name, err = adminSiteManager.Get("admin/internal/log.tmpl")
-	if err != nil {
-		rq.Error(500, err.Error())
-		return
-	}
+func logView(as *AdminSite) func(rq *request.Request) {
+	return func(rq *request.Request) {
+		var template, name, err = as.templateMgr.Get("admin/internal/log.tmpl")
+		if err != nil {
+			rq.Error(500, err.Error())
+			return
+		}
+		var db = as.DB().DB()
+		var logs = make([]*Log, 0)
+		var page, limit, redirected = paginator.PaginateRequest(rq, &Log{}, as.registrar.URL(router.GET, "admin:internal:log").Format(), db,
+			map[string]string{"search": rq.Request.URL.Query().Get("search")})
+		if redirected {
+			return
+		}
 
-	var logs = make([]*Log, 0)
-	var page, limit, redirected = paginator.PaginateRequest(rq, &Log{}, adminSite.URL(router.GET, "admin:internal:log").Format(), db.GetDefaultDatabase(auth.DB_KEY, AdminSite_DB_POOL).DB(),
-		map[string]string{"search": rq.Request.URL.Query().Get("search")})
-	if redirected {
-		return
-	}
+		var tx = db.Order("created_at desc")
+		// Get query params
+		var searchQuery = rq.Request.URL.Query().Get("search")
+		// Search the database
+		if searchQuery != "" {
+			tx = (&Log{}).AdminSearch(searchQuery, tx)
+		}
+		// Paginate the results
+		tx = paginator.PaginateDB(page, limit)(tx)
+		tx.Preload("User")
+		tx.Find(&logs)
 
-	var tx = db.GetDefaultDatabase(auth.DB_KEY, AdminSite_DB_POOL).DB().Order("created_at desc")
-	// Get query params
-	var searchQuery = rq.Request.URL.Query().Get("search")
-	// Search the database
-	if searchQuery != "" {
-		tx = (&Log{}).AdminSearch(searchQuery, tx)
-	}
-	// Paginate the results
-	tx = paginator.PaginateDB(page, limit)(tx)
-	tx.Preload("User")
-	tx.Find(&logs)
+		rq.Data.Set("logs", logs)
+		rq.Data.Set("current_url", rq.Request.URL.String())
+		rq.Data.Set("limit_choices", []int{10, 25, 50, 100})
+		rq.Data.Set("limit", limit)
 
-	rq.Data.Set("logs", logs)
-	rq.Data.Set("current_url", rq.Request.URL.String())
-	rq.Data.Set("limit_choices", []int{10, 25, 50, 100})
-	rq.Data.Set("limit", limit)
+		rq.Data.Set("has_search", true)
 
-	rq.Data.Set("has_search", true)
-
-	err = response.RenderTemplate(rq, template, name)
-	if err != nil {
-		if rq.Logger != nil {
-			rq.Logger.Critical(err)
+		err = response.RenderTemplate(rq, template, name)
+		if err != nil {
+			if rq.Logger != nil {
+				rq.Logger.Critical(err)
+			}
 		}
 	}
 }
 
-func logGroup() router.Registrar {
+func logGroup(as *AdminSite) router.Registrar {
 	var rt = router.Group("/download", "download")
 	rt.Get("", func(r *request.Request) {
 		var logs []*Log = make([]*Log, 0)
-		db.GetDefaultDatabase(auth.DB_KEY, AdminSite_DB_POOL).DB().Model(Log{}).Preload("User.Groups").Find(&logs)
+		as.DB().DB().Model(Log{}).Preload("User").Find(&logs)
 		var json, err = httputils.Jsonify(logs, 2)
 		if err != nil {
 			r.Error(500, err.Error())

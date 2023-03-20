@@ -166,16 +166,19 @@ func (f *Form) Process(r *request.Request, db *gorm.DB) (any, bool, error) {
 	}
 	var m, err = f.submit(kv, db, r)
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.New("failed to submit form: " + err.Error())
 	}
 
 	created, err := f.Save(db)
 	if err != nil {
-		return nil, false, err
+		return nil, false, errors.New("failed to save form: " + err.Error())
 	}
 
 	m = modelutils.NewPtr(f.Model).Interface()
-	db.First(m, modelutils.GetID(f.Model, "ID"))
+	err = db.First(m, modelutils.GetID(f.Model, "ID")).Error
+	if err != nil {
+		return nil, false, errors.New("failed to get model: " + err.Error())
+	}
 
 	return m, created, nil
 }

@@ -1,17 +1,14 @@
 package fs
 
 import (
-	"bytes"
 	"errors"
+	"io"
 	"io/fs"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/Nigel2392/go-django/core/httputils"
 
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/templates"
@@ -36,11 +33,12 @@ type Manager struct {
 	FS_MEDIA_URL       string
 	fs_STATICFILES     fs.FS
 	fs_MEDIAFILES      fs.FS
-	_QUEUE             chan *FileQueueItem
+	_QUEUE             chan FileQueueItem
 	FS_FILE_QUEUE_SIZE int
 
-	OnReadFromMedia func(path string, buf *bytes.Buffer)
-	OnWriteToMedia  func(path string, b []byte)
+	NewFileFunc     func(path string, r io.Reader) FileQueueItem
+	OnReadFromMedia func(path string, r io.Reader)
+	OnWriteToMedia  func(path string, r io.Reader)
 
 	staticRegistrar router.Registrar
 	mediaRegistrar  router.Registrar
@@ -49,49 +47,36 @@ type Manager struct {
 func (fm *Manager) Init() {
 	fm.fs_STATICFILES = os.DirFS(fm.FS_STATIC_ROOT)
 	fm.fs_MEDIAFILES = os.DirFS(fm.FS_MEDIA_ROOT)
-	fm._QUEUE = make(chan *FileQueueItem, fm.FS_FILE_QUEUE_SIZE)
+	fm._QUEUE = make(chan FileQueueItem, fm.FS_FILE_QUEUE_SIZE)
 
 	go fm.worker()
 }
 
-func (fm *Manager) AsStaticURL(path string) string {
-	return templates.NicePath(false, fm.FS_STATIC_URL, path)
-}
-
-func (fm *Manager) AsMediaURL(path string) string {
-	return templates.NicePath(false, fm.FS_MEDIA_URL, path)
-}
-
-type FileQueueItem struct {
-	path     string
-	data     []byte
-	err      chan error
-	pathChan chan string
-}
-
-func newFile(path string, data []byte) *FileQueueItem {
-	return &FileQueueItem{
-		path:     path,
-		data:     data,
-		err:      make(chan error, 1),
-		pathChan: make(chan string, 1),
+func (fm *Manager) WriteToMedia(path string, r io.Reader) (string, error) {
+	if path == "" {
+		return "", errors.New("path is empty")
 	}
-}
-
-func (fm *Manager) WriteToMedia(path string, data []byte) (string, error) {
-	var item = newFile(path, data)
+	path = strings.Replace(path, "\\", "/", -1)
+	if len(strings.Split(path, "/")) <= 1 {
+		return "", errors.New("path is invalid")
+	}
+	var item FileQueueItem
+	if fm.NewFileFunc != nil {
+		item = fm.NewFileFunc(path, r)
+	} else {
+		item = newFile(path, r)
+	}
 	fm._QUEUE <- item
-	defer close(item.err)
-	defer close(item.pathChan)
+	defer item.Close()
 	select {
-	case err := <-item.err:
+	case err := <-item.Err():
 		return "", err
-	case path := <-item.pathChan:
+	case path := <-item.PathChan():
 		return path, nil
 	}
 }
 
-func (fm *Manager) ReadFromMedia(path string) (*bytes.Buffer, error) {
+func (fm *Manager) ReadFromMedia(path string) (io.ReadCloser, error) {
 	var mediaFS = fm.fs_MEDIAFILES
 	if mediaFS == nil {
 		return nil, errors.New("no media file system")
@@ -104,24 +89,18 @@ func (fm *Manager) ReadFromMedia(path string) (*bytes.Buffer, error) {
 		return nil, err
 	}
 
-	// Read the file
-	var buffer = new(bytes.Buffer)
-	_, err = buffer.ReadFrom(file)
-	if err != nil {
-		return nil, err
-	}
-
 	// Hook for when reading from media.
 	if fm.OnReadFromMedia != nil {
-		fm.OnReadFromMedia(nice_path, buffer)
+		fm.OnReadFromMedia(nice_path, file)
 	}
 
-	return buffer, nil
+	return file, nil
 }
 
 func (fm *Manager) worker() {
-	var maxGoroutines = 10
+	var maxGoroutines = 6
 	var guard = make(chan struct{}, maxGoroutines)
+	defer close(guard)
 	for {
 		guard <- struct{}{}
 		go func() {
@@ -131,101 +110,53 @@ func (fm *Manager) worker() {
 	}
 }
 
-func (fm *Manager) writeFile(fileItem *FileQueueItem) {
+func (fm *Manager) writeFile(fileItem FileQueueItem) {
 	var mediaFS = fm.fs_MEDIAFILES
 	if mediaFS == nil {
-		fileItem.err <- errors.New("no media file system")
+		fileItem.Err() <- errors.New("no media file system")
 		return
 	}
-	var nice_path = templates.NicePath(false, fm.FS_MEDIA_ROOT, fileItem.path)
 
+	var nice_path = templates.NicePath(false, fm.FS_MEDIA_ROOT, fileItem.Path())
 	if len(nice_path) > 255 {
-		fileItem.err <- errors.New("path too long: " + nice_path)
+		fileItem.Err() <- errors.New("path too long: " + nice_path)
 		return
 	}
 
 	// Validate path
 	var cleaned = strings.ReplaceAll(filepath.Clean(nice_path), "\\", "/")
 	if cleaned != nice_path {
-		fileItem.err <- errors.New("path not clean")
+		fileItem.Err() <- errors.New("path not clean")
 	}
 
 	// Check if path is in media root
 	if nice_path[:len(fm.FS_MEDIA_ROOT)] != fm.FS_MEDIA_ROOT {
-		fileItem.err <- errors.New("path not in media root")
+		fileItem.Err() <- errors.New("path not in media root")
 	}
 
 	// Check if file exists
-	if _, err := fs.Stat(mediaFS, fileItem.path); !errors.Is(err, fs.ErrNotExist) {
-		var filename = templates.FilenameFromPath(fileItem.path)
-		fileItem.path = filepath.Dir(fileItem.path)
+	if _, err := fs.Stat(mediaFS, fileItem.Path()); err == nil || (err != nil && !errors.Is(err, fs.ErrNotExist)) {
+		var filename = templates.FilenameFromPath(fileItem.Path())
 		var uniqueTime = strconv.FormatInt(time.Now().UnixMicro(), 10)
 		filename = uniqueTime + "_" + filename
-		fileItem.path = templates.NicePath(false, fileItem.path, filename)
+		fileItem.SetPath(templates.NicePath(false, filepath.Dir(fileItem.Path()), filename))
 		fm.writeFile(fileItem)
 		return
 	}
 
 	// Hook for when the file is written to the media
 	if fm.OnWriteToMedia != nil {
-		fm.OnWriteToMedia(nice_path, fileItem.data)
+		fm.OnWriteToMedia(nice_path, fileItem)
 	}
 
-	if err := createFile(nice_path, fileItem.data); err != nil {
-		fileItem.err <- err
+	if err := createFile(nice_path, fileItem); err != nil {
+		fileItem.Err() <- err
 	} else {
-		fileItem.pathChan <- nice_path
+		fileItem.PathChan() <- nice_path
 	}
 }
 
-// Return the default registrars for the routes.
-// If the registrars are already set, they will be returned.
-func (fm *Manager) Registrars() (router.Registrar, router.Registrar) {
-	var StaticRegistrar router.Registrar
-	var MediaRegistrar router.Registrar
-
-	if fm.staticRegistrar != nil || fm.mediaRegistrar != nil {
-		return fm.staticRegistrar, fm.mediaRegistrar
-	}
-
-	// Register staticfiles
-	if fm.fs_STATICFILES != nil {
-		var static_url = templates.NicePath(false, "/", fm.FS_STATIC_URL, "/<<any>>")
-		StaticRegistrar = router.Group(
-			static_url, "static",
-		)
-		var r = StaticRegistrar.(*router.Route)
-		r.Method = router.GET
-		r.HandlerFunc = router.FromHTTPHandler(http.StripPrefix(
-			httputils.WrapSlash(fm.FS_STATIC_URL),
-			http.FileServer(
-				http.FS(fm.fs_STATICFILES),
-			),
-		)).ServeHTTP
-	}
-	// Register mediafiles
-	if fm.fs_MEDIAFILES != nil {
-		var media_url = templates.NicePath(false, "/", fm.FS_MEDIA_URL, "/<<any>>")
-		MediaRegistrar = router.Group(
-			media_url, "media",
-		)
-		var r = MediaRegistrar.(*router.Route)
-		r.Method = router.GET
-		r.HandlerFunc = router.FromHTTPHandler(http.StripPrefix(
-			httputils.WrapSlash(fm.FS_MEDIA_URL),
-			http.FileServer(
-				http.FS(fm.fs_MEDIAFILES),
-			),
-		)).ServeHTTP
-	}
-
-	fm.staticRegistrar = StaticRegistrar
-	fm.mediaRegistrar = MediaRegistrar
-
-	return StaticRegistrar, MediaRegistrar
-}
-
-func createFile(path string, data []byte) error {
+func createFile(path string, wr io.Reader) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 		return err
 	}
@@ -234,6 +165,8 @@ func createFile(path string, data []byte) error {
 		return err
 	}
 	defer file.Close()
-	_, err = file.Write(data)
-	return err
+	if _, err := io.Copy(file, wr); err != nil {
+		return err
+	}
+	return nil
 }

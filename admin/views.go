@@ -16,19 +16,19 @@ import (
 	"gorm.io/gorm"
 )
 
-func indexView(rq *request.Request) {
-	var template, name, err = adminSiteManager.Get("admin/templates/index.tmpl")
+func indexView(as *AdminSite, rq *request.Request) {
+	var template, name, err = as.templateManager().Get("admin/templates/index.tmpl")
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 
 	var logs []*Log = make([]*Log, 0)
-	dbItem, err := AdminSite_DB_POOL.ByModel(&Log{})
+	dbItem, err := as.DBPool.ByModel(&Log{})
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 	var db = dbItem.DB()
@@ -41,27 +41,27 @@ func indexView(rq *request.Request) {
 
 	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error rendering template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error rendering template", 500, err)
 	}
 }
 
-func listView(mdl *models.Model, rq *request.Request) {
-	if !checkPermission(rq.User, mdl.Permissions.View(), mdl.Permissions.List()) {
-		Unauthorized(rq, "You do not have permission to view this page.")
+func listView(as *AdminSite, mdl *models.Model, rq *request.Request) {
+	if !as.checkPermission(rq.User, mdl.Permissions.View(), mdl.Permissions.List()) {
+		Unauthorized(as, rq, "You do not have permission to view this page.")
 		return
 	}
-	var template, name, err = adminSiteManager.Get("admin/templates/list.tmpl")
+	var template, name, err = as.templateManager().Get("admin/templates/list.tmpl")
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 
-	db, err := AdminSite_DB_POOL.ByModel(mdl.Mdl)
+	db, err := as.DBPool.ByModel(mdl.Mdl)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 
@@ -94,7 +94,7 @@ func listView(mdl *models.Model, rq *request.Request) {
 		return tx
 	})
 
-	var model_data = tableDataFromModel(mdl.Mdl, models)
+	var model_data = as.tableDataFromModel(mdl.Mdl, models)
 	rq.Data.Set("model", mdl)
 	rq.Data.Set("model_data", model_data)
 	rq.Data.Set("has_search", hasSearch)
@@ -107,27 +107,27 @@ func listView(mdl *models.Model, rq *request.Request) {
 
 	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error rendering template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error rendering template", 500, err)
 	}
 }
 
-func detailView(mdl *models.Model, rq *request.Request) {
-	if !checkPermission(rq.User, mdl.Permissions.View()) {
-		Unauthorized(rq, "You do not have permission to view this page.")
+func detailView(as *AdminSite, mdl *models.Model, rq *request.Request) {
+	if !as.checkPermission(rq.User, mdl.Permissions.View()) {
+		Unauthorized(as, rq, "You do not have permission to view this page.")
 		return
 	}
-	var template, name, err = adminSiteManager.Get("admin/templates/detail.tmpl")
+	var template, name, err = as.templateManager().Get("admin/templates/detail.tmpl")
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 
-	db, err := AdminSite_DB_POOL.ByModel(mdl.Mdl)
+	db, err := as.DBPool.ByModel(mdl.Mdl)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 
@@ -137,14 +137,14 @@ func detailView(mdl *models.Model, rq *request.Request) {
 	var tx = db.DB().Model(m)
 	tx, err = id.Switch(m, "ID", tx)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading model", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading model", 500, err)
 		return
 	}
 	err = tx.First(m).Error
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading model", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading model", 500, err)
 		return
 	}
 
@@ -154,27 +154,27 @@ func detailView(mdl *models.Model, rq *request.Request) {
 			fmt.Sprintf("admin:%s:%s:detail", mdl.AppName(), mdl.Name),
 		).Format(id)), rq, db.DB(), m)
 
-	if !checkPermission(rq.User, mdl.Permissions.Update()) {
+	if !as.checkPermission(rq.User, mdl.Permissions.Update()) {
 		form.Disable()
 	}
 
 	if rq.Method() == "POST" {
 		var s, created, err = form.Process(rq, db.DB())
 		if err != nil {
-			AdminSite_Logger.Critical(err)
+			as.Logger.Critical(err)
 			goto renderTemplate
 		} else {
 			_ = s
 			var log *Log
 			if created {
-				log = ModelLog(rq.User.(*auth.User), form.Model, LogActionCreate)
+				log = ModelLog(as, rq.User.(*auth.User), form.Model, LogActionCreate)
 			} else {
-				log = ModelLog(rq.User.(*auth.User), form.Model, LogActionUpdate)
+				log = ModelLog(as, rq.User.(*auth.User), form.Model, LogActionUpdate)
 				log.Meta.Set("updated_fields", form.UpdatedFields)
 			}
-			err = log.Save()
+			err = log.Save(as)
 			if err != nil {
-				AdminSite_Logger.Critical(err)
+				as.Logger.Critical(err)
 			}
 
 			rq.Data.AddMessage("success", "Successfully updated model")
@@ -189,27 +189,27 @@ renderTemplate:
 
 	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error rendering template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error rendering template", 500, err)
 	}
 }
 
-func createView(mdl *models.Model, rq *request.Request) {
-	if !checkPermission(rq.User, mdl.Permissions.Create()) {
-		Unauthorized(rq, "You do not have permission to view this page.")
+func createView(as *AdminSite, mdl *models.Model, rq *request.Request) {
+	if !as.checkPermission(rq.User, mdl.Permissions.Create()) {
+		Unauthorized(as, rq, "You do not have permission to view this page.")
 		return
 	}
-	var template, name, err = adminSiteManager.Get("admin/templates/create.tmpl")
+	var template, name, err = as.templateManager().Get("admin/templates/create.tmpl")
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Could not load template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Could not load template", 500, err)
 		return
 	}
 
-	db, err := AdminSite_DB_POOL.ByModel(mdl.Mdl)
+	db, err := as.DBPool.ByModel(mdl.Mdl)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 
@@ -223,27 +223,27 @@ func createView(mdl *models.Model, rq *request.Request) {
 	if rq.Method() == "POST" {
 		var s, created, err = form.Process(rq, db.DB())
 		if err != nil {
-			AdminSite_Logger.Critical(err)
+			as.Logger.Critical(err)
 			goto renderTemplate
 		} else {
 			_ = s
 			if err != nil {
-				AdminSite_Logger.Critical(err)
-				renderError(rq, "Could not create model", 500, err)
+				as.Logger.Critical(err)
+				renderError(as, rq, "Could not create model", 500, err)
 				return
 			}
 			var log *Log
 			if created {
-				log = ModelLog(rq.User.(*auth.User), form.Model, LogActionCreate)
+				log = ModelLog(as, rq.User.(*auth.User), form.Model, LogActionCreate)
 			} else {
-				log = ModelLog(rq.User.(*auth.User), form.Model, LogActionUpdate)
+				log = ModelLog(as, rq.User.(*auth.User), form.Model, LogActionUpdate)
 				if form.UpdatedFields != nil {
 					log.Meta.Set("updated_fields", form.UpdatedFields)
 				}
 			}
-			var url, _, _ = getAdminDetailURL(form.Model, modelutils.GetID(form.Model, "ID"))
+			var url, _, _ = as.getAdminDetailURL(form.Model, modelutils.GetID(form.Model, "ID"))
 			log.Meta.Set("url", url)
-			log.Save()
+			log.Save(as)
 
 			rq.Data.AddMessage("success", "Successfully created model")
 			rq.Redirect(rq.URL(router.GET, fmt.Sprintf("admin:%s:%s:list", mdl.AppName(), mdl.Name)).Format(), 302)
@@ -257,28 +257,28 @@ renderTemplate:
 
 	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error rendering template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error rendering template", 500, err)
 	}
 }
 
-func deleteView(mdl *models.Model, rq *request.Request) {
-	if !checkPermission(rq.User, mdl.Permissions.Delete()) {
+func deleteView(as *AdminSite, mdl *models.Model, rq *request.Request) {
+	if !as.checkPermission(rq.User, mdl.Permissions.Delete()) {
 		rq.Error(403, "You do not have permission to view this page.")
 		return
 	}
-	var template, name, err = adminSiteManager.Get("admin/templates/delete.tmpl")
+	var template, name, err = as.templateManager().Get("admin/templates/delete.tmpl")
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 
-	dbItem, err := AdminSite_DB_POOL.ByModel(mdl.Mdl)
+	dbItem, err := as.DBPool.ByModel(mdl.Mdl)
 	var db = dbItem.DB()
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 
@@ -292,8 +292,8 @@ func deleteView(mdl *models.Model, rq *request.Request) {
 	var tx = db.Model(m)
 	tx, err = id.Switch(m, "ID", tx)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading model", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading model", 500, err)
 		return
 	}
 	err = tx.First(m).Error
@@ -305,14 +305,14 @@ func deleteView(mdl *models.Model, rq *request.Request) {
 	if rq.Method() == "POST" {
 		var err = db.Model(mdl.New()).Unscoped().Delete("WHERE id = ?", id).Error
 		if err != nil {
-			AdminSite_Logger.Critical(err)
-			renderError(rq, "Error deleting model", 500, err)
+			as.Logger.Critical(err)
+			renderError(as, rq, "Error deleting model", 500, err)
 			return
 		}
 
-		var mLog = ModelLog(rq.User.(*auth.User), m, LogActionDelete)
+		var mLog = ModelLog(as, rq.User.(*auth.User), m, LogActionDelete)
 		mLog.Meta.Set("ID", id)
-		mLog.Save()
+		mLog.Save(as)
 
 		rq.Data.AddMessage("success", "Successfully deleted model")
 		rq.Redirect(mdl.URL(), 302)
@@ -325,12 +325,12 @@ func deleteView(mdl *models.Model, rq *request.Request) {
 
 	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error rendering template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error rendering template", 500, err)
 	}
 }
 
-func unauthorizedView(rq *request.Request) {
+func unauthorizedView(as *AdminSite, rq *request.Request) {
 	//	if hasAdminPerms(rq) {
 	//		if rq.Next() != "" {
 	//			rq.Redirect(rq.Next(), 302)
@@ -340,10 +340,10 @@ func unauthorizedView(rq *request.Request) {
 	//		return
 	//	}
 
-	var template, name, err = adminSiteManager.Get("admin/errors/unauthorized.tmpl")
+	var template, name, err = as.templateManager().Get("admin/errors/unauthorized.tmpl")
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 
@@ -353,16 +353,16 @@ func unauthorizedView(rq *request.Request) {
 
 	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error rendering template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error rendering template", 500, err)
 	}
 }
 
-func loginView(rq *request.Request) {
-	var template, name, err = adminSiteManager.Get("admin/auth/login.tmpl")
+func loginView(as *AdminSite, rq *request.Request) {
+	var template, name, err = as.templateManager().Get("admin/auth/login.tmpl")
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 
@@ -378,20 +378,20 @@ func loginView(rq *request.Request) {
 				var log = SimpleLog(auth.NewUser(login), LogActionLoginFailed)
 				log.Meta.Set("login", login)
 				log.Meta.Set("database", err.Error())
-				log.Save()
+				log.Save(as)
 
 				rq.Data.AddMessage("error", "Login failed")
-				AdminSite_Logger.Warning(err)
+				as.Logger.Warning(err)
 				rq.Redirect(rq.URL(router.GET, "admin:login").Format(), 302)
 				return
 			} else {
-				SimpleLog(user, LogActionLogin).WithIP(rq).Save()
+				SimpleLog(user, LogActionLogin).WithIP(rq).Save(as)
 				rq.Data.AddMessage("success", "Successfully logged in")
 				if rq.Next() != "" {
 					rq.Redirect(rq.Next(), 302)
 					return
 				}
-				rq.Redirect(AdminSite_URL, 302)
+				rq.Redirect(as.URL, 302)
 				return
 			}
 		} else {
@@ -399,7 +399,7 @@ func loginView(rq *request.Request) {
 			var u = auth.NewUser(login)
 			if err != nil {
 				//lint:ignore ST1005 This is a log message
-				AdminSite_Logger.Critical(fmt.Errorf("Failed to set login field: %s", err.Error()))
+				as.Logger.Critical(fmt.Errorf("Failed to set login field: %s", err.Error()))
 				u.Email = login
 				u.Username = login
 			}
@@ -409,7 +409,7 @@ func loginView(rq *request.Request) {
 			for _, err := range form.Errors {
 				log.Meta.Set(err.Name, err.FieldErr.Error())
 			}
-			log.Save()
+			log.Save(as)
 			rq.Data.AddMessage("error", "Login failed")
 			rq.Redirect(rq.URL(router.GET, "admin:login").Format(), 302)
 			return
@@ -420,24 +420,24 @@ func loginView(rq *request.Request) {
 	rq.Data.Set("form", form)
 	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error rendering template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error rendering template", 500, err)
 	}
 }
 
-func logoutView(rq *request.Request) {
-	var template, name, err = adminSiteManager.Get("admin/auth/logout.tmpl")
+func logoutView(as *AdminSite, rq *request.Request) {
+	var template, name, err = as.templateManager().Get("admin/auth/logout.tmpl")
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error loading template", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error loading template", 500, err)
 		return
 	}
 
 	if rq.User.IsAuthenticated() {
 		err = auth.Logout(rq)
 		if err != nil {
-			AdminSite_Logger.Critical(err)
-			renderError(rq, "Error logging out", 500, err)
+			as.Logger.Critical(err)
+			renderError(as, rq, "Error logging out", 500, err)
 			return
 		}
 		rq.Data.AddMessage("success", "Successfully logged out")
@@ -447,16 +447,16 @@ func logoutView(rq *request.Request) {
 	rq.Data.Set("title", "Logout")
 	err = response.RenderTemplate(rq, template, name)
 	if err != nil {
-		AdminSite_Logger.Critical(err)
-		renderError(rq, "Error rendering template.", 500, err)
+		as.Logger.Critical(err)
+		renderError(as, rq, "Error rendering template.", 500, err)
 	}
 }
 
-func renderError(rq *request.Request, err string, code int, errDetail error) {
+func renderError(as *AdminSite, rq *request.Request, err string, code int, errDetail error) {
 	rq.Response.Buffer().Reset()
-	var template, name, tErr = adminSiteManager.Get("admin/errors/errors.tmpl")
+	var template, name, tErr = as.templateManager().Get("admin/errors/errors.tmpl")
 	if tErr != nil {
-		AdminSite_Logger.Critical(tErr)
+		as.Logger.Critical(tErr)
 		rq.Error(500, http.StatusText(500))
 		return
 	}
@@ -468,7 +468,7 @@ func renderError(rq *request.Request, err string, code int, errDetail error) {
 
 	tErr = response.RenderTemplate(rq, template, name)
 	if tErr != nil {
-		AdminSite_Logger.Critical(tErr)
+		as.Logger.Critical(tErr)
 		rq.Error(500, http.StatusText(500))
 	}
 }

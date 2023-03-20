@@ -1,15 +1,16 @@
 package forms_test
 
 import (
-	"github.com/Nigel2392/go-django/forms"
 	"testing"
+
+	"github.com/Nigel2392/go-django/forms"
 )
 
 type Structie struct {
 	Name  string   `form:"label:Name:Name; placeholder:Name; required:true;"`
 	Names []string `form:"label:Names:Names; placeholder:Names; required:true;"`
 	Age   int      `form:"label:Age:Age; placeholder:Age; required:true;"`
-	Male  bool     `form:"label:Male:Male; required:true;"`
+	Male  bool     `form:"label:Male:Male; placeholder:Male; required:true;"`
 	Cash  float64  `form:"label:Cash:Cash; placeholder:Cash; required:true;"`
 }
 

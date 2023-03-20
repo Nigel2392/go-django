@@ -11,6 +11,7 @@ import (
 // This is for type assertion of the flag, but remains unused.
 type Allowed interface {
 	string | bool | int64 | int | uint64 | uint | float64
+	*string | *bool | *int64 | *int | *uint64 | *uint | *float64
 }
 
 // A wrapper for the std.FlagSet.
@@ -19,6 +20,7 @@ type Flags struct {
 	errors   ErrorMap
 	FlagSet  *flag.FlagSet
 	Info     string
+	wasRan   bool
 }
 
 // ErrorHandling is the error handling for the flag set.
@@ -74,6 +76,35 @@ func (f *Flags) Register(name string, defaultValue any, description string, hand
 	f.Commands = append(f.Commands, cmd)
 }
 
+// Register a command for a pointer to a value.
+//
+// The defaultvalue cannot be nil!
+//
+// This is for type assertion purposes.
+func (f *Flags) RegisterPtr(ptr, defaultValue any, name string, description string, handler func(v Value) error) {
+	if ptr == nil {
+		panic("ptr cannot be nil")
+	}
+	var unPtr = dePtr(ptr)
+	if defaultValue == nil {
+		defaultValue = newOf(false, unPtr)
+	}
+	if !typesEqual(unPtr, defaultValue) {
+		panic("ptr and defaultValue must be of the same type")
+	}
+	if !isPtr(ptr) {
+		panic("ptr must be a pointer")
+	}
+	var cmd *Command = &Command{
+		Name:        name,
+		Description: description,
+		Default:     defaultValue,
+		Handler:     handler,
+		value:       ptr,
+	}
+	f.Commands = append(f.Commands, cmd)
+}
+
 // Register a new command to the flag set.
 func (f *Flags) RegisterCommand(cmd *Command) {
 	f.Commands = append(f.Commands, cmd)
@@ -98,7 +129,12 @@ func (f *Flags) Run() (wasRan bool) {
 			wasRan = true || wasRan
 		}
 	}
-	return
+	f.wasRan = true
+	return wasRan
+}
+
+func (f *Flags) Ran() bool {
+	return f.wasRan
 }
 
 // Reports if the flag was present in the arguments.
@@ -160,4 +196,10 @@ func dePtr(v any) any {
 		return dePtr(reflect.ValueOf(v).Elem().Interface())
 	}
 	return v
+}
+
+// isPtr checks if the given value is a pointer.
+func isPtr(v any) bool {
+	var typeOf = reflect.TypeOf(v)
+	return typeOf.Kind() == reflect.Ptr
 }

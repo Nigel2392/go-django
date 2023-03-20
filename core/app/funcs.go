@@ -3,6 +3,7 @@ package app
 import (
 	"html/template"
 
+	"github.com/Nigel2392/go-django/admin"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/flag"
@@ -57,12 +58,12 @@ func (a *Application) Mailer() *email.Manager {
 	return a.config.Mail
 }
 
-func (a *Application) Files() *fs.Manager {
+func (a *Application) FS() *fs.Manager {
 	if !a.initted {
-		panic("You must initialize the app (call app.New(...)) before calling app.Files()")
+		panic("You must initialize the app (call app.New(...)) before calling app.FS()")
 	}
 	if a.config.File == nil {
-		panic("You must initialize the app with a file manager before calling app.Files()")
+		panic("You must initialize the app with a file manager before calling app.FS()")
 	}
 	return a.config.File
 }
@@ -75,4 +76,14 @@ func (a *Application) Templates() *templates.Manager {
 		panic("You must initialize the app with a template manager before calling app.Templates()")
 	}
 	return a.config.Templates
+}
+
+func (a *Application) Admin() *admin.AdminSite {
+	if !a.initted {
+		panic("You must initialize the app (call app.New(...)) before calling app.Admin()")
+	}
+	if a.adminSite == nil {
+		panic("You must initialize the app with an admin before calling app.Admin()")
+	}
+	return a.adminSite
 }

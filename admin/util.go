@@ -20,7 +20,7 @@ import (
 )
 
 // Generate data for the admin site's sidebar model list.
-func groupModels(m []*models.Model, r *request.Request) []*menu.Item {
+func groupModels(baseURL string, m []*models.Model, r *request.Request) []*menu.Item {
 	var menuItemMap = make(map[string]*menu.Item)
 	for _, model := range m {
 		var user = r.User.(*auth.User)
@@ -31,7 +31,7 @@ func groupModels(m []*models.Model, r *request.Request) []*menu.Item {
 		if mItem, ok := menuItemMap[model.AppName()]; !ok {
 			mItem = menu.NewItem(
 				httputils.TitleCaser.String(model.AppName()),
-				fmt.Sprintf("%s/%s", AdminSite_URL, model.AppName()),
+				fmt.Sprintf("%s/%s", baseURL, model.AppName()),
 				fmt.Sprintf("/%s", model.AppName()),
 				0,
 				make([]*models.Model, 0),
@@ -78,7 +78,7 @@ func groupModels(m []*models.Model, r *request.Request) []*menu.Item {
 
 // Get table data from a list of models.
 // This function is used to generate the table data for the list view.
-func tableDataFromModel(s any, d []any) [][]any {
+func (as *AdminSite) tableDataFromModel(s any, d []any) [][]any {
 	var data = make([][]any, 1)
 	var valueOf = reflect.ValueOf(s)
 	if valueOf.Kind() == reflect.Ptr {
@@ -152,7 +152,7 @@ func tableDataFromModel(s any, d []any) [][]any {
 
 			if modelutils.IsModelField(fieldType) {
 				var id = modelutils.GetID(fieldValue, "ID")
-				var url, _, _ = getAdminDetailURL(model, id)
+				var url, _, _ = as.getAdminDetailURL(model, id)
 				var CreatedAt = fieldValue.FieldByName("CreatedAt").Interface()
 				var UpdatedAt = fieldValue.FieldByName("UpdatedAt").Interface()
 
@@ -208,8 +208,8 @@ func tableDataFromModel(s any, d []any) [][]any {
 }
 
 // Get a model's detail URL.
-func getAdminDetailURL(m any, id interface{}) (string, string, string) {
-	var model = getModel(m)
+func (as *AdminSite) getAdminDetailURL(m any, id interface{}) (string, string, string) {
+	var model = as.getModel(m)
 	if model == nil {
 		return "", "", ""
 	}
@@ -218,9 +218,9 @@ func getAdminDetailURL(m any, id interface{}) (string, string, string) {
 }
 
 // Get a model from the admin site models.
-func getModel(m any) *models.Model {
+func (as *AdminSite) getModel(m any) *models.Model {
 	var name = namer.GetModelName(m)
-	for _, model := range adminSite_models {
+	for _, model := range as.models {
 		if name == model.Name {
 			return model
 		}
@@ -230,7 +230,7 @@ func getModel(m any) *models.Model {
 
 // Check if a user has permissions.
 // If not, log the action.
-func checkPermission(user request.User, perms ...*auth.Permission) bool {
+func (as *AdminSite) checkPermission(user request.User, perms ...*auth.Permission) bool {
 	var u, ok = user.(*auth.User)
 	if !ok {
 		return true
@@ -241,29 +241,29 @@ func checkPermission(user request.User, perms ...*auth.Permission) bool {
 		for _, perm := range perms {
 			permList = append(permList, perm.String())
 		}
-		AdminSite_Logger.Debugf("User %s does not have permission. Metadata: %v\n", u.Username, permList)
+		as.Logger.Debugf("User %s does not have permission. Metadata: %v\n", u.Username, permList)
 		var log = SimpleLog(u, LogActionUnauthorized)
 		log.Meta.Set("permissions", permList)
-		log.Save()
+		log.Save(as)
 	}
 	return hasPerm
 }
 
 // Add  default data to a request.
 // (Title, apps, internals)
-func defaultDataFunc(r *request.Request, title ...string) {
-	__defaultDataFunc(r, title...)
+func defaultDataFunc(as *AdminSite, r *request.Request, title ...string) {
+	__defaultDataFunc(as, r, title...)
 }
 
 // Add  default data to a request.
 // (Title, apps, internals)
-func __defaultDataFunc(r *request.Request, title ...string) {
-	var t = AdminSite_Name
+func __defaultDataFunc(as *AdminSite, r *request.Request, title ...string) {
+	var t = as.Name
 	if len(title) > 0 {
 		t = title[0]
 	}
 	r.Data.Set("title", t)
-	r.Data.Set("apps", adminSortedApps(r))
+	r.Data.Set("apps", as.sortedApps(r))
 }
 
 // Join a list of types into a string.
@@ -356,15 +356,15 @@ func divideFunc(a, b int) int {
 }
 
 // Retrieve the *AdminURLs URLs for a model.
-func GetAdminURLs(m any) *models.AdminURLs {
-	var model = getModel(m)
+func (as *AdminSite) GetAdminURLs(m any) *models.AdminURLs {
+	var model = as.getModel(m)
 	if model == nil {
 		return nil
 	}
 	return model.URLS
 }
 
-func adminSortedApps(r *request.Request) []*menu.Item {
+func (as *AdminSite) sortedApps(r *request.Request) []*menu.Item {
 	var appMap = orderedmap.New[string, *menu.Item]()
 	if r.User == nil {
 		return []*menu.Item{}
@@ -374,13 +374,13 @@ func adminSortedApps(r *request.Request) []*menu.Item {
 		return []*menu.Item{}
 	}
 	if user.HasPerms(PermissionViewAdminInternal) {
-		var internal_app_menu = internal_menu_items()
+		var internal_app_menu = as.internal_menu_items()
 		if len(internal_app_menu.Children()) > 0 {
 			appMap.Set(internal_app_menu.Name, internal_app_menu)
 		}
 	}
 	if user.HasPerms(PermissionViewAdminExtensions) {
-		var extension_app_menu = extensions_menu_items()
+		var extension_app_menu = as.extensions_menu_items()
 		if len(extension_app_menu.Children()) > 0 {
 			appMap.Set(extension_app_menu.Name, extension_app_menu)
 		}
@@ -389,7 +389,7 @@ func adminSortedApps(r *request.Request) []*menu.Item {
 	//	var newMenuItem = menu.NewItem("Apps", "", "", 0)
 	//	newMenuItem.Children(groupModels(adminSite_models, r)...)
 	//	appMap.Set(newMenuItem.Name, newMenuItem)
-	for _, app := range groupModels(adminSite_models, r) {
+	for _, app := range groupModels(as.URL, as.models, r) {
 		appMap.Set(app.Name, app)
 	}
 
@@ -400,7 +400,7 @@ func adminSortedApps(r *request.Request) []*menu.Item {
 	//	}
 
 	return appMap.SortBySlice(
-		ADMIN_APP_ORDER...,
+		as.AppOrder...,
 	)
 }
 

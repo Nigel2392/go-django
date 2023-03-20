@@ -21,62 +21,48 @@ type internalModel struct {
 	registrar router.Registrar
 }
 
-// The internal application menu item.
-//
-// This will only be loaded once.
-//
-// This is where models such as the admin logs will be registered.
-var __internalApp *menu.Item
-
-// The extensions application menu item.
-//
-// This will only be loaded once.
-//
-// This is where all the extensions will be registered.
-var __extensionsApp *menu.Item
-
 // The internal menu.
 //
 // Will only be loaded once.
-func internal_menu_items() *menu.Item {
-	if __internalApp != nil {
-		return __internalApp
+func (a *AdminSite) internal_menu_items() *menu.Item {
+	if a.internalApp != nil {
+		return a.internalApp
 	}
 
-	__internalApp = menu.NewItem(
-		InternalAppName,
-		fmt.Sprintf("%s/%s", AdminSite_URL, InternalAppName),
-		fmt.Sprintf("/%s", InternalAppName),
+	a.internalApp = menu.NewItem(
+		a.InternalAppName,
+		fmt.Sprintf("%s/%s", a.URL, a.InternalAppName),
+		fmt.Sprintf("/%s", a.InternalAppName),
 		0,
 	)
 
-	return __internalApp
+	return a.internalApp
 }
 
 // The extensions menu.
 //
 // Will only be loaded once.
-func extensions_menu_items() *menu.Item {
-	if __extensionsApp != nil {
-		return __extensionsApp
+func (a *AdminSite) extensions_menu_items() *menu.Item {
+	if a.extensionsApp != nil {
+		return a.extensionsApp
 	}
 
-	__extensionsApp = menu.NewItem(
-		ExtensionsAppName,
-		httputils.NicePath(false, AdminSite_URL, EXTENSION_URL),
-		httputils.NicePath(false, EXTENSION_URL),
+	a.extensionsApp = menu.NewItem(
+		a.ExtensionsAppName,
+		httputils.NicePath(false, a.URL, a.ExtensionURL),
+		httputils.NicePath(false, a.ExtensionURL),
 		0,
 	)
 
-	return __extensionsApp
+	return a.extensionsApp
 }
 
 // Register an internal model.
 //
 // This will register the model to the internal menu.
-func register_internal_model(m *internalModel) {
-	if __internalApp == nil {
-		internal_menu_items()
+func (a *AdminSite) register_internal_model(m *internalModel) {
+	if a.internalApp == nil {
+		a.internal_menu_items()
 	}
 
 	if m.perms == nil {
@@ -87,9 +73,9 @@ func register_internal_model(m *internalModel) {
 	}
 
 	var modelName = namer.GetModelName(m.model)
-	__internalApp.Children(menu.NewItem(
+	a.internalApp.Children(menu.NewItem(
 		httputils.TitleCaser.String(modelName),
-		fmt.Sprintf("%s/%s", __internalApp.URL.WholeURL, httputils.SimpleSlugify(modelName)),
+		fmt.Sprintf("%s/%s", a.internalApp.URL.WholeURL, httputils.SimpleSlugify(modelName)),
 		fmt.Sprintf("/%s", httputils.SimpleSlugify(modelName)),
 		0,
 		m,
@@ -99,15 +85,15 @@ func register_internal_model(m *internalModel) {
 // Register an extension.
 //
 // This will register the extension to the extensions menu.
-func register_extension(e extensions.Extension) {
-	if __extensionsApp == nil {
-		extensions_menu_items()
+func (a *AdminSite) register_extension(e extensions.Extension) {
+	if a.extensionsApp == nil {
+		a.extensions_menu_items()
 	}
 
 	var extensionName = e.Name()
-	__extensionsApp.Children(menu.NewItem(
+	a.extensionsApp.Children(menu.NewItem(
 		extensionName,
-		fmt.Sprintf("%s/%s", __extensionsApp.URL.WholeURL, httputils.SimpleSlugify(extensionName)),
+		fmt.Sprintf("%s/%s", a.extensionsApp.URL.WholeURL, httputils.SimpleSlugify(extensionName)),
 		fmt.Sprintf("/%s", httputils.SimpleSlugify(extensionName)),
 		0,
 	))
