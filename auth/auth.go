@@ -132,12 +132,13 @@ func Login(r *request.Request, login, password string) (user *User, err error) {
 		r.Logger.Warning("Could not validate login field: " + USER_MODEL_LOGIN_FIELD)
 	}
 
-	// Check the password strength.
-	// If the password is not strong enough, return an error.
-	if err := validators.PasswordStrength(password); err != nil {
-		SIGNAL_LOGIN_FAILED.Send(&u, err)
-		return UnAuthenticatedUser(), err
-	}
+	// Commented out due to the fact that createsuperuser does not perform this check.
+	//	// Check the password strength.
+	//	// If the password is not strong enough, return an error.
+	//	if err := validators.PasswordStrength(password); err != nil {
+	//		SIGNAL_LOGIN_FAILED.Send(&u, err)
+	//		return UnAuthenticatedUser(), err
+	//	}
 
 	// Check the database for the user.
 	err = auth_db.Where("LOWER("+USER_MODEL_LOGIN_FIELD+") = ?", strings.ToLower(login)).First(&u).Error

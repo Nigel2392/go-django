@@ -1,63 +1,66 @@
-package main
+package tool
 
-var defaultBaseHTMLTemplate = `{{define "base"}}
+var defaultBaseHTMLTemplate = `{{ define "base" }}
 <!doctype html>
 <html lang="en">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>{{block "title" .}}{{end}}</title>
-        {{if .Messages}}{{template "messages.tmpl" .Messages}}{{end}}
-        {{block "css" .}}{{end}}
+        <title>{{ block "title" . }}{{ end }}</title>
+        {{ if .Messages }}{{ template "messages.tmpl" .Messages }}{{ end }}
+        {{ block "css" . }}{{ end }}
     </head>
     <body>
-        {{block "content" .}}{{end}}
-        {{block "js" .}}{{end}}
+        {{ block "content" .}}{{ end }}
+        {{ block "js" . }}{{ end }}
     </body>
 </html>
-{{end}}`
+{{ end }}`
 
 var defaultMessagesTemplate = `<section class="messages text-center">
-{{range .}}
+{{ range . }}
 	{{ if eq .Type "success" }}
 		<div class="message bg-success removeself">
-			<div class="font-l">{{.Text}}</div>
+			<div class="font-l">{{ .Text }}</div>
 		</div>
-	{{else if eq .Type "error" }}
+	{{ else if eq .Type "error" }}
 		<div class="message bg-danger removeself">
-			<div class="font-l">{{.Text}}</div>
+			<div class="font-l">{{ .Text }}</div>
 		</div>
-	{{else if eq .Type "warning" }}
+	{{ else if eq .Type "warning" }}
 		<div class="message bg-warning removeself">
-			<div class="font-l">{{.Text}}</div>
+			<div class="font-l">{{ .Text }}</div>
 		</div>
-	{{else if eq .Type "info" }}
+	{{ else if eq .Type "info" }}
 		<div class="message bg-info removeself">
-			<div class="font-l">{{.Text}}</div>
+			<div class="font-l">{{ .Text }}</div>
 		</div>
-	{{end}}
-{{end}}
+	{{ end }}
+{{ end }}
 </section>`
 
 var defaultHTMLTemplate = `{{ template "base" . }}
 
-{{ define "title" }} {{index .Data "title"}} {{end}}
+{{ define "title" }} {{ index .Data "title" }} {{ end }}
 
-{{ define "css" }}{{end}}
+{{ define "css" }}{{ end }}
 
 {{ define "content" }}
 <h1>Index!</h1>
-{{end}}
+{{ end }}
 
-{{ define "js" }}{{end}}
-{{template "base.tmpl"}}`
+{{ define "js" }}{{ end }}
+{{ template "base.tmpl" }}`
 
 var mainTemplate = `package main
 
 import (
+	"fmt"
+
 	"github.com/Nigel2392/go-django/admin"
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/app"
+	"github.com/Nigel2392/go-django/logger"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/router/v3/request/response"
 )
@@ -95,7 +98,7 @@ func main() {
 		fmt.Println(logger.Colorize(logger.Red, fmt.Sprintf("Error creating superuser: %s", err.Error())))
 	}
 
-	var err = App.Run()
+	err = App.Run()
 	if err != nil {
 		panic(err)
 	}
@@ -198,7 +201,7 @@ var appConfig = app.Config{
 	},
 }`
 
-var env_template string = `# SECURITY WARNING: keep the secret key used in production secret!
+var Env_template string = `# SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = "SECRET-KEY-%v"
 
 # Allowed hosts.

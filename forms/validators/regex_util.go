@@ -2,6 +2,10 @@ package validators
 
 import "strings"
 
+// This type of regex parsing is also used in github.com/Nigel2392/routevars.Match()
+// It is used to parse a string and replace variables with regex
+// For example: "user/<<id:int>>" will be parsed to "user/(?P<id>[0-9]+)"
+
 const (
 	VAR_PREFIX = "<<"
 	VAR_SUFFIX = ">>"

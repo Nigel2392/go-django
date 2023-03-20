@@ -1,4 +1,4 @@
-package main
+package tool
 
 import (
 	"fmt"
@@ -49,6 +49,6 @@ func createFile(path string, f []byte) error {
 	return nil
 }
 
-func createFileStr(path string, f string) error {
+func CreateFileStr(path string, f string) error {
 	return createFile(path, []byte(f))
 }

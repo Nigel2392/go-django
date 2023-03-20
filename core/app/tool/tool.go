@@ -1,4 +1,4 @@
-package main
+package tool
 
 import (
 	"fmt"
@@ -10,26 +10,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func main() {
-	var flags = flag.NewFlags("Go-Django-Tools")
-	flags.Info = `Go-Django-Tools is a tool to help you create a new Go-Django project.`
-	flags.Register("env", "", "", func(value flag.Value) error {
-		if !value.IsZero() {
-			var env_str_generated_secret = fmt.Sprintf(env_template, uuid.New().String())
-			return createFileStr(value.String(), env_str_generated_secret)
-		}
-		return nil
-	})
-
-	flags.Register("start", "", "", startProject)
-	flags.Register("app", "", "", startApp)
-
-	if !flags.Run() {
-		fmt.Println("No flags passed")
-	}
-}
-
-func startProject(v flag.Value) error {
+func StartProject(v flag.Value) error {
 	var projectName = v.String()
 	if err := createDir(projectName); err != nil {
 		return err
@@ -59,7 +40,7 @@ func startProject(v flag.Value) error {
 	if err := createFile("src/config.go", []byte(appConfigTemplate)); err != nil {
 		return err
 	}
-	var env_str_generated_secret = fmt.Sprintf(env_template, uuid.New().String())
+	var env_str_generated_secret = fmt.Sprintf(Env_template, uuid.New().String())
 	if err := createFile(".env", []byte(env_str_generated_secret)); err != nil {
 		return err
 	}
@@ -84,7 +65,7 @@ func initGoMod(v flag.Value) error {
 	return cmd.Run()
 }
 
-func startApp(v flag.Value) error {
+func StartApp(v flag.Value) error {
 	var appName = v.String()
 	fmt.Println("Creating app: ", appName)
 	return nil

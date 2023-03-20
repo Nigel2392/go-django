@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/logger"
+	"golang.org/x/exp/slices"
 )
 
 // PrettyPrintUsage returns a function that prints the usage of the flag set
@@ -22,6 +23,9 @@ func PrettyPrintUsage(w io.Writer, f *Flags) func() {
 		if f.Info != "" && len(f.Commands) > 0 {
 			colorizer(w, logger.Blue, "Command-line flags:\n")
 		}
+		slices.SortFunc(f.Commands, func(a, b *Command) bool {
+			return a.Name < b.Name
+		})
 		for _, cmd := range f.Commands {
 			var hasDefault = isBool(cmd.Default) || !equalsNew(cmd.Default)
 			var hasDescription = cmd.Description != ""

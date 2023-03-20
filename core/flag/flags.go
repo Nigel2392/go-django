@@ -15,7 +15,7 @@ type Allowed interface {
 
 // A wrapper for the std.FlagSet.
 type Flags struct {
-	Commands []Command
+	Commands []*Command
 	errors   ErrorMap
 	FlagSet  *flag.FlagSet
 	Info     string
@@ -39,7 +39,7 @@ func NewFlags(name string, handling ...ErrorHandling) *Flags {
 	}
 
 	var f = &Flags{
-		Commands: make([]Command, 0),
+		Commands: make([]*Command, 0),
 		errors:   make(ErrorMap, 0),
 		FlagSet:  flag.NewFlagSet(name, flag.ErrorHandling(errHandler)),
 	}
@@ -65,7 +65,7 @@ func (f *Flags) Errors() ErrorMap {
 //
 // This is for type assertion purposes.
 func (f *Flags) Register(name string, defaultValue any, description string, handler func(v Value) error) {
-	var cmd Command = Command{
+	var cmd *Command = &Command{
 		Name:        name,
 		Description: description,
 		Default:     defaultValue,
@@ -75,7 +75,7 @@ func (f *Flags) Register(name string, defaultValue any, description string, hand
 }
 
 // Register a new command to the flag set.
-func (f *Flags) RegisterCommand(cmd Command) {
+func (f *Flags) RegisterCommand(cmd *Command) {
 	f.Commands = append(f.Commands, cmd)
 }
 
@@ -87,7 +87,8 @@ func (f *Flags) Run() (wasRan bool) {
 	f.FlagSet.Parse(os.Args[1:])
 	var err error
 	for i := range f.Commands {
-		if (f.shouldExecute(f.Commands[i].Name) || equalsNew(f.Commands[i].value)) ||
+		if shouldExecute(f, f.Commands[i].Name) ||
+			!equalsNew(f.Commands[i].Default) ||
 			isBool(f.Commands[i].Default) {
 
 			if err = f.Commands[i].Execute(); err != nil {
@@ -101,7 +102,7 @@ func (f *Flags) Run() (wasRan bool) {
 }
 
 // Reports if the flag was present in the arguments.
-func (f *Flags) shouldExecute(name string) bool {
+func shouldExecute(f *Flags, name string) bool {
 	found := false
 	f.FlagSet.Visit(func(f *flag.Flag) {
 		if f.Name == name {

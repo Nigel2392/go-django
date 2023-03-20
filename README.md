@@ -23,6 +23,8 @@ If you find any bugs, please report them in the github issues page.
 - [X] Sending emails
 - [X] Secret keys
 - [X] Admin panel extensions (Embed your own templates!)
+- [X] Command-line flag package
+- [X] Project-setup tool
 
 ## In progress:
 - [ ] Admin panel

@@ -716,3 +716,32 @@ button.remove:hover {
     height: 50%;
     font-size: 1.5em;
 }
+.messages {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000;
+}
+.text-center {
+    text-align: center;
+}
+.bg-success {
+    background-color: #28a745;
+    color: #fff;
+}
+.bg-danger {
+    background-color: #dc3545;
+    color: #fff;
+}
+.message {
+    padding: 10px;
+    font-size: 1.3em;
+}
+.bg-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+.removeself {
+    cursor: pointer;
+}

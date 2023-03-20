@@ -27,22 +27,16 @@ const (
 
 // Preset colors for use in the logger's Colorize function
 var (
-
 	// LogTest
 	ColorLevelTest = Purple
-
 	// LogDebug
 	ColorLevelDebug = Green
-
 	// LogInfo
 	ColorLevelInfo = Blue
-
 	// LogWarn
 	ColorLevelWarning = Yellow
-
 	// LogErr
 	ColorLevelError = Red
-
 	// No level, default switch case opt.
 	ColorNoLevel = Green
 )

@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/auth"
+	"github.com/Nigel2392/go-django/core/app/tool"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/flag"
@@ -196,6 +197,9 @@ func New(c Config) *Application {
 	a.flags.Info = `Go-Django is a web framework written in Go.
 It is inspired by the Django web framework for Python.
 This is Go-Django's default command line interface.`
+
+	// Initialize default flags
+	a.flags.Register("startapp", "", "Initialize a new application with the given name", tool.StartApp)
 
 	__app = a
 	a.initted = true
