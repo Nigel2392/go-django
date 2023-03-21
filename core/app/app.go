@@ -288,8 +288,8 @@ func (a *Application) setupRouter() {
 	a.Router.NotFoundHandler = a.config.Server.NotFoundHandler
 
 	a.Router.Use(
-		csrf.Middleware,
 		middleware.XFrameOptions(middleware.XFrameDeny),
+		csrf.Middleware,
 		middleware.AllowedHosts(a.config.AllowedHosts...),
 		scsmiddleware.SessionMiddleware(a.sessionManager),
 		auth.AddUserMiddleware(),
@@ -334,6 +334,7 @@ func (a *Application) Run() error {
 	tracer.STACKLOGGER_UNSAFE = a.DEBUG
 
 	if a.DEBUG {
+		tracer.DisallowPackage("router/.*/middleware")
 		var databases = make([]debug.DatabaseSetting, 0)
 		for _, db := range a.Pool.Databases() {
 			var settingDB = db.DB()

@@ -7,8 +7,6 @@ import (
 	"strings"
 )
 
-var AMOUNT_OF_LINES = 4
-
 type fileFrame struct {
 	data    []string
 	errLine int
@@ -18,13 +16,13 @@ func (f *fileFrame) Data() []string {
 	return f.data
 }
 
-func (c *Caller) Read() (*fileFrame, error) {
+func (c *Caller) Read(amountOfLines int) (*fileFrame, error) {
 	if !STACKLOGGER_UNSAFE {
 		return nil, errors.New("tracer.Caller: unsafe read")
 	}
 	var ff = &fileFrame{}
 	var err error
-	ff.data, ff.errLine, err = parseFile(c.File, c.Line, AMOUNT_OF_LINES)
+	ff.data, ff.errLine, err = parseFile(c.File, c.Line, amountOfLines)
 	if err != nil {
 		return nil, errors.New("tracer.Caller: " + err.Error())
 	}

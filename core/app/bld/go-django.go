@@ -19,7 +19,7 @@ func main() {
 		return nil
 	})
 
-	flags.Register("start", "", "", tool.StartProject)
+	flags.Register("startproject", "", "", tool.StartProject)
 
 	if !flags.Run() {
 		fmt.Println("No flags passed")

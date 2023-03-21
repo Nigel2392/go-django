@@ -33,7 +33,9 @@ func (as *AdminSite) Init() {
 	if err != nil {
 		panic(err)
 	}
+
 	as.templateManager().TEMPLATEFS = templateFS
+
 	// Register the default admin site permissions.
 	PermissionViewAdminSite.Save(asDB.DB())
 	PermissionViewAdminInternal.Save(asDB.DB())
@@ -44,6 +46,7 @@ func (as *AdminSite) Init() {
 	var internalApp = as.internal_menu_items()
 
 	// Register default URLs.
+	// (Login, logout, etc...)
 	as.registrar = router.Group(as.URL, "admin")
 	as.registrar.Get("/unauthorized", as.wrapRoute(unauthorizedView), "unauthorized").Use(defaultDataMiddleware(as))
 	as.registrar.Get("/login", as.wrapRoute(loginView), "login")
@@ -118,6 +121,7 @@ func (as *AdminSite) Init() {
 
 }
 
+// Wrap a route handler function.
 func (as *AdminSite) wrapRoute(f func(as *AdminSite, r *request.Request)) func(r *request.Request) {
 	return func(r *request.Request) {
 		f(as, r)
@@ -203,7 +207,6 @@ func (as *AdminSite) URLS() router.Registrar {
 		mdlRoute.Post(model.URLS.Delete, adminHandler(as, model, deleteView), "delete")
 
 		packages.Set(model.AppName(), pkg)
-
 	}
 
 	for _, mdl := range as.models {

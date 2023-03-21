@@ -7,6 +7,11 @@ import (
 	"github.com/Nigel2392/router/v3/request"
 )
 
+// Some database settings that are useful to display in the stacktrace.
+//
+// The DB_PASS field is not actually used, but is here for completeness.
+//
+// It will be displayed in the stacktrace as "********".
 type DatabaseSetting struct {
 	KEY      string
 	ENGINE   string
@@ -16,6 +21,7 @@ type DatabaseSetting struct {
 	DB_PASS  string // Will not actually be used, but is here for completeness
 }
 
+// Some application settings that are useful to display in the stacktrace.
 type AppSettings struct {
 	DEBUG  bool
 	HOST   string
@@ -36,13 +42,15 @@ type AppSettings struct {
 // app.Application.DEBUG variable to false. (This will disable it! Recommended.)
 func StacktraceMiddleware(settings *AppSettings) router.Middleware {
 	return middleware.Recoverer(func(err error, r *request.Request) {
-		var stackTrace = tracer.TraceSafe(err, 6, 5)
+		var stackTrace = tracer.TraceSafe(err, 8, 5)
 		r.Response.Clear()
 		r.WriteString("<!DOCTYPE html>\n<html>")
 		r.WriteString("<head>")
 		StyleBlock(r)
 		r.WriteString("</head>")
 		r.WriteString("<body>")
+		// Render standard error message and debug disable warning.
+		RenderStdInfo(r, stackTrace)
 		// Render a stacktrace of the error.
 		RenderStackTrace(stackTrace, r)
 		// Render additional potentially useful information.

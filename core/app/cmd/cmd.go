@@ -3,6 +3,7 @@ package cmd
 import (
 	"flag"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 
@@ -45,17 +46,60 @@ func startProject(projectName string) {
 	initGoMod(projectName)
 }
 
-func initGoMod(projectName string) {
+var GITHUB_TAG_URL = "https://api.github.com/repos/Nigel2392/go-django/tags"
+var GITHUB_REPO_URL = "https://github.com/Nigel2392/go-django"
+
+// Initialize go.mod to get the latest version of the project.
+// This only works for github repositories with tags in the following format:
+//
+//	vDIGITS.DIGITS.DIGITS
+func initGoMod(projectName string) error {
 	var name = httputils.NameFromPath(projectName)
 	var cmd = exec.Command("go", "mod", "init", "go-django/"+name)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Run()
+	if err := cmd.Run(); err != nil {
+		return err
+	}
 
-	cmd = exec.Command("go", "mod", "tidy")
+	var req, _ = http.NewRequest("GET", GITHUB_TAG_URL, nil)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		panic(err)
+	}
+	defer resp.Body.Close()
+	// Decode the tags from the github api
+	var tagList = DecodeTags(resp.Body)
+	// Get the latest version of jsext
+	var latestTag = tagList.Latest()
+
+	var extra = ""
+	if len(latestTag.Name) > 1 {
+		var prefix = latestTag.Name[0]
+		if prefix == 'v' || prefix == 'V' {
+			extra = "/" + latestTag.Name[0:1]
+		}
+	}
+
+	if err := runCmd("go", "get", GITHUB_REPO_URL+extra+"@"+latestTag.Name); err != nil {
+		return err
+	}
+	if err := runCmd("go", "mod", "tidy"); err != nil {
+		return err
+	}
+	return nil
+}
+
+// Run a system command.
+func runCmd(name string, args ...string) error {
+	var cmd = exec.Command(name, args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	cmd.Run()
+	var err = cmd.Run()
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func startApp(appName string) {

@@ -8,18 +8,18 @@ type Caller struct {
 	FunctionName string
 }
 
-func (c *Caller) isAllowed(files map[string][]*callerFunc) bool {
+func (c *Caller) isAllowed(files []string) bool {
 	if files == nil {
 		return false
 	}
-	return containsMap(files, c.File)
+	return contains(files, c.File)
 }
 
-func (c *Caller) isDisallowed(files map[string][]*callerFunc) bool {
+func (c *Caller) isDisallowed(files []string) bool {
 	if files == nil {
 		return false
 	}
-	return containsMap(files, c.File)
+	return contains(files, c.File)
 }
 
 func (c *Caller) String() string {

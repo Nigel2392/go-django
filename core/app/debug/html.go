@@ -141,26 +141,41 @@ type requestWriter interface {
 	WriteString(string) (int, error)
 }
 
-func RenderStackTrace(s tracer.ErrorType, r *request.Request) {
+func RenderStdInfo(r requestWriter, s tracer.ErrorType) {
 	r.WriteString("<div class=\"container\">")
-	Header(r, "Stack Trace")
+	Header(r, fmt.Sprintf("Error: %s", s.Error()))
 	HorizontalRuleXS(r)
-	SubHeader(r, `An error has occurred, please consider looking at this stacktrace.`)
 	Paragraph(r, `To disable this page, please set `+
 		makeBold("app.Application.DEBUG")+` to `+
 		makeBold(false)+` or (`+
 		makeBold("tracer.STACKLOGGER_UNSAFE")+` to `+
 		makeBold(false)+` after running the app.)`)
 	Paragraph(r, `Remember to always disable this page in production!`)
-	MedHeader(r, fmt.Sprintf("Error: %s", s.Error()))
+	r.WriteString("</div>")
+}
+
+func RenderStackTrace(s tracer.ErrorType, r *request.Request) {
+	r.WriteString("<div class=\"container\">")
+	MedHeader(r, "Stack Trace")
+	SubHeader(r, `An error has occurred, please consider looking at the following stacktrace.`)
 	HorizontalRuleXS(r)
-	for i, item := range s.Trace() {
+	var trace = s.Trace()
+	for i, item := range trace {
 		var errb = Error(r)
 		errb.Message(fmt.Sprintf("Error at line %s in file %s", makeBold(item.Line), makeBold(item.File)))
 		var stackItem = errb.Stack()
 		if tracer.STACKLOGGER_UNSAFE {
 			stackItem.Item(makeBold(fmt.Sprintf("In function %s", item.FunctionName)))
-			var ff, err = item.Read()
+			var amountOfLines int = 2
+			var totalLen = len(trace) - 1
+			if i >= totalLen {
+				amountOfLines = amountOfLines * 4
+			} else if i >= totalLen-1 {
+				amountOfLines = amountOfLines * 3
+			} else if i >= totalLen-2 {
+				amountOfLines = amountOfLines * 2
+			}
+			var ff, err = item.Read(amountOfLines)
 			if err != nil {
 				stackItem.Item(fmt.Sprintf("In function %s", item.FunctionName))
 				goto closeItem

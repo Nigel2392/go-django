@@ -52,6 +52,13 @@ func (fm *Manager) Init() {
 	go fm.worker()
 }
 
+// Write a file to the media files directory.
+//
+// If there is a collision with the filename, it will append the current time to the filename.
+//
+// This is done to prevent overwriting files.
+//
+// We will push the file to a queue and wait for the function to return, and write to the path channel or the error channel
 func (fm *Manager) WriteToMedia(path string, r io.Reader) (string, error) {
 	if path == "" {
 		return "", errors.New("path is empty")

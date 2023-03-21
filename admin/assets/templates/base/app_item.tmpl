@@ -5,17 +5,17 @@
             <a href="{{ $app.URL.WholeURL }}" class="admin-button-dark">{{ $app.Name|title }}</a>
         </h3>
     {{ else if eq (len $app.Children) 1 }}
-            {{ range $m := $app.Children }}
-                {{if ge (len $m.Children) 1}}
-                    {{ range $m := $m.Children }}
-                        {{ template "app_item.tmpl" $m }}
-                    {{ end }}
-                {{else}}
-                    <h3 class="nomargin">
-                        <a href="{{ $m.URL.WholeURL }}" class="admin-button-dark">{{ $m.Name|title }}</a>
-                    </h3>
-                {{end}}
-            {{ end }}
+        {{ range $m := $app.Children }}
+            {{if ge (len $m.Children) 1}}
+                {{ range $m := $m.Children }}
+                    {{ template "app_item.tmpl" $m }}
+                {{ end }}
+            {{else}}
+                <h3 class="nomargin">
+                    <a href="{{ $m.URL.WholeURL }}" class="admin-button-dark">{{ $m.Name|title }}</a>
+                </h3>
+            {{end}}
+        {{ end }}
     {{ else }}
         <div class="dropdown">
             <h3 class="admin-app-header dropdown-button">

@@ -25,6 +25,7 @@ If you find any bugs, please report them in the github issues page.
 - [X] Admin panel extensions (Embed your own templates!)
 - [X] Command-line flag package
 - [X] Project-setup tool
+- [X] Debug recovery page middleware (Only when running with -debug flag)
 
 ## In progress:
 - [ ] Admin panel
