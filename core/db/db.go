@@ -35,6 +35,7 @@ type Pool[T any] interface {
 	AutoMigrate() error
 	Register(DB_KEY DATABASE_KEY, model ...interface{}) error
 	GetDefaultDB() PoolItem[T]
+	Databases() []PoolItem[T]
 }
 
 type DatabasePoolItem struct {

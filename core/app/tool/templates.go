@@ -147,8 +147,6 @@ var appConfig = app.Config{
 		KeyFile:  env.Get("SSL_KEY_FILE", ""),
 	},
 	Middlewares: []router.Middleware{
-		// CSRFToken verification middleware.
-		csrf.Middleware,
 		// Add a logger to the request.
 		// Can be accessed with request.logger
 		middleware.AddLogger,
@@ -198,6 +196,10 @@ var appConfig = app.Config{
 		EMAIL_USE_TLS:  env.GetBool("EMAIL_USE_TLS", false),
 		EMAIL_USE_SSL:  env.GetBool("EMAIL_USE_SSL", false),
 		EMAIL_FROM:     env.Get("EMAIL_FROM", ""),
+	},
+	Admin: &app.AdminSite{
+		Name: "Admin",
+		URL:  "/admin",
 	},
 }`
 

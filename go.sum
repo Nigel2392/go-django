@@ -6,8 +6,12 @@ github.com/Nigel2392/router/v3 v3.1.7 h1:rNwPAVE111S/Oas495K+R+xxiau9pkqD5sZoXXp
 github.com/Nigel2392/router/v3 v3.1.7/go.mod h1:TnWlTdVHy77iOavayrx+4Y3TQzMT1c0BxDwdYuMhXLU=
 github.com/Nigel2392/router/v3 v3.2.0 h1:VMiIM6FodwnXBSlOE5fmIzbttumQa0lJFdt3pqqXy6s=
 github.com/Nigel2392/router/v3 v3.2.0/go.mod h1:TnWlTdVHy77iOavayrx+4Y3TQzMT1c0BxDwdYuMhXLU=
+github.com/Nigel2392/router/v3 v3.2.7 h1:cSx7ilrfjCg8VIQ8jqDj/U6PixBl6CuvTNcyANodSoE=
+github.com/Nigel2392/router/v3 v3.2.7/go.mod h1:+SiVJcyAr9suGJ3GK13ce+cFZH6vuJVfYi/eLVkVmkE=
 github.com/Nigel2392/routevars v1.1.0 h1:2eM5EuPL3qANM145CoNo+cE2I0OssWvrPkzl2JiZa20=
 github.com/Nigel2392/routevars v1.1.0/go.mod h1:aPEoda1mvbkFa/Rnj9lErveL4RPZkmgh7/SMjL/xx7E=
+github.com/Nigel2392/routevars v1.1.1 h1:jiT3/6pvafnhYTxHPUMO7C7gxmBySn0/cnXPJkUQlpY=
+github.com/Nigel2392/routevars v1.1.1/go.mod h1:NBOLgLWRaSXJraX53Q2fFpvbWKrfY2KsT8K5kz4fuMU=
 github.com/Nigel2392/typeutils v1.1.1 h1:ZL8azlQKOAgHIFeHnvS+RnQ1z/CEG8iEOw1I43RdZMc=
 github.com/Nigel2392/typeutils v1.1.1/go.mod h1:9Y8rV5c8ZfD2N9y+mtF9Kmy3OtDubcuevYeCQCLq/Sw=
 github.com/alexedwards/scs/gormstore v0.0.0-20230305153148-62e546ce9d2d h1:HZcoSc8qnoWlpFofXrNb6vOoOuJeeYuLLhPtP0YK8yU=

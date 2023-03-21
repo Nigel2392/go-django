@@ -111,3 +111,12 @@ func (m *defaultPool) GetDefaultDB() PoolItem[*gorm.DB] {
 	}
 	return db
 }
+
+func (m *defaultPool) Databases() []PoolItem[*gorm.DB] {
+	var dbs []PoolItem[*gorm.DB]
+	m.rangeOver(func(db PoolItem[*gorm.DB]) bool {
+		dbs = append(dbs, db)
+		return true
+	})
+	return dbs
+}

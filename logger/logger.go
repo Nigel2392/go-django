@@ -2,8 +2,9 @@ package logger
 
 import (
 	"fmt"
-	"runtime"
 	"time"
+
+	"github.com/Nigel2392/go-django/core/tracer"
 )
 
 type Loglevel = int
@@ -44,9 +45,9 @@ func NewLogger(loglevel Loglevel, prefix ...string) Logger {
 }
 
 func (l Logger) Critical(err error) {
-	var info = GetCaller(1)
+	var t = tracer.TraceSafe(err, 6, 1)
 	l.logLine(msgTypeCritical, err.Error())
-	for _, i := range info {
+	for _, i := range t.Trace() {
 		l.logLine(msgTypeCritical, fmt.Sprintf("%s:%d", i.File, i.Line))
 	}
 }
@@ -166,30 +167,3 @@ func getColor(msgType msgType) string {
 //	    // Write a test message, loglevel test
 //	    Test(args ...any)
 //	    Testf(format string, args ...any)
-
-type CallerInfo struct {
-	File string
-	Line int
-}
-
-func GetCaller(skip int) []CallerInfo {
-	skip += 2 // skip this function and the function that called this function
-	pcs := make([]uintptr, 6)
-	n := runtime.Callers(0, pcs)
-	pcs = pcs[:n]
-
-	frames := runtime.CallersFrames(pcs)
-	var callFrames = make([]CallerInfo, 0, n)
-	for {
-		frame, more := frames.Next()
-		callFrames = append(callFrames, CallerInfo{frame.File, frame.Line})
-		if !more {
-			break
-		}
-	}
-
-	if skip > len(callFrames) {
-		skip = len(callFrames)
-	}
-	return callFrames[skip:]
-}

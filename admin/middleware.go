@@ -1,12 +1,13 @@
 package admin
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/go-django/admin/internal/models"
 	"github.com/Nigel2392/go-django/auth"
-	"github.com/Nigel2392/go-django/logger"
+	"github.com/Nigel2392/go-django/core/tracer"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
 )
@@ -102,10 +103,11 @@ func hasAdminPerms(as *AdminSite, req *request.Request) (retOk bool) {
 // It will also log a stacktrace of the code that called this function.
 func Unauthorized(as *AdminSite, r *request.Request, msg ...string) {
 	// Runtime.Caller
-	var callInfo = logger.GetCaller(0)
+	var err = errors.New("Unauthorized access")
+	var callInfo = tracer.TraceSafe(err, 16, 1)
 
 	as.Logger.Debugf("Unauthorized access by: %s\n", r.User)
-	for _, c := range callInfo {
+	for _, c := range callInfo.Trace() {
 		as.Logger.Debugf("\tUnauthorized access from: %s:%d\n", c.File, c.Line)
 	}
 

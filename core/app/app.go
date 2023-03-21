@@ -9,15 +9,18 @@ import (
 
 	"github.com/Nigel2392/go-django/admin"
 	"github.com/Nigel2392/go-django/auth"
+	"github.com/Nigel2392/go-django/core/app/debug"
 	"github.com/Nigel2392/go-django/core/app/tool"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/go-django/core/secret"
+	"github.com/Nigel2392/go-django/core/tracer"
 	"github.com/Nigel2392/go-django/logger"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/middleware"
+	"github.com/Nigel2392/router/v3/middleware/csrf"
 	"github.com/Nigel2392/router/v3/middleware/sessions/scsmiddleware"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/router/v3/request/response"
@@ -37,6 +40,8 @@ func App() *Application {
 	}
 	return __app
 }
+
+type AdminSite admin.AdminSite
 
 // Server is the configuration used to initialize the server.
 type Server struct {
@@ -66,12 +71,6 @@ type RedirectServer struct {
 // Config is the configuration used to initialize the application.
 // You must provide a server configuration!
 type Config struct {
-	// Wether the application is in debug mode.
-	// If true, the application will not use:
-	// - The rate limiter
-	// - The template cache
-	DEBUG bool
-
 	// The hostnames that are allowed to access the application.
 	AllowedHosts []string
 
@@ -125,17 +124,23 @@ type Config struct {
 
 	// Adminsite settings
 	// Name and URL of the admin site must be set in order for it to be used.
-	Admin *admin.AdminSite
+	Admin *AdminSite
 
 	// DefaultFlags are the default flags that will be added to the application.
 	// You can add more flags by using the Application.Flags().Register() function.
 	DefaultFlags []*flag.Command
+
+	// Default error handler on panics.
+	ErrorHandler func(error, *request.Request)
 }
 
 // Application is the main application object.
 //
 // This is used to store all the application data.
 type Application struct {
+	// Wether the application is in debug mode.
+	DEBUG bool
+
 	// The secret key for the application.
 	// This is used to encrypt, decrypt, and sign data.
 	SecretKey secret.Key
@@ -198,6 +203,9 @@ func New(c Config) *Application {
 		key = secret.New(config.SecretKey)
 	}
 
+	var conf = *config
+	config = &conf
+
 	// Initialize the application object.
 	var a = &Application{
 		SecretKey:       key,
@@ -216,7 +224,8 @@ This is Go-Django's default command line interface.`
 	}
 
 	// Initialize default flags
-	a.flags.Register("startapp", "", "Initialize a new application with the given name", tool.StartApp)
+	a.flags.Register("startapp", "", "Initialize a new application with the given name.", tool.StartApp)
+	a.flags.RegisterPtr(&a.DEBUG, false, "debug", "Run the application in debug mode.", nil)
 
 	__app = a
 	a.initted = true
@@ -241,7 +250,7 @@ This is Go-Django's default command line interface.`
 
 	if a.config.Admin != nil && a.config.Admin.Name != "" && a.config.Admin.URL != "" {
 		var adminSiteDePtr = *a.config.Admin
-		a.adminSite = &adminSiteDePtr
+		a.adminSite = (*admin.AdminSite)(&adminSiteDePtr)
 		a.adminSite.DBPool = a.Pool
 		a.adminSite.Defaults()
 		a.adminSite.Init()
@@ -279,6 +288,8 @@ func (a *Application) setupRouter() {
 	a.Router.NotFoundHandler = a.config.Server.NotFoundHandler
 
 	a.Router.Use(
+		csrf.Middleware,
+		middleware.XFrameOptions(middleware.XFrameDeny),
 		middleware.AllowedHosts(a.config.AllowedHosts...),
 		scsmiddleware.SessionMiddleware(a.sessionManager),
 		auth.AddUserMiddleware(),
@@ -303,6 +314,7 @@ func (a *Application) setupRouter() {
 			a.Router.AddGroup(mediaHandler)
 		}
 	}
+
 }
 
 // Run the application.
@@ -317,6 +329,38 @@ func (a *Application) Run() error {
 
 	if !a.flags.Ran() {
 		a.flags.Run()
+	}
+
+	tracer.STACKLOGGER_UNSAFE = a.DEBUG
+
+	if a.DEBUG {
+		var databases = make([]debug.DatabaseSetting, 0)
+		for _, db := range a.Pool.Databases() {
+			var settingDB = db.DB()
+			var setting = debug.DatabaseSetting{
+				ENGINE: settingDB.Config.Dialector.Name(),
+				NAME:   settingDB.Name(),
+				KEY:    string(db.Key()),
+			}
+			databases = append(databases, setting)
+		}
+		var settings = debug.AppSettings{
+			DEBUG:     a.DEBUG,
+			HOST:      a.config.Server.Host,
+			PORT:      a.config.Server.Port,
+			ROUTES:    a.Router.String(),
+			DATABASES: databases,
+		}
+		a.Router.Use(debug.StacktraceMiddleware(&settings))
+	} else {
+		if a.config.ErrorHandler != nil {
+			a.Router.Use(middleware.Recoverer(a.config.ErrorHandler))
+		} else {
+			a.Router.Use(middleware.Recoverer(func(err error, r *request.Request) {
+				a.Logger.Error(err)
+				r.Response.WriteHeader(http.StatusInternalServerError)
+			}))
+		}
 	}
 
 	if a.config.Templates != nil {
@@ -384,9 +428,22 @@ func (a *Application) Redirect() error {
 	return s.ListenAndServe()
 }
 
+// Main method to register models with the application.
+//
+// If an admin site is registered, the models will be registered with the admin site when specified.
+//
+// If the key is an empty string, the model will be registered with the default database.
 func (a *Application) Register(toAdmin bool, key db.DATABASE_KEY, models ...any) {
+	if a.Pool == nil {
+		panic("You must call Init() before calling Register()")
+	}
+	if key == "" {
+		key = db.DEFAULT_DATABASE_KEY
+	}
 	a.Pool.Register(key, models...)
 	if toAdmin && a.adminSite != nil {
 		a.adminSite.Register(models...)
+	} else if toAdmin && a.adminSite == nil {
+		panic("The admin site is nil!")
 	}
 }

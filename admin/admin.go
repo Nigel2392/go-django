@@ -164,14 +164,18 @@ func NewAdminSite(name, url string, p db.Pool[*gorm.DB], l ...request.Logger) *A
 func (as *AdminSite) Defaults() {
 	var internalAppName = "internal"
 	var extensionsAppName = "extensions"
-	var extensionURL = "/ext"
 
 	if as.InternalAppName == "" {
 		as.InternalAppName = internalAppName
 		as.ExtensionsAppName = extensionsAppName
 	}
 
+	if as.Logger == nil {
+		as.Logger = logger.NewLogger(logger.INFO, as.Name+" ")
+	}
+
 	if as.ExtensionURL == "" {
+		var extensionURL = "/ext"
 		as.ExtensionURL = extensionURL
 	}
 	if len(as.AppOrder) < 1 {
