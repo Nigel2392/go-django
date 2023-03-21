@@ -52,23 +52,24 @@ func createSuperUserFunc(v flag.Value) error {
 // This runs in a CLI to ask for input
 // It will skip most of the validation.
 func CreateAdminUser(email, username, first_name, last_name, password string) (*User, error) {
-	if err := validators.Length(3, 255)(email); err != nil {
+	var err error
+	if err = validators.Length(3, 255)(email); err != nil {
 		//lint:ignore ST1005 I like capitalized error strings.
 		return nil, errors.New("Email must be between 3 and 255 characters")
 	}
-	if err := validators.Length(2, 75)(username); err != nil {
+	if err = validators.Length(2, 75)(username); err != nil {
 		//lint:ignore ST1005 I like capitalized error strings.
 		return nil, errors.New("Username must be between 2 and 75 characters")
 	}
-	if err := validators.Length(2, 50)(first_name); err != nil {
+	if err = validators.Length(2, 50)(first_name); err != nil {
 		//lint:ignore ST1005 I like capitalized error strings.
 		return nil, errors.New("First name must be between 2 and 50 characters")
 	}
-	if err := validators.Length(2, 50)(last_name); err != nil {
+	if err = validators.Length(2, 50)(last_name); err != nil {
 		//lint:ignore ST1005 I like capitalized error strings.
 		return nil, errors.New("Last name must be between 2 and 50 characters")
 	}
-	if err := validators.Length(8, 255)(password); err != nil {
+	if err = validators.Length(8, 255)(password); err != nil {
 		//lint:ignore ST1005 I like capitalized error strings.
 		return nil, errors.New("Password must be between 8 and 255 characters")
 	}
@@ -79,14 +80,19 @@ func CreateAdminUser(email, username, first_name, last_name, password string) (*
 		Username:        username,
 		FirstName:       first_name,
 		LastName:        last_name,
-		Password:        password,
 		IsAdministrator: true,
 		IsActive:        true,
 	}
 
+	// Set the password
+	err = user.SetPassword(password)
+	if err != nil {
+		return nil, err
+	}
+
 	// Update the user to be a super user
 	user.IsAdministrator = true
-	var err = auth_db.Create(user).Error
+	err = auth_db.Create(user).Error
 	if err != nil {
 		return nil, err
 	}

@@ -254,6 +254,11 @@ This is Go-Django's default command line interface.`
 		a.adminSite.DBPool = a.Pool
 		a.adminSite.Defaults()
 		a.adminSite.Init()
+		a.adminSite.Register(
+			&auth.User{},
+			&auth.Group{},
+			&auth.Permission{},
+		)
 	}
 
 	return a
