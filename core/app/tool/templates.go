@@ -57,7 +57,6 @@ var mainTemplate = `package main
 import (
 	"fmt"
 
-	"github.com/Nigel2392/go-django/admin"
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/app"
 	"github.com/Nigel2392/go-django/logger"
@@ -72,27 +71,15 @@ func main() {
 	// You can add your own flags by using go-django's flag package.
 	// See the help menu for more information. (go run ./src -h)
 
-
 	auth.USER_MODEL_LOGIN_FIELD = "Email"
-
-	admin.Initialize("Admin", "/admin", App.Pool)
-	admin.Register(
-		&auth.User{},
-		&auth.Group{},
-		&auth.Permission{},
-	)
-
-	var urls = admin.URLS()
-	App.Router.AddGroup(urls)
-
 	App.Router.Get("/", index, "index")
 
 	var _, err = auth.CreateAdminUser(
 		"developer@local.local", // Email
-		"Developer", // Username
-		"root", // First name
-		"toor", // Last name
-		"Developer123!", // Password
+		"Developer",             // Username
+		"root",                  // First name
+		"toor",                  // Last name
+		"Developer123!",         // Password
 	)
 	if err != nil {
 		fmt.Println(logger.Colorize(logger.Red, fmt.Sprintf("Error creating superuser: %s", err.Error())))
@@ -126,7 +113,6 @@ import (
 	"github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/middleware"
-	"github.com/Nigel2392/router/v3/middleware/csrf"
 	"github.com/Nigel2392/router/v3/templates"
 	"gorm.io/gorm"
 )
@@ -135,7 +121,7 @@ var env = dotenv.NewEnv(".env")
 
 var appConfig = app.Config{
 	// Secret key for the server.
-	SecretKey:    env.Get("SECRET_KEY", time.Now().Format(time.RFC3339Nano)),
+	SecretKey: env.Get("SECRET_KEY", time.Now().Format(time.RFC3339Nano)),
 	// Allowed hosts for the server.
 	AllowedHosts: env.GetAll("ALLOWED_HOSTS", []string{"*"}...),
 	Server: &app.Server{
