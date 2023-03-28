@@ -4,7 +4,9 @@ import (
 	"embed"
 	"html/template"
 	"io/fs"
+	"os"
 	"strings"
+	"time"
 
 	"github.com/Nigel2392/go-django/admin/internal/menu"
 	"github.com/Nigel2392/go-django/admin/internal/models"
@@ -156,7 +158,9 @@ func NewAdminSite(name, url string, p db.Pool[*gorm.DB], l ...request.Logger) *A
 	if len(l) > 0 {
 		as.Logger = l[0]
 	} else {
-		as.Logger = logger.NewLogger(logger.DEBUG, name+" ")
+		var lgr = logger.NewBatchLogger(logger.DEBUG, 5, 1*time.Second, os.Stdout, as.Name+" ")
+		lgr.Colorize = true
+		as.Logger = lgr
 	}
 	return as
 }
@@ -171,7 +175,9 @@ func (as *AdminSite) Defaults() {
 	}
 
 	if as.Logger == nil {
-		as.Logger = logger.NewLogger(logger.INFO, as.Name+" ")
+		var lgr = logger.NewBatchLogger(logger.DEBUG, 5, 1*time.Second, os.Stdout, as.Name+" ")
+		lgr.Colorize = true
+		as.Logger = lgr
 	}
 
 	if as.ExtensionURL == "" {

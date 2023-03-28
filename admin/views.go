@@ -224,6 +224,7 @@ func createView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 		var s, created, err = form.Process(rq, db.DB())
 		if err != nil {
 			as.Logger.Critical(err)
+			rq.Data.AddMessage("error", err.Error())
 			goto renderTemplate
 		} else {
 			_ = s

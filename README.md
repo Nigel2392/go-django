@@ -17,7 +17,7 @@ Make sure you have your GOPATH set up correctly.
 
 ### Installing the project-setup tool
 ```bash
-go install github.com/Nigel2392/go-django/go-django
+go install github.com/Nigel2392/go-django/go-django@vX.X.X.X
 ```
 
 This will install the `go-django` command-line tool, which you can use to create a new project.

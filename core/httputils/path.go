@@ -80,3 +80,24 @@ func SimpleSlugify(s string) string {
 	var re = regexp.MustCompile("[^a-zA-Z0-9]+")
 	return strings.ToLower(re.ReplaceAllString(s, "-"))
 }
+
+// Cut the front of a string, and add "..." if it was cut.
+func CutFrontPath(s string, length int) string {
+	return CutStart(s, length, "/", true)
+}
+
+func CutStart(s string, length int, delim string, prefixIfCut bool) string {
+	if len(s) > length {
+		var cut = len(s) - length
+		s = s[cut:]
+		var parts = strings.Split(s, delim)
+		if len(parts) > 1 {
+			if prefixIfCut {
+				return "..." + delim + strings.Join(parts[1:], delim)
+			}
+			return "..." + strings.Join(parts[1:], delim)
+		}
+		return "..." + s
+	}
+	return s
+}

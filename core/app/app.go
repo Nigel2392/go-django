@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/Nigel2392/go-django/admin"
@@ -206,13 +207,17 @@ func New(c Config) *Application {
 	var conf = *config
 	config = &conf
 
+	// Set up the logger.
+	var logger = logger.NewBatchLogger(logger.INFO, 25, 5*time.Second, os.Stdout, "Go-Django ")
+	logger.Colorize = true
+
 	// Initialize the application object.
 	var a = &Application{
 		SecretKey:       key,
 		config:          config,
 		defaultDatabase: config.DBConfig,
 		Pool:            db.NewPool(config.DBConfig),
-		Logger:          logger.NewLogger(logger.INFO),
+		Logger:          logger,
 		flags:           flag.NewFlags("Go-Django", flag.ExitOnError),
 	}
 	a.flags.Info = `Go-Django is a web framework written in Go.
@@ -298,6 +303,7 @@ func (a *Application) setupRouter() {
 		middleware.AllowedHosts(a.config.AllowedHosts...),
 		scsmiddleware.SessionMiddleware(a.sessionManager),
 		auth.AddUserMiddleware(),
+		LoggerMiddleware(a.Logger),
 	)
 
 	if a.config.RateLimitOptions != nil {
