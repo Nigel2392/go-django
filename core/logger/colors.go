@@ -3,6 +3,7 @@ package logger
 import (
 	"regexp"
 	"strings"
+	"unsafe"
 )
 
 // ANSI color codes
@@ -56,31 +57,36 @@ var (
 	ColorNoLevel = Green
 )
 
-// colorize a message based on the loglevel
-func Colorize(color string, msg string) string {
-	return color + msg + Reset
-}
-
 const ansi = "[\u001B\u009B][[\\]()#;?]*(?:(?:(?:[a-zA-Z\\d]*(?:;[a-zA-Z\\d]*)*)?\u0007)|(?:(?:\\d{1,4}(?:;\\d{0,4})*)?[\\dA-PRZcf-ntqry=><~]))"
 
-var re = regexp.MustCompile(ansi)
+var remAnsiRex = regexp.MustCompile(ansi)
 
-func DeColorize(str string) string {
-	return re.ReplaceAllString(str, "")
+// Colorize a message.
+func Colorize(msg string, colors ...string) string {
+	var maxSize int = len(msg) + len(Reset)
+	for _, c := range colors {
+		maxSize += len(c)
+	}
+	var b = make([]byte, maxSize)
+	var n int = 0
+	for _, c := range colors {
+		n += copy(b[n:], c)
+	}
+	n += copy(b[n:], msg)
+	n += copy(b[n:], Reset)
+	return unsafe.String(unsafe.SliceData(b), n)
 }
 
+// Remove all ANSI color codes from a string.
+func DeColorize(str string) string {
+	return remAnsiRex.ReplaceAllString(str, "")
+}
+
+// Helper function to write a string to a string builder, optionally colorizing it.
 func writeIfColorized(b *strings.Builder, colorized bool, text string, color ...string) {
 	if colorized {
-		var maxLen int = len(text) + len(Reset)
-		for _, c := range color {
-			maxLen += len(c)
-		}
-		b.Grow(maxLen)
-		for _, c := range color {
-			b.WriteString(c)
-		}
-		b.WriteString(text)
-		b.WriteString(Reset)
+		var colorStr = Colorize(text, color...)
+		b.WriteString(colorStr)
 		return
 	}
 	b.WriteString(text)

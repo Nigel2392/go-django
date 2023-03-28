@@ -3,7 +3,7 @@ package logger
 type Loglevel int
 
 const (
-	CRITICAL Loglevel = iota
+	CRITICAL Loglevel = iota + 1
 	ERROR
 	WARNING
 	INFO

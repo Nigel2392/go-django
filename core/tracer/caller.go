@@ -3,9 +3,9 @@ package tracer
 import "fmt"
 
 type Caller struct {
-	File         string
-	Line         int
-	FunctionName string
+	File         string `json:"file"`
+	Line         int    `json:"line"`
+	FunctionName string `json:"function_name"`
 }
 
 func (c *Caller) isAllowed(files []string) bool {

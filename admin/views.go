@@ -39,7 +39,7 @@ func indexView(as *AdminSite, rq *request.Request) {
 
 	rq.Data.Set("logs", logs)
 
-	err = response.RenderTemplate(rq, template, name)
+	err = response.Template(rq, template, name)
 	if err != nil {
 		as.Logger.Critical(err)
 		renderError(as, rq, "Error rendering template", 500, err)
@@ -105,7 +105,7 @@ func listView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 	rq.Data.Set("limit_choices", []int{10, 25, 50, 100})
 	rq.Data.Set("limit", limit)
 
-	err = response.RenderTemplate(rq, template, name)
+	err = response.Template(rq, template, name)
 	if err != nil {
 		as.Logger.Critical(err)
 		renderError(as, rq, "Error rendering template", 500, err)
@@ -162,7 +162,7 @@ func detailView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 		var s, created, err = form.Process(rq, db.DB())
 		if err != nil {
 			as.Logger.Critical(err)
-			goto renderTemplate
+			goto Template
 		} else {
 			_ = s
 			var log *Log
@@ -182,12 +182,12 @@ func detailView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 			return
 		}
 	}
-renderTemplate:
+Template:
 	rq.Data.Set("model", mdl)
 	rq.Data.Set("id", id)
 	rq.Data.Set("form", form)
 
-	err = response.RenderTemplate(rq, template, name)
+	err = response.Template(rq, template, name)
 	if err != nil {
 		as.Logger.Critical(err)
 		renderError(as, rq, "Error rendering template", 500, err)
@@ -225,7 +225,7 @@ func createView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 		if err != nil {
 			as.Logger.Critical(err)
 			rq.Data.AddMessage("error", err.Error())
-			goto renderTemplate
+			goto Template
 		} else {
 			_ = s
 			if err != nil {
@@ -252,11 +252,11 @@ func createView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 		}
 	}
 
-renderTemplate:
+Template:
 	rq.Data.Set("model", mdl)
 	rq.Data.Set("form", form)
 
-	err = response.RenderTemplate(rq, template, name)
+	err = response.Template(rq, template, name)
 	if err != nil {
 		as.Logger.Critical(err)
 		renderError(as, rq, "Error rendering template", 500, err)
@@ -324,7 +324,7 @@ func deleteView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 	rq.Data.Set("model", mdl)
 	rq.Data.Set("instance", m)
 
-	err = response.RenderTemplate(rq, template, name)
+	err = response.Template(rq, template, name)
 	if err != nil {
 		as.Logger.Critical(err)
 		renderError(as, rq, "Error rendering template", 500, err)
@@ -352,7 +352,7 @@ func unauthorizedView(as *AdminSite, rq *request.Request) {
 
 	rq.ReSetNext()
 
-	err = response.RenderTemplate(rq, template, name)
+	err = response.Template(rq, template, name)
 	if err != nil {
 		as.Logger.Critical(err)
 		renderError(as, rq, "Error rendering template", 500, err)
@@ -419,7 +419,7 @@ func loginView(as *AdminSite, rq *request.Request) {
 
 	rq.Data.Set("title", "Login")
 	rq.Data.Set("form", form)
-	err = response.RenderTemplate(rq, template, name)
+	err = response.Template(rq, template, name)
 	if err != nil {
 		as.Logger.Critical(err)
 		renderError(as, rq, "Error rendering template", 500, err)
@@ -446,7 +446,7 @@ func logoutView(as *AdminSite, rq *request.Request) {
 	}
 
 	rq.Data.Set("title", "Logout")
-	err = response.RenderTemplate(rq, template, name)
+	err = response.Template(rq, template, name)
 	if err != nil {
 		as.Logger.Critical(err)
 		renderError(as, rq, "Error rendering template.", 500, err)
@@ -467,7 +467,7 @@ func renderError(as *AdminSite, rq *request.Request, err string, code int, errDe
 	rq.Data.Set("error_code", code)
 	rq.Data.Set("detail", errDetail.Error())
 
-	tErr = response.RenderTemplate(rq, template, name)
+	tErr = response.Template(rq, template, name)
 	if tErr != nil {
 		as.Logger.Critical(tErr)
 		rq.Error(500, http.StatusText(500))

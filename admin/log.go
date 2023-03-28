@@ -250,7 +250,7 @@ func logView(as *AdminSite) func(rq *request.Request) {
 
 		rq.Data.Set("has_search", true)
 
-		err = response.RenderTemplate(rq, template, name)
+		err = response.Template(rq, template, name)
 		if err != nil {
 			if rq.Logger != nil {
 				rq.Logger.Critical(err)

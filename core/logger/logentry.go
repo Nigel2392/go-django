@@ -10,17 +10,30 @@ import (
 	"github.com/Nigel2392/go-django/core/tracer"
 )
 
+var (
+	loggerMaxMsgWidth  = 100
+	stacktracePathSize = 40
+)
+
+// A entry to be logged.
+//
+// This may include a list of callers (Stacktrace)
 type LogEntry struct {
-	// The time the log entry was created.
-	Time time.Time
-	// The level of the log entry.
-	Level Loglevel
-	// The message of the log entry.
-	Message string
-	// The tracer of the log entry.
-	Stacktrace tracer.StackTrace
+	Time       time.Time         `json:"time"`       // The time the log entry was created.
+	Level      Loglevel          `json:"level"`      // The level of the log entry.
+	Message    string            `json:"message"`    // The message of the log entry.
+	Stacktrace tracer.StackTrace `json:"stacktrace"` // The tracer of the log entry.
 }
 
+// Intialize a new log entry.
+//
+// level: The level of the log entry.
+//
+// message: The message of the log entry.
+//
+// stackTraceLen: The length of the stacktrace.
+//
+// skip: The number of frames to skip in the stacktrace.
 func NewLogEntry(level Loglevel, message string, stackTraceLen, skip int) *LogEntry {
 	return &LogEntry{
 		Time:       time.Now(),
@@ -30,6 +43,11 @@ func NewLogEntry(level Loglevel, message string, stackTraceLen, skip int) *LogEn
 	}
 }
 
+// Generate a string representation of the log entry.
+//
+// prefix: A prefix to add to the log entry.
+//
+// colorized: If the log entry should be colorized.
 func (e *LogEntry) AsString(prefix string, colorized bool) string {
 	var charAfterNewLineOrMultiLine bool
 	var multiLine bool
@@ -43,7 +61,7 @@ func (e *LogEntry) AsString(prefix string, colorized bool) string {
 		}
 	}
 	var b = &strings.Builder{}
-	if charAfterNewLineOrMultiLine {
+	if charAfterNewLineOrMultiLine || len(e.Message) > loggerMaxMsgWidth {
 		b.WriteString("[ ")
 		if prefix != "" {
 			writeIfColorized(b, colorized, prefix, DimGrey)
@@ -88,7 +106,11 @@ func (e *LogEntry) AsString(prefix string, colorized bool) string {
 	var maxMiddleLen int
 	var middleSlice []string = make([]string, 0, len(e.Stacktrace))
 	for _, caller := range e.Stacktrace {
-		var middle = fmt.Sprintf("%s()", httputils.CutStart((httputils.FilenameFromPath(caller.FunctionName)), 40, ".", false))
+		if caller.FunctionName == "" {
+			middleSlice = append(middleSlice, "???")
+			continue
+		}
+		var middle = fmt.Sprintf("%s()", httputils.CutStart((httputils.FilenameFromPath(caller.FunctionName)), stacktracePathSize, ".", false))
 		middleSlice = append(middleSlice, middle)
 		if len(middle) > maxMiddleLen {
 			maxMiddleLen = len(middle)
@@ -118,7 +140,7 @@ func (e *LogEntry) AsString(prefix string, colorized bool) string {
 		}
 		b.WriteString(" ")
 
-		writeIfColorized(b, colorized, httputils.CutFrontPath(caller.File, 40), Italics, DimGrey)
+		writeIfColorized(b, colorized, httputils.CutFrontPath(caller.File, stacktracePathSize), Italics, DimGrey)
 		b.WriteString("\n")
 	}
 

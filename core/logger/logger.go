@@ -115,7 +115,7 @@ func generatePrefix(colorized bool, prefix string, level Loglevel) string {
 	msg = timestamp(msg)
 	if colorized {
 		var color = getLogLevelColor(level)
-		msg = Colorize(color, msg)
+		msg = Colorize(msg, color)
 	}
 	return msg
 }

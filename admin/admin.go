@@ -13,7 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/httputils"
-	"github.com/Nigel2392/go-django/logger"
+	"github.com/Nigel2392/go-django/core/logger"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/router/v3/templates"

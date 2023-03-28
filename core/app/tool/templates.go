@@ -133,11 +133,7 @@ var appConfig = app.Config{
 		KeyFile:  env.Get("SSL_KEY_FILE", ""),
 	},
 	Middlewares: []router.Middleware{
-		// Add a logger to the request.
-		// Can be accessed with request.logger
-		middleware.AddLogger,
-		// Print some information about the request to the terminal.
-		middleware.Printer,
+		// Default router middleware to use
 	},
 	// Rate limit middlewares.
 	RateLimitOptions: &middleware.RateLimitOptions{

@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/Nigel2392/go-django/logger"
+	"github.com/Nigel2392/go-django/core/logger"
 	"golang.org/x/exp/slices"
 )
 

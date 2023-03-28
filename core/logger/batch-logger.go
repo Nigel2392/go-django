@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/batch/accumulator"
+	"github.com/Nigel2392/router/v3/request"
 )
 
 // BatchLogger is a logger which logs messages in batches.
@@ -46,6 +47,11 @@ func NewBatchLogger(loglevel Loglevel, flushSize int, flushInterval time.Duratio
 	}
 	logger.batcher = accumulator.NewAccumulator(flushSize, flushInterval, logger.handle)
 	return logger
+}
+
+// Loglevel returns the loglevel of the logger.
+func (l *BatchLogger) LogLevel() request.LogLevel {
+	return request.LogLevel(l.Loglevel)
 }
 
 // Critical logs a critical message.

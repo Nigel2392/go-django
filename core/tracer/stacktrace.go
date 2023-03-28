@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-type StackTrace []Caller
+type StackTrace []Caller // A stacktrace is a slice of callers.
 
 func (s StackTrace) String() string {
 	var b strings.Builder

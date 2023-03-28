@@ -81,11 +81,12 @@ func SimpleSlugify(s string) string {
 	return strings.ToLower(re.ReplaceAllString(s, "-"))
 }
 
-// Cut the front of a string, and add "..." if it was cut.
+// Cut the front of a path, and add "..." if it was cut.
 func CutFrontPath(s string, length int) string {
 	return CutStart(s, length, "/", true)
 }
 
+// Cut the string if it is longer than the specified length, and add "..." if it was cut.
 func CutStart(s string, length int, delim string, prefixIfCut bool) string {
 	if len(s) > length {
 		var cut = len(s) - length
