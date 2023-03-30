@@ -55,7 +55,7 @@ func (l *Logger) Error(args ...any) {
 
 // Write an error message, loglevel error
 func (l *Logger) Errorf(format string, args ...any) {
-	l.log(ERROR, fmt.Sprintf(format, args...))
+	l.logLine(ERROR, fmt.Sprintf(format, args...))
 }
 
 // Write a warning message, loglevel warning
@@ -65,7 +65,7 @@ func (l *Logger) Warning(args ...any) {
 
 // Write a warning message, loglevel warning
 func (l *Logger) Warningf(format string, args ...any) {
-	l.log(WARNING, fmt.Sprintf(format, args...))
+	l.logLine(WARNING, fmt.Sprintf(format, args...))
 }
 
 // Write an info message, loglevel info
@@ -75,7 +75,7 @@ func (l *Logger) Info(args ...any) {
 
 // Write an info message, loglevel info
 func (l *Logger) Infof(format string, args ...any) {
-	l.log(INFO, fmt.Sprintf(format, args...))
+	l.logLine(INFO, fmt.Sprintf(format, args...))
 }
 
 // Write a debug message, loglevel debug
@@ -85,7 +85,7 @@ func (l *Logger) Debug(args ...any) {
 
 // Write a debug message, loglevel debug
 func (l *Logger) Debugf(format string, args ...any) {
-	l.log(DEBUG, fmt.Sprintf(format, args...))
+	l.logLine(DEBUG, fmt.Sprintf(format, args...))
 }
 
 // Write a test message, loglevel test
@@ -95,7 +95,7 @@ func (l *Logger) Test(args ...any) {
 
 // Write a test message, loglevel test
 func (l *Logger) Testf(format string, args ...any) {
-	l.log(TEST, fmt.Sprintf(format, args...))
+	l.logLine(TEST, fmt.Sprintf(format, args...))
 }
 
 func (l *Logger) logLine(level Loglevel, msg string) {

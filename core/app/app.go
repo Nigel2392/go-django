@@ -72,6 +72,10 @@ type RedirectServer struct {
 // Config is the configuration used to initialize the application.
 // You must provide a server configuration!
 type Config struct {
+	// Loglevel to use.
+	// If not specified, the default loglevel will be used.
+	LogLevel logger.Loglevel
+
 	// The hostnames that are allowed to access the application.
 	AllowedHosts []string
 
@@ -208,8 +212,14 @@ func New(c Config) *Application {
 	config = &conf
 
 	// Set up the logger.
-	var logger = logger.NewBatchLogger(logger.INFO, 25, 5*time.Second, os.Stdout, "Go-Django ")
-	logger.Colorize = true
+	var ll = config.LogLevel
+	if ll == 0 {
+		ll = logger.INFO
+	}
+	var lg = logger.NewBatchLogger(ll, 25, 5*time.Second, os.Stdout, "Go-Django ")
+	lg.Colorize = true
+
+	lg.Now(logger.DEBUG, "Initializing application...")
 
 	// Initialize the application object.
 	var a = &Application{
@@ -217,7 +227,7 @@ func New(c Config) *Application {
 		config:          config,
 		defaultDatabase: config.DBConfig,
 		Pool:            db.NewPool(config.DBConfig),
-		Logger:          logger,
+		Logger:          lg,
 		flags:           flag.NewFlags("Go-Django", flag.ExitOnError),
 	}
 	a.flags.Info = `Go-Django is a web framework written in Go.
@@ -229,31 +239,39 @@ This is Go-Django's default command line interface.`
 	}
 
 	// Initialize default flags
+	lg.Now(logger.DEBUG, "Initializing default flags...")
 	a.flags.Register("startapp", "", "Initialize a new application with the given name.", tool.StartApp)
 	a.flags.RegisterPtr(&a.DEBUG, false, "debug", "Run the application in debug mode.", nil)
 
 	__app = a
 	a.initted = true
 
+	lg.Now(logger.DEBUG, "Initializing auth...")
 	auth.Init(a.Pool, a.flags)
 
+	lg.Now(logger.DEBUG, "Initializing media manager...")
 	if config.File != nil {
 		a.config.File.Init()
 	}
 
+	lg.Now(logger.DEBUG, "Initializing email manager...")
 	if config.Mail != nil {
 		a.config.Mail.Init()
 	}
 
+	lg.Now(logger.DEBUG, "Initializing template manager...")
 	a.config.Templates.Init()
 
+	lg.Now(logger.DEBUG, "Initializing session manager...")
 	a.setupSessionManager()
 
+	lg.Now(logger.DEBUG, "Initializing router...")
 	a.setupRouter()
 
 	response.TEMPLATE_MANAGER = a.config.Templates
 
 	if a.config.Admin != nil && a.config.Admin.Name != "" && a.config.Admin.URL != "" {
+		lg.Now(logger.DEBUG, "Initializing admin site...")
 		var adminSiteDePtr = *a.config.Admin
 		a.adminSite = (*admin.AdminSite)(&adminSiteDePtr)
 		a.adminSite.DBPool = a.Pool
@@ -395,11 +413,11 @@ func (a *Application) Run() error {
 		// SSL is true, so we will listen on the TLS port.
 		// This will also automatically redirect all HTTP requests to HTTPS.
 		go a.Redirect()
-		a.Logger.Infof("Listening on https://%s\n", server.Addr)
+		a.Logger.Infof("Listening on https://%s", server.Addr)
 
 		return server.ListenAndServeTLS(a.config.Server.CertFile, a.config.Server.KeyFile)
 	}
-	a.Logger.Infof("Listening on http://%s\n", server.Addr)
+	a.Logger.Infof("Listening on http://%s", server.Addr)
 	return server.ListenAndServe()
 }
 
