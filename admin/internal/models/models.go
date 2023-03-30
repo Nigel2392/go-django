@@ -7,8 +7,8 @@ import (
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/httputils"
 	"github.com/Nigel2392/go-django/core/models"
-	"github.com/Nigel2392/go-django/core/modelutils"
-	"github.com/Nigel2392/go-django/core/modelutils/namer"
+	"github.com/Nigel2392/go-django/core/models/modelutils"
+	"github.com/Nigel2392/go-django/core/models/modelutils/namer"
 	"github.com/google/uuid"
 
 	"gorm.io/gorm"

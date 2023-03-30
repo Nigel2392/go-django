@@ -82,7 +82,7 @@ func main() {
 		"Developer123!",         // Password
 	)
 	if err != nil {
-		fmt.Println(logger.Colorize(logger.Red, fmt.Sprintf("Error creating superuser: %s", err.Error())))
+		fmt.Println(logger.Colorize(fmt.Sprintf("Error creating superuser: %s", err.Error()), logger.Red))
 	}
 
 	err = App.Run()
@@ -167,7 +167,9 @@ var appConfig = app.Config{
 		DB_HOST:          env.Get("DB_HOST", ""),
 		DB_PORT:          env.GetInt("DB_PORT", 0),
 		DB_SSLMODE:       env.Get("DB_SSLMODE", ""),
-		Config:           &gorm.Config{},
+		Config:           &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Silent),
+		},
 	},
 	// Email settings.
 	Mail: &email.Manager{

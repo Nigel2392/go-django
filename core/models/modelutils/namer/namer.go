@@ -5,7 +5,7 @@ import (
 
 	"github.com/Nigel2392/go-django/core"
 	"github.com/Nigel2392/go-django/core/httputils"
-	"github.com/Nigel2392/go-django/core/modelutils"
+	"github.com/Nigel2392/go-django/core/models/modelutils"
 )
 
 // GetAppName returns the name of the app the model belongs to.

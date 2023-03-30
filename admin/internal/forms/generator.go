@@ -8,7 +8,7 @@ import (
 
 	"github.com/Nigel2392/go-django/admin/internal/tags"
 	coreModels "github.com/Nigel2392/go-django/core/models"
-	"github.com/Nigel2392/go-django/core/modelutils"
+	"github.com/Nigel2392/go-django/core/models/modelutils"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/google/uuid"
 	"gorm.io/gorm"

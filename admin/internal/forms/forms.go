@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/core/models"
-	"github.com/Nigel2392/go-django/core/modelutils"
+	"github.com/Nigel2392/go-django/core/models/modelutils"
 	"github.com/Nigel2392/router/v3/request"
 	"gorm.io/gorm"
 )

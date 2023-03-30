@@ -9,7 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/admin/internal/paginator"
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core"
-	"github.com/Nigel2392/go-django/core/modelutils"
+	"github.com/Nigel2392/go-django/core/models/modelutils"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/router/v3/request/response"

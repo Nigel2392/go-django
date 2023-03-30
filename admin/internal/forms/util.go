@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/core"
-	"github.com/Nigel2392/go-django/core/modelutils"
+	"github.com/Nigel2392/go-django/core/models/modelutils"
 )
 
 func getValue(mdl interface{}, fieldName string) string {

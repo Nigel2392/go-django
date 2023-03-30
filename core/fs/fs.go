@@ -101,7 +101,10 @@ func (fm *Manager) ReadFromMedia(path string) (io.ReadCloser, error) {
 	if mediaFS == nil {
 		return nil, errors.New("no media file system")
 	}
-	var nice_path = templates.NicePath(false, fm.FS_MEDIA_ROOT, path)
+	var nice_path = templates.NicePath(false, path)
+	if !strings.HasPrefix(nice_path, templates.NicePath(false, fm.FS_MEDIA_ROOT)) {
+		nice_path = templates.NicePath(false, fm.FS_MEDIA_ROOT, path)
+	}
 
 	// Check if the file exists
 	file, err := mediaFS.Open(nice_path)

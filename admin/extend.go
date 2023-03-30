@@ -6,7 +6,7 @@ import (
 	"github.com/Nigel2392/go-django/admin/internal/menu"
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/httputils"
-	"github.com/Nigel2392/go-django/core/modelutils/namer"
+	"github.com/Nigel2392/go-django/core/models/modelutils/namer"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/templates/extensions"
 )
