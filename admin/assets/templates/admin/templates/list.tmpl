@@ -8,7 +8,7 @@
 
 {{ define "content" }}
 {{$model_data := index .Data "model_data"}}
-{{$length := len $model_data}}
+{{$length := index .Data "model_data_truelen"}}
 <div class="admin-list-top">
     {{if .Request.User.HasPerms (index .Data "model").Permissions.Create}}
         <a href="{{index .Data "create_url"}}" class="admin-btn">Create</a>
@@ -20,7 +20,7 @@
     <h1 class="list-header">{{(index .Data "model").Name}} ({{$length}})</h1>
 </div>
 <div class="table-container">
-    {{ if ge $length 2 }}
+    {{ if ge $length 1 }}
         <table width="100%">
             {{ range $i, $item := $model_data }}
                 {{ if eq $i 0 }}
