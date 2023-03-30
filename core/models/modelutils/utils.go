@@ -324,6 +324,11 @@ type ListDisplayer interface {
 //
 // If the model implements the DisplayableModel interface, the String() method will be called.
 func GetModelDisplay(mdl any, list bool) string {
+	return getModelDisplay(mdl, list, true)
+}
+
+// Get a default display for the given model.
+func getModelDisplay(mdl any, list, firstIteration bool) string {
 	if list {
 		switch mdlType := mdl.(type) {
 		case ListDisplayer:
@@ -337,6 +342,22 @@ func GetModelDisplay(mdl any, list bool) string {
 		return mdlType.Display()
 	}
 
+	if firstIteration {
+		if reflect.TypeOf(mdl).Kind() == reflect.Ptr {
+			mdl = reflect.ValueOf(mdl).Elem().Interface()
+			return getModelDisplay(mdl, list, false)
+		} else if reflect.TypeOf(mdl).Kind() == reflect.Struct {
+			// If the model is a struct, and we still havent found it
+			// We need to turn the non-pointer struct into a pointer struct.
+			var ptr = reflect.New(reflect.TypeOf(mdl))
+			// Set the value of the pointer struct to the value of the struct.
+			ptr.Elem().Set(reflect.ValueOf(mdl))
+			// Get the interface of the pointer struct.
+			mdl = ptr.Interface()
+			return getModelDisplay(mdl, list, false)
+		}
+	}
+
 	var id = GetID(mdl, "ID")
 	var name = GetName(mdl)
 	if id.IsZero() {
@@ -344,6 +365,7 @@ func GetModelDisplay(mdl any, list bool) string {
 	}
 
 	return name + " " + id.String()
+
 }
 
 // Get fields for preloading and joining.

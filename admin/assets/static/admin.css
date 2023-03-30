@@ -661,6 +661,21 @@ button.remove:hover {
 .buttons-right {
     justify-content: flex-end;
 }
+.list-header {
+    margin-top: 0;
+    margin-left: auto;
+    margin-bottom: 0;
+    margin-right: 0;
+    min-width: fit-content;
+}
+.next-to-each-other {
+    display: flex;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+
 .admin-button-danger,
 .admin-button-light {
     text-align: center;

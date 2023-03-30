@@ -7,7 +7,8 @@
 {{ end }}
 
 {{ define "content" }}
-
+{{$model_data := index .Data "model_data"}}
+{{$length := len $model_data}}
 <div class="admin-list-top">
     {{if .Request.User.HasPerms (index .Data "model").Permissions.Create}}
         <a href="{{index .Data "create_url"}}" class="admin-btn">Create</a>
@@ -16,11 +17,9 @@
     {{if index .Data "has_search"}}
         {{ template "list-search.tmpl" . }}
     {{end}}
+    <h1 class="list-header">{{(index .Data "model").Name}} ({{$length}})</h1>
 </div>
-
 <div class="table-container">
-    {{$model_data := index .Data "model_data"}}
-    {{$length := len $model_data}}
     {{ if ge $length 2 }}
         <table width="100%">
             {{ range $i, $item := $model_data }}

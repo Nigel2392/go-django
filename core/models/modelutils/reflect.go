@@ -116,8 +116,13 @@ func isVld(v reflect.Value) bool {
 func DePtr(val any) reflect.Value {
 	switch val := val.(type) {
 	case reflect.Value:
+		if val.IsValid() && val.IsZero() {
+			var v = reflect.New(val.Type())
+			val = v.Elem()
+		}
+
 		if isPtr(val) && isVld(val) {
-			return val.Elem()
+			val = val.Elem()
 		}
 
 		if isPtr(val) && isVld(val) {
@@ -131,15 +136,7 @@ func DePtr(val any) reflect.Value {
 		return DePtr(reflect.New(val.Type).Elem())
 	}
 	var v = reflect.ValueOf(val)
-	if isPtr(v) && isVld(v) {
-		v = v.Elem()
-	}
-
-	if isPtr(v) && isVld(v) {
-		return DePtr(v)
-	}
-
-	return v
+	return DePtr(v)
 }
 
 func DePtrType(val any) reflect.Type {
