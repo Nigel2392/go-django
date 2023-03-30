@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/Nigel2392/batch v1.0.2
+	github.com/Nigel2392/go-html v1.0.0
 	github.com/Nigel2392/go-signals v1.0.4
 	github.com/Nigel2392/router/v3 v3.3.0
 	github.com/Nigel2392/typeutils v1.1.1

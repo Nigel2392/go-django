@@ -10,8 +10,7 @@ import (
 //
 // This is for type assertion of the flag, but remains unused.
 type Allowed interface {
-	string | bool | int64 | int | uint64 | uint | float64
-	*string | *bool | *int64 | *int | *uint64 | *uint | *float64
+	~string | ~bool | ~int64 | ~int | ~uint64 | ~uint | ~float64
 }
 
 // A wrapper for the std.FlagSet.
@@ -171,7 +170,7 @@ func typesEqual(a, b interface{}) bool {
 	if typeOfB.Kind() == reflect.Ptr {
 		typeOfB = typeOfB.Elem()
 	}
-	return typeOfA == typeOfB
+	return typeOfA == typeOfB || typeOfA.Kind() == typeOfB.Kind()
 }
 
 // Check if the given value is a bool.

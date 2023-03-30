@@ -21,6 +21,8 @@ type Value interface {
 	Bool() bool
 	// IsZero returns true if the value is zero.
 	IsZero() bool
+	// Any returns the value as an interface{}.
+	Any() interface{}
 	// Set sets the value.
 	Set(s string) error
 }
@@ -131,4 +133,8 @@ func (v *value) Set(s string) error {
 		return fmt.Errorf("Unsupported type: %s", reflect.TypeOf(v.value))
 	}
 	return err
+}
+
+func (v value) Any() interface{} {
+	return v.value
 }

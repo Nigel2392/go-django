@@ -23,14 +23,20 @@ import (
 //   - uint
 //   - float64
 type Command struct {
-	Name        string
+	// Name of the command
+	Name string
+	// Description to show for the command
 	Description string
-	Default     any
-	Handler     func(v Value) error
+	// Default value for the command
+	Default any
+	// Handler func to be called when the command is called
+	Handler func(v Value) error
 
 	value any
 }
 
+// PtrCommand creates a command that stores a pointer to a value.
+// The pointer must be non-nil.
 func PtrCommand[T Allowed](name string, description string, ptr *T, def T, handler func(v Value) error) *Command {
 	if ptr == nil {
 		panic("Pointer is nil")
@@ -71,6 +77,11 @@ func (c *Command) Init(f *flag.FlagSet) {
 		case *float64:
 			f.Float64Var(c.value.(*float64), c.Name, c.Default.(float64), c.Description)
 		default:
+			var intr, ok = c.value.(flag.Value)
+			if !ok {
+				panic(fmt.Sprintf("Unsupported type: %T, please implement the flag.Value interface.", c.value))
+			}
+			f.Var(intr, c.Name, c.Description)
 			panic(fmt.Sprintf("Unsupported type: %T", c.value))
 		}
 		return
@@ -94,6 +105,12 @@ func (c *Command) Init(f *flag.FlagSet) {
 		c.value = f.Uint(c.Name, any(c.Default).(uint), c.Description)
 	case reflect.Float64:
 		c.value = f.Float64(c.Name, any(c.Default).(float64), c.Description)
+	case reflect.Struct:
+		var intr, ok = c.Default.(flag.Value)
+		if !ok {
+			panic(fmt.Sprintf("Unsupported type: %T, please implement the flag.Value interface.", c.Default))
+		}
+		f.Var(intr, c.Name, c.Description)
 	default:
 		panic(fmt.Sprintf("Unsupported type: %s", typeOf.Kind()))
 	}

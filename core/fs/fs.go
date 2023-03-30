@@ -27,21 +27,34 @@ EXAMPLE:
 */
 
 type Manager struct {
-	FS_STATIC_ROOT     string
-	FS_MEDIA_ROOT      string
-	FS_STATIC_URL      string
-	FS_MEDIA_URL       string
-	fs_STATICFILES     fs.FS
-	fs_MEDIAFILES      fs.FS
-	_QUEUE             chan FileQueueItem
+	// The root path of the static files directory.
+	FS_STATIC_ROOT string
+	// The root path of the media files directory.
+	FS_MEDIA_ROOT string
+	// The URL base to serve the static files.
+	FS_STATIC_URL string
+	// The URL base to serve the media files.
+	FS_MEDIA_URL string
+	// File system to access the static files.
+	fs_STATICFILES fs.FS
+	// File system to access the media files.
+	fs_MEDIAFILES fs.FS
+	// The queue of files to process.
+	_QUEUE chan FileQueueItem
+	// The size of the file queue.
 	FS_FILE_QUEUE_SIZE int
 
-	NewFileFunc     func(path string, r io.Reader) FileQueueItem
+	// A function to create new FileQueueItem.
+	NewFileFunc func(path string, r io.Reader) FileQueueItem
+	// A function to process the media files which are read from the media directory.
 	OnReadFromMedia func(path string, r io.Reader)
-	OnWriteToMedia  func(path string, r io.Reader)
+	// A function to process the media files which are written to the media directory.
+	OnWriteToMedia func(path string, r io.Reader)
 
+	// The registrar for the static files.
 	staticRegistrar router.Registrar
-	mediaRegistrar  router.Registrar
+	// The registrar for the media files.
+	mediaRegistrar router.Registrar
 }
 
 func (fm *Manager) Init() {

@@ -107,9 +107,9 @@ func colorizeType(v any, pref, suff string) string {
 		b.WriteString(pref)
 		b.WriteString("bool")
 	default:
-		b.WriteString(logger.White)
+		b.WriteString(logger.Blue)
 		b.WriteString(pref)
-		b.WriteString("unknown")
+		b.WriteString(strings.ToLower(fmt.Sprintf("%T", v)))
 	}
 	b.WriteString(suff)
 	b.WriteString(logger.Reset)
