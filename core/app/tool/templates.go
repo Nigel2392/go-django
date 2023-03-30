@@ -59,7 +59,7 @@ import (
 
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/app"
-	"github.com/Nigel2392/go-django/logger"
+	"github.com/Nigel2392/go-django/core/logger"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/router/v3/request/response"
 )

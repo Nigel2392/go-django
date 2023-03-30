@@ -67,6 +67,60 @@ func initGoMod(v flag.Value) error {
 
 func StartApp(v flag.Value) error {
 	var appName = v.String()
-	fmt.Println("Creating app: ", appName)
+	if err := createDir(appName); err != nil {
+		panic(err)
+	}
+	if err := os.Chdir(appName); err != nil {
+		panic(err)
+	}
+	createFile("urls.go", []byte(getURLSTemplate(httputils.NameFromPath(appName))))
+	createFile("views.go", []byte(getViewsTemplate(httputils.NameFromPath(appName))))
+	createFile("models.go", []byte(getModelsTemplate(httputils.NameFromPath(appName))))
 	return nil
 }
+
+func getURLSTemplate(appName string) string {
+	return fmt.Sprintf(urlsTemplate, appName, appName, appName, appName, appName, appName)
+}
+
+func getViewsTemplate(appName string) string {
+	return fmt.Sprintf(viewsTemplate, appName, appName)
+}
+
+func getModelsTemplate(appName string) string {
+	return fmt.Sprintf(modelsTemplate, appName, appName)
+}
+
+var urlsTemplate = `package %s
+
+import (
+	"github.com/Nigel2392/router/v3"
+)
+
+var %s_route = router.Group("/%s", "%s")
+
+func URLs() router.Registrar {
+	%s_route.Get("", index, "index")
+	return %s_route
+}`
+
+var viewsTemplate = `package %s
+
+import (
+	"github.com/Nigel2392/router/v3/request"
+)
+
+func index(r *request.Request) {
+	r.WriteString("Hello from %s")
+}`
+
+var modelsTemplate = `package %s
+
+import (
+	"github.com/Nigel2392/go-django/core/models"
+)
+
+// Declare your models here.
+type %s_model struct {
+	models.Model
+}`
