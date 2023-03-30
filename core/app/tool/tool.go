@@ -145,7 +145,7 @@ func initGoMod(projectName string) error {
 	var extra = ""
 	if len(latestTag.Name) > 1 {
 		var prefix = latestTag.Name[0]
-		if prefix == 'v' || prefix == 'V' && (len(latestTag.Name) > 2 && latestTag.Integer > 1000) {
+		if prefix == 'v' || prefix == 'V' && (len(latestTag.Name) > 2 && latestTag.Integer > 2000) {
 			extra = "/" + latestTag.Name[0:1]
 		}
 	}
