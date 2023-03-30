@@ -9,6 +9,7 @@
 {{ define "content" }}
 {{$model_data := index .Data "model_data"}}
 {{$length := index .Data "model_data_truelen"}}
+{{$length_prev := index .Data "model_data_len_prev"}}
 <div class="admin-list-top">
     {{if .Request.User.HasPerms (index .Data "model").Permissions.Create}}
         <a href="{{index .Data "create_url"}}" class="admin-btn">Create</a>
@@ -17,7 +18,7 @@
     {{if index .Data "has_search"}}
         {{ template "list-search.tmpl" . }}
     {{end}}
-    <h1 class="list-header">{{(index .Data "model").Name}} ({{$length}})</h1>
+    <h1 class="list-header">{{(index .Data "model").Name}} ({{$length_prev}} / {{$length}})</h1>
 </div>
 <div class="table-container">
     {{ if ge $length 1 }}

@@ -98,6 +98,16 @@ func listView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 	rq.Data.Set("model", mdl)
 	rq.Data.Set("model_data", model_data)
 	rq.Data.Set("model_data_truelen", count)
+
+	var modelsPrevious = int64(limit * page)
+	if modelsPrevious > count {
+		modelsPrevious = count
+	}
+	if modelsPrevious < 0 {
+		modelsPrevious = 0
+	}
+
+	rq.Data.Set("model_data_len_prev", modelsPrevious)
 	rq.Data.Set("has_search", hasSearch)
 	//	rq.Data.Set("has_fitlers", hasFilters)
 	rq.Data.Set("create_url", string(rq.URL(router.GET, fmt.Sprintf("admin:%s:%s:create", mdl.AppName(), mdl.Name)).Format()))
