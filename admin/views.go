@@ -66,7 +66,7 @@ func listView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 	}
 
 	var searchQuery = rq.Request.URL.Query().Get("search")
-	var page, limit, redirected = paginator.PaginateRequest(
+	var page, limit, count, redirected = paginator.PaginateRequest(
 		rq,
 		mdl.Mdl,
 		rq.URL(router.GET, fmt.Sprintf("admin:%s:%s", mdl.AppName(), mdl.Name)).Format(),
@@ -97,6 +97,7 @@ func listView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 	var model_data = as.tableDataFromModel(mdl.Mdl, models)
 	rq.Data.Set("model", mdl)
 	rq.Data.Set("model_data", model_data)
+	rq.Data.Set("model_data_truelen", count)
 	rq.Data.Set("has_search", hasSearch)
 	//	rq.Data.Set("has_fitlers", hasFilters)
 	rq.Data.Set("create_url", string(rq.URL(router.GET, fmt.Sprintf("admin:%s:%s:create", mdl.AppName(), mdl.Name)).Format()))

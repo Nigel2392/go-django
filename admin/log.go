@@ -225,7 +225,7 @@ func logView(as *AdminSite) func(rq *request.Request) {
 		}
 		var db = as.DB().DB()
 		var logs = make([]*Log, 0)
-		var page, limit, redirected = paginator.PaginateRequest(rq, &Log{}, as.registrar.URL(router.GET, "admin:internal:log").Format(), db,
+		var page, limit, _, redirected = paginator.PaginateRequest(rq, &Log{}, as.registrar.URL(router.GET, "admin:internal:log").Format(), db,
 			map[string]string{"search": rq.Request.URL.Query().Get("search")})
 		if redirected {
 			return

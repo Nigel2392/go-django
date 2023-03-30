@@ -196,7 +196,7 @@ func PaginateDB(page int, perPage int) func(db *gorm.DB) *gorm.DB {
 	}
 }
 
-func PaginateRequest(rq *request.Request, model any, baseURL string, db *gorm.DB, extra map[string]string) (page int, limit int, redirected bool) {
+func PaginateRequest(rq *request.Request, model any, baseURL string, db *gorm.DB, extra map[string]string) (page int, limit int, count int64, redirected bool) {
 	var currentPageHash = secret.FnvHash(rq.Request.URL.Path)
 	var pageStr = rq.Request.URL.Query().Get("page")
 	var limitStr = rq.Request.URL.Query().Get("limit")
@@ -219,7 +219,6 @@ func PaginateRequest(rq *request.Request, model any, baseURL string, db *gorm.DB
 		limit = 1
 	}
 
-	var count int64
 	var maxPage int
 
 	// Validate if the page is out of range
@@ -244,7 +243,7 @@ func PaginateRequest(rq *request.Request, model any, baseURL string, db *gorm.DB
 		}
 		url.RawQuery = query.Encode()
 		rq.Redirect(url.String(), 302)
-		return page, limit, true
+		return page, limit, count, true
 	}
 
 	if maxPage > 1 {
@@ -260,7 +259,7 @@ func PaginateRequest(rq *request.Request, model any, baseURL string, db *gorm.DB
 		})
 	}
 
-	return page, limit, false
+	return page, limit, count, false
 }
 
 func setLimitCookie(rq *request.Request, currentPageHash secret.HashUint, limit int) {
