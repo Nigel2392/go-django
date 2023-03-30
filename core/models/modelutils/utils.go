@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Nigel2392/go-django/core"
+	"github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/go-django/core/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -314,13 +316,25 @@ func GetName(val any) string {
 	return v.Name()
 }
 
+type ListDisplayer interface {
+	ListDisplay() string
+}
+
 // Get a default display for the given model.
 //
 // If the model implements the DisplayableModel interface, the String() method will be called.
-func GetModelDisplay(mdl any) string {
+func GetModelDisplay(mdl any, list bool) string {
+	if list {
+		switch mdlType := mdl.(type) {
+		case ListDisplayer:
+			return mdlType.ListDisplay()
+		}
+	}
 	switch mdlType := mdl.(type) {
-	case fmt.Stringer:
+	case core.DisplayableModel:
 		return mdlType.String()
+	case core.DisplayableField:
+		return mdlType.Display()
 	}
 
 	var id = GetID(mdl, "ID")
@@ -350,6 +364,10 @@ func GetPreloadFields(s any) (preload []string, joins []string) {
 
 		if fieldType.Kind() == reflect.Ptr {
 			fieldType = fieldType.Elem()
+		}
+
+		if reflect.TypeOf(fs.FileField{}) == DePtrType(fieldType) {
+			continue
 		}
 
 		// Validate wether the field is, or contains a gorm.Model

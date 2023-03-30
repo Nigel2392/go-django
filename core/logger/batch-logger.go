@@ -129,7 +129,7 @@ func (l *BatchLogger) Now(loglevel Loglevel, format string, args ...any) {
 	if l.Loglevel < loglevel {
 		return
 	}
-	var entry = NewLogEntry(loglevel, fmt.Sprintf(format, args...), 3, 2)
+	var entry = NewLogEntry(loglevel, fmt.Sprintf(format, args...), 8, 1)
 	l.handle(entry)
 }
 
@@ -138,7 +138,7 @@ func (l *BatchLogger) log(loglevel Loglevel, message string) {
 		return
 	}
 
-	var entry = NewLogEntry(loglevel, message, 4, 2)
+	var entry = NewLogEntry(loglevel, message, 8, 1)
 
 	l.batcher.Push(entry)
 }

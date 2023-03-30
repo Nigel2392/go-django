@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/admin/internal/tags"
+	"github.com/Nigel2392/go-django/core/fs"
 	coreModels "github.com/Nigel2392/go-django/core/models"
 	"github.com/Nigel2392/go-django/core/models/modelutils"
 	"github.com/Nigel2392/router/v3/request"
@@ -42,12 +43,20 @@ func getTypes(mdl any, name string) (string, reflect.Type) {
 		case "Time":
 			return "datetime", f.Type()
 		}
+		// Check if it implements the GetType method
+		if getTyper, ok := f.Interface().(GetTyper); ok {
+			return getTyper.GetType(), f.Type()
+		}
 	}
 	return "text", f.Type()
 }
 
+type GetTyper interface {
+	GetType() string
+}
+
 func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
-	var fields = make([]*FormField, 0)
+	var flds = make([]*FormField, 0)
 
 	var t = reflect.TypeOf(mdl)
 	if t.Kind() == reflect.Ptr {
@@ -113,7 +122,7 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 				}
 
 				addLabels(formField, tagMap)
-				fields = append(fields, formField)
+				flds = append(flds, formField)
 				continue
 			}
 			multiple = true
@@ -218,7 +227,7 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 				var option = &FormField{
 					isAdmin:    isAdmin,
 					Name:       name,
-					Label:      modelutils.GetModelDisplay(vval),
+					Label:      modelutils.GetModelDisplay(vval, false),
 					Value:      modelutils.GetID(vval, "ID").String(),
 					NeedsAdmin: needsAdmin,
 				}
@@ -237,11 +246,43 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 				NeedsAdmin: needsAdmin,
 			}
 
-			fields = append(fields, fieldGroup)
+			flds = append(flds, fieldGroup)
 			continue
 
 		case reflect.Struct:
 			if !modelutils.IsModel(field) || modelutils.IsModelField(field) {
+				switch modelutils.DePtr(field).Type() {
+				case reflect.TypeOf(fs.FileField{}):
+					var fieldInterface, err = modelutils.GetField(mdl, field.Name, true)
+					if err != nil {
+						panic(err)
+					}
+					url, err := modelutils.GetField(fieldInterface, "URL", false)
+					if err != nil {
+						panic(err)
+					}
+					var fieldName = field.Name
+					var disabled = false
+					flds = append(flds, &FormField{
+						isAdmin:    isAdmin,
+						Name:       fieldName,
+						Label:      fieldName,
+						Type:       "file",
+						Value:      valueFromInterface(url),
+						Disabled:   disabled,
+						NeedsAdmin: needsAdmin,
+						Classes: append(
+							strings.Split(tagMap.Get("class"), " "),
+							"admin-form-input"),
+						LabelClasses: append(
+							strings.Split(tagMap.Get("label_class"), " "),
+							"admin-form-label"),
+						DivClasses: append(
+							strings.Split(tagMap.Get("div_class"), " "),
+							"admin-form-div"),
+					})
+
+				}
 				continue
 			}
 
@@ -283,7 +324,7 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 						}
 						options = append(options, &FormField{
 							Name:       modelutils.GetName(selectedItem),
-							Label:      modelutils.GetModelDisplay(selectedItem),
+							Label:      modelutils.GetModelDisplay(selectedItem, false),
 							Value:      id.String(),
 							Selected:   true,
 							NeedsAdmin: needsAdmin,
@@ -311,7 +352,7 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 						var option = &FormField{
 							isAdmin:    isAdmin,
 							Name:       name,
-							Label:      modelutils.GetModelDisplay(vval),
+							Label:      modelutils.GetModelDisplay(vval, false),
 							Value:      modelutils.GetID(vval, "ID").String(),
 							NeedsAdmin: needsAdmin,
 						}
@@ -335,7 +376,7 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 					f.LabelClasses = append(lblcls, "admin-form-label")
 					f.DivClasses = append(divcls, "admin-form-div")
 
-					fields = append(fields, f)
+					flds = append(flds, f)
 
 					continue
 				}
@@ -376,9 +417,9 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 			f.Checked = f.Value == "true"
 			f.Value = ""
 		}
-		fields = append(fields, f)
+		flds = append(flds, f)
 	}
-	return fields
+	return flds
 }
 
 func addLabels(f *FormField, tagMap tags.TagMap) {

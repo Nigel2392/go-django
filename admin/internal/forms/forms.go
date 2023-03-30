@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/go-django/core/models"
 	"github.com/Nigel2392/go-django/core/models/modelutils"
 	"github.com/Nigel2392/router/v3/request"
@@ -151,7 +152,7 @@ func (f *Form) Save(db *gorm.DB) (bool, error) {
 }
 
 // Process and save the form if valid.
-func (f *Form) Process(r *request.Request, db *gorm.DB) (any, bool, error) {
+func (f *Form) Process(r *request.Request, mgr *fs.Manager, db *gorm.DB) (any, bool, error) {
 	if f.Disabled {
 		return nil, false, errors.New("form is disabled")
 	}
@@ -164,7 +165,15 @@ func (f *Form) Process(r *request.Request, db *gorm.DB) (any, bool, error) {
 		}
 		kv[strings.TrimPrefix(k, "form_")] = v
 	}
-	var m, err = f.submit(kv, db, r)
+	//	for k, v := range r.Request.MultipartForm.File {
+	//		r.Request.MultipartForm.File[strings.TrimPrefix(k, "form_")] = v
+	//		delete(r.Request.MultipartForm.File, k)
+	//	}
+	//	for k, v := range r.Request.MultipartForm.Value {
+	//		r.Request.MultipartForm.Value[strings.TrimPrefix(k, "form_")] = v
+	//		delete(r.Request.MultipartForm.Value, k)
+	//	}
+	var m, err = f.submit(kv, mgr, db, r)
 	if err != nil {
 		return nil, false, errors.New("failed to submit form: " + err.Error())
 	}

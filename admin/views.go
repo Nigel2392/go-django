@@ -159,7 +159,7 @@ func detailView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 	}
 
 	if rq.Method() == "POST" {
-		var s, created, err = form.Process(rq, db.DB())
+		var s, created, err = form.Process(rq, as.MediaManager, db.DB())
 		if err != nil {
 			as.Logger.Critical(err)
 			goto Template
@@ -221,7 +221,7 @@ func createView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 		).Format()), rq, db.DB(), m)
 
 	if rq.Method() == "POST" {
-		var s, created, err = form.Process(rq, db.DB())
+		var s, created, err = form.Process(rq, as.MediaManager, db.DB())
 		if err != nil {
 			as.Logger.Critical(err)
 			rq.Data.AddMessage("error", err.Error())

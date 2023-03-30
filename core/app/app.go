@@ -282,6 +282,7 @@ This is Go-Django's default command line interface.`
 			&auth.Group{},
 			&auth.Permission{},
 		)
+		a.adminSite.MediaManager = a.config.File
 	}
 
 	return a

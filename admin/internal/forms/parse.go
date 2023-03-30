@@ -3,11 +3,14 @@ package forms
 import (
 	"errors"
 	"fmt"
+	"net/http"
+	"path/filepath"
 	"reflect"
 	"strconv"
 	"time"
 
 	"github.com/Nigel2392/go-django/auth"
+	"github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/go-django/core/models/modelutils"
 	"github.com/Nigel2392/router/v3/request"
 	"gorm.io/gorm"
@@ -15,7 +18,7 @@ import (
 
 // 'submit' the form.
 // This processes the form fields and might update some model fields.
-func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) (any, error) {
+func (f *Form) submit(kv map[string][]string, mgr *fs.Manager, db *gorm.DB, rq *request.Request) (any, error) {
 	var t = reflect.TypeOf(f.Model)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
@@ -212,7 +215,36 @@ func (f *Form) submit(kv map[string][]string, db *gorm.DB, rq *request.Request) 
 
 			// Set the field
 			correctPtrSet(reflectValue.Field(i), selectedValue)
-		case "text", "textarea", "password", "email", "url", "tel", "search", "color", "range", "file":
+		case "file":
+			// If the field is a file, the field is a struct of type fields.File.
+			// We need to get the file from the request and save it.
+			var file, header, err = rq.Request.FormFile("form_" + field.Name)
+			if err != nil {
+				if err == http.ErrMissingFile {
+					if formField.Required {
+						return nil, errors.New("failed to parse field: " + field.Name + " is required")
+					}
+					continue
+				}
+				return nil, errors.New("failed to parse field: " + err.Error())
+			}
+
+			// Create a new file
+			defer file.Close()
+			fileField, err := fs.NewFile(mgr, filepath.Join("admin/"+header.Filename), file)
+			if err != nil {
+				return nil, errors.New("failed to parse field: " + err.Error())
+			}
+
+			// Validate the field
+			err = validateModelField(modelField, fileField)
+			if err != nil {
+				return nil, errors.New("failed to validate field: " + err.Error())
+			}
+
+			// Set the field
+			correctPtrSet(modelField, fileField)
+		case "text", "textarea", "password", "email", "url", "tel", "search", "color", "range":
 			// If the field is a text, textarea, password, email, url, tel, search, color, range or file, the field is a string.
 			//
 			// We need to parse the value to the correct type.

@@ -389,6 +389,28 @@ button.remove:hover {
     margin: 0;
     padding: 0;
 }
+.admin-button:has(input[type=file]) {
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    width: 200px;
+    margin-top: 10px;
+}
+.admin-button input[type=file] {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 100%;
+  min-height: 100%;
+  font-size: 100px;
+  text-align: right;
+  filter: alpha(opacity=0);
+  opacity: 0;
+  outline: none;
+  background: white;
+  cursor: inherit;
+  display: block;
+}
 .admin-form-input:disabled{
     background-color: var(--color-disabled);
     border-color: var(--color-disabled);

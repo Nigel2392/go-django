@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"html/template"
 	"strings"
+
+	"github.com/Nigel2392/go-django/core/httputils"
 )
 
 func (f *Form) Render() template.HTML {
@@ -41,10 +43,22 @@ func (f *FormField) Render(fieldBuilder *strings.Builder) {
 		f.renderSelect(fieldBuilder)
 	case "textarea":
 		f.renderTextarea(fieldBuilder)
+	case "file":
+		f.renderFile(fieldBuilder)
 	default:
 		f.renderInput(fieldBuilder)
 	}
 	fieldBuilder.WriteString(`</div>`)
+}
+
+func (f *FormField) renderFile(fieldBuilder *strings.Builder) {
+	var extra string = f.getExtra()
+	fmt.Fprintf(fieldBuilder, `<a href="%s" target="_blank">%s</a>`, f.Value, httputils.CutFrontPath(f.Value, 20))
+	fmt.Fprintf(fieldBuilder, `
+	<span class="admin-button">
+		Browse files...
+		<input type="file" name="form_%s" id="form_%s" %s>
+	</span>`, f.Name, f.Name, extra)
 }
 
 func (f *FormField) renderM2M(fieldBuilder *strings.Builder) {

@@ -6,7 +6,7 @@
 
 {{ define "content" }}
 {{$form := index .Data "form"}}
-<form action="{{$form.URL}}" method="{{$form.Method}}" {{if $form.Disabled}}class="disabled"{{end}}>
+<form action="{{$form.URL}}" method="{{$form.Method}}" enctype="multipart/form-data" {{if $form.Disabled}}class="disabled"{{end}}>
     {{ $form.CSRFToken.Input }}
     {{ $form.Render }}
     <button type="submit" class="admin-button margins-top">Create</button>

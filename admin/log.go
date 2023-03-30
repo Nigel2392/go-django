@@ -198,7 +198,7 @@ func ModelLog(as *AdminSite, user *auth.User, model any, action LogAction) *Log 
 	modelID := modelutils.GetID(model, "ID")
 	l := &Log{
 		User:         LogUser(user),
-		ModelName:    modelutils.GetModelDisplay(model),
+		ModelName:    modelutils.GetModelDisplay(model, false),
 		ModelPackage: namer.GetAppName(model),
 		ModelID:      modelID,
 		Action:       action,

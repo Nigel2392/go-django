@@ -8,7 +8,7 @@
     {{$form := index .Data "form"}}
     {{$model := index .Data "model"}}
     {{$id := index .Data "id"}}
-    <form action="{{$form.URL}}" method="{{$form.Method}}"{{if $form.Disabled}}class="disabled"{{end}}>
+    <form action="{{$form.URL}}" method="{{$form.Method}}" enctype="multipart/form-data"{{if $form.Disabled}}class="disabled"{{end}}>
         {{ $form.CSRFToken.Input }}
         {{ $form.Render }}
         <div class="buttons-left">

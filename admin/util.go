@@ -179,7 +179,7 @@ func (as *AdminSite) tableDataFromModel(s any, d []any) [][]any {
 					row = append(row, "")
 					continue
 				}
-				row = append(row, modelutils.GetModelDisplay(fieldValue.Interface()))
+				row = append(row, template.HTML(modelutils.GetModelDisplay(fieldValue.Interface(), true)))
 				if protectedTag {
 					row = append(row, "***************")
 					continue
@@ -282,7 +282,7 @@ func formatFunc(a any) string {
 		return ""
 	}
 	if modelutils.IsModel(a) {
-		return modelutils.GetModelDisplay(a)
+		return modelutils.GetModelDisplay(a, false)
 	}
 	switch a := a.(type) {
 	case time.Time:

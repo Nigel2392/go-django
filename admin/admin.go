@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/admin/internal/models"
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/db"
+	mfs "github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/go-django/core/httputils"
 	"github.com/Nigel2392/go-django/core/logger"
 	"github.com/Nigel2392/router/v3"
@@ -143,6 +144,9 @@ type AdminSite struct {
 	//
 	// This is where all the extensions will be registered.
 	extensionsApp *menu.Item
+
+	// File system for saving uploaded files.
+	MediaManager *mfs.Manager
 }
 
 func NewAdminSite(name, url string, p db.Pool[*gorm.DB], l ...request.Logger) *AdminSite {
