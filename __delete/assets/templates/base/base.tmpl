@@ -1,0 +1,16 @@
+{{ define "base" }}
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>{{ block "title" . }}{{ end }}</title>
+        {{ if .Messages }}{{ template "messages.tmpl" .Messages }}{{ end }}
+        {{ block "css" . }}{{ end }}
+    </head>
+    <body>
+        {{ block "content" .}}{{ end }}
+        {{ block "js" . }}{{ end }}
+    </body>
+</html>
+{{ end }}

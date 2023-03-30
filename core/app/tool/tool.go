@@ -120,7 +120,7 @@ func (t Tags) Latest() Tag {
 }
 
 var GITHUB_TAG_URL = "https://api.github.com/repos/Nigel2392/go-django/tags"
-var GITHUB_REPO_URL = "https://github.com/Nigel2392/go-django"
+var GITHUB_REPO_URL = "github.com/Nigel2392/go-django"
 
 // Initialize go.mod to get the latest version of the project.
 // This only works for github repositories with tags in the following format:
