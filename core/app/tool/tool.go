@@ -16,6 +16,8 @@ import (
 	"github.com/google/uuid"
 )
 
+var VERSION = ""
+
 func StartProject(v flag.Value) error {
 	var projectName = v.String()
 	if err := createDir(projectName); err != nil {
@@ -50,7 +52,7 @@ func StartProject(v flag.Value) error {
 	if err := createFile(".env", []byte(env_str_generated_secret)); err != nil {
 		return err
 	}
-	return initGoMod(v.String())
+	return initGoMod(v.String(), VERSION)
 }
 
 type Tag struct {
@@ -122,7 +124,7 @@ var GITHUB_REPO_URL = "https://github.com/Nigel2392/go-django"
 
 // Initialize go.mod to get the latest version of the project.
 // This only works for github repositories with tags in the following format:
-func initGoMod(projectName string) error {
+func initGoMod(projectName string, extra string) error {
 	var name = httputils.NameFromPath(projectName)
 	var cmd = exec.Command("go", "mod", "init", "go-django/"+name)
 	cmd.Stdout = os.Stdout
@@ -141,14 +143,6 @@ func initGoMod(projectName string) error {
 	var tagList = DecodeTags(resp.Body)
 	// Get the latest version of jsext
 	var latestTag = tagList.Latest()
-
-	var extra = ""
-	if len(latestTag.Name) > 1 {
-		var prefix = latestTag.Name[0]
-		if prefix == 'v' || prefix == 'V' && (len(latestTag.Name) > 2 && latestTag.Integer > 2000) {
-			extra = "/" + latestTag.Name[0:1]
-		}
-	}
 
 	if err := runCmd("go", "get", GITHUB_REPO_URL+extra+"@"+latestTag.Name); err != nil {
 		return err
