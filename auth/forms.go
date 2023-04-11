@@ -31,8 +31,15 @@ import (
 //		}
 //	}
 func LoginForm(inputClass, labelClass string) *forms.Form {
-	var login_field *forms.Field
 	var titled = httputils.TitleCaser.String(USER_MODEL_LOGIN_FIELD)
+	var login_field *forms.Field = &forms.Field{
+		LabelText:   titled,
+		Placeholder: titled,
+		Name:        USER_MODEL_LOGIN_FIELD,
+		Required:    true,
+		Class:       inputClass,
+		LabelClass:  labelClass,
+	}
 	switch strings.ToLower(USER_MODEL_LOGIN_FIELD) {
 	case "email":
 		login_field = &forms.Field{
@@ -46,12 +53,7 @@ func LoginForm(inputClass, labelClass string) *forms.Form {
 			Type: forms.TypeText,
 		}
 	}
-	login_field.LabelText = titled
-	login_field.Placeholder = titled
-	login_field.Name = USER_MODEL_LOGIN_FIELD
-	login_field.Required = true
-	login_field.Class = inputClass
-	login_field.LabelClass = labelClass
+
 	var loginForm = forms.Form{
 		Fields: []*forms.Field{
 			login_field,

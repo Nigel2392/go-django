@@ -17,11 +17,15 @@ type Key interface {
 	// Get a new aes key from the secret key.
 	KeyFromSecret() *[32]byte
 	// Generate a sha256 hash from the secret key.
-	PublicKey() string
+	Sha256() string
+	// Verify a sha256 hash with the secret key.
+	VerifySha256(hash string) bool
 	// Sign a string with the secret key.
 	Sign(data string) string
 	// Verify a string with the secret key.
 	Verify(data, signature string) bool
+	// Raw returns the raw secret key.
+	Raw() string
 }
 
 // Secret key struct.
@@ -76,17 +80,36 @@ func (c *secretKey) KeyFromSecret() *[32]byte {
 }
 
 // Public key from the secret key.
-func (c *secretKey) PublicKey() string {
-	return c.Sign(c.SECRET_KEY)
+func (c *secretKey) Sha256() string {
+	var hash = sha256.Sum256([]byte(c.SECRET_KEY))
+	return hex.EncodeToString(hash[:])
+}
+
+// Verify a sha256 hash with the secret key.
+func (c *secretKey) VerifySha256(hash string) bool {
+	if c.SECRET_KEY == "" {
+		panic("No secret key set")
+	}
+	return c.Sha256() == hash
 }
 
 // Sign a string with the secret key.
 func (c *secretKey) Sign(data string) string {
-	var hash = sha256.Sum256([]byte(data + c.SECRET_KEY))
-	return hex.EncodeToString(hash[:])
+	if c.SECRET_KEY == "" {
+		panic("No secret key set")
+	}
+	return Hash([]byte(data), []byte(c.SECRET_KEY))
 }
 
 // Verify a string with the secret key.
 func (c *secretKey) Verify(data, signature string) bool {
-	return c.Sign(data) == signature
+	if c.SECRET_KEY == "" {
+		panic("No secret key set")
+	}
+	return Compare([]byte(data), []byte(c.SECRET_KEY), signature)
+}
+
+// Raw returns the raw secret key.
+func (c *secretKey) Raw() string {
+	return c.SECRET_KEY
 }

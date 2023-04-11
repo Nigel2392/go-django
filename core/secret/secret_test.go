@@ -1,8 +1,9 @@
 package secret_test
 
 import (
-	"github.com/Nigel2392/go-django/core/secret"
 	"testing"
+
+	"github.com/Nigel2392/go-django/core/secret"
 )
 
 var key = secret.New("0123456789")
@@ -44,5 +45,7 @@ func TestSignVerify(t *testing.T) {
 	signature := key.Sign(string(data))
 	if !key.Verify(string(data), signature) {
 		t.Fatal("Signature does not match data.")
+	} else if key.Verify(string(data)+"!", signature) {
+		t.Fatal("Bad signature matched data.")
 	}
 }

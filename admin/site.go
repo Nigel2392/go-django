@@ -9,7 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/httputils"
-	"github.com/Nigel2392/go-django/core/httputils/orderedmap"
+	"github.com/Nigel2392/orderedmap"
 	"gorm.io/gorm"
 
 	"github.com/Nigel2392/router/v3"

@@ -347,12 +347,8 @@ func (a *Application) setupRouter() {
 
 }
 
-// Run the application.
-//
-// This will start the server and listen for requests.
-//
-// If the server is running in SSL mode, this will also start a redirect server.
-func (a *Application) Run() error {
+// Instead of running the application, retrieve the handler/serve mux.
+func (a *Application) Serve() http.Handler {
 	if !a.initted {
 		panic("You must call Init() before calling Run()")
 	}
@@ -408,8 +404,17 @@ func (a *Application) Run() error {
 	}
 
 	a.Router.AddGroup(a.adminSite.URLS())
+	return a.Router
+}
 
-	var server = a.server()
+// Run the application.
+//
+// This will start the server and listen for requests.
+//
+// If the server is running in SSL mode, this will also start a redirect server.
+func (a *Application) Run() error {
+	var handler = a.Serve()
+	var server = a.server(handler)
 	if a.config.Server.CertFile != "" && a.config.Server.KeyFile != "" {
 		// SSL is true, so we will listen on the TLS port.
 		// This will also automatically redirect all HTTP requests to HTTPS.
@@ -422,7 +427,7 @@ func (a *Application) Run() error {
 	return server.ListenAndServe()
 }
 
-func (a *Application) server() *http.Server {
+func (a *Application) server(h http.Handler) *http.Server {
 	var httpServer *http.Server = &http.Server{}
 	if a.config.Server != nil && a.config.Server.Server != nil {
 		httpServer = a.config.Server.Server
@@ -432,7 +437,7 @@ func (a *Application) server() *http.Server {
 		httpServer.Addr = fmt.Sprintf("%s:%d", a.config.Server.Host, a.config.Server.Port)
 	}
 	// Set the handler to the router.
-	httpServer.Handler = a.Router
+	httpServer.Handler = h
 	return httpServer
 }
 

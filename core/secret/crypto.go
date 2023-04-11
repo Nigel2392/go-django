@@ -16,6 +16,10 @@ func (h HashUint) String() string {
 	return fmt.Sprintf("%x", uint32(h))
 }
 
+func (h HashUint) Compare(other HashUint) bool {
+	return h == other
+}
+
 // Hashes any string to a 32-bit integer
 func FnvHash(s string) HashUint {
 	h := fnv.New32a()
