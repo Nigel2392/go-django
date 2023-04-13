@@ -1,7 +1,6 @@
 package secret
 
 import (
-	"bytes"
 	"crypto/md5"
 	"crypto/sha256"
 	"crypto/sha512"
@@ -15,34 +14,64 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
-type hasher struct {
-	hashFunc  hashFunc
-	validFunc compareFunc
-}
+// This package provides a way to generate a different type of hash for each day of the week.
+//
+// If the hashing algorithm does not allow for a salt, we will append the salt to the data.
+//
+// The hashing algorithm is chosen based on the day of the week.
+//
+// Algorithms:
+// 0 - SHA256 (Sunday)
+// 1 - MD5 (Monday)
+// 2 - SHA512 (Tuesday)
+// 3 - SHA384 (Wednesday)
+// 4 - Bcrypt (Thursday)
+// 5 - ARGON2 (Friday)
+// 6 - PBKDF2 (Saturday)
+//
+// The hash is in the format: <day>-<first letter of day>$<hash>
+// Example: 0-S$<hash>
+//
+// Multiple iterations of hashing is not supported.
+// IE: If the hash is 0-S$<hash>, it should not be hashed again.
+//
+// We allow overwriting of the daily hashers.
 
 var (
-	day0Hasher hasher = hasher{hash0SHA256, compare0SHA256}
-	day1Hasher hasher = hasher{hash1MD5, compare1MD5}
-	day2Hasher hasher = hasher{hash2SHA512, compare2SHA512}
-	day3Hasher hasher = hasher{hash3SHA384, compare3SHA384}
-	day4Hasher hasher = hasher{hash4Bcrypt, compare4Bcrypt}
-	day5Hasher hasher = hasher{hash5ARGON2, compare5ARGON2}
-	day6Hasher hasher = hasher{hash6PBKDF2, compare6PBKDF2}
+	Day0Hasher = Hasher{hash0SHA256, compare0SHA256} // Sunday     (SHA256)
+	Day1Hasher = Hasher{hash1MD5, compare1MD5}       // Monday     (MD5)
+	Day2Hasher = Hasher{hash2SHA512, compare2SHA512} // Tuesday    (SHA512)
+	Day3Hasher = Hasher{hash3SHA384, compare3SHA384} // Wednesday  (SHA384)
+	Day4Hasher = Hasher{hash4Bcrypt, compare4Bcrypt} // Thursday   (Bcrypt)
+	Day5Hasher = Hasher{hash5ARGON2, compare5ARGON2} // Friday     (ARGON2)
+	Day6Hasher = Hasher{hash6PBKDF2, compare6PBKDF2} // Saturday   (PBKDF2)
 )
 
-var weekDays map[string]hasher = map[string]hasher{
-	"0-S$": day0Hasher,
-	"1-M$": day1Hasher,
-	"2-T$": day2Hasher,
-	"3-W$": day3Hasher,
-	"4-T$": day4Hasher,
-	"5-F$": day5Hasher,
-	"6-S$": day6Hasher,
+var weekDays = map[string]Hasher{
+	"0-S$": Day0Hasher, // Sunday
+	"1-M$": Day1Hasher, // Monday
+	"2-T$": Day2Hasher, // Tuesday
+	"3-W$": Day3Hasher, // Wednesday
+	"4-T$": Day4Hasher, // Thursday
+	"5-F$": Day5Hasher, // Friday
+	"6-S$": Day6Hasher, // Saturday
 }
 
-type hashFunc func(data, salt []byte) string
+// A hash function should return a hash of the data and salt.
+type HashFunc func(data, salt []byte) string
 
-type compareFunc func(data, salt []byte, hash string) bool
+// A compare function should return true if the data and salt match the hash.
+type CompareFunc func(data, salt []byte, hash string) bool
+
+// A hasher is a struct that contains a hash function and a compare function.
+//
+// The hash function should return a hash of the data and salt.
+//
+// The compare function should return true if the data and salt match the hash.
+type Hasher struct {
+	hashFunc  HashFunc
+	validFunc CompareFunc
+}
 
 // Recommended use is only in testing!
 func HashForDay(data, salt []byte, day time.Weekday) string {
@@ -84,7 +113,7 @@ func Compare(data, salt []byte, hash string) bool {
 }
 
 func hash0SHA256(data, salt []byte) string {
-	var hash = sha256.Sum256(bytes.Join([][]byte{data, salt}, []byte{}))
+	var hash = sha256.Sum256(append(data, salt...))
 	return hex.EncodeToString(hash[:])
 }
 
@@ -93,7 +122,7 @@ func compare0SHA256(data, salt []byte, hash string) bool {
 }
 
 func hash1MD5(data, salt []byte) string {
-	var hash = md5.Sum(bytes.Join([][]byte{data, salt}, []byte{}))
+	var hash = md5.Sum(append(data, salt...))
 	return hex.EncodeToString(hash[:])
 }
 
@@ -102,7 +131,7 @@ func compare1MD5(data, salt []byte, hash string) bool {
 }
 
 func hash2SHA512(data, salt []byte) string {
-	var hash = sha512.Sum512(bytes.Join([][]byte{data, salt}, []byte{}))
+	var hash = sha512.Sum512(append(data, salt...))
 	return hex.EncodeToString(hash[:])
 }
 
@@ -111,7 +140,7 @@ func compare2SHA512(data, salt []byte, hash string) bool {
 }
 
 func hash3SHA384(data, salt []byte) string {
-	var hash = sha512.Sum384(bytes.Join([][]byte{data, salt}, []byte{}))
+	var hash = sha512.Sum384(append(data, salt...))
 	return hex.EncodeToString(hash[:])
 }
 
@@ -120,12 +149,12 @@ func compare3SHA384(data, salt []byte, hash string) bool {
 }
 
 func hash4Bcrypt(data, salt []byte) string {
-	bcryptHash, _ := bcrypt.GenerateFromPassword(bytes.Join([][]byte{data, salt}, []byte{}), bcrypt.DefaultCost)
+	bcryptHash, _ := bcrypt.GenerateFromPassword(append(data, salt...), bcrypt.DefaultCost)
 	return string(bcryptHash)
 }
 
 func compare4Bcrypt(data, salt []byte, hash string) bool {
-	return bcrypt.CompareHashAndPassword([]byte(hash), bytes.Join([][]byte{data, salt}, []byte{})) == nil
+	return bcrypt.CompareHashAndPassword([]byte(hash), append(data, salt...)) == nil
 }
 
 func hash5ARGON2(data, salt []byte) string {

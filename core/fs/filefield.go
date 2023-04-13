@@ -3,6 +3,7 @@ package fs
 import (
 	"errors"
 	"io"
+	"strings"
 
 	"github.com/Nigel2392/go-django/core/httputils"
 )
@@ -17,7 +18,14 @@ func (i FileField) String() string {
 }
 
 func (i FileField) ListDisplay() string {
-	return "<a href=\"" + i.URL + "\" target=\"_blank\">" + i.String() + "</a>"
+	var b strings.Builder
+	b.Grow(len("<a href=\"\"></a>") + len(i.URL) + len(i.String()))
+	b.WriteString("<a href=\"")
+	b.WriteString(i.URL)
+	b.WriteString("\" target=\"_blank\">")
+	b.WriteString(i.String())
+	b.WriteString("</a>")
+	return b.String()
 }
 
 // Create a new image from a reader.

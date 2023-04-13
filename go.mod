@@ -6,6 +6,7 @@ require (
 	github.com/Nigel2392/batch v1.0.2
 	github.com/Nigel2392/go-html v1.0.0
 	github.com/Nigel2392/go-signals v1.0.4
+	github.com/Nigel2392/orderedmap v1.0.1
 	github.com/Nigel2392/router/v3 v3.3.0
 	github.com/Nigel2392/typeutils v1.1.1
 	github.com/alexedwards/scs/gormstore v0.0.0-20230305153148-62e546ce9d2d

@@ -42,16 +42,10 @@ func LoginForm(inputClass, labelClass string) *forms.Form {
 	}
 	switch strings.ToLower(USER_MODEL_LOGIN_FIELD) {
 	case "email":
-		login_field = &forms.Field{
-			Type: forms.TypeEmail,
-			Validators: []validators.Validator{
-				validators.Regex(validators.REGEX_EMAIL),
-			},
-		}
+		login_field.Type = forms.TypeEmail
+		login_field.Validators = append(login_field.Validators, validators.Regex(validators.REGEX_EMAIL))
 	default:
-		login_field = &forms.Field{
-			Type: forms.TypeText,
-		}
+		login_field.Type = forms.TypeText
 	}
 
 	var loginForm = forms.Form{

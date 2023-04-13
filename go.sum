@@ -6,6 +6,8 @@ github.com/Nigel2392/go-html v1.0.0 h1:IkwFNMiY35L0hhkNfgADdo+X2niTJXBskZMoUCgJw
 github.com/Nigel2392/go-html v1.0.0/go.mod h1:H7HP952SQl9ws9rxyziwLfIo0rcpmWlCXF1/21KUYS4=
 github.com/Nigel2392/go-signals v1.0.4 h1:SULZt+6AwtHmQDrt2TTzb1bYeoTr2kSUetN6aIa39Mg=
 github.com/Nigel2392/go-signals v1.0.4/go.mod h1:Olk7MJlZ9gdGPN8bh+OZSe7iOsBixn7biVI7LqoWEIA=
+github.com/Nigel2392/orderedmap v1.0.1 h1:EVcifFvawpspDdgKwnQ4Gru7I9p8fkSU0XFsdD1XOWA=
+github.com/Nigel2392/orderedmap v1.0.1/go.mod h1:hSixHbaKFK3CEjE/joQBVNbJbfDrcOkfJKi61kDyLRY=
 github.com/Nigel2392/router/v3 v3.3.0 h1:0i93rnyhXqY1FjEob0gYEROazVD/3TZ7YpgPDUIRgZU=
 github.com/Nigel2392/router/v3 v3.3.0/go.mod h1:+SiVJcyAr9suGJ3GK13ce+cFZH6vuJVfYi/eLVkVmkE=
 github.com/Nigel2392/routevars v1.1.1 h1:jiT3/6pvafnhYTxHPUMO7C7gxmBySn0/cnXPJkUQlpY=
