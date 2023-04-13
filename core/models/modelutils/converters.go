@@ -5,6 +5,8 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+
+	"github.com/Nigel2392/go-django/core"
 )
 
 func ConvertInt(s string) (any, error) {
@@ -84,7 +86,7 @@ func Convert[T any](s string) (any, error) {
 		} else {
 			var t = new(T)
 			switch t := any(t).(type) {
-			case FromStringer:
+			case core.FromStringer:
 				if err := t.FromString(s); err != nil {
 					return nil, err
 				}

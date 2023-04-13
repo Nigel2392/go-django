@@ -1,23 +1,11 @@
 package modelutils
 
 import (
-	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"strings"
 )
-
-type FromStringer interface {
-	FromString(string) error
-}
-
-type BaseField interface {
-	fmt.Stringer
-	driver.Valuer
-	sql.Scanner
-	FromStringer
-}
 
 type Slice[T any] []T
 

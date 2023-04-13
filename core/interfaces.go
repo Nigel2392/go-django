@@ -1,6 +1,12 @@
 package core
 
-import "gorm.io/gorm"
+import (
+	"database/sql"
+	"database/sql/driver"
+	"fmt"
+
+	"gorm.io/gorm"
+)
 
 // Search the database for the model.
 //
@@ -33,6 +39,11 @@ type DisplayableField interface {
 	Display() string
 }
 
+// How a model should be displayed in the admin list.
+type ListDisplayer interface {
+	ListDisplay() string
+}
+
 // Get the absolute URL of the model.
 type AbsoluteURLModel interface {
 	// Get the absolute URL of the model.
@@ -55,4 +66,19 @@ type Namer interface {
 // -> modelutils.namer.GetAppName
 type AppNamer interface {
 	AppName() string
+}
+
+// How a model value should be transformed from a string to the type in question.
+type FromStringer interface {
+	FromString(string) error
+}
+
+// BaseField is the interface that all database fields should implement.
+//
+// This is used in the admin site for example.
+type BaseField interface {
+	fmt.Stringer
+	driver.Valuer
+	sql.Scanner
+	FromStringer
 }

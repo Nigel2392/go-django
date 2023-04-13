@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/auth"
+	"github.com/Nigel2392/go-django/core"
 	"github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/go-django/core/models/modelutils"
 	"github.com/Nigel2392/router/v3/request"
@@ -108,7 +109,7 @@ func (f *Form) submit(kv map[string][]string, mgr *fs.Manager, db *gorm.DB, rq *
 			//
 			// If it does, call FromString.
 			if !modelutils.IsModel(modelField.Type()) {
-				var fromStringer, ok = modelField.Interface().(modelutils.FromStringer)
+				var fromStringer, ok = modelField.Interface().(core.FromStringer)
 				if ok {
 					if err := fromStringer.FromString(value[0]); err != nil {
 						return nil, errors.New("failed to parse field, are you sure it is formatted correctly?")
@@ -260,7 +261,7 @@ func (f *Form) submit(kv map[string][]string, mgr *fs.Manager, db *gorm.DB, rq *
 
 			// If the field implements FromStringer, call FromString.
 			if value[0] != "" {
-				var fromStringer, ok = modelField.Interface().(modelutils.FromStringer)
+				var fromStringer, ok = modelField.Interface().(core.FromStringer)
 				if ok {
 					if err := fromStringer.FromString(value[0]); err != nil {
 						return nil, fmt.Errorf("failed to parse field %s, are you sure it is formatted correctly?", field.Name)

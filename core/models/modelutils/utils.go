@@ -316,10 +316,6 @@ func GetName(val any) string {
 	return v.Name()
 }
 
-type ListDisplayer interface {
-	ListDisplay() string
-}
-
 // Get a default display for the given model.
 //
 // If the model implements the DisplayableModel interface, the String() method will be called.
@@ -331,7 +327,7 @@ func GetModelDisplay(mdl any, list bool) string {
 func getModelDisplay(mdl any, list, firstIteration bool) string {
 	if list {
 		switch mdlType := mdl.(type) {
-		case ListDisplayer:
+		case core.ListDisplayer:
 			return mdlType.ListDisplay()
 		}
 	}
