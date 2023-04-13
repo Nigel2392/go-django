@@ -382,8 +382,8 @@ func loginView(as *AdminSite, rq *request.Request) {
 
 	if rq.Method() == "POST" {
 		if form.Fill(rq) {
-			var login = form.Field(auth.USER_MODEL_LOGIN_FIELD).Value
-			var password = form.Field("password").Value
+			var login = form.Field(auth.USER_MODEL_LOGIN_FIELD).Value()
+			var password = form.Field("password").Value()
 			var user, err = auth.Login(rq, login, password)
 			if err != nil {
 				// Log failed login
@@ -407,7 +407,7 @@ func loginView(as *AdminSite, rq *request.Request) {
 				return
 			}
 		} else {
-			var login = form.Field(auth.USER_MODEL_LOGIN_FIELD).Value
+			var login = form.Field(auth.USER_MODEL_LOGIN_FIELD).Value()
 			var u = auth.NewUser(login)
 			if err != nil {
 				//lint:ignore ST1005 This is a log message

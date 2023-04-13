@@ -33,7 +33,7 @@ type DisplayableModel interface {
 	String() string
 }
 
-// Display a model field in the admin.
+// Display a model field in the admin app list.
 type DisplayableField interface {
 	// Display a model field in the admin.
 	Display() string
@@ -69,6 +69,8 @@ type AppNamer interface {
 }
 
 // How a model value should be transformed from a string to the type in question.
+//
+// This is used in the admin site for example.
 type FromStringer interface {
 	FromString(string) error
 }

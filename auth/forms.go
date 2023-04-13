@@ -49,9 +49,9 @@ func LoginForm(inputClass, labelClass string) *forms.Form {
 	}
 
 	var loginForm = forms.Form{
-		Fields: []*forms.Field{
+		Fields: []forms.FormElement{
 			login_field,
-			{
+			&forms.Field{
 				LabelText:   "Password",
 				Type:        forms.TypePassword,
 				Name:        "password",
@@ -62,7 +62,7 @@ func LoginForm(inputClass, labelClass string) *forms.Form {
 			},
 		},
 		AfterValid: func(r *request.Request, f *forms.Form) error {
-			var _, err = Login(r, f.Field(USER_MODEL_LOGIN_FIELD).Value, f.Field("password").Value)
+			var _, err = Login(r, f.Field(USER_MODEL_LOGIN_FIELD).Value(), f.Field("password").Value())
 			return err
 		},
 	}

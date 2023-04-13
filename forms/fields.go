@@ -12,6 +12,43 @@ import (
 	"github.com/Nigel2392/go-django/forms/validators"
 )
 
+type ElementInterface interface {
+	String() string
+	HTML() template.HTML
+}
+
+type FormElement interface {
+	// Get the name of the field.
+	GetName() string
+
+	// Whether the field has a label.
+	HasLabel() bool
+	// Get the label for the field.
+	Label() ElementInterface
+
+	// Get the field element.
+	Field() ElementInterface
+
+	// Get, set or clear the value of the field.
+	SetValue(string)
+	Value() string
+	Clear()
+
+	// Validate the field.
+	Validate() error
+
+	// Errors
+	Errors() []FormError
+	AddError(error)
+	HasError() bool
+
+	// Relevant attributes to set.
+	SetReadOnly(bool)
+	SetDisabled(bool)
+	SetRequired(bool)
+	SetHidden(bool)
+}
+
 const (
 	TypeText     = "text"
 	TypePassword = "password"
@@ -48,7 +85,7 @@ type Field struct {
 	Placeholder  string
 	Type         string
 	Name         string
-	Value        string
+	FormValue    string
 	Max          int
 	Min          int
 	Required     bool
@@ -67,14 +104,72 @@ type Field struct {
 
 	Validators []validators.Validator
 
-	Errors FormErrors
+	FormErrors FormErrors
+
+	// Render function
+	RenderLabel func(f *Field) Element
+	Render      func(f *Field) Element
+}
+
+func (f *Field) GetName() string {
+	return f.Name
+}
+
+func (f *Field) HasLabel() bool {
+	return f.LabelText != ""
+}
+
+func (f *Field) Errors() []FormError {
+	return f.FormErrors
+}
+
+func (f *Field) AddError(err error) {
+	f.FormErrors = append(f.FormErrors, FormError{
+		Name:     f.Name,
+		FieldErr: err,
+	})
+}
+
+func (f *Field) HasError() bool {
+	return len(f.FormErrors) > 0
+}
+
+func (f *Field) SetValue(value string) {
+	f.FormValue = value
+}
+
+func (f *Field) Value() string {
+	return f.FormValue
+}
+
+func (f *Field) Clear() {
+	f.FormValue = ""
+}
+
+func (f *Field) SetReadOnly(readOnly bool) {
+	f.Disabled = readOnly
+}
+
+func (f *Field) SetDisabled(disabled bool) {
+	f.Disabled = disabled
+}
+
+func (f *Field) SetRequired(required bool) {
+	f.Required = required
+}
+
+func (f *Field) SetHidden(hidden bool) {
+	f.Type = TypeHidden
 }
 
 func (f *Field) String() string {
 	return string(f.Label().HTML()) + string(f.Field().HTML())
 }
 
-func (f *Field) Field() Element {
+func (f *Field) Field() ElementInterface {
+	if f.Render != nil {
+		return f.Render(f)
+	}
 	var attrStringBuilder = strings.Builder{}
 	if f.Type == "" {
 		attrStringBuilder.WriteString(` type="text"`)
@@ -95,8 +190,8 @@ func (f *Field) Field() Element {
 	if f.Class != "" {
 		attrStringBuilder.WriteString(` class="` + f.Class + `"`)
 	}
-	if f.Value != "" {
-		attrStringBuilder.WriteString(` value="` + f.Value + `"`)
+	if f.FormValue != "" {
+		attrStringBuilder.WriteString(` value="` + f.FormValue + `"`)
 	}
 	if f.Max > 0 {
 		attrStringBuilder.WriteString(` max="` + strconv.Itoa(f.Max) + `"`)
@@ -120,10 +215,10 @@ func (f *Field) Field() Element {
 		return Element(`<input` + attrs + `>` + "\r\n")
 
 	case "textarea":
-		return Element(`<textarea` + attrs + `>` + f.Value + `</textarea>` + "\r\n")
+		return Element(`<textarea` + attrs + `>` + f.FormValue + `</textarea>` + "\r\n")
 
 	case "checkbox":
-		if strings.ToLower(f.Value) == "on" || strings.ToLower(f.Value) == "true" {
+		if strings.ToLower(f.FormValue) == "on" || strings.ToLower(f.FormValue) == "true" {
 			return Element(`<input` + attrs + ` checked>` + "\r\n")
 		}
 		return Element(`<input` + attrs + `>` + "\r\n")
@@ -141,13 +236,16 @@ func (f *Field) Field() Element {
 		return b
 
 	default:
-		return ""
+		return Element("")
 	}
 }
 
-func (f *Field) Label() Element {
+func (f *Field) Label() ElementInterface {
+	if f.RenderLabel != nil {
+		return f.RenderLabel(f)
+	}
 	if f.LabelText == "" {
-		return ""
+		return Element("")
 	}
 	var LabelClass = ""
 	if f.LabelClass != "" {
@@ -161,21 +259,21 @@ func (f *Field) Label() Element {
 
 func (f *Field) Validate() error {
 	// VALIDATE REQUIRED
-	if f.Required && f.Value == "" {
+	if f.Required && f.FormValue == "" {
 		if f.ErrorMessageFieldRequired != "" {
 			return fmt.Errorf(f.ErrorMessageFieldRequired, f.LabelText)
 		}
 		return fmt.Errorf("%s is required", f.LabelText)
-	} else if f.Value == "" {
+	} else if f.FormValue == "" {
 		return nil
 	}
 
 	// VALIDATE LENGTH
 	switch f.Type {
 	case "number", "range":
-		var i, err = strconv.Atoi(f.Value)
+		var i, err = strconv.Atoi(f.FormValue)
 		if err != nil {
-			return fmt.Errorf("%s is not a valid number (%s)", f.LabelText, f.Value)
+			return fmt.Errorf("%s is not a valid number (%s)", f.LabelText, f.FormValue)
 		}
 
 		if f.Max > 0 && i > f.Max {
@@ -193,23 +291,23 @@ func (f *Field) Validate() error {
 		}
 
 	default:
-		if f.Max > 0 && len(f.Value) > f.Max {
+		if f.Max > 0 && len(f.FormValue) > f.Max {
 			if f.ErrorMessageFieldMax != "" {
 				return fmt.Errorf(f.ErrorMessageFieldMax, f.LabelText)
 			}
-			return fmt.Errorf("%s is too long by %d characters", f.LabelText, len(f.Value)-f.Max)
+			return fmt.Errorf("%s is too long by %d characters", f.LabelText, len(f.FormValue)-f.Max)
 		}
-		if f.Min > 0 && len(f.Value) < f.Min {
+		if f.Min > 0 && len(f.FormValue) < f.Min {
 			if f.ErrorMessageFieldMin != "" {
 				return fmt.Errorf(f.ErrorMessageFieldMin, f.LabelText)
 			}
-			return fmt.Errorf("%s is too short by %d characters", f.LabelText, f.Min-len(f.Value))
+			return fmt.Errorf("%s is too short by %d characters", f.LabelText, f.Min-len(f.FormValue))
 		}
 	}
 
 	if f.Validators != nil {
 		for _, validator := range f.Validators {
-			if err := validator(f.Value); err != nil {
+			if err := validator(f.FormValue); err != nil {
 				return err
 			}
 		}
@@ -269,7 +367,7 @@ func GenerateFieldsFromStruct(s interface{}) ([]*Field, error) {
 			// Check if it implements a FormValue interface
 			if value.Interface() != nil {
 				var fv = value.Interface()
-				f.Value = switchTyp(fv)
+				f.FormValue = switchTyp(fv)
 			}
 			switch strings.ToLower(parts[0]) {
 			case "type":
@@ -330,7 +428,7 @@ func GenerateFieldsFromStruct(s interface{}) ([]*Field, error) {
 					options = append(options, &o)
 				}
 				f.Options = options
-				f.Value = ""
+				f.FormValue = ""
 			}
 		}
 

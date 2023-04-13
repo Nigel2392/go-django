@@ -67,6 +67,7 @@ You can view the adminsite by going to the `<<DOMAIN>>/admin/` url (As specified
 - [X] Sending emails
 - [X] Secret keys
 - [X] Admin panel extensions (Embed your own templates!)
+- [X] Secure hashing with secret.Hash and secret.Compare
 - [X] Command-line flag package
 - [X] Project-setup tool
 - [X] Debug recovery page middleware (Only when running with -debug flag)

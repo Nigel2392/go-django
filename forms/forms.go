@@ -8,7 +8,7 @@ import (
 )
 
 type Form struct {
-	Fields      []*Field
+	Fields      []FormElement
 	Errors      FormErrors
 	BeforeValid func(*request.Request, *Form) error
 	AfterValid  func(*request.Request, *Form) error
@@ -24,10 +24,10 @@ func (f *Form) Validate() bool {
 		if err != nil {
 			valid = false
 			f.Errors = append(f.Errors, FormError{
-				Name:     field.Name,
+				Name:     field.GetName(),
 				FieldErr: err,
 			})
-			field.Errors.Add(field.Name, err)
+			field.AddError(err)
 		}
 	}
 	return valid
@@ -36,7 +36,7 @@ func (f *Form) Validate() bool {
 func (f Form) AsP() template.HTML {
 	var b strings.Builder
 	for _, field := range f.Fields {
-		if field.LabelText != "" {
+		if !field.HasLabel() {
 			b.WriteString(`<p>`)
 			b.WriteString(field.Label().String())
 			b.WriteString("</p>")
@@ -82,25 +82,25 @@ func (f *Form) Fill(r *request.Request) bool {
 
 func (f *Form) fillQueries(r *request.Request) {
 	for _, field := range f.Fields {
-		field.Value = r.Request.Form.Get(field.Name)
+		field.SetValue(r.Request.Form.Get(field.GetName()))
 	}
 }
 
 func (f *Form) fillForm(r *request.Request) {
 	for _, field := range f.Fields {
-		field.Value = r.Request.PostForm.Get(field.Name)
+		field.SetValue(r.Request.PostForm.Get(field.GetName()))
 	}
 }
 
 func (f *Form) Clear() {
 	for _, field := range f.Fields {
-		field.Value = ""
+		field.Clear()
 	}
 }
 
-func (f *Form) Field(name string) *Field {
+func (f *Form) Field(name string) FormElement {
 	for _, field := range f.Fields {
-		if field.Name == name {
+		if field.GetName() == name {
 			return field
 		}
 	}
@@ -108,9 +108,9 @@ func (f *Form) Field(name string) *Field {
 }
 
 // AddField adds a field to the form
-func (f *Form) AddFields(field ...*Field) {
+func (f *Form) AddFields(field ...FormElement) {
 	if f.Fields == nil {
-		f.Fields = make([]*Field, 0)
+		f.Fields = make([]FormElement, 0)
 	}
 	f.Fields = append(f.Fields, field...)
 }
@@ -127,11 +127,11 @@ func (f *Form) AddError(name string, err error) {
 }
 
 func (f *Form) Without(names ...string) {
-	var fields = make([]*Field, 0)
+	var fields = make([]FormElement, 0)
 	for _, field := range f.Fields {
 		var found = false
 		for _, name := range names {
-			if strings.EqualFold(field.Name, name) {
+			if strings.EqualFold(field.GetName(), name) {
 				found = true
 				break
 			}
@@ -146,14 +146,14 @@ func (f *Form) Without(names ...string) {
 func (f *Form) Disabled(names ...string) Form {
 	if len(names) == 0 {
 		for _, field := range f.Fields {
-			field.Disabled = true
+			field.SetDisabled(true)
 		}
 		return *f
 	}
 	for _, field := range f.Fields {
 		for _, name := range names {
-			if strings.EqualFold(field.Name, name) {
-				field.Disabled = true
+			if strings.EqualFold(field.GetName(), name) {
+				field.SetDisabled(true)
 				break
 			}
 		}
@@ -163,8 +163,8 @@ func (f *Form) Disabled(names ...string) Form {
 
 func (f *Form) Get(name string) string {
 	for _, field := range f.Fields {
-		if field.Name == name {
-			return field.Value
+		if field.GetName() == name {
+			return field.Value()
 		}
 	}
 	return ""
