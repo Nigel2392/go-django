@@ -371,6 +371,9 @@ button.remove:hover {
     flex-direction: column;
     margin-bottom: 10px;
 }
+.admin-form-textarea {
+    min-height: 200px;
+}
 .admin-form-input {
     width: 100%;
     padding: 5px;

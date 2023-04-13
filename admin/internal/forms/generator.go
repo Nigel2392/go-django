@@ -386,9 +386,17 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 		}
 
 		var formFieldTyp = tagMap.Get("type", t)
-		if formFieldTyp == "select" {
+		switch {
+		case formFieldTyp == "select":
 			var currentValue = getValue(mdl, field.Name)
 			options = getOptions(mdl, field, fieldName, currentValue, isAdmin, tagMap)
+		case formFieldTyp == "textarea":
+			var classes = strings.Split(tagMap.Get("class"), " ")
+			if len(classes) == 0 {
+				classes = []string{"admin-form-textarea"}
+			} else {
+				tagMap["class"] = tagMap["class"] + " admin-form-textarea"
+			}
 		}
 
 		var f = &FormField{
