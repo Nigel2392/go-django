@@ -1,7 +1,6 @@
 package cache
 
 import (
-	"fmt"
 	"time"
 
 	"github.com/Nigel2392/go-django/core/cache/binarytree"
@@ -35,7 +34,6 @@ func (c *InMemoryCache) Connect() error {
 				item.ttl -= c.tickerTime
 			})
 			c.Tree.DeleteIf(func(item *CacheItem) bool {
-				fmt.Println(item.key, item.ttl <= 0 && !item.keepAround)
 				return item.ttl <= 0 && !item.keepAround
 			})
 		}
