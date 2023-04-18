@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/app/debug"
 	"github.com/Nigel2392/go-django/core/app/tool"
+	"github.com/Nigel2392/go-django/core/cache"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/flag"
@@ -97,6 +98,12 @@ type Config struct {
 	//	Config *gorm.Config
 	DBConfig *db.DatabasePoolItem
 
+	// The application's cache.
+	Cache cache.Cache
+
+	// Forcefully disable the cache.
+	CacheDisabled bool
+
 	// Email settings:
 	// Timeout to wait for a response from the server
 	// Errors if the timeout is reached.
@@ -159,6 +166,9 @@ type Application struct {
 	// as long as it implements the PoolItem interface.
 	Pool db.Pool[*gorm.DB]
 
+	// The cache to use.
+	cache cache.Cache
+
 	// The default database connection.
 	defaultDatabase db.PoolItem[*gorm.DB]
 
@@ -199,6 +209,11 @@ func New(c Config) *Application {
 	// Initialize the default database.
 	config.DBConfig.DBKey = db.DEFAULT_DATABASE_KEY
 	config.DBConfig.Init()
+
+	// Initialize the cache.
+	if config.Cache == nil && !config.CacheDisabled {
+		config.Cache = cache.NewInMemoryCache(time.Second)
+	}
 
 	// Initialize the secret key.
 	var key secret.Key
@@ -247,7 +262,7 @@ This is Go-Django's default command line interface.`
 	a.initted = true
 
 	lg.Now(logger.DEBUG, "Initializing auth...")
-	auth.Init(a.Pool, a.flags)
+	auth.Init(a.Pool, a.cache, a.flags)
 
 	lg.Now(logger.DEBUG, "Initializing media manager...")
 	if config.File != nil {
@@ -355,6 +370,11 @@ func (a *Application) Serve() http.Handler {
 
 	if !a.flags.Ran() {
 		a.flags.Run()
+	}
+
+	// Connect the cache.
+	if a.cache != nil {
+		a.cache.Connect()
 	}
 
 	tracer.STACKLOGGER_UNSAFE = a.DEBUG

@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/go-django/core/cache"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/go-django/forms/validators"
@@ -20,11 +21,13 @@ func init() {
 	gob.Register(User{})
 }
 
-var auth_db *gorm.DB
-var SESSION_COOKIE_NAME string = "session_id"
-var DB_KEY db.DATABASE_KEY = "auth"
-
-var USER_ABSOLUTE_URL_FUNC func(*User) string
+var (
+	auth_cache             cache.Cache
+	auth_db                *gorm.DB
+	SESSION_COOKIE_NAME    string          = "session_id"
+	DB_KEY                 db.DATABASE_KEY = "auth"
+	USER_ABSOLUTE_URL_FUNC func(*User) string
+)
 
 var (
 	USER_MODEL_LOGIN_FIELD string = "Username"
@@ -50,7 +53,7 @@ var (
 )
 
 // Initialize the auth package.
-func Init(pool db.Pool[*gorm.DB], flags *flag.Flags) {
+func Init(pool db.Pool[*gorm.DB], cache cache.Cache, flags *flag.Flags) {
 	var database = db.GetDefaultDatabase(DB_KEY, pool)
 	auth_db = database.DB()
 	database.Register(
@@ -227,6 +230,18 @@ func HasPerms(user *User, permissions ...*Permission) bool {
 		return true
 	}
 
+	// Check if the user has the permissions
+	//
+	// We will check the cache first.
+	var groups []*Group
+	if auth_cache != nil {
+		var g, err = auth_cache.Get(hashUser(user, groups_suffix))
+		if err == nil && g != nil {
+			user.Groups = g.Value().([]*Group)
+			return user.HasPerms(permissions...)
+		}
+	}
+
 	// If the user already has the groups loaded, continue...
 	// Otherwise, load in the groups and permissions for the user
 	// Permissions get loaded in on each request for the user.
@@ -234,6 +249,11 @@ func HasPerms(user *User, permissions ...*Permission) bool {
 		// Get all of the groups that the user is in
 		// Load in the permissions for each group, into each group
 		auth_db.Model(user).Association("Groups.Permissions").Find(&user.Groups)
+	}
+
+	// Set the groups in the cache
+	if auth_cache != nil {
+		auth_cache.Set(hashUser(user, groups_suffix), groups, cache.DefaultExpiration)
 	}
 
 	// Return true if the user has all of the permissions

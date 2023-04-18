@@ -4,6 +4,7 @@ import (
 	"html/template"
 
 	"github.com/Nigel2392/go-django/admin"
+	"github.com/Nigel2392/go-django/core/cache"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/flag"
@@ -86,4 +87,14 @@ func (a *Application) Admin() *admin.AdminSite {
 		panic("You must initialize the app with an admin before calling app.Admin()")
 	}
 	return a.adminSite
+}
+
+func (a *Application) Cache() cache.Cache {
+	if !a.initted {
+		panic("You must initialize the app (call app.New(...)) before calling app.Cache()")
+	}
+	if a.cache == nil {
+		panic("You must initialize the app with a cache before calling app.Cache()")
+	}
+	return a.cache
 }

@@ -154,6 +154,13 @@ func (f *Form) submit(kv map[string][]string, mgr *fs.Manager, db *gorm.DB, rq *
 			// We need to find the selected models and set them.
 			var selected = value
 			if len(selected) == 1 && selected[0] == "-" && newModel != nil {
+				// Check if the current model has any relations.
+				//
+				// If it does, we need to clear the relation.
+				var count int64 = db.Model(f.Model).Association(field.Name).Count()
+				if count == 0 {
+					continue
+				}
 				// Clear the relation
 				if err := db.Model(f.Model).Association(field.Name).Clear(); err != nil {
 					return nil, errors.New("failed to clear relation: " + err.Error())
@@ -169,10 +176,10 @@ func (f *Form) submit(kv map[string][]string, mgr *fs.Manager, db *gorm.DB, rq *
 			// If the model is new, we cannot replace the relation just yet.
 			//
 			// The relations will be saved later in the Save() function.
-			if newModel != nil {
+			if !id.IsZero() {
 				var tx = db.Model(f.Model)
 
-				var id = modelutils.GetID(newModel, "ID")
+				var id = id
 				tx = tx.Where(id)
 
 				var err = tx.Association(field.Name).Replace(selectedValues)

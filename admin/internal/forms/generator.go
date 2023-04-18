@@ -238,7 +238,7 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 			var fieldGroup = &FormField{
 				isAdmin: isAdmin,
 				Type:    "m2m",
-				Name:    field.Name,
+				Name:    tagMap.Get("label", field.Name),
 				Options: []*FormField{
 					selectedField, otherField,
 				},

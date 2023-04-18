@@ -24,6 +24,9 @@ import (
 
 // Get the user from a request.
 func UserFromRequest(r *request.Request) *User {
+	if r.User != nil {
+		return r.User.(*User)
+	}
 	var userID = r.Session.Get(SESSION_COOKIE_NAME)
 	if userID == nil {
 		return UnAuthenticatedUser()

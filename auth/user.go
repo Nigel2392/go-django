@@ -6,13 +6,17 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Nigel2392/go-django/core/cache"
 	"github.com/Nigel2392/go-django/core/models"
 	"github.com/Nigel2392/go-django/core/models/modelutils"
+	"github.com/Nigel2392/go-django/core/secret"
 
 	"github.com/Nigel2392/go-django/forms/validators"
 
 	"gorm.io/gorm"
 )
+
+const groups_suffix = "_groups"
 
 // User is the default user model.
 //
@@ -228,6 +232,9 @@ func (u *User) ChangePassword(password string) error {
 		//lint:ignore ST1005 Could not update password.
 		return errors.New("Could not update password.")
 	}
+	if err == nil && auth_cache != nil {
+		auth_cache.Delete(hashUser(u, groups_suffix))
+	}
 	return nil
 }
 
@@ -273,7 +280,11 @@ func (u *User) validate() error {
 
 // Refresh the user, the instance's groups and permissions.
 func (u *User) Refresh() error {
-	return auth_db.Model(u).Preload("Groups.Permissions").Find(&u).Error
+	var err = auth_db.Model(u).Preload("Groups.Permissions").Find(&u).Error
+	if err == nil && auth_cache != nil {
+		auth_cache.Set(hashUser(u, groups_suffix), u.Groups, cache.DefaultExpiration)
+	}
+	return err
 }
 
 // Update the user
@@ -287,7 +298,13 @@ func (u *User) Update() error {
 	if err != nil {
 		return errors.New("user does not exist")
 	}
-	return auth_db.Save(u).Error
+
+	err = auth_db.Save(u).Error
+	// Delete the cache for the user
+	if auth_cache != nil {
+		auth_cache.Delete(hashUser(u, groups_suffix))
+	}
+	return err
 }
 
 // Delete the user
@@ -304,6 +321,10 @@ func GetUserByID(id interface{}) (*User, error) {
 		return nil, err
 	}
 
+	if auth_cache != nil {
+		auth_cache.Set(hashUser(user, groups_suffix), user.Groups, cache.DefaultExpiration)
+	}
+
 	return user, nil
 }
 
@@ -311,11 +332,22 @@ func GetUserByID(id interface{}) (*User, error) {
 func (u *User) AddGroup(db *gorm.DB, groupName string) error {
 	var g Group = Group{Name: strings.ToLower(groupName)}
 	db.FirstOrCreate(&g, g)
-	return db.Model(u).Association("Groups").Append(&g)
+	var err = db.Model(u).Association("Groups").Append(&g)
+	if err != nil && auth_cache != nil {
+		auth_cache.Delete(hashUser(u, groups_suffix))
+	}
+	return err
 }
 
 func (u *User) RemoveGroup(db *gorm.DB, groupName string) error {
-	return db.Model(&Group{}).Delete("name = ?", groupName).Error
+	var err = db.Model(&Group{}).Delete("name = ?", groupName).Error
+	if err != nil {
+		return err
+	}
+	if auth_cache != nil {
+		auth_cache.Delete(hashUser(u, groups_suffix))
+	}
+	return nil
 }
 
 func (u *User) SetGroups(db *gorm.DB, groups ...*Group) error {
@@ -334,12 +366,22 @@ func (u *User) SetGroups(db *gorm.DB, groups ...*Group) error {
 	// Delete all groups
 	err := db.Model(u).Association("Groups").Clear()
 	if err != nil {
+		if auth_cache != nil {
+			auth_cache.Delete(hashUser(u, groups_suffix))
+		}
 		return err
 	}
+
 	// Add the groups
 	err = db.Model(u).Association("Groups").Append(groups)
 	if err != nil {
+		if auth_cache != nil {
+			auth_cache.Delete(hashUser(u, groups_suffix))
+		}
 		return err
+	}
+	if auth_cache != nil {
+		auth_cache.Delete(hashUser(u, groups_suffix))
 	}
 	return nil
 }
@@ -352,10 +394,26 @@ func (u *User) HasGroup(groupNames ...string) bool {
 	if hasGroup(u.Groups, groupNames...) {
 		return true
 	}
+
 	var groups []*Group
+	if auth_cache != nil {
+		var g, err = auth_cache.Get(hashUser(u, groups_suffix))
+		if err == nil && g != nil {
+			groups = g.Value().([]*Group)
+			return hasGroup(groups, groupNames...)
+		}
+	}
+
 	err := auth_db.Model(u).Association("Groups").Find(&groups)
 	if err != nil {
+		if auth_cache != nil {
+			auth_cache.Delete(hashUser(u, groups_suffix))
+		}
 		return false
+	}
+
+	if auth_cache != nil {
+		auth_cache.Set(hashUser(u, groups_suffix), groups, cache.DefaultExpiration)
 	}
 
 	return hasGroup(groups, groupNames...)
@@ -377,9 +435,10 @@ func hasGroup(groups []*Group, groupNames ...string) bool {
 func (u *User) HasPerms(permissions ...*Permission) bool {
 
 	// Try to refresh the user's groups.
-	if len(u.Groups) == 0 {
-		u.Refresh()
-	}
+	// Commented out to reduce queries.
+	//	if len(u.Groups) == 0 { //&& auth_db.Model(u).Association("Groups").Count() > 0 {
+	//		u.Refresh()
+	//	}
 
 	// If the user has no groups, or is an administrator, return u.IsAdministrator.
 	if len(u.Groups) == 0 || u.IsAdministrator {
@@ -424,4 +483,35 @@ func (u *User) HasStrPerms(p ...string) bool {
 	}
 
 	return u.HasPerms(perms...)
+}
+
+func sumStr(s ...string) int {
+	var sum int
+	for _, str := range s {
+		sum += len(str)
+	}
+	return sum
+}
+
+func hashUser(user *User, extra ...string) string {
+	var b strings.Builder
+
+	b.Grow(sumStr(
+		user.Email,
+		user.Username,
+	))
+
+	b.WriteString(user.Email)
+	b.WriteString(user.Username)
+
+	var hash = secret.FnvHash(b.String()).String()
+	b.Reset()
+	if extrLen := sumStr(extra...); b.Cap() < (extrLen + len(hash)) {
+		b.Grow((extrLen + len(hash)) - b.Cap())
+	}
+	b.WriteString(hash)
+	for _, str := range extra {
+		b.WriteString(str)
+	}
+	return b.String()
 }
