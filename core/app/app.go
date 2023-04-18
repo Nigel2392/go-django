@@ -116,6 +116,9 @@ type Config struct {
 	// Hook for when a file is read, or written in the media directory.
 	File *fs.Manager
 
+	// The session store to use.
+	SessionStore scs.Store
+
 	// Use template cache?
 	// Template cache to use, if enabled
 	// Default base template suffixes
@@ -159,6 +162,9 @@ type Application struct {
 
 	// The session manager to use.
 	sessionManager *scs.SessionManager
+
+	// The session store to use.
+	sessionStore scs.Store
 
 	// A pool of database connections.
 	// This is used to store multiple database connections.
@@ -244,6 +250,8 @@ func New(c Config) *Application {
 		Pool:            db.NewPool(config.DBConfig),
 		Logger:          lg,
 		flags:           flag.NewFlags("Go-Django", flag.ExitOnError),
+		sessionStore:    config.SessionStore,
+		cache:           config.Cache,
 	}
 	a.flags.Info = `Go-Django is a web framework written in Go.
 It is inspired by the Django web framework for Python.
@@ -318,7 +326,9 @@ func (a *Application) setupSessionManager() {
 	sessionManager.Cookie.Secure = false
 	var store scs.Store
 	var err error
-	if store, err = gormstore.New(a.config.DBConfig.DB()); err != nil {
+	if a.sessionStore != nil {
+		store = a.sessionStore
+	} else if store, err = gormstore.New(a.config.DBConfig.DB()); err != nil {
 		store = memstore.New()
 	}
 	sessionManager.Store = store
