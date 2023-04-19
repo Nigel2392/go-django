@@ -85,12 +85,7 @@ func UnAuthenticatedUser() *User {
 func GetUser(query any, args ...interface{}) (*User, error) {
 	var user User
 	var err error
-	switch query.(type) {
-	case string:
-		err = auth_db.Where(fmt.Sprintf("%s = ?", query), args...).First(&user).Error
-	default:
-		err = auth_db.Where(query, args...).First(&user).Error
-	}
+	err = auth_db.Where(query, args...).First(&user).Error
 	if err != nil {
 		return nil, err
 	}

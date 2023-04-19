@@ -3,7 +3,7 @@ package cache
 import (
 	"time"
 
-	"github.com/Nigel2392/go-django/core/cache/binarytree"
+	"github.com/Nigel2392/go-django/core/httputils/binarytree"
 )
 
 const (
@@ -17,6 +17,7 @@ type InMemoryCache struct {
 	Tree       *binarytree.BST[*CacheItem]
 	ticker     *time.Ticker
 	tickerTime time.Duration
+	close      chan struct{}
 }
 
 func NewInMemoryCache(tickerTime time.Duration) Cache {
@@ -29,13 +30,18 @@ func NewInMemoryCache(tickerTime time.Duration) Cache {
 
 func (c *InMemoryCache) Connect() error {
 	go func() {
-		for range c.ticker.C {
-			c.Tree.Traverse(func(item *CacheItem) {
-				item.ttl -= c.tickerTime
-			})
-			c.Tree.DeleteIf(func(item *CacheItem) bool {
-				return item.ttl <= 0 && !item.keepAround
-			})
+		for {
+			select {
+			case <-c.ticker.C:
+				c.Tree.Traverse(func(item *CacheItem) {
+					item.ttl -= c.tickerTime
+				})
+				c.Tree.DeleteIf(func(item *CacheItem) bool {
+					return item.ttl <= 0 && !item.keepAround
+				})
+			case <-c.close:
+				return
+			}
 		}
 	}()
 	return nil
@@ -72,4 +78,10 @@ func (c *InMemoryCache) Clear() error {
 func (c *InMemoryCache) Has(key string) bool {
 	var _, found = c.Tree.Search(&CacheItem{key: key})
 	return found
+}
+
+func (c *InMemoryCache) Close() error {
+	c.close <- struct{}{}
+	c.ticker.Stop()
+	return nil
 }
