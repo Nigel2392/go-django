@@ -53,7 +53,7 @@ const (
 	TypeText     = "text"
 	TypePassword = "password"
 	TypeEmail    = "email"
-	TypeNumer    = "number"
+	TypeNumber   = "number"
 	TypeRange    = "range"
 	TypeTextArea = "textarea"
 	TypeCheck    = "checkbox"
