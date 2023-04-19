@@ -156,7 +156,7 @@ func (u *User) AfterCreate(tx *gorm.DB) error {
 
 // IsAdmin returns true if the user is an admin.
 func (u *User) IsAdmin() bool {
-	return u.IsAdministrator
+	return u.IsAdministrator && u.IsActive
 }
 
 // IsAuthenticated returns true if the user is logged in.
