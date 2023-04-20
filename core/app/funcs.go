@@ -98,3 +98,33 @@ func (a *Application) Cache() cache.Cache {
 	}
 	return a.cache
 }
+
+// Becaus there can only be one __app, we can use some shorthands.
+
+func Flags() *flag.Flags {
+	return App().Flags()
+}
+
+func DefaultDb() db.PoolItem[*gorm.DB] {
+	return App().DefaultDB()
+}
+
+func Mailer() *email.Manager {
+	return App().Mailer()
+}
+
+func FS() *fs.Manager {
+	return App().FS()
+}
+
+func Templates() *templates.Manager {
+	return App().Templates()
+}
+
+func Admin() *admin.AdminSite {
+	return App().Admin()
+}
+
+func Cache() cache.Cache {
+	return App().Cache()
+}
