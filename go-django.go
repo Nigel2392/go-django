@@ -1,4 +1,4 @@
-package django
+package godjango
 
 import (
 	"net/http"
@@ -32,7 +32,9 @@ type AppConfig app.Config
 
 // Create a new application.
 func New(c AppConfig) *App {
-	return (*App)(app.New(app.Config(c)))
+	var dj = (*App)(app.New(app.Config(c)))
+	defaultApp = dj
+	return dj
 }
 
 func Flags() *flag.Flags {
