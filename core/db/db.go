@@ -54,6 +54,9 @@ type DatabasePoolItem struct {
 }
 
 func (m *DatabasePoolItem) DB() *gorm.DB {
+	if m == nil {
+		return nil
+	}
 	if m.db == nil {
 		return m.Init()
 	}

@@ -205,16 +205,15 @@ func New(c Config) *Application {
 	if config.Templates == nil {
 		panic("You must provide a template manager.")
 	}
-	if config.DBConfig == nil {
-		config.DBConfig = &db.DatabasePoolItem{
-			DEFAULT_DATABASE: "sqlite",
-			DB_NAME:          "sqlite.db",
-		}
+	if config.DBConfig != nil {
+		//	config.DBConfig = &db.DatabasePoolItem{
+		//		DEFAULT_DATABASE: "sqlite",
+		//		DB_NAME:          "sqlite.db",
+		//	}
+		// Initialize the default database.
+		config.DBConfig.DBKey = db.DEFAULT_DATABASE_KEY
+		config.DBConfig.Init()
 	}
-
-	// Initialize the default database.
-	config.DBConfig.DBKey = db.DEFAULT_DATABASE_KEY
-	config.DBConfig.Init()
 
 	// Initialize the cache.
 	if config.Cache == nil && !config.CacheDisabled {
@@ -269,8 +268,12 @@ This is Go-Django's default command line interface.`
 	__app = a
 	a.initted = true
 
-	lg.Now(logger.DEBUG, "Initializing auth...")
-	auth.Init(a.Pool, a.cache, a.flags)
+	if a.defaultDatabase != nil && db.GetDefaultDatabase(auth.DB_KEY, a.Pool).DB() != nil {
+		lg.Now(logger.DEBUG, "Initializing auth...")
+		auth.Init(a.Pool, a.cache, a.flags)
+	} else {
+		lg.Now(logger.DEBUG, "No database connection found, skipping auth...")
+	}
 
 	lg.Now(logger.DEBUG, "Initializing media manager...")
 	if config.File != nil {
@@ -328,8 +331,15 @@ func (a *Application) setupSessionManager() {
 	var err error
 	if a.sessionStore != nil {
 		store = a.sessionStore
-	} else if store, err = gormstore.New(a.config.DBConfig.DB()); err != nil {
-		store = memstore.New()
+	} else {
+		if a.defaultDatabase == nil {
+			store = memstore.New()
+		} else {
+			store, err = gormstore.New(a.defaultDatabase.DB())
+			if err != nil {
+				panic(err)
+			}
+		}
 	}
 	sessionManager.Store = store
 	a.sessionManager = sessionManager
