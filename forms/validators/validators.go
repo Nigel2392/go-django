@@ -3,11 +3,18 @@ package validators
 import (
 	"errors"
 	"fmt"
+	"io"
 	"regexp"
 	"unicode"
 )
 
-type Validator func(string) error
+type FormValue interface {
+	IsFile() bool
+	Value() string
+	File() (string, io.ReadCloser)
+}
+
+type Validator func(FormValue) error
 
 func New(validators ...Validator) []Validator {
 	return validators
@@ -15,8 +22,8 @@ func New(validators ...Validator) []Validator {
 
 // MaxLength returns a validator that checks if the length of the string is at most max.
 func MaxLength(max int) Validator {
-	return func(value string) error {
-		if len(value) > max {
+	return func(value FormValue) error {
+		if len(value.Value()) > max {
 			return fmt.Errorf("value is too long")
 		}
 		return nil
@@ -25,8 +32,8 @@ func MaxLength(max int) Validator {
 
 // MinLength returns a validator that checks if the length of the string is at least min.
 func MinLength(min int) Validator {
-	return func(value string) error {
-		if len(value) < min {
+	return func(value FormValue) error {
+		if len(value.Value()) < min {
 			return fmt.Errorf("value is too short")
 		}
 		return nil
@@ -35,11 +42,11 @@ func MinLength(min int) Validator {
 
 // Check if the string is at least min and at most max.
 func Length(min, max int) Validator {
-	return func(value string) error {
-		if len(value) < min {
+	return func(value FormValue) error {
+		if len(value.Value()) < min {
 			return fmt.Errorf("value is too short")
 		}
-		if len(value) > max {
+		if len(value.Value()) > max {
 			return fmt.Errorf("value is too long")
 		}
 		return nil
@@ -56,17 +63,17 @@ func Length(min, max int) Validator {
 // - password contains at least one digit
 // - password contains at least one non-digit
 // - password does not contain any whitespace
-func PasswordStrength(password string) error {
-	if len(password) < 8 {
+func PasswordStrength(password FormValue) error {
+	if len(password.Value()) < 8 {
 		return fmt.Errorf("password is too short")
-	} else if len(password) > 32 {
+	} else if len(password.Value()) > 32 {
 		return fmt.Errorf("password is too long")
 	}
 	var upp_ct int = 0
 	var low_ct int = 0
 	var dig_ct int = 0
 	var spa_ct int = 0
-	for _, c := range password {
+	for _, c := range password.Value() {
 		if unicode.IsUpper(c) {
 			upp_ct++
 		}
@@ -81,20 +88,20 @@ func PasswordStrength(password string) error {
 		}
 	}
 
-	if upp_ct == 0 || upp_ct == len(password) {
+	if upp_ct == 0 || upp_ct == len(password.Value()) {
 		return fmt.Errorf("password must contain at least one uppercase letter, and at least one lowercase letter")
 	}
-	if low_ct == 0 || low_ct == len(password) {
+	if low_ct == 0 || low_ct == len(password.Value()) {
 		return fmt.Errorf("password must contain at least one lowercase letter, and at least one uppercase letter")
 	}
-	if dig_ct == 0 || dig_ct == len(password) {
+	if dig_ct == 0 || dig_ct == len(password.Value()) {
 		return fmt.Errorf("password must contain at least one digit, and at least one non-digit")
 	}
 	if spa_ct > 0 {
 		return fmt.Errorf("password must not contain spaces")
 	}
 	// Require at least one special character
-	if len(password) == upp_ct+low_ct+dig_ct {
+	if len(password.Value()) == upp_ct+low_ct+dig_ct {
 		return fmt.Errorf("password must contain at least one special character")
 	}
 	return nil
@@ -104,10 +111,10 @@ func PasswordStrength(password string) error {
 // Also matches custom strings,
 // Example: Regex("<<email>>")("email") -> errors.New("not a match")
 // Example: Regex("<<float>>")("0.01") -> nil
-func Regex(regex string) func(string) error {
-	return func(value string) error {
+func Regex(regex string) func(value FormValue) error {
+	return func(value FormValue) error {
 		var reg = regexp.MustCompile(toRegex(regex))
-		var match = reg.MatchString(value)
+		var match = reg.MatchString(value.Value())
 		if !match {
 			return errors.New("not a match")
 		}

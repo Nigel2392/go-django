@@ -384,10 +384,10 @@ func loginView(as *AdminSite, rq *request.Request) {
 		if form.Fill(rq) {
 			var login = form.Field(auth.USER_MODEL_LOGIN_FIELD).Value()
 			var password = form.Field("password").Value()
-			var user, err = auth.Login(rq, login, password)
+			var user, err = auth.Login(rq, login.Value(), password.Value())
 			if err != nil {
 				// Log failed login
-				var log = SimpleLog(auth.NewUser(login), LogActionLoginFailed)
+				var log = SimpleLog(auth.NewUser(login.Value()), LogActionLoginFailed)
 				log.Meta.Set("login", login)
 				log.Meta.Set("database", err.Error())
 				log.Save(as)
@@ -408,12 +408,12 @@ func loginView(as *AdminSite, rq *request.Request) {
 			}
 		} else {
 			var login = form.Field(auth.USER_MODEL_LOGIN_FIELD).Value()
-			var u = auth.NewUser(login)
+			var u = auth.NewUser(login.Value())
 			if err != nil {
 				//lint:ignore ST1005 This is a log message
 				as.Logger.Critical(fmt.Errorf("Failed to set login field: %s", err.Error()))
-				u.Email = login
-				u.Username = login
+				u.Email = login.Value()
+				u.Username = login.Value()
 			}
 			var log = SimpleLog(u, LogActionLoginFailed)
 			log.Meta.Set("login", login)

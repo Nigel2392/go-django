@@ -7,6 +7,10 @@ import (
 	"github.com/Nigel2392/router/v3/request"
 )
 
+func NewValue(s string) *FormData {
+	return &FormData{Val: s}
+}
+
 type Form struct {
 	Fields      []FormElement
 	Errors      FormErrors
@@ -88,6 +92,9 @@ func (f *Form) fillQueries(r *request.Request) {
 
 func (f *Form) fillForm(r *request.Request) {
 	for _, field := range f.Fields {
+		if field.IsFile() {
+
+		}
 		field.SetValue(r.Request.PostForm.Get(field.GetName()))
 	}
 }
@@ -164,7 +171,7 @@ func (f *Form) Disabled(names ...string) Form {
 func (f *Form) Get(name string) string {
 	for _, field := range f.Fields {
 		if field.GetName() == name {
-			return field.Value()
+			return field.Value().Val
 		}
 	}
 	return ""

@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/core/models"
 	"github.com/Nigel2392/go-django/core/models/modelutils"
 	"github.com/Nigel2392/go-django/core/secret"
+	"github.com/Nigel2392/go-django/forms"
 
 	"github.com/Nigel2392/go-django/forms/validators"
 
@@ -203,7 +204,7 @@ func (u *User) string() string {
 // Sets a hashed password on the user instance.
 // This will not automatically update the database!
 func (u *User) SetPassword(password string) error {
-	if err := validators.PasswordStrength(password); err != nil {
+	if err := validators.PasswordStrength(forms.NewValue(password)); err != nil {
 		//lint:ignore ST1005 Password is a field.
 		return errors.New("Password is too weak.")
 	}
@@ -247,7 +248,7 @@ func (u *User) validateFields() error {
 	if err := defaultValidation(u); err != nil {
 		return err
 	}
-	if err := validators.PasswordStrength(u.Password); err != nil {
+	if err := validators.PasswordStrength(forms.NewValue(u.Password)); err != nil {
 		return err
 	}
 	return nil

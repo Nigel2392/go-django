@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 
+	"github.com/Nigel2392/go-django/forms"
 	"github.com/Nigel2392/go-django/forms/validators"
 
 	"golang.org/x/crypto/bcrypt"
@@ -10,27 +11,27 @@ import (
 
 // Validates email, username, first name, and last name.
 func defaultValidation(u *User) error {
-	if err := validators.Regex(validators.REGEX_EMAIL)(u.Email); err != nil {
+	if err := validators.Regex(validators.REGEX_EMAIL)(forms.NewValue(u.Email)); err != nil {
 		//lint:ignore ST1005 Email is a field.
 		return errors.New("Email is not valid")
 	}
-	if err := validators.Length(3, 255)(u.Email); err != nil {
+	if err := validators.Length(3, 255)(forms.NewValue(u.Email)); err != nil {
 		//lint:ignore ST1005 Email is a field.
 		return errors.New("Email must be between 3 and 255 characters")
 	}
-	if err := validators.Regex(validators.REGEX_ALPHANUMERIC)(u.Username); err != nil {
+	if err := validators.Regex(validators.REGEX_ALPHANUMERIC)(forms.NewValue(u.Username)); err != nil {
 		//lint:ignore ST1005 Username is a field.
 		return errors.New("Username can only contain letters and numbers")
 	}
-	if err := validators.Length(3, 75)(u.Username); err != nil {
+	if err := validators.Length(3, 75)(forms.NewValue(u.Username)); err != nil {
 		//lint:ignore ST1005 Username is a field.
 		return errors.New("Username must be between 3 and 75 characters")
 	}
-	if err := validators.Length(0, 50)(u.FirstName); err != nil {
+	if err := validators.Length(0, 50)(forms.NewValue(u.FirstName)); err != nil {
 		//lint:ignore ST1005 FirstName is a field.
 		return errors.New("First name must be between 0 and 50 characters")
 	}
-	if err := validators.Length(0, 50)(u.LastName); err != nil {
+	if err := validators.Length(0, 50)(forms.NewValue(u.LastName)); err != nil {
 		//lint:ignore ST1005 LastName is a field.
 		return errors.New("Last name must be between 0 and 50 characters")
 	}

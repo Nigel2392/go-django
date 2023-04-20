@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/core/cache"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/flag"
+	"github.com/Nigel2392/go-django/forms"
 	"github.com/Nigel2392/go-django/forms/validators"
 
 	"github.com/Nigel2392/router/v3/request"
@@ -117,12 +118,12 @@ func Login(r *request.Request, login, password string) (user *User, err error) {
 	// Do some quick validation before we try to hit the database.
 	switch strings.ToLower(USER_MODEL_LOGIN_FIELD) {
 	case "email":
-		if err := validators.Regex(validators.REGEX_EMAIL)(login); err != nil {
+		if err := validators.Regex(validators.REGEX_EMAIL)(forms.NewValue(login)); err != nil {
 			SIGNAL_LOGIN_FAILED.Send(&u, err)
 			return UnAuthenticatedUser(), err
 		}
 	case "username":
-		if err := validators.Length(3, 75)(login); err != nil {
+		if err := validators.Length(3, 75)(forms.NewValue(login)); err != nil {
 			SIGNAL_LOGIN_FAILED.Send(&u, err)
 			return UnAuthenticatedUser(), err
 		}

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"io"
 	"reflect"
 	"strconv"
 	"strings"
@@ -31,7 +32,8 @@ type FormElement interface {
 
 	// Get, set or clear the value of the field.
 	SetValue(string)
-	Value() string
+	SetFile(filename string, file io.ReadCloser) error
+	Value() *FormData
 	Clear()
 
 	// Validate the field.
@@ -47,6 +49,8 @@ type FormElement interface {
 	SetDisabled(bool)
 	SetRequired(bool)
 	SetHidden(bool)
+
+	IsFile() bool
 }
 
 const (
@@ -60,6 +64,7 @@ const (
 	TypeRadio    = "radio"
 	TypeSelect   = "select"
 	TypeHidden   = "hidden"
+	TypeFile     = "file"
 )
 
 type Element string
@@ -73,8 +78,35 @@ func (e Element) HTML() template.HTML {
 }
 
 type Option struct {
-	Value string
-	Text  string
+	Value *FormData
+	Text  *FormData
+}
+
+type FormData struct {
+	Val      string
+	FileName string
+	Reader   io.ReadCloser
+}
+
+func (f *FormData) IsFile() bool {
+	if f == nil {
+		return false
+	}
+	return f.Reader != nil && f.FileName != ""
+}
+
+func (f *FormData) Value() string {
+	if f == nil {
+		return ""
+	}
+	return f.Val
+}
+
+func (f *FormData) File() (string, io.ReadCloser) {
+	if f == nil {
+		return "", nil
+	}
+	return f.FileName, f.Reader
 }
 
 type Field struct {
@@ -85,7 +117,7 @@ type Field struct {
 	Placeholder  string
 	Type         string
 	Name         string
-	FormValue    string
+	FormValue    *FormData
 	Max          int
 	Min          int
 	Required     bool
@@ -109,6 +141,21 @@ type Field struct {
 	// Render function
 	RenderLabel func(f *Field) Element
 	Render      func(f *Field) Element
+}
+
+func (f *Field) IsFile() bool {
+	return f.Type == TypeFile
+}
+
+func (f *Field) SetFile(filename string, file io.ReadCloser) error {
+	if f.Type != TypeFile {
+		return errors.New("field is not a file field")
+	}
+	f.FormValue = &FormData{
+		FileName: filename,
+		Reader:   file,
+	}
+	return nil
 }
 
 func (f *Field) GetName() string {
@@ -135,15 +182,17 @@ func (f *Field) HasError() bool {
 }
 
 func (f *Field) SetValue(value string) {
-	f.FormValue = value
+	f.FormValue = &FormData{
+		Val: value,
+	}
 }
 
-func (f *Field) Value() string {
+func (f *Field) Value() *FormData {
 	return f.FormValue
 }
 
 func (f *Field) Clear() {
-	f.FormValue = ""
+	f.FormValue = &FormData{}
 }
 
 func (f *Field) SetReadOnly(readOnly bool) {
@@ -190,8 +239,8 @@ func (f *Field) Field() ElementInterface {
 	if f.Class != "" {
 		attrStringBuilder.WriteString(` class="` + f.Class + `"`)
 	}
-	if f.FormValue != "" {
-		attrStringBuilder.WriteString(` value="` + f.FormValue + `"`)
+	if f.FormValue != nil && f.Type != TypeFile && f.FormValue.Val != "" {
+		attrStringBuilder.WriteString(` value="` + f.FormValue.Val + `"`)
 	}
 	if f.Max > 0 {
 		attrStringBuilder.WriteString(` max="` + strconv.Itoa(f.Max) + `"`)
@@ -211,14 +260,17 @@ func (f *Field) Field() ElementInterface {
 	var attrs = attrStringBuilder.String()
 	switch f.Type {
 
-	case "text", "password", "email", "number", "range":
+	case "text", "password", "email", "number", "range", "hidden", "file":
 		return Element(`<input` + attrs + `>` + "\r\n")
 
 	case "textarea":
-		return Element(`<textarea` + attrs + `>` + f.FormValue + `</textarea>` + "\r\n")
+		if f.FormValue != nil && f.FormValue.Val != "" {
+			return Element(`<textarea` + attrs + `>` + f.FormValue.Val + `</textarea>` + "\r\n")
+		}
+		return Element(`<textarea` + attrs + `>` + `</textarea>` + "\r\n")
 
 	case "checkbox":
-		if strings.ToLower(f.FormValue) == "on" || strings.ToLower(f.FormValue) == "true" {
+		if f.FormValue != nil && f.FormValue.Val != "" && strings.ToLower(f.FormValue.Val) == "on" || strings.ToLower(f.FormValue.Val) == "true" {
 			return Element(`<input` + attrs + ` checked>` + "\r\n")
 		}
 		return Element(`<input` + attrs + `>` + "\r\n")
@@ -230,11 +282,10 @@ func (f *Field) Field() ElementInterface {
 	case "select":
 		var b = Element(`<select` + attrs + `>`)
 		for _, option := range f.Options {
-			b += Element(`<option value="` + option.Value + `">` + option.Text + `</option>`)
+			b += Element(`<option value="` + option.Value.Value() + `">` + option.Text.Value() + `</option>`)
 		}
 		b += Element(`</select>`)
 		return b
-
 	default:
 		return Element("")
 	}
@@ -259,19 +310,27 @@ func (f *Field) Label() ElementInterface {
 
 func (f *Field) Validate() error {
 	// VALIDATE REQUIRED
-	if f.Required && f.FormValue == "" {
+	if f.Required && f.FormValue == nil || f.Required && f.FormValue != nil && f.FormValue.Val == "" {
 		if f.ErrorMessageFieldRequired != "" {
 			return fmt.Errorf(f.ErrorMessageFieldRequired, f.LabelText)
 		}
 		return fmt.Errorf("%s is required", f.LabelText)
-	} else if f.FormValue == "" {
+	} else if f.FormValue == nil {
 		return nil
 	}
 
 	// VALIDATE LENGTH
 	switch f.Type {
 	case "number", "range":
-		var i, err = strconv.Atoi(f.FormValue)
+		var v string
+		if f.FormValue == nil && f.FormValue.Val == "" {
+			v = "0"
+		} else if f.FormValue != nil {
+			v = f.FormValue.Val
+		} else {
+			v = "0"
+		}
+		var i, err = strconv.Atoi(v)
 		if err != nil {
 			return fmt.Errorf("%s is not a valid number (%s)", f.LabelText, f.FormValue)
 		}
@@ -291,17 +350,23 @@ func (f *Field) Validate() error {
 		}
 
 	default:
-		if f.Max > 0 && len(f.FormValue) > f.Max {
+		var v string
+		if f.FormValue != nil && f.FormValue.Val != "" {
+			v = f.FormValue.Val
+		} else {
+			v = f.FormValue.Val
+		}
+		if f.Max > 0 && len(v) > f.Max {
 			if f.ErrorMessageFieldMax != "" {
 				return fmt.Errorf(f.ErrorMessageFieldMax, f.LabelText)
 			}
-			return fmt.Errorf("%s is too long by %d characters", f.LabelText, len(f.FormValue)-f.Max)
+			return fmt.Errorf("%s is too long by %d characters", f.LabelText, len(v)-f.Max)
 		}
-		if f.Min > 0 && len(f.FormValue) < f.Min {
+		if f.Min > 0 && len(v) < f.Min {
 			if f.ErrorMessageFieldMin != "" {
 				return fmt.Errorf(f.ErrorMessageFieldMin, f.LabelText)
 			}
-			return fmt.Errorf("%s is too short by %d characters", f.LabelText, f.Min-len(f.FormValue))
+			return fmt.Errorf("%s is too short by %d characters", f.LabelText, f.Min-len(v))
 		}
 	}
 
@@ -428,7 +493,7 @@ func GenerateFieldsFromStruct(s interface{}) ([]*Field, error) {
 					options = append(options, &o)
 				}
 				f.Options = options
-				f.FormValue = ""
+				f.FormValue = &FormData{Val: ""}
 			}
 		}
 
@@ -437,23 +502,23 @@ func GenerateFieldsFromStruct(s interface{}) ([]*Field, error) {
 	return fields, nil
 }
 
-func switchTyp(t any) string {
+func switchTyp(t any) *FormData {
 	switch val := t.(type) {
 	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
-		return fmt.Sprintf("%d", val)
+		return &FormData{Val: fmt.Sprintf("%d", val)}
 	case float32, float64:
-		return fmt.Sprintf("%f", val)
+		return &FormData{Val: fmt.Sprintf("%f", val)}
 	case bool:
-		return fmt.Sprintf("%t", val)
+		return &FormData{Val: fmt.Sprintf("%t", val)}
 	case string:
-		return val
+		return &FormData{Val: val}
 	case []byte:
-		return string(val)
+		return &FormData{Val: string(val)}
 	case time.Time:
-		return val.Format("2006-01-02 15:04:05")
+		return &FormData{Val: val.Format("2006-01-02 15:04:05")}
 	case fmt.Stringer:
-		return val.String()
+		return &FormData{Val: val.String()}
 	default:
-		return fmt.Sprintf("%v", val)
+		return &FormData{Val: fmt.Sprintf("%v", val)}
 	}
 }
