@@ -93,7 +93,24 @@ func (f *Form) fillQueries(r *request.Request) {
 func (f *Form) fillForm(r *request.Request) {
 	for _, field := range f.Fields {
 		if field.IsFile() {
-
+			var mForm = r.Request.MultipartForm
+			if mForm == nil {
+				continue
+			}
+			if mForm.File == nil {
+				continue
+			}
+			var readerClosers = mForm.File[field.GetName()]
+			if len(readerClosers) == 0 {
+				continue
+			}
+			var readerCloser = readerClosers[0]
+			var file, err = readerCloser.Open()
+			if err != nil {
+				f.AddError(field.GetName(), err)
+			}
+			field.SetFile(readerCloser.Filename, file)
+			continue
 		}
 		field.SetValue(r.Request.PostForm.Get(field.GetName()))
 	}

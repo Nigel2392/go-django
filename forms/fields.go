@@ -348,7 +348,7 @@ func (f *Field) Validate() error {
 			}
 			return fmt.Errorf("%s is too small", f.LabelText)
 		}
-
+	case "file":
 	default:
 		var v string
 		if f.FormValue != nil && f.FormValue.Val != "" {
