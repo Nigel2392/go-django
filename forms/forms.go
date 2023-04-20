@@ -168,11 +168,11 @@ func (f *Form) Disabled(names ...string) Form {
 	return *f
 }
 
-func (f *Form) Get(name string) string {
+func (f *Form) Get(name string) *FormData {
 	for _, field := range f.Fields {
 		if field.GetName() == name {
-			return field.Value().Val
+			return field.Value()
 		}
 	}
-	return ""
+	return nil
 }
