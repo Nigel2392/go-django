@@ -432,8 +432,9 @@ func (a *Application) Serve() http.Handler {
 		}
 		a.config.Templates.DEFAULT_FUNCS = funcMap
 	}
-
-	a.Router.AddGroup(a.adminSite.URLS())
+	if a.adminSite != nil {
+		a.Router.AddGroup(a.adminSite.URLS())
+	}
 	return a.Router
 }
 
