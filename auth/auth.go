@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/go-django/forms"
 	"github.com/Nigel2392/go-django/forms/validators"
+	"github.com/Nigel2392/netcache/src/client"
 
 	"github.com/Nigel2392/router/v3/request"
 	"gorm.io/gorm"
@@ -23,7 +24,7 @@ func init() {
 }
 
 var (
-	auth_cache             cache.Cache
+	auth_cache             client.Cache
 	auth_db                *gorm.DB
 	SESSION_COOKIE_NAME    string          = "session_id"
 	DB_KEY                 db.DATABASE_KEY = "auth"
@@ -54,7 +55,7 @@ var (
 )
 
 // Initialize the auth package.
-func Init(pool db.Pool[*gorm.DB], cache cache.Cache, flags *flag.Flags) {
+func Init(pool db.Pool[*gorm.DB], cache client.Cache, flags *flag.Flags) {
 	var database = db.GetDefaultDatabase(DB_KEY, pool)
 	auth_db = database.DB()
 	database.Register(
@@ -231,7 +232,7 @@ func HasPerms(user *User, permissions ...*Permission) bool {
 	// We will check the cache first.
 	var groups []*Group
 	if auth_cache != nil {
-		var g, err = auth_cache.Get(hashUser(user, groups_suffix))
+		var g, err = auth_cache.Get(hashUser(user, groups_suffix), &groups)
 		if err == nil && g != nil {
 			user.Groups = g.Value().([]*Group)
 			return user.HasPerms(permissions...)

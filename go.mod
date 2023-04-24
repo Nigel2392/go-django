@@ -6,6 +6,7 @@ require (
 	github.com/Nigel2392/batch v1.0.2
 	github.com/Nigel2392/go-html v1.0.0
 	github.com/Nigel2392/go-signals v1.0.4
+	github.com/Nigel2392/netcache v1.0.5
 	github.com/Nigel2392/orderedmap v1.0.1
 	github.com/Nigel2392/router/v3 v3.3.0
 	github.com/Nigel2392/typeutils v1.1.1
@@ -22,6 +23,7 @@ require (
 )
 
 require (
+	github.com/Nigel2392/go-datastructures v1.0.4 // indirect
 	github.com/Nigel2392/routevars v1.1.1 // indirect
 	github.com/go-sql-driver/mysql v1.7.0 // indirect
 	github.com/jinzhu/inflection v1.0.0 // indirect

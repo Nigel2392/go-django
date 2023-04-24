@@ -4,11 +4,11 @@ import (
 	"html/template"
 
 	"github.com/Nigel2392/go-django/admin"
-	"github.com/Nigel2392/go-django/core/cache"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/go-django/core/fs"
+	"github.com/Nigel2392/netcache/src/client"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/templates"
 	"gorm.io/gorm"
@@ -89,7 +89,7 @@ func (a *Application) Admin() *admin.AdminSite {
 	return a.adminSite
 }
 
-func (a *Application) Cache() cache.Cache {
+func (a *Application) Cache() client.Cache {
 	if !a.initted {
 		panic("You must initialize the app (call app.New(...)) before calling app.Cache()")
 	}
@@ -125,6 +125,6 @@ func Admin() *admin.AdminSite {
 	return App().Admin()
 }
 
-func Cache() cache.Cache {
+func Cache() client.Cache {
 	return App().Cache()
 }

@@ -398,7 +398,7 @@ func (u *User) HasGroup(groupNames ...string) bool {
 
 	var groups []*Group
 	if auth_cache != nil {
-		var g, err = auth_cache.Get(hashUser(u, groups_suffix))
+		var g, err = auth_cache.Get(hashUser(u, groups_suffix), &groups)
 		if err == nil && g != nil {
 			groups = g.Value().([]*Group)
 			return hasGroup(groups, groupNames...)

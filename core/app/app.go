@@ -20,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/core/logger"
 	"github.com/Nigel2392/go-django/core/secret"
 	"github.com/Nigel2392/go-django/core/tracer"
+	"github.com/Nigel2392/netcache/src/client"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/middleware"
 	"github.com/Nigel2392/router/v3/middleware/csrf"
@@ -99,7 +100,7 @@ type Config struct {
 	DBConfig *db.DatabasePoolItem
 
 	// The application's cache.
-	Cache cache.Cache
+	Cache client.Cache
 
 	// Forcefully disable the cache.
 	CacheDisabled bool
@@ -173,7 +174,7 @@ type Application struct {
 	Pool db.Pool[*gorm.DB]
 
 	// The cache to use.
-	cache cache.Cache
+	cache client.Cache
 
 	// The default database connection.
 	defaultDatabase db.PoolItem[*gorm.DB]
@@ -217,7 +218,7 @@ func New(c Config) *Application {
 
 	// Initialize the cache.
 	if config.Cache == nil && !config.CacheDisabled {
-		config.Cache = cache.NewInMemoryCache(time.Second)
+		config.Cache = cache.NewInMemoryCache(cache.MedExpiration / 2)
 	}
 
 	// Initialize the secret key.

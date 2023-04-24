@@ -2,10 +2,16 @@ github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03
 github.com/Masterminds/semver/v3 v3.1.1/go.mod h1:VPu/7SZ7ePZ3QOrcuXROw5FAcLl4a0cBrbBpGY/8hQs=
 github.com/Nigel2392/batch v1.0.2 h1:FTCm8GPXa8+Ud0XqQqY3YFXTirj6lYpGsWl4bzau05A=
 github.com/Nigel2392/batch v1.0.2/go.mod h1:DZu24HD7odEw7xmDacDIXePS/9pGL/7XsUUeIjoxC+w=
+github.com/Nigel2392/go-datastructures v1.0.4 h1:by+l+Q0KgIMfMCnWqaEMs7dkoTOjA61o/qQDtDwwes4=
+github.com/Nigel2392/go-datastructures v1.0.4/go.mod h1:RNiDGkQM579UIEGwyDW5N/16s6abJNFMXx+iQvFWytg=
 github.com/Nigel2392/go-html v1.0.0 h1:IkwFNMiY35L0hhkNfgADdo+X2niTJXBskZMoUCgJwnE=
 github.com/Nigel2392/go-html v1.0.0/go.mod h1:H7HP952SQl9ws9rxyziwLfIo0rcpmWlCXF1/21KUYS4=
 github.com/Nigel2392/go-signals v1.0.4 h1:SULZt+6AwtHmQDrt2TTzb1bYeoTr2kSUetN6aIa39Mg=
 github.com/Nigel2392/go-signals v1.0.4/go.mod h1:Olk7MJlZ9gdGPN8bh+OZSe7iOsBixn7biVI7LqoWEIA=
+github.com/Nigel2392/netcache v1.0.4 h1:y6fyhoWQJL8KA1Qn3fqgv8UroXY2kU//GWjPW0CYvTo=
+github.com/Nigel2392/netcache v1.0.4/go.mod h1:urwUsJzhoQRQqHY2ow8swu6j6BKGrI+tBDaT/bgTAbU=
+github.com/Nigel2392/netcache v1.0.5 h1:GnFLPnm3/9bFpwD3SYog4AlGo4rwqGZZcyGSl/rC1cI=
+github.com/Nigel2392/netcache v1.0.5/go.mod h1:urwUsJzhoQRQqHY2ow8swu6j6BKGrI+tBDaT/bgTAbU=
 github.com/Nigel2392/orderedmap v1.0.1 h1:EVcifFvawpspDdgKwnQ4Gru7I9p8fkSU0XFsdD1XOWA=
 github.com/Nigel2392/orderedmap v1.0.1/go.mod h1:hSixHbaKFK3CEjE/joQBVNbJbfDrcOkfJKi61kDyLRY=
 github.com/Nigel2392/router/v3 v3.3.0 h1:0i93rnyhXqY1FjEob0gYEROazVD/3TZ7YpgPDUIRgZU=
