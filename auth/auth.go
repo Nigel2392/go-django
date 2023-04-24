@@ -68,6 +68,8 @@ func Init(pool db.Pool[*gorm.DB], cache client.Cache, flags *flag.Flags) {
 
 	// Register the createsuperuser command.
 	flags.RegisterCommand(CreateSuperUserCommand)
+
+	auth_cache = cache
 }
 
 // Create a new unauthenticated used, with the login field set to the login parameter.
