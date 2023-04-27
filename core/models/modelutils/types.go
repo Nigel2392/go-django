@@ -57,10 +57,7 @@ func (s *Slice[T]) FromString(str string) error {
 		if err != nil {
 			return err
 		}
-		if newv == nil {
-			continue
-		}
-		r[i] = newv.(T)
+		r[i] = newv
 	}
 	*s = r
 	return nil

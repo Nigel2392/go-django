@@ -173,6 +173,7 @@ func detailView(as *AdminSite, mdl *models.Model, rq *request.Request) {
 		var s, created, err = form.Process(rq, as.MediaManager, db.DB())
 		if err != nil {
 			as.Logger.Critical(err)
+			rq.Data.AddMessage("error", "Error processing form: "+err.Error())
 			goto Template
 		} else {
 			_ = s

@@ -1,12 +1,10 @@
 package modelutils
 
 import (
-	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
-
-	"github.com/Nigel2392/go-django/core"
+	"unsafe"
 )
 
 func ConvertInt(s string) (any, error) {
@@ -38,7 +36,7 @@ func ConvertSlice[T any](s string) ([]T, error) {
 		if err != nil {
 			return sl, err
 		}
-		sl = append(sl, v.(T))
+		sl = append(sl, v)
 	}
 	return sl, nil
 }
@@ -63,41 +61,108 @@ func ConvertMap[T1 comparable, T2 any](s1, s2 string) (any, any, error) {
 	return key.(T1), val.(T2), nil
 }
 
-func Convert[T any](s string) (any, error) {
-	var v any
+func Convert[T any](s string) (T, error) {
+	var v T
 	var err error
+	// var wentDefault bool
 	switch any(*(new(T))).(type) {
-	case int, int8, int16, int32, int64:
-		v, err = ConvertInt(s)
-	case uint, uint8, uint16, uint32, uint64:
-		v, err = ConvertUint(s)
-	case float64, float32:
-		v, err = ConvertFloat(s)
+	case int:
+		var i int64
+		i, err = strconv.ParseInt(s, 10, 64)
+		v = *(*T)(unsafe.Pointer(&i))
+	case int8:
+		var i int64
+		i, err = strconv.ParseInt(s, 10, 8)
+		var i8 int8 = int8(i)
+		v = *(*T)(unsafe.Pointer(&i8))
+	case int16:
+		var i int64
+		i, err = strconv.ParseInt(s, 10, 16)
+		var i16 int16 = int16(i)
+		v = *(*T)(unsafe.Pointer(&i16))
+	case int32:
+		var i int64
+		i, err = strconv.ParseInt(s, 10, 32)
+		var i32 int32 = int32(i)
+		v = *(*T)(unsafe.Pointer(&i32))
+	case int64:
+		var i int64
+		i, err = strconv.ParseInt(s, 10, 64)
+		v = *(*T)(unsafe.Pointer(&i))
+	case uint:
+		var i uint64
+		i, err = strconv.ParseUint(s, 10, 64)
+		v = *(*T)(unsafe.Pointer(&i))
+	case uint8:
+		var i uint64
+		i, err = strconv.ParseUint(s, 10, 8)
+		var i8 uint8 = uint8(i)
+		v = *(*T)(unsafe.Pointer(&i8))
+	case uint16:
+		var i uint64
+		i, err = strconv.ParseUint(s, 10, 16)
+		var i16 uint16 = uint16(i)
+		v = *(*T)(unsafe.Pointer(&i16))
+	case uint32:
+		var i uint64
+		i, err = strconv.ParseUint(s, 10, 32)
+		var i32 uint32 = uint32(i)
+		v = *(*T)(unsafe.Pointer(&i32))
+	case uint64:
+		var i uint64
+		i, err = strconv.ParseUint(s, 10, 64)
+		v = *(*T)(unsafe.Pointer(&i))
+	case float64:
+		var f float64
+		f, err = strconv.ParseFloat(s, 64)
+		v = *(*T)(unsafe.Pointer(&f))
+	case float32:
+		var f float64
+		f, err = strconv.ParseFloat(s, 32)
+		var f32 float32 = float32(f)
+		v = *(*T)(unsafe.Pointer(&f32))
 	case bool:
-		v, err = ConvertBool(s)
+		var b bool
+		b, err = strconv.ParseBool(s)
+		v = *(*T)(unsafe.Pointer(&b))
 	case string:
-		v, err = ConvertString(s)
+		v = any(s).(T)
 	case []byte:
-		v = []byte(s)
-	default:
-		var typ = reflect.TypeOf(new(T)).Elem()
-		if typ.Kind() == reflect.Slice {
-			v, err = ConvertSlice[T](s)
-		} else {
-			var t = new(T)
-			switch t := any(t).(type) {
-			case core.FromStringer:
-				if err := t.FromString(s); err != nil {
-					return nil, err
-				}
-			default:
-				err = fmt.Errorf("cannot convert %v automatically. please provide a Convert(string) (any, error) function", typ)
-			}
-		}
-		//	else if typ.Kind() == reflect.Map {
-		//		v, err = ConvertMap(s)
+		v = any([]byte(s)).(T)
+		//	default:
+		//		wentDefault = true
+		//		var typ = reflect.TypeOf(new(T)).Elem()
+		//		if typ.Kind() == reflect.Slice {
+		//			v, err = ConvertSlice[T](s)
+		//		} else {
+		//			var t = new(T)
+		//			switch t := any(t).(type) {
+		//			case core.FromStringer:
+		//				if err := t.FromString(s); err != nil {
+		//					return nil, err
+		//				}
+		//			default:
+		//				err = fmt.Errorf("cannot convert %v automatically. please provide a Convert(string) (any, error) function", typ)
+		//			}
+		//		}
+		//		//	else if typ.Kind() == reflect.Map {
+		//		//		v, err = ConvertMap(s)
+		//		//	}
+		//	}
+		//	if err != nil && !wentDefault {
+		//		return nil, err
+		//	} else if err == nil && !wentDefault {
+		//		return v, nil
+		//	}
+		//	var valueOf = reflect.ValueOf(v)
+		//	if valueOf.Kind() == reflect.Ptr {
+		//		valueOf = valueOf.Elem()
+		//	}
+		//	if valueOf.Type().ConvertibleTo(reflect.TypeOf(new(T)).Elem()) {
+		//		v = valueOf.Convert(reflect.TypeOf(new(T)).Elem()).Interface()
 		//	}
 	}
+
 	return v, err
 }
 

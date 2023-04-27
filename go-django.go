@@ -93,7 +93,7 @@ func Middlewares(m ...router.Middleware) {
 	(*app.Application)(defaultApp).Middlewares(m...)
 }
 
-func Serve() http.Handler {
+func Serve() (http.Handler, error) {
 	panicIfNoDefaultApp()
 	return (*app.Application)(defaultApp).Serve()
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/core"
-	"github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/go-django/core/models"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -23,6 +22,13 @@ var modelTypes []any = []any{
 
 // Returns true if an interface is exactly the type of a model.
 func IsActualModel(m any) bool {
+	if m, ok := m.(reflect.Type); ok {
+		return isActualModel(m)
+	}
+	return isActualModel(reflect.TypeOf(m))
+}
+
+func isActualModel(m reflect.Type) bool {
 	for _, modelType := range modelTypes {
 		if reflect.TypeOf(m) == reflect.TypeOf(modelType) {
 			return true
@@ -30,6 +36,8 @@ func IsActualModel(m any) bool {
 	}
 	return false
 }
+
+// Returns true if a type is exactly the type of a model.
 
 // Register a model type.
 //
@@ -331,6 +339,7 @@ func getModelDisplay(mdl any, list, firstIteration bool) string {
 			return mdlType.ListDisplay()
 		}
 	}
+
 	switch mdlType := mdl.(type) {
 	case core.DisplayableModel:
 		return mdlType.String()
@@ -384,14 +393,10 @@ func GetPreloadFields(s any) (preload []string, joins []string) {
 			fieldType = fieldType.Elem()
 		}
 
-		if reflect.TypeOf(fs.FileField{}) == DePtrType(fieldType) {
-			continue
-		}
-
 		// Validate wether the field is, or contains a gorm.Model
 		if fieldType.Kind() == reflect.Struct &&
 			!IsModelField(fieldType) &&
-			fieldType.Name() != "Time" {
+			fieldType.Name() != "Time" && IsModel(fieldType) {
 			// Append the field.
 			joins = append(joins, field.Name)
 		} else if fieldType.Kind() == reflect.Slice {

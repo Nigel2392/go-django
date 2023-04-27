@@ -102,8 +102,10 @@ type Config struct {
 	// The application's cache.
 	Cache client.Cache
 
-	// Forcefully disable the cache.
-	CacheDisabled bool
+	// Force the application to use a cache.
+	//
+	// If an error occurs connecting to the cache, do not proceed.
+	ForceCache bool
 
 	// Email settings:
 	// Timeout to wait for a response from the server
@@ -217,7 +219,7 @@ func New(c Config) *Application {
 	}
 
 	// Initialize the cache.
-	if config.Cache == nil && !config.CacheDisabled {
+	if config.Cache == nil && config.ForceCache {
 		config.Cache = cache.NewInMemoryCache(cache.MedExpiration / 2)
 	}
 
@@ -384,7 +386,7 @@ func (a *Application) setupRouter() {
 }
 
 // Instead of running the application, retrieve the handler/serve mux.
-func (a *Application) Serve() http.Handler {
+func (a *Application) Serve() (http.Handler, error) {
 	if !a.initted {
 		panic("You must call Init() before calling Run()")
 	}
@@ -395,7 +397,10 @@ func (a *Application) Serve() http.Handler {
 
 	// Connect the cache.
 	if a.cache != nil {
-		a.cache.Connect()
+		var err = a.cache.Connect()
+		if err != nil && a.config.ForceCache {
+			return nil, err
+		}
 	}
 
 	tracer.STACKLOGGER_UNSAFE = a.DEBUG
@@ -446,7 +451,7 @@ func (a *Application) Serve() http.Handler {
 	if a.adminSite != nil {
 		a.Router.AddGroup(a.adminSite.URLS())
 	}
-	return a.Router
+	return a.Router, nil
 }
 
 // Run the application.
@@ -455,7 +460,10 @@ func (a *Application) Serve() http.Handler {
 //
 // If the server is running in SSL mode, this will also start a redirect server.
 func (a *Application) Run() error {
-	var handler = a.Serve()
+	var handler, err = a.Serve()
+	if err != nil {
+		return err
+	}
 	var server = a.server(handler)
 	if a.config.Server.CertFile != "" && a.config.Server.KeyFile != "" {
 		// SSL is true, so we will listen on the TLS port.

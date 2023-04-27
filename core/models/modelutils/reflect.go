@@ -4,10 +4,29 @@ import (
 	"errors"
 	"reflect"
 	"strings"
-
-	"github.com/Nigel2392/go-django/core/models"
-	"github.com/google/uuid"
 )
+
+func GetFieldNames(m any) []string {
+	var v = reflect.ValueOf(m)
+	if !v.IsValid() {
+		return nil
+	}
+	var t = v.Type()
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	if t.Kind() != reflect.Struct {
+		return nil
+	}
+	var names = make([]string, 0, t.NumField())
+	for i := 0; i < t.NumField(); i++ {
+		var field = t.Field(i)
+		if field.IsExported() {
+			names = append(names, field.Name)
+		}
+	}
+	return names
+}
 
 func GetField(m any, field string, strict bool) (any, error) {
 	// fmt.Printf("GetField: %v, %v %T\n", m, field, m)
@@ -16,6 +35,15 @@ func GetField(m any, field string, strict bool) (any, error) {
 		// fmt.Println("GetField: ", v.Kind(), v.Type(), v.IsValid())
 		return nil, errors.New("invalid value")
 	}
+
+	if strict {
+		var field = v.FieldByName(field)
+		if field.IsValid() && field.CanInterface() {
+			return field.Interface(), nil
+		}
+		return nil, errors.New("field not found")
+	}
+
 	// fmt.Println("GetField: ", v.Kind(), v.Type())
 	for i := 0; i < v.NumField(); i++ {
 		if v.Type().Field(i).Name == field && v.Type().Field(i).IsExported() {
@@ -28,33 +56,10 @@ func GetField(m any, field string, strict bool) (any, error) {
 			if f.Kind() == reflect.Ptr {
 				f = f.Elem()
 			}
-			switch f.Kind() {
-			case reflect.String:
-				return f.String(), nil
-			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-				return f.Int(), nil
-			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-				return f.Uint(), nil
-			case reflect.Float32, reflect.Float64:
-				return f.Float(), nil
-			case reflect.Bool:
-				return f.Bool(), nil
-			default:
-				if !f.IsValid() || !f.CanInterface() {
-					return nil, errors.New("field not found")
-				}
-				switch f.Interface().(type) {
-				case models.UUIDField:
-					return f.Interface().(models.UUIDField), nil
-				case uuid.UUID:
-					return f.Interface().(uuid.UUID).String(), nil
-				default:
-					if f.IsValid() {
-						return f.Interface(), nil
-					}
-					return nil, errors.New("field not found")
-				}
+			if !f.IsValid() || !f.CanInterface() {
+				return nil, errors.New("field not found")
 			}
+			return f.Interface(), nil
 		}
 		var f = v.Field(i)
 		f = DePtr(f)

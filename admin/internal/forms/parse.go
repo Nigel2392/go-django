@@ -3,19 +3,49 @@ package forms
 import (
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"path/filepath"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core"
 	"github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/go-django/core/models/modelutils"
+	"github.com/Nigel2392/go-django/core/views/fields"
+	"github.com/Nigel2392/go-django/core/views/interfaces"
 	"github.com/Nigel2392/router/v3/request"
 	"gorm.io/gorm"
 )
+
+func getGormTag(field reflect.StructField, tag string) string {
+	var tags = field.Tag.Get("gorm")
+	if tags == "" {
+		return ""
+	}
+	var tagSplit = strings.Split(tags, ";")
+	for _, tag := range tagSplit {
+		var tagSplit = strings.Split(tag, ":")
+		if tagSplit[0] == tag {
+			return tag
+		}
+	}
+	return ""
+}
+
+func correctFieldPtrSet(model reflect.Value, fieldname string, value any, backup reflect.Value) {
+	var field = model.FieldByName(fieldname)
+	if field.IsValid() {
+		fmt.Println("Setting field", fieldname, "to", value)
+		correctPtrSet(field, value)
+	} else {
+		fmt.Println("Setting backup field", backup.Kind().String(), "to", value)
+		correctPtrSet(backup, value)
+	}
+}
 
 // 'submit' the form.
 // This processes the form fields and might update some model fields.
@@ -138,6 +168,21 @@ func (f *Form) submit(kv map[string][]string, mgr *fs.Manager, db *gorm.DB, rq *
 					return nil, errors.New("failed to find selected value: " + err.Error())
 
 				}
+
+				var actualFieldname = getGormTag(field, "foreignKey")
+				if actualFieldname == "" {
+					actualFieldname = field.Name + "ID"
+					v = modelutils.GetID(v, "ID")
+				} else {
+					var actualFieldnameSlice = strings.Split(actualFieldname, ":")
+					if len(actualFieldnameSlice) > 1 {
+						actualFieldname = actualFieldnameSlice[1]
+						v = modelutils.GetID(v, "ID")
+					}
+				}
+
+				correctFieldPtrSet(reflectValue, actualFieldname, v, modelField)
+				continue
 			}
 
 			// Validate the field
@@ -186,6 +231,7 @@ func (f *Form) submit(kv map[string][]string, mgr *fs.Manager, db *gorm.DB, rq *
 				if err != nil {
 					return nil, errors.New("failed to replace relation: " + err.Error())
 				}
+				continue
 			}
 
 			// Validate the field
@@ -236,22 +282,47 @@ func (f *Form) submit(kv map[string][]string, mgr *fs.Manager, db *gorm.DB, rq *
 				}
 				return nil, errors.New("failed to parse field: " + err.Error())
 			}
-
-			// Create a new file
 			defer file.Close()
-			fileField, err := fs.NewFile(mgr, filepath.Join("admin/"+header.Filename), file)
+
+			var ok bool
+			var mField interfaces.FileField
+			var modelField = modelField
+			if modelField.Kind() == reflect.Ptr {
+				modelField = modelField.Elem()
+			}
+
+			if mField, ok = modelField.Interface().(interfaces.FileField); !ok || ok {
+				var newModelField = reflect.New(modelField.Type()).Interface()
+				if mField, ok = newModelField.(interfaces.FileField); !ok {
+					return nil, errors.New("failed to parse field: " + field.Name + ": field is not a FileField")
+				}
+			}
+			var files = make([]interfaces.File, 0, 0)
+			files = append(files, fields.FormFile{
+				Filename: filepath.Join("admin/" + header.Filename),
+				OpenFunc: func() (io.ReadSeekCloser, error) {
+					return file, nil
+				},
+			})
+
+			err = mField.FormFiles(files)
 			if err != nil {
 				return nil, errors.New("failed to parse field: " + err.Error())
 			}
+			if saver, ok := mField.(interfaces.FileSaver); ok {
+				err = saver.Save(mgr)
+				if err != nil {
+					return nil, errors.New("failed to save field: " + err.Error())
+				}
+			}
 
 			// Validate the field
-			err = validateModelField(modelField, fileField)
+			err = validateModelField(modelField, mField)
 			if err != nil {
 				return nil, errors.New("failed to validate field: " + err.Error())
 			}
 
-			// Set the field
-			correctPtrSet(modelField, fileField)
+			correctPtrSet(modelField, mField)
 		case "text", "textarea", "password", "email", "url", "tel", "search", "color", "range":
 			// If the field is a text, textarea, password, email, url, tel, search, color, range or file, the field is a string.
 			//

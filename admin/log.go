@@ -89,7 +89,7 @@ func (u *LoggableUser) LoginField() string {
 type Log struct {
 	gorm.Model
 	// The user, if any, that performed the action.
-	User *LoggableUser `gorm:"foreignKey:UserID;references:ID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
+	User *LoggableUser `gorm:"foreignKey:UserID;constraint:OnUpdate:CASCADE,OnDelete:SET NULL;"`
 	// The ID of the user that performed the action.
 	UserID int64
 	// The name of the model that the log is for.

@@ -11,7 +11,7 @@ import (
 type FormValue interface {
 	IsFile() bool
 	Value() string
-	File() (string, io.ReadCloser)
+	File() (string, io.ReadSeekCloser)
 }
 
 type Validator func(FormValue) error

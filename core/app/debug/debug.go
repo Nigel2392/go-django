@@ -42,7 +42,7 @@ type AppSettings struct {
 // app.Application.DEBUG variable to false. (This will disable it! Recommended.)
 func StacktraceMiddleware(settings *AppSettings) router.Middleware {
 	return middleware.Recoverer(func(err error, r *request.Request) {
-		var stackTrace = tracer.TraceSafe(err, 8, 5)
+		var stackTrace = tracer.TraceSafe(err, 16, 1)
 		r.Response.Clear()
 		r.WriteString("<!DOCTYPE html>\n<html>")
 		r.WriteString("<head>")

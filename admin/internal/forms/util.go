@@ -128,12 +128,31 @@ func valueFromInterface(v interface{}) string {
 		return fmt.Sprintf("%f", v)
 	case bool:
 		return fmt.Sprintf("%t", v)
-	case time.Time:
-		return v.Format("2006-01-02 15:04:05")
-	case time.Duration:
-		return v.String()
-	case fmt.Stringer:
-		return v.String()
+	default:
+		var vOf = reflect.ValueOf(v)
+		if vOf.Kind() == reflect.Ptr {
+			vOf = vOf.Elem()
+		}
+		switch vOf.Kind() {
+		case reflect.String:
+			return vOf.String()
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			return fmt.Sprintf("%d", vOf.Int())
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			return fmt.Sprintf("%d", vOf.Uint())
+		case reflect.Float32, reflect.Float64:
+			return fmt.Sprintf("%f", vOf.Float())
+		case reflect.Bool:
+			return fmt.Sprintf("%t", vOf.Bool())
+		}
+		switch v := v.(type) {
+		case time.Time:
+			return v.Format("2006-01-02 15:04:05")
+		case time.Duration:
+			return v.String()
+		case fmt.Stringer:
+			return v.String()
+		}
 	}
 	return ""
 }

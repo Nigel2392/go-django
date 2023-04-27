@@ -45,6 +45,8 @@ func (f *FormField) Render(fieldBuilder *strings.Builder) {
 		f.renderTextarea(fieldBuilder)
 	case "file":
 		f.renderFile(fieldBuilder)
+	case "markdown":
+		f.renderMarkdown(fieldBuilder)
 	default:
 		f.renderInput(fieldBuilder)
 	}
@@ -120,6 +122,12 @@ func (f *FormField) renderSelect(fieldBuilder *strings.Builder) {
 func (f *FormField) renderTextarea(fieldBuilder *strings.Builder) {
 	var extra = f.getExtra()
 	fmt.Fprintf(fieldBuilder, `<textarea id="form_%s" name="form_%s" %s>%s</textarea>`, f.Name, f.Name, extra, f.Value)
+}
+
+func (f *FormField) renderMarkdown(fieldBuilder *strings.Builder) {
+	var extra = f.getExtra()
+	fmt.Fprintf(fieldBuilder, `<textarea id="form_%s" name="form_%s" %s>%s</textarea>`, f.Name, f.Name, extra, f.Value)
+	fmt.Fprintf(fieldBuilder, `<div id="markdown-preview"></div>`)
 }
 
 func (f *FormField) getExtra() string {

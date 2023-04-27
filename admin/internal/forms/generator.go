@@ -6,10 +6,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/go-django/admin/internal/tags"
-	"github.com/Nigel2392/go-django/core/fs"
+	"github.com/Nigel2392/go-django/core/httputils/tags"
 	coreModels "github.com/Nigel2392/go-django/core/models"
 	"github.com/Nigel2392/go-django/core/models/modelutils"
+	"github.com/Nigel2392/go-django/core/views/interfaces"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -55,13 +55,25 @@ type GetTyper interface {
 	GetType() string
 }
 
-func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
+func implements[T any](t reflect.Type) bool {
+	var typ = reflect.TypeOf((*T)(nil)).Elem()
+	if !t.Implements(typ) {
+		if _, ok := reflect.Zero(t).Interface().(T); ok {
+			return true
+		}
+		return false
+	}
+	return true
+}
+
+func generateFields(mdl any, db *gorm.DB, rq *request.Request) ([]*FormField, map[string]bool) {
 	var flds = make([]*FormField, 0)
 
 	var t = reflect.TypeOf(mdl)
 	if t.Kind() == reflect.Ptr {
 		t = t.Elem()
 	}
+	var importMap = make(map[string]bool)
 	for i := 0; i < t.NumField(); i++ {
 		var field = t.Field(i)
 
@@ -73,8 +85,8 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 
 		var tagMap = tags.ParseTags(tag)
 
-		var multiple = tagMap.Get("multiple") == "true"
-		var fieldName = tagMap.Get("name", field.Name)
+		var multiple = tagMap.GetSingle("multiple") == "true"
+		var fieldName = tagMap.GetSingle("name", field.Name)
 		var disabled = tagMap.Exists("disabled")
 		var needsAdmin = tagMap.Exists("needs_admin")
 		var isAdmin = rq.User != nil && rq.User.IsAdmin()
@@ -180,7 +192,7 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 			}
 
 			tx.Find(&otherItems)
-
+			importMap["m2m"] = true
 			var name = modelutils.DePtr(reflect.New(reflectedType)).Type().String()
 
 			// Create the two select fields.
@@ -238,7 +250,7 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 			var fieldGroup = &FormField{
 				isAdmin: isAdmin,
 				Type:    "m2m",
-				Name:    tagMap.Get("label", field.Name),
+				Name:    tagMap.GetSingle("label", field.Name),
 				Options: []*FormField{
 					selectedField, otherField,
 				},
@@ -251,38 +263,43 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 
 		case reflect.Struct:
 			if !modelutils.IsModel(field) || modelutils.IsModelField(field) {
-				switch modelutils.DePtr(field).Type() {
-				case reflect.TypeOf(fs.FileField{}):
-					var fieldInterface, err = modelutils.GetField(mdl, field.Name, true)
-					if err != nil {
-						panic(err)
+				var typ = modelutils.DePtrType(field.Type)
+				if v := reflect.New(typ); v.CanInterface() {
+					if _, ok := v.Interface().(interfaces.FileField); ok {
+						var fieldInterface, err = modelutils.GetField(mdl, field.Name, true)
+						if err != nil {
+							panic(err)
+						}
+						url, err := modelutils.GetField(fieldInterface, "URL", false)
+						if err != nil {
+							panic(err)
+						}
+						var fieldName = field.Name
+						var disabled = false
+						var classes, _ = tagMap.GetOK("class")
+						var labelClasses, _ = tagMap.GetOK("label_class")
+						var divClasses, _ = tagMap.GetOK("div_class")
+						flds = append(flds, &FormField{
+							isAdmin:    isAdmin,
+							Name:       fieldName,
+							Label:      fieldName,
+							Type:       "file",
+							Value:      valueFromInterface(url),
+							Disabled:   disabled,
+							NeedsAdmin: needsAdmin,
+							Classes: append(
+								classes,
+								"admin-form-input"),
+							LabelClasses: append(
+								labelClasses,
+								"admin-form-label"),
+							DivClasses: append(
+								divClasses,
+								"admin-form-div"),
+						})
 					}
-					url, err := modelutils.GetField(fieldInterface, "URL", false)
-					if err != nil {
-						panic(err)
-					}
-					var fieldName = field.Name
-					var disabled = false
-					flds = append(flds, &FormField{
-						isAdmin:    isAdmin,
-						Name:       fieldName,
-						Label:      fieldName,
-						Type:       "file",
-						Value:      valueFromInterface(url),
-						Disabled:   disabled,
-						NeedsAdmin: needsAdmin,
-						Classes: append(
-							strings.Split(tagMap.Get("class"), " "),
-							"admin-form-input"),
-						LabelClasses: append(
-							strings.Split(tagMap.Get("label_class"), " "),
-							"admin-form-label"),
-						DivClasses: append(
-							strings.Split(tagMap.Get("div_class"), " "),
-							"admin-form-div"),
-					})
-
 				}
+
 				continue
 			}
 
@@ -368,10 +385,9 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 						Options:    options,
 						NeedsAdmin: needsAdmin,
 					}
-
-					var cls = strings.Split(tagMap.Get("class"), " ")
-					var lblcls = strings.Split(tagMap.Get("label_class"), " ")
-					var divcls = strings.Split(tagMap.Get("div_class"), " ")
+					var cls, _ = tagMap.GetOK("class")
+					var lblcls = strings.Split(tagMap.GetSingle("label_class"), " ")
+					var divcls = strings.Split(tagMap.GetSingle("div_class"), " ")
 					f.Classes = append(cls, "admin-form-input")
 					f.LabelClasses = append(lblcls, "admin-form-label")
 					f.DivClasses = append(divcls, "admin-form-div")
@@ -385,17 +401,17 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 			value = getValue(mdl, field.Name)
 		}
 
-		var formFieldTyp = tagMap.Get("type", t)
+		var formFieldTyp = tagMap.GetSingle("type", t)
 		switch {
 		case formFieldTyp == "select":
 			var currentValue = getValue(mdl, field.Name)
 			options = getOptions(mdl, field, fieldName, currentValue, isAdmin, tagMap)
 		case formFieldTyp == "textarea":
-			var classes = strings.Split(tagMap.Get("class"), " ")
-			if len(classes) == 0 {
+			var classes, ok = tagMap.GetOK("class")
+			if !ok || len(classes) == 0 {
 				classes = []string{"admin-form-textarea"}
 			} else {
-				tagMap["class"] = tagMap["class"] + " admin-form-textarea"
+				tagMap["class"] = append(tagMap["class"], "admin-form-textarea")
 			}
 		}
 
@@ -404,18 +420,18 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 			Name:         field.Name,
 			Label:        fieldName,
 			Type:         formFieldTyp,
-			ReadOnly:     tagMap.Get("readonly") == "true" || tagMap.Exists("readonly"),
-			Required:     tagMap.Get("required") == "true" || tagMap.Exists("required"),
+			ReadOnly:     tagMap.GetSingle("readonly") == "true" || tagMap.Exists("readonly"),
+			Required:     tagMap.GetSingle("required") == "true" || tagMap.Exists("required"),
 			Disabled:     disabled,
 			Multiple:     multiple,
 			Model:        mdl,
 			Options:      options,
 			Value:        value,
-			Autocomplete: tagMap.Get("autocomplete", ""),
-			Custom:       tagMap.Get("custom", ""),
-			disabledfull: tagMap.Get("disabledfull", "") == "true" || tagMap.Exists("disabledfull"),
-			readonlyfull: tagMap.Get("readonlyfull", "") == "true" || tagMap.Exists("readonlyfull"),
-			bcrypt:       tagMap.Get("bcrypt", "") == "true" || tagMap.Exists("bcrypt"),
+			Autocomplete: tagMap.GetSingle("autocomplete", ""),
+			Custom:       tagMap.GetSingle("custom", ""),
+			disabledfull: tagMap.GetSingle("disabledfull", "") == "true" || tagMap.Exists("disabledfull"),
+			readonlyfull: tagMap.GetSingle("readonlyfull", "") == "true" || tagMap.Exists("readonlyfull"),
+			bcrypt:       tagMap.GetSingle("bcrypt", "") == "true" || tagMap.Exists("bcrypt"),
 			NeedsAdmin:   needsAdmin,
 		}
 
@@ -427,20 +443,21 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) []*FormField {
 		}
 		flds = append(flds, f)
 	}
-	return flds
+	return flds, importMap
 }
 
 func addLabels(f *FormField, tagMap tags.TagMap) {
-	var cls = strings.Split(tagMap.Get("class"), " ")
-	var lblcls = strings.Split(tagMap.Get("label_class"), " ")
-	var divcls = strings.Split(tagMap.Get("div_class"), " ")
+	var classes, _ = tagMap.GetOK("class")
+	var cls = classes
+	var lblcls = strings.Split(tagMap.GetSingle("label_class"), " ")
+	var divcls = strings.Split(tagMap.GetSingle("div_class"), " ")
 	f.Classes = append(cls, "admin-form-input")
 	f.LabelClasses = append(lblcls, "admin-form-label")
 	f.DivClasses = append(divcls, "admin-form-div")
 }
 
 func getOptions(mdl any, field reflect.StructField, fieldName string, value string, isAdmin bool, tagMap tags.TagMap) []*FormField {
-	var needsAdmin = tagMap.Get("needs_admin") == "true" || tagMap.Exists("needs_admin")
+	var needsAdmin = tagMap.GetSingle("needs_admin") == "true" || tagMap.Exists("needs_admin")
 	var optionsCallable = fmt.Sprintf("Get%sOptions", field.Name)
 	var optionsFunc = reflect.ValueOf(mdl).MethodByName(optionsCallable)
 	var opts = make([]*FormField, 0)
@@ -465,7 +482,7 @@ func getOptions(mdl any, field reflect.StructField, fieldName string, value stri
 			}
 		}
 	} else {
-		var options = tagMap.Get("options")
+		var options = tagMap.GetSingle("options")
 		var optionsSlice = strings.Split(options, ",")
 		for _, option := range optionsSlice {
 			var optionField = &FormField{

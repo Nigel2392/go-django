@@ -214,7 +214,7 @@ func Register(email, username, first_name, last_name, password string) (*User, e
 	}
 
 	// Create the user
-	err = auth_db.Create(u).Error
+	err = auth_db.Select("Email", "Username", "FirstName", "LastName", "Password").Create(u).Error
 	if err != nil {
 		fmt.Println("Failed to create user: " + err.Error())
 		//lint:ignore ST1005 potential error message to user.

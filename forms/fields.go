@@ -32,7 +32,7 @@ type FormElement interface {
 
 	// Get, set or clear the value of the field.
 	SetValue(string)
-	SetFile(filename string, file io.ReadCloser) error
+	SetFile(filename string, file io.ReadSeekCloser) error
 	Value() *FormData
 	Clear()
 
@@ -85,7 +85,7 @@ type Option struct {
 type FormData struct {
 	Val      string
 	FileName string
-	Reader   io.ReadCloser
+	Reader   io.ReadSeekCloser
 }
 
 func (f *FormData) IsFile() bool {
@@ -102,7 +102,7 @@ func (f *FormData) Value() string {
 	return f.Val
 }
 
-func (f *FormData) File() (string, io.ReadCloser) {
+func (f *FormData) File() (string, io.ReadSeekCloser) {
 	if f == nil {
 		return "", nil
 	}
@@ -147,7 +147,7 @@ func (f *Field) IsFile() bool {
 	return f.Type == TypeFile
 }
 
-func (f *Field) SetFile(filename string, file io.ReadCloser) error {
+func (f *Field) SetFile(filename string, file io.ReadSeekCloser) error {
 	if f.Type != TypeFile {
 		return errors.New("field is not a file field")
 	}
@@ -260,9 +260,19 @@ func (f *Field) Field() ElementInterface {
 	var attrs = attrStringBuilder.String()
 	switch f.Type {
 
-	case "text", "password", "email", "number", "range", "hidden", "file":
+	case "text", "password", "email", "number", "range", "hidden":
 		return Element(`<input` + attrs + `>` + "\r\n")
-
+	case "file":
+		if f.FormValue != nil && f.FormValue.Val != "" {
+			var b strings.Builder
+			b.WriteString(`<p class="form-control">`)
+			b.WriteString(f.FormValue.Val)
+			b.WriteString(`</p>`)
+			b.WriteString(`<input` + attrs + `>` + "\r\n")
+			return Element(b.String())
+		} else {
+			return Element(`<input` + attrs + `>` + "\r\n")
+		}
 	case "textarea":
 		if f.FormValue != nil && f.FormValue.Val != "" {
 			return Element(`<textarea` + attrs + `>` + f.FormValue.Val + `</textarea>` + "\r\n")
@@ -286,9 +296,8 @@ func (f *Field) Field() ElementInterface {
 		}
 		b += Element(`</select>`)
 		return b
-	default:
-		return Element("")
 	}
+	return Element("")
 }
 
 func (f *Field) Label() ElementInterface {

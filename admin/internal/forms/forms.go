@@ -20,6 +20,7 @@ type Form struct {
 	Model         any
 	UpdatedFields []string
 	Disabled      bool
+	JS            map[string]bool
 }
 
 // Instantiate a new form.
@@ -31,7 +32,7 @@ func NewForm(method, url string, rq *request.Request, db *gorm.DB, mdl any) *For
 	}
 
 	form.Model = mdl
-	form.Fields = generateFields(mdl, db, rq)
+	form.Fields, form.JS = generateFields(mdl, db, rq)
 
 	return form
 }
