@@ -125,7 +125,7 @@ func (m *Model) URL() string {
 }
 
 func (m *Model) New() any {
-	return modelutils.GetNewModel(m.Mdl, true)
+	return modelutils.NewOf(m.Mdl, true)
 }
 
 func (m *Model) NewSlice() any {

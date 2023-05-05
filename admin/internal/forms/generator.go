@@ -270,6 +270,11 @@ func generateFields(mdl any, db *gorm.DB, rq *request.Request) ([]*FormField, ma
 						if err != nil {
 							panic(err)
 						}
+
+						if fieldInterface == nil {
+							continue
+						}
+
 						url, err := modelutils.GetField(fieldInterface, "URL", false)
 						if err != nil {
 							panic(err)

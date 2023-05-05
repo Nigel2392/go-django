@@ -10,24 +10,24 @@ import (
 
 	"github.com/Nigel2392/go-django/admin"
 	"github.com/Nigel2392/go-django/auth"
-	"github.com/Nigel2392/go-django/core/app/debug"
 	"github.com/Nigel2392/go-django/core/app/tool"
 	"github.com/Nigel2392/go-django/core/cache"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/go-django/core/fs"
-	"github.com/Nigel2392/go-django/core/logger"
-	"github.com/Nigel2392/go-django/core/secret"
-	"github.com/Nigel2392/go-django/core/tracer"
 	"github.com/Nigel2392/netcache/src/client"
+	logger "github.com/Nigel2392/request-logger"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/middleware"
 	"github.com/Nigel2392/router/v3/middleware/csrf"
 	"github.com/Nigel2392/router/v3/middleware/sessions/scsmiddleware"
+	"github.com/Nigel2392/router/v3/middleware/tracer"
+	"github.com/Nigel2392/router/v3/middleware/tracer/debug"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/router/v3/request/response"
 	"github.com/Nigel2392/router/v3/templates"
+	"github.com/Nigel2392/secret"
 	"github.com/alexedwards/scs/gormstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/v2/memstore"
@@ -413,7 +413,6 @@ func (a *Application) Serve() (http.Handler, error) {
 			var setting = debug.DatabaseSetting{
 				ENGINE: settingDB.Config.Dialector.Name(),
 				NAME:   settingDB.Name(),
-				KEY:    string(db.Key()),
 			}
 			databases = append(databases, setting)
 		}

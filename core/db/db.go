@@ -103,7 +103,11 @@ func (d *DatabasePoolItem) createSQLDSN() string {
 }
 
 func (d *DatabasePoolItem) Init() *gorm.DB {
-	var configuration = &gorm.Config{}
+	var configuration = &gorm.Config{
+		FullSaveAssociations:     false,
+		SkipDefaultTransaction:   true,
+		DisableNestedTransaction: true,
+	}
 	if d.Config != nil {
 		configuration = d.Config
 	}

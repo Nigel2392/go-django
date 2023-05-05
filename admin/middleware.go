@@ -7,8 +7,8 @@ import (
 
 	"github.com/Nigel2392/go-django/admin/internal/models"
 	"github.com/Nigel2392/go-django/auth"
-	"github.com/Nigel2392/go-django/core/tracer"
 	"github.com/Nigel2392/router/v3"
+	"github.com/Nigel2392/router/v3/middleware/tracer"
 	"github.com/Nigel2392/router/v3/request"
 )
 

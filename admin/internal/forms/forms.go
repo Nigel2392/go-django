@@ -149,7 +149,7 @@ func (f *Form) Save(db *gorm.DB) (bool, error) {
 			}
 		}
 	}
-	return false, db.Save(f.Model).Error
+	return false, db.Session(&gorm.Session{FullSaveAssociations: false, SkipDefaultTransaction: true, DisableNestedTransaction: true}).Save(f.Model).Error
 }
 
 // Process and save the form if valid.

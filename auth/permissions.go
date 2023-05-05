@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/core/httputils"
-	"github.com/Nigel2392/go-django/core/models"
 
 	"gorm.io/gorm"
 )
@@ -15,10 +14,10 @@ import (
 //
 // This will be used application-wide by default.
 type Permission struct {
-	models.Model
-	Name        string   `gorm:"uniqueIndex;not null;size:50"`
-	Description string   `gorm:"size:255"`
-	Groups      []*Group `gorm:"many2many:group_permissions;"`
+	ID          uint64
+	Name        string
+	Description string
+	Groups      []*Group // many-to-many group_permission
 }
 
 // Adhere to default Admin interfaces.
@@ -68,6 +67,11 @@ func (p *Permission) String() string {
 	return p.Name
 }
 
+// Save the permission to the database.
+func (p *Permission) Save(db *gorm.DB) error {
+	return db.FirstOrCreate(p, "name = ?", p.Name).Error
+}
+
 // Retrieve the CREATE permission for a given object
 func PermCreate(s any) *Permission {
 	return NewPermission("create", s)
@@ -91,11 +95,6 @@ func PermDelete(s any) *Permission {
 // Retrieve the LIST permission for a given object
 func PermList(s any) *Permission {
 	return NewPermission("list", s)
-}
-
-// Save the permission to the database.
-func (p *Permission) Save(db *gorm.DB) error {
-	return db.FirstOrCreate(p, "name = ?", p.Name).Error
 }
 
 // Returns all the permissions for a given object.

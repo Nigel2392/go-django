@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/go-django/core/secret"
+	"github.com/Nigel2392/secret"
 )
 
 //lint:file-ignore ST1005 Errors can be returned to the user.

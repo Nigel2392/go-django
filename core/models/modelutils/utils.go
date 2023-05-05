@@ -420,7 +420,7 @@ func GetPreloadFields(s any) (preload []string, joins []string) {
 // Get a new model from the given model.
 //
 // If ptr is true, a pointer to the model will be returned.
-func GetNewModel(m any, ptr bool) any {
+func NewOf(m any, ptr bool) any {
 	var typeOf = reflect.TypeOf(m)
 	if typeOf.Kind() == reflect.Ptr {
 		typeOf = typeOf.Elem()

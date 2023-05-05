@@ -6,8 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Nigel2392/go-django/core/secret"
 	"github.com/Nigel2392/router/v3/request"
+	"github.com/Nigel2392/secret"
 	"gorm.io/gorm"
 )
 

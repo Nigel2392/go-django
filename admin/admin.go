@@ -14,7 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/core/db"
 	mfs "github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/go-django/core/httputils"
-	"github.com/Nigel2392/go-django/core/logger"
+	logger "github.com/Nigel2392/request-logger"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/router/v3/templates"

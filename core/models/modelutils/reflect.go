@@ -33,6 +33,7 @@ func GetField(m any, field string, strict bool) (any, error) {
 	var v = DePtr(reflect.ValueOf(m))
 	if !v.IsValid() {
 		// fmt.Println("GetField: ", v.Kind(), v.Type(), v.IsValid())
+
 		return nil, errors.New("invalid value")
 	}
 

@@ -277,7 +277,7 @@ func getFieldData(model any, field string, tagToFetch string) (interface{}, tags
 		v = v.Elem()
 	}
 	if !v.IsValid() {
-		v = reflect.ValueOf(modelutils.GetNewModel(model, false))
+		v = reflect.ValueOf(modelutils.NewOf(model, false))
 		if v.Kind() == reflect.Ptr {
 			v = v.Elem()
 		}

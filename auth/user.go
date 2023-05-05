@@ -3,14 +3,15 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/Nigel2392/go-django/core/cache"
 	"github.com/Nigel2392/go-django/core/models"
 	"github.com/Nigel2392/go-django/core/models/modelutils"
-	"github.com/Nigel2392/go-django/core/secret"
 	"github.com/Nigel2392/go-django/forms"
+	"github.com/Nigel2392/secret"
 
 	"github.com/Nigel2392/go-django/forms/validators"
 
@@ -39,21 +40,43 @@ type User struct {
 
 // Get the value of the currently set login field.
 func (u *User) LoginField() string {
-	var a, err = modelutils.GetField(u, USER_MODEL_LOGIN_FIELD, true)
-	if err != nil {
+	var v = reflect.ValueOf(u)
+	v = reflect.Indirect(v)
+	var rField = v.FieldByName(USER_MODEL_LOGIN_FIELD)
+	if !rField.IsValid() {
 		return ""
 	}
-	switch ret := a.(type) {
+	var iFace = rField.Interface()
+	switch answer := iFace.(type) {
 	case string:
-		return ret
+		return answer
 	default:
-		return fmt.Sprintf("%v", ret)
+		return fmt.Sprintf("%v", answer)
 	}
 }
 
 // Set the value of the current field used to log a user in.
 func (u *User) SetLoginField(value string) error {
-	return modelutils.SetField(u, USER_MODEL_LOGIN_FIELD, value)
+	var v = reflect.ValueOf(u)
+	v = reflect.Indirect(v)
+	var rField = v.FieldByName(USER_MODEL_LOGIN_FIELD)
+	if !rField.IsValid() {
+		return errors.New("Invalid login field")
+	}
+	var iFace = rField.Interface()
+	switch iFace.(type) {
+	case string:
+		rField.SetString(value)
+		return nil
+	case int, int8, int16, int32, int64:
+		var i, err = strconv.ParseInt(value, 10, 64)
+		if err != nil {
+			return err
+		}
+		rField.SetInt(i)
+		return nil
+	}
+	return errors.New("Invalid login field")
 }
 
 // Adhere to default Admin interfaces.
