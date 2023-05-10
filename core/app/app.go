@@ -340,7 +340,11 @@ func (a *Application) setupSessionManager() {
 			}
 			_, err = a.defaultDatabase.Exec(createSessionTableIndex)
 			if err != nil {
-				panic(err)
+				if err, ok := err.(*mysql.MySQLError); ok && err.Number == 1061 {
+					// Ignore error if index already exists.
+				} else {
+					panic(err)
+				}
 			}
 		}
 	}
