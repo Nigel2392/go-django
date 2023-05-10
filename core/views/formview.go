@@ -287,6 +287,9 @@ func (c *BaseFormView[T]) setInstance(r *request.Request) error {
 	if c.FormTag == "" {
 		c.FormTag = "fields"
 	}
+	if c.Scripts == nil {
+		c.Scripts = make(map[string]template.HTML)
+	}
 	for _, field := range c.fields {
 		var f, tagmap, err = getFieldData(c.Instance, field, c.FormTag)
 		if err != nil {
