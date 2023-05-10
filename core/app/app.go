@@ -408,10 +408,12 @@ func (a *Application) Serve() (http.Handler, error) {
 	if a.DEBUG {
 		tracer.DisallowPackage("router/.*/middleware")
 		var databases = make([]debug.DatabaseSetting, 0)
-		var setting = debug.DatabaseSetting{
-			ENGINE: reflect.TypeOf(a.defaultDatabase.Driver()).Name(),
+		if a.defaultDatabase != nil {
+			var setting = debug.DatabaseSetting{
+				ENGINE: reflect.TypeOf(a.defaultDatabase.Driver()).Name(),
+			}
+			databases = append(databases, setting)
 		}
-		databases = append(databases, setting)
 		var settings = debug.AppSettings{
 			DEBUG:     a.DEBUG,
 			HOST:      a.config.Server.Host,

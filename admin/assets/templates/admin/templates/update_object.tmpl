@@ -28,8 +28,6 @@
 {{ end }}
 
 {{ define "js" }}
-    {{template "m2m.tmpl" .}}
-
     {{ range $script := (index .Data "scripts") }}
 
         {{ $script }}
