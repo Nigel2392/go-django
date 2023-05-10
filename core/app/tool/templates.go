@@ -57,15 +57,15 @@ var mainTemplate = `package main
 import (
 	"fmt"
 
+	"github.com/Nigel2392/go-django"
 	"github.com/Nigel2392/go-django/auth"
-	"github.com/Nigel2392/go-django/core/app"
 	logger "github.com/Nigel2392/request-logger"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/router/v3/request/response"
 )
 
-var App = app.New(appConfig)
+var App = django.New(appConfig)
 
 func main() {
 	// There are some default commandline flags registered.
@@ -86,7 +86,7 @@ func main() {
 		fmt.Println(logger.Colorize(fmt.Sprintf("Error creating superuser: %s", err.Error()), logger.Red))
 	}
 
-	err = App.Run()
+	err = django.Run()
 	if err != nil {
 		panic(err)
 	}
@@ -113,6 +113,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/dotenv"
+	"github.com/Nigel2392/go-django"
 	"github.com/Nigel2392/go-django/core/app"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/fs"
@@ -155,7 +156,7 @@ var db = func() *sql.DB {
 	return db
 }()
 
-var appConfig = app.Config{
+var appConfig = django.AppConfig{
 	// Secret key for the server.
 	SecretKey: env.Get("SECRET_KEY", time.Now().Format(time.RFC3339Nano)),
 	// Allowed hosts for the server.
@@ -217,6 +218,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/go-django"
 	"github.com/Nigel2392/go-django/core/app"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/fs"
@@ -275,7 +277,7 @@ var db = func() *sql.DB {
 	return db
 }()
 
-var appConfig = app.Config{
+var appConfig = django.AppConfig{
 	// Secret key for the server.
 	SecretKey: getSafeEnvVar("SECRET_KEY", time.Now().Format(time.RFC3339Nano)),
 	// Allowed hosts for the server.
