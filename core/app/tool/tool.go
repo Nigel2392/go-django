@@ -49,7 +49,7 @@ func StartProject(v flag.Value) error {
 		return err
 	}
 	var env_str_generated_secret = fmt.Sprintf(Env_template_regular, uuid.New().String())
-	if err := createFile(".env", []byte(env_str_generated_secret)); err != nil {
+	if err := createFile("./environment/normal.env", []byte(env_str_generated_secret)); err != nil {
 		return err
 	}
 	return initGoMod(v.String(), VERSION)
@@ -67,7 +67,8 @@ func NewDockerCompose(v flag.Value) error {
 	if err := createFile("Dockerfile", []byte(DockerFileTemplate)); err != nil {
 		return err
 	}
-	if err := createFile("./environment/docker.env", []byte(Env_template_docker)); err != nil {
+	var env_str_generated_secret = fmt.Sprintf(Env_template_docker, uuid.New().String())
+	if err := createFile("./environment/docker.env", []byte(env_str_generated_secret)); err != nil {
 		return err
 	}
 	if err := createFile("src/config.docker.go", []byte(appConfigTemplateDocker)); err != nil {

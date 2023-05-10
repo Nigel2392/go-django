@@ -163,7 +163,7 @@ var appConfig = app.Config{
 	Server: &app.Server{
 		// Server options.
 		Host: env.Get("HOST", "127.0.0.1"),
-		Port: env.GetInt("PORT", 8000),
+		Port: env.GetInt("PORT", 8080),
 		// SSL Options
 		CertFile: env.Get("SSL_CERT_FILE", ""),
 		KeyFile:  env.Get("SSL_KEY_FILE", ""),
@@ -377,7 +377,7 @@ ALLOWED_HOSTS = "127.0.0.1"
 
 # Address to host the server on.
 HOST = "127.0.0.1"
-PORT = 8000
+PORT = 8080
 
 # SSL Certificate and Key file.
 SSL_CERT_FILE = None
@@ -448,7 +448,7 @@ SESSION_COOKIE_HTTP_ONLY = True
 SESSION_COOKIE_PERSIST = True`
 
 var Env_template_docker string = `# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "SECRET-KEY-3b9082f8-10d7-4087-9105-b29535ffe67b"
+SECRET_KEY = "%v"
 
 # Allowed hosts.
 ALLOWED_HOSTS = "127.0.0.1"
