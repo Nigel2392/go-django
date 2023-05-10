@@ -45,14 +45,35 @@ func StartProject(v flag.Value) error {
 	if err := createFile("src/main.go", []byte(mainTemplate)); err != nil {
 		return err
 	}
-	if err := createFile("src/config.go", []byte(appConfigTemplate)); err != nil {
+	if err := createFile("src/config.regular.go", []byte(appConfigTemplateRegular)); err != nil {
 		return err
 	}
-	var env_str_generated_secret = fmt.Sprintf(Env_template, uuid.New().String())
+	var env_str_generated_secret = fmt.Sprintf(Env_template_regular, uuid.New().String())
 	if err := createFile(".env", []byte(env_str_generated_secret)); err != nil {
 		return err
 	}
 	return initGoMod(v.String(), VERSION)
+}
+
+func NewDockerCompose(v flag.Value) error {
+
+	if !v.Bool() {
+		return nil
+	}
+
+	if err := createFile("docker-compose.yml", []byte(DockerComposeTemplate)); err != nil {
+		return err
+	}
+	if err := createFile("Dockerfile", []byte(DockerFileTemplate)); err != nil {
+		return err
+	}
+	if err := createFile("./environment/docker.env", []byte(Env_template_docker)); err != nil {
+		return err
+	}
+	if err := createFile("src/config.docker.go", []byte(appConfigTemplateDocker)); err != nil {
+		return err
+	}
+	return nil
 }
 
 type Tag struct {
@@ -175,7 +196,6 @@ func StartApp(v flag.Value) error {
 	}
 	createFile("urls.go", []byte(getURLSTemplate(httputils.NameFromPath(appName))))
 	createFile("views.go", []byte(getViewsTemplate(httputils.NameFromPath(appName))))
-	createFile("models.go", []byte(getModelsTemplate(httputils.NameFromPath(appName))))
 	return nil
 }
 
@@ -187,10 +207,6 @@ func getViewsTemplate(appName string) string {
 	return fmt.Sprintf(viewsTemplate, appName, appName)
 }
 
-func getModelsTemplate(appName string) string {
-	return fmt.Sprintf(modelsTemplate, appName, appName)
-}
-
 var urlsTemplate = `package %s
 
 import (
@@ -200,7 +216,7 @@ import (
 var %s_route = router.Group("/%s", "%s")
 
 func URLs() router.Registrar {
-	%s_route.Get("", index, "index")
+	%s_route.Get("", router.HandleFunc(index), "index")
 	return %s_route
 }`
 
@@ -212,15 +228,4 @@ import (
 
 func index(r *request.Request) {
 	r.WriteString("Hello from %s")
-}`
-
-var modelsTemplate = `package %s
-
-import (
-	"github.com/Nigel2392/go-django/core/models"
-)
-
-// Declare your models here.
-type %s_model struct {
-	models.Model
 }`

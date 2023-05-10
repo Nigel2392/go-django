@@ -242,6 +242,7 @@ This is Go-Django's default command line interface.`
 	// Initialize default flags
 	lg.Now(logger.DEBUG, "Initializing default flags...")
 	a.flags.Register("startapp", "", "Initialize a new application with the given name.", tool.StartApp)
+	a.flags.Register("newcompose", false, "Initialize a new composer with the given name.", tool.NewDockerCompose)
 	a.flags.RegisterPtr(&a.DEBUG, false, "debug", "Run the application in debug mode.", nil)
 
 	__app = a

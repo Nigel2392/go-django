@@ -13,13 +13,14 @@ func main() {
 	flags.Info = `Go-Django-Tools is a tool to help you create a new Go-Django project.`
 	flags.Register("env", "", "", func(value flag.Value) error {
 		if !value.IsZero() {
-			var env_str_generated_secret = fmt.Sprintf(tool.Env_template, uuid.New().String())
+			var env_str_generated_secret = fmt.Sprintf(tool.Env_template_regular, uuid.New().String())
 			return tool.CreateFileStr(value.String(), env_str_generated_secret)
 		}
 		return nil
 	})
 
 	flags.Register("startproject", "", "", tool.StartProject)
+	flags.Register("newcompose", false, "", tool.NewDockerCompose)
 
 	if !flags.Run() {
 		fmt.Println("No flags passed")
