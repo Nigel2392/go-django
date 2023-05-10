@@ -9,7 +9,6 @@ import (
 
 	"github.com/Nigel2392/forms"
 	"github.com/Nigel2392/forms/validators"
-	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/netcache/src/client"
 	"github.com/Nigel2392/router/v3/request"
 	"golang.org/x/crypto/bcrypt"
@@ -18,8 +17,7 @@ import (
 )
 
 var (
-	DB_KEY        db.DATABASE_KEY = "auth"
-	AUTH_APP_NAME                 = "auth"
+	AUTH_APP_NAME = "auth"
 	LOGIN_URL     string
 	LOGOUT_URL    string
 )

@@ -1,18 +1,19 @@
 package app
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
 	"os"
+	"reflect"
 	"time"
 
 	"github.com/Nigel2392/go-django/admin"
 	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/go-django/core/app/tool"
 	"github.com/Nigel2392/go-django/core/cache"
-	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/go-django/core/fs"
@@ -28,10 +29,10 @@ import (
 	"github.com/Nigel2392/router/v3/request/response"
 	"github.com/Nigel2392/router/v3/templates"
 	"github.com/Nigel2392/secret"
-	"github.com/alexedwards/scs/gormstore"
+	"github.com/alexedwards/scs/mysqlstore"
 	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/v2/memstore"
-	"gorm.io/gorm"
+	"github.com/go-sql-driver/mysql"
 )
 
 var __app *Application
@@ -90,13 +91,6 @@ type Config struct {
 	Server         *Server
 	RedirectServer *RedirectServer
 
-	// Database settings:
-	// GORM Config
-	// Database.DB will be initialized with Database.Init()
-	//
-	//	Config *gorm.Config
-	DBConfig *db.DatabasePoolItem
-
 	// The application's cache.
 	Cache client.Cache
 
@@ -135,6 +129,12 @@ type Config struct {
 	//	TEMPLATEFS fs.FS
 	Templates *templates.Manager
 
+	// The database to use.
+	Database *sql.DB
+
+	// Use authentication?
+	DisableAuthentication bool
+
 	Middlewares          []router.Middleware
 	DefaultTemplateFuncs template.FuncMap
 
@@ -163,26 +163,18 @@ type Application struct {
 	// The session store to use.
 	sessionStore scs.Store
 
-	// A pool of database connections.
-	// This is used to store multiple database connections.
-	// This is a generic type, so you can use any type of database connection,
-	// as long as it implements the PoolItem interface.
-	Pool db.Pool[*gorm.DB]
-
 	// The cache to use.
 	cache client.Cache
-
-	// The default database connection.
-	defaultDatabase db.PoolItem[*gorm.DB]
 
 	Router *router.Router
 	Logger request.Logger
 
-	initted bool
-	Auth    *auth.AuthApp
-	config  *Config
-
-	flags *flag.Flags
+	initted         bool
+	useAuth         bool
+	Auth            *auth.AuthApp
+	config          *Config
+	defaultDatabase *sql.DB
+	flags           *flag.Flags
 }
 
 // Initialize a new application.
@@ -200,15 +192,6 @@ func New(c Config) *Application {
 	}
 	if config.Templates == nil {
 		panic("You must provide a template manager.")
-	}
-	if config.DBConfig != nil {
-		//	config.DBConfig = &db.DatabasePoolItem{
-		//		DEFAULT_DATABASE: "sqlite",
-		//		DB_NAME:          "sqlite.db",
-		//	}
-		// Initialize the default database.
-		config.DBConfig.DBKey = db.DEFAULT_DATABASE_KEY
-		config.DBConfig.Init()
 	}
 
 	// Initialize the cache.
@@ -241,12 +224,12 @@ func New(c Config) *Application {
 	var a = &Application{
 		SecretKey:       key,
 		config:          config,
-		defaultDatabase: config.DBConfig,
-		Pool:            db.NewPool(config.DBConfig),
 		Logger:          lg,
 		flags:           flag.NewFlags("Go-Django", flag.ExitOnError),
 		sessionStore:    config.SessionStore,
 		cache:           config.Cache,
+		useAuth:         !config.DisableAuthentication,
+		defaultDatabase: config.Database,
 	}
 	a.flags.Info = `Go-Django is a web framework written in Go.
 It is inspired by the Django web framework for Python.
@@ -263,10 +246,9 @@ This is Go-Django's default command line interface.`
 
 	__app = a
 	a.initted = true
-
-	if a.defaultDatabase != nil && db.GetDefaultDatabase(auth.DB_KEY, a.Pool).DB() != nil {
+	if a.useAuth {
 		lg.Now(logger.DEBUG, "Initializing auth...")
-		a.Auth = auth.Initialize(a.defaultDatabase.DB().ConnPool)
+		a.Auth = auth.Initialize(a.defaultDatabase)
 		a.flags.RegisterCommand(auth.CreateSuperUserCommand)
 
 		admin.Register(admin.AdminOptions[*auth.User]{
@@ -286,11 +268,7 @@ This is Go-Django's default command line interface.`
 			FormFields: []string{"ID", "Name", "Description"},
 			Model:      &auth.Permission{},
 		})
-
-	} else {
-		lg.Now(logger.DEBUG, "No database connection found, skipping auth...")
 	}
-
 	lg.Now(logger.DEBUG, "Initializing media manager...")
 	if config.File != nil {
 		a.config.File.Initialize()
@@ -328,7 +306,25 @@ func (a *Application) setupSessionManager() {
 	sessionManager.Cookie.Persist = true
 	sessionManager.Cookie.SameSite = http.SameSiteLaxMode
 	sessionManager.Cookie.Secure = false
+
 	var store scs.Store
+	var queryCreateSessionTable string
+	var createSessionTableIndex string
+	if a.defaultDatabase != nil {
+		switch a.defaultDatabase.Driver().(type) {
+		case *mysql.MySQLDriver:
+			queryCreateSessionTable = `CREATE TABLE IF NOT EXISTS sessions (
+				` + "`" + `token` + "`" + ` CHAR(43) PRIMARY KEY,
+				` + "`" + `data` + "`" + ` BLOB NOT NULL,
+				` + "`" + `expiry` + "`" + ` TIMESTAMP(6) NOT NULL
+			)`
+			createSessionTableIndex = `CREATE INDEX sessions_expiry_idx ON sessions (expiry)`
+			store = mysqlstore.New(a.defaultDatabase)
+		default:
+			panic("Unsupported database driver, please use mysql")
+		}
+	}
+
 	var err error
 	if a.sessionStore != nil {
 		store = a.sessionStore
@@ -336,7 +332,11 @@ func (a *Application) setupSessionManager() {
 		if a.defaultDatabase == nil {
 			store = memstore.New()
 		} else {
-			store, err = gormstore.New(a.defaultDatabase.DB())
+			_, err = a.defaultDatabase.Exec(queryCreateSessionTable)
+			if err != nil {
+				panic(err)
+			}
+			_, err = a.defaultDatabase.Exec(createSessionTableIndex)
 			if err != nil {
 				panic(err)
 			}
@@ -394,14 +394,10 @@ func (a *Application) Serve() (http.Handler, error) {
 	if a.DEBUG {
 		tracer.DisallowPackage("router/.*/middleware")
 		var databases = make([]debug.DatabaseSetting, 0)
-		for _, db := range a.Pool.Databases() {
-			var settingDB = db.DB()
-			var setting = debug.DatabaseSetting{
-				ENGINE: settingDB.Config.Dialector.Name(),
-				NAME:   settingDB.Name(),
-			}
-			databases = append(databases, setting)
+		var setting = debug.DatabaseSetting{
+			ENGINE: reflect.TypeOf(a.defaultDatabase.Driver()).Name(),
 		}
+		databases = append(databases, setting)
 		var settings = debug.AppSettings{
 			DEBUG:     a.DEBUG,
 			HOST:      a.config.Server.Host,
@@ -526,19 +522,4 @@ func (a *Application) Redirect() error {
 		Handler: http.RedirectHandler(a.config.RedirectServer.URL, a.config.RedirectServer.StatusCode),
 	}
 	return s.ListenAndServe()
-}
-
-// Main method to register models with the application.
-//
-// If an admin site is registered, the models will be registered with the admin site when specified.
-//
-// If the key is an empty string, the model will be registered with the default database.
-func (a *Application) Register(key db.DATABASE_KEY, models ...any) {
-	if a.Pool == nil {
-		panic("You must call Init() before calling Register()")
-	}
-	if key == "" {
-		key = db.DEFAULT_DATABASE_KEY
-	}
-	a.Pool.Register(key, models...)
 }

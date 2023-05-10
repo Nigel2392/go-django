@@ -1,11 +1,11 @@
 package godjango
 
 import (
+	"database/sql"
 	"net/http"
 	"text/template"
 
 	"github.com/Nigel2392/go-django/core/app"
-	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/go-django/core/fs"
@@ -13,7 +13,6 @@ import (
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/router/v3/templates"
-	"gorm.io/gorm"
 )
 
 // A package intended to be used as a framework for web applications.
@@ -52,9 +51,9 @@ func Flags() *flag.Flags {
 	return (*app.Application)(defaultApp).Flags()
 }
 
-func DefaultDb() db.PoolItem[*gorm.DB] {
+func Database() *sql.DB {
 	panicIfNoDefaultApp()
-	return (*app.Application)(defaultApp).DefaultDB()
+	return (*app.Application)(defaultApp).Database()
 }
 
 func Mailer() *email.Manager {
@@ -94,11 +93,6 @@ func Serve() (http.Handler, error) {
 func ServeRedirect() error {
 	panicIfNoDefaultApp()
 	return (*app.Application)(defaultApp).Redirect()
-}
-
-func Register(toAdmin bool, key db.DATABASE_KEY, models ...any) {
-	panicIfNoDefaultApp()
-	(*app.Application)(defaultApp).Register(key, models...)
 }
 
 func Logger() request.Logger {

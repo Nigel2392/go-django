@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/core/httputils"
-	"github.com/Nigel2392/go-django/core/models/modelutils"
+	"github.com/Nigel2392/go-django/core/modelutils"
 	"github.com/Nigel2392/orderedmap"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
@@ -137,9 +137,6 @@ func formatFunc(a any) string {
 	if a == nil {
 		return ""
 	}
-	if modelutils.IsModel(a) {
-		return modelutils.GetModelDisplay(a, false)
-	}
 	switch a := a.(type) {
 	case time.Time:
 		return a.Format("15:04:05 02-01-2006")
@@ -167,6 +164,9 @@ func formatFunc(a any) string {
 			i++
 		}
 		return strings.Join(r, ", ")
+	case reflect.Struct:
+		return modelutils.GetModelDisplay(a, false)
+
 	}
 	return fmt.Sprint(a)
 }

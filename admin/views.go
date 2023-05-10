@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/core/httputils"
-	"github.com/Nigel2392/go-django/core/models/modelutils/namer"
+	"github.com/Nigel2392/go-django/core/modelutils/namer"
 	"github.com/Nigel2392/go-django/core/views"
 	"github.com/Nigel2392/orderedmap"
 	"github.com/Nigel2392/router/v3"

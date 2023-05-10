@@ -8,7 +8,7 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/Nigel2392/go-django/core/models/modelutils"
+	"github.com/Nigel2392/go-django/core/modelutils/converters"
 	"github.com/Nigel2392/go-django/core/views/interfaces"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/tags"
@@ -37,7 +37,7 @@ func (i *SliceField[T]) FormValues(v []string) error {
 		return nil
 	}
 	for index, v := range v {
-		var val, err = modelutils.Convert[T](v)
+		var val, err = converters.Convert[T](v)
 		if err != nil {
 			return err
 		}

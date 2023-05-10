@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/core/httputils"
-	"github.com/Nigel2392/go-django/core/models/modelutils"
+	"github.com/Nigel2392/go-django/core/modelutils"
 	"github.com/Nigel2392/go-django/core/views/fields"
 	"github.com/Nigel2392/go-django/core/views/interfaces"
 	"github.com/Nigel2392/orderedmap"

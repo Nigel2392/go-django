@@ -1,16 +1,15 @@
 package app
 
 import (
+	"database/sql"
 	"html/template"
 
-	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
 	"github.com/Nigel2392/go-django/core/flag"
 	"github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/netcache/src/client"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/templates"
-	"gorm.io/gorm"
 )
 
 // Application flags.
@@ -38,13 +37,7 @@ func (a *Application) Middlewares(m ...router.Middleware) {
 	a.Router.Use(m...)
 }
 
-func (a *Application) DefaultDB() db.PoolItem[*gorm.DB] {
-	if !a.initted {
-		panic("You must initialize the app (call app.New(...)) before calling app.DefaultDB()")
-	}
-	if a.defaultDatabase == nil {
-		panic("You must initialize the app with a database before calling app.DefaultDB()")
-	}
+func (a *Application) Database() *sql.DB {
 	return a.defaultDatabase
 }
 
@@ -94,8 +87,8 @@ func Flags() *flag.Flags {
 	return App().Flags()
 }
 
-func DefaultDb() db.PoolItem[*gorm.DB] {
-	return App().DefaultDB()
+func Database() *sql.DB {
+	return App().Database()
 }
 
 func Mailer() *email.Manager {
