@@ -20,6 +20,24 @@ The framework works through interfaces, thus you must add your own implementatio
 Most of the code is not tested thoroughly, and there could be bugs present.
 If you find any bugs, please report them in the github issues page.
 
+### Docker-Support
+
+There is built in support for creating a dockerfile and docker-compose file. 
+
+This can be done running the following command:
+
+```bash
+go run ./src -newcompose
+```
+
+Or alternatively it can be done using the go-django tool with the same command:
+
+```bash
+go-django -startproject myproject
+cd ./myproject
+go-django -newcompose
+```
+
 ## Rework:
 
 The framework, and mainly the admin site used to have a dependency on GORM.

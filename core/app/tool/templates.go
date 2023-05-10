@@ -448,7 +448,7 @@ SESSION_COOKIE_HTTP_ONLY = True
 SESSION_COOKIE_PERSIST = True`
 
 var Env_template_docker string = `# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "%v"
+SECRET_KEY = "SECRET-KEY-%v"
 
 # Allowed hosts.
 ALLOWED_HOSTS = "127.0.0.1"
