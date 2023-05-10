@@ -5,6 +5,8 @@ This framework is still in development, and is not ready for production use.
 
 It might still undergo many reworks and breaking changes.
 
+**As of now, Go-Django only supports MySQL**.
+
 ## Information
 
 This framework, is built from the ground up, and thus there is a lot of work to be done.
@@ -30,8 +32,7 @@ The admin package has went through a complete rework. To see a full implementati
 - auth/groups.go
 - auth/permissions.go
 
-It is now also possible to create custom fields for the admin-site forms. 
-
+It is now also possible to create custom fields for the admin-site forms.
 
 The auth package used to also depend on gorm. This has now also been removed for generated queries by SQLC.
 
