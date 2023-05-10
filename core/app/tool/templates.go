@@ -388,7 +388,7 @@ REQUESTS_PER_SECOND = 10
 REQUEST_BURST_MULTIPLIER = 3
 
 # Database settings.
-DB_NAME = "db.sqlite3"
+DB_NAME = None
 DB_USER = None
 DB_PASS = None
 DB_HOST = None
