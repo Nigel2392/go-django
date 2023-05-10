@@ -44,10 +44,10 @@ var (
 	AdminSite_ExtensionOptions         *extensions.Options
 
 	adminSite_TemplateMgr *templates.Manager
-	adminSite_Apps        = orderedmap.New[string, *Application]()
+	adminSite_Apps        = orderedmap.New[string, *application]()
 	adminSite_Route       = router.Group(AdminSite_URL, "admin")
 
-	adminSite_Extensions      []extensions.Extension
+	adminSite_Extensions      []*extension
 	adminSite_ExtensionsRoute = adminSite_Route.Group("/admin-extensions", "admin-extensions")
 )
 

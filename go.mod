@@ -10,7 +10,7 @@ require (
 	github.com/Nigel2392/netcache v1.1.7
 	github.com/Nigel2392/orderedmap v1.0.6
 	github.com/Nigel2392/request-logger v1.0.3
-	github.com/Nigel2392/router/v3 v3.3.8
+	github.com/Nigel2392/router/v3 v3.3.9
 	github.com/Nigel2392/routevars v1.1.1
 	github.com/Nigel2392/secret v1.0.0
 	github.com/Nigel2392/tags v1.0.0

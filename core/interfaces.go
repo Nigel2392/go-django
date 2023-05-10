@@ -11,12 +11,6 @@ type ListDisplayer interface {
 	ListDisplay() string
 }
 
-// Get the absolute URL of the model.
-type AbsoluteURLModel interface {
-	// Get the absolute URL of the model.
-	AbsoluteURL() string
-}
-
 // Namer to retrieve the model name, from any given model.
 //
 // This is used in the admin site for example.

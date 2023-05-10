@@ -1,4 +1,4 @@
-package godjango
+package django
 
 import (
 	"database/sql"

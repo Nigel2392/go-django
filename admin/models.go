@@ -22,14 +22,14 @@ type ModelInterface[T any] interface {
 	interfaces.Lister[T]
 }
 
-type Application struct {
+type application struct {
 	Name   string
-	Models *orderedmap.Map[string, *Model]
+	Models *orderedmap.Map[string, *model]
 	Index  router.Registrar
 	URL    string
 }
 
-type Model struct {
+type model struct {
 	Name string
 	Pkg  string
 
@@ -40,10 +40,10 @@ type Model struct {
 
 	Model any
 
-	Permissions Permissions
+	Permissions *permissions
 }
 
-type Permissions struct {
+type permissions struct {
 	Create string // Name of the Create permission
 	Update string // Name of the Update permission
 	Delete string // Name of the Delete permission
@@ -93,7 +93,7 @@ func Register[T ModelInterface[T]](m AdminOptions[T]) {
 		base_url = filepath.Join(AdminSite_URL, pkgURL, urlList)
 	)
 
-	var model_to_register = &Model{
+	var model_to_register = &model{
 		Name: name,
 		Pkg:  pkgName,
 
@@ -104,7 +104,7 @@ func Register[T ModelInterface[T]](m AdminOptions[T]) {
 
 		Model: m.Model,
 
-		Permissions: Permissions{
+		Permissions: &permissions{
 			Create: newPermission("create", m.Model),
 			Update: newPermission("update", m.Model),
 			Delete: newPermission("delete", m.Model),
@@ -126,9 +126,9 @@ func Register[T ModelInterface[T]](m AdminOptions[T]) {
 
 	var app = adminSite_Apps.Get(model_to_register.Pkg)
 	if app == nil {
-		app = &Application{
+		app = &application{
 			Name:   model_to_register.Pkg,
-			Models: orderedmap.New[string, *Model](),
+			Models: orderedmap.New[string, *model](),
 			Index: adminSite_Route.HandleFunc(
 				router.GET, pkgURL,
 				appIndex(app), model_to_register.Pkg,

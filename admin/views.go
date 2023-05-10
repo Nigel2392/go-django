@@ -46,7 +46,7 @@ func indexView(rq *request.Request) {
 	}
 }
 
-func appIndex(app *Application) router.HandleFunc {
+func appIndex(app *application) router.HandleFunc {
 	return router.HandleFunc(func(rq *request.Request) {
 		var template, name, err = templateManager().Get(template_app_index)
 		if err != nil {
@@ -175,7 +175,7 @@ func getInstance[T ModelInterface[T]](m T) func(r *request.Request) (T, error) {
 }
 
 type viewOptions[T ModelInterface[T]] struct {
-	Model   *Model
+	Model   *model
 	Options *AdminOptions[T]
 }
 

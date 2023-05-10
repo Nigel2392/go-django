@@ -14,6 +14,8 @@ github.com/Nigel2392/request-logger v1.0.3 h1:0njdKZW2WLL3sjguf7lt8D9u8ao/pyUCpU
 github.com/Nigel2392/request-logger v1.0.3/go.mod h1:83DtK/zReAp0aK08Z2fPyTVjyRukvCZZvb1o8vcbZdU=
 github.com/Nigel2392/router/v3 v3.3.8 h1:PCTB67U0L6tcXl5graI9QM/NR6NdlsheJFjSPbCQBqQ=
 github.com/Nigel2392/router/v3 v3.3.8/go.mod h1:+SiVJcyAr9suGJ3GK13ce+cFZH6vuJVfYi/eLVkVmkE=
+github.com/Nigel2392/router/v3 v3.3.9 h1:5UJMw3hgnaArH7ixg+Mom33oABilAt4shxQnnAs33VA=
+github.com/Nigel2392/router/v3 v3.3.9/go.mod h1:+SiVJcyAr9suGJ3GK13ce+cFZH6vuJVfYi/eLVkVmkE=
 github.com/Nigel2392/routevars v1.1.1 h1:jiT3/6pvafnhYTxHPUMO7C7gxmBySn0/cnXPJkUQlpY=
 github.com/Nigel2392/routevars v1.1.1/go.mod h1:NBOLgLWRaSXJraX53Q2fFpvbWKrfY2KsT8K5kz4fuMU=
 github.com/Nigel2392/secret v1.0.0 h1:bu307FddauLkKJoEtY5QhdSC1Z8NKIf7hMbZqVt2Tqs=

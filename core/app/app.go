@@ -248,6 +248,11 @@ This is Go-Django's default command line interface.`
 	__app = a
 	a.initted = true
 	if a.useAuth && a.defaultDatabase != nil {
+
+		if err := a.defaultDatabase.Ping(); err != nil {
+			goto skipAuth
+		}
+
 		lg.Now(logger.DEBUG, "Initializing auth...")
 		a.Auth = auth.Initialize(a.defaultDatabase)
 		a.flags.RegisterCommand(auth.CreateSuperUserCommand)
@@ -272,6 +277,8 @@ This is Go-Django's default command line interface.`
 	} else if a.useAuth && a.defaultDatabase == nil {
 		panic("cannot use authentication without a database connection")
 	}
+
+skipAuth:
 	lg.Now(logger.DEBUG, "Initializing media manager...")
 	if config.File != nil {
 		a.config.File.Initialize()
