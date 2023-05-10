@@ -1,37 +1,14 @@
 {{ $app := . }}
 {{ if $app }}
-    {{ if eq (len $app.Children) 0 }}
-        <h3 class="nomargin">
-            <a href="{{ $app.URL.WholeURL }}" class="admin-button-dark">{{ $app.Name|title }}</a>
-        </h3>
-    {{ else if eq (len $app.Children) 1 }}
-        {{ range $m := $app.Children }}
-            {{if ge (len $m.Children) 1}}
-                {{ range $m := $m.Children }}
-                    {{ template "app_item.tmpl" $m }}
-                {{ end }}
-            {{else}}
-                <h3 class="nomargin">
-                    <a href="{{ $m.URL.WholeURL }}" class="admin-button-dark">{{ $m.Name|title }}</a>
-                </h3>
-            {{end}}
-        {{ end }}
-    {{ else }}
+    {{$Models := $app.Models.InOrder}}
         <div class="dropdown">
             <h3 class="admin-app-header dropdown-button">
                 {{ $app.Name|title }}
             </h3>
             <ul class="admin-app-urls dropdown-content">
-                {{ range $m := $app.Children }}
-                    {{ if ge (len $m.Children) 1 }}
-                        {{ range $m := $m.Children }}
-                            {{ template "app_item.tmpl" $m }}
-                        {{ end }}
-                    {{ else }}
-                        <li><a href="{{ $m.URL.WholeURL }}">{{ $m.Name|title }}</a></li>
-                    {{ end }}
+                {{ range $m := $Models }}
+                    <li><a href="{{ $m.URL_List }}">{{ $m.Name|title }}</a></li>
                 {{ end }}
             </ul>
         </div>
-    {{ end }}
 {{ end }}

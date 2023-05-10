@@ -12,6 +12,7 @@ type CreateView[T interfaces.Saver] struct {
 
 func (c *CreateView[T]) ServeHTTP(r *request.Request) {
 	c.BaseFormView.Action = "create"
+	c.isNew = true
 	if len(c.Fields) > 0 {
 		c.BaseFormView.WithFields(c.Fields...)
 	}

@@ -1,37 +1,79 @@
 package auth
 
 import (
+	"context"
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
+	"github.com/Nigel2392/go-datastructures/linkedlist"
 	"github.com/Nigel2392/go-django/core/httputils"
-
-	"gorm.io/gorm"
+	"github.com/Nigel2392/go-django/core/views/fields"
 )
 
-// Default permission model.
-//
-// This will be used application-wide by default.
 type Permission struct {
-	ID          uint64
-	Name        string
-	Description string
-	Groups      []*Group // many-to-many group_permission
+	ID          int64            `admin-form:"readonly;disabled;omit_on_create;" gorm:"-" json:"id"`
+	Name        string           `gorm:"-" json:"name"`
+	Description fields.TextField `admin-form:"textarea;" gorm:"-" json:"description"`
+
+	// Non-SQLC fields
+	Groups []Group `gorm:"-" json:"groups"`
+	Users  []User  `gorm:"-" json:"users"`
 }
 
-// Adhere to default Admin interfaces.
-//
-// This is the default name of the Permission model as seen in the App List.
-func (p *Permission) NameOf() string {
-	return PERMISSION_MODEL_NAME
+func (p *Permission) String() string {
+	return p.Name
 }
 
-// Adhere to default Admin interfaces.
-//
-// This is the default name of the Permission model's APP as seen in the App List.
-func (p *Permission) AppName() string {
-	return AUTH_APP_NAME
+func (p *Permission) Save(creating bool) error {
+	if creating {
+		return Auth.Queries.CreatePermission(context.Background(), p)
+	}
+	return Auth.Queries.UpdatePermission(context.Background(), p)
+}
+
+func (p *Permission) Delete() error {
+	return Auth.Queries.DeletePermission(context.Background(), p.ID)
+}
+
+func (p *Permission) StringID() string {
+	return fmt.Sprintf("%d", p.ID)
+}
+
+func (p *Permission) GetFromStringID(id string) (*Permission, error) {
+	var intID, err = strconv.ParseInt(id, 10, 64)
+	if err != nil {
+		return nil, err
+	}
+	return Auth.Queries.GetPermissionByID(context.Background(), intID)
+}
+
+func (u *Permission) List(page, each_page int) ([]*Permission, int64, error) {
+	var count int64
+	var err error
+	var permissions *linkedlist.Doubly[Permission]
+
+	permissions, err = Auth.Queries.GetPermissionsWithPagination(context.Background(), PaginationParams{
+		Offset: int32((page - 1) * each_page),
+		Limit:  int32(each_page),
+	})
+	if err != nil {
+		return nil, 0, err
+	}
+
+	permissionsSlice := make([]*Permission, 0, permissions.Len())
+	for permissions.Len() > 0 {
+		var p = permissions.Shift()
+		permissionsSlice = append(permissionsSlice, &p)
+	}
+
+	count, err = Auth.Queries.CountPermissions(context.Background())
+	if err != nil {
+		return nil, 0, err
+	}
+
+	return permissionsSlice, count, nil
 }
 
 // Return a new permission for a given object.
@@ -50,7 +92,7 @@ func NewPermission(typ string, s any) *Permission {
 	}
 
 	permission := &Permission{
-		Description: "Permission to " + typ + " an object of type " + typeOf.Name(),
+		Description: fields.TextField("Permission to " + typ + " an object of type " + typeOf.Name()),
 	}
 
 	if typeOf.PkgPath() != "" {
@@ -61,15 +103,6 @@ func NewPermission(typ string, s any) *Permission {
 
 	permission.Name = fmt.Sprintf("%s_%s", typ, strings.ToLower(typeOf.Name()))
 	return permission
-}
-
-func (p *Permission) String() string {
-	return p.Name
-}
-
-// Save the permission to the database.
-func (p *Permission) Save(db *gorm.DB) error {
-	return db.FirstOrCreate(p, "name = ?", p.Name).Error
 }
 
 // Retrieve the CREATE permission for a given object

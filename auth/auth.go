@@ -1,113 +1,76 @@
 package auth
 
 import (
-	"encoding/gob"
+	"context"
+	"encoding/base64"
 	"errors"
-	"fmt"
+	"strconv"
 	"strings"
-	"time"
 
-	"github.com/Nigel2392/go-django/core/cache"
+	"github.com/Nigel2392/forms"
+	"github.com/Nigel2392/forms/validators"
 	"github.com/Nigel2392/go-django/core/db"
-	"github.com/Nigel2392/go-django/core/flag"
-	"github.com/Nigel2392/go-django/forms"
-	"github.com/Nigel2392/go-django/forms/validators"
 	"github.com/Nigel2392/netcache/src/client"
-
 	"github.com/Nigel2392/router/v3/request"
-	"gorm.io/gorm"
-)
+	"golang.org/x/crypto/bcrypt"
 
-// Register the User model with the gob package.
-func init() {
-	gob.Register(User{})
-}
-
-var (
-	auth_cache             client.Cache
-	auth_db                *gorm.DB
-	SESSION_COOKIE_NAME    string          = "session_id"
-	DB_KEY                 db.DATABASE_KEY = "auth"
-	USER_ABSOLUTE_URL_FUNC func(*User) string
+	_ "embed"
 )
 
 var (
-	USER_MODEL_LOGIN_FIELD string = "Username"
-	USER_MODEL_NAME        string = "Users"
-	GROUP_MODEL_NAME       string = "Groups"
-	PERMISSION_MODEL_NAME  string = "Permissions"
-	AUTH_APP_NAME          string = "Authentication"
+	DB_KEY        db.DATABASE_KEY = "auth"
+	AUTH_APP_NAME                 = "auth"
+	LOGIN_URL     string
+	LOGOUT_URL    string
+)
 
-	DEFAULT_USER_GROUP_NAMES = []string{
-		"user",
+//go:embed auth_schema.sql
+var createTableQuery string
+
+func UnAuthenticatedUser() *User {
+	return &User{
+		IsLoggedIn: false,
 	}
-)
-
-var (
-	LOGIN_URL  string
-	LOGOUT_URL string
-)
-
-var (
-	TokenExpiration     = 24 * time.Hour
-	MessageTokenInvalid = "Invalid password reset token."
-	MessageTokenExpired = "Password reset token has expired."
-)
-
-// Initialize the auth package.
-func Init(pool db.Pool[*gorm.DB], cache client.Cache, flags *flag.Flags) {
-	var database = db.GetDefaultDatabase(DB_KEY, pool)
-	auth_db = database.DB()
-	database.Register(
-		&User{},
-		&Group{},
-		&Permission{},
-	)
-
-	database.AutoMigrate()
-
-	// Register the createsuperuser command.
-	flags.RegisterCommand(CreateSuperUserCommand)
-
-	auth_cache = cache
 }
 
-// Create a new unauthenticated used, with the login field set to the login parameter.
+// Return a new unauthenticated user with the login field set.
 func NewUser(login string) *User {
-	var u = &User{}
+	var u = UnAuthenticatedUser()
 	u.SetLoginField(login)
 	return u
 }
 
-// Return an unauthenticated user.
-func UnAuthenticatedUser() *User {
-	return &User{}
+type AuthApp struct {
+	Queries AuthQuerier
+	Cache   *client.Cache
+	Logger  request.Logger
 }
 
-// GetUser returns the user from the database.
-// If the user is not found, return an error.
-func GetUser(query any, args ...interface{}) (*User, error) {
-	var user User
-	var err error
-	err = auth_db.Where(query, args...).First(&user).Error
-	if err != nil {
-		return nil, err
+var (
+	SESSION_COOKIE_NAME         = "session_id"
+	DEFAULT_PASSWORD_VALIDATORS = validators.New(
+		validators.PasswordStrength(8, 32, false),
+	)
+)
+
+var Auth *AuthApp
+
+func Initialize(db DBTX) *AuthApp {
+	if Auth == nil {
+		Auth = &AuthApp{}
 	}
-
-	return &user, nil
-}
-
-// Register a group.
-func RegisterGroups(groups ...*Group) error {
-	var err error
-	for _, group := range groups {
-		err = auth_db.FirstOrCreate(group, "LOWER(name) = ?", strings.ToLower(group.Name)).Error
-		if err != nil {
-			return err
+	Auth.Queries = NewQueries(db)
+	var tableQueries = strings.Split(createTableQuery, ";")
+	for _, query := range tableQueries {
+		if query = strings.TrimSpace(query); query == "" {
+			continue
+		}
+		if _, err := db.ExecContext(context.Background(), query); err != nil {
+			panic(err)
 		}
 	}
 
-	return nil
+	return Auth
 }
 
 // Log the user in and set the user inside of the request.
@@ -116,57 +79,110 @@ func RegisterGroups(groups ...*Group) error {
 //
 // Authentication for the login_column_name is case insensitive!
 func Login(r *request.Request, login, password string) (user *User, err error) {
-	var u User
-
-	// Do some quick validation before we try to hit the database.
+	var u *User
+	// Check the database for the user.
 	switch strings.ToLower(USER_MODEL_LOGIN_FIELD) {
 	case "email":
-		if err := validators.Regex(validators.REGEX_EMAIL)(forms.NewValue(login)); err != nil {
-			SIGNAL_LOGIN_FAILED.Send(&u, err)
+		if err := validators.Email(forms.NewValue(login)); err != nil {
 			return UnAuthenticatedUser(), err
 		}
+		u, err = Auth.Queries.GetUserByEmail(r.Request.Context(), login)
 	case "username":
 		if err := validators.Length(3, 75)(forms.NewValue(login)); err != nil {
-			SIGNAL_LOGIN_FAILED.Send(&u, err)
 			return UnAuthenticatedUser(), err
 		}
+		u, err = Auth.Queries.GetUserByUsername(r.Request.Context(), login)
 	default:
-		r.Logger.Warning("Could not validate login field: " + USER_MODEL_LOGIN_FIELD)
+		return nil, errors.New("Could not validate login field, please contact a site administrator: " + USER_MODEL_LOGIN_FIELD)
+	}
+	if err != nil {
+		return UnAuthenticatedUser(), errors.New("User does not exist: " + err.Error())
 	}
 
-	// Commented out due to the fact that createsuperuser does not perform this check.
-	//	// Check the password strength.
-	//	// If the password is not strong enough, return an error.
-	//	if err := validators.PasswordStrength(password); err != nil {
-	//		SIGNAL_LOGIN_FAILED.Send(&u, err)
-	//		return UnAuthenticatedUser(), err
-	//	}
-
-	// Check the database for the user.
-	err = auth_db.Where("LOWER("+USER_MODEL_LOGIN_FIELD+") = ?", strings.ToLower(login)).First(&u).Error
-	if err != nil {
-		SIGNAL_LOGIN_FAILED.Send(&u, err)
-		return UnAuthenticatedUser(), err
+	if err = validatePassword(password); err != nil {
+		return UnAuthenticatedUser(), errors.New("Invalid password")
 	}
 
 	// Validate the password.
-	if err := u.CheckPassword(password); err != nil {
-		//lint:ignore ST1005 potential error message to user.
-		var err = errors.New("Invalid password")
-		SIGNAL_LOGIN_FAILED.Send(&u, err)
-		return UnAuthenticatedUser(), err
+	if err = CheckPassword(u, password); err != nil {
+		return UnAuthenticatedUser(), errors.New("Password is incorrect")
 	}
 
 	// Check if the user is active.
 	if !u.IsActive {
-		var err = errors.New("User is not active")
-		SIGNAL_LOGIN_FAILED.Send(&u, err)
-		return UnAuthenticatedUser(), err
+		return UnAuthenticatedUser(), errors.New("Non-active user attempted to login")
 	}
 
 	// User is authenticated.
-	LoginUnsafe(r, &u)
-	return &u, nil
+	LoginUnsafe(r, u)
+	return u, nil
+}
+
+var onRegister = map[string]func(*User) error{
+	"ValidEmail":       ValidEmail,
+	"ValidUsername":    ValidUsername,
+	"ValidFirstName":   ValidFirstName,
+	"ValidLastName":    ValidLastName,
+	"ValidPassword":    ValidPassword,
+	"UserDoesNotExist": UserDoesNotExist,
+	"SetUserActive":    SetUserActive,
+}
+
+// Register a function to run on register.
+//
+// Default functions which are registered:
+//   - "ValidEmail"
+//   - "ValidUsername"
+//   - "ValidFirstName"
+//   - "ValidLastName"
+//   - "ValidPassword"
+//   - "UserDoesNotExist" (Checks for duplicates in the database by username or email.)
+//   - "SetUserActive" (Sets IsActive to be true)
+func OnRegister(name string, fn func(*User) error) {
+	onRegister[name] = fn
+}
+
+// Un-register a function to run on register.
+func UnRegister(name string) {
+	delete(onRegister, name)
+}
+
+// Get a username from an email address.
+func UsernameFromEmail(email string) string {
+	var parts = strings.Split(email, "@")
+	if len(parts) != 2 {
+		return ""
+	}
+	return parts[0]
+}
+
+// Register a user.
+func Register(email, username, first_name, last_name, password string) (*User, error) {
+	var u = &User{
+		Email:     EmailField(email),
+		Username:  username,
+		FirstName: first_name,
+		LastName:  last_name,
+		Password:  PasswordField(password),
+	}
+
+	// Run the on register functions.
+	var err error
+	for _, fn := range onRegister {
+		if err = fn(u); err != nil {
+			return nil, errors.New("Could not register: " + err.Error())
+		}
+	}
+
+	// Set the password
+	err = SetPassword(u, password)
+	if err != nil {
+		return nil, errors.New("Could not set password")
+	}
+
+	var ctx = context.Background()
+	err = Auth.Queries.CreateUser(ctx, u)
+	return u, errors.New("Could not create user: " + err.Error())
 }
 
 // Log the user in, without doing any of the validation.
@@ -176,85 +192,98 @@ func LoginUnsafe(r *request.Request, user *User) {
 	r.Session.RenewToken()
 	user.IsLoggedIn = true
 	UserToRequest(r, user)
-	SIGNAL_USER_LOGGED_IN.Send(user)
+	// SIGNAL_USER_LOGGED_IN.Send(user)
 }
 
 // Log the user out and set the user inside of the request to the unauthenticated user.
 func Logout(r *request.Request) error {
-	SIGNAL_USER_LOGGED_OUT.Send(r.User.(*User))
+	// SIGNAL_USER_LOGGED_OUT.Send(r.User.(*User))
 	UserToRequest(r, UnAuthenticatedUser())
 	return r.Session.Destroy()
 }
 
-// Register a user.
-func Register(email, username, first_name, last_name, password string) (*User, error) {
-	var u = &User{
-		Email:     email,
-		Username:  username,
-		FirstName: first_name,
-		LastName:  last_name,
-		Password:  password,
-	}
-
-	// Validate the fields
-	// (Email, username, first_name, last_name, password)
-	if err := u.validateFields(); err != nil {
-		return nil, err
-	}
-
-	// Set the password
-	err := u.SetPassword(password)
-	if err != nil {
-		return nil, err
-	}
-
-	// Validate the user
-	if err := u.validate(); err != nil {
-		return nil, err
-	}
-
-	// Create the user
-	err = auth_db.Select("Email", "Username", "FirstName", "LastName", "Password").Create(u).Error
-	if err != nil {
-		fmt.Println("Failed to create user: " + err.Error())
-		//lint:ignore ST1005 potential error message to user.
-		return nil, errors.New("Failed to create user")
-	}
-	return u, nil
+var HASHER = func(b string) (string, error) {
+	var bytes, err = bcrypt.GenerateFromPassword([]byte(b), bcrypt.DefaultCost)
+	return string(bytes), err
 }
 
-// Verify that a user has the given permissions.
-func HasPerms(user *User, permissions ...*Permission) bool {
-	if user.IsAdministrator {
-		return true
+var CHECKER = func(hashedPassword, password string) error {
+	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+}
+
+// This function likely cannot 100% guarantee that the password is hashed.
+// It might be susceptible to false positives or meticulously crafted user input.
+var IS_HASHED = func(hashedPassword string) bool {
+	return isBcryptHash(string(hashedPassword))
+}
+
+var (
+	bcryptEncodingStr = "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+	bcryptEncoding    = base64.NewEncoding(bcryptEncodingStr).WithPadding(base64.NoPadding)
+)
+
+// Checks if the input is a hashed password.
+func isBcryptHash(s string) bool {
+	var parts = strings.Split(s, "$")
+	if len(parts) != 4 {
+		return false
+	}
+	if parts[0] != "" {
+		return false
+	}
+	if parts[1] != "2b" &&
+		parts[1] != "2y" &&
+		parts[1] != "2a" &&
+		parts[1] != "2x" {
+		return false
+	}
+	// check that the cost is a valid number
+	if _, err := strconv.Atoi(parts[2]); err != nil {
+		return false
 	}
 
-	// Check if the user has the permissions
-	//
-	// We will check the cache first.
-	var groups []*Group
-	if auth_cache != nil {
-		var g, err = auth_cache.Get(hashUser(user, groups_suffix), &groups)
-		if err == nil && g != nil {
-			user.Groups = g.Value().([]*Group)
-			return user.HasPerms(permissions...)
+	if len(parts[3]) != 53 {
+		return false
+	}
+
+	var _, err = bcrypt.Cost([]byte(s))
+	if err != nil {
+		return false
+	}
+
+	var salt = parts[3][0:22]
+	_, err = bcryptEncoding.DecodeString(salt)
+	if err != nil {
+		return false
+	}
+
+	var hash = parts[3][22:]
+	_, err = bcryptEncoding.DecodeString(hash)
+	return err == nil
+}
+
+func SetPassword(u *User, password string) error {
+	var pw, err = HASHER(password)
+	if err != nil {
+		return err
+	}
+	u.Password = PasswordField(pw)
+	return nil
+}
+
+func CheckPassword(u *User, password string) error {
+	return CHECKER(string(u.Password), password)
+}
+
+func validatePassword(password string) error {
+	if DEFAULT_PASSWORD_VALIDATORS != nil {
+		for _, v := range DEFAULT_PASSWORD_VALIDATORS {
+			if err := v(forms.NewValue(password)); err != nil {
+				return err
+			}
 		}
+	} else {
+		panic("DEFAULT_PASSWORD_VALIDATORS is nil")
 	}
-
-	// If the user already has the groups loaded, continue...
-	// Otherwise, load in the groups and permissions for the user
-	// Permissions get loaded in on each request for the user.
-	if len(user.Groups) == 0 {
-		// Get all of the groups that the user is in
-		// Load in the permissions for each group, into each group
-		auth_db.Model(user).Association("Groups.Permissions").Find(&user.Groups)
-	}
-
-	// Set the groups in the cache
-	if auth_cache != nil {
-		auth_cache.Set(hashUser(user, groups_suffix), groups, cache.DefaultExpiration)
-	}
-
-	// Return true if the user has all of the permissions
-	return user.HasPerms(permissions...)
+	return nil
 }

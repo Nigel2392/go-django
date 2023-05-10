@@ -1,12 +1,19 @@
 package auth
 
 import (
+	"context"
 	"errors"
 	"strconv"
 	"strings"
 	"time"
 
 	"github.com/Nigel2392/secret"
+)
+
+var (
+	TokenExpiration     = 24 * time.Hour
+	MessageTokenInvalid = "Invalid password reset token."
+	MessageTokenExpired = "Password reset token has expired."
 )
 
 //lint:file-ignore ST1005 Errors can be returned to the user.
@@ -23,7 +30,7 @@ func GeneratePasswordResetToken(user *User) (string, error) {
 	// Create a token string.
 	var id = strconv.FormatUint(uint64(user.ID), 10)
 	var nowTime = strconv.FormatInt(time.Now().Unix(), 10)
-	var password = secret.FnvHash(user.Password).String()
+	var password = secret.FnvHash(string(user.Password)).String()
 	var tokenString = id + "___" + password + "___" + nowTime
 
 	// Encrypt the token.
@@ -73,7 +80,7 @@ func VerifyPasswordResetToken(tokenString string) (*User, error) {
 	}
 
 	// Parse the token parts.
-	id, err := strconv.ParseUint(tokenParts[0], 10, 64)
+	id, err := strconv.ParseInt(tokenParts[0], 10, 64)
 	if err != nil {
 		return nil, errors.New(MessageTokenInvalid)
 	}
@@ -90,13 +97,13 @@ func VerifyPasswordResetToken(tokenString string) (*User, error) {
 	}
 
 	// Get the user.
-	user, err := GetUserByID(uint(id))
+	user, err := Auth.Queries.GetUserByID(context.Background(), id)
 	if err != nil {
 		return nil, errors.New(MessageTokenInvalid)
 	}
 
 	// If the user's password has changed, the token is deemed invalid.
-	if secret.FnvHash(user.Password).String() != password {
+	if secret.FnvHash(string(user.Password)).String() != password {
 		return nil, errors.New(MessageTokenInvalid)
 	}
 
@@ -109,16 +116,19 @@ func VerifyPasswordResetToken(tokenString string) (*User, error) {
 // This is a convenience method.
 func TokenResetPassword(tokenString, newPassword string) (*User, error) {
 	// Verify the token.
-	user, err := VerifyPasswordResetToken(tokenString)
+	var user, err = VerifyPasswordResetToken(tokenString)
 	if err != nil {
 		return nil, err
 	}
 
-	err = user.ChangePassword(newPassword)
+	err = SetPassword(user, newPassword)
 	if err != nil {
 		return nil, err
 	}
-
+	err = Auth.Queries.UpdateUser(context.Background(), user)
+	if err != nil {
+		return nil, err
+	}
 	return user, nil
 }
 
@@ -127,10 +137,14 @@ func TokenResetPassword(tokenString, newPassword string) (*User, error) {
 // This is a convenience method.
 func ResetPassword(user *User, oldPassword, newPassword string) error {
 	// Check the old password.
-	if user.CheckPassword(oldPassword) != nil {
+	if CheckPassword(user, oldPassword) != nil {
 		return errors.New("Old password is incorrect.")
 	}
 
 	// Update the password.
-	return user.ChangePassword(newPassword)
+	var err = SetPassword(user, newPassword)
+	if err != nil {
+		return err
+	}
+	return Auth.Queries.UpdateUser(context.Background(), user)
 }

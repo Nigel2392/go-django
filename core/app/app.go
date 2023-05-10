@@ -44,8 +44,6 @@ func App() *Application {
 	return __app
 }
 
-type AdminSite admin.AdminSite
-
 // Server is the configuration used to initialize the server.
 type Server struct {
 	// The address to listen on
@@ -117,7 +115,7 @@ type Config struct {
 
 	// Size of the file queue
 	// Hook for when a file is read, or written in the media directory.
-	File *fs.Manager
+	File fs.Filer
 
 	// The session store to use.
 	SessionStore scs.Store
@@ -139,10 +137,6 @@ type Config struct {
 
 	Middlewares          []router.Middleware
 	DefaultTemplateFuncs template.FuncMap
-
-	// Adminsite settings
-	// Name and URL of the admin site must be set in order for it to be used.
-	Admin *AdminSite
 
 	// DefaultFlags are the default flags that will be added to the application.
 	// You can add more flags by using the Application.Flags().Register() function.
@@ -185,11 +179,10 @@ type Application struct {
 	Logger request.Logger
 
 	initted bool
+	Auth    *auth.AuthApp
 	config  *Config
 
 	flags *flag.Flags
-
-	adminSite *admin.AdminSite
 }
 
 // Initialize a new application.
@@ -273,14 +266,34 @@ This is Go-Django's default command line interface.`
 
 	if a.defaultDatabase != nil && db.GetDefaultDatabase(auth.DB_KEY, a.Pool).DB() != nil {
 		lg.Now(logger.DEBUG, "Initializing auth...")
-		auth.Init(a.Pool, a.cache, a.flags)
+		a.Auth = auth.Initialize(a.defaultDatabase.DB().ConnPool)
+		a.flags.RegisterCommand(auth.CreateSuperUserCommand)
+
+		admin.Register(admin.AdminOptions[*auth.User]{
+			ListFields: []string{"Username", "Email", "FirstName", "LastName", "IsAdministrator", "IsActive"},
+			FormFields: []string{"ID", "UploadAnImage", "Username", "Email", "FirstName", "LastName", "Password", "GroupSelect", "IsAdministrator", "IsActive"},
+			Model:      &auth.User{},
+		})
+
+		admin.Register(admin.AdminOptions[*auth.Group]{
+			ListFields: []string{"Name", "Description"},
+			FormFields: []string{"ID", "Name", "PermissionSelect", "Description"},
+			Model:      &auth.Group{},
+		})
+
+		admin.Register(admin.AdminOptions[*auth.Permission]{
+			ListFields: []string{"Name", "Description"},
+			FormFields: []string{"ID", "Name", "Description"},
+			Model:      &auth.Permission{},
+		})
+
 	} else {
 		lg.Now(logger.DEBUG, "No database connection found, skipping auth...")
 	}
 
 	lg.Now(logger.DEBUG, "Initializing media manager...")
 	if config.File != nil {
-		a.config.File.Init()
+		a.config.File.Initialize()
 	}
 
 	lg.Now(logger.DEBUG, "Initializing email manager...")
@@ -298,21 +311,6 @@ This is Go-Django's default command line interface.`
 	a.setupRouter()
 
 	response.TEMPLATE_MANAGER = a.config.Templates
-
-	if a.config.Admin != nil && a.config.Admin.Name != "" && a.config.Admin.URL != "" {
-		lg.Now(logger.DEBUG, "Initializing admin site...")
-		var adminSiteDePtr = *a.config.Admin
-		a.adminSite = (*admin.AdminSite)(&adminSiteDePtr)
-		a.adminSite.DBPool = a.Pool
-		a.adminSite.Defaults()
-		a.adminSite.Init()
-		a.adminSite.Register(
-			&auth.User{},
-			&auth.Group{},
-			&auth.Permission{},
-		)
-		a.adminSite.MediaManager = a.config.File
-	}
 
 	return a
 }
@@ -371,18 +369,6 @@ func (a *Application) setupRouter() {
 
 	// Add the default middlewares.
 	a.Router.Use(a.config.Middlewares...)
-
-	if a.config.File != nil {
-		// Get the registrars for the static/media files.
-		var staticHandler, mediaHandler = a.config.File.Registrars()
-		if staticHandler != nil {
-			a.Router.AddGroup(staticHandler)
-		}
-		if mediaHandler != nil {
-			a.Router.AddGroup(mediaHandler)
-		}
-	}
-
 }
 
 // Instead of running the application, retrieve the handler/serve mux.
@@ -437,19 +423,48 @@ func (a *Application) Serve() (http.Handler, error) {
 
 	if a.config.Templates != nil {
 		var funcMap = make(template.FuncMap)
-		if a.config.File != nil {
-			funcMap["static"] = a.config.File.AsStaticURL
-			funcMap["media"] = a.config.File.AsMediaURL
-		}
+		/*
+
+			//if a.config.File != nil {
+			//	funcMap["static"] = a.config.File.AsStaticURL
+			//	funcMap["media"] = a.config.File.AsMediaURL
+			//}
+
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+				TODO
+
+			//if a.config.File != nil {
+			//	funcMap["static"] = a.config.File.AsStaticURL
+			//	funcMap["media"] = a.config.File.AsMediaURL
+			//}
+
+		*/
 		funcMap["url"] = a.Router.URLFormat
 		for k, v := range a.config.DefaultTemplateFuncs {
 			funcMap[k] = v
 		}
 		a.config.Templates.DEFAULT_FUNCS = funcMap
 	}
-	if a.adminSite != nil {
-		a.Router.AddGroup(a.adminSite.URLS())
+
+	if a.Auth != nil {
+		a.Router.AddGroup(admin.Route())
 	}
+
 	return a.Router, nil
 }
 
@@ -518,7 +533,7 @@ func (a *Application) Redirect() error {
 // If an admin site is registered, the models will be registered with the admin site when specified.
 //
 // If the key is an empty string, the model will be registered with the default database.
-func (a *Application) Register(toAdmin bool, key db.DATABASE_KEY, models ...any) {
+func (a *Application) Register(key db.DATABASE_KEY, models ...any) {
 	if a.Pool == nil {
 		panic("You must call Init() before calling Register()")
 	}
@@ -526,9 +541,4 @@ func (a *Application) Register(toAdmin bool, key db.DATABASE_KEY, models ...any)
 		key = db.DEFAULT_DATABASE_KEY
 	}
 	a.Pool.Register(key, models...)
-	if toAdmin && a.adminSite != nil {
-		a.adminSite.Register(models...)
-	} else if toAdmin && a.adminSite == nil {
-		panic("The admin site is nil!")
-	}
 }

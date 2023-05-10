@@ -6,9 +6,9 @@ import (
 	"reflect"
 	"strconv"
 
-	"github.com/Nigel2392/go-django/core/httputils/tags"
 	"github.com/Nigel2392/go-django/core/views/interfaces"
 	"github.com/Nigel2392/router/v3/request"
+	"github.com/Nigel2392/tags"
 )
 
 func NumberField(n any) interfaces.FormField {
@@ -77,12 +77,12 @@ func (i *IntField) FormValues(v []string) error {
 	return nil
 }
 
-func (i IntField) LabelHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), name))
+func (i IntField) LabelHTML(_ *request.Request, name string, display_text string, tags tags.TagMap) interfaces.Element {
+	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), display_text))
 }
 
 func (i IntField) InputHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<input type="number" name="%s" value="%d" %s>`, name, i, TagMapToElementAttributes(tags, AllTagsInput...)))
+	return ElementType(fmt.Sprintf(`<input type="number" name="%s" id="%s" value="%d" %s>`, name, name, i, TagMapToElementAttributes(tags, AllTagsInput...)))
 }
 
 type FloatField float64
@@ -108,10 +108,10 @@ func (i *FloatField) FormValues(v []string) error {
 	return nil
 }
 
-func (i FloatField) LabelHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), name))
+func (i FloatField) LabelHTML(_ *request.Request, name string, display_text string, tags tags.TagMap) interfaces.Element {
+	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), display_text))
 }
 
 func (i FloatField) InputHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<input type="number" name="%s" value="%f" %s>`, name, i, TagMapToElementAttributes(tags, AllTagsInput...)))
+	return ElementType(fmt.Sprintf(`<input type="number" name="%s" id="%s" value="%f" %s>`, name, name, i, TagMapToElementAttributes(tags, AllTagsInput...)))
 }

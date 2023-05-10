@@ -6,9 +6,9 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/Nigel2392/go-django/core/httputils/tags"
 	"github.com/Nigel2392/go-django/core/views/interfaces"
 	"github.com/Nigel2392/router/v3/request"
+	"github.com/Nigel2392/tags"
 )
 
 type BoolField bool
@@ -34,15 +34,15 @@ func (i *BoolField) FormValues(v []string) error {
 	return nil
 }
 
-func (i BoolField) LabelHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), name))
+func (i BoolField) LabelHTML(_ *request.Request, name string, display_text string, tags tags.TagMap) interfaces.Element {
+	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), display_text))
 }
 
 func (i BoolField) InputHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
 	if i {
-		return ElementType(fmt.Sprintf(`<input type="checkbox" name="%s" checked %s>`, name, TagMapToElementAttributes(tags, AllTagsInput...)))
+		return ElementType(fmt.Sprintf(`<input type="checkbox" name="%s" id="%s" checked %s>`, name, name, TagMapToElementAttributes(tags, AllTagsInput...)))
 	}
-	return ElementType(fmt.Sprintf(`<input type="checkbox" name="%s" %s>`, name, TagMapToElementAttributes(tags, AllTagsInput...)))
+	return ElementType(fmt.Sprintf(`<input type="checkbox" name="%s" id="%s" %s>`, name, name, TagMapToElementAttributes(tags, AllTagsInput...)))
 }
 
 type DateField time.Time
@@ -72,12 +72,12 @@ func (i *DateField) FormValues(v []string) error {
 	return nil
 }
 
-func (i DateField) LabelHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), name))
+func (i DateField) LabelHTML(_ *request.Request, name string, display_text string, tags tags.TagMap) interfaces.Element {
+	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), display_text))
 }
 
 func (i DateField) InputHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<input type="date" name="%s" value="%s" %s>`, name, time.Time(i).Format("2006-01-02"), TagMapToElementAttributes(tags, AllTagsInput...)))
+	return ElementType(fmt.Sprintf(`<input type="date" name="%s" id="%s" value="%s" %s>`, name, name, time.Time(i).Format("2006-01-02"), TagMapToElementAttributes(tags, AllTagsInput...)))
 }
 
 type DateTimeField time.Time
@@ -107,10 +107,10 @@ func (i *DateTimeField) FormValues(v []string) error {
 	return nil
 }
 
-func (i DateTimeField) LabelHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), name))
+func (i DateTimeField) LabelHTML(_ *request.Request, name string, display_text string, tags tags.TagMap) interfaces.Element {
+	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), display_text))
 }
 
 func (i DateTimeField) InputHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<input type="datetime-local" name="%s" value="%s" %s>`, name, time.Time(i).Format("2006-01-02T15:04"), TagMapToElementAttributes(tags, AllTagsInput...)))
+	return ElementType(fmt.Sprintf(`<input type="datetime-local" name="%s" id="%s" value="%s" %s>`, name, name, time.Time(i).Format("2006-01-02T15:04"), TagMapToElementAttributes(tags, AllTagsInput...)))
 }

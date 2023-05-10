@@ -2,15 +2,18 @@ package views
 
 import (
 	"fmt"
+	"html/template"
 	"net/http"
 
-	"github.com/Nigel2392/go-django/auth"
 	"github.com/Nigel2392/router/v3/request"
 )
 
 type BaseView[MODEL any] struct {
 	// The template to use
 	Template string
+
+	// Function to get a template with
+	GetTemplate func(string) (*template.Template, string, error)
 
 	// The URL to redirect to after a failed action.
 	BackURL func(r *request.Request, model MODEL) string
@@ -21,10 +24,13 @@ type BaseView[MODEL any] struct {
 	// The permissions required to perform an action on the model
 	//
 	// If there is a permission registered, the user must be authenticated!
-	RequiredPerms []*auth.Permission
+	RequiredPerms []string
 
 	// NeedsAuth specifies whether the user needs to be authenticated to view the page.
 	NeedsAuth bool
+
+	// Needs admin permissions to perform an action on the model.
+	NeedsAdmin bool
 
 	// Whether a superuser can perform the action.
 	SuperUserCanPerform bool
@@ -67,17 +73,15 @@ func (v *BaseView[T]) Serve(r *request.Request) {
 			goto lastPage
 		}
 	}
-	if auth.LOGIN_URL != "" {
+	if v.NeedsAuth {
 		if !r.User.IsAuthenticated() && v.NeedsAuth {
 			r.Data.AddMessage("error", fmt.Sprintf("You need to be logged in to %s this item.", v.Action))
-			r.Redirect(auth.LOGIN_URL, 302, r.Request.URL.Path)
-			return
+			goto lastPage
 		}
 
-		var u, ok = r.User.(*auth.User)
-		if !ok {
-			// This should never happen, but just in case.
-			goto skip_auth
+		if !r.User.HasPermissions(v.RequiredPerms...) {
+			r.Data.AddMessage("error", fmt.Sprintf("You do not have permission to %s this item.", v.Action))
+			goto lastPage
 		}
 
 		if v.ExtraAuth != nil {
@@ -87,18 +91,7 @@ func (v *BaseView[T]) Serve(r *request.Request) {
 				goto lastPage
 			}
 		}
-
-		if len(v.RequiredPerms) > 0 {
-			if !r.User.(*auth.User).HasPerms(v.RequiredPerms...) || !u.IsAuthenticated() {
-				goto notAllowed
-			}
-		}
-		goto skip_auth
-	notAllowed:
-		r.Data.AddMessage("error", fmt.Sprintf("You are not allowed to %s this item.", v.Action))
-		goto lastPage
 	}
-skip_auth:
 	switch r.Method() {
 	case http.MethodPost:
 		if v.Post == nil {

@@ -257,11 +257,13 @@ tr:nth-child(odd) {
    background-color:#fff;
 }
 th:first-child {
-    text-align: center;
+    /* text-align: center; */
+    padding-left: 10px;
 }
 tr td:first-child {
     font-weight: bold;
-    text-align: center;
+    /* text-align: center; */
+    padding-left: 10px;
 }
 tr td:first-child a {
     color: var(--color-text-dark);
@@ -367,7 +369,7 @@ button.remove:hover {
     color: var(--color-text);
 }
 .field-group {
-    display: flex;
+    display: block;
     flex-direction: column;
     margin-bottom: 10px;
 }
@@ -392,27 +394,27 @@ button.remove:hover {
     margin: 0;
     padding: 0;
 }
-.admin-button:has(input[type=file]) {
-    position: relative;
-    overflow: hidden;
+.file-upload-label {
+    display: block;
+    padding: 5px;
+    min-width: 200px;
+    border: 1px solid var(--color-main);
+    border-radius: 5px;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
     cursor: pointer;
-    width: 200px;
-    margin-top: 10px;
+    text-decoration: underline;
+    transition: all 0.2s;
 }
-.admin-button input[type=file] {
-  position: absolute;
-  top: 0;
-  right: 0;
-  min-width: 100%;
-  min-height: 100%;
-  font-size: 100px;
-  text-align: right;
-  filter: alpha(opacity=0);
-  opacity: 0;
-  outline: none;
-  background: white;
-  cursor: inherit;
-  display: block;
+.file-upload-label:hover {
+    border-color: var(--color-main-light);
+    background-color: var(--color-lighter);
+}
+.file-upload-label:active {
+    background-color: var(--color-lighter);
+}
+.admin-form-input[type=file] {
+    display:none;
 }
 .admin-form-input:disabled{
     background-color: var(--color-disabled);

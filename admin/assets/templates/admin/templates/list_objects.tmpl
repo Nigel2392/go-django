@@ -1,0 +1,57 @@
+{{ template "base" . }}
+
+{{ define "title" }} {{index .Data "title"}} {{end}}
+
+{{ define "css" }}
+
+{{ end }}
+
+{{ define "content" }}
+{{$model_data := index .Data "items"}}
+{{$total_item_count := index .Data "total_item_count"}}
+{{$items_in_past := index .Data "items_in_past"}}
+<div class="admin-list-top">
+    {{$model := index .Data "model"}}
+    {{ if has_permissions .Request.User $model.Permissions.Create }}
+        <a href="{{$model.URL_Create}}" class="admin-btn">Create</a>
+    {{ end }}
+    {{ template "page-limit.tmpl" .Data }}
+    <h1 class="list-header">{{$model.Name}} ({{$items_in_past}} / {{$total_item_count}})</h1>
+</div>
+<div class="table-container">
+    {{ if ge $total_item_count 1 }}
+        <table width="100%">
+            {{ range $i, $item := $model_data }}
+                {{ if eq $i 0 }}
+                    <thead>
+                        <tr>
+                            {{ range $value := $item }}
+                                <th>{{ $value }}</th>
+                            {{ end }}
+                        </tr>
+                    </thead>
+                {{ else }}
+                        <tr>
+                            {{ range $value := $item }}
+                                <td>{{ $value }}</td>
+                            {{ end }}
+                        </tr>
+                {{ end }}
+            {{ end }}
+        </table>
+    {{ else }}
+        <div class="text-center">
+            <h1>No data found</h1>
+        </div>
+    {{ end }}
+</div>
+    
+{{if $pager := index .Data "paginator"}}
+    {{ template "pagination.tmpl" $pager }}
+{{end}}
+
+
+{{ end }}
+
+{{ define "js" }}
+{{ end }}

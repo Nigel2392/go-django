@@ -4,8 +4,8 @@ import (
 	"html/template"
 	"strings"
 
-	"github.com/Nigel2392/go-django/core/httputils/tags"
 	"github.com/Nigel2392/go-django/core/views/interfaces"
+	"github.com/Nigel2392/tags"
 )
 
 var (
@@ -17,6 +17,8 @@ var (
 	_ interfaces.FormField = (*DateField)(nil)
 	_ interfaces.FormField = (*DateTimeField)(nil)
 	_ interfaces.FormField = (*SelectField)(nil)
+	_ interfaces.FormField = (*MultipleSelectField)(nil)
+	_ interfaces.FormField = (*DoubleMultipleSelectField)(nil)
 	_ interfaces.FormField = (*CheckBoxField)(nil)
 
 	_ interfaces.Field = (*IntField)(nil)
@@ -27,6 +29,8 @@ var (
 	_ interfaces.Field = (*DateField)(nil)
 	_ interfaces.Field = (*DateTimeField)(nil)
 	_ interfaces.Field = (*SelectField)(nil)
+	_ interfaces.Field = (*MultipleSelectField)(nil)
+	_ interfaces.Field = (*DoubleMultipleSelectField)(nil)
 	_ interfaces.Field = (*CheckBoxField)(nil)
 )
 
@@ -43,7 +47,6 @@ func (e ElementType) HTML() template.HTML {
 // excludes the name, selected, value, type
 var AllTagsInput = []string{
 	"class",
-	"id",
 	"style",
 	"placeholder",
 	"rows",
@@ -82,9 +85,9 @@ func TagMapToElementAttributes(t tags.TagMap, fields ...string) string {
 		case "class":
 			var classes, ok = t["class"]
 			writeIfOK(&b, ok, ` class="`, strings.Join(classes, " "), `"`)
-		case "id":
-			var id = t.GetSingle("id")
-			writeIfOK(&b, id != "", ` id="`, id, `"`)
+		// case "id":
+		// var id = t.GetSingle("id")
+		// writeIfOK(&b, id != "", ` id="`, id, `"`)
 		case "style":
 			var style, ok = t["style"]
 			writeIfOK(&b, ok, ` style="`, strings.Join(style, ";"), `"`)

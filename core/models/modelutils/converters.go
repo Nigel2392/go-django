@@ -1,10 +1,13 @@
 package modelutils
 
 import (
+	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 	"unsafe"
+
+	"github.com/Nigel2392/go-django/core/views/interfaces"
 )
 
 func ConvertInt(s string) (any, error) {
@@ -129,38 +132,14 @@ func Convert[T any](s string) (T, error) {
 		v = any(s).(T)
 	case []byte:
 		v = any([]byte(s)).(T)
-		//	default:
-		//		wentDefault = true
-		//		var typ = reflect.TypeOf(new(T)).Elem()
-		//		if typ.Kind() == reflect.Slice {
-		//			v, err = ConvertSlice[T](s)
-		//		} else {
-		//			var t = new(T)
-		//			switch t := any(t).(type) {
-		//			case core.FromStringer:
-		//				if err := t.FromString(s); err != nil {
-		//					return nil, err
-		//				}
-		//			default:
-		//				err = fmt.Errorf("cannot convert %v automatically. please provide a Convert(string) (any, error) function", typ)
-		//			}
-		//		}
-		//		//	else if typ.Kind() == reflect.Map {
-		//		//		v, err = ConvertMap(s)
-		//		//	}
-		//	}
-		//	if err != nil && !wentDefault {
-		//		return nil, err
-		//	} else if err == nil && !wentDefault {
-		//		return v, nil
-		//	}
-		//	var valueOf = reflect.ValueOf(v)
-		//	if valueOf.Kind() == reflect.Ptr {
-		//		valueOf = valueOf.Elem()
-		//	}
-		//	if valueOf.Type().ConvertibleTo(reflect.TypeOf(new(T)).Elem()) {
-		//		v = valueOf.Convert(reflect.TypeOf(new(T)).Elem()).Interface()
-		//	}
+	default:
+		var t = new(T)
+		switch t := any(t).(type) {
+		case interfaces.Field:
+			err = t.FormValues([]string{s})
+		default:
+			err = fmt.Errorf("cannot convert %T automatically. this can be done implementing interfaces.Field on type %t", t, t)
+		}
 	}
 
 	return v, err

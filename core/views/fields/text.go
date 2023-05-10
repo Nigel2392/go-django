@@ -4,9 +4,9 @@ import (
 	"database/sql/driver"
 	"fmt"
 
-	"github.com/Nigel2392/go-django/core/httputils/tags"
 	"github.com/Nigel2392/go-django/core/views/interfaces"
 	"github.com/Nigel2392/router/v3/request"
+	"github.com/Nigel2392/tags"
 )
 
 type StringField string
@@ -33,12 +33,12 @@ func (i *StringField) FormValues(v []string) error {
 	return nil
 }
 
-func (i StringField) LabelHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), name))
+func (i StringField) LabelHTML(_ *request.Request, name string, display_text string, tags tags.TagMap) interfaces.Element {
+	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), display_text))
 }
 
 func (i StringField) InputHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<input type="text" name="%s" value="%s" %s>`, name, i, TagMapToElementAttributes(tags, AllTagsInput...)))
+	return ElementType(fmt.Sprintf(`<input type="text" name="%s" id="%s" value="%s" %s>`, name, name, i, TagMapToElementAttributes(tags, AllTagsInput...)))
 }
 
 type TextField string
@@ -65,10 +65,10 @@ func (i *TextField) FormValues(v []string) error {
 	return nil
 }
 
-func (i TextField) LabelHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), name))
+func (i TextField) LabelHTML(_ *request.Request, name string, display_text string, tags tags.TagMap) interfaces.Element {
+	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), display_text))
 }
 
 func (i TextField) InputHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<textarea name="%s" %s>%s</textarea>`, name, i, TagMapToElementAttributes(tags, AllTagsInput...)))
+	return ElementType(fmt.Sprintf(`<textarea name="%s" id="%s" %s>%s</textarea>`, name, name, TagMapToElementAttributes(tags, AllTagsInput...), i))
 }

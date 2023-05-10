@@ -32,6 +32,28 @@ const (
 	PanicOnError    = ErrorHandling(flag.PanicOnError)
 )
 
+var defaultFlags = NewFlags(os.Args[0])
+
+// Register a new command to the default flag set.
+func Register(name string, defaultValue any, description string, handler func(v Value) error) {
+	defaultFlags.Register(name, defaultValue, description, handler)
+}
+
+// Register a command for a pointer to a value to the default flag set.
+func RegisterPtr(ptr, defaultValue any, name string, description string, handler func(v Value) error) {
+	defaultFlags.RegisterPtr(ptr, defaultValue, name, description, handler)
+}
+
+// Register a new command to the default flag set.
+func RegisterCommand(cmd *Command) {
+	defaultFlags.RegisterCommand(cmd)
+}
+
+// Parse the default flag set.
+func Parse() {
+	defaultFlags.Run()
+}
+
 // Initialize a new flag set.
 func NewFlags(name string, handling ...ErrorHandling) *Flags {
 	var errHandler ErrorHandling = ContinueOnError

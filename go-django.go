@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"text/template"
 
-	"github.com/Nigel2392/go-django/admin"
 	"github.com/Nigel2392/go-django/core/app"
 	"github.com/Nigel2392/go-django/core/db"
 	"github.com/Nigel2392/go-django/core/email"
@@ -63,19 +62,14 @@ func Mailer() *email.Manager {
 	return (*app.Application)(defaultApp).Mailer()
 }
 
-func FS() *fs.Manager {
+func Filer() fs.Filer {
 	panicIfNoDefaultApp()
-	return (*app.Application)(defaultApp).FS()
+	return (*app.Application)(defaultApp).Filer()
 }
 
 func Templates() *templates.Manager {
 	panicIfNoDefaultApp()
 	return (*app.Application)(defaultApp).Templates()
-}
-
-func Admin() *admin.AdminSite {
-	panicIfNoDefaultApp()
-	return (*app.Application)(defaultApp).Admin()
 }
 
 func Cache() client.Cache {
@@ -104,7 +98,7 @@ func ServeRedirect() error {
 
 func Register(toAdmin bool, key db.DATABASE_KEY, models ...any) {
 	panicIfNoDefaultApp()
-	(*app.Application)(defaultApp).Register(toAdmin, key, models...)
+	(*app.Application)(defaultApp).Register(key, models...)
 }
 
 func Logger() request.Logger {

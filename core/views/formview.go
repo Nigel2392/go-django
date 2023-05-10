@@ -2,6 +2,7 @@ package views
 
 import (
 	"fmt"
+	"html/template"
 	"io"
 	"net/http"
 	"reflect"
@@ -9,14 +10,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/go-django/auth"
-	"github.com/Nigel2392/go-django/core/httputils/tags"
+	"github.com/Nigel2392/go-django/core/httputils"
 	"github.com/Nigel2392/go-django/core/models/modelutils"
 	"github.com/Nigel2392/go-django/core/views/fields"
 	"github.com/Nigel2392/go-django/core/views/interfaces"
 	"github.com/Nigel2392/orderedmap"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/router/v3/request/response"
+	"github.com/Nigel2392/tags"
 )
 
 type FormData struct {
@@ -29,11 +30,21 @@ type FormGroup struct {
 	Input interfaces.Element
 }
 
+type FormField struct {
+	Field interfaces.FormField
+	Tags  tags.TagMap
+	value any
+	Label string
+}
+
 // A FormView is a view that renders a form and handles the submission of that form.
 //
 // It will fill in the values of the form based on the model passed in.
 //
 // The default post method will call the Save method on the model passed in.
+//
+// Default tag for the formfields is "fields",
+// this can be changed by setting the FormTag field.
 type BaseFormView[T interfaces.Saver] struct {
 	// The action of the form
 	//
@@ -42,13 +53,23 @@ type BaseFormView[T interfaces.Saver] struct {
 	// Example: "create", "view", "update"
 	Action string
 	// The formfields of the model passed into the form.
-	formFields *orderedmap.Map[string, interfaces.FormField]
+	formFields *orderedmap.Map[string, *FormField]
 	// A fallback url for when an error occurs, and the form is submitted.
 	BackURL func(r *request.Request) string
+	// The success url for when the form is submitted.
+	PostRedirect func(r *request.Request, data T) string
+	// Extra function to run for authentication.
+	//
+	// This will be run before the form is rendered.
+	ExtraAuth func(r *request.Request) error
 	// The required permissions needed to perform an action on the model.
-	RequiredPermissions []*auth.Permission
-	// Whether the user needs to be authenticated to view the page.
 	NeedsAuth bool
+	// Needs admin permissions to perform an action on the model.
+	NeedsAdmin bool
+	// Whether a superuser can perform the action.
+	SuperUserCanPerform bool
+	// Function to run before rendering a template.
+	BeforeRender func(r *request.Request, data T, fieldMap *orderedmap.Map[string, *FormField])
 	// Function to run on submission, when overridden; the default save method will not be called.
 	OnSubmit func(r *request.Request, data T) error
 	// The form data for when the form is submitted.
@@ -62,6 +83,8 @@ type BaseFormView[T interfaces.Saver] struct {
 	POST func(r *request.Request, data T) error
 	// Template to pass the template variables to.
 	Template string
+	// Function to get a template.
+	GetTemplate func(string) (*template.Template, string, error)
 	// The instance of the model passed in.
 	//
 	// This will be automatically filled in with the model passed in.
@@ -71,22 +94,37 @@ type BaseFormView[T interfaces.Saver] struct {
 	// The function to get the instance of the model passed in.
 	//
 	// This will set the instance to the result of the function.
-	GetInstance func(r *request.Request) T
+	GetInstance func(r *request.Request) (T, error)
 
 	// Function to run after the form is submitted and the view specified has been called.
 	//
 	// This will only get called on the POST method!
 	AfterSubmit func(r *request.Request, data T)
 
-	fields  []string
-	tagsFor map[string]tags.TagMap
+	isNew bool
+
+	fields []string
 
 	// The tag to use to fetch attributes from struct fields.
 	//
 	// Defaults to "fields".
 	FormTag string
+
+	// Javascript to include in the template.
+	//
+	// You must include the <script> tags.
+	Scripts map[string]template.HTML
 }
 
+// The fields to use with the form
+//
+// If the field cannot be found on the struct, we will check the instance's struct methods.
+//
+// This method must implement one of the following signatures:
+//
+//	func() interface{}
+//	func() (interface{}, tags.TagMap)
+//	func() (interface{}, tags.TagMap, error)
 func (c *BaseFormView[T]) WithFields(fields ...string) error {
 	// var allFields bool
 	if len(fields) == 1 && fields[0] == "*" {
@@ -119,51 +157,64 @@ func (c *BaseFormView[T]) WithFields(fields ...string) error {
 }
 
 func (c *BaseFormView[T]) Serve(r *request.Request) {
+	var err error
 	if c.formFields == nil {
-		var err = c.WithFields("*")
+		err = c.WithFields("*")
 		if err != nil {
 			panic(err)
 		}
 	}
-	var err error
-	if auth.LOGIN_URL != "" {
-		if !r.User.IsAuthenticated() && c.NeedsAuth {
-			r.Data.AddMessage("error", fmt.Sprintf("You need to be logged in to %s this item.", c.Action))
-			r.Redirect(auth.LOGIN_URL, 302, r.Request.URL.Path)
-			return
-		}
 
-		var u, ok = r.User.(*auth.User)
-		if !ok {
-			// This should never happen, but just in case.
-			goto skip_auth
+	if c.NeedsAuth {
+		if r.User == nil {
+			r.Data.AddMessage("error", "You need to be logged in to perform this action.")
+			goto errRedirect
 		}
-
-		if len(c.RequiredPermissions) > 0 {
-			if !r.User.(*auth.User).HasPerms(c.RequiredPermissions...) || !u.IsAuthenticated() {
-				goto notAllowed
+		if c.SuperUserCanPerform && !r.User.IsAdmin() {
+			r.Data.AddMessage("error", "You need to be a superuser to perform this action.")
+			goto errRedirect
+		}
+		if c.ExtraAuth != nil {
+			if err := c.ExtraAuth(r); err != nil {
+				r.Data.AddMessage("error", err.Error())
+				goto errRedirect
 			}
 		}
-		goto skip_auth
-	notAllowed:
-		r.Data.AddMessage("error", fmt.Sprintf("You are not allowed to %s this item.", c.Action))
+	}
+
+	err = c.setInstance(r)
+	if err != nil {
+		r.Data.AddMessage("error", err.Error())
 		goto errRedirect
 	}
-skip_auth:
-
-	c.setInstance(r)
 
 	switch r.Method() {
 	case http.MethodGet:
+		if c.BeforeRender != nil {
+			c.BeforeRender(r, c.Instance, c.formFields)
+		}
 		var form = make([]FormGroup, 0, c.formFields.Len())
-		c.formFields.ForEach(func(k string, v interfaces.FormField) bool {
+		var err error
+		c.formFields.ForEach(func(k string, v *FormField) bool {
 			var formGroup = FormGroup{
-				Label: v.LabelHTML(r, k, c.tagsFor[k]),
-				Input: v.InputHTML(r, k, c.tagsFor[k]),
+				Label: v.Field.LabelHTML(r, k, v.Label, v.Tags),
+				Input: v.Field.InputHTML(r, k, v.Tags),
 			}
 			form = append(form, formGroup)
 			return true
 		})
+
+		var scripts = make([]template.HTML, 0, len(c.Scripts))
+		for _, v := range c.Scripts {
+			if len(v) == 0 {
+				continue
+			}
+			scripts = append(scripts, v)
+		}
+		if len(scripts) > 0 {
+			r.Data.Set("scripts", scripts)
+		}
+
 		r.Data.Set("form", form)
 		if c.GET != nil {
 			if err := c.GET(r); err != nil {
@@ -194,7 +245,7 @@ skip_auth:
 				c.AfterSubmit(r, c.Instance)
 			}()
 		}
-		fmt.Println("POST", c.FormData)
+
 		if c.POST != nil {
 			if err := c.POST(r, c.Instance); err != nil {
 				r.Data.AddMessage("error", err.Error())
@@ -219,17 +270,19 @@ errRedirect:
 	return
 }
 
-func (c *BaseFormView[T]) setInstance(r *request.Request) {
+func (c *BaseFormView[T]) setInstance(r *request.Request) error {
 	if c.GetInstance != nil {
-		c.Instance = c.GetInstance(r)
+		var err error
+		c.Instance, err = c.GetInstance(r)
+		if err != nil {
+			return err
+		}
 	} else {
 		c.Instance = *new(T)
 	}
+
 	if c.formFields == nil {
-		c.formFields = orderedmap.New[string, interfaces.FormField]()
-	}
-	if c.tagsFor == nil {
-		c.tagsFor = make(map[string]tags.TagMap)
+		c.formFields = orderedmap.New[string, *FormField]()
 	}
 	if c.FormTag == "" {
 		c.FormTag = "fields"
@@ -240,9 +293,14 @@ func (c *BaseFormView[T]) setInstance(r *request.Request) {
 			panic(err)
 		}
 
-		c.tagsFor[field] = tagmap
+		var permissions, ok = tagmap.GetOK("permissions")
+		if ok {
+			if !r.User.HasPermissions(permissions...) {
+				continue
+			}
+		}
 
-		var formField, ok = f.(interfaces.FormField)
+		formField, ok := f.(interfaces.FormField)
 		if !ok {
 			if canGuessFormField(f) {
 				formField = guessFormField(f, tagmap)
@@ -260,9 +318,65 @@ func (c *BaseFormView[T]) setInstance(r *request.Request) {
 				}
 			}
 		}
+
 	addFormField:
-		c.formFields.Set(field, formField)
+		if c.isNew {
+			if tagmap.Exists("omit_on_create") {
+				continue
+			}
+		} else {
+			if tagmap.Exists("omit_on_update") {
+				continue
+			}
+		}
+
+		scripter, ok := formField.(interfaces.Scripter)
+		if ok {
+			scriptName, script := scripter.Script()
+			c.Scripts[scriptName] = script
+		}
+
+		// Fill up the initial value of a formfield if it implements the Initializer interface.
+		var initializer interfaces.Initializer
+		var reflectedField = reflect.ValueOf(formField)
+		if reflectedField.Kind() == reflect.Ptr {
+			reflectedField = reflectedField.Elem()
+		}
+		var typeOfInitializer = reflect.TypeOf((*interfaces.Initializer)(nil)).Elem()
+		var newOf = reflect.New(reflectedField.Type())
+		newOf.Elem().Set(reflectedField)
+		if newOf.Type().Implements(typeOfInitializer) {
+			initializer = newOf.Interface().(interfaces.Initializer)
+		} else {
+			if newOf.Elem().Type().Implements(typeOfInitializer) {
+				initializer = newOf.Elem().Interface().(interfaces.Initializer)
+			}
+		}
+
+		if initializer != nil {
+			initializer.Initial(r, c.Instance, field)
+			formField = initializer.(interfaces.FormField)
+		}
+
+		var label string
+		var labelMethod = fmt.Sprintf("Get%sLabel", strings.Title(field))
+		var labelMethodValue = reflect.ValueOf(c.Instance).MethodByName(labelMethod)
+		if labelMethodValue.IsValid() {
+			var labelMethodResult = labelMethodValue.Call([]reflect.Value{})
+			label = labelMethodResult[0].String()
+		}
+		if label == "" || !ok {
+			label = httputils.FormatLabel(field)
+		}
+		var _formField = &FormField{
+			Field: formField,
+			Tags:  tagmap,
+			Label: label,
+			value: f,
+		}
+		c.formFields.Set(field, _formField)
 	}
+	return nil
 }
 
 var (
@@ -293,7 +407,7 @@ func getFieldData(model any, field string, tagToFetch string) (interface{}, tags
 	if f.IsValid() && f.CanInterface() {
 		var structField, ok = v.Type().FieldByName(field)
 		if !ok {
-			return nil, nil, fmt.Errorf("field %s is not valid", field)
+			return nil, nil, fmt.Errorf("field %s is not valid or does not exist", field)
 		}
 		var tag = structField.Tag.Get(tagToFetch)
 		var tagMap = tags.ParseWithDelimiter(tag, TAG_DEFAULT_DELIMITER_KEYVALUE, TAG_DEFAULT_DELIMITER_KEY, TAG_DEFAULT_DELIMITER_VALUE)
@@ -306,6 +420,19 @@ func getFieldData(model any, field string, tagToFetch string) (interface{}, tags
 		}
 
 		return f.Interface(), tagMap, nil
+	} else {
+		var method = v.MethodByName(field)
+		if method.IsValid() && method.CanInterface() {
+			switch method.Interface().(type) {
+			case func() interface{}:
+				return method.Interface().(func() interface{})(), nil, nil
+			case func() (interface{}, tags.TagMap):
+				var res, tagmap = method.Interface().(func() (interface{}, tags.TagMap))()
+				return res, tagmap, nil
+			case func() (interface{}, tags.TagMap, error):
+				return method.Interface().(func() (interface{}, tags.TagMap, error))()
+			}
+		}
 	}
 	return nil, nil, fmt.Errorf("field %s is not valid", field)
 }
@@ -505,11 +632,18 @@ func setGuessedField(m reflect.Value, value []string) error {
 
 func (c *BaseFormView[T]) defaultGet(r *request.Request) error {
 	var err error
-	err = response.Render(r, c.Template)
-	if err != nil {
-		return err
+	if c.GetTemplate != nil {
+		var tmpl *template.Template
+		var name string
+		tmpl, name, err = c.GetTemplate(c.Template)
+		if err != nil {
+			return err
+		}
+		err = response.Template(r, tmpl, name)
+	} else {
+		err = response.Render(r, c.Template)
 	}
-	return nil
+	return err
 }
 
 func (c *BaseFormView[T]) defaultPost(r *request.Request) error {
@@ -518,40 +652,48 @@ func (c *BaseFormView[T]) defaultPost(r *request.Request) error {
 		return err
 	}
 
-	if c.BackURL != nil {
-		r.Redirect(c.BackURL(r), 302, r.Request.URL.Path)
-	} else {
-		r.Redirect(r.Request.Referer(), 302, r.Request.URL.Path)
+	if c.PostRedirect != nil {
+		r.Redirect(c.PostRedirect(r, c.Instance), http.StatusFound)
 	}
 
 	return nil
 }
 
+// aquireFormData will parse the request and aquire the form data
+//
+// the data will be stored in the FormData map
+//
+// this will be later used to populate the instance's fields
+//
+// BEWARE: if a field is not present in the form, it will not be set, unless it is a boolean.
+//
+// This is for compatibility with html forms, where unchecked checkboxes are not sent.
+//
+// This is also to not override any values which were previously set on the instance, for updating purposes.
 func (c *BaseFormView[T]) aquireFormData(r *request.Request) error {
-	var data = make(map[string]FormData)
 	var err = r.Request.ParseMultipartForm(c.maxMem())
 	if err != nil {
 		return err
 	}
-	for k, v := range r.Request.Form {
-		if _, ok := c.formFields.GetOK(k); !ok {
-			continue
+	c.FormData = make(map[string]FormData)
+	c.formFields.ForEach(func(k string, v *FormField) bool {
+		if value, ok := r.Request.Form[k]; ok {
+			c.FormData[k] = FormData{Values: value}
+		} else if formFiles, ok := r.Request.MultipartForm.File[k]; ok {
+			var files = make([]interfaces.File, len(formFiles))
+			for i, f := range formFiles {
+				files[i] = fields.FormFile{Filename: f.Filename, OpenFunc: func() (io.ReadSeekCloser, error) {
+					return f.Open()
+				}}
+			}
+			c.FormData[k] = FormData{Files: files}
+		} else {
+			if reflect.TypeOf(v.value).Kind() == reflect.Bool {
+				c.FormData[k] = FormData{}
+			}
 		}
-		data[k] = FormData{Values: v}
-	}
-	for k, v := range r.Request.MultipartForm.File {
-		if _, ok := c.formFields.GetOK(k); !ok {
-			continue
-		}
-		var files = make([]interfaces.File, len(v))
-		for i, f := range v {
-			files[i] = fields.FormFile{Filename: f.Filename, OpenFunc: func() (io.ReadSeekCloser, error) {
-				return f.Open()
-			}}
-		}
-		data[k] = FormData{Files: files}
-	}
-	c.FormData = data
+		return true
+	})
 	return nil
 }
 
@@ -562,6 +704,15 @@ func (c *BaseFormView[T]) maxMem() int64 {
 	return c.MaxMemory
 }
 
+// fillModelInstance will fill the instance's fields with the data aquired from the form
+//
+// if a field is not present in the form, it will not be set, unless it is a boolean.
+//
+// The fields must either consist of primitives,
+// time values or implement one of the following interfaces:
+//
+//   - interfaces.Field
+//   - interfaces.FileField
 func (c *BaseFormView[T]) fillModelInstance(r *request.Request) error {
 	var typeOf = reflect.TypeOf(c.Instance)
 	if typeOf.Kind() == reflect.Ptr {
@@ -573,84 +724,111 @@ func (c *BaseFormView[T]) fillModelInstance(r *request.Request) error {
 		valueOf = valueOf.Elem()
 	}
 
-	var (
-		err error
-	)
+	// The instance is nil.
+	if !valueOf.IsValid() {
+		valueOf = reflect.New(typeOf).Elem()
+		if !valueOf.IsValid() {
+			return fmt.Errorf("instance is not valid")
+		}
+		if reflect.TypeOf(c.Instance).Kind() == reflect.Ptr {
+			c.Instance = valueOf.Addr().Interface().(T)
+		} else {
+			c.Instance = valueOf.Interface().(T)
+		}
+	}
 
-	c.formFields.ForEach(func(fieldName string, _ interfaces.FormField) bool {
-		var fieldVal = valueOf.FieldByName(fieldName)
-		if !fieldVal.IsValid() {
+	var err error
+	c.formFields.ForEach(func(fieldName string, f *FormField) bool {
+		var structField = valueOf.FieldByName(fieldName)
+		if !structField.IsValid() {
 			return true
 		}
-		if fieldVal.Kind() == reflect.Ptr {
-			fieldVal = fieldVal.Elem()
+		if structField.Kind() == reflect.Ptr {
+			structField = structField.Elem()
 		}
 
-		var instanceField = reflect.New(fieldVal.Type()).Interface()
+		var rNewField = reflect.New(structField.Type())
+		rNewField.Elem().Set(structField)
+		var newField = rNewField.Interface()
 		var checked bool
 	fillField:
-		switch v := instanceField.(type) {
+		switch v := newField.(type) {
 		case interfaces.Field:
 			var formField, ok = c.FormData[fieldName]
 			if !ok {
 				return true
 			}
 			v.FormValues(formField.Values)
-			instanceField = v
+			newField = v
 		case interfaces.FileField:
 			var formField, ok = c.FormData[fieldName]
 			if !ok {
 				return true
 			}
 			v.FormFiles(formField.Files)
-			instanceField = v
+			newField = v
 		default:
-			if canGuessFormField(fieldVal.Interface()) {
+			if canGuessFormField(structField.Interface()) {
 				var formField, ok = c.FormData[fieldName]
 				if !ok {
 					return true
 				}
-				err = setGuessedField(fieldVal, formField.Values)
+				err = setGuessedField(structField, formField.Values)
 				if err != nil {
 					return false
 				}
 
-				if v, ok := instanceField.(interfaces.Validator); ok {
-					if err = v.Validate(); err != nil {
-						return true
-					}
+				if err = fieldValid(newField, f.Tags); err != nil {
+					return false
 				}
 
 				return true
-			} else if reflect.TypeOf(instanceField).Kind() == reflect.Ptr && !checked {
-				instanceField = reflect.ValueOf(instanceField).Elem().Interface()
+			} else if reflect.TypeOf(newField).Kind() == reflect.Ptr && !checked {
+				newField = reflect.ValueOf(newField).Elem().Interface()
 				checked = true
 				goto fillField
 			}
 		}
-		if v, ok := instanceField.(interfaces.Validator); ok {
-			if err = v.Validate(); err != nil {
-				return true
-			}
+
+		if err = fieldValid(newField, f.Tags); err != nil {
+			return false
 		}
-		var field = reflect.ValueOf(instanceField)
+
+		var field = reflect.ValueOf(newField)
 		if field.Kind() == reflect.Ptr {
 			field = field.Elem()
 		}
-		if field.Type().ConvertibleTo(fieldVal.Type()) {
-			fieldVal.Set(field.Convert(fieldVal.Type()))
-		} else {
-			err = fmt.Errorf("field %s type %s is not convertible to %s", fieldName, field.Type(), fieldVal.Type())
+
+		if !field.Type().ConvertibleTo(structField.Type()) {
+			err = fmt.Errorf("field %s type %s is not convertible to %s", fieldName, field.Type(), structField.Type())
 			return false
 		}
+
+		structField.Set(field)
 		return true
 	})
+
 	return err
+}
+
+// fieldValid will check if the field is valid
+func fieldValid(field interface{}, tags tags.TagMap) error {
+	if v, ok := field.(interfaces.Validator); ok {
+		if err := v.Validate(); err != nil {
+			return err
+		}
+	}
+	if v, ok := field.(interfaces.ValidatorTagged); ok {
+		if err := v.ValidateWithTags(tags); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (c *BaseFormView[T]) Save(r *request.Request) error {
 	if c.OnSubmit != nil {
 		return c.OnSubmit(r, c.Instance)
 	}
-	return c.Instance.Save()
+	return c.Instance.Save(c.isNew)
 }

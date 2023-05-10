@@ -20,14 +20,7 @@ func (c *UpdateView[T]) ServeHTTP(r *request.Request) {
 	}
 
 	if c.GetQuerySet != nil {
-		var instance, err = c.GetQuerySet(r)
-		if err != nil {
-			r.Error(500, err.Error())
-			return
-		}
-		c.BaseFormView.GetInstance = func(r *request.Request) T {
-			return instance
-		}
+		c.BaseFormView.GetInstance = c.GetQuerySet
 	}
 	c.BaseFormView.Serve(r)
 }

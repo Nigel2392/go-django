@@ -1,0 +1,25 @@
+{{ template "base" . }}
+
+{{ define "title" }} {{ index .Data "title" }} {{end}}
+
+{{ define "css" }}{{ end }}
+
+{{ define "content" }}
+    {{ $form := index .Data "form" }}
+    <form method="POST" enctype="multipart/form-data">
+        {{ .CSRFToken.Input }}
+        {{ range $fieldgroup := $form }}
+            <div class="admin-form-div">
+                {{ $fieldgroup.Label.HTML }}
+                {{ $fieldgroup.Input.HTML }}
+            </div>
+        {{ end }}
+        <div class="buttons-left">
+            <button type="submit" class="admin-button-light margins-top">Create</button>
+        </div>
+    </form>
+{{ end }}
+
+{{ define "js" }}
+    {{template "m2m.tmpl" .}}
+{{ end }}

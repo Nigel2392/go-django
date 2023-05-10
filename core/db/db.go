@@ -80,6 +80,7 @@ func (m *DatabasePoolItem) AutoMigrate() error {
 	if m.db == nil {
 		m.Init()
 	}
+
 	return m.DB().AutoMigrate(m.models...)
 }
 
@@ -92,14 +93,14 @@ func (d *DatabasePoolItem) createSQLDSN() string {
 	var sslmode = d.DB_SSLMODE
 	if user == "" {
 		if sslmode != "" {
-			return host + ":" + strconv.Itoa(port) + "/" + database + "?sslmode=" + sslmode + "&charset=utf8&parseTime=True&loc=Local"
+			return host + ":" + strconv.Itoa(port) + "/" + database + "?sslmode=" + sslmode + "&charset=utf8&parseTime=true&loc=Local"
 		}
-		return host + ":" + strconv.Itoa(port) + "/" + database + "?charset=utf8&parseTime=True&loc=Local"
+		return host + ":" + strconv.Itoa(port) + "/" + database + "?charset=utf8&parseTime=true&loc=Local"
 	}
 	if sslmode != "" {
-		return user + ":" + password + "@tcp(" + host + ":" + strconv.Itoa(port) + ")/" + database + "?sslmode=" + sslmode + "&charset=utf8&parseTime=True&loc=Local"
+		return user + ":" + password + "@tcp(" + host + ":" + strconv.Itoa(port) + ")/" + database + "?sslmode=" + sslmode + "&charset=utf8&parseTime=true&loc=Local"
 	}
-	return user + ":" + password + "@tcp(" + host + ":" + strconv.Itoa(port) + ")/" + database + "?charset=utf8&parseTime=True&loc=Local"
+	return user + ":" + password + "@tcp(" + host + ":" + strconv.Itoa(port) + ")/" + database + "?charset=utf8&parseTime=true&loc=Local"
 }
 
 func (d *DatabasePoolItem) Init() *gorm.DB {

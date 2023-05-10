@@ -42,19 +42,19 @@ func (c *CRUDView[T]) URLs() router.Registrar {
 	var name = namer.GetModelName(*new(T))
 	var urls = router.Group("", name)
 	if c.List != nil {
-		urls.Get("/", c.List.ServeHTTP, "list")
+		urls.Get("/", c.List, "list")
 	}
 	if c.Create != nil {
 		// urls.Get("/create", c.Create.ServeHTTP, "create")
 	}
 	if c.Detail != nil {
-		urls.Get("/<<id>>", c.Detail.ServeHTTP, "detail")
+		urls.Get("/<<id>>", c.Detail, "detail")
 	}
 	if c.Update != nil {
 		// urls.Get("/<<id>>/update", c.Update.ServeHTTP, "update")
 	}
 	if c.Delete != nil {
-		urls.Get("/<<id>>/delete", c.Delete.ServeHTTP, "delete")
+		urls.Get("/<<id>>/delete", c.Delete, "delete")
 	}
 	return urls
 }

@@ -53,6 +53,9 @@ func (m *defaultPool) rangeOver(f func(value PoolItem[*gorm.DB]) bool) {
 func (m *defaultPool) AutoMigrate() error {
 	var err error
 	m.rangeOver(func(db PoolItem[*gorm.DB]) bool {
+		if db == nil {
+			panic("nil database in pool")
+		}
 		err = db.AutoMigrate()
 		return err == nil
 	})

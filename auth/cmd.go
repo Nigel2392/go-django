@@ -1,11 +1,12 @@
 package auth
 
 import (
+	"context"
 	"errors"
 
+	"github.com/Nigel2392/forms"
+	"github.com/Nigel2392/forms/validators"
 	"github.com/Nigel2392/go-django/core/flag"
-	"github.com/Nigel2392/go-django/forms"
-	"github.com/Nigel2392/go-django/forms/validators"
 	"github.com/Nigel2392/typeutils/terminal"
 )
 
@@ -24,6 +25,12 @@ func createSuperUserFunc(v flag.Value) error {
 	if v.IsZero() {
 		return nil
 	}
+	// Ask for input
+	CreateAdminFromTerminal()
+	return nil
+}
+
+func CreateAdminFromTerminal() error {
 	// Ask for input
 	var email = terminal.Ask("Email: ", true)
 	var username = terminal.Ask("Username: ", true)
@@ -77,7 +84,7 @@ func CreateAdminUser(email, username, first_name, last_name, password string) (*
 
 	// Create the user
 	var user = &User{
-		Email:           email,
+		Email:           EmailField(email),
 		Username:        username,
 		FirstName:       first_name,
 		LastName:        last_name,
@@ -86,14 +93,14 @@ func CreateAdminUser(email, username, first_name, last_name, password string) (*
 	}
 
 	// Set the password
-	err = user.SetPassword(password)
+	err = SetPassword(user, password)
 	if err != nil {
 		return nil, err
 	}
 
 	// Update the user to be a super user
 	user.IsAdministrator = true
-	err = auth_db.Create(user).Error
+	err = Auth.Queries.CreateUser(context.Background(), user)
 	if err != nil {
 		return nil, err
 	}

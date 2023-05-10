@@ -38,6 +38,8 @@ type ListView[T interfaces.Lister[T]] struct {
 	// This is used when the user specifies a number of items per page that is
 	// greater than this value.
 	MaxPerPage int
+
+	GetQuerySet func(r *request.Request) ([]T, error)
 }
 
 func (v *ListView[T]) ServeHTTP(r *request.Request) {

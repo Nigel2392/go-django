@@ -1,0 +1,32 @@
+{{ template "base" . }}
+
+{{ define "title" }} {{ index .Data "title" }} {{end}}
+
+{{ define "css" }}{{ end }}
+
+{{ define "content" }}
+    {{ $model := index .Data "model" }}
+    {{ $id := index .Data "id" }}
+    {{ $form := index .Data "form" }}
+    <form method="POST" enctype="multipart/form-data">
+        {{ .CSRFToken.Input }}
+        {{ range $fieldgroup := $form }}
+            <div class="admin-form-div">
+                {{ $fieldgroup.Label.HTML }}
+                {{ $fieldgroup.Input.HTML }}
+            </div>
+        {{ end }}
+        <div class="buttons-left">
+            {{ if has_permissions .Request.User $model.Permissions.Update }}
+                <button type="submit" class="admin-button-light margins-top">Save</button>
+            {{ end }}
+            {{ if has_permissions .Request.User $model.Permissions.Delete }}
+                <a href="{{ $model.URL_Delete.Format $id }}" class="admin-button-light danger-button margins-top">Delete</a>
+            {{ end }}
+        </div>
+    </form>
+{{ end }}
+
+{{ define "js" }}
+    {{template "m2m.tmpl" .}}
+{{ end }}

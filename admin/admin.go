@@ -2,227 +2,98 @@ package admin
 
 import (
 	"embed"
+	"fmt"
 	"html/template"
 	"io/fs"
-	"os"
+	"reflect"
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/go-django/admin/internal/menu"
-	"github.com/Nigel2392/go-django/admin/internal/models"
-	"github.com/Nigel2392/go-django/auth"
-	"github.com/Nigel2392/go-django/core/db"
-	mfs "github.com/Nigel2392/go-django/core/fs"
 	"github.com/Nigel2392/go-django/core/httputils"
-	logger "github.com/Nigel2392/request-logger"
+	"github.com/Nigel2392/go-django/core/models/modelutils"
+	"github.com/Nigel2392/orderedmap"
 	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/router/v3/templates"
 	"github.com/Nigel2392/router/v3/templates/extensions"
-	"gorm.io/gorm"
 )
 
-type AdminSite struct {
-	// The name of the admin site.
-	Name string
+func init() {
+	var TemplateFS, err = fs.Sub(templateFileSystem, "assets/templates")
+	if err != nil {
+		panic(err)
+	}
+	templateFS = TemplateFS
+	adminSite_Route.Use(
+		adminSiteMiddleware,
+	)
+	adminSite_Route.Get("", router.HandleFunc(indexView), "admin:index")
 
-	// The URL for the admin site.
-	//
-	// This is the prefix for all admin site URLs.
-	URL string
-
-	// The order of applications in the admin site.
-	//
-	// This is used to sort the applications in the admin site.
-	AppOrder []string
-
-	// The list of groups that are allowed to access the admin site.
-	//
-	// Allows bundles of groups.
-	//
-	// Example:
-	//
-	//	AdminSite_AllowedGroups = [][]string{
-	//		{"admin", "superuser"}, // Will check for both admin and superuser
-	//		{"admin"}, // Will check for admin
-	//	}
-	AllowedGroups [][]string
-
-	// Logger is the logger that is used to log errors.
-	//
-	// If none is specified on admin.Initialize(),
-	//
-	// a new logger is automatically assigned with loglevel DEBUG.
-	Logger request.Logger
-
-	// The list of registered models.
-	//
-	// This is used to generate the admin site.
-	//
-	// There are certain requirements for a model to be registered:
-	//
-	// - The model must have an ID field.
-	//
-	// - The ID field can only be of types:
-	//   - int
-	//   - int8
-	//   - int16
-	//   - int32
-	//   - int64
-	//   - uint
-	//   - uint8
-	//   - uint16
-	//   - uint32
-	//   - uint64
-	//   - string
-	models []*models.Model
-
-	// Database connection pool.
-	//
-	// This is used to store the logs, and to fetch the models.
-	DBPool db.Pool[*gorm.DB]
-
-	// Admin site route.
-	//
-	// This is the route that is used to register the admin site.
-	//
-	// This is only used internally.
-	registrar router.Registrar
-
-	// Internal admin site routes.
-	//
-	// This is used internally to easily register internal routes.
-	internalRegistrar router.Registrar
-
-	// Internal models
-	//
-	// This is used internally to easily register internal models.
-	internal_models []*internalModel
-
-	// Internal app name
-	//
-	// Set this before Initialize()ing the admin site.
-	InternalAppName string
-
-	// Adminsite extensions.
-	//
-	// The slice is only to be used internally.
-	//
-	// To add extensions, use the RegisterExtension() function.
-	//
-	// The extension interface is defined in the router/templates/extensions package.
-	extensions []extensions.Extension
-
-	// Per default, the admin site uses the request.TEMPLATE_MANAGER to fetch extensions.
-	//
-	// This can be overridden by setting this variable.
-	ExtensionsManager *templates.Manager
-
-	// Extension URL prefix.
-	//
-	// This is the prefix for all extension URLs.
-	ExtensionURL string
-
-	// Application name for extensions.
-	//
-	// This is the name which will be displayed in the admin site.
-	ExtensionsAppName string
-
-	// Template manager for the admin site.
-	templateMgr *templates.Manager
-
-	// The internal application menu item.
-	//
-	// This will only be loaded once.
-	//
-	// This is where models such as the admin logs will be registered.
-	internalApp *menu.Item
-
-	// The extensions application menu item.
-	//
-	// This will only be loaded once.
-	//
-	// This is where all the extensions will be registered.
-	extensionsApp *menu.Item
-
-	// File system for saving uploaded files.
-	MediaManager *mfs.Manager
+	var static = adminSite_Route.Get("/static/<<any>>",
+		router.NewFSHandler(fmt.Sprintf("%s/static/", AdminSite_URL), staticFileSystem),
+		"static")
+	static.(*router.Route).DisableMiddleware()
 }
 
-func NewAdminSite(name, url string, p db.Pool[*gorm.DB], l ...request.Logger) *AdminSite {
-	var as = &AdminSite{
-		Name:       name,
-		URL:        url,
-		DBPool:     p,
-		models:     make([]*models.Model, 0),
-		extensions: make([]extensions.Extension, 0),
-		AppOrder:   make([]string, 0),
-	}
+var (
+	AdminSite_Name                  = "Admin"
+	AdminSite_URL                   = "/admin"
+	AdminSite_Logger request.Logger = &request.NopLogger{}
 
-	if len(l) > 0 {
-		as.Logger = l[0]
-	} else {
-		var lgr = logger.NewBatchLogger(logger.DEBUG, 5, 1*time.Second, os.Stdout, as.Name+" ")
-		lgr.Colorize = true
-		as.Logger = lgr
+	AdminSite_ExtensionTemplateManager *templates.Manager
+	AdminSite_ExtensionOptions         *extensions.Options
+
+	adminSite_TemplateMgr *templates.Manager
+	adminSite_Apps        = orderedmap.New[string, *Application]()
+	adminSite_Route       = router.Group(AdminSite_URL, "admin")
+
+	adminSite_Extensions      []extensions.Extension
+	adminSite_ExtensionsRoute = adminSite_Route.Group("/admin-extensions", "admin-extensions")
+)
+
+func Route() router.Registrar {
+	if adminSite_Route == nil {
+		panic("Admin site routes are nil!")
 	}
-	return as
+	return adminSite_Route
 }
 
-func (as *AdminSite) Defaults() {
-	var internalAppName = "internal"
-	var extensionsAppName = "extensions"
-
-	if as.InternalAppName == "" {
-		as.InternalAppName = internalAppName
-		as.ExtensionsAppName = extensionsAppName
+func goback(r *request.Request) string {
+	var prev = r.Request.Referer()
+	if prev == "" {
+		return r.URL(router.GET, "admin:index").Format()
 	}
-
-	if as.Logger == nil {
-		var lgr = logger.NewBatchLogger(logger.DEBUG, 5, 1*time.Second, os.Stdout, as.Name+" ")
-		lgr.Colorize = true
-		as.Logger = lgr
-	}
-
-	if as.ExtensionURL == "" {
-		var extensionURL = "/ext"
-		as.ExtensionURL = extensionURL
-	}
-	if len(as.AppOrder) < 1 {
-		as.AppOrder = []string{auth.AUTH_APP_NAME, internalAppName, extensionsAppName}
-	}
-	as.internal_models = []*internalModel{
-		{&Log{}, logView(as), nil, logGroup(as)},
-	}
-
+	return prev
 }
 
-func DefaultAdminSite(name, url string, p db.Pool[*gorm.DB], l ...request.Logger) *AdminSite {
-	var as = NewAdminSite(name, url, p, l...)
-	as.Defaults()
-	return as
-}
-
-func (a *AdminSite) DB() db.PoolItem[*gorm.DB] {
-	return db.GetDefaultDatabase(auth.DB_KEY, a.DBPool)
-}
+var staticFileSystem, _ = fs.Sub(sfs, "assets/static")
 
 var templateFS fs.FS
 
-func (a *AdminSite) templateManager() *templates.Manager {
-	if a.templateMgr != nil {
-		return a.templateMgr
+// The template file system for the admin site.
+//
+// This is where the admin site templates are stored.
+//
+//go:embed assets/templates/*
+var templateFileSystem embed.FS
+
+//go:embed assets/static/*
+var sfs embed.FS
+
+func templateManager() *templates.Manager {
+	if adminSite_TemplateMgr != nil {
+		return adminSite_TemplateMgr
 	}
 	var mgr = &templates.Manager{
 		TEMPLATEFS:             templateFS,
-		USE_TEMPLATE_CACHE:     true,
+		USE_TEMPLATE_CACHE:     false,
 		BASE_TEMPLATE_SUFFIXES: []string{".html", ".tmpl"},
 		BASE_TEMPLATE_DIRS:     []string{"base"},
 		TEMPLATE_DIRS:          []string{"admin"},
 		DEFAULT_FUNCS: template.FuncMap{
 			"title": func(s any) string {
 				if s == nil {
-					return a.Name
+					return AdminSite_Name
 				}
 				switch s := s.(type) {
 				case string:
@@ -236,30 +107,106 @@ func (a *AdminSite) templateManager() *templates.Manager {
 			"max":    maxStrLenFunc,
 			"format": formatFunc,
 			"join":   joinFunc,
+			"has_permissions": func(r request.User, perms ...string) bool {
+				if len(perms) == 0 {
+					return true
+				}
+				if r == nil {
+					return false
+				}
+				return r.HasPermissions(perms...)
+			},
 		},
 	}
-	a.templateMgr = mgr
+	adminSite_TemplateMgr = mgr
 	return mgr
 }
 
-// The template file system for the admin site.
-//
-// This is where the admin site templates are stored.
-//
-//go:embed assets/templates/*
-var templateFileSystem embed.FS
-
-//go:embed assets/static/*
-var sfs embed.FS
-
-var staticFileSystem, _ = fs.Sub(sfs, "assets/static")
-
-func init() {
-	var TemplateFS, err = fs.Sub(templateFileSystem, "assets/templates")
-	if err != nil {
-		panic(err)
+// Join a list of types into a string.
+func joinFunc(args ...any) string {
+	var s = make([]string, len(args))
+	for i, arg := range args {
+		s[i] = formatFunc(arg)
 	}
-	// var TemplateFS = os.DirFS("go-django/admin/assets/templates")
-	templateFS = TemplateFS
-	// staticFileSystem = os.DirFS("go-django/admin/assets/static")
+	return strings.Join(s, "")
+}
+
+// Format a type.
+// If the type can not be formatted, fmt.Sprint.
+func formatFunc(a any) string {
+	if a == nil {
+		return ""
+	}
+	if modelutils.IsModel(a) {
+		return modelutils.GetModelDisplay(a, false)
+	}
+	switch a := a.(type) {
+	case time.Time:
+		return a.Format("15:04:05 02-01-2006")
+	}
+	var t = reflect.TypeOf(a)
+	if t.Kind() == reflect.Ptr {
+		t = t.Elem()
+	}
+	switch t.Kind() {
+	case reflect.Slice, reflect.Array:
+		var s = reflect.ValueOf(a)
+		var l = s.Len()
+		var r = make([]string, l)
+		for i := 0; i < l; i++ {
+			r[i] = fmt.Sprint(s.Index(i).Interface())
+		}
+		return strings.Join(r, ", ")
+	case reflect.Map:
+		var s = reflect.ValueOf(a)
+		var l = s.Len()
+		var r = make([]string, l)
+		var i = 0
+		for _, k := range s.MapKeys() {
+			r[i] = k.String() + ": " + fmt.Sprint(s.MapIndex(k).Interface())
+			i++
+		}
+		return strings.Join(r, ", ")
+	}
+	return fmt.Sprint(a)
+}
+
+// Format a time.Time or *time.Time to a string.
+// This is used to format strings accordingly.
+func formatTime(t any) string {
+	switch t := t.(type) {
+	case time.Time:
+		return t.Format("2006-01-02 15:04:05")
+	case *time.Time:
+		return t.Format("2006-01-02 15:04:05")
+	default:
+		return ""
+	}
+}
+
+// Cut a string or []byte to a maximum length.
+// If the string is longer than max, it will be cut and "..." will be appended.
+func maxStrLenFunc(s any, max int) any {
+	switch v := s.(type) {
+	case string:
+		if len(v) > max {
+			return v[:max] + "..."
+		}
+		return v
+	case []byte:
+		if len(v) > max {
+			return append(v[:max], []byte("...")...)
+		}
+		return v
+	default:
+		return s
+	}
+}
+
+// Divide two numbers.
+func divideFunc(a, b int) int {
+	if b == 0 || a == 0 {
+		return 0
+	}
+	return a / b
 }
