@@ -20,9 +20,71 @@ The framework works through interfaces, thus you must add your own implementatio
 Most of the code is not tested thoroughly, and there could be bugs present.
 If you find any bugs, please report them in the github issues page.
 
+### Adminsite
+
+In the main file are a few developer credentials registered.
+These are used to log into the adminsite.
+
+The adminsite is a group of routes which can be registered.
+
+You can register models with the adminsite, view them, create and edit them.
+
+It has support for indiviual permissions on fields, so you can exclude fields for users who do not have permissions for them.
+
+There are also permissions for the views.
+
+The adminsite has no dependency on the `go-django/auth` package as of now.
+
+This way you can implement your own authentication framework.
+
+As said previously, this mainly works due to interfaces.
+
+There is also configurability with tags for the formfields on a per-field basis, on the main model.
+
+(This however is still undocumented)
+
+There is an implementation for all the default registered fields in the `views/fields` package.
+
+These fields will dictate your form.
+
+The nescessary registered interfaces for the forms and views, and thus adminsite is in `views/interfaces`.
+
+## Views
+
+As said before, it is very easy to create a view, here is an implementation of the adminsite UpdateView:
+
+```go
+func newUpdateView[T ModelInterface[T]](m *viewOptions[T]) *views.UpdateView[T] {
+	return &views.UpdateView[T]{
+		BaseFormView: views.BaseFormView[T]{
+			Template:    template_update_object,
+			GetTemplate: templateManager().Get,
+			BackURL:     goback,
+			NeedsAuth:   true,
+			NeedsAdmin:  true,
+			GetInstance: getInstance(m.Options.Model),
+			FormTag:     "admin-form",
+			BeforeRender: func(r *request.Request, v T, fields *orderedmap.Map[string, *views.FormField]) {
+				r.Data.Set("id", v.StringID())
+				r.Data.Set("model", m.Model)
+				setFieldClasses(r, fields)
+			},
+			PostRedirect: func(r *request.Request, v T) string {
+				return string(m.Model.URL_List.Format())
+			},
+		},
+		Fields: m.Options.FormFields,
+	}
+}
+```
+
+As you can see, this is a very simple all-purpose view. (See the implementation in `views/formview.go`).
+
+The rest is implemented with the interfaces on the model, making these views very portable.
+
 ### Docker-Support
 
-There is built in support for creating a dockerfile and docker-compose file. 
+There is built in support for creating a dockerfile and docker-compose file.
 
 This can be done running the following command:
 
@@ -89,18 +151,12 @@ Now you can run the project with the following command:
 go run ./src/
 ```
 
-### Adminsite
-
-In the main file are a few developer credentials registered.
-These are used to log into the adminsite.
-You can view the adminsite by going to the `<<DOMAIN>>/admin/` url (As specified in config.go).
-
 ## Finished:
 
 - [X] Routing
 - [X] Signals
 - [X] Template file system/manager module
-- [X] ~~Media file system/manager module~~ (Reworked)
+- [X] Media file system/manager module (Reworked)
 - [X] middleware: CSRF protection, Sessions, AllowedHosts
 - [X] *Authentication* (Reworked)
 - [X] Messages (To the templates)
@@ -110,9 +166,9 @@ You can view the adminsite by going to the `<<DOMAIN>>/admin/` url (As specified
 - [X] Command-line flag package
 - [X] Project-setup tool
 - [X] Debug recovery page middleware (Only when running with -debug flag)
+- [X] ~~Forms~~ (Repackaged into separate github repository.)
 
 ## In progress:
 
-- [ ] ~~Forms~~ (Repackaged into separate github repository.)
 - [ ] Testing
 - [ ] Documentation

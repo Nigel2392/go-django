@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"html"
 	"html/template"
 	"net/http"
 	"os"
@@ -418,7 +419,7 @@ func (a *Application) Serve() (http.Handler, error) {
 			DEBUG:     a.DEBUG,
 			HOST:      a.config.Server.Host,
 			PORT:      a.config.Server.Port,
-			ROUTES:    a.Router.String(),
+			ROUTES:    html.EscapeString(a.Router.String()),
 			DATABASES: databases,
 		}
 		a.Router.Use(debug.StacktraceMiddleware(&settings))
@@ -461,11 +462,17 @@ func (a *Application) Serve() (http.Handler, error) {
 				TODO
 
 			//if a.config.File != nil {
-			//	funcMap["static"] = a.config.File.AsStaticURL
-			//	funcMap["media"] = a.config.File.AsMediaURL
+			//
+			//
 			//}
 
 		*/
+		funcMap["static"] = func(i ...any) string {
+			return a.Router.URLFormat("static", i...)
+		}
+		funcMap["media"] = func(i ...any) string {
+			return a.Router.URLFormat("media", i...)
+		}
 		funcMap["url"] = a.Router.URLFormat
 		for k, v := range a.config.DefaultTemplateFuncs {
 			funcMap[k] = v

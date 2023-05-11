@@ -65,10 +65,11 @@ func ConvertMap[T1 comparable, T2 any](s1, s2 string) (any, any, error) {
 }
 
 func Convert[T any](s string) (T, error) {
+	var t = any(*(new(T)))
 	var v T
 	var err error
 	// var wentDefault bool
-	switch any(*(new(T))).(type) {
+	switch t.(type) {
 	case int:
 		var i int64
 		i, err = strconv.ParseInt(s, 10, 64)
@@ -133,15 +134,23 @@ func Convert[T any](s string) (T, error) {
 	case []byte:
 		v = any([]byte(s)).(T)
 	default:
-		var t = new(T)
-		switch t := any(t).(type) {
+		switch t := t.(type) {
 		case interfaces.Field:
+			var typeOfField = reflect.TypeOf(t)
+			var newOf reflect.Value
+			if typeOfField.Kind() == reflect.Ptr {
+				typeOfField = typeOfField.Elem()
+				newOf = reflect.New(typeOfField)
+			} else {
+				newOf = reflect.New(typeOfField).Elem()
+			}
+			t = newOf.Interface().(interfaces.Field)
 			err = t.FormValues([]string{s})
+			v = any(t).(T)
 		default:
 			err = fmt.Errorf("cannot convert %T automatically. this can be done implementing interfaces.Field on type %t", t, t)
 		}
 	}
-
 	return v, err
 }
 

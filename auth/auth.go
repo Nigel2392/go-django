@@ -94,7 +94,7 @@ func Login(r *request.Request, login, password string) (user *User, err error) {
 		return nil, errors.New("Could not validate login field, please contact a site administrator: " + USER_MODEL_LOGIN_FIELD)
 	}
 	if err != nil {
-		return UnAuthenticatedUser(), errors.New("User does not exist: " + err.Error())
+		return UnAuthenticatedUser(), errors.New("User does not exist.")
 	}
 
 	if err = validatePassword(password); err != nil {

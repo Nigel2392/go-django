@@ -31,7 +31,7 @@ func (g *Group) Save(creating bool) error {
 	var permissions = g.PermissionSelect.Left
 	var permissionsIDs = make([]int64, len(permissions))
 	for i, group := range permissions {
-		var intID, err = strconv.ParseInt(group.Value(), 10, 64)
+		var intID, err = strconv.ParseInt(group.OptionValue(), 10, 64)
 		if err != nil {
 			return err
 		}

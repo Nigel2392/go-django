@@ -181,8 +181,8 @@ type viewOptions[T ModelInterface[T]] struct {
 
 func listView[T ModelInterface[T]](m *viewOptions[T]) func(r *request.Request) {
 	if len(m.Options.ListFields) == 0 {
-		m.Options.ListFields = make([]string, 0)
 		var v = reflect.ValueOf(m.Options.Model)
+		m.Options.ListFields = make([]string, 0)
 		var t = v.Type()
 		for i := 0; i < t.NumField(); i++ {
 			var field = t.Field(i)
@@ -245,7 +245,7 @@ func listView[T ModelInterface[T]](m *viewOptions[T]) func(r *request.Request) {
 				stringID))
 
 			rowNames.Set("ID", "ID")
-
+		inner:
 			for j, field := range m.Options.ListFields {
 				var fieldIndex = j + 1
 				var val = valueOf.FieldByName(field)
@@ -256,7 +256,7 @@ func listView[T ModelInterface[T]](m *viewOptions[T]) func(r *request.Request) {
 
 				var t = sField.Tag.Get("admin-form")
 				if t == "-" {
-					continue
+					continue inner
 				}
 
 				var tagMap = tags.ParseWithDelimiter(t, ";", "=", ",")
@@ -274,7 +274,19 @@ func listView[T ModelInterface[T]](m *viewOptions[T]) func(r *request.Request) {
 				if ok {
 					if !r.User.HasPermissions(permissions...) {
 						row[fieldIndex] = "**********"
-						continue
+						continue inner
+					}
+				}
+
+				if valueOf.CanAddr() {
+					var method = valueOf.MethodByName(fmt.Sprintf("Get%sDisplay", field))
+					if method.IsValid() {
+						var ret, ok = method.Interface().(func() string)
+						if !ok {
+							panic(fmt.Sprintf("invalid method signature for Get%sDisplay", field))
+						}
+						row[fieldIndex] = ret()
+						continue inner
 					}
 				}
 
@@ -283,18 +295,18 @@ func listView[T ModelInterface[T]](m *viewOptions[T]) func(r *request.Request) {
 					row[fieldIndex] = iFace.AdminDisplay()
 				case time.Time:
 					row[fieldIndex] = iFace.Format("2006-01-02 15:04:05")
-					continue
+					continue inner
 				case fmt.Stringer:
 					row[fieldIndex] = iFace.String()
-					continue
+					continue inner
 				case error:
 					row[fieldIndex] = iFace.Error()
-					continue
+					continue inner
 				}
 
 				switch val.Kind() {
 				case reflect.Struct, reflect.Slice, reflect.Map:
-					panic("non-primitive fields must implement AdminDisplayer interface")
+					panic(fmt.Errorf("non-primitive fields must implement AdminDisplayer interface: %s", field))
 				}
 
 				row[fieldIndex] = val.Interface()

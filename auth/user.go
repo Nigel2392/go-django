@@ -36,50 +36,76 @@ type User struct {
 	UploadAnImage fields.FileField                 `gorm:"-" json:"image"`
 	Groups        []Group                          `json:"groups" gorm:"-"`
 	Permissions   []Permission                     `json:"permissions" gorm:"-"`
+
+	// Used for forms by other packages.
+	SelectedAsOption bool `gorm:"-" json:"-"`
+}
+
+var LABELFUNC = func(u *User) string {
+	return u.LoginField()
+}
+
+func (u *User) OptionLabel() string {
+	return LABELFUNC(u)
+}
+
+func (u *User) OptionValue() string {
+	return strconv.FormatInt(u.ID, 10)
+}
+
+func (u *User) OptionSelected() bool {
+	return u.SelectedAsOption
 }
 
 func (u *User) Save(creating bool) error {
-	var ranQueryGroups, ranQueryUser bool
 	var err error
+	if creating {
+		err = Auth.Queries.CreateUser(context.Background(), u)
+	} else {
+		err = Auth.Queries.UpdateUser(context.Background(), u)
+	}
+
+	if err != nil {
+		return err
+	}
+
 	var groups = u.GroupSelect.Left
 	var groupIDs []int64
 	if len(groups) > 0 {
 		groupIDs = make([]int64, len(groups))
 		for i, group := range groups {
-			var intID, err = strconv.ParseInt(group.Value(), 10, 64)
+			var intID, err = strconv.ParseInt(group.OptionValue(), 10, 64)
 			if err != nil {
 				return err
 			}
 			groupIDs[i] = intID
 		}
 	}
-tryAgain:
-	if u.ID == 0 {
-		goto createFirst
-	} else {
-		err = Auth.Queries.OverrideUserGroups(context.Background(), u.ID, groupIDs)
-		if err != nil {
-			return err
-		}
-		ranQueryGroups = true
-	}
-createFirst:
-	if !ranQueryUser {
-		if creating {
-			err = Auth.Queries.CreateUser(context.Background(), u)
-		} else {
-			err = Auth.Queries.UpdateUser(context.Background(), u)
-		}
-		ranQueryUser = true
-	}
-	if !ranQueryGroups {
-		goto tryAgain
-	}
-	return err
+
+	return Auth.Queries.OverrideUserGroups(context.Background(), u.ID, groupIDs)
 }
 
 func (u *User) GetGroupSelectLabel() string {
 	return "Groups"
+}
+
+func (u *User) FormValues(s []string) error {
+	if len(s) <= 0 {
+		return nil
+	}
+
+	var intID, err = strconv.ParseInt(s[0], 10, 64)
+	if err != nil {
+		return errors.New("could not convert ID to int64")
+	}
+
+	user, err := Auth.Queries.GetUserByID(context.Background(), intID)
+	if err != nil {
+
+		return err
+	}
+	*u = *user
+	return nil
 }
 
 func (u *User) GetGroupSelectOptions() (thisOptions, otherOptions []interfaces.Option) {

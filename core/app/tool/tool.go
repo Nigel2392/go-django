@@ -8,11 +8,11 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/Nigel2392/go-django/core/flag"
-	"github.com/Nigel2392/go-django/core/httputils"
 	"github.com/google/uuid"
 )
 
@@ -147,7 +147,7 @@ var GITHUB_REPO_URL = "github.com/Nigel2392/go-django"
 // Initialize go.mod to get the latest version of the project.
 // This only works for github repositories with tags in the following format:
 func initGoMod(projectName string, extra string) error {
-	var name = httputils.NameFromPath(projectName)
+	var _, name = filepath.Split(projectName)
 	var cmd = exec.Command("go", "mod", "init", "go-django/"+name)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -195,8 +195,9 @@ func StartApp(v flag.Value) error {
 	if err := os.Chdir(appName); err != nil {
 		panic(err)
 	}
-	createFile("urls.go", []byte(getURLSTemplate(httputils.NameFromPath(appName))))
-	createFile("views.go", []byte(getViewsTemplate(httputils.NameFromPath(appName))))
+	var _, name = filepath.Split(appName)
+	createFile("urls.go", []byte(getURLSTemplate(name)))
+	createFile("views.go", []byte(getViewsTemplate(name)))
 	return nil
 }
 

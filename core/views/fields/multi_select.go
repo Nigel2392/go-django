@@ -14,8 +14,16 @@ import (
 )
 
 type Option struct {
-	Val  string `json:"value"`
-	Text string `json:"text"`
+	Val      string `json:"value"`
+	Text     string `json:"text"`
+	Selected bool   `json:"selected"`
+}
+
+func NewEmptyOption() Option {
+	return Option{
+		Val:  "",
+		Text: "---------",
+	}
 }
 
 func AutoOption(v any) Option {
@@ -29,6 +37,8 @@ func AutoOption(v any) Option {
 		o = Option{Val: fmt.Sprintf("%f", v), Text: fmt.Sprintf("%f", v)}
 	case bool:
 		o = Option{Val: fmt.Sprintf("%t", v), Text: fmt.Sprintf("%t", v)}
+	case nil:
+		o = NewEmptyOption()
 	default:
 		o = Option{Val: fmt.Sprintf("%v", v), Text: fmt.Sprintf("%v", v)}
 	}
@@ -36,19 +46,23 @@ func AutoOption(v any) Option {
 }
 
 func (o Option) MarshalJSON() ([]byte, error) {
-	return json.Marshal(o.Value)
+	return json.Marshal(o.Val)
 }
 
 func (o *Option) UnmarshalJSON(b []byte) error {
 	return json.Unmarshal(b, &o.Val)
 }
 
-func (o Option) Value() string {
+func (o Option) OptionValue() string {
 	return o.Val
 }
 
-func (o Option) Label() string {
+func (o Option) OptionLabel() string {
 	return o.Text
+}
+
+func (o Option) OptionSelected() bool {
+	return o.Selected
 }
 
 // When using this field with the forms, you should fill the right and left values.
@@ -84,7 +98,7 @@ func (i *DoubleMultipleSelectField) Initial(r *request.Request, model any, field
 func (i DoubleMultipleSelectField) Values() []string {
 	var s []string
 	for _, v := range i.Left {
-		s = append(s, v.Value())
+		s = append(s, v.OptionValue())
 	}
 	return s
 }
@@ -136,9 +150,8 @@ func (i DoubleMultipleSelectField) InputHTML(_ *request.Request, name string, ta
 	b.WriteString(">\n")
 	for _, v := range i.Left {
 		b.WriteString("\t\t\t<option value=\"")
-		b.WriteString(v.Value())
-		b.WriteString("\">")
-		b.WriteString(v.Label())
+		b.WriteString(v.OptionValue())
+		b.WriteString(v.OptionLabel())
 		b.WriteString("</option>\n")
 	}
 	b.WriteString("\t\t</select>\n")
@@ -157,9 +170,9 @@ func (i DoubleMultipleSelectField) InputHTML(_ *request.Request, name string, ta
 	b.WriteString(">\n")
 	for _, v := range i.Right {
 		b.WriteString("\t\t\t<option value=\"")
-		b.WriteString(v.Value())
+		b.WriteString(v.OptionValue())
 		b.WriteString("\">")
-		b.WriteString(v.Label())
+		b.WriteString(v.OptionLabel())
 		b.WriteString("</option>\n")
 	}
 	b.WriteString("\t\t</select>\n")

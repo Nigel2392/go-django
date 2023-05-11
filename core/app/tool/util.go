@@ -3,8 +3,7 @@ package tool
 import (
 	"fmt"
 	"os"
-
-	"github.com/Nigel2392/go-django/core/httputils"
+	"path/filepath"
 )
 
 func _writeFile(path string, f []byte) error {
@@ -35,7 +34,7 @@ func createDir(path string) error {
 }
 
 func createFile(path string, f []byte) error {
-	var dir = httputils.DirFromPath(path)
+	var dir = filepath.Dir(path)
 	var err = createDir(dir)
 	if err != nil {
 		//lint:ignore ST1005 I like capitalized error strings.

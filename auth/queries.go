@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 
@@ -261,7 +262,7 @@ func makeUser(row *sql.Row) (*User, error) {
 		&i.Permissions,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.New("could not scan user: " + err.Error())
 	}
 	var groups []Group
 	var permissions []Permission

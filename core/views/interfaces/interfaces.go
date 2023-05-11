@@ -85,8 +85,9 @@ type StringGetter[T any] interface {
 }
 
 type Option interface {
-	Value() string
-	Label() string
+	OptionLabel() string
+	OptionValue() string
+	OptionSelected() bool
 }
 
 // This method is called on FormFields, and not models.
@@ -111,18 +112,37 @@ type OptionsGetter interface {
 	GetXXXOptions___3(r *request.Request, model any, fieldName string) []string
 }
 
+// GenericOptionsGetter is used for fields that have a generic type.
+type GenericOptionsGetter[T any] interface {
+	// XXX is the fieldname.
+	GetXXXOptions() []Option
+
+	// XXX is the fieldname, ___1 should be omitted.
+	GetXXXOptions___1(r *request.Request) []Option
+
+	// XXX is the fieldname, ___2 should be omitted.
+	GetXXXOptions___2(r *request.Request, model any) []Option
+
+	// XXX is the fieldname, ___3 should be omitted.
+	GetXXXOptions___3(r *request.Request, model any, fieldName string) []Option
+}
+
 // Options getter for fields defined in fields/multi_select.go
 type MultiOptionsGetter interface {
 	// XXX is the fieldname, ___1 should be omitted.
-
 	GetXXXOptions___1() ([]Option, []Option)
+
 	// XXX is the fieldname, ___2 should be omitted.
-
 	GetXXXOptions___2(r *request.Request) ([]Option, []Option)
+
 	// XXX is the fieldname, ___3 should be omitted.
-
 	GetXXXOptions___3(r *request.Request, model any) ([]Option, []Option)
-	// XXX is the fieldname, ___4 should be omitted.
 
+	// XXX is the fieldname, ___4 should be omitted.
 	GetXXXOptions___4(r *request.Request, model any, fieldName string) ([]Option, []Option)
+}
+
+type DisplayGetter interface {
+	// XXX is the fieldname, ___1 should be omitted.
+	GetXXXDisplay___1() string
 }

@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -44,6 +46,10 @@ type queueItem struct {
 type fileresult struct {
 	// The writer that was created.
 	writer io.WriteCloser
+	// The path to the file.
+	//
+	// This might be different from the path passed in, depending on the file existing or not.
+	path string
 	// The error that occurred.
 	err error
 }
@@ -61,6 +67,8 @@ func NewFiler(basePath string) Filer {
 	if err != nil {
 		panic(err)
 	}
+
+	basePath = filepath.Clean(basePath)
 
 	var m = &FileFiler{BasePath: basePath}
 	if err = m.Initialize(); err != nil {
@@ -102,12 +110,31 @@ func (f *FileFiler) run() {
 		case <-f.close:
 			return
 		case item := <-f.queue.PopWaiter(time.Millisecond * 1): // Sleepy time!
-			f.mu.Lock()
-			defer f.mu.Unlock()
-			var writer, err = f.create(item.path)
-			item.result <- &fileresult{
-				writer: writer,
-				err:    err,
+			var err error
+			var path = item.path
+			var writer io.WriteCloser
+		tryAgain:
+			// Check if the file exists
+			if _, err = os.Stat(path); os.IsNotExist(err) {
+				// If not, create it
+				writer, err = f.create(path)
+				item.result <- &fileresult{
+					writer: writer,
+					path:   path,
+					err:    err,
+				}
+			} else if err == nil || os.IsExist(err) {
+				// If it does, try again with a new name
+				var dir, file = filepath.Split(path)
+				var now = time.Now()
+				var newName = strconv.FormatInt(now.UnixMilli(), 10) + "-" + file
+				path = filepath.Join(dir, newName)
+				goto tryAgain
+			} else {
+				// If it's some other error, return it
+				item.result <- &fileresult{
+					err: err,
+				}
 			}
 		}
 	}
@@ -115,24 +142,24 @@ func (f *FileFiler) run() {
 
 func (f *FileFiler) Create(pathParts ...string) (file io.WriteCloser, path string, err error) {
 	path = filepath.Join(pathParts...)
-	path = f.joinPath(path)
-
+	if path, err = f.joinPath(path); err != nil {
+		return nil, "", err
+	}
 	var dir = filepath.Dir(path)
 	err = os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
 		return nil, "", err
 	}
-
 	var item = &queueItem{
 		path:   path,
 		result: make(chan *fileresult),
 	}
-
 	f.mu.Lock()
-	defer f.mu.Unlock()
 	f.queue.Push(item)
+	f.mu.Unlock()
 	var result = <-item.result
-	return result.writer, path, result.err
+	close(item.result)
+	return result.writer, result.path, result.err
 }
 
 func (f *FileFiler) create(path string) (file io.WriteCloser, err error) {
@@ -145,18 +172,31 @@ func (f *FileFiler) create(path string) (file io.WriteCloser, err error) {
 }
 
 func (f *FileFiler) Open(path string) (file io.ReadCloser, err error) {
-	path = f.joinPath(path)
+	if path, err = f.joinPath(path); err != nil {
+		return nil, err
+	}
 	return os.Open(path)
 }
 
-func (f *FileFiler) Delete(path string) error {
-	path = f.joinPath(path)
+func (f *FileFiler) Delete(path string) (err error) {
+	if path, err = f.joinPath(path); err != nil {
+		return err
+	}
 	return os.Remove(path)
 }
 
-func (f *FileFiler) joinPath(path string) string {
+func (f *FileFiler) joinPath(path string) (string, error) {
 	path = filepath.Clean(path)
+	if filepath.IsAbs(path) {
+		if strings.HasPrefix(
+			path,
+			f.BasePath,
+		) {
+			return path, nil
+		}
+		return "", errors.New("path is not in base path")
+	}
 	path = filepath.Join(f.BasePath, path)
 	path = filepath.ToSlash(path)
-	return path
+	return path, nil
 }

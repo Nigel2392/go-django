@@ -6,10 +6,9 @@ import (
 	"errors"
 	"html/template"
 	"net/smtp"
+	"path/filepath"
 	"strconv"
 	"time"
-
-	"github.com/Nigel2392/go-django/core/httputils"
 
 	"github.com/jordan-wright/email"
 )
@@ -111,7 +110,8 @@ func (m *Manager) SendWithTemplate(to string, subject string, t *template.Templa
 	e.Subject = subject
 
 	var buf bytes.Buffer
-	err := t.ExecuteTemplate(&buf, httputils.FilenameFromPath(t.Name()), data)
+	var _, name = filepath.Split(t.Name())
+	err := t.ExecuteTemplate(&buf, name, data)
 	if err != nil {
 		return err
 	}

@@ -14,7 +14,22 @@ import (
 	"github.com/Nigel2392/tags"
 )
 
-type SliceField[T any] []T
+// GenericOptionsGetter must be implemented.
+type SliceField[T interfaces.Option] struct {
+	items   []interfaces.Option
+	Convert func([]string) ([]T, error)
+}
+
+func (i SliceField[T]) Selected() (value T) {
+	if len(i.items) == 0 {
+		return value
+	}
+	var item = i.items[0]
+	if item == nil {
+		return value
+	}
+	return item.(T)
+}
 
 func (i *SliceField[T]) Scan(src interface{}) error {
 	var str = src.(string)
@@ -32,23 +47,33 @@ type iface struct {
 }
 
 func (i *SliceField[T]) FormValues(v []string) error {
-	*i = make([]T, len(v))
+	i.items = make([]interfaces.Option, len(v))
 	if len(v) == 0 {
 		return nil
 	}
+	if i.Convert != nil {
+		var items, err = i.Convert(v)
+		if err != nil {
+			return err
+		}
+		i.items = make([]interfaces.Option, len(items))
+		for index, item := range items {
+			i.items[index] = item
+		}
+		return nil
+	}
+
 	for index, v := range v {
 		var val, err = converters.Convert[T](v)
 		if err != nil {
 			return err
 		}
-
-		var newV T
-		newV = *(*T)((*iface)(unsafe.Pointer(&val)).data)
-		(*i)[index] = newV
+		i.items[index] = val
 	}
 	return nil
 }
 
+// GenericOptionsGetter must be implemented.
 func (i *SliceField[T]) Initial(r *request.Request, model any, fieldName string) {
 	var getOptionsFuncName = fmt.Sprintf("Get%sOptions", fieldName)
 	var valueOf = reflect.ValueOf(model)
@@ -56,29 +81,41 @@ func (i *SliceField[T]) Initial(r *request.Request, model any, fieldName string)
 	if !method.IsValid() {
 		panic(fmt.Sprintf("Method %s does not exist on model %s", getOptionsFuncName, valueOf.Type().Name()))
 	}
+
 	switch method := method.Interface().(type) {
-	case func(r *request.Request) []T:
-		*i = method(r)
-	case func(r *request.Request, model any) []T:
-		*i = method(r, model)
-	case func(r *request.Request, model any, fieldName string) []T:
-		*i = method(r, model, fieldName)
+	case func() []interfaces.Option:
+		i.items = method()
+	case func(r *request.Request) []interfaces.Option:
+		i.items = method(r)
+	case func(r *request.Request, model any) []interfaces.Option:
+		i.items = method(r, model)
+	case func(r *request.Request, model any, fieldName string) []interfaces.Option:
+		i.items = method(r, model, fieldName)
+	default:
+		panic(fmt.Sprintf("Method %s on model %s does not have the correct signature for SliceField[T]", getOptionsFuncName, valueOf.Type().Name()))
 	}
-	panic(fmt.Sprintf("Method %s on model %s does not have the correct signature for SliceField[T]", getOptionsFuncName, valueOf.Type().Name()))
 }
 
-func (i SliceField[T]) LabelHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
-	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), name))
+func (i SliceField[T]) LabelHTML(_ *request.Request, name string, display_text string, tags tags.TagMap) interfaces.Element {
+	return ElementType(fmt.Sprintf(`<label for="%s" %s>%s</label>`, name, TagMapToElementAttributes(tags, AllTagsLabel...), display_text))
 }
 
 func (i SliceField[T]) InputHTML(_ *request.Request, name string, tags tags.TagMap) interfaces.Element {
 	var b strings.Builder
-	for _, v := range i {
-		b.WriteString(fmt.Sprintf(`<input type="text" name="%s" id="%s" value="%v" %s>`, name, name, v, TagMapToElementAttributes(tags, AllTagsInput...)))
+	b.WriteString(fmt.Sprintf(`<select name="%s" id="%s" %s>`, name, name, TagMapToElementAttributes(tags, AllTagsInput...)))
+	for _, v := range i.items {
+		b.WriteString(fmt.Sprintf(`<option value="%s"`, v.OptionValue()))
+		if v.OptionSelected() {
+			b.WriteString(` selected`)
+		}
+		b.WriteString(fmt.Sprintf(`>%s</option>`, v.OptionLabel()))
+
 	}
+	b.WriteString(`</select>`)
 	return ElementType(b.String())
 }
 
+// OptionsGetter must be implemented.
 type SelectField []string
 
 func (i *SelectField) Scan(src interface{}) error {
@@ -99,14 +136,17 @@ func (i *SelectField) Initial(r *request.Request, model any, fieldName string) {
 		panic(fmt.Sprintf("Method %s does not exist on model %s", getOptionsFuncName, valueOf.Type().Name()))
 	}
 	switch method := method.Interface().(type) {
+	case func() []string:
+		*i = method()
 	case func(r *request.Request) []string:
 		*i = method(r)
 	case func(r *request.Request, model any) []string:
 		*i = method(r, model)
 	case func(r *request.Request, model any, fieldName string) []string:
 		*i = method(r, model, fieldName)
+	default:
+		panic(fmt.Sprintf("Method %s on model %s does not have the correct signature for SelectField", getOptionsFuncName, valueOf.Type().Name()))
 	}
-	panic(fmt.Sprintf("Method %s on model %s does not have the correct signature for SelectField", getOptionsFuncName, valueOf.Type().Name()))
 }
 
 func (i *SelectField) FormValues(v []string) error {
@@ -151,14 +191,17 @@ func (i *MultipleSelectField) Initial(r *request.Request, model any, fieldName s
 		panic(fmt.Sprintf("Method %s does not exist on model %s", getOptionsFuncName, valueOf.Type().Name()))
 	}
 	switch method := method.Interface().(type) {
+	case func() []string:
+		*i = method()
 	case func(r *request.Request) []string:
 		*i = method(r)
 	case func(r *request.Request, model any) []string:
 		*i = method(r, model)
 	case func(r *request.Request, model any, fieldName string) []string:
 		*i = method(r, model, fieldName)
+	default:
+		panic(fmt.Sprintf("Method %s on model %s does not have the correct signature for SelectField", getOptionsFuncName, valueOf.Type().Name()))
 	}
-	panic(fmt.Sprintf("Method %s on model %s does not have the correct signature for MultipleSelectField", getOptionsFuncName, valueOf.Type().Name()))
 }
 
 func (i *MultipleSelectField) FormValues(v []string) error {
