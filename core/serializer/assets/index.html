@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no"/>
+    <title>Go-Dev Serializerd</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Inter:300italic,400italic,600italic,700italic,800italic,400,300,600,700,800&amp;display=swap"/>
+    <link rel="stylesheet" href="{{.Static}}/bootstrap.min.css" />
+  </head>
+
+  <body>
+        <nav class="navbar navbar-light navbar-expand-md py-3" style="font-size: 25px; height: 81px; margin: 0px; padding: 16px 0px">
+          <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="{{.Index}}">
+                <span class="text-lg-center text-xl-center text-xxl-center" style="font-size: 43px; color: rgba(255, 255, 255, 0.9)" >Go-Dev Serializer</span>
+            </a>
+            <div class="collapse navbar-collapse" id="navcol-2">
+              <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                  <a class="nav-link active" href="https://github.com/Nigel2392" style="color: rgba(255, 255, 255, 0.9)" >Github Profile</a>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </nav>
+        {{ if and (ge (len .LimitOptions) 0) .Paginator}}
+            <div class="container mb-2">
+                <div class="container">
+                    <form action="" class="d-flex">
+                        <select name="limit" id="limit-select" class="form-select form-select-sm w-25">
+                            {{ $paginator := .Paginator }}
+                            {{ range $limit := .LimitOptions }}
+                                <option value="{{ $limit }}"{{if (eq $paginator.ItemsPerPage $limit)}} selected{{end}}>{{ $limit }}</option>
+                            {{ end }}
+                        </select>
+                        <button type="submit" class="btn btn-primary btn-sm mx-2">Submit</button>
+                    </form>
+                </div>
+            </div>
+        {{ end }}
+        <div class="container h-100">
+            <div class="container h-100">
+              <div class="bg-light border rounded border-0 border-light d-flex flex-column justify-content-between flex-lg-row" style="color: rgb(95, 0, 0); min-height: 400px;max-height:80%;overflow:auto;box-shadow: 3px 4px 20px black;">
+                <div style="overflow: auto;white-space: pre;" class="p-4 w-100 h-100">{{.Content}}</div>
+              </div>
+            </div>
+            <div class="container">
+                {{ if .Paginator }}
+                    <div class="d-flex mt-2 w-100 justify-content-end">
+                        {{ if (ne .Paginator.Next "") }}
+                            <a href="{{.Paginator.Next}}" class="btn btn-primary btn-sm">Next</a>
+                        {{ end }}
+                        {{ if (ne .Paginator.Previous "") }}
+                            <a href="{{.Paginator.Previous}}" class="btn btn-primary btn-sm">Prev</a>
+                        {{ end }}
+                    </div>
+                {{ end }}
+                {{.Extra}}
+            </div>
+        </div>
+  </body>
+</html>

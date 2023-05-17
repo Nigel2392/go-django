@@ -1,13 +1,10 @@
 package fields
 
 import (
-	"embed"
 	"html/template"
-	"io/fs"
 	"strings"
 
 	"github.com/Nigel2392/go-django/core/views/interfaces"
-	"github.com/Nigel2392/router/v3"
 	"github.com/Nigel2392/router/v3/request"
 	"github.com/Nigel2392/tags"
 )
@@ -97,17 +94,4 @@ func (m MarkdownField) Script() (key string, src template.HTML) {
 	`)
 	src = template.HTML(srcBuf.String())
 	return
-}
-
-//go:embed staticfiles/*
-var staticFS embed.FS
-
-var StaticHandler = router.NewFSRoute("/field-static-files", "field-static-files", fixStaticFS(staticFS))
-
-func fixStaticFS(f embed.FS) fs.FS {
-	var fsys, err = fs.Sub(f, "staticfiles")
-	if err != nil {
-		panic(err)
-	}
-	return fsys
 }

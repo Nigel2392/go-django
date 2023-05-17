@@ -4,6 +4,8 @@ github.com/Nigel2392/go-datastructures v1.0.8 h1:N5/HkE6QpkAH843aAK55luqsPTllGUd
 github.com/Nigel2392/go-datastructures v1.0.8/go.mod h1:RNiDGkQM579UIEGwyDW5N/16s6abJNFMXx+iQvFWytg=
 github.com/Nigel2392/go-signals v1.0.4 h1:SULZt+6AwtHmQDrt2TTzb1bYeoTr2kSUetN6aIa39Mg=
 github.com/Nigel2392/go-signals v1.0.4/go.mod h1:Olk7MJlZ9gdGPN8bh+OZSe7iOsBixn7biVI7LqoWEIA=
+github.com/Nigel2392/go-structs v1.0.9 h1:bRn2KQTJoO11JJdExlYa+1ex50c14YRerVZgPljbW4c=
+github.com/Nigel2392/go-structs v1.0.9/go.mod h1:lcvRdF6nQ2dbltD/TQWNlPSsjEf+jPOPPW96MvSxiO8=
 github.com/Nigel2392/netcache v1.1.7 h1:917Gzc6LP0pQiW7149J5QY11/a61Lip6lHiMBpld3ts=
 github.com/Nigel2392/netcache v1.1.7/go.mod h1:H7iUOq1KEQO7dXf9bmFDhHewUIbr0Y6CaCuP2x5aG/k=
 github.com/Nigel2392/orderedmap v1.0.6 h1:LY+yXmir5j+aPck0qYhjrQuJoW1DjOIcJw5ighS2xlU=
@@ -47,3 +49,7 @@ golang.org/x/text v0.9.0 h1:2sjJmO8cDvYveuX97RDLsxlyUxLl+GHoLxBiRdHllBE=
 golang.org/x/text v0.9.0/go.mod h1:e1OnstbJyHTd6l/uOt8jFFHp6TRDWZR/bV3emEE/zU8=
 golang.org/x/time v0.3.0 h1:rg5rLMjNzMS1RkNLzCG38eapWhnYLFYXDXj2gOlr8j4=
 golang.org/x/time v0.3.0/go.mod h1:tRJNPiyCQ0inRvYxbN9jk5I+vvW/OXSQhTDSoE431IQ=
+gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405 h1:yhCVgyC4o1eVCa2tZl7eS0r+SDo693bJlVdllGtEeKM=
+gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
+gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
+gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=

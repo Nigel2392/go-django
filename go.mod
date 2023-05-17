@@ -6,6 +6,7 @@ require (
 	github.com/Nigel2392/forms v1.0.1
 	github.com/Nigel2392/go-datastructures v1.0.8
 	github.com/Nigel2392/go-signals v1.0.4
+	github.com/Nigel2392/go-structs v1.0.9
 	github.com/Nigel2392/netcache v1.1.7
 	github.com/Nigel2392/orderedmap v1.0.6
 	github.com/Nigel2392/request-logger v1.0.3
@@ -23,6 +24,7 @@ require (
 	golang.org/x/crypto v0.9.0
 	golang.org/x/exp v0.0.0-20230510235704-dd950f8aeaea
 	golang.org/x/text v0.9.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
