@@ -1,0 +1,19 @@
+{{ define "block_widget" }}
+<div class="django-block-widget" data-contentpath="{{ .Name }}">
+
+    {{ if (gt (len .Errors) 0) }}
+    <div class="django-block-widget__errors">
+        <ul>
+            {{ range .Errors }}
+                <li>{{ . }}</li>
+            {{ end }}
+        </ul>
+    </div>
+    {{ end }}
+
+    <div class="django-block-widget__block">
+        {{ .BlockHTML }}
+    </div>
+
+</div>
+{{ end }}

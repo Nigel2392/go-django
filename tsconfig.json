@@ -1,0 +1,20 @@
+{
+    "compilerOptions": {
+      "noImplicitAny": true,
+      "module": "es6",
+      "target": "es6",
+      "allowJs": true,
+      "moduleResolution": "node"
+    },
+    "include": [
+      "django/static_src/**/*.js",
+      "django/static_src/**/*.ts",
+      "django/static_src/**/*.tsx"
+    ],
+    "exclude": [
+      "node_modules",
+      "django/static_src/**/*.test.js",
+      "django/static_src/**/*.test.ts",
+      "django/static_src/**/*.test.tsx"
+    ]
+}

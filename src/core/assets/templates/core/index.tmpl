@@ -1,0 +1,34 @@
+{{ template "base" . }}
+
+{{ define "title" }}
+    Index Page
+{{ end }}
+
+{{ define "content" }}
+    <h1>Index Content! {{ .CsrfToken }}</h1>
+
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+
+        {{ range $Field := (.Get "Form").Fields }}
+
+            <div class="form-field-wrapper">
+                {{ if (gt (len $Field.Errors) 0) }}
+                    <ul class="form-errors">
+                        {{ range $Error := $Field.Errors }}
+                            <li><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
+                        {{ end }}
+                    </ul>
+                {{ end }}
+
+                <p class="form-field">
+                    {{ $Field.Label }}<br>
+                    {{ $Field.Field }}
+                </p>
+            </div>
+
+        {{ end }}
+
+        <input type="submit" value="Submit">
+    </form>
+{{ end }}
