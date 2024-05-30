@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/fields"
@@ -375,19 +376,19 @@ func (f *BaseForm) Widgets() []widgets.Widget {
 
 func (f *BaseForm) Field(name string) fields.Field {
 	var ret, ok = f.FormFields.Get(name)
-	assertTrue(ok, "The input %s does not exist.", name)
+	assert.True(ok, "The input %s does not exist.", name)
 	return ret
 }
 
 func (f *BaseForm) Widget(name string) widgets.Widget {
 	var ret, ok = f.FormWidgets.Get(name)
-	assertTrue(ok, "The widget %s does not exist.", name)
+	assert.True(ok, "The widget %s does not exist.", name)
 	return ret
 }
 
 func (f *BaseForm) CleanedData() map[string]interface{} {
-	assertTrue(f.Errors.Len() == 0, "You cannot access cleaned data if the form is invalid.")
-	assertFalse(f.Cleaned == nil, "You must call IsValid() before accessing cleaned data.")
+	assert.True(f.Errors.Len() == 0, "You cannot access cleaned data if the form is invalid.")
+	assert.False(f.Cleaned == nil, "You must call IsValid() before accessing cleaned data.")
 	return f.Cleaned
 }
 
@@ -479,7 +480,7 @@ func (f *BaseForm) FullClean() {
 }
 
 func (f *BaseForm) IsValid() bool {
-	assertFalse(f.Raw == nil, "You cannot call IsValid() without setting the data first.")
+	assert.False(f.Raw == nil, "You cannot call IsValid() without setting the data first.")
 
 	if f.Errors == nil {
 		f.Errors = orderedmap.NewOrderedMap[string, []error]()

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/widgets"
 )
@@ -71,7 +72,7 @@ func (b *BoundFormWidget) Field() template.HTML {
 		b.CachedHTML, err = b.FormWidget.RenderWithErrors(
 			b.ID(), b.FormName, b.FormValue, b.FormErrors, b.FormAttrs,
 		)
-		assertTrue(err == nil, "BoundFormWidget.Field: %s", err)
+		assert.True(err == nil, err)
 	}
 	return b.CachedHTML
 }

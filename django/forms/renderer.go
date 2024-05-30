@@ -4,6 +4,7 @@ import (
 	"embed"
 	"io/fs"
 
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/tpl"
 )
 
@@ -12,9 +13,7 @@ var formTemplates embed.FS
 
 func init() {
 	var templates, err = fs.Sub(formTemplates, "assets/templates")
-	if err != nil {
-		panic(err)
-	}
+	assert.True(err == nil, "failed to get form templates")
 
 	tpl.AddFS(templates, tpl.MatchAnd(
 		tpl.MatchPrefix("forms/widgets/"),
