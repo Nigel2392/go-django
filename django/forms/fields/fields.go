@@ -10,7 +10,6 @@ type Field interface {
 	SetName(name string)
 	SetWidget(widget widgets.Widget)
 	SetValidators(validators ...func(interface{}) error)
-	SetRequired(b bool)
 	Name() string
 	Label() string
 	Validate(value interface{}) []error
@@ -18,4 +17,7 @@ type Field interface {
 	Clean(value interface{}) (interface{}, error)
 	ValueToForm(value interface{}) interface{}
 	ValueToGo(value interface{}) (interface{}, error)
+	Required() bool
+	SetRequired(b bool)
+	IsEmpty(value interface{}) bool
 }

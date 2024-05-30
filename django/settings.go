@@ -1,8 +1,6 @@
 package django
 
-import (
-	"fmt"
-)
+import "github.com/Nigel2392/django/core/assert"
 
 type Settings interface {
 	Set(key string, value interface{})
@@ -60,9 +58,8 @@ func ConfigGetOK[T any](s Settings, key string, default_ ...T) (T, bool) {
 		return *(new(T)), false
 	}
 
-	if len(default_) > 1 {
-		panic("Too many arguments")
-	}
+	assert.Lt(default_, 2, "Too many arguments")
+	assert.Gt(default_, 0, "Too few arguments")
 
 	if s == nil {
 		return default_[0], false
@@ -77,9 +74,7 @@ func ConfigGetOK[T any](s Settings, key string, default_ ...T) (T, bool) {
 	}
 
 	v, ok := value.(T)
-	if !ok {
-		panic(fmt.Sprintf("Invalid type for key %s", key))
-	}
+	assert.True(ok, "Invalid type for key %s", key)
 
 	return v, true
 }

@@ -2,7 +2,6 @@ package fields
 
 import (
 	"maps"
-	"reflect"
 
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/widgets"
@@ -12,7 +11,7 @@ import (
 
 type BaseField struct {
 	FieldName  string
-	Required   bool
+	Required_  bool
 	Attributes map[string]string
 	Validators []func(interface{}) error
 	FormLabel  func() string
@@ -78,7 +77,15 @@ func (i *BaseField) SetValidators(validators ...func(interface{}) error) {
 }
 
 func (i *BaseField) SetRequired(b bool) {
-	i.Required = b
+	i.Required_ = b
+}
+
+func (i *BaseField) Required() bool {
+	return i.Required_
+}
+
+func (i *BaseField) IsEmpty(value interface{}) bool {
+	return IsZero(value)
 }
 
 func (i *BaseField) Attrs() map[string]string {
@@ -104,32 +111,8 @@ func (i *BaseField) Validate(value interface{}) []error {
 		}
 	}
 
-	if i.Required {
-		if value == nil {
-			return []error{errs.ErrFieldRequired}
-		}
-		var (
-			t = reflect.TypeOf(value)
-			v = reflect.ValueOf(value)
-		)
-		if t.Kind() == reflect.Ptr {
-			t = t.Elem()
-			v = v.Elem()
-		}
-		switch t.Kind() {
-		case reflect.Slice, reflect.Array, reflect.Map:
-			if v.Len() == 0 {
-				return []error{errs.ErrFieldRequired}
-			}
-		case reflect.Ptr:
-			if v.IsNil() {
-				return []error{errs.ErrFieldRequired}
-			}
-		default:
-			if v.IsZero() {
-				return []error{errs.ErrFieldRequired}
-			}
-		}
+	if i.Required() && i.IsEmpty(value) {
+		return []error{errs.NewValidationError(i.FieldName, "This field is required.")}
 	}
 	return nil
 }

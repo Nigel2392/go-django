@@ -2,6 +2,8 @@ package ctx
 
 import (
 	"reflect"
+
+	"github.com/Nigel2392/django/core/assert"
 )
 
 type StructContext struct {
@@ -15,9 +17,10 @@ func NewStructContext(obj interface{}) Context {
 	var t = reflect.TypeOf(obj)
 	var v = reflect.ValueOf(obj)
 
-	if t.Kind() != reflect.Ptr {
-		panic("obj must be a pointer")
-	}
+	assert.Equal(
+		t.Kind(), reflect.Ptr,
+		"obj must be a pointer",
+	)
 
 	t = t.Elem()
 	v = v.Elem()
@@ -57,9 +60,9 @@ func (c *StructContext) Set(key string, value any) {
 		var v = reflect.ValueOf(value)
 		if v.Type() != field.Type() && v.Type().ConvertibleTo(field.Type()) {
 			v = v.Convert(field.Type())
-		} else if v.Type() != field.Type() {
-			panic("type mismatch")
 		}
+
+		assert.Equal(v.Type(), field.Type(), "value type must be the same as field type")
 
 		field.Set(v)
 		return

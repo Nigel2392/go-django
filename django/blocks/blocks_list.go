@@ -8,6 +8,7 @@ import (
 	"net/url"
 	"strconv"
 
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/pkg/errors"
@@ -32,9 +33,9 @@ func NewListBlock(block Block, minMax ...int) *ListBlock {
 		Min:       -1,
 		Max:       -1,
 	}
-	if len(minMax) > 2 {
-		panic("Too many arguments (min, max)")
-	}
+
+	assert.Lt(minMax, 3, "Too many arguments (min, max)")
+
 	if len(minMax) == 2 {
 		l.Min = minMax[0]
 		l.Max = minMax[1]
@@ -146,7 +147,7 @@ func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCl
 }
 
 func (l *ListBlock) ValueToGo(value interface{}) (interface{}, error) {
-	if IsZero(value) {
+	if fields.IsZero(value) {
 		return "", nil
 	}
 	var (
@@ -181,7 +182,7 @@ func (l *ListBlock) GetDefault() interface{} {
 
 func (l *ListBlock) ValueToForm(value interface{}) interface{} {
 
-	if IsZero(value) {
+	if fields.IsZero(value) {
 		value = l.GetDefault()
 	}
 
@@ -200,7 +201,7 @@ func (l *ListBlock) ValueToForm(value interface{}) interface{} {
 }
 
 func (l *ListBlock) Clean(value interface{}) (interface{}, error) {
-	if IsZero(value) {
+	if fields.IsZero(value) {
 		return nil, nil
 	}
 
@@ -225,7 +226,7 @@ func (l *ListBlock) Validate(value interface{}) []error {
 		}
 	}
 
-	if IsZero(value) {
+	if fields.IsZero(value) {
 		return nil
 	}
 

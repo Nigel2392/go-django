@@ -1,6 +1,7 @@
 package urls
 
 import (
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/http_"
 	"github.com/Nigel2392/mux"
 )
@@ -28,9 +29,7 @@ func Group(info ...string) *URLPatternGroup {
 		name = info[1]
 	}
 
-	if len(info) > 2 {
-		panic("urls.Group: too many arguments")
-	}
+	assert.Lt(info, 3, "urls.Group: too many arguments")
 
 	return &URLPatternGroup{
 		Patterns: make([]http_.URL, 0),

@@ -88,7 +88,7 @@ func (m *StructBlock) ValueFromDataDict(d url.Values, files map[string][]io.Read
 }
 
 func (m *StructBlock) ValueToGo(value interface{}) (interface{}, error) {
-	if IsZero(value) {
+	if fields.IsZero(value) {
 		return nil, nil
 	}
 
@@ -153,7 +153,7 @@ func (m *StructBlock) ValueToForm(value interface{}) interface{} {
 }
 
 func (m *StructBlock) Clean(value interface{}) (interface{}, error) {
-	if IsZero(value) {
+	if fields.IsZero(value) {
 		return nil, nil
 	}
 
@@ -185,7 +185,7 @@ func (m *StructBlock) Validate(value interface{}) []error {
 		}
 	}
 
-	if IsZero(value) {
+	if fields.IsZero(value) {
 		return nil
 	}
 

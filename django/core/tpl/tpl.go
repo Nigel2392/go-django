@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/pkg/errors"
 )
@@ -82,9 +83,8 @@ func (r *TemplateRenderer) Funcs(funcs template.FuncMap) {
 }
 
 func (r *TemplateRenderer) Bases(key string, path ...string) error {
-	if len(path) == 0 {
-		panic("path is required")
-	}
+	assert.Gt(path, 0, "path is required")
+
 	var tmpl, _, err = r.getTemplate("", path...)
 	if err != nil {
 		return errors.Wrap(err, "failed to get template")
@@ -103,9 +103,13 @@ func (r *TemplateRenderer) AddFS(fs fs.FS, matches func(string) bool) {
 }
 
 func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*template.Template, string, error) {
-	if len(path) == 0 && baseKey == "" {
-		panic("path is required")
-	} else if len(path) == 0 {
+
+	assert.False(
+		len(path) == 0 && baseKey == "",
+		"path is required",
+	)
+
+	if len(path) == 0 {
 		path = []string{baseKey}
 		baseKey = ""
 	}
@@ -173,9 +177,7 @@ func (r *TemplateRenderer) Render(b io.Writer, context any, baseKey string, path
 				goto render
 			}
 			for _, f := range r.ctxFuncs {
-				if f == nil {
-					panic("nil context function")
-				}
+				assert.True(f == nil, "nil context function")
 				f(requestContext)
 			}
 		}

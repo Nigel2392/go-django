@@ -70,9 +70,7 @@ func WithRequestData(method string, r *http.Request) func(Form) {
 				var files_ = make([]io.ReadCloser, 0, len(v))
 				for _, file := range v {
 					var file, err = file.Open()
-					if err != nil {
-						panic(err)
-					}
+					assert.ErrNil(err)
 					files_ = append(files_, file)
 				}
 				files[k] = files_
@@ -437,14 +435,25 @@ func (f *BaseForm) FullClean() {
 	var err error
 	for head := f.FormFields.Front(); head != nil; head = head.Next() {
 		var (
-			k             = head.Key
-			v             = head.Value
-			initial, errs = v.Widget().ValueFromDataDict(f.Raw, f.Files, f.prefix(k))
-			data          interface{}
+			k       = head.Key
+			v       = head.Value
+			errors  []error
+			initial interface{}
+			data    interface{}
 		)
 
-		if len(errs) > 0 {
-			f.AddError(k, errs...)
+		if !v.Widget().ValueOmittedFromData(f.Raw, f.Files, f.prefix(k)) {
+			initial, errors = v.Widget().ValueFromDataDict(f.Raw, f.Files, f.prefix(k))
+		}
+
+		if len(errors) > 0 {
+			f.AddError(k, errors...)
+			f.InvalidDefaults[k] = initial
+			continue
+		}
+
+		if v.Required() && v.IsEmpty(initial) {
+			f.AddError(k, errs.NewValidationError(k, errs.ErrFieldRequired))
 			f.InvalidDefaults[k] = initial
 			continue
 		}
@@ -467,9 +476,9 @@ func (f *BaseForm) FullClean() {
 			continue
 		}
 
-		errs = v.Validate(data)
-		if len(errs) > 0 {
-			f.AddError(k, errs...)
+		errors = v.Validate(data)
+		if len(errors) > 0 {
+			f.AddError(k, errors...)
 			f.InvalidDefaults[k] = data
 			continue
 		}

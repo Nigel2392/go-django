@@ -3,6 +3,8 @@ package attrs
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/Nigel2392/django/core/assert"
 )
 
 type FieldDef struct {
@@ -29,19 +31,10 @@ func NewField[T any](instance *T, name string, null, blank, editable bool) *Fiel
 	)
 
 	field_t, ok = instance_t.FieldByName(name)
-	if !ok {
-		panic(
-			fmt.Sprintf("field %q not found in %T", name, instance),
-		)
-	}
+	assert.True(ok, "field %q not found in %T", name, instance)
 
 	field_v = instance_v.FieldByIndex(field_t.Index)
-	// field_v := instance_v.FieldByName(name)
-	if !field_v.IsValid() {
-		panic(
-			fmt.Sprintf("field %q not found in %T", name, instance),
-		)
-	}
+	assert.True(field_v.IsValid(), "field %q not found in %T", name, instance)
 
 	return &FieldDef{
 		Null:           null,
@@ -93,35 +86,35 @@ func (f *FieldDef) GetValue() interface{} {
 func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	var r_v = reflect.ValueOf(v)
 
+	if err := assert.True(
+		r_v.IsValid() || f.AllowNull(),
+		"field %q (%q) is not valid", f.field_t.Name, f.field_t.Type,
+	); err != nil {
+		return err
+	}
+
 	if !r_v.IsValid() && f.AllowNull() {
 		f.field_v.Set(reflect.Zero(f.field_t.Type))
 		return nil
-	} else if !r_v.IsValid() {
-		return errPanic(
-			fmt.Sprintf("field %q (%q) is not valid", f.field_t.Name, f.field_t.Type),
-		)
 	}
 
-	if r_v.Type() != f.field_t.Type && !r_v.CanConvert(f.field_t.Type) {
-		return errPanic(
-			fmt.Sprintf("field %q (%q) is not compatible with type %T", f.field_t.Name, f.field_t.Type, v),
-		)
+	if err := assert.True(
+		r_v.Type() == f.field_t.Type || r_v.CanConvert(f.field_t.Type),
+		"field %q (%q) is not convertible to %q",
+		f.field_t.Name, r_v.Type(), f.field_t.Type,
+	); err != nil {
+		return err
 	}
 
 	if r_v.Type() != f.field_t.Type {
 		r_v = r_v.Convert(f.field_t.Type)
 	}
 
-	if !f.field_v.CanSet() {
-		return errPanic(
-			fmt.Sprintf("field %q is not settable", f.field_t.Name),
-		)
-	}
-
-	if !f.Editable && !force {
-		return errPanic(
-			fmt.Sprintf("field %q is not editable", f.field_t.Name),
-		)
+	if err := assert.True(
+		f.field_v.CanSet() && (f.Editable || force),
+		"field %q is not editable", f.field_t.Name,
+	); err != nil {
+		return err
 	}
 
 	if r_v.IsZero() && !f.AllowBlank() {
@@ -131,7 +124,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 			reflect.Float32, reflect.Float64,
 			reflect.Complex64, reflect.Complex128:
 		default:
-			return errPanic(
+			return assert.Fail(
 				fmt.Sprintf("field %q is not blank", f.field_t.Name),
 			)
 		}

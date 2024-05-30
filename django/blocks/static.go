@@ -6,6 +6,7 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
 )
@@ -64,13 +65,9 @@ func NewAppConfig() *apps.AppConfig {
 func init() {
 	var err error
 	staticFS, err = fs.Sub(_staticFS, "assets/static")
-	if err != nil {
-		panic(err)
-	}
+	assert.Err(err)
 
 	templateFS, err = fs.Sub(_templateFS, "assets/templates")
-	if err != nil {
-		panic(err)
-	}
+	assert.Err(err)
 
 }

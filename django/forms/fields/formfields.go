@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/mail"
 
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/widgets"
 )
@@ -88,13 +89,8 @@ type MarshallerFormField[T any] struct {
 }
 
 func MarshallerField[T any](encoder func(io.Writer) Encoder, decoder func(io.Reader) Decoder, opts ...func(Field)) *MarshallerFormField[T] {
-	if encoder == nil {
-		panic("encoder is required")
-	}
-
-	if decoder == nil {
-		panic("decoder is required")
-	}
+	assert.True(encoder != nil, "encoder is required")
+	assert.True(decoder != nil, "decoder is required")
 
 	return &MarshallerFormField[T]{
 		BaseField:  NewField(S("text"), opts...),

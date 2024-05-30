@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"regexp"
 
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/forms/widgets"
 )
 
@@ -20,9 +21,12 @@ func Label(label any) func(Field) {
 		fn = S(v)
 	case func() string:
 		fn = v
-	default:
-		panic(fmt.Sprintf("FieldLabel: invalid type %T", v))
 	}
+
+	assert.Truthy(fn,
+		"FieldLabel: invalid type %T", label,
+	)
+
 	return func(f Field) {
 		f.SetLabel(fn)
 	}

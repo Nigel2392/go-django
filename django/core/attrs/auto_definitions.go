@@ -1,9 +1,10 @@
 package attrs
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
+
+	"github.com/Nigel2392/django/core/assert"
 )
 
 const ATTR_TAG_NAME = "attrs"
@@ -36,11 +37,10 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 		instance_v_ptr = reflect.ValueOf(instance)
 	)
 
-	if instance_t_ptr.Kind() != reflect.Ptr {
-		panic(
-			fmt.Sprintf("AutoDefinitions: %T is not a pointer", instance),
-		)
-	}
+	assert.Equal(
+		instance_t_ptr.Kind(), reflect.Ptr,
+		"instance %T must be a pointer", instance,
+	)
 
 	var (
 		instance_t = instance_t_ptr.Elem()
@@ -79,11 +79,9 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 	} else {
 		for _, name := range include {
 			var field_t, ok = instance_t.FieldByName(name)
-			if !ok {
-				panic(
-					fmt.Sprintf("AutoDefinitions: field %q not found in %T", name, instance),
-				)
-			}
+
+			assert.True(ok, "field %q not found in %T", name, instance)
+
 			var (
 				null, blank, editable = autoDefinitionStructTag(field_t)
 				field_v               = instance_v.FieldByIndex(field_t.Index)

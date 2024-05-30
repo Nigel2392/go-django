@@ -1,24 +1,15 @@
 package attrs
 
-import "fmt"
+import (
+	"fmt"
 
-var PanicEnabled = true
-
-func errPanic(msg any) error {
-	fail(msg)
-	return fmt.Errorf("%v", msg)
-}
-
-func fail(msg any) {
-	if PanicEnabled {
-		panic(msg)
-	}
-}
+	"github.com/Nigel2392/django/core/assert"
+)
 
 func SetMany(d Definer, values map[string]interface{}) error {
 	for name, value := range values {
-		if err := set(d, name, value, false); err != nil {
-			return errPanic(err)
+		if err := assert.Err(set(d, name, value, false)); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -36,8 +27,9 @@ func Get[T any](d Definer, name string) T {
 	var defs = d.FieldDefs()
 	var f, ok = defs.Field(name)
 	if !ok {
-		fail(
-			fmt.Sprintf("get (%T): no field named %q", d, name),
+		assert.Fail(
+			"get (%T): no field named %q",
+			d, name,
 		)
 	}
 
@@ -48,8 +40,9 @@ func Get[T any](d Definer, name string) T {
 	case *T:
 		return *t
 	default:
-		fail(
-			fmt.Sprintf("get (%T): field %q is not of type %T", d, name, v),
+		assert.Fail(
+			"get (%T): field %q is not of type %T",
+			d, name, v,
 		)
 	}
 	return *(new(T))
@@ -59,7 +52,7 @@ func set(d Definer, name string, value interface{}, force bool) error {
 	var defs = d.FieldDefs()
 	var f, ok = defs.Field(name)
 	if !ok {
-		return errPanic(
+		return assert.Fail(
 			fmt.Sprintf("set (%T): no field named %q", d, name),
 		)
 	}

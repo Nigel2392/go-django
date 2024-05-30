@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"text/template"
 
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/http_"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
@@ -50,14 +51,11 @@ func App(opts ...Option) *Application {
 		}
 	}
 
-	var err error
 	for _, opt := range opts {
 		if opt == nil {
 			continue
 		}
-		if err = opt(Global); err != nil {
-			panic(err)
-		}
+		assert.ErrNil(opt(Global))
 	}
 
 	return Global
@@ -65,9 +63,7 @@ func App(opts ...Option) *Application {
 
 func (a *Application) App(name string) AppConfig {
 	var app, ok = a.Apps.Get(name)
-	if !ok {
-		panic(fmt.Sprintf("App %s not found", name))
-	}
+	assert.True(ok, "App %s not found", name)
 	return app
 }
 
@@ -88,34 +84,27 @@ func (a *Application) Register(apps ...any) {
 			app = v()
 		default:
 			var rVal = reflect.ValueOf(appType)
-			if rVal.Kind() != reflect.Func {
-				panic("Invalid type")
-			}
+
+			assert.True(rVal.Kind() == reflect.Func, "Invalid type")
 
 			var retVal = rVal.Call(nil)
-			if len(retVal) == 0 {
-				panic("Invalid return type")
-			}
+
+			assert.True(len(retVal) == 1, "Invalid return type")
 
 			var vInt = retVal[0].Interface()
-			if vInt == nil {
-				panic("Invalid return type")
-			}
+
+			assert.False(vInt == nil, "Invalid return type")
+
 			var ok bool
 			app, ok = vInt.(AppConfig)
-			if !ok {
-				panic("Invalid return type")
-			}
+			assert.True(ok, "Invalid return type")
 		}
 
 		var appName = app.Name()
-		if appName == "" {
-			panic("App name cannot be empty")
-		}
+		assert.Truthy(appName, "App name cannot be empty")
 
-		if _, ok := a.Apps.Get(appName); ok {
-			panic(fmt.Sprintf("App %s already registered", appName))
-		}
+		var _, ok = a.Apps.Get(appName)
+		assert.False(ok, "App %s already registered", appName)
 
 		a.Apps.Set(appName, app)
 	}
