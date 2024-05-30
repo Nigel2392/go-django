@@ -1,21 +1,21 @@
 package widgets
 
 func NewTextInput(attrs map[string]string) Widget {
-	return NewBaseWidget(S("text"), "widgets/text.html", attrs)
+	return NewBaseWidget(S("text"), "forms/widgets/text.html", attrs)
 }
 
 func NewTextarea(attrs map[string]string) Widget {
-	return NewBaseWidget(S("textarea"), "widgets/textarea.html", attrs)
+	return NewBaseWidget(S("textarea"), "forms/widgets/textarea.html", attrs)
 }
 
 func NewEmailInput(attrs map[string]string) Widget {
-	return NewBaseWidget(S("email"), "widgets/email.html", attrs)
+	return NewBaseWidget(S("email"), "forms/widgets/email.html", attrs)
 }
 
 func NewPasswordInput(attrs map[string]string) Widget {
-	return NewBaseWidget(S("password"), "widgets/password.html", attrs)
+	return NewBaseWidget(S("password"), "forms/widgets/password.html", attrs)
 }
 
 func NewHiddenInput(attrs map[string]string) Widget {
-	return NewBaseWidget(S("hidden"), "widgets/hidden.html", attrs)
+	return NewBaseWidget(S("hidden"), "forms/widgets/hidden.html", attrs)
 }

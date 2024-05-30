@@ -17,7 +17,7 @@ func init() {
 	}
 
 	tpl.AddFS(templates, tpl.MatchAnd(
-		tpl.MatchPrefix("widgets/"),
+		tpl.MatchPrefix("forms/widgets/"),
 		tpl.MatchOr(
 			tpl.MatchExt(".html"),
 		),

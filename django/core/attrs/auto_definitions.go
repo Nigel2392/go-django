@@ -6,9 +6,11 @@ import (
 	"strings"
 )
 
+const ATTR_TAG_NAME = "attrs"
+
 func autoDefinitionStructTag(t reflect.StructField) (blank bool, editable bool) {
 	var (
-		tag   = t.Tag.Get("attrs")
+		tag   = t.Tag.Get(ATTR_TAG_NAME)
 		split = strings.Split(tag, "|")
 	)
 	blank, editable = false, true
@@ -54,7 +56,7 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 
 			var skip = (field_t.Anonymous ||
 				field_t.PkgPath != "" ||
-				field_t.Tag.Get("attrs") == "-")
+				field_t.Tag.Get(ATTR_TAG_NAME) == "-")
 
 			if skip {
 				continue
@@ -86,7 +88,7 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 
 			var skip = (field_t.Anonymous ||
 				field_t.PkgPath != "" ||
-				field_t.Tag.Get("attrs") == "-")
+				field_t.Tag.Get(ATTR_TAG_NAME) == "-")
 
 			if skip {
 				continue

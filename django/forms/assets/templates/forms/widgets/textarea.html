@@ -1,0 +1,1 @@
+{{ define "textarea" }}<textarea name="{{ .Get "name" }}" id="{{ .Get "id" }}" {{ safeAttrs (include (.Get "attrs") "forms/widgets/attrs.html") }}>{{ if (.Get "value") }}{{ safeHTML (.Get "value") }}{{ end }}</textarea>{{ end }}

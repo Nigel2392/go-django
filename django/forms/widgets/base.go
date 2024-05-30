@@ -106,7 +106,7 @@ func NewBaseWidget(type_ func() string, templateName string, attrs map[string]st
 	}
 
 	if templateName == "" {
-		templateName = "widgets/input.html"
+		templateName = "forms/widgets/input.html"
 	}
 
 	if type_ == nil {

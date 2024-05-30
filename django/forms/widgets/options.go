@@ -44,13 +44,13 @@ func NewOptionWidget(type_ func() string, templateName string, attrs map[string]
 }
 
 func NewCheckboxInput(attrs map[string]string, choices func() []Option) Widget {
-	return NewOptionWidget(S("checkbox"), "widgets/checkbox.html", attrs, choices)
+	return NewOptionWidget(S("checkbox"), "forms/widgets/checkbox.html", attrs, choices)
 }
 
 func NewRadioInput(attrs map[string]string, choices func() []Option) Widget {
-	return NewOptionWidget(S("radio"), "widgets/radio.html", attrs, choices)
+	return NewOptionWidget(S("radio"), "forms/widgets/radio.html", attrs, choices)
 }
 
 func NewSelectInput(attrs map[string]string, choices func() []Option) Widget {
-	return NewOptionWidget(S("select"), "widgets/select.html", attrs, choices)
+	return NewOptionWidget(S("select"), "forms/widgets/select.html", attrs, choices)
 }

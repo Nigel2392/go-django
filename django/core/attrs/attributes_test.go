@@ -296,7 +296,7 @@ func TestModelForceSetReadOnly(t *testing.T) {
 
 type TestModelReadonlyStructTag struct {
 	ID   int
-	Name string `models:"readonly"`
+	Name string `attrs:"readonly"`
 }
 
 func (f *TestModelReadonlyStructTag) FieldDefs() attrs.Definitions {
