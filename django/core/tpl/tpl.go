@@ -177,7 +177,7 @@ func (r *TemplateRenderer) Render(b io.Writer, context any, baseKey string, path
 				goto render
 			}
 			for _, f := range r.ctxFuncs {
-				assert.True(f == nil, "nil context function")
+				assert.False(f == nil, "nil context function")
 				f(requestContext)
 			}
 		}

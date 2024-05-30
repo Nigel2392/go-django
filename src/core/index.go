@@ -1,18 +1,19 @@
 package core
 
 import (
-	"errors"
 	"fmt"
 	"net/http"
 	"net/mail"
 
-	"github.com/Nigel2392/django/blocks"
+	"github.com/Nigel2392/django/contrib/blocks"
 	"github.com/Nigel2392/django/core/attrs"
+	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/core/http_"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/widgets"
+	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
 type FormData struct {
@@ -29,6 +30,10 @@ func (f *FormData) FieldDefs() attrs.Definitions {
 }
 
 func Index(w http.ResponseWriter, r *http.Request) {
+	var session = sessions.Retrieve(r)
+	fmt.Println(session.Get("page_key"))
+	session.Set("page_key", "Last visited the index page")
+
 	var form forms.Form = forms.Initialize(
 		forms.NewBaseForm(),
 		forms.WithRequestData("POST", r),
@@ -88,7 +93,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 				b.AddField("data", blocks.NewListBlock(blocks.TextBlock(
 					blocks.WithValidators[*blocks.FieldBlock](func(i interface{}) error {
 						if i == nil || i == "" {
-							return errors.New("This field is required")
+							return errs.ErrFieldRequired
 						}
 						return nil
 					}),

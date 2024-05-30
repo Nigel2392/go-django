@@ -3,6 +3,7 @@ package django
 import (
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/core/http_"
+	"github.com/Nigel2392/mux"
 )
 
 func AppSettings(settings Settings) func(*Application) error {
@@ -17,9 +18,14 @@ func AppSettings(settings Settings) func(*Application) error {
 	}
 }
 
-func AppMiddleware(middleware ...http_.Middleware) func(*Application) error {
+func AppMiddleware(middleware ...mux.Middleware) func(*Application) error {
+	var m = make([]http_.Middleware, 0, len(middleware))
+	for _, mw := range middleware {
+		m = append(m, http_.NewMiddleware(mw))
+	}
+
 	return func(a *Application) error {
-		a.Middleware = append(a.Middleware, middleware...)
+		a.Middleware = append(a.Middleware, m...)
 		return nil
 	}
 }

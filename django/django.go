@@ -16,6 +16,7 @@ import (
 	"github.com/Nigel2392/mux/middleware"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/justinas/nosurf"
+	"github.com/pkg/errors"
 )
 
 type AppConfig interface {
@@ -51,11 +52,14 @@ func App(opts ...Option) *Application {
 		}
 	}
 
-	for _, opt := range opts {
+	for i, opt := range opts {
 		if opt == nil {
 			continue
 		}
-		assert.ErrNil(opt(Global))
+
+		if err := opt(Global); err != nil {
+			assert.Fail("Error initializing django application %d: %s", i, err)
+		}
 	}
 
 	return Global
@@ -116,6 +120,8 @@ func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Requ
 
 func (a *Application) Initialize() error {
 
+	assert.False(a.Settings == nil, "Settings cannot be nil")
+
 	a.Mux.Use(
 		// middleware.Recoverer(a.ServerError),
 		middleware.AllowedHosts(
@@ -153,7 +159,7 @@ func (a *Application) Initialize() error {
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
 		if err = app.Initialize(a.Settings); err != nil {
-			return err
+			return errors.Wrapf(err, "Error initializing app %s", app.Name())
 		}
 	}
 

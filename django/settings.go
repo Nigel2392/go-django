@@ -26,6 +26,7 @@ func Config(m map[string]interface{}) Settings {
 func Configure(m map[string]interface{}) func(*Application) error {
 	return func(a *Application) error {
 		var s = Config(m)
+		a.Settings = s
 		return s.Bind(a)
 	}
 }
@@ -59,7 +60,7 @@ func ConfigGetOK[T any](s Settings, key string, default_ ...T) (T, bool) {
 	}
 
 	assert.Lt(default_, 2, "Too many arguments")
-	assert.Gt(default_, 0, "Too few arguments")
+	assert.Gte(default_, 0, "Too few arguments")
 
 	if s == nil {
 		return default_[0], false

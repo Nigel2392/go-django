@@ -1,11 +1,14 @@
 package apps
 
 import (
+	"database/sql"
 	"io/fs"
 
 	"github.com/Nigel2392/django"
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/http_"
 	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/mux"
 )
 
 type AppConfig struct {
@@ -16,6 +19,34 @@ type AppConfig struct {
 	Middlewares   []http_.Middleware
 	CtxProcessors []func(tpl.RequestContext)
 	TemplateFS    fs.FS
+}
+
+type DBRequiredAppConfig struct {
+	*AppConfig
+	DB   *sql.DB
+	Init func(settings django.Settings, db *sql.DB) error
+}
+
+func NewDBAppConfig(name string, patterns ...http_.URL) *DBRequiredAppConfig {
+	var app = &DBRequiredAppConfig{
+		AppConfig: NewAppConfig(name, patterns...),
+	}
+	return app
+}
+
+func (a *DBRequiredAppConfig) Initialize(settings django.Settings) error {
+	var dbInt, ok = settings.Get("DATABASE")
+	assert.True(ok, "DATABASE setting is required for '%s' app", a.AppName)
+
+	db, ok := dbInt.(*sql.DB)
+	assert.True(ok, "DATABASE setting must be of type *sql.DB")
+
+	a.DB = db
+
+	if a.Init != nil {
+		return a.Init(settings, db)
+	}
+	return nil
 }
 
 func NewAppConfig(name string, patterns ...http_.URL) *AppConfig {
@@ -36,6 +67,17 @@ func (a *AppConfig) Register(p ...http_.URL) {
 		a.URLPatterns = make([]http_.URL, 0)
 	}
 	a.URLPatterns = append(a.URLPatterns, p...)
+}
+
+func (a *AppConfig) AddMiddleware(m ...mux.Middleware) {
+	if a.Middlewares == nil {
+		a.Middlewares = make([]http_.Middleware, 0)
+	}
+	var mws = make([]http_.Middleware, len(m))
+	for i, mw := range m {
+		mws[i] = http_.NewMiddleware(mw)
+	}
+	a.Middlewares = append(a.Middlewares, mws...)
 }
 
 func (a *AppConfig) Use(m ...http_.Middleware) {
