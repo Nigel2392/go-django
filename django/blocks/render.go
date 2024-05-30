@@ -10,7 +10,7 @@ import (
 
 func RenderBlockForm(widget *BlockWidget, context *BlockContext) (template.HTML, error) {
 	var (
-		template = "blocks/forms/widgets/block_widget.tmpl"
+		template = "blocks/widgets/block_widget.tmpl"
 	)
 
 	var b, err = widget.BlockDef.RenderForm(context.ID, context.Name, context.Value, context)

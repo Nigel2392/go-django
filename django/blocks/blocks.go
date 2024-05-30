@@ -10,6 +10,7 @@ import (
 
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/django/forms/widgets"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/pkg/errors"
 )
@@ -28,6 +29,15 @@ func NumberBlock() Block {
 	var base = NewBaseBlock()
 	base.Template = "blocks/templates/number.html"
 	base.FormField = fields.NumberField[int]()
+	return base
+}
+
+func TextBlock() Block {
+	var base = NewBaseBlock()
+	base.Template = "blocks/templates/text.html"
+	base.FormField = fields.CharField(
+		fields.Widget(widgets.NewTextarea(nil)),
+	)
 	return base
 }
 
@@ -158,6 +168,14 @@ func (m *MultiBlock) Clean(value interface{}) (interface{}, error) {
 	return data, nil
 }
 
+func (m *MultiBlock) GetDefault() interface{} {
+	var data = make(map[string]interface{})
+	for head := m.Fields.Front(); head != nil; head = head.Next() {
+		data[head.Key] = head.Value.GetDefault()
+	}
+	return data
+}
+
 func (m *MultiBlock) RenderForm(id, name string, value interface{}, context ctx.Context) (template.HTML, error) {
 	var (
 		ctxData  = NewBlockContext(m, context)
@@ -169,7 +187,7 @@ func (m *MultiBlock) RenderForm(id, name string, value interface{}, context ctx.
 	ctxData.Value = value
 
 	if value == nil {
-		return "", nil
+		value = m.GetDefault()
 	}
 
 	if valueMap, ok = value.(map[string]interface{}); !ok {
@@ -207,6 +225,9 @@ type ListBlock struct {
 }
 
 func NewListBlock(block Block, minMax ...int) *ListBlock {
+
+	block.SetName("item")
+
 	var l = &ListBlock{
 		BaseBlock: NewBaseBlock(),
 		Child:     block,
@@ -315,6 +336,8 @@ func (l *ListBlock) Clean(value interface{}) (interface{}, error) {
 }
 
 func (l *ListBlock) renderDefaults(id, name string, ctxData *BlockContext) (template.HTML, error) {
+
+	fmt.Println("renderDefaults", id, name, ctxData, l.MinNum())
 	var b = new(bytes.Buffer)
 	for i := 0; i < l.MinNum(); i++ {
 		var (
@@ -328,8 +351,11 @@ func (l *ListBlock) renderDefaults(id, name string, ctxData *BlockContext) (temp
 			ctxData,
 		)
 		if err != nil {
+			fmt.Println("error", err)
 			return "", err
 		}
+
+		fmt.Println("v", v)
 
 		b.WriteString(string(v))
 	}
@@ -347,7 +373,7 @@ func (l *ListBlock) RenderForm(id, name string, value interface{}, context ctx.C
 	ctxData.Name = name
 	ctxData.Value = value
 
-	if value == nil {
+	if value == nil || value == "" {
 		return l.renderDefaults(id, name, ctxData)
 	}
 

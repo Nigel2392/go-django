@@ -81,7 +81,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 				b.AddField("name", blocks.CharBlock())
 				b.AddField("age", blocks.NumberBlock())
 				b.AddField("email", blocks.CharBlock())
-				b.AddField("data", blocks.NewListBlock(blocks.CharBlock(), 3, 5))
+				b.AddField("data", blocks.NewListBlock(blocks.TextBlock(), 3, 5))
 
 				var f = blocks.BlockField(
 					b,

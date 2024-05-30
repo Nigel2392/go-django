@@ -19,7 +19,7 @@ type Block interface {
 	Field() fields.Field
 	RenderForm(id, name string, value interface{}, context ctx.Context) (template.HTML, error)
 	Render(value interface{}, context ctx.Context) (template.HTML, error)
-
+	GetDefault() interface{}
 	media.MediaDefiner
 	widgets.FormValuer
 	forms.Validator
@@ -64,6 +64,10 @@ func (b *BaseBlock) Render(value interface{}, context ctx.Context) (template.HTM
 	var blockCtx = NewBlockContext(b, context)
 	blockCtx.Value = value
 	return tpl.Render(blockCtx, b.Template)
+}
+
+func (b *BaseBlock) GetDefault() interface{} {
+	return nil
 }
 
 func (b *BaseBlock) ValueToGo(value interface{}) (interface{}, error) {

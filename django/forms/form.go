@@ -34,13 +34,17 @@ type BaseForm struct {
 	OnFinalizeFuncs []func(Form)
 }
 
-func NewBaseForm() *BaseForm {
-	return &BaseForm{
+func NewBaseForm(opts ...func(Form)) *BaseForm {
+	var f = &BaseForm{
 		FormFields:      orderedmap.NewOrderedMap[string, fields.Field](),
 		FormWidgets:     orderedmap.NewOrderedMap[string, widgets.Widget](),
 		Initial:         make(map[string]interface{}),
 		InvalidDefaults: make(map[string]interface{}),
 	}
+	for _, opt := range opts {
+		opt(f)
+	}
+	return f
 }
 
 func WithRequestData(method string, r *http.Request) func(Form) {
@@ -382,6 +386,7 @@ func (f *BaseForm) Widget(name string) widgets.Widget {
 }
 
 func (f *BaseForm) CleanedData() map[string]interface{} {
+	assertTrue(f.Errors.Len() == 0, "You cannot access cleaned data if the form is invalid.")
 	assertFalse(f.Cleaned == nil, "You must call IsValid() before accessing cleaned data.")
 	return f.Cleaned
 }
