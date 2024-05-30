@@ -5,6 +5,7 @@ import (
 	"io"
 	"maps"
 	"net/url"
+	"strings"
 
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/tpl"
@@ -52,7 +53,7 @@ func (b *BaseWidget) ValueOmittedFromData(data url.Values, files map[string][]io
 func (b *BaseWidget) ValueFromDataDict(data url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
 	var value string
 	if data.Has(name) {
-		value = data.Get(name)
+		value = strings.TrimSpace(data.Get(name))
 	}
 	return value, nil
 }

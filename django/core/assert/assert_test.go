@@ -34,21 +34,34 @@ func noPanic(f func(t *testing.T)) func(t *testing.T) {
 }
 
 func TestIsAssertionError(t *testing.T) {
+	t.Run("PANIC", func(t *testing.T) {
+		defer func() {
+			var err any
+			if err = recover(); err == nil {
+				t.Error("Expected panic, got nil")
+			}
 
-	t.Run("Error", noPanic(func(t *testing.T) {
+			if !errors.Is(err.(error), assert.AssertionFailedError) {
+				t.Errorf("Expected error to be an assertion error, got %v", err)
+			}
+		}()
+
+		assert.Assert(false, "test")
+	})
+
+	t.Run("ERROR", noPanic(func(t *testing.T) {
 		var err = assert.Assert(false, "test")
 		if !errors.Is(err, assert.AssertionFailedError) {
 			t.Errorf("Expected error to be an assertion error, got %v", err)
 		}
 	}))
 
-	t.Run("Nil", func(t *testing.T) {
+	t.Run("OK", func(t *testing.T) {
 		var err = assert.Assert(true, "test")
 		if err != nil {
 			t.Errorf("Expected nil, got %v", err)
 		}
 	})
-
 }
 
 func TestFail(t *testing.T) {
@@ -200,6 +213,42 @@ func TestLt(t *testing.T) {
 	t.Run("OK", func(t *testing.T) {
 		defer notRaises(t)
 		panicIfErr(t, assert.Lt(slice, 4, "test"))
+	})
+}
+
+func TestGte(t *testing.T) {
+	var slice = []int{1, 2, 3}
+	t.Run("PANIC", func(t *testing.T) {
+		defer raises(t)
+		assert.Gte(slice, 4, "test")
+	})
+
+	t.Run("ERROR", noPanic(func(t *testing.T) {
+		defer notRaises(t)
+		assert.Gte(slice, 4, "test")
+	}))
+
+	t.Run("OK", func(t *testing.T) {
+		defer notRaises(t)
+		panicIfErr(t, assert.Gte(slice, 2, "test"))
+	})
+}
+
+func TestLte(t *testing.T) {
+	var slice = []int{1, 2, 3}
+	t.Run("PANIC", func(t *testing.T) {
+		defer raises(t)
+		assert.Lte(slice, 0, "test")
+	})
+
+	t.Run("ERROR", noPanic(func(t *testing.T) {
+		defer notRaises(t)
+		assert.Lte(slice, 0, "test")
+	}))
+
+	t.Run("OK", func(t *testing.T) {
+		defer notRaises(t)
+		panicIfErr(t, assert.Lte(slice, 4, "test"))
 	})
 }
 

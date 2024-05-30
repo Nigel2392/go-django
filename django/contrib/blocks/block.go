@@ -116,11 +116,7 @@ func (b *BaseBlock) ValueOmittedFromData(data url.Values, files map[string][]io.
 }
 
 func (b *BaseBlock) ValueFromDataDict(data url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
-	var value string
-	if data.Has(name) {
-		value = data.Get(name)
-	}
-	return value, nil
+	return b.Field().Widget().ValueFromDataDict(data, files, name)
 }
 
 func (b *BaseBlock) Validate(value interface{}) []error {

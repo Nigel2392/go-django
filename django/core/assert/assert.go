@@ -9,12 +9,14 @@ import (
 	"github.com/pkg/errors"
 )
 
+type AssertError = errs.Error
+
 var (
 	PanicEnabled bool = true
 
 	LogOnError func(error)
 
-	AssertionFailedError errs.Error = "assertion failed"
+	AssertionFailedError AssertError = "assertion failed"
 )
 
 // Fail will always panic unless PanicEnabled is set to false

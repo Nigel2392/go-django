@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
@@ -98,7 +99,7 @@ func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCl
 		return nil, []error{fmt.Errorf("Malformed form data, missing key %s", addedKey)} //lint:ignore ST1005 ignore this lint
 	}
 
-	var addedValue = d.Get(addedKey)
+	var addedValue = strings.TrimSpace(d.Get(addedKey))
 	if addedValue != "" {
 		added, _ = strconv.Atoi(addedValue)
 	}
