@@ -52,6 +52,18 @@ func (m *StructBlock) Field() fields.Field {
 	return m.FormField
 }
 
+func (m *StructBlock) ValueOmittedFromData(data url.Values, files map[string][]io.ReadCloser, name string) bool {
+	var omitted = true
+	for head := m.Fields.Front(); head != nil; head = head.Next() {
+		var key = fmt.Sprintf("%s-%s", name, head.Key)
+		if !head.Value.ValueOmittedFromData(data, files, key) {
+			omitted = false
+			break
+		}
+	}
+	return omitted
+}
+
 func (m *StructBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
 	var data = make(map[string]interface{})
 	var errors = NewBlockErrors[string]()
@@ -76,9 +88,10 @@ func (m *StructBlock) ValueFromDataDict(d url.Values, files map[string][]io.Read
 }
 
 func (m *StructBlock) ValueToGo(value interface{}) (interface{}, error) {
-	if value == nil {
-		return "", nil
+	if IsZero(value) {
+		return nil, nil
 	}
+
 	var (
 		data     = make(map[string]interface{})
 		valueMap map[string]interface{}
@@ -140,10 +153,15 @@ func (m *StructBlock) ValueToForm(value interface{}) interface{} {
 }
 
 func (m *StructBlock) Clean(value interface{}) (interface{}, error) {
+	if IsZero(value) {
+		return nil, nil
+	}
+
 	var data = make(map[string]interface{})
 	var errs = NewBlockErrors[string]()
+	var valueMap = value.(map[string]interface{})
 	for head := m.Fields.Front(); head != nil; head = head.Next() {
-		var v, err = head.Value.Clean(data[head.Key])
+		var v, err = head.Value.Clean(valueMap[head.Key])
 		if err != nil {
 			errs.AddError(head.Key, err)
 			continue
@@ -151,7 +169,45 @@ func (m *StructBlock) Clean(value interface{}) (interface{}, error) {
 
 		data[head.Key] = v
 	}
-	return data, errs
+
+	if errs.HasErrors() {
+		return nil, errs
+	}
+
+	return data, nil
+}
+
+func (m *StructBlock) Validate(value interface{}) []error {
+
+	for _, validator := range m.Validators {
+		if err := validator(value); err != nil {
+			return []error{err}
+		}
+	}
+
+	if IsZero(value) {
+		return nil
+	}
+
+	var valueMap map[string]interface{}
+	var ok bool
+	if valueMap, ok = value.(map[string]interface{}); !ok {
+		return []error{fmt.Errorf("value must be a map[string]interface{}")}
+	}
+
+	var errors = NewBlockErrors[string]()
+	for head := m.Fields.Front(); head != nil; head = head.Next() {
+		var e = head.Value.Validate(valueMap[head.Key])
+		if len(e) != 0 {
+			errors.AddError(head.Key, e...)
+		}
+	}
+
+	if errors.HasErrors() {
+		return []error{errors}
+	}
+
+	return nil
 }
 
 func (m *StructBlock) GetDefault() interface{} {

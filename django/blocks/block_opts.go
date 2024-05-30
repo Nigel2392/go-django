@@ -20,3 +20,22 @@ func WithValidators[T any](validators ...func(interface{}) error) OptFunc[T] {
 		}
 	}
 }
+
+func reflectSetter[T any](t T, fieldName string, value interface{}) {
+	var field = reflect.ValueOf(t).Elem().FieldByName(fieldName)
+	if field.IsValid() {
+		field.Set(reflect.ValueOf(value))
+	}
+}
+
+func WithLabel[T any](label string) OptFunc[T] {
+	return func(t T) {
+		reflectSetter(t, "LabelFunc", func() string { return label })
+	}
+}
+
+func WithHelpText[T any](text string) OptFunc[T] {
+	return func(t T) {
+		reflectSetter(t, "HelpFunc", func() string { return text })
+	}
+}

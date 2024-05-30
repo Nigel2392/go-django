@@ -7,6 +7,10 @@ import (
 	"github.com/Nigel2392/django/core/errs"
 )
 
+type Length interface {
+	Len() int
+}
+
 type BaseBlockValidationError[T comparable] struct {
 	Errors         map[T][]error
 	NonBlockErrors []error
@@ -40,6 +44,27 @@ func (m *BaseBlockValidationError[T]) HasErrors() bool {
 	return len(m.Errors) != 0 || len(m.NonBlockErrors) != 0
 }
 
+func (m *BaseBlockValidationError[T]) Len() int {
+	var l = 0
+	for _, errs := range m.Errors {
+		for _, err := range errs {
+			if e, ok := err.(Length); ok {
+				l += e.Len()
+			} else {
+				l++
+			}
+		}
+	}
+	for _, err := range m.NonBlockErrors {
+		if e, ok := err.(Length); ok {
+			l += e.Len()
+		} else {
+			l++
+		}
+	}
+	return l
+}
+
 func (m *BaseBlockValidationError[T]) AddError(key T, err ...error) *BaseBlockValidationError[T] {
 	if _, ok := m.Errors[key]; !ok {
 		m.Errors[key] = make([]error, 0)
@@ -63,13 +88,5 @@ func (m *BaseBlockValidationError[T]) Get(key T) []error {
 }
 
 func (m *BaseBlockValidationError[T]) Error() string {
-	if len(m.Errors) == 0 && len(m.NonBlockErrors) == 0 {
-		return ""
-	}
-
-	if len(m.Errors) == 0 {
-		return fmt.Sprintf("%d non-field errors occurred when validating", len(m.Errors))
-	}
-
-	return fmt.Sprintf("%d errors occurred when validating", len(m.Errors)+len(m.NonBlockErrors))
+	return fmt.Sprintf("%d errors occurred when validating", m.Len())
 }

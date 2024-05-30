@@ -21,7 +21,7 @@ func (b *FieldBlock) RenderForm(id, name string, value interface{}, errors []err
 		return "", err
 	}
 
-	var label = b.Field().Label()
+	var label = b.Label()
 	var idForLabel = b.Field().Widget().IdForLabel(id)
 	if len(errors) > 0 {
 		buf.WriteString("<ul class=\"errorlist\">")
@@ -46,6 +46,11 @@ func (b *FieldBlock) RenderForm(id, name string, value interface{}, errors []err
 	buf.WriteString("</label>")
 	buf.WriteString(string(html))
 	buf.WriteString("</div>")
+	if b.HelpText() != "" {
+		buf.WriteString("<p class=\"help\">")
+		buf.WriteString(b.HelpText())
+		buf.WriteString("</p>")
+	}
 	return template.HTML(buf.String()), nil
 
 }

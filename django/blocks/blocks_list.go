@@ -59,9 +59,29 @@ func (l *ListBlock) makeError(err error) error {
 }
 
 func (l *ListBlock) makeIndexedError(index int, err ...error) error {
+	if len(err) == 0 {
+		return nil
+	}
 	var e = NewBlockErrors[int]()
 	e.AddError(index, err...)
 	return e
+}
+
+func (b *ListBlock) ValueOmittedFromData(data url.Values, files map[string][]io.ReadCloser, name string) bool {
+	var addedKey = fmt.Sprintf("%sAdded", name)
+	if !data.Has(addedKey) {
+		return true
+	}
+
+	var omitted = true
+	for i := 0; ; i++ {
+		var key = fmt.Sprintf("%s-%d", name, i)
+		if data.Has(key) {
+			omitted = false
+			break
+		}
+	}
+	return omitted
 }
 
 func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
@@ -126,7 +146,7 @@ func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCl
 }
 
 func (l *ListBlock) ValueToGo(value interface{}) (interface{}, error) {
-	if value == nil {
+	if IsZero(value) {
 		return "", nil
 	}
 	var (
@@ -161,7 +181,7 @@ func (l *ListBlock) GetDefault() interface{} {
 
 func (l *ListBlock) ValueToForm(value interface{}) interface{} {
 
-	if value == nil {
+	if IsZero(value) {
 		value = l.GetDefault()
 	}
 
@@ -180,17 +200,43 @@ func (l *ListBlock) ValueToForm(value interface{}) interface{} {
 }
 
 func (l *ListBlock) Clean(value interface{}) (interface{}, error) {
+	if IsZero(value) {
+		return nil, nil
+	}
+
 	var data = make([]interface{}, 0)
 	for i, v := range value.([]interface{}) {
 		var v, err = l.Child.Clean(v)
 		if err != nil {
-			return nil, errors.Wrapf(err, "index %d", i)
+			return nil, l.makeIndexedError(i, errors.Wrapf(err, "index %d", i))
 		}
 
 		data = append(data, v)
 	}
 
 	return data, nil
+}
+
+func (l *ListBlock) Validate(value interface{}) []error {
+
+	for _, validator := range l.Validators {
+		if err := validator(value); err != nil {
+			return []error{err}
+		}
+	}
+
+	if IsZero(value) {
+		return nil
+	}
+
+	var errors = make([]error, 0)
+	for i, v := range value.([]interface{}) {
+		var e = l.Child.Validate(v)
+		if len(e) != 0 {
+			errors = append(errors, l.makeIndexedError(i, e...))
+		}
+	}
+	return errors
 }
 
 func (l *ListBlock) RenderForm(id, name string, value interface{}, errors []error, context ctx.Context) (template.HTML, error) {

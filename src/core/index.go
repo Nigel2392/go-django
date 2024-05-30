@@ -92,6 +92,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 						}
 						return nil
 					}),
+					blocks.WithLabel[*blocks.FieldBlock]("Data"),
 				), 3, 5))
 
 				// var c = blocks.NewMultiBlock()

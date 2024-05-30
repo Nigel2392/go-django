@@ -16,6 +16,8 @@ import (
 type Block interface {
 	Name() string
 	SetName(name string)
+	Label() string
+	HelpText() string
 	Field() fields.Field
 	SetField(field fields.Field)
 	RenderForm(id, name string, value interface{}, errors []error, context ctx.Context) (template.HTML, error)
@@ -35,6 +37,9 @@ type BaseBlock struct {
 	FormField  fields.Field
 	Validators []func(interface{}) error
 	Default    func() interface{}
+
+	LabelFunc func() string
+	HelpFunc  func() string
 }
 
 func (b *BaseBlock) Name() string {
@@ -77,6 +82,20 @@ func (b *BaseBlock) Render(value interface{}, context ctx.Context) (template.HTM
 	return tpl.Render(blockCtx, b.Template)
 }
 
+func (b *BaseBlock) Label() string {
+	if b.LabelFunc != nil {
+		return b.LabelFunc()
+	}
+	return b.Field().Label()
+}
+
+func (b *BaseBlock) HelpText() string {
+	if b.HelpFunc != nil {
+		return b.HelpFunc()
+	}
+	return ""
+}
+
 func (b *BaseBlock) GetDefault() interface{} {
 	if b.Default != nil {
 		return b.Default()
@@ -93,7 +112,7 @@ func (b *BaseBlock) ValueToForm(value interface{}) interface{} {
 }
 
 func (b *BaseBlock) ValueOmittedFromData(data url.Values, files map[string][]io.ReadCloser, name string) bool {
-	return !data.Has(name)
+	return b.Field().Widget().ValueOmittedFromData(data, files, name)
 }
 
 func (b *BaseBlock) ValueFromDataDict(data url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
