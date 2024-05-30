@@ -90,20 +90,20 @@ func (f *FieldDef) GetValue() interface{} {
 	return f.field_v.Interface()
 }
 
-func (f *FieldDef) SetValue(v interface{}, force bool) {
+func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	var r_v = reflect.ValueOf(v)
 
 	if !r_v.IsValid() && f.AllowNull() {
 		f.field_v.Set(reflect.Zero(f.field_t.Type))
-		return
+		return nil
 	} else if !r_v.IsValid() {
-		panic(
+		return errPanic(
 			fmt.Sprintf("field %q (%q) is not valid", f.field_t.Name, f.field_t.Type),
 		)
 	}
 
 	if r_v.Type() != f.field_t.Type && !r_v.CanConvert(f.field_t.Type) {
-		panic(
+		return errPanic(
 			fmt.Sprintf("field %q (%q) is not compatible with type %T", f.field_t.Name, f.field_t.Type, v),
 		)
 	}
@@ -113,13 +113,13 @@ func (f *FieldDef) SetValue(v interface{}, force bool) {
 	}
 
 	if !f.field_v.CanSet() {
-		panic(
+		return errPanic(
 			fmt.Sprintf("field %q is not settable", f.field_t.Name),
 		)
 	}
 
 	if !f.Editable && !force {
-		panic(
+		return errPanic(
 			fmt.Sprintf("field %q is not editable", f.field_t.Name),
 		)
 	}
@@ -131,11 +131,12 @@ func (f *FieldDef) SetValue(v interface{}, force bool) {
 			reflect.Float32, reflect.Float64,
 			reflect.Complex64, reflect.Complex128:
 		default:
-			panic(
+			return errPanic(
 				fmt.Sprintf("field %q is not blank", f.field_t.Name),
 			)
 		}
 	}
 
 	f.field_v.Set(r_v)
+	return nil
 }

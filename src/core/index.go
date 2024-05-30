@@ -107,9 +107,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		}),
 	)
 
-	if r.Method == "POST" {
-		form.IsValid()
-
+	if r.Method == "POST" && form.IsValid() {
 		var data = form.CleanedData()
 		var s = &FormData{}
 

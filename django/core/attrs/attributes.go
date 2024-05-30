@@ -2,25 +2,41 @@ package attrs
 
 import "fmt"
 
-func SetMany(d Definer, values map[string]interface{}) {
-	for name, value := range values {
-		Set(d, name, value)
+var PanicEnabled = true
+
+func errPanic(msg any) error {
+	fail(msg)
+	return fmt.Errorf("%v", msg)
+}
+
+func fail(msg any) {
+	if PanicEnabled {
+		panic(msg)
 	}
 }
 
-func Set(d Definer, name string, value interface{}) {
-	set(d, name, value, false)
+func SetMany(d Definer, values map[string]interface{}) error {
+	for name, value := range values {
+		if err := set(d, name, value, false); err != nil {
+			return errPanic(err)
+		}
+	}
+	return nil
 }
 
-func ForceSet(d Definer, name string, value interface{}) {
-	set(d, name, value, true)
+func Set(d Definer, name string, value interface{}) error {
+	return set(d, name, value, false)
+}
+
+func ForceSet(d Definer, name string, value interface{}) error {
+	return set(d, name, value, true)
 }
 
 func Get[T any](d Definer, name string) T {
 	var defs = d.FieldDefs()
 	var f, ok = defs.Field(name)
 	if !ok {
-		panic(
+		fail(
 			fmt.Sprintf("get (%T): no field named %q", d, name),
 		)
 	}
@@ -32,20 +48,21 @@ func Get[T any](d Definer, name string) T {
 	case *T:
 		return *t
 	default:
-		panic(
+		fail(
 			fmt.Sprintf("get (%T): field %q is not of type %T", d, name, v),
 		)
 	}
+	return *(new(T))
 }
 
-func set(d Definer, name string, value interface{}, force bool) {
+func set(d Definer, name string, value interface{}, force bool) error {
 	var defs = d.FieldDefs()
 	var f, ok = defs.Field(name)
 	if !ok {
-		panic(
+		return errPanic(
 			fmt.Sprintf("set (%T): no field named %q", d, name),
 		)
 	}
 
-	f.SetValue(value, force)
+	return f.SetValue(value, force)
 }

@@ -5,10 +5,10 @@ type Definer interface {
 }
 
 type Definitions interface {
-	Set(name string, value interface{})
+	Set(name string, value interface{}) error
 	Get(name string) interface{}
 	Field(name string) (f Field, ok bool)
-	ForceSet(name string, value interface{})
+	ForceSet(name string, value interface{}) error
 }
 
 type Field interface {
@@ -19,7 +19,7 @@ type Field interface {
 	AllowBlank() bool
 	AllowEdit() bool
 	GetValue() interface{}
-	SetValue(v interface{}, force bool)
+	SetValue(v interface{}, force bool) error
 }
 
 type Labeler interface {

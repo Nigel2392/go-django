@@ -12,12 +12,12 @@ func Define(d Definer, fieldDefinitions map[string]Field) *ObjectDefinitions {
 	}
 }
 
-func (d *ObjectDefinitions) Set(name string, value interface{}) {
-	set(d.Object, name, value, false)
+func (d *ObjectDefinitions) Set(name string, value interface{}) error {
+	return set(d.Object, name, value, false)
 }
 
-func (d *ObjectDefinitions) ForceSet(name string, value interface{}) {
-	set(d.Object, name, value, true)
+func (d *ObjectDefinitions) ForceSet(name string, value interface{}) error {
+	return set(d.Object, name, value, true)
 }
 
 func (d *ObjectDefinitions) Get(name string) interface{} {
