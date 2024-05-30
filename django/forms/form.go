@@ -529,7 +529,7 @@ func (f *BaseForm) AddError(name string, errorList ...error) {
 loop:
 	for i, err := range newErrs {
 		switch e := err.(type) {
-		case errs.ValidationError, *errs.ValidationError:
+		case errs.DjangoError:
 			continue loop
 		default:
 			newErrs[i] = errs.NewValidationError(name, e)

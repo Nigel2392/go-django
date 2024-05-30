@@ -8,12 +8,12 @@ import (
 	"github.com/Nigel2392/django/core/tpl"
 )
 
-func RenderBlockForm(widget *BlockWidget, context *BlockContext) (template.HTML, error) {
+func RenderBlockForm(widget *BlockWidget, context *BlockContext, errors []error) (template.HTML, error) {
 	var (
 		template = "blocks/widgets/block_widget.tmpl"
 	)
 
-	var b, err = widget.BlockDef.RenderForm(context.ID, context.Name, context.Value, context)
+	var b, err = widget.BlockDef.RenderForm(context.ID, context.Name, context.Value, errors, context)
 	if err != nil {
 		return "", errs.Error(b)
 	}

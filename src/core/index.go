@@ -1,6 +1,7 @@
 package core
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"net/mail"
@@ -76,12 +77,29 @@ func Index(w http.ResponseWriter, r *http.Request) {
 				fields.Name("block_data"),
 			),
 			func() fields.Field {
-				var b = blocks.NewMultiBlock()
+				var b = blocks.NewStructBlock()
 
 				b.AddField("name", blocks.CharBlock())
 				b.AddField("age", blocks.NumberBlock())
-				b.AddField("email", blocks.CharBlock())
-				b.AddField("data", blocks.NewListBlock(blocks.TextBlock(), 3, 5))
+				b.AddField("email", blocks.EmailBlock())
+				b.AddField("password", blocks.PasswordBlock())
+				b.AddField("date", blocks.DateBlock())
+				b.AddField("datetime", blocks.DateTimeBlock())
+				b.AddField("data", blocks.NewListBlock(blocks.TextBlock(
+					blocks.WithValidators[*blocks.FieldBlock](func(i interface{}) error {
+						if i == nil || i == "" {
+							return errors.New("This field is required")
+						}
+						return nil
+					}),
+				), 3, 5))
+
+				// var c = blocks.NewMultiBlock()
+				// c.AddField("name", blocks.CharBlock())
+				// c.AddField("age", blocks.NumberBlock())
+				// c.AddField("email", blocks.EmailBlock())
+				//
+				// b.AddField("data2", c)
 
 				var f = blocks.BlockField(
 					b,

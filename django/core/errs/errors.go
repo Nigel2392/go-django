@@ -5,28 +5,34 @@ import (
 	"fmt"
 )
 
-type ValidationError struct {
-	Name string
+type DjangoError interface {
+	error
+	Is(error) bool
+	DjangoError() // marker method
+}
+
+type ValidationError[T comparable] struct {
+	Name T
 	Err  error
 }
 
-func NewValidationError(name string, err any) ValidationError {
+func NewValidationError[T comparable](name T, err any) ValidationError[T] {
 
 	switch e := err.(type) {
 	case error:
-		return ValidationError{Name: name, Err: e}
+		return ValidationError[T]{Name: name, Err: e}
 	case string:
-		return ValidationError{Name: name, Err: errors.New(e)}
+		return ValidationError[T]{Name: name, Err: errors.New(e)}
 	default:
-		return ValidationError{Name: name, Err: fmt.Errorf("%v", e)}
+		return ValidationError[T]{Name: name, Err: fmt.Errorf("%v", e)}
 	}
 }
 
-func (e ValidationError) Is(other error) bool {
+func (e ValidationError[T]) Is(other error) bool {
 	switch otherErr := other.(type) {
-	case *ValidationError:
+	case *ValidationError[T]:
 		return errors.Is(e.Err, otherErr.Err) && otherErr.Name == e.Name
-	case ValidationError:
+	case ValidationError[T]:
 		return errors.Is(e.Err, otherErr.Err) && otherErr.Name == e.Name
 	case Error:
 		return errors.Is(e.Err, otherErr)
@@ -34,11 +40,13 @@ func (e ValidationError) Is(other error) bool {
 	return errors.Is(e.Err, other)
 }
 
-func (e ValidationError) Error() string {
+func (e ValidationError[T]) Error() string {
 	return e.Err.Error()
 }
 
-func Errors(m []ValidationError) []error {
+func (e ValidationError[T]) DjangoError() {}
+
+func Errors[T comparable](m []ValidationError[T]) []error {
 	var errs = make([]error, 0, len(m))
 	for _, v := range m {
 		errs = append(errs, v)

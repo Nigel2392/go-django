@@ -1,12 +1,13 @@
 package widgets
 
 import (
-	"errors"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Nigel2392/django/core/errs"
+	"github.com/pkg/errors"
 	"golang.org/x/exp/constraints"
 )
 
@@ -38,7 +39,7 @@ func (n *NumberWidget[T]) ValueToGo(value interface{}) (interface{}, error) {
 	switch val := value.(type) {
 	case string:
 		if val == "" {
-			return nil, nil
+			return reflect.Zero(t).Interface(), nil
 		}
 
 		switch t.Kind() {
@@ -76,6 +77,10 @@ func (n *NumberWidget[T]) ValueToForm(value interface{}) interface{} {
 		return value
 	}
 
+	if s, ok := value.(string); ok {
+		return s
+	}
+
 	var (
 		newT   = new(T)
 		new_rT = reflect.TypeOf(newT)
@@ -102,7 +107,7 @@ type DateWidgetType string
 
 const (
 	DateWidgetTypeDate     DateWidgetType = "date"
-	DateWidgetTypeDateTime DateWidgetType = "datetime"
+	DateWidgetTypeDateTime DateWidgetType = "datetime-local"
 )
 
 type DateWidget struct {
@@ -122,16 +127,29 @@ func (d *DateWidget) ValueToGo(value interface{}) (interface{}, error) {
 	switch val := value.(type) {
 	case string:
 		if val == "" {
-			return nil, nil
+			return "", nil
 		}
 
 		if d.Type == DateWidgetTypeDate {
 			v, err = time.Parse("2006-01-02", val)
 		} else {
-			v, err = time.Parse("2006-01-02T15:04:05", val)
+			var split = strings.Split(val, ":")
+			if len(split) == 2 {
+				v, err = time.Parse("2006-01-02T15:04", val)
+			} else if len(split) == 3 {
+				v, err = time.Parse("2006-01-02T15:04:05", val)
+			} else {
+				return "", errors.Wrapf(
+					errs.ErrInvalidSyntax,
+					"invalid date format %q", val,
+				)
+			}
 		}
 		if err != nil {
-			return nil, errs.ErrInvalidSyntax
+			return "", errors.Wrapf(
+				errs.ErrInvalidSyntax,
+				"invalid date format %q", val,
+			)
 		}
 		return v, nil
 	default:
@@ -140,8 +158,8 @@ func (d *DateWidget) ValueToGo(value interface{}) (interface{}, error) {
 }
 
 func (d *DateWidget) ValueToForm(value interface{}) interface{} {
-	if value == nil {
-		return value
+	if value == nil || value == "" {
+		return ""
 	}
 
 	switch val := value.(type) {

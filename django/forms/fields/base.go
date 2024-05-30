@@ -86,7 +86,10 @@ func (i *BaseField) Attrs() map[string]string {
 }
 
 func (i *BaseField) Label() string {
-	return i.FormLabel()
+	if i.FormLabel != nil {
+		return i.FormLabel()
+	}
+	return i.Caser.String(i.FieldName)
 }
 
 func (i *BaseField) Clean(value interface{}) (interface{}, error) {

@@ -6,6 +6,7 @@ import (
 	"net/url"
 
 	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/forms/widgets"
 )
@@ -49,7 +50,17 @@ func (bw *BlockWidget) GetContextData(id, name string, value interface{}, attrs 
 
 func (bw *BlockWidget) RenderWithErrors(id, name string, value interface{}, errors []error, attrs map[string]string) (template.HTML, error) {
 	var ctxData = bw.GetContextData(id, name, value, attrs)
-	return RenderBlockForm(bw, ctxData.(*BlockContext))
+
+	for i, err := range errors {
+		switch e := err.(type) {
+		case *errs.ValidationError[string]:
+			errors[i] = e.Err
+		case errs.ValidationError[string]:
+			errors[i] = e.Err
+		}
+	}
+
+	return RenderBlockForm(bw, ctxData.(*BlockContext), errors)
 }
 
 func (bw *BlockWidget) IdForLabel(name string) string {

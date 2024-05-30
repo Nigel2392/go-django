@@ -33,6 +33,8 @@ func NewBlockContext(b Block, context ctx.Context) *BlockContext {
 		case tpl.RequestContext:
 			r = ctx.Request()
 		}
+	} else {
+		context = ctx.NewContext(nil)
 	}
 
 	if blockCtx == nil {
@@ -40,6 +42,7 @@ func NewBlockContext(b Block, context ctx.Context) *BlockContext {
 			BlockDef: b,
 			Context:  context,
 			Request_: r,
+			Attrs:    make(map[string]string),
 		}
 	}
 
