@@ -71,9 +71,7 @@ func (b *BoundFormWidget) Field() template.HTML {
 		b.CachedHTML, err = b.FormWidget.RenderWithErrors(
 			b.ID(), b.FormName, b.FormValue, b.FormErrors, b.FormAttrs,
 		)
-		if err != nil {
-			panic(err)
-		}
+		assertTrue(err == nil, "BoundFormWidget.Field: %s", err)
 	}
 	return b.CachedHTML
 }

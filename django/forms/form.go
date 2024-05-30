@@ -479,9 +479,7 @@ func (f *BaseForm) FullClean() {
 }
 
 func (f *BaseForm) IsValid() bool {
-	if f.Raw == nil {
-		panic("Form data is not set.")
-	}
+	assertFalse(f.Raw == nil, "You cannot call IsValid() without setting the data first.")
 
 	if f.Errors == nil {
 		f.Errors = orderedmap.NewOrderedMap[string, []error]()

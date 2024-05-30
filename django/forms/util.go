@@ -2,10 +2,18 @@ package forms
 
 import "fmt"
 
-func assert(cond bool, msg string, args ...interface{}) {
+func assert(cond bool, msg any, args ...interface{}) {
 
 	if len(args) > 0 {
-		msg = fmt.Sprintf(msg, args...)
+		if s, ok := msg.(string); !ok {
+			msg = fmt.Sprint(append([]interface{}{msg}, args...))
+		} else {
+			msg = fmt.Sprintf(s, args...)
+		}
+	} else {
+		if _, ok := msg.(string); !ok {
+			msg = fmt.Sprint(msg)
+		}
 	}
 
 	if !cond {
@@ -13,10 +21,10 @@ func assert(cond bool, msg string, args ...interface{}) {
 	}
 }
 
-func assertTrue(cond bool, msg string, args ...interface{}) {
+func assertTrue(cond bool, msg any, args ...interface{}) {
 	assert(cond, msg, args...)
 }
 
-func assertFalse(cond bool, msg string, args ...interface{}) {
+func assertFalse(cond bool, msg any, args ...interface{}) {
 	assert(!cond, msg, args...)
 }
