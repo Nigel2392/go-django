@@ -252,21 +252,6 @@ func TestFieldBlock(t *testing.T) {
 				},
 			},
 		},
-		//{
-		//	Block:        NewBlock("test", blocks.PasswordBlock),
-		//	FormValue:    nil,
-		//	FormExpected: "",
-		//},
-		//{
-		//	Block:        NewBlock("test", blocks.DateBlock),
-		//	FormValue:    nil,
-		//	FormExpected: "",
-		//},
-		//{
-		//	Block:        NewBlock("test", blocks.DateTimeBlock),
-		//	FormValue:    nil,
-		//	FormExpected: "",
-		//},
 	}
 
 	for _, test := range tests {
