@@ -12,8 +12,20 @@ type Definitions interface {
 }
 
 type Field interface {
-	IsBlank() bool
-	IsEditable() bool
+	Labeler
+	Helper
+	Name() string
+	AllowNull() bool
+	AllowBlank() bool
+	AllowEdit() bool
 	GetValue() interface{}
 	SetValue(v interface{}, force bool)
+}
+
+type Labeler interface {
+	Label() string
+}
+
+type Helper interface {
+	HelpText() string
 }

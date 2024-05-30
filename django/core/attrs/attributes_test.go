@@ -30,21 +30,21 @@ func (f *ModelTest) Identifier() string {
 
 func (f *ModelTest) FieldDefs() attrs.Definitions {
 	return attrs.Define(f, map[string]attrs.Field{
-		"S":   attrs.NewField(f, "S", false, true),
-		"I8":  attrs.NewField(f, "I8", false, true),
-		"I16": attrs.NewField(f, "I16", false, true),
-		"I32": attrs.NewField(f, "I32", false, true),
-		"I64": attrs.NewField(f, "I64", false, true),
-		"U8":  attrs.NewField(f, "U8", false, true),
-		"U16": attrs.NewField(f, "U16", false, true),
-		"U32": attrs.NewField(f, "U32", false, true),
-		"U64": attrs.NewField(f, "U64", false, true),
-		"F32": attrs.NewField(f, "F32", false, true),
-		"F64": attrs.NewField(f, "F64", false, true),
-		"B":   attrs.NewField(f, "B", false, true),
-		"M":   attrs.NewField(f, "M", false, true),
-		"A":   attrs.NewField(f, "A", false, true),
-		"BT":  attrs.NewField(f, "BT", false, true),
+		"S":   attrs.NewField(f, "S", false, false, true),
+		"I8":  attrs.NewField(f, "I8", false, false, true),
+		"I16": attrs.NewField(f, "I16", false, false, true),
+		"I32": attrs.NewField(f, "I32", false, false, true),
+		"I64": attrs.NewField(f, "I64", false, false, true),
+		"U8":  attrs.NewField(f, "U8", false, false, true),
+		"U16": attrs.NewField(f, "U16", false, false, true),
+		"U32": attrs.NewField(f, "U32", false, false, true),
+		"U64": attrs.NewField(f, "U64", false, false, true),
+		"F32": attrs.NewField(f, "F32", false, false, true),
+		"F64": attrs.NewField(f, "F64", false, false, true),
+		"B":   attrs.NewField(f, "B", false, false, true),
+		"M":   attrs.NewField(f, "M", false, false, true),
+		"A":   attrs.NewField(f, "A", false, false, true),
+		"BT":  attrs.NewField(f, "BT", false, false, true),
 	})
 }
 
@@ -260,7 +260,7 @@ type ModelTestReadOnly struct {
 
 func (f *ModelTestReadOnly) FieldDefs() attrs.Definitions {
 	return attrs.Define(f, map[string]attrs.Field{
-		"Name": attrs.NewField(f, "Name", false, false),
+		"Name": attrs.NewField(f, "Name", false, false, false),
 	})
 }
 

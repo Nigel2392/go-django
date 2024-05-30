@@ -20,9 +20,9 @@ func TestModelFieldsGet(t *testing.T) {
 	}
 
 	var (
-		defID      = attrs.NewField(m, "ID", false, true)
-		defName    = attrs.NewField(m, "Name", false, true)
-		defObjects = attrs.NewField(m, "Objects", false, true)
+		defID      = attrs.NewField(m, "ID", false, false, true)
+		defName    = attrs.NewField(m, "Name", false, false, true)
+		defObjects = attrs.NewField(m, "Objects", false, false, true)
 	)
 
 	if m.ID != defID.GetValue().(int) {
@@ -46,9 +46,9 @@ func TestModelFieldFieldsSet(t *testing.T) {
 	}
 
 	var (
-		defID      = attrs.NewField(m, "ID", false, true)
-		defName    = attrs.NewField(m, "Name", false, true)
-		defObjects = attrs.NewField(m, "Objects", false, true)
+		defID      = attrs.NewField(m, "ID", false, false, true)
+		defName    = attrs.NewField(m, "Name", false, false, true)
+		defObjects = attrs.NewField(m, "Objects", false, false, true)
 	)
 
 	defID.SetValue(2, false)
@@ -80,9 +80,9 @@ func TestModelFieldFieldsSetReadOnly(t *testing.T) {
 	}
 
 	var (
-		defID      = attrs.NewField(m, "ID", false, true)
-		defName    = attrs.NewField(m, "Name", false, true)
-		defObjects = attrs.NewField(m, "Objects", false, false)
+		defID      = attrs.NewField(m, "ID", false, false, true)
+		defName    = attrs.NewField(m, "Name", false, false, true)
+		defObjects = attrs.NewField(m, "Objects", false, false, false)
 	)
 
 	defer func() {
@@ -116,9 +116,9 @@ func TestModelFieldFieldsForceSetReadOnly(t *testing.T) {
 	}
 
 	var (
-		defID      = attrs.NewField(m, "ID", false, true)
-		defName    = attrs.NewField(m, "Name", false, true)
-		defObjects = attrs.NewField(m, "Objects", false, false)
+		defID      = attrs.NewField(m, "ID", false, false, true)
+		defName    = attrs.NewField(m, "Name", false, false, true)
+		defObjects = attrs.NewField(m, "Objects", false, false, false)
 	)
 
 	defID.SetValue(2, true)
