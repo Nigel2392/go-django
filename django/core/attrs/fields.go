@@ -124,10 +124,17 @@ func (f *FieldDef) SetValue(v interface{}, force bool) {
 		)
 	}
 
-	if r_v.IsZero() && (!f.AllowBlank() || !f.AllowNull()) {
-		panic(
-			fmt.Sprintf("field %q is not blank", f.field_t.Name),
-		)
+	if r_v.IsZero() && !f.AllowBlank() {
+		switch r_v.Kind() {
+		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+			reflect.Float32, reflect.Float64,
+			reflect.Complex64, reflect.Complex128:
+		default:
+			panic(
+				fmt.Sprintf("field %q is not blank", f.field_t.Name),
+			)
+		}
 	}
 
 	f.field_v.Set(r_v)
