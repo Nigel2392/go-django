@@ -8,22 +8,24 @@ import (
 
 const ATTR_TAG_NAME = "attrs"
 
-func autoDefinitionStructTag(t reflect.StructField) (blank bool, editable bool) {
+func autoDefinitionStructTag(t reflect.StructField) (null, blank, editable bool) {
 	var (
 		tag   = t.Tag.Get(ATTR_TAG_NAME)
 		split = strings.Split(tag, "|")
 	)
-	blank, editable = false, true
+	null, blank, editable = false, false, true
 
 	for _, s := range split {
 		switch strings.TrimSpace(s) {
+		case "null":
+			null = true
 		case "blank":
 			blank = true
 		case "readonly":
 			editable = false
 		}
 	}
-	return blank, editable
+	return null, blank, editable
 }
 
 func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
@@ -48,10 +50,10 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 	if len(include) == 0 {
 		for i := 0; i < instance_t.NumField(); i++ {
 			var (
-				field_t         = instance_t.Field(i)
-				field_v         = instance_v.Field(i)
-				name            = field_t.Name
-				blank, editable = autoDefinitionStructTag(field_t)
+				field_t               = instance_t.Field(i)
+				field_v               = instance_v.Field(i)
+				name                  = field_t.Name
+				null, blank, editable = autoDefinitionStructTag(field_t)
 			)
 
 			var skip = (field_t.Anonymous ||
@@ -63,6 +65,7 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 			}
 
 			m[name] = &FieldDef{
+				Null:           null,
 				Blank:          blank,
 				Editable:       editable,
 				instance_t_ptr: instance_t_ptr,
@@ -82,8 +85,8 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 				)
 			}
 			var (
-				blank, editable = autoDefinitionStructTag(field_t)
-				field_v         = instance_v.FieldByIndex(field_t.Index)
+				null, blank, editable = autoDefinitionStructTag(field_t)
+				field_v               = instance_v.FieldByIndex(field_t.Index)
 			)
 
 			var skip = (field_t.Anonymous ||
@@ -95,6 +98,7 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 			}
 
 			m[name] = &FieldDef{
+				Null:           null,
 				Blank:          blank,
 				Editable:       editable,
 				instance_t_ptr: instance_t_ptr,

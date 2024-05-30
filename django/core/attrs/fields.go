@@ -15,7 +15,6 @@ type FieldDef struct {
 	instance_v     reflect.Value
 	field_t        reflect.StructField
 	field_v        reflect.Value
-	tags           map[string]string
 }
 
 func NewField[T any](instance *T, name string, null, blank, editable bool) *FieldDef {
