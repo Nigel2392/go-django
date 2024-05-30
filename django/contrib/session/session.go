@@ -9,10 +9,12 @@ import (
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/alexedwards/scs/mysqlstore"
+	"github.com/alexedwards/scs/postgresstore"
 	"github.com/alexedwards/scs/sqlite3store"
 	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/v2/memstore"
 	"github.com/go-sql-driver/mysql"
+	"github.com/lib/pq"
 	"github.com/mattn/go-sqlite3"
 )
 
@@ -34,6 +36,15 @@ var schemaSQLite = `CREATE TABLE IF NOT EXISTS sessions (
 
 CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions(expiry);`
 
+// schemaPostgres
+var schemaPostgres = `CREATE TABLE IF NOT EXISTS sessions (
+	token TEXT PRIMARY KEY,
+	data BYTEA NOT NULL,
+	expiry TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expiry);`
+
 func NewAppConfig() django.AppConfig {
 	var app = apps.NewDBAppConfig("session")
 
@@ -45,19 +56,31 @@ func NewAppConfig() django.AppConfig {
 
 		switch db.Driver().(type) {
 		case *mysql.MySQLDriver:
-			fmt.Println("Using mysqlstore for session storage")
-			sessionManager.Store = mysqlstore.New(db)
 
 			_, err := db.Exec(schemaMySQL)
 			assert.Err(err)
 
+			fmt.Println("Using mysqlstore for session storage")
+			sessionManager.Store = mysqlstore.New(db)
+
 		case *sqlite3.SQLiteDriver:
-			fmt.Println("Using sqlite3store for session storage")
-			sessionManager.Store = sqlite3store.New(db)
 
 			_, err := db.Exec(schemaSQLite)
 			assert.Err(err)
+
+			fmt.Println("Using sqlite3store for session storage")
+			sessionManager.Store = sqlite3store.New(db)
+
+		case *pq.Driver:
+
+			_, err := db.Exec(schemaPostgres)
+			assert.Err(err)
+
+			fmt.Println("Using postgresstore for session storage")
+			sessionManager.Store = postgresstore.New(db)
+
 		default:
+
 			fmt.Println("Using memstore for session storage")
 			sessionManager.Store = memstore.New()
 		}
