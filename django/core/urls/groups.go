@@ -1,13 +1,13 @@
 package urls
 
 import (
+	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
-	"github.com/Nigel2392/django/core/http_"
 	"github.com/Nigel2392/mux"
 )
 
 type URLPatternGroup struct {
-	Patterns []http_.URL
+	Patterns []core.URL
 	Pattern  string
 	Name     string
 }
@@ -32,20 +32,20 @@ func Group(info ...string) *URLPatternGroup {
 	assert.Lt(info, 3, "urls.Group: too many arguments")
 
 	return &URLPatternGroup{
-		Patterns: make([]http_.URL, 0),
+		Patterns: make([]core.URL, 0),
 		Pattern:  pattern,
 		Name:     name,
 	}
 }
 
-func (g *URLPatternGroup) Register(m http_.Mux) {
+func (g *URLPatternGroup) Register(m core.Mux) {
 	var group = m.Handle(mux.ANY, g.Pattern, nil, g.Name)
 	for _, pattern := range g.Patterns {
 		pattern.Register(group)
 	}
 }
 
-func (g *URLPatternGroup) Add(patterns ...http_.URL) *URLPatternGroup {
+func (g *URLPatternGroup) Add(patterns ...core.URL) *URLPatternGroup {
 	g.Patterns = append(g.Patterns, patterns...)
 	return g
 }

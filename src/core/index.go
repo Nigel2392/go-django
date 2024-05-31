@@ -6,9 +6,9 @@ import (
 	"net/mail"
 
 	"github.com/Nigel2392/django/contrib/blocks"
+	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/errs"
-	"github.com/Nigel2392/django/core/http_"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/forms/fields"
@@ -145,7 +145,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		fmt.Printf("%+v\n", s)
 	}
 
-	var context = http_.Context(r)
+	var context = core.Context(r)
 	context.Set("Form", form)
 
 	if err := tpl.FRender(w, context, "core", "core/index.tmpl"); err != nil {

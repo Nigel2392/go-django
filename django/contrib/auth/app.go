@@ -4,8 +4,8 @@ import (
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
+	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
-	"github.com/Nigel2392/django/core/http_"
 	"github.com/alexedwards/scs/v2"
 )
 
@@ -19,8 +19,8 @@ var Auth = AuthApplication{}
 func NewAppConfig() django.AppConfig {
 	var app = apps.NewAppConfig("auth")
 
-	app.Middlewares = []http_.Middleware{
-		http_.NewMiddleware(AddUserMiddleware()),
+	app.Middlewares = []core.Middleware{
+		core.NewMiddleware(AddUserMiddleware()),
 	}
 	app.Init = func(settings django.Settings) error {
 

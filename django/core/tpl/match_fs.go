@@ -18,6 +18,21 @@ func (m *MatchFS) Open(name string) (fs.File, error) {
 	return m.fs.Open(name)
 }
 
+func (m *MatchFS) ForceOpen(name string) (fs.File, error) {
+	if forcer, ok := m.fs.(interface{ ForceOpen(string) (fs.File, error) }); ok {
+		return forcer.ForceOpen(name)
+	}
+	return m.fs.Open(name)
+}
+
+func (m *MatchFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	return fs.ReadDir(m.fs, name)
+}
+
+func (m *MatchFS) FS() fs.FS {
+	return m.fs
+}
+
 func MatchNever(string) bool {
 	return false
 }

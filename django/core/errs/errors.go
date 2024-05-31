@@ -53,9 +53,3 @@ func Errors[T comparable](m []ValidationError[T]) []error {
 	}
 	return errs
 }
-
-const (
-	ErrFieldRequired Error = "Required field cannot be empty"
-	ErrInvalidSyntax Error = "Invalid syntax for value"
-	ErrInvalidType   Error = "Invalid type provided"
-)

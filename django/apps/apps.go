@@ -5,8 +5,8 @@ import (
 	"io/fs"
 
 	"github.com/Nigel2392/django"
+	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
-	"github.com/Nigel2392/django/core/http_"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/mux"
 )
@@ -15,8 +15,8 @@ type AppConfig struct {
 	AppName       string
 	Init          func(settings django.Settings) error
 	Ready         func() error
-	URLPatterns   []http_.URL
-	Middlewares   []http_.Middleware
+	URLPatterns   []core.URL
+	Middlewares   []core.Middleware
 	CtxProcessors []func(tpl.RequestContext)
 	TemplateFS    fs.FS
 }
@@ -27,7 +27,7 @@ type DBRequiredAppConfig struct {
 	Init func(settings django.Settings, db *sql.DB) error
 }
 
-func NewDBAppConfig(name string, patterns ...http_.URL) *DBRequiredAppConfig {
+func NewDBAppConfig(name string, patterns ...core.URL) *DBRequiredAppConfig {
 	var app = &DBRequiredAppConfig{
 		AppConfig: NewAppConfig(name, patterns...),
 	}
@@ -49,11 +49,11 @@ func (a *DBRequiredAppConfig) Initialize(settings django.Settings) error {
 	return nil
 }
 
-func NewAppConfig(name string, patterns ...http_.URL) *AppConfig {
+func NewAppConfig(name string, patterns ...core.URL) *AppConfig {
 	var app = &AppConfig{
 		AppName:       name,
-		URLPatterns:   make([]http_.URL, 0),
-		Middlewares:   make([]http_.Middleware, 0),
+		URLPatterns:   make([]core.URL, 0),
+		Middlewares:   make([]core.Middleware, 0),
 		CtxProcessors: make([]func(tpl.RequestContext), 0),
 	}
 
@@ -62,27 +62,27 @@ func NewAppConfig(name string, patterns ...http_.URL) *AppConfig {
 	return app
 }
 
-func (a *AppConfig) Register(p ...http_.URL) {
+func (a *AppConfig) Register(p ...core.URL) {
 	if a.URLPatterns == nil {
-		a.URLPatterns = make([]http_.URL, 0)
+		a.URLPatterns = make([]core.URL, 0)
 	}
 	a.URLPatterns = append(a.URLPatterns, p...)
 }
 
 func (a *AppConfig) AddMiddleware(m ...mux.Middleware) {
 	if a.Middlewares == nil {
-		a.Middlewares = make([]http_.Middleware, 0)
+		a.Middlewares = make([]core.Middleware, 0)
 	}
-	var mws = make([]http_.Middleware, len(m))
+	var mws = make([]core.Middleware, len(m))
 	for i, mw := range m {
-		mws[i] = http_.NewMiddleware(mw)
+		mws[i] = core.NewMiddleware(mw)
 	}
 	a.Middlewares = append(a.Middlewares, mws...)
 }
 
-func (a *AppConfig) Use(m ...http_.Middleware) {
+func (a *AppConfig) Use(m ...core.Middleware) {
 	if a.Middlewares == nil {
-		a.Middlewares = make([]http_.Middleware, 0)
+		a.Middlewares = make([]core.Middleware, 0)
 	}
 	a.Middlewares = append(a.Middlewares, m...)
 }
@@ -91,11 +91,11 @@ func (a *AppConfig) Name() string {
 	return a.AppName
 }
 
-func (a *AppConfig) URLs() []http_.URL {
+func (a *AppConfig) URLs() []core.URL {
 	return a.URLPatterns
 }
 
-func (a *AppConfig) Middleware() []http_.Middleware {
+func (a *AppConfig) Middleware() []core.Middleware {
 	return a.Middlewares
 }
 

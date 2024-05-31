@@ -33,6 +33,7 @@ func Configure(m map[string]interface{}) func(*Application) error {
 
 func (s *settings) Bind(app *Application) error {
 	s.a = app
+	app.Settings = s
 	return nil
 }
 

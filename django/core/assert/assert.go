@@ -6,55 +6,80 @@ import (
 	"slices"
 
 	"github.com/Nigel2392/django/core/errs"
-	"github.com/pkg/errors"
 )
 
 type AssertError = errs.Error
 
 var (
-	PanicEnabled bool = true
+	Panic func(error) = func(err error) { panic(err) }
 
 	LogOnError func(error)
 
 	AssertionFailedError AssertError = "assertion failed"
 )
 
-// Fail will always panic unless PanicEnabled is set to false
-// If PanicEnabled is false, it will return an error
-func Fail(msg any, args ...interface{}) error {
+// FailFunc is a function that is called when an assertion fails
+// it is used to customize the behavior of the assertion
+func FailFunc(fail func(err error) error, msg any, args ...interface{}) error {
+
 	var m string
+	var mErr = &errs.MultiError{
+		Errors: make([]error, 0),
+	}
 	if len(args) > 0 {
-		if s, ok := msg.(string); !ok {
+		switch e := msg.(type) {
+		case string:
+			m = fmt.Sprintf(m, args...)
+		case error:
+			mErr.Append(e)
+			m = fmt.Sprint(args...)
+		default:
 			m = fmt.Sprint(append([]interface{}{msg}, args...)...)
-		} else {
-			m = fmt.Sprintf(s, args...)
 		}
 	} else {
-		if _, ok := msg.(string); ok {
-			m = msg.(string)
-		} else {
+		switch msg := msg.(type) {
+		case error:
+			mErr.Append(msg)
+		case string:
+			m = msg
+		default:
 			m = fmt.Sprint(msg)
 		}
 	}
 
 	var err error
-	if m == "" {
+	if len(mErr.Errors) == 0 {
 		err = AssertionFailedError
 	} else {
-		err = errors.Wrap(
-			AssertionFailedError, m,
+		mErr.Errors = append([]error{AssertionFailedError}, mErr.Errors...)
+		err = mErr
+	}
+
+	if m != "" {
+		err = errs.Wrap(
+			err, m,
 		)
 	}
 
-	if PanicEnabled {
+	return fail(err)
+}
+
+// fail is the default function that is called when an assertion fails
+func fail(err error) error {
+	if Panic != nil {
 		panic(err)
 	}
-
 	if LogOnError != nil {
 		LogOnError(err)
 	}
-
 	return err
+}
+
+// Fail is called when an assertion fails
+// It is used to either return an error if PanicEnabled is false
+// or panic if PanicEnabled is true
+func Fail(msg any, args ...interface{}) error {
+	return FailFunc(fail, msg, args...)
 }
 
 // Assert asserts that the condition is true
@@ -66,10 +91,31 @@ func Assert(cond bool, msg any, args ...interface{}) error {
 	return nil
 }
 
+// AssertFunc asserts that the condition is true
+// if the condition is false, it panics with the message
+func AssertFunc(fail func(err error) error, cond bool, msg any, args ...interface{}) error {
+	if !cond {
+		return FailFunc(fail, msg, args...)
+	}
+	return nil
+}
+
 // Equal asserts that the two values are equal
 // if the two values are not equal, it panics with the message
 func Equal[T comparable](a, b T, msg any, args ...interface{}) error {
 	return Assert(a == b, msg, args...)
+}
+
+// True asserts that the condition is true
+// if the condition is false, it panics with the message
+func True(cond bool, msg any, args ...interface{}) error {
+	return Assert(cond, msg, args...)
+}
+
+// False asserts that the condition is false
+// if the condition is true, it panics with the message
+func False(cond bool, msg any, args ...interface{}) error {
+	return Assert(!cond, msg, args...)
 }
 
 // Truthy asserts that the value is truthy
@@ -132,16 +178,4 @@ func Contains[T comparable](v T, a []T, msg any, args ...interface{}) error {
 // if the value is not in the slice, it panics with the message
 func ContainsFunc[T any](a []T, f func(T) (in bool), msg any, args ...interface{}) error {
 	return Assert(slices.ContainsFunc(a, f), msg, args...)
-}
-
-// True asserts that the condition is true
-// if the condition is false, it panics with the message
-func True(cond bool, msg any, args ...interface{}) error {
-	return Assert(cond, msg, args...)
-}
-
-// False asserts that the condition is false
-// if the condition is true, it panics with the message
-func False(cond bool, msg any, args ...interface{}) error {
-	return Assert(!cond, msg, args...)
 }

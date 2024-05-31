@@ -4,7 +4,7 @@ import (
 	"net/http"
 
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
-	"github.com/Nigel2392/django/core/assert"
+	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
@@ -27,9 +27,17 @@ func UserFromRequest(r *http.Request) *models.User {
 	}
 
 	var session = sessions.Retrieve(r)
-	assert.False(session == nil, "Session must exist in the request")
+	except.Assert(
+		session != nil,
+		http.StatusInternalServerError,
+		"Session must exist in the request",
+	)
 
 	var userID = session.Get(SESSION_COOKIE_NAME)
+	if userID == nil {
+		return UnAuthenticatedUser()
+	}
+
 	var uidInt, ok = userID.(uint64)
 	if !ok {
 		return UnAuthenticatedUser()
@@ -54,8 +62,8 @@ func UserFromRequestPure(r *http.Request) authentication.User {
 // Set the user inside of the request.
 func UserToRequest(r *http.Request, user *models.User) {
 	var s = sessions.Retrieve(r)
-	assert.True(s != nil, "Session must exist in the request")
-	assert.True(user != nil, "User must be provided and not nil")
+	except.Assert(s != nil, 505, "Session must exist in the request")
+	except.Assert(user != nil, 505, "User must be provided and not nil")
 	s.Set(SESSION_COOKIE_NAME, user.ID)
 }
 

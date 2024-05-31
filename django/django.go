@@ -6,12 +6,16 @@ import (
 	"io/fs"
 	"net/http"
 	"reflect"
+	"sync/atomic"
 	"text/template"
 
+	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
-	"github.com/Nigel2392/django/core/http_"
+	"github.com/Nigel2392/django/core/errs"
+	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/internal/http_"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware"
 	"github.com/elliotchance/orderedmap/v2"
@@ -21,8 +25,8 @@ import (
 
 type AppConfig interface {
 	Name() string
-	URLs() []http_.URL
-	Middleware() []http_.Middleware
+	URLs() []core.URL
+	Middleware() []core.Middleware
 	Initialize(settings Settings) error
 	Processors() []func(tpl.RequestContext)
 	Templates() fs.FS
@@ -30,12 +34,13 @@ type AppConfig interface {
 }
 
 type Application struct {
-	Settings   Settings
-	Apps       *orderedmap.OrderedMap[string, AppConfig]
-	Middleware []http_.Middleware
-	URLs       []http_.URL
-	Mux        *mux.Mux
-	quitter    func() error
+	Settings    Settings
+	Apps        *orderedmap.OrderedMap[string, AppConfig]
+	Middleware  []core.Middleware
+	URLs        []core.URL
+	Mux         *mux.Mux
+	quitter     func() error
+	initialized *atomic.Bool
 }
 
 type Option func(*Application) error
@@ -46,9 +51,11 @@ func App(opts ...Option) *Application {
 	if Global == nil {
 		Global = &Application{
 			Apps:       orderedmap.NewOrderedMap[string, AppConfig](),
-			Middleware: make([]http_.Middleware, 0),
-			URLs:       make([]http_.URL, 0),
+			Middleware: make([]core.Middleware, 0),
+			URLs:       make([]core.URL, 0),
 			Mux:        mux.New(),
+
+			initialized: new(atomic.Bool),
 		}
 	}
 
@@ -114,26 +121,64 @@ func (a *Application) Register(apps ...any) {
 	}
 }
 
+func (a *Application) handleErrorCodePure(w http.ResponseWriter, r *http.Request, err any, code int) {
+	assert.False(code == 0, "code cannot be 0")
+
+	var pure error = errs.Convert(err, errs.ErrUnknown)
+	var handler, ok = a.Settings.Get(fmt.Sprintf("Handler%d", code))
+	if handler != nil && ok {
+		handler.(func(http.ResponseWriter, *http.Request, error))(w, r, pure)
+		return
+	}
+
+	http.Error(w, pure.Error(), int(code))
+}
+
 func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Request) {
-	http.Error(w, err.Error(), http.StatusInternalServerError)
+	var serverErrInt = except.GetServerError(err)
+	if serverErrInt == nil {
+		a.handleErrorCodePure(w, r, nil, http.StatusInternalServerError)
+		return
+	}
+
+	var serverErr = serverErrInt.(*except.HttpError)
+	a.handleErrorCodePure(w, r, serverErr.Message, serverErr.Code)
+
+	//var unwrapped = errors.Unwrap(err)
+	//fmt.Printf("ErrorStr: %v %T\n", err, err)
+	//fmt.Printf("ErrorStr: %v %T %v\n", unwrapped, unwrapped, errors.Is(err, except.HttpError{}))
+	//unwrapped = errors.Unwrap(unwrapped)
+	//fmt.Printf("ErrorStr: %v %T %v\n", unwrapped, unwrapped, errors.Is(err, except.HttpError{}))
+	//switch unwrapped.(type) {
+	//case assert.AssertError:
+	//	a.handleErrorCodePure(w, r, err, http.StatusInternalServerError)
+	//case error:
+	//	fmt.Printf("Error: %v %T\n", err, err)
+	//	a.handleErrorCodePure(w, r, nil, http.StatusInternalServerError)
+	//}
 }
 
 func (a *Application) Initialize() error {
 
-	assert.False(a.Settings == nil, "Settings cannot be nil")
+	if err := assert.False(a.Settings == nil, "Settings cannot be nil"); err != nil {
+		return err
+	}
 
 	a.Mux.Use(
-		// middleware.Recoverer(a.ServerError),
+		http_.RequestSignalMiddleware,
+		middleware.Recoverer(a.ServerError),
 		middleware.AllowedHosts(
 			ConfigGet(a.Settings, "ALLOWED_HOSTS", []string{"*"})...,
 		),
 	)
 
-	a.Mux.Handle(
-		mux.GET,
-		fmt.Sprintf("%s*", http_.STATIC_URL),
-		http.StripPrefix(http_.STATIC_URL, staticfiles.Handler),
-	)
+	if core.STATIC_URL != "" {
+		a.Mux.Handle(
+			mux.GET,
+			fmt.Sprintf("%s*", core.STATIC_URL),
+			http.StripPrefix(core.STATIC_URL, staticfiles.Handler),
+		)
+	}
 
 	for _, m := range a.Middleware {
 		m.Register(a.Mux)
@@ -151,7 +196,7 @@ func (a *Application) Initialize() error {
 
 	tpl.Funcs(template.FuncMap{
 		"static": func(path string) string {
-			return fmt.Sprintf("%s%s", http_.STATIC_URL, path)
+			return fmt.Sprintf("%s%s", core.STATIC_URL, path)
 		},
 	})
 
@@ -191,6 +236,8 @@ func (a *Application) Initialize() error {
 		}
 	}
 
+	a.initialized.Store(true)
+
 	return nil
 }
 
@@ -202,9 +249,10 @@ func (a *Application) Quit() error {
 }
 
 func (a *Application) Serve() error {
-
-	if err := a.Initialize(); err != nil {
-		return err
+	if !a.initialized.Load() {
+		if err := a.Initialize(); err != nil {
+			return err
+		}
 	}
 
 	var (

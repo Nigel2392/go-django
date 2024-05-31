@@ -35,3 +35,39 @@ func (m *MultiFS) Open(name string) (fs.File, error) {
 
 	return nil, fs.ErrNotExist
 }
+
+func (m *MultiFS) ForceOpen(name string) (fs.File, error) {
+	for _, f := range m.fs {
+		if forcer, ok := f.(interface{ ForceOpen(string) (fs.File, error) }); ok {
+			file, err := forcer.ForceOpen(name)
+			if err != nil && errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
+			return file, err
+		}
+
+		file, err := f.Open(name)
+		if err != nil && errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		return file, err
+	}
+
+	return nil, fs.ErrNotExist
+}
+
+func (m *MultiFS) FS() []fs.FS {
+	return m.fs
+}
+
+func (m *MultiFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	for _, f := range m.fs {
+		dir, err := fs.ReadDir(f, name)
+		if err != nil && errors.Is(err, fs.ErrNotExist) {
+			continue
+		}
+		return dir, err
+	}
+
+	return nil, fs.ErrNotExist
+}

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 
 	"github.com/Nigel2392/django/core/tpl"
+	"github.com/pkg/errors"
 )
 
 var Handler = NewFileHandler()
@@ -17,7 +18,7 @@ func AddFS(filesys fs.FS, matches func(path string) bool) {
 	Handler.AddFS(filesys, matches)
 }
 
-func Collect(fn func(fs.File) error) error {
+func Collect(fn func(path string, f fs.File) error) error {
 	return Handler.Collect(fn)
 }
 
@@ -39,23 +40,40 @@ func (h *FileHandler) AddFS(filesys fs.FS, matches func(path string) bool) {
 	h.fs.Add(filesys, matches)
 }
 
-func (h *FileHandler) Collect(fn func(fs.File) error) error {
-	var files, err = fs.ReadDir(h.fs, ".")
-	if err != nil {
-		return err
+func (h *FileHandler) Collect(fn func(path string, f fs.File) error) error {
+	var filesystems = make([]fs.FS, 0)
+	for _, fs := range h.fs.FS() {
+		switch fs := fs.(type) {
+		case *tpl.MatchFS:
+			filesystems = append(filesystems, fs.FS())
+		case *tpl.MultiFS:
+			filesystems = append(filesystems, fs.FS()...)
+		default:
+			filesystems = append(filesystems, fs)
+		}
 	}
+	var err error
+	for _, fSys := range filesystems {
+		err = fs.WalkDir(fSys, ".", func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return errors.Wrapf(err, "failed to walk directory '%s'", path)
+			}
+			if !d.IsDir() {
+				var f fs.File
+				f, err = fSys.Open(path)
+				if err != nil {
+					return errors.Wrapf(err, "failed to open file '%s'", path)
+				}
+				defer f.Close()
 
-	for _, file := range files {
-		var f, err = h.Open(file.Name())
+				return fn(path, f)
+			}
+			return nil
+		})
 		if err != nil {
 			return err
 		}
-		defer f.Close()
-		if err = fn(f); err != nil {
-			return err
-		}
 	}
-
 	return nil
 }
 

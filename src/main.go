@@ -2,11 +2,14 @@ package main
 
 import (
 	"database/sql"
+	"fmt"
+	"io/fs"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/auth"
 	"github.com/Nigel2392/django/contrib/blocks"
 	"github.com/Nigel2392/django/contrib/session"
+	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/mux/middleware"
 	"github.com/Nigel2392/src/core"
 
@@ -38,6 +41,23 @@ func main() {
 			blocks.NewAppConfig,
 		),
 	)
+
+	var err = app.Initialize()
+	if err != nil {
+		panic(err)
+	}
+
+	err = staticfiles.Collect(func(pah string, f fs.File) error {
+		var stat, err = f.Stat()
+		if err != nil {
+			return err
+		}
+		fmt.Println("Collected", pah, stat.Size())
+		return nil
+	})
+	if err != nil {
+		panic(err)
+	}
 
 	if err := app.Serve(); err != nil {
 		panic(err)

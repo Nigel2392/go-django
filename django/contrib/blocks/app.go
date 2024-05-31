@@ -69,5 +69,4 @@ func init() {
 
 	templateFS, err = fs.Sub(_templateFS, "assets/templates")
 	assert.Err(err)
-
 }

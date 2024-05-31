@@ -3,7 +3,7 @@ package urls
 import (
 	"net/http"
 
-	"github.com/Nigel2392/django/core/http_"
+	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/mux"
 )
 
@@ -40,7 +40,7 @@ func Pattern(p *PathInfo, handler http.Handler, name ...string) *URLPattern {
 	return &URLPattern{Methods: p.Methods, Pattern: p.Pattern, Handler: handler, Name: n}
 }
 
-func (p *URLPattern) Register(m http_.Mux) {
+func (p *URLPattern) Register(m core.Mux) {
 	for _, method := range p.Methods {
 		m.Handle(method, p.Pattern, p.Handler, p.Name)
 	}

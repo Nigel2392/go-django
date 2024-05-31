@@ -7,7 +7,6 @@ import (
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/core/assert"
-	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/alexedwards/scs/mysqlstore"
 	"github.com/alexedwards/scs/postgresstore"
 	"github.com/alexedwards/scs/sqlite3store"
@@ -88,9 +87,9 @@ func NewAppConfig() django.AppConfig {
 		return nil
 	}
 
-	app.AddMiddleware(
-		sessions.SessionMiddleware(sessionManager),
-	)
+	//app.AddMiddleware(
+	//	sessions.SessionMiddleware(sessionManager),
+	//)
 
 	return app
 }

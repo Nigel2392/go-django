@@ -27,9 +27,9 @@ func panicIfErr(t *testing.T, err error) {
 
 func noPanic(f func(t *testing.T)) func(t *testing.T) {
 	return func(t *testing.T) {
-		assert.PanicEnabled = false
+		assert.Panic = func(err error) {}
 		f(t)
-		assert.PanicEnabled = true
+		assert.Panic = func(err error) {}
 	}
 }
 

@@ -1,4 +1,4 @@
-package http_
+package core
 
 import "github.com/Nigel2392/mux"
 
