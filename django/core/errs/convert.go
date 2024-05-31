@@ -1,7 +1,6 @@
 package errs
 
 import (
-	"errors"
 	"fmt"
 )
 
@@ -38,17 +37,17 @@ func Convert(fmtOrErr any, default_ any, args ...any) error {
 		return e
 	case string:
 		if len(args) > 0 {
-			return fmt.Errorf(e, args...)
+			return Error(fmt.Sprintf(e, args...))
 		} else {
-			return errors.New(e)
+			return Error(e)
 		}
 	default:
 		if len(args) > 0 {
-			return errors.New(
+			return Error(
 				fmt.Sprint(append([]any{e}, args...)),
 			)
 		} else {
-			return fmt.Errorf("%v", e)
+			return Error(fmt.Sprint(e))
 		}
 	}
 }

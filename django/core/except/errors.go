@@ -4,6 +4,8 @@ import (
 	"errors"
 	"strconv"
 	"strings"
+
+	"github.com/Nigel2392/django/core/errs"
 )
 
 type (
@@ -53,9 +55,9 @@ const (
 
 )
 
-func ServerError(code Code, msg error) *HttpError {
+func ServerError(code Code, msg any) *HttpError {
 	return &HttpError{
-		Message: msg,
+		Message: errs.Convert(msg, nil),
 		Code:    code,
 	}
 }

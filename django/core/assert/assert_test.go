@@ -26,10 +26,11 @@ func panicIfErr(t *testing.T, err error) {
 }
 
 func noPanic(f func(t *testing.T)) func(t *testing.T) {
+	var panicFn = assert.Panic
 	return func(t *testing.T) {
 		assert.Panic = func(err error) {}
 		f(t)
-		assert.Panic = func(err error) {}
+		assert.Panic = panicFn
 	}
 }
 

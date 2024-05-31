@@ -48,7 +48,11 @@ func Assert(cond interface{}, code Code, msg any, args ...interface{}) error {
 		}
 	}
 
-	if !rVal.IsValid() || rVal.IsNil() || rVal.IsZero() {
+	if rVal.Kind() == reflect.Ptr && rVal.IsNil() {
+		return Fail(code, msg, args...)
+	}
+
+	if !rVal.IsValid() || rVal.IsZero() {
 		return Fail(code, msg, args...)
 	}
 

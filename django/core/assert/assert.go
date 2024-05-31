@@ -20,7 +20,7 @@ var (
 
 // FailFunc is a function that is called when an assertion fails
 // it is used to customize the behavior of the assertion
-func FailFunc(fail func(err error) error, msg any, args ...interface{}) error {
+func FailFunc(failFn func(err error) error, msg any, args ...interface{}) error {
 
 	var m string
 	var mErr = &errs.MultiError{
@@ -61,13 +61,13 @@ func FailFunc(fail func(err error) error, msg any, args ...interface{}) error {
 		)
 	}
 
-	return fail(err)
+	return failFn(err)
 }
 
 // fail is the default function that is called when an assertion fails
 func fail(err error) error {
 	if Panic != nil {
-		panic(err)
+		Panic(err)
 	}
 	if LogOnError != nil {
 		LogOnError(err)

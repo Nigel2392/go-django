@@ -143,19 +143,6 @@ func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Requ
 
 	var serverErr = serverErrInt.(*except.HttpError)
 	a.handleErrorCodePure(w, r, serverErr.Message, serverErr.Code)
-
-	//var unwrapped = errors.Unwrap(err)
-	//fmt.Printf("ErrorStr: %v %T\n", err, err)
-	//fmt.Printf("ErrorStr: %v %T %v\n", unwrapped, unwrapped, errors.Is(err, except.HttpError{}))
-	//unwrapped = errors.Unwrap(unwrapped)
-	//fmt.Printf("ErrorStr: %v %T %v\n", unwrapped, unwrapped, errors.Is(err, except.HttpError{}))
-	//switch unwrapped.(type) {
-	//case assert.AssertError:
-	//	a.handleErrorCodePure(w, r, err, http.StatusInternalServerError)
-	//case error:
-	//	fmt.Printf("Error: %v %T\n", err, err)
-	//	a.handleErrorCodePure(w, r, nil, http.StatusInternalServerError)
-	//}
 }
 
 func (a *Application) Initialize() error {
