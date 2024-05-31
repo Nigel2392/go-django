@@ -30,7 +30,7 @@ func autoDefinitionStructTag(t reflect.StructField) (null, blank, editable bool)
 }
 
 func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
-	var m = make(map[string]Field)
+	var m = make([]Field, 0)
 
 	var (
 		instance_t_ptr = reflect.TypeOf(instance)
@@ -52,7 +52,6 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 			var (
 				field_t               = instance_t.Field(i)
 				field_v               = instance_v.Field(i)
-				name                  = field_t.Name
 				null, blank, editable = autoDefinitionStructTag(field_t)
 			)
 
@@ -64,7 +63,7 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 				continue
 			}
 
-			m[name] = &FieldDef{
+			m = append(m, &FieldDef{
 				Null:           null,
 				Blank:          blank,
 				Editable:       editable,
@@ -74,7 +73,7 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 				instance_v:     instance_v,
 				field_t:        field_t,
 				field_v:        field_v,
-			}
+			})
 		}
 	} else {
 		for _, name := range include {
@@ -95,7 +94,7 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 				continue
 			}
 
-			m[name] = &FieldDef{
+			m = append(m, &FieldDef{
 				Null:           null,
 				Blank:          blank,
 				Editable:       editable,
@@ -105,7 +104,7 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 				instance_v:     instance_v,
 				field_t:        field_t,
 				field_v:        field_v,
-			}
+			})
 		}
 	}
 

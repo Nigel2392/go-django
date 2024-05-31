@@ -13,10 +13,10 @@ type TestModelDefinitions struct {
 }
 
 func (f *TestModelDefinitions) FieldDefs() attrs.Definitions {
-	return attrs.Define(f, map[string]attrs.Field{
-		"ID":      attrs.NewField(f, "ID", false, false, true),
-		"Name":    attrs.NewField(f, "Name", false, false, true),
-		"Objects": attrs.NewField(f, "Objects", false, false, true),
+	return attrs.Define(f, []attrs.Field{
+		attrs.NewField(f, "ID", false, false, true),
+		attrs.NewField(f, "Name", false, false, true),
+		attrs.NewField(f, "Objects", false, false, true),
 	})
 }
 

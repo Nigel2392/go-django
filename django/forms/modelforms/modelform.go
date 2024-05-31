@@ -13,19 +13,41 @@ type ModelForm interface {
 
 type BaseModelForm struct {
 	*forms.BaseForm
-	Model attrs.Definer
+	Model  attrs.Definer
+	Fields []attrs.Field
 }
 
 func NewBaseModelForm(model attrs.Definer) *BaseModelForm {
-	return &BaseModelForm{
+	var f = &BaseModelForm{
 		BaseForm: forms.NewBaseForm(),
 		Model:    model,
 	}
+
+	f.Fields = model.FieldDefs().Fields()
+	for _, def := range f.Fields {
+		f.BaseForm.FormFields.Set(
+			def.Name(), def.FormField(),
+		)
+	}
+
+	return f
+}
+
+func (f *BaseModelForm) Load() {
+	var initialData = make(map[string]interface{})
+	for _, def := range f.Fields {
+		initialData[def.Name()] = def.GetDefault()
+	}
+
+	f.Initial = initialData
 }
 
 func (f *BaseModelForm) Save() error {
-	for name, value := range f.CleanedData() {
-		attrs.Set(f.Model, name, value)
+	var cleaned = f.CleanedData()
+
+	for _, value := range f.Fields {
+		var n = value.Name()
+		attrs.Set(f.Model, n, cleaned[n])
 	}
 
 	if instance, ok := f.Model.(models.Saver); ok {

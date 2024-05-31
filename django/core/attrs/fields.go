@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/django/core/assert"
+	"github.com/Nigel2392/django/forms/fields"
 )
 
 type FieldDef struct {
@@ -79,8 +80,37 @@ func (f *FieldDef) AllowEdit() bool {
 	return f.Editable
 }
 
+func (f *FieldDef) Validate() error {
+	return nil
+}
+
 func (f *FieldDef) GetValue() interface{} {
 	return f.field_v.Interface()
+}
+
+func (f *FieldDef) GetDefault() interface{} {
+
+	var funcName = fmt.Sprintf("GetDefault%s", f.Name())
+	if method, ok := f.instance_t.MethodByName(funcName); ok {
+		return method.Func.Call([]reflect.Value{f.instance_v_ptr})[0].Interface()
+	}
+
+	if !f.field_v.IsValid() {
+		return reflect.Zero(f.field_t.Type).Interface()
+	}
+
+	return f.field_v.Interface()
+}
+
+func (f *FieldDef) FormField() fields.Field {
+	var opts = make([]func(fields.Field), 0)
+	if f.Label() != "" {
+		opts = append(opts, fields.Label(f.Label()))
+	}
+	opts = append(opts,
+		fields.Name(f.Name()),
+	)
+	return fields.CharField(opts...)
 }
 
 func (f *FieldDef) SetValue(v interface{}, force bool) error {

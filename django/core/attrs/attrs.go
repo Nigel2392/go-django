@@ -1,5 +1,7 @@
 package attrs
 
+import "github.com/Nigel2392/django/forms/fields"
+
 type Definer interface {
 	FieldDefs() Definitions
 }
@@ -9,6 +11,7 @@ type Definitions interface {
 	Get(name string) interface{}
 	Field(name string) (f Field, ok bool)
 	ForceSet(name string, value interface{}) error
+	Fields() []Field
 }
 
 type Field interface {
@@ -19,7 +22,10 @@ type Field interface {
 	AllowBlank() bool
 	AllowEdit() bool
 	GetValue() interface{}
+	GetDefault() interface{}
 	SetValue(v interface{}, force bool) error
+	FormField() fields.Field
+	Validate() error
 }
 
 type Labeler interface {

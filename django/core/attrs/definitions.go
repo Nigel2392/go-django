@@ -1,14 +1,22 @@
 package attrs
 
+import "github.com/elliotchance/orderedmap/v2"
+
 type ObjectDefinitions struct {
 	Object       Definer
-	ObjectFields map[string]Field
+	ObjectFields *orderedmap.OrderedMap[string, Field]
 }
 
-func Define(d Definer, fieldDefinitions map[string]Field) *ObjectDefinitions {
+func Define(d Definer, fieldDefinitions []Field) *ObjectDefinitions {
+
+	var m = orderedmap.NewOrderedMap[string, Field]()
+	for _, f := range fieldDefinitions {
+		m.Set(f.Name(), f)
+	}
+
 	return &ObjectDefinitions{
 		Object:       d,
-		ObjectFields: fieldDefinitions,
+		ObjectFields: m,
 	}
 }
 
@@ -25,6 +33,16 @@ func (d *ObjectDefinitions) Get(name string) interface{} {
 }
 
 func (d *ObjectDefinitions) Field(name string) (f Field, ok bool) {
-	f, ok = d.ObjectFields[name]
+	f, ok = d.ObjectFields.Get(name)
 	return
+}
+
+func (d *ObjectDefinitions) Fields() []Field {
+	var m = make([]Field, d.ObjectFields.Len())
+	var i = 0
+	for head := d.ObjectFields.Front(); head != nil; head = head.Next() {
+		m[i] = head.Value
+		i++
+	}
+	return m
 }

@@ -20,19 +20,19 @@ func TestModelAutoFieldDefinitions(t *testing.T) {
 	var m = &TestModelAutoFieldDefs{}
 
 	var fieldDefs = m.FieldDefs().(*attrs.ObjectDefinitions)
-	if len(fieldDefs.ObjectFields) != 3 {
-		t.Errorf("expected %d, got %d", 3, len(fieldDefs.ObjectFields))
+	if fieldDefs.ObjectFields.Len() != 3 {
+		t.Errorf("expected %d, got %d", 3, fieldDefs.ObjectFields.Len())
 	}
 
-	if _, ok := fieldDefs.ObjectFields["ID"]; !ok {
+	if _, ok := fieldDefs.ObjectFields.Get("ID"); !ok {
 		t.Errorf("expected field %q", "ID")
 	}
 
-	if _, ok := fieldDefs.ObjectFields["Name"]; !ok {
+	if _, ok := fieldDefs.ObjectFields.Get("Name"); !ok {
 		t.Errorf("expected field %q", "Name")
 	}
 
-	if _, ok := fieldDefs.ObjectFields["Objects"]; !ok {
+	if _, ok := fieldDefs.ObjectFields.Get("Objects"); !ok {
 		t.Errorf("expected field %q", "Objects")
 	}
 }
@@ -95,19 +95,19 @@ func TestModelAutoFieldDefinitionsInclude(t *testing.T) {
 	var m = &TestModelAutoFieldDefsInclude{}
 
 	var fieldDefs = m.FieldDefs().(*attrs.ObjectDefinitions)
-	if len(fieldDefs.ObjectFields) != 1 {
-		t.Errorf("expected %d, got %d", 1, len(fieldDefs.ObjectFields))
+	if fieldDefs.ObjectFields.Len() != 1 {
+		t.Errorf("expected %d, got %d", 1, fieldDefs.ObjectFields.Len())
 	}
 
-	if _, ok := fieldDefs.ObjectFields["Name"]; !ok {
+	if _, ok := fieldDefs.ObjectFields.Get("Name"); !ok {
 		t.Errorf("expected field %q", "Name")
 	}
 
-	if _, ok := fieldDefs.ObjectFields["ID"]; ok {
+	if _, ok := fieldDefs.ObjectFields.Get("ID"); ok {
 		t.Errorf("unexpected field %q", "ID")
 	}
 
-	if _, ok := fieldDefs.ObjectFields["Objects"]; ok {
+	if _, ok := fieldDefs.ObjectFields.Get("Objects"); ok {
 		t.Errorf("unexpected field %q", "Objects")
 	}
 }
