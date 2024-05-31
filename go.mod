@@ -3,7 +3,7 @@ module github.com/Nigel2392
 go 1.21.6
 
 require (
-	github.com/Nigel2392/mux v1.2.9
+	github.com/Nigel2392/mux v1.3.1
 	github.com/elliotchance/orderedmap/v2 v2.2.0
 	github.com/justinas/nosurf v1.1.1
 	github.com/pkg/errors v0.9.1
@@ -16,7 +16,7 @@ require (
 	github.com/alexedwards/scs/mysqlstore v0.0.0-20240316134038-7e11d57e8885
 	github.com/alexedwards/scs/postgresstore v0.0.0-20240316134038-7e11d57e8885
 	github.com/alexedwards/scs/sqlite3store v0.0.0-20240316134038-7e11d57e8885
-	github.com/alexedwards/scs/v2 v2.5.1
+	github.com/alexedwards/scs/v2 v2.8.0
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.22

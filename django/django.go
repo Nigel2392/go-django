@@ -185,6 +185,13 @@ func (a *Application) Initialize() error {
 		"static": func(path string) string {
 			return fmt.Sprintf("%s%s", core.STATIC_URL, path)
 		},
+		"url": func(name string, args ...any) string {
+			var rt, err = a.Mux.Reverse(name, args...)
+			if err != nil {
+				panic(fmt.Sprintf("URL %s not found", name))
+			}
+			return rt
+		},
 	})
 
 	var err error
