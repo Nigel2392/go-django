@@ -12,3 +12,15 @@ There is a caveat though; we try to touch the database as little as possible.
 This means that we don't have a full ORM like Django does.
 
 Any database logic should be implemented by the end-developer.
+
+## Not yet implemented
+
+Some things which are not yet finished but have been planned.
+
+This is not to say that these are the only things that will be implemented.
+
+More features will be added as we go along.
+
+- Auth application
+- Adminsite application
+- Full [wagtail](https://wagtail.org) block capabilities
