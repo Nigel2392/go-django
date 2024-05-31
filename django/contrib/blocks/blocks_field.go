@@ -63,21 +63,21 @@ func NewFieldBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	return base
 }
 
-func CharBlock(opts ...func(*FieldBlock)) Block {
+func CharBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.Template = "blocks/templates/text.html"
 	base.SetField(fields.CharField())
 	return base
 }
 
-func NumberBlock(opts ...func(*FieldBlock)) Block {
+func NumberBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.Template = "blocks/templates/number.html"
 	base.SetField(fields.NumberField[int]())
 	return base
 }
 
-func TextBlock(opts ...func(*FieldBlock)) Block {
+func TextBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.Template = "blocks/templates/text.html"
 	base.SetField(fields.CharField(
@@ -86,14 +86,14 @@ func TextBlock(opts ...func(*FieldBlock)) Block {
 	return base
 }
 
-func EmailBlock(opts ...func(*FieldBlock)) Block {
+func EmailBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.Template = "blocks/templates/email.html"
 	base.SetField(fields.EmailField())
 	return base
 }
 
-func PasswordBlock(opts ...func(*FieldBlock)) Block {
+func PasswordBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.Template = "blocks/templates/password.html"
 	base.SetField(fields.CharField(
@@ -102,7 +102,7 @@ func PasswordBlock(opts ...func(*FieldBlock)) Block {
 	return base
 }
 
-func DateBlock(opts ...func(*FieldBlock)) Block {
+func DateBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.Template = "blocks/templates/date.html"
 	base.SetField(fields.DateField(widgets.DateWidgetTypeDate))
@@ -112,7 +112,7 @@ func DateBlock(opts ...func(*FieldBlock)) Block {
 	return base
 }
 
-func DateTimeBlock(opts ...func(*FieldBlock)) Block {
+func DateTimeBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.Template = "blocks/templates/datetime.html"
 	base.SetField(fields.DateField(widgets.DateWidgetTypeDateTime))

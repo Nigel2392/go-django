@@ -168,6 +168,15 @@ func (d *DateWidget) ValueToForm(value interface{}) interface{} {
 			return val.Format("2006-01-02")
 		}
 		return val.Format("2006-01-02T15:04:05")
+	case string:
+		var t, err = time.Parse("2006-01-02", val)
+		if err != nil {
+			return val
+		}
+		if d.Type == DateWidgetTypeDate {
+			return t.Format("2006-01-02")
+		}
+		return t.Format("2006-01-02T15:04:05")
 	default:
 		return value
 	}

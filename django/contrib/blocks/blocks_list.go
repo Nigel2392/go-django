@@ -100,15 +100,17 @@ func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCl
 	}
 
 	var addedValue = strings.TrimSpace(d.Get(addedKey))
-	if addedValue != "" {
-		added, _ = strconv.Atoi(addedValue)
+	var err error
+	added, err = strconv.Atoi(addedValue)
+	if err != nil {
+		return nil, []error{l.makeError(err)}
 	}
 
 	var errs = NewBlockErrors[int]()
 
 	for i := 0; ; i++ {
 		var key = fmt.Sprintf("%s-%d", name, i)
-		if !d.Has(key) {
+		if l.Child.ValueOmittedFromData(d, files, key) {
 			break
 		}
 
@@ -140,7 +142,7 @@ func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCl
 
 	if addedCnt != added {
 		return nil, []error{l.makeError(
-			fmt.Errorf("Invalid number of items"), //lint:ignore ST1005 ignore this lint
+			fmt.Errorf("Invalid number of items, expected %d, got %d", added, addedCnt), //lint:ignore ST1005 ignore this lint
 		)}
 	}
 
