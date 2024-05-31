@@ -11,6 +11,10 @@ type MatchFS struct {
 	matches func(filepath string) bool
 }
 
+func NewMatchFS(fs fs.FS, matches func(filepath string) bool) *MatchFS {
+	return &MatchFS{fs, matches}
+}
+
 func (m *MatchFS) Open(name string) (fs.File, error) {
 	if m.matches != nil && !m.matches(name) {
 		return nil, fs.ErrNotExist
