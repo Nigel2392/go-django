@@ -13,6 +13,7 @@ require (
 
 require (
 	github.com/Nigel2392/go-signals v1.0.8
+	github.com/Nigel2392/goldcrest v1.0.4
 	github.com/alexedwards/scs/mysqlstore v0.0.0-20240316134038-7e11d57e8885
 	github.com/alexedwards/scs/postgresstore v0.0.0-20240316134038-7e11d57e8885
 	github.com/alexedwards/scs/sqlite3store v0.0.0-20240316134038-7e11d57e8885

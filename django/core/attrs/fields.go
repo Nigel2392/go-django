@@ -10,7 +10,14 @@ import (
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/widgets"
+	"github.com/Nigel2392/goldcrest"
 )
+
+const (
+	HookFormFieldForType = "attrs.FormFieldForType"
+)
+
+type TypeGetter func(f Field, t reflect.Type, v reflect.Value) (fields.Field, bool)
 
 type FieldDef struct {
 	Blank          bool
@@ -115,12 +122,25 @@ func (f *FieldDef) FormField() fields.Field {
 		fields.Name(f.Name()),
 	)
 
-	switch reflect.New(f.field_t.Type).Elem().Interface().(type) {
+	var typForNew = f.field_t.Type
+	if f.field_t.Type.Kind() == reflect.Ptr {
+		typForNew = f.field_t.Type.Elem()
+	}
+
+	var hooks = goldcrest.Get[TypeGetter](HookFormFieldForType)
+	for _, hook := range hooks {
+		if field, ok := hook(f, typForNew, f.field_v); ok {
+			field.SetName(f.Name())
+			return field
+		}
+	}
+
+	switch reflect.New(typForNew).Elem().Interface().(type) {
 	case time.Time:
 		return fields.DateField(widgets.DateWidgetTypeDateTime, opts...)
 	case json.RawMessage:
 		return fields.JSONField[map[string]interface{}](opts...)
-	case mail.Address, *mail.Address:
+	case mail.Address:
 		return fields.EmailField(opts...)
 	}
 
