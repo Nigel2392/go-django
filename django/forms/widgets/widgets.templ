@@ -1,0 +1,31 @@
+package widgets
+
+templ ErrorListComponent(forElem string, errors []error) {
+    if len(errors) > 0 {
+        <ul data-errors-for={ forElem } class="error-list error-wrapper">
+            for _, err := range errors {
+                if err == nil {
+                    {{ continue }}
+                }
+                <li class="error">{ err.Error() }</li>
+            }
+        </ul>
+    }
+}
+
+templ LabelComponent(forElem, label, labelFor string) {
+    if label != "" {
+        <div data-label-for={ forElem } class="label-wrapper">
+            <label for={ labelFor }>{ label }</label>
+        </div>
+    }
+}
+
+templ HelpTextComponent(forElem, helpText string) {
+    if helpText != "" {
+        <div data-help-for={ forElem }  class="help-text-wrapper">
+            <p class="help">{ helpText }</p>
+        </div>
+    }
+}
+
