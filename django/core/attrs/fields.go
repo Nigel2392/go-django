@@ -11,27 +11,30 @@ import (
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/widgets"
 	"github.com/Nigel2392/goldcrest"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 const (
 	HookFormFieldForType = "attrs.FormFieldForType"
 )
 
+var capCaser = cases.Title(language.English)
+
 type FormFieldGetter func(f Field, t reflect.Type, v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool)
 
 type FieldDef struct {
-	Blank          bool
-	Null           bool
-	Editable       bool
+	attrDef        FieldConfig
 	instance_t_ptr reflect.Type
 	instance_v_ptr reflect.Value
 	instance_t     reflect.Type
 	instance_v     reflect.Value
 	field_t        reflect.StructField
 	field_v        reflect.Value
+	formField      fields.Field
 }
 
-func NewField[T any](instance *T, name string, null, blank, editable bool) *FieldDef {
+func NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef {
 	var (
 		instance_t_ptr = reflect.TypeOf(instance)
 		instance_v_ptr = reflect.ValueOf(instance)
@@ -48,10 +51,12 @@ func NewField[T any](instance *T, name string, null, blank, editable bool) *Fiel
 	field_v = instance_v.FieldByIndex(field_t.Index)
 	assert.True(field_v.IsValid(), "field %q not found in %T", name, instance)
 
+	if conf == nil {
+		conf = &FieldConfig{}
+	}
+
 	return &FieldDef{
-		Null:           null,
-		Blank:          blank,
-		Editable:       editable,
+		attrDef:        *conf,
 		instance_t_ptr: instance_t_ptr,
 		instance_v_ptr: instance_v_ptr,
 		instance_t:     instance_t,
@@ -65,12 +70,18 @@ func (f *FieldDef) Label() string {
 	if labeler, ok := f.field_v.Interface().(Labeler); ok {
 		return labeler.Label()
 	}
-	return ""
+	if f.attrDef.Label != "" {
+		return fields.T(f.attrDef.Label)
+	}
+	return fields.T(capCaser.String(f.field_t.Name))
 }
 
 func (f *FieldDef) HelpText() string {
 	if helpTexter, ok := f.field_v.Interface().(Helper); ok {
-		return helpTexter.HelpText()
+		return fields.T(helpTexter.HelpText())
+	}
+	if f.attrDef.HelpText != "" {
+		return fields.T(f.attrDef.HelpText)
 	}
 	return ""
 }
@@ -80,15 +91,15 @@ func (f *FieldDef) Name() string {
 }
 
 func (f *FieldDef) AllowNull() bool {
-	return f.Null
+	return f.attrDef.Null
 }
 
 func (f *FieldDef) AllowBlank() bool {
-	return f.Blank
+	return f.attrDef.Blank
 }
 
 func (f *FieldDef) AllowEdit() bool {
-	return f.Editable
+	return !f.attrDef.ReadOnly
 }
 
 func (f *FieldDef) Validate() error {
@@ -114,48 +125,59 @@ func (f *FieldDef) GetDefault() interface{} {
 }
 
 func (f *FieldDef) FormField() fields.Field {
-	var opts = make([]func(fields.Field), 0)
-	if f.Label() != "" {
-		opts = append(opts, fields.Label(f.Label()))
+	if f.formField != nil {
+		return f.formField
 	}
-	opts = append(opts,
-		fields.Name(f.Name()),
-	)
+
+	var opts = make([]func(fields.Field), 0)
+
+	opts = append(opts, fields.Label(f.Label))
+	opts = append(opts, fields.HelpText(f.HelpText))
 
 	var typForNew = f.field_t.Type
 	if f.field_t.Type.Kind() == reflect.Ptr {
 		typForNew = f.field_t.Type.Elem()
 	}
 
+	var formField fields.Field
 	var hooks = goldcrest.Get[FormFieldGetter](HookFormFieldForType)
 	for _, hook := range hooks {
 		if field, ok := hook(f, typForNew, f.field_v, opts...); ok {
-			field.SetName(f.Name())
-			return field
+			formField = field
+			goto returnField
 		}
 	}
 
 	switch reflect.New(typForNew).Elem().Interface().(type) {
 	case time.Time:
-		return fields.DateField(widgets.DateWidgetTypeDateTime, opts...)
+		formField = fields.DateField(widgets.DateWidgetTypeDateTime, opts...)
 	case json.RawMessage:
-		return fields.JSONField[map[string]interface{}](opts...)
+		formField = fields.JSONField[map[string]interface{}](opts...)
 	case mail.Address:
-		return fields.EmailField(opts...)
+		formField = fields.EmailField(opts...)
+	}
+
+	if formField != nil {
+		goto returnField
 	}
 
 	switch f.field_t.Type.Kind() {
 	case reflect.String:
-		return fields.CharField(opts...)
+		formField = fields.CharField(opts...)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return fields.NumberField[int](opts...)
+		formField = fields.NumberField[int](opts...)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-		return fields.NumberField[uint](opts...)
+		formField = fields.NumberField[uint](opts...)
 	case reflect.Float32, reflect.Float64:
-		return fields.NumberField[float64](opts...)
+		formField = fields.NumberField[float64](opts...)
 	default:
-		return fields.CharField(opts...)
+		formField = fields.CharField(opts...)
 	}
+
+returnField:
+	formField.SetName(f.Name())
+	f.formField = formField
+	return formField
 }
 
 func (f *FieldDef) SetValue(v interface{}, force bool) error {
@@ -186,7 +208,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	}
 
 	if err := assert.True(
-		f.field_v.CanSet() && (f.Editable || force),
+		f.field_v.CanSet() && (f.AllowEdit() || force),
 		"field %q is not editable", f.field_t.Name,
 	); err != nil {
 		return err

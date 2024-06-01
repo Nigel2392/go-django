@@ -10,13 +10,14 @@ import (
 )
 
 type BaseField struct {
-	FieldName  string
-	Required_  bool
-	Attributes map[string]string
-	Validators []func(interface{}) error
-	FormLabel  func() string
-	FormWidget widgets.Widget
-	Caser      *cases.Caser
+	FieldName    string
+	Required_    bool
+	Attributes   map[string]string
+	Validators   []func(interface{}) error
+	FormLabel    func() string
+	FormHelpText func() string
+	FormWidget   widgets.Widget
+	Caser        *cases.Caser
 }
 
 func NewField(type_ func() string, opts ...func(Field)) *BaseField {
@@ -61,6 +62,10 @@ func (i *BaseField) SetLabel(label func() string) {
 	i.FormLabel = label
 }
 
+func (i *BaseField) SetHelpText(helpText func() string) {
+	i.FormHelpText = helpText
+}
+
 func (i *BaseField) SetName(name string) {
 	i.FieldName = name
 }
@@ -97,6 +102,13 @@ func (i *BaseField) Label() string {
 		return i.FormLabel()
 	}
 	return i.Caser.String(i.FieldName)
+}
+
+func (i *BaseField) HelpText() string {
+	if i.FormHelpText != nil {
+		return i.FormHelpText()
+	}
+	return ""
 }
 
 func (i *BaseField) Clean(value interface{}) (interface{}, error) {

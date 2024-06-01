@@ -40,6 +40,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		forms.WithFields(
 			fields.EmailField(
 				fields.Label("Email"),
+				fields.HelpText("Enter your email"),
 				fields.Name("email"),
 				fields.Required(true),
 				fields.MinLength(5),
@@ -50,6 +51,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 			),
 			fields.CharField(
 				fields.Label("Name"),
+				fields.HelpText("Enter your name"),
 				fields.Name("name"),
 				fields.Required(true),
 				fields.Regex(`^[a-zA-Z]+$`),
@@ -58,6 +60,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 			),
 			fields.CharField(
 				fields.Label("Password"),
+				fields.HelpText("Enter your password"),
 				fields.Name("password"),
 				fields.Required(true),
 				fields.MinLength(8),
@@ -68,6 +71,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 			),
 			fields.NumberField[int](
 				fields.Label("Age"),
+				fields.HelpText("Enter your age"),
 				fields.Name("age"),
 				fields.Required(true),
 			),

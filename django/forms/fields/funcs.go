@@ -10,7 +10,7 @@ import (
 
 func S(v string) func() string {
 	return func() string {
-		return v
+		return T(v)
 	}
 }
 
@@ -18,14 +18,19 @@ func T(v string) string {
 	return v
 }
 
-func Label(label any) func(Field) {
+func getHelpTextFn(helpText any) func() string {
 	var fn func() string
-	switch v := label.(type) {
+	switch v := helpText.(type) {
 	case string:
 		fn = S(v)
 	case func() string:
 		fn = v
 	}
+	return fn
+}
+
+func Label(label any) func(Field) {
+	var fn = getHelpTextFn(label)
 
 	assert.Truthy(fn,
 		"FieldLabel: invalid type %T", label,
@@ -33,6 +38,18 @@ func Label(label any) func(Field) {
 
 	return func(f Field) {
 		f.SetLabel(fn)
+	}
+}
+
+func HelpText(helpText any) func(Field) {
+	var fn = getHelpTextFn(helpText)
+
+	assert.Truthy(fn,
+		"FieldHelpText: invalid type %T", helpText,
+	)
+
+	return func(f Field) {
+		f.SetHelpText(fn)
 	}
 }
 

@@ -18,9 +18,9 @@
     
                 <div class="form-field-wrapper">
     
-                    <p class="form-field">
+                    <div class="form-field">
                         {{ $Field.Label }}
-    
+
                         {{ if (gt (len $Field.Errors) 0) }}
                             <ul class="error-list">
                                 {{ range $Error := $Field.Errors }}
@@ -29,8 +29,12 @@
                             </ul>
                         {{ end }}
     
+                        {{ if (ne $Field.HelpText "") }}
+                            <p class="help-text">{{ $Field.HelpText }}</p>
+                        {{ end }}
+
                         {{ $Field.Field }}
-                    </p>
+                    </div>
                 </div>
     
             {{ end }}

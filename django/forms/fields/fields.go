@@ -6,14 +6,19 @@ type Field interface {
 	Attrs() map[string]string
 	SetAttrs(attrs map[string]string)
 	Hide(hidden bool)
-	SetLabel(label func() string)
+
 	SetName(name string)
-	SetWidget(widget widgets.Widget)
+	SetLabel(label func() string)
+	SetHelpText(helpText func() string)
 	SetValidators(validators ...func(interface{}) error)
+	SetWidget(widget widgets.Widget)
+
 	Name() string
 	Label() string
+	HelpText() string
 	Validate(value interface{}) []error
 	Widget() widgets.Widget
+
 	Clean(value interface{}) (interface{}, error)
 	ValueToForm(value interface{}) interface{}
 	ValueToGo(value interface{}) (interface{}, error)

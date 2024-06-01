@@ -67,6 +67,13 @@ func (b *BoundFormWidget) Label() template.HTML {
 	)
 }
 
+func (b *BoundFormWidget) HelpText() template.HTML {
+	var (
+		helpText = b.FormField.HelpText()
+	)
+	return template.HTML(helpText)
+}
+
 func (b *BoundFormWidget) Field() template.HTML {
 	if b.CachedHTML == "" {
 		var err error

@@ -30,21 +30,21 @@ func (f *ModelTest) Identifier() string {
 
 func (f *ModelTest) FieldDefs() attrs.Definitions {
 	return attrs.Define(f,
-		attrs.NewField(f, "S", false, false, true),
-		attrs.NewField(f, "I8", false, false, true),
-		attrs.NewField(f, "I16", false, false, true),
-		attrs.NewField(f, "I32", false, false, true),
-		attrs.NewField(f, "I64", false, false, true),
-		attrs.NewField(f, "U8", false, false, true),
-		attrs.NewField(f, "U16", false, false, true),
-		attrs.NewField(f, "U32", false, false, true),
-		attrs.NewField(f, "U64", false, false, true),
-		attrs.NewField(f, "F32", false, false, true),
-		attrs.NewField(f, "F64", false, false, true),
-		attrs.NewField(f, "B", false, false, true),
-		attrs.NewField(f, "M", false, false, true),
-		attrs.NewField(f, "A", false, false, true),
-		attrs.NewField(f, "BT", false, false, true),
+		attrs.NewField(f, "S", nil),
+		attrs.NewField(f, "I8", nil),
+		attrs.NewField(f, "I16", nil),
+		attrs.NewField(f, "I32", nil),
+		attrs.NewField(f, "I64", nil),
+		attrs.NewField(f, "U8", nil),
+		attrs.NewField(f, "U16", nil),
+		attrs.NewField(f, "U32", nil),
+		attrs.NewField(f, "U64", nil),
+		attrs.NewField(f, "F32", nil),
+		attrs.NewField(f, "F64", nil),
+		attrs.NewField(f, "B", nil),
+		attrs.NewField(f, "M", nil),
+		attrs.NewField(f, "A", nil),
+		attrs.NewField(f, "BT", nil),
 	)
 }
 
@@ -260,7 +260,7 @@ type ModelTestReadOnly struct {
 
 func (f *ModelTestReadOnly) FieldDefs() attrs.Definitions {
 	return attrs.Define(f,
-		attrs.NewField(f, "Name", false, false, false),
+		attrs.NewField(f, "Name", &attrs.FieldConfig{ReadOnly: true}),
 	)
 }
 

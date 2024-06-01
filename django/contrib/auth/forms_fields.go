@@ -6,6 +6,7 @@ import (
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/django/forms/widgets"
 	"github.com/Nigel2392/goldcrest"
 )
 
@@ -48,6 +49,10 @@ func NewPasswordField(opts ...func(fields.Field)) *PasswordField {
 
 	for _, opt := range opts {
 		opt(p)
+	}
+
+	if p.FormWidget == nil {
+		p.FormWidget = widgets.NewPasswordInput(nil)
 	}
 
 	return p

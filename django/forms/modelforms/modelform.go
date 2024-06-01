@@ -15,15 +15,6 @@ type ModelForm interface {
 	models.Saver
 }
 
-func slicesOverlap(a, b []string) bool {
-	for _, val := range a {
-		if slices.Contains(b, val) {
-			return true
-		}
-	}
-	return false
-}
-
 type modelFormFlag int
 
 const (
@@ -198,7 +189,7 @@ func (f *BaseModelForm[T]) Load() {
 	}
 
 	var initialData = make(map[string]interface{})
-	if any(model) != nil {
+	if !f.modelIsNil(model) {
 		for _, def := range f.InstanceFields {
 			var n = def.Name()
 			if f.wasSet(excludeWasSet) && slices.Contains(f.Exclude, n) {

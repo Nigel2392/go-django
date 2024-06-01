@@ -14,9 +14,9 @@ type TestModelDefinitions struct {
 
 func (f *TestModelDefinitions) FieldDefs() attrs.Definitions {
 	return attrs.Define(f,
-		attrs.NewField(f, "ID", false, false, true),
-		attrs.NewField(f, "Name", false, false, true),
-		attrs.NewField(f, "Objects", false, false, true),
+		attrs.NewField(f, "ID", nil),
+		attrs.NewField(f, "Name", nil),
+		attrs.NewField(f, "Objects", nil),
 	)
 }
 

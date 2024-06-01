@@ -2,31 +2,44 @@ package attrs
 
 import (
 	"reflect"
-	"strings"
 
 	"github.com/Nigel2392/django/core/assert"
+	"github.com/Nigel2392/tags"
 )
 
 const ATTR_TAG_NAME = "attrs"
 
-func autoDefinitionStructTag(t reflect.StructField) (null, blank, editable bool) {
-	var (
-		tag   = t.Tag.Get(ATTR_TAG_NAME)
-		split = strings.Split(tag, "|")
-	)
-	null, blank, editable = false, false, true
+type FieldConfig struct {
+	Null     bool
+	Blank    bool
+	ReadOnly bool
+	Label    string
+	HelpText string
+}
 
-	for _, s := range split {
-		switch strings.TrimSpace(s) {
+func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
+	var (
+		tag  = t.Tag.Get(ATTR_TAG_NAME)
+		data = FieldConfig{}
+	)
+
+	var tagMap = tags.ParseTags(tag)
+	for k, v := range tagMap {
+		switch k {
 		case "null":
-			null = true
+			data.Null = true
 		case "blank":
-			blank = true
+			data.Blank = true
 		case "readonly":
-			editable = false
+			data.ReadOnly = true
+		case "label":
+			data.Label = v[0]
+		case "helpText":
+			data.HelpText = v[0]
 		}
 	}
-	return null, blank, editable
+
+	return data
 }
 
 func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
@@ -50,9 +63,9 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 	if len(include) == 0 {
 		for i := 0; i < instance_t.NumField(); i++ {
 			var (
-				field_t               = instance_t.Field(i)
-				field_v               = instance_v.Field(i)
-				null, blank, editable = autoDefinitionStructTag(field_t)
+				field_t = instance_t.Field(i)
+				field_v = instance_v.Field(i)
+				attrs   = autoDefinitionStructTag(field_t)
 			)
 
 			var skip = (field_t.Anonymous ||
@@ -64,9 +77,7 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 			}
 
 			m = append(m, &FieldDef{
-				Null:           null,
-				Blank:          blank,
-				Editable:       editable,
+				attrDef:        attrs,
 				instance_t_ptr: instance_t_ptr,
 				instance_v_ptr: instance_v_ptr,
 				instance_t:     instance_t,
@@ -82,8 +93,8 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 			assert.True(ok, "field %q not found in %T", name, instance)
 
 			var (
-				null, blank, editable = autoDefinitionStructTag(field_t)
-				field_v               = instance_v.FieldByIndex(field_t.Index)
+				attrs   = autoDefinitionStructTag(field_t)
+				field_v = instance_v.FieldByIndex(field_t.Index)
 			)
 
 			var skip = (field_t.Anonymous ||
@@ -95,9 +106,7 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 			}
 
 			m = append(m, &FieldDef{
-				Null:           null,
-				Blank:          blank,
-				Editable:       editable,
+				attrDef:        attrs,
 				instance_t_ptr: instance_t_ptr,
 				instance_v_ptr: instance_v_ptr,
 				instance_t:     instance_t,

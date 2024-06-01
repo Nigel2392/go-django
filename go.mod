@@ -24,4 +24,7 @@ require (
 	golang.org/x/crypto v0.23.0
 )
 
-require github.com/a-h/templ v0.2.707
+require (
+	github.com/Nigel2392/tags v1.0.0
+	github.com/a-h/templ v0.2.707
+)

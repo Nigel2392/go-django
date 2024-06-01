@@ -18,8 +18,8 @@ type TestModel struct {
 func (m *TestModel) FieldDefs() attrs.Definitions {
 	return attrs.Define(
 		m,
-		attrs.NewField(m, "ID", true, true, true),
-		attrs.NewField(m, "Name", true, true, true),
+		attrs.NewField(m, "ID", &attrs.FieldConfig{Null: true, Blank: true, ReadOnly: false}),
+		attrs.NewField(m, "Name", &attrs.FieldConfig{Null: true, Blank: true, ReadOnly: false}),
 	)
 }
 

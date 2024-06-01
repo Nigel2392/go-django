@@ -22,9 +22,9 @@ type customTestWidget struct {
 
 func (f *TestModelFields) FieldDefs() attrs.Definitions {
 	return attrs.Define(f,
-		attrs.NewField(f, "ID", false, false, true),
-		attrs.NewField(f, "Name", false, false, true),
-		attrs.NewField(f, "Objects", false, false, false),
+		attrs.NewField(f, "ID", nil),
+		attrs.NewField(f, "Name", nil),
+		attrs.NewField(f, "Objects", &attrs.FieldConfig{ReadOnly: true}),
 	)
 }
 
@@ -36,9 +36,9 @@ func TestModelFieldsGet(t *testing.T) {
 	}
 
 	var (
-		defID      = attrs.NewField(m, "ID", false, false, true)
-		defName    = attrs.NewField(m, "Name", false, false, true)
-		defObjects = attrs.NewField(m, "Objects", false, false, true)
+		defID      = attrs.NewField(m, "ID", nil)
+		defName    = attrs.NewField(m, "Name", nil)
+		defObjects = attrs.NewField(m, "Objects", nil)
 	)
 
 	if m.ID != defID.GetValue().(int) {
@@ -62,9 +62,9 @@ func TestModelFieldFieldsSet(t *testing.T) {
 	}
 
 	var (
-		defID      = attrs.NewField(m, "ID", false, false, true)
-		defName    = attrs.NewField(m, "Name", false, false, true)
-		defObjects = attrs.NewField(m, "Objects", false, false, true)
+		defID      = attrs.NewField(m, "ID", nil)
+		defName    = attrs.NewField(m, "Name", nil)
+		defObjects = attrs.NewField(m, "Objects", nil)
 	)
 
 	defID.SetValue(2, false)
@@ -96,9 +96,9 @@ func TestModelFieldFieldsSetReadOnly(t *testing.T) {
 	}
 
 	var (
-		defID      = attrs.NewField(m, "ID", false, false, true)
-		defName    = attrs.NewField(m, "Name", false, false, true)
-		defObjects = attrs.NewField(m, "Objects", false, false, false)
+		defID      = attrs.NewField(m, "ID", nil)
+		defName    = attrs.NewField(m, "Name", nil)
+		defObjects = attrs.NewField(m, "Objects", &attrs.FieldConfig{ReadOnly: true})
 	)
 
 	defer func() {
@@ -132,9 +132,9 @@ func TestModelFieldFieldsForceSetReadOnly(t *testing.T) {
 	}
 
 	var (
-		defID      = attrs.NewField(m, "ID", false, false, true)
-		defName    = attrs.NewField(m, "Name", false, false, true)
-		defObjects = attrs.NewField(m, "Objects", false, false, false)
+		defID      = attrs.NewField(m, "ID", nil)
+		defName    = attrs.NewField(m, "Name", nil)
+		defObjects = attrs.NewField(m, "Objects", &attrs.FieldConfig{ReadOnly: true})
 	)
 
 	defID.SetValue(2, true)
@@ -162,9 +162,9 @@ func TestModelFormFields(t *testing.T) {
 	}
 
 	var (
-		defID      = attrs.NewField(m, "ID", false, false, true)
-		defName    = attrs.NewField(m, "Name", false, false, true)
-		defObjects = attrs.NewField(m, "Objects", false, false, true)
+		defID      = attrs.NewField(m, "ID", nil)
+		defName    = attrs.NewField(m, "Name", nil)
+		defObjects = attrs.NewField(m, "Objects", nil)
 	)
 
 	var (
@@ -218,9 +218,9 @@ func TestModelFormFieldsCustomType(t *testing.T) {
 	}
 
 	var (
-		defID      = attrs.NewField(m, "ID", false, false, true)
-		defName    = attrs.NewField(m, "Name", false, false, true)
-		defObjects = attrs.NewField(m, "Objects", false, false, true)
+		defID      = attrs.NewField(m, "ID", nil)
+		defName    = attrs.NewField(m, "Name", nil)
+		defObjects = attrs.NewField(m, "Objects", nil)
 	)
 
 	goldcrest.Register(

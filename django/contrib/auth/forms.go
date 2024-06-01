@@ -31,7 +31,8 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserLogin
 		f.AddField(
 			"email",
 			fields.Protect(fields.EmailField(
-				fields.Label(fields.S("Email")),
+				fields.Label("Email"),
+				fields.HelpText("Enter your email address"),
 				fields.Required(true),
 				fields.MinLength(5),
 				fields.MaxLength(254),
@@ -41,7 +42,8 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserLogin
 		f.AddField(
 			"username",
 			fields.Protect(fields.CharField(
-				fields.Label(fields.S("Username")),
+				fields.Label("Username"),
+				fields.HelpText("Enter your username"),
 				fields.Required(true),
 				fields.MinLength(3),
 				fields.MaxLength(32),
@@ -53,7 +55,8 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserLogin
 	f.AddField(
 		"password",
 		fields.Protect(NewPasswordField(
-			fields.Label(fields.S("Password")),
+			fields.Label("Password"),
+			fields.HelpText("Enter your password"),
 			fields.Required(true),
 			fields.MinLength(8),
 			fields.MaxLength(64),
