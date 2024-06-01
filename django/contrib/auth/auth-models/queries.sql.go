@@ -476,7 +476,7 @@ ORDER BY
     u.id, g.name, p.name
 `
 
-type GetUserByEmailRow struct {
+type UserRow struct {
 	User                  User   `json:"user"`
 	GroupID               uint64 `json:"group_id"`
 	GroupName             string `json:"group_name"`
@@ -486,15 +486,15 @@ type GetUserByEmailRow struct {
 	PermissionDescription string `json:"permission_description"`
 }
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) ([]GetUserByEmailRow, error) {
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) ([]UserRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUserByEmail, email)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetUserByEmailRow
+	var items []UserRow
 	for rows.Next() {
-		var i GetUserByEmailRow
+		var i UserRow
 		if err := rows.Scan(
 			&i.User.ID,
 			&i.User.CreatedAt,
@@ -618,25 +618,15 @@ ORDER BY
     u.id
 `
 
-type GetUserByNameRow struct {
-	User                  User   `json:"user"`
-	GroupID               uint64 `json:"group_id"`
-	GroupName             string `json:"group_name"`
-	GroupDescription      string `json:"group_description"`
-	PermissionID          uint64 `json:"permission_id"`
-	PermissionName        string `json:"permission_name"`
-	PermissionDescription string `json:"permission_description"`
-}
-
-func (q *Queries) GetUserByName(ctx context.Context, username string) ([]GetUserByNameRow, error) {
+func (q *Queries) GetUserByName(ctx context.Context, username string) ([]UserRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUserByName, username)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []GetUserByNameRow
+	var items []UserRow
 	for rows.Next() {
-		var i GetUserByNameRow
+		var i UserRow
 		if err := rows.Scan(
 			&i.User.ID,
 			&i.User.CreatedAt,

@@ -22,6 +22,7 @@ type Validator interface {
 
 type BoundField interface {
 	ID() string
+	Name() string
 	Widget() widgets.Widget
 	Input() fields.Field
 	Label() template.HTML

@@ -11,6 +11,32 @@
     </head>
     <body>
         {{ template "content" . }}
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+    
+            {{ range $Field := (.Get "Form").Fields }}
+    
+                <div class="form-field-wrapper">
+    
+                    <p class="form-field">
+                        {{ $Field.Label }}
+    
+                        {{ if (gt (len $Field.Errors) 0) }}
+                            <ul class="error-list">
+                                {{ range $Error := $Field.Errors }}
+                                    <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
+                                {{ end }}
+                            </ul>
+                        {{ end }}
+    
+                        {{ $Field.Field }}
+                    </p>
+                </div>
+    
+            {{ end }}
+    
+            <input type="submit" value="Submit">
+        </form>
     </body>
 </html>
 {{ end }}

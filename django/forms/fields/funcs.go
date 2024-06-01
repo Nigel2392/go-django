@@ -14,6 +14,10 @@ func S(v string) func() string {
 	}
 }
 
+func T(v string) string {
+	return v
+}
+
 func Label(label any) func(Field) {
 	var fn func() string
 	switch v := label.(type) {
@@ -64,7 +68,10 @@ func MinLength(min int) func(Field) {
 	return func(f Field) {
 		f.SetAttrs(map[string]string{"minlength": fmt.Sprintf("%d", min)})
 		f.SetValidators(func(value interface{}) error {
-			if value == nil {
+			if value == nil || value == "" {
+				if min > 0 {
+					return fmt.Errorf("Ensure this value has at least %d characters.", min) //lint:ignore ST1005 ignore this lint
+				}
 				return nil
 			}
 			var v = fmt.Sprintf("%v", value)
@@ -80,7 +87,7 @@ func MaxLength(max int) func(Field) {
 	return func(f Field) {
 		f.SetAttrs(map[string]string{"maxlength": fmt.Sprintf("%d", max)})
 		f.SetValidators(func(value interface{}) error {
-			if value == nil {
+			if value == nil || value == "" {
 				return nil
 			}
 			var v = fmt.Sprintf("%v", value)

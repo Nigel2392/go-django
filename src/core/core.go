@@ -23,7 +23,7 @@ func NewAppConfig() django.AppConfig {
 				mux.NewHandler(Index),
 			),
 			urls.Pattern(
-				urls.P("/about", "GET"),
+				urls.P("/about", mux.ANY),
 				mux.NewHandler(About),
 			),
 		),

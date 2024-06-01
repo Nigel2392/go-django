@@ -81,3 +81,7 @@ func (m *MultiError) Error() string {
 func (m *MultiError) Unwrap() []error {
 	return m.Errors
 }
+
+func (m *MultiError) Len() int {
+	return len(m.Errors)
+}

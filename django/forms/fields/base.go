@@ -104,11 +104,15 @@ func (i *BaseField) Clean(value interface{}) (interface{}, error) {
 }
 
 func (i *BaseField) Validate(value interface{}) []error {
-
+	var errors = make([]error, 0)
 	for _, validator := range i.Validators {
 		if err := validator(value); err != nil {
-			return []error{errs.NewValidationError(i.FieldName, err.Error())}
+			errors = append(errors, err)
 		}
+	}
+
+	if len(errors) > 0 {
+		return errors
 	}
 
 	if i.Required() && i.IsEmpty(value) {

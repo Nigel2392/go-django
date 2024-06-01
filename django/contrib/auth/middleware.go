@@ -59,14 +59,6 @@ func UserFromRequestPure(r *http.Request) authentication.User {
 	return UserFromRequest(r)
 }
 
-// Set the user inside of the request.
-func UserToRequest(r *http.Request, user *models.User) {
-	var s = sessions.Retrieve(r)
-	except.Assert(s != nil, 505, "Session must exist in the request")
-	except.Assert(user != nil, 505, "User must be provided and not nil")
-	s.Set(SESSION_COOKIE_NAME, user.ID)
-}
-
 // Add a user to a request, if one exists in the session.
 func AddUserMiddleware() mux.Middleware {
 	return authentication.AddUserMiddleware(UserFromRequestPure)

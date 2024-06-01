@@ -136,6 +136,7 @@ func (a *Application) handleErrorCodePure(w http.ResponseWriter, r *http.Request
 
 func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Request) {
 	var serverErrInt = except.GetServerError(err)
+	fmt.Println("ServerError", serverErrInt, err)
 	if serverErrInt == nil {
 		a.handleErrorCodePure(w, r, nil, http.StatusInternalServerError)
 		return

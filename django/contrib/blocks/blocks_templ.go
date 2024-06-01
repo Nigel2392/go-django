@@ -218,25 +218,6 @@ func (l *ListBlock) RenderTempl(w io.Writer, id, name string, valueArr []interfa
 			return templ_7745c5c3_Err
 		}
 		var iStr string
-		if listBlockErrors.HasErrors() {
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-list-block-errors><div data-list-block-errors-content><p class=\"error-message\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(listBlockErrors.Error())
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 70, Col: 70}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</p></div></div>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-list-block-items>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -247,12 +228,12 @@ func (l *ListBlock) RenderTempl(w io.Writer, id, name string, valueArr []interfa
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var10 string
-			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(iStr)
+			var templ_7745c5c3_Var9 string
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(iStr)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 79, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 71, Col: 57}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

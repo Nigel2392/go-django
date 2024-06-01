@@ -224,13 +224,14 @@ func (f *_BoundForm) Media() media.Media {
 }
 
 func (f *BaseForm) BoundForm() BoundForm {
-	var fields = f.BoundFields()
-	var errors = f.BoundErrors()
-	var boundFields = make([]BoundField, 0, fields.Len())
+	var (
+		fields      = f.BoundFields()
+		errors      = f.BoundErrors()
+		boundFields = make([]BoundField, 0, fields.Len())
+	)
 	for head := fields.Front(); head != nil; head = head.Next() {
 		boundFields = append(boundFields, head.Value)
 	}
-
 	return &_BoundForm{
 		Form:    f,
 		Fields_: boundFields,
@@ -480,7 +481,17 @@ func (f *BaseForm) FullClean() {
 
 		errors = v.Validate(data)
 		if len(errors) > 0 {
-			f.AddError(k, errors...)
+			var errList = make([]error, 0, len(errors))
+			for _, err := range errors {
+				switch e := err.(type) {
+				case interface{ Unwrap() []error }:
+					errList = append(errList, e.Unwrap()...)
+				default:
+					errList = append(errList, err)
+				}
+			}
+
+			f.AddError(k, errList...)
 			f.InvalidDefaults[k] = data
 			continue
 		}

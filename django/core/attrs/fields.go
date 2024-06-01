@@ -17,7 +17,7 @@ const (
 	HookFormFieldForType = "attrs.FormFieldForType"
 )
 
-type FormFieldGetter func(f Field, t reflect.Type, v reflect.Value) (fields.Field, bool)
+type FormFieldGetter func(f Field, t reflect.Type, v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool)
 
 type FieldDef struct {
 	Blank          bool
@@ -129,7 +129,7 @@ func (f *FieldDef) FormField() fields.Field {
 
 	var hooks = goldcrest.Get[FormFieldGetter](HookFormFieldForType)
 	for _, hook := range hooks {
-		if field, ok := hook(f, typForNew, f.field_v); ok {
+		if field, ok := hook(f, typForNew, f.field_v, opts...); ok {
 			field.SetName(f.Name())
 			return field
 		}
