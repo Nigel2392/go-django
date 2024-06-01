@@ -4,9 +4,9 @@ import "github.com/Nigel2392/django/core/ctx"
 import "strconv"
 import "fmt"
 
-templ errorListComponent(errors []error) {
+templ errorListComponent(dataAttr string, errors []error) {
     if len(errors) > 0 {
-        <ul class="error-list error-wrapper">
+        <ul data-errors-for={ dataAttr } class="error-list error-wrapper">
             for _, err := range errors {
                 if err == nil {
                     {{ continue }}
@@ -17,19 +17,19 @@ templ errorListComponent(errors []error) {
     }
 }
 
-templ labelComponent(b Block, id string) {
+templ labelComponent(dataAttr string, b Block, id string) {
     {{ label := b.Label() }}
     if label != "" {
-        <div class="label-wrapper">
+        <div data-label-for={ dataAttr } class="label-wrapper">
             <label for={ b.Field().Widget().IdForLabel(id) }>{ label }</label>
         </div>
     }
 }
 
-templ helpTextComponent(b Block) {
+templ helpTextComponent(dataAttr string, b Block) {
     {{ helpText := b.HelpText() }}
     if helpText != "" {
-        <div class="help-text-wrapper">
+        <div data-help-for={ dataAttr }  class="help-text-wrapper">
             <p class="help">{ helpText }</p>
         </div>
     }
@@ -68,17 +68,19 @@ templ (b *StructBlock)RenderTempl(w io.Writer, id, name string, valueMap map[str
             <div data-struct-field data-contentpath={ key }>
 
 
-                @labelComponent(head.Value, id)
+                @labelComponent("struct-block", head.Value, id)
 
                 {{ var newErrs = errors.Get(head.Key) }}
-                @errorListComponent(newErrs)
+                @errorListComponent("struct-block", newErrs)
 
-	    	    {{ var err = head.Value.RenderForm(w, id, key, valueMap[head.Key], newErrs, tplCtx) }}
-	    	    if err != nil {
-	    	    	{{ return err }}
-	    	    }
+                <div data-struct-field-content>
+	    	        {{ var err = head.Value.RenderForm(w, id, key, valueMap[head.Key], newErrs, tplCtx) }}
+	    	        if err != nil {
+	    	        	{{ return err }}
+	    	        }
+                </div>
 
-                @helpTextComponent(head.Value)
+                @helpTextComponent("struct-block", head.Value)
             </div>
 	    }
     </div>
@@ -89,7 +91,7 @@ templ (l *ListBlock)RenderTempl(w io.Writer, id, name string, valueArr []interfa
 
 		<input data-list-block-add type="hidden" name={ fmt.Sprintf("%sAdded", name) } value={ strconv.Itoa(len(valueArr)) }>
 
-		{{ var iStr string = "0" }}
+		{{ var iStr string }}
 
 		<div data-list-block-items>
 			for i, v := range valueArr {
@@ -100,18 +102,19 @@ templ (l *ListBlock)RenderTempl(w io.Writer, id, name string, valueArr []interfa
 	    		    {{ var id  = fmt.Sprintf("%s-%d", id, i) }}
 	    		    {{ var key = fmt.Sprintf("%s-%d", name, i) }}
 
-
-                    @labelComponent(l.Child, id)
+                    @labelComponent("list-block", l.Child, id)
 
                     {{ var newErrs = listBlockErrors.Get(i) }}
-                    @errorListComponent(newErrs)
+                    @errorListComponent("list-block", newErrs)
 
-	    		    {{ var err = l.Child.RenderForm(w, id, key, v, newErrs, tplCtx) }}
-	    		    if err != nil {
-	    		    	{{ return err }}
-	    		    }
+                    <div data-list-block-field-content>
+	    		        {{ var err = l.Child.RenderForm(w, id, key, v, newErrs, tplCtx) }}
+	    		        if err != nil {
+	    		        	{{ return err }}
+	    		        }
+                    </div>
 
-                    @helpTextComponent(l.Child)
+                    @helpTextComponent("list-block", l.Child)
         	    </div>
 	    	}
 		</div>
