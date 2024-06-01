@@ -13,16 +13,18 @@
         {{ range $Field := (.Get "Form").Fields }}
 
             <div class="form-field-wrapper">
-                {{ if (gt (len $Field.Errors) 0) }}
-                    <ul class="form-errors">
-                        {{ range $Error := $Field.Errors }}
-                            <li><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
-                        {{ end }}
-                    </ul>
-                {{ end }}
 
                 <p class="form-field">
-                    {{ $Field.Label }}<br>
+                    {{ $Field.Label }}
+
+                    {{ if (gt (len $Field.Errors) 0) }}
+                        <ul class="error-list">
+                            {{ range $Error := $Field.Errors }}
+                                <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
+                            {{ end }}
+                        </ul>
+                    {{ end }}
+
                     {{ $Field.Field }}
                 </p>
             </div>

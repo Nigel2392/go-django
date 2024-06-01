@@ -1,0 +1,119 @@
+package blocks
+
+import "github.com/Nigel2392/django/core/ctx"
+import "strconv"
+import "fmt"
+
+templ errorListComponent(errors []error) {
+    if len(errors) > 0 {
+        <ul class="error-list error-wrapper">
+            for _, err := range errors {
+                if err == nil {
+                    {{ continue }}
+                }
+                <li class="error">{ err.Error() }</li>
+            }
+        </ul>
+    }
+}
+
+templ labelComponent(b Block, id string) {
+    {{ label := b.Label() }}
+    if label != "" {
+        <div class="label-wrapper">
+            <label for={ b.Field().Widget().IdForLabel(id) }>{ label }</label>
+        </div>
+    }
+}
+
+templ helpTextComponent(b Block) {
+    {{ helpText := b.HelpText() }}
+    if helpText != "" {
+        <div class="help-text-wrapper">
+            <p class="help">{ helpText }</p>
+        </div>
+    }
+}
+
+templ RenderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext, errors []error) {
+    <div class="django-block-widget-wrapper" id={ blockCtx.ID }>
+        <div class="django-block-widget">
+
+            {{ var err = widget.BlockDef.RenderForm(w, blockCtx.ID, blockCtx.Name, blockCtx.Value, errors, blockCtx) }}
+            if err != nil {
+                {{ return err }}
+            }
+
+        </div>
+    </div>
+}
+
+templ (b *FieldBlock)RenderTempl(w io.Writer, id, name string, value interface{}, errors []error, tplCtx ctx.Context)  {
+	{{ var c = tplCtx.(*BlockContext) }}
+    <div data-field-block class="field">
+        {{ var err = b.Field().Widget().RenderWithErrors(w, id, name, value, errors, c.Attrs) }}
+        if err != nil {
+            return err
+        }
+    </div>
+}
+
+templ (b *StructBlock)RenderTempl(w io.Writer, id, name string, valueMap map[string]interface{}, errors *BaseBlockValidationError[string], tplCtx ctx.Context)  {
+    <div data-struct-block>
+
+	    for head := b.Fields.Front(); head != nil; head = head.Next() {
+	    	{{ var id  = fmt.Sprintf("%s-%s", id, head.Key) }}
+	    	{{ var key = fmt.Sprintf("%s-%s", name, head.Key) }}
+
+            <div data-struct-field data-contentpath={ key }>
+
+
+                @labelComponent(head.Value, id)
+
+                {{ var newErrs = errors.Get(head.Key) }}
+                @errorListComponent(newErrs)
+
+	    	    {{ var err = head.Value.RenderForm(w, id, key, valueMap[head.Key], newErrs, tplCtx) }}
+	    	    if err != nil {
+	    	    	{{ return err }}
+	    	    }
+
+                @helpTextComponent(head.Value)
+            </div>
+	    }
+    </div>
+}
+
+templ (l *ListBlock)RenderTempl(w io.Writer, id, name string, valueArr []interface{}, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context)  {
+    <div data-list-block>
+
+		<input data-list-block-add type="hidden" name={ fmt.Sprintf("%sAdded", name) } value={ strconv.Itoa(len(valueArr)) }>
+
+		{{ var iStr string = "0" }}
+
+		<div data-list-block-items>
+			for i, v := range valueArr {
+				{{ iStr = strconv.Itoa(i) }}
+
+        	    <div data-list-block-field data-index={ iStr }>
+
+	    		    {{ var id  = fmt.Sprintf("%s-%d", id, i) }}
+	    		    {{ var key = fmt.Sprintf("%s-%d", name, i) }}
+
+
+                    @labelComponent(l.Child, id)
+
+                    {{ var newErrs = listBlockErrors.Get(i) }}
+                    @errorListComponent(newErrs)
+
+	    		    {{ var err = l.Child.RenderForm(w, id, key, v, newErrs, tplCtx) }}
+	    		    if err != nil {
+	    		    	{{ return err }}
+	    		    }
+
+                    @helpTextComponent(l.Child)
+        	    </div>
+	    	}
+		</div>
+    </div>
+}
