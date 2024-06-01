@@ -4,6 +4,8 @@ github.com/Nigel2392/goldcrest v1.0.4 h1:Xx+QLht6QjJ3Gg9uksgc6Ye1XjbtzQ1208ClZwo
 github.com/Nigel2392/goldcrest v1.0.4/go.mod h1:UpnPrYJqZY/b7TkoVKdoNNPKTlQtld+fsrZEA98c1c0=
 github.com/Nigel2392/mux v1.3.1 h1:dfhjf4kvX0NBlpNf/jM3YbWEUffwA7tdC0kphRvErzM=
 github.com/Nigel2392/mux v1.3.1/go.mod h1:Hrj90gq33BCcFy8167rU03oBr2YIQMRvNkMf9JnRcAU=
+github.com/a-h/templ v0.2.707 h1:T1Gkd2ugbRglZ9rYw/VBchWOSZVKmetDbBkm4YubM7U=
+github.com/a-h/templ v0.2.707/go.mod h1:5cqsugkq9IerRNucNsI4DEamdHPsoGMQy99DzydLhM8=
 github.com/alexedwards/scs/mysqlstore v0.0.0-20240316134038-7e11d57e8885 h1:C7QAamNjR5yz6di4KJWAKcnxueKBgq4L/JGXhlnu35w=
 github.com/alexedwards/scs/mysqlstore v0.0.0-20240316134038-7e11d57e8885/go.mod h1:p8jK3D80sw1PFrCSdlcJF1O75bp55HqbgDyyCLM0FrE=
 github.com/alexedwards/scs/postgresstore v0.0.0-20240316134038-7e11d57e8885 h1:012heQQRqytD5mSoXNzhfoTQaoPj6iRMvKh9DlUScoI=

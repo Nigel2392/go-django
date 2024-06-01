@@ -1,8 +1,8 @@
 package blocks
 
 import (
-	"bytes"
-	"html/template"
+	"context"
+	"io"
 
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/forms/fields"
@@ -13,54 +13,16 @@ type FieldBlock struct {
 	*BaseBlock
 }
 
-func (b *FieldBlock) RenderForm(id, name string, value interface{}, errors []error, context ctx.Context) (template.HTML, error) {
-	var c = context.(*BlockContext)
-	var buf = new(bytes.Buffer)
-	var html, err = b.Field().Widget().RenderWithErrors(id, name, value, errors, c.Attrs)
-	if err != nil {
-		return "", err
-	}
-
-	var label = b.Label()
-	var idForLabel = b.Field().Widget().IdForLabel(id)
-	if len(errors) > 0 {
-		buf.WriteString("<ul class=\"errorlist\">")
-
-		for _, err := range errors {
-			if err == nil {
-				continue
-			}
-			buf.WriteString("<li>")
-			buf.WriteString(err.Error())
-			buf.WriteString("</li>")
-		}
-
-		buf.WriteString("</ul>")
-	}
-
-	buf.WriteString("<div class=\"field\">")
-	buf.WriteString("<label for=\"")
-	buf.WriteString(idForLabel)
-	buf.WriteString("\">")
-	buf.WriteString(label)
-	buf.WriteString("</label>")
-	buf.WriteString(string(html))
-	buf.WriteString("</div>")
-	if b.HelpText() != "" {
-		buf.WriteString("<p class=\"help\">")
-		buf.WriteString(b.HelpText())
-		buf.WriteString("</p>")
-	}
-	return template.HTML(buf.String()), nil
-
-}
-
 func NewFieldBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = &FieldBlock{
 		BaseBlock: NewBaseBlock(),
 	}
 	runOpts(opts, base)
 	return base
+}
+
+func (b *FieldBlock) RenderForm(w io.Writer, id, name string, value interface{}, errors []error, c ctx.Context) error {
+	return b.RenderTempl(w, id, name, value, errors, c).Render(context.Background(), w)
 }
 
 func CharBlock(opts ...func(*FieldBlock)) *FieldBlock {

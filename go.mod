@@ -23,3 +23,5 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.22
 	golang.org/x/crypto v0.23.0
 )
+
+require github.com/a-h/templ v0.2.707 // indirect

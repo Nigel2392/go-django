@@ -1,7 +1,6 @@
 package widgets
 
 import (
-	"html/template"
 	"io"
 	"maps"
 	"net/url"
@@ -83,17 +82,17 @@ func (b *BaseWidget) GetContextData(id, name string, value interface{}, attrs ma
 	})
 }
 
-func (b *BaseWidget) RenderWithErrors(id, name string, value interface{}, errors []error, attrs map[string]string) (template.HTML, error) {
+func (b *BaseWidget) RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
 	var context = b.GetContextData(id, name, value, attrs)
 	if errors != nil {
 		context.Set("errors", errors)
 	}
 
-	return tpl.Render(context, b.TemplateName)
+	return tpl.FRender(w, context, b.TemplateName)
 }
 
-func (b *BaseWidget) Render(id, name string, value interface{}, attrs map[string]string) (template.HTML, error) {
-	return b.RenderWithErrors(id, name, value, nil, attrs)
+func (b *BaseWidget) Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
+	return b.RenderWithErrors(w, id, name, value, nil, attrs)
 }
 
 func (b *BaseWidget) Media() media.Media {

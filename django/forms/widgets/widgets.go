@@ -1,7 +1,6 @@
 package widgets
 
 import (
-	"html/template"
 	"io"
 	"net/url"
 
@@ -34,8 +33,8 @@ type Widget interface {
 	SetAttrs(attrs map[string]string)
 	IdForLabel(id string) string
 	GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context
-	RenderWithErrors(id, name string, value interface{}, errors []error, attrs map[string]string) (template.HTML, error)
-	Render(id, name string, value interface{}, attrs map[string]string) (template.HTML, error)
+	RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error
+	Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error
 
 	FormValuer
 	media.MediaDefiner

@@ -278,4 +278,8 @@ func TestModelFormFieldsCustomType(t *testing.T) {
 			t.Errorf("expected %t, got %t (%T)", true, ok, v.Widget())
 		}
 	}
+
+	goldcrest.Unregister(
+		attrs.HookFormFieldForType,
+	)
 }

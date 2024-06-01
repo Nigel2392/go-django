@@ -1,9 +1,8 @@
 package blocks
 
 import (
-	"bytes"
+	"context"
 	"fmt"
-	"html/template"
 	"io"
 	"maps"
 	"net/url"
@@ -102,11 +101,12 @@ func (m *StructBlock) ValueToGo(value interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("value must be a map[string]interface{}")
 	}
 	var errors = NewBlockErrors[string]()
+loop:
 	for head := m.Fields.Front(); head != nil; head = head.Next() {
 		var v, err = head.Value.ValueToGo(valueMap[head.Key])
 		if err != nil {
 			errors.AddError(head.Key, err)
-			continue
+			continue loop
 		}
 
 		data[head.Key] = v
@@ -218,9 +218,9 @@ func (m *StructBlock) GetDefault() interface{} {
 	return data
 }
 
-func (m *StructBlock) RenderForm(id, name string, value interface{}, errors []error, context ctx.Context) (template.HTML, error) {
+func (m *StructBlock) RenderForm(w io.Writer, id, name string, value interface{}, errors []error, tplCtx ctx.Context) error {
 	var (
-		ctxData  = NewBlockContext(m, context)
+		ctxData  = NewBlockContext(m, tplCtx)
 		valueMap map[string]interface{}
 		ok       bool
 	)
@@ -234,31 +234,11 @@ func (m *StructBlock) RenderForm(id, name string, value interface{}, errors []er
 	ctxData.Value = value
 
 	if valueMap, ok = value.(map[string]interface{}); !ok {
-		return "", fmt.Errorf("value must be a map[string]interface{}")
+		return fmt.Errorf("value must be a map[string]interface{}")
 	}
 
 	var errs = NewBlockErrors[string](errors...)
-
-	var b = new(bytes.Buffer)
-	for head := m.Fields.Front(); head != nil; head = head.Next() {
-
-		var (
-			id  = fmt.Sprintf("%s-%s", id, head.Key)
-			key = fmt.Sprintf("%s-%s", name, head.Key)
-		)
-
-		var v, err = head.Value.RenderForm(
-			id, key,
-			valueMap[head.Key],
-			errs.Get(head.Key),
-			ctxData,
-		)
-		if err != nil {
-			return template.HTML(err.Error()), err
-		}
-
-		b.WriteString(string(v))
-	}
-
-	return template.HTML(b.String()), nil
+	return m.RenderTempl(
+		w, id, name, valueMap, errs, ctxData,
+	).Render(context.Background(), w)
 }

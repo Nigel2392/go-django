@@ -90,15 +90,23 @@ func Index(w http.ResponseWriter, r *http.Request) {
 				b.AddField("password", blocks.PasswordBlock())
 				b.AddField("date", blocks.DateBlock())
 				b.AddField("datetime", blocks.DateTimeBlock())
-				b.AddField("data", blocks.NewListBlock(blocks.TextBlock(
+
+				var lb = blocks.NewListBlock(blocks.TextBlock(
 					blocks.WithValidators[*blocks.FieldBlock](func(i interface{}) error {
+						fmt.Println("Validating", i)
 						if i == nil || i == "" {
 							return errs.ErrFieldRequired
 						}
 						return nil
 					}),
-					blocks.WithLabel[*blocks.FieldBlock]("Data"),
-				), 3, 5))
+					blocks.WithLabel[*blocks.FieldBlock]("Data Sub-Block"),
+				), 3, 5)
+
+				lb.LabelFunc = func() string {
+					return "Data List"
+				}
+
+				b.AddField("data", lb)
 
 				// var c = blocks.NewMultiBlock()
 				// c.AddField("name", blocks.CharBlock())

@@ -1,7 +1,6 @@
 package blocks
 
 import (
-	"html/template"
 	"io"
 	"net/url"
 
@@ -48,7 +47,7 @@ func (bw *BlockWidget) GetContextData(id, name string, value interface{}, attrs 
 	return blockCtx
 }
 
-func (bw *BlockWidget) RenderWithErrors(id, name string, value interface{}, errors []error, attrs map[string]string) (template.HTML, error) {
+func (bw *BlockWidget) RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
 	var ctxData = bw.GetContextData(id, name, value, attrs)
 
 	for i, err := range errors {
@@ -60,15 +59,15 @@ func (bw *BlockWidget) RenderWithErrors(id, name string, value interface{}, erro
 		}
 	}
 
-	return RenderBlockForm(bw, ctxData.(*BlockContext), errors)
+	return RenderBlockForm(w, bw, ctxData.(*BlockContext), errors)
 }
 
 func (bw *BlockWidget) IdForLabel(name string) string {
 	return name
 }
 
-func (bw *BlockWidget) Render(id, name string, value interface{}, attrs map[string]string) (template.HTML, error) {
-	return bw.RenderWithErrors(id, name, value, nil, attrs)
+func (bw *BlockWidget) Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
+	return bw.RenderWithErrors(w, id, name, value, nil, attrs)
 }
 
 func (bw *BlockWidget) ValueToGo(value interface{}) (interface{}, error) {

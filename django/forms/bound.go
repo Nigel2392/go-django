@@ -1,6 +1,7 @@
 package forms
 
 import (
+	"bytes"
 	"fmt"
 	"html/template"
 
@@ -69,9 +70,11 @@ func (b *BoundFormWidget) Label() template.HTML {
 func (b *BoundFormWidget) Field() template.HTML {
 	if b.CachedHTML == "" {
 		var err error
-		b.CachedHTML, err = b.FormWidget.RenderWithErrors(
-			b.ID(), b.FormName, b.FormValue, b.FormErrors, b.FormAttrs,
+		var buf = new(bytes.Buffer)
+		err = b.FormWidget.RenderWithErrors(
+			buf, b.ID(), b.FormName, b.FormValue, b.FormErrors, b.FormAttrs,
 		)
+		b.CachedHTML = template.HTML(buf.String())
 		assert.True(err == nil, err)
 	}
 	return b.CachedHTML

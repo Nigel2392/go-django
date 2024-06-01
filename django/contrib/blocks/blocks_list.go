@@ -1,9 +1,8 @@
 package blocks
 
 import (
-	"bytes"
+	"context"
 	"fmt"
-	"html/template"
 	"io"
 	"net/url"
 	"strconv"
@@ -61,7 +60,7 @@ func (l *ListBlock) makeError(err error) error {
 }
 
 func (l *ListBlock) makeIndexedError(index int, err ...error) error {
-	if len(err) == 0 {
+	if len(err) == 0 || len(err) >= 1 && err[0] == nil {
 		return nil
 	}
 	var e = NewBlockErrors[int]()
@@ -163,13 +162,19 @@ func (l *ListBlock) ValueToGo(value interface{}) (interface{}, error) {
 		return nil, fmt.Errorf("value must be a []interface{}")
 	}
 
+	var errs = NewBlockErrors[int]()
 	for i, v := range valueArr {
 		var v, err = l.Child.ValueToGo(v)
 		if err != nil {
-			return nil, l.makeIndexedError(i, errors.Wrapf(err, "index %d", i))
+			errs.AddError(i, err)
+			continue
 		}
 
 		data = append(data, v)
+	}
+
+	if errs.HasErrors() {
+		return nil, errs
 	}
 
 	return data, nil
@@ -243,9 +248,9 @@ func (l *ListBlock) Validate(value interface{}) []error {
 	return errors
 }
 
-func (l *ListBlock) RenderForm(id, name string, value interface{}, errors []error, context ctx.Context) (template.HTML, error) {
+func (l *ListBlock) RenderForm(w io.Writer, id, name string, value interface{}, errors []error, tplCtx ctx.Context) error {
 	var (
-		ctxData  = NewBlockContext(l, context)
+		ctxData  = NewBlockContext(l, tplCtx)
 		valueArr []interface{}
 		ok       bool
 	)
@@ -258,35 +263,10 @@ func (l *ListBlock) RenderForm(id, name string, value interface{}, errors []erro
 	}
 
 	if valueArr, ok = value.([]interface{}); !ok {
-		return "", fmt.Errorf("value must be a []interface{}")
+		return fmt.Errorf("value must be a []interface{}")
 	}
 
 	var listBlockErrors = NewBlockErrors[int](errors...)
-	var b = new(bytes.Buffer)
 
-	b.WriteString(
-		fmt.Sprintf(`<input type="hidden" name="%sAdded" value="%d">`, name, len(valueArr)),
-	)
-
-	for i, v := range valueArr {
-
-		var (
-			id  = fmt.Sprintf("%s-%d", name, i)
-			key = fmt.Sprintf("%s-%d", name, i)
-		)
-
-		var v, err = l.Child.RenderForm(
-			id, key,
-			v,
-			listBlockErrors.Get(i),
-			ctxData,
-		)
-		if err != nil {
-			return "", err
-		}
-
-		b.WriteString(string(v))
-	}
-
-	return template.HTML(b.String()), nil
+	return l.RenderTempl(w, id, name, valueArr, listBlockErrors, ctxData).Render(context.Background(), w)
 }

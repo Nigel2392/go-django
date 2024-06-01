@@ -1,0 +1,34 @@
+package blocks
+
+import "github.com/Nigel2392/django/core/ctx"
+import "strconv"
+import "fmt"
+
+templ (l *ListBlock)RenderTempl(w io.Writer, id, name string, valueArr []interface{}, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context)  {
+    <div class="list-block">
+
+        <div class="list-block-header">
+            <label for={ l.Field().Widget().IdForLabel(id) }>{ l.Label() }</label>
+        </div>
+
+		<input type="hidden" name={ fmt.Sprintf("%sAdded", name) } value={ strconv.Itoa(len(valueArr)) }>
+		
+		{{ var iStr string = "0" }}
+		
+		for i, v := range valueArr {
+			{{ iStr = strconv.Itoa(i) }}
+
+            <div class="list-field field" data-index={ iStr }>
+
+	    	    {{ var id  = fmt.Sprintf("%s-%d", id, i) }}
+	    	    {{ var key = fmt.Sprintf("%s-%d", name, i) }}
+
+	    	    {{ var err = l.Child.RenderForm(w, id, key, v, listBlockErrors.Get(i), tplCtx) }}
+	    	    if err != nil {
+	    	    	{{ return err }}
+	    	    }
+            </div>
+	    }
+    </div>
+}
+

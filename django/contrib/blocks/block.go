@@ -1,7 +1,6 @@
 package blocks
 
 import (
-	"html/template"
 	"io"
 	"net/url"
 
@@ -20,8 +19,8 @@ type Block interface {
 	HelpText() string
 	Field() fields.Field
 	SetField(field fields.Field)
-	RenderForm(id, name string, value interface{}, errors []error, context ctx.Context) (template.HTML, error)
-	Render(value interface{}, context ctx.Context) (template.HTML, error)
+	RenderForm(w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error
+	Render(w io.Writer, value interface{}, context ctx.Context) error
 	GetDefault() interface{}
 	media.MediaDefiner
 	widgets.FormValuer
@@ -70,16 +69,16 @@ func (b *BaseBlock) FormContext(name string, value interface{}, context ctx.Cont
 	return blockCtx
 }
 
-func (b *BaseBlock) RenderForm(id, name string, value interface{}, errors []error, context ctx.Context) (template.HTML, error) {
+func (b *BaseBlock) RenderForm(w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error {
 	var blockCtx = b.FormContext(name, value, context)
 	blockCtx.Errors = errors
-	return b.Field().Widget().RenderWithErrors(id, name, value, errors, blockCtx.Attrs)
+	return b.Field().Widget().RenderWithErrors(w, id, name, value, errors, blockCtx.Attrs)
 }
 
-func (b *BaseBlock) Render(value interface{}, context ctx.Context) (template.HTML, error) {
+func (b *BaseBlock) Render(w io.Writer, value interface{}, context ctx.Context) error {
 	var blockCtx = NewBlockContext(b, context)
 	blockCtx.Value = value
-	return tpl.Render(blockCtx, b.Template)
+	return tpl.FRender(w, blockCtx, b.Template)
 }
 
 func (b *BaseBlock) Label() string {
