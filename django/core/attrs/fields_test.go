@@ -225,12 +225,11 @@ func TestModelFormFieldsCustomType(t *testing.T) {
 
 	goldcrest.Register(
 		attrs.HookFormFieldForType,
-		0, attrs.TypeGetter(func(f attrs.Field, t reflect.Type, v reflect.Value) (fields.Field, bool) {
+		0, attrs.FormFieldGetter(func(f attrs.Field, t reflect.Type, v reflect.Value) (fields.Field, bool) {
 			if t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Int64 {
-				var newF = fields.NewField(fields.S("text"))
+				var newF = fields.JSONField[[]int64]()
 				newF.FormWidget = &customTestWidget{widgets.NewBaseWidget(
-					widgets.S("custom"),
-					"", nil,
+					widgets.S("custom"), "", nil,
 				)}
 				return newF, true
 			}
@@ -268,7 +267,7 @@ func TestModelFormFieldsCustomType(t *testing.T) {
 		}
 	}
 
-	if v, ok := formfieldObjects.(*fields.BaseField); !ok {
+	if v, ok := formfieldObjects.(*fields.JSONFormField[[]int64]); !ok {
 		t.Errorf("expected %t, got %t", true, ok)
 	} else {
 		if v.Name() != "Objects" {
