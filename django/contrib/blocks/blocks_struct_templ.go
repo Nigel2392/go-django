@@ -26,7 +26,7 @@ func (b *StructBlock) RenderTempl(w io.Writer, id, name string, valueMap map[str
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"struct-block\"><div class=\"struct-block-header\"><label for=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-struct-block><div data-struct-block-header><label for=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -57,12 +57,25 @@ func (b *StructBlock) RenderTempl(w io.Writer, id, name string, valueMap map[str
 			return templ_7745c5c3_Err
 		}
 		for head := b.Fields.Front(); head != nil; head = head.Next() {
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"struct-field field\">")
+			var id = fmt.Sprintf("%s-%s", id, head.Key)
+			var key = fmt.Sprintf("%s-%s", name, head.Key)
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-struct-field data-contentpath=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var id = fmt.Sprintf("%s-%s", id, head.Key)
-			var key = fmt.Sprintf("%s-%s", name, head.Key)
+			var templ_7745c5c3_Var4 string
+			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(key)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks_struct.templ`, Line: 17, Col: 57}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 			var err = head.Value.RenderForm(w, id, key, valueMap[head.Key], errors.Get(head.Key), tplCtx)
 			if err != nil {
 				return err

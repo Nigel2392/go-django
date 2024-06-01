@@ -5,30 +5,32 @@ import "strconv"
 import "fmt"
 
 templ (l *ListBlock)RenderTempl(w io.Writer, id, name string, valueArr []interface{}, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context)  {
-    <div class="list-block">
+    <div data-list-block>
 
-        <div class="list-block-header">
+        <div data-list-block-header>
             <label for={ l.Field().Widget().IdForLabel(id) }>{ l.Label() }</label>
         </div>
 
-		<input type="hidden" name={ fmt.Sprintf("%sAdded", name) } value={ strconv.Itoa(len(valueArr)) }>
-		
+		<input data-list-block-add type="hidden" name={ fmt.Sprintf("%sAdded", name) } value={ strconv.Itoa(len(valueArr)) }>
+
 		{{ var iStr string = "0" }}
-		
-		for i, v := range valueArr {
-			{{ iStr = strconv.Itoa(i) }}
 
-            <div class="list-field field" data-index={ iStr }>
+		<div data-list-block-items>
+			for i, v := range valueArr {
+				{{ iStr = strconv.Itoa(i) }}
 
-	    	    {{ var id  = fmt.Sprintf("%s-%d", id, i) }}
-	    	    {{ var key = fmt.Sprintf("%s-%d", name, i) }}
+        	    <div data-list-block-field data-index={ iStr }>
 
-	    	    {{ var err = l.Child.RenderForm(w, id, key, v, listBlockErrors.Get(i), tplCtx) }}
-	    	    if err != nil {
-	    	    	{{ return err }}
-	    	    }
-            </div>
-	    }
+	    		    {{ var id  = fmt.Sprintf("%s-%d", id, i) }}
+	    		    {{ var key = fmt.Sprintf("%s-%d", name, i) }}
+
+	    		    {{ var err = l.Child.RenderForm(w, id, key, v, listBlockErrors.Get(i), tplCtx) }}
+	    		    if err != nil {
+	    		    	{{ return err }}
+	    		    }
+        	    </div>
+	    	}
+		</div>
     </div>
 }
 
