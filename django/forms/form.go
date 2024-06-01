@@ -385,7 +385,9 @@ func (f *BaseForm) Widget(name string) widgets.Widget {
 }
 
 func (f *BaseForm) CleanedData() map[string]interface{} {
-	assert.True(f.Errors.Len() == 0, "You cannot access cleaned data if the form is invalid.")
+	if f.Errors != nil {
+		assert.True(f.Errors.Len() == 0, "You cannot access cleaned data if the form is invalid.")
+	}
 	assert.False(f.Cleaned == nil, "You must call IsValid() before accessing cleaned data.")
 	return f.Cleaned
 }

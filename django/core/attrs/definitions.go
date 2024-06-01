@@ -7,7 +7,7 @@ type ObjectDefinitions struct {
 	ObjectFields *orderedmap.OrderedMap[string, Field]
 }
 
-func Define(d Definer, fieldDefinitions []Field) *ObjectDefinitions {
+func Define(d Definer, fieldDefinitions ...Field) *ObjectDefinitions {
 
 	var m = orderedmap.NewOrderedMap[string, Field]()
 	for _, f := range fieldDefinitions {

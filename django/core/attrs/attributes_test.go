@@ -29,7 +29,7 @@ func (f *ModelTest) Identifier() string {
 }
 
 func (f *ModelTest) FieldDefs() attrs.Definitions {
-	return attrs.Define(f, []attrs.Field{
+	return attrs.Define(f,
 		attrs.NewField(f, "S", false, false, true),
 		attrs.NewField(f, "I8", false, false, true),
 		attrs.NewField(f, "I16", false, false, true),
@@ -45,7 +45,7 @@ func (f *ModelTest) FieldDefs() attrs.Definitions {
 		attrs.NewField(f, "M", false, false, true),
 		attrs.NewField(f, "A", false, false, true),
 		attrs.NewField(f, "BT", false, false, true),
-	})
+	)
 }
 
 func TestModelGet(t *testing.T) {
@@ -259,9 +259,9 @@ type ModelTestReadOnly struct {
 }
 
 func (f *ModelTestReadOnly) FieldDefs() attrs.Definitions {
-	return attrs.Define(f, []attrs.Field{
+	return attrs.Define(f,
 		attrs.NewField(f, "Name", false, false, false),
-	})
+	)
 }
 
 func TestModelSetReadOnly(t *testing.T) {

@@ -108,5 +108,5 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 		}
 	}
 
-	return Define(instance, m)
+	return Define(instance, m...)
 }

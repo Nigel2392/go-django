@@ -13,11 +13,11 @@ type TestModelDefinitions struct {
 }
 
 func (f *TestModelDefinitions) FieldDefs() attrs.Definitions {
-	return attrs.Define(f, []attrs.Field{
+	return attrs.Define(f,
 		attrs.NewField(f, "ID", false, false, true),
 		attrs.NewField(f, "Name", false, false, true),
 		attrs.NewField(f, "Objects", false, false, true),
-	})
+	)
 }
 
 func TestModelFieldDefinitionsGet(t *testing.T) {

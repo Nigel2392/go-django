@@ -1,11 +1,15 @@
 package attrs
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/mail"
 	"reflect"
+	"time"
 
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/django/forms/widgets"
 )
 
 type FieldDef struct {
@@ -110,7 +114,28 @@ func (f *FieldDef) FormField() fields.Field {
 	opts = append(opts,
 		fields.Name(f.Name()),
 	)
-	return fields.CharField(opts...)
+
+	switch reflect.New(f.field_t.Type).Elem().Interface().(type) {
+	case time.Time:
+		return fields.DateField(widgets.DateWidgetTypeDateTime, opts...)
+	case json.RawMessage:
+		return fields.JSONField[map[string]interface{}](opts...)
+	case mail.Address, *mail.Address:
+		return fields.EmailField(opts...)
+	}
+
+	switch f.field_t.Type.Kind() {
+	case reflect.String:
+		return fields.CharField(opts...)
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return fields.NumberField[int](opts...)
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return fields.NumberField[uint](opts...)
+	case reflect.Float32, reflect.Float64:
+		return fields.NumberField[float64](opts...)
+	default:
+		return fields.CharField(opts...)
+	}
 }
 
 func (f *FieldDef) SetValue(v interface{}, force bool) error {

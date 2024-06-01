@@ -41,6 +41,7 @@ type User struct {
 	IsAdministrator bool      `json:"is_administrator"`
 	IsActive        bool      `json:"is_active"`
 	IsLoggedIn	  bool      `json:"is_logged_in"`
+
 }
 
 func (u *User) IsAuthenticated() bool {
