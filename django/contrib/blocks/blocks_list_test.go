@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/django/contrib/blocks"
+	"github.com/google/uuid"
 )
 
 func NewListBlock() *blocks.ListBlock {
@@ -17,13 +18,15 @@ func NewListBlock() *blocks.ListBlock {
 
 var (
 	ListBlockDataRaw = map[string][]string{
-		"test_list_blockAdded":       {"2"},
+		"test_list_block-added":      {"2"},
+		"test_list_block-id-0":       {uuid.Nil.String()},
 		"test_list_block-0-name":     {"John Doe"},
 		"test_list_block-0-age":      {"30"},
 		"test_list_block-0-email":    {"test@localhost"},
 		"test_list_block-0-password": {"password"},
 		"test_list_block-0-date":     {"2021-01-01"},
 		"test_list_block-0-datetime": {"2021-01-01T00:00:00"},
+		"test_list_block-id-1":       {uuid.Nil.String()},
 		"test_list_block-1-name":     {"Jane Doe"},
 		"test_list_block-1-age":      {"25"},
 		"test_list_block-1-email":    {"test2@localhost"},
@@ -32,41 +35,53 @@ var (
 		"test_list_block-1-datetime": {"2021-01-02T00:00:00"},
 	}
 
-	ListBlockDataRawCmp = []interface{}{
-		map[string]interface{}{
-			"name":     "John Doe",
-			"age":      "30",
-			"email":    "test@localhost",
-			"password": "password",
-			"date":     "2021-01-01",
-			"datetime": "2021-01-01T00:00:00",
+	ListBlockDataRawCmp = []*blocks.ListBlockValue{
+		{
+			ID: uuid.Nil,
+			Data: map[string]interface{}{
+				"name":     "John Doe",
+				"age":      "30",
+				"email":    "test@localhost",
+				"password": "password",
+				"date":     "2021-01-01",
+				"datetime": "2021-01-01T00:00:00",
+			},
 		},
-		map[string]interface{}{
-			"name":     "Jane Doe",
-			"age":      "25",
-			"email":    "test2@localhost",
-			"password": "password2",
-			"date":     "2021-01-02",
-			"datetime": "2021-01-02T00:00:00",
+		{
+			ID: uuid.Nil,
+			Data: map[string]interface{}{
+				"name":     "Jane Doe",
+				"age":      "25",
+				"email":    "test2@localhost",
+				"password": "password2",
+				"date":     "2021-01-02",
+				"datetime": "2021-01-02T00:00:00",
+			},
 		},
 	}
 
-	ListBlockDataGo = []interface{}{
-		map[string]interface{}{
-			"name":     "John Doe",
-			"age":      30,
-			"email":    must(mail.ParseAddress("test@localhost")),
-			"password": "password",
-			"date":     must(time.Parse("2006-01-02", "2021-01-01")),
-			"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-01T00:00:00")),
+	ListBlockDataGo = []*blocks.ListBlockValue{
+		{
+			ID: uuid.Nil,
+			Data: map[string]interface{}{
+				"name":     "John Doe",
+				"age":      30,
+				"email":    must(mail.ParseAddress("test@localhost")),
+				"password": "password",
+				"date":     must(time.Parse("2006-01-02", "2021-01-01")),
+				"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-01T00:00:00")),
+			},
 		},
-		map[string]interface{}{
-			"name":     "Jane Doe",
-			"age":      25,
-			"email":    must(mail.ParseAddress("test2@localhost")),
-			"password": "password2",
-			"date":     must(time.Parse("2006-01-02", "2021-01-02")),
-			"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-02T00:00:00")),
+		{
+			ID: uuid.Nil,
+			Data: map[string]interface{}{
+				"name":     "Jane Doe",
+				"age":      25,
+				"email":    must(mail.ParseAddress("test2@localhost")),
+				"password": "password2",
+				"date":     must(time.Parse("2006-01-02", "2021-01-02")),
+				"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-02T00:00:00")),
+			},
 		},
 	}
 )
@@ -85,11 +100,11 @@ func TestListBlock(t *testing.T) {
 			t.Errorf("Expected data, got nil")
 		}
 
-		var d = data.([]interface{})
+		var d = data.([]*blocks.ListBlockValue)
 
 		for i, v := range d {
-			if !reflect.DeepEqual(v, ListBlockDataRawCmp[i]) {
-				t.Errorf("Expected %v, got %v", ListBlockDataRawCmp[i], v)
+			if !reflect.DeepEqual(*v, *ListBlockDataRawCmp[i]) {
+				t.Errorf("Expected %v, got %v", *ListBlockDataRawCmp[i], *v)
 			}
 		}
 
@@ -105,11 +120,11 @@ func TestListBlock(t *testing.T) {
 			t.Errorf("Expected no error, got %v", err)
 		}
 
-		var d = data.([]interface{})
+		var d = data.([]*blocks.ListBlockValue)
 
 		for i, v := range d {
-			if !reflect.DeepEqual(v, ListBlockDataGo[i]) {
-				t.Errorf("Expected %v, got %v", ListBlockDataGo[i], v)
+			if !reflect.DeepEqual(*v, *ListBlockDataGo[i]) {
+				t.Errorf("Expected %v, got %v", *ListBlockDataGo[i], v)
 			}
 		}
 	})
@@ -117,12 +132,12 @@ func TestListBlock(t *testing.T) {
 	t.Run("ValueToForm", func(t *testing.T) {
 		var (
 			data = b.ValueToForm(ListBlockDataGo)
-			d    = data.([]interface{})
+			d    = data.([]*blocks.ListBlockValue)
 		)
 
 		for i, v := range d {
-			if !reflect.DeepEqual(v, ListBlockDataRawCmp[i]) {
-				t.Errorf("Expected %v, got %v", ListBlockDataRawCmp[i], v)
+			if !reflect.DeepEqual(*v, *ListBlockDataRawCmp[i]) {
+				t.Errorf("Expected %v, got %v", *ListBlockDataRawCmp[i], *v)
 			}
 		}
 	})

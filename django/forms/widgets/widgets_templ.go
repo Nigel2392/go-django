@@ -43,7 +43,10 @@ func ErrorListComponent(forElem string, errors []error) templ.Component {
 			}
 			for _, err := range errors {
 				if err == nil {
-					continue
+					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("continue")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" <li class=\"error\">")
 				if templ_7745c5c3_Err != nil {

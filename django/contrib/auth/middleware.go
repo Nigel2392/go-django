@@ -23,7 +23,7 @@ func UserFromRequest(r *http.Request) *models.User {
 
 	var u = authentication.Retrieve(r)
 	if u != nil {
-		return UnAuthenticatedUser()
+		return u.(*models.User)
 	}
 
 	var session = sessions.Retrieve(r)

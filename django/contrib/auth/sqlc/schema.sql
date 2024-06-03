@@ -43,4 +43,3 @@ CREATE TABLE IF NOT EXISTS `group_permissions` (
     FOREIGN KEY (`group_id`) REFERENCES `groups` (`id`) ON DELETE CASCADE,
     FOREIGN KEY (`permission_id`) REFERENCES `permissions` (`id`) ON DELETE CASCADE
 );
-

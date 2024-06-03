@@ -105,6 +105,12 @@ func WithPrefix(prefix string) func(Form) {
 	}
 }
 
+func WithInitial(initial map[string]interface{}) func(Form) {
+	return func(f Form) {
+		f.SetInitial(initial)
+	}
+}
+
 func OnValid(funcs ...func(Form)) func(Form) {
 	return func(f Form) {
 		f.OnValid(funcs...)
@@ -391,6 +397,10 @@ func (f *BaseForm) CleanedData() map[string]interface{} {
 	}
 	assert.False(f.Cleaned == nil, "You must call IsValid() before accessing cleaned data.")
 	return f.Cleaned
+}
+
+func (f *BaseForm) SetInitial(initial map[string]interface{}) {
+	f.Initial = initial
 }
 
 func (f *BaseForm) SetPrefix(prefix string) {

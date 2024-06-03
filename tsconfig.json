@@ -4,17 +4,18 @@
       "module": "es6",
       "target": "es6",
       "allowJs": true,
-      "moduleResolution": "node"
+      "moduleResolution": "node",
+      "esModuleInterop": true,
     },
     "include": [
-      "django/static_src/**/*.js",
-      "django/static_src/**/*.ts",
-      "django/static_src/**/*.tsx"
+      "django/contrib/blocks/assets/static_src/**/*.js",
+      "django/contrib/blocks/assets/static_src/**/*.ts",
+      "django/contrib/blocks/assets/static_src/**/*.tsx"
     ],
     "exclude": [
       "node_modules",
-      "django/static_src/**/*.test.js",
-      "django/static_src/**/*.test.ts",
-      "django/static_src/**/*.test.tsx"
+      "django/contrib/blocks/assets/static_src/**/*.test.js",
+      "django/contrib/blocks/assets/static_src/**/*.test.ts",
+      "django/contrib/blocks/assets/static_src/**/*.test.tsx"
     ]
 }

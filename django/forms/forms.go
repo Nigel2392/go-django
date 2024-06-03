@@ -40,6 +40,7 @@ type Form interface {
 
 	Prefix() string
 	SetPrefix(prefix string)
+	SetInitial(initial map[string]interface{})
 
 	Field(name string) fields.Field
 	Widget(name string) widgets.Widget

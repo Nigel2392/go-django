@@ -5,7 +5,7 @@ templ ErrorListComponent(forElem string, errors []error) {
         <ul data-errors-for={ forElem } class="error-list error-wrapper">
             for _, err := range errors {
                 if err == nil {
-                    {{ continue }}
+                    continue
                 }
                 <li class="error">{ err.Error() }</li>
             }

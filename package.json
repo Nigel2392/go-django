@@ -1,8 +1,14 @@
 {
   "dependencies": {
+    "@hotwired/stimulus": "^3.2.2",
+    "@hotwired/stimulus-webpack-helpers": "^1.0.1",
+    "sortablejs": "^1.15.2",
     "ts-loader": "^9.5.1",
     "typescript": "^5.4.5",
     "webpack": "^5.91.0",
     "webpack-cli": "^5.1.4"
+  },
+  "devDependencies": {
+    "@types/sortablejs": "^1.15.8"
   }
 }

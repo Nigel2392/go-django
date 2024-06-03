@@ -107,25 +107,15 @@ INSERT INTO users (email, username, password, first_name, last_name, is_administ
 VALUES (?, ?, ?, ?, ?, ?, ?)
 `
 
-type CreateUserParams struct {
-	Email           string `json:"email"`
-	Username        string `json:"username"`
-	Password        string `json:"password"`
-	FirstName       string `json:"first_name"`
-	LastName        string `json:"last_name"`
-	IsAdministrator bool   `json:"is_administrator"`
-	IsActive        bool   `json:"is_active"`
-}
-
-func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) error {
+func (q *Queries) CreateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool) error {
 	_, err := q.db.ExecContext(ctx, createUser,
-		arg.Email,
-		arg.Username,
-		arg.Password,
-		arg.FirstName,
-		arg.LastName,
-		arg.IsAdministrator,
-		arg.IsActive,
+		email,
+		username,
+		password,
+		firstName,
+		lastName,
+		isAdministrator,
+		isActive,
 	)
 	return err
 }
@@ -455,7 +445,7 @@ func (q *Queries) GetPermissionsWithPagination(ctx context.Context, limit int32,
 	return items, nil
 }
 
-const getUserByEmail = `-- name: GetUserByEmail :many
+const getUserByEmail = `-- name: GetUserByEmail :one
 SELECT
     u.id, u.created_at, u.updated_at, u.email, u.username, u.password, u.first_name, u.last_name, u.is_administrator, u.is_active,
     g.id AS group_id, g.name AS group_name, g.description AS group_description,
@@ -474,56 +464,32 @@ WHERE
     u.email = ?
 ORDER BY
     u.id, g.name, p.name
+LIMIT 1
 `
 
-type UserRow struct {
-	User                  User   `json:"user"`
-	GroupID               uint64 `json:"group_id"`
-	GroupName             string `json:"group_name"`
-	GroupDescription      string `json:"group_description"`
-	PermissionID          uint64 `json:"permission_id"`
-	PermissionName        string `json:"permission_name"`
-	PermissionDescription string `json:"permission_description"`
-}
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) ([]UserRow, error) {
-	rows, err := q.db.QueryContext(ctx, getUserByEmail, email)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []UserRow
-	for rows.Next() {
-		var i UserRow
-		if err := rows.Scan(
-			&i.User.ID,
-			&i.User.CreatedAt,
-			&i.User.UpdatedAt,
-			&i.User.Email,
-			&i.User.Username,
-			&i.User.Password,
-			&i.User.FirstName,
-			&i.User.LastName,
-			&i.User.IsAdministrator,
-			&i.User.IsActive,
-			&i.GroupID,
-			&i.GroupName,
-			&i.GroupDescription,
-			&i.PermissionID,
-			&i.PermissionName,
-			&i.PermissionDescription,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
+func (q *Queries) GetUserByEmail(ctx context.Context, email string) (UserRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
+	var i UserRow
+	err := row.Scan(
+		&i.User.ID,
+		&i.User.CreatedAt,
+		&i.User.UpdatedAt,
+		&i.User.Email,
+		&i.User.Username,
+		&i.User.Password,
+		&i.User.FirstName,
+		&i.User.LastName,
+		&i.User.IsAdministrator,
+		&i.User.IsActive,
+		&i.GroupID,
+		&i.GroupName,
+		&i.GroupDescription,
+		&i.PermissionID,
+		&i.PermissionName,
+		&i.PermissionDescription,
+	)
+	return i, err
 }
 
 const getUserById = `-- name: GetUserById :many
@@ -547,79 +513,9 @@ ORDER BY
     u.id, g.name, p.name
 `
 
-type GetUserByIdRow struct {
-	User                  User   `json:"user"`
-	GroupID               uint64 `json:"group_id"`
-	GroupName             string `json:"group_name"`
-	GroupDescription      string `json:"group_description"`
-	PermissionID          uint64 `json:"permission_id"`
-	PermissionName        string `json:"permission_name"`
-	PermissionDescription string `json:"permission_description"`
-}
 
-func (q *Queries) GetUserById(ctx context.Context, id uint64) ([]GetUserByIdRow, error) {
+func (q *Queries) GetUserById(ctx context.Context, id uint64) ([]UserRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUserById, id)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []GetUserByIdRow
-	for rows.Next() {
-		var i GetUserByIdRow
-		if err := rows.Scan(
-			&i.User.ID,
-			&i.User.CreatedAt,
-			&i.User.UpdatedAt,
-			&i.User.Email,
-			&i.User.Username,
-			&i.User.Password,
-			&i.User.FirstName,
-			&i.User.LastName,
-			&i.User.IsAdministrator,
-			&i.User.IsActive,
-			&i.GroupID,
-			&i.GroupName,
-			&i.GroupDescription,
-			&i.PermissionID,
-			&i.PermissionName,
-			&i.PermissionDescription,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const getUserByName = `-- name: GetUserByName :many
-SELECT
-    u.id, u.created_at, u.updated_at, u.email, u.username, u.password, u.first_name, u.last_name, u.is_administrator, u.is_active,
-    g.id AS group_id, g.name AS group_name, g.description AS group_description,
-    p.id AS permission_id, p.name AS permission_name, p.description AS permission_description
-FROM
-    users u
-JOIN
-    user_groups ug ON u.id = ug.user_id
-JOIN
-    ` + "`" + `groups` + "`" + ` g ON ug.group_id = g.id
-JOIN
-    group_permissions gp ON g.id = gp.group_id
-JOIN
-    permissions p ON gp.permission_id = p.id
-WHERE
-    u.username = ?
-ORDER BY
-    u.id
-`
-
-func (q *Queries) GetUserByName(ctx context.Context, username string) ([]UserRow, error) {
-	rows, err := q.db.QueryContext(ctx, getUserByName, username)
 	if err != nil {
 		return nil, err
 	}
@@ -656,6 +552,53 @@ func (q *Queries) GetUserByName(ctx context.Context, username string) ([]UserRow
 		return nil, err
 	}
 	return items, nil
+}
+
+const getUserByName = `-- name: GetUserByName :one
+SELECT
+    u.id, u.created_at, u.updated_at, u.email, u.username, u.password, u.first_name, u.last_name, u.is_administrator, u.is_active,
+    g.id AS group_id, g.name AS group_name, g.description AS group_description,
+    p.id AS permission_id, p.name AS permission_name, p.description AS permission_description
+FROM
+    users u
+JOIN
+    user_groups ug ON u.id = ug.user_id
+JOIN
+    ` + "`" + `groups` + "`" + ` g ON ug.group_id = g.id
+JOIN
+    group_permissions gp ON g.id = gp.group_id
+JOIN
+    permissions p ON gp.permission_id = p.id
+WHERE
+    u.username = ?
+ORDER BY
+    u.id
+LIMIT 1
+`
+
+
+func (q *Queries) GetUserByName(ctx context.Context, username string) (UserRow, error) {
+	row := q.db.QueryRowContext(ctx, getUserByName, username)
+	var i UserRow
+	err := row.Scan(
+		&i.User.ID,
+		&i.User.CreatedAt,
+		&i.User.UpdatedAt,
+		&i.User.Email,
+		&i.User.Username,
+		&i.User.Password,
+		&i.User.FirstName,
+		&i.User.LastName,
+		&i.User.IsAdministrator,
+		&i.User.IsActive,
+		&i.GroupID,
+		&i.GroupName,
+		&i.GroupDescription,
+		&i.PermissionID,
+		&i.PermissionName,
+		&i.PermissionDescription,
+	)
+	return i, err
 }
 
 const getUsersByPermissionID = `-- name: GetUsersByPermissionID :many
@@ -945,27 +888,16 @@ const updateUser = `-- name: UpdateUser :exec
 UPDATE users SET email = ?, username = ?, password = ?, first_name = ?, last_name = ?, is_administrator = ?, is_active = ? WHERE id = ?
 `
 
-type UpdateUserParams struct {
-	Email           string `json:"email"`
-	Username        string `json:"username"`
-	Password        string `json:"password"`
-	FirstName       string `json:"first_name"`
-	LastName        string `json:"last_name"`
-	IsAdministrator bool   `json:"is_administrator"`
-	IsActive        bool   `json:"is_active"`
-	ID              uint64 `json:"id"`
-}
-
-func (q *Queries) UpdateUser(ctx context.Context, arg UpdateUserParams) error {
+func (q *Queries) UpdateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool, iD uint64) error {
 	_, err := q.db.ExecContext(ctx, updateUser,
-		arg.Email,
-		arg.Username,
-		arg.Password,
-		arg.FirstName,
-		arg.LastName,
-		arg.IsAdministrator,
-		arg.IsActive,
-		arg.ID,
+		email,
+		username,
+		password,
+		firstName,
+		lastName,
+		isAdministrator,
+		isActive,
+		iD,
 	)
 	return err
 }

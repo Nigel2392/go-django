@@ -29,12 +29,14 @@ func (f *FormData) FieldDefs() attrs.Definitions {
 	return attrs.AutoDefinitions(f)
 }
 
+var validFormData map[string]interface{}
+
 func Index(w http.ResponseWriter, r *http.Request) {
 	var session = sessions.Retrieve(r)
 	fmt.Println(session.Get("page_key"))
 	session.Set("page_key", "Last visited the index page")
 
-	var form forms.Form = forms.Initialize(
+	var form = forms.Initialize(
 		forms.NewBaseForm(),
 		forms.WithRequestData("POST", r),
 		forms.WithFields(
@@ -143,16 +145,20 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		}),
 	)
 
+	if validFormData != nil {
+		form.Initial = validFormData
+	}
+
 	if r.Method == "POST" && form.IsValid() {
-		var data = form.CleanedData()
+		validFormData = form.CleanedData()
 		var s = &FormData{}
 
-		attrs.Set(s, "Email", data["email"])
-		attrs.Set(s, "Name", data["name"])
-		attrs.Set(s, "Password", data["password"])
-		attrs.Set(s, "Age", data["age"])
-		attrs.Set(s, "Data", data["data"])
-		attrs.Set(s, "Block", data["block"])
+		attrs.Set(s, "Email", validFormData["email"])
+		attrs.Set(s, "Name", validFormData["name"])
+		attrs.Set(s, "Password", validFormData["password"])
+		attrs.Set(s, "Age", validFormData["age"])
+		attrs.Set(s, "Data", validFormData["data"])
+		attrs.Set(s, "Block", validFormData["block"])
 
 		fmt.Printf("%+v\n", s)
 	}

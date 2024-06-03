@@ -4,13 +4,6 @@
 
 package models
 
-import (
-	"time"
-)
-
-
-
-
 
 type Group struct {
 	ID          uint64 `json:"id"`
@@ -18,12 +11,10 @@ type Group struct {
 	Description string `json:"description"`
 }
 
-
 type GroupPermission struct {
 	GroupID      uint64 `json:"group_id"`
 	PermissionID uint64 `json:"permission_id"`
 }
-
 
 type Permission struct {
 	ID          uint64 `json:"id"`
@@ -31,33 +22,7 @@ type Permission struct {
 	Description string `json:"description"`
 }
 
-
-type User struct {
-	ID              uint64    `json:"id"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
-	Email           string    `json:"email"`
-	Username        string    `json:"username"`
-	Password        string    `json:"password"`
-	FirstName       string    `json:"first_name"`
-	LastName        string    `json:"last_name"`
-	IsAdministrator bool      `json:"is_administrator"`
-	IsActive        bool      `json:"is_active"`
-	IsLoggedIn	  bool      `json:"is_logged_in"`
-
-}
-
-func (u *User) IsAuthenticated() bool {
-	return u.IsActive
-}
-
-func (u *User)    IsAdmin() bool {
-	return u.IsAdministrator
-}
-
-
 type UserGroup struct {
 	UserID  uint64 `json:"user_id"`
 	GroupID uint64 `json:"group_id"`
 }
-

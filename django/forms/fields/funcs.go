@@ -18,9 +18,9 @@ func T(v string) string {
 	return v
 }
 
-func getHelpTextFn(helpText any) func() string {
+func getTextFn(v any) func() string {
 	var fn func() string
-	switch v := helpText.(type) {
+	switch v := v.(type) {
 	case string:
 		fn = S(v)
 	case func() string:
@@ -30,7 +30,7 @@ func getHelpTextFn(helpText any) func() string {
 }
 
 func Label(label any) func(Field) {
-	var fn = getHelpTextFn(label)
+	var fn = getTextFn(label)
 
 	assert.Truthy(fn,
 		"FieldLabel: invalid type %T", label,
@@ -42,7 +42,7 @@ func Label(label any) func(Field) {
 }
 
 func HelpText(helpText any) func(Field) {
-	var fn = getHelpTextFn(helpText)
+	var fn = getTextFn(helpText)
 
 	assert.Truthy(fn,
 		"FieldHelpText: invalid type %T", helpText,

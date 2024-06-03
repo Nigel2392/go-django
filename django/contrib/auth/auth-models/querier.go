@@ -15,7 +15,7 @@ type Querier interface {
 	CheckUserHasPermissions(ctx context.Context, iD uint64, permissionnames []string) (bool, error)
 	CreateGroup(ctx context.Context, name string, description string) error
 	CreatePermission(ctx context.Context, name string, description string) error
-	CreateUser(ctx context.Context, arg CreateUserParams) error
+	CreateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool) error
 	DeleteGroup(ctx context.Context, id uint64) error
 	DeletePermission(ctx context.Context, id uint64) error
 	DeleteUser(ctx context.Context, id uint64) error
@@ -31,9 +31,9 @@ type Querier interface {
 	GetPermissionsByUserID(ctx context.Context, userID uint64) ([]Permission, error)
 	GetPermissionsByUserIDAndPermissionNames(ctx context.Context, userID uint64, permissionnames []string) ([]Permission, error)
 	GetPermissionsWithPagination(ctx context.Context, limit int32, offset int32) ([]Permission, error)
-	GetUserByEmail(ctx context.Context, email string) ([]UserRow, error)
-	GetUserById(ctx context.Context, id uint64) ([]GetUserByIdRow, error)
-	GetUserByName(ctx context.Context, username string) ([]UserRow, error)
+	GetUserByEmail(ctx context.Context, email string) (UserRow, error)
+	GetUserById(ctx context.Context, id uint64) ([]UserRow, error)
+	GetUserByName(ctx context.Context, username string) (UserRow, error)
 	GetUsersByPermissionID(ctx context.Context, permissionID uint64) ([]User, error)
 	GetUsersWithPagination(ctx context.Context, limit int32, offset int32) ([]User, error)
 	GroupsDoNotBelongTo(ctx context.Context, userID uint64) ([]Group, error)
@@ -45,7 +45,7 @@ type Querier interface {
 	RemoveUserFromGroup(ctx context.Context, userID uint64, groupID uint64) error
 	UpdateGroup(ctx context.Context, name string, description string, iD uint64) error
 	UpdatePermission(ctx context.Context, name string, description string, iD uint64) error
-	UpdateUser(ctx context.Context, arg UpdateUserParams) error
+	UpdateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool, iD uint64) error
 }
 
 var _ Querier = (*Queries)(nil)

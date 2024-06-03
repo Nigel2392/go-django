@@ -78,10 +78,12 @@ func (f *BaseUserLoginForm) Login() error {
 		return errs.Error("Form not cleaned")
 	}
 
-	var users []models.UserRow
-	var err error
-	var cleaned = f.CleanedData()
-	var ctx = f.Request.Context()
+	var (
+		ctx     = f.Request.Context()
+		cleaned = f.CleanedData()
+		users   models.UserRow
+		err     error
+	)
 	if Auth.LoginWithEmail {
 		users, err = Auth.Queries.GetUserByEmail(ctx, cleaned["email"].(string))
 	} else {
@@ -93,11 +95,7 @@ func (f *BaseUserLoginForm) Login() error {
 		)
 	}
 
-	if len(users) == 0 {
-		return errs.Error("User not found")
-	}
-
-	var user = &users[0].User
+	var user = &users.User
 	if err := CheckPassword(user, cleaned["password"].(string)); err != nil {
 		return errs.Error("Invalid password")
 	}

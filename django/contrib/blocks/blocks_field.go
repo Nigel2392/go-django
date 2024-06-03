@@ -22,7 +22,14 @@ func NewFieldBlock(opts ...func(*FieldBlock)) *FieldBlock {
 }
 
 func (b *FieldBlock) RenderForm(w io.Writer, id, name string, value interface{}, errors []error, c ctx.Context) error {
-	return b.RenderTempl(w, id, name, value, errors, c).Render(context.Background(), w)
+
+	var blockArgs = map[string]interface{}{
+		"id":    id,
+		"name":  name,
+		"value": value,
+	}
+
+	return b.RenderTempl(w, id, name, value, blockArgs, errors, c).Render(context.Background(), w)
 }
 
 func CharBlock(opts ...func(*FieldBlock)) *FieldBlock {

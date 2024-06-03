@@ -11,10 +11,16 @@ import (
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
 
 var _ Block = (*ListBlock)(nil)
+
+type ListBlockValue struct {
+	ID   uuid.UUID   `json:"id"`
+	Data interface{} `json:"data"`
+}
 
 type ListBlock struct {
 	*BaseBlock
@@ -69,7 +75,7 @@ func (l *ListBlock) makeIndexedError(index int, err ...error) error {
 }
 
 func (b *ListBlock) ValueOmittedFromData(data url.Values, files map[string][]io.ReadCloser, name string) bool {
-	var addedKey = fmt.Sprintf("%sAdded", name)
+	var addedKey = fmt.Sprintf("%s-added", name)
 	if !data.Has(addedKey) {
 		return true
 	}
@@ -86,11 +92,11 @@ func (b *ListBlock) ValueOmittedFromData(data url.Values, files map[string][]io.
 }
 
 func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
-	var data = make([]interface{}, 0)
+	var data = make([]*ListBlockValue, 0)
 
 	var (
 		added    = 0
-		addedKey = fmt.Sprintf("%sAdded", name)
+		addedKey = fmt.Sprintf("%s-added", name)
 		addedCnt = 0
 	)
 
@@ -113,13 +119,33 @@ func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCl
 			break
 		}
 
+		var (
+			idKey = fmt.Sprintf("%s-id-%d", name, i)
+			idStr = d.Get(idKey)
+			id    uuid.UUID
+		)
+
+		if idStr != "" {
+			id, err = uuid.Parse(idStr)
+			if err != nil {
+				errs.AddError(i, fmt.Errorf("Invalid UUID: %s", idStr)) //lint:ignore ST1005 ignore this lint
+				continue
+			}
+		} else {
+			id = uuid.New()
+		}
+
 		var value, e = l.Child.ValueFromDataDict(d, files, key)
 		if len(e) != 0 {
 			errs.AddError(i, e...)
 			continue
 		}
 
-		data = append(data, value)
+		data = append(data, &ListBlockValue{
+			ID:   id,
+			Data: value,
+		})
+
 		addedCnt++
 	}
 
@@ -153,39 +179,50 @@ func (l *ListBlock) ValueToGo(value interface{}) (interface{}, error) {
 		return "", nil
 	}
 	var (
-		data     = make([]interface{}, 0)
-		valueArr []interface{}
+		valueArr []*ListBlockValue
 		ok       bool
 	)
 
-	if valueArr, ok = value.([]interface{}); !ok {
-		return nil, fmt.Errorf("value must be a []interface{}")
+	if valueArr, ok = value.([]*ListBlockValue); !ok {
+		return nil, fmt.Errorf("value must be of type []*ListBlockValue], got %T", value)
 	}
 
-	var errs = NewBlockErrors[int]()
-	for i, v := range valueArr {
-		var v, err = l.Child.ValueToGo(v)
+	var (
+		newArr = make([]*ListBlockValue, len(valueArr))
+		errs   = NewBlockErrors[int]()
+	)
+	for i, lbVal := range valueArr {
+		var childData, err = l.Child.ValueToGo(lbVal.Data)
 		if err != nil {
 			errs.AddError(i, err)
 			continue
 		}
 
-		data = append(data, v)
+		newArr[i] = &ListBlockValue{
+			ID:   lbVal.ID,
+			Data: childData,
+		}
 	}
 
 	if errs.HasErrors() {
 		return nil, errs
 	}
 
-	return data, nil
+	return newArr, nil
 }
 
 func (l *ListBlock) GetDefault() interface{} {
-	var data = make([]interface{}, l.Min)
-	for i := 0; i < l.Min; i++ {
-		data[i] = l.Child.GetDefault()
+	if l.Min > 0 {
+		var data = make([]*ListBlockValue, l.Min)
+		for i := 0; i < l.Min; i++ {
+			data[i] = &ListBlockValue{
+				ID:   uuid.New(),
+				Data: l.Child.GetDefault(),
+			}
+		}
+		return data
 	}
-	return data
+	return make([]*ListBlockValue, 0)
 }
 
 func (l *ListBlock) ValueToForm(value interface{}) interface{} {
@@ -194,15 +231,18 @@ func (l *ListBlock) ValueToForm(value interface{}) interface{} {
 		value = l.GetDefault()
 	}
 
-	var valueArr []interface{}
+	var valueArr []*ListBlockValue
 	var ok bool
-	if valueArr, ok = value.([]interface{}); !ok {
+	if valueArr, ok = value.([]*ListBlockValue); !ok {
 		return ""
 	}
 
-	var data = make([]interface{}, 0, len(valueArr))
+	var data = make([]*ListBlockValue, 0, len(valueArr))
 	for _, v := range valueArr {
-		data = append(data, l.Child.ValueToForm(v))
+		data = append(data, &ListBlockValue{
+			ID:   v.ID,
+			Data: l.Child.ValueToForm(v.Data),
+		})
 	}
 
 	return data
@@ -213,14 +253,17 @@ func (l *ListBlock) Clean(value interface{}) (interface{}, error) {
 		return nil, nil
 	}
 
-	var data = make([]interface{}, 0)
-	for i, v := range value.([]interface{}) {
-		var v, err = l.Child.Clean(v)
+	var data = make([]*ListBlockValue, 0)
+	for i, lbVal := range value.([]*ListBlockValue) {
+		var v, err = l.Child.Clean(lbVal.Data)
 		if err != nil {
 			return nil, l.makeIndexedError(i, errors.Wrapf(err, "index %d", i))
 		}
 
-		data = append(data, v)
+		data = append(data, &ListBlockValue{
+			ID:   lbVal.ID,
+			Data: v,
+		})
 	}
 
 	return data, nil
@@ -239,8 +282,8 @@ func (l *ListBlock) Validate(value interface{}) []error {
 	}
 
 	var errors = make([]error, 0)
-	for i, v := range value.([]interface{}) {
-		var e = l.Child.Validate(v)
+	for i, v := range value.([]*ListBlockValue) {
+		var e = l.Child.Validate(v.Data)
 		if len(e) != 0 {
 			errors = append(errors, l.makeIndexedError(i, e...))
 		}
@@ -251,7 +294,7 @@ func (l *ListBlock) Validate(value interface{}) []error {
 func (l *ListBlock) RenderForm(w io.Writer, id, name string, value interface{}, errors []error, tplCtx ctx.Context) error {
 	var (
 		ctxData  = NewBlockContext(l, tplCtx)
-		valueArr []interface{}
+		valueArr []*ListBlockValue
 		ok       bool
 	)
 	ctxData.ID = id
@@ -262,7 +305,7 @@ func (l *ListBlock) RenderForm(w io.Writer, id, name string, value interface{}, 
 		value = l.GetDefault()
 	}
 
-	if valueArr, ok = value.([]interface{}); !ok {
+	if valueArr, ok = value.([]*ListBlockValue); !ok {
 		return fmt.Errorf("value must be a []interface{}")
 	}
 

@@ -130,7 +130,7 @@ WHERE
 ORDER BY
     u.id, g.name, p.name;
 
--- name: GetUserByEmail :many
+-- name: GetUserByEmail :one
 SELECT
     sqlc.embed(u),
     g.id AS group_id, g.name AS group_name, g.description AS group_description,
@@ -148,9 +148,10 @@ JOIN
 WHERE
     u.email = ?
 ORDER BY
-    u.id, g.name, p.name;
+    u.id, g.name, p.name
+LIMIT 1;
 
--- name: GetUserByName :many
+-- name: GetUserByName :one
 SELECT
     sqlc.embed(u),
     g.id AS group_id, g.name AS group_name, g.description AS group_description,
@@ -168,7 +169,8 @@ JOIN
 WHERE
     u.username = ?
 ORDER BY
-    u.id;
+    u.id
+LIMIT 1;
 
 -- name: CheckUserHasPermissions :one
 SELECT EXISTS (

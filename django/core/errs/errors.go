@@ -1,6 +1,7 @@
 package errs
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 )
@@ -45,6 +46,10 @@ func (e ValidationError[T]) Error() string {
 }
 
 func (e ValidationError[T]) DjangoError() {}
+
+func (e ValidationError[T]) MarshalJSON() ([]byte, error) {
+	return json.Marshal(e.Err)
+}
 
 func Errors[T comparable](m []ValidationError[T]) []error {
 	var errs = make([]error, 0, len(m))

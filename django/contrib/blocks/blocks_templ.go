@@ -60,7 +60,7 @@ func RenderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext,
 	})
 }
 
-func (b *FieldBlock) RenderTempl(w io.Writer, id, name string, value interface{}, errors []error, tplCtx ctx.Context) templ.Component {
+func (b *FieldBlock) RenderTempl(w io.Writer, id, name string, value, args interface{}, errors []error, tplCtx ctx.Context) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
 		if !templ_7745c5c3_IsBuffer {
@@ -74,7 +74,33 @@ func (b *FieldBlock) RenderTempl(w io.Writer, id, name string, value interface{}
 		}
 		ctx = templ.ClearChildren(ctx)
 		var c = tplCtx.(*BlockContext)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-field-block class=\"field\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-field-block class=\"field\" data-controller=\"block\" data-block-class-path-value=\"Django.blocks.field-block\" data-block-class-args-value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var4 string
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(templ.JSONString(args))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 23, Col: 172}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" data-block-class-errors-value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var5 string
+		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(templ.JSONString(errors))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 23, Col: 231}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -108,9 +134,9 @@ func (b *StructBlock) RenderTempl(w io.Writer, id, name string, valueMap map[str
 			defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var4 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var4 == nil {
-			templ_7745c5c3_Var4 = templ.NopComponent
+		templ_7745c5c3_Var6 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var6 == nil {
+			templ_7745c5c3_Var6 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-struct-block>")
@@ -124,12 +150,12 @@ func (b *StructBlock) RenderTempl(w io.Writer, id, name string, valueMap map[str
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(key)
+			var templ_7745c5c3_Var7 string
+			templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(key)
 			if templ_7745c5c3_Err != nil {
 				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 41, Col: 57}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -174,7 +200,7 @@ func (b *StructBlock) RenderTempl(w io.Writer, id, name string, valueMap map[str
 	})
 }
 
-func (l *ListBlock) RenderTempl(w io.Writer, id, name string, valueArr []interface{}, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context) templ.Component {
+func (l *ListBlock) RenderTempl(w io.Writer, id, name string, valueArr []*ListBlockValue, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context) templ.Component {
 	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
 		if !templ_7745c5c3_IsBuffer {
@@ -182,21 +208,21 @@ func (l *ListBlock) RenderTempl(w io.Writer, id, name string, valueArr []interfa
 			defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var6 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var6 == nil {
-			templ_7745c5c3_Var6 = templ.NopComponent
+		templ_7745c5c3_Var8 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var8 == nil {
+			templ_7745c5c3_Var8 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-list-block><input data-list-block-add type=\"hidden\" name=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-list-block data-controller=\"sortable\" class=\"list-block\"><input data-list-block-add type=\"hidden\" name=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%sAdded", name))
+		var templ_7745c5c3_Var9 string
+		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%s-added", name))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 63, Col: 78}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 63, Col: 79}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -204,12 +230,12 @@ func (l *ListBlock) RenderTempl(w io.Writer, id, name string, valueArr []interfa
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var8 string
-		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(valueArr)))
+		var templ_7745c5c3_Var10 string
+		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(len(valueArr)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 63, Col: 116}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 63, Col: 117}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -218,22 +244,65 @@ func (l *ListBlock) RenderTempl(w io.Writer, id, name string, valueArr []interfa
 			return templ_7745c5c3_Err
 		}
 		var iStr string
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-list-block-items>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-list-block-items data-sortable-target=\"items\" class=\"list-block-items\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		for i, v := range valueArr {
+			var id = fmt.Sprintf("%s-%d", id, i)
+			var blockId = fmt.Sprintf("%s-id-%d", name, i)
+			var key = fmt.Sprintf("%s-%d", name, i)
+			var keyRe = fmt.Sprintf("%s-(?<index>\\d+)", name)
 			iStr = strconv.Itoa(i)
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-list-block-field data-index=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(iStr)
+			var templ_7745c5c3_Var11 string
+			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(iStr)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 71, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 74, Col: 57}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" data-sortable-target=\"item\" data-sortable-replace-value=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var12 string
+			templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(keyRe)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 74, Col: 122}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" data-sortable-replace-key-value=\"index\" class=\"list-block-field\"><input type=\"hidden\" name=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var13 string
+			templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(blockId)
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 76, Col: 55}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" value=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var14 string
+			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(v.ID.String())
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 76, Col: 79}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -241,8 +310,6 @@ func (l *ListBlock) RenderTempl(w io.Writer, id, name string, valueArr []interfa
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var id = fmt.Sprintf("%s-%d", id, i)
-			var key = fmt.Sprintf("%s-%d", name, i)
 			templ_7745c5c3_Err = widgets.LabelComponent("list-block", l.Child.Label(), id).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -252,7 +319,7 @@ func (l *ListBlock) RenderTempl(w io.Writer, id, name string, valueArr []interfa
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var err = l.Child.RenderForm(w, id, key, v, newErrs, tplCtx)
+			var err = l.Child.RenderForm(w, id, key, v.Data, newErrs, tplCtx)
 			if err != nil {
 				return err
 			}

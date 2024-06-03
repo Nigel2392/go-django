@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/Nigel2392/django/core/assert"
@@ -89,4 +90,25 @@ func (m *BaseBlockValidationError[T]) Get(key T) []error {
 
 func (m *BaseBlockValidationError[T]) Error() string {
 	return fmt.Sprintf("%d errors occurred when validating", m.Len())
+}
+
+func (m *BaseBlockValidationError[T]) MarshalJSON() ([]byte, error) {
+	var (
+		errs = make(map[T][]string)
+	)
+	for k, v := range m.Errors {
+		var s = make([]string, len(v))
+		for i, e := range v {
+			s[i] = e.Error()
+		}
+		errs[k] = s
+	}
+	var nonBlockErrs = make([]string, len(m.NonBlockErrors))
+	for i, e := range m.NonBlockErrors {
+		nonBlockErrs[i] = e.Error()
+	}
+	return json.Marshal(map[string]interface{}{
+		"errors":         errs,
+		"nonBlockErrors": nonBlockErrs,
+	})
 }

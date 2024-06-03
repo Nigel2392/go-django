@@ -1,6 +1,7 @@
 package errs
 
 import (
+	"encoding/json"
 	"errors"
 	"strings"
 )
@@ -76,6 +77,10 @@ func (m *MultiError) Error() string {
 		errors = append(errors, err.Error())
 	}
 	return strings.Join(errors, ": ")
+}
+
+func (m *MultiError) MarshalJSON() ([]byte, error) {
+	return json.Marshal(m.Errors)
 }
 
 func (m *MultiError) Unwrap() []error {

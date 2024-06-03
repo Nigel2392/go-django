@@ -77,5 +77,9 @@ func Login(r *http.Request, u *models.User) *models.User {
 func Logout(r *http.Request) error {
 	var session = sessions.Retrieve(r)
 	except.Assert(session != nil, 500, "session is nil")
-	return session.Destroy()
+
+	var err = session.Destroy()
+	except.Assert(err == nil, 500, "failed to destroy session")
+
+	return nil
 }
