@@ -6,7 +6,7 @@ import "strconv"
 import "fmt"
 
 templ RenderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext, errors []error) {
-    <div class="django-block-widget-wrapper" id={ blockCtx.ID }>
+    <div class="django-block-widget-wrapper">
         <div class="django-block-widget">
 
             {{ var err = widget.BlockDef.RenderForm(w, blockCtx.ID, blockCtx.Name, blockCtx.Value, errors, blockCtx) }}
@@ -31,8 +31,8 @@ templ (b *FieldBlock)RenderTempl(w io.Writer, id, name string, value, args inter
     </div>
 }
 
-templ (b *StructBlock)RenderTempl(w io.Writer, id, name string, valueMap map[string]interface{}, errors *BaseBlockValidationError[string], tplCtx ctx.Context)  {
-    <div data-struct-block>
+templ (b *StructBlock)RenderTempl(w io.Writer, id, name string, valueMap map[string]interface{}, args interface{}, errors *BaseBlockValidationError[string], tplCtx ctx.Context)  {
+    <div id={ id } data-struct-block data-controller="block" data-block-class-path-value="Django.blocks.struct-block" data-block-class-args-value={ templ.JSONString(args) } data-block-class-errors-value={ templ.JSONString(errors) }>
 
 	    for head := b.Fields.Front(); head != nil; head = head.Next() {
 	    	{{ var id  = fmt.Sprintf("%s-%s", id, head.Key) }}

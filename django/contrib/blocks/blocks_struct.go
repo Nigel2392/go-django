@@ -238,7 +238,14 @@ func (m *StructBlock) RenderForm(w io.Writer, id, name string, value interface{}
 	}
 
 	var errs = NewBlockErrors[string](errors...)
+
+	var blockArgs = map[string]interface{}{
+		"id":    id,
+		"name":  name,
+		"value": value,
+	}
+
 	return m.RenderTempl(
-		w, id, name, valueMap, errs, ctxData,
+		w, id, name, valueMap, blockArgs, errs, ctxData,
 	).Render(context.Background(), w)
 }

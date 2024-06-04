@@ -1,5 +1,6 @@
 import { Application, ControllerConstructor, type Controller } from "@hotwired/stimulus";
 import { BlockController } from "../blocks/controller";
+import { BlockDef } from "../blocks/base";
 
 type BlockConstructor = new (...args: any) => BlockDef;
 

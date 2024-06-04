@@ -1,7 +1,8 @@
 import { ClassCallController } from "../controllers"
+import { Block, BlockDef, Config } from './base';
 
 
-class BlockController extends ClassCallController<HTMLElement, BlockDef> {
+class BlockController extends ClassCallController<HTMLElement, Block> {
     declare classErrorsValue: string
     declare hasClassErrorsValue: boolean
     declare _classErrors: any[]
@@ -21,20 +22,15 @@ class BlockController extends ClassCallController<HTMLElement, BlockDef> {
         return this._classErrors
     }
 
-    initializeClass(klass: any): BlockDef {
-
-        console.log('initializeClass', klass)
-        console.log('classArgs', this.classArgs)
-        console.log('classErrors', this.classErrors)
+    initializeClass(klass: any): Block {
 
         const block: BlockDef = new klass(this.classArgs, this.classErrors)
 
-        if (this.classErrors.length > 0) {
+        if (this.classErrors && this.classErrors.length > 0) {
             this.element.style.backgroundColor = 'red'
-            block.setError(this.classErrors)
         }
 
-        return block
+        return block.render()
     }
 }
 

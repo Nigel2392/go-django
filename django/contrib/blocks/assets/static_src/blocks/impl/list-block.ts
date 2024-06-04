@@ -1,3 +1,4 @@
+import { Block, BlockDef, Config } from '../base';
 
 class ListBlock {
     constructor(items: any) {
@@ -7,10 +8,7 @@ class ListBlock {
     items: any;
 }
 
-class ListBlockDef implements BlockDef {
-    constructor(items: any) {
-        this.items = items;
-    }
+class ListBlockDef extends BlockDef {
 
     render(): any {
         return new ListBlock(this.items);

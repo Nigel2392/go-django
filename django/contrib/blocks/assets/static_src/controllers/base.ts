@@ -35,6 +35,11 @@ class ClassCallController<ET extends Element, CT extends any> extends Controller
         if (this.classPathValue in constructorClass.classRegistry) {
             const klass = constructorClass.classRegistry[this.classPathValue]
             const klassInstance = this.initializeClass(klass)
+            const anyElem = this.element as any
+
+            anyElem[`${this.identifier}Class`] = klassInstance
+            anyElem[`${this.identifier}Controller`] = this
+
         } else {
             console.error(`Class ${this.classPathValue} not found in registered classes`)
         }
