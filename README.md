@@ -3,7 +3,7 @@ go-django (v2)
 
 **Django rewritten to Golang**
 
-This code will be pushed to github.com/Nigel2392/go-django when ready.
+This code will be pushed to [go-django](https://github.com/Nigel2392/go-django) when ready.
 
 This is a rewrite of the Django framework in Golang.
 
