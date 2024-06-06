@@ -33,11 +33,15 @@ func Fail(code Code, msg any, args ...interface{}) (err error) {
 	return assert.Fail(err)
 }
 
+func isBoolFunc(t reflect.Type) bool {
+	return t.NumOut() == 1 && t.Out(0).Kind() == reflect.Bool && t.NumIn() == 0
+}
+
 // Assert asserts that the condition is true
 // if the condition is false, it panics with the message
 func Assert(cond interface{}, code Code, msg any, args ...interface{}) error {
 	var rTyp, rVal = reflect.TypeOf(cond), reflect.ValueOf(cond)
-	if rTyp.Kind() == reflect.Func && !rVal.IsNil() {
+	if rTyp.Kind() == reflect.Func && !rVal.IsNil() && isBoolFunc(rTyp) {
 		rVal = rVal.Call(nil)[0]
 		rTyp = rVal.Type()
 	}

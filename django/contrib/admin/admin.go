@@ -1,12 +1,14 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -71,6 +73,16 @@ func NewAppConfig() django.AppConfig {
 
 func newHandler(handler func(w http.ResponseWriter, r *http.Request)) mux.Handler {
 	return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+
+		var user = authentication.Retrieve(req)
+		if user == nil || !user.IsAuthenticated() || !user.IsAdmin() {
+			fmt.Println("Unauthorized: ", user)
+			fmt.Println("IsAuthenticated: ", user.IsAuthenticated())
+			fmt.Println("IsAdmin: ", user.IsAdmin())
+			http.Error(w, "Unauthorized", http.StatusUnauthorized)
+			return
+		}
+
 		handler(w, req)
 	})
 }
@@ -91,7 +103,7 @@ func newInstanceHandler(handler func(w http.ResponseWriter, req *http.Request, a
 
 		var app, ok = AdminSite.Apps.Get(appName)
 		if !ok {
-			http.Error(w, "Model not found", http.StatusNotFound)
+			http.Error(w, "App not found", http.StatusNotFound)
 			return
 		}
 
@@ -126,7 +138,7 @@ func newModelHandler(handler func(w http.ResponseWriter, r *http.Request, adminS
 
 		var app, ok = AdminSite.Apps.Get(appName)
 		if !ok {
-			http.Error(w, "Model not found", http.StatusNotFound)
+			http.Error(w, "App not found", http.StatusNotFound)
 			return
 		}
 

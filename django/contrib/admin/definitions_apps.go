@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"fmt"
 	"net/http"
 	"reflect"
 
@@ -11,10 +10,12 @@ import (
 )
 
 type ModelOptions struct {
-	Name    string
-	Fields  []string
-	Exclude []string
-	Model   attrs.Definer
+	Name     string
+	Fields   []string
+	Exclude  []string
+	GetForID func(identifier any) (attrs.Definer, error)
+	GetList  func(amount, offset uint) ([]attrs.Definer, error)
+	Model    attrs.Definer
 }
 
 func (o *ModelOptions) GetName() string {
@@ -46,6 +47,16 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 		rTyp.Kind() == reflect.Invalid,
 		"Model must be a valid type")
 
+	assert.False(
+		opts.GetForID == nil,
+		"GetForID must be implemented",
+	)
+
+	assert.False(
+		opts.GetList == nil,
+		"GetList must be implemented",
+	)
+
 	assert.True(
 		rTyp.Kind() == reflect.Struct,
 		"Model must be a struct")
@@ -55,22 +66,27 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 		"Model must have fields")
 
 	var model = &ModelDefinition{
-		Name:   opts.GetName(),
-		Fields: opts.Fields,
-		Model:  rTyp,
+		Name:     opts.GetName(),
+		Fields:   opts.Fields,
+		Exclude:  opts.Exclude,
+		GetForID: opts.GetForID,
+		GetList:  opts.GetList,
+		Model:    rTyp,
 	}
 
 	assert.True(
 		model.Name != "",
 		"Model must have a name")
 
+	assert.True(
+		nameRegex.MatchString(model.Name),
+		"Model name must match regex %v",
+		nameRegex,
+	)
+
 	a.Models.Set(model.Name, model)
 
 	return model
-}
-
-func rt(name string) string {
-	return fmt.Sprintf("%s/", name)
 }
 
 func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
@@ -80,49 +96,6 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 		assert.True(ok, "Model not found")
 		modelDef.OnRegister(adminSite, a)
 	}
-
-	//// var routeGroup = mux.NewRoute(mux.ANY, a.Name, nil)
-	//var routeGroup = adminSite.Route.Handle(
-	//	mux.ANY, rt(a.Name),
-	//	AppHandler(adminSite, a),
-	//	a.Name,
-	//)
-
-	//for _, model := range models {
-	//	var modelDef, ok = a.Models.Get(model)
-	//	assert.True(ok, "Model not found")
-	//
-	//	var (
-	//		LIST_URL = rt(modelDef.Name)
-	//		ADD_URL  = path.Join(modelDef.Name, rt("add"))
-	//		EDIT_URL = path.Join(modelDef.Name, rt("edit"))
-	//		DEL_URL  = path.Join(modelDef.Name, rt("delete"))
-	//
-	//		listRoute = routeGroup.Handle(
-	//			mux.GET, LIST_URL,
-	//			ModelListHandler(adminSite, a, modelDef),
-	//			modelDef.Name,
-	//		)
-	//	)
-	//
-	//	listRoute.Handle(
-	//		mux.GET, ADD_URL,
-	//		ModelAddHandler(adminSite, a, modelDef),
-	//		"add",
-	//	)
-	//
-	//	listRoute.Handle(
-	//		mux.GET, EDIT_URL,
-	//		ModelEditHandler(adminSite, a, modelDef),
-	//		"edit",
-	//	)
-	//
-	//	listRoute.Handle(
-	//		mux.GET, DEL_URL,
-	//		ModelDeleteHandler(adminSite, a, modelDef),
-	//		"delete",
-	//	)
-	//}
 }
 
 var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition) {
@@ -141,13 +114,13 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 	w.Write([]byte("add"))
 }
 
-var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instsance attrs.Definer) {
+var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
 	w.Write([]byte(model.Name))
 	w.Write([]byte("\n"))
 	w.Write([]byte("edit"))
 }
 
-var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instsance attrs.Definer) {
+var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
 	w.Write([]byte(model.Name))
 	w.Write([]byte("\n"))
 	w.Write([]byte("delete"))

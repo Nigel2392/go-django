@@ -29,12 +29,12 @@ func FailFunc(failFn func(err error) error, msg any, args ...interface{}) error 
 	if len(args) > 0 {
 		switch e := msg.(type) {
 		case string:
-			m = fmt.Sprintf(m, args...)
+			m = fmt.Sprintf(e, args...)
 		case error:
 			mErr.Append(e)
 			m = fmt.Sprint(args...)
 		default:
-			m = fmt.Sprint(append([]interface{}{msg}, args...)...)
+			m = fmt.Sprint(append([]interface{}{e}, args...)...)
 		}
 	} else {
 		switch msg := msg.(type) {

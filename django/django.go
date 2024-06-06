@@ -154,7 +154,7 @@ func (a *Application) Initialize() error {
 
 	a.Mux.Use(
 		http_.RequestSignalMiddleware,
-		middleware.Recoverer(a.ServerError),
+		// middleware.Recoverer(a.ServerError),
 		middleware.AllowedHosts(
 			ConfigGet(a.Settings, "ALLOWED_HOSTS", []string{"*"})...,
 		),

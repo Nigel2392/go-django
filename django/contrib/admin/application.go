@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"regexp"
 	"sync/atomic"
 
 	"github.com/Nigel2392/django/apps"
@@ -8,6 +9,8 @@ import (
 	"github.com/Nigel2392/mux"
 	"github.com/elliotchance/orderedmap/v2"
 )
+
+var nameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]+$`)
 
 type AdminApplication struct {
 	*apps.AppConfig
@@ -35,6 +38,12 @@ func (a *AdminApplication) RegisterApp(name string, opts ...ModelOptions) *AppDe
 	assert.False(
 		a.IsReady(),
 		"AdminApplication is already initialized",
+	)
+
+	assert.True(
+		nameRegex.MatchString(name),
+		"App name must match regex %v",
+		nameRegex,
 	)
 
 	var app = &AppDefinition{
