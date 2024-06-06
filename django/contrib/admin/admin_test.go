@@ -346,36 +346,85 @@ var handlerTests = []HandlerTest{
 		Expected:        "testing delete\nTestModel (1)",
 	},
 	{
+		Name:            "Admin",
+		LoggedIn:        false,
+		IsAdministrator: false,
+		URL:             "/admin/apps/test",
+		Expected:        "You need to login\n",
+	},
+	{
 		Name:            "App",
 		LoggedIn:        false,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test",
-		Expected:        "Unauthorized\n",
+		Expected:        "You need to login\n",
 	},
 	{
 		Name:            "List",
 		LoggedIn:        false,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel",
-		Expected:        "Unauthorized\n",
+		Expected:        "You need to login\n",
 	},
 	{
 		Name:            "Add",
 		LoggedIn:        false,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/add",
-		Expected:        "Unauthorized\n",
+		Expected:        "You need to login\n",
 	},
 	{
 		Name:            "Edit",
 		LoggedIn:        false,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/edit/1",
-		Expected:        "Unauthorized\n",
+		Expected:        "You need to login\n",
 	},
 	{
 		Name:            "Delete",
 		LoggedIn:        false,
+		IsAdministrator: false,
+		URL:             "/admin/apps/test/model/TestModel/delete/1",
+		Expected:        "You need to login\n",
+	},
+	{
+		Name:            "App",
+		LoggedIn:        true,
+		IsAdministrator: false,
+		URL:             "/admin/apps/test",
+		Expected:        "Unauthorized\n",
+	},
+	{
+		Name:            "List",
+		LoggedIn:        true,
+		IsAdministrator: false,
+		URL:             "/admin/apps/test/model/TestModel",
+		Expected:        "Unauthorized\n",
+	},
+	{
+		Name:            "Admin",
+		LoggedIn:        true,
+		IsAdministrator: false,
+		URL:             "/admin/apps/test",
+		Expected:        "Unauthorized\n",
+	},
+	{
+		Name:            "Add",
+		LoggedIn:        true,
+		IsAdministrator: false,
+		URL:             "/admin/apps/test/model/TestModel/add",
+		Expected:        "Unauthorized\n",
+	},
+	{
+		Name:            "Edit",
+		LoggedIn:        true,
+		IsAdministrator: false,
+		URL:             "/admin/apps/test/model/TestModel/edit/1",
+		Expected:        "Unauthorized\n",
+	},
+	{
+		Name:            "Delete",
+		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/delete/1",
 		Expected:        "Unauthorized\n",
@@ -387,7 +436,10 @@ func TestAdminHandlers(t *testing.T) {
 	for _, test := range handlerTests {
 		var testName = fmt.Sprintf("%sHandler", test.Name)
 		if !test.LoggedIn {
-			testName += "NotLoggedIn"
+			testName += "LoggedOut"
+		}
+		if !test.IsAdministrator && test.LoggedIn {
+			testName += "NormalUser"
 		}
 
 		t.Run(testName, func(t *testing.T) {

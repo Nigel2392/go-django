@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/django"
@@ -31,6 +30,23 @@ var (
 )
 
 func NewAppConfig() django.AppConfig {
+	AdminSite.Route.Use(func(next mux.Handler) mux.Handler {
+		return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+			var user = authentication.Retrieve(req)
+			if user == nil || !user.IsAuthenticated() {
+				http.Error(w, "You need to login", http.StatusUnauthorized)
+				return
+			}
+
+			if !user.IsAdmin() {
+				http.Error(w, "Unauthorized", http.StatusForbidden)
+				return
+			}
+
+			next.ServeHTTP(w, req)
+		})
+	})
+
 	AdminSite.Init = func(settings django.Settings) error {
 		settings.App().Mux.AddRoute(AdminSite.Route)
 		return nil
@@ -73,15 +89,6 @@ func NewAppConfig() django.AppConfig {
 
 func newHandler(handler func(w http.ResponseWriter, r *http.Request)) mux.Handler {
 	return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
-
-		var user = authentication.Retrieve(req)
-		if user == nil || !user.IsAuthenticated() || !user.IsAdmin() {
-			fmt.Println("Unauthorized: ", user)
-			fmt.Println("IsAuthenticated: ", user.IsAuthenticated())
-			fmt.Println("IsAdmin: ", user.IsAdmin())
-			http.Error(w, "Unauthorized", http.StatusUnauthorized)
-			return
-		}
 
 		handler(w, req)
 	})
