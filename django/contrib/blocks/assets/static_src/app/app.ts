@@ -1,6 +1,7 @@
 import { Application, ControllerConstructor, type Controller } from "@hotwired/stimulus";
 import { BlockController } from "../blocks/controller";
 import { BlockDef } from "../blocks/base";
+import { Telepath } from "../telepath/telepath";
 
 type BlockConstructor = new (...args: any) => BlockDef;
 
@@ -20,6 +21,7 @@ class DjangoApplication implements App {
     controllers: Record<string, ControllerConstructor> = {};
     blocks: Record<string, BlockConstructor> = {};
     stimulusApp: Application;
+    telepath: Telepath;
 
     constructor(config: AppConfig) {
         this.controllers = config.controllers;
@@ -28,6 +30,7 @@ class DjangoApplication implements App {
         window.Stimulus = this.stimulusApp;
 
         BlockController.classRegistry = this.blocks;
+        this.telepath = new Telepath();
     }
 
     registerBlock(identifier: string, blockDefinition: BlockConstructor) {
@@ -36,6 +39,14 @@ class DjangoApplication implements App {
 
     registerController(identifier: string, controllerConstructor: ControllerConstructor) {
         this.controllers[identifier] = controllerConstructor;
+    }
+
+    registerAdapter(name: string, adapter: any) {
+        this.telepath.register(name, adapter);
+    }
+
+    unpack(data: any) {
+        return this.telepath.unpack(data);
     }
 
     initBlock(...args: any): BlockDef {
@@ -58,4 +69,5 @@ export {
     App,
     AppConfig,
     BlockConstructor,
+    
 };

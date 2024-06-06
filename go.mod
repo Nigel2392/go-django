@@ -7,7 +7,7 @@ require (
 	github.com/elliotchance/orderedmap/v2 v2.2.0
 	github.com/justinas/nosurf v1.1.1
 	github.com/pkg/errors v0.9.1
-	golang.org/x/exp v0.0.0-20240525044651-4c93da0ed11d
+	golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc
 	golang.org/x/text v0.15.0
 )
 
@@ -25,14 +25,8 @@ require (
 )
 
 require (
+	github.com/Nigel2392/go-telepath v0.1.2
 	github.com/Nigel2392/tags v1.0.0
 	github.com/a-h/templ v0.2.707
-	github.com/dop251/goja v0.0.0-20240516125602-ccbae20bcec2
 	github.com/google/uuid v1.6.0
-)
-
-require (
-	github.com/dlclark/regexp2 v1.7.0 // indirect
-	github.com/go-sourcemap/sourcemap v2.1.3+incompatible // indirect
-	github.com/google/pprof v0.0.0-20230207041349-798e818bf904 // indirect
 )

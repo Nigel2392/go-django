@@ -62,6 +62,10 @@ func (bw *BlockWidget) RenderWithErrors(w io.Writer, id, name string, value inte
 	return RenderBlockForm(w, bw, ctxData.(*BlockContext), errors)
 }
 
+func (bw *BlockWidget) Type() string {
+	return "block"
+}
+
 func (bw *BlockWidget) IdForLabel(name string) string {
 	return name
 }

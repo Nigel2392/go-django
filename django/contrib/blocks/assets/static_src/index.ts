@@ -1,8 +1,7 @@
-import { SortableController } from "./controllers";
-import { BlockController } from "./blocks/controller";
-import { Application } from '@hotwired/stimulus';
 import type { Definition } from '@hotwired/stimulus';
 import { DjangoApplication } from "./app/app";
+import { SortableController } from "./controllers";
+import { BlockController } from "./blocks/controller";
 import { ListBlockDef } from "./blocks/impl/list-block";
 import { FieldBlockDef } from "./blocks/impl/field-block";
 import { StructBlockDef } from "./blocks/impl/struct-block";
@@ -17,10 +16,16 @@ const app = new DjangoApplication({
     blocks: {},
 })
 
+
 window.Django = app;
 
-window.Django.registerBlock('Django.blocks.list-block', ListBlockDef);
+window.Django.registerAdapter('django.blocks.FieldBlock', FieldBlockDef);
 window.Django.registerBlock('Django.blocks.field-block', FieldBlockDef);
+
+window.Django.registerAdapter('django.blocks.ListBlock', ListBlockDef);
+window.Django.registerBlock('Django.blocks.list-block', ListBlockDef);
+
+window.Django.registerAdapter('django.blocks.StructBlock', StructBlockDef);
 window.Django.registerBlock('Django.blocks.struct-block', StructBlockDef);
 
 for (let i = 0; i < controllerDefinitions.length; i++) {

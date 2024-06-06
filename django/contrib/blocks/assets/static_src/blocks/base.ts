@@ -13,8 +13,21 @@
 
 type Config = {
     id: string;
+    type: string;
     name: string;
+    label: string;
+    html: string;
+    errors: any;
     value: any;
+    block: {
+        element: {
+            id: string;
+            name: string;
+            label: string;
+            helpText: string;
+            html: string;
+        }
+    };
 }
 
 class Block {
@@ -49,8 +62,10 @@ class Block {
 
 class BlockDef {
     config: Config;
+    element: HTMLElement;
 
-    constructor(config: Config) {
+    constructor(element: HTMLElement, config: Config) {
+        this.element = element;
         this.config = config;
     }
 

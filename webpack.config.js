@@ -6,15 +6,22 @@ const tsLoaderConfig = {
     exclude: '/node_modules/'
 }
 
+const tsxLoaderConfig = {
+    test: /\.tsx$/i,
+    use: 'ts-loader',
+    exclude: '/node_modules/'
+}
+
 function baseConfig(rules = []) {
     return {
         resolve: {
-            extensions: ['.ts', '...'],
+            extensions: ['.ts', '.tsx', '...'],
         },
         mode: 'production',
         module: {
             rules: [
                 tsLoaderConfig,
+                tsxLoaderConfig,
                 ...rules
             ]
         }

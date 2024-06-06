@@ -9,6 +9,7 @@ import (
 
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -242,10 +243,52 @@ func (m *StructBlock) RenderForm(w io.Writer, id, name string, value interface{}
 	var blockArgs = map[string]interface{}{
 		"id":    id,
 		"name":  name,
-		"value": value,
+		"block": m,
+		"childBlocks": (func() any {
+			var blocks = make(map[string]any)
+			for head := m.Fields.Front(); head != nil; head = head.Next() {
+				blocks[head.Key] = map[string]interface{}{
+					"block": head.Value,
+					"value": valueMap[head.Key],
+					"errors": (func() []error {
+						var errs = errs.Get(head.Key)
+						if errs != nil {
+							return errs
+						}
+						return []error{}
+					})(),
+				}
+			}
+			return map[string]interface{}{}
+		}()),
+	}
+	var bt, err = telepath.PackJSON(JSContext, blockArgs)
+	if err != nil {
+		return err
 	}
 
 	return m.RenderTempl(
-		w, id, name, valueMap, blockArgs, errs, ctxData,
+		w, id, name, valueMap, string(bt), errs, ctxData,
 	).Render(context.Background(), w)
+}
+
+func (m *StructBlock) Adapter() telepath.Adapter {
+	return &telepath.ObjectAdapter[*StructBlock]{
+		JSConstructor: "django.blocks.StructBlock",
+		GetJSArgs: func(obj *StructBlock) []interface{} {
+
+			var fields = make(map[string]interface{})
+			for head := obj.Fields.Front(); head != nil; head = head.Next() {
+				fields[head.Key] = head.Value
+			}
+
+			return []interface{}{map[string]interface{}{
+				"name":     obj.Name(),
+				"label":    obj.Label(),
+				"helpText": obj.HelpText(),
+				"required": obj.Field().Required(),
+				"fields":   fields,
+			}}
+		},
+	}
 }

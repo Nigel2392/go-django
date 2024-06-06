@@ -1,1 +1,1 @@
-package blocks
+package blocks_test

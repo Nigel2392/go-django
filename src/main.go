@@ -6,6 +6,7 @@ import (
 	"io/fs"
 
 	"github.com/Nigel2392/django"
+	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/auth"
 	"github.com/Nigel2392/django/contrib/blocks"
 	"github.com/Nigel2392/django/contrib/session"
@@ -37,6 +38,7 @@ func main() {
 		django.Apps(
 			session.NewAppConfig,
 			auth.NewAppConfig,
+			admin.NewAppConfig,
 			core.NewAppConfig,
 			blocks.NewAppConfig,
 		),

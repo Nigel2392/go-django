@@ -12,7 +12,7 @@ import (
 )
 
 type BaseWidget struct {
-	Type          func() string
+	TypeFn        func() string
 	TemplateName  string
 	InputIsHidden bool
 	BaseAttrs     map[string]string
@@ -95,6 +95,10 @@ func (b *BaseWidget) Render(w io.Writer, id, name string, value interface{}, att
 	return b.RenderWithErrors(w, id, name, value, nil, attrs)
 }
 
+func (b *BaseWidget) Type() string {
+	return b.TypeFn()
+}
+
 func (b *BaseWidget) Media() media.Media {
 	return nil
 }
@@ -114,7 +118,7 @@ func NewBaseWidget(type_ func() string, templateName string, attrs map[string]st
 	}
 
 	return &BaseWidget{
-		Type:          type_,
+		TypeFn:        type_,
 		TemplateName:  templateName,
 		InputIsHidden: false,
 		BaseAttrs:     attrs,

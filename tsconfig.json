@@ -4,6 +4,8 @@
       "module": "es6",
       "target": "es6",
       "allowJs": true,
+      "jsx": "react", // or react-jsx, etc.
+      "jsxFactory": "jsx",
       "moduleResolution": "node",
       "esModuleInterop": true,
     },

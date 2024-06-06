@@ -10,6 +10,11 @@ class ListBlock {
 
 class ListBlockDef extends BlockDef {
 
+    constructor(element: HTMLElement, config: Config) {
+        super(element, config);
+        console.log("ListBlockDef constructor", element, config);
+    }
+
     render(): any {
         return new ListBlock(this.items);
     }

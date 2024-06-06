@@ -16,7 +16,7 @@ import (
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
-type FormData struct {
+type MainStruct struct {
 	Email    *mail.Address
 	Name     string
 	Password string
@@ -25,7 +25,7 @@ type FormData struct {
 	Block    map[string]any ``
 }
 
-func (f *FormData) FieldDefs() attrs.Definitions {
+func (f *MainStruct) FieldDefs() attrs.Definitions {
 	return attrs.AutoDefinitions(f)
 }
 
@@ -151,7 +151,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "POST" && form.IsValid() {
 		validFormData = form.CleanedData()
-		var s = &FormData{}
+		var s = &MainStruct{}
 
 		attrs.Set(s, "Email", validFormData["email"])
 		attrs.Set(s, "Name", validFormData["name"])

@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/google/uuid"
 	"github.com/pkg/errors"
 )
@@ -311,5 +312,30 @@ func (l *ListBlock) RenderForm(w io.Writer, id, name string, value interface{}, 
 
 	var listBlockErrors = NewBlockErrors[int](errors...)
 
-	return l.RenderTempl(w, id, name, valueArr, listBlockErrors, ctxData).Render(context.Background(), w)
+	var blockArgs = map[string]interface{}{
+		"id":         id,
+		"name":       name,
+		"block":      l,
+		"childBlock": l.Child,
+	}
+	var bt, err = telepath.PackJSON(JSContext, blockArgs)
+	if err != nil {
+		return err
+	}
+
+	return l.RenderTempl(w, id, name, valueArr, string(bt), listBlockErrors, ctxData).Render(context.Background(), w)
+}
+
+func (m *ListBlock) Adapter() telepath.Adapter {
+	return &telepath.ObjectAdapter[*ListBlock]{
+		JSConstructor: "django.blocks.ListBlock",
+		GetJSArgs: func(obj *ListBlock) []interface{} {
+			return []interface{}{map[string]interface{}{
+				"name":     obj.Name(),
+				"label":    obj.Label(),
+				"helpText": obj.HelpText(),
+				"required": obj.Field().Required(),
+			}}
+		},
+	}
 }

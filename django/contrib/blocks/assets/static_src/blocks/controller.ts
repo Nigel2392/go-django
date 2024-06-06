@@ -2,6 +2,7 @@ import { ClassCallController } from "../controllers"
 import { Block, BlockDef, Config } from './base';
 
 
+
 class BlockController extends ClassCallController<HTMLElement, Block> {
     declare classErrorsValue: string
     declare hasClassErrorsValue: boolean
@@ -24,12 +25,14 @@ class BlockController extends ClassCallController<HTMLElement, Block> {
 
     initializeClass(klass: any): Block {
 
-        const block: BlockDef = new klass(this.classArgs, this.classErrors)
-
-        if (this.classErrors && this.classErrors.length > 0) {
-            this.element.style.backgroundColor = 'red'
+        if (this.element.classList.contains('block-initiated')) {
+            return null
         }
 
+        this.element.classList.add('block-initiated')
+
+        const definition = window.Django.telepath.unpack(this.classArgs)
+        const block: BlockDef = new klass(this.element, definition)
         return block.render()
     }
 }

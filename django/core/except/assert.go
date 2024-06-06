@@ -37,7 +37,7 @@ func Fail(code Code, msg any, args ...interface{}) (err error) {
 // if the condition is false, it panics with the message
 func Assert(cond interface{}, code Code, msg any, args ...interface{}) error {
 	var rTyp, rVal = reflect.TypeOf(cond), reflect.ValueOf(cond)
-	if rTyp.Kind() == reflect.Func {
+	if rTyp.Kind() == reflect.Func && !rVal.IsNil() {
 		rVal = rVal.Call(nil)[0]
 		rTyp = rVal.Type()
 	}

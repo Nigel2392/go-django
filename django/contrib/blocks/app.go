@@ -20,6 +20,7 @@ var _templateFS embed.FS
 var (
 	staticFS   fs.FS
 	templateFS fs.FS
+	AppConfig  *apps.AppConfig
 )
 
 func NewAppConfig() *apps.AppConfig {
@@ -58,6 +59,8 @@ func NewAppConfig() *apps.AppConfig {
 			"blocks/base.tmpl",
 		)
 	}
+
+	AppConfig = cfg
 
 	return cfg
 }

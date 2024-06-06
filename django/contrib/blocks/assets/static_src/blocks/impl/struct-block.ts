@@ -12,33 +12,21 @@ const getElementIfAttr = (parent: HTMLElement, attr: string, value?: string): HT
         }
     }
     return null;
-};
+};  
 
 class StructBlock extends Block {
-    wrapper: HTMLDivElement;
+    wrapper: HTMLElement;
     subBlocks: { [key: string]: Block };
 
-    constructor(id: string, name: string, widget: HTMLElement, blockDef: BlockDef) {
+    constructor(meta: any, widget: HTMLElement, blockDef: BlockDef) {
         super(widget, blockDef);
 
-        this.wrapper = document.getElementById(id) as HTMLDivElement;
+        this.wrapper = widget;        
+        
         this.subBlocks = {};
-        for (let i = 0; i < this.wrapper.children.length; i++) {
-            const blockElem = this.wrapper.children[i] as HTMLElement;
-            const blockFieldContent = getElementIfAttr(blockElem, "data-struct-field-content");
-            if (!blockFieldContent) {
-                console.log("no blockFieldContent found for data-struct-field-content", blockElem);
-                continue;
-            }
-            const block = getElementIfAttr(blockFieldContent, "data-controller", "block");
-            if (!block) {
-                console.log("no block found for data-controller=block", blockElem);
-                continue;
-            }
-            console.log("block", block, (block as any).blockClass);
-            block.addEventListener("blocks:init", (event: any) => {
-                console.log("blocks:init", event);
-            });
+        for (const key in meta.childBlocks) {
+            var childBlock = meta.childBlocks[key];
+            this.subBlocks[key] = (childBlock as BlockDef).render();
         }
     }
 
@@ -85,19 +73,15 @@ class StructBlock extends Block {
 }
 
 class StructBlockDef extends BlockDef {
-    constructor(config: Config) {
-        super(config);
-        this.config = config;
+    constructor(element: HTMLElement, config: Config) {
+        super(element, config);
+        console.log("StructBlockDef constructor", element, config);        
     }
 
     render(): any {
-        console.log("rendering StructBlock", this.config.id);
         return new StructBlock(
-            this.config.id,
-            this.config.name,
-            document.getElementById(
-                this.config.id,
-            ),
+            this.config,
+            this.element,
             this,
         );
     }

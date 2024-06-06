@@ -1,12 +1,14 @@
 package blocks
 
 import (
+	"bytes"
 	"context"
 	"io"
 
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/widgets"
+	"github.com/Nigel2392/go-telepath/telepath"
 )
 
 type FieldBlock struct {
@@ -22,14 +24,47 @@ func NewFieldBlock(opts ...func(*FieldBlock)) *FieldBlock {
 }
 
 func (b *FieldBlock) RenderForm(w io.Writer, id, name string, value interface{}, errors []error, c ctx.Context) error {
-
 	var blockArgs = map[string]interface{}{
-		"id":    id,
-		"name":  name,
-		"value": value,
+		"id":     id,
+		"name":   name,
+		"value":  value,
+		"errors": errors,
+		"type":   b.Field().Widget().Type(),
+		"block":  b,
+	}
+	var bt, err = telepath.PackJSON(JSContext, blockArgs)
+	if err != nil {
+		return err
 	}
 
-	return b.RenderTempl(w, id, name, value, blockArgs, errors, c).Render(context.Background(), w)
+	return b.RenderTempl(w, id, name, value, string(bt), errors, c).Render(context.Background(), w)
+}
+
+func (b *FieldBlock) Adapter() telepath.Adapter {
+	return &telepath.ObjectAdapter[*FieldBlock]{
+		JSConstructor: "django.blocks.FieldBlock",
+		GetJSArgs: func(obj *FieldBlock) []interface{} {
+			return []interface{}{map[string]interface{}{
+				"name":     obj.Name(),
+				"label":    obj.Label(),
+				"helpText": obj.HelpText(),
+				"required": obj.Field().Required(),
+				"html":     obj.RenderHTML(),
+			}}
+		},
+	}
+}
+
+func (b *FieldBlock) RenderHTML() string {
+	var w = new(bytes.Buffer)
+	b.FormField.Widget().Render(
+		w,
+		"__ID__",
+		"__PREFIX__",
+		b.GetDefault(),
+		b.FormField.Attrs(),
+	)
+	return w.String()
 }
 
 func CharBlock(opts ...func(*FieldBlock)) *FieldBlock {

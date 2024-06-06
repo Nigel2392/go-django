@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/forms/widgets"
+	"github.com/Nigel2392/go-telepath/telepath"
 )
 
 type Block interface {
@@ -22,6 +23,7 @@ type Block interface {
 	RenderForm(w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error
 	Render(w io.Writer, value interface{}, context ctx.Context) error
 	GetDefault() interface{}
+	telepath.AdapterGetter
 	media.MediaDefiner
 	widgets.FormValuer
 	forms.Validator
@@ -135,6 +137,10 @@ func (b *BaseBlock) Clean(value interface{}) (interface{}, error) {
 
 func (b *BaseBlock) Media() media.Media {
 	return b.Field().Widget().Media()
+}
+
+func (b *BaseBlock) Adapter() telepath.Adapter {
+	return nil
 }
 
 func NewBaseBlock(opts ...OptFunc[*BaseBlock]) *BaseBlock {

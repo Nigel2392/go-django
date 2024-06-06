@@ -136,13 +136,13 @@ func (a *Application) handleErrorCodePure(w http.ResponseWriter, r *http.Request
 
 func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Request) {
 	var serverErrInt = except.GetServerError(err)
-	fmt.Println("ServerError", serverErrInt, err)
 	if serverErrInt == nil {
 		a.handleErrorCodePure(w, r, nil, http.StatusInternalServerError)
 		return
 	}
 
 	var serverErr = serverErrInt.(*except.HttpError)
+	fmt.Printf("[Printing]: %s\n", serverErrInt)
 	a.handleErrorCodePure(w, r, serverErr.Message, serverErr.Code)
 }
 

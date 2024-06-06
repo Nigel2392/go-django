@@ -112,7 +112,7 @@ const (
 
 type DateWidget struct {
 	*BaseWidget
-	Type DateWidgetType
+	DateType DateWidgetType
 }
 
 func NewDateInput(attrs map[string]string, t DateWidgetType) Widget {
@@ -130,7 +130,7 @@ func (d *DateWidget) ValueToGo(value interface{}) (interface{}, error) {
 			return "", nil
 		}
 
-		if d.Type == DateWidgetTypeDate {
+		if d.DateType == DateWidgetTypeDate {
 			v, err = time.Parse("2006-01-02", val)
 		} else {
 			var split = strings.Split(val, ":")
@@ -164,7 +164,7 @@ func (d *DateWidget) ValueToForm(value interface{}) interface{} {
 
 	switch val := value.(type) {
 	case time.Time:
-		if d.Type == DateWidgetTypeDate {
+		if d.DateType == DateWidgetTypeDate {
 			return val.Format("2006-01-02")
 		}
 		return val.Format("2006-01-02T15:04:05")
@@ -173,7 +173,7 @@ func (d *DateWidget) ValueToForm(value interface{}) interface{} {
 		if err != nil {
 			return val
 		}
-		if d.Type == DateWidgetTypeDate {
+		if d.DateType == DateWidgetTypeDate {
 			return t.Format("2006-01-02")
 		}
 		return t.Format("2006-01-02T15:04:05")
