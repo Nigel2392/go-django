@@ -20,6 +20,7 @@ var (
 	ListBlockDataRaw = map[string][]string{
 		"test_list_block-added":      {"2"},
 		"test_list_block-id-0":       {uuid.Nil.String()},
+		"test_list_block-order-0":    {"0"},
 		"test_list_block-0-name":     {"John Doe"},
 		"test_list_block-0-age":      {"30"},
 		"test_list_block-0-email":    {"test@localhost"},
@@ -27,6 +28,7 @@ var (
 		"test_list_block-0-date":     {"2021-01-01"},
 		"test_list_block-0-datetime": {"2021-01-01T00:00:00"},
 		"test_list_block-id-1":       {uuid.Nil.String()},
+		"test_list_block-order-1":    {"1"},
 		"test_list_block-1-name":     {"Jane Doe"},
 		"test_list_block-1-age":      {"25"},
 		"test_list_block-1-email":    {"test2@localhost"},
@@ -37,7 +39,8 @@ var (
 
 	ListBlockDataRawCmp = []*blocks.ListBlockValue{
 		{
-			ID: uuid.Nil,
+			ID:    uuid.Nil,
+			Order: 0,
 			Data: map[string]interface{}{
 				"name":     "John Doe",
 				"age":      "30",
@@ -48,7 +51,8 @@ var (
 			},
 		},
 		{
-			ID: uuid.Nil,
+			ID:    uuid.Nil,
+			Order: 1,
 			Data: map[string]interface{}{
 				"name":     "Jane Doe",
 				"age":      "25",
@@ -62,7 +66,8 @@ var (
 
 	ListBlockDataGo = []*blocks.ListBlockValue{
 		{
-			ID: uuid.Nil,
+			ID:    uuid.Nil,
+			Order: 0,
 			Data: map[string]interface{}{
 				"name":     "John Doe",
 				"age":      30,
@@ -73,7 +78,8 @@ var (
 			},
 		},
 		{
-			ID: uuid.Nil,
+			ID:    uuid.Nil,
+			Order: 1,
 			Data: map[string]interface{}{
 				"name":     "Jane Doe",
 				"age":      25,
