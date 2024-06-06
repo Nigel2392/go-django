@@ -14,27 +14,28 @@ func isZero(rt reflect.Type, rv reflect.Value) bool {
 	return false
 }
 
-func parseFn[T1 any, T2 any](parse func(T1) (T2, error)) func(T1) (T2, error) {
-	return func(v T1) (T2, error) {
-		var rTyp = reflect.TypeOf(v)
-		var rVal = reflect.ValueOf(v)
-		if isZero(rTyp, rVal) {
-			return *new(T2), nil
-		}
-		if rTyp.Kind() == reflect.Ptr {
-			return *new(T2), nil
-		}
-		return parse(v)
-	}
-}
-
-func convertToGO[DBType any, GoType any](parse func(DBType) (GoType, error)) func(DBType) (GoType, error) {
-	return parseFn(parse)
-}
-
-func convertToDB[GoType any, DBType any](parse func(*GoType) (DBType, error)) func(*GoType) (DBType, error) {
-	return parseFn(parse)
-}
+//
+//func parseFn[T1 any, T2 any](parse func(T1) (T2, error)) func(T1) (T2, error) {
+//	return func(v T1) (T2, error) {
+//		var rTyp = reflect.TypeOf(v)
+//		var rVal = reflect.ValueOf(v)
+//		if isZero(rTyp, rVal) {
+//			return *new(T2), nil
+//		}
+//		if rTyp.Kind() == reflect.Ptr {
+//			return *new(T2), nil
+//		}
+//		return parse(v)
+//	}
+//}
+//
+//func convertToGO[DBType any, GoType any](parse func(DBType) (GoType, error)) func(DBType) (GoType, error) {
+//	return parseFn(parse)
+//}
+//
+//func convertToDB[GoType any, DBType any](parse func(*GoType) (DBType, error)) func(*GoType) (DBType, error) {
+//	return parseFn(parse)
+//}
 
 var (
 	_ (sql.Scanner)   = (*BaseSQLField[any, any])(nil)
@@ -49,16 +50,14 @@ type BaseSQLField[DBType, GoType any] struct {
 
 func EmailField() *BaseSQLField[string, mail.Address] {
 	return NewBaseSQLField(
-		convertToDB(func(v *mail.Address) (string, error) {
+		//convertToDB(func(v *mail.Address) (string, error) {
+		//	return v.String(), nil
+		//}),
+		//mail.ParseAddress,
+		func(v *mail.Address) (string, error) {
 			return v.String(), nil
-		}),
-		convertToGO(func(v string) (*mail.Address, error) {
-			var addr, err = mail.ParseAddress(v)
-			if err != nil {
-				return &mail.Address{}, err
-			}
-			return addr, nil
-		}),
+		},
+		mail.ParseAddress,
 	)
 }
 
@@ -89,10 +88,6 @@ func (f *BaseSQLField[DBType, GoType]) Scan(value interface{}) error {
 	if err != nil {
 		return err
 	}
-	*f = BaseSQLField[DBType, GoType]{
-		ConvertToDB: f.ConvertToDB,
-		ConvertToGO: f.ConvertToGO,
-		value:       parsed,
-	}
+	f.value = parsed
 	return nil
 }

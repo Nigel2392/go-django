@@ -1,6 +1,11 @@
 package models
 
-import "github.com/Nigel2392/django/core/attrs"
+import (
+	"database/sql"
+	"database/sql/driver"
+
+	"github.com/Nigel2392/django/core/attrs"
+)
 
 type Saver interface {
 	Save() error
@@ -23,4 +28,9 @@ type Model interface {
 	Saver
 	Updater
 	Deleter
+}
+
+type SQLField interface {
+	driver.Valuer
+	sql.Scanner
 }

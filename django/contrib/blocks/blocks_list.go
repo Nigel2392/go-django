@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -19,8 +20,9 @@ import (
 var _ Block = (*ListBlock)(nil)
 
 type ListBlockValue struct {
-	ID   uuid.UUID   `json:"id"`
-	Data interface{} `json:"data"`
+	ID    uuid.UUID   `json:"id"`
+	Data  interface{} `json:"data"`
+	Order int         `json:"order"`
 }
 
 type ListBlock struct {
@@ -92,6 +94,16 @@ func (b *ListBlock) ValueOmittedFromData(data url.Values, files map[string][]io.
 	return omitted
 }
 
+func sortListBlocks(a, b *ListBlockValue) int {
+	if a.Order < b.Order {
+		return -1
+	}
+	if a.Order > b.Order {
+		return 1
+	}
+	return 0
+}
+
 func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
 	var data = make([]*ListBlockValue, 0)
 
@@ -113,7 +125,7 @@ func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCl
 	}
 
 	var errs = NewBlockErrors[int]()
-
+	var ordered = make(map[int]struct{})
 	for i := 0; ; i++ {
 		var key = fmt.Sprintf("%s-%d", name, i)
 		if l.Child.ValueOmittedFromData(d, files, key) {
@@ -121,9 +133,11 @@ func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCl
 		}
 
 		var (
-			idKey = fmt.Sprintf("%s-id-%d", name, i)
-			idStr = d.Get(idKey)
-			id    uuid.UUID
+			idKey    = fmt.Sprintf("%s-id-%d", name, i)
+			orderKey = fmt.Sprintf("%s-order-%d", name, i)
+			orderStr = d.Get(orderKey)
+			idStr    = d.Get(idKey)
+			id       uuid.UUID
 		)
 
 		if idStr != "" {
@@ -136,6 +150,22 @@ func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCl
 			id = uuid.New()
 		}
 
+		if orderStr == "" {
+			errs.AddError(i, fmt.Errorf("Missing order key: %s", orderKey)) //lint:ignore ST1005 ignore this lint
+			continue
+		}
+
+		var order int
+		if order, err = strconv.Atoi(orderStr); err != nil {
+			errs.AddError(i, fmt.Errorf("Invalid order: %s", orderStr)) //lint:ignore ST1005 ignore this lint
+			continue
+		}
+
+		if _, ok := ordered[order]; ok {
+			errs.AddError(i, fmt.Errorf("Duplicate order: %d", order)) //lint:ignore ST1005 ignore this lint
+			continue
+		}
+
 		var value, e = l.Child.ValueFromDataDict(d, files, key)
 		if len(e) != 0 {
 			errs.AddError(i, e...)
@@ -143,12 +173,17 @@ func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCl
 		}
 
 		data = append(data, &ListBlockValue{
-			ID:   id,
-			Data: value,
+			ID:    id,
+			Order: order,
+			Data:  value,
 		})
 
 		addedCnt++
 	}
+
+	slices.SortFunc(
+		data, sortListBlocks,
+	)
 
 	if errs.HasErrors() {
 		return nil, []error{errs}
@@ -200,8 +235,9 @@ func (l *ListBlock) ValueToGo(value interface{}) (interface{}, error) {
 		}
 
 		newArr[i] = &ListBlockValue{
-			ID:   lbVal.ID,
-			Data: childData,
+			ID:    lbVal.ID,
+			Order: lbVal.Order,
+			Data:  childData,
 		}
 	}
 
@@ -239,10 +275,11 @@ func (l *ListBlock) ValueToForm(value interface{}) interface{} {
 	}
 
 	var data = make([]*ListBlockValue, 0, len(valueArr))
-	for _, v := range valueArr {
+	for i, v := range valueArr {
 		data = append(data, &ListBlockValue{
-			ID:   v.ID,
-			Data: l.Child.ValueToForm(v.Data),
+			ID:    v.ID,
+			Order: i,
+			Data:  l.Child.ValueToForm(v.Data),
 		})
 	}
 
@@ -262,8 +299,9 @@ func (l *ListBlock) Clean(value interface{}) (interface{}, error) {
 		}
 
 		data = append(data, &ListBlockValue{
-			ID:   lbVal.ID,
-			Data: v,
+			ID:    lbVal.ID,
+			Order: lbVal.Order,
+			Data:  v,
 		})
 	}
 

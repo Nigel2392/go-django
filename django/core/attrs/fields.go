@@ -112,6 +112,10 @@ func (f *FieldDef) GetValue() interface{} {
 
 func (f *FieldDef) GetDefault() interface{} {
 
+	if f.attrDef.Default != nil {
+		return f.attrDef.Default
+	}
+
 	var funcName = fmt.Sprintf("GetDefault%s", f.Name())
 	if method, ok := f.instance_t.MethodByName(funcName); ok {
 		return method.Func.Call([]reflect.Value{f.instance_v_ptr})[0].Interface()

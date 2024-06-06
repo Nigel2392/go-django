@@ -18,38 +18,38 @@ class FieldBlock extends Block {
 
         console.log("FieldBlock constructor", config);
 
-        this.errorList = (
-            <ul class="field-errors"></ul>
-        )
-
-        this.labelWrapper = (
-            <div class="field-label">
-                <label for={config.id}>{config.block.element.label}</label>
-            </div>
-        )
-
-        const inputHtml = toElement(config.block.element.html.replace(
-            "__PREFIX__", config.name,
-        ).replace(
-            "__ID__", config.id,
-        ))
-
-        this.input = inputHtml.querySelector('input');
-        this.widget.appendChild(this.errorList);
-        this.widget.appendChild(this.labelWrapper);
-        this.widget.appendChild(
-            <div class="field-input">{ inputHtml }</div>
-        );
-
-        if (config.block.element.helpText) {
-            this.widget.appendChild(
-                <div class="field-help">{config.block.element.helpText}</div>
-            );
-        }
-
-        if (config.errors && config.errors.length) {
-            this.setError(config.errors);
-        }
+        //this.errorList = (
+        //    <ul class="field-errors"></ul>
+        //)
+//
+        //this.labelWrapper = (
+        //    <div class="field-label">
+        //        <label for={config.id}>{config.block.element.label}</label>
+        //    </div>
+        //)
+//
+        //const inputHtml = toElement(config.block.element.html.replace(
+        //    "__PREFIX__", config.name,
+        //).replace(
+        //    "__ID__", config.id,
+        //))
+//
+        //this.input = inputHtml.querySelector('input');
+        //this.widget.appendChild(this.errorList);
+        //this.widget.appendChild(this.labelWrapper);
+        //this.widget.appendChild(
+        //    <div class="field-input">{ inputHtml }</div>
+        //);
+//
+        //if (config.block.element.helpText) {
+        //    this.widget.appendChild(
+        //        <div class="field-help">{config.block.element.helpText}</div>
+        //    );
+        //}
+//
+        //if (config.errors && config.errors.length) {
+        //    this.setError(config.errors);
+        //}
     }
 
     getLabel(): string {

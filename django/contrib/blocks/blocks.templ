@@ -19,15 +19,15 @@ templ RenderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext
 }
 
 templ (b *FieldBlock)RenderTempl(w io.Writer, id, name string, value interface{}, telepath string, errors []error, tplCtx ctx.Context)  {
-	// {{ var c = tplCtx.(*BlockContext) }}
+	{{ var c = tplCtx.(*BlockContext) }}
     <div data-field-block class="field" data-controller="block" data-block-class-path-value="Django.blocks.field-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(errors) }>
-// 
-        // @widgets.ErrorListComponent("field-block", errors)
-// 
-        // {{ var err = b.Field().Widget().RenderWithErrors(w, id, name, value, errors, c.Attrs) }}
-        // if err != nil {
-        //    return err
-        // }
+
+        @widgets.ErrorListComponent("field-block", errors)
+
+        {{ var err = b.Field().Widget().RenderWithErrors(w, id, name, value, errors, c.Attrs) }}
+        if err != nil {
+           return err
+        }
     </div>
 }
 
@@ -66,14 +66,18 @@ templ (l *ListBlock)RenderTempl(w io.Writer, id, name string, valueArr []*ListBl
 
 		<div data-list-block-items data-sortable-target="items" class="list-block-items">
 			for i, v := range valueArr {
+
 	    		{{ var id  = fmt.Sprintf("%s-%d", id, i) }}
                 {{ var blockId = fmt.Sprintf("%s-id-%d", name, i) }}
+                {{ var orderId = fmt.Sprintf("%s-order-%d", name, i) }}
 	    		{{ var key = fmt.Sprintf("%s-%d", name, i) }}
-                {{ var keyRe = fmt.Sprintf("%s-(?<index>\\d+)", name) }}
-				{{ iStr = strconv.Itoa(i) }}
-        	    <div data-list-block-field data-index={ iStr } data-sortable-target="item" data-sortable-replace-value={keyRe} data-sortable-replace-key-value="index" class="list-block-field">
 
-                    <input type="hidden" name={ blockId } value={ v.ID.String() }>
+				{{ iStr = strconv.Itoa(i) }}
+
+        	    <div data-list-block-field data-index={ iStr } data-sortable-target="item" data-replace={ fmt.Sprintf("#%s;[data-index]", orderId) } class="list-block-field">
+
+                    <input type="hidden" id={ blockId } name={ blockId } value={ v.ID.String() }>
+                    <input type="hidden" id={ orderId } name={ orderId } value={ strconv.Itoa(v.Order) }>
 
                     @widgets.LabelComponent("list-block", l.Child.Label(), id)
 

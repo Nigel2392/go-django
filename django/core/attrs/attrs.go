@@ -1,6 +1,8 @@
 package attrs
 
-import "github.com/Nigel2392/django/forms/fields"
+import (
+	"github.com/Nigel2392/django/forms/fields"
+)
 
 type Definer interface {
 	FieldDefs() Definitions

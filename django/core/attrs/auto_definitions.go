@@ -2,6 +2,7 @@ package attrs
 
 import (
 	"reflect"
+	"strconv"
 
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/tags"
@@ -15,6 +16,7 @@ type FieldConfig struct {
 	ReadOnly bool
 	Label    string
 	HelpText string
+	Default  any
 }
 
 func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
@@ -36,6 +38,59 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 			data.Label = v[0]
 		case "helpText":
 			data.HelpText = v[0]
+		case "default":
+			var (
+				default_ = v[0]
+				val      any
+				err      error
+				chkTyp   = t.Type
+			)
+
+			if chkTyp.Kind() == reflect.Ptr {
+				chkTyp = chkTyp.Elem()
+			}
+
+			switch chkTyp.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				val, err = strconv.ParseInt(default_, 10, 64)
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				val, err = strconv.ParseUint(default_, 10, 64)
+			case reflect.Float32, reflect.Float64:
+				val, err = strconv.ParseFloat(default_, 64)
+			case reflect.String:
+				val = default_
+			case reflect.Bool:
+				val, err = strconv.ParseBool(default_)
+			default:
+				assert.Fail("unsupported type %v", t.Type)
+			}
+
+			assert.True(err == nil, "error parsing %q: %v", default_, err)
+
+			var r_v = reflect.ValueOf(val)
+			assert.True(r_v.IsValid(), "invalid value %v", val)
+
+			if r_v.Type() != t.Type && !r_v.Type().ConvertibleTo(t.Type) && t.Type.Kind() != reflect.Ptr {
+				assert.Fail("type mismatch %v != %v", r_v.Type(), t.Type)
+			}
+
+			if t.Type.Kind() == reflect.Ptr && r_v.Type().Kind() != reflect.Ptr {
+				// r_v = r_v.Addr()
+				var new = reflect.New(t.Type.Elem())
+				r_v = r_v.Convert(new.Elem().Type())
+				new.Elem().Set(r_v)
+				val = new.Interface()
+			} else {
+				val = r_v.Interface()
+			}
+
+			r_v = reflect.ValueOf(val)
+
+			if r_v.Type() != t.Type {
+				r_v = r_v.Convert(t.Type)
+			}
+
+			data.Default = r_v.Interface()
 		}
 	}
 

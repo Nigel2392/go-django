@@ -6,7 +6,6 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
-	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/core/urls"
@@ -15,14 +14,6 @@ import (
 
 //go:embed assets/**
 var coreFS embed.FS
-
-var _ = admin.RegisterApp(
-	"core",
-	admin.ModelOptions{
-		Fields: []string{"Email", "Name", "Password", "Age", "Data", "Block"},
-		Model:  &MainStruct{},
-	},
-)
 
 func NewAppConfig() django.AppConfig {
 	var cfg = apps.NewAppConfig(

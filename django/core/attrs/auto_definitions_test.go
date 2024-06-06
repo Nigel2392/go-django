@@ -171,3 +171,110 @@ func TestModelAutoFieldDefinitionsIncludeSetExcluded(t *testing.T) {
 
 	attrs.Set(m, "ID", 1)
 }
+
+type DefaultsTester struct {
+	Bool      bool     `attrs:"default=true"`
+	Int       int      `attrs:"default=2"`
+	Uint      uint     `attrs:"default=4"`
+	Float     float64  `attrs:"default=6.0"`
+	String    string   `attrs:"default=hello"`
+	BoolPtr   *bool    `attrs:"default=true"`
+	IntPtr    *int     `attrs:"default=8"`
+	UintPtr   *uint    `attrs:"default=10"`
+	FloatPtr  *float64 `attrs:"default=12.0"`
+	StringPtr *string  `attrs:"default=hello"`
+	Int16     int16    `attrs:"default=14"`
+	Uint16    uint16   `attrs:"default=16"`
+	Float32   float32  `attrs:"default=18.0"`
+}
+
+func (f *DefaultsTester) FieldDefs() attrs.Definitions {
+	return attrs.AutoDefinitions(f)
+}
+
+func TestModelAutoFieldDefinitionsDefaults(t *testing.T) {
+	var m = &DefaultsTester{}
+	var fieldDefs = m.FieldDefs().(*attrs.ObjectDefinitions)
+
+	if fieldDefs.ObjectFields.Len() != 13 {
+		t.Errorf("expected %d, got %d", 13, fieldDefs.ObjectFields.Len())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("Bool"); !ok {
+		t.Errorf("expected field %q", "Bool")
+	} else if val.GetDefault().(bool) != true {
+		t.Errorf("expected %v, got %v", true, val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("Int"); !ok {
+		t.Errorf("expected field %q", "Int")
+	} else if val.GetDefault().(int) != 2 {
+		t.Errorf("expected %d, got %d", 2, val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("Uint"); !ok {
+		t.Errorf("expected field %q", "Uint")
+	} else if val.GetDefault().(uint) != 4 {
+		t.Errorf("expected %d, got %d", 4, val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("Float"); !ok {
+		t.Errorf("expected field %q", "Float")
+	} else if val.GetDefault().(float64) != 6.0 {
+		t.Errorf("expected %f, got %f", 6.0, val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("String"); !ok {
+		t.Errorf("expected field %q", "String")
+	} else if val.GetDefault().(string) != "hello" {
+		t.Errorf("expected %q, got %q", "hello", val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("BoolPtr"); !ok {
+		t.Errorf("expected field %q", "BoolPtr")
+	} else if *(val.GetDefault().(*bool)) != true {
+		t.Errorf("expected %v, got %v", true, val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("IntPtr"); !ok {
+		t.Errorf("expected field %q", "IntPtr")
+	} else if *(val.GetDefault().(*int)) != 8 {
+		t.Errorf("expected %d, got %d", 8, val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("UintPtr"); !ok {
+		t.Errorf("expected field %q", "UintPtr")
+	} else if *(val.GetDefault().(*uint)) != 10 {
+		t.Errorf("expected %d, got %d", 10, val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("FloatPtr"); !ok {
+		t.Errorf("expected field %q", "FloatPtr")
+	} else if *(val.GetDefault().(*float64)) != 12.0 {
+		t.Errorf("expected %f, got %f", 12.0, val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("StringPtr"); !ok {
+		t.Errorf("expected field %q", "StringPtr")
+	} else if *(val.GetDefault().(*string)) != "hello" {
+		t.Errorf("expected %q, got %q", "hello", val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("Int16"); !ok {
+		t.Errorf("expected field %q", "Int16")
+	} else if val.GetDefault().(int16) != 14 {
+		t.Errorf("expected %d, got %d", 14, val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("Uint16"); !ok {
+		t.Errorf("expected field %q", "Uint16")
+	} else if val.GetDefault().(uint16) != 16 {
+		t.Errorf("expected %d, got %d", 16, val.GetDefault())
+	}
+
+	if val, ok := fieldDefs.ObjectFields.Get("Float32"); !ok {
+		t.Errorf("expected field %q", "Float32")
+	} else if val.GetDefault().(float32) != 18.0 {
+		t.Errorf("expected %f, got %f", 18.0, val.GetDefault())
+	}
+}

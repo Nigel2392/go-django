@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/mail"
 
+	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/blocks"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/attrs"
@@ -24,6 +25,20 @@ type MainStruct struct {
 	Data     map[string]any
 	Block    map[string]any ``
 }
+
+var _ = admin.RegisterApp(
+	"core",
+	admin.ModelOptions{
+		Fields: []string{"Email", "Name", "Password", "Age", "Data", "Block"},
+		Model:  &MainStruct{},
+		GetForID: func(identifier any) (attrs.Definer, error) {
+			return &MainStruct{}, nil
+		},
+		GetList: func(amount, offset uint) ([]attrs.Definer, error) {
+			return nil, nil
+		},
+	},
+)
 
 func (f *MainStruct) FieldDefs() attrs.Definitions {
 	return attrs.AutoDefinitions(f)
