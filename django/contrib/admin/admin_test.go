@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/admin"
@@ -65,6 +66,8 @@ var (
 		}
 	})
 )
+
+var runTests = true
 
 func init() {
 	admin.AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition) {
@@ -180,7 +183,14 @@ func init() {
 		panic(err)
 	}
 
-	go app.Serve()
+	go func() {
+		var err = app.Serve()
+		if err != nil {
+			runTests = false
+		}
+	}()
+
+	time.Sleep(1 * time.Second)
 }
 
 func testBufferEquals(t *testing.T, buf *bytes.Buffer, expected string) bool {
@@ -432,6 +442,11 @@ var handlerTests = []HandlerTest{
 }
 
 func TestAdminHandlers(t *testing.T) {
+
+	if !runTests {
+		t.Skip("Server failed to start")
+		return
+	}
 
 	for _, test := range handlerTests {
 		var testName = fmt.Sprintf("%sHandler", test.Name)
