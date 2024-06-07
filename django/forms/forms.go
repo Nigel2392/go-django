@@ -33,10 +33,14 @@ type BoundField interface {
 	Errors() []error
 }
 
-type Form interface {
+type FormRenderer interface {
 	AsP() template.HTML
 	AsUL() template.HTML
 	Media() media.Media
+}
+
+type Form interface {
+	FormRenderer
 
 	Prefix() string
 	SetPrefix(prefix string)

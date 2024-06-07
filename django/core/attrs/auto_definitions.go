@@ -29,7 +29,7 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 			data.Primary = true
 		case "label":
 			data.Label = v[0]
-		case "helpText":
+		case "helptext":
 			data.HelpText = v[0]
 		case "default":
 			var (

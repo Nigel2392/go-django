@@ -11,6 +11,9 @@ var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminAp
 }
 
 var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
+
+	// var instances, err = model.GetList(10, 0)
+
 	w.Write([]byte(model.Name))
 	w.Write([]byte("\n"))
 	w.Write([]byte("list"))

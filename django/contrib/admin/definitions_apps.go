@@ -13,7 +13,7 @@ type ModelOptions struct {
 	Fields   []string
 	Exclude  []string
 	GetForID func(identifier any) (attrs.Definer, error)
-	GetList  func(amount, offset uint) ([]attrs.Definer, error)
+	GetList  func(amount, offset uint, include []string) ([]attrs.Definer, error)
 	Model    attrs.Definer
 }
 
@@ -70,7 +70,8 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 		Exclude:  opts.Exclude,
 		GetForID: opts.GetForID,
 		GetList:  opts.GetList,
-		Model:    rTyp,
+		Model:    opts.Model,
+		_rModel:  rTyp,
 	}
 
 	assert.True(

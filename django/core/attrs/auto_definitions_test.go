@@ -172,6 +172,32 @@ func TestModelAutoFieldDefinitionsIncludeSetExcluded(t *testing.T) {
 	attrs.Set(m, "ID", 1)
 }
 
+type PrimaryFieldTester struct {
+	ID int `attrs:"primary;default=2"`
+	I  int `attrs:"default=1"`
+}
+
+func (f *PrimaryFieldTester) FieldDefs() attrs.Definitions {
+	return attrs.AutoDefinitions(f)
+}
+
+func TestModelAutoFieldDefinitionsPrimary(t *testing.T) {
+	var m = &PrimaryFieldTester{}
+
+	var fieldDefs = m.FieldDefs().(*attrs.ObjectDefinitions)
+	if fieldDefs.ObjectFields.Len() != 2 {
+		t.Errorf("expected %d, got %d", 2, fieldDefs.ObjectFields.Len())
+	}
+
+	if fieldDefs.Primary().Name() != "ID" {
+		t.Errorf("expected %q, got %q", "ID", fieldDefs.Primary().Name())
+	}
+
+	if fieldDefs.Primary().GetDefault().(int) != 2 {
+		t.Errorf("expected %d, got %d", 1, fieldDefs.Primary().GetDefault())
+	}
+}
+
 type DefaultsTester struct {
 	Bool      bool     `attrs:"default=true"`
 	Int       int      `attrs:"default=2"`

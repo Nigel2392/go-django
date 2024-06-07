@@ -34,7 +34,7 @@ var _ = admin.RegisterApp(
 		GetForID: func(identifier any) (attrs.Definer, error) {
 			return &MainStruct{}, nil
 		},
-		GetList: func(amount, offset uint) ([]attrs.Definer, error) {
+		GetList: func(amount, offset uint, fields []string) ([]attrs.Definer, error) {
 			return nil, nil
 		},
 	},

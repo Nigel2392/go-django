@@ -4,19 +4,26 @@ import "github.com/elliotchance/orderedmap/v2"
 
 type ObjectDefinitions struct {
 	Object       Definer
+	PrimaryField string
 	ObjectFields *orderedmap.OrderedMap[string, Field]
 }
 
 func Define(d Definer, fieldDefinitions ...Field) *ObjectDefinitions {
-
+	var primaryField string
 	var m = orderedmap.NewOrderedMap[string, Field]()
 	for _, f := range fieldDefinitions {
+
+		if f.IsPrimary() && primaryField == "" {
+			primaryField = f.Name()
+		}
+
 		m.Set(f.Name(), f)
 	}
 
 	return &ObjectDefinitions{
 		Object:       d,
 		ObjectFields: m,
+		PrimaryField: primaryField,
 	}
 }
 
@@ -35,6 +42,14 @@ func (d *ObjectDefinitions) Get(name string) interface{} {
 func (d *ObjectDefinitions) Field(name string) (f Field, ok bool) {
 	f, ok = d.ObjectFields.Get(name)
 	return
+}
+
+func (d *ObjectDefinitions) Primary() Field {
+	if d.PrimaryField == "" {
+		return nil
+	}
+	f, _ := d.ObjectFields.Get(d.PrimaryField)
+	return f
 }
 
 func (d *ObjectDefinitions) Fields() []Field {

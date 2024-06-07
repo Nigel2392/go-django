@@ -13,6 +13,7 @@ type Definitions interface {
 	Get(name string) interface{}
 	Field(name string) (f Field, ok bool)
 	ForceSet(name string, value interface{}) error
+	Primary() Field
 	Fields() []Field
 }
 

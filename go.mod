@@ -30,3 +30,5 @@ require (
 	github.com/a-h/templ v0.2.707
 	github.com/google/uuid v1.6.0
 )
+
+require github.com/davecgh/go-spew v1.1.1 // indirect

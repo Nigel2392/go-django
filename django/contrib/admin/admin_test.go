@@ -115,7 +115,7 @@ func init() {
 				Name: "Test",
 			}, nil
 		},
-		GetList: func(amount, offset uint) ([]attrs.Definer, error) {
+		GetList: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
 			return []attrs.Definer{
 				&TestModelStruct{
 					ID:   1,

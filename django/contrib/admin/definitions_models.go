@@ -3,6 +3,7 @@ package admin
 import (
 	"net/http"
 	"reflect"
+	"sync"
 
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
@@ -13,14 +14,88 @@ type ModelDefinition struct {
 	Name     string
 	Fields   []string
 	Exclude  []string
-	Model    reflect.Type
+	Model    attrs.Definer
 	GetForID func(identifier any) (attrs.Definer, error)
-	GetList  func(amount, offset uint) ([]attrs.Definer, error)
+	GetList  func(amount, offset uint, include []string) ([]attrs.Definer, error)
+
+	_rModel  reflect.Type
+	_include map[string]struct{}
+}
+
+func (o *ModelDefinition) rModel() reflect.Type {
+	if o._rModel == nil {
+		o._rModel = reflect.TypeOf(o.Model)
+	}
+	return o._rModel
+}
+
+var globalMu *sync.Mutex = new(sync.Mutex)
+
+func (o *ModelDefinition) include() map[string]struct{} {
+	if o._include == nil {
+		globalMu.Lock()
+		defer globalMu.Unlock()
+
+		var include = len(o.Fields) == 0
+		var exclude = len(o.Exclude) > 0
+		if include && !exclude {
+			return nil
+		}
+
+		var excludeMap = make(map[string]struct{})
+		for _, name := range o.Exclude {
+			excludeMap[name] = struct{}{}
+		}
+
+		if exclude && !include {
+			for _, name := range o.Exclude {
+				assert.True(name != "", "Exclude field cannot be empty")
+			}
+
+			var (
+				n      = o.NewInstance()
+				defs   = n.FieldDefs()
+				fields = defs.Fields()
+			)
+
+			o.Fields = make([]string, 0, len(fields))
+			o._include = make(map[string]struct{})
+
+			for _, field := range fields {
+				var name = field.Name()
+				if _, ok := excludeMap[name]; !ok {
+					o.Fields = append(o.Fields, name)
+					o._include[name] = struct{}{}
+				}
+			}
+
+			return o._include
+		}
+
+		assert.False(
+			include && exclude,
+			"Cannot have both include and exclude fields",
+		)
+
+		o._include = make(map[string]struct{})
+		for _, name := range o.Fields {
+			o._include[name] = struct{}{}
+		}
+	}
+	return o._include
+}
+
+func (o *ModelDefinition) NewInstance() attrs.Definer {
+	var rTyp = o.rModel()
+	if rTyp.Kind() == reflect.Ptr {
+		return reflect.New(rTyp.Elem()).Interface().(attrs.Definer)
+	}
+	return reflect.New(rTyp).Interface().(attrs.Definer)
 }
 
 func (o *ModelDefinition) GetName() string {
 	if o.Name == "" {
-		var rTyp = reflect.TypeOf(o.Model)
+		var rTyp = o.rModel()
 		if rTyp.Kind() == reflect.Ptr {
 			return rTyp.Elem().Name()
 		}
@@ -36,11 +111,16 @@ func (m *ModelDefinition) ModelFields(instance attrs.Definer) []attrs.Field {
 	}
 
 	var (
-		fields = make([]attrs.Field, len(m.Fields))
-		ok     bool
+		fields  = make([]attrs.Field, len(m.Fields))
+		include = m.include()
+		ok      bool
 	)
 
 	for i, name := range m.Fields {
+		if _, ok = include[name]; !ok {
+			continue
+		}
+
 		fields[i], ok = defs.Field(name)
 		assert.True(ok, "Field %s not found in model %s", name, m.Name)
 	}
@@ -63,7 +143,7 @@ func (m *ModelDefinition) GetListInstances(amount, offset uint) ([]attrs.Definer
 		"GetList not implemented for model %s", m.GetName(),
 	)
 
-	return m.GetList(amount, offset)
+	return m.GetList(amount, offset, m.Fields)
 }
 
 func (m *ModelDefinition) OnRegister(a *AdminApplication, app *AppDefinition) {
