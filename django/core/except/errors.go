@@ -8,54 +8,12 @@ import (
 	"github.com/Nigel2392/django/core/errs"
 )
 
-type (
-	Code      = int
-	HttpError struct {
-		Message error
-		Code    Code
-	}
-)
+type HttpError struct {
+	Message error
+	Code    int
+}
 
-const (
-	// Everything went smoothly
-	Code200 Code = 200 // OK
-
-	// Redirects / Cached
-	Code301 Code = 301 // Moved Permanently
-	Code302 Code = 302 // Found
-	Code303 Code = 303 // See Other
-	Code304 Code = 304 // Not Modified
-
-	// Client Errors
-	Code400 Code = 400 // Bad Request
-	Code401 Code = 401 // Unauthorized
-	Code402 Code = 402 // Payment Required
-	Code403 Code = 403 // Forbidden
-	Code404 Code = 404 // Not Found
-	Code405 Code = 405 // Method Not Allowed
-	Code406 Code = 406 // Not Acceptable
-	Code407 Code = 407 // Proxy Authentication Required
-	Code408 Code = 408 // Request Timeout
-	Code409 Code = 409 // Conflict
-	Code410 Code = 410 // Gone
-	Code411 Code = 411 // Length Required
-	Code412 Code = 412 // Precondition Failed
-	Code413 Code = 413 // Payload Too Large
-	Code414 Code = 414 // URI Too Long
-	Code415 Code = 415 // Unsupported Media Type
-
-	// Server Errors
-	Code500 Code = 500 // Internal Server Error
-	Code501 Code = 501 // Not Implemented
-	Code502 Code = 502 // Bad Gateway
-	Code503 Code = 503 // Service Unavailable
-	Code504 Code = 504 // Gateway Timeout
-	Code505 Code = 505 // HTTP Version Not Supported
-	Code511 Code = 511 // Network Authentication Required
-
-)
-
-func ServerError(code Code, msg any) *HttpError {
+func NewServerError(code int, msg any) ServerError {
 	return &HttpError{
 		Message: errs.Convert(msg, nil),
 		Code:    code,
@@ -74,6 +32,14 @@ func (e *HttpError) Error() string {
 	b.WriteString(": ")
 	b.WriteString(e.Message.Error())
 	return b.String()
+}
+
+func (e *HttpError) StatusCode() int {
+	return int(e.Code)
+}
+
+func (e *HttpError) UserMessage() string {
+	return e.Message.Error()
 }
 
 func (e *HttpError) Unwrap() error {

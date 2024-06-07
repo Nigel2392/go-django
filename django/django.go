@@ -5,17 +5,20 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"os"
 	"reflect"
 	"sync/atomic"
 	"text/template"
 
 	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
-	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/core/except"
+	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/internal/http_"
+	"github.com/Nigel2392/django/utils"
+	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware"
 	"github.com/elliotchance/orderedmap/v2"
@@ -26,6 +29,7 @@ import (
 type AppConfig interface {
 	Name() string
 	URLs() []core.URL
+	URLPath() string // Can be empty for root paths
 	Middleware() []core.Middleware
 	Initialize(settings Settings) error
 	Processors() []func(tpl.RequestContext)
@@ -39,6 +43,7 @@ type Application struct {
 	Middleware  []core.Middleware
 	URLs        []core.URL
 	Mux         *mux.Mux
+	Log         logger.Log
 	quitter     func() error
 	initialized *atomic.Bool
 }
@@ -121,43 +126,96 @@ func (a *Application) Register(apps ...any) {
 	}
 }
 
-func (a *Application) handleErrorCodePure(w http.ResponseWriter, r *http.Request, err any, code int) {
+func (a *Application) handleErrorCodePure(w http.ResponseWriter, r *http.Request, err except.ServerError) {
+	var (
+		code    = err.StatusCode()
+		message = err.UserMessage()
+	)
+
 	assert.False(code == 0, "code cannot be 0")
 
-	var pure error = errs.Convert(err, errs.ErrUnknown)
 	var handler, ok = a.Settings.Get(fmt.Sprintf("Handler%d", code))
 	if handler != nil && ok {
-		handler.(func(http.ResponseWriter, *http.Request, error))(w, r, pure)
+		handler.(func(http.ResponseWriter, *http.Request, except.ServerError))(w, r, err)
 		return
 	}
 
-	http.Error(w, pure.Error(), int(code))
+	var markedWriter = &markedResponseWriter{
+		ResponseWriter: w,
+	}
+
+	var hooks = goldcrest.Get[ServerErrorHook](HOOK_SERVER_ERROR)
+	for _, hook := range hooks {
+		hook(markedWriter, r, a, err)
+	}
+
+	if !markedWriter.wasWritten {
+		http.Error(w, message, int(code))
+	}
+}
+
+func (a *Application) veryBadServerError(err error, w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
 }
 
 func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Request) {
-	var serverErrInt = except.GetServerError(err)
-	if serverErrInt == nil {
-		a.handleErrorCodePure(w, r, nil, http.StatusInternalServerError)
+	var serverError = except.GetServerError(err)
+	if serverError == nil {
+		a.veryBadServerError(err, w, r)
 		return
 	}
 
-	var serverErr = serverErrInt.(*except.HttpError)
-	fmt.Printf("[Printing]: %s\n", serverErrInt)
-	a.handleErrorCodePure(w, r, serverErr.Message, serverErr.Code)
+	a.Log.Errorf(
+		"Error serving request (%d: %s) %s",
+		serverError.StatusCode(),
+		utils.Trunc(r.URL.String(), 75),
+		serverError.UserMessage(),
+	)
+	a.handleErrorCodePure(w, r, serverError)
 }
 
 func (a *Application) Initialize() error {
+
+	if a.Log == nil {
+		a.Log = &logger.Logger{
+			Level:      logger.INF,
+			OutputTime: true,
+			Prefix:     "django",
+			WrapPrefix: logger.ColoredLogWrapper,
+		}
+
+		a.Log.SetOutput(
+			logger.OutputAll,
+			os.Stdout,
+		)
+
+		logger.Setup(a.Log)
+	}
 
 	if err := assert.False(a.Settings == nil, "Settings cannot be nil"); err != nil {
 		return err
 	}
 
+	a.Mux.NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
+		a.Log.Debug("Page not found")
+		a.ServerError(except.NewServerError(
+			http.StatusNotFound,
+			"Page not found",
+		), w, r)
+	}
+
 	a.Mux.Use(
+		middleware.Recoverer(a.veryBadServerError),
 		http_.RequestSignalMiddleware,
-		// middleware.Recoverer(a.ServerError),
 		middleware.AllowedHosts(
 			ConfigGet(a.Settings, "ALLOWED_HOSTS", []string{"*"})...,
 		),
+		a.loggerMiddleware,
+	)
+
+	a.Log.Debugf(
+		"Initializing static files at '%s'",
+		core.STATIC_URL,
 	)
 
 	if core.STATIC_URL != "" {
@@ -168,9 +226,13 @@ func (a *Application) Initialize() error {
 		)
 	}
 
+	a.Log.Debug("Initializing 'Django' middleware")
+
 	for _, m := range a.Middleware {
 		m.Register(a.Mux)
 	}
+
+	a.Log.Debug("Initializing 'Django' URLs")
 
 	for _, u := range a.URLs {
 		u.Register(a.Mux)
@@ -206,8 +268,19 @@ func (a *Application) Initialize() error {
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
 		var urls = app.URLs()
-		for _, url := range urls {
-			url.Register(a.Mux)
+		if len(urls) > 0 {
+			var path = app.URLPath()
+
+			var r core.Mux = a.Mux
+			if path != "" {
+				r = r.Handle(
+					mux.ANY, path, nil, app.Name(),
+				)
+			}
+
+			for _, url := range urls {
+				url.Register(r)
+			}
 		}
 
 		var middleware = app.Middleware()
@@ -230,6 +303,10 @@ func (a *Application) Initialize() error {
 			return err
 		}
 	}
+
+	a.Mux.Use(
+		middleware.Recoverer(a.ServerError),
+	)
 
 	a.initialized.Store(true)
 
@@ -271,10 +348,10 @@ func (a *Application) Serve() error {
 	}
 
 	if TLSCert != "" && TLSKey != "" {
-		fmt.Printf("Listening on https://%s\n", addr)
+		a.Log.Logf(logger.INF, "Listening on https://%s\n", addr)
 		return server.ListenAndServeTLS(TLSCert, TLSKey)
 	} else {
-		fmt.Printf("Listening on http://%s\n", addr)
+		a.Log.Logf(logger.INF, "Listening on http://%s\n", addr)
 		return server.ListenAndServe()
 	}
 }

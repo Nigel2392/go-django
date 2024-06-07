@@ -20,6 +20,8 @@ type Field interface {
 	Labeler
 	Helper
 	Name() string
+	Instance() any
+	IsPrimary() bool
 	AllowNull() bool
 	AllowBlank() bool
 	AllowEdit() bool

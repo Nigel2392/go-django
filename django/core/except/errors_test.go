@@ -14,8 +14,8 @@ func TestHttpError(t *testing.T) {
 
 		t.Run("TopLevelIs", func(t *testing.T) {
 			var (
-				httpError = except.ServerError(404, "Not Found")
-				newErr    = except.ServerError(404, "Not Found")
+				httpError = except.NewServerError(404, "Not Found")
+				newErr    = except.NewServerError(404, "Not Found")
 			)
 
 			if !errors.Is(httpError, newErr) {
@@ -25,10 +25,10 @@ func TestHttpError(t *testing.T) {
 
 		t.Run("NestedIs", func(t *testing.T) {
 			var (
-				httpError404 = except.ServerError(404, "Not Found")
-				httpError500 = except.ServerError(500, "Internal Server Error")
-				newErr400    = except.ServerError(404, "Not Found")
-				newErr500    = except.ServerError(500, "Internal Server Error")
+				httpError404 = except.NewServerError(404, "Not Found")
+				httpError500 = except.NewServerError(500, "Internal Server Error")
+				newErr400    = except.NewServerError(404, "Not Found")
+				newErr500    = except.NewServerError(500, "Internal Server Error")
 				multiErr     = errs.NewMultiError(
 					errs.Wrap(
 						httpError404,
@@ -52,7 +52,7 @@ func TestHttpError(t *testing.T) {
 
 		t.Run("TopLevelAs", func(t *testing.T) {
 			var (
-				httpError = except.ServerError(404, "Not Found")
+				httpError = except.NewServerError(404, "Not Found")
 				newErr    = &except.HttpError{}
 			)
 
@@ -71,8 +71,8 @@ func TestHttpError(t *testing.T) {
 
 		t.Run("NestedAs", func(t *testing.T) {
 			var (
-				httpError404 = except.ServerError(404, "Not Found")
-				httpError500 = except.ServerError(500, "Internal Server Error")
+				httpError404 = except.NewServerError(404, "Not Found")
+				httpError500 = except.NewServerError(500, "Internal Server Error")
 				newErr400    = &except.HttpError{}
 				newErr500    = &except.HttpError{}
 				multiErr     = errs.NewMultiError(

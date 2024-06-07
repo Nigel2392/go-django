@@ -9,6 +9,9 @@ import (
 	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/except"
+	"github.com/Nigel2392/django/core/urls"
+	"github.com/Nigel2392/goldcrest"
+	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/alexedwards/scs/v2"
 )
@@ -26,9 +29,26 @@ func NewAppConfig() django.AppConfig {
 	var app = &AuthApplication{
 		AppConfig: apps.NewAppConfig("auth"),
 	}
-
+	app.Path = "auth/"
 	app.Middlewares = []core.Middleware{
 		core.NewMiddleware(AddUserMiddleware()),
+	}
+	app.URLPatterns = []core.URL{
+		urls.Pattern(
+			urls.P("/login", mux.POST, mux.GET),
+			mux.NewHandler(viewUserLogin),
+			"login",
+		),
+		urls.Pattern(
+			urls.P("/logout", mux.POST),
+			mux.NewHandler(viewUserLogout),
+			"logout",
+		),
+		urls.Pattern(
+			urls.P("/register", mux.POST, mux.GET),
+			mux.NewHandler(viewUserRegister),
+			"register",
+		),
 	}
 	app.Init = func(settings django.Settings) error {
 
@@ -51,6 +71,11 @@ func NewAppConfig() django.AppConfig {
 
 		Auth.Queries = models.New(db)
 		Auth.Session = sess
+
+		goldcrest.Register(
+			django.HOOK_SERVER_ERROR, 0,
+			authRequiredHook,
+		)
 
 		return nil
 	}

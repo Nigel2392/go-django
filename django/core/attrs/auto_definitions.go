@@ -10,15 +10,6 @@ import (
 
 const ATTR_TAG_NAME = "attrs"
 
-type FieldConfig struct {
-	Null     bool
-	Blank    bool
-	ReadOnly bool
-	Label    string
-	HelpText string
-	Default  any
-}
-
 func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 	var (
 		tag  = t.Tag.Get(ATTR_TAG_NAME)
@@ -34,6 +25,8 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 			data.Blank = true
 		case "readonly":
 			data.ReadOnly = true
+		case "primary":
+			data.Primary = true
 		case "label":
 			data.Label = v[0]
 		case "helpText":

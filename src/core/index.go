@@ -129,6 +129,22 @@ func Index(w http.ResponseWriter, r *http.Request) {
 
 				b.AddField("data", lb)
 
+				lb = blocks.NewListBlock(blocks.TextBlock(
+					blocks.WithValidators[*blocks.FieldBlock](func(i interface{}) error {
+						fmt.Println("Validating", i)
+						if i == nil || i == "" {
+							return errs.ErrFieldRequired
+						}
+						return nil
+					}),
+					blocks.WithLabel[*blocks.FieldBlock]("Data Sub-Block"),
+				), 3, 5)
+
+				lb.LabelFunc = func() string {
+					return "Data List"
+				}
+
+				b.AddField("data2", lb)
 				// var c = blocks.NewMultiBlock()
 				// c.AddField("name", blocks.CharBlock())
 				// c.AddField("age", blocks.NumberBlock())

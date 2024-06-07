@@ -402,42 +402,42 @@ var handlerTests = []HandlerTest{
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test",
-		Expected:        "Unauthorized\n",
+		Expected:        "You do not have permission to access this page\n",
 	},
 	{
 		Name:            "List",
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel",
-		Expected:        "Unauthorized\n",
+		Expected:        "You do not have permission to access this page\n",
 	},
 	{
 		Name:            "Admin",
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test",
-		Expected:        "Unauthorized\n",
+		Expected:        "You do not have permission to access this page\n",
 	},
 	{
 		Name:            "Add",
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/add",
-		Expected:        "Unauthorized\n",
+		Expected:        "You do not have permission to access this page\n",
 	},
 	{
 		Name:            "Edit",
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/edit/1",
-		Expected:        "Unauthorized\n",
+		Expected:        "You do not have permission to access this page\n",
 	},
 	{
 		Name:            "Delete",
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/delete/1",
-		Expected:        "Unauthorized\n",
+		Expected:        "You do not have permission to access this page\n",
 	},
 }
 
@@ -474,13 +474,11 @@ func TestAdminHandlers(t *testing.T) {
 			req, err = http.NewRequest("GET", "http://"+HOST+test.URL, nil)
 			if err != nil {
 				t.Error(err)
-				os.Exit(1)
 			}
 
 			res, err = http.DefaultClient.Do(req)
 			if err != nil {
 				t.Error(err)
-				os.Exit(1)
 			}
 
 			buf.ReadFrom(res.Body)

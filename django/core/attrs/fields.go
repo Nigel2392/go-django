@@ -15,13 +15,17 @@ import (
 	"golang.org/x/text/language"
 )
 
-const (
-	HookFormFieldForType = "attrs.FormFieldForType"
-)
-
 var capCaser = cases.Title(language.English)
 
-type FormFieldGetter func(f Field, t reflect.Type, v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool)
+type FieldConfig struct {
+	Null     bool
+	Blank    bool
+	ReadOnly bool
+	Primary  bool
+	Label    string
+	HelpText string
+	Default  any
+}
 
 type FieldDef struct {
 	attrDef        FieldConfig
@@ -90,6 +94,10 @@ func (f *FieldDef) Name() string {
 	return f.field_t.Name
 }
 
+func (f *FieldDef) IsPrimary() bool {
+	return f.attrDef.Primary
+}
+
 func (f *FieldDef) AllowNull() bool {
 	return f.attrDef.Null
 }
@@ -104,6 +112,10 @@ func (f *FieldDef) AllowEdit() bool {
 
 func (f *FieldDef) Validate() error {
 	return nil
+}
+
+func (f *FieldDef) Instance() any {
+	return f.instance_v_ptr.Interface()
 }
 
 func (f *FieldDef) GetValue() interface{} {

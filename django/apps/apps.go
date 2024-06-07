@@ -13,6 +13,7 @@ import (
 
 type AppConfig struct {
 	AppName       string
+	Path          string
 	Init          func(settings django.Settings) error
 	Ready         func() error
 	URLPatterns   []core.URL
@@ -89,6 +90,10 @@ func (a *AppConfig) Use(m ...core.Middleware) {
 
 func (a *AppConfig) Name() string {
 	return a.AppName
+}
+
+func (a *AppConfig) URLPath() string {
+	return a.Path
 }
 
 func (a *AppConfig) URLs() []core.URL {

@@ -3,6 +3,7 @@ package django
 import (
 	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/errs"
+	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/mux"
 )
 
@@ -43,6 +44,14 @@ func AppURLs(u ...core.URL) func(*Application) error {
 func Apps(apps ...any) func(*Application) error {
 	return func(a *Application) error {
 		a.Register(apps...)
+		return nil
+	}
+}
+
+func AppLogger(w logger.Log) func(*Application) error {
+	return func(a *Application) error {
+		logger.Setup(w)
+		a.Log = w
 		return nil
 	}
 }

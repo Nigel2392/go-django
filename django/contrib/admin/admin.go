@@ -1,15 +1,40 @@
 package admin
 
 import (
+	"embed"
+	"io/fs"
 	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/core/attrs"
+	"github.com/Nigel2392/django/core/staticfiles"
+	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/mux"
-	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/elliotchance/orderedmap/v2"
 )
+
+var (
+	//go:embed assets/**
+	adminFS embed.FS
+
+	tplFS    fs.FS
+	staticFS fs.FS
+)
+
+func init() {
+	var err error
+	tplFS, err = fs.Sub(adminFS, "assets/templates")
+	if err != nil {
+		panic(err)
+	}
+
+	staticFS, err = fs.Sub(adminFS, "assets/static")
+	if err != nil {
+		panic(err)
+	}
+
+}
 
 var AdminSite *AdminApplication = &AdminApplication{
 	AppConfig: apps.NewAppConfig("admin"),
@@ -30,26 +55,41 @@ var (
 )
 
 func NewAppConfig() django.AppConfig {
-	AdminSite.Route.Use(func(next mux.Handler) mux.Handler {
-		return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
-			var user = authentication.Retrieve(req)
-			if user == nil || !user.IsAuthenticated() {
-				http.Error(w, "You need to login", http.StatusUnauthorized)
-				return
-			}
-
-			if !user.IsAdmin() {
-				http.Error(w, "Unauthorized", http.StatusForbidden)
-				return
-			}
-
-			next.ServeHTTP(w, req)
-		})
-	})
+	AdminSite.Route.Use(RequiredMiddleware)
 
 	AdminSite.Init = func(settings django.Settings) error {
 		settings.App().Mux.AddRoute(AdminSite.Route)
-		return nil
+
+		tpl.AddFS(tplFS, tpl.MatchAnd(
+			tpl.MatchPrefix("admin/"),
+			tpl.MatchOr(
+				tpl.MatchExt(".tmpl"),
+			),
+		))
+
+		staticfiles.AddFS(staticFS, tpl.MatchAnd(
+			//  tpl.MatchOr(
+			//  	tpl.MatchPrefix("admin/components/"),
+			//  	tpl.MatchPrefix("admin/shared/"),
+			//  	  tpl.MatchPrefix("admin/views/"),
+			tpl.MatchPrefix("admin/"),
+			//  ),
+			tpl.MatchOr(
+				tpl.MatchExt(".css"),
+				tpl.MatchExt(".js"),
+				tpl.MatchExt(".png"),
+				tpl.MatchExt(".jpg"),
+				tpl.MatchExt(".jpeg"),
+				tpl.MatchExt(".svg"),
+				tpl.MatchExt(".gif"),
+				tpl.MatchExt(".ico"),
+			),
+		))
+
+		return tpl.Bases("admin",
+			"admin/base.tmpl",
+		)
+
 	}
 
 	AdminSite.Ready = func() error {
