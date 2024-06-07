@@ -41,6 +41,7 @@ type MethodsView interface {
 }
 
 type ContextGetter interface {
+	View
 	GetContext(req *http.Request) (ctx.Context, error)
 }
 
@@ -75,6 +76,13 @@ type TemplateKeyer interface {
 	GetBaseKey() string
 }
 
+type DjangoView struct {
+	AllowedMethods  []string
+	BaseTemplateKey string
+	TemplateName    string
+	GetContextFn    func(req *http.Request) (ctx.Context, error)
+}
+
 type ErrorFunc func(w http.ResponseWriter, req *http.Request, err error, code int)
 
 func Serve(view View) http.Handler {
@@ -100,10 +108,6 @@ func Serve(view View) http.Handler {
 		"View must have at least one Serve method defined, I.E. ServeGET, ServePOST, etc...",
 	)
 
-	var errFn = func(w http.ResponseWriter, req *http.Request, err error, code int) {
-		http.Error(w, "Error processing request", code)
-	}
-
 	var allowedMethods []string
 	if methodViews, ok := view.(MethodsView); ok {
 		var m = methodViews.Methods()
@@ -118,14 +122,55 @@ func Serve(view View) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		Invoke(view, w, req, allowedMethods, errFn)
+		Invoke(view, w, req, allowedMethods)
 	})
 }
 
-func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods []string, errFn ErrorFunc) {
+func handleErrors(w http.ResponseWriter, req *http.Request, err error, code int) {
+	http.Error(w, "Error processing request", code)
+}
+
+// Invoke invokes the view and appropriately handles the request.
+//
+// This view is a generic view that can be used to render templates.
+//
+// It is moved into a separate function to better handle views and their composition.
+//
+// Example:
+//
+//	type MyView struct {
+//		TemplateView // Some sort of base view with a get context method.
+//		// Fields here...
+//	}
+//
+//	func (v *MyView) GetContext(req *http.Request) (ctx.Context, error) {
+//		// Get the context here...
+//	}
+//
+// In regular GO, the above TemplateView would not be able to get the context of the 'MyView' struct.
+//
+// This means the overridden GetContext method would remain completely invisible and thus go unused.
+//
+// This prevents a whole lot of flexibility in the design of the views.
+//
+// This function is a workaround to allow for a more class-based approach.
+//
+// It can handle the following types of views:
+//
+//  1. View - A generic view that can handle any type of request.
+//  2. MethodsView - A view that declares acceptable methods.
+//  3. ContextGetter - A view that can initiate a context for the request.
+//  4. TemplateGetter - A view that can get the template path of the template to render.
+//  5. TemplateView - A view that can render a template from a template path with a context.
+//  6. ErrorHandler - A view that can handle errors.
+//  7. Renderer - A view that can render directly to the response writer with a context.
+//  8. TemplateKeyer - A view that can get the base key for the template.
+//     This is useful for rendering a sub-template with a base template.
+func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods []string) {
 	var method = req.Method
 
 	// Setup error handling.
+	var errFn = handleErrors
 	if errHandler, ok := view.(ErrorHandler); ok {
 		errFn = errHandler.HandleError
 	}
@@ -166,6 +211,25 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 		}
 	}
 
+	// If the context is nil, then create a new context.
+	if context == nil {
+		context = core.Context(req)
+	}
+
+	// Set basic context variables.
+	context.Set("Request", req)
+	context.Set("Template", template)
+	context.Set("View", view)
+
+	// Render the template immediately if the view implements the Renderer interface.
+	if renderer, ok := view.(Renderer); ok {
+		err = renderer.Render(w, req, context)
+		if err != nil {
+			errFn(w, req, err, http.StatusInternalServerError)
+		}
+		return
+	}
+
 	// Get the template if the view implements the TemplateView interface.
 	if templateView, ok := view.(TemplateView); ok {
 		template = templateView.GetTemplate(req)
@@ -177,22 +241,8 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 		baseKey = templateKeyer.GetBaseKey()
 	}
 
-	// If the context is nil, then create a new context.
-	if context == nil {
-		context = core.Context(req)
-	}
-
-	// Set basic context variables.
-	context.Set("Request", req)
-	context.Set("Template", template)
-	context.Set("View", view)
-
 	// Render the template if the view implements the TemplateView interface.
 	if templateView, ok := view.(TemplateView); ok {
-		if template == "" {
-			goto renderer
-		}
-
 		err = templateView.Render(w, req, template, context)
 		if err != nil {
 			errFn(w, req, err, http.StatusInternalServerError)
@@ -201,17 +251,8 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 		return
 	}
 
-	// Render the template if the view implements the Renderer interface.
-renderer:
-	if renderer, ok := view.(Renderer); ok {
-		err = renderer.Render(w, req, context)
-		if err != nil {
-			errFn(w, req, err, http.StatusInternalServerError)
-		}
-		return
-	}
-
 	// Cannot render if there is no template.
+	// Developer error - HARD FAIL.
 	assert.False(
 		template == "" && baseKey == "",
 		"Template and base key cannot be empty",
