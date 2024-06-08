@@ -40,19 +40,18 @@ func NewAppConfig() *apps.AppConfig {
 		goldcrest.Register(
 			attrs.HookFormFieldForType, 0,
 			attrs.FormFieldGetter(func(f attrs.Field, t reflect.Type, v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
-				if v.Type() == blockTyp {
-					panic("Not implemented, field must be type of block and not interface{}")
-				}
+				assert.False(
+					v.Type() == blockTyp,
+					"field must be type of block and not interface{}",
+				)
 
-				fmt.Println("HookFormFieldForType", v.Type(), blockTyp, v.Type().Implements(blockTyp))
 				if v.Type().Implements(blockTyp) {
-					var name = f.Name()
-					fmt.Println("Name", name)
-					var getBlockDef = fmt.Sprintf("Get%sDef", name)
-					fmt.Println("GetBlockDef", getBlockDef)
-					var instance = f.Instance()
-					var method, ok = attrs.Method[func() Block](instance, getBlockDef)
-					fmt.Printf("Method %v, %v %T %v %s\n", method, ok, instance, instance, getBlockDef)
+					var (
+						name        = f.Name()
+						getBlockDef = fmt.Sprintf("Get%sDef", name)
+						instance    = f.Instance()
+						method, ok  = attrs.Method[func() Block](instance, getBlockDef)
+					)
 					if !ok {
 						return nil, false
 					}
