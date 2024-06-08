@@ -1,7 +1,6 @@
 package views
 
 import (
-	"fmt"
 	"net/http"
 	"reflect"
 
@@ -81,9 +80,6 @@ func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 				return v.ValidFn(req, form)
 			}
 		} else {
-			for front := form.BoundErrors().Front(); front != nil; front = front.Next() {
-				fmt.Printf("%s: %v\n", front.Key, front.Value)
-			}
 			if v.InvalidFn != nil {
 				return v.InvalidFn(req, form)
 			}

@@ -1,7 +1,6 @@
 package fields
 
 import (
-	"fmt"
 	"maps"
 
 	"github.com/Nigel2392/django/core/errs"
@@ -99,9 +98,7 @@ func (i *BaseField) Attrs() map[string]string {
 }
 
 func (i *BaseField) Label() string {
-	fmt.Println("FormLabel", i)
 	if i.FormLabel != nil {
-		fmt.Println("FormLabel", i.FormLabel())
 		return i.FormLabel()
 	}
 	return i.Caser.String(i.FieldName)
