@@ -68,14 +68,9 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 		"Model must have fields")
 
 	var model = &ModelDefinition{
-		Name:     opts.GetName(),
-		Fields:   opts.Fields,
-		Exclude:  opts.Exclude,
-		Labels:   opts.Labels,
-		GetForID: opts.GetForID,
-		GetList:  opts.GetList,
-		Model:    opts.Model,
-		_rModel:  rTyp,
+		Name:         opts.GetName(),
+		ModelOptions: opts,
+		_rModel:      rTyp,
 	}
 
 	assert.True(

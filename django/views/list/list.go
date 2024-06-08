@@ -1,6 +1,7 @@
 package list
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -21,12 +22,13 @@ type ListColumn[T attrs.Definer] interface {
 
 type View[T attrs.Definer] struct {
 	views.BaseView
-	AmountParam   string
-	PageParam     string
-	MaxAmount     uint64
-	DefaultAmount uint64
-	ListColumns   []ListColumn[T]
-	GetListFn     func(amount, offset uint, include []string) ([]T, error)
+	AmountParam      string
+	PageParam        string
+	MaxAmount        uint64
+	DefaultAmount    uint64
+	ListColumns      []ListColumn[T]
+	TitleFieldColumn func(ListColumn[T]) ListColumn[T]
+	GetListFn        func(amount, offset uint, include []string) ([]T, error)
 }
 
 func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
@@ -66,6 +68,12 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 			fields = append(fields, namer.Name())
 		}
 	}
+
+	if v.TitleFieldColumn != nil {
+		cols[0] = v.TitleFieldColumn(cols[0])
+	}
+
+	fmt.Println("fields", cols, len(cols))
 
 	list, err := v.GetListFn(uint(amount), uint(page), fields)
 	if err != nil {

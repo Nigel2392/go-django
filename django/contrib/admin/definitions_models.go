@@ -11,14 +11,8 @@ import (
 )
 
 type ModelDefinition struct {
+	ModelOptions
 	Name     string
-	Fields   []string
-	Exclude  []string
-	Labels   map[string]func() string
-	Model    attrs.Definer
-	GetForID func(identifier any) (attrs.Definer, error)
-	GetList  func(amount, offset uint, include []string) ([]attrs.Definer, error)
-
 	_rModel  reflect.Type
 	_include map[string]struct{}
 }

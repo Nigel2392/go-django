@@ -20,7 +20,7 @@ import (
 
 type MainStruct struct {
 	Email    *mail.Address       `attrs:"label=Email;helptext=Enter your email;null;required;min_length=5;max_length=250"`
-	Name     string              `attrs:"label=Name;helptext=Enter your name;required;regex=^[a-zA-Z]+$;min_length=2;max_length=50"`
+	Name     string              `attrs:"label=Name;helptext=Enter your name;primary;required;regex=^[a-zA-Z]+$;min_length=2;max_length=50"`
 	Password string              `attrs:"label=Password;helptext=Enter your password;required;min_length=8;max_length=50"`
 	Age      int                 `attrs:"label=Age;helptext=Enter your age;required"`
 	Data     map[string]any      `attrs:"label=Object Data;required;help_text=Enter your data"`

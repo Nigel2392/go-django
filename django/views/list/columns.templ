@@ -13,17 +13,13 @@ type funcColumn[T attrs.Definer] struct {
 
 templ (c *funcColumn[T]) Header() {
 	{{ assert.False(c.header == nil, "Column header is nil") }}
-    <th class="list-column-header">
-        { c.header() }
-    </th>
+    { c.header() }
 }
 
 templ (c *funcColumn[T]) Component(defs attrs.Definitions, row T) {
-    <td class="list-column">
-        { attrs.ToString(
-            c.data(defs, row),
-        ) }
-    </td>
+    { attrs.ToString(
+        c.data(defs, row),
+    ) }
 }
 
 type fieldColumn[T attrs.Definer] struct {
@@ -33,9 +29,7 @@ type fieldColumn[T attrs.Definer] struct {
 
 templ (c *fieldColumn[T]) Header() {
 	{{ assert.False(c.header == nil, "Column header is nil") }}
-    <th class="list-column-header">
-        { c.header() }
-    </th>
+    { c.header() }
 }
 
 func (c *fieldColumn[T]) data(defs attrs.Definitions, _ T) interface{} {
@@ -55,11 +49,38 @@ func (c *fieldColumn[T]) data(defs attrs.Definitions, _ T) interface{} {
 }
 
 templ (c *fieldColumn[T]) Component(defs attrs.Definitions, row T) {
-    <td class="list-column">
-        { attrs.ToString(
-            c.data(defs, row),
-        ) }
-    </td>
+    { attrs.ToString(
+        c.data(defs, row),
+    ) }
+}
+
+type titleFieldColumn[T attrs.Definer] struct {
+	wrapped ListColumn[T]
+	getURL  func(defs attrs.Definitions, row T) string
+}
+
+templ (c *titleFieldColumn[T]) Header() {
+	@c.wrapped.Header()
+}
+
+templ (c *titleFieldColumn[T]) Component(defs attrs.Definitions, row T) {
+	{{ var url = templ.SafeURL(c.getURL(defs, row))}}
+	<div class="list-title">
+		if url == "" {
+			@c.wrapped.Component(defs, row)
+		} else {
+			<a href={ url }>
+				@c.wrapped.Component(defs, row)
+			</a>
+		}
+	</div>
+}
+
+func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(defs attrs.Definitions, row T) string) ListColumn[T] {
+	return &titleFieldColumn[T]{
+		wrapped: wraps,
+		getURL:  getURL,
+	}
 }
 
 func Column[T attrs.Definer](header func() string, getter any) ListColumn[T] {

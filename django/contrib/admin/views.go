@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/views"
@@ -36,6 +37,15 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		},
 		GetListFn: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
 			return model.GetList(amount, offset, include)
+		},
+		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
+			return list.TitleFieldColumn(lc, func(defs attrs.Definitions, instance attrs.Definer) string {
+				var primaryField = defs.Primary()
+				if primaryField == nil {
+					return ""
+				}
+				return django.Reverse("admin:apps:model:edit", app.Name, model.Name, primaryField.GetValue())
+			})
 		},
 	}
 

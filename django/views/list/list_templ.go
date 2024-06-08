@@ -65,7 +65,15 @@ func (l *List[T]) Component() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		for _, column := range l.Columns {
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<th class=\"list-column-header\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 			templ_7745c5c3_Err = column.Header().Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</th>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

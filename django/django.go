@@ -50,7 +50,10 @@ type Application struct {
 
 type Option func(*Application) error
 
-var Global *Application
+var (
+	Global  *Application
+	Reverse = Global.Reverse
+)
 
 func App(opts ...Option) *Application {
 	if Global == nil {
@@ -62,6 +65,8 @@ func App(opts ...Option) *Application {
 
 			initialized: new(atomic.Bool),
 		}
+
+		Reverse = Global.Reverse
 	}
 
 	for i, opt := range opts {
@@ -172,6 +177,11 @@ func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Requ
 		serverError.UserMessage(),
 	)
 	a.handleErrorCodePure(w, r, serverError)
+}
+
+func (a *Application) Reverse(name string, args ...any) string {
+	var rt, _ = a.Mux.Reverse(name, args...)
+	return rt
 }
 
 func (a *Application) Initialize() error {

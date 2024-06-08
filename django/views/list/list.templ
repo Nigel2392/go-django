@@ -43,7 +43,9 @@ templ (l *List[T]) Component() {
         <thead>
             <tr class="list-header">
                 for _, column := range l.Columns {
-                    @column.Header()
+                    <th class="list-column-header">
+                        @column.Header()
+                    </th>
                 }
             </tr>
         </thead>
