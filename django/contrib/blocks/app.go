@@ -80,20 +80,22 @@ func NewAppConfig() *apps.AppConfig {
 			),
 		)
 
-		tpl.AddFS(
-			templateFS,
-			tpl.MatchAnd(
+		tpl.Add(tpl.Config{
+			AppName: "blocks",
+			FS:      templateFS,
+			Bases: []string{
+				"blocks/base.tmpl",
+			},
+			Matches: tpl.MatchAnd(
 				tpl.MatchPrefix("blocks"),
 				tpl.MatchOr(
 					tpl.MatchSuffix(".html"),
 					tpl.MatchSuffix(".tmpl"),
 				),
 			),
-		)
+		})
 
-		return tpl.Bases("blocks",
-			"blocks/base.tmpl",
-		)
+		return nil
 	}
 
 	AppConfig = cfg

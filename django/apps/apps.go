@@ -2,7 +2,6 @@ package apps
 
 import (
 	"database/sql"
-	"io/fs"
 
 	"github.com/Nigel2392/django"
 	core "github.com/Nigel2392/django/core"
@@ -12,14 +11,14 @@ import (
 )
 
 type AppConfig struct {
-	AppName       string
-	Path          string
-	Init          func(settings django.Settings) error
-	Ready         func() error
-	URLPatterns   []core.URL
-	Middlewares   []core.Middleware
-	CtxProcessors []func(tpl.RequestContext)
-	TemplateFS    fs.FS
+	AppName        string
+	Path           string
+	Init           func(settings django.Settings) error
+	Ready          func() error
+	URLPatterns    []core.URL
+	Middlewares    []core.Middleware
+	CtxProcessors  []func(tpl.RequestContext)
+	TemplateConfig *tpl.Config
 }
 
 type DBRequiredAppConfig struct {
@@ -104,8 +103,8 @@ func (a *AppConfig) Middleware() []core.Middleware {
 	return a.Middlewares
 }
 
-func (a *AppConfig) Templates() fs.FS {
-	return a.TemplateFS
+func (a *AppConfig) Templates() *tpl.Config {
+	return a.TemplateConfig
 }
 
 func (a *AppConfig) Processors() []func(tpl.RequestContext) {

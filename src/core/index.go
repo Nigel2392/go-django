@@ -18,16 +18,19 @@ import (
 )
 
 type MainStruct struct {
-	Email    *mail.Address
-	Name     string
-	Password string
-	Age      int
-	Data     map[string]any
-	Block    *blocks.StructBlock
+	Email    *mail.Address       `attrs:"label=Email;helptext=Enter your email;null;required;min_length=5;max_length=250"`
+	Name     string              `attrs:"label=Name;helptext=Enter your name;required;regex=^[a-zA-Z]+$;min_length=2;max_length=50"`
+	Password string              `attrs:"label=Password;helptext=Enter your password;required;min_length=8;max_length=50"`
+	Age      int                 `attrs:"label=Age;helptext=Enter your age;required"`
+	Data     map[string]any      `attrs:"label=Object Data;required;help_text=Enter your data"`
+	Block    *blocks.StructBlock `attrs:"label=Block;required;help_text=Enter your block data"`
 }
 
 func (m *MainStruct) GetBlockDef() blocks.Block {
 	var b = blocks.NewStructBlock()
+	b.LabelFunc = func() string {
+		return "Data Block"
+	}
 
 	b.AddField("name", blocks.CharBlock())
 	b.AddField("age", blocks.NumberBlock())
@@ -152,11 +155,6 @@ func Index(w http.ResponseWriter, r *http.Request) {
 				fields.Label("Data"),
 				fields.Name("data"),
 				fields.Required(true),
-			),
-			blocks.BlockField(
-				blocks.CharBlock(),
-				fields.Label("Block"),
-				fields.Name("block_data"),
 			),
 			blocks.BlockField(
 				instance.GetBlockDef(),

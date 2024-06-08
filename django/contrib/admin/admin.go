@@ -61,13 +61,6 @@ func NewAppConfig() django.AppConfig {
 	AdminSite.Init = func(settings django.Settings) error {
 		settings.App().Mux.AddRoute(AdminSite.Route)
 
-		tpl.AddFS(tplFS, tpl.MatchAnd(
-			tpl.MatchPrefix("admin/"),
-			tpl.MatchOr(
-				tpl.MatchExt(".tmpl"),
-			),
-		))
-
 		staticfiles.AddFS(staticFS, tpl.MatchAnd(
 			//  tpl.MatchOr(
 			//  	tpl.MatchPrefix("admin/components/"),
@@ -87,10 +80,22 @@ func NewAppConfig() django.AppConfig {
 			),
 		))
 
-		return tpl.Bases("admin",
-			"admin/base.tmpl",
-		)
+		tpl.Add(tpl.Config{
+			AppName: "admin",
+			FS:      tplFS,
+			Bases: []string{
+				"admin/skeleton.tmpl",
+				"admin/base.tmpl",
+			},
+			Matches: tpl.MatchAnd(
+				tpl.MatchPrefix("admin/"),
+				tpl.MatchOr(
+					tpl.MatchExt(".tmpl"),
+				),
+			),
+		})
 
+		return nil
 	}
 
 	AdminSite.Ready = func() error {
@@ -141,12 +146,13 @@ func NewAppConfig() django.AppConfig {
 			"delete", // admin:apps:model:delete
 		)
 
-		// Extension URLs
+		// External / Extension URLs root
 		var routeExtensions = AdminSite.Route.Handle(
-			mux.ANY, "extensions/", nil,
-			"extensions", // admin:extensions
+			mux.ANY, "ext/", nil,
+			"ext", // admin:ext
 		)
 
+		// Register all custom app URLs to the extension route
 		for front := AdminSite.Apps.Front(); front != nil; front = front.Next() {
 			var app = front.Value
 			for _, url := range app.URLs {
@@ -154,6 +160,7 @@ func NewAppConfig() django.AppConfig {
 			}
 		}
 
+		// Mark the admin site as ready
 		AdminSite.ready.Store(true)
 
 		return nil

@@ -39,13 +39,6 @@ func NewAppConfig() django.AppConfig {
 			return err
 		}
 
-		tpl.AddFS(tplFS, tpl.MatchAnd(
-			tpl.MatchPrefix("core/"),
-			tpl.MatchOr(
-				tpl.MatchExt(".tmpl"),
-			),
-		))
-
 		staticfiles.AddFS(staticFS, tpl.MatchAnd(
 			tpl.MatchPrefix("core/"),
 			tpl.MatchOr(
@@ -60,9 +53,21 @@ func NewAppConfig() django.AppConfig {
 			),
 		))
 
-		return tpl.Bases("core",
-			"core/base.tmpl",
-		)
+		tpl.Add(tpl.Config{
+			AppName: "core",
+			FS:      tplFS,
+			Bases: []string{
+				"core/base.tmpl",
+			},
+			Matches: tpl.MatchAnd(
+				tpl.MatchPrefix("core/"),
+				tpl.MatchOr(
+					tpl.MatchExt(".tmpl"),
+				),
+			),
+		})
+
+		return nil
 	}
 
 	return cfg

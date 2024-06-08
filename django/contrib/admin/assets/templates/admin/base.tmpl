@@ -1,17 +1,17 @@
-{{ define "base" }}
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        
-        <link rel="stylesheet" type="text/css" href="{{ static "admin/css/admin.css" }}">
-        <script src="{{ static "admin/js/admin.js" }}"></script>
+{{ template "skeleton" . }}
 
-        <title>{{ block "title" . }}{{ end }}</title>
-    </head>
-    <body>
-        {{ block "content" . }}{{ end }}
-    </body>
-</html>
+{{ define "root" }}
+    
+
+    <div id="main">
+
+
+        <div id="content">
+            {{ block "content" . }}{{ end }}
+        </div>
+
+
+    </div>
+
+
 {{ end }}

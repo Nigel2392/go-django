@@ -27,7 +27,7 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: "admin",
-			TemplateName:    "admin/views/add.tmpl",
+			TemplateName:    "admin/views/models/add.tmpl",
 		},
 		GetFormFn: func(req *http.Request) *forms.BaseForm {
 			var form = forms.NewBaseForm()

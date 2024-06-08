@@ -3,7 +3,6 @@ package django
 import (
 	"crypto/tls"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
 	"reflect"
@@ -34,7 +33,7 @@ type AppConfig interface {
 	Middleware() []core.Middleware
 	Initialize(settings Settings) error
 	Processors() []func(tpl.RequestContext)
-	Templates() fs.FS
+	Templates() *tpl.Config
 	OnReady() error
 }
 
@@ -295,7 +294,7 @@ func (a *Application) Initialize() error {
 
 		var templates = app.Templates()
 		if templates != nil {
-			tpl.AddFS(templates, nil)
+			tpl.Add(*templates)
 		}
 	}
 

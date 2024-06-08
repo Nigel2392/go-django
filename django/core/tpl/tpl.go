@@ -21,15 +21,27 @@ type RequestContext interface {
 }
 
 type Renderer interface {
-	AddFS(filesys fs.FS, matches func(path string) bool)
-	Funcs(funcs template.FuncMap)
+	Add(cfg Config)
 	Processors(funcs ...func(RequestContext))
-	Bases(key string, path ...string) error
-	Render(buffer io.Writer, data any, baseKey string, path ...string) error
+	Render(buffer io.Writer, data any, appKey string, path ...string) error
+	Funcs(funcs template.FuncMap)
+}
+
+type Config struct {
+	AppName string
+	FS      fs.FS
+	Bases   []string
+	Matches func(path string) bool
+	Funcs   template.FuncMap
+}
+
+type templates struct {
+	*Config
 }
 
 type TemplateRenderer struct {
-	cache    map[string]*template.Template
+	configs  map[string]*templates
+	cache    map[string]*templateObject
 	ctxFuncs []func(RequestContext)
 	funcs    template.FuncMap
 	fs       *MultiFS
@@ -37,8 +49,9 @@ type TemplateRenderer struct {
 
 func NewRenderer() *TemplateRenderer {
 	var r = &TemplateRenderer{
-		cache:    make(map[string]*template.Template),
 		funcs:    make(template.FuncMap),
+		configs:  make(map[string]*templates),
+		cache:    make(map[string]*templateObject),
 		ctxFuncs: make([]func(RequestContext), 0),
 		fs:       NewMultiFS(),
 	}
@@ -82,27 +95,50 @@ func (r *TemplateRenderer) Funcs(funcs template.FuncMap) {
 	maps.Copy(r.funcs, funcs)
 }
 
-func (r *TemplateRenderer) Bases(key string, path ...string) error {
-	assert.Gt(path, 0, "path is required")
-
-	var tmpl, _, err = r.getTemplate("", path...)
-	if err != nil {
-		return errors.Wrap(err, "failed to get template")
-	}
-
-	r.cache[key] = tmpl
-	return nil
-}
-
 func (r *TemplateRenderer) Processors(funcs ...func(RequestContext)) {
 	r.ctxFuncs = append(r.ctxFuncs, funcs...)
 }
 
-func (r *TemplateRenderer) AddFS(fs fs.FS, matches func(string) bool) {
-	r.fs.Add(fs, matches)
+func (r *TemplateRenderer) Add(cfg Config) {
+	_, ok := r.configs[cfg.AppName]
+	assert.False(ok, "config '%s' already exists", cfg.AppName)
+
+	var config = &templates{
+		Config: &cfg,
+	}
+
+	r.fs.Add(cfg.FS, cfg.Matches)
+	r.configs[cfg.AppName] = config
 }
 
-func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*template.Template, string, error) {
+type templateObject struct {
+	name  string
+	paths []string
+	cfg   *templates
+	t     *template.Template
+}
+
+func (t *templateObject) Execute(w io.Writer, data any) error {
+	var clone, err = t.t.Clone()
+	if err != nil {
+		return errors.Wrap(err, "failed to clone template")
+	}
+
+	return clone.ExecuteTemplate(w, getTemplateName(t.paths[0]), data)
+}
+
+func getTemplateName(path string) string {
+	name := filepath.Base(
+		filepath.ToSlash(path),
+	)
+
+	name = strings.TrimSuffix(
+		name, filepath.Ext(name),
+	)
+	return name
+}
+
+func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*templateObject, error) {
 
 	assert.False(
 		len(path) == 0 && baseKey == "",
@@ -113,60 +149,72 @@ func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*templat
 		path = []string{baseKey}
 		baseKey = ""
 	}
+	var cfg *templates
+	for _, c := range r.configs {
+		if baseKey == c.AppName || c.Matches(path[0]) {
+			cfg = c
+			break
+		}
+	}
 
+	if cfg == nil {
+		return nil, errors.Errorf(
+			"no config found for template %s", path[0],
+		)
+	}
+
+	var name = getTemplateName(path[0])
 	if tmpl, ok := r.cache[path[0]]; ok && tmpl != nil {
-		tmpl, err := tmpl.Clone()
-		return tmpl, "", err
-	}
-
-	var name = filepath.Base(
-		filepath.ToSlash(path[0]),
-	)
-
-	name = strings.TrimSuffix(name, filepath.Ext(name))
-
-	var (
-		tmpl = r.newTemplate(name)
-		err  error
-	)
-
-	if baseKey != "" {
-		var baseTmpl, ok = r.cache[baseKey]
-		if !ok {
-			return nil, "", errors.Errorf(
-				"base template %s not found", baseKey,
-			)
-		}
-		tmpl, err = tmpl.AddParseTree(baseKey, baseTmpl.Tree.Copy())
+		var clone, err = tmpl.t.Clone()
 		if err != nil {
-			return nil, "", errors.Wrapf(
-				err, "failed to add base template %s", baseKey,
-			)
+			return nil, errors.Wrap(err, "failed to clone template")
 		}
+
+		return &templateObject{
+			name:  tmpl.name,
+			cfg:   tmpl.cfg,
+			paths: tmpl.paths,
+			t:     clone,
+		}, nil
 	}
 
-	tmpl, err = tmpl.ParseFS(r.fs, path...)
+	var funcMap = make(template.FuncMap)
+	maps.Copy(funcMap, r.funcs)
+	maps.Copy(funcMap, cfg.Funcs)
+
+	tmpl := template.New(name)
+	tmpl = tmpl.Funcs(funcMap)
+
+	var tpls []string
+	if baseKey != "" {
+		tpls = make([]string, 0, len(cfg.Bases)+len(path))
+		tpls = append(tpls, cfg.Bases...)
+		tpls = append(tpls, path...)
+	} else {
+		tpls = path
+	}
+
+	tmpl, err := tmpl.ParseFS(r.fs, tpls...)
 	if err != nil {
-		return nil, "", errors.Wrapf(
+		return nil, errors.Wrapf(
 			err, "failed to parse template %s", path,
 		)
 	}
 
-	clone, err := tmpl.Clone()
-	if err != nil {
-		return nil, "", errors.Wrap(err, "failed to clone template")
+	var t = &templateObject{
+		name:  name,
+		cfg:   cfg,
+		paths: tpls,
+		t:     tmpl,
 	}
-	r.cache[path[0]] = clone
 
-	return tmpl, name, nil
-}
+	r.cache[path[0]] = t
 
-func (r *TemplateRenderer) newTemplate(name string) *template.Template {
-	return template.New(name).Funcs(r.funcs)
+	return t, nil
 }
 
 func (r *TemplateRenderer) Render(b io.Writer, context any, baseKey string, path ...string) error {
-	var tmpl, _, err = r.getTemplate(baseKey, path...)
+	var tmpl, err = r.getTemplate(baseKey, path...)
 	if err != nil {
 		return errors.Wrap(err, "failed to get template")
 	}

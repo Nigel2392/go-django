@@ -3,7 +3,6 @@ package tpl
 import (
 	"html/template"
 	"io"
-	"io/fs"
 	"strings"
 )
 
@@ -13,8 +12,8 @@ func init() {
 	Global = NewRenderer()
 }
 
-func AddFS(fs fs.FS, matches func(string) bool) {
-	Global.AddFS(fs, matches)
+func Add(c Config) {
+	Global.Add(c)
 }
 
 func Funcs(funcs template.FuncMap) {
@@ -23,10 +22,6 @@ func Funcs(funcs template.FuncMap) {
 
 func Processors(funcs ...func(RequestContext)) {
 	Global.Processors(funcs...)
-}
-
-func Bases(key string, path ...string) error {
-	return Global.Bases(key, path...)
 }
 
 func FRender(b io.Writer, context any, baseKey string, path ...string) error {

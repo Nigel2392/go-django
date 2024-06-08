@@ -15,10 +15,15 @@ func init() {
 	var templates, err = fs.Sub(formTemplates, "assets/templates")
 	assert.True(err == nil, "failed to get form templates")
 
-	tpl.AddFS(templates, tpl.MatchAnd(
-		tpl.MatchPrefix("forms/widgets/"),
-		tpl.MatchOr(
-			tpl.MatchExt(".html"),
+	tpl.Add(tpl.Config{
+		AppName: "forms",
+		FS:      templates,
+		Bases:   []string{},
+		Matches: tpl.MatchAnd(
+			tpl.MatchPrefix("forms/widgets/"),
+			tpl.MatchOr(
+				tpl.MatchExt(".html"),
+			),
 		),
-	))
+	})
 }
