@@ -1,0 +1,31 @@
+package menu
+
+type MenuItem interface {
+	// Order is used to sort the menu items
+	//
+	// The menu items are sorted in ascending order
+	//
+	// I.E. The menu item with the lowest order will be displayed first
+	//
+	// If two menu items have the same order, they will remain in the order they were added
+	Order() int
+
+	// Implement the templ.Component interface
+	// 
+	// We explicitly only render the menu with the templ generated code.
+	templ.Component
+}
+
+type Menu struct {
+	Items []MenuItem
+}
+
+templ (m *Menu) Create(c context.Context, w io.Writer) {
+	<div class="menu">
+		for _, item := range m.Items {
+			<div class="menu-item">
+				@item
+			</div>
+		}
+	</div>
+}

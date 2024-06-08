@@ -57,6 +57,8 @@ cover/
 *.mo
 *.pot
 
+**/admin/images/**
+
 # Django stuff:
 *.log
 local_settings.py

@@ -37,7 +37,7 @@ h1 {
 #main #sidebar {
     flex: 0 0 240px;
     background-color: #2e1f5e;
-    border-right: 1px solid #e0e0e0;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -49,9 +49,15 @@ h1 {
     align-items: center;
     justify-content: center;
 }
-#main #sidebar #sidebar-logo svg {
+#main #sidebar #sidebar-logo svg,
+#main #sidebar #sidebar-logo img {
     margin: 1em 0;
     padding: 1em;
+    transition: transform 0.2s ease-in-out;
+}
+#main #sidebar #sidebar-logo svg:hover,
+#main #sidebar #sidebar-logo img:hover {
+    transform: scale(1.1);
 }
 #main #content-wrapper {
     flex: 1;
@@ -69,10 +75,7 @@ h1 {
 }
 #main #content-wrapper #content {
     background-color: #fff;
-    border: 1px dotted #e0e0e0;
     border-radius: 4px;
-    padding: 0.5em 1em;
-
     & h1, 
     & h2, 
     & h3, 
