@@ -151,7 +151,7 @@ func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*templat
 	}
 	var cfg *templates
 	for _, c := range r.configs {
-		if baseKey == c.AppName || c.Matches(path[0]) {
+		if baseKey == c.AppName || c.Matches != nil && c.Matches(path[0]) {
 			cfg = c
 			break
 		}
