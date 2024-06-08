@@ -3,6 +3,7 @@ package admin
 import (
 	"reflect"
 
+	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/elliotchance/orderedmap/v2"
@@ -33,6 +34,7 @@ type AppDefinition struct {
 	Models *orderedmap.OrderedMap[
 		string, *ModelDefinition,
 	]
+	URLs []core.URL
 }
 
 func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {

@@ -55,7 +55,7 @@ var (
 )
 
 func NewAppConfig() django.AppConfig {
-	AdminSite.Route.Use(RequiredMiddleware)
+	// AdminSite.Route.Use(RequiredMiddleware)
 
 	AdminSite.Init = func(settings django.Settings) error {
 		settings.App().Mux.AddRoute(AdminSite.Route)
@@ -94,30 +94,64 @@ func NewAppConfig() django.AppConfig {
 
 	AdminSite.Ready = func() error {
 
+		// First initialize routes which do not require authentication
+		AdminSite.Route.Get(
+			"login/", mux.NewHandler(LoginHandler),
+			"login", // admin:login
+		)
+		AdminSite.Route.Post(
+			"login/", mux.NewHandler(LoginHandler),
+			"login", // admin:login
+		)
+
+		// Add authentication/administrator middleware to all subsequent routes added
+		AdminSite.Route.Use(
+			RequiredMiddleware,
+		)
+
+		// Initialize authenticated routes
 		var routeApps = AdminSite.Route.Handle(
 			mux.ANY, "apps/<<app_name>>/",
 			newAppHandler(AppHandler),
+			"apps", // admin:apps
 		)
 
 		var routeModelsList = routeApps.Handle(
 			mux.ANY, "model/<<model_name>>/",
 			newModelHandler(ModelListHandler),
+			"model", // admin:apps:model
 		)
 
 		routeModelsList.Handle(
 			mux.ANY, "add/",
 			newModelHandler(ModelAddHandler),
+			"add", // admin:apps:model:add
 		)
 
 		routeModelsList.Handle(
 			mux.ANY, "edit/<<model_id>>/",
 			newInstanceHandler(ModelEditHandler),
+			"edit", // admin:apps:model:edit
 		)
 
 		routeModelsList.Handle(
 			mux.ANY, "delete/<<model_id>>/",
 			newInstanceHandler(ModelDeleteHandler),
+			"delete", // admin:apps:model:delete
 		)
+
+		// Extension URLs
+		var routeExtensions = AdminSite.Route.Handle(
+			mux.ANY, "extensions/", nil,
+			"extensions", // admin:extensions
+		)
+
+		for front := AdminSite.Apps.Front(); front != nil; front = front.Next() {
+			var app = front.Value
+			for _, url := range app.URLs {
+				url.Register(routeExtensions)
+			}
+		}
 
 		AdminSite.ready.Store(true)
 

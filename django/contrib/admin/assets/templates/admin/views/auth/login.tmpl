@@ -1,0 +1,10 @@
+{{ template "base" . }}
+
+{{ define "title" }}
+
+{{ end }}
+
+{{ define "content" }}
+    <h1>{{ T "Login" }}</h1>
+    {{ include . "admin/forms/form.tmpl" }}
+{{ end }}
