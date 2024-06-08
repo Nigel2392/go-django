@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/mux"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -96,11 +97,11 @@ func NewAppConfig() django.AppConfig {
 
 		// First initialize routes which do not require authentication
 		AdminSite.Route.Get(
-			"login/", mux.NewHandler(LoginHandler),
+			"login/", views.Serve(LoginHandler),
 			"login", // admin:login
 		)
 		AdminSite.Route.Post(
-			"login/", mux.NewHandler(LoginHandler),
+			"login/", views.Serve(LoginHandler),
 			"login", // admin:login
 		)
 
@@ -110,31 +111,31 @@ func NewAppConfig() django.AppConfig {
 		)
 
 		// Initialize authenticated routes
-		var routeApps = AdminSite.Route.Handle(
+		var baseApps = AdminSite.Route.Handle(
 			mux.ANY, "apps/<<app_name>>/",
 			newAppHandler(AppHandler),
 			"apps", // admin:apps
 		)
 
-		var routeModelsList = routeApps.Handle(
+		var baseModelsRoute = baseApps.Handle(
 			mux.ANY, "model/<<model_name>>/",
 			newModelHandler(ModelListHandler),
 			"model", // admin:apps:model
 		)
 
-		routeModelsList.Handle(
+		baseModelsRoute.Handle(
 			mux.ANY, "add/",
 			newModelHandler(ModelAddHandler),
 			"add", // admin:apps:model:add
 		)
 
-		routeModelsList.Handle(
+		baseModelsRoute.Handle(
 			mux.ANY, "edit/<<model_id>>/",
 			newInstanceHandler(ModelEditHandler),
 			"edit", // admin:apps:model:edit
 		)
 
-		routeModelsList.Handle(
+		baseModelsRoute.Handle(
 			mux.ANY, "delete/<<model_id>>/",
 			newInstanceHandler(ModelDeleteHandler),
 			"delete", // admin:apps:model:delete

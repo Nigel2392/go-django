@@ -19,6 +19,10 @@ type BaseView struct {
 func (v *BaseView) ServeXXX(w http.ResponseWriter, req *http.Request) {
 }
 
+func (v *BaseView) Methods() []string {
+	return v.AllowedMethods
+}
+
 func (v *BaseView) GetContext(req *http.Request) (ctx.Context, error) {
 	if v.GetContextFn != nil {
 		return v.GetContextFn(req)
