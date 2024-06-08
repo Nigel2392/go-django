@@ -5,11 +5,21 @@
 
     <div id="main">
 
+        <section id="sidebar">
+            {{ block "sidebar" . }}{{ end }}
+        </section>
 
-        <div id="content">
-            {{ block "content" . }}{{ end }}
-        </div>
+        <section id="content-wrapper">
 
+            <div id="navigation">
+                {{ block "navigation" . }}{{ end }}
+            </div>
+
+            <div id="content">
+                {{ block "content" . }}{{ end }}
+            </div>
+
+        </section>
 
     </div>
 
