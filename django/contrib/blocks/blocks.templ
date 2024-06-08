@@ -20,13 +20,13 @@ templ RenderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext
 
 templ (b *FieldBlock)RenderTempl(w io.Writer, id, name string, value interface{}, telepath string, errors []error, tplCtx ctx.Context)  {
 	{{ var c = tplCtx.(*BlockContext) }}
-    <div data-field-block class="field" data-controller="block" data-block-class-path-value="Django.blocks.field-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(errors) }>
+    <div data-field-block class="form-field field" data-controller="block" data-block-class-path-value="Django.blocks.field-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(errors) }>
 
         @widgets.ErrorListComponent("field-block", errors)
 
         {{ var err = b.Field().Widget().RenderWithErrors(w, id, name, value, errors, c.Attrs) }}
         if err != nil {
-           return err
+           {{ return err }}
         }
     </div>
 }

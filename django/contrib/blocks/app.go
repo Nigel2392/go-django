@@ -58,7 +58,35 @@ func NewAppConfig() *apps.AppConfig {
 
 					var blockDef = method()
 
+					attrs.Set(instance, name, blockDef)
+
 					return BlockField(blockDef, opts...), true
+				}
+
+				return nil, false
+			}),
+		)
+
+		goldcrest.Register(
+			attrs.DefaultForType, 0,
+			attrs.DefaultGetter(func(f attrs.Field, t reflect.Type, v reflect.Value) (any, bool) {
+
+				if v.Type().Implements(blockTyp) {
+					var (
+						name        = f.Name()
+						getBlockDef = fmt.Sprintf("Get%sDef", name)
+						instance    = f.Instance()
+						method, ok  = attrs.Method[func() Block](instance, getBlockDef)
+					)
+					if !ok {
+						return nil, false
+					}
+
+					var blockDef = method()
+
+					attrs.Set(instance, name, blockDef)
+
+					return blockDef, true
 				}
 
 				return nil, false

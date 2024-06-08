@@ -61,14 +61,14 @@ func (b *FieldBlock) RenderTempl(w io.Writer, id, name string, value interface{}
 		}
 		ctx = templ.ClearChildren(ctx)
 		var c = tplCtx.(*BlockContext)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-field-block class=\"field\" data-controller=\"block\" data-block-class-path-value=\"Django.blocks.field-block\" data-block-class-args-value=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-field-block class=\"form-field field\" data-controller=\"block\" data-block-class-path-value=\"Django.blocks.field-block\" data-block-class-args-value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(telepath)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 23, Col: 158}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 23, Col: 169}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -81,7 +81,7 @@ func (b *FieldBlock) RenderTempl(w io.Writer, id, name string, value interface{}
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(templ.JSONString(errors))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 23, Col: 217}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/blocks/blocks.templ`, Line: 23, Col: 228}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -97,10 +97,7 @@ func (b *FieldBlock) RenderTempl(w io.Writer, id, name string, value interface{}
 		}
 		var err = b.Field().Widget().RenderWithErrors(w, id, name, value, errors, c.Attrs)
 		if err != nil {
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("return err")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
+			return err
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</div>")
 		if templ_7745c5c3_Err != nil {

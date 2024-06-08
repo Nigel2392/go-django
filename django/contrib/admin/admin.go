@@ -44,9 +44,7 @@ var AdminSite *AdminApplication = &AdminApplication{
 	](),
 	Ordering: make([]string, 0),
 	Route: mux.NewRoute(
-		mux.ANY, "admin/", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
-			w.Write([]byte("Admin Interface"))
-		}),
+		mux.ANY, "admin/", nil, "admin",
 	),
 }
 
@@ -113,6 +111,10 @@ func NewAppConfig() django.AppConfig {
 		// Add authentication/administrator middleware to all subsequent routes added
 		AdminSite.Route.Use(
 			RequiredMiddleware,
+		)
+
+		AdminSite.Route.Get(
+			"", views.Serve(HomeHandler), "home",
 		)
 
 		// Initialize authenticated routes

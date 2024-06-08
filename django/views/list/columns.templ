@@ -1,0 +1,75 @@
+package list
+
+import (
+    "github.com/Nigel2392/django/core/attrs"
+    "github.com/Nigel2392/django/core/assert"
+    "github.com/Nigel2392/django/forms/fields"
+)
+
+type funcColumn[T attrs.Definer] struct {
+	header func() string
+	data   func(defs attrs.Definitions, row T) interface{}
+}
+
+templ (c *funcColumn[T]) Header() {
+	{{ assert.False(c.header == nil, "Column header is nil") }}
+    <th class="list-column-header">
+        { c.header() }
+    </th>
+}
+
+templ (c *funcColumn[T]) Component(defs attrs.Definitions, row T) {
+    <td class="list-column">
+        { attrs.ToString(
+            c.data(defs, row),
+        ) }
+    </td>
+}
+
+type fieldColumn[T attrs.Definer] struct {
+	header    func() string
+	fieldName string
+}
+
+templ (c *fieldColumn[T]) Header() {
+	{{ assert.False(c.header == nil, "Column header is nil") }}
+    <th class="list-column-header">
+        { c.header() }
+    </th>
+}
+
+func (c *fieldColumn[T]) data(defs attrs.Definitions, _ T) interface{} {
+	var field, ok = defs.Field(c.fieldName)
+
+	assert.False(
+		field == nil || !ok,
+		"Field %q does not exist", c.fieldName,
+	)
+
+	var d = field.GetValue()
+	if fields.IsZero(d) {
+		return field.GetDefault()
+	}
+
+	return d
+}
+
+templ (c *fieldColumn[T]) Component(defs attrs.Definitions, row T) {
+    <td class="list-column">
+        { attrs.ToString(
+            c.data(defs, row),
+        ) }
+    </td>
+}
+
+func Column[T attrs.Definer](header func() string, getter any) ListColumn[T] {
+	switch g := getter.(type) {
+	case func(defs attrs.Definitions, row T) interface{}:
+		return &funcColumn[T]{header, g}
+	case string:
+		return &fieldColumn[T]{header, g}
+	default:
+		assert.Fail("Invalid column getter type")
+		return nil
+	}
+}

@@ -63,7 +63,7 @@ func NewRenderer() *TemplateRenderer {
 			}
 			return html
 		},
-		"safeHTML": func(v any) template.HTML {
+		"safe": func(v any) template.HTML {
 			var s = fmt.Sprint(v)
 			return template.HTML(s)
 		},

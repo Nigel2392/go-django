@@ -20,8 +20,9 @@ type Definitions interface {
 type Field interface {
 	Labeler
 	Helper
-	Name() string
-	Instance() any
+	Stringer
+	Namer
+	Instance() Definer
 	IsPrimary() bool
 	AllowNull() bool
 	AllowBlank() bool
@@ -31,6 +32,14 @@ type Field interface {
 	SetValue(v interface{}, force bool) error
 	FormField() fields.Field
 	Validate() error
+}
+
+type Namer interface {
+	Name() string
+}
+
+type Stringer interface {
+	ToString() string
 }
 
 type Labeler interface {

@@ -114,8 +114,22 @@ func (f *FieldDef) Validate() error {
 	return nil
 }
 
-func (f *FieldDef) Instance() any {
-	return f.instance_v_ptr.Interface()
+func (f *FieldDef) Instance() Definer {
+	return f.instance_v_ptr.Interface().(Definer)
+}
+
+func (f *FieldDef) ToString() string {
+	var v = f.GetValue()
+	if v == nil {
+		v = f.GetDefault()
+	}
+
+	var funcName = fmt.Sprintf("%sToString", f.Name())
+	if method, ok := f.instance_t.MethodByName(funcName); ok {
+		return method.Func.Call([]reflect.Value{f.instance_v_ptr})[0].String()
+	}
+
+	return toString(v)
 }
 
 func (f *FieldDef) GetValue() interface{} {
@@ -126,6 +140,18 @@ func (f *FieldDef) GetDefault() interface{} {
 
 	if f.attrDef.Default != nil {
 		return f.attrDef.Default
+	}
+
+	var typForNew = f.field_t.Type
+	if f.field_t.Type.Kind() == reflect.Ptr {
+		typForNew = f.field_t.Type.Elem()
+	}
+
+	var hooks = goldcrest.Get[DefaultGetter](DefaultForType)
+	for _, hook := range hooks {
+		if defaultValue, ok := hook(f, typForNew, f.field_v); ok {
+			return defaultValue
+		}
 	}
 
 	var funcName = fmt.Sprintf("GetDefault%s", f.Name())
