@@ -13,6 +13,7 @@ type ModelOptions struct {
 	Name     string
 	Fields   []string
 	Exclude  []string
+	Labels   map[string]func() string
 	GetForID func(identifier any) (attrs.Definer, error)
 	GetList  func(amount, offset uint, include []string) ([]attrs.Definer, error)
 	Model    attrs.Definer
@@ -70,6 +71,7 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 		Name:     opts.GetName(),
 		Fields:   opts.Fields,
 		Exclude:  opts.Exclude,
+		Labels:   opts.Labels,
 		GetForID: opts.GetForID,
 		GetList:  opts.GetList,
 		Model:    opts.Model,

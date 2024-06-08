@@ -14,6 +14,7 @@ type ModelDefinition struct {
 	Name     string
 	Fields   []string
 	Exclude  []string
+	Labels   map[string]func() string
 	Model    attrs.Definer
 	GetForID func(identifier any) (attrs.Definer, error)
 	GetList  func(amount, offset uint, include []string) ([]attrs.Definer, error)
@@ -102,6 +103,18 @@ func (o *ModelDefinition) GetName() string {
 		return rTyp.Name()
 	}
 	return o.Name
+}
+
+func (o *ModelDefinition) GetLabel(field string, default_ string) func() string {
+	if o.Labels != nil {
+		var label, ok = o.Labels[field]
+		if ok {
+			return label
+		}
+	}
+	return func() string {
+		return default_
+	}
 }
 
 func (m *ModelDefinition) ModelFields(instance attrs.Definer) []attrs.Field {

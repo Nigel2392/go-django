@@ -11,6 +11,7 @@ import "io"
 import "bytes"
 
 import "strings"
+import "slices"
 
 type MenuItem interface {
 	// Order is used to sort the menu items
@@ -39,6 +40,22 @@ func (m *Menu) HTML() string {
 	var buf = new(bytes.Buffer)
 	m.Component().Render(ctx, buf)
 	return buf.String()
+}
+
+func (m *Menu) MenuItems() []MenuItem {
+	var shallowCopy = make([]MenuItem, len(m.Items))
+	copy(shallowCopy, m.Items)
+
+	slices.SortStableFunc(shallowCopy, func(a, b MenuItem) int {
+		if a.Order() < b.Order() {
+			return -1
+		} else if a.Order() > b.Order() {
+			return 1
+		}
+		return 0
+	})
+
+	return shallowCopy
 }
 
 func (m *Menu) Component() templ.Component {
@@ -84,7 +101,7 @@ func (m *Menu) Component() templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(m.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/menu/menu.templ`, Line: 35, Col: 86}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/menu/menu.templ`, Line: 52, Col: 86}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -99,7 +116,7 @@ func (m *Menu) Component() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for _, item := range m.Items {
+		for _, item := range m.MenuItems() {
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"menu-item\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -179,7 +196,7 @@ func (i *Item) Component() templ.Component {
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(i.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/menu/menu.templ`, Line: 57, Col: 94}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/menu/menu.templ`, Line: 74, Col: 94}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -206,7 +223,7 @@ func (i *Item) Component() templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(i.Label())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/menu/menu.templ`, Line: 58, Col: 12}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/menu/menu.templ`, Line: 75, Col: 12}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -278,7 +295,7 @@ func (s *SubmenuItem) Component() templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(s.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/menu/menu.templ`, Line: 75, Col: 91}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/menu/menu.templ`, Line: 92, Col: 91}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -296,7 +313,7 @@ func (s *SubmenuItem) Component() templ.Component {
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(s.Label())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/menu/menu.templ`, Line: 77, Col: 13}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/menu/menu.templ`, Line: 94, Col: 13}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {

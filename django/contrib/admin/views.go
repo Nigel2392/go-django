@@ -6,7 +6,6 @@ import (
 
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/forms"
-	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/django/views/list"
 )
@@ -22,7 +21,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 	var columns = make([]list.ListColumn[attrs.Definer], len(model.Fields))
 	for i, field := range model.Fields {
 		columns[i] = list.Column[attrs.Definer](
-			fields.S(field), field,
+			model.GetLabel(field, field), field,
 		)
 	}
 
@@ -52,8 +51,16 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 	} else {
 		form = forms.NewBaseForm()
 		for _, field := range model.ModelFields(instance) {
+			var (
+				name      = field.Name()
+				formfield = field.FormField()
+			)
+
+			var label = model.GetLabel(name, field.Label())
+			formfield.SetLabel(label)
+
 			form.AddField(
-				field.Name(), field.FormField(),
+				name, formfield,
 			)
 		}
 	}

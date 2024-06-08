@@ -2,14 +2,17 @@ package admin
 
 import (
 	"embed"
+	"html/template"
 	"io/fs"
 	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
+	"github.com/Nigel2392/django/contrib/admin/menu"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/mux"
 	"github.com/elliotchance/orderedmap/v2"
@@ -91,6 +94,36 @@ func NewAppConfig() django.AppConfig {
 					tpl.MatchExt(".tmpl"),
 				),
 			),
+			Funcs: template.FuncMap{
+				"menu": func() template.HTML {
+					var m = &menu.Menu{
+						Items: []menu.MenuItem{
+							&menu.Item{
+								Ordering: 3,
+								Label:    fields.S("Users 1"),
+								Link:     fields.S("/admin/users/"),
+							},
+							&menu.Item{
+								Ordering: 1,
+								Label:    fields.S("Users 2"),
+								Link:     fields.S("/admin/users/"),
+							},
+							&menu.Item{
+								Ordering: 4,
+								Label:    fields.S("Users 3"),
+								Link:     fields.S("/admin/users/"),
+							},
+							&menu.Item{
+								Ordering: 2,
+								Label:    fields.S("Users 4"),
+								Link:     fields.S("/admin/users/"),
+							},
+						},
+					}
+
+					return template.HTML(m.HTML())
+				},
+			},
 		})
 
 		return nil

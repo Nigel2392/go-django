@@ -170,7 +170,15 @@ var _ = admin.RegisterApp(
 	"core",
 	admin.ModelOptions{
 		Fields: []string{"Email", "Name", "Password", "Age", "Data", "Block"},
-		Model:  &MainStruct{},
+		Labels: map[string]func() string{
+			"Email":    fields.S("Object Email"),
+			"Name":     fields.S("Object Name"),
+			"Password": fields.S("Object Password"),
+			"Age":      fields.S("Object Age"),
+			"Data":     fields.S("Object Data"),
+			"Block":    fields.S("Object Block"),
+		},
+		Model: &MainStruct{},
 		GetForID: func(identifier any) (attrs.Definer, error) {
 			return &MainStruct{}, nil
 		},
