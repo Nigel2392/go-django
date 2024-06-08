@@ -23,7 +23,60 @@ type MainStruct struct {
 	Password string
 	Age      int
 	Data     map[string]any
-	Block    map[string]any ``
+	Block    *blocks.StructBlock
+}
+
+func (m *MainStruct) GetBlockDef() blocks.Block {
+	var b = blocks.NewStructBlock()
+
+	b.AddField("name", blocks.CharBlock())
+	b.AddField("age", blocks.NumberBlock())
+	b.AddField("email", blocks.EmailBlock())
+	b.AddField("password", blocks.PasswordBlock())
+	b.AddField("date", blocks.DateBlock())
+	b.AddField("datetime", blocks.DateTimeBlock())
+
+	var lb = blocks.NewListBlock(blocks.TextBlock(
+		blocks.WithValidators[*blocks.FieldBlock](func(i interface{}) error {
+			fmt.Println("Validating", i)
+			if i == nil || i == "" {
+				return errs.ErrFieldRequired
+			}
+			return nil
+		}),
+		blocks.WithLabel[*blocks.FieldBlock]("Data Sub-Block"),
+	), 3, 5)
+
+	lb.LabelFunc = func() string {
+		return "Data List"
+	}
+
+	b.AddField("data", lb)
+
+	lb = blocks.NewListBlock(blocks.TextBlock(
+		blocks.WithValidators[*blocks.FieldBlock](func(i interface{}) error {
+			fmt.Println("Validating", i)
+			if i == nil || i == "" {
+				return errs.ErrFieldRequired
+			}
+			return nil
+		}),
+		blocks.WithLabel[*blocks.FieldBlock]("Data Sub-Block"),
+	), 3, 5)
+
+	lb.LabelFunc = func() string {
+		return "Data List"
+	}
+
+	b.AddField("data2", lb)
+	// var c = blocks.NewMultiBlock()
+	// c.AddField("name", blocks.CharBlock())
+	// c.AddField("age", blocks.NumberBlock())
+	// c.AddField("email", blocks.EmailBlock())
+	//
+	// b.AddField("data2", c)
+
+	return b
 }
 
 var _ = admin.RegisterApp(
@@ -41,6 +94,9 @@ var _ = admin.RegisterApp(
 )
 
 func (f *MainStruct) FieldDefs() attrs.Definitions {
+	if f == nil {
+		panic("MainStruct is nil")
+	}
 	return attrs.AutoDefinitions(f)
 }
 
@@ -50,7 +106,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	var session = sessions.Retrieve(r)
 	fmt.Println(session.Get("page_key"))
 	session.Set("page_key", "Last visited the index page")
-
+	var instance = &MainStruct{}
 	var form = forms.Initialize(
 		forms.NewBaseForm(),
 		forms.WithRequestData("POST", r),
@@ -102,64 +158,11 @@ func Index(w http.ResponseWriter, r *http.Request) {
 				fields.Label("Block"),
 				fields.Name("block_data"),
 			),
-			func() fields.Field {
-				var b = blocks.NewStructBlock()
-
-				b.AddField("name", blocks.CharBlock())
-				b.AddField("age", blocks.NumberBlock())
-				b.AddField("email", blocks.EmailBlock())
-				b.AddField("password", blocks.PasswordBlock())
-				b.AddField("date", blocks.DateBlock())
-				b.AddField("datetime", blocks.DateTimeBlock())
-
-				var lb = blocks.NewListBlock(blocks.TextBlock(
-					blocks.WithValidators[*blocks.FieldBlock](func(i interface{}) error {
-						fmt.Println("Validating", i)
-						if i == nil || i == "" {
-							return errs.ErrFieldRequired
-						}
-						return nil
-					}),
-					blocks.WithLabel[*blocks.FieldBlock]("Data Sub-Block"),
-				), 3, 5)
-
-				lb.LabelFunc = func() string {
-					return "Data List"
-				}
-
-				b.AddField("data", lb)
-
-				lb = blocks.NewListBlock(blocks.TextBlock(
-					blocks.WithValidators[*blocks.FieldBlock](func(i interface{}) error {
-						fmt.Println("Validating", i)
-						if i == nil || i == "" {
-							return errs.ErrFieldRequired
-						}
-						return nil
-					}),
-					blocks.WithLabel[*blocks.FieldBlock]("Data Sub-Block"),
-				), 3, 5)
-
-				lb.LabelFunc = func() string {
-					return "Data List"
-				}
-
-				b.AddField("data2", lb)
-				// var c = blocks.NewMultiBlock()
-				// c.AddField("name", blocks.CharBlock())
-				// c.AddField("age", blocks.NumberBlock())
-				// c.AddField("email", blocks.EmailBlock())
-				//
-				// b.AddField("data2", c)
-
-				var f = blocks.BlockField(
-					b,
-					fields.Label("Block"),
-					fields.Name("block"),
-				)
-
-				return f
-			}(),
+			blocks.BlockField(
+				instance.GetBlockDef(),
+				fields.Label("Block"),
+				fields.Name("block"),
+			),
 		),
 		forms.OnValid(func(f forms.Form) {
 			fmt.Println("Form is valid")

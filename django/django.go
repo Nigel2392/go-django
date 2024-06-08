@@ -16,6 +16,7 @@ import (
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/internal/http_"
 	"github.com/Nigel2392/django/utils"
 	"github.com/Nigel2392/goldcrest"
@@ -154,14 +155,14 @@ func (a *Application) handleErrorCodePure(w http.ResponseWriter, r *http.Request
 	}
 }
 
-func (a *Application) veryBadServerError(err error, w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
-}
+//func (a *Application) veryBadServerError(err error, w http.ResponseWriter, r *http.Request) {
+//	http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
+//}
 
 func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Request) {
 	var serverError = except.GetServerError(err)
 	if serverError == nil {
-		a.veryBadServerError(err, w, r)
+		// a.veryBadServerError(err, w, r)
 		return
 	}
 
@@ -205,7 +206,7 @@ func (a *Application) Initialize() error {
 	}
 
 	a.Mux.Use(
-		middleware.Recoverer(a.veryBadServerError),
+		// middleware.Recoverer(a.veryBadServerError),
 		http_.RequestSignalMiddleware,
 		middleware.AllowedHosts(
 			ConfigGet(a.Settings, "ALLOWED_HOSTS", []string{"*"})...,
@@ -255,6 +256,7 @@ func (a *Application) Initialize() error {
 			}
 			return rt
 		},
+		"T": fields.T,
 	})
 
 	var err error
@@ -305,7 +307,7 @@ func (a *Application) Initialize() error {
 	}
 
 	a.Mux.Use(
-		middleware.Recoverer(a.ServerError),
+	// middleware.Recoverer(a.ServerError),
 	)
 
 	a.initialized.Store(true)

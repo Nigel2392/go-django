@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"slices"
 
+	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
@@ -76,15 +77,12 @@ type TemplateKeyer interface {
 	GetBaseKey() string
 }
 
-type DjangoView struct {
-	AllowedMethods  []string
-	BaseTemplateKey string
-	TemplateName    string
-	GetContextFn    func(req *http.Request) (ctx.Context, error)
-}
-
 type ErrorFunc func(w http.ResponseWriter, req *http.Request, err error, code int)
 
+// Serve serves a view.
+//
+// This function is a generic view handler that can be used
+// to serve any type of view which the `Invoke` function can handle.
 func Serve(view View) http.Handler {
 	var allowedFnMethods []string
 	for _, method := range httpMethods {
@@ -122,7 +120,7 @@ func Serve(view View) http.Handler {
 	}
 
 	return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-		Invoke(view, w, req, allowedMethods)
+		Invoke(view, w, req, allowedMethods...)
 	})
 }
 
@@ -166,7 +164,7 @@ func handleErrors(w http.ResponseWriter, req *http.Request, err error, code int)
 //  7. Renderer - A view that can render directly to the response writer with a context.
 //  8. TemplateKeyer - A view that can get the base key for the template.
 //     This is useful for rendering a sub-template with a base template.
-func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods []string) {
+func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods ...string) {
 	var method = req.Method
 
 	// Setup error handling.
@@ -177,6 +175,7 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 
 	// Check if the method is allowed.
 	if len(allowedMethods) > 0 && !slices.Contains(allowedMethods, method) {
+		django.App().Log.Error("Method not allowed")
 		errFn(
 			w, req,
 			errs.Error("Method not allowed"),
@@ -204,8 +203,8 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 
 	// Get the context if the view implements the ContextGetter interface.
 	if contextGetter, ok := view.(ContextGetter); ok {
-		context, err = contextGetter.GetContext(req)
-		if err != nil {
+		if context, err = contextGetter.GetContext(req); err != nil {
+			django.App().Log.Error(err)
 			errFn(w, req, err, http.StatusInternalServerError)
 			return
 		}
@@ -223,8 +222,8 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 
 	// Render the template immediately if the view implements the Renderer interface.
 	if renderer, ok := view.(Renderer); ok {
-		err = renderer.Render(w, req, context)
-		if err != nil {
+		if err = renderer.Render(w, req, context); err != nil {
+			django.App().Log.Error(err)
 			errFn(w, req, err, http.StatusInternalServerError)
 		}
 		return
@@ -243,10 +242,9 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 
 	// Render the template if the view implements the TemplateView interface.
 	if templateView, ok := view.(TemplateView); ok {
-		err = templateView.Render(w, req, template, context)
-		if err != nil {
+		if err = templateView.Render(w, req, template, context); err != nil {
+			django.App().Log.Error(err)
 			errFn(w, req, err, http.StatusInternalServerError)
-			return
 		}
 		return
 	}
@@ -270,6 +268,7 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 		err = tpl.FRender(w, context, baseKey)
 	}
 	if err != nil {
+		django.App().Log.Error(err)
 		errFn(w, req, err, http.StatusInternalServerError)
 	}
 }

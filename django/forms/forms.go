@@ -52,6 +52,7 @@ type Form interface {
 	Widgets() []widgets.Widget
 	AddField(name string, field fields.Field)
 	AddWidget(name string, widget widgets.Widget)
+	BoundForm() BoundForm
 	BoundFields() *orderedmap.OrderedMap[string, BoundField]
 	BoundErrors() *orderedmap.OrderedMap[string, []error]
 

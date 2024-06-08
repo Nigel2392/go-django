@@ -17,6 +17,9 @@ func BlockField(block Block, opts ...func(fields.Field)) *BlockFormField {
 		bf.FormWidget = NewBlockWidget(block)
 	}
 
+	bf.FormLabel = block.Label
+	bf.FormHelpText = block.HelpText
+
 	return bf
 }
 

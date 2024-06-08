@@ -8,10 +8,10 @@
         <link rel="stylesheet" type="text/css" href="{{ static "admin/css/admin.css" }}">
         <script src="{{ static "admin/js/admin.js" }}"></script>
 
-        <title>{{ template "title" . }}</title>
+        <title>{{ block "title" . }}{{ end }}</title>
     </head>
     <body>
-        {{ template "root" . }}
+        {{ block "content" . }}{{ end }}
     </body>
 </html>
 {{ end }}

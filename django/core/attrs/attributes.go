@@ -60,13 +60,16 @@ func Method[T any](obj interface{}, name string) (n T, ok bool) {
 		return n, false
 	}
 
-	var v = reflect.ValueOf(obj)
-	if v.Kind() == reflect.Ptr {
-		v = v.Elem()
-	}
-
-	var m = v.MethodByName(name)
+	var (
+		v = reflect.ValueOf(obj)
+		m = v.MethodByName(name)
+	)
+checkValid:
 	if !m.IsValid() {
+		if v.Kind() == reflect.Ptr {
+			v = v.Elem()
+			goto checkValid
+		}
 		return n, false
 	}
 
