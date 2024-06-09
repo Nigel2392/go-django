@@ -5,7 +5,9 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/django"
+	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/attrs"
+	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/django/views/list"
@@ -34,6 +36,12 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: "admin",
 			TemplateName:    "admin/views/models/list.tmpl",
+			GetContextFn: func(req *http.Request) (ctx.Context, error) {
+				var context = core.Context(req)
+				context.Set("app", app)
+				context.Set("model", model)
+				return context, nil
+			},
 		},
 		GetListFn: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
 			return model.GetList(amount, offset, include)

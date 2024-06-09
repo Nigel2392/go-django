@@ -60,7 +60,9 @@ type titleFieldColumn[T attrs.Definer] struct {
 }
 
 templ (c *titleFieldColumn[T]) Header() {
-	@c.wrapped.Header()
+	<div class="list-title">
+		@c.wrapped.Header()
+	</div>
 }
 
 templ (c *titleFieldColumn[T]) Component(defs attrs.Definitions, row T) {

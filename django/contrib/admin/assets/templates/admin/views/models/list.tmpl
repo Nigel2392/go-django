@@ -2,34 +2,15 @@
 
 {{ define "title" }}{{ T "List" }}{{ end }}
 
-{{ define "extra_css" }}
-    <style>
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 1.2em;
-        }
-
-        th, td {
-            border: none;
-            padding: 1em 0;
-            text-align: left;
-        }
-
-        th {
-            /* background-color: #f2f2f2; */
-            font-size: 1.2em;
-            font-weight: bold;
-        }
-
-        /* tr:nth-child(even) { */
-            /* background-color: #f2f2f2; */
-        /* } */
-    </style>
-{{ end }}
-
 {{ define "content" }}
-    <h1>{{ T "List" }}</h1>
+    <div class="list-view-header">
+        <div class="buttons">
+            <a href="{{ url "admin:apps:model:add" (.Get "app").Name (.Get "model").Name }}" class="btn btn-primary">{{ T "Add" }}</a>
+        </div>
+        <div class="title-text">
+            <h1>{{ T "List" }}</h1>
+        </div>
+    </div>
     {{ $list := (.Get "list") }}
     {{ $headers := (.Get "headers") }}
 
