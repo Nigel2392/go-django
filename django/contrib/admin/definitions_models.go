@@ -10,9 +10,32 @@ import (
 	"github.com/Nigel2392/django/core/except"
 )
 
+type ModelOptions struct {
+	Name     string
+	Fields   []string
+	Exclude  []string
+	Format   map[string]func(v any) any
+	Labels   map[string]func() string
+	GetForID func(identifier any) (attrs.Definer, error)
+	GetList  func(amount, offset uint, include []string) ([]attrs.Definer, error)
+	Model    attrs.Definer
+}
+
+func (o *ModelOptions) GetName() string {
+	if o.Name == "" {
+		var rTyp = reflect.TypeOf(o.Model)
+		if rTyp.Kind() == reflect.Ptr {
+			return rTyp.Elem().Name()
+		}
+		return rTyp.Name()
+	}
+	return o.Name
+}
+
 type ModelDefinition struct {
 	ModelOptions
 	Name     string
+	LabelFn  func() string
 	_rModel  reflect.Type
 	_include map[string]struct{}
 }
@@ -97,6 +120,13 @@ func (o *ModelDefinition) GetName() string {
 		return rTyp.Name()
 	}
 	return o.Name
+}
+
+func (o *ModelDefinition) Label() string {
+	if o.LabelFn != nil {
+		return o.LabelFn()
+	}
+	return o.GetName()
 }
 
 func (o *ModelDefinition) GetLabel(field string, default_ string) func() string {

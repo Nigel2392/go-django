@@ -201,6 +201,10 @@ func (m *MainStruct) GetBlockDef() blocks.Block {
 
 var _ = admin.RegisterApp(
 	"core",
+	admin.AppOptions{
+		RegisterToAdminMenu: true,
+		MenuLabel:           fields.S("Core"),
+	},
 	admin.ModelOptions{
 		Fields: []string{"Email", "Name", "Password", "Age", "Data", "Block"},
 		Labels: map[string]func() string{

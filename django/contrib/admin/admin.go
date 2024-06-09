@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"bytes"
 	"embed"
 	"html/template"
 	"io/fs"
@@ -8,12 +9,12 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
-	"github.com/Nigel2392/django/contrib/admin/menu"
+	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
-	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/views"
+	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -63,12 +64,7 @@ func NewAppConfig() django.AppConfig {
 		settings.App().Mux.AddRoute(AdminSite.Route)
 
 		staticfiles.AddFS(staticFS, tpl.MatchAnd(
-			//  tpl.MatchOr(
-			//  	tpl.MatchPrefix("admin/components/"),
-			//  	tpl.MatchPrefix("admin/shared/"),
-			//  	  tpl.MatchPrefix("admin/views/"),
 			tpl.MatchPrefix("admin/"),
-			//  ),
 			tpl.MatchOr(
 				tpl.MatchExt(".css"),
 				tpl.MatchExt(".js"),
@@ -95,33 +91,17 @@ func NewAppConfig() django.AppConfig {
 				),
 			),
 			Funcs: template.FuncMap{
-				"menu": func() template.HTML {
-					var m = &menu.Menu{
-						Items: []menu.MenuItem{
-							&menu.Item{
-								Ordering: 3,
-								Label:    fields.S("Users 1"),
-								Link:     fields.S("/admin/users/"),
-							},
-							&menu.Item{
-								Ordering: 1,
-								Label:    fields.S("Users 2"),
-								Link:     fields.S("/admin/users/"),
-							},
-							&menu.Item{
-								Ordering: 4,
-								Label:    fields.S("Users 3"),
-								Link:     fields.S("/admin/users/"),
-							},
-							&menu.Item{
-								Ordering: 2,
-								Label:    fields.S("Users 4"),
-								Link:     fields.S("/admin/users/"),
-							},
-						},
+				"menu": func(r *http.Request) template.HTML {
+					var m = &menu.Menu{}
+					var menuItems = menu.NewItems()
+					var hooks = goldcrest.Get[RegisterMenuItemHookFunc](RegisterMenuItemHook)
+					for _, hook := range hooks {
+						hook(AdminSite, menuItems)
 					}
-
-					return template.HTML(m.HTML())
+					m.Items = menuItems.All()
+					var buf = new(bytes.Buffer)
+					m.Component().Render(r.Context(), buf)
+					return template.HTML(buf.String())
 				},
 			},
 		})
@@ -193,6 +173,10 @@ func NewAppConfig() django.AppConfig {
 			for _, url := range app.URLs {
 				url.Register(routeExtensions)
 			}
+		}
+
+		for front := AdminSite.Apps.Front(); front != nil; front = front.Next() {
+			front.Value.OnReady(AdminSite)
 		}
 
 		// Mark the admin site as ready

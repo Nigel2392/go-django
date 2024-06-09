@@ -33,7 +33,7 @@ func (a *AdminApplication) IsReady() bool {
 	return a.ready.Load()
 }
 
-func (a *AdminApplication) RegisterApp(name string, opts ...ModelOptions) *AppDefinition {
+func (a *AdminApplication) RegisterApp(name string, appOptions AppOptions, opts ...ModelOptions) *AppDefinition {
 
 	assert.False(
 		a.IsReady(),
@@ -47,7 +47,8 @@ func (a *AdminApplication) RegisterApp(name string, opts ...ModelOptions) *AppDe
 	)
 
 	var app = &AppDefinition{
-		Name: name,
+		Name:    name,
+		Options: appOptions,
 		Models: orderedmap.NewOrderedMap[
 			string, *ModelDefinition,
 		](),

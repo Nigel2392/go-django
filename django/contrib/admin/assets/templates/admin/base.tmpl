@@ -5,18 +5,22 @@
 
     <div id="main">
 
-        <section id="sidebar">
-            <div id="sidebar-logo-wrapper">
-                <a id="sidebar-logo" href="{{ url "admin:home" }}">
-                    
-                    <img src="{{ static "admin/images/logo.svg" }}" alt="Logo" />
-
-                </a>
+        <section id="sidebar-wrapper">
+            <div id="sidebar">
+                <div id="sidebar-logo-wrapper">
+                    <a id="sidebar-logo" href="{{ url "admin:home" }}">
+                        
+                        <img src="{{ static "admin/images/logo.svg" }}" alt="Logo" />
+    
+                    </a>
+                </div>
+    
+                <div id="sidebar-content">
+                    {{ menu .Request }}
+    
+                    {{ block "sidebar" . }}{{ end }}
+                </div>
             </div>
-
-            {{ menu }}
-
-            {{ block "sidebar" . }}{{ end }}
         </section>
 
         <section id="content-wrapper">

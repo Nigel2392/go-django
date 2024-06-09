@@ -82,12 +82,12 @@ func getFormForInstance(instance attrs.Definer, app *AppDefinition, model *Model
 	return form
 }
 
-func newInstanceView(instance attrs.Definer, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[modelforms.ModelForm[attrs.Definer]] {
+func newInstanceView(tpl string, instance attrs.Definer, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[modelforms.ModelForm[attrs.Definer]] {
 	return &views.FormView[modelforms.ModelForm[attrs.Definer]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: "admin",
-			TemplateName:    "admin/views/models/edit.tmpl",
+			TemplateName:    fmt.Sprintf("admin/views/models/%s.tmpl", tpl),
 		},
 		GetFormFn: func(req *http.Request) modelforms.ModelForm[attrs.Definer] {
 			var form = getFormForInstance(instance, app, model, r)
@@ -109,7 +109,6 @@ func newInstanceView(instance attrs.Definer, app *AppDefinition, model *ModelDef
 					initial[n] = v
 				}
 			}
-			fmt.Println(initial)
 			return initial
 		},
 	}
@@ -117,12 +116,12 @@ func newInstanceView(instance attrs.Definer, app *AppDefinition, model *ModelDef
 
 var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
 	var instance = model.NewInstance()
-	var addView = newInstanceView(instance, app, model, r)
+	var addView = newInstanceView("add", instance, app, model, r)
 	views.Invoke(addView, w, r)
 }
 
 var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
-	var editView = newInstanceView(instance, app, model, r)
+	var editView = newInstanceView("edit", instance, app, model, r)
 	views.Invoke(editView, w, r)
 }
 

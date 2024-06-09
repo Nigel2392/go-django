@@ -1,0 +1,35 @@
+package components
+
+type ButtonType uint8
+
+const (
+    ButtonTypePrimary ButtonType = iota
+    ButtonTypeSecondary
+    ButtonTypeSuccess
+    ButtonTypeDanger
+    ButtonTypeWarning
+    ButtonTypeHollow
+)
+
+type ButtonConfig struct {
+    Text string
+    Icon templ.Component
+    Type ButtonType
+}
+
+templ Button(config ButtonConfig) {
+    <button class={ 
+        "button",
+        templ.KV("primary", config.Type & ButtonTypePrimary != 0),
+        templ.KV("secondary", config.Type & ButtonTypeSecondary != 0),
+        templ.KV("success", config.Type & ButtonTypeSuccess != 0),
+        templ.KV("danger", config.Type & ButtonTypeDanger != 0),
+        templ.KV("warning", config.Type & ButtonTypeWarning != 0),
+        templ.KV("hollow", config.Type & ButtonTypeHollow != 0),
+    }>
+        if config.Icon != nil {
+            @config.Icon
+        }
+        { config.Text }
+    </button>
+}

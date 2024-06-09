@@ -4,44 +4,12 @@ import (
 	"context"
 	"io"
 	"reflect"
-
-	"github.com/Nigel2392/django/core/assert"
+	"strings"
 )
 
-type ComponentFunc = interface{} // func(...interface{}) -> Component
-
-type reflectFunc struct {
-	fn   ComponentFunc
-	rTyp reflect.Type
-	rVal reflect.Value
-}
-
-func (c *reflectFunc) Call(args ...interface{}) interface{} {
-
-	assert.True(c.rTyp.Kind() == reflect.Func, "component must be a function")
-	assert.True(c.rTyp.NumIn() == len(args), "component must have the same number of arguments as the number of arguments passed to Call")
-	assert.True(c.rTyp.NumOut() == 1, "component must return a single value of type interface { Render(ctx context.Context, w io.Writer) error }")
-
-	in := make([]reflect.Value, len(args))
-	for i, arg := range args {
-
-		assert.True(
-			in[i].Type().AssignableTo(c.rTyp.In(i)) || in[i].Type().ConvertibleTo(c.rTyp.In(i)),
-			"argument %d must be of type %s, got %s",
-			i,
-			c.rTyp.In(i),
-		)
-
-		if in[i].Type().ConvertibleTo(c.rTyp.In(i)) {
-			in[i] = reflect.ValueOf(arg).Convert(c.rTyp.In(i))
-		} else {
-			in[i] = reflect.ValueOf(arg)
-		}
-	}
-
-	var out = c.rVal.Call(in)
-	return out[0].Interface()
-
+type Registry interface {
+	Register(name string, componentFn ComponentFunc)
+	Render(name string, args ...interface{}) Component
 }
 
 type Component interface {
@@ -49,12 +17,14 @@ type Component interface {
 }
 
 type ComponentRegistry struct {
-	components map[string]*reflectFunc
+	ns_components map[string]map[string]*reflectFunc
+	components    map[string]*reflectFunc
 }
 
 func NewComponentRegistry() *ComponentRegistry {
 	return &ComponentRegistry{
-		components: make(map[string]*reflectFunc),
+		ns_components: make(map[string]map[string]*reflectFunc),
+		components:    make(map[string]*reflectFunc),
 	}
 }
 
@@ -69,13 +39,51 @@ func (r *ComponentRegistry) newComponent(fn ComponentFunc) *reflectFunc {
 	}
 }
 
+func (r *ComponentRegistry) Namespace(name string) Registry {
+	return &namespace{
+		name:              name,
+		ComponentRegistry: r,
+	}
+}
+
 func (r *ComponentRegistry) Register(name string, componentFn ComponentFunc) {
+	if strings.Contains(name, ".") && !(strings.HasPrefix(name, ".") || strings.HasSuffix(name, ".")) {
+		var parts = strings.SplitN(name, ".", 2)
+		var namespace = r.Namespace(parts[0])
+		namespace.Register(parts[1], componentFn)
+		return
+	}
 	r.components[name] = r.newComponent(componentFn)
 }
 
 func (r *ComponentRegistry) Render(name string, args ...interface{}) Component {
-	component, ok := r.components[name]
-	assert.True(ok, "component %s not found", name)
+	if c, ok := r.components[name]; ok {
+		return c.Call(args...).(Component)
+	}
 
-	return component.Call(args).(Component)
+	var hasDot = strings.Contains(name, ".")
+	if !hasDot {
+		return nil
+	}
+
+	var parts = strings.SplitN(name, ".", 2)
+	if len(parts) != 2 {
+		return nil
+	}
+
+	var ns = parts[0]
+	var n = parts[1]
+
+	if c, ok := r.ns_components[ns][n]; ok {
+		return c.Call(args...).(Component)
+	}
+
+	return nil
 }
+
+var (
+	RegistryObject = NewComponentRegistry()
+	Register       = RegistryObject.Register
+	Namespace      = RegistryObject.Namespace
+	Render         = RegistryObject.Render
+)

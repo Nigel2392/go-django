@@ -12,7 +12,10 @@
     "include": [
       "django/contrib/blocks/assets/static_src/**/*.js",
       "django/contrib/blocks/assets/static_src/**/*.ts",
-      "django/contrib/blocks/assets/static_src/**/*.tsx"
+      "django/contrib/blocks/assets/static_src/**/*.tsx",
+      "django/contrib/admin/assets/static_src/**/*.js",
+      "django/contrib/admin/assets/static_src/**/*.ts",
+      "django/contrib/admin/assets/static_src/**/*.tsx"
     ],
     "exclude": [
       "node_modules",

@@ -97,6 +97,12 @@ func (h *FileHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	switch file := file.(type) {
 	case io.ReadSeeker:
+		var name = stat.Name()
+		var _, hasCtype = w.Header()["Content-Type"]
+		var ctype = mime.TypeByExtension(filepath.Ext(name))
+		if ctype != "" && !hasCtype {
+			w.Header().Set("Content-Type", ctype)
+		}
 		http.ServeContent(w, r, stat.Name(), stat.ModTime(), file)
 	case io.ReaderAt:
 		var reader = io.NewSectionReader(file, 0, stat.Size())

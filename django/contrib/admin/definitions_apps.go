@@ -3,37 +3,25 @@ package admin
 import (
 	"reflect"
 
+	"github.com/Nigel2392/django"
+	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
-	"github.com/Nigel2392/django/core/attrs"
+	"github.com/Nigel2392/goldcrest"
+	"github.com/a-h/templ"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-type ModelOptions struct {
-	Name     string
-	Fields   []string
-	Exclude  []string
-	Format   map[string]func(v any) any
-	Labels   map[string]func() string
-	GetForID func(identifier any) (attrs.Definer, error)
-	GetList  func(amount, offset uint, include []string) ([]attrs.Definer, error)
-	Model    attrs.Definer
-}
-
-func (o *ModelOptions) GetName() string {
-	if o.Name == "" {
-		var rTyp = reflect.TypeOf(o.Model)
-		if rTyp.Kind() == reflect.Ptr {
-			return rTyp.Elem().Name()
-		}
-		return rTyp.Name()
-	}
-	return o.Name
+type AppOptions struct {
+	RegisterToAdminMenu bool
+	MenuLabel           func() string
+	MenuIcon            func() string
 }
 
 type AppDefinition struct {
-	Name   string
-	Models *orderedmap.OrderedMap[
+	Name    string
+	Options AppOptions
+	Models  *orderedmap.OrderedMap[
 		string, *ModelDefinition,
 	]
 	URLs []core.URL
@@ -95,5 +83,66 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 		var modelDef, ok = a.Models.Get(model)
 		assert.True(ok, "Model not found")
 		modelDef.OnRegister(adminSite, a)
+	}
+
+	if a.Options.RegisterToAdminMenu {
+		var menuLabel = a.Options.MenuLabel
+		if menuLabel == nil {
+			menuLabel = func() string {
+				return a.Name
+			}
+		}
+
+		var menuIcon templ.Component
+		if a.Options.MenuIcon != nil {
+			menuIcon = templ.Raw(
+				a.Options.MenuIcon(),
+			)
+		}
+
+		var hookFn = func(site *AdminApplication, items menu.Items) {
+			var menuItem = &menu.SubmenuItem{
+				BaseItem: menu.BaseItem{
+					Label: menuLabel,
+					Logo:  menuIcon,
+				},
+				Menu: &menu.Menu{
+					Items: make([]menu.MenuItem, 0),
+				},
+			}
+
+			var menuLabel func() string = a.Options.MenuLabel
+			if menuLabel == nil {
+				menuLabel = func() string {
+					return a.Name
+				}
+			}
+
+			menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
+				BaseItem: menu.BaseItem{
+					Label: menuLabel,
+				},
+				Link: func() string {
+					return django.Reverse("admin:apps", a.Name)
+				},
+			})
+
+			for front := a.Models.Front(); front != nil; front = front.Next() {
+				var model = front.Value
+
+				menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
+					BaseItem: menu.BaseItem{
+						Label: model.Label,
+					},
+					Link: func() string {
+						return django.Reverse("admin:apps:model", a.Name, model.Name)
+					},
+				})
+			}
+
+			items.Append(menuItem)
+		}
+
+		goldcrest.Register(RegisterMenuItemHook, 0, hookFn)
 	}
 }

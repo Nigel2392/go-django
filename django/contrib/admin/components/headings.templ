@@ -1,0 +1,37 @@
+package components
+
+import (
+    "fmt"
+)
+
+templ Heading(level uint8, text string) {
+    {{ var heading = fmt.Sprintf("h%d", level) }}
+    {{ var headingTag = fmt.Sprintf("<%s class=\"heading__title\">%s</%s>", heading, text, heading) }}
+    <div class="heading">
+        @templ.Raw(headingTag)
+    </div>
+}
+
+templ Heading1(text string) {
+    @Heading(1, text)
+}
+
+templ Heading2(text string) {
+    @Heading(2, text)
+}
+
+templ Heading3(text string) {
+    @Heading(3, text)
+}
+
+templ Heading4(text string) {
+    @Heading(4, text)
+}
+
+templ Heading5(text string) {
+    @Heading(5, text)
+}
+
+templ Heading6(text string) {
+    @Heading(6, text)
+}

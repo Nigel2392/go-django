@@ -30,6 +30,14 @@ function baseConfig(rules = []) {
 
 module.exports = [
     {
+        entry: './django/contrib/admin/assets/static_src/index.ts',
+        output: {
+            'path': path.resolve(__dirname, 'django/contrib/admin/assets/static/admin/js/'),
+            'filename': 'index.js'
+        },
+        ...baseConfig(),
+    },
+    {
         entry: './django/contrib/blocks/assets/static_src/index.ts',
         output: {
             'path': path.resolve(__dirname, 'django/contrib/blocks/assets/static/blocks/js/'),

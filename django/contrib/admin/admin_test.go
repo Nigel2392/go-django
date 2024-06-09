@@ -106,24 +106,26 @@ func init() {
 		w.Write([]byte(")"))
 	}
 
-	admin.RegisterApp("test", admin.ModelOptions{
-		Name:  "TestModel",
-		Model: &TestModelStruct{},
-		GetForID: func(identifier any) (attrs.Definer, error) {
-			return &TestModelStruct{
-				ID:   1,
-				Name: "Test",
-			}, nil
-		},
-		GetList: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
-			return []attrs.Definer{
-				&TestModelStruct{
+	admin.RegisterApp("test",
+		admin.AppOptions{},
+		admin.ModelOptions{
+			Name:  "TestModel",
+			Model: &TestModelStruct{},
+			GetForID: func(identifier any) (attrs.Definer, error) {
+				return &TestModelStruct{
 					ID:   1,
 					Name: "Test",
-				},
-			}, nil
-		},
-	})
+				}, nil
+			},
+			GetList: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
+				return []attrs.Definer{
+					&TestModelStruct{
+						ID:   1,
+						Name: "Test",
+					},
+				}, nil
+			},
+		})
 
 	var app = django.App(
 		django.Configure(map[string]interface{}{
