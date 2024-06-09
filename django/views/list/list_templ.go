@@ -5,14 +5,14 @@ package list
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import "context"
-import "io"
-import "bytes"
-
 import (
-	"github.com/Nigel2392/django/core/attrs"
+	"bytes"
+	"context"
+	"io"
 	"strings"
+
+	"github.com/Nigel2392/django/core/attrs"
+	"github.com/a-h/templ"
 )
 
 type List[T attrs.Definer] struct {
@@ -43,7 +43,9 @@ func (l *List[T]) Render() string {
 	var component = l.Component()
 	var b strings.Builder
 	var ctx = context.Background()
-	component.Render(ctx, &b)
+	if err := component.Render(ctx, &b); err != nil {
+		panic(err)
+	}
 	return b.String()
 }
 

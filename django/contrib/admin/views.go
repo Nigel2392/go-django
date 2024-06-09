@@ -1,13 +1,15 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/ctx"
-	"github.com/Nigel2392/django/forms"
+	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/django/forms/modelforms"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/django/views/list"
 )
@@ -57,14 +59,12 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 	views.Invoke(view, w, r)
 }
 
-var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
-
-	var form forms.Form
-	var instance = model.NewInstance()
+func getFormForInstance(instance attrs.Definer, app *AppDefinition, model *ModelDefinition, r *http.Request) modelforms.ModelForm[attrs.Definer] {
+	var form modelforms.ModelForm[attrs.Definer]
 	if f, ok := instance.(FormDefiner); ok {
 		form = f.AdminForm(r, app, model)
 	} else {
-		form = forms.NewBaseForm()
+		form = modelforms.NewBaseModelForm[attrs.Definer](instance)
 		for _, field := range model.ModelFields(instance) {
 			var (
 				name      = field.Name()
@@ -79,25 +79,51 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 			)
 		}
 	}
+	return form
+}
 
-	var addView = &views.FormView[forms.Form]{
+func newInstanceView(instance attrs.Definer, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[modelforms.ModelForm[attrs.Definer]] {
+	return &views.FormView[modelforms.ModelForm[attrs.Definer]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: "admin",
-			TemplateName:    "admin/views/models/add.tmpl",
+			TemplateName:    "admin/views/models/edit.tmpl",
 		},
-		GetFormFn: func(req *http.Request) forms.Form {
+		GetFormFn: func(req *http.Request) modelforms.ModelForm[attrs.Definer] {
+			var form = getFormForInstance(instance, app, model, r)
+			form.SetInstance(instance)
 			return form
 		},
+		GetInitialFn: func(req *http.Request) map[string]interface{} {
+			var initial = make(map[string]interface{})
+			if instance == nil {
+				fmt.Println(initial, "is nil")
+				return initial
+			}
+			for _, def := range model.ModelFields(instance) {
+				var v = def.GetValue()
+				var n = def.Name()
+				if fields.IsZero(v) {
+					initial[n] = def.GetDefault()
+				} else {
+					initial[n] = v
+				}
+			}
+			fmt.Println(initial)
+			return initial
+		},
 	}
+}
 
+var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
+	var instance = model.NewInstance()
+	var addView = newInstanceView(instance, app, model, r)
 	views.Invoke(addView, w, r)
 }
 
 var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
-	w.Write([]byte(model.Name))
-	w.Write([]byte("\n"))
-	w.Write([]byte("edit"))
+	var editView = newInstanceView(instance, app, model, r)
+	views.Invoke(editView, w, r)
 }
 
 var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {

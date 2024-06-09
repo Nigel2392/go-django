@@ -164,12 +164,14 @@ func (f *BaseForm) DefaultValue(name string) interface{} {
 
 	if f.Cleaned != nil {
 		if v, ok := f.Cleaned[name]; ok {
+			fmt.Println("Cleaned", v)
 			return v
 		}
 	}
 
 	if f.InvalidDefaults != nil {
 		if v, ok := f.InvalidDefaults[name]; ok {
+			fmt.Println("InvalidDefaults", v)
 			return v
 		}
 	}

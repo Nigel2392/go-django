@@ -20,10 +20,16 @@ type EmailFormField struct {
 }
 
 func (e *EmailFormField) ValueToForm(value interface{}) interface{} {
+	if value == nil {
+		return ""
+	}
 	switch val := value.(type) {
 	case string:
 		return val
 	case *mail.Address:
+		if val == nil {
+			return ""
+		}
 		return val.Address
 	case mail.Address:
 		return val.Address

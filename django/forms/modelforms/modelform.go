@@ -10,9 +10,13 @@ import (
 	"github.com/Nigel2392/django/models"
 )
 
-type ModelForm interface {
+type ModelForm[T any] interface {
 	forms.Form
 	models.Saver
+	Load()
+	SetFields(fields ...string)
+	SetExclude(exclude ...string)
+	SetInstance(model T)
 }
 
 type modelFormFlag int
@@ -33,9 +37,9 @@ type BaseModelForm[T attrs.Definer] struct {
 
 	flags modelFormFlag
 
-	Initial func() T
-	Fields  []string
-	Exclude []string
+	Initial      func() T
+	ModelFields  []string
+	ModelExclude []string
 }
 
 func NewBaseModelForm[T attrs.Definer](model T) *BaseModelForm[T] {
@@ -99,11 +103,11 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 
 	for _, field := range f.InstanceFields {
 		var n = field.Name()
-		if f.wasSet(excludeWasSet) && slices.Contains(f.Exclude, n) {
+		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, n) {
 			continue
 		}
 
-		f.Fields = append(f.Fields, n)
+		f.ModelFields = append(f.ModelFields, n)
 	}
 
 	f.setFlag(instanceWasSet, true)
@@ -115,7 +119,7 @@ func (f *BaseModelForm[T]) SetFields(fields ...string) {
 		"Fields cannot be set after the form fields have been loaded",
 	)
 
-	f.Fields = make([]string, 0)
+	f.ModelFields = make([]string, 0)
 
 	var fieldMap = make(map[string]struct{})
 	for _, field := range fields {
@@ -125,7 +129,7 @@ func (f *BaseModelForm[T]) SetFields(fields ...string) {
 		var field, ok = f.Definition.Field(field)
 		assert.True(ok, "Field %q not found in %T", field, f.Model)
 
-		f.Fields = append(f.Fields, field.Name())
+		f.ModelFields = append(f.ModelFields, field.Name())
 		fieldMap[field.Name()] = struct{}{}
 	}
 
@@ -138,7 +142,7 @@ func (f *BaseModelForm[T]) SetExclude(exclude ...string) {
 		"Exclude cannot be set after the form fields have been loaded",
 	)
 
-	f.Exclude = make([]string, 0)
+	f.ModelExclude = make([]string, 0)
 
 	var fieldMap = make(map[string]struct{})
 	for _, field := range exclude {
@@ -148,7 +152,7 @@ func (f *BaseModelForm[T]) SetExclude(exclude ...string) {
 		var field, ok = f.Definition.Field(field)
 		assert.True(ok, "Field %q not found in %T", field, f.Model)
 
-		f.Exclude = append(f.Exclude, field.Name())
+		f.ModelExclude = append(f.ModelExclude, field.Name())
 		fieldMap[field.Name()] = struct{}{}
 	}
 
@@ -162,7 +166,7 @@ func (f *BaseModelForm[T]) Load() {
 	)
 
 	assert.True(
-		f.wasSet(fieldsWasSet) || len(f.Fields) > 0,
+		f.wasSet(fieldsWasSet) || len(f.ModelFields) > 0,
 		"Fields must be set before loading the form",
 	)
 
@@ -176,9 +180,9 @@ func (f *BaseModelForm[T]) Load() {
 		model = f.Initial()
 	}
 
-	for _, name := range f.Fields {
+	for _, name := range f.ModelFields {
 
-		if f.wasSet(excludeWasSet) && slices.Contains(f.Exclude, name) {
+		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, name) {
 			continue
 		}
 
@@ -192,7 +196,7 @@ func (f *BaseModelForm[T]) Load() {
 	if !f.modelIsNil(model) {
 		for _, def := range f.InstanceFields {
 			var n = def.Name()
-			if f.wasSet(excludeWasSet) && slices.Contains(f.Exclude, n) {
+			if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, n) {
 				continue
 			}
 			initialData[n] = attrs.Get[any](model, n)
@@ -200,22 +204,22 @@ func (f *BaseModelForm[T]) Load() {
 	} else {
 		for _, def := range f.Definition.Fields() {
 			var n = def.Name()
-			if f.wasSet(excludeWasSet) && slices.Contains(f.Exclude, n) {
+			if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, n) {
 				continue
 			}
 			initialData[n] = def.GetDefault()
 		}
 	}
 
-	f.BaseForm.Initial = initialData
+	f.SetInitial(initialData)
 	f.setFlag(formLoaded, true)
 }
 
 func (f *BaseModelForm[T]) Save() error {
 	var cleaned = f.CleanedData()
 
-	for _, fieldname := range f.Fields {
-		if f.wasSet(excludeWasSet) && slices.Contains(f.Exclude, fieldname) {
+	for _, fieldname := range f.ModelFields {
+		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, fieldname) {
 			continue
 		}
 

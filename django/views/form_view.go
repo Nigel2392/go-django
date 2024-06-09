@@ -12,9 +12,10 @@ var _ TemplateView = (*FormView[forms.Form])(nil)
 
 type FormView[T forms.Form] struct {
 	BaseView
-	GetFormFn func(req *http.Request) T
-	ValidFn   func(req *http.Request, form T) error
-	InvalidFn func(req *http.Request, form T) error
+	GetFormFn    func(req *http.Request) T
+	GetInitialFn func(req *http.Request) map[string]interface{}
+	ValidFn      func(req *http.Request, form T) error
+	InvalidFn    func(req *http.Request, form T) error
 }
 
 type form[T forms.Form] struct {
@@ -72,6 +73,10 @@ func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 	form = forms.Initialize(
 		form, forms.WithRequestData(http.MethodPost, req),
 	)
+
+	if v.GetInitialFn != nil {
+		form.SetInitial(v.GetInitialFn(req))
+	}
 
 	if req.Method == http.MethodPost {
 

@@ -55,12 +55,12 @@ func TestModelForm(t *testing.T) {
 	})
 
 	t.Run("AutoFields", func(t *testing.T) {
-		if len(f.Fields) != 2 {
-			t.Errorf("expected %d, got %d", 2, len(f.Fields))
+		if len(f.ModelFields) != 2 {
+			t.Errorf("expected %d, got %d", 2, len(f.ModelFields))
 		}
 
-		if len(f.Exclude) != 0 {
-			t.Errorf("expected %d, got %d", 0, len(f.Exclude))
+		if len(f.ModelExclude) != 0 {
+			t.Errorf("expected %d, got %d", 0, len(f.ModelExclude))
 		}
 
 		if len(f.InstanceFields) != 2 {
