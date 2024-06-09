@@ -1,14 +1,12 @@
 body {
-    background: hsl( 254.3 50.4% 24.5% );
+    background-color: #007d7e;
     background: radial-gradient(
             100% 300.28% at 100% 0%,
-            hsl( 254.3 50.4% 24.5% ) 0%,
-            hsl( 254.3 50.4% 24.5% ) 32.94%,
-            hsl( 254.3 50.4% 24.5% ) 49.9%,
-            hsl( 254.3 50.4% 24.5% ) 50.2%,
-            hsl( 180.5 100% 24.7% ) 100%
+            #006363 0%,
+            #2e1f5e 32.2%,
+            #261a4d 42%
         ),
-        hsl( 254.3 50.4% 24.5%);
+        #007d7e;
 }
 .login-container-wrapper {
     display: flex;
@@ -19,7 +17,7 @@ body {
 .login-container {
     width: max(400px, 30dvw);
     padding: 1.5em 2.5em;
-    margin-top: -5dvh;
+    margin-top: -15dvh;
     margin-left: -50dvw;
     background: #fff;
     border-radius: 5px;
