@@ -11,14 +11,15 @@ import (
 )
 
 type ModelOptions struct {
-	Name     string
-	Fields   []string
-	Exclude  []string
-	Format   map[string]func(v any) any
-	Labels   map[string]func() string
-	GetForID func(identifier any) (attrs.Definer, error)
-	GetList  func(amount, offset uint, include []string) ([]attrs.Definer, error)
-	Model    attrs.Definer
+	Name                string
+	Fields              []string
+	Exclude             []string
+	RegisterToAdminMenu bool
+	Format              map[string]func(v any) any
+	Labels              map[string]func() string
+	GetForID            func(identifier any) (attrs.Definer, error)
+	GetList             func(amount, offset uint, include []string) ([]attrs.Definer, error)
+	Model               attrs.Definer
 }
 
 func (o *ModelOptions) GetName() string {

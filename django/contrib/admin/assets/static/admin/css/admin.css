@@ -47,7 +47,7 @@ a:hover {
     --menu-width: var(--sidebar-width);
     flex: 0 0 var(--sidebar-width);
     background-color: #2e1f5e;
-    box-shadow: 5px 0 5px rgba(0, 0, 0, 0.4);
+    box-shadow: 3px 0 5px rgba(0, 0, 0, 0.4);
     position: sticky;
     top: 0;
     z-index: 1000;
@@ -153,6 +153,21 @@ a:hover {
     width: 100%;
 }
 
+.error-list {
+    color: hsl( 0 100% 50% );
+    font-size: .875rem;
+    line-height: 1.3;
+    margin: 0;
+    padding: 0;
+}
+
+.error-list .error {
+    list-style-type: none;
+}
+.error-list .error p {
+    margin: 0.125rem 0;
+}
+
 button, input {
     line-height: normal;
 }
@@ -161,4 +176,7 @@ button, input, select, textarea {
     margin: 0;
     vertical-align: initial;
 }
+
+
+
 

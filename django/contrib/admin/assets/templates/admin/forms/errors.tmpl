@@ -1,0 +1,10 @@
+{{ define "errors" }}
+    {{ $Field := . }}
+    {{ if (gt (len $Field.Errors) 0) }}
+        <ul class="error-list">
+            {{ range $Error := $Field.Errors }}
+                <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
+            {{ end }}
+        </ul>
+    {{ end }}
+{{ end }}

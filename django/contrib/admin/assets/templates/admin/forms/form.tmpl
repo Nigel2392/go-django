@@ -1,31 +1,19 @@
 {{ define "form" }}
-    <form method="post">
-    
-        <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
-    
-        {{ range $Field := (.Get "form").Fields }}
-    
-            <div class="form-field-wrapper">
+    {{ range $Field := (.Get "form").Fields }}
+
+        <div class="form-field-wrapper">
+        
+            <div class="form-field">
+                {{ $Field.Label }}
             
-                <div class="form-field">
-                    {{ $Field.Label }}
+                {{ include $Field "admin/forms/errors.tmpl" }}
                 
-                    {{ if (gt (len $Field.Errors) 0) }}
-                        <ul class="error-list">
-                            {{ range $Error := $Field.Errors }}
-                                <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
-                            {{ end }}
-                        </ul>
-                    {{ end }}
-                    
-                    {{ if (ne $Field.HelpText "") }}
-                        <p class="help-text">{{ $Field.HelpText }}</p>
-                    {{ end }}
-                    
-                    {{ $Field.Field }}
-                </div>
+                {{ if (ne $Field.HelpText "") }}
+                    <p class="help-text">{{ $Field.HelpText }}</p>
+                {{ end }}
+                
+                {{ $Field.Field }}
             </div>
-        {{ end }}
-        <input type="submit" value="Submit">
-    </form>
+        </div>
+    {{ end }}
 {{ end }}

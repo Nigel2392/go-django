@@ -8,7 +8,7 @@
             <a href="{{ url "admin:apps:model:add" (.Get "app").Name (.Get "model").Name }}" class="btn btn-primary">{{ T "Add" }}</a>
         </div>
         <div class="title-text">
-            <h1>{{ T "List" }}</h1>
+            <h1>{{ (.Get "model").Label }} {{ T "List" }}</h1>
         </div>
     </div>
     {{ $list := (.Get "list") }}

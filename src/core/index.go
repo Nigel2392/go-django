@@ -206,7 +206,8 @@ var _ = admin.RegisterApp(
 		MenuLabel:           fields.S("Core"),
 	},
 	admin.ModelOptions{
-		Fields: []string{"Email", "Name", "Password", "Age", "Data", "Block"},
+		RegisterToAdminMenu: true,
+		Fields:              []string{"Email", "Name", "Password", "Age", "Data", "Block"},
 		Labels: map[string]func() string{
 			"Email":    fields.S("Object Email"),
 			"Name":     fields.S("Object Name"),

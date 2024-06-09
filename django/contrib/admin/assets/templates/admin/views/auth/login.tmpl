@@ -1,8 +1,24 @@
-{{ template "base" . }}
+{{ template "skeleton" . }}
 
 {{ define "title" }}{{ T "Login" }}{{ end }}
 
-{{ define "content" }}
-    <h1>{{ T "Login" }}</h1>
-    {{ include . "admin/forms/form.tmpl" }}
+{{ define "extra_css" }}
+    <link rel="stylesheet" type="text/css" href="{{ static "admin/css/login.css" }}">
+{{ end }}
+
+{{ define "root" }}
+    <div class="login-container-wrapper">
+        <div class="login-container">
+
+            <h1>{{ T "Login" }}</h1>
+
+            <form method="post" action="{{ url "admin:login" }}">
+                <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+                
+                {{ include . "admin/forms/form.tmpl" }}
+                
+                <input class="button" type="submit" value="Submit">
+            </form>
+        </div>
+    </div>
 {{ end }}

@@ -102,6 +102,7 @@
     /* background-color: var(--menu-toggle-bg-color); */
     color: var(--submenu-text-color);
     background-color: transparent;
+    padding: 0;
     border: none;
     transition: var(--menu-transition);
     display: flex;

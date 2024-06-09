@@ -1,0 +1,27 @@
+body {
+    background: hsl( 254.3 50.4% 24.5% );
+    background: radial-gradient(
+            100% 300.28% at 100% 0%,
+            hsl( 254.3 50.4% 24.5% ) 0%,
+            hsl( 254.3 50.4% 24.5% ) 32.94%,
+            hsl( 254.3 50.4% 24.5% ) 49.9%,
+            hsl( 254.3 50.4% 24.5% ) 50.2%,
+            hsl( 180.5 100% 24.7% ) 100%
+        ),
+        hsl( 254.3 50.4% 24.5%);
+}
+.login-container-wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100%;
+}
+.login-container {
+    width: max(400px, 30dvw);
+    padding: 1.5em 2.5em;
+    margin-top: -5dvh;
+    margin-left: -50dvw;
+    background: #fff;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
