@@ -1,0 +1,15 @@
+.menu {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+.menu .menu-item .menu-item-link {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0.5em 1em;
+    border-bottom: 1px solid #ddd;
+    color: #fff;
+    text-decoration: none;
+
+}

@@ -1,7 +1,6 @@
 package admin
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/django"
@@ -24,11 +23,9 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 	var columns = make([]list.ListColumn[attrs.Definer], len(model.Fields))
 	for i, field := range model.Fields {
 		columns[i] = list.Column[attrs.Definer](
-			model.GetLabel(field, field), field,
+			model.GetLabel(field, field), model.FormatColumn(field),
 		)
 	}
-
-	fmt.Println(columns, model.Fields)
 
 	var view = &list.View[attrs.Definer]{
 		ListColumns: columns,

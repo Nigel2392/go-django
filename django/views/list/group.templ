@@ -3,7 +3,6 @@ package list
 import (
     "github.com/Nigel2392/django/core/attrs"
     "strings"
-    "fmt"
 )
 
 type ColumnGroup[T attrs.Definer] struct {
@@ -25,8 +24,6 @@ func (c *ColumnGroup[T]) Render() string {
 }
 
 templ (c *ColumnGroup[T]) Component() {
-    {{ fmt.Println(c.Columns, len(c.Columns)) }}
-
     <tr class="column-group">
         for _, column := range c.Columns {
             <td class="list-column">

@@ -11,7 +11,6 @@ import "io"
 import "bytes"
 
 import (
-	"fmt"
 	"github.com/Nigel2392/django/core/attrs"
 	"strings"
 )
@@ -47,7 +46,6 @@ func (c *ColumnGroup[T]) Component() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		fmt.Println(c.Columns, len(c.Columns))
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<tr class=\"column-group\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

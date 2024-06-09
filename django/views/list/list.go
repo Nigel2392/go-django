@@ -1,7 +1,6 @@
 package list
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -72,8 +71,6 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	if v.TitleFieldColumn != nil {
 		cols[0] = v.TitleFieldColumn(cols[0])
 	}
-
-	fmt.Println("fields", cols, len(cols))
 
 	list, err := v.GetListFn(uint(amount), uint(page), fields)
 	if err != nil {

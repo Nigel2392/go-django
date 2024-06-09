@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/mail"
+	"strings"
 
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/auth"
@@ -177,6 +178,25 @@ var _ = admin.RegisterApp(
 			"Age":      fields.S("Object Age"),
 			"Data":     fields.S("Object Data"),
 			"Block":    fields.S("Object Block"),
+		},
+		Format: map[string]func(interface{}) interface{}{
+			"Age": func(v any) interface{} {
+				return fmt.Sprintf("%d years old", v)
+			},
+			"Password": func(v any) interface{} {
+				return "********"
+			},
+			"Data": func(v any) interface{} {
+				var data = v.(map[string]any)
+				var b strings.Builder
+				for k, v := range data {
+					b.WriteString(fmt.Sprintf("%s: %v\n", k, v))
+				}
+				return b.String()
+			},
+			"Block": func(v any) interface{} {
+				return "Block"
+			},
 		},
 		Model: &MainStruct{},
 		GetForID: func(identifier any) (attrs.Definer, error) {

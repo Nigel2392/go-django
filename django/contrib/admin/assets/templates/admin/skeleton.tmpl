@@ -4,17 +4,19 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        
-        <link rel="stylesheet" type="text/css" href="{{ static "admin/css/admin.css" }}">
-        <script src="{{ static "admin/js/admin.js" }}"></script>
 
         <title>{{ block "title" . }}{{ end }}</title>
 
+        <link rel="stylesheet" type="text/css" href="{{ static "admin/css/admin.css" }}">
+        <link rel="stylesheet" type="text/css" href="{{ static "admin/css/list.css" }}">
+        <link rel="stylesheet" type="text/css" href="{{ static "admin/css/menu.css" }}">
+        
         {{ block "extra_css" . }}{{ end }}
     </head>
     <body>
         {{ block "root" . }}{{ end }}
 
+        <script src="{{ static "admin/js/admin.js" }}"></script>
         {{ block "extra_js" . }}{{ end }}
     </body>
 </html>

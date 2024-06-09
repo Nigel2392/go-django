@@ -111,6 +111,22 @@ func (o *ModelDefinition) GetLabel(field string, default_ string) func() string 
 	}
 }
 
+func (o *ModelDefinition) FormatColumn(field string) any {
+	if o.Format == nil {
+		return field
+	}
+
+	var format, ok = o.Format[field]
+	if !ok {
+		return field
+	}
+
+	return func(defs attrs.Definitions, row attrs.Definer) interface{} {
+		var value = defs.Get(field)
+		return format(value)
+	}
+}
+
 func (m *ModelDefinition) ModelFields(instance attrs.Definer) []attrs.Field {
 	var defs = instance.FieldDefs()
 	if len(m.Fields) == 0 {
