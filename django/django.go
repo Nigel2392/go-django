@@ -60,10 +60,33 @@ type AppConfig interface {
 	// If the string is empty - direct access to the application's multiplexer will be given
 	// (through the core.Mux interface).
 	URLPath() string
+
+	// An alias for core.URL
+	//
+	// This is just for semantics - use this to register middleware for your application.
+	//
+	// The implementation might change in the future to make this something more meaningful.
+	//
+	// We do not actively prevent you from also registering middleware in the URLs() callback.
 	Middleware() []core.Middleware
+
+	// Initialize your application.
+	//
+	// This can be used to retrieve variables / objects from settings (like a database).
+	//
+	// Generally we recommend you use this method for your applications
+	// as opposed to doing stuff in toplevel init().
+	//
+	// Depending on the order of the registered applications, apps can depend on one- another.
+	//
+	// For example, this is used internally for authentication.
+	//
+	// I.E.: The 'sessions' app must always be registered before 'auth' in order for the auth app to work.
 	Initialize(settings Settings) error
 	Processors() []func(tpl.RequestContext)
 	Templates() *tpl.Config
+
+	// All apps have been initialized before OnReady() is called.
 	OnReady() error
 }
 
