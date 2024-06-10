@@ -132,10 +132,6 @@ func (f *FieldDef) ToString() string {
 	return toString(v)
 }
 
-func (f *FieldDef) GetValue() interface{} {
-	return f.field_v.Interface()
-}
-
 func (f *FieldDef) GetDefault() interface{} {
 
 	if f.attrDef.Default != nil {
@@ -222,9 +218,71 @@ returnField:
 	return formField
 }
 
-func (f *FieldDef) SetValue(v interface{}, force bool) error {
-	var r_v = reflect.ValueOf(v)
+func convert(v reflect.Value, t reflect.Type) (reflect.Value, bool) {
+	if v.Kind() == reflect.Ptr && t.Kind() != reflect.Ptr {
+		v = v.Elem()
+	} else if v.Kind() != reflect.Ptr && t.Kind() == reflect.Ptr {
+		v = reflect.New(v.Type())
+		v.Elem().Set(v)
+	}
+	if v.Type().AssignableTo(t) {
+		return v, true
+	}
+	if v.CanConvert(t) {
+		return v.Convert(t), true
+	}
+	return reflect.Value{}, false
+}
 
+func (f *FieldDef) GetValue() interface{} {
+	var (
+		b        []byte
+		firstArg reflect.Value
+		method   reflect.Method
+		field    reflect.StructField
+		ok       bool
+	)
+	b = make([]byte, 0, len(f.field_t.Name)+3)
+	b = append(b, "Get"...)
+	b = append(b, f.field_t.Name...)
+	firstArg = f.instance_v
+	method, ok = f.instance_t.MethodByName(string(b))
+	if !ok {
+		method, ok = f.instance_t_ptr.MethodByName(string(b))
+		firstArg = f.instance_v_ptr
+	}
+	if ok {
+		return method.Func.Call([]reflect.Value{firstArg})[0].Interface()
+	}
+
+	field, ok = f.instance_t.FieldByName(string(b))
+	if ok {
+		return f.instance_v.FieldByIndex(field.Index).Interface()
+	}
+
+	return f.field_v.Interface()
+}
+
+func (f *FieldDef) SetValue(v interface{}, force bool) error {
+
+	var b = make([]byte, 0, len(f.field_t.Name)+3)
+	b = append(b, "Set"...)
+	b = append(b, f.field_t.Name...)
+	var firstArg = f.instance_v
+	var method, ok = f.instance_t.MethodByName(string(b))
+	if !ok {
+		method, ok = f.instance_t_ptr.MethodByName(string(b))
+		firstArg = f.instance_v_ptr
+	}
+	if ok {
+		var r_v = reflect.ValueOf(v)
+		r_v, ok = convert(r_v, method.Type.In(1))
+		assert.True(ok, "field %q (%q) is not convertible to %q", f.field_t.Name, r_v.Type(), method.Type.In(1))
+		method.Func.Call([]reflect.Value{firstArg, r_v})
+		return nil
+	}
+
+	var r_v = reflect.ValueOf(v)
 	if err := assert.True(
 		r_v.IsValid() || f.AllowNull(),
 		"field %q (%q) is not valid", f.field_t.Name, f.field_t.Type,
@@ -237,16 +295,11 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		return nil
 	}
 
-	if err := assert.True(
-		r_v.Type() == f.field_t.Type || r_v.CanConvert(f.field_t.Type),
-		"field %q (%q) is not convertible to %q",
-		f.field_t.Name, r_v.Type(), f.field_t.Type,
-	); err != nil {
-		return err
-	}
-
-	if r_v.Type() != f.field_t.Type {
-		r_v = r_v.Convert(f.field_t.Type)
+	r_v, ok = convert(r_v, f.field_t.Type)
+	if !ok {
+		return assert.Fail(
+			fmt.Sprintf("field %q (%q) is not convertible to %q", f.field_t.Name, r_v.Type(), f.field_t.Type),
+		)
 	}
 
 	if err := assert.True(
