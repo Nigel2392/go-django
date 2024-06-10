@@ -10,12 +10,14 @@ import (
 	"strings"
 )
 
+var _ Querier = (*MySQLQueries)(nil)
+
 const addPermissionToGroup = `-- name: AddPermissionToGroup :exec
 INSERT INTO group_permissions (group_id, permission_id)
 VALUES (?, ?)
 `
 
-func (q *Queries) AddPermissionToGroup(ctx context.Context, groupID uint64, permissionID uint64) error {
+func (q *MySQLQueries) AddPermissionToGroup(ctx context.Context, groupID uint64, permissionID uint64) error {
 	_, err := q.db.ExecContext(ctx, addPermissionToGroup, groupID, permissionID)
 	return err
 }
@@ -25,7 +27,7 @@ INSERT INTO user_groups (user_id, group_id)
 VALUES (?, ?)
 `
 
-func (q *Queries) AddUserToGroup(ctx context.Context, userID uint64, groupID uint64) error {
+func (q *MySQLQueries) AddUserToGroup(ctx context.Context, userID uint64, groupID uint64) error {
 	_, err := q.db.ExecContext(ctx, addUserToGroup, userID, groupID)
 	return err
 }
@@ -36,7 +38,7 @@ SELECT ? AS user_id, group_id
 FROM (SELECT id, name, description FROM ` + "`" + `groups` + "`" + ` WHERE id IN (/*SLICE:group_ids*/?)) AS t
 `
 
-func (q *Queries) AddUserToGroups(ctx context.Context, userID uint64, groupIds []uint64) error {
+func (q *MySQLQueries) AddUserToGroups(ctx context.Context, userID uint64, groupIds []uint64) error {
 	query := addUserToGroups
 	var queryParams []interface{}
 	queryParams = append(queryParams, userID)
@@ -64,7 +66,7 @@ SELECT EXISTS (
 ) as has_permissions
 `
 
-func (q *Queries) CheckUserHasPermissions(ctx context.Context, iD uint64, permissionnames []string) (bool, error) {
+func (q *MySQLQueries) CheckUserHasPermissions(ctx context.Context, iD uint64, permissionnames []string) (bool, error) {
 	query := checkUserHasPermissions
 	var queryParams []interface{}
 	queryParams = append(queryParams, iD)
@@ -87,7 +89,7 @@ INSERT INTO ` + "`" + `groups` + "`" + ` (name, description)
 VALUES (?, ?)
 `
 
-func (q *Queries) CreateGroup(ctx context.Context, name string, description string) error {
+func (q *MySQLQueries) CreateGroup(ctx context.Context, name string, description string) error {
 	_, err := q.db.ExecContext(ctx, createGroup, name, description)
 	return err
 }
@@ -97,7 +99,7 @@ INSERT INTO permissions (name, description)
 VALUES (?, ?)
 `
 
-func (q *Queries) CreatePermission(ctx context.Context, name string, description string) error {
+func (q *MySQLQueries) CreatePermission(ctx context.Context, name string, description string) error {
 	_, err := q.db.ExecContext(ctx, createPermission, name, description)
 	return err
 }
@@ -107,7 +109,7 @@ INSERT INTO users (email, username, password, first_name, last_name, is_administ
 VALUES (?, ?, ?, ?, ?, ?, ?)
 `
 
-func (q *Queries) CreateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool) error {
+func (q *MySQLQueries) CreateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool) error {
 	_, err := q.db.ExecContext(ctx, createUser,
 		email,
 		username,
@@ -124,7 +126,7 @@ const deleteGroup = `-- name: DeleteGroup :exec
 DELETE FROM ` + "`" + `groups` + "`" + ` WHERE id = ?
 `
 
-func (q *Queries) DeleteGroup(ctx context.Context, id uint64) error {
+func (q *MySQLQueries) DeleteGroup(ctx context.Context, id uint64) error {
 	_, err := q.db.ExecContext(ctx, deleteGroup, id)
 	return err
 }
@@ -133,7 +135,7 @@ const deletePermission = `-- name: DeletePermission :exec
 DELETE FROM permissions WHERE id = ?
 `
 
-func (q *Queries) DeletePermission(ctx context.Context, id uint64) error {
+func (q *MySQLQueries) DeletePermission(ctx context.Context, id uint64) error {
 	_, err := q.db.ExecContext(ctx, deletePermission, id)
 	return err
 }
@@ -142,7 +144,7 @@ const deleteUser = `-- name: DeleteUser :exec
 DELETE FROM users WHERE id = ?
 `
 
-func (q *Queries) DeleteUser(ctx context.Context, id uint64) error {
+func (q *MySQLQueries) DeleteUser(ctx context.Context, id uint64) error {
 	_, err := q.db.ExecContext(ctx, deleteUser, id)
 	return err
 }
@@ -152,7 +154,7 @@ DELETE FROM user_groups
 WHERE user_id = ?
 `
 
-func (q *Queries) DeleteUserGroups(ctx context.Context, userID uint64) error {
+func (q *MySQLQueries) DeleteUserGroups(ctx context.Context, userID uint64) error {
 	_, err := q.db.ExecContext(ctx, deleteUserGroups, userID)
 	return err
 }
@@ -161,7 +163,7 @@ const getAllGroups = `-- name: GetAllGroups :many
 SELECT id, name, description FROM ` + "`" + `groups` + "`" + `
 `
 
-func (q *Queries) GetAllGroups(ctx context.Context) ([]Group, error) {
+func (q *MySQLQueries) GetAllGroups(ctx context.Context) ([]Group, error) {
 	rows, err := q.db.QueryContext(ctx, getAllGroups)
 	if err != nil {
 		return nil, err
@@ -188,7 +190,7 @@ const getAllPermissions = `-- name: GetAllPermissions :many
 SELECT id, name, description FROM permissions
 `
 
-func (q *Queries) GetAllPermissions(ctx context.Context) ([]Permission, error) {
+func (q *MySQLQueries) GetAllPermissions(ctx context.Context) ([]Permission, error) {
 	rows, err := q.db.QueryContext(ctx, getAllPermissions)
 	if err != nil {
 		return nil, err
@@ -215,7 +217,7 @@ const getAllUsers = `-- name: GetAllUsers :many
 SELECT id, created_at, updated_at, email, username, password, first_name, last_name, is_administrator, is_active FROM users
 `
 
-func (q *Queries) GetAllUsers(ctx context.Context) ([]User, error) {
+func (q *MySQLQueries) GetAllUsers(ctx context.Context) ([]User, error) {
 	rows, err := q.db.QueryContext(ctx, getAllUsers)
 	if err != nil {
 		return nil, err
@@ -253,7 +255,7 @@ const getGroupByID = `-- name: GetGroupByID :one
 SELECT id, name, description FROM ` + "`" + `groups` + "`" + ` WHERE id = ?
 `
 
-func (q *Queries) GetGroupByID(ctx context.Context, id uint64) (Group, error) {
+func (q *MySQLQueries) GetGroupByID(ctx context.Context, id uint64) (Group, error) {
 	row := q.db.QueryRowContext(ctx, getGroupByID, id)
 	var i Group
 	err := row.Scan(&i.ID, &i.Name, &i.Description)
@@ -267,7 +269,7 @@ JOIN user_groups ug ON g.id = ug.group_id
 WHERE ug.user_id = ?
 `
 
-func (q *Queries) GetGroupsByUserID(ctx context.Context, userID uint64) ([]Group, error) {
+func (q *MySQLQueries) GetGroupsByUserID(ctx context.Context, userID uint64) ([]Group, error) {
 	rows, err := q.db.QueryContext(ctx, getGroupsByUserID, userID)
 	if err != nil {
 		return nil, err
@@ -296,7 +298,7 @@ ORDER BY id
 LIMIT ? OFFSET ?
 `
 
-func (q *Queries) GetGroupsWithPagination(ctx context.Context, limit int32, offset int32) ([]Group, error) {
+func (q *MySQLQueries) GetGroupsWithPagination(ctx context.Context, limit uint64, offset uint64) ([]Group, error) {
 	rows, err := q.db.QueryContext(ctx, getGroupsWithPagination, limit, offset)
 	if err != nil {
 		return nil, err
@@ -323,7 +325,7 @@ const getPermissionByID = `-- name: GetPermissionByID :one
 SELECT id, name, description FROM permissions WHERE id = ?
 `
 
-func (q *Queries) GetPermissionByID(ctx context.Context, id uint64) (Permission, error) {
+func (q *MySQLQueries) GetPermissionByID(ctx context.Context, id uint64) (Permission, error) {
 	row := q.db.QueryRowContext(ctx, getPermissionByID, id)
 	var i Permission
 	err := row.Scan(&i.ID, &i.Name, &i.Description)
@@ -336,7 +338,7 @@ FROM permissions p
 WHERE p.name = ?
 `
 
-func (q *Queries) GetPermissionByName(ctx context.Context, name string) (Permission, error) {
+func (q *MySQLQueries) GetPermissionByName(ctx context.Context, name string) (Permission, error) {
 	row := q.db.QueryRowContext(ctx, getPermissionByName, name)
 	var i Permission
 	err := row.Scan(&i.ID, &i.Name, &i.Description)
@@ -351,7 +353,7 @@ JOIN user_groups ug ON gp.group_id = ug.group_id
 WHERE ug.user_id = ?
 `
 
-func (q *Queries) GetPermissionsByUserID(ctx context.Context, userID uint64) ([]Permission, error) {
+func (q *MySQLQueries) GetPermissionsByUserID(ctx context.Context, userID uint64) ([]Permission, error) {
 	rows, err := q.db.QueryContext(ctx, getPermissionsByUserID, userID)
 	if err != nil {
 		return nil, err
@@ -382,7 +384,7 @@ JOIN user_groups ug ON gp.group_id = ug.group_id
 WHERE ug.user_id = ? AND p.name IN (/*SLICE:permissionnames*/?)
 `
 
-func (q *Queries) GetPermissionsByUserIDAndPermissionNames(ctx context.Context, userID uint64, permissionnames []string) ([]Permission, error) {
+func (q *MySQLQueries) GetPermissionsByUserIDAndPermissionNames(ctx context.Context, userID uint64, permissionnames []string) ([]Permission, error) {
 	query := getPermissionsByUserIDAndPermissionNames
 	var queryParams []interface{}
 	queryParams = append(queryParams, userID)
@@ -422,7 +424,7 @@ ORDER BY id
 LIMIT ? OFFSET ?
 `
 
-func (q *Queries) GetPermissionsWithPagination(ctx context.Context, limit int32, offset int32) ([]Permission, error) {
+func (q *MySQLQueries) GetPermissionsWithPagination(ctx context.Context, limit uint64, offset uint64) ([]Permission, error) {
 	rows, err := q.db.QueryContext(ctx, getPermissionsWithPagination, limit, offset)
 	if err != nil {
 		return nil, err
@@ -468,7 +470,7 @@ LIMIT 1
 `
 
 
-func (q *Queries) GetUserByEmail(ctx context.Context, email string) (UserRow, error) {
+func (q *MySQLQueries) GetUserByEmail(ctx context.Context, email string) (UserRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByEmail, email)
 	var i UserRow
 	err := row.Scan(
@@ -514,7 +516,7 @@ ORDER BY
 `
 
 
-func (q *Queries) GetUserById(ctx context.Context, id uint64) ([]UserRow, error) {
+func (q *MySQLQueries) GetUserById(ctx context.Context, id uint64) ([]UserRow, error) {
 	rows, err := q.db.QueryContext(ctx, getUserById, id)
 	if err != nil {
 		return nil, err
@@ -577,7 +579,7 @@ LIMIT 1
 `
 
 
-func (q *Queries) GetUserByName(ctx context.Context, username string) (UserRow, error) {
+func (q *MySQLQueries) GetUserByName(ctx context.Context, username string) (UserRow, error) {
 	row := q.db.QueryRowContext(ctx, getUserByName, username)
 	var i UserRow
 	err := row.Scan(
@@ -601,6 +603,73 @@ func (q *Queries) GetUserByName(ctx context.Context, username string) (UserRow, 
 	return i, err
 }
 
+
+const userByEmail = `-- name: UserByEmail :one
+SELECT id, created_at, updated_at, email, username, password, first_name, last_name, is_administrator, is_active FROM users WHERE email = ?
+`
+
+func (q *MySQLQueries) UserByEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRowContext(ctx, userByEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.Username,
+		&i.Password,
+		&i.FirstName,
+		&i.LastName,
+		&i.IsAdministrator,
+		&i.IsActive,
+	)
+	return i, err
+}
+
+const userByID = `-- name: UserByID :one
+SELECT id, created_at, updated_at, email, username, password, first_name, last_name, is_administrator, is_active FROM users WHERE id = ?
+`
+
+func (q *MySQLQueries) UserByID(ctx context.Context, id uint64) (User, error) {
+	row := q.db.QueryRowContext(ctx, userByID, id)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.Username,
+		&i.Password,
+		&i.FirstName,
+		&i.LastName,
+		&i.IsAdministrator,
+		&i.IsActive,
+	)
+	return i, err
+}
+
+const userByUsername = `-- name: UserByUsername :one
+SELECT id, created_at, updated_at, email, username, password, first_name, last_name, is_administrator, is_active FROM users WHERE username = ?
+`
+
+func (q *MySQLQueries) UserByUsername(ctx context.Context, username string) (User, error) {
+	row := q.db.QueryRowContext(ctx, userByUsername, username)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Email,
+		&i.Username,
+		&i.Password,
+		&i.FirstName,
+		&i.LastName,
+		&i.IsAdministrator,
+		&i.IsActive,
+	)
+	return i, err
+}
+
 const getUsersByPermissionID = `-- name: GetUsersByPermissionID :many
 SELECT DISTINCT u.id, u.created_at, u.updated_at, u.email, u.username, u.password, u.first_name, u.last_name, u.is_administrator, u.is_active
 FROM users u
@@ -609,7 +678,7 @@ JOIN group_permissions gp ON ug.group_id = gp.group_id
 WHERE gp.permission_id = ?
 `
 
-func (q *Queries) GetUsersByPermissionID(ctx context.Context, permissionID uint64) ([]User, error) {
+func (q *MySQLQueries) GetUsersByPermissionID(ctx context.Context, permissionID uint64) ([]User, error) {
 	rows, err := q.db.QueryContext(ctx, getUsersByPermissionID, permissionID)
 	if err != nil {
 		return nil, err
@@ -649,7 +718,7 @@ ORDER BY id
 LIMIT ? OFFSET ?
 `
 
-func (q *Queries) GetUsersWithPagination(ctx context.Context, limit int32, offset int32) ([]User, error) {
+func (q *MySQLQueries) GetUsersWithPagination(ctx context.Context, limit uint64, offset uint64) ([]User, error) {
 	rows, err := q.db.QueryContext(ctx, getUsersWithPagination, limit, offset)
 	if err != nil {
 		return nil, err
@@ -693,7 +762,7 @@ WHERE g.id NOT IN (
 )
 `
 
-func (q *Queries) GroupsDoNotBelongTo(ctx context.Context, userID uint64) ([]Group, error) {
+func (q *MySQLQueries) GroupsDoNotBelongTo(ctx context.Context, userID uint64) ([]Group, error) {
 	rows, err := q.db.QueryContext(ctx, groupsDoNotBelongTo, userID)
 	if err != nil {
 		return nil, err
@@ -720,7 +789,7 @@ const listPermissionsInGroup = `-- name: ListPermissionsInGroup :many
 SELECT p.id, p.name, p.description FROM permissions p JOIN group_permissions gp ON p.id = gp.permission_id WHERE gp.group_id = ?
 `
 
-func (q *Queries) ListPermissionsInGroup(ctx context.Context, groupID uint64) ([]Permission, error) {
+func (q *MySQLQueries) ListPermissionsInGroup(ctx context.Context, groupID uint64) ([]Permission, error) {
 	rows, err := q.db.QueryContext(ctx, listPermissionsInGroup, groupID)
 	if err != nil {
 		return nil, err
@@ -747,7 +816,7 @@ const listUsersInGroup = `-- name: ListUsersInGroup :many
 SELECT u.id, u.created_at, u.updated_at, u.email, u.username, u.password, u.first_name, u.last_name, u.is_administrator, u.is_active FROM users u JOIN user_groups ug ON u.id = ug.user_id WHERE ug.group_id = ?
 `
 
-func (q *Queries) ListUsersInGroup(ctx context.Context, groupID uint64) ([]User, error) {
+func (q *MySQLQueries) ListUsersInGroup(ctx context.Context, groupID uint64) ([]User, error) {
 	rows, err := q.db.QueryContext(ctx, listUsersInGroup, groupID)
 	if err != nil {
 		return nil, err
@@ -791,7 +860,7 @@ WHERE p.id NOT IN (
 )
 `
 
-func (q *Queries) PermissionsNotInGroup(ctx context.Context, groupID uint64) ([]Permission, error) {
+func (q *MySQLQueries) PermissionsNotInGroup(ctx context.Context, groupID uint64) ([]Permission, error) {
 	rows, err := q.db.QueryContext(ctx, permissionsNotInGroup, groupID)
 	if err != nil {
 		return nil, err
@@ -825,7 +894,7 @@ WHERE p.id NOT IN (
 )
 `
 
-func (q *Queries) PermissionsNotInUser(ctx context.Context, userID uint64) ([]Permission, error) {
+func (q *MySQLQueries) PermissionsNotInUser(ctx context.Context, userID uint64) ([]Permission, error) {
 	rows, err := q.db.QueryContext(ctx, permissionsNotInUser, userID)
 	if err != nil {
 		return nil, err
@@ -852,7 +921,7 @@ const removePermissionFromGroup = `-- name: RemovePermissionFromGroup :exec
 DELETE FROM group_permissions WHERE group_id = ? AND permission_id = ?
 `
 
-func (q *Queries) RemovePermissionFromGroup(ctx context.Context, groupID uint64, permissionID uint64) error {
+func (q *MySQLQueries) RemovePermissionFromGroup(ctx context.Context, groupID uint64, permissionID uint64) error {
 	_, err := q.db.ExecContext(ctx, removePermissionFromGroup, groupID, permissionID)
 	return err
 }
@@ -861,7 +930,7 @@ const removeUserFromGroup = `-- name: RemoveUserFromGroup :exec
 DELETE FROM user_groups WHERE user_id = ? AND group_id = ?
 `
 
-func (q *Queries) RemoveUserFromGroup(ctx context.Context, userID uint64, groupID uint64) error {
+func (q *MySQLQueries) RemoveUserFromGroup(ctx context.Context, userID uint64, groupID uint64) error {
 	_, err := q.db.ExecContext(ctx, removeUserFromGroup, userID, groupID)
 	return err
 }
@@ -870,7 +939,7 @@ const updateGroup = `-- name: UpdateGroup :exec
 UPDATE ` + "`" + `groups` + "`" + ` SET name = ?, description = ? WHERE id = ?
 `
 
-func (q *Queries) UpdateGroup(ctx context.Context, name string, description string, iD uint64) error {
+func (q *MySQLQueries) UpdateGroup(ctx context.Context, name string, description string, iD uint64) error {
 	_, err := q.db.ExecContext(ctx, updateGroup, name, description, iD)
 	return err
 }
@@ -879,7 +948,7 @@ const updatePermission = `-- name: UpdatePermission :exec
 UPDATE permissions SET name = ?, description = ? WHERE id = ?
 `
 
-func (q *Queries) UpdatePermission(ctx context.Context, name string, description string, iD uint64) error {
+func (q *MySQLQueries) UpdatePermission(ctx context.Context, name string, description string, iD uint64) error {
 	_, err := q.db.ExecContext(ctx, updatePermission, name, description, iD)
 	return err
 }
@@ -888,7 +957,7 @@ const updateUser = `-- name: UpdateUser :exec
 UPDATE users SET email = ?, username = ?, password = ?, first_name = ?, last_name = ?, is_administrator = ?, is_active = ? WHERE id = ?
 `
 
-func (q *Queries) UpdateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool, iD uint64) error {
+func (q *MySQLQueries) UpdateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool, iD uint64) error {
 	_, err := q.db.ExecContext(ctx, updateUser,
 		email,
 		username,

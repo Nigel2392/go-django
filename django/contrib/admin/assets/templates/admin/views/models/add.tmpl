@@ -4,5 +4,11 @@
 
 {{ define "content" }}
     <h1>{{ T "Add" }}</h1>
-    {{ include . "admin/forms/form.tmpl" }}
+    <form method="post">
+        <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+        
+        {{ include . "admin/forms/form.tmpl" }}
+        
+        <input class="button" type="submit" value="Submit">
+    </form>
 {{ end }}

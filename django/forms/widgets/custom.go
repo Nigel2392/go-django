@@ -2,6 +2,7 @@ package widgets
 
 import (
 	"reflect"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -101,6 +102,34 @@ func (n *NumberWidget[T]) ValueToForm(value interface{}) interface{} {
 	default:
 		return value
 	}
+}
+
+type BooleanWidget struct {
+	*BaseWidget
+}
+
+func NewBooleanInput(attrs map[string]string) Widget {
+	return &BooleanWidget{NewBaseWidget(S("checkbox"), "forms/widgets/boolean.html", attrs)}
+}
+
+func (b *BooleanWidget) ValueToGo(value interface{}) (interface{}, error) {
+	if value == nil {
+		return false, nil
+	}
+	switch val := value.(type) {
+	case string:
+		return slices.Contains([]string{"true", "on", "1"}, strings.ToLower(val)), nil
+	default:
+		return val, nil
+	}
+}
+
+func (b *BooleanWidget) ValueToForm(value interface{}) interface{} {
+	if value == nil {
+		return false
+	}
+
+	return value
 }
 
 type DateWidgetType string

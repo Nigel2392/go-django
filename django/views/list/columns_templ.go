@@ -121,9 +121,13 @@ func (c *fieldColumn[T]) data(defs attrs.Definitions, _ T) interface{} {
 	var field, ok = defs.Field(c.fieldName)
 
 	assert.False(
-		field == nil || !ok,
+		!ok,
 		"Field %q does not exist", c.fieldName,
 	)
+
+	if field == nil {
+		return nil
+	}
 
 	var d = field.GetValue()
 	if fields.IsZero(d) {
@@ -151,7 +155,7 @@ func (c *fieldColumn[T]) Component(defs attrs.Definitions, row T) templ.Componen
 			c.data(defs, row),
 		))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/views/list/columns.templ`, Line: 54, Col: 5}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/views/list/columns.templ`, Line: 58, Col: 5}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {

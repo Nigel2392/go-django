@@ -1,0 +1,1 @@
+{{ define "boolean" }}<input type="{{ .Get "type" }}" name="{{ .Get "name" }}" id="{{ .Get "id" }}" {{ if (.Get "value") }}checked{{ end }}{{ safeAttrs (include (.Get "attrs") "forms/widgets/attrs.html") }}/>{{ end }}

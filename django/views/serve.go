@@ -164,7 +164,7 @@ func handleErrors(w http.ResponseWriter, req *http.Request, err error, code int)
 //  7. Renderer - A view that can render directly to the response writer with a context.
 //  8. TemplateKeyer - A view that can get the base key for the template.
 //     This is useful for rendering a sub-template with a base template.
-func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods ...string) {
+func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods ...string) error {
 	var method = req.Method
 
 	// Setup error handling.
@@ -175,13 +175,13 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 
 	// Check if the method is allowed.
 	if len(allowedMethods) > 0 && !slices.Contains(allowedMethods, method) {
-		django.App().Log.Error("Method not allowed")
+		var err = errs.Error("Method not allowed")
+		django.App().Log.Error(err)
 		errFn(
 			w, req,
-			errs.Error("Method not allowed"),
-			http.StatusMethodNotAllowed,
+			err, http.StatusMethodNotAllowed,
 		)
-		return
+		return err
 	}
 
 	// Check if the view has a Serve<XXX> method.
@@ -191,7 +191,7 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 	if ok {
 		// Any matching serve method takes precedence over the fallback.
 		serveFn(w, req)
-		return
+		return nil
 	}
 
 	var (
@@ -206,7 +206,7 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 		if context, err = contextGetter.GetContext(req); err != nil {
 			django.App().Log.Error(err)
 			errFn(w, req, err, http.StatusInternalServerError)
-			return
+			return err
 		}
 	}
 
@@ -226,7 +226,7 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 			django.App().Log.Error(err)
 			errFn(w, req, err, http.StatusInternalServerError)
 		}
-		return
+		return err
 	}
 
 	// Get the template if the view implements the TemplateView interface.
@@ -246,7 +246,7 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 			django.App().Log.Error(err)
 			errFn(w, req, err, http.StatusInternalServerError)
 		}
-		return
+		return err
 	}
 
 	// Cannot render if there is no template.
@@ -270,5 +270,7 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 	if err != nil {
 		django.App().Log.Error(err)
 		errFn(w, req, err, http.StatusInternalServerError)
+		return err
 	}
+	return nil
 }

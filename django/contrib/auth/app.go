@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"database/sql"
 	"net/http"
 
 	"github.com/Nigel2392/django"
@@ -66,10 +67,10 @@ func NewAppConfig() django.AppConfig {
 		dbInt, ok := settings.Get("DATABASE")
 		assert.True(ok, "DATABASE setting is required for 'auth' app")
 
-		db, ok := dbInt.(models.DBTX)
+		db, ok := dbInt.(*sql.DB)
 		assert.True(ok, "DATABASE setting must adhere to auth-models.DBTX interface")
 
-		Auth.Queries = models.New(db)
+		Auth.Queries = models.NewQueries(db)
 		Auth.Session = sess
 
 		goldcrest.Register(

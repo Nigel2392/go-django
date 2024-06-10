@@ -64,6 +64,14 @@ func EmailField(opts ...func(Field)) Field {
 	return f
 }
 
+func BooleanField(opts ...func(Field)) Field {
+	var f = NewField(S("boolean"), opts...)
+	if f.FormWidget == nil {
+		f.FormWidget = widgets.NewBooleanInput(nil)
+	}
+	return f
+}
+
 func DateField(typ widgets.DateWidgetType, opts ...func(Field)) Field {
 	var f = NewField(S("date"), opts...)
 	if f.FormWidget == nil {

@@ -1,6 +1,7 @@
 package modelforms
 
 import (
+	"context"
 	"reflect"
 	"slices"
 
@@ -12,8 +13,10 @@ import (
 
 type ModelForm[T any] interface {
 	forms.Form
-	models.Saver
 	Load()
+	Save() error
+	WithContext(ctx context.Context)
+	Context() context.Context
 	SetFields(fields ...string)
 	SetExclude(exclude ...string)
 	SetInstance(model T)
@@ -34,6 +37,7 @@ type BaseModelForm[T attrs.Definer] struct {
 	Model          T
 	Definition     attrs.Definitions
 	InstanceFields []attrs.Field
+	context        context.Context
 
 	flags modelFormFlag
 
@@ -215,8 +219,20 @@ func (f *BaseModelForm[T]) Load() {
 	f.setFlag(formLoaded, true)
 }
 
+func (f *BaseModelForm[T]) WithContext(ctx context.Context) {
+	f.context = ctx
+}
+
+func (f *BaseModelForm[T]) Context() context.Context {
+	if f.context == nil {
+		return context.Background()
+	}
+	return f.context
+}
+
 func (f *BaseModelForm[T]) Save() error {
 	var cleaned = f.CleanedData()
+	var ctx = f.Context()
 
 	for _, fieldname := range f.ModelFields {
 		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, fieldname) {
@@ -237,7 +253,7 @@ func (f *BaseModelForm[T]) Save() error {
 	}
 
 	if instance, ok := any(f.Model).(models.Saver); ok {
-		return instance.Save()
+		return instance.Save(ctx)
 	}
 
 	return nil

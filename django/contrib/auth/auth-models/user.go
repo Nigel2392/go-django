@@ -1,6 +1,12 @@
 package models
 
-import "time"
+import (
+	"context"
+	"time"
+
+	"github.com/Nigel2392/django/core/attrs"
+	"github.com/Nigel2392/django/models"
+)
 
 type UserRow struct {
 	User                  User   `json:"user"`
@@ -12,8 +18,15 @@ type UserRow struct {
 	PermissionDescription string `json:"permission_description"`
 }
 
+var (
+	_ models.Saver    = (*User)(nil)
+	_ models.Updater  = (*User)(nil)
+	_ models.Deleter  = (*User)(nil)
+	_ models.Reloader = (*User)(nil)
+)
+
 type User struct {
-	ID              uint64    `json:"id"`
+	ID              uint64    `json:"id" attrs:"primary"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	Email           string    `json:"email"`
@@ -24,6 +37,65 @@ type User struct {
 	IsAdministrator bool      `json:"is_administrator"`
 	IsActive        bool      `json:"is_active"`
 	IsLoggedIn      bool      `json:"is_logged_in"`
+}
+
+func (u *User) FieldDefs() attrs.Definitions {
+	return attrs.AutoDefinitions(u,
+		"ID",
+		"Email",
+		"Username",
+		"FirstName",
+		"LastName",
+		"Password",
+		"IsAdministrator",
+		"IsActive",
+		"CreatedAt",
+		"UpdatedAt",
+	)
+}
+
+func (u *User) Save(ctx context.Context) error {
+	if u.ID == 0 {
+		return queries.CreateUser(
+			ctx,
+			u.Email,
+			u.Username,
+			u.Password,
+			u.FirstName,
+			u.LastName,
+			u.IsAdministrator,
+			u.IsActive,
+		)
+	}
+	return u.Update(ctx)
+}
+
+func (u *User) Update(ctx context.Context) error {
+	return queries.UpdateUser(
+		ctx,
+		u.Email,
+		u.Username,
+		u.Password,
+		u.FirstName,
+		u.LastName,
+		u.IsAdministrator,
+		u.IsActive,
+		u.ID,
+	)
+}
+
+func (u *User) Delete(ctx context.Context) error {
+	return queries.DeleteUser(ctx, u.ID)
+}
+
+func (u *User) Reload(ctx context.Context) error {
+	row, err := queries.GetUserById(ctx, u.ID)
+	if err != nil {
+		return err
+	}
+
+	*u = row[0].User
+	return nil
 }
 
 func (u *User) IsAuthenticated() bool {

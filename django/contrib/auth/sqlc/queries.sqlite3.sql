@@ -2,6 +2,15 @@
 INSERT INTO users (email, username, password, first_name, last_name, is_administrator, is_active)
 VALUES (?, ?, ?, ?, ?, ?, ?);
 
+-- name: UserByID :one
+SELECT * FROM users WHERE id = ?;
+
+-- name: UserByEmail :one
+SELECT * FROM users WHERE email = ?;
+
+-- name: UserByUsername :one
+SELECT * FROM users WHERE username = ?;
+
 -- name: UpdateUser :exec
 UPDATE users SET email = ?, username = ?, password = ?, first_name = ?, last_name = ?, is_administrator = ?, is_active = ? WHERE id = ?;
 
@@ -9,17 +18,17 @@ UPDATE users SET email = ?, username = ?, password = ?, first_name = ?, last_nam
 DELETE FROM users WHERE id = ?;
 
 -- name: CreateGroup :exec
-INSERT INTO `groups` (name, description)
+INSERT INTO groups (name, description)
 VALUES (?, ?);
 
 -- name: GetGroupByID :one
-SELECT * FROM `groups` WHERE id = ?;
+SELECT * FROM groups WHERE id = ?;
 
 -- name: UpdateGroup :exec
-UPDATE `groups` SET name = ?, description = ? WHERE id = ?;
+UPDATE groups SET name = ?, description = ? WHERE id = ?;
 
 -- name: DeleteGroup :exec
-DELETE FROM `groups` WHERE id = ?;
+DELETE FROM groups WHERE id = ?;
 
 -- name: CreatePermission :exec
 INSERT INTO permissions (name, description)
@@ -58,14 +67,14 @@ SELECT p.* FROM permissions p JOIN group_permissions gp ON p.id = gp.permission_
 SELECT * FROM users;
 
 -- name: GetAllGroups :many
-SELECT * FROM `groups`;
+SELECT * FROM groups;
 
 -- name: GetAllPermissions :many
 SELECT * FROM permissions;
 
 -- name: GetGroupsByUserID :many
 SELECT g.*
-FROM `groups` g
+FROM groups g
 JOIN user_groups ug ON g.id = ug.group_id
 WHERE ug.user_id = ?;
 
@@ -101,7 +110,7 @@ ORDER BY id
 LIMIT ? OFFSET ?;
 
 -- name: GetGroupsWithPagination :many
-SELECT * FROM `groups`
+SELECT * FROM groups
 ORDER BY id
 LIMIT ? OFFSET ?;
 
@@ -120,7 +129,7 @@ FROM
 JOIN
     user_groups ug ON u.id = ug.user_id
 JOIN
-    `groups` g ON ug.group_id = g.id
+    groups g ON ug.group_id = g.id
 JOIN
     group_permissions gp ON g.id = gp.group_id
 JOIN
@@ -140,7 +149,7 @@ FROM
 JOIN
     user_groups ug ON u.id = ug.user_id
 JOIN
-    `groups` g ON ug.group_id = g.id
+    groups g ON ug.group_id = g.id
 JOIN
     group_permissions gp ON g.id = gp.group_id
 JOIN
@@ -161,7 +170,7 @@ FROM
 JOIN
     user_groups ug ON u.id = ug.user_id
 JOIN
-    `groups` g ON ug.group_id = g.id
+    groups g ON ug.group_id = g.id
 JOIN
     group_permissions gp ON g.id = gp.group_id
 JOIN
@@ -177,7 +186,7 @@ SELECT EXISTS (
     SELECT 1
     FROM users u
     JOIN user_groups ug ON u.id = ug.user_id
-    JOIN `groups` g ON ug.group_id = g.id
+    JOIN groups g ON ug.group_id = g.id
     JOIN group_permissions gp ON g.id = gp.group_id
     JOIN permissions p ON gp.permission_id = p.id
     WHERE u.id = ? AND p.name IN (sqlc.slice(PermissionNames))
@@ -204,7 +213,7 @@ WHERE p.id NOT IN (
 
 -- name: GroupsDoNotBelongTo :many
 SELECT g.*
-FROM `groups` g
+FROM groups g
 WHERE g.id NOT IN (
     SELECT ug.group_id
     FROM user_groups ug
@@ -218,4 +227,4 @@ WHERE user_id = ?;
 -- name: AddUserToGroups :exec
 INSERT INTO user_groups (user_id, group_id)
 SELECT ? AS user_id, group_id
-FROM (SELECT * FROM `groups` WHERE id IN (sqlc.slice('group_ids'))) AS t;
+FROM (SELECT * FROM groups WHERE id IN (sqlc.slice('group_ids'))) AS t;

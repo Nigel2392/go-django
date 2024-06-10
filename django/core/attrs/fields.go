@@ -202,6 +202,8 @@ func (f *FieldDef) FormField() fields.Field {
 	switch f.field_t.Type.Kind() {
 	case reflect.String:
 		formField = fields.CharField(opts...)
+	case reflect.Bool:
+		formField = fields.BooleanField(opts...)
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		formField = fields.NumberField[int](opts...)
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
@@ -216,22 +218,6 @@ returnField:
 	formField.SetName(f.Name())
 	f.formField = formField
 	return formField
-}
-
-func convert(v reflect.Value, t reflect.Type) (reflect.Value, bool) {
-	if v.Kind() == reflect.Ptr && t.Kind() != reflect.Ptr {
-		v = v.Elem()
-	} else if v.Kind() != reflect.Ptr && t.Kind() == reflect.Ptr {
-		v = reflect.New(v.Type())
-		v.Elem().Set(v)
-	}
-	if v.Type().AssignableTo(t) {
-		return v, true
-	}
-	if v.CanConvert(t) {
-		return v.Convert(t), true
-	}
-	return reflect.Value{}, false
 }
 
 func (f *FieldDef) GetValue() interface{} {
@@ -265,6 +251,24 @@ func (f *FieldDef) GetValue() interface{} {
 
 func (f *FieldDef) SetValue(v interface{}, force bool) error {
 
+	var r_v = reflect.ValueOf(v)
+	if err := assert.True(
+		r_v.IsValid() || f.AllowNull(),
+		"field %q (%q) is not valid", f.field_t.Name, f.field_t.Type,
+	); err != nil {
+		return err
+	}
+
+	// Set r_v to zero value if it is nil and field allows null
+	if !r_v.IsValid() && f.AllowNull() {
+		if f.field_v.Kind() == reflect.Ptr {
+			r_v = reflect.New(f.field_t.Type.Elem())
+		} else {
+			r_v = reflect.Zero(f.field_t.Type)
+		}
+	}
+
+	// Check if field has a setter
 	var b = make([]byte, 0, len(f.field_t.Name)+3)
 	b = append(b, "Set"...)
 	b = append(b, f.field_t.Name...)
@@ -274,34 +278,24 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		method, ok = f.instance_t_ptr.MethodByName(string(b))
 		firstArg = f.instance_v_ptr
 	}
+	// Call setter if it exists
 	if ok {
 		var r_v = reflect.ValueOf(v)
-		r_v, ok = convert(r_v, method.Type.In(1))
-		assert.True(ok, "field %q (%q) is not convertible to %q", f.field_t.Name, r_v.Type(), method.Type.In(1))
-		method.Func.Call([]reflect.Value{firstArg, r_v})
+		var r_v_ptr, ok = RConvert(&r_v, method.Type.In(1))
+		if !ok {
+			return assert.Fail(
+				fmt.Sprintf("field %q (%q) is not convertible to %q",
+					f.field_t.Name,
+					r_v.Type(),
+					method.Type.In(1),
+				),
+			)
+		}
+		method.Func.Call([]reflect.Value{firstArg, *r_v_ptr})
 		return nil
 	}
 
-	var r_v = reflect.ValueOf(v)
-	if err := assert.True(
-		r_v.IsValid() || f.AllowNull(),
-		"field %q (%q) is not valid", f.field_t.Name, f.field_t.Type,
-	); err != nil {
-		return err
-	}
-
-	if !r_v.IsValid() && f.AllowNull() {
-		f.field_v.Set(reflect.Zero(f.field_t.Type))
-		return nil
-	}
-
-	r_v, ok = convert(r_v, f.field_t.Type)
-	if !ok {
-		return assert.Fail(
-			fmt.Sprintf("field %q (%q) is not convertible to %q", f.field_t.Name, r_v.Type(), f.field_t.Type),
-		)
-	}
-
+	// Check if field is editable
 	if err := assert.True(
 		f.field_v.CanSet() && (f.AllowEdit() || force),
 		"field %q is not editable", f.field_t.Name,
@@ -309,8 +303,20 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		return err
 	}
 
-	if r_v.IsZero() && !f.AllowBlank() {
-		switch r_v.Kind() {
+	// Convert to field type if possible
+	r_v_ptr, ok := RConvert(&r_v, f.field_t.Type)
+	if !ok {
+		return assert.Fail(
+			fmt.Sprintf("field %q (%q) is not convertible to %q",
+				f.field_t.Name,
+				r_v.Type(),
+				f.field_t.Type,
+			),
+		)
+	}
+
+	if r_v_ptr.IsZero() && !f.AllowBlank() {
+		switch r_v_ptr.Kind() {
 		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 			reflect.Float32, reflect.Float64,
@@ -322,6 +328,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		}
 	}
 
-	f.field_v.Set(r_v)
+	RSet(r_v_ptr, &f.field_v, false)
+
 	return nil
 }

@@ -52,6 +52,10 @@ func (d *ObjectDefinitions) Primary() Field {
 	return f
 }
 
+func (d *ObjectDefinitions) Len() int {
+	return d.ObjectFields.Len()
+}
+
 func (d *ObjectDefinitions) Fields() []Field {
 	var m = make([]Field, d.ObjectFields.Len())
 	var i = 0

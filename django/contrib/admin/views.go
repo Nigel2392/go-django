@@ -22,15 +22,22 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 
 	// var instances, err = model.GetList(10, 0)
 
-	var columns = make([]list.ListColumn[attrs.Definer], len(model.Fields))
-	for i, field := range model.Fields {
+	var columns = make([]list.ListColumn[attrs.Definer], len(model.ListView.Fields))
+	for i, field := range model.ListView.Fields {
 		columns[i] = list.Column[attrs.Definer](
-			model.GetLabel(field, field), model.FormatColumn(field),
+			model.GetLabel(model.ListView.ViewOptions, field, field),
+			model.FormatColumn(field),
 		)
 	}
 
+	var amount = model.ListView.PerPage
+	if amount == 0 {
+		amount = 25
+	}
+
 	var view = &list.View[attrs.Definer]{
-		ListColumns: columns,
+		ListColumns:   columns,
+		DefaultAmount: amount,
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: "admin",
@@ -59,19 +66,42 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 	views.Invoke(view, w, r)
 }
 
-func getFormForInstance(instance attrs.Definer, app *AppDefinition, model *ModelDefinition, r *http.Request) modelforms.ModelForm[attrs.Definer] {
+var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
+	var instance = model.NewInstance()
+	var addView = newInstanceView("add", instance, model.AddView, app, model, r)
+	views.Invoke(addView, w, r)
+	// if err := views.Invoke(addView, w, r); err != nil {
+	// panic(err)
+	// }
+}
+
+var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
+	var editView = newInstanceView("edit", instance, model.EditView, app, model, r)
+	views.Invoke(editView, w, r)
+	// if err := views.Invoke(editView, w, r); err != nil {
+	// panic(err)
+	// }
+}
+
+var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
+	w.Write([]byte(model.Name))
+	w.Write([]byte("\n"))
+	w.Write([]byte("delete"))
+}
+
+func getFormForInstance(instance attrs.Definer, opts ViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) modelforms.ModelForm[attrs.Definer] {
 	var form modelforms.ModelForm[attrs.Definer]
 	if f, ok := instance.(FormDefiner); ok {
 		form = f.AdminForm(r, app, model)
 	} else {
 		form = modelforms.NewBaseModelForm[attrs.Definer](instance)
-		for _, field := range model.ModelFields(instance) {
+		for _, field := range model.ModelFields(opts, instance) {
 			var (
 				name      = field.Name()
 				formfield = field.FormField()
 			)
 
-			var label = model.GetLabel(name, field.Label())
+			var label = model.GetLabel(opts, name, field.Label())
 			formfield.SetLabel(label)
 
 			form.AddField(
@@ -82,7 +112,7 @@ func getFormForInstance(instance attrs.Definer, app *AppDefinition, model *Model
 	return form
 }
 
-func newInstanceView(tpl string, instance attrs.Definer, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[modelforms.ModelForm[attrs.Definer]] {
+func newInstanceView(tpl string, instance attrs.Definer, opts ViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[modelforms.ModelForm[attrs.Definer]] {
 	return &views.FormView[modelforms.ModelForm[attrs.Definer]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
@@ -90,17 +120,16 @@ func newInstanceView(tpl string, instance attrs.Definer, app *AppDefinition, mod
 			TemplateName:    fmt.Sprintf("admin/views/models/%s.tmpl", tpl),
 		},
 		GetFormFn: func(req *http.Request) modelforms.ModelForm[attrs.Definer] {
-			var form = getFormForInstance(instance, app, model, r)
+			var form = getFormForInstance(instance, opts, app, model, r)
 			form.SetInstance(instance)
 			return form
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
 			var initial = make(map[string]interface{})
 			if instance == nil {
-				fmt.Println(initial, "is nil")
 				return initial
 			}
-			for _, def := range model.ModelFields(instance) {
+			for _, def := range model.ModelFields(opts, instance) {
 				var v = def.GetValue()
 				var n = def.Name()
 				if fields.IsZero(v) {
@@ -112,21 +141,4 @@ func newInstanceView(tpl string, instance attrs.Definer, app *AppDefinition, mod
 			return initial
 		},
 	}
-}
-
-var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
-	var instance = model.NewInstance()
-	var addView = newInstanceView("add", instance, app, model, r)
-	views.Invoke(addView, w, r)
-}
-
-var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
-	var editView = newInstanceView("edit", instance, app, model, r)
-	views.Invoke(editView, w, r)
-}
-
-var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
-	w.Write([]byte(model.Name))
-	w.Write([]byte("\n"))
-	w.Write([]byte("delete"))
 }

@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/core/attrs"
+	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/views"
@@ -223,7 +224,10 @@ func newInstanceHandler(handler func(w http.ResponseWriter, req *http.Request, a
 
 		var instance, err = model.GetInstance(modelID)
 		if err != nil {
-			http.Error(w, "Error retrieving model, does it exist?", http.StatusInternalServerError)
+			except.Fail(
+				http.StatusInternalServerError,
+				"Failed to get instance: %s", err,
+			)
 			return
 		}
 

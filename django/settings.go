@@ -1,6 +1,12 @@
 package django
 
-import "github.com/Nigel2392/django/core/assert"
+import (
+	"fmt"
+	"reflect"
+	"strconv"
+
+	"github.com/Nigel2392/django/core/assert"
+)
 
 type Settings interface {
 	Set(key string, value interface{})
@@ -70,13 +76,40 @@ func ConfigGetOK[T any](s Settings, key string, default_ ...T) (T, bool) {
 	var value, ok = s.Get(key)
 	if !ok && len(default_) == 1 {
 		return default_[0], false
-	} else if !ok {
+	} else if !ok || value == nil {
 		return *(new(T)), false
+	}
 
+	if s, ok := value.(string); ok {
+		if s == "" {
+			return default_[0], true
+		}
+		var rTyp = reflect.TypeOf(default_[0])
+		switch rTyp.Kind() {
+		case reflect.String:
+			return value.(T), true
+		case reflect.Bool:
+			var v, err = strconv.ParseBool(s)
+			assert.ErrNil(fmt.Errorf("invalid value for key %s: %v (%v)", key, v, err))
+			return any(v).(T), true
+		case reflect.Int:
+			var v, err = strconv.Atoi(s)
+			assert.ErrNil(fmt.Errorf("invalid value for key %s: %v (%v)", key, v, err))
+			return any(v).(T), true
+		case reflect.Int64:
+			var v, err = strconv.ParseInt(s, 10, 64)
+			assert.ErrNil(fmt.Errorf("invalid value for key %s: %v (%v)", key, v, err))
+			return any(v).(T), true
+		case reflect.Float64:
+			var v, err = strconv.ParseFloat(s, 64)
+			assert.ErrNil(fmt.Errorf("invalid value for key %s: %v (%v)", key, v, err))
+			return any(v).(T), true
+		default:
+			assert.Fail("Invalid type for key %s", key)
+		}
 	}
 
 	v, ok := value.(T)
 	assert.True(ok, "Invalid type for key %s", key)
-
 	return v, true
 }

@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 
@@ -8,20 +9,36 @@ import (
 )
 
 type Saver interface {
-	Save() error
+	Save(c context.Context) error
 }
 
 type Updater interface {
-	Update() error
+	Update(c context.Context) error
 }
 
 type Deleter interface {
-	Delete() error
+	Delete(c context.Context) error
 }
 
 type Reloader interface {
-	Reload() error
+	Reload(c context.Context) error
 }
+
+//	type DBSaver interface {
+//		Save(db *sql.DB) error
+//	}
+//
+//	type DBUpdater interface {
+//		Update(db *sql.DB) error
+//	}
+//
+//	type DBDeleter interface {
+//		Delete(db *sql.DB) error
+//	}
+//
+//	type DBReloader interface {
+//		Reload(db *sql.DB) error
+//	}
 
 type Model interface {
 	attrs.Definer

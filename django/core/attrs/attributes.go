@@ -11,6 +11,61 @@ import (
 	"github.com/Nigel2392/django/core/assert"
 )
 
+func fieldNames(d Definer, exclude []string) []string {
+	var excludeMap = make(map[string]struct{})
+	for _, name := range exclude {
+		excludeMap[name] = struct{}{}
+	}
+
+	var (
+		fields = d.FieldDefs().Fields()
+		n      = len(fields)
+		names  = make([]string, 0, n)
+	)
+
+	for _, f := range fields {
+		if _, ok := excludeMap[f.Name()]; ok {
+			continue
+		}
+		names = append(names, f.Name())
+	}
+
+	return names
+}
+
+func FieldNames(d any, exclude []string) []string {
+	if d == nil {
+		return nil
+	}
+	if d, ok := d.(Definer); ok {
+		return fieldNames(d, exclude)
+	}
+	var (
+		rTyp       = reflect.TypeOf(d)
+		excludeMap = make(map[string]struct{})
+	)
+	if rTyp.Kind() == reflect.Ptr {
+		rTyp = rTyp.Elem()
+	}
+	for _, name := range exclude {
+		excludeMap[name] = struct{}{}
+	}
+
+	var (
+		n     = rTyp.NumField()
+		names = make([]string, 0, n)
+	)
+	for i := 0; i < n; i++ {
+		var f = rTyp.Field(i)
+		if _, ok := excludeMap[f.Name]; ok {
+			continue
+		}
+		names = append(names, f.Name)
+	}
+
+	return names
+}
+
 func SetMany(d Definer, values map[string]interface{}) error {
 	for name, value := range values {
 		if err := assert.Err(set(d, name, value, false)); err != nil {
@@ -156,4 +211,61 @@ func set(d Definer, name string, value interface{}, force bool) error {
 	}
 
 	return f.SetValue(value, force)
+}
+
+func RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool) {
+	if v.Kind() == reflect.Ptr && t.Kind() != reflect.Ptr {
+		*v = v.Elem()
+	} else if v.Kind() != reflect.Ptr && t.Kind() == reflect.Ptr {
+		*v = reflect.New(v.Type())
+		v.Elem().Set(*v)
+	}
+	if v.Type().AssignableTo(t) {
+		return v, true
+	}
+	if v.CanConvert(t) {
+		*v = v.Convert(t)
+		return v, true
+	}
+	return v, false
+}
+
+func rSet(src, dst *reflect.Value, isPointer bool) {
+	if isPointer {
+		dst.Elem().Set(src.Elem())
+	} else {
+		dst.Set(*src)
+	}
+}
+
+//func rMethodTakesArg(method reflect.Method, argType reflect.Type, index uint) bool {
+//	var nArgs = method.Type.NumIn()
+//	var i = int(index)
+//	if nArgs != int(i+2) {
+//		return false
+//	}
+//	return method.Type.In(int(i)).AssignableTo(argType)
+//}
+
+func RSet(src, dst *reflect.Value, convert bool) (canset bool) {
+	if !src.IsValid() || !dst.IsValid() {
+		return false
+	}
+	if !dst.CanSet() {
+		return false
+	}
+	var isPointer = dst.Kind() == reflect.Ptr
+	var isImmediatelyAssignable = src.Type().AssignableTo(dst.Type())
+	if isImmediatelyAssignable {
+		rSet(src, dst, isPointer)
+		return true
+	}
+	if convert {
+		src, canset = RConvert(src, dst.Type())
+		if !canset {
+			return false
+		}
+	}
+	rSet(src, dst, isPointer)
+	return true
 }

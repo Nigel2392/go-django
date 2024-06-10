@@ -1,6 +1,7 @@
 package list
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
@@ -68,7 +69,7 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 		}
 	}
 
-	if v.TitleFieldColumn != nil {
+	if v.TitleFieldColumn != nil && len(cols) > 0 {
 		cols[0] = v.TitleFieldColumn(cols[0])
 	}
 
@@ -77,7 +78,11 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 		return base, err
 	}
 
-	listObj := NewList[T](list, cols...)
+	for _, item := range list {
+		fmt.Println(item)
+	}
+
+	listObj := NewList(list, cols...)
 
 	base.Set("list", listObj)
 	base.Set("amount", amount)

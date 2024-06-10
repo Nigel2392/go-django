@@ -79,18 +79,30 @@ func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 	}
 
 	if req.Method == http.MethodPost {
-
 		if form.IsValid() {
+
+			if saver, ok := any(form).(interface{ Save() error }); ok {
+				var err = saver.Save()
+				if err != nil {
+					if v.InvalidFn != nil {
+						return v.InvalidFn(req, form)
+					}
+					goto render
+				}
+			}
+
 			if v.ValidFn != nil {
 				return v.ValidFn(req, form)
 			}
 		} else {
+
 			if v.InvalidFn != nil {
 				return v.InvalidFn(req, form)
 			}
 		}
 	}
 
+render:
 	context.Set("form", form)
 
 	return v.BaseView.Render(w, req, templateName, context)

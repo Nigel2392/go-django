@@ -39,6 +39,11 @@ type FormRenderer interface {
 	Media() media.Media
 }
 
+type ErrorAdder interface {
+	AddFormError(errorList ...error)
+	AddError(name string, errorList ...error)
+}
+
 type Form interface {
 	FormRenderer
 

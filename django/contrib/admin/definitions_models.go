@@ -3,19 +3,39 @@ package admin
 import (
 	"net/http"
 	"reflect"
-	"sync"
 
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/except"
 )
 
+type ViewOptions struct {
+	Fields  []string
+	Exclude []string
+	Labels  map[string]func() string
+}
+
+type ListViewOptions struct {
+	ViewOptions
+	PerPage uint64
+	Format  map[string]func(v any) any
+}
+
+func viewDefaults(o *ViewOptions, mdl any) {
+	if len(o.Fields) > 0 && len(o.Exclude) > 0 {
+		assert.Fail("Fields and Exclude cannot be used together")
+	}
+	if len(o.Fields) == 0 {
+		o.Fields = attrs.FieldNames(mdl, o.Exclude)
+	}
+}
+
 type ModelOptions struct {
 	Name                string
-	Fields              []string
-	Exclude             []string
+	AddView             ViewOptions
+	EditView            ViewOptions
+	ListView            ListViewOptions
 	RegisterToAdminMenu bool
-	Format              map[string]func(v any) any
 	Labels              map[string]func() string
 	GetForID            func(identifier any) (attrs.Definer, error)
 	GetList             func(amount, offset uint, include []string) ([]attrs.Definer, error)
@@ -35,10 +55,9 @@ func (o *ModelOptions) GetName() string {
 
 type ModelDefinition struct {
 	ModelOptions
-	Name     string
-	LabelFn  func() string
-	_rModel  reflect.Type
-	_include map[string]struct{}
+	Name    string
+	LabelFn func() string
+	_rModel reflect.Type
 }
 
 func (o *ModelDefinition) rModel() reflect.Type {
@@ -46,62 +65,6 @@ func (o *ModelDefinition) rModel() reflect.Type {
 		o._rModel = reflect.TypeOf(o.Model)
 	}
 	return o._rModel
-}
-
-var globalMu *sync.Mutex = new(sync.Mutex)
-
-func (o *ModelDefinition) include() map[string]struct{} {
-	if o._include == nil {
-		globalMu.Lock()
-		defer globalMu.Unlock()
-
-		var include = len(o.Fields) == 0
-		var exclude = len(o.Exclude) > 0
-		if include && !exclude {
-			return nil
-		}
-
-		var excludeMap = make(map[string]struct{})
-		for _, name := range o.Exclude {
-			excludeMap[name] = struct{}{}
-		}
-
-		if exclude && !include {
-			for _, name := range o.Exclude {
-				assert.True(name != "", "Exclude field cannot be empty")
-			}
-
-			var (
-				n      = o.NewInstance()
-				defs   = n.FieldDefs()
-				fields = defs.Fields()
-			)
-
-			o.Fields = make([]string, 0, len(fields))
-			o._include = make(map[string]struct{})
-
-			for _, field := range fields {
-				var name = field.Name()
-				if _, ok := excludeMap[name]; !ok {
-					o.Fields = append(o.Fields, name)
-					o._include[name] = struct{}{}
-				}
-			}
-
-			return o._include
-		}
-
-		assert.False(
-			include && exclude,
-			"Cannot have both include and exclude fields",
-		)
-
-		o._include = make(map[string]struct{})
-		for _, name := range o.Fields {
-			o._include[name] = struct{}{}
-		}
-	}
-	return o._include
 }
 
 func (o *ModelDefinition) NewInstance() attrs.Definer {
@@ -130,9 +93,15 @@ func (o *ModelDefinition) Label() string {
 	return o.GetName()
 }
 
-func (o *ModelDefinition) GetLabel(field string, default_ string) func() string {
+func (o *ModelDefinition) GetLabel(opts ViewOptions, field string, default_ string) func() string {
 	if o.Labels != nil {
 		var label, ok = o.Labels[field]
+		if ok {
+			return label
+		}
+	}
+	if opts.Labels != nil {
+		var label, ok = opts.Labels[field]
 		if ok {
 			return label
 		}
@@ -143,11 +112,11 @@ func (o *ModelDefinition) GetLabel(field string, default_ string) func() string 
 }
 
 func (o *ModelDefinition) FormatColumn(field string) any {
-	if o.Format == nil {
+	if o.ListView.Format == nil {
 		return field
 	}
 
-	var format, ok = o.Format[field]
+	var format, ok = o.ListView.Format[field]
 	if !ok {
 		return field
 	}
@@ -158,23 +127,18 @@ func (o *ModelDefinition) FormatColumn(field string) any {
 	}
 }
 
-func (m *ModelDefinition) ModelFields(instance attrs.Definer) []attrs.Field {
-	var defs = instance.FieldDefs()
-	if len(m.Fields) == 0 {
+func (m *ModelDefinition) ModelFields(opts ViewOptions, instace attrs.Definer) []attrs.Field {
+	var defs = instace.FieldDefs()
+	if len(opts.Fields) == 0 {
 		return defs.Fields()
 	}
 
 	var (
-		fields  = make([]attrs.Field, len(m.Fields))
-		include = m.include()
-		ok      bool
+		fields = make([]attrs.Field, len(opts.Fields))
+		ok     bool
 	)
 
-	for i, name := range m.Fields {
-		if _, ok = include[name]; !ok {
-			continue
-		}
-
+	for i, name := range opts.Fields {
 		fields[i], ok = defs.Field(name)
 		assert.True(ok, "Field %s not found in model %s", name, m.Name)
 	}
@@ -197,9 +161,11 @@ func (m *ModelDefinition) GetListInstances(amount, offset uint) ([]attrs.Definer
 		"GetList not implemented for model %s", m.GetName(),
 	)
 
-	return m.GetList(amount, offset, m.Fields)
+	return m.GetList(amount, offset, m.ListView.Fields)
 }
 
 func (m *ModelDefinition) OnRegister(a *AdminApplication, app *AppDefinition) {
-
+	viewDefaults(&m.AddView, m.Model)
+	viewDefaults(&m.EditView, m.Model)
+	viewDefaults(&m.ListView.ViewOptions, m.Model)
 }

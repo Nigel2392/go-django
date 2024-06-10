@@ -25,17 +25,20 @@ type Querier interface {
 	GetAllUsers(ctx context.Context) ([]User, error)
 	GetGroupByID(ctx context.Context, id uint64) (Group, error)
 	GetGroupsByUserID(ctx context.Context, userID uint64) ([]Group, error)
-	GetGroupsWithPagination(ctx context.Context, limit int32, offset int32) ([]Group, error)
+	GetGroupsWithPagination(ctx context.Context, limit uint64, offset uint64) ([]Group, error)
 	GetPermissionByID(ctx context.Context, id uint64) (Permission, error)
 	GetPermissionByName(ctx context.Context, name string) (Permission, error)
 	GetPermissionsByUserID(ctx context.Context, userID uint64) ([]Permission, error)
 	GetPermissionsByUserIDAndPermissionNames(ctx context.Context, userID uint64, permissionnames []string) ([]Permission, error)
-	GetPermissionsWithPagination(ctx context.Context, limit int32, offset int32) ([]Permission, error)
+	GetPermissionsWithPagination(ctx context.Context, limit uint64, offset uint64) ([]Permission, error)
+	UserByEmail(ctx context.Context, email string) (User, error)
+	UserByID(ctx context.Context, id uint64) (User, error)
+	UserByUsername(ctx context.Context, username string) (User, error)
 	GetUserByEmail(ctx context.Context, email string) (UserRow, error)
 	GetUserById(ctx context.Context, id uint64) ([]UserRow, error)
 	GetUserByName(ctx context.Context, username string) (UserRow, error)
 	GetUsersByPermissionID(ctx context.Context, permissionID uint64) ([]User, error)
-	GetUsersWithPagination(ctx context.Context, limit int32, offset int32) ([]User, error)
+	GetUsersWithPagination(ctx context.Context, limit uint64, offset uint64) ([]User, error)
 	GroupsDoNotBelongTo(ctx context.Context, userID uint64) ([]Group, error)
 	ListPermissionsInGroup(ctx context.Context, groupID uint64) ([]Permission, error)
 	ListUsersInGroup(ctx context.Context, groupID uint64) ([]User, error)
@@ -48,4 +51,3 @@ type Querier interface {
 	UpdateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool, iD uint64) error
 }
 
-var _ Querier = (*Queries)(nil)

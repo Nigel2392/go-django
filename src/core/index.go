@@ -207,7 +207,7 @@ var _ = admin.RegisterApp(
 	},
 	admin.ModelOptions{
 		RegisterToAdminMenu: true,
-		Fields:              []string{"Email", "Name", "Password", "Age", "Data", "Block"},
+		// Fields:              []string{"Email", "Name", "Password", "Age", "Data", "Block"},
 		Labels: map[string]func() string{
 			"Email":    fields.S("Object Email"),
 			"Name":     fields.S("Object Name"),
@@ -216,23 +216,25 @@ var _ = admin.RegisterApp(
 			"Data":     fields.S("Object Data"),
 			"Block":    fields.S("Object Block"),
 		},
-		Format: map[string]func(interface{}) interface{}{
-			"Age": func(v any) interface{} {
-				return fmt.Sprintf("%d years old", v)
-			},
-			"Password": func(v any) interface{} {
-				return "********"
-			},
-			"Data": func(v any) interface{} {
-				var data = v.(map[string]any)
-				var b strings.Builder
-				for k, v := range data {
-					b.WriteString(fmt.Sprintf("%s: %v\n", k, v))
-				}
-				return b.String()
-			},
-			"Block": func(v any) interface{} {
-				return "Block"
+		ListView: admin.ListViewOptions{
+			Format: map[string]func(interface{}) interface{}{
+				"Age": func(v any) interface{} {
+					return fmt.Sprintf("%d years old", v)
+				},
+				"Password": func(v any) interface{} {
+					return "********"
+				},
+				"Data": func(v any) interface{} {
+					var data = v.(map[string]any)
+					var b strings.Builder
+					for k, v := range data {
+						b.WriteString(fmt.Sprintf("%s: %v\n", k, v))
+					}
+					return b.String()
+				},
+				"Block": func(v any) interface{} {
+					return "Block"
+				},
 			},
 		},
 		Model: &MainStruct{},

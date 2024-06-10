@@ -130,6 +130,10 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 			for front := a.Models.Front(); front != nil; front = front.Next() {
 				var model = front.Value
 
+				if !model.ModelOptions.RegisterToAdminMenu {
+					continue
+				}
+
 				menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
 					BaseItem: menu.BaseItem{
 						Label: model.Label,

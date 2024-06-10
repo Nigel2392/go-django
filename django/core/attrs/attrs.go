@@ -15,6 +15,7 @@ type Definitions interface {
 	ForceSet(name string, value interface{}) error
 	Primary() Field
 	Fields() []Field
+	Len() int
 }
 
 type Field interface {

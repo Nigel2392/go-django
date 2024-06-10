@@ -24,6 +24,7 @@ type BaseForm struct {
 	FormFields      *orderedmap.OrderedMap[string, fields.Field]
 	FormWidgets     *orderedmap.OrderedMap[string, widgets.Widget]
 	Errors          *orderedmap.OrderedMap[string, []error]
+	ErrorList       []error
 	Raw             url.Values
 	Initial         map[string]interface{}
 	InvalidDefaults map[string]interface{}
@@ -151,6 +152,10 @@ func (f *BaseForm) setup() {
 		f.Errors = orderedmap.NewOrderedMap[string, []error]()
 	}
 
+	if f.ErrorList == nil {
+		f.ErrorList = make([]error, 0)
+	}
+
 	if f.Initial == nil {
 		f.Initial = make(map[string]interface{})
 	}
@@ -164,14 +169,12 @@ func (f *BaseForm) DefaultValue(name string) interface{} {
 
 	if f.Cleaned != nil {
 		if v, ok := f.Cleaned[name]; ok {
-			fmt.Println("Cleaned", v)
 			return v
 		}
 	}
 
 	if f.InvalidDefaults != nil {
 		if v, ok := f.InvalidDefaults[name]; ok {
-			fmt.Println("InvalidDefaults", v)
 			return v
 		}
 	}
@@ -194,7 +197,12 @@ func (f *BaseForm) BoundErrors() *orderedmap.OrderedMap[string, []error] {
 		return orderedmap.NewOrderedMap[string, []error]()
 	}
 
-	return f.Errors
+	var errs = f.Errors
+	if f.ErrorList != nil {
+		errs = f.Errors.Copy()
+		errs.Set("__all__", f.ErrorList)
+	}
+	return errs
 }
 
 type BoundForm interface {
@@ -547,6 +555,23 @@ func (f *BaseForm) IsValid() bool {
 	}
 
 	return valid
+}
+
+func (f *BaseForm) AddFormError(errorList ...error) {
+	if f.ErrorList == nil {
+		f.ErrorList = make([]error, 0)
+	}
+
+	var newErrs = slices.Clone(errorList)
+loop:
+	for i, err := range newErrs {
+		switch e := err.(type) {
+		case errs.DjangoError:
+			continue loop
+		default:
+			newErrs[i] = errs.NewValidationError("", e)
+		}
+	}
 }
 
 func (f *BaseForm) AddError(name string, errorList ...error) {
