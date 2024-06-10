@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/forms"
+	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/models"
 )
 
@@ -46,9 +47,9 @@ type BaseModelForm[T attrs.Definer] struct {
 	ModelExclude []string
 }
 
-func NewBaseModelForm[T attrs.Definer](model T) *BaseModelForm[T] {
+func NewBaseModelForm[T attrs.Definer](model T, opts ...func(forms.Form)) *BaseModelForm[T] {
 	var f = &BaseModelForm[T]{
-		BaseForm: forms.NewBaseForm(),
+		BaseForm: forms.NewBaseForm(opts...),
 		Model:    model,
 	}
 
@@ -97,13 +98,13 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 		"Instance has already been set",
 	)
 
-	f.Model = model
-	f.Definition = model.FieldDefs()
-	f.InstanceFields = model.FieldDefs().Fields()
-
 	if f.wasSet(fieldsWasSet) {
 		return
 	}
+
+	f.Model = model
+	f.Definition = model.FieldDefs()
+	f.InstanceFields = model.FieldDefs().Fields()
 
 	for _, field := range f.InstanceFields {
 		var n = field.Name()
@@ -113,6 +114,19 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 
 		f.ModelFields = append(f.ModelFields, n)
 	}
+
+	var initial = make(map[string]interface{})
+	for _, def := range f.InstanceFields {
+		var v = def.GetValue()
+		var n = def.Name()
+		if fields.IsZero(v) {
+			initial[n] = def.GetDefault()
+		} else {
+			initial[n] = v
+		}
+	}
+
+	f.SetInitial(initial)
 
 	f.setFlag(instanceWasSet, true)
 }
@@ -161,6 +175,11 @@ func (f *BaseModelForm[T]) SetExclude(exclude ...string) {
 	}
 
 	f.setFlag(excludeWasSet, true)
+}
+
+func (f *BaseModelForm[T]) Reset() {
+	f.BaseForm.Reset()
+	f.setFlag(formLoaded, false)
 }
 
 func (f *BaseModelForm[T]) Load() {
@@ -251,10 +270,16 @@ func (f *BaseModelForm[T]) Save() error {
 			return err
 		}
 	}
-
+	var err error
 	if instance, ok := any(f.Model).(models.Saver); ok {
-		return instance.Save(ctx)
+		err = instance.Save(ctx)
 	}
+	if err != nil {
+		return err
+	}
+
+	f.Reset()
+	f.Load()
 
 	return nil
 }

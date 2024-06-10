@@ -25,13 +25,15 @@ var (
 	_ models.Reloader = (*User)(nil)
 )
 
+type Password string
+
 type User struct {
-	ID              uint64    `json:"id" attrs:"primary"`
+	ID              uint64    `json:"id" attrs:"primary;readonly"`
 	CreatedAt       time.Time `json:"created_at"`
 	UpdatedAt       time.Time `json:"updated_at"`
 	Email           string    `json:"email"`
 	Username        string    `json:"username"`
-	Password        string    `json:"password"`
+	Password        Password  `json:"password"`
 	FirstName       string    `json:"first_name"`
 	LastName        string    `json:"last_name"`
 	IsAdministrator bool      `json:"is_administrator"`
@@ -54,13 +56,18 @@ func (u *User) FieldDefs() attrs.Definitions {
 	)
 }
 
+//
+//func (u *User) SetPassword(password string) error {
+//	return SetPassword(u, password)
+//}
+
 func (u *User) Save(ctx context.Context) error {
 	if u.ID == 0 {
 		return queries.CreateUser(
 			ctx,
 			u.Email,
 			u.Username,
-			u.Password,
+			string(u.Password),
 			u.FirstName,
 			u.LastName,
 			u.IsAdministrator,
@@ -75,7 +82,7 @@ func (u *User) Update(ctx context.Context) error {
 		ctx,
 		u.Email,
 		u.Username,
-		u.Password,
+		string(u.Password),
 		u.FirstName,
 		u.LastName,
 		u.IsAdministrator,

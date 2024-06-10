@@ -12,6 +12,7 @@ import (
 type BaseField struct {
 	FieldName    string
 	Required_    bool
+	ReadOnly_    bool
 	Attributes   map[string]string
 	Validators   []func(interface{}) error
 	FormLabel    func() string
@@ -87,6 +88,14 @@ func (i *BaseField) SetRequired(b bool) {
 
 func (i *BaseField) Required() bool {
 	return i.Required_
+}
+
+func (i *BaseField) SetReadOnly(b bool) {
+	i.ReadOnly_ = b
+}
+
+func (i *BaseField) ReadOnly() bool {
+	return i.ReadOnly_
 }
 
 func (i *BaseField) IsEmpty(value interface{}) bool {

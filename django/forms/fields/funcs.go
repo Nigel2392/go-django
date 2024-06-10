@@ -61,7 +61,17 @@ func Name(name string) func(Field) {
 
 func Required(b bool) func(Field) {
 	return func(f Field) {
+		if b {
+			f.SetAttrs(map[string]string{"required": ""})
+		}
 		f.SetRequired(b)
+	}
+}
+
+func ReadOnly(b bool) func(Field) {
+	return func(f Field) {
+		f.SetAttrs(map[string]string{"readonly": ""})
+		f.SetReadOnly(b)
 	}
 }
 

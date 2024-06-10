@@ -96,7 +96,7 @@ func (f *BaseUserLoginForm) Login() error {
 	}
 
 	var user = &users.User
-	if err := CheckPassword(user, cleaned["password"].(string)); err != nil {
+	if err := models.CheckPassword(user, cleaned["password"].(string)); err != nil {
 		return errs.Error("Invalid password")
 	}
 

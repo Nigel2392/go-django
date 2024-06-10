@@ -1,0 +1,10 @@
+{{ define "error_list" }}
+    {{ $Errors := . }}
+    {{ if (gt (len $Errors) 0) }}
+        <ul class="error-list">
+            {{ range $Error := $Errors }}
+                <li class="error"><p>{{ $Error }}</p></li>
+            {{ end }}
+        </ul>
+    {{ end }}
+{{ end }}

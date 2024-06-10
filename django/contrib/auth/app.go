@@ -3,14 +3,17 @@ package auth
 import (
 	"database/sql"
 	"net/http"
+	"reflect"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
 	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
+	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/urls"
+	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/sessions"
@@ -76,6 +79,26 @@ func NewAppConfig() django.AppConfig {
 		goldcrest.Register(
 			django.HOOK_SERVER_ERROR, 0,
 			authRequiredHook,
+		)
+
+		var passwordTyp = reflect.TypeOf(models.Password(""))
+
+		goldcrest.Register(
+			attrs.HookFormFieldForType, 0,
+			attrs.FormFieldGetter(func(f attrs.Field, t reflect.Type, v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
+
+				if v.Type() == passwordTyp {
+					return NewPasswordField(
+						fields.HelpText("Enter your password"),
+						fields.Required(true),
+						fields.MinLength(8),
+						fields.MaxLength(64),
+						ValidateCharacters(false, ChrFlagDigit|ChrFlagLower|ChrFlagUpper|ChrFlagSpecial),
+					), true
+				}
+
+				return nil, false
+			}),
 		)
 
 		return nil

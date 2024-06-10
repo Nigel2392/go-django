@@ -160,7 +160,7 @@ func (a *Application) handleErrorCodePure(w http.ResponseWriter, r *http.Request
 }
 
 func (a *Application) veryBadServerError(err error, w http.ResponseWriter, r *http.Request) {
-	a.Log.Errorf("An unexpected error occurred: %s", err)
+	a.Log.Errorf("An unexpected error occurred: %s (%s)", err, r.URL.String())
 	http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
 }
 
@@ -316,21 +316,9 @@ func (a *Application) Initialize() error {
 		}
 	}
 
-	// var debugMode = ConfigGet(a.Settings, "DEBUG", false)
-	// if debugMode {
-	//var settings = debug.AppSettings{
-	//	DEBUG: true,
-	//	HOST:  ConfigGet(a.Settings, "HOST", "localhost"),
-	//	PORT:  ConfigGet(a.Settings, "PORT", 8080),
-	//	// ROUTES:    a.Router.String(),
-	//	// DATABASES: databases,
-	//}
-	//a.Mux.Use(debug.StacktraceMiddleware(&settings))
-	// } else {
-	// a.Mux.Use(
+	a.Mux.Use(
 	// middleware.Recoverer(a.ServerError),
-	// )
-	// }
+	)
 
 	a.initialized.Store(true)
 

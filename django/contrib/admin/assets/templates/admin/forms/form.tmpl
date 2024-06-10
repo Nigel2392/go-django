@@ -1,5 +1,8 @@
 {{ define "form" }}
-    {{ range $Field := (.Get "form").Fields }}
+
+    {{ $Form := . }}
+
+    {{ range $Field := $Form.Fields }}
 
         <div class="form-field-wrapper">
         

@@ -24,5 +24,7 @@ type Field interface {
 	ValueToGo(value interface{}) (interface{}, error)
 	Required() bool
 	SetRequired(b bool)
+	ReadOnly() bool
+	SetReadOnly(b bool)
 	IsEmpty(value interface{}) bool
 }

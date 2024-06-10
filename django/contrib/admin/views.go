@@ -112,7 +112,7 @@ func getFormForInstance(instance attrs.Definer, opts ViewOptions, app *AppDefini
 	return form
 }
 
-func newInstanceView(tpl string, instance attrs.Definer, opts ViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[modelforms.ModelForm[attrs.Definer]] {
+func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[modelforms.ModelForm[attrs.Definer]] {
 	return &views.FormView[modelforms.ModelForm[attrs.Definer]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
@@ -120,7 +120,18 @@ func newInstanceView(tpl string, instance attrs.Definer, opts ViewOptions, app *
 			TemplateName:    fmt.Sprintf("admin/views/models/%s.tmpl", tpl),
 		},
 		GetFormFn: func(req *http.Request) modelforms.ModelForm[attrs.Definer] {
-			var form = getFormForInstance(instance, opts, app, model, r)
+			var form modelforms.ModelForm[attrs.Definer]
+			if opts.GetForm != nil {
+				form = opts.GetForm(req, instance, opts.ViewOptions.Fields)
+			} else {
+				form = getFormForInstance(instance, opts.ViewOptions, app, model, r)
+				form.SetFields(attrs.FieldNames(instance, opts.Exclude)...)
+			}
+
+			if opts.FormInit != nil {
+				opts.FormInit(instance, form)
+			}
+
 			form.SetInstance(instance)
 			return form
 		},
@@ -129,7 +140,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts ViewOptions, app *
 			if instance == nil {
 				return initial
 			}
-			for _, def := range model.ModelFields(opts, instance) {
+			for _, def := range model.ModelFields(opts.ViewOptions, instance) {
 				var v = def.GetValue()
 				var n = def.Name()
 				if fields.IsZero(v) {

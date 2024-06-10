@@ -19,36 +19,6 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-type BaseForm struct {
-	FormPrefix      string
-	FormFields      *orderedmap.OrderedMap[string, fields.Field]
-	FormWidgets     *orderedmap.OrderedMap[string, widgets.Widget]
-	Errors          *orderedmap.OrderedMap[string, []error]
-	ErrorList       []error
-	Raw             url.Values
-	Initial         map[string]interface{}
-	InvalidDefaults map[string]interface{}
-	Files           map[string][]io.ReadCloser
-	Cleaned         map[string]interface{}
-
-	OnValidFuncs    []func(Form)
-	OnInvalidFuncs  []func(Form)
-	OnFinalizeFuncs []func(Form)
-}
-
-func NewBaseForm(opts ...func(Form)) *BaseForm {
-	var f = &BaseForm{
-		FormFields:      orderedmap.NewOrderedMap[string, fields.Field](),
-		FormWidgets:     orderedmap.NewOrderedMap[string, widgets.Widget](),
-		Initial:         make(map[string]interface{}),
-		InvalidDefaults: make(map[string]interface{}),
-	}
-	for _, opt := range opts {
-		opt(f)
-	}
-	return f
-}
-
 func WithRequestData(method string, r *http.Request) func(Form) {
 	if r.Method != method {
 		return func(f Form) {
@@ -165,6 +135,38 @@ func (f *BaseForm) setup() {
 	}
 }
 
+type BaseForm struct {
+	FormPrefix      string
+	fieldOrder      []string
+	FormFields      *orderedmap.OrderedMap[string, fields.Field]
+	FormWidgets     *orderedmap.OrderedMap[string, widgets.Widget]
+	Errors          *orderedmap.OrderedMap[string, []error]
+	ErrorList       []error
+	Raw             url.Values
+	Initial         map[string]interface{}
+	InvalidDefaults map[string]interface{}
+	Files           map[string][]io.ReadCloser
+	Cleaned         map[string]interface{}
+
+	Validators      []func(Form) []error
+	OnValidFuncs    []func(Form)
+	OnInvalidFuncs  []func(Form)
+	OnFinalizeFuncs []func(Form)
+}
+
+func NewBaseForm(opts ...func(Form)) *BaseForm {
+	var f = &BaseForm{
+		FormFields:      orderedmap.NewOrderedMap[string, fields.Field](),
+		FormWidgets:     orderedmap.NewOrderedMap[string, widgets.Widget](),
+		Initial:         make(map[string]interface{}),
+		InvalidDefaults: make(map[string]interface{}),
+	}
+	for _, opt := range opts {
+		opt(f)
+	}
+	return f
+}
+
 func (f *BaseForm) DefaultValue(name string) interface{} {
 
 	if f.Cleaned != nil {
@@ -210,13 +212,15 @@ type BoundForm interface {
 	AsUL() template.HTML
 	Media() media.Media
 	Fields() []BoundField
+	ErrorList() []error
 	Errors() *orderedmap.OrderedMap[string, []error]
 }
 
 type _BoundForm struct {
-	Form    Form
-	Fields_ []BoundField
-	Errors_ *orderedmap.OrderedMap[string, []error]
+	Form       Form
+	Fields_    []BoundField
+	Errors_    *orderedmap.OrderedMap[string, []error]
+	ErrorList_ []error
 }
 
 func (f *_BoundForm) AsP() template.HTML {
@@ -235,6 +239,10 @@ func (f *_BoundForm) Errors() *orderedmap.OrderedMap[string, []error] {
 	return f.Errors_
 }
 
+func (f *_BoundForm) ErrorList() []error {
+	return f.ErrorList_
+}
+
 func (f *_BoundForm) Media() media.Media {
 	return f.Form.Media()
 }
@@ -245,13 +253,39 @@ func (f *BaseForm) BoundForm() BoundForm {
 		errors      = f.BoundErrors()
 		boundFields = make([]BoundField, 0, fields.Len())
 	)
-	for head := fields.Front(); head != nil; head = head.Next() {
-		boundFields = append(boundFields, head.Value)
+	//for head := fields.Front(); head != nil; head = head.Next() {
+	//	boundFields = append(boundFields, head.Value)
+	//}
+	if f.fieldOrder != nil {
+		var had = make(map[string]struct{})
+		for _, k := range f.fieldOrder {
+			if v, ok := fields.Get(k); ok {
+				boundFields = append(boundFields, v)
+				had[k] = struct{}{}
+			}
+		}
+		if fields.Len() > len(had) {
+			for head := fields.Front(); head != nil; head = head.Next() {
+				var (
+					k = head.Key
+					v = head.Value
+				)
+				if _, ok := had[k]; !ok {
+					boundFields = append(boundFields, v)
+				}
+			}
+		}
+	} else {
+		for head := fields.Front(); head != nil; head = head.Next() {
+			boundFields = append(boundFields, head.Value)
+		}
 	}
+
 	return &_BoundForm{
-		Form:    f,
-		Fields_: boundFields,
-		Errors_: errors,
+		Form:       f,
+		Fields_:    boundFields,
+		Errors_:    errors,
+		ErrorList_: f.ErrorList,
 	}
 }
 
@@ -441,6 +475,7 @@ func (f *BaseForm) Reset() {
 	f.Raw = nil
 	f.Initial = nil
 	f.Errors = nil
+	f.ErrorList = nil
 	f.InvalidDefaults = nil
 	f.Files = nil
 	f.Cleaned = nil
@@ -464,6 +499,10 @@ func (f *BaseForm) FullClean() {
 			initial interface{}
 			data    interface{}
 		)
+
+		if v.ReadOnly() {
+			continue
+		}
 
 		if !v.Widget().ValueOmittedFromData(f.Raw, f.Files, f.prefix(k)) {
 			initial, errors = v.Widget().ValueFromDataDict(f.Raw, f.Files, f.prefix(k))
@@ -521,6 +560,37 @@ func (f *BaseForm) FullClean() {
 	}
 }
 
+func (f *BaseForm) Ordering(order []string) {
+	f.fieldOrder = order
+}
+
+func (f *BaseForm) SetValidators(validators ...func(Form) []error) {
+	if f.Validators == nil {
+		f.Validators = make([]func(Form) []error, 0)
+	}
+	f.Validators = append(f.Validators, validators...)
+}
+
+func (f *BaseForm) Validate() {
+	if f.Validators == nil {
+		f.Validators = make([]func(Form) []error, 0)
+	}
+
+	for _, validator := range f.Validators {
+		var errors = validator(f)
+		if len(errors) > 0 {
+			for _, err := range errors {
+				switch e := err.(type) {
+				case interface{ Unwrap() []error }:
+					f.AddFormError(e.Unwrap()...)
+				default:
+					f.AddFormError(e)
+				}
+			}
+		}
+	}
+}
+
 func (f *BaseForm) IsValid() bool {
 	assert.False(f.Raw == nil, "You cannot call IsValid() without setting the data first.")
 
@@ -528,16 +598,24 @@ func (f *BaseForm) IsValid() bool {
 		f.Errors = orderedmap.NewOrderedMap[string, []error]()
 	}
 
+	if f.ErrorList == nil {
+		f.ErrorList = make([]error, 0)
+	}
+
 	if f.Cleaned == nil {
 		f.FullClean()
 	}
 
+	if f.Errors.Len() == 0 {
+		f.Validate()
+	}
+
 	var valid bool
-	if f.Errors.Len() > 0 && f.Cleaned != nil {
+	if (f.Errors.Len() > 0 || len(f.ErrorList) > 0) && f.Cleaned != nil {
 		f.Cleaned = nil
 		valid = false
 	} else {
-		valid = f.Errors.Len() == 0
+		valid = f.Errors.Len() == 0 && len(f.ErrorList) == 0
 	}
 
 	if valid {
@@ -563,15 +641,7 @@ func (f *BaseForm) AddFormError(errorList ...error) {
 	}
 
 	var newErrs = slices.Clone(errorList)
-loop:
-	for i, err := range newErrs {
-		switch e := err.(type) {
-		case errs.DjangoError:
-			continue loop
-		default:
-			newErrs[i] = errs.NewValidationError("", e)
-		}
-	}
+	f.ErrorList = append(f.ErrorList, newErrs...)
 }
 
 func (f *BaseForm) AddError(name string, errorList ...error) {

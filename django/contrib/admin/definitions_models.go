@@ -7,12 +7,19 @@ import (
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/except"
+	"github.com/Nigel2392/django/forms/modelforms"
 )
 
 type ViewOptions struct {
 	Fields  []string
 	Exclude []string
 	Labels  map[string]func() string
+}
+
+type FormViewOptions struct {
+	ViewOptions
+	GetForm  func(req *http.Request, instance attrs.Definer, fields []string) modelforms.ModelForm[attrs.Definer]
+	FormInit func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer])
 }
 
 type ListViewOptions struct {
@@ -32,8 +39,8 @@ func viewDefaults(o *ViewOptions, mdl any) {
 
 type ModelOptions struct {
 	Name                string
-	AddView             ViewOptions
-	EditView            ViewOptions
+	AddView             FormViewOptions
+	EditView            FormViewOptions
 	ListView            ListViewOptions
 	RegisterToAdminMenu bool
 	Labels              map[string]func() string
@@ -165,7 +172,7 @@ func (m *ModelDefinition) GetListInstances(amount, offset uint) ([]attrs.Definer
 }
 
 func (m *ModelDefinition) OnRegister(a *AdminApplication, app *AppDefinition) {
-	viewDefaults(&m.AddView, m.Model)
-	viewDefaults(&m.EditView, m.Model)
+	viewDefaults(&m.AddView.ViewOptions, m.Model)
+	viewDefaults(&m.EditView.ViewOptions, m.Model)
 	viewDefaults(&m.ListView.ViewOptions, m.Model)
 }

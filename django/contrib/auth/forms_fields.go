@@ -44,7 +44,9 @@ func PasswordValidators(fn ...func(PasswordString) error) func(*PasswordField) {
 
 func NewPasswordField(opts ...func(fields.Field)) *PasswordField {
 	var p = &PasswordField{
-		BaseField: fields.NewField(fields.S("password")),
+		BaseField: fields.NewField(
+			fields.S("password"),
+		),
 	}
 
 	for _, opt := range opts {

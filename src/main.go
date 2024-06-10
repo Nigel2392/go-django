@@ -11,11 +11,15 @@ import (
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/auth"
 	auth_models "github.com/Nigel2392/django/contrib/auth/auth-models"
+	models "github.com/Nigel2392/django/contrib/auth/auth-models"
 	"github.com/Nigel2392/django/contrib/blocks"
 	"github.com/Nigel2392/django/contrib/session"
 	"github.com/Nigel2392/django/core/attrs"
+	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/core/staticfiles"
+	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/django/forms/modelforms"
 	"github.com/Nigel2392/mux/middleware"
 	"github.com/Nigel2392/src/core"
 
@@ -80,19 +84,63 @@ func main() {
 				},
 				PerPage: 25,
 			},
-			AddView: admin.ViewOptions{
-				Labels: map[string]func() string{
-					"Email":     fields.S("Object AddView Email"),
-					"FirstName": fields.S("Object AddView First Name"),
-					"LastName":  fields.S("Object AddView Last Name"),
+			AddView: admin.FormViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Labels: map[string]func() string{
+						"Email":     fields.S("Object AddView Email"),
+						"FirstName": fields.S("Object AddView First Name"),
+						"LastName":  fields.S("Object AddView Last Name"),
+					},
+					Exclude: []string{"ID", "CreatedAt", "UpdatedAt"},
 				},
-				Exclude: []string{"ID", "CreatedAt", "UpdatedAt"},
 			},
-			EditView: admin.ViewOptions{
-				Labels: map[string]func() string{
-					"Email":     fields.S("Object EditView Email"),
-					"FirstName": fields.S("Object EditView First Name"),
-					"LastName":  fields.S("Object EditView Last Name"),
+			EditView: admin.FormViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Labels: map[string]func() string{
+						"Email":     fields.S("Object EditView Email"),
+						"FirstName": fields.S("Object EditView First Name"),
+						"LastName":  fields.S("Object EditView Last Name"),
+					},
+				},
+				FormInit: func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
+					form.Ordering([]string{
+						"Email",
+						"Username",
+						"FirstName",
+						"LastName",
+						"IsAdministrator",
+						"IsActive",
+						"Password",
+						"PasswordConfirm",
+					})
+					form.AddField("PasswordConfirm", auth.NewPasswordField(
+						fields.Label("Password Confirm"),
+						fields.HelpText("Enter your password again to confirm"),
+						fields.Required(false),
+						fields.MaxLength(64),
+						auth.ValidateCharacters(false, auth.ChrFlagDigit|auth.ChrFlagLower|auth.ChrFlagUpper|auth.ChrFlagSpecial),
+					))
+					form.SetValidators(func(f forms.Form) []error {
+						var (
+							cleaned      = f.CleanedData()
+							password1Int = cleaned["Password"]
+							password2Int = cleaned["PasswordConfirm"]
+						)
+						if password2Int == nil || password2Int == "" {
+							return nil
+						}
+						var (
+							password1 = password1Int.(auth.PasswordString)
+							password2 = password2Int.(auth.PasswordString)
+						)
+						if password1 != "" && password2 != "" && password1 != password2 {
+							return []error{errs.Error("Passwords do not match")}
+						} else if password1 != "" && password2 != "" && password1 == password2 {
+							models.SetPassword(instance.(*models.User), string(password1))
+							cleaned["Password"] = string(instance.(*models.User).Password)
+						}
+						return nil
+					})
 				},
 			},
 			Model: &auth_models.User{},

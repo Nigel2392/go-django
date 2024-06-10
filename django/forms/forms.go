@@ -50,6 +50,8 @@ type Form interface {
 	Prefix() string
 	SetPrefix(prefix string)
 	SetInitial(initial map[string]interface{})
+	SetValidators(validators ...func(Form) []error)
+	Ordering([]string)
 
 	Field(name string) fields.Field
 	Widget(name string) widgets.Widget
@@ -65,6 +67,7 @@ type Form interface {
 	CleanedData() map[string]interface{}
 
 	FullClean()
+	Validate()
 	HasChanged() bool
 	IsValid() bool
 	Close() error

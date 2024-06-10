@@ -15,7 +15,9 @@
             <form method="post" action="{{ url "admin:login" }}">
                 <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
                 
-                {{ include . "admin/forms/form.tmpl" }}
+                {{ $Form := (.Get "form") }}
+                {{ include $Form.ErrorList "admin/forms/error_list.tmpl" }}
+                {{ include $Form "admin/forms/form.tmpl" }}
                 
                 <input class="button" type="submit" value="Submit">
             </form>

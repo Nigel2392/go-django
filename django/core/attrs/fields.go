@@ -172,6 +172,10 @@ func (f *FieldDef) FormField() fields.Field {
 	opts = append(opts, fields.Label(f.Label))
 	opts = append(opts, fields.HelpText(f.HelpText))
 
+	if f.attrDef.ReadOnly {
+		opts = append(opts, fields.ReadOnly(true))
+	}
+
 	var typForNew = f.field_t.Type
 	if f.field_t.Type.Kind() == reflect.Ptr {
 		typForNew = f.field_t.Type.Elem()
@@ -272,14 +276,10 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	var b = make([]byte, 0, len(f.field_t.Name)+3)
 	b = append(b, "Set"...)
 	b = append(b, f.field_t.Name...)
-	var firstArg = f.instance_v
-	var method, ok = f.instance_t.MethodByName(string(b))
-	if !ok {
-		method, ok = f.instance_t_ptr.MethodByName(string(b))
-		firstArg = f.instance_v_ptr
-	}
+	var method, ok = f.instance_t_ptr.MethodByName(string(b))
 	// Call setter if it exists
 	if ok {
+		fmt.Println("Calling setter:", string(b))
 		var r_v = reflect.ValueOf(v)
 		var r_v_ptr, ok = RConvert(&r_v, method.Type.In(1))
 		if !ok {
@@ -291,7 +291,13 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 				),
 			)
 		}
-		method.Func.Call([]reflect.Value{firstArg, *r_v_ptr})
+		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr, *r_v_ptr})
+		if len(out) > 0 {
+			var out = out[len(out)-1].Interface()
+			if err, ok := out.(error); ok {
+				return err
+			}
+		}
 		return nil
 	}
 
