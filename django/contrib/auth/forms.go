@@ -81,13 +81,13 @@ func (f *BaseUserLoginForm) Login() error {
 	var (
 		ctx     = f.Request.Context()
 		cleaned = f.CleanedData()
-		users   models.UserRow
+		user    models.User
 		err     error
 	)
 	if Auth.LoginWithEmail {
-		users, err = Auth.Queries.GetUserByEmail(ctx, cleaned["email"].(string))
+		user, err = Auth.Queries.UserByEmail(ctx, cleaned["email"].(string))
 	} else {
-		users, err = Auth.Queries.GetUserByName(ctx, cleaned["username"].(string))
+		user, err = Auth.Queries.UserByUsername(ctx, cleaned["username"].(string))
 	}
 	if err != nil {
 		return errors.Wrap(
@@ -95,12 +95,12 @@ func (f *BaseUserLoginForm) Login() error {
 		)
 	}
 
-	var user = &users.User
-	if err := models.CheckPassword(user, cleaned["password"].(string)); err != nil {
+	var u = &user
+	if err := models.CheckPassword(u, string(cleaned["password"].(PasswordString))); err != nil {
 		return errs.Error("Invalid password")
 	}
 
-	Login(f.Request, user)
-	f.Instance = user
+	Login(f.Request, u)
+	f.Instance = u
 	return nil
 }

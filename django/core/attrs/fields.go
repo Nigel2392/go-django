@@ -176,6 +176,10 @@ func (f *FieldDef) FormField() fields.Field {
 		opts = append(opts, fields.ReadOnly(true))
 	}
 
+	if !f.AllowBlank() {
+		opts = append(opts, fields.Required(true))
+	}
+
 	var typForNew = f.field_t.Type
 	if f.field_t.Type.Kind() == reflect.Ptr {
 		typForNew = f.field_t.Type.Elem()

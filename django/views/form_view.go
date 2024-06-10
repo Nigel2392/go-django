@@ -1,6 +1,7 @@
 package views
 
 import (
+	"fmt"
 	"net/http"
 	"reflect"
 
@@ -16,6 +17,7 @@ type FormView[T forms.Form] struct {
 	GetInitialFn func(req *http.Request) map[string]interface{}
 	ValidFn      func(req *http.Request, form T) error
 	InvalidFn    func(req *http.Request, form T) error
+	SuccessFn    func(w http.ResponseWriter, req *http.Request, form T)
 }
 
 type form[T forms.Form] struct {
@@ -78,27 +80,46 @@ func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 		form.SetInitial(v.GetInitialFn(req))
 	}
 
+	var err error
 	if req.Method == http.MethodPost {
 		if form.IsValid() {
 
 			if saver, ok := any(form).(interface{ Save() error }); ok {
-				var err = saver.Save()
+				err = saver.Save()
 				if err != nil {
 					if v.InvalidFn != nil {
-						return v.InvalidFn(req, form)
+						err = v.InvalidFn(req, form)
+						goto checkFormErr
 					}
 					goto render
 				}
 			}
 
 			if v.ValidFn != nil {
-				return v.ValidFn(req, form)
+				err = v.ValidFn(req, form)
+				if err != nil {
+					goto checkFormErr
+				}
 			}
-		} else {
 
-			if v.InvalidFn != nil {
-				return v.InvalidFn(req, form)
+			if v.SuccessFn != nil {
+				v.SuccessFn(w, req, form)
+				return nil
 			}
+
+		} else {
+			if v.InvalidFn != nil {
+				err = v.InvalidFn(req, form)
+			}
+		}
+	}
+
+checkFormErr:
+	if err != nil {
+		if adder, ok := any(form).(forms.ErrorAdder); ok {
+			adder.AddFormError(err)
+		} else {
+			return fmt.Errorf("form error: %w", err)
 		}
 	}
 
