@@ -19,7 +19,6 @@ import (
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/fields"
-	"github.com/Nigel2392/django/internal/http_"
 	"github.com/Nigel2392/django/utils"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -29,10 +28,38 @@ import (
 	"github.com/pkg/errors"
 )
 
+// AppConfig is the interface that must be implemented by all Django applications.
+//
+// The AppConfig interface is used to define the structure of a Django application.
+//
+// It can be used to define routes, middleware, templates, and other options / handlers.
+//
+// The implementation of this interface can be found in django/apps/apps.go.
 type AppConfig interface {
+	// The application name.
+	//
+	// This is used to identify the application.
+	//
+	// An application cannot be registered twice - the name MUST be unique.
 	Name() string
+
+	// A list of callback functions to interact with the router / a sub- route.
+	//
+	// This can be used to register URLs for your application's handlers.
+	//
+	// These callback functions must take the core.Mux interface as the only argument
+	// and return nothing.
 	URLs() []core.URL
-	URLPath() string // Can be empty for root paths
+
+	// The base path for your application.
+	//
+	// If this is a non- empty string, a sub- route will automatically be created.
+	//
+	// This sub-route will then be passed to the above-mentioned list of callback functions.
+	//
+	// If the string is empty - direct access to the application's multiplexer will be given
+	// (through the core.Mux interface).
+	URLPath() string
 	Middleware() []core.Middleware
 	Initialize(settings Settings) error
 	Processors() []func(tpl.RequestContext)
@@ -40,6 +67,17 @@ type AppConfig interface {
 	OnReady() error
 }
 
+// The global application struct.
+//
+// This is a singleton object.
+//
+// It can only be configured once, any calls to the
+// initialization function will return the old instance.
+//
+// This allows for any registered application to freely call the initializer function
+// to work with the application instance.
+//
+// The application object should only be initialized once by calling `(*Application).Initialize()`
 type Application struct {
 	Settings    Settings
 	Apps        *orderedmap.OrderedMap[string, AppConfig]
@@ -219,8 +257,8 @@ func (a *Application) Initialize() error {
 	}
 
 	a.Mux.Use(
+		RequestSignalMiddleware,
 		// middleware.Recoverer(a.veryBadServerError),
-		http_.RequestSignalMiddleware,
 		middleware.AllowedHosts(
 			ConfigGet(a.Settings, "ALLOWED_HOSTS", []string{"*"})...,
 		),
