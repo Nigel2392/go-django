@@ -19,6 +19,7 @@ body {
     padding: 1.5em 2.5em;
     background: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    transition: width 0.5s, margin-top 0.5s, margin-left 0.5s;
 }
 
 @media (min-width: 768px) {

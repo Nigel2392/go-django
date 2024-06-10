@@ -101,14 +101,14 @@ func (o *ModelDefinition) Label() string {
 }
 
 func (o *ModelDefinition) GetLabel(opts ViewOptions, field string, default_ string) func() string {
-	if o.Labels != nil {
-		var label, ok = o.Labels[field]
+	if opts.Labels != nil {
+		var label, ok = opts.Labels[field]
 		if ok {
 			return label
 		}
 	}
-	if opts.Labels != nil {
-		var label, ok = opts.Labels[field]
+	if o.Labels != nil {
+		var label, ok = o.Labels[field]
 		if ok {
 			return label
 		}

@@ -13,6 +13,7 @@ import (
 	auth_models "github.com/Nigel2392/django/contrib/auth/auth-models"
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
 	"github.com/Nigel2392/django/contrib/blocks"
+	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/django/contrib/session"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/errs"
@@ -48,6 +49,7 @@ func main() {
 			session.NewAppConfig,
 			auth.NewAppConfig,
 			admin.NewAppConfig,
+			auditlogs.NewAppConfig,
 			core.NewAppConfig,
 			blocks.NewAppConfig,
 		),
