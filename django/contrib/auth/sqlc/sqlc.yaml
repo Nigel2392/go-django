@@ -24,3 +24,14 @@ sql:
         emit_interface: false
         query_parameter_limit: 8
 
+  # - schema: "./schema.postgres.sql"
+    # queries: "./queries.postgres.sql"
+    # engine: "postgresql"
+    # gen:
+      # go:
+        # package: "models"
+        # out: "../auth-models"
+        # emit_json_tags: true
+        # emit_prepared_queries: false
+        # emit_interface: false
+        # query_parameter_limit: 8

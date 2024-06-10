@@ -8,8 +8,8 @@
         <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
         
         {{ $Form := (.Get "form") }}
-        {{ include $Form.ErrorList "admin/forms/error_list.tmpl" }}
-        {{ include $Form "admin/forms/form.tmpl" }}
+        {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}
+        {{ include $Form "admin/shared/forms/form.tmpl" }}
         
         <input class="button" type="submit" value="Submit">
     </form>

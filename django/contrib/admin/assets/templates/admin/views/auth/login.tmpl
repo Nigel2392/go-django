@@ -10,14 +10,16 @@
     <div class="login-container-wrapper">
         <div class="login-container">
 
-            <h1>{{ T "Login" }}</h1>
+            {{ $headingText := (T "Login") }}
+            {{ $subText := (T "Login to access the admin area") }}
+            {{ component "admin.header" 1 $headingText $subText }}
 
             <form method="post" action="{{ url "admin:login" }}">
                 <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
                 
                 {{ $Form := (.Get "form") }}
-                {{ include $Form.ErrorList "admin/forms/error_list.tmpl" }}
-                {{ include $Form "admin/forms/form.tmpl" }}
+                {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}
+                {{ include $Form "admin/shared/forms/form.tmpl" }}
                 
                 <input class="button" type="submit" value="Submit">
             </form>

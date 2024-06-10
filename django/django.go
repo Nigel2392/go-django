@@ -1,14 +1,17 @@
 package django
 
 import (
+	"bytes"
+	"context"
 	"crypto/tls"
 	"fmt"
+	"html/template"
 	"net/http"
 	"os"
 	"reflect"
 	"sync/atomic"
-	"text/template"
 
+	"github.com/Nigel2392/django/components"
 	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/except"
@@ -266,6 +269,13 @@ func (a *Application) Initialize() error {
 			}
 			return rt
 		},
+		"component": func(name string, args ...interface{}) template.HTML {
+			var c = components.Render(name, args...)
+			var buf = new(bytes.Buffer)
+			var ctx = context.Background()
+			c.Render(ctx, buf)
+			return template.HTML(buf.String())
+		},
 		"T": fields.T,
 	})
 
@@ -317,7 +327,7 @@ func (a *Application) Initialize() error {
 	}
 
 	a.Mux.Use(
-		middleware.Recoverer(a.ServerError),
+	// middleware.Recoverer(a.ServerError),
 	)
 
 	a.initialized.Store(true)

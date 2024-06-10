@@ -9,6 +9,8 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
+	"github.com/Nigel2392/django/components"
+	cmpts "github.com/Nigel2392/django/contrib/admin/components"
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/except"
@@ -77,6 +79,15 @@ func NewAppConfig() django.AppConfig {
 				tpl.MatchExt(".ico"),
 			),
 		))
+
+		components.Register("admin.header", cmpts.Header)
+		components.Register("admin.heading", cmpts.Heading)
+		components.Register("admin.heading1", cmpts.Heading1)
+		components.Register("admin.heading2", cmpts.Heading2)
+		components.Register("admin.heading3", cmpts.Heading3)
+		components.Register("admin.heading4", cmpts.Heading4)
+		components.Register("admin.heading5", cmpts.Heading5)
+		components.Register("admin.heading6", cmpts.Heading6)
 
 		tpl.Add(tpl.Config{
 			AppName: "admin",

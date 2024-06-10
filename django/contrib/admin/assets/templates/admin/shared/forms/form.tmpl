@@ -9,7 +9,7 @@
             <div class="form-field">
                 {{ $Field.Label }}
             
-                {{ include $Field "admin/forms/errors.tmpl" }}
+                {{ include $Field "admin/shared/forms/errors.tmpl" }}
                 
                 {{ if (ne $Field.HelpText "") }}
                     <p class="help-text">{{ $Field.HelpText }}</p>

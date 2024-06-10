@@ -283,7 +283,6 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	var method, ok = f.instance_t_ptr.MethodByName(string(b))
 	// Call setter if it exists
 	if ok {
-		fmt.Println("Calling setter:", string(b))
 		var r_v = reflect.ValueOf(v)
 		var r_v_ptr, ok = RConvert(&r_v, method.Type.In(1))
 		if !ok {

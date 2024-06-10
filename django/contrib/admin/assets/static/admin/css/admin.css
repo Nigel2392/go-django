@@ -104,6 +104,9 @@ a:hover {
 #main #content-wrapper #content {
     background-color: #fff;
     border-radius: 4px;
+    max-width: 90%;
+    margin: 0 auto;
+
     & h1, 
     & h2, 
     & h3, 
@@ -114,7 +117,6 @@ a:hover {
         margin-bottom: .5rem;
         color: #2e1f5e;
     }
-    
 }
 
 .form-field {

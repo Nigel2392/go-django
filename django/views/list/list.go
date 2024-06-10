@@ -1,7 +1,6 @@
 package list
 
 import (
-	"fmt"
 	"net/http"
 	"strconv"
 
@@ -76,10 +75,6 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	list, err := v.GetListFn(uint(amount), uint(page), fields)
 	if err != nil {
 		return base, err
-	}
-
-	for _, item := range list {
-		fmt.Println(item)
 	}
 
 	listObj := NewList(list, cols...)

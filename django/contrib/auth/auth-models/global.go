@@ -1,14 +1,11 @@
-// versions:
-//   sqlc v1.26.0
-
 package models
 
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/go-sql-driver/mysql"
-	"github.com/lib/pq"
 	"github.com/mattn/go-sqlite3"
 )
 
@@ -34,9 +31,8 @@ func NewQueries(db *sql.DB) Querier {
 		q = &SQLiteQueries{
 			db: db,
 		}
-	case *pq.Driver:
 	default:
-		panic("unsupported driver")
+		panic(fmt.Sprintf("unsupported driver: %T", db.Driver()))
 	}
 
 	queries = q

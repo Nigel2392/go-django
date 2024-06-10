@@ -7,6 +7,7 @@ import (
 templ Heading(level uint8, text string) {
     {{ var heading = fmt.Sprintf("h%d", level) }}
     {{ var headingTag = fmt.Sprintf("<%s class=\"heading__title\">%s</%s>", heading, text, heading) }}
+    {{ if level < 1 { level = 1 } else if level > 6 { level = 6 } }}
     <div class="heading">
         @templ.Raw(headingTag)
     </div>
@@ -34,4 +35,32 @@ templ Heading5(text string) {
 
 templ Heading6(text string) {
     @Heading(6, text)
+}
+
+templ Header(lvel int, headingText, subText string, components ...templ.Component) {
+    <header class="header">
+        if len(components) > 0 {
+            <div class="header-content-row">
+                <div class="header-content">
+                    @Heading(uint8(lvel), headingText)
+                </div>
+                <div class="header-content">
+                    for _, component := range components {
+                        <div class="header-content__item">
+                            @component
+                        </div>
+                    }
+                </div>
+            </div>
+        } else {
+            <div class="header-content">
+                @Heading(uint8(lvel), headingText)
+            </div>
+        }
+        if subText != "" {
+            <div class="header-sub-content">
+                @Heading(uint8(lvel - 1), subText)
+            </div>
+        }
+    </header>
 }

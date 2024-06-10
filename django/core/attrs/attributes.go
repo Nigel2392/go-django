@@ -232,6 +232,9 @@ func RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool) {
 
 func rSet(src, dst *reflect.Value, isPointer bool) {
 	if isPointer {
+		if dst.IsZero() {
+			dst.Set(reflect.New(dst.Type().Elem()))
+		}
 		dst.Elem().Set(src.Elem())
 	} else {
 		dst.Set(*src)
