@@ -61,10 +61,10 @@ func Name(name string) func(Field) {
 
 func Required(b bool) func(Field) {
 	return func(f Field) {
-		//if b {
-		//	f.SetAttrs(map[string]string{"required": ""})
-		//}
-		f.SetRequired(b)
+		if b {
+			f.SetAttrs(map[string]string{"required": ""})
+			f.SetRequired(b)
+		}
 	}
 }
 

@@ -66,7 +66,7 @@ func inputEquals(widget field, type_, name, value string, attrs map[string]strin
 	var matches = obj.FindAllStringSubmatch(html, -1)
 
 	if len(matches) != len(tokens) {
-		return fmt.Errorf("Number of attributes do not match: %d != %d %v", len(matches), len(tokens), matches)
+		return fmt.Errorf("Number of attributes do not match: %d != expected (%d) %v", len(matches), len(tokens), matches)
 	}
 
 	for _, token := range tokens {
@@ -120,8 +120,9 @@ func TestInputEquals(t *testing.T) {
 	var attrs = map[string]string{
 		"minlength": "5",
 		"maxlength": "250",
+		"required":  "",
 	}
-	var inputHtml = `<input type="text" id="id_email" name="email" value="test@localhost" minlength="5" maxlength="250"/>`
+	var inputHtml = `<input type="text" id="id_email" name="email" value="test@localhost" minlength="5" maxlength="250" required="" />`
 	t.Run("Valid", func(t *testing.T) {
 		if err := inputEquals(fakeField{inputHtml}, "text", "email", "test@localhost", attrs); err != nil {
 			t.Errorf("Input HTML does not match: %s", err)
@@ -147,6 +148,7 @@ func TestInputEquals(t *testing.T) {
 			if err := inputEquals(fakeField{inputHtml}, "text", "email", "test@localhost", map[string]string{
 				"minlength": "6",
 				"maxlength": "249",
+				"required":  "",
 			}); err == nil {
 				t.Error("Input HTML should not match.")
 			}
@@ -181,6 +183,29 @@ func TestFormRequired(t *testing.T) {
 			nil,
 		)
 	}
+
+	t.Run("RequiredAttributePresent", func(t *testing.T) {
+		var (
+			fields       = form.BoundFields()
+			firstName, _ = fields.Get("first_name")
+			lastName, _  = fields.Get("last_name")
+		)
+
+		firstName.(*forms.BoundFormWidget).FormValue = "Firstname"
+		lastName.(*forms.BoundFormWidget).FormValue = "Lastname"
+
+		if err := inputEquals(firstName, "text", "first_name", "Firstname", map[string]string{
+			"required": "",
+		}); err != nil {
+			t.Errorf("Input HTML does not match for field 'first_name': %s", err)
+		}
+
+		if err := inputEquals(lastName, "text", "last_name", "Lastname", map[string]string{
+			"required": "",
+		}); err != nil {
+			t.Errorf("Input HTML does not match for field 'last_name': %s", err)
+		}
+	})
 
 	t.Run("Valid", func(t *testing.T) {
 		addFormData(map[string]string{
@@ -377,16 +402,20 @@ func TestFormValidation(t *testing.T) {
 			if err := inputEquals(email, "email", "email", expected["email"], map[string]string{
 				"minlength": "5",
 				"maxlength": "250",
+				"required":  "",
 			}); err != nil {
 				t.Errorf("Input HTML does not match for field 'email': %s", err)
 			}
 			if err := inputEquals(name, "text", "name", expected["name"], map[string]string{
 				"minlength": "2",
 				"maxlength": "50",
+				"required":  "",
 			}); err != nil {
 				t.Errorf("Input HTML does not match for field 'name': %s", err)
 			}
-			if err := inputEquals(age, "number", "age", expected["age"], map[string]string{}); err != nil {
+			if err := inputEquals(age, "number", "age", expected["age"], map[string]string{
+				"required": "",
+			}); err != nil {
 				t.Errorf("Input HTML does not match for field 'age': %s", err)
 			}
 

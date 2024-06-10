@@ -317,7 +317,7 @@ func (a *Application) Initialize() error {
 	}
 
 	a.Mux.Use(
-	// middleware.Recoverer(a.ServerError),
+		middleware.Recoverer(a.ServerError),
 	)
 
 	a.initialized.Store(true)
