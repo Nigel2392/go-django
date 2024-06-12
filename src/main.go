@@ -17,10 +17,12 @@ import (
 	"github.com/Nigel2392/django/contrib/session"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/errs"
+	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/modelforms"
+	"github.com/Nigel2392/django/views/list"
 	"github.com/Nigel2392/mux/middleware"
 	"github.com/Nigel2392/src/core"
 
@@ -71,8 +73,8 @@ func main() {
 			ListView: admin.ListViewOptions{
 				ViewOptions: admin.ViewOptions{
 					Fields: []string{
-						"Email",
 						"ID",
+						"Email",
 						"FirstName",
 						"LastName",
 						"IsAdministrator",
@@ -83,6 +85,14 @@ func main() {
 						"FirstName": fields.S("Object ListView First Name"),
 						"LastName":  fields.S("Object ListView Last Name"),
 					},
+				},
+				Columns: map[string]list.ListColumn[attrs.Definer]{
+					"Email": list.LinkColumn[attrs.Definer](
+						fields.S("Email"),
+						"Email", func(defs attrs.Definitions, row attrs.Definer) string {
+							return django.Reverse("admin:apps:model:edit", "Auth", "User", defs.Get("ID"))
+						},
+					),
 				},
 				PerPage: 25,
 			},
@@ -117,7 +127,7 @@ func main() {
 					})
 					form.AddField("PasswordConfirm", auth.NewPasswordField(
 						fields.Label("Password Confirm"),
-						fields.HelpText("Enter your password again to confirm"),
+						fields.HelpText("Enter the password again to confirm"),
 						fields.Required(false),
 						fields.MaxLength(64),
 						auth.ValidateCharacters(false, auth.ChrFlagDigit|auth.ChrFlagLower|auth.ChrFlagUpper|auth.ChrFlagSpecial),
@@ -185,6 +195,8 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	app.Log.SetLevel(logger.DBG)
 
 	err = staticfiles.Collect(func(pah string, f fs.File) error {
 		var stat, err = f.Stat()

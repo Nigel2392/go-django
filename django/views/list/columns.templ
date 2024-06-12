@@ -89,6 +89,29 @@ func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(defs att
 	}
 }
 
+type linkColumn[T attrs.Definer] struct {
+	fieldColumn[T]
+	getURL func(defs attrs.Definitions, row T) string
+}
+
+templ (c *linkColumn[T]) Component(defs attrs.Definitions, row T) {
+	{{ var url = templ.SafeURL(c.getURL(defs, row))}}
+	if url == "" {
+		@c.fieldColumn.Component(defs, row)
+	} else {
+		<a href={ url }>
+			@c.fieldColumn.Component(defs, row)
+		</a>
+	}
+}
+
+func LinkColumn[T attrs.Definer](header func() string, fieldName string, getURL func(defs attrs.Definitions, row T) string) ListColumn[T] {
+	return &linkColumn[T]{
+		fieldColumn: fieldColumn[T]{header, fieldName},
+		getURL:     getURL,
+	}
+}
+
 func Column[T attrs.Definer](header func() string, getter any) ListColumn[T] {
 	switch g := getter.(type) {
 	case func(defs attrs.Definitions, row T) interface{}:

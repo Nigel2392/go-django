@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
 	"os"
 	"reflect"
 	"sync/atomic"
@@ -117,6 +118,7 @@ type Option func(*Application) error
 var (
 	Global  *Application
 	Reverse = Global.Reverse
+	Static  = Global.Static
 )
 
 func App(opts ...Option) *Application {
@@ -131,6 +133,7 @@ func App(opts ...Option) *Application {
 		}
 
 		Reverse = Global.Reverse
+		Static = Global.Static
 	}
 
 	for i, opt := range opts {
@@ -249,6 +252,19 @@ func (a *Application) Reverse(name string, args ...any) string {
 	return rt
 }
 
+func (a *Application) Static(path string) string {
+	var u, err = url.Parse(path)
+	if err != nil {
+		panic(errors.Wrapf(err, "Invalid static URL path '%s'", path))
+	}
+
+	if u.Scheme != "" || u.Host != "" {
+		return path
+	}
+
+	return fmt.Sprintf("%s%s", core.STATIC_URL, path)
+}
+
 func (a *Application) Initialize() error {
 
 	if a.Log == nil {
@@ -320,9 +336,7 @@ func (a *Application) Initialize() error {
 	})
 
 	tpl.Funcs(template.FuncMap{
-		"static": func(path string) string {
-			return fmt.Sprintf("%s%s", core.STATIC_URL, path)
-		},
+		"static": a.Static,
 		"url": func(name string, args ...any) string {
 			var rt, err = a.Mux.Reverse(name, args...)
 			if err != nil {

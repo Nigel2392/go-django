@@ -1,13 +1,17 @@
 package components
 
+import (
+    "fmt"
+)
+
 type ButtonType uint8
 
 const (
-    ButtonTypePrimary ButtonType = iota
+    ButtonTypePrimary ButtonType = 1 << iota
     ButtonTypeSecondary
     ButtonTypeSuccess
-    ButtonTypeDanger
     ButtonTypeWarning
+    ButtonTypeDanger
     ButtonTypeHollow
 )
 
@@ -16,6 +20,107 @@ type ButtonConfig struct {
     Icon templ.Component
     Type ButtonType
 }
+
+func NewButton(text string, args ...interface{}) templ.Component {
+
+	var (
+		iconComponent templ.Component
+		type_ 	   ButtonType = 0
+	)
+loop:
+	for _, arg := range args {
+		switch t := arg.(type) {
+        case templ.Component:
+			iconComponent = t
+		case string:
+            if t == "" {
+			    continue loop
+            }
+			iconComponent = templ.Raw(t)
+		case ButtonType:
+			type_ |= t
+		case int:
+			type_ |= ButtonType(t)
+		case uint:
+			type_ |= ButtonType(t)
+        case nil, any:
+            continue loop
+		default:
+			fmt.Printf("Unknown type: %T\n", t)
+		}
+	}
+
+	var cfg = ButtonConfig{
+		Text: text,
+		Icon: iconComponent,
+		Type: type_,
+	}
+
+
+	return Button(cfg)
+}
+
+
+func ButtonPrimary(text string, icon any, hollow ...bool) templ.Component {
+	var h = false
+	if len(hollow) > 0 && hollow[0] {
+		h = true
+	}
+	var typ = ButtonTypePrimary
+	if h {
+		typ |= ButtonTypeHollow
+	}
+	return NewButton(text, icon, typ)
+}
+
+func ButtonSecondary(text string, icon any, hollow ...bool) templ.Component {
+	var h = false
+	if len(hollow) > 0 && hollow[0] {
+		h = true
+	}
+	var typ = ButtonTypeSecondary
+	if h {
+		typ |= ButtonTypeHollow
+	}
+	return NewButton(text, icon, typ)
+}
+
+func ButtonSuccess(text string, icon any, hollow ...bool) templ.Component {
+	var h = false
+	if len(hollow) > 0 && hollow[0] {
+		h = true
+	}
+	var typ = ButtonTypeSuccess
+	if h {
+		typ |= ButtonTypeHollow
+	}
+	return NewButton(text, icon, typ)
+}
+
+func ButtonDanger(text string, icon any, hollow ...bool) templ.Component {
+	var h = false
+	if len(hollow) > 0 && hollow[0] {
+		h = true
+	}
+	var typ = ButtonTypeDanger
+	if h {
+		typ |= ButtonTypeHollow
+	}
+	return NewButton(text, icon, typ)
+}
+
+func ButtonWarning(text string, icon any, hollow ...bool) templ.Component {
+	var h = false
+	if len(hollow) > 0 && hollow[0] {
+		h = true
+	}
+	var typ = ButtonTypeWarning
+	if h {
+		typ |= ButtonTypeHollow
+	}
+	return NewButton(text, icon, typ)
+}
+
 
 templ Button(config ButtonConfig) {
     <button class={ 

@@ -5,6 +5,9 @@
 {{ end }}
 
 {{ define "content" }}
-    
+
+    {{ $headingText := (T "Admin") }}
+    {{ $subText := (T "Welcome to the admin area") }}
+    {{ component "admin.header" 1 $headingText $subText }}
 
 {{ end }}

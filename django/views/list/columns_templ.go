@@ -269,6 +269,67 @@ func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(defs att
 	}
 }
 
+type linkColumn[T attrs.Definer] struct {
+	fieldColumn[T]
+	getURL func(defs attrs.Definitions, row T) string
+}
+
+func (c *linkColumn[T]) Component(defs attrs.Definitions, row T) templ.Component {
+	return templ.ComponentFunc(func(ctx context.Context, templ_7745c5c3_W io.Writer) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templ_7745c5c3_W.(*bytes.Buffer)
+		if !templ_7745c5c3_IsBuffer {
+			templ_7745c5c3_Buffer = templ.GetBuffer()
+			defer templ.ReleaseBuffer(templ_7745c5c3_Buffer)
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var12 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var12 == nil {
+			templ_7745c5c3_Var12 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		var url = templ.SafeURL(c.getURL(defs, row))
+		if url == "" {
+			templ_7745c5c3_Err = c.fieldColumn.Component(defs, row).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		} else {
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<a href=\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			var templ_7745c5c3_Var13 templ.SafeURL = url
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var13)))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\">")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = c.fieldColumn.Component(defs, row).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</a>")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		if !templ_7745c5c3_IsBuffer {
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteTo(templ_7745c5c3_W)
+		}
+		return templ_7745c5c3_Err
+	})
+}
+
+func LinkColumn[T attrs.Definer](header func() string, fieldName string, getURL func(defs attrs.Definitions, row T) string) ListColumn[T] {
+	return &linkColumn[T]{
+		fieldColumn: fieldColumn[T]{header, fieldName},
+		getURL:      getURL,
+	}
+}
+
 func Column[T attrs.Definer](header func() string, getter any) ListColumn[T] {
 	switch g := getter.(type) {
 	case func(defs attrs.Definitions, row T) interface{}:

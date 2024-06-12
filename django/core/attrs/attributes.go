@@ -214,6 +214,11 @@ func set(d Definer, name string, value interface{}, force bool) error {
 }
 
 func RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool) {
+	if !v.IsValid() {
+		var z = reflect.New(t)
+		*v = z
+		return v, true
+	}
 	if v.Kind() == reflect.Ptr && t.Kind() != reflect.Ptr {
 		*v = v.Elem()
 	} else if v.Kind() != reflect.Ptr && t.Kind() == reflect.Ptr {

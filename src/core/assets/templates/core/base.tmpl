@@ -11,6 +11,16 @@
         <title>{{ template "title" . }}</title>
     </head>
     <body>
+
+        <div class="form-media">
+            {{ range $File := (.Get "Form").Media.JS }}
+                {{ $File }}
+            {{ end }}
+            {{ range $File := (.Get "Form").Media.CSS }}
+                {{ $File }}
+            {{ end }}
+        </div>
+
         {{ template "content" . }}
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">

@@ -45,4 +45,12 @@ module.exports = [
         },
         ...baseConfig(),
     },
+    {
+        entry: './django/contrib/editor/static_src/index.ts',
+        output: {
+            'path': path.resolve(__dirname, 'django/contrib/editor/static/editorjs/js/'),
+            'filename': 'index.js'
+        },
+        ...baseConfig(),
+    },
 ]

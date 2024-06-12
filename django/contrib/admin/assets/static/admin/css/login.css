@@ -19,7 +19,18 @@ body {
     padding: 1.5em 2.5em;
     background: #fff;
     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-    transition: width 0.5s, margin-top 0.5s, margin-left 0.5s;
+    transition: width 0.5s, 
+                margin-top 0.5s, 
+                margin-left 0.5s,
+                border-radius 0.5s;
+}
+
+.login-container .header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-direction: column;
+    margin-bottom: 1.5em;
 }
 
 @media (min-width: 768px) {
@@ -33,6 +44,10 @@ body {
         width: max(600px, 30dvw);
         margin-top: -15dvh;
         margin-left: -25dvw;
+    }
+    .login-container .header {
+        justify-content: flex-start;
+        align-items: flex-start;
     }
 }
 @media (min-width: 1400px) {

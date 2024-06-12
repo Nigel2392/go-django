@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/forms/modelforms"
+	"github.com/Nigel2392/django/views/list"
 )
 
 type ViewOptions struct {
@@ -25,6 +26,7 @@ type FormViewOptions struct {
 type ListViewOptions struct {
 	ViewOptions
 	PerPage uint64
+	Columns map[string]list.ListColumn[attrs.Definer]
 	Format  map[string]func(v any) any
 }
 
@@ -98,6 +100,19 @@ func (o *ModelDefinition) Label() string {
 		return o.LabelFn()
 	}
 	return o.GetName()
+}
+
+func (o *ModelDefinition) GetColumn(opts ListViewOptions, field string) list.ListColumn[attrs.Definer] {
+	if opts.Columns != nil {
+		var col, ok = opts.Columns[field]
+		if ok {
+			return col
+		}
+	}
+	return list.Column[attrs.Definer](
+		o.GetLabel(opts.ViewOptions, field, field),
+		o.FormatColumn(field),
+	)
 }
 
 func (o *ModelDefinition) GetLabel(opts ViewOptions, field string, default_ string) func() string {

@@ -397,13 +397,30 @@ func (f *BaseForm) AsUL() template.HTML {
 
 func (f *BaseForm) Media() media.Media {
 	var media media.Media = media.NewMedia()
-	for head := f.FormWidgets.Front(); head != nil; head = head.Next() {
-		var m = head.Value.Media()
-		if m == nil {
-			continue
-		}
-		media = media.Merge(m)
+	if f.FormWidgets == nil {
+		f.FormWidgets = orderedmap.NewOrderedMap[string, widgets.Widget]()
 	}
+
+	for head := f.FormFields.Front(); head != nil; head = head.Next() {
+
+		fmt.Println("Getting media for field", head.Key)
+		var widget, ok = f.FormWidgets.Get(head.Key)
+		if !ok {
+			widget = head.Value.Widget()
+		}
+
+		fmt.Println("Widget:", widget)
+
+		var m = widget.Media()
+
+		fmt.Println("Widget Media:", m)
+
+		if m != nil {
+			media = media.Merge(m)
+		}
+		fmt.Println("Widget Media After:", media)
+	}
+
 	return media
 }
 

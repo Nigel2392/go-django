@@ -81,6 +81,7 @@ func NewAppConfig() django.AppConfig {
 		))
 
 		components.Register("admin.header", cmpts.Header)
+
 		components.Register("admin.heading", cmpts.Heading)
 		components.Register("admin.heading1", cmpts.Heading1)
 		components.Register("admin.heading2", cmpts.Heading2)
@@ -88,6 +89,13 @@ func NewAppConfig() django.AppConfig {
 		components.Register("admin.heading4", cmpts.Heading4)
 		components.Register("admin.heading5", cmpts.Heading5)
 		components.Register("admin.heading6", cmpts.Heading6)
+
+		components.Register("admin.button", cmpts.NewButton)
+		components.Register("admin.button.primary", cmpts.ButtonPrimary)
+		components.Register("admin.button.secondary", cmpts.ButtonSecondary)
+		components.Register("admin.button.success", cmpts.ButtonSuccess)
+		components.Register("admin.button.danger", cmpts.ButtonDanger)
+		components.Register("admin.button.warning", cmpts.ButtonWarning)
 
 		tpl.Add(tpl.Config{
 			AppName: "admin",

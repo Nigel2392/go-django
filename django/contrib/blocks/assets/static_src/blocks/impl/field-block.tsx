@@ -16,7 +16,7 @@ class FieldBlock extends Block {
     constructor(config: Config, widget: HTMLElement, blockDef: BlockDef) {
         super(widget, blockDef);
 
-        console.log("FieldBlock constructor", config);
+        // console.log("FieldBlock constructor", config);
 
         //this.errorList = (
         //    <ul class="field-errors"></ul>
@@ -94,7 +94,7 @@ class FieldBlock extends Block {
 class FieldBlockDef extends BlockDef {
     constructor(element: HTMLElement, config: Config) {
         super(element, config);
-        console.log("FieldBlockDef constructor", element, config);
+        // console.log("FieldBlockDef constructor", element, config);
     }
 
     render(): any {

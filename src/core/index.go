@@ -7,15 +7,14 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/django/contrib/admin"
-	"github.com/Nigel2392/django/contrib/auth"
 	"github.com/Nigel2392/django/contrib/blocks"
+	"github.com/Nigel2392/django/contrib/editor"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/forms/fields"
-	"github.com/Nigel2392/django/forms/modelforms"
 	"github.com/Nigel2392/django/forms/widgets"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
@@ -29,119 +28,39 @@ type MainStruct struct {
 	Block    *blocks.StructBlock `attrs:"label=Block;required;help_text=Enter your block data"`
 }
 
-func (m *MainStruct) AdminForm(r *http.Request, app *admin.AppDefinition, model *admin.ModelDefinition) modelforms.ModelForm[attrs.Definer] {
-	//widgets.NewCheckboxInput(),
-	//widgets.NewRadioInput(),
-	//widgets.NewSelectInput(),
-
-	//var form = forms.Initialize(
-	//	forms.NewBaseForm(),
-	//	forms.WithRequestData("POST", r),
-	//	forms.WithFields(
-	//		fields.EmailField(
-	//			fields.Label("Email"),
-	//			fields.HelpText("Enter your email"),
-	//			fields.Name("email"),
-	//			fields.Required(true),
-	//			fields.MinLength(5),
-	//			fields.MaxLength(250),
-	//		),
-	//		fields.CharField(
-	//			fields.Label("Name"),
-	//			fields.HelpText("Enter your name"),
-	//			fields.Name("name"),
-	//			fields.Required(true),
-	//			fields.Regex(`^[a-zA-Z\s+]+$`),
-	//			fields.MinLength(2),
-	//			fields.MaxLength(50),
-	//		),
-	//		auth.NewPasswordField(
-	//			fields.Label("Password"),
-	//			fields.HelpText("Enter your password"),
-	//			fields.Name("password"),
-	//			fields.Required(true),
-	//			fields.MinLength(8),
-	//			fields.MaxLength(50),
-	//		),
-	//
-	//		//fields.CharField(
-	//		//	fields.Name("checkbox"),
-	//		//	fields.Label("Checkbox"),
-	//		//	fields.Required(true),
-	//		//	fields.Widget(
-	//		//		widgets.NewCheckboxInput(nil, func() []widgets.Option {
-	//		//			return []widgets.Option{
-	//		//				widgets.NewOption("checkbox1", "Checkbox 1", "1"),
-	//		//				widgets.NewOption("checkbox2", "Checkbox 2", "2"),
-	//		//				widgets.NewOption("checkbox3", "Checkbox 3", "3"),
-	//		//			}
-	//		//		}),
-	//		//	),
-	//		//),
-	//		//fields.CharField(
-	//		//	fields.Name("checkbox"),
-	//		//	fields.Label("Checkbox"),
-	//		//	fields.Required(true),
-	//		//	fields.Widget(
-	//		//		widgets.NewRadioInput(nil, func() []widgets.Option {
-	//		//			return []widgets.Option{
-	//		//				widgets.NewOption("checkbox1", "Checkbox 1", "1"),
-	//		//				widgets.NewOption("checkbox2", "Checkbox 2", "2"),
-	//		//				widgets.NewOption("checkbox3", "Checkbox 3", "3"),
-	//		//			}
-	//		//		}),
-	//		//	),
-	//		//),
-	//		//fields.CharField(
-	//		//	fields.Name("checkbox"),
-	//		//	fields.Label("Checkbox"),
-	//		//	fields.Required(true),
-	//		//	fields.Widget(
-	//		//		widgets.NewSelectInput(nil, func() []widgets.Option {
-	//		//			return []widgets.Option{
-	//		//				widgets.NewOption("checkbox1", "Checkbox 1", "1"),
-	//		//				widgets.NewOption("checkbox2", "Checkbox 2", "2"),
-	//		//				widgets.NewOption("checkbox3", "Checkbox 3", "3"),
-	//		//			}
-	//		//		}),
-	//		//	),
-	//		//),
-	//	),
-	//)
-	//
-	//return form
-
-	var f modelforms.ModelForm[attrs.Definer] = modelforms.NewBaseModelForm[attrs.Definer](m)
-	return forms.Initialize(
-		f, forms.WithFields(
-			fields.EmailField(
-				fields.Label("Email"),
-				fields.HelpText("Enter your email"),
-				fields.Name("Email"),
-				fields.Required(true),
-				fields.MinLength(5),
-				fields.MaxLength(250),
-			),
-			fields.CharField(
-				fields.Label("Name"),
-				fields.HelpText("Enter your name"),
-				fields.Name("Name"),
-				fields.Required(true),
-				fields.Regex(`^[a-zA-Z\s+]+$`),
-				fields.MinLength(2),
-				fields.MaxLength(50),
-			),
-			auth.NewPasswordField(
-				fields.Label("Password"),
-				fields.HelpText("Enter your password"),
-				fields.Name("Password"),
-				fields.Required(true),
-				fields.MinLength(8),
-				fields.MaxLength(50),
-			),
-		),
-	)
-}
+//	func (m *MainStruct) AdminForm(r *http.Request, app *admin.AppDefinition, model *admin.ModelDefinition) modelforms.ModelForm[attrs.Definer] {
+//
+//		var f modelforms.ModelForm[attrs.Definer] = modelforms.NewBaseModelForm[attrs.Definer](m)
+//		return forms.Initialize(
+//			f, forms.WithFields(
+//				fields.EmailField(
+//					fields.Label("Email"),
+//					fields.HelpText("Enter your email"),
+//					fields.Name("Email"),
+//					fields.Required(true),
+//					fields.MinLength(5),
+//					fields.MaxLength(250),
+//				),
+//				fields.CharField(
+//					fields.Label("Name"),
+//					fields.HelpText("Enter your name"),
+//					fields.Name("Name"),
+//					fields.Required(true),
+//					fields.Regex(`^[a-zA-Z\s+]+$`),
+//					fields.MinLength(2),
+//					fields.MaxLength(50),
+//				),
+//				auth.NewPasswordField(
+//					fields.Label("Password"),
+//					fields.HelpText("Enter your password"),
+//					fields.Name("Password"),
+//					fields.Required(true),
+//					fields.MinLength(8),
+//					fields.MaxLength(50),
+//				),
+//			),
+//		)
+//	}
 
 func (m *MainStruct) GetBlockDef() blocks.Block {
 	var b = blocks.NewStructBlock()
@@ -216,6 +135,17 @@ var _ = admin.RegisterApp(
 			"Data":     fields.S("Object Data"),
 			"Block":    fields.S("Object Block"),
 		},
+		EditView: admin.FormViewOptions{
+			ViewOptions: admin.ViewOptions{
+				Fields: []string{
+					"Email",
+					"Name",
+					"Password",
+					"Age",
+					"Block",
+				},
+			},
+		},
 		ListView: admin.ListViewOptions{
 			Format: map[string]func(interface{}) interface{}{
 				"Age": func(v any) interface{} {
@@ -249,19 +179,20 @@ var _ = admin.RegisterApp(
 			}, nil
 		},
 		GetList: func(amount, offset uint, fields []string) ([]attrs.Definer, error) {
-			var listItemCount = 10
-			var items = make([]attrs.Definer, listItemCount)
-			for i := 0; i < listItemCount; i++ {
-				items[i] = &MainStruct{
-					Email:    &mail.Address{Address: fmt.Sprintf("user-%d@test.localhost", i)},
-					Name:     fmt.Sprintf("User %d", i),
-					Password: "password",
-					Age:      i + 20,
-					Data:     map[string]any{"key": fmt.Sprintf("value-%d", i)},
-					Block:    &blocks.StructBlock{},
-				}
-			}
-			return items, nil
+			//var listItemCount = 10
+			//var items = make([]attrs.Definer, listItemCount)
+			//for i := 0; i < listItemCount; i++ {
+			//	items[i] = &MainStruct{
+			//		Email:    &mail.Address{Address: fmt.Sprintf("user-%d@test.localhost", i)},
+			//		Name:     fmt.Sprintf("User %d", i),
+			//		Password: "password",
+			//		Age:      i + 20,
+			//		Data:     map[string]any{"key": fmt.Sprintf("value-%d", i)},
+			//		Block:    &blocks.StructBlock{},
+			//	}
+			//}
+			//return items, nil
+			return []attrs.Definer{}, nil
 		},
 	},
 )
@@ -325,6 +256,13 @@ func Index(w http.ResponseWriter, r *http.Request) {
 				fields.Label("Data"),
 				fields.Name("data"),
 				fields.Required(true),
+				fields.Widget(
+					editor.NewEditorJSWidget(
+					// "paragraph",
+					// "header",
+					// "list",
+					),
+				),
 			),
 			blocks.BlockField(
 				instance.GetBlockDef(),

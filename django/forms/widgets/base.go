@@ -100,7 +100,7 @@ func (b *BaseWidget) Type() string {
 }
 
 func (b *BaseWidget) Media() media.Media {
-	return nil
+	return media.NewMedia()
 }
 
 func NewBaseWidget(type_ func() string, templateName string, attrs map[string]string) *BaseWidget {

@@ -24,10 +24,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 
 	var columns = make([]list.ListColumn[attrs.Definer], len(model.ListView.Fields))
 	for i, field := range model.ListView.Fields {
-		columns[i] = list.Column[attrs.Definer](
-			model.GetLabel(model.ListView.ViewOptions, field, field),
-			model.FormatColumn(field),
-		)
+		columns[i] = model.GetColumn(model.ListView, field)
 	}
 
 	var amount = model.ListView.PerPage
@@ -118,6 +115,12 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: "admin",
 			TemplateName:    fmt.Sprintf("admin/views/models/%s.tmpl", tpl),
+			GetContextFn: func(req *http.Request) (ctx.Context, error) {
+				var context = core.Context(req)
+				context.Set("app", app)
+				context.Set("model", model)
+				return context, nil
+			},
 		},
 		GetFormFn: func(req *http.Request) modelforms.ModelForm[attrs.Definer] {
 			var form modelforms.ModelForm[attrs.Definer]

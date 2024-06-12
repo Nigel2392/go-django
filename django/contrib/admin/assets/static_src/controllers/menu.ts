@@ -1,12 +1,38 @@
 import { Controller, ActionEvent } from "@hotwired/stimulus";
 
 
+
+const OPEN = "open"
+const CLOSE = "close"
+
+type MenuOpenCloseEvent = Event & { detail: { action: typeof OPEN | typeof CLOSE, menu: MenuController }};
+
 class MenuController extends Controller<any> {
     declare subMenus: NodeListOf<HTMLElement>
+
+    static addEventListener(func: (event: MenuOpenCloseEvent) => void) {
+        document.addEventListener("menu:open", func);
+    }
+
+    listenForClose(event: MenuOpenCloseEvent) {
+        if (event.detail.action === OPEN && event.detail.menu !== this) {
+            if (!this.contains(event.detail.menu) && !event.detail.menu.contains(this)) {
+                this.close();
+            }
+        }
+    }
     
     connect() {
         this.element.menuController = this;
         this.element.dataset.menuController = "true";
+        (this.constructor as any).addEventListener(this.listenForClose.bind(this));
+    }
+
+    contains(element: HTMLElement | MenuController) {
+        if (element instanceof MenuController) {
+            element = element.element;
+        }
+        return this.element.contains(element);
     }
 
     toggle(event?: ActionEvent) {
@@ -14,21 +40,27 @@ class MenuController extends Controller<any> {
             this.close(event);
         } else {
             this.open(event);
+            var openEvent = new CustomEvent("menu:open", {
+                detail: {
+                    action: OPEN,
+                    menu: this
+                }
+            });
+            document.dispatchEvent(openEvent);
         }
     }
 
-    open(event?: ActionEvent) {
+    private open(event?: ActionEvent) {
         this.element.classList.add("open");
         this.element.setAttribute("aria-expanded", "true");
     }
 
-    close(event?: ActionEvent) {
+    private close(event?: ActionEvent) {
         this.element.classList.remove("open");
         this.element.setAttribute("aria-expanded", "false");
         if (!this.subMenus) {
             this.subMenus = this.element.querySelectorAll("[data-menu-controller]")
         }
-        console.log(this.subMenus);
         for (var i = 0; i < this.subMenus.length; i++) {
             var subMenu = this.subMenus[i] as any;
             subMenu.menuController.close();

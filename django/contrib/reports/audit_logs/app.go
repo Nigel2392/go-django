@@ -45,6 +45,42 @@ func NewAppConfig() django.AppConfig {
 							&menu.BaseItem{
 								Label: fields.S("View Logs"),
 							},
+							&menu.SubmenuItem{
+								BaseItem: menu.BaseItem{
+									Label: fields.S("Audit Logs"),
+								},
+								Menu: &menu.Menu{
+									Items: []menu.MenuItem{
+										&menu.BaseItem{
+											Label: fields.S("View Logs"),
+										},
+									},
+								},
+							},
+							&menu.SubmenuItem{
+								BaseItem: menu.BaseItem{
+									Label: fields.S("Audit Logs"),
+								},
+								Menu: &menu.Menu{
+									Items: []menu.MenuItem{
+										&menu.BaseItem{
+											Label: fields.S("View Logs"),
+										},
+										&menu.SubmenuItem{
+											BaseItem: menu.BaseItem{
+												Label: fields.S("Audit Logs"),
+											},
+											Menu: &menu.Menu{
+												Items: []menu.MenuItem{
+													&menu.BaseItem{
+														Label: fields.S("View Logs"),
+													},
+												},
+											},
+										},
+									},
+								},
+							},
 						},
 					},
 				}

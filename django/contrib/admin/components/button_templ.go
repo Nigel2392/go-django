@@ -10,14 +10,18 @@ import "context"
 import "io"
 import "bytes"
 
+import (
+	"fmt"
+)
+
 type ButtonType uint8
 
 const (
-	ButtonTypePrimary ButtonType = iota
+	ButtonTypePrimary ButtonType = 1 << iota
 	ButtonTypeSecondary
 	ButtonTypeSuccess
-	ButtonTypeDanger
 	ButtonTypeWarning
+	ButtonTypeDanger
 	ButtonTypeHollow
 )
 
@@ -25,6 +29,104 @@ type ButtonConfig struct {
 	Text string
 	Icon templ.Component
 	Type ButtonType
+}
+
+func NewButton(text string, args ...interface{}) templ.Component {
+
+	var (
+		iconComponent templ.Component
+		type_         ButtonType = 0
+	)
+loop:
+	for _, arg := range args {
+		switch t := arg.(type) {
+		case templ.Component:
+			iconComponent = t
+		case string:
+			if t == "" {
+				continue loop
+			}
+			iconComponent = templ.Raw(t)
+		case ButtonType:
+			type_ |= t
+		case int:
+			type_ |= ButtonType(t)
+		case uint:
+			type_ |= ButtonType(t)
+		case nil, any:
+			continue loop
+		default:
+			fmt.Printf("Unknown type: %T\n", t)
+		}
+	}
+
+	var cfg = ButtonConfig{
+		Text: text,
+		Icon: iconComponent,
+		Type: type_,
+	}
+
+	return Button(cfg)
+}
+
+func ButtonPrimary(text string, icon any, hollow ...bool) templ.Component {
+	var h = false
+	if len(hollow) > 0 && hollow[0] {
+		h = true
+	}
+	var typ = ButtonTypePrimary
+	if h {
+		typ |= ButtonTypeHollow
+	}
+	return NewButton(text, icon, typ)
+}
+
+func ButtonSecondary(text string, icon any, hollow ...bool) templ.Component {
+	var h = false
+	if len(hollow) > 0 && hollow[0] {
+		h = true
+	}
+	var typ = ButtonTypeSecondary
+	if h {
+		typ |= ButtonTypeHollow
+	}
+	return NewButton(text, icon, typ)
+}
+
+func ButtonSuccess(text string, icon any, hollow ...bool) templ.Component {
+	var h = false
+	if len(hollow) > 0 && hollow[0] {
+		h = true
+	}
+	var typ = ButtonTypeSuccess
+	if h {
+		typ |= ButtonTypeHollow
+	}
+	return NewButton(text, icon, typ)
+}
+
+func ButtonDanger(text string, icon any, hollow ...bool) templ.Component {
+	var h = false
+	if len(hollow) > 0 && hollow[0] {
+		h = true
+	}
+	var typ = ButtonTypeDanger
+	if h {
+		typ |= ButtonTypeHollow
+	}
+	return NewButton(text, icon, typ)
+}
+
+func ButtonWarning(text string, icon any, hollow ...bool) templ.Component {
+	var h = false
+	if len(hollow) > 0 && hollow[0] {
+		h = true
+	}
+	var typ = ButtonTypeWarning
+	if h {
+		typ |= ButtonTypeHollow
+	}
+	return NewButton(text, icon, typ)
 }
 
 func Button(config ButtonConfig) templ.Component {
@@ -79,7 +181,7 @@ func Button(config ButtonConfig) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(config.Text)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/button.templ`, Line: 33, Col: 21}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/button.templ`, Line: 138, Col: 21}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {

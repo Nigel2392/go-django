@@ -1,5 +1,28 @@
 :root {
     --sidebar-width: 200px;
+    --text-color: #333;
+    --color-link: #007d7e;
+    --color-link-hover: #006e6e;
+
+    --bg-color-button: #007bff;
+    --text-color-button: #fff;
+
+    --primary-bg-color: #2e1f5e;
+    --primary-bg-hover: #3f3370;
+    --secondary-bg-color: #007d7e;
+    --secondary-bg-hover: #006e6e;
+    --success-bg-color: #1b8666;
+    --success-bg-hover: #166a51;
+    --warning-bg-color: #faa500;
+    --warning-bg-hover: #db9406;
+    --danger-bg-color: #fd5765;
+    --danger-bg-hover: #db4854;
+
+    --primary-text-color: #ffffff;
+    --secondary-text-color: #ffffff;
+    --success-text-color: #ffffff;
+    --warning-text-color: #ffffff;
+    --danger-text-color: #ffffff;
 }
 *, *::before, *::after {
     box-sizing: border-box;
@@ -41,13 +64,16 @@ h1 {
     margin-bottom: .5rem;
 }
 a {
-    color: #007bff;
+    color: var(--color-link);
     text-decoration: none;
     background-color: transparent;
+    cursor: pointer;
+    text-underline-offset: 0.2em;
+    -webkit-text-decoration-skip: objects;
 }
 a:hover {
-    color: #0056b3;
-    text-decoration: underline;
+    color: var(--color-link-hover);
+    text-decoration: dotted underline;
 }
 #main {
     display: flex;
@@ -146,7 +172,7 @@ a:hover {
     background-color: hsl(0, 0%, 100%);
     border: 1px solid hsl( 0 0% calc( 14.9% + 63.5%) );
     border-radius: .3125rem;
-    color: var(--w-color-text-context);
+    color: var(--text-color);
     font-size: 1.1875rem;
     font-weight: 400;
     line-height: 1.5;
@@ -154,7 +180,13 @@ a:hover {
     padding: .375rem 1.25rem;
     width: 100%;
 }
-
+.form-field input:not([type="checkbox"], [type="radio"]):disabled,
+.form-field input:not([type="checkbox"], [type="radio"]):read-only,
+.form-field textarea:disabled,
+.form-field textarea:read-only {
+    background-color: hsl( 0 0% 98% );
+    color: hsl( 0 0% 60% );
+}
 .error-list {
     color: hsl( 0 100% 50% );
     font-size: .875rem;
@@ -178,7 +210,90 @@ button, input, select, textarea {
     margin: 0;
     vertical-align: initial;
 }
+a.button, .button a {
+    text-decoration: none;
+}
+.button {
+    -webkit-font-smoothing: auto;
+    -moz-appearance: none;
+    background-color: var(--bg-color-button);
+    border: 1px solid var(--bg-color-button);
+    border-radius: .1875rem;
+    color: var(--text-color-button);
+    display: inline-block;
+    font-weight: 600;
+    letter-spacing: .0525rem;
+    height: 2.25em;
+    line-height: calc(2.25em - 2px);
+    outline-offset: 3px;
+    overflow: hidden;
+    padding: 0 1em;
+    position: relative;
+    text-decoration: none;
+    transition: background-color .1s ease;
+    vertical-align: middle;
+    white-space: nowrap;
+    cursor: pointer;
+    width: auto
+}
+.button+.button {
+    margin-inline-start:1rem
+}
+.button.primary {
+    --bg-color-button: var(--primary-bg-color);
+    --text-color-button: var(--primary-text-color);
+}
+.button.primary:hover {
+    background-color: var(--primary-bg-hover);
+    color: var(--primary-text-color);
+}
+.button.secondary {
+    --bg-color-button: var(--secondary-bg-color);
+    --text-color-button: var(--secondary-text-color);
+}
+.button.secondary:hover {
+    background-color: var(--secondary-bg-hover);
+    color: var(--secondary-text-color);
+}
+.button.success {
+    --bg-color-button: var(--success-bg-color);
+    --text-color-button: var(--success-text-color);
+}
+.button.success:hover {
+    background-color: var(--success-bg-hover);
+    color: var(--success-text-color);
+}
+.button.danger {
+    --bg-color-button: var(--danger-bg-color);
+    --text-color-button: var(--danger-text-color);
+}
+.button.danger:hover {
+    background-color: var(--danger-bg-hover);
+    color: var(--danger-text-color);
+}
+.button.warning {
+    --bg-color-button: var(--warning-bg-color);
+    --text-color-button: var(--warning-text-color);
+}
+.button.warning:hover {
+    background-color: var(--warning-bg-hover);
+    color: var(--warning-text-color);
+}
+.button.hollow {
+    background-color: transparent;
+    color: var(--bg-color-button);
+    border-color: var(--bg-color-button);
+}
+.button.hollow:hover {
+    background-color: var(--bg-color-button);
+    color: var(--text-color-button);
+}
 
-
-
-
+@media screen and (min-width: 50em) {
+    .button {
+        font-size: .875rem;
+        height: 3em;
+        line-height: calc(3em - 2px);
+        padding: 0 1.4em
+    }
+}

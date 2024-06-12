@@ -15,12 +15,22 @@
       "django/contrib/blocks/assets/static_src/**/*.tsx",
       "django/contrib/admin/assets/static_src/**/*.js",
       "django/contrib/admin/assets/static_src/**/*.ts",
-      "django/contrib/admin/assets/static_src/**/*.tsx"
+      "django/contrib/admin/assets/static_src/**/*.tsx",
+      "django/contrib/editor/static_src/**/*.js",
+      "django/contrib/editor/static_src/**/*.ts",
+      "django/contrib/editor/static_src/**/*.tsx"
+
     ],
     "exclude": [
       "node_modules",
       "django/contrib/blocks/assets/static_src/**/*.test.js",
       "django/contrib/blocks/assets/static_src/**/*.test.ts",
-      "django/contrib/blocks/assets/static_src/**/*.test.tsx"
+      "django/contrib/blocks/assets/static_src/**/*.test.tsx",
+      "django/contrib/admin/assets/static_src/**/*.test.js",
+      "django/contrib/admin/assets/static_src/**/*.test.ts",
+      "django/contrib/admin/assets/static_src/**/*.test.tsx",
+      "django/contrib/editor/static_src/**/*.test.js",
+      "django/contrib/editor/static_src/**/*.test.ts",
+      "django/contrib/editor/static_src/**/*.test.tsx"
     ]
 }

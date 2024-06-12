@@ -75,7 +75,7 @@ class StructBlock extends Block {
 class StructBlockDef extends BlockDef {
     constructor(element: HTMLElement, config: Config) {
         super(element, config);
-        console.log("StructBlockDef constructor", element, config);        
+        // console.log("StructBlockDef constructor", element, config);        
     }
 
     render(): any {
