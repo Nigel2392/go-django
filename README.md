@@ -23,6 +23,8 @@ This is not to say that these are the only things that will be implemented.
 
 More features will be added as we go along.
 
+- Generic yet database- less page type
+- [EditorJS](https://editorjs.io/) widget
 - Auth application
 - Adminsite application
 - Full [wagtail](https://wagtail.org) block capabilities
