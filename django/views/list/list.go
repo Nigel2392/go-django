@@ -79,12 +79,12 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 
 	listObj := NewList(list, cols...)
 
-	base.Set("list", listObj)
-	base.Set("amount", amount)
-	base.Set("page", page)
-	base.Set("max_amount", v.MaxAmount)
-	base.Set("amount_param", v.AmountParam)
-	base.Set("page_param", v.PageParam)
+	base.Set("view_list", listObj)
+	base.Set("view_amount", amount)
+	base.Set("view_page", page)
+	base.Set("view_max_amount", v.MaxAmount)
+	base.Set("view_amount_param", v.AmountParam)
+	base.Set("view_page_param", v.PageParam)
 
 	return base, nil
 }

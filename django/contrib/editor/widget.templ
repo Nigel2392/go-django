@@ -7,8 +7,16 @@ import (
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/forms/media"
+	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/widgets"
 )
+
+func getSafe[T any](m map[string]interface{}, key string) (value T) {
+	if v, ok := m[key]; ok {
+		return v.(T)
+	}
+	return value
+}
 
 var _ widgets.Widget = (*EditorJSWidget)(nil)
 
@@ -28,6 +36,63 @@ func NewEditorJSWidget(features ...string) *EditorJSWidget {
 	}
 }
 
+func (b EditorJSWidget) ValueToForm(value interface{}) interface{} {
+    fmt.Println("ValueToForm", value)
+	var editorJsData EditorJSData
+	if fields.IsZero(value) {
+		return editorJsData
+	}
+
+	switch value := value.(type) {
+	case *EditorJSBlockData:
+		var blocks = make([]BlockData, 0)
+
+		for _, block := range value.Blocks {
+			var data = block.Data()
+            fmt.Println("block data:", block.Type(), data)
+			blocks = append(blocks, data)
+		}
+
+		var d = EditorJSData{
+			Time:    value.Time,
+			Version: value.Version,
+			Blocks:  blocks,
+		}
+
+		editorJsData = d
+	case EditorJSData:
+		editorJsData = value
+	default:
+		panic(fmt.Sprintf("Invalid value type: %T", value))
+	}
+
+	return editorJsData
+}
+
+func (b EditorJSWidget) ValueToGo(value interface{}) (interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	var editorJsData EditorJSData
+	switch value := value.(type) {
+	case *EditorJSBlockData:
+        return value, nil
+    case EditorJSData:
+        editorJsData = value
+    case string:
+        var d EditorJSData
+        if err := json.Unmarshal([]byte(value), &d); err != nil {
+            return nil, err
+        }
+        editorJsData = d
+    default:
+		panic(fmt.Sprintf("Invalid value type: %T (%v)", value, value))
+	}
+
+	return ValueToGo(b.Features, editorJsData)
+}
+
 func (b *EditorJSWidget) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {
 	var context = b.BaseWidget.GetContextData(id, name, value, attrs)
     // ...
@@ -43,7 +108,7 @@ templ (b *EditorJSWidget) Component(id, name, value string, errors []error, attr
             value={ value }
             data-editorjs-widget-target="input"/>
 
-        <div id={ fmt.Sprintf("%s-editor", id) }></div>
+        <div data-editorjs-widget-target="editor" id={ fmt.Sprintf("%s-editor", id) }></div>
     </div>
 }
 

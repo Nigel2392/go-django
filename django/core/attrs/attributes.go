@@ -222,8 +222,9 @@ func RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool) {
 	if v.Kind() == reflect.Ptr && t.Kind() != reflect.Ptr {
 		*v = v.Elem()
 	} else if v.Kind() != reflect.Ptr && t.Kind() == reflect.Ptr {
-		*v = reflect.New(v.Type())
-		v.Elem().Set(*v)
+		var z = reflect.New(v.Type())
+		z.Elem().Set(*v)
+		*v = z
 	}
 	if v.Type().AssignableTo(t) {
 		return v, true

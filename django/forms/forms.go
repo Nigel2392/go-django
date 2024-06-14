@@ -62,6 +62,7 @@ type Form interface {
 	BoundForm() BoundForm
 	BoundFields() *orderedmap.OrderedMap[string, BoundField]
 	BoundErrors() *orderedmap.OrderedMap[string, []error]
+	ErrorList() []error
 
 	WithData(data url.Values, files map[string][]io.ReadCloser, r *http.Request) Form
 	CleanedData() map[string]interface{}

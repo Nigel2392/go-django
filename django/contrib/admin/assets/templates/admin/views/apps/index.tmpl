@@ -1,0 +1,13 @@
+{{ template "base" . }}
+
+{{ define "title" }}
+
+{{ end }}
+
+{{ define "content" }}
+
+    {{ $headingText := (.Get "app").Label }}
+    {{ $subText := (T "See all models registered with this application.") }}
+    {{ component "admin.header" 1 $headingText $subText }}
+
+{{ end }}

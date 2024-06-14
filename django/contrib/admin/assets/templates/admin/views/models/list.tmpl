@@ -11,7 +11,7 @@
             <h1>{{ (.Get "model").Label }} {{ T "List" }}</h1>
         </div>
     </div>
-    {{ $list := (.Get "list") }}
+    {{ $list := (.Get "view_list") }}
     {{ $headers := (.Get "headers") }}
 
     {{ safe $list.Render }}

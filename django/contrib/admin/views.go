@@ -6,8 +6,10 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/core"
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/modelforms"
 	"github.com/Nigel2392/django/views"
@@ -15,7 +17,27 @@ import (
 )
 
 var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition) {
-	w.Write([]byte(app.Name))
+	if app.Options.IndexView != nil {
+		var err = views.Invoke(app.Options.IndexView, w, r)
+		assert.Err(err)
+		return
+	}
+
+	var models = app.Models
+	var modelNames = make([]string, models.Len())
+	var i = 0
+	for front := models.Front(); front != nil; front = front.Next() {
+		modelNames[i] = front.Value.Label()
+		i++
+	}
+
+	var context = NewContext(
+		r, adminSite, nil,
+	)
+	context.Set("app", app)
+	context.Set("models", modelNames)
+	var err = tpl.FRender(w, context, "admin/views/apps/index.tmpl")
+	assert.Err(err)
 }
 
 var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
@@ -40,7 +62,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 			BaseTemplateKey: "admin",
 			TemplateName:    "admin/views/models/list.tmpl",
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
-				var context = core.Context(req)
+				var context = NewContext(req, adminSite, nil)
 				context.Set("app", app)
 				context.Set("model", model)
 				return context, nil
@@ -153,6 +175,12 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				}
 			}
 			return initial
+		},
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form modelforms.ModelForm[attrs.Definer]) {
+			var instance = form.Instance()
+			assert.False(instance == nil, "instance is nil after form submission")
+			var listViewURL = django.Reverse("admin:apps:model", app.Name, model.Name)
+			http.Redirect(w, r, listViewURL, http.StatusSeeOther)
 		},
 	}
 }

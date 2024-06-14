@@ -138,6 +138,24 @@ func (f *FieldDef) GetDefault() interface{} {
 		return f.attrDef.Default
 	}
 
+	var funcName = fmt.Sprintf("GetDefault%s", f.Name())
+	if method, ok := f.instance_t.MethodByName(funcName); ok {
+		fmt.Println("Calling method on raw", funcName, f.instance_v_ptr, f.instance_v_ptr.Interface())
+		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
+		if len(out) > 0 {
+			return out[0].Interface()
+		}
+		assert.Fail("Method %q on raw did not return a value", funcName)
+	}
+
+	if method, ok := f.instance_t_ptr.MethodByName(funcName); ok {
+		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
+		if len(out) > 0 {
+			return out[0].Interface()
+		}
+		assert.Fail("Method %q on ptr did not return a value", funcName)
+	}
+
 	var typForNew = f.field_t.Type
 	if f.field_t.Type.Kind() == reflect.Ptr {
 		typForNew = f.field_t.Type.Elem()
@@ -148,11 +166,6 @@ func (f *FieldDef) GetDefault() interface{} {
 		if defaultValue, ok := hook(f, typForNew, f.field_v); ok {
 			return defaultValue
 		}
-	}
-
-	var funcName = fmt.Sprintf("GetDefault%s", f.Name())
-	if method, ok := f.instance_t.MethodByName(funcName); ok {
-		return method.Func.Call([]reflect.Value{f.instance_v_ptr})[0].Interface()
 	}
 
 	if !f.field_v.IsValid() {
@@ -276,32 +289,34 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		}
 	}
 
-	// Check if field has a setter
-	var b = make([]byte, 0, len(f.field_t.Name)+3)
-	b = append(b, "Set"...)
-	b = append(b, f.field_t.Name...)
-	var method, ok = f.instance_t_ptr.MethodByName(string(b))
-	// Call setter if it exists
-	if ok {
-		var r_v = reflect.ValueOf(v)
-		var r_v_ptr, ok = RConvert(&r_v, method.Type.In(1))
-		if !ok {
-			return assert.Fail(
-				fmt.Sprintf("field %q (%q) is not convertible to %q",
-					f.field_t.Name,
-					r_v.Type(),
-					method.Type.In(1),
-				),
-			)
-		}
-		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr, *r_v_ptr})
-		if len(out) > 0 {
-			var out = out[len(out)-1].Interface()
-			if err, ok := out.(error); ok {
-				return err
+	if !force {
+		// Check if field has a setter
+		var b = make([]byte, 0, len(f.field_t.Name)+3)
+		b = append(b, "Set"...)
+		b = append(b, f.field_t.Name...)
+		var method, ok = f.instance_t_ptr.MethodByName(string(b))
+		// Call setter if it exists
+		if ok {
+			var r_v = reflect.ValueOf(v)
+			var r_v_ptr, ok = RConvert(&r_v, method.Type.In(1))
+			if !ok {
+				return assert.Fail(
+					fmt.Sprintf("field %q (%q) is not convertible to %q",
+						f.field_t.Name,
+						r_v.Type(),
+						method.Type.In(1),
+					),
+				)
 			}
+			var out = method.Func.Call([]reflect.Value{f.instance_v_ptr, *r_v_ptr})
+			if len(out) > 0 {
+				var out = out[len(out)-1].Interface()
+				if err, ok := out.(error); ok {
+					return err
+				}
+			}
+			return nil
 		}
-		return nil
 	}
 
 	// Check if field is editable

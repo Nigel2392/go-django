@@ -58,7 +58,8 @@ func NewAppConfig() *apps.AppConfig {
 
 					var blockDef = method()
 
-					attrs.Set(instance, name, blockDef)
+					var vOf = reflect.ValueOf(blockDef)
+					v.Set(vOf)
 
 					return BlockField(blockDef, opts...), true
 				}

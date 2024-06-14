@@ -13,6 +13,10 @@ type EditorJSWidgetElement = HTMLInputElement & {
     CurrentEditor: EditorJS,
 };
 
+function keepEditorInstance(instance: EditorJSWidget) {
+    window.GoEditorJS.editors.push(this);
+}
+
 class EditorJSWidget {
     element: EditorJSWidgetElement;
     config: EditorJSWidgetConfig;
@@ -55,10 +59,9 @@ class EditorJSWidget {
             this.editorConfig.data = JSON.parse(this.element.value);
         }
 
-        if (!window.editors){
-            window.editors = [];
-        }
-        window.editors.push(this);
+        console.log('EditorJSWidget initialized with config:', this.editorConfig);
+
+        keepEditorInstance(this)
 
         var savedForm = false;
         console.log('Adding submit event listener to form');
@@ -130,7 +133,10 @@ class EditorJSWidget {
     }
 }
 
-window.EditorJSWidget = EditorJSWidget;
+window.GoEditorJS = {
+    editors: [],
+    Widget: EditorJSWidget,
+};
 
 export {
     EditorJSWidget,

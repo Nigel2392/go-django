@@ -2,7 +2,6 @@ package editor
 
 import (
 	"context"
-	"encoding/json"
 	"io"
 
 	"github.com/Nigel2392/django/core/ctx"
@@ -10,12 +9,13 @@ import (
 )
 
 type FeatureBlock interface {
-	json.Marshaler
 	ID() string
 	Type() string
 	Feature() BaseFeature
 	Render(ctx context.Context, w io.Writer) error
-	Data() map[string]interface{}
+	Attribute(key string, value any)
+	Attributes() map[string]interface{}
+	Data() BlockData
 }
 
 type BaseFeature interface {
@@ -30,9 +30,6 @@ type BaseFeature interface {
 
 	// Media return's the feature's static / media files.
 	Media() media.Media
-
-	json.Unmarshaler
-	json.Marshaler
 }
 
 // FeatureBlockRenderer is a feature that can render a block.
@@ -44,7 +41,8 @@ type BaseFeature interface {
 // This object will be used to render the HTML.
 type FeatureBlockRenderer interface {
 	BaseFeature
-	// Render returns the rendered HTML of the feature.
+	// Render should return a new block object that can be used to render
+	// the HTML.
 	Render(BlockData) FeatureBlock
 }
 

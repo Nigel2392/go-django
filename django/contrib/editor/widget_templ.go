@@ -16,9 +16,17 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/forms/widgets"
 )
+
+func getSafe[T any](m map[string]interface{}, key string) (value T) {
+	if v, ok := m[key]; ok {
+		return v.(T)
+	}
+	return value
+}
 
 var _ widgets.Widget = (*EditorJSWidget)(nil)
 
@@ -36,6 +44,63 @@ func NewEditorJSWidget(features ...string) *EditorJSWidget {
 		},
 		Features: features,
 	}
+}
+
+func (b EditorJSWidget) ValueToForm(value interface{}) interface{} {
+	fmt.Println("ValueToForm", value)
+	var editorJsData EditorJSData
+	if fields.IsZero(value) {
+		return editorJsData
+	}
+
+	switch value := value.(type) {
+	case *EditorJSBlockData:
+		var blocks = make([]BlockData, 0)
+
+		for _, block := range value.Blocks {
+			var data = block.Data()
+			fmt.Println("block data:", block.Type(), data)
+			blocks = append(blocks, data)
+		}
+
+		var d = EditorJSData{
+			Time:    value.Time,
+			Version: value.Version,
+			Blocks:  blocks,
+		}
+
+		editorJsData = d
+	case EditorJSData:
+		editorJsData = value
+	default:
+		panic(fmt.Sprintf("Invalid value type: %T", value))
+	}
+
+	return editorJsData
+}
+
+func (b EditorJSWidget) ValueToGo(value interface{}) (interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	var editorJsData EditorJSData
+	switch value := value.(type) {
+	case *EditorJSBlockData:
+		return value, nil
+	case EditorJSData:
+		editorJsData = value
+	case string:
+		var d EditorJSData
+		if err := json.Unmarshal([]byte(value), &d); err != nil {
+			return nil, err
+		}
+		editorJsData = d
+	default:
+		panic(fmt.Sprintf("Invalid value type: %T (%v)", value, value))
+	}
+
+	return ValueToGo(b.Features, editorJsData)
 }
 
 func (b *EditorJSWidget) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {
@@ -64,7 +129,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%s-container", id))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 38, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 103, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -77,7 +142,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(templ.JSONString(config))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 38, Col: 176}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 103, Col: 176}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -90,7 +155,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(id)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 41, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 106, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -103,7 +168,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 42, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 107, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -116,20 +181,20 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 43, Col: 25}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 108, Col: 25}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" data-editorjs-widget-target=\"input\"><div id=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" data-editorjs-widget-target=\"input\"><div data-editorjs-widget-target=\"editor\" id=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%s-editor", id))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 46, Col: 46}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/widget.templ`, Line: 111, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {

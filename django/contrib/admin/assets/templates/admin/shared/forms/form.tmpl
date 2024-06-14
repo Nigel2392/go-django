@@ -1,9 +1,13 @@
 {{ define "form" }}
-
     {{ $Form := . }}
 
-    {{ range $Field := $Form.Fields }}
+    <div class="form-styles">
+        {{ range $File := $Form.Media.JS }}
+            {{ $File }}
+        {{ end }}
+    </div>
 
+    {{ range $Field := $Form.Fields }}
         <div class="form-field-wrapper">
         
             <div class="form-field">
@@ -17,6 +21,14 @@
                 
                 {{ $Field.Field }}
             </div>
+            
         </div>
     {{ end }}
+
+    <div class="form-scripts">
+        {{ range $File := $Form.Media.CSS }}
+            {{ $File }}
+        {{ end }}
+    </div>
+    
 {{ end }}

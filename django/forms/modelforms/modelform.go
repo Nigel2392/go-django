@@ -20,6 +20,7 @@ type ModelForm[T any] interface {
 	Context() context.Context
 	SetFields(fields ...string)
 	SetExclude(exclude ...string)
+	Instance() T
 	SetInstance(model T)
 }
 
@@ -129,6 +130,10 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 	f.SetInitial(initial)
 
 	f.setFlag(instanceWasSet, true)
+}
+
+func (f *BaseModelForm[T]) Instance() T {
+	return f.Model
 }
 
 func (f *BaseModelForm[T]) SetFields(fields ...string) {

@@ -4,6 +4,7 @@ import { EditorJSWidget, EditorJSWidgetConfig, EditorJSWidgetElement } from "./e
 class EditorJSWidgetController extends Controller<HTMLDivElement> {
     declare configValue: EditorJSWidgetConfig;
     declare inputTarget: EditorJSWidgetElement;
+    declare editorTarget: EditorJSWidgetElement;
     declare widget: EditorJSWidget | null;
 
 
@@ -16,19 +17,27 @@ class EditorJSWidgetController extends Controller<HTMLDivElement> {
 
     connect() {
         console.log('EditorJSWidgetController connected', this.configValue);
-        const keys = Object.keys(this.configValue.tools);
+        let cfg = this.configValue;
+        const keys = Object.keys(cfg.tools);
         for (let i = 0; i < keys.length; i++) {
             const key = keys[i];
-            const toolConfig = this.configValue.tools[key];
+            const toolConfig = cfg.tools[key];
+            if (!toolConfig.class || !(toolConfig.class in window)) {
+                console.error(`Tool class not found in window`, toolConfig);
+                continue;
+            }
             const toolClass = window[toolConfig.class];
             toolConfig.class = toolClass;
-            this.configValue.tools[key] = toolConfig;
+            cfg.tools[key] = toolConfig;
         }
+
+        //  // add the editor target to the config
+        //  cfg["holder"] = this.editorTarget;
 
         this.widget = new EditorJSWidget(
             this.element as EditorJSWidgetElement,
             this.inputTarget,
-            this.configValue,
+            cfg,
         );
     }
 
@@ -38,6 +47,10 @@ class EditorJSWidgetController extends Controller<HTMLDivElement> {
     }
 }
 
-window.Stimulus.register('editorjs-widget', EditorJSWidgetController);
+document.addEventListener('DOMContentLoaded', () => {
+
+    window.Stimulus.register('editorjs-widget', EditorJSWidgetController);
+
+});
 
 export { EditorJSWidgetController };

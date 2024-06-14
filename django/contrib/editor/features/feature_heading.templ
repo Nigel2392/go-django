@@ -1,0 +1,35 @@
+package features
+
+import "fmt"
+import "github.com/Nigel2392/django"
+import "github.com/Nigel2392/django/contrib/editor"
+
+func init() {
+	editor.Register(HeadingFeature)
+}
+
+var HeadingFeature = &Block{
+	BaseFeature: BaseFeature{
+		Type:          "header",
+		JSConstructor: "Header",
+		JSFiles: []string{
+			django.Static("editorjs/js/vendor/tools/header.js"),
+		},
+		RenderBlock:  func(fb *FeatureBlock) *FeatureBlock {
+			fb.GetString = func(d editor.BlockData) string { return d.Data["text"].(string) }
+			return fb
+		},
+	},
+	RenderFunc:    renderHeading,
+}
+
+func renderHeading(b editor.FeatureBlock, c context.Context, w io.Writer) error {
+	return renderHeadingObject(b).Render(c, w)
+}
+
+templ renderHeadingObject(fb editor.FeatureBlock) {
+	{{ var headingLevel = fb.Data().Data["level"] }}
+	{{ if headingLevel == nil || headingLevel == 0 { headingLevel = 1 } }}
+	{{ var tag = fmt.Sprintf("h%d", headingLevel) }}
+	@templ.Raw(fmt.Sprintf("<%s>%s</%s>", tag, fb.Data().Data["text"], tag))
+}

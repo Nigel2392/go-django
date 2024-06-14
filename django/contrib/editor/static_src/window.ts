@@ -4,7 +4,9 @@ export {};
 
 declare global {
     interface Window {
-        EditorJSWidget: typeof EditorJSWidget
-        editors: EditorJSWidget[]
+        GoEditorJS: {
+            Widget: typeof EditorJSWidget
+            editors: EditorJSWidget[]
+        }
     }
 }

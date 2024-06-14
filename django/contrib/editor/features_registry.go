@@ -2,6 +2,7 @@ package editor
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/staticfiles"
@@ -10,10 +11,10 @@ import (
 )
 
 type BlockData struct {
-	Id    string                 `json:"id"`
+	ID    string                 `json:"id"`
 	Type  string                 `json:"type"`
 	Data  map[string]interface{} `json:"data"`
-	Tunes map[string]interface{} `json:"tunes"`
+	Tunes map[string]interface{} `json:"tunes,omitempty"`
 }
 
 type EditorJSData struct {
@@ -27,6 +28,14 @@ type EditorJSBlockData struct {
 	Blocks   []FeatureBlock `json:"blocks"`
 	Version  string         `json:"version"`
 	Features []BaseFeature  `json:"-"`
+}
+
+func (e *EditorJSBlockData) String() string {
+	var b = new(strings.Builder)
+	for _, block := range e.Blocks {
+		fmt.Fprintf(b, "%s\n", block)
+	}
+	return b.String()
 }
 
 type editorRegistry struct {
@@ -76,8 +85,10 @@ func (e *editorRegistry) BuildConfig(widgetContext ctx.Context, features ...stri
 		var featureCfg = f.Config(widgetContext)
 		var jsClass = f.Constructor()
 		var fullCfg = map[string]interface{}{
-			"class":  jsClass,
-			"config": featureCfg,
+			"class": jsClass,
+		}
+		if len(featureCfg) > 0 {
+			fullCfg["config"] = featureCfg
 		}
 		toolsConfig[f.Name()] = fullCfg
 	}
@@ -89,9 +100,9 @@ func (e *editorRegistry) BuildConfig(widgetContext ctx.Context, features ...stri
 	return config
 }
 
-func (e *editorRegistry) ValueToGo(tools []string, data EditorJSData) (EditorJSBlockData, error) {
+func (e *editorRegistry) ValueToGo(tools []string, data EditorJSData) (*EditorJSBlockData, error) {
 	var blocks = data.Blocks
-	var blockData = EditorJSBlockData{
+	var blockData = &EditorJSBlockData{
 		Time:     data.Time,
 		Version:  data.Version,
 		Features: e.Features(tools...),

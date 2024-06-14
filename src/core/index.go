@@ -1,14 +1,18 @@
 package core
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/mail"
+	"slices"
 	"strings"
 
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/blocks"
 	"github.com/Nigel2392/django/contrib/editor"
+	_ "github.com/Nigel2392/django/contrib/editor/features"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/errs"
@@ -16,16 +20,46 @@ import (
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/widgets"
+	"github.com/Nigel2392/django/models"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
+var _ (models.Saver) = (*MainStruct)(nil)
+
+var mainStructMap = make(map[string]*MainStruct)
+
 type MainStruct struct {
-	Email    *mail.Address       `attrs:"label=Email;helptext=Enter your email;null;required;min_length=5;max_length=250"`
-	Name     string              `attrs:"label=Name;helptext=Enter your name;primary;required;regex=^[a-zA-Z]+$;min_length=2;max_length=50"`
-	Password string              `attrs:"label=Password;helptext=Enter your password;required;min_length=8;max_length=50"`
-	Age      int                 `attrs:"label=Age;helptext=Enter your age;required"`
-	Data     map[string]any      `attrs:"label=Object Data;required;help_text=Enter your data"`
-	Block    *blocks.StructBlock `attrs:"label=Block;required;help_text=Enter your block data"`
+	Email      *mail.Address       `attrs:"label=Email;primary;helptext=Enter your email;null;required;min_length=5;max_length=250"`
+	Name       string              `attrs:"label=Name;helptext=Enter your name;required;regex=^[a-zA-Z]+$;min_length=2;max_length=50"`
+	Password   string              `attrs:"label=Password;helptext=Enter your password;required;min_length=8;max_length=50"`
+	Age        int                 `attrs:"label=Age;helptext=Enter your age;required"`
+	Data       json.RawMessage     `attrs:"label=Object Data;required;help_text=Enter your data"`
+	Block      *blocks.StructBlock `attrs:"label=Block;required;help_text=Enter your block data"`
+	_blockData map[string]interface{}
+	Editor     *editor.EditorJSBlockData `attrs:"label=Editor;required;help_text=Enter your editor data"`
+}
+
+func (m *MainStruct) SetBlock(v interface{}) {
+	var val, ok = v.(map[string]interface{})
+	if !ok {
+		panic(fmt.Sprintf("Invalid block data: %T", v))
+	}
+	m._blockData = val
+
+}
+
+func (m *MainStruct) GetBlock() interface{} {
+	return m._blockData
+}
+
+func (m *MainStruct) GetDefaultBlock() interface{} {
+	return make(map[string]interface{})
+}
+
+func (m *MainStruct) Save(context.Context) error {
+	fmt.Println("Saving", m)
+	mainStructMap[m.Email.Address] = m
+	return nil
 }
 
 //	func (m *MainStruct) AdminForm(r *http.Request, app *admin.AppDefinition, model *admin.ModelDefinition) modelforms.ModelForm[attrs.Definer] {
@@ -139,6 +173,7 @@ var _ = admin.RegisterApp(
 			ViewOptions: admin.ViewOptions{
 				Fields: []string{
 					"Email",
+					"Editor",
 					"Name",
 					"Password",
 					"Age",
@@ -155,7 +190,10 @@ var _ = admin.RegisterApp(
 					return "********"
 				},
 				"Data": func(v any) interface{} {
-					var data = v.(map[string]any)
+					var data = make(map[string]interface{})
+					if err := json.Unmarshal(v.(json.RawMessage), &data); err != nil {
+						return fmt.Sprintf("Error: %s", err)
+					}
 					var b strings.Builder
 					for k, v := range data {
 						b.WriteString(fmt.Sprintf("%s: %v\n", k, v))
@@ -169,30 +207,32 @@ var _ = admin.RegisterApp(
 		},
 		Model: &MainStruct{},
 		GetForID: func(identifier any) (attrs.Definer, error) {
-			return &MainStruct{
-				Email:    &mail.Address{Address: "test@localhost"},
-				Name:     "Test User",
-				Password: "password",
-				Age:      30,
-				Data:     map[string]any{"key": "value"},
-				Block:    &blocks.StructBlock{},
-			}, nil
+			var id, ok = identifier.(string)
+			if !ok {
+				return nil, fmt.Errorf("Invalid identifier: %T", identifier)
+			}
+			var email, err = mail.ParseAddress(id)
+			if err != nil {
+				return nil, err
+			}
+			m, ok := mainStructMap[email.Address]
+			if !ok {
+				return nil, fmt.Errorf("No object found with id: %s", email.Address)
+			}
+			return m, nil
 		},
 		GetList: func(amount, offset uint, fields []string) ([]attrs.Definer, error) {
-			//var listItemCount = 10
-			//var items = make([]attrs.Definer, listItemCount)
-			//for i := 0; i < listItemCount; i++ {
-			//	items[i] = &MainStruct{
-			//		Email:    &mail.Address{Address: fmt.Sprintf("user-%d@test.localhost", i)},
-			//		Name:     fmt.Sprintf("User %d", i),
-			//		Password: "password",
-			//		Age:      i + 20,
-			//		Data:     map[string]any{"key": fmt.Sprintf("value-%d", i)},
-			//		Block:    &blocks.StructBlock{},
-			//	}
-			//}
-			//return items, nil
-			return []attrs.Definer{}, nil
+			var items = make([]attrs.Definer, 0, len(mainStructMap))
+			for _, v := range mainStructMap {
+				items = append(items, v)
+			}
+			slices.SortFunc(items, func(a, b attrs.Definer) int {
+				return strings.Compare(attrs.Get[string](a, "Email"), attrs.Get[string](b, "Email"))
+			})
+
+			fmt.Println("Items:", items)
+
+			return items, nil
 		},
 	},
 )
@@ -258,8 +298,9 @@ func Index(w http.ResponseWriter, r *http.Request) {
 				fields.Required(true),
 				fields.Widget(
 					editor.NewEditorJSWidget(
-					// "paragraph",
-					// "header",
+						"paragraph",
+						"header",
+						"delimiter",
 					// "list",
 					),
 				),
@@ -282,6 +323,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		}),
 		forms.OnFinalize(func(f forms.Form) {
 			fmt.Println("Form is finalized:", f.BoundErrors())
+			fmt.Println("Form is finalized:", f.ErrorList())
 		}),
 	)
 
@@ -298,7 +340,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		attrs.Set(s, "Password", validFormData["password"])
 		attrs.Set(s, "Age", validFormData["age"])
 		attrs.Set(s, "Data", validFormData["data"])
-		attrs.Set(s, "Block", validFormData["block"])
+		// attrs.Set(s, "Block", validFormData["block"])
 
 		fmt.Printf("%+v\n", s)
 	}

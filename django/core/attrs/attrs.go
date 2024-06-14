@@ -1,8 +1,19 @@
 package attrs
 
 import (
+	"encoding/json"
+
 	"github.com/Nigel2392/django/forms/fields"
 )
+
+func init() {
+	RegisterFormFieldType(
+		json.RawMessage([]byte{}),
+		func(opts ...func(fields.Field)) fields.Field {
+			return fields.JSONField[json.RawMessage](opts...)
+		},
+	)
+}
 
 type Definer interface {
 	FieldDefs() Definitions

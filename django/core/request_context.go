@@ -12,7 +12,7 @@ type RequestContext struct {
 	CsrfToken   string
 }
 
-func Context(r *http.Request) ctx.Context {
+func Context(r *http.Request) *RequestContext {
 	var request = &RequestContext{
 		HttpRequest: r,
 	}

@@ -7,6 +7,7 @@ import (
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
+	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/a-h/templ"
 	"github.com/elliotchance/orderedmap/v2"
@@ -16,6 +17,7 @@ type AppOptions struct {
 	RegisterToAdminMenu bool
 	MenuLabel           func() string
 	MenuIcon            func() string
+	IndexView           views.View
 }
 
 type AppDefinition struct {

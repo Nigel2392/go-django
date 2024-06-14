@@ -56,7 +56,7 @@ loop:
 		case nil, any:
 			continue loop
 		default:
-			fmt.Printf("Unknown type: %T\n", t)
+			panic(fmt.Sprintf("Unknown type: %T\n", t))
 		}
 	}
 

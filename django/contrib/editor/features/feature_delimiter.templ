@@ -1,0 +1,34 @@
+package features
+
+import "github.com/Nigel2392/django"
+import "github.com/Nigel2392/django/contrib/editor"
+
+func init() {
+	editor.Register(DelimiterFeature)
+}
+
+var DelimiterFeature = &Block{
+	BaseFeature: BaseFeature{
+		Type:          "delimiter",
+		JSConstructor: "Delimiter",
+		JSFiles: []string{
+			django.Static("editorjs/js/vendor/tools/delimiter.js"),
+		},
+		RenderBlock:  func(fb *FeatureBlock) *FeatureBlock {
+			fb.GetString = func(editor.BlockData) string { return "----" }
+			return fb
+		},
+	},
+	RenderFunc:    renderDelimiter,
+}
+
+func renderDelimiter(b editor.FeatureBlock, c context.Context, w io.Writer) error{
+	return renderDelimiterObject(b).Render(c, w)
+}
+
+templ renderDelimiterObject(fb editor.FeatureBlock) {
+	{{ var text = fb.Data().Data["text"] }}
+	{{ if text == nil { text = "" } }}
+	{{ var t = text.(string) }}
+	<p class="paragraph"> { t } </p>
+}

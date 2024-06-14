@@ -122,8 +122,8 @@ func (f *BaseForm) setup() {
 		f.Errors = orderedmap.NewOrderedMap[string, []error]()
 	}
 
-	if f.ErrorList == nil {
-		f.ErrorList = make([]error, 0)
+	if f.ErrorList_ == nil {
+		f.ErrorList_ = make([]error, 0)
 	}
 
 	if f.Initial == nil {
@@ -141,7 +141,7 @@ type BaseForm struct {
 	FormFields      *orderedmap.OrderedMap[string, fields.Field]
 	FormWidgets     *orderedmap.OrderedMap[string, widgets.Widget]
 	Errors          *orderedmap.OrderedMap[string, []error]
-	ErrorList       []error
+	ErrorList_      []error
 	Raw             url.Values
 	Initial         map[string]interface{}
 	InvalidDefaults map[string]interface{}
@@ -190,19 +190,25 @@ func (f *BaseForm) DefaultValue(name string) interface{} {
 	return nil
 }
 
+func (f *BaseForm) ErrorList() []error {
+	return f.ErrorList_
+}
+
 func (f *BaseForm) BoundErrors() *orderedmap.OrderedMap[string, []error] {
 	if f.Errors == nil && (len(f.Raw) > 0 || len(f.Files) > 0) {
 		f.FullClean()
 	}
 
-	if f.Errors == nil {
-		return orderedmap.NewOrderedMap[string, []error]()
-	}
-
 	var errs = f.Errors
-	if f.ErrorList != nil {
+	if len(f.ErrorList_) > 0 {
+		if f.Errors == nil {
+			f.Errors = orderedmap.NewOrderedMap[string, []error]()
+		}
 		errs = f.Errors.Copy()
-		errs.Set("__all__", f.ErrorList)
+		errs.Set("__all__", f.ErrorList_)
+	}
+	if errs.Len() == 0 {
+		return nil
 	}
 	return errs
 }
@@ -285,7 +291,7 @@ func (f *BaseForm) BoundForm() BoundForm {
 		Form:       f,
 		Fields_:    boundFields,
 		Errors_:    errors,
-		ErrorList_: f.ErrorList,
+		ErrorList_: f.ErrorList_,
 	}
 }
 
@@ -403,22 +409,15 @@ func (f *BaseForm) Media() media.Media {
 
 	for head := f.FormFields.Front(); head != nil; head = head.Next() {
 
-		fmt.Println("Getting media for field", head.Key)
 		var widget, ok = f.FormWidgets.Get(head.Key)
 		if !ok {
 			widget = head.Value.Widget()
 		}
 
-		fmt.Println("Widget:", widget)
-
 		var m = widget.Media()
-
-		fmt.Println("Widget Media:", m)
-
 		if m != nil {
 			media = media.Merge(m)
 		}
-		fmt.Println("Widget Media After:", media)
 	}
 
 	return media
@@ -492,7 +491,7 @@ func (f *BaseForm) Reset() {
 	f.Raw = nil
 	f.Initial = nil
 	f.Errors = nil
-	f.ErrorList = nil
+	f.ErrorList_ = nil
 	f.InvalidDefaults = nil
 	f.Files = nil
 	f.Cleaned = nil
@@ -615,8 +614,8 @@ func (f *BaseForm) IsValid() bool {
 		f.Errors = orderedmap.NewOrderedMap[string, []error]()
 	}
 
-	if f.ErrorList == nil {
-		f.ErrorList = make([]error, 0)
+	if f.ErrorList_ == nil {
+		f.ErrorList_ = make([]error, 0)
 	}
 
 	if f.Cleaned == nil {
@@ -628,12 +627,17 @@ func (f *BaseForm) IsValid() bool {
 	}
 
 	var valid bool
-	if (f.Errors.Len() > 0 || len(f.ErrorList) > 0) && f.Cleaned != nil {
+	if (f.Errors.Len() > 0 || len(f.ErrorList_) > 0) && f.Cleaned != nil {
 		f.Cleaned = nil
 		valid = false
 	} else {
-		valid = f.Errors.Len() == 0 && len(f.ErrorList) == 0
+		valid = f.Errors.Len() == 0 && len(f.ErrorList_) == 0
 	}
+
+	fmt.Println("IsValid", valid, f.Errors, f.ErrorList_)
+	fmt.Println("IsValid", valid, f.Errors, f.ErrorList_)
+	fmt.Println("IsValid", valid, f.Errors, f.ErrorList_)
+	fmt.Println("IsValid", valid, f.Errors, f.ErrorList_)
 
 	if valid {
 		for _, fn := range f.OnValidFuncs {
@@ -653,12 +657,12 @@ func (f *BaseForm) IsValid() bool {
 }
 
 func (f *BaseForm) AddFormError(errorList ...error) {
-	if f.ErrorList == nil {
-		f.ErrorList = make([]error, 0)
+	if f.ErrorList_ == nil {
+		f.ErrorList_ = make([]error, 0)
 	}
 
 	var newErrs = slices.Clone(errorList)
-	f.ErrorList = append(f.ErrorList, newErrs...)
+	f.ErrorList_ = append(f.ErrorList_, newErrs...)
 }
 
 func (f *BaseForm) AddError(name string, errorList ...error) {
