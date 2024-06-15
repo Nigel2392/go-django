@@ -1,0 +1,87 @@
+version: "2"
+sql:
+  - schema: "./schema.mysql.sql"
+    queries: "./queries.mysql.sql"
+    engine: "mysql"
+    gen:
+      go:
+        package: "models_mysql"
+        out: "../pages-mysql"
+        emit_json_tags: true
+        emit_prepared_queries: false
+        emit_interface: true
+        query_parameter_limit: 8
+        overrides:
+          - db_type: "bigint"
+            go_type:
+              type: "NullInt64"
+              import: "database/sql"
+
+          - db_type: "text"
+            go_type:
+              type: "NullString"
+              import: "database/sql"
+
+          - db_type: "varchar(255)"
+            go_type:
+              type: "NullString"
+              import: "database/sql"
+
+  - schema: "./schema.sqlite3.sql"
+    queries: "./queries.sqlite3.sql"
+    engine: "sqlite"
+    gen:
+      go:
+        package: "models_sqlite"
+        out: "../pages-sqlite"
+        emit_json_tags: true
+        emit_prepared_queries: false
+        emit_interface: true
+        query_parameter_limit: 8
+        overrides:
+          - db_type: "bigint"
+            go_type:
+              type: "NullInt64"
+              import: "database/sql"
+
+          - db_type: "text"
+            go_type:
+              type: "NullString"
+              import: "database/sql"
+
+          - db_type: "varchar(255)"
+            go_type:
+              type: "NullString"
+              import: "database/sql"
+
+  - schema: "./schema.postgres.sql"
+    queries: "./queries.postgres.sql"
+    engine: "postgresql"
+    gen:
+      go:
+        package: "models_postgres"
+        out: "../pages-postgres"
+        emit_json_tags: true
+        emit_prepared_queries: false
+        emit_interface: true
+        query_parameter_limit: 8
+        overrides:
+          - db_type: "bigint"
+            go_type:
+              type: "NullInt64"
+              import: "database/sql"
+
+          - db_type: "serial"
+            go_type:
+              type: "NullInt64"
+              import: "database/sql"
+
+          - db_type: "text"
+            go_type:
+              type: "NullString"
+              import: "database/sql"
+
+          - db_type: "varchar(255)"
+            go_type:
+              type: "NullString"
+              import: "database/sql"
