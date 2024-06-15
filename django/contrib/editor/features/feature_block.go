@@ -60,7 +60,6 @@ func (b *FeatureBlock) Attributes() map[string]interface{} {
 }
 
 func (b *FeatureBlock) Render(ctx context.Context, w io.Writer) error {
-	fmt.Println("FeatureBlock.Render", b.FeatureName)
 	if r, ok := b.FeatureObject.(BlockRenderer); ok {
 		return r.RenderBlock(b, ctx, w)
 	}

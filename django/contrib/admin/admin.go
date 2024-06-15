@@ -44,6 +44,8 @@ func init() {
 
 }
 
+const BASE_KEY = "admin"
+
 var AdminSite *AdminApplication = &AdminApplication{
 	AppConfig: apps.NewAppConfig("admin"),
 	Apps: orderedmap.NewOrderedMap[

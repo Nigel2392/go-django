@@ -10,7 +10,7 @@ import (
 
 var HomeHandler = &views.BaseView{
 	AllowedMethods:  []string{http.MethodGet},
-	BaseTemplateKey: "admin",
+	BaseTemplateKey: BASE_KEY,
 	TemplateName:    "admin/views/home.tmpl",
 	GetContextFn: func(req *http.Request) (ctx.Context, error) {
 		var context = core.Context(req)

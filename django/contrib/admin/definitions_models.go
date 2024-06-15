@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/forms/modelforms"
+	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/django/views/list"
 )
 
@@ -19,15 +20,22 @@ type ViewOptions struct {
 
 type FormViewOptions struct {
 	ViewOptions
-	GetForm  func(req *http.Request, instance attrs.Definer, fields []string) modelforms.ModelForm[attrs.Definer]
-	FormInit func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer])
+	GetForm    func(req *http.Request, instance attrs.Definer, fields []string) modelforms.ModelForm[attrs.Definer]
+	FormInit   func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer])
+	GetHandler func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) views.View
 }
 
 type ListViewOptions struct {
 	ViewOptions
-	PerPage uint64
-	Columns map[string]list.ListColumn[attrs.Definer]
-	Format  map[string]func(v any) any
+	PerPage    uint64
+	Columns    map[string]list.ListColumn[attrs.Definer]
+	Format     map[string]func(v any) any
+	GetHandler func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) views.View
+}
+
+type DeleteViewOptions struct {
+	FormatMessage func(instance attrs.Definer) string
+	GetHandler    func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) views.View
 }
 
 func viewDefaults(o *ViewOptions, mdl any) {
@@ -44,6 +52,7 @@ type ModelOptions struct {
 	AddView             FormViewOptions
 	EditView            FormViewOptions
 	ListView            ListViewOptions
+	DeleteView          DeleteViewOptions
 	RegisterToAdminMenu bool
 	Labels              map[string]func() string
 	GetForID            func(identifier any) (attrs.Definer, error)

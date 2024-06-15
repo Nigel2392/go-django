@@ -634,11 +634,6 @@ func (f *BaseForm) IsValid() bool {
 		valid = f.Errors.Len() == 0 && len(f.ErrorList_) == 0
 	}
 
-	fmt.Println("IsValid", valid, f.Errors, f.ErrorList_)
-	fmt.Println("IsValid", valid, f.Errors, f.ErrorList_)
-	fmt.Println("IsValid", valid, f.Errors, f.ErrorList_)
-	fmt.Println("IsValid", valid, f.Errors, f.ErrorList_)
-
 	if valid {
 		for _, fn := range f.OnValidFuncs {
 			fn(f)

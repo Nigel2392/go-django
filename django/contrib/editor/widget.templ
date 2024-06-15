@@ -37,7 +37,6 @@ func NewEditorJSWidget(features ...string) *EditorJSWidget {
 }
 
 func (b EditorJSWidget) ValueToForm(value interface{}) interface{} {
-    fmt.Println("ValueToForm", value)
 	var editorJsData EditorJSData
 	if fields.IsZero(value) {
 		return editorJsData
@@ -49,7 +48,6 @@ func (b EditorJSWidget) ValueToForm(value interface{}) interface{} {
 
 		for _, block := range value.Blocks {
 			var data = block.Data()
-            fmt.Println("block data:", block.Type(), data)
 			blocks = append(blocks, data)
 		}
 

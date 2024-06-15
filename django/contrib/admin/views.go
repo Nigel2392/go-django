@@ -18,7 +18,7 @@ import (
 
 var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition) {
 	if app.Options.IndexView != nil {
-		var err = views.Invoke(app.Options.IndexView, w, r)
+		var err = views.Invoke(app.Options.IndexView(adminSite, app), w, r)
 		assert.Err(err)
 		return
 	}
@@ -42,7 +42,11 @@ var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminAp
 
 var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
 
-	// var instances, err = model.GetList(10, 0)
+	if model.ListView.GetHandler != nil {
+		var err = views.Invoke(model.ListView.GetHandler(adminSite, app, model), w, r)
+		assert.Err(err)
+		return
+	}
 
 	var columns = make([]list.ListColumn[attrs.Definer], len(model.ListView.Fields))
 	for i, field := range model.ListView.Fields {
@@ -59,7 +63,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		DefaultAmount: amount,
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: "admin",
+			BaseTemplateKey: BASE_KEY,
 			TemplateName:    "admin/views/models/list.tmpl",
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
 				var context = NewContext(req, adminSite, nil)
@@ -87,6 +91,11 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 
 var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
 	var instance = model.NewInstance()
+	if model.AddView.GetHandler != nil {
+		var err = views.Invoke(model.AddView.GetHandler(adminSite, app, model, instance), w, r)
+		assert.Err(err)
+		return
+	}
 	var addView = newInstanceView("add", instance, model.AddView, app, model, r)
 	views.Invoke(addView, w, r)
 	// if err := views.Invoke(addView, w, r); err != nil {
@@ -95,6 +104,11 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 }
 
 var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
+	if model.EditView.GetHandler != nil {
+		var err = views.Invoke(model.EditView.GetHandler(adminSite, app, model, instance), w, r)
+		assert.Err(err)
+		return
+	}
 	var editView = newInstanceView("edit", instance, model.EditView, app, model, r)
 	views.Invoke(editView, w, r)
 	// if err := views.Invoke(editView, w, r); err != nil {
@@ -103,6 +117,11 @@ var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 }
 
 var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
+	if model.DeleteView.GetHandler != nil {
+		var err = views.Invoke(model.DeleteView.GetHandler(adminSite, app, model, instance), w, r)
+		assert.Err(err)
+		return
+	}
 	w.Write([]byte(model.Name))
 	w.Write([]byte("\n"))
 	w.Write([]byte("delete"))
@@ -135,7 +154,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 	return &views.FormView[modelforms.ModelForm[attrs.Definer]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: "admin",
+			BaseTemplateKey: BASE_KEY,
 			TemplateName:    fmt.Sprintf("admin/views/models/%s.tmpl", tpl),
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
 				var context = core.Context(req)

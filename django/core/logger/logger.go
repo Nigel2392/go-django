@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -329,7 +330,11 @@ func (l *Logger) writeSuffix(w io.Writer) {
 	}
 }
 
+var mu = new(sync.Mutex)
+
 func (l *Logger) log(level LogLevel, args ...interface{}) (int, error) {
+	mu.Lock()
+	defer mu.Unlock()
 	var out = l.Output(level)
 	if out == nil {
 		return 0, ErrOutputInvalid

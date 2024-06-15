@@ -140,7 +140,6 @@ func (f *FieldDef) GetDefault() interface{} {
 
 	var funcName = fmt.Sprintf("GetDefault%s", f.Name())
 	if method, ok := f.instance_t.MethodByName(funcName); ok {
-		fmt.Println("Calling method on raw", funcName, f.instance_v_ptr, f.instance_v_ptr.Interface())
 		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
 		if len(out) > 0 {
 			return out[0].Interface()

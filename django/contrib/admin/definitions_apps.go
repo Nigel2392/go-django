@@ -13,11 +13,16 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
+type AdminView interface {
+	views.View
+	Site() *AdminApplication
+}
+
 type AppOptions struct {
 	RegisterToAdminMenu bool
 	MenuLabel           func() string
 	MenuIcon            func() string
-	IndexView           views.View
+	IndexView           func(adminSite *AdminApplication, app *AppDefinition) views.View
 }
 
 type AppDefinition struct {
