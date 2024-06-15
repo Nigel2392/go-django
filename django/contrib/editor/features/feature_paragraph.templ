@@ -30,5 +30,5 @@ templ renderParagraphObject(fb editor.FeatureBlock) {
 	{{ var text = fb.Data().Data["text"] }}
 	{{ if text == nil { text = "" } }}
 	{{ var t = text.(string) }}
-	<p class="paragraph" data-block-id={ fb.ID() }> { t } </p>
+	<p class="paragraph" data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }> { t } </p>
 }

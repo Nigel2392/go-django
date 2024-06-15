@@ -175,6 +175,15 @@ var _ = admin.RegisterApp(
 			"Block":    fields.S("Object Block"),
 		},
 		AddView: admin.FormViewOptions{
+			ViewOptions: admin.ViewOptions{
+				Fields: []string{
+					"Email",
+					"Name",
+					"Age",
+					"Password",
+					"Editor",
+				},
+			},
 			Panels: []admin.Panel{
 				admin.TitlePanel(
 					admin.FieldPanel("Email"),

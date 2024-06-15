@@ -87,7 +87,7 @@ type User struct {
 func (u *User) FieldDefs() attrs.Definitions {
 	return attrs.AutoDefinitions(u,
 		"ID",
-		attrs.NewField(u, "Email", &attrs.FieldConfig{}),
+		"Email",
 		"Username",
 		"FirstName",
 		"LastName",

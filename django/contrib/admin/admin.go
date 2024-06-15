@@ -16,9 +16,11 @@ import (
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
+	"github.com/a-h/templ"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -99,6 +101,26 @@ func NewAppConfig() django.AppConfig {
 		components.Register("admin.button.danger", cmpts.ButtonDanger)
 		components.Register("admin.button.warning", cmpts.ButtonWarning)
 
+		goldcrest.Register(
+			RegisterFooterMenuItemHook, 0,
+			RegisterFooterMenuItemHookFunc(func(r *http.Request, adminSite *AdminApplication, items menu.Items) {
+				items.Append(&menu.Item{
+					BaseItem: menu.BaseItem{
+						Label: fields.S("Logout"),
+						Logo: templ.Raw(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+	<!-- The MIT License (MIT) -->
+	<!-- Copyright (c) 2011-2024 The Bootstrap Authors -->
+  	<path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+  	<path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+</svg>`),
+					},
+					Link: func() string {
+						return django.Reverse("admin:logout")
+					},
+				})
+			}),
+		)
+
 		tpl.Add(tpl.Config{
 			AppName: "admin",
 			FS:      tplFS,
@@ -119,6 +141,18 @@ func NewAppConfig() django.AppConfig {
 					var hooks = goldcrest.Get[RegisterMenuItemHookFunc](RegisterMenuItemHook)
 					for _, hook := range hooks {
 						hook(AdminSite, menuItems)
+					}
+					m.Items = menuItems.All()
+					var buf = new(bytes.Buffer)
+					m.Component().Render(r.Context(), buf)
+					return template.HTML(buf.String())
+				},
+				"footer_menu": func(r *http.Request) template.HTML {
+					var m = &menu.Menu{}
+					var menuItems = menu.NewItems()
+					var hooks = goldcrest.Get[RegisterFooterMenuItemHookFunc](RegisterFooterMenuItemHook)
+					for _, hook := range hooks {
+						hook(r, AdminSite, menuItems)
 					}
 					m.Items = menuItems.All()
 					var buf = new(bytes.Buffer)
@@ -146,6 +180,11 @@ func NewAppConfig() django.AppConfig {
 		// Add authentication/administrator middleware to all subsequent routes added
 		AdminSite.Route.Use(
 			RequiredMiddleware,
+		)
+
+		AdminSite.Route.Get(
+			"logout/", mux.NewHandler(LogoutHandler),
+			"logout", // admin:logout
 		)
 
 		AdminSite.Route.Get(

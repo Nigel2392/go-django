@@ -28,3 +28,8 @@ var LoginHandler = &views.FormView[*AdminForm[*auth.BaseUserLoginForm]]{
 		http.Redirect(w, req, adminIndex, http.StatusSeeOther)
 	},
 }
+
+func LogoutHandler(w http.ResponseWriter, req *http.Request) {
+	auth.Logout(req)
+	http.Redirect(w, req, django.Reverse("admin:login"), http.StatusSeeOther)
+}

@@ -11,6 +11,7 @@ import (
 )
 
 var _ editor.BaseFeature = (*BaseFeature)(nil)
+var _ editor.BlockTuneFeature = (*BlockTune)(nil)
 var _ editor.FeatureBlockRenderer = (*BaseFeature)(nil)
 
 type BaseFeature struct {
@@ -81,4 +82,30 @@ func (b *Block) Render(d editor.BlockData) editor.FeatureBlock {
 	var block = b.BaseFeature.Render(d).(*FeatureBlock)
 	block.FeatureObject = b
 	return block
+}
+
+type BlockTune struct {
+	BaseFeature
+	TuneFunc func(fb editor.FeatureBlock, data interface{}) editor.FeatureBlock
+}
+
+func (b *BlockTune) Tune(fb editor.FeatureBlock, data interface{}) editor.FeatureBlock {
+	if b.TuneFunc != nil {
+		return b.TuneFunc(fb, data)
+	}
+	return fb
+}
+
+type WrapperTune struct {
+	BaseFeature
+	Wrap func(editor.FeatureBlock) func(context.Context, io.Writer) error
+}
+
+func (b *WrapperTune) Render(d editor.BlockData) editor.FeatureBlock {
+	var block = b.BaseFeature.Render(d).(*FeatureBlock)
+	block.FeatureObject = b
+	return &WrapperBlock{
+		FeatureBlock: block,
+		Wrap:         b.Wrap,
+	}
 }

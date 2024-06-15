@@ -19,6 +19,24 @@ type BlockRenderer interface {
 	RenderBlock(fb editor.FeatureBlock, c context.Context, w io.Writer) error
 }
 
+type WrapperBlock struct {
+	editor.FeatureBlock
+	Wrap func(editor.FeatureBlock) func(context.Context, io.Writer) error
+}
+
+func (w *WrapperBlock) Render(ctx context.Context, wr io.Writer) error {
+	if w.Wrap != nil {
+		var component = w.Wrap(w.FeatureBlock)
+		return component(ctx, wr)
+	}
+	return fmt.Errorf(
+		"feature '%s' (%T) does not implement RenderBlock %w",
+		w.Type(),
+		w.Feature(),
+		ErrRenderNotImplemented,
+	)
+}
+
 type FeatureBlock struct {
 	Attrs      map[string]interface{}
 	Identifier string

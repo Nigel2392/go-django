@@ -123,6 +123,10 @@ a:hover {
     flex-direction: column;
     height: 100%;
 }
+#main #sidebar #sidebar-footer {
+    margin-top: auto;
+    margin-bottom: 1em;
+}
 #main #content-wrapper {
     flex: 1;
     padding: 0.5em 1em;

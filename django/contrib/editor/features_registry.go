@@ -54,6 +54,8 @@ func (e *EditorJSBlockData) Render() template.HTML {
 
 type editorRegistry struct {
 	features *orderedmap.OrderedMap[string, BaseFeature]
+	ft_tunes map[string][]string
+	tunes    []string
 }
 
 func init() {
@@ -71,6 +73,8 @@ func init() {
 func newEditorRegistry() *editorRegistry {
 	return &editorRegistry{
 		features: orderedmap.NewOrderedMap[string, BaseFeature](),
+		ft_tunes: make(map[string][]string),
+		tunes:    make([]string, 0),
 	}
 }
 
@@ -93,6 +97,19 @@ func (e *editorRegistry) Register(feature BaseFeature) {
 	e.features.Set(feature.Name(), feature)
 }
 
+func (e *editorRegistry) TuneFeature(featureName string, tuneName string) {
+	var tunes, ok = e.ft_tunes[featureName]
+	if !ok {
+		tunes = make([]string, 0)
+	}
+	tunes = append(tunes, tuneName)
+	e.ft_tunes[featureName] = tunes
+}
+
+func (e *editorRegistry) Tune(tuneName string) {
+	e.tunes = append(e.tunes, tuneName)
+}
+
 func (e *editorRegistry) BuildConfig(widgetContext ctx.Context, features ...string) map[string]interface{} {
 	var toolsConfig = make(map[string]interface{})
 	for _, f := range e.Features(features...) {
@@ -104,11 +121,18 @@ func (e *editorRegistry) BuildConfig(widgetContext ctx.Context, features ...stri
 		if len(featureCfg) > 0 {
 			fullCfg["config"] = featureCfg
 		}
+		if tunes, ok := e.ft_tunes[f.Name()]; ok {
+			fullCfg["tunes"] = tunes
+		}
 		toolsConfig[f.Name()] = fullCfg
 	}
 
 	var config = map[string]interface{}{
 		"tools": toolsConfig,
+	}
+
+	if len(e.tunes) > 0 {
+		config["tunes"] = e.tunes
 	}
 
 	return config
@@ -136,9 +160,11 @@ func (e *editorRegistry) ValueToGo(tools []string, data EditorJSData) (*EditorJS
 		}
 
 		var blockObj = b.Render(block)
+		fmt.Println(block.Tunes)
 		for k, v := range block.Tunes {
 			var tuneFeature, ok = e.features.Get(k)
 			if !ok {
+				fmt.Printf("feature %q not found\n", k)
 				continue
 			}
 
@@ -162,5 +188,7 @@ var (
 	ValueToGo      = EditorRegistry.ValueToGo
 	Features       = EditorRegistry.Features
 	Register       = EditorRegistry.Register
+	TuneFeature    = EditorRegistry.TuneFeature
+	Tune           = EditorRegistry.Tune
 	buildConfig    = EditorRegistry.BuildConfig
 )
