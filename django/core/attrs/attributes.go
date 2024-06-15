@@ -214,6 +214,7 @@ func set(d Definer, name string, value interface{}, force bool) error {
 }
 
 func RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool) {
+	var original = *v
 	if !v.IsValid() {
 		var z = reflect.New(t)
 		*v = z
@@ -233,6 +234,7 @@ func RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool) {
 		*v = v.Convert(t)
 		return v, true
 	}
+	*v = original
 	return v, false
 }
 

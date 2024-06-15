@@ -10,7 +10,6 @@ import (
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/auth"
-	auth_models "github.com/Nigel2392/django/contrib/auth/auth-models"
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
 	"github.com/Nigel2392/django/contrib/blocks"
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
@@ -66,7 +65,7 @@ func main() {
 			MenuLabel:           fields.S("Auth"),
 		},
 		admin.ModelOptions{
-			Model:               &auth_models.User{},
+			Model:               &models.User{},
 			RegisterToAdminMenu: true,
 			Labels: map[string]func() string{
 				"ID":              fields.S("ID"),
@@ -126,7 +125,6 @@ func main() {
 						admin.FieldPanel("LastName"),
 					),
 					admin.FieldPanel("Password"),
-					admin.FieldPanel("PasswordConfirm"),
 					admin.FieldPanel("IsAdministrator"),
 					admin.FieldPanel("IsActive"),
 				},

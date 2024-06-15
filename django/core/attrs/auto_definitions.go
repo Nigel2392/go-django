@@ -90,7 +90,7 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 	return data
 }
 
-func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
+func AutoDefinitions[T Definer](instance T, include ...any) Definitions {
 	var m = make([]Field, 0)
 
 	var (
@@ -136,32 +136,39 @@ func AutoDefinitions[T Definer](instance T, include ...string) Definitions {
 		}
 	} else {
 		for _, name := range include {
-			var field_t, ok = instance_t.FieldByName(name)
+			switch name := name.(type) {
+			case string:
+				var field_t, ok = instance_t.FieldByName(name)
 
-			assert.True(ok, "field %q not found in %T", name, instance)
+				assert.True(ok, "field %q not found in %T", name, instance)
 
-			var (
-				attrs   = autoDefinitionStructTag(field_t)
-				field_v = instance_v.FieldByIndex(field_t.Index)
-			)
+				var (
+					attrs   = autoDefinitionStructTag(field_t)
+					field_v = instance_v.FieldByIndex(field_t.Index)
+				)
 
-			var skip = (field_t.Anonymous ||
-				field_t.PkgPath != "" ||
-				field_t.Tag.Get(ATTR_TAG_NAME) == "-")
+				var skip = (field_t.Anonymous ||
+					field_t.PkgPath != "" ||
+					field_t.Tag.Get(ATTR_TAG_NAME) == "-")
 
-			if skip {
-				continue
+				if skip {
+					continue
+				}
+
+				m = append(m, &FieldDef{
+					attrDef:        attrs,
+					instance_t_ptr: instance_t_ptr,
+					instance_v_ptr: instance_v_ptr,
+					instance_t:     instance_t,
+					instance_v:     instance_v,
+					field_t:        field_t,
+					field_v:        field_v,
+				})
+			case Field:
+				m = append(m, name)
+			default:
+				assert.Fail("unsupported type %T", name)
 			}
-
-			m = append(m, &FieldDef{
-				attrDef:        attrs,
-				instance_t_ptr: instance_t_ptr,
-				instance_v_ptr: instance_v_ptr,
-				instance_t:     instance_t,
-				instance_v:     instance_v,
-				field_t:        field_t,
-				field_v:        field_v,
-			})
 		}
 	}
 

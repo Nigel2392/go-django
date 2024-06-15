@@ -18,7 +18,10 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-var _ forms.Form = (*AdminForm[modelforms.ModelForm[attrs.Definer]])(nil)
+var (
+	_ forms.Form                          = (*AdminForm[modelforms.ModelForm[attrs.Definer]])(nil)
+	_ modelforms.ModelForm[attrs.Definer] = (*AdminModelForm[modelforms.ModelForm[attrs.Definer]])(nil)
+)
 
 type Panel interface {
 	Bind(form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel
@@ -125,12 +128,12 @@ func (b *PanelBoundForm) Errors() *orderedmap.OrderedMap[string, []error] {
 	return b.BoundForm.Errors()
 }
 
-type AdminForm[T modelforms.ModelForm[attrs.Definer]] struct {
+type AdminForm[T forms.Form] struct {
 	Form   T
 	Panels []Panel
 }
 
-func NewAdminForm[T modelforms.ModelForm[attrs.Definer]](form T, panels ...Panel) *AdminForm[T] {
+func NewAdminForm[T forms.Form](form T, panels ...Panel) *AdminForm[T] {
 	return &AdminForm[T]{
 		Form:   form,
 		Panels: panels,
@@ -270,27 +273,32 @@ func (a *AdminForm[T]) OnInvalid(f ...func(forms.Form)) {
 func (a *AdminForm[T]) OnFinalize(f ...func(forms.Form)) {
 	a.Form.OnFinalize(f...)
 }
-func (a *AdminForm[T]) Load() {
+
+type AdminModelForm[T modelforms.ModelForm[attrs.Definer]] struct {
+	*AdminForm[T]
+}
+
+func (a *AdminModelForm[T]) Load() {
 	a.Form.Load()
 }
-func (a *AdminForm[T]) Save() error {
+func (a *AdminModelForm[T]) Save() error {
 	return a.Form.Save()
 }
-func (a *AdminForm[T]) WithContext(ctx context.Context) {
+func (a *AdminModelForm[T]) WithContext(ctx context.Context) {
 	a.Form.WithContext(ctx)
 }
-func (a *AdminForm[T]) Context() context.Context {
+func (a *AdminModelForm[T]) Context() context.Context {
 	return a.Form.Context()
 }
-func (a *AdminForm[T]) SetFields(fields ...string) {
+func (a *AdminModelForm[T]) SetFields(fields ...string) {
 	a.Form.SetFields(fields...)
 }
-func (a *AdminForm[T]) SetExclude(exclude ...string) {
+func (a *AdminModelForm[T]) SetExclude(exclude ...string) {
 	a.Form.SetExclude(exclude...)
 }
-func (a *AdminForm[T]) Instance() attrs.Definer {
+func (a *AdminModelForm[T]) Instance() attrs.Definer {
 	return a.Form.Instance()
 }
-func (a *AdminForm[T]) SetInstance(model attrs.Definer) {
+func (a *AdminModelForm[T]) SetInstance(model attrs.Definer) {
 	a.Form.SetInstance(model)
 }

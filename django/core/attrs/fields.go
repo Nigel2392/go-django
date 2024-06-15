@@ -329,6 +329,12 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	// Convert to field type if possible
 	r_v_ptr, ok := RConvert(&r_v, f.field_t.Type)
 	if !ok {
+
+		scanner, ok := f.field_v.Interface().(Scanner)
+		if ok {
+			return scanner.ScanAttribute(r_v_ptr.Interface())
+		}
+
 		return assert.Fail(
 			fmt.Sprintf("field %q (%q) is not convertible to %q",
 				f.field_t.Name,

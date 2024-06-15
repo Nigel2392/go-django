@@ -8,20 +8,22 @@ import (
 	"github.com/Nigel2392/django/views"
 )
 
-var LoginHandler = &views.FormView[*auth.BaseUserLoginForm]{
+var LoginHandler = &views.FormView[*AdminForm[*auth.BaseUserLoginForm]]{
 	BaseView: views.BaseView{
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "admin",
 		TemplateName:    "admin/views/auth/login.tmpl",
 	},
-	GetFormFn: func(req *http.Request) *auth.BaseUserLoginForm {
-		return auth.UserLoginForm(req)
+	GetFormFn: func(req *http.Request) *AdminForm[*auth.BaseUserLoginForm] {
+		return &AdminForm[*auth.BaseUserLoginForm]{
+			Form: auth.UserLoginForm(req),
+		}
 	},
-	ValidFn: func(req *http.Request, form *auth.BaseUserLoginForm) error {
-		form.Request = req
-		return form.Login()
+	ValidFn: func(req *http.Request, form *AdminForm[*auth.BaseUserLoginForm]) error {
+		form.Form.Request = req
+		return form.Form.Login()
 	},
-	SuccessFn: func(w http.ResponseWriter, req *http.Request, form *auth.BaseUserLoginForm) {
+	SuccessFn: func(w http.ResponseWriter, req *http.Request, form *AdminForm[*auth.BaseUserLoginForm]) {
 		var adminIndex = django.Reverse("admin:home")
 		http.Redirect(w, req, adminIndex, http.StatusSeeOther)
 	},

@@ -2,7 +2,7 @@
     {{ $Form := . }}
 
     <div class="form-styles">
-        {{ range $File := $Form.Media.JS }}
+        {{ range $File := $Form.Media.CSS }}
             {{ $File }}
         {{ end }}
     </div>
@@ -14,7 +14,7 @@
     {{ end }}
 
     <div class="form-scripts">
-        {{ range $File := $Form.Media.CSS }}
+        {{ range $File := $Form.Media.JS }}
             {{ $File }}
         {{ end }}
     </div>

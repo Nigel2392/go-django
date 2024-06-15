@@ -61,3 +61,7 @@ type Labeler interface {
 type Helper interface {
 	HelpText() string
 }
+
+type Scanner interface {
+	ScanAttribute(src any) error
+}

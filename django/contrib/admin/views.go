@@ -154,8 +154,8 @@ func getFormForInstance(instance attrs.Definer, opts ViewOptions, app *AppDefini
 	return form
 }
 
-func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[*AdminForm[modelforms.ModelForm[attrs.Definer]]] {
-	return &views.FormView[*AdminForm[modelforms.ModelForm[attrs.Definer]]]{
+func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[*AdminModelForm[modelforms.ModelForm[attrs.Definer]]] {
+	return &views.FormView[*AdminModelForm[modelforms.ModelForm[attrs.Definer]]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: BASE_KEY,
@@ -167,7 +167,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				return context, nil
 			},
 		},
-		GetFormFn: func(req *http.Request) *AdminForm[modelforms.ModelForm[attrs.Definer]] {
+		GetFormFn: func(req *http.Request) *AdminModelForm[modelforms.ModelForm[attrs.Definer]] {
 			var form modelforms.ModelForm[attrs.Definer]
 			if opts.GetForm != nil {
 				form = opts.GetForm(req, instance, opts.ViewOptions.Fields)
@@ -182,9 +182,11 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 
 			form.SetInstance(instance)
 
-			return &AdminForm[modelforms.ModelForm[attrs.Definer]]{
-				Form:   form,
-				Panels: opts.Panels,
+			return &AdminModelForm[modelforms.ModelForm[attrs.Definer]]{
+				AdminForm: &AdminForm[modelforms.ModelForm[attrs.Definer]]{
+					Form:   form,
+					Panels: opts.Panels,
+				},
 			}
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
@@ -203,7 +205,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			}
 			return initial
 		},
-		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *AdminForm[modelforms.ModelForm[attrs.Definer]]) {
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *AdminModelForm[modelforms.ModelForm[attrs.Definer]]) {
 			var instance = form.Instance()
 			assert.False(instance == nil, "instance is nil after form submission")
 			var listViewURL = django.Reverse("admin:apps:model", app.Name, model.Name)

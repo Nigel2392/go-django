@@ -92,10 +92,6 @@ func NewAppConfig() django.AppConfig {
 			return NewPasswordField(newOpts...)
 		})
 
-		attrs.RegisterFormFieldType(models.Email{}, func(opts ...func(fields.Field)) fields.Field {
-			return fields.EmailField(opts...)
-		})
-
 		return nil
 	}
 

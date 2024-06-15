@@ -36,6 +36,14 @@ var _ (driver.Valuer) = (*Email)(nil)
 
 type Email mail.Address
 
+func (e Email) String() string {
+	return e.Address
+}
+
+func (e *Email) ScanAttribute(src interface{}) error {
+	return e.Scan(src)
+}
+
 func (e *Email) Scan(src interface{}) error {
 	switch v := src.(type) {
 	case string:
@@ -71,15 +79,15 @@ type User struct {
 	Password        Password  `json:"password"`
 	FirstName       string    `json:"first_name"`
 	LastName        string    `json:"last_name"`
-	IsAdministrator bool      `json:"is_administrator" attrs:"blank"`
-	IsActive        bool      `json:"is_active" attrs:"blank"`
+	IsAdministrator bool      `json:"is_administrator" attrs:"blank;default=true"`
+	IsActive        bool      `json:"is_active" attrs:"blank;default=true"`
 	IsLoggedIn      bool      `json:"is_logged_in"`
 }
 
 func (u *User) FieldDefs() attrs.Definitions {
 	return attrs.AutoDefinitions(u,
 		"ID",
-		"Email",
+		attrs.NewField(u, "Email", &attrs.FieldConfig{}),
 		"Username",
 		"FirstName",
 		"LastName",
