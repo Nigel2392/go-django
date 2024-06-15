@@ -24,7 +24,7 @@ var ParagraphFeature = &Block{
 		JSFiles: []string{
 			django.Static("editorjs/js/vendor/tools/paragraph.umd.js"),
 		},
-		RenderBlock: func(fb *FeatureBlock) *FeatureBlock {
+		Build: func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(d editor.BlockData) string { return d.Data["text"].(string) }
 			return fb
 		},
@@ -54,16 +54,29 @@ func renderParagraphObject(fb editor.FeatureBlock) templ.Component {
 			text = ""
 		}
 		var t = text.(string)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<p class=\"paragraph\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<p class=\"paragraph\" data-block-id=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(t)
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(fb.ID())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/feature_paragraph.templ`, Line: 33, Col: 26}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/feature_paragraph.templ`, Line: 33, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var3 string
+		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(t)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/feature_paragraph.templ`, Line: 33, Col: 52}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

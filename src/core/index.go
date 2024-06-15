@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"html/template"
 	"net/http"
 	"net/mail"
 	"slices"
@@ -21,6 +22,7 @@ import (
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/widgets"
 	"github.com/Nigel2392/django/models"
+	"github.com/Nigel2392/django/views/list"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
@@ -59,6 +61,9 @@ func (m *MainStruct) GetDefaultBlock() interface{} {
 func (m *MainStruct) Save(context.Context) error {
 	fmt.Println("Saving", m)
 	mainStructMap[m.Email.Address] = m
+	for _, v := range m.Editor.Blocks {
+		fmt.Println("Block:", v.Type(), v.Data())
+	}
 	return nil
 }
 
@@ -203,6 +208,21 @@ var _ = admin.RegisterApp(
 				"Block": func(v any) interface{} {
 					return "Block"
 				},
+				"Editor": func(v any) interface{} {
+					if v == nil {
+						return "No data"
+					}
+					var data = v.(*editor.EditorJSBlockData).Render()
+					return template.HTML(data)
+				},
+			},
+			Columns: map[string]list.ListColumn[attrs.Definer]{
+				"Editor": list.HTMLColumn(
+					fields.S("Editor Data"),
+					func(defs attrs.Definitions, row attrs.Definer) interface{} {
+						return row.(*MainStruct).Editor.Render()
+					},
+				),
 			},
 		},
 		Model: &MainStruct{},
@@ -230,7 +250,7 @@ var _ = admin.RegisterApp(
 				return strings.Compare(attrs.Get[string](a, "Email"), attrs.Get[string](b, "Email"))
 			})
 
-			fmt.Println("Items:", items)
+			fmt.Printf("Items: %+v\n", items[0])
 
 			return items, nil
 		},

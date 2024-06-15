@@ -14,7 +14,7 @@ var ParagraphFeature = &Block{
 		JSFiles:       []string{
 			django.Static("editorjs/js/vendor/tools/paragraph.umd.js"),
 		},
-		RenderBlock:  func(fb *FeatureBlock) *FeatureBlock {
+		Build:  func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(d editor.BlockData) string { return d.Data["text"].(string) }
 			return fb
 		},
@@ -30,5 +30,5 @@ templ renderParagraphObject(fb editor.FeatureBlock) {
 	{{ var text = fb.Data().Data["text"] }}
 	{{ if text == nil { text = "" } }}
 	{{ var t = text.(string) }}
-	<p class="paragraph"> { t } </p>
+	<p class="paragraph" data-block-id={ fb.ID() }> { t } </p>
 }

@@ -3,6 +3,7 @@ package features
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/Nigel2392/django/contrib/editor"
@@ -59,10 +60,16 @@ func (b *FeatureBlock) Attributes() map[string]interface{} {
 }
 
 func (b *FeatureBlock) Render(ctx context.Context, w io.Writer) error {
+	fmt.Println("FeatureBlock.Render", b.FeatureName)
 	if r, ok := b.FeatureObject.(BlockRenderer); ok {
 		return r.RenderBlock(b, ctx, w)
 	}
-	return ErrRenderNotImplemented
+	return fmt.Errorf(
+		"feature '%s' (%T) does not implement RenderBlock %w",
+		b.FeatureName,
+		b.FeatureObject,
+		ErrRenderNotImplemented,
+	)
 }
 
 func (b *FeatureBlock) Data() editor.BlockData {

@@ -15,7 +15,7 @@ var HeadingFeature = &Block{
 		JSFiles: []string{
 			django.Static("editorjs/js/vendor/tools/header.js"),
 		},
-		RenderBlock:  func(fb *FeatureBlock) *FeatureBlock {
+		Build:  func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(d editor.BlockData) string { return d.Data["text"].(string) }
 			return fb
 		},
@@ -29,7 +29,7 @@ func renderHeading(b editor.FeatureBlock, c context.Context, w io.Writer) error 
 
 templ renderHeadingObject(fb editor.FeatureBlock) {
 	{{ var headingLevel = fb.Data().Data["level"] }}
-	{{ if headingLevel == nil || headingLevel == 0 { headingLevel = 1 } }}
-	{{ var tag = fmt.Sprintf("h%d", headingLevel) }}
-	@templ.Raw(fmt.Sprintf("<%s>%s</%s>", tag, fb.Data().Data["text"], tag))
+	{{ if headingLevel == nil || headingLevel == 0.0 { headingLevel = 1.0 } }}
+	{{ var tag = fmt.Sprintf("h%.0f", headingLevel) }}
+	@templ.Raw(fmt.Sprintf("<%s data-block-id=\"%s\">%s</%s>", tag, fb.ID(), fb.Data().Data["text"], tag))
 }

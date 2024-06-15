@@ -2,7 +2,6 @@ package features
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"maps"
 
@@ -20,7 +19,7 @@ type BaseFeature struct {
 	JSConstructor string
 	JSFiles       []string
 	CSSFles       []string
-	RenderBlock   func(*FeatureBlock) *FeatureBlock
+	Build         func(*FeatureBlock) *FeatureBlock
 }
 
 // Name returns the name of the feature.
@@ -60,8 +59,8 @@ func (b *BaseFeature) Render(d editor.BlockData) editor.FeatureBlock {
 		FeatureName:   d.Type,
 		Identifier:    d.ID,
 	}
-	if b.RenderBlock != nil {
-		block = b.RenderBlock(block)
+	if b.Build != nil {
+		block = b.Build(block)
 	}
 	return block
 }
@@ -75,7 +74,11 @@ func (b *Block) RenderBlock(fb editor.FeatureBlock, c context.Context, w io.Writ
 	if b.RenderFunc != nil {
 		return b.RenderFunc(fb, c, w)
 	}
-	panic(
-		fmt.Sprintf("feature '%s' does not implement RenderBlock method", b.Type),
-	)
+	return ErrRenderNotImplemented
+}
+
+func (b *Block) Render(d editor.BlockData) editor.FeatureBlock {
+	var block = b.BaseFeature.Render(d).(*FeatureBlock)
+	block.FeatureObject = b
+	return block
 }

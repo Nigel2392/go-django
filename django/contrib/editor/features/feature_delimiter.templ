@@ -14,7 +14,7 @@ var DelimiterFeature = &Block{
 		JSFiles: []string{
 			django.Static("editorjs/js/vendor/tools/delimiter.js"),
 		},
-		RenderBlock:  func(fb *FeatureBlock) *FeatureBlock {
+		Build:  func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(editor.BlockData) string { return "----" }
 			return fb
 		},
@@ -27,8 +27,10 @@ func renderDelimiter(b editor.FeatureBlock, c context.Context, w io.Writer) erro
 }
 
 templ renderDelimiterObject(fb editor.FeatureBlock) {
-	{{ var text = fb.Data().Data["text"] }}
-	{{ if text == nil { text = "" } }}
-	{{ var t = text.(string) }}
-	<p class="paragraph"> { t } </p>
+	<div class="delimiter" data-block-id={ fb.ID() }>
+		<span class="delimiter__dot"></span>
+		<span class="delimiter__dot"></span>
+		<span class="delimiter__dot"></span>
+	</div>
+
 }

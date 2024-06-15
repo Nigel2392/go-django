@@ -24,7 +24,7 @@ var DelimiterFeature = &Block{
 		JSFiles: []string{
 			django.Static("editorjs/js/vendor/tools/delimiter.js"),
 		},
-		RenderBlock: func(fb *FeatureBlock) *FeatureBlock {
+		Build: func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(editor.BlockData) string { return "----" }
 			return fb
 		},
@@ -49,25 +49,20 @@ func renderDelimiterObject(fb editor.FeatureBlock) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var text = fb.Data().Data["text"]
-		if text == nil {
-			text = ""
-		}
-		var t = text.(string)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<p class=\"paragraph\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"delimiter\" data-block-id=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(t)
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(fb.ID())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/feature_delimiter.templ`, Line: 33, Col: 26}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/feature_delimiter.templ`, Line: 30, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</p>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\"><span class=\"delimiter__dot\"></span> <span class=\"delimiter__dot\"></span> <span class=\"delimiter__dot\"></span></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

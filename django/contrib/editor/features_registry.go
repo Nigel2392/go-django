@@ -1,7 +1,9 @@
 package editor
 
 import (
+	"context"
 	"fmt"
+	"html/template"
 	"strings"
 
 	"github.com/Nigel2392/django/core/ctx"
@@ -36,6 +38,18 @@ func (e *EditorJSBlockData) String() string {
 		fmt.Fprintf(b, "%s\n", block)
 	}
 	return b.String()
+}
+
+func (e *EditorJSBlockData) Render() template.HTML {
+	var ctx = context.Background()
+	var b = new(strings.Builder)
+	for _, block := range e.Blocks {
+		if err := block.Render(ctx, b); err != nil {
+			fmt.Fprintf(b, "Error (%s): %s", block.Type(), err)
+		}
+	}
+	return template.HTML(b.String())
+
 }
 
 type editorRegistry struct {

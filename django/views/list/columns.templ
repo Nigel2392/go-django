@@ -58,6 +58,19 @@ templ (c *fieldColumn[T]) Component(defs attrs.Definitions, row T) {
     ) }
 }
 
+type fieldHTMLColumn[T attrs.Definer] struct {
+	funcColumn[T]
+}
+
+templ (c *fieldHTMLColumn[T]) Component(defs attrs.Definitions, row T) {
+	{{ var s = attrs.ToString(c.data(defs, row)) }}
+	@templ.Raw(s)
+}
+
+func HTMLColumn[T attrs.Definer](header func() string, getHTML func(defs attrs.Definitions, row T) interface{}) ListColumn[T] {
+	return &fieldHTMLColumn[T]{funcColumn[T]{header, getHTML}}
+}
+
 type titleFieldColumn[T attrs.Definer] struct {
 	wrapped ListColumn[T]
 	getURL  func(defs attrs.Definitions, row T) string
