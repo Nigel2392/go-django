@@ -7,22 +7,10 @@
         {{ end }}
     </div>
 
-    {{ range $Field := $Form.Fields }}
-        <div class="form-field-wrapper">
-        
-            <div class="form-field">
-                {{ $Field.Label }}
-            
-                {{ include $Field "admin/shared/forms/errors.tmpl" }}
-                
-                {{ if (ne $Field.HelpText "") }}
-                    <p class="help-text">{{ $Field.HelpText }}</p>
-                {{ end }}
-                
-                {{ $Field.Field }}
-            </div>
-            
-        </div>
+    {{ range $Field := $Form.BoundPanels }}
+
+        {{ $Field.Render }}
+
     {{ end }}
 
     <div class="form-scripts">

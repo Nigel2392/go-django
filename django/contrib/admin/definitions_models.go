@@ -23,6 +23,7 @@ type FormViewOptions struct {
 	GetForm    func(req *http.Request, instance attrs.Definer, fields []string) modelforms.ModelForm[attrs.Definer]
 	FormInit   func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer])
 	GetHandler func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) views.View
+	Panels     []Panel
 }
 
 type ListViewOptions struct {

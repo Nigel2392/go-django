@@ -20,6 +20,8 @@ type AdminView interface {
 
 type AppOptions struct {
 	RegisterToAdminMenu bool
+	AppLabel            func() string
+	AppDescription      func() string
 	MenuLabel           func() string
 	MenuIcon            func() string
 	IndexView           func(adminSite *AdminApplication, app *AppDefinition) views.View
@@ -82,6 +84,20 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 	a.Models.Set(model.Name, model)
 
 	return model
+}
+
+func (a *AppDefinition) Label() string {
+	if a.Options.AppLabel != nil {
+		return a.Options.AppLabel()
+	}
+	return a.Name
+}
+
+func (a *AppDefinition) Description() string {
+	if a.Options.AppDescription != nil {
+		return a.Options.AppDescription()
+	}
+	return ""
 }
 
 func (a *AppDefinition) OnReady(adminSite *AdminApplication) {

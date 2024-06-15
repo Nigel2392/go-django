@@ -100,6 +100,10 @@ func (f *BaseUserLoginForm) Login() error {
 		return errs.Error("Invalid password")
 	}
 
+	if !u.IsActive {
+		return errs.Error("User account is not active")
+	}
+
 	Login(f.Request, u)
 	f.Instance = u
 	return nil

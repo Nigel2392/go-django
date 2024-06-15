@@ -61,101 +61,25 @@ func main() {
 		"Auth",
 		admin.AppOptions{
 			RegisterToAdminMenu: true,
+			AppLabel:            fields.S("Authentication and Authorization"),
+			AppDescription:      fields.S("Manage users and groups, control access to your site with permissions."),
 			MenuLabel:           fields.S("Auth"),
 		},
 		admin.ModelOptions{
+			Model:               &auth_models.User{},
 			RegisterToAdminMenu: true,
 			Labels: map[string]func() string{
-				"Email":     fields.S("Object Email"),
-				"FirstName": fields.S("Object First Name"),
-				"LastName":  fields.S("Object Last Name"),
+				"ID":              fields.S("ID"),
+				"Email":           fields.S("Email"),
+				"Username":        fields.S("Username"),
+				"FirstName":       fields.S("First name"),
+				"LastName":        fields.S("Last name"),
+				"Password":        fields.S("Password"),
+				"IsAdministrator": fields.S("Is administrator"),
+				"IsActive":        fields.S("Is active"),
+				"CreatedAt":       fields.S("Created at"),
+				"UpdatedAt":       fields.S("Updated at"),
 			},
-			ListView: admin.ListViewOptions{
-				ViewOptions: admin.ViewOptions{
-					Fields: []string{
-						"ID",
-						"Email",
-						"FirstName",
-						"LastName",
-						"IsAdministrator",
-						"IsActive",
-					},
-					Labels: map[string]func() string{
-						"Email":     fields.S("Object ListView Email"),
-						"FirstName": fields.S("Object ListView First Name"),
-						"LastName":  fields.S("Object ListView Last Name"),
-					},
-				},
-				Columns: map[string]list.ListColumn[attrs.Definer]{
-					"Email": list.LinkColumn[attrs.Definer](
-						fields.S("Email"),
-						"Email", func(defs attrs.Definitions, row attrs.Definer) string {
-							return django.Reverse("admin:apps:model:edit", "Auth", "User", defs.Get("ID"))
-						},
-					),
-				},
-				PerPage: 25,
-			},
-			AddView: admin.FormViewOptions{
-				ViewOptions: admin.ViewOptions{
-					Labels: map[string]func() string{
-						"Email":     fields.S("Object AddView Email"),
-						"FirstName": fields.S("Object AddView First Name"),
-						"LastName":  fields.S("Object AddView Last Name"),
-					},
-					Exclude: []string{"ID", "CreatedAt", "UpdatedAt"},
-				},
-			},
-			EditView: admin.FormViewOptions{
-				ViewOptions: admin.ViewOptions{
-					Labels: map[string]func() string{
-						"Email":     fields.S("Object EditView Email"),
-						"FirstName": fields.S("Object EditView First Name"),
-						"LastName":  fields.S("Object EditView Last Name"),
-					},
-				},
-				FormInit: func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
-					form.Ordering([]string{
-						"Email",
-						"Username",
-						"FirstName",
-						"LastName",
-						"IsAdministrator",
-						"IsActive",
-						"Password",
-						"PasswordConfirm",
-					})
-					form.AddField("PasswordConfirm", auth.NewPasswordField(
-						fields.Label("Password Confirm"),
-						fields.HelpText("Enter the password again to confirm"),
-						fields.Required(false),
-						fields.MaxLength(64),
-						auth.ValidateCharacters(false, auth.ChrFlagDigit|auth.ChrFlagLower|auth.ChrFlagUpper|auth.ChrFlagSpecial),
-					))
-					form.SetValidators(func(f forms.Form) []error {
-						var (
-							cleaned      = f.CleanedData()
-							password1Int = cleaned["Password"]
-							password2Int = cleaned["PasswordConfirm"]
-						)
-						if password2Int == nil || password2Int == "" {
-							return nil
-						}
-						var (
-							password1 = password1Int.(auth.PasswordString)
-							password2 = password2Int.(auth.PasswordString)
-						)
-						if password1 != "" && password2 != "" && password1 != password2 {
-							return []error{errs.Error("Passwords do not match")}
-						} else if password1 != "" && password2 != "" && password1 == password2 {
-							models.SetPassword(instance.(*models.User), string(password1))
-							cleaned["Password"] = string(instance.(*models.User).Password)
-						}
-						return nil
-					})
-				},
-			},
-			Model: &auth_models.User{},
 			GetForID: func(identifier any) (attrs.Definer, error) {
 				var id, ok = identifier.(int)
 				if !ok {
@@ -188,6 +112,66 @@ func main() {
 				}
 				return items, nil
 			},
+			AddView: admin.FormViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Exclude: []string{"ID", "CreatedAt", "UpdatedAt"},
+				},
+				Panels: []admin.Panel{
+					admin.TitlePanel(
+						admin.FieldPanel("Email"),
+					),
+					admin.FieldPanel("Username"),
+					admin.MultiPanel(
+						admin.FieldPanel("FirstName"),
+						admin.FieldPanel("LastName"),
+					),
+					admin.FieldPanel("Password"),
+					admin.FieldPanel("PasswordConfirm"),
+					admin.FieldPanel("IsAdministrator"),
+					admin.FieldPanel("IsActive"),
+				},
+			},
+			EditView: admin.FormViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Exclude: []string{"ID"},
+				},
+				FormInit: initAuthEditForm,
+				Panels: []admin.Panel{
+					admin.TitlePanel(
+						admin.FieldPanel("Email"),
+					),
+					admin.FieldPanel("Username"),
+					admin.MultiPanel(
+						admin.FieldPanel("FirstName"),
+						admin.FieldPanel("LastName"),
+					),
+					admin.FieldPanel("Password"),
+					admin.FieldPanel("PasswordConfirm"),
+					admin.FieldPanel("IsAdministrator"),
+					admin.FieldPanel("IsActive"),
+				},
+			},
+			ListView: admin.ListViewOptions{
+				ViewOptions: admin.ViewOptions{
+					Fields: []string{
+						"ID",
+						"Email",
+						"IsAdministrator",
+						"IsActive",
+						"CreatedAt",
+						"UpdatedAt",
+					},
+				},
+				Columns: map[string]list.ListColumn[attrs.Definer]{
+					"Email": list.LinkColumn(
+						fields.S("Email"),
+						"Email", func(defs attrs.Definitions, row attrs.Definer) string {
+							return django.Reverse("admin:apps:model:edit", "Auth", "User", defs.Get("ID"))
+						},
+					),
+				},
+				PerPage: 25,
+			},
 		},
 	)
 
@@ -213,4 +197,45 @@ func main() {
 	if err := app.Serve(); err != nil {
 		panic(err)
 	}
+}
+
+func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
+	form.Ordering([]string{
+		"Email",
+		"Username",
+		"FirstName",
+		"LastName",
+		"IsAdministrator",
+		"IsActive",
+		"Password",
+		"PasswordConfirm",
+	})
+	form.AddField("PasswordConfirm", auth.NewPasswordField(
+		fields.Label("Password Confirm"),
+		fields.HelpText("Enter the password again to confirm"),
+		fields.Required(false),
+		fields.MaxLength(64),
+		auth.ValidateCharacters(false, auth.ChrFlagDigit|auth.ChrFlagLower|auth.ChrFlagUpper|auth.ChrFlagSpecial),
+	))
+	form.SetValidators(func(f forms.Form) []error {
+		var (
+			cleaned      = f.CleanedData()
+			password1Int = cleaned["Password"]
+			password2Int = cleaned["PasswordConfirm"]
+		)
+		if password2Int == nil || password2Int == "" {
+			return nil
+		}
+		var (
+			password1 = password1Int.(auth.PasswordString)
+			password2 = password2Int.(auth.PasswordString)
+		)
+		if password1 != "" && password2 != "" && password1 != password2 {
+			return []error{errs.Error("Passwords do not match")}
+		} else if password1 != "" && password2 != "" && password1 == password2 {
+			models.SetPassword(instance.(*models.User), string(password1))
+			cleaned["Password"] = string(instance.(*models.User).Password)
+		}
+		return nil
+	})
 }

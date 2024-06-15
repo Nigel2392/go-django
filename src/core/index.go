@@ -174,6 +174,23 @@ var _ = admin.RegisterApp(
 			"Data":     fields.S("Object Data"),
 			"Block":    fields.S("Object Block"),
 		},
+		AddView: admin.FormViewOptions{
+			Panels: []admin.Panel{
+				admin.TitlePanel(
+					admin.FieldPanel("Email"),
+				),
+				admin.MultiPanel(
+					admin.FieldPanel("Name"),
+					admin.FieldPanel("Age"),
+				),
+				admin.FieldPanel("Password"),
+				admin.FieldPanel("Editor"),
+				//admin.MultiPanel(
+				//	admin.FieldPanel("CreatedAt"),
+				//	admin.FieldPanel("UpdatedAt"),
+				//),
+			},
+		},
 		EditView: admin.FormViewOptions{
 			ViewOptions: admin.ViewOptions{
 				Fields: []string{
@@ -195,15 +212,12 @@ var _ = admin.RegisterApp(
 					return "********"
 				},
 				"Data": func(v any) interface{} {
-					var data = make(map[string]interface{})
+					var data = &editor.EditorJSData{}
 					if err := json.Unmarshal(v.(json.RawMessage), &data); err != nil {
 						return fmt.Sprintf("Error: %s", err)
 					}
-					var b strings.Builder
-					for k, v := range data {
-						b.WriteString(fmt.Sprintf("%s: %v\n", k, v))
-					}
-					return b.String()
+					var d, _ = editor.ValueToGo(nil, *data)
+					return d.Render()
 				},
 				"Block": func(v any) interface{} {
 					return "Block"
@@ -250,7 +264,9 @@ var _ = admin.RegisterApp(
 				return strings.Compare(attrs.Get[string](a, "Email"), attrs.Get[string](b, "Email"))
 			})
 
-			fmt.Printf("Items: %+v\n", items[0])
+			if len(items) > 0 {
+				fmt.Printf("Items: %+v\n", items[0])
+			}
 
 			return items, nil
 		},
@@ -312,7 +328,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 				fields.Name("age"),
 				fields.Required(true),
 			),
-			fields.JSONField[map[string]any](
+			fields.JSONField[json.RawMessage](
 				fields.Label("Data"),
 				fields.Name("data"),
 				fields.Required(true),
@@ -360,9 +376,25 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		attrs.Set(s, "Password", validFormData["password"])
 		attrs.Set(s, "Age", validFormData["age"])
 		attrs.Set(s, "Data", validFormData["data"])
-		// attrs.Set(s, "Block", validFormData["block"])
+		attrs.Set(s, "Block", validFormData["block"])
+
+		var blockData = s.Data
+		var block = &editor.EditorJSData{}
+		if err := json.Unmarshal(blockData, block); err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+
+		d, err := editor.ValueToGo(nil, *block)
+		if err != nil {
+			http.Error(w, err.Error(), 500)
+			return
+		}
+		s.Editor = d
 
 		fmt.Printf("%+v\n", s)
+
+		s.Save(context.Background())
 	}
 
 	var context = core.Context(r)

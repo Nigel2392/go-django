@@ -15,12 +15,26 @@ var _ tpl.RequestContext = (*adminContext)(nil)
 
 type PageOptions struct {
 	TitleFn    func() string
-	SubTitleFn func() string
+	SubtitleFn func() string
 	MediaFn    func() media.Media
 }
 
+func (p *PageOptions) Title() string {
+	if p.TitleFn == nil {
+		return ""
+	}
+	return p.TitleFn()
+}
+
+func (p *PageOptions) Subtitle() string {
+	if p.SubtitleFn == nil {
+		return ""
+	}
+	return p.SubtitleFn()
+}
+
 type adminContext struct {
-	Page    PageOptions
+	Page    *PageOptions
 	Site    *AdminApplication
 	request *http.Request
 	Context ctx.Context
@@ -62,9 +76,13 @@ func (c *adminContext) Set(key string, value interface{}) {
 		c.Site = value.(*AdminApplication)
 		return
 	case "page", "Page":
-		c.Page = value.(PageOptions)
+		c.Page = value.(*PageOptions)
 	}
 	c.Context.Set(key, value)
+}
+
+func (c *adminContext) SetPage(page PageOptions) {
+	c.Page = &page
 }
 
 func (c *adminContext) Request() *http.Request {

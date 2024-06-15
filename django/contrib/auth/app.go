@@ -3,7 +3,6 @@ package auth
 import (
 	"database/sql"
 	"net/http"
-	"reflect"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
@@ -81,25 +80,21 @@ func NewAppConfig() django.AppConfig {
 			authRequiredHook,
 		)
 
-		var passwordTyp = reflect.TypeOf(models.Password(""))
+		attrs.RegisterFormFieldType(models.Password(""), func(opts ...func(fields.Field)) fields.Field {
+			var newOpts = []func(fields.Field){
+				fields.HelpText("Enter your password"),
+				fields.Required(true),
+				fields.MinLength(8),
+				fields.MaxLength(64),
+				ValidateCharacters(false, ChrFlagDigit|ChrFlagLower|ChrFlagUpper|ChrFlagSpecial),
+			}
+			newOpts = append(newOpts, opts...)
+			return NewPasswordField(newOpts...)
+		})
 
-		goldcrest.Register(
-			attrs.HookFormFieldForType, 0,
-			attrs.FormFieldGetter(func(f attrs.Field, t reflect.Type, v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
-
-				if v.Type() == passwordTyp {
-					return NewPasswordField(
-						fields.HelpText("Enter your password"),
-						fields.Required(true),
-						fields.MinLength(8),
-						fields.MaxLength(64),
-						ValidateCharacters(false, ChrFlagDigit|ChrFlagLower|ChrFlagUpper|ChrFlagSpecial),
-					), true
-				}
-
-				return nil, false
-			}),
-		)
+		attrs.RegisterFormFieldType(models.Email{}, func(opts ...func(fields.Field)) fields.Field {
+			return fields.EmailField(opts...)
+		})
 
 		return nil
 	}

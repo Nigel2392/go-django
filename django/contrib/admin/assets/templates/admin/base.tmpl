@@ -30,6 +30,12 @@
             </div>
 
             <div id="content">
+                {{ block "header" . }}
+                    {{ $Page := (.Get "Page") }}
+                    {{ if (ne $Page nil) }}
+                        {{ component "admin.header" 1 $Page.Title $Page.Subtitle }}
+                    {{ end }}
+                {{ end }}
                 {{ block "content" . }}{{ end }}
             </div>
 

@@ -149,7 +149,7 @@ a:hover {
     margin-bottom: 1.25rem;
     max-width: 1040px;
 }
-
+.panel label,
 .form-field label {
     color: hsl( 254.3 50.4% 24.5% );
     display: block;
@@ -158,15 +158,15 @@ a:hover {
     margin-bottom: 0.25rem;
     margin-top: 0;
 }
-.form-field .help-text {
+.panel .help-text {
     color: hsl( 0 0% 60% );
     font-size: .95rem;
     line-height: 1.3;
     margin: 0;
     margin-bottom: 0.375rem;
 }
-.form-field input:not([type="checkbox"], [type="radio"]),
-.form-field textarea {
+.panel input:not([type="checkbox"], [type="radio"]),
+.panel textarea {
     -moz-appearance: none;
     appearance: none;
     background-color: hsl(0, 0%, 100%);
@@ -180,13 +180,37 @@ a:hover {
     padding: .375rem 1.25rem;
     width: 100%;
 }
-.form-field input:not([type="checkbox"], [type="radio"]):disabled,
-.form-field input:not([type="checkbox"], [type="radio"]):read-only,
-.form-field textarea:disabled,
-.form-field textarea:read-only {
+.panel input:not([type="checkbox"], [type="radio"]):disabled,
+.panel input:not([type="checkbox"], [type="radio"]):read-only,
+.panel textarea:disabled,
+.panel textarea:read-only {
     background-color: hsl( 0 0% 98% );
     color: hsl( 0 0% 60% );
 }
+.panel.panel-title {
+    font-size: 1.5rem;
+}
+.panel.panel-title .panel__errors {
+    margin-bottom: 0.75rem;
+}
+.panel.panel-title .panel__error {
+    font-size: 1.1rem;
+}
+.panel.panel-title input:not([type="checkbox"], [type="radio"]),
+.panel.panel-title textarea {
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+.panel.panel-multi > .panel__body {
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+    gap: 1rem;
+}
+.panel.panel-multi > .panel__body > * {
+    flex: 1 1 auto;
+}
+.panel .panel__errors ul,
 .error-list {
     color: hsl( 0 100% 50% );
     font-size: .875rem;
@@ -194,10 +218,11 @@ a:hover {
     margin: 0;
     padding: 0;
 }
-
+.panel .panel__errors .panel__error,
 .error-list .error {
     list-style-type: none;
 }
+.panel .panel__errors .panel__error p,
 .error-list .error p {
     margin: 0.125rem 0;
 }

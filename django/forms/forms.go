@@ -26,6 +26,7 @@ type BoundField interface {
 	Widget() widgets.Widget
 	Input() fields.Field
 	Label() template.HTML
+	HelpText() template.HTML
 	Field() template.HTML
 	HTML() template.HTML
 	Attrs() map[string]string
@@ -52,6 +53,7 @@ type Form interface {
 	SetInitial(initial map[string]interface{})
 	SetValidators(validators ...func(Form) []error)
 	Ordering([]string)
+	FieldOrder() []string
 
 	Field(name string) fields.Field
 	Widget(name string) widgets.Widget

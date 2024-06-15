@@ -580,6 +580,10 @@ func (f *BaseForm) Ordering(order []string) {
 	f.fieldOrder = order
 }
 
+func (f *BaseForm) FieldOrder() []string {
+	return f.fieldOrder
+}
+
 func (f *BaseForm) SetValidators(validators ...func(Form) []error) {
 	if f.Validators == nil {
 		f.Validators = make([]func(Form) []error, 0)

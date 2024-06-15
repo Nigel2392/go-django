@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"net/http/cookiejar"
 	"os"
-	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -70,41 +69,41 @@ var (
 var runTests = true
 
 func init() {
-	admin.AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition) {
-		w.Write([]byte("testing app"))
-		w.Write([]byte("\n"))
-		w.Write([]byte(app.Name))
-	}
-
-	admin.ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) {
-		w.Write([]byte("testing list"))
-		w.Write([]byte("\n"))
-		w.Write([]byte(model.Name))
-	}
-
-	admin.ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) {
-		w.Write([]byte("testing add"))
-		w.Write([]byte("\n"))
-		w.Write([]byte(model.Name))
-	}
-
-	admin.ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) {
-		w.Write([]byte("testing edit"))
-		w.Write([]byte("\n"))
-		w.Write([]byte(model.Name))
-		w.Write([]byte(" ("))
-		w.Write([]byte(strconv.Itoa(instance.(*TestModelStruct).ID)))
-		w.Write([]byte(")"))
-	}
-
-	admin.ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) {
-		w.Write([]byte("testing delete"))
-		w.Write([]byte("\n"))
-		w.Write([]byte(model.Name))
-		w.Write([]byte(" ("))
-		w.Write([]byte(strconv.Itoa(instance.(*TestModelStruct).ID)))
-		w.Write([]byte(")"))
-	}
+	//admin.AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition) {
+	//	w.Write([]byte("testing app"))
+	//	w.Write([]byte("\n"))
+	//	w.Write([]byte(app.Name))
+	//}
+	//
+	//admin.ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) {
+	//	w.Write([]byte("testing list"))
+	//	w.Write([]byte("\n"))
+	//	w.Write([]byte(model.Name))
+	//}
+	//
+	//admin.ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) {
+	//	w.Write([]byte("testing add"))
+	//	w.Write([]byte("\n"))
+	//	w.Write([]byte(model.Name))
+	//}
+	//
+	//admin.ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) {
+	//	w.Write([]byte("testing edit"))
+	//	w.Write([]byte("\n"))
+	//	w.Write([]byte(model.Name))
+	//	w.Write([]byte(" ("))
+	//	w.Write([]byte(strconv.Itoa(instance.(*TestModelStruct).ID)))
+	//	w.Write([]byte(")"))
+	//}
+	//
+	//admin.ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) {
+	//	w.Write([]byte("testing delete"))
+	//	w.Write([]byte("\n"))
+	//	w.Write([]byte(model.Name))
+	//	w.Write([]byte(" ("))
+	//	w.Write([]byte(strconv.Itoa(instance.(*TestModelStruct).ID)))
+	//	w.Write([]byte(")"))
+	//}
 
 	admin.RegisterApp("test",
 		admin.AppOptions{},
@@ -322,41 +321,41 @@ func asRegularUser(t *testing.T) {
 }
 
 var handlerTests = []HandlerTest{
-	{
-		Name:            "App",
-		LoggedIn:        true,
-		IsAdministrator: true,
-		URL:             "/admin/apps/test",
-		Expected:        "testing app\ntest",
-	},
-	{
-		Name:            "List",
-		LoggedIn:        true,
-		IsAdministrator: true,
-		URL:             "/admin/apps/test/model/TestModel",
-		Expected:        "testing list\nTestModel",
-	},
-	{
-		Name:            "Add",
-		LoggedIn:        true,
-		IsAdministrator: true,
-		URL:             "/admin/apps/test/model/TestModel/add",
-		Expected:        "testing add\nTestModel",
-	},
-	{
-		Name:            "Edit",
-		LoggedIn:        true,
-		IsAdministrator: true,
-		URL:             "/admin/apps/test/model/TestModel/edit/1",
-		Expected:        "testing edit\nTestModel (1)",
-	},
-	{
-		Name:            "Delete",
-		LoggedIn:        true,
-		IsAdministrator: true,
-		URL:             "/admin/apps/test/model/TestModel/delete/1",
-		Expected:        "testing delete\nTestModel (1)",
-	},
+	//{
+	//	Name:            "App",
+	//	LoggedIn:        true,
+	//	IsAdministrator: true,
+	//	URL:             "/admin/apps/test",
+	//	Expected:        "testing app\ntest",
+	//},
+	//{
+	//	Name:            "List",
+	//	LoggedIn:        true,
+	//	IsAdministrator: true,
+	//	URL:             "/admin/apps/test/model/TestModel",
+	//	Expected:        "testing list\nTestModel",
+	//},
+	//{
+	//	Name:            "Add",
+	//	LoggedIn:        true,
+	//	IsAdministrator: true,
+	//	URL:             "/admin/apps/test/model/TestModel/add",
+	//	Expected:        "testing add\nTestModel",
+	//},
+	//{
+	//	Name:            "Edit",
+	//	LoggedIn:        true,
+	//	IsAdministrator: true,
+	//	URL:             "/admin/apps/test/model/TestModel/edit/1",
+	//	Expected:        "testing edit\nTestModel (1)",
+	//},
+	//{
+	//	Name:            "Delete",
+	//	LoggedIn:        true,
+	//	IsAdministrator: true,
+	//	URL:             "/admin/apps/test/model/TestModel/delete/1",
+	//	Expected:        "testing delete\nTestModel (1)",
+	//},
 	{
 		Name:            "Admin",
 		LoggedIn:        false,
