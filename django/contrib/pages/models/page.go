@@ -5,14 +5,36 @@ import (
 	"database/sql"
 )
 
+type StatusFlag int64
+
+const (
+	// StatusFlagPublished is the status flag for published pages.
+	StatusFlagPublished StatusFlag = 1 << iota
+
+	// StatusFlagHidden is the status flag for hidden pages.
+	StatusFlagHidden
+
+	// StatusFlagDeleted is the status flag for deleted pages.
+	StatusFlagDeleted
+)
+
+func (f StatusFlag) Is(flag StatusFlag) bool {
+	return f&flag != 0
+}
+
 type PageNode struct {
-	ID       int64  `json:"id"`
-	Title    string `json:"title"`
-	Path     string `json:"path"`
-	Depth    int64  `json:"depth"`
-	Numchild int64  `json:"numchild"`
-	PageID   int64  `json:"page_id"`
-	Typehash string `json:"typehash"`
+	ID          int64      `json:"id"`
+	Title       string     `json:"title"`
+	Path        string     `json:"path"`
+	Depth       int64      `json:"depth"`
+	Numchild    int64      `json:"numchild"`
+	StatusFlags StatusFlag `json:"status_flags"`
+	PageID      int64      `json:"page_id"`
+	Typehash    string     `json:"typehash"`
+}
+
+func (n *PageNode) IsRoot() bool {
+	return n.Depth == 0
 }
 
 type DBQuerier interface {
@@ -32,11 +54,13 @@ type Querier interface {
 	DeleteNode(ctx context.Context, id int64) error
 	GetChildren(ctx context.Context, path interface{}, depth interface{}) ([]PageNode, error)
 	GetDescendants(ctx context.Context, path interface{}, depth int64) ([]PageNode, error)
+	GetForPaths(ctx context.Context, path []string) ([]PageNode, error)
 	GetNodeByID(ctx context.Context, id int64) (PageNode, error)
 	GetNodeByPath(ctx context.Context, path string) (PageNode, error)
-	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, page_id int64, typehash string) (int64, error)
-	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, page_id int64, typehash string, iD int64) error
+	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, statusFlags int64, pageID int64, typehash string) (int64, error)
+	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, statusFlags int64, pageID int64, typehash string, iD int64) error
 	UpdateNodePathAndDepth(ctx context.Context, path string, depth int64, iD int64) error
+	UpdateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error
 }
 
 /// MoveNodeParams contains parameters for moving a node.

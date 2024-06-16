@@ -7,6 +7,7 @@ package models_sqlite
 
 import (
 	"context"
+	"strings"
 
 	"github.com/Nigel2392/django/contrib/pages/models"
 )
@@ -22,7 +23,7 @@ func (q *Queries) DeleteNode(ctx context.Context, id int64) error {
 }
 
 const getChildren = `-- name: GetChildren :many
-SELECT id, title, path, depth, numchild, page_id, typeHash
+SELECT id, title, path, depth, numchild, status_flags, page_id, typeHash
 FROM PageNode
 WHERE path LIKE CONCAT(?1, '%') AND depth = ?2 + 1
 `
@@ -42,6 +43,7 @@ func (q *Queries) GetChildren(ctx context.Context, path interface{}, depth inter
 			&i.Path,
 			&i.Depth,
 			&i.Numchild,
+			&i.StatusFlags,
 			&i.PageID,
 			&i.Typehash,
 		); err != nil {
@@ -59,7 +61,7 @@ func (q *Queries) GetChildren(ctx context.Context, path interface{}, depth inter
 }
 
 const getDescendants = `-- name: GetDescendants :many
-SELECT id, title, path, depth, numchild, page_id, typeHash
+SELECT id, title, path, depth, numchild, status_flags, page_id, typeHash
 FROM PageNode
 WHERE path LIKE CONCAT(?1, '%') AND depth > ?2
 `
@@ -79,6 +81,55 @@ func (q *Queries) GetDescendants(ctx context.Context, path interface{}, depth in
 			&i.Path,
 			&i.Depth,
 			&i.Numchild,
+			&i.StatusFlags,
+			&i.PageID,
+			&i.Typehash,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getForPaths = `-- name: GetForPaths :many
+SELECT id, title, path, depth, numchild, status_flags, page_id, typeHash
+FROM PageNode
+WHERE path IN (/*SLICE:path*/?)
+`
+
+func (q *Queries) GetForPaths(ctx context.Context, path []string) ([]models.PageNode, error) {
+	query := getForPaths
+	var queryParams []interface{}
+	if len(path) > 0 {
+		for _, v := range path {
+			queryParams = append(queryParams, v)
+		}
+		query = strings.Replace(query, "/*SLICE:path*/?", strings.Repeat(",?", len(path))[1:], 1)
+	} else {
+		query = strings.Replace(query, "/*SLICE:path*/?", "NULL", 1)
+	}
+	rows, err := q.db.QueryContext(ctx, query, queryParams...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []models.PageNode
+	for rows.Next() {
+		var i models.PageNode
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Path,
+			&i.Depth,
+			&i.Numchild,
+			&i.StatusFlags,
 			&i.PageID,
 			&i.Typehash,
 		); err != nil {
@@ -96,7 +147,7 @@ func (q *Queries) GetDescendants(ctx context.Context, path interface{}, depth in
 }
 
 const getNodeByID = `-- name: GetNodeByID :one
-SELECT id, title, path, depth, numchild, page_id, typeHash
+SELECT id, title, path, depth, numchild, status_flags, page_id, typeHash
 FROM PageNode
 WHERE id = ?1
 `
@@ -110,6 +161,7 @@ func (q *Queries) GetNodeByID(ctx context.Context, id int64) (models.PageNode, e
 		&i.Path,
 		&i.Depth,
 		&i.Numchild,
+		&i.StatusFlags,
 		&i.PageID,
 		&i.Typehash,
 	)
@@ -117,7 +169,7 @@ func (q *Queries) GetNodeByID(ctx context.Context, id int64) (models.PageNode, e
 }
 
 const getNodeByPath = `-- name: GetNodeByPath :one
-SELECT id, title, path, depth, numchild, page_id, typeHash
+SELECT id, title, path, depth, numchild, status_flags, page_id, typeHash
 FROM PageNode
 WHERE path = ?1
 `
@@ -131,6 +183,7 @@ func (q *Queries) GetNodeByPath(ctx context.Context, path string) (models.PageNo
 		&i.Path,
 		&i.Depth,
 		&i.Numchild,
+		&i.StatusFlags,
 		&i.PageID,
 		&i.Typehash,
 	)
@@ -138,16 +191,17 @@ func (q *Queries) GetNodeByPath(ctx context.Context, path string) (models.PageNo
 }
 
 const insertNode = `-- name: InsertNode :execlastid
-INSERT INTO PageNode (title, path, depth, numchild, page_id, typeHash)
-VALUES (?1, ?2, ?3, ?4, ?5, ?6)
+INSERT INTO PageNode (title, path, depth, numchild, status_flags, page_id, typeHash)
+VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
 `
 
-func (q *Queries) InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, pageID int64, typehash string) (int64, error) {
+func (q *Queries) InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, statusFlags int64, pageID int64, typehash string) (int64, error) {
 	result, err := q.db.ExecContext(ctx, insertNode,
 		title,
 		path,
 		depth,
 		numchild,
+		statusFlags,
 		pageID,
 		typehash,
 	)
@@ -159,16 +213,23 @@ func (q *Queries) InsertNode(ctx context.Context, title string, path string, dep
 
 const updateNode = `-- name: UpdateNode :exec
 UPDATE PageNode
-SET title = ?1, path = ?2, depth = ?3, numchild = ?4, page_id = ?5, typeHash = ?6
-WHERE id = ?7
+SET title = ?1,
+    path = ?2,
+    depth = ?3, 
+    numchild = ?4, 
+    status_flags = ?5, 
+    page_id = ?6, 
+    typeHash = ?7
+WHERE id = ?8
 `
 
-func (q *Queries) UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, pageID int64, typehash string, iD int64) error {
+func (q *Queries) UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, statusFlags int64, pageID int64, typehash string, iD int64) error {
 	_, err := q.db.ExecContext(ctx, updateNode,
 		title,
 		path,
 		depth,
 		numchild,
+		statusFlags,
 		pageID,
 		typehash,
 		iD,
@@ -184,5 +245,16 @@ WHERE id = ?3
 
 func (q *Queries) UpdateNodePathAndDepth(ctx context.Context, path string, depth int64, iD int64) error {
 	_, err := q.db.ExecContext(ctx, updateNodePathAndDepth, path, depth, iD)
+	return err
+}
+
+const updateNodeStatusFlags = `-- name: UpdateNodeStatusFlags :exec
+UPDATE PageNode
+SET status_flags = ?1
+WHERE id = ?2
+`
+
+func (q *Queries) UpdateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error {
+	_, err := q.db.ExecContext(ctx, updateNodeStatusFlags, statusFlags, iD)
 	return err
 }

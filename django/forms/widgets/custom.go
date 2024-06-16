@@ -164,6 +164,7 @@ func (d *DateWidget) ValueToGo(value interface{}) (interface{}, error) {
 		} else {
 			var split = strings.Split(val, ":")
 			if len(split) == 2 {
+				// 23233-01-08T23:23
 				v, err = time.Parse("2006-01-02T15:04", val)
 			} else if len(split) == 3 {
 				v, err = time.Parse("2006-01-02T15:04:05", val)
