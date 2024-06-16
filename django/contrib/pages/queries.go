@@ -166,7 +166,7 @@ func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (
 }
 
 func AncestorNodes(q models.Querier, ctx context.Context, p string, depth int) ([]models.PageNode, error) {
-	var paths = make([]string, 0, depth)
+	var paths = make([]string, depth)
 	for i := 1; i < int(depth); i++ {
 		var path, err = ancestorPath(
 			p, int64(i),
@@ -174,7 +174,7 @@ func AncestorNodes(q models.Querier, ctx context.Context, p string, depth int) (
 		if err != nil {
 			return nil, err
 		}
-		paths = append(paths, path)
+		paths[i] = path
 	}
 	return q.GetForPaths(
 		ctx, paths,

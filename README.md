@@ -9,6 +9,8 @@ This is a rewrite of the Django framework in Golang.
 
 The goal is to provide a similar experience to Django, but with the performance of Golang.
 
+At the core this is meant to be a web framework, but it also includes sub-packages to create a CMS-like experience.
+
 There is a caveat though; we try to touch the database as little as possible.
 
 This means that we don't have a full ORM like Django does.
