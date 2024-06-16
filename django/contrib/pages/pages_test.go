@@ -586,48 +586,58 @@ func TestPageNode(t *testing.T) {
 	}
 
 	var (
-		_ = createAndBind(t, &rootNode, &DBTestPage{
+		dbTestPage_Root = createAndBind(t, &rootNode, &DBTestPage{
 			TestPage: TestPage{
 				Description: "Root Description",
 			},
 		})
-		_ = createAndBind(t, &childNode, &DBTestPage{
+		dbTestPage_Child = createAndBind(t, &childNode, &DBTestPage{
 			TestPage: TestPage{
 				Description: "Child Description",
 			},
 		})
-		_ = createAndBind(t, &childSiblingNode, &DBTestPage{
+		dbTestPage_ChildSibling = createAndBind(t, &childSiblingNode, &DBTestPage{
 			TestPage: TestPage{
 				Description: "ChildSibling Description",
 			},
 		})
-		_ = createAndBind(t, &subChildNode, &DBTestPage{
+		dbTestPage_SubChild = createAndBind(t, &subChildNode, &DBTestPage{
 			TestPage: TestPage{
 				Description: "SubChild Description",
 			},
 		})
-		_ = createAndBind(t, &childSiblingSubChildNode, &DBTestPage{
+		dbTestPage_ChildSiblingSubChild = createAndBind(t, &childSiblingSubChildNode, &DBTestPage{
 			TestPage: TestPage{
 				Description: "ChildSiblingSubChild Description",
 			},
 		})
 	)
 
-	t.Run("DBPageRoot", func(t *testing.T) {
-		var instance, err = pages.Specific(queryCtx, rootNode)
-		if err != nil {
-			t.Error(err)
-			return
-		}
+	var pageList = []pages.Page{
+		dbTestPage_Root,
+		dbTestPage_Child,
+		dbTestPage_ChildSibling,
+		dbTestPage_SubChild,
+		dbTestPage_ChildSiblingSubChild,
+	}
 
-		var dbPage, ok = instance.(*DBTestPage)
-		if !ok {
-			t.Errorf("expected *DBTestPage, got %T", instance)
-			return
-		}
+	for _, page := range pageList {
+		t.Run(fmt.Sprintf("Specific_Page_%s", page.Reference().Title), func(t *testing.T) {
+			var instance, err = pages.Specific(queryCtx, *page.Reference())
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
-		if dbPage.Description != "Root Description" {
-			t.Errorf("expected Root Description, got %s", dbPage.Description)
-		}
-	})
+			var dbPage, ok = instance.(*DBTestPage)
+			if !ok {
+				t.Errorf("expected *DBTestPage, got %T", instance)
+				return
+			}
+
+			if dbPage.Description != page.(*DBTestPage).Description {
+				t.Errorf("expected %s, got %s", page.(*DBTestPage).Description, dbPage.Description)
+			}
+		})
+	}
 }
