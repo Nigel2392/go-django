@@ -4,22 +4,32 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/Nigel2392/django/contrib/pages"
 	"github.com/Nigel2392/django/contrib/pages/models"
 )
 
-const (
-	sqliteFile = "file::memory:?cache=shared"
-	// sqliteFile = "test.sqlite3.db"
-)
-
 var sqlDB *sql.DB
 
+func getEnv(key, def string) string {
+	var val = def
+	if v, ok := os.LookupEnv(key); ok {
+		val = v
+	}
+	return val
+}
+
 func init() {
+
+	var (
+		dbEngine = getEnv("DB_ENGINE", "sqlite3")
+		dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
+	)
+
 	var err error
-	sqlDB, err = sql.Open("sqlite3", sqliteFile)
+	sqlDB, err = sql.Open(dbEngine, dbURL)
 	if err != nil {
 		panic(err)
 	}
@@ -97,7 +107,7 @@ func TestPageRegistry(t *testing.T) {
 				PageID:   69,
 				Typehash: cType.TypeName(),
 			}
-			var instance, err = pages.SpecificInstance(context.Background(), node)
+			var instance, err = pages.Specific(context.Background(), node)
 			if err != nil {
 				t.Error(err)
 			}
@@ -146,6 +156,9 @@ func TestPageNode(t *testing.T) {
 		childNode = models.PageNode{
 			Title: "Child",
 		}
+		subChildNode = models.PageNode{
+			Title: "SubChild",
+		}
 		queryCtx = context.Background()
 		querier  = pages.QuerySet(sqlDB)
 	)
@@ -156,7 +169,7 @@ func TestPageNode(t *testing.T) {
 	}
 
 	t.Run("Root", func(t *testing.T) {
-		var err = pages.CreateRootNode(queryCtx, querier, &rootNode)
+		var err = pages.CreateRootNode(querier, queryCtx, &rootNode)
 		if err != nil {
 			t.Error(err)
 			return
@@ -191,7 +204,7 @@ func TestPageNode(t *testing.T) {
 		}
 
 		t.Run("AddChild", func(t *testing.T) {
-			var err = pages.CreateChildNode(queryCtx, querier, &rootNode, &childNode)
+			var err = pages.CreateChildNode(querier, queryCtx, &rootNode, &childNode)
 			if err != nil {
 				t.Error(err)
 				return
@@ -228,6 +241,92 @@ func TestPageNode(t *testing.T) {
 			if rootNode.Numchild != 1 {
 				t.Errorf("expected Numchild 1, got %d", rootNode.Numchild)
 			}
+
+			t.Run("AddSubChild", func(t *testing.T) {
+				var err = pages.CreateChildNode(querier, queryCtx, &childNode, &subChildNode)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+
+				if subChildNode.ID != 3 {
+					t.Errorf("expected ID 3, got %d", subChildNode.ID)
+				}
+
+				if subChildNode.Path != "001001001" {
+					t.Errorf("expected Path 001001001, got %s", subChildNode.Path)
+				}
+
+				if subChildNode.Depth != 2 {
+					t.Errorf("expected Depth 2, got %d", subChildNode.Depth)
+				}
+
+				if subChildNode.Numchild != 0 {
+					t.Errorf("expected Numchild 0, got %d", subChildNode.Numchild)
+				}
+
+				if childNode.Numchild != 1 {
+					t.Errorf("expected Numchild 1, got %d", childNode.Numchild)
+				}
+
+				t.Run("GetAncestors", func(t *testing.T) {
+					var ancestors, err = pages.AncestorNodes(querier, queryCtx, subChildNode.Path, int(subChildNode.Depth)+1)
+					if err != nil {
+						t.Error(err)
+						return
+					}
+
+					if len(ancestors) != 2 {
+						t.Errorf("expected 2 ancestors, got %d", len(ancestors))
+						return
+					}
+
+					if ancestors[0] != rootNode {
+						t.Errorf("expected %+v, got %+v", rootNode, ancestors[0])
+						return
+					}
+
+					if ancestors[1] != childNode {
+						t.Errorf("expected %+v, got %+v", childNode, ancestors[1])
+						return
+					}
+				})
+
+				t.Run("GetDescendants", func(t *testing.T) {
+					var descendants, err = querier.GetDescendants(queryCtx, rootNode.Path, 0)
+					if err != nil {
+						t.Error(err)
+						return
+					}
+
+					if len(descendants) != 2 {
+						t.Errorf("expected 2 descendants, got %d", len(descendants))
+						return
+					}
+
+					if descendants[0] != childNode {
+						t.Errorf("expected %+v, got %+v", childNode, descendants[0])
+						return
+					}
+
+					if descendants[1] != subChildNode {
+						t.Errorf("expected %+v, got %+v", subChildNode, descendants[1])
+						return
+					}
+				})
+
+				t.Run("ParentNode", func(t *testing.T) {
+					var parent, err = pages.ParentNode(querier, queryCtx, subChildNode.Path, int(subChildNode.Depth))
+					if err != nil {
+						t.Error(err)
+						return
+					}
+
+					if parent != childNode {
+						t.Errorf("expected %+v, got %+v", childNode, parent)
+					}
+				})
+			})
 
 			t.Run("GetChildren", func(t *testing.T) {
 				var children, err = querier.GetChildren(queryCtx, rootNode.Path, 0)

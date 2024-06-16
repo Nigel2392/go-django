@@ -94,7 +94,7 @@ func QuerySet(db *sql.DB) models.DBQuerier {
 	return querySet
 }
 
-func CreateRootNode(ctx context.Context, q models.Querier, node *models.PageNode) error {
+func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
 	if node.Path != "" {
 		return fmt.Errorf("node path must be empty")
 	}
@@ -112,7 +112,7 @@ func CreateRootNode(ctx context.Context, q models.Querier, node *models.PageNode
 	return nil
 }
 
-func CreateChildNode(ctx context.Context, q models.DBQuerier, parent, child *models.PageNode) error {
+func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *models.PageNode) error {
 
 	var tx, err = q.BeginTx(ctx, nil)
 	if err != nil {
@@ -149,62 +149,34 @@ func CreateChildNode(ctx context.Context, q models.DBQuerier, parent, child *mod
 	return tx.Commit()
 }
 
-func Specific(p Page) (Page, error) {
-	var ctx = context.Background()
-
-	return SpecificInstance(
-		ctx, p.Reference(),
-	)
-}
-
-func ParentNode(p Page) (v models.PageNode, err error) {
-	var ref = p.Reference()
-	if ref.IsRoot() {
+func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (v models.PageNode, err error) {
+	if depth == 0 {
 		return v, ErrPageIsRoot
 	}
 	var parentPath string
 	parentPath, err = ancestorPath(
-		ref.Path, 1,
+		path, 1,
 	)
 	if err != nil {
 		return v, err
 	}
-	var ctx = context.Background()
-	return querySet.GetNodeByPath(
+	return q.GetNodeByPath(
 		ctx, parentPath,
 	)
 }
 
-func ChildNodes(p Page) ([]models.PageNode, error) {
-	var ref = p.Reference()
-	var ctx = context.Background()
-	return querySet.GetChildren(
-		ctx, ref.Path, ref.Depth,
-	)
-}
-
-func AncestorNodes(p Page) ([]models.PageNode, error) {
-	var ref = p.Reference()
-	var paths = make([]string, 0, ref.Depth)
-	for i := 1; i < int(ref.Depth); i++ {
+func AncestorNodes(q models.Querier, ctx context.Context, p string, depth int) ([]models.PageNode, error) {
+	var paths = make([]string, 0, depth)
+	for i := 1; i < int(depth); i++ {
 		var path, err = ancestorPath(
-			ref.Path, int64(i),
+			p, int64(i),
 		)
 		if err != nil {
 			return nil, err
 		}
 		paths = append(paths, path)
 	}
-	var ctx = context.Background()
-	return querySet.GetForPaths(
+	return q.GetForPaths(
 		ctx, paths,
-	)
-}
-
-func Descendants(p Page) ([]models.PageNode, error) {
-	var ref = p.Reference()
-	var ctx = context.Background()
-	return querySet.GetDescendants(
-		ctx, ref.Path, ref.Depth,
 	)
 }

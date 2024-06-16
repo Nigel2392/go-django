@@ -57,7 +57,7 @@ func RegisterPageDefinition(definition *PageDefinition) {
 	pageRegistryObject.RegisterPageDefinition(definition)
 }
 
-func SpecificInstance(ctx context.Context, node models.PageNode) (Page, error) {
+func Specific(ctx context.Context, node models.PageNode) (Page, error) {
 	return pageRegistryObject.SpecificInstance(ctx, node)
 }
 
