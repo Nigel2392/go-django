@@ -14,7 +14,7 @@ import (
 	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/v2/memstore"
 	"github.com/go-sql-driver/mysql"
-	"github.com/lib/pq"
+	"github.com/jackc/pgx/v5/stdlib"
 	"github.com/mattn/go-sqlite3"
 )
 
@@ -71,7 +71,7 @@ func NewAppConfig() django.AppConfig {
 			fmt.Println("Using sqlite3store for session storage")
 			sessionManager.Store = sqlite3store.New(db)
 
-		case *pq.Driver:
+		case *stdlib.Driver:
 
 			_, err := db.Exec(schemaPostgres)
 			assert.Err(err)

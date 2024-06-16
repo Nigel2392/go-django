@@ -6,16 +6,18 @@ import (
 )
 
 type PageNode struct {
-	ID       sql.NullInt64  `json:"id"`
-	Title    sql.NullString `json:"title"`
-	Path     sql.NullString `json:"path"`
-	Depth    sql.NullInt64  `json:"depth"`
-	Numchild sql.NullInt64  `json:"numchild"`
-	Typehash sql.NullString `json:"typehash"`
+	ID       int64  `json:"id"`
+	Title    string `json:"title"`
+	Path     string `json:"path"`
+	Depth    int64  `json:"depth"`
+	Numchild int64  `json:"numchild"`
+	PageID   int64  `json:"page_id"`
+	Typehash string `json:"typehash"`
 }
 
 type DBQuerier interface {
 	Querier
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 }
 
 type DBTX interface {
@@ -27,14 +29,14 @@ type DBTX interface {
 
 type Querier interface {
 	WithTx(tx *sql.Tx) Querier
-	DeleteNode(ctx context.Context, id sql.NullInt64) error
+	DeleteNode(ctx context.Context, id int64) error
 	GetChildren(ctx context.Context, path interface{}, depth interface{}) ([]PageNode, error)
-	GetDescendants(ctx context.Context, path interface{}, depth sql.NullInt64) ([]PageNode, error)
-	GetNodeByID(ctx context.Context, id sql.NullInt64) (PageNode, error)
-	GetNodeByPath(ctx context.Context, path sql.NullString) (PageNode, error)
-	InsertNode(ctx context.Context, title sql.NullString, path sql.NullString, depth sql.NullInt64, numchild sql.NullInt64, typehash sql.NullString) (int64, error)
-	UpdateNode(ctx context.Context, title sql.NullString, path sql.NullString, depth sql.NullInt64, numchild sql.NullInt64, typehash sql.NullString, iD sql.NullInt64) error
-	UpdateNodePathAndDepth(ctx context.Context, path sql.NullString, depth sql.NullInt64, iD sql.NullInt64) error
+	GetDescendants(ctx context.Context, path interface{}, depth int64) ([]PageNode, error)
+	GetNodeByID(ctx context.Context, id int64) (PageNode, error)
+	GetNodeByPath(ctx context.Context, path string) (PageNode, error)
+	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, page_id int64, typehash string) (int64, error)
+	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, page_id int64, typehash string, iD int64) error
+	UpdateNodePathAndDepth(ctx context.Context, path string, depth int64, iD int64) error
 }
 
 /// MoveNodeParams contains parameters for moving a node.

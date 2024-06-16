@@ -2,176 +2,101 @@ package pages
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
-	"io"
-	"strconv"
-	"strings"
+	"math"
 
 	"github.com/Nigel2392/django/contrib/pages/models"
-	models_mysql "github.com/Nigel2392/django/contrib/pages/pages-mysql"
-	models_postgres "github.com/Nigel2392/django/contrib/pages/pages-postgres"
-	models_sqlite "github.com/Nigel2392/django/contrib/pages/pages-sqlite"
-	"github.com/go-sql-driver/mysql"
-	"github.com/lib/pq"
-	"github.com/mattn/go-sqlite3"
 )
 
 var querier models.DBQuerier
+var maxPathLen = int64(math.Pow(10, float64(STEP_LEN))) - 1
 
 const STEP_LEN = 3
+const ALPHABET = "0123456789"
 
-func Queries(db *sql.DB) models.DBQuerier {
-	if db == nil && querier != nil {
-		return querier
+func buildPathPart(numPreviousAncestors int64) string {
+	if numPreviousAncestors < 0 {
+		panic(ErrTooLittleAncestors)
 	}
 
-	if db == nil {
-		panic("db is nil")
+	numPreviousAncestors++
+
+	if numPreviousAncestors > maxPathLen {
+		panic(fmt.Errorf("numPreviousAncestors must be less than %d: %w", maxPathLen, ErrTooManyAncestors))
 	}
 
-	var q models.Querier
-	switch db.Driver().(type) {
-	case *mysql.MySQLDriver:
-		q = models_mysql.New(db)
-	case *sqlite3.SQLiteDriver:
-		q = models_sqlite.New(db)
-	case *pq.Driver:
-		q = models_postgres.New(db)
-	default:
-		panic(fmt.Sprintf("unsupported driver: %T", db.Driver()))
-	}
-
-	if querier == nil {
-		querier = q
-	}
-
-	return q
+	return fmt.Sprintf("%0*d", STEP_LEN, numPreviousAncestors)
 }
 
-func checkQuerier() {
-	if querier == nil {
-		panic("querier is nil")
-	}
-}
-
-func splitPathParts(path string) ([]int, error) {
-	if path == "" {
-		return []int{}, nil
+func ancestorPath(path string, numAncestors int64) (string, error) {
+	if numAncestors < 0 {
+		return "", ErrTooLittleAncestors
 	}
 
 	if len(path)%STEP_LEN != 0 {
-		return nil, fmt.Errorf("invalid path length: %d", len(path))
+		return "", ErrInvalidPathLength
 	}
 
-	var parts = make([]int, 0, len(path)/STEP_LEN)
-	for i := 0; i < len(path); i += STEP_LEN {
-		part, err := strconv.Atoi(path[i : i+STEP_LEN])
-		if err != nil {
-			return nil, err
-		}
-
-		parts = append(parts, part)
+	if numAncestors == 0 {
+		return path, nil
 	}
 
-	return parts, nil
+	if len(path) < int(numAncestors)*(STEP_LEN) {
+		return "", ErrTooManyAncestors
+	}
+
+	return path[:len(path)-int(numAncestors)*(STEP_LEN)], nil
 }
 
-func _fmtPathParts(b io.Writer, part int) {
-	fmt.Fprintf(b, "%03d", part)
-}
-
-func joinPathParts(parts []int) string {
-	var b strings.Builder
-	for i, part := range parts {
-		_fmtPathParts(&b, part)
-		if i < len(parts)-1 {
-			b.WriteString(".")
-		}
+func CreateRootNode(ctx context.Context, q models.Querier, node *models.PageNode) error {
+	if node.Path != "" {
+		return fmt.Errorf("node path must be empty")
 	}
 
-	return b.String()
-}
+	node.Path = buildPathPart(0)
+	node.Depth = 0
 
-func createPathPart(parent *models.PageNode, subPages []models.PageNode) (string, error) {
-	var (
-		parts = make([]int, 0)
-		err   error
-	)
-	if parent == nil {
-		return joinPathParts([]int{1}), nil
-	} else {
-		parts, err = splitPathParts(parent.Path.String)
-		if err != nil {
-			return "", err
-		}
-	}
-
-	if len(subPages) == 0 {
-		parts[len(parts)-1]++
-		return joinPathParts(parts), nil
-	}
-
-	var last = subPages[len(subPages)-1]
-	lastParts, err := splitPathParts(last.Path.String)
-	if err != nil {
-		return "", err
-	}
-
-	if len(lastParts) != len(parts)+1 {
-		return "", fmt.Errorf("invalid path length: %d", len(lastParts))
-	}
-
-	parts = append(parts, lastParts[len(lastParts)-1]+1)
-	return joinPathParts(parts), nil
-}
-
-func AddRoot(q models.Querier, parent, page models.PageNode, autoCreate bool) error {
-	var ctx = context.Background()
-
-	// Check if parent exists
-	if parent.ID.Int64 == 0 && autoCreate {
-		if err := CreatePage(ctx, q, parent); err != nil {
-			return err
-		}
-	}
-
-	// Check if page exists
-	if page.ID.Int64 == 0 && autoCreate {
-		if err := CreatePage(ctx, q, page); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-func CreatePage(ctx context.Context, q models.Querier, page models.PageNode) error {
-	checkQuerier()
-
-	// Get parent
-	var (
-		parent models.PageNode
-		err    error
-	)
-	if page.Path.String != "" {
-		parentPath := page.Path.String[:len(page.Path.String)-STEP_LEN]
-		parent, err = q.GetNodeByPath(ctx, sql.NullString{String: parentPath, Valid: true})
-		if err != nil {
-			return err
-		}
-	}
-
-	// Create page
-	page.Path.String, err = createPathPart(&parent, []models.PageNode{})
-	if err != nil {
-		return err
-	}
-
-	_, err = q.InsertNode(ctx, page.Title, page.Path, page.Depth, page.Numchild, page.Typehash)
+	_, err := q.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.PageID, node.Typehash)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+func CreateChildNode(ctx context.Context, q models.DBQuerier, parent, child *models.PageNode) error {
+
+	var tx, err = q.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	var queries = q.WithTx(tx)
+
+	if parent.Path == "" {
+		return fmt.Errorf("parent path must not be empty")
+	}
+
+	if child.Path != "" {
+		return fmt.Errorf("child path must be empty")
+	}
+
+	child.Path = parent.Path + buildPathPart(parent.Numchild)
+	child.Depth = parent.Depth + 1
+
+	var id int64
+	id, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, child.PageID, child.Typehash)
+	if err != nil {
+		return err
+	}
+	child.ID = id
+
+	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild+1, parent.PageID, parent.Typehash, parent.ID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
