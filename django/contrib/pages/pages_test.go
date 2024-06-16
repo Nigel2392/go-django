@@ -33,6 +33,15 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	// Create test_pages table
+	if err := sqlDB.Ping(); err != nil {
+		panic(err)
+	}
+
+	if _, err := sqlDB.Exec(testPageCREATE_TABLE); err != nil {
+		panic(err)
+	}
 }
 
 var _ pages.Page = &TestPage{}
@@ -42,6 +51,19 @@ type TestPage struct {
 	Identifier  int
 	Description string
 }
+
+type DBTestPage struct {
+	TestPage
+}
+
+const testPageCREATE_TABLE = `CREATE TABLE if not exists test_pages (
+	id 	  INTEGER PRIMARY KEY AUTOINCREMENT,
+	title TEXT,
+);`
+
+const testPageINSERT = `INSERT INTO test_pages (title) VALUES (?)`
+
+const testPageByID = `SELECT (id, title) FROM test_pages WHERE id = ?`
 
 func (t *TestPage) ID() int64 {
 	return int64(t.Identifier)
@@ -520,4 +542,18 @@ func TestPageNode(t *testing.T) {
 			})
 		})
 	})
+
+	pages.RegisterPageDefinition(&pages.PageDefinition{
+		PageObject: &DBTestPage{},
+		GetForID: func(ctx context.Context, ref models.PageNode, id int64) (pages.SaveablePage, error) {
+			var page = &DBTestPage{}
+			page.Ref = ref
+			var row = sqlDB.QueryRowContext(ctx, testPageByID, id)
+			if err := row.Scan(&page.Identifier, &page.Description); err != nil {
+				return nil, err
+			}
+			return page, nil
+		},
+	})
+
 }
