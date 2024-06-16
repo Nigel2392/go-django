@@ -52,6 +52,18 @@ type TestPage struct {
 	Description string
 }
 
+func (t *TestPage) ID() int64 {
+	return int64(t.Identifier)
+}
+
+func (t *TestPage) Reference() *models.PageNode {
+	return t.Ref
+}
+
+func (t *TestPage) Save(ctx context.Context) error {
+	return nil
+}
+
 type DBTestPage struct {
 	TestPage
 }
@@ -69,27 +81,15 @@ func (t *DBTestPage) Save(ctx context.Context) error {
 	return err
 }
 
-const testPageCREATE_TABLE = `CREATE TABLE IF NOT EXISTS test_pages (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	title TEXT
-)`
-
-const testPageINSERT = `INSERT INTO test_pages (title) VALUES (?)`
-const testPageUPDATE = `UPDATE test_pages SET title = ? WHERE id = ?`
-
-const testPageByID = `SELECT (id, title) FROM test_pages WHERE id = ?`
-
-func (t *TestPage) ID() int64 {
-	return int64(t.Identifier)
-}
-
-func (t *TestPage) Reference() *models.PageNode {
-	return t.Ref
-}
-
-func (t *TestPage) Save(ctx context.Context) error {
-	return nil
-}
+const (
+	testPageINSERT       = `INSERT INTO test_pages (title) VALUES (?)`
+	testPageUPDATE       = `UPDATE test_pages SET title = ? WHERE id = ?`
+	testPageByID         = `SELECT id, title FROM test_pages WHERE id = ?`
+	testPageCREATE_TABLE = `CREATE TABLE IF NOT EXISTS test_pages (
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		title TEXT
+	)`
+)
 
 func TestContentType(t *testing.T) {
 	var cType = pages.NewContentType(&TestPage{})
@@ -570,4 +570,64 @@ func TestPageNode(t *testing.T) {
 		},
 	})
 
+	var createAndBind = func(t *testing.T, node *models.PageNode, page *DBTestPage) *DBTestPage {
+		page.Ref = node
+		if err := page.Save(queryCtx); err != nil {
+			t.Error(err)
+		}
+		node.PageID = page.ID()
+		node.Typehash = pages.DefinitionForObject(page).ContentType().TypeName()
+
+		if err := querier.UpdateNode(queryCtx, node.Title, node.Path, node.Depth, node.Numchild, int64(node.StatusFlags), node.PageID, node.Typehash, node.ID); err != nil {
+			t.Error(err)
+		}
+
+		return page
+	}
+
+	var (
+		_ = createAndBind(t, &rootNode, &DBTestPage{
+			TestPage: TestPage{
+				Description: "Root Description",
+			},
+		})
+		_ = createAndBind(t, &childNode, &DBTestPage{
+			TestPage: TestPage{
+				Description: "Child Description",
+			},
+		})
+		_ = createAndBind(t, &childSiblingNode, &DBTestPage{
+			TestPage: TestPage{
+				Description: "ChildSibling Description",
+			},
+		})
+		_ = createAndBind(t, &subChildNode, &DBTestPage{
+			TestPage: TestPage{
+				Description: "SubChild Description",
+			},
+		})
+		_ = createAndBind(t, &childSiblingSubChildNode, &DBTestPage{
+			TestPage: TestPage{
+				Description: "ChildSiblingSubChild Description",
+			},
+		})
+	)
+
+	t.Run("DBPageRoot", func(t *testing.T) {
+		var instance, err = pages.Specific(queryCtx, rootNode)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		var dbPage, ok = instance.(*DBTestPage)
+		if !ok {
+			t.Errorf("expected *DBTestPage, got %T", instance)
+			return
+		}
+
+		if dbPage.Description != "Root Description" {
+			t.Errorf("expected Root Description, got %s", dbPage.Description)
+		}
+	})
 }
