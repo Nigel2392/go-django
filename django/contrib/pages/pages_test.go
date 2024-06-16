@@ -310,7 +310,7 @@ func TestPageNode(t *testing.T) {
 					}
 				})
 
-				t.Run("GetDescendants", func(t *testing.T) {
+				t.Run("GetRootDescendants", func(t *testing.T) {
 					var descendants, err = querier.GetDescendants(queryCtx, rootNode.Path, 0)
 					if err != nil {
 						t.Error(err)

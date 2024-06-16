@@ -21,7 +21,13 @@ func buildPathPart(numPreviousAncestors int64) string {
 		panic(fmt.Errorf("numPreviousAncestors must be less than %d: %w", maxPathLen, ErrTooManyAncestors))
 	}
 
-	return fmt.Sprintf("%0*d", STEP_LEN, numPreviousAncestors)
+	var pathParts = make([]byte, STEP_LEN)
+	for i := STEP_LEN - 1; i >= 0; i-- {
+		pathParts[i] = ALPHABET[numPreviousAncestors%10]
+		numPreviousAncestors /= 10
+	}
+
+	return string(pathParts)
 }
 
 func ancestorPath(path string, numAncestors int64) (string, error) {
