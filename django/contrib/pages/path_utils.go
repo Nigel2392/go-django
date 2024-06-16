@@ -7,8 +7,10 @@ import (
 
 var maxPathLen = int64(math.Pow(10, float64(STEP_LEN))) - 1
 
-const STEP_LEN = 3
-const ALPHABET = "0123456789"
+const (
+	STEP_LEN = 3
+	ALPHABET = "0123456789"
+)
 
 func buildPathPart(numPreviousAncestors int64) string {
 	if numPreviousAncestors < 0 {

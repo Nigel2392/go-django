@@ -156,8 +156,14 @@ func TestPageNode(t *testing.T) {
 		childNode = models.PageNode{
 			Title: "Child",
 		}
+		childSiblingNode = models.PageNode{
+			Title: "ChildSibling",
+		}
 		subChildNode = models.PageNode{
 			Title: "SubChild",
+		}
+		childSiblingSubChildNode = models.PageNode{
+			Title: "ChildSiblingSubChild",
 		}
 		queryCtx = context.Background()
 		querier  = pages.QuerySet(sqlDB)
@@ -376,6 +382,138 @@ func TestPageNode(t *testing.T) {
 
 					if childNode.Numchild != 0 {
 						t.Errorf("expected Numchild 0, got %d", childNode.Numchild)
+						return
+					}
+				})
+			})
+		})
+
+		t.Run("AddSibling", func(t *testing.T) {
+			var err = pages.CreateChildNode(querier, queryCtx, &rootNode, &childSiblingNode)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if childSiblingNode.ID != 4 {
+				t.Errorf("expected ID 3, got %d", childSiblingNode.ID)
+			}
+
+			if childSiblingNode.Path != "001002" {
+				t.Errorf("expected Path 001002, got %s", childSiblingNode.Path)
+			}
+
+			if childSiblingNode.Depth != 1 {
+				t.Errorf("expected Depth 1, got %d", childSiblingNode.Depth)
+			}
+
+			if childSiblingNode.Numchild != 0 {
+				t.Errorf("expected Numchild 0, got %d", childSiblingNode.Numchild)
+			}
+
+			if childSiblingNode.StatusFlags != 0 {
+				t.Errorf("expected StatusFlagPublished, got %d", childSiblingNode.StatusFlags)
+			}
+
+			if childSiblingNode.PageID != 0 {
+				t.Errorf("expected PageID 0, got %d", childSiblingNode.PageID)
+			}
+
+			if childSiblingNode.Typehash != "" {
+				t.Errorf("expected Typehash empty, got %s", childSiblingNode.Typehash)
+			}
+
+			if rootNode.Numchild != 2 {
+				t.Errorf("expected Numchild 2, got %d", rootNode.Numchild)
+			}
+
+			t.Run("GetChildren", func(t *testing.T) {
+				var children, err = querier.GetChildren(queryCtx, rootNode.Path, rootNode.Depth)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+
+				if len(children) != 2 {
+					t.Errorf("expected 2 children, got %d", len(children))
+					return
+				}
+
+				if children[1] != childSiblingNode {
+					t.Errorf("expected %+v, got %+v", childSiblingNode, children[1])
+					return
+				}
+			})
+
+			t.Run("AddSubChild", func(t *testing.T) {
+				var err = pages.CreateChildNode(querier, queryCtx, &childSiblingNode, &childSiblingSubChildNode)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+
+				if childSiblingSubChildNode.ID != 5 {
+					t.Errorf("expected ID 5, got %d", childSiblingSubChildNode.ID)
+				}
+
+				if childSiblingSubChildNode.Path != "001002001" {
+					t.Errorf("expected Path 001002001, got %s", childSiblingSubChildNode.Path)
+				}
+
+				if childSiblingSubChildNode.Depth != 2 {
+					t.Errorf("expected Depth 2, got %d", childSiblingSubChildNode.Depth)
+				}
+
+				if childSiblingSubChildNode.Numchild != 0 {
+					t.Errorf("expected Numchild 0, got %d", childSiblingSubChildNode.Numchild)
+				}
+
+				if childSiblingNode.Numchild != 1 {
+					t.Errorf("expected Numchild 1, got %d", childSiblingNode.Numchild)
+				}
+
+				t.Run("GetAncestors", func(t *testing.T) {
+					var ancestors, err = pages.AncestorNodes(querier, queryCtx, childSiblingSubChildNode.Path, int(childSiblingSubChildNode.Depth)+1)
+					if err != nil {
+						t.Error(err)
+						return
+					}
+
+					if len(ancestors) != 2 {
+						t.Errorf("expected 2 ancestors, got %d", len(ancestors))
+						return
+					}
+
+					if ancestors[0] != rootNode {
+						t.Errorf("expected %+v, got %+v", rootNode, ancestors[0])
+						return
+					}
+
+					if ancestors[1] != childSiblingNode {
+						t.Errorf("expected %+v, got %+v", childSiblingNode, ancestors[1])
+						return
+					}
+				})
+
+				t.Run("GetRootDescendants", func(t *testing.T) {
+					var descendants, err = querier.GetDescendants(queryCtx, rootNode.Path, 0)
+					if err != nil {
+						t.Error(err)
+						return
+					}
+
+					if len(descendants) != 3 {
+						t.Errorf("expected 3 descendants, got %d", len(descendants))
+						return
+					}
+
+					if descendants[1] != childSiblingNode {
+						t.Errorf("expected %+v, got %+v", childSiblingNode, descendants[1])
+						return
+					}
+
+					if descendants[2] != childSiblingSubChildNode {
+						t.Errorf("expected %+v, got %+v", childSiblingSubChildNode, descendants[2])
 						return
 					}
 				})
