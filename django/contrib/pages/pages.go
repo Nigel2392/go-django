@@ -8,7 +8,7 @@ import (
 
 type Page interface {
 	ID() int64
-	Reference() models.PageNode
+	Reference() *models.PageNode
 	// Specific() (Page, error)
 	//Parent(update bool) (Page, error)
 	//Children(update bool) ([]Page, error)

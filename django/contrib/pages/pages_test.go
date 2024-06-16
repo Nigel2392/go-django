@@ -47,8 +47,8 @@ func init() {
 var _ pages.Page = &TestPage{}
 
 type TestPage struct {
-	Ref         models.PageNode
-	Identifier  int
+	Ref         *models.PageNode
+	Identifier  int64
 	Description string
 }
 
@@ -56,12 +56,26 @@ type DBTestPage struct {
 	TestPage
 }
 
-const testPageCREATE_TABLE = `CREATE TABLE if not exists test_pages (
-	id 	  INTEGER PRIMARY KEY AUTOINCREMENT,
-	title TEXT,
-);`
+func (t *DBTestPage) Save(ctx context.Context) error {
+	if t.Identifier == 0 {
+		result, err := sqlDB.ExecContext(ctx, testPageINSERT, t.Description)
+		if err != nil {
+			return err
+		}
+		t.Identifier, err = result.LastInsertId()
+		return err
+	}
+	_, err := sqlDB.ExecContext(ctx, testPageUPDATE, t.Description, t.Identifier)
+	return err
+}
+
+const testPageCREATE_TABLE = `CREATE TABLE IF NOT EXISTS test_pages (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	title TEXT
+)`
 
 const testPageINSERT = `INSERT INTO test_pages (title) VALUES (?)`
+const testPageUPDATE = `UPDATE test_pages SET title = ? WHERE id = ?`
 
 const testPageByID = `SELECT (id, title) FROM test_pages WHERE id = ?`
 
@@ -69,7 +83,7 @@ func (t *TestPage) ID() int64 {
 	return int64(t.Identifier)
 }
 
-func (t *TestPage) Reference() models.PageNode {
+func (t *TestPage) Reference() *models.PageNode {
 	return t.Ref
 }
 
@@ -101,7 +115,7 @@ func TestPageRegistry(t *testing.T) {
 
 		var definition = &pages.PageDefinition{
 			PageObject: &TestPage{
-				Ref: models.PageNode{
+				Ref: &models.PageNode{
 					ID:     1,
 					Title:  "Title",
 					Path:   "001",
@@ -113,8 +127,8 @@ func TestPageRegistry(t *testing.T) {
 			},
 			GetForID: func(ctx context.Context, node models.PageNode, id int64) (pages.SaveablePage, error) {
 				return &TestPage{
-					Ref:         node,
-					Identifier:  int(id),
+					Ref:         &node,
+					Identifier:  id,
 					Description: fmt.Sprintf("Description for %s (%d)", node.Title, id),
 				}, nil
 			},
@@ -547,7 +561,7 @@ func TestPageNode(t *testing.T) {
 		PageObject: &DBTestPage{},
 		GetForID: func(ctx context.Context, ref models.PageNode, id int64) (pages.SaveablePage, error) {
 			var page = &DBTestPage{}
-			page.Ref = ref
+			page.Ref = &ref
 			var row = sqlDB.QueryRowContext(ctx, testPageByID, id)
 			if err := row.Scan(&page.Identifier, &page.Description); err != nil {
 				return nil, err
