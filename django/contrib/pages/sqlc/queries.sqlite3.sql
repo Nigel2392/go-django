@@ -1,29 +1,44 @@
 -- name: InsertNode :execlastid
-INSERT INTO PageNode (title, path, depth, numchild, status_flags, page_id, typeHash)
-VALUES (sqlc.arg(title), sqlc.arg(path), sqlc.arg(depth), sqlc.arg(numchild), sqlc.arg(status_flags), sqlc.arg(page_id), sqlc.arg(typeHash));
+INSERT INTO PageNode (
+    title,
+    path,
+    depth,
+    numchild,
+    status_flags,
+    page_id,
+    typeHash
+) VALUES (
+    sqlc.arg(title),
+    sqlc.arg(path),
+    sqlc.arg(depth),
+    sqlc.arg(numchild),
+    sqlc.arg(status_flags),
+    sqlc.arg(page_id),
+    sqlc.arg(typeHash)
+);
 
 -- name: GetNodeByID :one
-SELECT id, title, path, depth, numchild, status_flags, page_id, typeHash
+SELECT *
 FROM PageNode
 WHERE id = sqlc.arg(id);
 
 -- name: GetNodeByPath :one
-SELECT id, title, path, depth, numchild, status_flags, page_id, typeHash
+SELECT *
 FROM PageNode
 WHERE path = sqlc.arg(path);
 
 -- name: GetForPaths :many
-SELECT id, title, path, depth, numchild, status_flags, page_id, typeHash
+SELECT *
 FROM PageNode
 WHERE path IN (sqlc.slice(path));
 
 -- name: GetChildren :many
-SELECT id, title, path, depth, numchild, status_flags, page_id, typeHash
+SELECT *
 FROM PageNode
 WHERE path LIKE CONCAT(sqlc.arg(path), '%') AND depth = sqlc.arg(depth) + 1;
 
 -- name: GetDescendants :many
-SELECT id, title, path, depth, numchild, status_flags, page_id, typeHash
+SELECT *
 FROM PageNode
 WHERE path LIKE CONCAT(sqlc.arg(path), '%') AND depth > sqlc.arg(depth);
 

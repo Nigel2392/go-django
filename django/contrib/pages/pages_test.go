@@ -242,6 +242,24 @@ func TestPageNode(t *testing.T) {
 				t.Errorf("expected Numchild 1, got %d", rootNode.Numchild)
 			}
 
+			t.Run("GetChildren", func(t *testing.T) {
+				var children, err = querier.GetChildren(queryCtx, rootNode.Path, rootNode.Depth)
+				if err != nil {
+					t.Error(err)
+					return
+				}
+
+				if len(children) != 1 {
+					t.Errorf("expected 1 child, got %d", len(children))
+					return
+				}
+
+				if children[0] != childNode {
+					t.Errorf("expected %+v, got %+v", childNode, children[0])
+					return
+				}
+			})
+
 			t.Run("AddSubChild", func(t *testing.T) {
 				var err = pages.CreateChildNode(querier, queryCtx, &childNode, &subChildNode)
 				if err != nil {
@@ -326,24 +344,41 @@ func TestPageNode(t *testing.T) {
 						t.Errorf("expected %+v, got %+v", childNode, parent)
 					}
 				})
-			})
 
-			t.Run("GetChildren", func(t *testing.T) {
-				var children, err = querier.GetChildren(queryCtx, rootNode.Path, 0)
-				if err != nil {
-					t.Error(err)
-					return
-				}
+				t.Run("DeleteNode", func(t *testing.T) {
+					var err = pages.DeleteNode(querier, queryCtx, subChildNode.ID, subChildNode.Path, subChildNode.Depth)
+					if err != nil {
+						t.Error(err)
+						return
+					}
 
-				if len(children) != 1 {
-					t.Errorf("expected 1 child, got %d", len(children))
-					return
-				}
+					descendants, err := querier.GetDescendants(queryCtx, rootNode.Path, 0)
+					if err != nil {
+						t.Error(err)
+						return
+					}
 
-				if children[0] != childNode {
-					t.Errorf("expected %+v, got %+v", childNode, children[0])
-					return
-				}
+					if len(descendants) != 1 {
+						t.Errorf("expected 1 descendant, got %d", len(descendants))
+						return
+					}
+
+					childNode, err = querier.GetNodeByID(queryCtx, childNode.ID)
+					if err != nil {
+						t.Error(err)
+						return
+					}
+
+					if descendants[0] != childNode {
+						t.Errorf("expected %+v, got %+v", childNode, descendants[0])
+						return
+					}
+
+					if childNode.Numchild != 0 {
+						t.Errorf("expected Numchild 0, got %d", childNode.Numchild)
+						return
+					}
+				})
 			})
 		})
 	})

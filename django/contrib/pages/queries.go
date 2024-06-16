@@ -165,6 +165,48 @@ func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (
 	)
 }
 
+func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, depth int64) error {
+	if depth == 0 {
+		return ErrPageIsRoot
+	}
+
+	var parentPath, err = ancestorPath(
+		path, 1,
+	)
+	if err != nil {
+		return err
+	}
+
+	parent, err := q.GetNodeByPath(
+		ctx, parentPath,
+	)
+	if err != nil {
+		return err
+	}
+
+	tx, err := q.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	var queries = q.WithTx(tx)
+
+	err = queries.DeleteNode(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	parent.Numchild--
+	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild, int64(parent.StatusFlags), parent.PageID, parent.Typehash, parent.ID)
+	if err != nil {
+		return err
+	}
+
+	return tx.Commit()
+}
+
 func AncestorNodes(q models.Querier, ctx context.Context, p string, depth int) ([]models.PageNode, error) {
 	var paths = make([]string, depth)
 	for i := 1; i < int(depth); i++ {
