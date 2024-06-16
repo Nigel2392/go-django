@@ -50,21 +50,3 @@ func (p *pageRegistry) SpecificInstance(ctx context.Context, node models.PageNod
 
 	return definition.GetForID(ctx, node, node.PageID)
 }
-
-var pageRegistryObject = &pageRegistry{}
-
-func RegisterPageDefinition(definition *PageDefinition) {
-	pageRegistryObject.RegisterPageDefinition(definition)
-}
-
-func Specific(ctx context.Context, node models.PageNode) (Page, error) {
-	return pageRegistryObject.SpecificInstance(ctx, node)
-}
-
-func DefinitionForType(typeName string) *PageDefinition {
-	return pageRegistryObject.DefinitionForType(typeName)
-}
-
-func DefinitionForObject(page Page) *PageDefinition {
-	return pageRegistryObject.DefinitionForObject(page)
-}

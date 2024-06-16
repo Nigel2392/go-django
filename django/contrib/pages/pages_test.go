@@ -134,7 +134,7 @@ func TestPageRegistry(t *testing.T) {
 			},
 		}
 
-		pages.RegisterPageDefinition(definition)
+		pages.Register(definition)
 		var cType = definition.ContentType()
 
 		t.Run("SpecificInstance", func(t *testing.T) {
@@ -557,7 +557,7 @@ func TestPageNode(t *testing.T) {
 		})
 	})
 
-	pages.RegisterPageDefinition(&pages.PageDefinition{
+	pages.Register(&pages.PageDefinition{
 		PageObject: &DBTestPage{},
 		GetForID: func(ctx context.Context, ref models.PageNode, id int64) (pages.SaveablePage, error) {
 			var page = &DBTestPage{}

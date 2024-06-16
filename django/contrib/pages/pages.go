@@ -9,14 +9,32 @@ import (
 type Page interface {
 	ID() int64
 	Reference() *models.PageNode
-	// Specific() (Page, error)
-	//Parent(update bool) (Page, error)
-	//Children(update bool) ([]Page, error)
-	//Ancestors() ([]Page, error)
-	//Descendants() ([]Page, error)
 }
 
 type SaveablePage interface {
 	Page
 	Save(ctx context.Context) error
+}
+
+type DeletablePage interface {
+	Page
+	Delete(ctx context.Context) error
+}
+
+var pageRegistryObject = &pageRegistry{}
+
+func Register(definition *PageDefinition) {
+	pageRegistryObject.RegisterPageDefinition(definition)
+}
+
+func Specific(ctx context.Context, node models.PageNode) (Page, error) {
+	return pageRegistryObject.SpecificInstance(ctx, node)
+}
+
+func DefinitionForType(typeName string) *PageDefinition {
+	return pageRegistryObject.DefinitionForType(typeName)
+}
+
+func DefinitionForObject(page Page) *PageDefinition {
+	return pageRegistryObject.DefinitionForObject(page)
 }

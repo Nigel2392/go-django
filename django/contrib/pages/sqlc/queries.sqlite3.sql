@@ -22,17 +22,37 @@ SELECT *
 FROM PageNode
 WHERE id = sqlc.arg(id);
 
+-- name: GetNodesByIDs :many
+SELECT *
+FROM PageNode
+WHERE id IN (sqlc.slice(id));
+
+-- name: GetNodesByPageIDs :many
+SELECT *
+FROM PageNode
+WHERE page_id IN (sqlc.slice(page_id));
+
+-- name: GetNodesByTypeHash :many
+SELECT *
+FROM PageNode
+WHERE typeHash = sqlc.arg(typeHash);
+
+-- name: GetNodesByTypeHashes :many
+SELECT *
+FROM PageNode
+WHERE typeHash IN (sqlc.slice(typeHash));
+
 -- name: GetNodeByPath :one
 SELECT *
 FROM PageNode
 WHERE path = sqlc.arg(path);
 
--- name: GetForPaths :many
+-- name: GetNodeForPath :many
 SELECT *
 FROM PageNode
 WHERE path IN (sqlc.slice(path));
 
--- name: GetChildren :many
+-- name: GetChildNodes :many
 SELECT *
 FROM PageNode
 WHERE path LIKE CONCAT(sqlc.arg(path), '%') AND depth = sqlc.arg(depth) + 1;
@@ -53,10 +73,6 @@ SET title = sqlc.arg(title),
     typeHash = sqlc.arg(typeHash)
 WHERE id = sqlc.arg(id);
 
--- name: DeleteNode :exec
-DELETE FROM PageNode
-WHERE id = sqlc.arg(id);
-
 -- name: UpdateNodePathAndDepth :exec
 UPDATE PageNode
 SET path = sqlc.arg(path), depth = sqlc.arg(depth)
@@ -66,3 +82,15 @@ WHERE id = sqlc.arg(id);
 UPDATE PageNode
 SET status_flags = sqlc.arg(status_flags)
 WHERE id = sqlc.arg(id);
+
+-- name: DeleteNode :exec
+DELETE FROM PageNode
+WHERE id = sqlc.arg(id);
+
+-- name: DeleteNodes :exec
+DELETE FROM PageNode
+WHERE id IN (sqlc.slice(id));
+
+-- name: DeleteDescendants :exec
+DELETE FROM PageNode
+WHERE path LIKE CONCAT(sqlc.arg(path), '%') AND depth > sqlc.arg(depth);
