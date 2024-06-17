@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/django/contrib/pages"
+	_ "github.com/Nigel2392/django/contrib/pages/backend-sqlite"
 	"github.com/Nigel2392/django/contrib/pages/models"
 	"github.com/Nigel2392/go-signals"
 )
@@ -609,8 +610,82 @@ func TestPageNode(t *testing.T) {
 						t.Errorf("expected 1, got %d", nodeDeleteCounter)
 					}
 				})
+
+				t.Run("IncNumChild", func(t *testing.T) {
+					var node, err = querier.IncrementNumChild(queryCtx, childSiblingNode.Path, childSiblingNode.Depth)
+					if err != nil {
+						t.Error(err)
+						return
+					}
+
+					if node.Numchild != 2 {
+						t.Errorf("expected Numchild 2, got %d", node.Numchild)
+					}
+
+					if node.Title != "ChildSibling" {
+						t.Errorf("expected Title ChildSibling, got %s", node.Title)
+					}
+				})
+
+				t.Run("DecNumChild", func(t *testing.T) {
+					var node, err = querier.DecrementNumChild(queryCtx, childSiblingNode.Path, childSiblingNode.Depth)
+					if err != nil {
+						t.Error(err)
+						return
+					}
+
+					if node.Numchild != 1 {
+						t.Errorf("expected Numchild 1, got %d", node.Numchild)
+					}
+
+					if node.Title != "ChildSibling" {
+						t.Errorf("expected Title ChildSibling, got %s", node.Title)
+					}
+				})
 			})
 		})
+	})
+
+	var nodesToUpdate = []*models.PageNode{
+		&models.PageNode{
+			Title: "Root 1",
+		},
+		&models.PageNode{
+			Title: "Root 2",
+		},
+		&models.PageNode{
+			Title: "Root 3",
+		},
+	}
+
+	for _, node := range nodesToUpdate {
+		if err := pages.CreateRootNode(querier, queryCtx, node); err != nil {
+			t.Error(err)
+		}
+	}
+
+	for i, node := range nodesToUpdate {
+		node.Title = fmt.Sprintf("Root %d Updated", i+1)
+	}
+
+	t.Run("UpdateNodes", func(t *testing.T) {
+		var err = querier.UpdateNodes(queryCtx, nodesToUpdate)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		for _, node := range nodesToUpdate {
+			var updatedNode, err = querier.GetNodeByID(queryCtx, node.ID)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+
+			if updatedNode.Title != node.Title {
+				t.Errorf("expected %s, got %s", node.Title, updatedNode.Title)
+			}
+		}
 	})
 
 	pages.Register(&pages.PageDefinition{

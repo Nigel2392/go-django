@@ -19,7 +19,7 @@ func New(db DBTX) *Queries {
 	return &Queries{db: db}
 }
 
-func Prepare(ctx context.Context, db DBTX) (models.Querier, error) {
+func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
 	if q.allNodesStmt, err = db.PrepareContext(ctx, allNodes); err != nil {
@@ -30,6 +30,9 @@ func Prepare(ctx context.Context, db DBTX) (models.Querier, error) {
 	}
 	if q.countRootNodesStmt, err = db.PrepareContext(ctx, countRootNodes); err != nil {
 		return nil, fmt.Errorf("error preparing query CountRootNodes: %w", err)
+	}
+	if q.decrementNumChildStmt, err = db.PrepareContext(ctx, decrementNumChild); err != nil {
+		return nil, fmt.Errorf("error preparing query DecrementNumChild: %w", err)
 	}
 	if q.deleteDescendantsStmt, err = db.PrepareContext(ctx, deleteDescendants); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteDescendants: %w", err)
@@ -67,6 +70,9 @@ func Prepare(ctx context.Context, db DBTX) (models.Querier, error) {
 	if q.getNodesForPathsStmt, err = db.PrepareContext(ctx, getNodesForPaths); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNodesForPaths: %w", err)
 	}
+	if q.incrementNumChildStmt, err = db.PrepareContext(ctx, incrementNumChild); err != nil {
+		return nil, fmt.Errorf("error preparing query IncrementNumChild: %w", err)
+	}
 	if q.insertNodeStmt, err = db.PrepareContext(ctx, insertNode); err != nil {
 		return nil, fmt.Errorf("error preparing query InsertNode: %w", err)
 	}
@@ -97,6 +103,11 @@ func (q *Queries) Close() error {
 	if q.countRootNodesStmt != nil {
 		if cerr := q.countRootNodesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing countRootNodesStmt: %w", cerr)
+		}
+	}
+	if q.decrementNumChildStmt != nil {
+		if cerr := q.decrementNumChildStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing decrementNumChildStmt: %w", cerr)
 		}
 	}
 	if q.deleteDescendantsStmt != nil {
@@ -157,6 +168,11 @@ func (q *Queries) Close() error {
 	if q.getNodesForPathsStmt != nil {
 		if cerr := q.getNodesForPathsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getNodesForPathsStmt: %w", cerr)
+		}
+	}
+	if q.incrementNumChildStmt != nil {
+		if cerr := q.incrementNumChildStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing incrementNumChildStmt: %w", cerr)
 		}
 	}
 	if q.insertNodeStmt != nil {
@@ -221,6 +237,7 @@ type Queries struct {
 	allNodesStmt               *sql.Stmt
 	countNodesStmt             *sql.Stmt
 	countRootNodesStmt         *sql.Stmt
+	decrementNumChildStmt      *sql.Stmt
 	deleteDescendantsStmt      *sql.Stmt
 	deleteNodeStmt             *sql.Stmt
 	deleteNodesStmt            *sql.Stmt
@@ -233,6 +250,7 @@ type Queries struct {
 	getNodesByTypeHashStmt     *sql.Stmt
 	getNodesByTypeHashesStmt   *sql.Stmt
 	getNodesForPathsStmt       *sql.Stmt
+	incrementNumChildStmt      *sql.Stmt
 	insertNodeStmt             *sql.Stmt
 	updateNodeStmt             *sql.Stmt
 	updateNodePathAndDepthStmt *sql.Stmt
@@ -246,6 +264,7 @@ func (q *Queries) WithTx(tx *sql.Tx) models.Querier {
 		allNodesStmt:               q.allNodesStmt,
 		countNodesStmt:             q.countNodesStmt,
 		countRootNodesStmt:         q.countRootNodesStmt,
+		decrementNumChildStmt:      q.decrementNumChildStmt,
 		deleteDescendantsStmt:      q.deleteDescendantsStmt,
 		deleteNodeStmt:             q.deleteNodeStmt,
 		deleteNodesStmt:            q.deleteNodesStmt,
@@ -258,6 +277,7 @@ func (q *Queries) WithTx(tx *sql.Tx) models.Querier {
 		getNodesByTypeHashStmt:     q.getNodesByTypeHashStmt,
 		getNodesByTypeHashesStmt:   q.getNodesByTypeHashesStmt,
 		getNodesForPathsStmt:       q.getNodesForPathsStmt,
+		incrementNumChildStmt:      q.incrementNumChildStmt,
 		insertNodeStmt:             q.insertNodeStmt,
 		updateNodeStmt:             q.updateNodeStmt,
 		updateNodePathAndDepthStmt: q.updateNodePathAndDepthStmt,

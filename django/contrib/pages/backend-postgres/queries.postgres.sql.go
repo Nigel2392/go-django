@@ -1,4 +1,4 @@
-package models_mysql
+package models_postgres
 
 import (
 	"context"
@@ -11,12 +11,12 @@ const allNodes = `-- name: AllNodes :many
 SELECT id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
 ORDER BY path ASC
-LIMIT    ?
-OFFSET   ?
+LIMIT    $2
+OFFSET   $1
 `
 
-func (q *Queries) AllNodes(ctx context.Context, limit int32, offset int32) ([]models.PageNode, error) {
-	rows, err := q.query(ctx, q.allNodesStmt, allNodes, limit, offset)
+func (q *Queries) AllNodes(ctx context.Context, nodeOffset int32, nodeLimit int32) ([]models.PageNode, error) {
+	rows, err := q.query(ctx, q.allNodesStmt, allNodes, nodeOffset, nodeLimit)
 	if err != nil {
 		return nil, err
 	}
@@ -75,9 +75,69 @@ func (q *Queries) CountRootNodes(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const incrementNumChild = `-- name: IncrementNumChild :exec
+UPDATE PageNode
+SET numchild = numchild + 1
+WHERE path = $1 AND depth = $2
+RETURNING id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
+`
+
+func (q *Queries) IncrementNumChild(ctx context.Context, path string, depth int64) (models.PageNode, error) {
+	var row = q.queryRow(ctx, q.incrementNumChildStmt, incrementNumChild, path, depth)
+	var i models.PageNode
+	var rowErr = row.Err()
+	if rowErr != nil {
+		return i, rowErr
+	}
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Path,
+		&i.Depth,
+		&i.Numchild,
+		&i.UrlPath,
+		&i.StatusFlags,
+		&i.PageID,
+		&i.ContentType,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const decrementNumChild = `-- name: DecrementNumChild :exec
+UPDATE PageNode
+SET numchild = numchild - 1
+WHERE path = $1 AND depth = $2
+RETURNING id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
+`
+
+func (q *Queries) DecrementNumChild(ctx context.Context, path string, depth int64) (models.PageNode, error) {
+	var row = q.queryRow(ctx, q.decrementNumChildStmt, decrementNumChild, path, depth)
+	var i models.PageNode
+	var rowErr = row.Err()
+	if rowErr != nil {
+		return i, rowErr
+	}
+	err := row.Scan(
+		&i.ID,
+		&i.Title,
+		&i.Path,
+		&i.Depth,
+		&i.Numchild,
+		&i.UrlPath,
+		&i.StatusFlags,
+		&i.PageID,
+		&i.ContentType,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const deleteDescendants = `-- name: DeleteDescendants :exec
 DELETE FROM PageNode
-WHERE path LIKE CONCAT(?, '%') AND depth > ?
+WHERE path LIKE CONCAT($1, '%') AND depth > $2
 `
 
 func (q *Queries) DeleteDescendants(ctx context.Context, path interface{}, depth int64) error {
@@ -87,7 +147,7 @@ func (q *Queries) DeleteDescendants(ctx context.Context, path interface{}, depth
 
 const deleteNode = `-- name: DeleteNode :exec
 DELETE FROM PageNode
-WHERE id = ?
+WHERE id = $1
 `
 
 func (q *Queries) DeleteNode(ctx context.Context, id int64) error {
@@ -97,7 +157,7 @@ func (q *Queries) DeleteNode(ctx context.Context, id int64) error {
 
 const deleteNodes = `-- name: DeleteNodes :exec
 DELETE FROM PageNode
-WHERE id IN (/*SLICE:id*/?)
+WHERE id IN ($1)
 `
 
 func (q *Queries) DeleteNodes(ctx context.Context, id []int64) error {
@@ -118,7 +178,7 @@ func (q *Queries) DeleteNodes(ctx context.Context, id []int64) error {
 const getChildNodes = `-- name: GetChildNodes :many
 SELECT   id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
-WHERE    path LIKE CONCAT(?, '%') AND depth = ? + 1
+WHERE    path LIKE CONCAT($1, '%') AND depth = $2 + 1
 `
 
 func (q *Queries) GetChildNodes(ctx context.Context, path interface{}, depth interface{}) ([]models.PageNode, error) {
@@ -159,7 +219,7 @@ func (q *Queries) GetChildNodes(ctx context.Context, path interface{}, depth int
 const getDescendants = `-- name: GetDescendants :many
 SELECT   id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
-WHERE    path LIKE CONCAT(?, '%') AND depth > ?
+WHERE    path LIKE CONCAT($1, '%') AND depth > $2
 `
 
 func (q *Queries) GetDescendants(ctx context.Context, path interface{}, depth int64) ([]models.PageNode, error) {
@@ -200,7 +260,7 @@ func (q *Queries) GetDescendants(ctx context.Context, path interface{}, depth in
 const getNodeByID = `-- name: GetNodeByID :one
 SELECT   id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
-WHERE    id = ?
+WHERE    id = $1
 `
 
 func (q *Queries) GetNodeByID(ctx context.Context, id int64) (models.PageNode, error) {
@@ -225,7 +285,7 @@ func (q *Queries) GetNodeByID(ctx context.Context, id int64) (models.PageNode, e
 const getNodeByPath = `-- name: GetNodeByPath :one
 SELECT   id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
-WHERE    path = ?
+WHERE    path = $1
 `
 
 func (q *Queries) GetNodeByPath(ctx context.Context, path string) (models.PageNode, error) {
@@ -250,7 +310,7 @@ func (q *Queries) GetNodeByPath(ctx context.Context, path string) (models.PageNo
 const getNodesByIDs = `-- name: GetNodesByIDs :many
 SELECT   id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
-WHERE    id IN (/*SLICE:id*/?)
+WHERE    id IN ($1)
 `
 
 func (q *Queries) GetNodesByIDs(ctx context.Context, id []int64) ([]models.PageNode, error) {
@@ -301,7 +361,7 @@ func (q *Queries) GetNodesByIDs(ctx context.Context, id []int64) ([]models.PageN
 const getNodesByPageIDs = `-- name: GetNodesByPageIDs :many
 SELECT   id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
-WHERE    page_id IN (/*SLICE:page_id*/?)
+WHERE    page_id IN ($1)
 `
 
 func (q *Queries) GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]models.PageNode, error) {
@@ -352,7 +412,7 @@ func (q *Queries) GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]mode
 const getNodesByTypeHash = `-- name: GetNodesByTypeHash :many
 SELECT   id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
-WHERE    content_type = ?
+WHERE    content_type = $1
 `
 
 func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string) ([]models.PageNode, error) {
@@ -393,7 +453,7 @@ func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string) ([
 const getNodesByTypeHashes = `-- name: GetNodesByTypeHashes :many
 SELECT   id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
-WHERE    content_type IN (/*SLICE:content_type*/?)
+WHERE    content_type IN ($1)
 `
 
 func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string) ([]models.PageNode, error) {
@@ -444,7 +504,7 @@ func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string
 const getNodesForPaths = `-- name: GetNodesForPaths :many
 SELECT   id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
-WHERE    path IN (/*SLICE:path*/?)
+WHERE    path IN ($1)
 `
 
 func (q *Queries) GetNodesForPaths(ctx context.Context, path []string) ([]models.PageNode, error) {
@@ -503,14 +563,14 @@ INSERT INTO PageNode (
     page_id,
     content_type
 ) VALUES (
-    ?,
-    ?,
-    ?,
-    ?,
-    ?,
-    ?,
-    ?,
-    ?
+    $1,
+    $2,
+    $3,
+    $4,
+    $5,
+    $6,
+    $7,
+    $8
 )
 `
 
@@ -533,16 +593,16 @@ func (q *Queries) InsertNode(ctx context.Context, title string, path string, dep
 
 const updateNode = `-- name: UpdateNode :exec
 UPDATE PageNode
-SET title = ?,
-    path = ?,
-    depth = ?, 
-    numchild = ?,
-    url_path = ?,
-    status_flags = ?, 
-    page_id = ?, 
-    content_type = ?,
+SET title = $1,
+    path = $2,
+    depth = $3, 
+    numchild = $4,
+    url_path = $5,
+    status_flags = $6, 
+    page_id = $7, 
+    content_type = $8,
     updated_at = CURRENT_TIMESTAMP
-WHERE id = ?
+WHERE id = $9
 `
 
 func (q *Queries) UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, statusFlags int64, pageID int64, contentType string, iD int64) error {
@@ -562,8 +622,8 @@ func (q *Queries) UpdateNode(ctx context.Context, title string, path string, dep
 
 const updateNodePathAndDepth = `-- name: UpdateNodePathAndDepth :exec
 UPDATE   PageNode
-SET      path = ?, depth = ?
-WHERE    id = ?
+SET      path = $1, depth = $2
+WHERE    id = $3
 `
 
 func (q *Queries) UpdateNodePathAndDepth(ctx context.Context, path string, depth int64, iD int64) error {
@@ -573,8 +633,8 @@ func (q *Queries) UpdateNodePathAndDepth(ctx context.Context, path string, depth
 
 const updateNodeStatusFlags = `-- name: UpdateNodeStatusFlags :exec
 UPDATE   PageNode
-SET      status_flags = ?
-WHERE    id = ?
+SET      status_flags = $1
+WHERE    id = $2
 `
 
 func (q *Queries) UpdateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error {

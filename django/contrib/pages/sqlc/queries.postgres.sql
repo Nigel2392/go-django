@@ -103,6 +103,18 @@ UPDATE   PageNode
 SET      status_flags = sqlc.arg(status_flags)
 WHERE    id = sqlc.arg(id);
 
+-- name: IncrementNumChild :exec
+UPDATE PageNode
+SET numchild = numchild + 1
+WHERE path = sqlc.arg(path) AND depth = sqlc.arg(depth)
+RETURNING *;
+
+-- name: DecrementNumChild :exec
+UPDATE PageNode
+SET numchild = numchild - 1
+WHERE path = sqlc.arg(path) AND depth = sqlc.arg(depth)
+RETURNING *;
+
 -- name: DeleteNode :exec
 DELETE FROM PageNode
 WHERE id = sqlc.arg(id);

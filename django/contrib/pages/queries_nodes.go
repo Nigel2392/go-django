@@ -20,7 +20,7 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 	node.Path = buildPathPart(previousRootNodeCount)
 	node.Depth = 0
 
-	id, err := q.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.Path, int64(node.StatusFlags), node.PageID, node.ContentType)
+	id, err := q.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, int64(node.StatusFlags), node.PageID, node.ContentType)
 	if err != nil {
 		return err
 	}
@@ -28,9 +28,11 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 	node.ID = id
 
 	return SignalRootCreated.Send(&PageSignal{
-		Querier: q,
-		Ctx:     ctx,
-		Node:    node,
+		BaseSignal: BaseSignal{
+			Querier: q,
+			Ctx:     ctx,
+		},
+		Node: node,
 	})
 }
 
@@ -60,15 +62,13 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 
 	child.Path = parent.Path + buildPathPart(parent.Numchild)
 	child.Depth = parent.Depth + 1
-
-	var id int64
-	id, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, child.UrlPath, int64(child.StatusFlags), child.PageID, child.ContentType)
+	child.ID, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, child.UrlPath, int64(child.StatusFlags), child.PageID, child.ContentType)
 	if err != nil {
 		return err
 	}
-	child.ID = id
+
 	parent.Numchild++
-	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild, parent.UrlPath, int64(parent.StatusFlags), parent.PageID, parent.ContentType, parent.ID)
+	*parent, err = queries.IncrementNumChild(ctx, parent.Path, parent.Depth)
 	if err != nil {
 		return err
 	}
@@ -78,11 +78,106 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 	}
 
 	return SignalChildCreated.Send(&PageSignal{
-		Querier: q,
-		Ctx:     ctx,
-		Node:    child,
-		PageID:  parent.PageID,
+		BaseSignal: BaseSignal{
+			Querier: q,
+			Ctx:     ctx,
+		},
+		Node:   child,
+		PageID: parent.PageID,
 	})
+}
+
+func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, newParent *models.PageNode) error {
+	if node.Path == "" {
+		return fmt.Errorf("node path must not be empty")
+	}
+
+	if newParent.Path == "" {
+		return fmt.Errorf("new parent path must not be empty")
+	}
+
+	if node.Path == newParent.Path {
+		return fmt.Errorf("node and new parent paths must not be the same")
+	}
+
+	if node.Depth == 0 {
+		return fmt.Errorf("node is a root node")
+	}
+
+	if newParent.Depth == 0 {
+		return fmt.Errorf("new parent is a root node")
+	}
+
+	if node.Path[:len(newParent.Path)] == newParent.Path {
+		return fmt.Errorf("new parent is a descendant of the node")
+	}
+
+	prepped, err := PrepareQuerySet(ctx, q.DB())
+	if err != nil {
+		return err
+	}
+
+	tx, err := prepped.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+
+	var queries = prepped.WithTx(tx)
+	defer tx.Rollback()
+	defer queries.Close()
+
+	oldParentPath, err := ancestorPath(node.Path, 1)
+	if err != nil {
+		return err
+	}
+
+	oldParent, err := queries.GetNodeByPath(ctx, oldParentPath)
+	if err != nil {
+		return err
+	}
+
+	nodes, err := queries.GetDescendants(ctx, node.Path, node.Depth-1)
+	if err != nil {
+		return err
+	}
+
+	var nodesPtr = make([]*models.PageNode, len(nodes))
+	for i, descendant := range nodes {
+		descendant := descendant
+		descendant.Path = newParent.Path + descendant.Path[len(node.Path):]
+		descendant.Depth = newParent.Depth + descendant.Depth - node.Depth
+		nodesPtr[i] = &descendant
+	}
+
+	if err = queries.UpdateNodes(ctx, nodesPtr); err != nil {
+		return err
+	}
+
+	*newParent, err = queries.IncrementNumChild(ctx, newParent.Path, newParent.Depth)
+	if err != nil {
+		return err
+	}
+
+	_, err = queries.DecrementNumChild(ctx, oldParent.Path, oldParent.Depth)
+	if err != nil {
+		return err
+	}
+
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	return SignalNodeMoved.Send(&PageMovedSignal{
+		BaseSignal: BaseSignal{
+			Querier: q,
+			Ctx:     ctx,
+		},
+		Node:      node,
+		Nodes:     nodesPtr,
+		OldParent: &oldParent,
+		NewParent: newParent,
+	})
+
 }
 
 func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (v models.PageNode, err error) {
@@ -118,10 +213,12 @@ func UpdateNode(q models.DBQuerier, ctx context.Context, node *models.PageNode) 
 	}
 
 	return SignalNodeUpdated.Send(&PageSignal{
-		Querier: q,
-		Ctx:     ctx,
-		Node:    node,
-		PageID:  node.PageID,
+		BaseSignal: BaseSignal{
+			Querier: q,
+			Ctx:     ctx,
+		},
+		Node:   node,
+		PageID: node.PageID,
 	})
 }
 
@@ -144,70 +241,55 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 		return err
 	}
 
-	if err = SignalNodeBeforeDelete.Send(&PageSignal{
-		Querier: q,
-		Ctx:     ctx,
-		Node:    &parent,
-		PageID:  id,
-	}); err != nil {
-		return err
-	}
-
-	tx, err := q.BeginTx(ctx, nil)
+	prepped, err := PrepareQuerySet(
+		ctx, q.DB(),
+	)
 	if err != nil {
 		return err
 	}
 
+	tx, err := prepped.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
 	defer tx.Rollback()
+	var queries = prepped.WithTx(tx)
+	defer queries.Close()
 
-	var queries = q.WithTx(tx)
-
-	err = queries.DeleteNode(ctx, id)
+	var descendants []models.PageNode
+	descendants, err = queries.GetDescendants(
+		ctx, path, depth-1,
+	)
 	if err != nil {
 		return err
 	}
 
-	parent.Numchild--
-	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild, parent.UrlPath, int64(parent.StatusFlags), parent.PageID, parent.ContentType, parent.ID)
+	var ids = make([]int64, len(descendants))
+	for i, descendant := range descendants {
+		if err = SignalNodeBeforeDelete.Send(&PageSignal{
+			BaseSignal: BaseSignal{
+				Querier: q,
+				Ctx:     ctx,
+			},
+			Node:   &descendant,
+			PageID: id,
+		}); err != nil {
+			return err
+		}
+		ids[i] = descendant.ID
+	}
+
+	err = queries.DeleteNodes(ctx, ids)
 	if err != nil {
 		return err
 	}
 
-	//if newParent != nil {
-	//	newParent.Numchild++
-	//	err = queries.UpdateNode(ctx, newParent.Title, newParent.Path, newParent.Depth, newParent.Numchild, int64(newParent.StatusFlags), newParent.PageID, newParent.ContentType, newParent.ID)
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	var descendants []models.PageNode
-	//	descendants, err = q.GetDescendants(
-	//		ctx, path, depth,
-	//	)
-	//	if err != nil {
-	//		return err
-	//	}
-	//
-	//	for _, descendant := range descendants {
-	//		descendant.Path = newParent.Path + descendant.Path[len(path):]
-	//		descendant.Depth = newParent.Depth + descendant.Depth - depth
-	//		err = queries.UpdateNodePathAndDepth(
-	//			ctx, descendant.Path, descendant.Depth, descendant.ID,
-	//		)
-	//		if err != nil {
-	//			return err
-	//		}
-	//	}
-	//
-	//	return tx.Commit()
-	//
-	//}
+	parent, err = queries.DecrementNumChild(ctx, parent.Path, parent.Depth)
+	if err != nil {
+		return err
+	}
 
 	return tx.Commit()
-
-	//return queries.DeleteDescendants(
-	//	ctx, path, depth,
-	//)
 }
 
 func AncestorNodes(q models.Querier, ctx context.Context, p string, depth int) ([]models.PageNode, error) {
