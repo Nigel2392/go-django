@@ -3,8 +3,10 @@ package pages
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/pkg/errors"
 )
 
 func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
@@ -104,22 +106,18 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 		return fmt.Errorf("node is a root node")
 	}
 
-	if newParent.Depth == 0 {
-		return fmt.Errorf("new parent is a root node")
-	}
-
-	if node.Path[:len(newParent.Path)] == newParent.Path {
+	if strings.HasPrefix(newParent.Path, node.Path) {
 		return fmt.Errorf("new parent is a descendant of the node")
 	}
 
 	prepped, err := PrepareQuerySet(ctx, q.DB())
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to prepare query set")
 	}
 
 	tx, err := prepped.BeginTx(ctx, nil)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to begin transaction")
 	}
 
 	var queries = prepped.WithTx(tx)
@@ -128,43 +126,44 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 
 	oldParentPath, err := ancestorPath(node.Path, 1)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get old parent path")
 	}
 
 	oldParent, err := queries.GetNodeByPath(ctx, oldParentPath)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get old parent node")
 	}
 
 	nodes, err := queries.GetDescendants(ctx, node.Path, node.Depth-1)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get descendants")
 	}
 
-	var nodesPtr = make([]*models.PageNode, len(nodes))
+	var nodesPtr = make([]*models.PageNode, len(nodes)+1)
+	nodesPtr[0] = node
 	for i, descendant := range nodes {
 		descendant := descendant
-		descendant.Path = newParent.Path + descendant.Path[len(node.Path):]
-		descendant.Depth = newParent.Depth + descendant.Depth - node.Depth
-		nodesPtr[i] = &descendant
+		descendant.Path = newParent.Path + descendant.Path[node.Depth*STEP_LEN:]
+		descendant.Depth = (newParent.Depth + descendant.Depth + 1) - node.Depth
+		nodesPtr[i+1] = &descendant
 	}
 
 	if err = queries.UpdateNodes(ctx, nodesPtr); err != nil {
-		return err
+		return errors.Wrap(err, "failed to update descendants")
 	}
 
 	*newParent, err = queries.IncrementNumChild(ctx, newParent.Path, newParent.Depth)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to increment new parent numchild")
 	}
 
 	_, err = queries.DecrementNumChild(ctx, oldParent.Path, oldParent.Depth)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to decrement old parent numchild")
 	}
 
 	if err = tx.Commit(); err != nil {
-		return err
+		return errors.Wrap(err, "failed to commit transaction")
 	}
 
 	return SignalNodeMoved.Send(&PageMovedSignal{

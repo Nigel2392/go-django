@@ -28,7 +28,7 @@ func init() {
 	var (
 		dbEngine = getEnv("DB_ENGINE", "sqlite3")
 		dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
-		// dbURL    = getEnv("DB_URL", "test.sqlite3.db")
+		// dbURL = getEnv("DB_URL", "test.sqlite3.db")
 	)
 
 	var err error
@@ -209,6 +209,9 @@ func TestPageNode(t *testing.T) {
 		}
 		subChildNode = models.PageNode{
 			Title: "SubChild",
+		}
+		subChildNode2 = models.PageNode{
+			Title: "SubChild2",
 		}
 		childSiblingSubChildNode = models.PageNode{
 			Title: "ChildSiblingSubChild",
@@ -461,6 +464,7 @@ func TestPageNode(t *testing.T) {
 					}
 				})
 			})
+
 		})
 
 		t.Run("AddSibling", func(t *testing.T) {
@@ -662,6 +666,9 @@ func TestPageNode(t *testing.T) {
 		if err := pages.CreateRootNode(querier, queryCtx, node); err != nil {
 			t.Error(err)
 		}
+		if len(node.Path) != pages.STEP_LEN {
+			t.Errorf("expected Path of length %d, got %d", pages.STEP_LEN, len(node.Path))
+		}
 	}
 
 	for i, node := range nodesToUpdate {
@@ -685,6 +692,63 @@ func TestPageNode(t *testing.T) {
 			if updatedNode.Title != node.Title {
 				t.Errorf("expected %s, got %s", node.Title, updatedNode.Title)
 			}
+		}
+	})
+
+	t.Run("MoveNode", func(t *testing.T) {
+
+		if err := pages.CreateChildNode(querier, queryCtx, &childNode, &subChildNode2); err != nil {
+			t.Error(err)
+			return
+		}
+
+		var err = pages.MoveNode(querier, queryCtx, &childNode, nodesToUpdate[0])
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		sub, err := querier.GetNodeByID(queryCtx, childNode.ID)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if sub.Path != "002001" {
+			t.Errorf("expected Path 002001, got %s", sub.Path)
+		}
+
+		if sub.Depth != 1 {
+			t.Errorf("expected Depth 1, got %d", sub.Depth)
+		}
+
+		childNode = sub
+
+		subSub, err := querier.GetNodeByID(queryCtx, subChildNode2.ID)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if subSub.Path != "002001001" {
+			t.Errorf("expected Path 002001001, got %s", subSub.Path)
+		}
+
+		if subSub.Depth != 2 {
+			t.Errorf("expected Depth 2, got %d", subSub.Depth)
+		}
+
+		if sub.Numchild != 1 {
+			t.Errorf("expected Numchild 1, got %d", sub.Numchild)
+		}
+
+		parentNode, err := pages.ParentNode(querier, queryCtx, subSub.Path, int(subSub.Depth))
+		if err != nil {
+			t.Error(err)
+			return
+		}
+
+		if !nodesEqual(&parentNode, &sub) {
+			t.Errorf("expected %+v, got %+v", sub, parentNode)
 		}
 	})
 
