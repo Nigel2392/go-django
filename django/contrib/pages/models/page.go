@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"time"
+
+	"github.com/Nigel2392/django/core/attrs"
 )
 
 type StatusFlag int64
@@ -24,13 +26,13 @@ func (f StatusFlag) Is(flag StatusFlag) bool {
 }
 
 type PageNode struct {
-	ID          int64     `json:"id"`
+	ID          int64     `json:"id" attrs:"primary;readonly"`
 	Title       string    `json:"title"`
 	Path        string    `json:"path"`
 	Depth       int64     `json:"depth"`
 	Numchild    int64     `json:"numchild"`
 	UrlPath     string    `json:"url_path"`
-	StatusFlags int64     `json:"status_flags"`
+	StatusFlags int64     `json:"status_flags" attrs:"null;blank"`
 	PageID      int64     `json:"page_id"`
 	ContentType string    `json:"content_type"`
 	CreatedAt   time.Time `json:"created_at"`
@@ -39,6 +41,22 @@ type PageNode struct {
 
 func (n *PageNode) IsRoot() bool {
 	return n.Depth == 0
+}
+
+func (n *PageNode) FieldDefs() attrs.Definitions {
+	return attrs.AutoDefinitions(n,
+		"ID",
+		"Title",
+		"Path",
+		"Depth",
+		"Numchild",
+		"UrlPath",
+		"StatusFlags",
+		"PageID",
+		"ContentType",
+		"CreatedAt",
+		"UpdatedAt",
+	)
 }
 
 type DBTX interface {
@@ -68,6 +86,7 @@ type Querier interface {
 	GetDescendants(ctx context.Context, path interface{}, depth int64) ([]PageNode, error)
 	GetNodeByID(ctx context.Context, id int64) (PageNode, error)
 	GetNodeByPath(ctx context.Context, path string) (PageNode, error)
+	GetNodesByDepth(ctx context.Context, depth int64) ([]PageNode, error)
 	GetNodesByIDs(ctx context.Context, id []int64) ([]PageNode, error)
 	GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]PageNode, error)
 	GetNodesByTypeHash(ctx context.Context, contentType string) ([]PageNode, error)

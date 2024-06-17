@@ -197,6 +197,24 @@ func TestPageRegistry(t *testing.T) {
 }
 
 func TestPageNode(t *testing.T) {
+	pages.QuerySet = func() models.DBQuerier {
+		var driverType = sqlDB.Driver()
+		var backend, ok = models.GetBackend(driverType)
+		if !ok {
+			panic(fmt.Sprintf("no backend configured for %T", driverType))
+		}
+
+		var qs, err = backend.NewQuerySet(sqlDB)
+		if err != nil {
+			panic(fmt.Sprintf("failed to initialize queryset for backend %T", backend))
+		}
+
+		return &pages.Querier{
+			Querier: qs,
+			Db:      sqlDB,
+		}
+	}
+
 	var (
 		rootNode = models.PageNode{
 			Title: "Root",
@@ -217,7 +235,7 @@ func TestPageNode(t *testing.T) {
 			Title: "ChildSiblingSubChild",
 		}
 		queryCtx = context.Background()
-		querier  = pages.QuerySet(sqlDB)
+		querier  = pages.QuerySet()
 	)
 
 	var (

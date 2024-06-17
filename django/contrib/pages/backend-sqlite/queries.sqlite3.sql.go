@@ -309,6 +309,47 @@ func (q *Queries) GetNodeByPath(ctx context.Context, path string) (models.PageNo
 	return i, err
 }
 
+const getNodesByDepth = `-- name: GetNodesByDepth :many
+SELECT   id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
+FROM     PageNode
+WHERE    depth = ?1
+`
+
+func (q *Queries) GetNodesByDepth(ctx context.Context, depth int64) ([]models.PageNode, error) {
+	rows, err := q.query(ctx, q.getNodesByDepthStmt, getNodesByDepth, depth)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []models.PageNode
+	for rows.Next() {
+		var i models.PageNode
+		if err := rows.Scan(
+			&i.ID,
+			&i.Title,
+			&i.Path,
+			&i.Depth,
+			&i.Numchild,
+			&i.UrlPath,
+			&i.StatusFlags,
+			&i.PageID,
+			&i.ContentType,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getNodesByIDs = `-- name: GetNodesByIDs :many
 SELECT   id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode

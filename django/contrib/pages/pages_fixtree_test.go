@@ -1,6 +1,7 @@
 package pages_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -316,4 +317,8 @@ func TestFixTree(t *testing.T) {
 			}
 		})
 	}
+
+	var d, _ = json.MarshalIndent(node, "", "  ")
+
+	t.Logf("%s", d)
 }

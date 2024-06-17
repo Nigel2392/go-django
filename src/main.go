@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/django/contrib/auth"
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
 	"github.com/Nigel2392/django/contrib/blocks"
+	"github.com/Nigel2392/django/contrib/pages"
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/django/contrib/session"
 	"github.com/Nigel2392/django/core/attrs"
@@ -25,6 +26,7 @@ import (
 	"github.com/Nigel2392/mux/middleware"
 	"github.com/Nigel2392/src/core"
 
+	_ "github.com/Nigel2392/django/contrib/pages/backend-sqlite"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -50,6 +52,7 @@ func main() {
 			session.NewAppConfig,
 			auth.NewAppConfig,
 			admin.NewAppConfig,
+			pages.NewAppConfig,
 			auditlogs.NewAppConfig,
 			core.NewAppConfig,
 			blocks.NewAppConfig,
