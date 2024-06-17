@@ -52,6 +52,15 @@ type TestPage struct {
 	Description string
 }
 
+func nodesEqual(a, b *models.PageNode) bool {
+	pageARef := *a
+	pageBRef := *b
+	pageARef.CreatedAt = pageBRef.CreatedAt
+	pageARef.UpdatedAt = pageBRef.UpdatedAt
+	return pageARef == pageBRef
+
+}
+
 func (t *TestPage) ID() int64 {
 	return int64(t.Identifier)
 }
@@ -139,9 +148,9 @@ func TestPageRegistry(t *testing.T) {
 
 		t.Run("SpecificInstance", func(t *testing.T) {
 			var node = models.PageNode{
-				Title:    "Test Page",
-				PageID:   69,
-				Typehash: cType.TypeName(),
+				Title:       "Test Page",
+				PageID:      69,
+				ContentType: cType.TypeName(),
 			}
 			var instance, err = pages.Specific(context.Background(), node)
 			if err != nil {
@@ -241,8 +250,8 @@ func TestPageNode(t *testing.T) {
 			t.Errorf("expected PageID 0, got %d", rootNode.PageID)
 		}
 
-		if rootNode.Typehash != "" {
-			t.Errorf("expected Typehash empty, got %s", rootNode.Typehash)
+		if rootNode.ContentType != "" {
+			t.Errorf("expected ContentType empty, got %s", rootNode.ContentType)
 		}
 
 		t.Run("AddChild", func(t *testing.T) {
@@ -276,8 +285,8 @@ func TestPageNode(t *testing.T) {
 				t.Errorf("expected PageID 0, got %d", childNode.PageID)
 			}
 
-			if childNode.Typehash != "" {
-				t.Errorf("expected Typehash empty, got %s", childNode.Typehash)
+			if childNode.ContentType != "" {
+				t.Errorf("expected ContentType empty, got %s", childNode.ContentType)
 			}
 
 			if rootNode.Numchild != 1 {
@@ -285,7 +294,7 @@ func TestPageNode(t *testing.T) {
 			}
 
 			t.Run("GetChildren", func(t *testing.T) {
-				var children, err = querier.GetChildren(queryCtx, rootNode.Path, rootNode.Depth)
+				var children, err = querier.GetChildNodes(queryCtx, rootNode.Path, rootNode.Depth)
 				if err != nil {
 					t.Error(err)
 					return
@@ -296,7 +305,7 @@ func TestPageNode(t *testing.T) {
 					return
 				}
 
-				if children[0] != childNode {
+				if !nodesEqual(&children[0], &childNode) {
 					t.Errorf("expected %+v, got %+v", childNode, children[0])
 					return
 				}
@@ -341,12 +350,12 @@ func TestPageNode(t *testing.T) {
 						return
 					}
 
-					if ancestors[0] != rootNode {
+					if !nodesEqual(&ancestors[0], &rootNode) {
 						t.Errorf("expected %+v, got %+v", rootNode, ancestors[0])
 						return
 					}
 
-					if ancestors[1] != childNode {
+					if !nodesEqual(&ancestors[1], &childNode) {
 						t.Errorf("expected %+v, got %+v", childNode, ancestors[1])
 						return
 					}
@@ -364,12 +373,12 @@ func TestPageNode(t *testing.T) {
 						return
 					}
 
-					if descendants[0] != childNode {
+					if !nodesEqual(&descendants[0], &childNode) {
 						t.Errorf("expected %+v, got %+v", childNode, descendants[0])
 						return
 					}
 
-					if descendants[1] != subChildNode {
+					if !nodesEqual(&descendants[1], &subChildNode) {
 						t.Errorf("expected %+v, got %+v", subChildNode, descendants[1])
 						return
 					}
@@ -382,7 +391,7 @@ func TestPageNode(t *testing.T) {
 						return
 					}
 
-					if parent != childNode {
+					if !nodesEqual(&parent, &childNode) {
 						t.Errorf("expected %+v, got %+v", childNode, parent)
 					}
 				})
@@ -411,7 +420,7 @@ func TestPageNode(t *testing.T) {
 						return
 					}
 
-					if descendants[0] != childNode {
+					if !nodesEqual(&descendants[0], &childNode) {
 						t.Errorf("expected %+v, got %+v", childNode, descendants[0])
 						return
 					}
@@ -455,8 +464,8 @@ func TestPageNode(t *testing.T) {
 				t.Errorf("expected PageID 0, got %d", childSiblingNode.PageID)
 			}
 
-			if childSiblingNode.Typehash != "" {
-				t.Errorf("expected Typehash empty, got %s", childSiblingNode.Typehash)
+			if childSiblingNode.ContentType != "" {
+				t.Errorf("expected ContentType empty, got %s", childSiblingNode.ContentType)
 			}
 
 			if rootNode.Numchild != 2 {
@@ -464,7 +473,7 @@ func TestPageNode(t *testing.T) {
 			}
 
 			t.Run("GetChildren", func(t *testing.T) {
-				var children, err = querier.GetChildren(queryCtx, rootNode.Path, rootNode.Depth)
+				var children, err = querier.GetChildNodes(queryCtx, rootNode.Path, rootNode.Depth)
 				if err != nil {
 					t.Error(err)
 					return
@@ -475,7 +484,7 @@ func TestPageNode(t *testing.T) {
 					return
 				}
 
-				if children[1] != childSiblingNode {
+				if !nodesEqual(&children[1], &childSiblingNode) {
 					t.Errorf("expected %+v, got %+v", childSiblingNode, children[1])
 					return
 				}
@@ -520,12 +529,12 @@ func TestPageNode(t *testing.T) {
 						return
 					}
 
-					if ancestors[0] != rootNode {
+					if !nodesEqual(&ancestors[0], &rootNode) {
 						t.Errorf("expected %+v, got %+v", rootNode, ancestors[0])
 						return
 					}
 
-					if ancestors[1] != childSiblingNode {
+					if !nodesEqual(&ancestors[1], &childSiblingNode) {
 						t.Errorf("expected %+v, got %+v", childSiblingNode, ancestors[1])
 						return
 					}
@@ -543,12 +552,12 @@ func TestPageNode(t *testing.T) {
 						return
 					}
 
-					if descendants[1] != childSiblingNode {
+					if !nodesEqual(&descendants[1], &childSiblingNode) {
 						t.Errorf("expected %+v, got %+v", childSiblingNode, descendants[1])
 						return
 					}
 
-					if descendants[2] != childSiblingSubChildNode {
+					if !nodesEqual(&descendants[2], &childSiblingSubChildNode) {
 						t.Errorf("expected %+v, got %+v", childSiblingSubChildNode, descendants[2])
 						return
 					}
@@ -576,9 +585,9 @@ func TestPageNode(t *testing.T) {
 			t.Error(err)
 		}
 		node.PageID = page.ID()
-		node.Typehash = pages.DefinitionForObject(page).ContentType().TypeName()
+		node.ContentType = pages.DefinitionForObject(page).ContentType().TypeName()
 
-		if err := querier.UpdateNode(queryCtx, node.Title, node.Path, node.Depth, node.Numchild, int64(node.StatusFlags), node.PageID, node.Typehash, node.ID); err != nil {
+		if err := querier.UpdateNode(queryCtx, node.Title, node.Path, node.Depth, node.Numchild, int64(node.StatusFlags), node.PageID, node.ContentType, node.ID); err != nil {
 			t.Error(err)
 		}
 

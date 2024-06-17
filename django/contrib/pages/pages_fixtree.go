@@ -23,8 +23,4 @@ package pages
 		- Loop over the tree and fix the path of each node
 			* This can be done by sorting the children and then simply using buildPathPart(forLoopIndex) to generate the correct path for each child
 
-
-
-
-
 */

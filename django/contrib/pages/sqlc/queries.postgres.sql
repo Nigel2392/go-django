@@ -6,7 +6,7 @@ INSERT INTO PageNode (
     numchild,
     status_flags,
     page_id,
-    typeHash
+    content_type
 ) VALUES (
     sqlc.arg(title),
     sqlc.arg(path),
@@ -14,53 +14,60 @@ INSERT INTO PageNode (
     sqlc.arg(numchild),
     sqlc.arg(status_flags),
     sqlc.arg(page_id),
-    sqlc.arg(typeHash)
+    sqlc.arg(content_type)
 );
 
--- name: GetNodeByID :one
+-- name: AllNodes :many
 SELECT *
-FROM PageNode
-WHERE id = sqlc.arg(id);
+FROM     PageNode
+ORDER BY path ASC
+LIMIT    sqlc.arg(node_limit)
+OFFSET   sqlc.arg(node_offset);
+
+-- name: GetNodeByID :one
+SELECT   *
+FROM     PageNode
+WHERE    id = sqlc.arg(id);
 
 -- name: GetNodesByIDs :many
-SELECT *
-FROM PageNode
-WHERE id IN (sqlc.slice(id));
+SELECT   *
+FROM     PageNode
+WHERE    id IN (sqlc.slice(id));
 
 -- name: GetNodesByPageIDs :many
-SELECT *
-FROM PageNode
-WHERE page_id IN (sqlc.slice(page_id));
+SELECT   *
+FROM     PageNode
+WHERE    page_id IN (sqlc.slice(page_id));
 
 -- name: GetNodesByTypeHash :many
-SELECT *
-FROM PageNode
-WHERE typeHash = sqlc.arg(typeHash);
+SELECT   *
+FROM     PageNode
+WHERE    content_type = sqlc.arg(content_type);
 
 -- name: GetNodesByTypeHashes :many
-SELECT *
-FROM PageNode
-WHERE typeHash IN (sqlc.slice(typeHash));
+SELECT   *
+FROM     PageNode
+WHERE    content_type IN (sqlc.slice(content_type));
 
 -- name: GetNodeByPath :one
-SELECT *
-FROM PageNode
-WHERE path = sqlc.arg(path);
+SELECT   *
+FROM     PageNode
+WHERE    path = sqlc.arg(path);
 
--- name: GetNodeForPath :many
-SELECT *
-FROM PageNode
-WHERE path IN (sqlc.slice(path));
+-- name: GetNodesForPaths :many
+SELECT   *
+FROM     PageNode
+WHERE    path IN (sqlc.slice(path));
 
 -- name: GetChildNodes :many
-SELECT *
-FROM PageNode
-WHERE path LIKE CONCAT(sqlc.arg(path), '%') AND depth = sqlc.arg(depth) + 1;
+SELECT   *
+FROM     PageNode
+WHERE    path LIKE CONCAT(sqlc.arg(path), '%') AND depth = sqlc.arg(depth) + 1;
 
 -- name: GetDescendants :many
-SELECT *
-FROM PageNode
-WHERE path LIKE CONCAT(sqlc.arg(path), '%') AND depth > sqlc.arg(depth);
+SELECT   *
+FROM     PageNode
+WHERE    path LIKE CONCAT(sqlc.arg(path), '%') AND depth > sqlc.arg(depth);
 
 -- name: UpdateNode :exec
 UPDATE PageNode
@@ -70,18 +77,19 @@ SET title = sqlc.arg(title),
     numchild = sqlc.arg(numchild), 
     status_flags = sqlc.arg(status_flags), 
     page_id = sqlc.arg(page_id), 
-    typeHash = sqlc.arg(typeHash)
+    content_type = sqlc.arg(content_type),
+    updated_at = CURRENT_TIMESTAMP
 WHERE id = sqlc.arg(id);
 
 -- name: UpdateNodePathAndDepth :exec
-UPDATE PageNode
-SET path = sqlc.arg(path), depth = sqlc.arg(depth)
-WHERE id = sqlc.arg(id);
+UPDATE   PageNode
+SET      path = sqlc.arg(path), depth = sqlc.arg(depth)
+WHERE    id = sqlc.arg(id);
 
 -- name: UpdateNodeStatusFlags :exec
-UPDATE PageNode
-SET status_flags = sqlc.arg(status_flags)
-WHERE id = sqlc.arg(id);
+UPDATE   PageNode
+SET      status_flags = sqlc.arg(status_flags)
+WHERE    id = sqlc.arg(id);
 
 -- name: DeleteNode :exec
 DELETE FROM PageNode

@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"database/sql"
+	"time"
 )
 
 type StatusFlag int64
@@ -23,23 +24,20 @@ func (f StatusFlag) Is(flag StatusFlag) bool {
 }
 
 type PageNode struct {
-	ID          int64      `json:"id"`
-	Title       string     `json:"title"`
-	Path        string     `json:"path"`
-	Depth       int64      `json:"depth"`
-	Numchild    int64      `json:"numchild"`
-	StatusFlags StatusFlag `json:"status_flags"`
-	PageID      int64      `json:"page_id"`
-	Typehash    string     `json:"typehash"`
+	ID          int64     `json:"id"`
+	Title       string    `json:"title"`
+	Path        string    `json:"path"`
+	Depth       int64     `json:"depth"`
+	Numchild    int64     `json:"numchild"`
+	StatusFlags int64     `json:"status_flags"`
+	PageID      int64     `json:"page_id"`
+	ContentType string    `json:"content_type"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
 }
 
 func (n *PageNode) IsRoot() bool {
 	return n.Depth == 0
-}
-
-type DBQuerier interface {
-	Querier
-	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 }
 
 type DBTX interface {
@@ -49,16 +47,28 @@ type DBTX interface {
 	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
 }
 
+type DBQuerier interface {
+	Querier
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+}
+
 type Querier interface {
 	WithTx(tx *sql.Tx) Querier
+	AllNodes(ctx context.Context, nodeOffset int32, nodeLimit int32) ([]PageNode, error)
+	DeleteDescendants(ctx context.Context, path interface{}, depth int64) error
 	DeleteNode(ctx context.Context, id int64) error
-	GetChildren(ctx context.Context, path interface{}, depth interface{}) ([]PageNode, error)
+	DeleteNodes(ctx context.Context, id []int64) error
+	GetChildNodes(ctx context.Context, path interface{}, depth interface{}) ([]PageNode, error)
 	GetDescendants(ctx context.Context, path interface{}, depth int64) ([]PageNode, error)
-	GetForPaths(ctx context.Context, path []string) ([]PageNode, error)
 	GetNodeByID(ctx context.Context, id int64) (PageNode, error)
 	GetNodeByPath(ctx context.Context, path string) (PageNode, error)
-	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, statusFlags int64, pageID int64, typehash string) (int64, error)
-	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, statusFlags int64, pageID int64, typehash string, iD int64) error
+	GetNodesByIDs(ctx context.Context, id []int64) ([]PageNode, error)
+	GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]PageNode, error)
+	GetNodesByTypeHash(ctx context.Context, contentType string) ([]PageNode, error)
+	GetNodesByTypeHashes(ctx context.Context, contentType []string) ([]PageNode, error)
+	GetNodesForPaths(ctx context.Context, path []string) ([]PageNode, error)
+	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, statusFlags int64, pageID int64, contentType string) (int64, error)
+	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, statusFlags int64, pageID int64, contentType string, iD int64) error
 	UpdateNodePathAndDepth(ctx context.Context, path string, depth int64, iD int64) error
 	UpdateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error
 }

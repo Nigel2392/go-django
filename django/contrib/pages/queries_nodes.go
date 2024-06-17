@@ -15,7 +15,7 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 	node.Path = buildPathPart(0)
 	node.Depth = 0
 
-	id, err := q.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, int64(node.StatusFlags), node.PageID, node.Typehash)
+	id, err := q.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, int64(node.StatusFlags), node.PageID, node.ContentType)
 	if err != nil {
 		return err
 	}
@@ -48,13 +48,13 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 	child.Depth = parent.Depth + 1
 
 	var id int64
-	id, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, int64(child.StatusFlags), child.PageID, child.Typehash)
+	id, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, int64(child.StatusFlags), child.PageID, child.ContentType)
 	if err != nil {
 		return err
 	}
 	child.ID = id
 	parent.Numchild++
-	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild, int64(parent.StatusFlags), parent.PageID, parent.Typehash, parent.ID)
+	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild, int64(parent.StatusFlags), parent.PageID, parent.ContentType, parent.ID)
 	if err != nil {
 		return err
 	}
@@ -112,14 +112,14 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 	}
 
 	parent.Numchild--
-	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild, int64(parent.StatusFlags), parent.PageID, parent.Typehash, parent.ID)
+	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild, int64(parent.StatusFlags), parent.PageID, parent.ContentType, parent.ID)
 	if err != nil {
 		return err
 	}
 
 	//if newParent != nil {
 	//	newParent.Numchild++
-	//	err = queries.UpdateNode(ctx, newParent.Title, newParent.Path, newParent.Depth, newParent.Numchild, int64(newParent.StatusFlags), newParent.PageID, newParent.Typehash, newParent.ID)
+	//	err = queries.UpdateNode(ctx, newParent.Title, newParent.Path, newParent.Depth, newParent.Numchild, int64(newParent.StatusFlags), newParent.PageID, newParent.ContentType, newParent.ID)
 	//	if err != nil {
 	//		return err
 	//	}
@@ -169,7 +169,7 @@ func AncestorNodes(q models.Querier, ctx context.Context, p string, depth int) (
 		}
 		paths[i] = path
 	}
-	return q.GetForPaths(
+	return q.GetNodesForPaths(
 		ctx, paths,
 	)
 }

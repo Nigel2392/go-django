@@ -42,7 +42,7 @@ func (p *pageRegistry) DefinitionForObject(page Page) *PageDefinition {
 }
 
 func (p *pageRegistry) SpecificInstance(ctx context.Context, node models.PageNode) (Page, error) {
-	var typeName = node.Typehash
+	var typeName = node.ContentType
 	var definition, exists = p.registry[typeName]
 	if !exists {
 		return nil, nil
