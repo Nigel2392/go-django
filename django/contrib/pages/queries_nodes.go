@@ -12,29 +12,43 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 		return fmt.Errorf("node path must be empty")
 	}
 
-	node.Path = buildPathPart(0)
+	previousRootNodeCount, err := q.CountRootNodes(ctx)
+	if err != nil {
+		return err
+	}
+
+	node.Path = buildPathPart(previousRootNodeCount)
 	node.Depth = 0
 
-	id, err := q.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, int64(node.StatusFlags), node.PageID, node.ContentType)
+	id, err := q.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.Path, int64(node.StatusFlags), node.PageID, node.ContentType)
 	if err != nil {
 		return err
 	}
 
 	node.ID = id
 
-	return nil
+	return SignalRootCreated.Send(&PageSignal{
+		Querier: q,
+		Ctx:     ctx,
+		Node:    node,
+	})
 }
 
 func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *models.PageNode) error {
 
-	var tx, err = q.BeginTx(ctx, nil)
+	var prepped, err = PrepareQuerySet(ctx, q.DB())
 	if err != nil {
 		return err
 	}
 
-	defer tx.Rollback()
+	tx, err := prepped.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
 
-	var queries = q.WithTx(tx)
+	var queries = prepped.WithTx(tx)
+	defer tx.Rollback()
+	defer queries.Close()
 
 	if parent.Path == "" {
 		return fmt.Errorf("parent path must not be empty")
@@ -48,18 +62,27 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 	child.Depth = parent.Depth + 1
 
 	var id int64
-	id, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, int64(child.StatusFlags), child.PageID, child.ContentType)
+	id, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, child.UrlPath, int64(child.StatusFlags), child.PageID, child.ContentType)
 	if err != nil {
 		return err
 	}
 	child.ID = id
 	parent.Numchild++
-	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild, int64(parent.StatusFlags), parent.PageID, parent.ContentType, parent.ID)
+	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild, parent.UrlPath, int64(parent.StatusFlags), parent.PageID, parent.ContentType, parent.ID)
 	if err != nil {
 		return err
 	}
 
-	return tx.Commit()
+	if err = tx.Commit(); err != nil {
+		return err
+	}
+
+	return SignalChildCreated.Send(&PageSignal{
+		Querier: q,
+		Ctx:     ctx,
+		Node:    child,
+		PageID:  parent.PageID,
+	})
 }
 
 func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (v models.PageNode, err error) {
@@ -76,6 +99,30 @@ func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (
 	return q.GetNodeByPath(
 		ctx, parentPath,
 	)
+}
+
+func UpdateNode(q models.DBQuerier, ctx context.Context, node *models.PageNode) error {
+	if node.Path == "" {
+		return fmt.Errorf("node path must not be empty")
+	}
+
+	if node.ID == 0 {
+		return fmt.Errorf("node id must not be zero")
+	}
+
+	var err = q.UpdateNode(
+		ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, int64(node.StatusFlags), node.PageID, node.ContentType, node.ID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return SignalNodeUpdated.Send(&PageSignal{
+		Querier: q,
+		Ctx:     ctx,
+		Node:    node,
+		PageID:  node.PageID,
+	})
 }
 
 func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, depth int64) error { //, newParent *models.PageNode) error {
@@ -97,6 +144,15 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 		return err
 	}
 
+	if err = SignalNodeBeforeDelete.Send(&PageSignal{
+		Querier: q,
+		Ctx:     ctx,
+		Node:    &parent,
+		PageID:  id,
+	}); err != nil {
+		return err
+	}
+
 	tx, err := q.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -112,7 +168,7 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 	}
 
 	parent.Numchild--
-	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild, int64(parent.StatusFlags), parent.PageID, parent.ContentType, parent.ID)
+	err = queries.UpdateNode(ctx, parent.Title, parent.Path, parent.Depth, parent.Numchild, parent.UrlPath, int64(parent.StatusFlags), parent.PageID, parent.ContentType, parent.ID)
 	if err != nil {
 		return err
 	}
@@ -147,11 +203,7 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 	//
 	//}
 
-	if err = tx.Commit(); err != nil {
-		return err
-	}
-
-	return nil
+	return tx.Commit()
 
 	//return queries.DeleteDescendants(
 	//	ctx, path, depth,

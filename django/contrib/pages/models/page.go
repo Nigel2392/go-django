@@ -29,6 +29,7 @@ type PageNode struct {
 	Path        string    `json:"path"`
 	Depth       int64     `json:"depth"`
 	Numchild    int64     `json:"numchild"`
+	UrlPath     string    `json:"url_path"`
 	StatusFlags int64     `json:"status_flags"`
 	PageID      int64     `json:"page_id"`
 	ContentType string    `json:"content_type"`
@@ -49,12 +50,16 @@ type DBTX interface {
 
 type DBQuerier interface {
 	Querier
+	DB() *sql.DB
 	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
 }
 
 type Querier interface {
+	Close() error
 	WithTx(tx *sql.Tx) Querier
 	AllNodes(ctx context.Context, nodeOffset int32, nodeLimit int32) ([]PageNode, error)
+	CountNodes(ctx context.Context) (int64, error)
+	CountRootNodes(ctx context.Context) (int64, error)
 	DeleteDescendants(ctx context.Context, path interface{}, depth int64) error
 	DeleteNode(ctx context.Context, id int64) error
 	DeleteNodes(ctx context.Context, id []int64) error
@@ -67,8 +72,8 @@ type Querier interface {
 	GetNodesByTypeHash(ctx context.Context, contentType string) ([]PageNode, error)
 	GetNodesByTypeHashes(ctx context.Context, contentType []string) ([]PageNode, error)
 	GetNodesForPaths(ctx context.Context, path []string) ([]PageNode, error)
-	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, statusFlags int64, pageID int64, contentType string) (int64, error)
-	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, statusFlags int64, pageID int64, contentType string, iD int64) error
+	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, url_path string, statusFlags int64, pageID int64, contentType string) (int64, error)
+	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, url_path string, statusFlags int64, pageID int64, contentType string, iD int64) error
 	UpdateNodePathAndDepth(ctx context.Context, path string, depth int64, iD int64) error
 	UpdateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error
 }

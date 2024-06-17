@@ -6,11 +6,11 @@ sql:
     gen:
       go:
         package: "models_mysql"
-        out: "../models-mysql"
+        out: "../models-merge"
         emit_json_tags: true
         emit_prepared_queries: true
         emit_interface: true
-        query_parameter_limit: 8
+        query_parameter_limit: 11
         overrides:
           - db_type: "bigint"
             go_type:
@@ -30,11 +30,11 @@ sql:
     gen:
       go:
         package: "models_sqlite"
-        out: "../models-sqlite"
+        out: "../models-merge"
         emit_json_tags: true
         emit_prepared_queries: true
         emit_interface: true
-        query_parameter_limit: 8
+        query_parameter_limit: 11
         overrides:
           - db_type: "bigint"
             go_type:
@@ -54,12 +54,12 @@ sql:
     gen:
       go:
         package: "models_postgres"
-        out: "../models-postgres"
+        out: "../models-merge"
         # sql_package: "pgx/v5"
         emit_json_tags: true
         emit_prepared_queries: true
         emit_interface: true
-        query_parameter_limit: 8
+        query_parameter_limit: 11
         overrides:
           - db_type: "bigint"
             go_type:

@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/Nigel2392/go-signals"
 )
 
 type pageRegistry struct {
@@ -27,6 +28,24 @@ func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
 	var typeName = contentType.TypeName()
 	if _, exists := p.registry[typeName]; exists {
 		panic("pages: RegisterPageDefinition called twice for " + typeName)
+	}
+
+	if definition.OnReferenceUpdate != nil {
+		SignalNodeUpdated.Listen(func(s signals.Signal[*PageSignal], ps *PageSignal) error {
+			if ps.Node.ContentType == typeName {
+				return definition.OnReferenceUpdate(ps.Ctx, *ps.Node, ps.PageID)
+			}
+			return nil
+		})
+	}
+
+	if definition.OnReferenceBeforeDelete != nil {
+		SignalNodeBeforeDelete.Listen(func(s signals.Signal[*PageSignal], ps *PageSignal) error {
+			if ps.Node.ContentType == typeName {
+				return definition.OnReferenceBeforeDelete(ps.Ctx, *ps.Node, ps.PageID)
+			}
+			return nil
+		})
 	}
 
 	p.registry[typeName] = definition

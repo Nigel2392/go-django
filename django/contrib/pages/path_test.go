@@ -89,7 +89,7 @@ func TestPath(t *testing.T) {
 	})
 
 	for _, test := range ancestorPathTests {
-		t.Run(fmt.Sprintf("AncestorPath(%s, %d)", test.path, test.numAncestors), func(t *testing.T) {
+		t.Run(fmt.Sprintf("AncestorPath(%s-%d)", test.path, test.numAncestors), func(t *testing.T) {
 			var actualPath string
 			var err error
 			actualPath, err = ancestorPath(test.path, test.numAncestors)

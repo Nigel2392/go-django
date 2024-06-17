@@ -4,6 +4,7 @@ INSERT INTO PageNode (
     path,
     depth,
     numchild,
+    url_path,
     status_flags,
     page_id,
     content_type
@@ -12,6 +13,7 @@ INSERT INTO PageNode (
     sqlc.arg(path),
     sqlc.arg(depth),
     sqlc.arg(numchild),
+    sqlc.arg(url_path),
     sqlc.arg(status_flags),
     sqlc.arg(page_id),
     sqlc.arg(content_type)
@@ -23,6 +25,15 @@ FROM     PageNode
 ORDER BY path ASC
 LIMIT    sqlc.arg(node_limit)
 OFFSET   sqlc.arg(node_offset);
+
+-- name: CountRootNodes :one
+SELECT COUNT(*)
+FROM   PageNode
+WHERE  depth = 0;
+
+-- name: CountNodes :one
+SELECT COUNT(*)
+FROM   PageNode;
 
 -- name: GetNodeByID :one
 SELECT   *
@@ -74,7 +85,8 @@ UPDATE PageNode
 SET title = sqlc.arg(title),
     path = sqlc.arg(path),
     depth = sqlc.arg(depth), 
-    numchild = sqlc.arg(numchild), 
+    numchild = sqlc.arg(numchild),
+    url_path = sqlc.arg(url_path),
     status_flags = sqlc.arg(status_flags), 
     page_id = sqlc.arg(page_id), 
     content_type = sqlc.arg(content_type),

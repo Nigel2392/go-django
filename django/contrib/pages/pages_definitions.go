@@ -7,8 +7,10 @@ import (
 )
 
 type PageDefinition struct {
-	PageObject SaveablePage
-	GetForID   func(ctx context.Context, ref models.PageNode, id int64) (SaveablePage, error)
+	PageObject              Page
+	GetForID                func(ctx context.Context, ref models.PageNode, id int64) (Page, error)
+	OnReferenceUpdate       func(ctx context.Context, ref models.PageNode, id int64) error
+	OnReferenceBeforeDelete func(ctx context.Context, ref models.PageNode, id int64) error
 }
 
 func (p *PageDefinition) ContentType() *ContentType {

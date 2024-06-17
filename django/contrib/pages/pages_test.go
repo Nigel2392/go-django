@@ -9,6 +9,7 @@ import (
 
 	"github.com/Nigel2392/django/contrib/pages"
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/Nigel2392/go-signals"
 )
 
 var sqlDB *sql.DB
@@ -26,6 +27,7 @@ func init() {
 	var (
 		dbEngine = getEnv("DB_ENGINE", "sqlite3")
 		dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
+		// dbURL    = getEnv("DB_URL", "test.sqlite3.db")
 	)
 
 	var err error
@@ -134,7 +136,7 @@ func TestPageRegistry(t *testing.T) {
 				Identifier:  69,
 				Description: "Description",
 			},
-			GetForID: func(ctx context.Context, node models.PageNode, id int64) (pages.SaveablePage, error) {
+			GetForID: func(ctx context.Context, node models.PageNode, id int64) (pages.Page, error) {
 				return &TestPage{
 					Ref:         &node,
 					Identifier:  id,
@@ -213,6 +215,33 @@ func TestPageNode(t *testing.T) {
 		queryCtx = context.Background()
 		querier  = pages.QuerySet(sqlDB)
 	)
+
+	var (
+		rootCreateCounter  = 0
+		childCreateCounter = 0
+		nodeUpdateCounter  = 0
+		nodeDeleteCounter  = 0
+	)
+
+	pages.SignalNodeUpdated.Listen(func(s signals.Signal[*pages.PageSignal], ps *pages.PageSignal) error {
+		nodeUpdateCounter++
+		return nil
+	})
+
+	pages.SignalNodeBeforeDelete.Listen(func(s signals.Signal[*pages.PageSignal], ps *pages.PageSignal) error {
+		nodeDeleteCounter++
+		return nil
+	})
+
+	pages.SignalRootCreated.Listen(func(s signals.Signal[*pages.PageSignal], ps *pages.PageSignal) error {
+		rootCreateCounter++
+		return nil
+	})
+
+	pages.SignalChildCreated.Listen(func(s signals.Signal[*pages.PageSignal], ps *pages.PageSignal) error {
+		childCreateCounter++
+		return nil
+	})
 
 	if err := pages.CreateTable(sqlDB); err != nil {
 		t.Error(err)
@@ -562,13 +591,31 @@ func TestPageNode(t *testing.T) {
 						return
 					}
 				})
+
+				t.Run("CheckSignals", func(t *testing.T) {
+					if rootCreateCounter != 1 {
+						t.Errorf("expected 1, got %d", rootCreateCounter)
+					}
+
+					if childCreateCounter != 4 {
+						t.Errorf("expected 4, got %d", childCreateCounter)
+					}
+
+					if nodeUpdateCounter != 0 {
+						t.Errorf("expected 0, got %d", nodeUpdateCounter)
+					}
+
+					if nodeDeleteCounter != 1 {
+						t.Errorf("expected 1, got %d", nodeDeleteCounter)
+					}
+				})
 			})
 		})
 	})
 
 	pages.Register(&pages.PageDefinition{
 		PageObject: &DBTestPage{},
-		GetForID: func(ctx context.Context, ref models.PageNode, id int64) (pages.SaveablePage, error) {
+		GetForID: func(ctx context.Context, ref models.PageNode, id int64) (pages.Page, error) {
 			var page = &DBTestPage{}
 			page.Ref = &ref
 			var row = sqlDB.QueryRowContext(ctx, testPageByID, id)
@@ -587,7 +634,7 @@ func TestPageNode(t *testing.T) {
 		node.PageID = page.ID()
 		node.ContentType = pages.DefinitionForObject(page).ContentType().TypeName()
 
-		if err := querier.UpdateNode(queryCtx, node.Title, node.Path, node.Depth, node.Numchild, int64(node.StatusFlags), node.PageID, node.ContentType, node.ID); err != nil {
+		if err := pages.UpdateNode(querier, queryCtx, node); err != nil {
 			t.Error(err)
 		}
 

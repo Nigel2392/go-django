@@ -5,8 +5,22 @@ CREATE TABLE IF NOT EXISTS PageNode (
     path            TEXT      UNIQUE NOT NULL,
     depth           INTEGER   NOT NULL,
     numchild        INTEGER   NOT NULL,
-    status_flags    INTEGER   NOT NULL,
-    page_id         INTEGER   NOT NULL,
+
+    -- URL path for this node
+    -- This is a field based on the slugified title
+    -- It is used to generate the URL route
+    url_path        TEXT      NOT NULL,
+
+    -- Status flags:
+    -- 0x01: Published
+    -- 0x02: Hidden
+    -- 0x04: Deleted
+    status_flags    BIGINT    NOT NULL,
+
+    -- The page ID that this node represents
+    page_id         BIGINT    NOT NULL,
+
+    -- The unique content type name for this node
     content_type    TEXT      NOT NULL,
 
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Read-only
@@ -16,3 +30,21 @@ CREATE TABLE IF NOT EXISTS PageNode (
 CREATE INDEX IF NOT EXISTS PageNode_path ON PageNode(path);
 CREATE INDEX IF NOT EXISTS PageNode_page_id ON PageNode(page_id);
 CREATE INDEX IF NOT EXISTS PageNode_type_name ON PageNode(content_type);
+--  
+--  CREATE TRIGGER IF NOT EXISTS PageNode_decrement_numchild
+--  AFTER DELETE ON PageNode
+--  FOR EACH ROW
+--  BEGIN
+--      UPDATE PageNode
+--      SET numchild = numchild - 1
+--      WHERE path LIKE CONCAT(SUBSTR(OLD.path, 0, LENGTH(OLD.path) - 3), '%') AND depth = OLD.depth - 1;
+--  END;
+--  
+--  CREATE TRIGGER IF NOT EXISTS PageNode_increment_numchild
+--  AFTER INSERT ON PageNode
+--  FOR EACH ROW
+--  BEGIN
+--      UPDATE PageNode
+--      SET numchild = numchild + 1
+--      WHERE path LIKE CONCAT(SUBSTR(NEW.path, 0, LENGTH(NEW.path) - 3), '%') AND depth = NEW.depth - 1;
+--  END;

@@ -24,6 +24,10 @@ type Querier struct {
 	db *sql.DB
 }
 
+func (q *Querier) DB() *sql.DB {
+	return q.db
+}
+
 func (q *Querier) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
 	return q.db.BeginTx(ctx, opts)
 }
@@ -93,4 +97,31 @@ func QuerySet(db *sql.DB) models.DBQuerier {
 	}
 
 	return querySet
+}
+
+func PrepareQuerySet(ctx context.Context, db *sql.DB) (models.DBQuerier, error) {
+	var (
+		q   models.Querier
+		err error
+	)
+
+	switch db.Driver().(type) {
+	case *mysql.MySQLDriver:
+		q, err = models_mysql.Prepare(ctx, db)
+	case *sqlite3.SQLiteDriver:
+		q, err = models_sqlite.Prepare(ctx, db)
+	case *stdlib.Driver:
+		q, err = models_postgres.Prepare(ctx, db)
+	default:
+		panic(fmt.Sprintf("unsupported driver: %T", db.Driver()))
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &Querier{
+		Querier: q,
+		db:      db,
+	}, nil
 }

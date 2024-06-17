@@ -38,8 +38,8 @@ func (c *ContentType) Model() string {
 	return c.modelName
 }
 
-func (c *ContentType) New() SaveablePage {
-	return reflect.New(c.rTypeElem).Interface().(SaveablePage)
+func (c *ContentType) New() Page {
+	return reflect.New(c.rTypeElem).Interface().(Page)
 }
 
 func (c *ContentType) TypeName() string {
