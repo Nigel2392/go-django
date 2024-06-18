@@ -16,7 +16,7 @@ class MenuController extends Controller<any> {
 
     listenForClose(event: MenuOpenCloseEvent) {
         if (event.detail.action === OPEN && event.detail.menu !== this) {
-            if (!this.contains(event.detail.menu) && !event.detail.menu.contains(this)) {
+            if (!this.element.contains(event.detail.menu.element) && !event.detail.menu.element.contains(this.element)) {
                 this.close();
             }
         }
@@ -28,8 +28,8 @@ class MenuController extends Controller<any> {
         (this.constructor as any).addEventListener(this.listenForClose.bind(this));
     }
 
-    contains(element: HTMLElement | MenuController) {
-        if (element instanceof MenuController) {
+    contains(element: HTMLElement | MenuController | Controller) {
+        if (element instanceof MenuController || element instanceof Controller) {
             element = element.element;
         }
         return this.element.contains(element);

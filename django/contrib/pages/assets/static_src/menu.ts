@@ -29,13 +29,12 @@ function buildTemplate(template: HTMLTemplateElement, vars: { [key: string]: str
     return div.firstElementChild as HTMLElement;
 }
 
-class PageMenuController extends Controller<any> {
+class PageMenuController extends Controller<HTMLElement> {
     declare submenuTarget: HTMLElement
     declare templateMenuHeaderTarget: HTMLTemplateElement
     declare templateHasSubpagesTarget: HTMLTemplateElement
     declare templateNoSubpagesTarget: HTMLTemplateElement
     declare urlValue: string
-
     static targets = [
         "submenu",
         "templateMenuHeader",
@@ -47,8 +46,13 @@ class PageMenuController extends Controller<any> {
     }
 
     connect() {
-        this.element.menuController = this;
+        (this.element as any).menuController = this;
         this.element.dataset.menuController = "true";
+        document.addEventListener("menu:open", (event: CustomEvent) => {
+            if (event.detail.action === "open" && event.detail.menu !== this) {
+                this.close();
+            }
+        })
     }
 
     toggle(event?: ActionEvent) {
@@ -63,11 +67,26 @@ class PageMenuController extends Controller<any> {
         this.element.classList.add("open");
         this.element.setAttribute("aria-expanded", "true");
 
+        var openEvent = new CustomEvent("menu:open", {
+            detail: {
+                action: "open",
+                menu: this
+            }
+        });
+        document.dispatchEvent(openEvent);
+
+
         this.submenuTarget.innerHTML = "";
 
         fetch(this.urlValue)
             .then(response => response.json())
             .then(data => this.render(data));
+    }
+
+    private close(event?: ActionEvent) {
+        this.element.classList.remove("open");
+        this.element.setAttribute("aria-expanded", "false");
+        this.submenuTarget.innerHTML = "";
     }
 
     private buildMenuItem(item: PageNode) {
@@ -96,12 +115,6 @@ class PageMenuController extends Controller<any> {
                 this.submenuTarget.innerHTML = "";
                 this.render(data);
             });
-    }
-
-    private close(event?: ActionEvent) {
-        this.element.classList.remove("open");
-        this.element.setAttribute("aria-expanded", "false");
-        this.submenuTarget.innerHTML = "";
     }
 
     private render(data: PageMenuResponse) {
