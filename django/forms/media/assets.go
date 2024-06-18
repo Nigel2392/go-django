@@ -6,16 +6,24 @@ import (
 	"strings"
 )
 
-type CSSAsset struct {
-	URL string
+type CSS string
+
+func (c CSS) String() string {
+	return string(c)
 }
 
-func (c *CSSAsset) String() string {
-	return c.URL
+func (c CSS) Render() template.HTML {
+	return template.HTML(fmt.Sprintf(`<link rel="stylesheet" href="%s">`, c))
 }
 
-func (c *CSSAsset) Render() template.HTML {
-	return template.HTML(fmt.Sprintf(`<link rel="stylesheet" href="%s">`, c.URL))
+type JS string
+
+func (j JS) String() string {
+	return string(j)
+}
+
+func (j JS) Render() template.HTML {
+	return template.HTML(fmt.Sprintf(`<script src="%s"></script>`, j))
 }
 
 type JSAsset struct {

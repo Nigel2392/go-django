@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -146,6 +147,17 @@ func NewAppConfig() django.AppConfig {
 					var buf = new(bytes.Buffer)
 					m.Component().Render(r.Context(), buf)
 					return template.HTML(buf.String())
+				},
+				"script_hook_output": func() media.Media {
+					var hooks = goldcrest.Get[RegisterScriptHookFunc](RegisterGlobalMedia)
+					var m media.Media = media.NewMedia()
+					for _, hook := range hooks {
+						var hook_m = hook(AdminSite)
+						if hook_m != nil {
+							m = m.Merge(hook_m)
+						}
+					}
+					return m
 				},
 				"footer_menu": func(r *http.Request) template.HTML {
 					var m = &menu.Menu{}

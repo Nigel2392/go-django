@@ -12,6 +12,9 @@ import (
 
 var _ models.DBQuerier = (*Querier)(nil)
 
+// Will get set by django_app.go.(NewAppConfig)
+var QuerySet func() models.DBQuerier
+
 type Querier struct {
 	models.Querier
 	Db *sql.DB

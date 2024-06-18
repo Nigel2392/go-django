@@ -72,6 +72,18 @@ type Renderer interface {
 	Render(w http.ResponseWriter, req *http.Request, context ctx.Context) error
 }
 
+type Checker interface {
+	View
+
+	// Check checks the request before serving it.
+	// Useful for checking if the request is valid before serving it.
+	// Like checking permissions, etc...
+	Check(w http.ResponseWriter, req *http.Request) error
+
+	// Fail is a helper function to fail the request.
+	// This can be used to redirect, etc.
+	Fail(w http.ResponseWriter, req *http.Request, err error)
+}
 type TemplateKeyer interface {
 	// GetBaseKey returns the base key for the template.
 	GetBaseKey() string
@@ -164,6 +176,8 @@ func handleErrors(w http.ResponseWriter, req *http.Request, err error, code int)
 //  7. Renderer - A view that can render directly to the response writer with a context.
 //  8. TemplateKeyer - A view that can get the base key for the template.
 //     This is useful for rendering a sub-template with a base template.
+//  9. Checker - A view that can check the request before serving it.
+//     This is useful for checking if the request is valid before serving it.
 func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods ...string) error {
 	var method = req.Method
 
@@ -200,6 +214,14 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 		template string
 		err      error
 	)
+
+	if checker, ok := view.(Checker); ok {
+		if err = checker.Check(w, req); err != nil {
+			django.App().Log.Error(err)
+			checker.Fail(w, req, err)
+			return err
+		}
+	}
 
 	// Get the context if the view implements the ContextGetter interface.
 	if contextGetter, ok := view.(ContextGetter); ok {

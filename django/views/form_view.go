@@ -10,14 +10,17 @@ import (
 )
 
 var _ TemplateView = (*FormView[forms.Form])(nil)
+var _ Checker = (*FormView[forms.Form])(nil)
 
 type FormView[T forms.Form] struct {
 	BaseView
-	GetFormFn    func(req *http.Request) T
-	GetInitialFn func(req *http.Request) map[string]interface{}
-	ValidFn      func(req *http.Request, form T) error
-	InvalidFn    func(req *http.Request, form T) error
-	SuccessFn    func(w http.ResponseWriter, req *http.Request, form T)
+	GetFormFn        func(req *http.Request) T
+	GetInitialFn     func(req *http.Request) map[string]interface{}
+	ValidFn          func(req *http.Request, form T) error
+	InvalidFn        func(req *http.Request, form T) error
+	SuccessFn        func(w http.ResponseWriter, req *http.Request, form T)
+	CheckPermissions func(w http.ResponseWriter, req *http.Request) error
+	FailsPermissions func(w http.ResponseWriter, req *http.Request, err error)
 }
 
 type form[T forms.Form] struct {
@@ -48,6 +51,21 @@ func (v *FormView[T]) FormFromCtx(context ctx.Context) (t T) {
 	}
 
 	return form.f
+}
+
+func (v *FormView[T]) Check(w http.ResponseWriter, req *http.Request) error {
+	if v.CheckPermissions != nil {
+		return v.CheckPermissions(w, req)
+	}
+	return nil
+}
+
+func (v *FormView[T]) Fail(w http.ResponseWriter, req *http.Request, err error) {
+	if v.FailsPermissions != nil {
+		v.FailsPermissions(w, req, err)
+		return
+	}
+	http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 }
 
 func (v *FormView[T]) GetContext(req *http.Request) (ctx.Context, error) {
@@ -90,6 +108,10 @@ func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 					if v.InvalidFn != nil {
 						err = v.InvalidFn(req, form)
 						goto checkFormErr
+					} else {
+						if adder, ok := any(form).(forms.ErrorAdder); ok {
+							adder.AddFormError(err)
+						}
 					}
 					goto render
 				}

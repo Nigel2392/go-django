@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
 	"os"
 	"slices"
@@ -29,7 +30,8 @@ func RequiredMiddleware(next mux.Handler) mux.Handler {
 
 		if IS_GITHUB_ACTIONS {
 			if user == nil || !user.IsAuthenticated() {
-				auth.Fail(http.StatusUnauthorized, "You need to login")
+				fmt.Println("User is not authenticated")
+				auth.Fail(http.StatusUnauthorized, "You need to login", req.URL.Path)
 			}
 
 			if !user.IsAdmin() {

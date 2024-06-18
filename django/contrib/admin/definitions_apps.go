@@ -7,6 +7,7 @@ import (
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
+	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/a-h/templ"
@@ -24,6 +25,7 @@ type AppOptions struct {
 	AppDescription      func() string
 	MenuLabel           func() string
 	MenuIcon            func() string
+	MediaFn             func() media.Media
 	IndexView           func(adminSite *AdminApplication, app *AppDefinition) views.View
 }
 
@@ -106,6 +108,14 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 		var modelDef, ok = a.Models.Get(model)
 		assert.True(ok, "Model not found")
 		modelDef.OnRegister(adminSite, a)
+	}
+
+	if a.Options.MediaFn != nil {
+		var hookFn = RegisterScriptHookFunc(func(adminSite *AdminApplication) media.Media {
+			return a.Options.MediaFn()
+		})
+
+		goldcrest.Register(RegisterGlobalMedia, 0, hookFn)
 	}
 
 	if a.Options.RegisterToAdminMenu {

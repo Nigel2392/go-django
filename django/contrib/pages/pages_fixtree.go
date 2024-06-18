@@ -19,6 +19,9 @@ func fixTree(n *Node, depth int64) (cancel bool) {
 
 	var i = 0
 	for front := n.Children.Front(); front != nil; front = front.Next() {
+		if front.Value.Ref == nil {
+			continue
+		}
 		front.Value.Ref.Path = n.Ref.Path + buildPathPart(int64(i))
 		front.Value.Ref.Depth = depth + 1
 		i++

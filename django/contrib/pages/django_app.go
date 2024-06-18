@@ -2,12 +2,16 @@ package pages
 
 import (
 	"database/sql"
+	"embed"
 	"fmt"
+	"io/fs"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/Nigel2392/django/core/staticfiles"
+	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/mux"
 )
 
@@ -44,8 +48,12 @@ func (p *PageAppConfig) QuerySet() models.DBQuerier {
 }
 
 var (
-	pageApp  *PageAppConfig
-	QuerySet func() models.DBQuerier
+	pageApp *PageAppConfig
+)
+
+var (
+	//go:embed assets
+	assetsFS embed.FS
 )
 
 func App() *PageAppConfig {
@@ -75,6 +83,31 @@ func NewAppConfig() *PageAppConfig {
 
 		pageApp.backend = backend
 
+		var fileSys, err = fs.Sub(assetsFS, "assets/static")
+		if err != nil {
+			return err
+		}
+
+		staticfiles.AddFS(
+			fileSys, tpl.MatchAnd(
+				tpl.MatchPrefix("pages/"),
+				tpl.MatchOr(
+					tpl.MatchSuffix(".css"),
+					tpl.MatchSuffix(".js"),
+				),
+			),
+		)
+
+		return nil
+	}
+
+	pageApp = &PageAppConfig{
+		DBRequiredAppConfig: &apps.DBRequiredAppConfig{
+			AppConfig: apps.NewAppConfig("pages"),
+			Init:      initPageApp,
+		},
+	}
+	pageApp.AppConfig.Ready = func() error {
 		var pagesRoute = admin.AdminSite.Route.Get(
 			"/pages", nil, "pages",
 		)
@@ -88,13 +121,6 @@ func NewAppConfig() *PageAppConfig {
 		)
 
 		return nil
-	}
-
-	pageApp = &PageAppConfig{
-		DBRequiredAppConfig: &apps.DBRequiredAppConfig{
-			AppConfig: apps.NewAppConfig("pages"),
-			Init:      initPageApp,
-		},
 	}
 	QuerySet = pageApp.QuerySet
 

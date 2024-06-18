@@ -40,7 +40,7 @@ module.exports = [
     {
         entry: './django/contrib/pages/assets/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'django/contrib/admin/assets/static/pages/admin/js/'),
+            'path': path.resolve(__dirname, 'django/contrib/pages/assets/static/pages/admin/js/'),
             'filename': 'index.js'
         },
         ...baseConfig(),

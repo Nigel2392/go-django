@@ -47,7 +47,7 @@ func (b *BaseFeature) Media() media.Media {
 		m.AddJS(&media.JSAsset{URL: js})
 	}
 	for _, css := range b.CSSFles {
-		m.AddCSS(&media.CSSAsset{URL: css})
+		m.AddCSS(media.CSS(css))
 	}
 	return m
 }

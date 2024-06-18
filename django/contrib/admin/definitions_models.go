@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"net/http"
 	"reflect"
 
@@ -20,10 +21,11 @@ type ViewOptions struct {
 
 type FormViewOptions struct {
 	ViewOptions
-	GetForm    func(req *http.Request, instance attrs.Definer, fields []string) modelforms.ModelForm[attrs.Definer]
-	FormInit   func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer])
-	GetHandler func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) views.View
-	Panels     []Panel
+	GetForm      func(req *http.Request, instance attrs.Definer, fields []string) modelforms.ModelForm[attrs.Definer]
+	FormInit     func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer])
+	GetHandler   func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) views.View
+	SaveInstance func(context.Context, attrs.Definer) error
+	Panels       []Panel
 }
 
 type ListViewOptions struct {

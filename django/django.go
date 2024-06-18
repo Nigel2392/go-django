@@ -11,6 +11,7 @@ import (
 	"os"
 	"reflect"
 	"sync/atomic"
+	"time"
 
 	"github.com/Nigel2392/django/components"
 	core "github.com/Nigel2392/django/core"
@@ -119,6 +120,7 @@ var (
 	Global  *Application
 	Reverse = Global.Reverse
 	Static  = Global.Static
+	Task    = Global.Task
 )
 
 func App(opts ...Option) *Application {
@@ -134,6 +136,7 @@ func App(opts ...Option) *Application {
 
 		Reverse = Global.Reverse
 		Static = Global.Static
+		Task = Global.Task
 	}
 
 	for i, opt := range opts {
@@ -263,6 +266,19 @@ func (a *Application) Static(path string) string {
 	}
 
 	return fmt.Sprintf("%s%s", core.STATIC_URL, path)
+}
+
+func (a *Application) Task(description string, fn func(*Application) error) error {
+	var startTime = time.Now()
+	a.Log.Infof("Starting task: %s", description)
+	var err = fn(a)
+	var timeTaken = time.Since(startTime)
+	if err != nil {
+		a.Log.Errorf("Task failed: %s (%s)", description, timeTaken)
+	} else {
+		a.Log.Infof("Task completed: %s (%s)", description, timeTaken)
+	}
+	return err
 }
 
 func (a *Application) Initialize() error {
@@ -402,7 +418,7 @@ func (a *Application) Initialize() error {
 	}
 
 	a.Mux.Use(
-		middleware.Recoverer(a.ServerError),
+	// middleware.Recoverer(a.ServerError),
 	)
 
 	a.initialized.Store(true)

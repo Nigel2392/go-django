@@ -44,6 +44,7 @@ type BaseModelForm[T attrs.Definer] struct {
 	flags modelFormFlag
 
 	Initial      func() T
+	SaveInstance func(context.Context, T) error
 	ModelFields  []string
 	ModelExclude []string
 }
@@ -278,6 +279,8 @@ func (f *BaseModelForm[T]) Save() error {
 	var err error
 	if instance, ok := any(f.Model).(models.Saver); ok {
 		err = instance.Save(ctx)
+	} else if f.SaveInstance != nil {
+		err = f.SaveInstance(ctx, f.Model)
 	}
 	if err != nil {
 		return err

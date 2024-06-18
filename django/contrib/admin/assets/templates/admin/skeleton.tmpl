@@ -10,6 +10,10 @@
         <link rel="stylesheet" type="text/css" href="{{ static "admin/css/admin.css" }}">
         <link rel="stylesheet" type="text/css" href="{{ static "admin/css/list.css" }}">
         <link rel="stylesheet" type="text/css" href="{{ static "admin/css/menu.css" }}">
+        {{ $Media := script_hook_output }}
+        {{ range $css := $Media.CSS }}
+            {{ $css }}
+        {{ end }}
         
         {{ block "extra_css" . }}{{ end }}
     </head>
@@ -17,6 +21,9 @@
         {{ block "root" . }}{{ end }}
 
         <script src="{{ static "admin/js/index.js" }}"></script>
+        {{ range $js := $Media.JS }}
+            {{ $js }}
+        {{ end }}
         {{ block "extra_js" . }}{{ end }}
     </body>
 </html>

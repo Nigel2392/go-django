@@ -8,6 +8,7 @@
         <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
         
         {{ $Form := (.Get "form") }}
+        {{ $Form.ErrorList }}
         {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}
         {{ include $Form "admin/shared/forms/form.tmpl" }}
         

@@ -26,17 +26,17 @@ func (f StatusFlag) Is(flag StatusFlag) bool {
 }
 
 type PageNode struct {
-	ID          int64     `json:"id" attrs:"primary;readonly"`
-	Title       string    `json:"title"`
-	Path        string    `json:"path"`
-	Depth       int64     `json:"depth"`
-	Numchild    int64     `json:"numchild"`
-	UrlPath     string    `json:"url_path"`
-	StatusFlags int64     `json:"status_flags" attrs:"null;blank"`
-	PageID      int64     `json:"page_id"`
-	ContentType string    `json:"content_type"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   time.Time `json:"updated_at"`
+	ID          int64      `json:"id" attrs:"primary;readonly"`
+	Title       string     `json:"title"`
+	Path        string     `json:"path"`
+	Depth       int64      `json:"depth" attrs:"blank"`
+	Numchild    int64      `json:"numchild" attrs:"blank"`
+	UrlPath     string     `json:"url_path" attrs:"blank"`
+	StatusFlags StatusFlag `json:"status_flags" attrs:"null;blank"`
+	PageID      int64      `json:"page_id" attrs:"readonly"`
+	ContentType string     `json:"content_type" attrs:"readonly"`
+	CreatedAt   time.Time  `json:"created_at" attrs:"readonly"`
+	UpdatedAt   time.Time  `json:"updated_at" attrs:"readonly"`
 }
 
 func (n *PageNode) IsRoot() bool {
@@ -75,7 +75,7 @@ type DBQuerier interface {
 type Querier interface {
 	Close() error
 	WithTx(tx *sql.Tx) Querier
-	AllNodes(ctx context.Context, nodeOffset int32, nodeLimit int32) ([]PageNode, error)
+	AllNodes(ctx context.Context, nodeLimit int32, nodeOffset int32) ([]PageNode, error)
 	CountNodes(ctx context.Context) (int64, error)
 	CountRootNodes(ctx context.Context) (int64, error)
 	DecrementNumChild(ctx context.Context, path string, depth int64) (PageNode, error)

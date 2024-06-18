@@ -14,7 +14,7 @@
             {{ $subText := (T "Login to access the admin area") }}
             {{ component "admin.header" 1 $headingText $subText }}
 
-            <form method="post" action="{{ url "admin:login" }}">
+            <form method="post" action="{{ .Get "LoginURL" }}">
                 <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
                 
                 {{ $Form := (.Get "form") }}

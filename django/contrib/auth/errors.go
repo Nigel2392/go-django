@@ -9,12 +9,13 @@ var _ except.ServerError = (*authenticationError)(nil)
 
 type authenticationError struct {
 	Message string
+	NextURL string
 	Status  int
 }
 
 // Panic and raise an authentication error
 // We have a hook setup to catch any authentication errors and redirect to the login page
-func Fail(code int, msg string) {
+func Fail(code int, msg string, next ...string) {
 
 	assert.True(
 		code == 0 || code >= 400 && code < 600,
@@ -30,9 +31,15 @@ func Fail(code int, msg string) {
 		code = 401
 	}
 
+	var nextURL string
+	if len(next) > 0 {
+		nextURL = next[0]
+	}
+
 	panic(&authenticationError{
 		Message: msg,
 		Status:  code,
+		NextURL: nextURL,
 	})
 }
 
