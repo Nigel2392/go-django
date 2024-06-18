@@ -13,15 +13,16 @@ const tsxLoaderConfig = {
 }
 
 function baseConfig(rules = []) {
+    if (rules.length === 0) {
+        rules = [tsLoaderConfig, tsxLoaderConfig]
+    }
     return {
         resolve: {
-            extensions: ['.ts', '.tsx', '...'],
+            extensions: ['.ts', '.tsx', 'css', '...'],
         },
         mode: 'production',
         module: {
             rules: [
-                tsLoaderConfig,
-                tsxLoaderConfig,
                 ...rules
             ]
         }
@@ -43,7 +44,21 @@ module.exports = [
             'path': path.resolve(__dirname, 'django/contrib/pages/assets/static/pages/admin/js/'),
             'filename': 'index.js'
         },
-        ...baseConfig(),
+        ...baseConfig([
+            {
+                test: /\.css$/i,
+                use: [
+                    'style-loader',
+                    'css-loader',
+                ]
+            },
+            {
+                test: /\.ts$/i,
+                use: [
+                    "ts-loader",
+                ]
+            }
+        ]),
     },
     {
         entry: './django/contrib/blocks/assets/static_src/index.ts',

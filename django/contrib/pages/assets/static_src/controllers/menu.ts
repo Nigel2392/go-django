@@ -21,25 +21,34 @@ type PageMenuResponse = {
 
 function buildTemplate(template: HTMLTemplateElement, vars: { [key: string]: string }) {
     let html = template.innerHTML;
+    console.log(html)
     for (const key in vars) {
-        html = html.replace(`__${key.toUpperCase()}__`, vars[key]);
+        html = html.replace(new RegExp(`__${key.toUpperCase()}__`, "g"), vars[key]);
     }
+    console.log(html)
     const div = document.createElement("div");
     div.innerHTML = html;
     return div.firstElementChild as HTMLElement;
 }
 
+function newLoader(loadingText: string) {
+    const loaderWrapper = document.createElement("div");
+    loaderWrapper.classList.add("menu-loader-wrapper");
+    loaderWrapper.textContent = loadingText;
+    const loader = document.createElement("div");
+    loader.classList.add("menu-loader");
+    loaderWrapper.appendChild(loader);
+    return loaderWrapper;
+
+}
+
 class PageMenuController extends Controller<HTMLElement> {
     declare submenuTarget: HTMLElement
-    declare templateMenuHeaderTarget: HTMLTemplateElement
-    declare templateHasSubpagesTarget: HTMLTemplateElement
-    declare templateNoSubpagesTarget: HTMLTemplateElement
+    declare templateTarget: HTMLTemplateElement
     declare urlValue: string
     static targets = [
         "submenu",
-        "templateMenuHeader",
-        "templateHasSubpages",
-        "templateNoSubpages",
+        "template",
     ]
     static values = {
         url: String,
@@ -63,6 +72,20 @@ class PageMenuController extends Controller<HTMLElement> {
         }
     }
 
+    levelUp(event: ActionEvent) {
+        this.fetchItems(
+            (event.currentTarget as HTMLElement).dataset.pageId, {
+                get_parent: "true",
+            }
+        );
+    }
+
+    levelDown(event: ActionEvent) {
+        this.fetchItems(
+            (event.currentTarget as HTMLElement).dataset.pageId
+        );
+    }
+
     private open(event?: ActionEvent) {
         this.element.classList.add("open");
         this.element.setAttribute("aria-expanded", "true");
@@ -76,11 +99,7 @@ class PageMenuController extends Controller<HTMLElement> {
         document.dispatchEvent(openEvent);
 
 
-        this.submenuTarget.innerHTML = "";
-
-        fetch(this.urlValue)
-            .then(response => response.json())
-            .then(data => this.render(data));
+        this.fetchItems();
     }
 
     private close(event?: ActionEvent) {
@@ -89,59 +108,72 @@ class PageMenuController extends Controller<HTMLElement> {
         this.submenuTarget.innerHTML = "";
     }
 
-    private buildMenuItem(item: PageNode) {
-        let template;
-        if (item.numchild > 0) {
-            template = this.templateHasSubpagesTarget;
+    private fetchItems(menuItem: HTMLElement | number | string = "", params: { [key: string]: string } = null) {
+        let pageId: string;
+        if (menuItem instanceof HTMLElement) {
+            pageId = menuItem.dataset.pageId;
         } else {
-            template = this.templateNoSubpagesTarget;
+            pageId = menuItem.toString();
         }
-        return buildTemplate(template, {
-            id: `page-${item.id}`,
-            label: item.title,
-            page_id: item.id.toString(),
-        });
-    }
 
-    private fetchItems(menuItem: HTMLElement, params: { [key: string]: string } = null) {
-        const pageId = menuItem.dataset.pageId;
+        let loader = newLoader("Loading...");
+        this.submenuTarget.appendChild(loader);
+
         params = params || {};
         const query = new URLSearchParams(params);
         query.set("page_id", pageId);
         const url = this.urlValue + "?" + query.toString();
+
         fetch(url)
-            .then(response => response.json())
-            .then(data => {
-                this.submenuTarget.innerHTML = "";
-                this.render(data);
-            });
+        .then(response => response.json())
+        .then(data => {
+            this.submenuTarget.innerHTML = "";
+            this.render(data);
+        })
+        .catch(error => {
+            console.error("Error fetching menu items", error);
+            this.submenuTarget.innerHTML = "";
+            let errorContainer = document.createElement("div");
+            errorContainer.classList.add("menu-load-error");
+            errorContainer.textContent = `Error fetching menu items`;
+            this.submenuTarget.appendChild(errorContainer);
+        });
     }
 
     private render(data: PageMenuResponse) {
-
-        this.submenuTarget.innerHTML = "";
-
         if (data.parent_item) {
-            const menuItem = buildTemplate(this.templateMenuHeaderTarget, {
+            const menuItem = buildTemplate(this.templateTarget, {
                 id: `page-${data.parent_item.id}`,
                 label: data.parent_item.title,
                 page_id: data.parent_item.id.toString(),
             });
-            menuItem.addEventListener("click", (event) => {
-                event.preventDefault();
-                this.fetchItems(menuItem, {
-                    get_parent: "true",
-                });
-            });
+            menuItem.classList.add("header-menu-item");
+            let levelDown = menuItem.querySelector(".level-down");
+            if (levelDown) {
+                levelDown.remove();
+            }
             this.submenuTarget.appendChild(menuItem);
         }
 
         for (const item of data.items) {
-            const menuItem = this.buildMenuItem(item);
-            menuItem.addEventListener("click", (event) => {
-                event.preventDefault();
-                this.fetchItems(menuItem);
+            var menuItem = buildTemplate(this.templateTarget, {
+                id: `page-${item.id}`,
+                label: item.title,
+                page_id: item.id.toString(),
             });
+
+            let levelUp = menuItem.querySelector(".level-up");
+            if (levelUp) {
+                levelUp.remove();
+            }
+
+            if (item.numchild <= 0) {
+                let levelDown = menuItem.querySelector(".level-down");
+                if (levelDown) {
+                    levelDown.remove();
+                }
+            }
+
             this.submenuTarget.appendChild(menuItem);
         }
     }

@@ -33,6 +33,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 		ctx        = r.Context()
 		mainItemID = r.URL.Query().Get("page_id")
 		getParent  = r.URL.Query().Get("get_parent")
+		qs         = QuerySet()
 		response   = &pageMenuResponse{}
 		items      []models.PageNode
 		mainItem   models.PageNode
@@ -42,7 +43,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	)
 
 	if mainItemID == "" {
-		items, err = pageApp.QuerySet().GetNodesByDepth(ctx, 0)
+		items, err = qs.GetNodesByDepth(ctx, 0)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -65,7 +66,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	mainItem, err = pageApp.QuerySet().GetNodeByID(ctx, int64(idInt))
+	mainItem, err = qs.GetNodeByID(ctx, int64(idInt))
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
@@ -73,7 +74,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 
 	if prntBool && !mainItem.IsRoot() {
 		// Main item isn't a root node; we can safely fetch the parent node.
-		mainItem, err = ParentNode(pageApp.QuerySet(), ctx, mainItem.Path, int(mainItem.Depth))
+		mainItem, err = ParentNode(qs, ctx, mainItem.Path, int(mainItem.Depth))
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -82,7 +83,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	} else if prntBool && mainItem.IsRoot() {
 		// Main item is a root node; we can't fetch the parent node.
 		// Instead, override items and render the menu JSON.
-		items, err = pageApp.QuerySet().GetNodesByDepth(ctx, 0)
+		items, err = qs.GetNodesByDepth(ctx, 0)
 		if err != nil {
 			http.Error(w, err.Error(), 500)
 			return
@@ -91,7 +92,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch child nodes of the main item.
-	items, err = pageApp.QuerySet().GetChildNodes(ctx, mainItem.Path, mainItem.Depth)
+	items, err = qs.GetChildNodes(ctx, mainItem.Path, mainItem.Depth)
 	if err != nil {
 		http.Error(w, err.Error(), 500)
 		return
