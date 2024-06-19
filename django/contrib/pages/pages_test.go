@@ -27,11 +27,11 @@ func getEnv(key, def string) string {
 func init() {
 
 	var (
-		dbEngine = getEnv("DB_ENGINE", "sqlite3")
-		dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
+		// dbEngine = getEnv("DB_ENGINE", "sqlite3")
+		// dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
 		// dbURL = getEnv("DB_URL", "test.sqlite3.db")
-		// dbEngine = getEnv("DB_ENGINE", "mysql")
-		// dbURL    = getEnv("DB_URL", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
+		dbEngine = getEnv("DB_ENGINE", "mysql")
+		dbURL    = getEnv("DB_URL", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
 	)
 
 	var err error
@@ -101,7 +101,7 @@ const (
 	testPageUPDATE       = `UPDATE test_pages SET title = ? WHERE id = ?`
 	testPageByID         = `SELECT id, title FROM test_pages WHERE id = ?`
 	testPageCREATE_TABLE = `CREATE TABLE IF NOT EXISTS test_pages (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
+		id INTEGER PRIMARY KEY AUTO_INCREMENT,
 		title TEXT
 	)`
 )
@@ -267,6 +267,10 @@ func TestPageNode(t *testing.T) {
 		childCreateCounter++
 		return nil
 	})
+
+	sqlDB.Exec("DROP TABLE IF EXISTS PageNode")
+
+	// var _ sql.Result = (mysql.Result)(nil)
 
 	if err := pages.CreateTable(sqlDB); err != nil {
 		t.Error(err)

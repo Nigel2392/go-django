@@ -41,6 +41,9 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *models.PageNode) error {
 
 	var prepped, err = PrepareQuerySet(ctx, q.DB())
+	if prepped != nil {
+		defer prepped.Close()
+	}
 	if err != nil {
 		return err
 	}
@@ -52,7 +55,6 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 
 	var queries = prepped.WithTx(tx)
 	defer tx.Rollback()
-	defer queries.Close()
 
 	if parent.Path == "" {
 		return fmt.Errorf("parent path must not be empty")
@@ -111,6 +113,9 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 	}
 
 	prepped, err := PrepareQuerySet(ctx, q.DB())
+	if prepped != nil {
+		defer prepped.Close()
+	}
 	if err != nil {
 		return errors.Wrap(err, "failed to prepare query set")
 	}
@@ -122,7 +127,6 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 
 	var queries = prepped.WithTx(tx)
 	defer tx.Rollback()
-	defer queries.Close()
 
 	oldParentPath, err := ancestorPath(node.Path, 1)
 	if err != nil {
@@ -152,9 +156,9 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 		}
 	}
 
-	// if err = queries.UpdateNodes(ctx, nodesPtr); err != nil {
-	// return errors.Wrap(err, "failed to update descendants")
-	// }
+	if err = queries.UpdateNodes(ctx, nodesPtr); err != nil {
+		return errors.Wrap(err, "failed to update descendants")
+	}
 
 	*newParent, err = queries.IncrementNumChild(ctx, newParent.PK)
 	if err != nil {
@@ -247,6 +251,9 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 	prepped, err := PrepareQuerySet(
 		ctx, q.DB(),
 	)
+	if prepped != nil {
+		defer prepped.Close()
+	}
 	if err != nil {
 		return err
 	}
@@ -257,7 +264,6 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 	}
 	defer tx.Rollback()
 	var queries = prepped.WithTx(tx)
-	defer queries.Close()
 
 	var descendants []models.PageNode
 	descendants, err = queries.GetDescendants(
