@@ -1,0 +1,29 @@
+:root {
+    --dropdown-text-color: var(--primary-text-color);
+}
+.dropdown {
+    max-width: fit-content;
+}
+.dropdown .dropdown__toggle {
+    background-color: transparent;
+    cursor: pointer;
+    border: none;
+}
+.dropdown .dropdown__toggle-icon {
+    width: 1.25em;
+    height: 1.25em;
+    vertical-align: middle;
+}
+.dropdown .dropdown__content {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375em; 
+}
+.dropdown .dropdown__content > * {
+    width: 100%;
+    padding: 0.5em 1em;
+    color: var(--dropdown-text-color);
+}
+.dropdown .dropdown__content .button+.button {
+    margin-inline-start: 0;
+}

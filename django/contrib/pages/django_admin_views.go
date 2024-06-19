@@ -12,7 +12,6 @@ import (
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/django/views/list"
 	"github.com/Nigel2392/mux"
-	"github.com/a-h/templ"
 )
 
 func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinition, *admin.ModelDefinition, *models.PageNode)) mux.Handler {
@@ -51,42 +50,67 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 }
 
 func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
-	var columns = make([]list.ListColumn[attrs.Definer], 0, len(m.ListView.Fields)+1)
-	for _, field := range m.ListView.Fields {
-		columns = append(
-			columns,
-			m.GetColumn(m.ListView, field),
-		)
+	var columns = make([]list.ListColumn[attrs.Definer], len(m.ListView.Fields)+1)
+	for i, field := range m.ListView.Fields {
+		columns[i+1] = m.GetColumn(m.ListView, field)
 	}
 
-	columns = append(columns, &listButtonColumn[attrs.Definer]{
-		buttonText: func(defs attrs.Definitions, row attrs.Definer) string {
-			var p = row.(*models.PageNode)
-			if p.Numchild > 0 {
-				return fields.T("View Children")
-			}
-			return fields.T("Edit Page")
+	columns[0] = columns[1]
+	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
+		Actions: []*admin.ListAction[attrs.Definer]{
+			{
+				Text: func(defs attrs.Definitions, row attrs.Definer) string {
+					return fields.T("Edit Page")
+				},
+				URL: func(defs attrs.Definitions, row attrs.Definer) string {
+					var primaryField = defs.Primary()
+					if primaryField == nil {
+						return ""
+					}
+					return django.Reverse(
+						"admin:pages:edit",
+						primaryField.GetValue(),
+					)
+				},
+			},
+			{
+				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+					return row.(*models.PageNode).Numchild > 0
+				},
+				Text: func(defs attrs.Definitions, row attrs.Definer) string {
+					return fields.T("Add Child")
+				},
+				URL: func(defs attrs.Definitions, row attrs.Definer) string {
+					var primaryField = defs.Primary()
+					if primaryField == nil {
+						return ""
+					}
+					return django.Reverse(
+						"admin:pages:add",
+						primaryField.GetValue(),
+					)
+				},
+			},
+			//{
+			//	isShown: func(defs attrs.Definitions, row attrs.Definer) bool {
+			//		return row.(*models.PageNode).Numchild > 0
+			//	},
+			//	getText: func(defs attrs.Definitions, row attrs.Definer) string {
+			//		return fields.T("View Children")
+			//	},
+			//	getURL: func(defs attrs.Definitions, row attrs.Definer) string {
+			//		var primaryField = defs.Primary()
+			//		if primaryField == nil {
+			//			return ""
+			//		}
+			//		return django.Reverse(
+			//			"admin:pages:list",
+			//			primaryField.GetValue(),
+			//		)
+			//	},
+			//},
 		},
-		getURL: func(defs attrs.Definitions, row attrs.Definer) string {
-			var primaryField = defs.Primary()
-			if primaryField == nil {
-				return ""
-			}
-
-			if row.(*models.PageNode).Numchild > 0 {
-				return django.Reverse(
-					"admin:pages:list",
-					primaryField.GetValue(),
-				)
-			} else {
-				return django.Reverse(
-					"admin:pages:edit",
-					primaryField.GetValue(),
-				)
-			}
-		},
-		icon: templ.Raw("fa fa-eye"),
-	})
+	}
 
 	var amount = m.ListView.PerPage
 	if amount == 0 {
@@ -114,7 +138,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: admin.BASE_KEY,
-			TemplateName:    "pages/admin/list.tmpl",
+			TemplateName:    "pages/admin/admin_list.tmpl",
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
 				var context = admin.NewContext(req, admin.AdminSite, nil)
 				context.Set("app", a)
@@ -143,7 +167,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				if primaryField == nil {
 					return ""
 				}
-				return django.Reverse("admin:pages:edit", a.Name, m.Name, primaryField.GetValue())
+				return django.Reverse("admin:pages:edit", primaryField.GetValue())
 			})
 		},
 	}

@@ -33,10 +33,10 @@ table.list {
 }
 
 .list tr.column-group {
-
+    height: 3.75em;
 }
 
 .list td.list-column {
-    padding-top: 1.25em;
-    padding-bottom: 1.125em;
+    /* padding-top: 1.25em; */
+    /* padding-bottom: 1.125em; */
 }

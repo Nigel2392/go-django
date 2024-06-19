@@ -20,23 +20,28 @@
             </a>
         {{ end }}
 
-        <span class="breadcrumb">{{ $page.Title }}</span>
+        <span class="breadcrumb active">{{ $page.Title }}</span>
     </div>
 {{ end }}
 
 {{ define "content" }}
+
     {{ block "heading" . }}
+        {{ $page := (.Get "page_object") }}
+        {{ $model := (.Get "model") }}
         <div class="list-view-header">
             <div class="buttons">
-                <a href="{{ url "admin:pages:add" (.Get "page_object").ID }}" class="button primary">{{ T "Add Child Page" }}</a>
-                <a href="{{ url "admin:pages:edit" (.Get "page_object").ID }}" class="button primary">{{ T "Edit Page" }}</a>
+                <a href="{{ url "admin:pages:add" $page.ID }}" class="button primary">{{ T "Add Child Page" }}</a>
+                <a href="{{ url "admin:pages:edit" $page.ID }}" class="button primary">{{ T "Edit Page" }}</a>
             </div>
             <div class="title-text">
-                <h1>{{ (.Get "model").Label }} {{ T "List" }}</h1>
+                <h1>{{ $model.Label }} {{ T "List" }}</h1>
             </div>
         </div>
     {{ end }}
 
-    {{ $list := (.Get "view_list") }}
-    {{ safe $list.Render }}
+    <div class="pages-list">
+        {{ $list := (.Get "view_list") }}
+        {{ safe $list.Render }}
+    </div>
 {{ end }}

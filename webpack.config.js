@@ -36,14 +36,6 @@ module.exports = [
             'path': path.resolve(__dirname, 'django/contrib/admin/assets/static/admin/js/'),
             'filename': 'index.js'
         },
-        ...baseConfig(),
-    },
-    {
-        entry: './django/contrib/pages/assets/static_src/index.ts',
-        output: {
-            'path': path.resolve(__dirname, 'django/contrib/pages/assets/static/pages/admin/js/'),
-            'filename': 'index.js'
-        },
         ...baseConfig([
             {
                 test: /\.css$/i,
@@ -59,6 +51,14 @@ module.exports = [
                 ]
             }
         ]),
+    },
+    {
+        entry: './django/contrib/pages/assets/static_src/index.ts',
+        output: {
+            'path': path.resolve(__dirname, 'django/contrib/pages/assets/static/pages/admin/js/'),
+            'filename': 'index.js'
+        },
+        ...baseConfig(),
     },
     {
         entry: './django/contrib/blocks/assets/static_src/index.ts',
