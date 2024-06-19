@@ -128,7 +128,7 @@ func TestPageRegistry(t *testing.T) {
 		var definition = &pages.PageDefinition{
 			PageObject: &TestPage{
 				Ref: &models.PageNode{
-					ID:     1,
+					PK:     1,
 					Title:  "Title",
 					Path:   "001",
 					PageID: 69,
@@ -277,8 +277,8 @@ func TestPageNode(t *testing.T) {
 			return
 		}
 
-		if rootNode.ID != 1 {
-			t.Errorf("expected ID 1, got %d", rootNode.ID)
+		if rootNode.PK != 1 {
+			t.Errorf("expected ID 1, got %d", rootNode.PK)
 		}
 
 		if rootNode.Path != "001" {
@@ -312,8 +312,8 @@ func TestPageNode(t *testing.T) {
 				return
 			}
 
-			if childNode.ID != 2 {
-				t.Errorf("expected ID 2, got %d", childNode.ID)
+			if childNode.PK != 2 {
+				t.Errorf("expected ID 2, got %d", childNode.PK)
 			}
 
 			if childNode.Path != "001001" {
@@ -369,8 +369,8 @@ func TestPageNode(t *testing.T) {
 					return
 				}
 
-				if subChildNode.ID != 3 {
-					t.Errorf("expected ID 3, got %d", subChildNode.ID)
+				if subChildNode.PK != 3 {
+					t.Errorf("expected ID 3, got %d", subChildNode.PK)
 				}
 
 				if subChildNode.Path != "001001001" {
@@ -448,7 +448,7 @@ func TestPageNode(t *testing.T) {
 				})
 
 				t.Run("DeleteNode", func(t *testing.T) {
-					var err = pages.DeleteNode(querier, queryCtx, subChildNode.ID, subChildNode.Path, subChildNode.Depth)
+					var err = pages.DeleteNode(querier, queryCtx, subChildNode.PK, subChildNode.Path, subChildNode.Depth)
 					if err != nil {
 						t.Error(err)
 						return
@@ -465,7 +465,7 @@ func TestPageNode(t *testing.T) {
 						return
 					}
 
-					childNode, err = querier.GetNodeByID(queryCtx, childNode.ID)
+					childNode, err = querier.GetNodeByID(queryCtx, childNode.PK)
 					if err != nil {
 						t.Error(err)
 						return
@@ -492,8 +492,8 @@ func TestPageNode(t *testing.T) {
 				return
 			}
 
-			if childSiblingNode.ID != 4 {
-				t.Errorf("expected ID 3, got %d", childSiblingNode.ID)
+			if childSiblingNode.PK != 4 {
+				t.Errorf("expected ID 3, got %d", childSiblingNode.PK)
 			}
 
 			if childSiblingNode.Path != "001002" {
@@ -549,8 +549,8 @@ func TestPageNode(t *testing.T) {
 					return
 				}
 
-				if childSiblingSubChildNode.ID != 5 {
-					t.Errorf("expected ID 5, got %d", childSiblingSubChildNode.ID)
+				if childSiblingSubChildNode.PK != 5 {
+					t.Errorf("expected ID 5, got %d", childSiblingSubChildNode.PK)
 				}
 
 				if childSiblingSubChildNode.Path != "001002001" {
@@ -669,15 +669,9 @@ func TestPageNode(t *testing.T) {
 	})
 
 	var nodesToUpdate = []*models.PageNode{
-		&models.PageNode{
-			Title: "Root 1",
-		},
-		&models.PageNode{
-			Title: "Root 2",
-		},
-		&models.PageNode{
-			Title: "Root 3",
-		},
+		{Title: "Root 1"},
+		{Title: "Root 2"},
+		{Title: "Root 3"},
 	}
 
 	for _, node := range nodesToUpdate {
@@ -701,7 +695,7 @@ func TestPageNode(t *testing.T) {
 		}
 
 		for _, node := range nodesToUpdate {
-			var updatedNode, err = querier.GetNodeByID(queryCtx, node.ID)
+			var updatedNode, err = querier.GetNodeByID(queryCtx, node.PK)
 			if err != nil {
 				t.Error(err)
 				return
@@ -725,7 +719,7 @@ func TestPageNode(t *testing.T) {
 			t.Error(err)
 			return
 		}
-		sub, err := querier.GetNodeByID(queryCtx, childNode.ID)
+		sub, err := querier.GetNodeByID(queryCtx, childNode.PK)
 		if err != nil {
 			t.Error(err)
 			return
@@ -741,7 +735,7 @@ func TestPageNode(t *testing.T) {
 
 		childNode = sub
 
-		subSub, err := querier.GetNodeByID(queryCtx, subChildNode2.ID)
+		subSub, err := querier.GetNodeByID(queryCtx, subChildNode2.PK)
 		if err != nil {
 			t.Error(err)
 			return

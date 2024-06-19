@@ -131,7 +131,7 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 	w.Write([]byte("delete"))
 }
 
-func getFormForInstance(instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) modelforms.ModelForm[attrs.Definer] {
+func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) modelforms.ModelForm[attrs.Definer] {
 	var form modelforms.ModelForm[attrs.Definer]
 	if f, ok := instance.(FormDefiner); ok {
 		form = f.AdminForm(r, app, model)
@@ -174,7 +174,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			if opts.GetForm != nil {
 				form = opts.GetForm(req, instance, opts.ViewOptions.Fields)
 			} else {
-				form = getFormForInstance(instance, opts, app, model, r)
+				form = GetAdminForm(instance, opts, app, model, r)
 				form.SetFields(attrs.FieldNames(instance, opts.Exclude)...)
 			}
 

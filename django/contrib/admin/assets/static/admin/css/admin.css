@@ -129,7 +129,6 @@ a:hover {
 }
 #main #content-wrapper {
     flex: 1;
-    padding: 0.5em 1em;
     overflow-y: auto;
     position: relative;
     position: absolute;
@@ -144,9 +143,7 @@ a:hover {
 }
 #main #content-wrapper #content {
     background-color: #fff;
-    border-radius: 4px;
-    max-width: 90%;
-    margin: 0 auto;
+    padding: 0.5em 1em;
 }
 
 .panel {
@@ -204,6 +201,9 @@ a:hover {
 .panel.panel-title textarea {
     font-size: 1.4rem;
     font-weight: 600;
+}
+.panel.panel-multi {
+    margin-bottom: 0;
 }
 .panel.panel-multi > .panel__body {
     display: flex;

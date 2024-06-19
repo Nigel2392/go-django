@@ -1,0 +1,31 @@
+package pages
+
+import (
+    "github.com/Nigel2392/django/core/attrs"
+    "github.com/Nigel2392/django/core/assert"
+)
+
+
+type listButtonColumn[T attrs.Definer] struct {
+	header func() string
+	buttonText func(defs attrs.Definitions, row attrs.Definer) string
+	getURL func(defs attrs.Definitions, row T) string
+    icon templ.Component
+}
+
+templ (l *listButtonColumn[T]) Header() {
+    if l.header != nil {
+        { l.header() }
+    }
+}
+
+templ (l *listButtonColumn[T]) Component(defs attrs.Definitions, row T) {
+    {{ assert.False(l.buttonText == nil, "buttonText must not be nil") }}
+    if l.getURL != nil {
+        {{ var url = l.getURL(defs, row) }}
+        <a href={ templ.SafeURL(url) } class="button secondary">{ l.buttonText(defs, row) }</a>
+    } else {
+        <button class="button primary">{ l.buttonText(defs, row) }</button>
+    }
+}
+

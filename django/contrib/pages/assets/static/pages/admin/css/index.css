@@ -1,3 +1,32 @@
+:root {
+    --breadcrumb-bg-color: #f8f9fa;
+    --breadcrumb-border-color: #e9ecef;
+    --breadcrumb-text-color: var(--secondary-bg-color);
+    --breadcrumb-text-color-hover: var(--secondary-bg-hover);
+}
+
+
+.breadcrumbs {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5em;
+    padding: 0.5em 1em;
+    background-color: var(--breadcrumb-bg-color);
+    color: var(--breadcrumb-text-color);
+    font-size: 1.25em;
+    font-weight: 600;
+    border-bottom: 1px solid var(--breadcrumb-border-color);
+}
+
+.breadcrumbs a {
+    color: var(--breadcrumb-text-color);
+    text-decoration: none;
+}
+
+.breadcrumbs a:hover {
+    color: var(--breadcrumb-text-color-hover);
+}
+
 
 .pages-menu-item .pages-submenu-wrapper .header-menu-item {
     font-size: 1.5em;
@@ -20,6 +49,7 @@
     pointer-events: none;
     color: var(--submenu-text-color);
     background-color: var(--submenu-bg-color);
+    box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
     transform: translateX(-100%);
     transition: left 0.2s, opacity 0.2s, visibility 0.2s,
         transform 0.2s;
@@ -29,6 +59,7 @@
     left: var(--menu-width);
     transform: translateX(0);
     pointer-events: auto;
+    box-shadow: var(--menu-box-shadow);
     transition: left 0.2s, opacity 0.2s, visibility 0.2s,
         transform 0.2s;
 }

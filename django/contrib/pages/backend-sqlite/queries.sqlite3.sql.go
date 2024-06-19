@@ -25,7 +25,7 @@ func (q *Queries) AllNodes(ctx context.Context, limit int32, offset int32) ([]mo
 	for rows.Next() {
 		var i models.PageNode
 		if err := rows.Scan(
-			&i.ID,
+			&i.PK,
 			&i.Title,
 			&i.Path,
 			&i.Depth,
@@ -91,7 +91,7 @@ func (q *Queries) IncrementNumChild(ctx context.Context, path string, depth int6
 	}
 
 	err := row.Scan(
-		&i.ID,
+		&i.PK,
 		&i.Title,
 		&i.Path,
 		&i.Depth,
@@ -122,7 +122,7 @@ func (q *Queries) DecrementNumChild(ctx context.Context, path string, depth int6
 	}
 
 	err := row.Scan(
-		&i.ID,
+		&i.PK,
 		&i.Title,
 		&i.Path,
 		&i.Depth,
@@ -193,7 +193,7 @@ func (q *Queries) GetChildNodes(ctx context.Context, path interface{}, depth int
 	for rows.Next() {
 		var i models.PageNode
 		if err := rows.Scan(
-			&i.ID,
+			&i.PK,
 			&i.Title,
 			&i.Path,
 			&i.Depth,
@@ -234,7 +234,7 @@ func (q *Queries) GetDescendants(ctx context.Context, path interface{}, depth in
 	for rows.Next() {
 		var i models.PageNode
 		if err := rows.Scan(
-			&i.ID,
+			&i.PK,
 			&i.Title,
 			&i.Path,
 			&i.Depth,
@@ -269,7 +269,7 @@ func (q *Queries) GetNodeByID(ctx context.Context, id int64) (models.PageNode, e
 	row := q.queryRow(ctx, q.getNodeByIDStmt, getNodeByID, id)
 	var i models.PageNode
 	err := row.Scan(
-		&i.ID,
+		&i.PK,
 		&i.Title,
 		&i.Path,
 		&i.Depth,
@@ -294,7 +294,7 @@ func (q *Queries) GetNodeByPath(ctx context.Context, path string) (models.PageNo
 	row := q.queryRow(ctx, q.getNodeByPathStmt, getNodeByPath, path)
 	var i models.PageNode
 	err := row.Scan(
-		&i.ID,
+		&i.PK,
 		&i.Title,
 		&i.Path,
 		&i.Depth,
@@ -325,7 +325,7 @@ func (q *Queries) GetNodesByDepth(ctx context.Context, depth int64) ([]models.Pa
 	for rows.Next() {
 		var i models.PageNode
 		if err := rows.Scan(
-			&i.ID,
+			&i.PK,
 			&i.Title,
 			&i.Path,
 			&i.Depth,
@@ -376,7 +376,7 @@ func (q *Queries) GetNodesByIDs(ctx context.Context, id []int64) ([]models.PageN
 	for rows.Next() {
 		var i models.PageNode
 		if err := rows.Scan(
-			&i.ID,
+			&i.PK,
 			&i.Title,
 			&i.Path,
 			&i.Depth,
@@ -427,7 +427,7 @@ func (q *Queries) GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]mode
 	for rows.Next() {
 		var i models.PageNode
 		if err := rows.Scan(
-			&i.ID,
+			&i.PK,
 			&i.Title,
 			&i.Path,
 			&i.Depth,
@@ -468,7 +468,7 @@ func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string) ([
 	for rows.Next() {
 		var i models.PageNode
 		if err := rows.Scan(
-			&i.ID,
+			&i.PK,
 			&i.Title,
 			&i.Path,
 			&i.Depth,
@@ -519,7 +519,7 @@ func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string
 	for rows.Next() {
 		var i models.PageNode
 		if err := rows.Scan(
-			&i.ID,
+			&i.PK,
 			&i.Title,
 			&i.Path,
 			&i.Depth,
@@ -570,7 +570,7 @@ func (q *Queries) GetNodesForPaths(ctx context.Context, path []string) ([]models
 	for rows.Next() {
 		var i models.PageNode
 		if err := rows.Scan(
-			&i.ID,
+			&i.PK,
 			&i.Title,
 			&i.Path,
 			&i.Depth,
@@ -693,7 +693,7 @@ func (q *Queries) UpdateNodes(ctx context.Context, nodes []*models.PageNode) err
 			node.StatusFlags,
 			node.PageID,
 			node.ContentType,
-			node.ID,
+			node.PK,
 		)
 	}
 

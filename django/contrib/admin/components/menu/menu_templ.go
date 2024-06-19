@@ -448,7 +448,7 @@ func (s *SubmenuItem) Component() templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("><div class=\"menu-item-content\" data-action=\"click-&gt;menu#toggle\"><div class=\"submenu-item-text\">")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" aria-expanded=\"false\"><div class=\"menu-item-content\" data-action=\"click-&gt;menu#toggle\"><div class=\"submenu-item-text\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

@@ -25,9 +25,11 @@ func (p *PageAppConfig) QuerySet() models.DBQuerier {
 		panic("db is nil")
 	}
 
-	var querySet models.DBQuerier
-	var driver = p.DB.Driver()
-	var backend, ok = models.GetBackend(driver)
+	var (
+		querySet    models.DBQuerier
+		driver      = p.DB.Driver()
+		backend, ok = models.GetBackend(driver)
+	)
 	if !ok {
 		panic(fmt.Sprintf("no backend configured for %T", driver))
 	}
@@ -37,11 +39,9 @@ func (p *PageAppConfig) QuerySet() models.DBQuerier {
 		panic(fmt.Sprintf("failed to initialize queryset for backend %T", backend))
 	}
 
-	if querySet == nil {
-		querySet = &Querier{
-			Querier: qs,
-			Db:      p.DB,
-		}
+	querySet = &Querier{
+		Querier: qs,
+		Db:      p.DB,
 	}
 
 	return querySet
@@ -83,13 +83,18 @@ func NewAppConfig() *PageAppConfig {
 
 		pageApp.backend = backend
 
-		var fileSys, err = fs.Sub(assetsFS, "assets/static")
+		var assetFileSys, err = fs.Sub(assetsFS, "assets/static")
+		if err != nil {
+			return err
+		}
+
+		templateFileSys, err := fs.Sub(assetsFS, "assets/templates")
 		if err != nil {
 			return err
 		}
 
 		staticfiles.AddFS(
-			fileSys, tpl.MatchAnd(
+			assetFileSys, tpl.MatchAnd(
 				tpl.MatchPrefix("pages/"),
 				tpl.MatchOr(
 					tpl.MatchSuffix(".css"),
@@ -97,6 +102,17 @@ func NewAppConfig() *PageAppConfig {
 				),
 			),
 		)
+
+		tpl.Add(tpl.Config{
+			AppName: "pages",
+			FS:      templateFileSys,
+			Matches: tpl.MatchAnd(
+				tpl.MatchPrefix("pages/"),
+				tpl.MatchOr(
+					tpl.MatchSuffix(".tmpl"),
+				),
+			),
+		})
 
 		return nil
 	}
@@ -108,9 +124,30 @@ func NewAppConfig() *PageAppConfig {
 		},
 	}
 	pageApp.AppConfig.Ready = func() error {
+
 		var pagesRoute = admin.AdminSite.Route.Get(
 			"/pages", nil, "pages",
 		)
+
+		// listURL for the pages admin site.
+		pagesRoute.Get(
+			"<<page_id>>", pageHandler(listPageHandler), "list",
+		)
+
+		// addURL for the pages admin site.
+		pagesRoute.Get(
+			"<<page_id>>/add", pageHandler(addPageHandler), "add",
+		)
+
+		// editURL for the pages admin site.
+		pagesRoute.Get(
+			"<<page_id>>/edit", pageHandler(editPageHandler), "edit",
+		)
+
+		//// deleteURL for the pages admin site.
+		//pagesRoute.Get(
+		//	"<<page_id>>/delete", pageHandler(deletePageHandler), "delete",
+		//)
 
 		var pagesAPI = pagesRoute.Get(
 			"/api", nil, "api",

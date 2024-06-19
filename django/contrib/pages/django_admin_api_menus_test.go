@@ -18,20 +18,20 @@ import (
 func pageMenuHandler(w http.ResponseWriter, r *http.Request)
 
 var nodes = []models.PageNode{
-	{ID: 1, Title: "Home", Path: "001", StatusFlags: models.StatusFlagPublished},
-	{ID: 2, Title: "About", Path: "001001", StatusFlags: models.StatusFlagPublished},
-	{ID: 3, Title: "Contact", Path: "001002", StatusFlags: models.StatusFlagPublished},
-	{ID: 4, Title: "Services", Path: "001003", StatusFlags: models.StatusFlagPublished},
-	{ID: 5, Title: "Team", Path: "001004", StatusFlags: models.StatusFlagPublished},
-	{ID: 6, Title: "History", Path: "001001001", StatusFlags: models.StatusFlagPublished},
-	{ID: 7, Title: "Vision", Path: "001001002", StatusFlags: models.StatusFlagPublished},
-	{ID: 8, Title: "Mission", Path: "001001003", StatusFlags: models.StatusFlagPublished},
-	{ID: 9, Title: "Contact Us", Path: "001002001", StatusFlags: models.StatusFlagPublished},
-	{ID: 10, Title: "Services Offered", Path: "001003001", StatusFlags: models.StatusFlagPublished},
-	{ID: 11, Title: "Our Team", Path: "001004001", StatusFlags: models.StatusFlagPublished},
-	{ID: 12, Title: "Our History", Path: "001001001001", StatusFlags: models.StatusFlagPublished},
-	{ID: 13, Title: "Our Vision", Path: "001001002001", StatusFlags: models.StatusFlagPublished},
-	{ID: 14, Title: "Our Mission", Path: "001001003001", StatusFlags: models.StatusFlagPublished},
+	{PK: 1, Title: "Home", Path: "001", StatusFlags: models.StatusFlagPublished},
+	{PK: 2, Title: "About", Path: "001001", StatusFlags: models.StatusFlagPublished},
+	{PK: 3, Title: "Contact", Path: "001002", StatusFlags: models.StatusFlagPublished},
+	{PK: 4, Title: "Services", Path: "001003", StatusFlags: models.StatusFlagPublished},
+	{PK: 5, Title: "Team", Path: "001004", StatusFlags: models.StatusFlagPublished},
+	{PK: 6, Title: "History", Path: "001001001", StatusFlags: models.StatusFlagPublished},
+	{PK: 7, Title: "Vision", Path: "001001002", StatusFlags: models.StatusFlagPublished},
+	{PK: 8, Title: "Mission", Path: "001001003", StatusFlags: models.StatusFlagPublished},
+	{PK: 9, Title: "Contact Us", Path: "001002001", StatusFlags: models.StatusFlagPublished},
+	{PK: 10, Title: "Services Offered", Path: "001003001", StatusFlags: models.StatusFlagPublished},
+	{PK: 11, Title: "Our Team", Path: "001004001", StatusFlags: models.StatusFlagPublished},
+	{PK: 12, Title: "Our History", Path: "001001001001", StatusFlags: models.StatusFlagPublished},
+	{PK: 13, Title: "Our Vision", Path: "001001002001", StatusFlags: models.StatusFlagPublished},
+	{PK: 14, Title: "Our Mission", Path: "001001003001", StatusFlags: models.StatusFlagPublished},
 }
 
 type fakeHttpWriter struct {
@@ -67,61 +67,61 @@ var pageMenuHandlerTests = []pageMenuHandlerTest{
 	{
 		mainItemID: "1",
 		expectedItems: []models.PageNode{
-			{ID: 2, Title: "About", Path: "001001", StatusFlags: models.StatusFlagPublished},
-			{ID: 3, Title: "Contact", Path: "001002", StatusFlags: models.StatusFlagPublished},
-			{ID: 4, Title: "Services", Path: "001003", StatusFlags: models.StatusFlagPublished},
-			{ID: 5, Title: "Team", Path: "001004", StatusFlags: models.StatusFlagPublished},
+			{PK: 2, Title: "About", Path: "001001", StatusFlags: models.StatusFlagPublished},
+			{PK: 3, Title: "Contact", Path: "001002", StatusFlags: models.StatusFlagPublished},
+			{PK: 4, Title: "Services", Path: "001003", StatusFlags: models.StatusFlagPublished},
+			{PK: 5, Title: "Team", Path: "001004", StatusFlags: models.StatusFlagPublished},
 		},
 	},
 	{
 		mainItemID: "2",
 		getParent:  "true",
 		expectedItems: []models.PageNode{
-			{ID: 2, Title: "About", Path: "001001", StatusFlags: models.StatusFlagPublished},
-			{ID: 3, Title: "Contact", Path: "001002", StatusFlags: models.StatusFlagPublished},
-			{ID: 4, Title: "Services", Path: "001003", StatusFlags: models.StatusFlagPublished},
-			{ID: 5, Title: "Team", Path: "001004", StatusFlags: models.StatusFlagPublished},
+			{PK: 2, Title: "About", Path: "001001", StatusFlags: models.StatusFlagPublished},
+			{PK: 3, Title: "Contact", Path: "001002", StatusFlags: models.StatusFlagPublished},
+			{PK: 4, Title: "Services", Path: "001003", StatusFlags: models.StatusFlagPublished},
+			{PK: 5, Title: "Team", Path: "001004", StatusFlags: models.StatusFlagPublished},
 		},
 	},
 	{
 		mainItemID: "2",
 		expectedItems: []models.PageNode{
-			{ID: 6, Title: "History", Path: "001001001", StatusFlags: models.StatusFlagPublished},
-			{ID: 7, Title: "Vision", Path: "001001002", StatusFlags: models.StatusFlagPublished},
-			{ID: 8, Title: "Mission", Path: "001001003", StatusFlags: models.StatusFlagPublished},
+			{PK: 6, Title: "History", Path: "001001001", StatusFlags: models.StatusFlagPublished},
+			{PK: 7, Title: "Vision", Path: "001001002", StatusFlags: models.StatusFlagPublished},
+			{PK: 8, Title: "Mission", Path: "001001003", StatusFlags: models.StatusFlagPublished},
 		},
 	},
 	{
 		mainItemID: "3",
 		expectedItems: []models.PageNode{
-			{ID: 9, Title: "Contact Us", Path: "001002001", StatusFlags: models.StatusFlagPublished},
+			{PK: 9, Title: "Contact Us", Path: "001002001", StatusFlags: models.StatusFlagPublished},
 		},
 	},
 	{
 		mainItemID: "4",
 		expectedItems: []models.PageNode{
-			{ID: 10, Title: "Services Offered", Path: "001003001", StatusFlags: models.StatusFlagPublished},
+			{PK: 10, Title: "Services Offered", Path: "001003001", StatusFlags: models.StatusFlagPublished},
 		},
 	},
 	{
 		mainItemID: "5",
 		expectedItems: []models.PageNode{
-			{ID: 11, Title: "Our Team", Path: "001004001", StatusFlags: models.StatusFlagPublished},
+			{PK: 11, Title: "Our Team", Path: "001004001", StatusFlags: models.StatusFlagPublished},
 		},
 	},
 	{
 		mainItemID: "6",
 		expectedItems: []models.PageNode{
-			{ID: 12, Title: "Our History", Path: "001001001001", StatusFlags: models.StatusFlagPublished},
+			{PK: 12, Title: "Our History", Path: "001001001001", StatusFlags: models.StatusFlagPublished},
 		},
 	},
 	{
 		mainItemID: "6",
 		getParent:  "true",
 		expectedItems: []models.PageNode{
-			{ID: 6, Title: "History", Path: "001001001", StatusFlags: models.StatusFlagPublished},
-			{ID: 7, Title: "Vision", Path: "001001002", StatusFlags: models.StatusFlagPublished},
-			{ID: 8, Title: "Mission", Path: "001001003", StatusFlags: models.StatusFlagPublished},
+			{PK: 6, Title: "History", Path: "001001001", StatusFlags: models.StatusFlagPublished},
+			{PK: 7, Title: "Vision", Path: "001001002", StatusFlags: models.StatusFlagPublished},
+			{PK: 8, Title: "Mission", Path: "001001003", StatusFlags: models.StatusFlagPublished},
 		},
 	},
 }
@@ -217,8 +217,8 @@ func TestPageMenuHandler(t *testing.T) {
 			}
 
 			for i, item := range gotItems.Items {
-				if item.ID != test.expectedItems[i].ID {
-					t.Errorf("expected item ID %d; got %d", test.expectedItems[i].ID, item.ID)
+				if item.PK != test.expectedItems[i].PK {
+					t.Errorf("expected item ID %d; got %d", test.expectedItems[i].PK, item.PK)
 				}
 			}
 		})

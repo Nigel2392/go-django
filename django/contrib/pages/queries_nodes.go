@@ -27,7 +27,7 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 		return err
 	}
 
-	node.ID = id
+	node.PK = id
 
 	return SignalRootCreated.Send(&PageSignal{
 		BaseSignal: BaseSignal{
@@ -64,7 +64,7 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 
 	child.Path = parent.Path + buildPathPart(parent.Numchild)
 	child.Depth = parent.Depth + 1
-	child.ID, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, child.UrlPath, int64(child.StatusFlags), child.PageID, child.ContentType)
+	child.PK, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, child.UrlPath, int64(child.StatusFlags), child.PageID, child.ContentType)
 	if err != nil {
 		return err
 	}
@@ -200,12 +200,12 @@ func UpdateNode(q models.DBQuerier, ctx context.Context, node *models.PageNode) 
 		return fmt.Errorf("node path must not be empty")
 	}
 
-	if node.ID == 0 {
+	if node.PK == 0 {
 		return fmt.Errorf("node id must not be zero")
 	}
 
 	var err = q.UpdateNode(
-		ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, int64(node.StatusFlags), node.PageID, node.ContentType, node.ID,
+		ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, int64(node.StatusFlags), node.PageID, node.ContentType, node.PK,
 	)
 	if err != nil {
 		return err
@@ -275,7 +275,7 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 		}); err != nil {
 			return err
 		}
-		ids[i] = descendant.ID
+		ids[i] = descendant.PK
 	}
 
 	err = queries.DeleteNodes(ctx, ids)

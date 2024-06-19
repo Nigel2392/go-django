@@ -26,7 +26,7 @@ func (f StatusFlag) Is(flag StatusFlag) bool {
 }
 
 type PageNode struct {
-	ID          int64      `json:"id" attrs:"primary;readonly"`
+	PK          int64      `json:"id" attrs:"primary;readonly"`
 	Title       string     `json:"title"`
 	Path        string     `json:"path"`
 	Depth       int64      `json:"depth" attrs:"blank"`
@@ -39,13 +39,21 @@ type PageNode struct {
 	UpdatedAt   time.Time  `json:"updated_at" attrs:"readonly"`
 }
 
+func (n *PageNode) ID() int64 {
+	return n.PK
+}
+
+func (n *PageNode) Reference() *PageNode {
+	return n
+}
+
 func (n *PageNode) IsRoot() bool {
 	return n.Depth == 0
 }
 
 func (n *PageNode) FieldDefs() attrs.Definitions {
 	return attrs.AutoDefinitions(n,
-		"ID",
+		"PK",
 		"Title",
 		"Path",
 		"Depth",

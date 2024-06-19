@@ -36,9 +36,7 @@ func (p *PagesMenuItem) Component() templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		var editURL = templ.SafeURL(django.Reverse(
-			"admin:apps:model:edit",
-			AdminPagesAppName,
-			AdminPagesModelPath,
+			"admin:pages:list",
 			"__PAGE_ID__",
 		))
 		var templ_7745c5c3_Var2 = []any{strings.Join(p.Classes, " "), "pages-menu-item submenu-menu-item menu-item"}
@@ -53,7 +51,7 @@ func (p *PagesMenuItem) Component() templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(django.Reverse("admin:pages:api:menu"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/pages/django_admin.templ`, Line: 24, Col: 97}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/pages/django_admin.templ`, Line: 22, Col: 97}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -87,7 +85,7 @@ func (p *PagesMenuItem) Component() templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(fields.T("Open page submenu"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/pages/django_admin.templ`, Line: 30, Col: 120}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/pages/django_admin.templ`, Line: 28, Col: 120}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {

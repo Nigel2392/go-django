@@ -15,9 +15,7 @@ type PagesMenuItem struct {
 
 templ (p *PagesMenuItem) Component() {
 	{{ var editURL = templ.SafeURL(django.Reverse(
-		"admin:apps:model:edit",
-		AdminPagesAppName,
-		AdminPagesModelPath,
+		"admin:pages:list",
 		"__PAGE_ID__",
 	)) }}
 

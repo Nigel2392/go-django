@@ -97,11 +97,37 @@ var pageAdminModelOptions = admin.ModelOptions{
 	},
 	AddView: admin.FormViewOptions{
 		SaveInstance: saveInstanceFunc,
+		Panels: []admin.Panel{
+			admin.TitlePanel(
+				admin.FieldPanel("Title"),
+			),
+			admin.MultiPanel(
+				admin.FieldPanel("Path"),
+				admin.FieldPanel("Depth"),
+			),
+			admin.FieldPanel("Numchild"),
+			admin.FieldPanel("UrlPath"),
+			admin.FieldPanel("StatusFlags"),
+		},
 		// Change form interaction
 	},
 	EditView: admin.FormViewOptions{
 		SaveInstance: saveInstanceFunc,
 		// Change form interaction
+		Panels: []admin.Panel{
+			admin.TitlePanel(
+				admin.FieldPanel("Title"),
+			),
+			admin.MultiPanel(
+				admin.FieldPanel("Path"),
+				admin.FieldPanel("Depth"),
+			),
+			admin.FieldPanel("Numchild"),
+			admin.FieldPanel("UrlPath"),
+			admin.FieldPanel("StatusFlags"),
+			admin.FieldPanel("CreatedAt"),
+			admin.FieldPanel("UpdatedAt"),
+		},
 	},
 }
 
@@ -128,7 +154,7 @@ func init() {
 func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 	var n = d.(*models.PageNode)
 	var err error
-	if n.ID == 0 {
+	if n.PK == 0 {
 		_, err = pageApp.QuerySet().InsertNode(
 			ctx,
 			n.Title,
@@ -151,7 +177,7 @@ func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 			int64(n.StatusFlags),
 			n.PageID,
 			n.ContentType,
-			n.ID,
+			n.PK,
 		)
 	}
 

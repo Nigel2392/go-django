@@ -41,7 +41,7 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 		}
 	} else {
 		err = queries.UpdateNode(
-			ctx, ref.Title, ref.Path, ref.Depth, ref.Numchild, ref.UrlPath, int64(ref.StatusFlags), ref.PageID, ref.ContentType, ref.ID,
+			ctx, ref.Title, ref.Path, ref.Depth, ref.Numchild, ref.UrlPath, int64(ref.StatusFlags), ref.PageID, ref.ContentType, ref.PK,
 		)
 		if err != nil {
 			return err
@@ -61,7 +61,7 @@ func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
 		return fmt.Errorf("page path must not be empty")
 	}
 
-	if ref.ID == 0 {
+	if ref.PK == 0 {
 		return fmt.Errorf("page id must not be zero")
 	}
 
@@ -75,7 +75,7 @@ func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
 		int64(ref.StatusFlags),
 		ref.PageID,
 		ref.ContentType,
-		ref.ID,
+		ref.PK,
 	); err != nil {
 		return err
 	}
@@ -85,11 +85,11 @@ func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
 
 func DeletePage(q models.DBQuerier, ctx context.Context, p DeletablePage) error {
 	var ref = p.Reference()
-	if ref.ID == 0 {
+	if ref.PK == 0 {
 		return fmt.Errorf("page id must not be zero")
 	}
 
-	if err := DeleteNode(q, ctx, ref.ID, ref.Path, ref.Depth); err != nil {
+	if err := DeleteNode(q, ctx, ref.PK, ref.Path, ref.Depth); err != nil {
 		return err
 	}
 
