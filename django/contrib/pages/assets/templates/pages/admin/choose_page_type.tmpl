@@ -1,0 +1,17 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ T "List" }}{{ end }}
+
+{{ define "content" }}
+    <div class="pages-type-list">
+        {{ range $index, $page := (.Get "definitions") }}
+            <div class="pages-type-list-item">
+                <h3>{{ $page.Label }}</h3>
+                {{ $description := $page.Description }}
+                {{ if $description }}
+                    <p>{{ $description }}</p>
+                {{ end }}
+            </div>
+        {{ end }}
+    </div>
+{{ end }}

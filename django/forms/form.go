@@ -219,6 +219,7 @@ type BoundForm interface {
 	Media() media.Media
 	Fields() []BoundField
 	ErrorList() []error
+	UnpackErrors() []FieldError
 	Errors() *orderedmap.OrderedMap[string, []error]
 }
 
@@ -243,6 +244,33 @@ func (f *_BoundForm) Fields() []BoundField {
 
 func (f *_BoundForm) Errors() *orderedmap.OrderedMap[string, []error] {
 	return f.Errors_
+}
+
+type fieldError struct {
+	field  string
+	errors []error
+}
+
+func (f *fieldError) Field() string {
+	return f.field
+}
+
+func (f *fieldError) Errors() []error {
+	return f.errors
+}
+
+func (f *_BoundForm) UnpackErrors() []FieldError {
+	if f.Errors_ == nil {
+		return nil
+	}
+	var ret = make([]FieldError, 0, f.Errors_.Len())
+	for head := f.Errors_.Front(); head != nil; head = head.Next() {
+		ret = append(ret, &fieldError{
+			field:  head.Key,
+			errors: head.Value,
+		})
+	}
+	return ret
 }
 
 func (f *_BoundForm) ErrorList() []error {
@@ -302,6 +330,14 @@ func (f *BaseForm) EditContext(key string, context ctx.Context) {
 func (f *BaseForm) AddField(name string, field fields.Field) {
 	field.SetName(name)
 	f.FormFields.Set(name, field)
+}
+
+func (f *BaseForm) DeleteField(name string) bool {
+	var _, ok = f.FormFields.Get(name)
+	if ok {
+		f.FormFields.Delete(name)
+	}
+	return ok
 }
 
 func (f *BaseForm) AddWidget(name string, widget widgets.Widget) {

@@ -184,12 +184,28 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 
 			form.SetInstance(instance)
 
-			return &AdminModelForm[modelforms.ModelForm[attrs.Definer]]{
+			var adminForm = &AdminModelForm[modelforms.ModelForm[attrs.Definer]]{
 				AdminForm: &AdminForm[modelforms.ModelForm[attrs.Definer]]{
 					Form:   form,
 					Panels: opts.Panels,
 				},
 			}
+
+			var fields = make(map[string]struct{})
+			for _, panel := range adminForm.Panels {
+				for _, field := range panel.Fields() {
+					fields[field] = struct{}{}
+				}
+			}
+		
+			for _, field := range adminForm.Form.Fields() {
+				if _, ok := fields[field.Name()]; !ok {
+					fmt.Println("Deleting field", field.Name())
+					adminForm.Form.DeleteField(field.Name())
+				}
+			}
+			
+			return adminForm
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
 			var initial = make(map[string]interface{})

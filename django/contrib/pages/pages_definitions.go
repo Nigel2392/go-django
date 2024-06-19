@@ -2,17 +2,31 @@ package pages
 
 import (
 	"context"
+	"net/http"
 
+	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/Nigel2392/django/core/contenttypes"
 )
 
 type PageDefinition struct {
-	PageObject              Page
+	*contenttypes.ContentTypeDefinition
+	Panels                  func(r *http.Request, page Page) []admin.Panel
 	GetForID                func(ctx context.Context, ref models.PageNode, id int64) (Page, error)
 	OnReferenceUpdate       func(ctx context.Context, ref models.PageNode, id int64) error
 	OnReferenceBeforeDelete func(ctx context.Context, ref models.PageNode, id int64) error
 }
 
-func (p *PageDefinition) ContentType() *ContentType {
-	return NewContentType(p.PageObject)
+func (p *PageDefinition) Label() string {
+	if p.GetLabel != nil {
+		return p.GetLabel()
+	}
+	return ""
+}
+
+func (p *PageDefinition) Description() string {
+	if p.GetDescription != nil {
+		return p.GetDescription()
+	}
+	return ""
 }

@@ -106,7 +106,7 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 
 	f.Model = model
 	f.Definition = model.FieldDefs()
-	f.InstanceFields = model.FieldDefs().Fields()
+	f.InstanceFields = f.Definition.Fields()
 
 	for _, field := range f.InstanceFields {
 		var n = field.Name()

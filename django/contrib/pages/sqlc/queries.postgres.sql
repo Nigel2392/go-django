@@ -17,7 +17,7 @@ INSERT INTO PageNode (
     sqlc.arg(status_flags),
     sqlc.arg(page_id),
     sqlc.arg(content_type)
-);
+) RETURNING id;
 
 -- name: AllNodes :many
 SELECT *

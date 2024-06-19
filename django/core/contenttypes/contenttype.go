@@ -1,28 +1,37 @@
-package pages
+package contenttypes
 
 import (
 	"database/sql"
 	"database/sql/driver"
 	"reflect"
+
+	"github.com/Nigel2392/django/core/errs"
 )
 
-var _ sql.Scanner = (*ContentType)(nil)
-var _ driver.Valuer = (*ContentType)(nil)
+var _ sql.Scanner = (*BaseContentType[any])(nil)
+var _ driver.Valuer = (*BaseContentType[any])(nil)
 
-type ContentType struct {
+type BaseContentType[T any] struct {
 	rType     reflect.Type
 	rTypeElem reflect.Type
 	pkgPath   string
 	modelName string
 }
 
-func NewContentType(p Page) *ContentType {
+type ContentType interface {
+	PkgPath() string
+	Model() string
+	TypeName() string
+	New() interface{}
+}
+
+func NewContentType[T any](p T) *BaseContentType[T] {
 	var rType = reflect.TypeOf(p)
 	var rTypeElem = rType
 	if rType.Kind() == reflect.Ptr {
 		rTypeElem = rType.Elem()
 	}
-	return &ContentType{
+	return &BaseContentType[T]{
 		rType:     rType,
 		rTypeElem: rTypeElem,
 		pkgPath:   rTypeElem.PkgPath(),
@@ -30,19 +39,21 @@ func NewContentType(p Page) *ContentType {
 	}
 }
 
-func (c *ContentType) PkgPath() string {
+func (c *BaseContentType[T]) PkgPath() string {
 	return c.pkgPath
 }
 
-func (c *ContentType) Model() string {
+func (c *BaseContentType[T]) Model() string {
 	return c.modelName
 }
 
-func (c *ContentType) New() Page {
-	return reflect.New(c.rTypeElem).Interface().(Page)
+func (c *BaseContentType[T]) New() T {
+	return reflect.New(c.rTypeElem).Interface().(T)
 }
 
-func (c *ContentType) TypeName() string {
+var ErrInvalidScanType errs.Error = "invalid scan type"
+
+func (c *BaseContentType[T]) TypeName() string {
 	var typeName = c.pkgPath
 	var modelName = c.modelName
 	var b = make([]byte, 0, len(typeName)+len(modelName)+1)
@@ -52,7 +63,7 @@ func (c *ContentType) TypeName() string {
 	return string(b)
 }
 
-func (c *ContentType) Scan(src interface{}) error {
+func (c *BaseContentType[T]) Scan(src interface{}) error {
 	if src == nil {
 		return nil
 	}
@@ -66,11 +77,11 @@ func (c *ContentType) Scan(src interface{}) error {
 		return ErrInvalidScanType
 	}
 
-	var newCtype = NewContentType(registryObj.PageObject)
+	var newCtype = NewContentType[T](registryObj.ContentObject.(T))
 	*c = *newCtype
 	return nil
 }
 
-func (c ContentType) Value() (driver.Value, error) {
+func (c BaseContentType[T]) Value() (driver.Value, error) {
 	return c.TypeName(), nil
 }

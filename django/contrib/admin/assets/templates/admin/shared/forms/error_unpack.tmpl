@@ -1,0 +1,15 @@
+{{ define "error_unpack" }}
+    {{ $Errors := . }}
+    {{ if (gt (len $Errors) 0) }}
+        <ul class="error-list">
+            {{ range $Error := $Errors }}
+                <li class="error">
+                    <p class="error-label">{{ $Error.Field }}:</p>
+                    {{ range $err := $Error.Errors }}
+                        <p class="error-message">{{ $err }}</p>
+                    {{ end }}
+                </li>
+            {{ end }}
+        </ul>
+    {{ end }}
+{{ end }}

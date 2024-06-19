@@ -71,20 +71,6 @@ func NewAppConfig() django.AppConfig {
 	AdminSite.Init = func(settings django.Settings) error {
 		settings.App().Mux.AddRoute(AdminSite.Route)
 
-		staticfiles.AddFS(staticFS, tpl.MatchAnd(
-			tpl.MatchPrefix("admin/"),
-			tpl.MatchOr(
-				tpl.MatchExt(".css"),
-				tpl.MatchExt(".js"),
-				tpl.MatchExt(".png"),
-				tpl.MatchExt(".jpg"),
-				tpl.MatchExt(".jpeg"),
-				tpl.MatchExt(".svg"),
-				tpl.MatchExt(".gif"),
-				tpl.MatchExt(".ico"),
-			),
-		))
-
 		components.Register("admin.header", cmpts.Header)
 
 		components.Register("admin.heading", cmpts.Heading)
@@ -121,58 +107,6 @@ func NewAppConfig() django.AppConfig {
 				})
 			}),
 		)
-
-		tpl.Add(tpl.Config{
-			AppName: "admin",
-			FS:      tplFS,
-			Bases: []string{
-				"admin/skeleton.tmpl",
-				"admin/base.tmpl",
-			},
-			Matches: tpl.MatchAnd(
-				tpl.MatchPrefix("admin/"),
-				tpl.MatchOr(
-					tpl.MatchExt(".tmpl"),
-				),
-			),
-			Funcs: template.FuncMap{
-				"menu": func(r *http.Request) template.HTML {
-					var m = &menu.Menu{}
-					var menuItems = menu.NewItems()
-					var hooks = goldcrest.Get[RegisterMenuItemHookFunc](RegisterMenuItemHook)
-					for _, hook := range hooks {
-						hook(AdminSite, menuItems)
-					}
-					m.Items = menuItems.All()
-					var buf = new(bytes.Buffer)
-					m.Component().Render(r.Context(), buf)
-					return template.HTML(buf.String())
-				},
-				"script_hook_output": func() media.Media {
-					var hooks = goldcrest.Get[RegisterScriptHookFunc](RegisterGlobalMedia)
-					var m media.Media = media.NewMedia()
-					for _, hook := range hooks {
-						var hook_m = hook(AdminSite)
-						if hook_m != nil {
-							m = m.Merge(hook_m)
-						}
-					}
-					return m
-				},
-				"footer_menu": func(r *http.Request) template.HTML {
-					var m = &menu.Menu{}
-					var menuItems = menu.NewItems()
-					var hooks = goldcrest.Get[RegisterFooterMenuItemHookFunc](RegisterFooterMenuItemHook)
-					for _, hook := range hooks {
-						hook(r, AdminSite, menuItems)
-					}
-					m.Items = menuItems.All()
-					var buf = new(bytes.Buffer)
-					m.Component().Render(r.Context(), buf)
-					return template.HTML(buf.String())
-				},
-			},
-		})
 
 		return nil
 	}
@@ -257,6 +191,72 @@ func NewAppConfig() django.AppConfig {
 
 		return nil
 	}
+
+	staticfiles.AddFS(staticFS, tpl.MatchAnd(
+		tpl.MatchPrefix("admin/"),
+		tpl.MatchOr(
+			tpl.MatchExt(".css"),
+			tpl.MatchExt(".js"),
+			tpl.MatchExt(".png"),
+			tpl.MatchExt(".jpg"),
+			tpl.MatchExt(".jpeg"),
+			tpl.MatchExt(".svg"),
+			tpl.MatchExt(".gif"),
+			tpl.MatchExt(".ico"),
+		),
+	))
+
+	tpl.Add(tpl.Config{
+		AppName: "admin",
+		FS:      tplFS,
+		Bases: []string{
+			"admin/skeleton.tmpl",
+			"admin/base.tmpl",
+		},
+		Matches: tpl.MatchAnd(
+			tpl.MatchPrefix("admin/"),
+			tpl.MatchOr(
+				tpl.MatchExt(".tmpl"),
+			),
+		),
+		Funcs: template.FuncMap{
+			"menu": func(r *http.Request) template.HTML {
+				var m = &menu.Menu{}
+				var menuItems = menu.NewItems()
+				var hooks = goldcrest.Get[RegisterMenuItemHookFunc](RegisterMenuItemHook)
+				for _, hook := range hooks {
+					hook(AdminSite, menuItems)
+				}
+				m.Items = menuItems.All()
+				var buf = new(bytes.Buffer)
+				m.Component().Render(r.Context(), buf)
+				return template.HTML(buf.String())
+			},
+			"script_hook_output": func() media.Media {
+				var hooks = goldcrest.Get[RegisterScriptHookFunc](RegisterGlobalMedia)
+				var m media.Media = media.NewMedia()
+				for _, hook := range hooks {
+					var hook_m = hook(AdminSite)
+					if hook_m != nil {
+						m = m.Merge(hook_m)
+					}
+				}
+				return m
+			},
+			"footer_menu": func(r *http.Request) template.HTML {
+				var m = &menu.Menu{}
+				var menuItems = menu.NewItems()
+				var hooks = goldcrest.Get[RegisterFooterMenuItemHookFunc](RegisterFooterMenuItemHook)
+				for _, hook := range hooks {
+					hook(r, AdminSite, menuItems)
+				}
+				m.Items = menuItems.All()
+				var buf = new(bytes.Buffer)
+				m.Component().Render(r.Context(), buf)
+				return template.HTML(buf.String())
+			},
+		},
+	})
 
 	return AdminSite
 }

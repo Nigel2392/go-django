@@ -2,6 +2,7 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -24,6 +25,7 @@ var (
 )
 
 type Panel interface {
+	Fields() []string
 	Bind(form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel
 }
 
@@ -31,10 +33,14 @@ type fieldPanel struct {
 	fieldname string
 }
 
+func (f *fieldPanel) Fields() []string {
+	return []string{f.fieldname}
+}
+
 func (f *fieldPanel) Bind(form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	var bf, ok = boundFields[f.fieldname]
 	if !ok {
-		panic("Field does not exist in form")
+		panic(fmt.Sprintf("Field %s not found", f.fieldname))
 	}
 
 	return &BoundFormPanel[forms.Form, *fieldPanel]{
@@ -55,6 +61,10 @@ type titlePanel struct {
 	Panel
 }
 
+func (t *titlePanel) Fields() []string {
+	return t.Panel.Fields()
+}
+
 func (t *titlePanel) Bind(form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	return &BoundTitlePanel[forms.Form, *titlePanel]{
 		BoundPanel: t.Panel.Bind(form, ctx, boundFields),
@@ -71,6 +81,14 @@ func TitlePanel(panel Panel) Panel {
 type multiPanel struct {
 	panels []Panel
 	Label  func() string
+}
+
+func (m *multiPanel) Fields() []string {
+	var fields = make([]string, 0)
+	for _, panel := range m.panels {
+		fields = append(fields, panel.Fields()...)
+	}
+	return fields
 }
 
 func (m *multiPanel) Bind(form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
@@ -186,6 +204,9 @@ func (a *AdminForm[T]) Widgets() []widgets.Widget {
 func (a *AdminForm[T]) AddField(name string, field fields.Field) {
 	a.Form.AddField(name, field)
 }
+func (a *AdminForm[T]) DeleteField(name string) bool {
+	return a.Form.DeleteField(name)
+}
 func (a *AdminForm[T]) AddWidget(name string, widget widgets.Widget) {
 	a.Form.AddWidget(name, widget)
 }
@@ -276,6 +297,12 @@ func (a *AdminForm[T]) OnFinalize(f ...func(forms.Form)) {
 
 type AdminModelForm[T modelforms.ModelForm[attrs.Definer]] struct {
 	*AdminForm[T]
+}
+
+func NewAdminModelForm[T modelforms.ModelForm[attrs.Definer]](form T, panels ...Panel) *AdminModelForm[T] {
+	return &AdminModelForm[T]{
+		AdminForm: NewAdminForm(form, panels...),
+	}
 }
 
 func (a *AdminModelForm[T]) Load() {

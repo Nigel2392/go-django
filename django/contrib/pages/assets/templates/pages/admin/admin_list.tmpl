@@ -31,7 +31,7 @@
         {{ $model := (.Get "model") }}
         <div class="list-view-header">
             <div class="buttons">
-                <a href="{{ url "admin:pages:add" $page.ID }}" class="button primary">{{ T "Add Child Page" }}</a>
+                <a href="{{ url "admin:pages:type" $page.ID }}" class="button primary">{{ T "Add Child Page" }}</a>
                 <a href="{{ url "admin:pages:edit" $page.ID }}" class="button primary">{{ T "Edit Page" }}</a>
             </div>
             <div class="title-text">

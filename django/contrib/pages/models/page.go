@@ -33,8 +33,8 @@ type PageNode struct {
 	Numchild    int64      `json:"numchild" attrs:"blank"`
 	UrlPath     string     `json:"url_path" attrs:"blank"`
 	StatusFlags StatusFlag `json:"status_flags" attrs:"null;blank"`
-	PageID      int64      `json:"page_id" attrs:"readonly"`
-	ContentType string     `json:"content_type" attrs:"readonly"`
+	PageID      int64      `json:"page_id" attrs:""`
+	ContentType string     `json:"content_type" attrs:""`
 	CreatedAt   time.Time  `json:"created_at" attrs:"readonly"`
 	UpdatedAt   time.Time  `json:"updated_at" attrs:"readonly"`
 }

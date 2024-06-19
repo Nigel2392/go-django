@@ -9,5 +9,4 @@ const (
 	ErrTooLittleAncestors errs.Error = "too little ancestors provided"
 	ErrTooManyAncestors   errs.Error = "too many ancestors provided"
 	ErrPageIsRoot         errs.Error = "page is root"
-	ErrInvalidScanType    errs.Error = "invalid scan type"
 )

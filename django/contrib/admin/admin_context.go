@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/media"
+	"github.com/justinas/nosurf"
 )
 
 var _ ctx.Context = (*adminContext)(nil)
@@ -87,4 +88,8 @@ func (c *adminContext) SetPage(page PageOptions) {
 
 func (c *adminContext) Request() *http.Request {
 	return c.request
+}
+
+func (c *adminContext) CsrfToken() string {
+	return nosurf.Token(c.request)
 }

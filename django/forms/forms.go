@@ -45,6 +45,11 @@ type ErrorAdder interface {
 	AddError(name string, errorList ...error)
 }
 
+type FieldError interface {
+	Field() string
+	Errors() []error
+}
+
 type Form interface {
 	FormRenderer
 
@@ -61,6 +66,7 @@ type Form interface {
 	Widgets() []widgets.Widget
 	AddField(name string, field fields.Field)
 	AddWidget(name string, widget widgets.Widget)
+	DeleteField(name string) bool
 	BoundForm() BoundForm
 	BoundFields() *orderedmap.OrderedMap[string, BoundField]
 	BoundErrors() *orderedmap.OrderedMap[string, []error]

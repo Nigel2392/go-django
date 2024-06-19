@@ -124,23 +124,28 @@ func NewAppConfig() *PageAppConfig {
 		},
 	}
 	pageApp.AppConfig.Ready = func() error {
-
 		var pagesRoute = admin.AdminSite.Route.Get(
 			"/pages", nil, "pages",
 		)
 
-		// listURL for the pages admin site.
+		// List all pages
+		// Delibirately after the add page route
 		pagesRoute.Get(
 			"<<page_id>>", pageHandler(listPageHandler), "list",
 		)
 
-		// addURL for the pages admin site.
+		// Choose page type
 		pagesRoute.Get(
+			"<<page_id>>/type", pageHandler(choosePageTypeHandler), "type",
+		)
+
+		// Add new page type to a parent page
+		pagesRoute.Any(
 			"<<page_id>>/add", pageHandler(addPageHandler), "add",
 		)
 
-		// editURL for the pages admin site.
-		pagesRoute.Get(
+		// Edit page
+		pagesRoute.Any(
 			"<<page_id>>/edit", pageHandler(editPageHandler), "edit",
 		)
 

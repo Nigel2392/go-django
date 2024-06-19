@@ -11,6 +11,8 @@ import (
 	_ "github.com/Nigel2392/django/contrib/pages/backend-mysql"
 	_ "github.com/Nigel2392/django/contrib/pages/backend-sqlite"
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/Nigel2392/django/core/contenttypes"
+	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/go-signals"
 )
 
@@ -27,11 +29,11 @@ func getEnv(key, def string) string {
 func init() {
 
 	var (
-		// dbEngine = getEnv("DB_ENGINE", "sqlite3")
-		// dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
+		dbEngine = getEnv("DB_ENGINE", "sqlite3")
+		dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
 		// dbURL = getEnv("DB_URL", "test.sqlite3.db")
-		dbEngine = getEnv("DB_ENGINE", "mysql")
-		dbURL    = getEnv("DB_URL", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
+		// dbEngine = getEnv("DB_ENGINE", "mysql")
+		// dbURL    = getEnv("DB_URL", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
 	)
 
 	var err error
@@ -101,21 +103,13 @@ const (
 	testPageUPDATE       = `UPDATE test_pages SET title = ? WHERE id = ?`
 	testPageByID         = `SELECT id, title FROM test_pages WHERE id = ?`
 	testPageCREATE_TABLE = `CREATE TABLE IF NOT EXISTS test_pages (
-		id INTEGER PRIMARY KEY AUTO_INCREMENT,
+		id INTEGER PRIMARY KEY AUTOINCREMENT,
 		title TEXT
 	)`
 )
 
 func TestContentType(t *testing.T) {
-	var cType = pages.NewContentType(&TestPage{})
-
-	t.Run("NewPage", func(t *testing.T) {
-		var newInstance = cType.New()
-		var _, ok = newInstance.(*TestPage)
-		if !ok {
-			t.Errorf("expected *TestPage, got %T", newInstance)
-		}
-	})
+	var cType = contenttypes.NewContentType(&TestPage{})
 
 	t.Run("TypeName", func(t *testing.T) {
 		if cType.Model() != "TestPage" {
@@ -129,16 +123,19 @@ func TestPageRegistry(t *testing.T) {
 	t.Run("Definition", func(t *testing.T) {
 
 		var definition = &pages.PageDefinition{
-			PageObject: &TestPage{
-				Ref: &models.PageNode{
-					PK:     1,
-					Title:  "Title",
-					Path:   "001",
-					PageID: 69,
-					Depth:  0,
+			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
+				GetLabel: fields.S(""),
+				ContentObject: &TestPage{
+					Ref: &models.PageNode{
+						PK:     1,
+						Title:  "Title",
+						Path:   "001",
+						PageID: 69,
+						Depth:  0,
+					},
+					Identifier:  69,
+					Description: "Description",
 				},
-				Identifier:  69,
-				Description: "Description",
 			},
 			GetForID: func(ctx context.Context, node models.PageNode, id int64) (pages.Page, error) {
 				return &TestPage{
@@ -179,11 +176,11 @@ func TestPageRegistry(t *testing.T) {
 				return
 			}
 
-			if definition.PageObject != testDef.PageObject {
-				t.Errorf("expected %+v, got %+v", definition.PageObject, testDef.PageObject)
+			if definition.ContentObject != testDef.ContentObject {
+				t.Errorf("expected %+v, got %+v", definition.ContentObject, testDef.ContentObject)
 			}
 
-			var page = testDef.PageObject.(*TestPage)
+			var page = testDef.ContentObject.(*TestPage)
 			if page.Description != "Description" {
 				t.Errorf("expected Description, got %s", page.Description)
 			}
@@ -269,8 +266,6 @@ func TestPageNode(t *testing.T) {
 	})
 
 	sqlDB.Exec("DROP TABLE IF EXISTS PageNode")
-
-	// var _ sql.Result = (mysql.Result)(nil)
 
 	if err := pages.CreateTable(sqlDB); err != nil {
 		t.Error(err)
@@ -772,7 +767,10 @@ func TestPageNode(t *testing.T) {
 	})
 
 	pages.Register(&pages.PageDefinition{
-		PageObject: &DBTestPage{},
+		ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
+			ContentObject: &DBTestPage{},
+			GetLabel:      fields.S(""),
+		},
 		GetForID: func(ctx context.Context, ref models.PageNode, id int64) (pages.Page, error) {
 			var page = &DBTestPage{}
 			page.Ref = &ref

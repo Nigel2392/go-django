@@ -1,14 +1,19 @@
 package pages
 
 import (
+	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/django/forms/modelforms"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/django/views/list"
 	"github.com/Nigel2392/mux"
@@ -86,7 +91,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 						return ""
 					}
 					return django.Reverse(
-						"admin:pages:add",
+						"admin:pages:type",
 						primaryField.GetValue(),
 					)
 				},
@@ -175,10 +180,120 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	views.Invoke(view, w, r)
 }
 
+func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+	var definitions = ListDefinitions()
+	var view = &views.BaseView{
+		AllowedMethods:  []string{http.MethodGet},
+		BaseTemplateKey: admin.BASE_KEY,
+		TemplateName:    "pages/admin/choose_page_type.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = admin.NewContext(req, admin.AdminSite, nil)
+			context.Set("app", a)
+			context.Set("model", m)
+			context.Set("page_object", p)
+			context.Set("definitions", definitions)
+			context.SetPage(admin.PageOptions{
+				TitleFn:    fields.S("Choose Page Type"),
+				SubtitleFn: fields.S("Select the type of page you want to create"),
+			})
+			return context, nil
+		},
+	}
+
+	views.Invoke(view, w, r)
+}
+
 func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
 }
 
+type pageDefiner interface {
+	attrs.Definer
+	Page
+}
+
 func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
+	var instance, err = Specific(r.Context(), *p)
+	except.Assert(err == nil, 500, "error getting page instance, it might not exist.")
+
+	var page, ok = instance.(pageDefiner)
+	if !ok {
+		page = p
+		// logger.Fatalf(1, "instance does not adhere to attrs.Definer: %T", instance)
+	}
+
+	var fieldDefs = page.FieldDefs()
+	var definition = DefinitionForObject(page)
+	var panels []admin.Panel
+	if definition == nil || definition.Panels == nil {
+		panels = make([]admin.Panel, fieldDefs.Len())
+
+		for i, def := range fieldDefs.Fields() {
+			panels[i] = admin.FieldPanel(def.Name())
+		}
+	} else {
+		panels = definition.Panels(r, page)
+	}
+
+	var form = modelforms.NewBaseModelForm[attrs.Definer](page)
+	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
+
+	adminForm.Load()
+
+	fmt.Println("adminForm", adminForm)
+	fmt.Println("adminForm", adminForm.Fields())
+	for _, field := range adminForm.Fields() {
+		fmt.Println("field", field.Name())
+	}
+
+	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
+		if page, ok := d.(SaveablePage); ok {
+
+			return UpdatePage(QuerySet(), ctx, page)
+		}
+
+		var n = d.(*models.PageNode)
+		return QuerySet().UpdateNode(ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, int64(n.StatusFlags), n.PageID, n.ContentType, n.PK)
+	}
+
+	var view = &views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]]{
+		BaseView: views.BaseView{
+			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+			BaseTemplateKey: admin.BASE_KEY,
+			TemplateName:    "pages/admin/edit_page.tmpl",
+			GetContextFn: func(req *http.Request) (ctx.Context, error) {
+				var context = admin.NewContext(req, admin.AdminSite, nil)
+				var primary = fieldDefs.Primary()
+				context.Set("app", a)
+				context.Set("model", m)
+				context.Set("page_object", page)
+				context.Set("PostURL", django.Reverse("admin:pages:edit", primary.GetValue()))
+				return context, nil
+			},
+		},
+		GetFormFn: func(req *http.Request) *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]] {
+			return adminForm
+		},
+		GetInitialFn: func(req *http.Request) map[string]interface{} {
+			var initial = make(map[string]interface{})
+			fmt.Println("fieldDefs", fieldDefs)
+			for _, field := range fieldDefs.Fields() {
+				initial[field.Name()] = field.GetValue()
+				fmt.Println("field", field.Name(), field.GetValue())
+			}
+			return initial
+		},
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]) {
+			var instance = form.Instance()
+			assert.False(instance == nil, "instance is nil after form submission")
+			var listViewURL = django.Reverse("admin:pages:list", instance.(Page).ID())
+			http.Redirect(w, r, listViewURL, http.StatusSeeOther)
+		},
+	}
+
+	if err := views.Invoke(view, w, r); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
