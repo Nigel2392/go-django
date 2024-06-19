@@ -70,7 +70,7 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 	}
 
 	parent.Numchild++
-	*parent, err = queries.IncrementNumChild(ctx, parent.Path, parent.Depth)
+	*parent, err = queries.IncrementNumChild(ctx, parent.PK)
 	if err != nil {
 		return err
 	}
@@ -146,18 +146,22 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 		descendant.Path = newParent.Path + descendant.Path[node.Depth*STEP_LEN:]
 		descendant.Depth = (newParent.Depth + descendant.Depth + 1) - node.Depth
 		nodesPtr[i+1] = &descendant
+
+		if err = queries.UpdateNodePathAndDepth(ctx, descendant.Path, descendant.Depth, descendant.PK); err != nil {
+			return errors.Wrap(err, "failed to update descendant")
+		}
 	}
 
-	if err = queries.UpdateNodes(ctx, nodesPtr); err != nil {
-		return errors.Wrap(err, "failed to update descendants")
-	}
+	// if err = queries.UpdateNodes(ctx, nodesPtr); err != nil {
+	// return errors.Wrap(err, "failed to update descendants")
+	// }
 
-	*newParent, err = queries.IncrementNumChild(ctx, newParent.Path, newParent.Depth)
+	*newParent, err = queries.IncrementNumChild(ctx, newParent.PK)
 	if err != nil {
 		return errors.Wrap(err, "failed to increment new parent numchild")
 	}
 
-	_, err = queries.DecrementNumChild(ctx, oldParent.Path, oldParent.Depth)
+	_, err = queries.DecrementNumChild(ctx, oldParent.PK)
 	if err != nil {
 		return errors.Wrap(err, "failed to decrement old parent numchild")
 	}
@@ -283,7 +287,7 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 		return err
 	}
 
-	parent, err = queries.DecrementNumChild(ctx, parent.Path, parent.Depth)
+	parent, err = queries.DecrementNumChild(ctx, parent.PK)
 	if err != nil {
 		return err
 	}

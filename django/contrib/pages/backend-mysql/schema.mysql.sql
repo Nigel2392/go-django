@@ -1,9 +1,9 @@
 CREATE TABLE IF NOT EXISTS PageNode (
-    id              SERIAL    PRIMARY KEY,
-    title           TEXT      NOT NULL,
-    path            TEXT      UNIQUE NOT NULL,
-    depth           BIGINT    NOT NULL,
-    numchild        BIGINT    NOT NULL,
+    id              BIGINT       AUTO_INCREMENT PRIMARY KEY,
+    title           VARCHAR(255) NOT NULL,
+    path            VARCHAR(255) UNIQUE         NOT NULL,
+    depth           BIGINT       NOT NULL,
+    numchild        BIGINT       NOT NULL,
 
     -- URL path for this node
     -- This is a field based on the slugified title
@@ -20,11 +20,15 @@ CREATE TABLE IF NOT EXISTS PageNode (
     page_id         BIGINT    NOT NULL,
 
     -- The unique content type name for this node
-    content_type    TEXT      NOT NULL,
+    content_type    VARCHAR(255) NOT NULL,
+
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Read-only
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- Read-only
 );
 
-CREATE INDEX IF NOT EXISTS PageNode_path ON PageNode(path);
-CREATE INDEX IF NOT EXISTS PageNode_page_id ON PageNode(page_id);
-CREATE INDEX IF NOT EXISTS PageNode_type_name ON PageNode(content_type);
+ALTER TABLE PageNode ADD INDEX (path);
+ALTER TABLE PageNode ADD INDEX (page_id);
+ALTER TABLE PageNode ADD INDEX (content_type);
+-- CREATE INDEX PageNode_path ON PageNode(path);
+-- CREATE INDEX PageNode_page_id ON PageNode(page_id);
+-- CREATE INDEX PageNode_type_name ON PageNode(content_type);

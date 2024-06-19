@@ -1,9 +1,11 @@
-package models_postgres
+package models_mysql
 
 import (
 	"context"
 	"database/sql"
 	"fmt"
+
+	"github.com/Nigel2392/django/contrib/pages/models"
 )
 
 type DBTX interface {
@@ -52,6 +54,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.getNodeByPathStmt, err = db.PrepareContext(ctx, getNodeByPath); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNodeByPath: %w", err)
+	}
+	if q.getNodesByDepthStmt, err = db.PrepareContext(ctx, getNodesByDepth); err != nil {
+		return nil, fmt.Errorf("error preparing query GetNodesByDepth: %w", err)
 	}
 	if q.getNodesByIDsStmt, err = db.PrepareContext(ctx, getNodesByIDs); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNodesByIDs: %w", err)
@@ -141,6 +146,11 @@ func (q *Queries) Close() error {
 	if q.getNodeByPathStmt != nil {
 		if cerr := q.getNodeByPathStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing getNodeByPathStmt: %w", cerr)
+		}
+	}
+	if q.getNodesByDepthStmt != nil {
+		if cerr := q.getNodesByDepthStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing getNodesByDepthStmt: %w", cerr)
 		}
 	}
 	if q.getNodesByIDsStmt != nil {
@@ -243,6 +253,7 @@ type Queries struct {
 	getDescendantsStmt         *sql.Stmt
 	getNodeByIDStmt            *sql.Stmt
 	getNodeByPathStmt          *sql.Stmt
+	getNodesByDepthStmt        *sql.Stmt
 	getNodesByIDsStmt          *sql.Stmt
 	getNodesByPageIDsStmt      *sql.Stmt
 	getNodesByTypeHashStmt     *sql.Stmt
@@ -255,7 +266,7 @@ type Queries struct {
 	updateNodeStatusFlagsStmt  *sql.Stmt
 }
 
-func (q *Queries) WithTx(tx *sql.Tx) *Queries {
+func (q *Queries) WithTx(tx *sql.Tx) models.Querier {
 	return &Queries{
 		db:                         tx,
 		tx:                         tx,
@@ -270,6 +281,7 @@ func (q *Queries) WithTx(tx *sql.Tx) *Queries {
 		getDescendantsStmt:         q.getDescendantsStmt,
 		getNodeByIDStmt:            q.getNodeByIDStmt,
 		getNodeByPathStmt:          q.getNodeByPathStmt,
+		getNodesByDepthStmt:        q.getNodesByDepthStmt,
 		getNodesByIDsStmt:          q.getNodesByIDsStmt,
 		getNodesByPageIDsStmt:      q.getNodesByPageIDsStmt,
 		getNodesByTypeHashStmt:     q.getNodesByTypeHashStmt,

@@ -83,10 +83,10 @@ type DBQuerier interface {
 type Querier interface {
 	Close() error
 	WithTx(tx *sql.Tx) Querier
-	AllNodes(ctx context.Context, nodeLimit int32, nodeOffset int32) ([]PageNode, error)
+	AllNodes(ctx context.Context, nodeOffset int32, nodeLimit int32) ([]PageNode, error)
 	CountNodes(ctx context.Context) (int64, error)
 	CountRootNodes(ctx context.Context) (int64, error)
-	DecrementNumChild(ctx context.Context, path string, depth int64) (PageNode, error)
+	DecrementNumChild(ctx context.Context, id int64) (PageNode, error)
 	DeleteDescendants(ctx context.Context, path interface{}, depth int64) error
 	DeleteNode(ctx context.Context, id int64) error
 	DeleteNodes(ctx context.Context, id []int64) error
@@ -100,7 +100,7 @@ type Querier interface {
 	GetNodesByTypeHash(ctx context.Context, contentType string) ([]PageNode, error)
 	GetNodesByTypeHashes(ctx context.Context, contentType []string) ([]PageNode, error)
 	GetNodesForPaths(ctx context.Context, path []string) ([]PageNode, error)
-	IncrementNumChild(ctx context.Context, path string, depth int64) (PageNode, error)
+	IncrementNumChild(ctx context.Context, id int64) (PageNode, error)
 	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, statusFlags int64, pageID int64, contentType string) (int64, error)
 	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, statusFlags int64, pageID int64, contentType string, iD int64) error
 	UpdateNodes(ctx context.Context, nodes []*PageNode) error

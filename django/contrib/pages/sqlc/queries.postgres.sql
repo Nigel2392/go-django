@@ -40,6 +40,11 @@ SELECT   *
 FROM     PageNode
 WHERE    id = sqlc.arg(id);
 
+-- name: GetNodesByDepth :many
+SELECT   *
+FROM     PageNode
+WHERE    depth = sqlc.arg(depth);
+
 -- name: GetNodesByIDs :many
 SELECT   *
 FROM     PageNode

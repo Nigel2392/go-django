@@ -78,18 +78,17 @@ func (q *Queries) CountRootNodes(ctx context.Context) (int64, error) {
 const incrementNumChild = `-- name: IncrementNumChild :exec
 UPDATE PageNode
 SET numchild = numchild + 1
-WHERE path = ?1 AND depth = ?2
+WHERE id = ?1
 RETURNING id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 `
 
-func (q *Queries) IncrementNumChild(ctx context.Context, path string, depth int64) (models.PageNode, error) {
-	var row = q.queryRow(ctx, q.incrementNumChildStmt, incrementNumChild, path, depth)
+func (q *Queries) IncrementNumChild(ctx context.Context, id int64) (models.PageNode, error) {
+	row := q.queryRow(ctx, q.incrementNumChildStmt, incrementNumChild, id)
 	var i models.PageNode
 	var rowErr = row.Err()
 	if rowErr != nil {
 		return i, rowErr
 	}
-
 	err := row.Scan(
 		&i.PK,
 		&i.Title,
@@ -109,12 +108,12 @@ func (q *Queries) IncrementNumChild(ctx context.Context, path string, depth int6
 const decrementNumChild = `-- name: DecrementNumChild :exec
 UPDATE PageNode
 SET numchild = numchild - 1
-WHERE path = ?1 AND depth = ?2
+WHERE id = ?1
 RETURNING id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
 `
 
-func (q *Queries) DecrementNumChild(ctx context.Context, path string, depth int64) (models.PageNode, error) {
-	var row = q.queryRow(ctx, q.decrementNumChildStmt, decrementNumChild, path, depth)
+func (q *Queries) DecrementNumChild(ctx context.Context, id int64) (models.PageNode, error) {
+	var row = q.queryRow(ctx, q.decrementNumChildStmt, decrementNumChild, id)
 	var i models.PageNode
 	var rowErr = row.Err()
 	if rowErr != nil {

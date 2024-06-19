@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/django/contrib/pages"
+	_ "github.com/Nigel2392/django/contrib/pages/backend-mysql"
 	_ "github.com/Nigel2392/django/contrib/pages/backend-sqlite"
 	"github.com/Nigel2392/django/contrib/pages/models"
 	"github.com/Nigel2392/go-signals"
@@ -29,6 +30,8 @@ func init() {
 		dbEngine = getEnv("DB_ENGINE", "sqlite3")
 		dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
 		// dbURL = getEnv("DB_URL", "test.sqlite3.db")
+		// dbEngine = getEnv("DB_ENGINE", "mysql")
+		// dbURL    = getEnv("DB_URL", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
 	)
 
 	var err error
@@ -634,7 +637,7 @@ func TestPageNode(t *testing.T) {
 				})
 
 				t.Run("IncNumChild", func(t *testing.T) {
-					var node, err = querier.IncrementNumChild(queryCtx, childSiblingNode.Path, childSiblingNode.Depth)
+					var node, err = querier.IncrementNumChild(queryCtx, childSiblingNode.PK)
 					if err != nil {
 						t.Error(err)
 						return
@@ -650,7 +653,7 @@ func TestPageNode(t *testing.T) {
 				})
 
 				t.Run("DecNumChild", func(t *testing.T) {
-					var node, err = querier.DecrementNumChild(queryCtx, childSiblingNode.Path, childSiblingNode.Depth)
+					var node, err = querier.DecrementNumChild(queryCtx, childSiblingNode.PK)
 					if err != nil {
 						t.Error(err)
 						return

@@ -127,8 +127,7 @@ var pageMenuHandlerTests = []pageMenuHandlerTest{
 }
 
 func TestPageMenuHandler(t *testing.T) {
-	var err error
-	sqlDB, err = sql.Open("sqlite3", "file::memory:?cache=shared")
+	var sqlDB, err = sql.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		panic(err)
 	}

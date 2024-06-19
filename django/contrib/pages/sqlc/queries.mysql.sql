@@ -45,6 +45,11 @@ SELECT   *
 FROM     PageNode
 WHERE    id IN (sqlc.slice(id));
 
+-- name: GetNodesByDepth :many
+SELECT   *
+FROM     PageNode
+WHERE    depth = sqlc.arg(depth);
+
 -- name: GetNodesByPageIDs :many
 SELECT   *
 FROM     PageNode
@@ -106,12 +111,12 @@ WHERE    id = sqlc.arg(id);
 -- name: IncrementNumChild :exec
 UPDATE PageNode
 SET numchild = numchild + 1
-WHERE path = sqlc.arg(path) AND depth = sqlc.arg(depth);
+WHERE id = sqlc.arg(id);
 
 -- name: DecrementNumChild :exec
 UPDATE PageNode
 SET numchild = numchild - 1
-WHERE path = sqlc.arg(path) AND depth = sqlc.arg(depth);
+WHERE id = sqlc.arg(id);
 
 -- name: DeleteNode :exec
 DELETE FROM PageNode

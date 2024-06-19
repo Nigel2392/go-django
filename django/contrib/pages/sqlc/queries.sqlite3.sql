@@ -111,13 +111,13 @@ WHERE    id = sqlc.arg(id);
 -- name: IncrementNumChild :exec
 UPDATE PageNode
 SET numchild = numchild + 1
-WHERE path = sqlc.arg(path) AND depth = sqlc.arg(depth)
+WHERE id = sqlc.arg(id)
 RETURNING *;
 
 -- name: DecrementNumChild :exec
 UPDATE PageNode
 SET numchild = numchild - 1
-WHERE path = sqlc.arg(path) AND depth = sqlc.arg(depth)
+WHERE id = sqlc.arg(id)
 RETURNING *;
 
 -- name: DeleteNode :exec
