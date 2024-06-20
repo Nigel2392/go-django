@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -11,10 +12,78 @@ import (
 	"github.com/Nigel2392/django/contrib/pages/models"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/contenttypes"
+	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/forms/fields"
 )
 
-var pageMap = make(map[int64]*BlogPage)
+const createTable = `CREATE TABLE IF NOT EXISTS blog_pages (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	title TEXT,
+	editor TEXT
+)`
+
+const insertPage = `INSERT INTO blog_pages (title, editor) VALUES (?, ?)`
+const updatePage = `UPDATE blog_pages SET title = ?, editor = ? WHERE id = ?`
+const selectPage = `SELECT id, title, editor FROM blog_pages WHERE id = ?`
+
+func toBlockData(richText *editor.EditorJSBlockData) editor.EditorJSData {
+	var blocks = make([]editor.BlockData, 0)
+	for _, block := range richText.Blocks {
+		var data = block.Data()
+		blocks = append(blocks, data)
+	}
+	var d = editor.EditorJSData{
+		Time:    richText.Time,
+		Version: richText.Version,
+		Blocks:  blocks,
+	}
+	return d
+}
+
+func createBlogPage(title string, richText *editor.EditorJSBlockData) error {
+	var editorData = toBlockData(richText)
+	var data, err = json.Marshal(editorData)
+	if err != nil {
+		return err
+	}
+
+	_, err = globalDB.Exec(insertPage, title, string(data))
+	return err
+}
+
+func updateBlogPage(id int64, title string, richText *editor.EditorJSBlockData) error {
+	var editorData = toBlockData(richText)
+	var data, err = json.Marshal(editorData)
+	if err != nil {
+		return err
+	}
+
+	_, err = globalDB.Exec(updatePage, title, string(data), id)
+	return err
+}
+
+func getBlogPage(parentNode models.PageNode, id int64) (*BlogPage, error) {
+	var page = &BlogPage{
+		PageNode: &parentNode,
+	}
+	var editorData = ""
+	var err = globalDB.QueryRow(selectPage, id).Scan(&page.PageNode.PageID, &page.Title, &editorData)
+	if err != nil {
+		return nil, err
+	}
+
+	var richText = editor.EditorJSData{}
+	err = json.Unmarshal([]byte(editorData), &richText)
+	if err != nil {
+		return nil, err
+	}
+
+	page.Editor, err = editor.ValueToGo(
+		nil, richText,
+	)
+
+	return page, err
+}
 
 func init() {
 	pages.Register(&pages.PageDefinition{
@@ -22,7 +91,15 @@ func init() {
 			GetLabel:      fields.S("Blog Page"),
 			ContentObject: &BlogPage{},
 		},
-		Panels: func(r *http.Request, page pages.Page) []admin.Panel {
+		AddPanels: func(r *http.Request, page pages.Page) []admin.Panel {
+			return []admin.Panel{
+				admin.TitlePanel(
+					admin.FieldPanel("Title"),
+				),
+				admin.FieldPanel("Editor"),
+			}
+		},
+		EditPanels: func(r *http.Request, page pages.Page) []admin.Panel {
 			return []admin.Panel{
 				admin.TitlePanel(
 					admin.FieldPanel("Title"),
@@ -35,16 +112,7 @@ func init() {
 			}
 		},
 		GetForID: func(ctx context.Context, ref models.PageNode, id int64) (pages.Page, error) {
-			fmt.Printf("Getting blog page for id: %d %d %v\n", id, ref.PageID, pageMap)
-			var page = pageMap[id]
-			if page == nil {
-				return &BlogPage{
-					PageNode: &ref,
-					Editor:   &editor.EditorJSBlockData{},
-				}, nil
-			}
-			fmt.Printf("Returning blog page: %#v\n", page)
-			return page, nil
+			return getBlogPage(ref, id)
 		},
 	})
 
@@ -62,12 +130,21 @@ func (b *BlogPage) Save(ctx context.Context) error {
 	for _, block := range editorData.Blocks {
 		fmt.Printf("Block: %#v\n", block)
 	}
-	pageMap[b.PageID] = b
-	return nil
+	var err error
+	if b.ID() == 0 {
+		fmt.Println("Creating blog page")
+		err = createBlogPage(b.Title, b.Editor)
+	} else {
+		err = updateBlogPage(b.PageNode.PageID, b.Title, b.Editor)
+	}
+	if err != nil {
+		logger.Errorf("Error saving blog page: %v\n", err)
+	}
+	return err
 }
 
 func (b *BlogPage) ID() int64 {
-	return b.PageID
+	return b.PageNode.PageID
 }
 
 func (b *BlogPage) Reference() *models.PageNode {

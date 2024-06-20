@@ -2,17 +2,21 @@ package pages
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/admin"
+	"github.com/Nigel2392/django/contrib/auth"
 	"github.com/Nigel2392/django/contrib/pages/models"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
+	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/modelforms"
+	"github.com/Nigel2392/django/permissions"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/django/views/list"
 	"github.com/Nigel2392/mux"
@@ -54,6 +58,15 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 }
 
 func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+
+	if !permissions.Object(r, "pages:list", p) {
+		auth.Fail(
+			http.StatusForbidden,
+			"User does not have permission to view this page",
+		)
+		return
+	}
+
 	var columns = make([]list.ListColumn[attrs.Definer], len(m.ListView.Fields)+1)
 	for i, field := range m.ListView.Fields {
 		columns[i+1] = m.GetColumn(m.ListView, field)
@@ -180,6 +193,15 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 }
 
 func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+
+	if !permissions.Object(r, "pages:add", p) {
+		auth.Fail(
+			http.StatusForbidden,
+			"User does not have permission to add a page",
+		)
+		return
+	}
+
 	var definitions = ListDefinitions()
 	var view = &views.BaseView{
 		AllowedMethods:  []string{http.MethodGet},
@@ -203,7 +225,100 @@ func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 }
 
 func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+	if !permissions.Object(r, "pages:add", p) {
+		auth.Fail(
+			http.StatusForbidden,
+			"User does not have permission to add a page",
+		)
+		return
+	}
 
+	fmt.Println("Add page handler")
+
+	var cType = contenttypes.DefinitionForPackage("core", "BlogPage")
+	var page pageDefiner
+	if cType != nil {
+		page = cType.Object().(pageDefiner)
+	} else {
+		page = p
+	}
+
+	fmt.Println("Page: ", page, cType)
+
+	var fieldDefs = page.FieldDefs()
+	var definition = DefinitionForObject(page)
+	var panels []admin.Panel
+	if definition == nil || definition.AddPanels == nil {
+		panels = make([]admin.Panel, fieldDefs.Len())
+
+		for i, def := range fieldDefs.Fields() {
+			panels[i] = admin.FieldPanel(def.Name())
+		}
+	} else {
+		panels = definition.AddPanels(r, page)
+	}
+
+	var form = modelforms.NewBaseModelForm[attrs.Definer](page)
+	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](
+		form, panels...,
+	)
+
+	adminForm.Load()
+
+	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
+		if page, ok := d.(SaveablePage); ok {
+			return SavePage(QuerySet(), ctx, p, page)
+		}
+
+		var n = d.(*models.PageNode)
+		var _, err = QuerySet().InsertNode(
+			ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, int64(n.StatusFlags), n.PageID, n.ContentType,
+		)
+		return err
+	}
+
+	var view = &views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]]{
+		BaseView: views.BaseView{
+			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+			BaseTemplateKey: admin.BASE_KEY,
+			TemplateName:    "pages/admin/add_page.tmpl",
+			GetContextFn: func(req *http.Request) (ctx.Context, error) {
+				var context = admin.NewContext(req, admin.AdminSite, nil)
+				context.Set("app", a)
+				context.Set("model", m)
+				context.Set("page_object", p)
+				context.Set("PostURL", django.Reverse("admin:pages:add", p.ID()))
+				return context, nil
+			},
+		},
+		GetFormFn: func(req *http.Request) *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]] {
+			return adminForm
+		},
+		GetInitialFn: func(req *http.Request) map[string]interface{} {
+			var initial = make(map[string]interface{})
+			for _, field := range fieldDefs.Fields() {
+				initial[field.Name()] = field.GetValue()
+			}
+			return initial
+		},
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]) {
+			var instance = form.Instance()
+			assert.False(instance == nil, "instance is nil after form submission")
+			fmt.Println("Instance: ", instance, instance.(Page).Reference())
+			var f = instance.(pageDefiner)
+			var primary = f.FieldDefs().Primary()
+
+			fmt.Println("Primary: ", primary.GetValue())
+
+			var listViewURL = django.Reverse("admin:pages:list", primary.GetValue())
+			http.Redirect(w, r, listViewURL, http.StatusSeeOther)
+		},
+	}
+
+	if err := views.Invoke(view, w, r); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 type pageDefiner interface {
@@ -212,6 +327,14 @@ type pageDefiner interface {
 }
 
 func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+
+	if !permissions.Object(r, "pages:edit", p) {
+		auth.Fail(
+			http.StatusForbidden,
+			"User does not have permission to edit this page",
+		)
+		return
+	}
 
 	var instance, err = Specific(r.Context(), *p)
 	except.Assert(err == nil, 500, "error getting page instance, it might not exist.")
@@ -225,14 +348,14 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	var fieldDefs = page.FieldDefs()
 	var definition = DefinitionForObject(page)
 	var panels []admin.Panel
-	if definition == nil || definition.Panels == nil {
+	if definition == nil || definition.EditPanels == nil {
 		panels = make([]admin.Panel, fieldDefs.Len())
 
 		for i, def := range fieldDefs.Fields() {
 			panels[i] = admin.FieldPanel(def.Name())
 		}
 	} else {
-		panels = definition.Panels(r, page)
+		panels = definition.EditPanels(r, page)
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](page)

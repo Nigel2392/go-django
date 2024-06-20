@@ -1,6 +1,7 @@
 package contenttypes
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 )
@@ -96,6 +97,27 @@ func (p *ContentTypeRegistry) DefinitionForObject(page any) *ContentTypeDefiniti
 	return p.registry[typeName]
 }
 
+func (p *ContentTypeRegistry) DefinitionForPackage(toplevelPkgName string, typeName string) *ContentTypeDefinition {
+	fmt.Printf("Looking for %s.%s in %v\n", toplevelPkgName, typeName, p.registry)
+	for fullPkgPath, definition := range p.registry {
+		var parts = strings.Split(fullPkgPath, "/")
+		if len(parts) < 2 {
+			continue
+		}
+		var pkgInfo = parts[len(parts)-1]
+		var infoParts = strings.Split(pkgInfo, ".")
+		if len(infoParts) < 2 {
+			continue
+		}
+		var pkg = infoParts[0]
+		var typ = infoParts[1]
+		if pkg == toplevelPkgName && typ == typeName {
+			return definition
+		}
+	}
+	return nil
+}
+
 var contentTypeRegistryObject = &ContentTypeRegistry{}
 
 func Register(definition *ContentTypeDefinition) {
@@ -106,10 +128,14 @@ func DefinitionForType(typeName string) *ContentTypeDefinition {
 	return contentTypeRegistryObject.DefinitionForType(typeName)
 }
 
-func DefinitionForObject(page any) *ContentTypeDefinition {
-	return contentTypeRegistryObject.DefinitionForObject(page)
+func DefinitionForObject(obj any) *ContentTypeDefinition {
+	return contentTypeRegistryObject.DefinitionForObject(obj)
 }
 
 func ListDefinitions() []*ContentTypeDefinition {
 	return contentTypeRegistryObject.ListDefinitions()
+}
+
+func DefinitionForPackage(toplevelPkgName string, typeName string) *ContentTypeDefinition {
+	return contentTypeRegistryObject.DefinitionForPackage(toplevelPkgName, typeName)
 }

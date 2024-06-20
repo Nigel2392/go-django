@@ -1,0 +1,11 @@
+.ce-block__content > * {
+    padding-left: 0.325em;
+    padding-right: 0.325em;
+}
+.ce-block:has(:focus-within) {
+    outline: 2px solid var(--color-link);
+}
+.ce-block *:focus,
+.ce-block *:focus-within {
+    outline: unset;
+}

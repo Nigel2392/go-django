@@ -1,6 +1,7 @@
 package core
 
 import (
+	"database/sql"
 	"embed"
 	"io/fs"
 
@@ -15,8 +16,10 @@ import (
 //go:embed assets/**
 var coreFS embed.FS
 
+var globalDB *sql.DB
+
 func NewAppConfig() django.AppConfig {
-	var cfg = apps.NewAppConfig(
+	var cfg = apps.NewDBAppConfig(
 		"core", urls.Group("", "core").Add(
 			urls.Pattern(
 				urls.M("GET", "POST"),
@@ -28,8 +31,15 @@ func NewAppConfig() django.AppConfig {
 			),
 		),
 	)
-	cfg.Init = func(settings django.Settings) error {
+	cfg.Init = func(settings django.Settings, db *sql.DB) error {
 		var tplFS, err = fs.Sub(coreFS, "assets/templates")
+		if err != nil {
+			return err
+		}
+
+		globalDB = db
+
+		_, err = db.Exec(createTable)
 		if err != nil {
 			return err
 		}

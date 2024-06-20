@@ -277,10 +277,10 @@ func (f *BaseModelForm[T]) Save() error {
 		}
 	}
 	var err error
-	if instance, ok := any(f.Model).(models.Saver); ok {
-		err = instance.Save(ctx)
-	} else if f.SaveInstance != nil {
+	if f.SaveInstance != nil {
 		err = f.SaveInstance(ctx, f.Model)
+	} else if instance, ok := any(f.Model).(models.Saver); ok {
+		err = instance.Save(ctx)
 	}
 	if err != nil {
 		return err

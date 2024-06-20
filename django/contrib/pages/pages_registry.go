@@ -62,6 +62,7 @@ func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
 	}
 
 	p.registry[typeName] = definition
+	contenttypes.Register(definition.ContentTypeDefinition)
 }
 
 func (p *pageRegistry) ListDefinitions() []*PageDefinition {

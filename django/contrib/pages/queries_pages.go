@@ -3,11 +3,15 @@ package pages
 import (
 	"context"
 	"fmt"
+	"reflect"
 
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/Nigel2392/django/core/contenttypes"
 )
 
 func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, p SaveablePage) error {
+	fmt.Println("Parent is nil", parent == nil, p)
+
 	if parent == nil {
 		return UpdatePage(q, ctx, p)
 	}
@@ -24,32 +28,32 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 		ref     = p.Reference()
 	)
 
+	if ref.ContentType == "" && !reflect.DeepEqual(ref, p) {
+		var cType = contenttypes.NewContentType(p)
+		ref.ContentType = cType.TypeName()
+	}
+
 	if parent.Path == "" {
 		return fmt.Errorf("parent path must not be empty")
 	}
 
+	fmt.Println("Parent path is not empty", parent.Path, ref.Path)
+
 	if ref.Path == "" {
-		var err = CreateChildNode(
+		err = CreateChildNode(
 			q, ctx, parent, ref,
 		)
-		if err != nil {
-			return err
-		}
-
-		if err = p.Save(ctx); err != nil {
-			return err
-		}
 	} else {
 		err = queries.UpdateNode(
 			ctx, ref.Title, ref.Path, ref.Depth, ref.Numchild, ref.UrlPath, int64(ref.StatusFlags), ref.PageID, ref.ContentType, ref.PK,
 		)
-		if err != nil {
-			return err
-		}
+	}
+	if err != nil {
+		return err
+	}
 
-		if err = p.Save(ctx); err != nil {
-			return err
-		}
+	if err = p.Save(ctx); err != nil {
+		return err
 	}
 
 	return tx.Commit()
@@ -63,6 +67,11 @@ func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
 
 	if ref.PK == 0 {
 		return fmt.Errorf("page id must not be zero")
+	}
+
+	if ref.ContentType == "" && !reflect.DeepEqual(ref, p) {
+		var cType = contenttypes.NewContentType(p)
+		ref.ContentType = cType.TypeName()
 	}
 
 	if err := q.UpdateNode(

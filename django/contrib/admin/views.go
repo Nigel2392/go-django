@@ -233,9 +233,9 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				}
 			}
 
-			for _, field := range adminForm.Form.Fields() {
+			for _, field := range adminForm.Fields() {
 				if _, ok := fields[field.Name()]; !ok {
-					adminForm.Form.DeleteField(field.Name())
+					adminForm.DeleteField(field.Name())
 				}
 			}
 

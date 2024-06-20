@@ -31,6 +31,8 @@ class EditorJSWidgetController extends Controller<HTMLDivElement> {
             cfg.tools[key] = toolConfig;
         }
 
+        cfg.minHeight = cfg.minHeight || 150;
+
         //  // add the editor target to the config
         //  cfg["holder"] = this.editorTarget;
 

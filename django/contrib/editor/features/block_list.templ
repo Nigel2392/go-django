@@ -1,0 +1,38 @@
+package features
+
+import (
+	"github.com/Nigel2392/django"
+	"github.com/Nigel2392/django/contrib/editor"
+)
+
+func init() {
+	editor.Register(ListBlock)
+}
+
+var ListBlock = &Block{
+	BaseFeature: BaseFeature{
+		Type:          "list",
+		JSConstructor: "List",
+		JSFiles: []string{
+			django.Static("editorjs/js/vendor/tools/list.js"),
+		},
+		Build: func(fb *FeatureBlock) *FeatureBlock {
+			return fb
+		},
+	},
+	RenderFunc: func(b editor.FeatureBlock, c context.Context, w io.Writer) error {
+		var items = make([]string, 0)
+		for _, item := range b.Data().Data["items"].([]interface{}) {
+			items = append(items, item.(string))
+		}
+		return renderList(items).Render(c, w)
+	},
+}
+
+templ renderList(items []string) {
+	<ul>
+		for _, item := range items {
+			<li>{ item }</li>
+		}
+	</ul>
+}

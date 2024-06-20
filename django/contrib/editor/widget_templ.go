@@ -262,6 +262,10 @@ func (b *EditorJSWidget) Media() media.Media {
 		m = m.Merge(feature.Media())
 	}
 
+	m.AddCSS(
+		media.CSS(django.Static("editorjs/css/admin.css")),
+	)
+
 	m.AddJS(
 		&media.JSAsset{URL: django.Static("editorjs/js/index.js")},
 	)

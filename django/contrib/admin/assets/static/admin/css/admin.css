@@ -27,6 +27,10 @@
 *, *::before, *::after {
     box-sizing: border-box;
 }
+*:focus-within:not(:has(:focus-within)),
+*:focus {
+    outline: 2px solid var(--color-link);
+}
 html {
     font-family: sans-serif;
     line-height: 1.15;
@@ -213,6 +217,9 @@ a:hover {
 }
 .panel.panel-multi > .panel__body > * {
     flex: 1 1 auto;
+}
+.panel .panel__help {
+    margin-bottom: 0.35rem;
 }
 .panel .panel__errors ul,
 .error-list {

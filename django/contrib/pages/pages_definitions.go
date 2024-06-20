@@ -11,7 +11,8 @@ import (
 
 type PageDefinition struct {
 	*contenttypes.ContentTypeDefinition
-	Panels                  func(r *http.Request, page Page) []admin.Panel
+	AddPanels               func(r *http.Request, page Page) []admin.Panel
+	EditPanels              func(r *http.Request, page Page) []admin.Panel
 	GetForID                func(ctx context.Context, ref models.PageNode, id int64) (Page, error)
 	OnReferenceUpdate       func(ctx context.Context, ref models.PageNode, id int64) error
 	OnReferenceBeforeDelete func(ctx context.Context, ref models.PageNode, id int64) error

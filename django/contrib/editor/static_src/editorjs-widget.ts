@@ -2,6 +2,7 @@ import EditorJS from "@editorjs/editorjs";
 
 type EditorJSWidgetConfig = {
     holder: string | HTMLElement,
+    minHeight?: number,
     tools: any,
     data?: any,
     onReady?: () => void,

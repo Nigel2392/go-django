@@ -7,8 +7,6 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/django/core/ctx"
-	"github.com/Nigel2392/django/core/staticfiles"
-	"github.com/Nigel2392/django/core/tpl"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -56,18 +54,6 @@ type editorRegistry struct {
 	features *orderedmap.OrderedMap[string, BaseFeature]
 	ft_tunes map[string][]string
 	tunes    []string
-}
-
-func init() {
-	staticfiles.AddFS(
-		editorJS_FS,
-		tpl.MatchAnd(
-			tpl.MatchPrefix("editorjs"),
-			tpl.MatchOr(
-				tpl.MatchExt(".js"),
-			),
-		),
-	)
 }
 
 func newEditorRegistry() *editorRegistry {
