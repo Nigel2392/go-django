@@ -18,13 +18,18 @@ import (
 var capCaser = cases.Title(language.English)
 
 type FieldConfig struct {
-	Null     bool
-	Blank    bool
-	ReadOnly bool
-	Primary  bool
-	Label    string
-	HelpText string
-	Default  any
+	Null       bool
+	Blank      bool
+	ReadOnly   bool
+	Primary    bool
+	Label      string
+	HelpText   string
+	Default    any
+	Validators []func(interface{}) error
+	FormField  func(opts ...func(fields.Field)) fields.Field
+	FormWidget func(FieldConfig) widgets.Widget
+	Setter     func(interface{}) error
+	Getter     func() (interface{}, bool)
 }
 
 type FieldDef struct {
@@ -71,11 +76,11 @@ func NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef {
 }
 
 func (f *FieldDef) Label() string {
-	if labeler, ok := f.field_v.Interface().(Labeler); ok {
-		return labeler.Label()
-	}
 	if f.attrDef.Label != "" {
 		return fields.T(f.attrDef.Label)
+	}
+	if labeler, ok := f.field_v.Interface().(Labeler); ok {
+		return labeler.Label()
 	}
 	return fields.T(capCaser.String(f.field_t.Name))
 }
@@ -111,6 +116,12 @@ func (f *FieldDef) AllowEdit() bool {
 }
 
 func (f *FieldDef) Validate() error {
+	var v = f.GetValue()
+	for _, validator := range f.attrDef.Validators {
+		if err := validator(v); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -198,7 +209,13 @@ func (f *FieldDef) FormField() fields.Field {
 	}
 
 	var formField fields.Field
-	var hooks = goldcrest.Get[FormFieldGetter](HookFormFieldForType)
+	var hooks []FormFieldGetter
+	if f.attrDef.FormField != nil {
+		f.formField = f.attrDef.FormField()
+		goto returnField
+	}
+
+	hooks = goldcrest.Get[FormFieldGetter](HookFormFieldForType)
 	for _, hook := range hooks {
 		if field, ok := hook(f, typForNew, f.field_v, opts...); ok {
 			formField = field
@@ -236,11 +253,26 @@ func (f *FieldDef) FormField() fields.Field {
 
 returnField:
 	formField.SetName(f.Name())
+
+	if f.attrDef.FormWidget != nil {
+		formField.SetWidget(
+			f.attrDef.FormWidget(f.attrDef),
+		)
+	}
+
 	f.formField = formField
 	return formField
 }
 
 func (f *FieldDef) GetValue() interface{} {
+
+	if f.attrDef.Getter != nil {
+		var v, ok = f.attrDef.Getter()
+		if ok {
+			return v
+		}
+	}
+
 	var (
 		b        []byte
 		firstArg reflect.Value
@@ -270,6 +302,10 @@ func (f *FieldDef) GetValue() interface{} {
 }
 
 func (f *FieldDef) SetValue(v interface{}, force bool) error {
+
+	if f.attrDef.Setter != nil {
+		return f.attrDef.Setter(v)
+	}
 
 	var r_v = reflect.ValueOf(v)
 	if err := assert.True(
@@ -357,7 +393,13 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		}
 	}
 
+	var old = f.field_v
 	RSet(r_v_ptr, &f.field_v, false)
+
+	if err := f.Validate(); err != nil {
+		f.field_v.Set(old)
+		return err
+	}
 
 	return nil
 }

@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/django"
+	"github.com/Nigel2392/django/contrib/auth"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
@@ -12,6 +13,7 @@ import (
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/modelforms"
+	"github.com/Nigel2392/django/permissions"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/django/views/list"
 )
@@ -45,6 +47,14 @@ var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminAp
 }
 
 var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
+
+	if !permissions.Object(r, "admin:view_list", model.NewInstance()) {
+		auth.Fail(
+			http.StatusForbidden,
+			"Permission denied",
+		)
+		return
+	}
 
 	if model.ListView.GetHandler != nil {
 		var err = views.Invoke(model.ListView.GetHandler(adminSite, app, model), w, r)
@@ -94,6 +104,15 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 }
 
 var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
+
+	if !permissions.Object(r, "admin:add", model.NewInstance()) {
+		auth.Fail(
+			http.StatusForbidden,
+			"Permission denied",
+		)
+		return
+	}
+
 	var instance = model.NewInstance()
 	if model.AddView.GetHandler != nil {
 		var err = views.Invoke(model.AddView.GetHandler(adminSite, app, model, instance), w, r)
@@ -108,6 +127,14 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 }
 
 var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
+	if !permissions.Object(r, "admin:edit", instance) {
+		auth.Fail(
+			http.StatusForbidden,
+			"Permission denied",
+		)
+		return
+	}
+
 	if model.EditView.GetHandler != nil {
 		var err = views.Invoke(model.EditView.GetHandler(adminSite, app, model, instance), w, r)
 		assert.Err(err)
@@ -121,6 +148,14 @@ var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 }
 
 var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
+	if !permissions.Object(r, "admin:delete", instance) {
+		auth.Fail(
+			http.StatusForbidden,
+			"Permission denied",
+		)
+		return
+	}
+
 	if model.DeleteView.GetHandler != nil {
 		var err = views.Invoke(model.DeleteView.GetHandler(adminSite, app, model, instance), w, r)
 		assert.Err(err)
@@ -197,14 +232,13 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 					fields[field] = struct{}{}
 				}
 			}
-		
+
 			for _, field := range adminForm.Form.Fields() {
 				if _, ok := fields[field.Name()]; !ok {
-					fmt.Println("Deleting field", field.Name())
 					adminForm.Form.DeleteField(field.Name())
 				}
 			}
-			
+
 			return adminForm
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {

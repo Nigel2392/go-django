@@ -47,13 +47,10 @@ func NewEditorJSWidget(features ...string) *EditorJSWidget {
 }
 
 func (b EditorJSWidget) ValueToForm(value interface{}) interface{} {
-	fmt.Println("ValueToForm", value)
 	var editorJsData EditorJSData
 	if fields.IsZero(value) {
 		return editorJsData
 	}
-
-	fmt.Println("ValueToForm", value)
 
 	switch value := value.(type) {
 	case *EditorJSBlockData:

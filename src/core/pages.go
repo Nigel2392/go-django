@@ -83,15 +83,24 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 			Primary:  true,
 			ReadOnly: true,
 		}),
-		attrs.NewField(n.PageNode, "Title", nil),
+		attrs.NewField(n.PageNode, "Title", &attrs.FieldConfig{
+			Label:    "Title",
+			HelpText: "How do you want your post to be remembered?",
+		}),
 		attrs.NewField(n, "Editor", &attrs.FieldConfig{
-			Default: &editor.EditorJSBlockData{},
+			Default:  &editor.EditorJSBlockData{},
+			Label:    "Rich Text Editor",
+			HelpText: "This is a rich text editor. You can add images, videos, and other media to your blog post. ",
 		}),
 		attrs.NewField(n.PageNode, "CreatedAt", &attrs.FieldConfig{
 			ReadOnly: true,
+			Label:    "Created At",
+			HelpText: "The date and time this blog post was created.",
 		}),
 		attrs.NewField(n.PageNode, "UpdatedAt", &attrs.FieldConfig{
 			ReadOnly: true,
+			Label:    "Updated At",
+			HelpText: "The date and time this blog post was last updated.",
 		}),
 	)
 }

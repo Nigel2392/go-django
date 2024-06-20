@@ -9,7 +9,8 @@ import (
 type permissionTesterRegistry struct {
 	testersByObj  map[string][]PermissionTester
 	testersByPerm map[string][]PermissionTester
-	hooks         []func(r *http.Request, obj interface{}, perm string) bool
+	objectHooks   []func(r *http.Request, perm string, obj interface{}) bool
+	stringHooks   []func(r *http.Request, perm string) bool
 }
 
 func (p *permissionTesterRegistry) new(tests []PermissionTester) *tester {
@@ -17,8 +18,9 @@ func (p *permissionTesterRegistry) new(tests []PermissionTester) *tester {
 		tests = make([]PermissionTester, 0)
 	}
 	return &tester{
-		tests: tests,
-		hooks: p.hooks,
+		tests:       tests,
+		objectHooks: p.objectHooks,
+		stringHooks: p.stringHooks,
 	}
 }
 
@@ -58,9 +60,16 @@ func (p *permissionTesterRegistry) getTesterForPerm(perm string) PermissionTeste
 	return p.new(p.testersByPerm[perm])
 }
 
-func (p *permissionTesterRegistry) registerHook(hook func(r *http.Request, obj interface{}, perm string) bool) {
-	if p.hooks == nil {
-		p.hooks = make([]func(r *http.Request, obj interface{}, perm string) bool, 0)
+func (p *permissionTesterRegistry) registerObjectHook(hook func(r *http.Request, perm string, obj interface{}) bool) {
+	if p.objectHooks == nil {
+		p.objectHooks = make([]func(r *http.Request, perm string, obj interface{}) bool, 0)
 	}
-	p.hooks = append(p.hooks, hook)
+	p.objectHooks = append(p.objectHooks, hook)
+}
+
+func (p *permissionTesterRegistry) registerStringHook(hook func(r *http.Request, perm string) bool) {
+	if p.stringHooks == nil {
+		p.stringHooks = make([]func(r *http.Request, perm string) bool, 0)
+	}
+	p.stringHooks = append(p.stringHooks, hook)
 }

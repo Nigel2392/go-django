@@ -16,7 +16,7 @@
         {{ if $BackURL }}
             <a class="button warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
         {{ else }}
-            <a class="button warning hollow" href="{{ url "admin:apps:model" (.Get "app").Name (.Get "model").Name }}">{{ T "Back" }}</a>
+            <a class="button warning hollow" href="{{ url "admin:pages:list" (.Get "page_object").ID }}">{{ T "Back" }}</a>
         {{ end }}
     </form>
 {{ end }}

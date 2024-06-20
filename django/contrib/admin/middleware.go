@@ -1,13 +1,13 @@
 package admin
 
 import (
-	"fmt"
 	"net/http"
 	"os"
 	"slices"
 	"strings"
 
 	"github.com/Nigel2392/django/contrib/auth"
+	"github.com/Nigel2392/django/permissions"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 )
@@ -30,7 +30,6 @@ func RequiredMiddleware(next mux.Handler) mux.Handler {
 
 		if IS_GITHUB_ACTIONS {
 			if user == nil || !user.IsAuthenticated() {
-				fmt.Println("User is not authenticated")
 				auth.Fail(http.StatusUnauthorized, "You need to login", req.URL.Path)
 			}
 
@@ -38,6 +37,13 @@ func RequiredMiddleware(next mux.Handler) mux.Handler {
 				auth.Fail(
 					http.StatusForbidden,
 					"You do not have permission to access this page",
+				)
+			}
+
+			if !permissions.String(req, "admin:access_admin") {
+				auth.Fail(
+					http.StatusForbidden,
+					"You do not have permission to access the admin panel",
 				)
 			}
 		}

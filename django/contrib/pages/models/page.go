@@ -35,8 +35,8 @@ type PageNode struct {
 	StatusFlags StatusFlag `json:"status_flags" attrs:"null;blank"`
 	PageID      int64      `json:"page_id" attrs:""`
 	ContentType string     `json:"content_type" attrs:""`
-	CreatedAt   time.Time  `json:"created_at" attrs:"readonly"`
-	UpdatedAt   time.Time  `json:"updated_at" attrs:"readonly"`
+	CreatedAt   time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
+	UpdatedAt   time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
 }
 
 func (n *PageNode) ID() int64 {

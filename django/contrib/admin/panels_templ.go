@@ -22,9 +22,17 @@ type BoundPanel interface {
 
 type BoundFormPanel[T forms.Form, P Panel] struct {
 	forms.BoundField
-	Context context.Context
-	Panel   P
-	Form    T
+	LabelFunc func() string
+	Context   context.Context
+	Panel     P
+	Form      T
+}
+
+func (p *BoundFormPanel[T, P]) Label() template.HTML {
+	if p.LabelFunc != nil {
+		return template.HTML(p.LabelFunc())
+	}
+	return p.BoundField.Label()
 }
 
 func (p *BoundFormPanel[T, P]) Render() template.HTML {

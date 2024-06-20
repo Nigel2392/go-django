@@ -17,9 +17,9 @@ type DefaultGetter func(f Field, new_field_t_indirected reflect.Type, field_v re
 
 func RegisterFormFieldType(valueOfType any, getField func(opts ...func(fields.Field)) fields.Field) {
 	var typ reflect.Type
-	switch valueOfType.(type) {
+	switch v := valueOfType.(type) {
 	case reflect.Type:
-		typ = valueOfType.(reflect.Type)
+		typ = v
 	default:
 		typ = reflect.TypeOf(valueOfType)
 	}

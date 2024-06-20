@@ -2,7 +2,6 @@ package pages
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/django"
@@ -241,12 +240,6 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 	adminForm.Load()
 
-	fmt.Println("adminForm", adminForm)
-	fmt.Println("adminForm", adminForm.Fields())
-	for _, field := range adminForm.Fields() {
-		fmt.Println("field", field.Name())
-	}
-
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
 		if page, ok := d.(SaveablePage); ok {
 
@@ -277,10 +270,8 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
 			var initial = make(map[string]interface{})
-			fmt.Println("fieldDefs", fieldDefs)
 			for _, field := range fieldDefs.Fields() {
 				initial[field.Name()] = field.GetValue()
-				fmt.Println("field", field.Name(), field.GetValue())
 			}
 			return initial
 		},

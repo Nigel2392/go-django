@@ -160,11 +160,9 @@ func (e *editorRegistry) ValueToGo(tools []string, data EditorJSData) (*EditorJS
 		}
 
 		var blockObj = b.Render(block)
-		fmt.Println(block.Tunes)
 		for k, v := range block.Tunes {
 			var tuneFeature, ok = e.features.Get(k)
 			if !ok {
-				fmt.Printf("feature %q not found\n", k)
 				continue
 			}
 
