@@ -40,7 +40,7 @@ type templates struct {
 }
 
 type TemplateRenderer struct {
-	configs  map[string]*templates
+	configs  []*templates
 	cache    map[string]*templateObject
 	ctxFuncs []func(RequestContext)
 	funcs    template.FuncMap
@@ -50,7 +50,7 @@ type TemplateRenderer struct {
 func NewRenderer() *TemplateRenderer {
 	var r = &TemplateRenderer{
 		funcs:    make(template.FuncMap),
-		configs:  make(map[string]*templates),
+		configs:  make([]*templates, 0),
 		cache:    make(map[string]*templateObject),
 		ctxFuncs: make([]func(RequestContext), 0),
 		fs:       NewMultiFS(),
@@ -100,15 +100,15 @@ func (r *TemplateRenderer) Processors(funcs ...func(RequestContext)) {
 }
 
 func (r *TemplateRenderer) Add(cfg Config) {
-	_, ok := r.configs[cfg.AppName]
-	assert.False(ok, "config '%s' already exists", cfg.AppName)
+	//_, ok := r.configs[cfg.AppName]
+	//assert.False(ok, "config '%s' already exists", cfg.AppName)
 
 	var config = &templates{
 		Config: &cfg,
 	}
 
 	r.fs.Add(cfg.FS, cfg.Matches)
-	r.configs[cfg.AppName] = config
+	r.configs = append(r.configs, config)
 }
 
 type templateObject struct {
@@ -124,7 +124,9 @@ func (t *templateObject) Execute(w io.Writer, data any) error {
 		return errors.Wrap(err, "failed to clone template")
 	}
 
-	return clone.ExecuteTemplate(w, getTemplateName(t.paths[0]), data)
+	var name = getTemplateName(t.paths[0])
+	clone = clone.Lookup(name)
+	return clone.ExecuteTemplate(w, name, data)
 }
 
 func getTemplateName(path string) string {

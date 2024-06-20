@@ -60,14 +60,10 @@ class EditorJSWidget {
             this.editorConfig.data = JSON.parse(this.element.value);
         }
 
-        console.log('EditorJSWidget initialized with config:', this.editorConfig);
-
         keepEditorInstance(this)
 
         var savedForm = false;
-        console.log('Adding submit event listener to form');
         var form = this.element.closest('form') as HTMLFormElement;
-        console.log(form);
         form.addEventListener('submit', (e: SubmitEvent) => {
             if (savedForm) {
                 return;
@@ -79,6 +75,7 @@ class EditorJSWidget {
             this.editor.save().then((outputData) => {
                 this.element.value = JSON.stringify(outputData);
                 savedForm = true;
+                form.submit();
             }).catch((reason) => {
                 alert(`Failed to save EditorJS data: ${reason}`);
             });

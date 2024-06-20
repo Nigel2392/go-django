@@ -31,3 +31,18 @@ func (p *PageDefinition) Description() string {
 	}
 	return ""
 }
+
+func (p *PageDefinition) ContentType() contenttypes.ContentType {
+	if p.ContentTypeDefinition == nil {
+		return nil
+	}
+	return p.ContentTypeDefinition.ContentType()
+}
+
+func (p *PageDefinition) AppLabel() string {
+	return p.ContentType().AppLabel()
+}
+
+func (p *PageDefinition) Model() string {
+	return p.ContentType().Model()
+}

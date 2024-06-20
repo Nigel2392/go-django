@@ -417,9 +417,11 @@ func (a *Application) Initialize() error {
 		}
 	}
 
-	a.Mux.Use(
-	// middleware.Recoverer(a.ServerError),
-	)
+	if ConfigGet(a.Settings, "RECOVERER", true) {
+		a.Mux.Use(
+			middleware.Recoverer(a.ServerError),
+		)
+	}
 
 	a.initialized.Store(true)
 

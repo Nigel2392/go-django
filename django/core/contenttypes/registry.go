@@ -1,7 +1,6 @@
 package contenttypes
 
 import (
-	"fmt"
 	"slices"
 	"strings"
 )
@@ -11,10 +10,14 @@ type ContentTypeDefinition struct {
 	GetLabel       func() string
 	GetDescription func() string
 	GetObject      func() any
+	_cType         ContentType
 }
 
 func (p *ContentTypeDefinition) ContentType() ContentType {
-	return NewContentType(p.ContentObject)
+	if p._cType == nil {
+		p._cType = NewContentType(p.ContentObject)
+	}
+	return p._cType
 }
 
 func (p *ContentTypeDefinition) Label() string {
@@ -98,7 +101,6 @@ func (p *ContentTypeRegistry) DefinitionForObject(page any) *ContentTypeDefiniti
 }
 
 func (p *ContentTypeRegistry) DefinitionForPackage(toplevelPkgName string, typeName string) *ContentTypeDefinition {
-	fmt.Printf("Looking for %s.%s in %v\n", toplevelPkgName, typeName, p.registry)
 	for fullPkgPath, definition := range p.registry {
 		var parts = strings.Split(fullPkgPath, "/")
 		if len(parts) < 2 {

@@ -9,9 +9,12 @@ import (
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/contrib/admin"
+	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/contrib/pages/models"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 )
 
@@ -65,6 +68,37 @@ func App() *PageAppConfig {
 }
 
 func NewAppConfig() *PageAppConfig {
+	var assetFileSys, err = fs.Sub(assetsFS, "assets/static")
+	if err != nil {
+		panic(err)
+	}
+
+	templateFileSys, err := fs.Sub(assetsFS, "assets/templates")
+	if err != nil {
+		panic(err)
+	}
+
+	staticfiles.AddFS(
+		assetFileSys, tpl.MatchAnd(
+			tpl.MatchPrefix("pages/"),
+			tpl.MatchOr(
+				tpl.MatchSuffix(".css"),
+				tpl.MatchSuffix(".js"),
+			),
+		),
+	)
+
+	tpl.Add(tpl.Config{
+		AppName: "pages",
+		FS:      templateFileSys,
+		Matches: tpl.MatchAnd(
+			tpl.MatchPrefix("pages/"),
+			tpl.MatchOr(
+				tpl.MatchSuffix(".tmpl"),
+			),
+		),
+	})
+
 	if pageApp != nil {
 		return pageApp
 	}
@@ -83,36 +117,23 @@ func NewAppConfig() *PageAppConfig {
 
 		pageApp.backend = backend
 
-		var assetFileSys, err = fs.Sub(assetsFS, "assets/static")
-		if err != nil {
-			return err
+		var hookFn = func(site *admin.AdminApplication, items menu.Items) {
+			items.Append(&PagesMenuItem{
+				BaseItem: menu.BaseItem{
+					Label:    fields.S("Pages"),
+					ItemName: "pages",
+					Ordering: -1,
+				},
+			})
 		}
 
-		templateFileSys, err := fs.Sub(assetsFS, "assets/templates")
-		if err != nil {
-			return err
-		}
+		goldcrest.Register(admin.RegisterMenuItemHook, 0, hookFn)
 
-		staticfiles.AddFS(
-			assetFileSys, tpl.MatchAnd(
-				tpl.MatchPrefix("pages/"),
-				tpl.MatchOr(
-					tpl.MatchSuffix(".css"),
-					tpl.MatchSuffix(".js"),
-				),
-			),
+		admin.RegisterApp(
+			AdminPagesAppName,
+			pageAdminAppOptions,
+			pageAdminModelOptions,
 		)
-
-		tpl.Add(tpl.Config{
-			AppName: "pages",
-			FS:      templateFileSys,
-			Matches: tpl.MatchAnd(
-				tpl.MatchPrefix("pages/"),
-				tpl.MatchOr(
-					tpl.MatchSuffix(".tmpl"),
-				),
-			),
-		})
 
 		return nil
 	}
@@ -131,22 +152,22 @@ func NewAppConfig() *PageAppConfig {
 		// List all pages
 		// Delibirately after the add page route
 		pagesRoute.Get(
-			"<<page_id>>", pageHandler(listPageHandler), "list",
+			"/<<page_id>>", pageHandler(listPageHandler), "list",
 		)
 
 		// Choose page type
 		pagesRoute.Get(
-			"<<page_id>>/type", pageHandler(choosePageTypeHandler), "type",
+			"/<<page_id>>/type", pageHandler(choosePageTypeHandler), "type",
 		)
 
 		// Add new page type to a parent page
 		pagesRoute.Any(
-			"<<page_id>>/add", pageHandler(addPageHandler), "add",
+			"/<<page_id>>/<<app_label>>/<<model_name>>/add", pageHandler(addPageHandler), "add",
 		)
 
 		// Edit page
 		pagesRoute.Any(
-			"<<page_id>>/edit", pageHandler(editPageHandler), "edit",
+			"/<<page_id>>/edit", pageHandler(editPageHandler), "edit",
 		)
 
 		//// deleteURL for the pages admin site.

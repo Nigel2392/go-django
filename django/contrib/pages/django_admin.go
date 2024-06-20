@@ -6,13 +6,11 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/admin"
-	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/contrib/pages/models"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/media"
-	"github.com/Nigel2392/goldcrest"
 	"github.com/pkg/errors"
 )
 
@@ -131,26 +129,6 @@ var pageAdminModelOptions = admin.ModelOptions{
 			admin.FieldPanel("UpdatedAt"),
 		},
 	},
-}
-
-func init() {
-	var hookFn = func(site *admin.AdminApplication, items menu.Items) {
-		items.Append(&PagesMenuItem{
-			BaseItem: menu.BaseItem{
-				Label:    fields.S("Pages"),
-				ItemName: "pages",
-				Ordering: -1,
-			},
-		})
-	}
-
-	goldcrest.Register(admin.RegisterMenuItemHook, 0, hookFn)
-
-	admin.RegisterApp(
-		AdminPagesAppName,
-		pageAdminAppOptions,
-		pageAdminModelOptions,
-	)
 }
 
 func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {

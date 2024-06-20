@@ -27,10 +27,10 @@
 *, *::before, *::after {
     box-sizing: border-box;
 }
-*:focus-within:not(:has(:focus-within)),
-*:focus {
-    outline: 2px solid var(--color-link);
-}
+/* *:focus-within:not(:has(:focus-within)), */
+/* *:focus { */
+    /* outline: 2px solid var(--color-link); */
+/* } */
 html {
     font-family: sans-serif;
     line-height: 1.15;

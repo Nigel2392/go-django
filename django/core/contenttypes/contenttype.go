@@ -3,7 +3,9 @@ package contenttypes
 import (
 	"database/sql"
 	"database/sql/driver"
+	"fmt"
 	"reflect"
+	"strings"
 
 	"github.com/Nigel2392/django/core/errs"
 )
@@ -20,8 +22,9 @@ type BaseContentType[T any] struct {
 
 type ContentType interface {
 	PkgPath() string
-	Model() string
+	AppLabel() string
 	TypeName() string
+	Model() string
 	New() interface{}
 }
 
@@ -41,6 +44,14 @@ func NewContentType[T any](p T) *BaseContentType[T] {
 
 func (c *BaseContentType[T]) PkgPath() string {
 	return c.pkgPath
+}
+
+func (c *BaseContentType[T]) AppLabel() string {
+	var lastSlash = strings.LastIndex(c.pkgPath, "/")
+	if lastSlash == -1 {
+		panic(fmt.Sprintf("invalid package path: %s", c.pkgPath))
+	}
+	return c.pkgPath[lastSlash+1:]
 }
 
 func (c *BaseContentType[T]) Model() string {

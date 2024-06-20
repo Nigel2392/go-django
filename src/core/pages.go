@@ -3,7 +3,6 @@ package core
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/django/contrib/admin"
@@ -14,6 +13,7 @@ import (
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/pkg/errors"
 )
 
 const createTable = `CREATE TABLE IF NOT EXISTS blog_pages (
@@ -40,15 +40,24 @@ func toBlockData(richText *editor.EditorJSBlockData) editor.EditorJSData {
 	return d
 }
 
-func createBlogPage(title string, richText *editor.EditorJSBlockData) error {
+func createBlogPage(title string, richText *editor.EditorJSBlockData) (id int64, err error) {
 	var editorData = toBlockData(richText)
-	var data, err = json.Marshal(editorData)
+	data, err := json.Marshal(editorData)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
-	_, err = globalDB.Exec(insertPage, title, string(data))
-	return err
+	res, err := globalDB.Exec(insertPage, title, string(data))
+	if err != nil {
+		return 0, err
+	}
+
+	id, err = res.LastInsertId()
+	if err != nil {
+		return 0, err
+	}
+
+	return id, nil
 }
 
 func updateBlogPage(id int64, title string, richText *editor.EditorJSBlockData) error {
@@ -67,9 +76,19 @@ func getBlogPage(parentNode models.PageNode, id int64) (*BlogPage, error) {
 		PageNode: &parentNode,
 	}
 	var editorData = ""
-	var err = globalDB.QueryRow(selectPage, id).Scan(&page.PageNode.PageID, &page.Title, &editorData)
+	var row = globalDB.QueryRow(selectPage, id)
+	var err = row.Err()
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(
+			err, "Error getting blog page with id %d (%T)", id, id,
+		)
+	}
+
+	err = row.Scan(&page.PageNode.PageID, &page.Title, &editorData)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "Error scanning blog page with id %d (%T)", id, id,
+		)
 	}
 
 	var richText = editor.EditorJSData{}
@@ -88,8 +107,9 @@ func getBlogPage(parentNode models.PageNode, id int64) (*BlogPage, error) {
 func init() {
 	pages.Register(&pages.PageDefinition{
 		ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
-			GetLabel:      fields.S("Blog Page"),
-			ContentObject: &BlogPage{},
+			GetLabel:       fields.S("Blog Page"),
+			GetDescription: fields.S("A blog page with a rich text editor."),
+			ContentObject:  &BlogPage{},
 		},
 		AddPanels: func(r *http.Request, page pages.Page) []admin.Panel {
 			return []admin.Panel{
@@ -115,8 +135,6 @@ func init() {
 			return getBlogPage(ref, id)
 		},
 	})
-
-	fmt.Println(contenttypes.NewContentType(&BlogPage{}).TypeName())
 }
 
 type BlogPage struct {
@@ -125,15 +143,11 @@ type BlogPage struct {
 }
 
 func (b *BlogPage) Save(ctx context.Context) error {
-	fmt.Printf("Saving blog page: %#v\n", b)
-	var editorData = b.Editor
-	for _, block := range editorData.Blocks {
-		fmt.Printf("Block: %#v\n", block)
-	}
 	var err error
 	if b.ID() == 0 {
-		fmt.Println("Creating blog page")
-		err = createBlogPage(b.Title, b.Editor)
+		var id int64
+		id, err = createBlogPage(b.Title, b.Editor)
+		b.PageID = id
 	} else {
 		err = updateBlogPage(b.PageNode.PageID, b.Title, b.Editor)
 	}

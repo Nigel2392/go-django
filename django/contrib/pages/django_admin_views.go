@@ -2,7 +2,6 @@ package pages
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/django"
@@ -233,21 +232,20 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		return
 	}
 
-	fmt.Println("Add page handler")
-
-	var cType = contenttypes.DefinitionForPackage("core", "BlogPage")
+	var cTypeDef = contenttypes.DefinitionForPackage("core", "BlogPage")
 	var page pageDefiner
-	if cType != nil {
-		page = cType.Object().(pageDefiner)
+	if cTypeDef != nil {
+		page = cTypeDef.Object().(pageDefiner)
 	} else {
 		page = p
 	}
 
-	fmt.Println("Page: ", page, cType)
-
-	var fieldDefs = page.FieldDefs()
-	var definition = DefinitionForObject(page)
-	var panels []admin.Panel
+	var (
+		cType      = cTypeDef.ContentType()
+		fieldDefs  = page.FieldDefs()
+		definition = DefinitionForObject(page)
+		panels     []admin.Panel
+	)
 	if definition == nil || definition.AddPanels == nil {
 		panels = make([]admin.Panel, fieldDefs.Len())
 
@@ -287,7 +285,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 				context.Set("app", a)
 				context.Set("model", m)
 				context.Set("page_object", p)
-				context.Set("PostURL", django.Reverse("admin:pages:add", p.ID()))
+				context.Set("PostURL", django.Reverse("admin:pages:add", p.ID(), cType.AppLabel(), cType.Model()))
 				return context, nil
 			},
 		},
@@ -304,13 +302,8 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]) {
 			var instance = form.Instance()
 			assert.False(instance == nil, "instance is nil after form submission")
-			fmt.Println("Instance: ", instance, instance.(Page).Reference())
-			var f = instance.(pageDefiner)
-			var primary = f.FieldDefs().Primary()
-
-			fmt.Println("Primary: ", primary.GetValue())
-
-			var listViewURL = django.Reverse("admin:pages:list", primary.GetValue())
+			var ref = instance.(Page).Reference()
+			var listViewURL = django.Reverse("admin:pages:list", ref.ID())
 			http.Redirect(w, r, listViewURL, http.StatusSeeOther)
 		},
 	}
@@ -337,7 +330,10 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	}
 
 	var instance, err = Specific(r.Context(), *p)
-	except.Assert(err == nil, 500, "error getting page instance, it might not exist.")
+	except.Assert(
+		err == nil, 500,
+		err,
+	)
 
 	var page, ok = instance.(pageDefiner)
 	if !ok {
@@ -380,11 +376,15 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			TemplateName:    "pages/admin/edit_page.tmpl",
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
 				var context = admin.NewContext(req, admin.AdminSite, nil)
-				var primary = fieldDefs.Primary()
 				context.Set("app", a)
 				context.Set("model", m)
 				context.Set("page_object", page)
-				context.Set("PostURL", django.Reverse("admin:pages:edit", primary.GetValue()))
+				var backURL string
+				if q := req.URL.Query().Get("next"); q != "" {
+					backURL = q
+				}
+				context.Set("BackURL", backURL)
+				context.Set("PostURL", django.Reverse("admin:pages:edit", p.Reference().ID()))
 				return context, nil
 			},
 		},
@@ -401,7 +401,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]) {
 			var instance = form.Instance()
 			assert.False(instance == nil, "instance is nil after form submission")
-			var listViewURL = django.Reverse("admin:pages:list", instance.(Page).ID())
+			var listViewURL = django.Reverse("admin:pages:list", instance.(Page).Reference().ID())
 			http.Redirect(w, r, listViewURL, http.StatusSeeOther)
 		},
 	}

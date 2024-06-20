@@ -10,8 +10,6 @@ import (
 )
 
 func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, p SaveablePage) error {
-	fmt.Println("Parent is nil", parent == nil, p)
-
 	if parent == nil {
 		return UpdatePage(q, ctx, p)
 	}
@@ -37,7 +35,9 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 		return fmt.Errorf("parent path must not be empty")
 	}
 
-	fmt.Println("Parent path is not empty", parent.Path, ref.Path)
+	if err = p.Save(ctx); err != nil {
+		return err
+	}
 
 	if ref.Path == "" {
 		err = CreateChildNode(
@@ -49,10 +49,6 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 		)
 	}
 	if err != nil {
-		return err
-	}
-
-	if err = p.Save(ctx); err != nil {
 		return err
 	}
 
