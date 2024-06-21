@@ -14,10 +14,16 @@ import (
 var _ ctx.Context = (*adminContext)(nil)
 var _ tpl.RequestContext = (*adminContext)(nil)
 
+type BreadCrumb struct {
+	Title string
+	URL   string
+}
+
 type PageOptions struct {
-	TitleFn    func() string
-	SubtitleFn func() string
-	MediaFn    func() media.Media
+	TitleFn     func() string
+	SubtitleFn  func() string
+	MediaFn     func() media.Media
+	BreadCrumbs []BreadCrumb
 }
 
 func (p *PageOptions) Title() string {

@@ -21,6 +21,7 @@ import (
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/django/permissions"
 	"github.com/Nigel2392/django/utils"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -304,7 +305,6 @@ func (a *Application) Initialize() error {
 	}
 
 	a.Mux.NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
-		a.Log.Debug("Page not found")
 		a.ServerError(except.NewServerError(
 			http.StatusNotFound,
 			"Page not found",
@@ -329,7 +329,9 @@ func (a *Application) Initialize() error {
 		a.Mux.Handle(
 			mux.GET,
 			fmt.Sprintf("%s*", core.STATIC_URL),
-			http.StripPrefix(core.STATIC_URL, staticfiles.Handler),
+			LoggingDisabledMiddleware(
+				http.StripPrefix(core.STATIC_URL, staticfiles.Handler),
+			),
 		)
 	}
 
@@ -360,6 +362,8 @@ func (a *Application) Initialize() error {
 			}
 			return rt
 		},
+		"has_object_perm": permissions.HasObjectPermission,
+		"has_perm":        permissions.HasPermission,
 		"component": func(name string, args ...interface{}) template.HTML {
 			var c = components.Render(name, args...)
 			var buf = new(bytes.Buffer)

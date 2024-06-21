@@ -37,13 +37,6 @@ func NewAppConfig() django.AppConfig {
 			return err
 		}
 
-		globalDB = db
-
-		_, err = db.Exec(createTable)
-		if err != nil {
-			return err
-		}
-
 		staticFS, err := fs.Sub(coreFS, "assets/static")
 		if err != nil {
 			return err

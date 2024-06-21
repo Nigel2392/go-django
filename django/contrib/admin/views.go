@@ -48,7 +48,7 @@ var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminAp
 
 var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
 
-	if !permissions.Object(r, "admin:view_list", model.NewInstance()) {
+	if !permissions.HasObjectPermission(r, model.NewInstance(), "admin:view_list") {
 		auth.Fail(
 			http.StatusForbidden,
 			"Permission denied",
@@ -105,7 +105,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 
 var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
 
-	if !permissions.Object(r, "admin:add", model.NewInstance()) {
+	if !permissions.HasObjectPermission(r, model.NewInstance(), "admin:add") {
 		auth.Fail(
 			http.StatusForbidden,
 			"Permission denied",
@@ -127,7 +127,7 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 }
 
 var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
-	if !permissions.Object(r, "admin:edit", instance) {
+	if !permissions.HasObjectPermission(r, instance, "admin:edit") {
 		auth.Fail(
 			http.StatusForbidden,
 			"Permission denied",
@@ -148,7 +148,7 @@ var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 }
 
 var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
-	if !permissions.Object(r, "admin:delete", instance) {
+	if !permissions.HasObjectPermission(r, instance, "admin:delete") {
 		auth.Fail(
 			http.StatusForbidden,
 			"Permission denied",

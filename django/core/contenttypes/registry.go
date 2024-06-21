@@ -10,6 +10,7 @@ type ContentTypeDefinition struct {
 	GetLabel       func() string
 	GetDescription func() string
 	GetObject      func() any
+	Aliases        []string
 	_cType         ContentType
 }
 
@@ -42,11 +43,64 @@ func (p *ContentTypeDefinition) Object() any {
 }
 
 type ContentTypeRegistry struct {
-	registry map[string]*ContentTypeDefinition
+	registry   map[string]*ContentTypeDefinition
+	aliases    map[string][]string
+	aliasesRev map[string]string
 }
 
 func NewContentTypeRegistry() *ContentTypeRegistry {
 	return &ContentTypeRegistry{}
+}
+
+func (p *ContentTypeRegistry) Aliases(typeName string) []string {
+	return p.aliases[typeName]
+}
+
+func (p *ContentTypeRegistry) ReverseAlias(alias string) string {
+	if p.aliasesRev == nil {
+		return alias
+	}
+	if typeName, exists := p.aliasesRev[alias]; exists {
+		return typeName
+	}
+	return alias
+}
+
+func (p *ContentTypeRegistry) RegisterAlias(alias string, typeName string) {
+	if p.aliases == nil {
+		p.aliases = make(map[string][]string)
+		p.aliasesRev = make(map[string]string)
+	}
+
+	if _, exists := p.aliasesRev[alias]; exists {
+		panic("pages: RegisterAlias called twice for alias " + alias)
+	}
+
+	p.aliasesRev[alias] = typeName
+
+	if _, exists := p.aliases[typeName]; !exists {
+		p.aliases[typeName] = make([]string, 0)
+	}
+
+	p.aliases[typeName] = append(p.aliases[typeName], alias)
+
+	var aliasParts = strings.Split(alias, "/")
+	if len(aliasParts) < 2 {
+		return
+	}
+
+	var pkgParts = strings.Split(typeName, "/")
+	if len(pkgParts) < 2 {
+		return
+	}
+
+	var aliasPkg = aliasParts[len(aliasParts)-1]
+	p.aliasesRev[aliasPkg] = typeName
+
+	if _, exists := p.aliases[typeName]; !exists {
+		p.aliases[typeName] = make([]string, 0)
+	}
+	p.aliases[typeName] = append(p.aliases[typeName], aliasPkg)
 }
 
 func (p *ContentTypeRegistry) Register(definition *ContentTypeDefinition) {
@@ -74,6 +128,13 @@ func (p *ContentTypeRegistry) Register(definition *ContentTypeDefinition) {
 	}
 
 	p.registry[typeName] = definition
+
+	if definition.Aliases != nil {
+		for _, alias := range definition.Aliases {
+			p.RegisterAlias(alias, typeName)
+		}
+	}
+
 }
 
 func (p *ContentTypeRegistry) ListDefinitions() []*ContentTypeDefinition {
@@ -92,6 +153,11 @@ func (p *ContentTypeRegistry) ListDefinitions() []*ContentTypeDefinition {
 }
 
 func (p *ContentTypeRegistry) DefinitionForType(typeName string) *ContentTypeDefinition {
+	if p.aliasesRev != nil {
+		if alias, exists := p.aliasesRev[typeName]; exists {
+			typeName = alias
+		}
+	}
 	return p.registry[typeName]
 }
 
@@ -101,6 +167,17 @@ func (p *ContentTypeRegistry) DefinitionForObject(page any) *ContentTypeDefiniti
 }
 
 func (p *ContentTypeRegistry) DefinitionForPackage(toplevelPkgName string, typeName string) *ContentTypeDefinition {
+	if p.aliasesRev != nil {
+		var togetherBuf = make([]byte, 0, len(toplevelPkgName)+len(typeName)+1)
+		togetherBuf = append(togetherBuf, toplevelPkgName...)
+		togetherBuf = append(togetherBuf, '.')
+		togetherBuf = append(togetherBuf, typeName...)
+		if alias, exists := p.aliasesRev[string(togetherBuf)]; exists {
+			return p.registry[alias]
+		}
+
+	}
+
 	for fullPkgPath, definition := range p.registry {
 		var parts = strings.Split(fullPkgPath, "/")
 		if len(parts) < 2 {
@@ -124,6 +201,18 @@ var contentTypeRegistryObject = &ContentTypeRegistry{}
 
 func Register(definition *ContentTypeDefinition) {
 	contentTypeRegistryObject.Register(definition)
+}
+
+func Aliases(typeName string) []string {
+	return contentTypeRegistryObject.Aliases(typeName)
+}
+
+func ReverseAlias(alias string) string {
+	return contentTypeRegistryObject.ReverseAlias(alias)
+}
+
+func RegisterAlias(alias string, typeName string) {
+	contentTypeRegistryObject.RegisterAlias(alias, typeName)
 }
 
 func DefinitionForType(typeName string) *ContentTypeDefinition {

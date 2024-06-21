@@ -4,7 +4,7 @@
 
 {{ define "content" }}
     {{ block "heading" . }}
-        <div class="list-view-header">
+        <div class="view-header">
             <div class="buttons">
                 <a href="{{ url "admin:apps:model:add" (.Get "app").Name (.Get "model").Name }}" class="button primary">{{ T "Add" }}</a>
             </div>

@@ -211,7 +211,7 @@ func (f *FieldDef) FormField() fields.Field {
 	var formField fields.Field
 	var hooks []FormFieldGetter
 	if f.attrDef.FormField != nil {
-		f.formField = f.attrDef.FormField()
+		formField = f.attrDef.FormField(opts...)
 		goto returnField
 	}
 

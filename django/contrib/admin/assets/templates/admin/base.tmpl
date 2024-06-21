@@ -29,7 +29,24 @@
         <section id="content-wrapper">
 
             <div id="navigation">
-                {{ block "navigation" . }}{{ end }}
+                {{ block "navigation" . }}
+                
+                    {{ if (and .Page .Page.BreadCrumbs) }}
+                        {{ $breadCrumbs := .Page.BreadCrumbs }}
+                        <div class="breadcrumbs">
+                            {{ range $i, $breadCrumb := $breadCrumbs }}
+                                {{ if $breadCrumb.URL }}
+                                    <a class="breadcrumb" href="{{ $breadCrumb.URL }}">{{ $breadCrumb.Title }}</a>
+                                {{ else }}
+                                    <span class="breadcrumb{{ if eq $i (len $breadCrumbs) }} active{{ end }}">
+                                        {{ $breadCrumb.Title }}
+                                    </span>
+                                {{ end }}
+                            {{ end }}
+                        </div>
+                    {{ end }}
+                
+                {{ end }}
             </div>
 
             <div id="content">

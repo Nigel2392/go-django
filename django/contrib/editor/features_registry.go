@@ -97,8 +97,14 @@ func (e *editorRegistry) Tune(tuneName string) {
 }
 
 func (e *editorRegistry) BuildConfig(widgetContext ctx.Context, features ...string) map[string]interface{} {
+	var featuresMap = make(map[string]BaseFeature)
+	var featuresList = e.Features(features...)
+	for _, f := range featuresList {
+		featuresMap[f.Name()] = f
+	}
+
 	var toolsConfig = make(map[string]interface{})
-	for _, f := range e.Features(features...) {
+	for _, f := range featuresList {
 		var featureCfg = f.Config(widgetContext)
 		var jsClass = f.Constructor()
 		var fullCfg = map[string]interface{}{
@@ -118,10 +124,44 @@ func (e *editorRegistry) BuildConfig(widgetContext ctx.Context, features ...stri
 	}
 
 	if len(e.tunes) > 0 {
-		config["tunes"] = e.tunes
+		var tunes = make([]string, 0, len(e.tunes))
+		for _, tune := range e.tunes {
+			var _, ok = featuresMap[tune]
+			if !ok {
+				continue
+			}
+			tunes = append(tunes, tune)
+		}
+		config["tunes"] = tunes
 	}
 
 	return config
+}
+
+func (e *editorRegistry) ValueToForm(data *EditorJSBlockData) *EditorJSData {
+	var blocks = data.Blocks
+	var blockData = &EditorJSData{
+		Time:    data.Time,
+		Version: data.Version,
+	}
+
+	var blockList = make([]BlockData, 0, len(blocks))
+	for _, block := range blocks {
+		if block == nil {
+			continue
+		}
+		var _, ok = e.features.Get(block.Type())
+		if !ok {
+			continue
+		}
+
+		fmt.Println(block.Type())
+
+		blockList = append(blockList, block.Data())
+	}
+
+	blockData.Blocks = blockList
+	return blockData
 }
 
 func (e *editorRegistry) ValueToGo(tools []string, data EditorJSData) (*EditorJSBlockData, error) {
@@ -169,6 +209,7 @@ func (e *editorRegistry) ValueToGo(tools []string, data EditorJSData) (*EditorJS
 
 var (
 	EditorRegistry = newEditorRegistry()
+	ValueToForm    = EditorRegistry.ValueToForm
 	ValueToGo      = EditorRegistry.ValueToGo
 	Features       = EditorRegistry.Features
 	Register       = EditorRegistry.Register

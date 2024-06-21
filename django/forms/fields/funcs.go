@@ -8,13 +8,16 @@ import (
 	"github.com/Nigel2392/django/forms/widgets"
 )
 
-func S(v string) func() string {
+func S(v string, args ...any) func() string {
 	return func() string {
-		return T(v)
+		return T(v, args...)
 	}
 }
 
-func T(v string) string {
+func T(v string, args ...any) string {
+	if len(args) > 0 {
+		return fmt.Sprintf(v, args...)
+	}
 	return v
 }
 

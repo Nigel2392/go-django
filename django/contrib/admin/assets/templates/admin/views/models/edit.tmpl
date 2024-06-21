@@ -4,7 +4,7 @@
 
 {{ define "content" }}
     <h1>{{ T "Edit" }}</h1>
-    <form method="post">
+    <form method="post" class="admin-form">
         <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
 
         {{ $Form := (.Get "form") }}
@@ -12,12 +12,14 @@
         {{ include $Form.UnpackErrors "admin/shared/forms/error_unpack.tmpl" }}
         {{ include $Form "admin/shared/forms/form.tmpl" }}
 
-        <input class="button secondary" type="submit" value="Submit">
-        {{ $BackURL := (.Get "BackURL") }}
-        {{ if $BackURL }}
-            <a class="button warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
-        {{ else }}
-            <a class="button warning hollow" href="{{ url "admin:apps:model" (.Get "app").Name (.Get "model").Name }}">{{ T "Back" }}</a>
-        {{ end }}
+        <div class="form-buttons">
+            <input class="button secondary" type="submit" value="Submit">
+            {{ $BackURL := (.Get "BackURL") }}
+            {{ if $BackURL }}
+                <a class="button warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
+            {{ else }}
+                <a class="button warning hollow" href="{{ url "admin:apps:model" (.Get "app").Name (.Get "model").Name }}">{{ T "Back" }}</a>
+            {{ end }}
+        </div>
     </form>
 {{ end }}

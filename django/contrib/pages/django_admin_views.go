@@ -3,6 +3,8 @@ package pages
 import (
 	"context"
 	"net/http"
+	"net/url"
+	"slices"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/admin"
@@ -20,6 +22,11 @@ import (
 	"github.com/Nigel2392/django/views/list"
 	"github.com/Nigel2392/mux"
 )
+
+type pageDefiner interface {
+	attrs.Definer
+	Page
+}
 
 func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinition, *admin.ModelDefinition, *models.PageNode)) mux.Handler {
 	return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
@@ -56,9 +63,49 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 	})
 }
 
+func getPageBreadcrumbs(r *http.Request, p *models.PageNode, urlForLast bool) ([]admin.BreadCrumb, error) {
+	var breadcrumbs = make([]admin.BreadCrumb, 0, p.Depth+2)
+	if p.Depth > 0 {
+		var ancestors, err = AncestorNodes(
+			QuerySet(), r.Context(), p.Path, int(p.Depth),
+		)
+		if err != nil {
+			return nil, err
+		}
+		slices.SortStableFunc(ancestors, func(a, b models.PageNode) int {
+			if a.Depth < b.Depth {
+				return -1
+			}
+			if a.Depth > b.Depth {
+				return 1
+			}
+			return 0
+		})
+
+		for _, a := range ancestors {
+			a := a
+			breadcrumbs = append(breadcrumbs, admin.BreadCrumb{
+				Title: a.Title,
+				URL:   django.Reverse("admin:pages:list", a.ID()),
+			})
+		}
+
+		var b = admin.BreadCrumb{
+			Title: p.Title,
+		}
+
+		if urlForLast {
+			b.URL = django.Reverse("admin:pages:list", p.ID())
+		}
+
+		breadcrumbs = append(breadcrumbs, b)
+	}
+	return breadcrumbs, nil
+}
+
 func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
-	if !permissions.Object(r, "pages:list", p) {
+	if !permissions.HasObjectPermission(r, p, "pages:list") {
 		auth.Fail(
 			http.StatusForbidden,
 			"User does not have permission to view this page",
@@ -71,10 +118,18 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		columns[i+1] = m.GetColumn(m.ListView, field)
 	}
 
+	var next = django.Reverse(
+		"admin:pages:list",
+		p.ID(),
+	)
+
 	columns[0] = columns[1]
 	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
 		Actions: []*admin.ListAction[attrs.Definer]{
 			{
+				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+					return permissions.HasObjectPermission(r, row, "pages:edit")
+				},
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {
 					return fields.T("Edit Page")
 				},
@@ -83,15 +138,24 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 					if primaryField == nil {
 						return ""
 					}
-					return django.Reverse(
+					var u = django.Reverse(
 						"admin:pages:edit",
 						primaryField.GetValue(),
 					)
+					var url, err = url.Parse(u)
+					if err != nil {
+						return u
+					}
+					var q = url.Query()
+					q.Set("next", next)
+					url.RawQuery = q.Encode()
+					return url.String()
 				},
 			},
 			{
 				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
-					return row.(*models.PageNode).Numchild > 0
+					// return row.(*models.PageNode).Numchild > 0
+					return permissions.HasObjectPermission(r, row, "pages:add")
 				},
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {
 					return fields.T("Add Child")
@@ -101,30 +165,40 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 					if primaryField == nil {
 						return ""
 					}
-					return django.Reverse(
+					var u = django.Reverse(
 						"admin:pages:type",
+						primaryField.GetValue(),
+					)
+					var url, err = url.Parse(u)
+					if err != nil {
+						return u
+					}
+					var q = url.Query()
+					q.Set("next", next)
+					url.RawQuery = q.Encode()
+					return url.String()
+				},
+			},
+			{
+				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+					return row.(*models.PageNode).Numchild > 0 && permissions.HasObjectPermission(
+						r, row, "pages:list",
+					)
+				},
+				Text: func(defs attrs.Definitions, row attrs.Definer) string {
+					return fields.T("View Children")
+				},
+				URL: func(defs attrs.Definitions, row attrs.Definer) string {
+					var primaryField = defs.Primary()
+					if primaryField == nil {
+						return ""
+					}
+					return django.Reverse(
+						"admin:pages:list",
 						primaryField.GetValue(),
 					)
 				},
 			},
-			//{
-			//	isShown: func(defs attrs.Definitions, row attrs.Definer) bool {
-			//		return row.(*models.PageNode).Numchild > 0
-			//	},
-			//	getText: func(defs attrs.Definitions, row attrs.Definer) string {
-			//		return fields.T("View Children")
-			//	},
-			//	getURL: func(defs attrs.Definitions, row attrs.Definer) string {
-			//		var primaryField = defs.Primary()
-			//		if primaryField == nil {
-			//			return ""
-			//		}
-			//		return django.Reverse(
-			//			"admin:pages:list",
-			//			primaryField.GetValue(),
-			//		)
-			//	},
-			//},
 		},
 	}
 
@@ -156,11 +230,37 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			BaseTemplateKey: admin.BASE_KEY,
 			TemplateName:    "pages/admin/admin_list.tmpl",
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
-				var context = admin.NewContext(req, admin.AdminSite, nil)
+				var context = admin.NewContext(
+					req, admin.AdminSite, nil,
+				)
+
+				var contentType *contenttypes.ContentTypeDefinition
+				if p.ContentType != "" {
+					contentType = contenttypes.DefinitionForType(
+						p.ContentType,
+					)
+				} else {
+					contentType = contenttypes.DefinitionForObject(
+						p,
+					)
+				}
+
 				context.Set("app", a)
 				context.Set("model", m)
 				context.Set("page_object", p)
 				context.Set("parent_object", parent_object)
+				context.Set(
+					"model_name",
+					contentType.Label(),
+				)
+
+				var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
+				if err != nil {
+					return nil, err
+				}
+				context.SetPage(admin.PageOptions{
+					BreadCrumbs: breadcrumbs,
+				})
 				return context, nil
 			},
 		},
@@ -183,7 +283,21 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				if primaryField == nil {
 					return ""
 				}
-				return django.Reverse("admin:pages:edit", primaryField.GetValue())
+
+				var u = django.Reverse(
+					"admin:pages:edit",
+					primaryField.GetValue(),
+				)
+
+				var url, err = url.Parse(u)
+				if err != nil {
+					return u
+				}
+
+				var q = url.Query()
+				q.Set("next", next)
+				url.RawQuery = q.Encode()
+				return url.String()
 			})
 		},
 	}
@@ -193,7 +307,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
-	if !permissions.Object(r, "pages:add", p) {
+	if !permissions.HasObjectPermission(r, p, "pages:add") {
 		auth.Fail(
 			http.StatusForbidden,
 			"User does not have permission to add a page",
@@ -208,14 +322,28 @@ func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 		TemplateName:    "pages/admin/choose_page_type.tmpl",
 		GetContextFn: func(req *http.Request) (ctx.Context, error) {
 			var context = admin.NewContext(req, admin.AdminSite, nil)
+
 			context.Set("app", a)
 			context.Set("model", m)
 			context.Set("page_object", p)
 			context.Set("definitions", definitions)
+
+			var next = req.URL.Query().Get("next")
+			if next != "" {
+				context.Set("BackURL", next)
+			}
+
+			var breadcrumbs, err = getPageBreadcrumbs(r, p, true)
+			if err != nil {
+				return nil, err
+			}
+
 			context.SetPage(admin.PageOptions{
-				TitleFn:    fields.S("Choose Page Type"),
-				SubtitleFn: fields.S("Select the type of page you want to create"),
+				TitleFn:     fields.S("Choose Page Type"),
+				SubtitleFn:  fields.S("Select the type of page you want to create"),
+				BreadCrumbs: breadcrumbs,
 			})
+
 			return context, nil
 		},
 	}
@@ -224,7 +352,7 @@ func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 }
 
 func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
-	if !permissions.Object(r, "pages:add", p) {
+	if !permissions.HasObjectPermission(r, p, "pages:add") {
 		auth.Fail(
 			http.StatusForbidden,
 			"User does not have permission to add a page",
@@ -232,15 +360,25 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		return
 	}
 
-	var cTypeDef = contenttypes.DefinitionForPackage("core", "BlogPage")
-	var page pageDefiner
-	if cTypeDef != nil {
-		page = cTypeDef.Object().(pageDefiner)
-	} else {
-		page = p
+	var (
+		vars       = mux.Vars(r)
+		app_label  = vars.Get("app_label")
+		model_name = vars.Get("model_name")
+	)
+
+	if app_label == "" || model_name == "" {
+		http.Error(w, "app_label and model_name are required", http.StatusBadRequest)
+		return
+	}
+
+	var cTypeDef = contenttypes.DefinitionForPackage(app_label, model_name)
+	if cTypeDef == nil {
+		http.Error(w, "content type not found", http.StatusNotFound)
+		return
 	}
 
 	var (
+		page       = cTypeDef.Object().(pageDefiner)
 		cType      = cTypeDef.ContentType()
 		fieldDefs  = page.FieldDefs()
 		definition = DefinitionForObject(page)
@@ -282,10 +420,33 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			TemplateName:    "pages/admin/add_page.tmpl",
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
 				var context = admin.NewContext(req, admin.AdminSite, nil)
+
 				context.Set("app", a)
 				context.Set("model", m)
 				context.Set("page_object", p)
-				context.Set("PostURL", django.Reverse("admin:pages:add", p.ID(), cType.AppLabel(), cType.Model()))
+
+				var backURL string
+				if q := req.URL.Query().Get("next"); q != "" {
+					backURL = q
+				}
+				context.Set("BackURL", backURL)
+				context.Set("PostURL", django.Reverse(
+					"admin:pages:add",
+					p.ID(),
+					cType.AppLabel(),
+					cType.Model(),
+				))
+
+				var breadcrumbs, err = getPageBreadcrumbs(r, p, true)
+				if err != nil {
+					return nil, err
+				}
+
+				context.SetPage(admin.PageOptions{
+					TitleFn:     fields.S("Add %q", cType.Model()),
+					BreadCrumbs: breadcrumbs,
+				})
+
 				return context, nil
 			},
 		},
@@ -314,14 +475,9 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 	}
 }
 
-type pageDefiner interface {
-	attrs.Definer
-	Page
-}
-
 func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
-	if !permissions.Object(r, "pages:edit", p) {
+	if !permissions.HasObjectPermission(r, p, "pages:edit") {
 		auth.Fail(
 			http.StatusForbidden,
 			"User does not have permission to edit this page",
@@ -376,6 +532,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			TemplateName:    "pages/admin/edit_page.tmpl",
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
 				var context = admin.NewContext(req, admin.AdminSite, nil)
+
 				context.Set("app", a)
 				context.Set("model", m)
 				context.Set("page_object", page)
@@ -385,6 +542,17 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				}
 				context.Set("BackURL", backURL)
 				context.Set("PostURL", django.Reverse("admin:pages:edit", p.Reference().ID()))
+
+				var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
+				if err != nil {
+					return nil, err
+				}
+
+				context.SetPage(admin.PageOptions{
+					TitleFn:     fields.S("Edit %q", page.Reference().Title),
+					BreadCrumbs: breadcrumbs,
+				})
+
 				return context, nil
 			},
 		},

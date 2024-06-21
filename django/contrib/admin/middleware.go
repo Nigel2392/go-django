@@ -40,7 +40,7 @@ func RequiredMiddleware(next mux.Handler) mux.Handler {
 				)
 			}
 
-			if !permissions.String(req, "admin:access_admin") {
+			if !permissions.HasPermission(req, "admin:access_admin") {
 				auth.Fail(
 					http.StatusForbidden,
 					"You do not have permission to access the admin panel",

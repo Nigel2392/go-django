@@ -23,7 +23,13 @@ func (il ItemsList) MarshalJSON() ([]byte, error) {
 
 }
 
+type MenuHeader struct {
+	Text string `json:"text"`
+	URL  string `json:"url"`
+}
+
 type pageMenuResponse struct {
+	Header     MenuHeader       `json:"header,omitempty"`
 	ParentItem *models.PageNode `json:"parent_item,omitempty"`
 	Items      ItemsList        `json:"items"`
 }

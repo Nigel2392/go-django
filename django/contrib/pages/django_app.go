@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/fields"
@@ -134,6 +135,12 @@ func NewAppConfig() *PageAppConfig {
 			pageAdminAppOptions,
 			pageAdminModelOptions,
 		)
+
+		contenttypes.Register(&contenttypes.ContentTypeDefinition{
+			ContentObject: &models.PageNode{},
+			GetLabel:      fields.S("Page"),
+			GetObject:     func() any { return &models.PageNode{} },
+		})
 
 		return nil
 	}

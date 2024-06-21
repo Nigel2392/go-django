@@ -23,7 +23,7 @@ import (
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/modelforms"
 	"github.com/Nigel2392/django/views/list"
-	"github.com/Nigel2392/mux/middleware"
+	"github.com/Nigel2392/src/blog"
 	"github.com/Nigel2392/src/core"
 
 	_ "github.com/Nigel2392/django/contrib/pages/backend-sqlite"
@@ -45,9 +45,9 @@ func main() {
 				return db
 			}(),
 		}),
-		django.AppMiddleware(
-			middleware.DefaultLogger.Intercept,
-		),
+		// django.AppMiddleware(
+		// middleware.DefaultLogger.Intercept,
+		// ),
 		django.Apps(
 			session.NewAppConfig,
 			auth.NewAppConfig,
@@ -56,6 +56,7 @@ func main() {
 			auditlogs.NewAppConfig,
 			core.NewAppConfig,
 			blocks.NewAppConfig,
+			blog.NewAppConfig,
 		),
 	)
 

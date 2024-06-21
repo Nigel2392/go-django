@@ -1,8 +1,10 @@
 package django
 
 import (
+	"context"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	core "github.com/Nigel2392/django/core"
@@ -10,6 +12,42 @@ import (
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/mux"
 )
+
+type loggingEnabledKey string
+
+var DEFAULT_LOGGING_ENABLED = true
+var method_color = []string{logger.CMD_Cyan, logger.CMD_Bold}
+var logKey loggingEnabledKey = "logging"
+
+func LoggingEnabled(r *http.Request) bool {
+	var enabled = r.Context().Value(logKey)
+	if enabled == nil {
+		return DEFAULT_LOGGING_ENABLED
+	}
+	if enabled, ok := enabled.(*bool); ok {
+		return *enabled
+	}
+	return DEFAULT_LOGGING_ENABLED
+}
+
+func LogRequest(r *http.Request, enabled bool) *http.Request {
+	var ctx = r.Context()
+	if v := ctx.Value(logKey); v != nil {
+		if v, ok := v.(*bool); ok {
+			*v = enabled
+		}
+		return r
+	}
+
+	ctx = context.WithValue(ctx, logKey, &enabled)
+	return r.WithContext(ctx)
+}
+
+func LoggingDisabledMiddleware(next mux.Handler) mux.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		next.ServeHTTP(w, LogRequest(r, false))
+	})
+}
 
 // loggerMiddleware is a middleware that logs the request method, time taken, remote address and path of the request.
 //
@@ -20,33 +58,44 @@ import (
 // The message might be prefixed and / or suffixed with additional information.
 func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var startTime = time.Now()
+
+		r = LogRequest(r, true)
+
+		next.ServeHTTP(w, r)
+
+		var logLevel = logger.INF
+		if !LoggingEnabled(r) {
+			logLevel = logger.DBG
+		}
+
 		var (
+			timeTaken  = time.Since(startTime)
 			remoteAddr = mux.GetIP(
 				r, ConfigGet(
 					a.Settings, "django.RequestProxied", false,
 				),
 			)
-			startTime = time.Now()
-			method    = r.Method
-			path      = r.URL.Path
+			pathBuf = new(strings.Builder)
 		)
 
+		pathBuf.WriteString(r.URL.Path)
+
 		if r.URL.RawQuery != "" {
-			path += "?" + r.URL.RawQuery
+			pathBuf.WriteByte('?')
+			pathBuf.WriteString(r.URL.RawQuery)
 		}
 
-		next.ServeHTTP(w, r)
-
-		var timeTaken = time.Since(startTime)
-		a.Log.Infof(
+		a.Log.Logf(
+			logLevel,
 			"%s %s %s %s",
 			logger.Colorize(
-				logger.CMD_Cyan+logger.CMD_Bold,
-				method,
+				method_color,
+				r.Method,
 			),
 			colorizeTimeTaken(timeTaken),
 			remoteAddr,
-			path,
+			pathBuf.String(),
 		)
 	})
 }

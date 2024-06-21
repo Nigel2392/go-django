@@ -28,4 +28,12 @@
             </a>
         {{ end }}
     </div>
+    <div class="mt-auto mb-0">
+        {{ $BackURL := (.Get "BackURL") }}
+        {{ if $BackURL }}
+            <a class="button lg warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
+        {{ else }}
+            <a class="button lg warning hollow" href="{{ url "admin:pages:list" (.Get "page_object").Reference.ID }}">{{ T "Back" }}</a>
+        {{ end }}
+    </div>
 {{ end }}

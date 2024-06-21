@@ -3,15 +3,18 @@ package admin
 import (
 	"bytes"
 	"embed"
+	"fmt"
 	"html/template"
 	"io/fs"
 	"net/http"
+	"strings"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/components"
 	cmpts "github.com/Nigel2392/django/contrib/admin/components"
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
+	"github.com/Nigel2392/django/contrib/admin/icons"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/staticfiles"
@@ -67,6 +70,7 @@ var (
 
 func NewAppConfig() django.AppConfig {
 	// AdminSite.Route.Use(RequiredMiddleware)
+	var iconHTML template.HTML
 
 	AdminSite.Init = func(settings django.Settings) error {
 		settings.App().Mux.AddRoute(AdminSite.Route)
@@ -113,6 +117,32 @@ func NewAppConfig() django.AppConfig {
 
 	AdminSite.Ready = func() error {
 
+		if err := icons.Register(staticFS,
+			"admin/images/logo.svg",
+			"admin/images/arrow-right.svg",
+		); err != nil {
+			panic(err)
+		}
+
+		var replacer = strings.NewReplacer(
+			"xmlns=\"http://www.w3.org/2000/svg\"", "",
+			"<svg", "<symbol",
+			"</svg>", "</symbol>",
+		)
+
+		var icons = icons.Icons()
+		var htmlString = make([]string, 0, len(icons))
+		for _, icon := range icons {
+			htmlString = append(htmlString, replacer.Replace(
+				string(icon.HTML()),
+			))
+		}
+		iconHTML = template.HTML(
+			fmt.Sprintf(
+				`<svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>%s</defs></svg>`,
+				strings.Join(htmlString, ""),
+			),
+		)
 		// First initialize routes which do not require authentication
 		AdminSite.Route.Get(
 			"login/", views.Serve(LoginHandler),
@@ -220,6 +250,14 @@ func NewAppConfig() django.AppConfig {
 			),
 		),
 		Funcs: template.FuncMap{
+			"icons": func() template.HTML {
+				return iconHTML
+			},
+			"icon": func(name string) template.HTML {
+				return template.HTML(fmt.Sprintf(`<svg class="icon %s">
+	<use href="#%s"></use>
+</svg>`, name, name))
+			},
 			"menu": func(r *http.Request) template.HTML {
 				var m = &menu.Menu{}
 				var menuItems = menu.NewItems()

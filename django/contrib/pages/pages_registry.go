@@ -81,6 +81,7 @@ func (p *pageRegistry) ListDefinitions() []*PageDefinition {
 }
 
 func (p *pageRegistry) DefinitionForType(typeName string) *PageDefinition {
+	typeName = contenttypes.ReverseAlias(typeName)
 	return p.registry[typeName]
 }
 
@@ -91,9 +92,14 @@ func (p *pageRegistry) DefinitionForObject(page Page) *PageDefinition {
 
 func (p *pageRegistry) SpecificInstance(ctx context.Context, node models.PageNode) (Page, error) {
 	var typeName = node.ContentType
-	var definition, exists = p.registry[typeName]
-	if !exists {
-		return nil, nil
+	var definition = p.DefinitionForType(
+		typeName,
+	)
+	if definition == nil {
+		return &node, nil
+		// return nil, errors.Wrapf(
+		// ErrContentTypeInvalid, "Page type %s not found", typeName,
+		// )
 	}
 
 	return definition.GetForID(ctx, node, node.PageID)

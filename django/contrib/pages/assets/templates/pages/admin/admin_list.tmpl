@@ -2,40 +2,23 @@
 
 {{ define "title" }}{{ T "List" }}{{ end }}
 
-
-{{ define "navigation" }}
-    <div class="breadcrumbs">
-        {{ $parent := (.Get "parent_object") }}
-        {{ $page := (.Get "page_object") }}
-
-        {{ if (gt $page.Depth 1) }}
-            <span class="breadcrumb">...</span>
-        {{ else }}
-            <a class="breadcrumb" href="{{ url "admin:home" }}">{{ T "Dashboard" }}</a>
-        {{ end }}
-
-        {{ if $parent }}
-            <a class="breadcrumb" href="{{ url "admin:pages:list" $parent.ID }}">
-                {{ $parent.Title }}
-            </a>
-        {{ end }}
-
-        <span class="breadcrumb active">{{ $page.Title }}</span>
-    </div>
-{{ end }}
-
 {{ define "content" }}
 
     {{ block "heading" . }}
         {{ $page := (.Get "page_object") }}
-        {{ $model := (.Get "model") }}
-        <div class="list-view-header">
-            <div class="buttons">
-                <a href="{{ url "admin:pages:type" $page.ID }}" class="button primary">{{ T "Add Child Page" }}</a>
-                <a href="{{ url "admin:pages:edit" $page.ID }}" class="button primary">{{ T "Edit Page" }}</a>
-            </div>
+        <div class="view-header">
+            {{ if (or (has_perm .Request "pages:add") (has_perm .Request "pages:edit")) }}
+                <div class="buttons">
+                    {{ if (has_perm .Request "pages:add") }}
+                        <a href="{{ url "admin:pages:type" $page.ID }}" class="button primary">{{ T "Add Child Page" }}</a>
+                    {{ end }}
+                    {{ if (has_perm .Request "pages:edit") }}
+                        <a href="{{ url "admin:pages:edit" $page.ID }}" class="button primary">{{ T "Edit Page" }}</a>
+                    {{ end }}
+                </div>
+            {{ end }}
             <div class="title-text">
-                <h1>{{ $model.Label }} {{ T "List" }}</h1>
+                <h1>{{ .Get "model_name" }} &quot;{{ $page.Title }}&quot;</h1>
             </div>
         </div>
     {{ end }}

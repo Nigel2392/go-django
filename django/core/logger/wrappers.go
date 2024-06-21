@@ -2,6 +2,7 @@ package logger
 
 import (
 	"fmt"
+	"io"
 	"strings"
 )
 
@@ -15,7 +16,29 @@ const (
 )
 
 func Colorize(color, s any) string {
-	return fmt.Sprintf("%s%v%s", color, s, CMD_Reset)
+	var c string
+	switch color := color.(type) {
+	case string:
+		c = color
+	case []string:
+		c = strings.Join(color, "")
+	default:
+		panic(fmt.Sprintf("invalid color type: %T", color))
+	}
+	return fmt.Sprintf("%s%v%s", c, s, CMD_Reset)
+}
+
+func FColorize(w io.Writer, color, s any) (n int, err error) {
+	var c string
+	switch color := color.(type) {
+	case string:
+		c = color
+	case []string:
+		c = strings.Join(color, "")
+	default:
+		panic(fmt.Sprintf("invalid color type: %T", color))
+	}
+	return fmt.Fprintf(w, "%s%v%s", c, s, CMD_Reset)
 }
 
 func wrapLog(colors ...string) func(l LogLevel, s string) string {

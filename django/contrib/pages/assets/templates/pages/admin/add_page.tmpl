@@ -3,20 +3,21 @@
 {{ define "title" }}{{ T "Add" }}{{ end }}
 
 {{ define "content" }}
-    <h1>{{ T "Add" }}</h1>
-    <form method="post" action="{{ .Get ("PostURL") }}">
+    <form method="post" action="{{ .Get ("PostURL") }}" class="admin-form" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
 
         {{ $Form := (.Get "form") }}
         {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}
         {{ include $Form "admin/shared/forms/form.tmpl" }}
 
-        <input class="button secondary" type="submit" value="Submit">
-        {{ $BackURL := (.Get "BackURL") }}
-        {{ if $BackURL }}
-            <a class="button warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
-        {{ else }}
-            <a class="button warning hollow" href="{{ url "admin:pages:list" (.Get "page_object").ID }}">{{ T "Back" }}</a>
-        {{ end }}
+        <div class="form-buttons">
+            <input class="button secondary" type="submit" value="Submit">
+            {{ $BackURL := (.Get "BackURL") }}
+            {{ if $BackURL }}
+                <a class="button warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
+            {{ else }}
+                <a class="button warning hollow" href="{{ url "admin:pages:list" (.Get "page_object").ID }}">{{ T "Back" }}</a>
+            {{ end }}
+        </div>
     </form>
 {{ end }}
