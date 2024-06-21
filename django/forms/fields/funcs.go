@@ -15,10 +15,10 @@ func S(v string, args ...any) func() string {
 }
 
 func T(v string, args ...any) string {
-	if len(args) > 0 {
-		return fmt.Sprintf(v, args...)
+	if len(args) == 0 {
+		return v
 	}
-	return v
+	return fmt.Sprintf(v, args...)
 }
 
 func getTextFn(v any) func() string {
