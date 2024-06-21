@@ -23,42 +23,6 @@ type TestStructThree struct {
 
 func TestContentType(t *testing.T) {
 	var (
-		ctOne   = contenttypes.NewContentType(&TestStructOne{})
-		ctTwo   = contenttypes.NewContentType(TestStructTwo{})
-		ctThree = contenttypes.NewContentType((*TestStructThree)(nil))
-	)
-
-	t.Run("TestAppLabel", func(t *testing.T) {
-		if ctOne.AppLabel() != "contenttypes_test" {
-			t.Errorf("expected %q, got %q", "contenttypes_test", ctOne.PkgPath())
-		}
-
-		if ctTwo.AppLabel() != "contenttypes_test" {
-			t.Errorf("expected %q, got %q", "contenttypes_test", ctTwo.PkgPath())
-		}
-
-		if ctThree.AppLabel() != "contenttypes_test" {
-			t.Errorf("expected %q, got %q", "contenttypes_test", ctThree.PkgPath())
-		}
-	})
-
-	t.Run("TestTypeName", func(t *testing.T) {
-		if ctOne.Model() != "TestStructOne" {
-			t.Errorf("expected %q, got %q", "TestStructOne", ctOne.Model())
-		}
-
-		if ctTwo.Model() != "TestStructTwo" {
-			t.Errorf("expected %q, got %q", "TestStructTwo", ctTwo.Model())
-		}
-
-		if ctThree.Model() != "TestStructThree" {
-			t.Errorf("expected %q, got %q", "TestStructThree", ctThree.Model())
-		}
-	})
-}
-
-func TestContentTypeRegistry(t *testing.T) {
-	var (
 		aliasOne = []string{
 			"contenttypes.TestStructOne",
 			"test.TestStructOne",
@@ -112,116 +76,201 @@ func TestContentTypeRegistry(t *testing.T) {
 		}
 	)
 
+	var (
+		ctOne   = contenttypes.NewContentType(&TestStructOne{})
+		ctTwo   = contenttypes.NewContentType(TestStructTwo{})
+		ctThree = contenttypes.NewContentType((*TestStructThree)(nil))
+	)
+
+	t.Run("TestAppLabel", func(t *testing.T) {
+		if ctOne.AppLabel() != "contenttypes_test" {
+			t.Errorf("expected %q, got %q", "contenttypes_test", ctOne.PkgPath())
+		}
+
+		if ctTwo.AppLabel() != "contenttypes_test" {
+			t.Errorf("expected %q, got %q", "contenttypes_test", ctTwo.PkgPath())
+		}
+
+		if ctThree.AppLabel() != "contenttypes_test" {
+			t.Errorf("expected %q, got %q", "contenttypes_test", ctThree.PkgPath())
+		}
+	})
+
+	t.Run("TestTypeName", func(t *testing.T) {
+		if ctOne.Model() != "TestStructOne" {
+			t.Errorf("expected %q, got %q", "TestStructOne", ctOne.Model())
+		}
+
+		if ctTwo.Model() != "TestStructTwo" {
+			t.Errorf("expected %q, got %q", "TestStructTwo", ctTwo.Model())
+		}
+
+		if ctThree.Model() != "TestStructThree" {
+			t.Errorf("expected %q, got %q", "TestStructThree", ctThree.Model())
+		}
+	})
+
 	contenttypes.Register(defOne)
 	contenttypes.Register(defTwo)
 	contenttypes.Register(defThree)
 
-	t.Run("TestGetContentTypeDefinitionForObject", func(t *testing.T) {
-		def := contenttypes.DefinitionForObject(&TestStructOne{})
-		if def != defOne {
-			t.Errorf("expected %v, got %v", defOne, def)
+	t.Run("TestScan", func(t *testing.T) {
+
+		var (
+			typnameOne   = "contenttypes.TestStructOne"
+			typnameTwo   = "contenttypes.TestStructTwo"
+			typnameThree = "contenttypes.TestStructThree"
+		)
+
+		var ct = contenttypes.BaseContentType[any]{}
+		err := ct.Scan(typnameOne)
+		if err != nil {
+			t.Errorf("expected nil error, got %v", err)
 		}
 
-		def = contenttypes.DefinitionForObject(TestStructTwo{})
-		if def != defTwo {
-			t.Errorf("expected %v, got %v", defTwo, def)
+		if ct.PkgPath() != "github.com/Nigel2392/django/core/contenttypes_test" {
+			t.Errorf("expected %q, got %q", "github.com/Nigel2392/django/core/contenttypes_test", ct.PkgPath())
 		}
 
-		def = contenttypes.DefinitionForObject((*TestStructThree)(nil))
-		if def != defThree {
-			t.Errorf("expected %v, got %v", defThree, def)
-		}
-	})
-
-	t.Run("TestGetContentTypeDefinition", func(t *testing.T) {
-		def := contenttypes.DefinitionForPackage("contenttypes_test", "TestStructOne")
-		if def != defOne {
-			t.Errorf("expected %v, got %v", defOne, def)
+		if ct.Model() != "TestStructOne" {
+			t.Errorf("expected %q, got %q", "TestStructOne", ct.Model())
 		}
 
-		def = contenttypes.DefinitionForPackage("contenttypes_test", "TestStructTwo")
-		if def != defTwo {
-			t.Errorf("expected %v, got %v", defTwo, def)
+		err = ct.Scan(typnameTwo)
+		if err != nil {
+			t.Errorf("expected nil error, got %v", err)
 		}
 
-		def = contenttypes.DefinitionForPackage("contenttypes_test", "TestStructThree")
-		if def != defThree {
-			t.Errorf("expected %v, got %v", defThree, def)
-		}
-	})
-
-	t.Run("TestGetContentTypeDefinitionForAlias", func(t *testing.T) {
-		def := contenttypes.DefinitionForPackage("contenttypes", "TestStructOne")
-		if def != defOne {
-			t.Errorf("expected %v, got %v", defOne, def)
+		if ct.PkgPath() != "github.com/Nigel2392/django/core/contenttypes_test" {
+			t.Errorf("expected %q, got %q", "github.com/Nigel2392/django/core/contenttypes_test", ct.PkgPath())
 		}
 
-		def = contenttypes.DefinitionForPackage("contenttypes", "TestStructTwo")
-		if def != defTwo {
-			t.Errorf("expected %v, got %v", defTwo, def)
+		if ct.Model() != "TestStructTwo" {
+			t.Errorf("expected %q, got %q", "TestStructTwo", ct.Model())
 		}
 
-		def = contenttypes.DefinitionForPackage("contenttypes", "TestStructThree")
-		if def != defThree {
-			t.Errorf("expected %v, got %v", defThree, def)
+		err = ct.Scan(typnameThree)
+		if err != nil {
+			t.Errorf("expected nil error, got %v", err)
 		}
 
-		def = contenttypes.DefinitionForPackage("test", "TestStructOne")
-		if def != defOne {
-			t.Errorf("expected %v, got %v", defOne, def)
+		if ct.PkgPath() != "github.com/Nigel2392/django/core/contenttypes_test" {
+			t.Errorf("expected %q, got %q", "github.com/Nigel2392/django/core/contenttypes_test", ct.PkgPath())
 		}
 
-		def = contenttypes.DefinitionForPackage("test", "TestStructTwo")
-		if def != defTwo {
-			t.Errorf("expected %v, got %v", defTwo, def)
-		}
-
-		def = contenttypes.DefinitionForPackage("test", "TestStructThree")
-		if def != defThree {
-			t.Errorf("expected %v, got %v", defThree, def)
+		if ct.Model() != "TestStructThree" {
+			t.Errorf("expected %q, got %q", "TestStructThree", ct.Model())
 		}
 	})
 
-	t.Run("TestGetContentTypeDefinitionGetObjects", func(t *testing.T) {
-		var obj any
-		obj = defOne.Object()
-		if obj == nil {
-			t.Errorf("expected non-nil object")
-		}
+	t.Run("TestRegister", func(t *testing.T) {
 
-		if obj.(*TestStructOne).ID != 1 {
-			t.Errorf("expected %d, got %d", 1, obj.(*TestStructOne).ID)
-		}
+		t.Run("TestGetContentTypeDefinitionForObject", func(t *testing.T) {
+			def := contenttypes.DefinitionForObject(&TestStructOne{})
+			if def != defOne {
+				t.Errorf("expected %v, got %v", defOne, def)
+			}
 
-		if obj.(*TestStructOne).Name != "name" {
-			t.Errorf("expected %q, got %q", "name", obj.(*TestStructOne).Name)
-		}
+			def = contenttypes.DefinitionForObject(TestStructTwo{})
+			if def != defTwo {
+				t.Errorf("expected %v, got %v", defTwo, def)
+			}
 
-		obj = defTwo.Object()
-		if obj == nil {
-			t.Errorf("expected non-nil object")
-		}
+			def = contenttypes.DefinitionForObject((*TestStructThree)(nil))
+			if def != defThree {
+				t.Errorf("expected %v, got %v", defThree, def)
+			}
+		})
 
-		if obj.(TestStructTwo).ID != 2 {
-			t.Errorf("expected %d, got %d", 2, obj.(TestStructTwo).ID)
-		}
+		t.Run("TestGetContentTypeDefinition", func(t *testing.T) {
+			def := contenttypes.DefinitionForPackage("contenttypes_test", "TestStructOne")
+			if def != defOne {
+				t.Errorf("expected %v, got %v", defOne, def)
+			}
 
-		if obj.(TestStructTwo).Name != "name" {
-			t.Errorf("expected %q, got %q", "name", obj.(TestStructTwo).Name)
-		}
+			def = contenttypes.DefinitionForPackage("contenttypes_test", "TestStructTwo")
+			if def != defTwo {
+				t.Errorf("expected %v, got %v", defTwo, def)
+			}
 
-		obj = defThree.Object()
-		if obj == nil {
-			t.Errorf("expected non-nil object")
-		}
+			def = contenttypes.DefinitionForPackage("contenttypes_test", "TestStructThree")
+			if def != defThree {
+				t.Errorf("expected %v, got %v", defThree, def)
+			}
+		})
 
-		if obj.(*TestStructThree).ID != 3 {
-			t.Errorf("expected %d, got %d", 3, obj.(*TestStructThree).ID)
-		}
+		t.Run("TestGetContentTypeDefinitionForAlias", func(t *testing.T) {
+			def := contenttypes.DefinitionForPackage("contenttypes", "TestStructOne")
+			if def != defOne {
+				t.Errorf("expected %v, got %v", defOne, def)
+			}
 
-		if obj.(*TestStructThree).Name != "name" {
-			t.Errorf("expected %q, got %q", "name", obj.(*TestStructThree).Name)
-		}
+			def = contenttypes.DefinitionForPackage("contenttypes", "TestStructTwo")
+			if def != defTwo {
+				t.Errorf("expected %v, got %v", defTwo, def)
+			}
+
+			def = contenttypes.DefinitionForPackage("contenttypes", "TestStructThree")
+			if def != defThree {
+				t.Errorf("expected %v, got %v", defThree, def)
+			}
+
+			def = contenttypes.DefinitionForPackage("test", "TestStructOne")
+			if def != defOne {
+				t.Errorf("expected %v, got %v", defOne, def)
+			}
+
+			def = contenttypes.DefinitionForPackage("test", "TestStructTwo")
+			if def != defTwo {
+				t.Errorf("expected %v, got %v", defTwo, def)
+			}
+
+			def = contenttypes.DefinitionForPackage("test", "TestStructThree")
+			if def != defThree {
+				t.Errorf("expected %v, got %v", defThree, def)
+			}
+		})
+
+		t.Run("TestGetContentTypeDefinitionGetObjects", func(t *testing.T) {
+			var obj any
+			obj = defOne.Object()
+			if obj == nil {
+				t.Errorf("expected non-nil object")
+			}
+
+			if obj.(*TestStructOne).ID != 1 {
+				t.Errorf("expected %d, got %d", 1, obj.(*TestStructOne).ID)
+			}
+
+			if obj.(*TestStructOne).Name != "name" {
+				t.Errorf("expected %q, got %q", "name", obj.(*TestStructOne).Name)
+			}
+
+			obj = defTwo.Object()
+			if obj == nil {
+				t.Errorf("expected non-nil object")
+			}
+
+			if obj.(TestStructTwo).ID != 2 {
+				t.Errorf("expected %d, got %d", 2, obj.(TestStructTwo).ID)
+			}
+
+			if obj.(TestStructTwo).Name != "name" {
+				t.Errorf("expected %q, got %q", "name", obj.(TestStructTwo).Name)
+			}
+
+			obj = defThree.Object()
+			if obj == nil {
+				t.Errorf("expected non-nil object")
+			}
+
+			if obj.(*TestStructThree).ID != 3 {
+				t.Errorf("expected %d, got %d", 3, obj.(*TestStructThree).ID)
+			}
+
+			if obj.(*TestStructThree).Name != "name" {
+				t.Errorf("expected %q, got %q", "name", obj.(*TestStructThree).Name)
+			}
+		})
 	})
-
 }

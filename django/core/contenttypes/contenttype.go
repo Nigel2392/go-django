@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/django/core/errs"
+	"github.com/pkg/errors"
 )
 
 var _ sql.Scanner = (*BaseContentType[any])(nil)
@@ -74,25 +75,34 @@ func (c *BaseContentType[T]) TypeName() string {
 	return string(b)
 }
 
+// Scan implements the sql.Scanner interface.
+// It supports scanning a string into a BaseContentType.
+// The string must be a valid type name.
 func (c *BaseContentType[T]) Scan(src interface{}) error {
 	if src == nil {
 		return nil
 	}
 	var typeString, ok = src.(string)
 	if !ok {
-		return ErrInvalidScanType
+		return errors.Wrapf(
+			ErrInvalidScanType,
+			"expected string, got %T",
+			src,
+		)
 	}
 
 	var registryObj = DefinitionForType(typeString)
 	if registryObj == nil {
-		return ErrInvalidScanType
+		return errors.Errorf("invalid content type: %s", typeString)
 	}
 
-	var newCtype = NewContentType[T](registryObj.ContentObject.(T))
+	var newCtype = NewContentType(registryObj.ContentObject.(T))
 	*c = *newCtype
 	return nil
 }
 
+// Value implements the driver.Valuer interface.
+// It returns the type name of the BaseContentType.
 func (c BaseContentType[T]) Value() (driver.Value, error) {
 	return c.TypeName(), nil
 }
