@@ -1,6 +1,7 @@
 package contenttypes
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 )
@@ -128,6 +129,17 @@ func (p *ContentTypeRegistry) Register(definition *ContentTypeDefinition) {
 	}
 
 	p.registry[typeName] = definition
+
+	if p.aliasesRev == nil {
+		p.aliasesRev = make(map[string]string)
+	}
+
+	var alias = fmt.Sprintf(
+		"%s.%s",
+		contentType.AppLabel(),
+		contentType.Model(),
+	)
+	p.RegisterAlias(alias, typeName)
 
 	if definition.Aliases != nil {
 		for _, alias := range definition.Aliases {

@@ -1,6 +1,7 @@
 package contenttypes_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/Nigel2392/django/core/contenttypes"
@@ -116,50 +117,66 @@ func TestContentType(t *testing.T) {
 
 	t.Run("TestScan", func(t *testing.T) {
 
-		var (
-			typnameOne   = "contenttypes.TestStructOne"
-			typnameTwo   = "contenttypes.TestStructTwo"
-			typnameThree = "contenttypes.TestStructThree"
-		)
-
-		var ct = contenttypes.BaseContentType[any]{}
-		err := ct.Scan(typnameOne)
-		if err != nil {
-			t.Errorf("expected nil error, got %v", err)
+		var contentTypeNames [][3]string = [][3]string{
+			{
+				"github.com/Nigel2392/django/core/contenttypes_test.TestStructOne",
+				"github.com/Nigel2392/django/core/contenttypes_test.TestStructTwo",
+				"github.com/Nigel2392/django/core/contenttypes_test.TestStructThree",
+			},
+			{"contenttypes_test.TestStructOne", "contenttypes_test.TestStructTwo", "contenttypes_test.TestStructThree"},
+			{"contenttypes.TestStructOne", "contenttypes.TestStructTwo", "contenttypes.TestStructThree"},
+			{"test.TestStructOne", "test.TestStructTwo", "test.TestStructThree"},
 		}
 
-		if ct.PkgPath() != "github.com/Nigel2392/django/core/contenttypes_test" {
-			t.Errorf("expected %q, got %q", "github.com/Nigel2392/django/core/contenttypes_test", ct.PkgPath())
-		}
+		for _, typNames := range contentTypeNames {
 
-		if ct.Model() != "TestStructOne" {
-			t.Errorf("expected %q, got %q", "TestStructOne", ct.Model())
-		}
+			t.Run(fmt.Sprintf("TestScan_%s", typNames[0]), func(t *testing.T) {
+				var (
+					typnameOne   = typNames[0]
+					typnameTwo   = typNames[1]
+					typnameThree = typNames[2]
+				)
 
-		err = ct.Scan(typnameTwo)
-		if err != nil {
-			t.Errorf("expected nil error, got %v", err)
-		}
+				var ct = contenttypes.BaseContentType[any]{}
+				err := ct.Scan(typnameOne)
+				if err != nil {
+					t.Errorf("expected nil error, got %v", err)
+				}
 
-		if ct.PkgPath() != "github.com/Nigel2392/django/core/contenttypes_test" {
-			t.Errorf("expected %q, got %q", "github.com/Nigel2392/django/core/contenttypes_test", ct.PkgPath())
-		}
+				if ct.PkgPath() != "github.com/Nigel2392/django/core/contenttypes_test" {
+					t.Errorf("expected %q, got %q", "github.com/Nigel2392/django/core/contenttypes_test", ct.PkgPath())
+				}
 
-		if ct.Model() != "TestStructTwo" {
-			t.Errorf("expected %q, got %q", "TestStructTwo", ct.Model())
-		}
+				if ct.Model() != "TestStructOne" {
+					t.Errorf("expected %q, got %q", "TestStructOne", ct.Model())
+				}
 
-		err = ct.Scan(typnameThree)
-		if err != nil {
-			t.Errorf("expected nil error, got %v", err)
-		}
+				err = ct.Scan(typnameTwo)
+				if err != nil {
+					t.Errorf("expected nil error, got %v", err)
+				}
 
-		if ct.PkgPath() != "github.com/Nigel2392/django/core/contenttypes_test" {
-			t.Errorf("expected %q, got %q", "github.com/Nigel2392/django/core/contenttypes_test", ct.PkgPath())
-		}
+				if ct.PkgPath() != "github.com/Nigel2392/django/core/contenttypes_test" {
+					t.Errorf("expected %q, got %q", "github.com/Nigel2392/django/core/contenttypes_test", ct.PkgPath())
+				}
 
-		if ct.Model() != "TestStructThree" {
-			t.Errorf("expected %q, got %q", "TestStructThree", ct.Model())
+				if ct.Model() != "TestStructTwo" {
+					t.Errorf("expected %q, got %q", "TestStructTwo", ct.Model())
+				}
+
+				err = ct.Scan(typnameThree)
+				if err != nil {
+					t.Errorf("expected nil error, got %v", err)
+				}
+
+				if ct.PkgPath() != "github.com/Nigel2392/django/core/contenttypes_test" {
+					t.Errorf("expected %q, got %q", "github.com/Nigel2392/django/core/contenttypes_test", ct.PkgPath())
+				}
+
+				if ct.Model() != "TestStructThree" {
+					t.Errorf("expected %q, got %q", "TestStructThree", ct.Model())
+				}
+			})
 		}
 	})
 
