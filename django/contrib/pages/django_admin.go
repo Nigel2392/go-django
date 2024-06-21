@@ -165,33 +165,44 @@ func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 		return err
 	}
 
-	django.Task("Fixing tree structure upon manual page node save", func(app *django.Application) error {
-		allNodesCount, err := pageApp.QuerySet().CountNodes(ctx)
-		if err != nil {
-			return errors.Wrap(err, "failed to count nodes")
-		}
-
-		allNodes, err := pageApp.QuerySet().AllNodes(ctx, int32(allNodesCount), 0)
-		if err != nil {
-			return errors.Wrap(err, "failed to get all nodes")
-		}
-
-		var nodeRefs = make([]*models.PageNode, len(allNodes))
-		for i := 0; i < len(allNodes); i++ {
-			nodeRefs[i] = &allNodes[i]
-		}
-
-		var tree = NewNodeTree(nodeRefs)
-
-		tree.FixTree()
-
-		err = pageApp.QuerySet().UpdateNodes(ctx, nodeRefs)
-		if err != nil {
-			return errors.Wrap(err, "failed to update nodes")
-		}
-
-		return nil
+	django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
+		return FixTree(pageApp.QuerySet(), ctx)
 	})
 
 	return nil
+}
+
+func FixTree(querySet models.DBQuerier, ctx context.Context) error {
+	var tx, err = querySet.BeginTx(ctx, nil)
+	if err != nil {
+		return errors.Wrap(err, "failed to begin transaction")
+	}
+	defer tx.Rollback()
+
+	var qs = QuerySet().WithTx(tx)
+	allNodesCount, err := qs.CountNodes(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to count nodes")
+	}
+
+	allNodes, err := qs.AllNodes(ctx, int32(allNodesCount), 0)
+	if err != nil {
+		return errors.Wrap(err, "failed to get all nodes")
+	}
+
+	var nodeRefs = make([]*models.PageNode, len(allNodes))
+	for i := 0; i < len(allNodes); i++ {
+		nodeRefs[i] = &allNodes[i]
+	}
+
+	var tree = NewNodeTree(nodeRefs)
+
+	tree.FixTree()
+
+	err = qs.UpdateNodes(ctx, nodeRefs)
+	if err != nil {
+		return errors.Wrap(err, "failed to update nodes")
+	}
+
+	return tx.Commit()
 }

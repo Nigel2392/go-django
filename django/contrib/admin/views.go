@@ -6,7 +6,6 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/auth"
-	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/ctx"
@@ -198,7 +197,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			BaseTemplateKey: BASE_KEY,
 			TemplateName:    fmt.Sprintf("admin/views/models/%s.tmpl", tpl),
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
-				var context = core.Context(req)
+				var context = NewContext(req, AdminSite, nil)
 				context.Set("app", app)
 				context.Set("model", model)
 				return context, nil

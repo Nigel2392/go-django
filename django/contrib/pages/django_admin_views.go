@@ -401,16 +401,22 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 
 	adminForm.Load()
 
-	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
+	form.SaveInstance = func(ctx context.Context, d attrs.Definer) (err error) {
 		if page, ok := d.(SaveablePage); ok {
-			return SavePage(QuerySet(), ctx, p, page)
+			err = SavePage(QuerySet(), ctx, p, page)
+		} else {
+			var n = d.(*models.PageNode)
+			_, err = QuerySet().InsertNode(
+				ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, int64(n.StatusFlags), n.PageID, n.ContentType,
+			)
+		}
+		if err != nil {
+			return err
 		}
 
-		var n = d.(*models.PageNode)
-		var _, err = QuerySet().InsertNode(
-			ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, int64(n.StatusFlags), n.PageID, n.ContentType,
-		)
-		return err
+		return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
+			return FixTree(pageApp.QuerySet(), ctx)
+		})
 	}
 
 	var view = &views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]]{
@@ -517,12 +523,19 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
 		if page, ok := d.(SaveablePage); ok {
+			err = UpdatePage(QuerySet(), ctx, page)
+		} else {
+			var n = d.(*models.PageNode)
+			err = QuerySet().UpdateNode(ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, int64(n.StatusFlags), n.PageID, n.ContentType, n.PK)
 
-			return UpdatePage(QuerySet(), ctx, page)
+		}
+		if err != nil {
+			return err
 		}
 
-		var n = d.(*models.PageNode)
-		return QuerySet().UpdateNode(ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, int64(n.StatusFlags), n.PageID, n.ContentType, n.PK)
+		return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
+			return FixTree(pageApp.QuerySet(), ctx)
+		})
 	}
 
 	var view = &views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]]{

@@ -88,15 +88,20 @@ func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
 	return p.Save(ctx)
 }
 
-func DeletePage(q models.DBQuerier, ctx context.Context, p DeletablePage) error {
+func DeletePage(q models.DBQuerier, ctx context.Context, p DeletablePage) (err error) {
 	var ref = p.Reference()
 	if ref.PK == 0 {
 		return fmt.Errorf("page id must not be zero")
 	}
 
-	if err := DeleteNode(q, ctx, ref.PK, ref.Path, ref.Depth); err != nil {
+	if err = DeleteNode(q, ctx, ref.PK, ref.Path, ref.Depth); err != nil {
 		return err
 	}
 
-	return p.Delete(ctx)
+	err = p.Delete(ctx)
+	if err != nil {
+		return err
+	}
+
+	return FixTree(q, ctx)
 }

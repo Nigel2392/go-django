@@ -270,15 +270,23 @@ func (a *Application) Static(path string) string {
 }
 
 func (a *Application) Task(description string, fn func(*Application) error) error {
-	var startTime = time.Now()
-	a.Log.Infof("Starting task: %s", description)
-	var err = fn(a)
-	var timeTaken = time.Since(startTime)
+	var (
+		startTime = time.Now()
+		w         = a.Log.NameSpace("Task")
+	)
+
+	w.Infof("Starting task: %s", description)
+
+	var (
+		err       = fn(a)
+		timeTaken = time.Since(startTime)
+	)
 	if err != nil {
-		a.Log.Errorf("Task failed: %s (%s)", description, timeTaken)
+		w.Errorf("Task failed: %s (%s)", description, timeTaken)
 	} else {
-		a.Log.Infof("Task completed: %s (%s)", description, timeTaken)
+		w.Infof("Task completed: %s (%s)", description, timeTaken)
 	}
+
 	return err
 }
 
