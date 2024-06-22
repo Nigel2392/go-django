@@ -162,7 +162,7 @@ func TestPageMenuHandler(t *testing.T) {
 	// Insert test data
 	var ctx = context.Background()
 	for _, node := range nodes {
-		if _, err := qs.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, int64(node.StatusFlags), node.PageID, node.ContentType); err != nil {
+		if _, err := qs.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, node.Slug, int64(node.StatusFlags), node.PageID, node.ContentType); err != nil {
 			panic(err)
 		}
 	}

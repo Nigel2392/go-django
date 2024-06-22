@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS PageNode (
     -- It is used to generate the URL route
     url_path        TEXT      NOT NULL,
 
+    -- Slugified title
+    slug            TEXT      NOT NULL,
+
     -- Status flags:
     -- 0x01: Published
     -- 0x02: Hidden

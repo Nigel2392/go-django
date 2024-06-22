@@ -22,7 +22,7 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 	node.Path = buildPathPart(previousRootNodeCount)
 	node.Depth = 0
 
-	id, err := q.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, int64(node.StatusFlags), node.PageID, node.ContentType)
+	id, err := q.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, node.Slug, int64(node.StatusFlags), node.PageID, node.ContentType)
 	if err != nil {
 		return err
 	}
@@ -66,7 +66,7 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 
 	child.Path = parent.Path + buildPathPart(parent.Numchild)
 	child.Depth = parent.Depth + 1
-	child.PK, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, child.UrlPath, int64(child.StatusFlags), child.PageID, child.ContentType)
+	child.PK, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, child.UrlPath, child.Slug, int64(child.StatusFlags), child.PageID, child.ContentType)
 	if err != nil {
 		return err
 	}
@@ -138,7 +138,7 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 		return errors.Wrap(err, "failed to get old parent node")
 	}
 
-	nodes, err := queries.GetDescendants(ctx, node.Path, node.Depth-1)
+	nodes, err := queries.GetDescendants(ctx, node.Path, node.Depth-1, 1000, 0)
 	if err != nil {
 		return errors.Wrap(err, "failed to get descendants")
 	}
@@ -213,7 +213,7 @@ func UpdateNode(q models.DBQuerier, ctx context.Context, node *models.PageNode) 
 	}
 
 	var err = q.UpdateNode(
-		ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, int64(node.StatusFlags), node.PageID, node.ContentType, node.PK,
+		ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, node.Slug, int64(node.StatusFlags), node.PageID, node.ContentType, node.PK,
 	)
 	if err != nil {
 		return err
@@ -267,7 +267,7 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 
 	var descendants []models.PageNode
 	descendants, err = queries.GetDescendants(
-		ctx, path, depth-1,
+		ctx, path, depth-1, 1000, 0,
 	)
 	if err != nil {
 		return err

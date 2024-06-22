@@ -45,7 +45,7 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 		)
 	} else {
 		err = queries.UpdateNode(
-			ctx, ref.Title, ref.Path, ref.Depth, ref.Numchild, ref.UrlPath, int64(ref.StatusFlags), ref.PageID, ref.ContentType, ref.PK,
+			ctx, ref.Title, ref.Path, ref.Depth, ref.Numchild, ref.UrlPath, ref.Slug, int64(ref.StatusFlags), ref.PageID, ref.ContentType, ref.PK,
 		)
 	}
 	if err != nil {
@@ -77,6 +77,7 @@ func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
 		ref.Depth,
 		ref.Numchild,
 		ref.UrlPath,
+		ref.Slug,
 		int64(ref.StatusFlags),
 		ref.PageID,
 		ref.ContentType,

@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS PageNode (
     -- It is used to generate the URL route
     url_path        TEXT      NOT NULL,
 
+    -- Slugified title
+    slug            TEXT      NOT NULL,
+
     -- Status flags:
     -- 0x01: Published
     -- 0x02: Hidden
@@ -30,3 +33,21 @@ CREATE TABLE IF NOT EXISTS PageNode (
 CREATE INDEX IF NOT EXISTS PageNode_path ON PageNode(path);
 CREATE INDEX IF NOT EXISTS PageNode_page_id ON PageNode(page_id);
 CREATE INDEX IF NOT EXISTS PageNode_type_name ON PageNode(content_type);
+--  
+--  CREATE TRIGGER IF NOT EXISTS PageNode_decrement_numchild
+--  AFTER DELETE ON PageNode
+--  FOR EACH ROW
+--  BEGIN
+--      UPDATE PageNode
+--      SET numchild = numchild - 1
+--      WHERE path LIKE CONCAT(SUBSTR(OLD.path, 0, LENGTH(OLD.path) - 3), '%') AND depth = OLD.depth - 1;
+--  END;
+--  
+--  CREATE TRIGGER IF NOT EXISTS PageNode_increment_numchild
+--  AFTER INSERT ON PageNode
+--  FOR EACH ROW
+--  BEGIN
+--      UPDATE PageNode
+--      SET numchild = numchild + 1
+--      WHERE path LIKE CONCAT(SUBSTR(NEW.path, 0, LENGTH(NEW.path) - 3), '%') AND depth = NEW.depth - 1;
+--  END;

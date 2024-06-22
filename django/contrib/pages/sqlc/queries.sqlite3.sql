@@ -5,6 +5,7 @@ INSERT INTO PageNode (
     depth,
     numchild,
     url_path,
+    slug,
     status_flags,
     page_id,
     content_type
@@ -14,6 +15,7 @@ INSERT INTO PageNode (
     sqlc.arg(depth),
     sqlc.arg(numchild),
     sqlc.arg(url_path),
+    sqlc.arg(slug),
     sqlc.arg(status_flags),
     sqlc.arg(page_id),
     sqlc.arg(content_type)
@@ -23,8 +25,8 @@ INSERT INTO PageNode (
 SELECT *
 FROM     PageNode
 ORDER BY path ASC
-LIMIT    ?
-OFFSET   ?;
+LIMIT    sqlc.arg(limit)
+OFFSET   sqlc.arg(offset);
 
 -- name: CountRootNodes :one
 SELECT COUNT(*)
@@ -40,6 +42,13 @@ SELECT   *
 FROM     PageNode
 WHERE    id = sqlc.arg(id);
 
+-- name: GetNodeBySlug :one
+SELECT   *
+FROM     PageNode
+WHERE    slug  =    sqlc.arg(slug) 
+AND      depth =    sqlc.arg(depth)
+AND      path  LIKE CONCAT(sqlc.arg(path), '%');
+
 -- name: GetNodesByIDs :many
 SELECT   *
 FROM     PageNode
@@ -48,7 +57,9 @@ WHERE    id IN (sqlc.slice(id));
 -- name: GetNodesByDepth :many
 SELECT   *
 FROM     PageNode
-WHERE    depth = sqlc.arg(depth);
+WHERE    depth = sqlc.arg(depth)
+LIMIT    sqlc.arg(limit)
+OFFSET   sqlc.arg(offset);
 
 -- name: GetNodesByPageIDs :many
 SELECT   *
@@ -58,12 +69,16 @@ WHERE    page_id IN (sqlc.slice(page_id));
 -- name: GetNodesByTypeHash :many
 SELECT   *
 FROM     PageNode
-WHERE    content_type = sqlc.arg(content_type);
+WHERE    content_type = sqlc.arg(content_type)
+LIMIT    sqlc.arg(limit)
+OFFSET   sqlc.arg(offset);
 
 -- name: GetNodesByTypeHashes :many
 SELECT   *
 FROM     PageNode
-WHERE    content_type IN (sqlc.slice(content_type));
+WHERE    content_type IN (sqlc.slice(content_type))
+LIMIT    sqlc.arg(limit)
+OFFSET   sqlc.arg(offset);
 
 -- name: GetNodeByPath :one
 SELECT   *
@@ -78,12 +93,16 @@ WHERE    path IN (sqlc.slice(path));
 -- name: GetChildNodes :many
 SELECT   *
 FROM     PageNode
-WHERE    path LIKE CONCAT(sqlc.arg(path), '%') AND depth = sqlc.arg(depth) + 1;
+WHERE    path LIKE CONCAT(sqlc.arg(path), '%') AND depth = sqlc.arg(depth) + 1
+LIMIT    sqlc.arg(limit)
+OFFSET   sqlc.arg(offset);
 
 -- name: GetDescendants :many
 SELECT   *
 FROM     PageNode
-WHERE    path LIKE CONCAT(sqlc.arg(path), '%') AND depth > sqlc.arg(depth);
+WHERE    path LIKE CONCAT(sqlc.arg(path), '%') AND depth > sqlc.arg(depth)
+LIMIT    sqlc.arg(limit)
+OFFSET   sqlc.arg(offset);
 
 -- name: UpdateNode :exec
 UPDATE PageNode
@@ -92,6 +111,7 @@ SET title = sqlc.arg(title),
     depth = sqlc.arg(depth), 
     numchild = sqlc.arg(numchild),
     url_path = sqlc.arg(url_path),
+    slug = sqlc.arg(slug),
     status_flags = sqlc.arg(status_flags), 
     page_id = sqlc.arg(page_id), 
     content_type = sqlc.arg(content_type),
@@ -111,14 +131,12 @@ WHERE    id = sqlc.arg(id);
 -- name: IncrementNumChild :exec
 UPDATE PageNode
 SET numchild = numchild + 1
-WHERE id = sqlc.arg(id)
-RETURNING *;
+WHERE id = sqlc.arg(id);
 
 -- name: DecrementNumChild :exec
 UPDATE PageNode
 SET numchild = numchild - 1
-WHERE id = sqlc.arg(id)
-RETURNING *;
+WHERE id = sqlc.arg(id);
 
 -- name: DeleteNode :exec
 DELETE FROM PageNode

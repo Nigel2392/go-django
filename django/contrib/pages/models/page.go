@@ -32,6 +32,7 @@ type PageNode struct {
 	Depth       int64      `json:"depth" attrs:"blank"`
 	Numchild    int64      `json:"numchild" attrs:"blank"`
 	UrlPath     string     `json:"url_path" attrs:"blank"`
+	Slug        string     `json:"slug"`
 	StatusFlags StatusFlag `json:"status_flags" attrs:"null;blank"`
 	PageID      int64      `json:"page_id" attrs:""`
 	ContentType string     `json:"content_type" attrs:""`
@@ -59,6 +60,7 @@ func (n *PageNode) FieldDefs() attrs.Definitions {
 		"Depth",
 		"Numchild",
 		"UrlPath",
+		"Slug",
 		"StatusFlags",
 		"PageID",
 		"ContentType",
@@ -83,26 +85,27 @@ type DBQuerier interface {
 type Querier interface {
 	Close() error
 	WithTx(tx *sql.Tx) Querier
-	AllNodes(ctx context.Context, nodeOffset int32, nodeLimit int32) ([]PageNode, error)
+	AllNodes(ctx context.Context, limit int32, offset int32) ([]PageNode, error)
 	CountNodes(ctx context.Context) (int64, error)
 	CountRootNodes(ctx context.Context) (int64, error)
 	DecrementNumChild(ctx context.Context, id int64) (PageNode, error)
 	DeleteDescendants(ctx context.Context, path interface{}, depth int64) error
 	DeleteNode(ctx context.Context, id int64) error
 	DeleteNodes(ctx context.Context, id []int64) error
-	GetChildNodes(ctx context.Context, path interface{}, depth interface{}) ([]PageNode, error)
-	GetDescendants(ctx context.Context, path interface{}, depth int64) ([]PageNode, error)
+	GetChildNodes(ctx context.Context, path interface{}, depth interface{}, limit int32, offset int32) ([]PageNode, error)
+	GetDescendants(ctx context.Context, path interface{}, depth int64, limit int32, offset int32) ([]PageNode, error)
 	GetNodeByID(ctx context.Context, id int64) (PageNode, error)
 	GetNodeByPath(ctx context.Context, path string) (PageNode, error)
-	GetNodesByDepth(ctx context.Context, depth int64) ([]PageNode, error)
+	GetNodeBySlug(ctx context.Context, slug string, depth int64, path interface{}) (PageNode, error)
+	GetNodesByDepth(ctx context.Context, depth int64, limit int32, offset int32) ([]PageNode, error)
 	GetNodesByIDs(ctx context.Context, id []int64) ([]PageNode, error)
 	GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]PageNode, error)
-	GetNodesByTypeHash(ctx context.Context, contentType string) ([]PageNode, error)
-	GetNodesByTypeHashes(ctx context.Context, contentType []string) ([]PageNode, error)
+	GetNodesByTypeHash(ctx context.Context, contentType string, limit int32, offset int32) ([]PageNode, error)
+	GetNodesByTypeHashes(ctx context.Context, contentType []string, limit int32, offset int32) ([]PageNode, error)
 	GetNodesForPaths(ctx context.Context, path []string) ([]PageNode, error)
 	IncrementNumChild(ctx context.Context, id int64) (PageNode, error)
-	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, statusFlags int64, pageID int64, contentType string) (int64, error)
-	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, statusFlags int64, pageID int64, contentType string, iD int64) error
+	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, slug string, statusFlags int64, pageID int64, contentType string) (int64, error)
+	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, slug string, statusFlags int64, pageID int64, contentType string, iD int64) error
 	UpdateNodes(ctx context.Context, nodes []*PageNode) error
 	UpdateNodePathAndDepth(ctx context.Context, path string, depth int64, iD int64) error
 	UpdateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error

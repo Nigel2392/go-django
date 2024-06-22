@@ -44,6 +44,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 		"Depth":       fields.S("Tree Depth"),
 		"Numchild":    fields.S("Number of Children"),
 		"UrlPath":     fields.S("URL Path"),
+		"Slug":        fields.S("Slug"),
 		"StatusFlags": fields.S("Status Flags"),
 		"PageID":      fields.S("Page ID"),
 		"ContentType": fields.S("Content Type"),
@@ -87,6 +88,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 		ViewOptions: admin.ViewOptions{
 			Fields: []string{
 				"Title",
+				"UrlPath",
 				"CreatedAt",
 				"UpdatedAt",
 			},
@@ -106,6 +108,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 			admin.FieldPanel("PageID"),
 			admin.FieldPanel("Numchild"),
 			admin.FieldPanel("UrlPath"),
+			admin.FieldPanel("Slug"),
 			admin.FieldPanel("StatusFlags"),
 		},
 		// Change form interaction
@@ -124,6 +127,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 			admin.FieldPanel("PageID"),
 			admin.FieldPanel("Numchild"),
 			admin.FieldPanel("UrlPath"),
+			admin.FieldPanel("Slug"),
 			admin.FieldPanel("StatusFlags"),
 			admin.FieldPanel("CreatedAt"),
 			admin.FieldPanel("UpdatedAt"),
@@ -142,6 +146,7 @@ func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 			n.Depth,
 			n.Numchild,
 			n.UrlPath,
+			n.Slug,
 			int64(n.StatusFlags),
 			n.PageID,
 			n.ContentType,
@@ -154,6 +159,7 @@ func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 			n.Depth,
 			n.Numchild,
 			n.UrlPath,
+			n.Slug,
 			int64(n.StatusFlags),
 			n.PageID,
 			n.ContentType,
