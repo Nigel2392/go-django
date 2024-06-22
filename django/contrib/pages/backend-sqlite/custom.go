@@ -52,7 +52,7 @@ const incrementNumChild = `-- name: IncrementNumChild :exec
 UPDATE PageNode
 SET numchild = numchild + 1
 WHERE id = ?1
-RETURNING id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
+RETURNING id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
 `
 
 func (q *Queries) IncrementNumChild(ctx context.Context, id int64) (models.PageNode, error) {
@@ -69,6 +69,7 @@ func (q *Queries) IncrementNumChild(ctx context.Context, id int64) (models.PageN
 		&i.Depth,
 		&i.Numchild,
 		&i.UrlPath,
+		&i.Slug,
 		&i.StatusFlags,
 		&i.PageID,
 		&i.ContentType,
@@ -82,7 +83,7 @@ const decrementNumChild = `-- name: DecrementNumChild :exec
 UPDATE PageNode
 SET numchild = numchild - 1
 WHERE id = ?1
-RETURNING id, title, path, depth, numchild, url_path, status_flags, page_id, content_type, created_at, updated_at
+RETURNING id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
 `
 
 func (q *Queries) DecrementNumChild(ctx context.Context, id int64) (models.PageNode, error) {
@@ -100,6 +101,7 @@ func (q *Queries) DecrementNumChild(ctx context.Context, id int64) (models.PageN
 		&i.Depth,
 		&i.Numchild,
 		&i.UrlPath,
+		&i.Slug,
 		&i.StatusFlags,
 		&i.PageID,
 		&i.ContentType,

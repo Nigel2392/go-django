@@ -2,6 +2,7 @@ package pages
 
 import (
 	"fmt"
+	"path"
 	"slices"
 	"strings"
 
@@ -23,6 +24,8 @@ func fixTree(n *Node, depth int64) (cancel bool) {
 			continue
 		}
 		front.Value.Ref.Path = n.Ref.Path + buildPathPart(int64(i))
+		front.Value.Ref.UrlPath = path.Join(n.Ref.UrlPath, front.Value.Ref.Slug)
+		front.Value.Ref.Numchild = int64(front.Value.Children.Len())
 		front.Value.Ref.Depth = depth + 1
 		i++
 	}

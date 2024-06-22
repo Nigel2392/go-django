@@ -3,9 +3,11 @@ package pages
 import (
 	"context"
 	"fmt"
+	"path"
 	"strings"
 
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/gosimple/slug"
 	"github.com/pkg/errors"
 )
 
@@ -20,6 +22,20 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 	}
 
 	node.Path = buildPathPart(previousRootNodeCount)
+	if node.Title == "" {
+		return fmt.Errorf("node title must not be empty")
+	}
+
+	node.Slug = strings.TrimSpace(node.Slug)
+	if node.Slug == "" {
+		node.Slug = slug.Make(node.Title)
+	}
+
+	var urlPath = node.Slug
+	if !strings.HasPrefix(urlPath, "/") {
+		urlPath = "/" + urlPath
+	}
+	node.UrlPath = urlPath
 	node.Depth = 0
 
 	id, err := q.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, node.Slug, int64(node.StatusFlags), node.PageID, node.ContentType)
@@ -64,7 +80,18 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 		return fmt.Errorf("child path must be empty")
 	}
 
+	child.Title = strings.TrimSpace(child.Title)
+	if child.Title == "" {
+		return fmt.Errorf("child title must not be empty")
+	}
+
+	child.Slug = strings.TrimSpace(child.Slug)
+	if child.Slug == "" {
+		child.Slug = slug.Make(child.Title)
+	}
+
 	child.Path = parent.Path + buildPathPart(parent.Numchild)
+	child.UrlPath = path.Join(parent.UrlPath, child.Slug)
 	child.Depth = parent.Depth + 1
 	child.PK, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, child.UrlPath, child.Slug, int64(child.StatusFlags), child.PageID, child.ContentType)
 	if err != nil {
@@ -148,6 +175,7 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 	for i, descendant := range nodes {
 		descendant := descendant
 		descendant.Path = newParent.Path + descendant.Path[node.Depth*STEP_LEN:]
+		descendant.UrlPath = newParent.UrlPath + descendant.UrlPath[len(node.UrlPath):]
 		descendant.Depth = (newParent.Depth + descendant.Depth + 1) - node.Depth
 		nodesPtr[i+1] = &descendant
 

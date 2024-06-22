@@ -218,21 +218,27 @@ func TestPageNode(t *testing.T) {
 	var (
 		rootNode = models.PageNode{
 			Title: "Root",
+			Slug:  "root",
 		}
 		childNode = models.PageNode{
 			Title: "Child",
+			Slug:  "child",
 		}
 		childSiblingNode = models.PageNode{
 			Title: "ChildSibling",
+			Slug:  "childsibling",
 		}
 		subChildNode = models.PageNode{
 			Title: "SubChild",
+			Slug:  "subchild",
 		}
 		subChildNode2 = models.PageNode{
 			Title: "SubChild2",
+			Slug:  "subchild2",
 		}
 		childSiblingSubChildNode = models.PageNode{
 			Title: "ChildSiblingSubChild",
+			Slug:  "childsiblingsubchild",
 		}
 		queryCtx = context.Background()
 		querier  = pages.QuerySet()
@@ -295,6 +301,14 @@ func TestPageNode(t *testing.T) {
 			t.Errorf("expected Numchild 0, got %d", rootNode.Numchild)
 		}
 
+		if rootNode.UrlPath != "/root" {
+			t.Errorf("expected UrlPath /root, got %s", rootNode.UrlPath)
+		}
+
+		if rootNode.Slug != "root" {
+			t.Errorf("expected Slug root, got %s", rootNode.Slug)
+		}
+
 		if rootNode.StatusFlags != 0 {
 			t.Errorf("expected StatusFlagPublished, got %d", rootNode.StatusFlags)
 		}
@@ -328,6 +342,14 @@ func TestPageNode(t *testing.T) {
 
 			if childNode.Numchild != 0 {
 				t.Errorf("expected Numchild 0, got %d", childNode.Numchild)
+			}
+
+			if childNode.UrlPath != "/root/child" {
+				t.Errorf("expected UrlPath /root/child, got %s", childNode.UrlPath)
+			}
+
+			if childNode.Slug != "child" {
+				t.Errorf("expected Slug child, got %s", childNode.Slug)
 			}
 
 			if childNode.StatusFlags != 0 {
@@ -385,6 +407,14 @@ func TestPageNode(t *testing.T) {
 
 				if subChildNode.Numchild != 0 {
 					t.Errorf("expected Numchild 0, got %d", subChildNode.Numchild)
+				}
+
+				if subChildNode.UrlPath != "/root/child/subchild" {
+					t.Errorf("expected UrlPath /root/child/subchild, got %s", subChildNode.UrlPath)
+				}
+
+				if subChildNode.Slug != "subchild" {
+					t.Errorf("expected Slug subchild, got %s", subChildNode.Slug)
 				}
 
 				if childNode.Numchild != 1 {
@@ -520,6 +550,10 @@ func TestPageNode(t *testing.T) {
 
 			if childSiblingNode.ContentType != "" {
 				t.Errorf("expected ContentType empty, got %s", childSiblingNode.ContentType)
+			}
+
+			if childSiblingNode.UrlPath != "/root/childsibling" {
+				t.Errorf("expected UrlPath /root/childsibling, got %s", childSiblingNode.UrlPath)
 			}
 
 			if rootNode.Numchild != 2 {
