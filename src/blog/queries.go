@@ -9,11 +9,11 @@ import (
 )
 
 const (
-	createTable = `CREATE TABLE IF NOT EXISTS blog_pages (
-	id INTEGER PRIMARY KEY AUTOINCREMENT,
-	title TEXT,
-	editor TEXT
-)`
+	// createTable = `CREATE TABLE IF NOT EXISTS blog_pages (
+	// id INTEGER PRIMARY KEY AUTOINCREMENT,
+	// title TEXT,
+	// editor TEXT
+	// )`
 	insertPage = `INSERT INTO blog_pages (title, editor) VALUES (?, ?)`
 	updatePage = `UPDATE blog_pages SET title = ?, editor = ? WHERE id = ?`
 	selectPage = `SELECT id, title, editor FROM blog_pages WHERE id = ?`

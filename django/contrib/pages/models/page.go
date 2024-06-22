@@ -31,7 +31,7 @@ type PageNode struct {
 	Path        string     `json:"path"`
 	Depth       int64      `json:"depth" attrs:"blank"`
 	Numchild    int64      `json:"numchild" attrs:"blank"`
-	UrlPath     string     `json:"url_path" attrs:"blank"`
+	UrlPath     string     `json:"url_path" attrs:"readonly;blank"`
 	Slug        string     `json:"slug"`
 	StatusFlags StatusFlag `json:"status_flags" attrs:"null;blank"`
 	PageID      int64      `json:"page_id" attrs:""`

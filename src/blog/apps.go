@@ -31,6 +31,10 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 					admin.TitlePanel(
 						admin.FieldPanel("Title"),
 					),
+					admin.MultiPanel(
+						admin.FieldPanel("UrlPath"),
+						admin.FieldPanel("Slug"),
+					),
 					admin.FieldPanel("Editor"),
 				}
 			},
@@ -40,10 +44,12 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 						admin.FieldPanel("Title"),
 					),
 					admin.MultiPanel(
-						admin.FieldPanel("CreatedAt"),
-						admin.FieldPanel("UpdatedAt"),
+						admin.FieldPanel("UrlPath"),
+						admin.FieldPanel("Slug"),
 					),
 					admin.FieldPanel("Editor"),
+					admin.FieldPanel("CreatedAt"),
+					admin.FieldPanel("UpdatedAt"),
 				}
 			},
 			GetForID: func(ctx context.Context, ref models.PageNode, id int64) (pages.Page, error) {

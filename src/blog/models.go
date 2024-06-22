@@ -51,6 +51,16 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 			Label:    "Title",
 			HelpText: "How do you want your post to be remembered?",
 		}),
+		attrs.NewField(n.PageNode, "UrlPath", &attrs.FieldConfig{
+			ReadOnly: true,
+			Label:    "URL Path",
+			HelpText: "The URL path for this blog post.",
+		}),
+		attrs.NewField(n.PageNode, "Slug", &attrs.FieldConfig{
+			Label:    "Slug",
+			HelpText: "The slug for this blog post.",
+			Blank:    true,
+		}),
 		attrs.NewField(n, "Editor", &attrs.FieldConfig{
 			Default:  &editor.EditorJSBlockData{},
 			Label:    "Rich Text Editor",

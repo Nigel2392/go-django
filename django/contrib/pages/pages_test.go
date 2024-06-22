@@ -704,6 +704,45 @@ func TestPageNode(t *testing.T) {
 		})
 	})
 
+	t.Run("TraverseSlugs", func(t *testing.T) {
+		type slugsTest struct {
+			slug  string
+			path  string
+			depth int64
+
+			expectedPath string
+			shouldEqual  models.PageNode
+		}
+
+		var slugsTests = []slugsTest{
+			{"root", "", 0, "001", rootNode},
+			{"childsibling", "001", 1, "001002", childSiblingNode},
+			{"childsiblingsubchild", "001002", 2, "001002001", childSiblingSubChildNode},
+		}
+
+		for _, test := range slugsTests {
+			t.Run(fmt.Sprintf("Traverse-Slug-%s", test.slug), func(t *testing.T) {
+				var node, err = pages.QuerySet().GetNodeBySlug(queryCtx, test.slug, test.depth, test.path)
+				if err != nil {
+					t.Errorf("expected no error, got %v (%s %s)", err, test.slug, test.path)
+					return
+				}
+
+				if node.Path != test.expectedPath {
+					t.Errorf("expected Path %s, got %s", test.expectedPath, node.Path)
+				}
+
+				if node.Depth != int64(test.depth) {
+					t.Errorf("expected Depth %d, got %d", test.depth, node.Depth)
+				}
+
+				if !nodesEqual(&node, &test.shouldEqual) {
+					t.Errorf("expected %+v, got %+v", test.shouldEqual, node)
+				}
+			})
+		}
+	})
+
 	var nodesToUpdate = []*models.PageNode{
 		{Title: "Root 1"},
 		{Title: "Root 2"},
