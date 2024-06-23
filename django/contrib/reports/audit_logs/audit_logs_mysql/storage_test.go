@@ -1,16 +1,21 @@
-package auditlogs_test
+package auditlogs_mysql_test
 
 import (
+	"database/sql"
 	"fmt"
 	"testing"
+	"time"
 
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
+	auditlogs_mysql "github.com/Nigel2392/django/contrib/reports/audit_logs/audit_logs_mysql"
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/google/uuid"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql"
 )
+
+var db *sql.DB
 
 var entries []auditlogs.LogEntry
 
@@ -42,8 +47,20 @@ var entryIds = []uuid.UUID{
 }
 
 func init() {
-	var backend = auditlogs.NewInMemoryStorageBackend()
+	var err error
+	db, err = sql.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
+	if err != nil {
+		panic(err)
+	}
+	var backend = auditlogs_mysql.NewMySQLStorageBackend(db)
 	auditlogs.RegisterBackend(backend)
+
+	db.Exec("DROP TABLE IF EXISTS audit_logs;")
+
+	err = backend.Setup()
+	if err != nil {
+		panic(err)
+	}
 
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		ContentObject: &auditlogs.Entry{},
@@ -57,6 +74,7 @@ func init() {
 			Typ:   fmt.Sprintf("type-%d", i),
 			Lvl:   logger.LogLevel(i % 5),
 			UsrID: fmt.Sprintf("user-%d", i),
+			Time:  time.Now(),
 			ObjID: fmt.Sprintf("object-%d", i),
 			CType: contenttypes.NewContentType[any](&auditlogs.Entry{}),
 			Obj:   &auditlogs.Entry{},
@@ -67,7 +85,7 @@ func init() {
 		entries = append(entries, entry)
 	}
 
-	var _, err = backend.StoreMany(entries)
+	_, err = backend.StoreMany(entries)
 	if err != nil {
 		panic(err)
 	}
@@ -184,7 +202,7 @@ var filterTests = []filterTest{
 func TestFilter(t *testing.T) {
 
 	for i, test := range filterTests {
-		t.Run(fmt.Sprintf("filter-%d", i), func(t *testing.T) {
+		t.Run(fmt.Sprintf("filter-%d-%s", i, test.filters[0].Name()), func(t *testing.T) {
 			entries, err := auditlogs.Backend().Filter(test.filters, 25, 0)
 			if err != nil {
 				t.Fatalf("%d %s", i, err)
@@ -192,11 +210,43 @@ func TestFilter(t *testing.T) {
 			if len(entries) != len(test.expectedFilterIDs) {
 				t.Fatalf("%d expected %d entries, got %d", i, len(test.expectedFilterIDs), len(entries))
 			}
-			for j, entry := range entries {
-				if entry.ID() != test.expectedFilterIDs[j] {
-					t.Fatalf("%d expected id %s, got %s", i, test.expectedFilterIDs[j], entry.ID())
+
+			var m = make(map[uuid.UUID]bool)
+			for _, id := range test.expectedFilterIDs {
+				m[id] = true
+			}
+
+			for _, entry := range entries {
+				if !m[entry.ID()] {
+					t.Fatalf("%d expected id %s, got %s", i, test.expectedFilterIDs, entry.ID())
+				}
+
+				var fromDB, err = auditlogs.Backend().Retrieve(entry.ID())
+				if err != nil {
+					t.Fatalf("%d %s", i, err)
+				}
+
+				if fromDB == nil {
+					t.Fatalf("%d entry not found", i)
+				}
+
+				if fromDB.ID() != entry.ID() {
+					t.Fatalf("%d expected id %s, got %s", i, entry.ID(), fromDB.ID())
+				}
+
+				if fromDB.Type() != entry.Type() {
+					t.Fatalf("%d expected type %s, got %s", i, entry.Type(), fromDB.Type())
+				}
+
+				if fromDB.Level() != entry.Level() {
+					t.Fatalf("%d expected level %d, got %d", i, entry.Level(), fromDB.Level())
+				}
+
+				if fromDB.UserID() != entry.UserID() {
+					t.Fatalf("%d expected user id %v, got %v", i, entry.UserID(), fromDB.UserID())
 				}
 			}
+
 		})
 	}
 }

@@ -82,23 +82,24 @@ func (c *BaseContentType[T]) Scan(src interface{}) error {
 	if src == nil {
 		return nil
 	}
-	var typeString, ok = src.(string)
-	if !ok {
+	switch src := src.(type) {
+	case string:
+		var registryObj = DefinitionForType(src)
+		if registryObj == nil {
+			return errors.Errorf("invalid content type: %s", src)
+		}
+		var newCtype = NewContentType(registryObj.ContentObject.(T))
+		*c = *newCtype
+		return nil
+	case []byte:
+		return c.Scan(string(src))
+	default:
 		return errors.Wrapf(
 			ErrInvalidScanType,
 			"expected string, got %T",
 			src,
 		)
 	}
-
-	var registryObj = DefinitionForType(typeString)
-	if registryObj == nil {
-		return errors.Errorf("invalid content type: %s", typeString)
-	}
-
-	var newCtype = NewContentType(registryObj.ContentObject.(T))
-	*c = *newCtype
-	return nil
 }
 
 // Value implements the driver.Valuer interface.

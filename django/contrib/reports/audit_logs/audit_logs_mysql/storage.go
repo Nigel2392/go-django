@@ -8,12 +8,11 @@ import (
 	"strings"
 
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
-	"github.com/Nigel2392/django/core/logger"
 	"github.com/google/uuid"
 )
 
 const createTableMySQL = `CREATE TABLE IF NOT EXISTS audit_logs (
-	id BINARY(16) PRIMARY KEY NOT NULL,
+	id VARCHAR(36) PRIMARY KEY NOT NULL,
 	type VARCHAR(255) NOT NULL,
 	level INT NOT NULL,
 	timestamp DATETIME NOT NULL,
@@ -44,15 +43,12 @@ func (s *MySQLStorageBackend) Setup() error {
 }
 
 func (s *MySQLStorageBackend) Store(logEntry auditlogs.LogEntry) (uuid.UUID, error) {
-	var log = logger.NameSpace(logEntry.Type())
-	log.Log(logEntry.Level(), fmt.Sprint(logEntry))
+	// var log = logger.NameSpace(logEntry.Type())
+	// log.Log(logEntry.Level(), fmt.Sprint(logEntry))
 
 	var id, typeStr, level, timestamp, userID, objectID, contentType, data = auditlogs.SerializeRow(logEntry)
-	if id == uuid.Nil {
-		id = uuid.New()
-	}
 
-	_, err := s.db.Exec(insertMySQL, id, typeStr, level, timestamp, userID, objectID, contentType, string(data))
+	_, err := s.db.Exec(insertMySQL, id, typeStr, level, timestamp, string(userID), string(objectID), contentType, string(data))
 	return id, err
 }
 
