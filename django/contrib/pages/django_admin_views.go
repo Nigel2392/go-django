@@ -416,7 +416,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			return err
 		}
 
-		auditlogs.Log("pages:add", logger.INF, page, map[string]interface{}{
+		auditlogs.Log("pages:add", logger.INF, page.Reference(), map[string]interface{}{
 			"parent": p.ID(),
 			"label":  page.Reference().Title,
 			"cType":  cType.PkgPath(),
@@ -547,8 +547,8 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			return err
 		}
 
-		auditlogs.Log("pages:edit", logger.INF, page, map[string]interface{}{
-			"page_id": p.ID(),
+		auditlogs.Log("pages:edit", logger.INF, p, map[string]interface{}{
+			"page_id": page.ID(),
 			"label":   page.Reference().Title,
 		})
 

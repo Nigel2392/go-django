@@ -3,6 +3,7 @@ package auditlogs
 import (
 	"bytes"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/Nigel2392/django/core/attrs"
@@ -105,14 +106,15 @@ func RegisterDefinition(typ string, definition Definition) {
 	registry.definitions[typ] = definition
 }
 
-func Define(l LogEntry) *BoundDefinition {
+func Define(r *http.Request, l LogEntry) *BoundDefinition {
 	var typ = l.Type()
 	var def, ok = registry.definitions[typ]
 	if !ok {
-		def = SimpleDefinition(l)
+		def = SimpleDefinition()
 	}
 
 	return &BoundDefinition{
+		Request:    r,
 		Definition: def,
 		LogEntry:   l,
 	}

@@ -23,6 +23,7 @@
     width: 100%;
     padding: 0.5em 1em;
     color: var(--dropdown-text-color);
+    text-wrap: nowrap;
 }
 .dropdown .dropdown__content .button+.button {
     margin-inline-start: 0;

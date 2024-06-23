@@ -2,43 +2,41 @@ package auditlogs
 
 import (
 	"fmt"
+	"net/http"
 	"strings"
 )
 
 type BoundDefinition struct {
+	Request    *http.Request
 	Definition Definition
 	LogEntry
 }
 
 func (bd BoundDefinition) Label() string {
-	return bd.Definition.GetLabel(bd.LogEntry)
+	return bd.Definition.GetLabel(bd.Request, bd.LogEntry)
 }
 
 func (bd BoundDefinition) Message() string {
-	return bd.Definition.FormatMessage(bd.LogEntry)
+	return bd.Definition.FormatMessage(bd.Request, bd.LogEntry)
 }
 
 func (bd BoundDefinition) Actions() []LogEntryAction {
-	return bd.Definition.GetActions(bd.LogEntry)
+	return bd.Definition.GetActions(bd.Request, bd.LogEntry)
 }
 
-func SimpleDefinition(l LogEntry) Definition {
+func SimpleDefinition() Definition {
 	return &simpleDefinition{}
 }
 
 type simpleDefinition struct{}
 
-func (sd *simpleDefinition) GetLabel(logEntry LogEntry) string {
+func (sd *simpleDefinition) GetLabel(request *http.Request, logEntry LogEntry) string {
 	var (
 		id  = logEntry.ID()
 		typ = logEntry.Type()
-		lvl = logEntry.Level().String()
 	)
 
 	var b = new(strings.Builder)
-	b.WriteString("[")
-	b.WriteString(lvl)
-	b.WriteString("] ")
 	b.WriteString(typ)
 	b.WriteString(" (")
 	b.WriteString(id.String())
@@ -46,7 +44,7 @@ func (sd *simpleDefinition) GetLabel(logEntry LogEntry) string {
 	return b.String()
 }
 
-func (sd *simpleDefinition) FormatMessage(logEntry LogEntry) string {
+func (sd *simpleDefinition) FormatMessage(request *http.Request, logEntry LogEntry) string {
 	var (
 		cType = logEntry.ContentType()
 		objId = logEntry.ObjectID()
@@ -74,6 +72,6 @@ func (sd *simpleDefinition) FormatMessage(logEntry LogEntry) string {
 	return cType.TypeName()
 }
 
-func (sd *simpleDefinition) GetActions(logEntry LogEntry) []LogEntryAction {
+func (sd *simpleDefinition) GetActions(request *http.Request, logEntry LogEntry) []LogEntryAction {
 	return nil
 }

@@ -6,12 +6,14 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/contrib/pages/models"
+	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
@@ -67,6 +69,33 @@ func App() *PageAppConfig {
 	}
 
 	return pageApp
+}
+
+type pageLogDefinition struct {
+	auditlogs.Definition
+}
+
+func newPageLogDefinition() *pageLogDefinition {
+	return &pageLogDefinition{
+		Definition: auditlogs.SimpleDefinition(),
+	}
+}
+
+func (p *pageLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []auditlogs.LogEntryAction {
+	var id = l.ObjectID()
+	if id == nil {
+		return nil
+	}
+	return []auditlogs.LogEntryAction{
+		&auditlogs.BaseAction{
+			DisplayLabel: fields.T("Edit Live Page"),
+			ActionURL: fmt.Sprintf("%s?%s=%s",
+				django.Reverse("admin:pages:edit", id),
+				"next",
+				r.URL.Path,
+			),
+		},
+	}
 }
 
 func NewAppConfig() *PageAppConfig {
@@ -136,6 +165,8 @@ func NewAppConfig() *PageAppConfig {
 			pageAdminAppOptions,
 			pageAdminModelOptions,
 		)
+
+		auditlogs.RegisterDefinition("pages:edit", newPageLogDefinition())
 
 		// contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		// ContentObject:  &models.PageNode{},

@@ -170,7 +170,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 
 	var definitions = make([]*BoundDefinition, len(logList))
 	for i, log := range logList {
-		definitions[i] = Define(log)
+		definitions[i] = Define(r, log)
 	}
 
 	adminCtx.Set("logs", definitions)

@@ -2,6 +2,7 @@ package auditlogs
 
 import (
 	"io"
+	"net/http"
 	"time"
 
 	"github.com/Nigel2392/django/core/contenttypes"
@@ -37,7 +38,7 @@ type LogEntryAction interface {
 }
 
 type Definition interface {
-	GetLabel(logEntry LogEntry) string
-	FormatMessage(logEntry LogEntry) string
-	GetActions(logEntry LogEntry) []LogEntryAction
+	GetLabel(r *http.Request, logEntry LogEntry) string
+	FormatMessage(r *http.Request, logEntry LogEntry) string
+	GetActions(r *http.Request, logEntry LogEntry) []LogEntryAction
 }
