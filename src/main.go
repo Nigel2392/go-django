@@ -14,6 +14,7 @@ import (
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
 	"github.com/Nigel2392/django/contrib/blocks"
 	"github.com/Nigel2392/django/contrib/pages"
+	_ "github.com/Nigel2392/django/contrib/pages/backend-mysql"
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
 	auditlogs_sqlite "github.com/Nigel2392/django/contrib/reports/audit_logs/audit_logs_mysql"
 	"github.com/Nigel2392/django/contrib/session"

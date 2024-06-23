@@ -23,9 +23,7 @@ var schemaMySQL = `CREATE TABLE IF NOT EXISTS sessions (
 	token CHAR(43) PRIMARY KEY,
 	data BLOB NOT NULL,
 	expiry TIMESTAMP(6) NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expiry);`
+);`
 
 // schemaSQLite
 var schemaSQLite = `CREATE TABLE IF NOT EXISTS sessions (
@@ -59,6 +57,15 @@ func NewAppConfig() django.AppConfig {
 
 			_, err := db.Exec(schemaMySQL)
 			assert.Err(err)
+
+			rows, err := db.Query(`SHOW INDEX FROM sessions WHERE Key_name = 'sessions_expiry_idx'`)
+			assert.Err(err)
+
+			if !rows.Next() {
+				fmt.Println("Creating index sessions_expiry_idx on sessions table for MySQL")
+				_, err = db.Exec(`CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions(expiry)`)
+				assert.Err(err)
+			}
 
 			fmt.Println("Using mysqlstore for session storage")
 			sessionManager.Store = mysqlstore.New(db)

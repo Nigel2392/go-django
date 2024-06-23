@@ -24,6 +24,10 @@ type auditLogRegistry struct {
 	filters  map[string][]Filter
 	handlers map[string][]Handler
 
+	// Definitions are used for formatting the message to users or performing any additional operations on the log entry
+	// before it is shown to the user
+	definitions map[string]Definition
+
 	// Backend is used to store and retrieve log entries
 	backend StorageBackend
 }
@@ -33,6 +37,7 @@ var registry = &auditLogRegistry{
 	handlersCtyp: make(map[string]map[string][]Handler),
 	filters:      make(map[string][]Filter),
 	handlers:     make(map[string][]Handler),
+	definitions:  make(map[string]Definition),
 	backend:      newInMemoryStorageBackend(),
 }
 
@@ -94,6 +99,23 @@ func RegisterHandlerForObject(handler Handler, contentType contenttypes.ContentT
 
 	m[pkgPath] = append(m[pkgPath], handler)
 	registry.handlersCtyp[typ] = m
+}
+
+func RegisterDefinition(typ string, definition Definition) {
+	registry.definitions[typ] = definition
+}
+
+func Define(l LogEntry) *BoundDefinition {
+	var typ = l.Type()
+	var def, ok = registry.definitions[typ]
+	if !ok {
+		def = SimpleDefinition(l)
+	}
+
+	return &BoundDefinition{
+		Definition: def,
+		LogEntry:   l,
+	}
 }
 
 func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data map[string]interface{}) (uuid.UUID, error) {

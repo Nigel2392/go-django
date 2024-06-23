@@ -29,6 +29,6 @@ CREATE TABLE IF NOT EXISTS PageNode (
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- Read-only
 );
 
-CREATE INDEX IF NOT EXISTS PageNode_path ON PageNode(path);
-CREATE INDEX IF NOT EXISTS PageNode_page_id ON PageNode(page_id);
-CREATE INDEX IF NOT EXISTS PageNode_type_name ON PageNode(content_type);
+ALTER TABLE PageNode ADD INDEX (path);
+ALTER TABLE PageNode ADD INDEX (page_id);
+ALTER TABLE PageNode ADD INDEX (content_type);

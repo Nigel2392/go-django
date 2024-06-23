@@ -14,15 +14,16 @@ const createTableMySQL = `CREATE TABLE IF NOT EXISTS audit_logs (
 	type VARCHAR(255) NOT NULL,
 	level INT NOT NULL,
 	timestamp DATETIME NOT NULL,
+	user_id BLOB,
 	object_id BLOB,
 	content_type VARCHAR(255),
 	data TEXT
 );`
 
-const insertMySQL = `INSERT INTO audit_logs (id, type, level, timestamp, object_id, content_type, data) VALUES (?, ?, ?, ?, ?, ?, ?);`
-const selectMySQL = `SELECT id, type, level, timestamp, object_id, content_type, data FROM audit_logs WHERE id = ?;`
-const selectManyMySQL = `SELECT id, type, level, timestamp, object_id, content_type, data FROM audit_logs ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
-const selectTypedMySQL = `SELECT id, type, level, timestamp, object_id, content_type, data FROM audit_logs WHERE type = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
+const insertMySQL = `INSERT INTO audit_logs (id, type, level, timestamp, user_id, object_id, content_type, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`
+const selectMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE id = ?;`
+const selectManyMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
+const selectTypedMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE type = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
 
 type MySQLStorageBackend struct {
 	db *sql.DB
@@ -41,12 +42,12 @@ func (s *MySQLStorageBackend) Store(logEntry auditlogs.LogEntry) (uuid.UUID, err
 	var log = logger.NameSpace(logEntry.Type())
 	log.Log(logEntry.Level(), fmt.Sprint(logEntry))
 
-	var id, typeStr, level, timestamp, objectID, contentType, data = auditlogs.SerializeRow(logEntry)
+	var id, typeStr, level, timestamp, userID, objectID, contentType, data = auditlogs.SerializeRow(logEntry)
 	if id == uuid.Nil {
 		id = uuid.New()
 	}
 
-	_, err := s.db.Exec(insertMySQL, id, typeStr, level, timestamp, objectID, contentType, string(data))
+	_, err := s.db.Exec(insertMySQL, id, typeStr, level, timestamp, userID, objectID, contentType, string(data))
 	return id, err
 }
 

@@ -11,22 +11,35 @@ import (
 	"github.com/google/uuid"
 )
 
-func SerializeRow(l LogEntry) (id uuid.UUID, typeStr string, level int, timestamp time.Time, objectID []byte, contentType contenttypes.ContentType, data string) {
+func SerializeRow(l LogEntry) (id uuid.UUID, typeStr string, level int, timestamp time.Time, userId, objectID []byte, contentType contenttypes.ContentType, data string) {
 	id = l.ID()
 	typeStr = l.Type()
 	level = int(l.Level())
 	timestamp = l.Timestamp()
 	contentType = l.ContentType()
 	objectID = nil
-	if l.ObjectID() != nil {
+	var objId = l.ObjectID()
+	if objId != nil {
 		var b = new(bytes.Buffer)
 		enc := gob.NewEncoder(b)
-		err := enc.Encode(l.ObjectID())
+		err := enc.Encode(objId)
 		if err != nil {
 			return
 		}
 		objectID = b.Bytes()
 	}
+
+	var usrId = l.UserID()
+	if usrId != nil {
+		var b = new(bytes.Buffer)
+		enc := gob.NewEncoder(b)
+		err := enc.Encode(usrId)
+		if err != nil {
+			return
+		}
+		userId = b.Bytes()
+	}
+
 	var jsonData []byte
 	if l.Data() != nil {
 		var b = new(bytes.Buffer)
@@ -35,7 +48,7 @@ func SerializeRow(l LogEntry) (id uuid.UUID, typeStr string, level int, timestam
 		}
 		jsonData = b.Bytes()
 	}
-	return id, typeStr, level, timestamp, objectID, contentType, string(jsonData)
+	return id, typeStr, level, timestamp, userId, objectID, contentType, string(jsonData)
 }
 
 func ScanRow(row interface{ Scan(dest ...any) error }) (LogEntry, error) {
@@ -44,12 +57,13 @@ func ScanRow(row interface{ Scan(dest ...any) error }) (LogEntry, error) {
 		typeStr     string
 		level       int
 		timestamp   time.Time
+		userId      []byte
 		objectID    []byte
 		data        []byte
 		contentType = contenttypes.BaseContentType[any]{}
 	)
 
-	err := row.Scan(&id, &typeStr, &level, &timestamp, &objectID, &contentType, &data)
+	err := row.Scan(&id, &typeStr, &level, &timestamp, &userId, &objectID, &contentType, &data)
 	if err != nil {
 		return nil, err
 	}
@@ -59,6 +73,16 @@ func ScanRow(row interface{ Scan(dest ...any) error }) (LogEntry, error) {
 		b := bytes.NewBuffer(objectID)
 		dec := gob.NewDecoder(b)
 		err = dec.Decode(&goObjectID)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var goUserID interface{}
+	if userId != nil {
+		b := bytes.NewBuffer(userId)
+		dec := gob.NewDecoder(b)
+		err = dec.Decode(&goUserID)
 		if err != nil {
 			return nil, err
 		}

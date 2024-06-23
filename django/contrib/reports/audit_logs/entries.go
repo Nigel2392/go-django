@@ -14,6 +14,7 @@ type Entry struct {
 	Typ   string                   `json:"type"`
 	Lvl   logger.LogLevel          `json:"level"`
 	Time  time.Time                `json:"timestamp"`
+	UsrID interface{}              `json:"user_id"`
 	Obj   interface{}              `json:"-"`
 	ObjID interface{}              `json:"object_id"`
 	CType contenttypes.ContentType `json:"content_type"`
@@ -67,6 +68,10 @@ func (l *Entry) Level() logger.LogLevel {
 
 func (l *Entry) Timestamp() time.Time {
 	return l.Time
+}
+
+func (l *Entry) UserID() interface{} {
+	return l.UsrID
 }
 
 func (l *Entry) Object() interface{} {
