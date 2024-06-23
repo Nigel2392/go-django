@@ -165,7 +165,7 @@ func (s *MySQLStorageBackend) RetrieveTyped(logType string, amount, offset int) 
 }
 
 func (s *MySQLStorageBackend) Filter(filters []auditlogs.AuditLogFilter, amount, offset int) ([]auditlogs.LogEntry, error) {
-	var query string
+	var query = new(strings.Builder)
 	var args []interface{}
 	for i, filter := range filters {
 		switch filter.Name() {
@@ -177,9 +177,9 @@ func (s *MySQLStorageBackend) Filter(filters []auditlogs.AuditLogFilter, amount,
 					inQ[i] = "?"
 					args = append(args, v)
 				}
-				query += fmt.Sprintf("id IN (%s)", strings.Join(inQ, ","))
+				fmt.Fprintf(query, "id IN (%s)", strings.Join(inQ, ","))
 			} else {
-				query += "id = ?"
+				fmt.Fprint(query, "id = ?")
 				args = append(args, value[0])
 			}
 		case auditlogs.AuditLogFilterType:
@@ -190,46 +190,64 @@ func (s *MySQLStorageBackend) Filter(filters []auditlogs.AuditLogFilter, amount,
 					inQ[i] = "?"
 					args = append(args, v)
 				}
-				query += fmt.Sprintf("type IN (%s)", strings.Join(inQ, ","))
+				fmt.Fprintf(query, "type IN (%s)", strings.Join(inQ, ","))
 			} else {
-				query += "type = ?"
+				fmt.Fprint(query, "type = ?")
 				args = append(args, value[0])
 			}
 		case auditlogs.AuditLogFilterLevel_EQ:
-			query += "level = ?"
+			fmt.Fprint(query, "level = ?")
 			args = append(args, filter.Value()[0])
 		case auditlogs.AuditLogFilterLevel_GT:
-			query += "level > ?"
+			fmt.Fprint(query, "level > ?")
 			args = append(args, filter.Value()[0])
 		case auditlogs.AuditLogFilterLevel_LT:
-			query += "level < ?"
+			fmt.Fprint(query, "level < ?")
 			args = append(args, filter.Value()[0])
 		case auditlogs.AuditLogFilterTimestamp_EQ:
-			query += "timestamp = ?"
+			fmt.Fprint(query, "timestamp = ?")
 			args = append(args, filter.Value()[0])
 		case auditlogs.AuditLogFilterTimestamp_GT:
-			query += "timestamp > ?"
+			fmt.Fprint(query, "timestamp > ?")
 			args = append(args, filter.Value()[0])
 		case auditlogs.AuditLogFilterTimestamp_LT:
-			query += "timestamp < ?"
+			fmt.Fprint(query, "timestamp < ?")
 			args = append(args, filter.Value()[0])
 		case auditlogs.AuditLogFilterUserID:
-			query += "user_id = ?"
-			args = append(args, filter.Value()[0])
+			if len(filter.Value()) > 1 {
+				var inQ = make([]string, len(filter.Value()))
+				for i, v := range filter.Value() {
+					inQ[i] = "?"
+					args = append(args, v)
+				}
+				fmt.Fprintf(query, "user_id IN (%s)", strings.Join(inQ, ","))
+			} else {
+				fmt.Fprint(query, "user_id = ?")
+				args = append(args, filter.Value()[0])
+			}
 		case auditlogs.AuditLogFilterObjectID:
-			query += "object_id = ?"
-			args = append(args, filter.Value()[0])
+			if len(filter.Value()) > 1 {
+				var inQ = make([]string, len(filter.Value()))
+				for i, v := range filter.Value() {
+					inQ[i] = "?"
+					args = append(args, v)
+				}
+				fmt.Fprintf(query, "object_id IN (%s)", strings.Join(inQ, ","))
+			} else {
+				fmt.Fprint(query, "object_id = ?")
+				args = append(args, filter.Value()[0])
+			}
 		case auditlogs.AuditLogFilterContentType:
-			query += "content_type = ?"
+			fmt.Fprint(query, "content_type = ?")
 			args = append(args, filter.Value()[0])
 		case auditlogs.AuditLogFilterData:
 			var value = filter.Value()
 			switch value[0].(type) {
 			case string:
-				query += "data = ?"
+				fmt.Fprint(query, "data = ?")
 				args = append(args, value[0])
 			default:
-				query += "data = ?"
+				fmt.Fprint(query, "data = ?")
 				var dataBuf = new(bytes.Buffer)
 				enc := json.NewEncoder(dataBuf)
 				err := enc.Encode(value[0])
@@ -240,7 +258,7 @@ func (s *MySQLStorageBackend) Filter(filters []auditlogs.AuditLogFilter, amount,
 			}
 		}
 		if i < len(filters)-1 {
-			query += " AND "
+			fmt.Fprint(query, " AND ")
 		}
 	}
 
