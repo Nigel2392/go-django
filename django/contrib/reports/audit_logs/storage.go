@@ -17,4 +17,5 @@ type StorageBackend interface {
 	RetrieveForUser(userID interface{}, amount, offset int) ([]LogEntry, error)
 	RetrieveMany(amount, offset int) ([]LogEntry, error)
 	RetrieveTyped(logType string, amount, offset int) ([]LogEntry, error)
+	Filter(filters []AuditLogFilter, amount, offset int) ([]LogEntry, error)
 }

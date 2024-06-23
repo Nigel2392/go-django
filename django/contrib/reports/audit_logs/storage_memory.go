@@ -2,8 +2,10 @@ package auditlogs
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/elliotchance/orderedmap/v2"
@@ -160,6 +162,121 @@ func (i *inMemoryStorageBackend) RetrieveTyped(logType string, amount, offset in
 
 		var entry = front.Value
 		if entry.Type() == logType {
+			entries = append(entries, entry)
+		}
+		if len(entries) == amount {
+			break
+		}
+		idx++
+	}
+	slices.SortFunc(entries, sortEntries)
+	return entries, nil
+}
+
+func (i *inMemoryStorageBackend) Filter(filters []AuditLogFilter, amount, offset int) ([]LogEntry, error) {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	var entries = make([]LogEntry, 0)
+	var idx = 0
+	for front := i.entries.Front(); front != nil; front = front.Next() {
+		var match = true
+		if idx < offset {
+			idx++
+			continue
+		}
+
+		var entry = front.Value
+		for _, filter := range filters {
+		switchCase:
+			switch filter.Name() {
+			case AuditLogFilterID:
+				for _, value := range filter.Value() {
+					if value != entry.ID() {
+						match = false
+						break switchCase
+					}
+				}
+			case AuditLogFilterType:
+				for _, value := range filter.Value() {
+					if value != entry.Type() {
+						match = false
+						break switchCase
+					}
+				}
+			case AuditLogFilterLevel_EQ:
+				for _, value := range filter.Value() {
+					if value != entry.Level() {
+						match = false
+						break switchCase
+					}
+				}
+			case AuditLogFilterLevel_GT:
+				for _, value := range filter.Value() {
+					if value.(logger.LogLevel) >= entry.Level() {
+						match = false
+						break switchCase
+					}
+				}
+			case AuditLogFilterLevel_LT:
+				for _, value := range filter.Value() {
+					if value.(logger.LogLevel) <= entry.Level() {
+						match = false
+						break switchCase
+					}
+				}
+			case AuditLogFilterTimestamp_EQ:
+				for _, value := range filter.Value() {
+					if value != entry.Timestamp() {
+						match = false
+						break switchCase
+					}
+				}
+			case AuditLogFilterTimestamp_GT:
+				for _, value := range filter.Value() {
+					if value.(time.Time).Before(entry.Timestamp()) {
+						match = false
+						break switchCase
+					}
+				}
+			case AuditLogFilterTimestamp_LT:
+				for _, value := range filter.Value() {
+					if value.(time.Time).After(entry.Timestamp()) {
+						match = false
+						break switchCase
+					}
+				}
+			case AuditLogFilterUserID:
+				for _, value := range filter.Value() {
+					if value != entry.UserID() {
+						match = false
+						break switchCase
+					}
+				}
+			case AuditLogFilterObjectID:
+				for _, value := range filter.Value() {
+					if value != entry.ObjectID() {
+						match = false
+						break switchCase
+					}
+				}
+			case AuditLogFilterContentType:
+				for _, value := range filter.Value() {
+					if value != entry.ContentType() {
+						match = false
+						break switchCase
+					}
+				}
+			case AuditLogFilterData:
+				for _, value := range filter.Value() {
+					if !reflect.DeepEqual(value, entry.Data()) {
+						match = false
+						break switchCase
+					}
+				}
+			}
+		}
+		if match {
 			entries = append(entries, entry)
 		}
 		if len(entries) == amount {

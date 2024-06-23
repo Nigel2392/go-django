@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/django/core/logger"
@@ -150,6 +151,104 @@ func (s *MySQLStorageBackend) RetrieveMany(amount, offset int) ([]auditlogs.LogE
 
 func (s *MySQLStorageBackend) RetrieveTyped(logType string, amount, offset int) ([]auditlogs.LogEntry, error) {
 	rows, err := s.db.Query(selectTypedMySQL, logType, amount, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries = make([]auditlogs.LogEntry, 0)
+	for rows.Next() {
+		entry, err := auditlogs.ScanRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+func (s *MySQLStorageBackend) Filter(filters []auditlogs.AuditLogFilter, amount, offset int) ([]auditlogs.LogEntry, error) {
+	var query string
+	var args []interface{}
+	for i, filter := range filters {
+		switch filter.Name() {
+		case auditlogs.AuditLogFilterID:
+			var value = filter.Value()
+			if len(value) > 1 {
+				var inQ = make([]string, len(value))
+				for i, v := range value {
+					inQ[i] = "?"
+					args = append(args, v)
+				}
+				query += fmt.Sprintf("id IN (%s)", strings.Join(inQ, ","))
+			} else {
+				query += "id = ?"
+				args = append(args, value[0])
+			}
+		case auditlogs.AuditLogFilterType:
+			var value = filter.Value()
+			if len(value) > 1 {
+				var inQ = make([]string, len(value))
+				for i, v := range value {
+					inQ[i] = "?"
+					args = append(args, v)
+				}
+				query += fmt.Sprintf("type IN (%s)", strings.Join(inQ, ","))
+			} else {
+				query += "type = ?"
+				args = append(args, value[0])
+			}
+		case auditlogs.AuditLogFilterLevel_EQ:
+			query += "level = ?"
+			args = append(args, filter.Value()[0])
+		case auditlogs.AuditLogFilterLevel_GT:
+			query += "level > ?"
+			args = append(args, filter.Value()[0])
+		case auditlogs.AuditLogFilterLevel_LT:
+			query += "level < ?"
+			args = append(args, filter.Value()[0])
+		case auditlogs.AuditLogFilterTimestamp_EQ:
+			query += "timestamp = ?"
+			args = append(args, filter.Value()[0])
+		case auditlogs.AuditLogFilterTimestamp_GT:
+			query += "timestamp > ?"
+			args = append(args, filter.Value()[0])
+		case auditlogs.AuditLogFilterTimestamp_LT:
+			query += "timestamp < ?"
+			args = append(args, filter.Value()[0])
+		case auditlogs.AuditLogFilterUserID:
+			query += "user_id = ?"
+			args = append(args, filter.Value()[0])
+		case auditlogs.AuditLogFilterObjectID:
+			query += "object_id = ?"
+			args = append(args, filter.Value()[0])
+		case auditlogs.AuditLogFilterContentType:
+			query += "content_type = ?"
+			args = append(args, filter.Value()[0])
+		case auditlogs.AuditLogFilterData:
+			var value = filter.Value()
+			switch value[0].(type) {
+			case string:
+				query += "data = ?"
+				args = append(args, value[0])
+			default:
+				query += "data = ?"
+				var dataBuf = new(bytes.Buffer)
+				enc := json.NewEncoder(dataBuf)
+				err := enc.Encode(value[0])
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, dataBuf.Bytes())
+			}
+		}
+		if i < len(filters)-1 {
+			query += " AND "
+		}
+	}
+
+	rows, err := s.db.Query(fmt.Sprintf("SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE %s ORDER BY timestamp DESC LIMIT ? OFFSET ?;", query), append(args, amount, offset)...)
 	if err != nil {
 		return nil, err
 	}

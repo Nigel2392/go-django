@@ -57,9 +57,9 @@ func ScanRow(row interface{ Scan(dest ...any) error }) (LogEntry, error) {
 		typeStr     string
 		level       int
 		timestamp   time.Time
-		userId      []byte
-		objectID    []byte
-		data        []byte
+		userId      string
+		objectID    string
+		data        string
 		contentType = contenttypes.BaseContentType[any]{}
 	)
 
@@ -70,9 +70,7 @@ func ScanRow(row interface{ Scan(dest ...any) error }) (LogEntry, error) {
 
 	var goObjectID interface{}
 	if len(objectID) > 0 {
-		b := bytes.NewBuffer(objectID)
-		dec := json.NewDecoder(b)
-		err = dec.Decode(&goObjectID)
+		var err = json.Unmarshal([]byte(objectID), &goObjectID)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to decode objectID")
 		}
@@ -80,18 +78,16 @@ func ScanRow(row interface{ Scan(dest ...any) error }) (LogEntry, error) {
 
 	var goUserID interface{}
 	if len(userId) > 0 {
-		b := bytes.NewBuffer(userId)
-		dec := json.NewDecoder(b)
-		err = dec.Decode(&goUserID)
+		var err = json.Unmarshal([]byte(userId), &goUserID)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to decode userID")
 		}
 	}
 
 	var goData map[string]interface{}
-	if data != nil {
-		b := bytes.NewBuffer(data)
-		if err := json.NewDecoder(b).Decode(&goData); err != nil {
+	if len(data) > 0 {
+		var err = json.Unmarshal([]byte(data), &goData)
+		if err != nil {
 			return nil, errors.Wrap(err, "failed to decode data")
 		}
 	}
@@ -102,6 +98,7 @@ func ScanRow(row interface{ Scan(dest ...any) error }) (LogEntry, error) {
 		Lvl:   logger.LogLevel(level),
 		Time:  timestamp,
 		ObjID: goObjectID,
+		UsrID: goUserID,
 		CType: &contentType,
 		Src:   goData,
 	}, nil
