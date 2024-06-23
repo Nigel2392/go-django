@@ -23,7 +23,7 @@
         </div>
     {{ end }}
 
-    <div class="pages-list">
+    <div class="pages-list list-wrapper">
         {{ $list := (.Get "view_list") }}
         {{ safe $list.Render }}
     </div>

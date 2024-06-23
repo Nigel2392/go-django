@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/media"
+	"github.com/Nigel2392/goldcrest"
 	"github.com/justinas/nosurf"
 )
 
@@ -19,11 +20,19 @@ type BreadCrumb struct {
 	URL   string
 }
 
+type Action struct {
+	Icon  string
+	Title string
+	URL   string
+}
+
 type PageOptions struct {
+	Request     *http.Request
 	TitleFn     func() string
 	SubtitleFn  func() string
 	MediaFn     func() media.Media
 	BreadCrumbs []BreadCrumb
+	Actions     []Action
 }
 
 func (p *PageOptions) Title() string {
@@ -38,6 +47,36 @@ func (p *PageOptions) Subtitle() string {
 		return ""
 	}
 	return p.SubtitleFn()
+}
+
+func (p *PageOptions) GetBreadCrumbs() []BreadCrumb {
+	var breadCrumbs = p.BreadCrumbs
+	if breadCrumbs == nil {
+		breadCrumbs = make([]BreadCrumb, 0)
+	}
+
+	var hooks = goldcrest.Get[RegisterBreadCrumbHookFunc](RegisterNavBreadCrumb)
+	for _, hook := range hooks {
+		var crumbs = hook(p.Request, AdminSite)
+		breadCrumbs = append(breadCrumbs, crumbs...)
+	}
+
+	return breadCrumbs
+}
+
+func (p *PageOptions) GetActions() []Action {
+	var actions = p.Actions
+	if actions == nil {
+		actions = make([]Action, 0)
+	}
+
+	var hooks = goldcrest.Get[RegisterNavActionHookFunc](RegisterNavAction)
+	for _, hook := range hooks {
+		var acts = hook(p.Request, AdminSite)
+		actions = append(actions, acts...)
+	}
+
+	return actions
 }
 
 type adminContext struct {
@@ -90,6 +129,7 @@ func (c *adminContext) Set(key string, value interface{}) {
 
 func (c *adminContext) SetPage(page PageOptions) {
 	c.Page = &page
+	c.Page.Request = c.request
 }
 
 func (c *adminContext) Request() *http.Request {

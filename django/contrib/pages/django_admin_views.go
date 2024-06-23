@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"net/url"
+	"path"
 	"slices"
 
 	"github.com/Nigel2392/django"
@@ -105,6 +106,24 @@ func getPageBreadcrumbs(r *http.Request, p *models.PageNode, urlForLast bool) ([
 	return breadcrumbs, nil
 }
 
+func getPageActions(_ *http.Request, p *models.PageNode) []admin.Action {
+	var actions = make([]admin.Action, 0)
+	if p.ID() == 0 {
+		return actions
+	}
+
+	var viewLiveAction = admin.Action{
+		Title: fields.T("View Live"),
+		URL:   path.Join(pageApp.routePrefix, p.UrlPath),
+		Icon:  "icon-arrow-right",
+	}
+
+	actions = append(actions, viewLiveAction)
+
+	return actions
+
+}
+
 func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
 	if !permissions.HasObjectPermission(r, p, "pages:list") {
@@ -129,29 +148,12 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
 		Actions: []*admin.ListAction[attrs.Definer]{
 			{
-				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
-					return permissions.HasObjectPermission(r, row, "pages:edit")
-				},
+				Show: func(defs attrs.Definitions, row attrs.Definer) bool { return true },
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return fields.T("Edit Page")
+					return fields.T("View Live")
 				},
 				URL: func(defs attrs.Definitions, row attrs.Definer) string {
-					var primaryField = defs.Primary()
-					if primaryField == nil {
-						return ""
-					}
-					var u = django.Reverse(
-						"admin:pages:edit",
-						primaryField.GetValue(),
-					)
-					var url, err = url.Parse(u)
-					if err != nil {
-						return u
-					}
-					var q = url.Query()
-					q.Set("next", next)
-					url.RawQuery = q.Encode()
-					return url.String()
+					return path.Join(pageApp.routePrefix, row.(*models.PageNode).UrlPath)
 				},
 			},
 			{
@@ -169,6 +171,32 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 					}
 					var u = django.Reverse(
 						"admin:pages:type",
+						primaryField.GetValue(),
+					)
+					var url, err = url.Parse(u)
+					if err != nil {
+						return u
+					}
+					var q = url.Query()
+					q.Set("next", next)
+					url.RawQuery = q.Encode()
+					return url.String()
+				},
+			},
+			{
+				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+					return permissions.HasObjectPermission(r, row, "pages:edit")
+				},
+				Text: func(defs attrs.Definitions, row attrs.Definer) string {
+					return fields.T("Edit Page")
+				},
+				URL: func(defs attrs.Definitions, row attrs.Definer) string {
+					var primaryField = defs.Primary()
+					if primaryField == nil {
+						return ""
+					}
+					var u = django.Reverse(
+						"admin:pages:edit",
 						primaryField.GetValue(),
 					)
 					var url, err = url.Parse(u)
@@ -262,6 +290,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				}
 				context.SetPage(admin.PageOptions{
 					BreadCrumbs: breadcrumbs,
+					Actions:     getPageActions(r, p),
 				})
 				return context, nil
 			},
@@ -344,6 +373,7 @@ func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 				TitleFn:     fields.S("Choose Page Type"),
 				SubtitleFn:  fields.S("Select the type of page you want to create"),
 				BreadCrumbs: breadcrumbs,
+				Actions:     getPageActions(r, p),
 			})
 
 			return context, nil
@@ -459,6 +489,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 				context.SetPage(admin.PageOptions{
 					TitleFn:     fields.S("Add %q", cType.Model()),
 					BreadCrumbs: breadcrumbs,
+					Actions:     getPageActions(r, p),
 				})
 
 				return context, nil
@@ -583,6 +614,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				context.SetPage(admin.PageOptions{
 					TitleFn:     fields.S("Edit %q", page.Reference().Title),
 					BreadCrumbs: breadcrumbs,
+					Actions:     getPageActions(r, p),
 				})
 
 				return context, nil

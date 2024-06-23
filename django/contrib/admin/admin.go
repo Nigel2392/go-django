@@ -117,12 +117,12 @@ func NewAppConfig() django.AppConfig {
 
 	AdminSite.Ready = func() error {
 
-		//	if err := icons.Register(staticFS,
-		//		"admin/images/logo.svg",
-		//		"admin/images/arrow-right.svg",
-		//	); err != nil {
-		//		panic(err)
-		//	}
+		if err := icons.Register(staticFS,
+			"admin/images/logo.svg",
+			"admin/images/arrow-right.svg",
+		); err != nil {
+			panic(err)
+		}
 
 		var replacer = strings.NewReplacer(
 			"xmlns=\"http://www.w3.org/2000/svg\"", "",

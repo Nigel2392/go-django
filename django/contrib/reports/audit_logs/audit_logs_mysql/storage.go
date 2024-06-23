@@ -11,7 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
-const createTableMySQL = `CREATE TABLE IF NOT EXISTS audit_logs (
+const (
+	createTableMySQL = `CREATE TABLE IF NOT EXISTS audit_logs (
 	id VARCHAR(36) PRIMARY KEY NOT NULL,
 	type VARCHAR(255) NOT NULL,
 	level INT NOT NULL,
@@ -21,13 +22,13 @@ const createTableMySQL = `CREATE TABLE IF NOT EXISTS audit_logs (
 	content_type VARCHAR(255),
 	data TEXT
 );`
-
-const insertMySQL = `INSERT INTO audit_logs (id, type, level, timestamp, user_id, object_id, content_type, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`
-const selectMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE id = ?;`
-const selectManyMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
-const selectTypedMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE type = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
-const selectForUserMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
-const selectForObjectMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE object_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
+	insertMySQL          = `INSERT INTO audit_logs (id, type, level, timestamp, user_id, object_id, content_type, data) VALUES (?, ?, ?, ?, ?, ?, ?, ?);`
+	selectMySQL          = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE id = ?;`
+	selectManyMySQL      = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
+	selectTypedMySQL     = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE type = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
+	selectForUserMySQL   = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
+	selectForObjectMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE object_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
+)
 
 type MySQLStorageBackend struct {
 	db *sql.DB

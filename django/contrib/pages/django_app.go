@@ -24,7 +24,16 @@ import (
 
 type PageAppConfig struct {
 	*apps.DBRequiredAppConfig
-	backend models.Backend
+	backend     models.Backend
+	routePrefix string
+}
+
+func SetPrefix(prefix string) {
+	if pageApp == nil {
+		panic("app is nil")
+	}
+
+	pageApp.routePrefix = prefix
 }
 
 func (p *PageAppConfig) QuerySet() models.DBQuerier {

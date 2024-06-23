@@ -1,9 +1,16 @@
 
 .pages-list tr td:first-child {
-    min-width: 200px;
+    max-width: 900px;
     white-space: nowrap;
 }
-
+.pages-list tr td:has(> .dropdown) {
+    min-width: 100px;
+    max-width: 150px;
+} 
+.pages-list tr td:nth-child(3),
+.pages-list tr td:nth-child(4) {
+    width: 20%;
+}
 .pages-menu-item .pages-submenu-wrapper .header-menu-item {
     font-size: 1.5em;
 }

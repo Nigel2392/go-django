@@ -67,6 +67,7 @@ func main() {
 		),
 	)
 
+	pages.SetPrefix("/pages")
 	app.Mux.Any("/pages/*", http.StripPrefix("/pages", pages.Serve(
 		http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
 	)), "pages")

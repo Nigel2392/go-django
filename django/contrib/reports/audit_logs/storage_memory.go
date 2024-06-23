@@ -266,9 +266,11 @@ func (i *inMemoryStorageBackend) Filter(filters []AuditLogFilter, amount, offset
 		if match == len(filters) {
 			entries = append(entries, entry)
 		}
+
 		if len(entries) == amount {
 			break
 		}
+
 		idx++
 	}
 	slices.SortFunc(entries, sortEntries)

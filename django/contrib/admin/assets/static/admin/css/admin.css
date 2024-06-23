@@ -23,6 +23,12 @@
     --success-text-color: #ffffff;
     --warning-text-color: #ffffff;
     --danger-text-color: #ffffff;
+
+
+    --navigation-bg-color: #f8f9fa;
+    --navigation-border-color: #e9ecef;
+    --navigation-text-color: var(--secondary-bg-color);
+    --navigation-text-color-hover: var(--secondary-bg-hover);
 }
 *, *::before, *::after {
     box-sizing: border-box;
@@ -62,7 +68,37 @@ body {
     }
 }
 h1 {
-    font-size: 2.5rem;
+    font-size: 1.75rem;
+    line-height: 1.2;
+    margin-top: 0;
+    margin-bottom: .5rem;
+}
+h2 {
+    font-size: 1.6rem;
+    line-height: 1.2;
+    margin-top: 0;
+    margin-bottom: .5rem;
+}
+h3 {
+    font-size: 1.4rem;
+    line-height: 1.2;
+    margin-top: 0;
+    margin-bottom: .5rem;
+}
+h4 {
+    font-size: 1.2rem;
+    line-height: 1.2;
+    margin-top: 0;
+    margin-bottom: .5rem;
+}
+h5 {
+    font-size: 1rem;
+    line-height: 1.2;
+    margin-top: 0;
+    margin-bottom: .5rem;
+}
+h6 {
+    font-size: .875rem;
     line-height: 1.2;
     margin-top: 0;
     margin-bottom: .5rem;
@@ -145,8 +181,19 @@ a:hover {
     flex-direction: column;
     flex: 1;
 }
+#main #content-wrapper #navigation:has(*) {
+    padding: 0.375em 1em;
+    border-bottom: 1px solid var(--navigation-border-color);
+}
 #main #content-wrapper #navigation {
-
+    gap: 0.5em;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    text-wrap: nowrap;
+    color: var(--navigation-text-color);
+    background-color: var(--navigation-bg-color);
 }
 #main #content-wrapper #content {
     flex: 1;
@@ -166,6 +213,19 @@ a:hover {
     margin-bottom: 0;
 }
 
+.view-header {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-start;
+    margin-bottom: 1em;
+    gap: 0.75em;
+}
+.buttons {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
 .panel {
     max-width: 1040px;
 }
@@ -357,6 +417,32 @@ a.button, .button a {
     .button.lg {
         font-size: 1.1rem;
         padding: 0 1.4em
+    }
+    .view-header {
+        flex-direction: row;
+        align-items: center;
+
+        & h1 {
+            margin: 0;
+        }
+    }
+    h1 {
+        font-size: 2.25rem
+    }
+    h2 {
+        font-size: 2rem
+    }
+    h3 {
+        font-size: 1.75rem
+    }
+    h4 {
+        font-size: 1.5rem
+    }
+    h5 {
+        font-size: 1.25rem
+    }
+    h6 {
+        font-size: 1rem
     }
 }
 .mt-0 {

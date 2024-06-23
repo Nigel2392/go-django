@@ -11,7 +11,8 @@ import (
 	"github.com/google/uuid"
 )
 
-const createTableSQLITE = `CREATE TABLE IF NOT EXISTS audit_logs (
+const (
+	createTableSQLITE = `CREATE TABLE IF NOT EXISTS audit_logs (
 	id BLOB(16) PRIMARY KEY NOT NULL,
 	type TEXT NOT NULL,
 	level NUMBER NOT NULL,
@@ -22,12 +23,13 @@ const createTableSQLITE = `CREATE TABLE IF NOT EXISTS audit_logs (
 	data TEXT
 );`
 
-const insertSQLITE = `INSERT INTO audit_logs (id, type, level, timestamp, user_id, object_id, content_type, data) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);`
-const selectSQLITE = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE id = ?1;`
-const selectManySQLITE = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs ORDER BY timestamp DESC LIMIT ?1 OFFSET ?2;`
-const selectTypedSQLITE = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE type = ?1 ORDER BY timestamp DESC LIMIT ?2 OFFSET ?3;`
-const selectForUserSQLITE = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE user_id = ?1 ORDER BY timestamp DESC LIMIT ?2 OFFSET ?3;`
-const selectForObjectSQLITE = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE object_id = ?1 ORDER BY timestamp DESC LIMIT ?2 OFFSET ?3;`
+	insertSQLITE          = `INSERT INTO audit_logs (id, type, level, timestamp, user_id, object_id, content_type, data) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8);`
+	selectSQLITE          = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE id = ?1;`
+	selectManySQLITE      = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs ORDER BY timestamp DESC LIMIT ?1 OFFSET ?2;`
+	selectTypedSQLITE     = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE type = ?1 ORDER BY timestamp DESC LIMIT ?2 OFFSET ?3;`
+	selectForUserSQLITE   = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE user_id = ?1 ORDER BY timestamp DESC LIMIT ?2 OFFSET ?3;`
+	selectForObjectSQLITE = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE object_id = ?1 ORDER BY timestamp DESC LIMIT ?2 OFFSET ?3;`
+)
 
 type sqliteStorageBackend struct {
 	db *sql.DB

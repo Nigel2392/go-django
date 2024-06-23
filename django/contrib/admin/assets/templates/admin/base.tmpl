@@ -30,30 +30,55 @@
 
             <div id="navigation">
                 {{ block "navigation" . }}
-                
-                    {{ if (and .Page .Page.BreadCrumbs) }}
-                        {{ $breadCrumbs := .Page.BreadCrumbs }}
-                        <div class="breadcrumbs">
-                            {{ range $i, $breadCrumb := $breadCrumbs }}
-                                {{ if $breadCrumb.URL }}
-                                    <a class="breadcrumb" href="{{ $breadCrumb.URL }}">{{ $breadCrumb.Title }}</a>
-                                {{ else }}
-                                    <span class="breadcrumb{{ if eq $i (len $breadCrumbs) }} active{{ end }}">
-                                        {{ $breadCrumb.Title }}
-                                    </span>
+
+                    {{ if .Page }}
+                        {{ $breadCrumbs := .Page.GetBreadCrumbs }}
+                        {{ $actions := .Page.GetActions }}
+
+                        {{ if $breadCrumbs }}
+                            <div class="breadcrumbs">
+                                {{ range $i, $breadCrumb := $breadCrumbs }}
+                                    {{ if $breadCrumb.URL }}
+                                        <a class="breadcrumb" href="{{ $breadCrumb.URL }}">{{ $breadCrumb.Title }}</a>
+                                    {{ else }}
+                                        <span class="breadcrumb{{ if eq $i (len $breadCrumbs) }} active{{ end }}">
+                                            {{ $breadCrumb.Title }}
+                                        </span>
+                                    {{ end }}
                                 {{ end }}
-                            {{ end }}
-                        </div>
+                            </div>
+                        {{ end }}
+
+                        {{ if $actions }}
+                            <div class="actions">
+                                {{ range $action := $actions }}
+                                    <a class="actions__action" href="{{ $action.URL }}">
+                                        {{ if $action.Icon }}
+                                            <span class="actions__action--icon">
+                                                {{ icon $action.Icon }}
+                                            </span>
+                                        {{ end }}
+                                        {{ $action.Title }}
+                                    </a>
+                                {{ end }}
+                            </div>
+                        {{ end }}
+                        
                     {{ end }}
-                
+
                 {{ end }}
             </div>
 
             <div id="content">
                 {{ block "header" . }}
                     {{ $Page := (.Get "Page") }}
-                    {{ if (ne $Page nil) }}
-                        {{ component "admin.header" 1 $Page.Title $Page.Subtitle }}
+                    {{ if $Page }}
+                        {{ $Title := $Page.Title }}
+                        {{ $Subtitle := $Page.Subtitle }}
+
+                        {{ if (or $Title $Subtitle) }}
+                            {{ component "admin.header" 1 $Title $Subtitle }}
+                        {{ end }}
                     {{ end }}
                 {{ end }}
                 {{ block "content" . }}{{ end }}

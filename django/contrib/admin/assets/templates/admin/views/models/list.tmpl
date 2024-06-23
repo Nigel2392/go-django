@@ -13,6 +13,8 @@
             </div>
         </div>
     {{ end }}
-    {{ $list := (.Get "view_list") }}
-    {{ safe $list.Render }}
+    <div class="list-wrapper">
+        {{ $list := (.Get "view_list") }}
+        {{ safe $list.Render }}
+    </div>
 {{ end }}

@@ -88,7 +88,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 		ViewOptions: admin.ViewOptions{
 			Fields: []string{
 				"Title",
-				"UrlPath",
+				// "UrlPath",
 				"CreatedAt",
 				"UpdatedAt",
 			},

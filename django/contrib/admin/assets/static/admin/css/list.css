@@ -1,16 +1,11 @@
+.list-wrapper {
+    overflow-x: auto;
+}
 table.list {
     border-collapse: collapse;
     font-size: 1.125em;
+    text-wrap: nowrap;
     width: 100%;
-}
-
-.view-header {
-    display: flex;
-    flex-direction: row;
-    justify-content: flex-start;
-    align-items: center;
-    margin-bottom: 1em;
-    gap: 1em;
 }
 
 .list .list-title {
@@ -39,4 +34,6 @@ table.list {
 .list td.list-column {
     /* padding-top: 1.25em; */
     /* padding-bottom: 1.125em; */
+    padding-left: 0.25em;
+    padding-right: 0.25em;
 }

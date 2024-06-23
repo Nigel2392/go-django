@@ -1,19 +1,15 @@
 :root {
-    --breadcrumb-bg-color: #f8f9fa;
-    --breadcrumb-border-color: #e9ecef;
-    --breadcrumb-text-color: var(--secondary-bg-color);
-    --breadcrumb-text-color-hover: var(--secondary-bg-hover);
+    --breadcrumb-bg-color: var(--navigation-bg-color);
+    --breadcrumb-border-color: var(--navigation-border-color);
+    --breadcrumb-text-color: var(--navigation-text-color);
+    --breadcrumb-text-color-hover: var(--navigation-text-color-hover);
 }
 .breadcrumbs {
     display: flex;
     flex-direction: row;
     gap: 0.765em;
-    padding: 0.5em 1em;
-    background-color: var(--breadcrumb-bg-color);
-    color: var(--breadcrumb-text-color);
     font-size: 1.1em;
     font-weight: 600;
-    border-bottom: 1px solid var(--breadcrumb-border-color);
 }
 
 .breadcrumbs a {

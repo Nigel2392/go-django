@@ -237,7 +237,7 @@ func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (
 	)
 }
 
-func UpdateNode(q models.DBQuerier, ctx context.Context, node *models.PageNode) error {
+func UpdateNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
 	}
