@@ -106,3 +106,23 @@ func (c *BaseContentType[T]) Scan(src interface{}) error {
 func (c BaseContentType[T]) Value() (driver.Value, error) {
 	return c.TypeName(), nil
 }
+
+// MarshalJSON implements the json.Marshaler interface.
+// It marshals the type name of the BaseContentType.
+func (c BaseContentType[T]) MarshalJSON() ([]byte, error) {
+	return []byte(fmt.Sprintf(`"%s"`, c.TypeName())), nil
+}
+
+// UnmarshalJSON implements the json.Unmarshaler interface.
+// It unmarshals the type name of the BaseContentType.
+func (c *BaseContentType[T]) UnmarshalJSON(data []byte) error {
+	var typeString = string(data)
+	var registryObj = DefinitionForType(typeString)
+	if registryObj == nil {
+		return errors.Errorf("invalid content type: %s", typeString)
+	}
+
+	var newCtype = NewContentType(registryObj.ContentObject.(T))
+	*c = *newCtype
+	return nil
+}

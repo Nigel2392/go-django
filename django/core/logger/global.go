@@ -21,6 +21,7 @@ var (
 	Warnf  func(format string, args ...interface{})
 	Errorf func(format string, args ...interface{})
 	Fatalf func(errorcode int, format string, args ...interface{})
+	Logf   func(level LogLevel, format string, args ...interface{})
 )
 
 func Setup(logger Log) {
@@ -44,4 +45,5 @@ func Setup(logger Log) {
 	Warnf = globalLogger.Warnf
 	Errorf = globalLogger.Errorf
 	Fatalf = globalLogger.Fatalf
+	Logf = globalLogger.Logf
 }

@@ -14,16 +14,14 @@ import (
 
 type AuditLogs struct {
 	*apps.AppConfig
-	// Queries models.Querier
 }
 
-var Logs *AuditLogs
+var Logs *AuditLogs = &AuditLogs{
+	AppConfig: apps.NewAppConfig("auditlogs"),
+}
 
 func NewAppConfig() django.AppConfig {
-	var app = &AuditLogs{
-		AppConfig: apps.NewAppConfig("auditlogs"),
-	}
-	app.Init = func(settings django.Settings) error {
+	Logs.Init = func(settings django.Settings) error {
 
 		dbInt, ok := settings.Get("DATABASE")
 		assert.True(ok, "DATABASE setting is required for 'auditlogs' app")
@@ -92,7 +90,5 @@ func NewAppConfig() django.AppConfig {
 		return nil
 	}
 
-	Logs = app
-
-	return app
+	return Logs
 }

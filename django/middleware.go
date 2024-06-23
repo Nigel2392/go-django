@@ -57,6 +57,13 @@ func LoggingDisabledMiddleware(next mux.Handler) mux.Handler {
 //
 // The message might be prefixed and / or suffixed with additional information.
 func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
+	var logggingEnabled = ConfigGet(a.Settings, "LOGGING_ENABLED",
+		ConfigGet(a.Settings, "DEBUG", true),
+	)
+	if !logggingEnabled {
+		return next
+	}
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var startTime = time.Now()
 

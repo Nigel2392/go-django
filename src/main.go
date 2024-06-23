@@ -35,7 +35,7 @@ func main() {
 	var app = django.App(
 		django.Configure(map[string]interface{}{
 			"ALLOWED_HOSTS": []string{"*"},
-			"DEBUG":         true,
+			"DEBUG":         false,
 			"HOST":          "127.0.0.1",
 			"PORT":          "8080",
 			"DATABASE": func() *sql.DB {

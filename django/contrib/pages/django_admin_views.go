@@ -10,11 +10,13 @@ import (
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/auth"
 	"github.com/Nigel2392/django/contrib/pages/models"
+	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
+	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/modelforms"
 	"github.com/Nigel2392/django/permissions"
@@ -402,6 +404,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 	adminForm.Load()
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) (err error) {
+
 		if page, ok := d.(SaveablePage); ok {
 			err = SavePage(QuerySet(), ctx, p, page)
 		} else {
@@ -413,6 +416,12 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		if err != nil {
 			return err
 		}
+
+		auditlogs.Log("pages:add", logger.INF, page, map[string]interface{}{
+			"parent": p.ID(),
+			"label":  page.Reference().Title,
+			"cType":  cType.PkgPath(),
+		})
 
 		return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
 			return FixTree(pageApp.QuerySet(), ctx)
@@ -532,6 +541,11 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		if err != nil {
 			return err
 		}
+
+		auditlogs.Log("pages:edit", logger.INF, page, map[string]interface{}{
+			"page_id": p.ID(),
+			"label":   page.Reference().Title,
+		})
 
 		return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
 			return FixTree(pageApp.QuerySet(), ctx)
