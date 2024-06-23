@@ -39,7 +39,7 @@ var registry = &auditLogRegistry{
 	filters:      make(map[string][]Filter),
 	handlers:     make(map[string][]Handler),
 	definitions:  make(map[string]Definition),
-	backend:      newInMemoryStorageBackend(),
+	backend:      NewInMemoryStorageBackend(),
 }
 
 func Backend() StorageBackend {

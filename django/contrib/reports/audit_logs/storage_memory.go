@@ -1,7 +1,6 @@
 package auditlogs
 
 import (
-	"fmt"
 	"reflect"
 	"slices"
 	"sync"
@@ -17,7 +16,7 @@ type inMemoryStorageBackend struct {
 	mu      *sync.RWMutex
 }
 
-func newInMemoryStorageBackend() StorageBackend {
+func NewInMemoryStorageBackend() StorageBackend {
 	return &inMemoryStorageBackend{
 		entries: orderedmap.NewOrderedMap[uuid.UUID, LogEntry](),
 		mu:      &sync.RWMutex{},
@@ -43,8 +42,8 @@ func (i *inMemoryStorageBackend) store(logEntry LogEntry) (uuid.UUID, error) {
 		}
 	}
 
-	var log = logger.NameSpace(logEntry.Type())
-	log.Log(logEntry.Level(), fmt.Sprint(logEntry))
+	// var log = logger.NameSpace(logEntry.Type())
+	// log.Log(logEntry.Level(), fmt.Sprint(logEntry))
 
 	i.entries.Set(id, logEntry)
 	return id, nil
@@ -180,103 +179,91 @@ func (i *inMemoryStorageBackend) Filter(filters []AuditLogFilter, amount, offset
 	var entries = make([]LogEntry, 0)
 	var idx = 0
 	for front := i.entries.Front(); front != nil; front = front.Next() {
-		var match = true
+		var match = 0
 		if idx < offset {
 			idx++
 			continue
 		}
 
 		var entry = front.Value
+
 		for _, filter := range filters {
-		switchCase:
-			switch filter.Name() {
+			var name = filter.Name()
+			var value = filter.Value()
+			switch name {
 			case AuditLogFilterID:
-				for _, value := range filter.Value() {
-					if value != entry.ID() {
-						match = false
-						break switchCase
+				for _, v := range value {
+					if v == entry.ID() || v == entry.ID().String() {
+						match++
+						break
 					}
 				}
 			case AuditLogFilterType:
-				for _, value := range filter.Value() {
-					if value != entry.Type() {
-						match = false
-						break switchCase
+				for _, v := range value {
+					if v == entry.Type() {
+						match++
+						break
 					}
 				}
 			case AuditLogFilterLevel_EQ:
-				for _, value := range filter.Value() {
-					if value != entry.Level() {
-						match = false
-						break switchCase
+				for _, v := range value {
+					if v == entry.Level() {
+						match++
+						break
 					}
 				}
 			case AuditLogFilterLevel_GT:
-				for _, value := range filter.Value() {
-					if value.(logger.LogLevel) >= entry.Level() {
-						match = false
-						break switchCase
+				for _, v := range value {
+					if entry.Level() > v.(logger.LogLevel) {
+						match++
+						break
 					}
 				}
 			case AuditLogFilterLevel_LT:
-				for _, value := range filter.Value() {
-					if value.(logger.LogLevel) <= entry.Level() {
-						match = false
-						break switchCase
+				for _, v := range value {
+					if entry.Level() < v.(logger.LogLevel) {
+						match++
+						break
 					}
 				}
 			case AuditLogFilterTimestamp_EQ:
-				for _, value := range filter.Value() {
-					if value != entry.Timestamp() {
-						match = false
-						break switchCase
-					}
-				}
-			case AuditLogFilterTimestamp_GT:
-				for _, value := range filter.Value() {
-					if value.(time.Time).Before(entry.Timestamp()) {
-						match = false
-						break switchCase
-					}
-				}
-			case AuditLogFilterTimestamp_LT:
-				for _, value := range filter.Value() {
-					if value.(time.Time).After(entry.Timestamp()) {
-						match = false
-						break switchCase
+				for _, v := range value {
+					if entry.Timestamp().Equal(v.(time.Time)) {
+						match++
+						break
 					}
 				}
 			case AuditLogFilterUserID:
-				for _, value := range filter.Value() {
-					if value != entry.UserID() {
-						match = false
-						break switchCase
+				for _, v := range value {
+					if v == entry.UserID() {
+						match++
+						break
 					}
 				}
 			case AuditLogFilterObjectID:
-				for _, value := range filter.Value() {
-					if value != entry.ObjectID() {
-						match = false
-						break switchCase
+				for _, v := range value {
+					if v == entry.ObjectID() {
+						match++
+						break
 					}
 				}
 			case AuditLogFilterContentType:
-				for _, value := range filter.Value() {
-					if value != entry.ContentType() {
-						match = false
-						break switchCase
+				for _, v := range value {
+					if v == entry.ContentType() {
+						match++
+						break
 					}
 				}
 			case AuditLogFilterData:
-				for _, value := range filter.Value() {
-					if !reflect.DeepEqual(value, entry.Data()) {
-						match = false
-						break switchCase
+				for _, v := range value {
+					if reflect.DeepEqual(v, entry.Data()) {
+						match++
 					}
 				}
 			}
 		}
-		if match {
+
+		if match == len(filters) {
 			entries = append(entries, entry)
 		}
 		if len(entries) == amount {

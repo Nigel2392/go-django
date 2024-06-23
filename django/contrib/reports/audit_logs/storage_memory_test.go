@@ -1,20 +1,16 @@
-package auditlogs_sqlite_test
+package auditlogs_test
 
 import (
-	"database/sql"
 	"fmt"
 	"testing"
 
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
-	auditlogs_sqlite "github.com/Nigel2392/django/contrib/reports/audit_logs/audit_logs_sqlite"
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/google/uuid"
 
 	_ "github.com/mattn/go-sqlite3"
 )
-
-var db *sql.DB
 
 var entries []auditlogs.LogEntry
 
@@ -46,18 +42,8 @@ var entryIds = []uuid.UUID{
 }
 
 func init() {
-	var err error
-	db, err = sql.Open("sqlite3", ":memory:")
-	if err != nil {
-		panic(err)
-	}
-	var backend = auditlogs_sqlite.NewSQLiteStorageBackend(db)
+	var backend = auditlogs.NewInMemoryStorageBackend()
 	auditlogs.RegisterBackend(backend)
-
-	err = backend.Setup()
-	if err != nil {
-		panic(err)
-	}
 
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		ContentObject: &auditlogs.Entry{},
@@ -81,7 +67,7 @@ func init() {
 		entries = append(entries, entry)
 	}
 
-	_, err = backend.StoreMany(entries)
+	var _, err = backend.StoreMany(entries)
 	if err != nil {
 		panic(err)
 	}
