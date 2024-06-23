@@ -1,7 +1,9 @@
 package auditlogs_mysql
 
 import (
+	"bytes"
 	"database/sql"
+	"encoding/json"
 	"fmt"
 
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
@@ -24,6 +26,8 @@ const insertMySQL = `INSERT INTO audit_logs (id, type, level, timestamp, user_id
 const selectMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE id = ?;`
 const selectManyMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
 const selectTypedMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE type = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
+const selectForUserMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
+const selectForObjectMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE object_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
 
 type MySQLStorageBackend struct {
 	db *sql.DB
@@ -71,6 +75,58 @@ func (s *MySQLStorageBackend) Retrieve(id uuid.UUID) (auditlogs.LogEntry, error)
 	}
 
 	return auditlogs.ScanRow(row)
+}
+
+func (s *MySQLStorageBackend) RetrieveForUser(userID interface{}, amount, offset int) ([]auditlogs.LogEntry, error) {
+	var idBuf = new(bytes.Buffer)
+	enc := json.NewEncoder(idBuf)
+	err := enc.Encode(userID)
+	if err != nil {
+		return nil, err
+	}
+	var id = idBuf.Bytes()
+	rows, err := s.db.Query(selectForUserMySQL, string(id), amount, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries = make([]auditlogs.LogEntry, 0)
+	for rows.Next() {
+		entry, err := auditlogs.ScanRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+func (s *MySQLStorageBackend) RetrieveForObject(objectID interface{}, amount, offset int) ([]auditlogs.LogEntry, error) {
+	var idBuf = new(bytes.Buffer)
+	enc := json.NewEncoder(idBuf)
+	err := enc.Encode(objectID)
+	if err != nil {
+		return nil, err
+	}
+	var id = idBuf.Bytes()
+	rows, err := s.db.Query(selectForObjectMySQL, string(id), amount, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries = make([]auditlogs.LogEntry, 0)
+	for rows.Next() {
+		entry, err := auditlogs.ScanRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
 }
 
 func (s *MySQLStorageBackend) RetrieveMany(amount, offset int) ([]auditlogs.LogEntry, error) {

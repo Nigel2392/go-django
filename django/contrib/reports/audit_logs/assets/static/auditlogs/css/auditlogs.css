@@ -1,0 +1,75 @@
+:root {
+    --log-color-debug-rgb: 50, 211, 88;
+    --log-color-info-rgb: 50, 120, 195;
+    --log-color-warning-rgb: 186, 152, 50;
+    --log-color-error-rgb: 201, 50, 65;
+
+    --log-color-debug-bg: rgba(var(--log-color-debug-rgb), 0.1);
+    --log-color-info-bg: rgba(var(--log-color-info-rgb), 0.1);
+    --log-color-warning-bg: rgba(var(--log-color-warning-rgb), 0.1);
+    --log-color-error-bg: rgba(var(--log-color-error-rgb), 0.1);
+    --log-color-debug-header-bg: rgba(var(--log-color-debug-rgb), 0.1);
+    --log-color-info-header-bg: rgba(var(--log-color-info-rgb), 0.1);
+    --log-color-warning-header-bg: rgba(var(--log-color-warning-rgb), 0.1);
+    --log-color-error-header-bg: rgba(var(--log-color-error-rgb), 0.1);
+    --border-opacity: 0.3;
+    --log-color-text: #111;
+}
+
+.auditlog-list {
+    --item-bg: #fff;
+    --header-bg: #f0f0f0;
+    --border-color: #e0e0e0;
+    max-width: 1100px;
+}
+
+.auditlog-DEBUG {
+    --item-bg: var(--log-color-debug-bg);
+    --header-bg: var(--log-color-debug-header-bg);
+    --border-color: rgba(var(--log-color-debug-rgb), var(--border-opacity, 1));
+}
+.auditlog-INFO {
+    --item-bg: var(--log-color-info-bg);
+    --header-bg: var(--log-color-info-header-bg);
+    --border-color: rgba(var(--log-color-info-rgb), var(--border-opacity, 1));
+}
+.auditlog-WARN {
+    --item-bg: var(--log-color-warning-bg);
+    --header-bg: var(--log-color-warning-header-bg);
+    --border-color: rgba(var(--log-color-warning-rgb), var(--border-opacity, 1));
+}
+.auditlog-ERROR {
+    --item-bg: var(--log-color-error-bg);
+    --header-bg: var(--log-color-error-header-bg);
+    --border-color: rgba(var(--log-color-error-rgb), var(--border-opacity, 1));
+}
+
+.auditlog-list-item {
+    display: flex;
+    flex-direction: column;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border-color, #e0e0e0);
+    background-color: var(--item-bg, transparent);
+    color: var(--log-color-text);
+}
+.auditlog-list-item h1,
+.auditlog-list-item h2,
+.auditlog-list-item h3,
+.auditlog-list-item h4,
+.auditlog-list-item h5,
+.auditlog-list-item h6,
+.auditlog-list-item p {
+    margin: 0 !important;
+    color: var(--log-color-text) !important;
+}
+.auditlog-list-item__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.7rem 1rem;
+    background-color: var(--header-bg, #f0f0f0);
+    border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+.auditlog-list-item__body {
+    padding: 0.5rem 1rem;
+}

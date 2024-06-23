@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/forms/media"
+	"github.com/Nigel2392/goldcrest"
 )
 
 const (
@@ -18,3 +19,7 @@ type (
 	RegisterFooterMenuItemHookFunc func(r *http.Request, adminSite *AdminApplication, items menu.Items)
 	RegisterScriptHookFunc         func(adminSite *AdminApplication) media.Media
 )
+
+func RegisterMedia(fn RegisterScriptHookFunc) {
+	goldcrest.Register(RegisterGlobalMedia, 0, fn)
+}

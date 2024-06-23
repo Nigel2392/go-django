@@ -10,7 +10,10 @@ import (
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/logger"
+	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/forms/fields"
+	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/mux"
 
@@ -107,6 +110,27 @@ func NewAppConfig() django.AppConfig {
 		panic(err)
 	}
 
+	sFs, err := fs.Sub(templateFileSys, "assets/static")
+	if err != nil {
+		panic(err)
+	}
+
+	staticfiles.AddFS(
+		sFs, tpl.MatchAnd(
+			tpl.MatchPrefix("auditlogs/"),
+			tpl.MatchOr(
+				tpl.MatchSuffix(".css"),
+				tpl.MatchSuffix(".js"),
+			),
+		),
+	)
+
+	admin.RegisterMedia(func(adminSite *admin.AdminApplication) media.Media {
+		var m = media.NewMedia()
+		m.AddCSS(media.CSS(django.Static("auditlogs/css/auditlogs.css")))
+		return m
+	})
+
 	tpl.Add(tpl.Config{
 		AppName: "auditlogs",
 		FS:      tplFS,
@@ -150,6 +174,10 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	adminCtx.Set("logs", definitions)
+	adminCtx.SetPage(admin.PageOptions{
+		TitleFn:    fields.S("Audit Logs"),
+		SubtitleFn: fields.S("View all audit logs"),
+	})
 
 	var v = &views.BaseView{
 		AllowedMethods:  []string{http.MethodGet},

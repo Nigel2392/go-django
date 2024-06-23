@@ -75,6 +75,56 @@ func (i *inMemoryStorageBackend) Retrieve(id uuid.UUID) (LogEntry, error) {
 	return entry, nil
 }
 
+func (i *inMemoryStorageBackend) RetrieveForObject(objectID interface{}, amount, offset int) ([]LogEntry, error) {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	var entries = make([]LogEntry, 0)
+	var idx = 0
+	for front := i.entries.Front(); front != nil; front = front.Next() {
+		if idx < offset {
+			idx++
+			continue
+		}
+
+		var entry = front.Value
+		if entry.ObjectID() == objectID {
+			entries = append(entries, entry)
+		}
+		if len(entries) == amount {
+			break
+		}
+		idx++
+	}
+	slices.SortFunc(entries, sortEntries)
+	return entries, nil
+}
+
+func (i *inMemoryStorageBackend) RetrieveForUser(userID interface{}, amount, offset int) ([]LogEntry, error) {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	var entries = make([]LogEntry, 0)
+	var idx = 0
+	for front := i.entries.Front(); front != nil; front = front.Next() {
+		if idx < offset {
+			idx++
+			continue
+		}
+
+		var entry = front.Value
+		if entry.UserID() == userID {
+			entries = append(entries, entry)
+		}
+		if len(entries) == amount {
+			break
+		}
+		idx++
+	}
+	slices.SortFunc(entries, sortEntries)
+	return entries, nil
+}
+
 func (i *inMemoryStorageBackend) RetrieveMany(amount, offset int) ([]LogEntry, error) {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
