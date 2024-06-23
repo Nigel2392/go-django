@@ -97,7 +97,7 @@ func RegisterHandlerForObject(handler Handler, contentType contenttypes.ContentT
 }
 
 func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data map[string]interface{}) (uuid.UUID, error) {
-	var entry = &logEntry{
+	var entry = &Entry{
 		Typ:  entryType,
 		Lvl:  level,
 		Time: time.Now(),

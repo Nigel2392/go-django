@@ -1,6 +1,7 @@
 package auditlogs
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/Nigel2392/django/core/contenttypes"
@@ -8,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type logEntry struct {
+type Entry struct {
 	Id    uuid.UUID                `json:"id"`
 	Typ   string                   `json:"type"`
 	Lvl   logger.LogLevel          `json:"level"`
@@ -19,34 +20,67 @@ type logEntry struct {
 	Src   map[string]interface{}   `json:"data"`
 }
 
-func (l *logEntry) ID() uuid.UUID {
+func (l *Entry) String() string {
+	var (
+		id      = l.ID()
+		typ     = l.Type()
+		objId   = l.ObjectID()
+		cTyp    = l.ContentType()
+		srcData = l.Data()
+	)
+
+	switch {
+	case objId != nil && srcData != nil:
+		return fmt.Sprintf(
+			"<LogEntry(%q): %s> %s(%v) %v",
+			typ, id, cTyp.TypeName(), objId, srcData,
+		)
+	case objId != nil:
+		return fmt.Sprintf(
+			"<LogEntry(%q): %s> %s(%v)",
+			typ, id, cTyp.TypeName(), objId,
+		)
+	case srcData != nil:
+		return fmt.Sprintf(
+			"<LogEntry(%q): %s> %s %v",
+			typ, id, cTyp.TypeName(), srcData,
+		)
+	}
+
+	return fmt.Sprintf(
+		"<LogEntry(%q): %s> %s",
+		typ, id, cTyp.TypeName(),
+	)
+}
+
+func (l *Entry) ID() uuid.UUID {
 	return l.Id
 }
 
-func (l *logEntry) Type() string {
+func (l *Entry) Type() string {
 	return l.Typ
 }
 
-func (l *logEntry) Level() logger.LogLevel {
+func (l *Entry) Level() logger.LogLevel {
 	return l.Lvl
 }
 
-func (l *logEntry) Timestamp() time.Time {
+func (l *Entry) Timestamp() time.Time {
 	return l.Time
 }
 
-func (l *logEntry) Object() interface{} {
+func (l *Entry) Object() interface{} {
 	return l.Obj
 }
 
-func (l *logEntry) ObjectID() interface{} {
+func (l *Entry) ObjectID() interface{} {
 	return l.ObjID
 }
 
-func (l *logEntry) ContentType() contenttypes.ContentType {
+func (l *Entry) ContentType() contenttypes.ContentType {
 	return l.CType
 }
 
-func (l *logEntry) Data() map[string]interface{} {
+func (l *Entry) Data() map[string]interface{} {
 	return l.Src
 }

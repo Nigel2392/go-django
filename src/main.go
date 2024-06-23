@@ -43,6 +43,9 @@ func main() {
 				if err != nil {
 					panic(err)
 				}
+				auditlogs.RegisterBackend(
+					auditlogs.NewSQLiteStorageBackend(db),
+				)
 				return db
 			}(),
 		}),
