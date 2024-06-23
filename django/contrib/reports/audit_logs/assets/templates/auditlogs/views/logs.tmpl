@@ -1,0 +1,22 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ T "Audit Logs" }}{{ end }}
+
+{{ define "content" }}
+
+    {{ range $log := (.Get "logs") }}
+        <div class="auditlog-list-item">
+            <div class="auditlog-list-item__header">
+                <div class="auditlog-list-item__header__date">
+                    <h3>{{ $log.Label }}</h3>
+                </div>
+            </div>
+            <div class="auditlog-list-item__body">
+                <div class="auditlog-list-item__body__details">
+                    <p>{{ $log.Message }}</p>
+                </div>
+            </div>
+        </div>
+    {{ end }}
+
+{{ end }}

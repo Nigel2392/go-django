@@ -2,13 +2,13 @@ package auditlogs
 
 import (
 	"bytes"
-	"encoding/gob"
 	"encoding/json"
 	"time"
 
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/google/uuid"
+	"github.com/pkg/errors"
 )
 
 func SerializeRow(l LogEntry) (id uuid.UUID, typeStr string, level int, timestamp time.Time, userId, objectID []byte, contentType contenttypes.ContentType, data string) {
@@ -21,7 +21,7 @@ func SerializeRow(l LogEntry) (id uuid.UUID, typeStr string, level int, timestam
 	var objId = l.ObjectID()
 	if objId != nil {
 		var b = new(bytes.Buffer)
-		enc := gob.NewEncoder(b)
+		enc := json.NewEncoder(b)
 		err := enc.Encode(objId)
 		if err != nil {
 			return
@@ -32,7 +32,7 @@ func SerializeRow(l LogEntry) (id uuid.UUID, typeStr string, level int, timestam
 	var usrId = l.UserID()
 	if usrId != nil {
 		var b = new(bytes.Buffer)
-		enc := gob.NewEncoder(b)
+		enc := json.NewEncoder(b)
 		err := enc.Encode(usrId)
 		if err != nil {
 			return
@@ -69,22 +69,22 @@ func ScanRow(row interface{ Scan(dest ...any) error }) (LogEntry, error) {
 	}
 
 	var goObjectID interface{}
-	if objectID != nil {
+	if len(objectID) > 0 {
 		b := bytes.NewBuffer(objectID)
-		dec := gob.NewDecoder(b)
+		dec := json.NewDecoder(b)
 		err = dec.Decode(&goObjectID)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to decode objectID")
 		}
 	}
 
 	var goUserID interface{}
-	if userId != nil {
+	if len(userId) > 0 {
 		b := bytes.NewBuffer(userId)
-		dec := gob.NewDecoder(b)
+		dec := json.NewDecoder(b)
 		err = dec.Decode(&goUserID)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to decode userID")
 		}
 	}
 
@@ -92,7 +92,7 @@ func ScanRow(row interface{ Scan(dest ...any) error }) (LogEntry, error) {
 	if data != nil {
 		b := bytes.NewBuffer(data)
 		if err := json.NewDecoder(b).Decode(&goData); err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to decode data")
 		}
 	}
 

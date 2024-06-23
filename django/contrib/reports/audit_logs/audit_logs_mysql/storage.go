@@ -14,8 +14,8 @@ const createTableMySQL = `CREATE TABLE IF NOT EXISTS audit_logs (
 	type VARCHAR(255) NOT NULL,
 	level INT NOT NULL,
 	timestamp DATETIME NOT NULL,
-	user_id BLOB,
-	object_id BLOB,
+	user_id TEXT,
+	object_id TEXT,
 	content_type VARCHAR(255),
 	data TEXT
 );`

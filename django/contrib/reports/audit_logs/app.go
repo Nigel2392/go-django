@@ -1,8 +1,20 @@
 package auditlogs
 
 import (
+	"io/fs"
+	"net/http"
+
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
+	"github.com/Nigel2392/django/contrib/admin"
+	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/core/except"
+	"github.com/Nigel2392/django/core/logger"
+	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/views"
+	"github.com/Nigel2392/mux"
+
+	"embed"
 )
 
 type AuditLogs struct {
@@ -12,6 +24,9 @@ type AuditLogs struct {
 var Logs *AuditLogs = &AuditLogs{
 	AppConfig: apps.NewAppConfig("auditlogs"),
 }
+
+//go:embed assets/*
+var templateFileSys embed.FS
 
 func NewAppConfig() django.AppConfig {
 	Logs.Init = func(settings django.Settings) error {
@@ -87,5 +102,65 @@ func NewAppConfig() django.AppConfig {
 		return nil
 	}
 
+	var tplFS, err = fs.Sub(templateFileSys, "assets/templates")
+	if err != nil {
+		panic(err)
+	}
+
+	tpl.Add(tpl.Config{
+		AppName: "auditlogs",
+		FS:      tplFS,
+		Matches: tpl.MatchAnd(
+			tpl.MatchPrefix("auditlogs/"),
+			tpl.MatchOr(
+				tpl.MatchSuffix(".tmpl"),
+			),
+		),
+	})
+
+	Logs.Ready = func() error {
+		admin.AdminSite.Route.Handle(
+			mux.ANY, "/auditlogs", mux.NewHandler(auditLogView),
+			"auditlogs",
+		)
+		return nil
+	}
+
 	return Logs
+}
+
+func auditLogView(w http.ResponseWriter, r *http.Request) {
+
+	var adminCtx = admin.NewContext(r, admin.AdminSite, nil)
+
+	var logList, err = Backend().RetrieveMany(25, 0)
+	if err != nil {
+
+		logger.Error(err)
+		except.Fail(
+			http.StatusInternalServerError,
+			"Failed to retrieve audit logs",
+		)
+		return
+	}
+
+	var definitions = make([]*BoundDefinition, len(logList))
+	for i, log := range logList {
+		definitions[i] = Define(log)
+	}
+
+	adminCtx.Set("logs", definitions)
+
+	var v = &views.BaseView{
+		AllowedMethods:  []string{http.MethodGet},
+		BaseTemplateKey: "admin",
+		TemplateName:    "auditlogs/views/logs.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			return adminCtx, nil
+		},
+	}
+
+	if err = views.Invoke(v, w, r); err != nil {
+		return
+	}
 }

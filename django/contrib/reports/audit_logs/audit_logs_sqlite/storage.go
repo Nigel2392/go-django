@@ -14,8 +14,8 @@ const createTableSQLITE = `CREATE TABLE IF NOT EXISTS audit_logs (
 	type TEXT NOT NULL,
 	level NUMBER NOT NULL,
 	timestamp TEXT NOT NULL,
-	user_id BLOB,
-	object_id BLOB,
+	user_id TEXT,
+	object_id TEXT,
 	content_type TEXT,
 	data TEXT
 );`
