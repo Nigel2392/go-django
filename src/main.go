@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/django/contrib/blocks"
 	"github.com/Nigel2392/django/contrib/pages"
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
+	auditlogs_sqlite "github.com/Nigel2392/django/contrib/reports/audit_logs/audit_logs_mysql"
 	"github.com/Nigel2392/django/contrib/session"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/errs"
@@ -39,12 +40,13 @@ func main() {
 			"HOST":          "127.0.0.1",
 			"PORT":          "8080",
 			"DATABASE": func() *sql.DB {
+				// var db, err = sql.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
 				var db, err = sql.Open("sqlite3", "./.private/db.sqlite3")
 				if err != nil {
 					panic(err)
 				}
 				auditlogs.RegisterBackend(
-					auditlogs_sqlite.NewSQLiteStorageBackend(db),
+					auditlogs_sqlite.NewMySQLStorageBackend(db),
 				)
 				return db
 			}(),
