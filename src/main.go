@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"io/fs"
+	"net/http"
 	"strconv"
 
 	"github.com/Nigel2392/django"
@@ -59,6 +60,10 @@ func main() {
 			blog.NewAppConfig,
 		),
 	)
+
+	app.Mux.Any("/pages/*", http.StripPrefix("/pages", pages.Serve(
+		http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
+	)), "pages")
 
 	var _ = admin.RegisterApp(
 		"Auth",

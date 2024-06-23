@@ -65,7 +65,17 @@ func nodesEqual(a, b *models.PageNode) bool {
 	pageBRef := *b
 	pageARef.CreatedAt = pageBRef.CreatedAt
 	pageARef.UpdatedAt = pageBRef.UpdatedAt
-	return pageARef == pageBRef
+
+	return a.PK == b.PK &&
+		a.Title == b.Title &&
+		a.Path == b.Path &&
+		a.Depth == b.Depth &&
+		a.Numchild == b.Numchild &&
+		a.UrlPath == b.UrlPath &&
+		a.Slug == b.Slug &&
+		a.StatusFlags == b.StatusFlags &&
+		a.PageID == b.PageID &&
+		a.ContentType == b.ContentType
 
 }
 
@@ -806,6 +816,14 @@ func TestPageNode(t *testing.T) {
 
 		if sub.Depth != 1 {
 			t.Errorf("expected Depth 1, got %d", sub.Depth)
+		}
+
+		if sub.UrlPath != "/root-1/child" {
+			t.Errorf("expected UrlPath /root-1/child, got %s", sub.UrlPath)
+		}
+
+		if sub.Numchild != 1 {
+			t.Errorf("expected Numchild 1, got %d", sub.Numchild)
 		}
 
 		childNode = sub

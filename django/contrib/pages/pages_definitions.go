@@ -11,6 +11,7 @@ import (
 
 type PageDefinition struct {
 	*contenttypes.ContentTypeDefinition
+	ServePage               func() PageView
 	AddPanels               func(r *http.Request, page Page) []admin.Panel
 	EditPanels              func(r *http.Request, page Page) []admin.Panel
 	GetForID                func(ctx context.Context, ref models.PageNode, id int64) (Page, error)
@@ -45,4 +46,11 @@ func (p *PageDefinition) AppLabel() string {
 
 func (p *PageDefinition) Model() string {
 	return p.ContentType().Model()
+}
+
+func (p *PageDefinition) PageView() PageView {
+	if p.ServePage != nil {
+		return p.ServePage()
+	}
+	return nil
 }

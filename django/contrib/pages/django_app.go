@@ -1,6 +1,7 @@
 package pages
 
 import (
+	"context"
 	"database/sql"
 	"embed"
 	"fmt"
@@ -136,10 +137,23 @@ func NewAppConfig() *PageAppConfig {
 			pageAdminModelOptions,
 		)
 
-		contenttypes.Register(&contenttypes.ContentTypeDefinition{
-			ContentObject: &models.PageNode{},
-			GetLabel:      fields.S("Page"),
-			GetObject:     func() any { return &models.PageNode{} },
+		// contenttypes.Register(&contenttypes.ContentTypeDefinition{
+		// ContentObject:  &models.PageNode{},
+		// GetLabel:       fields.S("Page"),
+		// GetDescription: fields.S("A page in a hierarchical page tree- structure."),
+		// GetObject:      func() any { return &models.PageNode{} },
+		// })
+
+		Register(&PageDefinition{
+			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
+				ContentObject:  &models.PageNode{},
+				GetLabel:       fields.S("Page"),
+				GetDescription: fields.S("A page in a hierarchical page tree- structure."),
+				GetObject:      func() any { return &models.PageNode{} },
+			},
+			GetForID: func(ctx context.Context, ref models.PageNode, id int64) (Page, error) {
+				return &ref, nil
+			},
 		})
 
 		return nil

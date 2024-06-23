@@ -38,6 +38,14 @@ type PageNode struct {
 	ContentType string     `json:"content_type" attrs:""`
 	CreatedAt   time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
 	UpdatedAt   time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
+
+	// ParentNode is the parent node of this node.
+	// It will likely be nil and is not fetched by default.
+	ParentNode *PageNode `json:"parent_node" attrs:"readonly"`
+
+	// ChildNodes are the child nodes of this node.
+	// It will likely be nil and is not fetched by default.
+	ChildNodes []*PageNode `json:"child_nodes" attrs:"readonly"`
 }
 
 func (n *PageNode) ID() int64 {

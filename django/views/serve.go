@@ -36,6 +36,10 @@ type View interface {
 	ServeXXX(w http.ResponseWriter, req *http.Request)
 }
 
+type ControlledView interface {
+	TakeControl(w http.ResponseWriter, req *http.Request)
+}
+
 type MethodsView interface {
 	View
 	Methods() []string
@@ -196,6 +200,11 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 			err, http.StatusMethodNotAllowed,
 		)
 		return err
+	}
+
+	if v, ok := view.(ControlledView); ok {
+		v.TakeControl(w, req)
+		return nil
 	}
 
 	// Check if the view has a Serve<XXX> method.

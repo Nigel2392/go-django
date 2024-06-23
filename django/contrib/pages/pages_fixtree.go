@@ -10,29 +10,6 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-func fixTree(n *Node, depth int64) (cancel bool) {
-	if n.Ref == nil {
-		return
-	}
-
-	n.Ref.Numchild = int64(n.Children.Len())
-	n.Ref.Depth = depth
-
-	var i = 0
-	for front := n.Children.Front(); front != nil; front = front.Next() {
-		if front.Value.Ref == nil {
-			continue
-		}
-		front.Value.Ref.Path = n.Ref.Path + buildPathPart(int64(i))
-		front.Value.Ref.UrlPath = path.Join(n.Ref.UrlPath, front.Value.Ref.Slug)
-		front.Value.Ref.Numchild = int64(front.Value.Children.Len())
-		front.Value.Ref.Depth = depth + 1
-		i++
-	}
-
-	return
-}
-
 func newNode(ref *models.PageNode) *Node {
 	return &Node{
 		Ref:      ref,
@@ -85,7 +62,35 @@ type Node struct {
 }
 
 func (n *Node) FixTree() {
-	n.ForEach(fixTree)
+	var i int64 = 0
+	for front := n.Children.Front(); front != nil; front = front.Next() {
+		// Fix all root nodes
+		var node = front.Value
+		node.Ref.Depth = 0
+		node.Ref.UrlPath = path.Join("/", node.Ref.Slug)
+		node.Ref.Numchild = int64(node.Children.Len())
+		node.Ref.Path = buildPathPart(i)
+		i++
+
+		// Fix all children
+		node.fixChildren(1)
+	}
+}
+
+func (n *Node) fixChildren(depth int64) {
+	var i int64 = 0
+	for front := n.Children.Front(); front != nil; front = front.Next() {
+		var node = front.Value
+		if node.Ref == nil {
+			continue
+		}
+		node.Ref.Depth = depth
+		node.Ref.UrlPath = path.Join(n.Ref.UrlPath, node.Ref.Slug)
+		node.Ref.Numchild = int64(node.Children.Len())
+		node.Ref.Path = n.Ref.Path + buildPathPart(i)
+		node.fixChildren(depth + 1)
+		i++
+	}
 }
 
 func (n *Node) FindNode(path string) *Node {
@@ -122,7 +127,7 @@ func (n *Node) ForEach(fn func(*Node, int64) (cancel bool)) (cancelled bool) {
 	}
 
 	for front := n.Children.Front(); front != nil; front = front.Next() {
-		if front.Value.forEach(fn, ctr) {
+		if front.Value.forEach(fn, ctr, false) {
 			return
 		}
 	}
@@ -130,13 +135,15 @@ func (n *Node) ForEach(fn func(*Node, int64) (cancel bool)) (cancelled bool) {
 	return
 }
 
-func (n *Node) forEach(fn func(*Node, int64) (cancel bool), depth int64) (cancelled bool) {
-	if fn(n, depth) {
-		return
+func (n *Node) forEach(fn func(*Node, int64) (cancel bool), depth int64, execForRoot bool) (cancelled bool) {
+	if n.Ref != nil && execForRoot {
+		if fn(n, depth) {
+			return
+		}
 	}
 
 	for front := n.Children.Front(); front != nil; front = front.Next() {
-		if front.Value.forEach(fn, depth+1) {
+		if front.Value.forEach(fn, depth+1, false) {
 			return
 		}
 	}

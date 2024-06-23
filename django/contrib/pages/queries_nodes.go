@@ -11,6 +11,18 @@ import (
 	"github.com/pkg/errors"
 )
 
+func setNodeSlug(node *models.PageNode) *models.PageNode {
+	node.Slug = strings.TrimSpace(node.Slug)
+	if node.Slug == "" {
+		node.Slug = slug.Make(node.Title)
+	} else {
+		node.Slug = slug.Make(node.Slug)
+	}
+
+	node.UrlPath = path.Join(node.UrlPath, node.Slug)
+	return node
+}
+
 func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
 	if node.Path != "" {
 		return fmt.Errorf("node path must be empty")
@@ -26,10 +38,7 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 		return fmt.Errorf("node title must not be empty")
 	}
 
-	node.Slug = strings.TrimSpace(node.Slug)
-	if node.Slug == "" {
-		node.Slug = slug.Make(node.Title)
-	}
+	node = setNodeSlug(node)
 
 	var urlPath = node.Slug
 	if !strings.HasPrefix(urlPath, "/") {
@@ -85,10 +94,7 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 		return fmt.Errorf("child title must not be empty")
 	}
 
-	child.Slug = strings.TrimSpace(child.Slug)
-	if child.Slug == "" {
-		child.Slug = slug.Make(child.Title)
-	}
+	child = setNodeSlug(child)
 
 	child.Path = parent.Path + buildPathPart(parent.Numchild)
 	child.UrlPath = path.Join(parent.UrlPath, child.Slug)
@@ -175,8 +181,8 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 	for i, descendant := range nodes {
 		descendant := descendant
 		descendant.Path = newParent.Path + descendant.Path[node.Depth*STEP_LEN:]
-		descendant.UrlPath = newParent.UrlPath + descendant.UrlPath[len(node.UrlPath):]
 		descendant.Depth = (newParent.Depth + descendant.Depth + 1) - node.Depth
+		descendant.UrlPath = path.Join(newParent.UrlPath, descendant.Slug)
 		nodesPtr[i+1] = &descendant
 
 		if err = queries.UpdateNodePathAndDepth(ctx, descendant.Path, descendant.Depth, descendant.PK); err != nil {
@@ -239,6 +245,13 @@ func UpdateNode(q models.DBQuerier, ctx context.Context, node *models.PageNode) 
 	if node.PK == 0 {
 		return fmt.Errorf("node id must not be zero")
 	}
+
+	node.Title = strings.TrimSpace(node.Title)
+	if node.Title == "" {
+		return fmt.Errorf("node title must not be empty")
+	}
+
+	node = setNodeSlug(node)
 
 	var err = q.UpdateNode(
 		ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, node.Slug, int64(node.StatusFlags), node.PageID, node.ContentType, node.PK,
