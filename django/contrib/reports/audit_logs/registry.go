@@ -115,6 +115,7 @@ func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data 
 	if forObject != nil {
 		var (
 			contentType = contenttypes.NewContentType[interface{}](forObject)
+			pkgPath     = contentType.PkgPath()
 			filtersMap  = registry.filtersCtyp[entryType]
 			handlersMap = registry.handlersCtyp[entryType]
 			defs        = forObject.FieldDefs()
@@ -125,12 +126,12 @@ func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data 
 		entry.ObjID = primary.GetValue()
 		entry.CType = contentType
 
-		filtersForTyp, ok = filtersMap[contentType.PkgPath()]
+		filtersForTyp, ok = filtersMap[pkgPath]
 		if !ok {
 			filtersForTyp = make([]Filter, 0)
 		}
 
-		handlersForTyp, ok = handlersMap[contentType.PkgPath()]
+		handlersForTyp, ok = handlersMap[pkgPath]
 		if !ok {
 			handlersForTyp = make([]Handler, 0)
 		}

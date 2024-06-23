@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/views"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -100,11 +101,16 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 
 		page = pages[0]
 	} else {
-		for _, part := range pathParts {
-			page, err = querySet.GetNodeBySlug(context, part, page.Depth, page.Path)
+		var p models.PageNode
+		for i, part := range pathParts {
+			p, err = querySet.GetNodeBySlug(context, part, int64(i), page.Path)
 			if err != nil {
+				err = errors.Wrapf(
+					err, "Error getting page by slug (%d): %s/%s", i, page.Path, part,
+				)
 				break
 			}
+			page = p
 		}
 	}
 

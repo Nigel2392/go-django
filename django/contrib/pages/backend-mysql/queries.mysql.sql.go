@@ -243,9 +243,9 @@ func (q *Queries) GetNodeByID(ctx context.Context, id int64) (models.PageNode, e
 const getNodeBySlug = `-- name: GetNodeBySlug :one
 SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
-WHERE    slug  =    ? 
-AND      depth =    ?
-AND      path  LIKE CONCAT(?, '%')
+WHERE    LOWER(slug) = LOWER(?)
+AND      depth 		 = ?
+AND      path  		 LIKE CONCAT(?, '%')
 `
 
 func (q *Queries) GetNodeBySlug(ctx context.Context, slug string, depth int64, path interface{}) (models.PageNode, error) {

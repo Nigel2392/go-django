@@ -45,7 +45,7 @@ WHERE    id = sqlc.arg(id);
 -- name: GetNodeBySlug :one
 SELECT   *
 FROM     PageNode
-WHERE    slug  =    sqlc.arg(slug) 
+WHERE    LOWER(slug) = LOWER(sqlc.arg(slug))
 AND      depth =    sqlc.arg(depth)
 AND      path  LIKE CONCAT(sqlc.arg(path), '%');
 

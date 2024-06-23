@@ -3,6 +3,7 @@ package auditlogs
 import (
 	"errors"
 	"slices"
+	"sync"
 
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/elliotchance/orderedmap/v2"
@@ -21,22 +22,32 @@ type StorageBackend interface {
 
 type inMemoryStorageBackend struct {
 	entries *orderedmap.OrderedMap[uuid.UUID, LogEntry]
+	mu      *sync.RWMutex
 }
 
 func newInMemoryStorageBackend() StorageBackend {
 	return &inMemoryStorageBackend{
 		entries: orderedmap.NewOrderedMap[uuid.UUID, LogEntry](),
+		mu:      &sync.RWMutex{},
 	}
 }
 
 func (i *inMemoryStorageBackend) Store(logEntry LogEntry) (uuid.UUID, error) {
-	var id = logEntry.ID()
-	var typ = logEntry.Type()
-	var lvl = logEntry.Level()
-	var t = logEntry.Timestamp()
-	var objId = logEntry.ObjectID()
-	var cTyp = logEntry.ContentType()
-	var srcData = logEntry.Data()
+	i.mu.Lock()
+	defer i.mu.Unlock()
+	return i.store(logEntry)
+}
+
+func (i *inMemoryStorageBackend) store(logEntry LogEntry) (uuid.UUID, error) {
+	var (
+		id      = logEntry.ID()
+		typ     = logEntry.Type()
+		lvl     = logEntry.Level()
+		objId   = logEntry.ObjectID()
+		cTyp    = logEntry.ContentType()
+		srcData = logEntry.Data()
+		log     = logger.NameSpace(typ)
+	)
 
 	if id == uuid.Nil {
 		var newId = uuid.New()
@@ -45,28 +56,26 @@ func (i *inMemoryStorageBackend) Store(logEntry LogEntry) (uuid.UUID, error) {
 		}
 	}
 
-	var log = logger.NameSpace(typ)
-	var timeFormatted = t.Format("2006-01-02 15:04:05")
 	switch {
 	case objId != nil && srcData != nil:
 		log.Logf(
-			lvl, "<LogEntry: %s - %s> %s(%v) %v",
-			id, timeFormatted, cTyp.TypeName(), objId, srcData,
+			lvl, "<LogEntry: %s> %s(%v) %v",
+			id, cTyp.TypeName(), objId, srcData,
 		)
 	case objId != nil:
 		log.Logf(
-			lvl, "<LogEntry: %s - %s> %s(%v)",
-			id, timeFormatted, cTyp.TypeName(), objId,
+			lvl, "<LogEntry: %s> %s(%v)",
+			id, cTyp.TypeName(), objId,
 		)
 	case srcData != nil:
 		log.Logf(
-			lvl, "<LogEntry: %s - %s> %s %v",
-			id, timeFormatted, cTyp.TypeName(), srcData,
+			lvl, "<LogEntry: %s> %s %v",
+			id, cTyp.TypeName(), srcData,
 		)
 	default:
 		log.Logf(
-			lvl, "<LogEntry: %s - %s> %s",
-			id, timeFormatted, cTyp.TypeName(),
+			lvl, "<LogEntry: %s> %s",
+			id, cTyp.TypeName(),
 		)
 	}
 
@@ -75,9 +84,12 @@ func (i *inMemoryStorageBackend) Store(logEntry LogEntry) (uuid.UUID, error) {
 }
 
 func (i *inMemoryStorageBackend) StoreMany(logEntries []LogEntry) ([]uuid.UUID, error) {
+	i.mu.Lock()
+	defer i.mu.Unlock()
+
 	var ids = make([]uuid.UUID, 0, len(logEntries))
 	for _, entry := range logEntries {
-		var id, err = i.Store(entry)
+		var id, err = i.store(entry)
 		if err != nil {
 			return nil, err
 		}
@@ -87,14 +99,21 @@ func (i *inMemoryStorageBackend) StoreMany(logEntries []LogEntry) ([]uuid.UUID, 
 }
 
 func (i *inMemoryStorageBackend) Retrieve(id uuid.UUID) (LogEntry, error) {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
 	var entry, ok = i.entries.Get(id)
 	if !ok {
 		return nil, ErrLogEntryNotFound
 	}
+
 	return entry, nil
 }
 
 func (i *inMemoryStorageBackend) RetrieveMany(amount, offset int) ([]LogEntry, error) {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
 	var entries = make([]LogEntry, 0)
 	var keys = i.entries.Keys()
 	if offset >= len(keys) {
@@ -113,6 +132,9 @@ func (i *inMemoryStorageBackend) RetrieveMany(amount, offset int) ([]LogEntry, e
 }
 
 func (i *inMemoryStorageBackend) RetrieveTyped(logType string, amount, offset int) ([]LogEntry, error) {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
 	var entries = make([]LogEntry, 0)
 	var keys = i.entries.Keys()
 	for _, key := range keys {

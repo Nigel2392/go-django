@@ -243,7 +243,7 @@ func (q *Queries) GetNodeByID(ctx context.Context, id int64) (models.PageNode, e
 const getNodeBySlug = `-- name: GetNodeBySlug :one
 SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
 FROM     PageNode
-WHERE    slug  =    ?1 
+WHERE    LOWER(slug) = LOWER(?1)
 AND      depth =    ?2
 AND      path  LIKE CONCAT(?3, '%')
 `
