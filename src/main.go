@@ -44,7 +44,7 @@ func main() {
 					panic(err)
 				}
 				auditlogs.RegisterBackend(
-					auditlogs.NewSQLiteStorageBackend(db),
+					auditlogs_sqlite.NewSQLiteStorageBackend(db),
 				)
 				return db
 			}(),
