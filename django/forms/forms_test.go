@@ -66,7 +66,7 @@ func inputEquals(widget field, type_, name, value string, attrs map[string]strin
 	var matches = obj.FindAllStringSubmatch(html, -1)
 
 	if len(matches) != len(tokens) {
-		return fmt.Errorf("Number of attributes do not match: %d != expected (%d) %v", len(matches), len(tokens), matches)
+		return fmt.Errorf("Number of attributes do not match: %d != expected (%d) %v %v", len(matches), len(tokens), matches, tokens)
 	}
 
 	for _, token := range tokens {

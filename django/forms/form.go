@@ -147,6 +147,7 @@ type BaseForm struct {
 	InvalidDefaults map[string]interface{}
 	Files           map[string][]io.ReadCloser
 	Cleaned         map[string]interface{}
+	Defaults        map[string]interface{}
 
 	Validators      []func(Form) []error
 	OnValidFuncs    []func(Form)
@@ -181,8 +182,8 @@ func (f *BaseForm) DefaultValue(name string) interface{} {
 		}
 	}
 
-	if f.Initial != nil {
-		if v, ok := f.Initial[name]; ok {
+	if f.Defaults != nil {
+		if v, ok := f.Defaults[name]; ok {
 			return v
 		}
 	}
@@ -497,6 +498,7 @@ func (f *BaseForm) CleanedData() map[string]interface{} {
 
 func (f *BaseForm) SetInitial(initial map[string]interface{}) {
 	f.Initial = initial
+	f.Defaults = initial
 }
 
 func (f *BaseForm) SetPrefix(prefix string) {
@@ -531,6 +533,7 @@ func (f *BaseForm) Reset() {
 	f.InvalidDefaults = nil
 	f.Files = nil
 	f.Cleaned = nil
+	f.Defaults = nil
 }
 
 func (f *BaseForm) FullClean() {
@@ -540,6 +543,10 @@ func (f *BaseForm) FullClean() {
 
 	if f.Cleaned == nil {
 		f.Cleaned = make(map[string]interface{})
+	}
+
+	if f.Defaults == nil {
+		f.Defaults = make(map[string]interface{})
 	}
 
 	var err error
@@ -607,6 +614,7 @@ func (f *BaseForm) FullClean() {
 			continue
 		}
 
+		f.Defaults[k] = data
 		f.Cleaned[k] = data
 	}
 }
