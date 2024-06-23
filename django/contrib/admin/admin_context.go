@@ -21,9 +21,10 @@ type BreadCrumb struct {
 }
 
 type Action struct {
-	Icon  string
-	Title string
-	URL   string
+	Icon   string
+	Target string
+	Title  string
+	URL    string
 }
 
 type PageOptions struct {

@@ -64,20 +64,23 @@ class EditorJSWidget {
 
         var savedForm = false;
         var form = this.element.closest('form') as HTMLFormElement;
-        form.addEventListener('submit', (e: SubmitEvent) => {
-            if (savedForm) {
-                return;
-            }
-
-            e.preventDefault();
-            e.stopPropagation();
-
-            this.editor.save().then((outputData) => {
-                this.element.value = JSON.stringify(outputData);
-                savedForm = true;
-                form.submit();
-            }).catch((reason) => {
-                alert(`Failed to save EditorJS data: ${reason}`);
+        var formButtons = form.querySelectorAll('[type="submit"]');
+        formButtons.forEach((button) => {
+            button.addEventListener('click', (e) => {
+                if (savedForm) {
+                    return;
+                }
+    
+                e.preventDefault();
+                e.stopPropagation();
+    
+                this.editor.save().then((outputData) => {
+                    this.element.value = JSON.stringify(outputData);
+                    savedForm = true;
+                    (e.target as any).click();
+                }).catch((reason) => {
+                    alert(`Failed to save EditorJS data: ${reason}`);
+                });
             });
         });
 

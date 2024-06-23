@@ -22,7 +22,7 @@ const (
 )
 
 func (f StatusFlag) Is(flag StatusFlag) bool {
-	return f&flag != 0
+	return f&flag == flag
 }
 
 type PageNode struct {

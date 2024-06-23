@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/django/contrib/pages/models"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/views"
 	"github.com/pkg/errors"
@@ -26,7 +27,7 @@ func Serve(allowedMethods ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var view = &PageServeView{}
 		if err := views.Invoke(view, w, r, allowedMethods...); err != nil {
-			logger.Errorf("Error invoking view: %v\n", err)
+			logger.Errorf("Error invoking view: %v", err)
 		}
 	})
 }
@@ -95,7 +96,7 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 			goto checkError
 		}
 		if len(pages) == 0 {
-			http.Error(w, "No pages have been created", http.StatusNotFound)
+			pageNotFound(w, req, nil, pathParts)
 			return
 		}
 
@@ -116,20 +117,28 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 
 checkError:
 	if err != nil {
-		http.Error(w, "Page not found", http.StatusNotFound)
-		logger.Errorf("Error retrieving page: %v (%v)\n", err, pathParts)
+		pageNotFound(w, req, err, pathParts)
 		return
 	}
 
 	if page.ID() == 0 {
-		http.Error(w, "Page not found", http.StatusNotFound)
+		err = errors.New("No page found, ID is 0")
+		pageNotFound(w, req, err, pathParts)
+		return
+	}
+
+	if page.StatusFlags.Is(models.StatusFlagDeleted) ||
+		page.StatusFlags.Is(models.StatusFlagHidden) ||
+		!page.StatusFlags.Is(models.StatusFlagPublished) {
+		err = errors.New("Page is not published")
+		pageNotFound(w, req, err, pathParts)
 		return
 	}
 
 	var definition = DefinitionForType(page.ContentType)
 	if definition == nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		logger.Errorf("No definition found for page: %+v\n", page)
+		err = errors.New("No definition found for page")
+		pageNotFound(w, req, err, pathParts)
 		return
 	}
 
@@ -137,8 +146,7 @@ checkError:
 		context, page,
 	)
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		logger.Errorf("Error getting specific page: %v\n", err)
+		pageNotFound(w, req, err, pathParts)
 		return
 	}
 
@@ -146,9 +154,9 @@ checkError:
 	var handler, ok = specific.(http.Handler)
 
 	if view == nil && !ok {
-		logger.Fatalf(
-			500, "view is nil, cannot serve page",
-		)
+		err = errors.New("No view found for page")
+		pageNotFound(w, req, err, pathParts)
+		return
 	}
 
 	if ok {
@@ -162,7 +170,7 @@ checkError:
 	}
 	if err != nil {
 		http.Error(w, "Internal server error", http.StatusInternalServerError)
-		logger.Errorf("Error getting context: %v\n", err)
+		logger.Errorf("Error getting context: %v", err)
 		return
 	}
 
@@ -189,7 +197,7 @@ checkError:
 
 		if baseKey == "" && template == "" && !rViewOk {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			logger.Errorf("No template or base key provided for rendering, nor a plain render method found\n")
+			logger.Errorf("No template or base key provided for rendering, nor a plain render method found")
 			return
 		}
 
@@ -199,7 +207,7 @@ checkError:
 
 		if err := r.Render(w, req, template, specific, viewCtx); err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			logger.Errorf("Error rendering page: %v\n", err)
+			logger.Errorf("Error rendering page: %v", err)
 			return
 		}
 		return
@@ -209,12 +217,22 @@ renderView:
 	if rViewOk {
 		if err := rView.Render(w, req, specific, viewCtx); err != nil {
 			http.Error(w, "Internal server error", http.StatusInternalServerError)
-			logger.Errorf("Error rendering page: %v\n", err)
+			logger.Errorf("Error rendering page: %v", err)
 			return
 		}
 		return
 	}
 
 	http.Error(w, "Internal server error", http.StatusInternalServerError)
-	logger.Errorf("No render method found for view (%T)\n", view)
+	logger.Errorf("No render method found for page")
+}
+
+func pageNotFound(_ http.ResponseWriter, _ *http.Request, err error, pathParts []string) {
+	if err != nil {
+		logger.Errorf("Error retrieving page: %v (%v)", err, pathParts)
+	}
+	except.Fail(
+		http.StatusNotFound,
+		"Page not found: %v", pathParts,
+	)
 }

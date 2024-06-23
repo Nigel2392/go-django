@@ -218,7 +218,40 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 		OldParent: &oldParent,
 		NewParent: newParent,
 	})
+}
 
+func PublishNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
+	if node.Path == "" {
+		return fmt.Errorf("node path must not be empty")
+	}
+
+	if node.Depth == 0 {
+		return fmt.Errorf("node is a root node")
+	}
+
+	if node.StatusFlags.Is(models.StatusFlagPublished) {
+		return nil
+	}
+
+	node.StatusFlags |= models.StatusFlagPublished
+	return q.UpdateNodeStatusFlags(ctx, int64(models.StatusFlagPublished), node.PK)
+}
+
+func UnpublishNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
+	if node.Path == "" {
+		return fmt.Errorf("node path must not be empty")
+	}
+
+	if node.Depth == 0 {
+		return fmt.Errorf("node is a root node")
+	}
+
+	if !node.StatusFlags.Is(models.StatusFlagPublished) {
+		return nil
+	}
+
+	node.StatusFlags &^= models.StatusFlagPublished
+	return q.UpdateNodeStatusFlags(ctx, int64(node.StatusFlags), node.PK)
 }
 
 func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (v models.PageNode, err error) {

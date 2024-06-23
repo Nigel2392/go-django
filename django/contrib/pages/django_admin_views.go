@@ -112,13 +112,14 @@ func getPageActions(_ *http.Request, p *models.PageNode) []admin.Action {
 		return actions
 	}
 
-	var viewLiveAction = admin.Action{
-		Title: fields.T("View Live"),
-		URL:   path.Join(pageApp.routePrefix, p.UrlPath),
-		Icon:  "icon-arrow-right",
-	}
-
-	actions = append(actions, viewLiveAction)
+	actions = append(actions, admin.Action{
+		Icon:   "icon-view",
+		Target: "_blank",
+		Title:  fields.T("View Live"),
+		URL: path.Join(
+			pageApp.routePrefix, p.UrlPath,
+		),
+	})
 
 	return actions
 
@@ -434,6 +435,18 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 	adminForm.Load()
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) (err error) {
+
+		var publishPage = r.FormValue("publish-page") == "publish-page" && permissions.HasObjectPermission(
+			r, p, "pages:publish",
+		)
+
+		var ref = d.(Page).Reference()
+		if publishPage {
+			if !ref.StatusFlags.Is(models.StatusFlagPublished) {
+				ref.StatusFlags |= models.StatusFlagPublished
+			}
+		}
+
 		if page, ok := d.(SaveablePage); ok {
 			err = SavePage(QuerySet(), ctx, p, page)
 		} else {
@@ -562,12 +575,31 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
 
+		var publishPage = r.FormValue("publish-page") == "publish-page" && permissions.HasObjectPermission(
+			r, p, "pages:publish",
+		)
+		var unpublishPage = r.FormValue("unpublish-page") == "unpublish-page" && permissions.HasObjectPermission(
+			r, p, "pages:publish",
+		)
+
 		if !adminForm.HasChanged() {
 			logger.Warnf("No changes detected for page: %s", page.Reference().Title)
 			return nil
 		}
 
 		if page, ok := d.(SaveablePage); ok {
+
+			var ref = page.Reference()
+			if publishPage {
+				if !ref.StatusFlags.Is(models.StatusFlagPublished) {
+					ref.StatusFlags |= models.StatusFlagPublished
+				}
+			} else if unpublishPage {
+				if ref.StatusFlags.Is(models.StatusFlagPublished) {
+					ref.StatusFlags &^= models.StatusFlagPublished
+				}
+			}
+
 			err = UpdatePage(QuerySet(), ctx, page)
 		} else {
 			var n = d.(*models.PageNode)
@@ -599,6 +631,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				context.Set("app", a)
 				context.Set("model", m)
 				context.Set("page_object", page)
+				context.Set("is_published", p.StatusFlags.Is(models.StatusFlagPublished))
 				var backURL string
 				if q := req.URL.Query().Get("next"); q != "" {
 					backURL = q

@@ -52,7 +52,7 @@
                         {{ if $actions }}
                             <div class="actions">
                                 {{ range $action := $actions }}
-                                    <a class="actions__action" href="{{ $action.URL }}">
+                                    <a class="actions__action" href="{{ $action.URL }}" {{ if $action.Target }}target="{{ $action.Target }}"{{ end }}>
                                         {{ if $action.Icon }}
                                             <span class="actions__action--icon">
                                                 {{ icon $action.Icon }}

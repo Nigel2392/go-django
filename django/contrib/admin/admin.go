@@ -118,8 +118,8 @@ func NewAppConfig() django.AppConfig {
 	AdminSite.Ready = func() error {
 
 		if err := icons.Register(staticFS,
-			"admin/images/logo.svg",
-			"admin/images/arrow-right.svg",
+			"admin/icons/view.svg",
+			"admin/icons/no-view.svg",
 		); err != nil {
 			panic(err)
 		}

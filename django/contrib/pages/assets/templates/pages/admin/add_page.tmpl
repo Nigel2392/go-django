@@ -11,7 +11,14 @@
         {{ include $Form "admin/shared/forms/form.tmpl" }}
 
         <div class="form-buttons">
-            <input class="button secondary" type="submit" value="Submit">
+            <button class="button secondary" type="submit">
+                {{ T "Save" }}
+            </button>
+            {{ if (has_perm .Request "pages:publish") }}
+                <button class="button secondary" type="submit" name="publish-page" value="publish-page">
+                    {{ T "Save and Publish" }}
+                </button>
+            {{ end }}
             {{ $BackURL := (.Get "BackURL") }}
             {{ if $BackURL }}
                 <a class="button warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>

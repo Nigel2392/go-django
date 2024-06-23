@@ -475,10 +475,10 @@ func (a *Application) Serve() error {
 	}
 
 	if TLSCert != "" && TLSKey != "" {
-		a.Log.Logf(logger.INF, "Listening on https://%s\n", addr)
+		a.Log.Logf(logger.INF, "Listening on https://%s", addr)
 		return server.ListenAndServeTLS(TLSCert, TLSKey)
 	} else {
-		a.Log.Logf(logger.INF, "Listening on http://%s\n", addr)
+		a.Log.Logf(logger.INF, "Listening on http://%s", addr)
 		return server.ListenAndServe()
 	}
 }
