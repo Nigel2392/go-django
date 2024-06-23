@@ -18,6 +18,11 @@ func SerializeRow(l LogEntry) (id uuid.UUID, typeStr string, level int, timestam
 	timestamp = l.Timestamp()
 	contentType = l.ContentType()
 	objectID = nil
+
+	if id == uuid.Nil {
+		id = uuid.New()
+	}
+
 	var objId = l.ObjectID()
 	if objId != nil {
 		var b = new(bytes.Buffer)
@@ -57,9 +62,9 @@ func ScanRow(row interface{ Scan(dest ...any) error }) (LogEntry, error) {
 		typeStr     string
 		level       int
 		timestamp   time.Time
-		userId      string
-		objectID    string
-		data        string
+		userId      []byte
+		objectID    []byte
+		data        []byte
 		contentType = contenttypes.BaseContentType[any]{}
 	)
 

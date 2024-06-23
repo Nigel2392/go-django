@@ -38,6 +38,8 @@ templ Heading6(text string) {
 }
 
 templ Header(lvel int, headingText, subText string, components ...templ.Component) {
+    {{ subtitleLevel := lvel + 2 }}
+    {{ if subtitleLevel > 6 { subtitleLevel = 6 } }}
     <header class="header">
         if len(components) > 0 {
             <div class="header-content-row">
@@ -59,7 +61,7 @@ templ Header(lvel int, headingText, subText string, components ...templ.Componen
         }
         if subText != "" {
             <div class="header-sub-content">
-                @Heading(uint8(lvel + 1), subText)
+                @Heading(uint8(subtitleLevel), subText)
             </div>
         }
     </header>

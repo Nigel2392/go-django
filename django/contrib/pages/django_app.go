@@ -231,6 +231,14 @@ func NewAppConfig() *PageAppConfig {
 			"/<<page_id>>/edit", pageHandler(editPageHandler), "edit",
 		)
 
+		// Unpublish page
+		pagesRoute.Get(
+			"/<<page_id>>/unpublish", pageHandler(unpublishPageHandler), "unpublish",
+		)
+		pagesRoute.Post(
+			"/<<page_id>>/unpublish", pageHandler(unpublishPageHandler), "unpublish",
+		)
+
 		//// deleteURL for the pages admin site.
 		//pagesRoute.Get(
 		//	"<<page_id>>/delete", pageHandler(deletePageHandler), "delete",

@@ -14,9 +14,9 @@ import (
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
 	"github.com/Nigel2392/django/contrib/blocks"
 	"github.com/Nigel2392/django/contrib/pages"
-	_ "github.com/Nigel2392/django/contrib/pages/backend-mysql"
+	_ "github.com/Nigel2392/django/contrib/pages/backend-sqlite"
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
-	auditlogs_sqlite "github.com/Nigel2392/django/contrib/reports/audit_logs/audit_logs_mysql"
+	auditlogs_sqlite "github.com/Nigel2392/django/contrib/reports/audit_logs/audit_logs_sqlite"
 	"github.com/Nigel2392/django/contrib/session"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/errs"
@@ -47,7 +47,7 @@ func main() {
 					panic(err)
 				}
 				auditlogs.RegisterBackend(
-					auditlogs_sqlite.NewMySQLStorageBackend(db),
+					auditlogs_sqlite.NewSQLiteStorageBackend(db),
 				)
 				return db
 			}(),

@@ -225,10 +225,6 @@ func PublishNode(q models.Querier, ctx context.Context, node *models.PageNode) e
 		return fmt.Errorf("node path must not be empty")
 	}
 
-	if node.Depth == 0 {
-		return fmt.Errorf("node is a root node")
-	}
-
 	if node.StatusFlags.Is(models.StatusFlagPublished) {
 		return nil
 	}
@@ -237,21 +233,55 @@ func PublishNode(q models.Querier, ctx context.Context, node *models.PageNode) e
 	return q.UpdateNodeStatusFlags(ctx, int64(models.StatusFlagPublished), node.PK)
 }
 
-func UnpublishNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
+func UnpublishNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, unpublishChildren bool) error {
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
 	}
 
-	if node.Depth == 0 {
-		return fmt.Errorf("node is a root node")
+	prepped, err := PrepareQuerySet(ctx, q.DB())
+	if prepped != nil {
+		defer prepped.Close()
+	}
+	if err != nil {
+		return err
 	}
 
-	if !node.StatusFlags.Is(models.StatusFlagPublished) {
-		return nil
+	tx, err := prepped.BeginTx(ctx, nil)
+	if err != nil {
+		return err
 	}
 
-	node.StatusFlags &^= models.StatusFlagPublished
-	return q.UpdateNodeStatusFlags(ctx, int64(node.StatusFlags), node.PK)
+	defer tx.Rollback()
+
+	var queries = prepped.WithTx(tx)
+
+	if node.StatusFlags.Is(models.StatusFlagPublished) {
+		node.StatusFlags &^= models.StatusFlagPublished
+	}
+
+	if unpublishChildren {
+		descendants, err := queries.GetDescendants(ctx, node.Path, node.Depth, 1000, 0)
+		if err != nil {
+			return err
+		}
+
+		var nodes = make([]*models.PageNode, len(descendants)+1)
+		for i := range descendants {
+			var d = descendants[i]
+			if d.StatusFlags.Is(models.StatusFlagPublished) {
+				d.StatusFlags &^= models.StatusFlagPublished
+			}
+			nodes[i] = &d
+		}
+
+		nodes[len(nodes)-1] = node
+
+		if err := queries.UpdateNodes(ctx, nodes); err != nil {
+			return err
+		}
+	}
+
+	return tx.Commit()
 }
 
 func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (v models.PageNode, err error) {

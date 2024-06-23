@@ -210,6 +210,10 @@ func Header(lvel int, headingText, subText string, components ...templ.Component
 			templ_7745c5c3_Var8 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
+		subtitleLevel := lvel + 2
+		if subtitleLevel > 6 {
+			subtitleLevel = 6
+		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<header class=\"header\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -264,7 +268,7 @@ func Header(lvel int, headingText, subText string, components ...templ.Component
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = Heading(uint8(lvel+1), subText).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = Heading(uint8(subtitleLevel), subText).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

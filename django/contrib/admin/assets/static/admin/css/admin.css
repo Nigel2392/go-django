@@ -212,7 +212,10 @@ a:hover {
     margin-top: auto;
     margin-bottom: 0;
 }
-
+.header-sub-content .heading__title {
+    text-wrap: balance;
+    white-space: pre-line;
+}
 .view-header {
     display: flex;
     flex-direction: column;

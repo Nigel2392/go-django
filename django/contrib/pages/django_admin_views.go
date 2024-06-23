@@ -112,14 +112,16 @@ func getPageActions(_ *http.Request, p *models.PageNode) []admin.Action {
 		return actions
 	}
 
-	actions = append(actions, admin.Action{
-		Icon:   "icon-view",
-		Target: "_blank",
-		Title:  fields.T("View Live"),
-		URL: path.Join(
-			pageApp.routePrefix, p.UrlPath,
-		),
-	})
+	if p.StatusFlags.Is(models.StatusFlagPublished) {
+		actions = append(actions, admin.Action{
+			Icon:   "icon-view",
+			Target: "_blank",
+			Title:  fields.T("View Live"),
+			URL: path.Join(
+				pageApp.routePrefix, p.UrlPath,
+			),
+		})
+	}
 
 	return actions
 
@@ -573,16 +575,22 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 	adminForm.Load()
 
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var publishPage = r.FormValue("publish-page") == "publish-page" && permissions.HasObjectPermission(
+		r, p, "pages:publish",
+	)
+
+	var unpublishPage = r.FormValue("unpublish-page") == "unpublish-page" && permissions.HasObjectPermission(
+		r, p, "pages:publish",
+	)
+
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
 
-		var publishPage = r.FormValue("publish-page") == "publish-page" && permissions.HasObjectPermission(
-			r, p, "pages:publish",
-		)
-		var unpublishPage = r.FormValue("unpublish-page") == "unpublish-page" && permissions.HasObjectPermission(
-			r, p, "pages:publish",
-		)
-
-		if !adminForm.HasChanged() {
+		if !adminForm.HasChanged() && !publishPage && !unpublishPage {
 			logger.Warnf("No changes detected for page: %s", page.Reference().Title)
 			return nil
 		}
@@ -590,14 +598,12 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		if page, ok := d.(SaveablePage); ok {
 
 			var ref = page.Reference()
-			if publishPage {
-				if !ref.StatusFlags.Is(models.StatusFlagPublished) {
-					ref.StatusFlags |= models.StatusFlagPublished
-				}
-			} else if unpublishPage {
-				if ref.StatusFlags.Is(models.StatusFlagPublished) {
-					ref.StatusFlags &^= models.StatusFlagPublished
-				}
+			if publishPage && !ref.StatusFlags.Is(models.StatusFlagPublished) {
+				ref.StatusFlags |= models.StatusFlagPublished
+			}
+
+			if ref.Numchild == 0 && unpublishPage && ref.StatusFlags.Is(models.StatusFlagPublished) {
+				ref.StatusFlags &^= models.StatusFlagPublished
 			}
 
 			err = UpdatePage(QuerySet(), ctx, page)
@@ -666,8 +672,83 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]) {
 			var instance = form.Instance()
 			assert.False(instance == nil, "instance is nil after form submission")
-			var listViewURL = django.Reverse("admin:pages:list", instance.(Page).Reference().ID())
-			http.Redirect(w, r, listViewURL, http.StatusSeeOther)
+			var page = instance.(Page)
+			var ref = page.Reference()
+			var redirectURL string
+			if unpublishPage && ref.Numchild > 0 && ref.StatusFlags.Is(models.StatusFlagPublished) {
+				redirectURL = django.Reverse("admin:pages:unpublish", ref.ID())
+			} else {
+				redirectURL = django.Reverse("admin:pages:list", ref.ID())
+			}
+			http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+		},
+	}
+
+	if err := views.Invoke(view, w, r); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+}
+
+func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+	if !permissions.HasObjectPermission(r, p, "pages:publish") {
+		auth.Fail(
+			http.StatusForbidden,
+			"User does not have permission to unpublish this page",
+		)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err != nil {
+			http.Error(w, "Failed to parse form", http.StatusInternalServerError)
+			return
+		}
+
+		var unpublishChildren = r.FormValue("unpublish-children") == "unpublish-children"
+		if err := UnpublishNode(QuerySet(), r.Context(), p, unpublishChildren); err != nil {
+			except.Fail(500, err)
+			return
+		}
+
+		var _, err = auditlogs.Log("pages:unpublish", logger.WRN, p, map[string]interface{}{
+			"unpublish_children": unpublishChildren,
+			"page_id":            p.ID(),
+			"label":              p.Title,
+		})
+		if err != nil {
+			except.Fail(500, err)
+			return
+		}
+
+		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
+		return
+	}
+
+	var view = &views.BaseView{
+		AllowedMethods:  []string{http.MethodGet},
+		BaseTemplateKey: admin.BASE_KEY,
+		TemplateName:    "pages/admin/unpublish_page.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = admin.NewContext(req, admin.AdminSite, nil)
+
+			context.Set("app", a)
+			context.Set("model", m)
+			context.Set("page_object", p)
+
+			var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
+			if err != nil {
+				return nil, err
+			}
+
+			context.SetPage(admin.PageOptions{
+				TitleFn:     fields.S("Unpublish %q", p.Title),
+				SubtitleFn:  fields.S("Unpublishing a page will remove it from the live site\nOptionally, you can unpublish all child pages"),
+				BreadCrumbs: breadcrumbs,
+				Actions:     getPageActions(r, p),
+			})
+
+			return context, nil
 		},
 	}
 
