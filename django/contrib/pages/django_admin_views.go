@@ -69,7 +69,7 @@ func getPageBreadcrumbs(r *http.Request, p *models.PageNode, urlForLast bool) ([
 	var breadcrumbs = make([]admin.BreadCrumb, 0, p.Depth+2)
 	if p.Depth > 0 {
 		var ancestors, err = AncestorNodes(
-			QuerySet(), r.Context(), p.Path, int(p.Depth),
+			QuerySet(), r.Context(), p.Path, int(p.Depth)+1,
 		)
 		if err != nil {
 			return nil, err
@@ -404,7 +404,6 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 	adminForm.Load()
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) (err error) {
-
 		if page, ok := d.(SaveablePage); ok {
 			err = SavePage(QuerySet(), ctx, p, page)
 		} else {
@@ -531,6 +530,12 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	adminForm.Load()
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
+
+		if !adminForm.HasChanged() {
+			logger.Warnf("No changes detected for page: %s", page.Reference().Title)
+			return nil
+		}
+
 		if page, ok := d.(SaveablePage); ok {
 			err = UpdatePage(QuerySet(), ctx, page)
 		} else {

@@ -120,6 +120,10 @@ func (i *BaseField) HelpText() string {
 	return ""
 }
 
+func (i *BaseField) HasChanged(initial, data interface{}) bool {
+	return initial != data
+}
+
 func (i *BaseField) Clean(value interface{}) (interface{}, error) {
 	return value, nil
 }

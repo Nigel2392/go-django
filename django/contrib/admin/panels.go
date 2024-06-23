@@ -189,10 +189,10 @@ func (a *AdminForm[T]) Ordering(o []string) {
 func (a *AdminForm[T]) FieldOrder() []string {
 	return a.Form.FieldOrder()
 }
-func (a *AdminForm[T]) Field(name string) fields.Field {
+func (a *AdminForm[T]) Field(name string) (fields.Field, bool) {
 	return a.Form.Field(name)
 }
-func (a *AdminForm[T]) Widget(name string) widgets.Widget {
+func (a *AdminForm[T]) Widget(name string) (widgets.Widget, bool) {
 	return a.Form.Widget(name)
 }
 func (a *AdminForm[T]) Fields() []fields.Field {
@@ -238,7 +238,8 @@ func (a *AdminForm[T]) BoundForm() forms.BoundForm {
 		var fields []fields.Field
 		if len(a.FieldOrder()) > 0 {
 			for _, name := range a.FieldOrder() {
-				fields = append(fields, a.Field(name))
+				var f, _ = a.Field(name)
+				fields = append(fields, f)
 			}
 		} else {
 			fields = a.Fields()
@@ -267,6 +268,9 @@ func (a *AdminForm[T]) ErrorList() []error {
 func (a *AdminForm[T]) WithData(data url.Values, files map[string][]io.ReadCloser, r *http.Request) forms.Form {
 	return a.Form.WithData(data, files, r)
 }
+func (a *AdminForm[T]) InitialData() map[string]interface{} {
+	return a.Form.InitialData()
+}
 func (a *AdminForm[T]) CleanedData() map[string]interface{} {
 	return a.Form.CleanedData()
 }
@@ -277,7 +281,31 @@ func (a *AdminForm[T]) Validate() {
 	a.Form.Validate()
 }
 func (a *AdminForm[T]) HasChanged() bool {
-	return a.Form.HasChanged()
+	var (
+		fields  = make([]string, 0)
+		fieldsM = make(map[string]struct{})
+		initial = a.Form.InitialData()
+		cleaned = a.Form.CleanedData()
+	)
+
+	for _, panel := range a.Panels {
+		for _, field := range panel.Fields() {
+			if _, ok := fieldsM[field]; !ok {
+				fields = append(fields, field)
+				fieldsM[field] = struct{}{}
+			}
+		}
+	}
+
+	for _, fieldName := range fields {
+		var f, _ = a.Form.Field(fieldName)
+		if !f.ReadOnly() && f.HasChanged(initial[fieldName], cleaned[fieldName]) {
+			return true
+		}
+	}
+
+	return false
+
 }
 func (a *AdminForm[T]) IsValid() bool {
 	return a.Form.IsValid()

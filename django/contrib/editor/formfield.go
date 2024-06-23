@@ -1,6 +1,8 @@
 package editor
 
 import (
+	"reflect"
+
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/widgets"
 )
@@ -30,6 +32,10 @@ func (e *EditorJSFormField) Widget() widgets.Widget {
 		return e.widgetOverride(e.Features...)
 	}
 	return NewEditorJSWidget(e.Features...)
+}
+
+func (e *EditorJSFormField) HasChanged(initial, data interface{}) bool {
+	return reflect.DeepEqual(initial, data)
 }
 
 func EditorJSField(features []string, opts ...func(fields.Field)) fields.Field {

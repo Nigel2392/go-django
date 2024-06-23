@@ -2,6 +2,8 @@ package blog
 
 import (
 	"context"
+	"fmt"
+	"net/http"
 
 	"github.com/Nigel2392/django/contrib/editor"
 	"github.com/Nigel2392/django/contrib/pages/models"
@@ -13,6 +15,11 @@ import (
 type BlogPage struct {
 	*models.PageNode
 	Editor *editor.EditorJSBlockData
+}
+
+func (b *BlogPage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// Serve the blog page here.
+	fmt.Fprintf(w, "Blog page: %s\n", b.Title)
 }
 
 func (b *BlogPage) Save(ctx context.Context) error {

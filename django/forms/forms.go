@@ -60,8 +60,8 @@ type Form interface {
 	Ordering([]string)
 	FieldOrder() []string
 
-	Field(name string) fields.Field
-	Widget(name string) widgets.Widget
+	Field(name string) (fields.Field, bool)
+	Widget(name string) (widgets.Widget, bool)
 	Fields() []fields.Field
 	Widgets() []widgets.Widget
 	AddField(name string, field fields.Field)
@@ -73,6 +73,7 @@ type Form interface {
 	ErrorList() []error
 
 	WithData(data url.Values, files map[string][]io.ReadCloser, r *http.Request) Form
+	InitialData() map[string]interface{}
 	CleanedData() map[string]interface{}
 
 	FullClean()

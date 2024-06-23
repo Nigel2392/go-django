@@ -18,6 +18,7 @@ type Field interface {
 	HelpText() string
 	Validate(value interface{}) []error
 	Widget() widgets.Widget
+	HasChanged(initial, data interface{}) bool
 
 	Clean(value interface{}) (interface{}, error)
 	ValueToForm(value interface{}) interface{}

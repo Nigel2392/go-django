@@ -475,16 +475,16 @@ func (f *BaseForm) Widgets() []widgets.Widget {
 	return widgets
 }
 
-func (f *BaseForm) Field(name string) fields.Field {
-	var ret, ok = f.FormFields.Get(name)
-	assert.True(ok, "The input %s does not exist.", name)
-	return ret
+func (f *BaseForm) Field(name string) (fields.Field, bool) {
+	return f.FormFields.Get(name)
 }
 
-func (f *BaseForm) Widget(name string) widgets.Widget {
-	var ret, ok = f.FormWidgets.Get(name)
-	assert.True(ok, "The widget %s does not exist.", name)
-	return ret
+func (f *BaseForm) Widget(name string) (widgets.Widget, bool) {
+	return f.FormWidgets.Get(name)
+}
+
+func (f *BaseForm) InitialData() map[string]interface{} {
+	return f.Initial
 }
 
 func (f *BaseForm) CleanedData() map[string]interface{} {
@@ -607,7 +607,6 @@ func (f *BaseForm) FullClean() {
 			continue
 		}
 
-		f.Initial[k] = data
 		f.Cleaned[k] = data
 	}
 }
@@ -728,21 +727,26 @@ loop:
 
 func (f *BaseForm) HasChanged() bool {
 	var changed bool = false
-	for head := f.FormWidgets.Front(); head != nil; head = head.Next() {
+
+	for head := f.FormFields.Front(); head != nil; head = head.Next() {
 		var (
-			k = head.Key
-			v = head.Value
+			k     = head.Key
+			field = head.Value
 		)
+		var v, ok = f.FormWidgets.Get(k)
+		if !ok {
+			v = field.Widget()
+		}
 
 		if _, ok := f.Initial[k]; !ok {
-			changed = v.ValueOmittedFromData(f.Raw, f.Files, f.prefix(k))
-			// If the value is omitted from the data, we don't consider it to have changed.
-			return !changed
+			var omitted = v.ValueOmittedFromData(f.Raw, f.Files, f.prefix(k))
+			if !omitted {
+				return true
+			}
 		}
 
 		if f.Initial[k] != f.Cleaned[k] {
-			changed = true
-			return false
+			return true
 		}
 	}
 

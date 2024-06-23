@@ -155,8 +155,6 @@ func (e *editorRegistry) ValueToForm(data *EditorJSBlockData) *EditorJSData {
 			continue
 		}
 
-		fmt.Println(block.Type())
-
 		blockList = append(blockList, block.Data())
 	}
 

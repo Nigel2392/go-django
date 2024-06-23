@@ -119,6 +119,9 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 
 	var initial = make(map[string]interface{})
 	for _, def := range f.InstanceFields {
+		if !def.AllowEdit() {
+			continue
+		}
 		var v = def.GetValue()
 		var n = def.Name()
 		if fields.IsZero(v) {
@@ -225,6 +228,9 @@ func (f *BaseModelForm[T]) Load() {
 	if !f.modelIsNil(model) {
 		for _, def := range f.InstanceFields {
 			var n = def.Name()
+			if !def.AllowEdit() {
+				continue
+			}
 			if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, n) {
 				continue
 			}
@@ -233,6 +239,9 @@ func (f *BaseModelForm[T]) Load() {
 	} else {
 		for _, def := range f.Definition.Fields() {
 			var n = def.Name()
+			if !def.AllowEdit() {
+				continue
+			}
 			if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, n) {
 				continue
 			}

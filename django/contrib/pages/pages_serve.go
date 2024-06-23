@@ -143,11 +143,17 @@ checkError:
 	}
 
 	var view = definition.PageView()
+	var handler, ok = specific.(http.Handler)
 
-	if view == nil {
+	if view == nil && !ok {
 		logger.Fatalf(
 			500, "view is nil, cannot serve page",
 		)
+	}
+
+	if ok {
+		handler.ServeHTTP(w, req)
+		return
 	}
 
 	var viewCtx ctx.Context
