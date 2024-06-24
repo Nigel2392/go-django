@@ -460,6 +460,9 @@ func (a *Application) Initialize() error {
 	switch {
 	case errors.Is(err, command.ErrNoCommand):
 		return nil
+	case errors.Is(err, command.ErrUnknownCommand):
+		a.Log.Warnf("Error running command: %s", err)
+		return nil
 	case errors.Is(err, flag.ErrHelp):
 		os.Exit(0)
 		return nil

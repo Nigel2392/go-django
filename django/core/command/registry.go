@@ -42,7 +42,7 @@ func (r *commandRegistry) ExecCommand(args []string) error {
 		cmd:    cmd,
 	}
 
-	var flagSet = flag.NewFlagSet(cmdName, flag.ExitOnError)
+	var flagSet = flag.NewFlagSet(cmdName, flag.ContinueOnError)
 	var err = cmd.AddFlags(m, flagSet)
 	if err != nil {
 		return errors.Wrapf(
