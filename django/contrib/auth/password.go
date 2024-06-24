@@ -14,6 +14,7 @@ const (
 	ChrFlagDigit
 	ChrFlagLower
 	ChrFlagUpper
+	ChrFlagAll = ChrFlagSpecial | ChrFlagDigit | ChrFlagLower | ChrFlagUpper
 )
 
 type PasswordCharValidator struct {

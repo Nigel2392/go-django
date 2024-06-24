@@ -22,9 +22,3 @@ type MenuItem interface {
 	// The name should be unique
 	Name() string
 }
-
-type Items interface {
-	All() []MenuItem
-	Append(MenuItem)
-	Delete(name string) (ok bool)
-}

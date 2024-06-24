@@ -6,6 +6,7 @@ import (
 	"github.com/Nigel2392/django"
 	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
+	"github.com/Nigel2392/django/core/command"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/mux"
 )
@@ -13,6 +14,7 @@ import (
 type AppConfig struct {
 	AppName        string
 	Path           string
+	Cmd            []command.Command
 	Init           func(settings django.Settings) error
 	Ready          func() error
 	URLPatterns    []core.URL
@@ -55,6 +57,7 @@ func NewAppConfig(name string, patterns ...core.URL) *AppConfig {
 		URLPatterns:   make([]core.URL, 0),
 		Middlewares:   make([]core.Middleware, 0),
 		CtxProcessors: make([]func(tpl.RequestContext), 0),
+		Cmd:           make([]command.Command, 0),
 	}
 
 	app.URLPatterns = append(app.URLPatterns, patterns...)
@@ -67,6 +70,17 @@ func (a *AppConfig) Register(p ...core.URL) {
 		a.URLPatterns = make([]core.URL, 0)
 	}
 	a.URLPatterns = append(a.URLPatterns, p...)
+}
+
+func (a *AppConfig) AddCommand(c ...command.Command) {
+	if a.Cmd == nil {
+		a.Cmd = make([]command.Command, 0)
+	}
+	a.Cmd = append(a.Cmd, c...)
+}
+
+func (a *AppConfig) Commands() []command.Command {
+	return a.Cmd
 }
 
 func (a *AppConfig) AddMiddleware(m ...mux.Middleware) {

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"flag"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -16,6 +17,7 @@ import (
 	"github.com/Nigel2392/django/components"
 	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
+	"github.com/Nigel2392/django/core/command"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/core/staticfiles"
@@ -45,6 +47,13 @@ type AppConfig interface {
 	//
 	// An application cannot be registered twice - the name MUST be unique.
 	Name() string
+
+	// Commands for the application.
+	//
+	// These commands can be used to run tasks from the command line.
+	//
+	// The commands are registered in the Django command registry.
+	Commands() []command.Command
 
 	// A list of callback functions to interact with the router / a sub- route.
 	//
@@ -390,6 +399,11 @@ func (a *Application) Initialize() error {
 		}
 	}
 
+	var commandRegistry = command.NewRegistry(
+		"django",
+		flag.ContinueOnError,
+	)
+
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
 		var urls = app.URLs()
@@ -420,6 +434,11 @@ func (a *Application) Initialize() error {
 		if templates != nil {
 			tpl.Add(*templates)
 		}
+
+		var commands = app.Commands()
+		for _, cmd := range commands {
+			commandRegistry.Register(cmd)
+		}
 	}
 
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
@@ -437,7 +456,15 @@ func (a *Application) Initialize() error {
 
 	a.initialized.Store(true)
 
-	return nil
+	err = commandRegistry.ExecCommand(os.Args[1:])
+	switch {
+	case errors.Is(err, command.ErrNoCommand):
+		return nil
+	case errors.Is(err, flag.ErrHelp):
+		os.Exit(0)
+		return nil
+	}
+	return err
 }
 
 func (a *Application) Quit() error {

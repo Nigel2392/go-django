@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/django"
+	"github.com/Nigel2392/django/contrib/admin/components"
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
@@ -133,7 +134,7 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 			)
 		}
 
-		var hookFn = func(site *AdminApplication, items menu.Items) {
+		var hookFn = func(site *AdminApplication, items components.Items[menu.MenuItem]) {
 			var menuItem = &menu.SubmenuItem{
 				BaseItem: menu.BaseItem{
 					Label: menuLabel,

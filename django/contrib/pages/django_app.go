@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/contrib/admin"
+	"github.com/Nigel2392/django/contrib/admin/components"
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/contrib/pages/models"
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
@@ -157,7 +158,7 @@ func NewAppConfig() *PageAppConfig {
 
 		pageApp.backend = backend
 
-		var hookFn = func(site *admin.AdminApplication, items menu.Items) {
+		var hookFn = func(site *admin.AdminApplication, items components.Items[menu.MenuItem]) {
 			items.Append(&PagesMenuItem{
 				BaseItem: menu.BaseItem{
 					Label:    fields.S("Pages"),

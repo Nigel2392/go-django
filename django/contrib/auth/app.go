@@ -1,8 +1,12 @@
 package auth
 
 import (
+	"context"
 	"database/sql"
+	"errors"
+	"flag"
 	"net/http"
+	"net/mail"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
@@ -10,6 +14,7 @@ import (
 	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
+	"github.com/Nigel2392/django/core/command"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/urls"
 	"github.com/Nigel2392/django/forms/fields"
@@ -28,6 +33,11 @@ type AuthApplication struct {
 
 var Auth *AuthApplication
 
+func must[T any](t T, err error) T {
+	assert.Err(err)
+	return t
+}
+
 func NewAppConfig() django.AppConfig {
 	var app = &AuthApplication{
 		AppConfig: apps.NewAppConfig("auth"),
@@ -35,6 +45,60 @@ func NewAppConfig() django.AppConfig {
 	app.Path = "auth/"
 	app.Middlewares = []core.Middleware{
 		core.NewMiddleware(AddUserMiddleware()),
+	}
+	app.Cmd = []command.Command{
+		&command.Cmd[bool]{
+			ID: "createuser",
+			FlagFunc: func(m command.Manager, stored *bool, f *flag.FlagSet) error {
+				f.BoolVar(stored, "s", false, "Create a superuser")
+				return nil
+			},
+			Execute: func(m command.Manager, stored bool, args []string) error {
+				var u = &models.User{}
+
+				var email = must(m.Input("Enter email: "))
+				var username = must(m.Input("Enter username: "))
+				var password = must(m.Input("Enter password: "))
+				var password2 = must(m.Input("Re-enter password: "))
+
+				var e, err = mail.ParseAddress(email)
+				assert.Err(err)
+
+				u.Email = (*models.Email)(e)
+				u.Username = username
+
+				if password != password2 {
+					return errors.New("passwords do not match")
+				}
+
+				var validator = &PasswordCharValidator{
+					Flags: ChrFlagAll,
+				}
+
+				if err = validator.Validate(password); err != nil {
+					return err
+				}
+
+				if err = models.SetPassword(u, password); err != nil {
+					return err
+				}
+
+				var ctx = context.Background()
+				if err = app.Queries.CreateUser(ctx,
+					u.Email.String(),
+					u.Username,
+					string(u.Password),
+					u.FirstName,
+					u.LastName,
+					stored,
+					true,
+				); err != nil {
+					return err
+				}
+
+				return nil
+			},
+		},
 	}
 	app.URLPatterns = []core.URL{
 		urls.Pattern(

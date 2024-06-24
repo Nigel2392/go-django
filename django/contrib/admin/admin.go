@@ -94,7 +94,7 @@ func NewAppConfig() django.AppConfig {
 
 		goldcrest.Register(
 			RegisterFooterMenuItemHook, 0,
-			RegisterFooterMenuItemHookFunc(func(r *http.Request, adminSite *AdminApplication, items menu.Items) {
+			RegisterFooterMenuItemHookFunc(func(r *http.Request, adminSite *AdminApplication, items cmpts.Items[menu.MenuItem]) {
 				items.Append(&menu.Item{
 					BaseItem: menu.BaseItem{
 						Label: fields.S("Logout"),
@@ -260,7 +260,7 @@ func NewAppConfig() django.AppConfig {
 			},
 			"menu": func(r *http.Request) template.HTML {
 				var m = &menu.Menu{}
-				var menuItems = menu.NewItems()
+				var menuItems = cmpts.NewItems[menu.MenuItem]()
 				var hooks = goldcrest.Get[RegisterMenuItemHookFunc](RegisterMenuItemHook)
 				for _, hook := range hooks {
 					hook(AdminSite, menuItems)
@@ -283,7 +283,7 @@ func NewAppConfig() django.AppConfig {
 			},
 			"footer_menu": func(r *http.Request) template.HTML {
 				var m = &menu.Menu{}
-				var menuItems = menu.NewItems()
+				var menuItems = cmpts.NewItems[menu.MenuItem]()
 				var hooks = goldcrest.Get[RegisterFooterMenuItemHookFunc](RegisterFooterMenuItemHook)
 				for _, hook := range hooks {
 					hook(r, AdminSite, menuItems)
