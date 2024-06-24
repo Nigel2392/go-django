@@ -42,6 +42,7 @@ func NewAppConfig() django.AppConfig {
 	var app = &AuthApplication{
 		AppConfig: apps.NewAppConfig("auth"),
 	}
+	app.Deps = []string{"session"}
 	app.Path = "auth/"
 	app.Middlewares = []core.Middleware{
 		core.NewMiddleware(AddUserMiddleware()),

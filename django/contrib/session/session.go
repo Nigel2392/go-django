@@ -18,31 +18,6 @@ import (
 	"github.com/mattn/go-sqlite3"
 )
 
-// schemaMySQL
-var schemaMySQL = `CREATE TABLE IF NOT EXISTS sessions (
-	token CHAR(43) PRIMARY KEY,
-	data BLOB NOT NULL,
-	expiry TIMESTAMP(6) NOT NULL
-);`
-
-// schemaSQLite
-var schemaSQLite = `CREATE TABLE IF NOT EXISTS sessions (
-	token TEXT PRIMARY KEY,
-	data BLOB NOT NULL,
-	expiry REAL NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions(expiry);`
-
-// schemaPostgres
-var schemaPostgres = `CREATE TABLE IF NOT EXISTS sessions (
-	token TEXT PRIMARY KEY,
-	data BYTEA NOT NULL,
-	expiry TIMESTAMPTZ NOT NULL
-);
-
-CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expiry);`
-
 func NewAppConfig() django.AppConfig {
 	var app = apps.NewDBAppConfig("session")
 
@@ -55,7 +30,11 @@ func NewAppConfig() django.AppConfig {
 		switch db.Driver().(type) {
 		case *mysql.MySQLDriver:
 
-			_, err := db.Exec(schemaMySQL)
+			_, err := db.Exec(`CREATE TABLE IF NOT EXISTS sessions (
+					token CHAR(43) PRIMARY KEY,
+					data BLOB NOT NULL,
+					expiry TIMESTAMP(6) NOT NULL
+				);`)
 			assert.Err(err)
 
 			rows, err := db.Query(`SHOW INDEX FROM sessions WHERE Key_name = 'sessions_expiry_idx'`)
@@ -72,7 +51,11 @@ func NewAppConfig() django.AppConfig {
 
 		case *sqlite3.SQLiteDriver:
 
-			_, err := db.Exec(schemaSQLite)
+			_, err := db.Exec(`CREATE TABLE IF NOT EXISTS sessions (
+	token TEXT PRIMARY KEY,
+	data BLOB NOT NULL,
+	expiry REAL NOT NULL
+);`)
 			assert.Err(err)
 
 			fmt.Println("Using sqlite3store for session storage")
@@ -80,7 +63,13 @@ func NewAppConfig() django.AppConfig {
 
 		case *stdlib.Driver:
 
-			_, err := db.Exec(schemaPostgres)
+			_, err := db.Exec(`CREATE TABLE IF NOT EXISTS sessions (
+	token TEXT PRIMARY KEY,
+	data BYTEA NOT NULL,
+	expiry TIMESTAMPTZ NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expiry);`)
 			assert.Err(err)
 
 			fmt.Println("Using postgresstore for session storage")

@@ -48,6 +48,13 @@ type AppConfig interface {
 	// An application cannot be registered twice - the name MUST be unique.
 	Name() string
 
+	// Dependencies for the application.
+	//
+	// This can be used to define dependencies for the application.
+	//
+	// All of theses dependencies must be registered before the application is initialized.
+	Dependencies() []string
+
 	// Commands for the application.
 	//
 	// These commands can be used to run tasks from the command line.
@@ -394,6 +401,13 @@ func (a *Application) Initialize() error {
 	var err error
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
+		var deps = app.Dependencies()
+		for _, dep := range deps {
+			var _, ok = a.Apps.Get(dep)
+			if !ok {
+				return errors.Errorf("Dependency %q not found for app %q", dep, app.Name())
+			}
+		}
 		if err = app.Initialize(a.Settings); err != nil {
 			return errors.Wrapf(err, "Error initializing app %s", app.Name())
 		}

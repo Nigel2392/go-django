@@ -14,6 +14,7 @@ import (
 type AppConfig struct {
 	AppName        string
 	Path           string
+	Deps           []string
 	Cmd            []command.Command
 	Init           func(settings django.Settings) error
 	Ready          func() error
@@ -82,6 +83,10 @@ func (a *AppConfig) AddCommand(c ...command.Command) {
 
 func (a *AppConfig) Commands() []command.Command {
 	return a.Cmd
+}
+
+func (a *AppConfig) Dependencies() []string {
+	return a.Deps
 }
 
 func (a *AppConfig) AddMiddleware(m ...mux.Middleware) {

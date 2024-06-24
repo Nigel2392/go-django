@@ -72,6 +72,9 @@ func NewAppConfig() django.AppConfig {
 	// AdminSite.Route.Use(RequiredMiddleware)
 	var iconHTML template.HTML
 
+	AdminSite.Deps = []string{
+		"auth",
+	}
 	AdminSite.Init = func(settings django.Settings) error {
 		settings.App().Mux.AddRoute(AdminSite.Route)
 
