@@ -137,8 +137,9 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 		var hookFn = func(site *AdminApplication, items components.Items[menu.MenuItem]) {
 			var menuItem = &menu.SubmenuItem{
 				BaseItem: menu.BaseItem{
-					Label: menuLabel,
-					Logo:  menuIcon,
+					ItemName: a.Name,
+					Label:    menuLabel,
+					Logo:     menuIcon,
 				},
 				Menu: &menu.Menu{
 					Items: make([]menu.MenuItem, 0),
@@ -181,6 +182,6 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 			items.Append(menuItem)
 		}
 
-		goldcrest.Register(RegisterMenuItemHook, 0, hookFn)
+		goldcrest.Register(RegisterMenuItemHook, 0, RegisterMenuItemHookFunc(hookFn))
 	}
 }

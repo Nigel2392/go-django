@@ -97,7 +97,8 @@ func NewAppConfig() django.AppConfig {
 			RegisterFooterMenuItemHookFunc(func(r *http.Request, adminSite *AdminApplication, items cmpts.Items[menu.MenuItem]) {
 				items.Append(&menu.Item{
 					BaseItem: menu.BaseItem{
-						Label: fields.S("Logout"),
+						ItemName: "logout",
+						Label:    fields.S("Logout"),
 						Logo: templ.Raw(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
 	<!-- The MIT License (MIT) -->
 	<!-- Copyright (c) 2011-2024 The Bootstrap Authors -->
