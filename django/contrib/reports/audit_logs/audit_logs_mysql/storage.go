@@ -165,7 +165,7 @@ func (s *MySQLStorageBackend) RetrieveTyped(logType string, amount, offset int) 
 	return entries, nil
 }
 
-func (s *MySQLStorageBackend) Filter(filters []auditlogs.AuditLogFilter, amount, offset int) ([]auditlogs.LogEntry, error) {
+func (s *MySQLStorageBackend) EntryFilter(filters []auditlogs.AuditLogFilter, amount, offset int) ([]auditlogs.LogEntry, error) {
 	var query = new(strings.Builder)
 	var args []interface{}
 	for i, filter := range filters {

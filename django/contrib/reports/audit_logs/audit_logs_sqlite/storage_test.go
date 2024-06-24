@@ -243,7 +243,7 @@ func TestFilter(t *testing.T) {
 
 	for i, test := range filterTests {
 		t.Run(fmt.Sprintf("filter-%d-%s", i, test.filters[0].Name()), func(t *testing.T) {
-			entries, err := auditlogs.Backend().Filter(test.filters, 25, 0)
+			entries, err := auditlogs.Backend().EntryFilter(test.filters, 25, 0)
 			if err != nil {
 				t.Fatalf("%d %s", i, err)
 			}

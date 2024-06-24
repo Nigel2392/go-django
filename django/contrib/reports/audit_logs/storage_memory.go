@@ -172,7 +172,7 @@ func (i *inMemoryStorageBackend) RetrieveTyped(logType string, amount, offset in
 	return entries, nil
 }
 
-func (i *inMemoryStorageBackend) Filter(filters []AuditLogFilter, amount, offset int) ([]LogEntry, error) {
+func (i *inMemoryStorageBackend) EntryFilter(filters []AuditLogFilter, amount, offset int) ([]LogEntry, error) {
 	i.mu.RLock()
 	defer i.mu.RUnlock()
 

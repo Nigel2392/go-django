@@ -12,18 +12,18 @@ import (
 	"github.com/pkg/errors"
 )
 
-var Handler = NewFileHandler()
+var EntryHandler = NewFileHandler()
 
 func AddFS(filesys fs.FS, matches func(path string) bool) {
-	Handler.AddFS(filesys, matches)
+	EntryHandler.AddFS(filesys, matches)
 }
 
 func Collect(fn func(path string, f fs.File) error) error {
-	return Handler.Collect(fn)
+	return EntryHandler.Collect(fn)
 }
 
 func Open(name string) (fs.File, error) {
-	return Handler.Open(name)
+	return EntryHandler.Open(name)
 }
 
 type FileHandler struct {

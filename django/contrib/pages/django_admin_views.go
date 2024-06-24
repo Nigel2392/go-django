@@ -711,15 +711,11 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 			return
 		}
 
-		var _, err = auditlogs.Log("pages:unpublish", logger.WRN, p, map[string]interface{}{
+		auditlogs.Log("pages:unpublish", logger.WRN, p, map[string]interface{}{
 			"unpublish_children": unpublishChildren,
 			"page_id":            p.ID(),
 			"label":              p.Title,
 		})
-		if err != nil {
-			except.Fail(500, err)
-			return
-		}
 
 		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
 		return

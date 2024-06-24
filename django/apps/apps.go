@@ -21,6 +21,7 @@ type AppConfig struct {
 	Middlewares    []core.Middleware
 	CtxProcessors  []func(tpl.RequestContext)
 	TemplateConfig *tpl.Config
+	ready          bool
 }
 
 type DBRequiredAppConfig struct {
@@ -105,6 +106,10 @@ func (a *AppConfig) Name() string {
 	return a.AppName
 }
 
+func (a *AppConfig) IsReady() bool {
+	return a.ready
+}
+
 func (a *AppConfig) URLPath() string {
 	return a.Path
 }
@@ -133,8 +138,10 @@ func (a *AppConfig) Initialize(settings django.Settings) error {
 }
 
 func (a *AppConfig) OnReady() error {
+	var err error
 	if a.Ready != nil {
-		return a.Ready()
+		err = a.Ready()
 	}
-	return nil
+	a.ready = true
+	return err
 }

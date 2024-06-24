@@ -11,7 +11,7 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-type MultiFilter[T any] []Filter[T]
+type MultiFilter[T any] []EntryFilter[T]
 
 func (f MultiFilter[T]) Form(prefix string, r *http.Request, initial map[string]interface{}) FilterForm[T] {
 	var forms = orderedmap.NewOrderedMap[string, FilterForm[T]]()
@@ -45,7 +45,7 @@ func (f MultiFilter[T]) Form(prefix string, r *http.Request, initial map[string]
 
 type boundFilterForms[T any] struct {
 	forms  *orderedmap.OrderedMap[string, FilterForm[T]]
-	filter Filter[T]
+	filter EntryFilter[T]
 }
 
 func (f boundFilterForms[T]) AsP() template.HTML {
@@ -82,10 +82,10 @@ func (f boundFilterForms[T]) IsValid() bool {
 	return valid
 }
 
-func (f boundFilterForms[T]) Filter(data []T) []T {
+func (f boundFilterForms[T]) EntryFilter(data []T) []T {
 	for head := f.forms.Front(); head != nil; head = head.Next() {
 		if head.Value.IsValid() {
-			data = head.Value.Filter(data)
+			data = head.Value.EntryFilter(data)
 		}
 	}
 	return data

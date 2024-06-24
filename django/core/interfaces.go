@@ -17,13 +17,13 @@ type Middleware interface {
 }
 
 type MiddlewareImpl struct {
-	Handler mux.Middleware
+	EntryHandler mux.Middleware
 }
 
 func (m *MiddlewareImpl) Register(mux Mux) {
-	mux.Use(m.Handler)
+	mux.Use(m.EntryHandler)
 }
 
 func NewMiddleware(handler mux.Middleware) Middleware {
-	return &MiddlewareImpl{Handler: handler}
+	return &MiddlewareImpl{EntryHandler: handler}
 }

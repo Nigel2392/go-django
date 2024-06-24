@@ -219,7 +219,7 @@ func (a *Application) handleErrorCodePure(w http.ResponseWriter, r *http.Request
 
 	assert.False(code == 0, "code cannot be 0")
 
-	var handler, ok = a.Settings.Get(fmt.Sprintf("Handler%d", code))
+	var handler, ok = a.Settings.Get(fmt.Sprintf("EntryHandler%d", code))
 	if handler != nil && ok {
 		handler.(func(http.ResponseWriter, *http.Request, except.ServerError))(w, r, err)
 		return
@@ -347,7 +347,7 @@ func (a *Application) Initialize() error {
 			mux.GET,
 			fmt.Sprintf("%s*", core.STATIC_URL),
 			LoggingDisabledMiddleware(
-				http.StripPrefix(core.STATIC_URL, staticfiles.Handler),
+				http.StripPrefix(core.STATIC_URL, staticfiles.EntryHandler),
 			),
 		)
 	}

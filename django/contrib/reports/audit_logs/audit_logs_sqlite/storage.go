@@ -166,7 +166,7 @@ func (s *sqliteStorageBackend) RetrieveTyped(logType string, amount, offset int)
 	return entries, nil
 }
 
-func (s *sqliteStorageBackend) Filter(filters []auditlogs.AuditLogFilter, amount, offset int) ([]auditlogs.LogEntry, error) {
+func (s *sqliteStorageBackend) EntryFilter(filters []auditlogs.AuditLogFilter, amount, offset int) ([]auditlogs.LogEntry, error) {
 	var query = new(strings.Builder)
 	var args []interface{}
 	for i, filter := range filters {

@@ -9,7 +9,7 @@ import (
 	"github.com/Nigel2392/django/forms/media"
 )
 
-var _ Filter[any] = (*Sieve[any])(nil)
+var _ EntryFilter[any] = (*Sieve[any])(nil)
 
 type BoundSieve[T any] struct {
 	Form  forms.Form
@@ -32,7 +32,7 @@ func (b *BoundSieve[T]) IsValid() bool {
 	return b.Form.IsValid()
 }
 
-func (b *BoundSieve[T]) Filter(data []T) []T {
+func (b *BoundSieve[T]) EntryFilter(data []T) []T {
 	var result = make([]T, 0, len(data))
 	for _, item := range data {
 		if b.Sieve.Fn(item) {

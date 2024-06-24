@@ -9,9 +9,9 @@ import (
 type FilterForm[T any] interface {
 	forms.FormRenderer
 	IsValid() bool
-	Filter([]T) []T
+	EntryFilter([]T) []T
 }
 
-type Filter[T any] interface {
+type EntryFilter[T any] interface {
 	Form(prefix string, r *http.Request, initial map[string]interface{}) FilterForm[T]
 }
