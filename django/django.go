@@ -121,14 +121,15 @@ type AppConfig interface {
 //
 // The application object should only be initialized once by calling `(*Application).Initialize()`
 type Application struct {
-	Settings    Settings
-	Apps        *orderedmap.OrderedMap[string, AppConfig]
-	Middleware  []core.Middleware
-	URLs        []core.URL
-	Mux         *mux.Mux
-	Log         logger.Log
-	quitter     func() error
-	initialized *atomic.Bool
+	Settings      Settings
+	Apps          *orderedmap.OrderedMap[string, AppConfig]
+	Middleware    []core.Middleware
+	URLs          []core.URL
+	Mux           *mux.Mux
+	Log           logger.Log
+	skipDepsCheck bool
+	quitter       func() error
+	initialized   *atomic.Bool
 }
 
 type Option func(*Application) error
@@ -402,12 +403,16 @@ func (a *Application) Initialize() error {
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
 		var deps = app.Dependencies()
-		for _, dep := range deps {
-			var _, ok = a.Apps.Get(dep)
-			if !ok {
-				return errors.Errorf("Dependency %q not found for app %q", dep, app.Name())
+
+		if !a.skipDepsCheck {
+			for _, dep := range deps {
+				var _, ok = a.Apps.Get(dep)
+				if !ok {
+					return errors.Errorf("Dependency %q not found for app %q", dep, app.Name())
+				}
 			}
 		}
+
 		if err = app.Initialize(a.Settings); err != nil {
 			return errors.Wrapf(err, "Error initializing app %s", app.Name())
 		}
