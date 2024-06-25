@@ -196,25 +196,37 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 
 	var filters = make([]AuditLogFilter, 0)
 
-	var filterType = r.URL.Query().Get("type")
-	if filterType != "" {
-		filters = append(filters, FilterType(filterType))
+	var filterType = r.URL.Query()["type"]
+	if len(filterType) > 0 {
+		filters = append(filters, FilterType(filterType...))
 	}
 
-	var filterUser interface{} = r.URL.Query().Get("user")
-	if filterUser != "" {
-		if isNumber(filterUser.(string)) {
-			filterUser, _ = strconv.Atoi(filterUser.(string))
+	var filterUser = r.URL.Query()["user"]
+	if len(filterUser) > 0 {
+		var userIds = make([]interface{}, 0, len(filterUser))
+		for _, u := range filterUser {
+			if isNumber(u) {
+				userId, _ := strconv.Atoi(u)
+				userIds = append(userIds, userId)
+			} else {
+				userIds = append(userIds, u)
+			}
 		}
-		filters = append(filters, FilterUserID(filterUser))
+		filters = append(filters, FilterUserID(userIds...))
 	}
 
-	var objectID interface{} = r.URL.Query().Get("object_id")
-	if objectID != "" {
-		if isNumber(objectID.(string)) {
-			objectID, _ = strconv.Atoi(objectID.(string))
+	var filterObjects = r.URL.Query()["object_id"]
+	if len(filterObjects) > 0 {
+		var objectIds = make([]interface{}, 0, len(filterObjects))
+		for _, o := range filterObjects {
+			if isNumber(o) {
+				objId, _ := strconv.Atoi(o)
+				objectIds = append(objectIds, objId)
+			} else {
+				objectIds = append(objectIds, o)
+			}
 		}
-		filters = append(filters, FilterObjectID(objectID))
+		filters = append(filters, FilterObjectID(objectIds...))
 	}
 
 	objectPackage := r.URL.Query().Get("content_type")

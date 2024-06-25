@@ -270,24 +270,48 @@ func makeWhereQuery(query *strings.Builder, filters []auditlogs.AuditLogFilter) 
 				var inQ = make([]string, len(filter.Value()))
 				for i, v := range filter.Value() {
 					inQ[i] = "?"
-					args = append(args, v)
+					var b = new(bytes.Buffer)
+					enc := json.NewEncoder(b)
+					err := enc.Encode(v)
+					if err != nil {
+						return nil, err
+					}
+					args = append(args, b.String())
 				}
 				fmt.Fprintf(query, "user_id IN (%s)", strings.Join(inQ, ","))
 			} else {
 				fmt.Fprint(query, "user_id = ?")
-				args = append(args, filter.Value()[0])
+				var b = new(bytes.Buffer)
+				enc := json.NewEncoder(b)
+				err := enc.Encode(filter.Value()[0])
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, b.String())
 			}
 		case auditlogs.AuditLogFilterObjectID:
 			if len(filter.Value()) > 1 {
 				var inQ = make([]string, len(filter.Value()))
 				for i, v := range filter.Value() {
 					inQ[i] = "?"
-					args = append(args, v)
+					var b = new(bytes.Buffer)
+					enc := json.NewEncoder(b)
+					err := enc.Encode(v)
+					if err != nil {
+						return nil, err
+					}
+					args = append(args, b.String())
 				}
 				fmt.Fprintf(query, "object_id IN (%s)", strings.Join(inQ, ","))
 			} else {
 				fmt.Fprint(query, "object_id = ?")
-				args = append(args, filter.Value()[0])
+				var b = new(bytes.Buffer)
+				enc := json.NewEncoder(b)
+				err := enc.Encode(filter.Value()[0])
+				if err != nil {
+					return nil, err
+				}
+				args = append(args, b.String())
 			}
 		case auditlogs.AuditLogFilterContentType:
 			fmt.Fprint(query, "content_type = ?")
