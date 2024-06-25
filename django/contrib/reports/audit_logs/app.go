@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/admin/components"
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
+	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/logger"
@@ -182,13 +183,65 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var filters = make([]AuditLogFilter, 0)
+
+	var filterType = r.URL.Query().Get("type")
+	if filterType != "" {
+		filters = append(filters, FilterType(filterType))
+	}
+
+	var filterUser = r.URL.Query().Get("user")
+	if filterUser != "" {
+		filters = append(filters, FilterUserID(filterUser))
+	}
+
+	var objectID = r.URL.Query().Get("object_id")
+	if objectID != "" {
+		filters = append(filters, FilterObjectID(objectID))
+	}
+
+	objectPackage := r.URL.Query().Get("content_type")
+	if objectPackage != "" {
+		var contentType = contenttypes.DefinitionForType(
+			objectPackage,
+		)
+		if contentType != nil {
+			filters = append(filters, FilterContentType(
+				contentType.ContentType(),
+			))
+		}
+	}
+
 	var paginator = pagination.Paginator[LogEntry]{
 		GetObject: func(l LogEntry) LogEntry {
 			return Define(r, l)
 		},
-		GetObjects: backend.RetrieveMany,
-		GetCount:   backend.Count,
-		Amount:     15,
+		GetObjects: func(i1, i2 int) ([]LogEntry, error) {
+			var (
+				objects []LogEntry
+				err     error
+			)
+			if len(filters) > 0 {
+				objects, err = backend.EntryFilter(
+					filters, i1, i2,
+				)
+			} else {
+				objects, err = backend.RetrieveMany(
+					i1, i2,
+				)
+			}
+			if err != nil {
+				return nil, err
+			}
+			return objects, nil
+		},
+		GetCount: func() (int, error) {
+			if len(filters) > 0 {
+				return backend.CountFilter(filters)
+			}
+			return backend.Count()
+		},
+		Amount: 15,
 	}
 
 	var pageNum = pagination.GetPageNum(

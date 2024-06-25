@@ -24,13 +24,14 @@
     justify-content: center;
     align-items: center;
     text-align: center;
+    gap: 0.5em;
 }
 .pagination div.page-number {
 }
 .pagination div.active {
     font-weight: bold;
 }
-.pagination div.page-number {
+.pagination div.page-number a {
     display: inline-block;
     padding: 0.25em 0.5em;
     border: 1px solid var(--secondary-bg-color);

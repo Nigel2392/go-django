@@ -277,6 +277,96 @@ func (i *inMemoryStorageBackend) EntryFilter(filters []AuditLogFilter, amount, o
 	return entries, nil
 }
 
+func (i *inMemoryStorageBackend) CountFilter(filters []AuditLogFilter) (int, error) {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+	var idx = 0
+	for front := i.entries.Front(); front != nil; front = front.Next() {
+		var match = 0
+		var entry = front.Value
+		for _, filter := range filters {
+			var name = filter.Name()
+			var value = filter.Value()
+			switch name {
+			case AuditLogFilterID:
+				for _, v := range value {
+					if v == entry.ID() || v == entry.ID().String() {
+						match++
+						break
+					}
+				}
+			case AuditLogFilterType:
+				for _, v := range value {
+					if v == entry.Type() {
+						match++
+						break
+					}
+				}
+			case AuditLogFilterLevel_EQ:
+				for _, v := range value {
+					if v == entry.Level() {
+						match++
+						break
+					}
+				}
+			case AuditLogFilterLevel_GT:
+				for _, v := range value {
+					if entry.Level() > v.(logger.LogLevel) {
+						match++
+						break
+					}
+				}
+			case AuditLogFilterLevel_LT:
+				for _, v := range value {
+					if entry.Level() < v.(logger.LogLevel) {
+						match++
+						break
+					}
+				}
+			case AuditLogFilterTimestamp_EQ:
+				for _, v := range value {
+					if entry.Timestamp().Equal(v.(time.Time)) {
+						match++
+						break
+					}
+				}
+			case AuditLogFilterUserID:
+				for _, v := range value {
+					if v == entry.UserID() {
+						match++
+						break
+					}
+				}
+			case AuditLogFilterObjectID:
+				for _, v := range value {
+					if v == entry.ObjectID() {
+						match++
+						break
+					}
+				}
+			case AuditLogFilterContentType:
+				for _, v := range value {
+					if v == entry.ContentType() {
+						match++
+						break
+					}
+				}
+			case AuditLogFilterData:
+				for _, v := range value {
+					if reflect.DeepEqual(v, entry.Data()) {
+						match++
+					}
+				}
+			}
+		}
+
+		if match == len(filters) {
+			idx++
+		}
+	}
+	return idx, nil
+}
+
 func (i *inMemoryStorageBackend) Count() (int, error) {
 	i.mu.RLock()
 	defer i.mu.RUnlock()

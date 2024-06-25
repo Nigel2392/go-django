@@ -169,6 +169,56 @@ func (s *sqliteStorageBackend) RetrieveTyped(logType string, amount, offset int)
 
 func (s *sqliteStorageBackend) EntryFilter(filters []auditlogs.AuditLogFilter, amount, offset int) ([]auditlogs.LogEntry, error) {
 	var query = new(strings.Builder)
+	var args, err = makeWhereQuery(query, filters)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := s.db.Query(fmt.Sprintf("SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE %s ORDER BY timestamp DESC LIMIT ? OFFSET ?;", query), append(args, amount, offset)...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var entries = make([]auditlogs.LogEntry, 0)
+	for rows.Next() {
+		entry, err := auditlogs.ScanRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		entries = append(entries, entry)
+	}
+
+	return entries, nil
+}
+
+func (s *sqliteStorageBackend) CountFilter(filters []auditlogs.AuditLogFilter) (int, error) {
+	var query = new(strings.Builder)
+	var args, err = makeWhereQuery(query, filters)
+	if err != nil {
+		return 0, err
+	}
+	row := s.db.QueryRow(fmt.Sprintf("SELECT COUNT(id) FROM audit_logs WHERE %s;", query), args...)
+	if row.Err() != nil {
+		return 0, row.Err()
+	}
+
+	var count int
+	err = row.Scan(&count)
+	return count, err
+}
+
+func (s *sqliteStorageBackend) Count() (int, error) {
+	row := s.db.QueryRow(selectCountSQLITE)
+	if row.Err() != nil {
+		return 0, row.Err()
+	}
+
+	var count int
+	err := row.Scan(&count)
+	return count, err
+}
+
+func makeWhereQuery(query *strings.Builder, filters []auditlogs.AuditLogFilter) ([]interface{}, error) {
 	var args []interface{}
 	for i, filter := range filters {
 		switch filter.Name() {
@@ -264,32 +314,5 @@ func (s *sqliteStorageBackend) EntryFilter(filters []auditlogs.AuditLogFilter, a
 			fmt.Fprint(query, " AND ")
 		}
 	}
-
-	rows, err := s.db.Query(fmt.Sprintf("SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE %s ORDER BY timestamp DESC LIMIT ? OFFSET ?;", query), append(args, amount, offset)...)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	var entries = make([]auditlogs.LogEntry, 0)
-	for rows.Next() {
-		entry, err := auditlogs.ScanRow(rows)
-		if err != nil {
-			return nil, err
-		}
-		entries = append(entries, entry)
-	}
-
-	return entries, nil
-}
-
-func (s *sqliteStorageBackend) Count() (int, error) {
-	row := s.db.QueryRow(selectCountSQLITE)
-	if row.Err() != nil {
-		return 0, row.Err()
-	}
-
-	var count int
-	err := row.Scan(&count)
-	return count, err
+	return args, nil
 }

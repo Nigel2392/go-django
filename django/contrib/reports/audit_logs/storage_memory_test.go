@@ -143,7 +143,13 @@ func TestRetrieveTyped(t *testing.T) {
 	}
 	for i := 0; i < len(entryIds); i++ {
 		typ := fmt.Sprintf("type-%d", i)
-		entries, err := auditlogs.Backend().RetrieveTyped(typ, 25, 0)
+		entries, err := auditlogs.Backend().EntryFilter(
+			[]auditlogs.AuditLogFilter{
+				auditlogs.FilterType(typ),
+			},
+			25,
+			0,
+		)
 		if err != nil {
 			t.Fatalf("%d %s", i, err)
 		}
@@ -163,7 +169,13 @@ func TestRetrieveForUser(t *testing.T) {
 	}
 	for i := 0; i < len(entryIds); i++ {
 		var id = fmt.Sprintf("user-%d", i)
-		entries, err := auditlogs.Backend().RetrieveForUser(id, 25, 0)
+		entries, err := auditlogs.Backend().EntryFilter(
+			[]auditlogs.AuditLogFilter{
+				auditlogs.FilterUserID(id),
+			},
+			25,
+			0,
+		)
 		if err != nil {
 			t.Fatalf("%d %s", i, err)
 		}
@@ -186,7 +198,13 @@ func TestRetrieveForObj(t *testing.T) {
 	}
 	for i := 0; i < len(entryIds); i++ {
 		var id = fmt.Sprintf("object-%d", i)
-		entries, err := auditlogs.Backend().RetrieveForObject(id, 25, 0)
+		entries, err := auditlogs.Backend().EntryFilter(
+			[]auditlogs.AuditLogFilter{
+				auditlogs.FilterObjectID(id),
+			},
+			25,
+			0,
+		)
 		if err != nil {
 			t.Fatalf("%d %s", i, err)
 		}
@@ -287,6 +305,25 @@ func TestFilter(t *testing.T) {
 				}
 			}
 
+		})
+	}
+}
+
+func TestFilterCount(t *testing.T) {
+	if IS_GITHUB_ACTIONS {
+		// Skip tests if not running on github actions
+		return
+	}
+
+	for i, test := range filterTests {
+		t.Run(fmt.Sprintf("filter-count-%d-%s", i, test.filters[0].Name()), func(t *testing.T) {
+			count, err := auditlogs.Backend().CountFilter(test.filters)
+			if err != nil {
+				t.Fatalf("%d %s", i, err)
+			}
+			if count != len(test.expectedFilterIDs) {
+				t.Fatalf("%d expected %d entries, got %d", i, len(test.expectedFilterIDs), count)
+			}
 		})
 	}
 }

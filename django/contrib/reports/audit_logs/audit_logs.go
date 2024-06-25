@@ -56,15 +56,13 @@ type Definition interface {
 
 type StorageBackend interface {
 	Setup() error
+	Count() (int, error)
 	Store(logEntry LogEntry) (uuid.UUID, error)
+	RetrieveMany(amount, offset int) ([]LogEntry, error)
 	StoreMany(logEntries []LogEntry) ([]uuid.UUID, error)
 	Retrieve(id uuid.UUID) (LogEntry, error)
-	RetrieveForObject(objectID interface{}, amount, offset int) ([]LogEntry, error)
-	RetrieveForUser(userID interface{}, amount, offset int) ([]LogEntry, error)
-	RetrieveMany(amount, offset int) ([]LogEntry, error)
-	RetrieveTyped(logType string, amount, offset int) ([]LogEntry, error)
 	EntryFilter(filters []AuditLogFilter, amount, offset int) ([]LogEntry, error)
-	Count() (int, error)
+	CountFilter(filters []AuditLogFilter) (int, error)
 }
 
 func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data map[string]interface{}) (uuid.UUID, error) {
@@ -140,10 +138,6 @@ func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data 
 		handlersForTyp = append(handlersForTyp, handlers...)
 	}
 
-	logger.Logf(
-		level, "Adding new %q entry to audit log", entryType,
-	)
-
 	if len(filtersForTyp) == 0 && len(handlersForTyp) == 0 {
 		err = fmt.Errorf(
 			"no filters or handlers registered for entry type %q",
@@ -168,6 +162,9 @@ func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data 
 	}
 
 storeLogEntry:
+	logger.Logf(
+		level, "Adding new %q entry to audit log", entryType,
+	)
 	if registry.backend != nil {
 		return registry.backend.Store(e)
 	}
