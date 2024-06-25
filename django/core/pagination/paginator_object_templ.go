@@ -11,10 +11,10 @@ import "io"
 import "bytes"
 
 import "github.com/Nigel2392/django/forms/fields"
-import "strings"
 import "strconv"
 import "fmt"
 import "html/template"
+import "strings"
 
 type pageObject[T any] struct {
 	num       int
@@ -43,12 +43,12 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int) templ.C
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"pagination\"><ul>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"pagination\"><section class=\"pagination--paginator\"><div class=\"prev\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if p.HasPrev() {
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<li><a href=\"")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -70,63 +70,61 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int) templ.C
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</a></li>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		var numPages, err = p.Paginator().NumPages()
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var start = p.PageNum() - numPageNumbers
+		if start < 1 {
+			start = 1
+		}
+		var end = p.PageNum() + numPageNumbers
+		var count, err = p.Paginator().NumPages()
 		if err != nil {
-			return err
+			count = 1
 		}
-		var start = max(0, p.PageNum()-numPageNumbers)
-		var end = min(numPages, p.PageNum()+numPageNumbers+1)
-		if start > 0 {
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<li><a href=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var4 templ.SafeURL = templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, 0))
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var4)))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\">1</a></li>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			if start > 1 {
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<li>...</li>")
+		if end > count {
+			end = count
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"page-numbers\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		for i := start; i <= end; i++ {
+			if i == p.PageNum() {
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"page-number active\"><a href=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-			}
-		}
-		for i := start; i < end; i++ {
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<li>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			if i == p.PageNum() {
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<span>")
+				var templ_7745c5c3_Var4 templ.SafeURL = templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, i))
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var4)))
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" disabled>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/core/pagination/paginator_object.templ`, Line: 50, Col: 47}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/core/pagination/paginator_object.templ`, Line: 50, Col: 118}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</span>")
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</a></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 			} else {
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<a href=\"")
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div class=\"page-number\"><a href=\"")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -142,34 +140,28 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int) templ.C
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/core/pagination/paginator_object.templ`, Line: 52, Col: 105}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/core/pagination/paginator_object.templ`, Line: 54, Col: 109}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</a>")
+				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</a></div>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</li>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
 			}
 		}
-		if end < numPages {
-			if end < numPages-1 {
-				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<li>...</li>")
-				if templ_7745c5c3_Err != nil {
-					return templ_7745c5c3_Err
-				}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(" <li><a href=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</div><div class=\"next\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if p.HasNext() {
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<a href=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var8 templ.SafeURL = templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, numPages-1))
+			var templ_7745c5c3_Var8 templ.SafeURL = templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, p.Next()))
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var8)))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -179,48 +171,20 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int) templ.C
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(numPages))
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fields.T("Next"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/core/pagination/paginator_object.templ`, Line: 62, Col: 117}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/core/pagination/paginator_object.templ`, Line: 62, Col: 109}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</a></li>")
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		if p.HasNext() {
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<li><a href=\"")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var10 templ.SafeURL = templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, p.Next()))
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var10)))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\">")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var templ_7745c5c3_Var11 string
-			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(fields.T("Next"))
-			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/core/pagination/paginator_object.templ`, Line: 68, Col: 109}
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</a></li>")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</ul></div>")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</div></section></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -244,15 +208,15 @@ func (p *pageObject[T]) Paginator() Pagination[T] {
 }
 
 func (p *pageObject[T]) HasNext() bool {
-	var count, err = p.paginator.Count()
+	var numpages, err = p.Paginator().NumPages()
 	if err != nil {
 		return false
 	}
-	return count > (p.PageNum()+1)*p.paginator.PerPage()
+	return p.PageNum() < numpages
 }
 
 func (p *pageObject[T]) HasPrev() bool {
-	return p.PageNum() > 0
+	return p.num > 0
 }
 
 func (p *pageObject[T]) Next() int {
@@ -270,5 +234,5 @@ func (p *pageObject[T]) Prev() int {
 }
 
 func (p *pageObject[T]) PageNum() int {
-	return p.num
+	return p.num + 1
 }

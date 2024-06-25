@@ -1,10 +1,10 @@
 package pagination
 
 import "github.com/Nigel2392/django/forms/fields"
-import "strings"
 import "strconv"
 import "fmt"
 import "html/template"
+import "strings"
 
 type pageObject[T any] struct {
 	num       int
@@ -22,53 +22,47 @@ func (p *pageObject[T]) HTML(queryParam string, numPageNumbers int) template.HTM
 
 templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int) {
     <div class="pagination">
-        <ul>
-            if p.HasPrev() {
-                <li>
+        <section class="pagination--paginator">
+            <div class="prev">
+                if p.HasPrev() {
                     <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, p.Prev())) }>{ fields.T("Previous") }</a>
-                </li>
-            }
-
-            {{ var numPages, err = p.Paginator().NumPages() }}
-            {{ if err != nil { return err } }}
-
-            {{ var start = max(0, p.PageNum()-numPageNumbers) }}
-            {{ var end = min(numPages, p.PageNum()+numPageNumbers+1) }}
-
-            if start > 0 {
-                <li>
-                    <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, 0)) }>1</a>
-                </li>
-                if start > 1 {
-                    <li>...</li>
                 }
+            </div>
+
+            {{ var start = p.PageNum() - numPageNumbers }}
+            if start < 1 {
+                {{ start = 1 }}
             }
 
-            for i := start; i < end; i++ {
-                <li>
+            {{ var end = p.PageNum() + numPageNumbers }}
+            {{ var count, err = p.Paginator().NumPages() }}
+            if err != nil {
+                {{ count = 1 }}
+            }
+            if end > count {
+                {{ end = count }}
+            }
+
+            <div class="page-numbers">
+                for i := start; i <= end; i++ {
                     if i == p.PageNum() {
-                        <span>{ strconv.Itoa(i) }</span>
+                        <div class="page-number active">
+                            <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, i)) } disabled>{ strconv.Itoa(i) }</a>
+                        </div>
                     } else {
-                        <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, i)) }>{ strconv.Itoa(i) }</a>
+                        <div class="page-number">
+                            <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, i)) }>{ strconv.Itoa(i) }</a>
+                        </div>
                     }
-                </li>
-            }
-
-            if end < numPages {
-                if end < numPages-1 {
-                    <li>...</li>
                 }
-                <li>
-                    <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, numPages-1)) }>{ strconv.Itoa(numPages) }</a>
-                </li>
-            }
+            </div>
 
-            if p.HasNext() {
-                <li>
+            <div class="next">
+                if p.HasNext() {
                     <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, p.Next())) }>{ fields.T("Next") }</a>
-                </li>
-            }
-        </ul>
+                }
+            </div>
+        </section>
     </div>
 }
 
@@ -85,15 +79,15 @@ func (p *pageObject[T]) Paginator() Pagination[T] {
 }
 
 func (p *pageObject[T]) HasNext() bool {
-	var count, err = p.paginator.Count()
-	if err != nil {
-		return false
-	}
-	return count > (p.PageNum()+1)*p.paginator.PerPage()
+    var numpages, err = p.Paginator().NumPages()
+    if err != nil {
+        return false
+    }
+    return p.PageNum() < numpages
 }
 
 func (p *pageObject[T]) HasPrev() bool {
-	return p.PageNum() > 0
+	return p.num > 0
 }
 
 func (p *pageObject[T]) Next() int {
@@ -111,5 +105,5 @@ func (p *pageObject[T]) Prev() int {
 }
 
 func (p *pageObject[T]) PageNum() int {
-	return p.num
+	return p.num + 1
 }

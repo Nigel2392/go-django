@@ -67,26 +67,26 @@ func GetPageNum(n any) int {
 	return 0
 }
 
+// Paginator holds pagination logic
 type Paginator[T any] struct {
-	GetObject  func(l T) T
-	GetObjects func(amount, offset int) ([]T, error)
+	GetObject  func(T) T
+	GetObjects func(int, int) ([]T, error)
 	GetCount   func() (int, error)
 	Amount     int
 	cnt        int
 }
 
 func (p *Paginator[T]) NumPages() (int, error) {
-	var count, err = p.GetCount()
+	count, err := p.GetCount()
 	if err != nil {
 		return 0, err
 	}
-
 	return (count + p.PerPage() - 1) / p.PerPage(), nil
 }
 
 func (p *Paginator[T]) Count() (int, error) {
 	if p.cnt == 0 {
-		var count, err = p.GetCount()
+		count, err := p.GetCount()
 		if err != nil {
 			return 0, err
 		}
@@ -100,27 +100,16 @@ func (p *Paginator[T]) PerPage() int {
 }
 
 func (p *Paginator[T]) Page(n int) (PageObject[T], error) {
-	var (
-		offset = n * p.PerPage()
-		amount = p.PerPage()
-	)
-
-	var results, err = p.GetObjects(
-		amount, offset,
-	)
+	var amount = p.PerPage()
+	var offset = (n - 1) * amount
+	results, err := p.GetObjects(amount, offset)
 	if err != nil {
 		return nil, err
 	}
-
 	if p.GetObject != nil {
 		for i, r := range results {
 			results[i] = p.GetObject(r)
 		}
 	}
-
-	return &pageObject[T]{
-		num:       n,
-		results:   results,
-		paginator: p,
-	}, nil
+	return &pageObject[T]{num: n - 1, results: results, paginator: p}, nil
 }

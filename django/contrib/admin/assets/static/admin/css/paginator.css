@@ -1,0 +1,42 @@
+.pagination {
+    display: flex;
+    justify-content: center;
+    margin: 1em 0;
+    width: 100%;
+}
+.pagination section.pagination--paginator {
+    display: grid;
+    grid-template-columns: 1fr 3fr 1fr;
+    width: 100%;
+    gap: 0.5em;
+    padding: 0;
+}
+.pagination div.prev {
+    margin-left: 1em;
+}
+.pagination div.next {
+    margin-right: 1em;
+}
+.pagination div.prev,
+.pagination div.next,
+.pagination div.page-numbers {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+}
+.pagination div.page-number {
+}
+.pagination div.active {
+    font-weight: bold;
+}
+.pagination div.page-number {
+    display: inline-block;
+    padding: 0.25em 0.5em;
+    border: 1px solid var(--secondary-bg-color);
+    border-radius: 0.125rem;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;   
+}
