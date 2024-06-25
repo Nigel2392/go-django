@@ -64,6 +64,7 @@ type StorageBackend interface {
 	RetrieveMany(amount, offset int) ([]LogEntry, error)
 	RetrieveTyped(logType string, amount, offset int) ([]LogEntry, error)
 	EntryFilter(filters []AuditLogFilter, amount, offset int) ([]LogEntry, error)
+	Count() (int, error)
 }
 
 func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data map[string]interface{}) (uuid.UUID, error) {

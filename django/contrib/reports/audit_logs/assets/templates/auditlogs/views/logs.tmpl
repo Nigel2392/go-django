@@ -5,15 +5,20 @@
 {{ define "content" }}
 
     <div class="auditlog-list">
-        {{ range $log := (.Get "logs") }}
+        {{ $page := (.Get "paginator") }}
+        {{ range $log := $page.Results }}
             <div class="auditlog-list-item auditlog-{{ $log.Level.String }}">
                 <div class="auditlog-list-item__header" data-level="{{ $log.Level.String }}">
-                    <h3>{{ $log.Label }}</h3>
+                    {{ $log.Label }}
                 </div>
                 <div class="auditlog-list-item__body">
-                    <div class="auditlog-list-item__body__text">
-                        <p>{{ $log.Message }}</p>
-                    </div>
+
+                    {{ if $log.Message }}
+                        <div class="auditlog-list-item__body__text">
+                            <p>{{ $log.Message }}</p>
+                        </div>
+                    {{ end }}
+
                     {{ $actions := $log.Actions }}
                     {{ if gt (len $actions) 0 }}
                         <div class="auditlog-list-item__body__actions">
@@ -40,9 +45,19 @@
                             </div>
                         </div>
                     {{ end }}
+
+                    {{ if $log.Timestamp }}
+                        <div class="auditlog-list-item__body__timestamp">
+                            <code>{{ $log.Timestamp.Format "2006-01-02 15:04:05" }}</code>
+                        </div>
+                    {{ end }}
+                    
                 </div>
             </div>
         {{ end }}
+
+        {{ $page.HTML "page" 5 }}
+
     </div>
 
 {{ end }}

@@ -23,7 +23,7 @@
     max-width: 1100px;
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: 0.75rem;
 }
 
 .auditlog-DEBUG {
@@ -31,34 +31,35 @@
     --header-bg: var(--log-color-debug-header-bg);
     --border-color: rgba(var(--log-color-debug-rgb), var(--border-opacity, 1));
 }
-.auditlog-DEBUG::after {
-    color: var(--log-color-debug-rgb);
-    background-color: var(--log-color-debug-bg);
-}
 .auditlog-INFO {
     --item-bg: var(--log-color-info-bg);
     --header-bg: var(--log-color-info-header-bg);
     --border-color: rgba(var(--log-color-info-rgb), var(--border-opacity, 1));
-}
-.auditlog-INFO::after {
-    color: var(--log-color-info-rgb);
-    background-color: var(--log-color-info-bg);
 }
 .auditlog-WARN {
     --item-bg: var(--log-color-warning-bg);
     --header-bg: var(--log-color-warning-header-bg);
     --border-color: rgba(var(--log-color-warning-rgb), var(--border-opacity, 1));
 }
-.auditlog-WARN::after {
-    color: var(--log-color-warning-rgb);
-    background-color: var(--log-color-warning-bg);
-}
 .auditlog-ERROR {
     --item-bg: var(--log-color-error-bg);
     --header-bg: var(--log-color-error-header-bg);
     --border-color: rgba(var(--log-color-error-rgb), var(--border-opacity, 1));
 }
-.auditlog-ERROR::after {
+
+.auditlog-DEBUG .auditlog-list-item__header::after {
+    color: var(--log-color-debug-rgb);
+    background-color: var(--log-color-debug-bg);
+}
+.auditlog-INFO .auditlog-list-item__header::after {
+    color: var(--log-color-info-rgb);
+    background-color: var(--log-color-info-bg);
+}
+.auditlog-WARN .auditlog-list-item__header::after {
+    color: var(--log-color-warning-rgb);
+    background-color: var(--log-color-warning-bg);
+}
+.auditlog-ERROR .auditlog-list-item__header::after {
     color: var(--log-color-error-rgb);
     background-color: var(--log-color-error-bg);
 }
@@ -86,7 +87,8 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 0.7rem 1rem;
+    font-weight: 700;
+    padding: 0.5rem 0.75rem;
     background-color: var(--header-bg, #f0f0f0);
     border-bottom: 1px solid var(--border-color, #e0e0e0);
 }
@@ -107,7 +109,7 @@
 }
 .auditlog-list-item__body {
     position: relative;
-    padding: 0.5rem 1rem;
+    padding: 0.375rem 0.75rem;
 }
 .auditlog-list-item__body__text {
     padding-right: 1rem;

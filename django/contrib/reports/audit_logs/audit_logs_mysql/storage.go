@@ -28,6 +28,7 @@ const (
 	selectTypedMySQL     = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE type = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
 	selectForUserMySQL   = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE user_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
 	selectForObjectMySQL = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE object_id = ? ORDER BY timestamp DESC LIMIT ? OFFSET ?;`
+	selectCountMySQL     = `SELECT COUNT(id) FROM audit_logs;`
 )
 
 type MySQLStorageBackend struct {
@@ -279,4 +280,10 @@ func (s *MySQLStorageBackend) EntryFilter(filters []auditlogs.AuditLogFilter, am
 	}
 
 	return entries, nil
+}
+
+func (s *MySQLStorageBackend) Count() (int, error) {
+	var count int
+	err := s.db.QueryRow(selectCountMySQL).Scan(&count)
+	return count, err
 }

@@ -1,20 +1,25 @@
 package auditlogs
 
 import (
+	"fmt"
 	"io/fs"
 	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/contrib/admin"
+	"github.com/Nigel2392/django/contrib/admin/components"
+	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/logger"
+	"github.com/Nigel2392/django/core/pagination"
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/views"
+	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 
 	"embed"
@@ -35,7 +40,10 @@ func NewAppConfig() django.AppConfig {
 	Logs.Init = func(settings django.Settings) error {
 
 		if registry.backend != nil {
-			return registry.backend.Setup()
+			var err = registry.backend.Setup()
+			if err != nil {
+				return err
+			}
 		}
 
 		//dbInt, ok := settings.Get("DATABASE")
@@ -44,63 +52,71 @@ func NewAppConfig() django.AppConfig {
 		//_, ok = dbInt.(*sql.DB)
 		//assert.True(ok, "DATABASE setting must adhere to auditlogs-models.DBTX interface")
 		//
-		//// Logs.Queries = models.NewQueries(db)
-		//goldcrest.Register(
-		//	admin.RegisterMenuItemHook, 100,
-		//	admin.RegisterMenuItemHookFunc(func(adminSite *admin.AdminApplication, items menu.Items) {
-		//
-		//		var auditLogItem = menu.SubmenuItem{
-		//			BaseItem: menu.BaseItem{
-		//				Label: fields.S("Audit Logs"),
-		//			},
-		//			Menu: &menu.Menu{
-		//				Items: []menu.MenuItem{
-		//					&menu.BaseItem{
-		//						Label: fields.S("View Logs"),
-		//					},
-		//					&menu.SubmenuItem{
-		//						BaseItem: menu.BaseItem{
-		//							Label: fields.S("Audit Logs"),
-		//						},
-		//						Menu: &menu.Menu{
-		//							Items: []menu.MenuItem{
-		//								&menu.BaseItem{
-		//									Label: fields.S("View Logs"),
-		//								},
-		//							},
-		//						},
-		//					},
-		//					&menu.SubmenuItem{
-		//						BaseItem: menu.BaseItem{
-		//							Label: fields.S("Audit Logs"),
-		//						},
-		//						Menu: &menu.Menu{
-		//							Items: []menu.MenuItem{
-		//								&menu.BaseItem{
-		//									Label: fields.S("View Logs"),
-		//								},
-		//								&menu.SubmenuItem{
-		//									BaseItem: menu.BaseItem{
-		//										Label: fields.S("Audit Logs"),
-		//									},
-		//									Menu: &menu.Menu{
-		//										Items: []menu.MenuItem{
-		//											&menu.BaseItem{
-		//												Label: fields.S("View Logs"),
-		//											},
-		//										},
-		//									},
-		//								},
-		//							},
-		//						},
-		//					},
-		//				},
-		//			},
-		//		}
-		//
-		//		items.Append(&auditLogItem)
-		//	}),
-		//)
+		// Logs.Queries = models.NewQueries(db)
+		fmt.Println("Initializing audit logs app")
+		goldcrest.Register(
+			admin.RegisterMenuItemHook, 0,
+			admin.RegisterMenuItemHookFunc(func(adminSite *admin.AdminApplication, items components.Items[menu.MenuItem]) {
+				//var auditLogItem = menu.SubmenuItem{
+				//	BaseItem: menu.BaseItem{
+				//		Label: fields.S("Audit Logs"),
+				//	},
+				//	Menu: &menu.Menu{
+				//		Items: []menu.MenuItem{
+				//			&menu.BaseItem{
+				//				Label: fields.S("View Logs"),
+				//			},
+				//			&menu.SubmenuItem{
+				//				BaseItem: menu.BaseItem{
+				//					Label: fields.S("Audit Logs"),
+				//				},
+				//				Menu: &menu.Menu{
+				//					Items: []menu.MenuItem{
+				//						&menu.BaseItem{
+				//							Label: fields.S("View Logs"),
+				//						},
+				//					},
+				//				},
+				//			},
+				//			&menu.SubmenuItem{
+				//				BaseItem: menu.BaseItem{
+				//					Label: fields.S("Audit Logs"),
+				//				},
+				//				Menu: &menu.Menu{
+				//					Items: []menu.MenuItem{
+				//						&menu.BaseItem{
+				//							Label: fields.S("View Logs"),
+				//						},
+				//						&menu.SubmenuItem{
+				//							BaseItem: menu.BaseItem{
+				//								Label: fields.S("Audit Logs"),
+				//							},
+				//							Menu: &menu.Menu{
+				//								Items: []menu.MenuItem{
+				//									&menu.BaseItem{
+				//										Label: fields.S("View Logs"),
+				//									},
+				//								},
+				//							},
+				//						},
+				//					},
+				//				},
+				//			},
+				//		},
+				//	},
+				//}
+				var auditLogItem = &menu.Item{
+					BaseItem: menu.BaseItem{
+						Label: fields.S("Audit Logs"),
+					},
+					Link: func() string {
+						return django.Reverse("admin:auditlogs")
+					},
+				}
+
+				items.Append(auditLogItem)
+			}),
+		)
 
 		return nil
 	}
@@ -157,9 +173,30 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 
 	var adminCtx = admin.NewContext(r, admin.AdminSite, nil)
 
-	var logList, err = Backend().RetrieveMany(25, 0)
-	if err != nil {
+	var backend = Backend()
+	if backend == nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"Failed to setup audit logs backend",
+		)
+		return
+	}
 
+	var paginator = pagination.Paginator[LogEntry]{
+		GetObject: func(l LogEntry) LogEntry {
+			return Define(r, l)
+		},
+		GetObjects: backend.RetrieveMany,
+		GetCount:   backend.Count,
+		Amount:     15,
+	}
+
+	var pageNum = pagination.GetPageNum(
+		r.URL.Query().Get("page"),
+	)
+
+	var page, err = paginator.Page(pageNum)
+	if err != nil {
 		logger.Error(err)
 		except.Fail(
 			http.StatusInternalServerError,
@@ -168,12 +205,12 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var definitions = make([]*BoundDefinition, len(logList))
-	for i, log := range logList {
-		definitions[i] = Define(r, log)
-	}
+	//var definitions = make([]*BoundDefinition, page.Count())
+	//for i, log := range page.Results() {
+	//	definitions[i] = Define(r, log)
+	//}
 
-	adminCtx.Set("logs", definitions)
+	adminCtx.Set("paginator", page)
 	adminCtx.SetPage(admin.PageOptions{
 		TitleFn:    fields.S("Audit Logs"),
 		SubtitleFn: fields.S("View all audit logs"),

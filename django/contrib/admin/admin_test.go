@@ -177,9 +177,7 @@ func init() {
 
 	gob.Register(&User{})
 
-	http.DefaultClient.Jar, err = cookiejar.New(&cookiejar.Options{
-		PublicSuffixList: nil,
-	})
+	http.DefaultClient.Jar, err = cookiejar.New(nil)
 
 	if err != nil {
 		panic(err)

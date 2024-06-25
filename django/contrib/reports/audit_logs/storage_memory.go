@@ -277,6 +277,13 @@ func (i *inMemoryStorageBackend) EntryFilter(filters []AuditLogFilter, amount, o
 	return entries, nil
 }
 
+func (i *inMemoryStorageBackend) Count() (int, error) {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	return i.entries.Len(), nil
+}
+
 func sortEntries(i, j LogEntry) int {
 	var t1, t2 = i.Timestamp(), j.Timestamp()
 	if t1.Before(t2) {

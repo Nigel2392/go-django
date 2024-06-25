@@ -11,13 +11,29 @@
     font-size: 1.1em;
     font-weight: 600;
 }
-
-.breadcrumbs a {
+.breadcrumbs .breadcrumb {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 90px;
+    font-weight: normal;
+    -webkit-transition: max-width .5s ease;
+    -moz-transition: max-width .5s ease;
+    -o-transition: max-width .5s ease;
+    transition: max-width .5s ease;
+}
+.breadcrumbs .breadcrumb:hover {
+    max-width: 100%;
+}
+.breadcrumbs a.breadcrumb,
+.breadcrumbs .breadcrumb a {
     color: var(--breadcrumb-text-color);
+    line-height: 1.5;
+    text-underline-offset: unset;
     text-decoration: underline dotted var(--breadcrumb-text-color)
 }
-
 .breadcrumbs .breadcrumb.active {
+    font-weight: 700;
     color: var(--breadcrumb-text-color-hover);
     text-decoration: none;
 }

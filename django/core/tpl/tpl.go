@@ -63,6 +63,12 @@ func NewRenderer() *TemplateRenderer {
 			}
 			return html
 		},
+		"add": func(x, y int) any {
+			return x + y
+		},
+		"sub": func(y, x int) any {
+			return x - y
+		},
 		"safe": func(v any) template.HTML {
 			var s = fmt.Sprint(v)
 			return template.HTML(s)

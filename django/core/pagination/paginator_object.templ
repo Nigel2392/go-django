@@ -1,0 +1,115 @@
+package pagination
+
+import "github.com/Nigel2392/django/forms/fields"
+import "strings"
+import "strconv"
+import "fmt"
+import "html/template"
+
+type pageObject[T any] struct {
+	num       int
+	results   []T
+	paginator Pagination[T]
+}
+
+func (p *pageObject[T]) HTML(queryParam string, numPageNumbers int) template.HTML {
+    var b = new(strings.Builder)
+    var cmp = p.Component(queryParam, numPageNumbers)
+    var ctx = context.Background()
+    cmp.Render(ctx, b)
+    return template.HTML(b.String())
+}
+
+templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int) {
+    <div class="pagination">
+        <ul>
+            if p.HasPrev() {
+                <li>
+                    <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, p.Prev())) }>{ fields.T("Previous") }</a>
+                </li>
+            }
+
+            {{ var numPages, err = p.Paginator().NumPages() }}
+            {{ if err != nil { return err } }}
+
+            {{ var start = max(0, p.PageNum()-numPageNumbers) }}
+            {{ var end = min(numPages, p.PageNum()+numPageNumbers+1) }}
+
+            if start > 0 {
+                <li>
+                    <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, 0)) }>1</a>
+                </li>
+                if start > 1 {
+                    <li>...</li>
+                }
+            }
+
+            for i := start; i < end; i++ {
+                <li>
+                    if i == p.PageNum() {
+                        <span>{ strconv.Itoa(i) }</span>
+                    } else {
+                        <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, i)) }>{ strconv.Itoa(i) }</a>
+                    }
+                </li>
+            }
+
+            if end < numPages {
+                if end < numPages-1 {
+                    <li>...</li>
+                }
+                <li>
+                    <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, numPages-1)) }>{ strconv.Itoa(numPages) }</a>
+                </li>
+            }
+
+            if p.HasNext() {
+                <li>
+                    <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d", queryParam, p.Next())) }>{ fields.T("Next") }</a>
+                </li>
+            }
+        </ul>
+    </div>
+}
+
+func (p *pageObject[T]) Count() int {
+	return len(p.results)
+}
+
+func (p *pageObject[T]) Results() []T {
+	return p.results
+}
+
+func (p *pageObject[T]) Paginator() Pagination[T] {
+	return p.paginator
+}
+
+func (p *pageObject[T]) HasNext() bool {
+	var count, err = p.paginator.Count()
+	if err != nil {
+		return false
+	}
+	return count > (p.PageNum()+1)*p.paginator.PerPage()
+}
+
+func (p *pageObject[T]) HasPrev() bool {
+	return p.PageNum() > 0
+}
+
+func (p *pageObject[T]) Next() int {
+	if p.HasNext() {
+		return p.PageNum() + 1
+	}
+	return -1
+}
+
+func (p *pageObject[T]) Prev() int {
+	if p.HasPrev() {
+		return p.PageNum() - 1
+	}
+	return -1
+}
+
+func (p *pageObject[T]) PageNum() int {
+	return p.num
+}

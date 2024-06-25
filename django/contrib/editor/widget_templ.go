@@ -263,7 +263,7 @@ func (b *EditorJSWidget) Media() media.Media {
 	}
 
 	m.AddCSS(
-		media.CSS(django.Static("editorjs/css/admin.css")),
+		media.CSS(django.Static("editorjs/css/index.css")),
 	)
 
 	m.AddJS(

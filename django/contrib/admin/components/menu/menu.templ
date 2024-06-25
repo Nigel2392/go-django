@@ -59,6 +59,18 @@ type BaseItem struct {
 }
 
 func (i *BaseItem) Name() string {
+	if i.ItemName == "" {
+		if i.ID != "" {
+			return i.ID
+		}
+		
+		if i.Label != nil {
+			var name = i.Label()
+			name = strings.ReplaceAll(name, " ", "-")
+			name = strings.ToLower(name)
+			return name
+		}
+	}
 	return i.ItemName
 }
 

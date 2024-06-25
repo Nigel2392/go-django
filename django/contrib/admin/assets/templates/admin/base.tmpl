@@ -36,12 +36,13 @@
                         {{ $actions := .Page.GetActions }}
 
                         {{ if $breadCrumbs }}
+                            {{$last := (len $breadCrumbs | sub 1)}}
                             <div class="breadcrumbs">
                                 {{ range $i, $breadCrumb := $breadCrumbs }}
                                     {{ if $breadCrumb.URL }}
                                         <a class="breadcrumb" href="{{ $breadCrumb.URL }}">{{ $breadCrumb.Title }}</a>
                                     {{ else }}
-                                        <span class="breadcrumb{{ if eq $i (len $breadCrumbs) }} active{{ end }}">
+                                        <span class="breadcrumb{{ if eq $i $last }} active{{ end }}">
                                             {{ $breadCrumb.Title }}
                                         </span>
                                     {{ end }}

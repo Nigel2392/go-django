@@ -29,6 +29,7 @@ const (
 	selectTypedSQLITE     = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE type = ?1 ORDER BY timestamp DESC LIMIT ?2 OFFSET ?3;`
 	selectForUserSQLITE   = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE user_id = ?1 ORDER BY timestamp DESC LIMIT ?2 OFFSET ?3;`
 	selectForObjectSQLITE = `SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE object_id = ?1 ORDER BY timestamp DESC LIMIT ?2 OFFSET ?3;`
+	selectCountSQLITE     = `SELECT COUNT(id) FROM audit_logs;`
 )
 
 type sqliteStorageBackend struct {
@@ -280,4 +281,15 @@ func (s *sqliteStorageBackend) EntryFilter(filters []auditlogs.AuditLogFilter, a
 	}
 
 	return entries, nil
+}
+
+func (s *sqliteStorageBackend) Count() (int, error) {
+	row := s.db.QueryRow(selectCountSQLITE)
+	if row.Err() != nil {
+		return 0, row.Err()
+	}
+
+	var count int
+	err := row.Scan(&count)
+	return count, err
 }
