@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"strconv"
+	"unicode"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
@@ -170,6 +172,15 @@ func NewAppConfig() django.AppConfig {
 	return Logs
 }
 
+func isNumber(v string) bool {
+	for _, c := range v {
+		if !unicode.IsDigit(c) {
+			return false
+		}
+	}
+	return true
+}
+
 func auditLogView(w http.ResponseWriter, r *http.Request) {
 
 	var adminCtx = admin.NewContext(r, admin.AdminSite, nil)
@@ -190,13 +201,19 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		filters = append(filters, FilterType(filterType))
 	}
 
-	var filterUser = r.URL.Query().Get("user")
+	var filterUser interface{} = r.URL.Query().Get("user")
 	if filterUser != "" {
+		if isNumber(filterUser.(string)) {
+			filterUser, _ = strconv.Atoi(filterUser.(string))
+		}
 		filters = append(filters, FilterUserID(filterUser))
 	}
 
-	var objectID = r.URL.Query().Get("object_id")
+	var objectID interface{} = r.URL.Query().Get("object_id")
 	if objectID != "" {
+		if isNumber(objectID.(string)) {
+			objectID, _ = strconv.Atoi(objectID.(string))
+		}
 		filters = append(filters, FilterObjectID(objectID))
 	}
 

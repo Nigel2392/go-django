@@ -10,12 +10,12 @@ import (
 	"time"
 
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
-	auditlogs_mysql "github.com/Nigel2392/django/contrib/reports/audit_logs/audit_logs_mysql"
+	auditlogs_sqlite "github.com/Nigel2392/django/contrib/reports/audit_logs/audit_logs_sqlite"
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/google/uuid"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 // For now only used to make sure tests pass on github actions
@@ -67,11 +67,11 @@ func init() {
 	}
 
 	var err error
-	db, err = sql.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
+	db, err = sql.Open("sqlite3", ":memory:")
 	if err != nil {
 		panic(err)
 	}
-	var backend = auditlogs_mysql.NewMySQLStorageBackend(db)
+	var backend = auditlogs_sqlite.NewSQLiteStorageBackend(db)
 	auditlogs.RegisterBackend(backend)
 
 	db.Exec("DROP TABLE IF EXISTS audit_logs;")
@@ -243,6 +243,12 @@ var filterTests = []filterTest{
 			auditlogs.FilterLevelEqual(logger.LogLevel(3)),
 		},
 		expectedFilterIDs: []uuid.UUID{entryIds[3], entryIds[8], entryIds[13], entryIds[18], entryIds[23]},
+	},
+	{
+		filters: []auditlogs.AuditLogFilter{
+			auditlogs.FilterObjectID("object-1", "object-2"),
+		},
+		expectedFilterIDs: []uuid.UUID{entryIds[1], entryIds[2]},
 	},
 	{
 		filters: []auditlogs.AuditLogFilter{

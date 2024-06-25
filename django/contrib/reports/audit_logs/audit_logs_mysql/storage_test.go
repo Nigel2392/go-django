@@ -246,6 +246,13 @@ var filterTests = []filterTest{
 	},
 	{
 		filters: []auditlogs.AuditLogFilter{
+			auditlogs.FilterObjectID("object-1", "object-2"),
+		},
+		expectedFilterIDs: []uuid.UUID{entryIds[1], entryIds[2]},
+	},
+
+	{
+		filters: []auditlogs.AuditLogFilter{
 			auditlogs.FilterType("type-1", "type-2", "type-7"),
 			auditlogs.FilterLevelGreaterThan(logger.LogLevel(1)),
 		},

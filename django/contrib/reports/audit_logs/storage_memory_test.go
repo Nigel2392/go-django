@@ -1,7 +1,6 @@
 package auditlogs_test
 
 import (
-	"database/sql"
 	"fmt"
 	"os"
 	"slices"
@@ -10,20 +9,15 @@ import (
 	"time"
 
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
-	auditlogs_mysql "github.com/Nigel2392/django/contrib/reports/audit_logs/audit_logs_mysql"
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/google/uuid"
-
-	_ "github.com/go-sql-driver/mysql"
 )
 
 // For now only used to make sure tests pass on github actions
 // This will be removed when the package is properly developed and tested
 // This makes sure that the authentication check is enabled only when running on github actions
 var IS_GITHUB_ACTIONS = true
-
-var db *sql.DB
 
 var entries []auditlogs.LogEntry
 
@@ -67,14 +61,8 @@ func init() {
 	}
 
 	var err error
-	db, err = sql.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
-	if err != nil {
-		panic(err)
-	}
-	var backend = auditlogs_mysql.NewMySQLStorageBackend(db)
+	var backend = auditlogs.NewInMemoryStorageBackend()
 	auditlogs.RegisterBackend(backend)
-
-	db.Exec("DROP TABLE IF EXISTS audit_logs;")
 
 	err = backend.Setup()
 	if err != nil {

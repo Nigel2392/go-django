@@ -21,6 +21,15 @@ func (p *pageObject[T]) HTML(queryParam string, numPageNumbers int) template.HTM
 }
 
 templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int) {
+    {{ var count, err = p.Paginator().NumPages() }}
+    if err != nil {
+        {{ count = 1 }}
+    }
+
+    if count == 1 {
+        {{ return nil }}
+    }
+
     <div class="pagination">
         <section class="pagination--paginator">
             <div class="prev">
@@ -35,10 +44,6 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int) {
             }
 
             {{ var end = p.PageNum() + numPageNumbers }}
-            {{ var count, err = p.Paginator().NumPages() }}
-            if err != nil {
-                {{ count = 1 }}
-            }
             if end > count {
                 {{ end = count }}
             }

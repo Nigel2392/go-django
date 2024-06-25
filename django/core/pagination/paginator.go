@@ -1,8 +1,13 @@
 package pagination
 
 import (
+	"errors"
 	"reflect"
 	"strconv"
+)
+
+var (
+	ErrNoResults = errors.New("no results found")
 )
 
 type PageObject[T any] interface {
@@ -106,10 +111,16 @@ func (p *Paginator[T]) Page(n int) (PageObject[T], error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if len(results) == 0 {
+		return nil, ErrNoResults
+	}
+
 	if p.GetObject != nil {
 		for i, r := range results {
 			results[i] = p.GetObject(r)
 		}
 	}
+
 	return &pageObject[T]{num: n - 1, results: results, paginator: p}, nil
 }
