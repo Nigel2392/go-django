@@ -1,6 +1,8 @@
 go-django (v2)
 ==============
 
+![1719351174099](.github/image/README/1719351174099.png)
+
 **Django rewritten to Golang**
 
 This code will be pushed to [go-django](https://github.com/Nigel2392/go-django) when ready.
