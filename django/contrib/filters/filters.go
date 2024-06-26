@@ -21,7 +21,7 @@ type FilterSpec[ListT any] interface {
 	Field() fields.Field
 
 	// Filter filters the object list.
-	Filter(value interface{}, objectList []ListT)
+	Filter(value interface{}, objectList []ListT) error
 }
 
 type Filters[ListT any] struct {
@@ -29,7 +29,7 @@ type Filters[ListT any] struct {
 	specs *orderedmap.OrderedMap[string, FilterSpec[ListT]]
 }
 
-func NewFilters[FormValueT, ListT any](formPrefix string, specs ...FilterSpec[ListT]) *Filters[ListT] {
+func NewFilters[ListT any](formPrefix string, specs ...FilterSpec[ListT]) *Filters[ListT] {
 	var s = orderedmap.NewOrderedMap[string, FilterSpec[ListT]]()
 	for _, spec := range specs {
 		s.Set(spec.Name(), spec)
@@ -68,15 +68,15 @@ func (f *Filters[ListT]) Filter(data map[string][]string, objects []ListT) error
 	f.form.FormFields = orderedmap.NewOrderedMap[string, fields.Field]()
 	f.form.Errors = orderedmap.NewOrderedMap[string, []error]()
 
-	f.form.WithData(
-		data, nil, nil,
-	)
-
 	for front := f.specs.Front(); front != nil; front = front.Next() {
 		var spec = front.Value
 		var field = spec.Field()
 		f.form.AddField(spec.Name(), field)
 	}
+
+	f.form.WithData(
+		data, nil, nil,
+	)
 
 	if !f.form.IsValid() {
 		var errs = f.form.Errors

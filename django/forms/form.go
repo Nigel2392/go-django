@@ -368,7 +368,7 @@ func (f *BaseForm) BoundFields() *orderedmap.OrderedMap[string, BoundField] {
 		ret.Set(k, NewBoundFormWidget(
 			widget,
 			v,
-			k,
+			f.prefix(k),
 			value,
 			errors,
 		))

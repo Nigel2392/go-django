@@ -423,6 +423,46 @@ func (a *Application) Initialize() error {
 		flag.ContinueOnError,
 	)
 
+	commandRegistry.Register(&command.Cmd[interface{}]{
+		ID:   "help",
+		Desc: "List all available commands and their usage information",
+		Execute: func(m command.Manager, stored interface{}, args []string) error {
+			var (
+				buf  = new(bytes.Buffer)
+				cmds = commandRegistry.Commands()
+			)
+			buf.WriteString("Available commands:\n")
+			for _, cmd := range cmds {
+				var description string
+				var commandName = cmd.Name()
+				if d, ok := cmd.(command.CommandDescriptor); ok {
+					description = d.Description()
+				}
+
+				if description != "" {
+					fmt.Fprintf(buf, "[%s]:\n  %s\n", commandName, description)
+				} else {
+					fmt.Fprintf(buf, "[%s]\n", commandName)
+				}
+
+				var flagger = flag.NewFlagSet(
+					commandName,
+					flag.ContinueOnError,
+				)
+				if err := cmd.AddFlags(m, flagger); err != nil {
+					return err
+				}
+
+				flagger.SetOutput(buf)
+				flagger.PrintDefaults()
+				fmt.Fprintln(buf)
+			}
+			m.Log(buf.String())
+			os.Exit(0)
+			return nil
+		},
+	})
+
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
 		var urls = app.URLs()

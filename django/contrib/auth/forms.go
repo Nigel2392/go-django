@@ -55,12 +55,10 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserLogin
 	f.AddField(
 		"password",
 		fields.Protect(NewPasswordField(
+			ChrFlagDigit|ChrFlagLower|ChrFlagUpper|ChrFlagSpecial,
 			fields.Label("Password"),
 			fields.HelpText("Enter your password"),
 			fields.Required(true),
-			fields.MinLength(8),
-			fields.MaxLength(64),
-			ValidateCharacters(false, ChrFlagDigit|ChrFlagLower|ChrFlagUpper|ChrFlagSpecial),
 		), func(err error) error { return errs.Error("Invalid value provided") }),
 	)
 
@@ -81,13 +79,13 @@ func (f *BaseUserLoginForm) Login() error {
 	var (
 		ctx     = f.Request.Context()
 		cleaned = f.CleanedData()
-		user    models.User
+		user    *models.User
 		err     error
 	)
 	if Auth.LoginWithEmail {
-		user, err = Auth.Queries.UserByEmail(ctx, cleaned["email"].(string))
+		user, err = Auth.Queries.RetrieveByEmail(ctx, cleaned["email"].(string))
 	} else {
-		user, err = Auth.Queries.UserByUsername(ctx, cleaned["username"].(string))
+		user, err = Auth.Queries.RetrieveByUsername(ctx, cleaned["username"].(string))
 	}
 	if err != nil {
 		return errors.Wrap(
@@ -95,16 +93,15 @@ func (f *BaseUserLoginForm) Login() error {
 		)
 	}
 
-	var u = &user
-	if err := models.CheckPassword(u, string(cleaned["password"].(PasswordString))); err != nil {
+	if err := models.CheckPassword(user, string(cleaned["password"].(PasswordString))); err != nil {
 		return errs.Error("Invalid password")
 	}
 
-	if !u.IsActive {
+	if !user.IsActive {
 		return errs.Error("User account is not active")
 	}
 
-	Login(f.Request, u)
-	f.Instance = u
+	Login(f.Request, user)
+	f.Instance = user
 	return nil
 }

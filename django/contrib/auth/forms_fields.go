@@ -26,7 +26,7 @@ func init() {
 		attrs.HookFormFieldForType, 0,
 		attrs.FormFieldGetter(func(f attrs.Field, t reflect.Type, v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
 			if t == passwordType {
-				return NewPasswordField(opts...), true
+				return NewPasswordField(ChrFlagDigit|ChrFlagLower|ChrFlagUpper|ChrFlagSpecial, opts...), true
 			}
 			return nil, false
 		}),
@@ -42,12 +42,21 @@ func PasswordValidators(fn ...func(PasswordString) error) func(*PasswordField) {
 	}
 }
 
-func NewPasswordField(opts ...func(fields.Field)) *PasswordField {
+func NewPasswordField(flags PasswordCharacterFlag, opts ...func(fields.Field)) *PasswordField {
 	var p = &PasswordField{
 		BaseField: fields.NewField(
 			fields.S("password"),
 		),
 	}
+
+	opts = append(opts,
+		fields.MinLength(8),
+		fields.MaxLength(64),
+		ValidateCharacters(
+			false,
+			flags,
+		),
+	)
 
 	for _, opt := range opts {
 		opt(p)

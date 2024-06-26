@@ -4,14 +4,17 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"os"
+
+	"golang.org/x/term"
 )
 
 var _ Manager = (*manager)(nil)
 
 type manager struct {
-	stdout io.Writer
-	stderr io.Writer
-	stdin  io.Reader
+	stdout *os.File
+	stderr *os.File
+	stdin  *os.File
 	cmd    Command
 }
 
@@ -36,6 +39,17 @@ func (m *manager) Input(question string) (string, error) {
 	var reader = bufio.NewReader(m.stdin)
 	var input, _, err = reader.ReadLine()
 	return string(input), err
+}
+
+func (m *manager) ProtectedInput(question string) (string, error) {
+	fmt.Fprint(m.stdout, question)
+	var bytesPass, err = term.ReadPassword(
+		int(m.stdin.Fd()),
+	)
+	if err != nil {
+		return "", err
+	}
+	return string(bytesPass), nil
 }
 
 func (m *manager) Command() Command {

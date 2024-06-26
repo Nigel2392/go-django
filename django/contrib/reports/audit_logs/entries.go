@@ -10,15 +10,15 @@ import (
 )
 
 type Entry struct {
-	Id    uuid.UUID                `json:"id"`
-	Typ   string                   `json:"type"`
-	Lvl   logger.LogLevel          `json:"level"`
-	Time  time.Time                `json:"timestamp"`
-	UsrID interface{}              `json:"user_id"`
+	Id    uuid.UUID                `db:"id" json:"id"`
+	Typ   string                   `db:"type" json:"type"`
+	Lvl   logger.LogLevel          `db:"level" json:"level"`
+	Time  time.Time                `db:"timestamp" json:"timestamp"`
+	UsrID interface{}              `db:"user_id" json:"user_id"`
 	Obj   interface{}              `json:"-"`
-	ObjID interface{}              `json:"object_id"`
-	CType contenttypes.ContentType `json:"content_type"`
-	Src   map[string]interface{}   `json:"data"`
+	ObjID interface{}              `db:"object_id" json:"object_id"`
+	CType contenttypes.ContentType `db:"content_type" json:"content_type"`
+	Src   map[string]interface{}   `db:"data" json:"data"`
 }
 
 func (l *Entry) String() string {

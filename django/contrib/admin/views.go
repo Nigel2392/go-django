@@ -177,7 +177,12 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 				formfield = field.FormField()
 			)
 
-			var label = model.GetLabel(opts.ViewOptions, name, field.Label())
+			var label = model.GetLabel(
+				opts.ViewOptions,
+				name,
+				field.Label(),
+			)
+
 			formfield.SetLabel(label)
 
 			modelForm.AddField(

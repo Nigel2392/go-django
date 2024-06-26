@@ -53,7 +53,7 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	var backend = auditlogs_sqlite.NewSQLiteStorageBackend(db)
+	var backend auditlogs.StorageBackend = auditlogs_sqlite.NewSQLiteStorageBackend(db)
 	auditlogs.RegisterBackend(backend)
 
 	db.Exec("DROP TABLE IF EXISTS audit_logs;")

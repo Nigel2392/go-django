@@ -11,7 +11,13 @@ type Manager interface {
 	Stderr() io.Writer
 	Stdin() io.Reader
 	Input(question string) (string, error)
+	ProtectedInput(question string) (string, error)
 	Command() Command
+}
+
+type CommandDescriptor interface {
+	Command
+	Description() string
 }
 
 type Command interface {
@@ -28,6 +34,7 @@ type Command interface {
 
 type Cmd[T any] struct {
 	ID       string
+	Desc     string
 	FlagFunc func(m Manager, stored *T, f *flag.FlagSet) error
 	Execute  func(m Manager, stored T, args []string) error
 
@@ -38,6 +45,10 @@ type Cmd[T any] struct {
 
 func (c *Cmd[T]) Name() string {
 	return c.ID
+}
+
+func (c *Cmd[T]) Description() string {
+	return c.Desc
 }
 
 func (c *Cmd[T]) AddFlags(m Manager, f *flag.FlagSet) error {

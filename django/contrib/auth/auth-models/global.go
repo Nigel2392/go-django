@@ -3,10 +3,8 @@ package models
 import (
 	"context"
 	"database/sql"
-	"fmt"
 
-	"github.com/go-sql-driver/mysql"
-	"github.com/mattn/go-sqlite3"
+	models "github.com/Nigel2392/django/models"
 )
 
 type DBTX interface {
@@ -17,44 +15,62 @@ type DBTX interface {
 }
 
 var (
-	queries Querier
+	queries DBQuerier
 )
 
-func NewQueries(db *sql.DB) Querier {
-	var q Querier
-	switch db.Driver().(type) {
-	case *mysql.MySQLDriver:
-		q = &MySQLQueries{
-			db: db,
-		}
-	case *sqlite3.SQLiteDriver:
-		q = &SQLiteQueries{
-			db: db,
-		}
-	default:
-		panic(fmt.Sprintf("unsupported driver: %T", db.Driver()))
+type Querier interface {
+	Count(ctx context.Context) (int64, error)
+	CountMany(ctx context.Context, isActive bool, isAdministrator bool) (int64, error)
+	CreateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool) error
+	DeleteUser(ctx context.Context, id uint64) error
+	Retrieve(ctx context.Context, limit int32, offset int32) ([]*User, error)
+	RetrieveByEmail(ctx context.Context, email string) (*User, error)
+	RetrieveByID(ctx context.Context, id uint64) (*User, error)
+	RetrieveByUsername(ctx context.Context, username string) (*User, error)
+	RetrieveMany(ctx context.Context, isActive bool, isAdministrator bool, limit int32, offset int32) ([]*User, error)
+	UpdateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool, iD uint64) error
+	WithTx(tx *sql.Tx) Querier
+	Close() error
+}
+
+type DBQuerier interface {
+	Querier
+	DB() *sql.DB
+	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+}
+
+type dbQuerier struct {
+	db *sql.DB
+	Querier
+}
+
+func (q *dbQuerier) DB() *sql.DB {
+	return q.db
+}
+
+func (q *dbQuerier) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
+	return q.db.BeginTx(ctx, opts)
+}
+
+func NewQueries(db *sql.DB) (DBQuerier, error) {
+	var backend, ok = BackendForDB(db.Driver())
+	if !ok {
+		return nil, models.ErrBackendNotFound
 	}
 
-	queries = q
-	return q
-}
-
-type MySQLQueries struct {
-	db DBTX
-}
-
-func (q *MySQLQueries) WithTx(tx *sql.Tx) *MySQLQueries {
-	return &MySQLQueries{
-		db: tx,
+	var qs, err = backend.NewQuerySet(db)
+	if err != nil {
+		return nil, err
 	}
-}
 
-type SQLiteQueries struct {
-	db DBTX
-}
-
-func (q *SQLiteQueries) WithTx(tx *sql.Tx) *SQLiteQueries {
-	return &SQLiteQueries{
-		db: tx,
+	queries = &dbQuerier{
+		db:      db,
+		Querier: qs,
 	}
+
+	return queries, nil
 }
+
+var backend = models.NewBackendRegistry[Querier]()
+var Register = backend.RegisterForDriver
+var BackendForDB = backend.BackendForDB

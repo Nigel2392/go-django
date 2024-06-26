@@ -19,13 +19,14 @@ import (
 	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/fields"
+	dj_models "github.com/Nigel2392/django/models"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 )
 
 type PageAppConfig struct {
 	*apps.DBRequiredAppConfig
-	backend     models.Backend
+	backend     dj_models.Backend[models.Querier]
 	routePrefix string
 }
 

@@ -12,16 +12,6 @@ import (
 	"github.com/Nigel2392/django/models"
 )
 
-type UserRow struct {
-	User                  User   `json:"user"`
-	GroupID               uint64 `json:"group_id"`
-	GroupName             string `json:"group_name"`
-	GroupDescription      string `json:"group_description"`
-	PermissionID          uint64 `json:"permission_id"`
-	PermissionName        string `json:"permission_name"`
-	PermissionDescription string `json:"permission_description"`
-}
-
 var (
 	_ models.Saver    = (*User)(nil)
 	_ models.Updater  = (*User)(nil)
@@ -139,12 +129,12 @@ func (u *User) Delete(ctx context.Context) error {
 }
 
 func (u *User) Reload(ctx context.Context) error {
-	row, err := queries.GetUserById(ctx, u.ID)
+	row, err := queries.RetrieveByID(ctx, u.ID)
 	if err != nil {
 		return err
 	}
 
-	*u = row[0].User
+	*u = *row
 	return nil
 }
 

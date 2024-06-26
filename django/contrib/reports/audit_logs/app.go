@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/admin/components"
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
+	"github.com/Nigel2392/django/contrib/filters"
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
@@ -21,9 +22,11 @@ import (
 	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/media"
+	"github.com/Nigel2392/django/forms/widgets"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
+	"github.com/pkg/errors"
 
 	"embed"
 )
@@ -194,11 +197,11 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var filters = make([]AuditLogFilter, 0)
+	var logFilters = make([]AuditLogFilter, 0)
 
 	var filterType = r.URL.Query()["type"]
 	if len(filterType) > 0 {
-		filters = append(filters, FilterType(filterType...))
+		logFilters = append(logFilters, FilterType(filterType...))
 	}
 
 	var filterUser = r.URL.Query()["user"]
@@ -212,7 +215,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 				userIds = append(userIds, u)
 			}
 		}
-		filters = append(filters, FilterUserID(userIds...))
+		logFilters = append(logFilters, FilterUserID(userIds...))
 	}
 
 	var filterObjects = r.URL.Query()["object_id"]
@@ -226,7 +229,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 				objectIds = append(objectIds, o)
 			}
 		}
-		filters = append(filters, FilterObjectID(objectIds...))
+		logFilters = append(logFilters, FilterObjectID(objectIds...))
 	}
 
 	objectPackage := r.URL.Query().Get("content_type")
@@ -235,11 +238,60 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 			objectPackage,
 		)
 		if contentType != nil {
-			filters = append(filters, FilterContentType(
+			logFilters = append(logFilters, FilterContentType(
 				contentType.ContentType(),
 			))
 		}
 	}
+
+	var filter = filters.NewFilters[LogEntry](
+		"filters",
+	)
+
+	filter.Add(&filters.BaseFilterSpec[LogEntry]{
+		SpecName:  "type",
+		FormField: fields.CharField(),
+		Apply: func(value interface{}, objectList []LogEntry) error {
+			if fields.IsZero(value) {
+				return nil
+			}
+
+			var v = value.(string)
+			if v != "" {
+				logFilters = append(logFilters, FilterType(v))
+			}
+			return nil
+		},
+	})
+
+	filter.Add(&filters.BaseFilterSpec[LogEntry]{
+		SpecName: "level",
+		FormField: fields.CharField(fields.Widget(
+			widgets.NewSelectInput(nil, func() []widgets.Option {
+				return []widgets.Option{
+					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.DBG)), OptLabel: fields.T("Debug")},
+					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.INF)), OptLabel: fields.T("Info")},
+					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.WRN)), OptLabel: fields.T("Warning")},
+					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.ERR)), OptLabel: fields.T("Error")},
+				}
+			}),
+		)),
+		Apply: func(value interface{}, objectList []LogEntry) error {
+			if fields.IsZero(value) {
+				return nil
+			}
+
+			var v = value.(string)
+			var level, err = strconv.Atoi(v)
+			if err != nil {
+				return err
+			}
+			logFilters = append(logFilters, FilterLevelEqual(
+				logger.LogLevel(level),
+			))
+			return nil
+		},
+	})
 
 	var paginator = pagination.Paginator[LogEntry]{
 		GetObject: func(l LogEntry) LogEntry {
@@ -250,9 +302,14 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 				objects []LogEntry
 				err     error
 			)
-			if len(filters) > 0 {
+
+			if err = filter.Filter(r.URL.Query(), nil); err != nil {
+				return nil, errors.Wrap(err, "Failed to filter audit logs")
+			}
+
+			if len(logFilters) > 0 {
 				objects, err = backend.EntryFilter(
-					filters, i1, i2,
+					logFilters, i1, i2,
 				)
 			} else {
 				objects, err = backend.RetrieveMany(
@@ -265,8 +322,8 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 			return objects, nil
 		},
 		GetCount: func() (int, error) {
-			if len(filters) > 0 {
-				return backend.CountFilter(filters)
+			if len(logFilters) > 0 {
+				return backend.CountFilter(logFilters)
 			}
 			return backend.Count()
 		},
@@ -293,6 +350,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	//}
 
 	adminCtx.Set("paginator", page)
+	adminCtx.Set("form", filter.Form())
 	adminCtx.SetPage(admin.PageOptions{
 		TitleFn:    fields.S("Audit Logs"),
 		SubtitleFn: fields.S("View all audit logs"),

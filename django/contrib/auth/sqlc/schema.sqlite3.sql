@@ -10,31 +10,3 @@ CREATE TABLE IF NOT EXISTS users (
   is_administrator BOOLEAN NOT NULL,
   is_active BOOLEAN NOT NULL
 );
-
-CREATE TABLE IF NOT EXISTS groups (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name VARCHAR(255) NOT NULL UNIQUE,
-  description VARCHAR(255) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS permissions (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name VARCHAR(255) NOT NULL UNIQUE,
-  description VARCHAR(255) NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS user_groups (
-  user_id INTEGER NOT NULL,
-  group_id INTEGER NOT NULL,
-  PRIMARY KEY (user_id, group_id),
-  FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-  FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE
-);
-
-CREATE TABLE IF NOT EXISTS group_permissions (
-  group_id INTEGER NOT NULL,
-  permission_id INTEGER NOT NULL,
-  PRIMARY KEY (group_id, permission_id),
-  FOREIGN KEY (group_id) REFERENCES groups (id) ON DELETE CASCADE,
-  FOREIGN KEY (permission_id) REFERENCES permissions (id) ON DELETE CASCADE
-);

@@ -42,13 +42,13 @@ func UserFromRequest(r *http.Request) *models.User {
 	if !ok {
 		return UnAuthenticatedUser()
 	}
-	var user, err = Auth.Queries.UserByID(r.Context(), uidInt)
+	var user, err = Auth.Queries.RetrieveByID(r.Context(), uidInt)
 	if err != nil {
 		return UnAuthenticatedUser()
 	}
 
 	user.IsLoggedIn = true
-	return &user
+	return user
 }
 
 func UserFromRequestPure(r *http.Request) authentication.User {

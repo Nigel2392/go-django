@@ -104,18 +104,18 @@ func main() {
 					}
 					id = u
 				}
-				var user, err = auth.Auth.Queries.UserByID(
+				var user, err = auth.Auth.Queries.RetrieveByID(
 					context.Background(),
 					uint64(id),
 				)
 				if err != nil {
 					return nil, err
 				}
-				return &user, nil
+				return user, nil
 			},
 			GetList: func(amount, offset uint, fields []string) ([]attrs.Definer, error) {
-				var users, err = auth.Auth.Queries.GetUsersWithPagination(
-					context.Background(), uint64(amount), uint64(offset),
+				var users, err = auth.Auth.Queries.Retrieve(
+					context.Background(), int32(amount), int32(offset),
 				)
 				if err != nil {
 					return nil, err
@@ -123,7 +123,7 @@ func main() {
 				var items = make([]attrs.Definer, 0)
 				for _, u := range users {
 					var cpy = u
-					items = append(items, &cpy)
+					items = append(items, cpy)
 				}
 				return items, nil
 			},
@@ -225,11 +225,10 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 		"PasswordConfirm",
 	})
 	form.AddField("PasswordConfirm", auth.NewPasswordField(
+		auth.ChrFlagDigit|auth.ChrFlagLower|auth.ChrFlagUpper|auth.ChrFlagSpecial,
 		fields.Label("Password Confirm"),
 		fields.HelpText("Enter the password again to confirm"),
 		fields.Required(false),
-		fields.MaxLength(64),
-		auth.ValidateCharacters(false, auth.ChrFlagDigit|auth.ChrFlagLower|auth.ChrFlagUpper|auth.ChrFlagSpecial),
 	))
 	form.SetValidators(func(f forms.Form) []error {
 		var (

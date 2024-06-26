@@ -6,10 +6,11 @@ sql:
     gen:
       go:
         package: "models"
-        out: "../auth-models"
+        out: "../auth-models-mysql"
         emit_json_tags: true
-        emit_prepared_queries: false
-        emit_interface: false
+        emit_prepared_queries: true
+        emit_result_struct_pointers: true
+        emit_interface: true
         query_parameter_limit: 8
 
   - schema: "./schema.sqlite3.sql"
@@ -18,20 +19,9 @@ sql:
     gen:
       go:
         package: "models"
-        out: "../auth-models"
+        out: "../auth-models-sqlite"
         emit_json_tags: true
         emit_prepared_queries: false
-        emit_interface: false
+        emit_result_struct_pointers: true
+        emit_interface: true
         query_parameter_limit: 8
-
-  # - schema: "./schema.postgres.sql"
-    # queries: "./queries.postgres.sql"
-    # engine: "postgresql"
-    # gen:
-      # go:
-        # package: "models"
-        # out: "../auth-models"
-        # emit_json_tags: true
-        # emit_prepared_queries: false
-        # emit_interface: false
-        # query_parameter_limit: 8

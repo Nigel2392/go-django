@@ -43,7 +43,7 @@ var entryIds = []uuid.UUID{
 func init() {
 
 	var err error
-	var backend = auditlogs.NewInMemoryStorageBackend()
+	var backend auditlogs.StorageBackend = auditlogs.NewInMemoryStorageBackend()
 	auditlogs.RegisterBackend(backend)
 
 	err = backend.Setup()

@@ -4,21 +4,32 @@ import (
 	"flag"
 	"os"
 
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/pkg/errors"
 )
 
 type commandRegistry struct {
-	commands map[string]Command
+	commands *orderedmap.OrderedMap[string, Command]
 }
 
 func NewRegistry(flagsetName string, errorHandling flag.ErrorHandling) *commandRegistry {
 	return &commandRegistry{
-		commands: make(map[string]Command),
+		commands: orderedmap.NewOrderedMap[string, Command](),
 	}
 }
 
 func (r *commandRegistry) Register(cmd Command) {
-	r.commands[cmd.Name()] = cmd
+	r.commands.Set(cmd.Name(), cmd)
+}
+
+func (r *commandRegistry) Commands() []Command {
+	var cmds = make([]Command, r.commands.Len())
+	var i = 0
+	for front := r.commands.Front(); front != nil; front = front.Next() {
+		cmds[i] = front.Value
+		i++
+	}
+	return cmds
 }
 
 func (r *commandRegistry) ExecCommand(args []string) error {
@@ -26,7 +37,8 @@ func (r *commandRegistry) ExecCommand(args []string) error {
 	if cmdName == "" {
 		return errors.Wrap(ErrNoCommand, "no command provided")
 	}
-	var cmd, ok = r.commands[cmdName]
+
+	var cmd, ok = r.commands.Get(cmdName)
 	if !ok {
 		return errors.Wrapf(
 			ErrUnknownCommand,
