@@ -96,7 +96,7 @@ func (u *User) FieldDefs() attrs.Definitions {
 
 func (u *User) Save(ctx context.Context) error {
 	if u.ID == 0 {
-		return queries.CreateUser(
+		var id, err = queries.CreateUser(
 			ctx,
 			u.Email.Address,
 			u.Username,
@@ -106,6 +106,10 @@ func (u *User) Save(ctx context.Context) error {
 			u.IsAdministrator,
 			u.IsActive,
 		)
+		if err != nil {
+			return err
+		}
+		u.ID = uint64(id)
 	}
 	return u.Update(ctx)
 }

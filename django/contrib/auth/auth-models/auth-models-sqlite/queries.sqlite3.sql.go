@@ -30,7 +30,7 @@ func (q *Queries) CountMany(ctx context.Context, isActive bool, isAdministrator 
 	return count, err
 }
 
-const createUser = `-- name: CreateUser :exec
+const createUser = `-- name: CreateUser :execlastid
 INSERT INTO users (
     email,
     username,
@@ -50,8 +50,8 @@ INSERT INTO users (
 )
 `
 
-func (q *Queries) CreateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool) error {
-	_, err := q.db.ExecContext(ctx, createUser,
+func (q *Queries) CreateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool) (int64, error) {
+	result, err := q.db.ExecContext(ctx, createUser,
 		email,
 		username,
 		password,
@@ -60,7 +60,10 @@ func (q *Queries) CreateUser(ctx context.Context, email string, username string,
 		isAdministrator,
 		isActive,
 	)
-	return err
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
 }
 
 const deleteUser = `-- name: DeleteUser :exec

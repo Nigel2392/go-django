@@ -1,11 +1,17 @@
-package models
+package auth
 
 import (
 	"encoding/base64"
 	"strconv"
 	"strings"
 
+	models "github.com/Nigel2392/django/contrib/auth/auth-models"
+	"github.com/Nigel2392/django/core/errs"
 	"golang.org/x/crypto/bcrypt"
+)
+
+const (
+	ErrPwdHashMismatch = errs.Error("password is not valid")
 )
 
 var HASHER = func(b string) (string, error) {
@@ -14,7 +20,10 @@ var HASHER = func(b string) (string, error) {
 }
 
 var CHECKER = func(hashedPassword, password string) error {
-	return bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password))
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
+		return ErrPwdHashMismatch
+	}
+	return nil
 }
 
 // This function likely cannot 100% guarantee that the password is hashed.
@@ -68,15 +77,15 @@ func isBcryptHash(s string) bool {
 	return err == nil
 }
 
-func SetPassword(u *User, password string) error {
+func SetPassword(u *models.User, password string) error {
 	var pw, err = HASHER(password)
 	if err != nil {
 		return err
 	}
-	u.Password = Password(pw)
+	u.Password = models.Password(pw)
 	return nil
 }
 
-func CheckPassword(u *User, password string) error {
+func CheckPassword(u *models.User, password string) error {
 	return CHECKER(string(u.Password), password)
 }

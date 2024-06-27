@@ -30,7 +30,7 @@ type AuthApplication struct {
 	LoginWithEmail bool
 }
 
-var Auth *AuthApplication
+var Auth *AuthApplication = &AuthApplication{}
 
 func NewAppConfig() django.AppConfig {
 	var app = &AuthApplication{
@@ -98,27 +98,27 @@ func NewAppConfig() django.AppConfig {
 				fields.Required(true),
 			}
 			newOpts = append(newOpts, opts...)
-			return NewPasswordField(ChrFlagDigit|ChrFlagLower|ChrFlagUpper|ChrFlagSpecial, newOpts...)
+			return NewPasswordField(ChrFlagDEFAULT, true, newOpts...)
 		})
 
 		return nil
 	}
 
-	Auth = app
+	*Auth = *app
 
 	return app
 }
 
 func Login(r *http.Request, u *models.User) *models.User {
-	var session = sessions.Retrieve(r)
-	except.Assert(session != nil, 500, "session is nil")
-
-	var err = session.RenewToken()
-	except.Assert(err == nil, 500, "failed to renew session token")
+	//var session = sessions.Retrieve(r)
+	//except.Assert(session != nil, 500, "session is nil")
+	//
+	//var err = session.RenewToken()
+	//except.Assert(err == nil, 500, "failed to renew session token")
 
 	u.IsLoggedIn = true
 
-	session.Set(SESSION_COOKIE_NAME, u.ID)
+	//session.Set(SESSION_COOKIE_NAME, u.ID)
 
 	return u
 }

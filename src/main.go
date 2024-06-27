@@ -225,7 +225,7 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 		"PasswordConfirm",
 	})
 	form.AddField("PasswordConfirm", auth.NewPasswordField(
-		auth.ChrFlagDigit|auth.ChrFlagLower|auth.ChrFlagUpper|auth.ChrFlagSpecial,
+		auth.ChrFlagDEFAULT,
 		fields.Label("Password Confirm"),
 		fields.HelpText("Enter the password again to confirm"),
 		fields.Required(false),

@@ -63,7 +63,7 @@ var command_set_password = &command.Cmd[interface{}]{
 				logger.Fatal(1, err)
 			}
 
-			if err = models.SetPassword(uRow, password); err != nil {
+			if err = SetPassword(uRow, password); err != nil {
 				logger.Warn(err)
 				continue
 			}

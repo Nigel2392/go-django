@@ -141,7 +141,9 @@ func (i *BaseField) Validate(value interface{}) []error {
 	}
 
 	if i.Required() && i.IsEmpty(value) {
-		return []error{errs.NewValidationError(i.FieldName, "This field is required.")}
+		return []error{errs.NewValidationError(
+			i.FieldName, errs.ErrFieldRequired,
+		)}
 	}
 	return nil
 }

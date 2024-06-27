@@ -67,7 +67,7 @@ var command_create_user = &command.Cmd[createUserStorage]{
 				continue
 			}
 
-			if err = models.SetPassword(u, password); err != nil {
+			if err = SetPassword(u, password); err != nil {
 				logger.Warn(err)
 				continue
 			}
@@ -75,7 +75,7 @@ var command_create_user = &command.Cmd[createUserStorage]{
 		}
 
 		var ctx = context.Background()
-		return Auth.Queries.CreateUser(ctx,
+		_, err = Auth.Queries.CreateUser(ctx,
 			u.Email.String(),
 			u.Username,
 			string(u.Password),
@@ -84,5 +84,6 @@ var command_create_user = &command.Cmd[createUserStorage]{
 			stored.super,
 			!stored.inactive,
 		)
+		return err
 	},
 }

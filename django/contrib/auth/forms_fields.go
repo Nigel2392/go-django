@@ -1,13 +1,9 @@
 package auth
 
 import (
-	"reflect"
-
-	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/widgets"
-	"github.com/Nigel2392/goldcrest"
 )
 
 var _ (fields.Field) = (*PasswordField)(nil)
@@ -19,20 +15,6 @@ type PasswordField struct {
 	Validators []func(PasswordString) error
 }
 
-func init() {
-	var passwordType = reflect.TypeOf(PasswordString(""))
-
-	goldcrest.Register(
-		attrs.HookFormFieldForType, 0,
-		attrs.FormFieldGetter(func(f attrs.Field, t reflect.Type, v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
-			if t == passwordType {
-				return NewPasswordField(ChrFlagDigit|ChrFlagLower|ChrFlagUpper|ChrFlagSpecial, opts...), true
-			}
-			return nil, false
-		}),
-	)
-}
-
 func PasswordValidators(fn ...func(PasswordString) error) func(*PasswordField) {
 	return func(p *PasswordField) {
 		if p.Validators == nil {
@@ -42,7 +24,7 @@ func PasswordValidators(fn ...func(PasswordString) error) func(*PasswordField) {
 	}
 }
 
-func NewPasswordField(flags PasswordCharacterFlag, opts ...func(fields.Field)) *PasswordField {
+func NewPasswordField(flags PasswordCharacterFlag, isRegistering bool, opts ...func(fields.Field)) *PasswordField {
 	var p = &PasswordField{
 		BaseField: fields.NewField(
 			fields.S("password"),
@@ -53,7 +35,7 @@ func NewPasswordField(flags PasswordCharacterFlag, opts ...func(fields.Field)) *
 		fields.MinLength(8),
 		fields.MaxLength(64),
 		ValidateCharacters(
-			false,
+			isRegistering,
 			flags,
 		),
 	)

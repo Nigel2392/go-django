@@ -21,7 +21,7 @@ var (
 type Querier interface {
 	Count(ctx context.Context) (int64, error)
 	CountMany(ctx context.Context, isActive bool, isAdministrator bool) (int64, error)
-	CreateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool) error
+	CreateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool) (int64, error)
 	DeleteUser(ctx context.Context, id uint64) error
 	Retrieve(ctx context.Context, limit int32, offset int32) ([]*User, error)
 	RetrieveByEmail(ctx context.Context, email string) (*User, error)

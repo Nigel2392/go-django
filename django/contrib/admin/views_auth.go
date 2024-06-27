@@ -13,7 +13,7 @@ import (
 	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
-var LoginHandler = &views.FormView[*AdminForm[*auth.BaseUserLoginForm]]{
+var LoginHandler = &views.FormView[*AdminForm[*auth.BaseUserForm]]{
 	BaseView: views.BaseView{
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "admin",
@@ -40,16 +40,16 @@ var LoginHandler = &views.FormView[*AdminForm[*auth.BaseUserLoginForm]]{
 			return context, nil
 		},
 	},
-	GetFormFn: func(req *http.Request) *AdminForm[*auth.BaseUserLoginForm] {
-		return &AdminForm[*auth.BaseUserLoginForm]{
+	GetFormFn: func(req *http.Request) *AdminForm[*auth.BaseUserForm] {
+		return &AdminForm[*auth.BaseUserForm]{
 			Form: auth.UserLoginForm(req),
 		}
 	},
-	ValidFn: func(req *http.Request, form *AdminForm[*auth.BaseUserLoginForm]) error {
+	ValidFn: func(req *http.Request, form *AdminForm[*auth.BaseUserForm]) error {
 		form.Form.Request = req
 		return form.Form.Login()
 	},
-	SuccessFn: func(w http.ResponseWriter, req *http.Request, form *AdminForm[*auth.BaseUserLoginForm]) {
+	SuccessFn: func(w http.ResponseWriter, req *http.Request, form *AdminForm[*auth.BaseUserForm]) {
 		var nextURL = req.URL.Query().Get("next")
 		if nextURL == "" {
 			nextURL = django.Reverse("admin:home")

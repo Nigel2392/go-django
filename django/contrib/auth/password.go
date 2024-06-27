@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/pkg/errors"
 )
 
 type PasswordCharacterFlag uint8
@@ -14,7 +15,14 @@ const (
 	ChrFlagDigit
 	ChrFlagLower
 	ChrFlagUpper
-	ChrFlagAll = ChrFlagSpecial | ChrFlagDigit | ChrFlagLower | ChrFlagUpper
+	ChrFlagAll     = ChrFlagSpecial | ChrFlagDigit | ChrFlagLower | ChrFlagUpper
+	ChrFlagDEFAULT = ChrFlagAll
+
+	ErrPwdCasingUpper = errs.Error("password must contain at least one uppercase letter, and at least one lowercase letter")
+	ErrPwdCasingLower = errs.Error("password must contain at least one lowercase letter, and at least one uppercase letter")
+	ErrPwdDigits      = errs.Error("password must contain at least one digit, and at least one non-digit")
+	ErrPwdSpaces      = errs.Error("password must not contain spaces")
+	ErrPwdSpecial     = errs.Error("password must contain at least one special character")
 )
 
 type PasswordCharValidator struct {
@@ -24,7 +32,11 @@ type PasswordCharValidator struct {
 
 func (p *PasswordCharValidator) Validate(password string) error {
 	if len(password) == 0 {
-		return errs.Error("password must not be empty")
+		// return errs.Error("password must not be empty")
+		return errors.Wrap(
+			errs.ErrFieldRequired,
+			"password must not be empty",
+		)
 	}
 
 	var (
@@ -53,31 +65,28 @@ func (p *PasswordCharValidator) Validate(password string) error {
 
 	if upp_ct == 0 || upp_ct == len(password) {
 		if p.Flags&ChrFlagUpper != 0 {
-			e := errs.Error("password must contain at least one uppercase letter, and at least one lowercase letter")
-			err.Append(e)
+			err.Append(ErrPwdCasingUpper)
 		}
 	}
 	if low_ct == 0 || low_ct == len(password) {
 		if p.Flags&ChrFlagLower != 0 {
-			e := errs.Error("password must contain at least one lowercase letter, and at least one uppercase letter")
-			err.Append(e)
+			err.Append(ErrPwdCasingLower)
 		}
 	}
 	if dig_ct == 0 || dig_ct == len(password) {
 		if p.Flags&ChrFlagDigit != 0 {
-			e := errs.Error("password must contain at least one digit, and at least one non-digit")
-			err.Append(e)
+			err.Append(ErrPwdDigits)
 		}
 	}
+
 	if spa_ct > 0 {
-		e := errs.Error("password must not contain spaces")
-		err.Append(e)
+		err.Append(ErrPwdSpaces)
 	}
+
 	if p.Flags&ChrFlagSpecial != 0 {
 		// Require at least one special character
-		if len(password) == upp_ct+low_ct+dig_ct {
-			e := errs.Error("password must contain at least one special character")
-			err.Append(e)
+		if len(password) == upp_ct+low_ct+dig_ct+spa_ct {
+			err.Append(ErrPwdSpecial)
 		}
 	}
 

@@ -33,7 +33,7 @@ SELECT * FROM users
 WHERE LOWER(username) = LOWER(sqlc.arg(username))
 LIMIT 1;
 
--- name: CreateUser :exec
+-- name: CreateUser :execlastid
 INSERT INTO users (
     email,
     username,
