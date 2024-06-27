@@ -19,5 +19,5 @@ jobs:
       with:
         go-version: '1.22'
 
-    - name: Test
+    - name: Normal Test
       run: go test -v --tags=testing_auth ./...
