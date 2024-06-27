@@ -2,7 +2,6 @@ package auth
 
 import (
 	"database/sql"
-	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
@@ -11,12 +10,10 @@ import (
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/command"
-	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/urls"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
-	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/alexedwards/scs/v2"
 
 	_ "github.com/Nigel2392/django/contrib/auth/auth-models/auth-models-mysql"
@@ -107,28 +104,4 @@ func NewAppConfig() django.AppConfig {
 	*Auth = *app
 
 	return app
-}
-
-func Login(r *http.Request, u *models.User) *models.User {
-	//var session = sessions.Retrieve(r)
-	//except.Assert(session != nil, 500, "session is nil")
-	//
-	//var err = session.RenewToken()
-	//except.Assert(err == nil, 500, "failed to renew session token")
-
-	u.IsLoggedIn = true
-
-	//session.Set(SESSION_COOKIE_NAME, u.ID)
-
-	return u
-}
-
-func Logout(r *http.Request) error {
-	var session = sessions.Retrieve(r)
-	except.Assert(session != nil, 500, "session is nil")
-
-	var err = session.Destroy()
-	except.Assert(err == nil, 500, "failed to destroy session")
-
-	return nil
 }

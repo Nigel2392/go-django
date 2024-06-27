@@ -226,6 +226,7 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 	})
 	form.AddField("PasswordConfirm", auth.NewPasswordField(
 		auth.ChrFlagDEFAULT,
+		true,
 		fields.Label("Password Confirm"),
 		fields.HelpText("Enter the password again to confirm"),
 		fields.Required(false),
@@ -246,7 +247,7 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 		if password1 != "" && password2 != "" && password1 != password2 {
 			return []error{errs.Error("Passwords do not match")}
 		} else if password1 != "" && password2 != "" && password1 == password2 {
-			models.SetPassword(instance.(*models.User), string(password1))
+			auth.SetPassword(instance.(*models.User), string(password1))
 			cleaned["Password"] = string(instance.(*models.User).Password)
 		}
 		return nil
