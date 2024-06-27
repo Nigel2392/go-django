@@ -23,16 +23,6 @@ type BaseUserForm struct {
 
 const postMethod = mux.POST
 
-var (
-	ErrInvalidLogin    = errs.Error("invalid value, please try again")
-	ErrInvalidEmail    = errs.Error("invalid email address")
-	ErrInvalidUsername = errs.Error("invalid username")
-	ErrUserExists      = errs.Error("user already exists")
-	ErrIsActive        = errs.Error("user account is not active")
-	ErrPasswordInvalid = errs.Error("invalid password")
-	ErrPwdNoMatch      = errs.Error("passwords do not match")
-)
-
 func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm {
 	var f = &BaseUserForm{
 		Request: r,
@@ -40,6 +30,10 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 			append([]func(forms.Form){forms.WithRequestData(postMethod, r)}, formOpts...)...,
 		),
 	}
+
+	f.OnInvalid(func(_ forms.Form) {
+		SIGNAL_LOGIN_FAILED.Send(f.Raw)
+	})
 
 	if Auth.LoginWithEmail {
 		f.AddField(

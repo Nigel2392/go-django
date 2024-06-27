@@ -22,7 +22,7 @@ import (
 
 type AuthApplication struct {
 	*apps.AppConfig
-	Queries        models.Querier
+	Queries        models.DBQuerier
 	Session        *scs.SessionManager
 	LoginWithEmail bool
 }
@@ -86,7 +86,7 @@ func NewAppConfig() django.AppConfig {
 
 		goldcrest.Register(
 			django.HOOK_SERVER_ERROR, 0,
-			authRequiredHook,
+			isAuthErrorHook,
 		)
 
 		attrs.RegisterFormFieldType(models.Password(""), func(opts ...func(fields.Field)) fields.Field {

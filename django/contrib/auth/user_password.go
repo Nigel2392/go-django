@@ -6,12 +6,7 @@ import (
 	"strings"
 
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
-	"github.com/Nigel2392/django/core/errs"
 	"golang.org/x/crypto/bcrypt"
-)
-
-const (
-	ErrPwdHashMismatch = errs.Error("password is not valid")
 )
 
 var HASHER = func(b string) (string, error) {

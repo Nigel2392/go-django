@@ -119,11 +119,27 @@ var passwordHashTests = []passwordTest{
 	},
 }
 
+var passwordSetTests = []passwordTest{
+	{
+		TestName: "set-password-ok",
+		Password: "Password!123",
+		Hash:     "$2a$10$7CMDuopPFz/uiWO5Y/S8J.oJ.G0epnqppdSi4TcjP8Mo3OuQExV5q",
+	},
+	{
+		TestName: "set-password-fail",
+		Password: "Password!123",
+		Hash:     "$2a$10$eMXEd5fqGNMJqciAJDS5kegoRqUgf.JbAH3fxghqrffwONuhStm4m",
+		Errors:   []error{auth.ErrPwdHashMismatch},
+	},
+}
+
 var errExpectedHash = errors.New("expected hashed password, got invalid hash")
 
 func TestPasswords(t *testing.T) {
 	t.Run("Validation", func(t *testing.T) {
 		for _, test := range passwordValidationTests {
+			test.ExpectedError = test.ExpectedError || len(test.Errors) != 0
+
 			t.Run(test.TestName, func(t *testing.T) {
 				var validator = &auth.PasswordCharValidator{
 					Flags: test.ValidationFlags,
@@ -153,7 +169,7 @@ func TestPasswords(t *testing.T) {
 	t.Run("Hashing", func(t *testing.T) {
 		for _, test := range passwordHashTests {
 			t.Run(test.TestName, func(t *testing.T) {
-				test.ExpectedError = len(test.Errors) != 0
+				test.ExpectedError = test.ExpectedError || len(test.Errors) != 0
 				var u = &models.User{
 					Password: models.Password(test.Hash),
 				}
@@ -187,4 +203,30 @@ func TestPasswords(t *testing.T) {
 			})
 		}
 	})
+
+	for _, test := range passwordSetTests {
+		t.Run(test.TestName, func(t *testing.T) {
+			var u = &models.User{
+				Password: models.Password(test.Hash),
+			}
+
+			var err = auth.SetPassword(u, test.Password)
+			if test.ExpectedError {
+				if err == nil {
+					t.Error("expected error, got nil")
+				}
+				if len(test.Errors) != 0 {
+					for _, e := range test.Errors {
+						if !errors.Is(err, e) {
+							t.Errorf("expected error %v, got %v", e, err)
+						}
+					}
+				}
+			} else {
+				if err != nil {
+					t.Errorf("expected no error, got %v", err)
+				}
+			}
+		})
+	}
 }

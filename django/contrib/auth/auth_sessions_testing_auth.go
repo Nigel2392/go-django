@@ -21,10 +21,12 @@ import (
 )
 
 func Login(r *http.Request, u *models.User) *models.User {
+	SIGNAL_USER_LOGGED_IN.Send(u)
 	u.IsLoggedIn = true
 	return u
 }
 
 func Logout(r *http.Request) error {
+	SIGNAL_USER_LOGGED_OUT.Send((*models.User)(nil))
 	return nil
 }

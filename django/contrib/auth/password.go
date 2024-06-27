@@ -16,12 +16,6 @@ const (
 	ChrFlagLower
 	ChrFlagUpper
 	ChrFlagAll = ChrFlagSpecial | ChrFlagDigit | ChrFlagLower | ChrFlagUpper
-
-	ErrPwdCasingUpper = errs.Error("password must contain at least one uppercase letter, and at least one lowercase letter")
-	ErrPwdCasingLower = errs.Error("password must contain at least one lowercase letter, and at least one uppercase letter")
-	ErrPwdDigits      = errs.Error("password must contain at least one digit, and at least one non-digit")
-	ErrPwdSpaces      = errs.Error("password must not contain spaces")
-	ErrPwdSpecial     = errs.Error("password must contain at least one special character")
 )
 
 var ChrFlagDEFAULT = ChrFlagAll
@@ -116,7 +110,7 @@ func ValidateCharacters(isRegister bool, flags PasswordCharacterFlag) func(field
 	}
 
 	if !isRegister {
-		validator.GenericError = errs.Error("Invalid password")
+		validator.GenericError = ErrGenericPwdFail
 	}
 
 	return func(fv fields.Field) {

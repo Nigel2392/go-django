@@ -74,16 +74,11 @@ var command_create_user = &command.Cmd[createUserStorage]{
 			isValid = true
 		}
 
+		u.IsAdministrator = stored.super
+		u.IsActive = !stored.inactive
+
 		var ctx = context.Background()
-		_, err = Auth.Queries.CreateUser(ctx,
-			u.Email.String(),
-			u.Username,
-			string(u.Password),
-			u.FirstName,
-			u.LastName,
-			stored.super,
-			!stored.inactive,
-		)
+		_, err = models.CreateUser(ctx, u)
 		return err
 	},
 }

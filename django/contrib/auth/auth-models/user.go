@@ -96,15 +96,8 @@ func (u *User) FieldDefs() attrs.Definitions {
 
 func (u *User) Save(ctx context.Context) error {
 	if u.ID == 0 {
-		var id, err = queries.CreateUser(
-			ctx,
-			u.Email.Address,
-			u.Username,
-			string(u.Password),
-			u.FirstName,
-			u.LastName,
-			u.IsAdministrator,
-			u.IsActive,
+		var id, err = CreateUser(
+			ctx, u,
 		)
 		if err != nil {
 			return err
@@ -115,21 +108,13 @@ func (u *User) Save(ctx context.Context) error {
 }
 
 func (u *User) Update(ctx context.Context) error {
-	return queries.UpdateUser(
-		ctx,
-		u.Email.Address,
-		u.Username,
-		string(u.Password),
-		u.FirstName,
-		u.LastName,
-		u.IsAdministrator,
-		u.IsActive,
-		u.ID,
+	return UpdateUser(
+		ctx, u,
 	)
 }
 
 func (u *User) Delete(ctx context.Context) error {
-	return queries.DeleteUser(ctx, u.ID)
+	return DeleteUser(ctx, u)
 }
 
 func (u *User) Reload(ctx context.Context) error {

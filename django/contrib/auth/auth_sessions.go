@@ -22,6 +22,8 @@ func Login(r *http.Request, u *models.User) *models.User {
 
 	session.Set(SESSION_COOKIE_NAME, u.ID)
 
+	SIGNAL_USER_LOGGED_IN.Send(u)
+
 	return u
 }
 
@@ -31,6 +33,8 @@ func Logout(r *http.Request) error {
 
 	var err = session.Destroy()
 	except.Assert(err == nil, 500, "failed to destroy session")
+
+	SIGNAL_USER_LOGGED_OUT.Send((*models.User)(nil))
 
 	return nil
 }
