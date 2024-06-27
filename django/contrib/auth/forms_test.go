@@ -10,6 +10,8 @@ import (
 
 	"github.com/Nigel2392/django/contrib/auth"
 	auth_models "github.com/Nigel2392/django/contrib/auth/auth-models"
+	"github.com/Nigel2392/django/core/errs"
+	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/models"
 )
 
@@ -152,6 +154,86 @@ var formsTests = []formsTest{
 			IsInactive:  false,
 			AutoLogin:   true,
 		},
+	},
+	{
+		user: testUser{
+			Email:           "test6",
+			Username:        "test6",
+			Password:        "Test123!",
+			PasswordConfirm: "Test123!",
+			IsActive:        true,
+		},
+		expectedError: errs.ErrInvalidSyntax,
+	},
+	{
+		user: testUser{
+			Email:           "test6@localhost",
+			Username:        "te",
+			Password:        "Test123!",
+			PasswordConfirm: "Test123!",
+			IsActive:        true,
+		},
+		expectedError: errs.ErrLengthMin,
+	},
+	{
+		user: testUser{
+			Email:           "test6@localhost",
+			Username:        "te123A!@#",
+			Password:        "Test123!",
+			PasswordConfirm: "Test123!",
+			IsActive:        true,
+		},
+		expectedError: fields.ErrRegexInvalid,
+	},
+	{
+		user: testUser{
+			Email:           "test7@localhost",
+			Username:        "test7",
+			Password:        "test123!",
+			PasswordConfirm: "test123!",
+			IsActive:        true,
+		},
+		expectedError: auth.ErrPwdCasingUpper,
+	},
+	{
+		user: testUser{
+			Email:           "test7@localhost",
+			Username:        "test7",
+			Password:        "TEST1234!",
+			PasswordConfirm: "TEST1234!",
+			IsActive:        true,
+		},
+		expectedError: auth.ErrPwdCasingLower,
+	},
+	{
+		user: testUser{
+			Email:           "test7@localhost",
+			Username:        "test7",
+			Password:        "Testtttt!",
+			PasswordConfirm: "Testtttt!",
+			IsActive:        true,
+		},
+		expectedError: auth.ErrPwdDigits,
+	},
+	{
+		user: testUser{
+			Email:           "test7@localhost",
+			Username:        "test7",
+			Password:        "Test 123!",
+			PasswordConfirm: "Test 123!",
+			IsActive:        true,
+		},
+		expectedError: auth.ErrPwdSpaces,
+	},
+	{
+		user: testUser{
+			Email:           "test7@localhost",
+			Username:        "test7",
+			Password:        "Test1234",
+			PasswordConfirm: "Test1234",
+			IsActive:        true,
+		},
+		expectedError: auth.ErrPwdSpecial,
 	},
 }
 

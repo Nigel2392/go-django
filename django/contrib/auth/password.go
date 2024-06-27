@@ -15,8 +15,7 @@ const (
 	ChrFlagDigit
 	ChrFlagLower
 	ChrFlagUpper
-	ChrFlagAll     = ChrFlagSpecial | ChrFlagDigit | ChrFlagLower | ChrFlagUpper
-	ChrFlagDEFAULT = ChrFlagAll
+	ChrFlagAll = ChrFlagSpecial | ChrFlagDigit | ChrFlagLower | ChrFlagUpper
 
 	ErrPwdCasingUpper = errs.Error("password must contain at least one uppercase letter, and at least one lowercase letter")
 	ErrPwdCasingLower = errs.Error("password must contain at least one lowercase letter, and at least one uppercase letter")
@@ -24,6 +23,8 @@ const (
 	ErrPwdSpaces      = errs.Error("password must not contain spaces")
 	ErrPwdSpecial     = errs.Error("password must contain at least one special character")
 )
+
+var ChrFlagDEFAULT = ChrFlagAll
 
 type PasswordCharValidator struct {
 	GenericError error
@@ -110,9 +111,11 @@ func (p *PasswordCharValidator) Validate(password string) error {
 // - password contains at least one non-digit
 // - password does not contain any whitespace
 func ValidateCharacters(isRegister bool, flags PasswordCharacterFlag) func(fields.Field) {
-	var validator = &PasswordCharValidator{}
+	var validator = &PasswordCharValidator{
+		Flags: flags,
+	}
 
-	if isRegister {
+	if !isRegister {
 		validator.GenericError = errs.Error("Invalid password")
 	}
 

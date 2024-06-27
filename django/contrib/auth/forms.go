@@ -28,6 +28,8 @@ var (
 	ErrInvalidEmail    = errs.Error("invalid email address")
 	ErrInvalidUsername = errs.Error("invalid username")
 	ErrUserExists      = errs.Error("user already exists")
+	ErrIsActive        = errs.Error("user account is not active")
+	ErrPasswordInvalid = errs.Error("invalid password")
 	ErrPwdNoMatch      = errs.Error("passwords do not match")
 )
 
@@ -326,11 +328,11 @@ func (f *BaseUserForm) Login() error {
 	}
 
 	if err := CheckPassword(user, string(cleaned["password"].(PasswordString))); err != nil {
-		return errs.Error("Invalid password")
+		return ErrPasswordInvalid
 	}
 
 	if !user.IsActive {
-		return errs.Error("User account is not active")
+		return ErrIsActive
 	}
 
 	Login(f.Request, user)

@@ -3,6 +3,7 @@ package fields
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/mail"
 
@@ -51,7 +52,14 @@ func (e *EmailFormField) ValueToGo(value interface{}) (interface{}, error) {
 		return nil, nil
 	}
 
-	return mail.ParseAddress(val)
+	var addr, err = mail.ParseAddress(val)
+	if err != nil {
+		return nil, errors.Join(
+			errs.ErrInvalidSyntax,
+			err,
+		)
+	}
+	return addr, nil
 }
 
 func EmailField(opts ...func(Field)) Field {

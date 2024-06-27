@@ -5,6 +5,7 @@ import (
 	"regexp"
 
 	"github.com/Nigel2392/django/core/assert"
+	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/widgets"
 )
 
@@ -78,6 +79,10 @@ func ReadOnly(b bool) func(Field) {
 	}
 }
 
+const (
+	ErrRegexInvalid = errs.Error("regex does not match")
+)
+
 func Regex(regex string) func(Field) {
 	var rex = regexp.MustCompile(regex)
 	return func(f Field) {
@@ -87,7 +92,7 @@ func Regex(regex string) func(Field) {
 			}
 			var v = fmt.Sprintf("%v", value)
 			if !rex.MatchString(v) {
-				return fmt.Errorf("Invalid value %q (does not match \"%s\")", v, regex) //lint:ignore ST1005 ignore this lint
+				return fmt.Errorf("Invalid value %q (%w \"%s\")", v, ErrRegexInvalid, regex) //lint:ignore ST1005 ignore this lint
 			}
 			return nil
 		})
@@ -100,13 +105,13 @@ func MinLength(min int) func(Field) {
 		f.SetValidators(func(value interface{}) error {
 			if value == nil || value == "" {
 				if min > 0 {
-					return fmt.Errorf("Ensure this value has at least %d characters.", min) //lint:ignore ST1005 ignore this lint
+					return fmt.Errorf("Ensure this value has at least %d characters (%w).", min, errs.ErrLengthMin) //lint:ignore ST1005 ignore this lint
 				}
 				return nil
 			}
 			var v = fmt.Sprintf("%v", value)
 			if len(v) < min {
-				return fmt.Errorf("Ensure this value has at least %d characters (it has %d).", min, len(v)) //lint:ignore ST1005 ignore this lint
+				return fmt.Errorf("Ensure this value has at least %d characters (it has %d, %w).", min, len(v), errs.ErrLengthMin) //lint:ignore ST1005 ignore this lint
 			}
 			return nil
 		})
@@ -122,7 +127,7 @@ func MaxLength(max int) func(Field) {
 			}
 			var v = fmt.Sprintf("%v", value)
 			if len(v) > max {
-				return fmt.Errorf("Ensure this value has at most %d characters (it has %d).", max, len(v)) //lint:ignore ST1005 ignore this lint
+				return fmt.Errorf("Ensure this value has at most %d characters (it has %d, %w).", max, len(v), errs.ErrLengthMax) //lint:ignore ST1005 ignore this lint
 			}
 			return nil
 		})
