@@ -1,5 +1,7 @@
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
+github.com/Nigel2392/go-datastructures v1.1.5 h1:tYLwkImDjv/WgVh98vk67vZvQ0VLl/P9Sx/AubZnipM=
+github.com/Nigel2392/go-datastructures v1.1.5/go.mod h1:sRHt8MLgy702jGD7ieFdh2Fl33bkT7+ztienan3j4MU=
 github.com/Nigel2392/go-signals v1.0.8 h1:A7WchnawfSVk9FyMer5YtKUyDs5fIdKePnoumD56vgc=
 github.com/Nigel2392/go-signals v1.0.8/go.mod h1:Olk7MJlZ9gdGPN8bh+OZSe7iOsBixn7biVI7LqoWEIA=
 github.com/Nigel2392/go-telepath v0.1.2 h1:MZ6KmSed1r4EjwRscsr0992doEolRyO4Wi9WD4N1c+w=

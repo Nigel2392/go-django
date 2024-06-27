@@ -146,7 +146,8 @@ func viewUserLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func viewUserLogout(w http.ResponseWriter, r *http.Request) {
-
+	Logout(r)
+	http.Redirect(w, r, django.Reverse("auth:login"), http.StatusSeeOther)
 }
 
 func viewUserRegister(w http.ResponseWriter, r *http.Request) {

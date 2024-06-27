@@ -25,7 +25,8 @@ func (m *MultiFS) Add(fs fs.FS, matches func(filepath string) bool) {
 }
 
 func (m *MultiFS) Open(name string) (fs.File, error) {
-	for _, f := range m.fs {
+	for i := len(m.fs) - 1; i >= 0; i-- {
+		f := m.fs[i]
 		file, err := f.Open(name)
 		if err != nil && errors.Is(err, fs.ErrNotExist) {
 			continue
@@ -37,7 +38,8 @@ func (m *MultiFS) Open(name string) (fs.File, error) {
 }
 
 func (m *MultiFS) ForceOpen(name string) (fs.File, error) {
-	for _, f := range m.fs {
+	for i := len(m.fs) - 1; i >= 0; i-- {
+		f := m.fs[i]
 		if forcer, ok := f.(interface{ ForceOpen(string) (fs.File, error) }); ok {
 			file, err := forcer.ForceOpen(name)
 			if err != nil && errors.Is(err, fs.ErrNotExist) {
@@ -61,7 +63,8 @@ func (m *MultiFS) FS() []fs.FS {
 }
 
 func (m *MultiFS) ReadDir(name string) ([]fs.DirEntry, error) {
-	for _, f := range m.fs {
+	for i := len(m.fs) - 1; i >= 0; i-- {
+		f := m.fs[i]
 		dir, err := fs.ReadDir(f, name)
 		if err != nil && errors.Is(err, fs.ErrNotExist) {
 			continue

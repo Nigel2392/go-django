@@ -12,6 +12,7 @@ import (
 
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/core/tpl/binarytree"
 	"github.com/pkg/errors"
 )
 
@@ -39,8 +40,12 @@ type templates struct {
 	*Config
 }
 
+func (t *templates) Lt(other *templates) bool {
+	return t.AppName < other.AppName
+}
+
 type TemplateRenderer struct {
-	configs  []*templates
+	configs  *binarytree.InterfacedBST[*templates]
 	cache    map[string]*templateObject
 	ctxFuncs []func(RequestContext)
 	funcs    template.FuncMap
@@ -50,7 +55,6 @@ type TemplateRenderer struct {
 func NewRenderer() *TemplateRenderer {
 	var r = &TemplateRenderer{
 		funcs:    make(template.FuncMap),
-		configs:  make([]*templates, 0),
 		cache:    make(map[string]*templateObject),
 		ctxFuncs: make([]func(RequestContext), 0),
 		fs:       NewMultiFS(),
@@ -114,7 +118,11 @@ func (r *TemplateRenderer) Add(cfg Config) {
 	}
 
 	r.fs.Add(cfg.FS, cfg.Matches)
-	r.configs = append(r.configs, config)
+	if r.configs == nil {
+		r.configs = binarytree.NewInterfaced(config)
+	} else {
+		r.configs.Insert(config)
+	}
 }
 
 type templateObject struct {
@@ -157,12 +165,15 @@ func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*templat
 		path = []string{baseKey}
 		baseKey = ""
 	}
-	var cfg *templates
-	for _, c := range r.configs {
-		if baseKey == c.AppName || c.Matches != nil && c.Matches(path[0]) {
-			cfg = c
-			break
-		}
+	var cfg, ok = r.configs.Search(&templates{Config: &Config{AppName: baseKey}})
+	if !ok {
+		r.configs.Traverse(func(t *templates) bool {
+			if t.Matches != nil && t.Matches(path[0]) {
+				cfg = t
+				return false
+			}
+			return true
+		})
 	}
 
 	if cfg == nil {
