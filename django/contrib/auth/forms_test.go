@@ -1,6 +1,3 @@
-//go:build testing_auth
-// +build testing_auth
-
 package auth_test
 
 import (

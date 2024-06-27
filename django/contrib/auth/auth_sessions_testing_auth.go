@@ -1,6 +1,17 @@
 //go:build testing_auth
 // +build testing_auth
 
+/*
+Package auth provides a way to login and logout users.
+
+This file is used in place of auth_sessions.go when testing.
+
+This is due to sessions not being available in testing.
+
+Logging in and out should only have an effect on the session (Aside for settings IsLoggedIn)
+thus making the default file safe to override.
+*/
+
 package auth
 
 import (

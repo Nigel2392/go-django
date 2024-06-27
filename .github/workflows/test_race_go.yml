@@ -1,7 +1,7 @@
 # This workflow will build a golang project
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
-name: Build application
+name: Test race conditions in package
 on: [pull_request, push]
 
 jobs:
@@ -19,5 +19,5 @@ jobs:
       with:
         go-version: '1.22'
 
-    - name: Build
-      run: go build -v --tags=testing_auth ./...
+    - name: Test
+      run: go test -v --race --tags=testing_auth ./...
