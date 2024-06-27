@@ -7,6 +7,10 @@ import (
 	"reflect"
 )
 
+// IsZero returns true if:
+// - the value is not valid
+// - the value is a pointer and is nil
+// - the value is not a pointer and is equal to the zero value of that type
 func isZero(rt reflect.Type, rv reflect.Value) bool {
 	if !rv.IsValid() || (rt.Kind() == reflect.Ptr && rv.IsNil() || rt.Kind() != reflect.Ptr && rv.IsZero()) {
 		return true

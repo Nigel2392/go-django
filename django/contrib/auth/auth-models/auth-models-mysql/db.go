@@ -5,21 +5,35 @@ import (
 	"database/sql"
 	"fmt"
 
+	_ "embed"
+
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
+	dj_models "github.com/Nigel2392/django/models"
+	"github.com/go-sql-driver/mysql"
 )
 
-type DBTX interface {
-	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
-	PrepareContext(context.Context, string) (*sql.Stmt, error)
-	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
-	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
+//go:embed schema.mysql.sql
+var mysql_schema string
+
+func init() {
+	models.Register(
+		mysql.MySQLDriver{}, &dj_models.BaseBackend[models.Querier]{
+			CreateTableQuery: mysql_schema,
+			NewQuerier: func(d *sql.DB) (models.Querier, error) {
+				return New(d), nil
+			},
+			PreparedQuerier: func(ctx context.Context, d *sql.DB) (models.Querier, error) {
+				return Prepare(ctx, nil)
+			},
+		},
+	)
 }
 
-func New(db DBTX) *Queries {
+func New(db models.DBTX) *Queries {
 	return &Queries{db: db}
 }
 
-func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
+func Prepare(ctx context.Context, db models.DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
 	if q.countStmt, err = db.PrepareContext(ctx, count); err != nil {
@@ -144,7 +158,7 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                     DBTX
+	db                     models.DBTX
 	tx                     *sql.Tx
 	countStmt              *sql.Stmt
 	countManyStmt          *sql.Stmt

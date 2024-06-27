@@ -53,6 +53,10 @@ func (q *dbQuerier) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, 
 }
 
 func NewQueries(db *sql.DB) (DBQuerier, error) {
+	if queries != nil {
+		return queries, nil
+	}
+
 	var backend, ok = BackendForDB(db.Driver())
 	if !ok {
 		return nil, models.ErrBackendNotFound

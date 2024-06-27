@@ -5,6 +5,7 @@ import (
 	"database/sql"
 
 	"github.com/Nigel2392/django/contrib/pages/models"
+	dj_models "github.com/Nigel2392/django/models"
 	"github.com/go-sql-driver/mysql"
 
 	_ "embed"
@@ -15,7 +16,7 @@ var mysql_schema string
 
 func init() {
 	models.Register(
-		mysql.MySQLDriver{}, &models.BaseBackend{
+		mysql.MySQLDriver{}, &dj_models.BaseBackend[models.Querier]{
 			CreateTableQuery: mysql_schema,
 			NewQuerier: func(d *sql.DB) (models.Querier, error) {
 				return New(d), nil

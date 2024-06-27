@@ -18,6 +18,9 @@ import (
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/alexedwards/scs/v2"
+
+	_ "github.com/Nigel2392/django/contrib/auth/auth-models/auth-models-mysql"
+	_ "github.com/Nigel2392/django/contrib/auth/auth-models/auth-models-sqlite"
 )
 
 type AuthApplication struct {

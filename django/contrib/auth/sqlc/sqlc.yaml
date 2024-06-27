@@ -1,6 +1,6 @@
 version: "2"
 sql:
-  - schema: "./schema.mysql.sql"
+  - schema: "../auth-models/auth-models-mysql/schema.mysql.sql"
     queries: "./queries.mysql.sql"
     engine: "mysql"
     gen:
@@ -13,7 +13,7 @@ sql:
         emit_interface: true
         query_parameter_limit: 8
 
-  - schema: "./schema.sqlite3.sql"
+  - schema: "../auth-models/auth-models-sqlite/schema.sqlite3.sql"
     queries: "./queries.sqlite3.sql"
     engine: "sqlite"
     gen:
