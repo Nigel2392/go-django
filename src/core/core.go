@@ -63,7 +63,10 @@ func NewAppConfig() django.AppConfig {
 				"core/base.tmpl",
 			},
 			Matches: tpl.MatchAnd(
-				tpl.MatchPrefix("core/"),
+				tpl.MatchOr(
+					tpl.MatchPrefix("core/"),
+					tpl.MatchPrefix("auth/"),
+				),
 				tpl.MatchOr(
 					tpl.MatchExt(".tmpl"),
 				),

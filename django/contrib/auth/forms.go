@@ -13,15 +13,30 @@ import (
 	"github.com/pkg/errors"
 )
 
-type BaseUserForm struct {
-	*forms.BaseForm
-	Request  *http.Request
-	Instance *models.User
-	canSave  bool
-	config   *RegisterFormConfig
-}
-
 const postMethod = mux.POST
+
+type RegisterFormConfig struct {
+
+	// Include both email and username fields in the registration form.
+	//
+	// If this is false - only the field specified by `LoginWithEmail` will be
+	// included in the form.
+	AlwaysAllLoginFields bool
+
+	// Automatically login the user after registration.
+	//
+	// This requires a non-nil http request to be passed to the form.
+	AutoLogin bool
+
+	// Ask for the user's first and last name.
+	AskForNames bool
+
+	// Create an inactive user account.
+	//
+	// This is useful for when the user needs to verify their email address
+	// before they can login.
+	IsInactive bool
+}
 
 func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm {
 	var f = &BaseUserForm{
@@ -72,29 +87,6 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 	)
 
 	return f
-}
-
-type RegisterFormConfig struct {
-
-	// Include both email and username fields in the registration form.
-	//
-	// If this is false - only the field specified by `LoginWithEmail` will be
-	// included in the form.
-	AlwaysAllLoginFields bool
-
-	// Automatically login the user after registration.
-	//
-	// This requires a non-nil http request to be passed to the form.
-	AutoLogin bool
-
-	// Ask for the user's first and last name.
-	AskForNames bool
-
-	// Create an inactive user account.
-	//
-	// This is useful for when the user needs to verify their email address
-	// before they can login.
-	IsInactive bool
 }
 
 func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOpts ...func(forms.Form)) *BaseUserForm {
@@ -187,6 +179,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 		}
 		return nil
 	})
+
 	f.SetValidators(func(f forms.Form) []error {
 		var (
 			ctx      = context.Background()
@@ -236,6 +229,14 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 	return f
 }
 
+type BaseUserForm struct {
+	*forms.BaseForm
+	Request  *http.Request
+	Instance *models.User
+	canSave  bool
+	config   *RegisterFormConfig
+}
+
 func (f *BaseUserForm) basicChecks() error {
 	if f.Errors != nil && f.Errors.Len() > 0 {
 		for head := f.Errors.Front(); head != nil; head = head.Next() {
@@ -270,6 +271,9 @@ func (f *BaseUserForm) Save() (*models.User, error) {
 	if f.Instance == nil {
 		f.Instance = &models.User{}
 	}
+	if f.config == nil {
+		f.config = &RegisterFormConfig{}
+	}
 
 	if f.config.AlwaysAllLoginFields || Auth.LoginWithEmail {
 		f.Instance.Email = cleaned["email"].(*models.Email)
@@ -282,6 +286,11 @@ func (f *BaseUserForm) Save() (*models.User, error) {
 	if f.config.AskForNames {
 		f.Instance.FirstName = cleaned["firstName"].(string)
 		f.Instance.LastName = cleaned["lastName"].(string)
+	}
+
+	var pw = cleaned["password"].(PasswordString)
+	if err := SetPassword(f.Instance, string(pw)); err != nil {
+		return nil, errors.Wrap(err, "Error setting password")
 	}
 
 	f.Instance.IsActive = !f.config.IsInactive
@@ -316,13 +325,11 @@ func (f *BaseUserForm) Login() error {
 		user, err = Auth.Queries.RetrieveByUsername(ctx, cleaned["username"].(string))
 	}
 	if err != nil {
-		return errors.Wrap(
-			err, "Error retrieving user",
-		)
+		return ErrGenericAuthFail
 	}
 
 	if err := CheckPassword(user, string(cleaned["password"].(PasswordString))); err != nil {
-		return ErrPasswordInvalid
+		return ErrGenericAuthFail
 	}
 
 	if !user.IsActive {

@@ -1,7 +1,6 @@
 package views
 
 import (
-	"fmt"
 	"net/http"
 	"reflect"
 
@@ -101,34 +100,14 @@ func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 	var err error
 	if req.Method == http.MethodPost {
 		if form.IsValid() {
-
-			if saver, ok := any(form).(interface{ Save() error }); ok {
-				err = saver.Save()
-				if err != nil {
-					if v.InvalidFn != nil {
-						err = v.InvalidFn(req, form)
-						goto checkFormErr
-					} else {
-						if adder, ok := any(form).(forms.ErrorAdder); ok {
-							adder.AddFormError(err)
-						}
-					}
-					goto render
+			err = v.ValidFn(req, form)
+			if err != nil {
+				if v.ValidFn != nil {
+					err = v.ValidFn(req, form)
 				}
+				goto checkFormErr
 			}
-
-			if v.ValidFn != nil {
-				err = v.ValidFn(req, form)
-				if err != nil {
-					goto checkFormErr
-				}
-			}
-
-			if v.SuccessFn != nil {
-				v.SuccessFn(w, req, form)
-				return nil
-			}
-
+			goto formSuccess
 		} else {
 			if v.InvalidFn != nil {
 				err = v.InvalidFn(req, form)
@@ -138,15 +117,17 @@ func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 
 checkFormErr:
 	if err != nil {
-		if adder, ok := any(form).(forms.ErrorAdder); ok {
-			adder.AddFormError(err)
-		} else {
-			return fmt.Errorf("form error: %w", err)
-		}
+		any(form).(forms.ErrorAdder).AddFormError(err)
+	}
+	goto renderView
+
+formSuccess:
+	if v.SuccessFn != nil {
+		v.SuccessFn(w, req, form)
+		return nil
 	}
 
-render:
+renderView:
 	context.Set("form", form)
-
 	return v.BaseView.Render(w, req, templateName, context)
 }

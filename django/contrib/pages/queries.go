@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"fmt"
 
+	_ "github.com/Nigel2392/django/contrib/pages/backend-mysql"
+	_ "github.com/Nigel2392/django/contrib/pages/backend-sqlite"
 	"github.com/Nigel2392/django/contrib/pages/models"
 
 	_ "embed"
@@ -30,9 +32,9 @@ func (q *Querier) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, er
 
 func CreateTable(db *sql.DB) error {
 	var driver = db.Driver()
-	var backend, ok = models.GetBackend(driver)
-	if !ok {
-		panic(fmt.Sprintf("no backend configured for %T", driver))
+	var backend, err = models.GetBackend(driver)
+	if err != nil {
+		panic(fmt.Errorf("no backend configured for %T: %w", driver, err))
 	}
 
 	return backend.CreateTable(db)
@@ -40,12 +42,12 @@ func CreateTable(db *sql.DB) error {
 
 func PrepareQuerySet(ctx context.Context, db *sql.DB) (models.DBQuerier, error) {
 	var driver = db.Driver()
-	var backend, ok = models.GetBackend(driver)
-	if !ok {
-		panic(fmt.Sprintf("no backend configured for %T", driver))
+	var backend, err = models.GetBackend(driver)
+	if err != nil {
+		panic(fmt.Errorf("no backend configured for %T: %w", driver, err))
 	}
 
-	var qs, err = backend.Prepare(ctx, db)
+	qs, err := backend.Prepare(ctx, db)
 	if err != nil {
 		return nil, err
 	}

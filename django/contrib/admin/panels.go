@@ -323,6 +323,14 @@ func (a *AdminForm[T]) OnFinalize(f ...func(forms.Form)) {
 	a.Form.OnFinalize(f...)
 }
 
+func (a *AdminForm[T]) AddFormError(errorList ...error) {
+	any(a.Form).(forms.ErrorAdder).AddFormError(errorList...)
+}
+
+func (a *AdminForm[T]) AddError(name string, errorList ...error) {
+	any(a.Form).(forms.ErrorAdder).AddError(name, errorList...)
+}
+
 type AdminModelForm[T modelforms.ModelForm[attrs.Definer]] struct {
 	*AdminForm[T]
 }
@@ -356,12 +364,4 @@ func (a *AdminModelForm[T]) Instance() attrs.Definer {
 }
 func (a *AdminModelForm[T]) SetInstance(model attrs.Definer) {
 	a.Form.SetInstance(model)
-}
-
-func (a *AdminModelForm[T]) AddFormError(errorList ...error) {
-	any(a.Form).(forms.ErrorAdder).AddFormError(errorList...)
-}
-
-func (a *AdminModelForm[T]) AddError(name string, errorList ...error) {
-	any(a.Form).(forms.ErrorAdder).AddError(name, errorList...)
 }

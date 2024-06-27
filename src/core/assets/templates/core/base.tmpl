@@ -24,7 +24,15 @@
         {{ template "content" . }}
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
-    
+            {{ $errorList := (.Get "Form").ErrorList }}
+            {{ if (gt (len $errorList) 0) }}
+                <ul class="error-list">
+                    {{ range $Error := $errorList }}
+                        <li class="error"><p>{{ $Error }}</p></li>
+                    {{ end }}
+                </ul>
+            {{ end }}
+
             {{ range $Field := (.Get "Form").Fields }}
     
                 <div class="form-field-wrapper">

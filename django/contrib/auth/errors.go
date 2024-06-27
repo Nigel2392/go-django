@@ -20,7 +20,7 @@ const (
 	ErrPasswordInvalid errs.Error = "invalid password"
 	ErrPwdHashMismatch errs.Error = "password is not valid"
 	ErrPwdNoMatch      errs.Error = "passwords do not match"
-	ErrGenericPwdFail  errs.Error = ErrPwdHashMismatch
+	ErrGenericAuthFail errs.Error = "authentication failed"
 )
 
 var _ except.ServerError = (*authenticationError)(nil)

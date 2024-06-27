@@ -48,12 +48,15 @@ func (b *backendRegistry[T]) RegisterForDriver(driver any, backend Backend[T]) {
 	b.backends[rTyp] = backend
 }
 
-func (b *backendRegistry[T]) BackendForDB(d driver.Driver) (Backend[T], bool) {
+func (b *backendRegistry[T]) BackendForDB(d driver.Driver) (Backend[T], error) {
 	var rTyp = reflect.TypeOf(d)
 	if rTyp.Kind() == reflect.Pointer {
 		rTyp = rTyp.Elem()
 	}
 
 	var backend, ok = b.backends[rTyp]
-	return backend, ok
+	if !ok {
+		return nil, ErrBackendNotFound
+	}
+	return backend, nil
 }

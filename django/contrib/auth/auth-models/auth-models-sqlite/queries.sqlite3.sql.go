@@ -78,12 +78,12 @@ func (q *Queries) DeleteUser(ctx context.Context, id uint64) error {
 const retrieve = `-- name: Retrieve :many
 SELECT id, created_at, updated_at, email, username, password, first_name, last_name, is_administrator, is_active FROM users
 ORDER BY updated_at DESC
-LIMIT ?2
-OFFSET ?1
+LIMIT ?1
+OFFSET ?2
 `
 
-func (q *Queries) Retrieve(ctx context.Context, offset int32, limit int32) ([]*models.User, error) {
-	rows, err := q.db.QueryContext(ctx, retrieve, offset, limit)
+func (q *Queries) Retrieve(ctx context.Context, limit int32, offset int32) ([]*models.User, error) {
+	rows, err := q.db.QueryContext(ctx, retrieve, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -195,12 +195,11 @@ LIMIT ?4
 OFFSET ?3
 `
 
-func (q *Queries) RetrieveMany(ctx context.Context, isActive bool, isAdministrator bool, offset int32, limit int32) ([]*models.User, error) {
+func (q *Queries) RetrieveMany(ctx context.Context, isActive bool, isAdministrator bool, limit int32, offset int32) ([]*models.User, error) {
 	rows, err := q.db.QueryContext(ctx, retrieveMany,
 		isActive,
 		isAdministrator,
-		offset,
-		limit,
+		limit, offset,
 	)
 	if err != nil {
 		return nil, err

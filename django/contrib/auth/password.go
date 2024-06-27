@@ -110,7 +110,7 @@ func ValidateCharacters(isRegister bool, flags PasswordCharacterFlag) func(field
 	}
 
 	if !isRegister {
-		validator.GenericError = ErrGenericPwdFail
+		validator.GenericError = ErrGenericAuthFail
 	}
 
 	return func(fv fields.Field) {

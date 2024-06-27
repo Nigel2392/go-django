@@ -8,8 +8,6 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/django/contrib/pages"
-	_ "github.com/Nigel2392/django/contrib/pages/backend-mysql"
-	_ "github.com/Nigel2392/django/contrib/pages/backend-sqlite"
 	"github.com/Nigel2392/django/contrib/pages/models"
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/forms/fields"
@@ -209,12 +207,12 @@ func TestPageRegistry(t *testing.T) {
 func TestPageNode(t *testing.T) {
 	pages.QuerySet = func() models.DBQuerier {
 		var driverType = sqlDB.Driver()
-		var backend, ok = models.GetBackend(driverType)
-		if !ok {
-			panic(fmt.Sprintf("no backend configured for %T", driverType))
+		var backend, err = models.GetBackend(driverType)
+		if err != nil {
+			panic(fmt.Errorf("no backend configured for %T: %w", driverType, err))
 		}
 
-		var qs, err = backend.NewQuerySet(sqlDB)
+		qs, err := backend.NewQuerySet(sqlDB)
 		if err != nil {
 			panic(fmt.Sprintf("failed to initialize queryset for backend %T", backend))
 		}

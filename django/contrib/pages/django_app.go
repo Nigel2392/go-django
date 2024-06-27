@@ -44,15 +44,15 @@ func (p *PageAppConfig) QuerySet() models.DBQuerier {
 	}
 
 	var (
-		querySet    models.DBQuerier
-		driver      = p.DB.Driver()
-		backend, ok = models.GetBackend(driver)
+		querySet     models.DBQuerier
+		driver       = p.DB.Driver()
+		backend, err = models.GetBackend(driver)
 	)
-	if !ok {
-		panic(fmt.Sprintf("no backend configured for %T", driver))
+	if err != nil {
+		panic(fmt.Errorf("no backend configured for %T: %w", driver, err))
 	}
 
-	var qs, err = backend.NewQuerySet(p.DB)
+	qs, err := backend.NewQuerySet(p.DB)
 	if err != nil {
 		panic(fmt.Sprintf("failed to initialize queryset for backend %T", backend))
 	}
@@ -152,9 +152,9 @@ func NewAppConfig() *PageAppConfig {
 		}
 
 		var driver = db.Driver()
-		var backend, ok = models.GetBackend(driver)
-		if !ok {
-			return fmt.Errorf("no backend configured for %T", driver)
+		var backend, err = models.GetBackend(driver)
+		if err != nil {
+			return fmt.Errorf("no backend configured for %T: %w", driver, err)
 		}
 
 		pageApp.backend = backend

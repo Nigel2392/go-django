@@ -57,12 +57,12 @@ func NewQueries(db *sql.DB) (DBQuerier, error) {
 		return queries, nil
 	}
 
-	var backend, ok = BackendForDB(db.Driver())
-	if !ok {
-		return nil, models.ErrBackendNotFound
+	var backend, err = BackendForDB(db.Driver())
+	if err != nil {
+		return nil, err
 	}
 
-	var qs, err = backend.NewQuerySet(db)
+	qs, err := backend.NewQuerySet(db)
 	if err != nil {
 		return nil, err
 	}

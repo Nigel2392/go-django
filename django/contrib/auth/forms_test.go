@@ -19,9 +19,8 @@ var backend models.Backend[auth_models.Querier]
 
 func init() {
 	var (
-		backendExists bool
-		DB_FLAVOR     = "sqlite3"
-		DB_SOURCE     = ":memory:"
+		DB_FLAVOR = "sqlite3"
+		DB_SOURCE = ":memory:"
 	)
 
 	var db, err = sql.Open(DB_FLAVOR, DB_SOURCE)
@@ -29,9 +28,9 @@ func init() {
 		panic(err)
 	}
 
-	backend, backendExists = auth_models.BackendForDB(db.Driver())
-	if !backendExists {
-		panic("Backend does not exist")
+	backend, err = auth_models.BackendForDB(db.Driver())
+	if err != nil {
+		panic(err)
 	}
 
 	if err := backend.CreateTable(db); err != nil {

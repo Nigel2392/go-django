@@ -1,16 +1,16 @@
 -- name: Retrieve :many
 SELECT * FROM users
 ORDER BY updated_at DESC
-LIMIT sqlc.arg(limit)
-OFFSET sqlc.arg(offset);
+LIMIT ?1
+OFFSET ?2;
 
 -- name: RetrieveMany :many
 SELECT * FROM users
 WHERE is_active = sqlc.arg(is_active) 
 AND is_administrator = sqlc.arg(is_administrator)
 ORDER BY updated_at DESC
-LIMIT sqlc.arg(limit)
-OFFSET sqlc.arg(offset);
+LIMIT ?1
+OFFSET ?2;
 
 -- name: Count :one
 SELECT COUNT(*) FROM users;

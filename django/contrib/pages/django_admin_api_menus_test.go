@@ -138,9 +138,9 @@ func TestPageMenuHandler(t *testing.T) {
 	}
 
 	var driverType = sqlDB.Driver()
-	var backend, ok = models.GetBackend(driverType)
-	if !ok {
-		panic(fmt.Sprintf("no backend configured for %T", driverType))
+	backend, err := models.GetBackend(driverType)
+	if err != nil {
+		panic(fmt.Errorf("no backend configured for %T: %w", driverType, err))
 	}
 
 	if err := backend.CreateTable(sqlDB); err != nil {
