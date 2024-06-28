@@ -165,22 +165,6 @@ func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*templat
 		path = []string{baseKey}
 		baseKey = ""
 	}
-	var cfg, ok = r.configs.Search(&templates{Config: &Config{AppName: baseKey}})
-	if !ok {
-		r.configs.Traverse(func(t *templates) bool {
-			if t.Matches != nil && t.Matches(path[0]) {
-				cfg = t
-				return false
-			}
-			return true
-		})
-	}
-
-	if cfg == nil {
-		return nil, errors.Errorf(
-			"no config found for template %s", path[0],
-		)
-	}
 
 	var name = getTemplateName(path[0])
 	if tmpl, ok := r.cache[path[0]]; ok && tmpl != nil {
@@ -195,6 +179,29 @@ func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*templat
 			paths: tmpl.paths,
 			t:     clone,
 		}, nil
+	}
+
+	// Check if the templates for this path have already been cached
+	var cfg, ok = r.configs.Search(&templates{Config: &Config{AppName: baseKey}})
+	if ok {
+		goto checkCfg
+	}
+
+	// Walk btree to try and find a matching template to the path
+	// If a match is found, cache it to avoid future lookups
+	r.configs.Traverse(func(t *templates) bool {
+		if t.Matches != nil && t.Matches(path[0]) {
+			cfg = t
+			return false
+		}
+		return true
+	})
+
+checkCfg:
+	if cfg == nil {
+		return nil, errors.Errorf(
+			"no config found for template %s", path[0],
+		)
 	}
 
 	var funcMap = make(template.FuncMap)
