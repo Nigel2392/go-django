@@ -54,7 +54,7 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 
 	node.PK = id
 
-	return SignalRootCreated.Send(&PageSignal{
+	return SignalRootCreated.Send(&PageNodeSignal{
 		BaseSignal: BaseSignal{
 			Querier: q,
 			Ctx:     ctx,
@@ -114,7 +114,7 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 		return err
 	}
 
-	return SignalChildCreated.Send(&PageSignal{
+	return SignalChildCreated.Send(&PageNodeSignal{
 		BaseSignal: BaseSignal{
 			Querier: q,
 			Ctx:     ctx,
@@ -259,13 +259,14 @@ func UnpublishNode(q models.DBQuerier, ctx context.Context, node *models.PageNod
 		node.StatusFlags &^= models.StatusFlagPublished
 	}
 
+	var nodes []*models.PageNode = make([]*models.PageNode, 1)
 	if unpublishChildren {
 		descendants, err := queries.GetDescendants(ctx, node.Path, node.Depth, 1000, 0)
 		if err != nil {
 			return err
 		}
 
-		var nodes = make([]*models.PageNode, len(descendants)+1)
+		nodes = make([]*models.PageNode, len(descendants)+1)
 		for i := range descendants {
 			var d = descendants[i]
 			if d.StatusFlags.Is(models.StatusFlagPublished) {
@@ -273,12 +274,12 @@ func UnpublishNode(q models.DBQuerier, ctx context.Context, node *models.PageNod
 			}
 			nodes[i] = &d
 		}
+	}
 
-		nodes[len(nodes)-1] = node
+	nodes[len(nodes)-1] = node
 
-		if err := queries.UpdateNodes(ctx, nodes); err != nil {
-			return err
-		}
+	if err := queries.UpdateNodes(ctx, nodes); err != nil {
+		return err
 	}
 
 	return tx.Commit()
@@ -323,7 +324,7 @@ func UpdateNode(q models.Querier, ctx context.Context, node *models.PageNode) er
 		return err
 	}
 
-	return SignalNodeUpdated.Send(&PageSignal{
+	return SignalNodeUpdated.Send(&PageNodeSignal{
 		BaseSignal: BaseSignal{
 			Querier: q,
 			Ctx:     ctx,
@@ -379,7 +380,7 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 
 	var ids = make([]int64, len(descendants))
 	for i, descendant := range descendants {
-		if err = SignalNodeBeforeDelete.Send(&PageSignal{
+		if err = SignalNodeBeforeDelete.Send(&PageNodeSignal{
 			BaseSignal: BaseSignal{
 				Querier: q,
 				Ctx:     ctx,

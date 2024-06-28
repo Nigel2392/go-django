@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/Nigel2392/django/core/except"
 )
 
 type ItemsList []models.PageNode
@@ -51,7 +52,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	if mainItemID == "" {
 		items, err = qs.GetNodesByDepth(ctx, 0, 1000, 0)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			except.Fail(http.StatusInternalServerError, err)
 			return
 		}
 
@@ -60,21 +61,21 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 
 	idInt, err = strconv.Atoi(mainItemID)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		except.Fail(http.StatusBadRequest, err)
 		return
 	}
 
 	if getParent != "" {
 		prntBool, err = strconv.ParseBool(getParent)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			except.Fail(http.StatusBadRequest, err)
 			return
 		}
 	}
 
 	mainItem, err = qs.GetNodeByID(ctx, int64(idInt))
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		except.Fail(http.StatusNotFound, err)
 		return
 	}
 
@@ -82,7 +83,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 		// Main item isn't a root node; we can safely fetch the parent node.
 		mainItem, err = ParentNode(qs, ctx, mainItem.Path, int(mainItem.Depth))
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			except.Fail(http.StatusInternalServerError, err)
 			return
 		}
 
@@ -91,7 +92,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 		// Instead, override items and render the menu JSON.
 		items, err = qs.GetNodesByDepth(ctx, 0, 1000, 0)
 		if err != nil {
-			http.Error(w, err.Error(), 500)
+			except.Fail(http.StatusInternalServerError, err)
 			return
 		}
 		goto renderJSON
@@ -100,7 +101,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	// Fetch child nodes of the main item.
 	items, err = qs.GetChildNodes(ctx, mainItem.Path, mainItem.Depth, 1000, 0)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		except.Fail(http.StatusInternalServerError, err)
 		return
 	}
 	response.ParentItem = &mainItem

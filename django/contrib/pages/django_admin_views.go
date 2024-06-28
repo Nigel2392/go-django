@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"path"
 	"slices"
+	"strconv"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/admin"
@@ -40,25 +41,25 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 			pageID    = routeVars.GetInt("page_id")
 		)
 		if pageID == 0 {
-			http.Error(w, "invalid page id", http.StatusBadRequest)
+			except.Fail(http.StatusNotFound, "invalid page id")
 			return
 		}
 
 		var page, err = QuerySet().GetNodeByID(ctx, int64(pageID))
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			except.Fail(http.StatusNotFound, "Failed to get page")
 			return
 		}
 
 		var app, ok = admin.AdminSite.Apps.Get(AdminPagesAppName)
 		if !ok {
-			http.Error(w, "App not found", http.StatusNotFound)
+			except.Fail(http.StatusBadRequest, "App not found")
 			return
 		}
 
 		model, ok := app.Models.Get(AdminPagesModelPath)
 		if !ok {
-			http.Error(w, "Model not found", http.StatusNotFound)
+			except.Fail(http.StatusBadRequest, "Model not found")
 			return
 		}
 
@@ -120,6 +121,34 @@ func getPageActions(_ *http.Request, p *models.PageNode) []admin.Action {
 			URL: path.Join(
 				pageApp.routePrefix, p.UrlPath,
 			),
+		})
+	}
+
+	if django.AppInstalled("auditlogs") {
+		var u = django.Reverse(
+			"admin:auditlogs",
+		)
+
+		var url, err = url.Parse(u)
+		if err != nil {
+			return actions
+		}
+
+		var q = url.Query()
+		q.Set(
+			"object_id",
+			strconv.Itoa(int(p.ID())),
+		)
+		q.Set(
+			"content_type",
+			contenttypes.NewContentType(p).ShortTypeName(),
+		)
+		url.RawQuery = q.Encode()
+
+		actions = append(actions, admin.Action{
+			Icon:  "icon-history",
+			Title: fields.T("History"),
+			URL:   url.String(),
 		})
 	}
 
@@ -249,7 +278,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			int(p.Depth),
 		)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			except.Fail(http.StatusInternalServerError, err)
 			return
 		}
 		parent_object = &parent
@@ -402,13 +431,13 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 	)
 
 	if app_label == "" || model_name == "" {
-		http.Error(w, "app_label and model_name are required", http.StatusBadRequest)
+		except.Fail(http.StatusBadRequest, "app_label and model_name are required")
 		return
 	}
 
 	var cTypeDef = contenttypes.DefinitionForPackage(app_label, model_name)
 	if cTypeDef == nil {
-		http.Error(w, "content type not found", http.StatusNotFound)
+		except.Fail(http.StatusNotFound, "content type not found")
 		return
 	}
 
@@ -530,7 +559,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 	}
 
 	if err := views.Invoke(view, w, r); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		except.Fail(500, err)
 		return
 	}
 }
@@ -576,7 +605,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	adminForm.Load()
 
 	if err := r.ParseForm(); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		except.Fail(500, err)
 		return
 	}
 
@@ -685,7 +714,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	}
 
 	if err := views.Invoke(view, w, r); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		except.Fail(500, err)
 		return
 	}
 }
@@ -701,13 +730,13 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {
-			http.Error(w, "Failed to parse form", http.StatusInternalServerError)
+			except.Fail(500, "Failed to parse form")
 			return
 		}
 
 		var unpublishChildren = r.FormValue("unpublish-children") == "unpublish-children"
 		if err := UnpublishNode(QuerySet(), r.Context(), p, unpublishChildren); err != nil {
-			except.Fail(500, err)
+			except.Fail(500, "Failed to unpublish page: %s", err)
 			return
 		}
 
@@ -749,7 +778,7 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 	}
 
 	if err := views.Invoke(view, w, r); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		except.Fail(500, err)
 		return
 	}
 }

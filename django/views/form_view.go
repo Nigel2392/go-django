@@ -100,12 +100,22 @@ func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 	var err error
 	if req.Method == http.MethodPost {
 		if form.IsValid() {
-			err = v.ValidFn(req, form)
-			if err != nil {
-				if v.ValidFn != nil {
-					err = v.ValidFn(req, form)
+
+			if saver, ok := any(form).(interface{ Save() error }); ok {
+				err = saver.Save()
+				if err != nil {
+					goto checkFormErr
 				}
-				goto checkFormErr
+			}
+
+			if v.ValidFn != nil {
+				err = v.ValidFn(req, form)
+				if err != nil {
+					if v.InvalidFn != nil {
+						err = v.InvalidFn(req, form)
+					}
+					goto checkFormErr
+				}
 			}
 			goto formSuccess
 		} else {

@@ -21,6 +21,7 @@ const (
 	ErrPwdHashMismatch errs.Error = "password is not valid"
 	ErrPwdNoMatch      errs.Error = "passwords do not match"
 	ErrGenericAuthFail errs.Error = "authentication failed"
+	ErrNoSession       errs.Error = "no session found"
 )
 
 var _ except.ServerError = (*authenticationError)(nil)

@@ -27,6 +27,7 @@ func Login(r *http.Request, u *models.User) *models.User {
 }
 
 func Logout(r *http.Request) error {
-	SIGNAL_USER_LOGGED_OUT.Send((*models.User)(nil))
-	return nil
+	return SIGNAL_USER_LOGGED_OUT.Send(
+		(*models.User)(nil),
+	)
 }

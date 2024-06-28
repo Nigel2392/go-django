@@ -1,14 +1,17 @@
 package auth
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
+	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/views"
+	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
 type AuthView[T forms.Form] struct {
@@ -32,7 +35,6 @@ func newAuthView[T forms.Form](baseView *views.BaseView) *AuthView[T] {
 }
 
 func (v *AuthView[T]) GetContext(req *http.Request) (ctx.Context, error) {
-	fmt.Println("Getting context")
 	except.Assert(v.TemplateName != "", 500, "TemplateName is required")
 	except.Assert(v.getForm != nil, 500, "GetForm is required")
 	except.Assert(v.onValid != nil, 500, "OnValid is required")
@@ -146,8 +148,49 @@ func viewUserLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func viewUserLogout(w http.ResponseWriter, r *http.Request) {
-	Logout(r)
-	http.Redirect(w, r, django.Reverse("auth:login"), http.StatusSeeOther)
+	if r.Method != http.MethodPost {
+		except.Fail(
+			http.StatusMethodNotAllowed,
+			"Method not allowed",
+		)
+		return
+	}
+
+	var redirectURL = r.URL.Query().Get(
+		"next",
+	)
+	if redirectURL == "" {
+		redirectURL = django.Reverse(
+			"auth:login",
+		)
+	}
+	var u = authentication.Retrieve(
+		r,
+	)
+	if u == nil {
+		http.Redirect(
+			w, r,
+			redirectURL,
+			http.StatusSeeOther,
+		)
+		return
+	}
+
+	if err := Logout(r); err != nil && !errors.Is(err, ErrNoSession) {
+		logger.Errorf(
+			"Failed to log user out: %v", err,
+		)
+		except.Fail(
+			500, "Failed to log out",
+		)
+		return
+	}
+
+	http.Redirect(
+		w, r,
+		redirectURL,
+		http.StatusSeeOther,
+	)
 }
 
 func viewUserRegister(w http.ResponseWriter, r *http.Request) {

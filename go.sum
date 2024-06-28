@@ -10,6 +10,10 @@ github.com/Nigel2392/goldcrest v1.0.4 h1:Xx+QLht6QjJ3Gg9uksgc6Ye1XjbtzQ1208ClZwo
 github.com/Nigel2392/goldcrest v1.0.4/go.mod h1:UpnPrYJqZY/b7TkoVKdoNNPKTlQtld+fsrZEA98c1c0=
 github.com/Nigel2392/mux v1.3.2 h1:T/WUfmQCZnCMzuE6mUkRlagfNjRUpHxeoANdrx01qBM=
 github.com/Nigel2392/mux v1.3.2/go.mod h1:Hrj90gq33BCcFy8167rU03oBr2YIQMRvNkMf9JnRcAU=
+github.com/Nigel2392/mux v1.3.3 h1:qqKRZh8viRH9/Dvk/CEXboVsi5UF2aVhUk4JUbLzqrM=
+github.com/Nigel2392/mux v1.3.3/go.mod h1:a0OZuf+39ENmjSVJICsv2uMocJABSZTemfF5utx4mew=
+github.com/Nigel2392/mux v1.3.4 h1:rnf3zkrpf4ZCk2sP0bfaejRhZk9boB2IU1FFZ/Hafdc=
+github.com/Nigel2392/mux v1.3.4/go.mod h1:a0OZuf+39ENmjSVJICsv2uMocJABSZTemfF5utx4mew=
 github.com/Nigel2392/tags v1.0.0 h1:KR7VZosoKjksv0uYQDQp03iOo7l04MhCZhCjDeLIChg=
 github.com/Nigel2392/tags v1.0.0/go.mod h1:DDzJGymgpVSw0pjI7F7Qa7trBrGjlXaq1pE7jCCnagg=
 github.com/a-h/templ v0.2.707 h1:T1Gkd2ugbRglZ9rYw/VBchWOSZVKmetDbBkm4YubM7U=

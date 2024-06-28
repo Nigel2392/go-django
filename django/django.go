@@ -135,10 +135,11 @@ type Application struct {
 type Option func(*Application) error
 
 var (
-	Global  *Application
-	Reverse = Global.Reverse
-	Static  = Global.Static
-	Task    = Global.Task
+	Global       *Application
+	AppInstalled = Global.AppInstalled
+	Reverse      = Global.Reverse
+	Static       = Global.Static
+	Task         = Global.Task
 )
 
 func App(opts ...Option) *Application {
@@ -152,6 +153,7 @@ func App(opts ...Option) *Application {
 			initialized: new(atomic.Bool),
 		}
 
+		AppInstalled = Global.AppInstalled
 		Reverse = Global.Reverse
 		Static = Global.Static
 		Task = Global.Task
@@ -305,6 +307,11 @@ func (a *Application) Task(description string, fn func(*Application) error) erro
 	}
 
 	return err
+}
+
+func (a *Application) AppInstalled(name string) bool {
+	_, ok := a.Apps.Get(name)
+	return ok
 }
 
 func (a *Application) Initialize() error {

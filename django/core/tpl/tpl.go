@@ -12,7 +12,6 @@ import (
 
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
-	"github.com/Nigel2392/django/core/tpl/binarytree"
 	"github.com/pkg/errors"
 )
 
@@ -45,7 +44,7 @@ func (t *templates) Lt(other *templates) bool {
 }
 
 type TemplateRenderer struct {
-	configs  *binarytree.InterfacedBST[*templates]
+	configs  []*templates
 	cache    map[string]*templateObject
 	ctxFuncs []func(RequestContext)
 	funcs    template.FuncMap
@@ -118,11 +117,7 @@ func (r *TemplateRenderer) Add(cfg Config) {
 	}
 
 	r.fs.Add(cfg.FS, cfg.Matches)
-	if r.configs == nil {
-		r.configs = binarytree.NewInterfaced(config)
-	} else {
-		r.configs.Insert(config)
-	}
+	r.configs = append(r.configs, config)
 }
 
 type templateObject struct {
@@ -182,22 +177,14 @@ func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*templat
 	}
 
 	// Check if the templates for this path have already been cached
-	var cfg, ok = r.configs.Search(&templates{Config: &Config{AppName: baseKey}})
-	if ok {
-		goto checkCfg
+	var cfg *templates
+	for _, c := range r.configs {
+		if baseKey == c.AppName || c.Matches != nil && c.Matches(path[0]) {
+			cfg = c
+			break
+		}
 	}
 
-	// Walk btree to try and find a matching template to the path
-	// If a match is found, cache it to avoid future lookups
-	r.configs.Traverse(func(t *templates) bool {
-		if t.Matches != nil && t.Matches(path[0]) {
-			cfg = t
-			return false
-		}
-		return true
-	})
-
-checkCfg:
 	if cfg == nil {
 		return nil, errors.Errorf(
 			"no config found for template %s", path[0],

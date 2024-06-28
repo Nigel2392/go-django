@@ -82,6 +82,12 @@
     margin: 0 !important;
     color: var(--log-color-text) !important;
 }
+.auditlog-list-item .auditlog-list-empty-text {
+    padding: 1rem;
+    font-size: 1.25rem;
+    text-align: center;
+    color: var(--log-color-text);
+}
 .auditlog-list-item__header {
     position: relative;
     display: flex;

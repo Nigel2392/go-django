@@ -29,6 +29,11 @@ type ContentType interface {
 	New() interface{}
 }
 
+type ShortcutContentType[T any] interface {
+	ContentType
+	ShortTypeName() string
+}
+
 func NewContentType[T any](p T) *BaseContentType[T] {
 	var rType = reflect.TypeOf(p)
 	var rTypeElem = rType
@@ -68,6 +73,18 @@ var ErrInvalidScanType errs.Error = "invalid scan type"
 func (c *BaseContentType[T]) TypeName() string {
 	var typeName = c.pkgPath
 	var modelName = c.modelName
+	var b = make([]byte, 0, len(typeName)+len(modelName)+1)
+	b = append(b, typeName...)
+	b = append(b, '.')
+	b = append(b, modelName...)
+	return string(b)
+}
+
+func (c *BaseContentType[T]) ShortTypeName() string {
+	var (
+		typeName  = c.AppLabel()
+		modelName = c.modelName
+	)
 	var b = make([]byte, 0, len(typeName)+len(modelName)+1)
 	b = append(b, typeName...)
 	b = append(b, '.')

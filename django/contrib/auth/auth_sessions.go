@@ -29,12 +29,16 @@ func Login(r *http.Request, u *models.User) *models.User {
 
 func Logout(r *http.Request) error {
 	var session = sessions.Retrieve(r)
-	except.Assert(session != nil, 500, "session is nil")
+	// except.Assert(session != nil, 500, "session is nil")
+	if session == nil {
+		return ErrGenericAuthFail
+	}
 
-	var err = session.Destroy()
-	except.Assert(err == nil, 500, "failed to destroy session")
+	if err := session.Destroy(); err != nil {
+		return err
+	}
 
-	SIGNAL_USER_LOGGED_OUT.Send((*models.User)(nil))
-
-	return nil
+	return SIGNAL_USER_LOGGED_OUT.Send(
+		(*models.User)(nil),
+	)
 }

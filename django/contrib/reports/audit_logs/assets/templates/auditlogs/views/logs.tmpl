@@ -54,6 +54,12 @@
                     
                 </div>
             </div>
+        {{ else }}
+            <div class="auditlog-list-item">
+                <div class="auditlog-list-item__body">
+                    <p class="auditlog-list-empty-text">{{ T "No audit logs found" }}</p>
+                </div>
+            </div>
         {{ end }}
 
         {{ $page.HTML "page" 5 }}

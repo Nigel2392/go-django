@@ -123,6 +123,7 @@ func NewAppConfig() django.AppConfig {
 
 		if err := icons.Register(staticFS,
 			"admin/icons/view.svg",
+			"admin/icons/history.svg",
 			"admin/icons/no-view.svg",
 		); err != nil {
 			panic(err)
@@ -320,19 +321,19 @@ func newInstanceHandler(handler func(w http.ResponseWriter, req *http.Request, a
 		)
 
 		if modelName == "" || appName == "" || modelID == "" {
-			http.Error(w, "App, Model name and Model ID is required", http.StatusBadRequest)
+			except.Fail(http.StatusBadRequest, "App, Model name and Model ID is required")
 			return
 		}
 
 		var app, ok = AdminSite.Apps.Get(appName)
 		if !ok {
-			http.Error(w, "App not found", http.StatusNotFound)
+			except.Fail(http.StatusBadRequest, "App not found")
 			return
 		}
 
 		model, ok := app.Models.Get(modelName)
 		if !ok {
-			http.Error(w, "Model not found", http.StatusNotFound)
+			except.Fail(http.StatusBadRequest, "Model not found")
 			return
 		}
 
@@ -358,19 +359,19 @@ func newModelHandler(handler func(w http.ResponseWriter, r *http.Request, adminS
 		)
 
 		if modelName == "" || appName == "" {
-			http.Error(w, "App and Model name is required", http.StatusBadRequest)
+			except.Fail(http.StatusBadRequest, "App and Model name is required")
 			return
 		}
 
 		var app, ok = AdminSite.Apps.Get(appName)
 		if !ok {
-			http.Error(w, "App not found", http.StatusNotFound)
+			except.Fail(http.StatusBadRequest, "App not found")
 			return
 		}
 
 		model, ok := app.Models.Get(modelName)
 		if !ok {
-			http.Error(w, "Model not found", http.StatusNotFound)
+			except.Fail(http.StatusBadRequest, "Model not found")
 			return
 		}
 
@@ -384,13 +385,13 @@ func newAppHandler(handler func(w http.ResponseWriter, r *http.Request, adminSit
 		var appName = vars.Get("app_name")
 
 		if appName == "" {
-			http.Error(w, "App name is required", http.StatusBadRequest)
+			except.Fail(http.StatusBadRequest, "App name is required")
 			return
 		}
 
 		var app, ok = AdminSite.Apps.Get(appName)
 		if !ok {
-			http.Error(w, "App not found", http.StatusNotFound)
+			except.Fail(http.StatusBadRequest, "App not found")
 			return
 		}
 

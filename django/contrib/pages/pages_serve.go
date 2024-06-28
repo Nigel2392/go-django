@@ -169,7 +169,7 @@ checkError:
 		viewCtx, err = c.GetContext(req, specific)
 	}
 	if err != nil {
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		// http.Error(w, "Internal server error", http.StatusInternalServerError)
 		logger.Errorf("Error getting context: %v", err)
 		return
 	}

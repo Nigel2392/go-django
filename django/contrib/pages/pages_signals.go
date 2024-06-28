@@ -17,7 +17,7 @@ type BaseSignal struct {
 	Ctx context.Context
 }
 
-type PageSignal struct {
+type PageNodeSignal struct {
 	BaseSignal
 
 	// The current node, a child node or parent node depending on the signal.
@@ -25,6 +25,11 @@ type PageSignal struct {
 
 	// The current page ID, the parent page ID or a child's page ID depending on the signal.
 	PageID int64
+}
+
+type PageSignal struct {
+	BaseSignal
+	Page Page
 }
 
 type PageMovedSignal struct {
@@ -44,7 +49,7 @@ type PageMovedSignal struct {
 }
 
 var (
-	signalRegistry         = signals.NewPool[*PageSignal]()
+	signalRegistry         = signals.NewPool[*PageNodeSignal]()
 	SignalRootCreated      = signalRegistry.Get("pages.root_page_created")  // Node is the root node, PageID is zero.
 	SignalChildCreated     = signalRegistry.Get("pages.child_page_created") // Node is the child being created, PageID is the parent node's ID.
 	SignalNodeUpdated      = signalRegistry.Get("pages.node_updated")       // Node is the node being updated, PageID is the parent node's ID.
