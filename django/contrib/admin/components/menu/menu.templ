@@ -22,8 +22,13 @@ func (m *Menu) HTML() string {
 }
 
 func (m *Menu) MenuItems() []MenuItem {
-	var shallowCopy = make([]MenuItem, len(m.Items))
-	copy(shallowCopy, m.Items)
+	var shallowCopy = make([]MenuItem, 0, len(m.Items))
+	for _, item := range m.Items {
+		if !item.IsShown() {
+			continue
+		}
+		shallowCopy = append(shallowCopy, item)
+	}
 
 	 slices.SortStableFunc(shallowCopy, func(a, b MenuItem) int {
 		if a.Order() < b.Order() {
@@ -52,6 +57,7 @@ templ (m *Menu) Component() {
 type BaseItem struct {
 	ID string
 	ItemName string
+	Hidden bool
 	Classes []string
 	Ordering int
 	Logo templ.Component
@@ -72,6 +78,10 @@ func (i *BaseItem) Name() string {
 		}
 	}
 	return i.ItemName
+}
+
+func (i *BaseItem) IsShown() bool {
+	return !i.Hidden
 }
 
 func (i *BaseItem) Order() int {
@@ -119,6 +129,10 @@ type SubmenuItem struct {
 	MenuID string
 	MenuClasses []string
 	Menu *Menu
+}
+
+func (s *SubmenuItem) IsShown() bool {
+	return !s.Hidden && len(s.Menu.MenuItems()) > 0
 }
 
 css depthCss(i int) {

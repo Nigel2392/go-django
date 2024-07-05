@@ -14,7 +14,7 @@ import (
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
 	"github.com/Nigel2392/django/contrib/blocks"
 	"github.com/Nigel2392/django/contrib/pages"
-	_ "github.com/Nigel2392/django/contrib/pages/backend-sqlite"
+	"github.com/Nigel2392/django/contrib/reports"
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
 	auditlogs_sqlite "github.com/Nigel2392/django/contrib/reports/audit_logs/audit_logs_sqlite"
 	"github.com/Nigel2392/django/contrib/session"
@@ -61,6 +61,7 @@ func main() {
 			admin.NewAppConfig,
 			pages.NewAppConfig,
 			auditlogs.NewAppConfig,
+			reports.NewAppConfig,
 			core.NewAppConfig,
 			blocks.NewAppConfig,
 			blog.NewAppConfig,

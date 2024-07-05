@@ -452,10 +452,14 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		panels = make([]admin.Panel, fieldDefs.Len())
 
 		for i, def := range fieldDefs.Fields() {
-			panels[i] = admin.FieldPanel(def.Name())
+			panels[i] = admin.FieldPanel(
+				def.Name(),
+			)
 		}
 	} else {
-		panels = definition.AddPanels(r, page)
+		panels = definition.AddPanels(
+			r, page,
+		)
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](page)
@@ -479,7 +483,9 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		}
 
 		if page, ok := d.(SaveablePage); ok {
-			err = SavePage(QuerySet(), ctx, p, page)
+			err = SavePage(
+				QuerySet(), ctx, p, page,
+			)
 		} else {
 			var n = d.(*models.PageNode)
 			_, err = QuerySet().InsertNode(
@@ -490,11 +496,28 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			return err
 		}
 
-		auditlogs.Log("pages:add", logger.INF, page.Reference(), map[string]interface{}{
-			"parent": p.ID(),
-			"label":  page.Reference().Title,
-			"cType":  cType.PkgPath(),
-		})
+		var addData = map[string]interface{}{
+			"cType": cType.PkgPath(),
+		}
+
+		if p != nil && p.ID() > 0 {
+			addData["parent"] = p.ID()
+		}
+
+		auditlogs.Log(
+			"pages:add",
+			logger.INF,
+			page.Reference(),
+			addData,
+		)
+
+		if p != nil && p.ID() > 0 {
+			auditlogs.Log("pages:add_child", logger.INF, p, map[string]interface{}{
+				"page_id": ref.ID(),
+				"label":   ref.Title,
+				"cType":   cType.PkgPath(),
+			})
+		}
 
 		return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
 			return FixTree(pageApp.QuerySet(), ctx)

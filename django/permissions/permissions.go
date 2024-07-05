@@ -14,19 +14,20 @@ type PermissionTester interface {
 
 var Tester PermissionTester
 
+func defaultLog(r *http.Request, perms ...string) bool {
+	if LOG_IF_NONE_FOUND {
+		logger.Warnf(
+			"No permission testers found for \"%s\" (%s)",
+			strings.Join(perms, "\", \""),
+			r.URL.Path,
+		)
+	}
+	return true
+}
+
 var (
 	LOG_IF_NONE_FOUND     = true
-	DEFAULT_IF_NONE_FOUND = func(r *http.Request, perms ...string) bool {
-		if LOG_IF_NONE_FOUND {
-			logger.Warnf(
-				"No permission testers found for \"%s\" (%s)",
-				strings.Join(perms, "\", \""),
-				r.URL.Path,
-			)
-		}
-
-		return true
-	}
+	DEFAULT_IF_NONE_FOUND = defaultLog
 )
 
 // HasObjectPermission checks if the given request has the permission to perform the given action on the given object.

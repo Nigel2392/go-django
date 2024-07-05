@@ -1,6 +1,7 @@
 :root {
     --sidebar-width: 200px;
     --text-color: #333;
+    --border-color: hsl( 0 0% calc( 14.9% + 63.5%) );
     --color-link: #007d7e;
     --color-link-hover: #006e6e;
 
@@ -33,10 +34,11 @@
 *, *::before, *::after {
     box-sizing: border-box;
 }
-/* *:focus-within:not(:has(:focus-within)), */
-/* *:focus { */
-    /* outline: 2px solid var(--color-link); */
-/* } */
+input:not([type="button"]):focus,
+select:focus,
+textarea:focus {
+   outline: 2px solid var(--color-link);
+}
 html {
     /* font-family: sans-serif; */
     line-height: 1.15;
@@ -234,7 +236,7 @@ a:hover {
     max-width: 1040px;
 }
 .panel:not(:has(.panel)) {
-    margin-bottom: 1.25rem;
+    margin-bottom: 1rem;
 }
 .panel label,
 .form-field label {
@@ -253,11 +255,12 @@ a:hover {
     margin-bottom: 0.375rem;
 }
 .panel input:not([type="checkbox"], [type="radio"], .cdx-search-field__input, .ce-inline-tool-input),
-.panel textarea {
+.panel textarea,
+.panel select {
     -moz-appearance: none;
     appearance: none;
     background-color: hsl(0, 0%, 100%);
-    border: 1px solid hsl( 0 0% calc( 14.9% + 63.5%) );
+    border: 1px solid var(--border-color);
     border-radius: .3125rem;
     color: var(--text-color);
     font-size: 1.1875rem;
@@ -273,6 +276,25 @@ a:hover {
 .panel textarea:read-only {
     background-color: hsl( 0 0% 98% );
     color: hsl( 0 0% 60% );
+}
+.panel select {
+    -moz-appearance: none;
+    appearance: none;
+    background-color: var(--w-color-surface-field);
+    background-image: linear-gradient(45deg,#0000 50%,var(--text-color) 33%,var(--text-color) 66%,#0000 66%),linear-gradient(-45deg,#0000 50%,var(--text-color) 33%,var(--text-color) 66%,#0000 66%);
+    background-position: calc(100% - 1.5rem) 1.125rem,calc(100% - 1.125rem) 1.125rem;
+    background-repeat: no-repeat;
+    background-size: .375rem .375rem,.375rem .375rem;
+    padding-inline-end:2.625rem
+}
+.panel select:hover {
+    border-color: var(--border-color);
+}
+.panel select[disabled], .panel select[disabled]:hover {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-color: var(--border-color);
+    color: var(--text-color);
+    cursor: not-allowed
 }
 .panel.panel-title {
     font-size: 1.5rem;
@@ -406,6 +428,12 @@ a.button, .button a {
     background-color: var(--bg-color-button);
     color: var(--text-color-button);
 }
+.button.sm {
+    font-size: .75rem;
+    height: 2em;
+    line-height: calc(2em - 2px);
+    padding: 0 1em
+}
 .button.lg {
     font-size: 1rem;
     padding: 0 1.4em
@@ -421,6 +449,11 @@ a.button, .button a {
     .button.lg {
         font-size: 1.1rem;
         padding: 0 1.4em
+    }
+    .button.sm {
+        font-size: .875rem;
+        height: 2.5em;
+        line-height: calc(2.5em - 2px);
     }
     .view-header {
         flex-direction: row;

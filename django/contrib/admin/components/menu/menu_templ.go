@@ -33,8 +33,13 @@ func (m *Menu) HTML() string {
 }
 
 func (m *Menu) MenuItems() []MenuItem {
-	var shallowCopy = make([]MenuItem, len(m.Items))
-	copy(shallowCopy, m.Items)
+	var shallowCopy = make([]MenuItem, 0, len(m.Items))
+	for _, item := range m.Items {
+		if !item.IsShown() {
+			continue
+		}
+		shallowCopy = append(shallowCopy, item)
+	}
 
 	slices.SortStableFunc(shallowCopy, func(a, b MenuItem) int {
 		if a.Order() < b.Order() {
@@ -91,7 +96,7 @@ func (m *Menu) Component() templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(m.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 41, Col: 86}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 46, Col: 86}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -134,6 +139,7 @@ func (m *Menu) Component() templ.Component {
 type BaseItem struct {
 	ID       string
 	ItemName string
+	Hidden   bool
 	Classes  []string
 	Ordering int
 	Logo     templ.Component
@@ -154,6 +160,10 @@ func (i *BaseItem) Name() string {
 		}
 	}
 	return i.ItemName
+}
+
+func (i *BaseItem) IsShown() bool {
+	return !i.Hidden
 }
 
 func (i *BaseItem) Order() int {
@@ -194,7 +204,7 @@ func (i *BaseItem) Inner() templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(i.Label())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 88, Col: 12}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 98, Col: 12}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -255,7 +265,7 @@ func (i *BaseItem) Component() templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(i.ID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 94, Col: 99}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 104, Col: 99}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -340,7 +350,7 @@ func (i *Item) Component() templ.Component {
 			var templ_7745c5c3_Var14 string
 			templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(i.LinkID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 112, Col: 102}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 122, Col: 102}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 			if templ_7745c5c3_Err != nil {
@@ -384,6 +394,10 @@ type SubmenuItem struct {
 	MenuID      string
 	MenuClasses []string
 	Menu        *Menu
+}
+
+func (s *SubmenuItem) IsShown() bool {
+	return !s.Hidden && len(s.Menu.MenuItems()) > 0
 }
 
 func depthCss(i int) templ.CSSClass {
@@ -449,7 +463,7 @@ func (s *SubmenuItem) Component() templ.Component {
 			var templ_7745c5c3_Var19 string
 			templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(s.MenuID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 137, Col: 152}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 151, Col: 152}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 			if templ_7745c5c3_Err != nil {
@@ -501,7 +515,7 @@ func (s *SubmenuItem) Component() templ.Component {
 					var templ_7745c5c3_Var20 string
 					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(s.Label())
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 166, Col: 19}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/admin/components/menu/menu.templ`, Line: 180, Col: 19}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 					if templ_7745c5c3_Err != nil {

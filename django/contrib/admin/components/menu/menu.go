@@ -12,6 +12,9 @@ type MenuItem interface {
 	// If two menu items have the same order, they will remain in the order they were added
 	Order() int
 
+	// IsShown is used to determine if the menu item should be displayed
+	IsShown() bool
+
 	// Implement a method for the templ.Component interface
 	//
 	// We explicitly only render the menu with the templ generated code.

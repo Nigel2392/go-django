@@ -4,97 +4,110 @@
 
 {{ define "content" }}
 
-    <div class="auditlog-list">
-        {{ $page := (.Get "paginator") }}
-        {{ range $log := $page.Results }}
-            <div class="auditlog-list-item auditlog-{{ $log.Level.String }}">
-                <div class="auditlog-list-item__header" data-level="{{ $log.Level.String }}">
-                    {{ $log.Label }}
-                </div>
-                <div class="auditlog-list-item__body">
+    <div id="auditlogs">
+        <div class="auditlog-list">
+            {{ $page := (.Get "paginator") }}
+            {{ $content_type := (.Get "content_type") }}
+            {{ $object_id := (.Get "object_id") }}
 
-                    {{ if $log.Message }}
-                        <div class="auditlog-list-item__body__text">
-                            <p>{{ $log.Message }}</p>
-                        </div>
-                    {{ end }}
-
-                    {{ $actions := $log.Actions }}
-                    {{ if gt (len $actions) 0 }}
-                        <div class="auditlog-list-item__body__actions">
-                            <div data-controller="dropdown" class="dropdown">
-                                <button type="button" class="dropdown__toggle dropdown__toggle--icon" data-dropdown-target="toggle" aria-label={{ T "Actions" }}>
-                                    <svg class="icon icon-dots-horizontal dropdown__toggle-icon" viewBox="0 0 16 16">
-                                        <path d="M4.75 8c0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75 0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75Zm5 0c0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75 0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75Zm1.5 0c0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75 0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75Z"></path>
-                                    </svg>
-                                </button>
-                                <div data-dropdown-target="content" class="dropdown__content">
-                                    {{ range $action := $actions }}
-                                        {{ $icon := $action.Icon }}
-                                        <a href="{{ $action.URL }}" class="{{ if $icon }} button-icon {{ end }}">
-                                            {{ if $icon }}
-                                                <span class="icon button--icon">
-                                                    {{ icon $icon }}
-                                                </span>
-                                            {{ end }}
-                                            {{ $action.Label }}
-                                        </a>
-                                    {{ end }}
-
+            {{ range $log := $page.Results }}
+                <div class="auditlog-list-item auditlog-{{ $log.Level.String }}">
+                    <div class="auditlog-list-item__header" data-level="{{ $log.Level.String }}">
+                        {{ $log.Label }}
+                    </div>
+                    <div class="auditlog-list-item__body">
+    
+                        {{ if $log.Message }}
+                            <div class="auditlog-list-item__body__text">
+                                <p>{{ $log.Message }}</p>
+                            </div>
+                        {{ end }}
+    
+                        {{ $actions := $log.Actions }}
+                        {{ if gt (len $actions) 0 }}
+                            <div class="auditlog-list-item__body__actions">
+                                <div data-controller="dropdown" class="dropdown">
+                                    <button type="button" class="dropdown__toggle dropdown__toggle--icon" data-dropdown-target="toggle" aria-label={{ T "Actions" }}>
+                                        <svg class="icon icon-dots-horizontal dropdown__toggle-icon" viewBox="0 0 16 16">
+                                            <path d="M4.75 8c0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75 0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75Zm5 0c0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75 0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75Zm1.5 0c0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75 0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75Z"></path>
+                                        </svg>
+                                    </button>
+                                    <div data-dropdown-target="content" class="dropdown__content">
+                                        {{ range $action := $actions }}
+                                            {{ $icon := $action.Icon }}
+                                            <a href="{{ $action.URL }}" class="{{ if $icon }} button-icon {{ end }}">
+                                                {{ if $icon }}
+                                                    <span class="icon button--icon">
+                                                        {{ icon $icon }}
+                                                    </span>
+                                                {{ end }}
+                                                {{ $action.Label }}
+                                            </a>
+                                        {{ end }}
+    
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    {{ end }}
-
-                    {{ if $log.Timestamp }}
-                        <div class="auditlog-list-item__body__timestamp">
-                            <code>{{ $log.Timestamp.Format "2006-01-02 15:04:05" }}</code>
-                        </div>
-                    {{ end }}
-                    
-                </div>
-            </div>
-        {{ else }}
-            <div class="auditlog-list-item">
-                <div class="auditlog-list-item__body">
-                    <p class="auditlog-list-empty-text">{{ T "No audit logs found" }}</p>
-                </div>
-            </div>
-        {{ end }}
-
-        {{ $page.HTML "page" 5 }}
-
-    </div>
-
-    <div class="auditlogs-filters">
-        <form method="get">
-            {{ range $Field := (.Get "form").Fields }}
-    
-                <div class="form-field-wrapper">
-    
-                    <div class="form-field">
-                        {{ $Field.Label }}
-
-                        {{ if (gt (len $Field.Errors) 0) }}
-                            <ul class="error-list">
-                                {{ range $Error := $Field.Errors }}
-                                    <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
-                                {{ end }}
-                            </ul>
                         {{ end }}
     
-                        {{ if (ne $Field.HelpText "") }}
-                            <p class="help-text">{{ $Field.HelpText }}</p>
+                        {{ if $log.Timestamp }}
+                            <div class="auditlog-list-item__body__timestamp">
+                                <code>{{ $log.Timestamp.Format "2006-01-02 15:04:05" }}</code>
+                            </div>
                         {{ end }}
-
-                        {{ $Field.Field }}
+                        
                     </div>
                 </div>
-    
+            {{ else }}
+                <div class="auditlog-list-item">
+                    <div class="auditlog-list-item__body">
+                        <p class="auditlog-list-empty-text">{{ T "No audit logs found" }}</p>
+                    </div>
+                </div>
             {{ end }}
-    
-            <input type="submit" value="Submit">
-        </form>
+
+            {{ $page.HTML "page" 5 }}
+
+        </div>
+
+        <div class="auditlogs-filters">
+            <form method="get" action="{{ .Get "actionURL" }}">
+
+                {{ if $content_type }}
+                    <input type="hidden" name="content_type" value="{{ $content_type }}">
+                {{ end }}
+
+                {{ if $object_id }}
+                    <input type="hidden" name="object_id" value="{{ $object_id }}">
+                {{ end }}
+
+                {{ range $Field := (.Get "form").Fields }}        
+                    <div class="panel">
+
+                        <div class="form-field">
+                            {{ $Field.Label }}
+
+                            {{ if (gt (len $Field.Errors) 0) }}
+                                <ul class="error-list">
+                                    {{ range $Error := $Field.Errors }}
+                                        <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
+                                    {{ end }}
+                                </ul>
+                            {{ end }}
+
+                            {{ if (ne $Field.HelpText "") }}
+                                <p class="help-text">{{ $Field.HelpText }}</p>
+                            {{ end }}
+
+                            {{ $Field.Field }}
+                        </div>
+                    </div>
+
+                {{ end }}
+
+                <input class="button secondary hollow sm" type="submit" value="{{ T "Submit" }}">
+            </form>
+        </div>
     </div>
 
 {{ end }}

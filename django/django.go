@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"time"
 
@@ -272,7 +273,31 @@ func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Requ
 
 func (a *Application) Reverse(name string, args ...any) string {
 	var rt, _ = a.Mux.Reverse(name, args...)
-	return rt
+	var l = len(rt)
+	if !strings.HasPrefix(rt, "/") {
+		l += 1
+	}
+	if !strings.HasSuffix(rt, "/") {
+		l += 1
+	}
+
+	if l == len(rt) {
+		return rt
+	}
+
+	var buf = make([]byte, l)
+	if !strings.HasPrefix(rt, "/") {
+		buf[0] = '/'
+		copy(buf[1:], rt)
+	} else {
+		copy(buf, rt)
+	}
+
+	if !strings.HasSuffix(rt, "/") {
+		buf[l-1] = '/'
+	}
+
+	return string(buf)
 }
 
 func (a *Application) Static(path string) string {

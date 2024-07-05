@@ -31,7 +31,7 @@ func Logout(r *http.Request) error {
 	var session = sessions.Retrieve(r)
 	// except.Assert(session != nil, 500, "session is nil")
 	if session == nil {
-		return ErrGenericAuthFail
+		return ErrNoSession
 	}
 
 	if err := session.Destroy(); err != nil {

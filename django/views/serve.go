@@ -63,6 +63,11 @@ type TemplateView interface {
 	Render(w http.ResponseWriter, req *http.Request, templateName string, context ctx.Context) error
 }
 
+type SetupView interface {
+	View
+	Setup(w http.ResponseWriter, req *http.Request) (http.ResponseWriter, *http.Request)
+}
+
 type ErrorHandler interface {
 	// HandleError handles the error.
 	HandleError(w http.ResponseWriter, req *http.Request, err error, code int)
@@ -230,6 +235,10 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 			checker.Fail(w, req, err)
 			return err
 		}
+	}
+
+	if v, ok := view.(SetupView); ok {
+		w, req = v.Setup(w, req)
 	}
 
 	// Get the context if the view implements the ContextGetter interface.
