@@ -2,10 +2,10 @@ package forms
 
 import (
 	"html/template"
-	"io"
 	"net/http"
 	"net/url"
 
+	"github.com/Nigel2392/django/core/filesystem"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/forms/widgets"
@@ -72,7 +72,7 @@ type Form interface {
 	BoundErrors() *orderedmap.OrderedMap[string, []error]
 	ErrorList() []error
 
-	WithData(data url.Values, files map[string][]io.ReadCloser, r *http.Request) Form
+	WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) Form
 	InitialData() map[string]interface{}
 	CleanedData() map[string]interface{}
 
@@ -80,7 +80,6 @@ type Form interface {
 	Validate()
 	HasChanged() bool
 	IsValid() bool
-	Close() error
 
 	OnValid(...func(Form))
 	OnInvalid(...func(Form))

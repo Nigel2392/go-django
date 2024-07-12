@@ -63,7 +63,7 @@ func NewAppConfig() django.AppConfig {
 
 		loginWithEmail, ok := settings.Get("AUTH_EMAIL_LOGIN")
 		if ok {
-			app.LoginWithEmail = loginWithEmail.(bool)
+			Auth.LoginWithEmail = loginWithEmail.(bool)
 		}
 
 		sessInt, ok := settings.Get("SESSION_MANAGER")

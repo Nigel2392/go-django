@@ -12,6 +12,7 @@ import (
 
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/core/filesystem"
 	"github.com/pkg/errors"
 )
 
@@ -48,7 +49,7 @@ type TemplateRenderer struct {
 	cache    map[string]*templateObject
 	ctxFuncs []func(RequestContext)
 	funcs    template.FuncMap
-	fs       *MultiFS
+	fs       *filesystem.MultiFS
 }
 
 func NewRenderer() *TemplateRenderer {
@@ -56,7 +57,7 @@ func NewRenderer() *TemplateRenderer {
 		funcs:    make(template.FuncMap),
 		cache:    make(map[string]*templateObject),
 		ctxFuncs: make([]func(RequestContext), 0),
-		fs:       NewMultiFS(),
+		fs:       filesystem.NewMultiFS(),
 	}
 	r.Funcs(template.FuncMap{
 		"include": func(context any, baseKey string, path ...string) template.HTML {

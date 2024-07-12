@@ -5,7 +5,7 @@ import (
 
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/ctx"
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 )
 
 type BaseView struct {

@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"path/filepath"
 
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem"
 	"github.com/pkg/errors"
 )
 
@@ -27,12 +27,12 @@ func Open(name string) (fs.File, error) {
 }
 
 type FileHandler struct {
-	fs *tpl.MultiFS
+	fs *filesystem.MultiFS
 }
 
 func NewFileHandler() *FileHandler {
 	return &FileHandler{
-		fs: tpl.NewMultiFS(),
+		fs: filesystem.NewMultiFS(),
 	}
 }
 
@@ -44,9 +44,9 @@ func (h *FileHandler) Collect(fn func(path string, f fs.File) error) error {
 	var filesystems = make([]fs.FS, 0)
 	for _, fs := range h.fs.FS() {
 		switch fs := fs.(type) {
-		case *tpl.MatchFS:
+		case *filesystem.MatchFS:
 			filesystems = append(filesystems, fs.FS())
-		case *tpl.MultiFS:
+		case *filesystem.MultiFS:
 			filesystems = append(filesystems, fs.FS()...)
 		default:
 			filesystems = append(filesystems, fs)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/errs"
+	"github.com/Nigel2392/django/core/filesystem"
 	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/forms/widgets"
 )
@@ -82,11 +83,11 @@ func (bw *BlockWidget) ValueToForm(value interface{}) interface{} {
 	return bw.BlockDef.ValueToForm(value)
 }
 
-func (bw *BlockWidget) ValueOmittedFromData(data url.Values, files map[string][]io.ReadCloser, name string) bool {
+func (bw *BlockWidget) ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
 	return bw.BlockDef.ValueOmittedFromData(data, files, name)
 }
 
-func (bw *BlockWidget) ValueFromDataDict(data url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
+func (bw *BlockWidget) ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
 	return bw.BlockDef.ValueFromDataDict(data, files, name)
 }
 

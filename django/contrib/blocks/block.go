@@ -5,7 +5,8 @@ import (
 	"net/url"
 
 	"github.com/Nigel2392/django/core/ctx"
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/media"
@@ -112,11 +113,11 @@ func (b *BaseBlock) ValueToForm(value interface{}) interface{} {
 	return b.Field().ValueToForm(value)
 }
 
-func (b *BaseBlock) ValueOmittedFromData(data url.Values, files map[string][]io.ReadCloser, name string) bool {
+func (b *BaseBlock) ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
 	return b.Field().Widget().ValueOmittedFromData(data, files, name)
 }
 
-func (b *BaseBlock) ValueFromDataDict(data url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
+func (b *BaseBlock) ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
 	return b.Field().Widget().ValueFromDataDict(data, files, name)
 }
 

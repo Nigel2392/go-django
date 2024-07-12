@@ -6,7 +6,7 @@ import (
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/justinas/nosurf"

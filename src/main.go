@@ -20,8 +20,8 @@ import (
 	"github.com/Nigel2392/django/contrib/session"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/errs"
+	"github.com/Nigel2392/django/core/filesystem/staticfiles"
 	"github.com/Nigel2392/django/core/logger"
-	"github.com/Nigel2392/django/core/staticfiles"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/modelforms"
@@ -51,6 +51,8 @@ func main() {
 				)
 				return db
 			}(),
+
+			"AUTH_EMAIL_LOGIN": true,
 		}),
 		// django.AppMiddleware(
 		// middleware.DefaultLogger.Intercept,

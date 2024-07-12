@@ -5,7 +5,8 @@ import (
 	"io/fs"
 
 	"github.com/Nigel2392/django/core/assert"
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 )
 
 //go:embed assets/**
@@ -19,10 +20,10 @@ func init() {
 		AppName: "forms",
 		FS:      templates,
 		Bases:   []string{},
-		Matches: tpl.MatchAnd(
-			tpl.MatchPrefix("forms/widgets/"),
-			tpl.MatchOr(
-				tpl.MatchExt(".html"),
+		Matches: filesystem.MatchAnd(
+			filesystem.MatchPrefix("forms/widgets/"),
+			filesystem.MatchOr(
+				filesystem.MatchExt(".html"),
 			),
 		),
 	})

@@ -14,15 +14,15 @@ import (
 
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/errs"
+	"github.com/Nigel2392/django/core/filesystem"
 	"github.com/Nigel2392/django/core/logger"
-	"github.com/Nigel2392/django/core/tpl"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
 var (
 	registry = &iconRegistry{
 		icons: orderedmap.NewOrderedMap[string, Icon](),
-		fs:    tpl.NewMultiFS(),
+		fs:    filesystem.NewMultiFS(),
 	}
 	iconIDPattern      = regexp.MustCompile(`id=["']icon-([a-z0-9-]+)["']`)
 	iconCommentPattern = regexp.MustCompile(`<!--!(.*?)-->`)
@@ -46,7 +46,7 @@ type (
 	}
 	iconRegistry struct {
 		icons *orderedmap.OrderedMap[string, Icon]
-		fs    *tpl.MultiFS
+		fs    *filesystem.MultiFS
 	}
 )
 

@@ -7,7 +7,8 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/django/core/ctx"
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 	"github.com/Nigel2392/django/forms/media"
 )
 
@@ -45,11 +46,11 @@ func (b *BaseWidget) ValueToForm(value interface{}) interface{} {
 	return value
 }
 
-func (b *BaseWidget) ValueOmittedFromData(data url.Values, files map[string][]io.ReadCloser, name string) bool {
+func (b *BaseWidget) ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
 	return !data.Has(name)
 }
 
-func (b *BaseWidget) ValueFromDataDict(data url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
+func (b *BaseWidget) ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
 	var value string
 	if data.Has(name) {
 		value = strings.TrimSpace(data.Get(name))

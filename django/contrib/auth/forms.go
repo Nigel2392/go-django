@@ -320,7 +320,8 @@ func (f *BaseUserForm) Login() error {
 		err     error
 	)
 	if Auth.LoginWithEmail {
-		user, err = Auth.Queries.RetrieveByEmail(ctx, cleaned["email"].(string))
+		var m = cleaned["email"].(*mail.Address)
+		user, err = Auth.Queries.RetrieveByEmail(ctx, m.Address)
 	} else {
 		user, err = Auth.Queries.RetrieveByUsername(ctx, cleaned["username"].(string))
 	}

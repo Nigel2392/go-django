@@ -4,13 +4,13 @@ import (
 	"context"
 	"fmt"
 	"html/template"
-	"io"
 	"net/http"
 	"net/url"
 	"strings"
 
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/core/filesystem"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/media"
@@ -265,7 +265,7 @@ func (a *AdminForm[T]) BoundErrors() *orderedmap.OrderedMap[string, []error] {
 func (a *AdminForm[T]) ErrorList() []error {
 	return a.Form.ErrorList()
 }
-func (a *AdminForm[T]) WithData(data url.Values, files map[string][]io.ReadCloser, r *http.Request) forms.Form {
+func (a *AdminForm[T]) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) forms.Form {
 	return a.Form.WithData(data, files, r)
 }
 func (a *AdminForm[T]) InitialData() map[string]interface{} {
@@ -309,9 +309,6 @@ func (a *AdminForm[T]) HasChanged() bool {
 }
 func (a *AdminForm[T]) IsValid() bool {
 	return a.Form.IsValid()
-}
-func (a *AdminForm[T]) Close() error {
-	return a.Form.Close()
 }
 func (a *AdminForm[T]) OnValid(f ...func(forms.Form)) {
 	a.Form.OnValid(f...)

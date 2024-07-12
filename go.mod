@@ -24,7 +24,6 @@ require (
 )
 
 require (
-	github.com/Nigel2392/go-datastructures v1.1.5
 	github.com/Nigel2392/go-telepath v0.1.2
 	github.com/Nigel2392/tags v1.0.0
 	github.com/a-h/templ v0.2.707

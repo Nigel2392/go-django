@@ -1,4 +1,4 @@
-package tpl_test
+package filesystem_test
 
 import (
 	"embed"
@@ -8,7 +8,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem"
 )
 
 //go:embed test/fs1/**
@@ -41,12 +41,12 @@ func newTestMatchFS(name string, fs embed.FS, match func(filepath string) bool, 
 
 func TestMatchFS(t *testing.T) {
 
-	var matchFsFunc1 = tpl.MatchAnd(
-		tpl.MatchPrefix("test/fs1"),
-		tpl.MatchOr(
-			tpl.MatchExt(".txt"),
-			tpl.MatchExt(".text"),
-			tpl.MatchExt(".md"),
+	var matchFsFunc1 = filesystem.MatchAnd(
+		filesystem.MatchPrefix("test/fs1"),
+		filesystem.MatchOr(
+			filesystem.MatchExt(".txt"),
+			filesystem.MatchExt(".text"),
+			filesystem.MatchExt(".md"),
 		),
 	)
 	var allFilesFS1 = []testFile{
@@ -80,12 +80,12 @@ func TestMatchFS(t *testing.T) {
 		},
 	}
 
-	var matchFsFunc2 = tpl.MatchAnd(
-		tpl.MatchPrefix("test/fs2"),
-		tpl.MatchOr(
-			tpl.MatchExt(".txt"),
-			tpl.MatchExt(".md"),
-			tpl.MatchExt(".markdown"),
+	var matchFsFunc2 = filesystem.MatchAnd(
+		filesystem.MatchPrefix("test/fs2"),
+		filesystem.MatchOr(
+			filesystem.MatchExt(".txt"),
+			filesystem.MatchExt(".md"),
+			filesystem.MatchExt(".markdown"),
 		),
 	)
 	var allFilesFS2 = []testFile{
@@ -138,7 +138,7 @@ func TestMatchFS(t *testing.T) {
 
 			for _, file := range tt.files {
 
-				var fileSys = tpl.NewMatchFS(tt.fs, tt.matchFunc)
+				var fileSys = filesystem.NewMatchFS(tt.fs, tt.matchFunc)
 
 				var name = filepath.Base(file.Name)
 				if file.Error != nil {

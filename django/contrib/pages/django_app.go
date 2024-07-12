@@ -16,8 +16,9 @@ import (
 	"github.com/Nigel2392/django/contrib/pages/models"
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/django/core/contenttypes"
-	"github.com/Nigel2392/django/core/staticfiles"
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem"
+	"github.com/Nigel2392/django/core/filesystem/staticfiles"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 	"github.com/Nigel2392/django/forms/fields"
 	dj_models "github.com/Nigel2392/django/models"
 	"github.com/Nigel2392/goldcrest"
@@ -121,11 +122,11 @@ func NewAppConfig() *PageAppConfig {
 	}
 
 	staticfiles.AddFS(
-		assetFileSys, tpl.MatchAnd(
-			tpl.MatchPrefix("pages/"),
-			tpl.MatchOr(
-				tpl.MatchSuffix(".css"),
-				tpl.MatchSuffix(".js"),
+		assetFileSys, filesystem.MatchAnd(
+			filesystem.MatchPrefix("pages/"),
+			filesystem.MatchOr(
+				filesystem.MatchSuffix(".css"),
+				filesystem.MatchSuffix(".js"),
 			),
 		),
 	)
@@ -133,10 +134,10 @@ func NewAppConfig() *PageAppConfig {
 	tpl.Add(tpl.Config{
 		AppName: "pages",
 		FS:      templateFileSys,
-		Matches: tpl.MatchAnd(
-			tpl.MatchPrefix("pages/"),
-			tpl.MatchOr(
-				tpl.MatchSuffix(".tmpl"),
+		Matches: filesystem.MatchAnd(
+			filesystem.MatchPrefix("pages/"),
+			filesystem.MatchOr(
+				filesystem.MatchSuffix(".tmpl"),
 			),
 		),
 	})

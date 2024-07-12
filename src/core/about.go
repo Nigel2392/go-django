@@ -7,7 +7,7 @@ import (
 	"github.com/Nigel2392/django/contrib/auth"
 	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/except"
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 

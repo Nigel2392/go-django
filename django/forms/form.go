@@ -3,8 +3,8 @@ package forms
 import (
 	"fmt"
 	"html/template"
-	"io"
 	"maps"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"slices"
@@ -13,18 +13,35 @@ import (
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/errs"
+	"github.com/Nigel2392/django/core/filesystem"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/forms/widgets"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
+type multipartFileHeader struct {
+	header *multipart.FileHeader
+}
+
+func (f *multipartFileHeader) Name() string {
+	return f.header.Filename
+}
+
+func (f *multipartFileHeader) Size() int64 {
+	return f.header.Size
+}
+
+func (f *multipartFileHeader) Open() (multipart.File, error) {
+	return f.header.Open()
+}
+
 func WithRequestData(method string, r *http.Request) func(Form) {
 	if r.Method != method {
 		return func(f Form) {
 			var (
 				data  = make(url.Values)
-				files = make(map[string][]io.ReadCloser)
+				files = make(map[string][]filesystem.FileHeader)
 			)
 			f.WithData(data, files, r)
 		}
@@ -35,14 +52,12 @@ func WithRequestData(method string, r *http.Request) func(Form) {
 
 		var data = make(url.Values)
 		maps.Copy(data, r.Form)
-		var files = make(map[string][]io.ReadCloser)
+		var files = make(map[string][]filesystem.FileHeader)
 		if r.MultipartForm != nil && r.MultipartForm.File != nil {
 			for k, v := range r.MultipartForm.File {
-				var files_ = make([]io.ReadCloser, 0, len(v))
+				var files_ = make([]filesystem.FileHeader, 0, len(v))
 				for _, file := range v {
-					var file, err = file.Open()
-					assert.ErrNil(err)
-					files_ = append(files_, file)
+					files_ = append(files_, &multipartFileHeader{file})
 				}
 				files[k] = files_
 			}
@@ -52,9 +67,9 @@ func WithRequestData(method string, r *http.Request) func(Form) {
 	}
 }
 
-func WithData(data url.Values, files map[string][]io.ReadCloser, r *http.Request) func(Form) {
+func WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) func(Form) {
 	if files == nil {
-		files = make(map[string][]io.ReadCloser)
+		files = make(map[string][]filesystem.FileHeader)
 	}
 
 	return func(f Form) {
@@ -145,7 +160,7 @@ type BaseForm struct {
 	Raw             url.Values
 	Initial         map[string]interface{}
 	InvalidDefaults map[string]interface{}
-	Files           map[string][]io.ReadCloser
+	Files           map[string][]filesystem.FileHeader
 	Cleaned         map[string]interface{}
 	Defaults        map[string]interface{}
 
@@ -376,29 +391,6 @@ func (f *BaseForm) BoundFields() *orderedmap.OrderedMap[string, BoundField] {
 	return ret
 }
 
-func (f *BaseForm) Close() (err error) {
-	var errs = make([]error, 0)
-	for _, files := range f.Files {
-		for _, file := range files {
-			if err = file.Close(); err != nil {
-				errs = append(errs, err)
-			}
-		}
-	}
-
-	if len(errs) > 0 {
-		var errStr = make([]string, 0, len(errs))
-		for _, err := range errs {
-			errStr = append(errStr, err.Error())
-		}
-		return fmt.Errorf(
-			"error(s) closing files: %s", strings.Join(errStr, ", "),
-		)
-	}
-
-	return nil
-}
-
 func (f *BaseForm) OnValid(funcs ...func(Form)) {
 	f.OnValidFuncs = append(f.OnValidFuncs, funcs...)
 }
@@ -517,7 +509,7 @@ func (f *BaseForm) prefix(name string) string {
 	return fmt.Sprintf("%s-%s", prefix, name)
 }
 
-func (f *BaseForm) WithData(data url.Values, files map[string][]io.ReadCloser, r *http.Request) Form {
+func (f *BaseForm) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) Form {
 	f.Reset()
 	f.Raw = data
 	f.Files = files

@@ -5,8 +5,8 @@ import (
 	"io/fs"
 
 	"github.com/Nigel2392/django/core/attrs"
-	"github.com/Nigel2392/django/core/staticfiles"
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem"
+	"github.com/Nigel2392/django/core/filesystem/staticfiles"
 	"github.com/Nigel2392/django/forms/fields"
 )
 
@@ -25,11 +25,11 @@ func init() {
 
 	staticfiles.AddFS(
 		editorJS_FS,
-		tpl.MatchAnd(
-			tpl.MatchPrefix("editorjs"),
-			tpl.MatchOr(
-				tpl.MatchExt(".js"),
-				tpl.MatchExt(".css"),
+		filesystem.MatchAnd(
+			filesystem.MatchPrefix("editorjs"),
+			filesystem.MatchOr(
+				filesystem.MatchExt(".js"),
+				filesystem.MatchExt(".css"),
 			),
 		),
 	)

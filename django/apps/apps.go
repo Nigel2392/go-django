@@ -7,7 +7,7 @@ import (
 	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/command"
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 	"github.com/Nigel2392/mux"
 )
 

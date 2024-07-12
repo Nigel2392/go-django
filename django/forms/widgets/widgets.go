@@ -5,6 +5,7 @@ import (
 	"net/url"
 
 	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/core/filesystem"
 	"github.com/Nigel2392/django/forms/media"
 )
 
@@ -14,11 +15,11 @@ type FormValueConverter interface {
 }
 
 type FormValueOmitter interface {
-	ValueOmittedFromData(data url.Values, files map[string][]io.ReadCloser, name string) bool
+	ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool
 }
 
 type FormValueGetter interface {
-	ValueFromDataDict(data url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error)
+	ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error)
 }
 
 type FormValuer interface {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/core/filesystem"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/google/uuid"
@@ -77,7 +78,7 @@ func (l *ListBlock) makeIndexedError(index int, err ...error) error {
 	return e
 }
 
-func (b *ListBlock) ValueOmittedFromData(data url.Values, files map[string][]io.ReadCloser, name string) bool {
+func (b *ListBlock) ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
 	var addedKey = fmt.Sprintf("%s-added", name)
 	if !data.Has(addedKey) {
 		return true
@@ -104,7 +105,7 @@ func sortListBlocks(a, b *ListBlockValue) int {
 	return 0
 }
 
-func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
+func (l *ListBlock) ValueFromDataDict(d url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
 	var data = make([]*ListBlockValue, 0)
 
 	var (

@@ -8,6 +8,7 @@ import (
 	"net/url"
 
 	"github.com/Nigel2392/django/core/ctx"
+	"github.com/Nigel2392/django/core/filesystem"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/elliotchance/orderedmap/v2"
@@ -52,7 +53,7 @@ func (m *StructBlock) Field() fields.Field {
 	return m.FormField
 }
 
-func (m *StructBlock) ValueOmittedFromData(data url.Values, files map[string][]io.ReadCloser, name string) bool {
+func (m *StructBlock) ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
 	var omitted = true
 	for head := m.Fields.Front(); head != nil; head = head.Next() {
 		var key = fmt.Sprintf("%s-%s", name, head.Key)
@@ -64,7 +65,7 @@ func (m *StructBlock) ValueOmittedFromData(data url.Values, files map[string][]i
 	return omitted
 }
 
-func (m *StructBlock) ValueFromDataDict(d url.Values, files map[string][]io.ReadCloser, name string) (interface{}, []error) {
+func (m *StructBlock) ValueFromDataDict(d url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
 	var data = make(map[string]interface{})
 	var errors = NewBlockErrors[string]()
 	for head := m.Fields.Front(); head != nil; head = head.Next() {

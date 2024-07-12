@@ -10,8 +10,9 @@ import (
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
-	"github.com/Nigel2392/django/core/staticfiles"
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem"
+	"github.com/Nigel2392/django/core/filesystem/staticfiles"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/goldcrest"
 )
@@ -96,15 +97,15 @@ func NewAppConfig() *apps.AppConfig {
 
 		staticfiles.AddFS(
 			staticFS,
-			tpl.MatchAnd(
-				tpl.MatchPrefix("blocks"),
-				tpl.MatchOr(
-					tpl.MatchSuffix(".css"),
-					tpl.MatchSuffix(".js"),
-					tpl.MatchSuffix(".png"),
-					tpl.MatchSuffix(".jpg"),
-					tpl.MatchSuffix(".jpeg"),
-					tpl.MatchSuffix(".svg"),
+			filesystem.MatchAnd(
+				filesystem.MatchPrefix("blocks"),
+				filesystem.MatchOr(
+					filesystem.MatchSuffix(".css"),
+					filesystem.MatchSuffix(".js"),
+					filesystem.MatchSuffix(".png"),
+					filesystem.MatchSuffix(".jpg"),
+					filesystem.MatchSuffix(".jpeg"),
+					filesystem.MatchSuffix(".svg"),
 				),
 			),
 		)
@@ -115,11 +116,11 @@ func NewAppConfig() *apps.AppConfig {
 			Bases: []string{
 				"blocks/base.tmpl",
 			},
-			Matches: tpl.MatchAnd(
-				tpl.MatchPrefix("blocks"),
-				tpl.MatchOr(
-					tpl.MatchSuffix(".html"),
-					tpl.MatchSuffix(".tmpl"),
+			Matches: filesystem.MatchAnd(
+				filesystem.MatchPrefix("blocks"),
+				filesystem.MatchOr(
+					filesystem.MatchSuffix(".html"),
+					filesystem.MatchSuffix(".tmpl"),
 				),
 			),
 		})

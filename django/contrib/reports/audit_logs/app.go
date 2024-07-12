@@ -15,10 +15,11 @@ import (
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
+	"github.com/Nigel2392/django/core/filesystem"
+	"github.com/Nigel2392/django/core/filesystem/staticfiles"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/core/pagination"
-	"github.com/Nigel2392/django/core/staticfiles"
-	"github.com/Nigel2392/django/core/tpl"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/forms/widgets"
@@ -100,11 +101,11 @@ func NewAppConfig() django.AppConfig {
 	}
 
 	staticfiles.AddFS(
-		sFs, tpl.MatchAnd(
-			tpl.MatchPrefix("auditlogs/"),
-			tpl.MatchOr(
-				tpl.MatchSuffix(".css"),
-				tpl.MatchSuffix(".js"),
+		sFs, filesystem.MatchAnd(
+			filesystem.MatchPrefix("auditlogs/"),
+			filesystem.MatchOr(
+				filesystem.MatchSuffix(".css"),
+				filesystem.MatchSuffix(".js"),
 			),
 		),
 	)
@@ -118,10 +119,10 @@ func NewAppConfig() django.AppConfig {
 	tpl.Add(tpl.Config{
 		AppName: "auditlogs",
 		FS:      tplFS,
-		Matches: tpl.MatchAnd(
-			tpl.MatchPrefix("auditlogs/"),
-			tpl.MatchOr(
-				tpl.MatchSuffix(".tmpl"),
+		Matches: filesystem.MatchAnd(
+			filesystem.MatchPrefix("auditlogs/"),
+			filesystem.MatchOr(
+				filesystem.MatchSuffix(".tmpl"),
 			),
 		),
 	})

@@ -17,8 +17,9 @@ import (
 	"github.com/Nigel2392/django/contrib/admin/icons"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/except"
-	"github.com/Nigel2392/django/core/staticfiles"
-	"github.com/Nigel2392/django/core/tpl"
+	"github.com/Nigel2392/django/core/filesystem"
+	"github.com/Nigel2392/django/core/filesystem/staticfiles"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/views"
@@ -227,17 +228,17 @@ func NewAppConfig() django.AppConfig {
 		return nil
 	}
 
-	staticfiles.AddFS(staticFS, tpl.MatchAnd(
-		tpl.MatchPrefix("admin/"),
-		tpl.MatchOr(
-			tpl.MatchExt(".css"),
-			tpl.MatchExt(".js"),
-			tpl.MatchExt(".png"),
-			tpl.MatchExt(".jpg"),
-			tpl.MatchExt(".jpeg"),
-			tpl.MatchExt(".svg"),
-			tpl.MatchExt(".gif"),
-			tpl.MatchExt(".ico"),
+	staticfiles.AddFS(staticFS, filesystem.MatchAnd(
+		filesystem.MatchPrefix("admin/"),
+		filesystem.MatchOr(
+			filesystem.MatchExt(".css"),
+			filesystem.MatchExt(".js"),
+			filesystem.MatchExt(".png"),
+			filesystem.MatchExt(".jpg"),
+			filesystem.MatchExt(".jpeg"),
+			filesystem.MatchExt(".svg"),
+			filesystem.MatchExt(".gif"),
+			filesystem.MatchExt(".ico"),
 		),
 	))
 
@@ -248,10 +249,10 @@ func NewAppConfig() django.AppConfig {
 			"admin/skeleton.tmpl",
 			"admin/base.tmpl",
 		},
-		Matches: tpl.MatchAnd(
-			tpl.MatchPrefix("admin/"),
-			tpl.MatchOr(
-				tpl.MatchExt(".tmpl"),
+		Matches: filesystem.MatchAnd(
+			filesystem.MatchPrefix("admin/"),
+			filesystem.MatchOr(
+				filesystem.MatchExt(".tmpl"),
 			),
 		),
 		Funcs: template.FuncMap{
