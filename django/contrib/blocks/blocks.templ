@@ -89,7 +89,9 @@ templ (l *ListBlock)RenderTempl(w io.Writer, id, name string, valueArr []*ListBl
 	    		        }
                     </div>
 
-                    @widgets.HelpTextComponent("list-block", l.Child.HelpText())
+                    @widgets.HelpTextComponent(
+                        "list-block", l.Child.HelpText(),
+                    )
         	    </div>
 	    	}
 		</div>

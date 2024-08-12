@@ -173,6 +173,9 @@
     padding: 0.325em 1em;
     border-bottom: 1px dotted var(--secondary-bg-color);
 }
+.pages-type-list-item:hover {
+    text-decoration: none;
+}
 .pages-type-list-item .header {
     display: flex;
     flex-direction: row;

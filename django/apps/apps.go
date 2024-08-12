@@ -39,7 +39,7 @@ func NewDBAppConfig(name string, patterns ...core.URL) *DBRequiredAppConfig {
 }
 
 func (a *DBRequiredAppConfig) Initialize(settings django.Settings) error {
-	var dbInt, ok = settings.Get("DATABASE")
+	var dbInt, ok = settings.Get(django.APPVAR_DATABASE)
 	assert.True(ok, "DATABASE setting is required for '%s' app", a.AppName)
 
 	db, ok := dbInt.(*sql.DB)

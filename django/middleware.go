@@ -58,7 +58,7 @@ func LoggingDisabledMiddleware(next mux.Handler) mux.Handler {
 // The message might be prefixed and / or suffixed with additional information.
 func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
 	var logggingEnabled = ConfigGet(a.Settings, "LOGGING_ENABLED",
-		ConfigGet(a.Settings, "DEBUG", true),
+		ConfigGet(a.Settings, APPVAR_DEBUG, true),
 	)
 	if !logggingEnabled {
 		return next

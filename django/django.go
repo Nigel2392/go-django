@@ -372,7 +372,7 @@ func (a *Application) Initialize() error {
 		RequestSignalMiddleware,
 		// middleware.Recoverer(a.veryBadServerError),
 		middleware.AllowedHosts(
-			ConfigGet(a.Settings, "ALLOWED_HOSTS", []string{"*"})...,
+			ConfigGet(a.Settings, APPVAR_ALLOWED_HOSTS, []string{"*"})...,
 		),
 		a.loggerMiddleware,
 	)
@@ -539,7 +539,7 @@ func (a *Application) Initialize() error {
 		}
 	}
 
-	if ConfigGet(a.Settings, "RECOVERER", true) {
+	if ConfigGet(a.Settings, APPVAR_RECOVERER, true) {
 		a.Mux.Use(
 			middleware.Recoverer(a.ServerError),
 		)
@@ -576,30 +576,74 @@ func (a *Application) Serve() error {
 	}
 
 	var (
-		HOST      = ConfigGet(a.Settings, "HOST", "localhost")
-		PORT      = ConfigGet(a.Settings, "PORT", "8080")
-		TLSCert   = ConfigGet[string](a.Settings, "TLS_CERT")
-		TLSKey    = ConfigGet[string](a.Settings, "TLS_KEY")
-		TLSConfig = ConfigGet[*tls.Config](a.Settings, "TLS_CONFIG")
-		addr      = fmt.Sprintf("%s:%s", HOST, PORT)
-		server    = &http.Server{
-			Addr:      addr,
-			Handler:   nosurf.New(a.Mux),
+		handler     = nosurf.New(a.Mux)
+		HOST        = ConfigGet(a.Settings, APPVAR_HOST, "localhost")
+		PORT        = ConfigGet(a.Settings, APPVAR_PORT, "8080")
+		TLS_PORT    = ConfigGet(a.Settings, APPVAR_TLS_PORT, "8443")
+		TLSCert     = ConfigGet[string](a.Settings, APPVAR_TLS_CERT)
+		TLSKey      = ConfigGet[string](a.Settings, APPVAR_TLS_KEY)
+		TLSConfig   = ConfigGet[*tls.Config](a.Settings, APPVAR_TLS_CONFIG)
+		addr_http   = fmt.Sprintf("%s:%s", HOST, PORT)
+		addr_https  = fmt.Sprintf("%s:%s", HOST, TLS_PORT)
+		server_http = &http.Server{
+			Addr:      addr_http,
+			Handler:   handler,
+			TLSConfig: TLSConfig,
+		}
+		server_https = &http.Server{
+			Addr:      addr_https,
+			Handler:   handler,
 			TLSConfig: TLSConfig,
 		}
 	)
 
 	a.quitter = func() (err error) {
-		err = server.Close()
+		var (
+			err1 = server_http.Close()
+			err2 = server_https.Close()
+		)
+
+		if err1 != nil {
+			err = errors.Wrap(err1, "Error closing http server")
+		}
+
+		if err2 != nil {
+			err = errors.Wrap(err2, "Error closing https server")
+		}
+
 		a.quitter = nil
 		return err
 	}
 
 	if TLSCert != "" && TLSKey != "" {
-		a.Log.Logf(logger.INF, "Listening on https://%s", addr)
-		return server.ListenAndServeTLS(TLSCert, TLSKey)
+		a.Log.Logf(logger.INF, "Listening on https://%s (TLS)", addr_https)
+		a.Log.Logf(logger.INF, "Listening on http://%s", addr_http)
+
+		var errCh = make(chan error, 2)
+
+		// Start http server, if it exits close https server
+		go func() {
+			errCh <- server_http.ListenAndServe()
+			server_https.Close()
+		}()
+
+		// Start https server, if it exits close http server
+		go func() {
+			errCh <- server_https.ListenAndServeTLS(TLSCert, TLSKey)
+			server_http.Close()
+		}()
+
+		// Wait for both servers to exit
+		var err error
+		for i := 0; i < 2; i++ {
+			if e := <-errCh; e != nil {
+				err = e
+			}
+		}
+
+		return err
 	} else {
-		a.Log.Logf(logger.INF, "Listening on http://%s", addr)
-		return server.ListenAndServe()
+		a.Log.Logf(logger.INF, "Listening on http://%s", addr_http)
+		return server_http.ListenAndServe()
 	}
 }
