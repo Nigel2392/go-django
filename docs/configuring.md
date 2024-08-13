@@ -76,6 +76,24 @@ django.APPVAR_TLS_CONFIG
 django.APPVAR_DATABASE
 ```
 
+### Retrieving a value from settings
+
+Retrieving a value from within an app from the Django settings is done by adressing the global singleton struct, and can only be done after creating your Django program.
+
+```
+var ALLOWED_HOSTS = django.ConfigGet[[]string](
+	django.Global.Settings,
+	django.APPVAR_ALLOWED_HOSTS,
+	[]string{"*"},
+)
+```
+
+This will retrieve a value from the settings, and if it is not found, it will return the default value provided as the third argument.
+
+If no default value is provided, a type hint of the correct type is required.
+
+When the value does not meet this type, the program will panic.
+
 ## Go-Django initialization
 
 Configuration of the app instance can only be done once by calling `django.App` with different option- funcs.
@@ -134,7 +152,7 @@ The app struct is now created but left uninitialized.
 
 It should be initialized by calling `err := app.Initialize()`.
 
-This will set up a few things:
+This will set up a few things, (in order):
 
  * The logger (By default setup with level `INFO`)
 
@@ -177,3 +195,45 @@ This will set up a few things:
 ### Serving the app
 
 When all configuration is done it is time to serve the application.
+
+This is done by calling `err := app.Serve()`.
+
+This will start the server and listen for incoming requests.
+
+We look for the following settings when initializing to serve:
+
+ * "HOST" - The host to bind the server to
+ * "PORT" - The port to bind the server to
+   * If "PORT" is explicitly set to "" or "0", the server will not listen on the HTTP port.
+ * "TLS_PORT" - The port to bind the server to when using TLS
+   * This allows for serving both HTTP and HTTPS.
+   * It will only be used if "TLS_CERT" and "TLS_KEY" are set.
+   * If "TLS_PORT" is not set, is set to "" or "0", the server will not listen with TLS, and only serves HTTP.
+ * "TLS_CERT" - The path to the TLS certificate file
+ * "TLS_KEY" - The path to the TLS key file
+ * "TLS_CONFIG" - The TLS configuration
+
+### Adding routes or middleware to Django without an application
+
+If you want to add routes to the Django struct without having to create a custom app & appconfig, it is possible to directly interface with the multiplexer.
+
+This can be done by adressing the `app.Mux` field.
+
+It will likely be better to create your own app for code organization and maintainability, but it remains a possibility.
+
+## Logging
+
+A default logger will be set with loglevel INFO.
+
+Allowed log levels are:
+
+ * DBG
+ * INF
+ * WRN
+ * ERR
+
+A special case exists for `logger.Fatal` and `logger.Fatalf`.
+
+These will log the message and then call `os.Exit()` with the provided exit code.
+
+##

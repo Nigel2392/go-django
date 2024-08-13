@@ -579,7 +579,7 @@ func (a *Application) Serve() error {
 		handler     = nosurf.New(a.Mux)
 		HOST        = ConfigGet(a.Settings, APPVAR_HOST, "localhost")
 		PORT        = ConfigGet(a.Settings, APPVAR_PORT, "8080")
-		TLS_PORT    = ConfigGet(a.Settings, APPVAR_TLS_PORT, "8443")
+		TLS_PORT    = ConfigGet(a.Settings, APPVAR_TLS_PORT, "")
 		TLSCert     = ConfigGet[string](a.Settings, APPVAR_TLS_CERT)
 		TLSKey      = ConfigGet[string](a.Settings, APPVAR_TLS_KEY)
 		TLSConfig   = ConfigGet[*tls.Config](a.Settings, APPVAR_TLS_CONFIG)
@@ -595,55 +595,86 @@ func (a *Application) Serve() error {
 			Handler:   handler,
 			TLSConfig: TLSConfig,
 		}
+		listening_https = TLSCert != "" && TLSKey != "" && TLS_PORT != ""
+		listening_http  = PORT != "" && PORT != "0"
 	)
 
 	a.quitter = func() (err error) {
 		var (
-			err1 = server_http.Close()
-			err2 = server_https.Close()
+			err1, err2 error
 		)
 
-		if err1 != nil {
+		if listening_https {
+			a.Log.Logf(logger.INF, "Shutting down http server")
+			err1 = server_http.Shutdown(context.Background())
+		}
+
+		if err1 != nil && listening_https {
 			err = errors.Wrap(err1, "Error closing http server")
 		}
 
-		if err2 != nil {
-			err = errors.Wrap(err2, "Error closing https server")
+		if listening_http {
+			a.Log.Logf(logger.INF, "Shutting down https server")
+			err2 = server_https.Shutdown(context.Background())
+		}
+
+		if err2 != nil && listening_http {
+			// err = errors.Wrap(err2, "Error closing https server")
+			if err != nil {
+				err = errors.Wrap(err, err2.Error())
+			} else {
+				err = err2
+			}
 		}
 
 		a.quitter = nil
 		return err
 	}
 
-	if TLSCert != "" && TLSKey != "" {
+	var (
+		chanCt = 0
+		errCh  = make(chan error, 2)
+	)
+
+	if listening_https {
+		chanCt++
+
 		a.Log.Logf(logger.INF, "Listening on https://%s (TLS)", addr_https)
-		a.Log.Logf(logger.INF, "Listening on http://%s", addr_http)
 
-		var errCh = make(chan error, 2)
-
-		// Start http server, if it exits close https server
-		go func() {
-			errCh <- server_http.ListenAndServe()
-			server_https.Close()
-		}()
+		if TLS_PORT == "" || TLS_PORT == "0" {
+			a.Log.Fatalf(1, "TLS_PORT must be set to a valid port number, got %q", TLS_PORT)
+		}
 
 		// Start https server, if it exits close http server
 		go func() {
 			errCh <- server_https.ListenAndServeTLS(TLSCert, TLSKey)
 			server_http.Close()
 		}()
-
-		// Wait for both servers to exit
-		var err error
-		for i := 0; i < 2; i++ {
-			if e := <-errCh; e != nil {
-				err = e
-			}
-		}
-
-		return err
-	} else {
-		a.Log.Logf(logger.INF, "Listening on http://%s", addr_http)
-		return server_http.ListenAndServe()
 	}
+
+	if listening_http {
+		chanCt++
+
+		a.Log.Logf(logger.INF, "Listening on http://%s", addr_http)
+
+		// Start http server, if it exits close https server
+		go func() {
+			errCh <- server_http.ListenAndServe()
+			server_https.Close()
+		}()
+	}
+
+	if chanCt == 0 {
+		a.Log.Fatalf(1, "Server cannot be started, no valid ports found: %q, %q", PORT, TLS_PORT)
+	}
+
+	// Wait for both servers to exit
+	var err error
+	for i := 0; i < chanCt; i++ {
+		if e := <-errCh; e != nil {
+			err = e
+		}
+	}
+
+	return err
 }

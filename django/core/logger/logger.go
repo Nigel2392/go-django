@@ -61,31 +61,74 @@ func (lw *LogWriter) Write(p []byte) (n int, err error) {
 
 type Log interface {
 	// Getters
+
+	// Writer returns a new io.Writer that writes to the log output for the given log level.
 	Writer(level LogLevel) io.Writer
+
+	// PWriter returns a new io.Writer that writes to the log output for the given log level with a prefix.
 	PWriter(label string, level LogLevel) io.Writer
+
+	// NameSpace returns a new Log with the given label as the prefix.
 	NameSpace(label string) Log
 
 	// Setters
+
+	// SetOutput sets the output for the given log level.
 	SetOutput(level LogLevel, w io.Writer)
+
+	// SetLevel sets the current log level.
+	//
+	// Log messages with a log level lower than the current log level will not be written.
 	SetLevel(level LogLevel)
 
 	// Logging
+
+	// Log a debug message.
 	Debug(args ...interface{})
+
+	// Log an info message.
 	Info(args ...interface{})
+
+	// Log a warning message.
 	Warn(args ...interface{})
+
+	// Log an error message.
 	Error(args ...interface{})
+
+	// Log a message and exit the program with the given error code.
 	Fatal(errorcode int, args ...interface{})
+
+	// Log a format- and args-based debug message.
 	Debugf(format string, args ...interface{})
+
+	// Log a format- and args-based info message.
 	Infof(format string, args ...interface{})
+
+	// Log a format- and args-based warning message.
 	Warnf(format string, args ...interface{})
+
+	// Log a format- and args-based error message.
 	Errorf(format string, args ...interface{})
+
+	// Log a format- and args-based message and exit the program with the given error code.
 	Fatalf(errorcode int, format string, args ...interface{})
 
+	// Log a message at the given log level.
 	Log(level LogLevel, args ...interface{})
+
+	// Log a format string at the given log level.
 	Logf(level LogLevel, format string, args ...interface{})
+
+	// WriteString writes a string to the log output.
 	WriteString(s string) (n int, err error)
 }
 
+// The Logger type is used to log messages at different log levels.
+//
+// It is possible to set the log level, prefix, suffix, and outputs for the log messages.
+//
+// When a log message is written, the prefix, log level, and suffix are written to the output
+// provided for that specific loglevel.
 type Logger struct {
 	// Level is the log level.
 	Level LogLevel
@@ -110,6 +153,7 @@ type Logger struct {
 	WrapPrefix func(LogLevel, string) string
 }
 
+// SetOutput sets the output for the given log level.
 func (l *Logger) SetOutput(level LogLevel, w io.Writer) {
 	switch level {
 	case DBG:
@@ -128,6 +172,11 @@ func (l *Logger) SetOutput(level LogLevel, w io.Writer) {
 	}
 }
 
+// validateOutputs ensures that the outputs are not nil.
+//
+// If an output is nil before a lower importance output, it will be set to io.Discard.
+//
+// If an output is nil after a higher importance output, the output will be set to the higher importance output.
 func (l *Logger) validateOutputs() {
 	if l.OutputDebug == nil {
 		l.OutputDebug = io.Discard
@@ -143,6 +192,7 @@ func (l *Logger) validateOutputs() {
 	}
 }
 
+// Returns the output for the given log level.
 func (l *Logger) Output(level LogLevel) io.Writer {
 	l.validateOutputs()
 	switch level {
@@ -164,10 +214,12 @@ func (l *Logger) Output(level LogLevel) io.Writer {
 	return nil
 }
 
+// SetLevel sets the current log level.
 func (l *Logger) SetLevel(level LogLevel) {
 	l.Level = level
 }
 
+// Copy returns a copy of the logger.
 func (l *Logger) Copy() *Logger {
 	return &Logger{
 		Level:       l.Level,
@@ -182,6 +234,7 @@ func (l *Logger) Copy() *Logger {
 	}
 }
 
+// NameSpace returns a new Log with the given label as the prefix.
 func (l *Logger) NameSpace(label string) Log {
 	var logger = l.Copy()
 	if l.Prefix != "" {
@@ -191,6 +244,7 @@ func (l *Logger) NameSpace(label string) Log {
 	return logger
 }
 
+// Writer returns a new io.Writer that writes to the log output for the given log level.
 func (l *Logger) Writer(level LogLevel) io.Writer {
 	return &LogWriter{
 		Logger: l.Copy(),
@@ -198,6 +252,7 @@ func (l *Logger) Writer(level LogLevel) io.Writer {
 	}
 }
 
+// PWriter returns a new io.Writer that writes to the log output for the given log level with a prefix.
 func (l *Logger) PWriter(label string, level LogLevel) io.Writer {
 
 	if l.Prefix != "" {
