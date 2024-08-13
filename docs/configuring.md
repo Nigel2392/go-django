@@ -223,17 +223,44 @@ It will likely be better to create your own app for code organization and mainta
 
 ## Logging
 
+Logging is done with the `logger` package.
+
+The logger package provides a relatively extensive interface, and provides a default implementation of said interface.
+
+### Loglevels
+
 A default logger will be set with loglevel INFO.
 
 Allowed log levels are:
 
- * DBG
- * INF
- * WRN
- * ERR
+ * `logger.DBG` - Loglevel DEBUG
+ * `logger.INF` - Loglevel INFO
+ * `logger.WRN` - Loglevel WARNING
+ * `logger.ERR` - Loglevel ERROR
 
 A special case exists for `logger.Fatal` and `logger.Fatalf`.
 
 These will log the message and then call `os.Exit()` with the provided exit code.
 
-##
+### Outputs
+
+The logger will output to `io.Discard` by default.
+
+This can be changed by calling `logger.SetOutput(loglevel, io.Writer)`.
+
+It is possible to set different outputs for different loglevels.
+
+Example:
+
+```go
+logger.SetOutput(logger.OutputAll, os.Stdout)
+
+var file, err = os.OpenFile("log.txt", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+if err != nil {
+	panic(err)
+}
+
+logger.SetOutput(logger.INF, file)
+```
+
+In this example, all log messages will be written to `os.Stdout`, but INFO messages will instead be written to `log.txt`.
