@@ -32,7 +32,7 @@ type CustomApp struct {
 }
 ```
 
-In [Configuring](./configuring.md) we saw a function called `NewCustomAppConfig` being passed to the Go-Django initializer.
+In [Configuring](./configuring.md#creating-the-app) we saw a function called `NewCustomAppConfig` being passed to the Go-Django initializer.
 
 This function can be used to create a new instance of your app; and it should return an instance of your app struct.
 
