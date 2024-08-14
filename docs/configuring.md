@@ -126,11 +126,6 @@ if err != nil {
 	panic(err)
 }
 
-// Register the database connection with the auditlogs package
-auditlogs.RegisterBackend(
-	auditlogs_sqlite.NewSQLiteStorageBackend(db),
-)
-
 // Create the application struct with all the necessary settings/options
 var app = django.App(
 	django.Configure(map[string]interface{}{
