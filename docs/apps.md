@@ -105,59 +105,33 @@ func NewCustomAppConfig() *CustomApp {
 }
 ```
 
-#### `Register(p ...core.URL)`
-
-URLs can be registered with the app by calling the `Register` method inside the `Init` function, or NewAppConfig function.
-
-Let's expand on the `NewCustomAppConfig` function from above.
-
-The `AppConfig.Register` method takes a `core.URL` object, which can be created using the `urls.Func`, `urls.Group` or `urls.Pattern` functions.
-
-These are further explained in the [URLs](./routing.md#URLs) documentation.
-
-```go
-// Register routes
-myCustomApp.Register(
-    urls.Func(func(m core.Mux) {
-        // Full access to the multiplexer.
-        // This is likely either a *mux.Mux or *mux.Route
-        // Custom logic can be implemented here (but is not recommended).
-    }),
-    urls.Pattern(
-        // Allows for both POST and GET requests
-        // The path for this route is an empty string, thus it will be used as the root route.
-        // Multiple root routes can be registered, but only one will be used, depending on the order of registration.
-        urls.M("GET", "POST"),
-		mux.NewHandler(Index),
-	),
-	urls.Pattern(
-        // This route will only accept GET and POST requests
-        // It will be available at the `/about` path.
-		urls.P("/about", mux.GET, mux.POST),
-		mux.NewHandler(About),
-	),
-)
-```
-
 #### `AddCommand(c ...command.Command)`
 
 Register one or more commands for this AppConfig.
 
 Please see the [Commands](./commands.md) documentation for more information.
 
-#### `AddMiddleware(m ...mux.Middleware)`
-
-Register one or more middleware for this AppConfig.
-
-Please see the [Middleware](./routing.md#Middleware) documentation for more information.
-
-#### `Use(m ...core.Middleware)`
-
-Register one or more middleware for this AppConfig.
-
-Please see the [Middleware](./routing.md#Middleware) documentation for more information.
-
 ### Attributes
+
+#### `Routing`
+
+URLs can be registered with the app by setting the `Routing` attribute on your AppConfig inside the `Init` function, or NewAppConfig function.
+
+Let's expand on the `NewCustomAppConfig` function from above.
+
+The `AppConfig.Routing` function is used to register routes for the app.
+
+This function is called with a `django.Mux` object, which is used to register routes.
+
+Routes and middleware further explained in the [routing](./routing.md#URLs) documentation.
+
+```go
+// Register routes
+myCustomApp.Routing = func(mux django.Mux) {
+    mux.Handle(mux.GET, "/", Index, "index"),
+    mux.Handle(mux.GET, "/about", About, "about"),
+}
+```
 
 #### `TemplateConfig`
 
@@ -170,18 +144,6 @@ This skips the need to call `tpl.Add` manually.
 A list of context processors that will be run before rendering a template.
 
 This can be used to add context extra context to the template, if [Context Processors](./rendering.md#context-processors) are used while rendering.
-
-#### `Path`
-
-A string that represents the base URL path for this app.
-
-This will auto-register a route for the app at the given path.
-
-This means that instead of a `*mux.Mux` object, a `*mux.Route` object will be passed to the `urls.Func` (and other) functions.
-
-```go
-myCustomApp.Path = "/myapp"
-```
 
 #### `Deps`
 
