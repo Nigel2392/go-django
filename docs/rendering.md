@@ -65,6 +65,10 @@ Now that we have created the templates, we need to register them with the templa
 This can be done by passing a configuration object to the `Register` function.
 
 ```go
+//go:embed templates/*
+var tplFSFull embed.FS
+var tplFS, _ = fs.Sub(tplFSFull, "templates")
+
 tpl.Add(tpl.Config{
 	AppName: "mycustomapp",
 	FS:      tplFS,
