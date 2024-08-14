@@ -34,6 +34,22 @@ import (
 	"github.com/pkg/errors"
 )
 
+// The interface for our multiplexer
+//
+// This is a wrapper around the nigel2392/mux.Mux interface
+type Mux interface {
+	Use(middleware ...mux.Middleware)
+	Handle(method string, path string, handler mux.Handler, name ...string) *mux.Route
+	AddRoute(route *mux.Route)
+
+	Any(path string, handler mux.Handler, name ...string) *mux.Route
+	Get(path string, handler mux.Handler, name ...string) *mux.Route
+	Post(path string, handler mux.Handler, name ...string) *mux.Route
+	Put(path string, handler mux.Handler, name ...string) *mux.Route
+	Patch(path string, handler mux.Handler, name ...string) *mux.Route
+	Delete(path string, handler mux.Handler, name ...string) *mux.Route
+}
+
 // AppConfig is the interface that must be implemented by all Django applications.
 //
 // The AppConfig interface is used to define the structure of a Django application.
@@ -63,32 +79,11 @@ type AppConfig interface {
 	// The commands are registered in the Django command registry.
 	Commands() []command.Command
 
-	// A list of callback functions to interact with the router / a sub- route.
+	// BuildRouting is used to define the routes for the application.
+	// It can also be used to define middleware for the application.
 	//
-	// This can be used to register URLs for your application's handlers.
-	//
-	// These callback functions must take the core.Mux interface as the only argument
-	// and return nothing.
-	URLs() []core.URL
-
-	// The base path for your application.
-	//
-	// If this is a non- empty string, a sub- route will automatically be created.
-	//
-	// This sub-route will then be passed to the above-mentioned list of callback functions.
-	//
-	// If the string is empty - direct access to the application's multiplexer will be given
-	// (through the core.Mux interface).
-	URLPath() string
-
-	// An alias for core.URL
-	//
-	// This is just for semantics - use this to register middleware for your application.
-	//
-	// The implementation might change in the future to make this something more meaningful.
-	//
-	// We do not actively prevent you from also registering middleware in the URLs() callback.
-	Middleware() []core.Middleware
+	// A Mux object is passed to the function which can be used to define routes.
+	BuildRouting(mux Mux)
 
 	// Initialize your application.
 	//
@@ -124,8 +119,6 @@ type AppConfig interface {
 type Application struct {
 	Settings      Settings
 	Apps          *orderedmap.OrderedMap[string, AppConfig]
-	Middleware    []core.Middleware
-	URLs          []core.URL
 	Mux           *mux.Mux
 	Log           logger.Log
 	skipDepsCheck bool
@@ -146,10 +139,8 @@ var (
 func App(opts ...Option) *Application {
 	if Global == nil {
 		Global = &Application{
-			Apps:       orderedmap.NewOrderedMap[string, AppConfig](),
-			Middleware: make([]core.Middleware, 0),
-			URLs:       make([]core.URL, 0),
-			Mux:        mux.New(),
+			Apps: orderedmap.NewOrderedMap[string, AppConfig](),
+			Mux:  mux.New(),
 
 			initialized: new(atomic.Bool),
 		}
@@ -392,18 +383,6 @@ func (a *Application) Initialize() error {
 		)
 	}
 
-	a.Log.Debug("Initializing 'Django' middleware")
-
-	for _, m := range a.Middleware {
-		m.Register(a.Mux)
-	}
-
-	a.Log.Debug("Initializing 'Django' URLs")
-
-	for _, u := range a.URLs {
-		u.Register(a.Mux)
-	}
-
 	tpl.Processors(func(rc tpl.RequestContext) {
 		rc.Set("Application", a)
 		rc.Set("Settings", a.Settings)
@@ -495,28 +474,30 @@ func (a *Application) Initialize() error {
 		},
 	})
 
+	var r Mux = a.Mux
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
-		var urls = app.URLs()
-		if len(urls) > 0 {
-			var path = app.URLPath()
-
-			var r core.Mux = a.Mux
-			if path != "" {
-				r = r.Handle(
-					mux.ANY, path, nil, app.Name(),
-				)
-			}
-
-			for _, url := range urls {
-				url.Register(r)
-			}
-		}
-
-		var middleware = app.Middleware()
-		for _, m := range middleware {
-			m.Register(a.Mux)
-		}
+		//	var urls = app.URLs()
+		//	if len(urls) > 0 {
+		//		var path = app.URLPath()
+		//
+		//		var r core.Mux = a.Mux
+		//		if path != "" {
+		//			r = r.Handle(
+		//				mux.ANY, path, nil, app.Name(),
+		//			)
+		//		}
+		//
+		//		for _, url := range urls {
+		//			url.Register(r)
+		//		}
+		//	}
+		//
+		//	var middleware = app.Middleware()
+		//	for _, m := range middleware {
+		//		m.Register(a.Mux)
+		//	}
+		app.BuildRouting(r)
 
 		var processors = app.Processors()
 		tpl.Processors(processors...)

@@ -84,9 +84,11 @@ CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expiry);`)
 		return nil
 	}
 
-	app.AddMiddleware(
-		sessions.SessionMiddleware(sessionManager),
-	)
+	app.Routing = func(m django.Mux) {
+		m.Use(
+			sessions.SessionMiddleware(sessionManager),
+		)
+	}
 
 	return app
 }

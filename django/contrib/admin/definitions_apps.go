@@ -6,7 +6,6 @@ import (
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/admin/components"
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
-	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/forms/media"
 	"github.com/Nigel2392/django/views"
@@ -36,7 +35,7 @@ type AppDefinition struct {
 	Models  *orderedmap.OrderedMap[
 		string, *ModelDefinition,
 	]
-	URLs []core.URL
+	Routing func(django.Mux)
 }
 
 func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {

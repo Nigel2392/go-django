@@ -213,9 +213,12 @@ func NewAppConfig() django.AppConfig {
 		// Register all custom app URLs to the extension route
 		for front := AdminSite.Apps.Front(); front != nil; front = front.Next() {
 			var app = front.Value
-			for _, url := range app.URLs {
-				url.Register(routeExtensions)
+			if app.Routing != nil {
+				app.Routing(routeExtensions)
 			}
+			//for _, url := range app.URLs {
+			//	url.Register(routeExtensions)
+			//}
 		}
 
 		for front := AdminSite.Apps.Front(); front != nil; front = front.Next() {
