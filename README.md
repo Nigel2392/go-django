@@ -21,7 +21,7 @@ Any database logic should be implemented by the end-developer, but some sub-pack
 
 ## Docs:
 
-This might take a while...
+This might take [a while](./docs/)...
 
 - [Configuring](./docs/configuring.md)
 - [Apps](./docs/apps.md)
