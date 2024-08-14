@@ -83,6 +83,8 @@ Commands are required to be registered to an `apps.AppConfig` object for the com
 
 Let's say the appconfig is stored in a variable called `myCustomApp`.
 
+Ideally, you would register the command in the `NewCustomAppConfig` function as is directed in [the apps documentation](./apps.md#methods).
+
 ```go
 myCustomApp.AddCommand(myCustomCommand)
 ```
