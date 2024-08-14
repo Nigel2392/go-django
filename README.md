@@ -5,6 +5,13 @@ go-django (v2)
 
 **Django rewritten to Golang**
 
+## Docs:
+
+- [Configuring](./docs/configuring.md)
+- [Apps](./docs/apps.md)
+- [Rendering](./docs/rendering.md)
+- [Logging](./docs/logging.md)
+
 This code will be pushed to [go-django](https://github.com/Nigel2392/go-django) when ready.
 
 This is a rewrite of the Django framework in Golang.

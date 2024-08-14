@@ -17,6 +17,8 @@ The directory can be named anything you want, but for this example, we will name
 
 Our app name will be `mycustomapp`, just like the regular Django we like to namespace our apps and templates.
 
+Initial setup is best done in your `AppConfig.Init()` function.
+
 ### Creating templates
 
 ```bash
