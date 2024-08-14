@@ -2,20 +2,55 @@ package blog
 
 import (
 	"context"
+	"flag"
+	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/contrib/admin"
 	"github.com/Nigel2392/django/contrib/pages"
 	"github.com/Nigel2392/django/contrib/pages/models"
+	"github.com/Nigel2392/django/core/command"
 	"github.com/Nigel2392/django/core/contenttypes"
 	"github.com/Nigel2392/django/forms/fields"
+	"github.com/pkg/errors"
 )
+
+type customCommandObj struct {
+	printTime bool
+	printText string
+}
+
+var myCustomCommand = &command.Cmd[customCommandObj]{
+	ID:   "mycommand",
+	Desc: "Prints the provided text with an optional timestamp",
+
+	FlagFunc: func(m command.Manager, stored *customCommandObj, f *flag.FlagSet) error {
+		f.BoolVar(&stored.printTime, "t", false, "Print the current time")
+		f.StringVar(&stored.printText, "text", "", "The text to print")
+		return nil
+	},
+
+	Execute: func(m command.Manager, stored customCommandObj, args []string) error {
+		if stored.printText == "" {
+			return errors.New("No text provided")
+		}
+
+		if stored.printTime {
+			fmt.Println(time.Now().Format(time.RFC3339), stored.printText)
+		} else {
+			fmt.Println(stored.printText)
+		}
+		return nil
+	},
+}
 
 var blog *apps.DBRequiredAppConfig
 
 func NewAppConfig() *apps.DBRequiredAppConfig {
 	var appconfig = apps.NewDBAppConfig("blog")
+	appconfig.AddCommand(myCustomCommand)
 	appconfig.Ready = func() error {
 		pages.Register(&pages.PageDefinition{
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{

@@ -52,27 +52,27 @@ type customCommandObj struct {
 	printText string
 }
 
-var myCustomCommand = &command.Cmd[myCustomCommand]{
+var myCustomCommand = &command.Cmd[customCommandObj]{
 	ID:   "mycommand",
 	Desc: "Prints the provided text with an optional timestamp",
 
 	FlagFunc: func(m command.Manager, stored *customCommandObj, f *flag.FlagSet) error {
-        f.BoolVar(&stored.printTime, "t", false, "Print the current time")
-        f.StringVar(&stored.printText, "text", "", "The text to print")
+		f.BoolVar(&stored.printTime, "t", false, "Print the current time")
+		f.StringVar(&stored.printText, "text", "", "The text to print")
 		return nil
 	},
 
 	Execute: func(m command.Manager, stored customCommandObj, args []string) error {
-        if stored.printText == "" {
-            return errors.New("No text provided")
-        }
+		if stored.printText == "" {
+			return errors.New("No text provided")
+		}
 
-        if stored.printTime {
-            fmt.Println(time.Now().Format(time.RFC3339), stored.printText)
-        } else {
-            fmt.Println(stored.printText)
-        }
-        return nil
+		if stored.printTime {
+			fmt.Println(time.Now().Format(time.RFC3339), stored.printText)
+		} else {
+			fmt.Println(stored.printText)
+		}
+		return nil
 	},
 }
 ```
@@ -85,4 +85,17 @@ Let's say the appconfig is stored in a variable called `myCustomApp`.
 
 ```go
 myCustomApp.AddCommand(myCustomCommand)
+```
+
+## Running a command
+
+After building your application, you can run the command from the command line.
+
+```bash
+go build -o mywebapp .
+./mywebapp mycommand -text "Hello, World!"
+# Output: Hello, World!
+
+./mywebapp mycommand -text "Hello, World!" -t
+# Output: <current-time> Hello, World!
 ```

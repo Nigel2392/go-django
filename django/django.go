@@ -544,7 +544,13 @@ func (a *Application) Initialize() error {
 		os.Exit(0)
 		return nil
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	if !ConfigGet(a.Settings, APPVAR_CONTINUE_AFTER_COMMANDS, false) {
+		os.Exit(0)
+	}
+	return nil
 }
 
 func (a *Application) Quit() error {

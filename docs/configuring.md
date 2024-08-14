@@ -74,6 +74,10 @@ django.APPVAR_TLS_CONFIG
 // This is a *sql.DB, and allows for easily sharing a database connection
 // between multiple packages
 django.APPVAR_DATABASE
+
+// Continue after commands have parsed and been executed
+// If no command was passed, the application will continue to serve
+django.APPVAR_CONTINUE_AFTER_COMMANDS
 ```
 
 ### Retrieving a value from settings
