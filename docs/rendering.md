@@ -97,7 +97,7 @@ We have also added a custom function `title` that will be available in the templ
 
 Context processors are functions that are called before rendering a template.
 
-These will only run (but run every time) if the context inherits from the `ctx.Context` interface and has a method called "Request()" which returns a `*http.Request`.
+These will only run (but run every time) if the context inherits from the `ctx.Context` interface and has a method called "`Request()`" which returns a `*http.Request`.
 
 ```go
 tpl.Processors(
