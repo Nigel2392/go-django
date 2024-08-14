@@ -127,9 +127,9 @@ Routes and middleware further explained in the [routing](./routing.md#URLs) docu
 
 ```go
 // Register routes
-myCustomApp.Routing = func(mux django.Mux) {
-    mux.Handle(mux.GET, "/", Index, "index"),
-    mux.Handle(mux.GET, "/about", About, "about"),
+myCustomApp.Routing = func(m django.Mux) {
+    m.Handle(mux.GET, "/", Index, "index"),
+    m.Handle(mux.GET, "/about", About, "about"),
 }
 ```
 
