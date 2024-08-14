@@ -25,6 +25,7 @@ This might take [a while](./docs/)...
 
 - [Configuring](./docs/configuring.md)
 - [Apps](./docs/apps.md)
+- [Commands](./docs/commands.md)
 - [Rendering](./docs/rendering.md)
 - [Logging](./docs/logging.md)
 

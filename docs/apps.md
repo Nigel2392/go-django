@@ -109,7 +109,7 @@ func NewCustomAppConfig() *CustomApp {
 
 Register one or more commands for this AppConfig.
 
-Please see the [Commands](./commands.md) documentation for more information.
+Please see the [Commands](./commands.md#registering-a-command) documentation for more information.
 
 ### Attributes
 

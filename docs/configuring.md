@@ -160,10 +160,6 @@ This will set up a few things, (in order):
 
  * Static routes
 
- * Django app middleware
-
- * Django app routes
-
  * Custom registered apps initialization (Loop 1)
 
    * Check installed (required) dependencies for this application
@@ -174,13 +170,11 @@ This will set up a few things, (in order):
 
  * Setup custom apps (Loop 2)
    
-   * Register the URL's of the application
-
-   * Register the middleware of the application
+   * Register the URLs/middleware of the application
 
    * Register the context processors of the application
 
-   * Initialize the apps' template configurations
+   * Initialize the apps' template configuration
 
    * Register the apps' commands
 

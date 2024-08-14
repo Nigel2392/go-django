@@ -11,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"reflect"
+	"slices"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -527,6 +528,10 @@ func (a *Application) Initialize() error {
 	}
 
 	a.initialized.Store(true)
+
+	if len(os.Args) == 2 && slices.Contains([]string{"help", "--help", "-h"}, os.Args[1]) {
+		os.Args[1] = "help"
+	}
 
 	err = commandRegistry.ExecCommand(os.Args[1:])
 	switch {
