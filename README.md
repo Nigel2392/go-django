@@ -5,13 +5,6 @@ go-django (v2)
 
 **Django rewritten to Golang**
 
-## Docs:
-
-- [Configuring](./docs/configuring.md)
-- [Apps](./docs/apps.md)
-- [Rendering](./docs/rendering.md)
-- [Logging](./docs/logging.md)
-
 This code will be pushed to [go-django](https://github.com/Nigel2392/go-django) when ready.
 
 This is a rewrite of the Django framework in Golang.
@@ -25,6 +18,15 @@ There is a caveat though; we try to touch the database as little as possible.
 This means that we don't have a full ORM like Django does.
 
 Any database logic should be implemented by the end-developer, but some sub-packages do provide backends to use with MySQL and SQLite. Postgres is not planned yet.
+
+## Docs:
+
+This might take a while...
+
+- [Configuring](./docs/configuring.md)
+- [Apps](./docs/apps.md)
+- [Rendering](./docs/rendering.md)
+- [Logging](./docs/logging.md)
 
 ## Not yet implemented
 
