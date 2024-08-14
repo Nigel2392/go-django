@@ -32,6 +32,7 @@ func NewAppConfig() django.AppConfig {
 			),
 		),
 	)
+
 	cfg.Init = func(settings django.Settings, db *sql.DB) error {
 		var tplFS, err = fs.Sub(coreFS, "assets/templates")
 		if err != nil {
