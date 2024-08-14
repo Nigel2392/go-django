@@ -197,3 +197,11 @@ This can be used to create a new logger with a specific prefix.
 var myCustomNamespace = logger.NameSpace("myCustomNamespace")
 myCustomNamespace.Info("This is an info message")
 ```
+
+As a fun side- effect, namespaces can be nested.
+
+```go
+var myCustomNamespace = logger.NameSpace("myCustomNamespace")
+var myCustomNamespace2 = myCustomNamespace.NameSpace("myCustomNamespace2")
+myCustomNamespace2.Info("This is an info message")
+```
