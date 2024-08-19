@@ -28,6 +28,7 @@ This might take [a while](./docs/)...
 - [Routing](./docs/routing.md)
 - [Commands](./docs/commands.md)
 - [Rendering](./docs/rendering.md)
+- [Static Files](./docs/staticfiles.md)
 - [Logging](./docs/logging.md)
 
 ## Not yet implemented
