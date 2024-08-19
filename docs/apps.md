@@ -115,7 +115,7 @@ Please see the [Commands](./commands.md#registering-a-command) documentation for
 
 #### `Routing`
 
-URLs can be registered with the app by setting the `Routing` attribute on your AppConfig inside the `Init` function, or NewAppConfig function.
+URLs can be registered with the app by setting the `Routing` attribute on your AppConfig inside the `Init` function, or `NewAppConfig` function.
 
 Let's expand on the `NewCustomAppConfig` function from above.
 

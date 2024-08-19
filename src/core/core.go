@@ -36,6 +36,7 @@ func NewAppConfig() django.AppConfig {
 		//),
 		m.Handle(mux.GET, "/", mux.NewHandler(Index))
 		m.Handle(mux.POST, "/", mux.NewHandler(Index))
+
 		m.Handle(mux.GET, "/about", mux.NewHandler(About))
 		m.Handle(mux.POST, "/about", mux.NewHandler(About))
 
