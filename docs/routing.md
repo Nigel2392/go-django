@@ -146,3 +146,11 @@ The `ServeHTTP` method is called with the `http.ResponseWriter` and `*http.Reque
 
 The `ServeHTTP` method should call the next middleware in the chain, or the final handler if there are no more middleware functions.
 
+### Disabling Middleware
+
+Middleware can also be disabled for individual routes.
+
+```go
+route := m.Handle(mux.GET, "/", mux.NewHandler(Index), "index")
+route.RunsMiddleware(false)
+```
