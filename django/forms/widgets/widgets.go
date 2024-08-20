@@ -10,15 +10,20 @@ import (
 )
 
 type FormValueConverter interface {
+	// Convert the forms' string value to the appropriate GO type.
 	ValueToGo(value interface{}) (interface{}, error)
+
+	// Convert the GO type to the forms' string value.
 	ValueToForm(value interface{}) interface{}
 }
 
 type FormValueOmitter interface {
+	// Check if the value is omitted from the data provided.
 	ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool
 }
 
 type FormValueGetter interface {
+	// Get the value from the provided data.
 	ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error)
 }
 
