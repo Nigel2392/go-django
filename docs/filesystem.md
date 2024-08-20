@@ -71,3 +71,35 @@ When matching, the extension is retrieved from the file path with filepath.Ext a
   MatchFS is a filesystem that only allows opening files that match a given matcher-func.  
   It can be used to restrict access to files in a filesystem.  
   The matcher-func is called with the path of the file that is being opened.
+
+#### Example
+
+Using a `MatchFS` is relatively simple.
+
+First we will obtain a new `fs.FS` object, then we will wrap it in a `MatchFS` object.
+
+For this example, we will imagine to only need ".html" and ".txt" files if the directory starts with "templates".
+
+Otherwise if the directory starts with "static", we will only need ".css" and ".js" files.
+
+```go
+var myFs = os.DirFS("/path/to/files")
+
+var myMatchFs = filesystem.NewMatchFS(
+    myFs, filesystem.MatchOr(
+        // Match files in the "templates" directory with the extensions ".html" and ".txt"
+        filesystem.MatchAnd(
+            filesystem.MatchPrefix("templates/"),
+            filesystem.MatchExt(".html"),
+            filesystem.MatchExt(".txt"),
+        ),
+        
+        // Match files in the "static" directory with the extensions ".css" and ".js"
+        filesystem.MatchAnd(
+            filesystem.MatchPrefix("static/"),
+            filesystem.MatchExt(".css"),
+            filesystem.MatchExt(".js"),
+        ),
+    ),
+)
+```
