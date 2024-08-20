@@ -33,6 +33,7 @@ This might take [a while](./docs/)...
 - [Commands](./docs/commands.md)
 - [Rendering](./docs/rendering.md)
 - [Contenttypes](./docs/contenttypes.md)
+- [Filesystem](./docs/filesystem.md)
 - [Staticfiles](./docs/staticfiles.md)
 - [Logging](./docs/logging.md)
 
