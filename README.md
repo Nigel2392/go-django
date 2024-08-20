@@ -25,6 +25,10 @@ This might take [a while](./docs/)...
 
 - [Configuring](./docs/configuring.md)
 - [Apps](./docs/apps.md)
+- [Forms](./docs/forms/forms.md)
+  - [Fields](./docs/forms/fields.md)
+  - [Widgets](./docs/forms/widgets.md)
+  - [Media](./docs/forms/media.md)
 - [Routing](./docs/routing.md)
 - [Commands](./docs/commands.md)
 - [Rendering](./docs/rendering.md)
