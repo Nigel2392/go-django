@@ -191,8 +191,8 @@ func TestFormRequired(t *testing.T) {
 			lastName, _  = fields.Get("last_name")
 		)
 
-		firstName.(*forms.BoundFormWidget).FormValue = "Firstname"
-		lastName.(*forms.BoundFormWidget).FormValue = "Lastname"
+		firstName.(*forms.BoundFormField).FormValue = "Firstname"
+		lastName.(*forms.BoundFormField).FormValue = "Lastname"
 
 		if err := inputEquals(firstName, "text", "first_name", "Firstname", map[string]string{
 			"required": "",

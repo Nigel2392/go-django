@@ -3,8 +3,6 @@ package forms
 import (
 	"fmt"
 	"html/template"
-	"maps"
-	"mime/multipart"
 	"net/http"
 	"net/url"
 	"slices"
@@ -19,136 +17,6 @@ import (
 	"github.com/Nigel2392/django/forms/widgets"
 	"github.com/elliotchance/orderedmap/v2"
 )
-
-type multipartFileHeader struct {
-	header *multipart.FileHeader
-}
-
-func (f *multipartFileHeader) Name() string {
-	return f.header.Filename
-}
-
-func (f *multipartFileHeader) Size() int64 {
-	return f.header.Size
-}
-
-func (f *multipartFileHeader) Open() (multipart.File, error) {
-	return f.header.Open()
-}
-
-func WithRequestData(method string, r *http.Request) func(Form) {
-	if r.Method != method {
-		return func(f Form) {
-			var (
-				data  = make(url.Values)
-				files = make(map[string][]filesystem.FileHeader)
-			)
-			f.WithData(data, files, r)
-		}
-	}
-
-	return func(f Form) {
-		r.ParseForm()
-
-		var data = make(url.Values)
-		maps.Copy(data, r.Form)
-		var files = make(map[string][]filesystem.FileHeader)
-		if r.MultipartForm != nil && r.MultipartForm.File != nil {
-			for k, v := range r.MultipartForm.File {
-				var files_ = make([]filesystem.FileHeader, 0, len(v))
-				for _, file := range v {
-					files_ = append(files_, &multipartFileHeader{file})
-				}
-				files[k] = files_
-			}
-		}
-
-		f.WithData(data, files, r)
-	}
-}
-
-func WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) func(Form) {
-	if files == nil {
-		files = make(map[string][]filesystem.FileHeader)
-	}
-
-	return func(f Form) {
-		f.WithData(data, files, r)
-	}
-}
-
-func WithFields(fields ...fields.Field) func(Form) {
-	return func(f Form) {
-		for _, field := range fields {
-			f.AddField(field.Name(), field)
-		}
-	}
-}
-
-func WithPrefix(prefix string) func(Form) {
-	return func(f Form) {
-		f.SetPrefix(prefix)
-	}
-}
-
-func WithInitial(initial map[string]interface{}) func(Form) {
-	return func(f Form) {
-		f.SetInitial(initial)
-	}
-}
-
-func OnValid(funcs ...func(Form)) func(Form) {
-	return func(f Form) {
-		f.OnValid(funcs...)
-	}
-}
-
-func OnInvalid(funcs ...func(Form)) func(Form) {
-	return func(f Form) {
-		f.OnInvalid(funcs...)
-	}
-}
-
-func OnFinalize(funcs ...func(Form)) func(Form) {
-	return func(f Form) {
-		f.OnFinalize(funcs...)
-	}
-}
-
-func Initialize[T Form](f T, initfuncs ...func(Form)) T {
-
-	for _, initfunc := range initfuncs {
-		initfunc(f)
-	}
-
-	return f
-}
-
-func (f *BaseForm) setup() {
-	if f.FormFields == nil {
-		f.FormFields = orderedmap.NewOrderedMap[string, fields.Field]()
-	}
-
-	if f.FormWidgets == nil {
-		f.FormWidgets = orderedmap.NewOrderedMap[string, widgets.Widget]()
-	}
-
-	if f.Errors == nil {
-		f.Errors = orderedmap.NewOrderedMap[string, []error]()
-	}
-
-	if f.ErrorList_ == nil {
-		f.ErrorList_ = make([]error, 0)
-	}
-
-	if f.Initial == nil {
-		f.Initial = make(map[string]interface{})
-	}
-
-	if f.InvalidDefaults == nil {
-		f.InvalidDefaults = make(map[string]interface{})
-	}
-}
 
 type BaseForm struct {
 	FormPrefix      string
@@ -183,7 +51,33 @@ func NewBaseForm(opts ...func(Form)) *BaseForm {
 	return f
 }
 
-func (f *BaseForm) DefaultValue(name string) interface{} {
+func (f *BaseForm) setup() {
+	if f.FormFields == nil {
+		f.FormFields = orderedmap.NewOrderedMap[string, fields.Field]()
+	}
+
+	if f.FormWidgets == nil {
+		f.FormWidgets = orderedmap.NewOrderedMap[string, widgets.Widget]()
+	}
+
+	if f.Errors == nil {
+		f.Errors = orderedmap.NewOrderedMap[string, []error]()
+	}
+
+	if f.ErrorList_ == nil {
+		f.ErrorList_ = make([]error, 0)
+	}
+
+	if f.Initial == nil {
+		f.Initial = make(map[string]interface{})
+	}
+
+	if f.InvalidDefaults == nil {
+		f.InvalidDefaults = make(map[string]interface{})
+	}
+}
+
+func (f *BaseForm) FormValue(name string) interface{} {
 
 	if f.Cleaned != nil {
 		if v, ok := f.Cleaned[name]; ok {
@@ -227,74 +121,6 @@ func (f *BaseForm) BoundErrors() *orderedmap.OrderedMap[string, []error] {
 		return nil
 	}
 	return errs
-}
-
-type BoundForm interface {
-	AsP() template.HTML
-	AsUL() template.HTML
-	Media() media.Media
-	Fields() []BoundField
-	ErrorList() []error
-	UnpackErrors() []FieldError
-	Errors() *orderedmap.OrderedMap[string, []error]
-}
-
-type _BoundForm struct {
-	Form       Form
-	Fields_    []BoundField
-	Errors_    *orderedmap.OrderedMap[string, []error]
-	ErrorList_ []error
-}
-
-func (f *_BoundForm) AsP() template.HTML {
-	return f.Form.AsP()
-}
-
-func (f *_BoundForm) AsUL() template.HTML {
-	return f.Form.AsUL()
-}
-
-func (f *_BoundForm) Fields() []BoundField {
-	return f.Fields_
-}
-
-func (f *_BoundForm) Errors() *orderedmap.OrderedMap[string, []error] {
-	return f.Errors_
-}
-
-type fieldError struct {
-	field  string
-	errors []error
-}
-
-func (f *fieldError) Field() string {
-	return f.field
-}
-
-func (f *fieldError) Errors() []error {
-	return f.errors
-}
-
-func (f *_BoundForm) UnpackErrors() []FieldError {
-	if f.Errors_ == nil {
-		return nil
-	}
-	var ret = make([]FieldError, 0, f.Errors_.Len())
-	for head := f.Errors_.Front(); head != nil; head = head.Next() {
-		ret = append(ret, &fieldError{
-			field:  head.Key,
-			errors: head.Value,
-		})
-	}
-	return ret
-}
-
-func (f *_BoundForm) ErrorList() []error {
-	return f.ErrorList_
-}
-
-func (f *_BoundForm) Media() media.Media {
-	return f.Form.Media()
 }
 
 func (f *BaseForm) BoundForm() BoundForm {
@@ -377,10 +203,10 @@ func (f *BaseForm) BoundFields() *orderedmap.OrderedMap[string, BoundField] {
 		}
 
 		value = v.ValueToForm(
-			f.DefaultValue(k),
+			f.FormValue(k),
 		)
 
-		ret.Set(k, NewBoundFormWidget(
+		ret.Set(k, NewBoundFormField(
 			widget,
 			v,
 			f.prefix(k),

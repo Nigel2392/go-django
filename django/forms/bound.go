@@ -10,7 +10,7 @@ import (
 	"github.com/Nigel2392/django/forms/widgets"
 )
 
-type BoundFormWidget struct {
+type BoundFormField struct {
 	FormWidget widgets.Widget
 	FormField  fields.Field
 	FormName   string
@@ -20,13 +20,13 @@ type BoundFormWidget struct {
 	CachedHTML template.HTML
 }
 
-func NewBoundFormWidget(w widgets.Widget, f fields.Field, name string, value interface{}, errors []error) BoundField {
+func NewBoundFormField(w widgets.Widget, f fields.Field, name string, value interface{}, errors []error) BoundField {
 
 	if errors == nil {
 		errors = make([]error, 0)
 	}
 
-	var bw = &BoundFormWidget{
+	var bw = &BoundFormField{
 		FormWidget: w,
 		FormField:  f,
 		FormName:   name,
@@ -44,21 +44,21 @@ func NewBoundFormWidget(w widgets.Widget, f fields.Field, name string, value int
 	return bw
 }
 
-func (b *BoundFormWidget) Widget() widgets.Widget {
+func (b *BoundFormField) Widget() widgets.Widget {
 	return b.FormWidget
 }
 
-func (b *BoundFormWidget) Input() fields.Field {
+func (b *BoundFormField) Input() fields.Field {
 	return b.FormField
 }
 
-func (b *BoundFormWidget) ID() string {
+func (b *BoundFormField) ID() string {
 	return fmt.Sprintf(
 		"id_%s", b.FormWidget.IdForLabel(b.FormName),
 	)
 }
 
-func (b *BoundFormWidget) Label() template.HTML {
+func (b *BoundFormField) Label() template.HTML {
 	var (
 		labelText = b.FormField.Label()
 	)
@@ -67,14 +67,14 @@ func (b *BoundFormWidget) Label() template.HTML {
 	)
 }
 
-func (b *BoundFormWidget) HelpText() template.HTML {
+func (b *BoundFormField) HelpText() template.HTML {
 	var (
 		helpText = b.FormField.HelpText()
 	)
 	return template.HTML(helpText)
 }
 
-func (b *BoundFormWidget) Field() template.HTML {
+func (b *BoundFormField) Field() template.HTML {
 	if b.CachedHTML == "" {
 		var err error
 		var buf = new(bytes.Buffer)
@@ -87,24 +87,24 @@ func (b *BoundFormWidget) Field() template.HTML {
 	return b.CachedHTML
 }
 
-func (b *BoundFormWidget) HTML() template.HTML {
+func (b *BoundFormField) HTML() template.HTML {
 	return template.HTML(
 		fmt.Sprintf("%s%s", b.Label(), b.Field()),
 	)
 }
 
-func (b *BoundFormWidget) Name() string {
+func (b *BoundFormField) Name() string {
 	return b.FormName
 }
 
-func (b *BoundFormWidget) Attrs() map[string]string {
+func (b *BoundFormField) Attrs() map[string]string {
 	return b.FormAttrs
 }
 
-func (b *BoundFormWidget) Value() interface{} {
+func (b *BoundFormField) Value() interface{} {
 	return b.FormValue
 }
 
-func (b *BoundFormWidget) Errors() []error {
+func (b *BoundFormField) Errors() []error {
 	return b.FormErrors
 }
