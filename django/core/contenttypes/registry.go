@@ -14,7 +14,7 @@ import (
 // description, and aliases.
 //
 // It allows for more flexibility to work with models that are not directly
-// created by the framework, such as models from third-party apps.
+// created by the framework developers, such as models from third-party apps.
 type ContentTypeDefinition struct {
 	// The model itself.
 	//
