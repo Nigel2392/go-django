@@ -39,13 +39,13 @@ myFs.AddFS(
 
 ### `MatchFS`
 
+MatchFS is a filesystem that only allows opening files that match a given matcher-func.  
+
+It can be used to restrict access to files in a filesystem.  
+
+The matcher-func is called with the path of the file that is being opened.
+
 We provide a few default matchers:
-
-MatchExt returns a matcher-func that matches a file if the given extension matches the file path.
-
-The extension passed to this function is normalized to start with a ".".
-
-When matching, the extension is retrieved from the file path with filepath.Ext and compared to the provided extension.
 
 * `MatchNever`  
   MatchNever returns a matcher-func that never matches any file.
@@ -68,9 +68,9 @@ When matching, the extension is retrieved from the file path with filepath.Ext a
   If the suffix is not empty and does not start with a "." or "/", it is prepended with a "/".  
   When matching, the file path is compared to the suffix, the provided path either has to be the suffix or end with the suffix.
 * `MatchExt(extension string)`  
-  MatchFS is a filesystem that only allows opening files that match a given matcher-func.  
-  It can be used to restrict access to files in a filesystem.  
-  The matcher-func is called with the path of the file that is being opened.
+  MatchExt returns a matcher-func that matches a file if the given extension matches the file path.  
+  The extension passed to this function is normalized to start with a ".".  
+  When matching, the extension is retrieved from the file path with filepath.Ext and compared to the provided extension.
 
 #### Example
 
@@ -93,7 +93,7 @@ var myMatchFs = filesystem.NewMatchFS(
             filesystem.MatchExt(".html"),
             filesystem.MatchExt(".txt"),
         ),
-        
+
         // Match files in the "static" directory with the extensions ".css" and ".js"
         filesystem.MatchAnd(
             filesystem.MatchPrefix("static/"),

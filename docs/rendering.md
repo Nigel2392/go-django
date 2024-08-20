@@ -89,7 +89,7 @@ tpl.Add(tpl.Config{
 
 In the previous example, we have registered the `mycustomapp` templates with the `tplFS` filesystem.
 
-Only files that match the `mycustomapp/` prefix and have the `.tmpl` extension will be available for rendering.
+Only files that match the `mycustomapp/` prefix and have the `.tmpl` extension will be available for rendering (see [MatchFS](./filesystem.md#MatchFS)).
 
 We have also added a custom function `title` that will be available in the templates.
 
