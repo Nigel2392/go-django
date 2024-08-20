@@ -14,6 +14,9 @@ import (
 var _ sql.Scanner = (*BaseContentType[any])(nil)
 var _ driver.Valuer = (*BaseContentType[any])(nil)
 
+// BaseContentType is a base type for ContentType.
+// It implements the ContentType interface.
+// It uses generics to better let developers work with their content types.
 type BaseContentType[T any] struct {
 	rType     reflect.Type
 	rTypeElem reflect.Type
@@ -21,6 +24,14 @@ type BaseContentType[T any] struct {
 	modelName string
 }
 
+// ContentType is an interface that defines the methods that a content type must implement.
+//
+// A content type is a type that represents a model in the database.
+//
+// It does not represent individual instances of the model.
+//
+// It is used to store information about a model, such as its human-readable name,
+// description, and aliases.
 type ContentType interface {
 	PkgPath() string
 	AppLabel() string
@@ -29,11 +40,19 @@ type ContentType interface {
 	New() interface{}
 }
 
+// ShortcutContentType is an interface that defines the methods that a content type must implement.
+// It allows for a shorter type name to be used.
+//
+// This short type name can be used as an alias and allows for easier reference to the model in code.
+//
+// I.E: "github.com/Nigel2392/auth.User" can be shortened to "auth.User".
 type ShortcutContentType[T any] interface {
 	ContentType
 	ShortTypeName() string
 }
 
+// NewContentType returns a new BaseContentType.
+// It takes the model object or a pointer to the model object as an argument.
 func NewContentType[T any](p T) *BaseContentType[T] {
 	var rType = reflect.TypeOf(p)
 	var rTypeElem = rType
@@ -48,10 +67,16 @@ func NewContentType[T any](p T) *BaseContentType[T] {
 	}
 }
 
+// PkgPath returns the package path of the model.
+// It is the full import path of the package that the model is defined in.
+//
+// I.E: "github.com/Nigel2392/auth"
 func (c *BaseContentType[T]) PkgPath() string {
 	return c.pkgPath
 }
 
+// AppLabel returns the app label of the model.
+// It is the last part of the package path, and is safe to use for short names.
 func (c *BaseContentType[T]) AppLabel() string {
 	var lastSlash = strings.LastIndex(c.pkgPath, "/")
 	if lastSlash == -1 {
@@ -60,16 +85,22 @@ func (c *BaseContentType[T]) AppLabel() string {
 	return c.pkgPath[lastSlash+1:]
 }
 
+// Model returns the model name.
 func (c *BaseContentType[T]) Model() string {
 	return c.modelName
 }
 
+// New returns a new instance of the model.
 func (c *BaseContentType[T]) New() T {
 	return reflect.New(c.rTypeElem).Interface().(T)
 }
 
 var ErrInvalidScanType errs.Error = "invalid scan type"
 
+// TypeName returns the full type name of the model.
+// It is the package path and the model name separated by a dot.
+// It is used to uniquely identify the model.
+// I.E: "github.com/Nigel2392/auth.User"
 func (c *BaseContentType[T]) TypeName() string {
 	var typeName = c.pkgPath
 	var modelName = c.modelName
@@ -80,6 +111,10 @@ func (c *BaseContentType[T]) TypeName() string {
 	return string(b)
 }
 
+// ShortTypeName returns the short type name of the model.
+// It is the app label and the model name separated by a dot.
+// It is used as an alias for the model.
+// I.E: "github.com/Nigel2392/auth.User" -> "auth.User"
 func (c *BaseContentType[T]) ShortTypeName() string {
 	var (
 		typeName  = c.AppLabel()
