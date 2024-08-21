@@ -175,7 +175,7 @@ type Helper interface {
 }
 ```
 
-#### `Scanner` interface
+### `Scanner` interface
 
 The `Scanner` interface is used to scan a value into a field.
 
