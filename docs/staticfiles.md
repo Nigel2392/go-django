@@ -10,6 +10,8 @@ All staticfiles are served from the `static/` URL prefix by default.
 
 ## Configuration
 
+To configure staticfiles and learn more about matches, see the [filesystem documentation](./filesystem.md#matchfs).
+
 Staticfiles are configured using the global package- level functions:
 
 ### `AddFS(filesys fs.FS, matches func(path string) bool)`

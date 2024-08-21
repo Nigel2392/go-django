@@ -176,7 +176,16 @@ It is fully capable of handling aliases and will return the correct definition f
 Example:
 
 ```go
-contenttypes.RegisterAlias("custompackage.MyModel", "github.com/Nigel2392/mypackage.MyModel")
-definition := contenttypes.DefinitionForPackage("github.com/Nigel2392/mypackage", "MyModel")
-definition := contenttypes.DefinitionForPackage("custompackage", "MyModel")
+contenttypes.RegisterAlias(
+  "custompackage.MyModel",
+  "github.com/Nigel2392/mypackage.MyModel",
+)
+
+definition := contenttypes.DefinitionForPackage(
+  "github.com/Nigel2392/mypackage", "MyModel",
+)
+
+definition := contenttypes.DefinitionForPackage(
+  "custompackage", "MyModel",
+)
 ```

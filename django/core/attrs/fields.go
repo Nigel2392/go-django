@@ -137,7 +137,9 @@ func (f *FieldDef) ToString() string {
 
 	var funcName = fmt.Sprintf("%sToString", f.Name())
 	if method, ok := f.instance_t.MethodByName(funcName); ok {
-		return method.Func.Call([]reflect.Value{f.instance_v_ptr})[0].String()
+		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
+		assert.Gt(out, 0, "Method %q on raw did not return a value", funcName)
+		return out[0].String()
 	}
 
 	return toString(v)
@@ -146,24 +148,26 @@ func (f *FieldDef) ToString() string {
 func (f *FieldDef) GetDefault() interface{} {
 
 	if f.attrDef.Default != nil {
+		var v = reflect.ValueOf(f.attrDef.Default)
+		if v.IsValid() && v.Kind() == reflect.Func {
+			var out = v.Call([]reflect.Value{})
+			assert.Gt(out, 0, "Default function did not return a value")
+			return out[0].Interface()
+		}
 		return f.attrDef.Default
 	}
 
 	var funcName = fmt.Sprintf("GetDefault%s", f.Name())
 	if method, ok := f.instance_t.MethodByName(funcName); ok {
 		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
-		if len(out) > 0 {
-			return out[0].Interface()
-		}
-		assert.Fail("Method %q on raw did not return a value", funcName)
+		assert.Gt(out, 0, "Method %q on ptr did not return a value", funcName)
+		return out[0].Interface()
 	}
 
 	if method, ok := f.instance_t_ptr.MethodByName(funcName); ok {
 		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
-		if len(out) > 0 {
-			return out[0].Interface()
-		}
-		assert.Fail("Method %q on ptr did not return a value", funcName)
+		assert.Gt(out, 0, "Method %q on raw did not return a value", funcName)
+		return out[0].Interface()
 	}
 
 	var typForNew = f.field_t.Type
@@ -381,14 +385,14 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	}
 
 	if r_v_ptr.IsZero() && !f.AllowBlank() {
-		switch r_v_ptr.Kind() {
+		switch reflect.Indirect(*r_v_ptr).Kind() {
 		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 			reflect.Float32, reflect.Float64,
 			reflect.Complex64, reflect.Complex128:
 		default:
 			return assert.Fail(
-				fmt.Sprintf("field %q is not blank", f.field_t.Name),
+				fmt.Sprintf("field %q must not be blank", f.field_t.Name),
 			)
 		}
 	}
