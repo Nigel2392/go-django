@@ -20,12 +20,31 @@ type Definer interface {
 }
 
 type Definitions interface {
+	// Set sets the value of the field with the given name (or panics if not found).
 	Set(name string, value interface{}) error
+
+	// Retrieves the value of the field with the given name (or panics if not found).
 	Get(name string) interface{}
+
+	// Retrieves the field with the given name.
+	//
+	// If the field is not found, the second return value will be false.
 	Field(name string) (f Field, ok bool)
+
+	// Set sets the value of the field with the given name (or panics if not found).
+	//
+	// This method will allow setting the value of a field that is marked as not editable.
 	ForceSet(name string, value interface{}) error
+
+	// Retrieves the primary field.
 	Primary() Field
+
+	// Retrieves a slice of all fields.
+	//
+	// The order of the fields is the same as they were defined.
 	Fields() []Field
+
+	// Retrieves the number of fields.
 	Len() int
 }
 

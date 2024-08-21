@@ -30,6 +30,81 @@ type Definer interface {
 
 ### `Definitions` interface
 
+The definitions interface should be considered some kind of management struct for your fields.
+
+This is the primary way we recommend to interact with your fields, setting values and more.
+
+The interface is defined as follows:
+
+```go
+type Definitions interface {
+	// Set sets the value of the field with the given name (or panics if not found).
+	Set(name string, value interface{}) error
+
+	// Retrieves the value of the field with the given name (or panics if not found).
+	Get(name string) interface{}
+
+	// Retrieves the field with the given name.
+	//
+	// If the field is not found, the second return value will be false.
+	Field(name string) (f Field, ok bool)
+
+	// Set sets the value of the field with the given name (or panics if not found).
+	//
+	// This method will allow setting the value of a field that is marked as not editable.
+	ForceSet(name string, value interface{}) error
+
+	// Retrieves the primary field.
+	Primary() Field
+
+	// Retrieves a slice of all fields.
+	//
+	// The order of the fields is the same as they were defined.
+	Fields() []Field
+
+	// Retrieves the number of fields.
+	Len() int
+}
+```
+
+### `Scanner` interface
+
+The `Scanner` interface is used to scan a value into a field.
+
+This should be a method on the value of the field.
+
+I.E. to scan a value into a `StringField`, the method should be defined on the `StringField` struct.
+
+Example:
+
+```go
+type StringField struct {
+    Value string
+}
+
+func (s *StringField) ScanAttribute(src any) error {
+    if v, ok := src.(string); ok {
+        s.Value = v
+        return nil
+    }
+    return errors.New("Invalid type")
+}
+
+type MyStruct struct {
+    MyField StringField
+}
+```
+
+This allows for more complex logic when setting values.
+
+The interface is defined as follows:
+
+```go
+type Scanner interface {
+	ScanAttribute(src any) error
+}
+```
+
 ### `Field` Interface
 
 The field interface is used to define the properties of a field.
@@ -172,44 +247,6 @@ The interface is defined as follows:
 ```go
 type Helper interface {
 	HelpText() string
-}
-```
-
-### `Scanner` interface
-
-The `Scanner` interface is used to scan a value into a field.
-
-This should be a method on the value of the field.
-
-I.E. to scan a value into a `StringField`, the method should be defined on the `StringField` struct.
-
-Example:
-
-```go
-type StringField struct {
-    Value string
-}
-
-func (s *StringField) ScanAttribute(src any) error {
-    if v, ok := src.(string); ok {
-        s.Value = v
-        return nil
-    }
-    return errors.New("Invalid type")
-}
-
-type MyStruct struct {
-    MyField StringField
-}
-```
-
-This allows for more complex logic when setting values.
-
-The interface is defined as follows:
-
-```go
-type Scanner interface {
-	ScanAttribute(src any) error
 }
 ```
 
