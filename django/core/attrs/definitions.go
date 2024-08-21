@@ -44,6 +44,16 @@ func (d *ObjectDefinitions) Field(name string) (f Field, ok bool) {
 	return
 }
 
+func (d *ObjectDefinitions) Fields() []Field {
+	var m = make([]Field, d.ObjectFields.Len())
+	var i = 0
+	for head := d.ObjectFields.Front(); head != nil; head = head.Next() {
+		m[i] = head.Value
+		i++
+	}
+	return m
+}
+
 func (d *ObjectDefinitions) Primary() Field {
 	if d.PrimaryField == "" {
 		return nil
@@ -54,14 +64,4 @@ func (d *ObjectDefinitions) Primary() Field {
 
 func (d *ObjectDefinitions) Len() int {
 	return d.ObjectFields.Len()
-}
-
-func (d *ObjectDefinitions) Fields() []Field {
-	var m = make([]Field, d.ObjectFields.Len())
-	var i = 0
-	for head := d.ObjectFields.Front(); head != nil; head = head.Next() {
-		m[i] = head.Value
-		i++
-	}
-	return m
 }

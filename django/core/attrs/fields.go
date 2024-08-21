@@ -17,19 +17,22 @@ import (
 
 var capCaser = cases.Title(language.English)
 
+// FieldConfig is a configuration for a field.
+//
+// This defines how a field should behave and how it should be displayed in a form.
 type FieldConfig struct {
-	Null       bool
-	Blank      bool
-	ReadOnly   bool
-	Primary    bool
-	Label      string
-	HelpText   string
-	Default    any
-	Validators []func(interface{}) error
-	FormField  func(opts ...func(fields.Field)) fields.Field
-	FormWidget func(FieldConfig) widgets.Widget
-	Setter     func(interface{}) error
-	Getter     func() (interface{}, bool)
+	Null       bool                                          // Whether the field allows null values
+	Blank      bool                                          // Whether the field allows blank values
+	ReadOnly   bool                                          // Whether the field is read-only
+	Primary    bool                                          // Whether the field is a primary key
+	Label      string                                        // The label for the field
+	HelpText   string                                        // The help text for the field
+	Default    any                                           // The default value for the field (or a function that returns the default value)
+	Validators []func(interface{}) error                     // Validators for the field
+	FormField  func(opts ...func(fields.Field)) fields.Field // The form field for the field
+	FormWidget func(FieldConfig) widgets.Widget              // The form widget for the field
+	Setter     func(Definer, interface{}) error              // A custom setter for the field
+	Getter     func(Definer) (interface{}, bool)             // A custom getter for the field
 }
 
 type FieldDef struct {
@@ -43,6 +46,9 @@ type FieldDef struct {
 	formField      fields.Field
 }
 
+// NewField creates a new field definition for the given instance.
+//
+// This can then be used for managing the field in a more abstract way.
 func NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef {
 	var (
 		instance_t_ptr = reflect.TypeOf(instance)
@@ -271,7 +277,9 @@ returnField:
 func (f *FieldDef) GetValue() interface{} {
 
 	if f.attrDef.Getter != nil {
-		var v, ok = f.attrDef.Getter()
+		var v, ok = f.attrDef.Getter(
+			f.instance_v_ptr.Interface().(Definer),
+		)
 		if ok {
 			return v
 		}
@@ -308,7 +316,9 @@ func (f *FieldDef) GetValue() interface{} {
 func (f *FieldDef) SetValue(v interface{}, force bool) error {
 
 	if f.attrDef.Setter != nil {
-		return f.attrDef.Setter(v)
+		return f.attrDef.Setter(
+			f.instance_v_ptr.Interface().(Definer), v,
+		)
 	}
 
 	var r_v = reflect.ValueOf(v)
