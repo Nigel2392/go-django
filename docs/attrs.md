@@ -250,6 +250,8 @@ type Helper interface {
 }
 ```
 
+## Automatic definitions of fields
+
 ## Structs
 
 ### `FieldDef` struct
