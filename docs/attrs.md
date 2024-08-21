@@ -113,13 +113,105 @@ The methods are explained as follows:
 
 #### `Namer` interface
 
+The `Namer` interface is used to define the name of a field.
+
+This is useful for form generation and possibly even database columns, etc.
+
+The interface is defined as follows:
+
+```go
+type Namer interface {
+	Name() string
+}
+```
+
+For a form, this is the name attribute of the field; any other implementation may vary.
+
 #### `Stringer` interface
+
+The `Stringer` interface is used to define the string representation of a field.
+
+This interface varies from the `fmt.Stringer` interface; the method is called `ToString` instead of `String`.
+
+It is mainly used in list representations; and should provide a human-readable string representation of the field.
+
+The interface is defined as follows:
+
+```go
+type Stringer interface {
+	ToString() string
+}
+```
 
 #### `Labeler` interface
 
+The `Labeler` interface is used to define the label of a field.
+
+This should be the human-readable representation of the name of the field.
+
+I.E. if your field's name is `firstName`, an appropriate label might be `First Name`.
+
+Internally it is used in forms to generate labels for the fields or in lists to generate column headers.
+
+The interface is defined as follows:
+
+```go
+type Labeler interface {
+	Label() string
+}
+```
+
 #### `Helper` interface
 
+The `Helper` interface is used to define a help text for a field.
+
+This is useful for providing additional information about the field, such as in forms.
+
+The interface is defined as follows:
+
+```go
+type Helper interface {
+	HelpText() string
+}
+```
+
 #### `Scanner` interface
+
+The `Scanner` interface is used to scan a value into a field.
+
+This should be a method on the value of the field.
+
+I.E. to scan a value into a `StringField`, the method should be defined on the `StringField` struct.
+
+Example:
+
+```go
+type StringField struct {
+    Value string
+}
+
+func (s *StringField) ScanAttribute(src any) error {
+    if v, ok := src.(string); ok {
+        s.Value = v
+        return nil
+    }
+    return errors.New("Invalid type")
+}
+
+type MyStruct struct {
+    MyField StringField
+}
+```
+
+This allows for more complex logic when setting values.
+
+The interface is defined as follows:
+
+```go
+type Scanner interface {
+	ScanAttribute(src any) error
+}
+```
 
 ## Structs
 
@@ -130,3 +222,6 @@ The methods are explained as follows:
 ## Defining Model Attributes
 
 ### Embedding Structs
+
+## Package- level functions
+
