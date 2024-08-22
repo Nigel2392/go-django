@@ -282,6 +282,10 @@ func (f *BaseModelForm[T]) Save() error {
 		}
 
 		if err := attrs.Set(f.Model, fieldname, value); err != nil {
+			f.AddError(
+				fieldname,
+				err,
+			)
 			return err
 		}
 	}

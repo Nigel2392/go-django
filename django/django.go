@@ -26,7 +26,7 @@ import (
 	"github.com/Nigel2392/django/core/logger"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/permissions"
-	"github.com/Nigel2392/django/utils"
+	utils_text "github.com/Nigel2392/django/utils/text"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware"
@@ -257,9 +257,10 @@ func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Requ
 	a.Log.Errorf(
 		"Error serving request (%d: %s) %s",
 		serverError.StatusCode(),
-		utils.Trunc(r.URL.String(), 75),
+		utils_text.Trunc(r.URL.String(), 75),
 		serverError.UserMessage(),
 	)
+
 	a.handleErrorCodePure(w, r, serverError)
 }
 
@@ -478,26 +479,7 @@ func (a *Application) Initialize() error {
 	var r Mux = a.Mux
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
-		//	var urls = app.URLs()
-		//	if len(urls) > 0 {
-		//		var path = app.URLPath()
-		//
-		//		var r core.Mux = a.Mux
-		//		if path != "" {
-		//			r = r.Handle(
-		//				mux.ANY, path, nil, app.Name(),
-		//			)
-		//		}
-		//
-		//		for _, url := range urls {
-		//			url.Register(r)
-		//		}
-		//	}
-		//
-		//	var middleware = app.Middleware()
-		//	for _, m := range middleware {
-		//		m.Register(a.Mux)
-		//	}
+
 		app.BuildRouting(r)
 
 		var processors = app.Processors()

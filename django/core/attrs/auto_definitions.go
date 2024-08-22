@@ -46,7 +46,7 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 			switch chkTyp.Kind() {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 				val, err = strconv.ParseInt(default_, 10, 64)
-			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr:
 				val, err = strconv.ParseUint(default_, 10, 64)
 			case reflect.Float32, reflect.Float64:
 				val, err = strconv.ParseFloat(default_, 64)

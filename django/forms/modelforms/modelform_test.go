@@ -1,6 +1,7 @@
 package modelforms_test
 
 import (
+	"errors"
 	"reflect"
 	"testing"
 
@@ -13,6 +14,7 @@ var _ (attrs.Definer) = (*TestModel)(nil)
 type TestModel struct {
 	ID   int
 	Name string
+	Age  int
 }
 
 func (m *TestModel) FieldDefs() attrs.Definitions {
@@ -20,6 +22,17 @@ func (m *TestModel) FieldDefs() attrs.Definitions {
 		m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{Null: true, Blank: true, ReadOnly: false}),
 		attrs.NewField(m, "Name", &attrs.FieldConfig{Null: true, Blank: true, ReadOnly: false}),
+		attrs.NewField(m, "Age", &attrs.FieldConfig{Null: true, Blank: true, ReadOnly: false, Validators: []func(interface{}) error{
+			func(v interface{}) error {
+				if age, ok := v.(int); ok {
+					if age <= 0 {
+						return errors.New("Age must be greater than 0")
+					}
+					return nil
+				}
+				return errors.New("Invalid type")
+			},
+		}}),
 	)
 }
 
@@ -27,6 +40,7 @@ func TestModelForm(t *testing.T) {
 	var m = &TestModel{
 		ID:   1,
 		Name: "name",
+		Age:  0,
 	}
 
 	var f = modelforms.NewBaseModelForm(m)
@@ -41,13 +55,14 @@ func TestModelForm(t *testing.T) {
 		t.Run("LoadForm", func(t *testing.T) {
 			f.Load()
 
-			if f.FormFields.Len() != 2 {
-				t.Errorf("expected %d, got %d", 0, f.FormFields.Len())
+			if f.FormFields.Len() != 3 {
+				t.Errorf("expected %d, got %d", 3, f.FormFields.Len())
 			}
 
 			if !reflect.DeepEqual(f.BaseForm.Initial, map[string]interface{}{
 				"ID":   0,
 				"Name": "",
+				"Age":  0,
 			}) {
 				t.Errorf("expected %v, got %v", nil, f.BaseForm.Initial)
 			}
@@ -55,15 +70,15 @@ func TestModelForm(t *testing.T) {
 	})
 
 	t.Run("AutoFields", func(t *testing.T) {
-		if len(f.ModelFields) != 2 {
-			t.Errorf("expected %d, got %d", 2, len(f.ModelFields))
+		if len(f.ModelFields) != 3 {
+			t.Errorf("expected %d, got %d", 3, len(f.ModelFields))
 		}
 
 		if len(f.ModelExclude) != 0 {
 			t.Errorf("expected %d, got %d", 0, len(f.ModelExclude))
 		}
 
-		if len(f.InstanceFields) != 2 {
+		if len(f.InstanceFields) != 3 {
 			t.Errorf("expected %d, got %d", 2, len(f.InstanceFields))
 		}
 
@@ -75,13 +90,17 @@ func TestModelForm(t *testing.T) {
 			t.Errorf("expected %q, got %q", "Name", f.InstanceFields[1].Name())
 		}
 
+		if f.InstanceFields[2].Name() != "Age" {
+			t.Errorf("expected %q, got %q", "Age", f.InstanceFields[2].Name())
+		}
+
 		f = modelforms.NewBaseModelForm(m)
 
 		t.Run("LoadForm", func(t *testing.T) {
 			f.Load()
 
-			if f.FormFields.Len() != 2 {
-				t.Errorf("expected %d, got %d", 2, f.FormFields.Len())
+			if f.FormFields.Len() != 3 {
+				t.Errorf("expected %d, got %d", 3, f.FormFields.Len())
 			}
 
 			if f, ok := f.FormFields.Get("ID"); !ok {
@@ -100,12 +119,24 @@ func TestModelForm(t *testing.T) {
 				}
 			}
 
+			if f, ok := f.FormFields.Get("Age"); !ok {
+				t.Errorf("expected %t, got %t", true, ok)
+			} else {
+				if f.Name() != "Age" {
+					t.Errorf("expected %q, got %q", "Age", f.Name())
+				}
+			}
+
 			if f.BaseForm.Initial["ID"] != 1 {
 				t.Errorf("expected %d, got %d", 1, f.BaseForm.Initial["ID"])
 			}
 
 			if f.BaseForm.Initial["Name"] != "name" {
 				t.Errorf("expected %q, got %q", "name", f.BaseForm.Initial["Name"])
+			}
+
+			if f.BaseForm.Initial["Age"] != 0 {
+				t.Errorf("expected %d, got %d", 0, f.BaseForm.Initial["Age"])
 			}
 		})
 
@@ -117,6 +148,7 @@ func TestModelForm(t *testing.T) {
 			f.BaseForm.Cleaned = map[string]interface{}{
 				"ID":   2,
 				"Name": "new name",
+				"Age":  1,
 			}
 
 			if err := f.Save(); err != nil {
@@ -130,6 +162,10 @@ func TestModelForm(t *testing.T) {
 			if m.Name != "new name" {
 				t.Errorf("expected %q, got %q", "new name", m.Name)
 			}
+
+			if m.Age != 1 {
+				t.Errorf("expected %d, got %d", 1, m.Age)
+			}
 		})
 
 		m.ID = 1
@@ -142,7 +178,7 @@ func TestModelForm(t *testing.T) {
 
 			f.Load()
 
-			if f.FormFields.Len() != 1 {
+			if f.FormFields.Len() != 2 {
 				t.Errorf("expected length %d, got %d", 1, f.FormFields.Len())
 				for head := f.FormFields.Front(); head != nil; head = head.Next() {
 					t.Logf("field: %q", head.Value.Name())
@@ -157,6 +193,14 @@ func TestModelForm(t *testing.T) {
 				}
 			}
 
+			if f, ok := f.FormFields.Get("Age"); !ok {
+				t.Errorf("expected %t, got %t", true, ok)
+			} else {
+				if f.Name() != "Age" {
+					t.Errorf("expected %q, got %q", "Age", f.Name())
+				}
+			}
+
 			if f.BaseForm.Initial["ID"] != nil {
 				t.Errorf("expected %v, got %v", nil, f.BaseForm.Initial["ID"])
 			}
@@ -165,10 +209,15 @@ func TestModelForm(t *testing.T) {
 				t.Errorf("expected %q, got %q", "name", f.BaseForm.Initial["Name"])
 			}
 
+			if f.BaseForm.Initial["Age"] != 1 {
+				t.Errorf("expected %d, got %d", 1, f.BaseForm.Initial["Age"])
+			}
+
 			t.Run("SaveForm", func(t *testing.T) {
 				f.BaseForm.Cleaned = map[string]interface{}{
 					"ID":   2,
 					"Name": "new name",
+					"Age":  1,
 				}
 
 				if err := f.Save(); err != nil {
@@ -181,6 +230,35 @@ func TestModelForm(t *testing.T) {
 
 				if m.Name != "new name" {
 					t.Errorf("expected (Name) %q, got %q", "new name", m.Name)
+				}
+
+				if m.Age != 1 {
+					t.Errorf("expected (Age) %v, got %v", 1, m.Age)
+				}
+			})
+
+			t.Run("SaveFormFail", func(t *testing.T) {
+
+				f.BaseForm.Cleaned = map[string]interface{}{
+					"ID":   2,
+					"Name": "new name",
+					"Age":  -1,
+				}
+
+				if err := f.Save(); err == nil {
+					t.Errorf("expected (err) %v, got %v", errors.New("Age must be greater than 0"), err)
+				}
+
+				if m.ID != 1 {
+					t.Errorf("expected (ID) %v, got %v", 1, m.ID)
+				}
+
+				if m.Name != "new name" {
+					t.Errorf("expected (Name) %q, got %q", "new name", m.Name)
+				}
+
+				if m.Age != -1 {
+					t.Errorf("expected (Age) %v, got %v", -1, m.Age)
 				}
 			})
 		})

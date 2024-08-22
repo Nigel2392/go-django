@@ -74,6 +74,14 @@ func (r *commandRegistry) ExecCommand(args []string) error {
 	}
 
 	var remaining = flagSet.Args()
+
+	//  if len(remaining) > 0 && !cmd.AcceptsRemaining() {
+	//  	return fmt.Errorf(
+	//  		"too many arguments for command %q: %v",
+	//  		cmdName, remaining,
+	//  	)
+	//  }
+
 	return cmd.Exec(m, remaining)
 }
 

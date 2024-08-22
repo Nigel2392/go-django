@@ -24,7 +24,7 @@ The interface definition:
 
 ```go
 type Definer interface {
-	FieldDefs() attrs.Definitions
+    FieldDefs() attrs.Definitions
 }
 ```
 
@@ -38,32 +38,32 @@ The interface is defined as follows:
 
 ```go
 type Definitions interface {
-	// Set sets the value of the field with the given name (or panics if not found).
-	Set(name string, value interface{}) error
+    // Set sets the value of the field with the given name (or panics if not found).
+    Set(name string, value interface{}) error
 
-	// Retrieves the value of the field with the given name (or panics if not found).
-	Get(name string) interface{}
+    // Retrieves the value of the field with the given name (or panics if not found).
+    Get(name string) interface{}
 
-	// Retrieves the field with the given name.
-	//
-	// If the field is not found, the second return value will be false.
-	Field(name string) (f Field, ok bool)
+    // Retrieves the field with the given name.
+    //
+    // If the field is not found, the second return value will be false.
+    Field(name string) (f Field, ok bool)
 
-	// Set sets the value of the field with the given name (or panics if not found).
-	//
-	// This method will allow setting the value of a field that is marked as not editable.
-	ForceSet(name string, value interface{}) error
+    // Set sets the value of the field with the given name (or panics if not found).
+    //
+    // This method will allow setting the value of a field that is marked as not editable.
+    ForceSet(name string, value interface{}) error
 
-	// Retrieves the primary field.
-	Primary() Field
+    // Retrieves the primary field.
+    Primary() Field
 
-	// Retrieves a slice of all fields.
-	//
-	// The order of the fields is the same as they were defined.
-	Fields() []Field
+    // Retrieves a slice of all fields.
+    //
+    // The order of the fields is the same as they were defined.
+    Fields() []Field
 
-	// Retrieves the number of fields.
-	Len() int
+    // Retrieves the number of fields.
+    Len() int
 }
 ```
 
@@ -101,7 +101,7 @@ The interface is defined as follows:
 
 ```go
 type Scanner interface {
-	ScanAttribute(src any) error
+    ScanAttribute(src any) error
 }
 ```
 
@@ -184,7 +184,8 @@ The methods are explained as follows:
   Validates the field.  
   This can be used to check if the field is valid.  
   If the field is not valid, an error should be returned.  
-  If the field is valid, nil should be returned.
+  If the field is valid, nil should be returned.  
+  The value of the field will still be set, even if the field is not valid - errors should be handled by the caller.
 
 #### `Namer` interface
 
@@ -196,7 +197,7 @@ The interface is defined as follows:
 
 ```go
 type Namer interface {
-	Name() string
+    Name() string
 }
 ```
 
@@ -214,7 +215,7 @@ The interface is defined as follows:
 
 ```go
 type Stringer interface {
-	ToString() string
+    ToString() string
 }
 ```
 
@@ -232,7 +233,7 @@ The interface is defined as follows:
 
 ```go
 type Labeler interface {
-	Label() string
+    Label() string
 }
 ```
 
@@ -246,21 +247,320 @@ The interface is defined as follows:
 
 ```go
 type Helper interface {
-	HelpText() string
+    HelpText() string
 }
 ```
-
-## Automatic definitions of fields
 
 ## Structs
 
 ### `FieldDef` struct
 
+The `FieldDef` struct is used to define the properties of a field.
+
+It adheres to the `Field` interface, and should provide enough capabilities to customize fields to your liking.
+
+The struct definition is not important; and has only private properties.
+
+Creating a new field is done by calling the `NewField` function.
+
+Example:
+
+```go
+var myStruct = myStruct{
+  MyField: "value",
+}
+
+var myField = attrs.NewField(myStruct, "MyField", attrs.FieldConfig{
+    // ... config data
+})
+```
+
 ### `FieldConfig` struct
+
+The `FieldConfig` struct is used to define the configuration of a field.
+
+The struct is defined as follows:
+
+```go
+type FieldConfig struct {
+    Null       bool
+    Blank      bool
+    ReadOnly   bool
+    Primary    bool
+    Label      string
+    HelpText   string
+    Default    any
+    Validators []func(interface{}) error
+    FormField  func(opts ...func(fields.Field)) fields.Field
+    FormWidget func(FieldConfig) widgets.Widget
+    Setter     func(Definer, interface{}) error
+    Getter     func(Definer) (interface{}, bool)
+}
+```
+
+The struct is used to define the properties of a field, as well as setters, getters, form fields, etc.
+
+The setters/getters also take an argument of type `Definer`.
+
+This is the parent struct which the field belongs to, and thus can be safely cast to the parent struct's type.
+
+#### Properties
+
+- `Null bool`  
+  Whether the field allows nil values.
+- `Blank bool`  
+  Whether the field allows blank (zero) values.
+- `ReadOnly bool`  
+  Whether the field is read-only.
+- `Primary bool`  
+  Whether the field is a primary key.
+- `Label string`  
+  The label of the field.
+- `HelpText string`  
+  The help text of the field.
+- `Default any`  
+  The default value of the field.
+- `Validators []func(interface{}) error`  
+  A slice of validators for the field.
+- `FormField func(opts ...func(fields.Field)) fields.Field`  
+  A function that returns a self-defined form field for the field.
+- `FormWidget func(FieldConfig) widgets.Widget`  
+  A function that returns a custom form widget for the field.
+- `Setter func(Definer, interface{}) error`  
+  A function that sets the value of the field.
+- `Getter func(Definer) (interface{}, bool)`  
+  A function that retrieves the value of the field.
 
 ## Defining Model Attributes
 
+To define the attributes of a model, you need to implement the `Definer` interface on the model.
+
+The `FieldDefs` method should return a `Definitions` struct.
+
+Let's create a simple struct on which we will be defining the attributes:
+
+```go
+type myInt int
+
+type MyModel struct {
+    ID   int
+    Name string
+    Bio  string
+    Age  myInt
+}
+```
+
+Now we need to configure the fields of this struct.
+
+Formfields will be generated automatically, but we want to customize the Bio field to use a `Textarea` widget.
+
+We also want to add a validator to the `Age` field to ensure it is greater than 0.
+
+The `FieldDefs` method should be implemented as follows:
+
+```go
+func (m *MyModel) FieldDefs() attrs.Definitions {
+	return attrs.Define(m,
+		attrs.NewField(m, "ID", &attrs.FieldConfig{
+			Primary:  true,
+			ReadOnly: true,
+			Label:    "ID",
+			HelpText: "The unique identifier of the model",
+		}),
+		attrs.NewField(m, "Name", &attrs.FieldConfig{
+			Label:    "Name",
+			HelpText: "The name of the model",
+		}),
+		attrs.NewField(m, "Bio", &attrs.FieldConfig{
+			Label:    "Biography",
+			HelpText: "The biography of the model",
+			FormWidget: func(cfg attrs.FieldConfig) widgets.Widget {
+				return widgets.NewTextarea(nil)
+			},
+		}),
+		attrs.NewField(m, "Age", &attrs.FieldConfig{
+			Label:    "Age",
+			HelpText: "The age of the model",
+			Validators: []func(interface{}) error{
+				func(v interface{}) error {
+					if v.(myInt) <= myInt(0) {
+						return errors.New("Age must be greater than 0")
+					}
+					return nil
+				},
+			},
+		}),
+	)
+}
+```
+
+This will define the fields of the model, and customize the Bio field to use a `Textarea` widget, and add a validator to the Age field.
+
+To then set or retrieve the values; you could use the attrs package- level functions, or directly interact with the `Definitions` struct.
+
 ### Embedding Structs
+
+Embedding a struct is relatively easy; there are a few options which each depend on the already existing implementation of the underlying struct.
+
+In short; if the underlying struct implements the `Definer` interface, you can embed it directly using it's `FieldDefs().Fields()` method.
+
+If the underlying struct does not implement the `Definer` interface, you can still embed it, but you will have to manually define the fields.
+
+#### Option 1: The embedded struct implements the `Definer` interface
+
+When the embedded struct implements the `Definer` interface, you can embed it's fields directly.
+
+Let's extend the previous example with an embedded struct:
+
+```go
+type MyTopLevelModel struct {
+    MyModel
+    Address string
+}
+```
+
+The `MyModel` struct implements the `Definer` interface, so we can embed it directly.
+
+The `FieldDefs` method should be implemented as follows:
+
+```go
+func (m *MyTopLevelModel) FieldDefs() attrs.Definitions {
+    var fields = m.MyModel.FieldDefs().Fields()
+    fields = append(fields, attrs.NewField(m, "Address", &attrs.FieldConfig{
+        Label:    "Address",
+        HelpText: "The address of the model",
+    }))
+    return attrs.Define(m, fields...)
+}
+```
+
+#### Option 2: Embedding structs which do not implement the `Definer` interface
+
+When the embedded struct does not implement the `Definer` interface, you will have to manually define the fields.
+
+Let's pretend the `MyModel` struct does not implement the `Definer` interface:
+
+```go
+type MyModel struct {
+    ID   int
+    Name string
+    Bio  string
+    Age  myInt
+}
+
+type MyTopLevelModel struct {
+    MyModel
+    Address string
+}
+```
+
+The `FieldDefs` method should be implemented in a way to still include the fields of the embedded struct:
+
+```go
+func (m *MyTopLevelModel) FieldDefs() attrs.Definitions {
+    return attrs.Define(m,
+        attrs.NewField(m.MyModel, "ID", &attrs.FieldConfig{
+            Primary:  true,
+            ReadOnly: true,
+            Label:    "ID",
+            HelpText: "The unique identifier of the model",
+        }),
+        attrs.NewField(m.MyModel, "Name", &attrs.FieldConfig{
+            Label:    "Name",
+            HelpText: "The name of the model",
+        }),
+        attrs.NewField(m.MyModel, "Bio", &attrs.FieldConfig{
+            Label:    "Biography",
+            HelpText: "The biography of the model",
+            FormWidget: func(cfg attrs.FieldConfig) widgets.Widget {
+                return widgets.NewTextarea(nil)
+            },
+        }),
+        attrs.NewField(m.MyModel, "Age", &attrs.FieldConfig{
+            Label:    "Age",
+            HelpText: "The age of the model",
+            Validators: []func(interface{}) error{
+                func(v interface{}) error {
+                    if v.(myInt) <= myInt(0) {
+                        return errors.New("Age must be greater than 0")
+                    }
+                    return nil
+                },
+            },
+        }),
+        attrs.NewField(m, "Address", &attrs.FieldConfig{
+            Label:    "Address",
+            HelpText: "The address of the model",
+        }),
+    )
+}
+```
+
+As seen in the example, we have to manually define the fields of the embedded struct.
+
+We must still bind the fields to the embedded struct, even if the `FieldDefs` method is called on the parent struct.
+
+This allows for a more flexible way of defining fields, and allows for more complex models and overrides.
+
+### Automatic definitions of fields
+
+The `attrs` package provides a way to automatically define fields for a struct.
+
+This can be done using struct-tags.
+
+- null  
+    Whether the field allows nil values.
+- blank  
+    Whether the field allows blank (zero) values.
+- readonly  
+    Whether the field is read-only.
+- primary  
+    Whether the field is a primary key.
+- label  
+    The label of the field.
+- helptext  
+    The help text of the field.
+- default  
+    The default value of the field.
+    Allowed types for the struct tags are:
+    - `string` (no parentheses)
+    - `int/int8/int16/int32/int64`
+    - `uint/uint8/uint16/uint32/uint64/uintptr`
+    - `float32/float64`
+    - `bool`
+
+Let's create a struct to define with struct tags:
+
+```go
+type MyModel struct {
+    ID   int    `attrs:"primary;readonly;label=ID;helptext=The unique identifier of the model"`
+    Name string `attrs:"label=Name;helptext=The name of the model"`
+    Bio  string `attrs:"label=Biography;helptext=The biography of the model"`
+    Age  myInt  `attrs:"label=Age;helptext=The age of the model"`
+}
+```
+
+The `FieldDefs` method should be implemented as follows:
+
+```go
+func (m *MyModel) FieldDefs() attrs.Definitions {
+    return attrs.AutoDefinitions(m)
+}
+```
+
+Optionally, you could pass a variadic list of fields/strings to the `AutoDefinitions` function to include only those fields.
+
+This allows for more flexibility when defining fields.
+
+Example:
+
+```go
+func (m *MyModel) FieldDefs() attrs.Definitions {
+    return attrs.AutoDefinitions(m, "ID", "Name")
+}
+```
+
+This will only include the `ID` and `Name` fields in the definitions, and exclude the `Bio` and `Age` fields.
 
 ## Package- level functions
 

@@ -37,7 +37,6 @@ type Cmd[T any] struct {
 	Desc     string
 	FlagFunc func(m Manager, stored *T, f *flag.FlagSet) error
 	Execute  func(m Manager, stored T, args []string) error
-
 	// Holds the state of the command
 	// Helps with keeping track of the flag's values
 	stored T

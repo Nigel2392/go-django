@@ -6,8 +6,6 @@ github.com/Nigel2392/go-telepath v0.1.2 h1:MZ6KmSed1r4EjwRscsr0992doEolRyO4Wi9WD
 github.com/Nigel2392/go-telepath v0.1.2/go.mod h1:xcZ6HqRQm4TO6HPsixINS60UJ4/FlegeDZTzJ0tolt4=
 github.com/Nigel2392/goldcrest v1.0.4 h1:Xx+QLht6QjJ3Gg9uksgc6Ye1XjbtzQ1208ClZwoVWsg=
 github.com/Nigel2392/goldcrest v1.0.4/go.mod h1:UpnPrYJqZY/b7TkoVKdoNNPKTlQtld+fsrZEA98c1c0=
-github.com/Nigel2392/mux v1.3.4 h1:rnf3zkrpf4ZCk2sP0bfaejRhZk9boB2IU1FFZ/Hafdc=
-github.com/Nigel2392/mux v1.3.4/go.mod h1:a0OZuf+39ENmjSVJICsv2uMocJABSZTemfF5utx4mew=
 github.com/Nigel2392/mux v1.3.5 h1:ZE5z1ekU/P7Omva2rbWwSyuLNRxFHDAn/V8tVb6Hu04=
 github.com/Nigel2392/mux v1.3.5/go.mod h1:a0OZuf+39ENmjSVJICsv2uMocJABSZTemfF5utx4mew=
 github.com/Nigel2392/tags v1.0.0 h1:KR7VZosoKjksv0uYQDQp03iOo7l04MhCZhCjDeLIChg=
@@ -75,6 +73,8 @@ golang.org/x/crypto v0.23.0 h1:dIJU/v2J8Mdglj/8rJ6UUOM3Zc9zLZxVZwwxMooUSAI=
 golang.org/x/crypto v0.23.0/go.mod h1:CKFgDieR+mRhux2Lsu27y0fO304Db0wZe70UKqHu0v8=
 golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc h1:O9NuF4s+E/PvMIy+9IUZB9znFwUIXEWSstNjek6VpVg=
 golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc/go.mod h1:XtvwrStGgqGPLc4cjQfWqZHG1YFdYs6swckp8vpsjnc=
+golang.org/x/net v0.24.0 h1:1PcaxkF854Fu3+lvBIx5SYn9wRlBzzcnHZSiaFFAb0w=
+golang.org/x/net v0.24.0/go.mod h1:2Q7sJY5mzlzWjKtYUEXSlBWCdyaioyXzRB2RtU8KVE8=
 golang.org/x/sync v0.7.0 h1:YsImfSBoP9QPYL0xyKJPq0gcaJdG3rInoqxTWbfQu9M=
 golang.org/x/sync v0.7.0/go.mod h1:Czt+wKu1gCyEFDUtn0jG5QVvpJ6rzVqr5aXyt9drQfk=
 golang.org/x/sys v0.20.0 h1:Od9JTbYCk261bKm4M/mw7AklTlFYIa0bIp9BgSm1S8Y=
