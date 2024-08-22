@@ -33,6 +33,12 @@ func fieldNames(d Definer, exclude []string) []string {
 	return names
 }
 
+// A shortcut for getting the names of all fields in a Definer.
+//
+// The exclude parameter can be used to exclude certain fields from the result.
+//
+// This function is useful when you need to get the names of all fields in a
+// model, but you want to exclude certain fields (e.g. fields that are not editable).
 func FieldNames(d any, exclude []string) []string {
 	if d == nil {
 		return nil
@@ -66,6 +72,11 @@ func FieldNames(d any, exclude []string) []string {
 	return names
 }
 
+// SetMany sets multiple fields on a Definer.
+//
+// The values parameter is a map where the keys are the names of the fields to set.
+//
+// The values must be of the correct type for the fields.
 func SetMany(d Definer, values map[string]interface{}) error {
 	for name, value := range values {
 		if err := assert.Err(set(d, name, value, false)); err != nil {
@@ -75,14 +86,30 @@ func SetMany(d Definer, values map[string]interface{}) error {
 	return nil
 }
 
+// Set sets the value of a field on a Definer.
+//
+// If the field is not found, the value is not of the correct type or another constraint is violated, this function will panic.
+//
+// If the field is marked as non editable, this function will panic.
 func Set(d Definer, name string, value interface{}) error {
 	return set(d, name, value, false)
 }
 
+// ForceSet sets the value of a field on a Definer.
+//
+// If the field is not found, the value is not of the correct type or another constraint is violated, this function will panic.
+//
+// This function will allow setting the value of a field that is marked as not editable.
 func ForceSet(d Definer, name string, value interface{}) error {
 	return set(d, name, value, true)
 }
 
+// Get retrieves the value of a field on a Definer.
+//
+// If the field is not found, this function will panic.
+//
+// Type assertions are used to ensure that the value is of the correct type,
+// as well as providing less work for the caller.
 func Get[T any](d Definer, name string) T {
 	var defs = d.FieldDefs()
 	var f, ok = defs.Field(name)
@@ -114,17 +141,13 @@ func Get[T any](d Definer, name string) T {
 	return *(new(T))
 }
 
+// ToString converts a value to a string.
+//
+// This should be the human-readable representation of the value.
 func ToString(v any) string {
 	if v == nil {
 		return ""
 	}
-
-	//switch v := v.(type) {
-	//case Stringer:
-	//	return v.ToString()
-	//case fmt.Stringer:
-	//	return v.String()
-	//}
 
 	if stringer, ok := v.(Stringer); ok {
 		return stringer.ToString()
@@ -174,6 +197,9 @@ func toString(v any) string {
 	return fmt.Sprintf("%v", v)
 }
 
+// Method retrieves a method from an object.
+//
+// The generic type parameter must be the type of the method.
 func Method[T any](obj interface{}, name string) (n T, ok bool) {
 	if obj == nil {
 		return n, false
@@ -213,6 +239,11 @@ func set(d Definer, name string, value interface{}, force bool) error {
 	return f.SetValue(value, force)
 }
 
+// RConvert converts a reflect.Value to a different type.
+//
+// If the value is not convertible to the type, the original value is returned.
+//
+// If the pointer of `v` is invalid, a new value of type `t` is created, and the pointer is set to it, then the pointer is returned.
 func RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool) {
 	var original = *v
 	if !v.IsValid() {
@@ -249,15 +280,15 @@ func rSet(src, dst *reflect.Value, isPointer bool) {
 	}
 }
 
-//func rMethodTakesArg(method reflect.Method, argType reflect.Type, index uint) bool {
-//	var nArgs = method.Type.NumIn()
-//	var i = int(index)
-//	if nArgs != int(i+2) {
-//		return false
-//	}
-//	return method.Type.In(int(i)).AssignableTo(argType)
-//}
-
+// RSet sets a value from one reflect.Value to another.
+//
+// If the destination value is not settable, this function will return false.
+//
+// If the source value is not immediately assignable to the destination value, and the convert parameter is true,
+// the source value will be converted to the destination value's type.
+//
+// If the source value is not immediately assignable to the destination value, and the convert parameter is false,
+// this function will return false.
 func RSet(src, dst *reflect.Value, convert bool) (canset bool) {
 	if !src.IsValid() || !dst.IsValid() {
 		return false

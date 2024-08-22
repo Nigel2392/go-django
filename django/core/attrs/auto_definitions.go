@@ -90,6 +90,14 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 	return data
 }
 
+// AutoDefinitions automatically generates definitions for a struct.
+//
+// It does this by iterating over the fields of the struct and checking for the
+// `attrs` tag. If the tag is present, it will parse the tag and generate the
+// definition.
+//
+// If the `include` parameter is provided, it will only generate definitions for
+// the fields that are included.
 func AutoDefinitions[T Definer](instance T, include ...any) Definitions {
 	var m = make([]Field, 0)
 

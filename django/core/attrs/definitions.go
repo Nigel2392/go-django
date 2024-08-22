@@ -8,6 +8,10 @@ type ObjectDefinitions struct {
 	ObjectFields *orderedmap.OrderedMap[string, Field]
 }
 
+// Define creates a new object definitions.
+//
+// This can then be returned by the FieldDefs method of a model
+// to make it comply with the Definer interface.
 func Define(d Definer, fieldDefinitions ...Field) *ObjectDefinitions {
 	var primaryField string
 	var m = orderedmap.NewOrderedMap[string, Field]()

@@ -564,3 +564,111 @@ This will only include the `ID` and `Name` fields in the definitions, and exclud
 
 ## Package- level functions
 
+### `FieldNames(d any, exclude []string) []string`
+
+A shortcut for getting the names of all fields in a Definer.
+
+The exclude parameter can be used to exclude certain fields from the result.
+
+This function is useful when you need to get the names of all fields in a  
+model, but you want to exclude certain fields (e.g. fields that are not editable).
+
+### `SetMany(d Definer, values map[string]interface{}) error`
+
+SetMany sets multiple fields on a Definer.
+
+The values parameter is a map where the keys are the names of the fields to set.
+
+The values must be of the correct type for the fields.
+
+### `Set(d Definer, name string, value interface{}) error`
+
+Set sets the value of a field on a Definer.
+
+If the field is not found, the value is not of the correct type or another constraint is violated, this function will panic.
+
+If the field is marked as non editable, this function will panic.
+
+### `ForceSet(d Definer, name string, value interface{}) error`
+
+ForceSet sets the value of a field on a Definer.
+
+If the field is not found, the value is not of the correct type or another constraint is violated, this function will panic.
+
+This function will allow setting the value of a field that is marked as not editable.
+
+### `Get[T any](d Definer, name string) T`
+
+Get retrieves the value of a field on a Definer.
+
+If the field is not found, this function will panic.
+
+Type assertions are used to ensure that the value is of the correct type,
+as well as providing less work for the caller.
+
+### `ToString(v any) string`
+
+ToString converts a value to a string.
+
+This should be the human-readable representation of the value.
+
+### `Method[T any](obj interface{}, name string) (n T, ok bool)`
+
+Method retrieves a method from an object.
+
+The generic type parameter must be the type of the method.
+
+### `AutoDefinitions[T Definer](instance T, include ...any) Definitions`
+
+AutoDefinitions automatically generates definitions for a struct.
+
+It does this by iterating over the fields of the struct and checking for the
+`attrs` tag. If the tag is present, it will parse the tag and generate the
+definition.
+
+If the `include` parameter is provided, it will only generate definitions for
+the fields that are included.
+
+### `Define(d Definer, fieldDefinitions ...Field) *ObjectDefinitions`
+
+Define creates a new object definitions.
+
+This can then be returned by the FieldDefs method of a model
+to make it comply with the Definer interface.
+
+### `NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef`
+
+NewField creates a new field definition for the given instance.
+
+This can then be used for managing the field in a more abstract way.
+
+### `RegisterFormFieldType(valueOfType any, getField func(opts ...func(fields.Field)) fields.Field)`
+
+RegisterFormFieldType registers a field type for a given valueOfType.
+
+getField is a function that returns a fields.Field for the given valueOfType.
+
+The valueOfType can be a reflect.Type or any value, in which case the reflect.TypeOf(valueOfType) will be used.
+
+This is a shortcut function for the `HookFormFieldForType` hook.
+
+### `RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool)`
+
+RConvert converts a reflect.Value to a different type.
+
+If the value is not convertible to the type, the original value is returned.
+
+If the pointer of `v` is invalid, a new value of type `t` is created, and the pointer is set to it, then the pointer is returned.
+
+### `RSet(src, dst *reflect.Value, convert bool) (canset bool)`
+
+RSet sets a value from one reflect.Value to another.
+
+If the destination value is not settable, this function will return false.
+
+If the source value is not immediately assignable to the destination value, and the convert parameter is true,
+
+the source value will be converted to the destination value's type.
+
+If the source value is not immediately assignable to the destination value, and the convert parameter is false,
+this function will return false.
