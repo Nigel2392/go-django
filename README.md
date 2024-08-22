@@ -23,19 +23,20 @@ Any database logic should be implemented by the end-developer, but some sub-pack
 
 This might take [a while](./docs/)...
 
-- [Configuring](./docs/configuring.md)
-- [Apps](./docs/apps.md)
-- [Forms](./docs/forms/forms.md)
-  - [Fields](./docs/forms/fields.md)
-  - [Widgets](./docs/forms/widgets.md)
-  - [Media](./docs/forms/media.md)
-- [Routing](./docs/routing.md)
-- [Commands](./docs/commands.md)
-- [Rendering](./docs/rendering.md)
-- [Contenttypes](./docs/contenttypes.md)
-- [Filesystem](./docs/filesystem.md)
-- [Staticfiles](./docs/staticfiles.md)
-- [Logging](./docs/logging.md)
+- [Configuring your server](./docs/configuring.md)
+- [Creating an app](./docs/apps.md)
+- [Creating Forms](./docs/forms/forms.md)
+  - [Working with Fields](./docs/forms/fields.md)
+  - [Working with Widgets](./docs/forms/widgets.md)
+  - [Passing and creating Media](./docs/forms/media.md)
+- [Defining your models](./docs/attrs.md)
+- [Setting up Routing](./docs/routing.md)
+- [Creating Management Commands](./docs/commands.md)
+- [Rendering Your Templates](./docs/rendering.md)
+- [Usage of Contenttypes](./docs/contenttypes.md)
+- [Working with the Filesystem](./docs/filesystem.md)
+- [Serving your Staticfiles](./docs/staticfiles.md)
+- [Setting up Logging](./docs/logging.md)
 
 ## Not yet implemented
 
