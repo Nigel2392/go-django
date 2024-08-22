@@ -21,8 +21,6 @@ Any database logic should be implemented by the end-developer, but some sub-pack
 
 ## Docs:
 
-This might take [a while](./docs/)...
-
 - [Configuring your server](./docs/configuring.md)
 - [Creating an app](./docs/apps.md)
 - [Creating Forms](./docs/forms/forms.md)
@@ -34,9 +32,19 @@ This might take [a while](./docs/)...
 - [Creating Management Commands](./docs/commands.md)
 - [Rendering Your Templates](./docs/rendering.md)
 - [Usage of Contenttypes](./docs/contenttypes.md)
+- [Setting up and calling Hooks](./docs/hooks.md)
 - [Working with the Filesystem](./docs/filesystem.md)
 - [Serving your Staticfiles](./docs/staticfiles.md)
 - [Setting up Logging](./docs/logging.md)
+
+### Contrib apps:
+
+- [sessions](./docs/apps/sessions.md)
+- [admin](./docs/apps/admin)
+- [auditlogs](./docs/apps/auditlogs.md)
+- [auth](./docs/apps/auth)
+- [pages](./docs/apps/pages)
+- [editorjs](./docs/apps/editor.md)
 
 ## Not yet implemented
 
