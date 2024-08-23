@@ -21,6 +21,10 @@ func (w *markedResponseWriter) WriteHeader(statusCode int) {
 }
 
 func (w *markedResponseWriter) Write(data []byte) (int, error) {
+	if len(data) == 0 {
+		return 0, nil
+	}
+
 	w.wasWritten = true
 	return w.ResponseWriter.Write(data)
 }
