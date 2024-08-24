@@ -69,7 +69,7 @@ func (m *MyModel) FieldDefs() attrs.Definitions {
 			Validators: []func(interface{}) error{
 				func(v interface{}) error {
 					if v.(myInt) <= myInt(0) {
-						return errors.New("Age must be greater than 0")
+						return errors.New("Age must be greater than 0") //lint:ignore ST1005 Example.
 					}
 					return nil
 				},
@@ -270,12 +270,12 @@ func main() {
 
 	app.Log.SetLevel(logger.DBG)
 
-	err = staticfiles.Collect(func(pah string, f fs.File) error {
+	err = staticfiles.Collect(func(path string, f fs.File) error {
 		var stat, err = f.Stat()
 		if err != nil {
 			return err
 		}
-		fmt.Println("Collected", pah, stat.Size())
+		fmt.Println("Collected", path, stat.Size())
 		return nil
 	})
 	if err != nil {

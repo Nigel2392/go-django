@@ -9,16 +9,16 @@ The `django.Mux` object is used to register routes, the interface is defined as 
 
 ```go
 type Mux interface {
-	Use(middleware ...mux.Middleware)
-	Handle(method string, path string, handler mux.Handler, name ...string) *mux.Route
-	AddRoute(route *mux.Route)
+    Use(middleware ...mux.Middleware)
+    Handle(method string, path string, handler mux.Handler, name ...string) *mux.Route
+    AddRoute(route *mux.Route)
 
-	Any(path string, handler mux.Handler, name ...string) *mux.Route
-	Get(path string, handler mux.Handler, name ...string) *mux.Route
-	Post(path string, handler mux.Handler, name ...string) *mux.Route
-	Put(path string, handler mux.Handler, name ...string) *mux.Route
-	Patch(path string, handler mux.Handler, name ...string) *mux.Route
-	Delete(path string, handler mux.Handler, name ...string) *mux.Route
+    Any(path string, handler mux.Handler, name ...string) *mux.Route
+    Get(path string, handler mux.Handler, name ...string) *mux.Route
+    Post(path string, handler mux.Handler, name ...string) *mux.Route
+    Put(path string, handler mux.Handler, name ...string) *mux.Route
+    Patch(path string, handler mux.Handler, name ...string) *mux.Route
+    Delete(path string, handler mux.Handler, name ...string) *mux.Route
 }
 ```
 
@@ -119,16 +119,16 @@ It works the same way as the `http.Handler` middleware, but with a few differenc
 
 ```go
 myCustomApp.Routing = func(m django.Mux) {
-	m.Use(func(next mux.Handler) mux.Handler {
-		return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+    m.Use(func(next mux.Handler) mux.Handler {
+        return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
 
-			// Do stuff before the handler
+            // Do stuff before the handler
 
-			next.ServeHTTP(w, req)
+            next.ServeHTTP(w, req)
 
             // Do stuff after the handler
-		})
-	})
+        })
+    })
 }
 ```
 

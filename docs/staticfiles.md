@@ -35,3 +35,51 @@ None of this functionality is built-in, but can be added by the user.
 Open a file by name.
 
 This will return the first file that matches the name in any of the filesystems.
+
+## Example
+
+In this example, we add an embedded filesystem to the staticfiles, then we will pretend to collect all the files.
+
+You need to implement your own logic for this.
+
+```go
+package main
+
+import (
+    "fmt"
+    "embed"
+    "io/fs"
+    "github.com/Nigel2392/django"
+    "github.com/Nigel2392/django/core/filesystem/staticfiles"
+)
+
+//go:embed assets/**
+var staticFS embed.FS
+
+func main() {
+    var app = django.App(
+        // ...
+    )
+
+    staticfiles.AddFS(staticFS, nil)
+
+
+    var err = app.Initialize()
+    if err != nil {
+        panic(err)
+    }
+
+    err = staticfiles.Collect(func(path string, f fs.File) error {
+        var stat, err = f.Stat()
+        if err != nil {
+            return err
+        }
+        fmt.Println("Collected", path, stat.Size())
+        return nil
+    })
+
+    if err != nil {
+        panic(err)
+    }
+}
+```
