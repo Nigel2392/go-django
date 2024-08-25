@@ -21,6 +21,10 @@ type Session interface {
 
 To see what can be serialized (in the default implementation), please refer to the [alexedwards/scs](github.com/alexedwards/scs/v2) documentation.
 
+## Requirements
+
+The sessions app requires the [`DATABASE`/django.APPVAR_DATABASE](../configuring.md#pre-defined-settings) setting to be set, it allows for a SQLite3, MySQL, or PostgreSQL database.
+
 ## Retrieving the session
 
 The sessions package provides a single exported function (and a middleware) to retrieve the session from the request.
