@@ -1,0 +1,118 @@
+# Permissions
+
+## Overview
+
+The `permissions` package provides a framework for managing and checking permissions in HTTP requests. It defines an interface, `PermissionTester`, that should be implemented by the user to provide custom permission-checking logic. If no custom implementation is provided, a default logging behavior is used.
+
+The permissions package is a core application and thus can be safely used throughout your application for just about any `type`, or string-based permission checking.
+
+`PermissionTester` implementations might vary based on the auth system used in the application. For example, a simple implementation might check if the user is authenticated, while a more complex implementation might check if the user has a specific role or permission.
+
+## Key Components
+
+### `PermissionTester` Interface
+
+```go
+type PermissionTester interface {
+ HasObjectPermission(r *http.Request, obj interface{}, perms ...string) bool
+ HasPermission(r *http.Request, perms ...string) bool
+}
+```
+
+- **HasObjectPermission**: This method checks if the given request has the permission to perform the specified action on the provided object.
+- **HasPermission**: This method checks if the given request has the permission to perform the specified action without any object context.
+
+### `Tester` Variable
+
+```go
+var Tester PermissionTester
+```
+
+- `Tester` is a global variable of type `PermissionTester`. It should be assigned to an instance of a type that implements the `PermissionTester` interface.
+- **User Responsibility**: The framework user should implement the `PermissionTester` interface and assign it to the `Tester` variable.
+
+### Default Behavior
+
+If no custom `PermissionTester` is provided (i.e., `Tester` is `nil`), the default behavior will be used. This behavior is defined by the `DEFAULT_IF_NONE_FOUND` function, which logs a warning and returns `true` (granting permission by default).
+
+#### `DEFAULT_IF_NONE_FOUND`
+
+```go
+var (
+ DEFAULT_IF_NONE_FOUND = defaultLog
+)
+```
+
+- **defaultLog**: This function logs a warning if no permission tester is found and returns `true`. By default, this will log a message if `LOG_IF_NONE_FOUND` is set to `true`.
+
+```go
+func defaultLog(r *http.Request, perms ...string) bool {
+ if LOG_IF_NONE_FOUND {
+  logger.Warnf(
+   "No permission testers found for \"%s\" (%s)",
+   strings.Join(perms, "\", \""),
+   r.URL.Path,
+  )
+ }
+ return true
+}
+```
+
+### Configuration Variables
+
+- **LOG_IF_NONE_FOUND**
+
+  ```go
+  var LOG_IF_NONE_FOUND = true
+  ```
+
+  - When `LOG_IF_NONE_FOUND` is `true`, the `defaultLog` function will log a warning if no `PermissionTester` is found.
+  - When set to `false`, no warning will be logged.
+
+- **DEFAULT_IF_NONE_FOUND**
+
+  ```go
+  var DEFAULT_IF_NONE_FOUND = defaultLog
+  ```
+
+  - This variable points to the function used when no `PermissionTester` is set. By default, it is set to `defaultLog`.
+
+## Functions
+
+### `HasObjectPermission`
+
+```go
+func HasObjectPermission(r *http.Request, obj interface{}, perms ...string) bool
+```
+
+- **Description**: Checks if the given request has the permission to perform the specified action on the provided object.
+- **Behavior**:
+  - If no permissions are provided (`len(perms) == 0`), it returns `true`.
+  - If `Tester` is `nil`, it uses `DEFAULT_IF_NONE_FOUND`.
+  - Otherwise, it delegates the permission check to the `Tester`'s `HasObjectPermission` method.
+
+### `HasPermission`
+
+```go
+func HasPermission(r *http.Request, perms ...string) bool
+```
+
+- **Description**: Checks if the given request has the permission to perform the specified action.
+- **Behavior**:
+  - If no permissions are provided (`len(perms) == 0`), it returns `true`.
+  - If `Tester` is `nil`, it uses `DEFAULT_IF_NONE_FOUND`.
+  - Otherwise, it delegates the permission check to the `Tester`'s `HasPermission` method.
+
+## Usage
+
+1. **Implement the `PermissionTester` Interface**:
+   - Create a type that implements the `PermissionTester` interface.
+   - Assign an instance of this type to the `Tester` variable.
+
+2. **Default Logging**:
+   - If no `Tester` is provided, the default behavior will log a warning (if `LOG_IF_NONE_FOUND` is `true`) and grant permission.
+
+3. **Control Logging**:
+   - Set `LOG_IF_NONE_FOUND` to `false` to disable logging when no `PermissionTester` is found.
+
+This package is designed to be flexible, allowing users to define their own permission logic while providing a sensible default behavior when no custom logic is provided.
