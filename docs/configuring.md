@@ -14,10 +14,10 @@ There is an interface defined for configuring the `*django.Application`.
 
 ```go
 type Settings interface {
-	Set(key string, value interface{})
-	Get(key string) (any, bool)
-	Bind(app *Application) error
-	App() *Application
+    Set(key string, value interface{})
+    Get(key string) (any, bool)
+    Bind(app *Application) error
+    App() *Application
 }
 ```
 
@@ -84,11 +84,11 @@ django.APPVAR_CONTINUE_AFTER_COMMANDS
 
 Retrieving a value from within an app from the Django settings is done by adressing the global singleton struct, and can only be done after creating your Django program.
 
-```
+```go
 var ALLOWED_HOSTS = django.ConfigGet[[]string](
-	django.Global.Settings,
-	django.APPVAR_ALLOWED_HOSTS,
-	[]string{"*"},
+    django.Global.Settings,
+    django.APPVAR_ALLOWED_HOSTS,
+    []string{"*"},
 )
 ```
 
@@ -106,8 +106,8 @@ These option funcs must have the following type signature:
 
 ```go
 func MyCustomOption(a *django.Application) error {
-	// ... do something
-	return nil
+    // ... do something
+    return nil
 }
 ```
 
@@ -123,25 +123,25 @@ Example of a simple app's creation:
 // Open a new database connection
 var db, err = sql.Open("sqlite3", "./.private/db.sqlite3")
 if err != nil {
-	panic(err)
+    panic(err)
 }
 
 // Create the application struct with all the necessary settings/options
 var app = django.App(
-	django.Configure(map[string]interface{}{
-		django.APPVAR_ALLOWED_HOSTS: []string{"*"},
-		django.APPVAR_HOST: "127.0.0.1",
-		django.APPVAR_PORT: "8080",
-		django.APPVAR_DEBUG: false,
-		django.APPVAR_DATABASE: db,
-	}),
-	django.Apps(
-		// Initialize sessions...
-		session.NewAppConfig,
+    django.Configure(map[string]interface{}{
+        django.APPVAR_ALLOWED_HOSTS: []string{"*"},
+        django.APPVAR_HOST: "127.0.0.1",
+        django.APPVAR_PORT: "8080",
+        django.APPVAR_DEBUG: false,
+        django.APPVAR_DATABASE: db,
+    }),
+    django.Apps(
+        // Initialize sessions...
+        session.NewAppConfig,
 
-		// Initialize custom app...
-		NewCustomAppConfig,
-	),
+        // Initialize custom app...
+        NewCustomAppConfig,
+    ),
 )
 ```
 
@@ -153,37 +153,37 @@ It should be initialized by calling `err := app.Initialize()`.
 
 This will set up a few things, (in order):
 
- * The logger (By default setup with level `INFO`)
+* The logger (By default setup with level `INFO`)
 
- * Default middleware
+* Default middleware
 
- * Static routes
+* Static routes
 
- * Custom registered apps initialization (Loop 1)
+* Custom registered apps initialization (Loop 1)
 
-   * Check installed (required) dependencies for this application
+  * Check installed (required) dependencies for this application
 
-   * Initialized in the order they were registered (Call each apps' `Initialize` function)
+  * Initialized in the order they were registered (Call each apps' `Initialize` function)
 
- * Setup the command registry
+* Setup the command registry
 
- * Setup custom apps (Loop 2)
-   
-   * Register the URLs/middleware of the application
+* Setup custom apps (Loop 2)
 
-   * Register the context processors of the application
+  * Register the URLs/middleware of the application
 
-   * Initialize the apps' template configuration
+  * Register the context processors of the application
 
-   * Register the apps' commands
+  * Initialize the apps' template configuration
 
- * Call the `OnReady` function of each registered app (Loop 3)
+  * Register the apps' commands
 
-   * This is the place to do any final setup of the application
+* Call the `OnReady` function of each registered app (Loop 3)
 
- * Setup recoverer middleware if enabled
+  * This is the place to do any final setup of the application
 
- * Check if any command was passed to the application and execute accordingly
+* Setup recoverer middleware if enabled
+
+* Check if any command was passed to the application and execute accordingly
 
 ### Serving the app
 
@@ -195,16 +195,16 @@ This will start the server and listen for incoming requests.
 
 We look for the following settings when initializing to serve:
 
- * "HOST" - The host to bind the server to
- * "PORT" - The port to bind the server to
-   * If "PORT" is explicitly set to "" or "0", the server will not listen on the HTTP port.
- * "TLS_PORT" - The port to bind the server to when using TLS
-   * This allows for serving both HTTP and HTTPS.
-   * It will only be used if "TLS_CERT" and "TLS_KEY" are set.
-   * If "TLS_PORT" is not set, is set to "" or "0", the server will not listen with TLS, and only serves HTTP.
- * "TLS_CERT" - The path to the TLS certificate file
- * "TLS_KEY" - The path to the TLS key file
- * "TLS_CONFIG" - The TLS configuration
+* "HOST" - The host to bind the server to
+* "PORT" - The port to bind the server to
+  * If "PORT" is explicitly set to "" or "0", the server will not listen on the HTTP port.
+* "TLS_PORT" - The port to bind the server to when using TLS
+  * This allows for serving both HTTP and HTTPS.
+  * It will only be used if "TLS_CERT" and "TLS_KEY" are set.
+  * If "TLS_PORT" is not set, is set to "" or "0", the server will not listen with TLS, and only serves HTTP.
+* "TLS_CERT" - The path to the TLS certificate file
+* "TLS_KEY" - The path to the TLS key file
+* "TLS_CONFIG" - The TLS configuration
 
 ### Adding routes or middleware to Django without an application
 

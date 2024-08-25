@@ -15,11 +15,11 @@ func (o *MyObject) Media() *forms.Media {
     var firstMediaObj = media.NewMedia()
 
     firstMediaObj.AddCSS(
-    	media.CSS("http://example.com/css/style.css"),
+     media.CSS("http://example.com/css/style.css"),
     )
 
     firstMediaObj.AddJS(
-    	&media.JSAsset{URL: "http://example.com/js/script.js"},
+     &media.JSAsset{URL: "http://example.com/js/script.js"},
     )
 
     var secondMediaObj = media.NewMedia()
@@ -43,11 +43,10 @@ They must also be able to return the URL of the asset.
 
 ```go
 type Asset interface {
-	String() string
-	Render() template.HTML
+ String() string
+ Render() template.HTML
 }
 ```
-
 
 ### `CSS`
 

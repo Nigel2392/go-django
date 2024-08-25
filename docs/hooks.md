@@ -28,8 +28,8 @@ The hook is passed the request, response, the error and the web-app instance.
 
 ```go
 goldcrest.Register(
-	django.HOOK_SERVER_ERROR, 0,
-	func(w http.ResponseWriter, r *http.Request, app *django.Application, serverError except.ServerError) {
+    django.HOOK_SERVER_ERROR, 0,
+    func(w http.ResponseWriter, r *http.Request, app *django.Application, serverError except.ServerError) {
         // Do something with the error, if nothing is written to the response, the default error page is shown
     },
 )
@@ -49,11 +49,11 @@ Must return a `fields.Field` and a boolean indicating if the field returned is v
 goldcrest.Register(
     attrs.HookFormFieldForType, 0,
     func(f Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
-		if field_v.IsValid() && field_v.Type() == typ || new_field_t_indirected == typ {
-			return fields.JSONField[typ](opts...), true
-		}
-		return nil, false
-	}
+        if field_v.IsValid() && field_v.Type() == typ || new_field_t_indirected == typ {
+            return fields.JSONField[typ](opts...), true
+        }
+        return nil, false
+    }
 )
 ```
 
@@ -76,12 +76,12 @@ type MyBlock struct {
 var myBlockTyp = reflect.TypeOf(MyBlock{})
 
 goldcrest.Register(
-	attrs.DefaultForType, 0,
-	attrs.DefaultGetter(func(f attrs.Field, t reflect.Type, v reflect.Value) (any, bool) {
-		if v.Type().Implements(blockTyp) { // equivalent to if t == myBlockTyp
+    attrs.DefaultForType, 0,
+    attrs.DefaultGetter(func(f attrs.Field, t reflect.Type, v reflect.Value) (any, bool) {
+        if v.Type().Implements(blockTyp) { // equivalent to if t == myBlockTyp
             return &MyBlock{wasInitialized: true}, true
-		}
-		return nil, false
-	}),
+        }
+        return nil, false
+    }),
 )
 ```

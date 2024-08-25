@@ -14,15 +14,15 @@ A command is any object which implements the `command.Command` interface.
 
 ```go
 type Command interface {
-	// How the command should be called from the command line
-	Name() string
+    // How the command should be called from the command line
+    Name() string
 
-	// Add optional flags to the flagset
-	AddFlags(m command.Manager, f *flag.FlagSet) error
+    // Add optional flags to the flagset
+    AddFlags(m command.Manager, f *flag.FlagSet) error
 
-	// Execute the command
-	// Any arguments not consumed by the flags will be passed here
-	Exec(m command.Manager, args []string) error
+    // Execute the command
+    // Any arguments not consumed by the flags will be passed here
+    Exec(m command.Manager, args []string) error
 }
 ```
 
@@ -48,32 +48,32 @@ import (
 )
 
 type customCommandObj struct {
-	printTime bool
-	printText string
+    printTime bool
+    printText string
 }
 
 var myCustomCommand = &command.Cmd[customCommandObj]{
-	ID:   "mycommand",
-	Desc: "Prints the provided text with an optional timestamp",
+    ID:   "mycommand",
+    Desc: "Prints the provided text with an optional timestamp",
 
-	FlagFunc: func(m command.Manager, stored *customCommandObj, f *flag.FlagSet) error {
-		f.BoolVar(&stored.printTime, "t", false, "Print the current time")
-		f.StringVar(&stored.printText, "text", "", "The text to print")
-		return nil
-	},
+    FlagFunc: func(m command.Manager, stored *customCommandObj, f *flag.FlagSet) error {
+        f.BoolVar(&stored.printTime, "t", false, "Print the current time")
+        f.StringVar(&stored.printText, "text", "", "The text to print")
+        return nil
+    },
 
-	Execute: func(m command.Manager, stored customCommandObj, args []string) error {
-		if stored.printText == "" {
-			return errors.New("No text provided")
-		}
+    Execute: func(m command.Manager, stored customCommandObj, args []string) error {
+        if stored.printText == "" {
+            return errors.New("No text provided")
+        }
 
-		if stored.printTime {
-			fmt.Println(time.Now().Format(time.RFC3339), stored.printText)
-		} else {
-			fmt.Println(stored.printText)
-		}
-		return nil
-	},
+        if stored.printTime {
+            fmt.Println(time.Now().Format(time.RFC3339), stored.printText)
+        } else {
+            fmt.Println(stored.printText)
+        }
+        return nil
+    },
 }
 ```
 

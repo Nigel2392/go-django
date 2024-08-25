@@ -360,37 +360,37 @@ The `FieldDefs` method should be implemented as follows:
 
 ```go
 func (m *MyModel) FieldDefs() attrs.Definitions {
-	return attrs.Define(m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
-			Primary:  true,
-			ReadOnly: true,
-			Label:    "ID",
-			HelpText: "The unique identifier of the model",
-		}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{
-			Label:    "Name",
-			HelpText: "The name of the model",
-		}),
-		attrs.NewField(m, "Bio", &attrs.FieldConfig{
-			Label:    "Biography",
-			HelpText: "The biography of the model",
-			FormWidget: func(cfg attrs.FieldConfig) widgets.Widget {
-				return widgets.NewTextarea(nil)
-			},
-		}),
-		attrs.NewField(m, "Age", &attrs.FieldConfig{
-			Label:    "Age",
-			HelpText: "The age of the model",
-			Validators: []func(interface{}) error{
-				func(v interface{}) error {
-					if v.(myInt) <= myInt(0) {
-						return errors.New("Age must be greater than 0")
-					}
-					return nil
-				},
-			},
-		}),
-	)
+  return attrs.Define(m,
+    attrs.NewField(m, "ID", &attrs.FieldConfig{
+      Primary:  true,
+      ReadOnly: true,
+      Label:    "ID",
+      HelpText: "The unique identifier of the model",
+    }),
+    attrs.NewField(m, "Name", &attrs.FieldConfig{
+      Label:    "Name",
+      HelpText: "The name of the model",
+    }),
+    attrs.NewField(m, "Bio", &attrs.FieldConfig{
+      Label:    "Biography",
+      HelpText: "The biography of the model",
+      FormWidget: func(cfg attrs.FieldConfig) widgets.Widget {
+        return widgets.NewTextarea(nil)
+      },
+    }),
+    attrs.NewField(m, "Age", &attrs.FieldConfig{
+      Label:    "Age",
+      HelpText: "The age of the model",
+      Validators: []func(interface{}) error{
+        func(v interface{}) error {
+          if v.(myInt) <= myInt(0) {
+            return errors.New("Age must be greater than 0")
+          }
+          return nil
+        },
+      },
+    }),
+  )
 }
 ```
 
@@ -523,11 +523,11 @@ This can be done using struct-tags.
 - default  
     The default value of the field.
     Allowed types for the struct tags are:
-    - `string` (no parentheses)
-    - `int/int8/int16/int32/int64`
-    - `uint/uint8/uint16/uint32/uint64/uintptr`
-    - `float32/float64`
-    - `bool`
+  - `string` (no parentheses)
+  - `int/int8/int16/int32/int64`
+  - `uint/uint8/uint16/uint32/uint64/uintptr`
+  - `float32/float64`
+  - `bool`
 
 Let's create a struct to define with struct tags:
 

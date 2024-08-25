@@ -4,7 +4,7 @@
 
 To render templates there needs to be some setup done.
 
-First, you will have to create your GO-HTML (`html/template`) templates and store them in a directory. 
+First, you will have to create your GO-HTML (`html/template`) templates and store them in a directory.
 
 This directory has to be "registered" with our template storage engine.
 
@@ -72,15 +72,15 @@ var tplFSFull embed.FS
 var tplFS, _ = fs.Sub(tplFSFull, "templates")
 
 tpl.Add(tpl.Config{
-	AppName: "mycustomapp",
-	FS:      tplFS,
-	Bases: []string{
-		"mycustomapp/base.tmpl",
-	},
-	Matches: filesystem.MatchAnd(
-		filesystem.MatchPrefix("mycustomapp/"),
-		filesystem.MatchExt(".tmpl"),
-	),
+ AppName: "mycustomapp",
+ FS:      tplFS,
+ Bases: []string{
+  "mycustomapp/base.tmpl",
+ },
+ Matches: filesystem.MatchAnd(
+  filesystem.MatchPrefix("mycustomapp/"),
+  filesystem.MatchExt(".tmpl"),
+ ),
     Funcs: template.FuncMap{
         "title": strings.Title,
     },

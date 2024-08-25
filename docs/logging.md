@@ -10,10 +10,10 @@ A default logger will be set with loglevel INFO.
 
 Allowed log levels are:
 
- * `logger.DBG` - Loglevel DEBUG
- * `logger.INF` - Loglevel INFO
- * `logger.WRN` - Loglevel WARNING
- * `logger.ERR` - Loglevel ERROR
+* `logger.DBG` - Loglevel DEBUG
+* `logger.INF` - Loglevel INFO
+* `logger.WRN` - Loglevel WARNING
+* `logger.ERR` - Loglevel ERROR
 
 A special case exists for `logger.Fatal` and `logger.Fatalf`.
 
@@ -101,7 +101,7 @@ logger.SetOutput(logger.OutputAll, os.Stdout)
 
 var file, err = os.OpenFile("log.txt", os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
 if err != nil {
-	panic(err)
+ panic(err)
 }
 
 logger.SetOutput(logger.INF, file)

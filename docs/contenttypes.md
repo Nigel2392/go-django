@@ -8,11 +8,11 @@ The `ContentType` interface is defined as follows:
 
 ```go
 type ContentType interface {
-	PkgPath() string
-	AppLabel() string
-	TypeName() string
-	Model() string
-	New() interface{}
+    PkgPath() string
+    AppLabel() string
+    TypeName() string
+    Model() string
+    New() interface{}
 }
 ```
 
@@ -80,7 +80,7 @@ For example, after a big refactor or renaming of a model, you can add the old na
 as an alias to make it easier to reference the model in code.
 
 This should be the full type name of the model, including the package path.
-    
+
 ## Working with the content type registry
 
 Content types are registered to their own package.

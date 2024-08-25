@@ -27,7 +27,7 @@ import (
 )
 
 type CustomApp struct {
-	// *apps.AppConfig
+    // *apps.AppConfig
     *apps.DBRequiredAppConfig
 }
 ```
@@ -52,19 +52,19 @@ func NewCustomAppConfig() *CustomApp {
     // This is a list of app names that this app depends on.
     // 
     // I.E. if this app depends on the `session` app, you would add `session` to this list.
-	myCustomApp.Deps = []string{
+    myCustomApp.Deps = []string{
 
-	}
+    }
 
     // Will be called for the app's initialization
-	myCustomApp.Init = func(settings django.Settings, db *sql.DB) error {
-	
+    myCustomApp.Init = func(settings django.Settings, db *sql.DB) error {
+    
     }
 
     // Will be called after all apps have been initialized
-	myCustomApp.Ready = func() error {
+    myCustomApp.Ready = func() error {
         globalInstance = myCustomApp
-	}
+    }
 
     // Do any other possible setup, like registering routes, templates or static files
     // ...
@@ -81,11 +81,11 @@ The `AppConfig` struct has a few useful methods that can be used to configure yo
 
 This includes but is not limited to:
 
- * Registering routes
- * Registering templates
- * Registering commands
- * Registering middleware
- * Registering context processors
+* Registering routes
+* Registering templates
+* Registering commands
+* Registering middleware
+* Registering context processors
 
 Every method below should be called inside the `NewCustomAppConfig` function, unless otherwise specified.
 
