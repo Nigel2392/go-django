@@ -10,6 +10,8 @@ The permissions package is a core application and thus can be safely used throug
 
 `PermissionTester` implementations might vary based on the auth system used in the application. For example, a simple implementation might check if the user is authenticated, while a more complex implementation might check if the user has a specific role or permission.
 
+Be mindful that **all** package- level variables are meant to be overridden by the user, it is highly advised to not modify the package-level variables directly from modular apps.
+
 ## Key Components
 
 ### `PermissionTester` Interface
