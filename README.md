@@ -46,17 +46,10 @@ Any database logic should be implemented by the end-developer, but some sub-pack
 - [pages](./docs/apps/pages)
 - [editorjs](./docs/apps/editor.md)
 
-## Not yet implemented
+## Help Needed:
 
-Some things which are not yet finished but have been planned.
+- [ ] Block application:
+  - [ ] Javascript for structblock
+  - [ ] Javascript for listblock
+  - [ ] (maybe) Javascript for fieldblock
 
-This is not to say that these are the only things that will be implemented.
-
-More features will be added as we go along.
-
-- ~~Generic yet database- less page type~~ Page types (support for MySQL, SQLite and Postgres)
-- [EditorJS](https://editorjs.io/) widget
-- Auth application
-  - Permissions
-- Adminsite application
-- Full [wagtail](https://wagtail.org) block capabilities
