@@ -1,4 +1,4 @@
-# Context Package Documentation (with `EditContext` Interface)
+# Context Package
 
 ## Overview
 
