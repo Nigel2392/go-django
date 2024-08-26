@@ -136,7 +136,7 @@ Let's say we're rendering the index page from an HTTP handler.
 ```go
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
     // Create a request context:
-    var ctx = core.Context(r)
+    var ctx = ctx.RequestContext(r)
     ctx.Set("Title", "My Custom App")
 
     // Render the template:

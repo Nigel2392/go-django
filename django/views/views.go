@@ -3,7 +3,6 @@ package views
 import (
 	"net/http"
 
-	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/filesystem/tpl"
 )
@@ -27,7 +26,7 @@ func (v *BaseView) GetContext(req *http.Request) (ctx.Context, error) {
 	if v.GetContextFn != nil {
 		return v.GetContextFn(req)
 	}
-	return core.Context(req), nil
+	return ctx.RequestContext(req), nil
 }
 
 func (v *BaseView) GetTemplate(req *http.Request) string {

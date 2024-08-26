@@ -6,7 +6,6 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/auth"
-	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/views"
@@ -19,7 +18,7 @@ var LoginHandler = &views.FormView[*AdminForm[*auth.BaseUserForm]]{
 		BaseTemplateKey: "admin",
 		TemplateName:    "admin/views/auth/login.tmpl",
 		GetContextFn: func(req *http.Request) (ctx.Context, error) {
-			var context = core.Context(req)
+			var context = ctx.RequestContext(req)
 			// context.Set("next", req.URL.Query().Get("next"))
 			var loginURL = django.Reverse("admin:login")
 			var nextURL = req.URL.Query().Get("next")

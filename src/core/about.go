@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/django/contrib/auth"
-	"github.com/Nigel2392/django/core"
+	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/filesystem/tpl"
 	"github.com/Nigel2392/mux/middleware/sessions"
@@ -29,7 +29,7 @@ func About(w http.ResponseWriter, r *http.Request) {
 	var user = auth.UserFromRequest(r)
 	fmt.Println(user, form.Instance)
 
-	var context = core.Context(r)
+	var context = ctx.RequestContext(r)
 
 	context.Set("Form", form)
 

@@ -11,7 +11,7 @@ The paginator provides an easy way to paginate through a large set of data, brea
 Here’s an example of how to use the paginator:
 
 ```go
-var ctx = core.Context(r)
+var ctx = ctx.RequestContext(r)
 
 var paginator = pagination.Paginator[MyObject]{
     GetObject: func(obj MyObject) MyObject {

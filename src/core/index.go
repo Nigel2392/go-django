@@ -14,8 +14,8 @@ import (
 	"github.com/Nigel2392/django/contrib/blocks"
 	"github.com/Nigel2392/django/contrib/editor"
 	_ "github.com/Nigel2392/django/contrib/editor/features"
-	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/attrs"
+	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/core/filesystem/tpl"
 	"github.com/Nigel2392/django/forms"
@@ -406,7 +406,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 		s.Save(context.Background())
 	}
 
-	var context = core.Context(r)
+	var context = ctx.RequestContext(r)
 	context.Set("Form", form)
 
 	if err := tpl.FRender(w, context, "core", "core/index.tmpl"); err != nil {

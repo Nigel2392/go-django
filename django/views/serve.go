@@ -6,7 +6,6 @@ import (
 	"slices"
 
 	"github.com/Nigel2392/django"
-	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/ctx"
@@ -252,7 +251,7 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 
 	// If the context is nil, then create a new context.
 	if context == nil {
-		context = core.Context(req)
+		context = ctx.RequestContext(req)
 	}
 
 	// Set basic context variables.

@@ -3,7 +3,6 @@ package admin
 import (
 	"net/http"
 
-	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/filesystem/tpl"
@@ -89,7 +88,7 @@ type adminContext struct {
 
 func NewContext(request *http.Request, site *AdminApplication, context ctx.Context) *adminContext {
 	if context == nil {
-		context = core.Context(request)
+		context = ctx.RequestContext(request)
 	}
 
 	assert.False(

@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/django/contrib/pages/models"
-	"github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/logger"
@@ -175,7 +174,7 @@ checkError:
 	}
 
 	if viewCtx == nil {
-		viewCtx = core.Context(req)
+		viewCtx = ctx.RequestContext(req)
 	}
 
 	viewCtx.Set("Object", specific)
