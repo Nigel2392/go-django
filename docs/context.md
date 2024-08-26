@@ -4,7 +4,7 @@
 
 ## Overview
 
-The `context` package provides a flexible and simple way to manage context data in your Go applications. It allows you to store and retrieve key-value pairs, making it easier to pass data around in your application, particularly when rendering templates. The package supports both generic context storage and structured context with fields corresponding to struct members.
+The `ctx` package provides a flexible and simple way to manage context data in your Go applications. It allows you to store and retrieve key-value pairs, making it easier to pass data around in your application, particularly when rendering templates. The package supports both generic context storage and structured context with fields corresponding to struct members.
 
 ## Example Usage
 
@@ -21,7 +21,7 @@ import (
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
     // Create a request context
-    var ctx = core.Context(r)
+    var ctx = ctx.Context(r)
     ctx.Set("Title", "Welcome to My Custom App")
 
     // Render the index template
@@ -138,7 +138,7 @@ func (u *User) EditContext(key string, context ctx.Context) {
 
 // In your handler
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-    var ctx = core.Context(r)
+    var ctx = ctx.Context(r)
     var user = &User{Name: "John Doe"}
     
     // This will trigger the EditContext method on the User struct
