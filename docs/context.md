@@ -74,7 +74,7 @@ type Getter interface {
 - **Set**: Stores a value with a specified key.
 - **Get**: Retrieves the value associated with a key.
 
-##### `NewContext` Function
+### `NewContext` Function
 
 `NewContext` creates a new context that stores data in a map. It returns an implementation of the `Context` interface.
 

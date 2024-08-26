@@ -30,6 +30,7 @@ Any database logic should be implemented by the end-developer, but some sub-pack
 - [Working with permissions](./docs/permissions.md)
 - [Setting up Routing](./docs/routing.md)
 - [Creating Management Commands](./docs/commands.md)
+- [Working with context](./docs/context.md)
 - [Rendering Your Templates](./docs/rendering.md)
 - [Usage of Contenttypes](./docs/contenttypes.md)
 - [Paginating your data](./docs/pagination.md)
