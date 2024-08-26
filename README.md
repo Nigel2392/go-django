@@ -32,6 +32,7 @@ Any database logic should be implemented by the end-developer, but some sub-pack
 - [Creating Management Commands](./docs/commands.md)
 - [Rendering Your Templates](./docs/rendering.md)
 - [Usage of Contenttypes](./docs/contenttypes.md)
+- [Paginating your data](./docs/pagination.md)
 - [Setting up and calling Hooks](./docs/hooks.md)
 - [Working with the Filesystem](./docs/filesystem.md)
 - [Serving your Staticfiles](./docs/staticfiles.md)
