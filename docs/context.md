@@ -175,7 +175,7 @@ Example:
 `RequestContext` is a specific implementation used for HTTP requests. It embeds a `StructContext` and adds specific methods for handling requests.
 
 ```go
-package core
+package ctx
 
 type RequestContext struct {
     *ctx.StructContext
