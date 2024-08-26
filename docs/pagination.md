@@ -99,5 +99,3 @@ Here is a simple HTML template to render the paginated content:
 - **GetCount**: Get the total number of items.
 - **Page**: Get a specific page of items based on the page number.
 - **HTML Rendering**: Iterates over the results and displays them in a list. If no items are found, a message is displayed.
-
-This simplified documentation provides a clear overview and a practical example of how to implement and use the paginator in your application.
