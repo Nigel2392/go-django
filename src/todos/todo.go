@@ -2,6 +2,7 @@ package todos
 
 import (
 	"database/sql"
+	"embed"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
@@ -11,7 +12,7 @@ import (
 )
 
 // //go:embed assets/**
-// var todosFS embed.FS
+var todosFS embed.FS
 
 var globalDB *sql.DB
 
