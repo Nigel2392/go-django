@@ -14,7 +14,6 @@ This isn't necessarily required, but it is a good practice to keep your app's co
 
 ```bash
 mkdir myapp
-echo "package myapp" > myapp/myapp.go
 ```
 
 Now let's create a new app struct.
@@ -72,6 +71,14 @@ func NewCustomAppConfig() *CustomApp {
     return myCustomApp
 }
 ```
+
+### Retrieving your app for later use
+
+Apps can later be retrieved by either:
+
+1. Storing the app in a global variable
+2. Using the (generic) `django.GetApp` function.
+   Note: This function will panic if the app is not found or the wrong type is passed.
 
 ## AppConfig useful methods & attributes
 

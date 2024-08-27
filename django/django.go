@@ -137,6 +137,14 @@ var (
 	Task         = Global.Task
 )
 
+func GetApp[T AppConfig](name string) T {
+	var app, ok = Global.Apps.Get(name)
+	assert.True(ok, "App %s not found", name)
+	a, ok := app.(T)
+	assert.True(ok, "Invalid app type: %T", app)
+	return a
+}
+
 func App(opts ...Option) *Application {
 	if Global == nil {
 		Global = &Application{

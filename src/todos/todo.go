@@ -1,51 +1,64 @@
 package todos
 
 import (
-	"errors"
+	"database/sql"
+	"embed"
 
-	"github.com/Nigel2392/django/core/attrs"
-	"github.com/Nigel2392/django/forms/widgets"
+	"github.com/Nigel2392/django"
+	"github.com/Nigel2392/django/apps"
+	"github.com/Nigel2392/django/core/filesystem"
+	"github.com/Nigel2392/django/core/filesystem/staticfiles"
+	"github.com/Nigel2392/django/core/filesystem/tpl"
 )
 
-type myInt int
+//go:embed assets/**
+var todosFS embed.FS
 
-type MyModel struct {
-	ID   int
-	Name string
-	Bio  string
-	Age  myInt
-}
+var globalDB *sql.DB
 
-func (m *MyModel) FieldDefs() attrs.Definitions {
-	return attrs.Define(m,
-		attrs.NewField(m, "ID", &attrs.FieldConfig{
-			Primary:  true,
-			ReadOnly: true,
-			Label:    "ID",
-			HelpText: "The unique identifier of the model",
-		}),
-		attrs.NewField(m, "Name", &attrs.FieldConfig{
-			Label:    "Name",
-			HelpText: "The name of the model",
-		}),
-		attrs.NewField(m, "Bio", &attrs.FieldConfig{
-			Label:    "Biography",
-			HelpText: "The biography of the model",
-			FormWidget: func(cfg attrs.FieldConfig) widgets.Widget {
-				return widgets.NewTextarea(nil)
-			},
-		}),
-		attrs.NewField(m, "Age", &attrs.FieldConfig{
-			Label:    "Age",
-			HelpText: "The age of the model",
-			Validators: []func(interface{}) error{
-				func(v interface{}) error {
-					if v.(myInt) <= myInt(0) {
-						return errors.New("Age must be greater than 0")
-					}
-					return nil
-				},
-			},
-		}),
+func NewAppConfig() django.AppConfig {
+	var cfg = apps.NewDBAppConfig(
+		"todos",
 	)
+
+	cfg.Routing = func(m django.Mux) {
+
+	}
+
+	cfg.Init = func(settings django.Settings, db *sql.DB) error {
+		var (
+			tplFS    = filesystem.Sub(todosFS, "assets/templates")
+			staticFS = filesystem.Sub(todosFS, "assets/static")
+		)
+
+		staticfiles.AddFS(staticFS, filesystem.MatchAnd(
+			filesystem.MatchPrefix("todos/"),
+			filesystem.MatchOr(
+				filesystem.MatchExt(".css"),
+				filesystem.MatchExt(".js"),
+				filesystem.MatchExt(".png"),
+				filesystem.MatchExt(".jpg"),
+				filesystem.MatchExt(".jpeg"),
+				filesystem.MatchExt(".svg"),
+				filesystem.MatchExt(".gif"),
+				filesystem.MatchExt(".ico"),
+			),
+		))
+
+		tpl.Add(tpl.Config{
+			AppName: "todos",
+			FS:      tplFS,
+			Bases: []string{
+				"todos/base.tmpl",
+			},
+			Matches: filesystem.MatchAnd(
+				filesystem.MatchPrefix("todos/"),
+				filesystem.MatchExt(".tmpl"),
+			),
+		})
+
+		return nil
+	}
+
+	return cfg
 }
