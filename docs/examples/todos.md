@@ -37,6 +37,9 @@ import (
     "github.com/Nigel2392/go-django/contrib/session"
 )
 
+//go:embed assets/*
+var assetsFS embed.FS
+
 func main() {
     var app = django.App(
         django.Configure(map[string]interface{}{
@@ -67,6 +70,8 @@ We have defined the following in the above code snippet:
 
 * The [configuration](../configuring.md) for our app. We have set the `ALLOWED_HOSTS` to `*`, which means that all hosts are allowed to access the app.  
   We have also set the `DEBUG` flag to `true`, which means that the app will run in debug mode.
+
+* A filesystem for our assets (staticfiles and templates).
 
 * The app will be running on [`http://127.0.0.1:8080`](http://127.0.0.1:8080).
 
@@ -140,14 +145,65 @@ func NewAppConfig() *TodosAppConfig {
 
 ### Setting up routes
 
+In the previously defined `Routing` function, we will define the routes for our app.
+
+Creation, editing and deletion of todos will be done via the [admin interface](../apps/admin/app.md).
+
+This app will only need a route for displaying the list of todos, and for marking todos as done.
+
+<pre>
+todosApp.Routing = func(m django.Mux) {
+    m.Get("/todos", func(w http.ResponseWriter, r *http.Request) {
+        // ...<a href="#setting-up-the-list-view">Setting up views</a>
+    })
+
+    m.Post("/todos/&lt;id&gt;/done", func(w http.ResponseWriter, r *http.Request) {
+        // ...<a href="#finishing-a-todo">Finishing a todo</a>
+    })
+}
+</pre>
+
+We defined the route for marking todos on the `POST` method, a variable `id` is passed in the URL.
+
 ### Setting up static files
 
-### Creating the app structure
+Serving static files is important for most web applications.
 
-### Setting up the directory structure
+We will use the [staticfiles](../staticfiles.md#configuration) package to setup serving static files.
+
+Our static directory is located in `assets/static`.
+
+We will use [`filesystem.Sub`](../filesystem.md#sub) to make sure that only files in the `assets/static` directory are served.
+
+The only files we will be serving as staticfiles are CSS, JS and PNG- image files.
+
+```go
+var staticFS = filesystem.Sub(
+    assetsFS, "assets/static",
+)
+
+staticfiles.AddFS(staticFS, filesystem.MatchAnd(
+    filesystem.MatchPrefix("core/"),
+    filesystem.MatchOr(
+        filesystem.MatchExt(".css"),
+        filesystem.MatchExt(".js"),
+        filesystem.MatchExt(".png"),
+    ),
+))
+```
 
 ## Defining the model
 
 ## Setting up views
 
+### Setting up the list view
+
+In the `GET` route for `/todos`, we will define the view that will display the list of todos.
+
+We will also [paginate](../pagination.md#example-usage) the list of todos.
+
+### Finishing a todo
+
 ## Defining your templates
+
+### Adding simple CSS

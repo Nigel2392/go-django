@@ -8,6 +8,8 @@ Staticfiles will run through the middleware chain, so you can add custom middlew
 
 All staticfiles are served from the `static/` URL prefix by default.
 
+This can be changed by setting the [`APPVAR_STATIC_URL` setting](./configuring.md#pre-defined-settings).
+
 ## Configuration
 
 To configure staticfiles and learn more about matches, see the [filesystem documentation](./filesystem.md#matchfs).

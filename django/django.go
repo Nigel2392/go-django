@@ -17,7 +17,6 @@ import (
 	"time"
 
 	"github.com/Nigel2392/django/components"
-	core "github.com/Nigel2392/django/core"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/command"
 	"github.com/Nigel2392/django/core/except"
@@ -301,6 +300,20 @@ func (a *Application) Reverse(name string, args ...any) string {
 	return string(buf)
 }
 
+func (a *Application) staticURL() string {
+	var staticURL = []byte(
+		ConfigGet(
+			a.Settings,
+			APPVAR_STATIC_URL,
+			"/static/",
+		),
+	)
+	if staticURL[len(staticURL)-1] != '/' {
+		staticURL = append(staticURL, '/')
+	}
+	return string(staticURL)
+}
+
 func (a *Application) Static(path string) string {
 	var u, err = url.Parse(path)
 	if err != nil {
@@ -311,7 +324,8 @@ func (a *Application) Static(path string) string {
 		return path
 	}
 
-	return fmt.Sprintf("%s%s", core.STATIC_URL, path)
+	var staticUrl = a.staticURL()
+	return fmt.Sprintf("%s%s", staticUrl, path)
 }
 
 func (a *Application) Task(description string, fn func(*Application) error) error {
@@ -378,17 +392,19 @@ func (a *Application) Initialize() error {
 		a.loggerMiddleware,
 	)
 
+	var staticUrl = a.staticURL()
+
 	a.Log.Debugf(
 		"Initializing static files at '%s'",
-		core.STATIC_URL,
+		staticUrl,
 	)
 
-	if core.STATIC_URL != "" {
+	if staticUrl != "" {
 		a.Mux.Handle(
 			mux.GET,
-			fmt.Sprintf("%s*", core.STATIC_URL),
+			fmt.Sprintf("%s*", staticUrl),
 			LoggingDisabledMiddleware(
-				http.StripPrefix(core.STATIC_URL, staticfiles.EntryHandler),
+				http.StripPrefix(staticUrl, staticfiles.EntryHandler),
 			),
 		)
 	}

@@ -6,6 +6,24 @@ To easily work with files within the framework and provide a uniform approach to
 
 All filesystems ultimately do adhere to the `fs.FS` interface from the `io/fs` package.
 
+## `Sub`
+
+`Sub` is a filesystem that only allows access to files in a subdirectory of another filesystem.
+
+It works the same as `fs.Sub` from the `io/fs` package, but instead it automatically panics if the path is not in the subdirectory.
+
+This is useful for restricting access to a specific directory in a filesystem.
+
+### Example
+  
+```go
+var myFs = os.DirFS("/path/to/files")
+
+var mySubFs = filesystem.Sub(
+    myFs, "subdir",
+)
+```
+
 ## Structures
 
 ### `MultiFS`

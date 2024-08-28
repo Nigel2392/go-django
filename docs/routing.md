@@ -98,6 +98,8 @@ m.Handle(mux.GET, "/static/*", mux.NewHandler(Static), "static"),
 
 In the above example, the `Static` handler will be called for any URL that starts with `/static/`.
 
+We have already implemented a static file server, so this is just an example; refer to [configuring](./configuring.md#pre-defined-settings) for more information.
+
 Each wildcard part of the URL will be available as a named parameter in the request's path variable context.
 
 This can be retrieved using the `mux.Vars` function on the request.

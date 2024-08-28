@@ -57,6 +57,10 @@ django.APPVAR_HOST
 // This is the port the server will listen on
 django.APPVAR_PORT
 
+// The URL prefix for static files
+// This is the URL prefix that will be used to serve static files
+django.APPVAR_STATIC_URL
+
 // The path to the TLS certificate file
 // This is the certificate file used for TLS
 django.APPVAR_TLS_CERT
@@ -134,6 +138,7 @@ var app = django.App(
         django.APPVAR_PORT: "8080",
         django.APPVAR_DEBUG: false,
         django.APPVAR_DATABASE: db,
+        django.APPVAR_STATIC_URL: "/static/",
     }),
     django.Apps(
         // Initialize sessions...

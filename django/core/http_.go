@@ -7,8 +7,6 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
-const STATIC_URL = "/static/"
-
 type HttpSignal struct {
 	W http.ResponseWriter
 	R *http.Request
