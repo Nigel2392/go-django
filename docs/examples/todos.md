@@ -105,7 +105,6 @@ type TodosAppConfig struct {
 Let's now create the `NewAppConfig` function that will return an instance of the `TodosAppConfig` struct.
 
 <pre>
-
 func NewAppConfig() *TodosAppConfig {
     var todosApp = &TodosAppConfig{
         DBRequiredAppConfig: apps.NewDBAppConfig(
@@ -122,11 +121,13 @@ func NewAppConfig() *TodosAppConfig {
 
     // Will be called for the app's initialization (before any `OnReady` functions are called)
     todosApp.Init = func(settings django.Settings, db *sql.DB) error {
+        // ...<a href="#setting-up-templates">Setting up templates</a>
+        // ...<a href="#setting-up-static-files">Setting up static files</a>
     }
 
     // Will be called after all apps have been initialized
     todosApp.Ready = func() error {
-
+        // Do any extra setup which depends on other apps
     }
 
     todosApp.Routing = func(m django.Mux) {
@@ -135,7 +136,6 @@ func NewAppConfig() *TodosAppConfig {
 
     return todosApp
 }
-
 </pre>
 
 ### Setting up routes
