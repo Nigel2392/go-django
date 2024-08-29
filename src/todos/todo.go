@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/django/core/filesystem"
 	"github.com/Nigel2392/django/core/filesystem/staticfiles"
 	"github.com/Nigel2392/django/core/filesystem/tpl"
+	"github.com/Nigel2392/mux"
 )
 
 // //go:embed assets/**
@@ -22,7 +23,7 @@ func NewAppConfig() django.AppConfig {
 	)
 
 	cfg.Routing = func(m django.Mux) {
-
+		m.Get("/", mux.NewHandler())
 	}
 
 	cfg.Init = func(settings django.Settings, db *sql.DB) error {

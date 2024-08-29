@@ -153,13 +153,13 @@ This app will only need a route for displaying the list of todos, and for markin
 
 <pre>
 todosApp.Routing = func(m django.Mux) {
-    m.Get("/todos", func(w http.ResponseWriter, r *http.Request) {
+    m.Get("/todos", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
         // ...<a href="#setting-up-the-list-view">Setting up views</a>
-    })
+    }))
 
-    m.Post("/todos/&lt;id&gt;/done", func(w http.ResponseWriter, r *http.Request) {
+    m.Post("/todos/&lt;&lt;id&gt;&gt;/done", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
         // ...<a href="#finishing-a-todo">Finishing a todo</a>
-    })
+    }))
 }
 </pre>
 
@@ -346,19 +346,40 @@ The views will be responsible for rendering the list of todos, and for marking t
 
 View functions in Go-Django are equivalent to a `http.HandlerFunc`.
 
-```go
-func ListTodos(w http.ResponseWriter, r *http.Request) {}
-
-func FinishTodo(w http.ResponseWriter, r *http.Request) {}
-```
-
 ### Setting up the list view
 
 In the `GET` route for `/todos`, we will define the view that will display the list of todos.
 
 We will also [paginate](../pagination.md#example-usage) the list of todos.
 
+Let's define the `ListTodos` function.
 
+```go
+func ListTodos(w http.ResponseWriter, r *http.Request) {
+    var limit = 10
+    var page, err = strconv.Atoi(r.URL.Query().Get("page"))
+    if err != nil {
+        page = 1
+    }
+    var offset = (page - 1) * limit
+
+    var todos, err = models.ListAllTodos(r.Context(), limit, offset)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+
+    var data = map[string]interface{}{
+        "Todos": todos,
+    }
+
+    // Render the template
+    if err := templates.Render(w, "todos/list.html", data); err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+}
+```
 
 ### Finishing a todo
 
