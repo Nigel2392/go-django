@@ -194,13 +194,171 @@ staticfiles.AddFS(staticFS, filesystem.MatchAnd(
 
 ## Defining the model
 
+In `models.go`, we will define the model for the todo app.
+
+The model for todos is relatively simple, and contains 4 fields:
+
+* `ID` - The unique identifier for the todo.
+* `Title` - The title of the todo.
+* `Description` - A description of the todo.
+* `Done` - A boolean field that indicates whether the todo is done or not.
+
+```go
+type Todo struct {
+    ID          int
+    Title       string
+    Description string
+    Done        bool
+}
+```
+
+As seen in [attrs](../attrs.md#defining-model-attributes), we will define the model attributes for the `Todo` model.
+
+This should be a method called `FieldDefs`.
+
+```go
+func (m *Todo) FieldDefs() attrs.Definitions {
+  return attrs.Define(m,
+    attrs.NewField(m, "ID", &attrs.FieldConfig{
+        Primary:  true,
+        ReadOnly: true,
+        Label:    "ID",
+        HelpText: "The unique identifier of the model",
+    }),
+    attrs.NewField(m, "Title", &attrs.FieldConfig{
+        Label:    "Title",
+        HelpText: "The title of the todo",
+    }),
+    attrs.NewField(m, "Description", &attrs.FieldConfig{
+        Label:    "Description",
+        HelpText: "A description of the todo",
+        FormWidget: func(cfg attrs.FieldConfig) widgets.Widget {
+            return widgets.NewTextarea(nil)
+        },
+    }),
+    attrs.NewField(m, "Done", &attrs.FieldConfig{
+        Label:    "Done",
+        HelpText: "Indicates whether the todo is done or not",
+    }),
+  )
+}
+```
+
+### Creating the model's queries
+
+Our model will need a few queries to interact with the database.
+
+We will need to define all database logic pertaining to the `Todo` model - Go-Django does not do this and only looks for interface methods.
+
+The following columns should be present in the `todos` table:
+
+* `id` - The unique identifier for the todo.
+* `title` - The title of the todo.
+* `description` - A description of the todo.
+* `done` - A boolean field that indicates whether the todo is done or not.
+
+```go
+const (
+    createTable = `CREATE TABLE IF NOT EXISTS todos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT,
+        description TEXT,
+        done BOOLEAN
+    )`
+    listTodos = `SELECT id, title, description, done FROM todos ORDER BY id DESC LIMIT ? OFFSET ?`
+    insertTodo = `INSERT INTO todos (title, description, done) VALUES (?, ?, ?)`
+    updateTodo = `UPDATE todos SET title = ?, description = ?, done = ? WHERE id = ?`
+    selectTodo = `SELECT id, title, description, done FROM todos WHERE id = ?`
+)
+```
+
+Let's set up the methods for our todo model.
+
+```go
+// Save is a method that will either insert or update the todo in the database.
+// 
+// If the todo has an ID of 0, it will be inserted into the database; otherwise, it will be updated.
+// 
+// This method should exist on all models that need to be saved to the database.
+func (t *Todo) Save(ctx context.Context) error {
+    if t.ID == 0 {
+        return t.Insert(ctx)
+    }
+    return t.Update(ctx)
+}
+
+// Not Required
+func (t *Todo) Insert(ctx context.Context) error {
+    var res, err = db.ExecContext(ctx, insertTodo, t.Title, t.Description, t.Done)
+    if err != nil {
+        return err
+    }
+    var id, err = res.LastInsertId()
+    if err != nil {
+        return err
+    }
+    t.ID = int(id)
+    return nil
+}
+
+// Not Required
+func (t *Todo) Update(ctx context.Context) error {
+    _, err := db.ExecContext(ctx, updateTodo, t.Title, t.Description, t.Done, t.ID)
+    return err
+}
+```
+
+Let's also define a function to list all todos, or retrieve a single one by it's ID.
+
+```go
+func ListAllTodos(ctx context.Context, limit, offset int) ([]Todo, error) {
+    var rows, err = db.QueryContext(ctx, listTodos, limit, offset)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+
+    var todos []Todo
+    for rows.Next() {
+        var todo Todo
+        if err := rows.Scan(&todo.ID, &todo.Title, &todo.Description, &todo.Done); err != nil {
+            return nil, err
+        }
+        todos = append(todos, todo)
+    }
+    return todos, nil
+}
+
+func GetTodoByID(ctx context.Context, id int) (*Todo, error) {
+    var todo Todo
+    if err := db.QueryRowContext(ctx, selectTodo, id).Scan(&todo.ID, &todo.Title, &todo.Description, &todo.Done); err != nil {
+        return nil, err
+    }
+    return &todo, nil
+}
+```
+
 ## Setting up views
+
+In `views.go`, we will define the views for the todo app.
+
+The views will be responsible for rendering the list of todos, and for marking todos as done.
+
+View functions in Go-Django are equivalent to a `http.HandlerFunc`.
+
+```go
+func ListTodos(w http.ResponseWriter, r *http.Request) {}
+
+func FinishTodo(w http.ResponseWriter, r *http.Request) {}
+```
 
 ### Setting up the list view
 
 In the `GET` route for `/todos`, we will define the view that will display the list of todos.
 
 We will also [paginate](../pagination.md#example-usage) the list of todos.
+
+
 
 ### Finishing a todo
 
