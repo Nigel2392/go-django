@@ -363,20 +363,25 @@ func ListTodos(w http.ResponseWriter, r *http.Request) {
     }
     var offset = (page - 1) * limit
 
-    var todos, err = models.ListAllTodos(r.Context(), limit, offset)
+    var todos, err = ListAllTodos(
+        r.Context(), limit, offset,
+    )
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
 
-    var data = map[string]interface{}{
-        "Todos": todos,
-    }
+    var context = ctx.RequestContext(r)
+    
+    context.Set("Todos", todos)
 
-    // Render the template
-    if err := templates.Render(w, "todos/list.html", data); err != nil {
-        http.Error(w, err.Error(), http.StatusInternalServerError)
-        return
+    var err = tpl.FRender(
+        w, context,
+        "core", "core/about.tmpl",
+    )
+
+    if err != nil {
+        http.Error(w, err.Error(), 500)
     }
 }
 ```
