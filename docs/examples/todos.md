@@ -269,6 +269,7 @@ const (
     insertTodo = `INSERT INTO todos (title, description, done) VALUES (?, ?, ?)`
     updateTodo = `UPDATE todos SET title = ?, description = ?, done = ? WHERE id = ?`
     selectTodo = `SELECT id, title, description, done FROM todos WHERE id = ?`
+    countTodos = `SELECT COUNT(id) FROM todos`
 )
 ```
 
@@ -310,6 +311,10 @@ func (t *Todo) Update(ctx context.Context) error {
 
 Let's also define a function to list all todos, or retrieve a single one by it's ID.
 
+We will also define a function to count the number of todos in the database.
+
+This is mainly used for pagination.
+
 ```go
 func ListAllTodos(ctx context.Context, limit, offset int) ([]Todo, error) {
     var rows, err = db.QueryContext(ctx, listTodos, limit, offset)
@@ -336,6 +341,14 @@ func GetTodoByID(ctx context.Context, id int) (*Todo, error) {
     }
     return &todo, nil
 }
+
+func CountTodos(ctx context.Context) (int, error) {
+    var count int
+    if err := db.QueryRowContext(ctx, countTodos).Scan(&count); err != nil {
+        return 0, err
+    }
+    return count, nil
+}
 ```
 
 ## Setting up views
@@ -356,38 +369,114 @@ Let's define the `ListTodos` function.
 
 ```go
 func ListTodos(w http.ResponseWriter, r *http.Request) {
-    var limit = 10
-    var page, err = strconv.Atoi(r.URL.Query().Get("page"))
-    if err != nil {
-        page = 1
+    // Create a new paginator for the Todo model
+    var paginator = pagination.Paginator[Todo]{
+        // Define a function to retrieve a list of objects based on the amount and offset
+        GetObjects: func(amount, offset int) ([]Todo, error) {
+            return ListAllTodos(
+                r.Context(), amount, offset,
+            )
+        },
+        GetCount: func() (int, error) {
+            return CountTodos(r.Context())
+        },
     }
-    var offset = (page - 1) * limit
 
-    var todos, err = ListAllTodos(
-        r.Context(), limit, offset,
+    // Get the page number from the request's query string
+    // We provide a utility function to get the page number from a string, int(8/16/32/64) and uint(8/16/32/64/ptr).
+    var pageNum = pagination.GetPageNum(
+        r.URL.Query().Get("page"),
     )
+
+    // Get the page from the paginator
+    // 
+    // This will return a PageObject[Todo] which contains the list of todos for the current page.
+    var page, err = paginator.Page(pageNum)
     if err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
 
+    // Create a new RequestContext
+    // Add the page object to the context
     var context = ctx.RequestContext(r)
-    
-    context.Set("Todos", todos)
+    context.Set("Page", page)
 
-    var err = tpl.FRender(
+    // Render the template
+    err = tpl.FRender(
         w, context,
-        "core", "core/about.tmpl",
+        "todos/list.html",
     )
-
     if err != nil {
         http.Error(w, err.Error(), 500)
     }
 }
 ```
 
+For the `ListTodos` function to work, we need to define the template for the list of todos.
+
+This is done in [the next section](#setting-up-the-list-template).
+
 ### Finishing a todo
+
+For marking todos as done, we will define the `MarkTodoDone` function.
+
+This function will be called when a `POST` request is made to `/todos/<<id>>/done`.
+
+If the todo is already marked as done; we will unmark it, and vice versa.
+
+Then we will send a JSON response back to the client, indicating the status of the todo.
+
+```go
+func MarkTodoDone(w http.ResponseWriter, r *http.Request) {
+    // Get the todo ID from the URL
+    var vars = mux.Vars(r)
+    var id = vars.GetInt("id")
+    if id == 0 {
+        json.NewEncoder(w).Encode(map[string]interface{}{
+            "status": "error",
+            "error":  "Invalid todo ID",
+        })
+        return
+    }
+
+    // Get the todo from the database
+    var todo, err = GetTodoByID(r.Context(), id)
+    if err != nil {
+        json.NewEncoder(w).Encode(map[string]interface{}{
+            "status": "error",
+            "error":  err.Error(),
+        })
+        return
+    }
+
+    // Mark the todo as done
+    todo.Done = !todo.Done
+
+    // Save the todo
+    err = todo.Save(r.Context())
+    if err != nil {
+        json.NewEncoder(w).Encode(map[string]interface{}{
+            "status": "error",
+            "error":  err.Error(),
+        })
+        return
+    }
+
+    // Send a JSON response
+    json.NewEncoder(w).Encode(map[string]interface{}{
+        "status": "success",
+        "done":   todo.Done,
+    })
+}
+```
 
 ## Defining your templates
 
+### Setting up the base template
+
+### Setting up the list template
+
 ### Adding simple CSS
+
+### Adding javascript for marking todos as done

@@ -75,7 +75,7 @@ func GetPageNum(n any) int {
 // Paginator holds pagination logic
 type Paginator[T any] struct {
 	GetObject  func(T) T
-	GetObjects func(int, int) ([]T, error)
+	GetObjects func(amount int, offset int) ([]T, error)
 	GetCount   func() (int, error)
 	Amount     int
 	cnt        int

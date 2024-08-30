@@ -19,9 +19,9 @@ var paginator = pagination.Paginator[MyObject]{
         // You can use it to modify or wrap each item if needed.
         return obj
     },
-    GetObjects: func(limit, offset int) ([]MyObject, error) {
-        // This function fetches a slice of MyObject items based on the given limit and offset.
-        return getMyObjects(limit, offset)
+    GetObjects: func(amount, offset int) ([]MyObject, error) {
+        // This function fetches a slice of MyObject items based on the given amount and offset.
+        return getMyObjects(amount, offset)
     },
     GetCount: func() (int, error) {
         // This function returns the total number of items available.
