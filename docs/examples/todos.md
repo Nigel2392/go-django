@@ -126,7 +126,7 @@ func NewAppConfig() *TodosAppConfig {
 
     // Will be called for the app's initialization (before any `OnReady` functions are called)
     todosApp.Init = func(settings django.Settings, db *sql.DB) error {
-        // ...<a href="#setting-up-templates">Setting up templates</a>
+        // ...<a href="#defining-your-templates">Setting up templates</a>
         // ...<a href="#setting-up-static-files">Setting up static files</a>
     }
 
