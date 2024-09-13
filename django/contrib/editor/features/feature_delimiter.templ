@@ -1,6 +1,5 @@
 package features
 
-import "github.com/Nigel2392/django"
 import "github.com/Nigel2392/django/contrib/editor"
 
 func init() {
@@ -12,7 +11,7 @@ var DelimiterFeature = &Block{
 		Type:          "delimiter",
 		JSConstructor: "Delimiter",
 		JSFiles: []string{
-			django.Static("editorjs/js/vendor/tools/delimiter.js"),
+			"editorjs/js/vendor/tools/delimiter.js",
 		},
 		Build:  func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(editor.BlockData) string { return "----" }

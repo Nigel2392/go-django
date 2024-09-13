@@ -1,7 +1,6 @@
 package features
 
 import (
-	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/editor"
 )
 
@@ -19,7 +18,7 @@ var CheckListBlock = &Block{
 		Type:          "checklist",
 		JSConstructor: "Checklist",
 		JSFiles: []string{
-			django.Static("editorjs/js/vendor/tools/checklist.js"),
+			"editorjs/js/vendor/tools/checklist.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			return fb

@@ -10,7 +10,6 @@ import "context"
 import "io"
 import "bytes"
 
-import "github.com/Nigel2392/django"
 import "github.com/Nigel2392/django/contrib/editor"
 
 func init() {
@@ -22,7 +21,7 @@ var DelimiterFeature = &Block{
 		Type:          "delimiter",
 		JSConstructor: "Delimiter",
 		JSFiles: []string{
-			django.Static("editorjs/js/vendor/tools/delimiter.js"),
+			"editorjs/js/vendor/tools/delimiter.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(editor.BlockData) string { return "----" }
@@ -56,7 +55,7 @@ func renderDelimiterObject(fb editor.FeatureBlock) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(fb.ID())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/feature_delimiter.templ`, Line: 30, Col: 47}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/feature_delimiter.templ`, Line: 29, Col: 47}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {

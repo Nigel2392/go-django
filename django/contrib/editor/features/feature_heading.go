@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/editor"
 	"github.com/a-h/templ"
 )
@@ -19,7 +18,7 @@ var HeadingFeature = &Block{
 		Type:          "header",
 		JSConstructor: "Header",
 		JSFiles: []string{
-			django.Static("editorjs/js/vendor/tools/header.js"),
+			"editorjs/js/vendor/tools/header.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(d editor.BlockData) string { return d.Data["text"].(string) }

@@ -324,6 +324,10 @@ func (a *Application) Static(path string) string {
 		return path
 	}
 
+	if strings.HasPrefix(path, "/") {
+		return path
+	}
+
 	var staticUrl = a.staticURL()
 	return fmt.Sprintf("%s%s", staticUrl, path)
 }

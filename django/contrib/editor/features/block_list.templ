@@ -1,7 +1,6 @@
 package features
 
 import (
-	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/editor"
 )
 
@@ -14,7 +13,7 @@ var ListBlock = &Block{
 		Type:          "list",
 		JSConstructor: "List",
 		JSFiles: []string{
-			django.Static("editorjs/js/vendor/tools/list.js"),
+			"editorjs/js/vendor/tools/list.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			return fb

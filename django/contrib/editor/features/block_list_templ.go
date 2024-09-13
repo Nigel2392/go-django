@@ -11,7 +11,6 @@ import "io"
 import "bytes"
 
 import (
-	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/editor"
 )
 
@@ -24,7 +23,7 @@ var ListBlock = &Block{
 		Type:          "list",
 		JSConstructor: "List",
 		JSFiles: []string{
-			django.Static("editorjs/js/vendor/tools/list.js"),
+			"editorjs/js/vendor/tools/list.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			return fb
@@ -64,7 +63,7 @@ func renderList(items []string) templ.Component {
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(item)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/block_list.templ`, Line: 35, Col: 13}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/block_list.templ`, Line: 34, Col: 13}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {

@@ -10,7 +10,6 @@ import "context"
 import "io"
 import "bytes"
 
-import "github.com/Nigel2392/django"
 import "github.com/Nigel2392/django/contrib/editor"
 
 func init() {
@@ -22,7 +21,7 @@ var ParagraphFeature = &Block{
 		Type:          "paragraph",
 		JSConstructor: "Paragraph",
 		JSFiles: []string{
-			django.Static("editorjs/js/vendor/tools/paragraph.umd.js"),
+			"editorjs/js/vendor/tools/paragraph.umd.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(d editor.BlockData) string { return d.Data["text"].(string) }
@@ -61,7 +60,7 @@ func renderParagraphObject(fb editor.FeatureBlock) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(fb.ID())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/feature_paragraph.templ`, Line: 33, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/feature_paragraph.templ`, Line: 32, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -82,7 +81,7 @@ func renderParagraphObject(fb editor.FeatureBlock) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(t)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/feature_paragraph.templ`, Line: 33, Col: 93}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `django/contrib/editor/features/feature_paragraph.templ`, Line: 32, Col: 93}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {

@@ -428,7 +428,9 @@ func (l *ListBlock) RenderTempl(w io.Writer, id, name string, valueArr []*ListBl
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = widgets.HelpTextComponent("list-block", l.Child.HelpText()).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = widgets.HelpTextComponent(
+				"list-block", l.Child.HelpText(),
+			).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

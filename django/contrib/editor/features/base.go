@@ -5,6 +5,7 @@ import (
 	"io"
 	"maps"
 
+	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/editor"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/forms/media"
@@ -44,10 +45,12 @@ func (b *BaseFeature) Constructor() string {
 func (b *BaseFeature) Media() media.Media {
 	var m = media.NewMedia()
 	for _, js := range b.JSFiles {
-		m.AddJS(&media.JSAsset{URL: js})
+		m.AddJS(&media.JSAsset{URL: django.Static(js)})
 	}
 	for _, css := range b.CSSFles {
-		m.AddCSS(media.CSS(css))
+		m.AddCSS(media.CSS(
+			django.Static(css),
+		))
 	}
 	return m
 }
