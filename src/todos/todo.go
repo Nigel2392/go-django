@@ -3,7 +3,6 @@ package todos
 import (
 	"database/sql"
 	"embed"
-	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
@@ -24,12 +23,8 @@ func NewAppConfig() django.AppConfig {
 	)
 
 	cfg.Routing = func(m django.Mux) {
-		m.Get("/", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
-
-		}))
-		m.Post("/", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
-
-		}))
+		m.Get("/", mux.NewHandler(ListTodos))
+		m.Post("/", mux.NewHandler(MarkTodoDone))
 	}
 
 	cfg.Init = func(settings django.Settings, db *sql.DB) error {

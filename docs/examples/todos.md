@@ -166,13 +166,8 @@ This app will only need a route for displaying the list of todos, and for markin
 
 <pre>
 todosApp.Routing = func(m django.Mux) {
-    m.Get("/todos", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
-        // ...<a href="#setting-up-the-list-view">Setting up views</a>
-    }), "list")
-
-    m.Post("/todos/&lt;&lt;id&gt;&gt;/done", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
-        // ...<a href="#finishing-a-todo">Finishing a todo</a>
-    }), "done")
+    <a href="#setting-up-the-list-view">m.Get("/", mux.NewHandler(ListTodos))</a>
+    <a href="#finishing-a-todo">m.Post("/", mux.NewHandler(MarkTodoDone))</a>
 }
 </pre>
 
