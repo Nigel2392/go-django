@@ -155,11 +155,11 @@ This app will only need a route for displaying the list of todos, and for markin
 todosApp.Routing = func(m django.Mux) {
     m.Get("/todos", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
         // ...<a href="#setting-up-the-list-view">Setting up views</a>
-    }))
+    }), "list")
 
     m.Post("/todos/&lt;&lt;id&gt;&gt;/done", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
         // ...<a href="#finishing-a-todo">Finishing a todo</a>
-    }))
+    }), "done")
 }
 </pre>
 
@@ -473,10 +473,212 @@ func MarkTodoDone(w http.ResponseWriter, r *http.Request) {
 
 ## Defining your templates
 
+We can now define our `template/html` templates.
+
+We will create the following filetree structure inside of our assets folder.
+
+```filesystem
+assets/
+    templates/
+        todos/
+            base.html
+            list.html
+```
+
 ### Setting up the base template
+
+The base template will contain the basic structure of our HTML page.
+
+This will include the `<!DOCTYPE html>`, `<html>`, `<head>`, and `<body>` tags, as well as some `template/html` tags for overrides in the child templates.
+
+First, we will make sure that the base template is defined in the `base.html` file.
+
+This can be done by defining the `base` block, and later inheriting from this block in the child templates.
+
+Following that we will define the following blocks:
+
+* `title` - This block will be used to set the title of the page.
+* `content` - This block will be used to include the content of the page.
+* `extra_css` - This block will be used to include any extra CSS files.
+* `extra_js` - This block will be used to include any extra JS files.
+
+```html
+{{ define "base" }}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        {{ block "extra_css" . }}{{ end }}
+
+        <title>{{ block "title" . }}{{ end }}</title>
+    </head>
+    <body>
+
+        {{ block "content" . }}{{ end }}
+
+        {{ block "extra_js" . }}{{ end }}
+    </body>
+</html>
+{{ end }}
+```
 
 ### Setting up the list template
 
-### Adding simple CSS
+The list template will contain the list of todos.
+
+It will also populate the previously defined blocks in the base template.
+
+```html
+{{ define "title" }}Todos{{ end }}
+
+{{ define "extra_css" }}
+    <link rel="stylesheet" href="{{ static "todos/css/todos.css" }}">
+{{ end }}
+
+{{ define "extra_js" }}
+    <script src="{{ static "todos/js/todos.js" }}"></script>
+{{ end }}
+
+{{ define "content" }}
+
+    <div class="todo-list-wrapper">
+        {{ $page := (.Get "Page") }}
+
+        <!-- Range over the paginator results -->
+        {{ range $todo := $page.Results }}
+
+            <div class="todo-item">
+
+                <h3>{{ $todo.Title }}</h3>
+                <p>{{ $todo.Description }}</p>
+                
+                <!-- Submit to the todos app URL, use the template function to generate the URL based on what was previously defined. -->
+                <form class="todo-form" action="{{ url "todos:done" $todo.ID }}" method="POST">
+                    <input type="hidden" class="csrftoken-input" name="csrf_token" value="{{ .CsrfToken }}">
+                    <button type="submit">
+                        {{ if $todo.Done }}Unmark{{ else }}Mark{{ end }} as done
+                    </button>
+                </form>
+            </div>
+
+        {{ else }}
+            <p>No todos found</p>
+        {{ end }}
+
+        <!-- 
+         Paginator buttons - takes in:
+            1. Page query parameter name.
+            2. max amount page numbers shown.
+            3. included and the query parameters. 
+
+         Under the hood this uses a templ.Component.
+         -->
+        {{ $page.HTML "page" 5 .Request.URL.Query }}
+    </div>
+
+{{ end }}
+```
+
+### Adding CSS for styling the todos
+
+Now that we have defined the templates it is time to add some CSS to style the todos.
+
+We will create a new file called `todos.css` in the `assets/static/css` directory.
+
+```filesystem
+assets/
+    static/
+        css/
+            todos.css
+```
+
+The CSS file will contain the following styles:
+
+```css
+.todo-list-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.todo-item {
+    margin: 10px;
+    padding: 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    width: 50%;
+}
+
+.todo-item h3 {
+    margin: 0;
+}
+
+.todo-item p {
+    margin: 0;
+}
+
+.todo-item form {
+    margin-top: 10px;
+}
+
+.todo-item button {
+    padding: 5px 10px;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    background-color: #f0f0f0;
+    cursor: pointer;
+}
+```
 
 ### Adding javascript for marking todos as done
+
+We will also need to add some JavaScript to handle marking todos as done.
+
+This will make a `POST` request to the `/todos/<<id>>/done` URL - this will be retrieved from the form's action attribute.
+
+We will create a new file called `todos.js` in the `assets/static/js` directory.
+
+```filesystem
+assets/
+    static/
+        js/
+            todos.js
+```
+
+We will define a simple function that will make a request to the todo app URL.
+
+```javascript
+async function markAsDone(url, csrftoken) {
+    var response = await fetch(url, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": csrftoken,
+        },
+    });
+
+    var data = await response.json();
+    if (data.status === "success") {
+        alert("Todo marked as done");
+    } else {
+        alert("An error occurred");
+    }
+}
+
+function initForm(form) {
+    const formUrl = form.getAttribute("action");
+    const csrfTokenInput = form.querySelector(".csrftoken-input");
+
+    form.addEventListener("submit", function(e) {
+        e.preventDefault();
+        markAsDone(formUrl, csrfTokenInput.value);
+    });
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const forms = document.querySelectorAll(".todo-form");
+    forms.forEach(initForm);
+});
+```

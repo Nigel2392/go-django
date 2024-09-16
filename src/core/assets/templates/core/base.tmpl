@@ -8,7 +8,9 @@
         <link rel="stylesheet" type="text/css" href="{{ static "core/css/core.css" }}">
         <script src="{{ static "blocks/js/index.js" }}"></script>
 
-        <title>{{ template "title" . }}</title>
+        {{ block "extra_css" . }}{{ end }}
+
+        <title>{{ block "title" . }}{{ end }}</title>
     </head>
     <body>
 
@@ -21,7 +23,7 @@
             {{ end }}
         </div>
 
-        {{ template "content" . }}
+        {{ block "content" . }}{{ end }}
         <form method="post">
             <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
             {{ $errorList := (.Get "Form").ErrorList }}
@@ -60,6 +62,8 @@
     
             <input type="submit" value="Submit">
         </form>
+
+        {{ block "extra_js" . }}{{ end }}
     </body>
 </html>
 {{ end }}
