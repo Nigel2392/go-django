@@ -64,7 +64,12 @@ func NewAppConfig() django.AppConfig {
 			),
 		})
 
-		return nil
+		// Set the global database
+		globalDB = db
+
+		// Create the todos table
+		_, err := db.Exec(createTable)
+		return err
 	}
 
 	return cfg

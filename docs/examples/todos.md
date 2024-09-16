@@ -99,12 +99,18 @@ touch todos/views.go
 
 In `app.go`, we will define the app struct and its configuration.
 
-It is possible to retrieve apps later on with [`django.GetApp[TodosAppConfig]("todos")`](../apps#retrieving-your-app-for-later-use).
+It is possible to retrieve apps later on with [`django.GetApp[TodosAppConfig]("todos")`](../apps.md#retrieving-your-app-for-later-use).
 
 ```go
 type TodosAppConfig struct {
     *apps.DBRequiredAppConfig
 }
+```
+
+We will also create a global variable to store the database in.
+
+```go
+var globalDB *sql.DB
 ```
 
 Let's now create the `NewAppConfig` function that will return an instance of the `TodosAppConfig` struct.
@@ -128,6 +134,13 @@ func NewAppConfig() *TodosAppConfig {
     todosApp.Init = func(settings django.Settings, db *sql.DB) error {
         // ...<a href="#defining-your-templates">Setting up templates</a>
         // ...<a href="#setting-up-static-files">Setting up static files</a>
+
+        // Set the global database
+        globalDB = db
+
+        // Create the todos table
+        _, err := db.Exec(createTable)
+        return err
     }
 
     // Will be called after all apps have been initialized
@@ -277,9 +290,9 @@ Let's set up the methods for our todo model.
 
 ```go
 // Save is a method that will either insert or update the todo in the database.
-// 
+//
 // If the todo has an ID of 0, it will be inserted into the database; otherwise, it will be updated.
-// 
+//
 // This method should exist on all models that need to be saved to the database.
 func (t *Todo) Save(ctx context.Context) error {
     if t.ID == 0 {
@@ -290,11 +303,11 @@ func (t *Todo) Save(ctx context.Context) error {
 
 // Not Required
 func (t *Todo) Insert(ctx context.Context) error {
-    var res, err = db.ExecContext(ctx, insertTodo, t.Title, t.Description, t.Done)
+    var res, err = globalDB.ExecContext(ctx, insertTodo, t.Title, t.Description, t.Done)
     if err != nil {
         return err
     }
-    var id, err = res.LastInsertId()
+    id, err := res.LastInsertId()
     if err != nil {
         return err
     }
@@ -304,7 +317,7 @@ func (t *Todo) Insert(ctx context.Context) error {
 
 // Not Required
 func (t *Todo) Update(ctx context.Context) error {
-    _, err := db.ExecContext(ctx, updateTodo, t.Title, t.Description, t.Done, t.ID)
+    _, err := globalDB.ExecContext(ctx, updateTodo, t.Title, t.Description, t.Done, t.ID)
     return err
 }
 ```
@@ -317,7 +330,7 @@ This is mainly used for pagination.
 
 ```go
 func ListAllTodos(ctx context.Context, limit, offset int) ([]Todo, error) {
-    var rows, err = db.QueryContext(ctx, listTodos, limit, offset)
+    var rows, err = globalDB.QueryContext(ctx, listTodos, limit, offset)
     if err != nil {
         return nil, err
     }
@@ -336,7 +349,7 @@ func ListAllTodos(ctx context.Context, limit, offset int) ([]Todo, error) {
 
 func GetTodoByID(ctx context.Context, id int) (*Todo, error) {
     var todo Todo
-    if err := db.QueryRowContext(ctx, selectTodo, id).Scan(&todo.ID, &todo.Title, &todo.Description, &todo.Done); err != nil {
+    if err := globalDB.QueryRowContext(ctx, selectTodo, id).Scan(&todo.ID, &todo.Title, &todo.Description, &todo.Done); err != nil {
         return nil, err
     }
     return &todo, nil
@@ -344,7 +357,7 @@ func GetTodoByID(ctx context.Context, id int) (*Todo, error) {
 
 func CountTodos(ctx context.Context) (int, error) {
     var count int
-    if err := db.QueryRowContext(ctx, countTodos).Scan(&count); err != nil {
+    if err := globalDB.QueryRowContext(ctx, countTodos).Scan(&count); err != nil {
         return 0, err
     }
     return count, nil

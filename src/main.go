@@ -30,6 +30,7 @@ import (
 	"github.com/Nigel2392/django/views/list"
 	"github.com/Nigel2392/src/blog"
 	"github.com/Nigel2392/src/core"
+	"github.com/Nigel2392/src/todos"
 
 	_ "github.com/Nigel2392/django/contrib/pages/backend-sqlite"
 	_ "github.com/mattn/go-sqlite3"
@@ -138,6 +139,7 @@ func main() {
 			core.NewAppConfig,
 			blocks.NewAppConfig,
 			blog.NewAppConfig,
+			todos.NewAppConfig,
 		),
 	)
 
