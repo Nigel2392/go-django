@@ -166,8 +166,8 @@ This app will only need a route for displaying the list of todos, and for markin
 
 <pre>
 todosApp.Routing = func(m django.Mux) {
-    <a href="#setting-up-the-list-view">m.Get("/", mux.NewHandler(ListTodos))</a>
-    <a href="#finishing-a-todo">m.Post("/", mux.NewHandler(MarkTodoDone))</a>
+    <a href="#setting-up-the-list-view">m.Get("/list", mux.NewHandler(ListTodos))</a>
+    <a href="#finishing-a-todo">m.Post("/done", mux.NewHandler(MarkTodoDone))</a>
 }
 </pre>
 
@@ -191,7 +191,7 @@ var staticFS = filesystem.Sub(
 )
 
 staticfiles.AddFS(staticFS, filesystem.MatchAnd(
-    filesystem.MatchPrefix("core/"),
+    filesystem.MatchPrefix("todos/"),
     filesystem.MatchOr(
         filesystem.MatchExt(".css"),
         filesystem.MatchExt(".js"),
@@ -400,7 +400,7 @@ func ListTodos(w http.ResponseWriter, r *http.Request) {
     // 
     // This will return a PageObject[Todo] which contains the list of todos for the current page.
     var page, err = paginator.Page(pageNum)
-    if err != nil {
+    if err != nil && !errors.Is(err, pagination.ErrNoResults) {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
     }
@@ -412,8 +412,8 @@ func ListTodos(w http.ResponseWriter, r *http.Request) {
 
     // Render the template
     err = tpl.FRender(
-        w, context,
-        "todos/list.html",
+        w, context, "todos",
+        "todos/list.tmpl",
     )
     if err != nil {
         http.Error(w, err.Error(), 500)
@@ -489,8 +489,28 @@ We will create the following filetree structure inside of our assets folder.
 assets/
     templates/
         todos/
-            base.html
-            list.html
+            base.tmpl
+            list.tmpl
+```
+
+Then we will register the templates in the `Init` function of the `TodosAppConfig` - much like we did with the static files.
+
+```go
+var tplFS = filesystem.Sub(
+    assetsFS, "assets/templates",
+)
+
+tpl.Add(tpl.Config{
+    AppName: "todos",
+    FS:      tplFS,
+    Bases: []string{
+        "todos/base.tmpl",
+    },
+    Matches: filesystem.MatchAnd(
+        filesystem.MatchPrefix("todos/"),
+        filesystem.MatchExt(".tmpl"),
+    ),
+})
 ```
 
 ### Setting up the base template
@@ -499,7 +519,7 @@ The base template will contain the basic structure of our HTML page.
 
 This will include the `<!DOCTYPE html>`, `<html>`, `<head>`, and `<body>` tags, as well as some `template/html` tags for overrides in the child templates.
 
-First, we will make sure that the base template is defined in the `base.html` file.
+First, we will make sure that the base template is defined in the `base.tmpl` file.
 
 This can be done by defining the `base` block, and later inheriting from this block in the child templates.
 
@@ -690,3 +710,5 @@ document.addEventListener("DOMContentLoaded", function() {
     forms.forEach(initForm);
 });
 ```
+
+## Setting up the admin interface

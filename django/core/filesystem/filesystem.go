@@ -15,6 +15,8 @@ type FileHeader interface {
 
 func Sub(fileSys fs.FS, path string) fs.FS {
 	var f, err = fs.Sub(fileSys, path)
-	assert.Err(err)
+	if err != nil {
+		assert.Fail(err)
+	}
 	return f
 }

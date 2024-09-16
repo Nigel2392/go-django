@@ -2,6 +2,7 @@ package todos
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/Nigel2392/django/core/ctx"
@@ -34,7 +35,7 @@ func ListTodos(w http.ResponseWriter, r *http.Request) {
 	//
 	// This will return a PageObject[Todo] which contains the list of todos for the current page.
 	var page, err = paginator.Page(pageNum)
-	if err != nil {
+	if err != nil && !errors.Is(err, pagination.ErrNoResults) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -46,8 +47,8 @@ func ListTodos(w http.ResponseWriter, r *http.Request) {
 
 	// Render the template
 	err = tpl.FRender(
-		w, context,
-		"todos/list.html",
+		w, context, "todos",
+		"todos/list.tmpl",
 	)
 	if err != nil {
 		http.Error(w, err.Error(), 500)

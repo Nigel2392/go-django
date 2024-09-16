@@ -12,7 +12,7 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
-// //go:embed assets/**
+//go:embed assets/**
 var todosFS embed.FS
 
 var globalDB *sql.DB
@@ -23,8 +23,8 @@ func NewAppConfig() django.AppConfig {
 	)
 
 	cfg.Routing = func(m django.Mux) {
-		m.Get("/", mux.NewHandler(ListTodos))
-		m.Post("/", mux.NewHandler(MarkTodoDone))
+		m.Get("/list", mux.NewHandler(ListTodos))
+		m.Post("/done", mux.NewHandler(MarkTodoDone))
 	}
 
 	cfg.Init = func(settings django.Settings, db *sql.DB) error {
@@ -55,6 +55,7 @@ func NewAppConfig() django.AppConfig {
 			},
 			Matches: filesystem.MatchAnd(
 				filesystem.MatchPrefix("todos/"),
+				filesystem.MatchExt(".tmpl"),
 				filesystem.MatchExt(".tmpl"),
 			),
 		})
