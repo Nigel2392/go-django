@@ -8,11 +8,18 @@ import (
 	"github.com/Nigel2392/django/contrib/auth"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/errs"
+	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
-var LoginHandler = &views.FormView[*AdminForm[*auth.BaseUserForm]]{
+type LoginForm interface {
+	forms.Form
+	SetRequest(req *http.Request)
+	Login() error
+}
+
+var LoginHandler = &views.FormView[*AdminForm[LoginForm]]{
 	BaseView: views.BaseView{
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "admin",
@@ -39,16 +46,16 @@ var LoginHandler = &views.FormView[*AdminForm[*auth.BaseUserForm]]{
 			return context, nil
 		},
 	},
-	GetFormFn: func(req *http.Request) *AdminForm[*auth.BaseUserForm] {
-		return &AdminForm[*auth.BaseUserForm]{
+	GetFormFn: func(req *http.Request) *AdminForm[LoginForm] {
+		return &AdminForm[LoginForm]{
 			Form: auth.UserLoginForm(req),
 		}
 	},
-	ValidFn: func(req *http.Request, form *AdminForm[*auth.BaseUserForm]) error {
-		form.Form.Request = req
+	ValidFn: func(req *http.Request, form *AdminForm[LoginForm]) error {
+		form.Form.SetRequest(req)
 		return form.Form.Login()
 	},
-	SuccessFn: func(w http.ResponseWriter, req *http.Request, form *AdminForm[*auth.BaseUserForm]) {
+	SuccessFn: func(w http.ResponseWriter, req *http.Request, form *AdminForm[LoginForm]) {
 		var nextURL = req.URL.Query().Get("next")
 		if nextURL == "" {
 			nextURL = django.Reverse("admin:home")

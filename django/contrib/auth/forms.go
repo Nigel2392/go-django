@@ -237,6 +237,10 @@ type BaseUserForm struct {
 	config   *RegisterFormConfig
 }
 
+func (f *BaseUserForm) SetRequest(r *http.Request) {
+	f.Request = r
+}
+
 func (f *BaseUserForm) basicChecks() error {
 	if f.Errors != nil && f.Errors.Len() > 0 {
 		for head := f.Errors.Front(); head != nil; head = head.Next() {
