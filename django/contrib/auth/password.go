@@ -3,6 +3,7 @@ package auth
 import (
 	"unicode"
 
+	"github.com/Nigel2392/django/contrib/auth/autherrors"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/pkg/errors"
@@ -60,28 +61,28 @@ func (p *PasswordCharValidator) Validate(password string) error {
 
 	if upp_ct == 0 || upp_ct == len(password) {
 		if p.Flags&ChrFlagUpper != 0 {
-			err.Append(ErrPwdCasingUpper)
+			err.Append(autherrors.ErrPwdCasingUpper)
 		}
 	}
 	if low_ct == 0 || low_ct == len(password) {
 		if p.Flags&ChrFlagLower != 0 {
-			err.Append(ErrPwdCasingLower)
+			err.Append(autherrors.ErrPwdCasingLower)
 		}
 	}
 	if dig_ct == 0 || dig_ct == len(password) {
 		if p.Flags&ChrFlagDigit != 0 {
-			err.Append(ErrPwdDigits)
+			err.Append(autherrors.ErrPwdDigits)
 		}
 	}
 
 	if spa_ct > 0 {
-		err.Append(ErrPwdSpaces)
+		err.Append(autherrors.ErrPwdSpaces)
 	}
 
 	if p.Flags&ChrFlagSpecial != 0 {
 		// Require at least one special character
 		if len(password) == upp_ct+low_ct+dig_ct+spa_ct {
-			err.Append(ErrPwdSpecial)
+			err.Append(autherrors.ErrPwdSpecial)
 		}
 	}
 
@@ -110,7 +111,7 @@ func ValidateCharacters(isRegister bool, flags PasswordCharacterFlag) func(field
 	}
 
 	if !isRegister {
-		validator.GenericError = ErrGenericAuthFail
+		validator.GenericError = autherrors.ErrGenericAuthFail
 	}
 
 	return func(fv fields.Field) {

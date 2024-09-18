@@ -5,9 +5,9 @@ import (
 	"net/url"
 
 	"github.com/Nigel2392/django"
-	"github.com/Nigel2392/django/contrib/auth"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/errs"
+	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/views"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -48,7 +48,7 @@ var LoginHandler = &views.FormView[*AdminForm[LoginForm]]{
 	},
 	GetFormFn: func(req *http.Request) *AdminForm[LoginForm] {
 		return &AdminForm[LoginForm]{
-			Form: auth.UserLoginForm(req),
+			Form: AdminSite.LoginForm(req),
 		}
 	},
 	ValidFn: func(req *http.Request, form *AdminForm[LoginForm]) error {
@@ -77,6 +77,15 @@ var LoginHandler = &views.FormView[*AdminForm[LoginForm]]{
 }
 
 func LogoutHandler(w http.ResponseWriter, req *http.Request) {
-	auth.Logout(req)
+	if req.Method != http.MethodPost {
+		except.Fail(http.StatusMethodNotAllowed, "Method not allowed")
+		return
+	}
+
+	if err := AdminSite.Logout(req); err != nil {
+		except.Fail(http.StatusInternalServerError, "Failed to log out")
+		return
+	}
+
 	http.Redirect(w, req, django.Reverse("admin:login"), http.StatusSeeOther)
 }

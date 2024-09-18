@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
+	"github.com/Nigel2392/django/contrib/auth/autherrors"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
@@ -31,7 +32,7 @@ func Logout(r *http.Request) error {
 	var session = sessions.Retrieve(r)
 	// except.Assert(session != nil, 500, "session is nil")
 	if session == nil {
-		return ErrNoSession
+		return autherrors.ErrNoSession
 	}
 
 	if err := session.Destroy(); err != nil {

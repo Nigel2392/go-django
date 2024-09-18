@@ -10,7 +10,7 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/admin"
-	"github.com/Nigel2392/django/contrib/auth"
+	"github.com/Nigel2392/django/contrib/auth/autherrors"
 	"github.com/Nigel2392/django/contrib/pages/models"
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/django/core/assert"
@@ -159,7 +159,7 @@ func getPageActions(_ *http.Request, p *models.PageNode) []admin.Action {
 func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
 	if !permissions.HasObjectPermission(r, p, "pages:list") {
-		auth.Fail(
+		autherrors.Fail(
 			http.StatusForbidden,
 			"User does not have permission to view this page",
 		)
@@ -371,7 +371,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
 	if !permissions.HasObjectPermission(r, p, "pages:add") {
-		auth.Fail(
+		autherrors.Fail(
 			http.StatusForbidden,
 			"User does not have permission to add a page",
 		)
@@ -417,7 +417,7 @@ func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 
 func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 	if !permissions.HasObjectPermission(r, p, "pages:add") {
-		auth.Fail(
+		autherrors.Fail(
 			http.StatusForbidden,
 			"User does not have permission to add a page",
 		)
@@ -590,7 +590,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
 	if !permissions.HasObjectPermission(r, p, "pages:edit") {
-		auth.Fail(
+		autherrors.Fail(
 			http.StatusForbidden,
 			"User does not have permission to edit this page",
 		)
@@ -744,7 +744,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 	if !permissions.HasObjectPermission(r, p, "pages:publish") {
-		auth.Fail(
+		autherrors.Fail(
 			http.StatusForbidden,
 			"User does not have permission to unpublish this page",
 		)

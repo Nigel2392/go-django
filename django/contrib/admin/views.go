@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/django"
-	"github.com/Nigel2392/django/contrib/auth"
+	"github.com/Nigel2392/django/contrib/auth/autherrors"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/ctx"
@@ -48,7 +48,7 @@ var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminAp
 var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
 
 	if !permissions.HasObjectPermission(r, model.NewInstance(), "admin:view_list") {
-		auth.Fail(
+		autherrors.Fail(
 			http.StatusForbidden,
 			"Permission denied",
 		)
@@ -105,7 +105,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
 
 	if !permissions.HasObjectPermission(r, model.NewInstance(), "admin:add") {
-		auth.Fail(
+		autherrors.Fail(
 			http.StatusForbidden,
 			"Permission denied",
 		)
@@ -127,7 +127,7 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 
 var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
 	if !permissions.HasObjectPermission(r, instance, "admin:edit") {
-		auth.Fail(
+		autherrors.Fail(
 			http.StatusForbidden,
 			"Permission denied",
 		)
@@ -148,7 +148,7 @@ var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 
 var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
 	if !permissions.HasObjectPermission(r, instance, "admin:delete") {
-		auth.Fail(
+		autherrors.Fail(
 			http.StatusForbidden,
 			"Permission denied",
 		)

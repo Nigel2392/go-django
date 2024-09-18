@@ -2,15 +2,16 @@ package auth
 
 import (
 	"database/sql"
+	"net/http"
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/apps"
+	"github.com/Nigel2392/django/contrib/admin"
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
 	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/command"
 	"github.com/Nigel2392/django/forms/fields"
-	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 	"github.com/alexedwards/scs/v2"
 
@@ -52,6 +53,7 @@ func NewAppConfig() django.AppConfig {
 		g.Handle(mux.POST, "/logout", mux.NewHandler(viewUserLogout))
 
 	}
+
 	app.Init = func(settings django.Settings) error {
 
 		loginWithEmail, ok := settings.Get("AUTH_EMAIL_LOGIN")
@@ -77,10 +79,10 @@ func NewAppConfig() django.AppConfig {
 		Auth.Queries = q
 		Auth.Session = sess
 
-		goldcrest.Register(
-			django.HOOK_SERVER_ERROR, 0,
-			isAuthErrorHook,
-		)
+		admin.AdminSite.LogoutFunc = Logout
+		admin.AdminSite.GetLoginForm = func(req *http.Request) admin.LoginForm {
+			return UserLoginForm(req)
+		}
 
 		attrs.RegisterFormFieldType(models.Password(""), func(opts ...func(fields.Field)) fields.Field {
 			var newOpts = []func(fields.Field){

@@ -10,6 +10,7 @@ import (
 
 	"github.com/Nigel2392/django/contrib/auth"
 	auth_models "github.com/Nigel2392/django/contrib/auth/auth-models"
+	"github.com/Nigel2392/django/contrib/auth/autherrors"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/models"
@@ -100,7 +101,7 @@ var formsTests = []formsTest{
 			AutoLogin:   false,
 		},
 		shouldError:   true,
-		expectedError: auth.ErrPwdNoMatch,
+		expectedError: autherrors.ErrPwdNoMatch,
 	},
 	{
 		user: testUser{
@@ -192,7 +193,7 @@ var formsTests = []formsTest{
 			PasswordConfirm: "test123!",
 			IsActive:        true,
 		},
-		expectedError: auth.ErrPwdCasingUpper,
+		expectedError: autherrors.ErrPwdCasingUpper,
 	},
 	{
 		user: testUser{
@@ -202,7 +203,7 @@ var formsTests = []formsTest{
 			PasswordConfirm: "TEST1234!",
 			IsActive:        true,
 		},
-		expectedError: auth.ErrPwdCasingLower,
+		expectedError: autherrors.ErrPwdCasingLower,
 	},
 	{
 		user: testUser{
@@ -212,7 +213,7 @@ var formsTests = []formsTest{
 			PasswordConfirm: "Testtttt!",
 			IsActive:        true,
 		},
-		expectedError: auth.ErrPwdDigits,
+		expectedError: autherrors.ErrPwdDigits,
 	},
 	{
 		user: testUser{
@@ -222,7 +223,7 @@ var formsTests = []formsTest{
 			PasswordConfirm: "Test 123!",
 			IsActive:        true,
 		},
-		expectedError: auth.ErrPwdSpaces,
+		expectedError: autherrors.ErrPwdSpaces,
 	},
 	{
 		user: testUser{
@@ -232,7 +233,7 @@ var formsTests = []formsTest{
 			PasswordConfirm: "Test1234",
 			IsActive:        true,
 		},
-		expectedError: auth.ErrPwdSpecial,
+		expectedError: autherrors.ErrPwdSpecial,
 	},
 }
 

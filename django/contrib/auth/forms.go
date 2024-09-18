@@ -6,6 +6,7 @@ import (
 	"net/mail"
 
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
+	"github.com/Nigel2392/django/contrib/auth/autherrors"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/django/forms/fields"
@@ -59,7 +60,7 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 				fields.Required(true),
 				fields.MinLength(5),
 				fields.MaxLength(254),
-			), func(err error) error { return ErrInvalidLogin }),
+			), func(err error) error { return autherrors.ErrInvalidLogin }),
 		)
 	} else {
 		f.AddField(
@@ -71,7 +72,7 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 				fields.MinLength(3),
 				fields.MaxLength(75),
 				fields.Regex(`^[a-zA-Z][a-zA-Z0-9_]+$`),
-			), func(err error) error { return ErrInvalidLogin }),
+			), func(err error) error { return autherrors.ErrInvalidLogin }),
 		)
 	}
 
@@ -83,7 +84,7 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 			fields.Label("Password"),
 			fields.HelpText("Enter your password"),
 			fields.Required(true),
-		), func(err error) error { return ErrInvalidLogin }),
+		), func(err error) error { return autherrors.ErrInvalidLogin }),
 	)
 
 	return f
@@ -175,7 +176,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 	f.SetValidators(func(f forms.Form) []error {
 		var cleaned = f.CleanedData()
 		if cleaned["password"] != cleaned["passwordConfirm"] {
-			return []error{ErrPwdNoMatch}
+			return []error{autherrors.ErrPwdNoMatch}
 		}
 		return nil
 	})
@@ -198,13 +199,13 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 			_, err = Auth.Queries.RetrieveByEmail(ctx, email.(*mail.Address).Address)
 			if err == nil {
 				return []error{errors.Wrap(
-					ErrUserExists, "Email exists",
+					autherrors.ErrUserExists, "Email exists",
 				)}
 			}
 
 			email, err := mail.ParseAddress(email.(*mail.Address).Address)
 			if err != nil {
-				return []error{ErrInvalidEmail}
+				return []error{autherrors.ErrInvalidEmail}
 			}
 
 			cleaned["email"] = (*models.Email)(email)
@@ -219,7 +220,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 			_, err = Auth.Queries.RetrieveByUsername(ctx, username.(string))
 			if err == nil {
 				return []error{errors.Wrap(
-					ErrUserExists, "Username exists",
+					autherrors.ErrUserExists, "Username exists",
 				)}
 			}
 		}
@@ -330,15 +331,15 @@ func (f *BaseUserForm) Login() error {
 		user, err = Auth.Queries.RetrieveByUsername(ctx, cleaned["username"].(string))
 	}
 	if err != nil {
-		return ErrGenericAuthFail
+		return autherrors.ErrGenericAuthFail
 	}
 
 	if err := CheckPassword(user, string(cleaned["password"].(PasswordString))); err != nil {
-		return ErrGenericAuthFail
+		return autherrors.ErrGenericAuthFail
 	}
 
 	if !user.IsActive {
-		return ErrIsActive
+		return autherrors.ErrIsActive
 	}
 
 	Login(f.Request, user)

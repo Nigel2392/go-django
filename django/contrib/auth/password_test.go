@@ -6,6 +6,7 @@ import (
 
 	"github.com/Nigel2392/django/contrib/auth"
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
+	"github.com/Nigel2392/django/contrib/auth/autherrors"
 )
 
 type passwordTest struct {
@@ -22,14 +23,14 @@ var passwordValidationTests = []passwordTest{
 		TestName:        "casing-upper-mismatch",
 		Password:        "password",
 		ExpectedError:   true,
-		Errors:          []error{auth.ErrPwdCasingUpper},
+		Errors:          []error{autherrors.ErrPwdCasingUpper},
 		ValidationFlags: auth.ChrFlagUpper,
 	},
 	{
 		TestName:        "casing-lower-mismatch",
 		Password:        "PASSWORD",
 		ExpectedError:   true,
-		Errors:          []error{auth.ErrPwdCasingLower},
+		Errors:          []error{autherrors.ErrPwdCasingLower},
 		ValidationFlags: auth.ChrFlagLower,
 	},
 	{
@@ -43,7 +44,7 @@ var passwordValidationTests = []passwordTest{
 		TestName:        "digit-mismatch",
 		Password:        "password",
 		ExpectedError:   true,
-		Errors:          []error{auth.ErrPwdCasingUpper, auth.ErrPwdDigits},
+		Errors:          []error{autherrors.ErrPwdCasingUpper, autherrors.ErrPwdDigits},
 		ValidationFlags: auth.ChrFlagUpper | auth.ChrFlagDigit,
 	},
 	{
@@ -57,13 +58,13 @@ var passwordValidationTests = []passwordTest{
 		TestName:      "spaces-mismatch",
 		Password:      "Pass word1",
 		ExpectedError: true,
-		Errors:        []error{auth.ErrPwdSpaces},
+		Errors:        []error{autherrors.ErrPwdSpaces},
 	},
 	{
 		TestName:        "special-mismatch",
 		Password:        "Password1",
 		ExpectedError:   true,
-		Errors:          []error{auth.ErrPwdSpecial},
+		Errors:          []error{autherrors.ErrPwdSpecial},
 		ValidationFlags: auth.ChrFlagUpper | auth.ChrFlagDigit | auth.ChrFlagSpecial,
 	},
 	{
@@ -93,7 +94,7 @@ var passwordHashTests = []passwordTest{
 		Password:      "password",
 		Hash:          "$2a$10$H9rdZ17XTgxNgq0hIe/eM.9KHhjn5AqerNCUlIgyyV2ZCdhWjwtve",
 		ExpectedError: true,
-		Errors:        []error{auth.ErrPwdHashMismatch},
+		Errors:        []error{autherrors.ErrPwdHashMismatch},
 	},
 	{
 		TestName: "match-Password",
@@ -129,7 +130,7 @@ var passwordSetTests = []passwordTest{
 		TestName: "set-password-fail",
 		Password: "Password!123",
 		Hash:     "$2a$10$eMXEd5fqGNMJqciAJDS5kegoRqUgf.JbAH3fxghqrffwONuhStm4m",
-		Errors:   []error{auth.ErrPwdHashMismatch},
+		Errors:   []error{autherrors.ErrPwdHashMismatch},
 	},
 }
 

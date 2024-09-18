@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Nigel2392/django/contrib/auth"
+	"github.com/Nigel2392/django/contrib/auth/autherrors"
 	"github.com/Nigel2392/django/permissions"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -30,18 +30,18 @@ func RequiredMiddleware(next mux.Handler) mux.Handler {
 
 		if IS_GITHUB_ACTIONS {
 			if user == nil || !user.IsAuthenticated() {
-				auth.Fail(http.StatusUnauthorized, "You need to login", req.URL.Path)
+				autherrors.Fail(http.StatusUnauthorized, "You need to login", req.URL.Path)
 			}
 
 			if !user.IsAdmin() {
-				auth.Fail(
+				autherrors.Fail(
 					http.StatusForbidden,
 					"You do not have permission to access this page",
 				)
 			}
 
 			if !permissions.HasPermission(req, "admin:access_admin") {
-				auth.Fail(
+				autherrors.Fail(
 					http.StatusForbidden,
 					"You do not have permission to access the admin panel",
 				)

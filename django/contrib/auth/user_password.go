@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
+	"github.com/Nigel2392/django/contrib/auth/autherrors"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -16,7 +17,7 @@ var HASHER = func(b string) (string, error) {
 
 var CHECKER = func(hashedPassword, password string) error {
 	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
-		return ErrPwdHashMismatch
+		return autherrors.ErrPwdHashMismatch
 	}
 	return nil
 }

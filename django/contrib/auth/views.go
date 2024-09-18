@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/django"
+	"github.com/Nigel2392/django/contrib/auth/autherrors"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/logger"
@@ -175,7 +176,7 @@ func viewUserLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := Logout(r); err != nil && !errors.Is(err, ErrNoSession) {
+	if err := Logout(r); err != nil && !errors.Is(err, autherrors.ErrNoSession) {
 		logger.Errorf(
 			"Failed to log user out: %v", err,
 		)
