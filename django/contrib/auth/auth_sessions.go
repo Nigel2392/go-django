@@ -7,7 +7,7 @@ import (
 	"net/http"
 
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
-	"github.com/Nigel2392/django/contrib/auth/autherrors"
+	autherrors "github.com/Nigel2392/django/contrib/auth/auth_errors"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )

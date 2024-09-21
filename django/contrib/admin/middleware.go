@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Nigel2392/django/contrib/auth/autherrors"
+	autherrors "github.com/Nigel2392/django/contrib/auth/auth_errors"
 	"github.com/Nigel2392/django/permissions"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"

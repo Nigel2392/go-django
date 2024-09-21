@@ -1,6 +1,7 @@
 package errs
 
 const (
+	// Generic errors
 	ErrFieldRequired Error = "Required field cannot be empty"
 	ErrInvalidSyntax Error = "Invalid syntax for value"
 	ErrInvalidType   Error = "Invalid type provided"

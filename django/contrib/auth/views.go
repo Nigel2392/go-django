@@ -6,7 +6,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/django"
-	"github.com/Nigel2392/django/contrib/auth/autherrors"
+	autherrors "github.com/Nigel2392/django/contrib/auth/auth_errors"
 	"github.com/Nigel2392/django/core/ctx"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/logger"

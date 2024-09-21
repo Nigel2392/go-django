@@ -10,7 +10,7 @@ import (
 
 	"github.com/Nigel2392/django/contrib/auth"
 	auth_models "github.com/Nigel2392/django/contrib/auth/auth-models"
-	"github.com/Nigel2392/django/contrib/auth/autherrors"
+	autherrors "github.com/Nigel2392/django/contrib/auth/auth_errors"
 	"github.com/Nigel2392/django/core/errs"
 	"github.com/Nigel2392/django/forms/fields"
 	"github.com/Nigel2392/django/models"

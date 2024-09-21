@@ -7,6 +7,8 @@ import (
 
 	"github.com/Nigel2392/django/apps"
 	"github.com/Nigel2392/django/core/assert"
+	"github.com/Nigel2392/django/core/logger"
+	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/mux"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -29,30 +31,42 @@ type AdminApplication struct {
 		string, *AppDefinition,
 	]
 
-	GetLoginForm func(req *http.Request) LoginForm
-	LogoutFunc   func(req *http.Request) error
+	getAdminLoginForm func(r *http.Request, formOpts ...func(forms.Form)) LoginForm
+	logoutFunc        func(r *http.Request) error
+}
+
+type AuthConfig struct {
+	GetLoginForm func(r *http.Request, formOpts ...func(forms.Form)) LoginForm
+	Logout       func(r *http.Request) error
 }
 
 func (a *AdminApplication) IsReady() bool {
 	return a.ready.Load()
 }
 
-func (a *AdminApplication) LoginForm(req *http.Request) LoginForm {
-	assert.True(
-		a.GetLoginForm != nil,
-		"GetLoginForm is not set on the global AdminSite struct variable",
-	)
-
-	return a.GetLoginForm(req)
+func (a *AdminApplication) AuthLogout(r *http.Request) error {
+	return a.logoutFunc(r)
 }
 
-func (a *AdminApplication) Logout(req *http.Request) error {
-	assert.True(
-		a.LogoutFunc != nil,
-		"LogoutFunc is not set on the global AdminSite struct variable",
-	)
+func (a *AdminApplication) AuthLoginForm(r *http.Request, formOpts ...func(forms.Form)) LoginForm {
+	return a.getAdminLoginForm(r, formOpts...)
+}
 
-	return a.LogoutFunc(req)
+func (a *AdminApplication) configureAuth(config AuthConfig) {
+	if a.getAdminLoginForm != nil {
+		logger.Warn(
+			"AdminApplication.configureAuth: getAdminLoginForm was already set",
+		)
+	}
+
+	if a.logoutFunc != nil {
+		logger.Warn(
+			"AdminApplication.configureAuth: logoutFunc was already set",
+		)
+	}
+
+	a.getAdminLoginForm = config.GetLoginForm
+	a.logoutFunc = config.Logout
 }
 
 func (a *AdminApplication) RegisterApp(name string, appOptions AppOptions, opts ...ModelOptions) *AppDefinition {

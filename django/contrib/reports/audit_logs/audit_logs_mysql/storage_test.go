@@ -19,7 +19,9 @@ import (
 )
 
 // For now only used to make sure tests pass on github actions
-// This will be removed when the package is properly developed and tested
+//
+// # This will be removed when the package is properly developed and tested
+//
 // This makes sure that the authentication check is enabled only when running on github actions
 var IS_GITHUB_ACTIONS = false
 

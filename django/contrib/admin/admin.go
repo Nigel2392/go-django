@@ -15,6 +15,7 @@ import (
 	cmpts "github.com/Nigel2392/django/contrib/admin/components"
 	"github.com/Nigel2392/django/contrib/admin/components/menu"
 	"github.com/Nigel2392/django/contrib/admin/icons"
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/attrs"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/django/core/filesystem"
@@ -65,8 +66,9 @@ var AdminSite *AdminApplication = &AdminApplication{
 }
 
 var (
-	RegisterApp = AdminSite.RegisterApp
-	IsReady     = AdminSite.IsReady
+	RegisterApp   = AdminSite.RegisterApp
+	IsReady       = AdminSite.IsReady
+	ConfigureAuth = AdminSite.configureAuth
 )
 
 func NewAppConfig() django.AppConfig {
@@ -121,6 +123,18 @@ func NewAppConfig() django.AppConfig {
 	}
 
 	AdminSite.Ready = func() error {
+
+		if AdminSite.getAdminLoginForm == nil {
+			assert.Fail(
+				"AdminApplication.Ready: getAdminLoginForm was not set with admin.ConfigureAuth(...)",
+			)
+		}
+
+		if AdminSite.logoutFunc == nil {
+			assert.Fail(
+				"AdminApplication.Ready: logoutFunc was not set with admin.ConfigureAuth(...)",
+			)
+		}
 
 		if err := icons.Register(staticFS,
 			"admin/icons/view.svg",

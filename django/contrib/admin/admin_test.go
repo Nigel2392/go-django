@@ -14,8 +14,10 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/admin"
+	"github.com/Nigel2392/django/contrib/auth"
 	"github.com/Nigel2392/django/contrib/session"
 	"github.com/Nigel2392/django/core/attrs"
+	"github.com/Nigel2392/django/forms"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
@@ -104,6 +106,14 @@ func init() {
 	//	w.Write([]byte(strconv.Itoa(instance.(*TestModelStruct).ID)))
 	//	w.Write([]byte(")"))
 	//}
+
+	// Configure the auth system for the admin
+	admin.ConfigureAuth(admin.AuthConfig{
+		GetLoginForm: func(r *http.Request, formOpts ...func(forms.Form)) admin.LoginForm {
+			return auth.UserLoginForm(r, formOpts...)
+		},
+		Logout: auth.Logout,
+	})
 
 	admin.RegisterApp("test",
 		admin.AppOptions{},

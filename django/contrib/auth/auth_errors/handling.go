@@ -5,15 +5,24 @@ import (
 	"net/url"
 
 	"github.com/Nigel2392/django"
+	"github.com/Nigel2392/django/core/assert"
 	"github.com/Nigel2392/django/core/except"
 	"github.com/Nigel2392/goldcrest"
 )
 
-func init() {
+func RegisterHook() {
 	goldcrest.Register(
 		django.HOOK_SERVER_ERROR, 0,
 		isAuthErrorHook,
 	)
+}
+
+var _ except.ServerError = (*authenticationError)(nil)
+
+type authenticationError struct {
+	Message string
+	NextURL string
+	Status  int
 }
 
 // isAuthErrorHook is a hook that will redirect the user to the login page if an authentication error occurs.
@@ -54,4 +63,51 @@ func isAuthErrorHook(w http.ResponseWriter, r *http.Request, app *django.Applica
 
 respond:
 	http.Redirect(w, r, redirectURL, http.StatusFound)
+}
+
+// Authentication errors can be raised using autherrors.Fail(...)
+//
+// This makes sure boilerplate code for failing auth is not repeated.
+//
+// It also allows for a more consistent way to handle auth errors.
+//
+// We have a hook setup to catch any authentication errors and redirect to the login page (see hooks.go)
+func Fail(code int, msg string, next ...string) {
+
+	assert.True(
+		code == 0 || code >= 400 && code < 600,
+		"Invalid status code %d, must be between 400 and 599", code,
+	)
+
+	assert.True(
+		msg != "",
+		"Message must not be empty",
+	)
+
+	if code == 0 {
+		code = 401
+	}
+
+	var nextURL string
+	if len(next) > 0 {
+		nextURL = next[0]
+	}
+
+	panic(&authenticationError{
+		Message: msg,
+		Status:  code,
+		NextURL: nextURL,
+	})
+}
+
+func (e *authenticationError) Error() string {
+	return e.Message
+}
+
+func (e *authenticationError) StatusCode() int {
+	return e.Status
+}
+
+func (e *authenticationError) UserMessage() string {
+	return e.Message
 }

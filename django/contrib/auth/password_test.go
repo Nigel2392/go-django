@@ -6,7 +6,7 @@ import (
 
 	"github.com/Nigel2392/django/contrib/auth"
 	models "github.com/Nigel2392/django/contrib/auth/auth-models"
-	"github.com/Nigel2392/django/contrib/auth/autherrors"
+	autherrors "github.com/Nigel2392/django/contrib/auth/auth_errors"
 )
 
 type passwordTest struct {

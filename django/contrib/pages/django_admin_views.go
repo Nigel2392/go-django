@@ -10,7 +10,7 @@ import (
 
 	"github.com/Nigel2392/django"
 	"github.com/Nigel2392/django/contrib/admin"
-	"github.com/Nigel2392/django/contrib/auth/autherrors"
+	autherrors "github.com/Nigel2392/django/contrib/auth/auth_errors"
 	"github.com/Nigel2392/django/contrib/pages/models"
 	auditlogs "github.com/Nigel2392/django/contrib/reports/audit_logs"
 	"github.com/Nigel2392/django/core/assert"

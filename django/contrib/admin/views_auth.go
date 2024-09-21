@@ -47,8 +47,11 @@ var LoginHandler = &views.FormView[*AdminForm[LoginForm]]{
 		},
 	},
 	GetFormFn: func(req *http.Request) *AdminForm[LoginForm] {
+		var loginForm = AdminSite.AuthLoginForm(
+			req,
+		)
 		return &AdminForm[LoginForm]{
-			Form: AdminSite.LoginForm(req),
+			Form: loginForm,
 		}
 	},
 	ValidFn: func(req *http.Request, form *AdminForm[LoginForm]) error {
@@ -77,15 +80,17 @@ var LoginHandler = &views.FormView[*AdminForm[LoginForm]]{
 }
 
 func LogoutHandler(w http.ResponseWriter, req *http.Request) {
-	if req.Method != http.MethodPost {
-		except.Fail(http.StatusMethodNotAllowed, "Method not allowed")
+	if err := AdminSite.AuthLogout(req); err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"Failed to logout due to unexpected error",
+		)
 		return
 	}
 
-	if err := AdminSite.Logout(req); err != nil {
-		except.Fail(http.StatusInternalServerError, "Failed to log out")
-		return
-	}
-
-	http.Redirect(w, req, django.Reverse("admin:login"), http.StatusSeeOther)
+	http.Redirect(
+		w, req,
+		django.Reverse("admin:login"),
+		http.StatusSeeOther,
+	)
 }
