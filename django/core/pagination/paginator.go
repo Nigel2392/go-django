@@ -106,6 +106,11 @@ func (p *Paginator[T]) PerPage() int {
 
 func (p *Paginator[T]) Page(n int) (PageObject[T], error) {
 	var amount = p.PerPage()
+
+	if amount == 0 {
+		return nil, errors.New("amount of objects per page cannot be 0")
+	}
+
 	var offset = (n - 1) * amount
 	results, err := p.GetObjects(amount, offset)
 	if err != nil {

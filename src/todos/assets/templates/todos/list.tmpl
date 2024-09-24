@@ -12,6 +12,7 @@
 
     <div class="todo-list-wrapper">
         {{ $page := (.Get "Page") }}
+        {{ $csrfToken := (.Get "CsrfToken") }}
 
         <!-- Range over the paginator results -->
         {{ range $todo := $page.Results }}
@@ -23,8 +24,8 @@
                 
                 <!-- Submit to the todos app URL, use the template function to generate the URL based on what was previously defined. -->
                 <form class="todo-form" action="{{ url "todos:done" $todo.ID }}" method="POST">
-                    <input type="hidden" class="csrftoken-input" name="csrf_token" value="{{ .CsrfToken }}">
-                    <button type="submit">
+                    <input type="hidden" class="csrftoken-input" name="csrf_token" value="{{ $csrfToken }}">
+                    <button type="submit" class="update">
                         {{ if $todo.Done }}Unmark{{ else }}Mark{{ end }} as done
                     </button>
                 </form>

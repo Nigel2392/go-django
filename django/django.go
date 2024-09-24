@@ -423,8 +423,13 @@ func (a *Application) Initialize() error {
 		"static": a.Static,
 		"url": func(name string, args ...any) string {
 			var rt, err = a.Mux.Reverse(name, args...)
-			if err != nil {
+			switch {
+			case errors.Is(err, mux.ErrRouteNotFound):
 				panic(fmt.Sprintf("URL %s not found", name))
+			case errors.Is(err, mux.ErrTooManyVariables):
+				panic(fmt.Sprintf("Too many variables for URL %s", name))
+			case err != nil:
+				panic(fmt.Sprintf("Error reversing URL %s: %s", name, err))
 			}
 			return rt
 		},
@@ -577,8 +582,14 @@ func (a *Application) Serve() error {
 		}
 	}
 
+	var handler = nosurf.New(a.Mux)
+
+	var hooks = goldcrest.Get[NosurfSetupHook](HOOK_SETUP_NOSURF)
+	for _, hook := range hooks {
+		hook(a, handler)
+	}
+
 	var (
-		handler     = nosurf.New(a.Mux)
 		HOST        = ConfigGet(a.Settings, APPVAR_HOST, "localhost")
 		PORT        = ConfigGet(a.Settings, APPVAR_PORT, "8080")
 		TLS_PORT    = ConfigGet(a.Settings, APPVAR_TLS_PORT, "")

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/django/core/except"
+	"github.com/justinas/nosurf"
 )
 
 type markedResponseWriter struct {
@@ -32,8 +33,10 @@ func (w *markedResponseWriter) Write(data []byte) (int, error) {
 type (
 	DjangoHook      func(*Application) error
 	ServerErrorHook func(w http.ResponseWriter, r *http.Request, app *Application, err except.ServerError)
+	NosurfSetupHook func(app *Application, handler *nosurf.CSRFHandler)
 )
 
 const (
 	HOOK_SERVER_ERROR = "django.ServerError"
+	HOOK_SETUP_NOSURF = "django.SetupNosurf"
 )

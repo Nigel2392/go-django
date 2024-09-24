@@ -3,7 +3,7 @@ module github.com/Nigel2392
 go 1.23.0
 
 require (
-	github.com/Nigel2392/mux v1.3.5
+	github.com/Nigel2392/mux v1.3.7
 	github.com/elliotchance/orderedmap/v2 v2.2.0
 	github.com/justinas/nosurf v1.1.1
 	github.com/pkg/errors v0.9.1

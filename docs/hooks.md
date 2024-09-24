@@ -16,6 +16,25 @@ For more information on how hooks work - see the [hooks package](https://github.
 
 ## Django Defined Hooks
 
+### django.SetupNosurf
+
+*Type Signature: `django.NosurfSetupHook`*
+
+This hook is called when the CSRF middleware is being setup.
+
+It can be used to modify the CSRF middleware's configuration or error handling.
+
+The hook is passed the CSRF middleware, the web-app instance and the request.
+
+```go
+goldcrest.Register(
+    django.HOOK_SETUP_NOSURF, 0,
+    func(app *django.Application, csrfMiddleware *nosurf.CSRFHandler) {
+        // Do something with the CSRF middleware
+    },
+)
+```
+
 ### django.ServerError
 
 *Type Signature: `django.ServerErrorHook`*

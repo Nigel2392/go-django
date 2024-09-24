@@ -166,8 +166,12 @@ This app will only need a route for displaying the list of todos, and for markin
 
 <pre>
 todosApp.Routing = func(m django.Mux) {
-    <a href="#setting-up-the-list-view">m.Get("/list", mux.NewHandler(ListTodos))</a>
-    <a href="#finishing-a-todo">m.Post("/done", mux.NewHandler(MarkTodoDone))</a>
+    // Create a new group for the todos app
+    var todosGroup = m.Any("/todos", nil, "todos")
+
+    // Define the routes for the todos app
+    <a href="#setting-up-the-list-view">todosGroup.Get("/list", mux.NewHandler(ListTodos), "list")</a>
+    <a href="#finishing-a-todo">todosGroup.Post("/&lt;&lt;id&gt;&gt;/done", mux.NewHandler(MarkTodoDone), "done")</a>
 }
 </pre>
 
@@ -379,6 +383,8 @@ Let's define the `ListTodos` function.
 func ListTodos(w http.ResponseWriter, r *http.Request) {
     // Create a new paginator for the Todo model
     var paginator = pagination.Paginator[Todo]{
+        // Set the amount of objects per page
+        Amount: 25,
         // Define a function to retrieve a list of objects based on the amount and offset
         GetObjects: func(amount, offset int) ([]Todo, error) {
             return ListAllTodos(
@@ -573,6 +579,7 @@ It will also populate the previously defined blocks in the base template.
 
     <div class="todo-list-wrapper">
         {{ $page := (.Get "Page") }}
+        {{ $csrfToken := (.Get "CsrfToken") }}
 
         <!-- Range over the paginator results -->
         {{ range $todo := $page.Results }}
@@ -584,8 +591,8 @@ It will also populate the previously defined blocks in the base template.
                 
                 <!-- Submit to the todos app URL, use the template function to generate the URL based on what was previously defined. -->
                 <form class="todo-form" action="{{ url "todos:done" $todo.ID }}" method="POST">
-                    <input type="hidden" class="csrftoken-input" name="csrf_token" value="{{ .CsrfToken }}">
-                    <button type="submit">
+                    <input type="hidden" class="csrftoken-input" name="csrf_token" value="{{ $csrfToken }}">
+                    <button type="submit" class="update">
                         {{ if $todo.Done }}Unmark{{ else }}Mark{{ end }} as done
                     </button>
                 </form>
@@ -678,18 +685,24 @@ assets/
 We will define a simple function that will make a request to the todo app URL.
 
 ```javascript
-async function markAsDone(url, csrftoken) {
+async function markAsDone(url, csrftoken, update) {
+    console.log(url, csrftoken);
+
     var response = await fetch(url, {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "X-CSRFToken": csrftoken,
+            "X-CSRF-Token": csrftoken,
         },
     });
 
     var data = await response.json();
     if (data.status === "success") {
-        alert("Todo marked as done");
+        if (data.done) {
+            update("Task marked as done!");
+        } else {
+            update("Task marked as not done!");
+        }
     } else {
         alert("An error occurred");
     }
@@ -698,10 +711,15 @@ async function markAsDone(url, csrftoken) {
 function initForm(form) {
     const formUrl = form.getAttribute("action");
     const csrfTokenInput = form.querySelector(".csrftoken-input");
+    const updateElement = form.querySelector(".update");
+    const update = function(message) {
+        updateElement.textContent = message;
+    };
 
     form.addEventListener("submit", function(e) {
         e.preventDefault();
-        markAsDone(formUrl, csrfTokenInput.value);
+        
+        markAsDone(formUrl, csrfTokenInput.value, update);
     });
 }
 
@@ -712,3 +730,104 @@ document.addEventListener("DOMContentLoaded", function() {
 ```
 
 ## Setting up the admin interface
+
+To manage the todos, we will use the [admin interface](../apps/admin/app.md).
+
+We will need to define the app / model definition for the `Todo` model.
+
+This can be done in the `NewAppConfig` function of the `TodosAppConfig` before the `Ready` function gets called.
+
+Each app registered to the admin can contain multiple models - in this case, we only have one model.
+
+```go
+    var _ = admin.RegisterApp(
+        "todos",
+        admin.AppOptions{
+            RegisterToAdminMenu: true,
+            AppLabel:            fields.S("Todo App"),
+            AppDescription:      fields.S("Manage the todos for your todo app."),
+            MenuLabel:           fields.S("Todos"),
+        },
+        admin.ModelOptions{
+            Model:               &Todo{},
+            RegisterToAdminMenu: true,
+            Labels: map[string]func() string{
+                "ID":          fields.S("ID"),
+                "Title":       fields.S("Todo Title"),
+                "Description": fields.S("Todo Description"),
+                "Done":        fields.S("Is Done"),
+            },
+            GetForID: func(identifier any) (attrs.Definer, error) {
+                var id, ok = identifier.(int)
+                if !ok {
+                    var u, err = strconv.Atoi(fmt.Sprint(identifier))
+                    if err != nil {
+                        return nil, err
+                    }
+                    id = u
+                }
+                return GetTodoByID(
+                    context.Background(),
+                    id,
+                )
+            },
+            GetList: func(amount, offset uint, fields []string) ([]attrs.Definer, error) {
+                var todos, err = ListAllTodos(
+                    context.Background(), int(amount), int(offset),
+                )
+                if err != nil {
+                    return nil, err
+                }
+                var items = make([]attrs.Definer, 0)
+                for _, u := range todos {
+                    var cpy = u
+                    items = append(items, &cpy)
+                }
+                return items, nil
+            },
+            AddView: admin.FormViewOptions{
+                ViewOptions: admin.ViewOptions{
+                    Exclude: []string{"ID"},
+                },
+                Panels: []admin.Panel{
+                    admin.TitlePanel(
+                        admin.FieldPanel("Title"),
+                    ),
+                    admin.FieldPanel("Description"),
+                    admin.FieldPanel("Done"),
+                },
+            },
+            EditView: admin.FormViewOptions{
+                ViewOptions: admin.ViewOptions{
+                    Exclude: []string{"ID"},
+                },
+                Panels: []admin.Panel{
+                    admin.TitlePanel(
+                        admin.FieldPanel("Title"),
+                    ),
+                    admin.FieldPanel("Description"),
+                    admin.FieldPanel("Done"),
+                },
+            },
+            ListView: admin.ListViewOptions{
+                ViewOptions: admin.ViewOptions{
+                    Fields: []string{
+                        "ID",
+                        "Title",
+                        "Description",
+                        "Done",
+                    },
+                },
+                Columns: map[string]list.ListColumn[attrs.Definer]{
+                    "Title": list.LinkColumn(
+                        fields.S("Title"),
+                        "Title", func(defs attrs.Definitions, row attrs.Definer) string {
+                            return django.Reverse("admin:apps:model:edit", "todos", "Todo", defs.Get("ID"))
+                        },
+                    ),
+                },
+                PerPage: 25,
+            },
+        },
+    )
+```
