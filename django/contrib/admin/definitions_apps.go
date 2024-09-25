@@ -14,19 +14,33 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-type AdminView interface {
-	views.View
-	Site() *AdminApplication
-}
-
 type AppOptions struct {
+	// RegisterToAdminMenu allows for registering this app to the admin menu by default.
 	RegisterToAdminMenu bool
-	AppLabel            func() string
-	AppDescription      func() string
-	MenuLabel           func() string
-	MenuIcon            func() string
-	MediaFn             func() media.Media
-	IndexView           func(adminSite *AdminApplication, app *AppDefinition) views.View
+
+	// Applabel must return a human readable label for the app.
+	AppLabel func() string
+
+	// AppDescription must return a human readable description of this app.
+	AppDescription func() string
+
+	// MenuLabel must return a human readable label for the menu, this is how the app's name will appear in the admin's navigation.
+	MenuLabel func() string
+
+	// MenuIcon must return a string representing the icon to use for the menu.
+	//
+	// This should be a HTML element, I.E. "<svg>...</svg>".
+	MenuIcon func() string
+
+	// MediaFn must return a media.Media object that will be used for this app.
+	//
+	// It will always be included in the admin's media.
+	MediaFn func() media.Media
+
+	// A custom index view for the app.
+	//
+	// This will override the default index view for the app.
+	IndexView func(adminSite *AdminApplication, app *AppDefinition) views.View
 }
 
 type AppDefinition struct {

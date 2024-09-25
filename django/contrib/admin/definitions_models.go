@@ -13,19 +13,50 @@ import (
 	"github.com/Nigel2392/django/views/list"
 )
 
+// Basic options for a model-based view which includes a form.
 type ViewOptions struct {
-	Fields  []string
+	// Fields to include for the model in the view
+	Fields []string
+
+	// Fields to exclude from the model in the view
 	Exclude []string
-	Labels  map[string]func() string
+
+	// Labels for the fields in the view
+	//
+	// This is a map of field name to a function that returns the label for the field.
+	//
+	// Allowing for custom labels for fields in the view.
+	Labels map[string]func() string
 }
 
+// Options for a model-specific form view.
 type FormViewOptions struct {
 	ViewOptions
-	GetForm      func(req *http.Request, instance attrs.Definer, fields []string) modelforms.ModelForm[attrs.Definer]
-	FormInit     func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer])
-	GetHandler   func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) views.View
+
+	// GetForm is a function that returns a modelform.ModelForm for the model.
+	GetForm func(req *http.Request, instance attrs.Definer, fields []string) modelforms.ModelForm[attrs.Definer]
+
+	// FormInit is a function that can be used to initialize the form.
+	//
+	// This may be useful for providing custom form initialization logic.
+	FormInit func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer])
+
+	// GetHandler is a function that returns a views.View for the model.
+	//
+	// This allows you to have full control over the view used for saving the model.
+	//
+	// This does mean that any logic provided by the admin when saving the model should be implemented by the developer.
+	GetHandler func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) views.View
+
+	// A custom function for saving the instance.
+	//
+	// This function will be called when the form is saved and allows for custom logic to be executed when saving the instance.
 	SaveInstance func(context.Context, attrs.Definer) error
-	Panels       []Panel
+
+	// Panels are used to group fields in the form.
+	//
+	// This allows for a more simple, maintainable and organized form layout.
+	Panels []Panel
 }
 
 type ListViewOptions struct {
