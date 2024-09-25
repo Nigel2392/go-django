@@ -4,8 +4,6 @@
 
 **Django** rewritten to **Golang**.
 
-This code will be pushed to [go-django](https://github.com/Nigel2392/go-django) when ready.
-
 This is a rewrite of the Django framework in Golang.
 
 The goal is to provide a similar experience to Django, but with the performance of Golang.
@@ -22,9 +20,9 @@ Any database logic should be implemented by the end-developer, but some sub-pack
 
 - [Configuring your server](./docs/configuring.md)
 - [Creating an app](./docs/apps.md)
-- [Creating Forms](./docs/forms/forms.md)
+- [Creating Forms](./docs/forms/forms.md) (WIP)
   - [Working with Fields](./docs/forms/fields.md)
-  - [Working with Widgets](./docs/forms/widgets.md)
+  - [Working with Widgets](./docs/forms/widgets.md) (WIP)
   - [Passing and creating Media](./docs/forms/media.md)
 - [Defining your models](./docs/attrs.md)
 - [Working with permissions](./docs/permissions.md)
@@ -42,11 +40,11 @@ Any database logic should be implemented by the end-developer, but some sub-pack
 ### Contrib apps
 
 - [sessions](./docs/apps/sessions.md)
-- [admin](./docs/apps/admin)
-- [auditlogs](./docs/apps/auditlogs.md)
-- [auth](./docs/apps/auth)
-- [pages](./docs/apps/pages)
-- [editorjs](./docs/apps/editor.md)
+- [admin](./docs/apps/admin) (WIP)
+- [auditlogs](./docs/apps/auditlogs.md) (WIP)
+- [auth](./docs/apps/auth) (WIP)
+- [pages](./docs/apps/pages) (WIP)
+- [editorjs](./docs/apps/editor.md) (WIP)
 
 ### Examples
 
