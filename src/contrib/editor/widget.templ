@@ -1,0 +1,177 @@
+package editor
+
+import (
+    "fmt"
+    "encoding/json"
+
+	"github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
+)
+
+func getSafe[T any](m map[string]interface{}, key string) (value T) {
+	if v, ok := m[key]; ok {
+		return v.(T)
+	}
+	return value
+}
+
+var _ widgets.Widget = (*EditorJSWidget)(nil)
+
+type EditorJSWidget struct {
+	widgets.BaseWidget
+	Features []string
+}
+
+func NewEditorJSWidget(features ...string) *EditorJSWidget {
+	return &EditorJSWidget{
+		BaseWidget: widgets.BaseWidget{
+            TypeFn: func() string {
+                return "editorjs"
+            },
+        },
+		Features:   features,
+	}
+}
+
+func (b EditorJSWidget) ValueToForm(value interface{}) interface{} {
+	var editorJsData EditorJSData
+	if fields.IsZero(value) {
+		return editorJsData
+	}
+
+	switch value := value.(type) {
+	case *EditorJSBlockData:
+		var blocks = make([]BlockData, 0)
+
+		for _, block := range value.Blocks {
+			var data = block.Data()
+			blocks = append(blocks, data)
+		}
+
+		var d = EditorJSData{
+			Time:    value.Time,
+			Version: value.Version,
+			Blocks:  blocks,
+		}
+
+		editorJsData = d
+	case EditorJSData:
+		editorJsData = value
+	default:
+		panic(fmt.Sprintf("Invalid value type: %T", value))
+	}
+
+	return editorJsData
+}
+
+func (b EditorJSWidget) ValueToGo(value interface{}) (interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
+
+	var editorJsData EditorJSData
+	switch value := value.(type) {
+	case *EditorJSBlockData:
+        return value, nil
+    case EditorJSData:
+        editorJsData = value
+    case string:
+        var d EditorJSData
+        if err := json.Unmarshal([]byte(value), &d); err != nil {
+            return nil, err
+        }
+        editorJsData = d
+    default:
+		panic(fmt.Sprintf("Invalid value type: %T (%v)", value, value))
+	}
+
+	return ValueToGo(b.Features, editorJsData)
+}
+
+func (b *EditorJSWidget) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {
+	var context = b.BaseWidget.GetContextData(id, name, value, attrs)
+    // ...
+	return context
+}
+
+templ (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs map[string]string, config map[string]interface{}) {
+    <div id={ fmt.Sprintf("%s-container", id) } class="editorjs-widget-container" data-controller="editorjs-widget" data-editorjs-widget-config-value={ templ.JSONString(config) }>
+        <input
+            type="hidden"
+            id={ id }
+            name={ name }
+            value={ value }
+            data-editorjs-widget-target="input"/>
+
+        <div data-editorjs-widget-target="editor" id={ fmt.Sprintf("%s-editor", id) }></div>
+    </div>
+}
+
+func (b *EditorJSWidget) RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
+    var valueStr string
+    if value == nil || value == "" {
+        value = "{}"
+        goto getContext
+    }
+
+    switch value := value.(type) {
+    case []byte:
+        valueStr = string(value)
+    case string:
+        valueStr = value
+    default:
+        var d, err = json.Marshal(value)
+        if err != nil {
+            return err
+        }
+        valueStr = string(d)
+    }
+
+
+getContext:
+	var widgetCtx = b.GetContextData(id, name, value, attrs)
+	if errors != nil {
+		widgetCtx.Set("errors", errors)
+	}
+
+	var (
+        config = buildConfig(widgetCtx, b.Features...)
+        renderCtx = context.Background()
+    )
+
+    config["holder"] = fmt.Sprintf("%s-editor", id)
+    var component = b.Component(
+        id, name, valueStr, errors, attrs, config,
+    )
+
+	return component.Render(renderCtx, w)
+}
+
+func (b *EditorJSWidget) Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
+	return b.RenderWithErrors(w, id, name, value, nil, attrs)
+}
+
+func (b *EditorJSWidget) Media() media.Media {
+	var (
+		m           = b.BaseWidget.Media()
+		featureList = Features(b.Features...)
+	)
+
+	for _, feature := range featureList {
+		m = m.Merge(feature.Media())
+	}
+
+
+	m.AddCSS(
+		media.CSS(django.Static("editorjs/css/index.css")),
+	)
+
+	m.AddJS(
+		&media.JSAsset{URL: django.Static("editorjs/js/index.js")},
+	)
+
+	return m
+}

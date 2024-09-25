@@ -22,7 +22,7 @@ Now let's create a new app struct.
 package myapp
 
 import (
-    "github.com/Nigel2392/django/apps"
+    "github.com/Nigel2392/go-django/src/apps"
 )
 
 type CustomApp struct {

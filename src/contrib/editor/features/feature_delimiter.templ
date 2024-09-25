@@ -1,0 +1,35 @@
+package features
+
+import "github.com/Nigel2392/go-django/src/contrib/editor"
+
+func init() {
+	editor.Register(DelimiterFeature)
+}
+
+var DelimiterFeature = &Block{
+	BaseFeature: BaseFeature{
+		Type:          "delimiter",
+		JSConstructor: "Delimiter",
+		JSFiles: []string{
+			"editorjs/js/vendor/tools/delimiter.js",
+		},
+		Build:  func(fb *FeatureBlock) *FeatureBlock {
+			fb.GetString = func(editor.BlockData) string { return "----" }
+			return fb
+		},
+	},
+	RenderFunc:    renderDelimiter,
+}
+
+func renderDelimiter(b editor.FeatureBlock, c context.Context, w io.Writer) error{
+	return renderDelimiterObject(b).Render(c, w)
+}
+
+templ renderDelimiterObject(fb editor.FeatureBlock) {
+	<div class="delimiter" data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
+		<span class="delimiter__dot"></span>
+		<span class="delimiter__dot"></span>
+		<span class="delimiter__dot"></span>
+	</div>
+
+}

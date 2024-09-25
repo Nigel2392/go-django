@@ -1,4 +1,4 @@
-module github.com/Nigel2392
+module github.com/Nigel2392/go-django
 
 go 1.23.0
 

@@ -51,8 +51,8 @@ import (
     "fmt"
     "embed"
     "io/fs"
-    "github.com/Nigel2392/django"
-    "github.com/Nigel2392/django/core/filesystem/staticfiles"
+    "github.com/Nigel2392/go-django/src"
+    "github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 )
 
 //go:embed assets/**

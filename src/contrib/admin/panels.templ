@@ -1,0 +1,108 @@
+package admin
+
+import (
+    "github.com/Nigel2392/go-django/src/forms"
+    "html/template"
+)
+
+type BoundPanel interface {
+	Component() templ.Component
+	Render() template.HTML
+}
+
+type BoundFormPanel[T forms.Form, P Panel] struct {
+	forms.BoundField
+    Context context.Context
+    Panel P
+	Form T
+}
+
+func (p *BoundFormPanel[T, P]) Render() template.HTML {
+    var b bytes.Buffer
+    p.Component().Render(p.Context, &b)
+    return template.HTML(b.String())
+}
+
+templ (p *BoundFormPanel[T, P]) Component() {
+    {{ var label = p.Label() }}
+    {{ var errors = p.Errors() }}
+    {{ var helpText = p.HelpText() }}
+    {{ var field = p.Field() }}
+    <div class="panel panel-default">
+        <div class="panel__heading">
+            <div class="panel__title">
+                @templ.Raw(string(label))
+            </div>
+        </div>
+        if len(errors) > 0 {
+            <div class="panel__errors">
+                <ul>
+                    for _, err := range errors {
+                        <li class="panel__error">@templ.Raw(string(err.Error()))</li>
+                    }
+                </ul>
+            </div>
+        }
+        if helpText != "" {
+            <div class="panel__help">
+                @templ.Raw(string(helpText))
+            </div>
+        }
+        <div class="panel__body">
+            <div class="form-field-wrapper">
+                <div class="form-field">
+                    @templ.Raw(string(field))
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+type BoundTitlePanel[T forms.Form, P Panel] struct {
+	BoundPanel
+    Context context.Context
+}
+
+func (p *BoundTitlePanel[T, P]) Render() template.HTML {
+    var b bytes.Buffer
+    p.Component().Render(p.Context, &b)
+    return template.HTML(b.String())
+}
+
+templ (p *BoundTitlePanel[T, P]) Component() {
+    <div class="panel panel-title">
+        <div class="panel__body">
+            @p.BoundPanel.Component()
+        </div>
+    </div>
+}
+
+type BoundMultiPanel[T forms.Form] struct {
+    LabelFn func() string
+    Context context.Context
+    Panels []BoundPanel
+    Form T
+}
+
+func (p *BoundMultiPanel[T]) Render() template.HTML {
+    var b bytes.Buffer
+    p.Component().Render(p.Context, &b)
+    return template.HTML(b.String())
+}
+
+templ (p *BoundMultiPanel[T]) Component() {
+    <div class="panel panel-multi">
+        if p.LabelFn != nil {
+            <div class="panel__heading">
+                <div class="panel__title">
+                    @templ.Raw(p.LabelFn())
+                </div>
+            </div>
+        }
+        <div class="panel__body">
+            for _, panel := range p.Panels {
+                @panel.Component()
+            }
+        </div>
+    </div>
+}

@@ -15,8 +15,8 @@ package main
 
 import (
     "net/http"
-    "github.com/Nigel2392/django/core"
-    "github.com/Nigel2392/django/tpl"
+    "github.com/Nigel2392/go-django/src/core"
+    "github.com/Nigel2392/go-django/src/tpl"
 )
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {

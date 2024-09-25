@@ -1,0 +1,138 @@
+package list
+
+import (
+    "github.com/Nigel2392/go-django/src/core/attrs"
+    "github.com/Nigel2392/go-django/src/core/assert"
+    "github.com/Nigel2392/go-django/src/forms/fields"
+)
+
+type funcColumn[T attrs.Definer] struct {
+	header func() string
+	data   func(defs attrs.Definitions, row T) interface{}
+}
+
+templ (c *funcColumn[T]) Header() {
+	{{ assert.False(c.header == nil, "Column header is nil") }}
+    { c.header() }
+}
+
+templ (c *funcColumn[T]) Component(defs attrs.Definitions, row T) {
+    { attrs.ToString(
+        c.data(defs, row),
+    ) }
+}
+
+type fieldColumn[T attrs.Definer] struct {
+	header    func() string
+	fieldName string
+}
+
+templ (c *fieldColumn[T]) Header() {
+	{{ assert.False(c.header == nil, "Column header is nil") }}
+    { c.header() }
+}
+
+func (c *fieldColumn[T]) data(defs attrs.Definitions, _ T) interface{} {
+	var field, ok = defs.Field(c.fieldName)
+
+	assert.False(
+		!ok,
+		"Field %q does not exist", c.fieldName,
+	)
+
+	if field == nil {
+		return nil
+	}
+
+	var d = field.GetValue()
+	if fields.IsZero(d) {
+		return field.GetDefault()
+	}
+
+	return d
+}
+
+templ (c *fieldColumn[T]) Component(defs attrs.Definitions, row T) {
+    { attrs.ToString(
+        c.data(defs, row),
+    ) }
+}
+
+type fieldHTMLColumn[T attrs.Definer] struct {
+	funcColumn[T]
+}
+
+templ (c *fieldHTMLColumn[T]) Component(defs attrs.Definitions, row T) {
+	{{ var s = attrs.ToString(c.data(defs, row)) }}
+	@templ.Raw(s)
+}
+
+func HTMLColumn[T attrs.Definer](header func() string, getHTML func(defs attrs.Definitions, row T) interface{}) ListColumn[T] {
+	return &fieldHTMLColumn[T]{funcColumn[T]{header, getHTML}}
+}
+
+type titleFieldColumn[T attrs.Definer] struct {
+	wrapped ListColumn[T]
+	getURL  func(defs attrs.Definitions, row T) string
+}
+
+templ (c *titleFieldColumn[T]) Header() {
+	<div class="list-title">
+		@c.wrapped.Header()
+	</div>
+}
+
+templ (c *titleFieldColumn[T]) Component(defs attrs.Definitions, row T) {
+	{{ var url = templ.SafeURL(c.getURL(defs, row))}}
+	<div class="list-title">
+		if url == "" {
+			@c.wrapped.Component(defs, row)
+		} else {
+			<a href={ url }>
+				@c.wrapped.Component(defs, row)
+			</a>
+		}
+	</div>
+}
+
+func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(defs attrs.Definitions, row T) string) ListColumn[T] {
+	return &titleFieldColumn[T]{
+		wrapped: wraps,
+		getURL:  getURL,
+	}
+}
+
+type linkColumn[T attrs.Definer] struct {
+	fieldColumn[T]
+	getURL func(defs attrs.Definitions, row T) string
+}
+
+templ (c *linkColumn[T]) Component(defs attrs.Definitions, row T) {
+	{{ var url = templ.SafeURL(c.getURL(defs, row))}}
+	if url == "" {
+		@c.fieldColumn.Component(defs, row)
+	} else {
+		<a href={ url }>
+			@c.fieldColumn.Component(defs, row)
+		</a>
+	}
+}
+
+func LinkColumn[T attrs.Definer](header func() string, fieldName string, getURL func(defs attrs.Definitions, row T) string) ListColumn[T] {
+	return &linkColumn[T]{
+		fieldColumn: fieldColumn[T]{header, fieldName},
+		getURL:     getURL,
+	}
+}
+
+func Column[T attrs.Definer](header func() string, getter any) ListColumn[T] {
+	switch g := getter.(type) {
+	case func(defs attrs.Definitions, row T) interface{}:
+		return &funcColumn[T]{header, g}
+	case string:
+		return &fieldColumn[T]{header, g}
+	default:
+		assert.Fail("Invalid column getter type")
+		return nil
+	}
+}

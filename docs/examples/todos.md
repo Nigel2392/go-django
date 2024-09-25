@@ -31,10 +31,10 @@ import (
     "database/sql"
     _ "github.com/mattn/go-sqlite3"
 
-    "github.com/Nigel2392/go-django"
-    "github.com/Nigel2392/go-django/contrib/admin"
-    "github.com/Nigel2392/go-django/contrib/auth"
-    "github.com/Nigel2392/go-django/contrib/session"
+    "github.com/Nigel2392/go-django/src"
+    "github.com/Nigel2392/go-django/src/contrib/admin"
+    "github.com/Nigel2392/go-django/src/contrib/auth"
+    "github.com/Nigel2392/go-django/src/contrib/session"
 )
 
 //go:embed assets/*

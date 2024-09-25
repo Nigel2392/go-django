@@ -40,7 +40,7 @@ The following example shows how to create a simple command that prints a message
 package myapp
 
 import (
-    "github.com/Nigel2392/django/core/command"
+    "github.com/Nigel2392/go-django/src/core/command"
     "flag"
     "fmt"
     "time"

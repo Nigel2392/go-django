@@ -1,0 +1,58 @@
+package list
+
+import (
+    "github.com/Nigel2392/go-django/src/core/attrs"
+    "strings"
+)
+
+
+type List[T attrs.Definer] struct {
+	Columns []ListColumn[T]
+	groups  []ColumnGroup[T]
+}
+
+func NewList[T attrs.Definer](list []T, columns ...ListColumn[T]) *List[T] {
+    var l = &List[T]{
+        Columns: columns,
+        groups:  make([]ColumnGroup[T], 0, len(list)),
+    }
+
+    for _, item := range list {
+        var group = ColumnGroup[T]{
+            Definitons: item.FieldDefs(),
+            Columns: columns,
+            Instance: item,
+        }
+
+        l.groups = append(l.groups, group)
+    }
+
+    return l
+}
+
+func (l *List[T]) Render() string {
+    var component = l.Component()
+    var b strings.Builder
+    var ctx = context.Background()
+    component.Render(ctx, &b)
+    return b.String()
+}
+
+templ (l *List[T]) Component() {
+    <table class="list">
+        <thead>
+            <tr class="list-header">
+                for _, column := range l.Columns {
+                    <th class="list-column-header">
+                        @column.Header()
+                    </th>
+                }
+            </tr>
+        </thead>
+        <tbody>
+            for _, group := range l.groups {
+                @group.Component()
+            }
+        </tbody>
+    </table>
+}

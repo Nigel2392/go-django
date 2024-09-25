@@ -1,0 +1,66 @@
+package admin
+
+import (
+    "github.com/Nigel2392/go-django/src/core/attrs"
+    "github.com/Nigel2392/go-django/src/core/assert"
+)
+
+type ListAction[T attrs.Definer] struct {
+    Classname string
+	Show func(defs attrs.Definitions, row T) bool
+    Text func(defs attrs.Definitions, row T) string
+    URL func(defs attrs.Definitions, row T) string
+}
+
+func (l *ListAction[T]) IsShown(defs attrs.Definitions, row T) bool {
+    if l.Show != nil {
+        return l.Show(defs, row)
+    }
+    return true
+}
+
+templ (l *ListAction[T]) Component(defs attrs.Definitions, row T) {
+    {{ assert.False(l.Text == nil, "Text must not be nil") }}
+    if l.URL != nil {
+        {{ var url = l.URL(defs, row) }}
+        <a href={ templ.SafeURL(url) } class={ l.Classname }>{ l.Text(defs, row) }</a>
+    } else {
+        <button class={ l.Classname }>{ l.Text(defs, row) }</button>
+    }
+}
+
+type ListActionsColumn[T attrs.Definer] struct {
+	Heading func() string
+    Actions []*ListAction[T]
+}
+
+templ (l *ListActionsColumn[T]) Header() {
+    if l.Heading != nil {
+        { l.Heading() }
+    }
+}
+
+templ (l *ListActionsColumn[T]) Component(defs attrs.Definitions, row T) {
+    {{ var heading string }}
+    {{ if l.Heading != nil {
+        heading = l.Heading()
+    } }}
+
+
+    <div data-controller="dropdown" class="dropdown">
+        <button type="button" class="dropdown__toggle dropdown__toggle--icon" data-dropdown-target="toggle" aria-label={ heading } aria-expanded="false">
+            <svg class="icon icon-dots-horizontal dropdown__toggle-icon" viewBox="0 0 16 16">
+                <path d="M4.75 8c0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75 0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75Zm5 0c0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75 0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75Zm1.5 0c0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75 0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75Z"></path>
+            </svg>
+        </button>
+        <div data-dropdown-target="content" class="dropdown__content">
+            for _, col := range l.Actions {
+                if !col.IsShown(defs, row) {
+                    {{ continue }}
+                }
+                @col.Component(defs, row)
+            }
+        </div>
+    </div>
+}
+
