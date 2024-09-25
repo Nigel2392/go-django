@@ -18,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	django_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
 	"github.com/alexedwards/scs/v2"
@@ -79,8 +80,23 @@ func NewAppConfig() django.AppConfig {
 		db, ok := dbInt.(*sql.DB)
 		assert.True(ok, "DATABASE setting must adhere to auth-models.DBTX interface")
 
-		var q, err = models.NewQueries(db)
-		assert.Err(err)
+		var (
+			q       models.DBQuerier
+			backend django_models.Backend[models.Querier]
+			err     error
+		)
+
+		if q, err = models.NewQueries(db); err != nil {
+			return err
+		}
+
+		if backend, err = models.BackendForDB(db.Driver()); err != nil {
+			return err
+		}
+
+		if err := backend.CreateTable(db); err != nil {
+			return err
+		}
 
 		Auth.Queries = q
 		Auth.Session = sess
