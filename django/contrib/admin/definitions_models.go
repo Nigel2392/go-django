@@ -61,15 +61,40 @@ type FormViewOptions struct {
 
 type ListViewOptions struct {
 	ViewOptions
-	PerPage    uint64
-	Columns    map[string]list.ListColumn[attrs.Definer]
-	Format     map[string]func(v any) any
+
+	// PerPage is the number of items to show per page.
+	//
+	// This is used for pagination in the list view.
+	PerPage uint64
+
+	// Columns are used to define the columns in the list view.
+	//
+	// This allows for custom rendering logic of the columns in the list view.
+	Columns map[string]list.ListColumn[attrs.Definer]
+
+	// Format is a map of field name to a function that formats the field value.
+	//
+	// I.E. map[string]func(v any) any{"Name": func(v any) any { return strings.ToUpper(v.(string)) }}
+	// would uppercase the value of the "Name" field in the list view.
+	Format map[string]func(v any) any
+
+	// GetHandler is a function that returns a views.View for the model.
+	//
+	// This allows you to have full control over the view used for listing the models.
+	//
+	// This does mean that any logic provided by the admin when listing the models should be implemented by the developer.
 	GetHandler func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) views.View
 }
 
 type DeleteViewOptions struct {
-	FormatMessage func(instance attrs.Definer) string
-	GetHandler    func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) views.View
+	// FormatMessage func(instance attrs.Definer) string
+
+	// GetHandler is a function that returns a views.View for the model.
+	//
+	// This allows you to have full control over the view used for deleting the model.
+	//
+	// This does mean that any logic provided by the admin when deleting the model should be implemented by the developer.
+	GetHandler func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) views.View
 }
 
 func viewDefaults(o *ViewOptions, mdl any) {
@@ -82,16 +107,51 @@ func viewDefaults(o *ViewOptions, mdl any) {
 }
 
 type ModelOptions struct {
-	Name                string
-	AddView             FormViewOptions
-	EditView            FormViewOptions
-	ListView            ListViewOptions
-	DeleteView          DeleteViewOptions
+	// Name of the model and how it will be displayed in the admin.
+	Name string
+
+	// AddView is the options for the add view of the model.
+	//
+	// This allows for custom creation logic and formatting form fields / layout.
+	AddView FormViewOptions
+
+	// EditView is the options for the edit view of the model.
+	//
+	// This allows for custom editing logic and formatting form fields / layout.
+	EditView FormViewOptions
+
+	// ListView is the options for the list view of the model.
+	//
+	// This allows for custom listing logic and formatting list columns.
+	ListView ListViewOptions
+
+	// DeleteView is the options for the delete view of the model.
+	//
+	// Any custom logic for deleting the model should be implemented here.
+	DeleteView DeleteViewOptions
+
+	// RegisterToAdminMenu is a flag that determines if the model should be automatically registered to the admin menu.
 	RegisterToAdminMenu bool
-	Labels              map[string]func() string
-	GetForID            func(identifier any) (attrs.Definer, error)
-	GetList             func(amount, offset uint, include []string) ([]attrs.Definer, error)
-	Model               attrs.Definer
+
+	// Labels for the fields in the model.
+	//
+	// This provides a simple top- level override for the labels of the fields in the model.
+	//
+	// Any custom labels for fields implemented in the AddView, EditView or ListView will take precedence over these labels.
+	Labels map[string]func() string
+
+	// GetForID is a function that returns a model instance for the given identifier.
+	//
+	// This is used to get a model instance for the edit and delete views.
+	GetForID func(identifier any) (attrs.Definer, error)
+
+	// GetList is a function that returns a list of model instances.
+	//
+	// This is used to get a (paginated) list of model instances for the list view.
+	GetList func(amount, offset uint, include []string) ([]attrs.Definer, error)
+
+	// Model is the object that the above- defined options are for.
+	Model attrs.Definer
 }
 
 func (o *ModelOptions) GetName() string {
