@@ -165,6 +165,8 @@ func (o *ModelOptions) GetName() string {
 	return o.Name
 }
 
+// A struct which is mainly used internally (but can be used by third parties)
+// to easily work with models in admin views.
 type ModelDefinition struct {
 	ModelOptions
 	Name    string
@@ -179,6 +181,9 @@ func (o *ModelDefinition) rModel() reflect.Type {
 	return o._rModel
 }
 
+// Returns a new instance of the model.
+//
+// This works the same as calling `reflect.New` on the model type.
 func (o *ModelDefinition) NewInstance() attrs.Definer {
 	var rTyp = o.rModel()
 	if rTyp.Kind() == reflect.Ptr {

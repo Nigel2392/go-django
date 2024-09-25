@@ -739,95 +739,130 @@ This can be done in the `NewAppConfig` function of the `TodosAppConfig` before t
 
 Each app registered to the admin can contain multiple models - in this case, we only have one model.
 
+### Admin Area Documentation
+
+The admin area in your application leverages customizable views to manage models effectively. Below are the core components for setting up and controlling views in the admin area:
+
+#### 1. **ViewOptions**
+
+`ViewOptions` provides basic settings for form-based views, including fields and labels:
+
+* `Fields`: Specifies which fields to include.
+* `Exclude`: Specifies fields to exclude.
+* `Labels`: A map of field names to functions that return custom labels.
+
+#### 2. **FormViewOptions**
+
+`FormViewOptions` extends `ViewOptions` with settings specific to form views (Add/Edit):
+
+* `GetForm`: Returns a `ModelForm` for a model, customizable per request.
+* `FormInit`: Allows custom initialization logic for forms.
+* `GetHandler`: Returns a custom view handler for form submissions.
+* `SaveInstance`: A function to handle the instance saving process, allowing custom logic.
+* `Panels`: Groups fields into logical sections for better form organization.
+
+#### 3. **ListViewOptions**
+
+`ListViewOptions` is used for configuring list views:
+
+* `PerPage`: Controls pagination by setting the number of items per page.
+* `Columns`: Defines columns and their rendering logic in the list view.
+* `Format`: Provides custom formatting for field values.
+* `GetHandler`: Specifies a custom view handler for listing models.
+
+#### 4. **DeleteViewOptions**
+
+`DeleteViewOptions` provides customization for delete views:
+
+* `GetHandler`: Allows for custom view handlers for deletion, giving full control over delete operations.
+
+#### 5. **ModelOptions**
+
+`ModelOptions` brings all the above view configurations together for a model:
+
+* `Name`: Display name for the model in the admin area.
+* `AddView`, `EditView`: Customizes the add and edit views using `FormViewOptions`.
+* `ListView`: Configures the listing view using `ListViewOptions`.
+* `DeleteView`: Configures the delete view using `DeleteViewOptions`.
+* `RegisterToAdminMenu`: Determines if the model should be listed in the admin menu.
+* `Labels`: Provides top-level label overrides for model fields.
+* `GetForID`: Fetches a model instance by its ID for edit and delete views.
+* `GetList`: Fetches a list of model instances for list views.
+
+### Example Integration
+
+Below is a code snippet showing how to set up a model with these options in your admin area:
+
 ```go
-    var _ = admin.RegisterApp(
-        "todos",
-        admin.AppOptions{
-            RegisterToAdminMenu: true,
-            AppLabel:            fields.S("Todo App"),
-            AppDescription:      fields.S("Manage the todos for your todo app."),
-            MenuLabel:           fields.S("Todos"),
+admin.RegisterApp(
+    "todos",
+    admin.AppOptions{
+        RegisterToAdminMenu: true,
+        AppLabel:            "Todo App",
+        AppDescription:      "Manage your todos.",
+        MenuLabel:           "Todos",
+    },
+    admin.ModelOptions{
+        Model:               &Todo{},
+        Name:                "Todo",
+        RegisterToAdminMenu: true,
+        Labels: map[string]func() string{
+            "ID":    func() string { return "ID" },
+            "Title": func() string { return "Todo Title" },
         },
-        admin.ModelOptions{
-            Model:               &Todo{},
-            RegisterToAdminMenu: true,
-            Labels: map[string]func() string{
-                "ID":          fields.S("ID"),
-                "Title":       fields.S("Todo Title"),
-                "Description": fields.S("Todo Description"),
-                "Done":        fields.S("Is Done"),
+        GetForID: func(identifier any) (attrs.Definer, error) {
+            id, err := strconv.Atoi(fmt.Sprint(identifier))
+            if err != nil {
+                return nil, err
+            }
+            return GetTodoByID(context.Background(), id)
+        },
+        GetList: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
+            todos, err := ListAllTodos(context.Background(), int(amount), int(offset))
+            if err != nil {
+                return nil, err
+            }
+            return convertToDefiners(todos), nil
+        },
+        AddView: admin.FormViewOptions{
+            ViewOptions: admin.ViewOptions{
+                Exclude: []string{"ID"},
             },
-            GetForID: func(identifier any) (attrs.Definer, error) {
-                var id, ok = identifier.(int)
-                if !ok {
-                    var u, err = strconv.Atoi(fmt.Sprint(identifier))
-                    if err != nil {
-                        return nil, err
-                    }
-                    id = u
-                }
-                return GetTodoByID(
-                    context.Background(),
-                    id,
-                )
-            },
-            GetList: func(amount, offset uint, fields []string) ([]attrs.Definer, error) {
-                var todos, err = ListAllTodos(
-                    context.Background(), int(amount), int(offset),
-                )
-                if err != nil {
-                    return nil, err
-                }
-                var items = make([]attrs.Definer, 0)
-                for _, u := range todos {
-                    var cpy = u
-                    items = append(items, &cpy)
-                }
-                return items, nil
-            },
-            AddView: admin.FormViewOptions{
-                ViewOptions: admin.ViewOptions{
-                    Exclude: []string{"ID"},
-                },
-                Panels: []admin.Panel{
-                    admin.TitlePanel(
-                        admin.FieldPanel("Title"),
-                    ),
-                    admin.FieldPanel("Description"),
-                    admin.FieldPanel("Done"),
-                },
-            },
-            EditView: admin.FormViewOptions{
-                ViewOptions: admin.ViewOptions{
-                    Exclude: []string{"ID"},
-                },
-                Panels: []admin.Panel{
-                    admin.TitlePanel(
-                        admin.FieldPanel("Title"),
-                    ),
-                    admin.FieldPanel("Description"),
-                    admin.FieldPanel("Done"),
-                },
-            },
-            ListView: admin.ListViewOptions{
-                ViewOptions: admin.ViewOptions{
-                    Fields: []string{
-                        "ID",
-                        "Title",
-                        "Description",
-                        "Done",
-                    },
-                },
-                Columns: map[string]list.ListColumn[attrs.Definer]{
-                    "Title": list.LinkColumn(
-                        fields.S("Title"),
-                        "Title", func(defs attrs.Definitions, row attrs.Definer) string {
-                            return django.Reverse("admin:apps:model:edit", "todos", "Todo", defs.Get("ID"))
-                        },
-                    ),
-                },
-                PerPage: 25,
+            Panels: []admin.Panel{
+                admin.FieldPanel("Title"),
+                admin.FieldPanel("Description"),
+                admin.FieldPanel("Done"),
             },
         },
-    )
+        EditView: admin.FormViewOptions{
+            ViewOptions: admin.ViewOptions{
+                Exclude: []string{"ID"},
+            },
+            Panels: []admin.Panel{
+                admin.FieldPanel("Title"),
+                admin.FieldPanel("Description"),
+                admin.FieldPanel("Done"),
+            },
+        },
+        ListView: admin.ListViewOptions{
+            ViewOptions: admin.ViewOptions{
+                Fields: []string{"ID", "Title", "Done"},
+            },
+            PerPage: 20,
+            Columns: map[string]list.ListColumn[attrs.Definer]{
+                "Title": list.LinkColumn("Title", "Title", func(defs attrs.Definitions, row attrs.Definer) string {
+                    return django.Reverse("admin:todos:model:edit", "todos", "Todo", defs.Get("ID"))
+                }),
+            },
+        },
+        DeleteView: admin.DeleteViewOptions{
+            GetHandler: func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) views.View {
+                return customDeleteHandler(adminSite, app, model, instance)
+            },
+        },
+    },
+)
 ```
+
+This setup provides a robust admin interface, allowing for custom handling of add, edit, list,
+and delete operations while keeping the configuration modular and maintainable.
