@@ -8,7 +8,7 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
-	"github.com/Nigel2392/go-django/src/contrib/pages/models"
+	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms/fields"

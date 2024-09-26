@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/src/contrib/pages"
-	"github.com/Nigel2392/go-django/src/contrib/pages/models"
+	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-signals"

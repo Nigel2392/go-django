@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/Nigel2392/go-django/src/contrib/pages/models"
+	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	dj_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/go-sql-driver/mysql"
 

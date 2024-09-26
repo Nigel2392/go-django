@@ -1,4 +1,4 @@
-package models
+package page_models
 
 import models "github.com/Nigel2392/go-django/src/models"
 

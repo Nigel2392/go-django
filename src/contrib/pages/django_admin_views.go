@@ -10,7 +10,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
-	"github.com/Nigel2392/go-django/src/contrib/pages/models"
+	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"

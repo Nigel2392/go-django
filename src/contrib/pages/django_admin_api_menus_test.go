@@ -11,7 +11,7 @@ import (
 	_ "unsafe"
 
 	"github.com/Nigel2392/go-django/src/contrib/pages"
-	"github.com/Nigel2392/go-django/src/contrib/pages/models"
+	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 )
 
 //go:linkname pageMenuHandler github.com/Nigel2392/go-django/src/contrib/pages.pageMenuHandler

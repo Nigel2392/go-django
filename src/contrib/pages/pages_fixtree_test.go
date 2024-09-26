@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/src/contrib/pages"
-	"github.com/Nigel2392/go-django/src/contrib/pages/models"
+	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 )
 
 var FixTreeTest_DATA_OK = []*models.PageNode{

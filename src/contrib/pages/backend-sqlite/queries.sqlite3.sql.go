@@ -4,7 +4,7 @@ import (
 	"context"
 	"strings"
 
-	"github.com/Nigel2392/go-django/src/contrib/pages/models"
+	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 )
 
 const allNodes = `-- name: AllNodes :many

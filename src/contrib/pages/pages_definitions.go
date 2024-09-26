@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/src/contrib/admin"
-	"github.com/Nigel2392/go-django/src/contrib/pages/models"
+	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
 

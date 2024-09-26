@@ -7,7 +7,7 @@ import (
 
 	_ "github.com/Nigel2392/go-django/src/contrib/pages/backend-mysql"
 	_ "github.com/Nigel2392/go-django/src/contrib/pages/backend-sqlite"
-	"github.com/Nigel2392/go-django/src/contrib/pages/models"
+	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 
 	_ "embed"
 )
