@@ -491,17 +491,25 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			return err
 		}
 
-		fmt.Printf("Created root node: %+v\n", ref)
-		fmt.Printf("Saving page: %+v\n", d)
-
 		if page, ok := d.(SaveablePage); ok {
 			err = SavePage(
 				QuerySet(), ctx, nil, page,
 			)
-		} else {
-			fmt.Printf("Saving page node %T %+v\n", d, d)
-		}
+			if err != nil {
+				return err
+			}
 
+			ref.PageID = page.ID()
+			err = qs.UpdateNode(
+				ctx, ref.Title, ref.Path, ref.Depth, ref.Numchild, ref.UrlPath, ref.Slug, int64(ref.StatusFlags), ref.PageID, ref.ContentType, ref.PK,
+			)
+		} else if n, ok := d.(*models.PageNode); ok {
+			_, err = qs.InsertNode(
+				ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, n.Slug, int64(n.StatusFlags), n.PageID, n.ContentType,
+			)
+		} else {
+			err = fmt.Errorf("invalid page type: %T", d)
+		}
 		if err != nil {
 			return err
 		}
