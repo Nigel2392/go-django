@@ -272,7 +272,16 @@ func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Requ
 }
 
 func (a *Application) Reverse(name string, args ...any) string {
-	var rt, _ = a.Mux.Reverse(name, args...)
+	var rt, err = a.Mux.Reverse(name, args...)
+
+	if err != nil {
+		panic(fmt.Sprintf("Error reversing URL %s: %s", name, err))
+	}
+
+	if len(rt) == 0 {
+		panic(fmt.Sprintf("Error reversing URL %s: %s", name, err))
+	}
+
 	var l = len(rt)
 	if !strings.HasPrefix(rt, "/") {
 		l += 1
@@ -509,6 +518,8 @@ func (a *Application) Initialize() error {
 		},
 	})
 
+	commandRegistry.Register(sqlShellCommand)
+
 	var r Mux = a.Mux
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
@@ -553,7 +564,7 @@ func (a *Application) Initialize() error {
 	case errors.Is(err, command.ErrNoCommand):
 		return nil
 	case errors.Is(err, command.ErrUnknownCommand):
-		a.Log.Warnf("Error running command: %s", err)
+		a.Log.Fatalf(1, "Error running command: %s", err)
 		return nil
 	case errors.Is(err, flag.ErrHelp):
 		os.Exit(0)

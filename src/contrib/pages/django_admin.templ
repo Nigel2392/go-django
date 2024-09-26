@@ -2,6 +2,7 @@ package pages
 
 import (
     "github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
+    "github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src"
     "strings"
 )
@@ -39,8 +40,17 @@ templ (p *PagesMenuItem) Component() {
 		</div>
 		
         <div class="pages-submenu-wrapper">
+			<div class="menu-item header-menu-item">
+				<a class="menu-item-content menu-item-link" href={ templ.SafeURL(django.Reverse("admin:pages:root_type")) }>
+					<div class="menu-item-label">
+						{ fields.T("Add root page") }
+					</div>
+				</a>
+			</div>
+
 			<div class="pages-submenu-menu" data-pagemenu-target="submenu"></div>
 		</div>
+
 
 		<template data-pagemenu-target="template">
 			<div class="menu-item" id="__ID__">

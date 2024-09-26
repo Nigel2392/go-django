@@ -213,6 +213,16 @@ func NewAppConfig() *PageAppConfig {
 			"/pages", nil, "pages",
 		)
 
+		// Choose new root page type
+		pagesRoute.Any(
+			"/type", pageAdminAppHandler(chooseRootPageTypeHandler), "root_type",
+		)
+
+		// Add new root page
+		pagesRoute.Any(
+			"/<<app_label>>/<<model_name>>/add", pageAdminAppHandler(addRootPageHandler), "root_add",
+		)
+
 		// List all pages
 		// Delibirately after the add page route
 		pagesRoute.Get(

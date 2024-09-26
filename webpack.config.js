@@ -31,9 +31,9 @@ function baseConfig(rules = []) {
 
 module.exports = [
     {
-        entry: './django/contrib/admin/assets/static_src/index.ts',
+        entry: './src/contrib/admin/assets/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'django/contrib/admin/assets/static/admin/js/'),
+            'path': path.resolve(__dirname, 'src/contrib/admin/assets/static/admin/js/'),
             'filename': 'index.js'
         },
         ...baseConfig([
@@ -53,25 +53,25 @@ module.exports = [
         ]),
     },
     {
-        entry: './django/contrib/pages/assets/static_src/index.ts',
+        entry: './src/contrib/pages/assets/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'django/contrib/pages/assets/static/pages/admin/js/'),
+            'path': path.resolve(__dirname, 'src/contrib/pages/assets/static/pages/admin/js/'),
             'filename': 'index.js'
         },
         ...baseConfig(),
     },
     {
-        entry: './django/contrib/blocks/assets/static_src/index.ts',
+        entry: './src/contrib/blocks/assets/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'django/contrib/blocks/assets/static/blocks/js/'),
+            'path': path.resolve(__dirname, 'src/contrib/blocks/assets/static/blocks/js/'),
             'filename': 'index.js'
         },
         ...baseConfig(),
     },
     {
-        entry: './django/contrib/editor/static_src/index.ts',
+        entry: './src/contrib/editor/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'django/contrib/editor/static/editorjs/js/'),
+            'path': path.resolve(__dirname, 'src/contrib/editor/static/editorjs/js/'),
             'filename': 'index.js'
         },
         ...baseConfig(),

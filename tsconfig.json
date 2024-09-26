@@ -10,39 +10,39 @@
       "esModuleInterop": true,
     },
     "include": [
-      "django/contrib/blocks/assets/static_src/**/*.js",
-      "django/contrib/blocks/assets/static_src/**/*.ts",
-      "django/contrib/blocks/assets/static_src/**/*.tsx",
+      "src/contrib/blocks/assets/static_src/**/*.js",
+      "src/contrib/blocks/assets/static_src/**/*.ts",
+      "src/contrib/blocks/assets/static_src/**/*.tsx",
 
-      "django/contrib/admin/assets/static_src/**/*.js",
-      "django/contrib/admin/assets/static_src/**/*.ts",
-      "django/contrib/admin/assets/static_src/**/*.tsx",
+      "src/contrib/admin/assets/static_src/**/*.js",
+      "src/contrib/admin/assets/static_src/**/*.ts",
+      "src/contrib/admin/assets/static_src/**/*.tsx",
 
-      "django/contrib/pages/assets/static_src/**/*.js",
-      "django/contrib/pages/assets/static_src/**/*.ts",
-      "django/contrib/pages/assets/static_src/**/*.tsx",
+      "src/contrib/pages/assets/static_src/**/*.js",
+      "src/contrib/pages/assets/static_src/**/*.ts",
+      "src/contrib/pages/assets/static_src/**/*.tsx",
 
-      "django/contrib/editor/static_src/**/*.js",
-      "django/contrib/editor/static_src/**/*.ts",
-      "django/contrib/editor/static_src/**/*.tsx"
+      "src/contrib/editor/static_src/**/*.js",
+      "src/contrib/editor/static_src/**/*.ts",
+      "src/contrib/editor/static_src/**/*.tsx"
 
     ],
     "exclude": [
       "node_modules",
-      "django/contrib/blocks/assets/static_src/**/*.test.js",
-      "django/contrib/blocks/assets/static_src/**/*.test.ts",
-      "django/contrib/blocks/assets/static_src/**/*.test.tsx",
+      "src/contrib/blocks/assets/static_src/**/*.test.js",
+      "src/contrib/blocks/assets/static_src/**/*.test.ts",
+      "src/contrib/blocks/assets/static_src/**/*.test.tsx",
 
-      "django/contrib/admin/assets/static_src/**/*.test.js",
-      "django/contrib/admin/assets/static_src/**/*.test.ts",
-      "django/contrib/admin/assets/static_src/**/*.test.tsx",
+      "src/contrib/admin/assets/static_src/**/*.test.js",
+      "src/contrib/admin/assets/static_src/**/*.test.ts",
+      "src/contrib/admin/assets/static_src/**/*.test.tsx",
       
-      "django/contrib/pages/assets/static_src/**/*.test.js",
-      "django/contrib/pages/assets/static_src/**/*.test.ts",
-      "django/contrib/pages/assets/static_src/**/*.test.tsx",
+      "src/contrib/pages/assets/static_src/**/*.test.js",
+      "src/contrib/pages/assets/static_src/**/*.test.ts",
+      "src/contrib/pages/assets/static_src/**/*.test.tsx",
 
-      "django/contrib/editor/static_src/**/*.test.js",
-      "django/contrib/editor/static_src/**/*.test.ts",
-      "django/contrib/editor/static_src/**/*.test.tsx"
+      "src/contrib/editor/static_src/**/*.test.js",
+      "src/contrib/editor/static_src/**/*.test.ts",
+      "src/contrib/editor/static_src/**/*.test.tsx"
     ]
 }

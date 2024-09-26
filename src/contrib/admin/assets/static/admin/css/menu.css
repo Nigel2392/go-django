@@ -9,14 +9,14 @@
     --menu-item-logo-size: 1.25em;
     --menu-item-height: 2.75em;
 
-    --submenu-bg-color: #261a4e;
+    --submenu-bg-color: #2c2c2c;
     --submenu-text-color: #ebebeb;
     --submenu-text-color-hover: #fff;
 
-    --menu-bg-color: #2e1f5e;
-    --menu-bg-color-hover: #2e1f5e;
-    --menu-bg-color-active: #261a4e;
-    --menu-bg-color-active-hover: #3f2f7f;
+    --menu-bg-color: #1f1f1f;
+    --menu-bg-color-hover: #2c2c2c;
+    --menu-bg-color-active: #2c2c2c;
+    --menu-bg-color-active-hover: #313131;
 
     --menu-text-color: #dfdfdf;
     --menu-text-color-hover: #fff;
@@ -26,8 +26,8 @@
     --menu-toggle-text-color: #ebebeb;
     --menu-toggle-text-color-hover: #fff;
 
-    --menu-toggle-bg-color: #3f2f7f;
-    --menu-toggle-bg-color-hover: #3f2f7f;
+    --menu-toggle-bg-color: #1f1f1f;
+    --menu-toggle-bg-color-hover: #2c2c2c;
 }
 .menu {
     width: var(--menu-width, 240px);

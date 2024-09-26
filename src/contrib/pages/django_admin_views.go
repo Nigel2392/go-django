@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"path"
@@ -32,6 +33,24 @@ type pageDefiner interface {
 	Page
 }
 
+func pageAdminAppHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinition, *admin.ModelDefinition)) mux.Handler {
+	return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+		var app, ok = admin.AdminSite.Apps.Get(AdminPagesAppName)
+		if !ok {
+			except.Fail(http.StatusBadRequest, "App not found")
+			return
+		}
+
+		model, ok := app.Models.Get(AdminPagesModelPath)
+		if !ok {
+			except.Fail(http.StatusBadRequest, "Model not found")
+			return
+		}
+
+		fn(w, req, app, model)
+	})
+}
+
 func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinition, *admin.ModelDefinition, *models.PageNode)) mux.Handler {
 	return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
 
@@ -51,19 +70,11 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 			return
 		}
 
-		var app, ok = admin.AdminSite.Apps.Get(AdminPagesAppName)
-		if !ok {
-			except.Fail(http.StatusBadRequest, "App not found")
-			return
-		}
+		var handler = pageAdminAppHandler(func(w http.ResponseWriter, req *http.Request, app *admin.AppDefinition, model *admin.ModelDefinition) {
+			fn(w, req, app, model, &page)
+		})
 
-		model, ok := app.Models.Get(AdminPagesModelPath)
-		if !ok {
-			except.Fail(http.StatusBadRequest, "Model not found")
-			return
-		}
-
-		fn(w, req, app, model, &page)
+		handler.ServeHTTP(w, req)
 	})
 }
 
@@ -366,6 +377,203 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	}
 
 	views.Invoke(view, w, r)
+}
+
+func chooseRootPageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition) {
+
+	if !permissions.HasPermission(r, "pages:add") {
+		autherrors.Fail(
+			http.StatusForbidden,
+			"User does not have permission to add a page",
+		)
+		return
+	}
+
+	var definitions = ListDefinitions()
+	var view = &views.BaseView{
+		AllowedMethods:  []string{http.MethodGet},
+		BaseTemplateKey: admin.BASE_KEY,
+		TemplateName:    "pages/admin/choose_root_page_type.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = admin.NewContext(req, admin.AdminSite, nil)
+
+			context.Set("app", a)
+			context.Set("model", m)
+			context.Set("definitions", definitions)
+
+			var next = req.URL.Query().Get("next")
+			if next != "" {
+				context.Set("BackURL", next)
+			}
+
+			context.SetPage(admin.PageOptions{
+				TitleFn:    fields.S("Choose Page Type"),
+				SubtitleFn: fields.S("Select the type of page you want to create"),
+			})
+
+			return context, nil
+		},
+	}
+
+	views.Invoke(view, w, r)
+}
+
+func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition) {
+	if !permissions.HasPermission(r, "pages:add") {
+		autherrors.Fail(
+			http.StatusForbidden,
+			"User does not have permission to add a page",
+		)
+		return
+	}
+
+	var (
+		vars       = mux.Vars(r)
+		app_label  = vars.Get("app_label")
+		model_name = vars.Get("model_name")
+	)
+
+	if app_label == "" || model_name == "" {
+		except.Fail(http.StatusBadRequest, "app_label and model_name are required")
+		return
+	}
+
+	var cTypeDef = contenttypes.DefinitionForPackage(app_label, model_name)
+	if cTypeDef == nil {
+		except.Fail(http.StatusNotFound, "content type not found")
+		return
+	}
+
+	var (
+		page       = cTypeDef.Object().(pageDefiner)
+		cType      = cTypeDef.ContentType()
+		fieldDefs  = page.FieldDefs()
+		definition = DefinitionForObject(page)
+		panels     []admin.Panel
+	)
+	if definition == nil || definition.AddPanels == nil {
+		panels = make([]admin.Panel, fieldDefs.Len())
+
+		for i, def := range fieldDefs.Fields() {
+			panels[i] = admin.FieldPanel(
+				def.Name(),
+			)
+		}
+	} else {
+		panels = definition.AddPanels(
+			r, page,
+		)
+	}
+
+	var form = modelforms.NewBaseModelForm[attrs.Definer](page)
+	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](
+		form, panels...,
+	)
+
+	adminForm.Load()
+
+	form.SaveInstance = func(ctx context.Context, d attrs.Definer) (err error) {
+
+		var publishPage = r.FormValue("publish-page") == "publish-page" && permissions.HasPermission(
+			r, "pages:publish",
+		)
+
+		var ref = d.(Page).Reference()
+		if publishPage {
+			if !ref.StatusFlags.Is(models.StatusFlagPublished) {
+				ref.StatusFlags |= models.StatusFlagPublished
+			}
+		}
+
+		var qs = QuerySet()
+		err = CreateRootNode(qs, ctx, ref)
+		if err != nil {
+			return err
+		}
+
+		fmt.Printf("Created root node: %+v\n", ref)
+		fmt.Printf("Saving page: %+v\n", d)
+
+		if page, ok := d.(SaveablePage); ok {
+			err = SavePage(
+				QuerySet(), ctx, nil, page,
+			)
+		} else {
+			fmt.Printf("Saving page node %T %+v\n", d, d)
+		}
+
+		if err != nil {
+			return err
+		}
+
+		var addData = map[string]interface{}{
+			"cType": cType.PkgPath(),
+		}
+
+		auditlogs.Log(
+			"pages:add",
+			logger.INF,
+			page.Reference(),
+			addData,
+		)
+
+		return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
+			return FixTree(pageApp.QuerySet(), ctx)
+		})
+	}
+
+	var view = &views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]]{
+		BaseView: views.BaseView{
+			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+			BaseTemplateKey: admin.BASE_KEY,
+			TemplateName:    "pages/admin/add_root_page.tmpl",
+			GetContextFn: func(req *http.Request) (ctx.Context, error) {
+				var context = admin.NewContext(req, admin.AdminSite, nil)
+
+				context.Set("app", a)
+				context.Set("model", m)
+
+				var backURL string
+				if q := req.URL.Query().Get("next"); q != "" {
+					backURL = q
+				}
+				context.Set("BackURL", backURL)
+				context.Set("PostURL", django.Reverse(
+					"admin:pages:root_add",
+					cType.AppLabel(),
+					cType.Model(),
+				))
+
+				context.SetPage(admin.PageOptions{
+					TitleFn: fields.S("Add %q", cType.Model()),
+				})
+
+				return context, nil
+			},
+		},
+		GetFormFn: func(req *http.Request) *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]] {
+			return adminForm
+		},
+		GetInitialFn: func(req *http.Request) map[string]interface{} {
+			var initial = make(map[string]interface{})
+			for _, field := range fieldDefs.Fields() {
+				initial[field.Name()] = field.GetValue()
+			}
+			return initial
+		},
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]) {
+			var instance = form.Instance()
+			assert.False(instance == nil, "instance is nil after form submission")
+			var ref = instance.(Page).Reference()
+			var listViewURL = django.Reverse("admin:pages:list", ref.ID())
+			http.Redirect(w, r, listViewURL, http.StatusSeeOther)
+		},
+	}
+
+	if err := views.Invoke(view, w, r); err != nil {
+		except.Fail(500, err)
+		return
+	}
 }
 
 func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {

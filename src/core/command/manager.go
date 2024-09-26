@@ -22,6 +22,10 @@ func (m *manager) Log(message string) {
 	fmt.Fprintln(m.stdout, message)
 }
 
+func (m *manager) Logf(format string, args ...interface{}) {
+	fmt.Fprintf(m.stdout, format, args...)
+}
+
 func (m *manager) Stdout() io.Writer {
 	return m.stdout
 }
@@ -49,6 +53,7 @@ func (m *manager) ProtectedInput(question string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	fmt.Println()
 	return string(bytesPass), nil
 }
 

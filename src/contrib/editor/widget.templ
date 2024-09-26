@@ -10,6 +10,8 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
+import "io"
+import "context"
 
 func getSafe[T any](m map[string]interface{}, key string) (value T) {
 	if v, ok := m[key]; ok {

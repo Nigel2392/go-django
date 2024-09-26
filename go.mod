@@ -26,7 +26,7 @@ require (
 require (
 	github.com/Nigel2392/go-telepath v0.1.2
 	github.com/Nigel2392/tags v1.0.0
-	github.com/a-h/templ v0.2.707
+	github.com/a-h/templ v0.2.778
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.14.0
 	github.com/jackc/pgx/v5 v5.6.0
@@ -40,6 +40,6 @@ require (
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
 	github.com/lib/pq v1.10.9 // indirect
-	golang.org/x/sync v0.7.0 // indirect
-	golang.org/x/sys v0.20.0 // indirect
+	golang.org/x/sync v0.8.0 // indirect
+	golang.org/x/sys v0.23.0 // indirect
 )

@@ -4,6 +4,7 @@ import "github.com/Nigel2392/go-django/src/core/ctx"
 import "github.com/Nigel2392/go-django/src/forms/widgets"
 import "strconv"
 import "fmt"
+import "io"
 
 templ RenderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext, errors []error) {
     <div class="django-block-widget-wrapper">

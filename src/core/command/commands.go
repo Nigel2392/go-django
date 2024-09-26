@@ -7,6 +7,7 @@ import (
 
 type Manager interface {
 	Log(message string)
+	Logf(format string, args ...interface{})
 	Stdout() io.Writer
 	Stderr() io.Writer
 	Stdin() io.Reader

@@ -16,6 +16,7 @@ type PageNode = {
 
 type PageMenuResponse = {
     parent_item?: PageNode,
+    item_override?: PageNode,
     items: PageNode[],
 }
 
@@ -141,6 +142,8 @@ class PageMenuController extends Controller<HTMLElement> {
     }
 
     private render(data: PageMenuResponse) {
+
+
         if (data.parent_item) {
             const menuItem = buildTemplate(this.templateTarget, {
                 id: `page-${data.parent_item.id}`,
