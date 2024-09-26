@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"html/template"
 	"strconv"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -11,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/pkg/errors"
 )
 
@@ -91,7 +93,19 @@ var pageAdminModelOptions = admin.ModelOptions{
 				// "UrlPath",
 				"CreatedAt",
 				"UpdatedAt",
+				"Children",
 			},
+		},
+		Columns: map[string]list.ListColumn[attrs.Definer]{
+			"Children": list.HTMLColumn[attrs.Definer](
+				fields.S("Children"),
+				func(defs attrs.Definitions, row attrs.Definer) template.HTML {
+					var node = row.(*models.PageNode)
+					if node.Numchild > 0 {
+					}
+					return template.HTML("")
+				},
+			),
 		},
 		PerPage: 16,
 	},
