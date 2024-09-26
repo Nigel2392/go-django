@@ -114,6 +114,11 @@ func getPageBreadcrumbs(r *http.Request, p *models.PageNode, urlForLast bool) ([
 		}
 
 		breadcrumbs = append(breadcrumbs, b)
+	} else {
+		breadcrumbs = append(breadcrumbs, admin.BreadCrumb{
+			Title: "Root Pages",
+			URL:   django.Reverse("admin:pages"),
+		})
 	}
 	return breadcrumbs, nil
 }
@@ -165,7 +170,25 @@ func getPageActions(rq *http.Request, p *models.PageNode) []admin.Action {
 	}
 
 	return actions
+}
 
+func addNextUrl(current string, next string) string {
+	if next == "" {
+		return current
+	}
+	if current == "" {
+		assert.Fail("current url is empty")
+		return ""
+	}
+
+	var u, err = url.Parse(current)
+	if err != nil {
+		return current
+	}
+	var q = u.Query()
+	q.Set("next", next)
+	u.RawQuery = q.Encode()
+	return u.String()
 }
 
 func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
@@ -217,14 +240,9 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 						"admin:pages:type",
 						primaryField.GetValue(),
 					)
-					var url, err = url.Parse(u)
-					if err != nil {
-						return u
-					}
-					var q = url.Query()
-					q.Set("next", next)
-					url.RawQuery = q.Encode()
-					return url.String()
+					return addNextUrl(
+						u, next,
+					)
 				},
 			},
 			{
@@ -243,14 +261,9 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 						"admin:pages:edit",
 						primaryField.GetValue(),
 					)
-					var url, err = url.Parse(u)
-					if err != nil {
-						return u
-					}
-					var q = url.Query()
-					q.Set("next", next)
-					url.RawQuery = q.Encode()
-					return url.String()
+					return addNextUrl(
+						u, next,
+					)
 				},
 			},
 			{
@@ -385,16 +398,9 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 					"admin:pages:edit",
 					primaryField.GetValue(),
 				)
-
-				var url, err = url.Parse(u)
-				if err != nil {
-					return u
-				}
-
-				var q = url.Query()
-				q.Set("next", next)
-				url.RawQuery = q.Encode()
-				return url.String()
+				return addNextUrl(
+					u, next,
+				)
 			})
 		},
 	}
@@ -410,6 +416,10 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		)
 		return
 	}
+
+	var next = django.Reverse(
+		"admin:pages",
+	)
 
 	var columns = make([]list.ListColumn[attrs.Definer], len(m.ListView.Fields)+1)
 	for i, field := range m.ListView.Fields {
@@ -441,9 +451,12 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 					if primaryField == nil {
 						return ""
 					}
-					return django.Reverse(
+					var u = django.Reverse(
 						"admin:pages:type",
 						primaryField.GetValue(),
+					)
+					return addNextUrl(
+						u, next,
 					)
 				},
 			},
@@ -459,9 +472,12 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 					if primaryField == nil {
 						return ""
 					}
-					return django.Reverse(
+					var u = django.Reverse(
 						"admin:pages:edit",
 						primaryField.GetValue(),
+					)
+					return addNextUrl(
+						u, next,
 					)
 				},
 			},
@@ -479,9 +495,12 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 					if primaryField == nil {
 						return ""
 					}
-					return django.Reverse(
+					var u = django.Reverse(
 						"admin:pages:list",
 						primaryField.GetValue(),
+					)
+					return addNextUrl(
+						u, next,
 					)
 				},
 			},
@@ -1174,6 +1193,20 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			// logger.Fatalf(1, "instance does not adhere to attrs.Definer: %T", instance)
 		}
 
+		var parent models.PageNode
+		if p.Depth > 0 {
+			parent, err = ParentNode(
+				QuerySet(),
+				r.Context(),
+				p.Path,
+				int(p.Depth),
+			)
+			if err != nil {
+				except.Fail(http.StatusInternalServerError, err)
+				return
+			}
+		}
+
 		if page, ok := page.(DeletablePage); ok {
 			if err := DeletePage(QuerySet(), r.Context(), page); err != nil {
 				except.Fail(500, "Failed to delete page: %s", err)
@@ -1185,7 +1218,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 				return
 			}
 
-			logger.Warnf("Page %q (%v) deleted", p.Title, p.ID())
+			logger.Warnf("Page %q (%v) deleted but has no Delete() method", p.Title, p.ID())
 		}
 
 		auditlogs.Log("pages:delete", logger.WRN, p, map[string]interface{}{
@@ -1193,7 +1226,11 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			"label":   p.Title,
 		})
 
-		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
+		if p.Depth > 0 {
+			http.Redirect(w, r, django.Reverse("admin:pages:list", parent.ID()), http.StatusSeeOther)
+			return
+		}
+		http.Redirect(w, r, django.Reverse("admin:pages:root_list"), http.StatusSeeOther)
 		return
 	}
 

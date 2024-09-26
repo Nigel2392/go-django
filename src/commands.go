@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"slices"
+	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/command"
 )
@@ -18,7 +19,7 @@ func makeQuery(query string, m command.Manager, db *sql.DB) error {
 
 	columns, err := rows.Columns()
 	if err != nil {
-		m.Logf("Error getting columns: %s\n", err.Error())
+		m.Logf("Error retrieving columns: %s\n", err.Error())
 		return err
 	}
 
@@ -69,7 +70,6 @@ var sqlShellCommand = &command.Cmd[string]{
 
 		if stored != "" {
 			if err := makeQuery(stored, m, db); err != nil {
-				m.Logf("Error executing query: %s\n", err.Error())
 				os.Exit(1)
 				return nil
 			}
@@ -77,6 +77,7 @@ var sqlShellCommand = &command.Cmd[string]{
 			return nil
 		}
 
+		m.Log("Enter 'exit' or 'quit' to exit the shell")
 		for {
 			var query, err = m.Input("sql> ")
 			if err != nil {
@@ -85,15 +86,11 @@ var sqlShellCommand = &command.Cmd[string]{
 				return nil
 			}
 
-			if slices.Contains([]string{"exit", "quit"}, query) {
+			if slices.Contains([]string{"exit", "quit"}, strings.ToLower(query)) {
 				break
 			}
 
-			if err := makeQuery(query, m, db); err != nil {
-				m.Logf("Error executing query: %s\n", err.Error())
-				os.Exit(1)
-				return nil
-			}
+			makeQuery(query, m, db)
 		}
 
 		os.Exit(0)

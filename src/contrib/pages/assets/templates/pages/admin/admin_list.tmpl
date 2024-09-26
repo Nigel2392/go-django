@@ -7,7 +7,7 @@
     {{ block "heading" . }}
         {{ $page := (.Get "page_object") }}
         <div class="view-header">
-            {{ if (or (has_perm .Request "pages:add") (has_perm .Request "pages:edit")) }}
+            {{ if (or (or (has_perm .Request "pages:add") (has_perm .Request "pages:edit")) (has_perm .Request "pages:delete")) }}
                 <div class="buttons">
                     {{ if (has_perm .Request "pages:add") }}
                         <a href="{{ url "admin:pages:type" $page.ID }}" class="button primary">{{ T "Add Child Page" }}</a>

@@ -41,9 +41,9 @@ templ (p *PagesMenuItem) Component() {
 		
         <div class="pages-submenu-wrapper">
 			<div class="menu-item pages-root-menu-item header-menu-item">
-				<a class="menu-item-content menu-item-link" href={ templ.SafeURL(django.Reverse("admin:pages:root_type")) }>
+				<a class="menu-item-content menu-item-link" href={ templ.SafeURL(django.Reverse("admin:pages")) }>
 					<div class="menu-item-label">
-						{ fields.T("Add root page") }
+						{ fields.T("Root Pages") }
 					</div>
 				</a>
 			</div>

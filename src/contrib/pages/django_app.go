@@ -238,6 +238,9 @@ func NewAppConfig() *PageAppConfig {
 		pagesRoute.Get(
 			"/<<page_id>>/delete", pageHandler(deletePageHandler), "delete",
 		)
+		pagesRoute.Post(
+			"/<<page_id>>/delete", pageHandler(deletePageHandler), "delete",
+		)
 
 		// Add new page type to a parent page
 		pagesRoute.Any(

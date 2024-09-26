@@ -87,7 +87,7 @@ func (p *PagesMenuItem) Component() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var5 templ.SafeURL = templ.SafeURL(django.Reverse("admin:pages:root_type"))
+		var templ_7745c5c3_Var5 templ.SafeURL = templ.SafeURL(django.Reverse("admin:pages"))
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var5)))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -97,9 +97,9 @@ func (p *PagesMenuItem) Component() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fields.T("Add root page"))
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fields.T("Root Pages"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 46, Col: 33}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 46, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {

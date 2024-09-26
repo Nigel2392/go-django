@@ -2,6 +2,21 @@
 
 {{ define "title" }}{{ T "Root List" }}{{ end }}
 
+{{ block "header" . }}
+    <div class="view-header">
+        {{ if (has_perm .Request "pages:add") }}
+            <div class="buttons">
+                {{ if (has_perm .Request "pages:add") }}
+                    <a href="{{ url "admin:pages:root_type" }}" class="button primary">{{ T "Add Root Page" }}</a>
+                {{ end }}
+            </div>
+        {{ end }}
+        <div class="title-text">
+            <h1>{{ .Page.Title }}</h1>
+        </div>
+    </div>
+{{ end }}
+
 {{ define "content" }}
 
     <div class="pages-list list-wrapper">

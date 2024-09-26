@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"fmt"
 	"html/template"
 	"strconv"
 
@@ -90,7 +91,8 @@ var pageAdminModelOptions = admin.ModelOptions{
 		ViewOptions: admin.ViewOptions{
 			Fields: []string{
 				"Title",
-				// "UrlPath",
+				"Slug",
+				"ContentType",
 				"CreatedAt",
 				"UpdatedAt",
 				"Children",
@@ -98,12 +100,32 @@ var pageAdminModelOptions = admin.ModelOptions{
 		},
 		Columns: map[string]list.ListColumn[attrs.Definer]{
 			"Children": list.HTMLColumn[attrs.Definer](
-				fields.S("Children"),
+				fields.S(""),
 				func(defs attrs.Definitions, row attrs.Definer) template.HTML {
 					var node = row.(*models.PageNode)
 					if node.Numchild > 0 {
+						var url = django.Reverse(
+							"admin:pages:list",
+							node.PK,
+						)
+						var childText = "child"
+						if node.Numchild > 1 || node.Numchild == 0 {
+							childText = "children"
+						}
+						return template.HTML(fmt.Sprintf(
+							`<a href="%s" class="button primary hollow">%d %s</a>`,
+							url, node.Numchild, childText,
+						))
 					}
 					return template.HTML("")
+				},
+			),
+			"ContentType": list.FuncColumn(
+				fields.S("Content Type"),
+				func(defs attrs.Definitions, row attrs.Definer) interface{} {
+					var node = row.(*models.PageNode)
+					var ctype = DefinitionForType(node.ContentType)
+					return ctype.Label()
 				},
 			),
 		},
