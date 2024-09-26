@@ -723,7 +723,8 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 		}
 
 		var addData = map[string]interface{}{
-			"cType": cType.PkgPath(),
+			"cType":  cType.TypeName(),
+			"pageId": ref.PageID,
 		}
 
 		auditlogs.Log(

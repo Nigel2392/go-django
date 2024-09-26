@@ -179,6 +179,8 @@ func NewAppConfig() *PageAppConfig {
 		)
 
 		auditlogs.RegisterDefinition("pages:edit", newPageLogDefinition())
+		auditlogs.RegisterDefinition("pages:unpublish", newPageLogDefinition())
+		auditlogs.RegisterDefinition("pages:add", newPageLogDefinition())
 
 		// contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		// ContentObject:  &models.PageNode{},
