@@ -117,16 +117,17 @@ type AppConfig interface {
 //
 // The application object should only be initialized once by calling `(*Application).Initialize()`
 type Application struct {
-	Settings      Settings
-	Apps          *orderedmap.OrderedMap[string, AppConfig]
-	Mux           *mux.Mux
-	Log           logger.Log
-	skipDepsCheck bool
-	quitter       func() error
-	initialized   *atomic.Bool
+	Settings    Settings
+	Apps        *orderedmap.OrderedMap[string, AppConfig]
+	Mux         *mux.Mux
+	Log         logger.Log
+	flags       AppFlag
+	quitter     func() error
+	initialized *atomic.Bool
 }
 
 type Option func(*Application) error
+type AppFlag uint64
 
 var (
 	Global       *Application
@@ -134,6 +135,11 @@ var (
 	Reverse      = Global.Reverse
 	Static       = Global.Static
 	Task         = Global.Task
+)
+
+const (
+	FlagSkipDepsCheck AppFlag = 1 << iota
+	FlagSkipCmds
 )
 
 func GetApp[T AppConfig](name string) T {
@@ -367,6 +373,10 @@ func (a *Application) AppInstalled(name string) bool {
 	return ok
 }
 
+func (a *Application) Flagged(flag AppFlag) bool {
+	return (a.flags & flag) != 0
+}
+
 func (a *Application) Initialize() error {
 
 	if a.Log == nil {
@@ -459,7 +469,7 @@ func (a *Application) Initialize() error {
 		var app = h.Value
 		var deps = app.Dependencies()
 
-		if !a.skipDepsCheck {
+		if !a.Flagged(FlagSkipDepsCheck) {
 			for _, dep := range deps {
 				var _, ok = a.Apps.Get(dep)
 				if !ok {
@@ -554,6 +564,11 @@ func (a *Application) Initialize() error {
 	}
 
 	a.initialized.Store(true)
+
+	// Check if running commands is disabled
+	if a.Flagged(FlagSkipCmds) {
+		return nil
+	}
 
 	if len(os.Args) == 2 && slices.Contains([]string{"help", "--help", "-h"}, os.Args[1]) {
 		os.Args[1] = "help"

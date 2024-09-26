@@ -17,9 +17,11 @@ func AppSettings(settings Settings) func(*Application) error {
 	}
 }
 
-func SkipDependencyChecks() func(*Application) error {
+func Flag(flags ...AppFlag) func(*Application) error {
 	return func(a *Application) error {
-		a.skipDepsCheck = true
+		for _, flag := range flags {
+			a.flags |= flag
+		}
 		return nil
 	}
 }

@@ -154,7 +154,10 @@ func init() {
 			session.NewAppConfig,
 			admin.NewAppConfig,
 		),
-		django.SkipDependencyChecks(),
+		django.Flag(
+			django.FlagSkipDepsCheck,
+			django.FlagSkipCmds,
+		),
 	)
 
 	var err = app.Initialize()
