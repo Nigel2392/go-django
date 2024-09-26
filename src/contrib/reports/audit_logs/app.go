@@ -23,6 +23,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -148,6 +149,14 @@ func isNumber(v string) bool {
 }
 
 func auditLogView(w http.ResponseWriter, r *http.Request) {
+
+	if !permissions.HasPermission(r, "auditlogs:list") {
+		except.Fail(
+			http.StatusForbidden,
+			"Permission denied",
+		)
+		return
+	}
 
 	var adminCtx = admin.NewContext(r, admin.AdminSite, nil)
 	var backend = Backend()

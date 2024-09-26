@@ -118,7 +118,7 @@ func getPageBreadcrumbs(r *http.Request, p *models.PageNode, urlForLast bool) ([
 	return breadcrumbs, nil
 }
 
-func getPageActions(_ *http.Request, p *models.PageNode) []admin.Action {
+func getPageActions(rq *http.Request, p *models.PageNode) []admin.Action {
 	var actions = make([]admin.Action, 0)
 	if p.ID() == 0 {
 		return actions
@@ -135,7 +135,8 @@ func getPageActions(_ *http.Request, p *models.PageNode) []admin.Action {
 		})
 	}
 
-	if django.AppInstalled("auditlogs") {
+	if django.AppInstalled("auditlogs") &&
+		permissions.HasPermission(rq, "auditlogs:list") {
 		var u = django.Reverse(
 			"admin:auditlogs",
 		)
@@ -272,6 +273,28 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 					)
 				},
 			},
+			{
+				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+					return django.AppInstalled("auditlogs") && permissions.HasObjectPermission(r, row, "auditlogs:list")
+				},
+				Text: func(defs attrs.Definitions, row attrs.Definer) string {
+					return fields.T("History")
+				},
+				URL: func(defs attrs.Definitions, row attrs.Definer) string {
+					var u = django.Reverse(
+						"admin:auditlogs",
+					)
+					var url, err = url.Parse(u)
+					if err != nil {
+						return u
+					}
+					var q = url.Query()
+					q.Set("object_id", strconv.Itoa(int(row.(*models.PageNode).ID())))
+					q.Set("content_type", contenttypes.NewContentType(row).ShortTypeName())
+					url.RawQuery = q.Encode()
+					return url.String()
+				},
+			},
 		},
 	}
 
@@ -372,6 +395,172 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				q.Set("next", next)
 				url.RawQuery = q.Encode()
 				return url.String()
+			})
+		},
+	}
+
+	views.Invoke(view, w, r)
+}
+
+func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition) {
+	if !permissions.HasPermission(r, "pages:list") {
+		autherrors.Fail(
+			http.StatusForbidden,
+			"User does not have permission to view this page",
+		)
+		return
+	}
+
+	var columns = make([]list.ListColumn[attrs.Definer], len(m.ListView.Fields)+1)
+	for i, field := range m.ListView.Fields {
+		columns[i+1] = m.GetColumn(m.ListView, field)
+	}
+
+	columns[0] = columns[1]
+	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
+		Actions: []*admin.ListAction[attrs.Definer]{
+			{
+				Show: func(defs attrs.Definitions, row attrs.Definer) bool { return true },
+				Text: func(defs attrs.Definitions, row attrs.Definer) string {
+					return fields.T("View Live")
+				},
+				URL: func(defs attrs.Definitions, row attrs.Definer) string {
+					return path.Join(pageApp.routePrefix, row.(*models.PageNode).UrlPath)
+				},
+			},
+			{
+				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+					// return row.(*models.PageNode).Numchild > 0
+					return permissions.HasObjectPermission(r, row, "pages:add")
+				},
+				Text: func(defs attrs.Definitions, row attrs.Definer) string {
+					return fields.T("Add Child")
+				},
+				URL: func(defs attrs.Definitions, row attrs.Definer) string {
+					var primaryField = defs.Primary()
+					if primaryField == nil {
+						return ""
+					}
+					return django.Reverse(
+						"admin:pages:type",
+						primaryField.GetValue(),
+					)
+				},
+			},
+			{
+				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+					return permissions.HasObjectPermission(r, row, "pages:edit")
+				},
+				Text: func(defs attrs.Definitions, row attrs.Definer) string {
+					return fields.T("Edit Page")
+				},
+				URL: func(defs attrs.Definitions, row attrs.Definer) string {
+					var primaryField = defs.Primary()
+					if primaryField == nil {
+						return ""
+					}
+					return django.Reverse(
+						"admin:pages:edit",
+						primaryField.GetValue(),
+					)
+				},
+			},
+			{
+				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+					return row.(*models.PageNode).Numchild > 0 && permissions.HasObjectPermission(
+						r, row, "pages:list",
+					)
+				},
+				Text: func(defs attrs.Definitions, row attrs.Definer) string {
+					return fields.T("View Children")
+				},
+				URL: func(defs attrs.Definitions, row attrs.Definer) string {
+					var primaryField = defs.Primary()
+					if primaryField == nil {
+						return ""
+					}
+					return django.Reverse(
+						"admin:pages:list",
+						primaryField.GetValue(),
+					)
+				},
+			},
+			{
+				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+					return django.AppInstalled("auditlogs") && permissions.HasObjectPermission(r, row, "auditlogs:list")
+				},
+				Text: func(defs attrs.Definitions, row attrs.Definer) string {
+					return fields.T("History")
+				},
+				URL: func(defs attrs.Definitions, row attrs.Definer) string {
+					var u = django.Reverse(
+						"admin:auditlogs",
+					)
+					var url, err = url.Parse(u)
+					if err != nil {
+						return u
+					}
+					var q = url.Query()
+					q.Set("object_id", strconv.Itoa(int(row.(*models.PageNode).ID())))
+					q.Set("content_type", contenttypes.NewContentType(row).ShortTypeName())
+					url.RawQuery = q.Encode()
+					return url.String()
+				},
+			},
+		},
+	}
+
+	var amount = m.ListView.PerPage
+	if amount == 0 {
+		amount = 25
+	}
+
+	var view = &list.View[attrs.Definer]{
+		ListColumns:   columns,
+		DefaultAmount: amount,
+		BaseView: views.BaseView{
+			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+			BaseTemplateKey: admin.BASE_KEY,
+			TemplateName:    "pages/admin/admin_list_root.tmpl",
+			GetContextFn: func(req *http.Request) (ctx.Context, error) {
+				var context = admin.NewContext(
+					req, admin.AdminSite, nil,
+				)
+
+				context.Set("app", a)
+				context.Set("model", m)
+				context.SetPage(admin.PageOptions{
+					TitleFn:    fields.S("Root Pages"),
+					SubtitleFn: fields.S("View all root pages"),
+				})
+
+				return context, nil
+			},
+		},
+		GetListFn: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
+			var ctx = r.Context()
+			var nodes, err = QuerySet().GetNodesByDepth(ctx, 0, int32(amount), int32(offset))
+			if err != nil {
+				return nil, err
+			}
+			var items = make([]attrs.Definer, 0, len(nodes))
+			for _, n := range nodes {
+				n := n
+				items = append(items, &n)
+			}
+			return items, nil
+		},
+		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
+			return list.TitleFieldColumn(lc, func(defs attrs.Definitions, instance attrs.Definer) string {
+				var primaryField = defs.Primary()
+				if primaryField == nil {
+					return ""
+				}
+
+				return django.Reverse(
+					"admin:pages:edit",
+					primaryField.GetValue(),
+				)
 			})
 		},
 	}
@@ -949,6 +1138,89 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				redirectURL = django.Reverse("admin:pages:list", ref.ID())
 			}
 			http.Redirect(w, r, redirectURL, http.StatusSeeOther)
+		},
+	}
+
+	if err := views.Invoke(view, w, r); err != nil {
+		except.Fail(500, err)
+		return
+	}
+}
+
+func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+	if !permissions.HasObjectPermission(r, p, "pages:delete") {
+		autherrors.Fail(
+			http.StatusForbidden,
+			"User does not have permission to delete this page",
+		)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err != nil {
+			except.Fail(500, "Failed to parse form")
+			return
+		}
+
+		var instance, err = Specific(r.Context(), *p)
+		except.Assert(
+			err == nil, 500,
+			err,
+		)
+
+		var page, ok = instance.(pageDefiner)
+		if !ok {
+			page = p
+			// logger.Fatalf(1, "instance does not adhere to attrs.Definer: %T", instance)
+		}
+
+		if page, ok := page.(DeletablePage); ok {
+			if err := DeletePage(QuerySet(), r.Context(), page); err != nil {
+				except.Fail(500, "Failed to delete page: %s", err)
+				return
+			}
+		} else {
+			if err := DeleteNode(QuerySet(), r.Context(), p.ID(), p.Path, p.Depth); err != nil {
+				except.Fail(500, "Failed to delete page: %s", err)
+				return
+			}
+
+			logger.Warnf("Page %q (%v) deleted", p.Title, p.ID())
+		}
+
+		auditlogs.Log("pages:delete", logger.WRN, p, map[string]interface{}{
+			"page_id": p.ID(),
+			"label":   p.Title,
+		})
+
+		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
+		return
+	}
+
+	var view = &views.BaseView{
+		AllowedMethods:  []string{http.MethodGet},
+		BaseTemplateKey: admin.BASE_KEY,
+		TemplateName:    "pages/admin/delete_page.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = admin.NewContext(req, admin.AdminSite, nil)
+
+			context.Set("app", a)
+			context.Set("model", m)
+			context.Set("page_object", p)
+
+			var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
+			if err != nil {
+				return nil, err
+			}
+
+			context.SetPage(admin.PageOptions{
+				TitleFn:     fields.S("Delete %q", p.Title),
+				SubtitleFn:  fields.S("Are you sure you want to delete this page?"),
+				BreadCrumbs: breadcrumbs,
+				Actions:     getPageActions(r, p),
+			})
+
+			return context, nil
 		},
 	}
 

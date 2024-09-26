@@ -14,6 +14,12 @@
 .pages-menu-item .pages-submenu-wrapper .header-menu-item {
     font-size: 1.25em;
 }
+.pages-menu-wrapper .pages-root-menu-item {
+    font-size: 1.4em;
+}
+.pages-menu-wrapper:has(.level-up) .pages-root-menu-item {
+    display: none !important;
+}
 .pages-menu-item .pages-submenu-wrapper .menu-item-content {
     cursor: pointer;
     background-color: var(--submenu-bg-color);

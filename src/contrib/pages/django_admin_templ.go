@@ -44,7 +44,7 @@ func (p *PagesMenuItem) Component() templ.Component {
 			"admin:pages:list",
 			"__PAGE_ID__",
 		))
-		var templ_7745c5c3_Var2 = []any{strings.Join(p.Classes, " "), "pages-menu-item submenu-menu-item menu-item"}
+		var templ_7745c5c3_Var2 = []any{strings.Join(p.Classes, " "), "pages-menu-wrapper pages-menu-item submenu-menu-item menu-item"}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -83,7 +83,7 @@ func (p *PagesMenuItem) Component() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</div><button class=\"menu-item-toggle\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon open-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M6.5 7.5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v.938l.4 1.599a1 1 0 0 1-.416 1.074l-.93.62a1 1 0 0 1-1.109 0l-.93-.62a1 1 0 0 1-.415-1.074l.4-1.599zm2 0h-1v.938a1 1 0 0 1-.03.243l-.4 1.598.93.62.93-.62-.4-1.598a1 1 0 0 1-.03-.243z\"></path> <path d=\"M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm5.5-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9v1H8v1h1v1H8v1h1v1H7.5V5h-1V4h1V3h-1V2h1z\"></path></svg> <svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon close-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2m0 13V4a2 2 0 0 0-2-2H5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1M3 4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z\"></path></svg></button></div><div class=\"pages-submenu-wrapper\"><div class=\"menu-item header-menu-item\"><a class=\"menu-item-content menu-item-link\" href=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("</div><button class=\"menu-item-toggle\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon open-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M6.5 7.5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v.938l.4 1.599a1 1 0 0 1-.416 1.074l-.93.62a1 1 0 0 1-1.109 0l-.93-.62a1 1 0 0 1-.415-1.074l.4-1.599zm2 0h-1v.938a1 1 0 0 1-.03.243l-.4 1.598.93.62.93-.62-.4-1.598a1 1 0 0 1-.03-.243z\"></path> <path d=\"M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm5.5-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9v1H8v1h1v1H8v1h1v1H7.5V5h-1V4h1V3h-1V2h1z\"></path></svg> <svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon close-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2m0 13V4a2 2 0 0 0-2-2H5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1M3 4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z\"></path></svg></button></div><div class=\"pages-submenu-wrapper\"><div class=\"menu-item pages-root-menu-item header-menu-item\"><a class=\"menu-item-content menu-item-link\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

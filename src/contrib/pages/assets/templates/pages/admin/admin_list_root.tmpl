@@ -1,0 +1,11 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ T "Root List" }}{{ end }}
+
+{{ define "content" }}
+
+    <div class="pages-list list-wrapper">
+        {{ $list := (.Get "view_list") }}
+        {{ safe $list.Render }}
+    </div>
+{{ end }}

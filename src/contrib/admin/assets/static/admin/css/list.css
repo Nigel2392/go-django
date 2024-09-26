@@ -14,7 +14,7 @@ table.list {
 }
 
 .list tr.list-header {
-    border-bottom: 1px solid #ddd;
+    border-bottom: 1px solid var(--body-dark-bg-color);
 }
 
 .list tr.list-header th:first-child,

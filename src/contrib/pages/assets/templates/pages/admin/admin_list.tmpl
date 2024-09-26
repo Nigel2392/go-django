@@ -15,6 +15,9 @@
                     {{ if (has_perm .Request "pages:edit") }}
                         <a href="{{ url "admin:pages:edit" $page.ID }}" class="button primary">{{ T "Edit Page" }}</a>
                     {{ end }}
+                    {{ if (has_perm .Request "pages:delete") }}
+                        <a href="{{ url "admin:pages:delete" $page.ID }}" class="button danger hollow">{{ T "Delete Page" }}</a>
+                    {{ end }}
                 </div>
             {{ end }}
             <div class="title-text">

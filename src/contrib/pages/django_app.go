@@ -210,7 +210,7 @@ func NewAppConfig() *PageAppConfig {
 	}
 	pageApp.AppConfig.Ready = func() error {
 		var pagesRoute = admin.AdminSite.Route.Get(
-			"/pages", nil, "pages",
+			"/pages", pageAdminAppHandler(listRootPageHandler), "pages",
 		)
 
 		// Choose new root page type
@@ -232,6 +232,11 @@ func NewAppConfig() *PageAppConfig {
 		// Choose page type
 		pagesRoute.Get(
 			"/<<page_id>>/type", pageHandler(choosePageTypeHandler), "type",
+		)
+
+		// Delete page
+		pagesRoute.Get(
+			"/<<page_id>>/delete", pageHandler(deletePageHandler), "delete",
 		)
 
 		// Add new page type to a parent page
