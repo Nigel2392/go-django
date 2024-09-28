@@ -1,6 +1,6 @@
 {{ template "base" . }}
 
-{{ define "title" }}{{ T "List" }}{{ end }}
+{{ define "title" }}{{ T "List %s" (.Get "model").PluralLabel }}{{ end }}
 
 {{ define "content" }}
     {{ block "heading" . }}

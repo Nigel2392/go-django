@@ -103,26 +103,6 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			},
 			{
 				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
-					return row.(*models.PageNode).Numchild > 0 && permissions.HasObjectPermission(
-						r, row, "pages:list",
-					)
-				},
-				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return fields.T("View Children")
-				},
-				URL: func(defs attrs.Definitions, row attrs.Definer) string {
-					var primaryField = defs.Primary()
-					if primaryField == nil {
-						return ""
-					}
-					return django.Reverse(
-						"admin:pages:list",
-						primaryField.GetValue(),
-					)
-				},
-			},
-			{
-				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
 					return django.AppInstalled("auditlogs") && permissions.HasObjectPermission(r, row, "auditlogs:list")
 				},
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {

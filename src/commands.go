@@ -16,6 +16,7 @@ func makeQuery(query string, m command.Manager, db *sql.DB) error {
 		m.Logf("Error executing query: %s\n", err.Error())
 		return err
 	}
+	defer rows.Close()
 
 	columns, err := rows.Columns()
 	if err != nil {

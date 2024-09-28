@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -169,9 +170,10 @@ func (o *ModelOptions) GetName() string {
 // to easily work with models in admin views.
 type ModelDefinition struct {
 	ModelOptions
-	Name    string
-	LabelFn func() string
-	_rModel reflect.Type
+	Name          string
+	LabelFn       func() string
+	PluralLabelFn func() string
+	_rModel       reflect.Type
 }
 
 func (o *ModelDefinition) rModel() reflect.Type {
@@ -208,6 +210,30 @@ func (o *ModelDefinition) Label() string {
 		return o.LabelFn()
 	}
 	return o.GetName()
+}
+
+func (o *ModelDefinition) PluralLabel() string {
+	if o.PluralLabelFn != nil {
+		return o.PluralLabelFn()
+	}
+
+	var name = o.GetName()
+	var b strings.Builder
+	b.Grow(len(name) + 1)
+
+	switch {
+	case strings.HasSuffix(name, "y"):
+		b.WriteString(name[:len(name)-1])
+		b.WriteString("ies")
+	case strings.HasSuffix(name, "s"):
+		b.WriteString(name)
+		b.WriteString("es")
+	default:
+		b.WriteString(name)
+		b.WriteString("s")
+	}
+
+	return b.String()
 }
 
 func (o *ModelDefinition) GetColumn(opts ListViewOptions, field string) list.ListColumn[attrs.Definer] {
