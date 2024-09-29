@@ -2,7 +2,15 @@
 
 {{ define "title" }}{{ T "Add %s" (.Get "model").Label }}{{ end }}
 
+{{ define "extra_css" }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $css := $Media.CSS }}
+        {{ $css }}
+    {{ end }}
+{{ end }}
+
 {{ define "content" }}
+
     <h1>{{ T "Add %s" (.Get "model").Label }}</h1>
     <form method="post" class="admin-form">
         <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
@@ -20,4 +28,11 @@
             {{ end }}
         </div>
     </form>
+{{ end }}
+
+{{ define "extra_js" }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $js := $Media.JS }}
+        {{ $js }}
+    {{ end }}
 {{ end }}

@@ -26,7 +26,7 @@ require (
 require (
 	github.com/Nigel2392/go-telepath v0.1.2
 	github.com/Nigel2392/tags v1.0.0
-	github.com/a-h/templ v0.2.778
+	github.com/a-h/templ v0.2.707
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.14.0
 	github.com/jackc/pgx/v5 v5.6.0

@@ -35,6 +35,7 @@ type _BoundForm struct {
 	Fields_    []BoundField
 	Errors_    *orderedmap.OrderedMap[string, []error]
 	ErrorList_ []error
+	media      media.Media
 }
 
 func (f *_BoundForm) AsP() template.HTML {
@@ -72,5 +73,8 @@ func (f *_BoundForm) ErrorList() []error {
 }
 
 func (f *_BoundForm) Media() media.Media {
-	return f.Form.Media()
+	if f.media == nil {
+		f.media = f.Form.Media()
+	}
+	return f.media
 }

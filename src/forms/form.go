@@ -257,7 +257,7 @@ func (f *BaseForm) AsUL() template.HTML {
 }
 
 func (f *BaseForm) Media() media.Media {
-	var media media.Media = media.NewMedia()
+	var m media.Media = media.NewMedia()
 	if f.FormWidgets == nil {
 		f.FormWidgets = orderedmap.NewOrderedMap[string, widgets.Widget]()
 	}
@@ -269,13 +269,13 @@ func (f *BaseForm) Media() media.Media {
 			widget = head.Value.Widget()
 		}
 
-		var m = widget.Media()
-		if m != nil {
-			media = media.Merge(m)
+		var wm = widget.Media()
+		if wm != nil {
+			m = m.Merge(wm)
 		}
 	}
 
-	return media
+	return m
 }
 
 func (f *BaseForm) Fields() []fields.Field {

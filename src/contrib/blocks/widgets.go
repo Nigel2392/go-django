@@ -4,6 +4,7 @@ import (
 	"io"
 	"net/url"
 
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -100,5 +101,14 @@ func (bw *BlockWidget) Clean(value interface{}) (interface{}, error) {
 }
 
 func (bw *BlockWidget) Media() media.Media {
-	return bw.BlockDef.Media()
+	var m = bw.BlockDef.Media()
+	if m == nil {
+		m = media.NewMedia()
+	}
+	m.AddJS(
+		media.JS(
+			django.Static("blocks/js/index.js"),
+		),
+	)
+	return m
 }
