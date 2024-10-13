@@ -7,6 +7,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/alexedwards/scs/mysqlstore"
 	"github.com/alexedwards/scs/postgresstore"
@@ -46,7 +47,7 @@ func NewAppConfig() django.AppConfig {
 				assert.Err(err)
 			}
 
-			fmt.Println("Using mysqlstore for session storage")
+			logger.Info("Using mysqlstore for session storage")
 			sessionManager.Store = mysqlstore.New(db)
 
 		case *sqlite3.SQLiteDriver:
@@ -58,7 +59,7 @@ func NewAppConfig() django.AppConfig {
 );`)
 			assert.Err(err)
 
-			fmt.Println("Using sqlite3store for session storage")
+			logger.Info("Using sqlite3store for session storage")
 			sessionManager.Store = sqlite3store.New(db)
 
 		case *stdlib.Driver:
@@ -72,12 +73,12 @@ func NewAppConfig() django.AppConfig {
 CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expiry);`)
 			assert.Err(err)
 
-			fmt.Println("Using postgresstore for session storage")
+			logger.Info("Using postgresstore for session storage")
 			sessionManager.Store = postgresstore.New(db)
 
 		default:
 
-			fmt.Println("Using memstore for session storage")
+			logger.Info("Using memstore for session storage")
 			sessionManager.Store = memstore.New()
 		}
 

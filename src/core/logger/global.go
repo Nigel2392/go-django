@@ -1,49 +1,49 @@
 package logger
 
-import "io"
+import (
+	"io"
+	"os"
+)
 
 var (
-	globalLogger Log
-	Writer       func(level LogLevel) io.Writer
-	PWriter      func(label string, level LogLevel) io.Writer
-	NameSpace    func(label string) Log
+	Writer    = func(level LogLevel) io.Writer { return os.Stdout }
+	PWriter   = func(label string, level LogLevel) io.Writer { return os.Stdout }
+	NameSpace = func(label string) Log { return nil }
 
-	SetOutput func(level LogLevel, w io.Writer)
-	SetLevel  func(level LogLevel)
+	SetOutput func(level LogLevel, w io.Writer) = func(level LogLevel, w io.Writer) {}
+	SetLevel  func(level LogLevel)              = func(level LogLevel) {}
 
-	Debug  func(args ...interface{})
-	Info   func(args ...interface{})
-	Warn   func(args ...interface{})
-	Error  func(args ...interface{})
-	Fatal  func(errorcode int, args ...interface{})
-	Debugf func(format string, args ...interface{})
-	Infof  func(format string, args ...interface{})
-	Warnf  func(format string, args ...interface{})
-	Errorf func(format string, args ...interface{})
-	Fatalf func(errorcode int, format string, args ...interface{})
-	Logf   func(level LogLevel, format string, args ...interface{})
+	Debug  = func(args ...interface{}) {}
+	Info   = func(args ...interface{}) {}
+	Warn   = func(args ...interface{}) {}
+	Error  = func(args ...interface{}) {}
+	Fatal  = func(errorcode int, args ...interface{}) {}
+	Debugf = func(format string, args ...interface{}) {}
+	Infof  = func(format string, args ...interface{}) {}
+	Warnf  = func(format string, args ...interface{}) {}
+	Errorf = func(format string, args ...interface{}) {}
+	Fatalf = func(errorcode int, format string, args ...interface{}) {}
+	Logf   = func(level LogLevel, format string, args ...interface{}) {}
 )
 
 func Setup(logger Log) {
-	globalLogger = logger
+	Writer = logger.Writer
+	PWriter = logger.PWriter
+	NameSpace = logger.NameSpace
 
-	Writer = globalLogger.Writer
-	PWriter = globalLogger.PWriter
-	NameSpace = globalLogger.NameSpace
+	SetOutput = logger.SetOutput
+	SetLevel = logger.SetLevel
 
-	SetOutput = globalLogger.SetOutput
-	SetLevel = globalLogger.SetLevel
+	Debug = logger.Debug
+	Info = logger.Info
+	Warn = logger.Warn
+	Error = logger.Error
+	Fatal = logger.Fatal
 
-	Debug = globalLogger.Debug
-	Info = globalLogger.Info
-	Warn = globalLogger.Warn
-	Error = globalLogger.Error
-	Fatal = globalLogger.Fatal
-
-	Debugf = globalLogger.Debugf
-	Infof = globalLogger.Infof
-	Warnf = globalLogger.Warnf
-	Errorf = globalLogger.Errorf
-	Fatalf = globalLogger.Fatalf
-	Logf = globalLogger.Logf
+	Debugf = logger.Debugf
+	Infof = logger.Infof
+	Warnf = logger.Warnf
+	Errorf = logger.Errorf
+	Fatalf = logger.Fatalf
+	Logf = logger.Logf
 }
