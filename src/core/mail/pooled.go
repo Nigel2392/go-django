@@ -20,10 +20,11 @@ func NewPooledEmailBackend(poolCount int, cnf *Config) (EmailBackend, error) {
 		return nil, ErrConfigNil
 	}
 
-	assert.Truthy(cnf.Host, "EmailHost")
-	assert.Truthy(cnf.Username, "EmailUsername")
-	assert.Truthy(cnf.Password, "Password")
-	assert.Truthy(cnf.MailFrom, "MailFrom")
+	var msg = "%s cannot be an empty string"
+	assert.Truthy(cnf.Host, msg, "EmailHost")
+	assert.Truthy(cnf.Username, msg, "EmailUsername")
+	assert.Truthy(cnf.Password, msg, "Password")
+	assert.Truthy(cnf.MailFrom, msg, "MailFrom")
 
 	if cnf.Port == 0 {
 		cnf.Port = 25
