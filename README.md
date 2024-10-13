@@ -36,6 +36,8 @@ Any database logic should be implemented by the end-developer, but some sub-pack
 - [Setting up and calling Hooks](./docs/hooks.md)
 - [Working with the Filesystem](./docs/filesystem.md)
 - [Serving your Staticfiles](./docs/staticfiles.md)
+- [Cache Management](./docs/cache.md)
+- [Caching your Views](./docs/caching_views.md)
 - [Setting up Logging](./docs/logging.md)
 
 ### Contrib apps
