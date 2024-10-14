@@ -80,7 +80,8 @@ func (c *BaseContentType[T]) PkgPath() string {
 func (c *BaseContentType[T]) AppLabel() string {
 	var lastSlash = strings.LastIndex(c.pkgPath, "/")
 	if lastSlash == -1 {
-		panic(fmt.Sprintf("invalid package path: %s", c.pkgPath))
+		// panic(fmt.Sprintf("invalid package path: %s", c.pkgPath))
+		return c.pkgPath
 	}
 	return c.pkgPath[lastSlash+1:]
 }
