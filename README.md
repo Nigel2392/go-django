@@ -30,7 +30,7 @@ go get github.com/Nigel2392/go-django@v1.6.5.2
 - [Creating an app](./docs/apps.md)
 - [Creating Forms](./docs/forms/forms.md) (WIP)
   - [Working with Fields](./docs/forms/fields.md)
-  - [Working with Widgets](./docs/forms/widgets.md) (WIP)
+  - [Working with Widgets](./docs/forms/widgets.md)
   - [Passing and creating Media](./docs/forms/media.md)
 - [Defining your models](./docs/attrs.md)
 - [Working with permissions](./docs/permissions.md)
