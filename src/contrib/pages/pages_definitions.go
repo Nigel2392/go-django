@@ -17,6 +17,15 @@ type PageDefinition struct {
 	GetForID                func(ctx context.Context, ref models.PageNode, id int64) (Page, error)
 	OnReferenceUpdate       func(ctx context.Context, ref models.PageNode, id int64) error
 	OnReferenceBeforeDelete func(ctx context.Context, ref models.PageNode, id int64) error
+
+	MaxNum          int
+	DissalowCreate  bool
+	DisallowRoot    bool
+	ParentPageTypes []string
+	ChildPageTypes  []string
+
+	_parentPageTypes map[string]struct{}
+	_childPageTypes  map[string]struct{}
 }
 
 func (p *PageDefinition) Label() string {

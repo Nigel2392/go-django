@@ -37,6 +37,11 @@ WHERE  depth = 0;
 SELECT COUNT(*)
 FROM   PageNode;
 
+-- name: CountNodesByTypeHash :one
+SELECT COUNT(*)
+FROM   PageNode
+WHERE  content_type = sqlc.arg(content_type);
+
 -- name: GetNodeByID :one
 SELECT   *
 FROM     PageNode

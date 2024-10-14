@@ -42,3 +42,11 @@ func DefinitionForObject(page Page) *PageDefinition {
 func ListDefinitions() []*PageDefinition {
 	return pageRegistryObject.ListDefinitions()
 }
+
+func ListRootDefinitions() []*PageDefinition {
+	return pageRegistryObject.ListRootDefinitions()
+}
+
+func ListDefinitionsForType(typeName string) []*PageDefinition {
+	return pageRegistryObject.ListDefinitionsForType(typeName)
+}

@@ -76,6 +76,19 @@ func (q *Queries) CountRootNodes(ctx context.Context) (int64, error) {
 	return count, err
 }
 
+const countNodesByTypeHash = `-- name: CountNodesByTypeHash :one
+SELECT COUNT(*)
+FROM   PageNode
+WHERE  content_type = ?
+`
+
+func (q *Queries) CountNodesByTypeHash(ctx context.Context, contentType string) (int64, error) {
+	row := q.queryRow(ctx, q.countNodesByTypeHashStmt, countNodesByTypeHash, contentType)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteDescendants = `-- name: DeleteDescendants :exec
 DELETE FROM PageNode
 WHERE path LIKE CONCAT(?, '%') AND depth > ?

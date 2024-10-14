@@ -2,6 +2,15 @@
 
 {{ define "title" }}{{ T "Add" }}{{ end }}
 
+
+{{ define "extra_css" }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $css := $Media.CSS }}
+        {{ $css }}
+    {{ end }}
+{{ end }}
+
+
 {{ define "content" }}
     <form method="post" action="{{ .Get ("PostURL") }}" class="admin-form" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
@@ -27,4 +36,11 @@
             {{ end }}
         </div>
     </form>
+{{ end }}
+
+{{ define "extra_js" }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $js := $Media.JS }}
+        {{ $js }}
+    {{ end }}
 {{ end }}

@@ -35,6 +35,34 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 		return fmt.Errorf("parent path must not be empty")
 	}
 
+	var definition = DefinitionForType(ref.ContentType)
+	if definition != nil {
+		//	if definition.MaxNum > 0 {
+		//		var count, err = CountNodesByType(queries, ctx, ref.ContentType)
+		//		if err != nil {
+		//			return err
+		//		}
+		//
+		//		if count >= int64(definition.MaxNum) {
+		//			return fmt.Errorf("cannot create more than %d pages of type %s", definition.MaxNum, ref.ContentType)
+		//		}
+		//	}
+
+		if len(definition._childPageTypes) > 0 {
+			var parentType = parent.ContentType
+			var parentDef = DefinitionForType(parentType)
+			if _, exists := parentDef._childPageTypes[ref.ContentType]; !exists {
+				return fmt.Errorf("parent type %s is not allowed to have children of type %s", parentType, ref.ContentType)
+			}
+
+			if len(definition._parentPageTypes) > 0 {
+				if _, exists := definition._parentPageTypes[parentType]; !exists {
+					return fmt.Errorf("page type %s is not allowed to have parent of type %s", ref.ContentType, parentType)
+				}
+			}
+		}
+	}
+
 	if err = p.Save(ctx); err != nil {
 		return err
 	}

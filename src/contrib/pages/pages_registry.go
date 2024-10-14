@@ -43,6 +43,13 @@ func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
 		panic("pages: RegisterPageDefinition called twice for " + typeName)
 	}
 
+	if definition._childPageTypes == nil {
+		definition._childPageTypes = make(map[string]struct{})
+		for _, childType := range definition.ChildPageTypes {
+			definition._childPageTypes[childType] = struct{}{}
+		}
+	}
+
 	if definition.OnReferenceUpdate != nil {
 		SignalNodeUpdated.Listen(func(s signals.Signal[*PageNodeSignal], ps *PageNodeSignal) error {
 			if ps.Node.ContentType == typeName {
@@ -65,11 +72,7 @@ func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
 	contenttypes.Register(definition.ContentTypeDefinition)
 }
 
-func (p *pageRegistry) ListDefinitions() []*PageDefinition {
-	var definitions = make([]*PageDefinition, 0, len(p.registry))
-	for _, definition := range p.registry {
-		definitions = append(definitions, definition)
-	}
+func sortDefinitions(definitions []*PageDefinition) {
 	slices.SortStableFunc(definitions, func(a, b *PageDefinition) int {
 		var result = strings.Compare(a.ContentType().Model(), b.ContentType().Model())
 		if result == 0 {
@@ -77,6 +80,65 @@ func (p *pageRegistry) ListDefinitions() []*PageDefinition {
 		}
 		return result
 	})
+}
+
+func FilterCreatableDefinitions(definitions []*PageDefinition) []*PageDefinition {
+	var creatable = make([]*PageDefinition, 0, len(definitions))
+	for _, definition := range definitions {
+		if !definition.DissalowCreate {
+			creatable = append(creatable, definition)
+		}
+	}
+	return creatable
+}
+
+func (p *pageRegistry) ListDefinitions() []*PageDefinition {
+	var definitions = make([]*PageDefinition, 0, len(p.registry))
+	for _, definition := range p.registry {
+		definitions = append(definitions, definition)
+	}
+	sortDefinitions(definitions)
+	return definitions
+}
+
+func (p *pageRegistry) ListRootDefinitions() []*PageDefinition {
+	var definitions = make([]*PageDefinition, 0, len(p.registry))
+	for _, definition := range p.registry {
+		if !definition.DisallowRoot {
+			definitions = append(definitions, definition)
+		}
+	}
+	sortDefinitions(definitions)
+	return definitions
+}
+
+func (p *pageRegistry) ListDefinitionsForType(typeName string) []*PageDefinition {
+	var definitions = make([]*PageDefinition, 0, len(p.registry))
+	var definition = p.registry[typeName]
+	if definition == nil {
+		return definitions
+	}
+
+	if len(definition._childPageTypes) > 0 {
+		for _, def := range p.registry {
+			if _, exists := definition._childPageTypes[def.ContentType().TypeName()]; exists {
+				if len(def._parentPageTypes) > 0 {
+					if _, exists := def._parentPageTypes[typeName]; exists {
+						definitions = append(definitions, def)
+					}
+				} else {
+					definitions = append(definitions, def)
+				}
+			}
+		}
+	} else {
+		for _, def := range p.registry {
+			definitions = append(definitions, def)
+		}
+	}
+
+	sortDefinitions(definitions)
+
 	return definitions
 }
 

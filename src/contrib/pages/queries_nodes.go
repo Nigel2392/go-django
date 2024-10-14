@@ -63,6 +63,10 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 	})
 }
 
+func CountNodesByType(q models.Querier, ctx context.Context, contentType string) (int64, error) {
+	return q.CountNodesByTypeHash(ctx, contentType)
+}
+
 func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *models.PageNode) error {
 
 	var prepped, err = PrepareQuerySet(ctx, q.DB())

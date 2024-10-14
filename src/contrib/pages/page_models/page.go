@@ -96,6 +96,7 @@ type Querier interface {
 	AllNodes(ctx context.Context, limit int32, offset int32) ([]PageNode, error)
 	CountNodes(ctx context.Context) (int64, error)
 	CountRootNodes(ctx context.Context) (int64, error)
+	CountNodesByTypeHash(ctx context.Context, contentType string) (int64, error)
 	DecrementNumChild(ctx context.Context, id int64) (PageNode, error)
 	DeleteDescendants(ctx context.Context, path interface{}, depth int64) error
 	DeleteNode(ctx context.Context, id int64) error

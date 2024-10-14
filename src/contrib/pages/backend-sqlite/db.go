@@ -31,6 +31,9 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.countRootNodesStmt, err = db.PrepareContext(ctx, countRootNodes); err != nil {
 		return nil, fmt.Errorf("error preparing query CountRootNodes: %w", err)
 	}
+	if q.countNodesByTypeHashStmt, err = db.PrepareContext(ctx, countNodesByTypeHash); err != nil {
+		return nil, fmt.Errorf("error preparing query CountNodesByTypeHash: %w", err)
+	}
 	if q.decrementNumChildStmt, err = db.PrepareContext(ctx, decrementNumChild); err != nil {
 		return nil, fmt.Errorf("error preparing query DecrementNumChild: %w", err)
 	}
@@ -109,6 +112,11 @@ func (q *Queries) Close() error {
 	if q.countRootNodesStmt != nil {
 		if cerr := q.countRootNodesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing countRootNodesStmt: %w", cerr)
+		}
+	}
+	if q.countNodesByTypeHashStmt != nil {
+		if cerr := q.countNodesByTypeHashStmt.Close(); cerr != nil {
+			err = fmt.Errorf("error closing countNodesByTypeHashStmt: %w", cerr)
 		}
 	}
 	if q.decrementNumChildStmt != nil {
@@ -253,6 +261,7 @@ type Queries struct {
 	allNodesStmt               *sql.Stmt
 	countNodesStmt             *sql.Stmt
 	countRootNodesStmt         *sql.Stmt
+	countNodesByTypeHashStmt   *sql.Stmt
 	decrementNumChildStmt      *sql.Stmt
 	deleteDescendantsStmt      *sql.Stmt
 	deleteNodeStmt             *sql.Stmt
@@ -282,6 +291,7 @@ func (q *Queries) WithTx(tx *sql.Tx) models.Querier {
 		allNodesStmt:               q.allNodesStmt,
 		countNodesStmt:             q.countNodesStmt,
 		countRootNodesStmt:         q.countRootNodesStmt,
+		countNodesByTypeHashStmt:   q.countNodesByTypeHashStmt,
 		decrementNumChildStmt:      q.decrementNumChildStmt,
 		deleteDescendantsStmt:      q.deleteDescendantsStmt,
 		deleteNodeStmt:             q.deleteNodeStmt,

@@ -233,7 +233,15 @@ func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 		return
 	}
 
-	var definitions = ListDefinitions()
+	var definitions []*PageDefinition
+	if p.ContentType != "" && p.ContentType != contenttypes.NewContentType(p).TypeName() {
+		definitions = ListDefinitionsForType(p.ContentType)
+	} else {
+		definitions = ListDefinitions()
+	}
+	definitions = FilterCreatableDefinitions(
+		definitions,
+	)
 	var view = &views.BaseView{
 		AllowedMethods:  []string{http.MethodGet},
 		BaseTemplateKey: admin.BASE_KEY,

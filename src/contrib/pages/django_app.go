@@ -190,6 +190,10 @@ func NewAppConfig() *PageAppConfig {
 		// })
 
 		Register(&PageDefinition{
+			DisallowRoot: true,
+			ParentPageTypes: []string{
+				"github.com/Nigel2392/go-django-example/src/blog.BlogPage",
+			},
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 				ContentObject:  &models.PageNode{},
 				GetLabel:       fields.S("Page"),

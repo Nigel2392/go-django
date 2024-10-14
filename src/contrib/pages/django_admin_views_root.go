@@ -193,7 +193,10 @@ func chooseRootPageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.
 		return
 	}
 
-	var definitions = ListDefinitions()
+	var definitions = ListRootDefinitions()
+	definitions = FilterCreatableDefinitions(
+		definitions,
+	)
 	var view = &views.BaseView{
 		AllowedMethods:  []string{http.MethodGet},
 		BaseTemplateKey: admin.BASE_KEY,
