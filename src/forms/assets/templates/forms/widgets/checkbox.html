@@ -1,0 +1,11 @@
+{{ define "checkbox" }}
+    {{ $choices := (.Get "choices") }}
+    {{ $ctx := . }}
+
+    {{ range $choice := $choices }}
+        <div>
+            <input type="checkbox" name="{{ $ctx.Get "name" }}" id="{{ $ctx.Get "id" }}-{{ $choice.Value }}" value="{{ $choice.Value }}"{{ if (eq ($ctx.Get "value") $choice.Value) }} checked{{ end }} {{ safeAttrs (include ($ctx.Get "attrs") "forms/widgets/attrs.html") }}>
+            <label for="{{ $ctx.Get "id" }}-{{ $choice.Value }}">{{ $choice.Label }}</label>
+        </div>
+    {{ end }}
+{{ end }}

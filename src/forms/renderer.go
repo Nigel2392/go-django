@@ -12,7 +12,7 @@ import (
 //go:embed assets/**
 var formTemplates embed.FS
 
-func init() {
+func InitTemplateLibrary() {
 	var templates, err = fs.Sub(formTemplates, "assets/templates")
 	assert.True(err == nil, "failed to get form templates")
 
@@ -27,4 +27,8 @@ func init() {
 			),
 		),
 	})
+}
+
+func init() {
+	InitTemplateLibrary()
 }
