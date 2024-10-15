@@ -305,6 +305,27 @@ func TestHasPermissions(t *testing.T) {
 		if !permissions.HasPermission(request, perm.Name) {
 			t.Fatalf("expected user to have permission %s", perm.Name)
 		}
-	})
 
+		// t.Run("TestInactiveUser", func(t *testing.T) {
+		user.IsActive = false
+		if permissions.HasPermission(request, perm.Name) {
+			t.Fatalf("expected user to not have permission %s", perm.Name)
+		}
+		// })
+
+		// t.Run("TestDeletedPermissionGroup", func(t *testing.T) {
+		user.IsActive = true
+		pq.DeleteGroupPermission(context.Background(), uint64(groupID), uint64(permID))
+		if permissions.HasPermission(request, perm.Name) {
+			t.Fatalf("expected user to not have permission %s", perm.Name)
+		}
+		// })
+
+		// t.Run("TestAdminUser", func(t *testing.T) {
+		user.IsAdministrator = true
+		if !permissions.HasPermission(request, perm.Name) {
+			t.Fatalf("expected user to have permission %s", perm.Name)
+		}
+		// })
+	})
 }
