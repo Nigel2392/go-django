@@ -16,12 +16,12 @@ This means that we don't have a full ORM like Django does.
 
 Any database logic should be implemented by the end-developer, but some sub-packages do provide backends to use with MySQL and SQLite. Postgres is not planned yet.
 
-Latest version: `v1.6.5.2`
+Latest version: `v1.6.5.3`
 
 ## Installation
 
 ```bash
-go get github.com/Nigel2392/go-django@v1.6.5.2
+go get github.com/Nigel2392/go-django@v1.6.5.3
 ```
 
 ## Docs
