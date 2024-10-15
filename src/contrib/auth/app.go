@@ -11,6 +11,8 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
+	auth_permissions "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions"
+	permissions_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/permissions-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -19,6 +21,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	django_models "github.com/Nigel2392/go-django/src/models"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
 	"github.com/alexedwards/scs/v2"
@@ -30,6 +33,7 @@ import (
 type AuthApplication struct {
 	*apps.AppConfig
 	Queries        models.DBQuerier
+	PermQueries    auth_permissions.DBQuerier
 	Session        *scs.SessionManager
 	LoginWithEmail bool
 }
@@ -81,25 +85,44 @@ func NewAppConfig() django.AppConfig {
 		assert.True(ok, "DATABASE setting must adhere to auth-models.DBTX interface")
 
 		var (
-			q       models.DBQuerier
-			backend django_models.Backend[models.Querier]
-			err     error
+			q   models.DBQuerier
+			pq  auth_permissions.DBQuerier
+			b   django_models.Backend[models.Querier]
+			pb  django_models.Backend[permissions_models.Querier]
+			err error
 		)
 
 		if q, err = models.NewQueries(db); err != nil {
 			return err
 		}
 
-		if backend, err = models.BackendForDB(db.Driver()); err != nil {
+		if pq, err = auth_permissions.NewQueries(db); err != nil {
 			return err
 		}
 
-		if err := backend.CreateTable(db); err != nil {
+		if b, err = models.BackendForDB(db.Driver()); err != nil {
+			return err
+		}
+
+		if pb, err = permissions_models.BackendForDB(db.Driver()); err != nil {
+			return err
+		}
+
+		if err := b.CreateTable(db); err != nil {
+			return err
+		}
+
+		if err := pb.CreateTable(db); err != nil {
 			return err
 		}
 
 		Auth.Queries = q
+		Auth.PermQueries = pq
 		Auth.Session = sess
+
+		permissions.Tester = auth_permissions.NewPermissionsBackend(
+			pq,
+		)
 
 		autherrors.RegisterHook()
 

@@ -72,6 +72,50 @@ func FieldNames(d any, exclude []string) []string {
 	return names
 }
 
+// PrimaryKey returns the primary key field of a Definer.
+//
+// If the primary key field is not found, this function will panic.
+func PrimaryKey(d Definer) interface{} {
+	var f = d.FieldDefs().Primary()
+	if f == nil {
+		assert.Fail(
+			"primary key not found in %T",
+			d,
+		)
+	}
+	var (
+		v  = f.GetValue()
+		rT = reflect.TypeOf(v)
+		rV = reflect.ValueOf(v)
+	)
+
+	if rT.Kind() == reflect.Ptr {
+		rT = rT.Elem()
+		rV = rV.Elem()
+	}
+
+	switch rT.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return uint64(rV.Int())
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return rV.Uint()
+	case reflect.String:
+		return rV.String()
+	default:
+
+		switch v := v.(type) {
+		case fmt.Stringer:
+			return v.String()
+		}
+
+		assert.Fail(
+			"primary key %T is not of type int, uint or string",
+			v,
+		)
+	}
+	return nil
+}
+
 // SetMany sets multiple fields on a Definer.
 //
 // The values parameter is a map where the keys are the names of the fields to set.
