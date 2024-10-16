@@ -25,6 +25,16 @@ var AlignmentBlockTune = &BlockTune{
 }
 
 func tuneBlocks(fb editor.FeatureBlock, data interface{}) editor.FeatureBlock {
-	fb.Attribute("data-text-align", data.(map[string]interface{})["alignment"])
+	var (
+		d  map[string]interface{}
+		a  interface{}
+		ok bool
+	)
+	if d, ok = data.(map[string]interface{}); !ok {
+		return fb
+	}
+	if a, ok = d["alignment"]; ok {
+		fb.Attribute("data-text-align", a)
+	}
 	return fb
 }

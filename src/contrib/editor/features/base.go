@@ -55,7 +55,7 @@ func (b *BaseFeature) Media() media.Media {
 	return m
 }
 
-// Render returns the rendered HTML of the feature.
+// Render returns the feature block.
 func (b *BaseFeature) Render(d editor.BlockData) editor.FeatureBlock {
 	var block = &FeatureBlock{
 		FeatureObject: b,

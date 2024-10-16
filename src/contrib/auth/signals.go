@@ -1,11 +1,17 @@
 package auth
 
 import (
+	"net/http"
 	"net/url"
 
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	"github.com/Nigel2392/go-signals"
 )
+
+type UserWithRequest struct {
+	User *models.User
+	Req  *http.Request
+}
 
 // import "github.com/Nigel2392/go-signals"
 //
@@ -20,6 +26,7 @@ import (
 var (
 	signal_pool      = signals.NewPool[url.Values]()
 	user_signal_pool = signals.NewPool[*models.User]()
+	user_req_pool    = signals.NewPool[UserWithRequest]()
 	id_signal_pool   = signals.NewPool[uint64]()
 
 	SIGNAL_BEFORE_USER_CREATE = user_signal_pool.Get("user.before_create") // -> Send(auth.User) (Returned error unused!)
@@ -31,7 +38,7 @@ var (
 	SIGNAL_BEFORE_USER_DELETE = id_signal_pool.Get("user.before_delete") // -> Send(int64) (Returned error unused!)
 	SIGNAL_AFTER_USER_DELETE  = id_signal_pool.Get("user.after_delete")  // -> Send(int64) (Returned error unused!)
 
-	SIGNAL_USER_LOGGED_IN  = user_signal_pool.Get("auth.logged_in")  // -> Send(auth.User)		  (Returned error unused!)
-	SIGNAL_USER_LOGGED_OUT = user_signal_pool.Get("auth.logged_out") // -> Send(auth.User(nil))		  (Returned error unused!)
-	SIGNAL_LOGIN_FAILED    = signal_pool.Get("auth.login_failed")    // -> Send(auth.User, error) (Returned error unused!)
+	SIGNAL_USER_LOGGED_IN  = user_req_pool.Get("auth.logged_in")  // -> Send(auth.User)		  (Returned error unused!)
+	SIGNAL_USER_LOGGED_OUT = user_req_pool.Get("auth.logged_out") // -> Send(auth.User(nil))		  (Returned error unused!)
+	SIGNAL_LOGIN_FAILED    = signal_pool.Get("auth.login_failed") // -> Send(auth.User, error) (Returned error unused!)
 )

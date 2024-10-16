@@ -14,6 +14,10 @@ import (
 var _editorJS_FS embed.FS
 var editorJS_FS fs.FS
 
+var (
+	RENDER_ERRORS = true
+)
+
 func init() {
 	editorJS_FS, _ = fs.Sub(_editorJS_FS, "static")
 	attrs.RegisterFormFieldType(

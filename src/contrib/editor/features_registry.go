@@ -42,12 +42,19 @@ func (e *EditorJSBlockData) Render() template.HTML {
 	var ctx = context.Background()
 	var b = new(strings.Builder)
 	for _, block := range e.Blocks {
-		if err := block.Render(ctx, b); err != nil {
+		if err := block.Render(ctx, b); err != nil && RENDER_ERRORS {
 			fmt.Fprintf(b, "Error (%s): %s", block.Type(), err)
 		}
 	}
 	return template.HTML(b.String())
+}
 
+func FeatureNames(f ...BaseFeature) []string {
+	var names = make([]string, 0, len(f))
+	for _, feature := range f {
+		names = append(names, feature.Name())
+	}
+	return names
 }
 
 type editorRegistry struct {

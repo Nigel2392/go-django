@@ -15,7 +15,7 @@ import (
 func Login(r *http.Request, u *models.User) *models.User {
 	var session = sessions.Retrieve(r)
 	except.Assert(session != nil, 500, "session is nil")
-	//
+
 	var err = session.RenewToken()
 	except.Assert(err == nil, 500, "failed to renew session token")
 
@@ -23,7 +23,10 @@ func Login(r *http.Request, u *models.User) *models.User {
 
 	session.Set(SESSION_COOKIE_NAME, u.ID)
 
-	SIGNAL_USER_LOGGED_IN.Send(u)
+	SIGNAL_USER_LOGGED_IN.Send(UserWithRequest{
+		User: u,
+		Req:  r,
+	})
 
 	return u
 }
@@ -39,7 +42,8 @@ func Logout(r *http.Request) error {
 		return err
 	}
 
-	return SIGNAL_USER_LOGGED_OUT.Send(
-		(*models.User)(nil),
-	)
+	return SIGNAL_USER_LOGGED_OUT.Send(UserWithRequest{
+		User: nil,
+		Req:  r,
+	})
 }

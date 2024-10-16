@@ -28,6 +28,8 @@ import (
 
 	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-models/auth-models-mysql"
 	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-models/auth-models-sqlite"
+	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/auth-permissions-mysql"
+	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/auth-permissions-sqlite"
 )
 
 type AuthApplication struct {
