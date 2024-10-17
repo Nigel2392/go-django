@@ -71,9 +71,9 @@ Initialize a new project with the given go module name.
 #### Example
 
 ```bash
-go-django -m github.com/Nigel2392/myproject -d ./my-project startproject myproject
+go-django startproject -m github.com/Nigel2392/myproject -d ./my-project myproject
 # This translates to:
-go-django --module github.com/Nigel2392/myproject --dir ./my-project startproject myproject
+go-django startproject --module github.com/Nigel2392/myproject --dir ./my-project myproject
 ```
 
 ### `startapp`
