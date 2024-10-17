@@ -17,6 +17,11 @@ var funcMap = template.FuncMap{
 	"lowercase": func(s string) string {
 		return strings.ToLower(s)
 	},
+	"packageString": func(s string) string {
+		s = strings.ReplaceAll(s, "-", "_")
+		s = strings.ReplaceAll(s, " ", "_")
+		return strings.ToLower(s)
+	},
 }
 
 func setLogLevel(level logger.LogLevel) func(c *cli.Context, b bool) error {

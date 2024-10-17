@@ -1,4 +1,4 @@
-package $( lowercase .ProjectName )
+package $( packageString .ProjectName )
 
 import (
 	"net/http"
