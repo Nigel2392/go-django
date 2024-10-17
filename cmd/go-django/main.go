@@ -3,6 +3,8 @@ package main
 import (
 	"embed"
 	"os"
+	"strings"
+	"text/template"
 
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/urfave/cli/v2"
@@ -10,6 +12,12 @@ import (
 
 //go:embed assets/**
 var assetFiles embed.FS
+
+var funcMap = template.FuncMap{
+	"lowercase": func(s string) string {
+		return strings.ToLower(s)
+	},
+}
 
 func setLogLevel(level logger.LogLevel) func(c *cli.Context, b bool) error {
 	return func(c *cli.Context, b bool) error {

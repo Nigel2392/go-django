@@ -1,4 +1,4 @@
-package core
+package $( lowercase .ProjectName )
 
 import (
 	"net/http"
@@ -14,7 +14,7 @@ func Index(w http.ResponseWriter, r *http.Request) {
 	context.Set("ProjectURL", "https://github.com/nigel2392/go-django")
 	context.Set("ProjectName", "GO-Django")
 
-	if err := tpl.FRender(w, context, "core", "core/index.tmpl"); err != nil {
+	if err := tpl.FRender(w, context, "$( .ProjectName )", "$( .ProjectName )/index.tmpl"); err != nil {
 		http.Error(w, err.Error(), 500)
 		return
 	}

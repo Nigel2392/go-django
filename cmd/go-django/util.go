@@ -83,6 +83,7 @@ func copyProjectFiles(files fs.FS, projectPath string, data interface{}) error {
 
 func RenderTemplateString(s string, data interface{}) (string, error) {
 	var t = template.New("template")
+	t.Funcs(funcMap)
 	t.Delims("$(", ")")
 	t = template.Must(t.Parse(s))
 	var b = &bytes.Buffer{}
@@ -108,6 +109,7 @@ func RenderTemplateFile(files fs.FS, w io.Writer, path string, data interface{})
 
 	var t = template.New(path)
 	t.Delims("$(", ")")
+	t.Funcs(funcMap)
 	t = template.Must(
 		t.Parse(fileContent.String()),
 	)

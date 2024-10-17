@@ -1,10 +1,10 @@
-{{ define "Dockerfile" }}FROM golang:{{ .GoVersion }}-alpine{{ if .Scratch }} AS builder{{ end }}
+FROM golang:$( .GoVersion )-alpine$( if .Scratch ) AS builder$( end )
 
 # Update all the packages
 RUN apk update && apk upgrade
 
 # Update ca-certificates
-RUN apk add --no-cache ca-certificates
+RUN apk add --no-cache ca-certificates gcc musl-dev
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
@@ -12,10 +12,10 @@ WORKDIR /app
 # Copy go mod and sum files
 COPY go.mod go.sum ./
 
-{{ if .Vendored }}
+$( if .Vendored )
 # Copy the vendor directory and go mod files
 COPY vendor/ vendor/
-{{ end }}
+$( end )
 
 # Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
 RUN go mod download
@@ -23,25 +23,29 @@ RUN go mod download
 # Copy the source from the current directory to the Working Directory inside the container
 COPY ./src ./src
 
-# Build the Go app
-RUN go build{{ if .Scratch }} -ldflags="-extldflags=-static"{{ end }} -o {{ .ExecutableName }} ./src
+# Set environment variables for Go
+ENV GO111MODULE=on
+ENV CGO_ENABLED=1
 
-{{ if .Scratch }}
+# Build the Go app
+RUN go build$( if .Scratch ) -ldflags="-extldflags=-static"$( end ) -o $( .ExecutableName ) ./src
+
+$( if .Scratch )
     # Start a new stage from scratch
     FROM scratch
 
     # Copy the Pre-built binary file from the previous stage
-    COPY --from=builder /app/{{ .ExecutableName }} /app/
+    COPY --from=builder /app/$( .ExecutableName ) /app/
 
     # Copy the ca-certificates
     COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
     # Set the Current Working Directory inside the container
     WORKDIR /app
-{{ end }}
+$( end )
 
-# Expose port {{ .DefaultPort }} to the outside world
-EXPOSE {{ .DefaultPort }}
+# Expose port $( .DefaultPort ) to the outside world
+EXPOSE $( .DefaultPort )
 
 # Command to run the executable
-CMD ["./{{ .ExecutableName }}"]{{ end }}
+CMD ["./$( .ExecutableName )"]

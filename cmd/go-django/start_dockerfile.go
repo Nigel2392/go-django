@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"runtime/debug"
 	"strings"
-	"text/template"
 
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/urfave/cli/v2"
@@ -111,18 +110,9 @@ func NewDockerfile() *Dockerfile {
 func (d *Dockerfile) WriteTo(w io.Writer) (int64, error) {
 	d.defaults()
 
-	var template = template.New("Dockerfile")
-	template, err := template.ParseFS(
-		assetFiles,
-		"assets/templates/Dockerfile.tmpl",
-	)
-	if err != nil {
-		return 0, err
-	}
-
-	var buf = &bytes.Buffer{}
-	err = template.ExecuteTemplate(
-		buf, "Dockerfile", d,
+	var buf = new(bytes.Buffer)
+	var err = RenderTemplateFile(
+		assetFiles, buf, "assets/templates/Dockerfile.tmpl", d,
 	)
 	if err != nil {
 		return 0, err

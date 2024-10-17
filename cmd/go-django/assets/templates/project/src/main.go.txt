@@ -12,7 +12,7 @@ import (
 	auditlogs_sqlite "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/audit_logs_sqlite"
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"$( .ModulePath )/src/core"
+	$( lowercase .ProjectName ) "$( .ModulePath )/src/$( .ProjectName )"
 
 	_ "github.com/Nigel2392/go-django/src/contrib/pages/backend-sqlite"
 	_ "github.com/mattn/go-sqlite3"
@@ -27,7 +27,7 @@ func main() {
 			"HOST":          "0.0.0.0",
 			"PORT":          "8080",
 			"DATABASE": func() *sql.DB {
-				var db, err = sql.Open("sqlite3", "./.private/db.sqlite3")
+				var db, err = sql.Open("sqlite3", "./db.sqlite3")
 				if err != nil {
 					panic(err)
 				}
@@ -48,7 +48,7 @@ func main() {
 			pages.NewAppConfig,
 			auditlogs.NewAppConfig,
 			reports.NewAppConfig,
-			core.NewAppConfig,
+			$( lowercase .ProjectName ).NewAppConfig,
 		),
 	)
 
