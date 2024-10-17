@@ -31,22 +31,22 @@ Each command has its own help page, which you can access by running `go-django h
 Initialize a new Dockerfile for your project.
 
 - dir:
-    *Alias*: d
+    **Alias**: d  
     The directory to write the Dockerfile to
 - port:
-    *Alias*: p
+    **Alias**: p  
     The port the application listens on
 - executable:
-    *Alias*: e
+    **Alias**: e  
     The name of the executable
 - scratch:
-    *Alias*: s
+    **Alias**: s  
     Use a scratch image
 - vendored:
-    *Alias*: v
+    **Alias**: v  
     Use a vendored build
 - force:
-    *Alias*: f
+    **Alias**: f  
     Force overwrite of existing Dockerfile
 
 #### Example
@@ -62,10 +62,10 @@ go-django dockerfile --dir . --port 8080 --executable myapp --scratch
 Initialize a new project with the given go module name.
 
 - module:
-    *Alias*: m
+    **Alias**: m  
     The name of the go module
 - dir:
-    *Alias*: d
+    **Alias**: d  
     The directory to create the project in
 
 #### Example
@@ -83,7 +83,7 @@ Start a new app in the given project directory.
 If no directory is provided, we will look for a `src` directory in the current working directory.
 
 - dir:
-    *Alias*: d
+    **Alias**: d  
     The directory to create the app in
 
 #### Example
