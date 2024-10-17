@@ -1,0 +1,39 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ .Get "Title" }} | {{ .Get "ProjectName" }}{{ end }}
+
+{{ define "extra_css" }}
+<link rel="stylesheet" type="text/css" href="{{ static "core/css/core.css" }}">
+{{ end }}
+
+{{ define "content" }}
+    
+    <div class="center-display">
+        
+        <div class="top-nav">
+            <div class="top-nav-item">
+                <a href="{{ .Get "ProjectURL" }}" class="top-nav-item--link">
+                    <img src="{{ static "core/img/logo.png" }}" alt="logo" class="top-nav-item--logo">
+                    <span class="top-nav-item--title">{{ .Get "ProjectName" }}</span>
+                </a>
+            </div>
+            <div class="top-nav-item">
+                <span class="top-nav-item--releases">
+                    <a href="{{ .Get "ProjectURL" }}/releases" class="top-nav-item--releases--link">
+                        View our releases
+                    </a>
+                </span>
+            </div>
+        </div>
+
+        <div class="main-display">
+
+            <img src="{{ static "core/img/go-django.png" }}" alt="welcome" class="main-display--img">
+            <h1>Welcome to your new {{ .Get "ProjectName" }} project!</h1>
+            <h2>Get started by editing your project files</h2>
+
+        </div>
+
+    </div>
+
+{{ end }}

@@ -10,7 +10,7 @@ The permissions package is a core application and thus can be safely used throug
 
 `PermissionTester` implementations might vary based on the auth system used in the application. For example, a simple implementation might check if the user is authenticated, while a more complex implementation might check if the user has a specific role or permission.
 
-Be mindful that **all** package- level variables are meant to be overridden by the user, it is highly advised to not modify the package-level variables directly from modular apps.
+Be mindful that **all** package- level *variables* are meant to be overridden by the user, it is highly advised to not modify the package-level variables directly from modular apps but rather override them in the main application.
 
 ## Key Components
 
@@ -24,7 +24,14 @@ type PermissionTester interface {
 ```
 
 - **HasObjectPermission**: This method checks if the given request has the permission to perform the specified action on the provided object.
+  This method should return `true` if the request (or user bound to that request) has permissions for the given object, and `false` otherwise.
+
 - **HasPermission**: This method checks if the given request has the permission to perform the specified action without any object context.
+  This method should return `true` if the request (or user bound to that request) has the permission, and `false` otherwise.
+
+It is also possible to omit an actual implementation of the `HasObjectPermission` method and only implement the `HasPermission` method.
+In this case, the `HasObjectPermission` should still be defined to adhere to the interface, but immediately `return HasPermission(r, perms...)`.
+Do note that this will then not provide any object-level permission checking.
 
 ### `Tester` Variable
 
@@ -33,7 +40,7 @@ var Tester PermissionTester
 ```
 
 - `Tester` is a global variable of type `PermissionTester`. It should be assigned to an instance of a type that implements the `PermissionTester` interface.
-- **User Responsibility**: The framework user should implement the `PermissionTester` interface and assign it to the `Tester` variable.
+- **User Responsibility**: The framework user should implement the `PermissionTester` interface and assign it to the `permissions.Tester` variable.
 
 ### Default Behavior
 

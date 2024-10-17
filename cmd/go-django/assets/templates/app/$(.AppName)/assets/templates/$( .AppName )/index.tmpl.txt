@@ -1,0 +1,17 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ .Get "Title" }}{{ end }}
+
+{{ define "extra_css" }}
+<link rel="stylesheet" type="text/css" href="{{ static "$( .AppName )/css/$( .AppName ).css" }}">
+{{ end }}
+
+{{ define "extra_js" }}
+<script src="{{ static "$( .AppName )/js/$( .AppName ).js" }}"></script>
+{{ end }}
+
+{{ define "content" }}
+    
+    <h1>$( .AppName )</h1>
+
+{{ end }}

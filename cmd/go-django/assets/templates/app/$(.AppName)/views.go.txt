@@ -1,0 +1,20 @@
+package $( .AppName )
+
+import (
+	"net/http"
+
+	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+)
+
+func $( .AppName )View(w http.ResponseWriter, r *http.Request) {
+	var context = ctx.RequestContext(r)
+
+	context.Set("Title", "$( .AppName ) View")
+
+	if err := tpl.FRender(w, context, "core", "$( .AppName )/index.tmpl"); err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+
+}
