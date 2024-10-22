@@ -12,36 +12,41 @@ WORKDIR /app
 # Copy go mod and sum files
 COPY go.mod go.sum ./
 
-$( if .Vendored )
-# Copy the vendor directory and go mod files
-COPY vendor/ vendor/
-$( end )
-
-# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
-RUN go mod download
-
 # Copy the source from the current directory to the Working Directory inside the container
 COPY ./src ./src
+
+# Copy any extra files if required
+# COPY ...
 
 # Set environment variables for Go
 ENV GO111MODULE=on
 ENV CGO_ENABLED=1
 
+$( if .Vendored )
+# Copy the vendor directory and go mod files
+COPY vendor/ vendor/
+$( end )
+
+$( if not .Vendored )
+# Download all dependencies. Dependencies will be cached if the go.mod and go.sum files are not changed
+RUN go mod download
+$( end )
+
 # Build the Go app
 RUN go build$( if .Scratch ) -ldflags="-extldflags=-static"$( end ) -o $( .ExecutableName ) ./src
 
 $( if .Scratch )
-    # Start a new stage from scratch
-    FROM scratch
+# Start a new stage from scratch
+FROM scratch
 
-    # Copy the Pre-built binary file from the previous stage
-    COPY --from=builder /app/$( .ExecutableName ) /app/
+# Copy the Pre-built binary file from the previous stage
+COPY --from=builder /app/$( .ExecutableName ) /app/
 
-    # Copy the ca-certificates
-    COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# Copy the ca-certificates
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-    # Set the Current Working Directory inside the container
-    WORKDIR /app
+# Set the Current Working Directory inside the container
+WORKDIR /app
 $( end )
 
 # Expose port $( .DefaultPort ) to the outside world

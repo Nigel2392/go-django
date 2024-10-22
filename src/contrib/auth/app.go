@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
@@ -24,6 +25,7 @@ import (
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/alexedwards/scs/v2"
 
 	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-models/auth-models-mysql"
@@ -121,10 +123,19 @@ func NewAppConfig() django.AppConfig {
 		Auth.Queries = q
 		Auth.PermQueries = pq
 		Auth.Session = sess
+		Auth.CtxProcessors = []func(tpl.RequestContext){}
 
 		permissions.Tester = auth_permissions.NewPermissionsBackend(
 			pq,
 		)
+
+		tpl.Processors(func(rc tpl.RequestContext) {
+			rc.Set("User",
+				authentication.Retrieve(
+					rc.Request(),
+				),
+			)
+		})
 
 		autherrors.RegisterHook()
 

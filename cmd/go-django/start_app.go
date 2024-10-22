@@ -51,6 +51,7 @@ var startAppCommand = &cli.Command{
 			}
 		}
 
+		// Go-To label for for copying project files
 	setupModule:
 		if c.NArg() < 1 {
 			return cli.ShowCommandHelp(
