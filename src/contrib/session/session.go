@@ -2,7 +2,6 @@ package session
 
 import (
 	"database/sql"
-	"fmt"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
@@ -42,8 +41,8 @@ func NewAppConfig() django.AppConfig {
 			assert.Err(err)
 
 			if !rows.Next() {
-				fmt.Println("Creating index sessions_expiry_idx on sessions table for MySQL")
-				_, err = db.Exec(`CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions(expiry)`)
+				logger.Info("Creating index sessions_expiry_idx on sessions table for MySQL")
+				_, err = db.Exec(`CREATE INDEX sessions_expiry_idx ON sessions(expiry)`)
 				assert.Err(err)
 			}
 

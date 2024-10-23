@@ -173,7 +173,23 @@ func (s *sqliteStorageBackend) EntryFilter(filters []auditlogs.AuditLogFilter, a
 	if err != nil {
 		return nil, err
 	}
-	rows, err := s.db.Query(fmt.Sprintf("SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE %s ORDER BY timestamp DESC LIMIT ? OFFSET ?;", query), append(args, amount, offset)...)
+	var queryString = fmt.Sprintf(
+		`SELECT 
+			id,
+			type,
+			level,
+			timestamp,
+			user_id,
+			object_id,
+			content_type,
+			data
+			FROM audit_logs
+			WHERE %s
+			ORDER BY timestamp DESC
+			LIMIT ? OFFSET ?;`,
+		query,
+	)
+	rows, err := s.db.Query(queryString, append(args, amount, offset)...)
 	if err != nil {
 		return nil, err
 	}

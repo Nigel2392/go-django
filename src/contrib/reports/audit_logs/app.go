@@ -304,6 +304,10 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		r.URL.Query().Get("page"),
 	)
 
+	if pageNum < 1 {
+		pageNum = 1
+	}
+
 	var page, err = paginator.Page(pageNum)
 	if err != nil && !errors.Is(err, pagination.ErrNoResults) {
 		logger.Errorf("Failed to retrieve audit logs: %v", err)
