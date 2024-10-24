@@ -72,6 +72,19 @@ func FieldNames(d any, exclude []string) []string {
 	return names
 }
 
+// DefinerList converts a slice of []T where the underlying type is of type Definer to []Definer.
+func DefinerList[T Definer](list []T) []Definer {
+	var n = len(list)
+	if n == 0 {
+		return nil
+	}
+	var l = make([]Definer, n)
+	for i, v := range list {
+		l[i] = v
+	}
+	return l
+}
+
 // PrimaryKey returns the primary key field of a Definer.
 //
 // If the primary key field is not found, this function will panic.

@@ -573,6 +573,16 @@ The exclude parameter can be used to exclude certain fields from the result.
 This function is useful when you need to get the names of all fields in a  
 model, but you want to exclude certain fields (e.g. fields that are not editable).
 
+### `PrimaryKey(d Definer) interface{}`
+
+PrimaryKey retrieves the primary key of a Definer.
+
+This function will panic if the primary key is not found.
+
+### `DefinerList[T Definer](list []T) []Definer
+
+DefinerList converts a slice of []T where the underlying type is of type Definer to []Definer.
+
 ### `SetMany(d Definer, values map[string]interface{}) error`
 
 SetMany sets multiple fields on a Definer.
