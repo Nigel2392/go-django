@@ -9,6 +9,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/pkg/errors"
+	"github.com/shopspring/decimal"
 	"golang.org/x/exp/constraints"
 )
 
@@ -99,6 +100,55 @@ func (n *NumberWidget[T]) ValueToForm(value interface{}) interface{} {
 		return strconv.Itoa(int(v.Uint()))
 	case reflect.Float32, reflect.Float64:
 		return strconv.FormatFloat(v.Float(), 'f', -1, 64)
+	default:
+		return value
+	}
+}
+
+type DecimalWidget struct {
+	*BaseWidget
+	DecimalPlaces int
+}
+
+func NewDecimalInput(attrs map[string]string, decimalPlaces int) Widget {
+	if attrs == nil {
+		attrs = make(map[string]string)
+	}
+
+	if decimalPlaces == 0 {
+		decimalPlaces = 3
+	}
+
+	return &DecimalWidget{
+		NewBaseWidget(
+			S("number"), "forms/widgets/number.html", attrs,
+		),
+		decimalPlaces,
+	}
+}
+
+func (d *DecimalWidget) ValueToGo(value interface{}) (interface{}, error) {
+	switch val := value.(type) {
+	case string:
+		return decimal.NewFromString(val)
+	case decimal.Decimal:
+		return val, nil
+	case float32, float64:
+		return decimal.NewFromFloat(val.(float64)), nil
+	default:
+		return nil, errs.ErrInvalidType
+	}
+}
+
+func (d *DecimalWidget) ValueToForm(value interface{}) interface{} {
+	if value == nil {
+		return value
+	}
+	switch val := value.(type) {
+	case decimal.Decimal:
+		return val.String()
+	case float32, float64:
+		return decimal.NewFromFloat(val.(float64)).String()
 	default:
 		return value
 	}

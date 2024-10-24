@@ -31,6 +31,7 @@ require (
 	github.com/gosimple/slug v1.14.0
 	github.com/jackc/pgx/v5 v5.6.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
+	github.com/shopspring/decimal v1.4.0
 	github.com/urfave/cli/v2 v2.27.5
 	golang.org/x/term v0.20.0
 )

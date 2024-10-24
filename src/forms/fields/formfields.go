@@ -96,6 +96,16 @@ func NumberField[T widgets.NumberType](opts ...func(Field)) Field {
 	return f
 }
 
+func DecimalField(opts ...func(Field)) Field {
+	var f = NewField(S("number"), opts...)
+	if f.FormWidget == nil {
+		f.FormWidget = widgets.NewDecimalInput(
+			nil, 0,
+		)
+	}
+	return f
+}
+
 type Encoder interface {
 	Encode(interface{}) error
 }

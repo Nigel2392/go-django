@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/shopspring/decimal"
 )
 
 func init() {
@@ -11,6 +12,12 @@ func init() {
 		json.RawMessage([]byte{}),
 		func(opts ...func(fields.Field)) fields.Field {
 			return fields.JSONField[json.RawMessage](opts...)
+		},
+	)
+	RegisterFormFieldType(
+		decimal.Decimal{},
+		func(opts ...func(fields.Field)) fields.Field {
+			return fields.DecimalField(opts...)
 		},
 	)
 }
