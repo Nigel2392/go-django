@@ -83,6 +83,9 @@ func (a *AppConfig) IsReady() bool {
 }
 
 func (a *AppConfig) Templates() *tpl.Config {
+	if a.TemplateConfig != nil && a.TemplateConfig.AppName == "" {
+		a.TemplateConfig.AppName = a.AppName
+	}
 	return a.TemplateConfig
 }
 
