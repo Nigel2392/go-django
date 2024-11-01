@@ -46,6 +46,10 @@ func (b *BaseWidget) ValueToForm(value interface{}) interface{} {
 	return value
 }
 
+func (b *BaseWidget) Validate(value interface{}) []error {
+	return nil
+}
+
 func (b *BaseWidget) ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
 	return !data.Has(name)
 }

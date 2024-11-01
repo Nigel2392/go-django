@@ -136,6 +136,14 @@ func (i *BaseField) Validate(value interface{}) []error {
 		}
 	}
 
+	var widget = i.Widget()
+	if widget != nil {
+		var errs = widget.Validate(value)
+		if len(errs) > 0 {
+			errors = append(errors, errs...)
+		}
+	}
+
 	if len(errors) > 0 {
 		return errors
 	}

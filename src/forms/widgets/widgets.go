@@ -42,6 +42,7 @@ type Widget interface {
 	GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context
 	RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error
 	Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error
+	Validate(value interface{}) []error
 
 	FormValuer
 	media.MediaDefiner

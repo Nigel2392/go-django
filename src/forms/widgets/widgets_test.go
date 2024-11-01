@@ -1,9 +1,11 @@
 package widgets_test
 
 import (
+	"errors"
 	"net/url"
 	"testing"
 
+	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
 
@@ -38,6 +40,37 @@ func TestValueOmittedFromData(t *testing.T) {
 		v = w.ValueOmittedFromData(d, nil, "field")
 		if v != false {
 			t.Errorf("expected %v, got %v", false, v)
+		}
+	})
+}
+
+func TestOptionsWidgetValidate(t *testing.T) {
+	var options = []widgets.Option{
+		widgets.NewOption("name1", "label1", "value1"),
+		widgets.NewOption("name2", "label2", "value2"),
+		widgets.NewOption("name3", "label3", "value3"),
+	}
+
+	var w = widgets.NewSelectInput(map[string]string{}, func() []widgets.Option {
+		return options
+	})
+
+	t.Run("valid", func(t *testing.T) {
+		var errorList = w.Validate("value1")
+		if len(errorList) != 0 {
+			t.Errorf("expected %d, got %d", 0, len(errorList))
+		}
+	})
+
+	t.Run("invalid", func(t *testing.T) {
+		var errorList = w.Validate("invalid")
+
+		if len(errorList) != 1 {
+			t.Errorf("expected %d, got %d", 1, len(errorList))
+		}
+
+		if !errors.Is(errorList[0], errs.ErrInvalidValue) {
+			t.Errorf("expected %v, got %v", errs.ErrInvalidValue, errorList[0])
 		}
 	})
 }

@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 )
 
@@ -65,6 +66,23 @@ func (o *OptionsWidget) GetContextData(id, name string, value interface{}, attrs
 	}
 	base_context.Set("blank_label", o.BlankLabel)
 	return base_context
+}
+
+func (o *OptionsWidget) Validate(value interface{}) []error {
+	var errors []error
+	var choices = o.Choices()
+	var valueStr = value.(string)
+	var found bool
+	for _, choice := range choices {
+		if choice.Value() == valueStr {
+			found = true
+			break
+		}
+	}
+	if !found {
+		errors = append(errors, errs.ErrInvalidValue)
+	}
+	return errors
 }
 
 func (b *OptionsWidget) RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
