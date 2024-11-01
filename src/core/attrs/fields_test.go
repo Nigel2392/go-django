@@ -229,7 +229,7 @@ func TestModelFormFieldsCustomType(t *testing.T) {
 			if t.Kind() == reflect.Slice && t.Elem().Kind() == reflect.Int64 {
 				var newF = fields.JSONField[[]int64](opts...)
 				newF.FormWidget = &customTestWidget{widgets.NewBaseWidget(
-					widgets.S("custom"), "", nil,
+					"custom", "", nil,
 				)}
 				return newF, true
 			}

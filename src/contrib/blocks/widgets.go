@@ -64,7 +64,7 @@ func (bw *BlockWidget) RenderWithErrors(w io.Writer, id, name string, value inte
 	return RenderBlockForm(w, bw, ctxData.(*BlockContext), errors)
 }
 
-func (bw *BlockWidget) Type() string {
+func (bw *BlockWidget) FormType() string {
 	return "block"
 }
 

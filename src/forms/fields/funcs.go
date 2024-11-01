@@ -6,27 +6,15 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
-
-func S(v string, args ...any) func() string {
-	return func() string {
-		return T(v, args...)
-	}
-}
-
-func T(v string, args ...any) string {
-	if len(args) == 0 {
-		return v
-	}
-	return fmt.Sprintf(v, args...)
-}
 
 func getTextFn(v any) func() string {
 	var fn func() string
 	switch v := v.(type) {
 	case string:
-		fn = S(v)
+		fn = trans.S(v)
 	case func() string:
 		fn = v
 	}

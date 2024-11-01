@@ -26,9 +26,7 @@ func PasswordValidators(fn ...func(PasswordString) error) func(*PasswordField) {
 
 func NewPasswordField(flags PasswordCharacterFlag, isRegistering bool, opts ...func(fields.Field)) *PasswordField {
 	var p = &PasswordField{
-		BaseField: fields.NewField(
-			fields.S("password"),
-		),
+		BaseField: fields.NewField(),
 	}
 
 	opts = append(opts,

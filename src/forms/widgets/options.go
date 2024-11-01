@@ -37,7 +37,7 @@ type OptionsWidget struct {
 	BlankLabel   string
 }
 
-func NewOptionWidget(type_ func() string, templateName string, attrs map[string]string, choices func() []Option) Widget {
+func NewOptionWidget(type_ string, templateName string, attrs map[string]string, choices func() []Option) Widget {
 	return &OptionsWidget{
 		BaseWidget: NewBaseWidget(type_, templateName, attrs),
 		Choices:    choices,
@@ -45,15 +45,15 @@ func NewOptionWidget(type_ func() string, templateName string, attrs map[string]
 }
 
 func NewCheckboxInput(attrs map[string]string, choices func() []Option) Widget {
-	return NewOptionWidget(S("checkbox"), "forms/widgets/checkbox.html", attrs, choices)
+	return NewOptionWidget("checkbox", "forms/widgets/checkbox.html", attrs, choices)
 }
 
 func NewRadioInput(attrs map[string]string, choices func() []Option) Widget {
-	return NewOptionWidget(S("radio"), "forms/widgets/radio.html", attrs, choices)
+	return NewOptionWidget("radio", "forms/widgets/radio.html", attrs, choices)
 }
 
 func NewSelectInput(attrs map[string]string, choices func() []Option) Widget {
-	return NewOptionWidget(S("select"), "forms/widgets/select.html", attrs, choices)
+	return NewOptionWidget("select", "forms/widgets/select.html", attrs, choices)
 }
 
 func (o *OptionsWidget) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {

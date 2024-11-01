@@ -18,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
@@ -150,24 +151,24 @@ func NewAppConfig() django.AppConfig {
 			"Auth",
 			admin.AppOptions{
 				RegisterToAdminMenu: true,
-				AppLabel:            fields.S("Authentication and Authorization"),
-				AppDescription:      fields.S("Manage users and groups, control access to your site with permissions."),
-				MenuLabel:           fields.S("Auth"),
+				AppLabel:            trans.S("Authentication and Authorization"),
+				AppDescription:      trans.S("Manage users and groups, control access to your site with permissions."),
+				MenuLabel:           trans.S("Auth"),
 			},
 			admin.ModelOptions{
 				Model:               &models.User{},
 				RegisterToAdminMenu: true,
 				Labels: map[string]func() string{
-					"ID":              fields.S("ID"),
-					"Email":           fields.S("Email"),
-					"Username":        fields.S("Username"),
-					"FirstName":       fields.S("First name"),
-					"LastName":        fields.S("Last name"),
-					"Password":        fields.S("Password"),
-					"IsAdministrator": fields.S("Is administrator"),
-					"IsActive":        fields.S("Is active"),
-					"CreatedAt":       fields.S("Created at"),
-					"UpdatedAt":       fields.S("Updated at"),
+					"ID":              trans.S("ID"),
+					"Email":           trans.S("Email"),
+					"Username":        trans.S("Username"),
+					"FirstName":       trans.S("First name"),
+					"LastName":        trans.S("Last name"),
+					"Password":        trans.S("Password"),
+					"IsAdministrator": trans.S("Is administrator"),
+					"IsActive":        trans.S("Is active"),
+					"CreatedAt":       trans.S("Created at"),
+					"UpdatedAt":       trans.S("Updated at"),
 				},
 				GetForID: func(identifier any) (attrs.Definer, error) {
 					var id, ok = identifier.(int)
@@ -252,7 +253,7 @@ func NewAppConfig() django.AppConfig {
 					},
 					Columns: map[string]list.ListColumn[attrs.Definer]{
 						"Email": list.LinkColumn(
-							fields.S("Email"),
+							trans.S("Email"),
 							"Email", func(defs attrs.Definitions, row attrs.Definer) string {
 								return django.Reverse("admin:apps:model:edit", "Auth", "User", defs.Get("ID"))
 							},

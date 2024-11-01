@@ -14,7 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/except"
-	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/mux"
 )
@@ -124,7 +124,7 @@ func getPageActions(rq *http.Request, p *models.PageNode) []admin.Action {
 		actions = append(actions, admin.Action{
 			Icon:   "icon-view",
 			Target: "_blank",
-			Title:  fields.T("View Live"),
+			Title:  trans.T("View Live"),
 			URL: path.Join(
 				pageApp.routePrefix, p.UrlPath,
 			),
@@ -155,7 +155,7 @@ func getPageActions(rq *http.Request, p *models.PageNode) []admin.Action {
 
 		actions = append(actions, admin.Action{
 			Icon:  "icon-history",
-			Title: fields.T("History"),
+			Title: trans.T("History"),
 			URL:   url.String(),
 		})
 	}

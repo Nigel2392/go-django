@@ -22,7 +22,7 @@ type NumberWidget[T NumberType] struct {
 }
 
 func NewNumberInput[T NumberType](attrs map[string]string) Widget {
-	return &NumberWidget[T]{NewBaseWidget(S("number"), "forms/widgets/number.html", attrs)}
+	return &NumberWidget[T]{NewBaseWidget("number", "forms/widgets/number.html", attrs)}
 }
 
 func (n *NumberWidget[T]) ValueToGo(value interface{}) (interface{}, error) {
@@ -121,7 +121,7 @@ func NewDecimalInput(attrs map[string]string, decimalPlaces int) Widget {
 
 	return &DecimalWidget{
 		NewBaseWidget(
-			S("number"), "forms/widgets/number.html", attrs,
+			"number", "forms/widgets/number.html", attrs,
 		),
 		decimalPlaces,
 	}
@@ -159,7 +159,7 @@ type BooleanWidget struct {
 }
 
 func NewBooleanInput(attrs map[string]string) Widget {
-	return &BooleanWidget{NewBaseWidget(S("checkbox"), "forms/widgets/boolean.html", attrs)}
+	return &BooleanWidget{NewBaseWidget("checkbox", "forms/widgets/boolean.html", attrs)}
 }
 
 func (b *BooleanWidget) ValueToGo(value interface{}) (interface{}, error) {
@@ -195,7 +195,7 @@ type DateWidget struct {
 }
 
 func NewDateInput(attrs map[string]string, t DateWidgetType) Widget {
-	return &DateWidget{NewBaseWidget(S(string(t)), "forms/widgets/date.html", attrs), t}
+	return &DateWidget{NewBaseWidget(string(t), "forms/widgets/date.html", attrs), t}
 }
 
 func (d *DateWidget) ValueToGo(value interface{}) (interface{}, error) {

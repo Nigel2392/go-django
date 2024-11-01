@@ -13,7 +13,7 @@ import (
 )
 
 func CharField(opts ...func(Field)) Field {
-	return NewField(S("text"), opts...)
+	return NewField(opts...)
 }
 
 type EmailFormField struct {
@@ -64,7 +64,7 @@ func (e *EmailFormField) ValueToGo(value interface{}) (interface{}, error) {
 
 func EmailField(opts ...func(Field)) Field {
 	var f = &EmailFormField{
-		BaseField: NewField(S("email"), opts...),
+		BaseField: NewField(opts...),
 	}
 	if f.FormWidget == nil {
 		f.FormWidget = widgets.NewEmailInput(nil)
@@ -73,7 +73,7 @@ func EmailField(opts ...func(Field)) Field {
 }
 
 func BooleanField(opts ...func(Field)) Field {
-	var f = NewField(S("boolean"), opts...)
+	var f = NewField(opts...)
 	if f.FormWidget == nil {
 		f.FormWidget = widgets.NewBooleanInput(nil)
 	}
@@ -81,7 +81,7 @@ func BooleanField(opts ...func(Field)) Field {
 }
 
 func DateField(typ widgets.DateWidgetType, opts ...func(Field)) Field {
-	var f = NewField(S("date"), opts...)
+	var f = NewField(opts...)
 	if f.FormWidget == nil {
 		f.FormWidget = widgets.NewDateInput(nil, typ)
 	}
@@ -89,7 +89,7 @@ func DateField(typ widgets.DateWidgetType, opts ...func(Field)) Field {
 }
 
 func NumberField[T widgets.NumberType](opts ...func(Field)) Field {
-	var f = NewField(S("number"), opts...)
+	var f = NewField(opts...)
 	if f.FormWidget == nil {
 		f.FormWidget = widgets.NewNumberInput[T](nil)
 	}
@@ -97,7 +97,7 @@ func NumberField[T widgets.NumberType](opts ...func(Field)) Field {
 }
 
 func DecimalField(opts ...func(Field)) Field {
-	var f = NewField(S("number"), opts...)
+	var f = NewField(opts...)
 	if f.FormWidget == nil {
 		f.FormWidget = widgets.NewDecimalInput(
 			nil, 0,
@@ -125,7 +125,7 @@ func MarshallerField[T any](encoder func(io.Writer) Encoder, decoder func(io.Rea
 	assert.True(decoder != nil, "decoder is required")
 
 	return &MarshallerFormField[T]{
-		BaseField:  NewField(S("text"), opts...),
+		BaseField:  NewField(opts...),
 		NewEncoder: encoder,
 		NewDecoder: decoder,
 	}

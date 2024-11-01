@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/goldcrest"
@@ -83,20 +84,20 @@ func NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef {
 
 func (f *FieldDef) Label() string {
 	if f.attrDef.Label != "" {
-		return fields.T(f.attrDef.Label)
+		return trans.T(f.attrDef.Label)
 	}
 	if labeler, ok := f.field_v.Interface().(Labeler); ok {
 		return labeler.Label()
 	}
-	return fields.T(capCaser.String(f.field_t.Name))
+	return trans.T(capCaser.String(f.field_t.Name))
 }
 
 func (f *FieldDef) HelpText() string {
 	if helpTexter, ok := f.field_v.Interface().(Helper); ok {
-		return fields.T(helpTexter.HelpText())
+		return trans.T(helpTexter.HelpText())
 	}
 	if f.attrDef.HelpText != "" {
-		return fields.T(f.attrDef.HelpText)
+		return trans.T(f.attrDef.HelpText)
 	}
 	return ""
 }

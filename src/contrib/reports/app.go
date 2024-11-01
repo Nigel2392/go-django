@@ -6,7 +6,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
-	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/goldcrest"
 )
 
@@ -43,7 +43,7 @@ func NewAppConfig() django.AppConfig {
 				items.Append(&menu.SubmenuItem{
 					BaseItem: menu.BaseItem{
 						ItemName: "reports",
-						Label:    fields.S("Reports"),
+						Label:    trans.S("Reports"),
 					},
 					Menu: &menu.Menu{
 						Items: menuItems,

@@ -13,7 +13,7 @@ import (
 )
 
 type BaseWidget struct {
-	TypeFn        func() string
+	Type          string
 	TemplateName  string
 	InputIsHidden bool
 	BaseAttrs     map[string]string
@@ -67,7 +67,7 @@ func (b *BaseWidget) GetContextData(id, name string, value interface{}, attrs ma
 	maps.Copy(widgetAttrs, b.BaseAttrs)
 	maps.Copy(widgetAttrs, attrs)
 
-	var type_ = b.Type()
+	var type_ = b.Type
 	if widgetAttrs["type"] != "" {
 		type_ = widgetAttrs["type"]
 		delete(widgetAttrs, "type")
@@ -100,15 +100,15 @@ func (b *BaseWidget) Render(w io.Writer, id, name string, value interface{}, att
 	return b.RenderWithErrors(w, id, name, value, nil, attrs)
 }
 
-func (b *BaseWidget) Type() string {
-	return b.TypeFn()
+func (b *BaseWidget) FormType() string {
+	return b.Type
 }
 
 func (b *BaseWidget) Media() media.Media {
 	return media.NewMedia()
 }
 
-func NewBaseWidget(type_ func() string, templateName string, attrs map[string]string) *BaseWidget {
+func NewBaseWidget(type_ string, templateName string, attrs map[string]string) *BaseWidget {
 
 	if attrs == nil {
 		attrs = make(map[string]string)
@@ -118,12 +118,12 @@ func NewBaseWidget(type_ func() string, templateName string, attrs map[string]st
 		templateName = "forms/widgets/input.html"
 	}
 
-	if type_ == nil {
-		type_ = S("text")
+	if type_ == "" {
+		type_ = "text"
 	}
 
 	return &BaseWidget{
-		TypeFn:        type_,
+		Type:          type_,
 		TemplateName:  templateName,
 		InputIsHidden: false,
 		BaseAttrs:     attrs,

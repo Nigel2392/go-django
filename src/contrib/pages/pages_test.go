@@ -10,7 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
-	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-signals"
 )
 
@@ -132,7 +132,7 @@ func TestPageRegistry(t *testing.T) {
 
 		var definition = &pages.PageDefinition{
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
-				GetLabel: fields.S(""),
+				GetLabel: trans.S(""),
 				ContentObject: &TestPage{
 					Ref: &models.PageNode{
 						PK:     1,
@@ -858,7 +858,7 @@ func TestPageNode(t *testing.T) {
 	pages.Register(&pages.PageDefinition{
 		ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 			ContentObject: &DBTestPage{},
-			GetLabel:      fields.S(""),
+			GetLabel:      trans.S(""),
 		},
 		GetForID: func(ctx context.Context, ref models.PageNode, id int64) (pages.Page, error) {
 			var page = &DBTestPage{}

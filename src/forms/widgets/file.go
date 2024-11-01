@@ -49,7 +49,7 @@ type FileWidget struct {
 }
 
 func NewFileInput(attrs map[string]string, validators ...func(filename string, file io.ReadSeeker) error) Widget {
-	var base = NewBaseWidget(S("file"), "forms/widgets/file.html", attrs)
+	var base = NewBaseWidget("file", "forms/widgets/file.html", attrs)
 	var widget = &FileWidget{base, validators}
 	return widget
 }

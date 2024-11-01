@@ -9,7 +9,7 @@ type BlockFormField struct {
 
 func BlockField(block Block, opts ...func(fields.Field)) *BlockFormField {
 	var bf = &BlockFormField{
-		BaseField: fields.NewField(fields.S("block"), opts...),
+		BaseField: fields.NewField(opts...),
 		Block:     block,
 	}
 

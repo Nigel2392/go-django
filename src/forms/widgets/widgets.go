@@ -36,7 +36,7 @@ type FormValuer interface {
 type Widget interface {
 	IsHidden() bool
 	Hide(hidden bool)
-	Type() string
+	FormType() string
 	SetAttrs(attrs map[string]string)
 	IdForLabel(id string) string
 	GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context

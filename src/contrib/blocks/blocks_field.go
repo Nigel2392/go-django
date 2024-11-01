@@ -29,7 +29,7 @@ func (b *FieldBlock) RenderForm(w io.Writer, id, name string, value interface{},
 		"name":   name,
 		"value":  value,
 		"errors": errors,
-		"type":   b.Field().Widget().Type(),
+		"type":   b.Field().Widget().FormType(),
 		"block":  b,
 	}
 	var bt, err = telepath.PackJSON(JSContext, blockArgs)

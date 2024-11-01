@@ -28,9 +28,7 @@ type EditorJSWidget struct {
 func NewEditorJSWidget(features ...string) *EditorJSWidget {
 	return &EditorJSWidget{
 		BaseWidget: widgets.BaseWidget{
-            TypeFn: func() string {
-                return "editorjs"
-            },
+            Type: "editorjs",
         },
 		Features:   features,
 	}

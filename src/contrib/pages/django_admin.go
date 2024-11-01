@@ -11,7 +11,7 @@ import (
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/errs"
-	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/pkg/errors"
@@ -23,8 +23,8 @@ const (
 )
 
 var pageAdminAppOptions = admin.AppOptions{
-	AppLabel:       fields.S("Pages"),
-	AppDescription: fields.S("Manage pages in a hierarchical structure."),
+	AppLabel:       trans.S("Pages"),
+	AppDescription: trans.S("Manage pages in a hierarchical structure."),
 	MediaFn: func() media.Media {
 		var m = media.NewMedia()
 		m.AddCSS(
@@ -41,18 +41,18 @@ var pageAdminModelOptions = admin.ModelOptions{
 	Name:  AdminPagesModelPath,
 	Model: &models.PageNode{},
 	Labels: map[string]func() string{
-		"ID":          fields.S("ID"),
-		"Title":       fields.S("Title"),
-		"Path":        fields.S("Tree Path"),
-		"Depth":       fields.S("Tree Depth"),
-		"Numchild":    fields.S("Number of Children"),
-		"UrlPath":     fields.S("URL Path"),
-		"Slug":        fields.S("Slug"),
-		"StatusFlags": fields.S("Status Flags"),
-		"PageID":      fields.S("Page ID"),
-		"ContentType": fields.S("Content Type"),
-		"CreatedAt":   fields.S("Created At"),
-		"UpdatedAt":   fields.S("Updated At"),
+		"ID":          trans.S("ID"),
+		"Title":       trans.S("Title"),
+		"Path":        trans.S("Tree Path"),
+		"Depth":       trans.S("Tree Depth"),
+		"Numchild":    trans.S("Number of Children"),
+		"UrlPath":     trans.S("URL Path"),
+		"Slug":        trans.S("Slug"),
+		"StatusFlags": trans.S("Status Flags"),
+		"PageID":      trans.S("Page ID"),
+		"ContentType": trans.S("Content Type"),
+		"CreatedAt":   trans.S("Created At"),
+		"UpdatedAt":   trans.S("Updated At"),
 	},
 	GetForID: func(identifier any) (attrs.Definer, error) {
 		var id int64
@@ -100,7 +100,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 		},
 		Columns: map[string]list.ListColumn[attrs.Definer]{
 			"Children": list.HTMLColumn[attrs.Definer](
-				fields.S(""),
+				trans.S(""),
 				func(defs attrs.Definitions, row attrs.Definer) template.HTML {
 					var node = row.(*models.PageNode)
 					if node.Numchild > 0 {
@@ -121,7 +121,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 				},
 			),
 			"ContentType": list.FuncColumn(
-				fields.S("Content Type"),
+				trans.S("Content Type"),
 				func(defs attrs.Definitions, row attrs.Definer) interface{} {
 					var node = row.(*models.PageNode)
 					var ctype = DefinitionForType(node.ContentType)

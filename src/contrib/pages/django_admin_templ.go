@@ -13,7 +13,7 @@ import "bytes"
 import (
 	"github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
-	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"strings"
 )
 
@@ -91,9 +91,9 @@ func (p *PagesMenuItem) Component() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(fields.T("Root Pages"))
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T("Root Pages"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 46, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 46, Col: 29}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {

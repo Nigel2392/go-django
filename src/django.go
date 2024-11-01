@@ -23,7 +23,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/permissions"
 	utils_text "github.com/Nigel2392/go-django/src/utils/text"
 	"github.com/Nigel2392/goldcrest"
@@ -461,7 +461,7 @@ func (a *Application) Initialize() error {
 			c.Render(ctx, buf)
 			return template.HTML(buf.String())
 		},
-		"T": fields.T,
+		"T": trans.T,
 	})
 
 	var err error

@@ -9,7 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
-	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/core/trans"
 )
 
 type (
@@ -37,7 +37,7 @@ func init() {
 	definition1 = &pages.PageDefinition{
 		ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 			ContentObject: &TestPageParent1{},
-			GetLabel:      fields.S("TestPageParent1"),
+			GetLabel:      trans.S("TestPageParent1"),
 		},
 		DissalowCreate:  true,
 		DisallowRoot:    true,
@@ -53,7 +53,7 @@ func init() {
 	definition2 = &pages.PageDefinition{
 		ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 			ContentObject: &TestPageParent2{},
-			GetLabel:      fields.S("TestPageParent2"),
+			GetLabel:      trans.S("TestPageParent2"),
 		},
 		GetForID: func(ctx context.Context, ref page_models.PageNode, id int64) (pages.Page, error) {
 			return &ref, nil
@@ -66,7 +66,7 @@ func init() {
 	definition3 = &pages.PageDefinition{
 		ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 			ContentObject: &TestPageParent3{},
-			GetLabel:      fields.S("TestPageParent3"),
+			GetLabel:      trans.S("TestPageParent3"),
 		},
 		GetForID: func(ctx context.Context, ref page_models.PageNode, id int64) (pages.Page, error) {
 			return &ref, nil
@@ -78,7 +78,7 @@ func init() {
 	definition4 = &pages.PageDefinition{
 		ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 			ContentObject: &TestPageChild1{},
-			GetLabel:      fields.S("TestPageChild1"),
+			GetLabel:      trans.S("TestPageChild1"),
 		},
 		GetForID: func(ctx context.Context, ref page_models.PageNode, id int64) (pages.Page, error) {
 			return &ref, nil
@@ -91,7 +91,7 @@ func init() {
 	definition5 = &pages.PageDefinition{
 		ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 			ContentObject: &TestPageChild2{},
-			GetLabel:      fields.S("TestPageChild2"),
+			GetLabel:      trans.S("TestPageChild2"),
 		},
 		GetForID: func(ctx context.Context, ref page_models.PageNode, id int64) (pages.Page, error) {
 			return &ref, nil
@@ -106,7 +106,7 @@ func init() {
 	definition6 = &pages.PageDefinition{
 		ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 			ContentObject: &TestPageChild3{},
-			GetLabel:      fields.S("TestPageChild3"),
+			GetLabel:      trans.S("TestPageChild3"),
 		},
 		GetForID: func(ctx context.Context, ref page_models.PageNode, id int64) (pages.Page, error) {
 			return &ref, nil

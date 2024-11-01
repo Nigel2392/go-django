@@ -21,7 +21,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
@@ -104,7 +104,7 @@ func NewAppConfig() django.AppConfig {
 				items.Append(&menu.Item{
 					BaseItem: menu.BaseItem{
 						ItemName: "logout",
-						Label:    fields.S("Logout"),
+						Label:    trans.S("Logout"),
 						Logo: templ.Raw(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
 	<!-- The MIT License (MIT) -->
 	<!-- Copyright (c) 2011-2024 The Bootstrap Authors -->

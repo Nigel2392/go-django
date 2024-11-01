@@ -19,7 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
@@ -51,7 +51,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 			{
 				Show: func(defs attrs.Definitions, row attrs.Definer) bool { return true },
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return fields.T("View Live")
+					return trans.T("View Live")
 				},
 				URL: func(defs attrs.Definitions, row attrs.Definer) string {
 					return path.Join(pageApp.routePrefix, row.(*models.PageNode).UrlPath)
@@ -63,7 +63,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 					return permissions.HasObjectPermission(r, row, "pages:add")
 				},
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return fields.T("Add Child")
+					return trans.T("Add Child")
 				},
 				URL: func(defs attrs.Definitions, row attrs.Definer) string {
 					var primaryField = defs.Primary()
@@ -84,7 +84,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 					return permissions.HasObjectPermission(r, row, "pages:edit")
 				},
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return fields.T("Edit Page")
+					return trans.T("Edit Page")
 				},
 				URL: func(defs attrs.Definitions, row attrs.Definer) string {
 					var primaryField = defs.Primary()
@@ -105,7 +105,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 					return django.AppInstalled("auditlogs") && permissions.HasObjectPermission(r, row, "auditlogs:list")
 				},
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return fields.T("History")
+					return trans.T("History")
 				},
 				URL: func(defs attrs.Definitions, row attrs.Definer) string {
 					var u = django.Reverse(
@@ -145,8 +145,8 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 				context.Set("app", a)
 				context.Set("model", m)
 				context.SetPage(admin.PageOptions{
-					TitleFn:    fields.S("Root Pages"),
-					SubtitleFn: fields.S("View all root pages"),
+					TitleFn:    trans.S("Root Pages"),
+					SubtitleFn: trans.S("View all root pages"),
 				})
 
 				return context, nil
@@ -214,8 +214,8 @@ func chooseRootPageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.
 			}
 
 			context.SetPage(admin.PageOptions{
-				TitleFn:    fields.S("Choose Page Type"),
-				SubtitleFn: fields.S("Select the type of page you want to create"),
+				TitleFn:    trans.S("Choose Page Type"),
+				SubtitleFn: trans.S("Select the type of page you want to create"),
 			})
 
 			return context, nil
@@ -361,7 +361,7 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 				))
 
 				context.SetPage(admin.PageOptions{
-					TitleFn: fields.S("Add %q", cType.Model()),
+					TitleFn: trans.S("Add %q", cType.Model()),
 				})
 
 				return context, nil

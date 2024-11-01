@@ -18,7 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
@@ -52,7 +52,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			{
 				Show: func(defs attrs.Definitions, row attrs.Definer) bool { return true },
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return fields.T("View Live")
+					return trans.T("View Live")
 				},
 				URL: func(defs attrs.Definitions, row attrs.Definer) string {
 					return path.Join(pageApp.routePrefix, row.(*models.PageNode).UrlPath)
@@ -64,7 +64,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 					return permissions.HasObjectPermission(r, row, "pages:add")
 				},
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return fields.T("Add Child")
+					return trans.T("Add Child")
 				},
 				URL: func(defs attrs.Definitions, row attrs.Definer) string {
 					var primaryField = defs.Primary()
@@ -85,7 +85,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 					return permissions.HasObjectPermission(r, row, "pages:edit")
 				},
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return fields.T("Edit Page")
+					return trans.T("Edit Page")
 				},
 				URL: func(defs attrs.Definitions, row attrs.Definer) string {
 					var primaryField = defs.Primary()
@@ -106,7 +106,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 					return django.AppInstalled("auditlogs") && permissions.HasObjectPermission(r, row, "auditlogs:list")
 				},
 				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return fields.T("History")
+					return trans.T("History")
 				},
 				URL: func(defs attrs.Definitions, row attrs.Definer) string {
 					var u = django.Reverse(
@@ -265,8 +265,8 @@ func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 			}
 
 			context.SetPage(admin.PageOptions{
-				TitleFn:     fields.S("Choose Page Type"),
-				SubtitleFn:  fields.S("Select the type of page you want to create"),
+				TitleFn:     trans.S("Choose Page Type"),
+				SubtitleFn:  trans.S("Select the type of page you want to create"),
 				BreadCrumbs: breadcrumbs,
 				Actions:     getPageActions(r, p),
 			})
@@ -417,7 +417,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 				}
 
 				context.SetPage(admin.PageOptions{
-					TitleFn:     fields.S("Add %q", cType.Model()),
+					TitleFn:     trans.S("Add %q", cType.Model()),
 					BreadCrumbs: breadcrumbs,
 					Actions:     getPageActions(r, p),
 				})
@@ -566,7 +566,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				}
 
 				context.SetPage(admin.PageOptions{
-					TitleFn:     fields.S("Edit %q", page.Reference().Title),
+					TitleFn:     trans.S("Edit %q", page.Reference().Title),
 					BreadCrumbs: breadcrumbs,
 					Actions:     getPageActions(r, p),
 				})
@@ -690,8 +690,8 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			}
 
 			context.SetPage(admin.PageOptions{
-				TitleFn:     fields.S("Delete %q", p.Title),
-				SubtitleFn:  fields.S("Are you sure you want to delete this page?"),
+				TitleFn:     trans.S("Delete %q", p.Title),
+				SubtitleFn:  trans.S("Are you sure you want to delete this page?"),
 				BreadCrumbs: breadcrumbs,
 				Actions:     getPageActions(r, p),
 			})
@@ -754,8 +754,8 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 			}
 
 			context.SetPage(admin.PageOptions{
-				TitleFn:     fields.S("Unpublish %q", p.Title),
-				SubtitleFn:  fields.S("Unpublishing a page will remove it from the live site\nOptionally, you can unpublish all child pages"),
+				TitleFn:     trans.S("Unpublish %q", p.Title),
+				SubtitleFn:  trans.S("Unpublishing a page will remove it from the live site\nOptionally, you can unpublish all child pages"),
 				BreadCrumbs: breadcrumbs,
 				Actions:     getPageActions(r, p),
 			})

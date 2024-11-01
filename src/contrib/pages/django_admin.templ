@@ -2,7 +2,7 @@ package pages
 
 import (
     "github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
-    "github.com/Nigel2392/go-django/src/forms/fields"
+    "github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src"
     "strings"
 )
@@ -43,7 +43,7 @@ templ (p *PagesMenuItem) Component() {
 			<div class="menu-item pages-root-menu-item header-menu-item">
 				<a class="menu-item-content menu-item-link" href={ templ.SafeURL(django.Reverse("admin:pages")) }>
 					<div class="menu-item-label">
-						{ fields.T("Root Pages") }
+						{ trans.T("Root Pages") }
 					</div>
 				</a>
 			</div>

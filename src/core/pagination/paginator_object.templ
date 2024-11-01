@@ -1,6 +1,6 @@
 package pagination
 
-import "github.com/Nigel2392/go-django/src/forms/fields"
+import "github.com/Nigel2392/go-django/src/core/trans"
 import "strconv"
 import "net/url"
 import "fmt"
@@ -43,7 +43,7 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryP
         <section class="pagination--paginator">
             <div class="prev">
                 if p.HasPrev() {
-                    <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Prev(), q)) }>{ fields.T("Previous") }</a>
+                    <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Prev(), q)) }>{ trans.T("Previous") }</a>
                 }
             </div>
 
@@ -73,7 +73,7 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryP
 
             <div class="next">
                 if p.HasNext() {
-                    <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Next(), q)) }>{ fields.T("Next") }</a>
+                    <a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Next(), q)) }>{ trans.T("Next") }</a>
                 }
             </div>
         </section>

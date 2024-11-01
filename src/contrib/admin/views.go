@@ -244,6 +244,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 						panels = append(panels, FieldPanel(field.Name()))
 					}
 				}
+				adminForm.Panels = panels
 			} else {
 				for _, field := range adminForm.Fields() {
 					if _, ok := fields[field.Name()]; !ok {

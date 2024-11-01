@@ -20,8 +20,8 @@ func TestNewTextInput(t *testing.T) {
 	textInput := widgets.NewTextInput(attrs)
 
 	// Check widget type
-	if textInput.Type() != "text" {
-		t.Errorf("Expected widget type 'text', but got '%s'", textInput.Type())
+	if textInput.FormType() != "text" {
+		t.Errorf("Expected widget type 'text', but got '%s'", textInput.FormType())
 	}
 
 	// Render the widget and check the output HTML
@@ -59,8 +59,8 @@ func TestNewTextarea(t *testing.T) {
 	textarea := widgets.NewTextarea(attrs)
 
 	// Check widget type
-	if textarea.Type() != "textarea" {
-		t.Errorf("Expected widget type 'textarea', but got '%s'", textarea.Type())
+	if textarea.FormType() != "textarea" {
+		t.Errorf("Expected widget type 'textarea', but got '%s'", textarea.FormType())
 	}
 
 	// Render the widget and check the output HTML
@@ -95,8 +95,8 @@ func TestNewEmailInput(t *testing.T) {
 	emailInput := widgets.NewEmailInput(attrs)
 
 	// Check widget type
-	if emailInput.Type() != "email" {
-		t.Errorf("Expected widget type 'email', but got '%s'", emailInput.Type())
+	if emailInput.FormType() != "email" {
+		t.Errorf("Expected widget type 'email', but got '%s'", emailInput.FormType())
 	}
 
 	// Render the widget and check the output HTML
@@ -131,8 +131,8 @@ func TestNewPasswordInput(t *testing.T) {
 	passwordInput := widgets.NewPasswordInput(attrs)
 
 	// Check widget type
-	if passwordInput.Type() != "password" {
-		t.Errorf("Expected widget type 'password', but got '%s'", passwordInput.Type())
+	if passwordInput.FormType() != "password" {
+		t.Errorf("Expected widget type 'password', but got '%s'", passwordInput.FormType())
 	}
 
 	// Render the widget and check the output HTML
@@ -167,8 +167,8 @@ func TestNewHiddenInput(t *testing.T) {
 	hiddenInput := widgets.NewHiddenInput(attrs)
 
 	// Check widget type
-	if hiddenInput.Type() != "hidden" {
-		t.Errorf("Expected widget type 'hidden', but got '%s'", hiddenInput.Type())
+	if hiddenInput.FormType() != "hidden" {
+		t.Errorf("Expected widget type 'hidden', but got '%s'", hiddenInput.FormType())
 	}
 
 	// Render the widget and check the output HTML
@@ -203,8 +203,8 @@ func TestNewNumberInput(t *testing.T) {
 	numberInput := widgets.NewNumberInput[int](attrs) // Using int as the type for testing
 
 	// Check widget type
-	if numberInput.Type() != "number" {
-		t.Errorf("Expected widget type 'number', but got '%s'", numberInput.Type())
+	if numberInput.FormType() != "number" {
+		t.Errorf("Expected widget type 'number', but got '%s'", numberInput.FormType())
 	}
 
 	// Render the widget and check the output HTML
@@ -251,8 +251,8 @@ func TestNewBooleanInput(t *testing.T) {
 	booleanInput := widgets.NewBooleanInput(attrs)
 
 	// Check widget type
-	if booleanInput.Type() != "checkbox" {
-		t.Errorf("Expected widget type 'checkbox', but got '%s'", booleanInput.Type())
+	if booleanInput.FormType() != "checkbox" {
+		t.Errorf("Expected widget type 'checkbox', but got '%s'", booleanInput.FormType())
 	}
 
 	// Render the widget and check the output HTML
@@ -290,8 +290,8 @@ func TestNewDateInput(t *testing.T) {
 	dateInput := widgets.NewDateInput(attrs, widgets.DateWidgetTypeDate) // Assuming `DateWidgetTypeDate` is available
 
 	// Check widget type
-	if dateInput.Type() != "date" {
-		t.Errorf("Expected widget type 'date', but got '%s'", dateInput.Type())
+	if dateInput.FormType() != "date" {
+		t.Errorf("Expected widget type 'date', but got '%s'", dateInput.FormType())
 	}
 
 	// Render the widget and check the output HTML
@@ -353,8 +353,8 @@ func TestNewFileInput(t *testing.T) {
 	fileInput := widgets.NewFileInput(attrs, mockValidator)
 
 	// Check widget type
-	if fileInput.Type() != "file" {
-		t.Errorf("Expected widget type 'file', but got '%s'", fileInput.Type())
+	if fileInput.FormType() != "file" {
+		t.Errorf("Expected widget type 'file', but got '%s'", fileInput.FormType())
 	}
 
 	// Render the widget and check the output HTML
@@ -417,8 +417,8 @@ func TestNewCheckboxInput(t *testing.T) {
 	checkboxInput := widgets.NewCheckboxInput(attrs, mockOptions)
 
 	// Check widget type
-	if checkboxInput.Type() != "checkbox" {
-		t.Errorf("Expected widget type 'checkbox', but got '%s'", checkboxInput.Type())
+	if checkboxInput.FormType() != "checkbox" {
+		t.Errorf("Expected widget type 'checkbox', but got '%s'", checkboxInput.FormType())
 	}
 
 	// Render the widget and check the output HTML
@@ -450,8 +450,8 @@ func TestNewRadioInput(t *testing.T) {
 	radioInput := widgets.NewRadioInput(attrs, mockOptions)
 
 	// Check widget type
-	if radioInput.Type() != "radio" {
-		t.Errorf("Expected widget type 'radio', but got '%s'", radioInput.Type())
+	if radioInput.FormType() != "radio" {
+		t.Errorf("Expected widget type 'radio', but got '%s'", radioInput.FormType())
 	}
 
 	// Render the widget and check the output HTML
@@ -483,8 +483,8 @@ func TestNewSelectInput(t *testing.T) {
 	selectInput := widgets.NewSelectInput(attrs, mockOptions)
 
 	// Check widget type
-	if selectInput.Type() != "select" {
-		t.Errorf("Expected widget type 'select', but got '%s'", selectInput.Type())
+	if selectInput.FormType() != "select" {
+		t.Errorf("Expected widget type 'select', but got '%s'", selectInput.FormType())
 	}
 
 	// Render the widget and check the output HTML

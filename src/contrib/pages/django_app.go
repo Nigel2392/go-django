@@ -19,7 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	dj_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -100,7 +100,7 @@ func (p *pageLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []
 	}
 	return []auditlogs.LogEntryAction{
 		&auditlogs.BaseAction{
-			DisplayLabel: fields.T("Edit Live Page"),
+			DisplayLabel: trans.T("Edit Live Page"),
 			ActionURL: fmt.Sprintf("%s?%s=%s",
 				django.Reverse("admin:pages:edit", id),
 				"next",
@@ -163,7 +163,7 @@ func NewAppConfig() *PageAppConfig {
 		var hookFn = func(site *admin.AdminApplication, items components.Items[menu.MenuItem]) {
 			items.Append(&PagesMenuItem{
 				BaseItem: menu.BaseItem{
-					Label:    fields.S("Pages"),
+					Label:    trans.S("Pages"),
 					ItemName: "pages",
 					Ordering: -1,
 				},
@@ -184,16 +184,16 @@ func NewAppConfig() *PageAppConfig {
 
 		// contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		// ContentObject:  &models.PageNode{},
-		// GetLabel:       fields.S("Page"),
-		// GetDescription: fields.S("A page in a hierarchical page tree- structure."),
+		// GetLabel:       trans.S("Page"),
+		// GetDescription: trans.S("A page in a hierarchical page tree- structure."),
 		// GetObject:      func() any { return &models.PageNode{} },
 		// })
 
 		Register(&PageDefinition{
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 				ContentObject:  &models.PageNode{},
-				GetLabel:       fields.S("Page"),
-				GetDescription: fields.S("A page in a hierarchical page tree- structure."),
+				GetLabel:       trans.S("Page"),
+				GetDescription: trans.S("A page in a hierarchical page tree- structure."),
 				GetObject:      func() any { return &models.PageNode{} },
 			},
 			GetForID: func(ctx context.Context, ref models.PageNode, id int64) (Page, error) {

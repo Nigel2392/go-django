@@ -20,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/pagination"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
@@ -61,7 +62,7 @@ func NewAppConfig() django.AppConfig {
 		//	admin.RegisterMenuItemHookFunc(func(adminSite *admin.AdminApplication, items components.Items[menu.MenuItem]) {
 		//		var auditLogItem = &menu.Item{
 		//			BaseItem: menu.BaseItem{
-		//				Label: fields.S("Audit Logs"),
+		//				Label: trans.S("Audit Logs"),
 		//			},
 		//			Link: func() string {
 		//				return django.Reverse("admin:auditlogs")
@@ -77,7 +78,7 @@ func NewAppConfig() django.AppConfig {
 			reports.ReportsMenuHookFunc(func() []menu.MenuItem {
 				var auditLogItem = &menu.Item{
 					BaseItem: menu.BaseItem{
-						Label: fields.S("Audit Logs"),
+						Label: trans.S("Audit Logs"),
 					},
 					Link: func() string {
 						return django.Reverse("admin:auditlogs")
@@ -239,10 +240,10 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		FormField: fields.CharField(fields.Widget(
 			widgets.NewSelectInput(nil, func() []widgets.Option {
 				return []widgets.Option{
-					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.DBG)), OptLabel: fields.T("Debug")},
-					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.INF)), OptLabel: fields.T("Info")},
-					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.WRN)), OptLabel: fields.T("Warning")},
-					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.ERR)), OptLabel: fields.T("Error")},
+					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.DBG)), OptLabel: trans.T("Debug")},
+					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.INF)), OptLabel: trans.T("Info")},
+					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.WRN)), OptLabel: trans.T("Warning")},
+					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.ERR)), OptLabel: trans.T("Error")},
 				}
 			}),
 		)),
@@ -341,8 +342,8 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	)
 
 	adminCtx.SetPage(admin.PageOptions{
-		TitleFn:    fields.S("Audit Logs"),
-		SubtitleFn: fields.S("View all audit logs"),
+		TitleFn:    trans.S("Audit Logs"),
+		SubtitleFn: trans.S("View all audit logs"),
 	})
 
 	var v = &views.BaseView{

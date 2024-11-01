@@ -10,7 +10,7 @@ import "context"
 import "io"
 import "bytes"
 
-import "github.com/Nigel2392/go-django/src/forms/fields"
+import "github.com/Nigel2392/go-django/src/core/trans"
 import "strconv"
 import "net/url"
 import "fmt"
@@ -77,9 +77,9 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
-			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(fields.T("Previous"))
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T("Previous"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 46, Col: 118}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 46, Col: 117}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -182,9 +182,9 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(fields.T("Next"))
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T("Next"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 76, Col: 114}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 76, Col: 113}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {

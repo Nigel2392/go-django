@@ -21,7 +21,7 @@ type BaseField struct {
 	Caser        *cases.Caser
 }
 
-func NewField(type_ func() string, opts ...func(Field)) *BaseField {
+func NewField(opts ...func(Field)) *BaseField {
 	var bf = &BaseField{}
 
 	for _, opt := range opts {

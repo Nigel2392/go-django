@@ -14,8 +14,8 @@ func TestNewEditorJSWidget(t *testing.T) {
 		return
 	}
 
-	if widget.Type() != "editorjs" {
-		t.Errorf("Expected widget type 'editorjs', but got %s", widget.Type())
+	if widget.FormType() != "editorjs" {
+		t.Errorf("Expected widget type 'editorjs', but got %s", widget.FormType())
 	}
 
 	if len(widget.Features) != 2 {
