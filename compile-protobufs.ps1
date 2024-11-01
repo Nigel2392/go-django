@@ -1,0 +1,1 @@
+protoc --go_out="./cmd/go-django-definitions" --go-grpc_out="./cmd/go-django-definitions" ./cmd/go-django-definitions/codegen.proto

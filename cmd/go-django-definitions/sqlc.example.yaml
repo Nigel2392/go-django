@@ -1,0 +1,37 @@
+version: "2"
+plugins:
+  - name: go-django-definitions-plugin
+    process:
+      # go install github.com/Nigel2392/go-django/cmd/go-django-definitions@latest
+      cmd: "go-django-definitions"
+sql:
+  - schema: "./schema.sql"
+    queries: "./queries.sql"
+    engine: "mysql"
+    codegen:
+    - out: ./gen
+      # The name of the plugin as defined above in the plugins dictionary.
+      plugin: go-django-definitions-plugin
+      options:
+        # required, name of the package to generate
+        package: "mypackage" 
+
+        # optional, default is "<package>_definitions.go"
+        out: "mydefinitions.go" 
+
+        # optional, see https://docs.sqlc.dev/en/stable/reference/config.html
+        initialisms: ["id", "api", "url"] 
+
+        # optional, see https://docs.sqlc.dev/en/stable/howto/rename.html
+        rename: 
+
+    gen:
+      go:
+        package: "mypackage"
+        out: "./gen"
+        emit_json_tags: true
+        emit_prepared_queries: true
+        emit_result_struct_pointers: true
+        emit_interface: true
+        query_parameter_limit: 8
+

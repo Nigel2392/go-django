@@ -34,6 +34,7 @@ require (
 	github.com/shopspring/decimal v1.4.0
 	github.com/urfave/cli/v2 v2.27.5
 	golang.org/x/term v0.20.0
+	google.golang.org/protobuf v1.35.1
 )
 
 require (
