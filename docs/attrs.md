@@ -67,7 +67,6 @@ sql:
         emit_result_struct_pointers: true
         emit_interface: true
         query_parameter_limit: 8
-
 ```
 
 ## Interfaces
