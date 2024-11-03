@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 	"sync"
 	"time"
 )
@@ -25,6 +26,13 @@ var (
 		WRN: "WARN",
 		ERR: "ERROR",
 	}
+
+	revMap = map[string]LogLevel{
+		levelMap[DBG]: DBG,
+		levelMap[INF]: INF,
+		levelMap[WRN]: WRN,
+		levelMap[ERR]: ERR,
+	}
 )
 
 const (
@@ -43,6 +51,15 @@ const (
 	// OutputAll is used to output all log levels in the SetOutput function.
 	OutputAll LogLevel = -1
 )
+
+func ParseLogLevel(s string) (LogLevel, error) {
+	s = strings.ToUpper(s)
+	var l, ok = revMap[s]
+	if !ok {
+		return INF, fmt.Errorf("unknown log level %q", s)
+	}
+	return l, nil
+}
 
 type LogWriter struct {
 	Logger *Logger

@@ -17,7 +17,7 @@ var assetFilesystem embed.FS
 
 func NewAppConfig() django.AppConfig {
 	var cfg = apps.NewAppConfig(
-		"$( .ProjectName )",
+		"core",
 	)
 
 	cfg.Routing = func(m django.Mux) {
@@ -50,7 +50,7 @@ func NewAppConfig() django.AppConfig {
 		))
 
 		tpl.Add(tpl.Config{
-			AppName: "$( .ProjectName )",
+			AppName: "core",
 			FS:      tplFS,
 			Bases: []string{
 				"$( .ProjectName )/base.tmpl",
