@@ -71,6 +71,9 @@ type Field interface {
 	// Retrieves the underlying model instance.
 	Instance() Definer
 
+	// Retrieves the related model instance, if any.
+	Rel() Definer
+
 	// Reports whether the field is the primary field.
 	//
 	// A model can technically have multiple primary fields, but this is not recommended.

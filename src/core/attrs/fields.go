@@ -22,18 +22,19 @@ var capCaser = cases.Title(language.English)
 //
 // This defines how a field should behave and how it should be displayed in a form.
 type FieldConfig struct {
-	Null       bool                                          // Whether the field allows null values
-	Blank      bool                                          // Whether the field allows blank values
-	ReadOnly   bool                                          // Whether the field is read-only
-	Primary    bool                                          // Whether the field is a primary key
-	Label      string                                        // The label for the field
-	HelpText   string                                        // The help text for the field
-	Default    any                                           // The default value for the field (or a function that returns the default value)
-	Validators []func(interface{}) error                     // Validators for the field
-	FormField  func(opts ...func(fields.Field)) fields.Field // The form field for the field
-	FormWidget func(FieldConfig) widgets.Widget              // The form widget for the field
-	Setter     func(Definer, interface{}) error              // A custom setter for the field
-	Getter     func(Definer) (interface{}, bool)             // A custom getter for the field
+	Null          bool                                          // Whether the field allows null values
+	Blank         bool                                          // Whether the field allows blank values
+	ReadOnly      bool                                          // Whether the field is read-only
+	Primary       bool                                          // Whether the field is a primary key
+	Label         string                                        // The label for the field
+	HelpText      string                                        // The help text for the field
+	RelatedObject Definer                                       // The related object for the field
+	Default       any                                           // The default value for the field (or a function that returns the default value)
+	Validators    []func(interface{}) error                     // Validators for the field
+	FormField     func(opts ...func(fields.Field)) fields.Field // The form field for the field
+	FormWidget    func(FieldConfig) widgets.Widget              // The form widget for the field
+	Setter        func(Definer, interface{}) error              // A custom setter for the field
+	Getter        func(Definer) (interface{}, bool)             // A custom getter for the field
 }
 
 type FieldDef struct {
@@ -104,6 +105,13 @@ func (f *FieldDef) HelpText() string {
 
 func (f *FieldDef) Name() string {
 	return f.field_t.Name
+}
+
+func (f *FieldDef) Rel() Definer {
+	if f.attrDef.RelatedObject != nil {
+		return f.attrDef.RelatedObject
+	}
+	return nil
 }
 
 func (f *FieldDef) IsPrimary() bool {

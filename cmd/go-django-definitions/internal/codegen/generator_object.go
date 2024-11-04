@@ -8,8 +8,11 @@ type TemplateObject struct {
 }
 
 type Struct struct {
-	Name   string
-	Fields []Field
+	Name               string
+	PrimaryField       string
+	PrimaryFieldColumn string
+	TableName          string
+	Fields             []Field
 }
 
 type Choices struct {
@@ -23,9 +26,12 @@ type Choice struct {
 }
 
 type Field struct {
-	Name    string
-	Null    bool
-	Blank   bool
-	Primary bool
-	Choices string
+	Name              string
+	ColumnName        string
+	Null              bool
+	Blank             bool
+	ReadOnly          bool
+	Primary           bool
+	Choices           string
+	RelatedObjectName string
 }

@@ -3,6 +3,7 @@ package codegen
 import (
 	"embed"
 	"errors"
+	"fmt"
 	"io"
 	"path"
 	"regexp"
@@ -49,6 +50,27 @@ func New(req *plugin.GenerateRequest, opts *CodeGeneratorOptions) (*CodeGenerato
 	}, nil
 }
 
+func colIsReadOnly(i int, col *plugin.Column) bool {
+	if i == 0 {
+		return true
+	}
+	if col.Name == "created_at" || col.Name == "updated_at" {
+		return true
+	}
+	return false
+}
+
+var parseCommentsRegex = regexp.MustCompile(`(\w+)\s*:\s*(\w+)`)
+
+func parseComments(comments string) map[string]string {
+	var m = make(map[string]string)
+	var matches = parseCommentsRegex.FindAllStringSubmatch(comments, -1)
+	for _, match := range matches {
+		m[match[1]] = match[2]
+	}
+	return m
+}
+
 func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObject {
 	var obj = &TemplateObject{
 		PackageName: c.opts.PackageName,
@@ -78,17 +100,37 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 			Name: c.opts.GoName(
 				c.opts.InflectSingular(tbl.Rel.Name),
 			),
-			Fields: make([]Field, 0, len(tbl.Columns)),
+			TableName: tbl.Rel.Name,
+			Fields:    make([]Field, 0, len(tbl.Columns)),
+		}
+
+		if len(tbl.Columns) > 0 {
+			s.PrimaryField = c.opts.GoName(tbl.Columns[0].Name)
+			s.PrimaryFieldColumn = tbl.Columns[0].Name
 		}
 
 		for i, col := range tbl.Columns {
-			s.Fields = append(s.Fields, Field{
-				Name:    c.opts.GoName(col.Name),
-				Choices: choices[col.Type.Name],
-				Null:    col.NotNull,
-				Blank:   col.NotNull,
-				Primary: i == 0,
-			})
+			var f = Field{
+				Name:       c.opts.GoName(col.Name),
+				ColumnName: col.Name,
+				Choices:    choices[col.Type.Name],
+				Null:       col.NotNull,
+				Blank:      col.NotNull,
+				ReadOnly:   colIsReadOnly(i, col),
+				Primary:    i == 0,
+			}
+			var commentMap map[string]string
+			if col.Comment != "" {
+				commentMap = parseComments(col.Comment)
+			}
+
+			if fk, ok := commentMap["fk"]; ok {
+				f.RelatedObjectName = c.opts.GoName(
+					c.opts.InflectSingular(fk),
+				)
+			}
+
+			s.Fields = append(s.Fields, f)
 		}
 		obj.Structs = append(obj.Structs, s)
 	}
@@ -98,6 +140,17 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 
 func (c *CodeGenerator) Render(w io.Writer, name string, obj *TemplateObject) error {
 	var tmpl = template.New(name)
+	funcMap["placeholder"] = func(iter ...int) string {
+		switch c.opts.req.Settings.Engine {
+		case "postgres":
+			if len(iter) == 0 {
+				return "?"
+			}
+			return fmt.Sprintf("$%d", iter[0])
+		default:
+			return "?"
+		}
+	}
 	tmpl = tmpl.Funcs(funcMap)
 	tmpl, err := tmpl.ParseFS(
 		templates, path.Join("templates", name),
