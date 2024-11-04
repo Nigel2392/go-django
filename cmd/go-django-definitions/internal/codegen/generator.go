@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"path"
+	"regexp"
 	"text/template"
 
 	"github.com/Nigel2392/go-django/cmd/go-django-definitions/internal/codegen/plugin"
@@ -15,6 +16,15 @@ var templates embed.FS
 
 const (
 	GenerateDefinerTemplate = "definer.tmpl"
+)
+
+var (
+	labelRegex = regexp.MustCompile(`([a-z])([A-Z])`)
+	funcMap    = template.FuncMap{
+		"label": func(s string) string {
+			return labelRegex.ReplaceAllString(s, "${1} ${2}")
+		},
+	}
 )
 
 type CodeGenerator struct {
@@ -65,7 +75,9 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 
 	for _, tbl := range schema.Tables {
 		var s = &Struct{
-			Name:   c.opts.GoName(tbl.Rel.Name),
+			Name: c.opts.GoName(
+				c.opts.InflectSingular(tbl.Rel.Name),
+			),
 			Fields: make([]Field, 0, len(tbl.Columns)),
 		}
 
@@ -85,7 +97,9 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 }
 
 func (c *CodeGenerator) Render(w io.Writer, name string, obj *TemplateObject) error {
-	var tmpl, err = template.New(name).ParseFS(
+	var tmpl = template.New(name)
+	tmpl = tmpl.Funcs(funcMap)
+	tmpl, err := tmpl.ParseFS(
 		templates, path.Join("templates", name),
 	)
 	if err != nil {

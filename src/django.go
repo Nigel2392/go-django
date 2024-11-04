@@ -121,6 +121,7 @@ type Application struct {
 	Apps        *orderedmap.OrderedMap[string, AppConfig]
 	Mux         *mux.Mux
 	Log         logger.Log
+	Commands    command.Registry
 	flags       AppFlag
 	quitter     func() error
 	initialized *atomic.Bool
@@ -155,7 +156,10 @@ func App(opts ...Option) *Application {
 		Global = &Application{
 			Apps: orderedmap.NewOrderedMap[string, AppConfig](),
 			Mux:  mux.New(),
-
+			Commands: command.NewRegistry(
+				"django",
+				flag.ContinueOnError,
+			),
 			initialized: new(atomic.Bool),
 		}
 
@@ -483,18 +487,13 @@ func (a *Application) Initialize() error {
 		}
 	}
 
-	var commandRegistry = command.NewRegistry(
-		"django",
-		flag.ContinueOnError,
-	)
-
-	commandRegistry.Register(&command.Cmd[interface{}]{
+	a.Commands.Register(&command.Cmd[interface{}]{
 		ID:   "help",
 		Desc: "List all available commands and their usage information",
 		Execute: func(m command.Manager, stored interface{}, args []string) error {
 			var (
 				buf  = new(bytes.Buffer)
-				cmds = commandRegistry.Commands()
+				cmds = a.Commands.Commands()
 			)
 			buf.WriteString("Available commands:\n")
 			for _, cmd := range cmds {
@@ -528,7 +527,7 @@ func (a *Application) Initialize() error {
 		},
 	})
 
-	commandRegistry.Register(sqlShellCommand)
+	a.Commands.Register(sqlShellCommand)
 
 	var r Mux = a.Mux
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
@@ -546,7 +545,7 @@ func (a *Application) Initialize() error {
 
 		var commands = app.Commands()
 		for _, cmd := range commands {
-			commandRegistry.Register(cmd)
+			a.Commands.Register(cmd)
 		}
 	}
 
@@ -574,7 +573,7 @@ func (a *Application) Initialize() error {
 		os.Args[1] = "help"
 	}
 
-	err = commandRegistry.ExecCommand(os.Args[1:])
+	err = a.Commands.ExecCommand(os.Args[1:])
 	switch {
 	case errors.Is(err, command.ErrNoCommand):
 		return nil

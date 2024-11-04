@@ -13,7 +13,7 @@ import (
 var {{ $choices.Name }}Options = func() []widgets.Option {
     var options = make([]widgets.Option, {{ len $choices.Choices }})
     {{ range $i, $option := $choices.Choices }}
-    options[{{ $i }}] = widgets.NewOption("{{ $option.Value }}", "{{ $option.Name }}", "{{ $option.Value }}"){{ end }}
+    options[{{ $i }}] = widgets.NewOption("{{ $option.Value }}", "{{ label $option.Name }}", "{{ $option.Value }}"){{ end }}
     return options
 }
 {{ end }}
@@ -28,6 +28,7 @@ func (o *{{ $struct.Name }}) FieldDefs() attrs.Definitions {
         o, "{{ $field.Name }}", &attrs.FieldConfig{
             Null: {{ $field.Null }},
             Blank: {{ $field.Blank }},
+            Label: "{{ label $field.Name }}",
             Primary: {{ $field.Primary }},{{ if $field.Choices }}
             FormWidget: func(attrs.FieldConfig) widgets.Widget {
                 return {{$field.Choices}}Widget

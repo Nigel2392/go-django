@@ -8,11 +8,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+type Registry interface {
+	Register(cmd Command)
+	Commands() []Command
+	ExecCommand(args []string) error
+}
+
 type commandRegistry struct {
 	commands *orderedmap.OrderedMap[string, Command]
 }
 
-func NewRegistry(flagsetName string, errorHandling flag.ErrorHandling) *commandRegistry {
+func NewRegistry(flagsetName string, errorHandling flag.ErrorHandling) Registry {
 	return &commandRegistry{
 		commands: orderedmap.NewOrderedMap[string, Command](),
 	}
