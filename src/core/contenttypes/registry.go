@@ -345,11 +345,28 @@ func (p *ContentTypeRegistry) DefinitionForPackage(toplevelPkgName string, typeN
 	return nil
 }
 
+func (p *ContentTypeRegistry) GetInstance(typeName string, id interface{}) (interface{}, error) {
+	var definition = p.DefinitionForType(typeName)
+	if definition == nil {
+		return nil, fmt.Errorf("pages: GetInstance called for unknown type %s", typeName)
+	}
+	return definition.Instance(id)
+}
+
+func (p *ContentTypeRegistry) GetInstances(typeName string, amount, offset uint) ([]interface{}, error) {
+	var definition = p.DefinitionForType(typeName)
+	if definition == nil {
+		return nil, fmt.Errorf("pages: GetInstances called for unknown type %s", typeName)
+	}
+	return definition.Instances(amount, offset)
+}
+
 var contentTypeRegistryObject = &ContentTypeRegistry{}
 
 // Register registers a model with the registry.
-func Register(definition *ContentTypeDefinition) {
+func Register(definition *ContentTypeDefinition) *ContentTypeDefinition {
 	contentTypeRegistryObject.Register(definition)
+	return definition
 }
 
 // Aliases returns a list of aliases for the given model's type name.
@@ -385,4 +402,14 @@ func ListDefinitions() []*ContentTypeDefinition {
 // DefinitionForPackage returns the ContentTypeDefinition for the given package and type name.
 func DefinitionForPackage(toplevelPkgName string, typeName string) *ContentTypeDefinition {
 	return contentTypeRegistryObject.DefinitionForPackage(toplevelPkgName, typeName)
+}
+
+// GetInstance returns an instance of the model by its ID.
+func GetInstance(typeName string, id interface{}) (interface{}, error) {
+	return contentTypeRegistryObject.GetInstance(typeName, id)
+}
+
+// GetInstances returns a list of instances of the model.
+func GetInstances(typeName string, amount, offset uint) ([]interface{}, error) {
+	return contentTypeRegistryObject.GetInstances(typeName, amount, offset)
 }

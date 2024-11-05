@@ -743,6 +743,48 @@ Each app registered to the admin can contain multiple models - in this case, we 
 
 The admin area in your application leverages customizable views to manage models effectively. Below are the core components for setting up and controlling views in the admin area:
 
+#### ContentTypes
+
+For a model to work well with the go-django framework, a content type definition must be registered.
+
+This allows for more control over the model's (object and instance) string representation, as well as being able to query by ID or for a list of objects.
+
+```go
+contenttypes.Register(&contenttypes.ContentTypeDefinition{
+    ContentObject: &Todo{},
+    contenttypes.Register(&contenttypes.ContentTypeDefinition{
+        GetInstance: func(identifier any) (interface{}, error) {
+            var id, ok = identifier.(int)
+            if !ok {
+                var u, err = strconv.Atoi(fmt.Sprint(identifier))
+                if err != nil {
+                    return nil, err
+                }
+                id = u
+            }
+            return GetTodoByID(
+                context.Background(),
+                id,
+            )
+        },
+        GetInstances: func(amount, offset uint) ([]interface{}, error) {
+            var todos, err = ListAllTodos(
+                context.Background(), int(amount), int(offset),
+            )
+            if err != nil {
+                return nil, err
+            }
+            var items = make([]interface{}, 0)
+            for _, u := range todos {
+                var cpy = u
+                items = append(items, &cpy)
+            }
+            return items, nil
+        },
+    })
+})
+```
+
 #### 1. **ViewOptions**
 
 `ViewOptions` provides basic settings for form-based views, including fields and labels:
@@ -786,8 +828,6 @@ The admin area in your application leverages customizable views to manage models
 * `DeleteView`: Configures the delete view using `DeleteViewOptions`.
 * `RegisterToAdminMenu`: Determines if the model should be listed in the admin menu.
 * `Labels`: Provides top-level label overrides for model fields.
-* `GetForID`: Fetches a model instance by its ID for edit and delete views.
-* `GetList`: Fetches a list of model instances for list views.
 
 ### Example Integration
 
@@ -809,20 +849,6 @@ admin.RegisterApp(
         Labels: map[string]func() string{
             "ID":    func() string { return "ID" },
             "Title": func() string { return "Todo Title" },
-        },
-        GetForID: func(identifier any) (attrs.Definer, error) {
-            id, err := strconv.Atoi(fmt.Sprint(identifier))
-            if err != nil {
-                return nil, err
-            }
-            return GetTodoByID(context.Background(), id)
-        },
-        GetList: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
-            todos, err := ListAllTodos(context.Background(), int(amount), int(offset))
-            if err != nil {
-                return nil, err
-            }
-            return convertToDefiners(todos), nil
         },
         AddView: admin.FormViewOptions{
             ViewOptions: admin.ViewOptions{

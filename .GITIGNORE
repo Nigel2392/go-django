@@ -12,6 +12,7 @@ __pycache__/
 *.exe
 
 .private/
+./web
 
 # Distribution / packaging
 .Python

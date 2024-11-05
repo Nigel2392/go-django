@@ -1,0 +1,69 @@
+{{ define "base" }}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        
+        <link rel="stylesheet" type="text/css" href="{{ static "core/css/core.css" }}">
+        <script src="{{ static "blocks/js/index.js" }}"></script>
+
+        {{ block "extra_css" . }}{{ end }}
+
+        <title>{{ block "title" . }}{{ end }}</title>
+    </head>
+    <body>
+
+        <div class="form-media">
+            {{ range $File := (.Get "Form").Media.JS }}
+                {{ $File }}
+            {{ end }}
+            {{ range $File := (.Get "Form").Media.CSS }}
+                {{ $File }}
+            {{ end }}
+        </div>
+
+        {{ block "content" . }}{{ end }}
+        <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+            {{ $errorList := (.Get "Form").ErrorList }}
+            {{ if (gt (len $errorList) 0) }}
+                <ul class="error-list">
+                    {{ range $Error := $errorList }}
+                        <li class="error"><p>{{ $Error }}</p></li>
+                    {{ end }}
+                </ul>
+            {{ end }}
+
+            {{ range $Field := (.Get "Form").Fields }}
+    
+                <div class="form-field-wrapper">
+    
+                    <div class="form-field">
+                        {{ $Field.Label }}
+
+                        {{ if (gt (len $Field.Errors) 0) }}
+                            <ul class="error-list">
+                                {{ range $Error := $Field.Errors }}
+                                    <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
+                                {{ end }}
+                            </ul>
+                        {{ end }}
+    
+                        {{ if (ne $Field.HelpText "") }}
+                            <p class="help-text">{{ $Field.HelpText }}</p>
+                        {{ end }}
+
+                        {{ $Field.Field }}
+                    </div>
+                </div>
+    
+            {{ end }}
+    
+            <input type="submit" value="Submit">
+        </form>
+
+        {{ block "extra_js" . }}{{ end }}
+    </body>
+</html>
+{{ end }}

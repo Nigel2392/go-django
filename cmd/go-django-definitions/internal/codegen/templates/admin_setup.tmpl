@@ -6,19 +6,29 @@ package {{ .PackageName }};
 
 import (
     "github.com/Nigel2392/go-django/src/core/attrs"
+    "github.com/Nigel2392/go-django/src/core/contenttypes"
     "github.com/Nigel2392/go-django/src/contrib/admin"
 )
 {{ $obj := . }}
+
+func init() { {{ range $struct := $obj.Structs }}
+    contenttypes.Register(&contenttypes.ContentTypeDefinition{
+        ContentObject: &{{ $struct.Name }}{},
+        GetInstance: func(id any) (interface{}, error) {
+            return Select{{ $struct.Name }}(id.({{ $struct.PrimaryField.GoType }}))
+        },
+        GetInstances: func(limit, offset uint, _ []string) ([]interface{}, error) {
+            return list{{ $struct.PluralName }}Interface(limit, offset)
+        },
+    }){{ end }}
+}
+
 {{ range $struct := $obj.Structs }}
 func Admin{{ $struct.Name }}ModelOptions() admin.ModelOptions {
     return admin.ModelOptions{
 		RegisterToAdminMenu:    true,
         Model:                  &{{ $struct.Name }}{},
         Name:                   "{{ $struct.Name }}",
-        LabelFn:                func() string { return "{{ label $struct.Name }}" },
-        PluralLabelFn:          func() string { return "{{ label $struct.PluralName }}" },
-        GetForID:               select{{ $struct.Name }}Interface,
-        GetList:                list{{ $struct.PluralName }}Interface,
         AddView: admin.FormViewOptions{
             Panels: []admin.Panel{ {{ range $i, $field := $struct.Fields }}
                 admin.FieldPanel("{{ $field.Name }}"),{{ end }}
