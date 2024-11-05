@@ -1,13 +1,6 @@
 {{ template "base" . }}
 
-{{ define "title" }}{{ T "Edit %s" (.Get "model").Label }}{{ end }}
-
-{{ define "extra_css" }}
-    {{ $Media := (.Get "form").Media }}
-    {{ range $css := $Media.CSS }}
-        {{ $css }}
-    {{ end }}
-{{ end }}
+{{ define "title" }}{{ T "Delete %s" (.Get "model").Label }}{{ end }}
 
 {{ define "content" }}
     <h1>{{ T "Delete %s" (.Get "model").Label }}</h1>
@@ -28,11 +21,4 @@
             {{ end }}
         </div>
     </form>
-{{ end }}
-
-{{ define "extra_js" }}
-    {{ $Media := (.Get "form").Media }}
-    {{ range $js := $Media.JS }}
-        {{ $js }}
-    {{ end }}
 {{ end }}
