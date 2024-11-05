@@ -14,6 +14,7 @@ type Struct struct {
 	PrimaryFieldColumn string
 	TableName          string
 	Fields             []Field
+	InsertableFields   []Field
 }
 
 type Choices struct {

@@ -14,13 +14,13 @@ import (
 {{ range $struct := $obj.Structs }}
 const (
     insert{{$struct.Name}}Query = `INSERT INTO {{ $struct.TableName }} (
-        {{ range $i, $field := $struct.Fields }}{{ if $i }}, {{ end }}{{ $field.ColumnName }}{{ end }}
+        {{ range $i, $field := $struct.InsertableFields }}{{ if $i }}, {{ end }}{{ $field.ColumnName }}{{ end }}
     ) VALUES (
-        {{ range $i, $field := $struct.Fields }}{{ if $i }}, {{ end }}{{ placeholder $i }}{{ end }}
-    ) RETURNING {{ $struct.PrimaryField.ColumnName }}`
+        {{ range $i, $field := $struct.InsertableFields }}{{ if $i }}, {{ end }}{{ placeholder $i }}{{ end }}
+    )`
 
     update{{$struct.Name}}Query = `UPDATE {{ $struct.TableName }} SET
-        {{ range $i, $field := $struct.Fields }}{{ if $i }}, {{ end }}{{ $field.ColumnName }} = {{ placeholder $i }}{{ end }}
+        {{ range $i, $field := $struct.InsertableFields }}{{ if $i }}, {{ end }}{{ $field.ColumnName }} = {{ placeholder $i }}{{ end }}
         WHERE {{ $struct.PrimaryField.ColumnName }} = {{ placeholder }}`
 
     delete{{$struct.Name}}Query = `DELETE FROM {{ $struct.TableName }} WHERE {{ $struct.PrimaryField.ColumnName }} = {{ placeholder }}`
@@ -38,22 +38,27 @@ func (o *{{ $struct.Name }}) Save(ctx context.Context) error {
 }
 
 func (o *{{ $struct.Name }}) Insert(ctx context.Context) error {
-    var id {{ $struct.PrimaryField.GoType }}
-    var err = globalDB.QueryRowContext(
+    var result, err = globalDB.ExecContext(
         ctx, insert{{$struct.Name}}Query,
-        {{ range $i, $field := $struct.Fields }}{{ if $i }}, {{ end }}o.{{ $field.Name }}{{ end }},
-    ).Scan(&id)
+        {{ range $i, $field := $struct.InsertableFields }}{{ if $i }}, {{ end }}o.{{ $field.Name }}{{ end }},
+    )
     if err != nil {
         return err
     }
-    o.{{ $struct.PrimaryField.Name }} = id
+
+    dbId, err := result.LastInsertId()
+    if err != nil {
+        return err
+    }
+
+    o.{{ $struct.PrimaryField.Name }} = {{ $struct.PrimaryField.GoType }}(dbId)
     return nil
 }
 
 func (o *{{ $struct.Name }}) Update(ctx context.Context) error {
     _, err := globalDB.ExecContext(
         ctx, update{{$struct.Name}}Query,
-        {{ range $i, $field := $struct.Fields }}{{ if $i }}, {{ end }}o.{{ $field.Name }}{{ end }},
+        {{ range $i, $field := $struct.InsertableFields }}{{ if $i }}, {{ end }}o.{{ $field.Name }}{{ end }},
         o.{{ $struct.PrimaryField.Name }},
     )
     return err

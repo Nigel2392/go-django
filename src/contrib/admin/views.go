@@ -225,6 +225,11 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 		}
 		form = modelForm
 	}
+
+	for name, widget := range opts.Widgets {
+		form.AddWidget(name, widget)
+	}
+
 	return form
 }
 
@@ -254,10 +259,6 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			} else {
 				form = GetAdminForm(instance, opts, app, model, r)
 				form.SetFields(attrs.FieldNames(instance, opts.Exclude)...)
-			}
-
-			for name, widget := range opts.Widgets {
-				form.AddWidget(name, widget)
 			}
 
 			if opts.FormInit != nil {

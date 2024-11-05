@@ -144,9 +144,10 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 			Name: c.opts.GoName(
 				c.opts.InflectSingular(tbl.Rel.Name),
 			),
-			PluralName: c.opts.GoName(tbl.Rel.Name),
-			TableName:  tbl.Rel.Name,
-			Fields:     make([]Field, 0, len(tbl.Columns)),
+			PluralName:       c.opts.GoName(tbl.Rel.Name),
+			TableName:        tbl.Rel.Name,
+			Fields:           make([]Field, 0, len(tbl.Columns)),
+			InsertableFields: make([]Field, 0, len(tbl.Columns)),
 		}
 
 		for i, col := range tbl.Columns {
@@ -181,7 +182,10 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 						c.opts.InflectSingular(fk),
 					)
 				}
+			}
 
+			if !f.ReadOnly {
+				s.InsertableFields = append(s.InsertableFields, f)
 			}
 
 			s.Fields = append(s.Fields, f)
