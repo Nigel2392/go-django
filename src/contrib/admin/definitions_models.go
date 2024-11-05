@@ -177,6 +177,7 @@ func (o *ModelOptions) GetName() string {
 type ModelDefinition struct {
 	ModelOptions
 	Name    string
+	_app    *AppDefinition
 	_rModel reflect.Type
 }
 
@@ -185,6 +186,10 @@ func (o *ModelDefinition) rModel() reflect.Type {
 		o._rModel = reflect.TypeOf(o.Model)
 	}
 	return o._rModel
+}
+
+func (o *ModelDefinition) App() *AppDefinition {
+	return o._app
 }
 
 // Returns a new instance of the model.

@@ -86,6 +86,7 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 	var model = &ModelDefinition{
 		Name:         opts.GetName(),
 		ModelOptions: opts,
+		_app:         a,
 		_rModel:      rTyp,
 	}
 
@@ -102,7 +103,7 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 	var _, isModel = opts.Model.(models.Model)
 	if !isModel {
 		logger.Warnf(
-			"Model %s does not implement models.Model interface",
+			"Model %q does not implement models.Model interface",
 			model.Name,
 		)
 	}
