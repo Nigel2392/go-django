@@ -14,13 +14,15 @@ import (
 )
 
 type CodeGeneratorOptions struct {
-	Initialisms          []string                `json:"initialisms"`
-	Rename               map[string]string       `json:"rename"`
-	PackageName          string                  `json:"package"`
-	InflectionExclusions []string                `json:"inflection_exclusions"`
-	OutFile              string                  `json:"out"`
-	initialisms          map[string]struct{}     `json:"-"`
-	req                  *plugin.GenerateRequest `json:"-"`
+	Initialisms           []string                `json:"initialisms"`
+	Rename                map[string]string       `json:"rename"`
+	PackageName           string                  `json:"package"`
+	InflectionExclusions  []string                `json:"inflection_exclusions"`
+	OutFile               string                  `json:"out"`
+	GenerateAdminSetup    bool                    `json:"generate_admin_setup"`
+	GenerateModelsMethods bool                    `json:"generate_models_methods"`
+	initialisms           map[string]struct{}     `json:"-"`
+	req                   *plugin.GenerateRequest `json:"-"`
 }
 
 func (c *CodeGeneratorOptions) validate(req *plugin.GenerateRequest) error {
@@ -28,7 +30,7 @@ func (c *CodeGeneratorOptions) validate(req *plugin.GenerateRequest) error {
 		return errors.New("package name is required")
 	}
 	if c.OutFile == "" {
-		c.OutFile = fmt.Sprintf("%s_definer.go", c.PackageName)
+		c.OutFile = fmt.Sprintf("%s.go", c.PackageName)
 	}
 	if c.Rename == nil {
 		c.Rename = make(map[string]string)

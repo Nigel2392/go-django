@@ -111,6 +111,12 @@ type ModelOptions struct {
 	// Name of the model and how it will be displayed in the admin.
 	Name string
 
+	// LabelFn is a function that returns the label for the model.
+	LabelFn func() string
+
+	// PluralLabelFn is a function that returns the plural label for the model.
+	PluralLabelFn func() string
+
 	// AddView is the options for the add view of the model.
 	//
 	// This allows for custom creation logic and formatting form fields / layout.
@@ -170,10 +176,8 @@ func (o *ModelOptions) GetName() string {
 // to easily work with models in admin views.
 type ModelDefinition struct {
 	ModelOptions
-	Name          string
-	LabelFn       func() string
-	PluralLabelFn func() string
-	_rModel       reflect.Type
+	Name    string
+	_rModel reflect.Type
 }
 
 func (o *ModelDefinition) rModel() reflect.Type {

@@ -9,7 +9,8 @@ type TemplateObject struct {
 
 type Struct struct {
 	Name               string
-	PrimaryField       string
+	PluralName         string
+	PrimaryField       Field
 	PrimaryFieldColumn string
 	TableName          string
 	Fields             []Field
@@ -34,4 +35,5 @@ type Field struct {
 	Primary           bool
 	Choices           string
 	RelatedObjectName string
+	GoType            string
 }

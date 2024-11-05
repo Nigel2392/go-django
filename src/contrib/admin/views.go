@@ -160,9 +160,8 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 		assert.Err(err)
 		return
 	}
-	w.Write([]byte(model.Name))
-	w.Write([]byte("\n"))
-	w.Write([]byte("delete"))
+
+	panic("not implemented yet")
 }
 
 func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) modelforms.ModelForm[attrs.Definer] {

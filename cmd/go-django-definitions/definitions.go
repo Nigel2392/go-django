@@ -38,17 +38,42 @@ func Generate(ctx context.Context, req *plugin.GenerateRequest) (*plugin.Generat
 	for _, schema := range req.Catalog.Schemas {
 
 		var tmplObj = generator.BuildTemplateObject(schema)
-		var b = new(bytes.Buffer)
-		if err := generator.Render(b, codegen.GenerateDefinerTemplate, tmplObj); err != nil {
-			return nil, errors.Wrap(err, "failed to render template")
+
+		var templates = make([]string, 0)
+		templates = append(templates, codegen.GenerateDefinerTemplate)
+
+		if opts.GenerateModelsMethods {
+			templates = append(templates, codegen.GenerateModelsTemplate)
 		}
 
-		var file = &plugin.File{
-			Name:     opts.OutFile,
-			Contents: b.Bytes(),
+		if opts.GenerateAdminSetup {
+			templates = append(templates, codegen.GenerateAdminTemplate)
 		}
 
-		files = append(files, file)
+		for _, tmpl := range templates {
+			var b = new(bytes.Buffer)
+			if err := generator.Render(b, tmpl, tmplObj); err != nil {
+				return nil, errors.Wrap(err, "failed to render template")
+			}
+
+			var n string
+			if opts.OutFile != "" {
+				n = fmt.Sprintf(
+					"%s_%s", codegen.Prefixes[tmpl], opts.OutFile,
+				)
+			} else {
+				n = fmt.Sprintf(
+					"%s.go", codegen.Prefixes[tmpl],
+				)
+			}
+
+			var file = &plugin.File{
+				Name:     n,
+				Contents: b.Bytes(),
+			}
+
+			files = append(files, file)
+		}
 	}
 
 	return &plugin.GenerateResponse{Files: files}, nil
