@@ -33,10 +33,6 @@ func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
 		definition.ContentTypeDefinition = contenttypes.DefinitionForType(cType.TypeName())
 	}
 
-	if definition.GetLabel == nil {
-		panic("pages: RegisterPageDefinition definition is missing GetLabel")
-	}
-
 	var contentType = definition.ContentType()
 	var typeName = contentType.TypeName()
 	if _, exists := p.registry[typeName]; exists {

@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -115,25 +116,29 @@ func init() {
 		Logout: auth.Logout,
 	})
 
+	contenttypes.Register(&contenttypes.ContentTypeDefinition{
+		ContentObject: &TestModelStruct{},
+		GetInstance: func(identifier any) (interface{}, error) {
+			return &TestModelStruct{
+				ID:   1,
+				Name: "Test",
+			}, nil
+		},
+		GetInstances: func(amount, offset uint) ([]interface{}, error) {
+			return []interface{}{
+				&TestModelStruct{
+					ID:   1,
+					Name: "Test",
+				},
+			}, nil
+		},
+	})
+
 	admin.RegisterApp("test",
 		admin.AppOptions{},
 		admin.ModelOptions{
 			Name:  "TestModel",
 			Model: &TestModelStruct{},
-			GetForID: func(identifier any) (attrs.Definer, error) {
-				return &TestModelStruct{
-					ID:   1,
-					Name: "Test",
-				}, nil
-			},
-			GetList: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
-				return []attrs.Definer{
-					&TestModelStruct{
-						ID:   1,
-						Name: "Test",
-					},
-				}, nil
-			},
 		})
 
 	var app = django.App(

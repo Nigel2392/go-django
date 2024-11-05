@@ -4,11 +4,10 @@ import (
 	"context"
 	"net/http"
 	"reflect"
-	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/views"
@@ -117,12 +116,6 @@ type ModelOptions struct {
 	// Name of the model and how it will be displayed in the admin.
 	Name string
 
-	// LabelFn is a function that returns the label for the model.
-	LabelFn func() string
-
-	// PluralLabelFn is a function that returns the plural label for the model.
-	PluralLabelFn func() string
-
 	// AddView is the options for the add view of the model.
 	//
 	// This allows for custom creation logic and formatting form fields / layout.
@@ -153,16 +146,6 @@ type ModelOptions struct {
 	// Any custom labels for fields implemented in the AddView, EditView or ListView will take precedence over these labels.
 	Labels map[string]func() string
 
-	// GetForID is a function that returns a model instance for the given identifier.
-	//
-	// This is used to get a model instance for the edit and delete views.
-	GetForID func(identifier any) (attrs.Definer, error)
-
-	// GetList is a function that returns a list of model instances.
-	//
-	// This is used to get a (paginated) list of model instances for the list view.
-	GetList func(amount, offset uint, include []string) ([]attrs.Definer, error)
-
 	// Model is the object that the above- defined options are for.
 	Model attrs.Definer
 }
@@ -182,9 +165,9 @@ func (o *ModelOptions) GetName() string {
 // to easily work with models in admin views.
 type ModelDefinition struct {
 	ModelOptions
-	Name    string
 	_app    *AppDefinition
 	_rModel reflect.Type
+	_cType  *contenttypes.ContentTypeDefinition
 }
 
 func (o *ModelDefinition) rModel() reflect.Type {
@@ -210,45 +193,15 @@ func (o *ModelDefinition) NewInstance() attrs.Definer {
 }
 
 func (o *ModelDefinition) GetName() string {
-	if o.Name == "" {
-		var rTyp = o.rModel()
-		if rTyp.Kind() == reflect.Ptr {
-			return rTyp.Elem().Name()
-		}
-		return rTyp.Name()
-	}
-	return o.Name
+	return o._cType.Name()
 }
 
 func (o *ModelDefinition) Label() string {
-	if o.LabelFn != nil {
-		return o.LabelFn()
-	}
-	return o.GetName()
+	return o._cType.Label()
 }
 
 func (o *ModelDefinition) PluralLabel() string {
-	if o.PluralLabelFn != nil {
-		return o.PluralLabelFn()
-	}
-
-	var name = o.GetName()
-	var b strings.Builder
-	b.Grow(len(name) + 1)
-
-	switch {
-	case strings.HasSuffix(name, "y"):
-		b.WriteString(name[:len(name)-1])
-		b.WriteString("ies")
-	case strings.HasSuffix(name, "s"):
-		b.WriteString(name)
-		b.WriteString("es")
-	default:
-		b.WriteString(name)
-		b.WriteString("s")
-	}
-
-	return b.String()
+	return o._cType.PluralLabel()
 }
 
 func (o *ModelDefinition) GetColumn(opts ListViewOptions, field string) list.ListColumn[attrs.Definer] {
@@ -318,21 +271,23 @@ func (m *ModelDefinition) ModelFields(opts ViewOptions, instace attrs.Definer) [
 }
 
 func (m *ModelDefinition) GetInstance(identifier any) (attrs.Definer, error) {
-	except.Assert(
-		m.GetForID, http.StatusInternalServerError,
-		"GetForID not implemented for model %s", m.GetName(),
-	)
-
-	return m.GetForID(identifier)
+	var instance, err = m._cType.GetInstance(identifier)
+	if err != nil {
+		return nil, err
+	}
+	return instance.(attrs.Definer), nil
 }
 
 func (m *ModelDefinition) GetListInstances(amount, offset uint) ([]attrs.Definer, error) {
-	except.Assert(
-		m.GetList, http.StatusInternalServerError,
-		"GetList not implemented for model %s", m.GetName(),
-	)
-
-	return m.GetList(amount, offset, m.ListView.Fields)
+	var instances, err = m._cType.GetInstances(amount, offset)
+	if err != nil {
+		return nil, err
+	}
+	var defs = make([]attrs.Definer, len(instances))
+	for i, inst := range instances {
+		defs[i] = inst.(attrs.Definer)
+	}
+	return defs, nil
 }
 
 func (m *ModelDefinition) OnRegister(a *AdminApplication, app *AppDefinition) {

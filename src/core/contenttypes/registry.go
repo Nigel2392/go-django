@@ -2,8 +2,12 @@ package contenttypes
 
 import (
 	"fmt"
+	"reflect"
 	"slices"
 	"strings"
+
+	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/utils/text"
 )
 
 // ContentTypeDefinition is a struct that holds information about a model.
@@ -26,16 +30,32 @@ type ContentTypeDefinition struct {
 	// This can be used to provide a custom name for the model.
 	GetLabel func() string
 
+	// A function to return a pluralized version of the model's name.
+	//
+	// This can be used to provide a custom plural name for the model.
+	GetPluralLabel func() string
+
 	// A function that returns a description of the model.
 	//
 	// This should return an accurate description of the model and what it represents.
 	GetDescription func() string
+
+	// A function which returns the label for an instance of the content type.
+	//
+	// This is used to get the human-readable name of an instance of the model.
+	GetInstanceLabel func(any) string
 
 	// A function that returns a new instance of the model.
 	//
 	// This should return a new instance of the model that can be safely typecast to the
 	// correct model type.
 	GetObject func() any
+
+	// A function to retrieve an instance of the model by its ID.
+	GetInstance func(interface{}) (interface{}, error)
+
+	// A function to get a list of instances of the model.
+	GetInstances func(amount, offset uint) ([]interface{}, error)
 
 	// A list of aliases for the model.
 	//
@@ -62,12 +82,20 @@ func (p *ContentTypeDefinition) ContentType() ContentType {
 	return p._cType
 }
 
+func (c *ContentTypeDefinition) Name() string {
+	var rTyp = reflect.TypeOf(c.ContentObject)
+	if rTyp.Kind() == reflect.Ptr {
+		return rTyp.Elem().Name()
+	}
+	return rTyp.Name()
+}
+
 // Returns the model's human-readable name.
 func (p *ContentTypeDefinition) Label() string {
 	if p.GetLabel != nil {
 		return p.GetLabel()
 	}
-	return ""
+	return p.Name()
 }
 
 // Returns a description of the model and what it represents.
@@ -76,6 +104,30 @@ func (p *ContentTypeDefinition) Description() string {
 		return p.GetDescription()
 	}
 	return ""
+}
+
+// Returns the pluralized version of the model's name.
+func (p *ContentTypeDefinition) PluralLabel() string {
+	if p.GetPluralLabel != nil {
+		return p.GetPluralLabel()
+	}
+	return text.Pluralize(p.Label())
+}
+
+// Returns the human-readable name of an instance of the model.
+func (p *ContentTypeDefinition) InstanceLabel(instance any) string {
+	if p.GetInstanceLabel != nil {
+		return p.GetInstanceLabel(instance)
+	}
+
+	if s, ok := instance.(fmt.Stringer); ok {
+		return s.String()
+	}
+
+	return fmt.Sprintf(
+		"<Object %q>",
+		p.ContentType().Model(),
+	)
 }
 
 // Returns a new instance of the model.
@@ -87,6 +139,24 @@ func (p *ContentTypeDefinition) Object() any {
 		return p.GetObject()
 	}
 	return p.ContentType().New()
+}
+
+// Returns an instance of the model by its ID.
+func (p *ContentTypeDefinition) Instance(id interface{}) (interface{}, error) {
+	if p.GetInstance != nil {
+		return p.GetInstance(id)
+	}
+	assert.Fail("GetInstance not implemented for model %s", p.ContentType().TypeName())
+	return nil, nil
+}
+
+// Returns a list of instances of the model.
+func (p *ContentTypeDefinition) Instances(amount, offset uint) ([]interface{}, error) {
+	if p.GetInstances != nil {
+		return p.GetInstances(amount, offset)
+	}
+	assert.Fail("GetInstances not implemented for model %s", p.ContentType().TypeName())
+	return nil, nil
 }
 
 // ContentTypeRegistry is a struct that holds information about all registered models.
@@ -176,10 +246,6 @@ func (p *ContentTypeRegistry) Register(definition *ContentTypeDefinition) {
 
 	if definition.ContentObject == nil {
 		panic("pages: RegisterPageDefinition definition is missing PageObject or GetForID")
-	}
-
-	if definition.GetLabel == nil {
-		panic("pages: RegisterPageDefinition definition is missing GetLabel")
 	}
 
 	var contentType = definition.ContentType()

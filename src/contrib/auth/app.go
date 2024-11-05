@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
@@ -147,6 +148,41 @@ func NewAppConfig() django.AppConfig {
 			Logout: Logout,
 		})
 
+		contenttypes.Register(&contenttypes.ContentTypeDefinition{
+			ContentObject: &models.User{},
+			GetInstance: func(i interface{}) (interface{}, error) {
+				var id, ok = i.(int)
+				if !ok {
+					var u, err = strconv.Atoi(fmt.Sprint(i))
+					if err != nil {
+						return nil, err
+					}
+					id = u
+				}
+				var user, err = Auth.Queries.RetrieveByID(
+					context.Background(),
+					uint64(id),
+				)
+				if err != nil {
+					return nil, err
+				}
+				return user, nil
+			},
+			GetInstances: func(amount, offset uint) ([]interface{}, error) {
+				var users, err = Auth.Queries.Retrieve(
+					context.Background(), int32(amount), int32(offset),
+				)
+				if err != nil {
+					return nil, err
+				}
+				var items = make([]interface{}, 0)
+				for _, u := range users {
+					items = append(items, u)
+				}
+				return items, nil
+			},
+		})
+
 		var _ = admin.RegisterApp(
 			"Auth",
 			admin.AppOptions{
@@ -169,38 +205,6 @@ func NewAppConfig() django.AppConfig {
 					"IsActive":        trans.S("Is active"),
 					"CreatedAt":       trans.S("Created at"),
 					"UpdatedAt":       trans.S("Updated at"),
-				},
-				GetForID: func(identifier any) (attrs.Definer, error) {
-					var id, ok = identifier.(int)
-					if !ok {
-						var u, err = strconv.Atoi(fmt.Sprint(identifier))
-						if err != nil {
-							return nil, err
-						}
-						id = u
-					}
-					var user, err = Auth.Queries.RetrieveByID(
-						context.Background(),
-						uint64(id),
-					)
-					if err != nil {
-						return nil, err
-					}
-					return user, nil
-				},
-				GetList: func(amount, offset uint, fields []string) ([]attrs.Definer, error) {
-					var users, err = Auth.Queries.Retrieve(
-						context.Background(), int32(amount), int32(offset),
-					)
-					if err != nil {
-						return nil, err
-					}
-					var items = make([]attrs.Definer, 0)
-					for _, u := range users {
-						var cpy = u
-						items = append(items, cpy)
-					}
-					return items, nil
 				},
 				AddView: admin.FormViewOptions{
 					ViewOptions: admin.ViewOptions{

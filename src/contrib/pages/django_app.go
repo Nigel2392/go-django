@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"strconv"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
@@ -16,6 +17,7 @@ import (
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
@@ -195,6 +197,39 @@ func NewAppConfig() *PageAppConfig {
 				GetLabel:       trans.S("Page"),
 				GetDescription: trans.S("A page in a hierarchical page tree- structure."),
 				GetObject:      func() any { return &models.PageNode{} },
+				GetInstance: func(identifier any) (interface{}, error) {
+					var id int64
+					switch v := identifier.(type) {
+					case int:
+						id = int64(v)
+					case int64:
+						id = v
+					case string:
+						var err error
+						id, err = strconv.ParseInt(v, 10, 64)
+						if err != nil {
+							return nil, err
+						}
+					default:
+						return nil, errs.ErrInvalidType
+					}
+					var ctx = context.Background()
+					var node, err = pageApp.QuerySet().GetNodeByID(ctx, id)
+					if err != nil {
+						return nil, err
+					}
+					return &node, nil
+				},
+				GetInstances: func(amount, offset uint) ([]interface{}, error) {
+					var ctx = context.Background()
+					var nodes, err = pageApp.QuerySet().AllNodes(ctx, int32(amount), int32(offset))
+					var items = make([]interface{}, 0)
+					for _, n := range nodes {
+						n := n
+						items = append(items, &n)
+					}
+					return items, err
+				},
 			},
 			GetForID: func(ctx context.Context, ref models.PageNode, id int64) (Page, error) {
 				return &ref, nil

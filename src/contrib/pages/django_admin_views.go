@@ -189,7 +189,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				return context, nil
 			},
 		},
-		GetListFn: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
+		GetListFn: func(amount, offset uint) ([]attrs.Definer, error) {
 			var ctx = r.Context()
 			var nodes, err = QuerySet().GetChildNodes(ctx, p.Path, p.Depth, int32(amount), int32(offset))
 			if err != nil {

@@ -2,6 +2,8 @@ package text
 
 import (
 	"strings"
+
+	"github.com/gertd/go-pluralize"
 )
 
 func Trunc(s string, length int) string {
@@ -24,4 +26,18 @@ func (t *Truncator) Trunc(s string) string {
 		return b.String()
 	}
 	return s
+}
+
+var pluralizer = pluralize.NewClient()
+
+func Pluralize(s string) string {
+	return pluralizer.Plural(s)
+}
+
+func Singularize(s string) string {
+	return pluralizer.Singular(s)
+}
+
+func IsPlural(s string) bool {
+	return pluralizer.IsPlural(s)
 }

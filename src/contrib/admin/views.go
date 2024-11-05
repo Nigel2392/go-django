@@ -88,8 +88,8 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 				return context, nil
 			},
 		},
-		GetListFn: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
-			return model.GetList(amount, offset, include)
+		GetListFn: func(amount, offset uint) ([]attrs.Definer, error) {
+			return model.GetListInstances(amount, offset)
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
 			return list.TitleFieldColumn(lc, func(defs attrs.Definitions, instance attrs.Definer) string {

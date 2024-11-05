@@ -27,7 +27,7 @@ type View[T attrs.Definer] struct {
 	DefaultAmount    uint64
 	ListColumns      []ListColumn[T]
 	TitleFieldColumn func(ListColumn[T]) ListColumn[T]
-	GetListFn        func(amount, offset uint, include []string) ([]T, error)
+	GetListFn        func(amount, offset uint) ([]T, error)
 }
 
 func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
@@ -72,7 +72,7 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 		cols[0] = v.TitleFieldColumn(cols[0])
 	}
 
-	list, err := v.GetListFn(uint(amount), uint(page), fields)
+	list, err := v.GetListFn(uint(amount), uint(page))
 	if err != nil {
 		return base, err
 	}

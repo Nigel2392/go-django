@@ -7,6 +7,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/models"
@@ -65,16 +66,6 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 		rTyp.Kind() == reflect.Invalid,
 		"Model must be a valid type")
 
-	assert.False(
-		opts.GetForID == nil,
-		"GetForID must be implemented",
-	)
-
-	assert.False(
-		opts.GetList == nil,
-		"GetList must be implemented",
-	)
-
 	assert.True(
 		rTyp.Kind() == reflect.Struct,
 		"Model must be a struct")
@@ -83,11 +74,19 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 		rTyp.NumField() > 0,
 		"Model must have fields")
 
+	var cType = contenttypes.DefinitionForObject(
+		opts.Model,
+	)
+	assert.True(
+		cType != nil,
+		"Model must have a registered content type definition",
+	)
+
 	var model = &ModelDefinition{
-		Name:         opts.GetName(),
 		ModelOptions: opts,
 		_app:         a,
 		_rModel:      rTyp,
+		_cType:       cType,
 	}
 
 	assert.True(

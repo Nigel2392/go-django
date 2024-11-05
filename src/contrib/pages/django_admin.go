@@ -4,13 +4,11 @@ import (
 	"context"
 	"fmt"
 	"html/template"
-	"strconv"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/views/list"
@@ -53,39 +51,6 @@ var pageAdminModelOptions = admin.ModelOptions{
 		"ContentType": trans.S("Content Type"),
 		"CreatedAt":   trans.S("Created At"),
 		"UpdatedAt":   trans.S("Updated At"),
-	},
-	GetForID: func(identifier any) (attrs.Definer, error) {
-		var id int64
-		switch v := identifier.(type) {
-		case int:
-			id = int64(v)
-		case int64:
-			id = v
-		case string:
-			var err error
-			id, err = strconv.ParseInt(v, 10, 64)
-			if err != nil {
-				return nil, err
-			}
-		default:
-			return nil, errs.ErrInvalidType
-		}
-		var ctx = context.Background()
-		var node, err = pageApp.QuerySet().GetNodeByID(ctx, id)
-		if err != nil {
-			return nil, err
-		}
-		return &node, nil
-	},
-	GetList: func(amount, offset uint, include []string) ([]attrs.Definer, error) {
-		var ctx = context.Background()
-		var nodes, err = pageApp.QuerySet().AllNodes(ctx, int32(amount), int32(offset))
-		var items = make([]attrs.Definer, 0)
-		for _, n := range nodes {
-			n := n
-			items = append(items, &n)
-		}
-		return items, err
 	},
 	ListView: admin.ListViewOptions{
 		ViewOptions: admin.ViewOptions{

@@ -9,6 +9,7 @@ import (
     "github.com/Nigel2392/go-django/src/forms/widgets"
 
     "database/sql"
+    "fmt"
     {{ range $struct := .Structs }}{{ range $field := $struct.Fields }}{{ if $field.RelatedObjectPackage }}
     {{$field.RelatedObjectPackageAdressor}}"{{ $field.RelatedObjectPackage }}"{{ end }}{{ end }}{{end}}
 )
@@ -31,6 +32,13 @@ var {{ $choices.Name }}Options = func() []widgets.Option {
 }
 {{ end }}
 {{ range $struct := $obj.Structs }}
+func (o *{{ $struct.Name }}) String() string {
+    return fmt.Sprintf(
+        "<{{ $struct.Name }} %v>",
+        o.{{ $struct.PrimaryField.Name }},
+    )
+}
+
 func (o *{{ $struct.Name }}) FieldDefs() attrs.Definitions {
     var fields = make([]attrs.Field, {{ len $struct.Fields }})
     {{ range $i, $field := $struct.Fields }}{{ if $field.Choices }}
