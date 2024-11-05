@@ -7,7 +7,9 @@ import (
 	"io"
 	"path"
 	"regexp"
+	"strings"
 	"text/template"
+	"unicode"
 
 	"github.com/Nigel2392/go-django/cmd/go-django-definitions/internal/codegen/plugin"
 )
@@ -67,7 +69,7 @@ func colIsReadOnly(i int, col *plugin.Column) bool {
 	return false
 }
 
-var parseCommentsRegex = regexp.MustCompile(`(\w+)\s*:\s*(\w+)`)
+var parseCommentsRegex = regexp.MustCompile(`(\w+)\s*:\s*([^;\n]+)`)
 
 func parseComments(comments string) map[string]string {
 	var m = make(map[string]string)
@@ -76,6 +78,41 @@ func parseComments(comments string) map[string]string {
 		m[match[1]] = match[2]
 	}
 	return m
+}
+
+func fmtPkgName(name string) string {
+	name = strings.ToLower(name)
+	var wasSpecial bool
+	return strings.Map(func(r rune) rune {
+		if !unicode.IsLetter(r) && !unicode.IsDigit(r) {
+			if !wasSpecial {
+				wasSpecial = true
+				return '_'
+			}
+			return -1
+		}
+		wasSpecial = false
+		return r
+	}, name)
+}
+
+func packageInfo(objectPath string) (pkg, pkgAdressor, objName string) {
+	var lastDot = strings.LastIndex(objectPath, ".")
+	if lastDot != -1 {
+		var lastSlash = strings.LastIndex(objectPath, "/")
+		if lastSlash != -1 {
+			pkg = objectPath[:lastDot]
+			pkgAdressor = fmtPkgName(objectPath[lastSlash+1 : lastDot])
+			objName = objectPath[lastDot+1:]
+		} else {
+			pkg = objectPath[:lastDot]
+			pkgAdressor = fmtPkgName(objectPath[:lastDot])
+			objName = objectPath[lastDot+1:]
+		}
+	} else {
+		objName = objectPath
+	}
+	return
 }
 
 func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObject {
@@ -129,9 +166,22 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 			}
 
 			if fk, ok := commentMap["fk"]; ok {
-				f.RelatedObjectName = c.opts.GoName(
-					c.opts.InflectSingular(fk),
-				)
+
+				var values = strings.SplitN(fk, "=", 2)
+				if len(values) == 2 {
+					var pkgPath, pkgAdressor, dotObject = packageInfo(
+						values[1],
+					)
+					f.RelatedObjectPackage = pkgPath
+					f.RelatedObjectPackageAdressor = pkgAdressor
+					f.RelatedObjectName = dotObject
+
+				} else {
+					f.RelatedObjectName = c.opts.GoName(
+						c.opts.InflectSingular(fk),
+					)
+				}
+
 			}
 
 			s.Fields = append(s.Fields, f)

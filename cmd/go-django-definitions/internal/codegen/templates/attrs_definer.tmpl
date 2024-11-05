@@ -9,6 +9,8 @@ import (
     "github.com/Nigel2392/go-django/src/forms/widgets"
 
     "database/sql"
+    {{ range $struct := .Structs }}{{ range $field := $struct.Fields }}{{ if $field.RelatedObjectPackage }}
+    {{$field.RelatedObjectPackageAdressor}}"{{ $field.RelatedObjectPackage }}"{{ end }}{{ end }}{{end}}
 )
 
 var (
@@ -40,7 +42,7 @@ func (o *{{ $struct.Name }}) FieldDefs() attrs.Definitions {
             Null: {{ $field.Null }},
             Blank: {{ $field.Blank }},
             ReadOnly: {{ $field.ReadOnly }},{{ if $field.RelatedObjectName }}
-            RelatedObject: &{{ $field.RelatedObjectName }}{},{{ end }}
+            RelatedObject: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ end }}
             Label: "{{ label $field.Name }}",
             Primary: {{ $field.Primary }},{{ if $field.Choices }}
             FormWidget: func(attrs.FieldConfig) widgets.Widget {

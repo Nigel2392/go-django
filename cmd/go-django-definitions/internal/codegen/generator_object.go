@@ -27,13 +27,15 @@ type Choice struct {
 }
 
 type Field struct {
-	Name              string
-	ColumnName        string
-	Null              bool
-	Blank             bool
-	ReadOnly          bool
-	Primary           bool
-	Choices           string
-	RelatedObjectName string
-	GoType            string
+	Name                         string
+	ColumnName                   string
+	Null                         bool
+	Blank                        bool
+	ReadOnly                     bool
+	Primary                      bool
+	Choices                      string
+	RelatedObjectName            string
+	RelatedObjectPackage         string
+	RelatedObjectPackageAdressor string
+	GoType                       string
 }
