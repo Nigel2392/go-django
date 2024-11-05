@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"net/http"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
@@ -161,7 +164,29 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 		return
 	}
 
-	panic("not implemented yet")
+	var err error
+	if r.Method == http.MethodPost {
+		if deleter, ok := instance.(models.Deleter); ok {
+			err = deleter.Delete(r.Context())
+		}
+		assert.Err(err)
+		var listViewURL = django.Reverse("admin:apps:model", app.Name, model.Name)
+		http.Redirect(w, r, listViewURL, http.StatusSeeOther)
+		return
+	}
+
+	var context = NewContext(r, adminSite, nil)
+	var definitions = instance.FieldDefs()
+	var primaryField = definitions.Primary()
+
+	context.Set("app", app)
+	context.Set("model", model)
+	context.Set("instance", instance)
+	context.Set("instance", instance)
+	context.Set("primaryField", primaryField)
+
+	err = tpl.FRender(w, context, BASE_KEY, "admin/views/models/delete.tmpl")
+	assert.Err(err)
 }
 
 func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) modelforms.ModelForm[attrs.Definer] {
@@ -169,7 +194,7 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 	if f, ok := instance.(FormDefiner); ok {
 		form = f.AdminForm(r, app, model)
 	} else {
-		var modelForm = modelforms.NewBaseModelForm[attrs.Definer](instance)
+		var modelForm = modelforms.NewBaseModelForm(instance)
 		for _, field := range model.ModelFields(opts.ViewOptions, instance) {
 			var (
 				name      = field.Name()
@@ -188,7 +213,17 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 				name, formfield,
 			)
 		}
-		modelForm.SaveInstance = opts.SaveInstance
+
+		if opts.SaveInstance != nil {
+			modelForm.SaveInstance = opts.SaveInstance
+		} else {
+			modelForm.SaveInstance = func(ctx context.Context, instance attrs.Definer) error {
+				if saver, ok := instance.(models.Saver); ok {
+					return saver.Save(ctx)
+				}
+				return errors.New("instance does not implement models.Saver")
+			}
+		}
 		form = modelForm
 	}
 	return form

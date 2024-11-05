@@ -1,0 +1,38 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ T "Edit %s" (.Get "model").Label }}{{ end }}
+
+{{ define "extra_css" }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $css := $Media.CSS }}
+        {{ $css }}
+    {{ end }}
+{{ end }}
+
+{{ define "content" }}
+    <h1>{{ T "Delete %s" (.Get "model").Label }}</h1>
+    <form method="post" class="admin-form">
+        <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+
+        <p>{{ T "Are you sure you want to delete this object?" }}</p>
+        <p>{{ T "This action cannot be reversed." }}</p>
+
+
+        <div class="form-buttons">
+            <input class="button danger" type="submit" value="Submit">
+            {{ $BackURL := (.Get "BackURL") }}
+            {{ if $BackURL }}
+                <a class="button warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
+            {{ else }}
+                <a class="button warning hollow" href="{{ url "admin:apps:model:edit" (.Get "app").Name (.Get "model").Name (.Get "primaryField").GetValue }}">{{ T "Back" }}</a>
+            {{ end }}
+        </div>
+    </form>
+{{ end }}
+
+{{ define "extra_js" }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $js := $Media.JS }}
+        {{ $js }}
+    {{ end }}
+{{ end }}

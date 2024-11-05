@@ -7,7 +7,9 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/a-h/templ"
@@ -96,6 +98,14 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 		"Model name must match regex %v",
 		nameRegex,
 	)
+
+	var _, isModel = opts.Model.(models.Model)
+	if !isModel {
+		logger.Warnf(
+			"Model %s does not implement models.Model interface",
+			model.Name,
+		)
+	}
 
 	a.Models.Set(model.Name, model)
 

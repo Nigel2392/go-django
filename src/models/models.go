@@ -43,7 +43,6 @@ type Reloader interface {
 type Model interface {
 	attrs.Definer
 	Saver
-	Updater
 	Deleter
 }
 
