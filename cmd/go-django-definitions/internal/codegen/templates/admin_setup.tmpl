@@ -15,6 +15,8 @@ func Admin{{ $struct.Name }}ModelOptions() admin.ModelOptions {
 		RegisterToAdminMenu:    true,
         Model:                  &{{ $struct.Name }}{},
         Name:                   "{{ $struct.Name }}",
+        LabelFn:                func() string { return "{{ label $struct.Name }}" },
+        PluralLabelFn:          func() string { return "{{ label $struct.PluralName }}" },
         GetForID:               select{{ $struct.Name }}Interface,
         GetList:                list{{ $struct.PluralName }}Interface,
         AddView: admin.FormViewOptions{
