@@ -20,6 +20,8 @@ type Select struct {
 
 func SelectWidget(allowBlank bool, blankLabel string, opts BaseChooserOptions) *Select {
 	var chooser = BaseChooserWidget(opts)
+	chooser.BaseWidget.Type = "select"
+	chooser.BaseWidget.TemplateName = "forms/widgets/select.html"
 	return &Select{
 		BaseChooser:  chooser,
 		ExcludeBlank: !allowBlank,
@@ -43,7 +45,7 @@ func (o *Select) GetContextData(id, name string, value interface{}, widgetAttrs 
 	for _, modelInstance := range modelInstances {
 
 		var value = o.Opts.GetPrimaryKey(modelInstance)
-		var labelStr = o.forModelDefinition.GetInstanceLabel(
+		var labelStr = o.forModelDefinition.InstanceLabel(
 			modelInstance,
 		)
 		var valueStr = fmt.Sprintf("%v", value)
