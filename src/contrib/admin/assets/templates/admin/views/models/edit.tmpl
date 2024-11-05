@@ -21,6 +21,7 @@
 
         <div class="form-buttons">
             <input class="button secondary" type="submit" value="Submit">
+            <a class="button secondary" href="{{ url "admin:apps:model:delete" (.Get "app").Name (.Get "model").Name (.Get "primaryField").GetValue }}">{{ T "Delete" }}</a>
             {{ $BackURL := (.Get "BackURL") }}
             {{ if $BackURL }}
                 <a class="button warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>

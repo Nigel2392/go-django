@@ -182,7 +182,6 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 	context.Set("app", app)
 	context.Set("model", model)
 	context.Set("instance", instance)
-	context.Set("instance", instance)
 	context.Set("primaryField", primaryField)
 
 	err = tpl.FRender(w, context, BASE_KEY, "admin/views/models/delete.tmpl")
@@ -230,6 +229,10 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 }
 
 func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[*AdminModelForm[modelforms.ModelForm[attrs.Definer]]] {
+
+	var definer = instance.FieldDefs()
+	var primary = definer.Primary()
+
 	return &views.FormView[*AdminModelForm[modelforms.ModelForm[attrs.Definer]]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
@@ -239,6 +242,8 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				var context = NewContext(req, AdminSite, nil)
 				context.Set("app", app)
 				context.Set("model", model)
+				context.Set("instance", instance)
+				context.Set("primaryField", primary)
 				return context, nil
 			},
 		},
@@ -249,6 +254,10 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			} else {
 				form = GetAdminForm(instance, opts, app, model, r)
 				form.SetFields(attrs.FieldNames(instance, opts.Exclude)...)
+			}
+
+			for name, widget := range opts.Widgets {
+				form.AddWidget(name, widget)
 			}
 
 			if opts.FormInit != nil {

@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 )
@@ -33,6 +34,11 @@ type ViewOptions struct {
 // Options for a model-specific form view.
 type FormViewOptions struct {
 	ViewOptions
+
+	// Widgets are used to define the widgets for the fields in the form.
+	//
+	// This allows for custom rendering logic of the fields in the form.
+	Widgets map[string]widgets.Widget
 
 	// GetForm is a function that returns a modelform.ModelForm for the model.
 	GetForm func(req *http.Request, instance attrs.Definer, fields []string) modelforms.ModelForm[attrs.Definer]
