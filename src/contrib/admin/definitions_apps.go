@@ -90,11 +90,11 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 	}
 
 	assert.True(
-		model.Name != "",
+		model.GetName() != "",
 		"Model must have a name")
 
 	assert.True(
-		nameRegex.MatchString(model.Name),
+		nameRegex.MatchString(model.GetName()),
 		"Model name must match regex %v",
 		nameRegex,
 	)
@@ -103,11 +103,11 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 	if !isModel {
 		logger.Warnf(
 			"Model %q does not implement models.Model interface",
-			model.Name,
+			model.GetName(),
 		)
 	}
 
-	a.Models.Set(model.Name, model)
+	a.Models.Set(model.GetName(), model)
 
 	return model
 }
@@ -197,7 +197,7 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 						Label: model.Label,
 					},
 					Link: func() string {
-						return django.Reverse("admin:apps:model", a.Name, model.Name)
+						return django.Reverse("admin:apps:model", a.Name, model.GetName())
 					},
 				})
 			}

@@ -137,7 +137,6 @@ func init() {
 	admin.RegisterApp("test",
 		admin.AppOptions{},
 		admin.ModelOptions{
-			Name:  "TestModel",
 			Model: &TestModelStruct{},
 		})
 

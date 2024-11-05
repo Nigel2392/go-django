@@ -113,7 +113,9 @@ func viewDefaults(o *ViewOptions, mdl any) {
 }
 
 type ModelOptions struct {
-	// Name of the model and how it will be displayed in the admin.
+	// Name is the name of the model.
+	//
+	// This is used for the model's name in the admin.
 	Name string
 
 	// AddView is the options for the add view of the model.
@@ -264,7 +266,7 @@ func (m *ModelDefinition) ModelFields(opts ViewOptions, instace attrs.Definer) [
 
 	for i, name := range opts.Fields {
 		fields[i], ok = defs.Field(name)
-		assert.True(ok, "Field %s not found in model %s", name, m.Name)
+		assert.True(ok, "Field %s not found in model %s", name, m.GetName())
 	}
 
 	return fields

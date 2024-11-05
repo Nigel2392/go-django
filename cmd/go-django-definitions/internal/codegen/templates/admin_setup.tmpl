@@ -5,7 +5,6 @@
 package {{ .PackageName }};
 
 import (
-    "github.com/Nigel2392/go-django/src/core/attrs"
     "github.com/Nigel2392/go-django/src/core/contenttypes"
     "github.com/Nigel2392/go-django/src/contrib/admin"
 )
@@ -17,7 +16,7 @@ func init() { {{ range $struct := $obj.Structs }}
         GetInstance: func(id any) (interface{}, error) {
             return Select{{ $struct.Name }}(id.({{ $struct.PrimaryField.GoType }}))
         },
-        GetInstances: func(limit, offset uint, _ []string) ([]interface{}, error) {
+        GetInstances: func(limit, offset uint) ([]interface{}, error) {
             return list{{ $struct.PluralName }}Interface(limit, offset)
         },
     }){{ end }}
@@ -90,7 +89,7 @@ func List{{ $struct.PluralName }}(limit, offset int32) ([]*{{ $struct.Name }}, e
     return objects, nil
 }
 
-func select{{ $struct.Name }}Interface(id any) (attrs.Definer, error) {
+func select{{ $struct.Name }}Interface(id any) (interface{}, error) {
     var o = &{{ $struct.Name }}{}
     err := globalDB.QueryRow(select{{$struct.Name}}AdminQuery, id).Scan(
         {{ range $i, $field := $struct.Fields }}&o.{{ $field.Name }},{{ end }}
@@ -101,12 +100,12 @@ func select{{ $struct.Name }}Interface(id any) (attrs.Definer, error) {
     return o, nil
 }
 
-func list{{ $struct.PluralName }}Interface(limit, offset uint, _ []string) ([]attrs.Definer, error) {
+func list{{ $struct.PluralName }}Interface(limit, offset uint) ([]interface{}, error) {
     var rows, err = List{{ $struct.PluralName }}(int32(limit), int32(offset))
     if err != nil {
         return nil, err
     }
-    var objects = make([]attrs.Definer, len(rows))
+    var objects = make([]interface{}, len(rows))
     for i, row := range rows {
         objects[i] = row
     }
