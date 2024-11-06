@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/chooser"
 	"github.com/Nigel2392/goldcrest"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -276,6 +277,20 @@ returnField:
 	if f.attrDef.FormWidget != nil {
 		formField.SetWidget(
 			f.attrDef.FormWidget(f.attrDef),
+		)
+	} else if f.Rel() != nil {
+		formField.SetWidget(
+			chooser.SelectWidget(
+				f.AllowBlank(),
+				"--------",
+				chooser.BaseChooserOptions{
+					TargetObject: f.Rel(),
+					GetPrimaryKey: func(i interface{}) interface{} {
+						var def = i.(Definer)
+						return PrimaryKey(def)
+					},
+				},
+			),
 		)
 	}
 
