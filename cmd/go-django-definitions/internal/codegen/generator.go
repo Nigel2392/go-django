@@ -121,6 +121,7 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 		SQLCVersion: c.opts.req.SqlcVersion,
 		Structs:     make([]*Struct, 0),
 		Choices:     make([]*Choices, 0),
+		imports:     make(map[string]struct{}),
 	}
 
 	var choices = make(map[string]string)
@@ -167,7 +168,6 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 			}
 
 			if fk, ok := commentMap["fk"]; ok {
-
 				var values = strings.SplitN(fk, "=", 2)
 				if len(values) == 2 {
 					var pkgPath, pkgAdressor, dotObject = packageInfo(

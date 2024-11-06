@@ -5,6 +5,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/goldcrest"
 )
@@ -15,6 +16,10 @@ const (
 	RegisterGlobalMedia        = "admin:register_global_media"
 	RegisterNavBreadCrumb      = "admin:register_breadcrumb"
 	RegisterNavAction          = "admin:register_nav_action"
+
+	AdminModelHookAdd    = "admin:model:add"
+	AdminModelHookEdit   = "admin:model:edit"
+	AdminModelHookDelete = "admin:model:delete"
 )
 
 type (
@@ -23,6 +28,7 @@ type (
 	RegisterScriptHookFunc         func(adminSite *AdminApplication) media.Media
 	RegisterBreadCrumbHookFunc     func(r *http.Request, adminSite *AdminApplication) []BreadCrumb
 	RegisterNavActionHookFunc      func(r *http.Request, adminSite *AdminApplication) []Action
+	AdminModelHookFunc             func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
 )
 
 func RegisterMedia(fn RegisterScriptHookFunc) {

@@ -43,13 +43,13 @@ func (o *{{ $struct.Name }}) FieldDefs() attrs.Definitions {
     var fields = make([]attrs.Field, {{ len $struct.Fields }})
     {{ range $i, $field := $struct.Fields }}
     fields[{{ $i }}] = attrs.NewField(
-        o, "{{ $field.Name }}", &attrs.FieldConfig{
-            Null: {{ $field.Null }},
-            Blank: {{ $field.Blank }},
-            ReadOnly: {{ $field.ReadOnly }},{{ if $field.RelatedObjectName }}
+        o, "{{ $field.Name }}", &attrs.FieldConfig{ {{ if $field.Null }}
+            Null: {{ $field.Null }},{{ end }}{{ if $field.Blank }}
+            Blank: {{ $field.Blank }},{{ end }}{{ if $field.ReadOnly }}
+            ReadOnly: {{ $field.ReadOnly }},{{ end }}{{ if $field.RelatedObjectName }}
             RelatedObject: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ end }}{{ if not $field.RelatedObjectName }}
-            Label: "{{ label $field.Name }}",{{ end }}
-            Primary: {{ $field.Primary }},{{ if $field.Choices }}
+            Label: "{{ label $field.Name }}",{{ end }}{{ if $field.Primary }}
+            Primary: {{ $field.Primary }},{{ end }}{{ if $field.Choices }}
             FormWidget: func(attrs.FieldConfig) widgets.Widget {
                 return widgets.NewSelectInput(
                     nil, {{ $field.Choices }}Options,

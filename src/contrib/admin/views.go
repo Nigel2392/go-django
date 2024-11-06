@@ -18,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
+	"github.com/Nigel2392/goldcrest"
 )
 
 var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition) {
@@ -166,6 +167,14 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 
 	var err error
 	if r.Method == http.MethodPost {
+
+		var hooks = goldcrest.Get[AdminModelHookFunc](
+			AdminModelHookDelete,
+		)
+		for _, hook := range hooks {
+			hook(r, AdminSite, model, instance)
+		}
+
 		if deleter, ok := instance.(models.Deleter); ok {
 			err = deleter.Delete(r.Context())
 		}
@@ -317,6 +326,14 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 		},
 		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *AdminModelForm[modelforms.ModelForm[attrs.Definer]]) {
 			var instance = form.Instance()
+
+			var hooks = goldcrest.Get[AdminModelHookFunc](
+				fmt.Sprintf("admin:model:%s", tpl),
+			)
+			for _, hook := range hooks {
+				hook(req, AdminSite, model, instance)
+			}
+
 			assert.False(instance == nil, "instance is nil after form submission")
 			var listViewURL = django.Reverse("admin:apps:model", app.Name, model.Name)
 			http.Redirect(w, r, listViewURL, http.StatusSeeOther)

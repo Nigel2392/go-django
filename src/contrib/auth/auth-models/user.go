@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"net/mail"
 	"time"
 
@@ -72,6 +73,10 @@ type User struct {
 	IsAdministrator bool      `json:"is_administrator" attrs:"blank;default=true"`
 	IsActive        bool      `json:"is_active" attrs:"blank;default=true"`
 	IsLoggedIn      bool      `json:"is_logged_in"`
+}
+
+func (u *User) String() string {
+	return fmt.Sprintf("%s <%s>", u.Username, u.Email)
 }
 
 func (u *User) FieldDefs() attrs.Definitions {

@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -117,6 +118,45 @@ func NewAppConfig() django.AppConfig {
 		m.AddCSS(media.CSS(django.Static("auditlogs/css/auditlogs.css")))
 		return m
 	})
+
+	var hookNames = []string{
+		admin.AdminModelHookAdd,
+		admin.AdminModelHookEdit,
+		admin.AdminModelHookDelete,
+	}
+
+	for _, hookName := range hookNames {
+		var hookName = hookName
+		goldcrest.Register(hookName, 0, admin.AdminModelHookFunc(
+			func(r *http.Request, adminSite *admin.AdminApplication, model *admin.ModelDefinition, instance attrs.Definer) {
+				if !Logs.IsReady() {
+					return
+				}
+
+				var data = make(map[string]interface{})
+				var level logger.LogLevel = logger.DBG
+				switch hookName {
+				case admin.AdminModelHookAdd:
+					level = logger.INF
+				case admin.AdminModelHookEdit:
+					level = logger.INF
+				case admin.AdminModelHookDelete:
+					level = logger.WRN
+				}
+
+				data["model_name"] = model.Name
+				data["instance_id"] = attrs.PrimaryKey(instance)
+				var cTypeDef = contenttypes.DefinitionForObject(instance)
+				if cTypeDef != nil {
+					data["content_type"] = cTypeDef.ContentType()
+				}
+
+				if _, err := Log(hookName, level, instance, data); err != nil {
+					logger.Warn(err)
+				}
+			}),
+		)
+	}
 
 	tpl.Add(tpl.Config{
 		AppName: "auditlogs",
