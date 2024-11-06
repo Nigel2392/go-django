@@ -413,6 +413,11 @@ func Register(definition *ContentTypeDefinition) *ContentTypeDefinition {
 	return definition
 }
 
+// EditDefinition edits the definition for the given model.
+func EditDefinition(def *ContentTypeDefinition) {
+	contentTypeRegistryObject.EditDefinition(def)
+}
+
 // Aliases returns a list of aliases for the given model's type name.
 func Aliases(typeName string) []string {
 	return contentTypeRegistryObject.Aliases(typeName)
