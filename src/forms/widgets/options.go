@@ -69,6 +69,9 @@ func (o *OptionsWidget) GetContextData(id, name string, value interface{}, attrs
 }
 
 func (o *OptionsWidget) Validate(value interface{}) []error {
+	if value == nil {
+		return nil
+	}
 	var errors []error
 	var choices = o.Choices()
 	var valueStr = value.(string)
