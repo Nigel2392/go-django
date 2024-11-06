@@ -119,35 +119,41 @@ func SQLNullField[SQLType any](opts ...func(Field)) *NullableSQLField[SQLType] {
 	}
 }
 
+var (
+	int16Typ   = reflect.TypeOf(int16(0))
+	int32Typ   = reflect.TypeOf(int32(0))
+	int64Typ   = reflect.TypeOf(int64(0))
+	float64Typ = reflect.TypeOf(float64(0))
+	stringTyp  = reflect.TypeOf("")
+	boolTyp    = reflect.TypeOf(true)
+	timeTyp    = reflect.TypeOf(time.Time{})
+)
+
 func (n *NullableSQLField[SQLType]) ValueToForm(value interface{}) interface{} {
 	if value == nil {
 		return nil
 	}
 
-	if v, ok := value.(SQLType); ok {
+	switch v := value.(type) {
+	case SQLType:
 		return v
+	case sql.NullBool:
+		return v.Bool
+	case sql.NullInt16:
+		return v.Int16
+	case sql.NullInt32:
+		return v.Int32
+	case sql.NullInt64:
+		return v.Int64
+	case sql.NullFloat64:
+		return v.Float64
+	case sql.NullString:
+		return v.String
+	case sql.NullTime:
+		return v.Time
 	}
 
-	switch any(*new(SQLType)).(type) {
-	case bool:
-		return value.(sql.NullBool).Bool
-	case byte:
-		return value.(sql.NullByte).Byte
-	case int16:
-		return value.(sql.NullInt16).Int16
-	case int32:
-		return value.(sql.NullInt32).Int32
-	case int64:
-		return value.(sql.NullInt64).Int64
-	case float64:
-		return value.(sql.NullFloat64).Float64
-	case string:
-		return value.(sql.NullString).String
-	case time.Time:
-		return value.(sql.NullTime).Time
-	}
-
-	return nil
+	return n.Widget().ValueToForm(value)
 }
 
 func (n *NullableSQLField[SQLType]) ValueToGo(value interface{}) (interface{}, error) {
@@ -183,37 +189,25 @@ func (n *NullableSQLField[SQLType]) ValueToGo(value interface{}) (interface{}, e
 		return nil, errs.ErrInvalidType
 	}
 
-	switch any(*new(SQLType)).(type) {
-	case bool:
-		return sql.NullBool{}, nil
-	case byte:
-		return sql.NullByte{}, nil
-	case int16:
+	switch reflect.TypeOf(new(SQLType)).Elem() {
+	case int16Typ:
 		return sql.NullInt16{}, nil
-	case int32:
+	case int32Typ:
 		return sql.NullInt32{}, nil
-	case int64:
+	case int64Typ:
 		return sql.NullInt64{}, nil
-	case float64:
+	case float64Typ:
 		return sql.NullFloat64{}, nil
-	case string:
+	case stringTyp:
 		return sql.NullString{}, nil
-	case time.Time:
+	case boolTyp:
+		return sql.NullBool{}, nil
+	case timeTyp:
 		return sql.NullTime{}, nil
 	}
 
 	return nil, errs.ErrInvalidType
 }
-
-var (
-	int16Typ   = reflect.TypeOf(int16(0))
-	int32Typ   = reflect.TypeOf(int32(0))
-	int64Typ   = reflect.TypeOf(int64(0))
-	float64Typ = reflect.TypeOf(float64(0))
-	stringTyp  = reflect.TypeOf("")
-	boolTyp    = reflect.TypeOf(true)
-	timeTyp    = reflect.TypeOf(time.Time{})
-)
 
 func (n *NullableSQLField[SQLType]) Widget() widgets.Widget {
 	if n.FormWidget != nil {
