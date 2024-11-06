@@ -10,17 +10,16 @@ import (
 )
 {{ $obj := . }}
 
-func init() { {{ range $struct := $obj.Structs }}
-    contenttypes.Register(&contenttypes.ContentTypeDefinition{
-        ContentObject: &{{ $struct.Name }}{},
-        GetInstance: func(id any) (interface{}, error) {
-            return Select{{ $struct.Name }}(id.({{ $struct.PrimaryField.GoType }}))
-        },
-        GetInstances: func(limit, offset uint) ([]interface{}, error) {
-            return list{{ $struct.PluralName }}Interface(limit, offset)
-        },
-    }){{ end }}
-}
+{{ range $struct := $obj.Structs }}
+var _ = contenttypes.Register(&contenttypes.ContentTypeDefinition{
+    ContentObject: &{{ $struct.Name }}{},
+    GetInstance: func(id any) (interface{}, error) {
+        return select{{ $struct.Name }}Interface(id)
+    },
+    GetInstances: func(limit, offset uint) ([]interface{}, error) {
+        return list{{ $struct.PluralName }}Interface(limit, offset)
+    },
+}){{ end }}
 
 {{ range $struct := $obj.Structs }}
 func Admin{{ $struct.Name }}ModelOptions() admin.ModelOptions {

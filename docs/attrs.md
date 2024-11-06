@@ -52,6 +52,12 @@ sql:
         # optional, default is "<package>_definitions.go"
         out: "mydefinitions.go" 
 
+        # optional, default is false, generates extra functions to easily set up the admin panel for the included models
+        generate_admin_setup: true
+
+        # optional, default is false, generates extra methods to adhere to models.Saver, models.Updater, models.Deleter and models.Reloader interfaces
+        generate_models_methods: true
+
         # optional, see https://docs.sqlc.dev/en/stable/reference/config.html
         initialisms: ["id", "api", "url"] 
 

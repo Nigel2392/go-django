@@ -2,10 +2,12 @@ package fields
 
 import (
 	"bytes"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"io"
 	"net/mail"
+	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -104,6 +106,105 @@ func DecimalField(opts ...func(Field)) Field {
 		)
 	}
 	return f
+}
+
+type NullableSQLField[T any] struct {
+	*BaseField
+}
+
+func SQLNullField[T any](opts ...func(Field)) *NullableSQLField[T] {
+	return &NullableSQLField[T]{
+		BaseField: NewField(opts...),
+	}
+}
+
+func (n *NullableSQLField[T]) ValueToForm(value interface{}) interface{} {
+	if value == nil {
+		return nil
+	}
+
+	switch v := value.(type) {
+	case T:
+		return v
+	case *T:
+		if v == nil {
+			return nil
+		}
+		return *v
+	case sql.Null[T]:
+		if v.Valid {
+			return v.V
+		}
+		return nil
+	}
+
+	return n.BaseField.ValueToForm(value)
+}
+
+func (n *NullableSQLField[T]) ValueToGo(value interface{}) (interface{}, error) {
+	if value == nil {
+		return sql.Null[T]{Valid: false}, nil
+	}
+
+	switch v := value.(type) {
+	case T:
+		return sql.Null[T]{Valid: true, V: v}, nil
+	case *T:
+		if v == nil {
+			return sql.Null[T]{Valid: false}, nil
+		}
+		return sql.Null[T]{Valid: true, V: *v}, nil
+	case sql.Null[T]:
+		return v, nil
+	case string:
+		var val, err = n.BaseField.ValueToGo(value)
+		if err != nil {
+			return nil, err
+		}
+		return n.ValueToGo(val)
+	}
+
+	return nil, errs.ErrInvalidType
+}
+
+func (n *NullableSQLField[T]) Widget() widgets.Widget {
+	if n.FormWidget != nil {
+		return n.FormWidget
+	}
+	switch any(*new(T)).(type) {
+	case int:
+		return widgets.NewNumberInput[int](nil)
+	case int8:
+		return widgets.NewNumberInput[int8](nil)
+	case int16:
+		return widgets.NewNumberInput[int16](nil)
+	case int32:
+		return widgets.NewNumberInput[int32](nil)
+	case int64:
+		return widgets.NewNumberInput[int64](nil)
+	case uint:
+		return widgets.NewNumberInput[uint](nil)
+	case uint8:
+		return widgets.NewNumberInput[uint8](nil)
+	case uint16:
+		return widgets.NewNumberInput[uint16](nil)
+	case uint32:
+		return widgets.NewNumberInput[uint32](nil)
+	case uint64:
+		return widgets.NewNumberInput[uint64](nil)
+	case float32:
+		return widgets.NewNumberInput[float32](nil)
+	case float64:
+		return widgets.NewNumberInput[float64](nil)
+	case string:
+		return widgets.NewTextInput(nil)
+	case bool:
+		return widgets.NewBooleanInput(nil)
+	case time.Time:
+		return widgets.NewDateInput(nil, widgets.DateWidgetTypeDateTime)
+	default:
+		return widgets.NewTextInput(nil)
+	}
 }
 
 type Encoder interface {

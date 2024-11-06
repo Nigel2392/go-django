@@ -50,8 +50,8 @@ func (o *{{ $struct.Name }}) FieldDefs() attrs.Definitions {
             Null: {{ $field.Null }},
             Blank: {{ $field.Blank }},
             ReadOnly: {{ $field.ReadOnly }},{{ if $field.RelatedObjectName }}
-            RelatedObject: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ end }}
-            Label: "{{ label $field.Name }}",
+            RelatedObject: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ end }}{{ if not $field.RelatedObjectName }}
+            Label: "{{ label $field.Name }}",{{ end }}
             Primary: {{ $field.Primary }},{{ if $field.Choices }}
             FormWidget: func(attrs.FieldConfig) widgets.Widget {
                 return {{$field.Choices}}Widget

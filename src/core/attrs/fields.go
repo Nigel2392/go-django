@@ -1,6 +1,8 @@
 package attrs
 
 import (
+	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"net/mail"
@@ -8,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
@@ -90,6 +93,12 @@ func (f *FieldDef) Label() string {
 	}
 	if labeler, ok := f.field_v.Interface().(Labeler); ok {
 		return labeler.Label()
+	}
+	if f.Rel() != nil {
+		var cTypeDef = contenttypes.DefinitionForObject(f.Rel())
+		if cTypeDef != nil {
+			return cTypeDef.Label()
+		}
 	}
 	return trans.T(capCaser.String(f.field_t.Name))
 }
@@ -212,7 +221,16 @@ func (f *FieldDef) FormField() fields.Field {
 
 	var opts = make([]func(fields.Field), 0)
 
-	opts = append(opts, fields.Label(f.Label))
+	if f.Rel() != nil {
+		var cTypeDef = contenttypes.DefinitionForObject(f.Rel())
+		if cTypeDef != nil {
+			opts = append(opts, fields.Label(
+				cTypeDef.Label(),
+			))
+		}
+	} else {
+		opts = append(opts, fields.Label(f.Label))
+	}
 	opts = append(opts, fields.HelpText(f.HelpText))
 
 	if f.attrDef.ReadOnly {
@@ -250,6 +268,22 @@ func (f *FieldDef) FormField() fields.Field {
 		formField = fields.JSONField[map[string]interface{}](opts...)
 	case mail.Address:
 		formField = fields.EmailField(opts...)
+	case sql.NullBool:
+		formField = fields.SQLNullField[bool](opts...)
+	case sql.NullByte:
+		formField = fields.SQLNullField[byte](opts...)
+	case sql.NullInt16:
+		formField = fields.SQLNullField[int16](opts...)
+	case sql.NullInt32:
+		formField = fields.SQLNullField[int32](opts...)
+	case sql.NullInt64:
+		formField = fields.SQLNullField[int64](opts...)
+	case sql.NullString:
+		formField = fields.SQLNullField[string](opts...)
+	case sql.NullFloat64:
+		formField = fields.SQLNullField[float64](opts...)
+	case sql.NullTime:
+		formField = fields.SQLNullField[time.Time](opts...)
 	}
 
 	if formField != nil {
@@ -374,10 +408,10 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 			var r_v_ptr, ok = RConvert(&r_v, method.Type.In(1))
 			if !ok {
 				return assert.Fail(
-					fmt.Sprintf("field %q (%q) is not convertible to %q",
-						f.field_t.Name,
+					fmt.Sprintf("value of type %q is not convertible to %q for field %q",
 						r_v.Type(),
 						method.Type.In(1),
+						f.field_t.Name,
 					),
 				)
 			}
@@ -403,21 +437,63 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	// Convert to field type if possible
 	r_v_ptr, ok := RConvert(&r_v, f.field_t.Type)
 	if !ok {
-
 		scanner, ok := f.field_v.Interface().(Scanner)
 		if ok {
 			return scanner.ScanAttribute(r_v_ptr.Interface())
 		}
 
+		var (
+			sqlScanner sql.Scanner
+			sqlValuer  driver.Valuer
+			okScn      bool
+			okVal      bool
+		)
+
+		// Try converting the string to a number if necessary
+		if r_v.Kind() == reflect.String {
+			switch f.field_t.Type.Kind() {
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+				reflect.Float32, reflect.Float64:
+				var v = r_v.String()
+				if v == "" {
+					goto fail
+				}
+
+				var n = reflect.New(f.field_t.Type)
+				// Scan the value into the field
+				if _, err := fmt.Sscan(v, n.Interface()); err != nil {
+					goto fail
+				}
+
+				// Set the field value
+				n = n.Elem()
+				*r_v_ptr = n
+				goto success
+			}
+		}
+
+		sqlScanner, okScn = f.field_v.Interface().(sql.Scanner)
+		sqlValuer, okVal = v.(driver.Valuer)
+		if okScn && okVal {
+			var val, err = sqlValuer.Value()
+			if err != nil {
+				return err
+			}
+			return sqlScanner.Scan(val)
+		}
+
+	fail:
 		return assert.Fail(
-			fmt.Sprintf("field %q (%q) is not convertible to %q",
-				f.field_t.Name,
+			fmt.Sprintf("value of type %q is not convertible to %q for field %q",
 				r_v.Type(),
 				f.field_t.Type,
+				f.field_t.Name,
 			),
 		)
 	}
 
+success:
 	if r_v_ptr.IsZero() && !f.AllowBlank() {
 		switch reflect.Indirect(*r_v_ptr).Kind() {
 		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
