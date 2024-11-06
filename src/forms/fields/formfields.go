@@ -108,70 +108,109 @@ func DecimalField(opts ...func(Field)) Field {
 	return f
 }
 
-type NullableSQLField[T any] struct {
+type NullableSQLField[SQLType any] struct {
 	*BaseField
 }
 
-func SQLNullField[T any](opts ...func(Field)) *NullableSQLField[T] {
-	return &NullableSQLField[T]{
+func SQLNullField[SQLType any](opts ...func(Field)) *NullableSQLField[SQLType] {
+	return &NullableSQLField[SQLType]{
 		BaseField: NewField(opts...),
 	}
 }
 
-func (n *NullableSQLField[T]) ValueToForm(value interface{}) interface{} {
+func (n *NullableSQLField[SQLType]) ValueToForm(value interface{}) interface{} {
 	if value == nil {
 		return nil
 	}
 
-	switch v := value.(type) {
-	case T:
+	if v, ok := value.(SQLType); ok {
 		return v
-	case *T:
-		if v == nil {
-			return nil
-		}
-		return *v
-	case sql.Null[T]:
-		if v.Valid {
-			return v.V
-		}
-		return nil
 	}
 
-	return n.BaseField.ValueToForm(value)
+	switch any(*new(SQLType)).(type) {
+	case bool:
+		return value.(sql.NullBool).Bool
+	case byte:
+		return value.(sql.NullByte).Byte
+	case int16:
+		return value.(sql.NullInt16).Int16
+	case int32:
+		return value.(sql.NullInt32).Int32
+	case int64:
+		return value.(sql.NullInt64).Int64
+	case float64:
+		return value.(sql.NullFloat64).Float64
+	case string:
+		return value.(sql.NullString).String
+	case time.Time:
+		return value.(sql.NullTime).Time
+	}
+
+	return nil
 }
 
-func (n *NullableSQLField[T]) ValueToGo(value interface{}) (interface{}, error) {
-	if value == nil {
-		return sql.Null[T]{Valid: false}, nil
-	}
-
-	switch v := value.(type) {
-	case T:
-		return sql.Null[T]{Valid: true, V: v}, nil
-	case *T:
-		if v == nil {
-			return sql.Null[T]{Valid: false}, nil
+func (n *NullableSQLField[SQLType]) ValueToGo(value interface{}) (interface{}, error) {
+	switch value.(type) {
+	case SQLType:
+		switch any(*new(SQLType)).(type) {
+		case sql.NullBool:
+			return sql.NullBool{Valid: true, Bool: value.(bool)}, nil
+		case sql.NullByte:
+			return sql.NullByte{Valid: true, Byte: value.(byte)}, nil
+		case sql.NullInt16:
+			return sql.NullInt16{Valid: true, Int16: value.(int16)}, nil
+		case sql.NullInt32:
+			return sql.NullInt32{Valid: true, Int32: value.(int32)}, nil
+		case sql.NullInt64:
+			return sql.NullInt64{Valid: true, Int64: value.(int64)}, nil
+		case sql.NullFloat64:
+			return sql.NullFloat64{Valid: true, Float64: value.(float64)}, nil
+		case sql.NullString:
+			return sql.NullString{Valid: true, String: value.(string)}, nil
+		case sql.NullTime:
+			return sql.NullTime{Valid: true, Time: value.(time.Time)}, nil
 		}
-		return sql.Null[T]{Valid: true, V: *v}, nil
-	case sql.Null[T]:
-		return v, nil
+	case sql.NullBool, sql.NullByte, sql.NullInt16, sql.NullInt32, sql.NullInt64, sql.NullFloat64, sql.NullString, sql.NullTime:
+		return value, nil
 	case string:
-		var val, err = n.BaseField.ValueToGo(value)
+		var val, err = n.Widget().ValueToGo(value)
 		if err != nil {
 			return nil, err
 		}
 		return n.ValueToGo(val)
 	}
 
+	if value != nil {
+		return nil, errs.ErrInvalidType
+	}
+
+	switch any(*new(SQLType)).(type) {
+	case bool:
+		return sql.NullBool{}, nil
+	case byte:
+		return sql.NullByte{}, nil
+	case int16:
+		return sql.NullInt16{}, nil
+	case int32:
+		return sql.NullInt32{}, nil
+	case int64:
+		return sql.NullInt64{}, nil
+	case float64:
+		return sql.NullFloat64{}, nil
+	case string:
+		return sql.NullString{}, nil
+	case time.Time:
+		return sql.NullTime{}, nil
+	}
+
 	return nil, errs.ErrInvalidType
 }
 
-func (n *NullableSQLField[T]) Widget() widgets.Widget {
+func (n *NullableSQLField[SQLType]) Widget() widgets.Widget {
 	if n.FormWidget != nil {
 		return n.FormWidget
 	}
-	switch any(*new(T)).(type) {
+	switch any(*new(SQLType)).(type) {
 	case int:
 		return widgets.NewNumberInput[int](nil)
 	case int8:

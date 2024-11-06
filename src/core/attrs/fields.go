@@ -2,7 +2,6 @@ package attrs
 
 import (
 	"database/sql"
-	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"net/mail"
@@ -269,21 +268,21 @@ func (f *FieldDef) FormField() fields.Field {
 	case mail.Address:
 		formField = fields.EmailField(opts...)
 	case sql.NullBool:
-		formField = fields.SQLNullField[bool](opts...)
+		formField = fields.SQLNullField[bool, sql.NullBool](opts...)
 	case sql.NullByte:
-		formField = fields.SQLNullField[byte](opts...)
+		formField = fields.SQLNullField[byte, sql.NullByte](opts...)
 	case sql.NullInt16:
-		formField = fields.SQLNullField[int16](opts...)
+		formField = fields.SQLNullField[int16, sql.NullInt16](opts...)
 	case sql.NullInt32:
-		formField = fields.SQLNullField[int32](opts...)
+		formField = fields.SQLNullField[int32, sql.NullInt32](opts...)
 	case sql.NullInt64:
-		formField = fields.SQLNullField[int64](opts...)
+		formField = fields.SQLNullField[int64, sql.NullInt64](opts...)
 	case sql.NullString:
-		formField = fields.SQLNullField[string](opts...)
+		formField = fields.SQLNullField[string, sql.NullString](opts...)
 	case sql.NullFloat64:
-		formField = fields.SQLNullField[float64](opts...)
+		formField = fields.SQLNullField[float64, sql.NullFloat64](opts...)
 	case sql.NullTime:
-		formField = fields.SQLNullField[time.Time](opts...)
+		formField = fields.SQLNullField[time.Time, sql.NullTime](opts...)
 	}
 
 	if formField != nil {
@@ -442,13 +441,6 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 			return scanner.ScanAttribute(r_v_ptr.Interface())
 		}
 
-		var (
-			sqlScanner sql.Scanner
-			sqlValuer  driver.Valuer
-			okScn      bool
-			okVal      bool
-		)
-
 		// Try converting the string to a number if necessary
 		if r_v.Kind() == reflect.String {
 			switch f.field_t.Type.Kind() {
@@ -471,16 +463,6 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 				*r_v_ptr = n
 				goto success
 			}
-		}
-
-		sqlScanner, okScn = f.field_v.Interface().(sql.Scanner)
-		sqlValuer, okVal = v.(driver.Valuer)
-		if okScn && okVal {
-			var val, err = sqlValuer.Value()
-			if err != nil {
-				return err
-			}
-			return sqlScanner.Scan(val)
 		}
 
 	fail:
