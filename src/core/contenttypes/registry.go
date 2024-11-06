@@ -272,7 +272,51 @@ func (p *ContentTypeRegistry) Register(definition *ContentTypeDefinition) {
 			p.RegisterAlias(alias, typeName)
 		}
 	}
+}
 
+// EditDefinition edits the definition for the given model.
+//
+// This allows for easily changing certain properties of a content type definition later on.
+func (p *ContentTypeRegistry) EditDefinition(def *ContentTypeDefinition) {
+	var typeName = def.ContentType().TypeName()
+	var oldDef = p.registry[typeName]
+	if oldDef == nil {
+		panic("pages: EditDefinition called for unknown type " + typeName)
+	}
+
+	if def.GetLabel != nil {
+		oldDef.GetLabel = def.GetLabel
+	}
+
+	if def.GetPluralLabel != nil {
+		oldDef.GetPluralLabel = def.GetPluralLabel
+	}
+
+	if def.GetDescription != nil {
+		oldDef.GetDescription = def.GetDescription
+	}
+
+	if def.GetInstanceLabel != nil {
+		oldDef.GetInstanceLabel = def.GetInstanceLabel
+	}
+
+	if def.GetObject != nil {
+		oldDef.GetObject = def.GetObject
+	}
+
+	if def.GetInstance != nil {
+		oldDef.GetInstance = def.GetInstance
+	}
+
+	if def.GetInstances != nil {
+		oldDef.GetInstances = def.GetInstances
+	}
+
+	if def.Aliases != nil {
+		oldDef.Aliases = def.Aliases
+	}
+
+	p.registry[typeName] = oldDef
 }
 
 // ListDefinitions returns a list of all registered models.

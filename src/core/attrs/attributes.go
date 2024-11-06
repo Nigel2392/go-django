@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
 
 func fieldNames(d Definer, exclude []string) []string {
@@ -249,6 +250,13 @@ func toString(v any) string {
 			b[i] = ToString(r.Index(i).Interface())
 		}
 		return strings.Join(b, ", ")
+	case reflect.Struct:
+		var cType = contenttypes.DefinitionForObject(
+			v,
+		)
+		if cType != nil {
+			return cType.InstanceLabel(v)
+		}
 	}
 
 	return fmt.Sprintf("%v", v)
