@@ -29,6 +29,13 @@ func SelectWidget(allowBlank bool, blankLabel string, opts BaseChooserOptions) *
 	}
 }
 
+func (o *Select) ValueToForm(value interface{}) interface{} {
+	if value == nil {
+		return ""
+	}
+	return fmt.Sprintf("%v", value)
+}
+
 func (o *Select) GetContextData(id, name string, value interface{}, widgetAttrs map[string]string) ctx.Context {
 	var base_context = o.BaseWidget.GetContextData(id, name, value, widgetAttrs)
 	var modelInstances, err = o.QuerySet()
