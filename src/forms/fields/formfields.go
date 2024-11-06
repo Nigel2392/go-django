@@ -7,6 +7,7 @@ import (
 	"errors"
 	"io"
 	"net/mail"
+	"reflect"
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -152,23 +153,21 @@ func (n *NullableSQLField[SQLType]) ValueToForm(value interface{}) interface{} {
 func (n *NullableSQLField[SQLType]) ValueToGo(value interface{}) (interface{}, error) {
 	switch value.(type) {
 	case SQLType:
-		switch any(*new(SQLType)).(type) {
-		case sql.NullBool:
-			return sql.NullBool{Valid: true, Bool: value.(bool)}, nil
-		case sql.NullByte:
-			return sql.NullByte{Valid: true, Byte: value.(byte)}, nil
-		case sql.NullInt16:
-			return sql.NullInt16{Valid: true, Int16: value.(int16)}, nil
-		case sql.NullInt32:
-			return sql.NullInt32{Valid: true, Int32: value.(int32)}, nil
-		case sql.NullInt64:
-			return sql.NullInt64{Valid: true, Int64: value.(int64)}, nil
-		case sql.NullFloat64:
-			return sql.NullFloat64{Valid: true, Float64: value.(float64)}, nil
-		case sql.NullString:
-			return sql.NullString{Valid: true, String: value.(string)}, nil
-		case sql.NullTime:
-			return sql.NullTime{Valid: true, Time: value.(time.Time)}, nil
+		switch reflect.TypeOf(new(SQLType)).Elem() {
+		case int16Typ:
+			return sql.NullInt16{Int16: value.(int16), Valid: true}, nil
+		case int32Typ:
+			return sql.NullInt32{Int32: value.(int32), Valid: true}, nil
+		case int64Typ:
+			return sql.NullInt64{Int64: value.(int64), Valid: true}, nil
+		case float64Typ:
+			return sql.NullFloat64{Float64: value.(float64), Valid: true}, nil
+		case stringTyp:
+			return sql.NullString{String: value.(string), Valid: true}, nil
+		case boolTyp:
+			return sql.NullBool{Bool: value.(bool), Valid: true}, nil
+		case timeTyp:
+			return sql.NullTime{Time: value.(time.Time), Valid: true}, nil
 		}
 	case sql.NullBool, sql.NullByte, sql.NullInt16, sql.NullInt32, sql.NullInt64, sql.NullFloat64, sql.NullString, sql.NullTime:
 		return value, nil
@@ -206,40 +205,34 @@ func (n *NullableSQLField[SQLType]) ValueToGo(value interface{}) (interface{}, e
 	return nil, errs.ErrInvalidType
 }
 
+var (
+	int16Typ   = reflect.TypeOf(int16(0))
+	int32Typ   = reflect.TypeOf(int32(0))
+	int64Typ   = reflect.TypeOf(int64(0))
+	float64Typ = reflect.TypeOf(float64(0))
+	stringTyp  = reflect.TypeOf("")
+	boolTyp    = reflect.TypeOf(true)
+	timeTyp    = reflect.TypeOf(time.Time{})
+)
+
 func (n *NullableSQLField[SQLType]) Widget() widgets.Widget {
 	if n.FormWidget != nil {
 		return n.FormWidget
 	}
-	switch any(*new(SQLType)).(type) {
-	case int:
-		return widgets.NewNumberInput[int](nil)
-	case int8:
-		return widgets.NewNumberInput[int8](nil)
-	case int16:
+	switch reflect.TypeOf(new(SQLType)).Elem() {
+	case int16Typ:
 		return widgets.NewNumberInput[int16](nil)
-	case int32:
+	case int32Typ:
 		return widgets.NewNumberInput[int32](nil)
-	case int64:
+	case int64Typ:
 		return widgets.NewNumberInput[int64](nil)
-	case uint:
-		return widgets.NewNumberInput[uint](nil)
-	case uint8:
-		return widgets.NewNumberInput[uint8](nil)
-	case uint16:
-		return widgets.NewNumberInput[uint16](nil)
-	case uint32:
-		return widgets.NewNumberInput[uint32](nil)
-	case uint64:
-		return widgets.NewNumberInput[uint64](nil)
-	case float32:
-		return widgets.NewNumberInput[float32](nil)
-	case float64:
+	case float64Typ:
 		return widgets.NewNumberInput[float64](nil)
-	case string:
+	case stringTyp:
 		return widgets.NewTextInput(nil)
-	case bool:
+	case boolTyp:
 		return widgets.NewBooleanInput(nil)
-	case time.Time:
+	case timeTyp:
 		return widgets.NewDateInput(nil, widgets.DateWidgetTypeDateTime)
 	default:
 		return widgets.NewTextInput(nil)
