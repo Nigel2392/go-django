@@ -268,21 +268,21 @@ func (f *FieldDef) FormField() fields.Field {
 	case mail.Address:
 		formField = fields.EmailField(opts...)
 	case sql.NullBool:
-		formField = fields.SQLNullField[bool, sql.NullBool](opts...)
+		formField = fields.SQLNullField[bool](opts...)
 	case sql.NullByte:
-		formField = fields.SQLNullField[byte, sql.NullByte](opts...)
+		formField = fields.SQLNullField[byte](opts...)
 	case sql.NullInt16:
-		formField = fields.SQLNullField[int16, sql.NullInt16](opts...)
+		formField = fields.SQLNullField[int16](opts...)
 	case sql.NullInt32:
-		formField = fields.SQLNullField[int32, sql.NullInt32](opts...)
+		formField = fields.SQLNullField[int32](opts...)
 	case sql.NullInt64:
-		formField = fields.SQLNullField[int64, sql.NullInt64](opts...)
+		formField = fields.SQLNullField[int64](opts...)
 	case sql.NullString:
-		formField = fields.SQLNullField[string, sql.NullString](opts...)
+		formField = fields.SQLNullField[string](opts...)
 	case sql.NullFloat64:
-		formField = fields.SQLNullField[float64, sql.NullFloat64](opts...)
+		formField = fields.SQLNullField[float64](opts...)
 	case sql.NullTime:
-		formField = fields.SQLNullField[time.Time, sql.NullTime](opts...)
+		formField = fields.SQLNullField[time.Time](opts...)
 	}
 
 	if formField != nil {
