@@ -30,7 +30,7 @@ func init() {
 type ConsoleLogger struct{}
 
 func (l *ConsoleLogger) Log(message string) {
-	stdout.WriteString(message)
+	fmt.Fprintln(stdout, message)
 }
 
 func (l *ConsoleLogger) Logf(format string, args ...interface{}) {

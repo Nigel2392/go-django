@@ -68,6 +68,7 @@ func New(req *plugin.GenerateRequest, opts *CodeGeneratorOptions) (*CodeGenerato
 
 func colIsReadOnly(col *plugin.Column, commentMap map[string]string, readOnlyMap map[string]struct{}) bool {
 	if _, ok := readOnlyMap[col.Name]; ok {
+		logger.Logf("Field %s is read only\n", col.Name)
 		return true
 	}
 
@@ -75,12 +76,13 @@ func colIsReadOnly(col *plugin.Column, commentMap map[string]string, readOnlyMap
 		[]string{"1", "true", "yes", "y", "on"},
 		strings.ToLower(commentMap["readonly"]),
 	) {
+		logger.Logf("Field %s is read only\n", col.Name)
 		return true
 	}
 	return false
 }
 
-var parseCommentsRegex = regexp.MustCompile(`(\w+)\s*:\s*("[^"]*"|'[^']*'|[a-zA-Z0-9_\-\%=\./]+)`)
+var parseCommentsRegex = regexp.MustCompile(`(\w+)\s*:\s*("[^"]*"|'[^']*'|[a-zA-Z0-9_\-\%=\./,]+)`)
 
 func parseComments(comments string) map[string]string {
 	var m = make(map[string]string)
@@ -175,14 +177,26 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 		if tbl.Comment != "" {
 			structCommentMap = parseComments(tbl.Comment)
 		}
-		var readOnly, _ = strconv.Unquote(
+		var readOnly, err = strconv.Unquote(
 			structCommentMap["readonly"],
 		)
+		if err != nil {
+			readOnly = structCommentMap["readonly"]
+		}
 		var readOnlyFields = strings.Split(readOnly, ",")
 		var readOnlyMap = make(map[string]struct{})
 		for _, f := range readOnlyFields {
-			readOnlyMap[strings.TrimSpace(f)] = struct{}{}
+			var f = strings.TrimSpace(f)
+			if f == "" {
+				continue
+			}
+			readOnlyMap[f] = struct{}{}
+			logger.Logf("Field %s %d is read only\n", f, len(f))
 		}
+
+		logger.Logf("Building struct %s\n", s.Name)
+		logger.Logf("Metadata: %+v\n", structCommentMap)
+		logger.Logf("Read only fields: %+v\n", readOnlyFields)
 
 		// Walk through the columns and build the struct fields
 		for i, col := range tbl.Columns {

@@ -46,7 +46,7 @@ func (o *{{ $struct.Name }}) FieldDefs() attrs.Definitions {
             Null: {{ $field.Null }},{{ end }}{{ if $field.Blank }}
             Blank: {{ $field.Blank }},{{ end }}{{ if $field.ReadOnly }}
             ReadOnly: {{ $field.ReadOnly }},{{ end }}{{ if $field.IsRel }}
-            RelatedObject: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ end }}{{ if not $field.IsRel }}
+            RelatedObject: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ end }}{{ if (or (not $field.IsRel) $field.Label) }}
             Label: "{{ $field.GetLabel }}",{{ end }}{{ if $field.GetHelpText }}
             HelpText: "{{ $field.GetHelpText }}",{{ end}}{{ if $field.Primary }}
             Primary: {{ $field.Primary }},{{ end }}{{ if $field.Choices }}
