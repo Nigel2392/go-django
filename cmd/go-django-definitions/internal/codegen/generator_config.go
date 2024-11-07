@@ -19,6 +19,7 @@ type CodeGeneratorOptions struct {
 	PackageName           string                  `json:"package"`
 	InflectionExclusions  []string                `json:"inflection_exclusions"`
 	OutFile               string                  `json:"out"`
+	EmitPointersForNull   bool                    `json:"emit_pointers_for_null"`
 	GenerateAdminSetup    bool                    `json:"generate_admin_setup"`
 	GenerateModelsMethods bool                    `json:"generate_models_methods"`
 	initialisms           map[string]struct{}     `json:"-"`

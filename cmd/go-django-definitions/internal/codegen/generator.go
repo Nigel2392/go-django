@@ -7,11 +7,14 @@ import (
 	"io"
 	"path"
 	"regexp"
+	"slices"
+	"strconv"
 	"strings"
 	"text/template"
 	"unicode"
 
 	"github.com/Nigel2392/go-django/cmd/go-django-definitions/internal/codegen/plugin"
+	"github.com/Nigel2392/go-django/cmd/go-django-definitions/internal/logger"
 )
 
 //go:embed templates/*
@@ -23,6 +26,10 @@ const (
 	GenerateAdminTemplate   = "admin_setup.tmpl"
 )
 
+func makeLabel(s string) string {
+	return labelRegex.ReplaceAllString(s, "${1} ${2}")
+}
+
 var (
 	Prefixes = map[string]string{
 		GenerateDefinerTemplate: "godjango_definer",
@@ -32,7 +39,7 @@ var (
 	labelRegex = regexp.MustCompile(`([a-z])([A-Z])`)
 	funcMap    = template.FuncMap{
 		"label": func(s string) string {
-			return labelRegex.ReplaceAllString(s, "${1} ${2}")
+			return makeLabel(s)
 		},
 	}
 )
@@ -59,17 +66,21 @@ func New(req *plugin.GenerateRequest, opts *CodeGeneratorOptions) (*CodeGenerato
 	}, nil
 }
 
-func colIsReadOnly(i int, col *plugin.Column) bool {
-	if i == 0 {
+func colIsReadOnly(col *plugin.Column, commentMap map[string]string, readOnlyMap map[string]struct{}) bool {
+	if _, ok := readOnlyMap[col.Name]; ok {
 		return true
 	}
-	if col.Name == "created_at" || col.Name == "updated_at" {
+
+	if commentMap != nil && slices.Contains(
+		[]string{"1", "true", "yes", "y", "on"},
+		strings.ToLower(commentMap["readonly"]),
+	) {
 		return true
 	}
 	return false
 }
 
-var parseCommentsRegex = regexp.MustCompile(`(\w+)\s*:\s*([^;\n]+)`)
+var parseCommentsRegex = regexp.MustCompile(`(\w+)\s*:\s*("[^"]*"|'[^']*'|[a-zA-Z0-9_\-\%=\./]+)`)
 
 func parseComments(comments string) map[string]string {
 	var m = make(map[string]string)
@@ -124,6 +135,13 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 		imports:     make(map[string]struct{}),
 	}
 
+	logger.Logf("Building template object for schema %s\n", schema.Name)
+	logger.Logf("Package name: %s\n", c.opts.PackageName)
+	logger.Logf("SQLC Version: %s\n", c.opts.req.SqlcVersion)
+	logger.Logf("Structs: %d\n", len(schema.Tables))
+	logger.Logf("Enums: %d\n", len(schema.Enums))
+
+	// Parse the schema enums and build the choices
 	var choices = make(map[string]string)
 	for _, enum := range schema.Enums {
 		var chs = &Choices{
@@ -140,6 +158,7 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 		choices[enum.Name] = chs.Name
 	}
 
+	// Parse the schema tables and build the struct fields
 	for _, tbl := range schema.Tables {
 		var s = &Struct{
 			Name: c.opts.GoName(
@@ -151,24 +170,51 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 			InsertableFields: make([]Field, 0, len(tbl.Columns)),
 		}
 
+		// Parse table comments for struct level directives
+		var structCommentMap map[string]string
+		if tbl.Comment != "" {
+			structCommentMap = parseComments(tbl.Comment)
+		}
+		var readOnly, _ = strconv.Unquote(
+			structCommentMap["readonly"],
+		)
+		var readOnlyFields = strings.Split(readOnly, ",")
+		var readOnlyMap = make(map[string]struct{})
+		for _, f := range readOnlyFields {
+			readOnlyMap[strings.TrimSpace(f)] = struct{}{}
+		}
+
+		// Walk through the columns and build the struct fields
 		for i, col := range tbl.Columns {
+			var commentMap map[string]string
+			if col.Comment != "" {
+				commentMap = parseComments(col.Comment)
+			}
+
 			var f = Field{
 				Name:       c.opts.GoName(col.Name),
 				ColumnName: col.Name,
 				Choices:    choices[col.Type.Name],
 				Null:       col.NotNull,
 				Blank:      col.NotNull,
-				ReadOnly:   colIsReadOnly(i, col),
-				Primary:    i == 0,
-				GoType:     dbType(c, col),
-			}
-			var commentMap map[string]string
-			if col.Comment != "" {
-				commentMap = parseComments(col.Comment)
+				ReadOnly: colIsReadOnly(
+					col, commentMap, readOnlyMap,
+				),
+				Primary: i == 0,
+				GoType: goInnerType(
+					c, col,
+				),
 			}
 
+			logger.Logf("Building field %s.%s\n", s.Name, col.Name)
+			logger.Logf("Metadata: %+v\n", commentMap)
+
 			if fk, ok := commentMap["fk"]; ok {
-				var values = strings.SplitN(fk, "=", 2)
+				var unquoted, err = strconv.Unquote(fk)
+				if err != nil {
+					unquoted = fk
+				}
+				var values = strings.SplitN(unquoted, "=", 2)
 				if len(values) == 2 {
 					var pkgPath, pkgAdressor, dotObject = packageInfo(
 						values[1],
@@ -179,9 +225,25 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 
 				} else {
 					f.RelatedObjectName = c.opts.GoName(
-						c.opts.InflectSingular(fk),
+						c.opts.InflectSingular(unquoted),
 					)
 				}
+			}
+
+			if label, ok := commentMap["label"]; ok {
+				var unquoted, err = strconv.Unquote(label)
+				if err != nil {
+					unquoted = label
+				}
+				f.Label = unquoted
+			}
+
+			if helpText, ok := commentMap["helptext"]; ok {
+				var unquoted, err = strconv.Unquote(helpText)
+				if err != nil {
+					unquoted = helpText
+				}
+				f.HelpText = unquoted
 			}
 
 			if !f.ReadOnly {
@@ -223,129 +285,4 @@ func (c *CodeGenerator) Render(w io.Writer, name string, obj *TemplateObject) er
 		return err
 	}
 	return tmpl.Execute(w, obj)
-}
-
-func dbType(c *CodeGenerator, col *plugin.Column) string {
-	notNull := col.NotNull || col.IsArray
-	unsigned := col.Unsigned
-	columnType := col.Type.Name
-	switch columnType {
-
-	case "varchar", "text", "char", "tinytext", "mediumtext", "longtext":
-		if notNull {
-			return "string"
-		}
-		return "sql.NullString"
-
-	case "tinyint":
-		if col.Length == 1 {
-			if notNull {
-				return "bool"
-			}
-			return "sql.NullBool"
-		} else {
-			if notNull {
-				if unsigned {
-					return "uint8"
-				}
-				return "int8"
-			}
-			// The database/sql package does not have a sql.NullInt8 type, so we
-			// use the smallest type they have which is NullInt16
-			return "sql.NullInt16"
-		}
-
-	case "year":
-		if notNull {
-			return "int16"
-		}
-		return "sql.NullInt16"
-
-	case "smallint":
-		if notNull {
-			if unsigned {
-				return "uint16"
-			}
-			return "int16"
-		}
-		return "sql.NullInt16"
-
-	case "int", "integer", "mediumint":
-		if notNull {
-			if unsigned {
-				return "uint32"
-			}
-			return "int32"
-		}
-		return "sql.NullInt32"
-
-	case "bigint":
-		if notNull {
-			if unsigned {
-				return "uint64"
-			}
-			return "int64"
-		}
-		return "sql.NullInt64"
-
-	case "blob", "binary", "varbinary", "tinyblob", "mediumblob", "longblob":
-		if notNull {
-			return "[]byte"
-		}
-		return "sql.NullString"
-
-	case "double", "double precision", "real", "float":
-		if notNull {
-			return "float64"
-		}
-		return "sql.NullFloat64"
-
-	case "decimal", "dec", "fixed":
-		if notNull {
-			return "string"
-		}
-		return "sql.NullString"
-
-	case "enum":
-		// TODO: Proper Enum support
-		return "string"
-
-	case "date", "timestamp", "datetime", "time":
-		if notNull {
-			return "time.Time"
-		}
-		return "sql.NullTime"
-
-	case "boolean", "bool":
-		if notNull {
-			return "bool"
-		}
-		return "sql.NullBool"
-
-	case "json":
-		return "json.RawMessage"
-
-	case "any":
-		return "interface{}"
-
-	default:
-		for _, schema := range c.opts.req.Catalog.Schemas {
-			for _, enum := range schema.Enums {
-				if enum.Name == columnType {
-					if notNull {
-						if schema.Name == c.opts.req.Catalog.DefaultSchema {
-							return c.opts.GoName(enum.Name)
-						}
-						return c.opts.GoName(schema.Name + "_" + enum.Name)
-					} else {
-						if schema.Name == c.opts.req.Catalog.DefaultSchema {
-							return "Null" + c.opts.GoName(enum.Name)
-						}
-						return "Null" + c.opts.GoName(schema.Name+"_"+enum.Name)
-					}
-				}
-			}
-		}
-		return "interface{}"
-	}
 }

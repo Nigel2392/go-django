@@ -51,9 +51,28 @@ type Field struct {
 	ReadOnly                     bool
 	Primary                      bool
 	Choices                      string
+	Label                        string
+	HelpText                     string
 	RelatedObjectName            string
 	RelatedObjectPackage         string
 	RelatedObjectPackageAdressor string
 	GoType                       string
-	Widget                       string
+}
+
+func (f *Field) IsRel() bool {
+	return f.RelatedObjectName != ""
+}
+
+func (f *Field) GetLabel() string {
+	if f.Label != "" {
+		return f.Label
+	}
+	return makeLabel(f.Name)
+}
+
+func (f *Field) GetHelpText() string {
+	if f.HelpText != "" {
+		return f.HelpText
+	}
+	return ""
 }

@@ -34,7 +34,7 @@ This will provide some useful utilities to help you get started, like creating a
 go install github.com/Nigel2392/go-django/cmd/go-django@v1.6.7
 ```
 
-Or to install the SQLC plugin to auto- generate SQL queries and [go-django definitions](./docs/attrs.md) from your SQL database.
+Or to install the SQLC plugin to auto- generate SQL queries and [go-django definitions](./docs/sqlc.md) from your SQL database.
 
 ```bash
 go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.6.7
