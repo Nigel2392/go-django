@@ -79,6 +79,8 @@ The plugin also supports directives; these can be set on a table, or columns of 
 
 These directives can allow for extra functionality, such as declaring relations, labels and more.
 
+Multiple directives can be set on a single column or table, and are separated by a semicolon.
+
 For example, to specify a foreign key relation, you can use the `fk` directive.
 
 ### Column Directives
@@ -90,13 +92,13 @@ This will then internally link the two tables, and generate the necessary config
 If the relation target is in another go package, you can specify the package name as well.
 
 ```sql
-- `fk:&lt;table&gt;
+- `fk:<table>;
 ```
 
 Or to specify that the relation is in another package:
 
 ```sql
-- `fk:&lt;table&gt=github.com/myUser/myPackage.myType`;
+- `fk:<table>=github.com/myUser/myPackage.myType`;
 ```
 
 Pointers in this case are not supported.
@@ -106,7 +108,7 @@ Pointers in this case are not supported.
 This directive allows you to specify a label for the field in the generated struct.
 
 ```sql
-- `label:&lt;my-label&gt;`
+- `label:<my-label>;`
 ```
 
 #### `readonly`
