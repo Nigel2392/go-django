@@ -1,27 +1,36 @@
 package attrs_test
 
 import (
+	"database/sql"
 	"testing"
+	"time"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
 type ModelTest struct {
-	S   string
-	I8  int8
-	I16 int16
-	I32 int32
-	I64 int64
-	U8  uint8
-	U16 uint16
-	U32 uint32
-	U64 uint64
-	F32 float32
-	F64 float64
-	B   bool
-	M   map[string]interface{}
-	A   []interface{}
-	BT  []byte
+	S           string
+	I8          int8
+	I16         int16
+	I32         int32
+	I64         int64
+	U8          uint8
+	U16         uint16
+	U32         uint32
+	U64         uint64
+	F32         float32
+	F64         float64
+	NullBool    sql.NullBool
+	NullInt64   sql.NullInt64
+	NullInt32   sql.NullInt32
+	NullInt16   sql.NullInt16
+	NullFloat64 sql.NullFloat64
+	NullString  sql.NullString
+	NullTime    sql.NullTime
+	B           bool
+	M           map[string]interface{}
+	A           []interface{}
+	BT          []byte
 }
 
 func (f *ModelTest) Identifier() string {
@@ -45,57 +54,90 @@ func (f *ModelTest) FieldDefs() attrs.Definitions {
 		attrs.NewField(f, "M", nil),
 		attrs.NewField(f, "A", nil),
 		attrs.NewField(f, "BT", nil),
+		attrs.NewField(f, "NullBool", nil),
+		attrs.NewField(f, "NullInt64", nil),
+		attrs.NewField(f, "NullInt32", nil),
+		attrs.NewField(f, "NullInt16", nil),
+		attrs.NewField(f, "NullFloat64", nil),
+		attrs.NewField(f, "NullString", nil),
+		attrs.NewField(f, "NullTime", nil),
 	)
+}
+
+func now() time.Time {
+	var t, _ = time.Parse(time.RFC3339, "2020-01-01T00:00:00Z")
+	return t
 }
 
 func TestModelGet(t *testing.T) {
 	var m = &ModelTest{
-		S:   "string",
-		I8:  8,
-		I16: 16,
-		I32: 32,
-		I64: 64,
-		U8:  8,
-		U16: 16,
-		U32: 32,
-		U64: 64,
-		F32: 32.32,
-		F64: 64.64,
-		B:   true,
-		M:   map[string]interface{}{"key": "value"},
-		A:   []interface{}{"a", "b", "c"},
-		BT:  []byte("byte"),
+		S:           "string",
+		I8:          8,
+		I16:         16,
+		I32:         32,
+		I64:         64,
+		U8:          8,
+		U16:         16,
+		U32:         32,
+		U64:         64,
+		F32:         32.32,
+		F64:         64.64,
+		NullBool:    sql.NullBool{Bool: true, Valid: true},
+		NullInt64:   sql.NullInt64{Int64: 64, Valid: true},
+		NullInt32:   sql.NullInt32{Int32: 32, Valid: true},
+		NullInt16:   sql.NullInt16{Int16: 16, Valid: true},
+		NullFloat64: sql.NullFloat64{Float64: 64.64, Valid: true},
+		NullString:  sql.NullString{String: "string", Valid: true},
+		NullTime:    sql.NullTime{Time: now(), Valid: true},
+		B:           true,
+		M:           map[string]interface{}{"key": "value"},
+		A:           []interface{}{"a", "b", "c"},
+		BT:          []byte("byte"),
 	}
 
 	var (
-		S   = attrs.Get[string](m, "S")
-		I8  = attrs.Get[int8](m, "I8")
-		I16 = attrs.Get[int16](m, "I16")
-		I32 = attrs.Get[int32](m, "I32")
-		I64 = attrs.Get[int64](m, "I64")
-		U8  = attrs.Get[uint8](m, "U8")
-		U16 = attrs.Get[uint16](m, "U16")
-		U32 = attrs.Get[uint32](m, "U32")
-		U64 = attrs.Get[uint64](m, "U64")
-		F32 = attrs.Get[float32](m, "F32")
-		F64 = attrs.Get[float64](m, "F64")
-		B   = attrs.Get[bool](m, "B")
-		M   = attrs.Get[map[string]interface{}](m, "M")
-		A   = attrs.Get[[]interface{}](m, "A")
-		BT  = attrs.Get[[]byte](m, "BT")
+		S           = attrs.Get[string](m, "S")
+		I8          = attrs.Get[int8](m, "I8")
+		I16         = attrs.Get[int16](m, "I16")
+		I32         = attrs.Get[int32](m, "I32")
+		I64         = attrs.Get[int64](m, "I64")
+		U8          = attrs.Get[uint8](m, "U8")
+		U16         = attrs.Get[uint16](m, "U16")
+		U32         = attrs.Get[uint32](m, "U32")
+		U64         = attrs.Get[uint64](m, "U64")
+		F32         = attrs.Get[float32](m, "F32")
+		F64         = attrs.Get[float64](m, "F64")
+		NullBool    = attrs.Get[sql.NullBool](m, "NullBool")
+		NullInt64   = attrs.Get[sql.NullInt64](m, "NullInt64")
+		NullInt32   = attrs.Get[sql.NullInt32](m, "NullInt32")
+		NullInt16   = attrs.Get[sql.NullInt16](m, "NullInt16")
+		NullFloat64 = attrs.Get[sql.NullFloat64](m, "NullFloat64")
+		NullString  = attrs.Get[sql.NullString](m, "NullString")
+		NullTime    = attrs.Get[sql.NullTime](m, "NullTime")
+		B           = attrs.Get[bool](m, "B")
+		M           = attrs.Get[map[string]interface{}](m, "M")
+		A           = attrs.Get[[]interface{}](m, "A")
+		BT          = attrs.Get[[]byte](m, "BT")
 
-		S_INTERFACE   = attrs.Get[any](m, "S")
-		I8_INTERFACE  = attrs.Get[any](m, "I8")
-		I16_INTERFACE = attrs.Get[any](m, "I16")
-		I32_INTERFACE = attrs.Get[any](m, "I32")
-		I64_INTERFACE = attrs.Get[any](m, "I64")
-		U8_INTERFACE  = attrs.Get[any](m, "U8")
-		U16_INTERFACE = attrs.Get[any](m, "U16")
-		U32_INTERFACE = attrs.Get[any](m, "U32")
-		U64_INTERFACE = attrs.Get[any](m, "U64")
-		F32_INTERFACE = attrs.Get[any](m, "F32")
-		F64_INTERFACE = attrs.Get[any](m, "F64")
-		B_INTERFACE   = attrs.Get[any](m, "B")
+		S_INTERFACE           = attrs.Get[any](m, "S")
+		I8_INTERFACE          = attrs.Get[any](m, "I8")
+		I16_INTERFACE         = attrs.Get[any](m, "I16")
+		I32_INTERFACE         = attrs.Get[any](m, "I32")
+		I64_INTERFACE         = attrs.Get[any](m, "I64")
+		U8_INTERFACE          = attrs.Get[any](m, "U8")
+		U16_INTERFACE         = attrs.Get[any](m, "U16")
+		U32_INTERFACE         = attrs.Get[any](m, "U32")
+		U64_INTERFACE         = attrs.Get[any](m, "U64")
+		F32_INTERFACE         = attrs.Get[any](m, "F32")
+		F64_INTERFACE         = attrs.Get[any](m, "F64")
+		B_INTERFACE           = attrs.Get[any](m, "B")
+		NullBool_INTERFACE    = attrs.Get[any](m, "NullBool")
+		NullInt64_INTERFACE   = attrs.Get[any](m, "NullInt64")
+		NullInt32_INTERFACE   = attrs.Get[any](m, "NullInt32")
+		NullInt16_INTERFACE   = attrs.Get[any](m, "NullInt16")
+		NullFloat64_INTERFACE = attrs.Get[any](m, "NullFloat64")
+		NullString_INTERFACE  = attrs.Get[any](m, "NullString")
+		NullTime_INTERFACE    = attrs.Get[any](m, "NullTime")
 	)
 
 	if S != S_INTERFACE {
@@ -133,6 +175,27 @@ func TestModelGet(t *testing.T) {
 	}
 	if B != B_INTERFACE {
 		t.Errorf("Interface %v does not equal regular value %v", B_INTERFACE, B)
+	}
+	if NullBool != NullBool_INTERFACE {
+		t.Errorf("Interface %v does not equal regular value %v", NullBool_INTERFACE, NullBool)
+	}
+	if NullInt64 != NullInt64_INTERFACE {
+		t.Errorf("Interface %v does not equal regular value %v", NullInt64_INTERFACE, NullInt64)
+	}
+	if NullInt32 != NullInt32_INTERFACE {
+		t.Errorf("Interface %v does not equal regular value %v", NullInt32_INTERFACE, NullInt32)
+	}
+	if NullInt16 != NullInt16_INTERFACE {
+		t.Errorf("Interface %v does not equal regular value %v", NullInt16_INTERFACE, NullInt16)
+	}
+	if NullFloat64 != NullFloat64_INTERFACE {
+		t.Errorf("Interface %v does not equal regular value %v", NullFloat64_INTERFACE, NullFloat64)
+	}
+	if NullString != NullString_INTERFACE {
+		t.Errorf("Interface %v does not equal regular value %v", NullString_INTERFACE, NullString)
+	}
+	if NullTime != NullTime_INTERFACE {
+		t.Errorf("Interface %v does not equal regular value %v", NullTime_INTERFACE, NullTime)
 	}
 
 	if S != "string" {
@@ -194,25 +257,56 @@ func TestModelGet(t *testing.T) {
 	if string(BT) != "byte" {
 		t.Errorf("expected %q, got %q", "byte", string(BT))
 	}
+
+	if NullBool.Bool != true {
+		t.Errorf("expected %t, got %t", true, NullBool.Bool)
+	}
+
+	if NullInt64.Int64 != 64 {
+		t.Errorf("expected %d, got %d", 64, NullInt64.Int64)
+	}
+
+	if NullInt32.Int32 != 32 {
+		t.Errorf("expected %d, got %d", 32, NullInt32.Int32)
+	}
+
+	if NullInt16.Int16 != 16 {
+		t.Errorf("expected %d, got %d", 16, NullInt16.Int16)
+	}
+
+	if NullFloat64.Float64 != 64.64 {
+		t.Errorf("expected %f, got %f", 64.64, NullFloat64.Float64)
+	}
+
+	if NullString.String != "string" {
+		t.Errorf("expected %q, got %q", "string", NullString.String)
+	}
 }
 
 func TestModelSet(t *testing.T) {
 	var m = &ModelTest{
-		S:   "string",
-		I8:  8,
-		I16: 16,
-		I32: 32,
-		I64: 64,
-		U8:  8,
-		U16: 16,
-		U32: 32,
-		U64: 64,
-		F32: 32.32,
-		F64: 64.64,
-		B:   true,
-		M:   map[string]interface{}{"key": "value"},
-		A:   []interface{}{"a", "b", "c"},
-		BT:  []byte("byte"),
+		S:           "string",
+		I8:          8,
+		I16:         16,
+		I32:         32,
+		I64:         64,
+		U8:          8,
+		U16:         16,
+		U32:         32,
+		U64:         64,
+		F32:         32.32,
+		F64:         64.64,
+		NullBool:    sql.NullBool{Bool: true, Valid: true},
+		NullInt64:   sql.NullInt64{Int64: 64, Valid: true},
+		NullInt32:   sql.NullInt32{Int32: 32, Valid: true},
+		NullInt16:   sql.NullInt16{Int16: 16, Valid: true},
+		NullFloat64: sql.NullFloat64{Float64: 64.64, Valid: true},
+		NullString:  sql.NullString{String: "string", Valid: true},
+		NullTime:    sql.NullTime{Time: now(), Valid: true},
+		B:           true,
+		M:           map[string]interface{}{"key": "value"},
+		A:           []interface{}{"a", "b", "c"},
+		BT:          []byte("byte"),
 	}
 
 	attrs.Set(m, "S", "new string")
@@ -226,6 +320,13 @@ func TestModelSet(t *testing.T) {
 	attrs.Set(m, "U64", 6464)
 	attrs.Set(m, "F32", 32.3232)
 	attrs.Set(m, "F64", 64.6464)
+	attrs.Set(m, "NullBool", sql.NullBool{Bool: false, Valid: false})
+	attrs.Set(m, "NullInt64", sql.NullInt64{Int64: 6464, Valid: true})
+	attrs.Set(m, "NullInt32", sql.NullInt32{Int32: 3232, Valid: true})
+	attrs.Set(m, "NullInt16", sql.NullInt16{Int16: 1616, Valid: true})
+	attrs.Set(m, "NullFloat64", sql.NullFloat64{Float64: 64.6464, Valid: true})
+	attrs.Set(m, "NullString", sql.NullString{String: "new string", Valid: true})
+	attrs.Set(m, "NullTime", sql.NullTime{Time: now(), Valid: true})
 	attrs.Set(m, "B", false)
 	attrs.Set(m, "M", map[string]interface{}{"new key": "new value"})
 	attrs.Set(m, "A", []interface{}{"x", "y", "z"})
@@ -248,6 +349,13 @@ func TestModelSet(t *testing.T) {
 	assertEqual(t, m.U64, uint64(6464))
 	assertEqual(t, m.F32, float32(32.3232))
 	assertEqual(t, m.F64, float64(64.6464))
+	assertEqual(t, m.NullBool.Bool, false)
+	assertEqual(t, m.NullInt64.Int64, int64(6464))
+	assertEqual(t, m.NullInt32.Int32, int32(3232))
+	assertEqual(t, m.NullInt16.Int16, int16(1616))
+	assertEqual(t, m.NullFloat64.Float64, float64(64.6464))
+	assertEqual(t, m.NullString.String, "new string")
+	assertEqual(t, m.NullTime.Time, now())
 	assertEqual(t, m.B, false)
 	assertEqual(t, m.M["new key"], "new value")
 	assertEqual(t, len(m.A), 3)

@@ -109,16 +109,6 @@ func DecimalField(opts ...func(Field)) Field {
 	return f
 }
 
-type NullableSQLField[SQLType any] struct {
-	*BaseField
-}
-
-func SQLNullField[SQLType any](opts ...func(Field)) *NullableSQLField[SQLType] {
-	return &NullableSQLField[SQLType]{
-		BaseField: NewField(opts...),
-	}
-}
-
 var (
 	int16Typ   = reflect.TypeOf(int16(0))
 	int32Typ   = reflect.TypeOf(int32(0))
@@ -128,6 +118,16 @@ var (
 	boolTyp    = reflect.TypeOf(true)
 	timeTyp    = reflect.TypeOf(time.Time{})
 )
+
+type NullableSQLField[SQLType any] struct {
+	*BaseField
+}
+
+func SQLNullField[SQLType any](opts ...func(Field)) *NullableSQLField[SQLType] {
+	return &NullableSQLField[SQLType]{
+		BaseField: NewField(opts...),
+	}
+}
 
 func (n *NullableSQLField[SQLType]) ValueToForm(value interface{}) interface{} {
 	if value == nil {
@@ -227,7 +227,9 @@ func (n *NullableSQLField[SQLType]) Widget() widgets.Widget {
 	case boolTyp:
 		return widgets.NewBooleanInput(nil)
 	case timeTyp:
-		return widgets.NewDateInput(nil, widgets.DateWidgetTypeDateTime)
+		return widgets.NewDateInput(
+			nil, widgets.DateWidgetTypeDateTime,
+		)
 	default:
 		return widgets.NewTextInput(nil)
 	}

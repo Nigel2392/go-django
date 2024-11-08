@@ -482,6 +482,15 @@ success:
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
 			reflect.Float32, reflect.Float64,
 			reflect.Complex64, reflect.Complex128:
+		case reflect.Struct:
+			switch reflect.Indirect(*r_v_ptr).Interface().(type) {
+			case time.Time, sql.NullBool, sql.NullByte, sql.NullInt16, sql.NullInt32, sql.NullInt64,
+				sql.NullString, sql.NullFloat64, sql.NullTime:
+			default:
+				return assert.Fail(
+					fmt.Sprintf("field %q must not be blank", f.field_t.Name),
+				)
+			}
 		default:
 			return assert.Fail(
 				fmt.Sprintf("field %q must not be blank", f.field_t.Name),
