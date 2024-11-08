@@ -350,8 +350,8 @@ func (p *ContentTypeRegistry) DefinitionForType(typeName string) *ContentTypeDef
 }
 
 // DefinitionForObject returns the ContentTypeDefinition for the given object.
-func (p *ContentTypeRegistry) DefinitionForObject(page any) *ContentTypeDefinition {
-	var typeName = NewContentType(page).TypeName()
+func (p *ContentTypeRegistry) DefinitionForObject(object any) *ContentTypeDefinition {
+	var typeName = NewContentType(object).TypeName()
 	return p.registry[typeName]
 }
 

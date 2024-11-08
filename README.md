@@ -50,6 +50,7 @@ go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.6.7
   - [Working with Widgets](./docs/forms/widgets.md)
   - [Passing and creating Media](./docs/forms/media.md)
 - [Defining your models](./docs/attrs.md)
+- [Auto-generating GO-django models](./docs/sqlc.md)
 - [Working with permissions](./docs/permissions.md)
 - [Setting up Routing](./docs/routing.md)
 - [Creating Management Commands](./docs/commands.md)
