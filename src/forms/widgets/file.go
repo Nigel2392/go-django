@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"bytes"
 	"io"
 	"net/url"
 
@@ -45,10 +46,15 @@ import (
 
 type FileWidget struct {
 	*BaseWidget
-	Validators []func(filename string, file io.ReadSeeker) error
+	Validators []func(filename string, file io.Reader) error
 }
 
-func NewFileInput(attrs map[string]string, validators ...func(filename string, file io.ReadSeeker) error) Widget {
+type FileObject struct {
+	Name string
+	File *bytes.Buffer
+}
+
+func NewFileInput(attrs map[string]string, validators ...func(filename string, file io.Reader) error) Widget {
 	var base = NewBaseWidget("file", "forms/widgets/file.html", attrs)
 	var widget = &FileWidget{base, validators}
 	return widget
@@ -65,19 +71,28 @@ func (f *FileWidget) ValueFromDataDict(data url.Values, files map[string][]files
 		return nil, nil
 	}
 
-	var file = fileList[0]
-	var fileObj, err = file.Open()
+	var fileHeader = fileList[0]
+	var file, err = fileHeader.Open()
 	if err != nil {
 		return nil, []error{err}
 	}
+	defer file.Close()
 
+	var buf = new(bytes.Buffer)
+	if _, err := io.Copy(buf, file); err != nil {
+		return nil, []error{err}
+	}
+
+	var fileName = fileHeader.Name()
 	for _, validator := range f.Validators {
-		if err := validator(file.Name(), fileObj); err != nil {
+		if err := validator(fileName, buf); err != nil {
 			return nil, []error{err}
 		}
-		if _, err := fileObj.Seek(0, io.SeekStart); err != nil {
-			return nil, []error{err}
-		}
+	}
+
+	var fileObj = &FileObject{
+		Name: fileName,
+		File: buf,
 	}
 
 	return fileObj, nil

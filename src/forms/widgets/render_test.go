@@ -328,7 +328,7 @@ func TestNewFileInput(t *testing.T) {
 	attrs := map[string]string{"class": "file-input"}
 
 	// Validator to simulate file validation
-	mockValidator := func(filename string, file io.ReadSeeker) error {
+	mockValidator := func(filename string, file io.Reader) error {
 		if filename != "testfile.txt" {
 			return errors.New("invalid filename")
 		}
@@ -340,10 +340,8 @@ func TestNewFileInput(t *testing.T) {
 			return errors.New("error reading file")
 		}
 
-		// Reset file pointer after reading
-		_, err = file.Seek(0, io.SeekStart)
-		if err != nil {
-			return errors.New("error seeking file")
+		if string(buf) != "file" {
+			return errors.New("invalid file content")
 		}
 
 		return nil
