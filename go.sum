@@ -6,8 +6,6 @@ github.com/Nigel2392/go-telepath v0.1.2 h1:MZ6KmSed1r4EjwRscsr0992doEolRyO4Wi9WD
 github.com/Nigel2392/go-telepath v0.1.2/go.mod h1:xcZ6HqRQm4TO6HPsixINS60UJ4/FlegeDZTzJ0tolt4=
 github.com/Nigel2392/goldcrest v1.0.4 h1:Xx+QLht6QjJ3Gg9uksgc6Ye1XjbtzQ1208ClZwoVWsg=
 github.com/Nigel2392/goldcrest v1.0.4/go.mod h1:UpnPrYJqZY/b7TkoVKdoNNPKTlQtld+fsrZEA98c1c0=
-github.com/Nigel2392/mux v1.3.7 h1:nzqONzrzLN4h6AjP5VvsaPmZg1Hp4s8BD2GEu4FRbvk=
-github.com/Nigel2392/mux v1.3.7/go.mod h1:a0OZuf+39ENmjSVJICsv2uMocJABSZTemfF5utx4mew=
 github.com/Nigel2392/mux v1.3.8 h1:uebk5Ru3a8Lp4Ch3Mn8+xL+h3uWAUzyE2pAef+V62l4=
 github.com/Nigel2392/mux v1.3.8/go.mod h1:a0OZuf+39ENmjSVJICsv2uMocJABSZTemfF5utx4mew=
 github.com/Nigel2392/tags v1.0.0 h1:KR7VZosoKjksv0uYQDQp03iOo7l04MhCZhCjDeLIChg=
