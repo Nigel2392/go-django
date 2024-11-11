@@ -18,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
@@ -125,13 +126,13 @@ func NewAppConfig() django.AppConfig {
 		Auth.Queries = q
 		Auth.PermQueries = pq
 		Auth.Session = sess
-		Auth.CtxProcessors = []func(tpl.RequestContext){}
+		Auth.CtxProcessors = []func(ctx.ContextWithRequest){}
 
 		permissions.Tester = auth_permissions.NewPermissionsBackend(
 			pq,
 		)
 
-		tpl.Processors(func(rc tpl.RequestContext) {
+		tpl.RequestProcessors(func(rc ctx.ContextWithRequest) {
 			rc.Set("User",
 				authentication.Retrieve(
 					rc.Request(),

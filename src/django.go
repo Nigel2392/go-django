@@ -19,6 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/components"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
@@ -98,7 +99,7 @@ type AppConfig interface {
 	//
 	// I.E.: The 'sessions' app must always be registered before 'auth' in order for the auth app to work.
 	Initialize(settings Settings) error
-	Processors() []func(tpl.RequestContext)
+	Processors() []func(ctx.ContextWithRequest)
 	Templates() *tpl.Config
 
 	// All apps have been initialized before OnReady() is called.
@@ -436,9 +437,16 @@ func (a *Application) Initialize() error {
 		)
 	}
 
-	tpl.Processors(func(rc tpl.RequestContext) {
-		rc.Set("Application", a)
-		rc.Set("Settings", a.Settings)
+	tpl.Processors(func(val any) {
+		var ctx, ok = val.(ctx.Context)
+		if !ok {
+			return
+		}
+		ctx.Set("Application", a)
+		ctx.Set("Settings", a.Settings)
+	})
+
+	tpl.RequestProcessors(func(rc ctx.ContextWithRequest) {
 		rc.Set("CsrfToken", nosurf.Token(rc.Request()))
 	})
 
@@ -536,7 +544,7 @@ func (a *Application) Initialize() error {
 		app.BuildRouting(r)
 
 		var processors = app.Processors()
-		tpl.Processors(processors...)
+		tpl.RequestProcessors(processors...)
 
 		var templates = app.Templates()
 		if templates != nil {

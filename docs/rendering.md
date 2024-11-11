@@ -100,11 +100,11 @@ Context processors are functions that are called before rendering a template.
 These will only run (but run every time) if the context inherits from the `ctx.Context` interface and has a method called "`Request()`" which returns a `*http.Request`.
 
 ```go
-tpl.Processors(
-    func(ctx tpl.RequestContext) {
+tpl.RequestProcessors(
+    func(ctx ctx.ContextWithRequest) {
         ctx.Set("Title", "My Custom App")
     },
-    func(ctx tpl.RequestContext) {
+    func(ctx ctx.ContextWithRequest) {
         var user = ctx.Get("User")
         if user == nil {
             ctx.Set("User", &UnauthenticatedUser{})

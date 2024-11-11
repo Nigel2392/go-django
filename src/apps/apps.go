@@ -6,6 +6,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 )
 
@@ -16,7 +17,7 @@ type AppConfig struct {
 	Cmd            []command.Command
 	Init           func(settings django.Settings) error
 	Ready          func() error
-	CtxProcessors  []func(tpl.RequestContext)
+	CtxProcessors  []func(ctx.ContextWithRequest)
 	TemplateConfig *tpl.Config
 	ready          bool
 }
@@ -52,7 +53,7 @@ func (a *DBRequiredAppConfig) Initialize(settings django.Settings) error {
 func NewAppConfig(name string) *AppConfig {
 	var app = &AppConfig{
 		AppName:       name,
-		CtxProcessors: make([]func(tpl.RequestContext), 0),
+		CtxProcessors: make([]func(ctx.ContextWithRequest), 0),
 		Cmd:           make([]command.Command, 0),
 	}
 
@@ -89,7 +90,7 @@ func (a *AppConfig) Templates() *tpl.Config {
 	return a.TemplateConfig
 }
 
-func (a *AppConfig) Processors() []func(tpl.RequestContext) {
+func (a *AppConfig) Processors() []func(ctx.ContextWithRequest) {
 	return a.CtxProcessors
 }
 

@@ -4,6 +4,8 @@ import (
 	"html/template"
 	"io"
 	"strings"
+
+	"github.com/Nigel2392/go-django/src/core/ctx"
 )
 
 var Global Renderer
@@ -20,8 +22,12 @@ func Funcs(funcs template.FuncMap) {
 	Global.Funcs(funcs)
 }
 
-func Processors(funcs ...func(RequestContext)) {
+func Processors(funcs ...func(any)) {
 	Global.Processors(funcs...)
+}
+
+func RequestProcessors(funcs ...func(ctx.ContextWithRequest)) {
+	Global.RequestProcessors(funcs...)
 }
 
 func FRender(b io.Writer, context any, baseKey string, path ...string) error {

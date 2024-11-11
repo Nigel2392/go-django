@@ -6,7 +6,6 @@ import (
 	"io"
 	"io/fs"
 	"maps"
-	"net/http"
 	"path/filepath"
 	"strings"
 
@@ -16,14 +15,10 @@ import (
 	"github.com/pkg/errors"
 )
 
-type RequestContext interface {
-	ctx.Context
-	Request() *http.Request
-}
-
 type Renderer interface {
 	Add(cfg Config)
-	Processors(funcs ...func(RequestContext))
+	Processors(funcs ...func(any))
+	RequestProcessors(funcs ...func(ctx.ContextWithRequest))
 	Render(buffer io.Writer, data any, appKey string, path ...string) error
 	Funcs(funcs template.FuncMap)
 }
@@ -45,19 +40,21 @@ func (t *templates) Lt(other *templates) bool {
 }
 
 type TemplateRenderer struct {
-	configs  []*templates
-	cache    map[string]*templateObject
-	ctxFuncs []func(RequestContext)
-	funcs    template.FuncMap
-	fs       *filesystem.MultiFS
+	configs         []*templates
+	cache           map[string]*templateObject
+	ctxFuncs        []func(any)
+	requestCtxFuncs []func(ctx.ContextWithRequest)
+	funcs           template.FuncMap
+	fs              *filesystem.MultiFS
 }
 
 func NewRenderer() *TemplateRenderer {
 	var r = &TemplateRenderer{
-		funcs:    make(template.FuncMap),
-		cache:    make(map[string]*templateObject),
-		ctxFuncs: make([]func(RequestContext), 0),
-		fs:       filesystem.NewMultiFS(),
+		funcs:           make(template.FuncMap),
+		cache:           make(map[string]*templateObject),
+		ctxFuncs:        make([]func(any), 0),
+		requestCtxFuncs: make([]func(ctx.ContextWithRequest), 0),
+		fs:              filesystem.NewMultiFS(),
 	}
 	r.Funcs(template.FuncMap{
 		"include": func(context any, baseKey string, path ...string) template.HTML {
@@ -105,8 +102,12 @@ func (r *TemplateRenderer) Funcs(funcs template.FuncMap) {
 	maps.Copy(r.funcs, funcs)
 }
 
-func (r *TemplateRenderer) Processors(funcs ...func(RequestContext)) {
+func (r *TemplateRenderer) Processors(funcs ...func(any)) {
 	r.ctxFuncs = append(r.ctxFuncs, funcs...)
+}
+
+func (r *TemplateRenderer) RequestProcessors(funcs ...func(ctx.ContextWithRequest)) {
+	r.requestCtxFuncs = append(r.requestCtxFuncs, funcs...)
 }
 
 func (r *TemplateRenderer) Add(cfg Config) {
@@ -234,11 +235,16 @@ func (r *TemplateRenderer) Render(b io.Writer, context any, baseKey string, path
 	}
 
 	if context != nil {
-		if requestContext, ok := context.(RequestContext); ok {
+		for _, f := range r.ctxFuncs {
+			assert.False(f == nil, "nil context function")
+			f(context)
+		}
+
+		if requestContext, ok := context.(ctx.ContextWithRequest); ok {
 			if requestContext.Request() == nil {
 				goto render
 			}
-			for _, f := range r.ctxFuncs {
+			for _, f := range r.requestCtxFuncs {
 				assert.False(f == nil, "nil context function")
 				f(requestContext)
 			}

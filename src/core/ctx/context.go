@@ -1,5 +1,7 @@
 package ctx
 
+import "net/http"
+
 type Setter interface {
 	Set(key string, value any)
 }
@@ -15,6 +17,11 @@ type Editor interface {
 type Context interface {
 	Setter
 	Getter
+}
+
+type ContextWithRequest interface {
+	Context
+	Request() *http.Request
 }
 
 func NewContext(m map[string]any) Context {

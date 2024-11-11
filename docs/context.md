@@ -76,6 +76,21 @@ type Getter interface {
 - **Set**: Stores a value with a specified key.
 - **Get**: Retrieves the value associated with a key.
 
+### `ContextWithRequest` Interface
+
+The `ContextWithRequest` interface extends the `Context` interface and adds a method to retrieve the original HTTP request.
+
+```go
+package ctx
+
+type ContextWithRequest interface {
+    Context
+    Request() *http.Request
+}
+```
+
+- **Request**: Returns the original HTTP request associated with the context.
+
 ### `NewContext` Function
 
 `NewContext` creates a new context that stores data in a map. It returns an implementation of the `Context` interface.

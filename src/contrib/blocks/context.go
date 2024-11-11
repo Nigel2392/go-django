@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
-	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 )
 
 type BlockContext struct {
@@ -30,7 +29,7 @@ func NewBlockContext(b Block, context ctx.Context) *BlockContext {
 		switch ctx := context.(type) {
 		case *BlockContext:
 			blockCtx = ctx
-		case tpl.RequestContext:
+		case ctx.ContextWithRequest:
 			r = ctx.Request()
 		}
 	} else {

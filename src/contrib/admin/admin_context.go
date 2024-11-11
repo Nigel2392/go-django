@@ -5,14 +5,13 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/ctx"
-	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/justinas/nosurf"
 )
 
 var _ ctx.Context = (*adminContext)(nil)
-var _ tpl.RequestContext = (*adminContext)(nil)
+var _ ctx.ContextWithRequest = (*adminContext)(nil)
 
 type BreadCrumb struct {
 	Title string
