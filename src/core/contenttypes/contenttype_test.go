@@ -391,12 +391,21 @@ func TestContentType(t *testing.T) {
 
 		t.Run("TestGetInstances", func(t *testing.T) {
 			instances, err := contenttypes.GetInstances("contenttypes_test.TestStructOne", 2, 0)
-			if err != nil || len(instances) != 2 || instances[0].(*TestStructOne).ID != 1 {
+			if err != nil || len(instances) != 2 {
 				t.Errorf("expected 2 instances, got %v, error: %v", instances, err)
 			}
+
+			if instances[0].(*TestStructOne).ID != 1 {
+				t.Errorf("expected instance with ID 1, got %v", instances[0])
+			}
+
 			instances, err = contenttypes.GetInstances("contenttypes_test.TestStructTwo", 1, 0)
-			if err != nil || len(instances) != 1 || instances[0].(TestStructTwo).ID != 1 {
+			if err != nil || len(instances) != 1 {
 				t.Errorf("expected 1 instance, got %v, error: %v", instances, err)
+			}
+
+			if instances[0].(TestStructTwo).ID != 1 {
+				t.Errorf("expected instance with ID 1, got %v", instances[0])
 			}
 		})
 

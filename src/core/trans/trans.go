@@ -1,6 +1,10 @@
 package trans
 
-import "fmt"
+type TranslationBackend interface {
+	Translate(v string, args ...any) string
+}
+
+var DefaultBackend TranslationBackend = &EchoBackend{}
 
 func S(v string, args ...any) func() string {
 	return func() string {
@@ -12,9 +16,5 @@ func T(v string, args ...any) string {
 	if len(args) == 0 {
 		return v
 	}
-	return fmt.Sprintf(v, args...)
-}
-
-func N(v string, args ...any) string {
-	return fmt.Sprintf(v, args...)
+	return DefaultBackend.Translate(v, args...)
 }
