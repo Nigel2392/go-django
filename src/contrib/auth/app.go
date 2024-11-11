@@ -62,13 +62,13 @@ func NewAppConfig() django.AppConfig {
 			AddUserMiddleware(),
 		)
 
-		g.Handle(mux.GET, "/login", mux.NewHandler(viewUserLogin))
+		g.Handle(mux.GET, "/login", mux.NewHandler(viewUserLogin), "login")
 		g.Handle(mux.POST, "/login", mux.NewHandler(viewUserLogin))
 
-		g.Handle(mux.GET, "/register", mux.NewHandler(viewUserRegister))
+		g.Handle(mux.GET, "/register", mux.NewHandler(viewUserRegister), "register")
 		g.Handle(mux.POST, "/register", mux.NewHandler(viewUserRegister))
 
-		g.Handle(mux.POST, "/logout", mux.NewHandler(viewUserLogout))
+		g.Handle(mux.POST, "/logout", mux.NewHandler(viewUserLogout), "logout")
 
 	}
 	app.Init = func(settings django.Settings) error {
