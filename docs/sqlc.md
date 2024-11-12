@@ -62,6 +62,13 @@ sql:
         # optional, see https://docs.sqlc.dev/en/stable/howto/rename.html
         rename: 
 
+        # overrides, see https://docs.sqlc.dev/en/stable/howto/overrides.html
+        overrides:
+          - column: "mytable.myfilefield"
+            go_type:
+              import: "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
+              type: "SimpleStoredObject"
+              pointer: true
     gen:
       go:
         package: "mypackage"
@@ -71,6 +78,12 @@ sql:
         emit_result_struct_pointers: true
         emit_interface: true
         query_parameter_limit: 8
+        overrides:
+          - column: "mytable.myfilefield"
+            go_type:
+              import: "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
+              type: "SimpleStoredObject"
+              pointer: true
 ```
 
 ## Directives

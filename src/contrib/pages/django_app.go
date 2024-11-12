@@ -162,28 +162,6 @@ func NewAppConfig() *PageAppConfig {
 
 		pageApp.backend = backend
 
-		var hookFn = func(site *admin.AdminApplication, items components.Items[menu.MenuItem]) {
-			items.Append(&PagesMenuItem{
-				BaseItem: menu.BaseItem{
-					Label:    trans.S("Pages"),
-					ItemName: "pages",
-					Ordering: -1,
-				},
-			})
-		}
-
-		goldcrest.Register(admin.RegisterMenuItemHook, 0, hookFn)
-
-		admin.RegisterApp(
-			AdminPagesAppName,
-			pageAdminAppOptions,
-			pageAdminModelOptions,
-		)
-
-		auditlogs.RegisterDefinition("pages:edit", newPageLogDefinition())
-		auditlogs.RegisterDefinition("pages:unpublish", newPageLogDefinition())
-		auditlogs.RegisterDefinition("pages:add", newPageLogDefinition())
-
 		// contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		// ContentObject:  &models.PageNode{},
 		// GetLabel:       trans.S("Page"),
@@ -235,6 +213,28 @@ func NewAppConfig() *PageAppConfig {
 				return &ref, nil
 			},
 		})
+
+		var hookFn = func(site *admin.AdminApplication, items components.Items[menu.MenuItem]) {
+			items.Append(&PagesMenuItem{
+				BaseItem: menu.BaseItem{
+					Label:    trans.S("Pages"),
+					ItemName: "pages",
+					Ordering: -1,
+				},
+			})
+		}
+
+		goldcrest.Register(admin.RegisterMenuItemHook, 0, hookFn)
+
+		admin.RegisterApp(
+			AdminPagesAppName,
+			pageAdminAppOptions,
+			pageAdminModelOptions,
+		)
+
+		auditlogs.RegisterDefinition("pages:edit", newPageLogDefinition())
+		auditlogs.RegisterDefinition("pages:unpublish", newPageLogDefinition())
+		auditlogs.RegisterDefinition("pages:add", newPageLogDefinition())
 
 		return nil
 	}
