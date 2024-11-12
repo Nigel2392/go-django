@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"net/url"
+	"path/filepath"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 )
@@ -83,7 +84,7 @@ func (f *FileWidget) ValueFromDataDict(data url.Values, files map[string][]files
 		return nil, []error{err}
 	}
 
-	var fileName = fileHeader.Name()
+	var fileName = filepath.Clean(fileHeader.Name())
 	for _, validator := range f.Validators {
 		if err := validator(fileName, buf); err != nil {
 			return nil, []error{err}

@@ -20,6 +20,10 @@ type SimpleStoredObject struct {
 	OpenFn   func(path string) (File, error)
 }
 
+func (s *SimpleStoredObject) String() string {
+	return s.Filepath
+}
+
 func (s *SimpleStoredObject) Scan(value interface{}) error {
 	if value == nil {
 		return nil
