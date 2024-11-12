@@ -16,14 +16,14 @@ This means that we don't have a full ORM like Django does.
 
 Any database logic should be implemented by the end-developer, but some sub-packages do provide backends to use with MySQL and SQLite. Postgres is not planned yet.
 
-Latest version: `v1.6.8`
+Latest version: `v1.6.8.1`
 
 ## Installation
 
 The package is easily installed with `go get`.
 
 ```bash
-go get github.com/Nigel2392/go-django@v1.6.8
+go get github.com/Nigel2392/go-django@v1.6.8.1
 ```
 
 The [CLI](./docs/cli.md) can optionally be installed with `go install`.
@@ -31,13 +31,13 @@ The [CLI](./docs/cli.md) can optionally be installed with `go install`.
 This will provide some useful utilities to help you get started, like creating a new project, app or Dockerfile.
 
 ```bash
-go install github.com/Nigel2392/go-django/cmd/go-django@v1.6.8
+go install github.com/Nigel2392/go-django/cmd/go-django@v1.6.8.1
 ```
 
 Or to install the SQLC plugin to auto- generate SQL queries and [go-django definitions](./docs/sqlc.md) from your SQL database.
 
 ```bash
-go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.6.8
+go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.6.8.1
 ```
 
 ## Docs
