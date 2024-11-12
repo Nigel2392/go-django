@@ -12,7 +12,7 @@
 {{ define "content" }}
 
     <h1>{{ T "Add %s" (.Get "model").Label }}</h1>
-    <form method="post" class="admin-form">
+    <form method="post" class="admin-form" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
         
         {{ $Form := (.Get "form") }}

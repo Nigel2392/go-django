@@ -69,6 +69,18 @@ func Assert(cond interface{}, code int, msg any, args ...interface{}) error {
 	return nil
 }
 
+// AssertNil asserts that the value is nil
+// if the value is not nil, it panics with the message
+func AssertNil(v any, code int, msg any, args ...interface{}) error {
+	return Assert(v == nil, code, msg, args...)
+}
+
+// AssertNotNil asserts that the value is not nil
+// if the value is nil, it panics with the message
+func AssertNotNil(v any, code int, msg any, args ...interface{}) error {
+	return Assert(v != nil, code, msg, args...)
+}
+
 // Equal asserts that the two values are equal
 // if the two values are not equal, it panics with the message
 func AssertEqual[T comparable](a, b T, code int, msg any, args ...interface{}) error {

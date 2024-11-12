@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/mail"
 	"reflect"
@@ -240,6 +241,7 @@ type FileStorageField struct {
 	*BaseField
 	StorageEngine string
 	UploadTo      func(fileObject *widgets.FileObject) string
+	Validators    []func(filename string, file io.Reader) error
 }
 
 func FileField(engine string, opts ...func(Field)) *FileStorageField {
@@ -250,9 +252,15 @@ func FileField(engine string, opts ...func(Field)) *FileStorageField {
 }
 
 func (f *FileStorageField) Save(value interface{}) (interface{}, error) {
+	if value == nil {
+		return nil, nil
+	}
 	var file, ok = value.(*widgets.FileObject)
 	if !ok {
-		return nil, errs.ErrInvalidType
+		return nil, errs.Wrap(
+			errs.ErrInvalidType,
+			fmt.Sprintf("Expected *widgets.FileObject, got %T", value),
+		)
 	}
 
 	storage, ok := mediafiles.RetrieveBackend(f.StorageEngine)
@@ -271,6 +279,13 @@ func (f *FileStorageField) Save(value interface{}) (interface{}, error) {
 	}
 
 	return mediafiles.Open(path)
+}
+
+func (f *FileStorageField) Widget() widgets.Widget {
+	if f.FormWidget != nil {
+		return f.FormWidget
+	}
+	return widgets.NewFileInput(nil, f.Validators...)
 }
 
 type Encoder interface {

@@ -5,6 +5,8 @@ import (
 	"database/sql/driver"
 	"errors"
 	"path/filepath"
+
+	"github.com/Nigel2392/go-django/src/core/except"
 )
 
 var (
@@ -19,7 +21,25 @@ type SimpleStoredObject struct {
 }
 
 func (s *SimpleStoredObject) Scan(value interface{}) error {
-	s.Filepath = value.(string)
+	if value == nil {
+		return nil
+	}
+	var filepath string
+	switch v := value.(type) {
+	case string:
+		filepath = v
+	case []byte:
+		filepath = string(v)
+	default:
+		return errors.New("invalid type")
+	}
+	s.Filepath = filepath
+
+	except.Assert(
+		defaultBackend != nil, 500,
+		"defaultBackend is nil",
+	)
+
 	var s2, err = defaultBackend.Open(
 		s.Filepath,
 	)

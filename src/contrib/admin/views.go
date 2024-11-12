@@ -8,9 +8,9 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
-	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
@@ -24,7 +24,7 @@ import (
 var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition) {
 	if app.Options.IndexView != nil {
 		var err = views.Invoke(app.Options.IndexView(adminSite, app), w, r)
-		assert.Err(err)
+		except.AssertNil(err, 500, err)
 		return
 	}
 
@@ -46,7 +46,7 @@ var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminAp
 	context.Set("app", app)
 	context.Set("models", modelNames)
 	var err = tpl.FRender(w, context, BASE_KEY, "admin/views/apps/index.tmpl")
-	assert.Err(err)
+	except.AssertNil(err, 500, err)
 }
 
 var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
@@ -61,7 +61,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 
 	if model.ListView.GetHandler != nil {
 		var err = views.Invoke(model.ListView.GetHandler(adminSite, app, model), w, r)
-		assert.Err(err)
+		except.AssertNil(err, 500, err)
 		return
 	}
 
@@ -119,7 +119,7 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 	var instance = model.NewInstance()
 	if model.AddView.GetHandler != nil {
 		var err = views.Invoke(model.AddView.GetHandler(adminSite, app, model, instance), w, r)
-		assert.Err(err)
+		except.AssertNil(err, 500, err)
 		return
 	}
 	var addView = newInstanceView("add", instance, model.AddView, app, model, r)
@@ -140,7 +140,7 @@ var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 
 	if model.EditView.GetHandler != nil {
 		var err = views.Invoke(model.EditView.GetHandler(adminSite, app, model, instance), w, r)
-		assert.Err(err)
+		except.AssertNil(err, 500, err)
 		return
 	}
 	var editView = newInstanceView("edit", instance, model.EditView, app, model, r)
@@ -161,11 +161,12 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 
 	if model.DeleteView.GetHandler != nil {
 		var err = views.Invoke(model.DeleteView.GetHandler(adminSite, app, model, instance), w, r)
-		assert.Err(err)
+		except.AssertNil(err, 500, err)
 		return
 	}
 
 	var err error
+	var context = NewContext(r, adminSite, nil)
 	if r.Method == http.MethodPost {
 
 		var hooks = goldcrest.Get[AdminModelHookFunc](
@@ -178,13 +179,15 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 		if deleter, ok := instance.(models.Deleter); ok {
 			err = deleter.Delete(r.Context())
 		}
-		assert.Err(err)
+		if err != nil {
+			context.Set("error", err)
+		}
+
 		var listViewURL = django.Reverse("admin:apps:model", app.Name, model.Name)
 		http.Redirect(w, r, listViewURL, http.StatusSeeOther)
 		return
 	}
 
-	var context = NewContext(r, adminSite, nil)
 	var definitions = instance.FieldDefs()
 	var primaryField = definitions.Primary()
 
@@ -194,7 +197,7 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 	context.Set("primaryField", primaryField)
 
 	err = tpl.FRender(w, context, BASE_KEY, "admin/views/models/delete.tmpl")
-	assert.Err(err)
+	except.AssertNil(err, 500, err)
 }
 
 func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) modelforms.ModelForm[attrs.Definer] {
@@ -334,7 +337,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				hook(req, AdminSite, model, instance)
 			}
 
-			assert.False(instance == nil, "instance is nil after form submission")
+			except.AssertNotNil(instance, 500, "instance is nil after form submission")
 			var listViewURL = django.Reverse("admin:apps:model", app.Name, model.Name)
 			http.Redirect(w, r, listViewURL, http.StatusSeeOther)
 		},
