@@ -130,14 +130,9 @@ type templateObject struct {
 }
 
 func (t *templateObject) Execute(w io.Writer, data any) error {
-	var clone, err = t.t.Clone()
-	if err != nil {
-		return errors.Wrap(err, "failed to clone template")
-	}
-
 	var name = getTemplateName(t.paths[0])
-	clone = clone.Lookup(name)
-	return clone.ExecuteTemplate(w, name, data)
+	var tpl = t.t.Lookup(name)
+	return tpl.ExecuteTemplate(w, name, data)
 }
 
 func getTemplateName(path string) string {
@@ -165,17 +160,7 @@ func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*templat
 
 	var name = getTemplateName(path[0])
 	if tmpl, ok := r.cache[path[0]]; ok && tmpl != nil {
-		var clone, err = tmpl.t.Clone()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to clone template")
-		}
-
-		return &templateObject{
-			name:  tmpl.name,
-			cfg:   tmpl.cfg,
-			paths: tmpl.paths,
-			t:     clone,
-		}, nil
+		return tmpl, nil
 	}
 
 	// Check if the templates for this path have already been cached
