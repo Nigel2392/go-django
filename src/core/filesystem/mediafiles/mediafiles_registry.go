@@ -14,6 +14,9 @@ func (r *backendRegistry) Register(name string, backend Backend) {
 }
 
 func (r *backendRegistry) Backend(name string) (Backend, bool) {
+	if name == "" {
+		return defaultBackend, defaultBackend != nil
+	}
 	backend, ok := r.registry[name]
 	return backend, ok
 }

@@ -265,9 +265,12 @@ func (f *BaseModelForm[T]) Context() context.Context {
 }
 
 func (f *BaseModelForm[T]) Save() error {
-	var cleaned = f.CleanedData()
-	var ctx = f.Context()
+	var cleaned, err = f.BaseForm.Save()
+	if err != nil {
+		return err
+	}
 
+	var ctx = f.Context()
 	for _, fieldname := range f.ModelFields {
 		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, fieldname) {
 			continue
@@ -289,7 +292,7 @@ func (f *BaseModelForm[T]) Save() error {
 			return err
 		}
 	}
-	var err error
+
 	if f.SaveInstance != nil {
 		err = f.SaveInstance(ctx, f.Model)
 	} else if instance, ok := any(f.Model).(models.Saver); ok {

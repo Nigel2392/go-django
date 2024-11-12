@@ -184,6 +184,21 @@ func TestFormRequired(t *testing.T) {
 		)
 	}
 
+	var testFormSave = func(cleaned map[string]interface{}) func(t *testing.T) {
+		return func(t *testing.T) {
+			var values, err = form.Save()
+			if err != nil {
+				t.Error("Form Save should not return an error.")
+			}
+
+			for k, v := range cleaned {
+				if values[k] != v {
+					t.Errorf("Form Save does not match expected values: %v != %v", values[k], v)
+				}
+			}
+		}
+	}
+
 	t.Run("RequiredAttributePresent", func(t *testing.T) {
 		var (
 			fields       = form.BoundFields()
@@ -241,6 +256,11 @@ func TestFormRequired(t *testing.T) {
 				t.Errorf("last_name does not match expected: %s != %s", lastName, "Lastname")
 			}
 		})
+
+		t.Run("Save", testFormSave(map[string]interface{}{
+			"first_name": "Firstname",
+			"last_name":  "Lastname",
+		}))
 	})
 
 	t.Run("Invalid", func(t *testing.T) {

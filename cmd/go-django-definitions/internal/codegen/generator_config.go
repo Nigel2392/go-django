@@ -22,6 +22,7 @@ type CodeGeneratorOptions struct {
 	EmitPointersForNull   bool                    `json:"emit_pointers_for_null"`
 	GenerateAdminSetup    bool                    `json:"generate_admin_setup"`
 	GenerateModelsMethods bool                    `json:"generate_models_methods"`
+	Overrides             []*Override             `json:"overrides"`
 	initialisms           map[string]struct{}     `json:"-"`
 	req                   *plugin.GenerateRequest `json:"-"`
 }
@@ -44,6 +45,13 @@ func (c *CodeGeneratorOptions) validate(req *plugin.GenerateRequest) error {
 		c.initialisms[initial] = struct{}{}
 	}
 	c.req = req
+
+	for i := range c.Overrides {
+		if err := c.Overrides[i].parse(req); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

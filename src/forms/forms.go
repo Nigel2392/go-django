@@ -85,3 +85,8 @@ type Form interface {
 	OnInvalid(...func(Form))
 	OnFinalize(...func(Form))
 }
+
+type SaveableForm interface {
+	Form
+	Save() (map[string]interface{}, error)
+}

@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
@@ -308,9 +309,9 @@ func (f *BaseForm) InitialData() map[string]interface{} {
 
 func (f *BaseForm) CleanedData() map[string]interface{} {
 	if f.Errors != nil {
-		assert.True(f.Errors.Len() == 0, "You cannot access cleaned data if the form is invalid.")
+		except.Assert(f.Errors.Len() == 0, 500, "You cannot access cleaned data if the form is invalid.")
 	}
-	assert.False(f.Cleaned == nil, "You must call IsValid() before accessing cleaned data.")
+	except.Assert(f.Cleaned != nil, 500, "You must call IsValid() before accessing cleaned data.")
 	return f.Cleaned
 }
 
@@ -577,4 +578,43 @@ func (f *BaseForm) HasChanged() bool {
 	}
 
 	return changed
+}
+
+func (f *BaseForm) Save() (map[string]interface{}, error) {
+	if f.Errors != nil && f.Errors.Len() > 0 {
+		return nil, errs.Error("the form cannot be saved because it has errors")
+	}
+
+	if f.Cleaned == nil {
+		except.Assert(f.Cleaned != nil, 500, "You must call IsValid() before calling Save().")
+	}
+
+	var err error
+	var data = f.CleanedData()
+	for head := f.FormFields.Front(); head != nil; head = head.Next() {
+		var (
+			k     = head.Key
+			field = head.Value
+		)
+
+		if field.ReadOnly() {
+			continue
+		}
+
+		var value, ok = data[k]
+		if !ok {
+			continue
+		}
+
+		if field, saveable := field.(fields.SaveableField); saveable {
+			value, err = field.Save(value)
+			if err != nil {
+				return nil, err
+			}
+
+			data[k] = value
+		}
+	}
+
+	return data, nil
 }

@@ -29,3 +29,8 @@ type Field interface {
 	SetReadOnly(b bool)
 	IsEmpty(value interface{}) bool
 }
+
+type SaveableField interface {
+	Field
+	Save(value interface{}) (interface{}, error)
+}

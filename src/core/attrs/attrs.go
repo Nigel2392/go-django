@@ -3,6 +3,7 @@ package attrs
 import (
 	"encoding/json"
 
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/shopspring/decimal"
 )
@@ -18,6 +19,12 @@ func init() {
 		decimal.Decimal{},
 		func(opts ...func(fields.Field)) fields.Field {
 			return fields.DecimalField(opts...)
+		},
+	)
+	RegisterFormFieldType(
+		mediafiles.SimpleStoredObject{},
+		func(opts ...func(fields.Field)) fields.Field {
+			return fields.FileField("", opts...)
 		},
 	)
 }

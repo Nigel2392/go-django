@@ -215,7 +215,7 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 					col, commentMap, readOnlyMap,
 				),
 				Primary: i == 0,
-				GoType: goInnerType(
+				GoType: goType(
 					c, col,
 				),
 			}

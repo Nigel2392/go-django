@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/cmd/go-django-definitions/internal/codegen/plugin"
+	"github.com/Nigel2392/go-django/cmd/go-django-definitions/internal/pattern"
 )
 
 func DataType(n *plugin.Identifier) string {
@@ -14,19 +15,57 @@ func DataType(n *plugin.Identifier) string {
 	}
 }
 
+func MatchString(pat, target string) bool {
+	matcher, err := pattern.MatchCompile(pat)
+	if err != nil {
+		panic(err)
+	}
+	return matcher.MatchString(target)
+}
+
+func goType(c *CodeGenerator, col *plugin.Column) string {
+	// Check if the column's type has been overridden
+	for _, override := range c.opts.Overrides {
+		oride := override.ShimOverride
+
+		if oride.GoType.TypeName == "" {
+			continue
+		}
+		cname := col.Name
+		if col.OriginalName != "" {
+			cname = col.OriginalName
+		}
+		sameTable := override.Matches(col.Table, c.opts.req.Catalog.DefaultSchema)
+		if oride.Column != "" && MatchString(oride.ColumnName, cname) && sameTable {
+			if col.IsSqlcSlice {
+				return "[]" + oride.GoType.TypeName
+			}
+			return oride.GoType.TypeName
+		}
+	}
+	typ := goInnerType(c, col)
+	if col.IsSqlcSlice {
+		return "[]" + typ
+	}
+	if col.IsArray {
+		return strings.Repeat("[]", int(col.ArrayDims)) + typ
+	}
+	return typ
+}
+
 func goInnerType(c *CodeGenerator, col *plugin.Column) string {
-	//	columnType := DataType(col.Type)
-	//	notNull := col.NotNull || col.IsArray
-	//	// package overrides have a higher precedence
-	//	for _, override := range c.opts.Overrides {
-	//		oride := override.ShimOverride
-	//		if oride.GoType.TypeName == "" {
-	//			continue
-	//		}
-	//		if oride.DbType != "" && oride.DbType == columnType && oride.Nullable != notNull && oride.Unsigned == col.Unsigned {
-	//			return oride.GoType.TypeName
-	//		}
-	//	}
+	columnType := DataType(col.Type)
+	notNull := col.NotNull || col.IsArray
+	// package overrides have a higher precedence
+	for _, override := range c.opts.Overrides {
+		oride := override.ShimOverride
+		if oride.GoType.TypeName == "" {
+			continue
+		}
+		if oride.DbType != "" && oride.DbType == columnType && oride.Nullable != notNull && oride.Unsigned == col.Unsigned {
+			return oride.GoType.TypeName
+		}
+	}
 
 	// TODO: Extend the engine interface to handle types
 	switch c.opts.req.Settings.Engine {

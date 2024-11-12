@@ -12,6 +12,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
 
@@ -233,6 +234,43 @@ func (n *NullableSQLField[SQLType]) Widget() widgets.Widget {
 	default:
 		return widgets.NewTextInput(nil)
 	}
+}
+
+type FileStorageField struct {
+	*BaseField
+	StorageEngine string
+	UploadTo      func(fileObject *widgets.FileObject) string
+}
+
+func FileField(engine string, opts ...func(Field)) *FileStorageField {
+	return &FileStorageField{
+		BaseField:     NewField(opts...),
+		StorageEngine: engine,
+	}
+}
+
+func (f *FileStorageField) Save(value interface{}) (interface{}, error) {
+	var file, ok = value.(*widgets.FileObject)
+	if !ok {
+		return nil, errs.ErrInvalidType
+	}
+
+	storage, ok := mediafiles.RetrieveBackend(f.StorageEngine)
+	assert.True(ok, "Storage engine %q not found", f.StorageEngine)
+
+	if f.UploadTo == nil {
+		f.UploadTo = func(fileObject *widgets.FileObject) string {
+			return fileObject.Name
+		}
+	}
+
+	var uploadPath = f.UploadTo(file)
+	var path, err = storage.Save(uploadPath, file.File)
+	if err != nil {
+		return nil, err
+	}
+
+	return mediafiles.Open(path)
 }
 
 type Encoder interface {
