@@ -1,17 +1,14 @@
-package memory
+package fs
 
 import (
-	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math/rand"
+	"os"
 	"path/filepath"
-	"sort"
 	"strings"
-	"sync"
-	"time"
 
-	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 )
 
@@ -23,41 +20,42 @@ var (
 )
 
 func init() {
-	mediafiles.RegisterBackend("memory", &Backend{})
-	mediafiles.SetDefault("memory")
+	mediafiles.RegisterBackend("filesystem", &Backend{})
 }
 
 type Backend struct {
-	files   map[string]*File
-	mu      *sync.RWMutex
+	BaseDir string
 	Retries int
 }
 
-func NewBackend(retries int) *Backend {
+func NewBackend(baseDir string, retries int) *Backend {
 	return &Backend{
-		files:   make(map[string]*File),
-		mu:      new(sync.RWMutex),
+		BaseDir: baseDir,
 		Retries: retries,
 	}
 }
 
 // Deletes the file referenced by name. If deletion is not supported on the target storage system this will return ErrNotImplemented.
 func (b *Backend) Delete(path string) error {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	if _, ok := b.files[path]; !ok {
-		return mediafiles.ErrNotFound
+	if _, err := b.Stat(path); err != nil {
+		return err
 	}
-	delete(b.files, path)
-	return nil
+
+	var deletePath = path
+	if b.BaseDir != "" {
+		deletePath = filepath.Join(b.BaseDir, path)
+	}
+
+	return os.Remove(deletePath)
 }
 
 // Returns True if a file referenced by the given name already exists in the storage system.
 func (b *Backend) Exists(path string) (bool, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	_, ok := b.files[path]
-	return ok, nil
+	var _, err = b.Stat(path)
+	if err != nil {
+		return false, nil
+	}
+	return true, nil
 }
 
 // Returns an alternative filename based on the file_root and file_ext parameters, an underscore plus a random 7 character alphanumeric string is appended to the filename before the extension.
@@ -73,10 +71,7 @@ func (b *Backend) GetAlternateName(fileRoot, fileExt string) string {
 //
 // The length of the filename will not exceed max_length, if provided. If a free unique filename cannot be found, ErrSuspiciousOperation will be returned.
 func (b *Backend) GetAvailableName(path string, retries int, max_length int) (string, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	if _, ok := b.files[path]; !ok {
+	if _, err := b.Stat(path); err != nil && errors.Is(err, mediafiles.ErrNotFound) {
 		return path, nil
 	}
 
@@ -84,11 +79,14 @@ func (b *Backend) GetAvailableName(path string, retries int, max_length int) (st
 		retries = DEFAULT_RETRIES
 	}
 
+	// "my/path/to/file.txt" -> ["file", "txt"]
 	var ext = filepath.Ext(path)
-	var root = path[:len(path)-len(ext)]
+	path = strings.TrimSuffix(
+		path, ext,
+	)
 	for i := 0; i < retries; i++ {
-		var alt = b.GetAlternateName(root, ext)
-		if _, ok := b.files[alt]; !ok {
+		var alt = b.GetAlternateName(path, ext)
+		if _, err := b.Stat(alt); err != nil && errors.Is(err, mediafiles.ErrNotFound) {
 			return alt, nil
 		}
 	}
@@ -97,70 +95,62 @@ func (b *Backend) GetAvailableName(path string, retries int, max_length int) (st
 }
 
 func (b *Backend) Stat(path string) (mediafiles.FileHeader, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-
-	var file, ok = b.files[path]
-	if !ok {
-		return nil, mediafiles.ErrNotFound
+	var f, err = b.Open(path)
+	if err != nil {
+		return nil, err
 	}
-	return file.hdr, nil
+	file, err := f.Open()
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+	return file.Stat()
 }
 
 // Lists the contents of the specified path, returning a 2-tuple of lists; the first item being directories, the second item being files.
 // For storage systems that aren’t able to provide such a listing, this will return ErrNotImplemented.
 func (b *Backend) ListDir(path string) ([]string, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	var files []string
-	switch path {
-	case "", "/":
-		files = make([]string, 0, len(b.files))
-		for file := range b.files {
-			files = append(
-				files,
-				filepath.Base(file),
-			)
-		}
-	default:
-		files = make([]string, 0)
-		cleanedPath := strings.Trim(
-			filepath.Clean(path), "/",
-		)
-		for file := range b.files {
-			var base, name = filepath.Split(file)
-			if base == "" {
-				files = append(files, name)
-				continue
-			}
-
-			base = strings.Trim(
-				filepath.Clean(base), "/",
-			)
-
-			if base == cleanedPath {
-				files = append(files, name)
-			}
-		}
+	var readPath = path
+	if b.BaseDir != "" {
+		readPath = filepath.Join(b.BaseDir, path)
 	}
 
-	sort.Strings(files)
+	var files []string
+	var entries, err = os.ReadDir(
+		readPath,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, entry := range entries {
+		files = append(files, entry.Name())
+	}
+
 	return files, nil
 }
 
 func (b *Backend) Open(name string) (mediafiles.StoredObject, error) {
-	b.mu.RLock()
-	defer b.mu.RUnlock()
-	file, ok := b.files[name]
-	if !ok {
-		return nil, mediafiles.ErrNotFound
+	var openPath = name
+	if b.BaseDir != "" {
+		openPath = filepath.Join(b.BaseDir, name)
 	}
+
 	var obj = mediafiles.SimpleStoredObject{
 		Filepath: name,
 		OpenFn: func(path string) (mediafiles.File, error) {
-			return file, nil
+			var f, err = os.Open(openPath)
+			if err != nil {
+				return nil, err
+			}
+			return &File{
+				name: filepath.Base(path),
+				path: path,
+				file: f,
+			}, nil
 		},
 	}
+
 	return &obj, nil
 }
 
@@ -171,38 +161,46 @@ func (b *Backend) Open(name string) (mediafiles.StoredObject, error) {
 // If the file is too large to be saved, this will raise a SuspiciousOperation exception.
 func (b *Backend) Save(path string, file io.Reader, maxLength ...int) (string, error) {
 	// do not lock here, GetAvailableName will lock
-	var buf = new(bytes.Buffer)
-	var maxLen int
+	var (
+		maxLen int
+		err    error
+	)
 	if len(maxLength) > 0 {
 		maxLen = maxLength[0]
 	}
 
-	var name, err = b.GetAvailableName(path, b.Retries, maxLen)
+	path, err = b.GetAvailableName(
+		path, b.Retries, maxLen,
+	)
 	if err != nil {
 		return "", err
 	}
 
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	if b.files == nil {
-		assert.Fail("files map for memory backend is nil")
-	}
-	if _, ok := b.files[name]; ok {
-		return "", mediafiles.ErrExists
+	var createPath = path
+	if b.BaseDir != "" {
+		createPath = filepath.Join(
+			b.BaseDir, path,
+		)
 	}
 
-	_, err = io.Copy(buf, file)
-	var hdr = &FileHeader{
-		created:  time.Now(),
-		modified: time.Now(),
+	err = os.MkdirAll(
+		filepath.Dir(createPath),
+		os.ModePerm,
+	)
+	if err != nil {
+		return "", err
 	}
-	var f = &File{
-		name:    filepath.Base(name),
-		path:    name,
-		content: buf,
-		hdr:     hdr,
+
+	f, err := os.Create(createPath)
+	if err != nil {
+		return "", err
 	}
-	hdr.file = f
-	b.files[name] = f
-	return name, err
+	defer f.Close()
+
+	_, err = io.Copy(f, file)
+	if err != nil {
+		return "", err
+	}
+
+	return path, nil
 }

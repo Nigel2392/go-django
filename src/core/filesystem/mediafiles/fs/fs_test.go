@@ -1,4 +1,4 @@
-package memory_test
+package fs_test
 
 import (
 	"bytes"
@@ -6,15 +6,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/memory"
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 )
 
 func TestBackend_SaveAndExists(t *testing.T) {
-	backend := memory.NewBackend(5)
+	backend := fs.NewBackend("./test", 5)
 	content := "Hello, World!"
 	fileName := "testfile.txt"
 
 	// Test saving a file
+	t.Logf("Saving file %v", fileName)
 	savedName, err := backend.Save(fileName, strings.NewReader(content))
 	if err != nil {
 		t.Errorf("expected no error while saving file, got: %v", err)
@@ -23,6 +24,7 @@ func TestBackend_SaveAndExists(t *testing.T) {
 		t.Errorf("expected filename to match %v, got %v", fileName, savedName)
 	}
 
+	t.Log("Checking file existence")
 	// Test file existence
 	exists, err := backend.Exists(fileName)
 	if err != nil {
@@ -31,19 +33,26 @@ func TestBackend_SaveAndExists(t *testing.T) {
 	if !exists {
 		t.Error("expected file to exist, but it does not")
 	}
+
+	t.Logf("Deleting file %v", fileName)
+	if err := backend.Delete(fileName); err != nil {
+		t.Errorf("expected no error while deleting file, got: %v", err)
+	}
 }
 
 func TestBackend_SaveAndExists_Rename(t *testing.T) {
-	backend := memory.NewBackend(5)
+	backend := fs.NewBackend("./test", 5)
 	content := "Hello, World!"
 	fileName := "testfile.txt"
 
+	t.Logf("Saving file (1) %v", fileName)
 	// Test saving a file
 	fileNameNew1, err := backend.Save(fileName, strings.NewReader(content))
 	if err != nil {
 		t.Errorf("expected no error while saving file, got: %v", err)
 	}
 
+	t.Logf("Saving file (2) %v", fileName)
 	fileNameNew2, err := backend.Save(fileName, strings.NewReader(content))
 	if err != nil {
 		t.Errorf("expected no error while saving file, got: %v", err)
@@ -57,18 +66,39 @@ func TestBackend_SaveAndExists_Rename(t *testing.T) {
 		t.Errorf("expected one of the filenames to match the original, got %v and %v", fileNameNew1, fileNameNew2)
 	}
 
+	t.Log("Checking file existence (1)")
 	// Test file existence
-	exists, err := backend.Exists(fileName)
+	exists, err := backend.Exists(fileNameNew1)
 	if err != nil {
 		t.Errorf("expected no error while checking existence, got: %v", err)
 	}
 	if !exists {
 		t.Error("expected file to exist, but it does not")
 	}
+
+	t.Log("Checking file existence (2)")
+	// Test file existence
+	exists, err = backend.Exists(fileNameNew2)
+	if err != nil {
+		t.Errorf("expected no error while checking existence, got: %v", err)
+	}
+	if !exists {
+		t.Error("expected file to exist, but it does not")
+	}
+
+	t.Logf("Deleting file (1) %v", fileName)
+	if err := backend.Delete(fileNameNew1); err != nil {
+		t.Errorf("expected no error while deleting file, got: %v", err)
+	}
+
+	t.Logf("Deleting file (2) %v", fileName)
+	if err := backend.Delete(fileNameNew2); err != nil {
+		t.Errorf("expected no error while deleting file, got: %v", err)
+	}
 }
 
 func TestBackend_Delete(t *testing.T) {
-	backend := memory.NewBackend(5)
+	backend := fs.NewBackend("./test", 5)
 	fileName := "testfile.txt"
 	content := "Temporary content"
 
@@ -95,7 +125,7 @@ func TestBackend_Delete(t *testing.T) {
 }
 
 func TestBackend_GetAvailableName(t *testing.T) {
-	backend := memory.NewBackend(5)
+	backend := fs.NewBackend("./test", 5)
 	fileName := "testfile.txt"
 	content := "Sample content"
 
@@ -113,10 +143,14 @@ func TestBackend_GetAvailableName(t *testing.T) {
 	if availableName == fileName {
 		t.Errorf("expected a different name for an existing file, got same name: %v", availableName)
 	}
+
+	if err := backend.Delete(fileName); err != nil {
+		t.Errorf("expected no error while deleting file, got: %v", err)
+	}
 }
 
 func TestBackend_ListDir(t *testing.T) {
-	backend := memory.NewBackend(5)
+	backend := fs.NewBackend("./test", 5)
 	fileNames := []string{"dir1/file1.txt", "dir1/file2.txt", "dir2/file3.txt"}
 
 	// Save files
@@ -142,10 +176,16 @@ func TestBackend_ListDir(t *testing.T) {
 			t.Errorf("expected file %v, got %v", expectedFiles[i], file)
 		}
 	}
+
+	for _, name := range fileNames {
+		if err := backend.Delete(name); err != nil {
+			t.Errorf("expected no error while deleting file, got: %v", err)
+		}
+	}
 }
 
 func TestBackend_Stat(t *testing.T) {
-	backend := memory.NewBackend(5)
+	backend := fs.NewBackend("./test", 5)
 	fileName := "testfile.txt"
 	content := "File for stat test"
 
@@ -163,10 +203,14 @@ func TestBackend_Stat(t *testing.T) {
 	if header == nil {
 		t.Error("expected non-nil file header")
 	}
+
+	if err := backend.Delete(fileName); err != nil {
+		t.Errorf("expected no error while deleting file, got: %v", err)
+	}
 }
 
 func TestBackend_Open(t *testing.T) {
-	backend := memory.NewBackend(5)
+	backend := fs.NewBackend("./test", 5)
 	fileName := "testfile.txt"
 	content := "Content to read"
 
@@ -198,5 +242,13 @@ func TestBackend_Open(t *testing.T) {
 	}
 	if buf.String() != content {
 		t.Errorf("expected file content to match '%s', got '%s'", content, buf.String())
+	}
+
+	if err := file.Close(); err != nil {
+		t.Errorf("expected no error while closing file, got: %v", err)
+	}
+
+	if err := backend.Delete(fileName); err != nil {
+		t.Errorf("expected no error while deleting file, got: %v", err)
 	}
 }

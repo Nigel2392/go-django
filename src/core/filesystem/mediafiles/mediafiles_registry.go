@@ -111,16 +111,6 @@ func Stat(path string) (FileHeader, error) {
 	return defaultBackend.Stat(path)
 }
 
-// Returns a filename based on the name parameter that’s suitable for use on the target storage system.
-func GetValidName(name string) string {
-	return defaultBackend.GetValidName(name)
-}
-
-// Validates the filename by calling GetValidName() and returns a filename to be passed to the Save() method.
-func GenerateFilename(filename string) string {
-	return defaultBackend.GenerateFilename(filename)
-}
-
 // Lists the contents of the specified path, returning a 2-tuple of lists; the first item being directories, the second item being files.
 // For storage systems that aren’t able to provide such a listing, this will return ErrNotImplemented.
 func ListDir(path string) ([]string, error) {

@@ -86,12 +86,6 @@ type Backend interface {
 	// Stat returns the FileInfo structure describing the file.
 	Stat(path string) (FileHeader, error)
 
-	// Returns a filename based on the name parameter that’s suitable for use on the target storage system.
-	GetValidName(name string) string
-
-	// Validates the filename by calling GetValidName() and returns a filename to be passed to the Save() method.
-	GenerateFilename(filename string) string
-
 	// Lists the contents of the specified path, returning a 2-tuple of lists; the first item being directories, the second item being files.
 	// For storage systems that aren’t able to provide such a listing, this will return ErrNotImplemented.
 	ListDir(path string) ([]string, error)
