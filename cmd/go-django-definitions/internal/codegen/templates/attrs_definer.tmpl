@@ -10,8 +10,8 @@ import (
 
     "database/sql"
     "fmt"
-    {{ range $struct := .Structs }}{{ range $field := $struct.Fields }}{{ if $field.RelatedObjectPackage }}
-    {{$field.RelatedObjectPackageAdressor}}"{{ $field.RelatedObjectPackage }}"{{ end }}{{ end }}{{end}}
+    {{ range $import := .Imports }}
+    {{ $import.Alias }}"{{ $import.Package }}"{{ end }}
 )
 
 var (

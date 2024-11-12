@@ -1,25 +1,51 @@
 package codegen
 
-import "slices"
+import (
+	"fmt"
+	"slices"
+)
+
+type Import struct {
+	Package string
+	Alias   string
+}
+
+func (i *Import) String() string {
+	if i.Alias != "" {
+		return fmt.Sprintf("%s \"%s\"", i.Alias, i.Package)
+	}
+	return fmt.Sprintf("\"%s\"", i.Package)
+}
 
 type TemplateObject struct {
 	PackageName string
 	SQLCVersion string
 	Structs     []*Struct
 	Choices     []*Choices
-	imports     map[string]struct{}
+	imports     map[string]Import
 }
 
-func (t *TemplateObject) AddImport(pkg string) {
-	t.imports[pkg] = struct{}{}
-}
-
-func (t *TemplateObject) Imports() []string {
-	var imports = make([]string, 0)
-	for pkg := range t.imports {
-		imports = append(imports, pkg)
+func (t *TemplateObject) AddImport(imp Import) {
+	if t.imports == nil {
+		t.imports = make(map[string]Import)
 	}
-	slices.Sort(imports)
+	t.imports[imp.Package] = imp
+}
+
+func (t *TemplateObject) Imports() []Import {
+	var imports = make([]Import, 0)
+	for _, imp := range t.imports {
+		imports = append(imports, imp)
+	}
+	slices.SortStableFunc(imports, func(i, j Import) int {
+		if i.Package < j.Package {
+			return -1
+		}
+		if i.Package > j.Package {
+			return 1
+		}
+		return 0
+	})
 	return imports
 }
 

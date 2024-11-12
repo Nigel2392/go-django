@@ -316,6 +316,12 @@ func RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool) {
 		*v = z
 		return v, true
 	}
+
+	if v.CanConvert(t) {
+		*v = v.Convert(t)
+		return v, true
+	}
+
 	if v.Kind() == reflect.Ptr && t.Kind() != reflect.Ptr {
 		*v = v.Elem()
 	} else if v.Kind() != reflect.Ptr && t.Kind() == reflect.Ptr {

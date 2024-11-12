@@ -134,7 +134,7 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 		SQLCVersion: c.opts.req.SqlcVersion,
 		Structs:     make([]*Struct, 0),
 		Choices:     make([]*Choices, 0),
-		imports:     make(map[string]struct{}),
+		imports:     make(map[string]Import),
 	}
 
 	logger.Logf("Building template object for schema %s\n", schema.Name)
@@ -236,6 +236,11 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 					f.RelatedObjectPackage = pkgPath
 					f.RelatedObjectPackageAdressor = pkgAdressor
 					f.RelatedObjectName = dotObject
+
+					obj.AddImport(Import{
+						Alias:   pkgAdressor,
+						Package: pkgPath,
+					})
 
 				} else {
 					f.RelatedObjectName = c.opts.GoName(
