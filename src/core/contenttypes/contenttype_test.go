@@ -2,14 +2,23 @@ package contenttypes_test
 
 import (
 	"fmt"
+	"slices"
 	"testing"
 
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
 
+type identifiable interface {
+	identifier() int
+}
+
 type TestStructOne struct {
 	ID   int
 	Name string
+}
+
+func (t *TestStructOne) identifier() int {
+	return t.ID
 }
 
 type TestStructTwo struct {
@@ -17,9 +26,17 @@ type TestStructTwo struct {
 	Name string
 }
 
+func (t *TestStructTwo) identifier() int {
+	return t.ID
+}
+
 type TestStructThree struct {
 	ID   int
 	Name string
+}
+
+func (t *TestStructThree) identifier() int {
+	return t.ID
 }
 
 var (
@@ -61,6 +78,17 @@ func getInstancesFunc(modelName string) func(uint, uint) ([]interface{}, error) 
 			}
 			count++
 		}
+		slices.SortFunc(results, func(a, b any) int {
+			idA := a.(identifiable).identifier()
+			idB := b.(identifiable).identifier()
+			if idA < idB {
+				return -1
+			}
+			if idA > idB {
+				return 1
+			}
+			return 0
+		})
 		return results, nil
 	}
 }
