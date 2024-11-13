@@ -35,6 +35,7 @@ type FieldConfig struct {
 	Default       any                                           // The default value for the field (or a function that returns the default value)
 	Validators    []func(interface{}) error                     // Validators for the field
 	FormField     func(opts ...func(fields.Field)) fields.Field // The form field for the field
+	WidgetAttrs   map[string]string                             // The attributes for the widget
 	FormWidget    func(FieldConfig) widgets.Widget              // The form widget for the field
 	Setter        func(Definer, interface{}) error              // A custom setter for the field
 	Getter        func(Definer) (interface{}, bool)             // A custom getter for the field
@@ -307,6 +308,12 @@ func (f *FieldDef) FormField() fields.Field {
 returnField:
 	formField.SetName(f.Name())
 
+	if f.attrDef.WidgetAttrs != nil {
+		formField.SetAttrs(
+			f.attrDef.WidgetAttrs,
+		)
+	}
+
 	if f.attrDef.FormWidget != nil {
 		formField.SetWidget(
 			f.attrDef.FormWidget(f.attrDef),
@@ -323,6 +330,7 @@ returnField:
 						return PrimaryKey(def)
 					},
 				},
+				nil,
 			),
 		)
 	}

@@ -16,12 +16,12 @@ type BaseChooserOptions struct {
 }
 
 type BaseChooser struct {
-	widgets.BaseWidget
+	*widgets.BaseWidget
 	Opts               BaseChooserOptions
 	forModelDefinition *contenttypes.ContentTypeDefinition
 }
 
-func BaseChooserWidget(opts BaseChooserOptions) *BaseChooser {
+func BaseChooserWidget(opts BaseChooserOptions, attrs map[string]string) *BaseChooser {
 	var def = contenttypes.DefinitionForObject(opts.TargetObject)
 	assert.True(
 		def != nil,
@@ -30,6 +30,11 @@ func BaseChooserWidget(opts BaseChooserOptions) *BaseChooser {
 	)
 
 	return &BaseChooser{
+		BaseWidget: widgets.NewBaseWidget(
+			"chooser",
+			"forms/widgets/select.html",
+			attrs,
+		),
 		Opts:               opts,
 		forModelDefinition: def,
 	}

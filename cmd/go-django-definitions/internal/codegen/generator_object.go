@@ -69,6 +69,11 @@ type Choice struct {
 	Value string
 }
 
+type Attribute struct {
+	Key   string
+	Value string
+}
+
 type Field struct {
 	Name                         string
 	ColumnName                   string
@@ -82,6 +87,7 @@ type Field struct {
 	RelatedObjectName            string
 	RelatedObjectPackage         string
 	RelatedObjectPackageAdressor string
+	WidgetAttrs                  []Attribute
 	GoType                       string
 }
 

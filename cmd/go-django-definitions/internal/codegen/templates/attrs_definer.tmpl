@@ -54,6 +54,9 @@ func (o *{{ $struct.Name }}) FieldDefs() attrs.Definitions {
                 return widgets.NewSelectInput(
                     nil, {{ $field.Choices }}Options,
                 )            
+            },{{ end }}{{ if $field.WidgetAttrs }}
+            WidgetAttrs: map[string]string{ {{ range $value := $field.WidgetAttrs }}
+                "{{ $value.Key }}": "{{ $value.Value }}",{{ end }}
             },{{ end }}
         },
     ){{ end }}

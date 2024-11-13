@@ -265,6 +265,37 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 				f.HelpText = unquoted
 			}
 
+			var widgetAttrs = make([]Attribute, 0)
+			for k, v := range commentMap {
+				if strings.HasPrefix(k, "form_") {
+					var attr, err = strconv.Unquote(v)
+					if err != nil {
+						attr = v
+					}
+					widgetAttrs = append(
+						widgetAttrs,
+						Attribute{
+							Key:   strings.TrimPrefix(k, "form_"),
+							Value: attr,
+						},
+					)
+				}
+			}
+
+			if len(widgetAttrs) > 0 {
+				slices.SortStableFunc(widgetAttrs, func(i, j Attribute) int {
+					if i.Key < j.Key {
+						return -1
+					}
+					if i.Key > j.Key {
+						return 1
+					}
+					return 0
+				})
+
+				f.WidgetAttrs = widgetAttrs
+			}
+
 			if !f.ReadOnly {
 				s.InsertableFields = append(s.InsertableFields, f)
 			}

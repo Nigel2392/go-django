@@ -18,8 +18,8 @@ type Select struct {
 	BlankLabel   string
 }
 
-func SelectWidget(allowBlank bool, blankLabel string, opts BaseChooserOptions) *Select {
-	var chooser = BaseChooserWidget(opts)
+func SelectWidget(allowBlank bool, blankLabel string, opts BaseChooserOptions, attrs map[string]string) *Select {
+	var chooser = BaseChooserWidget(opts, attrs)
 	chooser.BaseWidget.Type = "select"
 	chooser.BaseWidget.TemplateName = "forms/widgets/select.html"
 	return &Select{
