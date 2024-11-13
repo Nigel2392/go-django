@@ -22,6 +22,10 @@ func Funcs(funcs template.FuncMap) {
 	Global.Funcs(funcs)
 }
 
+func Overrides(funcs ...func(any) (any, error)) {
+	Global.Override(funcs...)
+}
+
 func Processors(funcs ...func(any)) {
 	Global.Processors(funcs...)
 }

@@ -18,6 +18,7 @@ import (
 type Renderer interface {
 	Add(cfg Config)
 	Processors(funcs ...func(any))
+	Override(funcs ...func(any) (any, error))
 	RequestProcessors(funcs ...func(ctx.ContextWithRequest))
 	Render(buffer io.Writer, data any, appKey string, path ...string) error
 	Funcs(funcs template.FuncMap)
