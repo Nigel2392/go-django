@@ -59,10 +59,13 @@ func (v *AuthView[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	if nextURL != "" {
 		context.Set("NextURL", nextURL)
 	} else {
-		context.Set("NextURL", django.ConfigGet(
+		var nextURLSetting = django.ConfigGet[interface{}](
 			django.Global.Settings,
-			callOrString(APP_LOGIN_REDIRECT_URL, req),
+			APP_LOGIN_REDIRECT_URL,
 			"/",
+		)
+		context.Set("NextURL", callOrString(
+			nextURLSetting, req,
 		))
 	}
 
@@ -107,11 +110,12 @@ checkFormErr:
 formSuccess:
 	var nextURL = req.URL.Query().Get("next")
 	if nextURL == "" {
-		nextURL = django.ConfigGet(
+		var nextURLSetting = django.ConfigGet[interface{}](
 			django.Global.Settings,
-			callOrString(APP_LOGIN_REDIRECT_URL, req),
+			APP_LOGIN_REDIRECT_URL,
 			"/",
 		)
+		nextURL = callOrString(nextURLSetting, req)
 	}
 	http.Redirect(w, req, nextURL, http.StatusSeeOther)
 	return nil
