@@ -57,24 +57,24 @@ func NewAppConfig() django.AppConfig {
 		command_set_password,
 	}
 	app.Routing = func(m django.Mux) {
-		var g = m.Any("/auth", nil, "auth")
-
 		m.Use(
 			AddUserMiddleware(),
 		)
 
-		g.Handle(mux.GET, "/login", mux.NewHandler(viewUserLogin), "login")
-		g.Handle(mux.POST, "/login", mux.NewHandler(viewUserLogin))
+		if django.ConfigGet(django.Global.Settings, APP_REGISTER_AUTH_URLS, true) {
+			var g = m.Any("/auth", nil, "auth")
+			g.Handle(mux.GET, "/login", mux.NewHandler(viewUserLogin), "login")
+			g.Handle(mux.POST, "/login", mux.NewHandler(viewUserLogin))
 
-		g.Handle(mux.GET, "/register", mux.NewHandler(viewUserRegister), "register")
-		g.Handle(mux.POST, "/register", mux.NewHandler(viewUserRegister))
+			g.Handle(mux.GET, "/register", mux.NewHandler(viewUserRegister), "register")
+			g.Handle(mux.POST, "/register", mux.NewHandler(viewUserRegister))
 
-		g.Handle(mux.POST, "/logout", mux.NewHandler(viewUserLogout), "logout")
-
+			g.Handle(mux.POST, "/logout", mux.NewHandler(viewUserLogout), "logout")
+		}
 	}
 	app.Init = func(settings django.Settings) error {
 
-		loginWithEmail, ok := settings.Get("AUTH_EMAIL_LOGIN")
+		loginWithEmail, ok := settings.Get(APP_AUTH_EMAIL_LOGIN)
 		if ok {
 			Auth.LoginWithEmail = loginWithEmail.(bool)
 		}

@@ -35,6 +35,13 @@ func newAuthView[T forms.Form](baseView *views.BaseView) *AuthView[T] {
 	return v
 }
 
+func callOrString(fnOrStr interface{}, req *http.Request) string {
+	if fn, ok := fnOrStr.(func(*http.Request) string); ok {
+		return fn(req)
+	}
+	return fnOrStr.(string)
+}
+
 func (v *AuthView[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	except.Assert(v.TemplateName != "", 500, "TemplateName is required")
 	except.Assert(v.getForm != nil, 500, "GetForm is required")
@@ -54,7 +61,7 @@ func (v *AuthView[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	} else {
 		context.Set("NextURL", django.ConfigGet(
 			django.Global.Settings,
-			"LOGIN_REDIRECT_URL",
+			callOrString(APP_LOGIN_REDIRECT_URL, req),
 			"/",
 		))
 	}
@@ -102,7 +109,7 @@ formSuccess:
 	if nextURL == "" {
 		nextURL = django.ConfigGet(
 			django.Global.Settings,
-			"LOGIN_REDIRECT_URL",
+			callOrString(APP_LOGIN_REDIRECT_URL, req),
 			"/",
 		)
 	}
