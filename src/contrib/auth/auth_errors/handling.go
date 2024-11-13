@@ -17,9 +17,9 @@ func RegisterHook() {
 	)
 }
 
-var _ except.ServerError = (*authenticationError)(nil)
+var _ except.ServerError = (*AuthenticationError)(nil)
 
-type authenticationError struct {
+type AuthenticationError struct {
 	Message string
 	NextURL string
 	Status  int
@@ -36,12 +36,19 @@ type authenticationError struct {
 // It also allows for a more consistent way to handle auth errors.
 func isAuthErrorHook(w http.ResponseWriter, r *http.Request, app *django.Application, serverError except.ServerError) {
 	var (
-		authError *authenticationError
+		authError *AuthenticationError
 		ok        bool
 	)
 
-	if authError, ok = serverError.(*authenticationError); !ok {
+	if authError, ok = serverError.(*AuthenticationError); !ok {
 		return
+	}
+
+	var hooks = goldcrest.Get[AuthErrorHook](AUTH_ERROR_HOOK)
+	for _, hook := range hooks {
+		if hook(w, r, app, authError) {
+			return
+		}
 	}
 
 	var redirectURL, err = app.Mux.Reverse("auth:login")
@@ -93,21 +100,21 @@ func Fail(code int, msg string, next ...string) {
 		nextURL = next[0]
 	}
 
-	panic(&authenticationError{
+	panic(&AuthenticationError{
 		Message: msg,
 		Status:  code,
 		NextURL: nextURL,
 	})
 }
 
-func (e *authenticationError) Error() string {
+func (e *AuthenticationError) Error() string {
 	return e.Message
 }
 
-func (e *authenticationError) StatusCode() int {
+func (e *AuthenticationError) StatusCode() int {
 	return e.Status
 }
 
-func (e *authenticationError) UserMessage() string {
+func (e *AuthenticationError) UserMessage() string {
 	return e.Message
 }
