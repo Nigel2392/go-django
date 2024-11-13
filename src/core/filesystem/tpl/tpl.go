@@ -43,6 +43,7 @@ type TemplateRenderer struct {
 	configs         []*templates
 	cache           map[string]*templateObject
 	ctxFuncs        []func(any)
+	ctxOverrides    []func(any) (any, error)
 	requestCtxFuncs []func(ctx.ContextWithRequest)
 	funcs           template.FuncMap
 	fs              *filesystem.MultiFS
@@ -100,6 +101,10 @@ func (r *TemplateRenderer) FS() fs.FS {
 
 func (r *TemplateRenderer) Funcs(funcs template.FuncMap) {
 	maps.Copy(r.funcs, funcs)
+}
+
+func (r *TemplateRenderer) Override(funcs ...func(any) (any, error)) {
+	r.ctxOverrides = append(r.ctxOverrides, funcs...)
 }
 
 func (r *TemplateRenderer) Processors(funcs ...func(any)) {
@@ -237,6 +242,17 @@ func (r *TemplateRenderer) Render(b io.Writer, context any, baseKey string, path
 	}
 
 render:
+	for _, f := range r.ctxOverrides {
+		if f == nil {
+			continue
+		}
+
+		context, err = f(context)
+		if err != nil {
+			return errors.Wrap(err, "failed to override context")
+		}
+	}
+
 	return errors.Wrap(
 		tmpl.Execute(b, context),
 		"failed to render template",
