@@ -158,7 +158,18 @@ func viewUserLogin(w http.ResponseWriter, r *http.Request) {
 	views.Invoke(v, w, r)
 }
 
-func viewUserLogout(w http.ResponseWriter, r *http.Request) {
+func viewUserRegister(w http.ResponseWriter, r *http.Request) {
+	var v = RegisterView(&views.BaseView{
+		BaseTemplateKey: "auth",
+		TemplateName:    "auth/register.tmpl",
+	}, RegisterFormConfig{
+		AlwaysAllLoginFields: true,
+	})
+
+	views.Invoke(v, w, r)
+}
+
+func LogoutView(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		except.Fail(
 			http.StatusMethodNotAllowed,
@@ -178,7 +189,7 @@ func viewUserLogout(w http.ResponseWriter, r *http.Request) {
 	var u = authentication.Retrieve(
 		r,
 	)
-	if u == nil {
+	if u == nil || !u.IsAuthenticated() {
 		http.Redirect(
 			w, r,
 			redirectURL,
@@ -202,15 +213,4 @@ func viewUserLogout(w http.ResponseWriter, r *http.Request) {
 		redirectURL,
 		http.StatusSeeOther,
 	)
-}
-
-func viewUserRegister(w http.ResponseWriter, r *http.Request) {
-	var v = RegisterView(&views.BaseView{
-		BaseTemplateKey: "auth",
-		TemplateName:    "auth/register.tmpl",
-	}, RegisterFormConfig{
-		AlwaysAllLoginFields: true,
-	})
-
-	views.Invoke(v, w, r)
 }

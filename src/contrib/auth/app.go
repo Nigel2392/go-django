@@ -69,7 +69,7 @@ func NewAppConfig() django.AppConfig {
 			g.Handle(mux.GET, "/register", mux.NewHandler(viewUserRegister), "register")
 			g.Handle(mux.POST, "/register", mux.NewHandler(viewUserRegister))
 
-			g.Handle(mux.POST, "/logout", mux.NewHandler(viewUserLogout), "logout")
+			g.Handle(mux.POST, "/logout", mux.NewHandler(LogoutView), "logout")
 		}
 	}
 	app.Init = func(settings django.Settings) error {
