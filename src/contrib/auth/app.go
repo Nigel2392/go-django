@@ -160,14 +160,10 @@ func NewAppConfig() django.AppConfig {
 					}
 					id = u
 				}
-				var user, err = Auth.Queries.RetrieveByID(
+				return Auth.Queries.RetrieveByID(
 					context.Background(),
 					uint64(id),
 				)
-				if err != nil {
-					return nil, err
-				}
-				return user, nil
 			},
 			GetInstances: func(amount, offset uint) ([]interface{}, error) {
 				var users, err = Auth.Queries.Retrieve(

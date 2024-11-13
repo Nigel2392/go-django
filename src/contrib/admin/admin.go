@@ -15,6 +15,7 @@ import (
 	cmpts "github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/contrib/admin/icons"
+	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -80,6 +81,8 @@ func NewAppConfig() django.AppConfig {
 	}
 	AdminSite.Init = func(settings django.Settings) error {
 		settings.App().Mux.AddRoute(AdminSite.Route)
+
+		autherrors.OnAuthenticationError(RedirectLoginFailedToAdmin)
 
 		components.Register("admin.header", cmpts.Header)
 
