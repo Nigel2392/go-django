@@ -4,7 +4,7 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
-	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 )
 
 type ComponentFunc = interface{} // func(...interface{}) -> Component
@@ -38,7 +38,7 @@ func (c *reflectFunc) Call(args ...interface{}) interface{} {
 			var values = reflect.MakeSlice(typ, 0, 0)
 			for j := variadicIndex; j < len(args); j++ {
 				var valueOf = reflect.ValueOf(args[j])
-				var cnvrted, ok = attrs.RConvert(
+				var cnvrted, ok = django_reflect.RConvert(
 					&valueOf, typ.Elem(),
 				)
 				if !ok {
@@ -54,7 +54,7 @@ func (c *reflectFunc) Call(args ...interface{}) interface{} {
 		} else {
 			var arg = args[i]
 			var valueOf = reflect.ValueOf(arg)
-			var cnvrted, ok = attrs.RConvert(
+			var cnvrted, ok = django_reflect.RConvert(
 				&valueOf, typ,
 			)
 			if !ok {

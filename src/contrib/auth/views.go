@@ -2,7 +2,6 @@ package auth
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -101,7 +100,6 @@ func (v *AuthView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 
 checkFormErr:
 	if err != nil {
-		fmt.Println("Error in form", err)
 		any(form).(forms.ErrorAdder).AddFormError(err)
 	}
 	context.Set("Form", form)

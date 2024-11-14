@@ -2,10 +2,14 @@ package widgets
 
 import (
 	"io"
+	"net/url"
 
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/forms/media"
 )
 
 type Option interface {
@@ -37,29 +41,72 @@ type OptionsWidget struct {
 	BlankLabel   string
 }
 
-func NewOptionWidget(type_ string, templateName string, attrs map[string]string, choices func() []Option) Widget {
+type WrappedOption struct {
+	Option
+	Selected bool
+}
+
+func (w *WrappedOption) Label() string {
+	return w.Option.Label()
+}
+
+func (w *WrappedOption) Value() string {
+	return w.Option.Value()
+}
+
+func WrapOptions(options []Option, selectedValues []string) []WrappedOption {
+	var wrappedOptions []WrappedOption
+	for _, option := range options {
+		var selected bool
+		for _, selectedValue := range selectedValues {
+			if selectedValue == option.Value() {
+				selected = true
+				break
+			}
+		}
+		wrappedOptions = append(wrappedOptions, WrappedOption{Option: option, Selected: selected})
+	}
+	return wrappedOptions
+}
+
+func NewOptionWidget(type_ string, templateName string, attrs map[string]string, choices func() []Option) *OptionsWidget {
 	return &OptionsWidget{
 		BaseWidget: NewBaseWidget(type_, templateName, attrs),
 		Choices:    choices,
 	}
 }
 
-func NewCheckboxInput(attrs map[string]string, choices func() []Option) Widget {
+func NewCheckboxInput(attrs map[string]string, choices func() []Option) *OptionsWidget {
 	return NewOptionWidget("checkbox", "forms/widgets/checkbox.html", attrs, choices)
 }
 
-func NewRadioInput(attrs map[string]string, choices func() []Option) Widget {
+func NewRadioInput(attrs map[string]string, choices func() []Option) *OptionsWidget {
 	return NewOptionWidget("radio", "forms/widgets/radio.html", attrs, choices)
 }
 
-func NewSelectInput(attrs map[string]string, choices func() []Option) Widget {
+func NewSelectInput(attrs map[string]string, choices func() []Option) *OptionsWidget {
 	return NewOptionWidget("select", "forms/widgets/select.html", attrs, choices)
 }
 
 func (o *OptionsWidget) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {
 	var base_context = o.BaseWidget.GetContextData(id, name, value, attrs)
 	var choices = o.Choices()
-	base_context.Set("choices", choices)
+
+	var values []string
+	if value != nil {
+		switch v := value.(type) {
+		case string:
+			values = []string{v}
+		case []string:
+			values = v
+		}
+	}
+
+	base_context.Set(
+		"choices",
+		WrapOptions(choices, values),
+	)
+
 	base_context.Set("include_blank", o.IncludeBlank)
 	if o.BlankLabel == "" {
 		o.BlankLabel = "---------"
@@ -99,4 +146,33 @@ func (b *OptionsWidget) RenderWithErrors(w io.Writer, id, name string, value int
 
 func (b *OptionsWidget) Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
 	return b.RenderWithErrors(w, id, name, value, nil, attrs)
+}
+
+type MultiSelectWidget struct {
+	*OptionsWidget
+}
+
+func NewMultiSelectInput(attrs map[string]string, choices func() []Option) Widget {
+	return &MultiSelectWidget{
+		OptionsWidget: NewOptionWidget("select", "forms/widgets/multi_select.html", attrs, choices),
+	}
+}
+
+func (m *MultiSelectWidget) ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
+	var values, ok = data[name]
+	if !ok {
+		return nil, nil
+	}
+	return values, nil
+}
+
+func (m *MultiSelectWidget) Media() media.Media {
+	var formMedia = media.NewMedia()
+	formMedia.AddCSS(media.CSS(
+		"forms/css/multi-select.css",
+	))
+	formMedia.AddJS(&media.JSAsset{
+		URL: django.Static("forms/js/multi-select.js"),
+	})
+	return formMedia
 }

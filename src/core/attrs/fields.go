@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/chooser"
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"github.com/Nigel2392/goldcrest"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -412,7 +413,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		// Call setter if it exists
 		if ok {
 			var r_v = reflect.ValueOf(v)
-			var r_v_ptr, ok = RConvert(&r_v, method.Type.In(1))
+			var r_v_ptr, ok = django_reflect.RConvert(&r_v, method.Type.In(1))
 			if !ok {
 				return assert.Fail(
 					fmt.Sprintf("value of type %q is not convertible to %q for field %q",
@@ -442,7 +443,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	}
 
 	// Convert to field type if possible
-	r_v_ptr, ok := RConvert(&r_v, f.field_t.Type)
+	r_v_ptr, ok := django_reflect.RConvert(&r_v, f.field_t.Type)
 	if !ok {
 		scanner, ok := f.field_v.Interface().(Scanner)
 		if ok {
@@ -507,7 +508,7 @@ success:
 	}
 
 	var old = f.field_v
-	RSet(r_v_ptr, &f.field_v, false)
+	django_reflect.RSet(r_v_ptr, &f.field_v, false)
 
 	if err := f.Validate(); err != nil {
 		f.field_v.Set(old)

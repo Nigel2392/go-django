@@ -8,7 +8,7 @@
         {{ end }}
 
         {{ range $choice := $choices }}
-            <option value="{{ $choice.Value }}"{{ if (eq ($ctx.Get "value") $choice.Value) }} selected{{ end }}>{{ $choice.Label }}</option>
+            <option value="{{ $choice.Value }}"{{ if $choice.Selected }} selected{{ end }}>{{ $choice.Label }}</option>
         {{ end }}
     </select>
 

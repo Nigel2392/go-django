@@ -513,7 +513,7 @@ func TestNewSelectInputWithBlankOption(t *testing.T) {
 	attrs := map[string]string{"class": "select-input"}
 	selectInput := widgets.NewSelectInput(attrs, mockOptions)
 	// Set the option to include a blank option
-	selectInput.(*widgets.OptionsWidget).IncludeBlank = true
+	selectInput.IncludeBlank = true
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
