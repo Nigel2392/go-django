@@ -97,7 +97,7 @@ func List{{ $struct.PluralName }}(limit, offset int32) ([]*{{ $struct.Name }}, e
     return objects, nil
 }
 
-func List{{ $struct.PluralName }}ForPrimaryKeys(ids []interface{}, limit, offset int32) ([]*{{ $struct.Name }}, error) {
+func List{{ $struct.PluralName }}ForPrimaryKeys(ids []interface{}) ([]*{{ $struct.Name }}, error) {
     var query = list{{$struct.Name}}ForPrimaryKeysAdminQuery
     var placeholders = make([]string, len(ids))
     var values = make([]interface{}, len(ids) + 2)
@@ -105,8 +105,6 @@ func List{{ $struct.PluralName }}ForPrimaryKeys(ids []interface{}, limit, offset
         placeholders[i] = "{{ placeholder }}"
         values[i] = ids[i]
     }
-    values[len(ids)] = limit
-    values[len(ids) + 1] = offset
     query = strings.ReplaceAll(
         query,
         "{%PLACEHOLDER%}",
