@@ -5,6 +5,8 @@
 package {{ .PackageName }};
 
 import (
+    "strings"
+
     "github.com/Nigel2392/go-django/src/core/contenttypes"
     "github.com/Nigel2392/go-django/src/contrib/admin"
 )
@@ -55,6 +57,11 @@ const (
         ORDER BY {{ $struct.PrimaryField.ColumnName }} ASC
         LIMIT {{ placeholder }} OFFSET {{ placeholder }}`
 
+    list{{$struct.Name}}ForPrimaryKeysAdminQuery = `SELECT {{ range $i, $field := $struct.Fields }}{{ if $i }}, {{ end }}{{ $field.ColumnName }}{{ end }}
+        FROM {{ $struct.TableName }}
+        WHERE {{ $struct.PrimaryField.ColumnName }} IN ({%PLACEHOLDER%})
+        LIMIT {{ placeholder }} OFFSET {{ placeholder }}`
+
     select{{$struct.Name}}AdminQuery = `SELECT {{ range $i, $field := $struct.Fields }}{{ if $i }}, {{ end }}{{ $field.ColumnName }}{{ end }}
         FROM {{ $struct.TableName }}
         WHERE {{ $struct.PrimaryField.ColumnName }} = {{ placeholder }}`
@@ -70,6 +77,40 @@ func Select{{ $struct.Name }}(id {{ $struct.PrimaryField.GoType }}) (*{{ $struct
 
 func List{{ $struct.PluralName }}(limit, offset int32) ([]*{{ $struct.Name }}, error) {
     var rows, err = globalDB.Query(list{{$struct.Name}}AdminQuery, limit, offset)
+    if err != nil {
+        return nil, err
+    }
+    defer rows.Close()
+    var objects = make([]*{{ $struct.Name }}, 0)
+    for rows.Next() {
+        var o = &{{ $struct.Name }}{}
+        err = rows.Scan(
+            {{ range $i, $field := $struct.Fields }}&o.{{ $field.Name }},{{ end }}
+        )
+        if err != nil {
+            return nil, err
+        }
+        objects = append(objects, o)
+    }
+    return objects, nil
+}
+
+func List{{ $struct.PluralName }}ForPrimaryKeys(ids []{{ $struct.PrimaryField.GoType }}, limit, offset int32) ([]*{{ $struct.Name }}, error) {
+    var query = list{{$struct.Name}}ForPrimaryKeysAdminQuery
+    var placeholders = make([]string, len(ids))
+    var values = make([]interface{}, len(ids) + 2)
+    for i := range ids {
+        placeholders[i] = "{{ placeholder }}"
+        values[i] = ids[i]
+    }
+    values[len(ids)] = limit
+    values[len(ids) + 1] = offset
+    query = strings.ReplaceAll(
+        query,
+        "{%PLACEHOLDER%}",
+        strings.Join(placeholders, ", "),
+    )
+    var rows, err = globalDB.Query(query, values...)
     if err != nil {
         return nil, err
     }

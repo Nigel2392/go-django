@@ -63,7 +63,21 @@ func (o *Select) GetContextData(id, name string, value interface{}, widgetAttrs 
 		choices = append(choices, option)
 	}
 
-	base_context.Set("choices", choices)
+	var values []string
+	if value != nil {
+		switch v := value.(type) {
+		case string:
+			values = []string{v}
+		case []string:
+			values = v
+		}
+	}
+
+	base_context.Set(
+		"choices",
+		widgets.WrapOptions(choices, values),
+	)
+
 	base_context.Set("include_blank", !o.ExcludeBlank)
 	if o.BlankLabel == "" {
 		o.BlankLabel = "---------"

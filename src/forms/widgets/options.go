@@ -119,19 +119,34 @@ func (o *OptionsWidget) Validate(value interface{}) []error {
 	if value == nil {
 		return nil
 	}
-	var errors []error
-	var choices = o.Choices()
-	var valueStr = value.(string)
-	var found bool
-	for _, choice := range choices {
-		if choice.Value() == valueStr {
-			found = true
-			break
+
+	var (
+		errors  []error
+		choices = o.Choices()
+		values  []string
+	)
+
+	switch v := value.(type) {
+	case string:
+		values = []string{v}
+	case []string:
+		values = v
+	}
+
+	for _, valueStr := range values {
+		var found bool
+		for _, choice := range choices {
+			if choice.Value() == valueStr {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			errors = append(errors, errs.ErrInvalidValue)
 		}
 	}
-	if !found {
-		errors = append(errors, errs.ErrInvalidValue)
-	}
+
 	return errors
 }
 
@@ -154,7 +169,7 @@ type MultiSelectWidget struct {
 
 func NewMultiSelectInput(attrs map[string]string, choices func() []Option) Widget {
 	return &MultiSelectWidget{
-		OptionsWidget: NewOptionWidget("select", "forms/widgets/multi_select.html", attrs, choices),
+		OptionsWidget: NewOptionWidget("select", "forms/widgets/multi-select.html", attrs, choices),
 	}
 }
 
@@ -168,11 +183,13 @@ func (m *MultiSelectWidget) ValueFromDataDict(data url.Values, files map[string]
 
 func (m *MultiSelectWidget) Media() media.Media {
 	var formMedia = media.NewMedia()
-	formMedia.AddCSS(media.CSS(
-		"forms/css/multi-select.css",
-	))
+	formMedia.AddCSS(media.CSS(django.Static(
+		"forms/css/multiple-select.css",
+	)))
 	formMedia.AddJS(&media.JSAsset{
-		URL: django.Static("forms/js/multi-select.js"),
+		URL: django.Static(
+			"forms/js/multiple-select.js",
+		),
 	})
 	return formMedia
 }

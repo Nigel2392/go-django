@@ -32,13 +32,7 @@ func InitTemplateLibrary() {
 		),
 	})
 
-	staticfiles.AddFS(static, filesystem.MatchAnd(
-		filesystem.MatchPrefix("forms/"),
-		filesystem.MatchOr(
-			filesystem.MatchExt(".css"),
-			filesystem.MatchExt(".js"),
-		),
-	))
+	staticfiles.AddFS(static, filesystem.MatchPrefix("forms/"))
 }
 
 func init() {

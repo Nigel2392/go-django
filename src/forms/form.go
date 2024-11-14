@@ -300,7 +300,14 @@ func (f *BaseForm) Field(name string) (fields.Field, bool) {
 }
 
 func (f *BaseForm) Widget(name string) (widgets.Widget, bool) {
-	return f.FormWidgets.Get(name)
+	var widget, ok = f.FormWidgets.Get(name)
+	if !ok {
+		var field, ok = f.FormFields.Get(name)
+		if ok {
+			widget = field.Widget()
+		}
+	}
+	return widget, ok
 }
 
 func (f *BaseForm) InitialData() map[string]interface{} {
@@ -382,8 +389,13 @@ func (f *BaseForm) FullClean() {
 			continue
 		}
 
-		if !v.Widget().ValueOmittedFromData(f.Raw, f.Files, f.prefix(k)) {
-			initial, errors = v.Widget().ValueFromDataDict(f.Raw, f.Files, f.prefix(k))
+		var widget, ok = f.Widget(k)
+		if !ok {
+			widget = v.Widget()
+		}
+
+		if !widget.ValueOmittedFromData(f.Raw, f.Files, f.prefix(k)) {
+			initial, errors = widget.ValueFromDataDict(f.Raw, f.Files, f.prefix(k))
 		}
 
 		if len(errors) > 0 {
@@ -560,7 +572,7 @@ func (f *BaseForm) HasChanged() bool {
 			k     = head.Key
 			field = head.Value
 		)
-		var v, ok = f.FormWidgets.Get(k)
+		var v, ok = f.Widget(k)
 		if !ok {
 			v = field.Widget()
 		}

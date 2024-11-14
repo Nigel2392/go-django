@@ -1,6 +1,8 @@
 package chooser
 
 import (
+	"reflect"
+
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -52,6 +54,31 @@ func (o *BaseChooser) Validate(value interface{}) []error {
 		return nil
 	}
 
+	var (
+		errors []error
+		rType  = reflect.TypeOf(value)
+		rVal   = reflect.ValueOf(value)
+	)
+
+	if rType.Kind() == reflect.Ptr {
+		rType = rType.Elem()
+		rVal = rVal.Elem()
+	}
+
+	switch rType.Kind() {
+	case reflect.Slice, reflect.Array:
+		for i := 0; i < rVal.Len(); i++ {
+			var val = rVal.Index(i).Interface()
+			errors = append(errors, o.validateValue(val)...)
+		}
+	default:
+		errors = append(errors, o.validateValue(value)...)
+	}
+
+	return errors
+}
+
+func (o *BaseChooser) validateValue(value interface{}) []error {
 	var errors []error
 	var modelInstance, err = o.forModelDefinition.Instance(
 		value,
