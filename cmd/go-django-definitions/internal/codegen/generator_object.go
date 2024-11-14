@@ -74,6 +74,14 @@ type Attribute struct {
 	Value string
 }
 
+type relationType int
+
+const (
+	RelOneToOne relationType = iota
+	RelForeignKey
+	RelManyToMany
+)
+
 type Field struct {
 	Name                         string
 	ColumnName                   string
@@ -87,12 +95,17 @@ type Field struct {
 	RelatedObjectName            string
 	RelatedObjectPackage         string
 	RelatedObjectPackageAdressor string
+	RelationType                 relationType
 	WidgetAttrs                  []Attribute
 	GoType                       string
 }
 
-func (f *Field) IsRel() bool {
-	return f.RelatedObjectName != ""
+func (f *Field) IsForeignKey() bool {
+	return f.RelationType == RelForeignKey
+}
+
+func (f *Field) IsManyToMany() bool {
+	return f.RelationType == RelManyToMany
 }
 
 func (f *Field) GetLabel() string {

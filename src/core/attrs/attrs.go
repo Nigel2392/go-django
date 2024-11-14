@@ -78,8 +78,14 @@ type Field interface {
 	// Retrieves the underlying model instance.
 	Instance() Definer
 
-	// Retrieves the related model instance, if any.
-	Rel() Definer
+	// Retrieves the related model instance for a foreign key field.
+	ForeignKey() Definer
+
+	// Retrieves the related model instance for a many-to-many field.
+	ManyToMany() Definer
+
+	// Retrieves the related model instance for a one-to-one field.
+	OneToOne() Definer
 
 	// Reports whether the field is the primary field.
 	//

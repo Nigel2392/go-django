@@ -223,10 +223,10 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 			logger.Logf("Building field %s.%s\n", s.Name, col.Name)
 			logger.Logf("Metadata: %+v\n", commentMap)
 
-			if fk, ok := commentMap["fk"]; ok {
-				var unquoted, err = strconv.Unquote(fk)
+			var parseRelation = func(relType relationType, value string) {
+				var unquoted, err = strconv.Unquote(value)
 				if err != nil {
-					unquoted = fk
+					unquoted = value
 				}
 				var values = strings.SplitN(unquoted, "=", 2)
 				if len(values) == 2 {
@@ -236,6 +236,7 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 					f.RelatedObjectPackage = pkgPath
 					f.RelatedObjectPackageAdressor = pkgAdressor
 					f.RelatedObjectName = dotObject
+					f.RelationType = RelForeignKey
 
 					obj.AddImport(Import{
 						Alias:   pkgAdressor,
@@ -247,6 +248,18 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 						c.opts.InflectSingular(unquoted),
 					)
 				}
+			}
+
+			if fk, ok := commentMap["fk"]; ok {
+				parseRelation(RelForeignKey, fk)
+			}
+
+			if o2o, ok := commentMap["o2o"]; ok {
+				parseRelation(RelOneToOne, o2o)
+			}
+
+			if m2m, ok := commentMap["m2m"]; ok {
+				parseRelation(RelManyToMany, m2m)
 			}
 
 			if label, ok := commentMap["label"]; ok {

@@ -437,6 +437,65 @@ func TestContentType(t *testing.T) {
 			}
 		})
 
+		t.Run("TestGetInstancesByID", func(t *testing.T) {
+			// Mock IDs for testing
+			ids := []interface{}{1, 2}
+
+			// Case 1: Test when `GetInstancesByID` is defined
+			defOne.GetInstancesByID = func(ids []interface{}) ([]interface{}, error) {
+				var instances []interface{}
+				for _, id := range ids {
+					if instance, exists := instanceStorage["TestStructOne"][id.(int)]; exists {
+						instances = append(instances, instance)
+					} else {
+						return nil, fmt.Errorf("instance with ID %v not found", id)
+					}
+				}
+				return instances, nil
+			}
+
+			t.Run("With GetInstancesByID defined", func(t *testing.T) {
+				instances, err := defOne.InstancesByIDs(ids)
+				if err != nil {
+					t.Errorf("expected nil error, got %v", err)
+				}
+				if len(instances) != len(ids) {
+					t.Errorf("expected %d instances, got %d", len(ids), len(instances))
+				}
+			})
+
+			// Case 2: Test when `GetInstancesByID` is not defined, expecting a fallback to `GetInstance`
+			defOne.GetInstancesByID = nil // Remove custom `GetInstancesByID`
+
+			t.Run("Without GetInstancesByID, fallback to GetInstance", func(t *testing.T) {
+				instances, err := defOne.InstancesByIDs(ids)
+				if err != nil {
+					t.Errorf("expected nil error, got %v", err)
+				}
+				if len(instances) != len(ids) {
+					t.Errorf("expected %d instances, got %d", len(ids), len(instances))
+				}
+
+				slices.SortFunc(instances, func(a, b any) int {
+					idA := a.(identifiable).identifier()
+					idB := b.(identifiable).identifier()
+					if idA < idB {
+						return -1
+					}
+					if idA > idB {
+						return 1
+					}
+					return 0
+				})
+
+				for i, instance := range instances {
+					if instance.(identifiable).identifier() != ids[i] {
+						t.Errorf("expected instance with ID %v, got %v", ids[i], instance)
+					}
+				}
+			})
+		})
+
 		t.Run("TestRegisterDuplicateContentType", func(t *testing.T) {
 			defer func() {
 				if r := recover(); r == nil {

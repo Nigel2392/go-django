@@ -32,7 +32,9 @@ type FieldConfig struct {
 	Primary       bool                                          // Whether the field is a primary key
 	Label         string                                        // The label for the field
 	HelpText      string                                        // The help text for the field
-	RelatedObject Definer                                       // The related object for the field
+	RelForeignKey Definer                                       // The related object for the field (foreign key)
+	RelManyToMany Definer                                       // The related objects for the field (many to many, not implemented
+	RelOneToOne   Definer                                       // The related object for the field (one to one, not implemented)
 	Default       any                                           // The default value for the field (or a function that returns the default value)
 	Validators    []func(interface{}) error                     // Validators for the field
 	FormField     func(opts ...func(fields.Field)) fields.Field // The form field for the field
@@ -95,8 +97,8 @@ func (f *FieldDef) Label() string {
 	if labeler, ok := f.field_v.Interface().(Labeler); ok {
 		return labeler.Label()
 	}
-	if f.Rel() != nil {
-		var cTypeDef = contenttypes.DefinitionForObject(f.Rel())
+	if f.ForeignKey() != nil {
+		var cTypeDef = contenttypes.DefinitionForObject(f.ForeignKey())
 		if cTypeDef != nil {
 			return cTypeDef.Label()
 		}
@@ -118,9 +120,23 @@ func (f *FieldDef) Name() string {
 	return f.field_t.Name
 }
 
-func (f *FieldDef) Rel() Definer {
-	if f.attrDef.RelatedObject != nil {
-		return f.attrDef.RelatedObject
+func (f *FieldDef) ForeignKey() Definer {
+	if f.attrDef.RelForeignKey != nil {
+		return f.attrDef.RelForeignKey
+	}
+	return nil
+}
+
+func (f *FieldDef) ManyToMany() Definer {
+	if f.attrDef.RelManyToMany != nil {
+		return f.attrDef.RelManyToMany
+	}
+	return nil
+}
+
+func (f *FieldDef) OneToOne() Definer {
+	if f.attrDef.RelOneToOne != nil {
+		return f.attrDef.RelOneToOne
 	}
 	return nil
 }
@@ -222,8 +238,8 @@ func (f *FieldDef) FormField() fields.Field {
 
 	var opts = make([]func(fields.Field), 0)
 
-	if f.Rel() != nil {
-		var cTypeDef = contenttypes.DefinitionForObject(f.Rel())
+	if f.ForeignKey() != nil {
+		var cTypeDef = contenttypes.DefinitionForObject(f.ForeignKey())
 		if cTypeDef != nil {
 			opts = append(opts, fields.Label(
 				cTypeDef.Label(),
@@ -315,17 +331,18 @@ returnField:
 		)
 	}
 
-	if f.attrDef.FormWidget != nil {
+	switch {
+	case f.attrDef.FormWidget != nil:
 		formField.SetWidget(
 			f.attrDef.FormWidget(f.attrDef),
 		)
-	} else if f.Rel() != nil {
+	case f.ForeignKey() != nil:
 		formField.SetWidget(
 			chooser.SelectWidget(
 				f.AllowBlank(),
 				"--------",
 				chooser.BaseChooserOptions{
-					TargetObject: f.Rel(),
+					TargetObject: f.ForeignKey(),
 					GetPrimaryKey: func(i interface{}) interface{} {
 						var def = i.(Definer)
 						return PrimaryKey(def)
@@ -334,6 +351,10 @@ returnField:
 				nil,
 			),
 		)
+	case f.ManyToMany() != nil:
+
+	case f.OneToOne() != nil:
+
 	}
 
 	f.formField = formField
