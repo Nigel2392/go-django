@@ -97,8 +97,9 @@ func (f *FieldDef) Label() string {
 	if labeler, ok := f.field_v.Interface().(Labeler); ok {
 		return labeler.Label()
 	}
-	if f.ForeignKey() != nil {
-		var cTypeDef = contenttypes.DefinitionForObject(f.ForeignKey())
+	var rel = f.Rel()
+	if rel != nil {
+		var cTypeDef = contenttypes.DefinitionForObject(rel)
 		if cTypeDef != nil {
 			return cTypeDef.Label()
 		}
@@ -118,6 +119,19 @@ func (f *FieldDef) HelpText() string {
 
 func (f *FieldDef) Name() string {
 	return f.field_t.Name
+}
+
+func (f *FieldDef) Rel() Definer {
+	if f.ForeignKey() != nil {
+		return f.ForeignKey()
+	}
+	if f.ManyToMany() != nil {
+		return f.ManyToMany()
+	}
+	if f.OneToOne() != nil {
+		return f.OneToOne()
+	}
+	return nil
 }
 
 func (f *FieldDef) ForeignKey() Definer {
@@ -237,9 +251,9 @@ func (f *FieldDef) FormField() fields.Field {
 	}
 
 	var opts = make([]func(fields.Field), 0)
-
-	if f.ForeignKey() != nil {
-		var cTypeDef = contenttypes.DefinitionForObject(f.ForeignKey())
+	var rel = f.Rel()
+	if rel != nil {
+		var cTypeDef = contenttypes.DefinitionForObject(rel)
 		if cTypeDef != nil {
 			opts = append(opts, fields.Label(
 				cTypeDef.Label(),

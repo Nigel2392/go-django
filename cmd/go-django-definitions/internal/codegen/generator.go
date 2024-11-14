@@ -224,6 +224,7 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 			logger.Logf("Metadata: %+v\n", commentMap)
 
 			var parseRelation = func(relType relationType, value string) {
+				logger.Logf("Parsing relation %d %s\n", relType, value)
 				var unquoted, err = strconv.Unquote(value)
 				if err != nil {
 					unquoted = value
@@ -236,7 +237,6 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 					f.RelatedObjectPackage = pkgPath
 					f.RelatedObjectPackageAdressor = pkgAdressor
 					f.RelatedObjectName = dotObject
-					f.RelationType = relType
 
 					obj.AddImport(Import{
 						Alias:   pkgAdressor,
@@ -248,6 +248,8 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 						c.opts.InflectSingular(unquoted),
 					)
 				}
+
+				f.RelationType = relType
 			}
 
 			if fk, ok := commentMap["fk"]; ok {
