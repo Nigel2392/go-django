@@ -97,7 +97,7 @@ func List{{ $struct.PluralName }}(limit, offset int32) ([]*{{ $struct.Name }}, e
     return objects, nil
 }
 
-func List{{ $struct.PluralName }}ForPrimaryKeys(ids []{{ $struct.PrimaryField.GoType }}, limit, offset int32) ([]*{{ $struct.Name }}, error) {
+func List{{ $struct.PluralName }}ForPrimaryKeys(ids []interface{}, limit, offset int32) ([]*{{ $struct.Name }}, error) {
     var query = list{{$struct.Name}}ForPrimaryKeysAdminQuery
     var placeholders = make([]string, len(ids))
     var values = make([]interface{}, len(ids) + 2)
@@ -142,7 +142,7 @@ func select{{ $struct.Name }}Interface(id any) (interface{}, error) {
     return o, nil
 }
 
-func list{{ $struct.PluralName }}InterfaceForPrimaryKeys(ids []{{ $struct.PrimaryField.GoType }}) ([]interface{}, error) {
+func list{{ $struct.PluralName }}InterfaceForPrimaryKeys(ids []any) ([]interface{}, error) {
     var rows, err = List{{ $struct.PluralName }}ForPrimaryKeys(ids)
     if err != nil {
         return nil, err
