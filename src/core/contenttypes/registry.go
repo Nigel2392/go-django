@@ -1,6 +1,7 @@
 package contenttypes
 
 import (
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -56,6 +57,11 @@ type ContentTypeDefinition struct {
 
 	// A function to get a list of instances of the model.
 	GetInstances func(amount, offset uint) ([]interface{}, error)
+
+	// A function to get a list of instances of the model by a list of IDs.
+	//
+	// Falls back to calling Instance for each ID if GetInstancesByID is not implemented.
+	GetInstancesByID func([]interface{}) ([]interface{}, error)
 
 	// A list of aliases for the model.
 	//
@@ -157,6 +163,47 @@ func (p *ContentTypeDefinition) Instances(amount, offset uint) ([]interface{}, e
 	}
 	assert.Fail("GetInstances not implemented for model %s", p.ContentType().TypeName())
 	return nil, nil
+}
+
+// Returns a list of instances of the model by a list of IDs.
+//
+// Falls back to calling Instance for each ID if GetInstancesByID is not implemented.
+func (p *ContentTypeDefinition) InstancesByIDs(ids []interface{}) ([]interface{}, error) {
+	if p.GetInstancesByID != nil {
+		return p.GetInstancesByID(ids)
+	}
+
+	var instancesCh = make(chan interface{}, len(ids))
+	var errorsCh = make(chan error, len(ids))
+	for _, id := range ids {
+		var id = id
+		go func(id interface{}) {
+			var instance, err = p.Instance(id)
+			if err != nil {
+				errorsCh <- err
+				return
+			}
+			instancesCh <- instance
+		}(id)
+	}
+
+	var instances = make([]interface{}, 0, len(ids))
+	var errs = make([]error, 0, len(ids))
+	for i := 0; i < len(ids); i++ {
+		select {
+		case instance := <-instancesCh:
+			instances = append(instances, instance)
+		case err := <-errorsCh:
+			errs = append(errs, err)
+		}
+	}
+
+	if len(errs) > 0 {
+		return nil, errors.Join(errs...)
+	}
+
+	return instances, nil
+
 }
 
 // ContentTypeRegistry is a struct that holds information about all registered models.
@@ -405,6 +452,14 @@ func (p *ContentTypeRegistry) GetInstances(typeName string, amount, offset uint)
 	return definition.Instances(amount, offset)
 }
 
+func (p *ContentTypeRegistry) GetInstancesByIDs(typeName string, ids []interface{}) ([]interface{}, error) {
+	var definition = p.DefinitionForType(typeName)
+	if definition == nil {
+		return nil, fmt.Errorf("pages: GetInstancesByIDs called for unknown type %s", typeName)
+	}
+	return definition.InstancesByIDs(ids)
+}
+
 var contentTypeRegistryObject = &ContentTypeRegistry{}
 
 // Register registers a model with the registry.
@@ -461,4 +516,11 @@ func GetInstance(typeName string, id interface{}) (interface{}, error) {
 // GetInstances returns a list of instances of the model.
 func GetInstances(typeName string, amount, offset uint) ([]interface{}, error) {
 	return contentTypeRegistryObject.GetInstances(typeName, amount, offset)
+}
+
+// GetInstancesByIDs returns a list of instances of the model by a list of IDs.
+//
+// If the model does not implement GetInstancesByID, it will fall back to calling GetInstance for each ID.
+func GetInstancesByIDs(typeName string, ids []interface{}) ([]interface{}, error) {
+	return contentTypeRegistryObject.GetInstancesByIDs(typeName, ids)
 }

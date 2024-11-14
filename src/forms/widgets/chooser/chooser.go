@@ -67,34 +67,46 @@ func (o *BaseChooser) Validate(value interface{}) []error {
 
 	switch rType.Kind() {
 	case reflect.Slice, reflect.Array:
+		var values = make([]interface{}, rVal.Len())
 		for i := 0; i < rVal.Len(); i++ {
-			var val = rVal.Index(i).Interface()
-			errors = append(errors, o.validateValue(val)...)
+			values[i] = rVal.Index(i).Interface()
 		}
+
+		var modelInstances, err = o.forModelDefinition.InstancesByIDs(
+			values,
+		)
+
+		if err != nil {
+			errors = append(
+				errors,
+				errs.Wrap(err, "error retrieving model instances"),
+			)
+		}
+
+		if len(modelInstances) != len(values) {
+			errors = append(
+				errors,
+				errs.Error("some model instances not found"),
+			)
+		}
+
 	default:
-		errors = append(errors, o.validateValue(value)...)
-	}
-
-	return errors
-}
-
-func (o *BaseChooser) validateValue(value interface{}) []error {
-	var errors []error
-	var modelInstance, err = o.forModelDefinition.Instance(
-		value,
-	)
-	if err != nil {
-		errors = append(
-			errors,
-			errs.Wrap(err, "error retrieving model instance"),
+		var modelInstance, err = o.forModelDefinition.Instance(
+			value,
 		)
-	}
+		if err != nil {
+			errors = append(
+				errors,
+				errs.Wrap(err, "error retrieving model instance"),
+			)
+		}
 
-	if modelInstance == nil {
-		errors = append(
-			errors,
-			errs.Error("model instance not found"),
-		)
+		if modelInstance == nil {
+			errors = append(
+				errors,
+				errs.Error("model instance not found"),
+			)
+		}
 	}
 
 	return errors
