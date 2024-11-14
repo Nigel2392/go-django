@@ -11,10 +11,10 @@ import (
 func init() {
 	var def = &MockContentTypeDefinition{}
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
-		ContentObject:    def,
-		GetInstance:      def.GetInstance,
-		GetInstances:     def.GetInstances,
-		GetInstancesByID: def.GetInstancesByID,
+		ContentObject:     def,
+		GetInstance:       def.GetInstance,
+		GetInstances:      def.GetInstances,
+		GetInstancesByIDs: def.GetInstancesByIDs,
 	})
 }
 
@@ -27,7 +27,7 @@ func (m *MockContentTypeDefinition) GetInstances(amount, offset uint) ([]interfa
 	return []interface{}{"instance1", "instance2"}, nil
 }
 
-func (m *MockContentTypeDefinition) GetInstancesByID(ids []interface{}) ([]interface{}, error) {
+func (m *MockContentTypeDefinition) GetInstancesByIDs(ids []interface{}) ([]interface{}, error) {
 	if len(ids) == 2 && ids[0] == "id1" && ids[1] == "id2" {
 		return []interface{}{"instance1", "instance2"}, nil
 	}

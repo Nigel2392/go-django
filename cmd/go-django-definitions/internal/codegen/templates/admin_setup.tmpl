@@ -21,6 +21,9 @@ var _ = contenttypes.Register(&contenttypes.ContentTypeDefinition{
     GetInstances: func(limit, offset uint) ([]interface{}, error) {
         return list{{ $struct.PluralName }}Interface(limit, offset)
     },
+    GetInstancesByIDs: func(ids []any) ([]interface{}, error) {
+        return list{{ $struct.PluralName }}InterfaceForPrimaryKeys(ids)
+    },
 }){{ end }}
 
 {{ range $struct := $obj.Structs }}
@@ -59,8 +62,7 @@ const (
 
     list{{$struct.Name}}ForPrimaryKeysAdminQuery = `SELECT {{ range $i, $field := $struct.Fields }}{{ if $i }}, {{ end }}{{ $field.ColumnName }}{{ end }}
         FROM {{ $struct.TableName }}
-        WHERE {{ $struct.PrimaryField.ColumnName }} IN ({%PLACEHOLDER%})
-        LIMIT {{ placeholder }} OFFSET {{ placeholder }}`
+        WHERE {{ $struct.PrimaryField.ColumnName }} IN ({%PLACEHOLDER%})`
 
     select{{$struct.Name}}AdminQuery = `SELECT {{ range $i, $field := $struct.Fields }}{{ if $i }}, {{ end }}{{ $field.ColumnName }}{{ end }}
         FROM {{ $struct.TableName }}
@@ -138,6 +140,18 @@ func select{{ $struct.Name }}Interface(id any) (interface{}, error) {
         return nil, err
     }
     return o, nil
+}
+
+func list{{ $struct.PluralName }}InterfaceForPrimaryKeys(ids []{{ $struct.PrimaryField.GoType }}) ([]interface{}, error) {
+    var rows, err = List{{ $struct.PluralName }}ForPrimaryKeys(ids)
+    if err != nil {
+        return nil, err
+    }
+    var objects = make([]interface{}, len(rows))
+    for i, row := range rows {
+        objects[i] = row
+    }
+    return objects, nil
 }
 
 func list{{ $struct.PluralName }}Interface(limit, offset uint) ([]interface{}, error) {

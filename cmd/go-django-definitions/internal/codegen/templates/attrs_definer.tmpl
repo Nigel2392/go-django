@@ -46,8 +46,9 @@ func (o *{{ $struct.Name }}) FieldDefs() attrs.Definitions {
             Null: {{ $field.Null }},{{ end }}{{ if $field.Blank }}
             Blank: {{ $field.Blank }},{{ end }}{{ if $field.ReadOnly }}
             ReadOnly: {{ $field.ReadOnly }},{{ end }}{{ if $field.IsForeignKey }}
-            RelForeignKey: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ end }}{{ if $field.IsManyToMany }}
-            RelManyToMany: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ end }}{{ if (or (not (and $field.IsForeignKey $field.IsManyToMany)) $field.Label) }}
+            RelForeignKey: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ else if $field.IsManyToMany }}
+            RelManyToMany: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ else if $field.IsOneToOne }}
+            RelOneToOne: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ end }}{{ if (or (not (and $field.IsForeignKey $field.IsManyToMany)) $field.Label) }}
             Label: "{{ $field.GetLabel }}",{{ end }}{{ if $field.GetHelpText }}
             HelpText: "{{ $field.GetHelpText }}",{{ end}}{{ if $field.Primary }}
             Primary: {{ $field.Primary }},{{ end }}{{ if $field.Choices }}

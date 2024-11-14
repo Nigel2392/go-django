@@ -442,7 +442,7 @@ func TestContentType(t *testing.T) {
 			ids := []interface{}{1, 2}
 
 			// Case 1: Test when `GetInstancesByID` is defined
-			defOne.GetInstancesByID = func(ids []interface{}) ([]interface{}, error) {
+			defOne.GetInstancesByIDs = func(ids []interface{}) ([]interface{}, error) {
 				var instances []interface{}
 				for _, id := range ids {
 					if instance, exists := instanceStorage["TestStructOne"][id.(int)]; exists {
@@ -465,7 +465,7 @@ func TestContentType(t *testing.T) {
 			})
 
 			// Case 2: Test when `GetInstancesByID` is not defined, expecting a fallback to `GetInstance`
-			defOne.GetInstancesByID = nil // Remove custom `GetInstancesByID`
+			defOne.GetInstancesByIDs = nil // Remove custom `GetInstancesByID`
 
 			t.Run("Without GetInstancesByID, fallback to GetInstance", func(t *testing.T) {
 				instances, err := defOne.InstancesByIDs(ids)

@@ -236,7 +236,7 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 					f.RelatedObjectPackage = pkgPath
 					f.RelatedObjectPackageAdressor = pkgAdressor
 					f.RelatedObjectName = dotObject
-					f.RelationType = RelForeignKey
+					f.RelationType = relType
 
 					obj.AddImport(Import{
 						Alias:   pkgAdressor,

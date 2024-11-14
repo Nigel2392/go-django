@@ -77,7 +77,8 @@ type Attribute struct {
 type relationType int
 
 const (
-	RelOneToOne relationType = iota
+	RelNone relationType = iota
+	RelOneToOne
 	RelForeignKey
 	RelManyToMany
 )
@@ -106,6 +107,10 @@ func (f *Field) IsForeignKey() bool {
 
 func (f *Field) IsManyToMany() bool {
 	return f.RelationType == RelManyToMany
+}
+
+func (f *Field) IsOneToOne() bool {
+	return f.RelationType == RelOneToOne
 }
 
 func (f *Field) GetLabel() string {

@@ -61,7 +61,7 @@ type ContentTypeDefinition struct {
 	// A function to get a list of instances of the model by a list of IDs.
 	//
 	// Falls back to calling Instance for each ID if GetInstancesByID is not implemented.
-	GetInstancesByID func([]interface{}) ([]interface{}, error)
+	GetInstancesByIDs func([]interface{}) ([]interface{}, error)
 
 	// A list of aliases for the model.
 	//
@@ -169,8 +169,8 @@ func (p *ContentTypeDefinition) Instances(amount, offset uint) ([]interface{}, e
 //
 // Falls back to calling Instance for each ID if GetInstancesByID is not implemented.
 func (p *ContentTypeDefinition) InstancesByIDs(ids []interface{}) ([]interface{}, error) {
-	if p.GetInstancesByID != nil {
-		return p.GetInstancesByID(ids)
+	if p.GetInstancesByIDs != nil {
+		return p.GetInstancesByIDs(ids)
 	}
 
 	var instancesCh = make(chan interface{}, len(ids))
