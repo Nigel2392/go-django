@@ -60,6 +60,9 @@ type Definitions interface {
 	// Retrieves the primary field.
 	Primary() Field
 
+	// Instance returns the underlying model instance.
+	Instance() Definer
+
 	// Retrieves a slice of all fields.
 	//
 	// The order of the fields is the same as they were defined.

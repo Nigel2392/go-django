@@ -66,6 +66,10 @@ func (d *ObjectDefinitions) Primary() Field {
 	return f
 }
 
+func (d *ObjectDefinitions) Instance() Definer {
+	return d.Object
+}
+
 func (d *ObjectDefinitions) Len() int {
 	return d.ObjectFields.Len()
 }

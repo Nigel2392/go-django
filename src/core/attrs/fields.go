@@ -53,6 +53,8 @@ type FieldDef struct {
 	field_t        reflect.StructField
 	field_v        reflect.Value
 	formField      fields.Field
+	fieldName      string
+	// directlyInteractible bool
 }
 
 // NewField creates a new field definition for the given instance.
@@ -69,11 +71,17 @@ func NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef {
 		ok             bool
 	)
 
+	// var isRel = (conf != nil) && (conf.RelForeignKey != nil || conf.RelManyToMany != nil || conf.RelOneToOne != nil)
 	field_t, ok = instance_t.FieldByName(name)
+	// assert.True(ok || isRel, "field %q not found in %T", name, instance)
 	assert.True(ok, "field %q not found in %T", name, instance)
 
+	// var directlyInteractible = ok
+
+	// if ok {
 	field_v = instance_v.FieldByIndex(field_t.Index)
 	assert.True(field_v.IsValid(), "field %q not found in %T", name, instance)
+	// }
 
 	if conf == nil {
 		conf = &FieldConfig{}
@@ -87,6 +95,8 @@ func NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef {
 		instance_v:     instance_v,
 		field_t:        field_t,
 		field_v:        field_v,
+		fieldName:      name,
+		// directlyInteractible: directlyInteractible,
 	}
 }
 
@@ -94,9 +104,13 @@ func (f *FieldDef) Label() string {
 	if f.attrDef.Label != "" {
 		return trans.T(f.attrDef.Label)
 	}
+
+	// if f.directlyInteractible {
 	if labeler, ok := f.field_v.Interface().(Labeler); ok {
 		return labeler.Label()
 	}
+	// }
+
 	var rel = f.Rel()
 	if rel != nil {
 		var cTypeDef = contenttypes.DefinitionForObject(rel)
@@ -104,13 +118,16 @@ func (f *FieldDef) Label() string {
 			return cTypeDef.Label()
 		}
 	}
-	return trans.T(capCaser.String(f.field_t.Name))
+
+	return trans.T(capCaser.String(f.fieldName))
 }
 
 func (f *FieldDef) HelpText() string {
+	// if f.directlyInteractible {
 	if helpTexter, ok := f.field_v.Interface().(Helper); ok {
 		return trans.T(helpTexter.HelpText())
 	}
+	// }
 	if f.attrDef.HelpText != "" {
 		return trans.T(f.attrDef.HelpText)
 	}
@@ -118,7 +135,7 @@ func (f *FieldDef) HelpText() string {
 }
 
 func (f *FieldDef) Name() string {
-	return f.field_t.Name
+	return f.fieldName
 }
 
 func (f *FieldDef) Rel() Definer {
@@ -226,6 +243,7 @@ func (f *FieldDef) GetDefault() interface{} {
 		return out[0].Interface()
 	}
 
+	// if f.directlyInteractible {
 	var typForNew = f.field_t.Type
 	if f.field_t.Type.Kind() == reflect.Ptr {
 		typForNew = f.field_t.Type.Elem()
@@ -243,6 +261,17 @@ func (f *FieldDef) GetDefault() interface{} {
 	}
 
 	return f.field_v.Interface()
+	// }
+
+	// var rel = f.Rel()
+	// if rel != nil {
+	// var cTypeDef = contenttypes.DefinitionForObject(rel)
+	// if cTypeDef != nil {
+	// return cTypeDef.Object()
+	// }
+	// }
+	//
+	// return nil
 }
 
 func (f *FieldDef) FormField() fields.Field {
@@ -272,12 +301,12 @@ func (f *FieldDef) FormField() fields.Field {
 		opts = append(opts, fields.Required(true))
 	}
 
-	var typForNew = f.field_t.Type
+	var formField fields.Field
+	var typForNew reflect.Type = f.field_t.Type
 	if f.field_t.Type.Kind() == reflect.Ptr {
 		typForNew = f.field_t.Type.Elem()
 	}
 
-	var formField fields.Field
 	var hooks []FormFieldGetter
 	if f.attrDef.FormField != nil {
 		formField = f.attrDef.FormField(opts...)

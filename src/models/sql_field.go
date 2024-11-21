@@ -47,7 +47,7 @@ var (
 )
 
 type BaseSQLField[DBType, GoType any] struct {
-	value       *GoType
+	structField *GoType
 	ConvertToDB func(*GoType) (DBType, error)
 	ConvertToGO func(DBType) (*GoType, error)
 }
@@ -72,15 +72,23 @@ func NewBaseSQLField[DBType, GoType any](convertToDB func(*GoType) (DBType, erro
 	}
 }
 
+func (f *BaseSQLField[DBType, GoType]) Set(v *GoType) {
+	f.structField = v
+}
+
+func (f *BaseSQLField[DBType, GoType]) Get() *GoType {
+	return f.structField
+}
+
 func (f *BaseSQLField[DBType, GoType]) Value() (driver.Value, error) {
 	var (
-		rTyp = reflect.TypeOf(f.value)
-		rVal = reflect.ValueOf(f.value)
+		rTyp = reflect.TypeOf(f.structField)
+		rVal = reflect.ValueOf(f.structField)
 	)
 	if isZero(rTyp, rVal) {
 		return nil, nil
 	}
-	return f.ConvertToDB(f.value)
+	return f.ConvertToDB(f.structField)
 }
 
 func (f *BaseSQLField[DBType, GoType]) Scan(value interface{}) error {
@@ -92,6 +100,6 @@ func (f *BaseSQLField[DBType, GoType]) Scan(value interface{}) error {
 	if err != nil {
 		return err
 	}
-	f.value = parsed
+	f.structField = parsed
 	return nil
 }
