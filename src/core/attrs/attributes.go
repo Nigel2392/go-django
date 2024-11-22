@@ -296,8 +296,9 @@ func set(d Definer, name string, value interface{}, force bool) error {
 	var defs = d.FieldDefs()
 	var f, ok = defs.Field(name)
 	if !ok {
+		var fieldNames = fieldNames(d, nil)
 		return assert.Fail(
-			fmt.Sprintf("set (%T): no field named %q", d, name),
+			fmt.Sprintf("set (%T): no field named %q in %+v", d, name, fieldNames),
 		)
 	}
 

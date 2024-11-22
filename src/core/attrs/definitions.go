@@ -1,6 +1,8 @@
 package attrs
 
-import "github.com/elliotchance/orderedmap/v2"
+import (
+	"github.com/elliotchance/orderedmap/v2"
+)
 
 type ObjectDefinitions struct {
 	Object       Definer

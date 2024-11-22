@@ -170,6 +170,7 @@ func AutoDefinitions[T Definer](instance T, include ...any) Definitions {
 				instance_v:     instance_v,
 				field_t:        field_t,
 				field_v:        field_v,
+				fieldName:      field_t.Name,
 			})
 		}
 	} else {
@@ -201,6 +202,7 @@ func AutoDefinitions[T Definer](instance T, include ...any) Definitions {
 					instance_v:     instance_v,
 					field_t:        field_t,
 					field_v:        field_v,
+					fieldName:      field_t.Name,
 				})
 			case Field:
 				m = append(m, name)
