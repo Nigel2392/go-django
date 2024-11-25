@@ -17,7 +17,7 @@ func init() {
 
 func TestNewTextInput(t *testing.T) {
 	attrs := map[string]string{"placeholder": "Enter text", "class": "text-input"}
-	textInput := widgets.NewTextInput(attrs)
+	textInput := widgets.NewTextInput(nil)
 
 	// Check widget type
 	if textInput.FormType() != "text" {
@@ -56,7 +56,7 @@ func TestNewTextInput(t *testing.T) {
 
 func TestNewTextarea(t *testing.T) {
 	attrs := map[string]string{"placeholder": "Enter text", "class": "textarea"}
-	textarea := widgets.NewTextarea(attrs)
+	textarea := widgets.NewTextarea(nil)
 
 	// Check widget type
 	if textarea.FormType() != "textarea" {
@@ -92,7 +92,7 @@ func TestNewTextarea(t *testing.T) {
 
 func TestNewEmailInput(t *testing.T) {
 	attrs := map[string]string{"class": "email-input"}
-	emailInput := widgets.NewEmailInput(attrs)
+	emailInput := widgets.NewEmailInput(nil)
 
 	// Check widget type
 	if emailInput.FormType() != "email" {
@@ -128,7 +128,7 @@ func TestNewEmailInput(t *testing.T) {
 
 func TestNewPasswordInput(t *testing.T) {
 	attrs := map[string]string{"class": "password-input"}
-	passwordInput := widgets.NewPasswordInput(attrs)
+	passwordInput := widgets.NewPasswordInput(nil)
 
 	// Check widget type
 	if passwordInput.FormType() != "password" {
@@ -164,7 +164,7 @@ func TestNewPasswordInput(t *testing.T) {
 
 func TestNewHiddenInput(t *testing.T) {
 	attrs := map[string]string{"value": "secret-value"}
-	hiddenInput := widgets.NewHiddenInput(attrs)
+	hiddenInput := widgets.NewHiddenInput(nil)
 
 	// Check widget type
 	if hiddenInput.FormType() != "hidden" {
@@ -200,7 +200,7 @@ func TestNewHiddenInput(t *testing.T) {
 
 func TestNewNumberInput(t *testing.T) {
 	attrs := map[string]string{"min": "1", "max": "10", "step": "1", "class": "number-input"}
-	numberInput := widgets.NewNumberInput[int](attrs) // Using int as the type for testing
+	numberInput := widgets.NewNumberInput[int](nil) // Using int as the type for testing
 
 	// Check widget type
 	if numberInput.FormType() != "number" {
@@ -248,7 +248,7 @@ func TestNewNumberInput(t *testing.T) {
 
 func TestNewBooleanInput(t *testing.T) {
 	attrs := map[string]string{"class": "checkbox-input"}
-	booleanInput := widgets.NewBooleanInput(attrs)
+	booleanInput := widgets.NewBooleanInput(nil)
 
 	// Check widget type
 	if booleanInput.FormType() != "checkbox" {
@@ -287,7 +287,7 @@ func TestNewBooleanInput(t *testing.T) {
 
 func TestNewDateInput(t *testing.T) {
 	attrs := map[string]string{"class": "date-input"}
-	dateInput := widgets.NewDateInput(attrs, widgets.DateWidgetTypeDate) // Assuming `DateWidgetTypeDate` is available
+	dateInput := widgets.NewDateInput(nil, widgets.DateWidgetTypeDate) // Assuming `DateWidgetTypeDate` is available
 
 	// Check widget type
 	if dateInput.FormType() != "date" {
@@ -348,7 +348,7 @@ func TestNewFileInput(t *testing.T) {
 	}
 
 	// Create the file input widget with the mock validator
-	fileInput := widgets.NewFileInput(attrs, mockValidator)
+	fileInput := widgets.NewFileInput(nil, mockValidator)
 
 	// Check widget type
 	if fileInput.FormType() != "file" {
