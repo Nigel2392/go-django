@@ -43,7 +43,7 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 	var f = &BaseUserForm{
 		Request: r,
 		BaseForm: forms.NewBaseForm(
-			append([]func(forms.Form){forms.WithRequestData(postMethod, r)}, formOpts...)...,
+			forms.WithRequestData(postMethod, r),
 		),
 	}
 
@@ -87,14 +87,14 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 		), func(err error) error { return autherrors.ErrInvalidLogin }),
 	)
 
-	return f
+	return forms.Initialize(f, formOpts...)
 }
 
 func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOpts ...func(forms.Form)) *BaseUserForm {
 	var f = &BaseUserForm{
 		Request: r,
 		BaseForm: forms.NewBaseForm(
-			append([]func(forms.Form){forms.WithRequestData(postMethod, r)}, formOpts...)...,
+			forms.WithRequestData(postMethod, r),
 		),
 		canSave: true,
 		config:  &registerConfig,
@@ -227,7 +227,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 		return nil
 	})
 
-	return f
+	return forms.Initialize(f, formOpts...)
 }
 
 type BaseUserForm struct {

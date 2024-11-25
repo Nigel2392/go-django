@@ -100,10 +100,6 @@ func NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef {
 	}
 }
 
-func (f *FieldDef) GoString() string {
-	return fmt.Sprintf("FieldDef(%s)", f.Name())
-}
-
 func (f *FieldDef) Label() string {
 	if f.attrDef.Label != "" {
 		return trans.T(f.attrDef.Label)

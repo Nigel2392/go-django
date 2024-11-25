@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"fmt"
 	"io"
 	"maps"
 	"net/url"
@@ -64,8 +65,19 @@ func (b *BaseWidget) ValueFromDataDict(data url.Values, files map[string][]files
 
 func (b *BaseWidget) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {
 	var widgetAttrs = make(map[string]string)
-	maps.Copy(widgetAttrs, b.BaseAttrs)
-	maps.Copy(widgetAttrs, attrs)
+	for k, v := range b.BaseAttrs {
+		var attr, ok = attrs[k]
+		if !ok {
+			widgetAttrs[k] = v
+		} else {
+			widgetAttrs[k] = fmt.Sprintf("%s %s", v, attr)
+		}
+	}
+	for k, v := range attrs {
+		if _, ok := widgetAttrs[k]; !ok {
+			widgetAttrs[k] = v
+		}
+	}
 
 	var type_ = b.Type
 	if widgetAttrs["type"] != "" {
@@ -82,7 +94,7 @@ func (b *BaseWidget) GetContextData(id, name string, value interface{}, attrs ma
 		"type":   type_,
 		"name":   name,
 		"value":  value,
-		"attrs":  attrs,
+		"attrs":  widgetAttrs,
 		"widget": b,
 	})
 }

@@ -301,8 +301,9 @@ func (f *BaseForm) Field(name string) (fields.Field, bool) {
 
 func (f *BaseForm) Widget(name string) (widgets.Widget, bool) {
 	var widget, ok = f.FormWidgets.Get(name)
+	var field fields.Field
 	if !ok {
-		var field, ok = f.FormFields.Get(name)
+		field, ok = f.FormFields.Get(name)
 		if ok {
 			widget = field.Widget()
 		}
