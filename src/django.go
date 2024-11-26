@@ -451,6 +451,9 @@ func (a *Application) Initialize() error {
 	})
 
 	tpl.Funcs(template.FuncMap{
+		"safe": func(s string) template.HTML {
+			return template.HTML(s)
+		},
 		"static": a.Static,
 		"url": func(name string, args ...any) string {
 			var rt, err = a.Mux.Reverse(name, args...)
