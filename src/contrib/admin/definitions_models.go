@@ -152,17 +152,6 @@ type ModelOptions struct {
 	Model attrs.Definer
 }
 
-func (o *ModelOptions) GetName() string {
-	if o.Name == "" {
-		var rTyp = reflect.TypeOf(o.Model)
-		if rTyp.Kind() == reflect.Ptr {
-			return rTyp.Elem().Name()
-		}
-		return rTyp.Name()
-	}
-	return o.Name
-}
-
 // A struct which is mainly used internally (but can be used by third parties)
 // to easily work with models in admin views.
 type ModelDefinition struct {
@@ -195,7 +184,10 @@ func (o *ModelDefinition) NewInstance() attrs.Definer {
 }
 
 func (o *ModelDefinition) GetName() string {
-	return o._cType.Name()
+	if o.ModelOptions.Name == "" {
+		return o._cType.Name()
+	}
+	return o.ModelOptions.Name
 }
 
 func (o *ModelDefinition) Label() string {
