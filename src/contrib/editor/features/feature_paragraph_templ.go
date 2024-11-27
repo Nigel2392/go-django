@@ -21,7 +21,7 @@ var ParagraphFeature = &Block{
 		Type:          "paragraph",
 		JSConstructor: "Paragraph",
 		JSFiles: []string{
-			"editorjs/js/vendor/tools/paragraph.umd.js",
+			"editorjs/js/deps/tools/paragraph.umd.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(d editor.BlockData) string { return d.Data["text"].(string) }

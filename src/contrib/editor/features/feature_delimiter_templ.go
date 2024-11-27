@@ -21,7 +21,7 @@ var DelimiterFeature = &Block{
 		Type:          "delimiter",
 		JSConstructor: "Delimiter",
 		JSFiles: []string{
-			"editorjs/js/vendor/tools/delimiter.js",
+			"editorjs/js/deps/tools/delimiter.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(editor.BlockData) string { return "----" }

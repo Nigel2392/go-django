@@ -18,7 +18,7 @@ var HeadingFeature = &Block{
 		Type:          "header",
 		JSConstructor: "Header",
 		JSFiles: []string{
-			"editorjs/js/vendor/tools/header.js",
+			"editorjs/js/deps/tools/header.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(d editor.BlockData) string { return d.Data["text"].(string) }

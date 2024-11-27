@@ -11,6 +11,7 @@ import (
 )
 
 //go:embed static/**
+//go:embed static/**/**
 var _editorJS_FS embed.FS
 var editorJS_FS fs.FS
 
@@ -19,7 +20,12 @@ var (
 )
 
 func init() {
-	editorJS_FS, _ = fs.Sub(_editorJS_FS, "static")
+	var err error
+	editorJS_FS, err = fs.Sub(_editorJS_FS, "static")
+	if err != nil {
+		panic(err)
+	}
+
 	attrs.RegisterFormFieldType(
 		&EditorJSBlockData{},
 		func(opts ...func(fields.Field)) fields.Field {

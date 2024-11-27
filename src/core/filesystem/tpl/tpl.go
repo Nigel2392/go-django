@@ -220,11 +220,6 @@ func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*templat
 }
 
 func (r *TemplateRenderer) Render(b io.Writer, context any, baseKey string, path ...string) error {
-	var tmpl, err = r.getTemplate(baseKey, path...)
-	if err != nil {
-		return errors.Wrap(err, "failed to get template")
-	}
-
 	if context != nil {
 		for _, f := range r.ctxFuncs {
 			assert.False(f == nil, "nil context function")
@@ -243,6 +238,7 @@ func (r *TemplateRenderer) Render(b io.Writer, context any, baseKey string, path
 	}
 
 render:
+	var err error
 	for _, f := range r.ctxOverrides {
 		if f == nil {
 			continue
@@ -252,6 +248,11 @@ render:
 		if err != nil {
 			return errors.Wrap(err, "failed to override context")
 		}
+	}
+
+	tmpl, err := r.getTemplate(baseKey, path...)
+	if err != nil {
+		return errors.Wrap(err, "failed to get template")
 	}
 
 	return errors.Wrap(

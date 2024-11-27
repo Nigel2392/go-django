@@ -14,7 +14,7 @@ var AlignmentBlockTune = &BlockTune{
 		Type:          "text-align",
 		JSConstructor: "AlignmentBlockTune",
 		JSFiles: []string{
-			"editorjs/js/vendor/tools/text-alignment.js",
+			"editorjs/js/deps/tools/text-alignment.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(d editor.BlockData) string { return d.Data["text"].(string) }

@@ -1,9 +1,9 @@
 package tpl
 
 import (
+	"bytes"
 	"html/template"
 	"io"
-	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
 )
@@ -39,7 +39,7 @@ func FRender(b io.Writer, context any, baseKey string, path ...string) error {
 }
 
 func Render(context any, baseKey string, path ...string) (template.HTML, error) {
-	var b strings.Builder
+	var b bytes.Buffer
 	if err := Global.Render(&b, context, baseKey, path...); err != nil {
 		return template.HTML(b.String()), err
 	}

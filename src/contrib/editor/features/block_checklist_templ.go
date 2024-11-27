@@ -28,7 +28,7 @@ var CheckListBlock = &Block{
 		Type:          "checklist",
 		JSConstructor: "Checklist",
 		JSFiles: []string{
-			"editorjs/js/vendor/tools/checklist.js",
+			"editorjs/js/deps/tools/checklist.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			return fb

@@ -455,17 +455,17 @@ func (a *Application) Initialize() error {
 			return template.HTML(s)
 		},
 		"static": a.Static,
-		"url": func(name string, args ...any) string {
+		"url": func(name string, args ...any) template.URL {
 			var rt, err = a.Mux.Reverse(name, args...)
 			switch {
 			case errors.Is(err, mux.ErrRouteNotFound):
-				panic(fmt.Sprintf("URL %s not found", name))
+				panic(fmt.Sprintf("URL %q not found", name))
 			case errors.Is(err, mux.ErrTooManyVariables):
-				panic(fmt.Sprintf("Too many variables for URL %s", name))
+				panic(fmt.Sprintf("Too many variables for URL %q", name))
 			case err != nil:
-				panic(fmt.Sprintf("Error reversing URL %s: %s", name, err))
+				panic(fmt.Sprintf("Error reversing URL %q: %s", name, err))
 			}
-			return rt
+			return template.URL(rt)
 		},
 		"has_object_perm": permissions.HasObjectPermission,
 		"has_perm":        permissions.HasPermission,

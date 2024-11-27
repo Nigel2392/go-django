@@ -23,7 +23,7 @@ var ListBlock = &Block{
 		Type:          "list",
 		JSConstructor: "List",
 		JSFiles: []string{
-			"editorjs/js/vendor/tools/list.js",
+			"editorjs/js/deps/tools/list.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			return fb
