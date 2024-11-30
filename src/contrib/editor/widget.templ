@@ -34,10 +34,15 @@ func NewEditorJSWidget(features ...string) *EditorJSWidget {
 	}
 }
 
-func (b EditorJSWidget) ValueToForm(value interface{}) interface{} {
+func (b *EditorJSWidget) ValueToForm(value interface{}) interface{} {
 	var editorJsData EditorJSData
 	if fields.IsZero(value) {
 		return editorJsData
+	}
+
+	var featuresMap = make(map[string]struct{})
+	for _, feature := range b.Features {
+		featuresMap[feature] = struct{}{}
 	}
 
 	switch value := value.(type) {
@@ -45,6 +50,9 @@ func (b EditorJSWidget) ValueToForm(value interface{}) interface{} {
 		var blocks = make([]BlockData, 0)
 
 		for _, block := range value.Blocks {
+			if _, ok := featuresMap[block.Type()]; !ok {
+				continue
+			}
 			var data = block.Data()
 			blocks = append(blocks, data)
 		}
@@ -65,7 +73,7 @@ func (b EditorJSWidget) ValueToForm(value interface{}) interface{} {
 	return editorJsData
 }
 
-func (b EditorJSWidget) ValueToGo(value interface{}) (interface{}, error) {
+func (b *EditorJSWidget) ValueToGo(value interface{}) (interface{}, error) {
 	if value == nil {
 		return nil, nil
 	}

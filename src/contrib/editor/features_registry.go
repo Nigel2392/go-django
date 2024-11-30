@@ -23,6 +23,14 @@ type EditorJSData struct {
 	Version string      `json:"version"`
 }
 
+// The main datatype to use in structs.
+//
+// This will automatically assign the appropriate form widget for the field.
+//
+// It will also allow for simple rendering of the field's data by calling the `Render()` method.
+//
+// If the struct which the field belongs to defines a `Get<FieldName>Features() []string` method,
+// then these features will be used to build the editorjs widget.
 type EditorJSBlockData struct {
 	Time     int64          `json:"time"`
 	Blocks   []FeatureBlock `json:"blocks"`
