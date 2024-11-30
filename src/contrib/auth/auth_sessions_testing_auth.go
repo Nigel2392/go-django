@@ -20,13 +20,13 @@ import (
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 )
 
-func Login(r *http.Request, u *models.User) *models.User {
+func Login(r *http.Request, u *models.User) (*models.User, error) {
 	SIGNAL_USER_LOGGED_IN.Send(UserWithRequest{
 		User: u,
 		Req:  r,
 	})
 	u.IsLoggedIn = true
-	return u
+	return u, nil
 }
 
 func Logout(r *http.Request) error {
