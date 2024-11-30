@@ -307,7 +307,11 @@ func (f *BaseUserForm) Save() (*models.User, error) {
 	}
 
 	if f.config.AutoLogin {
-		*f.Instance = *Login(f.Request, f.Instance)
+		var user, err = Login(f.Request, f.Instance)
+		if err != nil {
+			return nil, errors.Wrap(err, "Error logging in user")
+		}
+		f.Instance = user
 	}
 
 	return f.Instance, nil
@@ -342,7 +346,9 @@ func (f *BaseUserForm) Login() error {
 		return autherrors.ErrIsActive
 	}
 
-	Login(f.Request, user)
+	if user, err = Login(f.Request, user); err != nil {
+		return err
+	}
 	f.Instance = user
 	return nil
 }

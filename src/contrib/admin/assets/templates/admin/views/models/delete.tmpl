@@ -17,7 +17,7 @@
             {{ if $BackURL }}
                 <a class="button warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
             {{ else }}
-                <a class="button warning hollow" href="{{ url "admin:apps:model:edit" (.Get "app").Name (.Get "model").Name (.Get "primaryField").GetValue }}">{{ T "Back" }}</a>
+                <a class="button warning hollow" href="{{ url "admin:apps:model:edit" (.Get "app").Name (.Get "model").GetName (.Get "primaryField").GetValue }}">{{ T "Back" }}</a>
             {{ end }}
         </div>
     </form>

@@ -12,12 +12,14 @@ import (
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
-func Login(r *http.Request, u *models.User) *models.User {
+func Login(r *http.Request, u *models.User) (*models.User, error) {
 	var session = sessions.Retrieve(r)
 	except.Assert(session != nil, 500, "session is nil")
 
 	var err = session.RenewToken()
-	except.Assert(err == nil, 500, "failed to renew session token")
+	if err != nil {
+		return nil, err
+	}
 
 	u.IsLoggedIn = true
 
@@ -28,7 +30,7 @@ func Login(r *http.Request, u *models.User) *models.User {
 		Req:  r,
 	})
 
-	return u
+	return u, nil
 }
 
 func Logout(r *http.Request) error {

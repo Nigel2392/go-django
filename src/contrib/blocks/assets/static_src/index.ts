@@ -20,13 +20,13 @@ const app = new DjangoApplication({
 window.Django = app;
 
 window.Django.registerAdapter('django.blocks.FieldBlock', FieldBlockDef);
-window.Django.registerBlock('Django.blocks.field-block', FieldBlockDef);
+window.Django.registerBlock('django.blocks.field-block', FieldBlockDef);
 
 window.Django.registerAdapter('django.blocks.ListBlock', ListBlockDef);
-window.Django.registerBlock('Django.blocks.list-block', ListBlockDef);
+window.Django.registerBlock('django.blocks.list-block', ListBlockDef);
 
 window.Django.registerAdapter('django.blocks.StructBlock', StructBlockDef);
-window.Django.registerBlock('Django.blocks.struct-block', StructBlockDef);
+window.Django.registerBlock('django.blocks.struct-block', StructBlockDef);
 
 for (let i = 0; i < controllerDefinitions.length; i++) {
     const { identifier, controllerConstructor } = controllerDefinitions[i];

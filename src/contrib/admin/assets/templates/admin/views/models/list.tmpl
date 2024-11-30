@@ -6,7 +6,7 @@
     {{ block "heading" . }}
         <div class="view-header">
             <div class="buttons">
-                <a href="{{ url "admin:apps:model:add" (.Get "app").Name (.Get "model").Name }}" class="button primary">{{ T "Add" }}</a>
+                <a href="{{ url "admin:apps:model:add" (.Get "app").Name (.Get "model").GetName }}" class="button primary">{{ T "Add" }}</a>
             </div>
             <div class="title-text">
                 <h1>{{ (.Get "model").Label }} {{ T "List" }}</h1>

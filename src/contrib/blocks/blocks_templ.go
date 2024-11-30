@@ -61,7 +61,7 @@ func (b *FieldBlock) RenderTempl(w io.Writer, id, name string, value interface{}
 		}
 		ctx = templ.ClearChildren(ctx)
 		var c = tplCtx.(*BlockContext)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-field-block class=\"form-field field\" data-controller=\"block\" data-block-class-path-value=\"Django.blocks.field-block\" data-block-class-args-value=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-field-block class=\"form-field field\" data-controller=\"block\" data-block-class-path-value=\"django.blocks.field-block\" data-block-class-args-value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -136,7 +136,7 @@ func (b *StructBlock) RenderTempl(w io.Writer, id, name string, valueMap map[str
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" data-struct-block data-controller=\"block\" data-block-class-path-value=\"Django.blocks.struct-block\" data-block-class-args-value=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("\" data-struct-block data-controller=\"block\" data-block-class-path-value=\"django.blocks.struct-block\" data-block-class-args-value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -236,7 +236,7 @@ func (l *ListBlock) RenderTempl(w io.Writer, id, name string, valueArr []*ListBl
 			templ_7745c5c3_Var10 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-list-block data-controller=\"sortable\" class=\"list-block\" data-block-class-path-value=\"Django.blocks.list-block\" data-block-class-args-value=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString("<div data-list-block data-controller=\"sortable\" class=\"list-block\" data-block-class-path-value=\"django.blocks.list-block\" data-block-class-args-value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
