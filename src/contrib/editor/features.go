@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms/media"
 )
@@ -24,6 +25,14 @@ type BaseFeature interface {
 
 	// Config returns the configuration of the feature.
 	Config(widgetContext ctx.Context) map[string]interface{}
+
+	// OnRegister is called when the feature is registered.
+	//
+	// It is allowed to add custom routes or do other setup here.
+	OnRegister(django.Mux) error
+
+	// OnValidate is called when the feature is validated.
+	OnValidate(BlockData) error
 
 	// Constructor returns the JS class name of the feature.
 	Constructor() string

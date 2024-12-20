@@ -2,13 +2,18 @@ package editor_test
 
 import (
 	"context"
+	"fmt"
 	"io"
+	"net/http"
+	"strings"
 	"testing"
 
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/mux"
 )
 
 var (
@@ -69,6 +74,17 @@ func (m MockBaseFeature) Name() string {
 
 func (m MockBaseFeature) Config(widgetContext ctx.Context) map[string]interface{} {
 	return map[string]interface{}{}
+}
+
+func (m MockBaseFeature) OnValidate(editor.BlockData) error {
+	return nil
+}
+
+func (m MockBaseFeature) OnRegister(mx django.Mux) error {
+	mx.Any("/mock", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("mock"))
+	}), "mock")
+	return nil
 }
 
 func (m MockBaseFeature) Constructor() string {
@@ -139,5 +155,58 @@ func TestUnmarshalEditorJSBlockData(t *testing.T) {
 		if block.Feature().Name() != deserialized.Blocks[i].Feature().Name() {
 			t.Errorf("Expected Feature Name %s, got %s", block.Feature().Name(), deserialized.Blocks[i].Feature().Name())
 		}
+	}
+}
+
+func TestOnRegisterRun(t *testing.T) {
+	const (
+		app_port = "8123"
+		app_host = "localhost"
+	)
+
+	var a = django.App(
+		django.Configure(map[string]interface{}{
+			django.APPVAR_DEBUG: true,
+			django.APPVAR_PORT:  app_port,
+			django.APPVAR_HOST:  app_host,
+		}),
+		django.Flag(
+			django.FlagSkipDepsCheck,
+			django.FlagSkipCmds,
+		),
+		django.Apps(
+			editor.NewAppConfig,
+		),
+	)
+
+	err := a.Initialize()
+	if err != nil {
+		t.Fatalf("Error initializing app: %v", err)
+	}
+
+	go func(t *testing.T) {
+		err := a.Serve()
+		if err != nil {
+			t.Errorf("Error serving app: %v", err)
+		}
+	}(t)
+
+	resp, err := http.Get(fmt.Sprintf(
+		"http://%s:%s%s",
+		app_host, app_port,
+		django.Reverse("editor:mock"),
+	))
+	if err != nil {
+		t.Fatalf("Error making request: %v", err)
+	}
+
+	var b = new(strings.Builder)
+	_, err = io.Copy(b, resp.Body)
+	if err != nil {
+		t.Fatalf("Error reading response: %v", err)
+	}
+
+	if b.String() != "mock" {
+		t.Errorf("Expected response 'mock', got %s", b.String())
 	}
 }

@@ -21,12 +21,32 @@ type BaseFeature struct {
 	JSConstructor string
 	JSFiles       []string
 	CSSFles       []string
+	Validate      func(editor.BlockData) error
 	Build         func(*FeatureBlock) *FeatureBlock
+	Register      func(django.Mux)
 }
 
 // Name returns the name of the feature.
 func (b *BaseFeature) Name() string {
 	return b.Type
+}
+
+// OnRegister is called when the feature is registered.
+//
+// It is allowed to add custom routes or do other setup here.
+func (b *BaseFeature) OnRegister(m django.Mux) error {
+	if b.Register != nil {
+		b.Register(m)
+	}
+	return nil
+}
+
+// OnValidate is called when the feature is validated.
+func (b *BaseFeature) OnValidate(data editor.BlockData) error {
+	if b.Validate != nil {
+		return b.Validate(data)
+	}
+	return nil
 }
 
 // Config returns the configuration of the feature.

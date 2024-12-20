@@ -6,11 +6,14 @@ import (
 	"io/fs"
 	"reflect"
 
+	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/Nigel2392/mux"
 )
 
 //go:embed static/**
@@ -22,7 +25,7 @@ var (
 	RENDER_ERRORS = true
 )
 
-func init() {
+func NewAppConfig() django.AppConfig {
 	var err error
 	editorJS_FS, err = fs.Sub(_editorJS_FS, "static")
 	if err != nil {
@@ -63,4 +66,19 @@ func init() {
 			),
 		),
 	)
+
+	var appconfig = apps.NewAppConfig("editor")
+	appconfig.Ready = func() error {
+		var features = Features()
+		var m = django.Global.Mux
+		var editorNs = mux.NewRoute(mux.ANY, "/go-editorjs", nil, "editor")
+		for _, feature := range features {
+			feature.OnRegister(editorNs)
+		}
+		if len(editorNs.Children) > 0 {
+			m.AddRoute(editorNs)
+		}
+		return nil
+	}
+	return appconfig
 }

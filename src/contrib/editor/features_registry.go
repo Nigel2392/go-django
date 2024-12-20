@@ -193,6 +193,10 @@ func (e *editorRegistry) ValueToGo(tools []string, data EditorJSData) (*EditorJS
 			continue
 		}
 
+		if err := feature.OnValidate(block); err != nil {
+			return blockData, err
+		}
+
 		var b FeatureBlockRenderer
 		if b, ok = feature.(FeatureBlockRenderer); !ok {
 			return blockData, fmt.Errorf("feature %q marked as feature but does not implement FeatureBlockRenderer", block.Type)
@@ -208,6 +212,11 @@ func (e *editorRegistry) ValueToGo(tools []string, data EditorJSData) (*EditorJS
 			var tuneFeatureBlock BlockTuneFeature
 			if tuneFeatureBlock, ok = tuneFeature.(BlockTuneFeature); !ok {
 				return blockData, fmt.Errorf("feature %q marked as tune but does not implement BlockTuneFeature", k)
+			}
+
+			var err = tuneFeatureBlock.OnValidate(block)
+			if err != nil {
+				return blockData, err
 			}
 
 			blockObj = tuneFeatureBlock.Tune(blockObj, v)
