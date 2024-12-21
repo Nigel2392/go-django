@@ -64,7 +64,7 @@ func (b *Backend) GetAlternateName(fileRoot, fileExt string) string {
 	for i := range random {
 		random[i] = byte(65 + rand.Intn(25))
 	}
-	return fmt.Sprintf("%s_%s.%s", fileRoot, string(random), fileExt)
+	return fmt.Sprintf("%s_%s%s", fileRoot, string(random), fileExt)
 }
 
 // Returns a filename based on the name parameter that’s free and available for new content to be written to on the target storage system.
