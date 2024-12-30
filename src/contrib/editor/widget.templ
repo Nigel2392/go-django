@@ -26,6 +26,10 @@ type EditorJSWidget struct {
 }
 
 func NewEditorJSWidget(features ...string) *EditorJSWidget {
+	if len(features) == 0 {
+		features = EditorRegistry.features.Keys()
+	}
+
 	return &EditorJSWidget{
 		BaseWidget: widgets.BaseWidget{
             Type: "editorjs",

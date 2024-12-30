@@ -135,6 +135,7 @@ func (b *Backend) Open(name string) (mediafiles.StoredObject, error) {
 	if b.BaseDir != "" {
 		openPath = filepath.Join(b.BaseDir, name)
 	}
+	openPath = filepath.ToSlash(openPath)
 
 	var obj = mediafiles.SimpleStoredObject{
 		Filepath: name,
@@ -202,5 +203,5 @@ func (b *Backend) Save(path string, file io.Reader, maxLength ...int) (string, e
 		return "", err
 	}
 
-	return path, nil
+	return filepath.ToSlash(path), nil
 }

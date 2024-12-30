@@ -151,6 +151,7 @@ func (b *Backend) ListDir(path string) ([]string, error) {
 func (b *Backend) Open(name string) (mediafiles.StoredObject, error) {
 	b.mu.RLock()
 	defer b.mu.RUnlock()
+	name = filepath.ToSlash(name)
 	file, ok := b.files[name]
 	if !ok {
 		return nil, mediafiles.ErrNotFound
@@ -203,6 +204,7 @@ func (b *Backend) Save(path string, file io.Reader, maxLength ...int) (string, e
 		hdr:     hdr,
 	}
 	hdr.file = f
-	b.files[name] = f
-	return name, err
+	var slashedPath = filepath.ToSlash(name)
+	b.files[slashedPath] = f
+	return slashedPath, err
 }
