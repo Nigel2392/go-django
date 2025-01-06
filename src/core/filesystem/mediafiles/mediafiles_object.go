@@ -34,6 +34,8 @@ func (s *SimpleStoredObject) Scan(value interface{}) error {
 		filepath = v
 	case []byte:
 		filepath = string(v)
+	case []rune:
+		filepath = string(v)
 	default:
 		return errors.New("invalid type")
 	}
