@@ -21,6 +21,10 @@ import (
 var _editorJS_FS embed.FS
 var editorJS_FS fs.FS
 
+const (
+	ROUTE_PATH = "/go-editorjs"
+)
+
 var (
 	RENDER_ERRORS = true
 )
@@ -71,7 +75,7 @@ func NewAppConfig() django.AppConfig {
 	appconfig.Ready = func() error {
 		var features = Features()
 		var m = django.Global.Mux
-		var editorNs = mux.NewRoute(mux.ANY, "/go-editorjs", nil, "editor")
+		var editorNs = mux.NewRoute(mux.ANY, ROUTE_PATH, nil, "editor")
 		for _, feature := range features {
 			feature.OnRegister(editorNs)
 		}

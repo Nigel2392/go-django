@@ -30,7 +30,7 @@ func (w *WrapperBlock) Render(ctx context.Context, wr io.Writer) error {
 		return component(ctx, wr)
 	}
 	return fmt.Errorf(
-		"feature '%s' (%T) does not implement RenderBlock %w",
+		"feature '%s' (%T) does not implement RenderBlock: %w",
 		w.Type(),
 		w.Feature(),
 		ErrRenderNotImplemented,
@@ -82,7 +82,7 @@ func (b *FeatureBlock) Render(ctx context.Context, w io.Writer) error {
 		return r.RenderBlock(b, ctx, w)
 	}
 	return fmt.Errorf(
-		"feature '%s' (%T) does not implement RenderBlock %w",
+		"feature '%s' (%T) does not implement RenderBlock: %w",
 		b.FeatureName,
 		b.FeatureObject,
 		ErrRenderNotImplemented,
