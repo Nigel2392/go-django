@@ -37,7 +37,7 @@ go install github.com/Nigel2392/go-django/cmd/go-django@v1.6.9.3
 Or to install the SQLC plugin to auto- generate SQL queries and [go-django definitions](./docs/sqlc.md) from your SQL database.
 
 ```bash
-go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.6.8.7
+go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.6.9.3
 ```
 
 ## Docs
