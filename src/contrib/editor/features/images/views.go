@@ -10,11 +10,14 @@ import (
 	"slices"
 
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/mux"
 	"github.com/justinas/nosurf"
 )
+
+const err_open_generic = "Error opening file"
 
 func httpError(w http.ResponseWriter, errStr string, status int) {
 	var jsonResp = map[string]interface{}{
@@ -43,7 +46,9 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 		err := json.NewEncoder(w).Encode(jsonResp)
 		if err != nil {
 			logger.Error("Error encoding response: %s", err)
-			httpError(w, err.Error(), http.StatusInternalServerError)
+			httpError(
+				w, "Error encoding response", http.StatusInternalServerError,
+			)
 		}
 
 		return
@@ -60,7 +65,7 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 	var maxBytes = app.MaxByteSize()
 	if err := r.ParseMultipartForm(int64(maxBytes)); err != nil {
 		logger.Error("Error parsing form: %s", err)
-		httpError(w, err.Error(), http.StatusInternalServerError)
+		httpError(w, "Error parsing form", http.StatusInternalServerError)
 		return
 	}
 
@@ -112,13 +117,6 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 	var file, err = hdr.Open()
 	defer file.Close()
 
-	var buf = new(bytes.Buffer)
-	if _, err := io.Copy(buf, file); err != nil {
-		logger.Error("Error processing file: %s", err)
-		httpError(w, "Error processing file", http.StatusInternalServerError)
-		return
-	}
-
 	// Save the file to the media backend
 	var backend = app.MediaBackend()
 	var mediaDir = app.MediaDir()
@@ -127,7 +125,7 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 		hdr.Filename,
 	)
 
-	if filePath, err = backend.Save(filePath, buf); err != nil {
+	if filePath, err = backend.Save(filePath, file); err != nil {
 		logger.Error("Error saving file: %s", err)
 		httpError(w, "Error saving file", http.StatusInternalServerError)
 		return
@@ -142,7 +140,9 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 	err = json.NewEncoder(w).Encode(jsonResp)
 	if err != nil {
 		logger.Error("Error encoding response: %s", err)
-		httpError(w, err.Error(), http.StatusInternalServerError)
+		httpError(
+			w, "Error encoding response", http.StatusInternalServerError,
+		)
 	}
 }
 
@@ -151,13 +151,15 @@ func viewImage(w http.ResponseWriter, r *http.Request) {
 	var filePath = path.Join(mux.Vars(r)["*"]...)
 	var fileObj, err = backend.Open(filePath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Error opening file (%s): %s", filePath, err)
+		http.Error(w, err_open_generic, http.StatusInternalServerError)
 		return
 	}
 
 	file, err := fileObj.Open()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Error opening file object: %s", err)
+		http.Error(w, err_open_generic, http.StatusInternalServerError)
 		return
 	}
 
@@ -165,19 +167,25 @@ func viewImage(w http.ResponseWriter, r *http.Request) {
 
 	stat, err := file.Stat()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Error reading file stat: %s", err)
+		http.Error(w, err_open_generic, http.StatusInternalServerError)
 		return
 	}
 
 	modTime, err := stat.TimeModified()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Error retrieving file modified time: %s", err)
+		http.Error(w, err_open_generic, http.StatusInternalServerError)
 		return
 	}
 
 	var buf = new(bytes.Buffer)
 	if _, err := io.Copy(buf, file); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		logger.Error("Error reading file content: %s", err)
+		except.Fail(
+			http.StatusInternalServerError,
+			"Error reading file content",
+		)
 		return
 	}
 

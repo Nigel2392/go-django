@@ -11,6 +11,9 @@ function getCsrfToken() {
     return null;
 }
 
+const STATUS_SUCCESS = 'success';
+const STATUS_ERROR = 'error';
+
 class GoDjangoImageTool {
     constructor({ data, api, config, block }) {
         if (!config) {
@@ -45,6 +48,14 @@ class GoDjangoImageTool {
             "GoDjango-image-tool__image"
         );
 
+        const throwError = (message) => {
+            let element = document.createElement('p');
+            element.textContent = message;
+            element.style.color = 'red';
+            this.imageWrapper.appendChild(element);
+            return;
+        }
+
         function createFileInput(wrapper) {
             var fileInput = document.createElement('input');
             fileInput.type = 'file';
@@ -69,19 +80,27 @@ class GoDjangoImageTool {
                 })
                 .then(response => response.json())
                 .then(data => {
+
+                    if (data.status !== STATUS_SUCCESS) {
+                        let message = this.api.i18n.t('Failed to upload image');
+                        if (data.message) {
+                            message = data.message;
+                        }
+                        throwError(message);
+                        return;
+                    }
+
                     this.data.filePath = data.filePath;
                     this.image.src = `${this.config.serveUrl}${data.filePath}`
                     this.image.dataset.filePath = data.filePath;
                     fileInput.remove();
+
                 }).catch((error) => {
                     let message = this.api.i18n.t('Failed to upload image');
                     if (error.message) {
                         message = error.message;
                     }
-                    let element = document.createElement('p');
-                    element.textContent = message;
-                    element.style.color = 'red';
-                    wrapper.appendChild(element);
+                    throwError(message);
                 })
 
             });
