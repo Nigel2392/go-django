@@ -316,8 +316,9 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 		if password1 != "" && password2 != "" && password1 != password2 {
 			return []error{autherrors.ErrPwdNoMatch}
 		} else if password1 != "" && password2 != "" && password1 == password2 {
-			SetPassword(instance.(*models.User), string(password1))
-			cleaned["Password"] = string(instance.(*models.User).Password)
+			var fake = *(instance.(*models.User))
+			SetPassword(&fake, string(password1))
+			cleaned["Password"] = string(fake.Password)
 		}
 		return nil
 	})

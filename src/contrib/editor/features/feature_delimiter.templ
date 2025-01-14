@@ -1,6 +1,10 @@
 package features
 
-import "github.com/Nigel2392/go-django/src/contrib/editor"
+import (
+	"context"
+	"github.com/Nigel2392/go-django/src/contrib/editor"
+	"io"
+)
 
 func init() {
 	editor.Register(DelimiterFeature)
@@ -13,15 +17,15 @@ var DelimiterFeature = &Block{
 		JSFiles: []string{
 			"editorjs/js/deps/tools/delimiter.js",
 		},
-		Build:  func(fb *FeatureBlock) *FeatureBlock {
+		Build: func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(editor.BlockData) string { return "----" }
 			return fb
 		},
 	},
-	RenderFunc:    renderDelimiter,
+	RenderFunc: renderDelimiter,
 }
 
-func renderDelimiter(b editor.FeatureBlock, c context.Context, w io.Writer) error{
+func renderDelimiter(b editor.FeatureBlock, c context.Context, w io.Writer) error {
 	return renderDelimiterObject(b).Render(c, w)
 }
 
@@ -31,5 +35,4 @@ templ renderDelimiterObject(fb editor.FeatureBlock) {
 		<span class="delimiter__dot"></span>
 		<span class="delimiter__dot"></span>
 	</div>
-
 }

@@ -1,37 +1,47 @@
 package blocks
 
+import "io"
 import "github.com/Nigel2392/go-django/src/core/ctx"
 import "github.com/Nigel2392/go-django/src/forms/widgets"
 import "strconv"
+import "context"
 import "fmt"
 
-templ RenderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext, errors []error) {
-    <div class="django-block-widget-wrapper">
-        <div class="django-block-widget">
-
-            {{ var err = widget.BlockDef.RenderForm(w, blockCtx.ID, blockCtx.Name, blockCtx.Value, errors, blockCtx) }}
-            if err != nil {
-                {{ return err }}
-            }
-
-        </div>
-    </div>
+func renderWithErrors(fn func(w io.Writer, id string, name string, value interface{}, errors []error, attrs map[string]string) error, id string, name string, value interface{}, errors []error, attrs map[string]string) templ.Component {
+    return templ.ComponentFunc(func(tmplCtx context.Context, tmplW io.Writer) error {
+        return fn(tmplW, id, name, value, errors, attrs)
+    })
 }
 
-templ (b *FieldBlock)RenderTempl(w io.Writer, id, name string, value interface{}, telepath string, errors []error, tplCtx ctx.Context)  {
+func renderForm(b Block, id string, name string, value interface{}, errors []error, tplCtx ctx.Context) templ.Component {
+    return templ.ComponentFunc(func(tmplCtx context.Context, tmplW io.Writer) error {
+        return b.RenderForm(tmplW, id, name, value, errors, tplCtx)
+    })
+}
+
+func RenderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext, errors []error) error {
+    w.Write([]byte("<div class=\"django-block-widget-wrapper\">\n"))
+    w.Write([]byte("\t<div class=\"django-block-widget\">\n"))
+    var err = widget.BlockDef.RenderForm(w, blockCtx.ID, blockCtx.Name, blockCtx.Value, errors, blockCtx)
+    if err != nil {
+        return err
+    }
+    w.Write([]byte("\t</div>\n"))
+    w.Write([]byte("</div>\n"))
+    return nil
+}
+
+templ (b *FieldBlock) RenderTempl(id, name string, value interface{}, telepath string, errors []error, tplCtx ctx.Context)  {
 	{{ var c = tplCtx.(*BlockContext) }}
     <div data-field-block class="form-field field" data-controller="block" data-block-class-path-value="django.blocks.field-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(errors) }>
 
         @widgets.ErrorListComponent("field-block", errors)
 
-        {{ var err = b.Field().Widget().RenderWithErrors(w, id, name, value, errors, c.Attrs) }}
-        if err != nil {
-           {{ return err }}
-        }
+        @renderWithErrors(b.Field().Widget().RenderWithErrors, id, name, value, errors, c.Attrs)
     </div>
 }
 
-templ (b *StructBlock)RenderTempl(w io.Writer, id, name string, valueMap map[string]interface{}, telepath string, errors *BaseBlockValidationError[string], tplCtx ctx.Context)  {
+templ (b *StructBlock) RenderTempl(id, name string, valueMap map[string]interface{}, telepath string, errors *BaseBlockValidationError[string], tplCtx ctx.Context)  {
     <div id={ id } data-struct-block data-controller="block" data-block-class-path-value="django.blocks.struct-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(errors) }>
 
 	    for head := b.Fields.Front(); head != nil; head = head.Next() {
@@ -45,10 +55,7 @@ templ (b *StructBlock)RenderTempl(w io.Writer, id, name string, valueMap map[str
 
                 {{ var newErrs = errors.Get(head.Key) }}
                 <div data-struct-field-content>
-	    	        {{ var err = head.Value.RenderForm(w, id, key, valueMap[head.Key], newErrs, tplCtx) }}
-	    	        if err != nil {
-	    	        	{{ return err }}
-	    	        }
+                    @renderForm(head.Value, id, key, valueMap[head.Key], newErrs, tplCtx)
                 </div>
 
                 @widgets.HelpTextComponent("struct-block", head.Value.HelpText())
@@ -57,7 +64,7 @@ templ (b *StructBlock)RenderTempl(w io.Writer, id, name string, valueMap map[str
     </div>
 }
 
-templ (l *ListBlock)RenderTempl(w io.Writer, id, name string, valueArr []*ListBlockValue, telepath string, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context)  {
+templ (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, telepath string, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context)  {
     <div data-list-block data-controller="sortable" class="list-block" data-block-class-path-value="django.blocks.list-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(listBlockErrors) }>
 
 		<input data-list-block-add type="hidden" name={ fmt.Sprintf("%s-added", name) } value={ strconv.Itoa(len(valueArr)) }>
@@ -83,10 +90,7 @@ templ (l *ListBlock)RenderTempl(w io.Writer, id, name string, valueArr []*ListBl
 
                     {{ var newErrs = listBlockErrors.Get(i) }}
                     <div data-list-block-field-content>
-	    		        {{ var err = l.Child.RenderForm(w, id, key, v.Data, newErrs, tplCtx) }}
-	    		        if err != nil {
-	    		        	{{ return err }}
-	    		        }
+                        @renderForm(l.Child, id, key, v.Data, newErrs, tplCtx)
                     </div>
 
                     @widgets.HelpTextComponent(

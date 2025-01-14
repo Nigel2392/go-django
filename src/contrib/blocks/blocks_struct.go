@@ -269,7 +269,7 @@ func (m *StructBlock) RenderForm(w io.Writer, id, name string, value interface{}
 	}
 
 	return m.RenderTempl(
-		w, id, name, valueMap, string(bt), errs, ctxData,
+		id, name, valueMap, string(bt), errs, ctxData,
 	).Render(context.Background(), w)
 }
 

@@ -1,6 +1,10 @@
 package features
 
-import "github.com/Nigel2392/go-django/src/contrib/editor"
+import (
+	"context"
+	"github.com/Nigel2392/go-django/src/contrib/editor"
+	"io"
+)
 
 func init() {
 	editor.Register(ParagraphFeature)
@@ -10,24 +14,26 @@ var ParagraphFeature = &Block{
 	BaseFeature: BaseFeature{
 		Type:          "paragraph",
 		JSConstructor: "Paragraph",
-		JSFiles:       []string{
+		JSFiles: []string{
 			"editorjs/js/deps/tools/paragraph.umd.js",
 		},
-		Build:  func(fb *FeatureBlock) *FeatureBlock {
+		Build: func(fb *FeatureBlock) *FeatureBlock {
 			fb.GetString = func(d editor.BlockData) string { return d.Data["text"].(string) }
 			return fb
 		},
 	},
-	RenderFunc:    renderParagraph,
+	RenderFunc: renderParagraph,
 }
 
-func renderParagraph(b editor.FeatureBlock, c context.Context, w io.Writer) error{
+func renderParagraph(b editor.FeatureBlock, c context.Context, w io.Writer) error {
 	return renderParagraphObject(b).Render(c, w)
 }
 
 templ renderParagraphObject(fb editor.FeatureBlock) {
 	{{ var text = fb.Data().Data["text"] }}
-	{{ if text == nil { text = "" } }}
+	{{ if text == nil {
+	text = ""
+} }}
 	{{ var t = text.(string) }}
-	<p class="paragraph" data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }> { t } </p>
+	<p class="paragraph" data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>{ t } </p>
 }

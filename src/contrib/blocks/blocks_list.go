@@ -362,7 +362,7 @@ func (l *ListBlock) RenderForm(w io.Writer, id, name string, value interface{}, 
 		return err
 	}
 
-	return l.RenderTempl(w, id, name, valueArr, string(bt), listBlockErrors, ctxData).Render(context.Background(), w)
+	return l.RenderTempl(id, name, valueArr, string(bt), listBlockErrors, ctxData).Render(context.Background(), w)
 }
 
 func (m *ListBlock) Adapter() telepath.Adapter {

@@ -26,7 +26,7 @@ require (
 require (
 	github.com/Nigel2392/go-telepath v0.1.2
 	github.com/Nigel2392/tags v1.0.0
-	github.com/a-h/templ v0.2.707
+	github.com/a-h/templ v0.3.819
 	github.com/fatih/structtag v1.2.0
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/google/uuid v1.6.0
@@ -50,6 +50,6 @@ require (
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
-	golang.org/x/sync v0.8.0 // indirect
-	golang.org/x/sys v0.23.0 // indirect
+	golang.org/x/sync v0.10.0 // indirect
+	golang.org/x/sys v0.28.0 // indirect
 )
