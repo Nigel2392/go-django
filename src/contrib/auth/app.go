@@ -271,7 +271,10 @@ func NewAppConfig() django.AppConfig {
 				fields.Required(true),
 			}
 			newOpts = append(newOpts, opts...)
-			return NewPasswordField(ChrFlagDEFAULT, true, newOpts...)
+			return NewPasswordField(PasswordFieldOptions{
+				Flags:         ChrFlagDEFAULT,
+				IsRegistering: true,
+			}, newOpts...)
 		})
 
 		return nil
@@ -293,13 +296,18 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 		"Password",
 		"PasswordConfirm",
 	})
+
 	form.AddField("PasswordConfirm", NewPasswordField(
-		ChrFlagDEFAULT,
-		true,
+		PasswordFieldOptions{
+			Flags:             ChrFlagDEFAULT,
+			IsRegistering:     true,
+			UseDefaultOptions: false,
+		},
 		fields.Label("Password Confirm"),
 		fields.HelpText("Enter the password again to confirm"),
 		fields.Required(false),
 	))
+
 	form.SetValidators(func(f forms.Form) []error {
 		var (
 			cleaned      = f.CleanedData()

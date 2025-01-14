@@ -79,8 +79,10 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 	f.AddField(
 		"password",
 		fields.Protect(NewPasswordField(
-			ChrFlagDEFAULT,
-			false,
+			PasswordFieldOptions{
+				Flags:         ChrFlagDEFAULT,
+				IsRegistering: false,
+			},
 			fields.Label("Password"),
 			fields.HelpText("Enter your password"),
 			fields.Required(true),
@@ -154,8 +156,10 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 	f.AddField(
 		"password",
 		NewPasswordField(
-			ChrFlagDEFAULT,
-			true,
+			PasswordFieldOptions{
+				Flags:         ChrFlagDEFAULT,
+				IsRegistering: true,
+			},
 			fields.Label("Password"),
 			fields.HelpText("Enter your password"),
 			fields.Required(true),
@@ -165,8 +169,10 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 	f.AddField(
 		"passwordConfirm",
 		NewPasswordField(
-			ChrFlagDEFAULT,
-			true,
+			PasswordFieldOptions{
+				Flags:         ChrFlagDEFAULT,
+				IsRegistering: true,
+			},
 			fields.Label("Password Confirm"),
 			fields.HelpText("Enter the password again to confirm"),
 			fields.Required(true),

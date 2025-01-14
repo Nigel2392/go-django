@@ -98,7 +98,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 				if primaryField == nil {
 					return ""
 				}
-				return django.Reverse("admin:apps:model:edit", app.Name, model.Name, primaryField.GetValue())
+				return django.Reverse("admin:apps:model:edit", app.Name, model.GetName(), primaryField.GetValue())
 			})
 		},
 	}
@@ -183,7 +183,7 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 			context.Set("error", err)
 		}
 
-		var listViewURL = django.Reverse("admin:apps:model", app.Name, model.Name)
+		var listViewURL = django.Reverse("admin:apps:model", app.Name, model.GetName())
 		http.Redirect(w, r, listViewURL, http.StatusSeeOther)
 		return
 	}
@@ -338,7 +338,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			}
 
 			except.AssertNotNil(instance, 500, "instance is nil after form submission")
-			var listViewURL = django.Reverse("admin:apps:model", app.Name, model.Name)
+			var listViewURL = django.Reverse("admin:apps:model", app.Name, model.GetName())
 			http.Redirect(w, r, listViewURL, http.StatusSeeOther)
 		},
 	}

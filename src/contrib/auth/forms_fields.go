@@ -24,19 +24,36 @@ func PasswordValidators(fn ...func(PasswordString) error) func(*PasswordField) {
 	}
 }
 
-func NewPasswordField(flags PasswordCharacterFlag, isRegistering bool, opts ...func(fields.Field)) *PasswordField {
+type PasswordFieldOptions struct {
+	Flags             PasswordCharacterFlag
+	IsRegistering     bool
+	UseDefaultOptions bool
+	Options           []func(fields.Field)
+}
+
+func NewPasswordField(config PasswordFieldOptions, opts ...func(fields.Field)) *PasswordField {
 	var p = &PasswordField{
 		BaseField: fields.NewField(),
 	}
 
-	opts = append(opts,
-		fields.MinLength(8),
-		fields.MaxLength(64),
-		ValidateCharacters(
+	var (
+		flags         = config.Flags
+		isRegistering = config.IsRegistering
+	)
+
+	if config.UseDefaultOptions {
+		opts = append(opts,
+			fields.MinLength(8),
+			fields.MaxLength(64),
+		)
+	}
+
+	if config.Flags != 0 {
+		opts = append(opts, ValidateCharacters(
 			isRegistering,
 			flags,
-		),
-	)
+		))
+	}
 
 	for _, opt := range opts {
 		opt(p)
