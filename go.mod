@@ -24,7 +24,7 @@ require (
 )
 
 require (
-	github.com/Nigel2392/go-telepath v0.1.2
+	github.com/Nigel2392/go-telepath v0.1.3-0.20250115131048-600eacd48c62
 	github.com/Nigel2392/tags v1.0.0
 	github.com/a-h/templ v0.3.819
 	github.com/fatih/structtag v1.2.0

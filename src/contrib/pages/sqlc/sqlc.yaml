@@ -48,31 +48,31 @@ sql:
             go_type:
               type: "string"
 
-  - schema: "./schema.postgres.sql"
-    queries: "./queries.postgres.sql"
-    engine: "postgresql"
-    gen:
-      go:
-        package: "models_postgres"
-        out: "../models-postgres"
+  # - schema: "./schema.postgres.sql"
+    # queries: "./queries.postgres.sql"
+    # engine: "postgresql"
+    # gen:
+      # go:
+        # package: "models_postgres"
+        # out: "../models-postgres"
         # sql_package: "pgx/v5"
-        emit_json_tags: true
-        emit_prepared_queries: true
-        emit_interface: true
-        query_parameter_limit: 11
-        overrides:
-          - db_type: "bigint"
-            go_type:
-              type: "int64"
-
-          - db_type: "serial"
-            go_type:
-              type: "int64"
-
-          - db_type: "text"
-            go_type:
-              type: "string"
-
-          - db_type: "varchar(255)"
-            go_type:
-              type: "string"
+        # emit_json_tags: true
+        # emit_prepared_queries: true
+        # emit_interface: true
+        # query_parameter_limit: 11
+        # overrides:
+          # - db_type: "bigint"
+            # go_type:
+              # type: "int64"
+# 
+          # - db_type: "serial"
+            # go_type:
+              # type: "int64"
+# 
+          # - db_type: "text"
+            # go_type:
+              # type: "string"
+# 
+          # - db_type: "varchar(255)"
+            # go_type:
+              # type: "string"

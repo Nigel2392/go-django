@@ -126,48 +126,57 @@ var pageMenuHandlerTests = []pageMenuHandlerTest{
 	},
 }
 
-func TestPageMenuHandler(t *testing.T) {
-	var sqlDB, err = sql.Open("sqlite3", "file::memory:?cache=shared")
+var (
+	menuSQLDB *sql.DB
+	menuQS    models.Querier
+)
+
+func init() {
+	var err error
+	menuSQLDB, err = sql.Open("sqlite3", "file::memory:?cache=shared")
 	if err != nil {
 		panic(err)
 	}
 
 	// Create test_pages table
-	if err := sqlDB.Ping(); err != nil {
+	if err := menuSQLDB.Ping(); err != nil {
 		panic(err)
 	}
 
-	var driverType = sqlDB.Driver()
+	var driverType = menuSQLDB.Driver()
 	backend, err := models.GetBackend(driverType)
 	if err != nil {
 		panic(fmt.Errorf("no backend configured for %T: %w", driverType, err))
 	}
 
-	if err := backend.CreateTable(sqlDB); err != nil {
+	if err := backend.CreateTable(menuSQLDB); err != nil {
 		panic(err)
 	}
 
-	qs, err := backend.NewQuerySet(sqlDB)
+	menuQS, err = backend.NewQuerySet(menuSQLDB)
 	if err != nil {
 		panic(fmt.Sprintf("failed to initialize queryset for backend %T", backend))
 	}
 
 	pages.QuerySet = func() models.DBQuerier {
 		return &pages.Querier{
-			Querier: qs,
-			Db:      sqlDB,
+			Querier: menuQS,
+			Db:      menuSQLDB,
 		}
 	}
+}
+
+func TestPageMenuHandler(t *testing.T) {
 
 	// Insert test data
 	var ctx = context.Background()
 	for _, node := range nodes {
-		if _, err := qs.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, node.Slug, int64(node.StatusFlags), node.PageID, node.ContentType); err != nil {
+		if _, err := menuQS.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, node.Slug, int64(node.StatusFlags), node.PageID, node.ContentType, node.LatestRevisionID); err != nil {
 			panic(err)
 		}
 	}
 
-	allNodes, err := qs.AllNodes(ctx, 1000, 0)
+	allNodes, err := menuQS.AllNodes(ctx, 0, 1000)
 	if err != nil {
 		panic(err)
 	}
@@ -181,7 +190,7 @@ func TestPageMenuHandler(t *testing.T) {
 
 	tree.FixTree()
 
-	err = qs.UpdateNodes(ctx, nodeRefs)
+	err = menuQS.UpdateNodes(ctx, nodeRefs)
 	if err != nil {
 		panic(err)
 	}
@@ -223,5 +232,5 @@ func TestPageMenuHandler(t *testing.T) {
 		})
 	}
 
-	sqlDB.Exec("DROP TABLE PageNode")
+	menuSQLDB.Exec("DROP TABLE PageNode")
 }

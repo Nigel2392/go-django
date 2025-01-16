@@ -21,6 +21,7 @@ const updateNodes = `INSERT INTO PageNode (
 	status_flags = VALUES(status_flags),
 	page_id = VALUES(page_id),
 	content_type = VALUES(content_type),
+	latest_revision_id = VALUES(latest_revision_id),
 	updated_at = VALUES(updated_at)
 `
 
@@ -40,6 +41,7 @@ func (q *Queries) UpdateNodes(ctx context.Context, nodes []*models.PageNode) err
 			node.StatusFlags,
 			node.PageID,
 			node.ContentType,
+			node.LatestRevisionID,
 		)
 	}
 	query := updateNodes

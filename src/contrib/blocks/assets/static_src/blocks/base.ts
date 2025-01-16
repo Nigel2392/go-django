@@ -28,15 +28,16 @@ type Config = {
             html: string;
         }
     };
+    [key: string]: any;
 }
 
 class Block {
-    widget: HTMLElement;
     blockDef: BlockDef;
+    prefix: String;
 
-    constructor(widget: HTMLElement, blockDef: BlockDef) {
-        this.widget = widget;
+    constructor(blockDef: BlockDef, prefix: String) {
         this.blockDef = blockDef;
+        this.prefix = prefix;
     }
 
     getLabel(): string {
@@ -69,7 +70,7 @@ class BlockDef {
         this.config = config;
     }
 
-    render(): any {
+    render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): Block {
         throw new Error("Method not implemented.");
     }
 }

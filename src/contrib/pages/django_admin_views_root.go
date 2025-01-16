@@ -308,11 +308,11 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 
 			ref.PageID = page.ID()
 			err = qs.UpdateNode(
-				ctx, ref.Title, ref.Path, ref.Depth, ref.Numchild, ref.UrlPath, ref.Slug, int64(ref.StatusFlags), ref.PageID, ref.ContentType, ref.PK,
+				ctx, ref.Title, ref.Path, ref.Depth, ref.Numchild, ref.UrlPath, ref.Slug, int64(ref.StatusFlags), ref.PageID, ref.ContentType, ref.LatestRevisionID, ref.PK,
 			)
 		} else if n, ok := d.(*models.PageNode); ok {
 			_, err = qs.InsertNode(
-				ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, n.Slug, int64(n.StatusFlags), n.PageID, n.ContentType,
+				ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, n.Slug, int64(n.StatusFlags), n.PageID, n.ContentType, n.LatestRevisionID,
 			)
 		} else {
 			err = fmt.Errorf("invalid page type: %T", d)

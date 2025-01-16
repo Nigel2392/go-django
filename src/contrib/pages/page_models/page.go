@@ -26,18 +26,19 @@ func (f StatusFlag) Is(flag StatusFlag) bool {
 }
 
 type PageNode struct {
-	PK          int64      `json:"id" attrs:"primary;readonly"`
-	Title       string     `json:"title"`
-	Path        string     `json:"path"`
-	Depth       int64      `json:"depth" attrs:"blank"`
-	Numchild    int64      `json:"numchild" attrs:"blank"`
-	UrlPath     string     `json:"url_path" attrs:"readonly;blank"`
-	Slug        string     `json:"slug"`
-	StatusFlags StatusFlag `json:"status_flags" attrs:"null;blank"`
-	PageID      int64      `json:"page_id" attrs:""`
-	ContentType string     `json:"content_type" attrs:""`
-	CreatedAt   time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
-	UpdatedAt   time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
+	PK               int64      `json:"id" attrs:"primary;readonly"`
+	Title            string     `json:"title"`
+	Path             string     `json:"path"`
+	Depth            int64      `json:"depth" attrs:"blank"`
+	Numchild         int64      `json:"numchild" attrs:"blank"`
+	UrlPath          string     `json:"url_path" attrs:"readonly;blank"`
+	Slug             string     `json:"slug"`
+	StatusFlags      StatusFlag `json:"status_flags" attrs:"null;blank"`
+	PageID           int64      `json:"page_id" attrs:""`
+	ContentType      string     `json:"content_type" attrs:""`
+	LatestRevisionID int64      `json:"latest_revision_id" attrs:""`
+	CreatedAt        time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
+	UpdatedAt        time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
 
 	// ParentNode is the parent node of this node.
 	// It will likely be nil and is not fetched by default.
@@ -72,9 +73,19 @@ func (n *PageNode) FieldDefs() attrs.Definitions {
 		"StatusFlags",
 		"PageID",
 		"ContentType",
+		"LatestRevisionID",
 		"CreatedAt",
 		"UpdatedAt",
 	)
+}
+
+type Revision struct {
+	ID          interface{} `json:"id"`
+	ObjectID    int64       `json:"object_id"`
+	ContentType string      `json:"content_type"`
+	Data        string      `json:"data"`
+	CreatedAt   time.Time   `json:"created_at"`
+	UpdatedAt   time.Time   `json:"updated_at"`
 }
 
 type DBTX interface {
@@ -93,31 +104,36 @@ type DBQuerier interface {
 type Querier interface {
 	Close() error
 	WithTx(tx *sql.Tx) Querier
-	AllNodes(ctx context.Context, limit int32, offset int32) ([]PageNode, error)
+	AllNodes(ctx context.Context, offset int32, limit int32) ([]PageNode, error)
 	CountNodes(ctx context.Context) (int64, error)
-	CountRootNodes(ctx context.Context) (int64, error)
 	CountNodesByTypeHash(ctx context.Context, contentType string) (int64, error)
+	CountRootNodes(ctx context.Context) (int64, error)
 	DecrementNumChild(ctx context.Context, id int64) (PageNode, error)
-	DeleteDescendants(ctx context.Context, path interface{}, depth int64) error
+	DeleteDescendants(ctx context.Context, path string, depth int64) error
 	DeleteNode(ctx context.Context, id int64) error
 	DeleteNodes(ctx context.Context, id []int64) error
-	GetChildNodes(ctx context.Context, path interface{}, depth interface{}, limit int32, offset int32) ([]PageNode, error)
-	GetDescendants(ctx context.Context, path interface{}, depth int64, limit int32, offset int32) ([]PageNode, error)
+	DeleteRevision(ctx context.Context, id int64) error
+	GetChildNodes(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]PageNode, error)
+	GetDescendants(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]PageNode, error)
 	GetNodeByID(ctx context.Context, id int64) (PageNode, error)
 	GetNodeByPath(ctx context.Context, path string) (PageNode, error)
 	GetNodeBySlug(ctx context.Context, slug string, depth int64, path interface{}) (PageNode, error)
-	GetNodesByDepth(ctx context.Context, depth int64, limit int32, offset int32) ([]PageNode, error)
+	GetNodesByDepth(ctx context.Context, depth int64, offset int32, limit int32) ([]PageNode, error)
 	GetNodesByIDs(ctx context.Context, id []int64) ([]PageNode, error)
 	GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]PageNode, error)
-	GetNodesByTypeHash(ctx context.Context, contentType string, limit int32, offset int32) ([]PageNode, error)
-	GetNodesByTypeHashes(ctx context.Context, contentType []string, limit int32, offset int32) ([]PageNode, error)
+	GetNodesByTypeHash(ctx context.Context, contentType string, offset int32, limit int32) ([]PageNode, error)
+	GetNodesByTypeHashes(ctx context.Context, contentType []string, offset int32, limit int32) ([]PageNode, error)
 	GetNodesForPaths(ctx context.Context, path []string) ([]PageNode, error)
+	GetRevisionByID(ctx context.Context, id int64) (Revision, error)
+	GetRevisionsByObjectID(ctx context.Context, objectID int64, contentType string, offset int32, limit int32) ([]Revision, error)
 	IncrementNumChild(ctx context.Context, id int64) (PageNode, error)
-	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, slug string, statusFlags int64, pageID int64, contentType string) (int64, error)
-	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, slug string, statusFlags int64, pageID int64, contentType string, iD int64) error
+	ListRevisions(ctx context.Context, offset int32, limit int32) ([]Revision, error)
+	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, slug string, statusFlags int64, pageID int64, contentType string, latestRevisionID int64) (int64, error)
+	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, slug string, statusFlags int64, pageID int64, contentType string, latestRevisionID int64, iD int64) error
 	UpdateNodes(ctx context.Context, nodes []*PageNode) error
 	UpdateNodePathAndDepth(ctx context.Context, path string, depth int64, iD int64) error
 	UpdateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error
+	UpdateRevision(ctx context.Context, objectID int64, contentType string, data string, iD int64) error
 }
 
 /// MoveNodeParams contains parameters for moving a node.

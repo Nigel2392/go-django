@@ -151,6 +151,7 @@ func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 			int64(n.StatusFlags),
 			n.PageID,
 			n.ContentType,
+			n.LatestRevisionID,
 		)
 	} else {
 		err = pageApp.QuerySet().UpdateNode(
@@ -164,6 +165,7 @@ func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 			int64(n.StatusFlags),
 			n.PageID,
 			n.ContentType,
+			n.LatestRevisionID,
 			n.PK,
 		)
 	}

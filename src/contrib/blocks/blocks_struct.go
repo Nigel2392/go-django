@@ -245,24 +245,29 @@ func (m *StructBlock) RenderForm(w io.Writer, id, name string, value interface{}
 		"id":    id,
 		"name":  name,
 		"block": m,
-		"childBlocks": (func() any {
-			var blocks = make(map[string]any)
+		"childBlockDefs": (func() any {
+			var blocks = make([]any, 0)
 			for head := m.Fields.Front(); head != nil; head = head.Next() {
-				blocks[head.Key] = map[string]interface{}{
+				var value = head.Value.ValueToForm(
+					valueMap[head.Key],
+				)
+
+				blocks = append(blocks, map[string]interface{}{
 					"block": head.Value,
-					"value": valueMap[head.Key],
+					"value": value,
 					"errors": (func() []error {
-						var errs = errs.Get(head.Key)
-						if errs != nil {
-							return errs
+						var errors = errs.Get(head.Key)
+						if errors != nil {
+							return errors
 						}
-						return []error{}
+						return nil
 					})(),
-				}
+				})
 			}
-			return map[string]interface{}{}
+			return blocks
 		}()),
 	}
+
 	var bt, err = telepath.PackJSON(JSContext, blockArgs)
 	if err != nil {
 		return err

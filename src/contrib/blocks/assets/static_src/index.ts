@@ -2,7 +2,7 @@ import type { Definition } from '@hotwired/stimulus';
 import { DjangoApplication } from "./app/app";
 import { SortableController } from "./controllers";
 import { BlockController } from "./blocks/controller";
-import { ListBlockDef } from "./blocks/impl/list-block";
+import { ListBlockDef, ListBlockValue } from "./blocks/impl/list-block";
 import { FieldBlockDef } from "./blocks/impl/field-block";
 import { StructBlockDef } from "./blocks/impl/struct-block";
 
@@ -22,6 +22,7 @@ window.Django = app;
 window.Django.registerAdapter('django.blocks.FieldBlock', FieldBlockDef);
 window.Django.registerBlock('django.blocks.field-block', FieldBlockDef);
 
+window.Django.registerAdapter('django.blocks.ListBlockValue', ListBlockValue);
 window.Django.registerAdapter('django.blocks.ListBlock', ListBlockDef);
 window.Django.registerBlock('django.blocks.list-block', ListBlockDef);
 

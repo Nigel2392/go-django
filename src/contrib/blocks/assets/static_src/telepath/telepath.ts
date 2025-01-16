@@ -15,7 +15,11 @@ class Telepath {
 	  	const packedValuesById: {[key: number]: any} = {};
 	  	this.scanForIds(objData, packedValuesById);
 	  	const valuesById = {};
-	  	return this.unpackWithRefs(objData, packedValuesById, valuesById);
+		console.log("objData", objData);
+		console.log("objData", objData);
+		console.log("objData", objData);
+		console.log("objData", objData);
+		return this.unpackWithRefs(objData, packedValuesById, valuesById);
 	}
   
 	scanForIds(objData: any, packedValuesById: {[key: number]: any}) {
@@ -127,7 +131,7 @@ class Telepath {
 		}.bind(this));
 		result = new constructor(...args);
 	  } else if ('_id' in objData) {
-		throw new Error('telepath encountered object with _id but no type specified');
+		throw new Error(`telepath encountered object with _id but no type specified`);
 	  } else {
 		/* no reserved key names found, so unpack objData as a plain dict and return */
 		result = {};

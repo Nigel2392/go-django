@@ -8,7 +8,8 @@ INSERT INTO PageNode (
     slug,
     status_flags,
     page_id,
-    content_type
+    content_type,
+    latest_revision_id
 ) VALUES (
     sqlc.arg(title),
     sqlc.arg(path),
@@ -18,7 +19,8 @@ INSERT INTO PageNode (
     sqlc.arg(slug),
     sqlc.arg(status_flags),
     sqlc.arg(page_id),
-    sqlc.arg(content_type)
+    sqlc.arg(content_type),
+    sqlc.arg(latest_revision_id)
 );
 
 -- name: AllNodes :many
@@ -120,6 +122,7 @@ SET title = sqlc.arg(title),
     status_flags = sqlc.arg(status_flags), 
     page_id = sqlc.arg(page_id), 
     content_type = sqlc.arg(content_type),
+    latest_revision_id = sqlc.arg(latest_revision_id),
     updated_at = CURRENT_TIMESTAMP
 WHERE id = sqlc.arg(id);
 
@@ -154,3 +157,46 @@ WHERE id IN (sqlc.slice(id));
 -- name: DeleteDescendants :exec
 DELETE FROM PageNode
 WHERE path LIKE CONCAT(sqlc.arg(path), '%') AND depth > sqlc.arg(depth);
+
+-- name: InsertRevision :execlastid
+INSERT INTO Revision (
+    object_id,
+    content_type,
+    data
+) VALUES (
+    sqlc.arg(object_id),
+    sqlc.arg(content_type),
+    sqlc.arg(data)
+);
+
+-- name: GetRevisionByID :one
+SELECT   *
+FROM     Revision
+WHERE    id = sqlc.arg(id);
+
+-- name: GetRevisionsByObjectID :many
+SELECT   *
+FROM     Revision
+WHERE    object_id = sqlc.arg(object_id)
+AND      content_type = sqlc.arg(content_type)
+LIMIT    ?
+OFFSET   ?;
+
+-- name: ListRevisions :many
+SELECT   *
+FROM     Revision
+ORDER BY created_at DESC
+LIMIT    ?
+OFFSET   ?;
+
+-- name: UpdateRevision :exec
+UPDATE Revision
+SET object_id = sqlc.arg(object_id),
+    content_type = sqlc.arg(content_type),
+    data = sqlc.arg(data),
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = sqlc.arg(id);
+
+-- name: DeleteRevision :exec
+DELETE FROM Revision
+WHERE id = sqlc.arg(id);

@@ -10,7 +10,7 @@ import (
 
 func init() {
 	RegisterFormFieldType(
-		json.RawMessage([]byte{}),
+		json.RawMessage{},
 		func(opts ...func(fields.Field)) fields.Field {
 			return fields.JSONField[json.RawMessage](opts...)
 		},

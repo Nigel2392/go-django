@@ -19,7 +19,7 @@ func renderForm(b Block, id string, name string, value interface{}, errors []err
     })
 }
 
-func RenderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext, errors []error) error {
+func renderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext, errors []error) error {
     w.Write([]byte("<div class=\"django-block-widget-wrapper\">\n"))
     w.Write([]byte("\t<div class=\"django-block-widget\">\n"))
     var err = widget.BlockDef.RenderForm(w, blockCtx.ID, blockCtx.Name, blockCtx.Value, errors, blockCtx)
@@ -32,35 +32,35 @@ func RenderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext,
 }
 
 templ (b *FieldBlock) RenderTempl(id, name string, value interface{}, telepath string, errors []error, tplCtx ctx.Context)  {
-	{{ var c = tplCtx.(*BlockContext) }}
+	// {{ var c = tplCtx.(*BlockContext) }}
     <div data-field-block class="form-field field" data-controller="block" data-block-class-path-value="django.blocks.field-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(errors) }>
 
         @widgets.ErrorListComponent("field-block", errors)
 
-        @renderWithErrors(b.Field().Widget().RenderWithErrors, id, name, value, errors, c.Attrs)
+        // @renderWithErrors(b.Field().Widget().RenderWithErrors, id, name, value, errors, c.Attrs)
     </div>
 }
 
 templ (b *StructBlock) RenderTempl(id, name string, valueMap map[string]interface{}, telepath string, errors *BaseBlockValidationError[string], tplCtx ctx.Context)  {
     <div id={ id } data-struct-block data-controller="block" data-block-class-path-value="django.blocks.struct-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(errors) }>
 
-	    for head := b.Fields.Front(); head != nil; head = head.Next() {
-	    	{{ var id  = fmt.Sprintf("%s-%s", id, head.Key) }}
-	    	{{ var key = fmt.Sprintf("%s-%s", name, head.Key) }}
-
-            <div data-struct-field data-contentpath={ key }>
-
-
-                @widgets.LabelComponent("struct-block", head.Value.Label(), id)
-
-                {{ var newErrs = errors.Get(head.Key) }}
-                <div data-struct-field-content>
-                    @renderForm(head.Value, id, key, valueMap[head.Key], newErrs, tplCtx)
-                </div>
-
-                @widgets.HelpTextComponent("struct-block", head.Value.HelpText())
-            </div>
-	    }
+	    //for head := b.Fields.Front(); head != nil; head = head.Next() {
+	    //	{{ var id  = fmt.Sprintf("%s-%s", id, head.Key) }}
+	    //	{{ var key = fmt.Sprintf("%s-%s", name, head.Key) }}
+//
+        //    <div data-struct-field data-contentpath={ key }>
+//
+//
+        //        @widgets.LabelComponent("struct-block", head.Value.Label(), id)
+//
+        //        {{ var newErrs = errors.Get(head.Key) }}
+        //        <div data-struct-field-content>
+        //            @renderForm(head.Value, id, key, valueMap[head.Key], newErrs, tplCtx)
+        //        </div>
+//
+        //        @widgets.HelpTextComponent("struct-block", head.Value.HelpText())
+        //    </div>
+	    //}
     </div>
 }
 

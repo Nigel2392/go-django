@@ -8,14 +8,14 @@ import (
 )
 
 const allNodes = `-- name: AllNodes :many
-SELECT id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
+SELECT id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 ORDER BY path ASC
-LIMIT    ?
 OFFSET   ?
+LIMIT    ?
 `
 
-func (q *Queries) AllNodes(ctx context.Context, limit int32, offset int32) ([]models.PageNode, error) {
+func (q *Queries) AllNodes(ctx context.Context, offset int32, limit int32) ([]models.PageNode, error) {
 	rows, err := q.query(ctx, q.allNodesStmt, allNodes, limit, offset)
 	if err != nil {
 		return nil, err
@@ -35,6 +35,7 @@ func (q *Queries) AllNodes(ctx context.Context, limit int32, offset int32) ([]mo
 			&i.StatusFlags,
 			&i.PageID,
 			&i.ContentType,
+			&i.LatestRevisionID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -63,19 +64,6 @@ func (q *Queries) CountNodes(ctx context.Context) (int64, error) {
 	return count, err
 }
 
-const countRootNodes = `-- name: CountRootNodes :one
-SELECT COUNT(*)
-FROM   PageNode
-WHERE  depth = 0
-`
-
-func (q *Queries) CountRootNodes(ctx context.Context) (int64, error) {
-	row := q.queryRow(ctx, q.countRootNodesStmt, countRootNodes)
-	var count int64
-	err := row.Scan(&count)
-	return count, err
-}
-
 const countNodesByTypeHash = `-- name: CountNodesByTypeHash :one
 SELECT COUNT(*)
 FROM   PageNode
@@ -89,12 +77,25 @@ func (q *Queries) CountNodesByTypeHash(ctx context.Context, contentType string) 
 	return count, err
 }
 
+const countRootNodes = `-- name: CountRootNodes :one
+SELECT COUNT(*)
+FROM   PageNode
+WHERE  depth = 0
+`
+
+func (q *Queries) CountRootNodes(ctx context.Context) (int64, error) {
+	row := q.queryRow(ctx, q.countRootNodesStmt, countRootNodes)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteDescendants = `-- name: DeleteDescendants :exec
 DELETE FROM PageNode
 WHERE path LIKE CONCAT(?, '%') AND depth > ?
 `
 
-func (q *Queries) DeleteDescendants(ctx context.Context, path interface{}, depth int64) error {
+func (q *Queries) DeleteDescendants(ctx context.Context, path string, depth int64) error {
 	_, err := q.exec(ctx, q.deleteDescendantsStmt, deleteDescendants, path, depth)
 	return err
 }
@@ -129,15 +130,25 @@ func (q *Queries) DeleteNodes(ctx context.Context, id []int64) error {
 	return err
 }
 
-const getChildNodes = `-- name: GetChildNodes :many
-SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
-FROM     PageNode
-WHERE    path LIKE CONCAT(?, '%') AND depth = ? + 1
-LIMIT    ?
-OFFSET   ?
+const deleteRevision = `-- name: DeleteRevision :exec
+DELETE FROM Revision
+WHERE id = ?
 `
 
-func (q *Queries) GetChildNodes(ctx context.Context, path interface{}, depth interface{}, limit int32, offset int32) ([]models.PageNode, error) {
+func (q *Queries) DeleteRevision(ctx context.Context, id int64) error {
+	_, err := q.exec(ctx, q.deleteRevisionStmt, deleteRevision, id)
+	return err
+}
+
+const getChildNodes = `-- name: GetChildNodes :many
+SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
+FROM     PageNode
+WHERE    path LIKE CONCAT(?, '%') AND depth = ? + 1
+OFFSET   ?
+LIMIT    ?
+`
+
+func (q *Queries) GetChildNodes(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]models.PageNode, error) {
 	rows, err := q.query(ctx, q.getChildNodesStmt, getChildNodes,
 		path,
 		depth,
@@ -162,6 +173,7 @@ func (q *Queries) GetChildNodes(ctx context.Context, path interface{}, depth int
 			&i.StatusFlags,
 			&i.PageID,
 			&i.ContentType,
+			&i.LatestRevisionID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -179,14 +191,14 @@ func (q *Queries) GetChildNodes(ctx context.Context, path interface{}, depth int
 }
 
 const getDescendants = `-- name: GetDescendants :many
-SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
+SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    path LIKE CONCAT(?, '%') AND depth > ?
-LIMIT    ?
 OFFSET   ?
+LIMIT    ?
 `
 
-func (q *Queries) GetDescendants(ctx context.Context, path interface{}, depth int64, limit int32, offset int32) ([]models.PageNode, error) {
+func (q *Queries) GetDescendants(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]models.PageNode, error) {
 	rows, err := q.query(ctx, q.getDescendantsStmt, getDescendants,
 		path,
 		depth,
@@ -211,6 +223,7 @@ func (q *Queries) GetDescendants(ctx context.Context, path interface{}, depth in
 			&i.StatusFlags,
 			&i.PageID,
 			&i.ContentType,
+			&i.LatestRevisionID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -228,7 +241,7 @@ func (q *Queries) GetDescendants(ctx context.Context, path interface{}, depth in
 }
 
 const getNodeByID = `-- name: GetNodeByID :one
-SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
+SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    id = ?
 `
@@ -247,34 +260,7 @@ func (q *Queries) GetNodeByID(ctx context.Context, id int64) (models.PageNode, e
 		&i.StatusFlags,
 		&i.PageID,
 		&i.ContentType,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getNodeBySlug = `-- name: GetNodeBySlug :one
-SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
-FROM     PageNode
-WHERE    LOWER(slug) = LOWER(?)
-AND      depth 		 = ?
-AND      path  		 LIKE CONCAT(?, '%')
-`
-
-func (q *Queries) GetNodeBySlug(ctx context.Context, slug string, depth int64, path interface{}) (models.PageNode, error) {
-	row := q.queryRow(ctx, q.getNodeBySlugStmt, getNodeBySlug, slug, depth, path)
-	var i models.PageNode
-	err := row.Scan(
-		&i.PK,
-		&i.Title,
-		&i.Path,
-		&i.Depth,
-		&i.Numchild,
-		&i.UrlPath,
-		&i.Slug,
-		&i.StatusFlags,
-		&i.PageID,
-		&i.ContentType,
+		&i.LatestRevisionID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -282,7 +268,7 @@ func (q *Queries) GetNodeBySlug(ctx context.Context, slug string, depth int64, p
 }
 
 const getNodeByPath = `-- name: GetNodeByPath :one
-SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
+SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    path = ?
 `
@@ -301,6 +287,36 @@ func (q *Queries) GetNodeByPath(ctx context.Context, path string) (models.PageNo
 		&i.StatusFlags,
 		&i.PageID,
 		&i.ContentType,
+		&i.LatestRevisionID,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getNodeBySlug = `-- name: GetNodeBySlug :one
+SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
+FROM     PageNode
+WHERE    LOWER(slug) = LOWER(?)
+AND      depth =    ?
+AND      path  LIKE CONCAT(?, '%')
+`
+
+func (q *Queries) GetNodeBySlug(ctx context.Context, slug string, depth int64, path interface{}) (models.PageNode, error) {
+	row := q.queryRow(ctx, q.getNodeBySlugStmt, getNodeBySlug, slug, depth, path)
+	var i models.PageNode
+	err := row.Scan(
+		&i.PK,
+		&i.Title,
+		&i.Path,
+		&i.Depth,
+		&i.Numchild,
+		&i.UrlPath,
+		&i.Slug,
+		&i.StatusFlags,
+		&i.PageID,
+		&i.ContentType,
+		&i.LatestRevisionID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 	)
@@ -308,14 +324,14 @@ func (q *Queries) GetNodeByPath(ctx context.Context, path string) (models.PageNo
 }
 
 const getNodesByDepth = `-- name: GetNodesByDepth :many
-SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
+SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    depth = ?
-LIMIT    ?
 OFFSET   ?
+LIMIT    ?
 `
 
-func (q *Queries) GetNodesByDepth(ctx context.Context, depth int64, limit int32, offset int32) ([]models.PageNode, error) {
+func (q *Queries) GetNodesByDepth(ctx context.Context, depth int64, offset int32, limit int32) ([]models.PageNode, error) {
 	rows, err := q.query(ctx, q.getNodesByDepthStmt, getNodesByDepth, depth, limit, offset)
 	if err != nil {
 		return nil, err
@@ -335,6 +351,7 @@ func (q *Queries) GetNodesByDepth(ctx context.Context, depth int64, limit int32,
 			&i.StatusFlags,
 			&i.PageID,
 			&i.ContentType,
+			&i.LatestRevisionID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -352,7 +369,7 @@ func (q *Queries) GetNodesByDepth(ctx context.Context, depth int64, limit int32,
 }
 
 const getNodesByIDs = `-- name: GetNodesByIDs :many
-SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
+SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    id IN (/*SLICE:id*/?)
 `
@@ -387,6 +404,7 @@ func (q *Queries) GetNodesByIDs(ctx context.Context, id []int64) ([]models.PageN
 			&i.StatusFlags,
 			&i.PageID,
 			&i.ContentType,
+			&i.LatestRevisionID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -404,7 +422,7 @@ func (q *Queries) GetNodesByIDs(ctx context.Context, id []int64) ([]models.PageN
 }
 
 const getNodesByPageIDs = `-- name: GetNodesByPageIDs :many
-SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
+SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    page_id IN (/*SLICE:page_id*/?)
 `
@@ -439,6 +457,7 @@ func (q *Queries) GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]mode
 			&i.StatusFlags,
 			&i.PageID,
 			&i.ContentType,
+			&i.LatestRevisionID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -456,14 +475,14 @@ func (q *Queries) GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]mode
 }
 
 const getNodesByTypeHash = `-- name: GetNodesByTypeHash :many
-SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
+SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    content_type = ?
-LIMIT    ?
 OFFSET   ?
+LIMIT    ?
 `
 
-func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string, limit int32, offset int32) ([]models.PageNode, error) {
+func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string, offset int32, limit int32) ([]models.PageNode, error) {
 	rows, err := q.query(ctx, q.getNodesByTypeHashStmt, getNodesByTypeHash, contentType, limit, offset)
 	if err != nil {
 		return nil, err
@@ -483,6 +502,7 @@ func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string, li
 			&i.StatusFlags,
 			&i.PageID,
 			&i.ContentType,
+			&i.LatestRevisionID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -500,14 +520,14 @@ func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string, li
 }
 
 const getNodesByTypeHashes = `-- name: GetNodesByTypeHashes :many
-SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
+SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    content_type IN (/*SLICE:content_type*/?)
-LIMIT    ?
 OFFSET   ?
+LIMIT    ?
 `
 
-func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string, limit int32, offset int32) ([]models.PageNode, error) {
+func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string, offset int32, limit int32) ([]models.PageNode, error) {
 	query := getNodesByTypeHashes
 	var queryParams []interface{}
 	if len(contentType) > 0 {
@@ -539,6 +559,7 @@ func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string
 			&i.StatusFlags,
 			&i.PageID,
 			&i.ContentType,
+			&i.LatestRevisionID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -556,7 +577,7 @@ func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string
 }
 
 const getNodesForPaths = `-- name: GetNodesForPaths :many
-SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, created_at, updated_at
+SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    path IN (/*SLICE:path*/?)
 `
@@ -591,6 +612,71 @@ func (q *Queries) GetNodesForPaths(ctx context.Context, path []string) ([]models
 			&i.StatusFlags,
 			&i.PageID,
 			&i.ContentType,
+			&i.LatestRevisionID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const getRevisionByID = `-- name: GetRevisionByID :one
+SELECT   id, object_id, content_type, data, created_at, updated_at
+FROM     Revision
+WHERE    id = ?
+`
+
+func (q *Queries) GetRevisionByID(ctx context.Context, id int64) (models.Revision, error) {
+	row := q.queryRow(ctx, q.getRevisionByIDStmt, getRevisionByID, id)
+	var i models.Revision
+	err := row.Scan(
+		&i.ID,
+		&i.ObjectID,
+		&i.ContentType,
+		&i.Data,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
+const getRevisionsByObjectID = `-- name: GetRevisionsByObjectID :many
+SELECT   id, object_id, content_type, data, created_at, updated_at
+FROM     Revision
+WHERE    object_id = ?
+AND      content_type = ?
+OFFSET   ?
+LIMIT    ?
+`
+
+func (q *Queries) GetRevisionsByObjectID(ctx context.Context, objectID int64, contentType string, offset int32, limit int32) ([]models.Revision, error) {
+	rows, err := q.query(ctx, q.getRevisionsByObjectIDStmt, getRevisionsByObjectID,
+		objectID,
+		contentType,
+		limit,
+		offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []models.Revision
+	for rows.Next() {
+		var i models.Revision
+		if err := rows.Scan(
+			&i.ID,
+			&i.ObjectID,
+			&i.ContentType,
+			&i.Data,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -617,8 +703,10 @@ INSERT INTO PageNode (
     slug,
     status_flags,
     page_id,
-    content_type
+    content_type,
+    latest_revision_id
 ) VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -631,7 +719,7 @@ INSERT INTO PageNode (
 )
 `
 
-func (q *Queries) InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, slug string, statusFlags int64, pageID int64, contentType string) (int64, error) {
+func (q *Queries) InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, slug string, statusFlags int64, pageID int64, contentType string, latestRevisionID int64) (int64, error) {
 	result, err := q.exec(ctx, q.insertNodeStmt, insertNode,
 		title,
 		path,
@@ -642,11 +730,70 @@ func (q *Queries) InsertNode(ctx context.Context, title string, path string, dep
 		statusFlags,
 		pageID,
 		contentType,
+		latestRevisionID,
 	)
 	if err != nil {
 		return 0, err
 	}
 	return result.LastInsertId()
+}
+
+const insertRevision = `-- name: InsertRevision :execlastid
+INSERT INTO Revision (
+    object_id,
+    content_type,
+    data
+) VALUES (
+    ?,
+    ?,
+    ?
+)
+`
+
+func (q *Queries) InsertRevision(ctx context.Context, objectID int64, contentType string, data string) (int64, error) {
+	result, err := q.exec(ctx, q.insertRevisionStmt, insertRevision, objectID, contentType, data)
+	if err != nil {
+		return 0, err
+	}
+	return result.LastInsertId()
+}
+
+const listRevisions = `-- name: ListRevisions :many
+SELECT   id, object_id, content_type, data, created_at, updated_at
+FROM     Revision
+ORDER BY created_at DESC
+OFFSET   ?
+LIMIT    ?
+`
+
+func (q *Queries) ListRevisions(ctx context.Context, offset int32, limit int32) ([]models.Revision, error) {
+	rows, err := q.query(ctx, q.listRevisionsStmt, listRevisions, limit, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []models.Revision
+	for rows.Next() {
+		var i models.Revision
+		if err := rows.Scan(
+			&i.ID,
+			&i.ObjectID,
+			&i.ContentType,
+			&i.Data,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const updateNode = `-- name: UpdateNode :exec
@@ -656,15 +803,16 @@ SET title = ?,
     depth = ?, 
     numchild = ?,
     url_path = ?,
-	slug = ?,
+    slug = ?,
     status_flags = ?, 
     page_id = ?, 
     content_type = ?,
+    latest_revision_id = ?,
     updated_at = CURRENT_TIMESTAMP
 WHERE id = ?
 `
 
-func (q *Queries) UpdateNode(ctx context.Context, title, path string, depth, numchild int64, urlPath, slug string, statusFlags, pageID int64, contentType string, iD int64) error {
+func (q *Queries) UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, slug string, statusFlags int64, pageID int64, contentType string, latestRevisionID int64, iD int64) error {
 	_, err := q.exec(ctx, q.updateNodeStmt, updateNode,
 		title,
 		path,
@@ -675,6 +823,7 @@ func (q *Queries) UpdateNode(ctx context.Context, title, path string, depth, num
 		statusFlags,
 		pageID,
 		contentType,
+		latestRevisionID,
 		iD,
 	)
 	return err
@@ -699,5 +848,24 @@ WHERE    id = ?
 
 func (q *Queries) UpdateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error {
 	_, err := q.exec(ctx, q.updateNodeStatusFlagsStmt, updateNodeStatusFlags, statusFlags, iD)
+	return err
+}
+
+const updateRevision = `-- name: UpdateRevision :exec
+UPDATE Revision
+SET object_id = ?,
+    content_type = ?,
+    data = ?,
+    updated_at = CURRENT_TIMESTAMP
+WHERE id = ?
+`
+
+func (q *Queries) UpdateRevision(ctx context.Context, objectID int64, contentType string, data string, iD int64) error {
+	_, err := q.exec(ctx, q.updateRevisionStmt, updateRevision,
+		objectID,
+		contentType,
+		data,
+		iD,
+	)
 	return err
 }

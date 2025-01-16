@@ -22,8 +22,21 @@ var _ Block = (*ListBlock)(nil)
 
 type ListBlockValue struct {
 	ID    uuid.UUID   `json:"id"`
-	Data  interface{} `json:"data"`
 	Order int         `json:"order"`
+	Data  interface{} `json:"data"`
+}
+
+func (m *ListBlockValue) Adapter() telepath.Adapter {
+	return &telepath.ObjectAdapter[*ListBlockValue]{
+		JSConstructor: "django.blocks.ListBlockValue",
+		GetJSArgs: func(obj *ListBlockValue) []interface{} {
+			return []interface{}{
+				obj.ID,
+				obj.Order,
+				obj.Data,
+			}
+		},
+	}
 }
 
 type ListBlock struct {
@@ -91,6 +104,8 @@ func (b *ListBlock) ValueOmittedFromData(data url.Values, files map[string][]fil
 			omitted = false
 			break
 		}
+
+		//TODO: this can cause an infinite loop
 	}
 	return omitted
 }

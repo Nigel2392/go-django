@@ -352,7 +352,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		} else {
 			var n = d.(*models.PageNode)
 			_, err = QuerySet().InsertNode(
-				ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, n.Slug, int64(n.StatusFlags), n.PageID, n.ContentType,
+				ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, n.Slug, int64(n.StatusFlags), n.PageID, n.ContentType, n.LatestRevisionID,
 			)
 		}
 		if err != nil {
@@ -524,7 +524,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			err = UpdatePage(QuerySet(), ctx, page)
 		} else {
 			var n = d.(*models.PageNode)
-			err = QuerySet().UpdateNode(ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, n.Slug, int64(n.StatusFlags), n.PageID, n.ContentType, n.PK)
+			err = QuerySet().UpdateNode(ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, n.Slug, int64(n.StatusFlags), n.PageID, n.ContentType, n.LatestRevisionID, n.PK)
 
 		}
 		if err != nil {

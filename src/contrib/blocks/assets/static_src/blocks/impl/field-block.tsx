@@ -10,46 +10,52 @@ function toElement(html: string): HTMLElement {
 class FieldBlock extends Block {
     errorList: HTMLElement;
     labelWrapper: HTMLElement;
+    helpText: HTMLElement;
     inputWrapper: HTMLElement;
     input: HTMLInputElement;
 
-    constructor(config: Config, widget: HTMLElement, blockDef: BlockDef) {
-        super(widget, blockDef);
+    constructor(blockDef: BlockDef, placeHolder: HTMLElement, prefix: String, initialState: any, initialError: any) {
+        super(blockDef, prefix);
 
-        // console.log("FieldBlock constructor", config);
+        console.log("FieldBlock constructor", blockDef, prefix);
 
-        //this.errorList = (
-        //    <ul class="field-errors"></ul>
-        //)
-//
-        //this.labelWrapper = (
-        //    <div class="field-label">
-        //        <label for={config.id}>{config.block.element.label}</label>
-        //    </div>
-        //)
-//
-        //const inputHtml = toElement(config.block.element.html.replace(
-        //    "__PREFIX__", config.name,
-        //).replace(
-        //    "__ID__", config.id,
-        //))
-//
-        //this.input = inputHtml.querySelector('input');
-        //this.widget.appendChild(this.errorList);
-        //this.widget.appendChild(this.labelWrapper);
-        //this.widget.appendChild(
-        //    <div class="field-input">{ inputHtml }</div>
-        //);
-//
-        //if (config.block.element.helpText) {
-        //    this.widget.appendChild(
-        //        <div class="field-help">{config.block.element.helpText}</div>
-        //    );
-        //}
-//
-        //if (config.errors && config.errors.length) {
-        //    this.setError(config.errors);
-        //}
+        this.errorList = (
+           <ul class="field-errors"></ul>
+        )
+
+        this.labelWrapper = (
+           <div class="field-label">
+               <label for={blockDef.config.id}>{blockDef.config.block.element.label}</label>
+           </div>
+        )
+
+        this.helpText = (
+              <div class="field-help">{blockDef.config.block.element.helpText}</div>
+          )
+
+        const inputHtml = toElement(blockDef.config.block.element.html.replace(
+           "__PREFIX__", blockDef.config.name,
+        ).replace(
+           "__ID__", blockDef.config.id,
+        ))
+
+        this.input = inputHtml.querySelector('input');
+        placeHolder.appendChild(this.errorList);
+        placeHolder.appendChild(this.labelWrapper);
+        placeHolder.appendChild(this.helpText);
+        placeHolder.appendChild(
+           <div class="field-input">{ inputHtml }</div>
+        );
+
+        if (blockDef.config.block.element.helpText) {
+           placeHolder.appendChild(
+               <div class="field-help">{blockDef.config.block.element.helpText}</div>
+           );
+        }
+        
+        if (blockDef.config.errors && blockDef.config.errors.length) {
+           this.setError(blockDef.config.errors);
+        }
     }
 
     getLabel(): string {
@@ -97,11 +103,13 @@ class FieldBlockDef extends BlockDef {
         // console.log("FieldBlockDef constructor", element, config);
     }
 
-    render(): any {
+    render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): any {
         return new FieldBlock(
-            this.config,
-            this.element,
             this,
+            placeholder,
+            prefix,
+            initialState,
+            initialError,
         );
     }
 

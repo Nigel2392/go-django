@@ -33,7 +33,12 @@ class BlockController extends ClassCallController<HTMLElement, Block> {
 
         const definition = window.Django.telepath.unpack(this.classArgs)
         const block: BlockDef = new klass(this.element, definition)
-        return block.render()
+        return block.render(
+            this.element,
+            block.config.block.element.name,
+            block.config.value,
+            block.config.errors,
+        )
     }
 }
 
