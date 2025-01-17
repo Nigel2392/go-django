@@ -790,6 +790,18 @@ func TestPageNode(t *testing.T) {
 		}
 	})
 
+	t.Run("CheckNodesUpdated", func(t *testing.T) {
+		for i, node := range nodesToUpdate {
+			if node.Title != fmt.Sprintf("Root %d Updated", i+1) {
+				t.Errorf("expected Root %d Updated, got %s", i+1, node.Title)
+			}
+
+			if node.UrlPath != fmt.Sprintf("/root-%d", i+1) {
+				t.Errorf("expected /root-%d, got %s", i+1, node.UrlPath)
+			}
+		}
+	})
+
 	t.Run("MoveNode", func(t *testing.T) {
 
 		if err := pages.CreateChildNode(querier, queryCtx, &childNode, &subChildNode2); err != nil {
@@ -802,6 +814,7 @@ func TestPageNode(t *testing.T) {
 			t.Error(err)
 			return
 		}
+
 		sub, err := querier.GetNodeByID(queryCtx, childNode.PK)
 		if err != nil {
 			t.Error(err)
@@ -874,13 +887,15 @@ func TestPageNode(t *testing.T) {
 	var createAndBind = func(t *testing.T, node *models.PageNode, page *DBTestPage) *DBTestPage {
 		page.Ref = node
 		if err := page.Save(queryCtx); err != nil {
-			t.Error(err)
+			t.Fatalf("failed to save page: %v", err)
 		}
 		node.PageID = page.ID()
 		node.ContentType = pages.DefinitionForObject(page).ContentType().TypeName()
 
-		if err := pages.UpdateNode(querier, queryCtx, node); err != nil {
-			t.Error(err)
+		t.Logf("Created page %s for %s (%d)", node.Title, page.Description, page.Reference().PK)
+
+		if err := pages.UpdateNode(querier, queryCtx, page.Reference()); err != nil {
+			t.Fatalf("failed to update node: %v", err)
 		}
 
 		return page
@@ -902,11 +917,6 @@ func TestPageNode(t *testing.T) {
 				Description: "ChildSibling Description",
 			},
 		})
-		dbTestPage_SubChild = createAndBind(t, &subChildNode, &DBTestPage{
-			TestPage: TestPage{
-				Description: "SubChild Description",
-			},
-		})
 		dbTestPage_ChildSiblingSubChild = createAndBind(t, &childSiblingSubChildNode, &DBTestPage{
 			TestPage: TestPage{
 				Description: "ChildSiblingSubChild Description",
@@ -918,7 +928,6 @@ func TestPageNode(t *testing.T) {
 		dbTestPage_Root,
 		dbTestPage_Child,
 		dbTestPage_ChildSibling,
-		dbTestPage_SubChild,
 		dbTestPage_ChildSiblingSubChild,
 	}
 

@@ -56,6 +56,18 @@ func (q *Queries) UpdateNodes(ctx context.Context, nodes []*models.PageNode) err
 
 }
 
+const updateDescendantPaths = `-- name: UpdateDescendantPaths :exec
+UPDATE PageNode
+SET url_path = CONCAT(?, SUBSTRING(url_path, LENGTH(?) + 1))
+WHERE path LIKE CONCAT(?, '%')
+AND id <> ?
+`
+
+func (q *Queries) UpdateDescendantPaths(ctx context.Context, oldUrlPath, newUrlPath, pageNodePath string, id int64) error {
+	_, err := q.exec(ctx, nil, updateDescendantPaths, newUrlPath, oldUrlPath, pageNodePath, id)
+	return err
+}
+
 const incrementNumChild = `-- name: IncrementNumChild :exec
 UPDATE PageNode
 SET numchild = numchild + 1

@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/gosimple/slug"
 )
 
 type StatusFlag int64
@@ -47,6 +48,34 @@ type PageNode struct {
 	// ChildNodes are the child nodes of this node.
 	// It will likely be nil and is not fetched by default.
 	ChildNodes []*PageNode `json:"child_nodes" attrs:"readonly"`
+}
+
+func (n *PageNode) SetUrlPath(parent *PageNode) (newPath, oldPath string) {
+	oldPath = n.UrlPath
+
+	if n.Slug == "" && n.Title != "" {
+		n.Slug = slug.Make(n.Title)
+	}
+
+	var bufLen = len(n.Slug)
+	if parent == nil {
+		bufLen++
+	} else {
+		bufLen += len(parent.UrlPath) + 1
+	}
+
+	var buf = make([]byte, 0, bufLen)
+	if parent == nil {
+		buf = append(buf, '/')
+	} else {
+		buf = append(buf, parent.UrlPath...)
+		buf = append(buf, '/')
+	}
+
+	buf = append(buf, n.Slug...)
+
+	n.UrlPath = string(buf)
+	return n.UrlPath, oldPath
 }
 
 func (n *PageNode) ID() int64 {
@@ -134,6 +163,7 @@ type Querier interface {
 	UpdateNodePathAndDepth(ctx context.Context, path string, depth int64, iD int64) error
 	UpdateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error
 	UpdateRevision(ctx context.Context, objectID int64, contentType string, data string, iD int64) error
+	UpdateDescendantPaths(ctx context.Context, oldUrlPath, newUrlPath, pageNodePath string, id int64) error
 }
 
 /// MoveNodeParams contains parameters for moving a node.

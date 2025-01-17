@@ -314,10 +314,8 @@ func (f *FieldDef) FormField() fields.Field {
 	}
 
 	hooks = goldcrest.Get[FormFieldGetter](HookFormFieldForType)
-	fmt.Println("Running hooks for field", f.Name(), len(hooks))
-	for i, hook := range hooks {
+	for _, hook := range hooks {
 		if field, ok := hook(f, typForNew, f.field_v, opts...); ok {
-			fmt.Println("Hook returned field", i, field)
 			formField = field
 			goto returnField
 		}

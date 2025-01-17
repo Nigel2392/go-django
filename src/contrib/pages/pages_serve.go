@@ -90,7 +90,7 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if len(pathParts) == 0 {
-		var pages, err = querySet.GetNodesByDepth(context, 0, 1000, 0)
+		var pages, err = querySet.GetNodesByDepth(context, 0, 0, 1000)
 		if err != nil {
 			goto checkError
 		}

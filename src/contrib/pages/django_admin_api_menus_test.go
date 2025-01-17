@@ -12,6 +12,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
+	"github.com/pkg/errors"
 )
 
 //go:linkname pageMenuHandler github.com/Nigel2392/go-django/src/contrib/pages.pageMenuHandler
@@ -164,6 +165,7 @@ func init() {
 			Db:      menuSQLDB,
 		}
 	}
+
 }
 
 func TestPageMenuHandler(t *testing.T) {
@@ -171,8 +173,22 @@ func TestPageMenuHandler(t *testing.T) {
 	// Insert test data
 	var ctx = context.Background()
 	for _, node := range nodes {
+
+		if node.Depth > 0 {
+			var parentNode, err = pages.ParentNode(pages.QuerySet(), ctx, node.Path, int(node.Depth))
+			if err != nil {
+				panic(err)
+			}
+
+			node.SetUrlPath(&parentNode)
+		} else {
+			node.SetUrlPath(nil)
+		}
+
 		if _, err := menuQS.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, node.Slug, int64(node.StatusFlags), node.PageID, node.ContentType, node.LatestRevisionID); err != nil {
-			panic(err)
+			panic(errors.Wrapf(
+				err, "failed to insert node %s", node.Title,
+			))
 		}
 	}
 

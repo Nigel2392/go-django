@@ -45,6 +45,7 @@ CREATE TABLE IF NOT EXISTS Revision (
 CREATE INDEX IF NOT EXISTS PageNode_path ON PageNode(path);
 CREATE INDEX IF NOT EXISTS PageNode_page_id ON PageNode(page_id);
 CREATE INDEX IF NOT EXISTS PageNode_type_name ON PageNode(content_type);
+CREATE UNIQUE INDEX IF NOT EXISTS PageNode_path_depth ON PageNode(slug, depth);
 
 CREATE INDEX IF NOT EXISTS Revision_object_id ON Revision(object_id);
 CREATE INDEX IF NOT EXISTS Revision_content_type ON Revision(content_type);
