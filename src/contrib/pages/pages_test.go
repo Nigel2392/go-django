@@ -853,6 +853,10 @@ func TestPageNode(t *testing.T) {
 			t.Errorf("expected Depth 2, got %d", subSub.Depth)
 		}
 
+		if subSub.UrlPath != "/root-1/child/subchild2" {
+			t.Errorf("expected UrlPath /root-1/child/subchild2, got %s", subSub.UrlPath)
+		}
+
 		if sub.Numchild != 1 {
 			t.Errorf("expected Numchild 1, got %d", sub.Numchild)
 		}
