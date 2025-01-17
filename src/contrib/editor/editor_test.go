@@ -160,7 +160,7 @@ func TestUnmarshalEditorJSBlockData(t *testing.T) {
 
 func TestOnRegisterRun(t *testing.T) {
 	const (
-		app_port = "8239"
+		app_port = "22393"
 		app_host = "localhost"
 	)
 
@@ -187,7 +187,9 @@ func TestOnRegisterRun(t *testing.T) {
 	go func(t *testing.T) {
 		err := a.Serve()
 		if err != nil {
-			t.Errorf("Error serving app: %v", err)
+			panic(fmt.Errorf(
+				"Error serving app: %v", err,
+			))
 		}
 	}(t)
 
