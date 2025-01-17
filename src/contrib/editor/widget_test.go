@@ -1,3 +1,6 @@
+//go:build !noracing
+// +build !noracing
+
 package editor_test
 
 import (
