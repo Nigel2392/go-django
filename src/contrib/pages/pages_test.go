@@ -839,37 +839,39 @@ func TestPageNode(t *testing.T) {
 
 		childNode = sub
 
-		subSub, err := querier.GetNodeByID(queryCtx, subChildNode2.PK)
-		if err != nil {
-			t.Error(err)
-			return
-		}
+		t.Run("CheckMovedNodeChild", func(t *testing.T) {
+			subSub, err := querier.GetNodeByID(queryCtx, subChildNode2.PK)
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
-		if subSub.Path != "002001001" {
-			t.Errorf("expected Path 002001001, got %s", subSub.Path)
-		}
+			if subSub.Path != "002001001" {
+				t.Errorf("expected Path 002001001, got %s", subSub.Path)
+			}
 
-		if subSub.Depth != 2 {
-			t.Errorf("expected Depth 2, got %d", subSub.Depth)
-		}
+			if subSub.Depth != 2 {
+				t.Errorf("expected Depth 2, got %d", subSub.Depth)
+			}
 
-		if subSub.UrlPath != "/root-1/child/subchild2" {
-			t.Errorf("expected UrlPath /root-1/child/subchild2, got %s", subSub.UrlPath)
-		}
+			if subSub.UrlPath != "/root-1/child/subchild2" {
+				t.Errorf("expected UrlPath /root-1/child/subchild2, got %s", subSub.UrlPath)
+			}
 
-		if sub.Numchild != 1 {
-			t.Errorf("expected Numchild 1, got %d", sub.Numchild)
-		}
+			if sub.Numchild != 1 {
+				t.Errorf("expected Numchild 1, got %d", sub.Numchild)
+			}
 
-		parentNode, err := pages.ParentNode(querier, queryCtx, subSub.Path, int(subSub.Depth))
-		if err != nil {
-			t.Error(err)
-			return
-		}
+			parentNode, err := pages.ParentNode(querier, queryCtx, subSub.Path, int(subSub.Depth))
+			if err != nil {
+				t.Error(err)
+				return
+			}
 
-		if !nodesEqual(&parentNode, &sub) {
-			t.Errorf("expected %+v, got %+v", sub, parentNode)
-		}
+			if !nodesEqual(&parentNode, &sub) {
+				t.Errorf("expected %+v, got %+v", sub, parentNode)
+			}
+		})
 	})
 
 	pages.Register(&pages.PageDefinition{

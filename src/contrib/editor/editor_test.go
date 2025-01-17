@@ -161,7 +161,7 @@ func TestUnmarshalEditorJSBlockData(t *testing.T) {
 func TestOnRegisterRun(t *testing.T) {
 	const (
 		app_port = "8123"
-		app_host = "localhost"
+		app_host = "127.0.0.1"
 	)
 
 	var a = django.App(
