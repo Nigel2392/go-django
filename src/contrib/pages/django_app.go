@@ -245,6 +245,9 @@ func NewAppConfig() *PageAppConfig {
 			Init:      initPageApp,
 		},
 	}
+	pageApp.Deps = []string{
+		"revisions",
+	}
 	pageApp.AppConfig.Ready = func() error {
 		var pagesRoute = admin.AdminSite.Route.Get(
 			"/pages", pageAdminAppHandler(listRootPageHandler), "pages",

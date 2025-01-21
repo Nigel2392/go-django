@@ -86,6 +86,21 @@ func DefinerList[T Definer](list []T) []Definer {
 	return l
 }
 
+// SetPrimaryKey sets the primary key field of a Definer.
+//
+// If the primary key field is not found, this function will panic.
+func SetPrimaryKey(d Definer, value interface{}) error {
+	var f = d.FieldDefs().Primary()
+	if f == nil {
+		assert.Fail(
+			"primary key not found in %T",
+			d,
+		)
+	}
+
+	return f.SetValue(value, false)
+}
+
 // PrimaryKey returns the primary key field of a Definer.
 //
 // If the primary key field is not found, this function will panic.

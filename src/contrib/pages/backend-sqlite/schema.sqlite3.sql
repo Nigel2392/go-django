@@ -33,23 +33,10 @@ CREATE TABLE IF NOT EXISTS PageNode (
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- Read-only
 );
 
-CREATE TABLE IF NOT EXISTS Revision (
-    id              BIGINT    AUTO_INCREMENT PRIMARY KEY,
-    object_id       BIGINT    NOT NULL,
-    content_type    TEXT      NOT NULL,
-    data            TEXT      NOT NULL,
-    created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Read-only
-    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- Read-only
-);
-
 CREATE INDEX IF NOT EXISTS PageNode_path ON PageNode(path);
 CREATE INDEX IF NOT EXISTS PageNode_page_id ON PageNode(page_id);
 CREATE INDEX IF NOT EXISTS PageNode_type_name ON PageNode(content_type);
 CREATE UNIQUE INDEX IF NOT EXISTS PageNode_path_depth ON PageNode(slug, depth);
-
-CREATE INDEX IF NOT EXISTS Revision_object_id ON Revision(object_id);
-CREATE INDEX IF NOT EXISTS Revision_content_type ON Revision(content_type);
-CREATE UNIQUE INDEX IF NOT EXISTS Revision_object_id_content_type ON Revision(object_id, content_type);
 
 --  
 --  CREATE TRIGGER IF NOT EXISTS PageNode_decrement_numchild

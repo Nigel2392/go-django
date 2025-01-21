@@ -46,9 +46,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.deleteNodesStmt, err = db.PrepareContext(ctx, deleteNodes); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteNodes: %w", err)
 	}
-	if q.deleteRevisionStmt, err = db.PrepareContext(ctx, deleteRevision); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteRevision: %w", err)
-	}
 	if q.getChildNodesStmt, err = db.PrepareContext(ctx, getChildNodes); err != nil {
 		return nil, fmt.Errorf("error preparing query GetChildNodes: %w", err)
 	}
@@ -82,23 +79,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.getNodesForPathsStmt, err = db.PrepareContext(ctx, getNodesForPaths); err != nil {
 		return nil, fmt.Errorf("error preparing query GetNodesForPaths: %w", err)
 	}
-	if q.getRevisionByIDStmt, err = db.PrepareContext(ctx, getRevisionByID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetRevisionByID: %w", err)
-	}
-	if q.getRevisionsByObjectIDStmt, err = db.PrepareContext(ctx, getRevisionsByObjectID); err != nil {
-		return nil, fmt.Errorf("error preparing query GetRevisionsByObjectID: %w", err)
-	}
 	if q.incrementNumChildStmt, err = db.PrepareContext(ctx, incrementNumChild); err != nil {
 		return nil, fmt.Errorf("error preparing query IncrementNumChild: %w", err)
 	}
 	if q.insertNodeStmt, err = db.PrepareContext(ctx, insertNode); err != nil {
 		return nil, fmt.Errorf("error preparing query InsertNode: %w", err)
-	}
-	if q.insertRevisionStmt, err = db.PrepareContext(ctx, insertRevision); err != nil {
-		return nil, fmt.Errorf("error preparing query InsertRevision: %w", err)
-	}
-	if q.listRevisionsStmt, err = db.PrepareContext(ctx, listRevisions); err != nil {
-		return nil, fmt.Errorf("error preparing query ListRevisions: %w", err)
 	}
 	if q.updateNodeStmt, err = db.PrepareContext(ctx, updateNode); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateNode: %w", err)
@@ -108,9 +93,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.updateNodeStatusFlagsStmt, err = db.PrepareContext(ctx, updateNodeStatusFlags); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateNodeStatusFlags: %w", err)
-	}
-	if q.updateRevisionStmt, err = db.PrepareContext(ctx, updateRevision); err != nil {
-		return nil, fmt.Errorf("error preparing query UpdateRevision: %w", err)
 	}
 	return &q, nil
 }
@@ -155,11 +137,6 @@ func (q *Queries) Close() error {
 	if q.deleteNodesStmt != nil {
 		if cerr := q.deleteNodesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteNodesStmt: %w", cerr)
-		}
-	}
-	if q.deleteRevisionStmt != nil {
-		if cerr := q.deleteRevisionStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteRevisionStmt: %w", cerr)
 		}
 	}
 	if q.getChildNodesStmt != nil {
@@ -217,16 +194,6 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing getNodesForPathsStmt: %w", cerr)
 		}
 	}
-	if q.getRevisionByIDStmt != nil {
-		if cerr := q.getRevisionByIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getRevisionByIDStmt: %w", cerr)
-		}
-	}
-	if q.getRevisionsByObjectIDStmt != nil {
-		if cerr := q.getRevisionsByObjectIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing getRevisionsByObjectIDStmt: %w", cerr)
-		}
-	}
 	if q.incrementNumChildStmt != nil {
 		if cerr := q.incrementNumChildStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing incrementNumChildStmt: %w", cerr)
@@ -235,16 +202,6 @@ func (q *Queries) Close() error {
 	if q.insertNodeStmt != nil {
 		if cerr := q.insertNodeStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing insertNodeStmt: %w", cerr)
-		}
-	}
-	if q.insertRevisionStmt != nil {
-		if cerr := q.insertRevisionStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing insertRevisionStmt: %w", cerr)
-		}
-	}
-	if q.listRevisionsStmt != nil {
-		if cerr := q.listRevisionsStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing listRevisionsStmt: %w", cerr)
 		}
 	}
 	if q.updateNodeStmt != nil {
@@ -260,11 +217,6 @@ func (q *Queries) Close() error {
 	if q.updateNodeStatusFlagsStmt != nil {
 		if cerr := q.updateNodeStatusFlagsStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateNodeStatusFlagsStmt: %w", cerr)
-		}
-	}
-	if q.updateRevisionStmt != nil {
-		if cerr := q.updateRevisionStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing updateRevisionStmt: %w", cerr)
 		}
 	}
 	return err
@@ -314,7 +266,6 @@ type Queries struct {
 	deleteDescendantsStmt      *sql.Stmt
 	deleteNodeStmt             *sql.Stmt
 	deleteNodesStmt            *sql.Stmt
-	deleteRevisionStmt         *sql.Stmt
 	getChildNodesStmt          *sql.Stmt
 	getDescendantsStmt         *sql.Stmt
 	getNodeByIDStmt            *sql.Stmt
@@ -326,16 +277,11 @@ type Queries struct {
 	getNodesByTypeHashStmt     *sql.Stmt
 	getNodesByTypeHashesStmt   *sql.Stmt
 	getNodesForPathsStmt       *sql.Stmt
-	getRevisionByIDStmt        *sql.Stmt
-	getRevisionsByObjectIDStmt *sql.Stmt
 	incrementNumChildStmt      *sql.Stmt
 	insertNodeStmt             *sql.Stmt
-	insertRevisionStmt         *sql.Stmt
-	listRevisionsStmt          *sql.Stmt
 	updateNodeStmt             *sql.Stmt
 	updateNodePathAndDepthStmt *sql.Stmt
 	updateNodeStatusFlagsStmt  *sql.Stmt
-	updateRevisionStmt         *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) models.Querier {
@@ -350,7 +296,6 @@ func (q *Queries) WithTx(tx *sql.Tx) models.Querier {
 		deleteDescendantsStmt:      q.deleteDescendantsStmt,
 		deleteNodeStmt:             q.deleteNodeStmt,
 		deleteNodesStmt:            q.deleteNodesStmt,
-		deleteRevisionStmt:         q.deleteRevisionStmt,
 		getChildNodesStmt:          q.getChildNodesStmt,
 		getDescendantsStmt:         q.getDescendantsStmt,
 		getNodeByIDStmt:            q.getNodeByIDStmt,
@@ -362,15 +307,10 @@ func (q *Queries) WithTx(tx *sql.Tx) models.Querier {
 		getNodesByTypeHashStmt:     q.getNodesByTypeHashStmt,
 		getNodesByTypeHashesStmt:   q.getNodesByTypeHashesStmt,
 		getNodesForPathsStmt:       q.getNodesForPathsStmt,
-		getRevisionByIDStmt:        q.getRevisionByIDStmt,
-		getRevisionsByObjectIDStmt: q.getRevisionsByObjectIDStmt,
 		incrementNumChildStmt:      q.incrementNumChildStmt,
 		insertNodeStmt:             q.insertNodeStmt,
-		insertRevisionStmt:         q.insertRevisionStmt,
-		listRevisionsStmt:          q.listRevisionsStmt,
 		updateNodeStmt:             q.updateNodeStmt,
 		updateNodePathAndDepthStmt: q.updateNodePathAndDepthStmt,
 		updateNodeStatusFlagsStmt:  q.updateNodeStatusFlagsStmt,
-		updateRevisionStmt:         q.updateRevisionStmt,
 	}
 }

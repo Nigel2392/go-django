@@ -108,15 +108,6 @@ func (n *PageNode) FieldDefs() attrs.Definitions {
 	)
 }
 
-type Revision struct {
-	ID          interface{} `json:"id"`
-	ObjectID    int64       `json:"object_id"`
-	ContentType string      `json:"content_type"`
-	Data        string      `json:"data"`
-	CreatedAt   time.Time   `json:"created_at"`
-	UpdatedAt   time.Time   `json:"updated_at"`
-}
-
 type DBTX interface {
 	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
 	PrepareContext(context.Context, string) (*sql.Stmt, error)
@@ -141,7 +132,6 @@ type Querier interface {
 	DeleteDescendants(ctx context.Context, path string, depth int64) error
 	DeleteNode(ctx context.Context, id int64) error
 	DeleteNodes(ctx context.Context, id []int64) error
-	DeleteRevision(ctx context.Context, id int64) error
 	GetChildNodes(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]PageNode, error)
 	GetDescendants(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]PageNode, error)
 	GetNodeByID(ctx context.Context, id int64) (PageNode, error)
@@ -153,16 +143,12 @@ type Querier interface {
 	GetNodesByTypeHash(ctx context.Context, contentType string, offset int32, limit int32) ([]PageNode, error)
 	GetNodesByTypeHashes(ctx context.Context, contentType []string, offset int32, limit int32) ([]PageNode, error)
 	GetNodesForPaths(ctx context.Context, path []string) ([]PageNode, error)
-	GetRevisionByID(ctx context.Context, id int64) (Revision, error)
-	GetRevisionsByObjectID(ctx context.Context, objectID int64, contentType string, offset int32, limit int32) ([]Revision, error)
 	IncrementNumChild(ctx context.Context, id int64) (PageNode, error)
-	ListRevisions(ctx context.Context, offset int32, limit int32) ([]Revision, error)
 	InsertNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, slug string, statusFlags int64, pageID int64, contentType string, latestRevisionID int64) (int64, error)
 	UpdateNode(ctx context.Context, title string, path string, depth int64, numchild int64, urlPath string, slug string, statusFlags int64, pageID int64, contentType string, latestRevisionID int64, iD int64) error
 	UpdateNodes(ctx context.Context, nodes []*PageNode) error
 	UpdateNodePathAndDepth(ctx context.Context, path string, depth int64, iD int64) error
 	UpdateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error
-	UpdateRevision(ctx context.Context, objectID int64, contentType string, data string, iD int64) error
 	UpdateDescendantPaths(ctx context.Context, oldUrlPath, newUrlPath, pageNodePath string, id int64) error
 }
 

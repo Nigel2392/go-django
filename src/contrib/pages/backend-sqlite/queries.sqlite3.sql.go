@@ -130,16 +130,6 @@ func (q *Queries) DeleteNodes(ctx context.Context, id []int64) error {
 	return err
 }
 
-const deleteRevision = `-- name: DeleteRevision :exec
-DELETE FROM Revision
-WHERE id = ?1
-`
-
-func (q *Queries) DeleteRevision(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.deleteRevisionStmt, deleteRevision, id)
-	return err
-}
-
 const getChildNodes = `-- name: GetChildNodes :many
 SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
@@ -629,70 +619,6 @@ func (q *Queries) GetNodesForPaths(ctx context.Context, path []string) ([]models
 	return items, nil
 }
 
-const getRevisionByID = `-- name: GetRevisionByID :one
-SELECT   id, object_id, content_type, data, created_at, updated_at
-FROM     Revision
-WHERE    id = ?1
-`
-
-func (q *Queries) GetRevisionByID(ctx context.Context, id int64) (models.Revision, error) {
-	row := q.queryRow(ctx, q.getRevisionByIDStmt, getRevisionByID, id)
-	var i models.Revision
-	err := row.Scan(
-		&i.ID,
-		&i.ObjectID,
-		&i.ContentType,
-		&i.Data,
-		&i.CreatedAt,
-		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const getRevisionsByObjectID = `-- name: GetRevisionsByObjectID :many
-SELECT   id, object_id, content_type, data, created_at, updated_at
-FROM     Revision
-WHERE    object_id = ?3
-AND      content_type = ?4
-LIMIT    ?
-OFFSET   ?
-`
-
-func (q *Queries) GetRevisionsByObjectID(ctx context.Context, objectID int64, contentType string, offset int32, limit int32) ([]models.Revision, error) {
-	rows, err := q.query(ctx, q.getRevisionsByObjectIDStmt, getRevisionsByObjectID,
-		objectID,
-		contentType,
-		limit,
-		offset,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []models.Revision
-	for rows.Next() {
-		var i models.Revision
-		if err := rows.Scan(
-			&i.ID,
-			&i.ObjectID,
-			&i.ContentType,
-			&i.Data,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const insertNode = `-- name: InsertNode :execlastid
 INSERT INTO PageNode (
     title,
@@ -736,64 +662,6 @@ func (q *Queries) InsertNode(ctx context.Context, title string, path string, dep
 		return 0, err
 	}
 	return result.LastInsertId()
-}
-
-const insertRevision = `-- name: InsertRevision :execlastid
-INSERT INTO Revision (
-    object_id,
-    content_type,
-    data
-) VALUES (
-    ?1,
-    ?2,
-    ?3
-)
-`
-
-func (q *Queries) InsertRevision(ctx context.Context, objectID int64, contentType string, data string) (int64, error) {
-	result, err := q.exec(ctx, q.insertRevisionStmt, insertRevision, objectID, contentType, data)
-	if err != nil {
-		return 0, err
-	}
-	return result.LastInsertId()
-}
-
-const listRevisions = `-- name: ListRevisions :many
-SELECT   id, object_id, content_type, data, created_at, updated_at
-FROM     Revision
-ORDER BY created_at DESC
-LIMIT    ?
-OFFSET   ?
-`
-
-func (q *Queries) ListRevisions(ctx context.Context, offset int32, limit int32) ([]models.Revision, error) {
-	rows, err := q.query(ctx, q.listRevisionsStmt, listRevisions, limit, offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []models.Revision
-	for rows.Next() {
-		var i models.Revision
-		if err := rows.Scan(
-			&i.ID,
-			&i.ObjectID,
-			&i.ContentType,
-			&i.Data,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const updateNode = `-- name: UpdateNode :exec
@@ -848,24 +716,5 @@ WHERE    id = ?2
 
 func (q *Queries) UpdateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error {
 	_, err := q.exec(ctx, q.updateNodeStatusFlagsStmt, updateNodeStatusFlags, statusFlags, iD)
-	return err
-}
-
-const updateRevision = `-- name: UyypdateRevision :exec
-UPDATE Revision
-SET object_id = ?1,
-    content_type = ?2,
-    data = ?3,
-    updated_at = CURRENT_TIMESTAMP
-WHERE id = ?4
-`
-
-func (q *Queries) UpdateRevision(ctx context.Context, objectID int64, contentType string, data string, iD int64) error {
-	_, err := q.exec(ctx, q.updateRevisionStmt, updateRevision,
-		objectID,
-		contentType,
-		data,
-		iD,
-	)
 	return err
 }
