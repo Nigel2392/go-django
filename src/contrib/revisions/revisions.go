@@ -26,7 +26,7 @@ func App() *RevisionsAppConfig {
 	return app
 }
 
-func NewRevisionsAppConfig() *RevisionsAppConfig {
+func NewAppConfig() *RevisionsAppConfig {
 	app = &RevisionsAppConfig{
 		DBRequiredAppConfig: apps.NewDBAppConfig(
 			"revisions",

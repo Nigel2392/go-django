@@ -11,8 +11,8 @@ const allNodes = `-- name: AllNodes :many
 SELECT id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 ORDER BY path ASC
-OFFSET   ?
 LIMIT    ?
+OFFSET   ?
 `
 
 func (q *Queries) AllNodes(ctx context.Context, offset int32, limit int32) ([]models.PageNode, error) {
@@ -134,8 +134,8 @@ const getChildNodes = `-- name: GetChildNodes :many
 SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    path LIKE CONCAT(?, '%') AND depth = ? + 1
-OFFSET   ?
 LIMIT    ?
+OFFSET   ?
 `
 
 func (q *Queries) GetChildNodes(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]models.PageNode, error) {
@@ -184,8 +184,8 @@ const getDescendants = `-- name: GetDescendants :many
 SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    path LIKE CONCAT(?, '%') AND depth > ?
-OFFSET   ?
 LIMIT    ?
+OFFSET   ?
 `
 
 func (q *Queries) GetDescendants(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]models.PageNode, error) {
@@ -317,8 +317,8 @@ const getNodesByDepth = `-- name: GetNodesByDepth :many
 SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    depth = ?
-OFFSET   ?
 LIMIT    ?
+OFFSET   ?
 `
 
 func (q *Queries) GetNodesByDepth(ctx context.Context, depth int64, offset int32, limit int32) ([]models.PageNode, error) {
@@ -468,8 +468,8 @@ const getNodesByTypeHash = `-- name: GetNodesByTypeHash :many
 SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    content_type = ?
-OFFSET   ?
 LIMIT    ?
+OFFSET   ?
 `
 
 func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string, offset int32, limit int32) ([]models.PageNode, error) {
@@ -513,8 +513,8 @@ const getNodesByTypeHashes = `-- name: GetNodesByTypeHashes :many
 SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    content_type IN (/*SLICE:content_type*/?)
-OFFSET   ?
 LIMIT    ?
+OFFSET   ?
 `
 
 func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string, offset int32, limit int32) ([]models.PageNode, error) {

@@ -37,16 +37,16 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 
 	var definition = DefinitionForType(ref.ContentType)
 	if definition != nil {
-		//	if definition.MaxNum > 0 {
-		//		var count, err = CountNodesByType(queries, ctx, ref.ContentType)
-		//		if err != nil {
-		//			return err
-		//		}
+		// if definition.MaxNum > 0 {
+		// var count, err = CountNodesByType(queries, ctx, ref.ContentType)
+		// if err != nil {
+		// return err
+		// }
 		//
-		//		if count >= int64(definition.MaxNum) {
-		//			return fmt.Errorf("cannot create more than %d pages of type %s", definition.MaxNum, ref.ContentType)
-		//		}
-		//	}
+		// if count >= int64(definition.MaxNum) {
+		// return fmt.Errorf("cannot create more than %d pages of type %s", definition.MaxNum, ref.ContentType)
+		// }
+		// }
 
 		if len(definition._childPageTypes) > 0 {
 			var parentType = parent.ContentType

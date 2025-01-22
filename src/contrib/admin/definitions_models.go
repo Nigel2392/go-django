@@ -118,6 +118,14 @@ type ModelOptions struct {
 	// This is used for the model's name in the admin.
 	Name string
 
+	// MenuIcon is a function that returns the icon for the model in the admin menu.
+	//
+	// This should return an HTML element, I.E. "<svg>...</svg>".
+	MenuIcon func() string
+
+	// MenuOrder is the order of the model in the admin menu.
+	MenuOrder int
+
 	// AddView is the options for the add view of the model.
 	//
 	// This allows for custom creation logic and formatting form fields / layout.

@@ -30,6 +30,9 @@ type AppOptions struct {
 	// MenuLabel must return a human readable label for the menu, this is how the app's name will appear in the admin's navigation.
 	MenuLabel func() string
 
+	// MenuOrder is the order in which the app will appear in the admin's navigation.
+	MenuOrder int
+
 	// MenuIcon must return a string representing the icon to use for the menu.
 	//
 	// This should be a HTML element, I.E. "<svg>...</svg>".
@@ -163,6 +166,7 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 					ItemName: a.Name,
 					Label:    menuLabel,
 					Logo:     menuIcon,
+					Ordering: a.Options.MenuOrder,
 				},
 				Menu: &menu.Menu{
 					Items: make([]menu.MenuItem, 0),
@@ -192,9 +196,18 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 					continue
 				}
 
+				var menuIcon templ.Component
+				if model.ModelOptions.MenuIcon != nil {
+					menuIcon = templ.Raw(
+						model.ModelOptions.MenuIcon(),
+					)
+				}
+
 				menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
 					BaseItem: menu.BaseItem{
-						Label: model.Label,
+						Label:    model.Label,
+						Ordering: model.MenuOrder,
+						Logo:     menuIcon,
 					},
 					Link: func() string {
 						return django.Reverse("admin:apps:model", a.Name, model.GetName())

@@ -469,7 +469,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	var page, ok = instance.(pageDefiner)
 	if !ok {
 		page = p
-		// logger.Fatalf(1, "instance does not adhere to attrs.Definer: %T", instance)
+		// logger.Warnf("instance does not adhere to attrs.Definer: %T", instance)
 	}
 
 	var fieldDefs = page.FieldDefs()

@@ -95,23 +95,23 @@ func (r *RevisionQuerier) ListRevisions(limit, offset int) ([]Revision, error) {
 	return revisionsDbListToRevisions(res), nil
 }
 
-func (r *RevisionQuerier) GetRevisionByID(id int64) (Revision, error) {
+func (r *RevisionQuerier) GetRevisionByID(id int64) (*Revision, error) {
 	res, err := r.Querier.GetRevisionByID(r.ctx, id)
 	if err != nil {
-		return Revision{}, err
+		return nil, err
 	}
-	return Revision(res), nil
+	return (*Revision)(&res), nil
 }
 
-func (r *RevisionQuerier) LatestRevision(obj attrs.Definer) (Revision, error) {
+func (r *RevisionQuerier) LatestRevision(obj attrs.Definer) (*Revision, error) {
 	var res, err = r.GetRevisionsByObject(obj, 1, 0)
 	if err != nil {
-		return Revision{}, err
+		return nil, err
 	}
 	if len(res) == 0 {
-		return Revision{}, sql.ErrNoRows
+		return nil, sql.ErrNoRows
 	}
-	return res[0], nil
+	return &res[0], nil
 }
 
 func (r *RevisionQuerier) GetRevisionsByObject(obj attrs.Definer, limit int, offset int) ([]Revision, error) {
@@ -139,16 +139,16 @@ func (r *RevisionQuerier) GetRevisionsByObject(obj attrs.Definer, limit int, off
 	return revisionsDbListToRevisions(results), nil
 }
 
-func (r *RevisionQuerier) CreateRevision(forObj attrs.Definer) (Revision, error) {
+func (r *RevisionQuerier) CreateRevision(forObj attrs.Definer) (*Revision, error) {
 	var objKey = attrs.PrimaryKey(forObj)
 	var dataBuf, err = json.Marshal(forObj)
 	if err != nil {
-		return Revision{}, err
+		return nil, err
 	}
 
 	idSerialized, err := json.Marshal(objKey)
 	if err != nil {
-		return Revision{}, err
+		return nil, err
 	}
 
 	var cTypeDef = contenttypes.DefinitionForObject(forObj)
@@ -166,11 +166,11 @@ func (r *RevisionQuerier) CreateRevision(forObj attrs.Definer) (Revision, error)
 		rev.Data,
 	)
 	if err != nil {
-		return rev, err
+		return &rev, err
 	}
 
 	rev.ID = id
-	return rev, nil
+	return &rev, nil
 }
 
 func (r *RevisionQuerier) UpdateRevision(rev Revision) error {

@@ -118,6 +118,7 @@ func init() {
 		})
 	}
 
+	// var db, err = sql.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
 	var db, err = sql.Open("sqlite3", "file::memory:?cache=shared")
 	// var db, err = sql.Open("sqlite3", "./revisions_test.db")
 	if err != nil {
@@ -126,7 +127,7 @@ func init() {
 		))
 	}
 
-	var app = revisions.NewRevisionsAppConfig()
+	var app = revisions.NewAppConfig()
 	var settings = django.Config(map[string]interface{}{
 		django.APPVAR_DATABASE: db,
 	})

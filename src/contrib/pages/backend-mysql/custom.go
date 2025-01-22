@@ -29,7 +29,7 @@ func (q *Queries) UpdateNodes(ctx context.Context, nodes []*models.PageNode) err
 	var values = make([]interface{}, 0, len(nodes)*8)
 	var replaceStrings = make([]string, 0, len(nodes))
 	for _, node := range nodes {
-		replaceStrings = append(replaceStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)")
+		replaceStrings = append(replaceStrings, "(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)")
 		values = append(values,
 			node.PK,
 			node.Title,
