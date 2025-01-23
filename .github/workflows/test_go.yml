@@ -11,6 +11,7 @@ jobs:
       GITHUB_ACTIONS: 1
 
     runs-on: ubuntu-latest
+    container: ubuntu
     steps:
     - uses: actions/checkout@v4
 
