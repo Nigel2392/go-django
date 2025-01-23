@@ -162,7 +162,7 @@ func TestUnmarshalEditorJSBlockData(t *testing.T) {
 }
 
 func TestOnRegisterRun(t *testing.T) {
-	const HOST = "localhost:5191"
+	const HOST = "localhost:22394"
 
 	var a = django.App(
 		django.Configure(map[string]interface{}{
