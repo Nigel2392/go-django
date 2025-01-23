@@ -187,7 +187,7 @@ func NewAppConfig() django.AppConfig {
 				AppLabel:            trans.S("Authentication and Authorization"),
 				AppDescription:      trans.S("Manage users and groups, control access to your site with permissions."),
 				MenuLabel:           trans.S("Auth"),
-				MenuOrder:           -1,
+				MenuOrder:           -900,
 			},
 			admin.ModelOptions{
 				Model:               &models.User{},

@@ -23,11 +23,16 @@ type BaseQuerier[T any] interface {
 	Close() error
 }
 
+type Registry[T any] interface {
+	RegisterForDriver(driver any, backend Backend[T])
+	BackendForDB(driver.Driver) (Backend[T], error)
+}
+
 type backendRegistry[T BaseQuerier[T]] struct {
 	backends map[reflect.Type]Backend[T]
 }
 
-func NewBackendRegistry[T BaseQuerier[T]]() *backendRegistry[T] {
+func NewBackendRegistry[T BaseQuerier[T]]() Registry[T] {
 	return &backendRegistry[T]{}
 }
 

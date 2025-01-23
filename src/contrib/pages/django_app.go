@@ -8,6 +8,7 @@ import (
 	"io/fs"
 	"net/http"
 	"strconv"
+	"strings"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
@@ -148,6 +149,7 @@ func NewAppConfig() *PageAppConfig {
 		return pageApp
 	}
 
+	var routePrefixSet = false
 	var initPageApp = func(settings django.Settings, db *sql.DB) error {
 
 		if err := CreateTable(db); err != nil {
@@ -168,6 +170,28 @@ func NewAppConfig() *PageAppConfig {
 		// GetDescription: trans.S("A page in a hierarchical page tree- structure."),
 		// GetObject:      func() any { return &models.PageNode{} },
 		// })
+
+		if pageApp.routePrefix == "" {
+			pageApp.routePrefix = "/"
+		} else {
+			routePrefixSet = true
+		}
+
+		if !strings.HasPrefix(pageApp.routePrefix, "/") {
+			pageApp.routePrefix = "/" + pageApp.routePrefix
+		}
+
+		if strings.HasSuffix(pageApp.routePrefix, "/") && len(pageApp.routePrefix) > 1 {
+			pageApp.routePrefix = pageApp.routePrefix[:len(pageApp.routePrefix)-1]
+		}
+
+		django.Global.Mux.Any(
+			fmt.Sprintf("%s/*", pageApp.routePrefix),
+			http.StripPrefix(pageApp.routePrefix, Serve(
+				http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
+			)),
+			"pages",
+		)
 
 		Register(&PageDefinition{
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
@@ -245,10 +269,17 @@ func NewAppConfig() *PageAppConfig {
 			Init:      initPageApp,
 		},
 	}
-	pageApp.Deps = []string{
-		"revisions",
-	}
+
+	//	pageApp.Deps = []string{
+	//		"revisions",
+	//	}
+
 	pageApp.AppConfig.Ready = func() error {
+
+		if !routePrefixSet && pageApp.routePrefix != "" {
+			django.Global.Log.Fatal(1, "Route prefix was set after calling django.App.Initialize().")
+		}
+
 		var pagesRoute = admin.AdminSite.Route.Get(
 			"/pages", pageAdminAppHandler(listRootPageHandler), "pages",
 		)
@@ -315,6 +346,7 @@ func NewAppConfig() *PageAppConfig {
 
 		return nil
 	}
+
 	QuerySet = pageApp.QuerySet
 
 	return pageApp
