@@ -162,16 +162,13 @@ func TestUnmarshalEditorJSBlockData(t *testing.T) {
 }
 
 func TestOnRegisterRun(t *testing.T) {
-	const (
-		app_port = "22393"
-		app_host = "localhost"
-	)
+	const HOST = "localhost:5191"
 
 	var a = django.App(
 		django.Configure(map[string]interface{}{
 			django.APPVAR_DEBUG: true,
-			django.APPVAR_PORT:  app_port,
-			django.APPVAR_HOST:  app_host,
+			django.APPVAR_PORT:  strings.Split(HOST, ":")[0],
+			django.APPVAR_HOST:  strings.Split(HOST, ":")[1],
 		}),
 		django.Flag(
 			django.FlagSkipDepsCheck,
@@ -197,9 +194,8 @@ func TestOnRegisterRun(t *testing.T) {
 	}(t)
 
 	resp, err := http.Get(fmt.Sprintf(
-		"http://%s:%s%s",
-		app_host, app_port,
-		django.Reverse("editor:mock"),
+		"http://%s%s",
+		HOST, django.Reverse("editor:mock"),
 	))
 	if err != nil {
 		t.Fatalf("Error making request: %v", err)
