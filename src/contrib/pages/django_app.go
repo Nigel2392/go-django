@@ -33,7 +33,7 @@ type PageAppConfig struct {
 	routePrefix string
 }
 
-func SetPrefix(prefix string) {
+func SetRoutePrefix(prefix string) {
 	if pageApp == nil {
 		panic("app is nil")
 	}
@@ -219,7 +219,7 @@ func NewAppConfig() *PageAppConfig {
 				BaseItem: menu.BaseItem{
 					Label:    trans.S("Pages"),
 					ItemName: "pages",
-					Ordering: -1,
+					Ordering: -1000,
 				},
 			})
 		}

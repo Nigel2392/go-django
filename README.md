@@ -14,7 +14,7 @@ There is a caveat though; we try to touch the database as little as possible.
 
 This means that we don't have a full ORM like Django does.
 
-Any database logic should be implemented by the end-developer, but some sub-packages do provide backends to use with MySQL and SQLite. Postgres is not planned yet.
+Any database logic should be implemented by the end-developer, but all sub-packages which require it do provide backends to use with MySQL and SQLite. Postgres is not planned yet.
 
 Latest version: `v1.6.9.3`
 
