@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
@@ -167,8 +168,8 @@ func TestOnRegisterRun(t *testing.T) {
 	var a = django.App(
 		django.Configure(map[string]interface{}{
 			django.APPVAR_DEBUG: true,
-			django.APPVAR_PORT:  strings.Split(HOST, ":")[0],
-			django.APPVAR_HOST:  strings.Split(HOST, ":")[1],
+			django.APPVAR_HOST:  strings.Split(HOST, ":")[0],
+			django.APPVAR_PORT:  strings.Split(HOST, ":")[1],
 		}),
 		django.Flag(
 			django.FlagSkipDepsCheck,
@@ -192,6 +193,8 @@ func TestOnRegisterRun(t *testing.T) {
 			))
 		}
 	}(t)
+
+	time.Sleep(1 * time.Second)
 
 	resp, err := http.Get(fmt.Sprintf(
 		"http://%s%s",
