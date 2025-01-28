@@ -87,6 +87,13 @@ var sqlShellCommand = &command.Cmd[string]{
 				return nil
 			}
 
+			query = strings.TrimSpace(query)
+
+			if len(query) == 0 {
+				m.Log("No query entered")
+				continue
+			}
+
 			if slices.Contains([]string{"exit", "quit"}, strings.ToLower(query)) {
 				break
 			}
