@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -88,6 +89,8 @@ func (e *editorRegistry) Features(f ...string) []BaseFeature {
 	for _, name := range f {
 		if feature, ok := e.features.Get(name); ok {
 			features = append(features, feature)
+		} else {
+			logger.Infof("Feature %q not found in feature registry", name)
 		}
 	}
 
