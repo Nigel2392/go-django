@@ -7,6 +7,7 @@ import (
 
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/permissions"
 )
 
 type ItemsList []models.PageNode
@@ -21,7 +22,6 @@ func (il ItemsList) MarshalJSON() ([]byte, error) {
 		items = append(items, item)
 	}
 	return json.Marshal(items)
-
 }
 
 type MenuHeader struct {
@@ -38,7 +38,7 @@ type pageMenuResponse struct {
 func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	var (
 		ctx        = r.Context()
-		mainItemID = r.URL.Query().Get("page_id")
+		mainItemID = r.URL.Query().Get(PageIDVariableName)
 		getParent  = r.URL.Query().Get("get_parent")
 		qs         = QuerySet()
 		response   = &pageMenuResponse{}
@@ -48,6 +48,11 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 		prntBool   bool
 		err        error
 	)
+
+	if !permissions.HasPermission(r, "pages:list") {
+		except.Fail(http.StatusForbidden, nil)
+		return
+	}
 
 	if mainItemID == "" {
 		items, err = qs.GetNodesByDepth(ctx, 0, 0, 1000)
