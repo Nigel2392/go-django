@@ -22,7 +22,7 @@ var _editorJS_FS embed.FS
 var editorJS_FS fs.FS
 
 const (
-	ROUTE_PATH = "/go-editorjs"
+	ROUTE_PATH = "/__go-editorjs__"
 )
 
 var (
