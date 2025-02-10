@@ -35,9 +35,9 @@ func NewAppConfig(opts *Options) *AppConfig {
 		}
 	}
 
-	if opts.MediaDir == "" {
-		opts.MediaDir = "images"
-	}
+	//	if opts.MediaDir == "" {
+	//		opts.MediaDir = "images"
+	//	}
 
 	if opts.MaxByteSize == 0 {
 		opts.MaxByteSize = defaultMaxBytes
