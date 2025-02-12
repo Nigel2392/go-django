@@ -18,7 +18,7 @@ templ (p *PagesMenuItem) Component() {
 		"__PAGE_ID__",
 	)) }}
 
-	<div data-controller="pagemenu" data-pagemenu-url-value={ django.Reverse("admin:pages:api:menu") } class={ strings.Join(p.Classes, " "), "pages-menu-wrapper pages-menu-item submenu-menu-item menu-item" }>
+	<div data-controller="pagemenu" data-pagemenu-url-value={ django.Reverse("admin:pages:api:menu") } data-pagemenu-urlquery-value={ PageIDVariableName } class={ strings.Join(p.Classes, " "), "pages-menu-wrapper pages-menu-item submenu-menu-item menu-item" }>
 
 		<div class="menu-item-content" data-action="click->pagemenu#toggle">
 			<div class="submenu-item-text">

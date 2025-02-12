@@ -6,11 +6,15 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/pkg/errors"
 )
 
 var (
 	// ErrNotImplemented is returned when an operation is not supported by the storage backend.
-	ErrNotImplemented = errs.Error("unsupported operation for this storage backend")
+	ErrNotImplemented = errors.Wrap(
+		errs.ErrNotImplemented,
+		"Unsupported operation for this storage backend",
+	)
 
 	// ErrNotFound is returned when a file is not found.
 	ErrNotFound = os.ErrNotExist

@@ -1,0 +1,118 @@
+.GoDjango-image-tool {
+
+}
+.GoDjango-image-tool__image {
+    max-width: 100%;
+    height: auto;
+}
+.page-link-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.375);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.page-link-modal-overlay[hidden] {
+    display: none;
+}
+.page-link-modal {
+    /* margin-top: -4rem; */
+    position: relative;
+    background-color: white;
+    border-radius: 4px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    max-width: min(100%, 52em);
+    width: 100%;
+}
+.page-link-modal-controls {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+}
+.page-link-modal-control {
+    background-color: transparent;
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+    cursor: pointer;
+    display: inline-block;
+    height: 1.5rem;
+    width: 1.5rem;
+    text-align: center;
+    line-height: 1.5rem;
+}
+.page-link-modal-control + .page-link-modal-control {
+    margin-left: 0.5rem;
+}
+.page-link-modal-close {
+    position: relative;
+    color: #ff0000;
+}
+.page-link-modal-close-x {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+.page-link-modal-close:hover {
+    color: #ffffff;
+    background-color: #ff0000;
+}
+.page-link-modal-heading {
+
+}
+.page-link-modal-content {
+
+}
+.page-link-modal-page {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+.page-link-modal-page-heading {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #2e1f5e;
+    cursor: pointer;
+}
+.page-link-modal-page-children {
+
+}
+
+.page-link-modal-loader{
+  width: 100%;
+  height: 3px;
+  background-color: #2e1f5e;
+  animation: line 2s infinite alternate;
+}
+@keyframes line{
+  0%{
+      transform: scaleX(0);
+      transform-origin: left;
+  }
+  45%{
+      transform: scaleX(1);
+      transform-origin: left;
+  }
+  50%{
+      transform: scaleX(1);
+      transform-origin: right;
+  }
+  55%{
+      transform: scaleX(1);
+      transform-origin: right;
+  }
+  100%{
+      transform: scaleX(0);
+      transform-origin: right;
+  }
+}
+  

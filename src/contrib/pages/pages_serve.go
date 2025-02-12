@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/views"
+	"github.com/Nigel2392/mux"
 	"github.com/pkg/errors"
 )
 
@@ -19,7 +20,14 @@ var (
 
 func newPathParts(path string) []string {
 	path = strings.Trim(path, "/")
-	return strings.Split(path, "/")
+	var split = strings.Split(path, "/")
+	var parts []string = make([]string, 0, len(split))
+	for _, part := range split {
+		if part != "" {
+			parts = append(parts, part)
+		}
+	}
+	return parts
 }
 
 func Serve(allowedMethods ...string) http.Handler {
@@ -83,7 +91,7 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 
 	var (
 		context   = context.Background()
-		pathParts = newPathParts(req.URL.Path)
+		pathParts = mux.Vars(req).GetAll("*")
 		querySet  = QuerySet()
 		page      models.PageNode
 		err       error
@@ -94,12 +102,18 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 		if err != nil {
 			goto checkError
 		}
+
 		if len(pages) == 0 {
 			pageNotFound(w, req, nil, pathParts)
 			return
 		}
 
-		page = pages[0]
+		for _, p := range pages {
+			if p.StatusFlags.Is(models.StatusFlagPublished) {
+				page = p
+				break
+			}
+		}
 	} else {
 		var p models.PageNode
 		for i, part := range pathParts {
@@ -115,7 +129,7 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 	}
 
 checkError:
-	if err != nil {
+	if err != nil || page.ID() == 0 {
 		pageNotFound(w, req, err, pathParts)
 		return
 	}

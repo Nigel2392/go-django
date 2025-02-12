@@ -7,6 +7,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/PuerkitoBio/goquery"
 )
 
 type FeatureBlock interface {
@@ -71,4 +72,5 @@ type BlockTuneFeature interface {
 
 type InlineFeature interface {
 	BaseFeature
+	ParseInlineData(soup *goquery.Document) error
 }

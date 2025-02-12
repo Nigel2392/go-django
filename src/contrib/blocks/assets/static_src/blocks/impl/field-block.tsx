@@ -1,5 +1,5 @@
 import { Block, BlockDef, Config } from '../base';
-import { jsx } from '../../components/jsx';
+import { jsx } from '../../../../../editor/features/links/static_src/jsx';
 
 function toElement(html: string): HTMLElement {
     const template = document.createElement('template');

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"path"
 	"strconv"
 	"strings"
 
@@ -30,8 +31,9 @@ import (
 
 type PageAppConfig struct {
 	*apps.DBRequiredAppConfig
-	backend     dj_models.Backend[models.Querier]
-	routePrefix string
+	backend            dj_models.Backend[models.Querier]
+	routePrefix        string
+	useRedirectHandler bool
 }
 
 func SetRoutePrefix(prefix string) {
@@ -40,6 +42,25 @@ func SetRoutePrefix(prefix string) {
 	}
 
 	pageApp.routePrefix = prefix
+}
+
+func SetUseRedirectHandler(use bool) {
+	if pageApp == nil {
+		panic("app is nil")
+	}
+
+	pageApp.useRedirectHandler = use
+}
+
+func URLPath(page Page) string {
+	var ref *models.PageNode
+	switch v := page.(type) {
+	case *models.PageNode:
+		ref = v
+	default:
+		ref = page.Reference()
+	}
+	return path.Join(pageApp.routePrefix, ref.UrlPath)
 }
 
 func (p *PageAppConfig) QuerySet() models.DBQuerier {
@@ -68,6 +89,10 @@ func (p *PageAppConfig) QuerySet() models.DBQuerier {
 
 	return querySet
 }
+
+const (
+	PageIDVariableName = "page_id"
+)
 
 var (
 	pageApp *PageAppConfig
@@ -185,12 +210,16 @@ func NewAppConfig() *PageAppConfig {
 			pageApp.routePrefix = pageApp.routePrefix[:len(pageApp.routePrefix)-1]
 		}
 
+		var handler = http.StripPrefix(pageApp.routePrefix, Serve(
+			http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
+		))
+		django.Global.Mux.Any(
+			fmt.Sprintf("%s/", pageApp.routePrefix),
+			handler, "pages_home",
+		)
 		django.Global.Mux.Any(
 			fmt.Sprintf("%s/*", pageApp.routePrefix),
-			http.StripPrefix(pageApp.routePrefix, Serve(
-				http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
-			)),
-			"pages",
+			handler, "pages",
 		)
 
 		Register(&PageDefinition{
@@ -297,44 +326,47 @@ func NewAppConfig() *PageAppConfig {
 		// List all pages
 		// Delibirately after the add page route
 		pagesRoute.Get(
-			"/<<page_id>>", pageHandler(listPageHandler), "list",
+			fmt.Sprintf("/<<%s>>", PageIDVariableName),
+			pageHandler(listPageHandler), "list",
 		)
 
 		// Choose page type
 		pagesRoute.Get(
-			"/<<page_id>>/type", pageHandler(choosePageTypeHandler), "type",
+			fmt.Sprintf("/<<%s>>/type", PageIDVariableName),
+			pageHandler(choosePageTypeHandler), "type",
 		)
 
 		// Delete page
 		pagesRoute.Get(
-			"/<<page_id>>/delete", pageHandler(deletePageHandler), "delete",
+			fmt.Sprintf("/<<%s>>/delete", PageIDVariableName),
+			pageHandler(deletePageHandler), "delete",
 		)
 		pagesRoute.Post(
-			"/<<page_id>>/delete", pageHandler(deletePageHandler), "delete",
+			fmt.Sprintf("/<<%s>>/delete", PageIDVariableName),
+			pageHandler(deletePageHandler), "delete",
 		)
 
 		// Add new page type to a parent page
 		pagesRoute.Any(
-			"/<<page_id>>/<<app_label>>/<<model_name>>/add", pageHandler(addPageHandler), "add",
+			fmt.Sprintf("/<<%s>>/<<app_label>>/<<model_name>>/add", PageIDVariableName),
+			pageHandler(addPageHandler), "add",
 		)
 
 		// Edit page
 		pagesRoute.Any(
-			"/<<page_id>>/edit", pageHandler(editPageHandler), "edit",
+			fmt.Sprintf("/<<%s>>/edit", PageIDVariableName),
+			pageHandler(editPageHandler), "edit",
 		)
 
 		// Unpublish page
 		pagesRoute.Get(
-			"/<<page_id>>/unpublish", pageHandler(unpublishPageHandler), "unpublish",
+			fmt.Sprintf("/<<%s>>/unpublish", PageIDVariableName),
+			pageHandler(unpublishPageHandler), "unpublish",
 		)
 		pagesRoute.Post(
-			"/<<page_id>>/unpublish", pageHandler(unpublishPageHandler), "unpublish",
+			fmt.Sprintf("/<<%s>>/unpublish", PageIDVariableName),
+			pageHandler(unpublishPageHandler), "unpublish",
 		)
-
-		//// deleteURL for the pages admin site.
-		//pagesRoute.Get(
-		//	"<<page_id>>/delete", pageHandler(deletePageHandler), "delete",
-		//)
 
 		var pagesAPI = pagesRoute.Get(
 			"/api", nil, "api",
@@ -343,6 +375,15 @@ func NewAppConfig() *PageAppConfig {
 		pagesAPI.Get(
 			"/menu", mux.NewHandler(pageMenuHandler), "menu",
 		)
+
+		if pageApp.useRedirectHandler {
+			var djangoMux = django.Global.Mux
+			djangoMux.Get(
+				fmt.Sprintf("/__pages__/redirect/<<%s>>", PageIDVariableName),
+				mux.NewHandler(redirectHandler),
+				"pages_redirect",
+			)
+		}
 
 		return nil
 	}

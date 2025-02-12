@@ -3,7 +3,6 @@ package pages
 import (
 	"net/http"
 	"net/url"
-	"path"
 	"slices"
 	"strconv"
 
@@ -48,7 +47,7 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 		var (
 			ctx       = req.Context()
 			routeVars = mux.Vars(req)
-			pageID    = routeVars.GetInt("page_id")
+			pageID    = routeVars.GetInt(PageIDVariableName)
 		)
 		if pageID == 0 {
 			except.Fail(http.StatusNotFound, "invalid page id")
@@ -125,9 +124,7 @@ func getPageActions(rq *http.Request, p *models.PageNode) []admin.Action {
 			Icon:   "icon-view",
 			Target: "_blank",
 			Title:  trans.T("View Live"),
-			URL: path.Join(
-				pageApp.routePrefix, p.UrlPath,
-			),
+			URL:    URLPath(p),
 		})
 	}
 

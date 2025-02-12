@@ -8,7 +8,7 @@ require (
 	github.com/justinas/nosurf v1.1.1
 	github.com/pkg/errors v0.9.1
 	golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc
-	golang.org/x/text v0.15.0
+	golang.org/x/text v0.21.0
 )
 
 require (
@@ -20,13 +20,14 @@ require (
 	github.com/alexedwards/scs/v2 v2.8.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/mattn/go-sqlite3 v1.14.22
-	golang.org/x/crypto v0.23.0
+	golang.org/x/crypto v0.31.0
 )
 
 require (
 	github.com/Nigel2392/go-telepath v0.1.3-0.20250115131048-600eacd48c62
 	github.com/Nigel2392/tags v1.0.0
-	github.com/a-h/templ v0.3.819
+	github.com/PuerkitoBio/goquery v1.10.1
+	github.com/a-h/templ v0.3.833
 	github.com/fatih/structtag v1.2.0
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/google/uuid v1.6.0
@@ -36,20 +37,23 @@ require (
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/shopspring/decimal v1.4.0
 	github.com/urfave/cli/v2 v2.27.5
-	golang.org/x/term v0.20.0
+	golang.org/x/term v0.27.0
 	google.golang.org/protobuf v1.35.1
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
 	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
+	golang.org/x/net v0.33.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 )

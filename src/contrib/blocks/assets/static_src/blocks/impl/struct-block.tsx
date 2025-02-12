@@ -1,5 +1,5 @@
 import { Block, BlockDef, Config } from '../base';
-import { jsx } from '../../components/jsx';
+import { jsx } from '../../../../../editor/features/links/static_src/jsx';
 
 const getElementIfAttr = (parent: HTMLElement, attr: string, value?: string): HTMLElement => {
     for (var i = 0; i < parent.children.length; i++) {

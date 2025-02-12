@@ -28,8 +28,9 @@ var CheckListBlock = &Block{
 	},
 	RenderFunc: func(b editor.FeatureBlock, c context.Context, w io.Writer) error {
 		var items = make([]checkListItem, 0)
-		var checklistItems = b.Data().Data["items"].([]map[string]interface{})
+		var checklistItems = b.Data().Data["items"].([]interface{})
 		for _, item := range checklistItems {
+			item := item.(map[string]interface{})
 			items = append(items, checkListItem{
 				Text: item["text"].(string),
 				Checked: item["checked"].(bool),
@@ -42,7 +43,7 @@ var CheckListBlock = &Block{
 templ renderCheckList(items []checkListItem) {
 	<ul>
 		for _, item := range items {
-			<li class={ templ.KV("is-checked", item.Checked) }>{ item.Text }</li>
+			<li class={ templ.KV("is-checked", item.Checked) }>@templ.Raw(item.Text)</li>
 		}
 	</ul>
 }

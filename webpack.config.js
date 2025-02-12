@@ -12,6 +12,15 @@ const tsxLoaderConfig = {
     exclude: '/node_modules/'
 }
 
+const cssLoaderConfig = {
+    test: /\.css$/i,
+    use: [
+        'style-loader',
+        'css-loader',
+    ],
+    exclude: '/node_modules/'
+}
+
 function baseConfig(rules = []) {
     if (rules.length === 0) {
         rules = [tsLoaderConfig, tsxLoaderConfig]
@@ -75,5 +84,17 @@ module.exports = [
             'filename': 'index.js'
         },
         ...baseConfig(),
+    },
+    {
+        entry: './src/contrib/editor/features/links/static_src/index.ts',
+        output: {
+            'path': path.resolve(__dirname, 'src/contrib/editor/features/links/static/links/editorjs/'),
+            'filename': 'index.js'
+        },
+        ...baseConfig([
+            tsLoaderConfig,
+            tsxLoaderConfig,
+            cssLoaderConfig
+        ]),
     },
 ]

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"path"
 	"strconv"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -54,7 +53,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 					return trans.T("View Live")
 				},
 				URL: func(defs attrs.Definitions, row attrs.Definer) string {
-					return path.Join(pageApp.routePrefix, row.(*models.PageNode).UrlPath)
+					return URLPath(row.(*models.PageNode))
 				},
 			},
 			{

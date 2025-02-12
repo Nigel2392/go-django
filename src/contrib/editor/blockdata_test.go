@@ -18,7 +18,10 @@ func TestEditorJSBlockDataRender(t *testing.T) {
 		},
 	}
 
-	rendered := data.Render()
+	rendered, err := data.Render()
+	if err != nil {
+		t.Fatalf("Error rendering block data: %v", err)
+	}
 
 	if !strings.Contains(string(rendered), "header-type") {
 		t.Errorf("Render output did not contain 'header'")

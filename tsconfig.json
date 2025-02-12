@@ -24,8 +24,11 @@
 
       "src/contrib/editor/static_src/**/*.js",
       "src/contrib/editor/static_src/**/*.ts",
-      "src/contrib/editor/static_src/**/*.tsx"
+      "src/contrib/editor/static_src/**/*.tsx",
 
+      "src/contrib/editor/features/links/static_src/**/*.js",
+      "src/contrib/editor/features/links/static_src/**/*.ts",
+      "src/contrib/editor/features/links/static_src/**/*.tsx",
     ],
     "exclude": [
       "node_modules",

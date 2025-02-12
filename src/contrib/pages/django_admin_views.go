@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 	"net/url"
-	"path"
 	"strconv"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -55,7 +54,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 					return trans.T("View Live")
 				},
 				URL: func(defs attrs.Definitions, row attrs.Definer) string {
-					return path.Join(pageApp.routePrefix, row.(*models.PageNode).UrlPath)
+					return URLPath(row.(*models.PageNode))
 				},
 			},
 			{

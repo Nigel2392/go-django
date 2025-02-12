@@ -34,7 +34,7 @@ var ListBlock = &Block{
 templ renderList(items []string) {
 	<ul>
 		for _, item := range items {
-			<li>{ item }</li>
+			<li>@templ.Raw(item)</li>
 		}
 	</ul>
 }

@@ -22,11 +22,9 @@ type PageMenuResponse = {
 
 function buildTemplate(template: HTMLTemplateElement, vars: { [key: string]: string }) {
     let html = template.innerHTML;
-    console.log(html)
     for (const key in vars) {
         html = html.replace(new RegExp(`__${key.toUpperCase()}__`, "g"), vars[key]);
     }
-    console.log(html)
     const div = document.createElement("div");
     div.innerHTML = html;
     return div.firstElementChild as HTMLElement;
@@ -47,12 +45,14 @@ class PageMenuController extends Controller<HTMLElement> {
     declare submenuTarget: HTMLElement
     declare templateTarget: HTMLTemplateElement
     declare urlValue: string
+    declare urlqueryValue: string
     static targets = [
         "submenu",
         "template",
     ]
     static values = {
         url: String,
+        urlquery: String,
     }
 
     connect() {
@@ -122,7 +122,7 @@ class PageMenuController extends Controller<HTMLElement> {
 
         params = params || {};
         const query = new URLSearchParams(params);
-        query.set("page_id", pageId);
+        query.set(this.urlqueryValue, pageId);
         const url = this.urlValue + "?" + query.toString();
 
         fetch(url)

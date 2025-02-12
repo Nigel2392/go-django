@@ -1,0 +1,5 @@
+import sqlite3
+
+db = sqlite3.connect(':memory:')
+
+print(db.execute('''SELECT CONCAT('a', 'b');''').fetchall())

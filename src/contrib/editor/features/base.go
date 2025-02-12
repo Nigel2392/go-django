@@ -8,7 +8,11 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/PuerkitoBio/goquery"
+	"github.com/pkg/errors"
+	"golang.org/x/net/html"
 )
 
 var _ editor.BaseFeature = (*BaseFeature)(nil)
@@ -131,4 +135,88 @@ func (b *WrapperTune) Render(d editor.BlockData) editor.FeatureBlock {
 		FeatureBlock: block,
 		Wrap:         b.Wrap,
 	}
+}
+
+type InlineFeatureAttribute struct {
+	Required bool    // if true, the attribute must be present
+	Name     string  // the name of the attribute to search for
+	Value    *string // nil means any value is allowed, or that just the presence of the attribute is enough
+}
+
+type InlineFeatureElement struct {
+	Node *html.Node
+	Data map[string]*string // the data of the element, equivalent to the parsed data of InlineFeatureAttribute
+}
+
+type InlineFeature struct {
+	BaseFeature
+	TagName           string
+	Class             string
+	Attributes        []InlineFeatureAttribute
+	RebuildElementsFn func([]*InlineFeatureElement) error
+	RebuildElementFn  func(*InlineFeatureElement) error
+}
+
+func (b *InlineFeature) ParseInlineData(doc *goquery.Document) error {
+	var elements = doc.Find(b.TagName).FilterFunction(func(i int, s *goquery.Selection) bool {
+		if b.Class != "" && !s.HasClass(b.Class) {
+			return false
+		}
+
+		for _, attr := range b.Attributes {
+			var value, exists = s.Attr(attr.Name)
+			if !exists && attr.Required {
+				return false
+			}
+
+			if attr.Value != nil && value != *attr.Value {
+				return false
+			}
+		}
+		return true
+	})
+
+	if elements.Length() == 0 {
+		return nil
+	}
+
+	var matches = make([]*InlineFeatureElement, 0)
+	elements.Each(func(i int, s *goquery.Selection) {
+		var node = s.Get(0)
+		var data = make(map[string]*string)
+		for _, attr := range b.Attributes {
+			if value, exists := s.Attr(attr.Name); exists {
+				data[attr.Name] = &value
+			} else {
+				data[attr.Name] = nil
+			}
+		}
+
+		matches = append(matches, &InlineFeatureElement{
+			Node: node,
+			Data: data,
+		})
+	})
+
+	return b.RebuildElements(matches)
+}
+
+func (b *InlineFeature) RebuildElements(elements []*InlineFeatureElement) error {
+	if b.RebuildElementsFn != nil {
+		return b.RebuildElementsFn(elements)
+	}
+
+	if b.RebuildElementFn == nil {
+		return errors.Wrap(
+			errs.ErrNotImplemented,
+			"RebuildElementFn is not implemented",
+		)
+	}
+
+	for _, element := range elements {
+		if err := b.RebuildElementFn(element); err != nil {
+			return err
+		}
+	}
+	return nil
 }

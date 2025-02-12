@@ -8,6 +8,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -47,7 +48,7 @@ func (e *EditorJSBlockData) String() string {
 	return b.String()
 }
 
-func (e *EditorJSBlockData) Render() template.HTML {
+func (e *EditorJSBlockData) Render() (template.HTML, error) {
 	var ctx = context.Background()
 	var b = new(strings.Builder)
 	for _, block := range e.Blocks {
@@ -55,7 +56,40 @@ func (e *EditorJSBlockData) Render() template.HTML {
 			fmt.Fprintf(b, "Error (%s): %s", block.Type(), err)
 		}
 	}
-	return template.HTML(b.String())
+
+	var goQuerySelection, err = goquery.NewDocumentFromReader(
+		strings.NewReader(b.String()),
+	)
+
+	if err != nil {
+		return "", err
+	}
+
+	var inlines = make([]InlineFeature, 0)
+	for _, feature := range e.Features {
+		if inline, ok := feature.(InlineFeature); ok {
+			inlines = append(inlines, inline)
+		}
+	}
+
+	for _, inline := range inlines {
+		err = inline.ParseInlineData(goQuerySelection)
+		if err != nil {
+			return "", err
+		}
+	}
+
+	html, err := goQuerySelection.Html()
+	return template.HTML(html), err
+}
+
+func (e *EditorJSBlockData) MustRender() template.HTML {
+	html, err := e.Render()
+	if err != nil {
+		logger.Errorf("Error rendering editorjs block data: %v", err)
+		return ""
+	}
+	return html
 }
 
 func FeatureNames(f ...BaseFeature) []string {

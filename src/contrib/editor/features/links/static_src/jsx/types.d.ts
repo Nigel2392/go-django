@@ -2,7 +2,7 @@ declare namespace JSX {
     type Element = HTMLElement;
     type Tag = keyof HTMLElementTagNameMap;
 
-    interface IntrinsicElements extends IntrinsicElementMap { }
+    interface IntrinsicElements extends IntrinsicElementMap, SVGElementMap { }
 
     type IntrinsicElementMap = {
         [K in keyof HTMLElementTagNameMap]: {
@@ -10,6 +10,12 @@ declare namespace JSX {
         }
     }
 
+    type SVGElementMap = {
+        [K in keyof SVGElementTagNameMap]: {
+            [k: string]: any;
+        }
+    }
+    
     interface Component {
         (properties?: { [key: string]: any }, children?: any[]): Node;
     }
