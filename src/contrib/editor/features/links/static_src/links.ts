@@ -1,5 +1,4 @@
 import { API } from "@editorjs/editorjs";
-import { jsx } from "./jsx";
 import { PageChooserModal, PageMenuResponsePage } from "./modal";
 import "./css/index.css";
 
@@ -21,9 +20,9 @@ type ConstructorObject = {
 }
 
 type ToolConfig = {
-    pageMenuURL: string,
+    pageListURL: string,
     retrievePageURL: string,
-    pageIDVar: string,
+    pageListQueryVar: string,
 }
 
 class PageLinkTool {
@@ -53,9 +52,9 @@ class PageLinkTool {
         this.config = config;
 
         if (
-            !this.config.pageMenuURL ||
+            !this.config.pageListURL ||
             !this.config.retrievePageURL ||
-            !this.config.pageIDVar
+            !this.config.pageListQueryVar
         ) {
             throw new Error("PageLinkTool requires pageMenuURL, retrievePageURL, and pageIDVar in config");
         }
@@ -82,31 +81,6 @@ class PageLinkTool {
         return this._state;
     }
 
-    showActions(wrapperTag: HTMLElement) {
-        this.actionsContainer.hidden = false;
-    }
-
-    hideActions() {
-        this.actionsContainer.hidden = true;
-    }
-
-    renderActions() {
-        this.actionsContainer = document.createElement('div');
-        this.actionsContainer.classList.add("page-link-tool-actions");
-
-        this.chooseNewPageButton = document.createElement('button');
-        this.chooseNewPageButton.type = 'button';
-        this.chooseNewPageButton.innerHTML = PageLinkIcon;
-        this.chooseNewPageButton.dataset.chooserActionChoose = 'true';
-        this.chooseNewPageButton.classList.add(
-            this.api.styles.inlineToolButton,
-        );
-
-        this.actionsContainer.hidden = true;
-        this.actionsContainer.appendChild(this.chooseNewPageButton);
-        return this.actionsContainer;
-    }
-    
     validate(savedData: SavedData) {
         if (!savedData || !savedData.id || !savedData.text) {
             return false;
@@ -120,12 +94,6 @@ class PageLinkTool {
             return;
         }
 
-        //let chooserEventListener;
-        //chooserEventListener = (event: Event) => {
-        //    let data = this.modal.state;
-        //    this.wrap(range, data);
-        //    
-        //};
         this.modal.open();
         this.modal.onChosen = (page: PageMenuResponsePage) => {
             this.wrap(range, page);
@@ -158,11 +126,13 @@ class PageLinkTool {
     }
   
     render(){
-        this.button = (<button class={this.api.styles.inlineToolButton} type="button"></button>) as HTMLButtonElement;
+        this.button = document.createElement('button');
+        this.button.type = 'button';
+        this.button.classList.add(this.api.styles.inlineToolButton);
         this.button.innerHTML = PageLinkIcon;
         this.modal = new PageChooserModal({
-            menuURL: this.config.pageMenuURL,
-            menuQueryVar: this.config.pageIDVar,
+            pageListURL: this.config.pageListURL,
+            pageListQueryVar: this.config.pageListQueryVar,
             translate: this.api.i18n.t.bind(this.api.i18n),
         })
         return this.button
@@ -172,12 +142,6 @@ class PageLinkTool {
         const wrapperTag = this.api.selection.findParentTag(this.tag, this.tagClass);
 
         this.state = !!wrapperTag;
-
-        if (this.state) {
-            this.showActions(wrapperTag);
-        } else {
-            this.hideActions();
-        }
     }
 
     save(blockContent: any) {

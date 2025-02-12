@@ -34,9 +34,9 @@ type PageLinkFeatureBlock features.InlineFeature
 
 func (i *PageLinkFeatureBlock) Config(widgetContext ctx.Context) map[string]interface{} {
 	var cfg = (*features.InlineFeature)(i).Config(widgetContext)
-	cfg["pageMenuURL"] = django.Reverse("editor:links:list-pages")
+	cfg["pageListURL"] = django.Reverse("editor:links:list-pages")
 	cfg["retrievePageURL"] = django.Reverse("editor:links:retrieve-page")
-	cfg["pageIDVar"] = pages.PageIDVariableName
+	cfg["pageListQueryVar"] = pages.PageIDVariableName
 	return cfg
 }
 
@@ -44,9 +44,6 @@ func (i *PageLinkFeatureBlock) Media() media.Media {
 	var m = media.NewMedia()
 	m.AddJS(
 		media.JS(django.Static("links/editorjs/index.js")),
-	)
-	m.AddCSS(
-		media.CSS(django.Static("links/editorjs/index.css")),
 	)
 	return m
 }
@@ -80,7 +77,7 @@ var PageLinkFeature = &PageLinkFeatureBlock{
 				filesystem.MatchPrefix("links/editorjs"),
 			)
 			var linkRoute = m.Any(
-				"/__go-editorjs__/links",
+				"links",
 				nil, "links",
 			)
 			linkRoute.Get(

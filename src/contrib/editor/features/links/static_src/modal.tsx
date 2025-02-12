@@ -2,10 +2,6 @@ import { jsx } from "./jsx";
 
 
 type PageMenuResponse = {
-    header: {
-        text: string,
-        url: string,
-    },
     parent_item?: PageMenuResponsePage,
     items: PageMenuResponsePage[],
 }
@@ -18,8 +14,8 @@ type PageMenuResponsePage = {
 }
 
 type ModalOptions = {
-    menuURL: string,
-    menuQueryVar: string,
+    pageListURL: string,
+    pageListQueryVar: string,
     openedByDefault?: boolean,
     translate?: (key: string) => string,
     pageChosen?: (page: PageMenuResponsePage) => void,
@@ -27,6 +23,15 @@ type ModalOptions = {
     modalClose?: (modal: PageChooserModal) => void,
     modalDelete?: (modal: PageChooserModal) => void,
 }
+
+const SVGGetParent = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-return-left" viewBox="0 0 16 16">
+    <path fill-rule="evenodd" d="M14.5 1.5a.5.5 0 0 1 .5.5v4.8a2.5 2.5 0 0 1-2.5 2.5H2.707l3.347 3.346a.5.5 0 0 1-.708.708l-4.2-4.2a.5.5 0 0 1 0-.708l4-4a.5.5 0 1 1 .708.708L2.707 8.3H12.5A1.5 1.5 0 0 0 14 6.8V2a.5.5 0 0 1 .5-.5"/>
+</svg>`
+
+const SVGGetChildren = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-in-right" viewBox="0 0 16 16">
+    <path fill-rule="evenodd" d="M6 3.5a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v9a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-2a.5.5 0 0 0-1 0v2A1.5 1.5 0 0 0 6.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-9A1.5 1.5 0 0 0 14.5 2h-8A1.5 1.5 0 0 0 5 3.5v2a.5.5 0 0 0 1 0z"/>
+    <path fill-rule="evenodd" d="M11.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 1 0-.708.708L10.293 7.5H1.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+</svg>`
 
 class PageChooserModal {
     private elements: {
@@ -98,62 +103,132 @@ class PageChooserModal {
         this.loadPageList();        
     }
 
-        
-    private async loadPageList() {
+    private _try(errorMessage: string, func: any, ...args: any[]) {
+        try {
+            return func(...args);
+        } catch (e) {
+            this.modalError(errorMessage);
+        }
+    }
+
+    private async loadPages(id: number | string = null, get_parent: boolean = false) {
+        // Get ID, default to current state's ID
+        // if no ID is provided and no state is set
+        // then we default to an empty string, this
+        // will fetch all root pages
+        if (id == null) {
+            id = this.state ? this.state.id : "";
+        }
+
+        // Setup
         this.modalError(null);
         this.elements.loader.hidden = false;
-        fetch(this.opts.menuURL)
-        .then(response => response.json())
-        .then((data: PageMenuResponse) => {
-            this.elements.loader.hidden = true;
+
+        // Build URL
+        const query = new URLSearchParams({
+            [this.opts.pageListQueryVar]: id.toString(),
+            get_parent: get_parent.toString(),
+        });
+        const url = this.opts.pageListURL + "?" + query.toString();
+        
+        // Make request
+        const response = await this._try("Error fetching menu items", fetch, url);
+        if (!response.ok) {
+            this.modalError(this.opts.translate("Error fetching menu items"));
+            return;
+        }
+
+        // Parse response
+        const data = await this._try("Error parsing response", response.json.bind(response));
+        this.elements.loader.hidden = true;
+        return data;
+    }
+        
+    private async loadPageList(pageId: number | string = null, get_parent: boolean = false) {
+        this.modalError(null);
+        this.elements.content.innerHTML = "";
+        this.elements.loader.hidden = false;
+        let data = await this.loadPages(pageId, get_parent);
+        if (!data) {
+            return;
+        }
+
+        if (data.items.length == 0 && !data.parent_item) {
+            this.modalError(this.opts.translate("No pages found"));
+            return;
+        }
+
+
+        if (data.parent_item) {
+            const navUp = <div class="page-link-modal-parent-page-pageup"></div>
+            navUp.innerHTML = SVGGetParent;
+
+            const parentItem = <div class="page-link-modal-parent-page" data-page-id={data.parent_item.id} data-depth={data.parent_item.depth}>
+                { navUp }
+                <div class="page-link-modal-parent-page-heading">
+                    {data.parent_item.title}
+                </div>
+            </div>;
+
+            navUp.addEventListener('click', () => {
+                this.loadPageList(data.parent_item.id, true);
+                this._state = data.parent_item;
+            });
+
+            this.elements.content.appendChild(parentItem);
 
             if (data.items.length == 0) {
-                this.modalError(this.opts.translate("No pages found"));
-                return;
+
+                this.elements.content.appendChild(<div class="page-link-modal-page">
+                    <div class="page-link-modal-page-heading">
+                        {this.opts.translate("No live child pages found")}
+                    </div>
+                </div>);
+            }
+        }
+
+
+        for (let page of data.items) {
+            
+            const pageListItem = <div class="page-link-modal-page" data-page-id={page.id} data-depth={page.depth}>
+                <div className="page-link-modal-page-heading">
+                    {page.title}
+                </div>
+            </div>;
+
+            if (page.numchild > 0) {
+                let navDown = <div class="page-link-modal-page-down"></div>;
+                navDown.innerHTML = SVGGetChildren;
+
+                navDown.addEventListener('click', () => {
+                    this.loadPageList(page.id);
+                    this._state = page;
+                });
+                
+                pageListItem.appendChild(navDown);
             }
 
-            for (let page of data.items) {
-
-                const pageListItem = <div class="page-link-modal-page" data-page-id={page.id}>
-                    <div className="page-link-modal-page-heading">
-                        {page.title}
-                    </div>
-                </div>;
-
-                if (page.numchild > 0) {
-                    pageListItem.appendChild(<div class="page-link-modal-page-children">
-                        {page.numchild.toString()} {this.opts.translate("children")}
-                    </div>)
+            var heading = pageListItem.querySelector('.page-link-modal-page-heading');
+            heading.addEventListener('click', () => {
+                this._state = page;
+                if (this.opts.pageChosen) {
+                    this.opts.pageChosen(page);
                 }
 
-                var heading = pageListItem.querySelector('.page-link-modal-page-heading');
-                heading.addEventListener('click', () => {
-                    this._state = page;
-                    if (this.opts.pageChosen) {
-                        this.opts.pageChosen(page);
-                    }
-                    let anim = this.elements.overlay.animate([
-                        {opacity: 1},
-                        {opacity: 0},
-                    ], {
-                        duration: 200,
-                        fill: "forwards",
-                    });
-                    anim.onfinish = () => {
-                        this.elements.overlay.hidden = true;
-                    }
+                let anim = this.elements.overlay.animate([
+                    {opacity: 1},
+                    {opacity: 0},
+                ], {
+                    duration: 200,
+                    fill: "forwards",
                 });
+                anim.onfinish = () => {
+                    this.elements.overlay.hidden = true;
+                }
+            });
 
-                this.elements.content.appendChild(pageListItem);
-            }
-        })
-        .catch(error => {
-            console.error("Error fetching menu items", error);
-            this.elements.loader.hidden = true;
-            this.modalError(this.opts.translate(
-                "Error fetching menu items, please try again later or contact an administrator"
-            ));
-        });
+            this.elements.content.appendChild(pageListItem);
+        }
     }
 
     get state() {
@@ -207,6 +282,7 @@ class PageChooserModal {
     }
 
     modalError(message: string | null) {
+        this.elements.loader.hidden = true;
         if (message == "" || message == null) {
             this.elements.error.innerHTML = "";
         }
