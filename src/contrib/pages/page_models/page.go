@@ -20,6 +20,11 @@ const (
 
 	// StatusFlagDeleted is the status flag for deleted pages.
 	StatusFlagDeleted
+
+	// StatusflagNone is the status flag for no status.
+	//
+	// It is mainly used in queries to ignore the status flag in where clauses.
+	StatusFlagNone StatusFlag = 0
 )
 
 func (f StatusFlag) Is(flag StatusFlag) bool {
@@ -124,20 +129,20 @@ type DBQuerier interface {
 type Querier interface {
 	Close() error
 	WithTx(tx *sql.Tx) Querier
-	AllNodes(ctx context.Context, offset int32, limit int32) ([]PageNode, error)
-	CountNodes(ctx context.Context) (int64, error)
+	AllNodes(ctx context.Context, statusFlags StatusFlag, offset int32, limit int32) ([]PageNode, error)
+	CountNodes(ctx context.Context, statusFlags StatusFlag) (int64, error)
 	CountNodesByTypeHash(ctx context.Context, contentType string) (int64, error)
-	CountRootNodes(ctx context.Context) (int64, error)
+	CountRootNodes(ctx context.Context, statusFlags StatusFlag) (int64, error)
 	DecrementNumChild(ctx context.Context, id int64) (PageNode, error)
 	DeleteDescendants(ctx context.Context, path string, depth int64) error
 	DeleteNode(ctx context.Context, id int64) error
 	DeleteNodes(ctx context.Context, id []int64) error
-	GetChildNodes(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]PageNode, error)
-	GetDescendants(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]PageNode, error)
+	GetChildNodes(ctx context.Context, path string, depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]PageNode, error)
+	GetDescendants(ctx context.Context, path string, depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]PageNode, error)
 	GetNodeByID(ctx context.Context, id int64) (PageNode, error)
 	GetNodeByPath(ctx context.Context, path string) (PageNode, error)
-	GetNodeBySlug(ctx context.Context, slug string, depth int64, path interface{}) (PageNode, error)
-	GetNodesByDepth(ctx context.Context, depth int64, offset int32, limit int32) ([]PageNode, error)
+	GetNodeBySlug(ctx context.Context, slug string, depth int64, path string) (PageNode, error)
+	GetNodesByDepth(ctx context.Context, depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]PageNode, error)
 	GetNodesByIDs(ctx context.Context, id []int64) ([]PageNode, error)
 	GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]PageNode, error)
 	GetNodesByTypeHash(ctx context.Context, contentType string, offset int32, limit int32) ([]PageNode, error)

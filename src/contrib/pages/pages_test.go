@@ -377,7 +377,7 @@ func TestPageNode(t *testing.T) {
 			}
 
 			t.Run("GetChildren", func(t *testing.T) {
-				var children, err = querier.GetChildNodes(queryCtx, rootNode.Path, rootNode.Depth, 0, 1000)
+				var children, err = querier.GetChildNodes(queryCtx, rootNode.Path, rootNode.Depth, models.StatusFlagNone, 0, 1000)
 				if err != nil {
 					t.Error(err)
 					return
@@ -453,7 +453,7 @@ func TestPageNode(t *testing.T) {
 				})
 
 				t.Run("GetRootDescendants", func(t *testing.T) {
-					var descendants, err = querier.GetDescendants(queryCtx, rootNode.Path, 0, 0, 1000)
+					var descendants, err = querier.GetDescendants(queryCtx, rootNode.Path, 0, models.StatusFlagNone, 0, 1000)
 					if err != nil {
 						t.Error(err)
 						return
@@ -494,7 +494,7 @@ func TestPageNode(t *testing.T) {
 						return
 					}
 
-					descendants, err := querier.GetDescendants(queryCtx, rootNode.Path, 0, 0, 1000)
+					descendants, err := querier.GetDescendants(queryCtx, rootNode.Path, 0, models.StatusFlagNone, 0, 1000)
 					if err != nil {
 						t.Error(err)
 						return
@@ -569,7 +569,7 @@ func TestPageNode(t *testing.T) {
 			}
 
 			t.Run("GetChildren", func(t *testing.T) {
-				var children, err = querier.GetChildNodes(queryCtx, rootNode.Path, rootNode.Depth, 0, 1000)
+				var children, err = querier.GetChildNodes(queryCtx, rootNode.Path, rootNode.Depth, models.StatusFlagNone, 0, 1000)
 				if err != nil {
 					t.Error(err)
 					return
@@ -637,7 +637,7 @@ func TestPageNode(t *testing.T) {
 				})
 
 				t.Run("GetRootDescendants", func(t *testing.T) {
-					var descendants, err = querier.GetDescendants(queryCtx, rootNode.Path, 0, 0, 1000)
+					var descendants, err = querier.GetDescendants(queryCtx, rootNode.Path, 0, models.StatusFlagNone, 0, 1000)
 					if err != nil {
 						t.Error(err)
 						return

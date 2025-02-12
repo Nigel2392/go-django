@@ -153,7 +153,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		},
 		GetListFn: func(amount, offset uint) ([]attrs.Definer, error) {
 			var ctx = r.Context()
-			var nodes, err = QuerySet().GetNodesByDepth(ctx, 0, int32(offset), int32(amount))
+			var nodes, err = QuerySet().GetNodesByDepth(ctx, 0, models.StatusFlagNone, int32(offset), int32(amount))
 			if err != nil {
 				return nil, err
 			}

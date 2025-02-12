@@ -55,7 +55,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if mainItemID == "" {
-		items, err = qs.GetNodesByDepth(ctx, 0, 0, 1000)
+		items, err = qs.GetNodesByDepth(ctx, 0, models.StatusFlagNone, 0, 1000)
 		if err != nil {
 			except.Fail(http.StatusInternalServerError, err)
 			return
@@ -95,7 +95,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	} else if prntBool && mainItem.IsRoot() {
 		// Main item is a root node; we can't fetch the parent node.
 		// Instead, override items and render the menu JSON.
-		items, err = qs.GetNodesByDepth(ctx, 0, 0, 1000)
+		items, err = qs.GetNodesByDepth(ctx, 0, models.StatusFlagNone, 0, 1000)
 		if err != nil {
 			except.Fail(http.StatusInternalServerError, err)
 			return
@@ -104,7 +104,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch child nodes of the main item.
-	items, err = qs.GetChildNodes(ctx, mainItem.Path, mainItem.Depth, 0, 1000)
+	items, err = qs.GetChildNodes(ctx, mainItem.Path, mainItem.Depth, models.StatusFlagNone, 0, 1000)
 	if err != nil {
 		except.Fail(http.StatusInternalServerError, err)
 		return

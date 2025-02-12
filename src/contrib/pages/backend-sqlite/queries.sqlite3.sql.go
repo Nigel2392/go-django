@@ -4,26 +4,27 @@ import (
 	"context"
 	"strings"
 
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
+	"github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 )
 
 const allNodes = `-- name: AllNodes :many
 SELECT id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
+WHERE    status_flags & ?1 = ?1
 ORDER BY path ASC
-LIMIT    ?2
-OFFSET   ?1
+LIMIT    ?3
+OFFSET   ?2
 `
 
-func (q *Queries) AllNodes(ctx context.Context, offset int32, limit int32) ([]models.PageNode, error) {
-	rows, err := q.query(ctx, q.allNodesStmt, allNodes, offset, limit)
+func (q *Queries) AllNodes(ctx context.Context, statusFlags page_models.StatusFlag, offset int32, limit int32) ([]page_models.PageNode, error) {
+	rows, err := q.query(ctx, q.allNodesStmt, allNodes, statusFlags, offset, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.PageNode
+	var items []page_models.PageNode
 	for rows.Next() {
-		var i models.PageNode
+		var i page_models.PageNode
 		if err := rows.Scan(
 			&i.PK,
 			&i.Title,
@@ -55,10 +56,11 @@ func (q *Queries) AllNodes(ctx context.Context, offset int32, limit int32) ([]mo
 const countNodes = `-- name: CountNodes :one
 SELECT COUNT(*)
 FROM   PageNode
+WHERE status_flags & ?1 = ?1
 `
 
-func (q *Queries) CountNodes(ctx context.Context) (int64, error) {
-	row := q.queryRow(ctx, q.countNodesStmt, countNodes)
+func (q *Queries) CountNodes(ctx context.Context, statusFlags page_models.StatusFlag) (int64, error) {
+	row := q.queryRow(ctx, q.countNodesStmt, countNodes, statusFlags)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -81,10 +83,11 @@ const countRootNodes = `-- name: CountRootNodes :one
 SELECT COUNT(*)
 FROM   PageNode
 WHERE  depth = 0
+    AND status_flags & ?1 = ?1
 `
 
-func (q *Queries) CountRootNodes(ctx context.Context) (int64, error) {
-	row := q.queryRow(ctx, q.countRootNodesStmt, countRootNodes)
+func (q *Queries) CountRootNodes(ctx context.Context, statusFlags page_models.StatusFlag) (int64, error) {
+	row := q.queryRow(ctx, q.countRootNodesStmt, countRootNodes, statusFlags)
 	var count int64
 	err := row.Scan(&count)
 	return count, err
@@ -133,15 +136,18 @@ func (q *Queries) DeleteNodes(ctx context.Context, id []int64) error {
 const getChildNodes = `-- name: GetChildNodes :many
 SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
-WHERE    path LIKE CONCAT(?1, '%') AND depth = ?2 + 1
-LIMIT    ?4
-OFFSET   ?3
+WHERE    path LIKE CONCAT(?1, '%')
+    AND depth = ?2 + 1
+    AND status_flags & ?3 = ?3
+LIMIT    ?5
+OFFSET   ?4
 `
 
-func (q *Queries) GetChildNodes(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]models.PageNode, error) {
+func (q *Queries) GetChildNodes(ctx context.Context, path string, depth int64, statusFlags page_models.StatusFlag, offset int32, limit int32) ([]page_models.PageNode, error) {
 	rows, err := q.query(ctx, q.getChildNodesStmt, getChildNodes,
 		path,
 		depth,
+		statusFlags,
 		offset,
 		limit,
 	)
@@ -149,9 +155,9 @@ func (q *Queries) GetChildNodes(ctx context.Context, path string, depth int64, o
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.PageNode
+	var items []page_models.PageNode
 	for rows.Next() {
-		var i models.PageNode
+		var i page_models.PageNode
 		if err := rows.Scan(
 			&i.PK,
 			&i.Title,
@@ -183,15 +189,18 @@ func (q *Queries) GetChildNodes(ctx context.Context, path string, depth int64, o
 const getDescendants = `-- name: GetDescendants :many
 SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
-WHERE    path LIKE CONCAT(?1, '%') AND depth > ?2
-LIMIT    ?4
-OFFSET   ?3
+WHERE    path LIKE CONCAT(?1, '%')
+    AND depth > ?2
+    AND status_flags & ?3 = ?3
+LIMIT    ?5
+OFFSET   ?4
 `
 
-func (q *Queries) GetDescendants(ctx context.Context, path string, depth int64, offset int32, limit int32) ([]models.PageNode, error) {
+func (q *Queries) GetDescendants(ctx context.Context, path string, depth int64, statusFlags page_models.StatusFlag, offset int32, limit int32) ([]page_models.PageNode, error) {
 	rows, err := q.query(ctx, q.getDescendantsStmt, getDescendants,
 		path,
 		depth,
+		statusFlags,
 		offset,
 		limit,
 	)
@@ -199,9 +208,9 @@ func (q *Queries) GetDescendants(ctx context.Context, path string, depth int64, 
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.PageNode
+	var items []page_models.PageNode
 	for rows.Next() {
-		var i models.PageNode
+		var i page_models.PageNode
 		if err := rows.Scan(
 			&i.PK,
 			&i.Title,
@@ -236,9 +245,9 @@ FROM     PageNode
 WHERE    id = ?1
 `
 
-func (q *Queries) GetNodeByID(ctx context.Context, id int64) (models.PageNode, error) {
+func (q *Queries) GetNodeByID(ctx context.Context, id int64) (page_models.PageNode, error) {
 	row := q.queryRow(ctx, q.getNodeByIDStmt, getNodeByID, id)
-	var i models.PageNode
+	var i page_models.PageNode
 	err := row.Scan(
 		&i.PK,
 		&i.Title,
@@ -263,9 +272,9 @@ FROM     PageNode
 WHERE    path = ?1
 `
 
-func (q *Queries) GetNodeByPath(ctx context.Context, path string) (models.PageNode, error) {
+func (q *Queries) GetNodeByPath(ctx context.Context, path string) (page_models.PageNode, error) {
 	row := q.queryRow(ctx, q.getNodeByPathStmt, getNodeByPath, path)
-	var i models.PageNode
+	var i page_models.PageNode
 	err := row.Scan(
 		&i.PK,
 		&i.Title,
@@ -292,9 +301,9 @@ AND      depth =    ?2
 AND      path  LIKE CONCAT(?3, '%')
 `
 
-func (q *Queries) GetNodeBySlug(ctx context.Context, slug string, depth int64, path interface{}) (models.PageNode, error) {
+func (q *Queries) GetNodeBySlug(ctx context.Context, slug string, depth int64, path string) (page_models.PageNode, error) {
 	row := q.queryRow(ctx, q.getNodeBySlugStmt, getNodeBySlug, slug, depth, path)
-	var i models.PageNode
+	var i page_models.PageNode
 	err := row.Scan(
 		&i.PK,
 		&i.Title,
@@ -317,19 +326,25 @@ const getNodesByDepth = `-- name: GetNodesByDepth :many
 SELECT   id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    depth = ?1
-LIMIT    ?3
-OFFSET   ?2
+    AND status_flags & ?2 = ?2
+LIMIT    ?4
+OFFSET   ?3
 `
 
-func (q *Queries) GetNodesByDepth(ctx context.Context, depth int64, offset int32, limit int32) ([]models.PageNode, error) {
-	rows, err := q.query(ctx, q.getNodesByDepthStmt, getNodesByDepth, depth, offset, limit)
+func (q *Queries) GetNodesByDepth(ctx context.Context, depth int64, statusFlags page_models.StatusFlag, offset int32, limit int32) ([]page_models.PageNode, error) {
+	rows, err := q.query(ctx, q.getNodesByDepthStmt, getNodesByDepth,
+		depth,
+		statusFlags,
+		offset,
+		limit,
+	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.PageNode
+	var items []page_models.PageNode
 	for rows.Next() {
-		var i models.PageNode
+		var i page_models.PageNode
 		if err := rows.Scan(
 			&i.PK,
 			&i.Title,
@@ -364,7 +379,7 @@ FROM     PageNode
 WHERE    id IN (/*SLICE:id*/?)
 `
 
-func (q *Queries) GetNodesByIDs(ctx context.Context, id []int64) ([]models.PageNode, error) {
+func (q *Queries) GetNodesByIDs(ctx context.Context, id []int64) ([]page_models.PageNode, error) {
 	query := getNodesByIDs
 	var queryParams []interface{}
 	if len(id) > 0 {
@@ -380,9 +395,9 @@ func (q *Queries) GetNodesByIDs(ctx context.Context, id []int64) ([]models.PageN
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.PageNode
+	var items []page_models.PageNode
 	for rows.Next() {
-		var i models.PageNode
+		var i page_models.PageNode
 		if err := rows.Scan(
 			&i.PK,
 			&i.Title,
@@ -417,7 +432,7 @@ FROM     PageNode
 WHERE    page_id IN (/*SLICE:page_id*/?)
 `
 
-func (q *Queries) GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]models.PageNode, error) {
+func (q *Queries) GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]page_models.PageNode, error) {
 	query := getNodesByPageIDs
 	var queryParams []interface{}
 	if len(pageID) > 0 {
@@ -433,9 +448,9 @@ func (q *Queries) GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]mode
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.PageNode
+	var items []page_models.PageNode
 	for rows.Next() {
-		var i models.PageNode
+		var i page_models.PageNode
 		if err := rows.Scan(
 			&i.PK,
 			&i.Title,
@@ -472,15 +487,15 @@ LIMIT    ?3
 OFFSET   ?2
 `
 
-func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string, offset int32, limit int32) ([]models.PageNode, error) {
+func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string, offset int32, limit int32) ([]page_models.PageNode, error) {
 	rows, err := q.query(ctx, q.getNodesByTypeHashStmt, getNodesByTypeHash, contentType, offset, limit)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.PageNode
+	var items []page_models.PageNode
 	for rows.Next() {
-		var i models.PageNode
+		var i page_models.PageNode
 		if err := rows.Scan(
 			&i.PK,
 			&i.Title,
@@ -517,7 +532,7 @@ LIMIT    ?3
 OFFSET   ?2
 `
 
-func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string, offset int32, limit int32) ([]models.PageNode, error) {
+func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string, offset int32, limit int32) ([]page_models.PageNode, error) {
 	query := getNodesByTypeHashes
 	var queryParams []interface{}
 	if len(contentType) > 0 {
@@ -535,9 +550,9 @@ func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.PageNode
+	var items []page_models.PageNode
 	for rows.Next() {
-		var i models.PageNode
+		var i page_models.PageNode
 		if err := rows.Scan(
 			&i.PK,
 			&i.Title,
@@ -572,7 +587,7 @@ FROM     PageNode
 WHERE    path IN (/*SLICE:path*/?)
 `
 
-func (q *Queries) GetNodesForPaths(ctx context.Context, path []string) ([]models.PageNode, error) {
+func (q *Queries) GetNodesForPaths(ctx context.Context, path []string) ([]page_models.PageNode, error) {
 	query := getNodesForPaths
 	var queryParams []interface{}
 	if len(path) > 0 {
@@ -588,9 +603,9 @@ func (q *Queries) GetNodesForPaths(ctx context.Context, path []string) ([]models
 		return nil, err
 	}
 	defer rows.Close()
-	var items []models.PageNode
+	var items []page_models.PageNode
 	for rows.Next() {
-		var i models.PageNode
+		var i page_models.PageNode
 		if err := rows.Scan(
 			&i.PK,
 			&i.Title,

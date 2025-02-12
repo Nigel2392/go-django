@@ -14,7 +14,7 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 		return fmt.Errorf("node path must be empty")
 	}
 
-	previousRootNodeCount, err := q.CountRootNodes(ctx)
+	previousRootNodeCount, err := q.CountRootNodes(ctx, models.StatusFlagNone)
 	if err != nil {
 		return err
 	}
@@ -201,7 +201,7 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 
 	var descendants []models.PageNode
 	descendants, err = queries.GetDescendants(
-		ctx, path, depth-1, 0, 1000,
+		ctx, path, depth-1, models.StatusFlagNone, 0, 1000,
 	)
 	if err != nil {
 		return err
@@ -282,7 +282,7 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 		return errors.Wrap(err, "failed to get old parent node")
 	}
 
-	nodes, err := queries.GetDescendants(ctx, node.Path, node.Depth-1, 0, 1000)
+	nodes, err := queries.GetDescendants(ctx, node.Path, node.Depth-1, models.StatusFlagNone, 0, 1000)
 	if err != nil {
 		return errors.Wrap(err, "failed to get descendants")
 	}
@@ -384,7 +384,7 @@ func UnpublishNode(q models.DBQuerier, ctx context.Context, node *models.PageNod
 
 	var nodes []*models.PageNode = make([]*models.PageNode, 1)
 	if unpublishChildren {
-		descendants, err := queries.GetDescendants(ctx, node.Path, node.Depth, 0, 1000)
+		descendants, err := queries.GetDescendants(ctx, node.Path, node.Depth, models.StatusFlagNone, 0, 1000)
 		if err != nil {
 			return err
 		}

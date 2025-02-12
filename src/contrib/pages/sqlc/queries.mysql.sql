@@ -26,6 +26,7 @@ INSERT INTO PageNode (
 -- name: AllNodes :many
 SELECT *
 FROM     PageNode
+WHERE    status_flags & sqlc.arg(status_flags) = sqlc.arg(status_flags)
 ORDER BY path ASC
 LIMIT    ?
 OFFSET   ?;
@@ -33,11 +34,13 @@ OFFSET   ?;
 -- name: CountRootNodes :one
 SELECT COUNT(*)
 FROM   PageNode
-WHERE  depth = 0;
+WHERE  depth = 0
+    AND status_flags & sqlc.arg(status_flags) = sqlc.arg(status_flags);
 
 -- name: CountNodes :one
 SELECT COUNT(*)
-FROM   PageNode;
+FROM   PageNode
+WHERE status_flags & sqlc.arg(status_flags) = sqlc.arg(status_flags);
 
 -- name: CountNodesByTypeHash :one
 SELECT COUNT(*)
@@ -65,6 +68,7 @@ WHERE    id IN (sqlc.slice(id));
 SELECT   *
 FROM     PageNode
 WHERE    depth = sqlc.arg(depth)
+    AND status_flags & sqlc.arg(status_flags) = sqlc.arg(status_flags)
 LIMIT    ?
 OFFSET   ?;
 
@@ -100,14 +104,18 @@ WHERE    path IN (sqlc.slice(path));
 -- name: GetChildNodes :many
 SELECT   *
 FROM     PageNode
-WHERE    path LIKE CONCAT(sqlc.arg(path), '%') AND depth = sqlc.arg(depth) + 1
+WHERE    path LIKE CONCAT(sqlc.arg(path), '%')
+    AND depth = sqlc.arg(depth) + 1
+    AND status_flags & sqlc.arg(status_flags) = sqlc.arg(status_flags)
 LIMIT    ?
 OFFSET   ?;
 
 -- name: GetDescendants :many
 SELECT   *
 FROM     PageNode
-WHERE    path LIKE CONCAT(sqlc.arg(path), '%') AND depth > sqlc.arg(depth)
+WHERE    path LIKE CONCAT(sqlc.arg(path), '%')
+    AND depth > sqlc.arg(depth)
+    AND status_flags & sqlc.arg(status_flags) = sqlc.arg(status_flags)
 LIMIT    ?
 OFFSET   ?;
 

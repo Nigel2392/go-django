@@ -189,12 +189,12 @@ func FixTree(querySet models.DBQuerier, ctx context.Context) error {
 	defer tx.Rollback()
 
 	var qs = QuerySet().WithTx(tx)
-	allNodesCount, err := qs.CountNodes(ctx)
+	allNodesCount, err := qs.CountNodes(ctx, models.StatusFlagNone)
 	if err != nil {
 		return errors.Wrap(err, "failed to count nodes")
 	}
 
-	allNodes, err := qs.AllNodes(ctx, int32(allNodesCount), 0)
+	allNodes, err := qs.AllNodes(ctx, models.StatusFlagNone, int32(allNodesCount), 0)
 	if err != nil {
 		return errors.Wrap(err, "failed to get all nodes")
 	}

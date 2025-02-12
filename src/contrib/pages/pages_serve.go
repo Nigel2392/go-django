@@ -3,7 +3,6 @@ package pages
 import (
 	"context"
 	"net/http"
-	"strings"
 
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -18,17 +17,18 @@ var (
 	_ views.ControlledView = (*PageServeView)(nil)
 )
 
-func newPathParts(path string) []string {
-	path = strings.Trim(path, "/")
-	var split = strings.Split(path, "/")
-	var parts []string = make([]string, 0, len(split))
-	for _, part := range split {
-		if part != "" {
-			parts = append(parts, part)
-		}
-	}
-	return parts
-}
+//
+//	func newPathParts(path string) []string {
+//		path = strings.Trim(path, "/")
+//		var split = strings.Split(path, "/")
+//		var parts []string = make([]string, 0, len(split))
+//		for _, part := range split {
+//			if part != "" {
+//				parts = append(parts, part)
+//			}
+//		}
+//		return parts
+//	}
 
 func Serve(allowedMethods ...string) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -98,7 +98,7 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 	)
 
 	if len(pathParts) == 0 {
-		var pages, err = querySet.GetNodesByDepth(context, 0, 0, 1000)
+		var pages, err = querySet.GetNodesByDepth(context, 0, models.StatusFlagNone, 0, 1000)
 		if err != nil {
 			goto checkError
 		}
