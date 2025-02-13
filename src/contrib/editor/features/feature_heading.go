@@ -35,6 +35,7 @@ func renderHeading(fb editor.FeatureBlock, c context.Context, w io.Writer) error
 	}
 	var tag = fmt.Sprintf("h%.0f", headingLevel)
 	fmt.Fprintf(w, "<%s data-block-id=\"%s\"", tag, fb.ID())
+	fmt.Fprintf(w, " class=\"heading %s\"", fb.ClassName())
 	if err := templ.RenderAttributes(c, w, templ.Attributes(fb.Attributes())); err != nil {
 		return err
 	}

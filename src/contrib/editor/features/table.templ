@@ -84,7 +84,7 @@ templ renderTable(fb editor.FeatureBlock, c context.Context, w io.Writer) {
     {{ var rawContent = data.Data["content"] }}
     {{ var headings, content = getTableData(rawContent, withHeadings) }}
 
-    <table class={ "table", templ.KV("table-headings", withHeadings), templ.KV("table-stretched", stretched) } data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
+    <table class={ "table", templ.KV("table-headings", withHeadings), templ.KV("table-stretched", stretched), fb.ClassName() } data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
         if len(headings) > 0 {
             <thead>
                 <tr>

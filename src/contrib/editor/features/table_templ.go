@@ -110,7 +110,7 @@ func renderTable(fb editor.FeatureBlock, c context.Context, w io.Writer) templ.C
 		var stretched = data.Data["stretched"].(bool)
 		var rawContent = data.Data["content"]
 		var headings, content = getTableData(rawContent, withHeadings)
-		var templ_7745c5c3_Var2 = []any{"table", templ.KV("table-headings", withHeadings), templ.KV("table-stretched", stretched)}
+		var templ_7745c5c3_Var2 = []any{"table", templ.KV("table-headings", withHeadings), templ.KV("table-stretched", stretched), fb.ClassName()}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -135,7 +135,7 @@ func renderTable(fb editor.FeatureBlock, c context.Context, w io.Writer) templ.C
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(fb.ID())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/features/table.templ`, Line: 87, Col: 134}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/features/table.templ`, Line: 87, Col: 150}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {

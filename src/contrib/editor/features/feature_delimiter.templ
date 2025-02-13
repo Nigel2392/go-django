@@ -30,7 +30,7 @@ func renderDelimiter(b editor.FeatureBlock, c context.Context, w io.Writer) erro
 }
 
 templ renderDelimiterObject(fb editor.FeatureBlock) {
-	<div class="delimiter" data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
+	<div class={ "delimiter", fb.ClassName() } data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
 		<span class="delimiter__dot"></span>
 		<span class="delimiter__dot"></span>
 		<span class="delimiter__dot"></span>

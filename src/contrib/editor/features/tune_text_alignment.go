@@ -1,6 +1,8 @@
 package features
 
 import (
+	"fmt"
+
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 )
 
@@ -34,6 +36,7 @@ func tuneBlocks(fb editor.FeatureBlock, data interface{}) editor.FeatureBlock {
 		return fb
 	}
 	if a, ok = d["alignment"]; ok {
+		fb.Class(fmt.Sprintf("text-align-%s", a))
 		fb.Attribute("data-text-align", a)
 	}
 	return fb

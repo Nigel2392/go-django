@@ -53,6 +53,12 @@ func (m MockFeatureBlock) Render(ctx context.Context, w io.Writer) error {
 	return err
 }
 
+func (m MockFeatureBlock) Class(key string) {}
+
+func (m MockFeatureBlock) ClassName() string {
+	return ""
+}
+
 func (m MockFeatureBlock) Attribute(key string, value any) {}
 
 func (m MockFeatureBlock) Attributes() map[string]interface{} {

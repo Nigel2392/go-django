@@ -57,7 +57,7 @@ templ renderAlert(fb editor.FeatureBlock, c context.Context, w io.Writer) {
     {{ var typ = data.Data["type"] }}
     {{ var align = data.Data["align"] }}
     {{ var text = data.Data["message"].(string) }}
-    <div class={ "alert", fmt.Sprintf("alert-%s", typ), fmt.Sprintf("align-%s", align) } data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
+    <div class={ "alert", fmt.Sprintf("alert-%s", typ), fmt.Sprintf("align-%s", align), fb.ClassName() } data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
         @templ.Raw(text)
     </div>
 }

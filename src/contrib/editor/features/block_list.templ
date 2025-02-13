@@ -32,7 +32,7 @@ var ListBlock = &Block{
 }
 
 templ renderList(fb editor.FeatureBlock, items []string) {
-	<ul { templ.Attributes(fb.Attributes())... }>
+	<ul class={ fb.ClassName() } { templ.Attributes(fb.Attributes())... }>
 		for _, item := range items {
 			<li>@templ.Raw(item)</li>
 		}

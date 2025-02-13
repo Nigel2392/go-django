@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 )
@@ -39,6 +40,7 @@ func (w *WrapperBlock) Render(ctx context.Context, wr io.Writer) error {
 
 type FeatureBlock struct {
 	Attrs      map[string]interface{}
+	Classes    []string
 	Identifier string
 
 	FeatureData   editor.BlockData
@@ -75,6 +77,17 @@ func (b *FeatureBlock) Attribute(key string, value interface{}) {
 
 func (b *FeatureBlock) Attributes() map[string]interface{} {
 	return b.Attrs
+}
+
+func (b *FeatureBlock) Class(key string) {
+	if b.Classes == nil {
+		b.Classes = make([]string, 0)
+	}
+	b.Classes = append(b.Classes, key)
+}
+
+func (b *FeatureBlock) ClassName() string {
+	return strings.Join(b.Classes, " ")
 }
 
 func (b *FeatureBlock) Render(ctx context.Context, w io.Writer) error {

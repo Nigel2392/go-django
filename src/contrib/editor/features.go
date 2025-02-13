@@ -17,6 +17,8 @@ type FeatureBlock interface {
 	Render(ctx context.Context, w io.Writer) error
 	Attribute(key string, value any)
 	Attributes() map[string]interface{}
+	Class(key string)
+	ClassName() string
 	Data() BlockData
 }
 
