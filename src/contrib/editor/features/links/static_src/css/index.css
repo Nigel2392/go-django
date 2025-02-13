@@ -30,7 +30,7 @@
 }
 .page-link-modal-control {
     background-color: transparent;
-    border: 1px solid rgba(0, 0, 0, 0.05);
+    border: 1px solid rgba(0, 0, 0, 0.15);
     border-radius: 4px;
     cursor: pointer;
     display: inline-block;
@@ -57,12 +57,17 @@
     background-color: #ff0000;
 }
 .page-link-modal-heading {
-
+    margin: 0;
+    color: #2e1f5e;
+}
+.page-link-modal-heading > * {
+    font-size: 2.25rem;
+    font-weight: bold;
 }
 .page-link-modal-content {
-
+    display: flex;
+    flex-direction: column;
 }
-
 .page-link-modal-parent-page,
 .page-link-modal-page {
     display: flex;
@@ -80,34 +85,43 @@
     cursor: pointer;
 }
 .page-link-modal-parent-page-heading {
-    font-size: 1.5rem;
+    font-size: 2rem;
+    font-weight: 500;
 }
 .page-link-modal-page-down,
 .page-link-modal-parent-page-pageup {
     display: flex;
     cursor: pointer;
-    background-size: 1.5rem;
-    background-repeat: no-repeat;
-    background-position: center;
+    vertical-align: middle;
 }
 .page-link-modal-page-down {
     margin-left: auto;
 }
-.page-link-modal-page-down svg {
+.page-link-modal-page-down svg,
+.page-link-modal-parent-page-pageup svg {
+    vertical-align: middle;
     color: #2e1f5e;
+}
+.page-link-modal-page-down svg {
     width: 1.5rem;
     height: 1.5rem;
 }
+.page-link-modal-parent-page-pageup {
+    margin-right: 1rem;
+}
 .page-link-modal-parent-page-pageup svg {
-    color: #2e1f5e;
-    width: 2.5rem;
-    height: 2.5rem;
+    width: 2rem;
+    height: 2rem;
 }
 
 .page-link-modal-loader{
   width: 100%;
   height: 3px;
   background-color: #2e1f5e;
+  position: absolute;
+  left: 5%;
+  right: 5%;
+  max-width: 90%;
   animation: line 2s infinite alternate;
 }
 @keyframes line{

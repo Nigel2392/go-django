@@ -146,13 +146,13 @@ class PageChooserModal {
         
     private async loadPageList(pageId: number | string = null, get_parent: boolean = false) {
         this.modalError(null);
-        this.elements.content.innerHTML = "";
         this.elements.loader.hidden = false;
         let data = await this.loadPages(pageId, get_parent);
         if (!data) {
             return;
         }
 
+        this.elements.content.innerHTML = "";
         if (data.items.length == 0 && !data.parent_item) {
             this.modalError(this.opts.translate("No pages found"));
             return;
