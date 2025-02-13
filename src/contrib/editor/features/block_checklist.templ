@@ -36,12 +36,12 @@ var CheckListBlock = &Block{
 				Checked: item["checked"].(bool),
 			})
 		}
-		return renderCheckList(items).Render(c, w)
+		return renderCheckList(b, items).Render(c, w)
 	},
 }
 
-templ renderCheckList(items []checkListItem) {
-	<ul>
+templ renderCheckList(fb editor.FeatureBlock, items []checkListItem) {
+	<ul { templ.Attributes(fb.Attributes())... }>
 		for _, item := range items {
 			<li class={ templ.KV("is-checked", item.Checked) }>@templ.Raw(item.Text)</li>
 		}

@@ -1,0 +1,111 @@
+package features
+
+
+import (
+	"context"
+	"io"
+    "fmt"
+	"github.com/Nigel2392/go-django/src/contrib/editor"
+)
+
+func init() {
+	editor.Register(TableFeature)
+}
+
+var TableFeature = &Block{
+	BaseFeature: BaseFeature{
+		Type:          "table",
+		JSConstructor: "Table",
+		JSFiles: []string{
+			"editorjs/js/deps/tools/table.js",
+		},
+		Build: func(fb *FeatureBlock) *FeatureBlock {
+			fb.GetString = func(d editor.BlockData) string { return "Table" }
+			return fb
+		},
+        Validate: func(bd editor.BlockData) error {
+            var data = bd.Data
+            var content, hasContent = data["content"]
+            if !hasContent {
+                return fmt.Errorf("content is required for table feature")
+            }
+            var _, isArray = content.([]interface{})
+            if !isArray {
+                return fmt.Errorf("content should be an array of arrays")
+            }
+            return nil
+        },
+	},
+	RenderFunc: templRender(renderTable),
+}
+
+func useHeadings(withHeadings bool) string {
+    if withHeadings {
+        return "table-headings"
+    }
+    return ""
+}
+
+func getTableData(rawContent interface{}, useHeadings bool) (headings []string, content [][]string) {
+    var data = rawContent.([]interface{})
+    if len(data) == 0 {
+        return nil, nil
+    }
+
+    headings = make([]string, 0)
+    content = make([][]string, 0)
+
+    // Convert (optional) headings from interface to string
+    if useHeadings {
+        var headingsIFace = data[0].([]interface{})
+        for _, cell := range headingsIFace {
+            headings = append(headings, cell.(string))
+        }
+
+        data = data[1:]
+    }
+
+    // Convert content from interface to string
+    for _, row := range data {
+        var rowContent = make([]string, 0)
+        for _, cell := range row.([]interface{}) {
+            rowContent = append(rowContent, cell.(string))
+        }
+        content = append(content, rowContent)
+    }
+
+    return headings, content
+}
+
+templ renderTable(fb editor.FeatureBlock, c context.Context, w io.Writer) {
+    {{ var data = fb.Data() }}
+    {{ var withHeadings = data.Data["withHeadings"].(bool) }}
+    {{ var stretched = data.Data["stretched"].(bool) }}
+    {{ var rawContent = data.Data["content"] }}
+    {{ var headings, content = getTableData(rawContent, withHeadings) }}
+
+    <table class={ "table", templ.KV("table-headings", withHeadings), templ.KV("table-stretched", stretched) } data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
+        if len(headings) > 0 {
+            <thead>
+                <tr>
+                    for _, heading := range headings {
+                        <th>
+                            @templ.Raw(heading)
+                        </th>
+                    }
+                </tr>
+            </thead>
+        }
+        <tbody>
+            for _, row := range content {
+                <tr>
+                    for _, cell := range row {
+                        <td>
+                            @templ.Raw(cell)
+                        </td>
+                    }
+                </tr>
+            }
+        </tbody>
+    </table>
+}

@@ -27,12 +27,12 @@ var ListBlock = &Block{
 		for _, item := range b.Data().Data["items"].([]interface{}) {
 			items = append(items, item.(string))
 		}
-		return renderList(items).Render(c, w)
+		return renderList(b, items).Render(c, w)
 	},
 }
 
-templ renderList(items []string) {
-	<ul>
+templ renderList(fb editor.FeatureBlock, items []string) {
+	<ul { templ.Attributes(fb.Attributes())... }>
 		for _, item := range items {
 			<li>@templ.Raw(item)</li>
 		}

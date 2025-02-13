@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/PuerkitoBio/goquery"
+	"github.com/a-h/templ"
 	"github.com/pkg/errors"
 	"golang.org/x/net/html"
 )
@@ -219,4 +220,10 @@ func (b *InlineFeature) RebuildElements(elements []*InlineFeatureElement) error 
 		}
 	}
 	return nil
+}
+
+func templRender(fn func(fb editor.FeatureBlock, c context.Context, w io.Writer) templ.Component) func(b editor.FeatureBlock, c context.Context, w io.Writer) error {
+	return func(b editor.FeatureBlock, c context.Context, w io.Writer) error {
+		return fn(b, c, w).Render(c, w)
+	}
 }

@@ -1,0 +1,63 @@
+package features
+
+
+import (
+	"context"
+	"io"
+    "fmt"
+	"github.com/Nigel2392/go-django/src/contrib/editor"
+)
+
+func init() {
+	editor.Register(AlertFeature)
+}
+
+var alertTypes = map[string]struct{}{
+    "primary": {},
+    "secondary": {},
+    "success": {},
+    "danger": {},
+    "warning": {},
+    "info": {},
+    "light": {},
+    "dark": {},
+}
+
+var AlertFeature = &Block{
+	BaseFeature: BaseFeature{
+		Type:          "alert",
+		JSConstructor: "Alert",
+		JSFiles: []string{
+			"editorjs/js/deps/tools/vishaltelangre.editorjs-alert.js",
+		},
+		Build: func(fb *FeatureBlock) *FeatureBlock {
+			fb.GetString = func(d editor.BlockData) string { return d.Data["message"].(string) }
+			return fb
+		},
+        Validate: func(bd editor.BlockData) error {
+            var data = bd.Data
+            var typ, hasType = data["type"]
+            if !hasType {
+                return fmt.Errorf("type is required for alert feature")
+            }
+            if typ == nil || typ == "" {
+                return fmt.Errorf("type cannot be empty for alert feature")
+            }
+            if _, ok := alertTypes[typ.(string)]; !ok {
+                return fmt.Errorf("invalid type %s for alert feature", typ)
+            }
+            return nil
+        },
+	},
+	RenderFunc: templRender(renderAlert),
+}
+
+templ renderAlert(fb editor.FeatureBlock, c context.Context, w io.Writer) {
+    {{ var data = fb.Data() }}
+    {{ var typ = data.Data["type"] }}
+    {{ var align = data.Data["align"] }}
+    {{ var text = data.Data["message"].(string) }}
+    <div class={ "alert", fmt.Sprintf("alert-%s", typ), fmt.Sprintf("align-%s", align) } data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
+        @templ.Raw(text)
+    </div>
+}
