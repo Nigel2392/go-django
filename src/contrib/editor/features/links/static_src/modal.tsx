@@ -10,6 +10,7 @@ type PageMenuResponsePage = {
     id: string,
     title: string,
     numchild: number,
+    url_path: string,
     depth: number,
 }
 

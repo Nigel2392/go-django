@@ -21,7 +21,6 @@ type ConstructorObject = {
 
 type ToolConfig = {
     pageListURL: string,
-    retrievePageURL: string,
     pageListQueryVar: string,
 }
 
@@ -34,7 +33,7 @@ class PageLinkTool {
     modal: PageChooserModal;
     private _state: boolean;
 
-    wrapperTag: HTMLElement;
+    wrapperTag: HTMLAnchorElement;
     button: HTMLButtonElement;
     actionsContainer: HTMLElement;
     chooseNewPageButton: HTMLButtonElement;
@@ -53,7 +52,6 @@ class PageLinkTool {
 
         if (
             !this.config.pageListURL ||
-            !this.config.retrievePageURL ||
             !this.config.pageListQueryVar
         ) {
             throw new Error("PageLinkTool requires pageMenuURL, retrievePageURL, and pageIDVar in config");
@@ -108,8 +106,9 @@ class PageLinkTool {
             previousWrapperTag.remove();
         }
 
-        this.wrapperTag = document.createElement(this.tag);
+        this.wrapperTag = document.createElement(this.tag) as HTMLAnchorElement;
         this.wrapperTag.dataset.pageId = page.id;
+        this.wrapperTag.href = page.url_path;
 
         this.wrapperTag.classList.add(this.tagClass);
         this.wrapperTag.appendChild(selectedText);

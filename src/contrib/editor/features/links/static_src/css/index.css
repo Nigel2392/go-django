@@ -1,3 +1,10 @@
+.page-link {
+    color: #2e1f5e;
+    cursor: pointer;
+}
+.page-link:hover {
+    color: #362377;
+}
 .page-link-modal-overlay {
     position: fixed;
     top: 0;

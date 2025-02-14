@@ -35,7 +35,6 @@ type PageLinkFeatureBlock features.InlineFeature
 func (i *PageLinkFeatureBlock) Config(widgetContext ctx.Context) map[string]interface{} {
 	var cfg = (*features.InlineFeature)(i).Config(widgetContext)
 	cfg["pageListURL"] = django.Reverse("editor:links:list-pages")
-	cfg["retrievePageURL"] = django.Reverse("editor:links:retrieve-page")
 	cfg["pageListQueryVar"] = pages.PageIDVariableName
 	return cfg
 }
@@ -140,13 +139,20 @@ var PageLinkFeature = &PageLinkFeatureBlock{
 			}
 
 			var page = idMap[int64(id)]
-			el.Node.Attr = append(
-				el.Node.Attr,
-				html.Attribute{
+			el.Node.Attr = []html.Attribute{
+				{
+					Key: "class",
+					Val: "page-link",
+				},
+				{
+					Key: "data-page-id",
+					Val: pageID,
+				},
+				{
 					Key: "href",
 					Val: pages.URLPath(page),
 				},
-			)
+			}
 		}
 
 		return nil

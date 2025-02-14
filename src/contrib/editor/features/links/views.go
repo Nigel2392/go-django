@@ -95,6 +95,9 @@ func listPages(w http.ResponseWriter, r *http.Request) {
 	response.ParentItem = &mainItem
 
 renderJSON:
+	for i := 0; i < len(items); i++ {
+		items[i].UrlPath = pages.URLPath(&items[i])
+	}
 	response.Items = items
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(response)
