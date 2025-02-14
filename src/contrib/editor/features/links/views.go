@@ -5,12 +5,10 @@ import (
 	"net/http"
 	"strconv"
 
-	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/permissions"
-	"github.com/Nigel2392/mux"
 )
 
 type listResponse struct {
@@ -100,38 +98,4 @@ renderJSON:
 	response.Items = items
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(response)
-}
-
-func retrievePage(w http.ResponseWriter, r *http.Request) {
-	if !permissions.HasPermission(r, "pages:list") {
-		autherrors.Fail(
-			403, "You do not have permission to list or view pages",
-		)
-	}
-
-	// Get the page ID from the request
-	var vars = mux.Vars(r)
-	var pageID = vars.GetInt(
-		pages.PageIDVariableName,
-	)
-
-	if pageID == 0 {
-		except.Fail(
-			http.StatusBadRequest, "Page ID is required",
-		)
-	}
-
-	// Get the page from the database
-	var page, err = pages.QuerySet().GetNodeByID(
-		r.Context(), int64(pageID),
-	)
-	if err != nil {
-		except.Fail(http.StatusNotFound, err)
-	}
-
-	// Return the page as JSON
-	var encoder = json.NewEncoder(w)
-	if err = encoder.Encode(page); err != nil {
-		except.Fail(http.StatusInternalServerError, err)
-	}
 }

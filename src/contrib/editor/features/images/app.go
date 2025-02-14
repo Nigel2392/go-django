@@ -19,7 +19,7 @@ type (
 	}
 
 	AppConfig struct {
-		*apps.DBRequiredAppConfig
+		*apps.AppConfig
 		Options *Options
 	}
 )
@@ -29,7 +29,7 @@ var app *AppConfig
 func NewAppConfig(opts *Options) *AppConfig {
 	if app == nil {
 		app = &AppConfig{
-			DBRequiredAppConfig: apps.NewDBAppConfig(
+			AppConfig: apps.NewAppConfig(
 				"images",
 			),
 		}

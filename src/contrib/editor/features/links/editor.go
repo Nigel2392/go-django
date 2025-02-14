@@ -85,11 +85,6 @@ var PageLinkFeature = &PageLinkFeatureBlock{
 				mux.NewHandler(listPages),
 				"list-pages",
 			)
-			linkRoute.Get(
-				"/retrieve-page",
-				mux.NewHandler(retrievePage),
-				"retrieve-page",
-			)
 		},
 	},
 	RebuildElementsFn: func(li []*features.InlineFeatureElement) error {

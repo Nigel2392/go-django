@@ -1,0 +1,45 @@
+.editorjs-widget-container [data-color],
+.editorjs-widget-container [data-color] h1,
+.editorjs-widget-container [data-color] h2,
+.editorjs-widget-container [data-color] h3,
+.editorjs-widget-container [data-color] h4,
+.editorjs-widget-container [data-color] h5,
+.editorjs-widget-container [data-color] h6,
+.editorjs-widget-container [data-color] a {
+    color: var(--block-color);
+}
+.editorjs-widget-container [data-background-color] {
+    background-color: var(--block-background-color);
+}
+.editorjs-color-input-wrapper {
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 5px;
+    margin-bottom: 0.25rem;
+    overflow: hidden;
+    width: 100%;
+}
+.editorjs-color-input-wrapper > * {
+    background-color: transparent;
+    border-radius: 0;
+    border: none;
+    outline: none;
+    height: 22px;
+    margin: 0;
+}
+.editorjs-color-input-wrapper > *:not(:last-child) {
+    border-right: 1px solid rgba(0, 0, 0, 0.1);
+}
+.w-theme-dark .editorjs-color-input-wrapper {
+    border: 1px solid rgba(0, 0, 0, 0.25);
+}
+.w-theme-dark .editorjs-color-input-wrapper > *:not(:last-child) {
+    border-right: 1px solid rgba(0, 0, 0, 0.25);
+}
+
+.editorjs-color-input-wrapper > input {
+    width: 100%;
+    padding: 0;
+}
