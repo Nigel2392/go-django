@@ -36,19 +36,9 @@ type ContentType interface {
 	PkgPath() string
 	AppLabel() string
 	TypeName() string
+	ShortTypeName() string
 	Model() string
 	New() interface{}
-}
-
-// ShortcutContentType is an interface that defines the methods that a content type must implement.
-// It allows for a shorter type name to be used.
-//
-// This short type name can be used as an alias and allows for easier reference to the model in code.
-//
-// I.E: "github.com/Nigel2392/auth.User" can be shortened to "auth.User".
-type ShortcutContentType[T any] interface {
-	ContentType
-	ShortTypeName() string
 }
 
 // NewContentType returns a new BaseContentType.

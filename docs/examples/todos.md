@@ -752,36 +752,34 @@ This allows for more control over the model's (object and instance) string repre
 ```go
 contenttypes.Register(&contenttypes.ContentTypeDefinition{
     ContentObject: &Todo{},
-    contenttypes.Register(&contenttypes.ContentTypeDefinition{
-        GetInstance: func(identifier any) (interface{}, error) {
-            var id, ok = identifier.(int)
-            if !ok {
-                var u, err = strconv.Atoi(fmt.Sprint(identifier))
-                if err != nil {
-                    return nil, err
-                }
-                id = u
-            }
-            return GetTodoByID(
-                context.Background(),
-                id,
-            )
-        },
-        GetInstances: func(amount, offset uint) ([]interface{}, error) {
-            var todos, err = ListAllTodos(
-                context.Background(), int(amount), int(offset),
-            )
+    GetInstance: func(identifier any) (interface{}, error) {
+        var id, ok = identifier.(int)
+        if !ok {
+            var u, err = strconv.Atoi(fmt.Sprint(identifier))
             if err != nil {
                 return nil, err
             }
-            var items = make([]interface{}, 0)
-            for _, u := range todos {
-                var cpy = u
-                items = append(items, &cpy)
-            }
-            return items, nil
-        },
-    })
+            id = u
+        }
+        return GetTodoByID(
+            context.Background(),
+            id,
+        )
+    },
+    GetInstances: func(amount, offset uint) ([]interface{}, error) {
+        var todos, err = ListAllTodos(
+            context.Background(), int(amount), int(offset),
+        )
+        if err != nil {
+            return nil, err
+        }
+        var items = make([]interface{}, 0)
+        for _, u := range todos {
+            var cpy = u
+            items = append(items, &cpy)
+        }
+        return items, nil
+    },
 })
 ```
 

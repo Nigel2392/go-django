@@ -2,6 +2,7 @@ package editor
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"html/template"
 	"strings"
@@ -38,6 +39,29 @@ type EditorJSBlockData struct {
 	Blocks   []FeatureBlock `json:"blocks"`
 	Version  string         `json:"version"`
 	Features []BaseFeature  `json:"-"`
+}
+
+func (e *EditorJSBlockData) Value() (driver.Value, error) {
+	return JSONMarshalEditorData(e)
+}
+
+func (e *EditorJSBlockData) Scan(src interface{}) error {
+	var features = make([]string, len(e.Features))
+	for i, f := range e.Features {
+		features[i] = f.Name()
+	}
+	var b []byte
+	switch v := src.(type) {
+	case []byte:
+		b = v
+	case string:
+		b = []byte(v)
+	default:
+		return fmt.Errorf("unsupported type: %T", src)
+	}
+	return _JSONUnmarshalEditorData(
+		e, features, b,
+	)
 }
 
 func (e *EditorJSBlockData) String() string {

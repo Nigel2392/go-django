@@ -163,7 +163,7 @@ checkError:
 		return
 	}
 
-	var view = definition.PageView()
+	var view = definition.PageView(specific)
 	var handler, ok = specific.(http.Handler)
 
 	if view == nil && !ok {

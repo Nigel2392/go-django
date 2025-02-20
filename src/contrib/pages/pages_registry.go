@@ -81,7 +81,7 @@ func sortDefinitions(definitions []*PageDefinition) {
 func FilterCreatableDefinitions(definitions []*PageDefinition) []*PageDefinition {
 	var creatable = make([]*PageDefinition, 0, len(definitions))
 	for _, definition := range definitions {
-		if !definition.DissalowCreate {
+		if !definition.DissallowCreate {
 			creatable = append(creatable, definition)
 		}
 	}

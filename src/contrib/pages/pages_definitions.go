@@ -11,7 +11,7 @@ import (
 
 type PageDefinition struct {
 	*contenttypes.ContentTypeDefinition
-	ServePage               func() PageView
+	ServePage               func(page Page) PageView
 	AddPanels               func(r *http.Request, page Page) []admin.Panel
 	EditPanels              func(r *http.Request, page Page) []admin.Panel
 	GetForID                func(ctx context.Context, ref models.PageNode, id int64) (Page, error)
@@ -19,7 +19,7 @@ type PageDefinition struct {
 	OnReferenceBeforeDelete func(ctx context.Context, ref models.PageNode, id int64) error
 
 	MaxNum          int
-	DissalowCreate  bool
+	DissallowCreate bool
 	DisallowRoot    bool
 	ParentPageTypes []string
 	ChildPageTypes  []string
@@ -57,9 +57,9 @@ func (p *PageDefinition) Model() string {
 	return p.ContentType().Model()
 }
 
-func (p *PageDefinition) PageView() PageView {
+func (p *PageDefinition) PageView(page Page) PageView {
 	if p.ServePage != nil {
-		return p.ServePage()
+		return p.ServePage(page)
 	}
 	return nil
 }
