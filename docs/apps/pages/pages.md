@@ -78,7 +78,7 @@ type BlogPage struct {
 
 // Adhere to the pages.Page interface
 func (b *BlogPage) ID() int64 {
-    return b.PageNode.ID()
+    return b.PageNode.PageID
 }
 
 // Adhere to the pages.Page interface
