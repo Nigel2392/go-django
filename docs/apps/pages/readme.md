@@ -15,7 +15,7 @@ The Pages app provides a framework for managing page content with a hierarchical
 5. [Page Definitions and Registration](./contenttypes.md)
 6. [PageNode Signals](./signals.md)
 7. [`pages_models` Package Reference](./pages_models.md)
-8. [Example pages app](./example.md)
+8. [Example Blog app](../../examples/blog.md)
 
 ---
 
