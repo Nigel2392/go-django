@@ -45,7 +45,7 @@ go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.6.9.7
 - [Using the CLI](./docs/cli.md)
 - [Configuring your server](./docs/configuring.md)
 - [Creating an app](./docs/apps.md)
-- [Creating Forms](./docs/forms/forms.md) (WIP)
+- [Creating Forms](./docs/forms/forms.md)
   - [Working with Fields](./docs/forms/fields.md)
   - [Working with Widgets](./docs/forms/widgets.md)
   - [Passing and creating Media](./docs/forms/media.md)
