@@ -13,10 +13,9 @@ The Pages app provides a framework for managing page content with a hierarchical
 3. [URL Handling](#routing-and-url-handling)
 4. [Queries and Database Operations](./queries.md)
 5. [Page Definitions and Registration](./contenttypes.md)
-6. [Signals](./signals.md)
-7. [Core Page Operations](./core.md)
-8. [pages_models Package Reference](./pages_models.md)
-9. [Example pages app](./example.md)
+6. [PageNode Signals](./signals.md)
+7. [`pages_models` Package Reference](./pages_models.md)
+8. [Example pages app](./example.md)
 
 ---
 
@@ -68,4 +67,3 @@ The Pages app does not assume a default URL. You must explicitly define the rout
 
 - **URLPath(page Page) string**  
   Constructs and returns the live URL path for a given page. It combines the configured route prefix with the page node’s `UrlPath`.
-  
