@@ -181,6 +181,9 @@ func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 	return nil
 }
 
+// Fixtree fixes the tree structure of the page nodes.
+//
+// It scans for errors in the tree structure in the database and fixes them.
 func FixTree(querySet models.DBQuerier, ctx context.Context) error {
 	var tx, err = querySet.BeginTx(ctx, nil)
 	if err != nil {

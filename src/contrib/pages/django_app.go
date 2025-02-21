@@ -36,6 +36,9 @@ type PageAppConfig struct {
 	useRedirectHandler bool
 }
 
+// SetRoutePrefix sets the route prefix for the pages app.
+//
+// Pages app will be served at the route prefix.
 func SetRoutePrefix(prefix string) {
 	if pageApp == nil {
 		panic("app is nil")
@@ -44,6 +47,12 @@ func SetRoutePrefix(prefix string) {
 	pageApp.routePrefix = prefix
 }
 
+// SetUseRedirectHandler sets whether to use redirect handler for pages app.
+//
+// If set to true, a redirect handler will be registered at /__pages__/redirect/<page_id>
+//
+// This is useful when you want to redirect to a page when you only have the page id,
+// using this handler will skip the need for a database query to get the page url.
 func SetUseRedirectHandler(use bool) {
 	if pageApp == nil {
 		panic("app is nil")
@@ -52,6 +61,9 @@ func SetUseRedirectHandler(use bool) {
 	pageApp.useRedirectHandler = use
 }
 
+// Returns the live URL path for the given page.
+//
+// This is the URL path that the page will be served at.
 func URLPath(page Page) string {
 	var ref *models.PageNode
 	switch v := page.(type) {
@@ -91,6 +103,9 @@ func (p *PageAppConfig) QuerySet() models.DBQuerier {
 }
 
 const (
+	// The variable name generally used to refer to the page id in the URL.
+	//
+	// This is used in the URL patterns for the pages app, as well as javascript code and queries in URLs.
 	PageIDVariableName = "page_id"
 )
 
@@ -103,6 +118,7 @@ var (
 	assetsFS embed.FS
 )
 
+// Returns the pages app object itself
 func App() *PageAppConfig {
 	if pageApp == nil {
 		panic("app is nil")
@@ -111,33 +127,9 @@ func App() *PageAppConfig {
 	return pageApp
 }
 
-type pageLogDefinition struct {
-	auditlogs.Definition
-}
-
-func newPageLogDefinition() *pageLogDefinition {
-	return &pageLogDefinition{
-		Definition: auditlogs.SimpleDefinition(),
-	}
-}
-
-func (p *pageLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []auditlogs.LogEntryAction {
-	var id = l.ObjectID()
-	if id == nil {
-		return nil
-	}
-	return []auditlogs.LogEntryAction{
-		&auditlogs.BaseAction{
-			DisplayLabel: trans.T("Edit Live Page"),
-			ActionURL: fmt.Sprintf("%s?%s=%s",
-				django.Reverse("admin:pages:edit", id),
-				"next",
-				r.URL.Path,
-			),
-		},
-	}
-}
-
+// NewAppConfig returns a new pages app config.
+//
+// This is used to initialize the pages app, set up routes, and register the admin application.
 func NewAppConfig() *PageAppConfig {
 	var assetFileSys, err = fs.Sub(assetsFS, "assets/static")
 	if err != nil {
@@ -391,4 +383,31 @@ func NewAppConfig() *PageAppConfig {
 	QuerySet = pageApp.QuerySet
 
 	return pageApp
+}
+
+type pageLogDefinition struct {
+	auditlogs.Definition
+}
+
+func newPageLogDefinition() *pageLogDefinition {
+	return &pageLogDefinition{
+		Definition: auditlogs.SimpleDefinition(),
+	}
+}
+
+func (p *pageLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []auditlogs.LogEntryAction {
+	var id = l.ObjectID()
+	if id == nil {
+		return nil
+	}
+	return []auditlogs.LogEntryAction{
+		&auditlogs.BaseAction{
+			DisplayLabel: trans.T("Edit Live Page"),
+			ActionURL: fmt.Sprintf("%s?%s=%s",
+				django.Reverse("admin:pages:edit", id),
+				"next",
+				r.URL.Path,
+			),
+		},
+	}
 }

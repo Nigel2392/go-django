@@ -9,6 +9,13 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
 
+// SavePage saves a custom page object to the database.
+//
+// If the parent is nil, the page is presumed to be updating.
+//
+// This can not be used to create a new root page.
+//
+// The Save() is called on the custom page object before the reference node is created/updated.
 func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, p SaveablePage) error {
 	if parent == nil {
 		return UpdatePage(q, ctx, p)
@@ -63,10 +70,6 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 		}
 	}
 
-	if err = p.Save(ctx); err != nil {
-		return err
-	}
-
 	if ref.Path == "" {
 		err = CreateChildNode(
 			q, ctx, parent, ref,
@@ -80,9 +83,18 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 		return err
 	}
 
+	if err = p.Save(ctx); err != nil {
+		return err
+	}
+
 	return tx.Commit()
 }
 
+// UpdatePage updates a page object in the database.
+//
+// It calls page.Save() to update the custom page object.
+//
+// The reference node is updated before the page is saved.
 func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
 	var ref = p.Reference()
 	if ref.Path == "" {
@@ -105,6 +117,11 @@ func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
 	return p.Save(ctx)
 }
 
+// DeletePage deletes a page object from the database.
+//
+// It calls page.Delete() to delete the custom page object after the reference node is deleted.
+//
+// FixTree is called after the page is deleted to ensure the tree is in a consistent state.
 func DeletePage(q models.DBQuerier, ctx context.Context, p DeletablePage) (err error) {
 	var ref = p.Reference()
 	if ref.PK == 0 {

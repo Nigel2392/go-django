@@ -9,6 +9,15 @@ import (
 	"github.com/pkg/errors"
 )
 
+// CreateRootNode creates a new root node.
+//
+// The node path must be empty.
+//
+// The node title must not be empty.
+//
+// The child node title must not be empty, if not provided the page's slug (and thus URLPath) will be based on the page's title.
+//
+// The node path is set to a new path part based on the number of root nodes.
 func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
 	if node.Path != "" {
 		return fmt.Errorf("node path must be empty")
@@ -43,10 +52,20 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 	})
 }
 
+// CountNodesByType returns the number of nodes with the given content type.
 func CountNodesByType(q models.Querier, ctx context.Context, contentType string) (int64, error) {
 	return q.CountNodesByTypeHash(ctx, contentType)
 }
 
+// CreateChildNode creates a new child node.
+//
+// The parent node path must not be empty.
+//
+// The child node path must be empty.
+//
+// The child node title must not be empty, if not provided the page's slug (and thus URLPath) will be based on the page's title.
+//
+// The child node path is set to a new path part based on the number of children of the parent node.
 func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *models.PageNode) error {
 
 	var prepped, err = PrepareQuerySet(ctx, q.DB())
@@ -106,6 +125,11 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 	})
 }
 
+// UpdateNode updates a node.
+//
+// This function will update the node's url path if the slug has changed.
+//
+// In that case, it will also update the url paths of all descendants.
 func UpdateNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
@@ -163,6 +187,7 @@ func UpdateNode(q models.Querier, ctx context.Context, node *models.PageNode) er
 	})
 }
 
+// DeleteNode deletes a page node.
 func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, depth int64) error { //, newParent *models.PageNode) error {
 	if depth == 0 {
 		return ErrPageIsRoot
@@ -235,6 +260,13 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 	return tx.Commit()
 }
 
+// MoveNode moves a node to a new parent.
+//
+// The node and new parent paths must not be empty or equal.
+//
+// The new parent must not be a descendant of the node.
+//
+// This function will update the url paths of all descendants, as well as the tree paths of the node and its descendants.
 func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, newParent *models.PageNode) error {
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
@@ -343,6 +375,8 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 	})
 }
 
+// PublishNode will set the published flag on the node
+// and update it accordingly in the database.
 func PublishNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
@@ -356,6 +390,10 @@ func PublishNode(q models.Querier, ctx context.Context, node *models.PageNode) e
 	return q.UpdateNodeStatusFlags(ctx, int64(models.StatusFlagPublished), node.PK)
 }
 
+// UnpublishNode will unset the published flag on the node
+// and update it accordingly in the database.
+//
+// If unpublishChildren is true, it will also unpublish all descendants.
 func UnpublishNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, unpublishChildren bool) error {
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
@@ -408,6 +446,7 @@ func UnpublishNode(q models.DBQuerier, ctx context.Context, node *models.PageNod
 	return tx.Commit()
 }
 
+// ParentNode returns the parent node of the given node.
 func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (v models.PageNode, err error) {
 	if depth == 0 {
 		return v, ErrPageIsRoot
@@ -424,6 +463,9 @@ func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (
 	)
 }
 
+// AncestorNodes returns the ancestor nodes of the given node.
+//
+// The path is a PageNode.Path, the depth is the depth of the page.
 func AncestorNodes(q models.Querier, ctx context.Context, p string, depth int) ([]models.PageNode, error) {
 	var paths = make([]string, depth)
 	for i := 1; i < int(depth); i++ {

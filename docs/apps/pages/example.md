@@ -52,7 +52,7 @@ type DeletablePage interface {
 
 Now that we know what interfaces our custom page model has to adhere to, it is time to create the model itself.
 
-We will extend the `*page_models.PageNode` model, and add a [richtext editor field](../editor/editor.md) to it.
+We will extend the [`*page_models.PageNode`](./pages_models.md#pagenode) model, and add a [richtext editor field](../editor/editor.md) to it.
 
 Following that, we will add the required methods to adhere to the `pages.Page` interface.
 
@@ -305,7 +305,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 
 The blog page model must be registered to the pages app.
 
-This is done by calling the `pages.Register` function with a `*pages.PageDefinition` object.
+This is done by calling the `pages.Register` function with a [`*pages.PageDefinition`](./contenttypes.md#page-definitions-and-registration) object.
 
 This is an extension of the [`contenttypes.ContentTypeDefinition`](../../contenttypes.md#content-type-definition) object.
 
@@ -391,7 +391,7 @@ pages.Register(&pages.PageDefinition{
 
 Now that we have our blog app set up, we can create a new Go-Django web application.
 
-The page app does not know from which URL it should be served, this has to be explicitly configured.
+The page app does not know from which URL it should be served, [this has to be explicitly configured](./readme.md#routing-and-url-handling).
 
 First we will handle all imports.
 
