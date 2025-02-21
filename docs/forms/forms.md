@@ -302,3 +302,5 @@ Typically, you would use the forms package in combination with the fields, widge
 ---
 
 The forms package is designed to work seamlessly with the fields, widgets, and media packages to build fully featured forms that can be easily rendered in HTML templates and integrated with your Go application's models.
+
+As seen, the media required for the fields to work is provided by the form itself, making it easy to include CSS and JS files in your templates. The form lifecycle, from initialization to validation and rendering, is well-defined, allowing you to build robust forms with ease.
