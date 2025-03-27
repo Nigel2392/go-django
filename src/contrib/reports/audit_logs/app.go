@@ -113,7 +113,7 @@ func NewAppConfig() django.AppConfig {
 		),
 	)
 
-	admin.RegisterMedia(func(adminSite *admin.AdminApplication) media.Media {
+	admin.RegisterGlobalMedia(func(adminSite *admin.AdminApplication) media.Media {
 		var m = media.NewMedia()
 		m.AddCSS(media.CSS(django.Static("auditlogs/css/auditlogs.css")))
 		return m

@@ -57,7 +57,7 @@ func LoggingDisabledMiddleware(next mux.Handler) mux.Handler {
 //
 // The message might be prefixed and / or suffixed with additional information.
 func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
-	var logggingEnabled = ConfigGet(a.Settings, "LOGGING_ENABLED",
+	var logggingEnabled = ConfigGet(a.Settings, APPVAR_ROUTE_LOGGING_ENABLED,
 		ConfigGet(a.Settings, APPVAR_DEBUG, true),
 	)
 	if !logggingEnabled {
@@ -80,7 +80,7 @@ func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
 			timeTaken  = time.Since(startTime)
 			remoteAddr = mux.GetIP(
 				r, ConfigGet(
-					a.Settings, "django.RequestProxied", false,
+					a.Settings, APPVAR_REQUESTS_PROXIED, false,
 				),
 			)
 			pathBuf = new(strings.Builder)

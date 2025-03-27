@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	django_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/mux"
 	"github.com/pkg/errors"
 )
@@ -214,7 +215,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 				return []error{autherrors.ErrInvalidEmail}
 			}
 
-			cleaned["email"] = (*models.Email)(email)
+			cleaned["email"] = (*django_models.Email)(email)
 		}
 
 		if registerConfig.AlwaysAllLoginFields || !Auth.LoginWithEmail {
@@ -287,7 +288,7 @@ func (f *BaseUserForm) Save() (*models.User, error) {
 	}
 
 	if f.config.AlwaysAllLoginFields || Auth.LoginWithEmail {
-		f.Instance.Email = cleaned["email"].(*models.Email)
+		f.Instance.Email = cleaned["email"].(*django_models.Email)
 	}
 
 	if f.config.AlwaysAllLoginFields || !Auth.LoginWithEmail {

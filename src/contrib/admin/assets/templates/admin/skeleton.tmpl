@@ -5,8 +5,9 @@
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-        <title>{{ block "title" . }}{{ end }}</title>
+        <title>{{ block "title_root" . }}{{ block "title" . }}{{ end }}{{ block "site_name" . }} | {{ T "Adminsite" }}{{ end }}{{ end }}</title>
 
+        <link rel="icon" href="{{ static "admin/images/favicon.ico" }}" type="image/x-icon">
         <link rel="stylesheet" type="text/css" href="{{ static "admin/css/admin.css" }}">
         <link rel="stylesheet" type="text/css" href="{{ static "admin/css/breadcrumbs.css" }}">
         <link rel="stylesheet" type="text/css" href="{{ static "admin/css/actions.css" }}">
@@ -14,6 +15,7 @@
         <link rel="stylesheet" type="text/css" href="{{ static "admin/css/paginator.css" }}">
         <link rel="stylesheet" type="text/css" href="{{ static "admin/css/list.css" }}">
         <link rel="stylesheet" type="text/css" href="{{ static "admin/css/menu.css" }}">
+        <link rel="stylesheet" type="text/css" href="{{ static "admin/css/grid.css" }}">
         {{ $Media := script_hook_output }}
         {{ range $css := $Media.CSS }}
             {{ $css }}

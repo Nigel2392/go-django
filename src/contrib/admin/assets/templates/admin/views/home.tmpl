@@ -1,17 +1,36 @@
 {{ template "base" . }}
 
-{{ define "title" }}
+{{ define "title" }}{{ .Page.Title }}{{ end }}
 
+{{ define "extra_css" }}
+    {{ range $css := .Page.Media.CSS }}
+        {{ $css }}
+    {{ end }}
+{{ end }}
+
+{{ define "extra_js" }}
+    {{ range $js := .Page.Media.JS }}
+        {{ $js }}
+    {{ end }}
 {{ end }}
 
 {{ define "header" }}
-    {{ $headingText := (T "Admin") }}
-    {{ $subText := (T "Welcome to the admin area") }}
-    {{ component "admin.header" 1 $headingText $subText }}
+
+    {{ if $logo := (.Get "LogoPath") }}
+        <div class="home-row">
+            <div class="logo-col">
+                <img src="{{ $logo }}" alt="logo" class="homepage-logo">
+            </div>
+            <div class="text-col">
+                {{ component "admin.header" 1 .Page.Title .Page.Subtitle }}
+            </div>
+        </div>
+    {{ else }}
+        {{ component "admin.header" 1 .Page.Title .Page.Subtitle }}
+    {{ end }}
+
 {{ end }}
 
 {{ define "content" }}
-
-
 
 {{ end }}

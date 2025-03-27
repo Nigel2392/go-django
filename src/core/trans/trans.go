@@ -1,10 +1,11 @@
 package trans
 
 type TranslationBackend interface {
-	Translate(v string, args ...any) string
+	Translate(v string) string
+	Translatef(v string, args ...any) string
 }
 
-var DefaultBackend TranslationBackend = &EchoBackend{}
+var DefaultBackend TranslationBackend = &SprintBackend{}
 
 func S(v string, args ...any) func() string {
 	return func() string {
@@ -14,7 +15,7 @@ func S(v string, args ...any) func() string {
 
 func T(v string, args ...any) string {
 	if len(args) == 0 {
-		return v
+		return DefaultBackend.Translate(v)
 	}
-	return DefaultBackend.Translate(v, args...)
+	return DefaultBackend.Translatef(v, args...)
 }

@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	django_models "github.com/Nigel2392/go-django/src/models"
 )
 
 type createUserStorage struct {
@@ -50,7 +51,7 @@ var command_create_user = &command.Cmd[createUserStorage]{
 			var e, err = mail.ParseAddress(email)
 			assert.Err(err)
 
-			u.Email = (*models.Email)(e)
+			u.Email = (*django_models.Email)(e)
 			u.Username = username
 
 			if password != password2 {

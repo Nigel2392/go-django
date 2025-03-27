@@ -293,16 +293,18 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				}
 			}
 
+			var adminFormFields = adminForm.Fields()
+
 			if opts.Panels == nil {
-				var panels = make([]Panel, 0, len(adminForm.Fields()))
-				for _, field := range adminForm.Fields() {
+				var panels = make([]Panel, 0, len(adminFormFields))
+				for _, field := range adminFormFields {
 					if _, ok := fields[field.Name()]; !ok {
 						panels = append(panels, FieldPanel(field.Name()))
 					}
 				}
 				adminForm.Panels = panels
 			} else {
-				for _, field := range adminForm.Fields() {
+				for _, field := range adminFormFields {
 					if _, ok := fields[field.Name()]; !ok {
 						adminForm.DeleteField(field.Name())
 					}

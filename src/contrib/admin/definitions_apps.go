@@ -138,11 +138,11 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 	}
 
 	if a.Options.MediaFn != nil {
-		var hookFn = RegisterScriptHookFunc(func(adminSite *AdminApplication) media.Media {
+		var hookFn = RegisterMediaHookFunc(func(adminSite *AdminApplication) media.Media {
 			return a.Options.MediaFn()
 		})
 
-		goldcrest.Register(RegisterGlobalMedia, 0, hookFn)
+		goldcrest.Register(RegisterGlobalMediaHook, 0, hookFn)
 	}
 
 	if a.Options.RegisterToAdminMenu {

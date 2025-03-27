@@ -1,0 +1,46 @@
+.homepage-logo {
+    display: block;
+    margin: 0 auto;
+    width: 100%;
+    max-width: 300px;
+}
+.home-row {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1em;
+
+    & .logo-col {
+        flex: 1 0 0%;
+        max-width: 300px;
+        padding: 0.5em;
+        border: 1px solid var(--primary-bg-color);
+        border-radius: 0.25rem;
+    }
+
+    & .text-col {
+        flex: 1 0 0%;
+    }
+}
+
+@media (min-width: 768px) {
+    .home-row {
+        flex-direction: row;
+        margin-left: 1em;
+        margin-top: 1em;
+
+        & .logo-col {
+            flex: 0 0 auto;
+        }
+    }
+}
+@media (min-width: 992px) {
+  
+}
+@media (min-width: 1200px) {
+  
+}
+@media (min-width: 1400px) {
+  
+}

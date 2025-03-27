@@ -94,7 +94,7 @@ func init() {
 		)
 		var u = models.User{
 			Username:   fmt.Sprintf(usernameFmt, i),
-			Email:      (*models.Email)(email),
+			Email:      (*django_models.Email)(email),
 			IsLoggedIn: true,
 			IsActive:   true,
 		}
@@ -246,7 +246,7 @@ func TestHasPermissions(t *testing.T) {
 		var mailAddr, _ = mail.ParseAddress("test_user@example.com")
 		var user = &models.User{
 			Username:   "test_user",
-			Email:      (*models.Email)(mailAddr),
+			Email:      (*django_models.Email)(mailAddr),
 			IsLoggedIn: true,
 			IsActive:   true,
 		}

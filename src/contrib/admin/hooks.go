@@ -13,9 +13,9 @@ import (
 const (
 	RegisterMenuItemHook       = "admin:register_menu_item"
 	RegisterFooterMenuItemHook = "admin:register_footer_menu_item"
-	RegisterGlobalMedia        = "admin:register_global_media"
-	RegisterNavBreadCrumb      = "admin:register_breadcrumb"
-	RegisterNavAction          = "admin:register_nav_action"
+	RegisterGlobalMediaHook    = "admin:register_global_media"
+	RegisterNavBreadCrumbHook  = "admin:register_breadcrumb"
+	RegisterNavActionHook      = "admin:register_nav_action"
 
 	AdminModelHookAdd    = "admin:model:add"
 	AdminModelHookEdit   = "admin:model:edit"
@@ -25,12 +25,28 @@ const (
 type (
 	RegisterMenuItemHookFunc       func(adminSite *AdminApplication, items components.Items[menu.MenuItem])
 	RegisterFooterMenuItemHookFunc func(r *http.Request, adminSite *AdminApplication, items components.Items[menu.MenuItem])
-	RegisterScriptHookFunc         func(adminSite *AdminApplication) media.Media
+	RegisterMediaHookFunc          func(adminSite *AdminApplication) media.Media
 	RegisterBreadCrumbHookFunc     func(r *http.Request, adminSite *AdminApplication) []BreadCrumb
 	RegisterNavActionHookFunc      func(r *http.Request, adminSite *AdminApplication) []Action
 	AdminModelHookFunc             func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
 )
 
-func RegisterMedia(fn RegisterScriptHookFunc) {
-	goldcrest.Register(RegisterGlobalMedia, 0, fn)
+func RegisterGlobalMenuItem(fn RegisterMenuItemHookFunc) {
+	goldcrest.Register(RegisterMenuItemHook, 0, fn)
+}
+
+func RegisterGlobalFooterMenuItem(fn RegisterFooterMenuItemHookFunc) {
+	goldcrest.Register(RegisterFooterMenuItemHook, 0, fn)
+}
+
+func RegisterGlobalMedia(fn RegisterMediaHookFunc) {
+	goldcrest.Register(RegisterGlobalMediaHook, 0, fn)
+}
+
+func RegisterGlobalNavBreadCrumb(fn RegisterBreadCrumbHookFunc) {
+	goldcrest.Register(RegisterNavBreadCrumbHook, 0, fn)
+}
+
+func RegisterGlobalNavAction(fn RegisterNavActionHookFunc) {
+	goldcrest.Register(RegisterNavActionHook, 0, fn)
 }

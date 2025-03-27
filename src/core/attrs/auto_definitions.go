@@ -177,8 +177,8 @@ func AutoDefinitions[T Definer](instance T, include ...any) Definitions {
 		for _, name := range include {
 			switch name := name.(type) {
 			case string:
-				var field_t, ok = instance_t.FieldByName(name)
 
+				var field_t, ok = instance_t.FieldByName(name)
 				assert.True(ok, "field %q not found in %T", name, instance)
 
 				var (

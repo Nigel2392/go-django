@@ -48,13 +48,20 @@ func (p *PageOptions) Subtitle() string {
 	return p.SubtitleFn()
 }
 
+func (p *PageOptions) Media() media.Media {
+	if p.MediaFn == nil {
+		return media.NewMedia()
+	}
+	return p.MediaFn()
+}
+
 func (p *PageOptions) GetBreadCrumbs() []BreadCrumb {
 	var breadCrumbs = p.BreadCrumbs
 	if breadCrumbs == nil {
 		breadCrumbs = make([]BreadCrumb, 0)
 	}
 
-	var hooks = goldcrest.Get[RegisterBreadCrumbHookFunc](RegisterNavBreadCrumb)
+	var hooks = goldcrest.Get[RegisterBreadCrumbHookFunc](RegisterNavBreadCrumbHook)
 	for _, hook := range hooks {
 		var crumbs = hook(p.Request, AdminSite)
 		breadCrumbs = append(breadCrumbs, crumbs...)
@@ -69,7 +76,7 @@ func (p *PageOptions) GetActions() []Action {
 		actions = make([]Action, 0)
 	}
 
-	var hooks = goldcrest.Get[RegisterNavActionHookFunc](RegisterNavAction)
+	var hooks = goldcrest.Get[RegisterNavActionHookFunc](RegisterNavActionHook)
 	for _, hook := range hooks {
 		var acts = hook(p.Request, AdminSite)
 		actions = append(actions, acts...)

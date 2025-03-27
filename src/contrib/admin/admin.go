@@ -297,7 +297,7 @@ func NewAppConfig() django.AppConfig {
 				return template.HTML(buf.String())
 			},
 			"script_hook_output": func() media.Media {
-				var hooks = goldcrest.Get[RegisterScriptHookFunc](RegisterGlobalMedia)
+				var hooks = goldcrest.Get[RegisterMediaHookFunc](RegisterGlobalMediaHook)
 				var m media.Media = media.NewMedia()
 				for _, hook := range hooks {
 					var hook_m = hook(AdminSite)
