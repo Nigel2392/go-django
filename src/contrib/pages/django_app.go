@@ -25,7 +25,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	dj_models "github.com/Nigel2392/go-django/src/models"
-	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 )
 
@@ -259,7 +258,7 @@ func NewAppConfig() *PageAppConfig {
 			},
 		})
 
-		var hookFn = func(site *admin.AdminApplication, items components.Items[menu.MenuItem]) {
+		admin.RegisterGlobalMenuItem(admin.RegisterMenuItemHookFunc(func(site *admin.AdminApplication, items components.Items[menu.MenuItem]) {
 			items.Append(&PagesMenuItem{
 				BaseItem: menu.BaseItem{
 					Label:    trans.S("Pages"),
@@ -267,9 +266,14 @@ func NewAppConfig() *PageAppConfig {
 					Ordering: -1000,
 				},
 			})
-		}
+		}))
 
-		goldcrest.Register(admin.RegisterMenuItemHook, 0, hookFn)
+		admin.RegisterHomePageComponent(admin.RegisterHomePageComponentHookFunc(func(r *http.Request, a *admin.AdminApplication) admin.HomePageComponent {
+			return &PagesAdminHomeComponent{
+				AdminApplication: a,
+				Request:          r,
+			}
+		}))
 
 		admin.RegisterApp(
 			AdminPagesAppName,

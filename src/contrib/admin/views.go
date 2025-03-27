@@ -265,7 +265,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			if opts.GetForm != nil {
 				form = opts.GetForm(req, instance, opts.ViewOptions.Fields)
 			} else {
-				form = GetAdminForm(instance, opts, app, model, r)
+				form = GetAdminForm(instance, opts, app, model, req)
 				form.SetFields(attrs.FieldNames(instance, opts.Exclude)...)
 			}
 

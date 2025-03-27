@@ -33,4 +33,13 @@
 
 {{ define "content" }}
 
+        <div class="home-spacing"></div>
+
+        <div class="home-components">
+            {{ $components := (.Get "Components") }}
+            {{ range $component := $components }}
+                {{ $component.HTML }}
+            {{ end }}
+        </div>
+
 {{ end }}

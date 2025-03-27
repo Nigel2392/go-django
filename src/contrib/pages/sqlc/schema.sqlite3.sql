@@ -36,6 +36,16 @@ CREATE TABLE IF NOT EXISTS PageNode (
 CREATE INDEX IF NOT EXISTS PageNode_path ON PageNode(path);
 CREATE INDEX IF NOT EXISTS PageNode_page_id ON PageNode(page_id);
 CREATE INDEX IF NOT EXISTS PageNode_type_name ON PageNode(content_type);
+CREATE UNIQUE INDEX IF NOT EXISTS PageNode_path_depth ON PageNode(slug, depth);
+
+-- What a workaround to auto- update the updated_at field...
+CREATE TRIGGER IF NOT EXISTS PageNode_updated_at
+    AFTER UPDATE ON PageNode FOR EACH ROW
+    WHEN OLD.id = NEW.id OR OLD.id IS NULL
+BEGIN
+    UPDATE PageNode SET updated_at=CURRENT_TIMESTAMP WHERE id=NEW.id;
+END;
+
 --  
 --  CREATE TRIGGER IF NOT EXISTS PageNode_decrement_numchild
 --  AFTER DELETE ON PageNode

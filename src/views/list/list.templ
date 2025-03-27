@@ -8,6 +8,7 @@ import (
 
 type List[T attrs.Definer] struct {
 	Columns []ListColumn[T]
+	HideHeadings bool
 	groups  []ColumnGroup[T]
 }
 
@@ -40,15 +41,17 @@ func (l *List[T]) Render() string {
 
 templ (l *List[T]) Component() {
 	<table class="list">
-		<thead>
-			<tr class="list-header">
-				for _, column := range l.Columns {
-					<th class="list-column-header">
-						@column.Header()
-					</th>
-				}
-			</tr>
-		</thead>
+		if !l.HideHeadings {
+			<thead>
+				<tr class="list-header">
+					for _, column := range l.Columns {
+						<th class="list-column-header">
+							@column.Header()
+						</th>
+					}
+				</tr>
+			</thead>
+		}
 		<tbody>
 			for _, group := range l.groups {
 				@group.Component()

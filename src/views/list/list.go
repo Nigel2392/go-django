@@ -61,13 +61,6 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	}
 
 	var cols = v.Columns()
-	var fields = make([]string, 0, len(cols))
-	for _, col := range cols {
-		if namer, ok := col.(attrs.Namer); ok {
-			fields = append(fields, namer.Name())
-		}
-	}
-
 	if v.TitleFieldColumn != nil && len(cols) > 0 {
 		cols[0] = v.TitleFieldColumn(cols[0])
 	}

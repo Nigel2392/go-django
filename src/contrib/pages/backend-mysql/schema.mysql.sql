@@ -29,7 +29,7 @@ CREATE TABLE IF NOT EXISTS PageNode (
     latest_revision_id BIGINT,
 
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Read-only
-    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- Read-only
+    updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP -- Read-only
 );
 
 ALTER TABLE PageNode ADD INDEX (path);

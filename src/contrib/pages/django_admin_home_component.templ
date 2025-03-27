@@ -1,0 +1,86 @@
+package pages
+
+import "github.com/Nigel2392/go-django/src/contrib/admin"
+import "html/template"
+import "bytes"
+import "net/http"
+import "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
+import "github.com/Nigel2392/go-django/src/views/list"
+import "github.com/Nigel2392/go-django/src/core/attrs"
+import "github.com/Nigel2392/go-django/src"
+import "github.com/Nigel2392/go-django/src/core/trans"
+
+var (
+    _ADMIN_HOMEPAGE_PAGE_COUNT int32 = 5
+)
+
+type PagesAdminHomeComponent struct {
+    AdminApplication *admin.AdminApplication
+    Request *http.Request
+}
+
+templ (p *PagesAdminHomeComponent) html(upper *list.List[attrs.Definer]) {
+    <div class="pages-admin-homepage-component">
+        <div class="pages-admin-homepage-component-title">
+            <h2>{ trans.T("Pages") }</h2>
+        </div>
+        @upper.Component()
+    </div>
+}
+
+func (p *PagesAdminHomeComponent) HTML() template.HTML {
+    var qs = pageApp.QuerySet()
+    var pages, err = qs.AllNodes(
+        p.Request.Context(),
+        page_models.StatusFlagNone,
+        0, _ADMIN_HOMEPAGE_PAGE_COUNT,
+    )
+    if err != nil {
+        return template.HTML("")
+    }
+
+	var app, ok = admin.AdminSite.Apps.Get(AdminPagesAppName)
+	if !ok {
+		return template.HTML("")
+	}
+
+	model, ok := app.Models.Get(AdminPagesModelPath)
+	if !ok {
+		return template.HTML("")
+	}
+
+	var columns = make([]list.ListColumn[attrs.Definer], len(model.ListView.Fields)+1)
+	for i, field := range model.ListView.Fields {
+		columns[i+1] = model.GetColumn(model.ListView, field)
+	}
+
+	columns[0] = columns[1]
+	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
+		Actions: getListActions(p.Request, django.Reverse("admin")),
+	}
+
+	var pagesList = make([]attrs.Definer, len(pages))
+	for i, page := range pages {
+		pagesList[i] = &page
+	}
+
+    var listComponent = list.NewList(
+        pagesList,
+		columns...,
+    )
+    listComponent.HideHeadings = true
+
+	var b bytes.Buffer
+	err = p.html(listComponent).Render(
+		p.Request.Context(), &b,
+	)
+	if err != nil {
+		return template.HTML("")
+	}
+
+	return template.HTML(b.String())
+}
+
+func (p *PagesAdminHomeComponent) Ordering() int {
+    return 5
+}

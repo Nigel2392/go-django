@@ -5,6 +5,7 @@ import (
     "github.com/Nigel2392/go-django/src/core/assert"
     "github.com/Nigel2392/go-django/src/forms/fields"
 	"html/template"
+	"time"
 )
 
 type funcColumn[T attrs.Definer] struct {
@@ -54,7 +55,12 @@ func (c *fieldColumn[T]) data(defs attrs.Definitions, _ T) interface{} {
 		return field.GetDefault()
 	}
 
-	return d
+	switch f := d.(type) {
+		case time.Time:
+			return f.Format("2006-01-02 15:04:05")
+		default:
+			return d
+	}
 }
 
 templ (c *fieldColumn[T]) Component(defs attrs.Definitions, row T) {
