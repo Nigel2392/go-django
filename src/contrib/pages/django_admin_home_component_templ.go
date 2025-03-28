@@ -82,8 +82,10 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 	var pages, err = qs.AllNodes(
 		p.Request.Context(),
 		page_models.StatusFlagNone,
-		"-updated_at",
 		0, _ADMIN_HOMEPAGE_PAGE_COUNT,
+		"-updated_at",
+		"-numchild",
+		"path",
 	)
 	if err != nil {
 		return template.HTML("")

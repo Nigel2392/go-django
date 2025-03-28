@@ -3,8 +3,10 @@ package models_mysql
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 
+	"github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 )
 
@@ -97,4 +99,81 @@ func (q *Queries) DecrementNumChild(ctx context.Context, id int64) (models.PageN
 		return n, err
 	}
 	return q.GetNodeByID(ctx, id)
+}
+
+const allNodes = `-- name: AllNodes :many
+SELECT id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
+FROM     PageNode
+WHERE    status_flags & ? = ?
+ORDER BY %s
+LIMIT    ?
+OFFSET   ?
+`
+
+func (q *Queries) AllNodes(ctx context.Context, statusFlags page_models.StatusFlag, offset int32, limit int32, orderings ...string) ([]page_models.PageNode, error) {
+	var b strings.Builder
+	for i, ordering := range orderings {
+		var ord = "ASC"
+		if strings.HasPrefix(ordering, "-") {
+			ord = "DESC"
+			ordering = strings.TrimPrefix(ordering, "-")
+		}
+
+		if ordering == "" {
+			return nil, fmt.Errorf("ordering field cannot be empty if provided")
+		}
+
+		if !page_models.IsValidField(ordering) {
+			return nil, fmt.Errorf("invalid ordering field %s, must be one of %v", ordering, page_models.ValidFields)
+		}
+
+		b.WriteString(ordering)
+		b.WriteString(" ")
+		b.WriteString(ord)
+
+		if i < len(orderings)-1 {
+			b.WriteString(", ")
+		}
+	}
+
+	var getAllNodes = fmt.Sprintf(allNodes, b.String())
+	rows, err := q.query(ctx, nil, getAllNodes,
+		statusFlags,
+		statusFlags,
+		limit,
+		offset,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []page_models.PageNode
+	for rows.Next() {
+		var i page_models.PageNode
+		if err := rows.Scan(
+			&i.PK,
+			&i.Title,
+			&i.Path,
+			&i.Depth,
+			&i.Numchild,
+			&i.UrlPath,
+			&i.Slug,
+			&i.StatusFlags,
+			&i.PageID,
+			&i.ContentType,
+			&i.LatestRevisionID,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Close(); err != nil {
+		return nil, err
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }

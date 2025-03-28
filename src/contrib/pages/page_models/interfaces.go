@@ -21,7 +21,7 @@ type DBQuerier interface {
 type Querier interface {
 	Close() error
 	WithTx(tx *sql.Tx) Querier
-	AllNodes(ctx context.Context, statusFlags StatusFlag, ordering string, offset int32, limit int32) ([]PageNode, error)
+	AllNodes(ctx context.Context, statusFlags StatusFlag, offset int32, limit int32, orderings ...string) ([]PageNode, error)
 	CountNodes(ctx context.Context, statusFlags StatusFlag) (int64, error)
 	CountNodesByTypeHash(ctx context.Context, contentType string) (int64, error)
 	CountRootNodes(ctx context.Context, statusFlags StatusFlag) (int64, error)

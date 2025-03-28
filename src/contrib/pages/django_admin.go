@@ -197,7 +197,7 @@ func FixTree(querySet models.DBQuerier, ctx context.Context) error {
 		return errors.Wrap(err, "failed to count nodes")
 	}
 
-	allNodes, err := qs.AllNodes(ctx, models.StatusFlagNone, "path", 0, int32(allNodesCount))
+	allNodes, err := qs.AllNodes(ctx, models.StatusFlagNone, 0, int32(allNodesCount))
 	if err != nil {
 		return errors.Wrap(err, "failed to get all nodes")
 	}
