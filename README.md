@@ -79,6 +79,7 @@ go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.6.9.7
 ### Examples
 
 - [Todo App](./docs/examples/todos.md)
+- [Blog App](./docs/examples/blog.md)
 
 ## Help Needed
 
