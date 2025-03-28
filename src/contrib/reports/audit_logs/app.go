@@ -1,6 +1,7 @@
 package auditlogs
 
 import (
+	"database/sql"
 	"io/fs"
 	"net/http"
 	"strconv"
@@ -32,6 +33,7 @@ import (
 	"github.com/pkg/errors"
 
 	"embed"
+	_ "unsafe"
 )
 
 type AuditLogs struct {
@@ -45,34 +47,49 @@ var Logs *AuditLogs = &AuditLogs{
 //go:embed assets/*
 var templateFileSys embed.FS
 
+//go:linkname _NewSQLiteStorageBackend github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/audit_logs_sqlite.NewSQLiteStorageBackend
+func _NewSQLiteStorageBackend(db *sql.DB) StorageBackend
+
+//go:linkname _NewMySQLStorageBackend github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/audit_logs_mysql.NewMySQLStorageBackend
+func _NewMySQLStorageBackend(db *sql.DB) StorageBackend
+
 func NewAppConfig() django.AppConfig {
 	Logs.Deps = []string{
 		"reports",
 	}
 	Logs.Init = func(settings django.Settings) error {
 
+		// if registry.backend == nil {
+		// var db = django.ConfigGet[*sql.DB](
+		// django.Global.Settings,
+		// django.APPVAR_DATABASE,
+		// )
+		//
+		// if db == nil {
+		// goto setupBackend
+		// }
+		//
+		// fmt.Print("No database backend was setup")
+		// switch db.Driver().(type) {
+		// case mysql.MySQLDriver:
+		// fmt.Println(" defaulting to MySQL")
+		// registry.backend = _NewMySQLStorageBackend(db)
+		// case *sqlite3.SQLiteDriver:
+		// fmt.Println(" defaulting to SQLite")
+		// registry.backend = _NewSQLiteStorageBackend(db)
+		// default:
+		// fmt.Println(" defaulting to in-memory storage, no other suitable backend found")
+		// registry.backend = NewInMemoryStorageBackend()
+		// }
+		// }
+		//
+		// setupBackend:
 		if registry.backend != nil {
 			var err = registry.backend.Setup()
 			if err != nil {
 				return err
 			}
 		}
-
-		//goldcrest.Register(
-		//	admin.RegisterMenuItemHook, 0,
-		//	admin.RegisterMenuItemHookFunc(func(adminSite *admin.AdminApplication, items components.Items[menu.MenuItem]) {
-		//		var auditLogItem = &menu.Item{
-		//			BaseItem: menu.BaseItem{
-		//				Label: trans.S("Audit Logs"),
-		//			},
-		//			Link: func() string {
-		//				return django.Reverse("admin:auditlogs")
-		//			},
-		//		}
-		//
-		//		items.Append(auditLogItem)
-		//	}),
-		//)
 
 		goldcrest.Register(
 			reports.ReportsMenuHook, 0,

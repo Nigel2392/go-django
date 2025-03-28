@@ -27,11 +27,11 @@ func getEnv(key, def string) string {
 func init() {
 
 	var (
-		dbEngine = getEnv("DB_ENGINE", "sqlite3")
-		dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
+		// dbEngine = getEnv("DB_ENGINE", "sqlite3")
+		// dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
 		// dbURL = getEnv("DB_URL", "test.sqlite3.db")
-		// dbEngine = getEnv("DB_ENGINE", "mysql")
-		// dbURL    = getEnv("DB_URL", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
+		dbEngine = getEnv("DB_ENGINE", "mysql")
+		dbURL    = getEnv("DB_URL", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
 	)
 
 	var err error
@@ -44,6 +44,8 @@ func init() {
 	if err := sqlDB.Ping(); err != nil {
 		panic(err)
 	}
+
+	sqlDB.Exec("DROP TABLE IF EXISTS test_pages")
 
 	if _, err := sqlDB.Exec(testPageCREATE_TABLE); err != nil {
 		panic(err)
@@ -107,12 +109,16 @@ func (t *DBTestPage) Save(ctx context.Context) error {
 }
 
 const (
-	testPageINSERT       = `INSERT INTO test_pages (title) VALUES (?)`
-	testPageUPDATE       = `UPDATE test_pages SET title = ? WHERE id = ?`
-	testPageByID         = `SELECT id, title FROM test_pages WHERE id = ?`
+	testPageINSERT = `INSERT INTO test_pages (title) VALUES (?)`
+	testPageUPDATE = `UPDATE test_pages SET title = ? WHERE id = ?`
+	testPageByID   = `SELECT id, title FROM test_pages WHERE id = ?`
+	// testPageCREATE_TABLE = `CREATE TABLE IF NOT EXISTS test_pages (
+	// id INTEGER PRIMARY KEY AUTOINCREMENT,
+	// title TEXT
+	// )`
 	testPageCREATE_TABLE = `CREATE TABLE IF NOT EXISTS test_pages (
-		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		title TEXT
+	id INTEGER PRIMARY KEY AUTO_INCREMENT,
+	title TEXT
 	)`
 )
 
@@ -373,7 +379,7 @@ func TestPageNode(t *testing.T) {
 			}
 
 			if rootNode.Numchild != 1 {
-				t.Errorf("expected Numchild 1, got %d", rootNode.Numchild)
+				t.Errorf("expected Numchild 1 for rootNode, got %d", rootNode.Numchild)
 			}
 
 			t.Run("GetChildren", func(t *testing.T) {
@@ -384,7 +390,7 @@ func TestPageNode(t *testing.T) {
 				}
 
 				if len(children) != 1 {
-					t.Errorf("expected 1 child, got %d", len(children))
+					t.Errorf("expected 1 child for GetChildren, got %d", len(children))
 					return
 				}
 
@@ -437,7 +443,7 @@ func TestPageNode(t *testing.T) {
 					}
 
 					if len(ancestors) != 2 {
-						t.Errorf("expected 2 ancestors, got %d", len(ancestors))
+						t.Errorf("expected 2 ancestors for GetAncestors, got %d", len(ancestors))
 						return
 					}
 

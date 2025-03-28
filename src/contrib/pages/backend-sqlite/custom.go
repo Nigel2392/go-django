@@ -18,8 +18,7 @@ SET    title = ?,
 	   status_flags = ?,
 	   page_id = ?,
 	   content_type = ?,
-	   latest_revision_id = ?,
-	   updated_at = CURRENT_TIMESTAMP
+	   latest_revision_id = ?
 WHERE  id = ?
 `
 

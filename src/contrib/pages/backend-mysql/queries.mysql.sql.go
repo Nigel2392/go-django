@@ -97,7 +97,7 @@ LIMIT    ?
 OFFSET   ?
 `
 
-func (q *Queries) GetChildNodes(ctx context.Context, path string, depth int64, statusFlags page_models.StatusFlag, limit int32, offset int32) ([]page_models.PageNode, error) {
+func (q *Queries) GetChildNodes(ctx context.Context, path string, depth int64, statusFlags page_models.StatusFlag, offset int32, limit int32) ([]page_models.PageNode, error) {
 	rows, err := q.query(ctx, q.getChildNodesStmt, getChildNodes,
 		path,
 		depth,
@@ -151,7 +151,7 @@ LIMIT    ?
 OFFSET   ?
 `
 
-func (q *Queries) GetDescendants(ctx context.Context, path string, depth int64, statusFlags page_models.StatusFlag, limit int32, offset int32) ([]page_models.PageNode, error) {
+func (q *Queries) GetDescendants(ctx context.Context, path string, depth int64, statusFlags page_models.StatusFlag, offset int32, limit int32) ([]page_models.PageNode, error) {
 	rows, err := q.query(ctx, q.getDescendantsStmt, getDescendants,
 		path,
 		depth,
@@ -287,7 +287,7 @@ LIMIT    ?
 OFFSET   ?
 `
 
-func (q *Queries) GetNodesByDepth(ctx context.Context, depth int64, statusFlags page_models.StatusFlag, limit int32, offset int32) ([]page_models.PageNode, error) {
+func (q *Queries) GetNodesByDepth(ctx context.Context, depth int64, statusFlags page_models.StatusFlag, offset int32, limit int32) ([]page_models.PageNode, error) {
 	rows, err := q.query(ctx, q.getNodesByDepthStmt, getNodesByDepth,
 		depth,
 		statusFlags,
@@ -444,7 +444,7 @@ LIMIT    ?
 OFFSET   ?
 `
 
-func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string, limit int32, offset int32) ([]page_models.PageNode, error) {
+func (q *Queries) GetNodesByTypeHash(ctx context.Context, contentType string, offset int32, limit int32) ([]page_models.PageNode, error) {
 	rows, err := q.query(ctx, q.getNodesByTypeHashStmt, getNodesByTypeHash, contentType, limit, offset)
 	if err != nil {
 		return nil, err
@@ -489,7 +489,7 @@ LIMIT    ?
 OFFSET   ?
 `
 
-func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string, limit int32, offset int32) ([]page_models.PageNode, error) {
+func (q *Queries) GetNodesByTypeHashes(ctx context.Context, contentType []string, offset int32, limit int32) ([]page_models.PageNode, error) {
 	query := getNodesByTypeHashes
 	var queryParams []interface{}
 	if len(contentType) > 0 {
