@@ -123,7 +123,7 @@ Below is a detailed description of each method defined on the **Querier** interf
 
 ### Node Retrieval Methods
 
-- **AllNodes(ctx context.Context, statusFlags StatusFlag, offset int32, limit int32) ([]PageNode, error)**  
+- **AllNodes(ctx context.Context, statusFlags StatusFlag, offset int32, limit int32, ordering ...string) ([]PageNode, error)**  
   Retrieves all page nodes filtered by the given status flags, with support for pagination.
 
 - **GetNodeByID(ctx context.Context, id int64) (PageNode, error)**  
