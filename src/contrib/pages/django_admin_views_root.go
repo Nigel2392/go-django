@@ -332,9 +332,10 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			addData,
 		)
 
-		return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
-			return FixTree(pageApp.QuerySet(), ctx)
-		})
+		return nil
+		//return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
+		//	return FixTree(pageApp.QuerySet(), ctx)
+		//})
 	}
 
 	var view = &views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]]{

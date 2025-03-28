@@ -385,9 +385,10 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			})
 		}
 
-		return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
-			return FixTree(pageApp.QuerySet(), ctx)
-		})
+		return nil
+		//return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
+		//	return FixTree(pageApp.QuerySet(), ctx)
+		//})
 	}
 
 	var view = &views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]]{
@@ -539,9 +540,10 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			"label":   page.Reference().Title,
 		})
 
-		return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
-			return FixTree(pageApp.QuerySet(), ctx)
-		})
+		return nil
+		//return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
+		//	return FixTree(pageApp.QuerySet(), ctx)
+		//})
 	}
 
 	var view = &views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]]{

@@ -244,7 +244,7 @@ func NewAppConfig() *PageAppConfig {
 				},
 				GetInstances: func(amount, offset uint) ([]interface{}, error) {
 					var ctx = context.Background()
-					var nodes, err = pageApp.QuerySet().AllNodes(ctx, models.StatusFlagNone, int32(amount), int32(offset))
+					var nodes, err = pageApp.QuerySet().AllNodes(ctx, models.StatusFlagNone, "path", int32(offset), int32(amount))
 					var items = make([]interface{}, 0)
 					for _, n := range nodes {
 						n := n

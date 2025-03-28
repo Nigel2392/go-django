@@ -174,9 +174,9 @@ func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 		return err
 	}
 
-	django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
-		return FixTree(pageApp.QuerySet(), ctx)
-	})
+	//django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
+	//	return FixTree(pageApp.QuerySet(), ctx)
+	//})
 
 	return nil
 }
@@ -197,7 +197,7 @@ func FixTree(querySet models.DBQuerier, ctx context.Context) error {
 		return errors.Wrap(err, "failed to count nodes")
 	}
 
-	allNodes, err := qs.AllNodes(ctx, models.StatusFlagNone, int32(allNodesCount), 0)
+	allNodes, err := qs.AllNodes(ctx, models.StatusFlagNone, "path", 0, int32(allNodesCount))
 	if err != nil {
 		return errors.Wrap(err, "failed to get all nodes")
 	}

@@ -2,6 +2,7 @@ package models_mysql
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/contrib/pages/page_models"
@@ -11,15 +12,27 @@ const allNodes = `-- name: AllNodes :many
 SELECT id, title, path, depth, numchild, url_path, slug, status_flags, page_id, content_type, latest_revision_id, created_at, updated_at
 FROM     PageNode
 WHERE    status_flags & ? = ?
-ORDER BY path ASC
+ORDER BY ? %s
 LIMIT    ?
 OFFSET   ?
 `
 
-func (q *Queries) AllNodes(ctx context.Context, statusFlags page_models.StatusFlag, limit int32, offset int32) ([]page_models.PageNode, error) {
-	rows, err := q.query(ctx, q.allNodesStmt, allNodes,
+func (q *Queries) AllNodes(ctx context.Context, statusFlags page_models.StatusFlag, ordering string, offset int32, limit int32) ([]page_models.PageNode, error) {
+	var ord = "ASC"
+	if strings.HasPrefix(ordering, "-") {
+		ord = "DESC"
+		ordering = strings.TrimPrefix(ordering, "-")
+	}
+
+	if ordering == "" {
+		ordering = "path"
+	}
+
+	var getAllNodes = fmt.Sprintf(allNodes, ord)
+	rows, err := q.query(ctx, nil, getAllNodes,
 		statusFlags,
 		statusFlags,
+		ordering,
 		limit,
 		offset,
 	)

@@ -33,6 +33,7 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
     var pages, err = qs.AllNodes(
         p.Request.Context(),
         page_models.StatusFlagNone,
+		"-updated_at",
         0, _ADMIN_HOMEPAGE_PAGE_COUNT,
     )
     if err != nil {
@@ -68,7 +69,6 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
         pagesList,
 		columns...,
     )
-    listComponent.HideHeadings = true
 
 	var b bytes.Buffer
 	err = p.html(listComponent).Render(

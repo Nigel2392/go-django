@@ -26,9 +26,6 @@ func New(db DBTX) *Queries {
 func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	q := Queries{db: db}
 	var err error
-	if q.allNodesStmt, err = db.PrepareContext(ctx, allNodes); err != nil {
-		return nil, fmt.Errorf("error preparing query AllNodes: %w", err)
-	}
 	if q.countNodesStmt, err = db.PrepareContext(ctx, countNodes); err != nil {
 		return nil, fmt.Errorf("error preparing query CountNodes: %w", err)
 	}
@@ -103,11 +100,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 
 func (q *Queries) Close() error {
 	var err error
-	if q.allNodesStmt != nil {
-		if cerr := q.allNodesStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing allNodesStmt: %w", cerr)
-		}
-	}
 	if q.countNodesStmt != nil {
 		if cerr := q.countNodesStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing countNodesStmt: %w", cerr)
@@ -262,7 +254,6 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 type Queries struct {
 	db                         DBTX
 	tx                         *sql.Tx
-	allNodesStmt               *sql.Stmt
 	countNodesStmt             *sql.Stmt
 	countNodesByTypeHashStmt   *sql.Stmt
 	countRootNodesStmt         *sql.Stmt
@@ -292,7 +283,6 @@ func (q *Queries) WithTx(tx *sql.Tx) models.Querier {
 	return &Queries{
 		db:                         tx,
 		tx:                         tx,
-		allNodesStmt:               q.allNodesStmt,
 		countNodesStmt:             q.countNodesStmt,
 		countNodesByTypeHashStmt:   q.countNodesByTypeHashStmt,
 		countRootNodesStmt:         q.countRootNodesStmt,

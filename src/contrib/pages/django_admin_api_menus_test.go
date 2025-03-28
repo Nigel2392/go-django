@@ -192,7 +192,7 @@ func TestPageMenuHandler(t *testing.T) {
 		}
 	}
 
-	allNodes, err := menuQS.AllNodes(ctx, models.StatusFlagNone, 0, 1000)
+	allNodes, err := menuQS.AllNodes(ctx, models.StatusFlagNone, "path", 0, 1000)
 	if err != nil {
 		panic(err)
 	}
