@@ -19,7 +19,7 @@
             </div>
             <div class="top-nav-item">
                 <span class="top-nav-item--releases">
-                    <a href="{{ .Get "ProjectURL" }}/releases" class="top-nav-item--releases--link">
+                    <a href="{{ .Get "ProjectURL" }}/tags" class="top-nav-item--releases--link">
                         View our releases
                     </a>
                 </span>

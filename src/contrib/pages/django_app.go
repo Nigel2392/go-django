@@ -303,8 +303,8 @@ func NewAppConfig() *PageAppConfig {
 
 	pageApp.AppConfig.Ready = func() error {
 
-		if !routePrefixSet && pageApp.routePrefix != "" {
-			django.Global.Log.Fatal(1, "Route prefix was set after calling django.App.Initialize().")
+		if !routePrefixSet {
+			django.Global.Log.Fatal(1, "Route prefix was not set before calling django.App.Initialize().")
 		}
 
 		var pagesRoute = admin.AdminSite.Route.Get(

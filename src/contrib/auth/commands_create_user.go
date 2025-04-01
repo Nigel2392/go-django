@@ -6,7 +6,6 @@ import (
 	"net/mail"
 
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
-	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	django_models "github.com/Nigel2392/go-django/src/models"
@@ -35,12 +34,18 @@ var command_create_user = &command.Cmd[createUserStorage]{
 		)
 
 		for !isValid {
-			if email, err = m.Input("Enter email: "); err != nil {
-				continue
+			if email != "" {
+				if email, err = m.Input("Enter email: "); err != nil {
+					continue
+				}
 			}
-			if username, err = m.Input("Enter username: "); err != nil {
-				continue
+
+			if username != "" {
+				if username, err = m.Input("Enter username: "); err != nil {
+					continue
+				}
 			}
+
 			if password, err = m.ProtectedInput("Enter password: "); err != nil {
 				continue
 			}
@@ -49,7 +54,10 @@ var command_create_user = &command.Cmd[createUserStorage]{
 			}
 
 			var e, err = mail.ParseAddress(email)
-			assert.Err(err)
+			if err != nil {
+				logger.Warn("invalid email address")
+				email = ""
+			}
 
 			u.Email = (*django_models.Email)(e)
 			u.Username = username

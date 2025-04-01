@@ -22,11 +22,11 @@ func main() {
 
 	var app = django.App(
 		django.Configure(map[string]interface{}{
-			"ALLOWED_HOSTS": []string{"*"},
-			"DEBUG":         false,
-			"HOST":          "0.0.0.0",
-			"PORT":          "8080",
-			"DATABASE": func() *sql.DB {
+			django.APPVAR_ALLOWED_HOSTS: []string{"*"},
+			django.APPVAR_DEBUG:         false,
+			django.APPVAR_HOST:          "0.0.0.0",
+			django.APPVAR_PORT:          "8080",
+			django.APPVAR_DATABASE: func() *sql.DB {
 				var db, err = sql.Open("sqlite3", "./db.sqlite3")
 				if err != nil {
 					panic(err)
@@ -51,6 +51,8 @@ func main() {
 			$( packageString .ProjectName ).NewAppConfig,
 		),
 	)
+
+	pages.SetRoutePrefix("/pages")
 
 	var err = app.Initialize()
 	if err != nil {

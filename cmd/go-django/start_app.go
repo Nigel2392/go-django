@@ -28,8 +28,9 @@ var startAppCommand = &cli.Command{
 		}
 
 		var projectPath string
-		if c.String("dir") != "" {
-			projectPath = c.String("dir")
+		var directory string = c.String("dir")
+		if directory != "" {
+			projectPath = directory
 			os.MkdirAll(projectPath, 0755)
 		} else {
 
