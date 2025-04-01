@@ -281,10 +281,12 @@ func NewAppConfig() *PageAppConfig {
 			pageAdminModelOptions,
 		)
 
-		auditlogs.RegisterDefinition("pages:edit", newPageLogDefinition())
-		auditlogs.RegisterDefinition("pages:unpublish", newPageLogDefinition())
 		auditlogs.RegisterDefinition("pages:add", newPageLogDefinition())
-
+		auditlogs.RegisterDefinition("pages:add_child", newPageLogDefinition())
+		auditlogs.RegisterDefinition("pages:edit", newPageLogDefinition())
+		auditlogs.RegisterDefinition("pages:publish", newPageLogDefinition())
+		auditlogs.RegisterDefinition("pages:unpublish", newPageLogDefinition())
+		auditlogs.RegisterDefinition("pages:delete", auditlogs.SimpleDefinition())
 		return nil
 	}
 

@@ -2,8 +2,18 @@
 
 {{ define "title" }}{{ T "Unpublish" }}{{ end }}
 
-{{ define "content" }}
-    <form method="post" action="{{ (.Get "PostURL") }}" class="admin-form" enctype="multipart/form-data">
+{{ define "content_root" }}
+    <form method="post" action="{{ (.Get "PostURL") }}" class="admin-form pages-unpublish-form" enctype="multipart/form-data">
+        
+        {{ $Page := (.Get "Page") }}
+        {{ if $Page }}
+            {{ $Title := $Page.Title }}
+            {{ $Subtitle := $Page.Subtitle }}
+            {{ if (or $Title $Subtitle) }}
+                {{ component "admin.header" 1 $Title $Subtitle }}
+            {{ end }}
+        {{ end }}
+        
         <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
         <div class="buttons">
             <button class="button secondary" type="submit" value="Submit">

@@ -27,11 +27,11 @@ func getEnv(key, def string) string {
 func init() {
 
 	var (
-		// dbEngine = getEnv("DB_ENGINE", "sqlite3")
-		// dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
+		dbEngine = getEnv("DB_ENGINE", "sqlite3")
+		dbURL    = getEnv("DB_URL", "file::memory:?cache=shared")
 		// dbURL = getEnv("DB_URL", "test.sqlite3.db")
-		dbEngine = getEnv("DB_ENGINE", "mysql")
-		dbURL    = getEnv("DB_URL", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
+		// dbEngine = getEnv("DB_ENGINE", "mysql")
+		// dbURL    = getEnv("DB_URL", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
 	)
 
 	var err error
@@ -109,17 +109,17 @@ func (t *DBTestPage) Save(ctx context.Context) error {
 }
 
 const (
-	testPageINSERT = `INSERT INTO test_pages (title) VALUES (?)`
-	testPageUPDATE = `UPDATE test_pages SET title = ? WHERE id = ?`
-	testPageByID   = `SELECT id, title FROM test_pages WHERE id = ?`
-	// testPageCREATE_TABLE = `CREATE TABLE IF NOT EXISTS test_pages (
-	// id INTEGER PRIMARY KEY AUTOINCREMENT,
-	// title TEXT
-	// )`
+	testPageINSERT       = `INSERT INTO test_pages (title) VALUES (?)`
+	testPageUPDATE       = `UPDATE test_pages SET title = ? WHERE id = ?`
+	testPageByID         = `SELECT id, title FROM test_pages WHERE id = ?`
 	testPageCREATE_TABLE = `CREATE TABLE IF NOT EXISTS test_pages (
-	id INTEGER PRIMARY KEY AUTO_INCREMENT,
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	title TEXT
 	)`
+	// testPageCREATE_TABLE = `CREATE TABLE IF NOT EXISTS test_pages (
+	// id INTEGER PRIMARY KEY AUTO_INCREMENT,
+	// title TEXT
+	// )`
 )
 
 func TestContentType(t *testing.T) {

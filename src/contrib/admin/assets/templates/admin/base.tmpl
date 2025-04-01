@@ -71,18 +71,20 @@
             </div>
 
             <div id="content">
-                {{ block "header" . }}
-                    {{ $Page := (.Get "Page") }}
-                    {{ if $Page }}
-                        {{ $Title := $Page.Title }}
-                        {{ $Subtitle := $Page.Subtitle }}
-
-                        {{ if (or $Title $Subtitle) }}
-                            {{ component "admin.header" 1 $Title $Subtitle }}
+                {{ block "content_root" . }}
+                    {{ block "header" . }}
+                        {{ $Page := (.Get "Page") }}
+                        {{ if $Page }}
+                            {{ $Title := $Page.Title }}
+                            {{ $Subtitle := $Page.Subtitle }}
+                
+                            {{ if (or $Title $Subtitle) }}
+                                {{ component "admin.header" 1 $Title $Subtitle }}
+                            {{ end }}
                         {{ end }}
                     {{ end }}
+                    {{ block "content" . }}{{ end }}
                 {{ end }}
-                {{ block "content" . }}{{ end }}
             </div>
 
         </section>

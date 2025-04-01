@@ -332,6 +332,18 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			addData,
 		)
 
+		if publishPage {
+			auditlogs.Log(
+				"pages:publish",
+				logger.INF,
+				page.Reference(),
+				map[string]interface{}{
+					"page_id": ref.PageID,
+					"label":   ref.Title,
+				},
+			)
+		}
+
 		return nil
 		//return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
 		//	return FixTree(pageApp.QuerySet(), ctx)

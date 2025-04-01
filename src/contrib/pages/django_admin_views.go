@@ -385,6 +385,14 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			})
 		}
 
+		if publishPage {
+			auditlogs.Log("pages:publish", logger.INF, p, map[string]interface{}{
+				"page_id": ref.ID(),
+				"label":   ref.Title,
+				"cType":   cType.PkgPath(),
+			})
+		}
+
 		return nil
 		//return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
 		//	return FixTree(pageApp.QuerySet(), ctx)
@@ -514,15 +522,22 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			return nil
 		}
 
+		var (
+			wasPublished, wasUnpublished bool
+		)
 		if page, ok := d.(SaveablePage); ok {
 
 			var ref = page.Reference()
 			if publishPage && !ref.StatusFlags.Is(models.StatusFlagPublished) {
 				ref.StatusFlags |= models.StatusFlagPublished
+				wasPublished = true
 			}
 
+			// If no children it is safe to unpublish the page straight away,
+			// otherwise we will later redirect to an unpublish page- view.
 			if ref.Numchild == 0 && unpublishPage && ref.StatusFlags.Is(models.StatusFlagPublished) {
 				ref.StatusFlags &^= models.StatusFlagPublished
+				wasUnpublished = true
 			}
 
 			err = UpdatePage(QuerySet(), ctx, page)
@@ -539,6 +554,20 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			"page_id": page.ID(),
 			"label":   page.Reference().Title,
 		})
+
+		if wasPublished {
+			auditlogs.Log("pages:publish", logger.INF, p, map[string]interface{}{
+				"page_id": page.ID(),
+				"label":   page.Reference().Title,
+			})
+		}
+
+		if wasUnpublished {
+			auditlogs.Log("pages:unpublish", logger.INF, p, map[string]interface{}{
+				"page_id": page.ID(),
+				"label":   page.Reference().Title,
+			})
+		}
 
 		return nil
 		//return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {

@@ -1,7 +1,6 @@
 package auditlogs
 
 import (
-	"database/sql"
 	"io/fs"
 	"net/http"
 	"strconv"
@@ -33,7 +32,6 @@ import (
 	"github.com/pkg/errors"
 
 	"embed"
-	_ "unsafe"
 )
 
 type AuditLogs struct {
@@ -46,12 +44,6 @@ var Logs *AuditLogs = &AuditLogs{
 
 //go:embed assets/*
 var templateFileSys embed.FS
-
-//go:linkname _NewSQLiteStorageBackend github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/audit_logs_sqlite.NewSQLiteStorageBackend
-func _NewSQLiteStorageBackend(db *sql.DB) StorageBackend
-
-//go:linkname _NewMySQLStorageBackend github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/audit_logs_mysql.NewMySQLStorageBackend
-func _NewMySQLStorageBackend(db *sql.DB) StorageBackend
 
 func NewAppConfig() django.AppConfig {
 	Logs.Deps = []string{

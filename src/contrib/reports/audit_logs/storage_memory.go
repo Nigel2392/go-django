@@ -192,72 +192,83 @@ func (i *inMemoryStorageBackend) EntryFilter(filters []AuditLogFilter, amount, o
 			var value = filter.Value()
 			switch name {
 			case AuditLogFilterID:
+			inner1:
 				for _, v := range value {
 					if v == entry.ID() || v == entry.ID().String() {
 						match++
-						break
+						break inner1
 					}
 				}
 			case AuditLogFilterType:
+			inner2:
 				for _, v := range value {
 					if v == entry.Type() {
 						match++
-						break
+						break inner2
 					}
 				}
 			case AuditLogFilterLevel_EQ:
+			inner3:
 				for _, v := range value {
 					if v == entry.Level() {
 						match++
-						break
+						break inner3
 					}
 				}
 			case AuditLogFilterLevel_GT:
+			inner4:
 				for _, v := range value {
 					if entry.Level() > v.(logger.LogLevel) {
 						match++
-						break
+						break inner4
 					}
 				}
 			case AuditLogFilterLevel_LT:
+			inner5:
 				for _, v := range value {
 					if entry.Level() < v.(logger.LogLevel) {
 						match++
-						break
+						break inner5
 					}
 				}
 			case AuditLogFilterTimestamp_EQ:
+			inner6:
 				for _, v := range value {
 					if entry.Timestamp().Equal(v.(time.Time)) {
 						match++
-						break
+						break inner6
 					}
 				}
 			case AuditLogFilterUserID:
+			inner7:
 				for _, v := range value {
 					if v == entry.UserID() {
 						match++
-						break
+						break inner7
 					}
 				}
 			case AuditLogFilterObjectID:
+			inner8:
 				for _, v := range value {
 					if v == entry.ObjectID() {
 						match++
-						break
+						break inner8
 					}
 				}
 			case AuditLogFilterContentType:
+			inner10:
 				for _, v := range value {
 					if v == entry.ContentType() {
 						match++
-						break
+						break inner10
 					}
 				}
 			case AuditLogFilterData:
+			inner11:
 				for _, v := range value {
 					if reflect.DeepEqual(v, entry.Data()) {
 						match++
+						break inner11
 					}
 				}
 			}
