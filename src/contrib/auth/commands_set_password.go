@@ -14,14 +14,13 @@ var command_set_password = &command.Cmd[interface{}]{
 	Execute: func(m command.Manager, stored interface{}, args []string) error {
 		var (
 			ctx                 = context.Background()
-			isValid             = false
 			uRow                *models.User
 			identifier          string
 			password, password2 string
 			err                 error
 		)
 
-		for !isValid {
+		for {
 			if Auth.LoginWithEmail {
 				if identifier, err = m.Input("Enter email: "); err != nil {
 					continue
@@ -67,7 +66,8 @@ var command_set_password = &command.Cmd[interface{}]{
 				logger.Warn(err)
 				continue
 			}
-			isValid = true
+
+			break
 		}
 
 		return Auth.Queries.UpdateUser(

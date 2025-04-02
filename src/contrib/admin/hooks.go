@@ -11,6 +11,7 @@ import (
 )
 
 const (
+	// RegisterAppMenuItemHook    = "admin:register_menu_item:<app_name>"
 	RegisterMenuItemHook       = "admin:register_menu_item"
 	RegisterFooterMenuItemHook = "admin:register_footer_menu_item"
 	RegisterGlobalMediaHook    = "admin:register_global_media"
@@ -27,7 +28,8 @@ const (
 )
 
 type (
-	RegisterMenuItemHookFunc       func(adminSite *AdminApplication, items components.Items[menu.MenuItem])
+	RegisterMenuItemHookFunc func(adminSite *AdminApplication, items components.Items[menu.MenuItem])
+	//	RegisterAppMenuItemHookFunc    func(adminSite *AdminApplication, app *AppDefinition) []menu.MenuItem
 	RegisterFooterMenuItemHookFunc func(r *http.Request, adminSite *AdminApplication, items components.Items[menu.MenuItem])
 	RegisterMediaHookFunc          func(adminSite *AdminApplication) media.Media
 	RegisterBreadCrumbHookFunc     func(r *http.Request, adminSite *AdminApplication) []BreadCrumb
@@ -44,6 +46,15 @@ type (
 func RegisterGlobalMenuItem(fn RegisterMenuItemHookFunc) {
 	goldcrest.Register(RegisterMenuItemHook, 0, fn)
 }
+
+//	// Register an item to the django admin menu (sidebar) for a specific app.
+//	func RegisterAppMenuItem(appName string, fn RegisterAppMenuItemHookFunc) {
+//		var b = make([]byte, len(appName)+len(RegisterMenuItemHook)+1)
+//		copy(b, RegisterMenuItemHook)
+//		b[len(RegisterMenuItemHook)] = ':'
+//		copy(b[len(RegisterMenuItemHook)+1:], appName)
+//		goldcrest.Register(string(b), 0, fn)
+//	}
 
 // Register an item to the django admin menu's footer.
 func RegisterGlobalFooterMenuItem(fn RegisterFooterMenuItemHookFunc) {

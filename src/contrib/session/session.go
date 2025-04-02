@@ -25,7 +25,9 @@ func NewAppConfig() django.AppConfig {
 
 	app.Init = func(settings django.Settings, db *sql.DB) error {
 
-		settings.Set("SESSION_MANAGER", sessionManager)
+		settings.Set(
+			django.APPVAR_SESSION_MANAGER, sessionManager,
+		)
 
 		switch db.Driver().(type) {
 		case *mysql.MySQLDriver:

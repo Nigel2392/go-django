@@ -18,16 +18,16 @@ CREATE TABLE IF NOT EXISTS PageNode (
     -- 0x01: Published
     -- 0x02: Hidden
     -- 0x04: Deleted
-    status_flags    BIGINT    NOT NULL,
+    status_flags    INTEGER    NOT NULL,
 
     -- The page ID that this node represents
-    page_id         BIGINT    NOT NULL,
+    page_id         INTEGER    NOT NULL,
 
     -- The unique content type name for this node
     content_type    TEXT      NOT NULL,
 
     -- Latest revision ID
-    latest_revision_id BIGINT,
+    latest_revision_id INTEGER,
 
     created_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP, -- Read-only
     updated_at      TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP -- Read-only

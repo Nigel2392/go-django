@@ -45,4 +45,8 @@ const (
 	// This is so the application knows to use different headers to, for example
 	// get the remote address of the client
 	APPVAR_REQUESTS_PROXIED = "REQUESTS_PROXIED" // bool
+
+	// The session manager for the application
+	APPVAR_SESSION_MANAGER = "SESSION_MANAGER" // *scs.SessionManager
+
 )

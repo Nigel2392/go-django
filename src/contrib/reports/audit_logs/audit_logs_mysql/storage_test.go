@@ -64,7 +64,7 @@ func init() {
 	}
 
 	if IS_GITHUB_ACTIONS {
-		// Skip tests if not running on github actions
+		// Skip tests if running on github actions
 		return
 	}
 
@@ -115,7 +115,7 @@ func init() {
 
 func TestGetByID(t *testing.T) {
 	if IS_GITHUB_ACTIONS {
-		// Skip tests if not running on github actions
+		// Skip tests if running on github actions
 		return
 	}
 	for i, id := range entryIds {
@@ -140,7 +140,7 @@ func TestGetByID(t *testing.T) {
 
 func TestRetrieveTyped(t *testing.T) {
 	if IS_GITHUB_ACTIONS {
-		// Skip tests if not running on github actions
+		// Skip tests if running on github actions
 		return
 	}
 	for i := 0; i < len(entryIds); i++ {
@@ -166,7 +166,7 @@ func TestRetrieveTyped(t *testing.T) {
 
 func TestRetrieveForUser(t *testing.T) {
 	if IS_GITHUB_ACTIONS {
-		// Skip tests if not running on github actions
+		// Skip tests if running on github actions
 		return
 	}
 	for i := 0; i < len(entryIds); i++ {
@@ -195,7 +195,7 @@ func TestRetrieveForUser(t *testing.T) {
 
 func TestRetrieveForObj(t *testing.T) {
 	if IS_GITHUB_ACTIONS {
-		// Skip tests if not running on github actions
+		// Skip tests if running on github actions
 		return
 	}
 	for i := 0; i < len(entryIds); i++ {
@@ -264,7 +264,7 @@ var filterTests = []filterTest{
 
 func TestFilter(t *testing.T) {
 	if IS_GITHUB_ACTIONS {
-		// Skip tests if not running on github actions
+		// Skip tests if running on github actions
 		return
 	}
 
@@ -320,7 +320,7 @@ func TestFilter(t *testing.T) {
 
 func TestFilterCount(t *testing.T) {
 	if IS_GITHUB_ACTIONS {
-		// Skip tests if not running on github actions
+		// Skip tests if running on github actions
 		return
 	}
 

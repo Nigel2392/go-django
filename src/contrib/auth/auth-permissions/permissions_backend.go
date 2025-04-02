@@ -73,5 +73,5 @@ func (pb *PermissionsBackend) HasObjectPermission(r *http.Request, obj interface
 		}
 	}
 
-	return len(perms)-checkedCount == 0
+	return len(perms) == checkedCount
 }

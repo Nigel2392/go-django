@@ -11,8 +11,6 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
-	auth_permissions "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions"
-	permissions_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/permissions-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -25,7 +23,6 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	django_models "github.com/Nigel2392/go-django/src/models"
-	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -37,10 +34,10 @@ import (
 	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/auth-permissions-sqlite"
 )
 
+// The AuthApplication struct is the main struct used for the auth app.
 type AuthApplication struct {
 	*apps.AppConfig
 	Queries        models.DBQuerier
-	PermQueries    auth_permissions.DBQuerier
 	Session        *scs.SessionManager
 	LoginWithEmail bool
 }
@@ -54,6 +51,7 @@ func NewAppConfig() django.AppConfig {
 	app.Deps = []string{"session"}
 	app.Cmd = []command.Command{
 		command_create_user,
+		command_change_user,
 		command_set_password,
 	}
 	app.Routing = func(m django.Mux) {
@@ -79,13 +77,13 @@ func NewAppConfig() django.AppConfig {
 			Auth.LoginWithEmail = loginWithEmail.(bool)
 		}
 
-		sessInt, ok := settings.Get("SESSION_MANAGER")
-		assert.True(ok, "SESSION_MANAGER setting is required for 'auth' app")
+		sessInt, ok := settings.Get(django.APPVAR_SESSION_MANAGER)
+		assert.True(ok, "%s setting is required for 'auth' app", django.APPVAR_SESSION_MANAGER)
 
 		sess, ok := sessInt.(*scs.SessionManager)
-		assert.True(ok, "SESSION_MANAGER setting must adhere to scs.SessionManager interface")
+		assert.True(ok, "%s setting must be of type *scs.SessionManager", django.APPVAR_SESSION_MANAGER)
 
-		dbInt, ok := settings.Get("DATABASE")
+		dbInt, ok := settings.Get(django.APPVAR_DATABASE)
 		assert.True(ok, "DATABASE setting is required for 'auth' app")
 
 		db, ok := dbInt.(*sql.DB)
@@ -93,9 +91,7 @@ func NewAppConfig() django.AppConfig {
 
 		var (
 			q   models.DBQuerier
-			pq  auth_permissions.DBQuerier
 			b   django_models.Backend[models.Querier]
-			pb  django_models.Backend[permissions_models.Querier]
 			err error
 		)
 
@@ -103,15 +99,7 @@ func NewAppConfig() django.AppConfig {
 			return err
 		}
 
-		if pq, err = auth_permissions.NewQueries(db); err != nil {
-			return err
-		}
-
 		if b, err = models.BackendForDB(db.Driver()); err != nil {
-			return err
-		}
-
-		if pb, err = permissions_models.BackendForDB(db.Driver()); err != nil {
 			return err
 		}
 
@@ -119,19 +107,11 @@ func NewAppConfig() django.AppConfig {
 			return err
 		}
 
-		if err := pb.CreateTable(db); err != nil {
-			return err
-		}
-
 		Auth.Queries = q
-		Auth.PermQueries = pq
 		Auth.Session = sess
 		Auth.CtxProcessors = []func(ctx.ContextWithRequest){}
 
-		permissions.Tester = auth_permissions.NewPermissionsBackend(
-			pq,
-		)
-
+		// Set the user in the context if a request is present in the context.
 		tpl.RequestProcessors(func(rc ctx.ContextWithRequest) {
 			rc.Set("User",
 				authentication.Retrieve(
@@ -140,8 +120,14 @@ func NewAppConfig() django.AppConfig {
 			)
 		})
 
+		// Register hooks for authentication errors.
+		//
+		// These will intercept the server errors and allow for
+		// custom handling of authentication errors.
 		autherrors.RegisterHook()
 
+		// Configure the admin app for logins and logouts with the appropriate
+		// user model.
 		admin.ConfigureAuth(admin.AuthConfig{
 			GetLoginForm: func(r *http.Request, formOpts ...func(forms.Form)) admin.LoginForm {
 				return UserLoginForm(r, formOpts...)
@@ -149,8 +135,15 @@ func NewAppConfig() django.AppConfig {
 			Logout: Logout,
 		})
 
+		// Register the user model with the contenttypes package.
+		//
+		// This allows for the user model to be used in the admin app,
+		// as well as in other apps that require it.
 		contenttypes.Register(&contenttypes.ContentTypeDefinition{
-			ContentObject: &models.User{},
+			ContentObject:  &models.User{},
+			GetLabel:       trans.S("User"),
+			GetPluralLabel: trans.S("Users"),
+			GetDescription: trans.S("User model for authentication"),
 			GetInstance: func(i interface{}) (interface{}, error) {
 				var id, ok = i.(int)
 				if !ok {
@@ -180,8 +173,10 @@ func NewAppConfig() django.AppConfig {
 			},
 		})
 
+		// Register the user model and the auth app with the admin app.
 		var _ = admin.RegisterApp(
 			"Auth",
+			// Register the auth app with the admin app.
 			admin.AppOptions{
 				RegisterToAdminMenu: true,
 				AppLabel:            trans.S("Authentication and Authorization"),
@@ -189,6 +184,7 @@ func NewAppConfig() django.AppConfig {
 				MenuLabel:           trans.S("Auth"),
 				MenuOrder:           -900,
 			},
+			// Register the user model with the admin app.
 			admin.ModelOptions{
 				Model:               &models.User{},
 				RegisterToAdminMenu: true,
@@ -204,6 +200,7 @@ func NewAppConfig() django.AppConfig {
 					"CreatedAt":       trans.S("Created at"),
 					"UpdatedAt":       trans.S("Updated at"),
 				},
+				// Customize the view / fields for the user models' create view.
 				AddView: admin.FormViewOptions{
 					ViewOptions: admin.ViewOptions{
 						Exclude: []string{"ID", "CreatedAt", "UpdatedAt"},
@@ -222,6 +219,7 @@ func NewAppConfig() django.AppConfig {
 						admin.FieldPanel("IsActive"),
 					},
 				},
+				// Customize the view / fields for the user models' edit view.
 				EditView: admin.FormViewOptions{
 					ViewOptions: admin.ViewOptions{
 						Exclude: []string{"ID"},
@@ -242,6 +240,7 @@ func NewAppConfig() django.AppConfig {
 						admin.FieldPanel("IsActive"),
 					},
 				},
+				// Customize the view / fields for the user models' list view.
 				ListView: admin.ListViewOptions{
 					ViewOptions: admin.ViewOptions{
 						Fields: []string{
@@ -266,6 +265,7 @@ func NewAppConfig() django.AppConfig {
 			},
 		)
 
+		// Register the auth apps' password field with go-django.
 		attrs.RegisterFormFieldType(models.Password(""), func(opts ...func(fields.Field)) fields.Field {
 			var newOpts = []func(fields.Field){
 				fields.HelpText("Enter your password"),
