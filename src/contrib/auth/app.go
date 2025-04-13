@@ -124,7 +124,7 @@ func NewAppConfig() django.AppConfig {
 		//
 		// These will intercept the server errors and allow for
 		// custom handling of authentication errors.
-		autherrors.RegisterHook()
+		autherrors.RegisterHook("auth:login")
 
 		// Configure the admin app for logins and logouts with the appropriate
 		// user model.

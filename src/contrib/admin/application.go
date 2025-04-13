@@ -31,13 +31,30 @@ type AdminApplication struct {
 		string, *AppDefinition,
 	]
 
-	getAdminLoginForm func(r *http.Request, formOpts ...func(forms.Form)) LoginForm
-	logoutFunc        func(r *http.Request) error
+	auth *AuthConfig
 }
 
 type AuthConfig struct {
+	// GetLoginForm is a function that returns a LoginForm
+	//
+	// This function is called when the user tries to login to the admin
+	// interface. It should return a LoginForm that is used to render
+	// the login form.
+	//
+	// If GetLoginHandler is set, this function will not be called.
 	GetLoginForm func(r *http.Request, formOpts ...func(forms.Form)) LoginForm
-	Logout       func(r *http.Request) error
+
+	// GetLoginHandler is a function that returns a http.HandlerFunc for
+	// logging a user in to the admin interface.
+	//
+	// If GetLoginHandler is set, this function will be called instead
+	// of GetLoginForm. It should return a http.HandlerFunc that is
+	// used to render the login form.
+	GetLoginHandler func(w http.ResponseWriter, r *http.Request)
+
+	// Logout is a function that is called when the user logs out of
+	// the admin interface.
+	Logout func(r *http.Request) error
 }
 
 func (a *AdminApplication) IsReady() bool {
@@ -45,28 +62,43 @@ func (a *AdminApplication) IsReady() bool {
 }
 
 func (a *AdminApplication) AuthLogout(r *http.Request) error {
-	return a.logoutFunc(r)
+	return a.auth.Logout(r)
 }
 
 func (a *AdminApplication) AuthLoginForm(r *http.Request, formOpts ...func(forms.Form)) LoginForm {
-	return a.getAdminLoginForm(r, formOpts...)
+	return a.auth.GetLoginForm(r, formOpts...)
+}
+
+func (a *AdminApplication) AuthLoginHandler() func(w http.ResponseWriter, r *http.Request) {
+	return a.auth.GetLoginHandler
 }
 
 func (a *AdminApplication) configureAuth(config AuthConfig) {
-	if a.getAdminLoginForm != nil {
+	if config.GetLoginForm != nil {
 		logger.Warn(
-			"AdminApplication.configureAuth: getAdminLoginForm was already set",
+			"AdminApplication.configureAuth: GetLoginForm was already set",
 		)
 	}
 
-	if a.logoutFunc != nil {
+	if config.GetLoginHandler != nil {
 		logger.Warn(
-			"AdminApplication.configureAuth: logoutFunc was already set",
+			"AdminApplication.configureAuth: GetLoginHandler was already set",
 		)
 	}
 
-	a.getAdminLoginForm = config.GetLoginForm
-	a.logoutFunc = config.Logout
+	if config.Logout != nil {
+		logger.Warn(
+			"AdminApplication.configureAuth: Logout was already set",
+		)
+	}
+
+	if config.GetLoginForm != nil && config.GetLoginHandler != nil {
+		logger.Warn(
+			"AdminApplication.configureAuth: GetLoginForm and GetLoginHandler were both set, only the handler will be used",
+		)
+	}
+
+	a.auth = &config
 }
 
 func (a *AdminApplication) RegisterApp(name string, appOptions AppOptions, opts ...ModelOptions) *AppDefinition {

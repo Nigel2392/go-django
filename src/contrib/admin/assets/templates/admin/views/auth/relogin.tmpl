@@ -1,0 +1,27 @@
+{{ template "skeleton" . }}
+
+{{ define "title" }}{{ T "Permission Error" }}{{ end }}
+
+{{ define "extra_css" }}
+    <link rel="stylesheet" type="text/css" href="{{ static "admin/css/login.css" }}">
+{{ end }}
+
+{{ define "root" }}
+    <div class="login-container-wrapper">
+        <div class="login-container">
+
+            {{ $headingText := (T "Permission Error") }}
+            {{ component "admin.header" 1 $headingText "" }}
+
+            <div class="relogin-text">
+                <p><strong>{{ T "You do not have permissions to access the admin site." }}</strong></p>
+                <p>{{ T "Please contact your administrator to get access, or log out and try again with a different account." }}</p>
+            </div>
+            {{ $next := (.Get "next") }}
+            <a class="button warning" href="{{ url "admin:logout" }}?next={{ url "admin:login" }}{{ if $next }}{{ urlquery "?next=" }}{{ urlquery $next }}{{ end }}">
+                {{ T "Log in with a different account" }}
+            </a>
+
+        </div>
+    </div>
+{{ end }}

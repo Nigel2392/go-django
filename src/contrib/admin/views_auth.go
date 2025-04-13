@@ -4,10 +4,12 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/Nigel2392/go-django/src"
+	django "github.com/Nigel2392/go-django/src"
+	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -79,7 +81,60 @@ var LoginHandler = &views.FormView[*AdminForm[LoginForm]]{
 	},
 }
 
-func LogoutHandler(w http.ResponseWriter, req *http.Request) {
+func loginHandler(w http.ResponseWriter, r *http.Request) {
+	var handler = AdminSite.AuthLoginHandler()
+	if handler == nil {
+		views.Invoke(LoginHandler, w, r)
+		return
+	}
+
+	handler(w, r)
+}
+
+func reloginHandler(w http.ResponseWriter, req *http.Request) {
+	var user = authentication.Retrieve(req)
+	var next = req.URL.Query().Get("next")
+
+	if user != nil && !user.IsAuthenticated() {
+		autherrors.Fail(
+			http.StatusUnauthorized,
+			"You need to login",
+			next,
+		)
+		return
+	}
+
+	if user != nil && user.IsAuthenticated() && user.IsAdmin() {
+		if next == "" {
+			next = django.Reverse("admin:home")
+		}
+		http.Redirect(w, req, next, http.StatusSeeOther)
+		return
+	}
+
+	var context = ctx.RequestContext(req)
+	if next != "" {
+		context.Set("next", next)
+	}
+
+	tpl.FRender(
+		w, context,
+		"admin", "admin/views/auth/relogin.tmpl",
+	)
+}
+
+func logoutHandler(w http.ResponseWriter, req *http.Request) {
+
+	var redirectURL = req.URL.Query().Get("next")
+	if redirectURL == "" {
+		redirectURL = django.Reverse("admin:login")
+	}
+
+	var user = authentication.Retrieve(req)
+	if user == nil || !user.IsAuthenticated() {
+		autherrors.Fail(http.StatusUnauthorized, "You are already logged out", redirectURL)
+	}
+
 	if err := AdminSite.AuthLogout(req); err != nil {
 		except.Fail(
 			http.StatusInternalServerError,
@@ -90,7 +145,7 @@ func LogoutHandler(w http.ResponseWriter, req *http.Request) {
 
 	http.Redirect(
 		w, req,
-		django.Reverse("admin:login"),
+		redirectURL,
 		http.StatusSeeOther,
 	)
 }

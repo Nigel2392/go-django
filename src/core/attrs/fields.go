@@ -138,6 +138,10 @@ func (f *FieldDef) Name() string {
 	return f.fieldName
 }
 
+func (f *FieldDef) Tag(name string) string {
+	return f.field_t.Tag.Get(name)
+}
+
 func (f *FieldDef) Rel() Definer {
 	if f.ForeignKey() != nil {
 		return f.ForeignKey()

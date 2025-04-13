@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	django_models "github.com/Nigel2392/go-django/src/models"
+	django_signals "github.com/Nigel2392/go-django/src/signals"
 	"github.com/Nigel2392/mux"
 	"github.com/pkg/errors"
 )
@@ -49,7 +50,7 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 	}
 
 	f.OnInvalid(func(_ forms.Form) {
-		SIGNAL_LOGIN_FAILED.Send(f.Raw)
+		django_signals.SIGNAL_LOGIN_FAILED.Send(f.Raw)
 	})
 
 	if Auth.LoginWithEmail {

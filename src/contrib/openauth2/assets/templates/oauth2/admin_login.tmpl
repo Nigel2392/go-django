@@ -1,0 +1,38 @@
+{{ template "skeleton" . }}
+
+{{ define "title" }}{{ T "Login" }}{{ end }}
+
+{{ define "extra_css" }}
+    <link rel="stylesheet" type="text/css" href="{{ static "admin/css/login.css" }}">
+{{ end }}
+
+{{ define "root" }}
+    <div class="login-container-wrapper">
+        <div class="login-container">
+
+            {{ $headingText := (T "Login") }}
+            {{ $subText := (T "Login to access the admin area") }}
+            {{ component "admin.header" 1 $headingText $subText }}
+
+            {{ $providerConfigs := (.Get "oauth2").Config.AuthConfigurations }}
+            {{ $next := (.Get "Next") }}
+
+            {{ range $cnf := $providerConfigs }}
+                <div class="login-provider">
+                    <a href="{{ url "auth2:provider" $cnf.Provider }}?next={{ if $next }}{{$next}}{{else}}{{ url "admin:home" }}{{end}}" class="login-provider__link">
+                        {{ if $cnf.ProviderLogoURL }}
+                            <img src="{{ call $cnf.ProviderLogoURL }}" alt="{{ $cnf.Provider }}" class="login-provider__icon">
+                        {{ end }}
+
+                        {{ if $cnf.ProviderNiceName }}
+                            {{ $cnf.ProviderNiceName }}
+                        {{ else }}
+                            {{ $cnf.Provider }}
+                        {{ end }}
+                    </a>
+                </div>
+            {{ end }}
+
+        </div>
+    </div>
+{{ end }}

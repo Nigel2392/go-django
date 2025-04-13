@@ -1,15 +1,30 @@
-package auth
+/*
+Default signals for authentication events.
+
+# These should be, and are available for custom authentication apps
+
+It defines a generic interface for the user object, which is used in the signals.
+You can use this interface to define your own user object, and use the signals to
+handle events.
+*/
+package django_signals
 
 import (
 	"net/http"
 	"net/url"
 
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-signals"
+	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
+type User interface {
+	attrs.Definer
+	authentication.User
+}
+
 type UserWithRequest struct {
-	User *models.User
+	User User
 	Req  *http.Request
 }
 
@@ -18,16 +33,16 @@ type UserWithRequest struct {
 // /*
 // Example usage:
 //
-//	auth.SIGNAL_BEFORE_USER_SAVE.Connect(signals.NewRecv(func(s signals.Signal, user ...any) error {
+//	django_signals.SIGNAL_BEFORE_USER_SAVE.Connect(signals.NewRecv(func(s signals.Signal, user ...any) error {
 //		return nil
 //	}))
 //
 // */
 var (
 	signal_pool      = signals.NewPool[url.Values]()
-	user_signal_pool = signals.NewPool[*models.User]()
+	user_signal_pool = signals.NewPool[User]()
 	user_req_pool    = signals.NewPool[UserWithRequest]()
-	id_signal_pool   = signals.NewPool[uint64]()
+	id_signal_pool   = signals.NewPool[any]()
 
 	SIGNAL_BEFORE_USER_CREATE = user_signal_pool.Get("user.before_create") // -> Send(auth.User) (Returned error unused!)
 	SIGNAL_AFTER_USER_CREATE  = user_signal_pool.Get("user.after_create")  // -> Send(auth.User) (Returned error unused!)

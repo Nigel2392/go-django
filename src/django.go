@@ -209,6 +209,9 @@ func (a *Application) Register(apps ...any) {
 
 			assert.True(rVal.Kind() == reflect.Func, "Invalid type")
 
+			assert.True(rVal.Type().NumIn() == 0, "Invalid type, must be a function with no arguments")
+			assert.True(rVal.Type().NumOut() == 1, "Invalid type, must return django.AppConfig")
+
 			var retVal = rVal.Call(nil)
 
 			assert.True(len(retVal) == 1, "Invalid return type")

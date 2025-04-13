@@ -1,0 +1,53 @@
+version: "2"
+plugins:
+  - name: go-django-definitions-plugin
+    process:
+      # go install github.com/Nigel2392/go-django/cmd/go-django-definitions@latest
+      cmd: "go-django-definitions"
+sql:
+  - schema: "./openauth2_models/mysqlc/sql/schema.sql"
+    queries: "./openauth2_models/mysqlc/sql/queries.sql"
+    engine: "mysql"
+    codegen:
+    - out: ./openauth2_models
+      # The name of the plugin as defined above in the plugins dictionary.
+      plugin: go-django-definitions-plugin
+      options:
+        # required, name of the package to generate
+        package: "openauth2models" 
+
+        # optional, default is false, generates extra functions to easily set up the admin panel for the included models
+        generate_admin_setup: false
+
+        # optional, default is false, generates extra methods to adhere to models.Saver, models.Updater, models.Deleter and models.Reloader interfaces
+        generate_models_methods: false
+
+        # Optional, default is false, generates pointers for fields in the generated struct (only sqlite)
+        emit_pointers_for_null: true
+
+        # optional, see https://docs.sqlc.dev/en/stable/reference/config.html
+        initialisms: ["id", "api", "url"] 
+
+        # optional, see https://docs.sqlc.dev/en/stable/howto/rename.html
+        rename: 
+    gen:
+      go:
+        package: "openauth2_models_mysql"
+        out: "./openauth2_models/mysqlc"
+        emit_json_tags: true
+        emit_prepared_queries: true
+        emit_result_struct_pointers: true
+        emit_interface: true
+        query_parameter_limit: 8
+  - schema: "./openauth2_models/sqlitec/sql/schema.sql"
+    queries: "./openauth2_models/sqlitec/sql/queries.sql"
+    engine: "sqlite"
+    gen:
+      go:
+        package: "openauth2_models_sqlite"
+        out: "./openauth2_models/sqlitec"
+        emit_json_tags: true
+        emit_prepared_queries: true
+        emit_result_struct_pointers: true
+        emit_interface: true
+        query_parameter_limit: 8

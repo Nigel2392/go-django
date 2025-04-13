@@ -44,6 +44,13 @@ func (a *DBRequiredAppConfig) Initialize(settings django.Settings) error {
 
 	a.DB = db
 
+	if a.AppConfig.Init != nil {
+		err := a.AppConfig.Init(settings)
+		if err != nil {
+			return err
+		}
+	}
+
 	if a.Init != nil {
 		return a.Init(settings, db)
 	}

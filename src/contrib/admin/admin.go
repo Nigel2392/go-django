@@ -76,9 +76,9 @@ func NewAppConfig() django.AppConfig {
 	// AdminSite.Route.Use(RequiredMiddleware)
 	var iconHTML template.HTML
 
-	AdminSite.Deps = []string{
-		"auth",
-	}
+	// AdminSite.Deps = []string{
+	// "auth",
+	// }
 	AdminSite.Init = func(settings django.Settings) error {
 		settings.App().Mux.AddRoute(AdminSite.Route)
 
@@ -127,13 +127,19 @@ func NewAppConfig() django.AppConfig {
 
 	AdminSite.Ready = func() error {
 
-		if AdminSite.getAdminLoginForm == nil {
+		if AdminSite.auth == nil {
 			assert.Fail(
-				"AdminApplication.Ready: getAdminLoginForm was not set with admin.ConfigureAuth(...)",
+				"AdminApplication.Ready: authentication was not setup with admin.ConfigureAuth(...)",
 			)
 		}
 
-		if AdminSite.logoutFunc == nil {
+		if AdminSite.auth.GetLoginForm == nil && AdminSite.auth.GetLoginHandler == nil {
+			assert.Fail(
+				"AdminApplication.Ready: GetLoginForm or GetLoginHandler was not set with admin.ConfigureAuth(...)",
+			)
+		}
+
+		if AdminSite.auth.Logout == nil {
 			assert.Fail(
 				"AdminApplication.Ready: logoutFunc was not set with admin.ConfigureAuth(...)",
 			)
@@ -168,22 +174,27 @@ func NewAppConfig() django.AppConfig {
 		)
 		// First initialize routes which do not require authentication
 		AdminSite.Route.Get(
-			"login/", views.Serve(LoginHandler),
+			"login/", mux.NewHandler(loginHandler),
 			"login", // admin:login
 		)
 		AdminSite.Route.Post(
-			"login/", views.Serve(LoginHandler),
+			"login/", mux.NewHandler(loginHandler),
 			"login", // admin:login
+		)
+
+		AdminSite.Route.Get(
+			"logout/", mux.NewHandler(logoutHandler),
+			"logout", // admin:logout
+		)
+
+		AdminSite.Route.Get(
+			"relogin/", mux.NewHandler(reloginHandler),
+			"relogin", // admin:relogin
 		)
 
 		// Add authentication/administrator middleware to all subsequent routes added
 		AdminSite.Route.Use(
 			RequiredMiddleware,
-		)
-
-		AdminSite.Route.Get(
-			"logout/", mux.NewHandler(LogoutHandler),
-			"logout", // admin:logout
 		)
 
 		AdminSite.Route.Get(
@@ -262,7 +273,7 @@ func NewAppConfig() django.AppConfig {
 		),
 	))
 
-	tpl.Add(tpl.Config{
+	AdminSite.TemplateConfig = &tpl.Config{
 		AppName: "admin",
 		FS:      tplFS,
 		Bases: []string{
@@ -320,7 +331,7 @@ func NewAppConfig() django.AppConfig {
 				return template.HTML(buf.String())
 			},
 		},
-	})
+	}
 
 	return AdminSite
 }

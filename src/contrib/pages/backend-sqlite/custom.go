@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
+	django_models "github.com/Nigel2392/go-django/src/models"
 )
 
 const updateNodes = `UPDATE PageNode
@@ -137,37 +138,18 @@ OFFSET   ?2`
 
 func (q *Queries) AllNodes(ctx context.Context, statusFlags models.StatusFlag, offset int32, limit int32, orderings ...string) ([]models.PageNode, error) {
 
-	var b strings.Builder
-	for i, ordering := range orderings {
-		var ord = "ASC"
-		if strings.HasPrefix(ordering, "-") {
-			ord = "DESC"
-			ordering = strings.TrimPrefix(ordering, "-")
-		}
-
-		if ordering == "" {
-			return nil, fmt.Errorf("ordering field cannot be empty")
-		}
-
-		if !models.IsValidField(ordering) {
-			return nil, fmt.Errorf("invalid ordering field %s, must be one of %v", ordering, models.ValidFields)
-		}
-
-		b.WriteString(ordering)
-		b.WriteString(" ")
-		b.WriteString(ord)
-
-		if i < len(orderings)-1 {
-			b.WriteString(", ")
-		}
+	var orderer = django_models.Orderer{
+		Fields:   orderings,
+		Validate: models.IsValidField,
+		Default:  models.FieldPath,
 	}
 
-	if b.Len() == 0 {
-		b.WriteString(models.FieldPath)
-		b.WriteString(" ASC")
+	ordering, err := orderer.Build()
+	if err != nil {
+		return nil, err
 	}
 
-	var getAllNodes = fmt.Sprintf(allNodes, b.String())
+	var getAllNodes = fmt.Sprintf(allNodes, ordering)
 	rows, err := q.query(ctx, nil, getAllNodes, statusFlags, offset, limit)
 	if err != nil {
 		return nil, err

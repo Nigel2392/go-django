@@ -78,6 +78,9 @@ type Field interface {
 	Stringer
 	Namer
 
+	// Tag retrieves the tag value for the field with the given name.
+	Tag(name string) string
+
 	// Retrieves the underlying model instance.
 	Instance() Definer
 

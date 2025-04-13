@@ -1,19 +1,16 @@
-//go:build !testing_auth
-// +build !testing_auth
-
-package auth
+package openauth2
 
 import (
 	"net/http"
 
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
 	"github.com/Nigel2392/go-django/src/core/except"
 	django_signals "github.com/Nigel2392/go-django/src/signals"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
-func Login(r *http.Request, u *models.User) (*models.User, error) {
+func Login(r *http.Request, u *openauth2models.User) (*openauth2models.User, error) {
 	var session = sessions.Retrieve(r)
 	except.Assert(session != nil, 500, "session is nil")
 
@@ -24,7 +21,7 @@ func Login(r *http.Request, u *models.User) (*models.User, error) {
 
 	u.IsLoggedIn = true
 
-	session.Set(SESSION_COOKIE_NAME, u.ID)
+	session.Set(USER_ID_SESSION_KEY, u.ID)
 
 	django_signals.SIGNAL_USER_LOGGED_IN.Send(django_signals.UserWithRequest{
 		User: u,
