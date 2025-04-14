@@ -152,13 +152,21 @@ func NewAppConfig() *PageAppConfig {
 
 	tpl.Add(tpl.Config{
 		AppName: "pages",
-		FS:      templateFileSys,
-		Matches: filesystem.MatchAnd(
-			filesystem.MatchPrefix("pages/"),
-			filesystem.MatchOr(
-				filesystem.MatchSuffix(".tmpl"),
-			),
+		FS: filesystem.NewMultiFS(
+			templateFileSys,
+			admin.AdminSite.TemplateConfig.FS,
 		),
+		Matches: filesystem.MatchOr(
+			filesystem.MatchAnd(
+				filesystem.MatchPrefix("pages/"),
+				filesystem.MatchOr(
+					filesystem.MatchSuffix(".tmpl"),
+				),
+			),
+			admin.AdminSite.TemplateConfig.Matches,
+		),
+		Bases: admin.AdminSite.TemplateConfig.Bases,
+		Funcs: admin.AdminSite.TemplateConfig.Funcs,
 	})
 
 	if pageApp != nil {

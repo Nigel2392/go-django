@@ -11,10 +11,17 @@ import (
 type AssertError = errs.Error
 
 var (
+	// This function should generally not be overridden.
+	//
+	// It is only here for testing purposes.
 	Panic func(error) = func(err error) { panic(err) }
 
+	// LogOnError is a function that is called when an assertion fails
+	// and can be used to log the error
 	LogOnError func(error)
 
+	// AssertionFailedError is one of the (possibly multiple) errors that is returned when an assertion fails
+	// it is used to indicate that the error was a cause of a failed assertion
 	AssertionFailedError AssertError = "assertion failed"
 )
 

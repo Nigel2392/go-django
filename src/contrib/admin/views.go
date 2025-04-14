@@ -8,6 +8,7 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -183,6 +184,14 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 			context.Set("error", err)
 		}
 
+		messages.Warning(r,
+			fmt.Sprintf(
+				"Successfully deleted %s (%v)",
+				attrs.ToString(instance),
+				attrs.PrimaryKey(instance),
+			),
+		)
+
 		var listViewURL = django.Reverse("admin:apps:model", app.Name, model.GetName())
 		http.Redirect(w, r, listViewURL, http.StatusSeeOther)
 		return
@@ -340,6 +349,15 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			}
 
 			except.AssertNotNil(instance, 500, "instance is nil after form submission")
+
+			messages.Success(req,
+				fmt.Sprintf(
+					"Successfully saved %s (%v)",
+					attrs.ToString(instance),
+					attrs.PrimaryKey(instance),
+				),
+			)
+
 			var listViewURL = django.Reverse("admin:apps:model", app.Name, model.GetName())
 			http.Redirect(w, r, listViewURL, http.StatusSeeOther)
 		},

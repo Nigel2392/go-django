@@ -2,7 +2,6 @@
 
 {{ define "root" }}
     
-
     <div id="main">
 
         <section id="sidebar-wrapper">
@@ -71,6 +70,9 @@
             </div>
 
             <div id="content">
+
+                {{ template "messages" . }}
+
                 {{ block "content_root" . }}
                     {{ block "header" . }}
                         {{ $Page := (.Get "Page") }}
@@ -90,6 +92,5 @@
         </section>
 
     </div>
-
-
+    <script src="{{ static "admin/js/messages.js" }}"></script>
 {{ end }}

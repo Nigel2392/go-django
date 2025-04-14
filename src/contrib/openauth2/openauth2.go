@@ -109,14 +109,17 @@ func NewAppConfig(cnf Config) django.AppConfig {
 		tpl.Add(tpl.Config{
 			AppName: "openauth2",
 			FS: filesystem.NewMultiFS(
-				admin.AdminSite.TemplateConfig.FS,
 				filesystem.Sub(
 					templates, "assets/templates",
 				),
+				admin.AdminSite.TemplateConfig.FS,
 			),
-			Matches: filesystem.MatchAnd(
-				filesystem.MatchPrefix("oauth2"),
-				filesystem.MatchSuffix(".tmpl"),
+			Matches: filesystem.MatchOr(
+				filesystem.MatchAnd(
+					filesystem.MatchPrefix("oauth2"),
+					filesystem.MatchSuffix(".tmpl"),
+				),
+				admin.AdminSite.TemplateConfig.Matches,
 			),
 			Bases: admin.AdminSite.TemplateConfig.Bases,
 			Funcs: admin.AdminSite.TemplateConfig.Funcs,

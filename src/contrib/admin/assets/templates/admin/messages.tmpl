@@ -1,0 +1,28 @@
+{{ define "messages" }}
+<section class="messages">
+    {{ $ctx := . }}
+    {{range $msg := (.Get "messages")}}
+        {{ if eq $msg.Tag "success" }}
+            <div class="message bg-success">
+                <div class="message-text">{{$msg.Message}}</div>
+            </div>
+        {{else if eq $msg.Tag "error" }}
+            <div class="message bg-danger">
+                <div class="message-text">{{$msg.Message}}</div>
+            </div>
+        {{else if eq $msg.Tag "warning" }}
+            <div class="message bg-warning">
+                <div class="message-text">{{$msg.Message}}</div>
+            </div>
+        {{else if eq $msg.Tag "info" }}
+            <div class="message bg-info">
+                <div class="message-text">{{$msg.Message}}</div>
+            </div>
+        {{else if eq $msg.Tag "debug" }}
+            <div class="message bg-debug">
+                <div class="message-text">{{$msg.Message}}</div>
+            </div>
+        {{end}}
+    {{end}}
+</section>
+{{ end }}

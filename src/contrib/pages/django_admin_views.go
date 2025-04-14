@@ -9,6 +9,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/src/contrib/messages"
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -450,6 +451,9 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]) {
 			var instance = form.Instance()
 			assert.False(instance == nil, "instance is nil after form submission")
+
+			messages.Success(r, "Page created successfully")
+
 			var ref = instance.(Page).Reference()
 			var listViewURL = django.Reverse("admin:pages:list", ref.ID())
 			http.Redirect(w, r, listViewURL, http.StatusSeeOther)
@@ -623,6 +627,9 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			assert.False(instance == nil, "instance is nil after form submission")
 			var page = instance.(Page)
 			var ref = page.Reference()
+
+			messages.Success(r, "Page updated successfully")
+
 			var redirectURL string
 			if unpublishPage && ref.Numchild > 0 && ref.StatusFlags.Is(models.StatusFlagPublished) {
 				redirectURL = django.Reverse("admin:pages:unpublish", ref.ID())
@@ -699,6 +706,8 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			"label":   p.Title,
 		})
 
+		messages.Warning(r, "Page deleted successfully")
+
 		if p.Depth > 0 {
 			http.Redirect(w, r, django.Reverse("admin:pages:list", parent.ID()), http.StatusSeeOther)
 			return
@@ -766,6 +775,12 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 			"page_id":            p.ID(),
 			"label":              p.Title,
 		})
+
+		if unpublishChildren {
+			messages.Warning(r, "Page and all child pages unpublished successfully")
+		} else {
+			messages.Warning(r, "Page unpublished successfully")
+		}
 
 		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
 		return

@@ -442,6 +442,44 @@ a.button, .button a {
     padding: 0 1.4em
 }
 
+.messages {
+    display: flex;
+    flex-direction: column;
+}
+.message {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5em 1em;
+    margin-bottom: 1em;
+    border-radius: .1875rem;
+    color: var(--text-color);
+}
+.message-text {
+
+}
+.bg-success {
+    background-color: var(--success-bg-color);
+    color: var(--success-text-color);
+}
+.bg-danger {
+    background-color: var(--danger-bg-color);
+    color: var(--danger-text-color);
+}
+.bg-warning {
+    background-color: var(--warning-bg-color);
+    color: var(--warning-text-color);
+}
+.bg-info {
+    background-color: var(--secondary-bg-color);
+    color: var(--secondary-text-color);
+}
+.bg-debug {
+    background-color: var(--primary-bg-color);
+    color: var(--primary-text-color);
+}
+
 @media screen and (min-width: 50em) {
     .button {
         font-size: .875rem;

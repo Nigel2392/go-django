@@ -76,9 +76,9 @@ func NewAppConfig() django.AppConfig {
 	// AdminSite.Route.Use(RequiredMiddleware)
 	var iconHTML template.HTML
 
-	// AdminSite.Deps = []string{
-	// "auth",
-	// }
+	AdminSite.Deps = []string{
+		"messages",
+	}
 	AdminSite.Init = func(settings django.Settings) error {
 		settings.App().Mux.AddRoute(AdminSite.Route)
 
@@ -278,6 +278,7 @@ func NewAppConfig() django.AppConfig {
 		FS:      tplFS,
 		Bases: []string{
 			"admin/skeleton.tmpl",
+			"admin/messages.tmpl",
 			"admin/base.tmpl",
 		},
 		Matches: filesystem.MatchAnd(
