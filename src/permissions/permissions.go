@@ -16,17 +16,18 @@ type PermissionTester interface {
 var Tester PermissionTester
 
 func defaultLog(r *http.Request, perms ...string) bool {
+
+	var user = authentication.Retrieve(r)
+	if user != nil && user.IsAdmin() {
+		return true
+	}
+
 	if LOG_IF_NONE_FOUND {
 		logger.Warnf(
 			"No permission testers found for \"%s\" (%s)",
 			strings.Join(perms, "\", \""),
 			r.URL.Path,
 		)
-	}
-
-	var user = authentication.Retrieve(r)
-	if user != nil {
-		return user.IsAdmin() || DEFAULT_HAS_PERMISSION
 	}
 
 	return DEFAULT_HAS_PERMISSION

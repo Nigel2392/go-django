@@ -58,17 +58,18 @@ var (
 
 ```go
 func defaultLog(r *http.Request, perms ...string) bool {
+
+ var user = authentication.Retrieve(r)
+ if user != nil && user.IsAdmin() {
+  return true
+ }
+
  if LOG_IF_NONE_FOUND {
   logger.Warnf(
    "No permission testers found for \"%s\" (%s)",
    strings.Join(perms, "\", \""),
    r.URL.Path,
   )
- }
-
- var user = authentication.Retrieve(r)
- if user != nil {
-  return user.IsAdmin() || DEFAULT_HAS_PERMISSION
  }
 
  return DEFAULT_HAS_PERMISSION
@@ -100,7 +101,7 @@ var DEFAULT_IF_NONE_FOUND = defaultLog
 var DEFAULT_HAS_PERMISSION = false
 ```
 
-- This variable is used to determine the default behavior when no `PermissionTester` is provided. By default, it is set to `false`, meaning that permission is granted by default.
+- This variable is used to determine the default behavior when no `PermissionTester` is provided. By default, it is set to `false`, meaning that permission is **not** granted by default.
 
 ## Functions
 
