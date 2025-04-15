@@ -19,15 +19,24 @@ import (
 )
 
 func NewAppConfig() django.AppConfig {
-	var app = apps.NewDBAppConfig("session")
+	var app = apps.NewAppConfig("session")
 
 	var sessionManager = scs.New()
 
-	app.Init = func(settings django.Settings, db *sql.DB) error {
+	app.Init = func(settings django.Settings) error {
 
 		settings.Set(
 			django.APPVAR_SESSION_MANAGER, sessionManager,
 		)
+
+		var dbInt, ok = settings.Get(django.APPVAR_DATABASE)
+		var db *sql.DB
+		if !ok {
+			goto memstore
+		}
+
+		db, ok = dbInt.(*sql.DB)
+		assert.True(ok, "DATABASE setting must be of type *sql.DB")
 
 		switch db.Driver().(type) {
 		case *mysql.MySQLDriver:
@@ -50,6 +59,7 @@ func NewAppConfig() django.AppConfig {
 
 			logger.Info("Using mysqlstore for session storage")
 			sessionManager.Store = mysqlstore.New(db)
+			return nil
 
 		case *sqlite3.SQLiteDriver:
 
@@ -62,6 +72,7 @@ func NewAppConfig() django.AppConfig {
 
 			logger.Info("Using sqlite3store for session storage")
 			sessionManager.Store = sqlite3store.New(db)
+			return nil
 
 		case *stdlib.Driver:
 
@@ -76,13 +87,12 @@ CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expiry);`)
 
 			logger.Info("Using postgresstore for session storage")
 			sessionManager.Store = postgresstore.New(db)
-
-		default:
-
-			logger.Info("Using memstore for session storage")
-			sessionManager.Store = memstore.New()
+			return nil
 		}
 
+	memstore:
+		logger.Info("Using memstore for session storage")
+		sessionManager.Store = memstore.New()
 		return nil
 	}
 

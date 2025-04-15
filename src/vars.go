@@ -48,5 +48,4 @@ const (
 
 	// The session manager for the application
 	APPVAR_SESSION_MANAGER = "SESSION_MANAGER" // *scs.SessionManager
-
 )

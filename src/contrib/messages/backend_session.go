@@ -11,7 +11,7 @@ import (
 
 var (
 	_                 MessageBackend = (*SessionBackend)(nil)
-	sessionBackendKey                = "sessionBackendKey"
+	sessionBackendKey                = "messages.sessionBackendKey"
 )
 
 type SessionBackend struct {

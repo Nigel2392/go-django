@@ -150,24 +150,30 @@ func NewAppConfig() *PageAppConfig {
 		),
 	)
 
-	tpl.Add(tpl.Config{
-		AppName: "pages",
-		FS: filesystem.NewMultiFS(
-			templateFileSys,
-			admin.AdminSite.TemplateConfig.FS,
-		),
-		Matches: filesystem.MatchOr(
-			filesystem.MatchAnd(
-				filesystem.MatchPrefix("pages/"),
-				filesystem.MatchOr(
-					filesystem.MatchSuffix(".tmpl"),
+	if django.AppInstalled("admin") {
+		tpl.Add(tpl.Config{
+			AppName: "pages",
+			FS: filesystem.NewMultiFS(
+				filesystem.NewMatchFS(
+					templateFileSys,
+					filesystem.MatchOr(
+						filesystem.MatchAnd(
+							filesystem.MatchPrefix("pages/"),
+							filesystem.MatchOr(
+								filesystem.MatchSuffix(".tmpl"),
+							),
+						),
+					),
+				),
+				filesystem.NewMatchFS(
+					admin.AdminSite.TemplateConfig.FS,
+					admin.AdminSite.TemplateConfig.Matches,
 				),
 			),
-			admin.AdminSite.TemplateConfig.Matches,
-		),
-		Bases: admin.AdminSite.TemplateConfig.Bases,
-		Funcs: admin.AdminSite.TemplateConfig.Funcs,
-	})
+			Bases: admin.AdminSite.TemplateConfig.Bases,
+			Funcs: admin.AdminSite.TemplateConfig.Funcs,
+		})
+	}
 
 	if pageApp != nil {
 		return pageApp

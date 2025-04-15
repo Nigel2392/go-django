@@ -36,14 +36,23 @@ func setBackend(r *http.Request, backend MessageBackend) *http.Request {
 	return r.WithContext(ctx)
 }
 
+func BackendFromContext(r *http.Request) MessageBackend {
+	var b = r.Context().Value(backendKey)
+	if b != nil {
+		return b.(MessageBackend)
+	}
+
+	return nil
+}
+
 func Backend(r *http.Request) MessageBackend {
 	if r == nil {
 		return nil
 	}
 
-	var b = r.Context().Value(backendKey)
+	var b = BackendFromContext(r)
 	if b != nil {
-		return b.(MessageBackend)
+		return b
 	}
 
 	except.AssertNotNil(
