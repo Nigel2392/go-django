@@ -12,6 +12,8 @@ import (
 
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
+	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/pkg/errors"
 )
 
@@ -168,6 +170,18 @@ func init() {
 
 }
 
+type DummyUser struct {
+	IsAdministrator bool
+}
+
+func (u *DummyUser) IsAuthenticated() bool {
+	return true
+}
+
+func (u *DummyUser) IsAdmin() bool {
+	return u.IsAdministrator
+}
+
 func TestPageMenuHandler(t *testing.T) {
 
 	// Insert test data
@@ -223,12 +237,16 @@ func TestPageMenuHandler(t *testing.T) {
 			}
 			r.URL.RawQuery = q.Encode()
 			r = r.WithContext(ctx)
-			pageMenuHandler(w, r)
+			var m = authentication.AddUserMiddleware(func(r *http.Request) authentication.User {
+				return &DummyUser{IsAdministrator: true}
+			})
+			var handler = m(mux.NewHandler(pageMenuHandler))
+			handler.ServeHTTP(w, r)
 
-			//if w.s != http.StatusOK {
-			//	t.Errorf("expected status %d; got %d", http.StatusOK, w.s)
-			//	return
-			//}
+			// if w.s != http.StatusOK {
+			// t.Errorf("expected status %d; got %d", http.StatusOK, w.s)
+			// return
+			// }
 
 			var gotItems menuResponse
 			if err := json.Unmarshal(w.b.Bytes(), &gotItems); err != nil {

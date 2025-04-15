@@ -1,7 +1,9 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -18,6 +20,15 @@ func RedirectLoginFailedToAdmin(w http.ResponseWriter, r *http.Request, app *dja
 	}
 
 	var redirectURL = django.Reverse("admin:login")
+	var nextURL = authError.NextURL
+	if nextURL != "" {
+		redirectURL = fmt.Sprintf(
+			"%s?next=%s",
+			redirectURL,
+			url.QueryEscape(nextURL),
+		)
+	}
+
 	http.Redirect(w, r, redirectURL, http.StatusFound)
 	return true
 }

@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/editor/features/images"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/memory"
 	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
 var appFileBackend = memory.NewBackend(5)
@@ -33,6 +34,18 @@ var testImage2 = []byte(`<svg xmlns="http://www.w3.org/2000/svg" width="100" hei
 //var testImage3 = []byte(`<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100">
 //	<circle cx="50" cy="50" r="40" stroke="black" stroke-width="3" fill="green" />
 //</svg>`)
+
+type dummyUser struct {
+	IsAdministrator bool
+}
+
+func (u *dummyUser) IsAuthenticated() bool {
+	return true
+}
+
+func (u *dummyUser) IsAdmin() bool {
+	return u.IsAdministrator
+}
 
 func makeRequest(method, url string, filename string, image []byte) *http.Request {
 	req, _ := http.NewRequest(method, url, nil)
@@ -58,6 +71,9 @@ type uploadResponse struct {
 
 func TestViews(t *testing.T) {
 	var mux = mux.New()
+	mux.Use(authentication.AddUserMiddleware(func(r *http.Request) authentication.User {
+		return &dummyUser{IsAdministrator: true}
+	}))
 	images.ImageFeature.OnRegister(mux)
 	var server = httptest.NewServer(mux)
 	defer server.Close()

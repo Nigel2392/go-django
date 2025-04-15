@@ -44,7 +44,7 @@ var Tester PermissionTester
 
 ### Default Behavior
 
-If no custom `PermissionTester` is provided (i.e., `Tester` is `nil`), the default behavior will be used. This behavior is defined by the `DEFAULT_IF_NONE_FOUND` function, which logs a warning and returns `true` (granting permission by default).
+If no custom `PermissionTester` is provided (i.e., `Tester` is `nil`), the default behavior will be used. This behavior is defined by the `DEFAULT_IF_NONE_FOUND` function, which logs a warning and returns [`DEFAULT_HAS_PERMISSION`](#default_has_permission) (granting **no** permission by default).
 
 #### `DEFAULT_IF_NONE_FOUND`
 
@@ -54,7 +54,7 @@ var (
 )
 ```
 
-- **defaultLog**: This function logs a warning if no permission tester is found and returns `true`. By default, this will log a message if `LOG_IF_NONE_FOUND` is set to `true`.
+- **defaultLog**: This function logs a warning if no permission tester is found and returns [`DEFAULT_HAS_PERMISSION`](#default_has_permission). By default, this will log a message if `LOG_IF_NONE_FOUND` is set to `true`.
 
 ```go
 func defaultLog(r *http.Request, perms ...string) bool {
@@ -65,28 +65,42 @@ func defaultLog(r *http.Request, perms ...string) bool {
    r.URL.Path,
   )
  }
- return true
+
+ var user = authentication.Retrieve(r)
+ if user != nil {
+  return user.IsAdmin() || DEFAULT_HAS_PERMISSION
+ }
+
+ return DEFAULT_HAS_PERMISSION
 }
 ```
 
 ### Configuration Variables
 
-- **LOG_IF_NONE_FOUND**
+#### LOG_IF_NONE_FOUND
 
-  ```go
-  var LOG_IF_NONE_FOUND = true
-  ```
+```go
+var LOG_IF_NONE_FOUND = true
+```
 
-  - When `LOG_IF_NONE_FOUND` is `true`, the `defaultLog` function will log a warning if no `PermissionTester` is found.
-  - When set to `false`, no warning will be logged.
+- When `LOG_IF_NONE_FOUND` is `true`, the `defaultLog` function will log a warning if no `PermissionTester` is found.
+- When set to `false`, no warning will be logged.
 
-- **DEFAULT_IF_NONE_FOUND**
+#### DEFAULT_IF_NONE_FOUND
 
-  ```go
-  var DEFAULT_IF_NONE_FOUND = defaultLog
-  ```
+```go
+var DEFAULT_IF_NONE_FOUND = defaultLog
+```
 
-  - This variable points to the function used when no `PermissionTester` is set. By default, it is set to `defaultLog`.
+- This variable points to the function used when no `PermissionTester` is set. By default, it is set to `defaultLog`.
+
+#### DEFAULT_HAS_PERMISSION
+
+```go
+var DEFAULT_HAS_PERMISSION = false
+```
+
+- This variable is used to determine the default behavior when no `PermissionTester` is provided. By default, it is set to `false`, meaning that permission is granted by default.
 
 ## Functions
 

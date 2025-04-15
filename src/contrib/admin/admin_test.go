@@ -15,6 +15,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
+	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -38,35 +39,37 @@ func (t *TestModelStruct) FieldDefs() attrs.Definitions {
 	return attrs.AutoDefinitions[*TestModelStruct](t)
 }
 
+func getUserFromRequest(r *http.Request) authentication.User {
+	var session = sessions.Retrieve(r)
+	// fmt.Println("add user middleware", session)
+	// return nil
+	var user = session.Get("user")
+	if user == nil {
+		return &User{
+			LoggedIn:        false,
+			IsAdministrator: false,
+		}
+	}
+	var (
+		userID = user.(int)
+		isLoggedIn,
+		isAdmin bool
+	)
+	if userID >= 1 {
+		isLoggedIn = true
+	}
+	if userID == 2 {
+		isAdmin = true
+	}
+	return &User{
+		LoggedIn:        isLoggedIn,
+		IsAdministrator: isAdmin,
+	}
+}
+
 var (
 	HOST                = "localhost:22392"
-	ADD_USER_MIDDLEWARE = authentication.AddUserMiddleware(func(r *http.Request) authentication.User {
-		var session = sessions.Retrieve(r)
-		// fmt.Println("add user middleware", session)
-		// return nil
-		var user = session.Get("user")
-		if user == nil {
-			return &User{
-				LoggedIn:        false,
-				IsAdministrator: false,
-			}
-		}
-		var (
-			userID = user.(int)
-			isLoggedIn,
-			isAdmin bool
-		)
-		if userID >= 1 {
-			isLoggedIn = true
-		}
-		if userID == 2 {
-			isAdmin = true
-		}
-		return &User{
-			LoggedIn:        isLoggedIn,
-			IsAdministrator: isAdmin,
-		}
-	})
+	ADD_USER_MIDDLEWARE = authentication.AddUserMiddleware(getUserFromRequest)
 )
 
 var runTests = true
@@ -164,6 +167,19 @@ func init() {
 		),
 	)
 
+	app.Mux.Any("/", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("this page should not be hit!"))
+		panic("this page should not be hit!")
+	}), "index")
+
+	// register the auth errors hook to redirect to the login page
+	// on login failed - normally this is setup by an auth package itself
+	// but we don't need it here
+	// the hook normally redirects to the login page of the auth package,
+	// we redirect to an index page (which should not be hit,
+	// hook functionality can be changed, like in admin_auth_errors.go).
+	autherrors.RegisterHook("index")
+
 	var err = app.Initialize()
 	if err != nil {
 		panic(err)
@@ -241,100 +257,44 @@ type HandlerTest struct {
 	Expected        string
 }
 
-func login(t *testing.T) {
-	var req *http.Request
-	var err error
+func AuthURL(url string, expected string) func(t *testing.T) {
+	return func(t *testing.T) {
+		var req *http.Request
+		var err error
 
-	req, err = http.NewRequest("GET", "http://"+HOST+"/tests/auto-login/", nil)
-	if err != nil {
-		t.Error(err)
-		os.Exit(1)
-	}
+		req, err = http.NewRequest("GET", "http://"+HOST+url, nil)
+		if err != nil {
+			t.Error(err)
+			os.Exit(1)
+		}
 
-	response, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Error(err)
-		os.Exit(1)
-	}
-	if response.StatusCode != http.StatusOK {
-		t.Error("Expected status OK")
-		os.Exit(1)
-	}
+		response, err := http.DefaultClient.Do(req)
+		if err != nil {
+			t.Error(err)
+			os.Exit(1)
+		}
+		if response.StatusCode != http.StatusOK {
+			t.Error("Expected status OK")
+			os.Exit(1)
+		}
 
-	defer response.Body.Close()
+		defer response.Body.Close()
 
-	var buf bytes.Buffer
-	buf.ReadFrom(response.Body)
-	if !testBufferEquals(t, &buf, "Logged in") {
-		t.Error("Expected Logged in, got", buf.String())
-		os.Exit(1)
-	}
-}
+		var buf bytes.Buffer
+		buf.ReadFrom(response.Body)
 
-func logout(t *testing.T) {
-	var req *http.Request
-	var err error
-
-	req, err = http.NewRequest("GET", "http://"+HOST+"/tests/auto-logout/", nil)
-	if err != nil {
-		t.Error(err)
-		os.Exit(1)
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Error(err)
-		os.Exit(1)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		t.Error("Expected status OK")
-		os.Exit(1)
-	}
-
-	defer resp.Body.Close()
-
-	var buf bytes.Buffer
-	buf.ReadFrom(resp.Body)
-
-	if !testBufferEquals(t, &buf, "Logged out") {
-		t.Error("Expected Logged out, got", buf.String())
-		os.Exit(1)
+		if !testBufferEquals(t, &buf, expected) {
+			t.Error("Expected", expected, "got", buf.String())
+			os.Exit(1)
+		}
 	}
 }
 
-func asRegularUser(t *testing.T) {
-
-	var req *http.Request
-	var err error
-
-	req, err = http.NewRequest("GET", "http://"+HOST+"/tests/user-level/", nil)
-	if err != nil {
-		t.Error(err)
-		os.Exit(1)
-	}
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		t.Error(err)
-		os.Exit(1)
-	}
-
-	if resp.StatusCode != http.StatusOK {
-		t.Error("Expected status OK")
-		os.Exit(1)
-	}
-
-	defer resp.Body.Close()
-
-	var buf bytes.Buffer
-	buf.ReadFrom(resp.Body)
-
-	if !testBufferEquals(t, &buf, "Logged in") {
-		t.Error("Expected Logged in, got", buf.String())
-		os.Exit(1)
-	}
-}
+var (
+	login         = AuthURL("/tests/auto-login/", "Logged in")
+	logout        = AuthURL("/tests/auto-logout/", "Logged out")
+	asRegularUser = AuthURL("/tests/user-level/", "Logged in")
+)
 
 var handlerTests = []HandlerTest{
 	//{
@@ -377,84 +337,84 @@ var handlerTests = []HandlerTest{
 		LoggedIn:        false,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test",
-		Expected:        "You need to login\n",
+		Expected:        "/admin/login/",
 	},
 	{
 		Name:            "App",
 		LoggedIn:        false,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test",
-		Expected:        "You need to login\n",
+		Expected:        "/admin/login/",
 	},
 	{
 		Name:            "List",
 		LoggedIn:        false,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel",
-		Expected:        "You need to login\n",
+		Expected:        "/admin/login/",
 	},
 	{
 		Name:            "Add",
 		LoggedIn:        false,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/add",
-		Expected:        "You need to login\n",
+		Expected:        "/admin/login/",
 	},
 	{
 		Name:            "Edit",
 		LoggedIn:        false,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/edit/1",
-		Expected:        "You need to login\n",
+		Expected:        "/admin/login/",
 	},
 	{
 		Name:            "Delete",
 		LoggedIn:        false,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/delete/1",
-		Expected:        "You need to login\n",
+		Expected:        "/admin/login/",
 	},
 	{
 		Name:            "App",
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test",
-		Expected:        "You do not have permission to access this page\n",
+		Expected:        "/admin/relogin/",
 	},
 	{
 		Name:            "List",
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel",
-		Expected:        "You do not have permission to access this page\n",
+		Expected:        "/admin/relogin/",
 	},
 	{
 		Name:            "Admin",
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test",
-		Expected:        "You do not have permission to access this page\n",
+		Expected:        "/admin/relogin/",
 	},
 	{
 		Name:            "Add",
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/add",
-		Expected:        "You do not have permission to access this page\n",
+		Expected:        "/admin/relogin/",
 	},
 	{
 		Name:            "Edit",
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/edit/1",
-		Expected:        "You do not have permission to access this page\n",
+		Expected:        "/admin/relogin/",
 	},
 	{
 		Name:            "Delete",
 		LoggedIn:        true,
 		IsAdministrator: false,
 		URL:             "/admin/apps/test/model/TestModel/delete/1",
-		Expected:        "You do not have permission to access this page\n",
+		Expected:        "/admin/relogin/",
 	},
 }
 
@@ -475,7 +435,6 @@ func TestAdminHandlers(t *testing.T) {
 		}
 
 		t.Run(testName, func(t *testing.T) {
-			var buf bytes.Buffer
 			var req *http.Request
 			var res *http.Response
 			var err error
@@ -491,16 +450,25 @@ func TestAdminHandlers(t *testing.T) {
 			req, err = http.NewRequest("GET", "http://"+HOST+test.URL, nil)
 			if err != nil {
 				t.Error(err)
+				return
 			}
 
 			res, err = http.DefaultClient.Do(req)
 			if err != nil {
 				t.Error(err)
+				return
 			}
 
-			buf.ReadFrom(res.Body)
-			if !testBufferEquals(nil, &buf, test.Expected) {
-				t.Errorf("Expected %s, got %s (%d != %d)", test.Expected, buf.String(), len(test.Expected), buf.Len())
+			defer res.Body.Close()
+
+			if test.Expected != "" {
+				if strings.TrimSuffix(res.Request.URL.Path, "/") != strings.TrimSuffix(test.Expected, "/") {
+					t.Errorf("Expected %s, got %s", test.Expected, res.Request.URL.Path)
+					var buf bytes.Buffer
+					buf.ReadFrom(res.Body)
+					t.Error(buf.String())
+					return
+				}
 			}
 		})
 	}

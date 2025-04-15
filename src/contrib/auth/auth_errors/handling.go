@@ -98,7 +98,7 @@ func Fail(code int, msg string, next ...string) {
 		nextURL = next[0]
 	}
 
-	// Hidden control flow is resumed in isAuthErrorHook
+	// Hidden control flow is resumed in RegisterHook's function body
 	panic(&AuthenticationError{
 		Message: msg,
 		Status:  code,
