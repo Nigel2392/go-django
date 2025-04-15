@@ -26,7 +26,11 @@ func NewAppConfig() django.AppConfig {
 		app.checkTags()
 
 		if app.initBackend == nil {
-			app.initBackend = NewSessionBackend
+			if django.AppInstalled("session") {
+				app.initBackend = NewSessionBackend
+			} else {
+				app.initBackend = NewCookieBackend
+			}
 		}
 
 		return nil

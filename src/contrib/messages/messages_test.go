@@ -5,6 +5,7 @@ package messages_test
 
 import (
 	"bytes"
+	"fmt"
 	"net/http"
 	"net/http/cookiejar"
 	"net/http/httptest"
@@ -17,28 +18,6 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/mux"
 )
-
-var _ messages.MessageBackend = (*DummyBackend)(nil)
-
-type DummyBackend struct {
-	under *messages.SessionBackend
-}
-
-func (d *DummyBackend) Get() (messages []messages.Message, AllRetrieved bool) {
-	return d.under.Get()
-}
-func (d *DummyBackend) Store(message messages.Message) error {
-	return d.under.Store(message)
-}
-func (d *DummyBackend) Clear() error {
-	return d.under.Clear()
-}
-func (d *DummyBackend) Level() messages.MessageTag {
-	return d.under.Level()
-}
-func (d *DummyBackend) SetLevel(level messages.MessageTag) error {
-	return d.under.SetLevel(level)
-}
 
 var (
 	server  *httptest.Server
@@ -82,6 +61,10 @@ func init() {
 	settings[django.APPVAR_ALLOWED_HOSTS] = []string{"*"}
 	settings[django.APPVAR_DEBUG] = true
 
+	messages.ConfigureBackend(
+		messages.NewCookieBackend,
+	)
+
 	app = django.App(
 		django.Configure(settings),
 		django.Apps(
@@ -114,63 +97,85 @@ func init() {
 	client.Jar = cookieJar
 }
 
+var backendFuncs = map[string]func(r *http.Request) (messages.MessageBackend, error){
+	"Cookie":  messages.NewCookieBackend,
+	"Session": messages.NewSessionBackend,
+}
+
 func TestMessagesMiddleware(t *testing.T) {
+	for name, backendFunc := range backendFuncs {
+		t.Run(fmt.Sprintf("Test_%s_Backend", name), func(t *testing.T) {
+			backend = nil
 
-	var response, err = client.Get(server.URL + "/")
-	if err != nil {
-		t.Fatalf("Error making request: %v", err)
-	}
+			messages.ConfigureBackend(backendFunc)
 
-	if response.Body != nil {
-		defer response.Body.Close()
-	}
+			var response, err = client.Get(server.URL + "/")
+			if err != nil {
+				t.Fatalf("Error making request: %v", err)
+			}
 
-	if response.StatusCode != 200 {
-		t.Fatalf("Expected status code 200, got %d", response.StatusCode)
-	}
+			if response.Body != nil {
+				defer response.Body.Close()
+			}
 
-	if backend == nil {
-		t.Fatal("Expected backend to be set, got nil")
+			if response.StatusCode != 200 {
+				t.Fatalf("Expected status code 200, got %d", response.StatusCode)
+			}
+
+			if backend == nil {
+				t.Fatal("Expected backend to be set, got nil")
+			}
+		})
 	}
 }
 
 func TestAddMessages(t *testing.T) {
 
-	var response, err = client.Get(server.URL + "/add")
-	if err != nil {
-		t.Fatalf("Error making request: %v", err)
-	}
-	var body = new(bytes.Buffer)
-	if response.Body != nil {
-		defer response.Body.Close()
-		body.ReadFrom(response.Body)
+	for name, backendFunc := range backendFuncs {
+		t.Run(fmt.Sprintf("Test_%s_Backend", name), func(t *testing.T) {
+			backend = nil
+
+			messages.ConfigureBackend(backendFunc)
+
+			var response, err = client.Get(server.URL + "/add")
+			if err != nil {
+				t.Fatalf("Error making request: %v", err)
+			}
+			var body = new(bytes.Buffer)
+			if response.Body != nil {
+				defer response.Body.Close()
+				body.ReadFrom(response.Body)
+			}
+
+			if response.StatusCode != 200 {
+				t.Fatalf("Expected status code 200, got %d", response.StatusCode)
+			}
+
+			if body.String() != "Message added" {
+				t.Fatalf("Expected body to be 'Message added', got %s", body.String())
+			}
+
+			response, err = client.Get(server.URL + "/test")
+			if err != nil {
+				t.Fatalf("Error making request: %v", err)
+			}
+
+			body = new(bytes.Buffer)
+			if response.Body != nil {
+				defer response.Body.Close()
+				body.ReadFrom(response.Body)
+			}
+
+			count, err := strconv.Atoi(body.String())
+			if err != nil {
+				t.Fatalf("Expected count to be an integer, got %v", err)
+			}
+
+			if count != 1 {
+				t.Fatalf("Expected count to be 1, got %d", count)
+			}
+
+		})
 	}
 
-	if response.StatusCode != 200 {
-		t.Fatalf("Expected status code 200, got %d", response.StatusCode)
-	}
-
-	if body.String() != "Message added" {
-		t.Fatalf("Expected body to be 'Message added', got %s", body.String())
-	}
-
-	response, err = client.Get(server.URL + "/test")
-	if err != nil {
-		t.Fatalf("Error making request: %v", err)
-	}
-
-	body = new(bytes.Buffer)
-	if response.Body != nil {
-		defer response.Body.Close()
-		body.ReadFrom(response.Body)
-	}
-
-	count, err := strconv.Atoi(body.String())
-	if err != nil {
-		t.Fatalf("Expected count to be an integer, got %v", err)
-	}
-
-	if count != 1 {
-		t.Fatalf("Expected count to be 1, got %d", count)
-	}
 }

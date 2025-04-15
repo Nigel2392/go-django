@@ -15,9 +15,8 @@ var (
 )
 
 type SessionBackend struct {
-	Request        *http.Request
-	MinTagLevel    uint
-	QueuedMessages []Message
+	Request     *http.Request
+	MinTagLevel uint
 }
 
 func NewSessionBackend(r *http.Request) (MessageBackend, error) {
@@ -32,6 +31,10 @@ func NewSessionBackend(r *http.Request) (MessageBackend, error) {
 		Request:     r,
 		MinTagLevel: TagLevels[DefaultTags.Debug],
 	}, nil
+}
+
+func (b *SessionBackend) Finalize(w http.ResponseWriter, r *http.Request) error {
+	return nil
 }
 
 func (b *SessionBackend) Level() MessageTag {

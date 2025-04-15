@@ -28,5 +28,9 @@ func MessagesMiddleware(next mux.Handler) mux.Handler {
 		logger.Debugf("Messages backend initialized: %T", backend)
 		r = setBackend(r, backend)
 		next.ServeHTTP(w, r)
+
+		if err := backend.Finalize(w, r); err != nil {
+			logger.Errorf("Error finalizing messages backend: %v", err)
+		}
 	})
 }

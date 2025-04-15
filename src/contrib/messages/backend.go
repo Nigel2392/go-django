@@ -2,6 +2,7 @@ package messages
 
 import (
 	"encoding/gob"
+	"net/http"
 )
 
 func init() {
@@ -45,7 +46,8 @@ type Message interface {
 type MessageBackend interface {
 	Get() (messages []Message, AllRetrieved bool)
 	Store(message Message) error
-	Clear() error
 	Level() MessageTag
 	SetLevel(level MessageTag) error
+	Finalize(w http.ResponseWriter, r *http.Request) error
+	Clear() error
 }
