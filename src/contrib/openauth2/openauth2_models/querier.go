@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"time"
 
 	django_signals "github.com/Nigel2392/go-django/src/signals"
 )
@@ -14,23 +15,29 @@ type Querier interface {
 
 	RetrieveUsers(ctx context.Context, limit int32, offset int32, ordering ...string) ([]*User, error)
 	RetrieveUserByID(ctx context.Context, id uint64) (*User, error)
-	RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier string) (*User, error)
+	RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier string) (*UserWithToken, error)
+	RetrieveTokensByUserID(ctx context.Context, userID uint64) ([]*Token, error)
 
-	CreateUser(ctx context.Context, uniqueIdentifier string, data json.RawMessage, isAdministrator bool, isActive bool) (uint64, error)
-	UpdateUser(ctx context.Context, uniqueIdentifier string, data json.RawMessage, isAdministrator bool, isActive bool, iD uint64) error
+	CreateUser(ctx context.Context, uniqueIdentifier string, isAdministrator bool, isActive bool) (int64, error)
+	UpdateUser(ctx context.Context, uniqueIdentifier string, isAdministrator bool, isActive bool, iD uint64) error
 
 	DeleteUser(ctx context.Context, id uint64) error
 	DeleteUsers(ctx context.Context, ids []uint64) error
+
+	CreateUserToken(ctx context.Context, userID uint64, providerName string, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, scope sql.NullString, tokenType sql.NullString) (int64, error)
+	UpdateUserToken(ctx context.Context, userID uint64, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, scope sql.NullString, tokenType sql.NullString, providerName string) error
+	DeleteUserToken(ctx context.Context, userID uint64) error
+	DeleteUserTokenByProvider(ctx context.Context, userID uint64, providerName string) error
+	DeleteUserTokens(ctx context.Context, userIds []uint64) error
 }
 
 type SignalsQuerier struct {
 	Querier
 }
 
-func (q *SignalsQuerier) CreateUser(ctx context.Context, uniqueIdentifier string, data json.RawMessage, isAdministrator bool, isActive bool) (uint64, error) {
+func (q *SignalsQuerier) CreateUser(ctx context.Context, uniqueIdentifier string, isAdministrator bool, isActive bool) (int64, error) {
 	var u = &User{
 		UniqueIdentifier: uniqueIdentifier,
-		Data:             data,
 		IsAdministrator:  isAdministrator,
 		IsActive:         isActive,
 	}
@@ -39,7 +46,7 @@ func (q *SignalsQuerier) CreateUser(ctx context.Context, uniqueIdentifier string
 		return 0, err
 	}
 
-	id, err := q.Querier.CreateUser(ctx, uniqueIdentifier, data, isAdministrator, isActive)
+	id, err := q.Querier.CreateUser(ctx, uniqueIdentifier, isAdministrator, isActive)
 	if err != nil {
 		return 0, err
 	}
@@ -50,11 +57,10 @@ func (q *SignalsQuerier) CreateUser(ctx context.Context, uniqueIdentifier string
 	return id, nil
 }
 
-func (q *SignalsQuerier) UpdateUser(ctx context.Context, uniqueIdentifier string, data json.RawMessage, isAdministrator bool, isActive bool, iD uint64) error {
+func (q *SignalsQuerier) UpdateUser(ctx context.Context, uniqueIdentifier string, isAdministrator bool, isActive bool, iD uint64) error {
 	var u = &User{
 		ID:               uint64(iD),
 		UniqueIdentifier: uniqueIdentifier,
-		Data:             data,
 		IsAdministrator:  isAdministrator,
 		IsActive:         isActive,
 	}
@@ -63,7 +69,7 @@ func (q *SignalsQuerier) UpdateUser(ctx context.Context, uniqueIdentifier string
 		return err
 	}
 
-	err = q.Querier.UpdateUser(ctx, uniqueIdentifier, data, isAdministrator, isActive, iD)
+	err = q.Querier.UpdateUser(ctx, uniqueIdentifier, isAdministrator, isActive, iD)
 	if err != nil {
 		return err
 	}

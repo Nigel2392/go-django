@@ -1,8 +1,12 @@
 package admin
 
 import (
+	"fmt"
+	"net/http"
+	"net/url"
 	"reflect"
 
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -28,4 +32,21 @@ func FindDefinition(model attrs.Definer) *ModelDefinition {
 	}
 
 	return nil
+}
+
+func ReLogin(w http.ResponseWriter, r *http.Request, nextURL ...string) {
+	var redirectURL = django.Reverse("admin:login")
+	if len(nextURL) > 0 {
+		redirectURL = fmt.Sprintf(
+			"%s?next=%s",
+			redirectURL,
+			url.QueryEscape(nextURL[0]),
+		)
+	}
+	http.Redirect(
+		w, r,
+		redirectURL,
+		http.StatusSeeOther,
+	)
+
 }

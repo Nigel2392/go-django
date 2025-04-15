@@ -27,10 +27,10 @@ const (
 
 	// TODO: Implement functionality later - model should store:
 	// - UserID
-	// - ProviderID (or name)
+	// - ProviderName
 	// - AccessToken
 	// - RefreshToken
-	// - ExpiresIn
+	// - ExpiresAt
 	// - Scope
 	// - TokenType
 	// - CreatedAt

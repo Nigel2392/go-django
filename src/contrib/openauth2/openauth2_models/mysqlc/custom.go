@@ -9,7 +9,7 @@ import (
 )
 
 const retrieveUsersDynamicOrd = `-- name: RetrieveUsers :many
-SELECT id, unique_identifier, data, created_at, updated_at, is_administrator, is_active FROM users
+SELECT id, unique_identifier, created_at, updated_at, is_administrator, is_active FROM users
 ORDER BY %s
 LIMIT ?
 OFFSET ?
@@ -43,7 +43,6 @@ func (q *Queries) RetrieveUsers(ctx context.Context, limit int32, offset int32, 
 		if err := rows.Scan(
 			&i.ID,
 			&i.UniqueIdentifier,
-			&i.Data,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 			&i.IsAdministrator,

@@ -97,7 +97,9 @@ func NewCookieBackend(r *http.Request) (MessageBackend, error) {
 func (d *CookieBackend) Finalize(w http.ResponseWriter, r *http.Request) error {
 	if d.cleared {
 		http.SetCookie(w, &http.Cookie{
-			Name: d.BaseCookie.Name,
+			Name:   d.BaseCookie.Name,
+			Value:  "",
+			MaxAge: -1,
 		})
 		return nil
 	}

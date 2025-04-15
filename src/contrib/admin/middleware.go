@@ -1,11 +1,8 @@
 package admin
 
 import (
-	"fmt"
 	"net/http"
-	"net/url"
 
-	django "github.com/Nigel2392/go-django/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -31,17 +28,7 @@ func RequiredMiddleware(next mux.Handler) mux.Handler {
 				"User \"%s\" tried to access admin without permission",
 				attrs.ToString(user),
 			)
-			var nextURL = req.URL.Path
-			var redirectURL = fmt.Sprintf(
-				"%s?next=%s",
-				django.Reverse("admin:relogin"),
-				url.QueryEscape(nextURL),
-			)
-			http.Redirect(
-				w, req,
-				redirectURL,
-				http.StatusSeeOther,
-			)
+			ReLogin(w, req, req.URL.Path)
 			return
 		}
 

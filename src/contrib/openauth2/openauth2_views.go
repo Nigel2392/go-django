@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"strings"
 
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -14,12 +15,42 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const redirectCookieName = "openauth2.redirectURL"
+
+func setCallbackHandlerRedirect(w http.ResponseWriter, redirectURL string, delete bool) {
+	var maxAge = -1
+	if delete {
+		redirectURL = ""
+	} else {
+		maxAge = 60 * 10 // 10 minutes
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:     redirectCookieName,
+		Value:    redirectURL,
+		MaxAge:   maxAge, // 10 minutes
+		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
+	})
+}
+
+func getCallbackHandlerRedirect(r *http.Request) string {
+	var cookie, err = r.Cookie(redirectCookieName)
+	if err != nil {
+		return ""
+	}
+	if cookie == nil {
+		return ""
+	}
+	return cookie.Value
+}
+
 func (oa *OpenAuth2AppConfig) AuthHandler(w http.ResponseWriter, r *http.Request, a *AuthConfig) {
 	var user = authentication.Retrieve(r)
+	var redirectURL = r.URL.Query().Get(
+		"next",
+	)
 	if user != nil && user.IsAuthenticated() {
-		var redirectURL = r.URL.Query().Get(
-			"next",
-		)
 		if redirectURL == "" {
 			redirectURL = "/"
 		}
@@ -31,6 +62,10 @@ func (oa *OpenAuth2AppConfig) AuthHandler(w http.ResponseWriter, r *http.Request
 		return
 	}
 
+	if redirectURL != "" {
+		setCallbackHandlerRedirect(w, redirectURL, false)
+	}
+
 	// Handle the authentication logic here
 	var url = a.Oauth2.AuthCodeURL("state", oauth2.AccessTypeOffline)
 	http.Redirect(w, r, url, http.StatusFound)
@@ -39,22 +74,17 @@ func (oa *OpenAuth2AppConfig) AuthHandler(w http.ResponseWriter, r *http.Request
 
 func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Request, a *AuthConfig) {
 	var code = r.URL.Query().Get("code")
-	if code == "" {
-		except.Fail(
-			http.StatusBadRequest,
-			"Missing code in URL",
-		)
-		return
-	}
+	except.Assert(
+		code != "", http.StatusBadRequest,
+		"Missing code in URL",
+	)
 
+	// Exchange the access code for a token
 	token, err := a.Oauth2.Exchange(r.Context(), code)
-	if err != nil {
-		except.Fail(
-			http.StatusInternalServerError,
-			"Failed to exchange code for authentication token",
-		)
-		return
-	}
+	except.AssertNil(
+		err, http.StatusInternalServerError,
+		"Failed to exchange code for authentication token",
+	)
 
 	if a.DataStructURL == "" {
 		logger.Warnf("DataStructURL was not provided, incomplete Oauth2 flow")
@@ -65,59 +95,62 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
+	// Use the token to get the user's data from the provider
 	client := a.Oauth2.Client(r.Context(), token)
 	resp, err := client.Get(a.DataStructURL)
-	if err != nil {
-		except.Fail(
-			http.StatusInternalServerError,
-			"Failed to get data from provider",
-		)
-		return
-	}
+	except.AssertNil(
+		err, http.StatusInternalServerError,
+		"Failed to get data from provider",
+	)
 
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		except.Fail(
-			http.StatusInternalServerError,
-			"Failed to get data from provider",
-		)
-		return
-	}
 
+	except.Assert(
+		resp.StatusCode == http.StatusOK,
+		http.StatusInternalServerError,
+		"Failed to get data from provider",
+	)
+
+	// Scan the response body into the data struct
 	data, err := a.ScanStruct(resp.Body)
-	if err != nil {
-		except.Fail(
-			http.StatusInternalServerError,
-			"Failed to scan data into struct",
-		)
-		return
-	}
+	except.AssertNil(
+		err, http.StatusInternalServerError,
+		"Failed to scan data into struct",
+	)
 
-	logger.Debugf("Data received from provider: %+v", data)
-
+	// Retrieve the identifier from the data struct
+	// This is used to identify the user in the database
 	identifier, err := a.DataStructIdentifier(token, data)
-	if err != nil {
-		except.Fail(
-			http.StatusInternalServerError,
-			"Failed to get identifier from data struct",
-		)
-		return
-	}
+	except.AssertNil(
+		err, http.StatusInternalServerError,
+		"Failed to get identifier from data struct",
+	)
 
-	if identifier == "" {
-		except.Fail(
-			http.StatusInternalServerError,
-			"Identifier from data struct is empty",
-		)
-		return
-	}
+	except.Assert(
+		identifier != "",
+		http.StatusInternalServerError,
+		"Identifier from data struct is empty",
+	)
+
+	// Serialize raw data into JSON
+	// This is used to store the data in the database
+	// on a per- provider basis
+	rawData, err := json.Marshal(data)
+	except.AssertNil(
+		err, http.StatusInternalServerError,
+		"Failed to marshal data into JSON",
+	)
 
 	logger.Debugf("Identifier from data struct: %s", identifier)
 
-	user, err := oa.queryset.RetrieveUserByIdentifier(
+	// Check if the user already exists in the database
+	userWithToken, err := oa.queryset.RetrieveUserByIdentifier(
 		r.Context(), identifier,
 	)
+	var user = userWithToken.User
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+		// An error occurred while retrieving the user from the database
+		// Log the error and return a 500 status code
 		logger.Errorf("Failed to retrieve user from database: %s", err)
 		except.Fail(
 			http.StatusInternalServerError,
@@ -126,41 +159,78 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 		return
 	} else if err != nil && errors.Is(err, sql.ErrNoRows) {
 		logger.Debug("User not found in database, creating new user")
-		// User not found, create a new user
-		var rawData, err = json.Marshal(data)
-		if err != nil {
-			except.Fail(
-				http.StatusInternalServerError,
-				"Failed to marshal data into JSON",
-			)
-			return
-		}
-
+		// User not found, create a new user in the database
 		lastId, err := oa.queryset.CreateUser(
 			r.Context(),
 			identifier,
-			json.RawMessage(rawData),
 			false,
 			!oa.Config.UserDefaultIsDisabled,
 		)
-		if err != nil {
-			except.Fail(
-				http.StatusInternalServerError,
-				"Failed to create user in database",
-			)
-			return
-		}
-
-		user, err = oa.queryset.RetrieveUserByID(
-			r.Context(), lastId,
+		except.AssertNil(
+			err, http.StatusInternalServerError,
+			"Failed to create user in database",
 		)
-		if err != nil {
-			except.Fail(
-				http.StatusInternalServerError,
-				"Failed to retrieve user from database",
-			)
-			return
-		}
+
+		// Retrieve the full user model from the database by ID
+		user, err = oa.queryset.RetrieveUserByID(
+			r.Context(), uint64(lastId),
+		)
+		except.AssertNil(
+			err, http.StatusInternalServerError,
+			"Failed to retrieve user from database",
+		)
+
+		// Create the user's token information in the database
+		_, err = oa.queryset.CreateUserToken(
+			r.Context(),
+			user.ID,
+			a.Provider,
+			rawData,
+			token.AccessToken,
+			token.RefreshToken,
+			token.Expiry,
+			sql.NullString{
+				String: strings.Join(
+					a.Oauth2.Scopes, " ",
+				),
+				Valid: true,
+			},
+			sql.NullString{
+				String: token.TokenType,
+				Valid:  true,
+			},
+		)
+		except.AssertNil(
+			err, http.StatusInternalServerError,
+			"Failed to create user token in database",
+		)
+
+	} else if err == nil {
+		logger.Debug("User found in database, updating user")
+		// User found, update user token information in the database
+		err = oa.queryset.UpdateUserToken(
+			r.Context(),
+			user.ID,
+			rawData,
+			token.AccessToken,
+			token.RefreshToken,
+			token.Expiry,
+			sql.NullString{
+				String: strings.Join(
+					a.Oauth2.Scopes, " ",
+				),
+				Valid: true,
+			},
+			sql.NullString{
+				String: token.TokenType,
+				Valid:  true,
+			},
+			a.Provider,
+		)
+		except.AssertNil(
+			err, http.StatusInternalServerError,
+			"Failed to update user token in database",
+		)
 	}
 
 	_, err = Login(r, user)
@@ -173,14 +243,23 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	var redirectURL string
-	if oa.Config.RedirectAfterLogin != nil {
-		redirectURL = oa.Config.RedirectAfterLogin(data, r)
-	}
+	var redirectURL = getCallbackHandlerRedirect(r)
 	if redirectURL == "" {
-		redirectURL = "/"
+		if oa.Config.RedirectAfterLogin != nil {
+			redirectURL = oa.Config.RedirectAfterLogin(data, r)
+		}
+		if redirectURL == "" {
+			redirectURL = "/"
+		}
+	} else {
+		setCallbackHandlerRedirect(w, "", true)
 	}
-	logger.Debugf("User logged in successfully, redirecting to: %s", redirectURL)
+
+	logger.Debugf(
+		"User logged in successfully, redirecting to: %s",
+		redirectURL,
+	)
+
 	http.Redirect(
 		w, r,
 		redirectURL,
