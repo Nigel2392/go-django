@@ -35,7 +35,7 @@ func FindDefinition(model attrs.Definer) *ModelDefinition {
 }
 
 func ReLogin(w http.ResponseWriter, r *http.Request, nextURL ...string) {
-	var redirectURL = django.Reverse("admin:login")
+	var redirectURL = django.Reverse("admin:relogin")
 	if len(nextURL) > 0 {
 		redirectURL = fmt.Sprintf(
 			"%s?next=%s",

@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
-	"strings"
 
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -144,10 +143,9 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 	logger.Debugf("Identifier from data struct: %s", identifier)
 
 	// Check if the user already exists in the database
-	userWithToken, err := oa.queryset.RetrieveUserByIdentifier(
+	user, err := oa.queryset.RetrieveUserByIdentifier(
 		r.Context(), identifier,
 	)
-	var user = userWithToken.User
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		// An error occurred while retrieving the user from the database
 		// Log the error and return a 500 status code
@@ -163,6 +161,11 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 		lastId, err := oa.queryset.CreateUser(
 			r.Context(),
 			identifier,
+			a.Provider,
+			rawData,
+			token.AccessToken,
+			token.RefreshToken,
+			token.Expiry,
 			false,
 			!oa.Config.UserDefaultIsDisabled,
 		)
@@ -180,52 +183,19 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 			"Failed to retrieve user from database",
 		)
 
-		// Create the user's token information in the database
-		_, err = oa.queryset.CreateUserToken(
-			r.Context(),
-			user.ID,
-			a.Provider,
-			rawData,
-			token.AccessToken,
-			token.RefreshToken,
-			token.Expiry,
-			sql.NullString{
-				String: strings.Join(
-					a.Oauth2.Scopes, " ",
-				),
-				Valid: true,
-			},
-			sql.NullString{
-				String: token.TokenType,
-				Valid:  true,
-			},
-		)
-		except.AssertNil(
-			err, http.StatusInternalServerError,
-			"Failed to create user token in database",
-		)
-
 	} else if err == nil {
 		logger.Debug("User found in database, updating user")
 		// User found, update user token information in the database
-		err = oa.queryset.UpdateUserToken(
+		err = oa.queryset.UpdateUser(
 			r.Context(),
-			user.ID,
+			a.Provider,
 			rawData,
 			token.AccessToken,
 			token.RefreshToken,
 			token.Expiry,
-			sql.NullString{
-				String: strings.Join(
-					a.Oauth2.Scopes, " ",
-				),
-				Valid: true,
-			},
-			sql.NullString{
-				String: token.TokenType,
-				Valid:  true,
-			},
-			a.Provider,
+			user.IsAdministrator,
+			user.IsActive,
+			user.ID,
 		)
 		except.AssertNil(
 			err, http.StatusInternalServerError,

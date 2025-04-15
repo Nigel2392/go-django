@@ -24,21 +24,6 @@ import (
 
 const (
 	USER_ID_SESSION_KEY = "openauth2_user_id"
-
-	// TODO: Implement functionality later - model should store:
-	// - UserID
-	// - ProviderName
-	// - AccessToken
-	// - RefreshToken
-	// - ExpiresAt
-	// - Scope
-	// - TokenType
-	// - CreatedAt
-	// - UpdatedAt
-	//
-	// The use of this struct is to easily access the token data, and refresh
-	// the access token if needed.
-	OAUTH_MODEL_SESSION_KEY = "openauth2_model"
 )
 
 var (

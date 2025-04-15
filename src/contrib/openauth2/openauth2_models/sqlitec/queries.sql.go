@@ -7,7 +7,6 @@ package openauth2_models_sqlite
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"strings"
 	"time"
@@ -16,24 +15,7 @@ import (
 )
 
 const createUser = `-- name: CreateUser :execlastid
-INSERT INTO oauth2_users (unique_identifier, is_administrator, is_active)
-VALUES (
-    ?1,
-    ?2,
-    ?3
-)
-`
-
-func (q *Queries) CreateUser(ctx context.Context, uniqueIdentifier string, isAdministrator bool, isActive bool) (int64, error) {
-	result, err := q.exec(ctx, q.createUserStmt, createUser, uniqueIdentifier, isAdministrator, isActive)
-	if err != nil {
-		return 0, err
-	}
-	return result.LastInsertId()
-}
-
-const createUserToken = `-- name: CreateUserToken :execlastid
-INSERT INTO oauth2_tokens (user_id, provider_name, data, access_token, refresh_token, expires_at, scope, token_type)
+INSERT INTO oauth2_users (unique_identifier, provider_name, data, access_token, refresh_token, expires_at, is_administrator, is_active)
 VALUES (
     ?1,
     ?2,
@@ -46,16 +28,16 @@ VALUES (
 )
 `
 
-func (q *Queries) CreateUserToken(ctx context.Context, userID uint64, providerName string, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, scope sql.NullString, tokenType sql.NullString) (int64, error) {
-	result, err := q.exec(ctx, q.createUserTokenStmt, createUserToken,
-		userID,
+func (q *Queries) CreateUser(ctx context.Context, uniqueIdentifier string, providerName string, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, isAdministrator bool, isActive bool) (int64, error) {
+	result, err := q.exec(ctx, q.createUserStmt, createUser,
+		uniqueIdentifier,
 		providerName,
 		data,
 		accessToken,
 		refreshToken,
 		expiresAt,
-		scope,
-		tokenType,
+		isAdministrator,
+		isActive,
 	)
 	if err != nil {
 		return 0, err
@@ -70,47 +52,6 @@ WHERE id = ?1
 
 func (q *Queries) DeleteUser(ctx context.Context, id uint64) error {
 	_, err := q.exec(ctx, q.deleteUserStmt, deleteUser, id)
-	return err
-}
-
-const deleteUserToken = `-- name: DeleteUserToken :exec
-DELETE FROM oauth2_tokens
-WHERE user_id = ?1
-`
-
-func (q *Queries) DeleteUserToken(ctx context.Context, userID uint64) error {
-	_, err := q.exec(ctx, q.deleteUserTokenStmt, deleteUserToken, userID)
-	return err
-}
-
-const deleteUserTokenByProvider = `-- name: DeleteUserTokenByProvider :exec
-DELETE FROM oauth2_tokens
-WHERE user_id = ?1
-AND provider_name = ?2
-`
-
-func (q *Queries) DeleteUserTokenByProvider(ctx context.Context, userID uint64, providerName string) error {
-	_, err := q.exec(ctx, q.deleteUserTokenByProviderStmt, deleteUserTokenByProvider, userID, providerName)
-	return err
-}
-
-const deleteUserTokens = `-- name: DeleteUserTokens :exec
-DELETE FROM oauth2_tokens
-WHERE user_id IN (/*SLICE:user_ids*/?)
-`
-
-func (q *Queries) DeleteUserTokens(ctx context.Context, userIds []uint64) error {
-	query := deleteUserTokens
-	var queryParams []interface{}
-	if len(userIds) > 0 {
-		for _, v := range userIds {
-			queryParams = append(queryParams, v)
-		}
-		query = strings.Replace(query, "/*SLICE:user_ids*/?", strings.Repeat(",?", len(userIds))[1:], 1)
-	} else {
-		query = strings.Replace(query, "/*SLICE:user_ids*/?", "NULL", 1)
-	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
 	return err
 }
 
@@ -134,48 +75,8 @@ func (q *Queries) DeleteUsers(ctx context.Context, ids []uint64) error {
 	return err
 }
 
-const retrieveTokensByUserID = `-- name: RetrieveTokensByUserID :many
-SELECT id, user_id, provider_name, data, access_token, refresh_token, expires_at, scope, token_type, created_at, updated_at FROM oauth2_tokens
-WHERE user_id = ?1
-`
-
-func (q *Queries) RetrieveTokensByUserID(ctx context.Context, userID uint64) ([]*openauth2models.Token, error) {
-	rows, err := q.query(ctx, q.retrieveTokensByUserIDStmt, retrieveTokensByUserID, userID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var items []*openauth2models.Token
-	for rows.Next() {
-		var i openauth2models.Token
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.ProviderName,
-			&i.Data,
-			&i.AccessToken,
-			&i.RefreshToken,
-			&i.ExpiresAt,
-			&i.Scope,
-			&i.TokenType,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, &i)
-	}
-	if err := rows.Close(); err != nil {
-		return nil, err
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const retrieveUserByID = `-- name: RetrieveUserByID :one
-SELECT id, unique_identifier, created_at, updated_at, is_administrator, is_active FROM oauth2_users
+SELECT id, unique_identifier, provider_name, data, access_token, refresh_token, expires_at, created_at, updated_at, is_administrator, is_active FROM oauth2_users
 WHERE id = ?1
 `
 
@@ -185,6 +86,11 @@ func (q *Queries) RetrieveUserByID(ctx context.Context, id uint64) (*openauth2mo
 	err := row.Scan(
 		&i.ID,
 		&i.UniqueIdentifier,
+		&i.ProviderName,
+		&i.Data,
+		&i.AccessToken,
+		&i.RefreshToken,
+		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
 		&i.IsAdministrator,
@@ -194,79 +100,51 @@ func (q *Queries) RetrieveUserByID(ctx context.Context, id uint64) (*openauth2mo
 }
 
 const retrieveUserByIdentifier = `-- name: RetrieveUserByIdentifier :one
-SELECT oauth2_users.id, oauth2_users.unique_identifier, oauth2_users.created_at, oauth2_users.updated_at, oauth2_users.is_administrator, oauth2_users.is_active, oauth2_tokens.id, oauth2_tokens.user_id, oauth2_tokens.provider_name, oauth2_tokens.data, oauth2_tokens.access_token, oauth2_tokens.refresh_token, oauth2_tokens.expires_at, oauth2_tokens.scope, oauth2_tokens.token_type, oauth2_tokens.created_at, oauth2_tokens.updated_at FROM oauth2_users
-JOIN oauth2_tokens ON oauth2_users.id = oauth2_tokens.user_id
-WHERE oauth2_users.unique_identifier = ?1
+SELECT id, unique_identifier, provider_name, data, access_token, refresh_token, expires_at, created_at, updated_at, is_administrator, is_active FROM oauth2_users
+WHERE unique_identifier = ?1
 `
 
-func (q *Queries) RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier string) (*openauth2models.UserWithToken, error) {
+func (q *Queries) RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier string) (*openauth2models.User, error) {
 	row := q.queryRow(ctx, q.retrieveUserByIdentifierStmt, retrieveUserByIdentifier, uniqueIdentifier)
-	var i =  openauth2models.UserWithToken{
-		User:  &openauth2models.User{},
-		Token: &openauth2models.Token{},
-	}
+	var i openauth2models.User
 	err := row.Scan(
-		&i.User.ID,
-		&i.User.UniqueIdentifier,
-		&i.User.CreatedAt,
-		&i.User.UpdatedAt,
-		&i.User.IsAdministrator,
-		&i.User.IsActive,
-		&i.Token.ID,
-		&i.Token.UserID,
-		&i.Token.ProviderName,
-		&i.Token.Data,
-		&i.Token.AccessToken,
-		&i.Token.RefreshToken,
-		&i.Token.ExpiresAt,
-		&i.Token.Scope,
-		&i.Token.TokenType,
-		&i.Token.CreatedAt,
-		&i.Token.UpdatedAt,
+		&i.ID,
+		&i.UniqueIdentifier,
+		&i.ProviderName,
+		&i.Data,
+		&i.AccessToken,
+		&i.RefreshToken,
+		&i.ExpiresAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.IsAdministrator,
+		&i.IsActive,
 	)
 	return &i, err
 }
 
 const updateUser = `-- name: UpdateUser :exec
 UPDATE oauth2_users
-SET unique_identifier = ?1,
-    is_administrator = ?2,
-    is_active = ?3
-WHERE id = ?4
-`
-
-func (q *Queries) UpdateUser(ctx context.Context, uniqueIdentifier string, isAdministrator bool, isActive bool, iD uint64) error {
-	_, err := q.exec(ctx, q.updateUserStmt, updateUser,
-		uniqueIdentifier,
-		isAdministrator,
-		isActive,
-		iD,
-	)
-	return err
-}
-
-const updateUserToken = `-- name: UpdateUserToken :exec
-UPDATE oauth2_tokens
-SET user_id = ?1,
+SET provider_name = ?1,
     data = ?2,
     access_token = ?3,
     refresh_token = ?4,
     expires_at = ?5,
-    scope = ?6,
-    token_type = ?7
-WHERE provider_name = ?8
+    is_administrator = ?6,
+    is_active = ?7
+WHERE id = ?8
 `
 
-func (q *Queries) UpdateUserToken(ctx context.Context, userID uint64, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, scope sql.NullString, tokenType sql.NullString, providerName string) error {
-	_, err := q.exec(ctx, q.updateUserTokenStmt, updateUserToken,
-		userID,
+func (q *Queries) UpdateUser(ctx context.Context, providerName string, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, isAdministrator bool, isActive bool, iD uint64) error {
+	_, err := q.exec(ctx, q.updateUserStmt, updateUser,
+		providerName,
 		data,
 		accessToken,
 		refreshToken,
 		expiresAt,
-		scope,
-		tokenType,
-		providerName,
+		isAdministrator,
+		isActive,
+		iD,
 	)
 	return err
 }

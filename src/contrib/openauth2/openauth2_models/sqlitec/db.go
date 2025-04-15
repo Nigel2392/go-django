@@ -29,26 +29,11 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
 		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
 	}
-	if q.createUserTokenStmt, err = db.PrepareContext(ctx, createUserToken); err != nil {
-		return nil, fmt.Errorf("error preparing query CreateUserToken: %w", err)
-	}
 	if q.deleteUserStmt, err = db.PrepareContext(ctx, deleteUser); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteUser: %w", err)
 	}
-	if q.deleteUserTokenStmt, err = db.PrepareContext(ctx, deleteUserToken); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteUserToken: %w", err)
-	}
-	if q.deleteUserTokenByProviderStmt, err = db.PrepareContext(ctx, deleteUserTokenByProvider); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteUserTokenByProvider: %w", err)
-	}
-	if q.deleteUserTokensStmt, err = db.PrepareContext(ctx, deleteUserTokens); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteUserTokens: %w", err)
-	}
 	if q.deleteUsersStmt, err = db.PrepareContext(ctx, deleteUsers); err != nil {
 		return nil, fmt.Errorf("error preparing query DeleteUsers: %w", err)
-	}
-	if q.retrieveTokensByUserIDStmt, err = db.PrepareContext(ctx, retrieveTokensByUserID); err != nil {
-		return nil, fmt.Errorf("error preparing query RetrieveTokensByUserID: %w", err)
 	}
 	if q.retrieveUserByIDStmt, err = db.PrepareContext(ctx, retrieveUserByID); err != nil {
 		return nil, fmt.Errorf("error preparing query RetrieveUserByID: %w", err)
@@ -58,9 +43,6 @@ func Prepare(ctx context.Context, db DBTX) (*Queries, error) {
 	}
 	if q.updateUserStmt, err = db.PrepareContext(ctx, updateUser); err != nil {
 		return nil, fmt.Errorf("error preparing query UpdateUser: %w", err)
-	}
-	if q.updateUserTokenStmt, err = db.PrepareContext(ctx, updateUserToken); err != nil {
-		return nil, fmt.Errorf("error preparing query UpdateUserToken: %w", err)
 	}
 	return &q, nil
 }
@@ -72,39 +54,14 @@ func (q *Queries) Close() error {
 			err = fmt.Errorf("error closing createUserStmt: %w", cerr)
 		}
 	}
-	if q.createUserTokenStmt != nil {
-		if cerr := q.createUserTokenStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing createUserTokenStmt: %w", cerr)
-		}
-	}
 	if q.deleteUserStmt != nil {
 		if cerr := q.deleteUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteUserStmt: %w", cerr)
 		}
 	}
-	if q.deleteUserTokenStmt != nil {
-		if cerr := q.deleteUserTokenStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteUserTokenStmt: %w", cerr)
-		}
-	}
-	if q.deleteUserTokenByProviderStmt != nil {
-		if cerr := q.deleteUserTokenByProviderStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteUserTokenByProviderStmt: %w", cerr)
-		}
-	}
-	if q.deleteUserTokensStmt != nil {
-		if cerr := q.deleteUserTokensStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing deleteUserTokensStmt: %w", cerr)
-		}
-	}
 	if q.deleteUsersStmt != nil {
 		if cerr := q.deleteUsersStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing deleteUsersStmt: %w", cerr)
-		}
-	}
-	if q.retrieveTokensByUserIDStmt != nil {
-		if cerr := q.retrieveTokensByUserIDStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing retrieveTokensByUserIDStmt: %w", cerr)
 		}
 	}
 	if q.retrieveUserByIDStmt != nil {
@@ -120,11 +77,6 @@ func (q *Queries) Close() error {
 	if q.updateUserStmt != nil {
 		if cerr := q.updateUserStmt.Close(); cerr != nil {
 			err = fmt.Errorf("error closing updateUserStmt: %w", cerr)
-		}
-	}
-	if q.updateUserTokenStmt != nil {
-		if cerr := q.updateUserTokenStmt.Close(); cerr != nil {
-			err = fmt.Errorf("error closing updateUserTokenStmt: %w", cerr)
 		}
 	}
 	return err
@@ -164,37 +116,25 @@ func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, ar
 }
 
 type Queries struct {
-	db                            DBTX
-	tx                            *sql.Tx
-	createUserStmt                *sql.Stmt
-	createUserTokenStmt           *sql.Stmt
-	deleteUserStmt                *sql.Stmt
-	deleteUserTokenStmt           *sql.Stmt
-	deleteUserTokenByProviderStmt *sql.Stmt
-	deleteUserTokensStmt          *sql.Stmt
-	deleteUsersStmt               *sql.Stmt
-	retrieveTokensByUserIDStmt    *sql.Stmt
-	retrieveUserByIDStmt          *sql.Stmt
-	retrieveUserByIdentifierStmt  *sql.Stmt
-	updateUserStmt                *sql.Stmt
-	updateUserTokenStmt           *sql.Stmt
+	db                           DBTX
+	tx                           *sql.Tx
+	createUserStmt               *sql.Stmt
+	deleteUserStmt               *sql.Stmt
+	deleteUsersStmt              *sql.Stmt
+	retrieveUserByIDStmt         *sql.Stmt
+	retrieveUserByIdentifierStmt *sql.Stmt
+	updateUserStmt               *sql.Stmt
 }
 
 func (q *Queries) WithTx(tx *sql.Tx) openauth2models.Querier {
 	return &Queries{
-		db:                            tx,
-		tx:                            tx,
-		createUserStmt:                q.createUserStmt,
-		createUserTokenStmt:           q.createUserTokenStmt,
-		deleteUserStmt:                q.deleteUserStmt,
-		deleteUserTokenStmt:           q.deleteUserTokenStmt,
-		deleteUserTokenByProviderStmt: q.deleteUserTokenByProviderStmt,
-		deleteUserTokensStmt:          q.deleteUserTokensStmt,
-		deleteUsersStmt:               q.deleteUsersStmt,
-		retrieveTokensByUserIDStmt:    q.retrieveTokensByUserIDStmt,
-		retrieveUserByIDStmt:          q.retrieveUserByIDStmt,
-		retrieveUserByIdentifierStmt:  q.retrieveUserByIdentifierStmt,
-		updateUserStmt:                q.updateUserStmt,
-		updateUserTokenStmt:           q.updateUserTokenStmt,
+		db:                           tx,
+		tx:                           tx,
+		createUserStmt:               q.createUserStmt,
+		deleteUserStmt:               q.deleteUserStmt,
+		deleteUsersStmt:              q.deleteUsersStmt,
+		retrieveUserByIDStmt:         q.retrieveUserByIDStmt,
+		retrieveUserByIdentifierStmt: q.retrieveUserByIdentifierStmt,
+		updateUserStmt:               q.updateUserStmt,
 	}
 }
