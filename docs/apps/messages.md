@@ -39,7 +39,7 @@ func main() {
         // Explicitly set the messages backend to use sessions
         messages.NewSessionBackend,
     )
-   
+
     app = django.App(
         django.Configure(settings),
         django.Apps(
@@ -103,6 +103,8 @@ func myView(w http.ResponseWriter, r *http.Request) {
     }
 }
 ```
+
+Do note that no templates were setup; you will have to do this yourself according to the [rendering docs](../rendering.md).
 
 ### Showing messages in templates
 
