@@ -74,7 +74,7 @@ go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.6.9.8
 - [auditlogs](./docs/apps/auditlogs.md) (WIP)
 - [auth](./docs/apps/auth) (WIP)
 - [oauth2](./docs/apps/oauth2) (WIP)
-- [messages](./docs/apps/messages.md) (WIP)
+- [messages](./docs/apps/messages.md)
 - [pages](./docs/apps/pages/readme.md)
 - [editorjs](./docs/apps/editor.md) (WIP)
 

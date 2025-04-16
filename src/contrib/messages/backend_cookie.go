@@ -18,7 +18,8 @@ var (
 	// This can be used to set default values for the cookies.
 	// For example, the domain, path, max-age, etc.
 	cookieBackendBaseCoookie = http.Cookie{
-		Name: "messages.cookieBackendKey",
+		Name:   "messages.cookieBackendKey",
+		MaxAge: 60 * 60 * 24 * 7, // 7 days
 	}
 )
 
