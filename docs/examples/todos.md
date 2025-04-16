@@ -874,7 +874,10 @@ admin.RegisterApp(
             },
             PerPage: 20,
             Columns: map[string]list.ListColumn[attrs.Definer]{
-                "Title": list.LinkColumn("Title", "Title", func(defs attrs.Definitions, row attrs.Definer) string {
+                "Title": list.LinkColumn("Title", "Title", func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+                    if !permissions.HasObjectPermission(r, row, "admin:edit") {
+                        return ""
+                    }
                     return django.Reverse("admin:todos:model:edit", "todos", "Todo", defs.Get("ID"))
                 }),
             },
