@@ -235,6 +235,28 @@ func (a *Application) Register(apps ...any) {
 	}
 }
 
+func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Request) {
+	var serverError = except.GetServerError(err)
+	if serverError == nil {
+		a.veryBadServerError(err, w, r)
+		return
+	}
+
+	a.Log.Errorf(
+		"Error serving request (%d: %s) %s",
+		serverError.StatusCode(),
+		utils_text.Trunc(r.URL.String(), 75),
+		serverError.UserMessage(),
+	)
+
+	a.handleErrorCodePure(w, r, serverError)
+}
+
+func (a *Application) veryBadServerError(err error, w http.ResponseWriter, r *http.Request) {
+	a.Log.Errorf("An unexpected error occurred: %s (%s)", err, r.URL.String())
+	http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
+}
+
 func (a *Application) handleErrorCodePure(w http.ResponseWriter, r *http.Request, err except.ServerError) {
 	var (
 		code    = err.StatusCode()
@@ -261,28 +283,6 @@ func (a *Application) handleErrorCodePure(w http.ResponseWriter, r *http.Request
 	if !markedWriter.wasWritten {
 		http.Error(w, message, int(code))
 	}
-}
-
-func (a *Application) veryBadServerError(err error, w http.ResponseWriter, r *http.Request) {
-	a.Log.Errorf("An unexpected error occurred: %s (%s)", err, r.URL.String())
-	http.Error(w, "An unexpected error occurred", http.StatusInternalServerError)
-}
-
-func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Request) {
-	var serverError = except.GetServerError(err)
-	if serverError == nil {
-		a.veryBadServerError(err, w, r)
-		return
-	}
-
-	a.Log.Errorf(
-		"Error serving request (%d: %s) %s",
-		serverError.StatusCode(),
-		utils_text.Trunc(r.URL.String(), 75),
-		serverError.UserMessage(),
-	)
-
-	a.handleErrorCodePure(w, r, serverError)
 }
 
 func (a *Application) Reverse(name string, args ...any) string {

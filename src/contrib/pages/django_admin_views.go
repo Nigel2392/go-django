@@ -8,7 +8,6 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
-	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
@@ -108,10 +107,7 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
 	if !permissions.HasObjectPermission(r, p, "pages:list") {
-		autherrors.Fail(
-			http.StatusForbidden,
-			"User does not have permission to view this page",
-		)
+		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
@@ -234,10 +230,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
 	if !permissions.HasObjectPermission(r, p, "pages:add") {
-		autherrors.Fail(
-			http.StatusForbidden,
-			"User does not have permission to add a page",
-		)
+		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
@@ -288,10 +281,7 @@ func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 
 func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 	if !permissions.HasObjectPermission(r, p, "pages:add") {
-		autherrors.Fail(
-			http.StatusForbidden,
-			"User does not have permission to add a page",
-		)
+		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
@@ -473,10 +463,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 
 	if !permissions.HasObjectPermission(r, p, "pages:edit") {
-		autherrors.Fail(
-			http.StatusForbidden,
-			"User does not have permission to edit this page",
-		)
+		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
@@ -652,10 +639,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 	if !permissions.HasObjectPermission(r, p, "pages:delete") {
-		autherrors.Fail(
-			http.StatusForbidden,
-			"User does not have permission to delete this page",
-		)
+		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
@@ -755,10 +739,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 
 func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
 	if !permissions.HasObjectPermission(r, p, "pages:publish") {
-		autherrors.Fail(
-			http.StatusForbidden,
-			"User does not have permission to unpublish this page",
-		)
+		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 

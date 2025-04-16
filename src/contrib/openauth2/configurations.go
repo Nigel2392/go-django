@@ -70,3 +70,13 @@ func (c *AuthConfig) ScanStruct(r io.Reader) (interface{}, error) {
 	var err = dec.Decode(copy)
 	return copy, err
 }
+
+func (c *AuthConfig) DataForUser(user *openauth2models.User) (interface{}, error) {
+	if c.DataStruct == nil {
+		return nil, errors.New("DataStruct was not provided")
+	}
+
+	var copy = reprint.This(c.DataStruct)
+	err := json.Unmarshal(user.Data, copy)
+	return copy, err
+}

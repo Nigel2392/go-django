@@ -48,7 +48,7 @@ type Config struct {
 	BaseCallbackURL       string
 	AuthConfigurations    []AuthConfig
 	UserDefaultIsDisabled bool
-	RedirectAfterLogin    func(datastruct interface{}, r *http.Request) string
+	RedirectAfterLogin    func(user *openauth2models.User, datastruct interface{}, r *http.Request) string
 	RedirectAfterLogout   func(r *http.Request) string
 }
 

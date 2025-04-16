@@ -7,7 +7,6 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
-	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
@@ -27,10 +26,7 @@ import (
 
 func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition) {
 	if !permissions.HasPermission(r, "pages:list") {
-		autherrors.Fail(
-			http.StatusForbidden,
-			"User does not have permission to view this page",
-		)
+		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
@@ -113,10 +109,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 func chooseRootPageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition) {
 
 	if !permissions.HasPermission(r, "pages:add") {
-		autherrors.Fail(
-			http.StatusForbidden,
-			"User does not have permission to add a page",
-		)
+		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
@@ -154,10 +147,7 @@ func chooseRootPageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.
 
 func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition) {
 	if !permissions.HasPermission(r, "pages:add") {
-		autherrors.Fail(
-			http.StatusForbidden,
-			"User does not have permission to add a page",
-		)
+		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 

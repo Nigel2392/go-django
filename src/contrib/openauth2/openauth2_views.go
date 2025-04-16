@@ -221,7 +221,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 	var redirectURL = getCallbackHandlerRedirect(r)
 	if redirectURL == "" {
 		if oa.Config.RedirectAfterLogin != nil {
-			redirectURL = oa.Config.RedirectAfterLogin(data, r)
+			redirectURL = oa.Config.RedirectAfterLogin(user, data, r)
 		}
 		if redirectURL == "" {
 			redirectURL = "/"
