@@ -108,7 +108,7 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 
 	columns[0] = columns[1]
 	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
-		Actions: getListActions(p.Request, django.Reverse("admin")),
+		Actions: getListActions(django.Reverse("admin")),
 	}
 
 	var pagesList = make([]attrs.Definer, len(pages))
@@ -117,6 +117,7 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 	}
 
 	var listComponent = list.NewList(
+		p.Request,
 		pagesList,
 		columns...,
 	)

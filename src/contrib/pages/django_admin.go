@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"net/http"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
@@ -66,7 +67,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 		Columns: map[string]list.ListColumn[attrs.Definer]{
 			"Children": list.HTMLColumn[attrs.Definer](
 				trans.S(""),
-				func(defs attrs.Definitions, row attrs.Definer) template.HTML {
+				func(_ *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
 					var node = row.(*models.PageNode)
 					if node.Numchild > 0 {
 						var url = django.Reverse(
@@ -87,7 +88,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 			),
 			"ContentType": list.FuncColumn(
 				trans.S("Content Type"),
-				func(defs attrs.Definitions, row attrs.Definer) interface{} {
+				func(_ *http.Request, _ attrs.Definitions, row attrs.Definer) interface{} {
 					var node = row.(*models.PageNode)
 					var ctype = DefinitionForType(node.ContentType)
 					return ctype.Label()

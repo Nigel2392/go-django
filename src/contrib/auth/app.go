@@ -255,7 +255,7 @@ func NewAppConfig() django.AppConfig {
 					Columns: map[string]list.ListColumn[attrs.Definer]{
 						"Email": list.LinkColumn(
 							trans.S("Email"),
-							"Email", func(defs attrs.Definitions, row attrs.Definer) string {
+							"Email", func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 								return django.Reverse("admin:apps:model:edit", "Auth", "User", defs.Get("ID"))
 							},
 						),

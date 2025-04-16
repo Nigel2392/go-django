@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"net/url"
-	"strconv"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
@@ -47,82 +45,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 
 	columns[0] = columns[1]
 	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
-		Actions: []*admin.ListAction[attrs.Definer]{
-			{
-				Show: func(defs attrs.Definitions, row attrs.Definer) bool { return true },
-				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return trans.T("View Live")
-				},
-				URL: func(defs attrs.Definitions, row attrs.Definer) string {
-					return URLPath(row.(*models.PageNode))
-				},
-			},
-			{
-				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
-					// return row.(*models.PageNode).Numchild > 0
-					return permissions.HasObjectPermission(r, row, "pages:add")
-				},
-				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return trans.T("Add Child")
-				},
-				URL: func(defs attrs.Definitions, row attrs.Definer) string {
-					var primaryField = defs.Primary()
-					if primaryField == nil {
-						return ""
-					}
-					var u = django.Reverse(
-						"admin:pages:type",
-						primaryField.GetValue(),
-					)
-					return addNextUrl(
-						u, next,
-					)
-				},
-			},
-			{
-				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
-					return permissions.HasObjectPermission(r, row, "pages:edit")
-				},
-				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return trans.T("Edit Page")
-				},
-				URL: func(defs attrs.Definitions, row attrs.Definer) string {
-					var primaryField = defs.Primary()
-					if primaryField == nil {
-						return ""
-					}
-					var u = django.Reverse(
-						"admin:pages:edit",
-						primaryField.GetValue(),
-					)
-					return addNextUrl(
-						u, next,
-					)
-				},
-			},
-			{
-				Show: func(defs attrs.Definitions, row attrs.Definer) bool {
-					return django.AppInstalled("auditlogs") && permissions.HasObjectPermission(r, row, "auditlogs:list")
-				},
-				Text: func(defs attrs.Definitions, row attrs.Definer) string {
-					return trans.T("History")
-				},
-				URL: func(defs attrs.Definitions, row attrs.Definer) string {
-					var u = django.Reverse(
-						"admin:auditlogs",
-					)
-					var url, err = url.Parse(u)
-					if err != nil {
-						return u
-					}
-					var q = url.Query()
-					q.Set("object_id", strconv.Itoa(int(row.(*models.PageNode).ID())))
-					q.Set("content_type", contenttypes.NewContentType(row).ShortTypeName())
-					url.RawQuery = q.Encode()
-					return url.String()
-				},
-			},
-		},
+		Actions: getListActions(next),
 	}
 
 	var amount = m.ListView.PerPage
@@ -166,7 +89,11 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 			return items, nil
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
-			return list.TitleFieldColumn(lc, func(defs attrs.Definitions, instance attrs.Definer) string {
+			return list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {
+				if !permissions.HasObjectPermission(r, instance, "pages:edit") {
+					return ""
+				}
+
 				var primaryField = defs.Primary()
 				if primaryField == nil {
 					return ""

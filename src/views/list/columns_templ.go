@@ -13,12 +13,13 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"html/template"
+	"net/http"
 	"time"
 )
 
 type funcColumn[T attrs.Definer] struct {
 	header func() string
-	data   func(defs attrs.Definitions, row T) interface{}
+	data   func(r *http.Request, defs attrs.Definitions, row T) interface{}
 }
 
 func (c *funcColumn[T]) Header() templ.Component {
@@ -46,7 +47,7 @@ func (c *funcColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(c.header())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 18, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 19, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -56,7 +57,7 @@ func (c *funcColumn[T]) Header() templ.Component {
 	})
 }
 
-func (c *funcColumn[T]) Component(defs attrs.Definitions, row T) templ.Component {
+func (c *funcColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -79,10 +80,10 @@ func (c *funcColumn[T]) Component(defs attrs.Definitions, row T) templ.Component
 		ctx = templ.ClearChildren(ctx)
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(attrs.ToString(
-			c.data(defs, row),
+			c.data(r, defs, row),
 		))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 24, Col: 5}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 25, Col: 5}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -92,7 +93,7 @@ func (c *funcColumn[T]) Component(defs attrs.Definitions, row T) templ.Component
 	})
 }
 
-func FuncColumn[T attrs.Definer](header func() string, data func(defs attrs.Definitions, row T) interface{}) ListColumn[T] {
+func FuncColumn[T attrs.Definer](header func() string, data func(r *http.Request, defs attrs.Definitions, row T) interface{}) ListColumn[T] {
 	return &funcColumn[T]{header, data}
 }
 
@@ -126,7 +127,7 @@ func (c *fieldColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(c.header())
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 38, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 39, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -136,7 +137,7 @@ func (c *fieldColumn[T]) Header() templ.Component {
 	})
 }
 
-func (c *fieldColumn[T]) data(defs attrs.Definitions, _ T) interface{} {
+func (c *fieldColumn[T]) data(r *http.Request, defs attrs.Definitions, _ T) interface{} {
 	var field, ok = defs.Field(c.fieldName)
 
 	assert.False(
@@ -161,7 +162,7 @@ func (c *fieldColumn[T]) data(defs attrs.Definitions, _ T) interface{} {
 	}
 }
 
-func (c *fieldColumn[T]) Component(defs attrs.Definitions, row T) templ.Component {
+func (c *fieldColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -184,10 +185,10 @@ func (c *fieldColumn[T]) Component(defs attrs.Definitions, row T) templ.Componen
 		ctx = templ.ClearChildren(ctx)
 		var templ_7745c5c3_Var8 string
 		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(attrs.ToString(
-			c.data(defs, row),
+			c.data(r, defs, row),
 		))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 69, Col: 5}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 70, Col: 5}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
@@ -203,7 +204,7 @@ func FieldColumn[T attrs.Definer](header func() string, fieldName string) ListCo
 
 type titleFieldColumn[T attrs.Definer] struct {
 	wrapped ListColumn[T]
-	getURL  func(defs attrs.Definitions, row T) string
+	getURL  func(r *http.Request, defs attrs.Definitions, row T) string
 }
 
 func (c *titleFieldColumn[T]) Header() templ.Component {
@@ -243,7 +244,7 @@ func (c *titleFieldColumn[T]) Header() templ.Component {
 	})
 }
 
-func (c *titleFieldColumn[T]) Component(defs attrs.Definitions, row T) templ.Component {
+func (c *titleFieldColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -264,13 +265,13 @@ func (c *titleFieldColumn[T]) Component(defs attrs.Definitions, row T) templ.Com
 			templ_7745c5c3_Var10 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var url = templ.SafeURL(c.getURL(defs, row))
+		var url = templ.SafeURL(c.getURL(r, defs, row))
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<div class=\"list-title\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if url == "" {
-			templ_7745c5c3_Err = c.wrapped.Component(defs, row).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = c.wrapped.Component(r, defs, row).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -288,7 +289,7 @@ func (c *titleFieldColumn[T]) Component(defs attrs.Definitions, row T) templ.Com
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = c.wrapped.Component(defs, row).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = c.wrapped.Component(r, defs, row).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -305,7 +306,7 @@ func (c *titleFieldColumn[T]) Component(defs attrs.Definitions, row T) templ.Com
 	})
 }
 
-func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(defs attrs.Definitions, row T) string) ListColumn[T] {
+func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(r *http.Request, defs attrs.Definitions, row T) string) ListColumn[T] {
 	return &titleFieldColumn[T]{
 		wrapped: wraps,
 		getURL:  getURL,
@@ -314,10 +315,10 @@ func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(defs att
 
 type htmlColumn[T attrs.Definer] struct {
 	fieldColumn[T]
-	getHTML func(defs attrs.Definitions, row T) template.HTML
+	getHTML func(r *http.Request, defs attrs.Definitions, row T) template.HTML
 }
 
-func (c *htmlColumn[T]) Component(defs attrs.Definitions, row T) templ.Component {
+func (c *htmlColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -338,7 +339,7 @@ func (c *htmlColumn[T]) Component(defs attrs.Definitions, row T) templ.Component
 			templ_7745c5c3_Var12 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var html = c.getHTML(defs, row)
+		var html = c.getHTML(r, defs, row)
 		templ_7745c5c3_Err = templ.Raw(html).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
@@ -347,7 +348,7 @@ func (c *htmlColumn[T]) Component(defs attrs.Definitions, row T) templ.Component
 	})
 }
 
-func HTMLColumn[T attrs.Definer](header func() string, getHTML func(defs attrs.Definitions, row T) template.HTML) ListColumn[T] {
+func HTMLColumn[T attrs.Definer](header func() string, getHTML func(r *http.Request, defs attrs.Definitions, row T) template.HTML) ListColumn[T] {
 	return &htmlColumn[T]{
 		fieldColumn: fieldColumn[T]{header: header},
 		getHTML:     getHTML,
@@ -356,10 +357,10 @@ func HTMLColumn[T attrs.Definer](header func() string, getHTML func(defs attrs.D
 
 type linkColumn[T attrs.Definer] struct {
 	fieldColumn[T]
-	getURL func(defs attrs.Definitions, row T) string
+	getURL func(r *http.Request, defs attrs.Definitions, row T) string
 }
 
-func (c *linkColumn[T]) Component(defs attrs.Definitions, row T) templ.Component {
+func (c *linkColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -380,9 +381,9 @@ func (c *linkColumn[T]) Component(defs attrs.Definitions, row T) templ.Component
 			templ_7745c5c3_Var13 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var url = templ.SafeURL(c.getURL(defs, row))
+		var url = templ.SafeURL(c.getURL(r, defs, row))
 		if url == "" {
-			templ_7745c5c3_Err = c.fieldColumn.Component(defs, row).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = c.fieldColumn.Component(r, defs, row).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -400,7 +401,7 @@ func (c *linkColumn[T]) Component(defs attrs.Definitions, row T) templ.Component
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = c.fieldColumn.Component(defs, row).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = c.fieldColumn.Component(r, defs, row).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -413,7 +414,7 @@ func (c *linkColumn[T]) Component(defs attrs.Definitions, row T) templ.Component
 	})
 }
 
-func LinkColumn[T attrs.Definer](header func() string, fieldName string, getURL func(defs attrs.Definitions, row T) string) ListColumn[T] {
+func LinkColumn[T attrs.Definer](header func() string, fieldName string, getURL func(r *http.Request, defs attrs.Definitions, row T) string) ListColumn[T] {
 	return &linkColumn[T]{
 		fieldColumn: fieldColumn[T]{header, fieldName},
 		getURL:      getURL,
@@ -422,7 +423,7 @@ func LinkColumn[T attrs.Definer](header func() string, fieldName string, getURL 
 
 func Column[T attrs.Definer](header func() string, getter any) ListColumn[T] {
 	switch g := getter.(type) {
-	case func(defs attrs.Definitions, row T) interface{}:
+	case func(r *http.Request, defs attrs.Definitions, row T) interface{}:
 		return &funcColumn[T]{header, g}
 	case string:
 		return &fieldColumn[T]{header, g}

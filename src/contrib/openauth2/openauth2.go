@@ -243,9 +243,10 @@ func NewAppConfig(cnf Config) django.AppConfig {
 		},
 		admin.ModelOptions{
 			RegisterToAdminMenu: true,
-			Name:                "Oauth2User",
+			Name:                "OAuth2User",
 			Model:               &openauth2models.User{},
-
+			DisallowCreate:      true,
+			DisallowDelete:      true,
 			AddView: admin.FormViewOptions{
 				ViewOptions: admin.ViewOptions{},
 			},
@@ -260,16 +261,35 @@ func NewAppConfig(cnf Config) django.AppConfig {
 						"UniqueIdentifier",
 						"ProviderName",
 						"HasRefreshToken",
-						"CreatedAt",
-						"UpdatedAt",
+						"TokenType",
 						"IsAdministrator",
 						"IsActive",
+						"CreatedAt",
+						"UpdatedAt",
+					},
+				},
+				Format: map[string]func(v any) any{
+					"TokenType": func(v any) any {
+						return strings.ToUpper(v.(string))
 					},
 				},
 				Columns: map[string]list.ListColumn[attrs.Definer]{
+					"UniqueIdentifier": list.TitleFieldColumn(
+						list.FieldColumn[attrs.Definer](
+							trans.S("Unique Identifier"),
+							"UniqueIdentifier",
+						),
+						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+							return django.Reverse(
+								"admin:apps:model:edit",
+								"openauth2", "OAuth2User",
+								row.(*openauth2models.User).ID,
+							)
+						},
+					),
 					"HasRefreshToken": list.FuncColumn(
 						trans.S("Has Refresh Token"),
-						func(defs attrs.Definitions, row attrs.Definer) interface{} {
+						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {
 							var u = row.(*openauth2models.User)
 							return u.RefreshToken != ""
 						},

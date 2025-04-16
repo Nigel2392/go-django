@@ -94,7 +94,11 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 			return model.GetListInstances(amount, offset)
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
-			return list.TitleFieldColumn(lc, func(defs attrs.Definitions, instance attrs.Definer) string {
+			return list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {
+				if !permissions.HasObjectPermission(r, instance, "admin:edit") || model.DisallowEdit {
+					return ""
+				}
+
 				var primaryField = defs.Primary()
 				if primaryField == nil {
 					return ""
@@ -113,6 +117,16 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 		autherrors.Fail(
 			http.StatusForbidden,
 			"Permission denied",
+		)
+		return
+	}
+
+	if model.DisallowCreate {
+		messages.Error(r, "This model does not allow creation")
+		autherrors.Fail(
+			http.StatusForbidden,
+			"This model does not allow creation",
+			django.Reverse("admin:apps:model", app.Name, model.GetName()),
 		)
 		return
 	}
@@ -139,6 +153,16 @@ var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		return
 	}
 
+	if model.DisallowEdit {
+		messages.Error(r, "This model does not allow editing")
+		autherrors.Fail(
+			http.StatusForbidden,
+			"This model does not allow editing",
+			django.Reverse("admin:apps:model", app.Name, model.GetName()),
+		)
+		return
+	}
+
 	if model.EditView.GetHandler != nil {
 		var err = views.Invoke(model.EditView.GetHandler(adminSite, app, model, instance), w, r)
 		except.AssertNil(err, 500, err)
@@ -156,6 +180,16 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 		autherrors.Fail(
 			http.StatusForbidden,
 			"Permission denied",
+		)
+		return
+	}
+
+	if model.DisallowDelete {
+		messages.Error(r, "This model does not allow deletion")
+		autherrors.Fail(
+			http.StatusForbidden,
+			"This model does not allow deletion",
+			django.Reverse("admin:apps:model", app.Name, model.GetName()),
 		)
 		return
 	}

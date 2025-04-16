@@ -12,7 +12,7 @@ import (
 
 type ListColumn[T attrs.Definer] interface {
 	Header() templ.Component
-	Component(defs attrs.Definitions, row T) templ.Component
+	Component(r *http.Request, defs attrs.Definitions, row T) templ.Component
 }
 
 //func Column[T any](header string, data func(row interface{}) string) ListColumn[T] {
@@ -70,7 +70,7 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 		return base, err
 	}
 
-	listObj := NewList(list, cols...)
+	listObj := NewList(req, list, cols...)
 
 	base.Set("view_list", listObj)
 	base.Set("view_amount", amount)

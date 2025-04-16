@@ -11,23 +11,24 @@ import templruntime "github.com/a-h/templ/runtime"
 import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"net/http"
 )
 
 type ListAction[T attrs.Definer] struct {
 	Classname string
-	Show      func(defs attrs.Definitions, row T) bool
-	Text      func(defs attrs.Definitions, row T) string
-	URL       func(defs attrs.Definitions, row T) string
+	Show      func(r *http.Request, defs attrs.Definitions, row T) bool
+	Text      func(r *http.Request, defs attrs.Definitions, row T) string
+	URL       func(r *http.Request, defs attrs.Definitions, row T) string
 }
 
-func (l *ListAction[T]) IsShown(defs attrs.Definitions, row T) bool {
+func (l *ListAction[T]) IsShown(r *http.Request, defs attrs.Definitions, row T) bool {
 	if l.Show != nil {
-		return l.Show(defs, row)
+		return l.Show(r, defs, row)
 	}
 	return true
 }
 
-func (l *ListAction[T]) Component(defs attrs.Definitions, row T) templ.Component {
+func (l *ListAction[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -50,7 +51,7 @@ func (l *ListAction[T]) Component(defs attrs.Definitions, row T) templ.Component
 		ctx = templ.ClearChildren(ctx)
 		assert.False(l.Text == nil, "Text must not be nil")
 		if l.URL != nil {
-			var url = l.URL(defs, row)
+			var url = l.URL(r, defs, row)
 			var templ_7745c5c3_Var2 = []any{l.Classname}
 			templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
 			if templ_7745c5c3_Err != nil {
@@ -83,9 +84,9 @@ func (l *ListAction[T]) Component(defs attrs.Definitions, row T) templ.Component
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
-			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(l.Text(defs, row))
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(l.Text(r, defs, row))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/action_column.templ`, Line: 26, Col: 80}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/action_column.templ`, Line: 27, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -119,9 +120,9 @@ func (l *ListAction[T]) Component(defs attrs.Definitions, row T) templ.Component
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var8 string
-			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(l.Text(defs, row))
+			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(l.Text(r, defs, row))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/action_column.templ`, Line: 28, Col: 57}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/action_column.templ`, Line: 29, Col: 60}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -166,7 +167,7 @@ func (l *ListActionsColumn[T]) Header() templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(l.Heading())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/action_column.templ`, Line: 39, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/action_column.templ`, Line: 40, Col: 21}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -177,7 +178,7 @@ func (l *ListActionsColumn[T]) Header() templ.Component {
 	})
 }
 
-func (l *ListActionsColumn[T]) Component(defs attrs.Definitions, row T) templ.Component {
+func (l *ListActionsColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -209,7 +210,7 @@ func (l *ListActionsColumn[T]) Component(defs attrs.Definitions, row T) templ.Co
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(heading)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/action_column.templ`, Line: 51, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/action_column.templ`, Line: 52, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
@@ -220,14 +221,14 @@ func (l *ListActionsColumn[T]) Component(defs attrs.Definitions, row T) templ.Co
 			return templ_7745c5c3_Err
 		}
 		for _, col := range l.Actions {
-			if !col.IsShown(defs, row) {
+			if !col.IsShown(r, defs, row) {
 				continue
 			}
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, " ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = col.Component(defs, row).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = col.Component(r, defs, row).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

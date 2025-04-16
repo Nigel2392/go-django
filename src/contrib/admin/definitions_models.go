@@ -126,6 +126,21 @@ type ModelOptions struct {
 	// MenuOrder is the order of the model in the admin menu.
 	MenuOrder int
 
+	// DisallowCreate is a flag that determines if the model should be disallowed from being created.
+	//
+	// This is used to prevent the model from being created in the admin.
+	DisallowCreate bool
+
+	// DisallowEdit is a flag that determines if the model should be disallowed from being edited.
+	//
+	// This is used to prevent the model from being edited in the admin.
+	DisallowEdit bool
+
+	// DisallowDelete is a flag that determines if the model should be disallowed from being deleted.
+	//
+	// This is used to prevent the model from being deleted in the admin.
+	DisallowDelete bool
+
 	// AddView is the options for the add view of the model.
 	//
 	// This allows for custom creation logic and formatting form fields / layout.
@@ -247,7 +262,7 @@ func (o *ModelDefinition) FormatColumn(field string) any {
 		return field
 	}
 
-	return func(defs attrs.Definitions, row attrs.Definer) interface{} {
+	return func(_ *http.Request, defs attrs.Definitions, _ attrs.Definer) interface{} {
 		var value = defs.Get(field)
 		return format(value)
 	}

@@ -1,9 +1,8 @@
 package list
 
 import (
-	"context"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"strings"
+	"net/http"
 )
 
 type ColumnGroup[T attrs.Definer] struct {
@@ -16,19 +15,12 @@ func (c *ColumnGroup[T]) AddColumn(column ListColumn[T]) {
 	c.Columns = append(c.Columns, column)
 }
 
-func (c *ColumnGroup[T]) Render() string {
-	var component = c.Component()
-	var b strings.Builder
-	var ctx = context.Background()
-	component.Render(ctx, &b)
-	return b.String()
-}
 
-templ (c *ColumnGroup[T]) Component() {
+templ (c *ColumnGroup[T]) Component(r *http.Request) {
 	<tr class="column-group">
 		for _, column := range c.Columns {
 			<td class="list-column">
-				@column.Component(c.Definitons, c.Instance)
+				@column.Component(r, c.Definitons, c.Instance)
 			</td>
 		}
 	</tr>

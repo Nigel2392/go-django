@@ -9,9 +9,8 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
-	"context"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"strings"
+	"net/http"
 )
 
 type ColumnGroup[T attrs.Definer] struct {
@@ -24,15 +23,7 @@ func (c *ColumnGroup[T]) AddColumn(column ListColumn[T]) {
 	c.Columns = append(c.Columns, column)
 }
 
-func (c *ColumnGroup[T]) Render() string {
-	var component = c.Component()
-	var b strings.Builder
-	var ctx = context.Background()
-	component.Render(ctx, &b)
-	return b.String()
-}
-
-func (c *ColumnGroup[T]) Component() templ.Component {
+func (c *ColumnGroup[T]) Component(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -62,7 +53,7 @@ func (c *ColumnGroup[T]) Component() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = column.Component(c.Definitons, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = column.Component(r, c.Definitons, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

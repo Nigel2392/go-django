@@ -26,26 +26,26 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
-func getListActions(r *http.Request, next string) []*admin.ListAction[attrs.Definer] {
+func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 	return []*admin.ListAction[attrs.Definer]{
 		{
-			Show: func(defs attrs.Definitions, row attrs.Definer) bool { return true },
-			Text: func(defs attrs.Definitions, row attrs.Definer) string {
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool { return true },
+			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				return trans.T("View Live")
 			},
-			URL: func(defs attrs.Definitions, row attrs.Definer) string {
+			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				return URLPath(row.(*models.PageNode))
 			},
 		},
 		{
-			Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
 				// return row.(*models.PageNode).Numchild > 0
 				return permissions.HasObjectPermission(r, row, "pages:add")
 			},
-			Text: func(defs attrs.Definitions, row attrs.Definer) string {
+			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				return trans.T("Add Child")
 			},
-			URL: func(defs attrs.Definitions, row attrs.Definer) string {
+			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				var primaryField = defs.Primary()
 				if primaryField == nil {
 					return ""
@@ -60,13 +60,13 @@ func getListActions(r *http.Request, next string) []*admin.ListAction[attrs.Defi
 			},
 		},
 		{
-			Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
 				return permissions.HasObjectPermission(r, row, "pages:edit")
 			},
-			Text: func(defs attrs.Definitions, row attrs.Definer) string {
+			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				return trans.T("Edit Page")
 			},
-			URL: func(defs attrs.Definitions, row attrs.Definer) string {
+			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				var primaryField = defs.Primary()
 				if primaryField == nil {
 					return ""
@@ -81,13 +81,13 @@ func getListActions(r *http.Request, next string) []*admin.ListAction[attrs.Defi
 			},
 		},
 		{
-			Show: func(defs attrs.Definitions, row attrs.Definer) bool {
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
 				return django.AppInstalled("auditlogs") && permissions.HasObjectPermission(r, row, "auditlogs:list")
 			},
-			Text: func(defs attrs.Definitions, row attrs.Definer) string {
+			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				return trans.T("History")
 			},
-			URL: func(defs attrs.Definitions, row attrs.Definer) string {
+			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				var u = django.Reverse(
 					"admin:auditlogs",
 				)
@@ -127,7 +127,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 	columns[0] = columns[1]
 	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
-		Actions: getListActions(r, next),
+		Actions: getListActions(next),
 	}
 
 	var amount = m.ListView.PerPage
@@ -207,7 +207,11 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			return items, nil
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
-			return list.TitleFieldColumn(lc, func(defs attrs.Definitions, instance attrs.Definer) string {
+			return list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {
+				if !permissions.HasObjectPermission(r, instance, "pages:edit") {
+					return ""
+				}
+
 				var primaryField = defs.Primary()
 				if primaryField == nil {
 					return ""

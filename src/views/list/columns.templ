@@ -6,11 +6,12 @@ import (
     "github.com/Nigel2392/go-django/src/forms/fields"
 	"html/template"
 	"time"
+	"net/http"
 )
 
 type funcColumn[T attrs.Definer] struct {
 	header func() string
-	data   func(defs attrs.Definitions, row T) interface{}
+	data   func(r *http.Request, defs attrs.Definitions, row T) interface{}
 }
 
 templ (c *funcColumn[T]) Header() {
@@ -18,13 +19,13 @@ templ (c *funcColumn[T]) Header() {
     { c.header() }
 }
 
-templ (c *funcColumn[T]) Component(defs attrs.Definitions, row T) {
+templ (c *funcColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
     { attrs.ToString(
-        c.data(defs, row),
+        c.data(r, defs, row),
     ) }
 }
 
-func FuncColumn[T attrs.Definer](header func() string, data func(defs attrs.Definitions, row T) interface{}) ListColumn[T] {
+func FuncColumn[T attrs.Definer](header func() string, data func(r *http.Request, defs attrs.Definitions, row T) interface{}) ListColumn[T] {
 	return &funcColumn[T]{header, data}
 }
 
@@ -38,7 +39,7 @@ templ (c *fieldColumn[T]) Header() {
     { c.header() }
 }
 
-func (c *fieldColumn[T]) data(defs attrs.Definitions, _ T) interface{} {
+func (c *fieldColumn[T]) data(r *http.Request, defs attrs.Definitions, _ T) interface{} {
 	var field, ok = defs.Field(c.fieldName)
 
 	assert.False(
@@ -63,9 +64,9 @@ func (c *fieldColumn[T]) data(defs attrs.Definitions, _ T) interface{} {
 	}
 }
 
-templ (c *fieldColumn[T]) Component(defs attrs.Definitions, row T) {
+templ (c *fieldColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
     { attrs.ToString(
-        c.data(defs, row),
+        c.data(r, defs, row),
     ) }
 }
 
@@ -75,7 +76,7 @@ func FieldColumn[T attrs.Definer](header func() string, fieldName string) ListCo
 
 type titleFieldColumn[T attrs.Definer] struct {
 	wrapped ListColumn[T]
-	getURL  func(defs attrs.Definitions, row T) string
+	getURL  func(r *http.Request, defs attrs.Definitions, row T) string
 }
 
 templ (c *titleFieldColumn[T]) Header() {
@@ -84,20 +85,20 @@ templ (c *titleFieldColumn[T]) Header() {
 	</div>
 }
 
-templ (c *titleFieldColumn[T]) Component(defs attrs.Definitions, row T) {
-	{{ var url = templ.SafeURL(c.getURL(defs, row))}}
+templ (c *titleFieldColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
+	{{ var url = templ.SafeURL(c.getURL(r, defs, row))}}
 	<div class="list-title">
 		if url == "" {
-			@c.wrapped.Component(defs, row)
+			@c.wrapped.Component(r, defs, row)
 		} else {
 			<a href={ url }>
-				@c.wrapped.Component(defs, row)
+				@c.wrapped.Component(r, defs, row)
 			</a>
 		}
 	</div>
 }
 
-func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(defs attrs.Definitions, row T) string) ListColumn[T] {
+func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(r *http.Request, defs attrs.Definitions, row T) string) ListColumn[T] {
 	return &titleFieldColumn[T]{
 		wrapped: wraps,
 		getURL:  getURL,
@@ -106,15 +107,15 @@ func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(defs att
 
 type htmlColumn[T attrs.Definer] struct {
 	fieldColumn[T]
-	getHTML func(defs attrs.Definitions, row T) template.HTML
+	getHTML func(r *http.Request, defs attrs.Definitions, row T) template.HTML
 }
 
-templ (c *htmlColumn[T]) Component(defs attrs.Definitions, row T) {
-	{{ var html = c.getHTML(defs, row) }}
+templ (c *htmlColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
+	{{ var html = c.getHTML(r, defs, row) }}
 	@templ.Raw(html)
 }
 
-func HTMLColumn[T attrs.Definer](header func() string, getHTML func(defs attrs.Definitions, row T) template.HTML) ListColumn[T] {
+func HTMLColumn[T attrs.Definer](header func() string, getHTML func(r *http.Request, defs attrs.Definitions, row T) template.HTML) ListColumn[T] {
 	return &htmlColumn[T]{
 		fieldColumn: fieldColumn[T]{header: header},
 		getHTML:    getHTML,
@@ -123,21 +124,21 @@ func HTMLColumn[T attrs.Definer](header func() string, getHTML func(defs attrs.D
 
 type linkColumn[T attrs.Definer] struct {
 	fieldColumn[T]
-	getURL func(defs attrs.Definitions, row T) string
+	getURL func(r *http.Request, defs attrs.Definitions, row T) string
 }
 
-templ (c *linkColumn[T]) Component(defs attrs.Definitions, row T) {
-	{{ var url = templ.SafeURL(c.getURL(defs, row))}}
+templ (c *linkColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
+	{{ var url = templ.SafeURL(c.getURL(r, defs, row))}}
 	if url == "" {
-		@c.fieldColumn.Component(defs, row)
+		@c.fieldColumn.Component(r, defs, row)
 	} else {
 		<a href={ url }>
-			@c.fieldColumn.Component(defs, row)
+			@c.fieldColumn.Component(r, defs, row)
 		</a>
 	}
 }
 
-func LinkColumn[T attrs.Definer](header func() string, fieldName string, getURL func(defs attrs.Definitions, row T) string) ListColumn[T] {
+func LinkColumn[T attrs.Definer](header func() string, fieldName string, getURL func(r *http.Request, defs attrs.Definitions, row T) string) ListColumn[T] {
 	return &linkColumn[T]{
 		fieldColumn: fieldColumn[T]{header, fieldName},
 		getURL:     getURL,
@@ -146,7 +147,7 @@ func LinkColumn[T attrs.Definer](header func() string, fieldName string, getURL 
 
 func Column[T attrs.Definer](header func() string, getter any) ListColumn[T] {
 	switch g := getter.(type) {
-	case func(defs attrs.Definitions, row T) interface{}:
+	case func(r *http.Request, defs attrs.Definitions, row T) interface{}:
 		return &funcColumn[T]{header, g}
 	case string:
 		return &fieldColumn[T]{header, g}

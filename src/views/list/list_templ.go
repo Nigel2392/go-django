@@ -11,6 +11,7 @@ import templruntime "github.com/a-h/templ/runtime"
 import (
 	"context"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"net/http"
 	"strings"
 )
 
@@ -18,12 +19,14 @@ type List[T attrs.Definer] struct {
 	Columns      []ListColumn[T]
 	HideHeadings bool
 	groups       []ColumnGroup[T]
+	request      *http.Request
 }
 
-func NewList[T attrs.Definer](list []T, columns ...ListColumn[T]) *List[T] {
+func NewList[T attrs.Definer](r *http.Request, list []T, columns ...ListColumn[T]) *List[T] {
 	var l = &List[T]{
 		Columns: columns,
 		groups:  make([]ColumnGroup[T], 0, len(list)),
+		request: r,
 	}
 
 	for _, item := range list {
@@ -101,7 +104,7 @@ func (l *List[T]) Component() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		for _, group := range l.groups {
-			templ_7745c5c3_Err = group.Component().Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = group.Component(l.request).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

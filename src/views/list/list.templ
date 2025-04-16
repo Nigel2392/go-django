@@ -4,18 +4,21 @@ import (
 	"context"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"strings"
+	"net/http"
 )
 
 type List[T attrs.Definer] struct {
 	Columns []ListColumn[T]
 	HideHeadings bool
 	groups  []ColumnGroup[T]
+	request *http.Request
 }
 
-func NewList[T attrs.Definer](list []T, columns ...ListColumn[T]) *List[T] {
+func NewList[T attrs.Definer](r *http.Request,list []T, columns ...ListColumn[T]) *List[T] {
 	var l = &List[T]{
 		Columns: columns,
 		groups:  make([]ColumnGroup[T], 0, len(list)),
+		request: r,
 	}
 
 	for _, item := range list {
@@ -54,7 +57,7 @@ templ (l *List[T]) Component() {
 		}
 		<tbody>
 			for _, group := range l.groups {
-				@group.Component()
+				@group.Component(l.request)
 			}
 		</tbody>
 	</table>
