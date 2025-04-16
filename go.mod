@@ -39,7 +39,7 @@ require (
 	github.com/shopspring/decimal v1.4.0
 	github.com/urfave/cli/v2 v2.27.5
 	golang.org/x/net v0.33.0
-	golang.org/x/oauth2 v0.28.0
+	golang.org/x/oauth2 v0.29.0
 	golang.org/x/term v0.27.0
 	google.golang.org/protobuf v1.35.1
 )

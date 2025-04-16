@@ -1,6 +1,7 @@
 package openauth2
 
 import (
+	"bytes"
 	"database/sql"
 	"embed"
 	"errors"
@@ -15,22 +16,28 @@ import (
 	openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
 	_ "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models/mysqlc"
 	_ "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models/sqlitec"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/mux"
 )
 
 const (
 	USER_ID_SESSION_KEY = "openauth2_user_id"
+
+	ErrUnknownProvider errs.Error = "Unknown provider"
 )
 
 var (
 	App *OpenAuth2AppConfig
 
 	//go:embed assets/*
-	templates embed.FS
+	assets embed.FS
 )
 
 type Config struct {
@@ -91,11 +98,21 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			Logout:          Logout,
 		})
 
+		staticfiles.AddFS(
+			filesystem.Sub(
+				assets, "assets/static",
+			),
+			filesystem.MatchAnd(
+				filesystem.MatchPrefix("oauth2/"),
+				filesystem.MatchSuffix(".css"),
+			),
+		)
+
 		tpl.Add(tpl.Config{
 			AppName: "openauth2",
 			FS: filesystem.NewMultiFS(
 				filesystem.Sub(
-					templates, "assets/templates",
+					assets, "assets/templates",
 				),
 				admin.AdminSite.TemplateConfig.FS,
 			),
@@ -152,7 +169,41 @@ func NewAppConfig(cnf Config) django.AppConfig {
 		var rt = base.Any("/<<provider>>", App.handler(App.AuthHandler), "provider")
 		rt.Any("/callback", App.handler(App.CallbackHandler), "callback")
 	}
+
+	contenttypes.Register(&contenttypes.ContentTypeDefinition{
+		ContentObject:  &openauth2models.User{},
+		GetLabel:       trans.S("OAuth2 User"),
+		GetPluralLabel: trans.S("OAuth2 Users"),
+		GetInstanceLabel: func(a any) string {
+			var u = a.(*openauth2models.User)
+			var providerConfig, ok = App._cnfs[u.ProviderName]
+			if !ok {
+				return u.String()
+			}
+
+			if providerConfig.UserToString != nil {
+				var dataStruct, err = providerConfig.ScanStruct(
+					bytes.NewReader(u.Data),
+				)
+				if err != nil {
+					return u.String()
+				}
+				return providerConfig.UserToString(u, dataStruct)
+			}
+
+			return u.String()
+		},
+	})
+
 	return App
+}
+
+func (a *OpenAuth2AppConfig) Provider(name string) (*AuthConfig, error) {
+	var authConfig, ok = a._cnfs[name]
+	if !ok {
+		return nil, ErrUnknownProvider
+	}
+	return &authConfig, nil
 }
 
 func (a *OpenAuth2AppConfig) handler(h func(http.ResponseWriter, *http.Request, *AuthConfig)) http.HandlerFunc {

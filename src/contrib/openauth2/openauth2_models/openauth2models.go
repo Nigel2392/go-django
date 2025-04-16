@@ -1,8 +1,12 @@
 package openauth2models
 
 import (
+	"context"
 	"encoding/json"
+	"fmt"
 	"time"
+
+	"golang.org/x/oauth2"
 )
 
 // These fields are synonymous with the field names in  the database table
@@ -49,16 +53,23 @@ type User struct {
 	Data             json.RawMessage `json:"data"`
 	AccessToken      string          `json:"access_token"`
 	RefreshToken     string          `json:"refresh_token"`
+	TokenType        string          `json:"token_type"`
 	ExpiresAt        time.Time       `json:"expires_at"`
 	CreatedAt        time.Time       `json:"created_at"`
 	UpdatedAt        time.Time       `json:"updated_at"`
 	IsAdministrator  bool            `json:"is_administrator"`
 	IsActive         bool            `json:"is_active"`
-	IsLoggedIn       bool            `json:"is_logged_in"`
+
+	IsLoggedIn bool `json:"is_logged_in"`
+	context    context.Context
 }
 
 func (u *User) String() string {
-	return u.UniqueIdentifier
+	return fmt.Sprintf(
+		"%s (%s)",
+		u.UniqueIdentifier,
+		u.ProviderName,
+	)
 }
 
 func (u *User) IsAdmin() bool {
@@ -67,4 +78,33 @@ func (u *User) IsAdmin() bool {
 
 func (u *User) IsAuthenticated() bool {
 	return u.IsLoggedIn
+}
+
+func (u *User) SetContext(ctx context.Context) *User {
+	u.context = ctx
+	return u
+}
+
+func (u *User) Context() context.Context {
+	if u.context == nil {
+		u.context = context.Background()
+	}
+	return u.context
+}
+
+func (u *User) SetToken(token *oauth2.Token) {
+	u.AccessToken = token.AccessToken
+	u.RefreshToken = token.RefreshToken
+	u.ExpiresAt = token.Expiry
+	u.TokenType = token.TokenType
+}
+
+func (u *User) Token() *oauth2.Token {
+	var token = &oauth2.Token{
+		AccessToken:  u.AccessToken,
+		RefreshToken: u.RefreshToken,
+		Expiry:       u.ExpiresAt,
+		TokenType:    u.TokenType,
+	}
+	return token
 }

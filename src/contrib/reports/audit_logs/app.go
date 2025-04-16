@@ -167,16 +167,26 @@ func NewAppConfig() django.AppConfig {
 		)
 	}
 
-	tpl.Add(tpl.Config{
+	Logs.TemplateConfig = &tpl.Config{
 		AppName: "auditlogs",
-		FS:      tplFS,
-		Matches: filesystem.MatchAnd(
-			filesystem.MatchPrefix("auditlogs/"),
-			filesystem.MatchOr(
-				filesystem.MatchSuffix(".tmpl"),
+		FS: filesystem.NewMultiFS(
+			filesystem.NewMatchFS(
+				tplFS,
+				filesystem.MatchAnd(
+					filesystem.MatchPrefix("auditlogs/"),
+					filesystem.MatchOr(
+						filesystem.MatchSuffix(".tmpl"),
+					),
+				),
+			),
+			filesystem.NewMatchFS(
+				admin.AdminSite.TemplateConfig.FS,
+				admin.AdminSite.TemplateConfig.Matches,
 			),
 		),
-	})
+		Bases: admin.AdminSite.TemplateConfig.Bases,
+		Funcs: admin.AdminSite.TemplateConfig.Funcs,
+	}
 
 	Logs.Ready = func() error {
 		admin.AdminSite.Route.Handle(

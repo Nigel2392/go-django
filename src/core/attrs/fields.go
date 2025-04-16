@@ -219,7 +219,8 @@ func (f *FieldDef) ToString() string {
 		return out[0].String()
 	}
 
-	return toString(v)
+	var rv = reflect.ValueOf(v)
+	return toString(rv, v)
 }
 
 func (f *FieldDef) GetDefault() interface{} {

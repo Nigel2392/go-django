@@ -19,11 +19,6 @@ func UnAuthenticatedUser() *openauth2models.User {
 // Get the user from a request.
 func UserFromRequest(r *http.Request) *openauth2models.User {
 
-	var u = authentication.Retrieve(r)
-	if u != nil {
-		return u.(*openauth2models.User)
-	}
-
 	var session = sessions.Retrieve(r)
 	except.Assert(
 		session != nil,

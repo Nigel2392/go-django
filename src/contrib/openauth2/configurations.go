@@ -5,12 +5,18 @@ import (
 	"errors"
 	"io"
 
+	openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
 	"github.com/qdm12/reprint"
 	"golang.org/x/oauth2"
 )
 
 type AuthConfig struct {
 	Oauth2 *oauth2.Config
+
+	// The access type to request from the provider.
+	//
+	// If this is nil, it will be set to "oauth2.AccessTypeOffline".
+	AccessType oauth2.AuthCodeOption
 
 	// The name of the provider, e.g. "google", "github", etc.
 	Provider string
@@ -46,6 +52,12 @@ type AuthConfig struct {
 	// This means that it DOES support unexported fields, though these will
 	// NOT be used for JSON unmarshalling.
 	DataStruct interface{}
+
+	// UserToString is a function that takes a user and returns a string.
+	//
+	// It can act on the user's data struct to return a string.
+	// It is used for display purposes only.
+	UserToString func(user *openauth2models.User, dataStruct interface{}) string
 }
 
 func (c *AuthConfig) ScanStruct(r io.Reader) (interface{}, error) {

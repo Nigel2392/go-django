@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS oauth2_users (
     data              TEXT NOT NULL,
     access_token      TEXT NOT NULL,
     refresh_token     TEXT NOT NULL,
+    token_type        TEXT NOT NULL,
     expires_at        DATETIME NOT NULL,
     created_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -19,3 +20,6 @@ CREATE TRIGGER IF NOT EXISTS oauth2_users_updated_at
 BEGIN
     UPDATE oauth2_users SET updated_at=CURRENT_TIMESTAMP WHERE id=NEW.id;
 END;
+
+CREATE UNIQUE INDEX IF NOT EXISTS oauth2_users_unique_identifier ON oauth2_users (unique_identifier);
+CREATE INDEX IF NOT EXISTS oauth2_users_provider_name ON oauth2_users (provider_name);

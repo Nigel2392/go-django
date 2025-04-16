@@ -15,8 +15,9 @@ import (
 )
 
 const createUser = `-- name: CreateUser :execlastid
-INSERT INTO oauth2_users (unique_identifier, provider_name, data, access_token, refresh_token, expires_at, is_administrator, is_active)
+INSERT INTO oauth2_users (unique_identifier, provider_name, data, access_token, refresh_token, token_type, expires_at, is_administrator, is_active)
 VALUES (
+    ?,
     ?,
     ?,
     ?,
@@ -28,13 +29,14 @@ VALUES (
 )
 `
 
-func (q *Queries) CreateUser(ctx context.Context, uniqueIdentifier string, providerName string, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, isAdministrator bool, isActive bool) (int64, error) {
+func (q *Queries) CreateUser(ctx context.Context, uniqueIdentifier string, providerName string, data json.RawMessage, accessToken string, refreshToken string, tokenType string, expiresAt time.Time, isAdministrator bool, isActive bool) (int64, error) {
 	result, err := q.exec(ctx, q.createUserStmt, createUser,
 		uniqueIdentifier,
 		providerName,
 		data,
 		accessToken,
 		refreshToken,
+		tokenType,
 		expiresAt,
 		isAdministrator,
 		isActive,
@@ -76,7 +78,7 @@ func (q *Queries) DeleteUsers(ctx context.Context, ids []uint64) error {
 }
 
 const retrieveUserByID = `-- name: RetrieveUserByID :one
-SELECT id, unique_identifier, provider_name, data, access_token, refresh_token, expires_at, created_at, updated_at, is_administrator, is_active FROM oauth2_users
+SELECT id, unique_identifier, provider_name, data, access_token, refresh_token, token_type, expires_at, created_at, updated_at, is_administrator, is_active FROM oauth2_users
 WHERE id = ?
 `
 
@@ -90,6 +92,7 @@ func (q *Queries) RetrieveUserByID(ctx context.Context, id uint64) (*openauth2mo
 		&i.Data,
 		&i.AccessToken,
 		&i.RefreshToken,
+		&i.TokenType,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -100,7 +103,7 @@ func (q *Queries) RetrieveUserByID(ctx context.Context, id uint64) (*openauth2mo
 }
 
 const retrieveUserByIdentifier = `-- name: RetrieveUserByIdentifier :one
-SELECT id, unique_identifier, provider_name, data, access_token, refresh_token, expires_at, created_at, updated_at, is_administrator, is_active FROM oauth2_users
+SELECT id, unique_identifier, provider_name, data, access_token, refresh_token, token_type, expires_at, created_at, updated_at, is_administrator, is_active FROM oauth2_users
 WHERE unique_identifier = ?
 `
 
@@ -114,6 +117,7 @@ func (q *Queries) RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier
 		&i.Data,
 		&i.AccessToken,
 		&i.RefreshToken,
+		&i.TokenType,
 		&i.ExpiresAt,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -129,18 +133,20 @@ SET provider_name = ?,
     data = ?,
     access_token = ?,
     refresh_token = ?,
+    token_type = ?,
     expires_at = ?,
     is_administrator = ?,
     is_active = ?
 WHERE id = ?
 `
 
-func (q *Queries) UpdateUser(ctx context.Context, providerName string, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, isAdministrator bool, isActive bool, iD uint64) error {
+func (q *Queries) UpdateUser(ctx context.Context, providerName string, data json.RawMessage, accessToken string, refreshToken string, tokenType string, expiresAt time.Time, isAdministrator bool, isActive bool, iD uint64) error {
 	_, err := q.exec(ctx, q.updateUserStmt, updateUser,
 		providerName,
 		data,
 		accessToken,
 		refreshToken,
+		tokenType,
 		expiresAt,
 		isAdministrator,
 		isActive,

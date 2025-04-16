@@ -66,9 +66,12 @@ func (oa *OpenAuth2AppConfig) AuthHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Handle the authentication logic here
-	var url = a.Oauth2.AuthCodeURL("state", oauth2.AccessTypeOffline)
+	var accessType = oauth2.AccessTypeOffline
+	if a.AccessType != nil {
+		accessType = a.AccessType
+	}
+	var url = a.Oauth2.AuthCodeURL("state", accessType)
 	http.Redirect(w, r, url, http.StatusFound)
-	logger.Infof("AuthHandler called for provider: %s (%s)", a.Provider, url)
 }
 
 func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Request, a *AuthConfig) {
@@ -165,6 +168,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 			rawData,
 			token.AccessToken,
 			token.RefreshToken,
+			token.TokenType,
 			token.Expiry,
 			false,
 			!oa.Config.UserDefaultIsDisabled,
@@ -192,6 +196,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 			rawData,
 			token.AccessToken,
 			token.RefreshToken,
+			token.TokenType,
 			token.Expiry,
 			user.IsAdministrator,
 			user.IsActive,

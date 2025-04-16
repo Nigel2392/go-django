@@ -130,57 +130,19 @@ func App() *PageAppConfig {
 //
 // This is used to initialize the pages app, set up routes, and register the admin application.
 func NewAppConfig() *PageAppConfig {
-	var assetFileSys, err = fs.Sub(assetsFS, "assets/static")
-	if err != nil {
-		panic(err)
-	}
-
-	templateFileSys, err := fs.Sub(assetsFS, "assets/templates")
-	if err != nil {
-		panic(err)
-	}
-
-	staticfiles.AddFS(
-		assetFileSys, filesystem.MatchAnd(
-			filesystem.MatchPrefix("pages/"),
-			filesystem.MatchOr(
-				filesystem.MatchSuffix(".css"),
-				filesystem.MatchSuffix(".js"),
-			),
-		),
-	)
-
-	if django.AppInstalled("admin") {
-		tpl.Add(tpl.Config{
-			AppName: "pages",
-			FS: filesystem.NewMultiFS(
-				filesystem.NewMatchFS(
-					templateFileSys,
-					filesystem.MatchOr(
-						filesystem.MatchAnd(
-							filesystem.MatchPrefix("pages/"),
-							filesystem.MatchOr(
-								filesystem.MatchSuffix(".tmpl"),
-							),
-						),
-					),
-				),
-				filesystem.NewMatchFS(
-					admin.AdminSite.TemplateConfig.FS,
-					admin.AdminSite.TemplateConfig.Matches,
-				),
-			),
-			Bases: admin.AdminSite.TemplateConfig.Bases,
-			Funcs: admin.AdminSite.TemplateConfig.Funcs,
-		})
-	}
-
 	if pageApp != nil {
 		return pageApp
 	}
 
 	var routePrefixSet = false
-	var initPageApp = func(settings django.Settings, db *sql.DB) error {
+
+	pageApp = &PageAppConfig{
+		DBRequiredAppConfig: &apps.DBRequiredAppConfig{
+			AppConfig: apps.NewAppConfig("pages"),
+		},
+	}
+
+	pageApp.Init = func(settings django.Settings, db *sql.DB) error {
 
 		if err := CreateTable(db); err != nil {
 			return err
@@ -272,6 +234,12 @@ func NewAppConfig() *PageAppConfig {
 			},
 		})
 
+		// Return if the admin app is not installed
+		// This is used to prevent the pages app's admin setup from running
+		if !django.AppInstalled("admin") {
+			return nil
+		}
+
 		admin.RegisterGlobalMenuItem(admin.RegisterMenuItemHookFunc(func(site *admin.AdminApplication, items components.Items[menu.MenuItem]) {
 			items.Append(&PagesMenuItem{
 				BaseItem: menu.BaseItem{
@@ -304,11 +272,50 @@ func NewAppConfig() *PageAppConfig {
 		return nil
 	}
 
-	pageApp = &PageAppConfig{
-		DBRequiredAppConfig: &apps.DBRequiredAppConfig{
-			AppConfig: apps.NewAppConfig("pages"),
-			Init:      initPageApp,
-		},
+	// Only register staticfiles & templates if the admin app is installed
+	if django.AppInstalled("admin") {
+		var assetFileSys, err = fs.Sub(assetsFS, "assets/static")
+		if err != nil {
+			panic(err)
+		}
+
+		templateFileSys, err := fs.Sub(assetsFS, "assets/templates")
+		if err != nil {
+			panic(err)
+		}
+
+		staticfiles.AddFS(
+			assetFileSys, filesystem.MatchAnd(
+				filesystem.MatchPrefix("pages/"),
+				filesystem.MatchOr(
+					filesystem.MatchSuffix(".css"),
+					filesystem.MatchSuffix(".js"),
+				),
+			),
+		)
+
+		pageApp.TemplateConfig = &tpl.Config{
+			AppName: "pages",
+			FS: filesystem.NewMultiFS(
+				filesystem.NewMatchFS(
+					templateFileSys,
+					filesystem.MatchOr(
+						filesystem.MatchAnd(
+							filesystem.MatchPrefix("pages/"),
+							filesystem.MatchOr(
+								filesystem.MatchSuffix(".tmpl"),
+							),
+						),
+					),
+				),
+				filesystem.NewMatchFS(
+					admin.AdminSite.TemplateConfig.FS,
+					admin.AdminSite.TemplateConfig.Matches,
+				),
+			),
+			Bases: admin.AdminSite.TemplateConfig.Bases,
+			Funcs: admin.AdminSite.TemplateConfig.Funcs,
+		}
 	}
 
 	//	pageApp.Deps = []string{
@@ -316,6 +323,12 @@ func NewAppConfig() *PageAppConfig {
 	//	}
 
 	pageApp.AppConfig.Ready = func() error {
+
+		// If the admin app is not installed we don't need to register the pages app's
+		// routes and handlers
+		if !django.AppInstalled("admin") {
+			return nil
+		}
 
 		if !routePrefixSet {
 			django.Global.Log.Fatal(1, "Route prefix was not set before calling django.App.Initialize().")

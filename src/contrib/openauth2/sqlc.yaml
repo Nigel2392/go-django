@@ -38,7 +38,7 @@ sql:
         emit_prepared_queries: true
         emit_result_struct_pointers: true
         emit_interface: true
-        query_parameter_limit: 8
+        query_parameter_limit: 12
   - schema: "./openauth2_models/sqlitec/sql/schema.sql"
     queries: "./openauth2_models/sqlitec/sql/queries.sql"
     engine: "sqlite"
@@ -50,4 +50,4 @@ sql:
         emit_prepared_queries: true
         emit_result_struct_pointers: true
         emit_interface: true
-        query_parameter_limit: 8
+        query_parameter_limit: 12

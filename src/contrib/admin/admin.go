@@ -288,6 +288,7 @@ func NewAppConfig() django.AppConfig {
 			),
 		),
 		Funcs: template.FuncMap{
+			"string": attrs.ToString,
 			"icons": func() template.HTML {
 				return iconHTML
 			},

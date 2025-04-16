@@ -17,17 +17,17 @@ type Querier interface {
 	RetrieveUserByID(ctx context.Context, id uint64) (*User, error)
 	RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier string) (*User, error)
 
-	CreateUser(ctx context.Context, uniqueIdentifier string, providerName string, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, isAdministrator bool, isActive bool) (int64, error)
+	CreateUser(ctx context.Context, uniqueIdentifier string, providerName string, data json.RawMessage, accessToken string, refreshToken string, tokenType string, expiresAt time.Time, isAdministrator bool, isActive bool) (int64, error)
 	DeleteUser(ctx context.Context, id uint64) error
 	DeleteUsers(ctx context.Context, ids []uint64) error
-	UpdateUser(ctx context.Context, providerName string, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, isAdministrator bool, isActive bool, iD uint64) error
+	UpdateUser(ctx context.Context, providerName string, data json.RawMessage, accessToken string, refreshToken string, tokenType string, expiresAt time.Time, isAdministrator bool, isActive bool, iD uint64) error
 }
 
 type SignalsQuerier struct {
 	Querier
 }
 
-func (q *SignalsQuerier) CreateUser(ctx context.Context, uniqueIdentifier string, providerName string, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, isAdministrator bool, isActive bool) (int64, error) {
+func (q *SignalsQuerier) CreateUser(ctx context.Context, uniqueIdentifier string, providerName string, data json.RawMessage, accessToken string, refreshToken string, tokenType string, expiresAt time.Time, isAdministrator bool, isActive bool) (int64, error) {
 	var u = &User{
 		UniqueIdentifier: uniqueIdentifier,
 		ProviderName:     providerName,
@@ -35,6 +35,7 @@ func (q *SignalsQuerier) CreateUser(ctx context.Context, uniqueIdentifier string
 		AccessToken:      accessToken,
 		RefreshToken:     refreshToken,
 		ExpiresAt:        expiresAt,
+		TokenType:        tokenType,
 		IsAdministrator:  isAdministrator,
 		IsActive:         isActive,
 		IsLoggedIn:       true,
@@ -44,7 +45,7 @@ func (q *SignalsQuerier) CreateUser(ctx context.Context, uniqueIdentifier string
 		return 0, err
 	}
 
-	id, err := q.Querier.CreateUser(ctx, uniqueIdentifier, providerName, data, accessToken, refreshToken, expiresAt, isAdministrator, isActive)
+	id, err := q.Querier.CreateUser(ctx, uniqueIdentifier, providerName, data, accessToken, refreshToken, tokenType, expiresAt, isAdministrator, isActive)
 	if err != nil {
 		return 0, err
 	}
@@ -55,13 +56,14 @@ func (q *SignalsQuerier) CreateUser(ctx context.Context, uniqueIdentifier string
 	return id, nil
 }
 
-func (q *SignalsQuerier) UpdateUser(ctx context.Context, providerName string, data json.RawMessage, accessToken string, refreshToken string, expiresAt time.Time, isAdministrator bool, isActive bool, iD uint64) error {
+func (q *SignalsQuerier) UpdateUser(ctx context.Context, providerName string, data json.RawMessage, accessToken string, refreshToken string, tokenType string, expiresAt time.Time, isAdministrator bool, isActive bool, iD uint64) error {
 	var u = &User{
 		ID:              iD,
 		ProviderName:    providerName,
 		Data:            data,
 		AccessToken:     accessToken,
 		RefreshToken:    refreshToken,
+		TokenType:       tokenType,
 		ExpiresAt:       expiresAt,
 		IsAdministrator: isAdministrator,
 		IsActive:        isActive,
@@ -72,7 +74,7 @@ func (q *SignalsQuerier) UpdateUser(ctx context.Context, providerName string, da
 		return err
 	}
 
-	err = q.Querier.UpdateUser(ctx, providerName, data, accessToken, refreshToken, expiresAt, isAdministrator, isActive, iD)
+	err = q.Querier.UpdateUser(ctx, providerName, data, accessToken, refreshToken, tokenType, expiresAt, isAdministrator, isActive, iD)
 	if err != nil {
 		return err
 	}

@@ -6,6 +6,7 @@ import (
 	"slices"
 
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
@@ -62,7 +63,7 @@ var HomeHandler = &views.BaseView{
 			func(r *http.Request) string {
 				return trans.T(
 					"Welcome to the Go-Django admin dashboard, %s!",
-					user,
+					attrs.ToString(user),
 				)
 			},
 		)

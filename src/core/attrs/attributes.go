@@ -222,14 +222,24 @@ func ToString(v any) string {
 		return ""
 	}
 
-	if stringer, ok := v.(Stringer); ok {
-		return stringer.ToString()
+	var r = reflect.ValueOf(v)
+	if r.Kind() == reflect.Ptr {
+		r = r.Elem()
 	}
 
-	return toString(v)
+	if r.Kind() == reflect.Struct {
+		var cType = contenttypes.DefinitionForObject(
+			v,
+		)
+		if cType != nil {
+			return cType.InstanceLabel(v)
+		}
+	}
+
+	return toString(r, v)
 }
 
-func toString(v any) string {
+func toString(r reflect.Value, v any) string {
 	switch v := v.(type) {
 	case *mail.Address:
 		return v.Address
@@ -241,7 +251,6 @@ func toString(v any) string {
 		return v.Error()
 	}
 
-	var r = reflect.ValueOf(v)
 	if r.Kind() == reflect.Ptr {
 		r = r.Elem()
 	}
