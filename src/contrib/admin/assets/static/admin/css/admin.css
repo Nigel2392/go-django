@@ -280,6 +280,9 @@ a:hover {
     background-color: hsl( 0 0% 98% );
     color: hsl( 0 0% 60% );
 }
+.panel textarea {
+    resize: vertical;
+}
 .panel select {
     -moz-appearance: none;
     appearance: none;

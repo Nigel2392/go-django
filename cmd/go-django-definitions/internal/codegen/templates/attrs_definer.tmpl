@@ -8,7 +8,6 @@ import (
     "github.com/Nigel2392/go-django/src/core/attrs"
     "github.com/Nigel2392/go-django/src/forms/widgets"
 
-    "database/sql"
     "fmt"
     {{ range $import := .Imports }}
     {{ $import.Alias }}"{{ $import.Package }}"{{ end }}
@@ -16,12 +15,8 @@ import (
 
 var (
     _ widgets.Widget
-    globalDB *sql.DB
 )
 
-func SetDB(db *sql.DB) {
-    globalDB = db
-}
 {{ $obj := . }}
 {{ range $choices := $obj.Choices }}
 var {{ $choices.Name }}Options = func() []widgets.Option {

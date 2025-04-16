@@ -6,7 +6,8 @@ package {{ .PackageName }};
 
 import (
     "strings"
-
+    "database/sql"
+    "github.com/Nigel2392/go-django/src"
     "github.com/Nigel2392/go-django/src/core/contenttypes"
     "github.com/Nigel2392/go-django/src/contrib/admin"
 )
@@ -78,7 +79,11 @@ func Select{{ $struct.Name }}(id {{ $struct.PrimaryField.GoType }}) (*{{ $struct
 }
 
 func List{{ $struct.PluralName }}(limit, offset int32) ([]*{{ $struct.Name }}, error) {
-    var rows, err = globalDB.Query(list{{$struct.Name}}AdminQuery, limit, offset)
+	var db = django.ConfigGet[*sql.DB](
+		django.Global.Settings,
+		django.APPVAR_DATABASE,
+	)
+    var rows, err = db.Query(list{{$struct.Name}}AdminQuery, limit, offset)
     if err != nil {
         return nil, err
     }
@@ -110,7 +115,11 @@ func List{{ $struct.PluralName }}ForPrimaryKeys(ids []interface{}) ([]*{{ $struc
         "{%PLACEHOLDER%}",
         strings.Join(placeholders, ", "),
     )
-    var rows, err = globalDB.Query(query, values...)
+	var db = django.ConfigGet[*sql.DB](
+		django.Global.Settings,
+		django.APPVAR_DATABASE,
+	)
+    var rows, err = db.Query(query, values...)
     if err != nil {
         return nil, err
     }
@@ -131,7 +140,11 @@ func List{{ $struct.PluralName }}ForPrimaryKeys(ids []interface{}) ([]*{{ $struc
 
 func select{{ $struct.Name }}Interface(id any) (interface{}, error) {
     var o = &{{ $struct.Name }}{}
-    err := globalDB.QueryRow(select{{$struct.Name}}AdminQuery, id).Scan(
+    var db = django.ConfigGet[*sql.DB](
+		django.Global.Settings,
+		django.APPVAR_DATABASE,
+	)
+    err := db.QueryRow(select{{$struct.Name}}AdminQuery, id).Scan(
         {{ range $i, $field := $struct.Fields }}&o.{{ $field.Name }},{{ end }}
     )
     if err != nil {

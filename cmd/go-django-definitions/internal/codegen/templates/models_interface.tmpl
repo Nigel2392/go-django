@@ -5,10 +5,11 @@
 package {{ .PackageName }};
 
 import (
+    "context"
+    "database/sql"
+    "github.com/Nigel2392/go-django/src"
     "github.com/Nigel2392/go-django/src/models"
     "github.com/Nigel2392/go-django/src/core/attrs"
-
-    "context"
 )
 {{ $obj := . }}
 {{ range $struct := $obj.Structs }}
@@ -38,7 +39,11 @@ func (o *{{ $struct.Name }}) Save(ctx context.Context) error {
 }
 
 func (o *{{ $struct.Name }}) Insert(ctx context.Context) error {
-    var result, err = globalDB.ExecContext(
+    var db = django.ConfigGet[*sql.DB](
+		django.Global.Settings,
+		django.APPVAR_DATABASE,
+	)
+    var result, err = db.ExecContext(
         ctx, insert{{$struct.Name}}Query,
         {{ range $i, $field := $struct.InsertableFields }}{{ if $i }}, {{ end }}o.{{ $field.Name }}{{ end }},
     )
@@ -56,7 +61,11 @@ func (o *{{ $struct.Name }}) Insert(ctx context.Context) error {
 }
 
 func (o *{{ $struct.Name }}) Update(ctx context.Context) error {
-    _, err := globalDB.ExecContext(
+    var db = django.ConfigGet[*sql.DB](
+		django.Global.Settings,
+		django.APPVAR_DATABASE,
+	)
+    _, err := db.ExecContext(
         ctx, update{{$struct.Name}}Query,
         {{ range $i, $field := $struct.InsertableFields }}{{ if $i }}, {{ end }}o.{{ $field.Name }}{{ end }},
         o.{{ $struct.PrimaryField.Name }},
@@ -65,12 +74,20 @@ func (o *{{ $struct.Name }}) Update(ctx context.Context) error {
 }
 
 func (o *{{ $struct.Name }}) Delete(ctx context.Context) error {
-    _, err := globalDB.ExecContext(ctx, delete{{$struct.Name}}Query, o.{{ $struct.PrimaryField.Name }})
+    var db = django.ConfigGet[*sql.DB](
+		django.Global.Settings,
+		django.APPVAR_DATABASE,
+	)
+    _, err := db.ExecContext(ctx, delete{{$struct.Name}}Query, o.{{ $struct.PrimaryField.Name }})
     return err
 }
 
 func (o *{{ $struct.Name }}) Reload(ctx context.Context) error {
-    return globalDB.QueryRowContext(
+    var db = django.ConfigGet[*sql.DB](
+		django.Global.Settings,
+		django.APPVAR_DATABASE,
+	)
+    return db.QueryRowContext(
         ctx, select{{$struct.Name}}Query, o.{{ $struct.PrimaryField.Name }},
     ).Scan(
         {{ range $i, $field := $struct.Fields }}&o.{{ $field.Name }},{{ end }}

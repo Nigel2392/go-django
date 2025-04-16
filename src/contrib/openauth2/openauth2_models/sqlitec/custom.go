@@ -9,7 +9,7 @@ import (
 )
 
 const retrieveUsersDynamicOrd = `-- name: RetrieveUsers :many
-SELECT id, unique_identifier, provider_name, data, access_token, refresh_token, token_type, expires_at, created_at, updated_at, is_administrator, is_active FROM users
+SELECT id, unique_identifier, provider_name, data, access_token, refresh_token, token_type, expires_at, created_at, updated_at, is_administrator, is_active FROM oauth2_users
 ORDER BY %s
 LIMIT ?
 OFFSET ?

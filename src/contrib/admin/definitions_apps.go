@@ -60,6 +60,14 @@ type AppDefinition struct {
 
 func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 
+	if opts.Model == nil {
+		logger.Warnf(
+			"Model is nil, cannot register model %q",
+			opts.Name,
+		)
+		return nil
+	}
+
 	var rTyp = reflect.TypeOf(opts.Model)
 	if rTyp.Kind() == reflect.Ptr {
 		rTyp = rTyp.Elem()

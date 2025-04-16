@@ -20,7 +20,7 @@ sql:
         generate_admin_setup: false
 
         # optional, default is false, generates extra methods to adhere to models.Saver, models.Updater, models.Deleter and models.Reloader interfaces
-        generate_models_methods: false
+        generate_models_methods: true
 
         # Optional, default is false, generates pointers for fields in the generated struct (only sqlite)
         emit_pointers_for_null: true

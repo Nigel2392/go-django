@@ -2,11 +2,13 @@ package openauth2
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -16,6 +18,7 @@ import (
 	openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
 	_ "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models/mysqlc"
 	_ "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models/sqlitec"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -24,6 +27,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
 )
 
@@ -193,7 +197,90 @@ func NewAppConfig(cnf Config) django.AppConfig {
 
 			return u.String()
 		},
+		GetInstance: func(i interface{}) (interface{}, error) {
+			var (
+				u   uint64
+				err error
+			)
+			switch i := i.(type) {
+			case string:
+				u, err = strconv.ParseUint(i, 10, 64)
+				if err != nil {
+					return nil, fmt.Errorf(
+						"OpenAuth2: Invalid ID %q", i,
+					)
+				}
+			case uint64:
+				u = i
+			default:
+				return nil, fmt.Errorf(
+					"OpenAuth2: Invalid ID type %T", i,
+				)
+			}
+			instance, err := App.queryset.RetrieveUserByID(
+				context.Background(), u,
+			)
+			return instance, err
+		},
+		GetInstances: func(amount, offset uint) ([]interface{}, error) {
+			var instances, err = App.queryset.RetrieveUsers(
+				context.Background(), int32(amount), int32(offset),
+			)
+			return attrs.InterfaceList(instances), err
+		},
 	})
+
+	admin.RegisterApp(
+		"openauth2",
+		admin.AppOptions{
+			RegisterToAdminMenu: true,
+			AppLabel:            trans.S("OpenAuth2"),
+			AppDescription: trans.S(
+				"OpenAuth2 is an authentication backend for Go-Django. It allows you to authenticate users using OAuth2 providers such as Google, Facebook, GitHub, etc.",
+			),
+			MenuLabel: trans.S("OpenAuth2"),
+			MenuOrder: 1000,
+		},
+		admin.ModelOptions{
+			RegisterToAdminMenu: true,
+			Name:                "Oauth2User",
+			Model:               &openauth2models.User{},
+
+			AddView: admin.FormViewOptions{
+				ViewOptions: admin.ViewOptions{},
+			},
+			EditView: admin.FormViewOptions{
+				ViewOptions: admin.ViewOptions{},
+			},
+			ListView: admin.ListViewOptions{
+				PerPage: 20,
+				ViewOptions: admin.ViewOptions{
+					Fields: []string{
+						"ID",
+						"UniqueIdentifier",
+						"ProviderName",
+						"HasRefreshToken",
+						"CreatedAt",
+						"UpdatedAt",
+						"IsAdministrator",
+						"IsActive",
+					},
+				},
+				Columns: map[string]list.ListColumn[attrs.Definer]{
+					"HasRefreshToken": list.FuncColumn(
+						trans.S("Has Refresh Token"),
+						func(defs attrs.Definitions, row attrs.Definer) interface{} {
+							var u = row.(*openauth2models.User)
+							return u.RefreshToken != ""
+						},
+					),
+				},
+			},
+			//	DeleteView: admin.DeleteViewOptions{
+			//
+			//	},
+		},
+	)
 
 	return App
 }

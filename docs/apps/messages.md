@@ -9,7 +9,7 @@ The messages app has to be included in your `django.Apps(...)` function.
 
 The app will then setup any required middleware, and add the messages context processor.
 
-Messages will only be available in templates when rendered with `tpl.Render()` or `tpl.FRender()`, and when the context's type adheres to tpl.RequestContext.
+Messages will only be available in templates when rendered with `tpl.Render()` or `tpl.FRender()`, and when the context's type adheres to `tpl.RequestContext`.
 
 Example setup of this can be done accordingly:
 
