@@ -72,6 +72,31 @@ func NewCustomAppConfig() *CustomApp {
 }
 ```
 
+## Creating a new app for a single `mux.Handler`
+
+We provide a way to create a new app for a single `mux.Handler`.
+
+This is useful for creating a new app for a single route, or a single handler, or for very simple apps.
+
+Example:
+
+```go
+package myapp
+
+import (
+    "github.com/Nigel2392/mux"
+    "github.com/Nigel2392/go-django/src/apps"
+)
+
+func myHandler(w http.ResponseWriter, r *http.Request) {
+    // Handle the request
+}
+
+var app = apps.NewAppConfigForHandler(
+    "myApp", mux.GET, "/myapp", mux.NewHandler(myHandler),
+)
+```
+
 ### Retrieving your app for later use
 
 Apps can later be retrieved by either:

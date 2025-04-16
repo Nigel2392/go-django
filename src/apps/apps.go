@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/mux"
 )
 
 type AppConfig struct {
@@ -64,6 +65,14 @@ func NewAppConfig(name string) *AppConfig {
 		Cmd:           make([]command.Command, 0),
 	}
 
+	return app
+}
+
+func NewAppConfigForHandler(name string, method string, path string, handler mux.Handler) *AppConfig {
+	var app = NewAppConfig(name)
+	app.Routing = func(m django.Mux) {
+		m.Handle(method, path, handler, name)
+	}
 	return app
 }
 

@@ -17,7 +17,9 @@ Example setup of this can be done accordingly:
 package main
 
 import (
+    "github.com/Nigel2392/mux"
     "github.com/Nigel2392/go-django/src"
+    "github.com/Nigel2392/go-django/src/apps"
     "github.com/Nigel2392/go-django/src/contrib/messages"
     "github.com/Nigel2392/go-django/src/contrib/session"
 )
@@ -43,6 +45,11 @@ func main() {
         django.Apps(
             session.NewAppConfig,
             messages.NewAppConfig,
+            apps.NewAppConfigForHandler(
+                "myapp", 
+                mux.GET, "/myapp", 
+                mux.NewHandler(myView),
+            ),
         ),
     )
 
