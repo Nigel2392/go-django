@@ -9,6 +9,7 @@ import "github.com/Nigel2392/go-django/src/views/list"
 import "github.com/Nigel2392/go-django/src/core/attrs"
 import "github.com/Nigel2392/go-django/src"
 import "github.com/Nigel2392/go-django/src/core/trans"
+import "github.com/Nigel2392/go-django/src/forms/media"
 
 var (
     _ADMIN_HOMEPAGE_PAGE_COUNT int32 = 5
@@ -26,6 +27,10 @@ templ (p *PagesAdminHomeComponent) html(upper *list.List[attrs.Definer]) {
         </div>
         @upper.Component()
     </div>
+}
+
+func (p *PagesAdminHomeComponent) Media() media.Media {
+	return nil
 }
 
 func (p *PagesAdminHomeComponent) HTML() template.HTML {
@@ -59,7 +64,7 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 
 	columns[0] = columns[1]
 	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
-		Actions: getListActions(p.Request, django.Reverse("admin")),
+		Actions: getListActions(django.Reverse("admin")),
 	}
 
 	var pagesList = make([]attrs.Definer, len(pages))
@@ -68,6 +73,7 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 	}
 
     var listComponent = list.NewList(
+		p.Request,
         pagesList,
 		columns...,
     )

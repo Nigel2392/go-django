@@ -17,6 +17,7 @@ import "github.com/Nigel2392/go-django/src/views/list"
 import "github.com/Nigel2392/go-django/src/core/attrs"
 import "github.com/Nigel2392/go-django/src"
 import "github.com/Nigel2392/go-django/src/core/trans"
+import "github.com/Nigel2392/go-django/src/forms/media"
 
 var (
 	_ADMIN_HOMEPAGE_PAGE_COUNT int32 = 5
@@ -55,7 +56,7 @@ func (p *PagesAdminHomeComponent) html(upper *list.List[attrs.Definer]) templ.Co
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T("Pages"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin_home_component.templ`, Line: 25, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin_home_component.templ`, Line: 26, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -75,6 +76,10 @@ func (p *PagesAdminHomeComponent) html(upper *list.List[attrs.Definer]) templ.Co
 		}
 		return nil
 	})
+}
+
+func (p *PagesAdminHomeComponent) Media() media.Media {
+	return nil
 }
 
 func (p *PagesAdminHomeComponent) HTML() template.HTML {

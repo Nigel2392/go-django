@@ -21,5 +21,5 @@ BEGIN
     UPDATE oauth2_users SET updated_at=CURRENT_TIMESTAMP WHERE id=NEW.id;
 END;
 
-CREATE UNIQUE INDEX IF NOT EXISTS oauth2_users_unique_identifier ON oauth2_users (unique_identifier);
+CREATE UNIQUE INDEX IF NOT EXISTS oauth2_users_unique_identifier ON oauth2_users (unique_identifier, provider_name);
 CREATE INDEX IF NOT EXISTS oauth2_users_provider_name ON oauth2_users (provider_name);

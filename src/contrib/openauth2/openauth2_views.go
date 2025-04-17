@@ -66,12 +66,32 @@ func (oa *OpenAuth2AppConfig) AuthHandler(w http.ResponseWriter, r *http.Request
 	}
 
 	// Handle the authentication logic here
+	var state = "state"
+	if a.State != "" {
+		state = a.State
+	}
+
 	var accessType = oauth2.AccessTypeOffline
 	if a.AccessType != nil {
 		accessType = a.AccessType
 	}
-	var url = a.Oauth2.AuthCodeURL("state", accessType)
-	http.Redirect(w, r, url, http.StatusFound)
+
+	var opts = make([]oauth2.AuthCodeOption, 0)
+	opts = append(opts, accessType)
+
+	// Set any extra parameters that may be needed for the provider
+	if a.ExtraParams != nil {
+		for k, v := range a.ExtraParams {
+			opts = append(opts, oauth2.SetAuthURLParam(k, v))
+		}
+	}
+
+	// Generate the URL for the provider's authentication page
+	var oauthURL = a.Oauth2.AuthCodeURL(
+		state,
+		opts...,
+	)
+	http.Redirect(w, r, oauthURL, http.StatusFound)
 }
 
 func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Request, a *AuthConfig) {
@@ -89,7 +109,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 	)
 
 	if a.DataStructURL == "" {
-		logger.Warnf("DataStructURL was not provided, incomplete Oauth2 flow")
+		logger.Errorf("DataStructURL was not provided, incomplete Oauth2 flow")
 		except.Fail(
 			http.StatusInternalServerError,
 			"Internal server error",
@@ -147,7 +167,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 
 	// Check if the user already exists in the database
 	user, err := oa.queryset.RetrieveUserByIdentifier(
-		r.Context(), identifier,
+		r.Context(), identifier, a.Provider,
 	)
 	if err != nil && !errors.Is(err, sql.ErrNoRows) {
 		// An error occurred while retrieving the user from the database

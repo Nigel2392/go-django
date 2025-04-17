@@ -12,7 +12,7 @@ func (oa *OpenAuth2AppConfig) AdminLoginHandler(w http.ResponseWriter, r *http.R
 	var v = &views.BaseView{
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "admin",
-		TemplateName:    "oauth2/admin_login.tmpl",
+		TemplateName:    "oauth2/admin/login.tmpl",
 		GetContextFn: func(req *http.Request) (ctx.Context, error) {
 			var context = ctx.RequestContext(req)
 			context.Set("oauth2", oa)

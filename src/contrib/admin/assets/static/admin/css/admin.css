@@ -462,6 +462,16 @@ a.button, .button a {
 .message-text {
 
 }
+.spacing {
+    --s: var(--spacing, 3em);
+    --b: var(--bg, var(--primary-bg-color));
+
+    margin-top: var(--s);
+    margin-bottom: var(--s);
+    background-color: var(--b);
+    height: 1px;
+    width: 100%;
+}
 .bg-success {
     background-color: var(--success-bg-color);
     color: var(--success-text-color);

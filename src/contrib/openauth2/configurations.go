@@ -18,6 +18,12 @@ type AuthConfig struct {
 	// If this is nil, it will be set to "oauth2.AccessTypeOffline".
 	AccessType oauth2.AuthCodeOption
 
+	// The state to use when generating the URL
+	// with Oauth2.AuthCodeURL.
+	//
+	// If this is left empty, it will default to "state"
+	State string
+
 	// The name of the provider, e.g. "google", "github", etc.
 	Provider string
 
@@ -25,6 +31,15 @@ type AuthConfig struct {
 	//
 	// This is used for display purposes only.
 	ProviderNiceName string
+
+	// The URL of the documentation for the provider.
+	//
+	// This can be used to link to the provider's documentation.
+	DocumentationURL string
+
+	// ExtraParams are extra parameters to be set on the URL AFTER
+	// generating the url with Oauth2.AuthCodeURL
+	ExtraParams map[string]string
 
 	// An optional URL for the provider's logo.
 	//
@@ -58,6 +73,13 @@ type AuthConfig struct {
 	// It can act on the user's data struct to return a string.
 	// It is used for display purposes only.
 	UserToString func(user *openauth2models.User, dataStruct interface{}) string
+}
+
+func (c *AuthConfig) ReadableName() string {
+	if c.ProviderNiceName != "" {
+		return c.ProviderNiceName
+	}
+	return c.Provider
 }
 
 func (c *AuthConfig) ScanStruct(r io.Reader) (interface{}, error) {

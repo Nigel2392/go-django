@@ -4,7 +4,7 @@
 
 {{ define "extra_css" }}
     <link rel="stylesheet" type="text/css" href="{{ static "admin/css/login.css" }}">
-    <link rel="stylesheet" type="text/css" href="{{ static "oauth2/css/admin_login.css" }}">
+    <link rel="stylesheet" type="text/css" href="{{ static "oauth2/admin/css/login.css" }}">
 {{ end }}
 
 {{ define "root" }}
@@ -27,11 +27,7 @@
                             {{ end }}
                         
                             <span class="login-provider__name">
-                                {{ if $cnf.ProviderNiceName }}
-                                    {{ $cnf.ProviderNiceName }}
-                                {{ else }}
-                                    {{ $cnf.Provider }}
-                                {{ end }}
+                                {{ $cnf.ReadableName }}
                             </span>
                         </a>
                     </div>

@@ -21,16 +21,6 @@
         flex: 1 0 0%;
     }
 }
-.home-spacing {
-    --s: var(--spacing, 3em);
-    --b: var(--bg, var(--primary-bg-color));
-
-    margin-top: var(--s);
-    margin-bottom: var(--s);
-    background-color: var(--b);
-    height: 1px;
-    width: 100%;
-}
 .home-components {
     display: flex;
     flex-direction: column;

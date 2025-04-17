@@ -104,11 +104,11 @@ func (q *Queries) RetrieveUserByID(ctx context.Context, id uint64) (*openauth2mo
 
 const retrieveUserByIdentifier = `-- name: RetrieveUserByIdentifier :one
 SELECT id, unique_identifier, provider_name, data, access_token, refresh_token, token_type, expires_at, created_at, updated_at, is_administrator, is_active FROM oauth2_users
-WHERE unique_identifier = ?1
+WHERE unique_identifier = ?1 AND provider_name = ?2
 `
 
-func (q *Queries) RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier string) (*openauth2models.User, error) {
-	row := q.queryRow(ctx, q.retrieveUserByIdentifierStmt, retrieveUserByIdentifier, uniqueIdentifier)
+func (q *Queries) RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier string, providerName string) (*openauth2models.User, error) {
+	row := q.queryRow(ctx, q.retrieveUserByIdentifierStmt, retrieveUserByIdentifier, uniqueIdentifier, providerName)
 	var i openauth2models.User
 	err := row.Scan(
 		&i.ID,

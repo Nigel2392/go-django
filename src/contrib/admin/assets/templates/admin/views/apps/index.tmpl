@@ -1,10 +1,28 @@
 {{ template "base" . }}
 
-{{ define "title" }}
+{{ define "title" }}{{ (.Get "app").Label }}{{ end }}
 
+{{ define "extra_css" }}
+    {{ range $css := .Page.Media.CSS }}
+        {{ $css }}
+    {{ end }}
+{{ end }}
+
+{{ define "extra_js" }}
+    {{ range $js := .Page.Media.JS }}
+        {{ $js }}
+    {{ end }}
 {{ end }}
 
 {{ define "content" }}
 
+    <div class="spacing"></div>
+
+    <div class="components">
+        {{ $components := (.Get "components") }}
+        {{ range $component := $components }}
+            {{ $component.HTML }}
+        {{ end }}
+    </div>
 
 {{ end }}

@@ -5,10 +5,23 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
+	"slices"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
+
+func sortComponents(components []AdminPageComponent) []AdminPageComponent {
+	slices.SortStableFunc(components, func(i, j AdminPageComponent) int {
+		if i.Ordering() < j.Ordering() {
+			return -1
+		} else if i.Ordering() > j.Ordering() {
+			return 1
+		}
+		return 0
+	})
+	return components
+}
 
 func FindDefinition(model attrs.Definer) *ModelDefinition {
 	var modelType = reflect.TypeOf(model)

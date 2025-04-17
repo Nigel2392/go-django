@@ -14,5 +14,5 @@ CREATE TABLE IF NOT EXISTS oauth2_users (
     PRIMARY KEY (id)
 );
 
-ALTER TABLE oauth2_users ADD UNIQUE INDEX (unique_identifier(255));
+ALTER TABLE oauth2_users ADD UNIQUE INDEX (unique_identifier(255), provider_name(255));
 ALTER TABLE oauth2_users ADD INDEX (provider_name(255));

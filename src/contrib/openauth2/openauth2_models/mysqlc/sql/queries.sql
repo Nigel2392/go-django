@@ -4,7 +4,8 @@ WHERE id = sqlc.arg(id);
 
 -- name: RetrieveUserByIdentifier :one
 SELECT * FROM oauth2_users
-WHERE unique_identifier = sqlc.arg(unique_identifier);
+WHERE unique_identifier = sqlc.arg(unique_identifier)
+AND provider_name = sqlc.arg(provider_name);
 
 -- name: CreateUser :execlastid
 INSERT INTO oauth2_users (unique_identifier, provider_name, data, access_token, refresh_token, token_type, expires_at, is_administrator, is_active)

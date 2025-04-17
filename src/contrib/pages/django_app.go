@@ -250,7 +250,7 @@ func NewAppConfig() *PageAppConfig {
 			})
 		}))
 
-		admin.RegisterHomePageComponent(admin.RegisterHomePageComponentHookFunc(func(r *http.Request, a *admin.AdminApplication) admin.HomePageComponent {
+		admin.RegisterHomePageComponent(admin.RegisterHomePageComponentHookFunc(func(r *http.Request, a *admin.AdminApplication) admin.AdminPageComponent {
 			return &PagesAdminHomeComponent{
 				AdminApplication: a,
 				Request:          r,

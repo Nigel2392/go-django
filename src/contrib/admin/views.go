@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
@@ -23,6 +24,11 @@ import (
 )
 
 var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition) {
+	if !permissions.HasPermission(r, fmt.Sprintf("admin:view_app:%s", app.Name)) {
+		ReLogin(w, r, r.URL.Path)
+		return
+	}
+
 	if app.Options.IndexView != nil {
 		var err = views.Invoke(app.Options.IndexView(adminSite, app), w, r)
 		except.AssertNil(err, 500, err)
@@ -37,15 +43,38 @@ var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminAp
 		i++
 	}
 
+	var hookName = RegisterAdminPageComponentHook(app.Name)
+	var hook = goldcrest.Get[RegisterAdminAppPageComponentHookFunc](hookName)
+	var components = make([]AdminPageComponent, 0)
+	for _, h := range hook {
+		var component = h(r, adminSite, app)
+		if component != nil {
+			components = append(components, component)
+		}
+	}
+	sortComponents(components)
+
 	var context = NewContext(
 		r, adminSite, nil,
 	)
+
 	context.SetPage(PageOptions{
 		TitleFn:    app.Label,
 		SubtitleFn: app.Description,
+		MediaFn: func() media.Media {
+			var appMedia media.Media = media.NewMedia()
+			for _, component := range components {
+				var m = component.Media()
+				if m != nil {
+					appMedia = appMedia.Merge(m)
+				}
+			}
+			return appMedia
+		},
 	})
 	context.Set("app", app)
 	context.Set("models", modelNames)
+	context.Set("components", components)
 	var err = tpl.FRender(w, context, BASE_KEY, "admin/views/apps/index.tmpl")
 	except.AssertNil(err, 500, err)
 }

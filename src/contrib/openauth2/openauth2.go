@@ -8,7 +8,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -198,25 +197,11 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			return u.String()
 		},
 		GetInstance: func(i interface{}) (interface{}, error) {
-			var (
-				u   uint64
-				err error
-			)
-			switch i := i.(type) {
-			case string:
-				u, err = strconv.ParseUint(i, 10, 64)
-				if err != nil {
-					return nil, fmt.Errorf(
-						"OpenAuth2: Invalid ID %q", i,
-					)
-				}
-			case uint64:
-				u = i
-			default:
-				return nil, fmt.Errorf(
-					"OpenAuth2: Invalid ID type %T", i,
-				)
+			var u, err = attrs.CastToNumber[uint64](i)
+			if err != nil {
+				return nil, err
 			}
+
 			instance, err := App.queryset.RetrieveUserByID(
 				context.Background(), u,
 			)
@@ -229,6 +214,8 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			return attrs.InterfaceList(instances), err
 		},
 	})
+
+	admin.RegisterAdminAppPageComponent("openauth2", newProviderComponent(App))
 
 	admin.RegisterApp(
 		"openauth2",
@@ -256,6 +243,9 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			ListView: admin.ListViewOptions{
 				PerPage: 20,
 				ViewOptions: admin.ViewOptions{
+					Labels: map[string]func() string{
+						"ProviderName": trans.S("Provider"),
+					},
 					Fields: []string{
 						"ID",
 						"UniqueIdentifier",
@@ -311,6 +301,10 @@ func (a *OpenAuth2AppConfig) Provider(name string) (*AuthConfig, error) {
 		return nil, ErrUnknownProvider
 	}
 	return &authConfig, nil
+}
+
+func (a *OpenAuth2AppConfig) Providers() []AuthConfig {
+	return a.Config.AuthConfigurations
 }
 
 func (a *OpenAuth2AppConfig) handler(h func(http.ResponseWriter, *http.Request, *AuthConfig)) http.HandlerFunc {

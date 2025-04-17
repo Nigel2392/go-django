@@ -1,22 +1,17 @@
-.login-providers {
+.oauth2-providers {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
-.login-provider__link {
+.oauth2-provider {
     display: flex;
     flex-direction: row;
     align-items: center;
     text-decoration: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--color-link);
-    transition: border-color 0.2s ease-in-out;
+    padding: 0.75rem 0;
+    max-width: 30rem;
 }
-.login-provider__link:hover {
-    border-color: var(--color-link-hover);
-}
-.login-provider__icon {
+.oauth2-provider__icon {
     width: 3.5rem;
     height: 3.5rem;
     margin-right: 1rem;
@@ -25,7 +20,11 @@
     justify-content: center;
     align-items: center;
 }
-.login-provider__name {
+.oauth2-provider__info {
+    display: flex;
+    flex-direction: column;
+}
+.oauth2-provider__info__title {
     font-size: 1.5rem;
     font-weight: 600;
 }

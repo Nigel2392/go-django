@@ -15,7 +15,7 @@ type Querier interface {
 
 	RetrieveUsers(ctx context.Context, limit int32, offset int32, ordering ...string) ([]*User, error)
 	RetrieveUserByID(ctx context.Context, id uint64) (*User, error)
-	RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier string) (*User, error)
+	RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier string, providerName string) (*User, error)
 
 	CreateUser(ctx context.Context, uniqueIdentifier string, providerName string, data json.RawMessage, accessToken string, refreshToken string, tokenType string, expiresAt time.Time, isAdministrator bool, isActive bool) (int64, error)
 	DeleteUser(ctx context.Context, id uint64) error

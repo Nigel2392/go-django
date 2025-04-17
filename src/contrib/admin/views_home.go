@@ -3,7 +3,6 @@ package admin
 import (
 	"html/template"
 	"net/http"
-	"slices"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -15,14 +14,15 @@ import (
 	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
-// HomePageComponent is an interface for custom home page components
+// AdminPageComponent is an interface for custom page components
 //
-// It allows for custom home page components to be added to the home page
+// It allows for custom page components to be added to the page
 // dynamically. The ordering of the components is determined by the
 // Ordering method.
-type HomePageComponent interface {
+type AdminPageComponent interface {
 	HTML() template.HTML
 	Ordering() int
+	Media() media.Media
 }
 
 func getFuncTyped[T any](text any, request *http.Request, fallBack func() T) func() T {
@@ -69,7 +69,7 @@ var HomeHandler = &views.BaseView{
 		)
 
 		// Set up media files for the home page template
-		var homeMedia = media.NewMedia()
+		var homeMedia media.Media = media.NewMedia()
 		homeMedia.AddCSS(media.CSS(django.Static(
 			"admin/css/home.css",
 		)))
@@ -105,13 +105,14 @@ var HomeHandler = &views.BaseView{
 
 		// Add custom home page components
 		var componentHooks = goldcrest.Get[RegisterHomePageComponentHookFunc](RegisterHomePageComponentHook)
-		var components = make([]HomePageComponent, 0)
+		var components = make([]AdminPageComponent, 0)
 		for _, hook := range componentHooks {
 			var component = hook(req, AdminSite)
 			if component != nil {
 				components = append(components, component)
 			}
 		}
+		components = sortComponents(components)
 
 		context.SetPage(PageOptions{
 			TitleFn:     getFuncTyped[string](pageTitle, req, nil),
@@ -119,19 +120,17 @@ var HomeHandler = &views.BaseView{
 			BreadCrumbs: breadCrumbs,
 			Actions:     actions,
 			MediaFn: func() media.Media {
+				for _, component := range components {
+					var media = component.Media()
+					if media != nil {
+						homeMedia = homeMedia.Merge(media)
+					}
+				}
 				return homeMedia
 			},
 		})
 
 		// Order the components by their ordering
-		slices.SortFunc(components, func(i, j HomePageComponent) int {
-			if i.Ordering() < j.Ordering() {
-				return -1
-			} else if i.Ordering() > j.Ordering() {
-				return 1
-			}
-			return 0
-		})
 		context.Set("Components", components)
 
 		if logoPath != "" {

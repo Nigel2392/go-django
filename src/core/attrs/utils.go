@@ -1,6 +1,7 @@
 package attrs
 
 import (
+	"errors"
 	"fmt"
 	"net/mail"
 	"reflect"
@@ -9,6 +10,11 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+)
+
+var (
+	ErrEmptyString      = errors.New("empty string")
+	ErrConvertingString = errors.New("error converting string to number")
 )
 
 // DefinerList converts a slice of []T where the underlying type is of type Definer to []Definer.
@@ -22,6 +28,37 @@ func DefinerList[T Definer](list []T) []Definer {
 		l[i] = v
 	}
 	return l
+}
+
+func CastToNumber[T any](v any) (T, error) {
+	var zero T
+	var rv = reflect.ValueOf(v)
+	var rt = reflect.TypeOf(zero)
+	// if they passed a pointer to a number, grab the value
+	if rv.Kind() == reflect.Ptr {
+		rv = rv.Elem()
+	}
+
+	if rv.Kind() == reflect.String {
+		var str = rv.String()
+		if str == "" {
+			return zero, ErrEmptyString
+		}
+		rv, err := strconv.ParseUint(str, 10, 64)
+		if err != nil {
+			return zero, errors.Join(
+				ErrConvertingString, err,
+			)
+		}
+		return CastToNumber[T](rv)
+	}
+
+	if !rv.Type().ConvertibleTo(rt) {
+		panic(fmt.Sprintf("cannot convert %T to %s", v, rt))
+	}
+
+	cv := rv.Convert(rt)
+	return cv.Interface().(T), nil
 }
 
 // InterfaceList converts a slice of []T where the underlying type is of type Definer to []any.

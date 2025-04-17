@@ -1,6 +1,7 @@
 package auth_permissions
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -46,10 +47,16 @@ func (pb *PermissionsBackend) HasObjectPermission(r *http.Request, obj interface
 		return false
 	}
 
+	var err error
+	primary, err = attrs.CastToNumber[uint64](primary)
+	if err != nil && (errors.Is(err, attrs.ErrEmptyString) || errors.Is(err, attrs.ErrConvertingString)) {
+		return false
+	}
+
 	var (
 		ctx = r.Context()
 	)
-	var tx, err = pb.db.BeginTx(ctx, nil)
+	tx, err := pb.db.BeginTx(ctx, nil)
 	if err != nil {
 		return false
 	}

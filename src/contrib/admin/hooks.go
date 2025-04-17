@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
@@ -27,19 +28,31 @@ const (
 	AdminModelHookDelete = "admin:model:delete"
 )
 
+var (
+	// Register a custom component for an app registered to the admin.
+	// The app name is used to identify the app.
+	// It should be formatted as "admin:<app_name>:register_admin_page_component"
+	// This will then return a string which can be used to register the component to the app.
+	RegisterAdminPageComponentHook = func(appname string) string {
+		return fmt.Sprintf("admin:%s:register_component", appname)
+	}
+)
+
 type (
-	RegisterMenuItemHookFunc func(adminSite *AdminApplication, items components.Items[menu.MenuItem])
+	RegisterMenuItemHookFunc = func(adminSite *AdminApplication, items components.Items[menu.MenuItem])
 	//	RegisterAppMenuItemHookFunc    func(adminSite *AdminApplication, app *AppDefinition) []menu.MenuItem
-	RegisterFooterMenuItemHookFunc func(r *http.Request, adminSite *AdminApplication, items components.Items[menu.MenuItem])
-	RegisterMediaHookFunc          func(adminSite *AdminApplication) media.Media
-	RegisterBreadCrumbHookFunc     func(r *http.Request, adminSite *AdminApplication) []BreadCrumb
-	RegisterNavActionHookFunc      func(r *http.Request, adminSite *AdminApplication) []Action
+	RegisterFooterMenuItemHookFunc = func(r *http.Request, adminSite *AdminApplication, items components.Items[menu.MenuItem])
+	RegisterMediaHookFunc          = func(adminSite *AdminApplication) media.Media
+	RegisterBreadCrumbHookFunc     = func(r *http.Request, adminSite *AdminApplication) []BreadCrumb
+	RegisterNavActionHookFunc      = func(r *http.Request, adminSite *AdminApplication) []Action
 
 	RegisterHomePageBreadcrumbHookFunc = func(*http.Request, *AdminApplication, []BreadCrumb)
 	RegisterHomePageActionHookFunc     = func(*http.Request, *AdminApplication, []Action)
-	RegisterHomePageComponentHookFunc  = func(*http.Request, *AdminApplication) HomePageComponent
+	RegisterHomePageComponentHookFunc  = func(*http.Request, *AdminApplication) AdminPageComponent
 
-	AdminModelHookFunc func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
+	RegisterAdminAppPageComponentHookFunc = func(r *http.Request, adminSite *AdminApplication, app *AppDefinition) AdminPageComponent
+
+	AdminModelHookFunc = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
 )
 
 // Register an item to the django admin menu (sidebar).
@@ -106,4 +119,11 @@ func RegisterModelEditHook(f AdminModelHookFunc) {
 // Register a hook to be called when a model is deleted.
 func RegisterModelDeleteHook(f AdminModelHookFunc) {
 	goldcrest.Register(AdminModelHookDelete, 0, f)
+}
+
+// Register a custom component for an app registered to the admin.
+func RegisterAdminAppPageComponent(appname string, f RegisterAdminAppPageComponentHookFunc) {
+	goldcrest.Register(
+		RegisterAdminPageComponentHook(appname), 0, f,
+	)
 }
