@@ -33,8 +33,8 @@ type FieldConfig struct {
 	Label         string                                        // The label for the field
 	HelpText      string                                        // The help text for the field
 	RelForeignKey Definer                                       // The related object for the field (foreign key)
-	RelManyToMany Definer                                       // The related objects for the field (many to many, not implemented
-	RelOneToOne   Definer                                       // The related object for the field (one to one, not implemented)
+	RelManyToMany Relation                                      // The related objects for the field (many to many, not implemented
+	RelOneToOne   Relation                                      // The related object for the field (one to one, not implemented)
 	Default       any                                           // The default value for the field (or a function that returns the default value)
 	Validators    []func(interface{}) error                     // Validators for the field
 	FormField     func(opts ...func(fields.Field)) fields.Field // The form field for the field
@@ -146,11 +146,13 @@ func (f *FieldDef) Rel() Definer {
 	if f.ForeignKey() != nil {
 		return f.ForeignKey()
 	}
-	if f.ManyToMany() != nil {
-		return f.ManyToMany()
+	var m2m = f.ManyToMany()
+	if m2m != nil {
+		return m2m.Model()
 	}
-	if f.OneToOne() != nil {
-		return f.OneToOne()
+	var o2o = f.OneToOne()
+	if o2o != nil {
+		return o2o.Model()
 	}
 	return nil
 }
@@ -162,14 +164,14 @@ func (f *FieldDef) ForeignKey() Definer {
 	return nil
 }
 
-func (f *FieldDef) ManyToMany() Definer {
+func (f *FieldDef) ManyToMany() Relation {
 	if f.attrDef.RelManyToMany != nil {
 		return f.attrDef.RelManyToMany
 	}
 	return nil
 }
 
-func (f *FieldDef) OneToOne() Definer {
+func (f *FieldDef) OneToOne() Relation {
 	if f.attrDef.RelOneToOne != nil {
 		return f.attrDef.RelOneToOne
 	}
@@ -386,7 +388,7 @@ returnField:
 		)
 	case f.ForeignKey() != nil:
 		formField.SetWidget(
-			chooser.SelectWidget(
+			chooser.ModelSelectWidget(
 				f.AllowBlank(),
 				"--------",
 				chooser.BaseChooserOptions{

@@ -175,8 +175,8 @@ func NewAppConfig(cnf Config) django.AppConfig {
 
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		ContentObject:  &openauth2models.User{},
-		GetLabel:       trans.S("OAuth2 User"),
-		GetPluralLabel: trans.S("OAuth2 Users"),
+		GetLabel:       trans.S("User"),
+		GetPluralLabel: trans.S("Users"),
 		GetInstanceLabel: func(a any) string {
 			var u = a.(*openauth2models.User)
 			var providerConfig, ok = App._cnfs[u.ProviderName]
@@ -225,13 +225,14 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			AppDescription: trans.S(
 				"OpenAuth2 is an authentication backend for Go-Django. It allows you to authenticate users using OAuth2 providers such as Google, Facebook, GitHub, etc.",
 			),
-			MenuLabel: trans.S("OpenAuth2"),
+			MenuLabel: trans.S("Authentication"),
 			MenuOrder: 1000,
 		},
 		admin.ModelOptions{
 			RegisterToAdminMenu: true,
 			Name:                "OAuth2User",
 			Model:               &openauth2models.User{},
+			MenuLabel:           trans.S("Users"),
 			DisallowCreate:      true,
 			DisallowDelete:      true,
 			AddView: admin.FormViewOptions{

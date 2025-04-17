@@ -1,6 +1,8 @@
 package admin
 
 import (
+	"fmt"
+	"net/http"
 	"reflect"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -11,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/models"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/a-h/templ"
@@ -168,13 +171,16 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 			)
 		}
 
-		var hookFn = func(site *AdminApplication, items components.Items[menu.MenuItem]) {
+		var hookFn = func(r *http.Request, site *AdminApplication, items components.Items[menu.MenuItem]) {
 			var menuItem = &menu.SubmenuItem{
 				BaseItem: menu.BaseItem{
 					ItemName: a.Name,
 					Label:    menuLabel,
 					Logo:     menuIcon,
 					Ordering: a.Options.MenuOrder,
+					Hidden: !permissions.HasPermission(
+						r, fmt.Sprintf("admin:view_app:%s", a.Name),
+					),
 				},
 				Menu: &menu.Menu{
 					Items: make([]menu.MenuItem, 0),
@@ -230,9 +236,12 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 
 				menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
 					BaseItem: menu.BaseItem{
-						Label:    model.Label,
+						Label:    model.getMenuLabel,
 						Ordering: model.MenuOrder,
 						Logo:     menuIcon,
+						Hidden: !permissions.HasObjectPermission(
+							r, model.NewInstance(), "admin:view_list",
+						),
 					},
 					Link: func() string {
 						return django.Reverse("admin:apps:model", a.Name, model.GetName())

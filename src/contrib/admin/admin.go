@@ -302,7 +302,7 @@ func NewAppConfig() django.AppConfig {
 				var menuItems = cmpts.NewItems[menu.MenuItem]()
 				var hooks = goldcrest.Get[RegisterMenuItemHookFunc](RegisterMenuItemHook)
 				for _, hook := range hooks {
-					hook(AdminSite, menuItems)
+					hook(r, AdminSite, menuItems)
 				}
 				m.Items = menuItems.All()
 				var buf = new(bytes.Buffer)
@@ -393,19 +393,19 @@ func newModelHandler(handler func(w http.ResponseWriter, r *http.Request, adminS
 		)
 
 		if modelName == "" || appName == "" {
-			except.Fail(http.StatusBadRequest, "App and Model name is required")
+			Home(w, req, "App and Model name is required")
 			return
 		}
 
 		var app, ok = AdminSite.Apps.Get(appName)
 		if !ok {
-			except.Fail(http.StatusBadRequest, "App not found")
+			Home(w, req, "App not found")
 			return
 		}
 
 		model, ok := app.Models.Get(modelName)
 		if !ok {
-			except.Fail(http.StatusBadRequest, "Model not found")
+			Home(w, req, "Model not found")
 			return
 		}
 

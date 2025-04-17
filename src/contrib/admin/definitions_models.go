@@ -126,6 +126,11 @@ type ModelOptions struct {
 	// MenuOrder is the order of the model in the admin menu.
 	MenuOrder int
 
+	// MenuLabel is the label for the model in the admin menu.
+	//
+	// This is used for the model's label in the admin.
+	MenuLabel func() string
+
 	// DisallowCreate is a flag that determines if the model should be disallowed from being created.
 	//
 	// This is used to prevent the model from being created in the admin.
@@ -219,6 +224,13 @@ func (o *ModelDefinition) Label() string {
 
 func (o *ModelDefinition) PluralLabel() string {
 	return o._cType.PluralLabel()
+}
+
+func (o *ModelDefinition) getMenuLabel() string {
+	if o.ModelOptions.MenuLabel != nil {
+		return o.ModelOptions.MenuLabel()
+	}
+	return o.Label()
 }
 
 func (o *ModelDefinition) GetColumn(opts ListViewOptions, field string) list.ListColumn[attrs.Definer] {

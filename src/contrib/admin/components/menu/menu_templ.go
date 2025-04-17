@@ -419,7 +419,27 @@ type SubmenuItem struct {
 }
 
 func (s *SubmenuItem) IsShown() bool {
-	return !s.Hidden && len(s.Menu.MenuItems()) > 0
+	var isShown = s.BaseItem.IsShown()
+	if !isShown {
+		return false
+	}
+	
+	if s.Menu == nil {
+		return false
+	}
+
+	var menuItems = s.Menu.MenuItems()
+	if len(menuItems) == 0 {
+		return false
+	}
+	var hasVisibleItems = false
+	for _, item := range menuItems {
+		if item.IsShown() {
+			hasVisibleItems = true
+			break
+		}
+	}
+	return hasVisibleItems
 }
 
 func depthCss(i int) templ.CSSClass {

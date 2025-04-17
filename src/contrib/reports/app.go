@@ -1,6 +1,8 @@
 package reports
 
 import (
+	"net/http"
+
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
@@ -27,7 +29,7 @@ func NewAppConfig() django.AppConfig {
 
 		goldcrest.Register(
 			admin.RegisterMenuItemHook, 0,
-			admin.RegisterMenuItemHookFunc(func(adminSite *admin.AdminApplication, items components.Items[menu.MenuItem]) {
+			admin.RegisterMenuItemHookFunc(func(r *http.Request, adminSite *admin.AdminApplication, items components.Items[menu.MenuItem]) {
 
 				var menuItems = make([]menu.MenuItem, 0)
 				var h = goldcrest.Get[ReportsMenuHookFunc](ReportsMenuHook)

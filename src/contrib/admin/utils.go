@@ -8,6 +8,7 @@ import (
 	"slices"
 
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -62,4 +63,16 @@ func ReLogin(w http.ResponseWriter, r *http.Request, nextURL ...string) {
 		http.StatusSeeOther,
 	)
 
+}
+
+func Home(w http.ResponseWriter, r *http.Request, errorMessage ...string) {
+	if len(errorMessage) > 0 {
+		messages.Error(r, errorMessage[0])
+	}
+	var redirectURL = django.Reverse("admin")
+	http.Redirect(
+		w, r,
+		redirectURL,
+		http.StatusSeeOther,
+	)
 }

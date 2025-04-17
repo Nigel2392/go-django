@@ -25,6 +25,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	dj_models "github.com/Nigel2392/go-django/src/models"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/mux"
 )
 
@@ -240,12 +241,13 @@ func NewAppConfig() *PageAppConfig {
 			return nil
 		}
 
-		admin.RegisterGlobalMenuItem(admin.RegisterMenuItemHookFunc(func(site *admin.AdminApplication, items components.Items[menu.MenuItem]) {
+		admin.RegisterGlobalMenuItem(admin.RegisterMenuItemHookFunc(func(r *http.Request, site *admin.AdminApplication, items components.Items[menu.MenuItem]) {
 			items.Append(&PagesMenuItem{
 				BaseItem: menu.BaseItem{
 					Label:    trans.S("Pages"),
 					ItemName: "pages",
 					Ordering: -1000,
+					Hidden:   !permissions.HasPermission(r, "pages:list"),
 				},
 			})
 		}))

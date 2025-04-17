@@ -37,6 +37,15 @@ type Definer interface {
 	FieldDefs() Definitions
 }
 
+// Relation is an interface for defining a relation between two models.
+//
+// This provides a very abstract way of defining relations between models,
+// which can be used to define relations in a more generic way.
+type Relation interface {
+	Model() Definer
+	Through() Definer
+}
+
 // Definitions is the interface that wraps the methods for a model's field definitions.
 //
 // This is some sort of management- interface which allows for simpler and more uniform management of model fields.
@@ -88,10 +97,10 @@ type Field interface {
 	ForeignKey() Definer
 
 	// Retrieves the related model instance for a many-to-many field.
-	ManyToMany() Definer
+	ManyToMany() Relation
 
 	// Retrieves the related model instance for a one-to-one field.
-	OneToOne() Definer
+	OneToOne() Relation
 
 	// Reports whether the field is the primary field.
 	//
