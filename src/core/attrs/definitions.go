@@ -7,6 +7,7 @@ import (
 type ObjectDefinitions struct {
 	Object       Definer
 	PrimaryField string
+	Table        string
 	ObjectFields *orderedmap.OrderedMap[string, Field]
 }
 
@@ -31,6 +32,15 @@ func Define(d Definer, fieldDefinitions ...Field) *ObjectDefinitions {
 		ObjectFields: m,
 		PrimaryField: primaryField,
 	}
+}
+
+func (d *ObjectDefinitions) TableName() string {
+	return d.Table
+}
+
+func (d *ObjectDefinitions) WithTableName(name string) *ObjectDefinitions {
+	d.Table = name
+	return d
 }
 
 func (d *ObjectDefinitions) Set(name string, value interface{}) error {

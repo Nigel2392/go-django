@@ -56,6 +56,14 @@ type Definitions interface {
 	// Retrieves the value of the field with the given name (or panics if not found).
 	Get(name string) interface{}
 
+	// TableName retrieves the name of the table in the database.
+	//
+	// This can be used to generate the SQL for the model.
+	//
+	// This is the name of the table in the database.
+	// It is not the name of the model in the code.
+	TableName() string
+
 	// Retrieves the field with the given name.
 	//
 	// If the field is not found, the second return value will be false.
