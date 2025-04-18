@@ -597,3 +597,71 @@ success:
 
 	return nil
 }
+
+var _ sql.Scanner = (*FieldDef)(nil)
+
+func (f *FieldDef) Scan(value any) error {
+	if f.field_v.Kind() == reflect.Ptr {
+		f.field_v.Set(reflect.New(f.field_t.Type.Elem()))
+	}
+	if scanner, ok := f.field_v.Interface().(sql.Scanner); ok {
+		return scanner.Scan(value)
+	}
+
+	var v = reflect.ValueOf(value)
+	if !f.field_v.IsValid() {
+		if f.field_v.Kind() == reflect.Ptr {
+			f.field_v.Set(reflect.New(f.field_t.Type.Elem()))
+		} else {
+			f.field_v.Set(reflect.New(f.field_t.Type).Elem())
+		}
+	}
+
+	if v.Type() == f.field_v.Type() {
+		f.field_v.Set(v)
+		return nil
+	}
+
+	r_v_ptr, ok := django_reflect.RConvert(&v, f.field_t.Type)
+	if !ok {
+		var typ = f.field_t.Type
+		if typ.Kind() == reflect.Ptr {
+			typ = typ.Elem()
+		}
+
+		if v.Type().Kind() == reflect.String && isAnyKind(typ, reflect.Struct, reflect.Map, reflect.Slice) {
+			var t = reflect.New(typ).Interface()
+			if err := json.Unmarshal([]byte(v.String()), t); err != nil {
+				return err
+			}
+			f.field_v.Set(reflect.ValueOf(t))
+			return nil
+		}
+
+		assert.Fail(
+			fmt.Sprintf("value of type %q is not convertible to %q for field %q",
+				v.Type(),
+				f.field_t.Type,
+				f.field_t.Name,
+			),
+		)
+	}
+
+	var old = f.field_v
+	django_reflect.RSet(r_v_ptr, &f.field_v, false)
+	if err := f.Validate(); err != nil {
+		f.field_v.Set(old)
+		return err
+	}
+
+	return nil
+}
+
+func isAnyKind(t reflect.Type, kind ...reflect.Kind) bool {
+	for _, k := range kind {
+		if t.Kind() == k {
+			return true
+		}
+	}
+	return false
+}

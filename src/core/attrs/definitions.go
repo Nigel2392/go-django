@@ -1,6 +1,8 @@
 package attrs
 
 import (
+	"reflect"
+
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -35,7 +37,15 @@ func Define(d Definer, fieldDefinitions ...Field) *ObjectDefinitions {
 }
 
 func (d *ObjectDefinitions) TableName() string {
-	return d.Table
+	if d.Table != "" {
+		return d.Table
+	}
+	var rTyp = reflect.TypeOf(d.Object)
+	if rTyp.Kind() == reflect.Ptr {
+		rTyp = rTyp.Elem()
+	}
+	var tableName = toSnakeCase(rTyp.Name())
+	return tableName
 }
 
 func (d *ObjectDefinitions) WithTableName(name string) *ObjectDefinitions {
