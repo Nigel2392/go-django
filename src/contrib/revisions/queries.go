@@ -79,7 +79,7 @@ func (r *Revision) ObjectFromDB() (attrs.Definer, error) {
 		return nil, err
 	}
 
-	objInstance, err := cTypeDef.GetInstance(newPrimaryKey)
+	objInstance, err := cTypeDef.Instance(newPrimaryKey)
 	if err != nil {
 		return nil, err
 	}

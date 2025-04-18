@@ -300,7 +300,7 @@ func (m *ModelDefinition) ModelFields(opts ViewOptions, instace attrs.Definer) [
 }
 
 func (m *ModelDefinition) GetInstance(identifier any) (attrs.Definer, error) {
-	var instance, err = m._cType.GetInstance(identifier)
+	var instance, err = m._cType.Instance(identifier)
 	if err != nil {
 		return nil, err
 	}
@@ -308,7 +308,7 @@ func (m *ModelDefinition) GetInstance(identifier any) (attrs.Definer, error) {
 }
 
 func (m *ModelDefinition) GetListInstances(amount, offset uint) ([]attrs.Definer, error) {
-	var instances, err = m._cType.GetInstances(amount, offset)
+	var instances, err = m._cType.Instances(amount, offset)
 	if err != nil {
 		return nil, err
 	}

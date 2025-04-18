@@ -388,7 +388,7 @@ returnField:
 		)
 	case f.ForeignKey() != nil:
 		formField.SetWidget(
-			chooser.ModelSelectWidget(
+			chooser.SelectWidget(
 				f.AllowBlank(),
 				"--------",
 				chooser.BaseChooserOptions{

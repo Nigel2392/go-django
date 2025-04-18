@@ -46,7 +46,7 @@ func (p *ContentTypeRegistry) RegisterAlias(alias string, typeName string) {
 	}
 
 	if _, exists := p.aliasesRev[alias]; exists {
-		panic("pages: RegisterAlias called twice for alias " + alias)
+		panic("ContentTypeRegistry: RegisterAlias called twice for " + alias)
 	}
 
 	p.aliasesRev[alias] = typeName
@@ -88,17 +88,17 @@ func (p *ContentTypeRegistry) Register(definition *ContentTypeDefinition) {
 	}
 
 	if definition == nil {
-		panic("pages: RegisterPageDefinition definition is nil")
+		panic("ContentTypeRegistry: Register definition is nil")
 	}
 
 	if definition.ContentObject == nil {
-		panic("pages: RegisterPageDefinition definition is missing PageObject or GetForID")
+		panic("ContentTypeRegistry: Register definition is missing ContentObject")
 	}
 
 	var contentType = definition.ContentType()
 	var typeName = contentType.TypeName()
 	if _, exists := p.registry[typeName]; exists {
-		panic("pages: RegisterPageDefinition called twice for " + typeName)
+		panic("ContentTypeRegistry: Register called twice for " + typeName)
 	}
 
 	p.registry[typeName] = definition
@@ -128,7 +128,7 @@ func (p *ContentTypeRegistry) EditDefinition(def *ContentTypeDefinition) {
 	var typeName = def.ContentType().TypeName()
 	var oldDef = p.registry[typeName]
 	if oldDef == nil {
-		panic("pages: EditDefinition called for unknown type " + typeName)
+		panic("ContentTypeRegistry: EditDefinition called for unknown type " + typeName)
 	}
 
 	if def.GetLabel != nil {
@@ -239,7 +239,7 @@ func (p *ContentTypeRegistry) DefinitionForPackage(toplevelPkgName string, typeN
 func (p *ContentTypeRegistry) GetInstance(typeName string, id interface{}) (interface{}, error) {
 	var definition = p.DefinitionForType(typeName)
 	if definition == nil {
-		return nil, fmt.Errorf("pages: GetInstance called for unknown type %s", typeName)
+		return nil, fmt.Errorf("ContentTypeRegistry: GetInstance called for unknown type %s", typeName)
 	}
 	return definition.Instance(id)
 }
@@ -247,7 +247,7 @@ func (p *ContentTypeRegistry) GetInstance(typeName string, id interface{}) (inte
 func (p *ContentTypeRegistry) GetInstances(typeName string, amount, offset uint) ([]interface{}, error) {
 	var definition = p.DefinitionForType(typeName)
 	if definition == nil {
-		return nil, fmt.Errorf("pages: GetInstances called for unknown type %s", typeName)
+		return nil, fmt.Errorf("ContentTypeRegistry: GetInstances called for unknown type %s", typeName)
 	}
 	return definition.Instances(amount, offset)
 }
@@ -255,7 +255,7 @@ func (p *ContentTypeRegistry) GetInstances(typeName string, amount, offset uint)
 func (p *ContentTypeRegistry) GetInstancesByIDs(typeName string, ids []interface{}) ([]interface{}, error) {
 	var definition = p.DefinitionForType(typeName)
 	if definition == nil {
-		return nil, fmt.Errorf("pages: GetInstancesByIDs called for unknown type %s", typeName)
+		return nil, fmt.Errorf("ContentTypeRegistry: GetInstancesByIDs called for unknown type %s", typeName)
 	}
 	return definition.InstancesByIDs(ids)
 }
