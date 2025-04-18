@@ -25,6 +25,7 @@ type assertion struct {
 }
 
 func (d *assertion) Assert(predication bool, message string, args ...any) {
+	d.t.Helper()
 	if !predication {
 		if len(args) > 0 {
 			message = fmt.Sprintf(message, args...)
@@ -34,55 +35,42 @@ func (d *assertion) Assert(predication bool, message string, args ...any) {
 }
 
 func (d *assertion) AssertEqual(expected, actual any) {
+	d.t.Helper()
 	d.Assert(expected == actual, "expected %v, got %v", expected, actual)
 }
 
 func (d *assertion) AssertNotEqual(expected, actual any) {
+	d.t.Helper()
 	d.Assert(expected != actual, "expected not %v, got %v", expected, actual)
 }
 
 func (d *assertion) AssertNil(actual any) {
+	d.t.Helper()
 	d.Assert(actual == nil, "expected nil, got %v", actual)
 }
 
 func (d *assertion) AssertNotNil(actual any) {
+	d.t.Helper()
 	d.Assert(actual != nil, "expected not nil, got %v", actual)
 }
 
-func contains(slice reflect.Value, item reflect.Value) bool {
-	if slice.IsNil() {
+func contains(sliceVal, itemVal reflect.Value) bool {
+	if !sliceVal.IsValid() || sliceVal.Kind() != reflect.Slice {
 		return false
 	}
 
-	sliceV := reflect.ValueOf(slice)
-	itemV := reflect.ValueOf(item)
-
-	if sliceV.Kind() != reflect.Slice && sliceV.Kind() != reflect.Array {
-		return false
-	}
-
-	for i := 0; i < sliceV.Len(); i++ {
-		var s = sliceV.Index(i)
-		if s.Kind() == reflect.Ptr {
-			if s.IsNil() && !itemV.IsNil() {
-				continue
-			}
-
-			s = s.Elem()
-			var itemVal = itemV
-			if itemVal.Kind() == reflect.Ptr {
-				itemVal = itemVal.Elem()
-			}
-
-			if reflect.DeepEqual(s.Interface(), itemVal.Interface()) {
-				return true
-			}
+	for i := 0; i < sliceVal.Len(); i++ {
+		elem := sliceVal.Index(i)
+		if reflect.DeepEqual(elem.Interface(), itemVal.Interface()) {
+			return true
 		}
 	}
+
 	return false
 }
 
 func (d *assertion) AssertContains(haystack, needle any) {
+	d.t.Helper()
 	if haystack == nil || needle == nil {
 		d.t.Fatalf("expected %v to contain %v, but haystack is nil", haystack, needle)
 		return
@@ -105,6 +93,7 @@ func (d *assertion) AssertContains(haystack, needle any) {
 }
 
 func (d *assertion) AssertNotContains(haystack, needle any) {
+	d.t.Helper()
 	if haystack == nil || needle == nil {
 		d.t.Fatalf("expected %v to not contain %v, but haystack is nil", haystack, needle)
 		return

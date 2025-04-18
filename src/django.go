@@ -621,11 +621,18 @@ func (a *Application) Serve() error {
 		}
 	}
 
-	var handler = nosurf.New(a.Mux)
+	var disableNosurf = ConfigGet(
+		a.Settings, APPVAR_DISABLE_NOSURF, false,
+	)
 
-	var hooks = goldcrest.Get[NosurfSetupHook](HOOK_SETUP_NOSURF)
-	for _, hook := range hooks {
-		hook(a, handler)
+	var httpHandler http.Handler = a.Mux
+	if !disableNosurf {
+		var handler = nosurf.New(a.Mux)
+		var hooks = goldcrest.Get[NosurfSetupHook](HOOK_SETUP_NOSURF)
+		for _, hook := range hooks {
+			hook(a, handler)
+		}
+		httpHandler = handler
 	}
 
 	var (
@@ -639,12 +646,12 @@ func (a *Application) Serve() error {
 		addr_https  = fmt.Sprintf("%s:%s", HOST, TLS_PORT)
 		server_http = &http.Server{
 			Addr:      addr_http,
-			Handler:   handler,
+			Handler:   httpHandler,
 			TLSConfig: TLSConfig,
 		}
 		server_https = &http.Server{
 			Addr:      addr_https,
-			Handler:   handler,
+			Handler:   httpHandler,
 			TLSConfig: TLSConfig,
 		}
 		listening_https = TLSCert != "" && TLSKey != "" && TLS_PORT != ""

@@ -11,7 +11,6 @@ import (
 	"io/fs"
 	"mime/multipart"
 	"net/http"
-	"net/http/httptest"
 	"net/url"
 	url_URL "net/url"
 	"os"
@@ -26,9 +25,12 @@ func (d *Tester) makeRequest(method string, url string, headers http.Header, par
 	baseURL.Path = url
 	baseURL.RawQuery = params.Encode()
 
-	var req = httptest.NewRequest(
+	req, err := http.NewRequest(
 		method, baseURL.String(), body,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	for key, values := range headers {
 		for _, value := range values {

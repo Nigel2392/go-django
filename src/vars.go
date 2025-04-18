@@ -48,4 +48,7 @@ const (
 
 	// The session manager for the application
 	APPVAR_SESSION_MANAGER = "SESSION_MANAGER" // *scs.SessionManager
+
+	// Disable nosurf middleware for the application
+	APPVAR_DISABLE_NOSURF = "DISABLE_NOSURF" // bool
 )

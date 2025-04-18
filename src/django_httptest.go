@@ -4,6 +4,7 @@
 package django
 
 import (
+	"net/http"
 	"net/http/httptest"
 
 	"github.com/Nigel2392/goldcrest"
@@ -17,21 +18,29 @@ func (a *Application) TestServe(autoStart bool) (*httptest.Server, error) {
 		}
 	}
 
-	var handler = nosurf.New(a.Mux)
-	var hooks = goldcrest.Get[NosurfSetupHook](HOOK_SETUP_NOSURF)
-	for _, hook := range hooks {
-		hook(a, handler)
+	var disableNosurf = ConfigGet(
+		a.Settings, APPVAR_DISABLE_NOSURF, false,
+	)
+
+	var httpHandler http.Handler = a.Mux
+	if !disableNosurf {
+		var handler = nosurf.New(a.Mux)
+		var hooks = goldcrest.Get[NosurfSetupHook](HOOK_SETUP_NOSURF)
+		for _, hook := range hooks {
+			hook(a, handler)
+		}
+		httpHandler = handler
 	}
 
 	var server *httptest.Server
 
 	if autoStart {
 		server = httptest.NewServer(
-			handler,
+			httpHandler,
 		)
 	} else {
 		server = httptest.NewUnstartedServer(
-			handler,
+			httpHandler,
 		)
 	}
 
