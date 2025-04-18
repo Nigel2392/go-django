@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/models"
@@ -161,7 +162,10 @@ func CreateObject[T attrs.Definer](obj T) error {
 
 	lastId, err := result.LastInsertId()
 	if err != nil {
-		return err
+		return errs.WrapErrors(
+			ErrLastInsertId,
+			err,
+		)
 	}
 
 	return primaryField.SetValue(lastId, true)

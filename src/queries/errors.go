@@ -7,4 +7,5 @@ const (
 	ErrUnknownDriver errs.Error = "Unknown driver"
 	ErrNoTableName   errs.Error = "No table name"
 	ErrFieldNull     errs.Error = "Field cannot be null"
+	ErrLastInsertId  errs.Error = "Last insert id is not valid"
 )
