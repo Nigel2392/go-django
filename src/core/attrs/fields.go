@@ -32,6 +32,7 @@ type FieldConfig struct {
 	Primary       bool                                          // Whether the field is a primary key
 	Label         string                                        // The label for the field
 	HelpText      string                                        // The help text for the field
+	Column        string                                        // The name of the column in the database
 	RelForeignKey Definer                                       // The related object for the field (foreign key)
 	RelManyToMany Relation                                      // The related objects for the field (many to many, not implemented
 	RelOneToOne   Relation                                      // The related object for the field (one to one, not implemented)
@@ -140,6 +141,14 @@ func (f *FieldDef) Name() string {
 
 func (f *FieldDef) Tag(name string) string {
 	return f.field_t.Tag.Get(name)
+}
+
+func (f *FieldDef) ColumnName() string {
+	if f.attrDef.Column != "" {
+		return f.attrDef.Column
+	}
+
+	return toSnakeCase(f.field_t.Name)
 }
 
 func (f *FieldDef) Rel() Definer {

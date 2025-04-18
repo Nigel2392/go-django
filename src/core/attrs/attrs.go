@@ -93,6 +93,11 @@ type Field interface {
 	// Retrieves the underlying model instance.
 	Instance() Definer
 
+	// ColumnName retrieves the name of the column in the database.
+	//
+	// This can be used to generate the SQL for the field.
+	ColumnName() string
+
 	// Retrieves the related model instance for a foreign key field.
 	ForeignKey() Definer
 
