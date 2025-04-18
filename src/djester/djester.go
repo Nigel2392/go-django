@@ -170,6 +170,7 @@ func (d *Tester) Assert(t *testing.T, verbose bool) Assertion {
 }
 
 func (d *Tester) Test(t *testing.T) {
+	t.Helper()
 	if err := d.Setup(); err != nil {
 		t.Errorf("failed to setup djester tests: %v", err)
 		return

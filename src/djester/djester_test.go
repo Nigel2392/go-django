@@ -73,7 +73,7 @@ func newApp() *apps.AppConfig {
 	return app
 }
 
-func TestDjesterEverything(t *testing.T) {
+func TestDjester(t *testing.T) {
 	d := &djester.Tester{
 		Settings: map[string]any{
 			django.APPVAR_ALLOWED_HOSTS:  []string{"*"},
