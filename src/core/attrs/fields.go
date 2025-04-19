@@ -628,15 +628,9 @@ func (f *FieldDef) Scan(value any) error {
 	}
 
 	if definer, ok := f.field_v.Interface().(Definer); ok {
-		var cTypeDef = contenttypes.DefinitionForObject(definer)
-		if cTypeDef != nil {
-			var instance, err = cTypeDef.Instance(value)
-			if err != nil {
-				return err
-			}
-			f.field_v.Set(reflect.ValueOf(instance))
-			return nil
-		}
+		var defs = definer.FieldDefs()
+		var primary = defs.Primary()
+		return primary.Scan(value)
 	}
 
 	r_v_ptr, ok := django_reflect.RConvert(&v, f.field_t.Type)

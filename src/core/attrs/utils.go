@@ -71,8 +71,8 @@ func CastToNumber[T any](v any) (T, error) {
 	return cv.Interface().(T), nil
 }
 
-// InterfaceList converts a slice of []T where the underlying type is of type Definer to []any.
-func InterfaceList[T Definer](list []T) []any {
+// InterfaceList converts a slice of []T to []any.
+func InterfaceList[T any](list []T) []any {
 	var n = len(list)
 	if n == 0 {
 		return nil

@@ -1,6 +1,8 @@
 package queries
 
 import (
+	"database/sql"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -46,7 +48,8 @@ func GetObject[T attrs.Definer](obj T) error {
 
 	var dbSpecific = queryInfo.dbx.Rebind(query.String())
 	logger.Debugf("GetObject (%T, %v): %s", obj, primaryValue, dbSpecific)
-	return queryInfo.dbx.Get(obj, dbSpecific, args...)
+	var results = queryInfo.dbx.QueryRow(dbSpecific, args...)
+	return results.Scan(attrs.InterfaceList(queryInfo.fields)...)
 }
 
 func ListObjects[T attrs.Definer](obj T, offset, limit uint64, ordering ...string) ([]T, error) {
@@ -92,9 +95,34 @@ func ListObjects[T attrs.Definer](obj T, offset, limit uint64, ordering ...strin
 
 	var dbSpecific = queryInfo.dbx.Rebind(query.String())
 	logger.Debugf("ListObjects (%T): %s", obj, dbSpecific)
+	results, err := queryInfo.dbx.Query(dbSpecific, args...)
+	if err != nil {
+		return nil, err
+	}
 
 	var newList = make([]T, 0, limit)
-	err = queryInfo.dbx.Select(&newList, dbSpecific, args...)
+	var rT = reflect.TypeOf(obj)
+	if rT.Kind() != reflect.Ptr {
+		return nil, errors.New("object must be a pointer to a struct")
+	}
+
+	rT = rT.Elem()
+
+	for results.Next() {
+		var newObj = reflect.New(rT).Interface().(T)
+		var fieldDefs = newObj.FieldDefs()
+		err = results.Scan(
+			attrs.InterfaceList(fieldDefs.Fields())...,
+		)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				break
+			}
+			return nil, err
+		}
+		newList = append(newList, newObj)
+	}
+
 	return newList, err
 }
 
@@ -203,7 +231,7 @@ func CreateObject[T attrs.Definer](obj T) error {
 		)
 	}
 
-	err = primaryField.SetValue(lastId, true)
+	err = primaryField.Scan(lastId)
 	if err != nil {
 		return errs.WrapErrors(
 			err,
