@@ -218,3 +218,16 @@ func TestTodoDelete(t *testing.T) {
 
 	t.Logf("Deleted todo: %+v, (%s)", todo, err)
 }
+
+func TestTodoCount(t *testing.T) {
+	var count, err = queries.CountObjects(&Todo{})
+	if err != nil {
+		t.Fatalf("Failed to count todos: %v", err)
+	}
+
+	if count != 2 {
+		t.Fatalf("Expected 2 todos, got %d", count)
+	}
+
+	t.Logf("Counted todos: %d", count)
+}

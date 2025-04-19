@@ -31,6 +31,7 @@ type queryInfo struct {
 	tableName   string
 	definitions attrs.Definitions
 	fields      []attrs.Field
+	// fields_map  map[string]attrs.Field
 }
 
 func getQueryInfo[T attrs.Definer](obj T) (*queryInfo, error) {
@@ -53,6 +54,12 @@ func getQueryInfo[T attrs.Definer](obj T) (*queryInfo, error) {
 		return nil, ErrNoTableName
 	}
 
+	// var fields_map = make(map[string]attrs.Field)
+	var fields = fieldDefs.Fields()
+	// for _, field := range fieldDefs.Fields() {
+	// fields_map[field.ColumnName()] = field
+	// }
+
 	var dbx = sqlx.NewDb(db, sqlxDriver)
 	return &queryInfo{
 		db:          db,
@@ -60,6 +67,7 @@ func getQueryInfo[T attrs.Definer](obj T) (*queryInfo, error) {
 		sqlxDriver:  sqlxDriver,
 		definitions: fieldDefs,
 		tableName:   tableName,
-		fields:      fieldDefs.Fields(),
+		fields:      fields,
+		// fields_map:  fields_map,
 	}, nil
 }

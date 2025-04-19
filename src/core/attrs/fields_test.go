@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/goldcrest"
@@ -22,10 +23,44 @@ type customTestWidget struct {
 
 func (f *TestModelFields) FieldDefs() attrs.Definitions {
 	return attrs.Define(f,
-		attrs.NewField(f, "ID", nil),
+		attrs.NewField(f, "ID", &attrs.FieldConfig{
+			Primary: true,
+		}),
 		attrs.NewField(f, "Name", nil),
 		attrs.NewField(f, "Objects", &attrs.FieldConfig{ReadOnly: true}),
 	)
+}
+
+type TestEmbeddedModelFields struct {
+	ID   int
+	Name string
+	Test *TestModelFields
+}
+
+func (f *TestEmbeddedModelFields) FieldDefs() attrs.Definitions {
+	return attrs.Define(f,
+		attrs.NewField(f, "ID", &attrs.FieldConfig{
+			Primary: true,
+		}),
+		attrs.NewField(f, "Name", nil),
+		attrs.NewField(f, "Test", nil),
+	)
+}
+
+func init() {
+
+	contenttypes.Register(&contenttypes.ContentTypeDefinition{
+		ContentObject: &TestModelFields{},
+		GetInstance: func(i interface{}) (interface{}, error) {
+			var id = i.(int)
+			return &TestModelFields{
+				ID:      int(id),
+				Name:    "name",
+				Objects: []int64{4, 5, 6},
+			}, nil
+		},
+	})
+
 }
 
 func TestModelFieldsGet(t *testing.T) {
@@ -193,6 +228,101 @@ func TestModelFieldsScannable(t *testing.T) {
 
 	if m.Objects[2] != 6 {
 		t.Errorf("expected %d, got %d", 6, m.Objects[2])
+	}
+
+	var testEmbeddedModelFields = &TestEmbeddedModelFields{
+		ID:   1,
+		Name: "name",
+	}
+
+	var (
+		defTestID   = attrs.NewField(testEmbeddedModelFields, "ID", nil)
+		defTestName = attrs.NewField(testEmbeddedModelFields, "Name", nil)
+		defTest     = attrs.NewField(testEmbeddedModelFields, "Test", nil)
+	)
+
+	defTestID.Scan(uint64(2))
+	defTestName.Scan("new name")
+	defTest.Scan(2)
+
+	if testEmbeddedModelFields.ID != 2 {
+		t.Errorf("expected %d, got %d", 2, testEmbeddedModelFields.ID)
+	}
+
+	if testEmbeddedModelFields.Name != "new name" {
+		t.Errorf("expected %q, got %q", "new name", testEmbeddedModelFields.Name)
+	}
+
+	if testEmbeddedModelFields.Test.ID != 2 {
+		t.Errorf("expected %d, got %d", 2, testEmbeddedModelFields.Test.ID)
+	}
+
+	if testEmbeddedModelFields.Test.Name != "name" {
+		t.Errorf("expected %q, got %q", "name", testEmbeddedModelFields.Test.Name)
+	}
+
+	if len(testEmbeddedModelFields.Test.Objects) != 3 {
+		t.Errorf("expected %d, got %d", 3, len(testEmbeddedModelFields.Test.Objects))
+	}
+
+	if testEmbeddedModelFields.Test.Objects[0] != 4 {
+		t.Errorf("expected %d, got %d", 1, testEmbeddedModelFields.Test.Objects[0])
+	}
+
+	if testEmbeddedModelFields.Test.Objects[1] != 5 {
+		t.Errorf("expected %d, got %d", 2, testEmbeddedModelFields.Test.Objects[1])
+	}
+
+	if testEmbeddedModelFields.Test.Objects[2] != 6 {
+		t.Errorf("expected %d, got %d", 3, testEmbeddedModelFields.Test.Objects[2])
+	}
+}
+
+func TestModelFieldsValuer(t *testing.T) {
+	var m = &TestEmbeddedModelFields{
+		ID:   1,
+		Name: "name",
+		Test: &TestModelFields{ID: 1, Name: "name", Objects: []int64{1, 2, 3}},
+	}
+
+	var (
+		defID   = attrs.NewField(m, "ID", nil)
+		defName = attrs.NewField(m, "Name", nil)
+		defTest = attrs.NewField(m, "Test", nil)
+	)
+
+	var v any
+	var err error
+
+	v, err = defID.Value()
+	if err != nil {
+		t.Errorf("expected %v, got %v", nil, err)
+	}
+
+	if v.(int) != 1 {
+		t.Errorf("expected %d, got %d", 1, v.(int))
+	}
+
+	v, err = defName.Value()
+	if err != nil {
+		t.Errorf("expected %v, got %v", nil, err)
+	}
+
+	if v.(string) != "name" {
+		t.Errorf("expected %q, got %q", "name", v.(string))
+	}
+
+	v, err = defTest.Value()
+	if err != nil {
+		t.Errorf("expected %v, got %v", nil, err)
+	}
+
+	if v == nil {
+		t.Errorf("expected %v, got %v", nil, v)
+	}
+
+	if v.(uint64) != 1 {
+		t.Errorf("expected %d, got %d", 1, v.(int))
 	}
 
 }

@@ -12,16 +12,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-func SaveObject[T attrs.Definer](obj T) error {
-	var fieldDefs = obj.FieldDefs()
-	var primaryField = fieldDefs.Primary()
-	var primaryValue = primaryField.GetValue()
-	if fields.IsZero(primaryValue) {
-		return CreateObject(obj)
-	}
-	return UpdateObject(obj)
-}
-
 func GetObject[T attrs.Definer](obj T) error {
 	var queryInfo, err = getQueryInfo(obj)
 	if err != nil {
@@ -30,10 +20,14 @@ func GetObject[T attrs.Definer](obj T) error {
 
 	var (
 		primaryField = queryInfo.definitions.Primary()
-		primaryValue = primaryField.GetValue()
 		query        strings.Builder
 		args         []any
 	)
+
+	primaryValue, err := primaryField.Value()
+	if err != nil {
+		return err
+	}
 
 	if fields.IsZero(primaryValue) {
 		return errors.Wrapf(
@@ -104,6 +98,41 @@ func ListObjects[T attrs.Definer](obj T, offset, limit uint64, ordering ...strin
 	return newList, err
 }
 
+func CountObjects[T attrs.Definer](obj T) (int64, error) {
+	var queryInfo, err = getQueryInfo(obj)
+	if err != nil {
+		return 0, err
+	}
+
+	var (
+		query strings.Builder
+		args  []any
+	)
+
+	query.WriteString("SELECT COUNT(*) FROM ")
+	query.WriteString(queryInfo.tableName)
+
+	var dbSpecific = queryInfo.dbx.Rebind(query.String())
+	logger.Debugf("CountObjects (%T): %s", obj, dbSpecific)
+
+	var count int64
+	err = queryInfo.dbx.Get(&count, dbSpecific, args...)
+	return count, err
+}
+
+func SaveObject[T attrs.Definer](obj T) error {
+	var fieldDefs = obj.FieldDefs()
+	var primaryField = fieldDefs.Primary()
+	var primaryValue, err = primaryField.Value()
+	if err != nil {
+		return err
+	}
+	if fields.IsZero(primaryValue) {
+		return CreateObject(obj)
+	}
+	return UpdateObject(obj)
+}
+
 func CreateObject[T attrs.Definer](obj T) error {
 	var queryInfo, err = getQueryInfo(obj)
 	if err != nil {
@@ -115,6 +144,7 @@ func CreateObject[T attrs.Definer](obj T) error {
 		primaryField = queryInfo.definitions.Primary()
 		query        strings.Builder
 		args         []any
+		tx           = queryInfo.dbx.MustBegin()
 	)
 
 	query.WriteString("INSERT INTO ")
@@ -126,7 +156,11 @@ func CreateObject[T attrs.Definer](obj T) error {
 			continue
 		}
 
-		var value = field.GetValue()
+		var value, err = field.Value()
+		if err != nil {
+			return err
+		}
+
 		if value == nil && !field.AllowNull() {
 			return errors.Wrapf(
 				ErrFieldNull,
@@ -154,8 +188,8 @@ func CreateObject[T attrs.Definer](obj T) error {
 	query.WriteString(")")
 
 	var dbSpecific = queryInfo.dbx.Rebind(query.String())
-	logger.Debugf("UpdateObject (%T): %s", obj, dbSpecific)
-	result, err := queryInfo.dbx.Exec(dbSpecific, args...)
+	logger.Debugf("CreateObject (%T): %s", obj, dbSpecific)
+	result, err := tx.Exec(dbSpecific, args...)
 	if err != nil {
 		return err
 	}
@@ -164,11 +198,20 @@ func CreateObject[T attrs.Definer](obj T) error {
 	if err != nil {
 		return errs.WrapErrors(
 			ErrLastInsertId,
+			tx.Rollback(),
 			err,
 		)
 	}
 
-	return primaryField.SetValue(lastId, true)
+	err = primaryField.SetValue(lastId, true)
+	if err != nil {
+		return errs.WrapErrors(
+			err,
+			tx.Rollback(),
+		)
+	}
+
+	return tx.Commit()
 }
 
 func UpdateObject[T attrs.Definer](obj T) error {
@@ -180,10 +223,14 @@ func UpdateObject[T attrs.Definer](obj T) error {
 	var (
 		written      bool
 		primaryField = queryInfo.definitions.Primary()
-		primaryValue = primaryField.GetValue()
 		query        strings.Builder
 		args         []any
 	)
+
+	primaryValue, err := primaryField.Value()
+	if err != nil {
+		return err
+	}
 
 	if fields.IsZero(primaryValue) {
 		return errors.Wrapf(
@@ -202,7 +249,11 @@ func UpdateObject[T attrs.Definer](obj T) error {
 			continue
 		}
 
-		var value = field.GetValue()
+		var value, err = field.Value()
+		if err != nil {
+			return err
+		}
+
 		if value == nil && !field.AllowNull() {
 			return errors.Wrapf(
 				ErrFieldNull,
@@ -240,10 +291,14 @@ func DeleteObject[T attrs.Definer](obj T) error {
 
 	var (
 		primaryField = queryInfo.definitions.Primary()
-		primaryValue = primaryField.GetValue()
 		query        strings.Builder
 		args         []any
 	)
+
+	primaryValue, err := primaryField.Value()
+	if err != nil {
+		return err
+	}
 
 	if fields.IsZero(primaryValue) {
 		return errors.Wrapf(

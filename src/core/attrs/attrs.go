@@ -1,6 +1,8 @@
 package attrs
 
 import (
+	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
@@ -90,6 +92,9 @@ type Definitions interface {
 }
 
 type Field interface {
+	sql.Scanner
+	driver.Valuer
+
 	Labeler
 	Helper
 	Stringer

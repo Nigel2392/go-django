@@ -2,10 +2,12 @@ package attrs
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"net/mail"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -565,7 +567,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	}
 
 success:
-	if r_v_ptr.IsZero() && !f.AllowBlank() {
+	if !force && r_v_ptr.IsZero() && !f.AllowBlank() {
 		switch reflect.Indirect(*r_v_ptr).Kind() {
 		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
@@ -598,7 +600,10 @@ success:
 	return nil
 }
 
-var _ sql.Scanner = (*FieldDef)(nil)
+var (
+	_ sql.Scanner   = (*FieldDef)(nil)
+	_ driver.Valuer = (*FieldDef)(nil)
+)
 
 func (f *FieldDef) Scan(value any) error {
 	if f.field_v.Kind() == reflect.Ptr {
@@ -622,6 +627,18 @@ func (f *FieldDef) Scan(value any) error {
 		return nil
 	}
 
+	if definer, ok := f.field_v.Interface().(Definer); ok {
+		var cTypeDef = contenttypes.DefinitionForObject(definer)
+		if cTypeDef != nil {
+			var instance, err = cTypeDef.Instance(value)
+			if err != nil {
+				return err
+			}
+			f.field_v.Set(reflect.ValueOf(instance))
+			return nil
+		}
+	}
+
 	r_v_ptr, ok := django_reflect.RConvert(&v, f.field_t.Type)
 	if !ok {
 		var typ = f.field_t.Type
@@ -629,7 +646,7 @@ func (f *FieldDef) Scan(value any) error {
 			typ = typ.Elem()
 		}
 
-		if v.Type().Kind() == reflect.String && isAnyKind(typ, reflect.Struct, reflect.Map, reflect.Slice) {
+		if v.Type().Kind() == reflect.String && slices.Contains([]reflect.Kind{reflect.Struct, reflect.Map, reflect.Slice}, typ.Kind()) {
 			var t = reflect.New(typ).Interface()
 			if err := json.Unmarshal([]byte(v.String()), t); err != nil {
 				return err
@@ -638,12 +655,10 @@ func (f *FieldDef) Scan(value any) error {
 			return nil
 		}
 
-		assert.Fail(
-			fmt.Sprintf("value of type %q is not convertible to %q for field %q",
-				v.Type(),
-				f.field_t.Type,
-				f.field_t.Name,
-			),
+		return fmt.Errorf("value of type %q is not convertible to %q for field %q",
+			v.Type(),
+			f.field_t.Type,
+			f.field_t.Name,
 		)
 	}
 
@@ -657,11 +672,45 @@ func (f *FieldDef) Scan(value any) error {
 	return nil
 }
 
-func isAnyKind(t reflect.Type, kind ...reflect.Kind) bool {
-	for _, k := range kind {
-		if t.Kind() == k {
-			return true
+func (f *FieldDef) Value() (driver.Value, error) {
+	var v = f.field_v
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			return nil, nil
+		}
+		v = v.Elem()
+	}
+
+	if v.Kind() == reflect.Interface {
+		if v.IsNil() {
+			return nil, nil
+		}
+		v = v.Elem()
+	}
+
+	switch v.Kind() {
+	case reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64, reflect.Bool:
+		return v.Interface(), nil
+	case reflect.Struct:
+		switch f.field_v.Interface().(type) {
+		case time.Time, sql.NullBool, sql.NullByte, sql.NullInt16, sql.NullInt32, sql.NullInt64,
+			sql.NullString, sql.NullFloat64, sql.NullTime:
+			return v.Interface(), nil
+		case Definer:
+			var def = f.field_v.Interface().(Definer)
+			var pk = PrimaryKey(def)
+			return pk, nil
 		}
 	}
-	return false
+
+	if v.CanInterface() {
+		return v.Interface(), nil
+	}
+
+	return nil, fmt.Errorf(
+		"cannot convert %q to driver.Value",
+		f.field_v.Type().Name(),
+	)
 }
