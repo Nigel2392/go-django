@@ -126,7 +126,7 @@ var ConfigGoogle = openauth2.AuthConfig{
     // If this is left empty, it will default to "state"
     State: "state",
 
-    // ExtraParams are extra parameters to be set on the URL **AFTER**
+    // ExtraParams are extra parameters to be set on the URL when
     // generating the url with Oauth2.AuthCodeURL
     ExtraParams: nil,
 }

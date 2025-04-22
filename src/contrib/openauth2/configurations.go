@@ -40,7 +40,7 @@ type AuthConfig struct {
 	// This can be used to link to the provider's documentation.
 	DocumentationURL string
 
-	// ExtraParams are extra parameters to be set on the URL AFTER
+	// ExtraParams are extra parameters to be set on the URL when
 	// generating the url with Oauth2.AuthCodeURL
 	ExtraParams map[string]string
 
