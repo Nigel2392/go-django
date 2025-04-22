@@ -11,6 +11,9 @@ import (
 )
 
 type AuthConfig struct {
+	// The base oauth2 config to use.
+	//
+	// Under the hood the `golang.org/x/oauth2` package is used.
 	Oauth2 *oauth2.Config
 
 	// The access type to request from the provider.

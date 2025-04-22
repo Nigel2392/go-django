@@ -13,18 +13,18 @@ const (
 )
 
 func newSavingTokenSource(src oauth2.TokenSource, u *openauth2models.User) oauth2.TokenSource {
-	return &cachedTokenSource{
+	return &savingTokenSource{
 		pts: src,
 		u:   u,
 	}
 }
 
-type cachedTokenSource struct {
+type savingTokenSource struct {
 	pts oauth2.TokenSource // called when t is expired.
 	u   *openauth2models.User
 }
 
-func (s *cachedTokenSource) Token() (*oauth2.Token, error) {
+func (s *savingTokenSource) Token() (*oauth2.Token, error) {
 	t, err := s.pts.Token()
 	if err != nil {
 		return nil, err
@@ -50,7 +50,10 @@ func (s *cachedTokenSource) Token() (*oauth2.Token, error) {
 	return t, err
 }
 
-// RefreshTokens refreshes the tokens for a user. It will return the new token and an error if one occurred.
+// RefreshTokens refreshes the tokens for a user.
+//
+// It will return the new token and an error if one occurred.
+//
 // It will also update the user with the new token in the database.
 func RefreshTokens(u *openauth2models.User) (*oauth2.Token, error) {
 	if u == nil {
@@ -89,6 +92,13 @@ func RefreshTokens(u *openauth2models.User) (*oauth2.Token, error) {
 	return newToken, err
 }
 
+// Create a new HTTP client with the token source for the user.
+//
+// This can be used to make requests to the API of the provider.
+//
+// The client will automatically refresh the access token when it expires.
+//
+// It will also update the user with the new token in the database.
 func Client(u *openauth2models.User) (*http.Client, error) {
 	if u == nil {
 		return nil, ErrUserNil

@@ -13,9 +13,9 @@ type HttpError struct {
 	Code    int
 }
 
-func NewServerError(code int, msg any) ServerError {
+func NewServerError(code int, msg any, args ...any) ServerError {
 	return &HttpError{
-		Message: errs.Convert(msg, nil),
+		Message: errs.Convert(msg, nil, args...),
 		Code:    code,
 	}
 }

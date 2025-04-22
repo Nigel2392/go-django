@@ -24,6 +24,14 @@ import (
 )
 
 var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition) {
+	if !app.Options.EnableIndexView {
+		except.RaiseNotFound(
+			"app %s does not have an i,ndex view",
+			app.Label(),
+		)
+		return
+	}
+
 	if !permissions.HasPermission(r, fmt.Sprintf("admin:view_app:%s", app.Name)) {
 		ReLogin(w, r, r.URL.Path)
 		return

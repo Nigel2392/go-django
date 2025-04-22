@@ -24,6 +24,11 @@ type AppOptions struct {
 	// RegisterToAdminMenu allows for registering this app to the admin menu by default.
 	RegisterToAdminMenu bool
 
+	// EnableIndexView allows for enabling the index view for this app.
+	//
+	// If this is disabled, only a main sub-menu item will be created, but not for the index view.
+	EnableIndexView bool
+
 	// Applabel must return a human readable label for the app.
 	AppLabel func() string
 
@@ -187,21 +192,22 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 				},
 			}
 
-			var menuLabel func() string = a.Options.MenuLabel
-			if menuLabel == nil {
-				menuLabel = func() string {
-					return a.Name
+			if a.Options.EnableIndexView {
+				var menuLabel func() string = a.Options.MenuLabel
+				if menuLabel == nil {
+					menuLabel = func() string {
+						return a.Name
+					}
 				}
+				menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
+					BaseItem: menu.BaseItem{
+						Label: menuLabel,
+					},
+					Link: func() string {
+						return django.Reverse("admin:apps", a.Name)
+					},
+				})
 			}
-
-			menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
-				BaseItem: menu.BaseItem{
-					Label: menuLabel,
-				},
-				Link: func() string {
-					return django.Reverse("admin:apps", a.Name)
-				},
-			})
 
 			//	var hooks = goldcrest.Get[RegisterAppMenuItemHookFunc](
 			//		fmt.Sprintf("%s:%s", RegisterMenuItemHook, a.Name),

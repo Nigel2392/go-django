@@ -18,6 +18,7 @@ import (
 	_ "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models/mysqlc"
 	_ "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models/sqlitec"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -44,11 +45,26 @@ var (
 )
 
 type Config struct {
-	BaseCallbackURL       string
-	AuthConfigurations    []AuthConfig
+	// The base URL for the callback URL. This is used to generate the redirect URL for the OAuth2 provider.
+	//
+	// This should be the base URL of your application, e.g. "https://example.com/"
+	BaseCallbackURL string
+
+	// A list of authentication configurations for the providers.
+	AuthConfigurations []AuthConfig
+
+	// If the user's state should be inactive by default.
 	UserDefaultIsDisabled bool
-	RedirectAfterLogin    func(user *openauth2models.User, datastruct interface{}, r *http.Request) string
-	RedirectAfterLogout   func(r *http.Request) string
+
+	// A function to generate the default URL after the user has logged in.
+	//
+	// Note:
+	//  If this is not set, the default URL will be "/".
+	// 	A redirect URL might also be stored in a HTTP-only cookie, if present the cookie's URL will be used instead.
+	RedirectAfterLogin func(user *openauth2models.User, datastruct interface{}, r *http.Request) string
+
+	// A function to generate the default URL after the user has logged out.
+	RedirectAfterLogout func(r *http.Request) string
 }
 
 type OpenAuth2AppConfig struct {
@@ -72,6 +88,11 @@ func NewAppConfig(cnf Config) django.AppConfig {
 	}
 
 	App.Deps = []string{"session"}
+
+	App.Cmd = []command.Command{
+		command_create_user,
+		command_change_user,
+	}
 
 	App.Init = func(settings django.Settings, db *sql.DB) error {
 		if len(App.Config.AuthConfigurations) == 0 {
@@ -221,6 +242,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 		"openauth2",
 		admin.AppOptions{
 			RegisterToAdminMenu: true,
+			EnableIndexView:     true,
 			AppLabel:            trans.S("OpenAuth2"),
 			AppDescription: trans.S(
 				"OpenAuth2 is an authentication backend for Go-Django. It allows you to authenticate users using OAuth2 providers such as Google, Facebook, GitHub, etc.",

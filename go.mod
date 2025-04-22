@@ -1,6 +1,6 @@
 module github.com/Nigel2392/go-django
 
-go 1.23.0
+go 1.24.2
 
 require (
 	github.com/Nigel2392/mux v1.3.8
@@ -18,8 +18,8 @@ require (
 	github.com/alexedwards/scs/postgresstore v0.0.0-20240316134038-7e11d57e8885
 	github.com/alexedwards/scs/sqlite3store v0.0.0-20240316134038-7e11d57e8885
 	github.com/alexedwards/scs/v2 v2.8.0
-	github.com/go-sql-driver/mysql v1.8.1
-	github.com/mattn/go-sqlite3 v1.14.22
+	github.com/go-sql-driver/mysql v1.9.2
+	github.com/mattn/go-sqlite3 v1.14.28
 	golang.org/x/crypto v0.31.0
 )
 
@@ -32,7 +32,7 @@ require (
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.14.0
-	github.com/jackc/pgx/v5 v5.6.0
+	github.com/jackc/pgx/v5 v5.7.4
 	github.com/jinzhu/inflection v1.0.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/qdm12/reprint v0.0.0-20200326205758-722754a53494
@@ -47,12 +47,13 @@ require (
 require (
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/Nigel2392/go-django-queries v1.0.2 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
-	github.com/jackc/pgservicefile v0.0.0-20221227161230-091c0ba34f0a // indirect
-	github.com/jackc/puddle/v2 v2.2.1 // indirect
+	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/lib/pq v1.10.9 // indirect
