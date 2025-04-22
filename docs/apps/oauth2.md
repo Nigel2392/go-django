@@ -322,7 +322,7 @@ A simple way to register a custom querier for your database is to do so with `op
 import (
     "context"
     "database/sql"
-    "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
+    openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
 )
 
 func init() {
