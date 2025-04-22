@@ -368,7 +368,7 @@ Both these commands take the following optional arguments:
 
 Both of these commands will ask you for the unique identifier of the user and a provider.
 
-This is the same unique identifier that is used to identify the user in the database, which we have [configured in the `DataStructIdentifier` function.](#configuring-openauth2).
+This is the same unique identifier that is used to identify the user in the database, which we have [configured in the `DataStructIdentifier` function](#configuring-openauth2).
 
 The provider is the name of the provider, in our case either `google` or `github`.
 
