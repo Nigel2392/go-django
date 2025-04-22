@@ -249,7 +249,7 @@ We have also installed the admin app, which can be used to edit a user's adminis
 
 Creating a new user through the admin interface is not supported.
 
-You can now navigate to `http://127.0.0.1:8080/admin/login` and log in with your Google or GitHub account.
+You can now navigate to [`http://127.0.0.1:8080/admin/login`](http://127.0.0.1:8080/admin/login) and log in with your Google or GitHub account.
 
 A user will be automatically created in the database with the profile information retrieved from the provider.
 
