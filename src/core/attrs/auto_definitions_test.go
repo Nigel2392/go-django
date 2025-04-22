@@ -189,13 +189,29 @@ func TestModelAutoFieldDefinitionsPrimary(t *testing.T) {
 		t.Errorf("expected %d, got %d", 2, fieldDefs.ObjectFields.Len())
 	}
 
-	if fieldDefs.Primary().Name() != "ID" {
+	var primary = fieldDefs.Primary()
+
+	if primary.Name() != "ID" {
 		t.Errorf("expected %q, got %q", "ID", fieldDefs.Primary().Name())
 	}
 
-	if fieldDefs.Primary().GetDefault().(int) != 2 {
+	if primary.GetDefault().(int) != 2 {
 		t.Errorf("expected %d, got %d", 1, fieldDefs.Primary().GetDefault())
 	}
+
+	if primary.GetValue().(int) != 0 {
+		t.Errorf("(GetValue())expected %d, got %d", 2, fieldDefs.Primary().GetValue())
+	}
+
+	var v, err = primary.Value()
+	if err != nil {
+		t.Errorf("expected no error, got %v", err)
+	}
+
+	if v.(int) != 2 {
+		t.Errorf("(Value()) expected %d, got %d", 2, v.(int))
+	}
+
 }
 
 type DefaultsTester struct {

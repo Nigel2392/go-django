@@ -8,45 +8,35 @@ import "reflect"
 //
 // If the pointer of `v` is invalid, a new value of type `t` is created, and the pointer is set to it, then the pointer is returned.
 func RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool) {
-	var original = *v
 	if !v.IsValid() {
-		var z = reflect.New(t)
+		z := reflect.New(t)
 		*v = z
 		return v, true
 	}
 
-	if v.CanConvert(t) {
-		*v = v.Convert(t)
+	if v.Type() == t {
 		return v, true
 	}
 
+	// Handle pointer-to-value or value-to-pointer
 	if v.Kind() == reflect.Ptr && t.Kind() != reflect.Ptr {
-		*v = v.Elem()
+		if v.IsNil() {
+			*v = reflect.New(t).Elem()
+		} else {
+			*v = v.Elem()
+		}
 	} else if v.Kind() != reflect.Ptr && t.Kind() == reflect.Ptr {
-		var z = reflect.New(v.Type())
-		z.Elem().Set(*v)
-		*v = z
+		ptr := reflect.New(v.Type())
+		ptr.Elem().Set(*v)
+		*v = ptr
 	}
-	if v.Type().AssignableTo(t) {
-		return v, true
-	}
-	if v.CanConvert(t) {
+
+	if v.Type().AssignableTo(t) || v.CanConvert(t) {
 		*v = v.Convert(t)
 		return v, true
 	}
-	*v = original
-	return v, false
-}
 
-func rSet(src, dst *reflect.Value, isPointer bool) {
-	if isPointer {
-		if dst.IsZero() {
-			dst.Set(reflect.New(dst.Type().Elem()))
-		}
-		dst.Elem().Set(src.Elem())
-	} else {
-		dst.Set(*src)
-	}
+	return v, false
 }
 
 // RSet sets a value from one reflect.Value to another.
@@ -58,25 +48,28 @@ func rSet(src, dst *reflect.Value, isPointer bool) {
 //
 // If the source value is not immediately assignable to the destination value, and the convert parameter is false,
 // this function will return false.
-func RSet(src, dst *reflect.Value, convert bool) (canset bool) {
-	if !src.IsValid() || !dst.IsValid() {
+func RSet(src, dst *reflect.Value, convert bool) bool {
+	if !src.IsValid() || !dst.IsValid() || !dst.CanSet() {
 		return false
 	}
-	if !dst.CanSet() {
-		return false
-	}
-	var isPointer = dst.Kind() == reflect.Ptr
-	var isImmediatelyAssignable = src.Type().AssignableTo(dst.Type())
-	if isImmediatelyAssignable {
-		rSet(src, dst, isPointer)
+
+	// Direct pointer assignment if types match
+	if src.Type() == dst.Type() && src.Kind() == reflect.Ptr {
+		dst.Set(*src)
 		return true
 	}
+
+	if src.Type().AssignableTo(dst.Type()) {
+		dst.Set(*src)
+		return true
+	}
+
 	if convert {
-		src, canset = RConvert(src, dst.Type())
-		if !canset {
-			return false
+		if conv, ok := RConvert(src, dst.Type()); ok {
+			dst.Set(*conv)
+			return true
 		}
 	}
-	rSet(src, dst, isPointer)
-	return true
+
+	return false
 }

@@ -210,6 +210,28 @@ func TestModelFieldsScannable(t *testing.T) {
 		t.Errorf("expected %d, got %d", 2, m.ID)
 	}
 
+	var err = defID.Scan("3")
+	if err != nil {
+		t.Errorf("expected %v, got %v", nil, err)
+	}
+
+	if m.ID != 3 {
+		t.Errorf("expected %d, got %d", 3, m.ID)
+	}
+
+	err = defID.Scan(float64(4))
+	if err != nil {
+		t.Errorf("expected %v, got %v", nil, err)
+	}
+
+	if m.ID != 4 {
+		t.Errorf("expected %d, got %d", 4, m.ID)
+	}
+
+	if err = defID.Scan("not a number"); err == nil {
+		t.Errorf("expected %v, got %v", nil, err)
+	}
+
 	if m.Name != "new name" {
 		t.Errorf("expected %q, got %q", "new name", m.Name)
 	}
@@ -276,6 +298,40 @@ func TestModelFieldsScannable(t *testing.T) {
 	//	if testEmbeddedModelFields.Test.Objects[2] != 6 {
 	//		t.Errorf("expected %d, got %d", 3, testEmbeddedModelFields.Test.Objects[2])
 	//	}
+}
+
+func TestEmbeddedFieldsScannable(t *testing.T) {
+	var m = &TestEmbeddedModelFields{
+		ID:   1,
+		Name: "name",
+	}
+
+	var test = &TestModelFields{ID: 1, Name: "name", Objects: []int64{1, 2, 3}}
+	var mDefs = m.FieldDefs()
+	var testDefs = test.FieldDefs()
+
+	var f, _ = mDefs.Field("Test")
+	f.SetValue(test, true)
+
+	if m.Test != test {
+		t.Errorf("expected %v, got %v (%p != %p)", test, m.Test, m.Test, test)
+	}
+
+	var (
+		defTestID, _   = testDefs.Field("ID")
+		defTestName, _ = testDefs.Field("Name")
+	)
+
+	defTestID.Scan(uint64(2))
+	defTestName.Scan("new name")
+
+	if m.Test.ID != 2 {
+		t.Errorf("expected %d, got %d", 2, m.Test.ID)
+	}
+
+	if m.Test.Name != "new name" {
+		t.Errorf("expected %q, got %q", "new name", m.Test.Name)
+	}
 }
 
 func TestModelFieldsValuer(t *testing.T) {

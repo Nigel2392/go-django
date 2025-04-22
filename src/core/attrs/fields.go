@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/mail"
 	"reflect"
-	"slices"
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -159,11 +158,11 @@ func (f *FieldDef) Rel() Definer {
 	}
 	var m2m = f.ManyToMany()
 	if m2m != nil {
-		return m2m.Model()
+		return m2m.Through()
 	}
 	var o2o = f.OneToOne()
 	if o2o != nil {
-		return o2o.Model()
+		return o2o.Through()
 	}
 	return nil
 }
@@ -462,53 +461,31 @@ func (f *FieldDef) GetValue() interface{} {
 }
 
 func (f *FieldDef) SetValue(v interface{}, force bool) error {
-
 	if f.attrDef.Setter != nil {
-		return f.attrDef.Setter(
-			f.instance_v_ptr.Interface().(Definer), v,
-		)
+		return f.attrDef.Setter(f.instance_v_ptr.Interface().(Definer), v)
 	}
 
-	var r_v = reflect.ValueOf(v)
-	if err := assert.True(
-		r_v.IsValid() || f.AllowNull(),
-		"field %q (%q) is not valid", f.field_t.Name, f.field_t.Type,
-	); err != nil {
-		return err
-	}
+	rv := reflect.ValueOf(v)
 
-	// Set r_v to zero value if it is nil and field allows null
-	if !r_v.IsValid() && f.AllowNull() {
-		if f.field_v.Kind() == reflect.Ptr {
-			r_v = reflect.New(f.field_t.Type.Elem())
-		} else {
-			r_v = reflect.Zero(f.field_t.Type)
+	if !rv.IsValid() {
+		if !f.AllowNull() {
+			return assert.Fail("field %q (%q) is not valid", f.field_t.Name, f.field_t.Type)
 		}
+		rv = reflect.Zero(f.field_t.Type)
 	}
 
+	// Try user-defined setter method like Set<FieldName>
 	if !force {
-		// Check if field has a setter
-		var b = make([]byte, 0, len(f.field_t.Name)+3)
-		b = append(b, "Set"...)
-		b = append(b, f.field_t.Name...)
-		var method, ok = f.instance_t_ptr.MethodByName(string(b))
-		// Call setter if it exists
-		if ok {
-			var r_v = reflect.ValueOf(v)
-			var r_v_ptr, ok = django_reflect.RConvert(&r_v, method.Type.In(1))
+		setterName := "Set" + f.field_t.Name
+		if method, ok := f.instance_t_ptr.MethodByName(setterName); ok {
+			arg, ok := django_reflect.RConvert(&rv, method.Type.In(1))
 			if !ok {
-				return assert.Fail(
-					fmt.Sprintf("value of type %q is not convertible to %q for field %q",
-						r_v.Type(),
-						method.Type.In(1),
-						f.field_t.Name,
-					),
-				)
+				return assert.Fail("value %q not convertible to %q for field %q",
+					rv.Type(), method.Type.In(1), f.field_t.Name)
 			}
-			var out = method.Func.Call([]reflect.Value{f.instance_v_ptr, *r_v_ptr})
+			out := method.Func.Call([]reflect.Value{f.instance_v_ptr, *arg})
 			if len(out) > 0 {
-				var out = out[len(out)-1].Interface()
-				if err, ok := out.(error); ok {
+				if err, ok := out[len(out)-1].Interface().(error); ok {
 					return err
 				}
 			}
@@ -516,81 +493,53 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		}
 	}
 
-	// Check if field is editable
-	if err := assert.True(
-		f.field_v.CanSet() && (f.AllowEdit() || force),
-		"field %q is not editable", f.field_t.Name,
-	); err != nil {
-		return err
+	if !f.field_v.CanSet() || (!f.AllowEdit() && !force) {
+		return assert.Fail("field %q is not editable", f.field_t.Name)
 	}
 
-	// Convert to field type if possible
-	r_v_ptr, ok := django_reflect.RConvert(&r_v, f.field_t.Type)
+	rvPtr, ok := django_reflect.RConvert(&rv, f.field_t.Type)
 	if !ok {
-		scanner, ok := f.field_v.Interface().(Scanner)
-		if ok {
-			return scanner.ScanAttribute(r_v_ptr.Interface())
+		if scanner, ok := f.field_v.Interface().(Scanner); ok {
+			return scanner.ScanAttribute(rvPtr.Interface())
 		}
-
-		// Try converting the string to a number if necessary
-		if r_v.Kind() == reflect.String {
+		// String to primitive fallback
+		if rv.Kind() == reflect.String {
 			switch f.field_t.Type.Kind() {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
 				reflect.Float32, reflect.Float64:
-				var v = r_v.String()
-				if v == "" {
-					goto fail
+				if rv.String() == "" {
+					return assert.Fail("field %q cannot be blank", f.field_t.Name)
 				}
-
-				var n = reflect.New(f.field_t.Type)
-				// Scan the value into the field
-				if _, err := fmt.Sscan(v, n.Interface()); err != nil {
-					goto fail
+				num := reflect.New(f.field_t.Type)
+				if _, err := fmt.Sscan(rv.String(), num.Interface()); err != nil {
+					return err
 				}
-
-				// Set the field value
-				n = n.Elem()
-				*r_v_ptr = n
-				goto success
-			}
-		}
-
-	fail:
-		return assert.Fail(
-			fmt.Sprintf("value of type %q is not convertible to %q for field %q",
-				r_v.Type(),
-				f.field_t.Type,
-				f.field_t.Name,
-			),
-		)
-	}
-
-success:
-	if !force && r_v_ptr.IsZero() && !f.AllowBlank() {
-		switch reflect.Indirect(*r_v_ptr).Kind() {
-		case reflect.Bool, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
-			reflect.Float32, reflect.Float64,
-			reflect.Complex64, reflect.Complex128:
-		case reflect.Struct:
-			switch reflect.Indirect(*r_v_ptr).Interface().(type) {
-			case time.Time, sql.NullBool, sql.NullByte, sql.NullInt16, sql.NullInt32, sql.NullInt64,
-				sql.NullString, sql.NullFloat64, sql.NullTime:
+				val := num.Elem()
+				rvPtr = &val
 			default:
-				return assert.Fail(
-					fmt.Sprintf("field %q must not be blank", f.field_t.Name),
-				)
+				return assert.Fail("type mismatch for field %q", f.field_t.Name)
 			}
-		default:
-			return assert.Fail(
-				fmt.Sprintf("field %q must not be blank", f.field_t.Name),
-			)
 		}
 	}
 
-	var old = f.field_v
-	django_reflect.RSet(r_v_ptr, &f.field_v, false)
+	// Blank check
+	if !force && rvPtr.IsZero() && !f.AllowBlank() {
+		kind := reflect.Indirect(*rvPtr).Kind()
+		if kind == reflect.Struct {
+			switch reflect.Indirect(*rvPtr).Interface().(type) {
+			case time.Time, sql.NullTime, sql.NullBool, sql.NullFloat64, sql.NullInt64, sql.NullString:
+				break
+			default:
+				return assert.Fail("field %q must not be blank", f.field_t.Name)
+			}
+		} else if kind == reflect.String || kind == reflect.Slice || kind == reflect.Map || kind == reflect.Ptr {
+			return assert.Fail("field %q must not be blank", f.field_t.Name)
+		}
+	}
+
+	old := f.field_v
+	django_reflect.RSet(rvPtr, &f.field_v, false)
 
 	if err := f.Validate(); err != nil {
 		f.field_v.Set(old)
@@ -606,58 +555,72 @@ var (
 )
 
 func (f *FieldDef) Scan(value any) error {
-	if f.field_v.Kind() == reflect.Ptr {
+	if f.field_v.Kind() == reflect.Ptr && f.field_v.IsNil() {
 		f.field_v.Set(reflect.New(f.field_t.Type.Elem()))
 	}
+
+	rv := reflect.ValueOf(value)
+
+	if !rv.IsValid() {
+		f.field_v.Set(reflect.Zero(f.field_t.Type))
+		return nil
+	}
+
 	if scanner, ok := f.field_v.Interface().(sql.Scanner); ok {
 		return scanner.Scan(value)
 	}
 
-	var v = reflect.ValueOf(value)
-	if !f.field_v.IsValid() {
-		if f.field_v.Kind() == reflect.Ptr {
-			f.field_v.Set(reflect.New(f.field_t.Type.Elem()))
-		} else {
-			f.field_v.Set(reflect.New(f.field_t.Type).Elem())
-		}
-	}
-
-	if v.Type() == f.field_v.Type() {
-		f.field_v.Set(v)
+	if rv.Type() == f.field_v.Type() {
+		f.field_v.Set(rv)
 		return nil
 	}
 
 	if definer, ok := f.field_v.Interface().(Definer); ok {
-		var defs = definer.FieldDefs()
-		var primary = defs.Primary()
-		return primary.Scan(value)
+		return definer.FieldDefs().Primary().Scan(value)
 	}
 
-	r_v_ptr, ok := django_reflect.RConvert(&v, f.field_t.Type)
+	rvPtr, ok := django_reflect.RConvert(&rv, f.field_t.Type)
 	if !ok {
-		var typ = f.field_t.Type
+		typ := f.field_t.Type
 		if typ.Kind() == reflect.Ptr {
 			typ = typ.Elem()
 		}
 
-		if v.Type().Kind() == reflect.String && slices.Contains([]reflect.Kind{reflect.Struct, reflect.Map, reflect.Slice}, typ.Kind()) {
-			var t = reflect.New(typ).Interface()
-			if err := json.Unmarshal([]byte(v.String()), t); err != nil {
-				return err
-			}
-			f.field_v.Set(reflect.ValueOf(t))
-			return nil
-		}
+		if rv.Kind() == reflect.String {
+			switch typ.Kind() {
+			case reflect.Struct, reflect.Map, reflect.Slice:
+				t := reflect.New(typ).Interface()
+				if err := json.Unmarshal([]byte(rv.String()), t); err != nil {
+					return err
+				}
+				f.field_v.Set(reflect.ValueOf(t))
+				return nil
 
-		return fmt.Errorf("value of type %q is not convertible to %q for field %q",
-			v.Type(),
-			f.field_t.Type,
-			f.field_t.Name,
-		)
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+				reflect.Float32, reflect.Float64:
+				if rv.String() == "" {
+					return fmt.Errorf("value is empty")
+				}
+				n := reflect.New(f.field_t.Type)
+				if _, err := fmt.Sscan(rv.String(), n.Interface()); err != nil {
+					return err
+				}
+				val := n.Elem()
+				rvPtr = &val
+			default:
+				return fmt.Errorf("value of type %q not convertible to %q for field %q",
+					rv.Type(), f.field_t.Type, f.field_t.Name)
+			}
+		} else {
+			return fmt.Errorf("value of type %q not convertible to %q for field %q",
+				rv.Type(), f.field_t.Type, f.field_t.Name)
+		}
 	}
 
-	var old = f.field_v
-	django_reflect.RSet(r_v_ptr, &f.field_v, false)
+	old := f.field_v
+	django_reflect.RSet(rvPtr, &f.field_v, false)
+
 	if err := f.Validate(); err != nil {
 		f.field_v.Set(old)
 		return err
@@ -666,16 +629,26 @@ func (f *FieldDef) Scan(value any) error {
 	return nil
 }
 
-func (f *FieldDef) Value() (driver.Value, error) {
-	var v = f.field_v
-	if v.Kind() == reflect.Ptr {
-		if v.IsNil() {
-			return nil, nil
-		}
-		v = v.Elem()
+func (f *FieldDef) driverValue(value any) (driver.Value, error) {
+	var v reflect.Value
+	switch val := value.(type) {
+	case reflect.Value:
+		v = val
+	case *reflect.Value:
+		v = *val
+	default:
+		v = reflect.ValueOf(val)
 	}
 
-	if v.Kind() == reflect.Interface {
+	if !v.IsValid() {
+		return nil, nil
+	}
+
+	if v.IsZero() {
+		return v.Interface(), nil
+	}
+
+	if v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
 		if v.IsNil() {
 			return nil, nil
 		}
@@ -689,9 +662,9 @@ func (f *FieldDef) Value() (driver.Value, error) {
 		return v.Interface(), nil
 	case reflect.Struct:
 		switch f.field_v.Interface().(type) {
-		case time.Time, sql.NullBool, sql.NullByte, sql.NullInt16, sql.NullInt32, sql.NullInt64,
-			sql.NullString, sql.NullFloat64, sql.NullTime:
-			return v.Interface(), nil
+		case driver.Valuer:
+			var valuer = f.field_v.Interface().(driver.Valuer)
+			return valuer.Value()
 		case Definer:
 			var def = f.field_v.Interface().(Definer)
 			var pk = PrimaryKey(def)
@@ -707,4 +680,25 @@ func (f *FieldDef) Value() (driver.Value, error) {
 		"cannot convert %q to driver.Value",
 		f.field_v.Type().Name(),
 	)
+}
+
+// Returns the value of the field as a driver.Value.
+//
+// This value should be used for storing the field in a database.
+//
+// If the field is nil or the zero value, the default value is returned.
+func (f *FieldDef) Value() (driver.Value, error) {
+	var v = f.field_v
+	if v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+		if !v.IsValid() || v.IsNil() {
+			return f.driverValue(f.GetDefault())
+		}
+		v = v.Elem()
+	}
+
+	if v.IsZero() {
+		return f.driverValue(f.GetDefault())
+	}
+
+	return f.driverValue(v)
 }

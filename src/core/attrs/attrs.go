@@ -93,6 +93,12 @@ type Definitions interface {
 
 type Field interface {
 	sql.Scanner
+
+	// Return the value of the field as a driver.Value.
+	//
+	// This value should be used for storing the field in a database.
+	//
+	// If the field is nil or the zero value, the default value should be returned.
 	driver.Valuer
 
 	Labeler
@@ -110,6 +116,11 @@ type Field interface {
 	//
 	// This can be used to generate the SQL for the field.
 	ColumnName() string
+
+	// Rel etrieves the related model instance for a foreign key field.
+	//
+	// This could be used to generate the SQL for the field.
+	Rel() Definer
 
 	// Retrieves the related model instance for a foreign key field.
 	ForeignKey() Definer

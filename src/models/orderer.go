@@ -28,9 +28,11 @@ var (
 // The default field is used if no ordering fields are provided, and is validated with the Validate function as well,
 // it can also be prefixed with a minus sign (-) to indicate descending order.
 type Orderer struct {
-	Fields   []string
-	Validate func(string) bool
-	Default  string
+	TableName string
+	Quote     string
+	Fields    []string
+	Validate  func(string) bool
+	Default   string
 }
 
 func (o *Orderer) stringify(ordering string) (sort string, field string) {
@@ -61,7 +63,22 @@ func (o *Orderer) Build() (string, error) {
 			return "", err
 		}
 
-		b.WriteString(field)
+		if o.TableName != "" {
+			b.Grow(1 + (len(o.Quote) * 4) + len(o.TableName) + len(field) + len(ord))
+			b.WriteString(o.Quote)
+			b.WriteString(o.TableName)
+			b.WriteString(o.Quote)
+			b.WriteString(".")
+			b.WriteString(o.Quote)
+			b.WriteString(field)
+			b.WriteString(o.Quote)
+		} else {
+			b.Grow(1 + (len(o.Quote) * 2) + len(field))
+			b.WriteString(o.Quote)
+			b.WriteString(field)
+			b.WriteString(o.Quote)
+		}
+
 		b.WriteString(" ")
 		b.WriteString(ord)
 
