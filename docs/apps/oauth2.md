@@ -12,7 +12,7 @@ Dependencies for the `openauth2` app are:
 
 - [`sessions`](./sessions.md) - storing session state such as the user's id
 
-** Table of Contents **
+**Table of Contents**
 
 - [Configuring openauth2](#configuring-openauth2)
 - [Installing the openauth2 app](#installing-the-openauth2-app)
