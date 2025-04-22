@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/mail"
 	"reflect"
+	"slices"
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -23,6 +24,18 @@ import (
 
 var capCaser = cases.Title(language.English)
 
+const (
+	AttrNameKey       = "field.name"
+	AttrMaxLengthKey  = "field.max_length"
+	AttrMinLengthKey  = "field.min_length"
+	AttrMinValueKey   = "field.min_value"
+	AttrMaxValueKey   = "field.max_value"
+	AttrAllowNullKey  = "field.allow_null"
+	AttrAllowBlankKey = "field.allow_blank"
+	AttrAllowEditKey  = "field.read_only"
+	AttrIsPrimaryKey  = "field.primary"
+)
+
 // FieldConfig is a configuration for a field.
 //
 // This defines how a field should behave and how it should be displayed in a form.
@@ -34,6 +47,11 @@ type FieldConfig struct {
 	Label         string                                        // The label for the field
 	HelpText      string                                        // The help text for the field
 	Column        string                                        // The name of the column in the database
+	MinLength     int64                                         // The minimum length of the field
+	MaxLength     int64                                         // The maximum length of the field
+	MinValue      float64                                       // The minimum value of the field
+	MaxValue      float64                                       // The maximum value of the field
+	Attributes    map[string]interface{}                        // The attributes for the field
 	RelForeignKey Definer                                       // The related object for the field (foreign key)
 	RelManyToMany Relation                                      // The related objects for the field (many to many, not implemented
 	RelOneToOne   Relation                                      // The related object for the field (one to one, not implemented)
@@ -102,6 +120,10 @@ func NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef {
 	}
 }
 
+func (f *FieldDef) Type() reflect.Type {
+	return f.field_t.Type
+}
+
 func (f *FieldDef) Label() string {
 	if f.attrDef.Label != "" {
 		return trans.T(f.attrDef.Label)
@@ -142,6 +164,23 @@ func (f *FieldDef) Name() string {
 
 func (f *FieldDef) Tag(name string) string {
 	return f.field_t.Tag.Get(name)
+}
+
+func (f *FieldDef) Attrs() map[string]interface{} {
+	var attrs = f.attrDef.Attributes
+	if attrs == nil {
+		attrs = make(map[string]interface{})
+	}
+	attrs[AttrNameKey] = f.Name()
+	attrs[AttrMaxLengthKey] = f.attrDef.MaxLength
+	attrs[AttrMinLengthKey] = f.attrDef.MinLength
+	attrs[AttrMinValueKey] = f.attrDef.MinValue
+	attrs[AttrMaxValueKey] = f.attrDef.MaxValue
+	attrs[AttrAllowNullKey] = f.AllowNull()
+	attrs[AttrAllowBlankKey] = f.AllowBlank()
+	attrs[AttrAllowEditKey] = f.AllowEdit()
+	attrs[AttrIsPrimaryKey] = f.IsPrimary()
+	return attrs
 }
 
 func (f *FieldDef) ColumnName() string {
@@ -206,6 +245,67 @@ func (f *FieldDef) AllowEdit() bool {
 
 func (f *FieldDef) Validate() error {
 	var v = f.GetValue()
+
+	var rV = reflect.ValueOf(v)
+	if f.attrDef.MinLength > 0 || f.attrDef.MaxLength > 0 {
+		if slices.Contains([]reflect.Kind{reflect.String, reflect.Slice, reflect.Array, reflect.Map}, rV.Kind()) {
+
+			if f.attrDef.MinLength > 0 && rV.Len() < int(f.attrDef.MinLength) {
+				return fmt.Errorf(
+					"field %q must be at least %d characters long",
+					f.field_t.Name, f.attrDef.MinLength,
+				)
+			}
+
+			if f.attrDef.MaxLength > 0 && rV.Len() > int(f.attrDef.MaxLength) {
+				return fmt.Errorf(
+					"field %q must be at most %d characters long",
+					f.field_t.Name, f.attrDef.MaxLength,
+				)
+			}
+		}
+	}
+
+	if f.attrDef.MinValue > 0 || f.attrDef.MinValue < 0 || f.attrDef.MaxValue > 0 || f.attrDef.MaxValue < 0 {
+		if slices.Contains([]reflect.Kind{reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64}, rV.Kind()) {
+			var num, err = CastToNumber[float64](v)
+			if err != nil {
+				return fmt.Errorf(
+					"field %q is not a number: %w",
+					f.field_t.Name, err,
+				)
+			}
+			if f.attrDef.MinValue > 0 && num < f.attrDef.MinValue {
+				return fmt.Errorf(
+					"field %q must be at least %f",
+					f.field_t.Name, f.attrDef.MinValue,
+				)
+			}
+
+			if f.attrDef.MaxValue > 0 && num > f.attrDef.MaxValue {
+				return fmt.Errorf(
+					"field %q must be at most %f",
+					f.field_t.Name, f.attrDef.MaxValue,
+				)
+			}
+
+			if f.attrDef.MinValue < 0 && num > f.attrDef.MinValue {
+				return fmt.Errorf(
+					"field %q must be at least %f",
+					f.field_t.Name, f.attrDef.MinValue,
+				)
+			}
+
+			if f.attrDef.MaxValue < 0 && num < f.attrDef.MaxValue {
+				return fmt.Errorf(
+					"field %q must be at most %f",
+					f.field_t.Name, f.attrDef.MaxValue,
+				)
+			}
+		}
+	}
+
 	for _, validator := range f.attrDef.Validators {
 		if err := validator(v); err != nil {
 			return err
@@ -316,6 +416,22 @@ func (f *FieldDef) FormField() fields.Field {
 
 	if !f.AllowBlank() {
 		opts = append(opts, fields.Required(true))
+	}
+
+	if f.attrDef.MinLength > 0 {
+		opts = append(opts, fields.MinLength(int(f.attrDef.MinLength)))
+	}
+
+	if f.attrDef.MaxLength > 0 {
+		opts = append(opts, fields.MaxLength(int(f.attrDef.MaxLength)))
+	}
+
+	if f.attrDef.MinValue > 0 || f.attrDef.MinValue < 0 {
+		opts = append(opts, fields.MinValue(int(f.attrDef.MinValue)))
+	}
+
+	if f.attrDef.MaxValue > 0 || f.attrDef.MaxValue < 0 {
+		opts = append(opts, fields.MaxValue(int(f.attrDef.MaxValue)))
 	}
 
 	var formField fields.Field

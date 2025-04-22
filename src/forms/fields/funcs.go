@@ -3,6 +3,7 @@ package fields
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -117,6 +118,55 @@ func MaxLength(max int) func(Field) {
 			if len(v) > max {
 				return fmt.Errorf("Ensure this value has at most %d characters (it has %d, %w).", max, len(v), errs.ErrLengthMax) //lint:ignore ST1005 ignore this lint
 			}
+			return nil
+		})
+	}
+}
+
+func MinValue(min int) func(Field) {
+	return func(f Field) {
+		f.SetAttrs(map[string]string{"min": fmt.Sprintf("%d", min)})
+		f.SetValidators(func(value interface{}) error {
+			if value == nil || value == "" {
+				if min > 0 {
+					return fmt.Errorf("Ensure this value is greater than or equal to %d (%w).", min, errs.ErrInvalidValue) //lint:ignore ST1005 ignore this lint
+				}
+				return nil
+			}
+
+			var v = fmt.Sprintf("%v", value)
+			var i, err = strconv.Atoi(v)
+			if err != nil {
+				return fmt.Errorf("Could not convert value %q to int (%w)", v, err) //lint:ignore ST1005 ignore this lint
+			}
+
+			if i < min {
+				return fmt.Errorf("Ensure this value is greater than or equal to %d (it is %d, %w).", min, i, errs.ErrInvalidValue) //lint:ignore ST1005 ignore this lint
+			}
+
+			return nil
+		})
+	}
+}
+
+func MaxValue(max int) func(Field) {
+	return func(f Field) {
+		f.SetAttrs(map[string]string{"max": fmt.Sprintf("%d", max)})
+		f.SetValidators(func(value interface{}) error {
+			if value == nil || value == "" {
+				return nil
+			}
+
+			var v = fmt.Sprintf("%v", value)
+			var i, err = strconv.Atoi(v)
+			if err != nil {
+				return fmt.Errorf("Could not convert value %q to int (%w)", v, err) //lint:ignore ST1005 ignore this lint
+			}
+
+			if i > max {
+				return fmt.Errorf("Ensure this value is less than or equal to %d (it is %d, %w).", max, i, errs.ErrInvalidValue) //lint:ignore ST1005 ignore this lint
+			}
+
 			return nil
 		})
 	}

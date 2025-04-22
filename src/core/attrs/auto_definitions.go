@@ -35,6 +35,22 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 			data.HelpText = v[0]
 		case "column":
 			data.Column = v[0]
+		case "min_length":
+			var err error
+			data.MinLength, err = strconv.ParseInt(v[0], 10, 64)
+			assert.True(err == nil, "error parsing %q: %v", v[0], err)
+		case "max_length":
+			var err error
+			data.MaxLength, err = strconv.ParseInt(v[0], 10, 64)
+			assert.True(err == nil, "error parsing %q: %v", v[0], err)
+		case "min_value":
+			var err error
+			data.MinValue, err = strconv.ParseFloat(v[0], 64)
+			assert.True(err == nil, "error parsing %q: %v", v[0], err)
+		case "max_value":
+			var err error
+			data.MaxValue, err = strconv.ParseFloat(v[0], 64)
+			assert.True(err == nil, "error parsing %q: %v", v[0], err)
 		case "default":
 			var (
 				default_ = v[0]

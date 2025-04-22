@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -116,6 +117,14 @@ type Field interface {
 	//
 	// This can be used to generate the SQL for the field.
 	ColumnName() string
+
+	// Type returns the reflect.Type of the field.
+	Type() reflect.Type
+
+	// Attrs returns any extra attributes for the field, these can be used for multiple purposes.
+	//
+	// Additional info can be stored here, for example - if the field has a min / max length.
+	Attrs() map[string]any
 
 	// Rel etrieves the related model instance for a foreign key field.
 	//
