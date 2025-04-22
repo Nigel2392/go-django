@@ -85,7 +85,7 @@ go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.6.9.8
 
 ### Third-Party & Related Projects
 
-- [go-django-queries](https://github.com/Nigel2932/go-django-queries) - A library to help you create SQL queries specialized (and only useful) for go-django models.
+- [go-django-queries](https://github.com/Nigel2392/go-django-queries) - A library to help you create SQL queries specialized (and only useful) for go-django models.
 
 ## Help Needed
 
