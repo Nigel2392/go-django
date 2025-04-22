@@ -4,7 +4,7 @@ The `openauth2` app provides a simple way to authenticate users using OAuth2 pro
 
 It uses the `golang.org/x/oauth2` package to handle the OAuth2 flow and provides a way to authenticate users and store their profile information in the database.
 
-Currently, it is not implemented to let a user sign in with different oauth2 providers - this is also not planned.
+Currently, it is not supported to the same user sign in with different oauth2 providers - this is also not planned.
 
 When a user who is not registered tries to log in with a provider, the app will create a new user in the database with the profile information retrieved from the provider.
 
