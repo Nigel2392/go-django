@@ -101,6 +101,11 @@ type DeleteViewOptions struct {
 	//
 	// This does mean that any logic provided by the admin when deleting the model should be implemented by the developer.
 	GetHandler func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) views.View
+
+	// DeleteInstance is a function that deletes the instance.
+	//
+	// This allows for custom logic to be executed when deleting the instance.
+	DeleteInstance func(context.Context, attrs.Definer) error
 }
 
 func viewDefaults(o *ViewOptions, mdl any) {

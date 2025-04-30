@@ -4,6 +4,7 @@ import (
 	"context"
 
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
+	dj_models "github.com/Nigel2392/go-django/src/models"
 )
 
 type Page interface {
@@ -13,12 +14,12 @@ type Page interface {
 
 type SaveablePage interface {
 	Page
-	Save(ctx context.Context) error
+	dj_models.Saver
 }
 
 type DeletablePage interface {
 	Page
-	Delete(ctx context.Context) error
+	dj_models.Deleter
 }
 
 var pageRegistryObject = &pageRegistry{}

@@ -1,335 +1,152 @@
-# Attributes
+# `attrs` Package Documentation
 
-Attributes are used to define the properties of a model.
+The `attrs` package enables defining and managing model attributes with support for auto-generated forms, field validation, and custom form widgets.
 
-This is useful for providing form functionality and more.
+## Core Concept
 
-Embedded struct support is easily implemented by your own code.
+Attributes describe the properties of model fields—useful for form generation, value setting, validation, and more.
 
-The `Attributes` interface allows for customizability of the model and it's formfields when auto-generating forms for it's fields, setting & retrieving values and more.
+Embedded struct support is possible, including manual and automatic field registration.
 
 ## Interfaces
 
-To keep things uniform when working with attributes we have implemented a few interfaces.
+These interfaces provide a uniform way to define and manage attributes:
 
-These interfaces are already implemented in the framework, but for the sake of customizability you can implement them yourself.
+---
 
-### `Definer` interface
+### `Definer`
 
-The `Definer` interface is used to define the properties of a model.
-
-This interface has a single method, and should be defined on the model itself.
-
-The interface definition:
+A model implementing this interface provides its own field definitions.
 
 ```go
+import (
+  "github.com/Nigel2392/go-django/src/core/attrs"
+)
+
 type Definer interface {
-    FieldDefs() attrs.Definitions
+  FieldDefs() attrs.Definitions
 }
 ```
 
-### `Definitions` interface
+---
 
-The definitions interface should be considered some kind of management struct for your fields.
+### `Definitions`
 
-This is the primary way we recommend to interact with your fields, setting values and more.
-
-The interface is defined as follows:
+Manages field definitions for a model.
 
 ```go
 type Definitions interface {
-    // Set sets the value of the field with the given name (or panics if not found).
-    Set(name string, value interface{}) error
-
-    // Retrieves the value of the field with the given name (or panics if not found).
-    Get(name string) interface{}
-
-    // Retrieves the field with the given name.
-    //
-    // If the field is not found, the second return value will be false.
-    Field(name string) (f Field, ok bool)
-
-    // Set sets the value of the field with the given name (or panics if not found).
-    //
-    // This method will allow setting the value of a field that is marked as not editable.
-    ForceSet(name string, value interface{}) error
-
-    // Retrieves the primary field.
-    Primary() Field
-
-    // Retrieves a slice of all fields.
-    //
-    // The order of the fields is the same as they were defined.
-    Fields() []Field
-
-    // Retrieves the number of fields.
-    Len() int
+  Set(name string, value interface{}) error
+  ForceSet(name string, value interface{}) error
+  Get(name string) interface{}
+  Field(name string) (attrs.Field, bool)
+  Primary() attrs.Field
+  Fields() []attrs.Field
+  TableName() string
+  Instance() attrs.Definer
+  Len() int
 }
 ```
 
-### `Scanner` interface
+---
 
-The `Scanner` interface is used to scan a value into a field.
+### `Field`
 
-This should be a method on the value of the field.
-
-I.E. to scan a value into a `StringField`, the method should be defined on the `StringField` struct.
-
-Example:
+Represents a model field and its behavior.
 
 ```go
-type StringField struct {
-    Value string
-}
+type Field interface {
+  sql.Scanner
+  driver.Valuer
+  attrs.Labeler
+  attrs.Helper
+  attrs.Stringer
+  attrs.Namer
 
-func (s *StringField) ScanAttribute(src any) error {
-    if v, ok := src.(string); ok {
-        s.Value = v
-        return nil
-    }
-    return errors.New("Invalid type")
-}
+  Instance() attrs.Definer
+  Tag(name string) string
+  ColumnName() string
+  Type() reflect.Type
+  Attrs() map[string]any
 
-type MyStruct struct {
-    MyField StringField
+  Rel() attrs.Definer
+  ForeignKey() attrs.Definer
+  ManyToMany() attrs.Relation
+  OneToOne() attrs.Relation
+
+  IsPrimary() bool
+  AllowNull() bool
+  AllowBlank() bool
+  AllowEdit() bool
+
+  GetValue() interface{}
+  GetDefault() interface{}
+  SetValue(v interface{}, force bool) error
+
+  FormField() fields.Field
+  Validate() error
 }
 ```
 
-This allows for more complex logic when setting values.
+---
 
-The interface is defined as follows:
+### `Scanner`
+
+Allows scanning raw values into custom field types.
 
 ```go
 type Scanner interface {
-    ScanAttribute(src any) error
+  ScanAttribute(src any) error
 }
 ```
 
-### `Field` Interface
+---
 
-The field interface is used to define the properties of a field.
-
-The interface itself also adheres to the following interfaces:
-
-- `Labeler`
-- `Helper`
-- `Stringer`
-- `Namer`
-
-This allows each field to easily define labels, help texts, string representations and names for forms.
-
-The full interface is defined as follows:
+### Additional Small Interfaces
 
 ```go
-type Field interface { // size=16 (0x10)
-    Labeler
-    Helper
-    Stringer
-    Namer
-    Instance() Definer
-    IsPrimary() bool
-    AllowNull() bool
-    AllowBlank() bool
-    AllowEdit() bool
-    GetValue() interface{}
-    GetDefault() interface{}
-    SetValue(v interface{}, force bool) error
-    FormField() fields.Field
-    Validate() error
-}
+type Namer interface       { Name() string }
+type Stringer interface    { ToString() string }
+type Labeler interface     { Label() string }
+type Helper interface      { HelpText() string }
 ```
 
-As seen it is a quite extensive interface.
+---
 
-This is to allow for maximum customizability of the fields, while not sacrificing functionality in forms.
+## Field Configuration
 
-The methods are explained as follows:
+### `FieldConfig`
 
-- `Instance() Definer`  
-  Returns the struct instance of the field.
-- `IsPrimary() bool`  
-  Returns whether the field is a primary identifier of this object.  
-  For example, this can be used to easily identify the primary key field in a database.
-- `AllowNull() bool`  
-  Returns whether the field allows nil values.  
-  If this is not true; a panic will be raised if the return object of `reflect.ValueOf` returns false when calling `IsValid` on that object.
-- `AllowBlank() bool`  
-  Returns whether the field allows blank (zero) values in forms.  
-  If this is false, formfields generated by this (by default) will be required.  
-  The framework does not always panic if a zero value is passed to a field that does not allow it, we only panic if the field's value is zero (reflect.IsZero) and not of types:
-  - `bool`
-  - `int/int8/int16/int32/int64`
-  - `uint/uint8/uint16/uint32/uint64/uintptr`
-  - `float32/float64`
-  - `complex64/complex128`
-- `AllowEdit() bool`  
-  Mark this field as non-editable (editable by default).  
-  This means a panic will be raised if the value of this field gets set.  
-  Values still can be read at all times. Setting the value can also still occur, if the `force` parameter is set to true.
-- `GetValue() interface{}`  
-  Returns the value of the field.
-- `GetDefault() interface{}`  
-  Returns a default value for the field.  
-  This can be overridden on the `Definer` struct by creating a method called `GetDefault<FieldName>` or optionally by populating the `Default` key in the `FieldConfig` struct.  
-  When populating in the `FieldConfig` struct, a function that returns the default value for this is also allowed.  
-  *warning*: Do not use pointer values as a default - this may cause unexpected behavior.
-- `SetValue(v interface{}, force bool) error`  
-  Sets the value of the field.  
-  If `force` is set to true, the value will be set regardless of the `AllowEdit` setting.  
-  If the value is not of the correct type, a panic will be raised.
-- `FormField() fields.Field`
-  Returns a form field for this field.  
-  This is used to auto-generate forms for the model.
-- `Validate() error`
-  Validates the field.  
-  This can be used to check if the field is valid.  
-  If the field is not valid, an error should be returned.  
-  If the field is valid, nil should be returned.  
-  The value of the field will still be set, even if the field is not valid - errors should be handled by the caller.
-
-#### `Namer` interface
-
-The `Namer` interface is used to define the name of a field.
-
-This is useful for form generation and possibly even database columns, etc.
-
-The interface is defined as follows:
-
-```go
-type Namer interface {
-    Name() string
-}
-```
-
-For a form, this is the name attribute of the field; any other implementation may vary.
-
-#### `Stringer` interface
-
-The `Stringer` interface is used to define the string representation of a field.
-
-This interface varies from the `fmt.Stringer` interface; the method is called `ToString` instead of `String`.
-
-It is mainly used in list representations; and should provide a human-readable string representation of the field.
-
-The interface is defined as follows:
-
-```go
-type Stringer interface {
-    ToString() string
-}
-```
-
-#### `Labeler` interface
-
-The `Labeler` interface is used to define the label of a field.
-
-This should be the human-readable representation of the name of the field.
-
-I.E. if your field's name is `firstName`, an appropriate label might be `First Name`.
-
-Internally it is used in forms to generate labels for the fields or in lists to generate column headers.
-
-The interface is defined as follows:
-
-```go
-type Labeler interface {
-    Label() string
-}
-```
-
-#### `Helper` interface
-
-The `Helper` interface is used to define a help text for a field.
-
-This is useful for providing additional information about the field, such as in forms.
-
-The interface is defined as follows:
-
-```go
-type Helper interface {
-    HelpText() string
-}
-```
-
-## Structs
-
-### `FieldDef` struct
-
-The `FieldDef` struct is used to define the properties of a field.
-
-It adheres to the `Field` interface, and should provide enough capabilities to customize fields to your liking.
-
-The struct definition is not important; and has only private properties.
-
-Creating a new field is done by calling the `NewField` function.
-
-Example:
-
-```go
-var myStruct = myStruct{
-  MyField: "value",
-}
-
-var myField = attrs.NewField(myStruct, "MyField", attrs.FieldConfig{
-    // ... config data
-})
-```
-
-### `FieldConfig` struct
-
-The `FieldConfig` struct is used to define the configuration of a field.
-
-The struct is defined as follows:
+Used to configure individual fields:
 
 ```go
 type FieldConfig struct {
-    Null       bool
-    Blank      bool
-    ReadOnly   bool
-    Primary    bool
-    Label      string
-    HelpText   string
-    Default    any
-    Validators []func(interface{}) error
-    FormField  func(opts ...func(fields.Field)) fields.Field
-    FormWidget func(FieldConfig) widgets.Widget
-    Setter     func(Definer, interface{}) error
-    Getter     func(Definer) (interface{}, bool)
+  Null          bool
+  Blank         bool
+  ReadOnly      bool
+  Primary       bool
+  Label         string
+  HelpText      string
+  Column        string
+  MinLength     int64
+  MaxLength     int64
+  MinValue      float64
+  MaxValue      float64
+  Attributes    map[string]interface{}
+  WidgetAttrs   map[string]string
+  Default       any
+  RelForeignKey attrs.Definer
+  RelManyToMany attrs.Relation
+  RelOneToOne   attrs.Relation
+  Validators    []func(interface{}) error
+  FormField     func(opts ...func(fields.Field)) fields.Field
+  FormWidget    func(FieldConfig) widgets.Widget
+  Setter        func(attrs.Definer, interface{}) error
+  Getter        func(attrs.Definer) (interface{}, bool)
 }
 ```
 
-The struct is used to define the properties of a field, as well as setters, getters, form fields, etc.
-
-The setters/getters also take an argument of type `Definer`.
-
-This is the parent struct which the field belongs to, and thus can be safely cast to the parent struct's type.
-
-#### Properties
-
-- `Null bool`  
-  Whether the field allows nil values.
-- `Blank bool`  
-  Whether the field allows blank (zero) values.
-- `ReadOnly bool`  
-  Whether the field is read-only.
-- `Primary bool`  
-  Whether the field is a primary key.
-- `Label string`  
-  The label of the field.
-- `HelpText string`  
-  The help text of the field.
-- `Default any`  
-  The default value of the field.
-- `Validators []func(interface{}) error`  
-  A slice of validators for the field.
-- `FormField func(opts ...func(fields.Field)) fields.Field`  
-  A function that returns a self-defined form field for the field.
-- `FormWidget func(FieldConfig) widgets.Widget`  
-  A function that returns a custom form widget for the field.
-- `Setter func(Definer, interface{}) error`  
-  A function that sets the value of the field.
-- `Getter func(Definer) (interface{}, bool)`  
-  A function that retrieves the value of the field.
+---
 
 ## Defining Model Attributes
 
@@ -398,6 +215,8 @@ This will define the fields of the model, and customize the Bio field to use a `
 
 To then set or retrieve the values; you could use the attrs package- level functions, or directly interact with the `Definitions` struct.
 
+---
+
 ### Embedding Structs
 
 Embedding a struct is relatively easy; there are a few options which each depend on the already existing implementation of the underlying struct.
@@ -405,6 +224,8 @@ Embedding a struct is relatively easy; there are a few options which each depend
 In short; if the underlying struct implements the `Definer` interface, you can embed it directly using it's `FieldDefs().Fields()` method.
 
 If the underlying struct does not implement the `Definer` interface, you can still embed it, but you will have to manually define the fields.
+
+---
 
 #### Option 1: The embedded struct implements the `Definer` interface
 
@@ -433,6 +254,8 @@ func (m *MyTopLevelModel) FieldDefs() attrs.Definitions {
     return attrs.Define(m, fields...)
 }
 ```
+
+---
 
 #### Option 2: Embedding structs which do not implement the `Definer` interface
 
@@ -502,6 +325,8 @@ We must still bind the fields to the embedded struct, even if the `FieldDefs` me
 
 This allows for a more flexible way of defining fields, and allows for more complex models and overrides.
 
+---
+
 ### Automatic definitions of fields
 
 The `attrs` package provides a way to automatically define fields for a struct.
@@ -562,123 +387,38 @@ func (m *MyModel) FieldDefs() attrs.Definitions {
 
 This will only include the `ID` and `Name` fields in the definitions, and exclude the `Bio` and `Age` fields.
 
-## Package- level functions
+---
 
-### `FieldNames(d any, exclude []string) []string`
+## Common Utilities
 
-A shortcut for getting the names of all fields in a Definer.
+```go
+attrs.FieldNames(definer, []string{"Exclude"})
+attrs.PrimaryKey(definer)
+attrs.SetMany(definer, map[string]interface{}{"Name": "New"})
+attrs.Set(definer, "Name", "New")
+attrs.ForceSet(definer, "Name", "Forced")
+attrs.Get[string](definer, "Name")
+attrs.ToString(value)
+```
 
-The exclude parameter can be used to exclude certain fields from the result.
+---
 
-This function is useful when you need to get the names of all fields in a  
-model, but you want to exclude certain fields (e.g. fields that are not editable).
+## Form Field Hooking
 
-### `PrimaryKey(d Definer) interface{}`
+Register form field widgets for custom types:
 
-PrimaryKey retrieves the primary key of a Definer.
+```go
+RegisterFormFieldType(
+  json.RawMessage{},
+  func(opts ...func(fields.Field)) fields.Field {
+    return fields.JSONField[json.RawMessage](opts...)
+  },
+)
+```
 
-This function will panic if the primary key is not found.
+---
 
-### `DefinerList[T Definer](list []T) []Definer
+## Notes
 
-DefinerList converts a slice of []T where the underlying type is of type Definer to []Definer.
-
-### `SetMany(d Definer, values map[string]interface{}) error`
-
-SetMany sets multiple fields on a Definer.
-
-The values parameter is a map where the keys are the names of the fields to set.
-
-The values must be of the correct type for the fields.
-
-### `Set(d Definer, name string, value interface{}) error`
-
-Set sets the value of a field on a Definer.
-
-If the field is not found, the value is not of the correct type or another constraint is violated, this function will panic.
-
-If the field is marked as non editable, this function will panic.
-
-### `ForceSet(d Definer, name string, value interface{}) error`
-
-ForceSet sets the value of a field on a Definer.
-
-If the field is not found, the value is not of the correct type or another constraint is violated, this function will panic.
-
-This function will allow setting the value of a field that is marked as not editable.
-
-### `Get[T any](d Definer, name string) T`
-
-Get retrieves the value of a field on a Definer.
-
-If the field is not found, this function will panic.
-
-Type assertions are used to ensure that the value is of the correct type,
-as well as providing less work for the caller.
-
-### `ToString(v any) string`
-
-ToString converts a value to a string.
-
-This should be the human-readable representation of the value.
-
-### `Method[T any](obj interface{}, name string) (n T, ok bool)`
-
-Method retrieves a method from an object.
-
-The generic type parameter must be the type of the method.
-
-### `AutoDefinitions[T Definer](instance T, include ...any) Definitions`
-
-AutoDefinitions automatically generates definitions for a struct.
-
-It does this by iterating over the fields of the struct and checking for the
-`attrs` tag. If the tag is present, it will parse the tag and generate the
-definition.
-
-If the `include` parameter is provided, it will only generate definitions for
-the fields that are included.
-
-### `Define(d Definer, fieldDefinitions ...Field) *ObjectDefinitions`
-
-Define creates a new object definitions.
-
-This can then be returned by the FieldDefs method of a model
-to make it comply with the Definer interface.
-
-### `NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef`
-
-NewField creates a new field definition for the given instance.
-
-This can then be used for managing the field in a more abstract way.
-
-### `RegisterFormFieldType(valueOfType any, getField func(opts ...func(fields.Field)) fields.Field)`
-
-RegisterFormFieldType registers a field type for a given valueOfType.
-
-getField is a function that returns a fields.Field for the given valueOfType.
-
-The valueOfType can be a reflect.Type or any value, in which case the reflect.TypeOf(valueOfType) will be used.
-
-This is a shortcut function for the `HookFormFieldForType` hook.
-
-### `RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool)`
-
-RConvert converts a reflect.Value to a different type.
-
-If the value is not convertible to the type, the original value is returned.
-
-If the pointer of `v` is invalid, a new value of type `t` is created, and the pointer is set to it, then the pointer is returned.
-
-### `RSet(src, dst *reflect.Value, convert bool) (canset bool)`
-
-RSet sets a value from one reflect.Value to another.
-
-If the destination value is not settable, this function will return false.
-
-If the source value is not immediately assignable to the destination value, and the convert parameter is true,
-
-the source value will be converted to the destination value's type.
-
-If the source value is not immediately assignable to the destination value, and the convert parameter is false,
-this function will return false.
+- Panics occur on invalid sets unless `force` is used.
+- Default values can be set via struct tags, the FieldConfig type or methods like `GetDefault<FieldName>()`.

@@ -57,7 +57,7 @@ type FieldConfig struct {
 	RelForeignKey Definer                                       // The related object for the field (foreign key)
 	RelManyToMany Relation                                      // The related objects for the field (many to many, not implemented
 	RelOneToOne   Relation                                      // The related object for the field (one to one, not implemented)
-	Default       any                                           // The default value for the field (or a function that returns the default value)
+	Default       any                                           // The default value for the field (or a function that takes in the object type and returns the default value)
 	Validators    []func(interface{}) error                     // Validators for the field
 	FormField     func(opts ...func(fields.Field)) fields.Field // The form field for the field
 	WidgetAttrs   map[string]string                             // The attributes for the widget
@@ -342,7 +342,7 @@ func (f *FieldDef) GetDefault() interface{} {
 	if f.attrDef.Default != nil {
 		var v = reflect.ValueOf(f.attrDef.Default)
 		if v.IsValid() && v.Kind() == reflect.Func {
-			var out = v.Call([]reflect.Value{})
+			var out = v.Call([]reflect.Value{f.instance_v_ptr})
 			assert.Gt(out, 0, "Default function did not return a value")
 			return out[0].Interface()
 		}
@@ -809,7 +809,9 @@ func (f *FieldDef) Value() (driver.Value, error) {
 	var v = f.field_v
 	if v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
 		if !v.IsValid() || v.IsNil() {
-			return f.driverValue(f.GetDefault())
+			var def = f.GetDefault()
+			f.SetValue(def, true)
+			return f.driverValue(def)
 		}
 		v = v.Elem()
 	}

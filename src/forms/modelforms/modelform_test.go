@@ -151,7 +151,7 @@ func TestModelForm(t *testing.T) {
 				"Age":  1,
 			}
 
-			if err := f.Save(); err != nil {
+			if _, err := f.Save(); err != nil {
 				t.Errorf("expected %v, got %v", nil, err)
 			}
 
@@ -220,7 +220,7 @@ func TestModelForm(t *testing.T) {
 					"Age":  1,
 				}
 
-				if err := f.Save(); err != nil {
+				if _, err := f.Save(); err != nil {
 					t.Errorf("expected (err) %v, got %v", nil, err)
 				}
 
@@ -245,7 +245,7 @@ func TestModelForm(t *testing.T) {
 					"Age":  -1,
 				}
 
-				if err := f.Save(); err == nil {
+				if _, err := f.Save(); err == nil {
 					t.Errorf("expected (err) %v, got %v", errors.New("Age must be greater than 0"), err)
 				}
 

@@ -15,7 +15,7 @@ import (
 type ModelForm[T any] interface {
 	forms.Form
 	Load()
-	Save() error
+	Save() (map[string]interface{}, error)
 	WithContext(ctx context.Context)
 	Context() context.Context
 	SetFields(fields ...string)
@@ -264,10 +264,10 @@ func (f *BaseModelForm[T]) Context() context.Context {
 	return f.context
 }
 
-func (f *BaseModelForm[T]) Save() error {
+func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 	var cleaned, err = f.BaseForm.Save()
 	if err != nil {
-		return err
+		return cleaned, err
 	}
 
 	var ctx = f.Context()
@@ -289,7 +289,7 @@ func (f *BaseModelForm[T]) Save() error {
 				fieldname,
 				err,
 			)
-			return err
+			return cleaned, err
 		}
 	}
 
@@ -299,11 +299,11 @@ func (f *BaseModelForm[T]) Save() error {
 		err = instance.Save(ctx)
 	}
 	if err != nil {
-		return err
+		return cleaned, err
 	}
 
 	f.Reset()
 	f.Load()
 
-	return nil
+	return cleaned, nil
 }

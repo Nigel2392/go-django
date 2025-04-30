@@ -238,6 +238,13 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 
 		if deleter, ok := instance.(models.Deleter); ok {
 			err = deleter.Delete(r.Context())
+		} else if delFn := model.DeleteView.DeleteInstance; delFn != nil {
+			err = delFn(r.Context(), instance)
+		} else {
+			panic(fmt.Errorf(
+				"instance %T does not implement models.Deleter and no delete function was provided",
+				instance,
+			))
 		}
 		if err != nil {
 			context.Set("error", err)

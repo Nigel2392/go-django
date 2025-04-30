@@ -619,6 +619,8 @@ func (f *BaseForm) Save() (map[string]interface{}, error) {
 			continue
 		}
 
+		// Check if the field is saveable and call Save() on it.
+		// This might be used to save a relation to the database, among other things.
 		if field, saveable := field.(fields.SaveableField); saveable {
 			value, err = field.Save(value)
 			if err != nil {

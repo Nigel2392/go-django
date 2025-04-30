@@ -22,6 +22,15 @@ type DefaultGetter func(f Field, new_field_t_indirected reflect.Type, field_v re
 // The valueOfType can be a reflect.Type or any value, in which case the reflect.TypeOf(valueOfType) will be used.
 //
 // This is a shortcut function for the `HookFormFieldForType` hook.
+//
+// Example usage:
+//
+//		RegisterFormFieldType(
+//			json.RawMessage{},
+//			func(opts ...func(fields.Field)) fields.Field {
+//				return fields.JSONField[json.RawMessage](opts...)
+//			},
+//	 	)
 func RegisterFormFieldType(valueOfType any, getField func(opts ...func(fields.Field)) fields.Field) {
 	var typ reflect.Type
 	switch v := valueOfType.(type) {

@@ -9,10 +9,8 @@ import (
 )
 
 var (
-	_ models.Saver    = (*User)(nil)
-	_ models.Updater  = (*User)(nil)
-	_ models.Deleter  = (*User)(nil)
-	_ models.Reloader = (*User)(nil)
+	_ models.Saver   = (*User)(nil)
+	_ models.Deleter = (*User)(nil)
 )
 
 type Password string

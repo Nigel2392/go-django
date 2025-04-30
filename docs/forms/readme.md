@@ -164,7 +164,7 @@ type Form interface {
 
 ## SaveableForm
 
-Sometimes you need your form to do more than just validate data—you want to save it too. The **SaveableForm** interface extends **Form** with a `Save()` method:
+Sometimes you need your form to do more than just validate data, you want to save it too. The **SaveableForm** interface extends **Form** with a `Save()` method:
 
 ```go
 type SaveableForm interface {
@@ -294,9 +294,10 @@ Typically, you would use the forms package in combination with the fields, widge
    modelForm := modelforms.NewBaseModelForm(existingModel)
    modelForm.Load() // load data from the model into the form
    // after validation...
-   if err := modelForm.Save(); err != nil {
+   if cleanedDataMap, err := modelForm.Save(); err != nil {
        // handle error
    }
+   var instance = modelForm.Instance()
    ```
 
 ---

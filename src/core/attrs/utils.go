@@ -40,6 +40,8 @@ func DefinerList[T Definer](list []T) []Definer {
 	return l
 }
 
+// CastToNumber converts a value of any type (int, float, string) to a number of type T.
+// It returns the converted value and an error if the conversion fails.
 func CastToNumber[T any](v any) (T, error) {
 	var zero T
 	var rv = reflect.ValueOf(v)
@@ -87,6 +89,14 @@ func InterfaceList[T any](list []T) []any {
 // ToString converts a value to a string.
 //
 // This should be the human-readable representation of the value.
+//
+// If the value is a struct with a content type, it will use the content type's InstanceLabel method to convert it to a string.
+//
+// time.Time, mail.Address, and error types are handled specially.
+//
+// If the value is a slice or array, it will convert each element to a string and join them with ", ".
+//
+// If all else fails, it will use fmt.Sprintf to convert the value to a string.
 func ToString(v any) string {
 	if v == nil {
 		return ""

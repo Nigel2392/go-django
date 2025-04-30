@@ -341,7 +341,7 @@ func NewAdminModelForm[T modelforms.ModelForm[attrs.Definer]](form T, panels ...
 func (a *AdminModelForm[T]) Load() {
 	a.Form.Load()
 }
-func (a *AdminModelForm[T]) Save() error {
+func (a *AdminModelForm[T]) Save() (map[string]interface{}, error) {
 	return a.Form.Save()
 }
 func (a *AdminModelForm[T]) WithContext(ctx context.Context) {

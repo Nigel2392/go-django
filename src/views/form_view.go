@@ -101,8 +101,8 @@ func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 	if req.Method == http.MethodPost {
 		if form.IsValid() {
 
-			if saver, ok := any(form).(interface{ Save() error }); ok {
-				err = saver.Save()
+			if saver, ok := any(form).(forms.SaveableForm); ok {
+				_, err = saver.Save()
 				if err != nil {
 					goto checkFormErr
 				}
