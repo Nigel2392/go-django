@@ -3,6 +3,7 @@ package attrs
 import (
 	"reflect"
 
+	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -54,15 +55,22 @@ func (d *ObjectDefinitions) WithTableName(name string) *ObjectDefinitions {
 }
 
 func (d *ObjectDefinitions) Set(name string, value interface{}) error {
-	return set(d.Object, name, value, false)
+	return set(d, name, value, false)
 }
 
 func (d *ObjectDefinitions) ForceSet(name string, value interface{}) error {
-	return set(d.Object, name, value, true)
+	return set(d, name, value, true)
 }
 
 func (d *ObjectDefinitions) Get(name string) interface{} {
-	return Get[interface{}](d.Object, name)
+	var f, ok = d.ObjectFields.Get(name)
+	if !ok {
+		return assert.Fail(
+			"get (%T): field %q not found in %T",
+			d.Object, name, d.Object,
+		)
+	}
+	return f.GetValue()
 }
 
 func (d *ObjectDefinitions) Field(name string) (f Field, ok bool) {

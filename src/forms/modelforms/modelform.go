@@ -221,7 +221,12 @@ func (f *BaseModelForm[T]) Load() {
 		var field, ok = f.Definition.Field(name)
 		assert.True(ok, "Field %q not found in %T", name, model)
 
-		f.AddField(name, field.FormField())
+		var formField = field.FormField()
+		if formField == nil {
+			continue
+		}
+
+		f.AddField(name, formField)
 	}
 
 	var initialData = make(map[string]interface{})

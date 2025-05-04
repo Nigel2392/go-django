@@ -7,14 +7,14 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 )
 
-func fieldNames(d Definer, exclude []string) []string {
+func fieldNames(d Definitions, exclude []string) []string {
 	var excludeMap = make(map[string]struct{})
 	for _, name := range exclude {
 		excludeMap[name] = struct{}{}
 	}
 
 	var (
-		fields = d.FieldDefs().Fields()
+		fields = d.Fields()
 		n      = len(fields)
 		names  = make([]string, 0, n)
 	)
@@ -40,7 +40,7 @@ func FieldNames(d any, exclude []string) []string {
 		return nil
 	}
 	if d, ok := d.(Definer); ok {
-		return fieldNames(d, exclude)
+		return fieldNames(d.FieldDefs(), exclude)
 	}
 	var (
 		rTyp       = reflect.TypeOf(d)
@@ -134,7 +134,7 @@ func PrimaryKey(d Definer) interface{} {
 // The values must be of the correct type for the fields.
 func SetMany(d Definer, values map[string]interface{}) error {
 	for name, value := range values {
-		if err := assert.Err(set(d, name, value, false)); err != nil {
+		if err := assert.Err(set(d.FieldDefs(), name, value, false)); err != nil {
 			return err
 		}
 	}
@@ -147,7 +147,7 @@ func SetMany(d Definer, values map[string]interface{}) error {
 //
 // If the field is marked as non editable, this function will panic.
 func Set(d Definer, name string, value interface{}) error {
-	return set(d, name, value, false)
+	return set(d.FieldDefs(), name, value, false)
 }
 
 // ForceSet sets the value of a field on a Definer.
@@ -156,7 +156,7 @@ func Set(d Definer, name string, value interface{}) error {
 //
 // This function will allow setting the value of a field that is marked as not editable.
 func ForceSet(d Definer, name string, value interface{}) error {
-	return set(d, name, value, true)
+	return set(d.FieldDefs(), name, value, true)
 }
 
 // Get retrieves the value of a field on a Definer.
@@ -226,9 +226,8 @@ checkValid:
 	return n, ok
 }
 
-func set(d Definer, name string, value interface{}, force bool) error {
-	var defs = d.FieldDefs()
-	var f, ok = defs.Field(name)
+func set(d Definitions, name string, value interface{}, force bool) error {
+	var f, ok = d.Field(name)
 	if !ok {
 		var fieldNames = fieldNames(d, nil)
 		return assert.Fail(

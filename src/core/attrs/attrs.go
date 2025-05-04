@@ -11,6 +11,36 @@ import (
 	"github.com/shopspring/decimal"
 )
 
+type RelationType int
+
+const (
+
+	// ManyToOne is a many to one relationship, also known as a foreign key relationship.
+	//
+	// This means that the target model can have multiple instances of the source model,
+	// but the source model can only have one instance of the target model.
+	// This is the default type for a relation.
+	RelManyToOne RelationType = iota
+
+	// OneToOne is a one to one relationship.
+	//
+	// This means that the target model can only have one instance of the source model.
+	// This is the default type for a relation.
+	RelOneToOne
+
+	// ManyToMany is a many to many relationship.
+	//
+	// This means that the target model can have multiple instances of the source model,
+	// and the source model can have multiple instances of the target model.
+	RelManyToMany
+
+	// OneToMany is a one to many relationship, also known as a reverse foreign key relationship.
+	//
+	// This means that the target model can only have one instance of the source model,
+	// but the source model can have multiple instances of the target model.
+	RelOneToMany
+)
+
 func init() {
 	RegisterFormFieldType(
 		json.RawMessage{},
@@ -40,13 +70,48 @@ type Definer interface {
 	FieldDefs() Definitions
 }
 
+// Through is an interface for defining a relation between two models.
+//
+// This provides a very abstract way of defining relations between models,
+// which can be used to define one to one relations or many to many relations.
+type Through interface {
+	// The through model itself.
+	Model() Definer
+
+	// The source field for the relation - this is the field in the source model.
+	SourceField() Field
+
+	// The target field for the relation - this is the field in the target model, or in the through model.
+	TargetField() Field
+}
+
 // Relation is an interface for defining a relation between two models.
 //
 // This provides a very abstract way of defining relations between models,
 // which can be used to define relations in a more generic way.
 type Relation interface {
-	Model() Definer
-	Through() Definer
+	// The target model for the relationship.
+	Target() Definer
+
+	// TargetField retrieves the field in the target model for the relationship.
+	//
+	// This can be nil, in such cases the relationship should use the primary field of the target model.
+	//
+	// If a through model is used, the target field should still target the actual target model,
+	// the through model should then use this field to link to the target model.
+	TargetField() Field
+
+	// A through model for the relationship.
+	//
+	// This can be nil, but does not have to be.
+	// It can support a one to one relationship with or without a through model,
+	// or a many to many relationship with a through model.
+	Through() Through
+}
+
+type TypedRelation interface {
+	Relation
+	Type() RelationType
 }
 
 // Definitions is the interface that wraps the methods for a model's field definitions.
@@ -129,16 +194,7 @@ type Field interface {
 	// Rel etrieves the related model instance for a foreign key field.
 	//
 	// This could be used to generate the SQL for the field.
-	Rel() Definer
-
-	// Retrieves the related model instance for a foreign key field.
-	ForeignKey() Definer
-
-	// Retrieves the related model instance for a many-to-many field.
-	ManyToMany() Relation
-
-	// Retrieves the related model instance for a one-to-one field.
-	OneToOne() Relation
+	Rel() TypedRelation
 
 	// Reports whether the field is the primary field.
 	//

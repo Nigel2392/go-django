@@ -42,9 +42,10 @@ func (o *{{ $struct.Name }}) FieldDefs() attrs.Definitions {
             Blank: {{ $field.Blank }},{{ end }}{{ if $field.ReadOnly }}
             ReadOnly: {{ $field.ReadOnly }},{{ end }}
             Column: {{$field.ColumnName}},{{ if $field.IsForeignKey }}
-            RelForeignKey: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ else if $field.IsManyToMany }}
-            RelManyToMany: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ else if $field.IsOneToOne }}
-            RelOneToOne: &{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{},{{ end }}{{ if (or (not (and $field.IsForeignKey $field.IsManyToMany)) $field.Label) }}
+            RelForeignKey: attrs.Relate(&{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{}, "", nil),{{ else if $field.IsForeignKeyReverse }}
+            RelForeignKeyReverse: attrs.Relate(&{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{}, "", nil),{{ else if $field.IsManyToMany }}
+            RelManyToMany: attrs.Relate(&{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{}, "", nil),{{ else if $field.IsOneToOne }}
+            RelOneToOne: attrs.Relate(&{{$field.RelatedObjectPackageAdressor}}{{if $field.RelatedObjectPackageAdressor}}.{{end}}{{ $field.RelatedObjectName }}{}, "", nil),{{ end }}{{ if (or (not (and $field.IsForeignKey $field.IsManyToMany)) $field.Label) }}
             Label: "{{ $field.GetLabel }}",{{ end }}{{ if $field.GetHelpText }}
             HelpText: "{{ $field.GetHelpText }}",{{ end}}{{ if $field.Primary }}
             Primary: {{ $field.Primary }},{{ end }}{{ if $field.Choices }}

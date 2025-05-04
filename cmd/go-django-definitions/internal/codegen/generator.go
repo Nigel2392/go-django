@@ -264,6 +264,10 @@ func (c *CodeGenerator) BuildTemplateObject(schema *plugin.Schema) *TemplateObje
 				parseRelation(RelManyToMany, m2m)
 			}
 
+			if fkRev, ok := commentMap["fk_rev"]; ok {
+				parseRelation(RelForeignKeyReverse, fkRev)
+			}
+
 			if label, ok := commentMap["label"]; ok {
 				var unquoted, err = strconv.Unquote(label)
 				if err != nil {

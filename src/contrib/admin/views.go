@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
@@ -286,6 +287,14 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 				name      = field.Name()
 				formfield = field.FormField()
 			)
+
+			if formfield == nil {
+				logger.Warnf(
+					"Field %q for model %T does not have a form field",
+					name, instance,
+				)
+				continue
+			}
 
 			var label = model.GetLabel(
 				opts.ViewOptions,

@@ -80,6 +80,7 @@ const (
 	RelNone relationType = iota
 	RelOneToOne
 	RelForeignKey
+	RelForeignKeyReverse
 	RelManyToMany
 )
 
@@ -103,6 +104,10 @@ type Field struct {
 
 func (f *Field) IsForeignKey() bool {
 	return f.RelationType == RelForeignKey
+}
+
+func (f *Field) IsForeignKeyReverse() bool {
+	return f.RelationType == RelForeignKeyReverse
 }
 
 func (f *Field) IsManyToMany() bool {
