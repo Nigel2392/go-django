@@ -8,10 +8,9 @@ var (
 )
 
 type ThroughModel struct {
-	This        Definer
-	Source      string
-	Target      string
-	NextThrough *ThroughModel
+	This   Definer
+	Source string
+	Target string
 
 	defs        Definitions
 	sourceField Field
@@ -53,11 +52,6 @@ func (t *ThroughModel) TargetField() Field {
 		}
 	}
 	return t.targetField
-}
-
-// Through returns the next through model for the relation - this is the field in the target model, or in the next through model.
-func (t *ThroughModel) Through() Through {
-	return t.NextThrough
 }
 
 type relation struct {
@@ -131,6 +125,48 @@ func Relate(target Definer, targetField string, through Through) Relation {
 	}
 
 	return rel
+}
+
+// Reverse creates a new reverse relation between two models.
+//
+// It does this by taking the relation and reversing the source and target models,
+// and optionally any through models.
+//
+// The sourceObj is the model that is being related from in the TypedRelation.
+// The sourceFieldName is the field in the forward model that is being related from in the TypedRelation.
+func ReverseRelation(sourceObj Definer, sourceFieldName string, rel TypedRelation) TypedRelation {
+	var r = &relation{
+		target:         sourceObj,
+		targetFieldStr: sourceFieldName,
+	}
+
+	var through = rel.Through()
+	if through != nil {
+		r.through = &ThroughModel{
+			This:        through.Model(),
+			sourceField: through.TargetField(),
+			targetField: through.SourceField(),
+		}
+	}
+
+	var relTyp RelationType
+	switch rel.Type() {
+	case RelOneToOne:
+		relTyp = RelOneToOne
+	case RelOneToMany:
+		relTyp = RelManyToOne
+	case RelManyToOne:
+		relTyp = RelOneToMany
+	case RelManyToMany:
+		relTyp = RelManyToMany
+	default:
+		assert.Fail("Unknown relation type %q", rel.Type())
+	}
+
+	return &typedRelation{
+		typ:      relTyp,
+		Relation: r,
+	}
 }
 
 type typedRelation struct {

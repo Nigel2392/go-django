@@ -195,15 +195,34 @@ func (f *FieldDef) ColumnName() string {
 }
 
 func (f *FieldDef) Rel() TypedRelation {
+	var (
+		rel Relation
+		typ RelationType
+	)
 	switch {
 	case f.attrDef.RelForeignKey != nil:
-		return &typedRelation{f.attrDef.RelForeignKey, RelManyToOne}
+		rel = f.attrDef.RelForeignKey
+		typ = RelManyToOne
 	case f.attrDef.RelManyToMany != nil:
-		return &typedRelation{f.attrDef.RelManyToMany, RelManyToMany}
+		rel = f.attrDef.RelManyToMany
+		typ = RelManyToMany
 	case f.attrDef.RelOneToOne != nil:
-		return &typedRelation{f.attrDef.RelOneToOne, RelOneToOne}
+		rel = f.attrDef.RelOneToOne
+		typ = RelOneToOne
 	case f.attrDef.RelForeignKeyReverse != nil:
-		return &typedRelation{f.attrDef.RelForeignKeyReverse, RelOneToMany}
+		rel = f.attrDef.RelForeignKeyReverse
+		typ = RelOneToMany
+	}
+
+	if typed, ok := rel.(TypedRelation); ok {
+		return typed
+	}
+
+	if rel != nil {
+		return &typedRelation{
+			typ:      typ,
+			Relation: rel,
+		}
 	}
 	return nil
 }

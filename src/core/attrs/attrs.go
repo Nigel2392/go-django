@@ -85,11 +85,10 @@ type Through interface {
 	TargetField() Field
 }
 
-// Relation is an interface for defining a relation between two models.
+// RelationTarget is an interface for defining a relation target.
 //
-// This provides a very abstract way of defining relations between models,
-// which can be used to define relations in a more generic way.
-type Relation interface {
+// This is the target model for the relation, which can be used to define the relation in a more generic way.
+type RelationTarget interface {
 	// The target model for the relationship.
 	Target() Definer
 
@@ -100,6 +99,14 @@ type Relation interface {
 	// If a through model is used, the target field should still target the actual target model,
 	// the through model should then use this field to link to the target model.
 	TargetField() Field
+}
+
+// Relation is an interface for defining a relation between two models.
+//
+// This provides a very abstract way of defining relations between models,
+// which can be used to define relations in a more generic way.
+type Relation interface {
+	RelationTarget
 
 	// A through model for the relationship.
 	//
@@ -243,6 +250,17 @@ type Field interface {
 
 	// Validates the field's value.
 	Validate() error
+}
+
+type FakeField interface {
+	Field
+
+	// IsFake returns whether the field is a fake field.
+	//
+	// This is used to mark fields that cannot have their value set or retrieved.
+	//
+	// For example, in one of our tests we use this to denote a one-to-one relationship with a through model.
+	IsFake() bool
 }
 
 type Namer interface {
