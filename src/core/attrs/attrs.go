@@ -79,26 +79,31 @@ type Through interface {
 	Model() Definer
 
 	// The source field for the relation - this is the field in the source model.
-	SourceField() Field
+	SourceField() string
 
 	// The target field for the relation - this is the field in the target model, or in the through model.
-	TargetField() Field
+	TargetField() string
 }
 
 // RelationTarget is an interface for defining a relation target.
 //
 // This is the target model for the relation, which can be used to define the relation in a more generic way.
 type RelationTarget interface {
-	// The target model for the relationship.
-	Target() Definer
+	// From represents the source model for the relationship.
+	//
+	// If this is nil then the current interface value is the source model.
+	From() RelationTarget
 
-	// TargetField retrieves the field in the target model for the relationship.
+	// The target model for the relationship.
+	Model() Definer
+
+	// Field retrieves the field in the target model for the relationship.
 	//
 	// This can be nil, in such cases the relationship should use the primary field of the target model.
 	//
 	// If a through model is used, the target field should still target the actual target model,
 	// the through model should then use this field to link to the target model.
-	TargetField() Field
+	Field() Field
 }
 
 // Relation is an interface for defining a relation between two models.
@@ -108,17 +113,14 @@ type RelationTarget interface {
 type Relation interface {
 	RelationTarget
 
+	Type() RelationType
+
 	// A through model for the relationship.
 	//
 	// This can be nil, but does not have to be.
 	// It can support a one to one relationship with or without a through model,
 	// or a many to many relationship with a through model.
 	Through() Through
-}
-
-type TypedRelation interface {
-	Relation
-	Type() RelationType
 }
 
 // Definitions is the interface that wraps the methods for a model's field definitions.
@@ -201,7 +203,7 @@ type Field interface {
 	// Rel etrieves the related model instance for a foreign key field.
 	//
 	// This could be used to generate the SQL for the field.
-	Rel() TypedRelation
+	Rel() Relation
 
 	// Reports whether the field is the primary field.
 	//
@@ -252,15 +254,9 @@ type Field interface {
 	Validate() error
 }
 
-type FakeField interface {
+type CanRelatedName interface {
 	Field
-
-	// IsFake returns whether the field is a fake field.
-	//
-	// This is used to mark fields that cannot have their value set or retrieved.
-	//
-	// For example, in one of our tests we use this to denote a one-to-one relationship with a through model.
-	IsFake() bool
+	RelatedName() string
 }
 
 type Namer interface {

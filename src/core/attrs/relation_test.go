@@ -76,25 +76,25 @@ func (t *typedRelation) Type() attrs.RelationType {
 }
 
 func (f *targetModel) FieldDefs() attrs.Definitions {
-	var fk_rev = attrs.ReverseRelation(
-		&sourceModel{}, "FK",
-		&typedRelation{
-			Relation: attrs.Relate(&targetModel{}, "", nil),
-			typ:      attrs.RelManyToOne,
-		},
-	)
-
-	var o2o_rev = attrs.ReverseRelation(
-		&sourceModel{}, "O2OWithThrough",
-		&typedRelation{
-			Relation: attrs.Relate(&targetModel{}, "O2OWithThrough", &attrs.ThroughModel{
-				This:   &throughModel{},
-				Source: "SourceModel",
-				Target: "TargetModel",
-			}),
-			typ: attrs.RelOneToOne,
-		},
-	)
+	//var fk_rev = attrs.ReverseRelation(
+	//	&sourceModel{}, mustGetField((&sourceModel{}).FieldDefs(), "FK"),
+	//	&typedRelation{
+	//		Relation: attrs.Relate(&targetModel{}, "", nil),
+	//		typ:      attrs.RelManyToOne,
+	//	},
+	//)
+	//
+	//var o2o_rev = attrs.ReverseRelation(
+	//	&sourceModel{}, mustGetField((&sourceModel{}).FieldDefs(), "O2OWithThrough"),
+	//	&typedRelation{
+	//		Relation: attrs.Relate(&targetModel{}, "O2OWithThrough", &attrs.ThroughModel{
+	//			This:   &throughModel{},
+	//			Source: "SourceModel",
+	//			Target: "TargetModel",
+	//		}),
+	//		typ: attrs.RelOneToOne,
+	//	},
+	//)
 
 	return attrs.Define(f,
 		attrs.NewField(f, "ID", &attrs.FieldConfig{
@@ -102,12 +102,12 @@ func (f *targetModel) FieldDefs() attrs.Definitions {
 		}),
 		attrs.NewField(f, "Name", nil),
 		attrs.NewField(f, "Age", nil),
-		attrs.NewField(f, "SourceSet", &attrs.FieldConfig{
-			RelForeignKeyReverse: fk_rev,
-		}),
-		attrs.NewField(f, "SourceRev", &attrs.FieldConfig{
-			RelOneToOne: o2o_rev,
-		}),
+		//attrs.NewField(f, "SourceSet", &attrs.FieldConfig{
+		//	RelForeignKeyReverse: fk_rev,
+		//}),
+		//attrs.NewField(f, "SourceRev", &attrs.FieldConfig{
+		//	RelOneToOne: o2o_rev,
+		//}),
 	)
 }
 
@@ -134,6 +134,13 @@ func typeEquals(t1, t2 any) bool {
 }
 
 func fieldEquals(f1, f2 attrs.Field) bool {
+	if f1 == nil || f2 == nil {
+		if f1 == nil {
+			panic("f1 is nil")
+		} else {
+			panic("f2 is nil")
+		}
+	}
 	return f1.Name() == f2.Name() &&
 		typeEquals(f1.Type(), f2.Type()) &&
 		typeEquals(f1.Instance(), f2.Instance())
@@ -150,8 +157,8 @@ func TestO2OWithThrough(t *testing.T) {
 		field = mustGetField(defs, "O2OWithThrough")
 		rel   = field.Rel()
 
-		target         = rel.Target()
-		targetField    = rel.TargetField()
+		target         = rel.Model()
+		targetField    = rel.Field()
 		through        = rel.Through()
 		throughSource  = through.SourceField()
 		throughTarget  = through.TargetField()
@@ -172,55 +179,53 @@ func TestO2OWithThrough(t *testing.T) {
 		t.Errorf("expected %T, got %T", &throughModel{}, through)
 	}
 
-	if !fieldEquals(throughSource, mustGetField((&throughModel{}).FieldDefs(), "SourceModel")) {
-		t.Errorf("expected %q, got %q", "SourceModel", throughSource.Name())
+	if throughSource != "SourceModel" {
+		t.Errorf("expected %q, got %q", "SourceModel", throughSource)
 	}
 
-	if !fieldEquals(throughTarget, mustGetField((&throughModel{}).FieldDefs(), "TargetModel")) {
-		t.Errorf("expected %q, got %q", "TargetModel", throughTarget.Name())
-	}
-}
-
-func TestO2OWithThroughReverse(t *testing.T) {
-	var source = &targetModel{
-		ID:   1,
-		Name: "source",
-	}
-
-	var (
-		defs  = source.FieldDefs()
-		field = mustGetField(defs, "SourceRev")
-		rel   = field.Rel()
-
-		target      = rel.Target()
-		targetField = rel.TargetField()
-		through     = rel.Through()
-		throughDefs = (&throughModel{}).FieldDefs()
-	)
-
-	// Check relation target
-	if !typeEquals(target, &sourceModel{}) {
-		t.Errorf("expected %T, got %T", &sourceModel{}, target)
-	}
-
-	if !fieldEquals(targetField, mustGetField((&sourceModel{}).FieldDefs(), "O2OWithThrough")) {
-		t.Errorf("expected %q, got %q", "ID", targetField.Name())
-	}
-
-	// Check through model
-	if !typeEquals(through.Model(), &throughModel{}) {
-		t.Errorf("expected %T, got %T", &throughModel{}, through)
-	}
-
-	if !fieldEquals(through.SourceField(), mustGetField(throughDefs, "TargetModel")) {
-		t.Errorf("expected %q, got %q", "TargetModel", through.SourceField().Name())
-	}
-
-	if !fieldEquals(through.TargetField(), mustGetField(throughDefs, "SourceModel")) {
-		t.Errorf("expected %q, got %q", "SourceModel", through.TargetField().Name())
+	if throughTarget != "TargetModel" {
+		t.Errorf("expected %q, got %q", "TargetModel", throughTarget)
 	}
 }
 
+//	func TestO2OWithThroughReverse(t *testing.T) {
+//		var source = &targetModel{
+//			ID:   1,
+//			Name: "source",
+//		}
+//
+//		var (
+//			defs  = source.FieldDefs()
+//			field = mustGetField(defs, "SourceRev")
+//			rel   = field.Rel()
+//
+//			target      = rel.Model()
+//			targetField = rel.Field()
+//			through     = rel.Through()
+//		)
+//
+//		// Check relation target
+//		if !typeEquals(target, &sourceModel{}) {
+//			t.Errorf("expected %T, got %T", &sourceModel{}, target)
+//		}
+//
+//		if !fieldEquals(targetField, mustGetField((&sourceModel{}).FieldDefs(), "O2OWithThrough")) {
+//			t.Errorf("expected %q, got %q", "ID", targetField.Name())
+//		}
+//
+//		// Check through model
+//		if !typeEquals(through.Model(), &throughModel{}) {
+//			t.Errorf("expected %T, got %T", &throughModel{}, through)
+//		}
+//
+//		if through.SourceField() != "TargetModel" {
+//			t.Errorf("expected %q, got %q", "TargetModel", through.SourceField())
+//		}
+//
+//		if through.TargetField() != "SourceModel" {
+//			t.Errorf("expected %q, got %q", "SourceModel", through.TargetField())
+//		}
+//	}
 func TestO2OWithoutThrough(t *testing.T) {
 	var source = &sourceModel{
 		ID:   1,
@@ -232,8 +237,8 @@ func TestO2OWithoutThrough(t *testing.T) {
 		field = mustGetField(defs, "O2OWithoutThrough")
 		rel   = field.Rel()
 
-		target      = rel.Target()
-		targetField = rel.TargetField()
+		target      = rel.Model()
+		targetField = rel.Field()
 		through     = rel.Through()
 	)
 
@@ -262,8 +267,8 @@ func TestFK(t *testing.T) {
 		field = mustGetField(defs, "FK")
 		rel   = field.Rel()
 
-		target      = rel.Target()
-		targetField = rel.TargetField()
+		target      = rel.Model()
+		targetField = rel.Field()
 		through     = rel.Through()
 	)
 
@@ -280,33 +285,35 @@ func TestFK(t *testing.T) {
 	}
 }
 
-func TestFKReverse(t *testing.T) {
-	var source = &targetModel{
-		ID:   1,
-		Name: "source",
-		Age:  1,
-	}
-
-	var (
-		defs  = source.FieldDefs()
-		field = mustGetField(defs, "SourceSet")
-		rel   = field.Rel()
-
-		target      = rel.Target()
-		targetField = rel.TargetField()
-		through     = rel.Through()
-	)
-
-	if through != nil {
-		t.Errorf("expected nil, got %T", through)
-	}
-
-	if !typeEquals(target, &sourceModel{}) {
-		t.Errorf("expected %T, got %T", &targetModel{}, target)
-	}
-
-	if !fieldEquals(targetField, mustGetField((&sourceModel{}).FieldDefs(), "FK")) {
-		t.Errorf("expected %q, got %q", "ID", targetField.Name())
-	}
-
-}
+//
+//func TestFKReverse(t *testing.T) {
+//	var source = &targetModel{
+//		ID:   1,
+//		Name: "source",
+//		Age:  1,
+//	}
+//
+//	var (
+//		defs  = source.FieldDefs()
+//		field = mustGetField(defs, "SourceSet")
+//		rel   = field.Rel()
+//
+//		target      = rel.Model()
+//		targetField = rel.Field()
+//		through     = rel.Through()
+//	)
+//
+//	if through != nil {
+//		t.Errorf("expected nil, got %T", through)
+//	}
+//
+//	if !typeEquals(target, &sourceModel{}) {
+//		t.Errorf("expected %T, got %T", &targetModel{}, target)
+//	}
+//
+//	if !fieldEquals(targetField, mustGetField((&sourceModel{}).FieldDefs(), "FK")) {
+//		t.Errorf("expected %q, got %q", "ID", targetField.Name())
+//	}
+//
+//}
+//

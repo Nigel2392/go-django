@@ -36,35 +36,37 @@ const (
 	AttrIsPrimaryKey     = "field.primary"
 	AttrAutoIncrementKey = "field.auto_increment"
 	AttrUniqueKey        = "field.unique"
+	AttrReverseAliasKey  = "field.reverse_alias"
 )
 
 // FieldConfig is a configuration for a field.
 //
 // This defines how a field should behave and how it should be displayed in a form.
 type FieldConfig struct {
-	Null                 bool                                          // Whether the field allows null values
-	Blank                bool                                          // Whether the field allows blank values
-	ReadOnly             bool                                          // Whether the field is read-only
-	Primary              bool                                          // Whether the field is a primary key
-	Label                string                                        // The label for the field
-	HelpText             string                                        // The help text for the field
-	Column               string                                        // The name of the column in the database
-	MinLength            int64                                         // The minimum length of the field
-	MaxLength            int64                                         // The maximum length of the field
-	MinValue             float64                                       // The minimum value of the field
-	MaxValue             float64                                       // The maximum value of the field
-	Attributes           map[string]interface{}                        // The attributes for the field
-	RelForeignKey        Relation                                      // The related object for the field (foreign key)
-	RelManyToMany        Relation                                      // The related objects for the field (many to many, not implemented
-	RelOneToOne          Relation                                      // The related object for the field (one to one, not implemented)
-	RelForeignKeyReverse Relation                                      // The reverse foreign key for the field (not implemented)
-	Default              any                                           // The default value for the field (or a function that takes in the object type and returns the default value)
-	Validators           []func(interface{}) error                     // Validators for the field
-	FormField            func(opts ...func(fields.Field)) fields.Field // The form field for the field
-	WidgetAttrs          map[string]string                             // The attributes for the widget
-	FormWidget           func(FieldConfig) widgets.Widget              // The form widget for the field
-	Setter               func(Definer, interface{}) error              // A custom setter for the field
-	Getter               func(Definer) (interface{}, bool)             // A custom getter for the field
+	Null                 bool                                                // Whether the field allows null values
+	Blank                bool                                                // Whether the field allows blank values
+	ReadOnly             bool                                                // Whether the field is read-only
+	Primary              bool                                                // Whether the field is a primary key
+	Label                string                                              // The label for the field
+	HelpText             string                                              // The help text for the field
+	Column               string                                              // The name of the column in the database
+	MinLength            int64                                               // The minimum length of the field
+	MaxLength            int64                                               // The maximum length of the field
+	MinValue             float64                                             // The minimum value of the field
+	MaxValue             float64                                             // The maximum value of the field
+	Attributes           map[string]interface{}                              // The attributes for the field
+	RelForeignKey        Relation                                            // The related object for the field (foreign key)
+	RelManyToMany        Relation                                            // The related objects for the field (many to many, not implemented
+	RelOneToOne          Relation                                            // The related object for the field (one to one, not implemented)
+	RelForeignKeyReverse Relation                                            // The reverse foreign key for the field (not implemented)
+	Default              any                                                 // The default value for the field (or a function that takes in the object type and returns the default value)
+	Validators           []func(interface{}) error                           // Validators for the field
+	FormField            func(opts ...func(fields.Field)) fields.Field       // The form field for the field
+	WidgetAttrs          map[string]string                                   // The attributes for the widget
+	FormWidget           func(FieldConfig) widgets.Widget                    // The form widget for the field
+	Setter               func(Definer, interface{}) error                    // A custom setter for the field
+	Getter               func(Definer) (interface{}, bool)                   // A custom getter for the field
+	OnInit               func(Definer, *FieldDef, *FieldConfig) *FieldConfig // A function that is called when the field is initialized
 }
 
 type FieldDef struct {
@@ -110,7 +112,7 @@ func NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef {
 		conf = &FieldConfig{}
 	}
 
-	return &FieldDef{
+	var f = &FieldDef{
 		attrDef:        *conf,
 		instance_t_ptr: instance_t_ptr,
 		instance_v_ptr: instance_v_ptr,
@@ -121,6 +123,17 @@ func NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef {
 		fieldName:      name,
 		// directlyInteractible: directlyInteractible,
 	}
+
+	if conf.OnInit != nil {
+		conf = conf.OnInit(
+			any(instance).(Definer), f, conf,
+		)
+		if conf != nil {
+			f.attrDef = *conf
+		}
+	}
+
+	return f
 }
 
 func (f *FieldDef) Type() reflect.Type {
@@ -194,11 +207,12 @@ func (f *FieldDef) ColumnName() string {
 	return toSnakeCase(f.field_t.Name)
 }
 
-func (f *FieldDef) Rel() TypedRelation {
+func (f *FieldDef) Rel() Relation {
 	var (
 		rel Relation
 		typ RelationType
 	)
+
 	switch {
 	case f.attrDef.RelForeignKey != nil:
 		rel = f.attrDef.RelForeignKey
@@ -214,43 +228,15 @@ func (f *FieldDef) Rel() TypedRelation {
 		typ = RelOneToMany
 	}
 
-	if typed, ok := rel.(TypedRelation); ok {
-		return typed
-	}
-
 	if rel != nil {
 		return &typedRelation{
-			typ:      typ,
+			typ: typ,
+			from: &relationTarget{
+				model: f.Instance(),
+				field: f,
+			},
 			Relation: rel,
 		}
-	}
-	return nil
-}
-
-func (f *FieldDef) ForeignKey() Relation {
-	if f.attrDef.RelForeignKey != nil {
-		return f.attrDef.RelForeignKey
-	}
-	return nil
-}
-
-func (f *FieldDef) ManyToMany() Relation {
-	if f.attrDef.RelManyToMany != nil {
-		return f.attrDef.RelManyToMany
-	}
-	return nil
-}
-
-func (f *FieldDef) OneToOne() Relation {
-	if f.attrDef.RelOneToOne != nil {
-		return f.attrDef.RelOneToOne
-	}
-	return nil
-}
-
-func (f *FieldDef) ManyToOne() Relation {
-	if f.attrDef.RelForeignKeyReverse != nil {
-		return f.attrDef.RelForeignKeyReverse
 	}
 	return nil
 }
@@ -540,13 +526,13 @@ returnField:
 		formField.SetWidget(
 			f.attrDef.FormWidget(f.attrDef),
 		)
-	case f.ForeignKey() != nil:
+	case f.attrDef.RelForeignKey != nil:
 		formField.SetWidget(
 			chooser.SelectWidget(
 				f.AllowBlank(),
 				"--------",
 				chooser.BaseChooserOptions{
-					TargetObject: f.ForeignKey(),
+					TargetObject: f.attrDef.RelForeignKey.Model(),
 					GetPrimaryKey: func(i interface{}) interface{} {
 						var def = i.(Definer)
 						return PrimaryKey(def)
@@ -555,9 +541,9 @@ returnField:
 				nil,
 			),
 		)
-	case f.ManyToMany() != nil:
+	case f.attrDef.RelManyToMany != nil:
 
-	case f.OneToOne() != nil:
+	case f.attrDef.RelOneToOne != nil:
 
 	}
 
