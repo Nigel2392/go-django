@@ -48,9 +48,15 @@ func (f *sourceModel) FieldDefs() attrs.Definitions {
 		attrs.NewField(f, "Name", nil),
 		attrs.NewField(f, "O2OWithThrough", &attrs.FieldConfig{
 			RelOneToOne: o2o_through,
+			Attributes: map[string]interface{}{
+				attrs.AttrReverseAliasKey: "SourceRev1",
+			},
 		}),
 		attrs.NewField(f, "O2OWithoutThrough", &attrs.FieldConfig{
 			RelOneToOne: o2o,
+			Attributes: map[string]interface{}{
+				attrs.AttrReverseAliasKey: "SourceRev2",
+			},
 		}),
 		attrs.NewField(f, "FK", &attrs.FieldConfig{
 			RelForeignKey: fk,
@@ -64,15 +70,6 @@ type targetModel struct {
 	Age       int
 	SourceRev *sourceModel
 	SourceSet []*sourceModel
-}
-
-type typedRelation struct {
-	attrs.Relation
-	typ attrs.RelationType
-}
-
-func (t *typedRelation) Type() attrs.RelationType {
-	return t.typ
 }
 
 func (f *targetModel) FieldDefs() attrs.Definitions {

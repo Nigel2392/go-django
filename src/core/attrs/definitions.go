@@ -20,6 +20,7 @@ type ObjectDefinitions struct {
 // to make it comply with the Definer interface.
 func Define(d Definer, fieldDefinitions ...Field) *ObjectDefinitions {
 	var primaryField string
+
 	var m = orderedmap.NewOrderedMap[string, Field]()
 	for _, f := range fieldDefinitions {
 

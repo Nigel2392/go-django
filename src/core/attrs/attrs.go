@@ -4,10 +4,12 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"iter"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/elliotchance/orderedmap/v2"
 	"github.com/shopspring/decimal"
 )
 
@@ -121,6 +123,41 @@ type Relation interface {
 	// It can support a one to one relationship with or without a through model,
 	// or a many to many relationship with a through model.
 	Through() Through
+}
+
+// ModelMeta represents the meta information for a model.
+//
+// This is used to store information about the model, such as relational information,
+// and other information that is not part of the model itself.
+type ModelMeta interface {
+	// Model returns the model for this meta
+	Model() Definer
+
+	// Forward returns the forward relations for this model
+	Forward(relField string) (Relation, bool)
+
+	// ForwardMap returns the forward relations map for this model
+	ForwardMap() *orderedmap.OrderedMap[string, Relation]
+
+	// Reverse returns the reverse relations for this model
+	Reverse(relField string) (Relation, bool)
+
+	// ReverseMap returns the reverse relations map for this model
+	ReverseMap() *orderedmap.OrderedMap[string, Relation]
+
+	// IterForward iterates over the forward relations for this model
+	IterForward() iter.Seq2[string, Relation]
+
+	// IterReverse iterates over the reverse relations for this model
+	IterReverse() iter.Seq2[string, Relation]
+
+	// Storage returns a value stored on the model meta.
+	//
+	// This is used to store values that are not part of the model itself,
+	// but are needed for the model or possible third party libraries to function.
+	//
+	// Values can be stored on the model meta using the `attrs.StoreOnMeta` helper function.
+	Storage(key string) (any, bool)
 }
 
 // Definitions is the interface that wraps the methods for a model's field definitions.

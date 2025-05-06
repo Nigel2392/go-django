@@ -2,6 +2,7 @@ package attrs
 
 import (
 	"fmt"
+	"iter"
 	"reflect"
 	"strings"
 
@@ -27,23 +28,6 @@ func (t *ThroughModel) SourceField() string {
 // TargetField returns the target field for the relation - this is the field in the target model, or in the next through model.
 func (t *ThroughModel) TargetField() string {
 	return t.Target
-}
-
-type ModelMeta interface {
-	// Model returns the model for this meta
-	Model() Definer
-
-	// Forward returns the forward relations for this model
-	Forward(relField string) (Relation, bool)
-
-	// ForwardMap returns the forward relations map for this model
-	ForwardMap() *orderedmap.OrderedMap[string, Relation]
-
-	// Reverse returns the reverse relations for this model
-	Reverse(relField string) (Relation, bool)
-
-	// ReverseMap returns the reverse relations map for this model
-	ReverseMap() *orderedmap.OrderedMap[string, Relation]
 }
 
 type relationTarget struct {
@@ -111,6 +95,7 @@ type modelMeta struct {
 	model   Definer
 	forward *orderedmap.OrderedMap[string, Relation] // forward orderedmap
 	reverse *orderedmap.OrderedMap[string, Relation] // forward orderedmap
+	stored  *orderedmap.OrderedMap[string, any]      // stored (possible configuration) values
 }
 
 func (m *modelMeta) Model() Definer {
@@ -137,6 +122,28 @@ func (m *modelMeta) Reverse(relField string) (Relation, bool) {
 		return rel, true
 	}
 	return nil, false
+}
+
+func (m *modelMeta) iter(om *orderedmap.OrderedMap[string, Relation]) iter.Seq2[string, Relation] {
+	return func(yield func(attributeName string, rel Relation) bool) {
+		for head := om.Front(); head != nil; head = head.Next() {
+			if !yield(head.Key, head.Value) {
+				break
+			}
+		}
+	}
+}
+
+func (m *modelMeta) IterForward() iter.Seq2[string, Relation] {
+	return m.iter(m.forward)
+}
+
+func (m *modelMeta) IterReverse() iter.Seq2[string, Relation] {
+	return m.iter(m.reverse)
+}
+
+func (m *modelMeta) Storage(key string) (any, bool) {
+	return m.stored.Get(key)
 }
 
 var modelReg = make(map[reflect.Type]*modelMeta)
@@ -189,12 +196,9 @@ func registerReverseRelation(
 	fromField Field,
 	forward Relation,
 ) {
-	//// Step 1: Get final target in the chain (the destination model)
-	//var last = forward
-	//for last.To() != nil {
-	//	last = last.To()
-	//}
 
+	// Step 1: Get the target model and type
+	// Create a new instance of the target target model
 	var targetModel = forward.Model()
 	var targetType = reflect.TypeOf(targetModel)
 	targetModel = reflect.New(targetType.Elem()).Interface().(Definer)
@@ -206,6 +210,8 @@ func registerReverseRelation(
 		meta = modelReg[targetType]
 	}
 
+	// Step 3: Build reversed chain
+	// This is the relation that will be used to access the source model from the target model
 	var reversed = ReverseRelation(
 		fromModel,
 		fromField,
@@ -219,8 +225,27 @@ func registerReverseRelation(
 		reverseAlias = newReverseAlias(reversed)
 	}
 
+	var storageKey = fmt.Sprintf(
+		"relation.%T.%s.%s",
+		fromModel,
+		fromField.Name(),
+		reverseAlias,
+	)
+
+	if _, ok := meta.stored.Get(storageKey); ok {
+		// Cannot register the same reverse relation twice
+		// No need to panic here - since the relation was already registered
+		// we can just skip it
+		return
+	}
+
 	// Step 5: Store in reverseRelations
 	if _, ok := meta.reverse.Get(reverseAlias); ok {
+		// Cannot register a reverse relation with the same name twice
+		// This is a programming error and can happen if you have two reverse relations
+		// from two different models to the same model with the same name
+		//
+		// e.g. if you have two models A and B, and both have a reverse relation to C with the same name
 		panic(fmt.Errorf(
 			"reverse relation %q from %T on %T was already registered, please use a different related name",
 			reverseAlias, fromModel, targetModel,
@@ -228,6 +253,7 @@ func registerReverseRelation(
 	}
 
 	meta.reverse.Set(reverseAlias, reversed)
+	meta.stored.Set(storageKey, nil)
 
 	modelReg[targetType] = meta
 }
@@ -252,6 +278,7 @@ func RegisterModel(model Definer) {
 		model:   reflect.New(t.Elem()).Interface().(Definer),
 		forward: orderedmap.NewOrderedMap[string, Relation](),
 		reverse: orderedmap.NewOrderedMap[string, Relation](),
+		stored:  orderedmap.NewOrderedMap[string, any](),
 	}
 
 	// set the model in the registry early - reverse relations may need it
@@ -307,6 +334,15 @@ func GetRelationMeta(m Definer, name string) (Relation, bool) {
 		return rel, true
 	}
 	return nil, false
+}
+
+func StoreOnMeta(m Definer, key string, value any) {
+	var rType = reflect.TypeOf(m)
+	if meta, ok := modelReg[rType]; ok {
+		meta.stored.Set(key, value)
+	} else {
+		panic(fmt.Errorf("model %T not registered with `queries.RegisterModel`", m))
+	}
 }
 
 type typedRelation struct {
