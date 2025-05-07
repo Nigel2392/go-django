@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -51,6 +52,50 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 			var err error
 			data.MaxValue, err = strconv.ParseFloat(v[0], 64)
 			assert.True(err == nil, "error parsing %q: %v", v[0], err)
+		case "fk":
+			var targetField string
+			if len(v) > 1 {
+				targetField = v[1]
+			}
+
+			data.RelForeignKey = &deferredRelation{
+				typ:          RelManyToOne,
+				model_type:   v[0],
+				target_field: targetField,
+			}
+		case "o2o":
+			var (
+				targetField   string
+				throughModel  string
+				throughSource string
+				throughTarget string
+			)
+			if len(v) > 1 {
+				targetField = v[1]
+			}
+
+			if len(v) > 2 {
+				if len(v) != 5 {
+					assert.Fail(
+						"invalid through definition %q, expected format <target>,<target_field>,<through>,<through_source_field>,<through_target_field>",
+						strings.Join(v, ","),
+					)
+				}
+
+				throughModel = v[2]
+				throughSource = v[3]
+				throughTarget = v[4]
+			}
+
+			data.RelOneToOne = &deferredRelation{
+				typ:            RelOneToOne,
+				model_type:     v[0],
+				target_field:   targetField,
+				through_Ctype:  throughModel,
+				through_source: throughSource,
+				through_target: throughTarget,
+			}
+
 		case "default":
 			var (
 				default_ = v[0]

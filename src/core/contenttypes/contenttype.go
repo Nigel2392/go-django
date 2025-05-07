@@ -129,7 +129,7 @@ func (c *BaseContentType[T]) Scan(src interface{}) error {
 	case string:
 		var registryObj = DefinitionForType(src)
 		if registryObj == nil {
-			return errors.Errorf("invalid content type: %s", src)
+			return errors.Errorf("invalid content type: %s, are you sure it is registered?", src)
 		}
 		var newCtype = NewContentType(registryObj.ContentObject.(T))
 		*c = *newCtype
@@ -163,7 +163,7 @@ func (c *BaseContentType[T]) UnmarshalJSON(data []byte) error {
 	var typeString = string(data)
 	var registryObj = DefinitionForType(typeString)
 	if registryObj == nil {
-		return errors.Errorf("invalid content type: %s", typeString)
+		return errors.Errorf("invalid content type: %s, are you sure it is registered?", typeString)
 	}
 
 	var newCtype = NewContentType(registryObj.ContentObject.(T))

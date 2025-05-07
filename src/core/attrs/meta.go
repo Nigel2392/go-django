@@ -9,88 +9,6 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-type ThroughModel struct {
-	This   Definer
-	Source string
-	Target string
-}
-
-// Model returns the through model itself.
-func (t *ThroughModel) Model() Definer {
-	return t.This
-}
-
-// SourceField returns the source field for the relation - this is the field in the source model.
-func (t *ThroughModel) SourceField() string {
-	return t.Source
-}
-
-// TargetField returns the target field for the relation - this is the field in the target model, or in the next through model.
-func (t *ThroughModel) TargetField() string {
-	return t.Target
-}
-
-type relationTarget struct {
-	model    Definer
-	field    Field
-	fieldStr string
-	prev     RelationTarget
-}
-
-func (r *relationTarget) From() RelationTarget {
-	return r.prev
-}
-
-func (r *relationTarget) Model() Definer {
-	return r.model
-}
-
-func (r *relationTarget) Field() Field {
-	if r.field != nil {
-		return r.field
-	}
-
-	var defs = r.model.FieldDefs()
-	if r.fieldStr != "" {
-		var ok bool
-		r.field, ok = defs.Field(r.fieldStr)
-		if !ok {
-			panic(fmt.Errorf("field %q not found in model %T", r.fieldStr, r.model))
-		}
-	} else {
-		r.field = defs.Primary()
-	}
-
-	return r.field
-}
-
-type relationMeta struct {
-	from    RelationTarget
-	typ     RelationType
-	target  RelationTarget
-	through Through
-}
-
-func (r *relationMeta) From() RelationTarget {
-	return r.from
-}
-
-func (r *relationMeta) Type() RelationType {
-	return r.typ
-}
-
-func (r *relationMeta) Model() Definer {
-	return r.target.Model()
-}
-
-func (r *relationMeta) Field() Field {
-	return r.target.Field()
-}
-
-func (r *relationMeta) Through() Through {
-	return r.through
-}
-
 type modelMeta struct {
 	model   Definer
 	forward *orderedmap.OrderedMap[string, Relation] // forward orderedmap
@@ -310,6 +228,8 @@ func RegisterModel(model Definer) {
 			model, field, rel,
 		)
 	}
+
+	OnModelRegister.Send(model)
 }
 
 func GetModelMeta(model Definer) ModelMeta {
@@ -343,23 +263,6 @@ func StoreOnMeta(m Definer, key string, value any) {
 	} else {
 		panic(fmt.Errorf("model %T not registered with `queries.RegisterModel`", m))
 	}
-}
-
-type typedRelation struct {
-	Relation
-	from RelationTarget
-	typ  RelationType
-}
-
-func (r *typedRelation) Type() RelationType {
-	return r.typ
-}
-
-func (r *typedRelation) From() RelationTarget {
-	if r.from != nil {
-		return r.from
-	}
-	return r.Relation.From()
 }
 
 // Relate creates a new relation between two models.

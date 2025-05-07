@@ -129,6 +129,8 @@ type Relation interface {
 //
 // This is used to store information about the model, such as relational information,
 // and other information that is not part of the model itself.
+//
+// Models which implement the `Definer` interface
 type ModelMeta interface {
 	// Model returns the model for this meta
 	Model() Definer
