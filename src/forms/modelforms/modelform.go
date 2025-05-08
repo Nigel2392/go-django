@@ -2,6 +2,7 @@ package modelforms
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"slices"
 
@@ -300,8 +301,15 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 
 	if f.SaveInstance != nil {
 		err = f.SaveInstance(ctx, f.Model)
-	} else if instance, ok := any(f.Model).(models.Saver); ok {
-		err = instance.Save(ctx)
+	} else {
+		var saved bool
+		saved, err = models.SaveModel(ctx, f.Model)
+		if err == nil && !saved {
+			err = fmt.Errorf("model %T not saved", f.Model)
+		}
+		//if instance, ok := any(f.Model).(models.Saver); ok {
+		//	err = instance.Save(ctx)
+		//}
 	}
 	if err != nil {
 		return cleaned, err

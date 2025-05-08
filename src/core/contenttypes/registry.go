@@ -46,7 +46,7 @@ func (p *ContentTypeRegistry) RegisterAlias(alias string, typeName string) {
 	}
 
 	if _, exists := p.aliasesRev[alias]; exists {
-		panic("ContentTypeRegistry: RegisterAlias called twice for " + alias)
+		return
 	}
 
 	p.aliasesRev[alias] = typeName
@@ -98,10 +98,11 @@ func (p *ContentTypeRegistry) Register(definition *ContentTypeDefinition) {
 	var contentType = definition.ContentType()
 	var typeName = contentType.TypeName()
 	if _, exists := p.registry[typeName]; exists {
-		panic("ContentTypeRegistry: Register called twice for " + typeName)
+		p.EditDefinition(definition)
+		return
+	} else {
+		p.registry[typeName] = definition
 	}
-
-	p.registry[typeName] = definition
 
 	if p.aliasesRev == nil {
 		p.aliasesRev = make(map[string]string)
@@ -145,9 +146,26 @@ func (p *ContentTypeRegistry) EditDefinition(def *ContentTypeDefinition) {
 	if def.GetObject != nil {
 		oldDef.GetObject = def.GetObject
 	}
-	if def.Aliases != nil {
-		oldDef.Aliases = def.Aliases
+	if def.GetInstance != nil {
+		oldDef.GetInstance = def.GetInstance
 	}
+	if def.GetInstances != nil {
+		oldDef.GetInstances = def.GetInstances
+	}
+	if def.GetInstancesByIDs != nil {
+		oldDef.GetInstancesByIDs = def.GetInstancesByIDs
+	}
+
+	if p.aliasesRev == nil {
+		p.aliasesRev = make(map[string]string)
+	}
+
+	if def.Aliases != nil {
+		for _, alias := range def.Aliases {
+			p.RegisterAlias(alias, typeName)
+		}
+	}
+
 	p.registry[typeName] = oldDef
 }
 

@@ -102,7 +102,7 @@ func (o *User) Reload(ctx context.Context) error {
 }
 
 var (
-	_ models.Saver   = &User{}
-	_ models.Deleter = &User{}
-	_ attrs.Definer  = &User{}
+	_ models.ContextSaver   = &User{}
+	_ models.ContextDeleter = &User{}
+	_ attrs.Definer         = &User{}
 )

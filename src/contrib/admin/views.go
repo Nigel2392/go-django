@@ -2,13 +2,13 @@ package admin
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 
 	django "github.com/Nigel2392/go-django/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
+	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -237,16 +237,18 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 			hook(r, AdminSite, model, instance)
 		}
 
-		if deleter, ok := instance.(models.Deleter); ok {
-			err = deleter.Delete(r.Context())
-		} else if delFn := model.DeleteView.DeleteInstance; delFn != nil {
-			err = delFn(r.Context(), instance)
+		if model.DeleteView.DeleteInstance != nil {
+			err = model.DeleteView.DeleteInstance(r.Context(), instance)
 		} else {
-			panic(fmt.Errorf(
-				"instance %T does not implement models.Deleter and no delete function was provided",
+			var deleted bool
+			deleted, err = models.DeleteModel(r.Context(), instance)
+			assert.False(
+				err == nil && !deleted,
+				"model %T not deleted, model does not implement models.Deleter interface",
 				instance,
-			))
+			)
 		}
+
 		if err != nil {
 			context.Set("error", err)
 		}
@@ -313,10 +315,16 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 			modelForm.SaveInstance = opts.SaveInstance
 		} else {
 			modelForm.SaveInstance = func(ctx context.Context, instance attrs.Definer) error {
-				if saver, ok := instance.(models.Saver); ok {
-					return saver.Save(ctx)
+				var saved, err = models.SaveModel(ctx, instance)
+				if err != nil {
+					return err
 				}
-				return errors.New("instance does not implement models.Saver")
+
+				return assert.True(
+					saved,
+					"model %T not saved, model does not implement models.Saver interface",
+					instance,
+				)
 			}
 		}
 		form = modelForm

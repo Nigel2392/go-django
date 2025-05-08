@@ -686,7 +686,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 				return
 			}
 
-			logger.Warnf("Page %q (%v) deleted but has no Delete() method", p.Title, p.ID())
+			logger.Warnf("Page %q (%v) deleted but content node has no Delete() method", p.Title, p.ID())
 		}
 
 		auditlogs.Log("pages:delete", logger.WRN, p, map[string]interface{}{

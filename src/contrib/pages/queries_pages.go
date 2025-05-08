@@ -7,6 +7,7 @@ import (
 
 	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	django_models "github.com/Nigel2392/go-django/src/models"
 )
 
 // SavePage saves a custom page object to the database.
@@ -83,8 +84,15 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 		return err
 	}
 
-	if err = p.Save(ctx); err != nil {
+	var saved bool
+	saved, err = django_models.SaveModel(
+		ctx, p,
+	)
+	if err != nil {
 		return err
+	}
+	if !saved {
+		return fmt.Errorf("page %T could not be saved", p)
 	}
 
 	return tx.Commit()
@@ -114,7 +122,14 @@ func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
 		return err
 	}
 
-	return p.Save(ctx)
+	var saved, err = django_models.SaveModel(ctx, p)
+	if err != nil {
+		return err
+	}
+	if !saved {
+		return fmt.Errorf("page %T could not be saved", p)
+	}
+	return nil
 }
 
 // DeletePage deletes a page object from the database.
@@ -132,9 +147,14 @@ func DeletePage(q models.DBQuerier, ctx context.Context, p DeletablePage) (err e
 		return err
 	}
 
-	err = p.Delete(ctx)
+	var deleted bool
+	deleted, err = django_models.DeleteModel(ctx, p)
 	if err != nil {
 		return err
+	}
+
+	if !deleted {
+		return fmt.Errorf("page %T could not be deleted", p)
 	}
 
 	return FixTree(q, ctx)

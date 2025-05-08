@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	_ models.Saver   = (*User)(nil)
-	_ models.Deleter = (*User)(nil)
+	_ models.ContextSaver   = (*User)(nil)
+	_ models.ContextDeleter = (*User)(nil)
 )
 
 type Password string

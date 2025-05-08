@@ -1,6 +1,7 @@
 package modelforms_test
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"testing"
@@ -15,6 +16,10 @@ type TestModel struct {
 	ID   int
 	Name string
 	Age  int
+}
+
+func (m *TestModel) Save(ctx context.Context) error {
+	return nil
 }
 
 func (m *TestModel) FieldDefs() attrs.Definitions {

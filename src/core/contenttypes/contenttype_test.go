@@ -497,12 +497,34 @@ func TestContentType(t *testing.T) {
 		})
 
 		t.Run("TestRegisterDuplicateContentType", func(t *testing.T) {
-			defer func() {
-				if r := recover(); r == nil {
-					t.Errorf("expected panic on duplicate content type registration")
-				}
-			}()
-			contenttypes.Register(defOne)
+			var defOneCpy = &contenttypes.ContentTypeDefinition{
+				ContentObject: &TestStructOne{},
+				GetLabel: func() string {
+					return "test struct twooooo"
+				},
+				Aliases: aliasOne,
+				GetObject: func() interface{} {
+					return &TestStructOne{
+						ID:   1,
+						Name: "name",
+					}
+				},
+				GetInstance:  getInstanceFunc("TestStructOne"),
+				GetInstances: getInstancesFunc("TestStructOne"),
+			}
+
+			var original = *defOne
+			contenttypes.Register(defOneCpy)
+
+			var Ctype = contenttypes.DefinitionForObject(&TestStructOne{})
+			if Ctype.GetLabel() != "test struct twooooo" {
+				t.Errorf("expected %q, got %q", "test struct twooooo", Ctype.GetLabel())
+			}
+			if Ctype.Aliases[0] != "contenttypes.TestStructOne" {
+				t.Errorf("expected %q, got %q", "contenttypes.TestStructOne", Ctype.Aliases[0])
+			}
+
+			contenttypes.EditDefinition(&original)
 		})
 
 		t.Run("TestPluralLabelAndDescription", func(t *testing.T) {
