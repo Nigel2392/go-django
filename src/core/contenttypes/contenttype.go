@@ -3,6 +3,7 @@ package contenttypes
 import (
 	"database/sql"
 	"database/sql/driver"
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strings"
@@ -160,7 +161,11 @@ func (c BaseContentType[T]) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON implements the json.Unmarshaler interface.
 // It unmarshals the type name of the BaseContentType.
 func (c *BaseContentType[T]) UnmarshalJSON(data []byte) error {
-	var typeString = string(data)
+	var typeString string
+	if err := json.Unmarshal(data, &typeString); err != nil {
+		return errors.Wrap(err, "error unmarshaling content type")
+	}
+
 	var registryObj = DefinitionForType(typeString)
 	if registryObj == nil {
 		return errors.Errorf("invalid content type: %s, are you sure it is registered?", typeString)

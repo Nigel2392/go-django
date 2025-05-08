@@ -13,36 +13,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-type RelationType int
-
-const (
-
-	// ManyToOne is a many to one relationship, also known as a foreign key relationship.
-	//
-	// This means that the target model can have multiple instances of the source model,
-	// but the source model can only have one instance of the target model.
-	// This is the default type for a relation.
-	RelManyToOne RelationType = iota
-
-	// OneToOne is a one to one relationship.
-	//
-	// This means that the target model can only have one instance of the source model.
-	// This is the default type for a relation.
-	RelOneToOne
-
-	// ManyToMany is a many to many relationship.
-	//
-	// This means that the target model can have multiple instances of the source model,
-	// and the source model can have multiple instances of the target model.
-	RelManyToMany
-
-	// OneToMany is a one to many relationship, also known as a reverse foreign key relationship.
-	//
-	// This means that the target model can only have one instance of the source model,
-	// but the source model can have multiple instances of the target model.
-	RelOneToMany
-)
-
 func init() {
 	RegisterFormFieldType(
 		json.RawMessage{},
