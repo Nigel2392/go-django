@@ -209,9 +209,18 @@ func RegisterModel(model Definer) {
 	// if the model is self-referential (e.g. a tree structure)
 	modelReg[t] = meta
 
-	var defs = reflect.New(t.Elem()).Interface().(Definer).FieldDefs()
+	var defs = meta.model.FieldDefs()
 	if defs == nil {
 		panic(fmt.Errorf("error getting model definitions: model %T has no field definitions", model))
+	}
+
+	if mInfo, ok := meta.model.(CanModelInfo); ok {
+		// If the model has a meta, we need to set it
+		// This is used for things like unique_together, ordering, etc.
+		var modelMeta = mInfo.ModelMetaInfo()
+		for k, v := range modelMeta {
+			meta.stored.Set(k, v)
+		}
 	}
 
 	var fields = defs.Fields()

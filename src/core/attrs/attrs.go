@@ -95,6 +95,16 @@ type Relation interface {
 	Through() Through
 }
 
+// CanMeta is an interface for defining a model that can have meta information.
+//
+// This meta information is then stored on the ModelMeta interface.
+type CanModelInfo interface {
+	// ModelMetaInfo returns the meta information for the model.
+	//
+	// This is used to store information about the model, such as relational information,
+	ModelMetaInfo() map[string]any
+}
+
 // ModelMeta represents the meta information for a model.
 //
 // This is used to store information about the model, such as relational information,

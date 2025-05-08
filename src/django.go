@@ -216,7 +216,10 @@ func (a *Application) Register(apps ...any) {
 
 			assert.True(rVal.Kind() == reflect.Func, "Invalid type")
 
-			assert.True(rVal.Type().NumIn() == 0, "Invalid type, must be a function with no arguments")
+			assert.True(
+				rVal.Type().NumIn() == 0 || rVal.Type().NumIn() == 1 && rVal.Type().In(0).IsVariadic(),
+				"Invalid type, must be variadic func(...args) AppConfig or func() AppConfig",
+			)
 			assert.True(rVal.Type().NumOut() == 1, "Invalid type, must return django.AppConfig")
 
 			var retVal = rVal.Call(nil)

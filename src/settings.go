@@ -74,17 +74,25 @@ func ConfigGetOK[T any](s Settings, key string, default_ ...T) (T, bool) {
 	}
 
 	var value, ok = s.Get(key)
-	if !ok && len(default_) == 1 {
+	if !ok && len(default_) > 0 {
 		return default_[0], false
 	} else if !ok || value == nil {
 		return *(new(T)), false
 	}
 
+	var t T
+	var rTyp = reflect.TypeOf(t)
 	if s, ok := value.(string); ok {
 		if s == "" {
 			return default_[0], true
 		}
-		var rTyp = reflect.TypeOf(default_[0])
+
+		if rTyp.Kind() == reflect.String {
+			v, ok := value.(T)
+			assert.True(ok, "Invalid type for key %s", key)
+			return v, true
+		}
+
 		switch rTyp.Kind() {
 		case reflect.String:
 			return value.(T), true
