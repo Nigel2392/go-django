@@ -127,6 +127,7 @@ type AppConfig interface {
 type Application struct {
 	Settings    Settings
 	Apps        *orderedmap.OrderedMap[string, AppConfig]
+	apps        []func() AppConfig
 	Mux         *mux.Mux
 	Log         logger.Log
 	Commands    command.Registry
@@ -163,6 +164,7 @@ func App(opts ...Option) *Application {
 	if Global == nil {
 		Global = &Application{
 			Apps: orderedmap.NewOrderedMap[string, AppConfig](),
+			apps: make([]func() AppConfig, 0),
 			Mux:  mux.New(),
 			Commands: command.NewRegistry(
 				"django",
@@ -202,9 +204,8 @@ func (a *Application) Config(key string) interface{} {
 	return ConfigGet[interface{}](a.Settings, key)
 }
 
-func (a *Application) Register(apps ...any) {
-	for _, appType := range apps {
-
+func (a *Application) newAppRegisterFunc(appType any) func() AppConfig {
+	return func() AppConfig {
 		var app AppConfig
 		switch v := appType.(type) {
 		case AppConfig:
@@ -241,7 +242,13 @@ func (a *Application) Register(apps ...any) {
 		var _, ok = a.Apps.Get(appName)
 		assert.False(ok, "App %s already registered", appName)
 
-		a.Apps.Set(appName, app)
+		return app
+	}
+}
+
+func (a *Application) Register(apps ...any) {
+	for _, appType := range apps {
+		a.apps = append(a.apps, a.newAppRegisterFunc(appType))
 	}
 }
 
@@ -397,6 +404,10 @@ func (a *Application) Flagged(flag AppFlag) bool {
 
 func (a *Application) Initialize() error {
 
+	if a.initialized.Load() {
+		return nil
+	}
+
 	if a.Log == nil {
 		a.Log = &logger.Logger{
 			Level:      logger.INF,
@@ -534,6 +545,22 @@ func (a *Application) Initialize() error {
 
 	a.Commands.Register(sqlShellCommand)
 
+	for _, appFunc := range a.apps {
+		var app = appFunc()
+		a.Apps.Set(app.Name(), app)
+	}
+
+	// Load all models for the application first
+	for h := a.Apps.Front(); h != nil; h = h.Next() {
+		var app = h.Value
+		var models = app.Models()
+		for _, model := range models {
+			attrs.RegisterModel(model)
+		}
+	}
+
+	core.OnModelsReady.Send(a)
+
 	var err error
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
@@ -570,11 +597,6 @@ func (a *Application) Initialize() error {
 		var commands = app.Commands()
 		for _, cmd := range commands {
 			a.Commands.Register(cmd)
-		}
-
-		var models = app.Models()
-		for _, model := range models {
-			attrs.RegisterModel(model)
 		}
 	}
 

@@ -110,7 +110,11 @@ const (
 )
 
 var (
-	pageApp *PageAppConfig
+	pageApp *PageAppConfig = &PageAppConfig{
+		DBRequiredAppConfig: &apps.DBRequiredAppConfig{
+			AppConfig: apps.NewAppConfig("pages"),
+		},
+	}
 )
 
 var (
@@ -131,18 +135,8 @@ func App() *PageAppConfig {
 //
 // This is used to initialize the pages app, set up routes, and register the admin application.
 func NewAppConfig() *PageAppConfig {
-	if pageApp != nil {
-		return pageApp
-	}
 
 	var routePrefixSet = false
-
-	pageApp = &PageAppConfig{
-		DBRequiredAppConfig: &apps.DBRequiredAppConfig{
-			AppConfig: apps.NewAppConfig("pages"),
-		},
-	}
-
 	pageApp.Init = func(settings django.Settings, db *sql.DB) error {
 
 		if err := CreateTable(db); err != nil {
