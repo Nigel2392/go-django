@@ -192,6 +192,9 @@ func RegisterModel(model Definer) {
 		return
 	}
 
+	// Send signal that the model is being registered
+	OnBeforeModelRegister.Send(model)
+
 	var meta = &modelMeta{
 		model:   reflect.New(t.Elem()).Interface().(Definer),
 		forward: orderedmap.NewOrderedMap[string, Relation](),
@@ -205,14 +208,14 @@ func RegisterModel(model Definer) {
 
 	var defs = reflect.New(t.Elem()).Interface().(Definer).FieldDefs()
 	if defs == nil {
-		panic(fmt.Errorf("model %T has no field definitions", model))
+		panic(fmt.Errorf("error getting model definitions: model %T has no field definitions", model))
 	}
 
 	var fields = defs.Fields()
 	for _, field := range fields {
 		var name = field.Name()
 		if name == "" {
-			panic(fmt.Errorf("field %T has no name", field))
+			panic(fmt.Errorf("error creating meta: field %T has no name", field))
 		}
 
 		var rel = field.Rel()
@@ -229,6 +232,7 @@ func RegisterModel(model Definer) {
 		)
 	}
 
+	// Send signal that the model has been registered
 	OnModelRegister.Send(model)
 }
 
@@ -236,7 +240,12 @@ func GetModelMeta(model Definer) ModelMeta {
 	if meta, ok := modelReg[reflect.TypeOf(model)]; ok {
 		return meta
 	}
-	panic(fmt.Errorf("model %T not registered with `queries.RegisterModel`", model))
+	panic(fmt.Errorf("model %T not registered with `attrs.RegisterModel`, could not retrieve meta", model))
+}
+
+func IsModelRegistered(model Definer) bool {
+	var _, ok = modelReg[reflect.TypeOf(model)]
+	return ok
 }
 
 func GetRelationMeta(m Definer, name string) (Relation, bool) {
@@ -261,7 +270,7 @@ func StoreOnMeta(m Definer, key string, value any) {
 	if meta, ok := modelReg[rType]; ok {
 		meta.stored.Set(key, value)
 	} else {
-		panic(fmt.Errorf("model %T not registered with `queries.RegisterModel`", m))
+		panic(fmt.Errorf("model %T not registered with `attrs.RegisterModel`, cannot store value %q", m, key))
 	}
 }
 
