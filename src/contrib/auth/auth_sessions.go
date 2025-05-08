@@ -8,8 +8,8 @@ import (
 
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/except"
-	django_signals "github.com/Nigel2392/go-django/src/signals"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
@@ -26,7 +26,7 @@ func Login(r *http.Request, u *models.User) (*models.User, error) {
 
 	session.Set(SESSION_COOKIE_NAME, u.ID)
 
-	django_signals.SIGNAL_USER_LOGGED_IN.Send(django_signals.UserWithRequest{
+	core.SIGNAL_USER_LOGGED_IN.Send(core.UserWithRequest{
 		User: u,
 		Req:  r,
 	})
@@ -45,7 +45,7 @@ func Logout(r *http.Request) error {
 		return err
 	}
 
-	return django_signals.SIGNAL_USER_LOGGED_OUT.Send(django_signals.UserWithRequest{
+	return core.SIGNAL_USER_LOGGED_OUT.Send(core.UserWithRequest{
 		User: nil,
 		Req:  r,
 	})

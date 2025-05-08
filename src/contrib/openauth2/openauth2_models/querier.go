@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"time"
 
-	django_signals "github.com/Nigel2392/go-django/src/signals"
+	"github.com/Nigel2392/go-django/src/core"
 )
 
 type Querier interface {
@@ -40,7 +40,7 @@ func (q *SignalsQuerier) CreateUser(ctx context.Context, uniqueIdentifier string
 		IsActive:         isActive,
 		IsLoggedIn:       true,
 	}
-	var err = django_signals.SIGNAL_BEFORE_USER_CREATE.Send(u)
+	var err = core.SIGNAL_BEFORE_USER_CREATE.Send(u)
 	if err != nil {
 		return 0, err
 	}
@@ -51,7 +51,7 @@ func (q *SignalsQuerier) CreateUser(ctx context.Context, uniqueIdentifier string
 	}
 
 	u.ID = uint64(id)
-	django_signals.SIGNAL_AFTER_USER_CREATE.Send(u)
+	core.SIGNAL_AFTER_USER_CREATE.Send(u)
 
 	return id, nil
 }
@@ -69,7 +69,7 @@ func (q *SignalsQuerier) UpdateUser(ctx context.Context, providerName string, da
 		IsActive:        isActive,
 		IsLoggedIn:      true,
 	}
-	var err = django_signals.SIGNAL_BEFORE_USER_UPDATE.Send(u)
+	var err = core.SIGNAL_BEFORE_USER_UPDATE.Send(u)
 	if err != nil {
 		return err
 	}
@@ -79,12 +79,12 @@ func (q *SignalsQuerier) UpdateUser(ctx context.Context, providerName string, da
 		return err
 	}
 
-	django_signals.SIGNAL_AFTER_USER_UPDATE.Send(u)
+	core.SIGNAL_AFTER_USER_UPDATE.Send(u)
 	return nil
 }
 
 func (q *SignalsQuerier) DeleteUser(ctx context.Context, id uint64) error {
-	err := django_signals.SIGNAL_BEFORE_USER_DELETE.Send(uint64(id))
+	err := core.SIGNAL_BEFORE_USER_DELETE.Send(uint64(id))
 	if err != nil {
 		return err
 	}
@@ -94,12 +94,12 @@ func (q *SignalsQuerier) DeleteUser(ctx context.Context, id uint64) error {
 		return err
 	}
 
-	django_signals.SIGNAL_AFTER_USER_DELETE.Send(uint64(id))
+	core.SIGNAL_AFTER_USER_DELETE.Send(uint64(id))
 	return nil
 }
 
 func (q *SignalsQuerier) DeleteUsers(ctx context.Context, ids []uint64) error {
-	err := django_signals.SIGNAL_BEFORE_USER_DELETE.Send(ids)
+	err := core.SIGNAL_BEFORE_USER_DELETE.Send(ids)
 	if err != nil {
 		return err
 	}
@@ -109,6 +109,6 @@ func (q *SignalsQuerier) DeleteUsers(ctx context.Context, ids []uint64) error {
 		return err
 	}
 
-	django_signals.SIGNAL_AFTER_USER_DELETE.Send(ids)
+	core.SIGNAL_AFTER_USER_DELETE.Send(ids)
 	return nil
 }

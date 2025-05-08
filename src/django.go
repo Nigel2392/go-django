@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/components"
+	core "github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
@@ -488,25 +489,6 @@ func (a *Application) Initialize() error {
 		"T": trans.T,
 	})
 
-	var err error
-	for h := a.Apps.Front(); h != nil; h = h.Next() {
-		var app = h.Value
-		var deps = app.Dependencies()
-
-		if !a.Flagged(FlagSkipDepsCheck) {
-			for _, dep := range deps {
-				var _, ok = a.Apps.Get(dep)
-				if !ok {
-					return errors.Errorf("Dependency %q not found for app %q", dep, app.Name())
-				}
-			}
-		}
-
-		if err = app.Initialize(a.Settings); err != nil {
-			return errors.Wrapf(err, "Error initializing app %s", app.Name())
-		}
-	}
-
 	a.Commands.Register(&command.Cmd[interface{}]{
 		ID:   "help",
 		Desc: "List all available commands and their usage information",
@@ -549,6 +531,25 @@ func (a *Application) Initialize() error {
 
 	a.Commands.Register(sqlShellCommand)
 
+	var err error
+	for h := a.Apps.Front(); h != nil; h = h.Next() {
+		var app = h.Value
+		var deps = app.Dependencies()
+
+		if !a.Flagged(FlagSkipDepsCheck) {
+			for _, dep := range deps {
+				var _, ok = a.Apps.Get(dep)
+				if !ok {
+					return errors.Errorf("Dependency %q not found for app %q", dep, app.Name())
+				}
+			}
+		}
+
+		if err = app.Initialize(a.Settings); err != nil {
+			return errors.Wrapf(err, "Error initializing app %s", app.Name())
+		}
+	}
+
 	var r Mux = a.Mux
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
@@ -589,6 +590,8 @@ func (a *Application) Initialize() error {
 
 	a.initialized.Store(true)
 
+	core.OnDjangoReady.Send(a)
+
 	// Check if running commands is disabled
 	if a.Flagged(FlagSkipCmds) {
 		return nil
@@ -615,6 +618,7 @@ func (a *Application) Initialize() error {
 	if !ConfigGet(a.Settings, APPVAR_CONTINUE_AFTER_COMMANDS, false) {
 		os.Exit(0)
 	}
+
 	return nil
 }
 

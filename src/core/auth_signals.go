@@ -7,7 +7,7 @@ It defines a generic interface for the user object, which is used in the signals
 You can use this interface to define your own user object, and use the signals to
 handle events.
 */
-package django_signals
+package core
 
 import (
 	"net/http"
@@ -39,10 +39,10 @@ type UserWithRequest struct {
 //
 // */
 var (
-	signal_pool      = signals.NewPool[url.Values]()
+	url_values_pool  = signals.NewPool[url.Values]()
 	user_signal_pool = signals.NewPool[User]()
 	user_req_pool    = signals.NewPool[UserWithRequest]()
-	id_signal_pool   = signals.NewPool[any]()
+	any_signals      = signals.NewPool[any]()
 
 	SIGNAL_BEFORE_USER_CREATE = user_signal_pool.Get("user.before_create") // -> Send(auth.User) (Returned error unused!)
 	SIGNAL_AFTER_USER_CREATE  = user_signal_pool.Get("user.after_create")  // -> Send(auth.User) (Returned error unused!)
@@ -50,10 +50,10 @@ var (
 	SIGNAL_BEFORE_USER_UPDATE = user_signal_pool.Get("user.before_update") // -> Send(auth.User) (Returned error unused!)
 	SIGNAL_AFTER_USER_UPDATE  = user_signal_pool.Get("user.after_update")  // -> Send(auth.User) (Returned error unused!)
 
-	SIGNAL_BEFORE_USER_DELETE = id_signal_pool.Get("user.before_delete") // -> Send(int64) (Returned error unused!)
-	SIGNAL_AFTER_USER_DELETE  = id_signal_pool.Get("user.after_delete")  // -> Send(int64) (Returned error unused!)
+	SIGNAL_BEFORE_USER_DELETE = any_signals.Get("user.before_delete") // -> Send(int64) (Returned error unused!)
+	SIGNAL_AFTER_USER_DELETE  = any_signals.Get("user.after_delete")  // -> Send(int64) (Returned error unused!)
 
-	SIGNAL_USER_LOGGED_IN  = user_req_pool.Get("auth.logged_in")  // -> Send(auth.User)		  (Returned error unused!)
-	SIGNAL_USER_LOGGED_OUT = user_req_pool.Get("auth.logged_out") // -> Send(auth.User(nil))		  (Returned error unused!)
-	SIGNAL_LOGIN_FAILED    = signal_pool.Get("auth.login_failed") // -> Send(auth.User, error) (Returned error unused!)
+	SIGNAL_USER_LOGGED_IN  = user_req_pool.Get("auth.logged_in")      // -> Send(auth.User)		  (Returned error unused!)
+	SIGNAL_USER_LOGGED_OUT = user_req_pool.Get("auth.logged_out")     // -> Send(auth.User(nil))		  (Returned error unused!)
+	SIGNAL_LOGIN_FAILED    = url_values_pool.Get("auth.login_failed") // -> Send(auth.User, error) (Returned error unused!)
 )
