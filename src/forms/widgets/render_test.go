@@ -8,6 +8,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/pkg/errors"
 )
 
@@ -412,7 +413,7 @@ func mockOptions() []widgets.Option {
 
 func TestNewCheckboxInput(t *testing.T) {
 	attrs := map[string]string{"class": "checkbox-input"}
-	checkboxInput := widgets.NewCheckboxInput(attrs, mockOptions)
+	checkboxInput := options.NewCheckboxInput(attrs, mockOptions)
 
 	// Check widget type
 	if checkboxInput.FormType() != "checkbox" {
@@ -445,7 +446,7 @@ func TestNewCheckboxInput(t *testing.T) {
 
 func TestNewRadioInput(t *testing.T) {
 	attrs := map[string]string{"class": "radio-input"}
-	radioInput := widgets.NewRadioInput(attrs, mockOptions)
+	radioInput := options.NewRadioInput(attrs, mockOptions)
 
 	// Check widget type
 	if radioInput.FormType() != "radio" {
@@ -478,7 +479,7 @@ func TestNewRadioInput(t *testing.T) {
 
 func TestNewSelectInput(t *testing.T) {
 	attrs := map[string]string{"class": "select-input"}
-	selectInput := widgets.NewSelectInput(attrs, mockOptions)
+	selectInput := options.NewSelectInput(attrs, mockOptions)
 
 	// Check widget type
 	if selectInput.FormType() != "select" {
@@ -511,7 +512,7 @@ func TestNewSelectInput(t *testing.T) {
 
 func TestNewSelectInputWithBlankOption(t *testing.T) {
 	attrs := map[string]string{"class": "select-input"}
-	selectInput := widgets.NewSelectInput(attrs, mockOptions)
+	selectInput := options.NewSelectInput(attrs, mockOptions)
 	// Set the option to include a blank option
 	selectInput.IncludeBlank = true
 

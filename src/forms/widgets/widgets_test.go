@@ -7,6 +7,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 )
 
 func TestValueFromDataDict(t *testing.T) {
@@ -45,14 +46,14 @@ func TestValueOmittedFromData(t *testing.T) {
 }
 
 func TestOptionsWidgetValidate(t *testing.T) {
-	var options = []widgets.Option{
+	var opts = []widgets.Option{
 		widgets.NewOption("name1", "label1", "value1"),
 		widgets.NewOption("name2", "label2", "value2"),
 		widgets.NewOption("name3", "label3", "value3"),
 	}
 
-	var w = widgets.NewSelectInput(map[string]string{}, func() []widgets.Option {
-		return options
+	var w = options.NewSelectInput(map[string]string{}, func() []widgets.Option {
+		return opts
 	})
 
 	t.Run("valid", func(t *testing.T) {

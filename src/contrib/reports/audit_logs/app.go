@@ -27,6 +27,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
@@ -300,7 +301,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	filter.Add(&filters.BaseFilterSpec[LogEntry]{
 		SpecName: "level",
 		FormField: fields.CharField(fields.Widget(
-			widgets.NewSelectInput(nil, func() []widgets.Option {
+			options.NewSelectInput(nil, func() []widgets.Option {
 				return []widgets.Option{
 					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.DBG)), OptLabel: trans.T("Debug")},
 					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.INF)), OptLabel: trans.T("Info")},

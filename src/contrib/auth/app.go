@@ -54,6 +54,9 @@ func NewAppConfig() django.AppConfig {
 		command_change_user,
 		command_set_password,
 	}
+	app.ModelObjects = []attrs.Definer{
+		&models.User{},
+	}
 	app.Routing = func(m django.Mux) {
 		m.Use(
 			AddUserMiddleware(),

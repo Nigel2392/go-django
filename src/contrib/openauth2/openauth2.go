@@ -94,6 +94,10 @@ func NewAppConfig(cnf Config) django.AppConfig {
 		command_change_user,
 	}
 
+	App.ModelObjects = []attrs.Definer{
+		&openauth2models.User{},
+	}
+
 	App.Init = func(settings django.Settings, db *sql.DB) error {
 		if len(App.Config.AuthConfigurations) == 0 {
 			return errors.New("OpenAuth2: No providers configured")

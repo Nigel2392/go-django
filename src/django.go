@@ -18,6 +18,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/components"
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -85,6 +86,11 @@ type AppConfig interface {
 	//
 	// A Mux object is passed to the function which can be used to define routes.
 	BuildRouting(mux Mux)
+
+	// Models is used to define the models for the app.
+	//
+	// These models can then be used throughout the go-django application.
+	Models() []attrs.Definer
 
 	// Initialize your application.
 	//
@@ -560,6 +566,11 @@ func (a *Application) Initialize() error {
 		var commands = app.Commands()
 		for _, cmd := range commands {
 			a.Commands.Register(cmd)
+		}
+
+		var models = app.Models()
+		for _, model := range models {
+			attrs.RegisterModel(model)
 		}
 	}
 

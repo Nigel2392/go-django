@@ -176,6 +176,9 @@ func registerReverseRelation(
 	modelReg[targetType] = meta
 }
 
+// RegisterModel registers a model to be used for any ORM- type operations.
+//
+// Models are registered automatically in [django.Initialize], but you can also register them manually if needed.
 func RegisterModel(model Definer) {
 	var t = reflect.TypeOf(model)
 	if _, ok := modelReg[t]; ok {

@@ -5,6 +5,7 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
@@ -20,6 +21,7 @@ type AppConfig struct {
 	Ready          func() error
 	CtxProcessors  []func(ctx.ContextWithRequest)
 	TemplateConfig *tpl.Config
+	ModelObjects   []attrs.Definer
 	ready          bool
 }
 
@@ -114,6 +116,10 @@ func (a *AppConfig) BuildRouting(m django.Mux) {
 	if a.Routing != nil {
 		a.Routing(m)
 	}
+}
+
+func (a *AppConfig) Models() []attrs.Definer {
+	return a.ModelObjects
 }
 
 func (a *AppConfig) Initialize(settings django.Settings) error {

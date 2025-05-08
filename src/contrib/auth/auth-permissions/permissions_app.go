@@ -5,12 +5,18 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
+	permissions_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/permissions-models"
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/permissions"
 )
 
 func NewAppConfig() django.AppConfig {
 	var cnf = apps.NewDBAppConfig("auth-permissions")
+	cnf.ModelObjects = []attrs.Definer{
+		&permissions_models.Group{},
+		&permissions_models.Permission{},
+	}
 	cnf.Init = func(settings django.Settings, db *sql.DB) error {
 		var backend, err = NewQueries(db)
 		if err != nil {
