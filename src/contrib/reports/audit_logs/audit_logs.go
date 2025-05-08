@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/backend"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -21,16 +22,7 @@ var (
 	LogUnknownTypes bool = false
 )
 
-type LogEntry interface {
-	ID() uuid.UUID
-	Type() string
-	Level() logger.LogLevel
-	Timestamp() time.Time
-	UserID() interface{}
-	ObjectID() interface{}
-	ContentType() contenttypes.ContentType
-	Data() map[string]interface{}
-}
+type LogEntry = backend.LogEntry
 
 type EntryFilter interface {
 	Type() string
@@ -54,16 +46,7 @@ type Definition interface {
 	GetActions(r *http.Request, logEntry LogEntry) []LogEntryAction
 }
 
-type StorageBackend interface {
-	Setup() error
-	Count() (int, error)
-	Store(logEntry LogEntry) (uuid.UUID, error)
-	RetrieveMany(amount, offset int) ([]LogEntry, error)
-	StoreMany(logEntries []LogEntry) ([]uuid.UUID, error)
-	Retrieve(id uuid.UUID) (LogEntry, error)
-	EntryFilter(filters []AuditLogFilter, amount, offset int) ([]LogEntry, error)
-	CountFilter(filters []AuditLogFilter) (int, error)
-}
+type StorageBackend = backend.StorageBackend
 
 func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data map[string]interface{}) (uuid.UUID, error) {
 

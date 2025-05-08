@@ -337,7 +337,7 @@ func (c *CodeGenerator) Render(w io.Writer, name string, obj *TemplateObject) er
 	var tmpl = template.New(name)
 	funcMap["placeholder"] = func(iter ...int) string {
 		switch c.opts.req.Settings.Engine {
-		case "postgres":
+		case "postgres", "pgx":
 			if len(iter) == 0 {
 				return "?"
 			}

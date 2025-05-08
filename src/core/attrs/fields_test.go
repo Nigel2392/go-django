@@ -48,17 +48,8 @@ func (f *TestEmbeddedModelFields) FieldDefs() attrs.Definitions {
 }
 
 func init() {
-
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		ContentObject: &TestModelFields{},
-		GetInstance: func(i interface{}) (interface{}, error) {
-			var id = i.(int)
-			return &TestModelFields{
-				ID:      int(id),
-				Name:    "name",
-				Objects: []int64{4, 5, 6},
-			}, nil
-		},
 	})
 
 }

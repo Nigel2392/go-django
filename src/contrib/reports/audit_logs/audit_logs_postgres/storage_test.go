@@ -1,4 +1,4 @@
-package auditlogs_mysql_test
+package auditlogs_postgres_test
 
 import (
 	"database/sql"
@@ -15,7 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/google/uuid"
 
-	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
 // For now only used to make sure tests pass on github actions
@@ -69,7 +69,7 @@ func init() {
 	}
 
 	var err error
-	db, err = sql.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
+	db, err = sql.Open("pgx", "host=127.0.0.1 port=5432 user=root password=my-secret-pw dbname=django-pages-test sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
@@ -84,6 +84,7 @@ func init() {
 			django.FlagSkipCmds,
 		),
 	)
+
 	if err := dj.Initialize(); err != nil {
 		panic(err)
 	}

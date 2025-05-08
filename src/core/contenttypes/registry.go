@@ -145,15 +145,6 @@ func (p *ContentTypeRegistry) EditDefinition(def *ContentTypeDefinition) {
 	if def.GetObject != nil {
 		oldDef.GetObject = def.GetObject
 	}
-	if def.GetInstance != nil {
-		oldDef.GetInstance = def.GetInstance
-	}
-	if def.GetInstances != nil {
-		oldDef.GetInstances = def.GetInstances
-	}
-	if def.GetInstancesByIDs != nil {
-		oldDef.GetInstancesByIDs = def.GetInstancesByIDs
-	}
 	if def.Aliases != nil {
 		oldDef.Aliases = def.Aliases
 	}

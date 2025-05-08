@@ -5,29 +5,26 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/backend"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
-type AuditLogFilter interface {
-	Is(string) bool
-	Name() string
-	Value() []interface{}
-}
+type AuditLogFilter = backend.AuditLogFilter
 
 const (
-	AuditLogFilterID           = "id"
-	AuditLogFilterType         = "type"
-	AuditLogFilterLevel_EQ     = "level_eq"
-	AuditLogFilterLevel_GT     = "level_gt"
-	AuditLogFilterLevel_LT     = "level_lt"
-	AuditLogFilterTimestamp_EQ = "timestamp_eq"
-	AuditLogFilterTimestamp_GT = "timestamp_gt"
-	AuditLogFilterTimestamp_LT = "timestamp_lt"
-	AuditLogFilterUserID       = "user_id"
-	AuditLogFilterObjectID     = "object_id"
-	AuditLogFilterContentType  = "content_type"
-	AuditLogFilterData         = "data"
+	AuditLogFilterID           = backend.AuditLogFilterID
+	AuditLogFilterType         = backend.AuditLogFilterType
+	AuditLogFilterLevel_EQ     = backend.AuditLogFilterLevel_EQ
+	AuditLogFilterLevel_GT     = backend.AuditLogFilterLevel_GT
+	AuditLogFilterLevel_LT     = backend.AuditLogFilterLevel_LT
+	AuditLogFilterTimestamp_EQ = backend.AuditLogFilterTimestamp_EQ
+	AuditLogFilterTimestamp_GT = backend.AuditLogFilterTimestamp_GT
+	AuditLogFilterTimestamp_LT = backend.AuditLogFilterTimestamp_LT
+	AuditLogFilterUserID       = backend.AuditLogFilterUserID
+	AuditLogFilterObjectID     = backend.AuditLogFilterObjectID
+	AuditLogFilterContentType  = backend.AuditLogFilterContentType
+	AuditLogFilterData         = backend.AuditLogFilterData
 )
 
 func NewAuditLogFilter(name string, value ...interface{}) AuditLogFilter {

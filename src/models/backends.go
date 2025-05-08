@@ -19,7 +19,6 @@ type Backend[T any] interface {
 }
 
 type BaseQuerier[T any] interface {
-	WithTx(tx *sql.Tx) T
 	Close() error
 }
 

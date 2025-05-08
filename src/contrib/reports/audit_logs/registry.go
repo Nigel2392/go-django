@@ -40,10 +40,6 @@ func Backend() StorageBackend {
 	return registry.backend
 }
 
-func RegisterBackend(backend StorageBackend) {
-	registry.backend = backend
-}
-
 func RegisterFilter(filter EntryFilter) {
 	var typ = filter.Type()
 	if registry.filters[typ] == nil {

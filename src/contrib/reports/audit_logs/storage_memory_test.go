@@ -43,14 +43,6 @@ var entryIds = []uuid.UUID{
 func init() {
 
 	var err error
-	var backend auditlogs.StorageBackend = auditlogs.NewInMemoryStorageBackend()
-	auditlogs.RegisterBackend(backend)
-
-	err = backend.Setup()
-	if err != nil {
-		panic(err)
-	}
-
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		ContentObject: &auditlogs.Entry{},
 		GetObject:     func() interface{} { return &auditlogs.Entry{} },
@@ -74,7 +66,7 @@ func init() {
 		entries = append(entries, entry)
 	}
 
-	_, err = backend.StoreMany(entries)
+	_, err = auditlogs.Backend().StoreMany(entries)
 	if err != nil {
 		panic(err)
 	}

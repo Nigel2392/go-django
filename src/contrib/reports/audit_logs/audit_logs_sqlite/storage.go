@@ -7,9 +7,23 @@ import (
 	"fmt"
 	"strings"
 
-	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/backend"
+	"github.com/Nigel2392/go-django/src/models"
 	"github.com/google/uuid"
+	"github.com/mattn/go-sqlite3"
 )
+
+func init() {
+	backend.Register(&sqlite3.SQLiteDriver{}, &models.BaseBackend[backend.StorageBackend]{
+		CreateTableFn: func(d *sql.DB) error {
+			_, err := d.Exec(createTableSQLITE)
+			return err
+		},
+		NewQuerier: func(d *sql.DB) (backend.StorageBackend, error) {
+			return NewSQLiteStorageBackend(d), nil
+		},
+	})
+}
 
 const (
 	createTableSQLITE = `CREATE TABLE IF NOT EXISTS audit_logs (
@@ -36,26 +50,29 @@ type sqliteStorageBackend struct {
 	db *sql.DB
 }
 
-func NewSQLiteStorageBackend(db *sql.DB) auditlogs.StorageBackend {
+func NewSQLiteStorageBackend(db *sql.DB) backend.StorageBackend {
 	return &sqliteStorageBackend{db: db}
 }
 
-func (s *sqliteStorageBackend) Setup() error {
-	_, err := s.db.Exec(createTableSQLITE)
-	return err
+func (s *sqliteStorageBackend) WithTx(tx *sql.Tx) backend.StorageBackend {
+	return s
 }
 
-func (s *sqliteStorageBackend) Store(logEntry auditlogs.LogEntry) (uuid.UUID, error) {
+func (s *sqliteStorageBackend) Close() error {
+	return nil
+}
+
+func (s *sqliteStorageBackend) Store(logEntry backend.LogEntry) (uuid.UUID, error) {
 	// var log = logger.NameSpace(logEntry.Type())
 	// log.Log(logEntry.Level(), fmt.Sprint(logEntry))
 
-	var id, typeStr, level, timestamp, userID, objectID, contentType, data = auditlogs.SerializeRow(logEntry)
+	var id, typeStr, level, timestamp, userID, objectID, contentType, data = backend.SerializeRow(logEntry)
 
 	_, err := s.db.Exec(insertSQLITE, id, typeStr, level, timestamp, string(userID), string(objectID), contentType, string(data))
 	return id, err
 }
 
-func (s *sqliteStorageBackend) StoreMany(logEntries []auditlogs.LogEntry) ([]uuid.UUID, error) {
+func (s *sqliteStorageBackend) StoreMany(logEntries []backend.LogEntry) ([]uuid.UUID, error) {
 	var ids = make([]uuid.UUID, 0)
 	for _, logEntry := range logEntries {
 		id, err := s.Store(logEntry)
@@ -67,17 +84,17 @@ func (s *sqliteStorageBackend) StoreMany(logEntries []auditlogs.LogEntry) ([]uui
 	return ids, nil
 }
 
-func (s *sqliteStorageBackend) Retrieve(id uuid.UUID) (auditlogs.LogEntry, error) {
+func (s *sqliteStorageBackend) Retrieve(id uuid.UUID) (backend.LogEntry, error) {
 
 	row := s.db.QueryRow(selectSQLITE, id)
 	if row.Err() != nil {
 		return nil, row.Err()
 	}
 
-	return auditlogs.ScanRow(row)
+	return backend.ScanRow(row)
 }
 
-func (s *sqliteStorageBackend) RetrieveForUser(userID interface{}, amount, offset int) ([]auditlogs.LogEntry, error) {
+func (s *sqliteStorageBackend) RetrieveForUser(userID interface{}, amount, offset int) ([]backend.LogEntry, error) {
 	var idBuf = new(bytes.Buffer)
 	enc := json.NewEncoder(idBuf)
 	err := enc.Encode(userID)
@@ -91,9 +108,9 @@ func (s *sqliteStorageBackend) RetrieveForUser(userID interface{}, amount, offse
 	}
 	defer rows.Close()
 
-	var entries = make([]auditlogs.LogEntry, 0)
+	var entries = make([]backend.LogEntry, 0)
 	for rows.Next() {
-		entry, err := auditlogs.ScanRow(rows)
+		entry, err := backend.ScanRow(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +120,7 @@ func (s *sqliteStorageBackend) RetrieveForUser(userID interface{}, amount, offse
 	return entries, nil
 }
 
-func (s *sqliteStorageBackend) RetrieveForObject(objectID interface{}, amount, offset int) ([]auditlogs.LogEntry, error) {
+func (s *sqliteStorageBackend) RetrieveForObject(objectID interface{}, amount, offset int) ([]backend.LogEntry, error) {
 	var idBuf = new(bytes.Buffer)
 	enc := json.NewEncoder(idBuf)
 	err := enc.Encode(objectID)
@@ -117,9 +134,9 @@ func (s *sqliteStorageBackend) RetrieveForObject(objectID interface{}, amount, o
 	}
 	defer rows.Close()
 
-	var entries = make([]auditlogs.LogEntry, 0)
+	var entries = make([]backend.LogEntry, 0)
 	for rows.Next() {
-		entry, err := auditlogs.ScanRow(rows)
+		entry, err := backend.ScanRow(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -129,16 +146,16 @@ func (s *sqliteStorageBackend) RetrieveForObject(objectID interface{}, amount, o
 	return entries, nil
 }
 
-func (s *sqliteStorageBackend) RetrieveMany(amount, offset int) ([]auditlogs.LogEntry, error) {
+func (s *sqliteStorageBackend) RetrieveMany(amount, offset int) ([]backend.LogEntry, error) {
 	rows, err := s.db.Query(selectManySQLITE, amount, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var entries = make([]auditlogs.LogEntry, 0)
+	var entries = make([]backend.LogEntry, 0)
 	for rows.Next() {
-		entry, err := auditlogs.ScanRow(rows)
+		entry, err := backend.ScanRow(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -148,16 +165,16 @@ func (s *sqliteStorageBackend) RetrieveMany(amount, offset int) ([]auditlogs.Log
 	return entries, nil
 }
 
-func (s *sqliteStorageBackend) RetrieveTyped(logType string, amount, offset int) ([]auditlogs.LogEntry, error) {
+func (s *sqliteStorageBackend) RetrieveTyped(logType string, amount, offset int) ([]backend.LogEntry, error) {
 	rows, err := s.db.Query(selectTypedSQLITE, logType, amount, offset)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
 
-	var entries = make([]auditlogs.LogEntry, 0)
+	var entries = make([]backend.LogEntry, 0)
 	for rows.Next() {
-		entry, err := auditlogs.ScanRow(rows)
+		entry, err := backend.ScanRow(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -167,7 +184,7 @@ func (s *sqliteStorageBackend) RetrieveTyped(logType string, amount, offset int)
 	return entries, nil
 }
 
-func (s *sqliteStorageBackend) EntryFilter(filters []auditlogs.AuditLogFilter, amount, offset int) ([]auditlogs.LogEntry, error) {
+func (s *sqliteStorageBackend) EntryFilter(filters []backend.AuditLogFilter, amount, offset int) ([]backend.LogEntry, error) {
 	var query = new(strings.Builder)
 	var args, err = makeWhereQuery(query, filters)
 	if err != nil {
@@ -195,9 +212,9 @@ func (s *sqliteStorageBackend) EntryFilter(filters []auditlogs.AuditLogFilter, a
 	}
 	defer rows.Close()
 
-	var entries = make([]auditlogs.LogEntry, 0)
+	var entries = make([]backend.LogEntry, 0)
 	for rows.Next() {
-		entry, err := auditlogs.ScanRow(rows)
+		entry, err := backend.ScanRow(rows)
 		if err != nil {
 			return nil, err
 		}
@@ -207,7 +224,7 @@ func (s *sqliteStorageBackend) EntryFilter(filters []auditlogs.AuditLogFilter, a
 	return entries, nil
 }
 
-func (s *sqliteStorageBackend) CountFilter(filters []auditlogs.AuditLogFilter) (int, error) {
+func (s *sqliteStorageBackend) CountFilter(filters []backend.AuditLogFilter) (int, error) {
 	var query = new(strings.Builder)
 	var args, err = makeWhereQuery(query, filters)
 	if err != nil {
@@ -234,11 +251,11 @@ func (s *sqliteStorageBackend) Count() (int, error) {
 	return count, err
 }
 
-func makeWhereQuery(query *strings.Builder, filters []auditlogs.AuditLogFilter) ([]interface{}, error) {
+func makeWhereQuery(query *strings.Builder, filters []backend.AuditLogFilter) ([]interface{}, error) {
 	var args []interface{}
 	for i, filter := range filters {
 		switch filter.Name() {
-		case auditlogs.AuditLogFilterID:
+		case backend.AuditLogFilterID:
 			var value = filter.Value()
 			if len(value) > 1 {
 				var inQ = make([]string, len(value))
@@ -251,7 +268,7 @@ func makeWhereQuery(query *strings.Builder, filters []auditlogs.AuditLogFilter) 
 				fmt.Fprint(query, "id = ?")
 				args = append(args, value[0])
 			}
-		case auditlogs.AuditLogFilterType:
+		case backend.AuditLogFilterType:
 			var value = filter.Value()
 			if len(value) > 1 {
 				var inQ = make([]string, len(value))
@@ -264,25 +281,25 @@ func makeWhereQuery(query *strings.Builder, filters []auditlogs.AuditLogFilter) 
 				fmt.Fprint(query, "type = ?")
 				args = append(args, value[0])
 			}
-		case auditlogs.AuditLogFilterLevel_EQ:
+		case backend.AuditLogFilterLevel_EQ:
 			fmt.Fprint(query, "level = ?")
 			args = append(args, filter.Value()[0])
-		case auditlogs.AuditLogFilterLevel_GT:
+		case backend.AuditLogFilterLevel_GT:
 			fmt.Fprint(query, "level > ?")
 			args = append(args, filter.Value()[0])
-		case auditlogs.AuditLogFilterLevel_LT:
+		case backend.AuditLogFilterLevel_LT:
 			fmt.Fprint(query, "level < ?")
 			args = append(args, filter.Value()[0])
-		case auditlogs.AuditLogFilterTimestamp_EQ:
+		case backend.AuditLogFilterTimestamp_EQ:
 			fmt.Fprint(query, "timestamp = ?")
 			args = append(args, filter.Value()[0])
-		case auditlogs.AuditLogFilterTimestamp_GT:
+		case backend.AuditLogFilterTimestamp_GT:
 			fmt.Fprint(query, "timestamp > ?")
 			args = append(args, filter.Value()[0])
-		case auditlogs.AuditLogFilterTimestamp_LT:
+		case backend.AuditLogFilterTimestamp_LT:
 			fmt.Fprint(query, "timestamp < ?")
 			args = append(args, filter.Value()[0])
-		case auditlogs.AuditLogFilterUserID:
+		case backend.AuditLogFilterUserID:
 			if len(filter.Value()) > 1 {
 				var inQ = make([]string, len(filter.Value()))
 				for i, v := range filter.Value() {
@@ -306,7 +323,7 @@ func makeWhereQuery(query *strings.Builder, filters []auditlogs.AuditLogFilter) 
 				}
 				args = append(args, b.String())
 			}
-		case auditlogs.AuditLogFilterObjectID:
+		case backend.AuditLogFilterObjectID:
 			if len(filter.Value()) > 1 {
 				var inQ = make([]string, len(filter.Value()))
 				for i, v := range filter.Value() {
@@ -330,10 +347,10 @@ func makeWhereQuery(query *strings.Builder, filters []auditlogs.AuditLogFilter) 
 				}
 				args = append(args, b.String())
 			}
-		case auditlogs.AuditLogFilterContentType:
+		case backend.AuditLogFilterContentType:
 			fmt.Fprint(query, "content_type = ?")
 			args = append(args, filter.Value()[0])
-		case auditlogs.AuditLogFilterData:
+		case backend.AuditLogFilterData:
 			var value = filter.Value()
 			switch value[0].(type) {
 			case string:

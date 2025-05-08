@@ -1,6 +1,7 @@
 package auditlogs
 
 import (
+	"database/sql"
 	"reflect"
 	"slices"
 	"sync"
@@ -24,6 +25,14 @@ func NewInMemoryStorageBackend() StorageBackend {
 }
 
 func (i *inMemoryStorageBackend) Setup() error {
+	return nil
+}
+
+func (i *inMemoryStorageBackend) WithTx(tx *sql.Tx) StorageBackend {
+	return i
+}
+
+func (i *inMemoryStorageBackend) Close() error {
 	return nil
 }
 

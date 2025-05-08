@@ -1,6 +1,7 @@
 package auditlogs
 
 import (
+	"database/sql"
 	"io/fs"
 	"net/http"
 	"strconv"
@@ -12,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
+	"github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/backend"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -25,6 +27,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
@@ -51,38 +54,38 @@ func NewAppConfig() django.AppConfig {
 	}
 	Logs.Init = func(settings django.Settings) error {
 
-		// if registry.backend == nil {
-		// var db = django.ConfigGet[*sql.DB](
-		// django.Global.Settings,
-		// django.APPVAR_DATABASE,
-		// )
-		//
-		// if db == nil {
-		// goto setupBackend
-		// }
-		//
-		// fmt.Print("No database backend was setup")
-		// switch db.Driver().(type) {
-		// case mysql.MySQLDriver:
-		// fmt.Println(" defaulting to MySQL")
-		// registry.backend = _NewMySQLStorageBackend(db)
-		// case *sqlite3.SQLiteDriver:
-		// fmt.Println(" defaulting to SQLite")
-		// registry.backend = _NewSQLiteStorageBackend(db)
-		// default:
-		// fmt.Println(" defaulting to in-memory storage, no other suitable backend found")
-		// registry.backend = NewInMemoryStorageBackend()
-		// }
-		// }
-		//
-		// setupBackend:
-		if registry.backend != nil {
-			var err = registry.backend.Setup()
-			if err != nil {
-				return err
+		if registry.backend == nil {
+			var db = django.ConfigGet[*sql.DB](
+				django.Global.Settings,
+				django.APPVAR_DATABASE,
+			)
+
+			if db == nil {
+				goto continueInit
 			}
+
+			var backend, err = backend.GetBackend(db.Driver())
+			if err != nil {
+				if errors.Is(err, models.ErrBackendNotFound) {
+					registry.backend = NewInMemoryStorageBackend()
+					goto continueInit
+				}
+				return errors.Wrap(err, "Failed to get audit logs backend")
+			}
+
+			if err = backend.CreateTable(db); err != nil {
+				return errors.Wrap(err, "Failed to create audit logs table")
+			}
+
+			qs, err := backend.NewQuerySet(db)
+			if err != nil {
+				return errors.Wrap(err, "Failed to create audit logs query set")
+			}
+
+			registry.backend = qs
 		}
 
+	continueInit:
 		goldcrest.Register(
 			reports.ReportsMenuHook, 0,
 			reports.ReportsMenuHookFunc(func() []menu.MenuItem {

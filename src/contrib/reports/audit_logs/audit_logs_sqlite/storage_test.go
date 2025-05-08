@@ -6,8 +6,8 @@ import (
 	"testing"
 	"time"
 
+	django "github.com/Nigel2392/go-django/src"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
-	auditlogs_sqlite "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/audit_logs_sqlite"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/google/uuid"
@@ -53,13 +53,18 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	var backend auditlogs.StorageBackend = auditlogs_sqlite.NewSQLiteStorageBackend(db)
-	auditlogs.RegisterBackend(backend)
 
 	db.Exec("DROP TABLE IF EXISTS audit_logs;")
 
-	err = backend.Setup()
-	if err != nil {
+	var dj = django.App(
+		django.Configure(map[string]interface{}{
+			django.APPVAR_DATABASE: db,
+		}),
+		django.Flag(
+			django.FlagSkipCmds,
+		),
+	)
+	if err := dj.Initialize(); err != nil {
 		panic(err)
 	}
 
@@ -86,7 +91,7 @@ func init() {
 		entries = append(entries, entry)
 	}
 
-	_, err = backend.StoreMany(entries)
+	_, err = auditlogs.Backend().StoreMany(entries)
 	if err != nil {
 		panic(err)
 	}
