@@ -130,39 +130,33 @@ func (p *ContentTypeRegistry) EditDefinition(def *ContentTypeDefinition) {
 	if oldDef == nil {
 		panic("ContentTypeRegistry: EditDefinition called for unknown type " + typeName)
 	}
-
 	if def.GetLabel != nil {
 		oldDef.GetLabel = def.GetLabel
 	}
-
 	if def.GetPluralLabel != nil {
 		oldDef.GetPluralLabel = def.GetPluralLabel
 	}
-
 	if def.GetDescription != nil {
 		oldDef.GetDescription = def.GetDescription
 	}
-
 	if def.GetInstanceLabel != nil {
 		oldDef.GetInstanceLabel = def.GetInstanceLabel
 	}
-
 	if def.GetObject != nil {
 		oldDef.GetObject = def.GetObject
 	}
-
 	if def.GetInstance != nil {
 		oldDef.GetInstance = def.GetInstance
 	}
-
 	if def.GetInstances != nil {
 		oldDef.GetInstances = def.GetInstances
 	}
-
+	if def.GetInstancesByIDs != nil {
+		oldDef.GetInstancesByIDs = def.GetInstancesByIDs
+	}
 	if def.Aliases != nil {
 		oldDef.Aliases = def.Aliases
 	}
-
 	p.registry[typeName] = oldDef
 }
 
