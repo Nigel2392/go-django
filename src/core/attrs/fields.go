@@ -47,6 +47,7 @@ type FieldConfig struct {
 	Blank                bool                                                // Whether the field allows blank values
 	ReadOnly             bool                                                // Whether the field is read-only
 	Primary              bool                                                // Whether the field is a primary key
+	NameOverride         string                                              // An optional override for the field name
 	Label                string                                              // The label for the field
 	HelpText             string                                              // The help text for the field
 	Column               string                                              // The name of the column in the database
@@ -85,7 +86,7 @@ type FieldDef struct {
 // NewField creates a new field definition for the given instance.
 //
 // This can then be used for managing the field in a more abstract way.
-func NewField[T any](instance *T, name string, conf *FieldConfig) *FieldDef {
+func NewField(instance Definer, name string, conf *FieldConfig) *FieldDef {
 	var (
 		instance_t_ptr = reflect.TypeOf(instance)
 		instance_v_ptr = reflect.ValueOf(instance)
@@ -159,7 +160,7 @@ func (f *FieldDef) Label() string {
 		}
 	}
 
-	return trans.T(capCaser.String(f.fieldName))
+	return trans.T(capCaser.String(f.Name()))
 }
 
 func (f *FieldDef) HelpText() string {
@@ -175,6 +176,9 @@ func (f *FieldDef) HelpText() string {
 }
 
 func (f *FieldDef) Name() string {
+	if f.attrDef.NameOverride != "" {
+		return f.attrDef.NameOverride
+	}
 	return f.fieldName
 }
 
@@ -207,24 +211,24 @@ func (f *FieldDef) ColumnName() string {
 	return toSnakeCase(f.field_t.Name)
 }
 
-func (f *FieldDef) Rel() Relation {
+func relFromConfig[T FieldDefinition](f T, cnf *FieldConfig) Relation {
 	var (
 		rel Relation
 		typ RelationType
 	)
 
 	switch {
-	case f.attrDef.RelForeignKey != nil:
-		rel = f.attrDef.RelForeignKey
+	case cnf.RelForeignKey != nil:
+		rel = cnf.RelForeignKey
 		typ = RelManyToOne
-	case f.attrDef.RelManyToMany != nil:
-		rel = f.attrDef.RelManyToMany
+	case cnf.RelManyToMany != nil:
+		rel = cnf.RelManyToMany
 		typ = RelManyToMany
-	case f.attrDef.RelOneToOne != nil:
-		rel = f.attrDef.RelOneToOne
+	case cnf.RelOneToOne != nil:
+		rel = cnf.RelOneToOne
 		typ = RelOneToOne
-	case f.attrDef.RelForeignKeyReverse != nil:
-		rel = f.attrDef.RelForeignKeyReverse
+	case cnf.RelForeignKeyReverse != nil:
+		rel = cnf.RelForeignKeyReverse
 		typ = RelOneToMany
 	}
 
@@ -238,7 +242,12 @@ func (f *FieldDef) Rel() Relation {
 			Relation: rel,
 		}
 	}
+
 	return nil
+}
+
+func (f *FieldDef) Rel() Relation {
+	return relFromConfig(f, &f.attrDef)
 }
 
 func (f *FieldDef) IsPrimary() bool {

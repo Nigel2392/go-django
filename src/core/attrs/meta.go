@@ -10,14 +10,22 @@ import (
 )
 
 type modelMeta struct {
-	model   Definer
-	forward *orderedmap.OrderedMap[string, Relation] // forward orderedmap
-	reverse *orderedmap.OrderedMap[string, Relation] // forward orderedmap
-	stored  *orderedmap.OrderedMap[string, any]      // stored (possible configuration) values
+	model       Definer
+	definitions StaticDefinitions
+	forward     *orderedmap.OrderedMap[string, Relation] // forward orderedmap
+	reverse     *orderedmap.OrderedMap[string, Relation] // forward orderedmap
+	stored      *orderedmap.OrderedMap[string, any]      // stored (possible configuration) values
 }
 
 func (m *modelMeta) Model() Definer {
 	return m.model
+}
+
+func (m *modelMeta) Definitions() StaticDefinitions {
+	if m.definitions == nil {
+		m.definitions = newStaticDefinitions(m.model)
+	}
+	return m.definitions
 }
 
 func (m *modelMeta) Forward(relField string) (Relation, bool) {

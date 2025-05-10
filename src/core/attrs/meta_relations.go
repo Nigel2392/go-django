@@ -35,7 +35,7 @@ func (t *ThroughModel) TargetField() string {
 
 type relationTarget struct {
 	model    Definer
-	field    Field
+	field    FieldDefinition
 	fieldStr string
 	prev     RelationTarget
 }
@@ -48,7 +48,7 @@ func (r *relationTarget) Model() Definer {
 	return r.model
 }
 
-func (r *relationTarget) Field() Field {
+func (r *relationTarget) Field() FieldDefinition {
 	if r.field != nil {
 		return r.field
 	}
@@ -86,7 +86,7 @@ func (r *relationMeta) Model() Definer {
 	return r.target.Model()
 }
 
-func (r *relationMeta) Field() Field {
+func (r *relationMeta) Field() FieldDefinition {
 	return r.target.Field()
 }
 
@@ -219,7 +219,7 @@ func (d *deferredRelation) Model() Definer {
 	return d.mdl
 }
 
-func (d *deferredRelation) Field() Field {
+func (d *deferredRelation) Field() FieldDefinition {
 	if d.field != nil {
 		return d.field
 	}

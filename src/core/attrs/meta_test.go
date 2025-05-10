@@ -130,17 +130,31 @@ func typeEquals(t1, t2 any) bool {
 	return reflect.TypeOf(t1) == reflect.TypeOf(t2)
 }
 
-func fieldEquals(f1, f2 attrs.Field) bool {
-	if f1 == nil || f2 == nil {
-		if f1 == nil {
+func fieldEquals[T attrs.FieldDefinition](f1, f2 T) bool {
+	if any(f1) == nil || any(f2) == nil {
+		if any(f1) == nil {
 			panic("f1 is nil")
 		} else {
 			panic("f2 is nil")
 		}
 	}
+
 	return f1.Name() == f2.Name() &&
 		typeEquals(f1.Type(), f2.Type()) &&
 		typeEquals(f1.Instance(), f2.Instance())
+}
+
+func TestFieldEqualsPanic(t *testing.T) {
+	var f1 = (*attrs.FieldDef)(nil)
+	var f2 = (*attrs.FieldDef)(nil)
+
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("expected panic, got nil")
+		}
+	}()
+
+	fieldEquals(f1, f2)
 }
 
 func TestO2OWithThrough(t *testing.T) {
@@ -167,7 +181,7 @@ func TestO2OWithThrough(t *testing.T) {
 		t.Errorf("expected %T, got %T", &targetModel{}, target)
 	}
 
-	if !fieldEquals(targetField, mustGetField((&targetModel{}).FieldDefs(), "ID")) {
+	if !fieldEquals[attrs.FieldDefinition](targetField, getField(&targetModel{}, "ID")) {
 		t.Errorf("expected %q, got %q", "ID", targetField.Name())
 	}
 
@@ -247,7 +261,7 @@ func TestO2OWithoutThrough(t *testing.T) {
 		t.Errorf("expected %T, got %T", &targetModel{}, target)
 	}
 
-	if !fieldEquals(targetField, mustGetField((&targetModel{}).FieldDefs(), "ID")) {
+	if !fieldEquals[attrs.FieldDefinition](targetField, mustGetField((&targetModel{}).FieldDefs(), "ID")) {
 		t.Errorf("expected %q, got %q", "ID", targetField.Name())
 	}
 
@@ -277,7 +291,7 @@ func TestFK(t *testing.T) {
 		t.Errorf("expected %T, got %T", &targetModel{}, target)
 	}
 
-	if !fieldEquals(targetField, mustGetField((&targetModel{}).FieldDefs(), "ID")) {
+	if !fieldEquals[attrs.FieldDefinition](targetField, mustGetField((&targetModel{}).FieldDefs(), "ID")) {
 		t.Errorf("expected %q, got %q", "ID", targetField.Name())
 	}
 }

@@ -75,7 +75,7 @@ type RelationTarget interface {
 	//
 	// If a through model is used, the target field should still target the actual target model,
 	// the through model should then use this field to link to the target model.
-	Field() Field
+	Field() FieldDefinition
 }
 
 // Relation is an interface for defining a relation between two models.
@@ -140,18 +140,15 @@ type ModelMeta interface {
 	//
 	// Values can be stored on the model meta using the `attrs.StoreOnMeta` helper function.
 	Storage(key string) (any, bool)
+
+	// Definitions returns the field definitions for the model.
+	//
+	// This is used to retrieve meta information about fields, such as their type,
+	// and other information that is not part of the model itself.
+	Definitions() StaticDefinitions
 }
 
-// Definitions is the interface that wraps the methods for a model's field definitions.
-//
-// This is some sort of management- interface which allows for simpler and more uniform management of model fields.
-type Definitions interface {
-	// Set sets the value of the field with the given name (or panics if not found).
-	Set(name string, value interface{}) error
-
-	// Retrieves the value of the field with the given name (or panics if not found).
-	Get(name string) interface{}
-
+type staticDefinitions[T FieldDefinition] interface {
 	// TableName retrieves the name of the table in the database.
 	//
 	// This can be used to generate the SQL for the model.
@@ -163,15 +160,10 @@ type Definitions interface {
 	// Retrieves the field with the given name.
 	//
 	// If the field is not found, the second return value will be false.
-	Field(name string) (f Field, ok bool)
-
-	// Set sets the value of the field with the given name (or panics if not found).
-	//
-	// This method will allow setting the value of a field that is marked as not editable.
-	ForceSet(name string, value interface{}) error
+	Field(name string) (f T, ok bool)
 
 	// Retrieves the primary field.
-	Primary() Field
+	Primary() T
 
 	// Instance returns the underlying model instance.
 	Instance() Definer
@@ -179,26 +171,18 @@ type Definitions interface {
 	// Retrieves a slice of all fields.
 	//
 	// The order of the fields is the same as they were defined.
-	Fields() []Field
+	Fields() []T
 
 	// Retrieves the number of fields.
 	Len() int
 }
 
-type Field interface {
-	sql.Scanner
+type StaticDefinitions = staticDefinitions[FieldDefinition]
 
-	// Return the value of the field as a driver.Value.
-	//
-	// This value should be used for storing the field in a database.
-	//
-	// If the field is nil or the zero value, the default value should be returned.
-	driver.Valuer
-
+type FieldDefinition interface {
+	Namer
 	Labeler
 	Helper
-	Stringer
-	Namer
 
 	// Tag retrieves the tag value for the field with the given name.
 	Tag(name string) string
@@ -248,6 +232,41 @@ type Field interface {
 	//
 	// If not, the field should panic when trying to set the value, unless the force parameter passed to the `SetValue` method is true.
 	AllowEdit() bool
+	// Retrieves the form field for the field.
+	//
+	// This is used to generate forms for the field.
+	FormField() fields.Field
+
+	// Validates the field's value.
+	Validate() error
+}
+
+// Definitions is the interface that wraps the methods for a model's field definitions.
+//
+// This is some sort of management- interface which allows for simpler and more uniform management of model fields.
+type Definitions interface {
+	staticDefinitions[Field]
+
+	// Set sets the value of the field with the given name (or panics if not found).
+	Set(name string, value interface{}) error
+
+	// Retrieves the value of the field with the given name (or panics if not found).
+	Get(name string) interface{}
+}
+
+type Field interface {
+	FieldDefinition
+
+	Stringer
+
+	sql.Scanner
+
+	// Return the value of the field as a driver.Value.
+	//
+	// This value should be used for storing the field in a database.
+	//
+	// If the field is nil or the zero value, the default value should be returned.
+	driver.Valuer
 
 	// Retrieves the value of the field.
 	GetValue() interface{}
@@ -263,14 +282,6 @@ type Field interface {
 	// If the field is not allowed to be null, this method should panic when trying to set the value to nil / a reflect.Invalid value.
 	// If the field is not allowed to be blank, this method should panic when trying to set the value to a blank value if the field is not of types:
 	SetValue(v interface{}, force bool) error
-
-	// Retrieves the form field for the field.
-	//
-	// This is used to generate forms for the field.
-	FormField() fields.Field
-
-	// Validates the field's value.
-	Validate() error
 }
 
 type CanRelatedName interface {
