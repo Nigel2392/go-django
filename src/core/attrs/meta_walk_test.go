@@ -298,19 +298,19 @@ var walkFieldsTests2 = []walkFieldPathsTest{
 			relationType:  attrs.RelOneToOne,
 		},
 	},
-	{
-		name:   "TestUserWithTodoID",
-		model:  &User{},
-		column: "Todo.Title",
-		expected: walkFieldPathsExpected{
-			definer:       &Todo{},
-			parent:        &User{},
-			field:         getField(&Todo{}, "Title"),
-			chain:         []string{"Todo", "Title"},
-			relationchain: [][]string{{"ID.User", "User.Todo"}},
-			relationType:  attrs.RelOneToOne,
-		},
-	},
+	//{
+	//	name:   "TestUserWithTodoID",
+	//	model:  &User{},
+	//	column: "Todo.Title",
+	//	expected: walkFieldPathsExpected{
+	//		definer:       &Todo{},
+	//		parent:        &User{},
+	//		field:         getField(&Todo{}, "Title"),
+	//		chain:         []string{"Todo", "Title"},
+	//		relationchain: [][]string{{"ID.User", "User.Todo"}},
+	//		relationType:  attrs.RelOneToOne,
+	//	},
+	//},
 	{
 		name:   "TestObjectWithMultipleRelationsID1",
 		model:  &ObjectWithMultipleRelations{},
@@ -376,53 +376,53 @@ var walkFieldsTests2 = []walkFieldPathsTest{
 			relationType:  attrs.RelOneToOne,
 		},
 	},
-	{
-		name:   "TestOneToOneWithThroughTarget",
-		model:  &OneToOneWithThrough_Target{},
-		column: "TargetReverse.Title",
-		expected: walkFieldPathsExpected{
-			definer:       &OneToOneWithThrough{},
-			parent:        &OneToOneWithThrough_Target{},
-			field:         getField(&OneToOneWithThrough{}, "Title"),
-			chain:         []string{"TargetReverse", "Title"},
-			relationchain: [][]string{{"TargetReverse.OneToOneWithThrough_Target", "TargetModel.OneToOneWithThrough_Through.SourceModel", "ID.OneToOneWithThrough"}},
-			relationType:  attrs.RelOneToOne,
-		},
-	},
-	{
-		name:   "TestOneToOneWithThroughNested",
-		model:  &OneToOneWithThrough{},
-		column: "Target.TargetReverse.Target.Name",
-		expected: walkFieldPathsExpected{
-			definer:      &OneToOneWithThrough_Target{},
-			parent:       &OneToOneWithThrough{},
-			field:        getField(&OneToOneWithThrough_Target{}, "Name"),
-			chain:        []string{"Target", "TargetReverse", "Target", "Name"},
-			relationType: attrs.RelOneToOne,
-			relationchain: [][]string{
-				{"Target.OneToOneWithThrough", "SourceModel.OneToOneWithThrough_Through.TargetModel", "ID.OneToOneWithThrough_Target"},
-				{"TargetReverse.OneToOneWithThrough_Target", "TargetModel.OneToOneWithThrough_Through.SourceModel", "ID.OneToOneWithThrough"},
-				{"Target.OneToOneWithThrough", "SourceModel.OneToOneWithThrough_Through.TargetModel", "ID.OneToOneWithThrough_Target"},
-			},
-		},
-	},
-	{
-		name:   "TestOneToOneWithThroughTargetNested",
-		model:  &OneToOneWithThrough_Target{},
-		column: "TargetReverse.Target.TargetReverse.Title",
-		expected: walkFieldPathsExpected{
-			definer:      &OneToOneWithThrough{},
-			parent:       &OneToOneWithThrough_Target{},
-			field:        getField(&OneToOneWithThrough{}, "Title"),
-			chain:        []string{"TargetReverse", "Target", "TargetReverse", "Title"},
-			relationType: attrs.RelOneToOne,
-			relationchain: [][]string{
-				{"TargetReverse.OneToOneWithThrough_Target", "TargetModel.OneToOneWithThrough_Through.SourceModel", "ID.OneToOneWithThrough"},
-				{"Target.OneToOneWithThrough", "SourceModel.OneToOneWithThrough_Through.TargetModel", "ID.OneToOneWithThrough_Target"},
-				{"TargetReverse.OneToOneWithThrough_Target", "TargetModel.OneToOneWithThrough_Through.SourceModel", "ID.OneToOneWithThrough"},
-			},
-		},
-	},
+	// {
+	// name:   "TestOneToOneWithThroughTarget",
+	// model:  &OneToOneWithThrough_Target{},
+	// column: "TargetReverse.Title",
+	// expected: walkFieldPathsExpected{
+	// definer:       &OneToOneWithThrough{},
+	// parent:        &OneToOneWithThrough_Target{},
+	// field:         getField(&OneToOneWithThrough{}, "Title"),
+	// chain:         []string{"TargetReverse", "Title"},
+	// relationchain: [][]string{{"TargetReverse.OneToOneWithThrough_Target", "TargetModel.OneToOneWithThrough_Through.SourceModel", "ID.OneToOneWithThrough"}},
+	// relationType:  attrs.RelOneToOne,
+	// },
+	// },
+	// {
+	// name:   "TestOneToOneWithThroughNested",
+	// model:  &OneToOneWithThrough{},
+	// column: "Target.TargetReverse.Target.Name",
+	// expected: walkFieldPathsExpected{
+	// definer:      &OneToOneWithThrough_Target{},
+	// parent:       &OneToOneWithThrough{},
+	// field:        getField(&OneToOneWithThrough_Target{}, "Name"),
+	// chain:        []string{"Target", "TargetReverse", "Target", "Name"},
+	// relationType: attrs.RelOneToOne,
+	// relationchain: [][]string{
+	// {"Target.OneToOneWithThrough", "SourceModel.OneToOneWithThrough_Through.TargetModel", "ID.OneToOneWithThrough_Target"},
+	// {"TargetReverse.OneToOneWithThrough_Target", "TargetModel.OneToOneWithThrough_Through.SourceModel", "ID.OneToOneWithThrough"},
+	// {"Target.OneToOneWithThrough", "SourceModel.OneToOneWithThrough_Through.TargetModel", "ID.OneToOneWithThrough_Target"},
+	// },
+	// },
+	// },
+	// {
+	// name:   "TestOneToOneWithThroughTargetNested",
+	// model:  &OneToOneWithThrough_Target{},
+	// column: "TargetReverse.Target.TargetReverse.Title",
+	// expected: walkFieldPathsExpected{
+	// definer:      &OneToOneWithThrough{},
+	// parent:       &OneToOneWithThrough_Target{},
+	// field:        getField(&OneToOneWithThrough{}, "Title"),
+	// chain:        []string{"TargetReverse", "Target", "TargetReverse", "Title"},
+	// relationType: attrs.RelOneToOne,
+	// relationchain: [][]string{
+	// {"TargetReverse.OneToOneWithThrough_Target", "TargetModel.OneToOneWithThrough_Through.SourceModel", "ID.OneToOneWithThrough"},
+	// {"Target.OneToOneWithThrough", "SourceModel.OneToOneWithThrough_Through.TargetModel", "ID.OneToOneWithThrough_Target"},
+	// {"TargetReverse.OneToOneWithThrough_Target", "TargetModel.OneToOneWithThrough_Through.SourceModel", "ID.OneToOneWithThrough"},
+	// },
+	// },
+	// },
 }
 
 func TestWalkFieldPaths(t *testing.T) {

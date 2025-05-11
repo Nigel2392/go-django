@@ -86,7 +86,7 @@ type FieldDef struct {
 // NewField creates a new field definition for the given instance.
 //
 // This can then be used for managing the field in a more abstract way.
-func NewField(instance Definer, name string, conf *FieldConfig) *FieldDef {
+func NewField(instance any, name string, conf *FieldConfig) *FieldDef {
 	var (
 		instance_t_ptr = reflect.TypeOf(instance)
 		instance_v_ptr = reflect.ValueOf(instance)

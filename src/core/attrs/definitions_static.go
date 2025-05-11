@@ -1,17 +1,14 @@
 package attrs
 
 import (
-	"maps"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/src/core/contenttypes"
-	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
 var (
 	_ StaticDefinitions = (*staticDefinition)(nil)
-	_ FieldDefinition   = (*staticField)(nil)
+	// _ FieldDefinition   = (*staticField)(nil)
 )
 
 type staticDefinition struct {
@@ -40,62 +37,63 @@ func newStaticDefinitions(d Definer) *staticDefinition {
 		m.Set(f.Name(), f)
 	}
 
-	var meta = GetModelMeta(d)
-	var reverseRelations = meta.ReverseMap()
-	for head := reverseRelations.Front(); head != nil; head = head.Next() {
-		var key = head.Key
-		var value = head.Value
-		var typ = value.Type()
-
-		var (
-			from           = value.From()
-			fromModelField = from.Field()
-		)
-
-		var confCopy = &FieldConfig{
-			NameOverride: key,
-			Null:         fromModelField.AllowNull(),
-			Blank:        fromModelField.AllowBlank(),
-			ReadOnly:     !fromModelField.AllowEdit(),
-			Primary:      fromModelField.IsPrimary(),
-			Label:        fromModelField.Label(),
-			HelpText:     fromModelField.HelpText(),
-			Column:       fromModelField.ColumnName(),
-			Attributes:   fromModelField.Attrs(),
-			// Validators: ,
-			// FormField:
-			// WidgetAttrs:
-		}
-
-		switch typ {
-		case RelOneToOne: // OneToOne
-			confCopy.RelOneToOne = value
-		case RelManyToOne: // ForeignKey, ForeignKey
-			confCopy.RelOneToOne = value
-		case RelOneToMany: // ForeignKeyReverse, ForeignKeyReverse
-			confCopy.RelForeignKeyReverse = value
-		case RelManyToMany: // ManyToMany
-			confCopy.RelManyToMany = value
-		default:
-			panic("unknown relation type")
-		}
-
-		var field = &staticField{
-			typ:         fromModelField.Type(),
-			name:        key,
-			definitions: sDef,
-			conf:        confCopy,
-		}
-
-		m.Set(key, field)
-	}
-
 	sDef.defs = d.FieldDefs()
 	sDef.Table = sDef.defs.TableName()
 	sDef.PrimaryField = primaryField
 	sDef.fields = m
 
 	return sDef
+
+	//	var meta = GetModelMeta(d)
+	//	var reverseRelations = meta.ReverseMap()
+	//	for head := reverseRelations.Front(); head != nil; head = head.Next() {
+	//		var key = head.Key
+	//		var value = head.Value
+	//		var typ = value.Type()
+	//
+	//		var (
+	//			from           = value.From()
+	//			fromModelField = from.Field()
+	//		)
+	//
+	//		var confCopy = &FieldConfig{
+	//			NameOverride: key,
+	//			Null:         fromModelField.AllowNull(),
+	//			Blank:        fromModelField.AllowBlank(),
+	//			ReadOnly:     !fromModelField.AllowEdit(),
+	//			Primary:      fromModelField.IsPrimary(),
+	//			Label:        fromModelField.Label(),
+	//			HelpText:     fromModelField.HelpText(),
+	//			Column:       fromModelField.ColumnName(),
+	//			Attributes:   fromModelField.Attrs(),
+	//			// Validators: ,
+	//			// FormField:
+	//			// WidgetAttrs:
+	//		}
+	//
+	//		switch typ {
+	//		case RelOneToOne: // OneToOne
+	//			confCopy.RelOneToOne = value
+	//		case RelManyToOne: // ForeignKey, ForeignKey
+	//			confCopy.RelOneToOne = value
+	//		case RelOneToMany: // ForeignKeyReverse, ForeignKeyReverse
+	//			confCopy.RelForeignKeyReverse = value
+	//		case RelManyToMany: // ManyToMany
+	//			confCopy.RelManyToMany = value
+	//		default:
+	//			panic("unknown relation type")
+	//		}
+	//
+	//		var field = &staticField{
+	//			typ:         fromModelField.Type(),
+	//			name:        key,
+	//			definitions: sDef,
+	//			conf:        confCopy,
+	//		}
+	//
+	//		m.Set(key, field)
+	//	}
+
 }
 
 func (d *staticDefinition) TableName() string {
@@ -140,134 +138,134 @@ func (d *staticDefinition) Len() int {
 	return d.fields.Len()
 }
 
-type staticField struct {
-	typ         reflect.Type
-	name        string
-	definitions *staticDefinition
-	conf        *FieldConfig
-	formField   fields.Field
-}
-
-func (s *staticField) Tag(name string) string {
-	return ""
-}
-
-func (s *staticField) Instance() Definer {
-	return s.definitions.Instance()
-}
-
-func (s *staticField) Name() string {
-	if s.conf.NameOverride != "" {
-		return s.conf.NameOverride
-	}
-	return s.name
-}
-
-func (s *staticField) ColumnName() string {
-	return s.conf.Column
-}
-
-func (s *staticField) Type() reflect.Type {
-	return s.typ
-}
-
-func (s *staticField) Attrs() map[string]any {
-	var attrs = make(map[string]interface{})
-	attrs[AttrNameKey] = s.Name()
-	attrs[AttrMaxLengthKey] = s.conf.MaxLength
-	attrs[AttrMinLengthKey] = s.conf.MinLength
-	attrs[AttrMinValueKey] = s.conf.MinValue
-	attrs[AttrMaxValueKey] = s.conf.MaxValue
-	attrs[AttrAllowNullKey] = s.AllowNull()
-	attrs[AttrAllowBlankKey] = s.AllowBlank()
-	attrs[AttrAllowEditKey] = s.AllowEdit()
-	attrs[AttrIsPrimaryKey] = s.IsPrimary()
-	maps.Copy(attrs, s.conf.Attributes)
-	return attrs
-
-}
-
-func (s *staticField) Rel() Relation {
-	switch {
-	case s.conf.RelForeignKey != nil:
-		return s.conf.RelForeignKey
-	case s.conf.RelManyToMany != nil:
-		return s.conf.RelManyToMany
-	case s.conf.RelOneToOne != nil:
-		return s.conf.RelOneToOne
-	case s.conf.RelForeignKeyReverse != nil:
-		return s.conf.RelForeignKeyReverse
-	}
-	return nil
-}
-
-func (s *staticField) Label() string {
-	return s.conf.Label
-}
-
-func (s *staticField) HelpText() string {
-	return s.conf.HelpText
-}
-
-func (s *staticField) IsPrimary() bool {
-	return s.conf.Primary
-}
-
-func (s *staticField) AllowNull() bool {
-	return s.conf.Null
-}
-
-func (s *staticField) AllowBlank() bool {
-	return s.conf.Blank
-}
-
-func (s *staticField) AllowEdit() bool {
-	return s.conf.ReadOnly
-}
-
-func (s *staticField) FormField() fields.Field {
-	if s.formField != nil {
-		return s.formField
-	}
-
-	var opts = make([]func(fields.Field), 0)
-	var rel = s.Rel()
-	if rel != nil {
-		var cTypeDef = contenttypes.DefinitionForObject(rel)
-		if cTypeDef != nil {
-			opts = append(opts, fields.Label(
-				cTypeDef.Label(),
-			))
-		}
-	} else {
-		opts = append(opts, fields.Label(s.Label))
-	}
-
-	opts = append(opts, fields.HelpText(s.HelpText))
-
-	if s.conf.ReadOnly {
-		opts = append(opts, fields.ReadOnly(true))
-	}
-
-	if !s.AllowBlank() {
-		opts = append(opts, fields.Required(true))
-	}
-
-	if s.conf.FormField != nil {
-		return s.conf.FormField(opts...)
-	}
-
-	return nil
-}
-
-func (s *staticField) Validate() error {
-	if s.conf.Validators == nil {
-		return nil
-	}
-	for _, v := range s.conf.Validators {
-		if err := v(s); err != nil {
-			return err
-		}
-	}
-	return nil
-}
+//type staticField struct {
+//	typ         reflect.Type
+//	name        string
+//	definitions *staticDefinition
+//	conf        *FieldConfig
+//	formField   fields.Field
+//}
+//
+//func (s *staticField) Tag(name string) string {
+//	return ""
+//}
+//
+//func (s *staticField) Instance() Definer {
+//	return s.definitions.Instance()
+//}
+//
+//func (s *staticField) Name() string {
+//	if s.conf.NameOverride != "" {
+//		return s.conf.NameOverride
+//	}
+//	return s.name
+//}
+//
+//func (s *staticField) ColumnName() string {
+//	return s.conf.Column
+//}
+//
+//func (s *staticField) Type() reflect.Type {
+//	return s.typ
+//}
+//
+//func (s *staticField) Attrs() map[string]any {
+//	var attrs = make(map[string]interface{})
+//	attrs[AttrNameKey] = s.Name()
+//	attrs[AttrMaxLengthKey] = s.conf.MaxLength
+//	attrs[AttrMinLengthKey] = s.conf.MinLength
+//	attrs[AttrMinValueKey] = s.conf.MinValue
+//	attrs[AttrMaxValueKey] = s.conf.MaxValue
+//	attrs[AttrAllowNullKey] = s.AllowNull()
+//	attrs[AttrAllowBlankKey] = s.AllowBlank()
+//	attrs[AttrAllowEditKey] = s.AllowEdit()
+//	attrs[AttrIsPrimaryKey] = s.IsPrimary()
+//	maps.Copy(attrs, s.conf.Attributes)
+//	return attrs
+//
+//}
+//
+//func (s *staticField) Rel() Relation {
+//	switch {
+//	case s.conf.RelForeignKey != nil:
+//		return s.conf.RelForeignKey
+//	case s.conf.RelManyToMany != nil:
+//		return s.conf.RelManyToMany
+//	case s.conf.RelOneToOne != nil:
+//		return s.conf.RelOneToOne
+//	case s.conf.RelForeignKeyReverse != nil:
+//		return s.conf.RelForeignKeyReverse
+//	}
+//	return nil
+//}
+//
+//func (s *staticField) Label() string {
+//	return s.conf.Label
+//}
+//
+//func (s *staticField) HelpText() string {
+//	return s.conf.HelpText
+//}
+//
+//func (s *staticField) IsPrimary() bool {
+//	return s.conf.Primary
+//}
+//
+//func (s *staticField) AllowNull() bool {
+//	return s.conf.Null
+//}
+//
+//func (s *staticField) AllowBlank() bool {
+//	return s.conf.Blank
+//}
+//
+//func (s *staticField) AllowEdit() bool {
+//	return s.conf.ReadOnly
+//}
+//
+//func (s *staticField) FormField() fields.Field {
+//	if s.formField != nil {
+//		return s.formField
+//	}
+//
+//	var opts = make([]func(fields.Field), 0)
+//	var rel = s.Rel()
+//	if rel != nil {
+//		var cTypeDef = contenttypes.DefinitionForObject(rel)
+//		if cTypeDef != nil {
+//			opts = append(opts, fields.Label(
+//				cTypeDef.Label(),
+//			))
+//		}
+//	} else {
+//		opts = append(opts, fields.Label(s.Label))
+//	}
+//
+//	opts = append(opts, fields.HelpText(s.HelpText))
+//
+//	if s.conf.ReadOnly {
+//		opts = append(opts, fields.ReadOnly(true))
+//	}
+//
+//	if !s.AllowBlank() {
+//		opts = append(opts, fields.Required(true))
+//	}
+//
+//	if s.conf.FormField != nil {
+//		return s.conf.FormField(opts...)
+//	}
+//
+//	return nil
+//}
+//
+//func (s *staticField) Validate() error {
+//	if s.conf.Validators == nil {
+//		return nil
+//	}
+//	for _, v := range s.conf.Validators {
+//		if err := v(s); err != nil {
+//			return err
+//		}
+//	}
+//	return nil
+//}
