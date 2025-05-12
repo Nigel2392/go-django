@@ -56,7 +56,7 @@ We will extend the [`*page_models.PageNode`](./pages_models.md#pagenode) model, 
 
 Following that, we will add the required methods to adhere to the `pages.Page` interface.
 
-It is also required for pages to adhere to the [attrs.Definer](../../attrs.md#definer-interface) interface.
+It is also required for pages to adhere to the [attrs.Definer](../attrs/interfaces.md#definer) interface.
 
 ```go
 // blog/page.go

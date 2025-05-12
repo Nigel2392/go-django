@@ -4,7 +4,7 @@ Models are the core of your application.
 They define the structure of your data and how it interacts with a data store.
 In Go-Django, models are defined as structs define the following methods:
 
-- `FieldDefs()` - Returns a list of [field definitions](./attrs.md#defining-model-attributes) for the model.
+- `FieldDefs()` - Returns a list of [field definitions](./attrs/interfaces.md#definer) for the model.
 - `Save(context.Context) error` - [Saves](./#saving-models) the model instance to the data store.
 - `Delete(context.Context) error` - [Deletes](./#deleting-models) the model instance from the data store.
 

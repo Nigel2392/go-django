@@ -26,12 +26,12 @@ var (
 	// A signal that is called before a model is registered.
 	//
 	// This can be used to add custom logic before a model is registered.
-	OnBeforeModelRegister signals.Signal[Definer]
+	OnBeforeModelRegister = modelSignalPool.Get("attrs.OnBeforeModelRegister")
 
 	// A signal that is called after a model is registered.
 	//
 	// This can be used to add custom logic after a model is registered.
-	OnModelRegister signals.Signal[Definer]
+	OnModelRegister = modelSignalPool.Get("attrs.OnModelRegister")
 )
 
 const (

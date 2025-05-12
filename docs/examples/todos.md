@@ -224,7 +224,7 @@ type Todo struct {
 }
 ```
 
-As seen in [attrs](../attrs.md#defining-model-attributes), we will define the model attributes for the `Todo` model.
+As seen in [attrs](../attrs/implementation.md#manually-defining-fields), we will define the model attributes for the `Todo` model.
 
 This should be a method called `FieldDefs`.
 

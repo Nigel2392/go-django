@@ -1,6 +1,6 @@
 # SQLC Plugin
 
-A SQLC plugin has been implemented to help generate [the definer interface](./attrs.md#definer-interface) for your models.
+A SQLC plugin has been implemented to help generate [the definer interface](./attrs/interfaces.md#definer) for your models.
 
 It is also capable of:
 
