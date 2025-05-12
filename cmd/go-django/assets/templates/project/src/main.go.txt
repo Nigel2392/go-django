@@ -8,8 +8,8 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
+	"github.com/Nigel2392/go-django/src/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
-	auditlogs_sqlite "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/audit_logs_sqlite"
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	$( packageString .ProjectName ) "$( .ModulePath )/src/$( .ProjectName )"
@@ -19,6 +19,10 @@ import (
 )
 
 func main() {
+	var db, err = sql.Open("sqlite3", "./db.sqlite3")
+	if err != nil {
+		panic(err)
+	}
 
 	var app = django.App(
 		django.Configure(map[string]interface{}{
@@ -26,16 +30,7 @@ func main() {
 			django.APPVAR_DEBUG:         false,
 			django.APPVAR_HOST:          "0.0.0.0",
 			django.APPVAR_PORT:          "8080",
-			django.APPVAR_DATABASE: func() *sql.DB {
-				var db, err = sql.Open("sqlite3", "./db.sqlite3")
-				if err != nil {
-					panic(err)
-				}
-				auditlogs.RegisterBackend(
-					auditlogs_sqlite.NewSQLiteStorageBackend(db),
-				)
-				return db
-			}(),
+			django.APPVAR_DATABASE: 	 db,
 			// django.APPVAR_RECOVERER: false,
 
 			"AUTH_EMAIL_LOGIN": true,
@@ -43,6 +38,7 @@ func main() {
 
 		django.Apps(
 			session.NewAppConfig,
+			messages.NewAppConfig,
 			auth.NewAppConfig,
 			admin.NewAppConfig,
 			pages.NewAppConfig,
@@ -54,7 +50,7 @@ func main() {
 
 	pages.SetRoutePrefix("/pages")
 
-	var err = app.Initialize()
+	err = app.Initialize()
 	if err != nil {
 		panic(err)
 	}

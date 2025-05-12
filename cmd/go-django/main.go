@@ -13,6 +13,11 @@ import (
 //go:embed assets/**
 var assetFiles embed.FS
 
+const (
+	GITHUB_PREFIX_URL = "github.com/"
+	GO_DJANGO_PACKAGE = "Nigel2392/go-django"
+)
+
 var funcMap = template.FuncMap{
 	"lowercase": func(s string) string {
 		return strings.ToLower(s)
@@ -35,7 +40,8 @@ func setLogLevel(level logger.LogLevel) func(c *cli.Context, b bool) error {
 
 func main() {
 	logger.Setup(&logger.Logger{
-		Level: logger.WRN,
+		Level:      logger.INF,
+		WrapPrefix: logger.ColoredLogWrapper,
 	})
 	logger.SetOutput(
 		logger.OutputAll,

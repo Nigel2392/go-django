@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"io/fs"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -10,6 +13,35 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/urfave/cli/v2"
 )
+
+type githubTagInfo struct {
+	Name string `json:"name"`
+}
+
+func fetchLatestVersion() (string, error) {
+	// https://api.github.com/repos/%s/tags
+	var url = fmt.Sprintf(
+		"https://api.github.com/repos/%s/tags",
+		GO_DJANGO_PACKAGE,
+	)
+
+	var resp, err = http.Get(url)
+	if err != nil {
+		return "", err
+	}
+
+	var l = make([]githubTagInfo, 0)
+	if err := json.NewDecoder(resp.Body).Decode(&l); err != nil {
+		return "", err
+	}
+
+	if len(l) == 0 {
+		return "", fmt.Errorf("no tags found for %s", GO_DJANGO_PACKAGE)
+	}
+
+	var latest = l[0]
+	return latest.Name, nil
+}
 
 var startProjectCommand = &cli.Command{
 	Name:        "startproject",
@@ -82,11 +114,41 @@ var startProjectCommand = &cli.Command{
 		}
 
 		logger.Infof(
+			"Executing `go mod init %q` in %q",
+			module, projectPath,
+		)
+		var cmd = exec.Command("go", "mod", "init", module)
+		cmd.Dir = projectPath
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+
+		latest, err := fetchLatestVersion()
+		if err != nil {
+			return err
+		}
+
+		logger.Infof(
+			"Executing `go get -u %s@%s` in %q",
+			GO_DJANGO_PACKAGE, latest, projectPath,
+		)
+		cmd = exec.Command("go", "get", "-u", fmt.Sprintf(
+			"%s%s@%s", GITHUB_PREFIX_URL, GO_DJANGO_PACKAGE, latest,
+		))
+		cmd.Dir = projectPath
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return err
+		}
+
+		logger.Infof(
 			"Executing 'go mod tidy' in %q",
 			projectPath,
 		)
-
-		var cmd = exec.Command("go", "mod", "tidy")
+		cmd = exec.Command("go", "mod", "tidy")
 		cmd.Dir = projectPath
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
