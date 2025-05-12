@@ -2,7 +2,6 @@ package attrs
 
 import (
 	"fmt"
-	"iter"
 	"reflect"
 	"strings"
 
@@ -35,14 +34,6 @@ func (m *modelMeta) Forward(relField string) (Relation, bool) {
 	return nil, false
 }
 
-func (m *modelMeta) ForwardMap() *orderedmap.OrderedMap[string, Relation] {
-	return m.forward
-}
-
-func (m *modelMeta) ReverseMap() *orderedmap.OrderedMap[string, Relation] {
-	return m.reverse
-}
-
 func (m *modelMeta) Reverse(relField string) (Relation, bool) {
 	if rel, ok := m.reverse.Get(relField); ok {
 		return rel, true
@@ -50,22 +41,12 @@ func (m *modelMeta) Reverse(relField string) (Relation, bool) {
 	return nil, false
 }
 
-func (m *modelMeta) iter(om *orderedmap.OrderedMap[string, Relation]) iter.Seq2[string, Relation] {
-	return func(yield func(attributeName string, rel Relation) bool) {
-		for head := om.Front(); head != nil; head = head.Next() {
-			if !yield(head.Key, head.Value) {
-				break
-			}
-		}
-	}
+func (m *modelMeta) ForwardMap() *orderedmap.OrderedMap[string, Relation] {
+	return m.forward.Copy()
 }
 
-func (m *modelMeta) IterForward() iter.Seq2[string, Relation] {
-	return m.iter(m.forward)
-}
-
-func (m *modelMeta) IterReverse() iter.Seq2[string, Relation] {
-	return m.iter(m.reverse)
+func (m *modelMeta) ReverseMap() *orderedmap.OrderedMap[string, Relation] {
+	return m.reverse.Copy()
 }
 
 func (m *modelMeta) Storage(key string) (any, bool) {

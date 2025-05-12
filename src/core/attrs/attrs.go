@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
-	"iter"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
@@ -34,6 +33,49 @@ func init() {
 	)
 }
 
+// Keys of attributes defined with the `Attrs()` method on fields.
+//
+// These are used to store extra information about the field.
+//
+// We provide some default keys which might be useful for implementing an ORM, but any keys can be used.
+const (
+	// AttrNameKey (string) is the name of the field.
+	AttrNameKey = "field.name"
+
+	// AttrMaxLengthKey (int64) is the maximum length of the field.
+	AttrMaxLengthKey = "field.max_length"
+
+	// AttrMinLengthKey (int64) is the minimum length of the field.
+	AttrMinLengthKey = "field.min_length"
+
+	// AttrMinValueKey (float64) is the minimum value of the field.
+	AttrMinValueKey = "field.min_value"
+
+	// AttrMaxValueKey (float64) is the maximum value of the field.
+	AttrMaxValueKey = "field.max_value"
+
+	// AttrAllowNullKey (bool) is whether the field allows null values.
+	AttrAllowNullKey = "field.allow_null"
+
+	// AttrAllowBlankKey (bool) is whether the field allows blank values.
+	AttrAllowBlankKey = "field.allow_blank"
+
+	// AttrAllowEditKey (bool) is whether the field is read-only.
+	AttrAllowEditKey = "field.read_only"
+
+	// AttrIsPrimaryKey (bool) is whether the field is a primary key.
+	AttrIsPrimaryKey = "field.primary"
+
+	// AttrAutoIncrementKey (bool) is whether the field is an auto-incrementing field.
+	AttrAutoIncrementKey = "field.auto_increment"
+
+	// AttrUniqueKey (bool) is whether the field is a unique field.
+	AttrUniqueKey = "field.unique"
+
+	// AttrReverseAliasKey (string) is the reverse alias of the field.
+	AttrReverseAliasKey = "field.reverse_alias"
+)
+
 // Definer is the interface that wraps the FieldDefs method.
 //
 // FieldDefs retrieves the field definitions for the model.
@@ -50,10 +92,10 @@ type Through interface {
 	// The through model itself.
 	Model() Definer
 
-	// The source field for the relation - this is the field in the source model.
+	// The source field for the relation - this is a field in the through model linking to the source model.
 	SourceField() string
 
-	// The target field for the relation - this is the field in the target model, or in the through model.
+	// The target field for the relation - this is a field in the through model linking to the target model.
 	TargetField() string
 }
 
@@ -116,22 +158,18 @@ type ModelMeta interface {
 	Model() Definer
 
 	// Forward returns the forward relations for this model
+	// which belong to the field with the given name.
 	Forward(relField string) (Relation, bool)
 
-	// ForwardMap returns the forward relations map for this model
-	ForwardMap() *orderedmap.OrderedMap[string, Relation]
-
 	// Reverse returns the reverse relations for this model
+	// which belong to the field with the given name.
 	Reverse(relField string) (Relation, bool)
 
-	// ReverseMap returns the reverse relations map for this model
+	// ForwardMap returns a copy the forward relations map for this model
+	ForwardMap() *orderedmap.OrderedMap[string, Relation]
+
+	// ReverseMap returns a copy of the reverse relations map for this model
 	ReverseMap() *orderedmap.OrderedMap[string, Relation]
-
-	// IterForward iterates over the forward relations for this model
-	IterForward() iter.Seq2[string, Relation]
-
-	// IterReverse iterates over the reverse relations for this model
-	IterReverse() iter.Seq2[string, Relation]
 
 	// Storage returns a value stored on the model meta.
 	//
@@ -139,6 +177,8 @@ type ModelMeta interface {
 	// but are needed for the model or possible third party libraries to function.
 	//
 	// Values can be stored on the model meta using the `attrs.StoreOnMeta` helper function.
+	//
+	// A model can also implement the `CanModelInfo` interface to store values on the model meta.
 	Storage(key string) (any, bool)
 
 	// Definitions returns the field definitions for the model.
@@ -180,7 +220,7 @@ type staticDefinitions[T FieldDefinition] interface {
 type StaticDefinitions = staticDefinitions[FieldDefinition]
 
 type FieldDefinition interface {
-	Namer
+	Name() string
 	Labeler
 	Helper
 
@@ -257,8 +297,9 @@ type Definitions interface {
 type Field interface {
 	FieldDefinition
 
-	Stringer
-
+	// Scan the value of the field into your model.
+	//
+	// This allows for reading the value easily from the database.
 	sql.Scanner
 
 	// Return the value of the field as a driver.Value.
@@ -267,6 +308,11 @@ type Field interface {
 	//
 	// If the field is nil or the zero value, the default value should be returned.
 	driver.Valuer
+
+	// ToString returns a string representation of the value.
+	//
+	// This should be the human-readable version of the value, for example for a list display.
+	ToString() string
 
 	// Retrieves the value of the field.
 	GetValue() interface{}
@@ -287,22 +333,6 @@ type Field interface {
 type CanRelatedName interface {
 	Field
 	RelatedName() string
-}
-
-type Namer interface {
-	// Retrieves the name of the field.
-	//
-	// This is the name that is used to identify the field in the definitions.
-	//
-	// It is also the name that is used mainly in forms.
-	Name() string
-}
-
-type Stringer interface {
-	// ToString returns a string representation of the value.
-	//
-	// This should be the human-readable version of the value, for example for a list display.
-	ToString() string
 }
 
 type Labeler interface {

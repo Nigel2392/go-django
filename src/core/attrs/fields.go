@@ -24,21 +24,6 @@ import (
 
 var capCaser = cases.Title(language.English)
 
-const (
-	AttrNameKey          = "field.name"
-	AttrMaxLengthKey     = "field.max_length"
-	AttrMinLengthKey     = "field.min_length"
-	AttrMinValueKey      = "field.min_value"
-	AttrMaxValueKey      = "field.max_value"
-	AttrAllowNullKey     = "field.allow_null"
-	AttrAllowBlankKey    = "field.allow_blank"
-	AttrAllowEditKey     = "field.read_only"
-	AttrIsPrimaryKey     = "field.primary"
-	AttrAutoIncrementKey = "field.auto_increment"
-	AttrUniqueKey        = "field.unique"
-	AttrReverseAliasKey  = "field.reverse_alias"
-)
-
 // FieldConfig is a configuration for a field.
 //
 // This defines how a field should behave and how it should be displayed in a form.

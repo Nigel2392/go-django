@@ -55,6 +55,17 @@ func NewCustomAppConfig() *CustomApp {
 
     }
 
+    // Models for this app - these will be registered with the global `attrs.RegisterModel` function
+    // 
+    // Third party and contrib apps might use these models for their own purposes.
+    // 
+    // I.E. currently, the https://github.com/Nigel2392/go-django-queries app uses this to
+    // register models and set up reverse relations.
+    myCustomApp.ModelObjects = []attrs.Definer{
+        // Models
+        // ...
+    }
+
     // Will be called for the app's initialization
     myCustomApp.Init = func(settings django.Settings, db *sql.DB) error {
     
@@ -114,6 +125,7 @@ The `AppConfig` struct has a few useful methods that can be used to configure yo
 This includes but is not limited to:
 
 * Registering routes
+* Registering models
 * Registering templates
 * Registering commands
 * Registering middleware
