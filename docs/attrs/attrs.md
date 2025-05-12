@@ -3,11 +3,12 @@
 The `attrs` package enables defining and managing model attributes with support for auto-generated forms, field validation, and custom form widgets.
 
 Table of Contents:
-    - [Functions](./functions.md)
-    - [Interfaces](./interfaces.md)
-    - [Implementation](./implementation.md)
-    - [Model Meta](./model-meta.md)
-    - [Hooks and Signals](./hooks_signals.md)
+
+- [Functions](./functions.md)
+- [Interfaces](./interfaces.md)
+- [Implementation](./implementation.md)
+- [Model Meta](./model-meta.md)
+- [Hooks and Signals](./hooks_signals.md)
 
 It also allows for defining relations between models - for example [go-django-queries](https://github.com/Nigel2392/go-django-queries)  
 uses this to define relations between models and overall manage the database schema.
