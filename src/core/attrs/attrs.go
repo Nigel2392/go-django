@@ -228,6 +228,9 @@ type FieldDefinition interface {
 	Tag(name string) string
 
 	// Retrieves the underlying model instance.
+	//
+	// For a field definition, this is likely not an actual instance of the model,
+	// for the Field interface, this is the actual model instance.
 	Instance() Definer
 
 	// ColumnName retrieves the name of the column in the database.

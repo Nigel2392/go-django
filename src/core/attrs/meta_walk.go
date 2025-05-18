@@ -83,28 +83,18 @@ func (m *pathMeta) CutAt() []*pathMeta {
 
 //var walkFieldPathsCache = make(map[string]PathMetaChain)
 
-func WalkMetaFields(m Definer, path string) (PathMetaChain, error) {
-	//var cacheKey = fmt.Sprintf("%T.%s", m, path)
-	//if CACHE_TRAVERSAL_RESULTS {
-	//	if result, ok := walkFieldPathsCache[cacheKey]; ok {
-	//		return result, nil
-	//	}
-	//}
+type WalkFieldsFunc func(meta ModelMeta, object Definer, field FieldDefinition, relation Relation, path string, parts []string, idx int) (stop bool, err error)
 
-	var parts = strings.Split(path, ".")
-	var root = make(PathMetaChain, len(parts))
+func WalkMetaFieldsFunc(m Definer, path []string, fn WalkFieldsFunc) error {
 	var current = m
-	for i, part := range parts {
-		var modelMeta = GetModelMeta(current)
-		var defs = modelMeta.Definitions()
-		var meta = &pathMeta{
-			Object:      current,
-			Definitions: defs,
-		}
-
-		var f, ok = defs.Field(part)
+	for i, part := range path {
+		var (
+			modelMeta = GetModelMeta(current)
+			defs      = modelMeta.Definitions()
+			f, ok     = defs.Field(part)
+		)
 		if !ok {
-			return nil, fmt.Errorf("field %q not found in %T", part, meta.Object)
+			return fmt.Errorf("field %q not found in %T", part, current)
 		}
 
 		var (
@@ -117,37 +107,60 @@ func WalkMetaFields(m Definer, path string) (PathMetaChain, error) {
 		}
 
 		if rev, ok2 = modelMeta.Reverse(part); ok2 {
+
+			if ok1 {
+				return fmt.Errorf("field %q is both a forward and reverse relation in %T", part, current)
+			}
+
 			relation = rev
 		}
 
-		if (!ok1 && !ok2) && i != len(parts)-1 {
-			return nil, fmt.Errorf("field %q is not a relation in %T", part, meta.Object)
+		if (!ok1 && !ok2) && i != len(path)-1 {
+			return fmt.Errorf("field %q is not a relation in %T, cannot traverse further", part, current)
 		}
 
-		meta.idx = i
-		meta.root = root
-		meta.Field = f
-		meta.Relation = relation
+		if stop, err := fn(modelMeta, current, f, relation, part, path, i); stop || err != nil {
+			return err
+		}
 
-		root[i] = meta
-
-		// meta.TableAlias = pathMetaTableAlias(meta)
-
-		if i == len(parts)-1 {
+		if i == len(path)-1 {
 			break
 		}
 
-		// This is required to avoid FieldNotFound errors - some objects might cache
-		// their field definitions, meaning any dynamic changes to the field will not be reflected
-		// in the field definitions. This is a workaround to avoid that issue.
 		var newTyp = reflect.TypeOf(relation.Model())
 		var newObj = reflect.New(newTyp.Elem())
 		current = newObj.Interface().(Definer)
 	}
 
-	//if CACHE_TRAVERSAL_RESULTS {
-	//	walkFieldPathsCache[cacheKey] = root
-	//}
+	return nil
+}
+
+func WalkMetaFields(m Definer, path string) (PathMetaChain, error) {
+
+	var parts = strings.Split(path, ".")
+	var root = make(PathMetaChain, len(parts))
+	var walk = func(meta ModelMeta, object Definer, field FieldDefinition, relation Relation, path string, parts []string, idx int) (bool, error) {
+		var pM = &pathMeta{
+			Object:      object,
+			Definitions: meta.Definitions(),
+			Field:       field,
+			Relation:    relation,
+			idx:         idx,
+			root:        root,
+		}
+
+		root[idx] = pM
+
+		if idx == len(parts)-1 {
+			return true, nil
+		}
+
+		return false, nil
+	}
+
+	if err := WalkMetaFieldsFunc(m, parts, walk); err != nil {
+		return nil, err
+	}
 
 	return root, nil
 }
