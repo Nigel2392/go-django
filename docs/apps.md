@@ -189,6 +189,12 @@ A list of context processors that will be run before rendering a template.
 
 This can be used to add context extra context to the template, if [Context Processors](./rendering.md#context-processors) are used while rendering.
 
+#### `ModelObjects`
+
+A list of model objects that will be registered with the [`attrs`](./attrs/attrs.md) package.
+
+These models must implement the [`Definer`](./attrs/interfaces.md#definer) interface.
+
 #### `Deps`
 
 A list of app names that this app depends on.

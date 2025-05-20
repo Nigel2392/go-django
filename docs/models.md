@@ -12,6 +12,38 @@ Go-Django's packages will internally call these methods to save or delete persis
 
 ---
 
+## Helper functions
+
+There are 2 helper functions that can be used to interact with models.
+
+### SaveModel
+
+The `SaveModel` function can be used to save a model instance.
+
+It will call the `Save()` method on the model instance, if it exists.
+
+```go
+SaveModel(context.Context, attrs.Definer) (saved bool, err error)
+```
+
+If the model does not have a `Save` method, it will call a chain of [hooks](./hooks.md#hooks) that can be used to save the model.
+
+These functions must be of type `models.ModelFunc`, the hook that is used to register the function is `models.MODEL_SAVE_HOOK`.
+
+### DeleteModel
+
+The `DeleteModel` function can be used to delete a model instance.
+
+It will call the `Delete()` method on the model instance, if it exists.
+
+```go
+DeleteModel(context.Context, attrs.Definer) (deleted bool, err error)
+```
+
+If the model does not have a `Delete` method, it will call a chain of [hooks](./hooks.md#hooks) that can be used to delete the model.
+
+These functions must be of type `models.ModelFunc`, the hook that is used to register the function is `models.MODEL_DELETE_HOOK`.
+
 ## Defining Models
 
 Models can be defined as structs which implement only the `FieldDefs()` method, however apps like `contrib.admin` and `modelforms.ModelForm` will not  
