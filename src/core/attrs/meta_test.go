@@ -3,6 +3,7 @@ package attrs_test
 import (
 	"fmt"
 	"reflect"
+	"sync"
 	"testing"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -155,6 +156,31 @@ func TestFieldEqualsPanic(t *testing.T) {
 	}()
 
 	fieldEquals(f1, f2)
+}
+
+func TestGetModelMetaConcurrent(t *testing.T) {
+	var wg sync.WaitGroup
+	var metas = make([]attrs.ModelMeta, 100)
+	var models = []attrs.Definer{
+		&sourceModel{},
+		&targetModel{},
+		&throughModel{},
+	}
+
+	attrs.RegisterModel(&sourceModel{})
+	attrs.RegisterModel(&targetModel{})
+	attrs.RegisterModel(&throughModel{})
+
+	wg.Add(100)
+
+	for i := 0; i < 100; i++ {
+		go func(i int) {
+			defer wg.Done()
+			metas[i] = attrs.GetModelMeta(
+				models[i%len(models)],
+			)
+		}(i)
+	}
 }
 
 func TestO2OWithThrough(t *testing.T) {

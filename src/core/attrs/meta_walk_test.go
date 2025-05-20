@@ -463,7 +463,8 @@ func TestWalkFieldPaths(t *testing.T) {
 				t.Logf("field %s -> %T.%s", field.Name(), field.Instance(), field.Name())
 			}
 
-			var meta, err = attrs.WalkMetaFields(test.model, test.column)
+			var parts = strings.Split(test.column, ".")
+			var meta, err = attrs.WalkMetaFields(test.model, parts)
 			if err != nil {
 				t.Errorf("expected no error, got %v %v", err, attrs.FieldNames(test.model, nil))
 				return

@@ -83,7 +83,7 @@ func (m *pathMeta) CutAt() []*pathMeta {
 
 //var walkFieldPathsCache = make(map[string]PathMetaChain)
 
-type WalkFieldsFunc func(meta ModelMeta, object Definer, field FieldDefinition, relation Relation, path string, parts []string, idx int) (stop bool, err error)
+type WalkFieldsFunc func(meta ModelMeta, object Definer, field FieldDefinition, relation Relation, part string, parts []string, idx int) (stop bool, err error)
 
 func WalkMetaFieldsFunc(m Definer, path []string, fn WalkFieldsFunc) error {
 	var current = m
@@ -135,11 +135,10 @@ func WalkMetaFieldsFunc(m Definer, path []string, fn WalkFieldsFunc) error {
 	return nil
 }
 
-func WalkMetaFields(m Definer, path string) (PathMetaChain, error) {
+func WalkMetaFields(m Definer, path []string) (PathMetaChain, error) {
 
-	var parts = strings.Split(path, ".")
-	var root = make(PathMetaChain, len(parts))
-	var walk = func(meta ModelMeta, object Definer, field FieldDefinition, relation Relation, path string, parts []string, idx int) (bool, error) {
+	var root = make(PathMetaChain, len(path))
+	var walk = func(meta ModelMeta, object Definer, field FieldDefinition, relation Relation, part string, parts []string, idx int) (bool, error) {
 		var pM = &pathMeta{
 			Object:      object,
 			Definitions: meta.Definitions(),
@@ -158,7 +157,7 @@ func WalkMetaFields(m Definer, path string) (PathMetaChain, error) {
 		return false, nil
 	}
 
-	if err := WalkMetaFieldsFunc(m, parts, walk); err != nil {
+	if err := WalkMetaFieldsFunc(m, path, walk); err != nil {
 		return nil, err
 	}
 
