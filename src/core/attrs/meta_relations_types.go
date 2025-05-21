@@ -9,13 +9,18 @@ import (
 type RelationType int
 
 const (
+	// RelNone is a placeholder for no relation.
+	//
+	// This is used to distinguish from the zero value of a relation.
+	// It is not a valid relation type.
+	RelNone RelationType = iota
 
 	// ManyToOne is a many to one relationship, also known as a foreign key relationship.
 	//
 	// This means that the target model can have multiple instances of the source model,
 	// but the source model can only have one instance of the target model.
 	// This is the default type for a relation.
-	RelManyToOne RelationType = iota
+	RelManyToOne
 
 	// OneToOne is a one to one relationship.
 	//
@@ -39,6 +44,7 @@ const (
 var (
 	// relationTypeNames is a map of relation types to their names.
 	relationTypeNames = map[RelationType]string{
+		RelNone:       "None",
 		RelManyToOne:  "ManyToOne",
 		RelOneToOne:   "OneToOne",
 		RelManyToMany: "ManyToMany",
@@ -47,6 +53,7 @@ var (
 
 	// relationTypeValues is a map of relation type names to their values.
 	relationTypeValues = map[string]RelationType{
+		"None":       RelNone,
 		"ManyToOne":  RelManyToOne,
 		"OneToOne":   RelOneToOne,
 		"ManyToMany": RelManyToMany,
