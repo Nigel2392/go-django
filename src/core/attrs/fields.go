@@ -98,10 +98,6 @@ func NewField(instance any, name string, conf *FieldConfig) *FieldDef {
 		conf = &FieldConfig{}
 	}
 
-	if field_v.IsValid() && (field_t.Type.Kind() == reflect.Pointer && field_v.IsNil()) {
-		field_v.Set(reflect.New(field_t.Type.Elem()))
-	}
-
 	var f = &FieldDef{
 		attrDef:        *conf,
 		instance_t_ptr: instance_t_ptr,
@@ -114,8 +110,10 @@ func NewField(instance any, name string, conf *FieldConfig) *FieldDef {
 		// directlyInteractible: directlyInteractible,
 	}
 
-	if err := BindValueToModel(instance.(Definer), f, field_v); err != nil {
-		assert.Fail("failed to bind value to model: %v", err)
+	if field_v.IsValid() && (field_t.Type.Kind() == reflect.Pointer && !field_v.IsNil()) {
+		if err := BindValueToModel(instance.(Definer), f, field_v); err != nil {
+			assert.Fail("failed to bind value to model: %v", err)
+		}
 	}
 
 	if conf.OnInit != nil {
