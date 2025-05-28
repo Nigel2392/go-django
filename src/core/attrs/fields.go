@@ -679,6 +679,13 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	rvPtr, ok := django_reflect.RConvert(&rv, f.field_t.Type)
 	if !ok {
 		if scanner, ok := f.field_v.Interface().(Scanner); ok {
+
+			if f.field_v.Kind() == reflect.Ptr && f.field_v.IsNil() {
+				var newVal = reflect.New(f.field_t.Type.Elem())
+				f.field_v.Set(newVal)
+				scanner = newVal.Interface().(Scanner)
+			}
+
 			return assert.Err(scanner.ScanAttribute(
 				rvPtr.Interface(),
 			))

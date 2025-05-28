@@ -574,17 +574,9 @@ func TestModelFieldsBindable(t *testing.T) {
 
 	var defs = m.FieldDefs()
 
-	if m.Name.parentObj.(*TestBindableValue).ID != m.ID {
-		t.Errorf("expected %d, got %d", m.ID, m.Name.parentObj.(*TestBindableValue).ID)
+	if err := defs.Set("Name", "new name"); err != nil {
+		t.Errorf("expected %v, got %v", nil, err)
 	}
-
-	m.ID = 2
-
-	if m.Objects.parentObj.(*TestBindableValue).ID != m.ID {
-		t.Errorf("expected %d, got %d", m.ID, m.Objects.parentObj.(*TestBindableValue).ID)
-	}
-
-	defs.Set("Name", "new name")
 
 	if m.Name.value != "new name" {
 		t.Errorf("expected %q, got %q", "new name", m.Name.value)
@@ -594,7 +586,7 @@ func TestModelFieldsBindable(t *testing.T) {
 		t.Errorf("expected %d, got %d", m.ID, m.Name.parentObj.(*TestBindableValue).ID)
 	}
 
-	m.ID = 3
+	m.ID = 2
 
 	if m.Name.parentObj.(*TestBindableValue).ID != m.ID {
 		t.Errorf("expected %d, got %d", m.ID, m.Name.parentObj.(*TestBindableValue).ID)
