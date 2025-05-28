@@ -84,6 +84,45 @@ type Definer interface {
 	FieldDefs() Definitions
 }
 
+// A binder is a value which can be bound to a model.
+//
+// Any fields should call the `Bind` method to bind the value to the model,
+// this has to be done when:
+// - the field value is set 	    (SetValue method is called)
+// - the field value is retrieved   (GetValue method is called)
+// - the default value is retrieved (GetDefault method is called)
+// - the field value is scanned     (Scan method is called)
+// - the driver.Value is retrieved  (Value method is called)
+type Binder interface {
+	// Bind binds the value to the model.
+	BindToModel(model Definer, field Field) error
+}
+
+// BindValueToModel binds the given model and field to the value.
+func BindValueToModel(model Definer, field Field, value any) error {
+	if value == nil {
+		return nil
+	}
+
+	switch v := value.(type) {
+	case reflect.Value:
+		if !v.IsValid() {
+			return nil
+		}
+		value = v.Interface()
+	case *reflect.Value:
+		if v == nil || !v.IsValid() {
+			return nil
+		}
+		value = v.Interface()
+	}
+
+	if binder, ok := value.(Binder); ok {
+		return binder.BindToModel(model, field)
+	}
+	return nil
+}
+
 // Through is an interface for defining a relation between two models.
 //
 // This provides a very abstract way of defining relations between models,

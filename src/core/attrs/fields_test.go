@@ -6,9 +6,11 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/pkg/errors"
 )
 
 type TestModelFields struct {
@@ -502,4 +504,100 @@ func TestModelFormFieldsCustomType(t *testing.T) {
 	goldcrest.Unregister(
 		attrs.HookFormFieldForType,
 	)
+}
+
+var _ attrs.Binder = (*bindable[any])(nil)
+
+type bindable[T any] struct {
+	parentObj   attrs.Definer
+	parentField attrs.Field
+	value       T
+}
+
+func (b *bindable[T]) ScanAttribute(value any) error {
+	if b == nil {
+		return nil
+	}
+
+	if value == nil {
+		b.value = *new(T)
+		return nil
+	}
+
+	switch v := value.(type) {
+	case T:
+		b.value = v
+	case *T:
+		if v != nil {
+			b.value = *v
+		}
+	default:
+		return errors.Wrapf(
+			errs.ErrInvalidType,
+			"expected %T, got %T",
+			(*new(T)), value,
+		)
+	}
+
+	return nil
+}
+
+func (b *bindable[T]) BindToModel(parentObj attrs.Definer, parentField attrs.Field) error {
+	if b == nil {
+		return nil
+	}
+	b.parentObj = parentObj
+	b.parentField = parentField
+	return nil
+}
+
+type TestBindableValue struct {
+	ID      int
+	Name    *bindable[string]
+	Objects *bindable[[]int64]
+}
+
+func (f *TestBindableValue) FieldDefs() attrs.Definitions {
+	return attrs.Define(f,
+		attrs.NewField(f, "ID", &attrs.FieldConfig{
+			Primary: true,
+		}),
+		attrs.NewField(f, "Name", nil),
+		attrs.NewField(f, "Objects", nil),
+	)
+}
+
+func TestModelFieldsBindable(t *testing.T) {
+	var m = &TestBindableValue{
+		ID: 1,
+	}
+
+	var defs = m.FieldDefs()
+
+	if m.Name.parentObj.(*TestBindableValue).ID != m.ID {
+		t.Errorf("expected %d, got %d", m.ID, m.Name.parentObj.(*TestBindableValue).ID)
+	}
+
+	m.ID = 2
+
+	if m.Objects.parentObj.(*TestBindableValue).ID != m.ID {
+		t.Errorf("expected %d, got %d", m.ID, m.Objects.parentObj.(*TestBindableValue).ID)
+	}
+
+	defs.Set("Name", "new name")
+
+	if m.Name.value != "new name" {
+		t.Errorf("expected %q, got %q", "new name", m.Name.value)
+	}
+
+	if m.Name.parentObj.(*TestBindableValue).ID != m.ID {
+		t.Errorf("expected %d, got %d", m.ID, m.Name.parentObj.(*TestBindableValue).ID)
+	}
+
+	m.ID = 3
+
+	if m.Name.parentObj.(*TestBindableValue).ID != m.ID {
+		t.Errorf("expected %d, got %d", m.ID, m.Name.parentObj.(*TestBindableValue).ID)
+	}
+
 }

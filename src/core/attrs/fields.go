@@ -98,6 +98,10 @@ func NewField(instance any, name string, conf *FieldConfig) *FieldDef {
 		conf = &FieldConfig{}
 	}
 
+	if field_v.IsValid() && (field_t.Type.Kind() == reflect.Pointer && field_v.IsNil()) {
+		field_v.Set(reflect.New(field_t.Type.Elem()))
+	}
+
 	var f = &FieldDef{
 		attrDef:        *conf,
 		instance_t_ptr: instance_t_ptr,
@@ -108,6 +112,10 @@ func NewField(instance any, name string, conf *FieldConfig) *FieldDef {
 		field_v:        field_v,
 		fieldName:      name,
 		// directlyInteractible: directlyInteractible,
+	}
+
+	if err := BindValueToModel(instance.(Definer), f, field_v); err != nil {
+		assert.Fail("failed to bind value to model: %v", err)
 	}
 
 	if conf.OnInit != nil {
@@ -350,22 +358,39 @@ func (f *FieldDef) GetDefault() interface{} {
 		if v.IsValid() && v.Kind() == reflect.Func {
 			var out = v.Call([]reflect.Value{f.instance_v_ptr})
 			assert.Gt(out, 0, "Default function did not return a value")
-			return out[0].Interface()
+			var outVal = out[0].Interface()
+			assert.Err(BindValueToModel(
+				f.Instance(), f, outVal,
+			))
+			return outVal
 		}
-		return f.attrDef.Default
+
+		var outVal = f.attrDef.Default
+		assert.Err(BindValueToModel(
+			f.Instance(), f, outVal,
+		))
+		return outVal
 	}
 
 	var funcName = fmt.Sprintf("GetDefault%s", f.Name())
 	if method, ok := f.instance_t.MethodByName(funcName); ok {
 		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
 		assert.Gt(out, 0, "Method %q on ptr did not return a value", funcName)
-		return out[0].Interface()
+		var outVal = out[0].Interface()
+		assert.Err(BindValueToModel(
+			f.Instance(), f, outVal,
+		))
+		return outVal
 	}
 
 	if method, ok := f.instance_t_ptr.MethodByName(funcName); ok {
 		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
 		assert.Gt(out, 0, "Method %q on raw did not return a value", funcName)
-		return out[0].Interface()
+		var outVal = out[0].Interface()
+		assert.Err(BindValueToModel(
+			f.Instance(), f, outVal,
+		))
+		return outVal
 	}
 
 	// if f.directlyInteractible {
@@ -377,15 +402,26 @@ func (f *FieldDef) GetDefault() interface{} {
 	var hooks = goldcrest.Get[DefaultGetter](DefaultForType)
 	for _, hook := range hooks {
 		if defaultValue, ok := hook(f, typForNew, f.field_v); ok {
+			assert.Err(BindValueToModel(
+				f.Instance(), f, defaultValue,
+			))
 			return defaultValue
 		}
 	}
 
 	if !f.field_v.IsValid() {
-		return reflect.Zero(f.field_t.Type).Interface()
+		var zeroVal = reflect.Zero(f.field_t.Type).Interface()
+		assert.Err(BindValueToModel(
+			f.Instance(), f, zeroVal,
+		))
+		return zeroVal
 	}
 
-	return f.field_v.Interface()
+	var outVal = f.field_v.Interface()
+	assert.Err(BindValueToModel(
+		f.Instance(), f, outVal,
+	))
+	return outVal
 	// }
 
 	// var rel = f.Rel()
@@ -552,6 +588,9 @@ func (f *FieldDef) GetValue() interface{} {
 			f.instance_v_ptr.Interface().(Definer),
 		)
 		if ok {
+			assert.Err(BindValueToModel(
+				f.Instance(), f, v,
+			))
 			return v
 		}
 	}
@@ -573,21 +612,39 @@ func (f *FieldDef) GetValue() interface{} {
 		firstArg = f.instance_v_ptr
 	}
 	if ok {
-		return method.Func.Call([]reflect.Value{firstArg})[0].Interface()
+		var outVal = method.Func.Call([]reflect.Value{firstArg})[0].Interface()
+		assert.Err(BindValueToModel(
+			f.Instance(), f, outVal,
+		))
+		return outVal
 	}
 
 	field, ok = f.instance_t.FieldByName(string(b))
 	if ok {
-		return f.instance_v.FieldByIndex(field.Index).Interface()
+		var outVal = f.instance_v.FieldByIndex(field.Index).Interface()
+		assert.Err(BindValueToModel(
+			f.Instance(), f, outVal,
+		))
+		return outVal
 	}
 
-	return f.field_v.Interface()
+	var outVal = f.field_v.Interface()
+	assert.Err(BindValueToModel(
+		f.Instance(), f, outVal,
+	))
+	return outVal
 }
 
 func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	if f.attrDef.Setter != nil {
 		return f.attrDef.Setter(f.instance_v_ptr.Interface().(Definer), v)
 	}
+
+	defer func() {
+		assert.Err(BindValueToModel(
+			f.Instance(), f, f.field_v.Interface(),
+		))
+	}()
 
 	rv := reflect.ValueOf(v)
 
@@ -624,7 +681,9 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	rvPtr, ok := django_reflect.RConvert(&rv, f.field_t.Type)
 	if !ok {
 		if scanner, ok := f.field_v.Interface().(Scanner); ok {
-			return scanner.ScanAttribute(rvPtr.Interface())
+			return assert.Err(scanner.ScanAttribute(
+				rvPtr.Interface(),
+			))
 		}
 		// String to primitive fallback
 		if rv.Kind() == reflect.String {
@@ -682,6 +741,12 @@ func (f *FieldDef) Scan(value any) error {
 	if f.field_v.Kind() == reflect.Ptr && f.field_v.IsNil() {
 		f.field_v.Set(reflect.New(f.field_t.Type.Elem()))
 	}
+
+	defer func() {
+		assert.Err(BindValueToModel(
+			f.Instance(), f, f.field_v.Interface(),
+		))
+	}()
 
 	rv := reflect.ValueOf(value)
 
@@ -778,6 +843,10 @@ func (f *FieldDef) driverValue(value any) (driver.Value, error) {
 		}
 		v = v.Elem()
 	}
+
+	assert.Err(BindValueToModel(
+		f.Instance(), f, v,
+	))
 
 	switch v.Kind() {
 	case reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
