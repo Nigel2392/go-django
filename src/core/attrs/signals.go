@@ -8,6 +8,12 @@ import (
 	"github.com/Nigel2392/goldcrest"
 )
 
+type ThroughModelMeta struct {
+	Source      Definer
+	Target      Definer
+	ThroughInfo Through
+}
+
 // The following signals are available for hooking into the `attrs` package's model registration process.
 //
 // It can be hooked into to add custom logic before a model is registered.
@@ -23,6 +29,8 @@ import (
 var (
 	modelSignalPool = signals.NewPool[Definer]()
 
+	throughSignalPool = signals.NewPool[ThroughModelMeta]()
+
 	// A signal that is called before a model is registered.
 	//
 	// This can be used to add custom logic before a model is registered.
@@ -32,6 +40,12 @@ var (
 	//
 	// This can be used to add custom logic after a model is registered.
 	OnModelRegister = modelSignalPool.Get("attrs.OnModelRegister")
+
+	// A signal that is called when a through model is registered.
+	//
+	// This is only sent from the forward relation side,
+	// not when the through model is actually registered.
+	OnThroughModelRegister = throughSignalPool.Get("attrs.OnThroughModelRegister")
 )
 
 const (

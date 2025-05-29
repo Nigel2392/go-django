@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"reflect"
 
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/elliotchance/orderedmap/v2"
@@ -209,6 +210,9 @@ type ModelMeta interface {
 
 	// ReverseMap returns a copy of the reverse relations map for this model
 	ReverseMap() *orderedmap.OrderedMap[string, Relation]
+
+	// ContentType returns the content type for the model.
+	ContentType() contenttypes.ContentType
 
 	// Storage returns a value stored on the model meta.
 	//

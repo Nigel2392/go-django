@@ -5,6 +5,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -39,6 +40,10 @@ func (m *modelMeta) Reverse(relField string) (Relation, bool) {
 		return rel, true
 	}
 	return nil, false
+}
+
+func (m *modelMeta) ContentType() contenttypes.ContentType {
+	return contenttypes.NewContentType[any](m.model)
 }
 
 func (m *modelMeta) ForwardMap() *orderedmap.OrderedMap[string, Relation] {
@@ -224,6 +229,38 @@ func RegisterModel(model Definer) {
 			continue
 		}
 
+		if rel.Through() != nil {
+			// If the relation has a through model, we need to register it
+			// This is used for many-to-many relations
+			var through = rel.Through()
+			if through.Model() == nil {
+				panic(fmt.Errorf("error creating meta: relation %q on %T has no through model", name, model))
+			}
+
+			var throughMeta, ok = modelReg[reflect.TypeOf(through.Model())]
+			if !ok {
+				// If the through model is not registered, we need to register it
+				RegisterModel(through.Model())
+				throughMeta = modelReg[reflect.TypeOf(through.Model())]
+			}
+
+			var storageKey = fmt.Sprintf(
+				"through.%s",
+				meta.ContentType().TypeName(),
+			)
+			if _, wasSent := throughMeta.stored.Get(storageKey); wasSent {
+				goto setRel
+			}
+
+			// Send signal that the through model is being registered
+			OnThroughModelRegister.Send(ThroughModelMeta{
+				Source:      meta.model,
+				Target:      rel.Model(),
+				ThroughInfo: through,
+			})
+		}
+
+	setRel:
 		meta.forward.Set(
 			name, rel,
 		)
