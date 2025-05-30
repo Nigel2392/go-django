@@ -727,3 +727,188 @@ func TestWalkFieldPaths(t *testing.T) {
 		})
 	}
 }
+
+type relationChainTest struct {
+	ExpectedRelType attrs.RelationType
+	ExpectedModel   attrs.Definer
+	ExpectedChain   []string
+	ExpectedFields  []string
+
+	ExcludeFinalRel bool
+	Model           attrs.Definer
+	Chain           string
+}
+
+var relationChainTests = []relationChainTest{
+	{
+		ExpectedRelType: attrs.RelOneToOne,
+		ExpectedModel:   &OneToOneWithThrough_Target{},
+		ExpectedChain:   []string{"Target"},
+		ExpectedFields:  []string{"Name"},
+
+		Model: &OneToOneWithThrough{},
+		Chain: "Target.Name",
+	},
+	{
+		ExpectedRelType: attrs.RelOneToOne,
+		ExpectedModel:   &OneToOneWithThrough_Target{},
+		ExpectedChain:   []string{"Target"},
+		ExpectedFields:  []string{"ID", "Name", "Age"},
+
+		Model: &OneToOneWithThrough{},
+		Chain: "Target",
+	},
+	{
+		ExpectedRelType: attrs.RelManyToOne,
+		ExpectedModel:   &Image{},
+		ExpectedChain:   []string{"User", "Profile", "Image"},
+		ExpectedFields:  []string{"ID", "Path"},
+
+		Model: &Todo{},
+		Chain: "User.Profile.Image",
+	},
+	{
+		ExpectedRelType: attrs.RelNone,
+		ExpectedModel:   &Todo{},
+		ExpectedChain:   []string{},
+		ExpectedFields:  []string{"User"},
+		ExcludeFinalRel: true,
+
+		Model: &Todo{},
+		Chain: "User",
+	},
+	{
+		ExpectedRelType: attrs.RelOneToOne,
+		ExpectedModel:   &User{},
+		ExpectedChain:   []string{"User"},
+		ExpectedFields:  []string{"ID"},
+
+		Model: &Todo{},
+		Chain: "User.ID",
+	},
+	{
+		ExpectedRelType: attrs.RelOneToOne,
+		ExpectedModel:   &User{},
+		ExpectedChain:   []string{"User"},
+		ExpectedFields:  []string{"ID"},
+		ExcludeFinalRel: true,
+
+		Model: &Todo{},
+		Chain: "User.ID",
+	},
+	{
+		ExpectedRelType: attrs.RelManyToOne,
+		ExpectedModel:   &Profile{},
+		ExpectedChain:   []string{"User", "Profile"},
+		ExpectedFields:  []string{"Image"},
+
+		ExcludeFinalRel: true,
+		Model:           &Todo{},
+		Chain:           "User.Profile.Image",
+	},
+	{
+		ExpectedRelType: attrs.RelManyToOne,
+		ExpectedModel:   &Image{},
+		ExpectedChain:   []string{"User", "Profile", "Image"},
+		ExpectedFields:  []string{"Path"},
+
+		Model: &Todo{},
+		Chain: "User.Profile.Image.Path",
+	},
+	{
+		ExpectedRelType: attrs.RelManyToOne,
+		ExpectedModel:   &Image{},
+		ExpectedChain:   []string{"User", "Profile", "Image"},
+		ExpectedFields:  []string{"Path"},
+
+		ExcludeFinalRel: true,
+		Model:           &Todo{},
+		Chain:           "User.Profile.Image.Path",
+	},
+}
+
+func TestRelationChain(t *testing.T) {
+
+	var (
+		finalRelIncluded = make([]relationChainTest, 0, len(relationChainTests))
+		finalRelExcluded = make([]relationChainTest, 0, len(relationChainTests))
+	)
+
+	for _, test := range relationChainTests {
+		if test.ExcludeFinalRel {
+			finalRelExcluded = append(finalRelExcluded, test)
+		} else {
+			finalRelIncluded = append(finalRelIncluded, test)
+		}
+	}
+
+	t.Run("IncludeFinalRel", func(t *testing.T) {
+		for _, test := range finalRelIncluded {
+			t.Run(test.Chain, testRelationChain(test))
+		}
+	})
+
+	t.Run("ExcludeFinalRel", func(t *testing.T) {
+		for _, test := range finalRelExcluded {
+			t.Run(test.Chain, testRelationChain(test))
+		}
+	})
+}
+
+func testRelationChain(test relationChainTest) func(t *testing.T) {
+	return func(t *testing.T) {
+		var model = test.Model
+		var chain, err = attrs.WalkRelationChain(model, !test.ExcludeFinalRel, strings.Split(test.Chain, "."))
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+
+		if chain == nil {
+			t.Fatal("expected chain not nil, got nil")
+		}
+
+		if chain.Root == nil {
+			t.Fatal("expected chain.Root not nil, got nil")
+		}
+
+		if reflect.TypeOf(chain.Final.Model) != reflect.TypeOf(test.ExpectedModel) {
+			t.Errorf("expected chain.Final.TargetModel %T, got %T", test.ExpectedModel, chain.Final.Model)
+		}
+
+		if test.ExpectedRelType != attrs.RelNone && chain.Final.Prev == nil {
+			t.Fatalf("expected chain.Final.Prev not nil, got nil: %T", chain.Final.Model)
+		}
+
+		if test.ExpectedRelType != attrs.RelNone && chain.Final.Prev.FieldRel.Type() != test.ExpectedRelType {
+			t.Errorf("expected chain.Final.Source.Type() %d, got %d", test.ExpectedRelType, chain.Final.Prev.FieldRel.Type())
+		}
+
+		var fieldNames = attrs.FieldNames(chain.Fields, nil)
+		if len(fieldNames) != len(test.ExpectedFields) {
+			t.Fatalf("expected %d fields, got %d", len(test.ExpectedFields), len(fieldNames))
+		}
+
+		for i, fieldName := range test.ExpectedFields {
+			if i >= len(fieldNames) {
+				t.Fatalf("expected field %s at index %d, got only %d fields", fieldName, i, len(fieldNames))
+			}
+			if fieldNames[i] != fieldName {
+				t.Errorf("expected field %s at index %d, got %s", fieldName, i, fieldNames[i])
+			}
+		}
+
+		if len(chain.Chain) != len(test.ExpectedChain) {
+			t.Fatalf("expected %d chain parts, got %d: %v (%T)", len(test.ExpectedChain), len(chain.Chain), chain.Chain, chain.Final.Model)
+		}
+
+		for i, part := range test.ExpectedChain {
+			if i >= len(chain.Chain) {
+				t.Fatalf("expected chain part %s at index %d, got only %d parts", part, i, len(chain.Chain))
+			}
+
+			if chain.Chain[i] != part {
+				t.Errorf("expected chain part %s at index %d, got %s", part, i, chain.Chain[i])
+			}
+		}
+	}
+}

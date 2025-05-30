@@ -83,10 +83,13 @@ func (m *pathMeta) CutAt() []*pathMeta {
 
 //var walkFieldPathsCache = make(map[string]PathMetaChain)
 
-type WalkFieldsFunc func(meta ModelMeta, object Definer, field FieldDefinition, relation Relation, part string, parts []string, idx int) (stop bool, err error)
+type WalkFieldsFunc func(source Relation, meta ModelMeta, object Definer, field FieldDefinition, fieldRel Relation, part string, parts []string, idx int) (stop bool, err error)
 
 func WalkMetaFieldsFunc(m Definer, path []string, fn WalkFieldsFunc) error {
-	var current = m
+	var (
+		parentRel Relation
+		current   = m
+	)
 	for i, part := range path {
 		var (
 			modelMeta = GetModelMeta(current)
@@ -119,7 +122,7 @@ func WalkMetaFieldsFunc(m Definer, path []string, fn WalkFieldsFunc) error {
 			return fmt.Errorf("field %q is not a relation in %T, cannot traverse further", part, current)
 		}
 
-		if stop, err := fn(modelMeta, current, f, relation, part, path, i); stop || err != nil {
+		if stop, err := fn(parentRel, modelMeta, current, f, relation, part, path, i); stop || err != nil {
 			return err
 		}
 
@@ -130,15 +133,15 @@ func WalkMetaFieldsFunc(m Definer, path []string, fn WalkFieldsFunc) error {
 		var newTyp = reflect.TypeOf(relation.Model())
 		var newObj = reflect.New(newTyp.Elem())
 		current = newObj.Interface().(Definer)
+		parentRel = relation
 	}
 
 	return nil
 }
 
 func WalkMetaFields(m Definer, path []string) (PathMetaChain, error) {
-
 	var root = make(PathMetaChain, len(path))
-	var walk = func(meta ModelMeta, object Definer, field FieldDefinition, relation Relation, part string, parts []string, idx int) (bool, error) {
+	var walk = func(source Relation, meta ModelMeta, object Definer, field FieldDefinition, relation Relation, part string, parts []string, idx int) (bool, error) {
 		var pM = &pathMeta{
 			Object:      object,
 			Definitions: meta.Definitions(),
@@ -162,4 +165,91 @@ func WalkMetaFields(m Definer, path []string) (PathMetaChain, error) {
 	}
 
 	return root, nil
+}
+
+type RelationChainPart struct {
+	chain     *RelationChain     // the chain this part belongs to
+	Next      *RelationChainPart // the next part in the chain
+	Prev      *RelationChainPart // the previous part in the chain
+	ChainPart string             // the name of the field in the chain
+	FieldRel  Relation           // the relation of the field in the current part
+	Model     Definer            // the current target model
+	Through   Through            // the through relation to get to the target model, if any
+	Field     FieldDefinition    // the field in the current target model
+	Depth     int                // corresponds to the index in chain.Chain
+}
+
+type RelationChain struct {
+	Root   *RelationChainPart
+	Final  *RelationChainPart
+	Fields []FieldDefinition
+	Chain  []string
+}
+
+func WalkRelationChain(m Definer, includeFinalRel bool, path []string) (*RelationChain, error) {
+	var last *RelationChainPart
+	var chain = &RelationChain{
+		Chain: make([]string, 0, len(path)),
+	}
+	var walk = func(sourceRel Relation, meta ModelMeta, object Definer, field FieldDefinition, fieldRel Relation, part string, parts []string, idx int) (bool, error) {
+		var node = &RelationChainPart{
+			chain: chain,
+
+			Next: nil,
+			Prev: chain.Final, // the previous part in the chain
+
+			Depth:     idx,
+			ChainPart: part,
+			FieldRel:  fieldRel,
+			Model:     object,
+			Field:     field,
+		}
+
+		if last == nil {
+			chain.Root = node
+		} else {
+			last.Next = node
+		}
+		last = node
+		chain.Final = node
+
+		if idx == len(parts)-1 {
+			// always set the final part’s Source to fieldRel
+			if fieldRel != nil && includeFinalRel {
+				// include the relation in the chain
+				chain.Chain = append(chain.Chain, part)
+
+				// rebuild p to carry through-model info
+				*node = RelationChainPart{
+					chain:     chain,
+					Next:      nil,
+					Depth:     idx,
+					Prev:      chain.Final, // the previous part in the chain
+					ChainPart: field.Name(),
+					FieldRel:  fieldRel,
+					Through:   fieldRel.Through(),
+					Model:     fieldRel.Model(),
+					Field:     fieldRel.Field(),
+				}
+
+				// all the target’s fields
+				chain.Fields = GetModelMeta(fieldRel.Model()).Definitions().Fields()
+			} else {
+				// just expose the last field itself
+				chain.Fields = []FieldDefinition{field}
+			}
+
+			return true, nil
+		}
+
+		chain.Chain = append(chain.Chain, part)
+
+		return false, nil
+	}
+
+	if err := WalkMetaFieldsFunc(m, path, walk); err != nil {
+		return nil, err
+	}
+
+	return chain, nil
 }

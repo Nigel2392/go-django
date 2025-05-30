@@ -7,18 +7,33 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 )
 
-func fieldNames(d Definitions, exclude []string) []string {
+func fieldNames(d any, exclude []string) []string {
 	var excludeMap = make(map[string]struct{})
 	for _, name := range exclude {
 		excludeMap[name] = struct{}{}
 	}
 
-	var (
-		fields = d.Fields()
-		n      = len(fields)
-		names  = make([]string, 0, n)
-	)
+	var fields []FieldDefinition
+	switch d := d.(type) {
+	case Definer:
+		var meta = GetModelMeta(d)
+		var defs = meta.Definitions()
+		fields = defs.Fields()
+	case []Field:
+		fields = make([]FieldDefinition, len(d))
+		for i, f := range d {
+			fields[i] = f
+		}
+	case []FieldDefinition:
+		fields = d
+	default:
+		panic(fmt.Sprintf(
+			"fieldNames: expected Definer, []Field or []FieldDefinition, got %T",
+			d,
+		))
+	}
 
+	var names = make([]string, 0, len(fields))
 	for _, f := range fields {
 		if _, ok := excludeMap[f.Name()]; ok {
 			continue
@@ -39,9 +54,12 @@ func FieldNames(d any, exclude []string) []string {
 	if d == nil {
 		return nil
 	}
-	if d, ok := d.(Definer); ok {
-		return fieldNames(d.FieldDefs(), exclude)
+
+	switch d.(type) {
+	case Definer, []Field, []FieldDefinition:
+		return fieldNames(d, exclude)
 	}
+
 	var (
 		rTyp       = reflect.TypeOf(d)
 		excludeMap = make(map[string]struct{})
