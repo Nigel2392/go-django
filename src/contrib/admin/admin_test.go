@@ -119,6 +119,8 @@ func init() {
 		Logout: auth.Logout,
 	})
 
+	attrs.RegisterModel(&TestModelStruct{})
+
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		ContentObject: &TestModelStruct{},
 		GetInstance: func(identifier any) (interface{}, error) {

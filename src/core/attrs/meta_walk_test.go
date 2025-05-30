@@ -810,6 +810,15 @@ var relationChainTests = []relationChainTest{
 		ExpectedRelType: attrs.RelManyToOne,
 		ExpectedModel:   &Image{},
 		ExpectedChain:   []string{"User", "Profile", "Image"},
+		ExpectedFields:  []string{"ID", "Path"},
+
+		Model: &Todo{},
+		Chain: "User.Profile.Image",
+	},
+	{
+		ExpectedRelType: attrs.RelManyToOne,
+		ExpectedModel:   &Image{},
+		ExpectedChain:   []string{"User", "Profile", "Image"},
 		ExpectedFields:  []string{"Path"},
 
 		Model: &Todo{},
@@ -858,7 +867,11 @@ func TestRelationChain(t *testing.T) {
 func testRelationChain(test relationChainTest) func(t *testing.T) {
 	return func(t *testing.T) {
 		var model = test.Model
-		var chain, err = attrs.WalkRelationChain(model, !test.ExcludeFinalRel, strings.Split(test.Chain, "."))
+		var chain, err = attrs.WalkRelationChain(
+			model,
+			!test.ExcludeFinalRel,
+			strings.Split(test.Chain, "."),
+		)
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
