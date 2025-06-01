@@ -8,10 +8,17 @@ import (
 	"github.com/Nigel2392/goldcrest"
 )
 
-type ThroughModelMeta struct {
+type SignalModelMeta struct {
+	Definer     Definer
+	Definitions StaticDefinitions
+	Meta        ModelMeta
+}
+
+type SignalThroughModelMeta struct {
 	Source      Definer
 	Target      Definer
 	ThroughInfo Through
+	Meta        ModelMeta
 }
 
 // The following signals are available for hooking into the `attrs` package's model registration process.
@@ -27,9 +34,9 @@ type ThroughModelMeta struct {
 //		})
 //	}
 var (
-	modelSignalPool = signals.NewPool[Definer]()
+	modelSignalPool = signals.NewPool[SignalModelMeta]()
 
-	throughSignalPool = signals.NewPool[ThroughModelMeta]()
+	throughSignalPool = signals.NewPool[SignalThroughModelMeta]()
 
 	// A signal that is called before a model is registered.
 	//

@@ -28,6 +28,7 @@ var capCaser = cases.Title(language.English)
 //
 // This defines how a field should behave and how it should be displayed in a form.
 type FieldConfig struct {
+	AutoInit             bool                                                // Whether the parent struct should be initialized automatically if the field is an embedded field
 	Null                 bool                                                // Whether the field allows null values
 	Blank                bool                                                // Whether the field allows blank values
 	ReadOnly             bool                                                // Whether the field is read-only
@@ -71,35 +72,59 @@ type FieldDef struct {
 // NewField creates a new field definition for the given instance.
 //
 // This can then be used for managing the field in a more abstract way.
-func NewField(instance any, name string, conf *FieldConfig) *FieldDef {
+func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 	var (
 		instance_t_ptr = reflect.TypeOf(instance)
 		instance_v_ptr = reflect.ValueOf(instance)
 		instance_t     = instance_t_ptr.Elem()
 		instance_v     = instance_v_ptr.Elem()
-		field_t        reflect.StructField
-		field_v        reflect.Value
-		ok             bool
 	)
 
-	// var isRel = (conf != nil) && (conf.RelForeignKey != nil || conf.RelManyToMany != nil || conf.RelOneToOne != nil)
-	field_t, ok = instance_t.FieldByName(name)
-	// assert.True(ok || isRel, "field %q not found in %T", name, instance)
-	assert.True(ok, "field %q not found in %T", name, instance)
-
 	// var directlyInteractible = ok
-
-	// if ok {
-	field_v = instance_v.FieldByIndex(field_t.Index)
-	assert.True(field_v.IsValid(), "field %q not found in %T", name, instance)
-	// }
-
-	if conf == nil {
-		conf = &FieldConfig{}
+	var cnf = &FieldConfig{}
+	if len(conf) > 0 && conf[0] != nil {
+		cnf = conf[0]
 	}
 
+	var field_t, ok = instance_t.FieldByName(name)
+	assert.True(ok, "field %q not found in %T", name, instance)
+
+	// make sure we can access the field
+	var field_v = instance_v
+	for i := 0; i < len(field_t.Index); i++ {
+		var isNil = false
+		if field_v.Kind() == reflect.Ptr {
+			isNil = field_v.IsNil()
+			if isNil {
+				if i > 0 && !cnf.AutoInit {
+					assert.Fail("field %q is nil and cannot be accessed", name)
+				}
+				isNil = false
+				field_v.Set(reflect.New(field_t.Type.Elem()))
+			}
+
+			field_v = field_v.Elem()
+		}
+
+		if !isNil {
+			var ptr = field_v
+			// ok because struct fields are always addressable
+			if field_t.Type.Kind() != reflect.Ptr {
+				ptr = field_v.Addr()
+			}
+
+			var iFace = ptr.Interface()
+			if embedded, ok := iFace.(Embedded); ok {
+				embedded.BindToEmbedder(instance.(Definer))
+			}
+		}
+
+		field_v = field_v.Field(field_t.Index[i])
+	}
+	assert.True(field_v.IsValid(), "field %q not found in %T", name, instance)
+
 	var f = &FieldDef{
-		attrDef:        *conf,
+		attrDef:        *cnf,
 		instance_t_ptr: instance_t_ptr,
 		instance_v_ptr: instance_v_ptr,
 		instance_t:     instance_t,
@@ -116,12 +141,12 @@ func NewField(instance any, name string, conf *FieldConfig) *FieldDef {
 		}
 	}
 
-	if conf.OnInit != nil {
-		conf = conf.OnInit(
-			any(instance).(Definer), f, conf,
+	if cnf.OnInit != nil {
+		cnf = cnf.OnInit(
+			any(instance).(Definer), f, cnf,
 		)
-		if conf != nil {
-			f.attrDef = *conf
+		if cnf != nil {
+			f.attrDef = *cnf
 		}
 	}
 

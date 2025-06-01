@@ -189,24 +189,28 @@ func RegisterModel(model Definer) {
 		return
 	}
 
-	// Send signal that the model is being registered
-	OnBeforeModelRegister.Send(model)
-
+	// set the model in the registry early - reverse relations may need it
+	// if the model is self-referential (e.g. a tree structure)
 	var meta = &modelMeta{
 		model:   reflect.New(t.Elem()).Interface().(Definer),
 		forward: orderedmap.NewOrderedMap[string, Relation](),
 		reverse: orderedmap.NewOrderedMap[string, Relation](),
 		stored:  orderedmap.NewOrderedMap[string, any](),
 	}
-
-	// set the model in the registry early - reverse relations may need it
-	// if the model is self-referential (e.g. a tree structure)
 	modelReg[t] = meta
 
 	var defs = meta.model.FieldDefs()
 	if defs == nil {
 		panic(fmt.Errorf("error getting model definitions: model %T has no field definitions", model))
 	}
+
+	// Send signal that the model is being registered
+	var staticDefs = wrapDefinitions(meta.model, defs)
+	OnBeforeModelRegister.Send(SignalModelMeta{
+		Definer:     meta.model,
+		Definitions: staticDefs,
+		Meta:        meta,
+	})
 
 	if mInfo, ok := meta.model.(CanModelInfo); ok {
 		// If the model has a meta, we need to set it
@@ -253,10 +257,11 @@ func RegisterModel(model Definer) {
 			}
 
 			// Send signal that the through model is being registered
-			OnThroughModelRegister.Send(ThroughModelMeta{
+			OnThroughModelRegister.Send(SignalThroughModelMeta{
 				Source:      meta.model,
 				Target:      rel.Model(),
 				ThroughInfo: through,
+				Meta:        throughMeta,
 			})
 		}
 
@@ -271,7 +276,11 @@ func RegisterModel(model Definer) {
 	}
 
 	// Send signal that the model has been registered
-	OnModelRegister.Send(model)
+	OnModelRegister.Send(SignalModelMeta{
+		Definer:     meta.model,
+		Definitions: staticDefs,
+		Meta:        meta,
+	})
 }
 
 func GetModelMeta(model Definer) ModelMeta {

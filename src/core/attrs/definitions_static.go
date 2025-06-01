@@ -19,81 +19,53 @@ type staticDefinition struct {
 	Table        string
 }
 
+func wrapDefinitions(definer Definer, defs Definitions) StaticDefinitions {
+	var prim, staticFields = fieldsFromDefs[FieldDefinition](defs)
+	var sDef = &staticDefinition{
+		object: definer,
+		defs:   defs,
+		fields: staticFields,
+		Table:  defs.TableName(),
+	}
+	if prim != nil {
+		sDef.PrimaryField = prim.Name()
+	}
+	return sDef
+}
+
+func fieldsFromDefs[T FieldDefinition](defs Definitions) (T, *orderedmap.OrderedMap[string, T]) {
+	var (
+		wasPrimarySet bool
+		primary       T
+		fields        = orderedmap.NewOrderedMap[string, T]()
+	)
+	for _, f := range defs.Fields() {
+		var ft = f.(T)
+		if f.IsPrimary() && !wasPrimarySet {
+			primary = ft
+			wasPrimarySet = true
+		}
+		fields.Set(f.Name(), ft)
+	}
+	return primary, fields
+}
+
 func newStaticDefinitions(d Definer) *staticDefinition {
 
 	var sDef = &staticDefinition{
 		object: d,
 	}
 
-	var primaryField string
 	var defs = d.FieldDefs()
-	var m = orderedmap.NewOrderedMap[string, FieldDefinition]()
-	for _, f := range defs.Fields() {
-
-		if f.IsPrimary() && primaryField == "" {
-			primaryField = f.Name()
-		}
-
-		m.Set(f.Name(), f)
+	var prim, m = fieldsFromDefs[FieldDefinition](defs)
+	if prim != nil {
+		sDef.PrimaryField = prim.Name()
 	}
-
-	sDef.defs = d.FieldDefs()
+	sDef.defs = defs
 	sDef.Table = sDef.defs.TableName()
-	sDef.PrimaryField = primaryField
 	sDef.fields = m
 
 	return sDef
-
-	//	var meta = GetModelMeta(d)
-	//	var reverseRelations = meta.ReverseMap()
-	//	for head := reverseRelations.Front(); head != nil; head = head.Next() {
-	//		var key = head.Key
-	//		var value = head.Value
-	//		var typ = value.Type()
-	//
-	//		var (
-	//			from           = value.From()
-	//			fromModelField = from.Field()
-	//		)
-	//
-	//		var confCopy = &FieldConfig{
-	//			NameOverride: key,
-	//			Null:         fromModelField.AllowNull(),
-	//			Blank:        fromModelField.AllowBlank(),
-	//			ReadOnly:     !fromModelField.AllowEdit(),
-	//			Primary:      fromModelField.IsPrimary(),
-	//			Label:        fromModelField.Label(),
-	//			HelpText:     fromModelField.HelpText(),
-	//			Column:       fromModelField.ColumnName(),
-	//			Attributes:   fromModelField.Attrs(),
-	//			// Validators: ,
-	//			// FormField:
-	//			// WidgetAttrs:
-	//		}
-	//
-	//		switch typ {
-	//		case RelOneToOne: // OneToOne
-	//			confCopy.RelOneToOne = value
-	//		case RelManyToOne: // ForeignKey, ForeignKey
-	//			confCopy.RelOneToOne = value
-	//		case RelOneToMany: // ForeignKeyReverse, ForeignKeyReverse
-	//			confCopy.RelForeignKeyReverse = value
-	//		case RelManyToMany: // ManyToMany
-	//			confCopy.RelManyToMany = value
-	//		default:
-	//			panic("unknown relation type")
-	//		}
-	//
-	//		var field = &staticField{
-	//			typ:         fromModelField.Type(),
-	//			name:        key,
-	//			definitions: sDef,
-	//			conf:        confCopy,
-	//		}
-	//
-	//		m.Set(key, field)
-	//	}
-
 }
 
 func (d *staticDefinition) TableName() string {

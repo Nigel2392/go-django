@@ -18,14 +18,42 @@ type ObjectDefinitions struct {
 //
 // This can then be returned by the FieldDefs method of a model
 // to make it comply with the Definer interface.
-func Define(d Definer, fieldDefinitions ...Field) *ObjectDefinitions {
-	var primaryField string
-
-	var m = orderedmap.NewOrderedMap[string, Field]()
+func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions {
+	var fields = make([]Field, 0, len(fieldDefinitions))
 	for _, f := range fieldDefinitions {
+		switch v := any(f).(type) {
+		case Field:
+			fields = append(fields, v)
+		case []Field:
+			fields = append(fields, v...)
+		case func() Field:
+			fields = append(fields, v())
+		case func() []Field:
+			fields = append(fields, v()...)
+		case func(d T1) Field:
+			fields = append(fields, v(d))
+		case func(d T1) []Field:
+			fields = append(fields, v(d)...)
+			//case EmbeddedFields:
+			//	fields = append(fields, v.Embed(d)...)
+		default:
+			assert.Fail("define (%T): unsupported field type %T", d, f)
+			return nil
+		}
+	}
+
+	var primaryField string
+	var m = orderedmap.NewOrderedMap[string, Field]()
+	for _, f := range fields {
 
 		if f.IsPrimary() && primaryField == "" {
 			primaryField = f.Name()
+		}
+
+		if binder, ok := f.(Binder); ok {
+			if err := binder.BindToModel(d, f); err != nil {
+				assert.Fail("bind (%T): %v", d, err)
+			}
 		}
 
 		m.Set(f.Name(), f)

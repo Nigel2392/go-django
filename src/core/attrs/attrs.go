@@ -94,6 +94,9 @@ type Definer interface {
 // - the default value is retrieved (GetDefault method is called)
 // - the field value is scanned     (Scan method is called)
 // - the driver.Value is retrieved  (Value method is called)
+//
+// Fields may also implement the Binder interface,
+// this will allow for a more generic way of binding values to models.
 type Binder interface {
 	// Bind binds the value to the model.
 	BindToModel(model Definer, field Field) error
@@ -122,6 +125,17 @@ func BindValueToModel(model Definer, field Field, value any) error {
 		return binder.BindToModel(model, field)
 	}
 	return nil
+}
+
+// A field in a struct can implement the Embedded interface
+// to bind itself to the [Definer] which should be the top-most model.
+//
+// It allows for multiple values in a chain of embedded models
+// to be bound to the top-most model.
+//
+// This is only called when [NewField] is called.
+type Embedded interface {
+	BindToEmbedder(embedder Definer) error
 }
 
 // Through is an interface for defining a relation between two models.
