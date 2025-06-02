@@ -94,9 +94,6 @@ type Definer interface {
 // - the default value is retrieved (GetDefault method is called)
 // - the field value is scanned     (Scan method is called)
 // - the driver.Value is retrieved  (Value method is called)
-//
-// Fields may also implement the Binder interface,
-// this will allow for a more generic way of binding values to models.
 type Binder interface {
 	// Bind binds the value to the model.
 	BindToModel(model Definer, field Field) error
@@ -198,7 +195,7 @@ type CanModelInfo interface {
 	// ModelMetaInfo returns the meta information for the model.
 	//
 	// This is used to store information about the model, such as relational information,
-	ModelMetaInfo() map[string]any
+	ModelMetaInfo(object Definer) map[string]any
 }
 
 // ModelMeta represents the meta information for a model.
@@ -390,9 +387,32 @@ type Field interface {
 	SetValue(v interface{}, force bool) error
 }
 
+// CanRelatedName is an interface for fields that have a related name.
+//
+// This is used to define the name of the field in the related model.
 type CanRelatedName interface {
 	Field
 	RelatedName() string
+}
+
+// CanOnModelRegister defines a method that is called when the model is registered.
+//
+// This method is called once, and only once.
+//
+// See [OnModelRegister] and [RegisterModel] for the implementation details.
+type CanOnModelRegister interface {
+	Field
+	OnModelRegister(model Definer) error
+}
+
+// An unbound field is a field that is not yet bound to a model.
+//
+// It returns a field in case of a wrapper implementation,
+// or an error in case the field cannot be bound to the model.
+type UnboundField interface {
+	Field
+	// BindField binds the field to the model.
+	BindField(model Definer) (Field, error)
 }
 
 type Labeler interface {

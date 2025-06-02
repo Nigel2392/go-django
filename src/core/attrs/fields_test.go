@@ -591,5 +591,179 @@ func TestModelFieldsBindable(t *testing.T) {
 	if m.Name.parentObj.(*TestBindableValue).ID != m.ID {
 		t.Errorf("expected %d, got %d", m.ID, m.Name.parentObj.(*TestBindableValue).ID)
 	}
+}
 
+type EmbeddedStruct struct {
+	ID        int
+	Age       int
+	FirstName string
+	LastName  string
+}
+
+type TestBenchmarkWithCaching struct {
+	EmbeddedStruct
+	Title       string
+	Description string
+	Objects     []int64
+}
+
+func (f *TestBenchmarkWithCaching) FieldDefs() attrs.Definitions {
+	return attrs.Define(f,
+		attrs.NewField(f, "ID", &attrs.FieldConfig{
+			Primary: true,
+		}),
+		attrs.NewField(f, "Age"),
+		attrs.NewField(f, "FirstName"),
+		attrs.NewField(f, "LastName"),
+		attrs.NewField(f, "Title"),
+		attrs.NewField(f, "Description"),
+		attrs.NewField(f, "Objects"),
+	)
+}
+
+type TestBenchmarkWithoutCaching struct {
+	EmbeddedStruct
+	Title       string
+	Description string
+	Objects     []int64
+}
+
+func (f *TestBenchmarkWithoutCaching) FieldDefs() attrs.Definitions {
+	return attrs.Define(f,
+		attrs.NewField(f, "ID", &attrs.FieldConfig{
+			Primary: true,
+		}),
+		attrs.NewField(f, "Age"),
+		attrs.NewField(f, "FirstName"),
+		attrs.NewField(f, "LastName"),
+		attrs.NewField(f, "Title"),
+		attrs.NewField(f, "Description"),
+		attrs.NewField(f, "Objects"),
+	)
+}
+
+func BenchmarkFieldsWithCaching(b *testing.B) {
+	b.StopTimer()
+
+	// cache is warmed up only when the model is registered
+	// see [attrs.FieldDef.OnModelRegister]
+	attrs.RegisterModel(&TestBenchmarkWithCaching{})
+
+	b.StartTimer()
+
+	for i := 0; i < b.N; i++ {
+		var m = &TestBenchmarkWithCaching{
+			EmbeddedStruct: EmbeddedStruct{
+				ID:        i,
+				Age:       i + 20,
+				FirstName: "First",
+				LastName:  "Last",
+			},
+			Title:       "Title",
+			Description: "Description",
+			Objects:     []int64{1, 2, 3},
+		}
+
+		var defs = m.FieldDefs()
+		var (
+			title, _       = defs.Field("Title")
+			description, _ = defs.Field("Description")
+			objects, _     = defs.Field("Objects")
+		)
+
+		if err := title.SetValue("New Title", true); err != nil {
+			b.Errorf("expected %v, got %v", nil, err)
+		}
+
+		if err := description.SetValue("New Description", true); err != nil {
+			b.Errorf("expected %v, got %v", nil, err)
+		}
+
+		if err := objects.SetValue([]int64{4, 5, 6}, true); err != nil {
+			b.Errorf("expected %v, got %v", nil, err)
+		}
+
+		if m.Title != "New Title" {
+			b.Errorf("expected %q, got %q", "New Title", m.Title)
+		}
+
+		if m.Description != "New Description" {
+			b.Errorf("expected %q, got %q", "New Description", m.Description)
+		}
+
+		if len(m.Objects) != 3 {
+			b.Errorf("expected %d, got %d", 3, len(m.Objects))
+		}
+
+		if m.Objects[0] != 4 {
+			b.Errorf("expected %d, got %d", 4, m.Objects[0])
+		}
+
+		if m.Objects[1] != 5 {
+			b.Errorf("expected %d, got %d", 5, m.Objects[1])
+		}
+
+		if m.Objects[2] != 6 {
+			b.Errorf("expected %d, got %d", 6, m.Objects[2])
+		}
+	}
+}
+
+func BenchmarkFieldsWithoutCaching(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		var m = &TestBenchmarkWithoutCaching{
+			EmbeddedStruct: EmbeddedStruct{
+				ID:        i,
+				Age:       i + 20,
+				FirstName: "First",
+				LastName:  "Last",
+			},
+			Title:       "Title",
+			Description: "Description",
+			Objects:     []int64{1, 2, 3},
+		}
+
+		var defs = m.FieldDefs()
+		var (
+			title, _       = defs.Field("Title")
+			description, _ = defs.Field("Description")
+			objects, _     = defs.Field("Objects")
+		)
+
+		if err := title.SetValue("New Title", true); err != nil {
+			b.Errorf("expected %v, got %v", nil, err)
+		}
+
+		if err := description.SetValue("New Description", true); err != nil {
+			b.Errorf("expected %v, got %v", nil, err)
+		}
+
+		if err := objects.SetValue([]int64{4, 5, 6}, true); err != nil {
+			b.Errorf("expected %v, got %v", nil, err)
+		}
+
+		if m.Title != "New Title" {
+			b.Errorf("expected %q, got %q", "New Title", m.Title)
+		}
+
+		if m.Description != "New Description" {
+			b.Errorf("expected %q, got %q", "New Description", m.Description)
+		}
+
+		if len(m.Objects) != 3 {
+			b.Errorf("expected %d, got %d", 3, len(m.Objects))
+		}
+
+		if m.Objects[0] != 4 {
+			b.Errorf("expected %d, got %d", 4, m.Objects[0])
+		}
+
+		if m.Objects[1] != 5 {
+			b.Errorf("expected %d, got %d", 5, m.Objects[1])
+		}
+
+		if m.Objects[2] != 6 {
+			b.Errorf("expected %d, got %d", 6, m.Objects[2])
+		}
+	}
 }

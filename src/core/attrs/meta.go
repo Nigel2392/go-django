@@ -215,7 +215,7 @@ func RegisterModel(model Definer) {
 	if mInfo, ok := meta.model.(CanModelInfo); ok {
 		// If the model has a meta, we need to set it
 		// This is used for things like unique_together, ordering, etc.
-		var modelMeta = mInfo.ModelMetaInfo()
+		var modelMeta = mInfo.ModelMetaInfo(meta.model)
 		for k, v := range modelMeta {
 			meta.stored.Set(k, v)
 		}
@@ -226,6 +226,17 @@ func RegisterModel(model Definer) {
 		var name = field.Name()
 		if name == "" {
 			panic(fmt.Errorf("error creating meta: field %T has no name", field))
+		}
+
+		// fields can get a callback when the model they are defined on is registered
+		if registrar, ok := field.(CanOnModelRegister); ok {
+			var err = registrar.OnModelRegister(meta.model)
+			if err != nil {
+				panic(fmt.Errorf(
+					"field.OnModelRegister: error registering field %q on model %T: %w",
+					name, meta.model, err,
+				))
+			}
 		}
 
 		var rel = field.Rel()

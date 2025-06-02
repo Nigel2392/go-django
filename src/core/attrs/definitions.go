@@ -50,8 +50,10 @@ func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions
 			primaryField = f.Name()
 		}
 
-		if binder, ok := f.(Binder); ok {
-			if err := binder.BindToModel(d, f); err != nil {
+		if binder, ok := f.(UnboundField); ok {
+			var err error
+			f, err = binder.BindField(d)
+			if err != nil {
 				assert.Fail("bind (%T): %v", d, err)
 			}
 		}

@@ -22,7 +22,11 @@ import (
 	"golang.org/x/text/language"
 )
 
-var capCaser = cases.Title(language.English)
+var (
+	capCaser            = cases.Title(language.English)
+	cachedStructs       = make(reflectStructFieldMap) // Cache for struct fields and methods
+	ALLOW_METHOD_CHECKS = true                        // Whether to allow method checks for getters and setters
+)
 
 // FieldConfig is a configuration for a field.
 //
@@ -86,9 +90,10 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 		cnf = conf[0]
 	}
 
-	var field_t, ok = instance_t.FieldByName(name)
+	var field_t, ok = cachedStructs.getField(instance_t, name)
 	assert.True(ok, "field %q not found in %T", name, instance)
 
+	// setupFieldValue:
 	// make sure we can access the field
 	var field_v = instance_v
 	for i := 0; i < len(field_t.Index); i++ {
@@ -151,6 +156,51 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 	}
 
 	return f
+}
+
+// model is equal to instance_t
+func (f *FieldDef) OnModelRegister(model Definer) error {
+	var sTyp, ok = cachedStructs[f.instance_t]
+	if !ok {
+		sTyp = &structType{
+			methods: make(map[string]reflect.Method),
+			fields:  make(map[string]reflect.StructField),
+		}
+		cachedStructs[f.instance_t] = sTyp
+	}
+
+	sTyp.fields[f.fieldName] = f.field_t
+
+	var (
+		getDefaultMethod reflect.Method
+		setValueMethod   reflect.Method
+		getValueMethod   reflect.Method
+	)
+
+	if ALLOW_METHOD_CHECKS {
+		var (
+			defaultMethodName  = nameGetDefault(f)
+			setValueMethodName = nameSetValue(f)
+			getValueMethodName = nameGetValue(f)
+		)
+
+		getDefaultMethod, ok = f.instance_t.MethodByName(defaultMethodName)
+		if ok {
+			sTyp.methods[defaultMethodName] = getDefaultMethod
+		}
+
+		setValueMethod, ok = f.instance_t.MethodByName(setValueMethodName)
+		if ok {
+			sTyp.methods[setValueMethodName] = setValueMethod
+		}
+
+		getValueMethod, ok = f.instance_t.MethodByName(getValueMethodName)
+		if ok {
+			sTyp.methods[getValueMethodName] = getValueMethod
+		}
+	}
+
+	return nil
 }
 
 func (f *FieldDef) Type() reflect.Type {
@@ -395,25 +445,24 @@ func (f *FieldDef) GetDefault() interface{} {
 		return outVal
 	}
 
-	var funcName = fmt.Sprintf("GetDefault%s", f.Name())
-	if method, ok := f.instance_t.MethodByName(funcName); ok {
-		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
-		assert.Gt(out, 0, "Method %q on ptr did not return a value", funcName)
-		var outVal = out[0].Interface()
-		assert.Err(BindValueToModel(
-			f.Instance(), f, outVal,
-		))
-		return outVal
-	}
-
-	if method, ok := f.instance_t_ptr.MethodByName(funcName); ok {
-		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
-		assert.Gt(out, 0, "Method %q on raw did not return a value", funcName)
-		var outVal = out[0].Interface()
-		assert.Err(BindValueToModel(
-			f.Instance(), f, outVal,
-		))
-		return outVal
+	if ALLOW_METHOD_CHECKS {
+		var funcName = nameGetDefault(f)
+		var method, ok = cachedStructs.getMethod(f.instance_t, funcName)
+		if ok {
+			var out []reflect.Value
+			switch method.Type.In(0) {
+			case f.instance_t_ptr:
+				out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
+			case f.instance_t:
+				out = method.Func.Call([]reflect.Value{f.instance_v})
+			}
+			assert.Gt(out, 0, "Method %q on raw did not return a value", funcName)
+			var outVal = out[0].Interface()
+			assert.Err(BindValueToModel(
+				f.Instance(), f, outVal,
+			))
+			return outVal
+		}
 	}
 
 	// if f.directlyInteractible {
@@ -445,17 +494,6 @@ func (f *FieldDef) GetDefault() interface{} {
 		f.Instance(), f, outVal,
 	))
 	return outVal
-	// }
-
-	// var rel = f.Rel()
-	// if rel != nil {
-	// var cTypeDef = contenttypes.DefinitionForObject(rel)
-	// if cTypeDef != nil {
-	// return cTypeDef.Object()
-	// }
-	// }
-	//
-	// return nil
 }
 
 func (f *FieldDef) FormField() fields.Field {
@@ -618,37 +656,22 @@ func (f *FieldDef) GetValue() interface{} {
 		}
 	}
 
-	var (
-		b        []byte
-		firstArg reflect.Value
-		method   reflect.Method
-		field    reflect.StructField
-		ok       bool
-	)
-	b = make([]byte, 0, len(f.field_t.Name)+3)
-	b = append(b, "Get"...)
-	b = append(b, f.field_t.Name...)
-	firstArg = f.instance_v
-	method, ok = f.instance_t.MethodByName(string(b))
-	if !ok {
-		method, ok = f.instance_t_ptr.MethodByName(string(b))
-		firstArg = f.instance_v_ptr
-	}
-	if ok {
-		var outVal = method.Func.Call([]reflect.Value{firstArg})[0].Interface()
-		assert.Err(BindValueToModel(
-			f.Instance(), f, outVal,
-		))
-		return outVal
-	}
-
-	field, ok = f.instance_t.FieldByName(string(b))
-	if ok {
-		var outVal = f.instance_v.FieldByIndex(field.Index).Interface()
-		assert.Err(BindValueToModel(
-			f.Instance(), f, outVal,
-		))
-		return outVal
+	if ALLOW_METHOD_CHECKS {
+		var methodName = nameGetValue(f)
+		var method, ok = cachedStructs.getMethod(f.instance_t, methodName)
+		if ok {
+			var outVal any
+			switch method.Type.In(0) {
+			case f.instance_t_ptr:
+				outVal = method.Func.Call([]reflect.Value{f.instance_v_ptr})[0].Interface()
+			case f.instance_t:
+				outVal = method.Func.Call([]reflect.Value{f.instance_v})[0].Interface()
+			}
+			assert.Err(BindValueToModel(
+				f.Instance(), f, outVal,
+			))
+			return outVal
+		}
 	}
 
 	var outVal = f.field_v.Interface()
@@ -679,19 +702,21 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	}
 
 	// Try user-defined setter method like Set<FieldName>
-	if !force {
-		setterName := "Set" + f.field_t.Name
-		if method, ok := f.instance_t_ptr.MethodByName(setterName); ok {
-			arg, ok := django_reflect.RConvert(&rv, method.Type.In(1))
-			if !ok {
-				return assert.Fail("value %q not convertible to %q for field %q",
-					rv.Type(), method.Type.In(1), f.field_t.Name)
-			}
-			out := method.Func.Call([]reflect.Value{f.instance_v_ptr, *arg})
+	if ALLOW_METHOD_CHECKS && !force {
+		var setterName = nameSetValue(f)
+		var method, ok = cachedStructs.getMethod(f.instance_t, setterName)
+		if ok {
+			var arg, ok = django_reflect.RConvert(&rv, method.Type.In(1))
+			assert.True(ok,
+				"value %q not convertible to %q for field %q",
+				rv.Type(), method.Type.In(1), f.field_t.Name,
+			)
+			var out = method.Func.Call([]reflect.Value{f.instance_v_ptr, *arg})
 			if len(out) > 0 {
 				if err, ok := out[len(out)-1].Interface().(error); ok {
 					return err
 				}
+				return assert.Fail("setter returned a non-error value: %v", out)
 			}
 			return nil
 		}
