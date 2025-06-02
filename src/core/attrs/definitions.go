@@ -129,11 +129,7 @@ func (d *ObjectDefinitions) Primary() Field {
 
 func (d *ObjectDefinitions) Instance() Definer {
 	if d.Object == nil {
-		var objectT = reflect.TypeOf(d.Object)
-		if objectT.Kind() == reflect.Ptr {
-			objectT = objectT.Elem()
-		}
-		return reflect.New(objectT).Interface().(Definer)
+		return NewObject[Definer](d.Object)
 	}
 	return d.Object
 }

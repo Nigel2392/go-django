@@ -209,11 +209,7 @@ func (o *ModelDefinition) App() *AppDefinition {
 //
 // This works the same as calling `reflect.New` on the model type.
 func (o *ModelDefinition) NewInstance() attrs.Definer {
-	var rTyp = o.rModel()
-	if rTyp.Kind() == reflect.Ptr {
-		return reflect.New(rTyp.Elem()).Interface().(attrs.Definer)
-	}
-	return reflect.New(rTyp).Interface().(attrs.Definer)
+	return attrs.NewObject[attrs.Definer](o.rModel())
 }
 
 func (o *ModelDefinition) GetName() string {

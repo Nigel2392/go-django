@@ -34,6 +34,24 @@ func init() {
 	)
 }
 
+// CanCreateObject is an interface for models that can create new objects of the same type.
+//
+// If the type is not the same as the model (for example when embedding a model),
+// the newly created object will not be used.
+type CanCreateObject[T Definer] interface {
+	// CreateObject creates a new object being the same
+	// type as the model, and returns it.
+	CreateObject() T
+}
+
+// A model can implement the CanSetup interface
+// to perform any setup that is needed for the model.
+//
+// This is called when the model is created with the [NewObject] function.
+type CanSetup interface {
+	Setup()
+}
+
 // Keys of attributes defined with the `Attrs()` method on fields.
 //
 // These are used to store extra information about the field.

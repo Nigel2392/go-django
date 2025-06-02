@@ -44,19 +44,12 @@ func (r *Revision) AsObject() (attrs.Definer, error) {
 		)
 	}
 
-	var rVal = reflect.ValueOf(newInstance)
-	if rVal.Kind() != reflect.Ptr {
-		rVal = reflect.New(
-			rVal.Type(),
-		)
-	}
-
-	err := json.Unmarshal([]byte(r.Data), rVal.Interface())
+	var definer = attrs.NewObject[attrs.Definer](newInstance)
+	err := json.Unmarshal([]byte(r.Data), definer)
 	if err != nil {
 		return nil, err
 	}
 
-	var definer = rVal.Interface().(attrs.Definer)
 	if err = attrs.SetPrimaryKey(definer, r.ObjectID); err != nil {
 		return nil, err
 	}

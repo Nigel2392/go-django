@@ -113,7 +113,7 @@ func registerReverseRelation(
 	// Create a new instance of the target target model
 	var targetModel = forward.Model()
 	var targetType = reflect.TypeOf(targetModel)
-	targetModel = reflect.New(targetType.Elem()).Interface().(Definer)
+	targetModel = NewObject[Definer](targetType.Elem())
 
 	// Step 2: Get or init ModelMeta for the target
 	meta, ok := modelReg[targetType]
@@ -192,7 +192,7 @@ func RegisterModel(model Definer) {
 	// set the model in the registry early - reverse relations may need it
 	// if the model is self-referential (e.g. a tree structure)
 	var meta = &modelMeta{
-		model:   reflect.New(t.Elem()).Interface().(Definer),
+		model:   NewObject[Definer](model),
 		forward: orderedmap.NewOrderedMap[string, Relation](),
 		reverse: orderedmap.NewOrderedMap[string, Relation](),
 		stored:  orderedmap.NewOrderedMap[string, any](),

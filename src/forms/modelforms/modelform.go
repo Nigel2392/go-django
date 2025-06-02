@@ -62,12 +62,7 @@ func NewBaseModelForm[T attrs.Definer](model T, opts ...func(forms.Form)) *BaseM
 	)
 
 	if f.modelIsNil(model) {
-		if rModelType.Kind() == reflect.Ptr {
-			rModel = reflect.New(rModelType.Elem())
-		} else {
-			rModel = reflect.New(rModelType).Elem()
-		}
-
+		rModel = reflect.ValueOf(attrs.NewObject[attrs.Definer](rModelType))
 		f.Model = rModel.Interface().(T)
 	}
 

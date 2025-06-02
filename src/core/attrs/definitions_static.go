@@ -1,8 +1,6 @@
 package attrs
 
 import (
-	"reflect"
-
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -99,11 +97,7 @@ func (d *staticDefinition) Primary() FieldDefinition {
 }
 
 func (d *staticDefinition) Instance() Definer {
-	var objectT = reflect.TypeOf(d.object)
-	if objectT.Kind() == reflect.Ptr {
-		objectT = objectT.Elem()
-	}
-	return reflect.New(objectT).Interface().(Definer)
+	return NewObject[Definer](d.object)
 }
 
 func (d *staticDefinition) Len() int {
