@@ -25,7 +25,7 @@ import (
 var (
 	capCaser            = cases.Title(language.English)
 	cachedStructs       = make(reflectStructFieldMap) // Cache for struct fields and methods
-	ALLOW_METHOD_CHECKS = true                        // Whether to allow method checks for getters and setters
+	ALLOW_METHOD_CHECKS = false                       // Whether to allow method checks for getters and setters
 )
 
 // FieldConfig is a configuration for a field.
