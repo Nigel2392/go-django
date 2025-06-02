@@ -84,14 +84,18 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 		instance_v     = instance_v_ptr.Elem()
 	)
 
+	var field_t, ok = cachedStructs.getField(instance_t, name)
+	assert.True(ok, "field %q not found in %T", name, instance)
+
 	// var directlyInteractible = ok
 	var cnf = &FieldConfig{}
+	if len(conf) == 0 {
+		var c = autoDefinitionStructTag(field_t)
+		cnf = &c
+	}
 	if len(conf) > 0 && conf[0] != nil {
 		cnf = conf[0]
 	}
-
-	var field_t, ok = cachedStructs.getField(instance_t, name)
-	assert.True(ok, "field %q not found in %T", name, instance)
 
 	// setupFieldValue:
 	// make sure we can access the field

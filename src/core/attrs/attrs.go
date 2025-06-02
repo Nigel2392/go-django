@@ -423,14 +423,28 @@ type CanOnModelRegister interface {
 	OnModelRegister(model Definer) error
 }
 
-// An unbound field is a field that is not yet bound to a model.
+// An unbound field constructor is an object that can bind a field to a model.
+//
+// This is only called in [Define].
 //
 // It returns a field in case of a wrapper implementation,
 // or an error in case the field cannot be bound to the model.
-type UnboundField interface {
-	Field
+type UnboundFieldConstructor interface {
+	// Name returns the name of the field.
+	Name() string
+
 	// BindField binds the field to the model.
 	BindField(model Definer) (Field, error)
+}
+
+// An UnboundField is a field that is not bound to a model yet.
+//
+// This is only used in the [Define] function to create a field definition.
+// It is used to create a field that does not have to directly take a model as an argument,
+// but can be bound to a model later.
+type UnboundField interface {
+	Field
+	UnboundFieldConstructor
 }
 
 type Labeler interface {

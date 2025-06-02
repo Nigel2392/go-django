@@ -593,6 +593,54 @@ func TestModelFieldsBindable(t *testing.T) {
 	}
 }
 
+type TestUnboundFields struct {
+	ID          int
+	Name        string
+	Description string
+}
+
+func (f *TestUnboundFields) FieldDefs() attrs.Definitions {
+	return attrs.Define(f,
+		attrs.Unbound("ID", &attrs.FieldConfig{
+			Primary: true,
+		}),
+		attrs.Unbound("Name"),
+		attrs.Unbound("Description"),
+	)
+}
+
+func TestModelFieldsUnbound(t *testing.T) {
+	var m = &TestUnboundFields{
+		ID:          1,
+		Name:        "name",
+		Description: "description",
+	}
+
+	var defs = m.FieldDefs()
+	if err := defs.Set("ID", 2); err != nil {
+		t.Errorf("expected %v, got %v", nil, err)
+	}
+
+	if m.ID != 2 {
+		t.Errorf("expected %d, got %d", 2, m.ID)
+	}
+
+	if err := defs.Set("Name", "new name"); err != nil {
+		t.Errorf("expected %v, got %v", nil, err)
+	}
+
+	if m.Name != "new name" {
+		t.Errorf("expected %q, got %q", "new name", m.Name)
+	}
+
+	if err := defs.Set("Description", "new description"); err != nil {
+		t.Errorf("expected %v, got %v", nil, err)
+	}
+	if m.Description != "new description" {
+		t.Errorf("expected %q, got %q", "new description", m.Description)
+	}
+}
+
 type EmbeddedStruct struct {
 	ID        int
 	Age       int
