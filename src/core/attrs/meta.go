@@ -10,6 +10,7 @@ import (
 )
 
 type modelMeta struct {
+	setup       bool
 	model       Definer
 	definitions StaticDefinitions
 	forward     *orderedmap.OrderedMap[string, Relation] // forward orderedmap
@@ -286,6 +287,9 @@ func RegisterModel(model Definer) {
 		)
 	}
 
+	// Set the model as setup
+	meta.setup = true
+
 	// Send signal that the model has been registered
 	OnModelRegister.Send(SignalModelMeta{
 		Definer:     meta.model,
@@ -294,16 +298,42 @@ func RegisterModel(model Definer) {
 	})
 }
 
-func GetModelMeta(model Definer) ModelMeta {
-	if meta, ok := modelReg[reflect.TypeOf(model)]; ok {
+func GetModelMeta(model any) ModelMeta {
+	var (
+		meta ModelMeta
+		ok   bool
+	)
+	switch model := model.(type) {
+	case Definer:
+		meta, ok = modelReg[reflect.TypeOf(model)]
+	case reflect.Type:
+		if model.Kind() != reflect.Ptr {
+			model = reflect.PointerTo(model)
+		}
+		meta, ok = modelReg[model]
+	case reflect.Value:
+		var t = model.Type()
+		if t.Kind() != reflect.Ptr {
+			t = reflect.PointerTo(t)
+		}
+		meta, ok = modelReg[t]
+	default:
+		panic(fmt.Errorf("GetModelMeta: expected Definer, reflect.Type or reflect.Value, got %T", model))
+	}
+
+	if ok {
 		return meta
 	}
+
 	panic(fmt.Errorf("model %T not registered with `attrs.RegisterModel`, could not retrieve meta", model))
 }
 
 func IsModelRegistered(model Definer) bool {
-	var _, ok = modelReg[reflect.TypeOf(model)]
-	return ok
+	var mdl, ok = modelReg[reflect.TypeOf(model)]
+	if !ok {
+		return false
+	}
+	return mdl.setup
 }
 
 func GetRelationMeta(m Definer, name string) (Relation, bool) {

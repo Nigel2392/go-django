@@ -19,6 +19,12 @@ func fieldNames(d any, exclude []string) []string {
 		var meta = GetModelMeta(d)
 		var defs = meta.Definitions()
 		fields = defs.Fields()
+	case Definitions:
+		var f = d.Fields()
+		fields = make([]FieldDefinition, len(f))
+		for i, field := range f {
+			fields[i] = field
+		}
 	case []Field:
 		fields = make([]FieldDefinition, len(d))
 		for i, f := range d {
