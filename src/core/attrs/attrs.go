@@ -40,8 +40,12 @@ func init() {
 // the newly created object will not be used.
 type CanCreateObject[T Definer] interface {
 	// CreateObject creates a new object being the same
-	// type as the model, and returns it.
-	CreateObject() T
+	// type as the source model provided in the method.
+	//
+	// This might be useful for creating new objects
+	// when the embedder needs information from the source model,
+	// such as the content type or other attributes.
+	CreateObject(source T) T
 }
 
 // A model can implement the CanSetup interface

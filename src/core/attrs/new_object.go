@@ -11,9 +11,9 @@ func createIfIface[T Definer](v any) (T, bool) {
 	var obj T
 	switch v := v.(type) {
 	case CanCreateObject[T]:
-		obj = v.CreateObject()
+		obj = v.CreateObject(v.(T))
 	case CanCreateObject[Definer]:
-		obj = v.CreateObject().(T)
+		obj = v.CreateObject(v.(Definer)).(T)
 	default:
 		var zero T
 		return zero, false
