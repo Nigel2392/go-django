@@ -15,7 +15,30 @@ type ObjectDefinitions struct {
 	ObjectFields *orderedmap.OrderedMap[string, Field]
 }
 
-func fieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, error) {
+// UnpackFieldsFromArgs unpacks the fields from the given arguments.
+//
+// The fields are passed as variadic arguments, and can be of many types:
+//
+// - Field: a field (or any type that implements the Field interface)
+// - []Field: a slice of fields
+// - UnboundFieldConstruuctor: a constructor for a field that needs to be bound
+// - []UnboundFieldConstructor: a slice of unbound field constructors
+// - UnboundField: an unbound field that needs to be bound
+// - []UnboundField: a slice of unbound fields that need to be bound
+// - func() Field: a function that returns a field
+// - func() (Field, error): a function that returns a field and an error
+// - func() []Field: a function that returns a slice of fields
+// - func() ([]Field, error): a function that returns a slice of fields and an error
+// - func(d Definer) Field: a function that takes a Definer and returns a field
+// - func(d Definer) (Field, error): a function that takes a Definer and returns a field and an error
+// - func(d Definer) []Field: a function that takes a Definer and returns a slice of fields
+// - func(d Definer) ([]Field, error): a function that takes a Definer and returns a slice of fields and an error
+// - func(d T1) Field: a function that takes a Definer of type T1 and returns a field
+// - func(d T1) (Field, error): a function that takes a Definer of type T1 and returns a field and an error
+// - func(d T1) []Field: a function that takes a Definer of type T1 and returns a slice of fields
+// - func(d T1) ([]Field, error): a function that takes a Definer of type T1 and returns a slice of fields and an error
+// - string: a field name, which will be converted to a Field with no configuration
+func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, error) {
 	var fields = make([]Field, 0, len(args))
 	for _, f := range args {
 		var (
@@ -44,8 +67,6 @@ func fieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, error)
 				}
 			}
 
-		case UnboundField:
-			fld = v
 		case []UnboundField:
 			flds = make([]Field, len(v))
 			for i, u := range v {
@@ -120,28 +141,10 @@ func fieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, error)
 // This can then be returned by the FieldDefs method of a model
 // to make it comply with the Definer interface.
 //
-// The fields are passed as variadic arguments, and can be of many types:
-// - Field: a field
-// - []Field: a slice of fields
-// - UnboundFieldConstruuctor: a constructor for a field that needs to be bound
-// - []UnboundFieldConstructor: a slice of unbound field constructors
-// - UnboundField: an unbound field that needs to be bound
-// - []UnboundField: a slice of unbound fields that need to be bound
-// - func() Field: a function that returns a field
-// - func() (Field, error): a function that returns a field and an error
-// - func() []Field: a function that returns a slice of fields
-// - func() ([]Field, error): a function that returns a slice of fields and an error
-// - func(d Definer) Field: a function that takes a Definer and returns a field
-// - func(d Definer) (Field, error): a function that takes a Definer and returns a field and an error
-// - func(d Definer) []Field: a function that takes a Definer and returns a slice of fields
-// - func(d Definer) ([]Field, error): a function that takes a Definer and returns a slice of fields and an error
-// - func(d T1) Field: a function that takes a Definer of type T1 and returns a field
-// - func(d T1) (Field, error): a function that takes a Definer of type T1 and returns a field and an error
-// - func(d T1) []Field: a function that takes a Definer of type T1 and returns a slice of fields
-// - func(d T1) ([]Field, error): a function that takes a Definer of type T1 and returns a slice of fields and an error
-// - string: a field name, which will be converted to a Field with no configuration
+// For information about the arguments, see the
+// [UnpackFieldsFromArgs] function.
 func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions {
-	var fields, err = fieldsFromArgs(d, fieldDefinitions...)
+	var fields, err = UnpackFieldsFromArgs(d, fieldDefinitions...)
 	if err != nil {
 		assert.Fail("define (%T): %v", d, err)
 	}
