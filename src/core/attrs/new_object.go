@@ -8,7 +8,7 @@ import (
 )
 
 func createIfIface[T Definer](v any) (T, bool) {
-	var obj T
+	var obj T = v.(T)
 	switch v := v.(type) {
 	case CanCreateObject[T]:
 		obj = v.CreateObject(v.(T))
@@ -21,11 +21,14 @@ func createIfIface[T Definer](v any) (T, bool) {
 
 	var rVal = reflect.ValueOf(v)
 	var rNew = reflect.ValueOf(obj)
+	if !rNew.IsValid() || rNew.IsNil() {
+		return obj, false
+	}
 	if rVal.Type() != rNew.Type() {
 		return obj, false
 	}
 
-	if rVal.IsValid() && !rVal.IsNil() {
+	if rVal.IsValid() && !rVal.IsNil() && rVal.CanAddr() && rNew.CanAddr() {
 		assert.False(
 			rVal.UnsafeAddr() == rNew.UnsafeAddr(),
 			"the new object must not be the same as the original object (%d == %d)",
