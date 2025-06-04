@@ -70,6 +70,16 @@ type CanSetup interface {
 	Setup()
 }
 
+// AutoInitialize is an interface for values of model fields
+// that should be automatically initialized when the model is created.
+type CanAutoInitialize interface {
+	// AutoInitialize returns a value that should be used to initialize the field.
+	//
+	// This is called inside field constructors to initialize the field value.
+	// If the returned value is nil, the field will not be initialized.
+	AutoInitialize(Definer) any
+}
+
 // Keys of attributes defined with the `Attrs()` method on fields.
 //
 // These are used to store extra information about the field.

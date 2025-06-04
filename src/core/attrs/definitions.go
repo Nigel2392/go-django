@@ -236,6 +236,10 @@ func (d *ObjectDefinitions) Primary() Field {
 
 func (d *ObjectDefinitions) Instance() Definer {
 	if d.Object == nil {
+		var rTyp = reflect.TypeOf(d)
+		if rTyp == nil || rTyp.Kind() == reflect.Invalid {
+			return nil
+		}
 		return NewObject[Definer](d.Object)
 	}
 	return d.Object

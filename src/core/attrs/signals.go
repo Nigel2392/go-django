@@ -129,3 +129,5 @@ func RegisterDefaultType(valueOfType any, getDefault func(f Field, new_field_t_i
 		}),
 	)
 }
+
+// var valueInitMap = make(map[reflect.Type]func(instType reflect.Type, instField reflect.StructField, instValue reflect.Value) (reflect.Value, error))
