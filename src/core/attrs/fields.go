@@ -73,8 +73,6 @@ type FieldDef struct {
 	// directlyInteractible bool
 }
 
-var _CAN_AUTO_INIT = reflect.TypeOf((*CanAutoInitialize)(nil)).Elem()
-
 // NewField creates a new field definition for the given instance.
 //
 // This can then be used for managing the field in a more abstract way.
@@ -99,11 +97,6 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 		cnf = conf[0]
 	}
 
-	var canAutoInit = false
-	if field_t.Type.Implements(_CAN_AUTO_INIT) {
-		canAutoInit = true
-	}
-
 	// setupFieldValue:
 	// make sure we can access the field
 	var field_v = instance_v.Field(field_t.Index[0])
@@ -112,21 +105,12 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 		if field_v.Kind() == reflect.Ptr {
 			isNil = field_v.IsNil()
 			if isNil {
-				if !canAutoInit && !cnf.AutoInit {
+				if !cnf.AutoInit {
 					assert.Fail("field %q is nil and cannot be accessed", name)
 				}
+
 				isNil = false
-
-				var newVal = reflect.New(field_t.Type.Elem())
-				if canAutoInit {
-					initter := newVal.Interface().(CanAutoInitialize)
-					v := initter.AutoInitialize(instance.(Definer))
-					if v != nil {
-						newVal = reflect.ValueOf(v)
-					}
-				}
-
-				field_v.Set(newVal)
+				field_v.Set(reflect.New(field_t.Type.Elem()))
 			}
 
 			field_v = field_v.Elem()

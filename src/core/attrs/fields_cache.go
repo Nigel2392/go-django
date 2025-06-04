@@ -10,8 +10,6 @@ type structType struct {
 	fields  map[string]reflect.StructField
 }
 
-type reflectStructFieldMap map[reflect.Type]*structType
-
 func nameGetDefault(f *FieldDef) string {
 	return fmt.Sprintf("GetDefault%s", f.field_t.Name)
 }
@@ -23,6 +21,8 @@ func nameSetValue(f *FieldDef) string {
 func nameGetValue(f *FieldDef) string {
 	return fmt.Sprintf("Get%s", f.field_t.Name)
 }
+
+type reflectStructFieldMap map[reflect.Type]*structType
 
 func (m reflectStructFieldMap) getField(typIndirected reflect.Type, name string) (reflect.StructField, bool) {
 	var (
