@@ -9,8 +9,11 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/shopspring/decimal"
+
+	_ "unsafe"
 )
 
 func init() {
@@ -32,6 +35,17 @@ func init() {
 			return fields.FileField("", opts...)
 		},
 	)
+}
+
+// IsZero checks if a value is set to its zero value.
+// It works on any value, including pointers, slices, maps, and structs.
+//
+//   - For slices it checks if the slice is empty and all elements are zero values.
+//   - For maps it checks if the map is empty.
+//   - For pointers it checks if the pointer is nil
+//     or if the value it points to is a zero value.
+func IsZero(value interface{}) bool {
+	return django_reflect.IsZero(value)
 }
 
 // CanCreateObject is an interface for models that can create new objects of the same type.
