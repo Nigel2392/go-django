@@ -420,7 +420,7 @@ type Field interface {
 	//
 	// Each time a field is changed, the field definitions should receive a signal that
 	// the field has changed.
-	FieldDefs() Definitions
+	FieldDefinitions() Definitions
 
 	// BindToDefinitions binds the field to the definitions of the model.
 	//

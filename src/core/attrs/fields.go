@@ -247,7 +247,7 @@ func (f *FieldDef) BindToDefinitions(defs Definitions) {
 	f.defs = defs
 }
 
-func (f *FieldDef) FieldDefs() Definitions {
+func (f *FieldDef) FieldDefinitions() Definitions {
 	assert.False(
 		f.defs == nil,
 		"Definitions for field %q (%T) are not set, the field was not properly bound to the model",
