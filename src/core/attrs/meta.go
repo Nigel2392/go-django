@@ -282,9 +282,12 @@ func RegisterModel(model Definer) {
 			name, rel,
 		)
 
-		registerReverseRelation(
-			model, field, rel,
-		)
+		var canReverse, ok = field.(CanReverseRelate)
+		if !ok || canReverse.AllowReverseRelation() {
+			registerReverseRelation(
+				model, field, rel,
+			)
+		}
 	}
 
 	// Set the model as setup

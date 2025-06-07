@@ -149,6 +149,10 @@ func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions
 		assert.Fail("define (%T): %v", d, err)
 	}
 
+	var defs = &ObjectDefinitions{
+		Object: d,
+	}
+
 	var primaryField string
 	var m = orderedmap.NewOrderedMap[string, Field]()
 	for _, f := range fields {
@@ -165,13 +169,19 @@ func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions
 			}
 		}
 
+		f.BindToDefinitions(defs)
+
 		m.Set(f.Name(), f)
 	}
 
-	return &ObjectDefinitions{
-		Object:       d,
-		ObjectFields: m,
-		PrimaryField: primaryField,
+	defs.ObjectFields = m
+	defs.PrimaryField = primaryField
+	return defs
+}
+
+func (d *ObjectDefinitions) SignalChange(f Field, value interface{}) {
+	if m, ok := d.Object.(CanSignalChanged); ok {
+		m.SignalChange(f, value)
 	}
 }
 

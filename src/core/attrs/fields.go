@@ -26,6 +26,8 @@ var (
 	capCaser            = cases.Title(language.English)
 	cachedStructs       = make(reflectStructFieldMap) // Cache for struct fields and methods
 	ALLOW_METHOD_CHECKS = false                       // Whether to allow method checks for getters and setters
+
+	_ Field = (*FieldDef)(nil) // Ensure FieldDef implements the Field interface
 )
 
 // FieldConfig is a configuration for a field.
@@ -61,6 +63,7 @@ type FieldConfig struct {
 }
 
 type FieldDef struct {
+	defs           Definitions
 	attrDef        FieldConfig
 	instance_t_ptr reflect.Type
 	instance_v_ptr reflect.Value
@@ -100,17 +103,36 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 	// setupFieldValue:
 	// make sure we can access the field
 	var field_v = instance_v.Field(field_t.Index[0])
+	var curr_t = field_v.Type()
 	for i := 1; i < len(field_t.Index); i++ {
 		var isNil = false
 		if field_v.Kind() == reflect.Ptr {
 			isNil = field_v.IsNil()
 			if isNil {
 				if !cnf.AutoInit {
-					assert.Fail("field %q is nil and cannot be accessed", name)
+					assert.Fail("field %q is nil (%s) and cannot be accessed", name, curr_t.Elem().Name())
+				}
+				isNil = false
+
+				var newVal reflect.Value
+				switch curr_t.Kind() {
+				case reflect.Slice, reflect.Array:
+					newVal = reflect.MakeSlice(curr_t, 0, 0)
+				case reflect.Map:
+					newVal = reflect.MakeMap(curr_t)
+				case reflect.Interface:
+					newVal = reflect.New(curr_t.Elem())
+				default:
+					newVal = reflect.New(curr_t.Elem())
 				}
 
-				isNil = false
-				field_v.Set(reflect.New(field_t.Type.Elem()))
+				if curr_t.Implements(reflect.TypeOf((*Definer)(nil)).Elem()) {
+					newVal = reflect.ValueOf(
+						NewObject[Definer](curr_t),
+					)
+				}
+
+				field_v.Set(newVal)
 			}
 
 			field_v = field_v.Elem()
@@ -130,6 +152,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 		}
 
 		field_v = field_v.Field(field_t.Index[i])
+		curr_t = field_v.Type()
 	}
 	assert.True(field_v.IsValid(), "field %q not found in %T", name, instance)
 
@@ -161,6 +184,13 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 	}
 
 	return f
+}
+
+func (f *FieldDef) signalChanges(value interface{}) {
+	if f.defs == nil {
+		return
+	}
+	f.defs.SignalChange(f, value)
 }
 
 // model is equal to instance_t
@@ -206,6 +236,24 @@ func (f *FieldDef) OnModelRegister(model Definer) error {
 	}
 
 	return nil
+}
+
+func (f *FieldDef) BindToDefinitions(defs Definitions) {
+	assert.True(
+		f.defs == nil,
+		"Definitions for field %q (%T) are already set, the field was bound to the model multiple times",
+		f.field_t.Name, f.field_v.Interface(),
+	)
+	f.defs = defs
+}
+
+func (f *FieldDef) FieldDefs() Definitions {
+	assert.False(
+		f.defs == nil,
+		"Definitions for field %q (%T) are not set, the field was not properly bound to the model",
+		f.field_t.Name, f.field_v.Interface(),
+	)
+	return f.defs
 }
 
 func (f *FieldDef) Type() reflect.Type {
@@ -695,6 +743,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		assert.Err(BindValueToModel(
 			f.Instance(), f, f.field_v.Interface(),
 		))
+		f.signalChanges(f.field_v.Interface())
 	}()
 
 	rv := reflect.ValueOf(v)
@@ -806,6 +855,7 @@ func (f *FieldDef) Scan(value any) error {
 		assert.Err(BindValueToModel(
 			f.Instance(), f, f.field_v.Interface(),
 		))
+		f.signalChanges(f.field_v.Interface())
 	}()
 
 	rv := reflect.ValueOf(value)

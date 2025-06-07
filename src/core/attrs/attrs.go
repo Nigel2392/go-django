@@ -374,11 +374,25 @@ type FieldDefinition interface {
 	Validate() error
 }
 
+// CanSignalChanged is an interface for models so that fields can signal their changes to the model.
+//
+// This is used to notify the model that a field has changed,
+// so that the model can update its state accordingly.
+type CanSignalChanged interface {
+	// Changed is a function that is called when a field is changed.
+	//
+	// This is used to notify the model that a field has changed,
+	// so that the model can update its state accordingly.
+	SignalChange(f Field, value interface{})
+}
+
 // Definitions is the interface that wraps the methods for a model's field definitions.
 //
 // This is some sort of management- interface which allows for simpler and more uniform management of model fields.
 type Definitions interface {
 	staticDefinitions[Field]
+
+	CanSignalChanged
 
 	// Set sets the value of the field with the given name (or panics if not found).
 	Set(name string, value interface{}) error
@@ -401,6 +415,18 @@ type Field interface {
 	//
 	// If the field is nil or the zero value, the default value should be returned.
 	driver.Valuer
+
+	// FieldDefs retrieves the field definitions for the model.
+	//
+	// Each time a field is changed, the field definitions should receive a signal that
+	// the field has changed.
+	FieldDefs() Definitions
+
+	// BindToDefinitions binds the field to the definitions of the model.
+	//
+	// This is used to bind the field to the model's definitions
+	// so that the field can send the appropriate signals when the field is changed.
+	BindToDefinitions(definitions Definitions)
 
 	// ToString returns a string representation of the value.
 	//
@@ -439,6 +465,13 @@ type CanRelatedName interface {
 type CanOnModelRegister interface {
 	Field
 	OnModelRegister(model Definer) error
+}
+
+// CanReverseRelate is an interface for fields to indicate that no reverse relation should be created.
+type CanReverseRelate interface {
+	Field
+	// ReverseRelate returns false, indicating that the field cannot be reverse related.
+	AllowReverseRelation() bool
 }
 
 // An unbound field constructor is an object that can bind a field to a model.
