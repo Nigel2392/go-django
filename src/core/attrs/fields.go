@@ -239,11 +239,12 @@ func (f *FieldDef) OnModelRegister(model Definer) error {
 }
 
 func (f *FieldDef) BindToDefinitions(defs Definitions) {
-	assert.True(
-		f.defs == nil,
-		"Definitions for field %q (%T) are already set, the field was bound to the model multiple times",
-		f.field_t.Name, f.field_v.Interface(),
-	)
+	// allow for rebinding until i see a reason not to...
+	//	assert.True(
+	//		f.defs == nil,
+	//		"Definitions for field %q (%T) are already set, the field was bound to the model multiple times",
+	//		f.field_t.Name, f.field_v.Interface(),
+	//	)
 	f.defs = defs
 }
 
