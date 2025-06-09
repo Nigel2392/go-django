@@ -744,7 +744,9 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 		assert.Err(BindValueToModel(
 			f.Instance(), f, f.field_v.Interface(),
 		))
-		f.signalChanges(f.field_v.Interface())
+		if !force {
+			f.signalChanges(f.field_v.Interface())
+		}
 	}()
 
 	rv := reflect.ValueOf(v)
@@ -867,6 +869,10 @@ func (f *FieldDef) Scan(value any) error {
 	}
 
 	if scanner, ok := f.field_v.Interface().(sql.Scanner); ok {
+		return scanner.Scan(value)
+	}
+
+	if scanner, ok := f.field_v.Addr().Interface().(sql.Scanner); ok {
 		return scanner.Scan(value)
 	}
 

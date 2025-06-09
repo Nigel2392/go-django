@@ -135,6 +135,8 @@ type Binder interface {
 	BindToModel(model Definer, field Field) error
 }
 
+var _binder = reflect.TypeOf((*Binder)(nil)).Elem()
+
 // BindValueToModel binds the given model and field to the value.
 func BindValueToModel(model Definer, field Field, value any) error {
 	if value == nil {
@@ -146,12 +148,14 @@ func BindValueToModel(model Definer, field Field, value any) error {
 		if !v.IsValid() {
 			return nil
 		}
-		value = v.Interface()
-	case *reflect.Value:
-		if v == nil || !v.IsValid() {
-			return nil
+		if v.CanAddr() && v.Addr().Type().Implements(_binder) {
+			value = v.Addr().Interface()
+		} else {
+			value = v.Interface()
 		}
-		value = v.Interface()
+
+	case *reflect.Value:
+		return BindValueToModel(model, field, *v)
 	}
 
 	if binder, ok := value.(Binder); ok {
