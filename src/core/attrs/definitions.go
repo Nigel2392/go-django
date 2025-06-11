@@ -25,14 +25,17 @@ type ObjectDefinitions struct {
 // - []UnboundFieldConstructor: a slice of unbound field constructors
 // - UnboundField: an unbound field that needs to be bound
 // - []UnboundField: a slice of unbound fields that need to be bound
+// - func() []any: a function of which the result will be recursively unpacked
 // - func() Field: a function that returns a field
 // - func() (Field, error): a function that returns a field and an error
 // - func() []Field: a function that returns a slice of fields
 // - func() ([]Field, error): a function that returns a slice of fields and an error
+// - func(d Definer) []any: a function that takes a Definer and returns a slice of any to be recursively unpacked
 // - func(d Definer) Field: a function that takes a Definer and returns a field
 // - func(d Definer) (Field, error): a function that takes a Definer and returns a field and an error
 // - func(d Definer) []Field: a function that takes a Definer and returns a slice of fields
 // - func(d Definer) ([]Field, error): a function that takes a Definer and returns a slice of fields and an error
+// - func(d T1) []any: a function that takes a Definer of type T1 and returns a slice of any to be recursively unpacked
 // - func(d T1) Field: a function that takes a Definer of type T1 and returns a field
 // - func(d T1) (Field, error): a function that takes a Definer of type T1 and returns a field and an error
 // - func(d T1) []Field: a function that takes a Definer of type T1 and returns a slice of fields
@@ -80,6 +83,15 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 			fld, err = v()
 
 		// func() ([]field, ?error)
+		case func() []any:
+			var unpacked, err = UnpackFieldsFromArgs(definer, v()...)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"fieldsFromArgs (%T): %v",
+					definer, err,
+				)
+			}
+			flds = unpacked
 		case func() []Field:
 			flds = v()
 		case func() ([]Field, error):
@@ -92,6 +104,15 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 			fld, err = v(definer)
 
 		// func(t1) ([]field, ?error)
+		case func(d T1) []any:
+			var unpacked, err = UnpackFieldsFromArgs(definer, v(definer)...)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"fieldsFromArgs (%T): %v",
+					definer, err,
+				)
+			}
+			flds = unpacked
 		case func(d T1) []Field:
 			flds = v(definer)
 		case func(d T1) ([]Field, error):
@@ -104,6 +125,15 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 			fld, err = v(definer)
 
 		// func(d Definer) ([]field, ?error)
+		case func(d Definer) []any:
+			var unpacked, err = UnpackFieldsFromArgs(definer, v(definer)...)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"fieldsFromArgs (%T): %v",
+					definer, err,
+				)
+			}
+			flds = unpacked
 		case func(d Definer) []Field:
 			flds = v(definer)
 		case func(d Definer) ([]Field, error):
