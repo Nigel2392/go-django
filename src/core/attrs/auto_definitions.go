@@ -183,30 +183,18 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 	return data
 }
 
-// AutoDefinitions automatically generates definitions for a struct.
-//
+// AutoFieldList automatically generates a list of fields for a struct.
 // It does this by iterating over the fields of the struct and checking for the
 // `attrs` tag. If the tag is present, it will parse the tag and generate the
 // definition.
-//
-// If the `include` parameter is provided, it will only generate definitions for
-// the fields that are included.
-func AutoDefinitions[T Definer](instance T, include ...any) Definitions {
+func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
 	var m = make([]Field, 0)
 
 	var (
 		instance_t_ptr = reflect.TypeOf(instance)
 		instance_v_ptr = reflect.ValueOf(instance)
-	)
-
-	assert.Equal(
-		instance_t_ptr.Kind(), reflect.Ptr,
-		"instance %T must be a pointer", instance,
-	)
-
-	var (
-		instance_t = instance_t_ptr.Elem()
-		instance_v = instance_v_ptr.Elem()
+		instance_t     = instance_t_ptr.Elem()
+		instance_v     = instance_v_ptr.Elem()
 	)
 
 	if len(include) == 0 {
@@ -236,44 +224,66 @@ func AutoDefinitions[T Definer](instance T, include ...any) Definitions {
 				fieldName:      field_t.Name,
 			})
 		}
-	} else {
-		for _, name := range include {
-			switch name := name.(type) {
-			case string:
 
-				var field_t, ok = instance_t.FieldByName(name)
-				assert.True(ok, "field %q not found in %T", name, instance)
+		return m
+	}
 
-				var (
-					attrs   = autoDefinitionStructTag(field_t)
-					field_v = instance_v.FieldByIndex(field_t.Index)
-				)
+	for _, name := range include {
+		switch name := name.(type) {
+		case string:
 
-				var skip = (field_t.Anonymous ||
-					field_t.PkgPath != "" ||
-					field_t.Tag.Get(ATTR_TAG_NAME) == "-")
-
-				if skip {
-					continue
-				}
-
-				m = append(m, &FieldDef{
-					attrDef:        attrs,
-					instance_t_ptr: instance_t_ptr,
-					instance_v_ptr: instance_v_ptr,
-					instance_t:     instance_t,
-					instance_v:     instance_v,
-					field_t:        field_t,
-					field_v:        field_v,
-					fieldName:      field_t.Name,
-				})
-			case Field:
-				m = append(m, name)
-			default:
-				assert.Fail("unsupported type %T", name)
+			if name == "*" {
+				m = append(m, AutoFieldList(instance)...)
+				continue
 			}
+
+			var field_t, ok = cachedStructs.getField(instance_t, name)
+			assert.True(ok, "field %q not found in %T", name, instance)
+
+			var (
+				attrs   = autoDefinitionStructTag(field_t)
+				field_v = instance_v.FieldByIndex(field_t.Index)
+			)
+
+			var skip = (field_t.Anonymous ||
+				field_t.PkgPath != "" ||
+				field_t.Tag.Get(ATTR_TAG_NAME) == "-")
+
+			if skip {
+				continue
+			}
+
+			m = append(m, &FieldDef{
+				attrDef:        attrs,
+				instance_t_ptr: instance_t_ptr,
+				instance_v_ptr: instance_v_ptr,
+				instance_t:     instance_t,
+				instance_v:     instance_v,
+				field_t:        field_t,
+				field_v:        field_v,
+				fieldName:      field_t.Name,
+			})
+		case Field:
+			m = append(m, name)
+		default:
+			fields, err := UnpackFieldsFromArgs(instance, name)
+			assert.True(err == nil, "error unpacking fields: %v", err)
+			m = append(m, fields...)
 		}
 	}
 
-	return Define(instance, m...)
+	assert.True(len(m) > 0, "no fields found in %T", instance)
+	return m
+}
+
+// AutoDefinitions automatically generates definitions for a struct.
+//
+// It does this by iterating over the fields of the struct and checking for the
+// `attrs` tag. If the tag is present, it will parse the tag and generate the
+// definition.
+//
+// If the `include` parameter is provided, it will only generate definitions for
+// the fields that are included.
+func AutoDefinitions[T Definer](instance T, include ...any) Definitions {
+	return Define(instance, AutoFieldList(instance, include...)...)
 }

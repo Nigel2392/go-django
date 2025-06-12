@@ -5,6 +5,8 @@ import (
 	"reflect"
 )
 
+var cachedStructs = make(reflectStructFieldMap) // Cache for struct fields and methods
+
 type structType struct {
 	methods map[string]reflect.Method
 	fields  map[string]reflect.StructField
@@ -30,15 +32,22 @@ func (m reflectStructFieldMap) getField(typIndirected reflect.Type, name string)
 		field         reflect.StructField
 	)
 	if !ok {
-		return typIndirected.FieldByName(name)
+		structTyp = &structType{
+			methods: make(map[string]reflect.Method),
+			fields:  make(map[string]reflect.StructField),
+		}
+		m[typIndirected] = structTyp
 	}
 
 	field, ok = structTyp.fields[name]
 	if !ok {
-		return typIndirected.FieldByName(name)
+		field, ok = typIndirected.FieldByName(name)
+		if ok {
+			structTyp.fields[name] = field
+		}
 	}
 
-	return field, true
+	return field, ok
 }
 
 func (m reflectStructFieldMap) getMethod(typIndirected reflect.Type, name string) (reflect.Method, bool) {
