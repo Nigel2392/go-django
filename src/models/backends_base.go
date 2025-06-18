@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 type BaseBackend[T any] struct {
@@ -13,11 +14,11 @@ type BaseBackend[T any] struct {
 }
 
 func (b *BaseBackend[T]) CreateTable(db *sql.DB) error {
-	if b.CreateTableQuery == "" {
-		return nil
-	}
 	if b.CreateTableFn != nil {
 		return b.CreateTableFn(db)
+	}
+	if b.CreateTableQuery == "" {
+		return fmt.Errorf("no CreateTableQuery or CreateTableFn provided")
 	}
 	_, err := db.Exec(b.CreateTableQuery)
 	return err

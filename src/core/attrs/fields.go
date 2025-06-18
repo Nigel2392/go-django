@@ -891,7 +891,32 @@ func (f *FieldDef) Scan(value any) error {
 			typ = typ.Elem()
 		}
 
-		if rv.Kind() == reflect.String {
+		switch rv.Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			switch typ.Kind() {
+			case reflect.Bool:
+				if rv.Int() == 0 {
+					f.field_v.SetBool(false)
+				} else {
+					f.field_v.SetBool(true)
+				}
+			}
+
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			switch typ.Kind() {
+			case reflect.Bool:
+				if rv.Uint() == 0 {
+					f.field_v.SetBool(false)
+				} else {
+					f.field_v.SetBool(true)
+				}
+				return nil
+			default:
+				return fmt.Errorf("value of type %q not convertible to %q for field %q",
+					rv.Type(), f.field_t.Type, f.field_t.Name)
+			}
+
+		case reflect.String:
 			switch typ.Kind() {
 			case reflect.Struct, reflect.Map, reflect.Slice:
 				t := reflect.New(typ).Interface()
@@ -917,10 +942,12 @@ func (f *FieldDef) Scan(value any) error {
 				return fmt.Errorf("value of type %q not convertible to %q for field %q",
 					rv.Type(), f.field_t.Type, f.field_t.Name)
 			}
-		} else {
+
+		default:
 			return fmt.Errorf("value of type %q not convertible to %q for field %q",
 				rv.Type(), f.field_t.Type, f.field_t.Name)
 		}
+
 	}
 
 	old := f.field_v
