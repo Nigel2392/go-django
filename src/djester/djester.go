@@ -116,6 +116,8 @@ func (d *Tester) Setup() error {
 		appConfigs = append(appConfigs, app)
 	}
 
+	d.Flags = append(d.Flags, django.FlagSkipCmds)
+
 	var opts = make([]django.Option, 0, len(d.ExtraOptions))
 	opts = append(opts, django.Configure(settings))
 	opts = append(opts, django.Apps(appConfigs...))
