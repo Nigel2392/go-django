@@ -2,12 +2,12 @@ package revisions_test
 
 import (
 	"context"
-	"database/sql"
 	"reflect"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -119,7 +119,7 @@ func init() {
 	}
 
 	// var db, err = sql.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
-	var db, err = sql.Open("sqlite3", "file::memory:?cache=shared")
+	var db, err = drivers.Open(context.Background(), "sqlite3", "file::memory:?cache=shared")
 	// var db, err = sql.Open("sqlite3", "./revisions_test.db")
 	if err != nil {
 		panic(errors.Wrap(

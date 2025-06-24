@@ -4,12 +4,13 @@
 package djester
 
 import (
-	"database/sql"
+	"context"
 	"maps"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -54,7 +55,7 @@ type (
 		Tests        []Test
 
 		// Private fields to be used by the Tester struct
-		db         *sql.DB
+		db         drivers.Database
 		app        *django.Application
 		testClient *http.Client
 		testServer *httptest.Server
@@ -73,7 +74,7 @@ func (d *Tester) Setup() error {
 	maps.Copy(settings, d.Settings)
 
 	if d.Database.Engine != "" {
-		var db, err = sql.Open(d.Database.Engine, d.Database.ConnectionString)
+		var db, err = drivers.Open(context.Background(), d.Database.Engine, d.Database.ConnectionString)
 		if err != nil {
 			return err
 		}
@@ -144,7 +145,7 @@ func (d *Tester) Client() *http.Client {
 	return d.testClient
 }
 
-func (d *Tester) DB() *sql.DB {
+func (d *Tester) DB() drivers.Database {
 	return d.db
 }
 

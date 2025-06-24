@@ -2,12 +2,12 @@ package links_test
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features/links"
@@ -18,7 +18,7 @@ import (
 
 func TestViews(t *testing.T) {
 
-	var db, _ = sql.Open("sqlite3", "file::memory:?cache=private")
+	var db, _ = drivers.Open(context.Background(), "sqlite3", "file::memory:?cache=private")
 	var app = django.App(
 		django.Configure(map[string]interface{}{
 			django.APPVAR_ALLOWED_HOSTS: []string{"*"},
