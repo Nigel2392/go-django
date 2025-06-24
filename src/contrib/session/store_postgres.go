@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 )
 
 // PostgresStore represents the session store.

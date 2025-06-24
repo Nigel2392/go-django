@@ -1,0 +1,35 @@
+{
+  "dependencies": [
+    "auth:User:0001_create_table.mig"
+  ],
+  "table": {
+    "table": "profile",
+    "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.Profile",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "default": 0
+      },
+      {
+        "name": "User",
+        "column": "user_id",
+        "use_in_db": true,
+        "relation": {
+          "type": "OneToOne",
+          "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User"
+        }
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

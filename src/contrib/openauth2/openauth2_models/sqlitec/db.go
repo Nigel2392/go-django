@@ -8,7 +8,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
 )
 

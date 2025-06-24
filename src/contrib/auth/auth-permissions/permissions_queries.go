@@ -3,7 +3,7 @@ package auth_permissions
 import (
 	"context"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/auth-permissions-mysql"
 	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/auth-permissions-sqlite"
 	permissions_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/permissions-models"

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/backend"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/google/uuid"

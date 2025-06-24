@@ -1,7 +1,7 @@
 package auth_permissions
 
 import (
-	"github.com/Nigel2392/go-django-queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	permissions_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/permissions-models"

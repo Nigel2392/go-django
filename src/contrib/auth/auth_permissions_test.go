@@ -8,7 +8,7 @@ import (
 	"net/mail"
 	"testing"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	auth_permissions "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions"

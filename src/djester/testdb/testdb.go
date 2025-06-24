@@ -1,6 +1,6 @@
 package testdb
 
-import "github.com/Nigel2392/go-django-queries/src/drivers"
+import "github.com/Nigel2392/go-django/queries/src/drivers"
 
 const (
 	retries  int    = 10

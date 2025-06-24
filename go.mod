@@ -21,7 +21,7 @@ require (
 )
 
 require (
-	github.com/Nigel2392/go-django-queries v1.1.1-0.20250624172831-e65e8bfd89fb
+	github.com/Nigel2392/go-django-queries v1.1.1-0.20250624202131-50941ca35bb9
 	github.com/Nigel2392/go-telepath v0.1.3-0.20250115131048-600eacd48c62
 	github.com/Nigel2392/tags v1.0.0
 	github.com/PuerkitoBio/goquery v1.10.1

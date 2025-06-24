@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	queries "github.com/Nigel2392/go-django-queries/src"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/pkg/errors"
 )
 

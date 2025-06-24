@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/command"
 )
 

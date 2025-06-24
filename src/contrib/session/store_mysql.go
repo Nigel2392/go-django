@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 )
 
 // MySQLStore represents the session store.

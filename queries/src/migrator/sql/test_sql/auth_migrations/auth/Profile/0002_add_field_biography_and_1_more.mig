@@ -1,0 +1,70 @@
+{
+  "dependencies": [
+    "auth:User:0002_add_field_first_name_and_1_more.mig"
+  ],
+  "table": {
+    "table": "profile",
+    "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.Profile",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "default": 0
+      },
+      {
+        "name": "User",
+        "column": "user_id",
+        "use_in_db": true,
+        "relation": {
+          "type": "OneToOne",
+          "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User"
+        }
+      },
+      {
+        "name": "Biography",
+        "column": "biography",
+        "use_in_db": true,
+        "nullable": true,
+        "default": ""
+      },
+      {
+        "name": "Website",
+        "column": "website",
+        "use_in_db": true,
+        "nullable": true,
+        "default": ""
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "add_field",
+      "field": {
+        "new": {
+          "name": "Biography",
+          "column": "biography",
+          "use_in_db": true,
+          "nullable": true,
+          "default": ""
+        }
+      }
+    },
+    {
+      "action": "add_field",
+      "field": {
+        "new": {
+          "name": "Website",
+          "column": "website",
+          "use_in_db": true,
+          "nullable": true,
+          "default": ""
+        }
+      }
+    }
+  ]
+}

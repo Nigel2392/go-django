@@ -5,7 +5,7 @@ import (
 
 	_ "embed"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	permissions_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/permissions-models"
 	dj_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/mattn/go-sqlite3"

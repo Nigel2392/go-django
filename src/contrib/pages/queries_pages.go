@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	queries "github.com/Nigel2392/go-django-queries/src"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	django_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/pkg/errors"

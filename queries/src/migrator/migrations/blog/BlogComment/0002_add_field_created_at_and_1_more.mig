@@ -1,0 +1,84 @@
+{
+  "dependencies": [
+    "auth:User:0004_add_field_first_name_and_1_more.mig",
+    "blog:BlogPost:0002_add_field_published_and_2_more.mig"
+  ],
+  "table": {
+    "table": "blog_comment",
+    "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.BlogComment",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "default": 0
+      },
+      {
+        "name": "Body",
+        "column": "body",
+        "use_in_db": true,
+        "max_length": 255,
+        "nullable": true,
+        "default": ""
+      },
+      {
+        "name": "Author",
+        "column": "author_id",
+        "use_in_db": true,
+        "relation": {
+          "type": "ManyToOne",
+          "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User"
+        }
+      },
+      {
+        "name": "Post",
+        "column": "post_id",
+        "use_in_db": true,
+        "relation": {
+          "type": "ManyToOne",
+          "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.BlogPost"
+        }
+      },
+      {
+        "name": "CreatedAt",
+        "column": "created_at",
+        "use_in_db": true,
+        "default": "0001-01-01T00:00:00Z"
+      },
+      {
+        "name": "UpdatedAt",
+        "column": "updated_at",
+        "use_in_db": true,
+        "default": "0001-01-01T00:00:00Z"
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "add_field",
+      "field": {
+        "new": {
+          "name": "CreatedAt",
+          "column": "created_at",
+          "use_in_db": true,
+          "default": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "action": "add_field",
+      "field": {
+        "new": {
+          "name": "UpdatedAt",
+          "column": "updated_at",
+          "use_in_db": true,
+          "default": "0001-01-01T00:00:00Z"
+        }
+      }
+    }
+  ]
+}

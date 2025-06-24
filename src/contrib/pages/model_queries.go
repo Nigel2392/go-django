@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 
-	queries "github.com/Nigel2392/go-django-queries/src"
-	"github.com/Nigel2392/go-django-queries/src/expr"
-	"github.com/Nigel2392/go-django-queries/src/query_errors"
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/query_errors"
 )
 
 func rowsToNodes(rows queries.Rows[*PageNode]) []*PageNode {

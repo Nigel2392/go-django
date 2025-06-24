@@ -59,7 +59,7 @@ func NewCustomAppConfig() *CustomApp {
     // 
     // Third party and contrib apps might use these models for their own purposes.
     // 
-    // I.E. currently, the https://github.com/Nigel2392/go-django-queries app uses this to
+    // I.E. currently, the https://github.com/Nigel2392/go-django/queries app uses this to
     // register models and set up reverse relations.
     myCustomApp.ModelObjects = []attrs.Definer{
         // Models

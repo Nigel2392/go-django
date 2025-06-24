@@ -4,9 +4,9 @@ import (
 	"context"
 	"time"
 
-	queries "github.com/Nigel2392/go-django-queries/src"
-	"github.com/Nigel2392/go-django-queries/src/migrator"
-	"github.com/Nigel2392/go-django-queries/src/models"
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
+	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/gosimple/slug"
 )

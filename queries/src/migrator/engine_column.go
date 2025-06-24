@@ -1,0 +1,347 @@
+package migrator
+
+import (
+	"encoding/json"
+	"fmt"
+	"reflect"
+	"slices"
+	"strings"
+
+	"github.com/Nigel2392/go-django/queries/internal"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
+)
+
+type Column struct {
+	Table        Table              `json:"-"`
+	Field        attrs.Field        `json:"-"`
+	Name         string             `json:"name"`
+	Column       string             `json:"column"`
+	UseInDB      bool               `json:"use_in_db,omitempty"`
+	MinLength    int64              `json:"min_length,omitempty"`
+	MaxLength    int64              `json:"max_length,omitempty"`
+	MinValue     float64            `json:"min_value,omitempty"`
+	MaxValue     float64            `json:"max_value,omitempty"`
+	Unique       bool               `json:"unique,omitempty"`
+	Nullable     bool               `json:"nullable,omitempty"`
+	Primary      bool               `json:"primary,omitempty"`
+	Auto         bool               `json:"auto,omitempty"`
+	Default      interface{}        `json:"default,omitempty"`
+	ReverseAlias string             `json:"reverse_alias,omitempty"`
+	Rel          *MigrationRelation `json:"relation,omitempty"`
+}
+
+func (c *Column) String() string {
+	var sb strings.Builder
+	sb.WriteString("Column{")
+	sb.WriteString(fmt.Sprintf("Name: %s, ", c.Name))
+	sb.WriteString(fmt.Sprintf("Column: %s, ", c.Column))
+	sb.WriteString(fmt.Sprintf("UseInDB: %t, ", c.UseInDB))
+	sb.WriteString(fmt.Sprintf("MinLength: %d, ", c.MinLength))
+	sb.WriteString(fmt.Sprintf("MaxLength: %d, ", c.MaxLength))
+	sb.WriteString(fmt.Sprintf("MinValue: %f, ", c.MinValue))
+	sb.WriteString(fmt.Sprintf("MaxValue: %f, ", c.MaxValue))
+	sb.WriteString(fmt.Sprintf("Unique: %t, ", c.Unique))
+	sb.WriteString(fmt.Sprintf("Nullable: %t, ", c.Nullable))
+	sb.WriteString(fmt.Sprintf("Primary: %t", c.Primary))
+	sb.WriteString("}")
+	return sb.String()
+}
+
+func NewTableColumn(table Table, field attrs.Field) Column {
+	var atts = field.Attrs()
+
+	attrUseInDB, ok := internal.GetFromAttrs[bool](atts, AttrUseInDBKey)
+	if !ok {
+		attrUseInDB = true
+	}
+
+	attrMaxLength, _ := internal.GetFromAttrs[int64](atts, attrs.AttrMaxLengthKey)
+	attrMinLength, _ := internal.GetFromAttrs[int64](atts, attrs.AttrMinLengthKey)
+	attrMinValue, _ := internal.GetFromAttrs[float64](atts, attrs.AttrMinValueKey)
+	attrMaxValue, _ := internal.GetFromAttrs[float64](atts, attrs.AttrMaxValueKey)
+	attrAutoIncrement, _ := internal.GetFromAttrs[bool](atts, attrs.AttrAutoIncrementKey)
+	attrUnique, _ := internal.GetFromAttrs[bool](atts, attrs.AttrUniqueKey)
+	attrReverseAlias, _ := internal.GetFromAttrs[string](atts, attrs.AttrReverseAliasKey)
+	attrOnDelete, _ := internal.GetFromAttrs[Action](atts, AttrOnDeleteKey)
+	attrOnUpdate, _ := internal.GetFromAttrs[Action](atts, AttrOnUpdateKey)
+
+	var rel *MigrationRelation
+	var fRel = field.Rel()
+	if fRel != nil {
+
+		var cType = contenttypes.NewContentType(
+			fRel.Model(),
+		)
+
+		rel = &MigrationRelation{
+			Type:        fRel.Type(),
+			TargetModel: cType,
+			TargetField: fRel.Field(),
+			OnDelete:    attrOnDelete,
+			OnUpdate:    attrOnUpdate,
+		}
+
+		var through = fRel.Through()
+		if through != nil {
+			rel.Through = &MigrationRelationThrough{
+				Model:       contenttypes.NewContentType(through.Model()),
+				SourceField: through.SourceField(),
+				TargetField: through.TargetField(),
+			}
+		}
+	}
+
+	var dflt = field.GetDefault()
+	if def, ok := dflt.(attrs.Definer); ok {
+		if !attrs.IsZero(dflt) {
+			var defs = def.FieldDefs()
+			var prim = defs.Primary()
+			if prim != nil {
+				dflt = prim.GetDefault()
+			} else {
+				dflt = nil // no primary field, no default
+			}
+		} else {
+			dflt = nil // zero value, no default
+		}
+	}
+
+	var col = Column{
+		Table:        table,
+		Field:        field,
+		Name:         field.Name(),
+		Column:       field.ColumnName(),
+		UseInDB:      attrUseInDB,
+		MinLength:    attrMinLength,
+		MaxLength:    attrMaxLength,
+		MinValue:     attrMinValue,
+		MaxValue:     attrMaxValue,
+		Unique:       attrUnique,
+		Auto:         attrAutoIncrement || canAutoIncrement(field),
+		Primary:      field.IsPrimary(),
+		Default:      dflt,
+		ReverseAlias: attrReverseAlias,
+		Rel:          rel,
+	}
+
+	var nullable = field.AllowNull()
+	nullable = nullable || (rel != nil && rel.TargetField != nil && rel.TargetField.AllowNull())
+	if col.FieldType().Kind() == reflect.String && !col.Unique {
+		nullable = true // strings are not nullable in the database
+		if attrs.IsZero(col.Default) {
+			col.Default = ""
+		}
+	}
+
+	col.Nullable = nullable
+	return col
+}
+
+func canAutoIncrement(field attrs.Field) bool {
+	return field.IsPrimary() && !field.AllowNull() && slices.Contains(
+		[]reflect.Kind{
+			reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		},
+		field.Type().Kind(),
+	)
+}
+
+func (c *Column) FieldType() reflect.Type {
+	if c.Field == nil {
+		return nil
+	}
+
+	var field attrs.FieldDefinition = c.Field
+	if c.Rel != nil {
+		var relField = c.Rel.TargetField
+		if relField == nil {
+			relField = c.Rel.Model().FieldDefs().Primary()
+		}
+		if relField != nil {
+			field = relField
+		}
+	}
+
+	var fieldType = field.Type()
+	if field.Type().Implements(reflect.TypeOf((*attrs.Definer)(nil)).Elem()) {
+		// if the field is a definer, we return the type of the underlying object
+		var definerType = fieldType.Elem()
+		var newObj = reflect.New(definerType)
+		var definer = newObj.Interface().(attrs.Definer)
+		var fieldDefs = definer.FieldDefs()
+		return fieldDefs.Primary().Type()
+	}
+
+	return field.Type()
+}
+
+func jsonCompare(a, b interface{}) (bool, error) {
+
+	var (
+		aBytes, bBytes []byte
+		err            error
+	)
+	if aBytes, err = json.Marshal(a); err != nil {
+		return false, err
+	}
+	if bBytes, err = json.Marshal(b); err != nil {
+		return false, err
+	}
+	var (
+		aFace = new(interface{})
+		bFace = new(interface{})
+	)
+	if err = json.Unmarshal(aBytes, aFace); err != nil {
+		return false, err
+	}
+	if err = json.Unmarshal(bBytes, bFace); err != nil {
+		return false, err
+	}
+	if reflect.DeepEqual(aFace, bFace) {
+		return true, nil
+	}
+	return false, nil
+}
+
+// even zero values are considered valid defaults
+func (c *Column) HasDefault() bool {
+	if c == nil {
+		return false
+	}
+	if c.Default == nil {
+		return false
+	}
+
+	var rv = reflect.ValueOf(c.Default)
+	if rv.Kind() == reflect.Ptr {
+		if !rv.IsValid() || rv.IsNil() {
+			return false
+		}
+		rv = rv.Elem()
+	}
+	switch rv.Kind() {
+	case reflect.String:
+		return rv.String() != ""
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return rv.Int() != 0
+	case reflect.Float32, reflect.Float64:
+		return rv.Float() != 0.0
+	case reflect.Array, reflect.Slice, reflect.Map:
+		return rv.Len() > 0
+	}
+	return true
+}
+
+func (c *Column) Equals(other *Column) bool {
+	if c == nil && other == nil {
+		return true
+	}
+	if (c == nil) != (other == nil) {
+		return false
+	}
+	if c.Name != other.Name {
+		return false
+	}
+	if c.Column != other.Column {
+		return false
+	}
+	if c.MinLength != other.MinLength {
+		return false
+	}
+	if c.MaxLength != other.MaxLength {
+		return false
+	}
+	if c.MinValue != other.MinValue {
+		return false
+	}
+	if c.MaxValue != other.MaxValue {
+		return false
+	}
+	if c.Unique != other.Unique {
+		return false
+	}
+	if c.Nullable != other.Nullable {
+		return false
+	}
+	if c.Primary != other.Primary {
+		return false
+	}
+	if c.Auto != other.Auto {
+		return false
+	}
+
+	if equal, err := jsonCompare(c.Default, other.Default); err != nil {
+		if !EqualDefaultValue(c.Default, other.Default) {
+			return false
+		}
+	} else if !equal {
+		return false
+	}
+
+	//if !EqualDefaultValue(c.Default, other.Default) {
+	//	return false
+	//}
+
+	if c.ReverseAlias != other.ReverseAlias {
+		return false
+	}
+	if (c.Rel == nil) != (other.Rel == nil) {
+		return false
+	}
+	if c.Rel != nil {
+
+		var other = other.Rel
+		if c.Rel.Type != other.Type {
+			return false
+		}
+		if (c.Rel.TargetModel == nil) != (other.TargetModel == nil) {
+			return false
+		}
+
+		if c.Rel.TargetModel != nil {
+			if c.Rel.TargetModel.TypeName() != other.TargetModel.TypeName() {
+				return false
+			}
+		}
+
+		if (c.Rel.TargetField == nil) != (other.TargetField == nil) {
+			return false
+		}
+
+		if c.Rel.TargetField != nil {
+			if c.Rel.TargetField.Name() != other.TargetField.Name() {
+				return false
+			}
+
+			if c.Rel.TargetField.ColumnName() != other.TargetField.ColumnName() {
+				return false
+			}
+
+			if c.Rel.TargetField.AllowNull() != other.TargetField.AllowNull() {
+				return false
+			}
+
+			if c.Rel.TargetField.IsPrimary() != other.TargetField.IsPrimary() {
+				return false
+			}
+
+			var (
+				c1, ok1 = c.Rel.TargetField.(interface{ GetDefault() any })
+				c2, ok2 = other.TargetField.(interface{ GetDefault() any })
+			)
+
+			if ok1 && ok2 {
+				if c1.GetDefault() != c2.GetDefault() {
+					return false
+				}
+			}
+
+			if c.Rel.TargetField.Type() != other.TargetField.Type() {
+				return false
+			}
+		}
+	}
+	return true
+}

@@ -10,7 +10,7 @@ Table of Contents:
 - [Model Meta](./model-meta.md)
 - [Hooks and Signals](./hooks_signals.md)
 
-It also allows for defining relations between models - for example [go-django-queries](https://github.com/Nigel2392/go-django-queries)  
+It also allows for defining relations between models - for example [go-django-queries](https://github.com/Nigel2392/go-django/queries)  
 uses this to define relations between models and overall manage the database schema.
 
 When models are registered in an apps' `ModelObjects` attribute (`Model()` method), go-django will automatically register all your models  

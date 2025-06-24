@@ -3,7 +3,7 @@ package models
 import (
 	"context"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	models "github.com/Nigel2392/go-django/src/models"
 )
 

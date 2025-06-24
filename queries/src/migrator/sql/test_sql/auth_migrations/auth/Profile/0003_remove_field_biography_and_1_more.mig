@@ -1,0 +1,56 @@
+{
+  "dependencies": [
+    "auth:User:0003_remove_field_first_name_and_1_more.mig"
+  ],
+  "table": {
+    "table": "profile",
+    "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.Profile",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "default": 0
+      },
+      {
+        "name": "User",
+        "column": "user_id",
+        "use_in_db": true,
+        "relation": {
+          "type": "OneToOne",
+          "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User"
+        }
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "remove_field",
+      "field": {
+        "old": {
+          "name": "Biography",
+          "column": "biography",
+          "use_in_db": true,
+          "nullable": true,
+          "default": ""
+        }
+      }
+    },
+    {
+      "action": "remove_field",
+      "field": {
+        "old": {
+          "name": "Website",
+          "column": "website",
+          "use_in_db": true,
+          "nullable": true,
+          "default": ""
+        }
+      }
+    }
+  ]
+}

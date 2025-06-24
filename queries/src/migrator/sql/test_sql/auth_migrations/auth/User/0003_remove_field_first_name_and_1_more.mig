@@ -1,0 +1,67 @@
+{
+  "table": {
+    "table": "user",
+    "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "default": 0
+      },
+      {
+        "name": "Name",
+        "column": "name",
+        "use_in_db": true,
+        "max_length": 255,
+        "nullable": true,
+        "default": ""
+      },
+      {
+        "name": "Email",
+        "column": "email",
+        "use_in_db": true,
+        "max_length": 255,
+        "nullable": true,
+        "default": ""
+      },
+      {
+        "name": "Age",
+        "column": "age",
+        "use_in_db": true,
+        "max_value": 120,
+        "default": 0
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "remove_field",
+      "field": {
+        "old": {
+          "name": "FirstName",
+          "column": "first_name",
+          "use_in_db": true,
+          "nullable": true,
+          "default": ""
+        }
+      }
+    },
+    {
+      "action": "remove_field",
+      "field": {
+        "old": {
+          "name": "LastName",
+          "column": "last_name",
+          "use_in_db": true,
+          "nullable": true,
+          "default": ""
+        }
+      }
+    }
+  ]
+}

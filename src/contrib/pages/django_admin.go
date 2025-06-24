@@ -6,7 +6,7 @@ import (
 	"html/template"
 	"net/http"
 
-	queries "github.com/Nigel2392/go-django-queries/src"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core/attrs"

@@ -1,0 +1,72 @@
+{
+  "dependencies": [
+    "auth:User:0005_remove_field_first_name_and_1_more.mig",
+    "blog:BlogPost:0003_remove_field_published_and_2_more.mig"
+  ],
+  "table": {
+    "table": "blog_comment",
+    "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.BlogComment",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "default": 0
+      },
+      {
+        "name": "Body",
+        "column": "body",
+        "use_in_db": true,
+        "max_length": 255,
+        "nullable": true,
+        "default": ""
+      },
+      {
+        "name": "Author",
+        "column": "author_id",
+        "use_in_db": true,
+        "relation": {
+          "type": "ManyToOne",
+          "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User"
+        }
+      },
+      {
+        "name": "Post",
+        "column": "post_id",
+        "use_in_db": true,
+        "relation": {
+          "type": "ManyToOne",
+          "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.BlogPost"
+        }
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "remove_field",
+      "field": {
+        "old": {
+          "name": "CreatedAt",
+          "column": "created_at",
+          "use_in_db": true,
+          "default": "0001-01-01T00:00:00Z"
+        }
+      }
+    },
+    {
+      "action": "remove_field",
+      "field": {
+        "old": {
+          "name": "UpdatedAt",
+          "column": "updated_at",
+          "use_in_db": true,
+          "default": "0001-01-01T00:00:00Z"
+        }
+      }
+    }
+  ]
+}
