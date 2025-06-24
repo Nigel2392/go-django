@@ -36,6 +36,13 @@
           "type": "ManyToOne",
           "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User"
         }
+      },
+      {
+        "name": "Description",
+        "column": "description",
+        "use_in_db": true,
+        "nullable": true,
+        "default": ""
       }
     ],
     "indexes": null,

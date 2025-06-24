@@ -48,6 +48,13 @@
         "column": "updated_at",
         "use_in_db": true,
         "default": "0001-01-01T00:00:00Z"
+      },
+      {
+        "name": "Description",
+        "column": "description",
+        "use_in_db": true,
+        "nullable": true,
+        "default": ""
       }
     ],
     "indexes": null,

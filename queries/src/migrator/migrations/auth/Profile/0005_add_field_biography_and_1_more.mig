@@ -36,6 +36,13 @@
         "use_in_db": true,
         "nullable": true,
         "default": ""
+      },
+      {
+        "name": "Image",
+        "column": "image",
+        "use_in_db": true,
+        "nullable": true,
+        "default": ""
       }
     ],
     "indexes": null,
