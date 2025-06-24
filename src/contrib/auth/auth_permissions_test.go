@@ -13,6 +13,7 @@ import (
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	auth_permissions "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions"
 	permissions_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/permissions-models"
+	"github.com/Nigel2392/go-django/src/djester/testdb"
 	django_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -50,12 +51,9 @@ var (
 )
 
 func init() {
-	var err error
-	db, err = drivers.Open(context.Background(), "sqlite3", ":memory:")
-	if err != nil {
-		panic(err)
-	}
+	_, db = testdb.Open()
 
+	var err error
 	if q, err = models.NewQueries(db); err != nil {
 		panic(err)
 	}

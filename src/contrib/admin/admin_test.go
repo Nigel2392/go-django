@@ -2,7 +2,6 @@ package admin_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/gob"
 	"fmt"
 	"net/http"
@@ -20,6 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -153,10 +153,7 @@ func init() {
 			"HOST":          strings.Split(HOST, ":")[0],
 			"PORT":          strings.Split(HOST, ":")[1],
 			"DATABASE": func() drivers.Database {
-				var db, err = drivers.Open(context.Background(), "sqlite3", "file::memory:?cache=shared")
-				if err != nil {
-					panic(err)
-				}
+				var _, db = testdb.Open()
 				return db
 			}(),
 		}),

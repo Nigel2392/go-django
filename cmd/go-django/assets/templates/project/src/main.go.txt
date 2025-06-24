@@ -1,14 +1,13 @@
 package main
 
 import (
-	"database/sql"
-
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -19,7 +18,7 @@ import (
 )
 
 func main() {
-	var db, err = sql.Open("sqlite3", "./db.sqlite3")
+	var db, err = drivers.Open("sqlite3", "./db.sqlite3")
 	if err != nil {
 		panic(err)
 	}

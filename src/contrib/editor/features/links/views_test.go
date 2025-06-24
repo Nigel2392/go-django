@@ -7,18 +7,18 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features/links"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
+	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/PuerkitoBio/goquery"
 	_ "github.com/mattn/go-sqlite3"
 )
 
 func TestViews(t *testing.T) {
 
-	var db, _ = drivers.Open(context.Background(), "sqlite3", "file::memory:?cache=private")
+	var _, db = testdb.Open()
 	var app = django.App(
 		django.Configure(map[string]interface{}{
 			django.APPVAR_ALLOWED_HOSTS: []string{"*"},

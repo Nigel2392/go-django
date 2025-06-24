@@ -1,18 +1,17 @@
 package auth_test
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	auth_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/models"
 )
@@ -20,16 +19,9 @@ import (
 var backend models.Backend[auth_models.Querier]
 
 func init() {
-	var (
-		DB_FLAVOR = "sqlite3"
-		DB_SOURCE = ":memory:"
-	)
 
-	var db, err = drivers.Open(context.Background(), DB_FLAVOR, DB_SOURCE)
-	if err != nil {
-		panic(err)
-	}
-
+	var _, db = testdb.Open()
+	var err error
 	backend, err = auth_models.BackendForDB(db.Driver())
 	if err != nil {
 		panic(err)

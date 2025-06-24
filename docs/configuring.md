@@ -125,7 +125,7 @@ Example of a simple app's creation:
 
 ```go
 // Open a new database connection
-var db, err = sql.Open("sqlite3", "./.private/db.sqlite3")
+var db, err = drivers.Open("sqlite3", "./.private/db.sqlite3")
 if err != nil {
     panic(err)
 }

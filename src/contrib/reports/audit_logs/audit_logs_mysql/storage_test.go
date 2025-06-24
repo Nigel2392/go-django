@@ -1,3 +1,5 @@
+//go:build mysql || mysql_local
+
 package auditlogs_mysql_test
 
 import (
@@ -14,6 +16,7 @@ import (
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/google/uuid"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -64,15 +67,10 @@ func init() {
 		IS_GITHUB_ACTIONS = true
 	}
 
-	if IS_GITHUB_ACTIONS {
+	var whichDB, db = testdb.Open()
+	if IS_GITHUB_ACTIONS && whichDB != "mysql_local" {
 		// Skip tests if running on github actions
 		return
-	}
-
-	var err error
-	db, err = drivers.Open(context.Background(), "mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
-	if err != nil {
-		panic(err)
 	}
 
 	db.ExecContext(context.Background(), "DROP TABLE IF EXISTS audit_logs;")
@@ -112,7 +110,7 @@ func init() {
 		entries = append(entries, entry)
 	}
 
-	_, err = auditlogs.Backend().StoreMany(entries)
+	var _, err = auditlogs.Backend().StoreMany(entries)
 	if err != nil {
 		panic(err)
 	}

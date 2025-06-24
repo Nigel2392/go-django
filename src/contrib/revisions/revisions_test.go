@@ -7,11 +7,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/pkg/errors"
 )
 
@@ -119,14 +119,7 @@ func init() {
 	}
 
 	// var db, err = sql.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
-	var db, err = drivers.Open(context.Background(), "sqlite3", "file::memory:?cache=shared")
-	// var db, err = sql.Open("sqlite3", "./revisions_test.db")
-	if err != nil {
-		panic(errors.Wrap(
-			err, "failed to open database",
-		))
-	}
-
+	var _, db = testdb.Open()
 	var app = revisions.NewAppConfig()
 	var settings = django.Config(map[string]interface{}{
 		django.APPVAR_DATABASE: db,

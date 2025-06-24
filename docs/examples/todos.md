@@ -48,8 +48,8 @@ func main() {
             "HOST":          "127.0.0.1",
             "PORT":          "8080",
             "DATABASE": func() *sql.DB {
-                // var db, err = sql.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
-                var db, err = sql.Open("sqlite3", "./.private/db.sqlite3")
+                // var db, err = drivers.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
+                var db, err = drivers.Open("sqlite3", "./.private/db.sqlite3")
                 if err != nil {
                     panic(err)
                 }

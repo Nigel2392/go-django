@@ -11,6 +11,7 @@ import (
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/google/uuid"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -49,8 +50,12 @@ var entryIds = []uuid.UUID{
 
 func init() {
 
+	if testdb.ENGINE != "sqlite3" {
+		return
+	}
+
 	var err error
-	db, err = drivers.Open(context.Background(), "sqlite3", ":memory:")
+	var _, db = testdb.Open()
 	if err != nil {
 		panic(err)
 	}
@@ -100,6 +105,11 @@ func init() {
 }
 
 func TestGetByID(t *testing.T) {
+
+	if testdb.ENGINE != "sqlite3" {
+		t.Skip("Skipping test, not using sqlite3")
+	}
+
 	for i, id := range entryIds {
 		entry, err := auditlogs.Backend().Retrieve(id)
 		if err != nil {
@@ -121,6 +131,11 @@ func TestGetByID(t *testing.T) {
 }
 
 func TestRetrieveTyped(t *testing.T) {
+
+	if testdb.ENGINE != "sqlite3" {
+		t.Skip("Skipping test, not using sqlite3")
+	}
+
 	for i := 0; i < len(entryIds); i++ {
 		typ := fmt.Sprintf("type-%d", i)
 		entries, err := auditlogs.Backend().EntryFilter(
@@ -143,6 +158,10 @@ func TestRetrieveTyped(t *testing.T) {
 }
 
 func TestRetrieveForUser(t *testing.T) {
+	if testdb.ENGINE != "sqlite3" {
+		t.Skip("Skipping test, not using sqlite3")
+	}
+
 	for i := 0; i < len(entryIds); i++ {
 		var id = fmt.Sprintf("user-%d", i)
 		entries, err := auditlogs.Backend().EntryFilter(
@@ -168,6 +187,10 @@ func TestRetrieveForUser(t *testing.T) {
 }
 
 func TestRetrieveForObj(t *testing.T) {
+	if testdb.ENGINE != "sqlite3" {
+		t.Skip("Skipping test, not using sqlite3")
+	}
+
 	for i := 0; i < len(entryIds); i++ {
 		var id = fmt.Sprintf("object-%d", i)
 		entries, err := auditlogs.Backend().EntryFilter(
@@ -233,6 +256,10 @@ var filterTests = []filterTest{
 
 func TestFilter(t *testing.T) {
 
+	if testdb.ENGINE != "sqlite3" {
+		t.Skip("Skipping test, not using sqlite3")
+	}
+
 	for i, test := range filterTests {
 		t.Run(fmt.Sprintf("filter-%d-%s", i, test.filters[0].Name()), func(t *testing.T) {
 			entries, err := auditlogs.Backend().EntryFilter(test.filters, 25, 0)
@@ -284,6 +311,10 @@ func TestFilter(t *testing.T) {
 }
 
 func TestFilterCount(t *testing.T) {
+
+	if testdb.ENGINE != "sqlite3" {
+		t.Skip("Skipping test, not using sqlite3")
+	}
 
 	for i, test := range filterTests {
 		t.Run(fmt.Sprintf("filter-count-%d-%s", i, test.filters[0].Name()), func(t *testing.T) {

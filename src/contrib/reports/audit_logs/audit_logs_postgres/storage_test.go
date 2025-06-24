@@ -1,3 +1,6 @@
+//go:build postgres
+// +build postgres
+
 package auditlogs_postgres_test
 
 import (
@@ -14,6 +17,7 @@ import (
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/google/uuid"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
@@ -70,10 +74,7 @@ func init() {
 	}
 
 	var err error
-	db, err = drivers.Open(context.Background(), "postgres", "host=127.0.0.1 port=5432 user=root password=my-secret-pw dbname=django-pages-test sslmode=disable")
-	if err != nil {
-		panic(err)
-	}
+	var _, db = testdb.Open()
 
 	db.ExecContext(context.Background(), "DROP TABLE IF EXISTS audit_logs;")
 

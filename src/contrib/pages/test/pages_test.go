@@ -9,7 +9,6 @@ import (
 	_ "unsafe"
 
 	queries "github.com/Nigel2392/go-django-queries/src"
-	"github.com/Nigel2392/go-django-queries/src/drivers"
 	"github.com/Nigel2392/go-django-queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
@@ -17,18 +16,11 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/Nigel2392/go-signals"
 )
 
-var sqlDB drivers.Database
-
-func getEnv(key, def string) string {
-	var val = def
-	if v, ok := os.LookupEnv(key); ok {
-		val = v
-	}
-	return val
-}
+var _, sqlDB = testdb.Open()
 
 //go:linkname insertNode github.com/Nigel2392/go-django/src/contrib/pages.insertNode
 func insertNode(ctx context.Context, node *pages.PageNode) (*pages.PageNode, error)

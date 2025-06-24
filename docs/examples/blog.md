@@ -439,7 +439,7 @@ var app = django.App(
         django.APPVAR_HOST:          "127.0.0.1",
         django.APPVAR_PORT:          "8080",
         django.APPVAR_DATABASE: func() *sql.DB {
-            var db, err = sql.Open("sqlite3", "./.private/db.sqlite3")
+            var db, err = drivers.Open("sqlite3", "./.private/db.sqlite3")
             if err != nil {
                 panic(err)
             }
