@@ -2,7 +2,6 @@ package pages
 
 import (
 	"context"
-	"database/sql"
 	"embed"
 	"fmt"
 	"io/fs"
@@ -11,27 +10,27 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
+	"github.com/Nigel2392/go-django-queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
-	dj_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/mux"
 )
 
 type PageAppConfig struct {
 	*apps.DBRequiredAppConfig
-	backend            dj_models.Backend[models.Querier]
 	routePrefix        string
 	useRedirectHandler bool
 }
@@ -65,41 +64,14 @@ func SetUseRedirectHandler(use bool) {
 //
 // This is the URL path that the page will be served at.
 func URLPath(page Page) string {
-	var ref *models.PageNode
+	var ref *PageNode
 	switch v := page.(type) {
-	case *models.PageNode:
+	case *PageNode:
 		ref = v
 	default:
 		ref = page.Reference()
 	}
 	return path.Join(pageApp.routePrefix, ref.UrlPath)
-}
-
-func (p *PageAppConfig) QuerySet() models.DBQuerier {
-	if p.DB == nil {
-		panic("db is nil")
-	}
-
-	var (
-		querySet     models.DBQuerier
-		driver       = p.DB.Driver()
-		backend, err = models.GetBackend(driver)
-	)
-	if err != nil {
-		panic(fmt.Errorf("no backend configured for %T: %w", driver, err))
-	}
-
-	qs, err := backend.NewQuerySet(p.DB)
-	if err != nil {
-		panic(fmt.Sprintf("failed to initialize queryset for backend %T", backend))
-	}
-
-	querySet = &Querier{
-		Querier: qs,
-		Db:      p.DB,
-	}
-
-	return querySet
 }
 
 const (
@@ -136,26 +108,39 @@ func App() *PageAppConfig {
 // This is used to initialize the pages app, set up routes, and register the admin application.
 func NewAppConfig() *PageAppConfig {
 
+	attrs.RegisterModel(&PageNode{})
+
 	var routePrefixSet = false
-	pageApp.Init = func(settings django.Settings, db *sql.DB) error {
 
-		if err := CreateTable(db); err != nil {
-			return err
+	pageApp.ModelObjects = []attrs.Definer{
+		&PageNode{},
+	}
+
+	pageApp.Init = func(settings django.Settings, db drivers.Database) error {
+
+		if !django.AppInstalled("migrator") {
+			var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())
+			if err != nil {
+				return fmt.Errorf("failed to get schema editor: %w", err)
+			}
+
+			var table = migrator.NewModelTable(&PageNode{})
+			if err := schemaEditor.CreateTable(table, true); err != nil {
+				return fmt.Errorf("failed to create pages table: %w", err)
+			}
+
+			for _, index := range table.Indexes() {
+				if err := schemaEditor.AddIndex(table, index, true); err != nil {
+					return fmt.Errorf("failed to create index %s: %w", index.Name(), err)
+				}
+			}
 		}
-
-		var driver = db.Driver()
-		var backend, err = models.GetBackend(driver)
-		if err != nil {
-			return fmt.Errorf("no backend configured for %T: %w", driver, err)
-		}
-
-		pageApp.backend = backend
 
 		// contenttypes.Register(&contenttypes.ContentTypeDefinition{
-		// ContentObject:  &models.PageNode{},
+		// ContentObject:  &PageNode{},
 		// GetLabel:       trans.S("Page"),
 		// GetDescription: trans.S("A page in a hierarchical page tree- structure."),
-		// GetObject:      func() any { return &models.PageNode{} },
+		// GetObject:      func() any { return &PageNode{} },
 		// })
 
 		if pageApp.routePrefix == "" {
@@ -186,10 +171,10 @@ func NewAppConfig() *PageAppConfig {
 
 		Register(&PageDefinition{
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
-				ContentObject:  &models.PageNode{},
+				ContentObject:  &PageNode{},
 				GetLabel:       trans.S("Page"),
 				GetDescription: trans.S("A page in a hierarchical page tree- structure."),
-				GetObject:      func() any { return &models.PageNode{} },
+				GetObject:      func() any { return &PageNode{} },
 				GetInstance: func(identifier any) (interface{}, error) {
 					var id int64
 					switch v := identifier.(type) {
@@ -207,7 +192,7 @@ func NewAppConfig() *PageAppConfig {
 						return nil, errs.ErrInvalidType
 					}
 					var ctx = context.Background()
-					var node, err = pageApp.QuerySet().GetNodeByID(ctx, id)
+					var node, err = GetNodeByID(ctx, id)
 					if err != nil {
 						return nil, err
 					}
@@ -215,7 +200,7 @@ func NewAppConfig() *PageAppConfig {
 				},
 				GetInstances: func(amount, offset uint) ([]interface{}, error) {
 					var ctx = context.Background()
-					var nodes, err = pageApp.QuerySet().AllNodes(ctx, models.StatusFlagNone, int32(offset), int32(amount))
+					var nodes, err = AllNodes(ctx, StatusFlagNone, int32(offset), int32(amount))
 					var items = make([]interface{}, 0)
 					for _, n := range nodes {
 						n := n
@@ -224,8 +209,8 @@ func NewAppConfig() *PageAppConfig {
 					return items, err
 				},
 			},
-			GetForID: func(ctx context.Context, ref models.PageNode, id int64) (Page, error) {
-				return &ref, nil
+			GetForID: func(ctx context.Context, ref *PageNode, id int64) (Page, error) {
+				return ref, nil
 			},
 		})
 
@@ -408,8 +393,6 @@ func NewAppConfig() *PageAppConfig {
 
 		return nil
 	}
-
-	QuerySet = pageApp.QuerySet
 
 	return pageApp
 }

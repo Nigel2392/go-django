@@ -7,6 +7,7 @@ import (
 
 	_ "embed"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	dj_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/go-sql-driver/mysql"
@@ -19,54 +20,18 @@ func init() {
 	models.Register(
 		mysql.MySQLDriver{}, &dj_models.BaseBackend[models.Querier]{
 			CreateTableQuery: mysql_schema,
-			NewQuerier: func(d *sql.DB) (models.Querier, error) {
+			NewQuerier: func(d drivers.Database) (models.Querier, error) {
 				return New(d), nil
 			},
-			PreparedQuerier: func(ctx context.Context, d *sql.DB) (models.Querier, error) {
-				return Prepare(ctx, nil)
+			PreparedQuerier: func(ctx context.Context, d drivers.Database) (models.Querier, error) {
+				return New(d), nil
 			},
 		},
 	)
 }
 
-func New(db models.DBTX) *Queries {
+func New(db drivers.Database) *Queries {
 	return &Queries{db: db}
-}
-
-func Prepare(ctx context.Context, db models.DBTX) (*Queries, error) {
-	q := Queries{db: db}
-	var err error
-	if q.countStmt, err = db.PrepareContext(ctx, count); err != nil {
-		return nil, fmt.Errorf("error preparing query Count: %w", err)
-	}
-	if q.countManyStmt, err = db.PrepareContext(ctx, countMany); err != nil {
-		return nil, fmt.Errorf("error preparing query CountMany: %w", err)
-	}
-	if q.createUserStmt, err = db.PrepareContext(ctx, createUser); err != nil {
-		return nil, fmt.Errorf("error preparing query CreateUser: %w", err)
-	}
-	if q.deleteUserStmt, err = db.PrepareContext(ctx, deleteUser); err != nil {
-		return nil, fmt.Errorf("error preparing query DeleteUser: %w", err)
-	}
-	if q.retrieveStmt, err = db.PrepareContext(ctx, retrieve); err != nil {
-		return nil, fmt.Errorf("error preparing query Retrieve: %w", err)
-	}
-	if q.retrieveByEmailStmt, err = db.PrepareContext(ctx, retrieveByEmail); err != nil {
-		return nil, fmt.Errorf("error preparing query RetrieveByEmail: %w", err)
-	}
-	if q.retrieveByIDStmt, err = db.PrepareContext(ctx, retrieveByID); err != nil {
-		return nil, fmt.Errorf("error preparing query RetrieveByID: %w", err)
-	}
-	if q.retrieveByUsernameStmt, err = db.PrepareContext(ctx, retrieveByUsername); err != nil {
-		return nil, fmt.Errorf("error preparing query RetrieveByUsername: %w", err)
-	}
-	if q.retrieveManyStmt, err = db.PrepareContext(ctx, retrieveMany); err != nil {
-		return nil, fmt.Errorf("error preparing query RetrieveMany: %w", err)
-	}
-	if q.updateUserStmt, err = db.PrepareContext(ctx, updateUser); err != nil {
-		return nil, fmt.Errorf("error preparing query UpdateUser: %w", err)
-	}
-	return &q, nil
 }
 
 func (q *Queries) Close() error {
@@ -125,41 +90,19 @@ func (q *Queries) Close() error {
 }
 
 func (q *Queries) exec(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (sql.Result, error) {
-	switch {
-	case stmt != nil && q.tx != nil:
-		return q.tx.StmtContext(ctx, stmt).ExecContext(ctx, args...)
-	case stmt != nil:
-		return stmt.ExecContext(ctx, args...)
-	default:
-		return q.db.ExecContext(ctx, query, args...)
-	}
+	return q.db.ExecContext(ctx, query, args...)
 }
 
-func (q *Queries) query(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (*sql.Rows, error) {
-	switch {
-	case stmt != nil && q.tx != nil:
-		return q.tx.StmtContext(ctx, stmt).QueryContext(ctx, args...)
-	case stmt != nil:
-		return stmt.QueryContext(ctx, args...)
-	default:
-		return q.db.QueryContext(ctx, query, args...)
-	}
+func (q *Queries) query(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) (drivers.SQLRows, error) {
+	return q.db.QueryContext(ctx, query, args...)
 }
 
-func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) *sql.Row {
-	switch {
-	case stmt != nil && q.tx != nil:
-		return q.tx.StmtContext(ctx, stmt).QueryRowContext(ctx, args...)
-	case stmt != nil:
-		return stmt.QueryRowContext(ctx, args...)
-	default:
-		return q.db.QueryRowContext(ctx, query, args...)
-	}
+func (q *Queries) queryRow(ctx context.Context, stmt *sql.Stmt, query string, args ...interface{}) drivers.SQLRow {
+	return q.db.QueryRowContext(ctx, query, args...)
 }
 
 type Queries struct {
-	db                     models.DBTX
-	tx                     *sql.Tx
+	db                     drivers.DB
 	countStmt              *sql.Stmt
 	countManyStmt          *sql.Stmt
 	createUserStmt         *sql.Stmt
@@ -172,10 +115,9 @@ type Queries struct {
 	updateUserStmt         *sql.Stmt
 }
 
-func (q *Queries) WithTx(tx *sql.Tx) models.Querier {
+func (q *Queries) WithTx(tx drivers.Transaction) models.Querier {
 	return &Queries{
 		db:                     tx,
-		tx:                     tx,
 		countStmt:              q.countStmt,
 		countManyStmt:          q.countManyStmt,
 		createUserStmt:         q.createUserStmt,

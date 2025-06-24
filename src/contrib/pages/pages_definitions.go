@@ -5,7 +5,6 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/src/contrib/admin"
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
 
@@ -27,13 +26,13 @@ type PageDefinition struct {
 	EditPanels func(r *http.Request, page Page) []admin.Panel
 
 	// Query for an instance of this model by its ID
-	GetForID func(ctx context.Context, ref models.PageNode, id int64) (Page, error)
+	GetForID func(ctx context.Context, ref *PageNode, id int64) (Page, error)
 
 	// Callback function to be called when a reference node is updated
-	OnReferenceUpdate func(ctx context.Context, ref models.PageNode, id int64) error
+	OnReferenceUpdate func(ctx context.Context, ref *PageNode, id int64) error
 
 	// Callback function to be called before a reference node is deleted
-	OnReferenceBeforeDelete func(ctx context.Context, ref models.PageNode, id int64) error
+	OnReferenceBeforeDelete func(ctx context.Context, ref *PageNode, id int64) error
 
 	// Maximum number of pages allowed for this model
 	// MaxNum          int

@@ -2,10 +2,10 @@ package models_sqlite
 
 import (
 	"context"
-	"database/sql"
 
 	_ "embed"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	dj_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/mattn/go-sqlite3"
@@ -18,25 +18,25 @@ func init() {
 	models.Register(
 		sqlite3.SQLiteDriver{}, &dj_models.BaseBackend[models.Querier]{
 			CreateTableQuery: sqlite_schema,
-			NewQuerier: func(d *sql.DB) (models.Querier, error) {
+			NewQuerier: func(d drivers.Database) (models.Querier, error) {
 				return New(d), nil
 			},
-			PreparedQuerier: func(ctx context.Context, d *sql.DB) (models.Querier, error) {
+			PreparedQuerier: func(ctx context.Context, d drivers.Database) (models.Querier, error) {
 				return New(d), nil
 			},
 		},
 	)
 }
 
-func New(db models.DBTX) *Queries {
+func New(db drivers.Database) *Queries {
 	return &Queries{db: db}
 }
 
 type Queries struct {
-	db models.DBTX
+	db drivers.DB
 }
 
-func (q *Queries) WithTx(tx *sql.Tx) models.Querier {
+func (q *Queries) WithTx(tx drivers.Transaction) models.Querier {
 	return &Queries{
 		db: tx,
 	}

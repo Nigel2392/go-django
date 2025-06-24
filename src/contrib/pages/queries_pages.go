@@ -5,9 +5,10 @@ import (
 	"fmt"
 	"reflect"
 
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
+	queries "github.com/Nigel2392/go-django-queries/src"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	django_models "github.com/Nigel2392/go-django/src/models"
+	"github.com/pkg/errors"
 )
 
 // SavePage saves a custom page object to the database.
@@ -17,23 +18,19 @@ import (
 // This can not be used to create a new root page.
 //
 // The Save() is called on the custom page object before the reference node is created/updated.
-func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, p SaveablePage) error {
+func SavePage(ctx context.Context, parent *PageNode, p SaveablePage) error {
 	if parent == nil {
-		return UpdatePage(q, ctx, p)
+		return UpdatePage(ctx, p)
 	}
 
-	var tx, err = q.BeginTx(ctx, nil)
+	var querySet = queries.GetQuerySet(&PageNode{}).WithContext(ctx)
+	var transaction, err = querySet.GetOrCreateTransaction()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to start transaction")
 	}
+	defer transaction.Rollback()
 
-	defer tx.Rollback()
-
-	var (
-		queries = q.WithTx(tx)
-		ref     = p.Reference()
-	)
-
+	var ref = p.Reference()
 	if ref.ContentType == "" && !reflect.DeepEqual(ref, p) {
 		var cType = contenttypes.NewContentType(p)
 		ref.ContentType = cType.TypeName()
@@ -71,19 +68,6 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 		}
 	}
 
-	if ref.Path == "" {
-		err = CreateChildNode(
-			q, ctx, parent, ref,
-		)
-	} else {
-		err = UpdateNode(
-			queries, ctx, ref,
-		)
-	}
-	if err != nil {
-		return err
-	}
-
 	var saved bool
 	saved, err = django_models.SaveModel(
 		ctx, p,
@@ -95,7 +79,33 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 		return fmt.Errorf("page %T could not be saved", p)
 	}
 
-	return tx.Commit()
+	var (
+		srcDefs = p.FieldDefs()
+		dstDefs = ref.FieldDefs()
+	)
+
+	var refField, _ = dstDefs.Field("PageID")
+	var srcVal, _ = srcDefs.Primary().Value()
+	if err = refField.Scan(srcVal); err != nil {
+		return errors.Wrapf(
+			err, "failed to set PageID for %T", p,
+		)
+	}
+
+	if ref.Path == "" {
+		err = CreateChildNode(
+			ctx, parent, ref,
+		)
+	} else {
+		err = UpdateNode(
+			ctx, ref,
+		)
+	}
+	if err != nil {
+		return err
+	}
+
+	return transaction.Commit()
 }
 
 // UpdatePage updates a page object in the database.
@@ -103,7 +113,7 @@ func SavePage(q models.DBQuerier, ctx context.Context, parent *models.PageNode, 
 // It calls page.Save() to update the custom page object.
 //
 // The reference node is updated before the page is saved.
-func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
+func UpdatePage(ctx context.Context, p SaveablePage) error {
 	var ref = p.Reference()
 	if ref.Path == "" {
 		return fmt.Errorf("page path must not be empty")
@@ -118,7 +128,7 @@ func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
 		ref.ContentType = cType.TypeName()
 	}
 
-	if err := UpdateNode(q, ctx, ref); err != nil {
+	if err := UpdateNode(ctx, ref); err != nil {
 		return err
 	}
 
@@ -137,13 +147,13 @@ func UpdatePage(q models.DBQuerier, ctx context.Context, p SaveablePage) error {
 // It calls page.Delete() to delete the custom page object after the reference node is deleted.
 //
 // FixTree is called after the page is deleted to ensure the tree is in a consistent state.
-func DeletePage(q models.DBQuerier, ctx context.Context, p DeletablePage) (err error) {
+func DeletePage(ctx context.Context, p DeletablePage) (err error) {
 	var ref = p.Reference()
 	if ref.PK == 0 {
 		return fmt.Errorf("page id must not be zero")
 	}
 
-	if err = DeleteNode(q, ctx, ref.PK, ref.Path, ref.Depth); err != nil {
+	if err = DeleteNode(ctx, ref); err != nil {
 		return err
 	}
 
@@ -157,5 +167,5 @@ func DeletePage(q models.DBQuerier, ctx context.Context, p DeletablePage) (err e
 		return fmt.Errorf("page %T could not be deleted", p)
 	}
 
-	return FixTree(q, ctx)
+	return FixTree(ctx)
 }

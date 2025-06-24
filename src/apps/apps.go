@@ -1,8 +1,7 @@
 package apps
 
 import (
-	"database/sql"
-
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -27,8 +26,8 @@ type AppConfig struct {
 
 type DBRequiredAppConfig struct {
 	*AppConfig
-	DB   *sql.DB
-	Init func(settings django.Settings, db *sql.DB) error
+	DB   drivers.Database
+	Init func(settings django.Settings, db drivers.Database) error
 }
 
 func NewDBAppConfig(name string) *DBRequiredAppConfig {
@@ -42,8 +41,8 @@ func (a *DBRequiredAppConfig) Initialize(settings django.Settings) error {
 	var dbInt, ok = settings.Get(django.APPVAR_DATABASE)
 	assert.True(ok, "DATABASE setting is required for '%s' app", a.AppName)
 
-	db, ok := dbInt.(*sql.DB)
-	assert.True(ok, "DATABASE setting must be of type *sql.DB")
+	db, ok := dbInt.(drivers.Database)
+	assert.True(ok, "DATABASE setting must be of type drivers.Database")
 
 	a.DB = db
 

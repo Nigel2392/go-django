@@ -2,11 +2,11 @@ package auth
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net/http"
 	"strconv"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
@@ -89,8 +89,8 @@ func NewAppConfig() django.AppConfig {
 		dbInt, ok := settings.Get(django.APPVAR_DATABASE)
 		assert.True(ok, "DATABASE setting is required for 'auth' app")
 
-		db, ok := dbInt.(*sql.DB)
-		assert.True(ok, "DATABASE setting must adhere to auth-models.DBTX interface")
+		db, ok := dbInt.(drivers.Database)
+		assert.True(ok, "DATABASE setting must adhere to auth-models.drivers.DB interface")
 
 		var (
 			q   models.DBQuerier

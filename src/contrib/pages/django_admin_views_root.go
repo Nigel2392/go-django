@@ -8,7 +8,6 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -73,14 +72,14 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		},
 		GetListFn: func(amount, offset uint) ([]attrs.Definer, error) {
 			var ctx = r.Context()
-			var nodes, err = QuerySet().GetNodesByDepth(ctx, 0, models.StatusFlagNone, int32(offset), int32(amount))
+			var nodes, err = GetNodesByDepth(ctx, 0, StatusFlagNone, int32(offset), int32(amount))
 			if err != nil {
 				return nil, err
 			}
 			var items = make([]attrs.Definer, 0, len(nodes))
 			for _, n := range nodes {
 				n := n
-				items = append(items, &n)
+				items = append(items, n)
 			}
 			return items, nil
 		},
@@ -204,32 +203,31 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 
 		var ref = d.(Page).Reference()
 		if publishPage {
-			if !ref.StatusFlags.Is(models.StatusFlagPublished) {
-				ref.StatusFlags |= models.StatusFlagPublished
+			if !ref.StatusFlags.Is(StatusFlagPublished) {
+				ref.StatusFlags |= StatusFlagPublished
 			}
 		}
 
-		var qs = QuerySet()
-		err = CreateRootNode(qs, ctx, ref)
+		err = CreateRootNode(ctx, ref)
 		if err != nil {
 			return err
 		}
 
 		if page, ok := d.(SaveablePage); ok {
 			err = SavePage(
-				QuerySet(), ctx, nil, page,
+				ctx, nil, page,
 			)
 			if err != nil {
 				return err
 			}
 
 			ref.PageID = page.ID()
-			err = qs.UpdateNode(
-				ctx, ref.Title, ref.Path, ref.Depth, ref.Numchild, ref.UrlPath, ref.Slug, int64(ref.StatusFlags), ref.PageID, ref.ContentType, ref.LatestRevisionID, ref.PK,
+			err = UpdateNode(
+				ctx, ref,
 			)
-		} else if n, ok := d.(*models.PageNode); ok {
-			_, err = qs.InsertNode(
-				ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, n.Slug, int64(n.StatusFlags), n.PageID, n.ContentType, n.LatestRevisionID,
+		} else if n, ok := d.(*PageNode); ok {
+			_, err = insertNode(
+				ctx, n,
 			)
 		} else {
 			err = fmt.Errorf("invalid page type: %T", d)

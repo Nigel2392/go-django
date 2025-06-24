@@ -1,8 +1,7 @@
 package auth_permissions
 
 import (
-	"database/sql"
-
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	permissions_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/permissions-models"
@@ -17,7 +16,7 @@ func NewAppConfig() django.AppConfig {
 		&permissions_models.Group{},
 		&permissions_models.Permission{},
 	}
-	cnf.Init = func(settings django.Settings, db *sql.DB) error {
+	cnf.Init = func(settings django.Settings, db drivers.Database) error {
 		var backend, err = NewQueries(db)
 		if err != nil {
 			return err

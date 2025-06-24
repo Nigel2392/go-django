@@ -2,9 +2,9 @@ package revisions
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/revisions/internal/revisions_db"
@@ -33,7 +33,7 @@ func NewAppConfig() *RevisionsAppConfig {
 		),
 	}
 
-	app.Init = func(settings django.Settings, db *sql.DB) error {
+	app.Init = func(settings django.Settings, db drivers.Database) error {
 
 		var driver = db.Driver()
 		var backend, err = revisions_db.GetBackend(driver)

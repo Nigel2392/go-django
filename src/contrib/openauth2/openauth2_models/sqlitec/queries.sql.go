@@ -30,7 +30,7 @@ VALUES (
 `
 
 func (q *Queries) CreateUser(ctx context.Context, uniqueIdentifier string, providerName string, data json.RawMessage, accessToken string, refreshToken string, tokenType string, expiresAt time.Time, isAdministrator bool, isActive bool) (int64, error) {
-	result, err := q.exec(ctx, q.createUserStmt, createUser,
+	result, err := q.exec(ctx, createUser,
 		uniqueIdentifier,
 		providerName,
 		data,
@@ -53,7 +53,7 @@ WHERE id = ?1
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, id uint64) error {
-	_, err := q.exec(ctx, q.deleteUserStmt, deleteUser, id)
+	_, err := q.exec(ctx, deleteUser, id)
 	return err
 }
 
@@ -73,7 +73,7 @@ func (q *Queries) DeleteUsers(ctx context.Context, ids []uint64) error {
 	} else {
 		query = strings.Replace(query, "/*SLICE:ids*/?", "NULL", 1)
 	}
-	_, err := q.exec(ctx, nil, query, queryParams...)
+	_, err := q.exec(ctx, query, queryParams...)
 	return err
 }
 
@@ -83,7 +83,7 @@ WHERE id = ?1
 `
 
 func (q *Queries) RetrieveUserByID(ctx context.Context, id uint64) (*openauth2models.User, error) {
-	row := q.queryRow(ctx, q.retrieveUserByIDStmt, retrieveUserByID, id)
+	row := q.queryRow(ctx, retrieveUserByID, id)
 	var i openauth2models.User
 	err := row.Scan(
 		&i.ID,
@@ -108,7 +108,7 @@ WHERE unique_identifier = ?1 AND provider_name = ?2
 `
 
 func (q *Queries) RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier string, providerName string) (*openauth2models.User, error) {
-	row := q.queryRow(ctx, q.retrieveUserByIdentifierStmt, retrieveUserByIdentifier, uniqueIdentifier, providerName)
+	row := q.queryRow(ctx, retrieveUserByIdentifier, uniqueIdentifier, providerName)
 	var i openauth2models.User
 	err := row.Scan(
 		&i.ID,
@@ -141,7 +141,7 @@ WHERE id = ?9
 `
 
 func (q *Queries) UpdateUser(ctx context.Context, providerName string, data json.RawMessage, accessToken string, refreshToken string, tokenType string, expiresAt time.Time, isAdministrator bool, isActive bool, iD uint64) error {
-	_, err := q.exec(ctx, q.updateUserStmt, updateUser,
+	_, err := q.exec(ctx, updateUser,
 		providerName,
 		data,
 		accessToken,

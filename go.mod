@@ -14,9 +14,6 @@ require (
 require (
 	github.com/Nigel2392/go-signals v1.0.8
 	github.com/Nigel2392/goldcrest v1.0.4
-	github.com/alexedwards/scs/mysqlstore v0.0.0-20240316134038-7e11d57e8885
-	github.com/alexedwards/scs/postgresstore v0.0.0-20240316134038-7e11d57e8885
-	github.com/alexedwards/scs/sqlite3store v0.0.0-20240316134038-7e11d57e8885
 	github.com/alexedwards/scs/v2 v2.8.0
 	github.com/go-sql-driver/mysql v1.9.2
 	github.com/mattn/go-sqlite3 v1.14.28
@@ -24,6 +21,7 @@ require (
 )
 
 require (
+	github.com/Nigel2392/go-django-queries v1.1.1-0.20250624143553-56fc357188a9
 	github.com/Nigel2392/go-telepath v0.1.3-0.20250115131048-600eacd48c62
 	github.com/Nigel2392/tags v1.0.0
 	github.com/PuerkitoBio/goquery v1.10.1
@@ -52,7 +50,7 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/lib/pq v1.10.9 // indirect
+	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	golang.org/x/sync v0.10.0 // indirect

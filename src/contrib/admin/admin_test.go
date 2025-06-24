@@ -2,7 +2,7 @@ package admin_test
 
 import (
 	"bytes"
-	"database/sql"
+	"context"
 	"encoding/gob"
 	"fmt"
 	"net/http"
@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
@@ -151,8 +152,8 @@ func init() {
 			"DEBUG":         true,
 			"HOST":          strings.Split(HOST, ":")[0],
 			"PORT":          strings.Split(HOST, ":")[1],
-			"DATABASE": func() *sql.DB {
-				var db, err = sql.Open("sqlite3", "file::memory:?cache=shared")
+			"DATABASE": func() drivers.Database {
+				var db, err = drivers.Open(context.Background(), "sqlite3", "file::memory:?cache=shared")
 				if err != nil {
 					panic(err)
 				}

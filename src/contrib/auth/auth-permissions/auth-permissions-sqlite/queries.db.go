@@ -2,10 +2,10 @@ package models
 
 import (
 	"context"
-	"database/sql"
 
 	_ "embed"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	permissions_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/permissions-models"
 	dj_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/mattn/go-sqlite3"
@@ -20,32 +20,25 @@ func init() {
 	permissions_models.Register(
 		sqlite3.SQLiteDriver{}, &dj_models.BaseBackend[permissions_models.Querier]{
 			CreateTableQuery: sqlite_schema,
-			NewQuerier: func(d *sql.DB) (permissions_models.Querier, error) {
+			NewQuerier: func(d drivers.Database) (permissions_models.Querier, error) {
 				return New(d), nil
 			},
-			PreparedQuerier: func(ctx context.Context, d *sql.DB) (permissions_models.Querier, error) {
+			PreparedQuerier: func(ctx context.Context, d drivers.Database) (permissions_models.Querier, error) {
 				return New(d), nil
 			},
 		},
 	)
 }
 
-type DBTX interface {
-	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
-	PrepareContext(context.Context, string) (*sql.Stmt, error)
-	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
-	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
-}
-
-func New(db DBTX) *Queries {
+func New(db drivers.Database) *Queries {
 	return &Queries{db: db}
 }
 
 type Queries struct {
-	db DBTX
+	db drivers.DB
 }
 
-func (q *Queries) WithTx(tx *sql.Tx) permissions_models.Querier {
+func (q *Queries) WithTx(tx drivers.Transaction) permissions_models.Querier {
 	return &Queries{
 		db: tx,
 	}

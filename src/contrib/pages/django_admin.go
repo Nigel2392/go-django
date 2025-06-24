@@ -6,9 +6,9 @@ import (
 	"html/template"
 	"net/http"
 
+	queries "github.com/Nigel2392/go-django-queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
@@ -38,7 +38,7 @@ var pageAdminAppOptions = admin.AppOptions{
 
 var pageAdminModelOptions = admin.ModelOptions{
 	Name:  AdminPagesModelPath,
-	Model: &models.PageNode{},
+	Model: &PageNode{},
 	Labels: map[string]func() string{
 		"ID":          trans.S("ID"),
 		"Title":       trans.S("Title"),
@@ -68,7 +68,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 			"Children": list.HTMLColumn[attrs.Definer](
 				trans.S(""),
 				func(_ *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
-					var node = row.(*models.PageNode)
+					var node = row.(*PageNode)
 					if node.Numchild > 0 {
 						var url = django.Reverse(
 							"admin:pages:list",
@@ -89,7 +89,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 			"ContentType": list.FuncColumn(
 				trans.S("Content Type"),
 				func(_ *http.Request, _ attrs.Definitions, row attrs.Definer) interface{} {
-					var node = row.(*models.PageNode)
+					var node = row.(*PageNode)
 					var ctype = DefinitionForType(node.ContentType)
 					return ctype.Label()
 				},
@@ -138,37 +138,12 @@ var pageAdminModelOptions = admin.ModelOptions{
 }
 
 func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
-	var n = d.(*models.PageNode)
+	var n = d.(*PageNode)
 	var err error
 	if n.PK == 0 {
-		_, err = pageApp.QuerySet().InsertNode(
-			ctx,
-			n.Title,
-			n.Path,
-			n.Depth,
-			n.Numchild,
-			n.UrlPath,
-			n.Slug,
-			int64(n.StatusFlags),
-			n.PageID,
-			n.ContentType,
-			n.LatestRevisionID,
-		)
+		_, err = insertNode(ctx, n)
 	} else {
-		err = pageApp.QuerySet().UpdateNode(
-			ctx,
-			n.Title,
-			n.Path,
-			n.Depth,
-			n.Numchild,
-			n.UrlPath,
-			n.Slug,
-			int64(n.StatusFlags),
-			n.PageID,
-			n.ContentType,
-			n.LatestRevisionID,
-			n.PK,
-		)
+		err = UpdateNode(ctx, n)
 	}
 
 	if err != nil {
@@ -185,37 +160,32 @@ func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 // Fixtree fixes the tree structure of the page nodes.
 //
 // It scans for errors in the tree structure in the database and fixes them.
-func FixTree(querySet models.DBQuerier, ctx context.Context) error {
-	var tx, err = querySet.BeginTx(ctx, nil)
+func FixTree(ctx context.Context) error {
+	var querySet = queries.GetQuerySet(&PageNode{}).WithContext(ctx)
+	var transaction, err = querySet.GetOrCreateTransaction()
 	if err != nil {
-		return errors.Wrap(err, "failed to begin transaction")
+		return errors.Wrap(err, "failed to start transaction")
 	}
-	defer tx.Rollback()
+	defer transaction.Rollback()
 
-	var qs = QuerySet().WithTx(tx)
-	allNodesCount, err := qs.CountNodes(ctx, models.StatusFlagNone)
+	allNodesCount, err := CountNodes(ctx, StatusFlagNone)
 	if err != nil {
 		return errors.Wrap(err, "failed to count nodes")
 	}
 
-	allNodes, err := qs.AllNodes(ctx, models.StatusFlagNone, 0, int32(allNodesCount))
+	allNodes, err := AllNodes(ctx, StatusFlagNone, 0, int32(allNodesCount))
 	if err != nil {
 		return errors.Wrap(err, "failed to get all nodes")
 	}
 
-	var nodeRefs = make([]*models.PageNode, len(allNodes))
-	for i := 0; i < len(allNodes); i++ {
-		nodeRefs[i] = &allNodes[i]
-	}
-
-	var tree = NewNodeTree(nodeRefs)
+	var tree = NewNodeTree(allNodes)
 
 	tree.FixTree()
 
-	err = qs.UpdateNodes(ctx, nodeRefs)
+	err = updateNodes(ctx, allNodes)
 	if err != nil {
 		return errors.Wrap(err, "failed to update nodes")
 	}
 
-	return tx.Commit()
+	return transaction.Commit()
 }

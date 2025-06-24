@@ -3,14 +3,13 @@ package pages
 import (
 	"context"
 
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	dj_models "github.com/Nigel2392/go-django/src/models"
 )
 
 type Page interface {
 	ID() int64
-	Reference() *models.PageNode
+	Reference() *PageNode
 }
 
 type SaveablePage interface {
@@ -35,7 +34,7 @@ func Register(definition *PageDefinition) {
 }
 
 // Return the custom page object belonging to the given node
-func Specific(ctx context.Context, node models.PageNode) (Page, error) {
+func Specific(ctx context.Context, node *PageNode) (Page, error) {
 	return pageRegistryObject.SpecificInstance(ctx, node)
 }
 

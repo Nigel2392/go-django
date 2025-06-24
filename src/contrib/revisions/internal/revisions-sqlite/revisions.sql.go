@@ -12,7 +12,7 @@ WHERE id = ?1
 `
 
 func (q *Queries) DeleteRevision(ctx context.Context, id int64) error {
-	_, err := q.exec(ctx, q.deleteRevisionStmt, deleteRevision, id)
+	_, err := q.exec(ctx, deleteRevision, id)
 	return err
 }
 
@@ -23,7 +23,7 @@ WHERE    id = ?1
 `
 
 func (q *Queries) GetRevisionByID(ctx context.Context, id int64) (revisions_db.Revision, error) {
-	row := q.queryRow(ctx, q.getRevisionByIDStmt, getRevisionByID, id)
+	row := q.queryRow(ctx, getRevisionByID, id)
 	var i revisions_db.Revision
 	err := row.Scan(
 		&i.ID,
@@ -46,7 +46,7 @@ OFFSET   ?4
 `
 
 func (q *Queries) GetRevisionsByObjectID(ctx context.Context, objectID string, contentType string, limit int32, offset int32) ([]revisions_db.Revision, error) {
-	rows, err := q.query(ctx, q.getRevisionsByObjectIDStmt, getRevisionsByObjectID,
+	rows, err := q.query(ctx, getRevisionsByObjectID,
 		objectID,
 		contentType,
 		limit,
@@ -92,7 +92,7 @@ INSERT INTO Revision (
 `
 
 func (q *Queries) InsertRevision(ctx context.Context, objectID string, contentType string, data string) (int64, error) {
-	result, err := q.exec(ctx, q.insertRevisionStmt, insertRevision, objectID, contentType, data)
+	result, err := q.exec(ctx, insertRevision, objectID, contentType, data)
 	if err != nil {
 		return 0, err
 	}
@@ -108,7 +108,7 @@ OFFSET   ?
 `
 
 func (q *Queries) ListRevisions(ctx context.Context, limit int32, offset int32) ([]revisions_db.Revision, error) {
-	rows, err := q.query(ctx, q.listRevisionsStmt, listRevisions, limit, offset)
+	rows, err := q.query(ctx, listRevisions, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -145,7 +145,7 @@ WHERE id = ?4
 `
 
 func (q *Queries) UpdateRevision(ctx context.Context, objectID string, contentType string, data string, iD int64) error {
-	_, err := q.exec(ctx, q.updateRevisionStmt, updateRevision,
+	_, err := q.exec(ctx, updateRevision,
 		objectID,
 		contentType,
 		data,

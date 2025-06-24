@@ -9,7 +9,6 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -33,12 +32,12 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 				return trans.T("View Live")
 			},
 			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				return URLPath(row.(*models.PageNode))
+				return URLPath(row.(*PageNode))
 			},
 		},
 		{
 			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-				// return row.(*models.PageNode).Numchild > 0
+				// return row.(*PageNode).Numchild > 0
 				return permissions.HasObjectPermission(r, row, "pages:add")
 			},
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
@@ -95,7 +94,7 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 					return u
 				}
 				var q = url.Query()
-				q.Set("object_id", strconv.Itoa(int(row.(*models.PageNode).ID())))
+				q.Set("object_id", strconv.Itoa(int(row.(*PageNode).ID())))
 				q.Set("content_type", contenttypes.NewContentType(row).ShortTypeName())
 				url.RawQuery = q.Encode()
 				return url.String()
@@ -104,7 +103,7 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 	}
 }
 
-func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {
 
 	if !permissions.HasObjectPermission(r, p, "pages:list") {
 		admin.ReLogin(w, r, r.URL.Path)
@@ -131,10 +130,9 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		amount = 25
 	}
 
-	var parent_object *models.PageNode
+	var parent_object *PageNode
 	if p.Depth > 0 {
 		var parent, err = ParentNode(
-			QuerySet(),
 			r.Context(),
 			p.Path,
 			int(p.Depth),
@@ -143,7 +141,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			except.Fail(http.StatusInternalServerError, err)
 			return
 		}
-		parent_object = &parent
+		parent_object = parent
 	}
 
 	var view = &list.View[attrs.Definer]{
@@ -191,14 +189,14 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		},
 		GetListFn: func(amount, offset uint) ([]attrs.Definer, error) {
 			var ctx = r.Context()
-			var nodes, err = QuerySet().GetChildNodes(ctx, p.Path, p.Depth, models.StatusFlagNone, int32(offset), int32(amount))
+			var nodes, err = GetChildNodes(ctx, p, StatusFlagNone, int32(offset), int32(amount))
 			if err != nil {
 				return nil, err
 			}
 			var items = make([]attrs.Definer, 0, len(nodes))
 			for _, n := range nodes {
 				n := n
-				items = append(items, &n)
+				items = append(items, n)
 			}
 			return items, nil
 		},
@@ -227,7 +225,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	views.Invoke(view, w, r)
 }
 
-func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {
 
 	if !permissions.HasObjectPermission(r, p, "pages:add") {
 		admin.ReLogin(w, r, r.URL.Path)
@@ -279,7 +277,7 @@ func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 	views.Invoke(view, w, r)
 }
 
-func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {
 	if !permissions.HasObjectPermission(r, p, "pages:add") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
@@ -338,19 +336,19 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 
 		var ref = d.(Page).Reference()
 		if publishPage {
-			if !ref.StatusFlags.Is(models.StatusFlagPublished) {
-				ref.StatusFlags |= models.StatusFlagPublished
+			if !ref.StatusFlags.Is(StatusFlagPublished) {
+				ref.StatusFlags |= StatusFlagPublished
 			}
 		}
 
 		if page, ok := d.(SaveablePage); ok {
 			err = SavePage(
-				QuerySet(), ctx, p, page,
+				ctx, p, page,
 			)
 		} else {
-			var n = d.(*models.PageNode)
-			_, err = QuerySet().InsertNode(
-				ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, n.Slug, int64(n.StatusFlags), n.PageID, n.ContentType, n.LatestRevisionID,
+			var n = d.(*PageNode)
+			_, err = insertNode(
+				ctx, n,
 			)
 		}
 		if err != nil {
@@ -460,14 +458,14 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 	}
 }
 
-func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {
 
 	if !permissions.HasObjectPermission(r, p, "pages:edit") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}
 
-	var instance, err = Specific(r.Context(), *p)
+	var instance, err = p.Specific(r.Context())
 	except.Assert(
 		err == nil, 500,
 		err,
@@ -523,22 +521,22 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		if page, ok := d.(SaveablePage); ok {
 
 			var ref = page.Reference()
-			if publishPage && !ref.StatusFlags.Is(models.StatusFlagPublished) {
-				ref.StatusFlags |= models.StatusFlagPublished
+			if publishPage && !ref.StatusFlags.Is(StatusFlagPublished) {
+				ref.StatusFlags |= StatusFlagPublished
 				wasPublished = true
 			}
 
 			// If no children it is safe to unpublish the page straight away,
 			// otherwise we will later redirect to an unpublish page- view.
-			if ref.Numchild == 0 && unpublishPage && ref.StatusFlags.Is(models.StatusFlagPublished) {
-				ref.StatusFlags &^= models.StatusFlagPublished
+			if ref.Numchild == 0 && unpublishPage && ref.StatusFlags.Is(StatusFlagPublished) {
+				ref.StatusFlags &^= StatusFlagPublished
 				wasUnpublished = true
 			}
 
-			err = UpdatePage(QuerySet(), ctx, page)
+			err = UpdatePage(ctx, page)
 		} else {
-			var n = d.(*models.PageNode)
-			err = QuerySet().UpdateNode(ctx, n.Title, n.Path, n.Depth, n.Numchild, n.UrlPath, n.Slug, int64(n.StatusFlags), n.PageID, n.ContentType, n.LatestRevisionID, n.PK)
+			var n = d.(*PageNode)
+			err = UpdateNode(ctx, n)
 
 		}
 		if err != nil {
@@ -581,7 +579,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				context.Set("app", a)
 				context.Set("model", m)
 				context.Set("page_object", page)
-				context.Set("is_published", p.StatusFlags.Is(models.StatusFlagPublished))
+				context.Set("is_published", p.StatusFlags.Is(StatusFlagPublished))
 				var backURL string
 				if q := req.URL.Query().Get("next"); q != "" {
 					backURL = q
@@ -622,7 +620,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			messages.Success(r, "Page updated successfully")
 
 			var redirectURL string
-			if unpublishPage && ref.Numchild > 0 && ref.StatusFlags.Is(models.StatusFlagPublished) {
+			if unpublishPage && ref.Numchild > 0 && ref.StatusFlags.Is(StatusFlagPublished) {
 				redirectURL = django.Reverse("admin:pages:unpublish", ref.ID())
 			} else {
 				redirectURL = django.Reverse("admin:pages:list", ref.ID())
@@ -637,7 +635,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	}
 }
 
-func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {
 	if !permissions.HasObjectPermission(r, p, "pages:delete") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
@@ -649,7 +647,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			return
 		}
 
-		var instance, err = Specific(r.Context(), *p)
+		var instance, err = p.Specific(r.Context())
 		except.Assert(
 			err == nil, 500,
 			err,
@@ -661,10 +659,9 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			// logger.Fatalf(1, "instance does not adhere to attrs.Definer: %T", instance)
 		}
 
-		var parent models.PageNode
+		var parent *PageNode
 		if p.Depth > 0 {
 			parent, err = ParentNode(
-				QuerySet(),
 				r.Context(),
 				p.Path,
 				int(p.Depth),
@@ -676,12 +673,12 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 		}
 
 		if page, ok := page.(DeletablePage); ok {
-			if err := DeletePage(QuerySet(), r.Context(), page); err != nil {
+			if err := DeletePage(r.Context(), page); err != nil {
 				except.Fail(500, "Failed to delete page: %s", err)
 				return
 			}
 		} else {
-			if err := DeleteNode(QuerySet(), r.Context(), p.ID(), p.Path, p.Depth); err != nil {
+			if err := DeleteNode(r.Context(), p); err != nil {
 				except.Fail(500, "Failed to delete page: %s", err)
 				return
 			}
@@ -737,7 +734,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 	}
 }
 
-func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *models.PageNode) {
+func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {
 	if !permissions.HasObjectPermission(r, p, "pages:publish") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
@@ -750,7 +747,7 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		}
 
 		var unpublishChildren = r.FormValue("unpublish-children") == "unpublish-children"
-		if err := UnpublishNode(QuerySet(), r.Context(), p, unpublishChildren); err != nil {
+		if err := UnpublishNode(r.Context(), p, unpublishChildren); err != nil {
 			except.Fail(500, "Failed to unpublish page: %s", err)
 			return
 		}

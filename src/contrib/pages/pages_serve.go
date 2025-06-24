@@ -4,7 +4,6 @@ import (
 	"context"
 	"net/http"
 
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -92,13 +91,12 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 	var (
 		context   = context.Background()
 		pathParts = mux.Vars(req).GetAll("*")
-		querySet  = QuerySet()
-		page      models.PageNode
+		page      *PageNode
 		err       error
 	)
 
 	if len(pathParts) == 0 {
-		var pages, err = querySet.GetNodesByDepth(context, 0, models.StatusFlagNone, 0, 1000)
+		var pages, err = GetNodesByDepth(context, 0, StatusFlagNone, 0, 1000)
 		if err != nil {
 			goto checkError
 		}
@@ -109,15 +107,15 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 		}
 
 		for _, p := range pages {
-			if p.StatusFlags.Is(models.StatusFlagPublished) {
+			if p.StatusFlags.Is(StatusFlagPublished) {
 				page = p
 				break
 			}
 		}
 	} else {
-		var p models.PageNode
+		var p *PageNode
 		for i, part := range pathParts {
-			p, err = querySet.GetNodeBySlug(context, part, int64(i), page.Path)
+			p, err = GetNodeBySlug(context, part, int64(i), page.Path)
 			if err != nil {
 				err = errors.Wrapf(
 					err, "Error getting page by slug (%d): %s/%s", i, page.Path, part,
@@ -140,9 +138,9 @@ checkError:
 		return
 	}
 
-	if page.StatusFlags.Is(models.StatusFlagDeleted) ||
-		page.StatusFlags.Is(models.StatusFlagHidden) ||
-		!page.StatusFlags.Is(models.StatusFlagPublished) {
+	if page.StatusFlags.Is(StatusFlagDeleted) ||
+		page.StatusFlags.Is(StatusFlagHidden) ||
+		!page.StatusFlags.Is(StatusFlagPublished) {
 		err = errors.New("Page is not published")
 		pageNotFound(w, req, err, pathParts)
 		return
@@ -155,9 +153,7 @@ checkError:
 		return
 	}
 
-	specific, err := Specific(
-		context, page,
-	)
+	specific, err := page.Specific(context)
 	if err != nil {
 		pageNotFound(w, req, err, pathParts)
 		return

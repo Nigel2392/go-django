@@ -12,7 +12,6 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features/links"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
-	"github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/PuerkitoBio/goquery"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -46,13 +45,11 @@ func TestViews(t *testing.T) {
 	var server = httptest.NewServer(app.Mux)
 	defer server.Close()
 
-	var pageQs = pages.QuerySet()
-	var page = &page_models.PageNode{
+	var page = &pages.PageNode{
 		Title: "Google",
 	}
 	err = pages.CreateRootNode(
-		pageQs, context.Background(),
-		page,
+		context.Background(), page,
 	)
 	if err != nil {
 		t.Fatal(err)

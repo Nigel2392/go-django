@@ -2,16 +2,16 @@ package openauth2models
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"time"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core"
 )
 
 type Querier interface {
 	Close() error
-	WithTx(tx *sql.Tx) Querier
+	WithTx(tx drivers.Transaction) Querier
 
 	RetrieveUsers(ctx context.Context, limit int32, offset int32, ordering ...string) ([]*User, error)
 	RetrieveUserByID(ctx context.Context, id uint64) (*User, error)

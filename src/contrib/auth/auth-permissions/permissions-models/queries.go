@@ -2,8 +2,8 @@ package permissions_models
 
 import (
 	"context"
-	"database/sql"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/models"
 )
 
@@ -35,7 +35,7 @@ type Querier interface {
 	DeleteQuerier
 	UpdateQuerier
 
-	WithTx(*sql.Tx) Querier
+	WithTx(drivers.Transaction) Querier
 	Close() error
 
 	AllGroups(ctx context.Context, limit int32, offset int32) ([]*Group, error)

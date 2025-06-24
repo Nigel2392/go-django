@@ -1,7 +1,7 @@
 package auditlogs_postgres_test
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"os"
 	"slices"
@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -25,7 +26,7 @@ import (
 // This makes sure that the authentication check is enabled only when running on github actions
 var IS_GITHUB_ACTIONS = false
 
-var db *sql.DB
+var db drivers.Database
 
 var entries []auditlogs.LogEntry
 
@@ -69,12 +70,12 @@ func init() {
 	}
 
 	var err error
-	db, err = sql.Open("pgx", "host=127.0.0.1 port=5432 user=root password=my-secret-pw dbname=django-pages-test sslmode=disable")
+	db, err = drivers.Open(context.Background(), "postgres", "host=127.0.0.1 port=5432 user=root password=my-secret-pw dbname=django-pages-test sslmode=disable")
 	if err != nil {
 		panic(err)
 	}
 
-	db.Exec("DROP TABLE IF EXISTS audit_logs;")
+	db.ExecContext(context.Background(), "DROP TABLE IF EXISTS audit_logs;")
 
 	var dj = django.App(
 		django.Configure(map[string]interface{}{

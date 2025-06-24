@@ -33,7 +33,7 @@ const (
 	APPVAR_TLS_CONFIG = "TLS_CONFIG" // *tls.Config
 
 	// The database connection for the application
-	APPVAR_DATABASE = "DATABASE" // *sql.DB
+	APPVAR_DATABASE = "DATABASE" // drivers.Database
 
 	// Continue running the application after executing cli- commands
 	APPVAR_CONTINUE_AFTER_COMMANDS = "CONTINUE_AFTER_COMMAND" // bool

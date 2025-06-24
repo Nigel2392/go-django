@@ -3,13 +3,13 @@ package openauth2
 import (
 	"bytes"
 	"context"
-	"database/sql"
 	"embed"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
@@ -98,7 +98,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 		&openauth2models.User{},
 	}
 
-	App.Init = func(settings django.Settings, db *sql.DB) error {
+	App.Init = func(settings django.Settings, db drivers.Database) error {
 		if len(App.Config.AuthConfigurations) == 0 {
 			return errors.New("OpenAuth2: No providers configured")
 		}

@@ -1,4 +1,4 @@
-package page_models
+package pages
 
 type StatusFlag int64
 

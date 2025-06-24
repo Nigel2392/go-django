@@ -6,10 +6,9 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/src/contrib/pages"
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 )
 
-var FixTreeTest_DATA_OK = []*models.PageNode{
+var FixTreeTest_DATA_OK = []*pages.PageNode{
 	{PK: 1, Title: "Test Page 1", Path: "001", Depth: 0, Numchild: 6},
 	{PK: 2, Title: "Test Page 1-1", Path: "001001", Depth: 1, Numchild: 0},
 	{PK: 3, Title: "Test Page 1-2", Path: "001002", Depth: 1, Numchild: 6},
@@ -38,7 +37,7 @@ var FixTreeTest_DATA_OK = []*models.PageNode{
 	{PK: 26, Title: "Test Page 2-6", Path: "002006", Depth: 1, Numchild: 0},
 }
 
-var FixTreeTest_DATA_WRONG = []*models.PageNode{
+var FixTreeTest_DATA_WRONG = []*pages.PageNode{
 	{PK: 1, Title: "Test Page 1", Path: "001", Depth: 0, Slug: "/test-page-1"},
 	{PK: 2, Title: "Test Page 1-1", Path: "001001", Depth: 1, Slug: "test-page-1-1"},
 	{PK: 3, Title: "Test Page 1-2", Path: "001002", Depth: 69, Slug: "test-page-1-2"},
@@ -69,11 +68,11 @@ var FixTreeTest_DATA_WRONG = []*models.PageNode{
 
 type TreeTraversalTest struct {
 	Path string
-	Test func(t *testing.T, n *models.PageNode) error
+	Test func(t *testing.T, n *pages.PageNode) error
 }
 
-func testFuncBuilder(match ...func(t *testing.T, n *models.PageNode) error) func(t *testing.T, n *models.PageNode) error {
-	return func(t *testing.T, n *models.PageNode) error {
+func testFuncBuilder(match ...func(t *testing.T, n *pages.PageNode) error) func(t *testing.T, n *pages.PageNode) error {
+	return func(t *testing.T, n *pages.PageNode) error {
 		for _, f := range match {
 			if err := f(t, n); err != nil {
 				return err
@@ -83,8 +82,8 @@ func testFuncBuilder(match ...func(t *testing.T, n *models.PageNode) error) func
 	}
 }
 
-func testFuncPath(path string) func(t *testing.T, n *models.PageNode) error {
-	return func(t *testing.T, n *models.PageNode) error {
+func testFuncPath(path string) func(t *testing.T, n *pages.PageNode) error {
+	return func(t *testing.T, n *pages.PageNode) error {
 		if n.Path != path {
 			return fmt.Errorf("Expected path %s, got %s", path, n.Path)
 		}
@@ -92,8 +91,8 @@ func testFuncPath(path string) func(t *testing.T, n *models.PageNode) error {
 	}
 }
 
-func testNumChild(num int64) func(t *testing.T, n *models.PageNode) error {
-	return func(t *testing.T, n *models.PageNode) error {
+func testNumChild(num int64) func(t *testing.T, n *pages.PageNode) error {
+	return func(t *testing.T, n *pages.PageNode) error {
 		if n.Numchild != num {
 			return fmt.Errorf("Expected numchild %d, got %d", num, n.Numchild)
 		}
@@ -101,8 +100,8 @@ func testNumChild(num int64) func(t *testing.T, n *models.PageNode) error {
 	}
 }
 
-func testUrlPath(url string) func(t *testing.T, n *models.PageNode) error {
-	return func(t *testing.T, n *models.PageNode) error {
+func testUrlPath(url string) func(t *testing.T, n *pages.PageNode) error {
+	return func(t *testing.T, n *pages.PageNode) error {
 		if n.UrlPath != url {
 			return fmt.Errorf("Expected urlpath %s, got %s", url, n.UrlPath)
 		}
@@ -110,8 +109,8 @@ func testUrlPath(url string) func(t *testing.T, n *models.PageNode) error {
 	}
 }
 
-func testFuncDepth(depth int64) func(t *testing.T, n *models.PageNode) error {
-	return func(t *testing.T, n *models.PageNode) error {
+func testFuncDepth(depth int64) func(t *testing.T, n *pages.PageNode) error {
+	return func(t *testing.T, n *pages.PageNode) error {
 		if n.Depth != depth {
 			return fmt.Errorf("Expected	 depth %d, got %d", depth, n.Depth)
 		}

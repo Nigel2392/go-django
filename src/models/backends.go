@@ -2,10 +2,11 @@ package models
 
 import (
 	"context"
-	"database/sql"
 	"database/sql/driver"
 	"errors"
 	"reflect"
+
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 )
 
 var (
@@ -13,9 +14,9 @@ var (
 )
 
 type Backend[T any] interface {
-	CreateTable(*sql.DB) error
-	NewQuerySet(*sql.DB) (T, error)
-	Prepare(ctx context.Context, db *sql.DB) (T, error)
+	CreateTable(drivers.Database) error
+	NewQuerySet(drivers.Database) (T, error)
+	Prepare(ctx context.Context, db drivers.Database) (T, error)
 }
 
 type BaseQuerier[T any] interface {

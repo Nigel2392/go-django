@@ -3,16 +3,10 @@ package pages
 import (
 	"context"
 
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-signals"
 )
 
 type BaseSignal struct {
-	// Querier is the Querier used to perform the operation.
-	//
-	// This can be used to perform additional queries or operations
-	Querier models.Querier
-
 	// Ctx stores the context used to perform the operation.
 	Ctx context.Context
 }
@@ -21,7 +15,7 @@ type PageNodeSignal struct {
 	BaseSignal
 
 	// The current node, a child node or parent node depending on the signal.
-	Node *models.PageNode
+	Node *PageNode
 
 	// The current page ID, the parent page ID or a child's page ID depending on the signal.
 	PageID int64
@@ -36,16 +30,16 @@ type PageMovedSignal struct {
 	BaseSignal
 
 	// The node being moved.
-	Node *models.PageNode
+	Node *PageNode
 
 	// All nodes that are being moved.
-	Nodes []*models.PageNode
+	Nodes []*PageNode
 
 	// The new parent node.
-	NewParent *models.PageNode
+	NewParent *PageNode
 
 	// The old parent node.
-	OldParent *models.PageNode
+	OldParent *PageNode
 }
 
 var (

@@ -10,7 +10,6 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	"github.com/Nigel2392/go-django/src/contrib/editor/features"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
-	"github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
@@ -110,7 +109,7 @@ var PageLinkFeature = &PageLinkFeatureBlock{
 			pageIds = append(pageIds, int64(id))
 		}
 
-		var pageList, err = pages.QuerySet().GetNodesByIDs(
+		var pageList, err = pages.GetNodesByIDs(
 			context.Background(), pageIds,
 		)
 		if err != nil {
@@ -119,9 +118,9 @@ var PageLinkFeature = &PageLinkFeatureBlock{
 			)
 		}
 
-		var idMap = make(map[int64]*page_models.PageNode)
+		var idMap = make(map[int64]*pages.PageNode)
 		for _, page := range pageList {
-			idMap[page.ID()] = &page
+			idMap[page.ID()] = page
 		}
 
 		for _, el := range li {

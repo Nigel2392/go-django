@@ -6,22 +6,21 @@ import (
 	"slices"
 	"strings"
 
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-func newNode(ref *models.PageNode) *Node {
+func newNode(ref *PageNode) *Node {
 	return &Node{
 		Ref:      ref,
 		Children: orderedmap.NewOrderedMap[string, *Node](),
 	}
 }
 
-func NewNodeTree(refs []*models.PageNode) *Node {
-	var refsCpy = make([]*models.PageNode, len(refs))
+func NewNodeTree(refs []*PageNode) *Node {
+	var refsCpy = make([]*PageNode, len(refs))
 	copy(refsCpy, refs)
 
-	slices.SortStableFunc(refsCpy, func(a, b *models.PageNode) int {
+	slices.SortStableFunc(refsCpy, func(a, b *PageNode) int {
 		return strings.Compare(a.Path, b.Path)
 	})
 
@@ -57,7 +56,7 @@ func PrintTree(node *Node, depth int) {
 }
 
 type Node struct {
-	Ref      *models.PageNode
+	Ref      *PageNode
 	Children *orderedmap.OrderedMap[string, *Node]
 }
 
@@ -151,8 +150,8 @@ func (n *Node) forEach(fn func(*Node, int64) (cancel bool), depth int64, execFor
 	return
 }
 
-func (n *Node) FlatList() []*models.PageNode {
-	var nodes = make([]*models.PageNode, 0)
+func (n *Node) FlatList() []*PageNode {
+	var nodes = make([]*PageNode, 0)
 	n.ForEach(func(node *Node, d int64) bool {
 		if node.Ref != nil {
 			nodes = append(nodes, node.Ref)

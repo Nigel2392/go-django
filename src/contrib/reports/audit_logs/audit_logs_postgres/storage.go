@@ -2,11 +2,13 @@ package auditlogs_postgres
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/backend"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/google/uuid"
@@ -15,11 +17,11 @@ import (
 
 func init() {
 	backend.Register(&pg_stdlib.Driver{}, &models.BaseBackend[backend.StorageBackend]{
-		CreateTableFn: func(d *sql.DB) error {
-			_, err := d.Exec(createTablePostgres)
+		CreateTableFn: func(d drivers.Database) error {
+			_, err := d.ExecContext(context.Background(), createTablePostgres)
 			return err
 		},
-		NewQuerier: func(d *sql.DB) (backend.StorageBackend, error) {
+		NewQuerier: func(d drivers.Database) (backend.StorageBackend, error) {
 			return NewPostgresStorageBackend(d), nil
 		},
 	})
@@ -47,10 +49,10 @@ const (
 )
 
 type postgresStorageBackend struct {
-	db *sql.DB
+	db drivers.Database
 }
 
-func NewPostgresStorageBackend(db *sql.DB) backend.StorageBackend {
+func NewPostgresStorageBackend(db drivers.Database) backend.StorageBackend {
 	return &postgresStorageBackend{db: db}
 }
 
@@ -64,7 +66,7 @@ func (s *postgresStorageBackend) Close() error {
 
 func (s *postgresStorageBackend) Store(logEntry backend.LogEntry) (uuid.UUID, error) {
 	id, typeStr, level, timestamp, userID, objectID, contentType, data := backend.SerializeRow(logEntry)
-	_, err := s.db.Exec(insertPostgres, id, typeStr, level, timestamp, string(userID), string(objectID), contentType, string(data))
+	_, err := s.db.ExecContext(context.Background(), insertPostgres, id, typeStr, level, timestamp, string(userID), string(objectID), contentType, string(data))
 	return id, err
 }
 
@@ -81,7 +83,7 @@ func (s *postgresStorageBackend) StoreMany(logEntries []backend.LogEntry) ([]uui
 }
 
 func (s *postgresStorageBackend) Retrieve(id uuid.UUID) (backend.LogEntry, error) {
-	row := s.db.QueryRow(selectPostgres, id)
+	row := s.db.QueryRowContext(context.Background(), selectPostgres, id)
 	return backend.ScanRow(row)
 }
 
@@ -90,7 +92,7 @@ func (s *postgresStorageBackend) RetrieveForUser(userID interface{}, amount, off
 	if err := json.NewEncoder(b).Encode(userID); err != nil {
 		return nil, err
 	}
-	rows, err := s.db.Query(selectForUserPostgres, b.String(), amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectForUserPostgres, b.String(), amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -104,7 +106,7 @@ func (s *postgresStorageBackend) RetrieveForObject(objectID interface{}, amount,
 	if err := json.NewEncoder(b).Encode(objectID); err != nil {
 		return nil, err
 	}
-	rows, err := s.db.Query(selectForObjectPostgres, b.String(), amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectForObjectPostgres, b.String(), amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +116,7 @@ func (s *postgresStorageBackend) RetrieveForObject(objectID interface{}, amount,
 }
 
 func (s *postgresStorageBackend) RetrieveMany(amount, offset int) ([]backend.LogEntry, error) {
-	rows, err := s.db.Query(selectManyPostgres, amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectManyPostgres, amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -123,7 +125,7 @@ func (s *postgresStorageBackend) RetrieveMany(amount, offset int) ([]backend.Log
 }
 
 func (s *postgresStorageBackend) RetrieveTyped(logType string, amount, offset int) ([]backend.LogEntry, error) {
-	rows, err := s.db.Query(selectTypedPostgres, logType, amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectTypedPostgres, logType, amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +141,7 @@ func (s *postgresStorageBackend) EntryFilter(filters []backend.AuditLogFilter, a
 	}
 	args = append(args, amount, offset)
 	queryStr := fmt.Sprintf(`SELECT id, type, level, timestamp, user_id, object_id, content_type, data FROM audit_logs WHERE %s ORDER BY timestamp DESC LIMIT $%d OFFSET $%d;`, query.String(), len(args)-1, len(args))
-	rows, err := s.db.Query(queryStr, args...)
+	rows, err := s.db.QueryContext(context.Background(), queryStr, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -153,20 +155,20 @@ func (s *postgresStorageBackend) CountFilter(filters []backend.AuditLogFilter) (
 	if err != nil {
 		return 0, err
 	}
-	row := s.db.QueryRow(fmt.Sprintf("SELECT COUNT(id) FROM audit_logs WHERE %s;", query), args...)
+	row := s.db.QueryRowContext(context.Background(), fmt.Sprintf("SELECT COUNT(id) FROM audit_logs WHERE %s;", query), args...)
 	var count int
 	err = row.Scan(&count)
 	return count, err
 }
 
 func (s *postgresStorageBackend) Count() (int, error) {
-	row := s.db.QueryRow(selectCountPostgres)
+	row := s.db.QueryRowContext(context.Background(), selectCountPostgres)
 	var count int
 	err := row.Scan(&count)
 	return count, err
 }
 
-func scanRows(rows *sql.Rows) ([]backend.LogEntry, error) {
+func scanRows(rows drivers.SQLRows) ([]backend.LogEntry, error) {
 	var entries []backend.LogEntry
 	for rows.Next() {
 		entry, err := backend.ScanRow(rows)

@@ -2,17 +2,10 @@ package models
 
 import (
 	"context"
-	"database/sql"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	models "github.com/Nigel2392/go-django/src/models"
 )
-
-type DBTX interface {
-	ExecContext(context.Context, string, ...interface{}) (sql.Result, error)
-	PrepareContext(context.Context, string) (*sql.Stmt, error)
-	QueryContext(context.Context, string, ...interface{}) (*sql.Rows, error)
-	QueryRowContext(context.Context, string, ...interface{}) *sql.Row
-}
 
 var (
 	queries DBQuerier
@@ -29,30 +22,30 @@ type Querier interface {
 	RetrieveByUsername(ctx context.Context, username string) (*User, error)
 	RetrieveMany(ctx context.Context, isActive bool, isAdministrator bool, limit int32, offset int32) ([]*User, error)
 	UpdateUser(ctx context.Context, email string, username string, password string, firstName string, lastName string, isAdministrator bool, isActive bool, iD uint64) error
-	WithTx(tx *sql.Tx) Querier
+	WithTx(tx drivers.Transaction) Querier
 	Close() error
 }
 
 type DBQuerier interface {
 	Querier
-	DB() *sql.DB
-	BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error)
+	DB() drivers.Database
+	Begin(ctx context.Context) (drivers.Transaction, error)
 }
 
 type dbQuerier struct {
-	db *sql.DB
+	db drivers.Database
 	Querier
 }
 
-func (q *dbQuerier) DB() *sql.DB {
+func (q *dbQuerier) DB() drivers.Database {
 	return q.db
 }
 
-func (q *dbQuerier) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
-	return q.db.BeginTx(ctx, opts)
+func (q *dbQuerier) Begin(ctx context.Context) (drivers.Transaction, error) {
+	return q.db.Begin(ctx)
 }
 
-func NewQueries(db *sql.DB) (DBQuerier, error) {
+func NewQueries(db drivers.Database) (DBQuerier, error) {
 	if queries != nil {
 		return queries, nil
 	}

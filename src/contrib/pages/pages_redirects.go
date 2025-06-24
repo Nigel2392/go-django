@@ -24,7 +24,7 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, err := pageApp.QuerySet().GetNodeByID(
+	page, err := GetNodeByID(
 		r.Context(), int64(id),
 	)
 	if err != nil {
@@ -32,6 +32,6 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var pageUrl = URLPath(&page)
+	var pageUrl = URLPath(page)
 	http.Redirect(w, r, pageUrl, http.StatusFound)
 }

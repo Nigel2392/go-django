@@ -1,13 +1,14 @@
 package auth_test
 
 import (
-	"database/sql"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
 	"testing"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	auth_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
@@ -24,7 +25,7 @@ func init() {
 		DB_SOURCE = ":memory:"
 	)
 
-	var db, err = sql.Open(DB_FLAVOR, DB_SOURCE)
+	var db, err = drivers.Open(context.Background(), DB_FLAVOR, DB_SOURCE)
 	if err != nil {
 		panic(err)
 	}

@@ -12,7 +12,6 @@ import "github.com/Nigel2392/go-django/src/contrib/admin"
 import "html/template"
 import "bytes"
 import "net/http"
-import "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 import "github.com/Nigel2392/go-django/src/views/list"
 import "github.com/Nigel2392/go-django/src/core/attrs"
 import "github.com/Nigel2392/go-django/src"
@@ -56,7 +55,7 @@ func (p *PagesAdminHomeComponent) html(upper *list.List[attrs.Definer]) templ.Co
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T("Pages"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin_home_component.templ`, Line: 26, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `pages/django_admin_home_component.templ`, Line: 25, Col: 34}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -83,14 +82,13 @@ func (p *PagesAdminHomeComponent) Media() media.Media {
 }
 
 func (p *PagesAdminHomeComponent) HTML() template.HTML {
-	var qs = pageApp.QuerySet()
-	var pages, err = qs.AllNodes(
+	var pages, err = AllNodes(
 		p.Request.Context(),
-		page_models.StatusFlagNone,
+		StatusFlagNone,
 		0, _ADMIN_HOMEPAGE_PAGE_COUNT,
-		"-updated_at",
-		"-numchild",
-		"path",
+		"-UpdatedAt",
+		"-Numchild",
+		"Path",
 	)
 	if err != nil {
 		return template.HTML("")
@@ -118,7 +116,7 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 
 	var pagesList = make([]attrs.Definer, len(pages))
 	for i, page := range pages {
-		pagesList[i] = &page
+		pagesList[i] = page
 	}
 
 	var listComponent = list.NewList(

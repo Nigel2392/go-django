@@ -8,7 +8,6 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -41,7 +40,7 @@ func pageAdminAppHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppD
 	})
 }
 
-func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinition, *admin.ModelDefinition, *models.PageNode)) mux.Handler {
+func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinition, *admin.ModelDefinition, *PageNode)) mux.Handler {
 	return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
 
 		var (
@@ -54,30 +53,30 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 			return
 		}
 
-		var page, err = QuerySet().GetNodeByID(ctx, int64(pageID))
+		var page, err = GetNodeByID(ctx, int64(pageID))
 		if err != nil {
 			except.Fail(http.StatusNotFound, "Failed to get page")
 			return
 		}
 
 		var handler = pageAdminAppHandler(func(w http.ResponseWriter, req *http.Request, app *admin.AppDefinition, model *admin.ModelDefinition) {
-			fn(w, req, app, model, &page)
+			fn(w, req, app, model, page)
 		})
 
 		handler.ServeHTTP(w, req)
 	})
 }
 
-func getPageBreadcrumbs(r *http.Request, p *models.PageNode, urlForLast bool) ([]admin.BreadCrumb, error) {
+func getPageBreadcrumbs(r *http.Request, p *PageNode, urlForLast bool) ([]admin.BreadCrumb, error) {
 	var breadcrumbs = make([]admin.BreadCrumb, 0, p.Depth+2)
 	if p.Depth > 0 {
 		var ancestors, err = AncestorNodes(
-			QuerySet(), r.Context(), p.Path, int(p.Depth)+1,
+			r.Context(), p.Path, int(p.Depth)+1,
 		)
 		if err != nil {
 			return nil, err
 		}
-		slices.SortStableFunc(ancestors, func(a, b models.PageNode) int {
+		slices.SortStableFunc(ancestors, func(a, b *PageNode) int {
 			if a.Depth < b.Depth {
 				return -1
 			}
@@ -113,13 +112,13 @@ func getPageBreadcrumbs(r *http.Request, p *models.PageNode, urlForLast bool) ([
 	return breadcrumbs, nil
 }
 
-func getPageActions(rq *http.Request, p *models.PageNode) []admin.Action {
+func getPageActions(rq *http.Request, p *PageNode) []admin.Action {
 	var actions = make([]admin.Action, 0)
 	if p.ID() == 0 {
 		return actions
 	}
 
-	if p.StatusFlags.Is(models.StatusFlagPublished) {
+	if p.StatusFlags.Is(StatusFlagPublished) {
 		actions = append(actions, admin.Action{
 			Icon:   "icon-view",
 			Target: "_blank",

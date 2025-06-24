@@ -1,16 +1,14 @@
 package session
 
 import (
-	"database/sql"
+	"context"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/mux/middleware/sessions"
-	"github.com/alexedwards/scs/mysqlstore"
-	"github.com/alexedwards/scs/postgresstore"
-	"github.com/alexedwards/scs/sqlite3store"
 	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/v2/memstore"
 	"github.com/go-sql-driver/mysql"
@@ -30,40 +28,40 @@ func NewAppConfig() django.AppConfig {
 		)
 
 		var dbInt, ok = settings.Get(django.APPVAR_DATABASE)
-		var db *sql.DB
+		var db drivers.Database
 		if !ok {
 			goto memstore
 		}
 
-		db, ok = dbInt.(*sql.DB)
-		assert.True(ok, "DATABASE setting must be of type *sql.DB")
+		db, ok = dbInt.(drivers.Database)
+		assert.True(ok, "DATABASE setting must be of type drivers.Database")
 
 		switch db.Driver().(type) {
 		case *mysql.MySQLDriver:
 
-			_, err := db.Exec(`CREATE TABLE IF NOT EXISTS sessions (
+			_, err := db.ExecContext(context.Background(), `CREATE TABLE IF NOT EXISTS sessions (
 					token CHAR(43) PRIMARY KEY,
 					data BLOB NOT NULL,
 					expiry TIMESTAMP(6) NOT NULL
 				);`)
 			assert.Err(err)
 
-			rows, err := db.Query(`SHOW INDEX FROM sessions WHERE Key_name = 'sessions_expiry_idx'`)
+			rows, err := db.QueryContext(context.Background(), `SHOW INDEX FROM sessions WHERE Key_name = 'sessions_expiry_idx'`)
 			assert.Err(err)
 
 			if !rows.Next() {
 				logger.Info("Creating index sessions_expiry_idx on sessions table for MySQL")
-				_, err = db.Exec(`CREATE INDEX sessions_expiry_idx ON sessions(expiry)`)
+				_, err = db.ExecContext(context.Background(), `CREATE INDEX sessions_expiry_idx ON sessions(expiry)`)
 				assert.Err(err)
 			}
 
 			logger.Info("Using mysqlstore for session storage")
-			sessionManager.Store = mysqlstore.New(db)
+			sessionManager.Store = NewMySQLStore(db)
 			return nil
 
 		case *sqlite3.SQLiteDriver:
 
-			_, err := db.Exec(`CREATE TABLE IF NOT EXISTS sessions (
+			_, err := db.ExecContext(context.Background(), `CREATE TABLE IF NOT EXISTS sessions (
 	token TEXT PRIMARY KEY,
 	data BLOB NOT NULL,
 	expiry REAL NOT NULL
@@ -71,12 +69,12 @@ func NewAppConfig() django.AppConfig {
 			assert.Err(err)
 
 			logger.Info("Using sqlite3store for session storage")
-			sessionManager.Store = sqlite3store.New(db)
+			sessionManager.Store = NewSQLiteStore(db)
 			return nil
 
 		case *stdlib.Driver:
 
-			_, err := db.Exec(`CREATE TABLE IF NOT EXISTS sessions (
+			_, err := db.ExecContext(context.Background(), `CREATE TABLE IF NOT EXISTS sessions (
 	token TEXT PRIMARY KEY,
 	data BYTEA NOT NULL,
 	expiry TIMESTAMPTZ NOT NULL
@@ -86,7 +84,7 @@ CREATE INDEX IF NOT EXISTS sessions_expiry_idx ON sessions (expiry);`)
 			assert.Err(err)
 
 			logger.Info("Using postgresstore for session storage")
-			sessionManager.Store = postgresstore.New(db)
+			sessionManager.Store = NewPostgresStore(db)
 			return nil
 		}
 

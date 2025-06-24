@@ -28,7 +28,7 @@ func (q *Queries) RetrieveUsers(ctx context.Context, limit int32, offset int32, 
 	}
 
 	var query = fmt.Sprintf(retrieveUsersDynamicOrd, ordering)
-	rows, err := q.query(ctx, nil, query,
+	rows, err := q.query(ctx, query,
 		limit,
 		offset,
 	)

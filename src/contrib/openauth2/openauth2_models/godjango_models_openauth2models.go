@@ -2,8 +2,8 @@ package openauth2models
 
 import (
 	"context"
-	"database/sql"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -11,7 +11,7 @@ import (
 )
 
 func getQuerySet() (Querier, error) {
-	var db = django.ConfigGet[*sql.DB](
+	var db = django.ConfigGet[drivers.Database](
 		django.Global.Settings,
 		django.APPVAR_DATABASE,
 	)

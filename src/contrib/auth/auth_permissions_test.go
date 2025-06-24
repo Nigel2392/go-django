@@ -2,13 +2,13 @@ package auth_test
 
 import (
 	"context"
-	"database/sql"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/mail"
 	"testing"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	auth_permissions "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions"
@@ -27,7 +27,7 @@ import (
 const context_user_key = "mux.middleware.authentication.User"
 
 var (
-	db            *sql.DB
+	db            drivers.Database
 	q             models.DBQuerier
 	pq            auth_permissions.DBQuerier
 	b             django_models.Backend[models.Querier]
@@ -51,7 +51,7 @@ var (
 
 func init() {
 	var err error
-	db, err = sql.Open("sqlite3", ":memory:")
+	db, err = drivers.Open(context.Background(), "sqlite3", ":memory:")
 	if err != nil {
 		panic(err)
 	}

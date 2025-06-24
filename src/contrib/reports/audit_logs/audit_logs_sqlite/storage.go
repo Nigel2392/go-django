@@ -2,11 +2,13 @@ package auditlogs_sqlite
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/backend"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/google/uuid"
@@ -15,11 +17,11 @@ import (
 
 func init() {
 	backend.Register(&sqlite3.SQLiteDriver{}, &models.BaseBackend[backend.StorageBackend]{
-		CreateTableFn: func(d *sql.DB) error {
-			_, err := d.Exec(createTableSQLITE)
+		CreateTableFn: func(d drivers.Database) error {
+			_, err := d.ExecContext(context.Background(), createTableSQLITE)
 			return err
 		},
-		NewQuerier: func(d *sql.DB) (backend.StorageBackend, error) {
+		NewQuerier: func(d drivers.Database) (backend.StorageBackend, error) {
 			return NewSQLiteStorageBackend(d), nil
 		},
 	})
@@ -47,10 +49,10 @@ const (
 )
 
 type sqliteStorageBackend struct {
-	db *sql.DB
+	db drivers.Database
 }
 
-func NewSQLiteStorageBackend(db *sql.DB) backend.StorageBackend {
+func NewSQLiteStorageBackend(db drivers.Database) backend.StorageBackend {
 	return &sqliteStorageBackend{db: db}
 }
 
@@ -68,7 +70,7 @@ func (s *sqliteStorageBackend) Store(logEntry backend.LogEntry) (uuid.UUID, erro
 
 	var id, typeStr, level, timestamp, userID, objectID, contentType, data = backend.SerializeRow(logEntry)
 
-	_, err := s.db.Exec(insertSQLITE, id, typeStr, level, timestamp, string(userID), string(objectID), contentType, string(data))
+	_, err := s.db.ExecContext(context.Background(), insertSQLITE, id, typeStr, level, timestamp, string(userID), string(objectID), contentType, string(data))
 	return id, err
 }
 
@@ -86,7 +88,7 @@ func (s *sqliteStorageBackend) StoreMany(logEntries []backend.LogEntry) ([]uuid.
 
 func (s *sqliteStorageBackend) Retrieve(id uuid.UUID) (backend.LogEntry, error) {
 
-	row := s.db.QueryRow(selectSQLITE, id)
+	row := s.db.QueryRowContext(context.Background(), selectSQLITE, id)
 	if row.Err() != nil {
 		return nil, row.Err()
 	}
@@ -102,7 +104,7 @@ func (s *sqliteStorageBackend) RetrieveForUser(userID interface{}, amount, offse
 		return nil, err
 	}
 	var id = idBuf.Bytes()
-	rows, err := s.db.Query(selectForUserSQLITE, string(id), amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectForUserSQLITE, string(id), amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +130,7 @@ func (s *sqliteStorageBackend) RetrieveForObject(objectID interface{}, amount, o
 		return nil, err
 	}
 	var id = idBuf.Bytes()
-	rows, err := s.db.Query(selectForObjectSQLITE, string(id), amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectForObjectSQLITE, string(id), amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -147,7 +149,7 @@ func (s *sqliteStorageBackend) RetrieveForObject(objectID interface{}, amount, o
 }
 
 func (s *sqliteStorageBackend) RetrieveMany(amount, offset int) ([]backend.LogEntry, error) {
-	rows, err := s.db.Query(selectManySQLITE, amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectManySQLITE, amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +168,7 @@ func (s *sqliteStorageBackend) RetrieveMany(amount, offset int) ([]backend.LogEn
 }
 
 func (s *sqliteStorageBackend) RetrieveTyped(logType string, amount, offset int) ([]backend.LogEntry, error) {
-	rows, err := s.db.Query(selectTypedSQLITE, logType, amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectTypedSQLITE, logType, amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +208,7 @@ func (s *sqliteStorageBackend) EntryFilter(filters []backend.AuditLogFilter, amo
 			LIMIT ? OFFSET ?;`,
 		query,
 	)
-	rows, err := s.db.Query(queryString, append(args, amount, offset)...)
+	rows, err := s.db.QueryContext(context.Background(), queryString, append(args, amount, offset)...)
 	if err != nil {
 		return nil, err
 	}
@@ -230,7 +232,7 @@ func (s *sqliteStorageBackend) CountFilter(filters []backend.AuditLogFilter) (in
 	if err != nil {
 		return 0, err
 	}
-	row := s.db.QueryRow(fmt.Sprintf("SELECT COUNT(id) FROM audit_logs WHERE %s;", query), args...)
+	row := s.db.QueryRowContext(context.Background(), fmt.Sprintf("SELECT COUNT(id) FROM audit_logs WHERE %s;", query), args...)
 	if row.Err() != nil {
 		return 0, row.Err()
 	}
@@ -241,7 +243,7 @@ func (s *sqliteStorageBackend) CountFilter(filters []backend.AuditLogFilter) (in
 }
 
 func (s *sqliteStorageBackend) Count() (int, error) {
-	row := s.db.QueryRow(selectCountSQLITE)
+	row := s.db.QueryRowContext(context.Background(), selectCountSQLITE)
 	if row.Err() != nil {
 		return 0, row.Err()
 	}

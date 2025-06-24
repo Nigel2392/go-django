@@ -1,12 +1,12 @@
 package auditlogs
 
 import (
-	"database/sql"
 	"io/fs"
 	"net/http"
 	"strconv"
 	"unicode"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
@@ -56,7 +56,7 @@ func NewAppConfig() django.AppConfig {
 	Logs.Init = func(settings django.Settings) error {
 
 		if registry.backend == nil {
-			var db = django.ConfigGet[*sql.DB](
+			var db = django.ConfigGet[drivers.Database](
 				django.Global.Settings,
 				django.APPVAR_DATABASE,
 			)

@@ -15,7 +15,7 @@ OFFSET ?
 `
 
 func (q *Queries) AllGroups(ctx context.Context, limit int32, offset int32) ([]*permissions_models.Group, error) {
-	rows, err := q.query(ctx, q.allGroupsStmt, allGroups, limit, offset)
+	rows, err := q.query(ctx, allGroups, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -46,7 +46,7 @@ OFFSET ?
 `
 
 func (q *Queries) AllPermissions(ctx context.Context, limit int32, offset int32) ([]*permissions_models.Permission, error) {
-	rows, err := q.query(ctx, q.allPermissionsStmt, allPermissions, limit, offset)
+	rows, err := q.query(ctx, allPermissions, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +74,7 @@ WHERE ` + "`" + `id` + "`" + ` = ?
 `
 
 func (q *Queries) DeleteGroup(ctx context.Context, id uint64) error {
-	_, err := q.exec(ctx, q.deleteGroupStmt, deleteGroup, id)
+	_, err := q.exec(ctx, deleteGroup, id)
 	return err
 }
 
@@ -85,7 +85,7 @@ AND ` + "`" + `permission_id` + "`" + ` = ?
 `
 
 func (q *Queries) DeleteGroupPermission(ctx context.Context, groupID uint64, permissionID uint64) error {
-	_, err := q.exec(ctx, q.deleteGroupPermissionStmt, deleteGroupPermission, groupID, permissionID)
+	_, err := q.exec(ctx, deleteGroupPermission, groupID, permissionID)
 	return err
 }
 
@@ -95,7 +95,7 @@ WHERE ` + "`" + `id` + "`" + ` = ?
 `
 
 func (q *Queries) DeletePermission(ctx context.Context, id uint64) error {
-	_, err := q.exec(ctx, q.deletePermissionStmt, deletePermission, id)
+	_, err := q.exec(ctx, deletePermission, id)
 	return err
 }
 
@@ -106,7 +106,7 @@ AND ` + "`" + `group_id` + "`" + ` = ?
 `
 
 func (q *Queries) DeleteUserGroup(ctx context.Context, userID uint64, groupID uint64) error {
-	_, err := q.exec(ctx, q.deleteUserGroupStmt, deleteUserGroup, userID, groupID)
+	_, err := q.exec(ctx, deleteUserGroup, userID, groupID)
 	return err
 }
 
@@ -117,7 +117,7 @@ WHERE ` + "`" + `id` + "`" + ` = ?
 `
 
 func (q *Queries) GetGroupByID(ctx context.Context, id uint64) (*permissions_models.Group, error) {
-	row := q.queryRow(ctx, q.getGroupByIDStmt, getGroupByID, id)
+	row := q.queryRow(ctx, getGroupByID, id)
 	var i permissions_models.Group
 	err := row.Scan(&i.ID, &i.Name, &i.Description)
 	return &i, err
@@ -130,7 +130,7 @@ WHERE ` + "`" + `id` + "`" + ` = ?
 `
 
 func (q *Queries) GetPermissionByID(ctx context.Context, id uint64) (*permissions_models.Permission, error) {
-	row := q.queryRow(ctx, q.getPermissionByIDStmt, getPermissionByID, id)
+	row := q.queryRow(ctx, getPermissionByID, id)
 	var i permissions_models.Permission
 	err := row.Scan(&i.ID, &i.Name, &i.Description)
 	return &i, err
@@ -142,7 +142,7 @@ VALUES (?, ?)
 `
 
 func (q *Queries) InsertGroup(ctx context.Context, name string, description string) (int64, error) {
-	result, err := q.exec(ctx, q.insertGroupStmt, insertGroup, name, description)
+	result, err := q.exec(ctx, insertGroup, name, description)
 	if err != nil {
 		return 0, err
 	}
@@ -155,7 +155,7 @@ VALUES (?, ?)
 `
 
 func (q *Queries) InsertGroupPermission(ctx context.Context, groupID uint64, permissionID uint64) (int64, error) {
-	result, err := q.exec(ctx, q.insertGroupPermissionStmt, insertGroupPermission, groupID, permissionID)
+	result, err := q.exec(ctx, insertGroupPermission, groupID, permissionID)
 	if err != nil {
 		return 0, err
 	}
@@ -168,7 +168,7 @@ VALUES (?, ?)
 `
 
 func (q *Queries) InsertPermission(ctx context.Context, name string, description string) (int64, error) {
-	result, err := q.exec(ctx, q.insertPermissionStmt, insertPermission, name, description)
+	result, err := q.exec(ctx, insertPermission, name, description)
 	if err != nil {
 		return 0, err
 	}
@@ -181,7 +181,7 @@ VALUES (?, ?)
 `
 
 func (q *Queries) InsertUserGroup(ctx context.Context, userID uint64, groupID uint64) (int64, error) {
-	result, err := q.exec(ctx, q.insertUserGroupStmt, insertUserGroup, userID, groupID)
+	result, err := q.exec(ctx, insertUserGroup, userID, groupID)
 	if err != nil {
 		return 0, err
 	}
@@ -197,7 +197,7 @@ WHERE ug.user_id = ?
 `
 
 func (q *Queries) PermissionsForUser(ctx context.Context, userID uint64) ([]*permissions_models.Permission, error) {
-	rows, err := q.query(ctx, q.permissionsForUserStmt, permissionsForUser, userID)
+	rows, err := q.query(ctx, permissionsForUser, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -227,7 +227,7 @@ WHERE ` + "`" + `id` + "`" + ` = ?
 `
 
 func (q *Queries) UpdateGroup(ctx context.Context, name string, description string, iD uint64) error {
-	_, err := q.exec(ctx, q.updateGroupStmt, updateGroup, name, description, iD)
+	_, err := q.exec(ctx, updateGroup, name, description, iD)
 	return err
 }
 
@@ -239,7 +239,7 @@ WHERE ` + "`" + `id` + "`" + ` = ?
 `
 
 func (q *Queries) UpdatePermission(ctx context.Context, name string, description string, iD uint64) error {
-	_, err := q.exec(ctx, q.updatePermissionStmt, updatePermission, name, description, iD)
+	_, err := q.exec(ctx, updatePermission, name, description, iD)
 	return err
 }
 
@@ -292,7 +292,7 @@ AND p.name = ?
 `
 
 func (q *Queries) UserHasPermission(ctx context.Context, userID uint64, permissionName string) (int64, error) {
-	row := q.queryRow(ctx, q.userHasPermissionStmt, userHasPermission, userID, permissionName)
+	row := q.queryRow(ctx, userHasPermission, userID, permissionName)
 	var count int64
 	err := row.Scan(&count)
 	return count, err

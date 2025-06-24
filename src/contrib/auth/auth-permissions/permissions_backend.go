@@ -56,7 +56,7 @@ func (pb *PermissionsBackend) HasObjectPermission(r *http.Request, obj interface
 	var (
 		ctx = r.Context()
 	)
-	tx, err := pb.db.BeginTx(ctx, nil)
+	tx, err := pb.db.Begin(ctx)
 	if err != nil {
 		return false
 	}

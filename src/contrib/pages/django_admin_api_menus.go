@@ -5,18 +5,17 @@ import (
 	"net/http"
 	"strconv"
 
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/permissions"
 )
 
-type ItemsList []models.PageNode
+type ItemsList []*PageNode
 
 func (il ItemsList) MarshalJSON() ([]byte, error) {
-	var items = make([]models.PageNode, 0, len(il))
+	var items = make([]*PageNode, 0, len(il))
 	for _, item := range il {
-		if item.StatusFlags.Is(models.StatusFlagHidden) ||
-			item.StatusFlags.Is(models.StatusFlagDeleted) {
+		if item.StatusFlags.Is(StatusFlagHidden) ||
+			item.StatusFlags.Is(StatusFlagDeleted) {
 			continue
 		}
 		items = append(items, item)
@@ -30,9 +29,9 @@ type MenuHeader struct {
 }
 
 type pageMenuResponse struct {
-	Header     MenuHeader       `json:"header,omitempty"`
-	ParentItem *models.PageNode `json:"parent_item,omitempty"`
-	Items      ItemsList        `json:"items"`
+	Header     MenuHeader `json:"header,omitempty"`
+	ParentItem *PageNode  `json:"parent_item,omitempty"`
+	Items      ItemsList  `json:"items"`
 }
 
 func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
@@ -40,10 +39,9 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 		ctx        = r.Context()
 		mainItemID = r.URL.Query().Get(PageIDVariableName)
 		getParent  = r.URL.Query().Get("get_parent")
-		qs         = QuerySet()
 		response   = &pageMenuResponse{}
-		items      []models.PageNode
-		mainItem   models.PageNode
+		items      []*PageNode
+		mainItem   *PageNode
 		idInt      int
 		prntBool   bool
 		err        error
@@ -55,7 +53,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if mainItemID == "" {
-		items, err = qs.GetNodesByDepth(ctx, 0, models.StatusFlagNone, 0, 1000)
+		items, err = GetNodesByDepth(ctx, 0, StatusFlagNone, 0, 1000)
 		if err != nil {
 			except.Fail(http.StatusInternalServerError, err)
 			return
@@ -78,7 +76,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	mainItem, err = qs.GetNodeByID(ctx, int64(idInt))
+	mainItem, err = GetNodeByID(ctx, int64(idInt))
 	if err != nil {
 		except.Fail(http.StatusNotFound, err)
 		return
@@ -86,7 +84,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 
 	if prntBool && !mainItem.IsRoot() {
 		// Main item isn't a root node; we can safely fetch the parent node.
-		mainItem, err = ParentNode(qs, ctx, mainItem.Path, int(mainItem.Depth))
+		mainItem, err = ParentNode(ctx, mainItem.Path, int(mainItem.Depth))
 		if err != nil {
 			except.Fail(http.StatusInternalServerError, err)
 			return
@@ -95,7 +93,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	} else if prntBool && mainItem.IsRoot() {
 		// Main item is a root node; we can't fetch the parent node.
 		// Instead, override items and render the menu JSON.
-		items, err = qs.GetNodesByDepth(ctx, 0, models.StatusFlagNone, 0, 1000)
+		items, err = GetNodesByDepth(ctx, 0, StatusFlagNone, 0, 1000)
 		if err != nil {
 			except.Fail(http.StatusInternalServerError, err)
 			return
@@ -104,12 +102,12 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch child nodes of the main item.
-	items, err = qs.GetChildNodes(ctx, mainItem.Path, mainItem.Depth, models.StatusFlagNone, 0, 1000)
+	items, err = GetChildNodes(ctx, mainItem, StatusFlagNone, 0, 1000)
 	if err != nil {
 		except.Fail(http.StatusInternalServerError, err)
 		return
 	}
-	response.ParentItem = &mainItem
+	response.ParentItem = mainItem
 
 renderJSON:
 	response.Items = items

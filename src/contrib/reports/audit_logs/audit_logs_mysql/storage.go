@@ -2,11 +2,13 @@ package auditlogs_mysql
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"strings"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/backend"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/go-sql-driver/mysql"
@@ -15,11 +17,11 @@ import (
 
 func init() {
 	backend.Register(&mysql.MySQLDriver{}, &models.BaseBackend[backend.StorageBackend]{
-		CreateTableFn: func(d *sql.DB) error {
-			_, err := d.Exec(createTableMySQL)
+		CreateTableFn: func(d drivers.Database) error {
+			_, err := d.ExecContext(context.Background(), createTableMySQL)
 			return err
 		},
-		NewQuerier: func(d *sql.DB) (backend.StorageBackend, error) {
+		NewQuerier: func(d drivers.Database) (backend.StorageBackend, error) {
 			return NewMySQLStorageBackend(d), nil
 		},
 	})
@@ -46,10 +48,10 @@ const (
 )
 
 type MySQLStorageBackend struct {
-	db *sql.DB
+	db drivers.Database
 }
 
-func NewMySQLStorageBackend(db *sql.DB) backend.StorageBackend {
+func NewMySQLStorageBackend(db drivers.Database) backend.StorageBackend {
 	return &MySQLStorageBackend{db: db}
 }
 
@@ -67,7 +69,7 @@ func (s *MySQLStorageBackend) Store(logEntry backend.LogEntry) (uuid.UUID, error
 
 	var id, typeStr, level, timestamp, userID, objectID, contentType, data = backend.SerializeRow(logEntry)
 
-	_, err := s.db.Exec(insertMySQL, id, typeStr, level, timestamp, string(userID), string(objectID), contentType, string(data))
+	_, err := s.db.ExecContext(context.Background(), insertMySQL, id, typeStr, level, timestamp, string(userID), string(objectID), contentType, string(data))
 	return id, err
 }
 
@@ -85,7 +87,7 @@ func (s *MySQLStorageBackend) StoreMany(logEntries []backend.LogEntry) ([]uuid.U
 
 func (s *MySQLStorageBackend) Retrieve(id uuid.UUID) (backend.LogEntry, error) {
 
-	row := s.db.QueryRow(selectMySQL, id)
+	row := s.db.QueryRowContext(context.Background(), selectMySQL, id)
 	if row.Err() != nil {
 		return nil, row.Err()
 	}
@@ -101,7 +103,7 @@ func (s *MySQLStorageBackend) RetrieveForUser(userID interface{}, amount, offset
 		return nil, err
 	}
 	var id = idBuf.Bytes()
-	rows, err := s.db.Query(selectForUserMySQL, string(id), amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectForUserMySQL, string(id), amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -127,7 +129,7 @@ func (s *MySQLStorageBackend) RetrieveForObject(objectID interface{}, amount, of
 		return nil, err
 	}
 	var id = idBuf.Bytes()
-	rows, err := s.db.Query(selectForObjectMySQL, string(id), amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectForObjectMySQL, string(id), amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +148,7 @@ func (s *MySQLStorageBackend) RetrieveForObject(objectID interface{}, amount, of
 }
 
 func (s *MySQLStorageBackend) RetrieveMany(amount, offset int) ([]backend.LogEntry, error) {
-	rows, err := s.db.Query(selectManyMySQL, amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectManyMySQL, amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +167,7 @@ func (s *MySQLStorageBackend) RetrieveMany(amount, offset int) ([]backend.LogEnt
 }
 
 func (s *MySQLStorageBackend) RetrieveTyped(logType string, amount, offset int) ([]backend.LogEntry, error) {
-	rows, err := s.db.Query(selectTypedMySQL, logType, amount, offset)
+	rows, err := s.db.QueryContext(context.Background(), selectTypedMySQL, logType, amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -205,7 +207,7 @@ func (s *MySQLStorageBackend) EntryFilter(filters []backend.AuditLogFilter, amou
 			LIMIT ? OFFSET ?;`,
 		query,
 	)
-	rows, err := s.db.Query(queryString, append(args, amount, offset)...)
+	rows, err := s.db.QueryContext(context.Background(), queryString, append(args, amount, offset)...)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +231,7 @@ func (s *MySQLStorageBackend) CountFilter(filters []backend.AuditLogFilter) (int
 	if err != nil {
 		return 0, err
 	}
-	row := s.db.QueryRow(fmt.Sprintf("SELECT COUNT(id) FROM audit_logs WHERE %s;", query), args...)
+	row := s.db.QueryRowContext(context.Background(), fmt.Sprintf("SELECT COUNT(id) FROM audit_logs WHERE %s;", query), args...)
 	if row.Err() != nil {
 		return 0, row.Err()
 	}
@@ -240,7 +242,7 @@ func (s *MySQLStorageBackend) CountFilter(filters []backend.AuditLogFilter) (int
 }
 
 func (s *MySQLStorageBackend) Count() (int, error) {
-	row := s.db.QueryRow(selectCountMySQL)
+	row := s.db.QueryRowContext(context.Background(), selectCountMySQL)
 	if row.Err() != nil {
 		return 0, row.Err()
 	}

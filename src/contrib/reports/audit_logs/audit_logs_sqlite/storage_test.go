@@ -1,11 +1,12 @@
 package auditlogs_sqlite_test
 
 import (
-	"database/sql"
+	"context"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/Nigel2392/go-django-queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -15,7 +16,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-var db *sql.DB
+var db drivers.Database
 
 var entries []auditlogs.LogEntry
 
@@ -49,12 +50,12 @@ var entryIds = []uuid.UUID{
 func init() {
 
 	var err error
-	db, err = sql.Open("sqlite3", ":memory:")
+	db, err = drivers.Open(context.Background(), "sqlite3", ":memory:")
 	if err != nil {
 		panic(err)
 	}
 
-	db.Exec("DROP TABLE IF EXISTS audit_logs;")
+	db.ExecContext(context.Background(), "DROP TABLE IF EXISTS audit_logs;")
 
 	var dj = django.App(
 		django.Configure(map[string]interface{}{

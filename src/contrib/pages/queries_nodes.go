@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
+	queries "github.com/Nigel2392/go-django-queries/src"
 	"github.com/pkg/errors"
 )
 
@@ -18,12 +18,12 @@ import (
 // The child node title must not be empty, if not provided the page's slug (and thus URLPath) will be based on the page's title.
 //
 // The node path is set to a new path part based on the number of root nodes.
-func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
+func CreateRootNode(ctx context.Context, node *PageNode) error {
 	if node.Path != "" {
 		return fmt.Errorf("node path must be empty")
 	}
 
-	previousRootNodeCount, err := q.CountRootNodes(ctx, models.StatusFlagNone)
+	previousRootNodeCount, err := CountRootNodes(ctx, StatusFlagNone)
 	if err != nil {
 		return err
 	}
@@ -36,7 +36,7 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 	node.SetUrlPath(nil)
 	node.Depth = 0
 
-	id, err := q.InsertNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, node.Slug, int64(node.StatusFlags), node.PageID, node.ContentType, node.LatestRevisionID)
+	id, err := insertNode(ctx, node)
 	if err != nil {
 		return err
 	}
@@ -45,16 +45,10 @@ func CreateRootNode(q models.Querier, ctx context.Context, node *models.PageNode
 
 	return SignalRootCreated.Send(&PageNodeSignal{
 		BaseSignal: BaseSignal{
-			Querier: q,
-			Ctx:     ctx,
+			Ctx: ctx,
 		},
 		Node: node,
 	})
-}
-
-// CountNodesByType returns the number of nodes with the given content type.
-func CountNodesByType(q models.Querier, ctx context.Context, contentType string) (int64, error) {
-	return q.CountNodesByTypeHash(ctx, contentType)
 }
 
 // CreateChildNode creates a new child node.
@@ -66,23 +60,16 @@ func CountNodesByType(q models.Querier, ctx context.Context, contentType string)
 // The child node title must not be empty, if not provided the page's slug (and thus URLPath) will be based on the page's title.
 //
 // The child node path is set to a new path part based on the number of children of the parent node.
-func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *models.PageNode) error {
+func CreateChildNode(ctx context.Context, parent, child *PageNode) error {
 
-	var prepped, err = PrepareQuerySet(ctx, q.DB())
-	if prepped != nil {
-		defer prepped.Close()
-	}
+	var querySet = queries.GetQuerySet(&PageNode{}).
+		ExplicitSave().
+		WithContext(ctx)
+	var transaction, err = querySet.GetOrCreateTransaction()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to start transaction")
 	}
-
-	tx, err := prepped.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	var queries = prepped.WithTx(tx)
-	defer tx.Rollback()
+	defer transaction.Rollback()
 
 	if parent.Path == "" {
 		return fmt.Errorf("parent path must not be empty")
@@ -100,25 +87,31 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 	child.SetUrlPath(parent)
 	child.Path = parent.Path + buildPathPart(parent.Numchild)
 	child.Depth = parent.Depth + 1
-	child.PK, err = queries.InsertNode(ctx, child.Title, child.Path, child.Depth, child.Numchild, child.UrlPath, child.Slug, int64(child.StatusFlags), child.PageID, child.ContentType, child.LatestRevisionID)
+	child, err = querySet.Create(child)
 	if err != nil {
 		return err
 	}
 
 	parent.Numchild++
-	*parent, err = queries.IncrementNumChild(ctx, parent.PK)
+	updated, err := querySet.
+		Select("Numchild").
+		Filter("PK", parent.PK).
+		Update(parent)
 	if err != nil {
 		return err
 	}
 
-	if err = tx.Commit(); err != nil {
+	if updated == 0 {
+		return fmt.Errorf("failed to update parent node with PK %d", parent.PK)
+	}
+
+	if err = transaction.Commit(); err != nil {
 		return err
 	}
 
 	return SignalChildCreated.Send(&PageNodeSignal{
 		BaseSignal: BaseSignal{
-			Querier: q,
-			Ctx:     ctx,
+			Ctx: ctx,
 		},
 		Node:   child,
 		PageID: parent.PageID,
@@ -130,7 +123,7 @@ func CreateChildNode(q models.DBQuerier, ctx context.Context, parent, child *mod
 // This function will update the node's url path if the slug has changed.
 //
 // In that case, it will also update the url paths of all descendants.
-func UpdateNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
+func UpdateNode(ctx context.Context, node *PageNode) error {
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
 	}
@@ -144,24 +137,24 @@ func UpdateNode(q models.Querier, ctx context.Context, node *models.PageNode) er
 		return fmt.Errorf("node title must not be empty")
 	}
 
-	var oldRecord, err = q.GetNodeByID(ctx, node.PK)
+	var oldRecord, err = GetNodeByID(ctx, node.PK)
 	if err != nil {
 		return errors.Wrapf(err, "failed to retrieve old record with PK %d", node.PK)
 	}
 
 	if oldRecord.Slug != node.Slug {
-		var parent *models.PageNode
+		var parent *PageNode
 
 		if node.Depth > 0 {
-			var parentNode, err = ParentNode(q, ctx, node.Path, int(node.Depth))
+			var parentNode, err = ParentNode(ctx, node.Path, int(node.Depth))
 			if err != nil {
 				return errors.Wrapf(err, "failed to get parent node for node with path %s", node.Path)
 			}
-			parent = &parentNode
+			parent = parentNode
 		}
 
 		node.SetUrlPath(parent)
-		err = q.UpdateDescendantPaths(ctx, oldRecord.UrlPath, node.UrlPath, node.Path, node.PK)
+		err = updateDescendantPaths(ctx, oldRecord.UrlPath, node.UrlPath, node.Path, node.PK)
 		if err != nil {
 			return errors.Wrapf(err,
 				"failed to update descendant paths for node with path %s and PK %d",
@@ -170,8 +163,8 @@ func UpdateNode(q models.Querier, ctx context.Context, node *models.PageNode) er
 		}
 	}
 
-	err = q.UpdateNode(
-		ctx, node.Title, node.Path, node.Depth, node.Numchild, node.UrlPath, node.Slug, int64(node.StatusFlags), node.PageID, node.ContentType, node.LatestRevisionID, node.PK,
+	err = updateNode(
+		ctx, node,
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to update node")
@@ -179,8 +172,7 @@ func UpdateNode(q models.Querier, ctx context.Context, node *models.PageNode) er
 
 	return SignalNodeUpdated.Send(&PageNodeSignal{
 		BaseSignal: BaseSignal{
-			Querier: q,
-			Ctx:     ctx,
+			Ctx: ctx,
 		},
 		Node:   node,
 		PageID: node.PageID,
@@ -188,45 +180,35 @@ func UpdateNode(q models.Querier, ctx context.Context, node *models.PageNode) er
 }
 
 // DeleteNode deletes a page node.
-func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, depth int64) error { //, newParent *models.PageNode) error {
-	if depth == 0 {
+func DeleteNode(ctx context.Context, node *PageNode) error { //, newParent *PageNode) error {
+	if node.Depth == 0 {
 		return ErrPageIsRoot
 	}
 
 	var parentPath, err = ancestorPath(
-		path, 1,
+		node.Path, 1,
 	)
 	if err != nil {
 		return err
 	}
 
-	parent, err := q.GetNodeByPath(
+	parent, err := GetNodeByPath(
 		ctx, parentPath,
 	)
 	if err != nil {
 		return err
 	}
 
-	prepped, err := PrepareQuerySet(
-		ctx, q.DB(),
-	)
-	if prepped != nil {
-		defer prepped.Close()
-	}
+	var querySet = queries.GetQuerySet(&PageNode{}).WithContext(ctx)
+	tx, err := querySet.GetOrCreateTransaction()
 	if err != nil {
-		return err
-	}
-
-	tx, err := prepped.BeginTx(ctx, nil)
-	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to start transaction")
 	}
 	defer tx.Rollback()
-	var queries = prepped.WithTx(tx)
 
-	var descendants []models.PageNode
-	descendants, err = queries.GetDescendants(
-		ctx, path, depth-1, models.StatusFlagNone, 0, 1000,
+	var descendants []*PageNode
+	descendants, err = GetDescendants(
+		ctx, node.Path, node.Depth-1, StatusFlagNone, 0, 1000,
 	)
 	if err != nil {
 		return err
@@ -236,26 +218,26 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 	for i, descendant := range descendants {
 		if err = SignalNodeBeforeDelete.Send(&PageNodeSignal{
 			BaseSignal: BaseSignal{
-				Querier: q,
-				Ctx:     ctx,
+				Ctx: ctx,
 			},
-			Node:   &descendant,
-			PageID: id,
+			Node:   descendant,
+			PageID: node.PageID,
 		}); err != nil {
 			return err
 		}
 		ids[i] = descendant.PK
 	}
 
-	err = queries.DeleteNodes(ctx, ids)
+	err = deleteNodes(ctx, ids)
 	if err != nil {
 		return err
 	}
 
-	parent, err = queries.DecrementNumChild(ctx, parent.PK)
+	prnt, err := decrementNumChild(ctx, parent.PK)
 	if err != nil {
 		return err
 	}
+	*parent = *prnt
 
 	return tx.Commit()
 }
@@ -267,7 +249,7 @@ func DeleteNode(q models.DBQuerier, ctx context.Context, id int64, path string, 
 // The new parent must not be a descendant of the node.
 //
 // This function will update the url paths of all descendants, as well as the tree paths of the node and its descendants.
-func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, newParent *models.PageNode) error {
+func MoveNode(ctx context.Context, node *PageNode, newParent *PageNode) error {
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
 	}
@@ -288,20 +270,11 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 		return fmt.Errorf("new parent is a descendant of the node")
 	}
 
-	prepped, err := PrepareQuerySet(ctx, q.DB())
-	if prepped != nil {
-		defer prepped.Close()
-	}
+	var querySet = queries.GetQuerySet(&PageNode{}).WithContext(ctx)
+	var tx, err = querySet.GetOrCreateTransaction()
 	if err != nil {
-		return errors.Wrap(err, "failed to prepare query set")
+		return errors.Wrap(err, "failed to start transaction")
 	}
-
-	tx, err := prepped.BeginTx(ctx, nil)
-	if err != nil {
-		return errors.Wrap(err, "failed to begin transaction")
-	}
-
-	var queries = prepped.WithTx(tx)
 	defer tx.Rollback()
 
 	oldParentPath, err := ancestorPath(node.Path, 1)
@@ -309,17 +282,17 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 		return errors.Wrap(err, "failed to get old parent path")
 	}
 
-	oldParent, err := queries.GetNodeByPath(ctx, oldParentPath)
+	oldParent, err := GetNodeByPath(ctx, oldParentPath)
 	if err != nil {
 		return errors.Wrap(err, "failed to get old parent node")
 	}
 
-	nodes, err := queries.GetDescendants(ctx, node.Path, node.Depth-1, models.StatusFlagNone, 0, 1000)
+	nodes, err := GetDescendants(ctx, node.Path, node.Depth-1, StatusFlagNone, 0, 1000)
 	if err != nil {
 		return errors.Wrap(err, "failed to get descendants")
 	}
 
-	var nodesPtr = make([]*models.PageNode, len(nodes)+1)
+	var nodesPtr = make([]*PageNode, len(nodes)+1)
 	nodesPtr[0] = node
 
 	for _, descendant := range nodes {
@@ -329,7 +302,7 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 		// descendant.UrlPath = path.Join(newParent.UrlPath, descendant.Slug)
 		// nodesPtr[i+1] = &descendant
 
-		if err = queries.UpdateNodePathAndDepth(ctx, descendant.Path, descendant.Depth, descendant.PK); err != nil {
+		if err = updateNodePathAndDepth(ctx, descendant.Path, descendant.Depth, descendant.PK); err != nil {
 			return errors.Wrap(err, "failed to update descendant")
 		}
 	}
@@ -341,20 +314,21 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 	))
 	node.Depth = newParent.Depth + 1
 
-	if err = queries.UpdateNode(ctx, node.Title, node.Path, node.Depth, node.Numchild, newPath, node.Slug, int64(node.StatusFlags), node.PageID, node.ContentType, node.LatestRevisionID, node.PK); err != nil {
+	if err = updateNode(ctx, node); err != nil {
 		return errors.Wrap(err, "failed to update node")
 	}
 
-	if err = queries.UpdateDescendantPaths(ctx, oldPath, newPath, node.Path, node.PK); err != nil {
+	if err = updateDescendantPaths(ctx, oldPath, newPath, node.Path, node.PK); err != nil {
 		return errors.Wrap(err, "failed to update descendant paths")
 	}
 
-	*newParent, err = queries.IncrementNumChild(ctx, newParent.PK)
+	prnt, err := incrementNumChild(ctx, newParent.PK)
 	if err != nil {
 		return errors.Wrap(err, "failed to increment new parent numchild")
 	}
+	*newParent = *prnt
 
-	_, err = queries.DecrementNumChild(ctx, oldParent.PK)
+	_, err = decrementNumChild(ctx, oldParent.PK)
 	if err != nil {
 		return errors.Wrap(err, "failed to decrement old parent numchild")
 	}
@@ -365,89 +339,72 @@ func MoveNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, ne
 
 	return SignalNodeMoved.Send(&PageMovedSignal{
 		BaseSignal: BaseSignal{
-			Querier: q,
-			Ctx:     ctx,
+			Ctx: ctx,
 		},
 		Node:      node,
 		Nodes:     nodesPtr,
-		OldParent: &oldParent,
+		OldParent: oldParent,
 		NewParent: newParent,
 	})
 }
 
 // PublishNode will set the published flag on the node
 // and update it accordingly in the database.
-func PublishNode(q models.Querier, ctx context.Context, node *models.PageNode) error {
+func PublishNode(ctx context.Context, node *PageNode) error {
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
 	}
 
-	if node.StatusFlags.Is(models.StatusFlagPublished) {
+	if node.StatusFlags.Is(StatusFlagPublished) {
 		return nil
 	}
 
-	node.StatusFlags |= models.StatusFlagPublished
-	return q.UpdateNodeStatusFlags(ctx, int64(models.StatusFlagPublished), node.PK)
+	node.StatusFlags |= StatusFlagPublished
+	return updateNodeStatusFlags(ctx, int64(StatusFlagPublished), node.PK)
 }
 
 // UnpublishNode will unset the published flag on the node
 // and update it accordingly in the database.
 //
 // If unpublishChildren is true, it will also unpublish all descendants.
-func UnpublishNode(q models.DBQuerier, ctx context.Context, node *models.PageNode, unpublishChildren bool) error {
+func UnpublishNode(ctx context.Context, node *PageNode, unpublishChildren bool) error {
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
 	}
 
-	prepped, err := PrepareQuerySet(ctx, q.DB())
-	if prepped != nil {
-		defer prepped.Close()
-	}
+	var querySet = queries.GetQuerySet(&PageNode{}).WithContext(ctx)
+	var transaction, err = querySet.GetOrCreateTransaction()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer transaction.Rollback()
+
+	if node.StatusFlags.Is(StatusFlagPublished) {
+		node.StatusFlags &^= StatusFlagPublished
 	}
 
-	tx, err := prepped.BeginTx(ctx, nil)
-	if err != nil {
-		return err
-	}
-
-	defer tx.Rollback()
-
-	var queries = prepped.WithTx(tx)
-
-	if node.StatusFlags.Is(models.StatusFlagPublished) {
-		node.StatusFlags &^= models.StatusFlagPublished
-	}
-
-	var nodes []*models.PageNode = make([]*models.PageNode, 1)
+	var nodes []*PageNode = make([]*PageNode, 1)
 	if unpublishChildren {
-		descendants, err := queries.GetDescendants(ctx, node.Path, node.Depth, models.StatusFlagNone, 0, 1000)
+		descendants, err := GetDescendants(ctx, node.Path, node.Depth, StatusFlagNone, 0, 1000)
 		if err != nil {
 			return err
 		}
 
-		nodes = make([]*models.PageNode, len(descendants)+1)
-		for i := range descendants {
-			var d = descendants[i]
-			if d.StatusFlags.Is(models.StatusFlagPublished) {
-				d.StatusFlags &^= models.StatusFlagPublished
-			}
-			nodes[i] = &d
-		}
+		nodes = make([]*PageNode, len(descendants)+1)
+		copy(nodes, descendants)
 	}
 
 	nodes[len(nodes)-1] = node
 
-	if err := queries.UpdateNodes(ctx, nodes); err != nil {
+	if err := updateNodes(ctx, nodes); err != nil {
 		return err
 	}
 
-	return tx.Commit()
+	return transaction.Commit()
 }
 
 // ParentNode returns the parent node of the given node.
-func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (v models.PageNode, err error) {
+func ParentNode(ctx context.Context, path string, depth int) (v *PageNode, err error) {
 	if depth == 0 {
 		return v, ErrPageIsRoot
 	}
@@ -458,7 +415,7 @@ func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (
 	if err != nil {
 		return v, err
 	}
-	return q.GetNodeByPath(
+	return GetNodeByPath(
 		ctx, parentPath,
 	)
 }
@@ -466,7 +423,7 @@ func ParentNode(q models.Querier, ctx context.Context, path string, depth int) (
 // AncestorNodes returns the ancestor nodes of the given node.
 //
 // The path is a PageNode.Path, the depth is the depth of the page.
-func AncestorNodes(q models.Querier, ctx context.Context, p string, depth int) ([]models.PageNode, error) {
+func AncestorNodes(ctx context.Context, p string, depth int) ([]*PageNode, error) {
 	var paths = make([]string, depth)
 	for i := 1; i < int(depth); i++ {
 		var path, err = ancestorPath(
@@ -477,7 +434,7 @@ func AncestorNodes(q models.Querier, ctx context.Context, p string, depth int) (
 		}
 		paths[i] = path
 	}
-	return q.GetNodesForPaths(
+	return GetNodesForPaths(
 		ctx, paths,
 	)
 }

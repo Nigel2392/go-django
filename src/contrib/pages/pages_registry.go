@@ -2,10 +2,10 @@ package pages
 
 import (
 	"context"
+	"fmt"
 	"slices"
 	"strings"
 
-	models "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-signals"
 )
@@ -49,7 +49,7 @@ func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
 	if definition.OnReferenceUpdate != nil {
 		SignalNodeUpdated.Listen(func(s signals.Signal[*PageNodeSignal], ps *PageNodeSignal) error {
 			if ps.Node.ContentType == typeName {
-				return definition.OnReferenceUpdate(ps.Ctx, *ps.Node, ps.PageID)
+				return definition.OnReferenceUpdate(ps.Ctx, ps.Node, ps.PageID)
 			}
 			return nil
 		})
@@ -58,7 +58,7 @@ func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
 	if definition.OnReferenceBeforeDelete != nil {
 		SignalNodeBeforeDelete.Listen(func(s signals.Signal[*PageNodeSignal], ps *PageNodeSignal) error {
 			if ps.Node.ContentType == typeName {
-				return definition.OnReferenceBeforeDelete(ps.Ctx, *ps.Node, ps.PageID)
+				return definition.OnReferenceBeforeDelete(ps.Ctx, ps.Node, ps.PageID)
 			}
 			return nil
 		})
@@ -148,16 +148,23 @@ func (p *pageRegistry) DefinitionForObject(page Page) *PageDefinition {
 	return p.registry[typeName]
 }
 
-func (p *pageRegistry) SpecificInstance(ctx context.Context, node models.PageNode) (Page, error) {
+func (p *pageRegistry) SpecificInstance(ctx context.Context, node *PageNode) (Page, error) {
 	var typeName = node.ContentType
 	var definition = p.DefinitionForType(
 		typeName,
 	)
 	if definition == nil {
-		return &node, nil
+		return node, nil
 		// return nil, errors.Wrapf(
 		// ErrContentTypeInvalid, "Page type %s not found", typeName,
 		// )
+	}
+
+	if node.PageID == 0 {
+		panic(fmt.Sprintf(
+			"pages: SpecificInstance called with node %s that has no PageID (%+v)",
+			typeName, node,
+		))
 	}
 
 	return definition.GetForID(ctx, node, node.PageID)
