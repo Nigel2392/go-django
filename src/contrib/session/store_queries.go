@@ -3,6 +3,7 @@ package session
 import (
 	"errors"
 	"log"
+	"sync"
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -58,6 +59,10 @@ func (s *Session) DatabaseIndexes() []migrator.Index {
 		},
 	}
 }
+
+var (
+	cleanupMu = &sync.Mutex{}
+)
 
 type QueryStore struct {
 	db          drivers.Database
@@ -168,10 +173,12 @@ func (p *QueryStore) startCleanup(interval time.Duration) {
 	for {
 		select {
 		case <-ticker.C:
+			cleanupMu.Lock()
 			err := p.deleteExpired()
 			if err != nil {
 				log.Println(err)
 			}
+			cleanupMu.Unlock()
 		case <-p.stopCleanup:
 			ticker.Stop()
 			return

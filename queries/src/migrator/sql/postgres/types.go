@@ -82,11 +82,6 @@ func Type__string(c *migrator.Column) string {
 }
 
 func Type__char(c *migrator.Column) string {
-	if c.FieldType() == reflect.TypeOf(drivers.Char("")) {
-		// If the field is of type drivers.Char, we use CHAR type
-		return "CHAR"
-	}
-
 	var max int64 = c.MaxLength
 	if max <= 0 {
 		max = 1 // Default to CHAR(1) if no length is specified
