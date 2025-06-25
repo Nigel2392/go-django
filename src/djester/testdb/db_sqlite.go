@@ -4,8 +4,8 @@ package testdb
 
 import (
 	"context"
-	"database/sql"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 )
 
@@ -18,11 +18,14 @@ func open() (which string, db drivers.Database) {
 		ENGINE,
 		openDSN,
 
-		// SQLite in-memory databases should only have one connection
-		drivers.SQLDBOption(func(driverName string, db *sql.DB) error {
-			db.SetMaxOpenConns(1)
-			return nil
-		}),
+		//// SQLite in-memory databases should only have one connection
+		//drivers.SQLDBOption(func(driverName string, db *sql.DB) error {
+		//	// db.SetMaxOpenConns(1)
+		//	// db.SetMaxIdleConns(1)
+		//	// db.SetConnMaxLifetime(30 * time.Second) // 30 seconds
+		//	// db.SetConnMaxIdleTime(30) // 30 seconds
+		//	return nil
+		//}),
 	)
 	if err != nil {
 		panic(err)
@@ -32,6 +35,9 @@ func open() (which string, db drivers.Database) {
 	if err := sqlDB.Ping(); err != nil {
 		panic(err)
 	}
+
+	// set to false to avoid database locking issues in tests
+	queries.QUERYSET_CREATE_IMPLICIT_TRANSACTION = false
 
 	return ENGINE, sqlDB
 }
