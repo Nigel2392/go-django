@@ -1364,8 +1364,7 @@ func TestQueryNestedRelated(t *testing.T) {
 
 			&expr.RawExpr{
 				Statement: &expr.ExpressionStatement{
-					Statement: "%s = ?",
-					Fields:    []string{"User.ID"},
+					Statement: "![User.ID] = ?",
 					Values:    []any{user.ID},
 				},
 			},

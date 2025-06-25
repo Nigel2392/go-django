@@ -611,8 +611,7 @@ func Test_Annotated_ValuesList(t *testing.T) {
 	qs := queries.Objects[attrs.Definer](&TestStruct{}).
 		Annotate("Combined", &expr.RawExpr{
 			Statement: &expr.ExpressionStatement{
-				Statement: "%s || ' ' || %s",
-				Fields:    []string{"Name", "Text"},
+				Statement: "![Name] || ' ' || ![Text]",
 			},
 		}).
 		Select("ID", "Name")
@@ -738,8 +737,7 @@ func Test_Annotate_With_Relation(t *testing.T) {
 		GroupBy("Author.Name").
 		Annotate("BookCount", &expr.RawExpr{
 			Statement: &expr.ExpressionStatement{
-				Statement: "COUNT(%s)",
-				Fields:    []string{"ID"},
+				Statement: "COUNT(![ID])",
 			},
 		})
 

@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -79,10 +80,14 @@ func F(statement any, value ...any) NamedExpression {
 
 	}
 
-	if len(stmt.Fields) > 0 {
-		fieldName = stmt.Fields[0]
+	var fields = stmt.Raw("field")
+	if len(fields) > 0 {
+		fieldName = fields[0]
 	} else {
-		panic("no field found in statement")
+		panic(fmt.Sprintf(
+			"no field found in statement: %q: %+v",
+			stmt.Statement, stmt.info.resolver.nodeTexts,
+		))
 	}
 
 	return &RawNamedExpression{
