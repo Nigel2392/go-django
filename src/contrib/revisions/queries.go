@@ -1,30 +1,63 @@
 package revisions
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"reflect"
-	"unsafe"
+	"slices"
+	"time"
 
-	_ "github.com/Nigel2392/go-django/src/contrib/revisions/internal/revisions-mysql"
-	_ "github.com/Nigel2392/go-django/src/contrib/revisions/internal/revisions-sqlite"
-	"github.com/Nigel2392/go-django/src/contrib/revisions/internal/revisions_db"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/pkg/errors"
 )
 
-func revisionsDbListToRevisions(dbRevs []revisions_db.Revision) []Revision {
-	return *(*[]Revision)(unsafe.Pointer(&dbRevs))
+var (
+	_ queries.ActsBeforeCreate = (*Revision)(nil)
+	_ queries.OrderByDefiner   = (*Revision)(nil)
+	_ attrs.Definer            = (*Revision)(nil)
+)
+
+type Revision struct {
+	ID          int64     `json:"id"`
+	ObjectID    string    `json:"object_id"`
+	ContentType string    `json:"content_type"`
+	Data        string    `json:"data"`
+	CreatedAt   time.Time `json:"created_at"`
 }
 
-type RevisionQuerier struct {
-	ctx     context.Context
-	Querier revisions_db.Querier
+func (r *Revision) BeforeCreate(qs *queries.GenericQuerySet) error {
+	if r.CreatedAt.IsZero() {
+		r.CreatedAt = time.Now()
+	}
+	return nil
 }
 
-type Revision revisions_db.Revision
+func (r *Revision) OrderBy() []string {
+	return []string{"-CreatedAt"}
+}
+
+func (r *Revision) FieldDefs() attrs.Definitions {
+	return attrs.Define(r,
+		attrs.Unbound("ID", &attrs.FieldConfig{
+			Primary: true,
+			Column:  "id",
+		}),
+		attrs.Unbound("ObjectID", &attrs.FieldConfig{
+			Column: "object_id",
+		}),
+		attrs.Unbound("ContentType", &attrs.FieldConfig{
+			Column: "content_type",
+		}),
+		attrs.Unbound("Data", &attrs.FieldConfig{
+			Column: "data",
+		}),
+		attrs.Unbound("CreatedAt", &attrs.FieldConfig{
+			Column: "created_at",
+		}),
+	)
+}
 
 // AsObject will return the object that this revision is for.
 //
@@ -80,34 +113,38 @@ func (r *Revision) ObjectFromDB() (attrs.Definer, error) {
 	return objInstance.(attrs.Definer), nil
 }
 
-func (r *RevisionQuerier) ListRevisions(limit, offset int) ([]Revision, error) {
-	res, err := r.Querier.ListRevisions(r.ctx, int32(limit), int32(offset))
+func ListRevisions(limit, offset int) ([]*Revision, error) {
+	var rows, err = queries.GetQuerySet(&Revision{}).
+		Limit(limit).
+		Offset(offset).
+		OrderBy("-CreatedAt").
+		All()
 	if err != nil {
 		return nil, err
 	}
-	return revisionsDbListToRevisions(res), nil
+	return slices.Collect(rows.Objects()), nil
 }
 
-func (r *RevisionQuerier) GetRevisionByID(id int64) (*Revision, error) {
-	res, err := r.Querier.GetRevisionByID(r.ctx, id)
+func GetRevisionByID(id int64) (*Revision, error) {
+	var row, err = queries.GetQuerySet(&Revision{}).Filter("ID", id).Get()
 	if err != nil {
 		return nil, err
 	}
-	return (*Revision)(&res), nil
+	return row.Object, nil
 }
 
-func (r *RevisionQuerier) LatestRevision(obj attrs.Definer) (*Revision, error) {
-	var res, err = r.GetRevisionsByObject(obj, 1, 0)
+func LatestRevision(obj attrs.Definer) (*Revision, error) {
+	var res, err = GetRevisionsByObject(obj, 1, 0)
 	if err != nil {
 		return nil, err
 	}
 	if len(res) == 0 {
 		return nil, sql.ErrNoRows
 	}
-	return &res[0], nil
+	return res[0], nil
 }
 
-func (r *RevisionQuerier) GetRevisionsByObject(obj attrs.Definer, limit int, offset int) ([]Revision, error) {
+func GetRevisionsByObject(obj attrs.Definer, limit int, offset int) ([]*Revision, error) {
 	var objKey = attrs.PrimaryKey(obj)
 	var objectID, err = json.Marshal(objKey)
 	if err != nil {
@@ -116,23 +153,22 @@ func (r *RevisionQuerier) GetRevisionsByObject(obj attrs.Definer, limit int, off
 
 	var cTypeDef = contenttypes.DefinitionForObject(obj)
 	var cType = cTypeDef.ContentType()
-	results, err := r.Querier.GetRevisionsByObjectID(
-		r.ctx,
-		string(objectID),
-		cType.TypeName(),
-		int32(limit),
-		int32(offset),
-	)
-
+	rows, err := queries.GetQuerySet(&Revision{}).
+		Filter("ObjectID", string(objectID)).
+		Filter("ContentType", cType.TypeName()).
+		Limit(limit).
+		Offset(offset).
+		OrderBy("-CreatedAt").
+		All()
 	if err != nil {
 		return nil, errors.Wrap(
-			err, "GetRevisionsByObjectID",
+			err, "GetRevisionsByObject",
 		)
 	}
-	return revisionsDbListToRevisions(results), nil
+	return slices.Collect(rows.Objects()), nil
 }
 
-func (r *RevisionQuerier) CreateRevision(forObj attrs.Definer) (*Revision, error) {
+func CreateRevision(forObj attrs.Definer) (*Revision, error) {
 	var objKey = attrs.PrimaryKey(forObj)
 	var dataBuf, err = json.Marshal(forObj)
 	if err != nil {
@@ -146,36 +182,21 @@ func (r *RevisionQuerier) CreateRevision(forObj attrs.Definer) (*Revision, error
 
 	var cTypeDef = contenttypes.DefinitionForObject(forObj)
 	var cType = cTypeDef.ContentType()
-	var rev = Revision{
+	var rev = &Revision{
 		ObjectID:    string(idSerialized),
 		ContentType: cType.TypeName(),
 		Data:        string(dataBuf),
 	}
 
-	id, err := r.Querier.InsertRevision(
-		r.ctx,
-		rev.ObjectID,
-		rev.ContentType,
-		rev.Data,
-	)
-	if err != nil {
-		return &rev, err
-	}
-
-	rev.ID = id
-	return &rev, nil
+	return queries.GetQuerySet(&Revision{}).Create(rev)
 }
 
-func (r *RevisionQuerier) UpdateRevision(rev Revision) error {
-	return r.Querier.UpdateRevision(
-		r.ctx,
-		rev.ObjectID,
-		rev.ContentType,
-		rev.Data,
-		rev.ID,
-	)
+func UpdateRevision(rev *Revision) error {
+	var _, err = queries.GetQuerySet(&Revision{}).Filter("ID", rev.ID).Update(rev)
+	return err
 }
 
-func (r *RevisionQuerier) DeleteRevision(rev Revision) error {
-	return r.Querier.DeleteRevision(r.ctx, rev.ID)
+func DeleteRevision(rev *Revision) error {
+	var _, err = queries.GetQuerySet(&Revision{}).Filter("ID", rev.ID).Delete()
+	return err
 }

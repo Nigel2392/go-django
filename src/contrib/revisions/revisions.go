@@ -1,20 +1,17 @@
 package revisions
 
 import (
-	"context"
 	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
-	"github.com/Nigel2392/go-django/src/contrib/revisions/internal/revisions_db"
-	"github.com/Nigel2392/go-django/src/core/assert"
-	"github.com/Nigel2392/go-django/src/models"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
 type RevisionsAppConfig struct {
 	*apps.DBRequiredAppConfig
-	backend models.Backend[revisions_db.Querier]
 }
 
 var app *RevisionsAppConfig
@@ -33,39 +30,32 @@ func NewAppConfig() *RevisionsAppConfig {
 		),
 	}
 
+	app.ModelObjects = []attrs.Definer{
+		&Revision{},
+	}
+
 	app.Init = func(settings django.Settings, db drivers.Database) error {
 
-		var driver = db.Driver()
-		var backend, err = revisions_db.GetBackend(driver)
-		if err != nil {
-			panic(fmt.Errorf(
-				"no backend configured for %T: %w",
-				driver, err,
-			))
+		if !django.AppInstalled("migrator") {
+			var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())
+			if err != nil {
+				return fmt.Errorf("failed to get schema editor: %w", err)
+			}
+
+			var table = migrator.NewModelTable(&Revision{})
+			if err := schemaEditor.CreateTable(table, true); err != nil {
+				return fmt.Errorf("failed to create pages table: %w", err)
+			}
+
+			for _, index := range table.Indexes() {
+				if err := schemaEditor.AddIndex(table, index, true); err != nil {
+					return fmt.Errorf("failed to create index %s: %w", index.Name(), err)
+				}
+			}
 		}
 
-		app.backend = backend
-
-		return backend.CreateTable(db)
+		return nil
 	}
 
 	return app
-}
-
-func QuerySet(ctx context.Context) *RevisionQuerier {
-	if ctx == nil {
-		ctx = context.Background()
-	}
-
-	var app = App()
-	var q, err = app.backend.NewQuerySet(app.DB)
-	assert.Assert(
-		err == nil,
-		"error creating new query set: %v", err,
-	)
-
-	return &RevisionQuerier{
-		ctx:     ctx,
-		Querier: q,
-	}
 }

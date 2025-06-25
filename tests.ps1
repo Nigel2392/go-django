@@ -27,6 +27,7 @@ $DockerDatabases = @{
 $UsingQueriesTestDirs = @(
     "./src/contrib/pages/...",
     "./src/contrib/session/...",
+    "./src/contrib/revisions/...",
     "./queries/..."
 )
 

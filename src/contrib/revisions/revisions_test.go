@@ -1,7 +1,6 @@
 package revisions_test
 
 import (
-	"context"
 	"reflect"
 	"strconv"
 	"testing"
@@ -120,12 +119,17 @@ func init() {
 
 	// var db, err = sql.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
 	var _, db = testdb.Open()
-	var app = revisions.NewAppConfig()
 	var settings = django.Config(map[string]interface{}{
 		django.APPVAR_DATABASE: db,
 	})
 
-	if err := app.Initialize(settings); err != nil {
+	var app = django.App(
+		django.AppSettings(settings),
+		django.Apps(revisions.NewAppConfig),
+		django.Flag(django.FlagSkipCmds),
+	)
+
+	if err := app.Initialize(); err != nil {
 		panic(errors.Wrap(
 			err, "failed to initialize app",
 		))
@@ -138,9 +142,6 @@ var (
 
 func TestCreateRevision(t *testing.T) {
 	var (
-		ctx      = context.Background()
-		querySet = revisions.QuerySet(ctx)
-
 		artist = Artists[0]
 		laptop = Laptops[0]
 		bottle = Bottles[0]
@@ -148,21 +149,21 @@ func TestCreateRevision(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 	revIDCounter++
-	artistRev, err := querySet.CreateRevision(&artist)
+	artistRev, err := revisions.CreateRevision(&artist)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(1 * time.Second)
 	revIDCounter++
-	laptopRev, err := querySet.CreateRevision(&laptop)
+	laptopRev, err := revisions.CreateRevision(&laptop)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(1 * time.Second)
 	revIDCounter++
-	bottleRev, err := querySet.CreateRevision(&bottle)
+	bottleRev, err := revisions.CreateRevision(&bottle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +173,7 @@ func TestCreateRevision(t *testing.T) {
 	t.Run("TestLatestRevision", func(t *testing.T) {
 		t.Run("Artist", func(t *testing.T) {
 			t.Logf("Retrieving latest revision for artist %d", artist.ID)
-			artistRev, err = querySet.LatestRevision(&artist)
+			artistRev, err = revisions.LatestRevision(&artist)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -193,7 +194,7 @@ func TestCreateRevision(t *testing.T) {
 
 		t.Run("Laptop", func(t *testing.T) {
 			t.Logf("Retrieving latest revision for laptop %d", laptop.ID)
-			laptopRev, err = querySet.LatestRevision(&laptop)
+			laptopRev, err = revisions.LatestRevision(&laptop)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -214,7 +215,7 @@ func TestCreateRevision(t *testing.T) {
 
 		t.Run("Bottle", func(t *testing.T) {
 			t.Logf("Retrieving latest revision for bottle %d", bottle.ID)
-			bottleRev, err = querySet.LatestRevision(&bottle)
+			bottleRev, err = revisions.LatestRevision(&bottle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -241,13 +242,13 @@ func TestCreateRevision(t *testing.T) {
 			t.Logf("Creating new revision for artist %d", artist.ID)
 			artist.Name = "John Doe"
 			revIDCounter++
-			artistRevLatest, err := querySet.CreateRevision(&artist)
+			artistRevLatest, err := revisions.CreateRevision(&artist)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			t.Logf("Retrieving latest revision for artist %d", artist.ID)
-			artistRev, err = querySet.LatestRevision(&artist)
+			artistRev, err = revisions.LatestRevision(&artist)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -276,13 +277,13 @@ func TestCreateRevision(t *testing.T) {
 			t.Logf("Creating new revision for laptop %d", laptop.ID)
 			laptop.Resolution = "720p"
 			revIDCounter++
-			laptopRevLatest, err := querySet.CreateRevision(&laptop)
+			laptopRevLatest, err := revisions.CreateRevision(&laptop)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			t.Logf("Retrieving latest revision for laptop %d", laptop.ID)
-			laptopRev, err = querySet.LatestRevision(&laptop)
+			laptopRev, err = revisions.LatestRevision(&laptop)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -311,13 +312,13 @@ func TestCreateRevision(t *testing.T) {
 			t.Logf("Creating new revision for bottle %d", bottle.ID)
 			bottle.Liters = 2
 			revIDCounter++
-			bottleRevLatest, err := querySet.CreateRevision(&bottle)
+			bottleRevLatest, err := revisions.CreateRevision(&bottle)
 			if err != nil {
 				t.Fatal(err)
 			}
 
 			t.Logf("Retrieving latest revision for bottle %d", bottle.ID)
-			bottleRev, err = querySet.LatestRevision(&bottle)
+			bottleRev, err = revisions.LatestRevision(&bottle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -345,7 +346,7 @@ func TestCreateRevision(t *testing.T) {
 	t.Run("TestGetRevisions", func(t *testing.T) {
 		t.Run("Artist", func(t *testing.T) {
 			t.Logf("Retrieving all revisions for artist %d", artist.ID)
-			artistRevs, err := querySet.GetRevisionsByObject(&artist, 1000, 0)
+			artistRevs, err := revisions.GetRevisionsByObject(&artist, 1000, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -365,7 +366,7 @@ func TestCreateRevision(t *testing.T) {
 
 		t.Run("Laptop", func(t *testing.T) {
 			t.Logf("Retrieving all revisions for laptop %d", laptop.ID)
-			laptopRevs, err := querySet.GetRevisionsByObject(&laptop, 1000, 0)
+			laptopRevs, err := revisions.GetRevisionsByObject(&laptop, 1000, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -385,7 +386,7 @@ func TestCreateRevision(t *testing.T) {
 
 		t.Run("Bottle", func(t *testing.T) {
 			t.Logf("Retrieving all revisions for bottle %d", bottle.ID)
-			bottleRevs, err := querySet.GetRevisionsByObject(&bottle, 1000, 0)
+			bottleRevs, err := revisions.GetRevisionsByObject(&bottle, 1000, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -405,7 +406,7 @@ func TestCreateRevision(t *testing.T) {
 	})
 
 	t.Run("ListRevisions", func(t *testing.T) {
-		var revs, err = querySet.ListRevisions(1000, 0)
+		var revs, err = revisions.ListRevisions(1000, 0)
 		if err != nil {
 			t.Fatal(err)
 		}
