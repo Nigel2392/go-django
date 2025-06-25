@@ -154,9 +154,9 @@ func TestSaveUpdated(t *testing.T) {
 }
 
 func TestExpiry(t *testing.T) {
-	m := session.NewQueryStoreWithCleanupInterval(db, 50*time.Millisecond)
+	m := session.NewQueryStoreWithCleanupInterval(db, 200*time.Millisecond)
 
-	var err = m.Commit("expired_token", []byte("encoded_data"), time.Now().Add(100*time.Millisecond))
+	var err = m.Commit("expired_token", []byte("encoded_data"), time.Now().Add(400*time.Millisecond))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,7 +166,7 @@ func TestExpiry(t *testing.T) {
 		t.Fatalf("got %v: expected %v", found, true)
 	}
 
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(600 * time.Millisecond)
 
 	obj, found, err := m.Find("expired_token")
 	if found != false {
@@ -199,11 +199,11 @@ func TestDelete(t *testing.T) {
 }
 
 func TestCleanup(t *testing.T) {
-	m := session.NewQueryStoreWithCleanupInterval(db, 50)
+	m := session.NewQueryStoreWithCleanupInterval(db, 200*time.Millisecond)
 
 	defer m.StopCleanup()
 
-	var err = m.Commit("cleanup_token", []byte("encoded_data"), time.Now().Add(300*time.Millisecond))
+	var err = m.Commit("cleanup_token", []byte("encoded_data"), time.Now().Add(400*time.Millisecond))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -218,7 +218,7 @@ func TestCleanup(t *testing.T) {
 		t.Fatalf("got %d: expected %d", count, 1)
 	}
 
-	time.Sleep(300 * time.Millisecond)
+	time.Sleep(600 * time.Millisecond)
 
 	row = db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM sessions WHERE token = 'cleanup_token'")
 	err = row.Scan(&count)
