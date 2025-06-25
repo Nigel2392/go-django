@@ -19,68 +19,50 @@ const (
 	int32_max = 1 << 31
 )
 
+func registerKind(kinds []reflect.Kind, fn func(c *migrator.Column) string) {
+	migrator.RegisterColumnKind(&drivers.DriverMySQL{}, kinds, fn)
+	migrator.RegisterColumnKind(&drivers.DriverMariaDB{}, kinds, fn)
+}
+
+func registerType(t any, fn func(c *migrator.Column) string) {
+	migrator.RegisterColumnType(&drivers.DriverMySQL{}, t, fn)
+	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, t, fn)
+}
+
 // MYSQL TYPES
 func init() {
 	// register kinds
-	migrator.RegisterColumnKind(&drivers.DriverMySQL{}, []reflect.Kind{reflect.String}, Type__string)
-	migrator.RegisterColumnKind(&drivers.DriverMySQL{}, []reflect.Kind{reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64}, Type__int)
-	migrator.RegisterColumnKind(&drivers.DriverMySQL{}, []reflect.Kind{reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64}, Type__int)
-	migrator.RegisterColumnKind(&drivers.DriverMySQL{}, []reflect.Kind{reflect.Float32, reflect.Float64}, Type__float)
-	migrator.RegisterColumnKind(&drivers.DriverMySQL{}, []reflect.Kind{reflect.Bool}, Type__bool)
-	migrator.RegisterColumnKind(&drivers.DriverMySQL{}, []reflect.Kind{reflect.Array, reflect.Slice, reflect.Map}, Type__string) // MySQL does not have a native array type, so we use string for JSON
+	registerKind([]reflect.Kind{reflect.String}, Type__string)
+	registerKind([]reflect.Kind{reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64}, Type__int)
+	registerKind([]reflect.Kind{reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64}, Type__int)
+	registerKind([]reflect.Kind{reflect.Float32, reflect.Float64}, Type__float)
+	registerKind([]reflect.Kind{reflect.Bool}, Type__bool)
+	registerKind([]reflect.Kind{reflect.Array, reflect.Slice, reflect.Map}, Type__string) // MySQL does not have a native array type, so we use string for JSON
 
 	// register types
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, drivers.Text(""), Type__string)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, drivers.String(""), Type__string)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, drivers.Int(0), Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, drivers.Bytes(nil), Type__blob)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, drivers.Bool(false), Type__bool)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, drivers.Float(0.0), Type__float)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, drivers.Time{}, Type__datetime)
+	registerType(drivers.Text(""), Type__string)
+	registerType(drivers.Char(""), Type__char)
+	registerType(drivers.String(""), Type__string)
+	registerType(drivers.Int(0), Type__int)
+	registerType(drivers.Bytes(nil), Type__blob)
+	registerType(drivers.Bool(false), Type__bool)
+	registerType(drivers.Float(0.0), Type__float)
+	registerType(drivers.Timestamp{}, Type__timestamp)
+	registerType(drivers.LocalTime{}, Type__timestamp)
+	registerType(drivers.DateTime{}, Type__datetime)
 
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, (*contenttypes.ContentType)(nil), Type__string)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, contenttypes.BaseContentType[attrs.Definer]{}, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, sql.NullString{}, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, sql.NullFloat64{}, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, sql.NullInt64{}, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, sql.NullInt32{}, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, sql.NullInt16{}, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, sql.NullBool{}, Type__bool)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, sql.NullByte{}, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, sql.NullTime{}, Type__datetime)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, time.Time{}, Type__datetime)
-	migrator.RegisterColumnType(&drivers.DriverMySQL{}, []byte{}, Type__string)
-
-	// register kinds
-	migrator.RegisterColumnKind(&drivers.DriverMariaDB{}, []reflect.Kind{reflect.String}, Type__string)
-	migrator.RegisterColumnKind(&drivers.DriverMariaDB{}, []reflect.Kind{reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64}, Type__int)
-	migrator.RegisterColumnKind(&drivers.DriverMariaDB{}, []reflect.Kind{reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64}, Type__int)
-	migrator.RegisterColumnKind(&drivers.DriverMariaDB{}, []reflect.Kind{reflect.Float32, reflect.Float64}, Type__float)
-	migrator.RegisterColumnKind(&drivers.DriverMariaDB{}, []reflect.Kind{reflect.Bool}, Type__bool)
-	migrator.RegisterColumnKind(&drivers.DriverMariaDB{}, []reflect.Kind{reflect.Array, reflect.Slice, reflect.Map}, Type__string) // MySQL does not have a native array type, so we use string for JSON
-
-	// register types
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, drivers.Text(""), Type__string)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, drivers.String(""), Type__string)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, drivers.Int(0), Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, drivers.Bytes(nil), Type__blob)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, drivers.Bool(false), Type__bool)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, drivers.Float(0.0), Type__float)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, drivers.Time{}, Type__datetime)
-
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, (*contenttypes.ContentType)(nil), Type__string)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, contenttypes.BaseContentType[attrs.Definer]{}, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, sql.NullString{}, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, sql.NullFloat64{}, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, sql.NullInt64{}, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, sql.NullInt32{}, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, sql.NullInt16{}, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, sql.NullBool{}, Type__bool)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, sql.NullByte{}, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, sql.NullTime{}, Type__datetime)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, time.Time{}, Type__datetime)
-	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, []byte{}, Type__string)
-
+	registerType((*contenttypes.ContentType)(nil), Type__string)
+	registerType(contenttypes.BaseContentType[attrs.Definer]{}, Type__string)
+	registerType(sql.NullString{}, Type__string)
+	registerType(sql.NullFloat64{}, Type__int)
+	registerType(sql.NullInt64{}, Type__int)
+	registerType(sql.NullInt32{}, Type__int)
+	registerType(sql.NullInt16{}, Type__int)
+	registerType(sql.NullBool{}, Type__bool)
+	registerType(sql.NullByte{}, Type__int)
+	registerType(sql.NullTime{}, Type__datetime)
+	registerType(time.Time{}, Type__datetime)
+	registerType([]byte{}, Type__string)
 }
 
 func Type__string(c *migrator.Column) string {
@@ -104,6 +86,24 @@ func Type__string(c *migrator.Column) string {
 
 	var sb = new(strings.Builder)
 	sb.WriteString("VARCHAR(")
+	sb.WriteString(strconv.FormatInt(max, 10))
+	sb.WriteString(")")
+	return sb.String()
+}
+
+func Type__char(c *migrator.Column) string {
+	var max int64 = c.MaxLength
+
+	if max == 0 {
+		return "CHAR(1)"
+	}
+
+	if max < 1 || max > 255 {
+		max = 255
+	}
+
+	var sb = new(strings.Builder)
+	sb.WriteString("CHAR(")
 	sb.WriteString(strconv.FormatInt(max, 10))
 	sb.WriteString(")")
 	return sb.String()
@@ -158,6 +158,17 @@ func Type__bool(c *migrator.Column) string {
 	return "BOOLEAN"
 }
 
-func Type__datetime(c *migrator.Column) string {
+func Type__timestamp(c *migrator.Column) string {
+	if c.MaxLength > 0 {
+		if c.MaxLength <= 6 {
+			return fmt.Sprintf("TIMESTAMP(%d)", c.MaxLength)
+		}
+		return "TIMESTAMP(6)"
+	}
+
 	return "TIMESTAMP"
+}
+
+func Type__datetime(c *migrator.Column) string {
+	return "DATETIME"
 }

@@ -21,11 +21,12 @@ require (
 )
 
 require (
-	github.com/Nigel2392/go-django-queries v1.1.1-0.20250624202131-50941ca35bb9
+	github.com/Nigel2392/go-django/queries v0.0.0-20250624221924-d2d8e49b5141
 	github.com/Nigel2392/go-telepath v0.1.3-0.20250115131048-600eacd48c62
 	github.com/Nigel2392/tags v1.0.0
 	github.com/PuerkitoBio/goquery v1.10.1
 	github.com/a-h/templ v0.3.833
+	github.com/alexedwards/scs/sqlite3store v0.0.0-20250417082927-ab20b3feb5e9
 	github.com/dolthub/go-mysql-server v0.20.0
 	github.com/fatih/structtag v1.2.0
 	github.com/gertd/go-pluralize v0.2.1

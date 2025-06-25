@@ -149,7 +149,7 @@ var mySQLTests = []test{
 		Expect: "BOOLEAN",
 	},
 	&tableTypeTest[time.Time]{
-		Expect: "TIMESTAMP",
+		Expect: "DATETIME",
 	},
 }
 

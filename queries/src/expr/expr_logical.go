@@ -210,7 +210,7 @@ func Logical(expr ...any) LogicalExpression {
 	var fieldName string
 	var inner = make([]Expression, 0, len(expr))
 	for i, e := range expr {
-		if n, ok := e.(NamedExpression); ok && (i == 0 || i > 0 && fieldName == "") {
+		if n, ok := e.(NamedExpression); ok && i == 0 {
 			fieldName = n.FieldName()
 		}
 

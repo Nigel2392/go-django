@@ -160,5 +160,21 @@ func LENGTH(expr any) *Function {
 }
 
 func NOW() *Function {
-	return newFunc("NOW", []any{}, nil)
+	return newFunc("NOW", []any{})
+}
+
+func UTCNOW() *Function {
+	return newFunc("UTCNOW", []any{})
+}
+
+func LOCALTIMESTAMP() *Function {
+	return newFunc("LOCALTIMESTAMP", []any{})
+}
+
+func DATE(expr any) *Function {
+	return newFunc("DATE", []any{}, expr)
+}
+
+func DATE_FORMAT(expr any, format string) *Function {
+	return newFunc("DATE_FORMAT", []any{format}, expr)
 }

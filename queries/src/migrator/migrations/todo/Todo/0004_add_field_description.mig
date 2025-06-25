@@ -1,7 +1,4 @@
 {
-  "dependencies": [
-    "auth:User:0003_remove_field_first_name_and_1_more.mig"
-  ],
   "table": {
     "table": "todo",
     "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.Todo",
@@ -36,6 +33,13 @@
           "type": "ManyToOne",
           "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User"
         }
+      },
+      {
+        "name": "Description",
+        "column": "description",
+        "use_in_db": true,
+        "nullable": true,
+        "default": ""
       }
     ],
     "indexes": null,
@@ -43,7 +47,16 @@
   },
   "actions": [
     {
-      "action": "create_table"
+      "action": "add_field",
+      "field": {
+        "new": {
+          "name": "Description",
+          "column": "description",
+          "use_in_db": true,
+          "nullable": true,
+          "default": ""
+        }
+      }
     }
   ]
 }

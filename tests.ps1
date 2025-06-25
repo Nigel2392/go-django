@@ -26,6 +26,7 @@ $DockerDatabases = @{
 # to the test command when running tests that use the queries package
 $UsingQueriesTestDirs = @(
     "./src/contrib/pages/...",
+    "./src/contrib/session/...",
     "./queries/..."
 )
 
@@ -63,7 +64,7 @@ foreach ($arg in $args) {
             continue
         }
         "failslow" {
-            $flags.failslow = $false
+            $flags.failslow = $true
             continue
         }
         "down" {
@@ -98,7 +99,7 @@ foreach ($Database in $testsToRun) {
     if ($flags.verbose) {
         $cmd += " -v"
     }
-    if ($flags.failslow -eq $false) {
+    if ($flags.failslow -ne $true) {
         $cmd += " --failfast"
     }
     

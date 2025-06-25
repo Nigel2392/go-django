@@ -118,7 +118,7 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 		MinValue:     attrMinValue,
 		MaxValue:     attrMaxValue,
 		Unique:       attrUnique,
-		Auto:         attrAutoIncrement || canAutoIncrement(field),
+		Auto:         attrAutoIncrement || CanAutoIncrement(field),
 		Primary:      field.IsPrimary(),
 		Default:      dflt,
 		ReverseAlias: attrReverseAlias,
@@ -138,7 +138,7 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	return col
 }
 
-func canAutoIncrement(field attrs.Field) bool {
+func CanAutoIncrement(field attrs.FieldDefinition) bool {
 	return field.IsPrimary() && !field.AllowNull() && slices.Contains(
 		[]reflect.Kind{
 			reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,

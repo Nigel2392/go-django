@@ -3,8 +3,8 @@
     "auth:User:0005_remove_field_first_name_and_1_more.mig"
   ],
   "table": {
-    "table": "todo",
-    "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.Todo",
+    "table": "profile",
+    "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.Profile",
     "fields": [
       {
         "name": "ID",
@@ -15,25 +15,11 @@
         "default": 0
       },
       {
-        "name": "Title",
-        "column": "title",
-        "use_in_db": true,
-        "max_length": 255,
-        "nullable": true,
-        "default": ""
-      },
-      {
-        "name": "Completed",
-        "column": "completed",
-        "use_in_db": true,
-        "default": false
-      },
-      {
         "name": "User",
         "column": "user_id",
         "use_in_db": true,
         "relation": {
-          "type": "ManyToOne",
+          "type": "OneToOne",
           "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User"
         }
       }
@@ -46,10 +32,11 @@
       "action": "remove_field",
       "field": {
         "old": {
-          "name": "CreatedAt",
-          "column": "created_at",
+          "name": "Biography",
+          "column": "biography",
           "use_in_db": true,
-          "default": "0001-01-01T00:00:00Z"
+          "nullable": true,
+          "default": ""
         }
       }
     },
@@ -57,10 +44,11 @@
       "action": "remove_field",
       "field": {
         "old": {
-          "name": "UpdatedAt",
-          "column": "updated_at",
+          "name": "Website",
+          "column": "website",
           "use_in_db": true,
-          "default": "0001-01-01T00:00:00Z"
+          "nullable": true,
+          "default": ""
         }
       }
     }

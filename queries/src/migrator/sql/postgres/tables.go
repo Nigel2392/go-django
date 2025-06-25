@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"reflect"
 	"strings"
@@ -156,19 +157,6 @@ func (m *PostgresSchemaEditor) AddIndex(table migrator.Table, index migrator.Ind
 		w.WriteString(`"`)
 		w.WriteString(col.Column)
 		w.WriteString(`"`)
-		var fieldType = col.FieldType()
-		switch {
-		case fieldType.Kind() == reflect.String:
-
-			if col.MaxLength > 0 {
-				w.WriteString("(")
-				w.WriteString(fmt.Sprintf("%d", col.MaxLength))
-				w.WriteString(")")
-			} else {
-				// MySQL does not support VARCHAR without length, so we assume a default length
-				w.WriteString("(255)")
-			}
-		}
 	}
 	w.WriteString(");")
 
@@ -342,6 +330,20 @@ func (m *PostgresSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Colu
 	}
 
 	if col.HasDefault() {
+
+		if valuer, ok := col.Default.(driver.Valuer); ok {
+			// If the default value is a driver.Valuer, we need to call it to get the actual value.
+			val, err := valuer.Value()
+			if err != nil {
+				panic(fmt.Errorf("failed to get value from driver.Valuer: %w", err))
+			}
+			col.Default = val
+		}
+
+		if col.Default == nil && !col.Nullable {
+			goto checkRels
+		}
+
 		w.WriteString(" DEFAULT ")
 		switch v := col.Default.(type) {
 		case string:
@@ -365,10 +367,14 @@ func (m *PostgresSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Colu
 				w.WriteString(v.Format("2006-01-02 15:04:05"))
 				w.WriteString("'")
 			}
+		case nil:
+			w.WriteString("NULL")
 		default:
 			panic(fmt.Errorf("unsupported default type: %T", v))
 		}
 	}
+
+checkRels:
 	if col.Rel != nil {
 		// handle foreign keys
 		var relField = col.Rel.Field()

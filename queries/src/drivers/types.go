@@ -1,18 +1,59 @@
 package drivers
 
 import (
+	"database/sql/driver"
 	"time"
 )
 
 type (
 	Text   string
 	String string
+	Char   string
 	Int    int64
 	Bool   bool
 	Bytes  []byte
 	Float  float64
-	Time   = time.Time
+
+	timeType  time.Time
+	Timestamp time.Time
+	LocalTime time.Time
+	DateTime  time.Time
 )
+
+func (t *timeType) Scan(value any) error {
+	switch v := value.(type) {
+	case time.Time:
+		*t = timeType(v)
+		return nil
+	case string:
+		var _t, err = time.Parse(time.RFC3339, v)
+		*t = timeType(_t)
+		return err
+	case []byte:
+		var _t, err = time.Parse(time.RFC3339, string(v))
+		*t = timeType(_t)
+		return err
+	case int64:
+		*t = timeType(time.Unix(v, 0))
+	case uint64:
+		*t = timeType(time.Unix(int64(v), 0))
+	default:
+		return nil
+	}
+	return nil
+}
+
+func (t Timestamp) Time() time.Time              { return time.Time(t) }
+func (t Timestamp) Value() (driver.Value, error) { return t.Time(), nil }
+func (t Timestamp) Scan(value any) error         { return (*timeType)(&t).Scan(value) }
+
+func (t LocalTime) Time() time.Time              { return time.Time(t) }
+func (t LocalTime) Value() (driver.Value, error) { return t.Time(), nil }
+func (t LocalTime) Scan(value any) error         { return (*timeType)(&t).Scan(value) }
+
+func (t DateTime) Time() time.Time              { return time.Time(t) }
+func (t DateTime) Value() (driver.Value, error) { return t.Time(), nil }
+func (t *DateTime) Scan(value any) error        { return (*timeType)(t).Scan(value) }
 
 //
 //	func (t *Text) Scan(value any) error {

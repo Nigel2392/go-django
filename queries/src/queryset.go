@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -2325,7 +2326,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				primary = field
 			}
 
-			if isPrimary || !ForDBEdit(field) {
+			if migrator.CanAutoIncrement(field) || !ForDBEdit(field) {
 				continue
 			}
 
@@ -2403,7 +2404,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 
 		// No results are returned, we cannot set the primary key
 		// so we can return and commit the transaction
-		if qs.internals.Model.Primary == nil {
+		if qs.internals.Model.Primary == nil || !migrator.CanAutoIncrement(qs.internals.Model.Primary) {
 			return objects, tx.Commit()
 		}
 
@@ -2466,7 +2467,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		if len(results) != len(objects) {
 			return nil, errors.Wrapf(
 				query_errors.ErrLastInsertId,
-				"expected %d results returned after insert, got %d",
+				"expected %d results returned after insert, got %d (len(results) != len(objects))",
 				len(objects), len(results),
 			)
 		}
@@ -2485,7 +2486,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			if len(scannables) != resLen {
 				return nil, errors.Wrapf(
 					query_errors.ErrLastInsertId,
-					"expected %d results returned after insert, got %d",
+					"expected %d results returned after insert, got %d (len(scannables) != resLen)",
 					len(scannables), len(results),
 				)
 			}
@@ -2647,8 +2648,7 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 				continue
 			}
 
-			var isPrimary = field.IsPrimary()
-			if isPrimary || !ForDBEdit(field) {
+			if migrator.CanAutoIncrement(field) || !ForDBEdit(field) {
 				continue
 			}
 

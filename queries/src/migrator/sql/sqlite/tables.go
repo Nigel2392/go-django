@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"fmt"
 	"reflect"
 	"strings"
@@ -11,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/mattn/go-sqlite3"
 )
@@ -65,7 +67,7 @@ func (m *SQLiteSchemaEditor) queryRow(ctx context.Context, query string, args ..
 }
 
 func (m *SQLiteSchemaEditor) Execute(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	// logger.Debugf("SQLiteSchemaEditor.ExecContext:\n%s", query)
+	logger.Debugf("SQLiteSchemaEditor.ExecContext:\n%s", query)
 	result, err := m.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
@@ -509,6 +511,20 @@ func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column
 	}
 
 	if col.HasDefault() {
+
+		if valuer, ok := col.Default.(driver.Valuer); ok {
+			// If the default value is a driver.Valuer, we need to call it to get the actual value.
+			val, err := valuer.Value()
+			if err != nil {
+				panic(fmt.Errorf("failed to get value from driver.Valuer: %w", err))
+			}
+			col.Default = val
+		}
+
+		if col.Default == nil && !col.Nullable {
+			goto checkRels
+		}
+
 		w.WriteString(" DEFAULT ")
 
 		switch v := col.Default.(type) {
@@ -535,6 +551,8 @@ func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column
 				w.WriteString(v.Format("2006-01-02 15:04:05"))
 				w.WriteString("'")
 			}
+		case nil:
+			w.WriteString("NULL")
 		default:
 			panic(fmt.Errorf(
 				"unsupported default value type %T (%v)", v, v,
@@ -542,6 +560,7 @@ func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column
 		}
 	}
 
+checkRels:
 	if col.Rel != nil {
 		var (
 			relDefs  = col.Rel.Model().FieldDefs()

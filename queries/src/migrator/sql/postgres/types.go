@@ -31,12 +31,15 @@ func init() {
 
 	// register types
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.Text(""), Type__string)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.Char(""), Type__char)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.String(""), Type__string)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.Int(0), Type__int)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.Bytes(nil), Type__blob)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.Bool(false), Type__bool)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.Float(0.0), Type__float)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.Time{}, Type__datetime)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.Timestamp{}, Type__datetime)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.LocalTime{}, Type__localtime)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.DateTime{}, Type__datetime)
 
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, (*contenttypes.ContentType)(nil), Type__string)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, contenttypes.BaseContentType[attrs.Definer]{}, Type__string)
@@ -76,6 +79,20 @@ func Type__string(c *migrator.Column) string {
 	sb.WriteString(strconv.FormatInt(max, 10))
 	sb.WriteString(")")
 	return sb.String()
+}
+
+func Type__char(c *migrator.Column) string {
+	if c.FieldType() == reflect.TypeOf(drivers.Char("")) {
+		// If the field is of type drivers.Char, we use CHAR type
+		return "CHAR"
+	}
+
+	var max int64 = c.MaxLength
+	if max <= 0 {
+		max = 1 // Default to CHAR(1) if no length is specified
+	}
+
+	return fmt.Sprintf("CHAR(%d)", max)
 }
 
 func Type__blob(c *migrator.Column) string {
@@ -125,6 +142,14 @@ func Type__int(c *migrator.Column) string {
 
 func Type__bool(c *migrator.Column) string {
 	return "BOOLEAN"
+}
+
+func Type__timestamp(c *migrator.Column) string {
+	return "TIMESTAMP"
+}
+
+func Type__localtime(c *migrator.Column) string {
+	return "TIMESTAMPTZ"
 }
 
 func Type__datetime(c *migrator.Column) string {

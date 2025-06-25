@@ -11,7 +11,7 @@ import (
 const ENGINE = "sqlite3"
 
 func open() (which string, db drivers.Database) {
-	var sqlDB, err = drivers.Open(context.Background(), ENGINE, "file::memory:?cache=shared")
+	var sqlDB, err = drivers.Open(context.Background(), ENGINE, "file::memory:?cache=shared&_loc=auto")
 	if err != nil {
 		panic(err)
 	}

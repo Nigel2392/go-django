@@ -182,8 +182,72 @@ func init() {
 		case *drivers.DriverPostgres:
 			return "CURRENT_TIMESTAMP", nil, nil
 		case *drivers.DriverSQLite:
-			return "DATETIME('now')", nil, nil
+			return "CURRENT_TIMESTAMP", nil, nil
 		}
 		return "", nil, fmt.Errorf("unsupported driver for NOW: %T", d)
+	})
+	RegisterFunc("UTCNOW", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
+		switch d.(type) {
+		case *drivers.DriverMySQL, *drivers.DriverMariaDB:
+			return "UTC_TIMESTAMP()", nil, nil
+		case *drivers.DriverPostgres:
+			return "CURRENT_TIMESTAMP AT TIME ZONE 'UTC'", nil, nil
+		case *drivers.DriverSQLite:
+			return "julianday('now')", nil, nil
+		}
+		return "", nil, fmt.Errorf("unsupported driver for UTCNOW: %T", d)
+	})
+	RegisterFunc("LOCALTIMESTAMP", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
+		switch d.(type) {
+		case *drivers.DriverMySQL, *drivers.DriverMariaDB:
+			return "LOCALTIMESTAMP()", nil, nil
+		case *drivers.DriverPostgres:
+			return "LOCALTIMESTAMP", nil, nil
+		case *drivers.DriverSQLite:
+			return "CURRENT_TIMESTAMP", nil, nil
+		}
+		return "", nil, fmt.Errorf("unsupported driver for LOCALTIMESTAMP: %T", d)
+	})
+	RegisterFunc("DATE", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
+		if len(value) != 1 {
+			return "", []any{}, fmt.Errorf("DATE lookup requires exactly one value")
+		}
+		var sb strings.Builder
+		args = value[0].SQL(&sb)
+		return fmt.Sprintf("DATE(%s)", sb.String()), args, nil
+	})
+	RegisterFunc("DATE_FORMAT", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
+		if len(value) != 1 && len(funcParams) != 1 {
+			return "", []any{}, fmt.Errorf("DATE_FORMAT lookup requires exactly one value and one format parameter")
+		}
+
+		var sb strings.Builder
+		args = value[0].SQL(&sb)
+		var format string
+		switch v := funcParams[0].(type) {
+		case Expression:
+			var formatBuilder strings.Builder
+			args = append(args, v.SQL(&formatBuilder)...)
+			format = formatBuilder.String()
+		default:
+			if v != nil {
+				format = fmt.Sprintf("%v", v) // assume it's a constant value
+			}
+		}
+
+		if format == "" {
+			return "", nil, fmt.Errorf("DATE_FORMAT lookup requires a valid format parameter")
+		}
+
+		switch d.(type) {
+		case *drivers.DriverMySQL, *drivers.DriverMariaDB:
+			return fmt.Sprintf("DATE_FORMAT(%s, %s)", sb.String(), format), args, nil
+		case *drivers.DriverPostgres:
+			return fmt.Sprintf("TO_CHAR(%s, %s)", sb.String(), format), args, nil
+		case *drivers.DriverSQLite:
+			return fmt.Sprintf("STRFTIME(%s, %s)", format, sb.String()), args, nil
+		}
+
+		return "", nil, fmt.Errorf("unsupported driver for DATE_FORMAT: %T", d)
 	})
 }
