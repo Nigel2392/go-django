@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/internal"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
@@ -135,7 +136,29 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	}
 
 	col.Nullable = nullable
+
 	return col
+}
+
+func (c *Column) DBType() drivers.Type {
+	var fieldType = c.FieldType()
+	var fieldVal = reflect.New(fieldType).Elem()
+	var dbType drivers.Type
+	if dbTypeDefiner, ok := fieldVal.Interface().(CanColumnDBType); ok {
+		return dbTypeDefiner.DBType(c)
+	} else if dbTypeDefiner, ok := c.Field.(CanColumnDBType); ok {
+		return dbTypeDefiner.DBType(c)
+	}
+
+	dbType, ok := drivers.DBType(c.Field)
+	if !ok {
+		panic(fmt.Sprintf(
+			"no database type registered for field %s of type %s",
+			c.Field.Name(), fieldType.String(),
+		))
+	}
+
+	return dbType
 }
 
 func CanAutoIncrement(field attrs.FieldDefinition) bool {
@@ -152,29 +175,7 @@ func (c *Column) FieldType() reflect.Type {
 	if c.Field == nil {
 		return nil
 	}
-
-	var field attrs.FieldDefinition = c.Field
-	if c.Rel != nil {
-		var relField = c.Rel.TargetField
-		if relField == nil {
-			relField = c.Rel.Model().FieldDefs().Primary()
-		}
-		if relField != nil {
-			field = relField
-		}
-	}
-
-	var fieldType = field.Type()
-	if field.Type().Implements(reflect.TypeOf((*attrs.Definer)(nil)).Elem()) {
-		// if the field is a definer, we return the type of the underlying object
-		var definerType = fieldType.Elem()
-		var newObj = reflect.New(definerType)
-		var definer = newObj.Interface().(attrs.Definer)
-		var fieldDefs = definer.FieldDefs()
-		return fieldDefs.Primary().Type()
-	}
-
-	return field.Type()
+	return drivers.FieldType(c.Field)
 }
 
 func jsonCompare(a, b interface{}) (bool, error) {
@@ -269,6 +270,9 @@ func (c *Column) Equals(other *Column) bool {
 		return false
 	}
 	if c.Auto != other.Auto {
+		return false
+	}
+	if c.DBType() != other.DBType() {
 		return false
 	}
 

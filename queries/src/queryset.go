@@ -223,8 +223,6 @@ func Objects[T attrs.Definer](model T, database ...string) *QuerySet[T] {
 	var orderBy []string
 	if ord, ok := any(model).(OrderByDefiner); ok {
 		orderBy = ord.OrderBy()
-	} else if primary != nil {
-		orderBy = []string{primary.Name()}
 	}
 
 	var qs = &QuerySet[T]{
@@ -253,7 +251,13 @@ func Objects[T attrs.Definer](model T, database ...string) *QuerySet[T] {
 		// but is generally safe to use
 		useCache: QUERYSET_USE_CACHE_DEFAULT,
 	}
+
 	qs.compiler = Compiler(defaultDb)
+
+	// Add default ordering to the QuerySet if the model implements OrderByDefiner
+	if len(orderBy) > 0 {
+		qs.internals.OrderBy = qs.compileOrderBy(orderBy...)
+	}
 
 	// Allow the model to change the QuerySet
 	if c, ok := any(model).(QuerySetChanger); ok {

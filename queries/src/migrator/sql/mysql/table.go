@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
-	"reflect"
 	"strings"
 	"time"
 
@@ -194,9 +193,10 @@ func (m *MySQLSchemaEditor) AddIndex(table migrator.Table, index migrator.Index,
 		w.WriteString("`")
 		w.WriteString(col.Column)
 		w.WriteString("`")
-		var fieldType = col.FieldType()
+		var fieldType = col.DBType()
 		switch {
-		case fieldType.Kind() == reflect.String:
+		case fieldType == drivers.TypeString || fieldType == drivers.TypeText || fieldType == drivers.TypeChar:
+			// MySQL requires a length for VARCHAR, CHAR, and TEXT types in indexes.
 
 			if col.MaxLength > 0 {
 				w.WriteString("(")

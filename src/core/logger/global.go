@@ -1,9 +1,18 @@
 package logger
 
 import (
+	"fmt"
 	"io"
 	"os"
 )
+
+func printArgs(levelStr string, format string, args ...interface{}) {
+	if format == "" {
+		fmt.Printf("[%s] %s\n", levelStr, fmt.Sprint(args...))
+		return
+	}
+	fmt.Printf("[%s] %s\n", levelStr, fmt.Sprintf(format, args...))
+}
 
 var (
 	Writer    = func(level LogLevel) io.Writer { return os.Stdout }
@@ -13,17 +22,19 @@ var (
 	SetOutput func(level LogLevel, w io.Writer) = func(level LogLevel, w io.Writer) {}
 	SetLevel  func(level LogLevel)              = func(level LogLevel) {}
 
-	Debug  = func(args ...interface{}) {}
-	Info   = func(args ...interface{}) {}
-	Warn   = func(args ...interface{}) {}
-	Error  = func(args ...interface{}) {}
-	Fatal  = func(errorcode int, args ...interface{}) {}
-	Debugf = func(format string, args ...interface{}) {}
-	Infof  = func(format string, args ...interface{}) {}
-	Warnf  = func(format string, args ...interface{}) {}
-	Errorf = func(format string, args ...interface{}) {}
-	Fatalf = func(errorcode int, format string, args ...interface{}) {}
-	Logf   = func(level LogLevel, format string, args ...interface{}) {}
+	Debug  = func(args ...interface{}) { printArgs("DEBUG", "", args...) }
+	Info   = func(args ...interface{}) { printArgs("INFO", "", args...) }
+	Warn   = func(args ...interface{}) { printArgs("WARN", "", args...) }
+	Error  = func(args ...interface{}) { printArgs("ERROR", "", args...) }
+	Fatal  = func(errorcode int, args ...interface{}) { printArgs("FATAL", "", args...) }
+	Debugf = func(format string, args ...interface{}) { printArgs("DEBUG", format, args...) }
+	Infof  = func(format string, args ...interface{}) { printArgs("INFO", format, args...) }
+	Warnf  = func(format string, args ...interface{}) { printArgs("WARN", format, args...) }
+	Errorf = func(format string, args ...interface{}) { printArgs("ERROR", format, args...) }
+	Fatalf = func(errorcode int, format string, args ...interface{}) { printArgs("FATAL", format, args...) }
+	Logf   = func(level LogLevel, format string, args ...interface{}) {
+		printArgs(level.String(), format, args...)
+	}
 )
 
 func Setup(logger Log) {

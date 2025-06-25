@@ -53,6 +53,11 @@ func NewAppConfig() django.AppConfig {
 	Logs.Deps = []string{
 		"reports",
 	}
+
+	//	Logs.ModelObjects = []attrs.Definer{
+	//		&Entry{},
+	//	}
+
 	Logs.Init = func(settings django.Settings) error {
 
 		if registry.backend == nil {

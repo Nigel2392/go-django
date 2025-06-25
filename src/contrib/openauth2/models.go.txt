@@ -1,20 +1,84 @@
-package openauth2models
+package openauth2
 
 import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"time"
+
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"golang.org/x/oauth2"
 )
 
-var (
-	_ widgets.Widget
-)
+type User struct {
+	ID               uint64          `json:"id"`
+	UniqueIdentifier string          `json:"unique_identifier"`
+	ProviderName     string          `json:"provider_name"`
+	Data             json.RawMessage `json:"data"`
+	AccessToken      string          `json:"access_token"`
+	RefreshToken     string          `json:"refresh_token"`
+	TokenType        string          `json:"token_type"`
+	ExpiresAt        time.Time       `json:"expires_at"`
+	CreatedAt        time.Time       `json:"created_at"`
+	UpdatedAt        time.Time       `json:"updated_at"`
+	IsAdministrator  bool            `json:"is_administrator"`
+	IsActive         bool            `json:"is_active"`
+
+	IsLoggedIn bool `json:"is_logged_in"`
+	context    context.Context
+}
+
+func (u *User) String() string {
+	return fmt.Sprintf(
+		"%s (%s)",
+		u.UniqueIdentifier,
+		u.ProviderName,
+	)
+}
+
+func (u *User) IsAdmin() bool {
+	return u.IsAdministrator
+}
+
+func (u *User) IsAuthenticated() bool {
+	return u.IsLoggedIn
+}
+
+func (u *User) SetContext(ctx context.Context) *User {
+	u.context = ctx
+	return u
+}
+
+func (u *User) Context() context.Context {
+	if u.context == nil {
+		u.context = context.Background()
+	}
+	return u.context
+}
+
+func (u *User) SetToken(token *oauth2.Token) {
+	u.AccessToken = token.AccessToken
+	u.RefreshToken = token.RefreshToken
+	u.ExpiresAt = token.Expiry
+	u.TokenType = token.TokenType
+}
+
+func (u *User) Token() *oauth2.Token {
+	var token = &oauth2.Token{
+		AccessToken:  u.AccessToken,
+		RefreshToken: u.RefreshToken,
+		Expiry:       u.ExpiresAt,
+		TokenType:    u.TokenType,
+	}
+	return token
+}
 
 func (o *User) FieldDefs() attrs.Definitions {
 	var fields = make([]attrs.Field, 12)
 	fields[0] = attrs.NewField(
 		o, "ID", &attrs.FieldConfig{
-			Null:     true,
-			Blank:    true,
+			Null:     false,
+			Blank:    false,
 			ReadOnly: true,
 			Label:    "ID",
 			Primary:  true,
@@ -22,16 +86,16 @@ func (o *User) FieldDefs() attrs.Definitions {
 	)
 	fields[1] = attrs.NewField(
 		o, "UniqueIdentifier", &attrs.FieldConfig{
-			Null:     true,
-			Blank:    true,
+			Null:     false,
+			Blank:    false,
 			ReadOnly: true,
 			Label:    "Unique Identifier",
 		},
 	)
 	fields[2] = attrs.NewField(
 		o, "ProviderName", &attrs.FieldConfig{
-			Null:     true,
-			Blank:    true,
+			Null:     false,
+			Blank:    false,
 			ReadOnly: true,
 			Label:    "Provider Name",
 		},
@@ -94,14 +158,14 @@ func (o *User) FieldDefs() attrs.Definitions {
 	)
 	fields[10] = attrs.NewField(
 		o, "IsAdministrator", &attrs.FieldConfig{
-			Null:  true,
+			Null:  false,
 			Blank: true,
 			Label: "Is Administrator",
 		},
 	)
 	fields[11] = attrs.NewField(
 		o, "IsActive", &attrs.FieldConfig{
-			Null:  true,
+			Null:  false,
 			Blank: true,
 			Label: "Is Active",
 		},

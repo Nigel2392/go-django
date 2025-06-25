@@ -4,47 +4,26 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"reflect"
+
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 )
 
 var (
-	drivers_to_kinds = make(map[reflect.Type]map[reflect.Kind]func(c *Column) string)
-	drivers_to_types = make(map[reflect.Type]map[reflect.Type]func(c *Column) string)
+	drivers_to_types = make(map[reflect.Type]map[drivers.Type]func(c *Column) string)
 )
-
-// RegisterColumnKind registers a function to convert a field to a database type for a specific driver and kind.
-//
-// The function will be called with the field as an argument and should return the database type as a string.
-func RegisterColumnKind(driver driver.Driver, typ []reflect.Kind, fn func(c *Column) string) {
-	t := reflect.TypeOf(driver)
-	m, ok := drivers_to_kinds[t]
-	if !ok || m == nil {
-		m = make(map[reflect.Kind]func(c *Column) string)
-		drivers_to_kinds[t] = m
-	}
-
-	for _, k := range typ {
-		m[k] = fn
-	}
-}
 
 // RegisterColumnType registers a function to convert a field to a database type for a specific driver and type.
 //
 // The function will be called with the field as an argument and should return the database type as a string.
-func RegisterColumnType(driver driver.Driver, typ interface{}, fn func(c *Column) string) {
+func RegisterColumnType(driver driver.Driver, typ drivers.Type, fn func(c *Column) string) {
 	t := reflect.TypeOf(driver)
 	m, ok := drivers_to_types[t]
 	if !ok || m == nil {
-		m = make(map[reflect.Type]func(c *Column) string)
+		m = make(map[drivers.Type]func(c *Column) string)
 		drivers_to_types[t] = m
 	}
 
-	var typType = reflect.TypeOf(typ)
-
-	if typType.Kind() == reflect.Ptr {
-		typType = typType.Elem()
-	}
-
-	m[typType] = fn
+	m[typ] = fn
 }
 
 // GetFieldType returns the database type for a field based on the driver and field type.
@@ -52,11 +31,7 @@ func RegisterColumnType(driver driver.Driver, typ interface{}, fn func(c *Column
 // It first checks if the field has a custom database type defined in its attributes referenced by [AttrDBTypeKey],
 // and if not, it uses the registered functions to determine the type.
 func GetFieldType(driver driver.Driver, c *Column) string {
-	var typ = c.FieldType()
-	if typ.Kind() == reflect.Ptr {
-		typ = typ.Elem()
-	}
-
+	var typ = c.DBType()
 	var fn = getType(driver, typ)
 	if fn == nil {
 		panic(fmt.Sprintf(
@@ -67,7 +42,7 @@ func GetFieldType(driver driver.Driver, c *Column) string {
 	return fn(c)
 }
 
-func getType(driver driver.Driver, typ reflect.Type) func(c *Column) string {
+func getType(driver driver.Driver, typ drivers.Type) func(c *Column) string {
 	t := reflect.TypeOf(driver)
 
 	// First: absolute type match
@@ -77,14 +52,10 @@ func getType(driver driver.Driver, typ reflect.Type) func(c *Column) string {
 		}
 	}
 
-	// Fallback: kind-based match
-	if m, ok := drivers_to_kinds[t]; ok && m != nil {
-		if fn, ok := m[typ.Kind()]; ok {
-			return checkDBType(fn)
-		}
-	}
-
-	return nil
+	panic(fmt.Sprintf(
+		"no type registered for driver %T and type %s",
+		driver, typ.String(),
+	))
 }
 
 func checkDBType(fn func(c *Column) string) func(c *Column) string {

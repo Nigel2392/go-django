@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -20,6 +21,10 @@ const (
 	// The directory where the migration files are stored
 	APPVAR_MIGRATION_DIR = "migrator.migration_dir"
 )
+
+type CanColumnDBType interface {
+	DBType(*Column) drivers.Type
+}
 
 type CanSQL[T any] interface {
 	SQL(T) (string, []any)

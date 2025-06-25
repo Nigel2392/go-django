@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"io"
@@ -15,6 +16,32 @@ type LogLevel int8
 
 func (l LogLevel) String() string {
 	return levelMap[l]
+}
+
+func (l LogLevel) Value() (driver.Value, error) {
+	var v, ok = levelMap[l]
+	if !ok {
+		return nil, fmt.Errorf("unknown log level %d", l)
+	}
+	return v, nil
+}
+
+func (l *LogLevel) Scan(value interface{}) error {
+	var s string
+	switch v := value.(type) {
+	case string:
+		s = v
+	case []byte:
+		s = string(v)
+	default:
+		return fmt.Errorf("cannot scan %T into LogLevel", value)
+	}
+	var level, ok = revMap[s]
+	if !ok {
+		return fmt.Errorf("unknown log level %q", s)
+	}
+	*l = level
+	return nil
 }
 
 var (

@@ -1,24 +1,178 @@
 package drivers
 
 import (
+	"database/sql"
 	"database/sql/driver"
+	"encoding/json"
+	"reflect"
 	"time"
+
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/google/uuid"
 )
 
+func init() {
+	TYPES.Add(reflect.Bool, TypeBool, "", true)
+	TYPES.Add(reflect.Int, TypeInt, "", true)
+	TYPES.Add(reflect.Int8, TypeInt, "", true)
+	TYPES.Add(reflect.Int16, TypeInt, "", true)
+	TYPES.Add(reflect.Int32, TypeInt, "", true)
+	TYPES.Add(reflect.Int64, TypeInt, "", true)
+	TYPES.Add(reflect.Uint, TypeUint, "", true)
+	TYPES.Add(reflect.Uint8, TypeUint, "", true)
+	TYPES.Add(reflect.Uint16, TypeUint, "", true)
+	TYPES.Add(reflect.Uint32, TypeUint, "", true)
+	TYPES.Add(reflect.Uint64, TypeUint, "", true)
+	TYPES.Add(reflect.Uintptr, TypeUint, "", true)
+	TYPES.Add(reflect.Float32, TypeFloat, "", true)
+	TYPES.Add(reflect.Float64, TypeFloat, "", true)
+	TYPES.Add(reflect.Complex64, TypeFloat, "", true)
+	TYPES.Add(reflect.Complex128, TypeFloat, "", true)
+	TYPES.Add(reflect.Interface, TypeJSON, "", true)
+	TYPES.Add(reflect.Map, TypeJSON, "", true)
+	TYPES.Add(reflect.Slice, TypeJSON, "", true)
+	TYPES.Add(reflect.String, TypeString, "", true)
+
+	TYPES.Add(Text(""), TypeText, "TEXT")
+	TYPES.Add(String(""), TypeString, "STRING")
+	TYPES.Add(Char(""), TypeChar, "CHAR")
+	TYPES.Add(Int(0), TypeInt, "INT")
+	TYPES.Add(Uint(0), TypeUint, "UINT")
+	TYPES.Add(Float(0.0), TypeFloat, "FLOAT")
+	TYPES.Add(Bool(false), TypeBool, "BOOLEAN")
+	TYPES.Add(Bytes(nil), TypeBytes, "BYTES")
+	TYPES.Add(UUID(uuid.UUID{}), TypeUUID, "UUID")
+	TYPES.Add(Timestamp{}, TypeTimestamp, "TIMESTAMP")
+	TYPES.Add(LocalTime{}, TypeLocalTime, "LOCALTIME")
+	TYPES.Add(DateTime{}, TypeDateTime, "DATETIME")
+
+	TYPES.Add(*new(any), TypeJSON, "")
+	TYPES.Add(*new(string), TypeString, "")
+	TYPES.Add(*new([]byte), TypeBytes, "")
+	TYPES.Add(*new(int), TypeInt, "")
+	TYPES.Add(*new(int8), TypeInt, "")
+	TYPES.Add(*new(int16), TypeInt, "")
+	TYPES.Add(*new(int32), TypeInt, "")
+	TYPES.Add(*new(int64), TypeInt, "")
+	TYPES.Add(*new(uint), TypeUint, "")
+	TYPES.Add(*new(uint8), TypeUint, "")
+	TYPES.Add(*new(uint16), TypeUint, "")
+	TYPES.Add(*new(uint32), TypeUint, "")
+	TYPES.Add(*new(uint64), TypeUint, "")
+	TYPES.Add(*new(float32), TypeFloat, "")
+	TYPES.Add(*new(float64), TypeFloat, "")
+	TYPES.Add(*new(bool), TypeBool, "")
+	TYPES.Add(*new(uuid.UUID), TypeUUID, "")
+	TYPES.Add(*new(time.Time), TypeDateTime, "")
+
+	TYPES.Add(sql.NullString{}, TypeText, "")
+	TYPES.Add(sql.NullFloat64{}, TypeFloat, "")
+	TYPES.Add(sql.NullInt64{}, TypeInt, "")
+	TYPES.Add(sql.NullInt32{}, TypeInt, "")
+	TYPES.Add(sql.NullInt16{}, TypeInt, "")
+	TYPES.Add(sql.NullBool{}, TypeBool, "")
+	TYPES.Add(sql.NullByte{}, TypeBytes, "")
+	TYPES.Add(sql.NullTime{}, TypeDateTime, "")
+
+	TYPES.Add(sql.Null[Text]{}, TypeText, "")
+	TYPES.Add(sql.Null[String]{}, TypeString, "")
+	TYPES.Add(sql.Null[Char]{}, TypeChar, "")
+	TYPES.Add(sql.Null[Int]{}, TypeInt, "")
+	TYPES.Add(sql.Null[Uint]{}, TypeUint, "")
+	TYPES.Add(sql.Null[Float]{}, TypeFloat, "")
+	TYPES.Add(sql.Null[Bool]{}, TypeBool, "")
+	TYPES.Add(sql.Null[Bytes]{}, TypeBytes, "")
+	TYPES.Add(sql.Null[UUID]{}, TypeUUID, "")
+	TYPES.Add(sql.Null[Timestamp]{}, TypeTimestamp, "")
+	TYPES.Add(sql.Null[LocalTime]{}, TypeLocalTime, "")
+	TYPES.Add(sql.Null[DateTime]{}, TypeDateTime, "")
+
+	TYPES.Add(sql.Null[any]{}, TypeJSON, "")
+	TYPES.Add(sql.Null[string]{}, TypeString, "")
+	TYPES.Add(sql.Null[[]byte]{}, TypeBytes, "")
+	TYPES.Add(sql.Null[int]{}, TypeInt, "")
+	TYPES.Add(sql.Null[int8]{}, TypeInt, "")
+	TYPES.Add(sql.Null[int16]{}, TypeInt, "")
+	TYPES.Add(sql.Null[int32]{}, TypeInt, "")
+	TYPES.Add(sql.Null[int64]{}, TypeInt, "")
+	TYPES.Add(sql.Null[uint]{}, TypeUint, "")
+	TYPES.Add(sql.Null[uint8]{}, TypeUint, "")
+	TYPES.Add(sql.Null[uint16]{}, TypeUint, "")
+	TYPES.Add(sql.Null[uint32]{}, TypeUint, "")
+	TYPES.Add(sql.Null[uint64]{}, TypeUint, "")
+	TYPES.Add(sql.Null[float32]{}, TypeFloat, "")
+	TYPES.Add(sql.Null[float64]{}, TypeFloat, "")
+	TYPES.Add(sql.Null[bool]{}, TypeBool, "")
+	TYPES.Add(sql.Null[uuid.UUID]{}, TypeUUID, "")
+	TYPES.Add(sql.Null[time.Time]{}, TypeDateTime, "")
+
+	TYPES.Add((contenttypes.ContentType)(nil), TypeText, "")
+	TYPES.Add(contenttypes.BaseContentType[attrs.Definer]{}, TypeText, "")
+	TYPES.Add(contenttypes.BaseContentType[any]{}, TypeText, "")
+	TYPES.Add(&contenttypes.BaseContentType[attrs.Definer]{}, TypeText, "")
+	TYPES.Add(&contenttypes.BaseContentType[any]{}, TypeText, "")
+}
+
 type (
-	Text   string
-	String string
-	Char   string
-	Int    int64
-	Bool   bool
-	Bytes  []byte
-	Float  float64
+	Text        string
+	String      string
+	Char        string
+	Int         int64
+	Uint        uint64
+	Float       float64
+	Bool        bool
+	Bytes       []byte
+	JSON[T any] struct {
+		Data T
+		Null bool
+	}
+	UUID uuid.UUID
 
 	timeType  time.Time
 	Timestamp time.Time
 	LocalTime time.Time
 	DateTime  time.Time
 )
+
+func (t JSON[T]) DBType(obj attrs.Definer, field attrs.Field) Type {
+	return TypeJSON
+}
+
+func (t JSON[T]) Value() (driver.Value, error) {
+	var bytes, err = json.Marshal(t)
+	if err != nil {
+		return nil, errs.Wrap(err, "failed to marshal Text value")
+	}
+	return string(bytes), nil
+}
+
+func (j *JSON[T]) Scan(value any) error {
+	var newT T
+	var bytes []byte
+	switch v := value.(type) {
+	case string:
+		bytes = []byte(v)
+	case []byte:
+		bytes = v
+	case nil:
+		j.Null = true
+	default:
+		return errs.ErrInvalidType
+	}
+	if len(bytes) == 0 {
+		j.Null = true
+		j.Data = newT
+		return nil
+	}
+	if err := json.Unmarshal(bytes, &newT); err != nil {
+		return errs.Wrap(err, "failed to unmarshal JSON value")
+	}
+	j.Null = false
+	j.Data = newT
+	return nil
+}
 
 func (t *timeType) Scan(value any) error {
 	switch v := value.(type) {

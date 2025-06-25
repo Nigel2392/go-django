@@ -26,7 +26,6 @@ require (
 	github.com/Nigel2392/tags v1.0.0
 	github.com/PuerkitoBio/goquery v1.10.1
 	github.com/a-h/templ v0.3.833
-	github.com/alexedwards/scs/sqlite3store v0.0.0-20250417082927-ab20b3feb5e9
 	github.com/dolthub/go-mysql-server v0.20.0
 	github.com/fatih/structtag v1.2.0
 	github.com/gertd/go-pluralize v0.2.1
