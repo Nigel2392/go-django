@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
+	"errors"
 
 	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/jackc/pgx/v5"
@@ -76,11 +77,18 @@ func (d *dbWrapper) ExecContext(ctx context.Context, query string, args ...any) 
 	return d.DB.ExecContext(ctx, query, args...)
 }
 
-func OpenSQL(driverName, dsn string) (Database, error) {
+func OpenSQL(driverName, dsn string, opts ...OpenOption) (Database, error) {
 	db, err := sql.Open(driverName, dsn)
 	if err != nil {
 		return nil, err
 	}
+
+	for _, opt := range opts {
+		if err := opt(driverName, db); err != nil && !errors.Is(err, query_errors.ErrNotImplemented) {
+			return nil, err
+		}
+	}
+
 	return &dbWrapper{DB: db}, nil
 }
 
@@ -214,11 +222,35 @@ func (p *pgResult) RowsAffected() (int64, error) {
 	return p.CommandTag.RowsAffected(), nil
 }
 
-func OpenPGX(ctx context.Context, dsn string) (Database, error) {
+func OpenPGX(ctx context.Context, dsn string, opts ...OpenOption) (Database, error) {
 	var conn, err = pgx.Connect(ctx, dsn)
 	if err != nil {
 		return nil, err
 	}
 
+	for _, opt := range opts {
+		if err := opt(POSTGRES_DRIVER_NAME, conn); err != nil && !errors.Is(err, query_errors.ErrNotImplemented) {
+			return nil, err
+		}
+	}
+
 	return &connWrapper{conn: conn}, nil
+}
+
+func SQLDBOption(opt func(driverName string, db *sql.DB) error) OpenOption {
+	return func(driverName string, db any) error {
+		if sqlDB, ok := db.(*sql.DB); ok {
+			return opt(driverName, sqlDB)
+		}
+		return query_errors.ErrNotImplemented
+	}
+}
+
+func PGXOption(opt func(driverName string, db *pgx.Conn) error) OpenOption {
+	return func(driverName string, db any) error {
+		if pgxConn, ok := db.(*pgx.Conn); ok {
+			return opt(driverName, pgxConn)
+		}
+		return query_errors.ErrNotImplemented
+	}
 }

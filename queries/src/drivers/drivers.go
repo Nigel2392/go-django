@@ -13,11 +13,18 @@ import (
 	"reflect"
 )
 
+const (
+	SQLITE3_DRIVER_NAME  = "sqlite3"
+	MYSQL_DRIVER_NAME    = "mysql"
+	MARIADB_DRIVER_NAME  = "mariadb"
+	POSTGRES_DRIVER_NAME = "postgres"
+)
+
 type Driver struct {
 	Name              string
 	SupportsReturning SupportsReturningType
 	Driver            driver.Driver
-	Open              func(ctx context.Context, dsn string) (Database, error)
+	Open              func(ctx context.Context, dsn string, opts ...OpenOption) (Database, error)
 }
 
 type driverRegistry struct {
@@ -30,35 +37,37 @@ var drivers = &driverRegistry{
 	byType: make(map[reflect.Type]*Driver),
 }
 
-func init() {
-	sql.Register("mariadb", DriverMariaDB{})
+type OpenOption func(driverName string, db any) error
 
-	Register("sqlite3", Driver{
+func init() {
+	sql.Register(MARIADB_DRIVER_NAME, DriverMariaDB{})
+
+	Register(SQLITE3_DRIVER_NAME, Driver{
 		SupportsReturning: SupportsReturningColumns,
 		Driver:            &DriverSQLite{},
-		Open: func(ctx context.Context, dsn string) (Database, error) {
-			return OpenSQL("sqlite3", dsn)
+		Open: func(ctx context.Context, dsn string, opts ...OpenOption) (Database, error) {
+			return OpenSQL(SQLITE3_DRIVER_NAME, dsn, opts...)
 		},
 	})
-	Register("mysql", Driver{
+	Register(MYSQL_DRIVER_NAME, Driver{
 		SupportsReturning: SupportsReturningLastInsertId,
 		Driver:            &DriverMySQL{},
-		Open: func(ctx context.Context, dsn string) (Database, error) {
-			return OpenSQL("mysql", dsn)
+		Open: func(ctx context.Context, dsn string, opts ...OpenOption) (Database, error) {
+			return OpenSQL(MYSQL_DRIVER_NAME, dsn, opts...)
 		},
 	})
-	Register("mariadb", Driver{
+	Register(MARIADB_DRIVER_NAME, Driver{
 		SupportsReturning: SupportsReturningColumns,
 		Driver:            &DriverMariaDB{},
-		Open: func(ctx context.Context, dsn string) (Database, error) {
-			return OpenSQL("mariadb", dsn)
+		Open: func(ctx context.Context, dsn string, opts ...OpenOption) (Database, error) {
+			return OpenSQL(MARIADB_DRIVER_NAME, dsn, opts...)
 		},
 	})
-	Register("postgres", Driver{
+	Register(POSTGRES_DRIVER_NAME, Driver{
 		SupportsReturning: SupportsReturningColumns,
 		Driver:            &DriverPostgres{},
-		Open: func(ctx context.Context, dsn string) (Database, error) {
-			return OpenPGX(ctx, dsn)
+		Open: func(ctx context.Context, dsn string, opts ...OpenOption) (Database, error) {
+			return OpenPGX(ctx, dsn, opts...)
 		},
 	})
 }
@@ -184,10 +193,10 @@ func Retrieve(nameOrType any) (*Driver, bool) {
 // Open opens a database connection using the registered opener for the given driver name.
 //
 // This should always be used instead of directly using sql.Open or pgx.Connect.
-func Open(ctx context.Context, driverName, dsn string) (Database, error) {
+func Open(ctx context.Context, driverName, dsn string, opts ...OpenOption) (Database, error) {
 	opener, exists := drivers.byName[driverName]
 	if !exists {
 		return nil, query_errors.ErrUnknownDriver
 	}
-	return opener.Open(ctx, dsn)
+	return opener.Open(ctx, dsn, opts...)
 }
