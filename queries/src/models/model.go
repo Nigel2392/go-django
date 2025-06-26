@@ -883,7 +883,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	} else {
 		transaction = queries.NullTransction()
 	}
-	defer transaction.Rollback()
+	defer transaction.Rollback(ctx)
 
 	// Save fields which do not depend on the model itself,
 	// these are fields that can be / should be saved before the model itself is saved.
@@ -948,7 +948,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	m.internals.state.Reset()
 	m.internals.fromDB = true
 
-	return transaction.Commit()
+	return transaction.Commit(ctx)
 }
 
 func saveRegularField(ctx context.Context, cnf *SaveConfig, field queries.SaveableField) error {

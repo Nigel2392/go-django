@@ -32,7 +32,7 @@ func open() (which string, db drivers.Database) {
 	}
 
 	// Create test_pages table
-	if err := sqlDB.Ping(); err != nil {
+	if err := sqlDB.Ping(context.Background()); err != nil {
 		panic(err)
 	}
 

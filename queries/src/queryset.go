@@ -2040,7 +2040,7 @@ func (qs *QuerySet[T]) GetOrCreate(value T) (T, bool, error) {
 			err, "failed to get transaction for %T", qs.internals.Model.Object,
 		)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(qs.context)
 
 	// Check if the object already exists
 	qs.useCache = false
@@ -2057,7 +2057,7 @@ func (qs *QuerySet[T]) GetOrCreate(value T) (T, bool, error) {
 
 	// Object already exists, return it and commit the transaction
 	if row != nil {
-		return row.Object, false, tx.Commit()
+		return row.Object, false, tx.Commit(qs.context)
 	}
 
 	// Object does not exist, create it
@@ -2071,7 +2071,7 @@ create:
 	}
 
 	// Object was created successfully, commit the transaction
-	return obj, true, tx.Commit()
+	return obj, true, tx.Commit(qs.context)
 	// return obj[0], true, commitTransaction()
 }
 
@@ -2158,7 +2158,7 @@ func (qs *QuerySet[T]) Create(value T) (T, error) {
 			err, "failed to get transaction for %T", qs.internals.Model.Object,
 		)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(qs.context)
 
 	// Check if the object is a saver
 	// If it is, we can use the Save method to save the object
@@ -2195,7 +2195,7 @@ func (qs *QuerySet[T]) Create(value T) (T, error) {
 			)
 		}
 
-		return saver.(T), tx.Commit()
+		return saver.(T), tx.Commit(qs.context)
 	}
 
 	result, err := qs.BulkCreate([]T{value})
@@ -2208,7 +2208,7 @@ func (qs *QuerySet[T]) Create(value T) (T, error) {
 		return *new(T), query_errors.ErrNoRows
 	}
 
-	return result[0], tx.Commit()
+	return result[0], tx.Commit(qs.context)
 }
 
 // Update is used to update an object in the database.
@@ -2227,7 +2227,7 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 			err, "failed to get transaction for %T", qs.internals.Model.Object,
 		)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(qs.context)
 
 	if len(qs.internals.Where) == 0 && !qs.explicitSave {
 
@@ -2255,7 +2255,7 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 			if err := sendSignal(SignalPostModelSave, value, qs.compiler); err != nil {
 				return 0, err
 			}
-			return 1, tx.Commit()
+			return 1, tx.Commit(qs.context)
 		}
 	}
 
@@ -2266,7 +2266,7 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 		)
 	}
 
-	return c, tx.Commit()
+	return c, tx.Commit(qs.context)
 }
 
 // BulkCreate is used to create multiple objects in the database.
@@ -2280,7 +2280,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			err, "failed to get transaction for %T", qs.internals.Model.Object,
 		)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(qs.context)
 
 	var (
 		infos   = make([]UpdateInfo, 0, len(objects))
@@ -2409,7 +2409,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		// No results are returned, we cannot set the primary key
 		// so we can return and commit the transaction
 		if qs.internals.Model.Primary == nil || !migrator.CanAutoIncrement(qs.internals.Model.Primary) {
-			return objects, tx.Commit()
+			return objects, tx.Commit(qs.context)
 		}
 
 		// If no results are returned, we cannot set the primary key
@@ -2420,7 +2420,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				"no results returned after insert, cannot set primary key for %T",
 				qs.internals.Model.Object,
 			)
-			return objects, tx.Commit()
+			return objects, tx.Commit(qs.context)
 		}
 
 		if len(results) != len(objects) {
@@ -2535,7 +2535,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		)
 	}
 
-	return objects, tx.Commit()
+	return objects, tx.Commit(qs.context)
 }
 
 // BulkUpdate is used to update multiple objects in the database.
@@ -2550,7 +2550,7 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 			err, "failed to get transaction for %T", qs.internals.Model.Object,
 		)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(qs.context)
 
 	var exprMap = make(map[string]expr.NamedExpression, len(expressions))
 	for _, expression := range expressions {
@@ -2735,7 +2735,7 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 		}
 	}
 
-	return res, tx.Commit()
+	return res, tx.Commit(qs.context)
 }
 
 // BatchCreate is used to create multiple objects in the database.
@@ -2755,7 +2755,7 @@ func (qs *QuerySet[T]) BatchCreate(objects []T) ([]T, error) {
 			err, "failed to get transaction for %T", qs.internals.Model.Object,
 		)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(qs.context)
 
 	var createdObjects = make([]T, 0, len(objects))
 	for batchNum, batch := range qs.batch(objects, qs.internals.Limit) {
@@ -2772,7 +2772,7 @@ func (qs *QuerySet[T]) BatchCreate(objects []T) ([]T, error) {
 		)
 	}
 
-	return createdObjects, tx.Commit()
+	return createdObjects, tx.Commit(qs.context)
 }
 
 // BatchUpdate is used to update multiple objects in the database.
@@ -2795,7 +2795,7 @@ func (qs *QuerySet[T]) BatchUpdate(objects []T, exprs ...any) (int64, error) {
 			err, "failed to get transaction for %T", qs.internals.Model.Object,
 		)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(qs.context)
 
 	var updatedObjects int64 = 0
 	for batchNum, batch := range qs.batch(objects, qs.internals.Limit) {
@@ -2817,7 +2817,7 @@ func (qs *QuerySet[T]) BatchUpdate(objects []T, exprs ...any) (int64, error) {
 		updatedObjects += count
 	}
 
-	return updatedObjects, tx.Commit()
+	return updatedObjects, tx.Commit(qs.context)
 }
 
 // Delete is used to delete an object from the database.
@@ -2831,7 +2831,7 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 			err, "failed to get transaction for %T", qs.internals.Model.Object,
 		)
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(qs.context)
 
 	if len(objects) > 0 {
 		var where, err = GenerateObjectsWhereClause(objects...)
@@ -2856,7 +2856,7 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 		return 0, err
 	}
 
-	return res, tx.Commit()
+	return res, tx.Commit(qs.context)
 }
 
 func (qs *QuerySet[T]) tryParseExprStatement(sqlStr string, args ...interface{}) (string, []interface{}) {

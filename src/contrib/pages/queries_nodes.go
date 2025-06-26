@@ -69,7 +69,7 @@ func CreateChildNode(ctx context.Context, parent, child *PageNode) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
-	defer transaction.Rollback()
+	defer transaction.Rollback(ctx)
 
 	if parent.Path == "" {
 		return fmt.Errorf("parent path must not be empty")
@@ -105,7 +105,7 @@ func CreateChildNode(ctx context.Context, parent, child *PageNode) error {
 		return fmt.Errorf("failed to update parent node with PK %d", parent.PK)
 	}
 
-	if err = transaction.Commit(); err != nil {
+	if err = transaction.Commit(ctx); err != nil {
 		return err
 	}
 
@@ -204,7 +204,7 @@ func DeleteNode(ctx context.Context, node *PageNode) error { //, newParent *Page
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(ctx)
 
 	var descendants []*PageNode
 	descendants, err = GetDescendants(
@@ -239,7 +239,7 @@ func DeleteNode(ctx context.Context, node *PageNode) error { //, newParent *Page
 	}
 	*parent = *prnt
 
-	return tx.Commit()
+	return tx.Commit(ctx)
 }
 
 // MoveNode moves a node to a new parent.
@@ -275,7 +275,7 @@ func MoveNode(ctx context.Context, node *PageNode, newParent *PageNode) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(ctx)
 
 	oldParentPath, err := ancestorPath(node.Path, 1)
 	if err != nil {
@@ -333,7 +333,7 @@ func MoveNode(ctx context.Context, node *PageNode, newParent *PageNode) error {
 		return errors.Wrap(err, "failed to decrement old parent numchild")
 	}
 
-	if err = tx.Commit(); err != nil {
+	if err = tx.Commit(ctx); err != nil {
 		return errors.Wrap(err, "failed to commit transaction")
 	}
 
@@ -377,7 +377,7 @@ func UnpublishNode(ctx context.Context, node *PageNode, unpublishChildren bool) 
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
-	defer transaction.Rollback()
+	defer transaction.Rollback(ctx)
 
 	if node.StatusFlags.Is(StatusFlagPublished) {
 		node.StatusFlags &^= StatusFlagPublished
@@ -400,7 +400,7 @@ func UnpublishNode(ctx context.Context, node *PageNode, unpublishChildren bool) 
 		return err
 	}
 
-	return transaction.Commit()
+	return transaction.Commit(ctx)
 }
 
 // ParentNode returns the parent node of the given node.

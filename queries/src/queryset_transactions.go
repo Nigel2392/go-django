@@ -124,7 +124,7 @@ func RunInTransaction[T attrs.Definer](c context.Context, fn func(ctx context.Co
 		}
 
 		if transaction != nil && !comitted {
-			if err := transaction.Rollback(); err != nil {
+			if err := transaction.Rollback(ctx); err != nil {
 				logger.Errorf("RunInTransaction: failed to rollback transaction: %v", err)
 			}
 		}
@@ -138,7 +138,7 @@ func RunInTransaction[T attrs.Definer](c context.Context, fn func(ctx context.Co
 
 	if commit {
 		// commit the transaction if everything went well
-		err = transaction.Commit()
+		err = transaction.Commit(ctx)
 		if err != nil {
 			return errors.Wrap(err, "RunInTransaction: failed to commit transaction")
 		}

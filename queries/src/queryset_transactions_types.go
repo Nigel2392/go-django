@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -18,11 +19,11 @@ func NullTransction() drivers.Transaction {
 	return &nullTransaction{DB: nil}
 }
 
-func (n *nullTransaction) Rollback() error {
+func (n *nullTransaction) Rollback(context.Context) error {
 	return nil
 }
 
-func (n *nullTransaction) Commit() error {
+func (n *nullTransaction) Commit(context.Context) error {
 	return nil
 }
 
@@ -40,14 +41,14 @@ type wrappedTransaction struct {
 	compiler *genericQueryBuilder
 }
 
-func (w *wrappedTransaction) Rollback() error {
+func (w *wrappedTransaction) Rollback(ctx context.Context) error {
 	if !w.compiler.InTransaction() {
 		return query_errors.ErrNoTransaction
 	}
 	if w.compiler != nil {
 		w.compiler.transaction = nil
 	}
-	var err = w.Transaction.Rollback()
+	var err = w.Transaction.Rollback(ctx)
 	if errors.Is(err, sql.ErrTxDone) {
 		return nil
 	}
@@ -58,14 +59,14 @@ func (w *wrappedTransaction) Rollback() error {
 	return nil
 }
 
-func (w *wrappedTransaction) Commit() error {
+func (w *wrappedTransaction) Commit(ctx context.Context) error {
 	if !w.compiler.InTransaction() {
 		return query_errors.ErrNoTransaction
 	}
 	if w.compiler != nil {
 		w.compiler.transaction = nil
 	}
-	var err = w.Transaction.Commit()
+	var err = w.Transaction.Commit(ctx)
 	// logger.Debugf("Committing transaction for %s (%v)", w.compiler.DatabaseName(), err)
 	if errors.Is(err, sql.ErrTxDone) {
 		return nil

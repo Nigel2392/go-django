@@ -1,6 +1,7 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"log"
 	"sync"
@@ -119,7 +120,7 @@ func (p *QueryStore) Commit(token string, b []byte, expiry time.Time) error {
 	if err != nil {
 		return err
 	}
-	defer transaction.Rollback()
+	defer transaction.Rollback(context.Background())
 
 	obj, created, err := querySet.GetOrCreate(session)
 	if err != nil {
@@ -127,7 +128,8 @@ func (p *QueryStore) Commit(token string, b []byte, expiry time.Time) error {
 	}
 
 	if created {
-		return transaction.Commit()
+		return transaction.Commit(context.Background())
+
 	}
 
 	// Update existing session data and expiry
@@ -138,7 +140,8 @@ func (p *QueryStore) Commit(token string, b []byte, expiry time.Time) error {
 		return err
 	}
 
-	return transaction.Commit()
+	return transaction.Commit(context.Background())
+
 }
 
 // Delete removes a session token and corresponding data from the QueryStore

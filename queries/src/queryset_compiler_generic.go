@@ -434,18 +434,18 @@ func (g *genericQueryBuilder) WithTransaction(t drivers.Transaction) (drivers.Tr
 	return g.transaction, nil
 }
 
-func (g *genericQueryBuilder) CommitTransaction() error {
+func (g *genericQueryBuilder) CommitTransaction(ctx context.Context) error {
 	if !g.InTransaction() {
 		return query_errors.ErrNoTransaction
 	}
-	return g.transaction.Commit()
+	return g.transaction.Commit(ctx)
 }
 
-func (g *genericQueryBuilder) RollbackTransaction() error {
+func (g *genericQueryBuilder) RollbackTransaction(ctx context.Context) error {
 	if !g.InTransaction() {
 		return query_errors.ErrNoTransaction
 	}
-	return g.transaction.Rollback()
+	return g.transaction.Rollback(ctx)
 }
 
 func (g *genericQueryBuilder) InTransaction() bool {

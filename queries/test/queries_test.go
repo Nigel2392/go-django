@@ -2281,7 +2281,7 @@ func TestQuerySet_SharedInstance_Concurrency(t *testing.T) {
 	}
 
 	queries.QUERYSET_USE_CACHE_DEFAULT = false
-	var ctx = drivers.SetLogSQL(
+	var ctx = drivers.SetLogSQLContext(
 		context.Background(), false,
 	)
 	var baseQS = queries.GetQuerySetWithContext[attrs.Definer](ctx, &Todo{}).

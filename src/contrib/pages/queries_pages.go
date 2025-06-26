@@ -28,7 +28,7 @@ func SavePage(ctx context.Context, parent *PageNode, p SaveablePage) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
-	defer transaction.Rollback()
+	defer transaction.Rollback(ctx)
 
 	var ref = p.Reference()
 	if ref.ContentType == "" && !reflect.DeepEqual(ref, p) {
@@ -105,7 +105,7 @@ func SavePage(ctx context.Context, parent *PageNode, p SaveablePage) error {
 		return err
 	}
 
-	return transaction.Commit()
+	return transaction.Commit(ctx)
 }
 
 // UpdatePage updates a page object in the database.

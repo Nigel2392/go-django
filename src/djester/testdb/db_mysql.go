@@ -23,7 +23,7 @@ func open() (which string, db drivers.Database) {
 
 	for i := 0; i < retries; i++ {
 		//  Wait for the database to be ready
-		if err := sqlDB.Ping(); err == nil {
+		if err := sqlDB.Ping(context.Background()); err == nil {
 			break
 		}
 		time.Sleep(5 * time.Second)

@@ -166,7 +166,7 @@ func FixTree(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
-	defer transaction.Rollback()
+	defer transaction.Rollback(ctx)
 
 	allNodesCount, err := CountNodes(ctx, StatusFlagNone)
 	if err != nil {
@@ -187,5 +187,5 @@ func FixTree(ctx context.Context) error {
 		return errors.Wrap(err, "failed to update nodes")
 	}
 
-	return transaction.Commit()
+	return transaction.Commit(ctx)
 }

@@ -3,6 +3,7 @@
 package testdb
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
@@ -69,7 +70,7 @@ func open() (which string, db drivers.Database) {
 
 	for i := 0; i < retries; i++ {
 		//  Wait for the database to be ready
-		if err := db.Ping(); err == nil {
+		if err := db.Ping(context.Background()); err == nil {
 			break
 		}
 		time.Sleep(5 * time.Second)

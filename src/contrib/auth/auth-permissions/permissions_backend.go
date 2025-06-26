@@ -60,7 +60,7 @@ func (pb *PermissionsBackend) HasObjectPermission(r *http.Request, obj interface
 	if err != nil {
 		return false
 	}
-	defer tx.Rollback()
+	defer tx.Rollback(ctx)
 
 	var (
 		querier = pb.db.WithTx(tx)
