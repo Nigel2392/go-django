@@ -62,7 +62,7 @@ func (s *statement) Data(typ string, v any) any {
 	return parser.Data(v)
 }
 
-var STMT = &statement{
+var PARSER = &statement{
 	Field: &statementParser{
 		typ:     "field",
 		pattern: `\!\[([a-zA-Z][a-zA-Z0-9_.-]*)\]`, // ![FieldPath]
@@ -89,22 +89,31 @@ var STMT = &statement{
 				return info.QuoteIdentifier(defs.TableName()), []any{}, nil
 			}
 
-			var current, _, _, _, aliases, _, err = internal.WalkFields(info.Model, fieldPath, info.AliasGen)
+			var _, _, f, _, _, _, err = internal.WalkFields(info.Model, fieldPath, info.AliasGen)
 			if err != nil {
 				return "", []any{}, fmt.Errorf(
 					"error when walking fields: %w", err,
 				)
 			}
 
-			var tableName string
-			if len(aliases) > 0 {
-				tableName = aliases[len(aliases)-1]
-			} else {
-				var defs = current.FieldDefs()
-				tableName = defs.TableName()
+			var rel = f.Rel()
+			if rel == nil {
+				return "", []any{}, fmt.Errorf(
+					"field %q is not a relation, cannot resolve table name", fieldPath,
+				)
 			}
 
-			return info.QuoteIdentifier(tableName), []any{}, nil
+			var (
+				current        = rel.Model()
+				defs           = current.FieldDefs()
+				tableName      = defs.TableName()
+				lhs_tableName  = info.QuoteIdentifier(tableName)
+				rhs_tableAlias = info.QuoteIdentifier(info.AliasGen.GetTableAlias(
+					defs.TableName(), fieldPath,
+				))
+			)
+
+			return fmt.Sprintf("%s AS %s", lhs_tableName, rhs_tableAlias), []any{}, nil
 		},
 	},
 	Value: &statementParser{
@@ -463,10 +472,10 @@ func (b *statementBuilder) nodes(stmt string) *nodeResolver {
 
 var stmtBuilder = &statementBuilder{
 	info: []StatementParser{
-		STMT.Field,
-		STMT.Table,
-		STMT.Value,
-		STMT.Expr,
+		PARSER.Field,
+		PARSER.Table,
+		PARSER.Value,
+		PARSER.Expr,
 	},
 }
 

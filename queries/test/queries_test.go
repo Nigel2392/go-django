@@ -3048,7 +3048,7 @@ func TestQuerySetRows(t *testing.T) {
 
 	var qs = queries.GetQuerySet[attrs.Definer](&TestRowsAffected{})
 	var rows, err = qs.Rows("SELECT ![ID], ![Name] FROM TABLE(SELF) WHERE ? = ? AND EXPR(NameFilter) AND EXPR(0) AND 1 = ?[3] AND ?[1] - ?[2] = 0",
-		expr.STMT.Expr.Expressions(
+		expr.PARSER.Expr.Expressions(
 			map[string]expr.Expression{
 				"NameFilter": expr.Q("Name__istartswith", "testrows"),
 			},
