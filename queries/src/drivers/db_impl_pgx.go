@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"errors"
+	"fmt"
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/query_errors"
@@ -25,7 +26,9 @@ func OpenPGX(ctx context.Context, dsn string, opts ...OpenOption) (Database, err
 		}
 	}
 
-	return &poolWrapper{pool: pool}, nil
+	var qW = queryWrapper[*pgxpool.Pool]{conn: pool}
+	var cW = &connWrapper[*pgxpool.Pool]{queryWrapper: qW}
+	return &poolWrapper{connWrapper: cW}, nil
 }
 
 func PGXOption(opt func(driverName string, db *pgxpool.Pool) error) OpenOption {
@@ -37,35 +40,52 @@ func PGXOption(opt func(driverName string, db *pgxpool.Pool) error) OpenOption {
 	}
 }
 
-type poolWrapper struct {
-	pool *pgxpool.Pool
+type pgxQuerier interface {
+	Query(ctx context.Context, query string, args ...any) (pgx.Rows, error)
+	QueryRow(ctx context.Context, query string, args ...any) pgx.Row
+	Exec(ctx context.Context, query string, args ...any) (pgconn.CommandTag, error)
+	SendBatch(ctx context.Context, batch *pgx.Batch) pgx.BatchResults
 }
 
-func (p *poolWrapper) Ping() error {
-	return p.pool.Ping(context.Background())
+type pgxConn interface {
+	pgxQuerier
+	Ping(ctx context.Context) error
+	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
-func (p *poolWrapper) Driver() driver.Driver {
-	return &DriverPostgres{}
+type queryWrapper[T pgxQuerier] struct {
+	conn T
 }
 
-func (p *poolWrapper) Close() error {
-	if p.pool == nil {
-		return nil
-	}
-	p.pool.Close()
-	return nil
-}
-
-func (c *poolWrapper) Begin(ctx context.Context) (Transaction, error) {
-	tx, err := c.pool.Begin(ctx)
+func (c *queryWrapper[T]) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
+	var rows, err = c.conn.Query(ctx, query, args...)
+	LogSQL(ctx, fmt.Sprintf("%T", c.conn), err, query, args...)
 	if err != nil {
 		return nil, err
 	}
-	return &wrappedTx[*pgxTx, SQLRows, SQLRow, sql.Result]{db: &pgxTx{Tx: tx, ctx: ctx}}, nil
+	return &pgxRows{Rows: rows}, nil
 }
 
-func (p *poolWrapper) SendBatch(ctx context.Context, batch *pgx.Batch) pgx.BatchResults {
+func (c *queryWrapper[T]) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	result, err := c.conn.Exec(ctx, query, args...)
+	LogSQL(ctx, fmt.Sprintf("%T", c.conn), err, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	return &pgResult{CommandTag: result}, nil
+}
+
+func (c *queryWrapper[T]) QueryRowContext(ctx context.Context, query string, args ...any) SQLRow {
+	var row = c.conn.QueryRow(ctx, query, args...)
+	if canErr, ok := row.(interface{ Err() error }); ok {
+		LogSQL(ctx, fmt.Sprintf("%T", c.conn), canErr.Err(), query, args...)
+	} else {
+		LogSQL(ctx, fmt.Sprintf("%T", c.conn), nil, query, args...)
+	}
+	return &pgxRow{Row: row}
+}
+
+func (c *queryWrapper[T]) SendBatch(ctx context.Context, batch *pgx.Batch) pgx.BatchResults {
 	var sb strings.Builder
 	var args []any
 	for i, item := range batch.QueuedQueries {
@@ -75,133 +95,68 @@ func (p *poolWrapper) SendBatch(ctx context.Context, batch *pgx.Batch) pgx.Batch
 		sb.WriteString(item.SQL)
 		args = append(args, item.Arguments...)
 	}
-	LogSQL(ctx, "pgxpool.Pool.SendBatch", nil, sb.String(), args...)
-	return p.pool.SendBatch(ctx, batch)
+	LogSQL(ctx, fmt.Sprintf("%T.SendBatch", c.conn), nil, sb.String(), args...)
+	return c.conn.SendBatch(ctx, batch)
 }
 
-func (p *poolWrapper) Acquire(ctx context.Context) (Database, error) {
-	conn, err := p.pool.Acquire(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return &connWrapper{conn: conn}, nil
+type connWrapper[T pgxConn] struct {
+	queryWrapper[T]
 }
 
-func (p *poolWrapper) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
-	var rows, err = p.pool.Query(ctx, query, args...)
-	LogSQL(ctx, "pgxpool.Pool", err, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	return &pgxRows{Rows: rows}, nil
-}
-
-func (p *poolWrapper) QueryRowContext(ctx context.Context, query string, args ...any) SQLRow {
-	var row = p.pool.QueryRow(ctx, query, args...)
-	if canErr, ok := row.(interface{ Err() error }); ok {
-		LogSQL(ctx, "pgxpool.Pool", canErr.Err(), query, args...)
-	} else {
-		LogSQL(ctx, "pgxpool.Pool", nil, query, args...)
-	}
-	return &pgxRow{Row: row}
-}
-
-func (p *poolWrapper) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	result, err := p.pool.Exec(ctx, query, args...)
-	LogSQL(ctx, "pgxpool.Pool", err, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	return &pgResult{CommandTag: result}, nil
-}
-
-type connWrapper struct {
-	conn *pgxpool.Conn
-}
-
-func (c *connWrapper) Close() error {
+func (c *connWrapper[T]) Close() error {
 	return nil
 }
 
-func (c *connWrapper) Ping() error {
-	if c.conn == nil {
-		return query_errors.ErrNoDatabase
-	}
+func (c *connWrapper[T]) Ping() error {
 	return c.conn.Ping(context.Background())
 }
 
-func (c *connWrapper) Driver() driver.Driver {
+func (c *connWrapper[T]) Driver() driver.Driver {
 	return &DriverPostgres{}
 }
 
-func (c *connWrapper) Begin(ctx context.Context) (Transaction, error) {
+func (c *connWrapper[T]) Begin(ctx context.Context) (Transaction, error) {
 	tx, err := c.conn.Begin(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &wrappedTx[*pgxTx, SQLRows, SQLRow, sql.Result]{db: &pgxTx{Tx: tx, ctx: ctx}}, nil
+	return &pgxTx{
+		queryWrapper: queryWrapper[pgx.Tx]{conn: tx},
+		ctx:          ctx,
+	}, nil
 }
 
-func (c *connWrapper) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
-	var rows, err = c.conn.Query(ctx, query, args...)
-	LogSQL(ctx, "pgxpool.Conn", err, query, args...)
+type poolWrapper struct {
+	*connWrapper[*pgxpool.Pool]
+}
+
+func (p *poolWrapper) Close() error {
+	if p.conn == nil {
+		return nil
+	}
+	p.conn.Close()
+	return nil
+}
+
+func (p *poolWrapper) Acquire(ctx context.Context) (Database, error) {
+	conn, err := p.conn.Acquire(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return &pgxRows{Rows: rows}, nil
-}
-
-func (c *connWrapper) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	result, err := c.conn.Exec(ctx, query, args...)
-	LogSQL(ctx, "pgxpool.Conn", err, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	return &pgResult{CommandTag: result}, nil
-}
-
-func (c *connWrapper) QueryRowContext(ctx context.Context, query string, args ...any) SQLRow {
-	var row = c.conn.QueryRow(ctx, query, args...)
-	if canErr, ok := row.(interface{ Err() error }); ok {
-		LogSQL(ctx, "pgxpool.Conn", canErr.Err(), query, args...)
-	} else {
-		LogSQL(ctx, "pgxpool.Conn", nil, query, args...)
-	}
-	return &pgxRow{Row: row}
+	return &connWrapper[*pgxpool.Conn]{queryWrapper: queryWrapper[*pgxpool.Conn]{conn: conn}}, nil
 }
 
 type pgxTx struct {
-	pgx.Tx
+	queryWrapper[pgx.Tx]
 	ctx context.Context
 }
 
 func (p *pgxTx) Commit() error {
-	return p.Tx.Commit(p.ctx)
+	return p.conn.Commit(p.ctx)
 }
 
 func (p *pgxTx) Rollback() error {
-	return p.Tx.Rollback(p.ctx)
-}
-
-func (p *pgxTx) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	var result, err = p.Exec(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	return &pgResult{CommandTag: result}, nil
-}
-
-func (p *pgxTx) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
-	var rows, err = p.Query(ctx, query, args...)
-	if err != nil {
-		return nil, err
-	}
-	return &pgxRows{Rows: rows}, nil
-}
-
-func (p *pgxTx) QueryRowContext(ctx context.Context, query string, args ...any) SQLRow {
-	var row = p.QueryRow(ctx, query, args...)
-	return &pgxRow{Row: row}
+	return p.conn.Rollback(p.ctx)
 }
 
 type pgxRows struct {

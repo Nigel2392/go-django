@@ -263,7 +263,7 @@ func (inf *statementParser) Data(v any) any {
 		v = inf.processData(v)
 	}
 
-	return ParserArg(inf.typ, v)
+	return StatementParserArg(inf.typ, v)
 }
 
 func (inf *statementParser) Type() string {
@@ -318,7 +318,7 @@ type parserArg struct {
 	data  any
 }
 
-func ParserArg(which string, data any) any {
+func StatementParserArg(which string, data any) any {
 	if which == "" {
 		panic(fmt.Errorf("NodeArg must have a non-empty 'which' field"))
 	}
