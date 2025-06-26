@@ -1150,13 +1150,16 @@ func (g *postgresQueryBuilder) BuildUpdateQuery(
 		batch.Queue(sql, arg...)
 	}
 
-	var conner, ok = g.queryInfo.DB.(interface{ Conn() *pgx.Conn })
+	var conner, ok = g.queryInfo.DB.(interface {
+		SendBatch(context.Context, *pgx.Batch) pgx.BatchResults
+	})
 	if !ok {
 		panic(fmt.Errorf(
-			"cannot execute batch update, DB does not implement Conn(): %T",
+			"cannot execute batch update, DB does not implement `SendBatch(context.Context, *pgx.Batch) pgx.BatchResults`: %T",
 			g.DB(),
 		))
 	}
+
 	return &QueryObject[int64]{
 		QueryInformation: QueryInformation{
 			Builder: g,
@@ -1165,7 +1168,7 @@ func (g *postgresQueryBuilder) BuildUpdateQuery(
 			Object:  qs.Model(),
 		},
 		Execute: func(query string, args ...any) (int64, error) {
-			var br = conner.Conn().SendBatch(ctx, batch)
+			var br = conner.SendBatch(ctx, batch)
 			defer br.Close()
 			var res, err = br.Exec()
 			if err != nil {

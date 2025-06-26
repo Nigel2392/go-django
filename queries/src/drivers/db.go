@@ -33,10 +33,10 @@ type DB interface {
 
 type Database interface {
 	DB
-	Close() error
 	Ping() error
 	Driver() driver.Driver
 	Begin(ctx context.Context) (Transaction, error)
+	Close() error
 }
 
 // This interface is compatible with `*sql.Tx`.
@@ -44,6 +44,18 @@ type Database interface {
 // It is used for simple transaction management in the queryset.
 type Transaction interface {
 	DB
+	Commit() error
+	Rollback() error
+}
+
+type sqlDB[RowsT SQLRows, RowT SQLRow, ResultT any] interface {
+	QueryContext(ctx context.Context, query string, args ...any) (RowsT, error)
+	QueryRowContext(ctx context.Context, query string, args ...any) RowT
+	ExecContext(ctx context.Context, query string, args ...any) (ResultT, error)
+}
+
+type sqlTx[RowsT SQLRows, RowT SQLRow, ResultT any] interface {
+	sqlDB[RowsT, RowT, ResultT]
 	Commit() error
 	Rollback() error
 }

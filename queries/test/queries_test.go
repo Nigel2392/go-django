@@ -2281,15 +2281,15 @@ func TestQuerySet_SharedInstance_Concurrency(t *testing.T) {
 	}
 
 	queries.QUERYSET_USE_CACHE_DEFAULT = false
-	var baseQS = queries.GetQuerySet[attrs.Definer](&Todo{}).
+	var ctx = drivers.SetLogSQL(
+		context.Background(), false,
+	)
+	var baseQS = queries.GetQuerySetWithContext[attrs.Definer](ctx, &Todo{}).
 		Select("ID", "Title", "Description", "Done", "User").
 		Filter("Done", false).
 		Filter("Title__startswith", "ConcurrentTodo")
 
-	queries.LogQueries = false
-
 	const goroutines = 1000
-
 	var todos = make([]*Todo, goroutines)
 	for i := range goroutines {
 		todo := &Todo{
@@ -2298,7 +2298,7 @@ func TestQuerySet_SharedInstance_Concurrency(t *testing.T) {
 			Done:        i%2 != 0,
 		}
 
-		if err := queries.CreateObject(todo); err != nil {
+		if _, err := queries.GetQuerySetWithContext(ctx, todo).Create(todo); err != nil {
 			t.Fatalf("Failed to insert todo: %v", err)
 		}
 
@@ -2383,9 +2383,8 @@ func TestQuerySet_SharedInstance_Concurrency(t *testing.T) {
 			}
 		}
 	}
-
-	queries.LogQueries = true
 }
+
 func TestRecursiveAliasConflict(t *testing.T) {
 	// Create deep hierarchy
 	root := &Category{Name: "Root"}
@@ -3048,7 +3047,15 @@ func TestQuerySetRows(t *testing.T) {
 	}
 
 	var qs = queries.GetQuerySet[attrs.Definer](&TestRowsAffected{})
-	var rows, err = qs.Rows("SELECT ![ID], ![Name] FROM #[SELF] WHERE LOWER(![Name]) LIKE LOWER(?[1])", "testrows%")
+	var rows, err = qs.Rows("SELECT ![ID], ![Name] FROM TABLE(SELF) WHERE ? = ? AND EXPR(NameFilter) AND EXPR(0) AND 1 = ?[3] AND ?[1] - ?[2] = 0",
+		expr.STMT.Expr.Expressions(
+			map[string]expr.Expression{
+				"NameFilter": expr.Q("Name__istartswith", "testrows"),
+			},
+			expr.String("1 = 1"),
+		),
+		expr.Value(2), expr.Value(2), expr.Value(1),
+	)
 	if err != nil {
 		t.Fatalf("Failed to get rows: %v (%s)", err, qs.LatestQuery().SQL())
 	}
@@ -3088,7 +3095,7 @@ func TestQuerySetRow(t *testing.T) {
 	}
 
 	var rows = queries.GetQuerySet[attrs.Definer](&TestRowsAffected{}).
-		Row("SELECT ![ID], ![Name] FROM #[SELF] WHERE ![Name] = ?", "TestQuerySetRow")
+		Row("SELECT ![ID], ![Name] FROM TABLE(SELF) WHERE ![Name] = ?", "TestQuerySetRow")
 	if err := rows.Err(); err != nil {
 		t.Fatalf("Failed to get rows: %v", err)
 	}

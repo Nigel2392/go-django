@@ -2,14 +2,11 @@ package queries
 
 import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
 var (
 	_ CompiledQuery[int64] = &QueryObject[int64]{}
 	// _ CompiledQuery[[][]interface{}] = (*CombinedQuery[[]interface{}])(nil)
-
-	LogQueries = true
 )
 
 type QueryInformation struct {
@@ -41,13 +38,5 @@ type QueryObject[T1 any] struct {
 }
 
 func (q *QueryObject[T1]) Exec() (T1, error) {
-	var result, err = q.Execute(q.Stmt, q.Params...)
-	if LogQueries {
-		if err != nil {
-			logger.Errorf("Query (%T, %T): %s: %s %v", q.Model(), *new(T1), err.Error(), q.Stmt, q.Params)
-			return result, err
-		}
-		logger.Debugf("Query (%T, %T): %s %v", q.Model(), *new(T1), q.Stmt, q.Params)
-	}
-	return result, err
+	return q.Execute(q.Stmt, q.Params...)
 }

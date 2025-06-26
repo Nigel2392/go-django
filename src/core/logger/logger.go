@@ -115,6 +115,9 @@ type Log interface {
 	// NameSpace returns a new Log with the given label as the prefix.
 	NameSpace(label string) Log
 
+	// GetLevel retrieves the loglevel for the current logger
+	GetLevel() LogLevel
+
 	// Setters
 
 	// SetOutput sets the output for the given log level.
@@ -261,6 +264,11 @@ func (l *Logger) Output(level LogLevel) io.Writer {
 // SetLevel sets the current log level.
 func (l *Logger) SetLevel(level LogLevel) {
 	l.Level = level
+}
+
+// GetLevel retrieves the log level for the current logger.
+func (l *Logger) GetLevel() LogLevel {
+	return l.Level
 }
 
 // Copy returns a copy of the logger.

@@ -21,6 +21,7 @@ var (
 
 	SetOutput func(level LogLevel, w io.Writer) = func(level LogLevel, w io.Writer) {}
 	SetLevel  func(level LogLevel)              = func(level LogLevel) {}
+	GetLevel  func() (level LogLevel)           = func() (level LogLevel) { return DBG }
 
 	Debug  = func(args ...interface{}) { printArgs("DEBUG", "", args...) }
 	Info   = func(args ...interface{}) { printArgs("INFO", "", args...) }
@@ -44,6 +45,7 @@ func Setup(logger Log) {
 
 	SetOutput = logger.SetOutput
 	SetLevel = logger.SetLevel
+	GetLevel = logger.GetLevel
 
 	Debug = logger.Debug
 	Info = logger.Info
