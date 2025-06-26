@@ -83,7 +83,7 @@ var PARSER = &statement{
 		},
 		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
 			var fieldPath = in[1]
-			if fieldPath == SELF_TABLE {
+			if strings.EqualFold(fieldPath, SELF_TABLE) {
 				var meta = attrs.GetModelMeta(info.Model)
 				var defs = meta.Definitions()
 				return info.QuoteIdentifier(defs.TableName()), []any{}, nil
