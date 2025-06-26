@@ -17,11 +17,22 @@ import (
 const SELF_TABLE = "SELF" // the name of the self table, used in expressions
 
 type StatementParser interface {
+	// return the type / identifier of the statement parser, e.g. "field", "table", "value", "expr"
 	Type() string
-	Data(v any) any // should return an parserArg with the type of the statement and the data
+
+	// should return a value created by StatementParserArg of type parserArg
+	Data(v any) any
+
+	// Compiled returns the compiled regex for the statement parser
 	Compiled() *regexp.Regexp
+
+	// CompiledAbs returns the compiled regex for the statement parser with anchors
 	CompiledAbs() *regexp.Regexp
+
+	// RawText returns the raw text of the statement parser, given the matched input, I.E. ![FieldName] -> FieldName
 	RawText(in []string) string
+
+	// Resolve resolves the statement parser, given the matched input, the expression info, the arguments and any additional data
 	Resolve(nodesIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error)
 }
 
@@ -150,6 +161,8 @@ var STMT = &statement{
 					expr   Expression
 				)
 
+				// if the first number is a digit, we assume it's an index since
+				// "<number><text>" is not valid according to the pattern
 				if unicode.IsDigit(rune(exprId[0])) {
 					var idx, err = strconv.Atoi(exprId)
 					if err != nil {
@@ -158,35 +171,30 @@ var STMT = &statement{
 					if idx < 0 || idx >= len(exprData._list) {
 						return "", nil, fmt.Errorf("expression index %d out of range for %d expressions", idx, len(exprData._list))
 					}
+
 					expr = exprData._list[idx]
+
+					// simpler, skips code duplication
 					goto buildExpression
 				}
 
+				// assume the identifier is a name for an expression
 				expr, ok = exprData._map[exprId]
 				if !ok {
 					return "", nil, fmt.Errorf("expression %q not found in data", exprId)
 				}
 
 			buildExpression:
-				expr = expr.Resolve(info)
 				var exprStr strings.Builder
-				var exprParams = expr.SQL(&exprStr)
+				var exprParams = expr.
+					Resolve(info).
+					SQL(&exprStr)
+
 				return exprStr.String(), exprParams, nil
 			},
 		},
 	},
 }
-
-var (
-	stmtBuilder = &statementBuilder{
-		info: []StatementParser{
-			STMT.Field,
-			STMT.Table,
-			STMT.Value,
-			STMT.Expr,
-		},
-	}
-)
 
 type statementParser struct {
 	typ         string
@@ -318,6 +326,10 @@ type parserArg struct {
 	data  any
 }
 
+// StatementParserArg creates a parserArg for the given type and data.
+//
+// a parserArg is a special case used in [ExpressionStatement.Resolve] to
+// pass additional data to a registered parser.
 func StatementParserArg(which string, data any) any {
 	if which == "" {
 		panic(fmt.Errorf("NodeArg must have a non-empty 'which' field"))
@@ -447,6 +459,15 @@ func (b *statementBuilder) nodes(stmt string) *nodeResolver {
 		nodes:     matches,
 		nodeTexts: nodeTexts,
 	}
+}
+
+var stmtBuilder = &statementBuilder{
+	info: []StatementParser{
+		STMT.Field,
+		STMT.Table,
+		STMT.Value,
+		STMT.Expr,
+	},
 }
 
 type expressionStatementInfo struct {
