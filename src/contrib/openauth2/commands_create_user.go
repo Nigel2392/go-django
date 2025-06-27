@@ -1,10 +1,10 @@
 package openauth2
 
 import (
-	"context"
 	"flag"
-	"time"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/command"
 )
 
@@ -23,8 +23,6 @@ var command_create_user = &command.Cmd[createUserStorage]{
 	},
 	Execute: func(m command.Manager, stored createUserStorage, args []string) error {
 		var (
-			qs                   = App.Querier()
-			ctx                  = context.Background()
 			identifier, provider string
 			err                  error
 		)
@@ -48,18 +46,17 @@ var command_create_user = &command.Cmd[createUserStorage]{
 			break
 		}
 
-		u, err := qs.CreateUser(
-			ctx,
-			identifier,
-			provider,
-			[]byte{},
-			"",
-			"",
-			"",
-			time.Time{},
-			stored.super,
-			!stored.inactive,
-		)
+		u, err := queries.GetQuerySet(&User{}).Create(&User{
+			UniqueIdentifier: identifier,
+			ProviderName:     provider,
+			Data:             []byte{},
+			AccessToken:      "",
+			RefreshToken:     "",
+			TokenType:        "",
+			ExpiresAt:        drivers.Timestamp{},
+			IsAdministrator:  stored.super,
+			IsActive:         !stored.inactive,
+		})
 		if err != nil {
 			m.Logf("Error creating user: %s", err)
 		}

@@ -12,7 +12,6 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
-	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/mattn/go-sqlite3"
 )
@@ -67,7 +66,7 @@ func (m *SQLiteSchemaEditor) queryRow(ctx context.Context, query string, args ..
 }
 
 func (m *SQLiteSchemaEditor) Execute(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	logger.Debugf("SQLiteSchemaEditor.ExecContext:\n%s", query)
+	// logger.Debugf("SQLiteSchemaEditor.ExecContext:\n%s", query)
 	result, err := m.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return nil, err

@@ -1,23 +1,25 @@
 package openauth2
 
 import (
+	"errors"
 	"net/http"
 
-	openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
-func UnAuthenticatedUser() *openauth2models.User {
-	return &openauth2models.User{
+func UnAuthenticatedUser() *User {
+	return &User{
 		IsLoggedIn: false,
 	}
 }
 
 // Get the user from a request.
-func UserFromRequest(r *http.Request) *openauth2models.User {
+func UserFromRequest(r *http.Request) *User {
 
 	var session = sessions.Retrieve(r)
 	except.Assert(
@@ -31,17 +33,22 @@ func UserFromRequest(r *http.Request) *openauth2models.User {
 		return UnAuthenticatedUser()
 	}
 
-	var uidInt, ok = userID.(uint64)
-	if !ok {
+	var userRow, err = queries.GetQuerySet(&User{}).
+		Filter("ID", userID).
+		Filter("IsActive", true).
+		Get()
+	if err != nil && errors.Is(err, query_errors.ErrNoRows) {
 		return UnAuthenticatedUser()
-	}
-	var user, err = App.queryset.RetrieveUserByID(r.Context(), uidInt)
-	if err != nil {
+	} else if err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"Failed to retrieve user from database",
+		)
 		return UnAuthenticatedUser()
 	}
 
-	user.IsLoggedIn = true
-	return user
+	userRow.Object.IsLoggedIn = true
+	return userRow.Object
 }
 
 func UserFromRequestPure(r *http.Request) authentication.User {

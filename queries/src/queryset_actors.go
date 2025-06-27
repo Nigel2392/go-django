@@ -17,7 +17,13 @@ const (
 	actsAfterCreate
 	actsBeforeUpdate
 	actsAfterUpdate
+	actsBeforeDelete
+	actsAfterDelete
 )
+
+func (a actorFlag) wasSet(flag actorFlag) bool {
+	return a&flag != 0
+}
 
 type ActsAfterQuery interface {
 	AfterQuery(qs *GenericQuerySet) error
@@ -47,47 +53,81 @@ type ActsAfterUpdate interface {
 	AfterUpdate(qs *GenericQuerySet) error
 }
 
+type ActsBeforeDelete interface {
+	BeforeDelete(qs *GenericQuerySet) error
+}
+
+type ActsAfterDelete interface {
+	AfterDelete(qs *GenericQuerySet) error
+}
+
 func runActor(which actorFlag, targetObj attrs.Definer, qs *QuerySet[attrs.Definer]) error {
 	switch {
-	case which&actsAfterQuery != 0:
+	case which.wasSet(actsAfterQuery):
 		if s, ok := targetObj.(ActsAfterQuery); ok {
 			return s.AfterQuery(qs)
 		}
-	case which&actsBeforeSave != 0:
+	case which.wasSet(actsBeforeSave):
+
+		var err = SignalPreModelSave.Send(SignalSave{
+			Instance: targetObj,
+			Using:    qs.Compiler(),
+		})
+		if err != nil {
+			return fmt.Errorf("error running pre-save signal: %w", err)
+		}
+
 		if s, ok := targetObj.(ActsBeforeSave); ok {
 			return s.BeforeSave(qs)
 		}
-	case which&actsAfterSave != 0:
+	case which.wasSet(actsAfterSave):
+
+		var err = SignalPostModelSave.Send(SignalSave{
+			Instance: targetObj,
+			Using:    qs.Compiler(),
+		})
+		if err != nil {
+			return fmt.Errorf("error running post-save signal: %w", err)
+		}
+
 		if s, ok := targetObj.(ActsAfterSave); ok {
 			return s.AfterSave(qs)
 		}
-	case which&actsBeforeCreate != 0:
+	case which.wasSet(actsBeforeCreate):
 		if err := runActor(actsBeforeSave, targetObj, qs); err != nil {
 			return err
 		}
 		if s, ok := targetObj.(ActsBeforeCreate); ok {
 			return s.BeforeCreate(qs)
 		}
-	case which&actsAfterCreate != 0:
+	case which.wasSet(actsAfterCreate):
 		if err := runActor(actsAfterSave, targetObj, qs); err != nil {
 			return err
 		}
 		if s, ok := targetObj.(ActsAfterCreate); ok {
 			return s.AfterCreate(qs)
 		}
-	case which&actsBeforeUpdate != 0:
+	case which.wasSet(actsBeforeUpdate):
 		if err := runActor(actsBeforeSave, targetObj, qs); err != nil {
 			return err
 		}
 		if s, ok := targetObj.(ActsBeforeUpdate); ok {
 			return s.BeforeUpdate(qs)
 		}
-	case which&actsAfterUpdate != 0:
+	case which.wasSet(actsAfterUpdate):
 		if err := runActor(actsAfterSave, targetObj, qs); err != nil {
 			return err
 		}
 		if s, ok := targetObj.(ActsAfterUpdate); ok {
 			return s.AfterUpdate(qs)
+		}
+	case which.wasSet(actsBeforeDelete):
+		if s, ok := targetObj.(ActsBeforeDelete); ok {
+			return s.BeforeDelete(qs)
+		}
+	case which.wasSet(actsAfterDelete):
+		if s, ok := targetObj.(ActsAfterDelete); ok {
+			return s.AfterDelete(qs)
 		}
 	default:
 		return fmt.Errorf("unknown actor flag: %d", which)

@@ -2273,6 +2273,11 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 //
 // It takes a list of definer objects as arguments and returns a Query that can be executed
 // to get the result, which is a slice of the created objects.
+//
+// It panics if a non- nullable field is null or if the field is not found in the model.
+//
+// This function will run the [ActsBeforeCreate] and [ActsAfterCreate] actor methods
+// for each object, as well as send the [SignalPreModelSave] and [SignalPostModelSave] signals.
 func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
@@ -2542,6 +2547,9 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 //
 // It takes a list of definer objects as arguments and any possible NamedExpressions.
 // It does not try to call any save methods on the objects.
+//
+// It will run the actor methods of [ActsBeforeUpdate] and [ActsAfterUpdate] for each object,
+// as well as send the [SignalPreModelSave] and [SignalPostModelSave] signals.
 func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error) {
 
 	var tx, err = qs.GetOrCreateTransaction()
@@ -2588,21 +2596,6 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 		joins = slices.Clone(qs.internals.Joins)
 	)
 
-	var (
-		canBeforeUpdate bool
-		canAfterUpdate  bool
-	)
-
-	if len(objects) > 0 {
-		var obj = objects[0]
-		_, canBeforeUpdate = any(obj).(ActsBeforeUpdate)
-		_, canAfterUpdate = any(obj).(ActsAfterUpdate)
-		_, canBeforeSave := any(obj).(ActsBeforeSave)
-		_, canAfterSave := any(obj).(ActsAfterSave)
-		canBeforeUpdate = canBeforeUpdate || canBeforeSave
-		canAfterUpdate = canAfterUpdate || canAfterSave
-	}
-
 	var typ reflect.Type
 	for _, obj := range objects {
 
@@ -2623,14 +2616,10 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 			))
 		}
 
-		if canBeforeUpdate {
-			if err := runActor(actsBeforeUpdate, obj, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
-				return 0, errors.Wrapf(
-					err,
-					"failed to run ActsBeforeUpdate for %T",
-					obj,
-				)
-			}
+		if err := runActor(actsBeforeUpdate, obj, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+			return 0, errors.Wrapf(
+				err, "failed to run ActsBeforeUpdate for %T", obj,
+			)
 		}
 
 		var defs, fields = qs.updateFields(obj)
@@ -2723,15 +2712,15 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 		)
 	}
 
-	if canAfterUpdate {
-		for _, obj := range objects {
-			if err := runActor(actsAfterUpdate, obj, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
-				return 0, errors.Wrapf(
-					err,
-					"failed to run ActsAfterUpdate for %T",
-					obj,
-				)
-			}
+	// Must always run the after update actor
+	// even if it was not implemented - the signal must be sent
+	for _, obj := range objects {
+		if err := runActor(actsAfterUpdate, obj, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+			return 0, errors.Wrapf(
+				err,
+				"failed to run ActsAfterUpdate for %T",
+				obj,
+			)
 		}
 	}
 
@@ -2823,6 +2812,10 @@ func (qs *QuerySet[T]) BatchUpdate(objects []T, exprs ...any) (int64, error) {
 // Delete is used to delete an object from the database.
 //
 // It returns a CountQuery that can be executed to get the result, which is the number of rows affected.
+//
+// If any objects are provided, it will generate a where clause based on [GenerateObjectsWhereClause].
+// It will also run the [ActsBeforeDelete] and [ActsAfterDelete] actor methods and
+// send [SignalPreModelDelete] and [SignalPostModelDelete] signals.
 func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 
 	var tx, err = qs.GetOrCreateTransaction()
@@ -2834,6 +2827,14 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 	defer tx.Rollback(qs.context)
 
 	if len(objects) > 0 {
+		for _, obj := range objects {
+			if err := runActor(actsBeforeDelete, obj, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+				return 0, errors.Wrapf(
+					err, "failed to run ActsBeforeDelete for %T", obj,
+				)
+			}
+		}
+
 		var where, err = GenerateObjectsWhereClause(objects...)
 		if err != nil {
 			return 0, errors.Wrapf(
@@ -2841,6 +2842,7 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 				qs.internals.Model.Object,
 			)
 		}
+
 		qs.internals.Where = append(qs.internals.Where, where...)
 	}
 
@@ -2854,6 +2856,16 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 	res, err := resultQuery.Exec()
 	if err != nil {
 		return 0, err
+	}
+
+	if len(objects) > 0 {
+		for _, obj := range objects {
+			if err := runActor(actsAfterDelete, obj, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+				return 0, errors.Wrapf(
+					err, "failed to run ActsAfterDelete for %T", obj,
+				)
+			}
+		}
 	}
 
 	return res, tx.Commit(qs.context)

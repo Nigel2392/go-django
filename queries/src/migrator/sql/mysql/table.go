@@ -102,7 +102,7 @@ func (m *MySQLSchemaEditor) queryRow(ctx context.Context, query string, args ...
 }
 
 func (m *MySQLSchemaEditor) Execute(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	logger.Debugf("MySQLSchemaEditor.ExecContext:\n%s", query)
+	// logger.Debugf("MySQLSchemaEditor.ExecContext:\n%s", query)
 	result, err := m.db.ExecContext(ctx, query, args...)
 	if err != nil {
 		return nil, err

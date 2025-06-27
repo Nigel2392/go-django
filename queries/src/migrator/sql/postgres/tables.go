@@ -12,7 +12,6 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
-	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
 var _ migrator.SchemaEditor = &PostgresSchemaEditor{}
@@ -78,7 +77,7 @@ func (m *PostgresSchemaEditor) QueryRow(ctx context.Context, query string, args 
 }
 
 func (m *PostgresSchemaEditor) Execute(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	logger.Debugf("PostgresSchemaEditor.ExecContext:\n%s", query)
+	// logger.Debugf("PostgresSchemaEditor.ExecContext:\n%s", query)
 	return m.db.ExecContext(ctx, query, args...)
 }
 

@@ -118,11 +118,11 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 		nameRegex,
 	)
 
-	var _, isModel = opts.Model.(models.Model)
-	if !isModel {
+	var implementsSave, implementsDelete = models.ImplementsMethods(opts.Model)
+	if !implementsSave || !implementsDelete {
 		logger.Warnf(
-			"Model %q does not implement models.Model interface",
-			model.GetName(),
+			"Model %q is not fully implemented, canSave: %t, canDelete: %t",
+			model.GetName(), implementsSave, implementsDelete,
 		)
 	}
 

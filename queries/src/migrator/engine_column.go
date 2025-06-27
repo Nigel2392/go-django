@@ -215,6 +215,10 @@ func (c *Column) HasDefault() bool {
 		return false
 	}
 
+	if isZero, ok := c.Default.(interface{ IsZero() bool }); ok {
+		return !isZero.IsZero()
+	}
+
 	var rv = reflect.ValueOf(c.Default)
 	if rv.Kind() == reflect.Ptr {
 		if !rv.IsValid() || rv.IsNil() {
@@ -227,6 +231,8 @@ func (c *Column) HasDefault() bool {
 		return rv.String() != ""
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return rv.Int() != 0
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return rv.Uint() != 0
 	case reflect.Float32, reflect.Float64:
 		return rv.Float() != 0.0
 	case reflect.Array, reflect.Slice, reflect.Map:

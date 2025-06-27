@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"encoding/base64"
 	"fmt"
+	"hash/fnv"
 	"net/url"
 	"strings"
 	"time"
@@ -251,8 +252,29 @@ uniqueFieldsLoop:
 				sb.WriteString(base64.StdEncoding.EncodeToString(v))
 			case time.Time:
 				sb.WriteString(v.UTC().Format(time.RFC3339Nano)) // consistent time format
+			case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64:
+				sb.WriteString(fmt.Sprintf("%d", v))
+			case float32, float64:
+				sb.WriteString(fmt.Sprintf("%f", v))
+			case bool:
+				if v {
+					sb.WriteString("true")
+				} else {
+					sb.WriteString("false")
+				}
+			case nil:
+				sb.WriteString("nil")
 			default:
-				fmt.Fprintf(&sb, "%v", v)
+				var hash = fnv.New64a()
+				_, err = hash.Write([]byte(fmt.Sprintf("%v", v)))
+				if err != nil {
+					return nil, fmt.Errorf(
+						"error hashing value for field %q in model %T: %w",
+						part.name, obj, err,
+					)
+				}
+				var hashBytes = hash.Sum(nil)
+				sb.WriteString(fmt.Sprintf("%x", hashBytes))
 			}
 		}
 	}

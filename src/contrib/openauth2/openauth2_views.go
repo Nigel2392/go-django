@@ -1,11 +1,13 @@
 package openauth2
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"net/http"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -134,7 +136,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 	)
 
 	// Scan the response body into the data struct
-	data, err := a.ScanStruct(resp.Body)
+	data, err := a.ScanContentObject(resp.Body)
 	except.AssertNil(
 		err, http.StatusInternalServerError,
 		"Failed to scan data into struct",
@@ -166,10 +168,8 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 	logger.Debugf("Identifier from data struct: %s", identifier)
 
 	// Check if the user already exists in the database
-	user, err := oa.queryset.RetrieveUserByIdentifier(
-		r.Context(), identifier, a.Provider,
-	)
-	if err != nil && !errors.Is(err, sql.ErrNoRows) {
+	user, err := GetUserByIdentifier(r.Context(), a.Provider, identifier)
+	if err != nil && !errors.Is(err, query_errors.ErrNoRows) {
 		// An error occurred while retrieving the user from the database
 		// Log the error and return a 500 status code
 		logger.Errorf("Failed to retrieve user from database: %s", err)
@@ -178,53 +178,37 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 			"Failed to retrieve user from database",
 		)
 		return
-	} else if err != nil && errors.Is(err, sql.ErrNoRows) {
+	} else if err != nil && errors.Is(err, query_errors.ErrNoRows) {
 		logger.Debug("User not found in database, creating new user")
 		// User not found, create a new user in the database
-		lastId, err := oa.queryset.CreateUser(
-			r.Context(),
-			identifier,
-			a.Provider,
-			rawData,
-			token.AccessToken,
-			token.RefreshToken,
-			token.TokenType,
-			token.Expiry,
-			false,
-			!oa.Config.UserDefaultIsDisabled,
-		)
+		user, err = queries.GetQuerySetWithContext(r.Context(), &User{}).Create(&User{
+			UniqueIdentifier: identifier,
+			ProviderName:     a.Provider,
+			Data:             rawData,
+			AccessToken:      drivers.Text(token.AccessToken),
+			RefreshToken:     drivers.Text(token.RefreshToken),
+			TokenType:        token.TokenType,
+			ExpiresAt:        drivers.Timestamp(token.Expiry),
+			IsAdministrator:  false,
+			IsActive:         !oa.Config.UserDefaultIsDisabled,
+		})
 		except.AssertNil(
 			err, http.StatusInternalServerError,
 			"Failed to create user in database",
 		)
 
-		// Retrieve the full user model from the database by ID
-		user, err = oa.queryset.RetrieveUserByID(
-			r.Context(), uint64(lastId),
-		)
-		except.AssertNil(
-			err, http.StatusInternalServerError,
-			"Failed to retrieve user from database",
-		)
-
 	} else if err == nil {
 		logger.Debug("User found in database, updating user")
 		// User found, update user token information in the database
-		err = oa.queryset.UpdateUser(
-			r.Context(),
-			a.Provider,
-			rawData,
-			token.AccessToken,
-			token.RefreshToken,
-			token.TokenType,
-			token.Expiry,
-			user.IsAdministrator,
-			user.IsActive,
-			user.ID,
-		)
+		_, err = queries.GetQuerySetWithContext(r.Context(), &User{}).
+			ExplicitSave().
+			Select("Data", "AccessToken", "RefreshToken", "TokenType", "ExpiresAt").
+			Filter("ID", user.ID).
+			Update(user)
+
 		except.AssertNil(
 			err, http.StatusInternalServerError,
-			"Failed to update user token in database",
+			"Failed to update user in database",
 		)
 	}
 
@@ -272,17 +256,14 @@ func (oa *OpenAuth2AppConfig) LoginHandler(w http.ResponseWriter, r *http.Reques
 }
 
 func (oa *OpenAuth2AppConfig) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	var redirectURL = r.URL.Query().Get(
-		"next",
-	)
+	var redirectURL = r.URL.Query().Get("next")
 	if redirectURL == "" {
 		if oa.Config.RedirectAfterLogout != nil {
 			redirectURL = oa.Config.RedirectAfterLogout(r)
 		}
 	}
-	var u = authentication.Retrieve(
-		r,
-	)
+
+	var u = authentication.Retrieve(r)
 	if u == nil || !u.IsAuthenticated() {
 		http.Redirect(
 			w, r,

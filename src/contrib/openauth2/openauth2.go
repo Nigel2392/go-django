@@ -1,22 +1,19 @@
 package openauth2
 
 import (
-	"bytes"
-	"context"
 	"embed"
 	"errors"
 	"fmt"
 	"net/http"
 	"strings"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
-	openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
-	_ "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models/mysqlc"
-	_ "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models/sqlitec"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -61,7 +58,7 @@ type Config struct {
 	// Note:
 	//  If this is not set, the default URL will be "/".
 	// 	A redirect URL might also be stored in a HTTP-only cookie, if present the cookie's URL will be used instead.
-	RedirectAfterLogin func(user *openauth2models.User, datastruct interface{}, r *http.Request) string
+	RedirectAfterLogin func(user *User, datastruct interface{}, r *http.Request) string
 
 	// A function to generate the default URL after the user has logged out.
 	RedirectAfterLogout func(r *http.Request) string
@@ -69,13 +66,8 @@ type Config struct {
 
 type OpenAuth2AppConfig struct {
 	*apps.DBRequiredAppConfig
-	Config   *Config
-	_cnfs    map[string]AuthConfig
-	queryset openauth2models.Querier
-}
-
-func (oa *OpenAuth2AppConfig) Querier() openauth2models.Querier {
-	return oa.queryset
+	Config *Config
+	_cnfs  map[string]AuthConfig
 }
 
 func NewAppConfig(cnf Config) django.AppConfig {
@@ -95,7 +87,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 	}
 
 	App.ModelObjects = []attrs.Definer{
-		&openauth2models.User{},
+		&User{},
 	}
 
 	App.Init = func(settings django.Settings, db drivers.Database) error {
@@ -103,28 +95,25 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			return errors.New("OpenAuth2: No providers configured")
 		}
 
-		var backend, err = openauth2models.GetBackend(db.Driver())
-		if err != nil {
-			return err
-		}
+		if !django.AppInstalled("migrator") {
+			var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())
+			if err != nil {
+				return fmt.Errorf("failed to get schema editor: %w", err)
+			}
 
-		err = backend.CreateTable(db)
-		if err != nil {
-			return err
-		}
+			var table = migrator.NewModelTable(&User{})
+			if err := schemaEditor.CreateTable(table, true); err != nil {
+				return fmt.Errorf("failed to create pages table: %w", err)
+			}
 
-		queryset, err := backend.NewQuerySet(db)
-		if err != nil {
-			return err
+			for _, index := range table.Indexes() {
+				if err := schemaEditor.AddIndex(table, index, true); err != nil {
+					return fmt.Errorf("failed to create index %s: %w", index.Name(), err)
+				}
+			}
 		}
-		App.queryset = &openauth2models.SignalsQuerier{Querier: queryset}
 
 		autherrors.RegisterHook("auth2:login")
-
-		admin.ConfigureAuth(admin.AuthConfig{
-			GetLoginHandler: App.AdminLoginHandler,
-			Logout:          Logout,
-		})
 
 		staticfiles.AddFS(
 			filesystem.Sub(
@@ -136,24 +125,32 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			),
 		)
 
-		tpl.Add(tpl.Config{
-			AppName: "openauth2",
-			FS: filesystem.NewMultiFS(
-				filesystem.Sub(
-					assets, "assets/templates",
+		// Register everything required to the admin if it is installed.
+		if django.AppInstalled("admin") {
+			admin.ConfigureAuth(admin.AuthConfig{
+				GetLoginHandler: App.AdminLoginHandler,
+				Logout:          Logout,
+			})
+
+			tpl.Add(tpl.Config{
+				AppName: "openauth2",
+				FS: filesystem.NewMultiFS(
+					filesystem.Sub(
+						assets, "assets/templates",
+					),
+					admin.AdminSite.TemplateConfig.FS,
 				),
-				admin.AdminSite.TemplateConfig.FS,
-			),
-			Matches: filesystem.MatchOr(
-				filesystem.MatchAnd(
-					filesystem.MatchPrefix("oauth2"),
-					filesystem.MatchSuffix(".tmpl"),
+				Matches: filesystem.MatchOr(
+					filesystem.MatchAnd(
+						filesystem.MatchPrefix("oauth2"),
+						filesystem.MatchSuffix(".tmpl"),
+					),
+					admin.AdminSite.TemplateConfig.Matches,
 				),
-				admin.AdminSite.TemplateConfig.Matches,
-			),
-			Bases: admin.AdminSite.TemplateConfig.Bases,
-			Funcs: admin.AdminSite.TemplateConfig.Funcs,
-		})
+				Bases: admin.AdminSite.TemplateConfig.Bases,
+				Funcs: admin.AdminSite.TemplateConfig.Funcs,
+			})
+		}
 
 		return nil
 	}
@@ -199,20 +196,18 @@ func NewAppConfig(cnf Config) django.AppConfig {
 	}
 
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
-		ContentObject:  &openauth2models.User{},
+		ContentObject:  &User{},
 		GetLabel:       trans.S("User"),
 		GetPluralLabel: trans.S("Users"),
 		GetInstanceLabel: func(a any) string {
-			var u = a.(*openauth2models.User)
+			var u = a.(*User)
 			var providerConfig, ok = App._cnfs[u.ProviderName]
 			if !ok {
 				return u.String()
 			}
 
 			if providerConfig.UserToString != nil {
-				var dataStruct, err = providerConfig.ScanStruct(
-					bytes.NewReader(u.Data),
-				)
+				var dataStruct, err = u.ContentObject()
 				if err != nil {
 					return u.String()
 				}
@@ -221,22 +216,33 @@ func NewAppConfig(cnf Config) django.AppConfig {
 
 			return u.String()
 		},
-		GetInstance: func(i interface{}) (interface{}, error) {
-			var u, err = attrs.CastToNumber[uint64](i)
+		GetInstance: func(id interface{}) (interface{}, error) {
+			var instance, err = queries.
+				GetQuerySet(&User{}).
+				Filter("ID", id).
+				Get()
 			if err != nil {
 				return nil, err
 			}
 
-			instance, err := App.queryset.RetrieveUserByID(
-				context.Background(), u,
-			)
-			return instance, err
+			return instance.Object, nil
 		},
 		GetInstances: func(amount, offset uint) ([]interface{}, error) {
-			var instances, err = App.queryset.RetrieveUsers(
-				context.Background(), int32(amount), int32(offset),
-			)
-			return attrs.InterfaceList(instances), err
+			var instances, err = queries.
+				GetQuerySet(&User{}).
+				Limit(int(amount)).
+				Offset(int(offset)).
+				All()
+			if err != nil {
+				return nil, err
+			}
+
+			var result = make([]interface{}, len(instances))
+			for i, instance := range instances {
+				result[i] = instance.Object
+			}
+
+			return result, nil
 		},
 	})
 
@@ -257,7 +263,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 		admin.ModelOptions{
 			RegisterToAdminMenu: true,
 			Name:                "OAuth2User",
-			Model:               &openauth2models.User{},
+			Model:               &User{},
 			MenuLabel:           trans.S("Users"),
 			DisallowCreate:      true,
 			DisallowDelete:      true,
@@ -300,14 +306,14 @@ func NewAppConfig(cnf Config) django.AppConfig {
 							return django.Reverse(
 								"admin:apps:model:edit",
 								"openauth2", "OAuth2User",
-								row.(*openauth2models.User).ID,
+								row.(*User).ID,
 							)
 						},
 					),
 					"HasRefreshToken": list.FuncColumn(
 						trans.S("Has Refresh Token"),
 						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {
-							var u = row.(*openauth2models.User)
+							var u = row.(*User)
 							return u.RefreshToken != ""
 						},
 					),

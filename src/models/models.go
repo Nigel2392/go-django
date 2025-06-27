@@ -23,10 +23,24 @@ type Deleter interface {
 	Delete() error
 }
 
-type Model interface {
-	attrs.Definer
-	ContextSaver
-	ContextDeleter
+func ImplementsMethods(m attrs.Definer) (definesSave, definesDelete bool) {
+	if _, ok := m.(ContextSaver); ok {
+		definesSave = true
+	}
+
+	if _, ok := m.(Saver); ok {
+		definesSave = true
+	}
+
+	if _, ok := m.(ContextDeleter); ok {
+		definesDelete = true
+	}
+
+	if _, ok := m.(Deleter); ok {
+		definesDelete = true
+	}
+
+	return definesSave, definesDelete
 }
 
 type ModelFunc func(c context.Context, m attrs.Definer) (changed bool, err error)

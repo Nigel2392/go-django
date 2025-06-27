@@ -1,9 +1,12 @@
 package openauth2
 
 import (
+	"context"
+	"fmt"
 	"net/http"
+	"sync"
 
-	openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"golang.org/x/oauth2"
 )
@@ -12,7 +15,13 @@ const (
 	ErrUserNil errs.Error = "User is nil"
 )
 
-func newSavingTokenSource(src oauth2.TokenSource, u *openauth2models.User) oauth2.TokenSource {
+func newSavingTokenSource(src oauth2.TokenSource, u *User) oauth2.TokenSource {
+	if u == nil {
+		panic(fmt.Errorf(
+			"newSavingTokenSource: User is nil, cannot create token source for nil user: %w",
+			ErrUserNil,
+		))
+	}
 	return &savingTokenSource{
 		pts: src,
 		u:   u,
@@ -20,76 +29,89 @@ func newSavingTokenSource(src oauth2.TokenSource, u *openauth2models.User) oauth
 }
 
 type savingTokenSource struct {
-	pts oauth2.TokenSource // called when t is expired.
-	u   *openauth2models.User
+	pts oauth2.TokenSource
+	mu  sync.Mutex
+	u   *User
 }
 
 func (s *savingTokenSource) Token() (*oauth2.Token, error) {
-	t, err := s.pts.Token()
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.u.Token().Valid() {
+		return s.u.Token(), nil
+	}
+
+	var t, err = s.pts.Token()
 	if err != nil {
 		return nil, err
 	}
 
 	// Save the token to the user.
-	if s.u != nil {
+	if s.u != nil && t.Valid() {
 		s.u.SetToken(t)
-		err = App.Querier().UpdateUser(
-			s.u.Context(),
-			s.u.ProviderName,
-			s.u.Data,
-			t.AccessToken,
-			t.RefreshToken,
-			t.TokenType,
-			t.Expiry,
-			s.u.IsAdministrator,
-			s.u.IsActive,
-			s.u.ID,
-		)
+
+		ctx := s.u.Context()
+		if ctx == nil {
+			ctx = context.Background()
+		}
+
+		_, err = queries.GetQuerySetWithContext(ctx, s.u).
+			ExplicitSave().
+			Select("AccessToken", "RefreshToken", "TokenType", "ExpiresAt").
+			Filter("ID", s.u.ID).
+			Update(s.u)
 	}
 
 	return t, err
 }
 
-// RefreshTokens refreshes the tokens for a user.
+type ProviderTokenSource struct {
+	pts      oauth2.TokenSource
+	Provider *AuthConfig
+	User     *User
+}
+
+func (pts *ProviderTokenSource) Token() (*oauth2.Token, error) {
+	return pts.pts.Token()
+}
+
+// TokenSource returns a new oauth2.TokenSource for the user.
 //
-// It will return the new token and an error if one occurred.
-//
-// It will also update the user with the new token in the database.
-func RefreshTokens(u *openauth2models.User) (*oauth2.Token, error) {
-	if u == nil {
-		return nil, ErrUserNil
-	}
+// This token source will automatically refresh the access token when it expires.
+func TokenSource(u *User) *ProviderTokenSource {
 	var token = u.Token()
 	var conf, err = App.Provider(u.ProviderName)
 	if err != nil {
-		return nil, err
+		panic(fmt.Errorf(
+			"failed to get provider %s: %w",
+			u.ProviderName, err,
+		))
 	}
 
-	var ts = conf.Oauth2.TokenSource(
+	var ts = conf.TokenSource(
 		u.Context(),
 		token,
 	)
 
-	newToken, err := ts.Token()
-	if err != nil {
-		return nil, err
+	return &ProviderTokenSource{
+		pts:      newSavingTokenSource(ts, u),
+		Provider: conf,
+		User:     u,
+	}
+}
+
+// RefreshTokens refreshes the tokens for a user if the access token is expired.
+// If the token is still valid, that token will be returned instead.
+//
+// It will return the new token and an error if one occurred.
+//
+// It will also update the user with the new token in the database.
+func RefreshTokens(u *User) (*oauth2.Token, error) {
+	if u == nil {
+		return nil, ErrUserNil
 	}
 
-	u.SetToken(newToken)
-	err = App.Querier().UpdateUser(
-		u.Context(),
-		u.ProviderName,
-		u.Data,
-		newToken.AccessToken,
-		newToken.RefreshToken,
-		newToken.TokenType,
-		newToken.Expiry,
-		u.IsAdministrator,
-		u.IsActive,
-		u.ID,
-	)
-
-	return newToken, err
+	return TokenSource(u).Token()
 }
 
 // Create a new HTTP client with the token source for the user.
@@ -99,24 +121,9 @@ func RefreshTokens(u *openauth2models.User) (*oauth2.Token, error) {
 // The client will automatically refresh the access token when it expires.
 //
 // It will also update the user with the new token in the database.
-func Client(u *openauth2models.User) (*http.Client, error) {
+func Client(u *User) (*http.Client, error) {
 	if u == nil {
 		return nil, ErrUserNil
 	}
-	var token = u.Token()
-	var conf, err = App.Provider(u.ProviderName)
-	if err != nil {
-		return nil, err
-	}
-
-	var ts = conf.Oauth2.TokenSource(
-		u.Context(),
-		token,
-	)
-
-	var cts = newSavingTokenSource(ts, u)
-	return oauth2.NewClient(
-		u.Context(),
-		cts,
-	), nil
+	return oauth2.NewClient(u.Context(), TokenSource(u)), nil
 }

@@ -1,11 +1,11 @@
 package openauth2
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 
-	openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
 	"github.com/qdm12/reprint"
 	"golang.org/x/oauth2"
 )
@@ -71,11 +71,22 @@ type AuthConfig struct {
 	// NOT be used for JSON unmarshalling.
 	DataStruct interface{}
 
+	// ScanDataStruct is a function that takes an io.Reader and returns a data struct.
+
 	// UserToString is a function that takes a user and returns a string.
 	//
 	// It can act on the user's data struct to return a string.
 	// It is used for display purposes only.
-	UserToString func(user *openauth2models.User, dataStruct interface{}) string
+	UserToString func(user *User, dataStruct interface{}) string
+
+	// GetTokenSource is a function that takes a context and a token,
+	// and returns a new oauth2.TokenSource.
+	//
+	// It is used to create a new oauth2.TokenSource for the user.
+	//
+	// The token will be wrapped in a savingTokenSource, which will save the token to the user
+	// when it is refreshed.
+	GetTokenSource func(context context.Context, token *oauth2.Token) oauth2.TokenSource
 }
 
 func (c *AuthConfig) ReadableName() string {
@@ -85,7 +96,19 @@ func (c *AuthConfig) ReadableName() string {
 	return c.Provider
 }
 
-func (c *AuthConfig) ScanStruct(r io.Reader) (interface{}, error) {
+// TokenSource returns a new oauth2.TokenSource for the user.
+//
+// This token source will not automatically refresh the access token when it expires.
+// It will also not update the user with the new token in the database.
+func (c *AuthConfig) TokenSource(context context.Context, token *oauth2.Token) oauth2.TokenSource {
+	if c.GetTokenSource != nil {
+		return c.GetTokenSource(context, token)
+	}
+
+	return c.Oauth2.TokenSource(context, token)
+}
+
+func (c *AuthConfig) ScanContentObject(r io.Reader) (interface{}, error) {
 	if c.DataStruct == nil {
 		return nil, errors.New("DataStruct was not provided")
 	}
@@ -93,15 +116,5 @@ func (c *AuthConfig) ScanStruct(r io.Reader) (interface{}, error) {
 	var copy = reprint.This(c.DataStruct)
 	var dec = json.NewDecoder(r)
 	var err = dec.Decode(copy)
-	return copy, err
-}
-
-func (c *AuthConfig) DataForUser(user *openauth2models.User) (interface{}, error) {
-	if c.DataStruct == nil {
-		return nil, errors.New("DataStruct was not provided")
-	}
-
-	var copy = reprint.This(c.DataStruct)
-	err := json.Unmarshal(user.Data, copy)
 	return copy, err
 }

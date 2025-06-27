@@ -4,13 +4,12 @@ import (
 	"net/http"
 
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
-	openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
-func Login(r *http.Request, u *openauth2models.User) (*openauth2models.User, error) {
+func Login(r *http.Request, u *User) (*User, error) {
 	var session = sessions.Retrieve(r)
 	except.Assert(session != nil, 500, "session is nil")
 

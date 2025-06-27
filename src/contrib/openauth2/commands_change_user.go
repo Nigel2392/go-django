@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/command"
 )
 
@@ -21,11 +22,6 @@ var command_change_user = &command.Cmd[changeUserStorage]{
 		return nil
 	},
 	Execute: func(m command.Manager, stored changeUserStorage, args []string) error {
-		var (
-			qs  = App.Querier()
-			ctx = context.Background()
-		)
-
 		identifier, err := m.Input("Enter user's primary identifier: ")
 		if err != nil {
 			return err
@@ -36,27 +32,30 @@ var command_change_user = &command.Cmd[changeUserStorage]{
 			return err
 		}
 
-		u, err := qs.RetrieveUserByIdentifier(
-			ctx, identifier, provider,
-		)
-		if err != nil {
-			return err
-		}
+		var ctx = context.Background()
+		return queries.RunInTransaction(ctx, func(ctx context.Context, NewQuerySet queries.ObjectsFunc[*User]) (commit bool, err error) {
+			var qs = NewQuerySet(&User{})
 
-		u.IsAdministrator = stored.super
-		u.IsActive = !stored.inactive
+			// Retrieve the user by identifier and provider
+			u, err := qs.Filter(map[string]interface{}{
+				"UniqueIdentifier": identifier,
+				"ProviderName":     provider,
+			}).Get()
+			if err != nil {
+				return false, err
+			}
 
-		return qs.UpdateUser(
-			ctx,
-			u.ProviderName,
-			u.Data,
-			u.AccessToken,
-			u.RefreshToken,
-			u.TokenType,
-			u.ExpiresAt,
-			u.IsAdministrator,
-			u.IsActive,
-			u.ID,
-		)
+			// Update the user's administrator and active status
+			u.Object.IsAdministrator = stored.super
+			u.Object.IsActive = !stored.inactive
+
+			// Save the changes to the user
+			_, err = qs.Select("IsAdministrator", "IsActive").Filter("ID", u.Object.ID).Update(&User{
+				IsAdministrator: u.Object.IsAdministrator,
+				IsActive:        u.Object.IsActive,
+			})
+
+			return err == nil, err
+		})
 	},
 }

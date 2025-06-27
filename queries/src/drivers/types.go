@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -140,6 +141,39 @@ func (t JSON[T]) DBType(obj attrs.Definer, field attrs.Field) Type {
 	return TypeJSON
 }
 
+func isZero(rval reflect.Value) bool {
+	if !rval.IsValid() {
+		return true
+	}
+	switch rval.Kind() {
+	case reflect.Ptr, reflect.Interface:
+		return rval.IsNil() || (!rval.IsNil() && isZero(rval.Elem()))
+	case reflect.Array, reflect.Slice:
+		if rval.IsNil() {
+			return true
+		}
+		if rval.Len() == 0 {
+			return true
+		}
+	case reflect.Map:
+		if rval.IsNil() {
+			return true
+		}
+		if rval.Len() == 0 {
+			return true
+		}
+	}
+	return rval.IsZero()
+}
+
+func (t JSON[T]) IsZero() bool {
+	if t.Null {
+		return true
+	}
+	var val = reflect.ValueOf(t.Data)
+	return isZero(val)
+}
+
 func (t JSON[T]) Value() (driver.Value, error) {
 	var bytes, err = json.Marshal(t)
 	if err != nil {
@@ -192,22 +226,54 @@ func (t *timeType) Scan(value any) error {
 	case uint64:
 		*t = timeType(time.Unix(int64(v), 0))
 	default:
-		return nil
+		return fmt.Errorf(
+			"cannot scan %T into timeType: %w",
+			value, errs.ErrInvalidType,
+		)
 	}
 	return nil
 }
 
-func (t Timestamp) Time() time.Time              { return time.Time(t) }
-func (t Timestamp) Value() (driver.Value, error) { return t.Time(), nil }
-func (t Timestamp) Scan(value any) error         { return (*timeType)(&t).Scan(value) }
+func (t UUID) IsZero() bool { return (uuid.UUID)(t) == uuid.Nil }
 
-func (t LocalTime) Time() time.Time              { return time.Time(t) }
-func (t LocalTime) Value() (driver.Value, error) { return t.Time(), nil }
-func (t LocalTime) Scan(value any) error         { return (*timeType)(&t).Scan(value) }
+func CurrentTimestamp() Timestamp {
+	return Timestamp(time.Now().UTC().Truncate(time.Millisecond))
+}
+func (t Timestamp) IsZero() bool { return t.Time().IsZero() }
+func (t Timestamp) Add(d time.Duration) Timestamp {
+	return Timestamp(t.Time().Add(d).Truncate(time.Millisecond))
+}
+func (t Timestamp) Time() time.Time       { return time.Time(t).Truncate(time.Millisecond) }
+func (t *Timestamp) Scan(value any) error { return (*timeType)(t).Scan(value) }
+func (t Timestamp) Value() (driver.Value, error) {
+	return t.Time(), nil
+}
 
-func (t DateTime) Time() time.Time              { return time.Time(t) }
-func (t DateTime) Value() (driver.Value, error) { return t.Time(), nil }
-func (t *DateTime) Scan(value any) error        { return (*timeType)(t).Scan(value) }
+func CurrentLocalTime() LocalTime {
+	return LocalTime(time.Now().Local().Truncate(time.Second))
+}
+func (t LocalTime) IsZero() bool { return t.Time().IsZero() }
+func (t LocalTime) Add(d time.Duration) LocalTime {
+	return LocalTime(t.Time().Add(d).Truncate(time.Second))
+}
+func (t LocalTime) Time() time.Time       { return time.Time(t).Truncate(time.Second) }
+func (t *LocalTime) Scan(value any) error { return (*timeType)(t).Scan(value) }
+func (t LocalTime) Value() (driver.Value, error) {
+	return t.Time(), nil
+}
+
+func CurrentDateTime() DateTime {
+	return DateTime(time.Now().UTC().Truncate(time.Second))
+}
+func (t DateTime) IsZero() bool { return t.Time().IsZero() }
+func (t DateTime) Add(d time.Duration) DateTime {
+	return DateTime(t.Time().Add(d).Truncate(time.Second))
+}
+func (t DateTime) Time() time.Time       { return time.Time(t).Truncate(time.Second) }
+func (t *DateTime) Scan(value any) error { return (*timeType)(t).Scan(value) }
+func (t DateTime) Value() (driver.Value, error) {
+	return t.Time(), nil
+}
 
 //
 //	func (t *Text) Scan(value any) error {
