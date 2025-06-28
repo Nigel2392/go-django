@@ -34,7 +34,7 @@ func init() {
 	registerType(drivers.TypeBLOB, Type__blob)
 	registerType(drivers.TypeJSON, Type__string)
 	registerType(drivers.TypeTimestamp, Type__timestamp)
-	registerType(drivers.TypeLocalTime, Type__timestamp)
+	registerType(drivers.TypeLocalTime, Type__datetime)
 	registerType(drivers.TypeDateTime, Type__datetime)
 }
 

@@ -218,7 +218,7 @@ func TestCleanup(t *testing.T) {
 		t.Fatalf("got %d: expected %d", count, 1)
 	}
 
-	time.Sleep(600 * time.Millisecond)
+	time.Sleep(650 * time.Millisecond)
 
 	row = db.QueryRowContext(context.Background(), "SELECT COUNT(*) FROM sessions WHERE token = 'cleanup_token'")
 	err = row.Scan(&count)

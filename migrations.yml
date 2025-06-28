@@ -1,0 +1,17 @@
+migrate:
+  src:
+    - ./migrations
+
+  apps:
+    - pages: 
+        dst: src/contrib/pages/migrations
+
+    - session: 
+        dst: src/contrib/session/migrations
+
+    - openauth2: 
+        dst: src/contrib/openauth2/migrations
+
+    - revisions: 
+        dst: src/contrib/revisions/migrations
+ 

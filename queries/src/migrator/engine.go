@@ -12,7 +12,9 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/goldcrest"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/pkg/errors"
 )
@@ -188,6 +190,17 @@ func NewMigrationEngine(path string, schemaEditor SchemaEditor, apps ...string) 
 				var fs = mgAppCnf.GetMigrationFS()
 				if fs != nil {
 					migrationDirectories[app] = fs
+				}
+			} else {
+
+				// Try to get the migration FS from a hook
+				var filesystems = goldcrest.Get[fs.FS](fileSystemHookName(
+					app,
+				))
+
+				if len(filesystems) > 0 {
+					var fileSystems = filesystem.NewMultiFS(filesystems...)
+					migrationDirectories[app] = fileSystems
 				}
 			}
 
@@ -462,7 +475,7 @@ func (m *MigrationEngine) MakeMigrations() error {
 	}
 
 	if !migrationsFound {
-		logger.Warn("No migrations to apply, no changes were detected.")
+		logger.Warn("Migrations were not created - no changes were detected.")
 		return nil
 	}
 

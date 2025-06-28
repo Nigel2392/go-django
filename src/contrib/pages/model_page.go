@@ -7,7 +7,6 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/models"
-	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/gosimple/slug"
 )
@@ -126,6 +125,15 @@ func (n *PageNode) TargetPrimaryField() attrs.FieldDefinition {
 
 func (n *PageNode) FieldDefs() attrs.Definitions {
 	return n.Model.Define(n, func(d attrs.Definer) []attrs.Field {
+
+		//	var relForeignKey attrs.Relation
+		//	if django.AppInstalled != nil && django.AppInstalled("revisions") {
+		//		relForeignKey = attrs.Relate(
+		//			&revisions.Revision{},
+		//			"", nil,
+		//		)
+		//	}
+
 		return []attrs.Field{
 			attrs.NewField(n, "PK"),
 			attrs.NewField(n, "Title"),
@@ -141,10 +149,7 @@ func (n *PageNode) FieldDefs() attrs.Definitions {
 				Null:   true,
 				Blank:  true,
 				Column: "latest_revision_id",
-				RelForeignKey: attrs.Relate(
-					&revisions.Revision{},
-					"", nil,
-				),
+				//	RelForeignKey: relForeignKey,
 			}),
 			attrs.NewField(n, "CreatedAt"),
 			attrs.NewField(n, "UpdatedAt"),

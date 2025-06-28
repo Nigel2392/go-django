@@ -1,17 +1,16 @@
 package logger
 
 import (
-	"fmt"
 	"io"
 	"os"
 )
 
 func printArgs(levelStr string, format string, args ...interface{}) {
-	if format == "" {
-		fmt.Printf("[%s] %s\n", levelStr, fmt.Sprint(args...))
-		return
-	}
-	fmt.Printf("[%s] %s\n", levelStr, fmt.Sprintf(format, args...))
+	//	if format == "" {
+	//		fmt.Printf("[%s] %s\n", levelStr, fmt.Sprint(args...))
+	//		return
+	//	}
+	//	fmt.Printf("[%s] %s\n", levelStr, fmt.Sprintf(format, args...))
 }
 
 var (

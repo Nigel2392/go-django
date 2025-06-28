@@ -1,15 +1,13 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"flag"
-	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
+	"gopkg.in/yaml.v3"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
@@ -29,26 +27,59 @@ import (
 // the app where the migrations are placed should be wrapped by [migrator.MigratorAppConfig], or implement [migrator.MigrationAppConfig],
 // which is used to provide the migration filesystem to the migrator engine
 
+// go run ./dev/migrator makemigrations
+// go run ./dev/migrator clearmigrations
+// go run ./dev/migrator migrate
+
 const ROOT_MIGRATION_DIR = "./migrations"
+const MIGRATION_MAP_FILE = "./migrations.yml"
 
 func main() {
-	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/db.sqlite3")
+	var __cnf = new(struct {
+		Migrate MigrationConfig `yaml:"migrate"`
+	})
+
+	var file, err = os.Open(MIGRATION_MAP_FILE)
+	if err != nil {
+		logger.Errorf("Failed to open migration map file: %v", err)
+		return
+	}
+	defer file.Close()
+
+	decoder := yaml.NewDecoder(file)
+	decoder.KnownFields(true)
+	if err = decoder.Decode(__cnf); err != nil {
+		logger.Errorf("Failed to decode migration map file: %v", err)
+		return
+	}
+
+	var config = __cnf.Migrate
+	var dbConf = &DatabaseConfig{
+		Engine: "sqlite3",
+		DSN:    "./.private/db.sqlite3",
+	}
+	if config.Database != nil {
+		dbConf = config.Database
+	}
+
+	db, err := drivers.Open(
+		context.Background(),
+		dbConf.Engine,
+		dbConf.DSN,
+	)
 	if err != nil {
 		panic(err)
 	}
 
-	var app = django.App(
+	app := django.App(
 		django.Configure(map[string]interface{}{
-			django.APPVAR_ALLOWED_HOSTS: []string{"*"},
-			django.APPVAR_DEBUG:         false,
-			django.APPVAR_HOST:          "127.0.0.1",
-			django.APPVAR_PORT:          "8080",
-			django.APPVAR_DATABASE:      db,
+			django.APPVAR_DATABASE: db,
 		}),
 		django.AppLogger(&logger.Logger{
-			Level:      logger.INF,
-			OutputInfo: os.Stdout,
-			WrapPrefix: logger.ColoredLogWrapper,
+			Level:       logger.INF,
+			OutputDebug: os.Stdout,
+			Prefix:      "migrator",
+			WrapPrefix:  logger.ColoredLogWrapper,
 		}),
 		django.Flag(
 			django.FlagSkipCmds,
@@ -57,8 +88,8 @@ func main() {
 			session.NewAppConfig,
 			pages.NewAppConfig,
 			revisions.NewAppConfig,
-			openauth2.NewAppConfig(openauth2.Config{}),
 			migrator.NewAppConfig,
+			openauth2.NewAppConfig(openauth2.Config{}),
 		),
 	)
 
@@ -71,51 +102,40 @@ func main() {
 		panic(err)
 	}
 
-	appMapping, err := readAppMappingsFile("migrations.map")
-	if err != nil {
-		logger.Errorf("Failed to read app mappings: %v", err)
-		return
-	}
-
 	var engine = migrator.NewMigrationEngine(
 		ROOT_MIGRATION_DIR,
 		schemaEditor,
 	)
 
 	var reg = command.NewRegistry(
-		"django",
+		"migrator",
 		flag.ContinueOnError,
 	)
-
-	var cmds = make(map[string]command.Command)
-	for _, c := range app.Commands.Commands() {
-		cmds[c.Name()] = c
-	}
-
-	reg.Register(cmds["migrate"])
 
 	reg.Register(&command.Cmd[any]{
 		ID:   "makemigrations",
 		Desc: "Create new database migrations to be applied with `migrate`",
-		FlagFunc: func(m command.Manager, stored *any, f *flag.FlagSet) error {
-			return nil
-		},
 		Execute: func(m command.Manager, stored any, args []string) error {
 			var err = engine.MakeMigrations()
 			if err != nil {
 				return err
 			}
 
-			for _, mapping := range appMapping {
-				err := copyDir(
-					filepath.Join(ROOT_MIGRATION_DIR, mapping[0]),
-					filepath.Join(mapping[1], mapping[0]),
+			for app, conf := range config.Targets.Iter() {
+				var n, err = copyDir(
+					filepath.Join(ROOT_MIGRATION_DIR, app),
+					filepath.Join(conf.Destination, app),
 				)
 				if err != nil {
 					return err
 				}
 
-				logger.Infof("Copied migrations from %s to %s", mapping[0], mapping[1])
+				if n == 0 {
+					logger.Debugf("No migrations were copied for app %q", app)
+					continue
+				}
+
+				logger.Infof("Copied migrations from %q to %q", app, conf.Destination)
 			}
 
 			return nil
@@ -125,28 +145,48 @@ func main() {
 	reg.Register(&command.Cmd[any]{
 		ID:   "clearmigrations",
 		Desc: "Clear all migration files for all apps",
-		FlagFunc: func(m command.Manager, stored *any, f *flag.FlagSet) error {
-			return nil
-		},
 		Execute: func(m command.Manager, stored any, args []string) error {
-			logger.Info("Clearing all migration files...")
+			logger.Warn("Clearing all migration files...")
 
-			for _, mapping := range appMapping {
-				migrationDir := filepath.Join(ROOT_MIGRATION_DIR, mapping[0])
-				if err := os.RemoveAll(migrationDir); err != nil {
-					return err
+			var anyRemoved bool
+			for app, conf := range config.Targets.Iter() {
+				var (
+					migrationDir    = filepath.Join(ROOT_MIGRATION_DIR, app)
+					dirRemoved      = false
+					appMigrationDir = filepath.Join(conf.Destination, app)
+					appDirRemoved   = false
+				)
+
+				if _, err := os.Stat(migrationDir); err == nil || !os.IsNotExist(err) {
+					if err := os.RemoveAll(migrationDir); err != nil {
+						return err
+					}
+					dirRemoved = true
 				}
 
-				logger.Infof("Removed migration directory: %s", migrationDir)
+				if _, err := os.Stat(appMigrationDir); err == nil || !os.IsNotExist(err) {
+					if err := os.RemoveAll(appMigrationDir); err != nil {
+						return err
+					}
+					appDirRemoved = true
+				}
+
+				switch {
+				case dirRemoved && appDirRemoved:
+					logger.Infof("Removed migration directories for app %q", app)
+				case dirRemoved:
+					logger.Infof("Removed migration directory %q for app %q", migrationDir, app)
+				case appDirRemoved:
+					logger.Infof("Removed app migration directory %q for app %q", appMigrationDir, app)
+				default:
+					logger.Debugf("No migration directories found for app %q", app)
+				}
+
+				anyRemoved = anyRemoved || dirRemoved || appDirRemoved
 			}
 
-			for _, mapping := range appMapping {
-				appMigrationDir := filepath.Join(mapping[1], mapping[0])
-				if err := os.RemoveAll(appMigrationDir); err != nil {
-					return err
-				}
-
-				logger.Infof("Removed app migration directory: %s", appMigrationDir)
+			if !anyRemoved {
+				logger.Info("No migration directories were removed")
 			}
 
 			return nil
@@ -161,73 +201,46 @@ func main() {
 	}
 }
 
-func copyDir(src, dst string) error {
+func copyDir(src, dst string) (copied int, err error) {
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
 
-	if _, err := os.Stat(src); err != nil {
+	if _, err = os.Stat(src); err != nil {
 		if !os.IsNotExist(err) {
-			return err
+			return copied, err
 		}
-		return nil
+		return copied, nil
 	}
 
-	if err := os.MkdirAll(dst, 0755); err != nil {
-		return err
+	if err = os.MkdirAll(dst, 0755); err != nil {
+		return copied, err
 	}
 
 	entries, err := os.ReadDir(src)
 	if err != nil {
-		return err
+		return copied, err
 	}
 
 	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
+		var (
+			srcPath = filepath.Join(src, entry.Name())
+			dstPath = filepath.Join(dst, entry.Name())
+		)
 
 		if entry.IsDir() {
-			logger.Infof("Copying directory: %s to %s", srcPath, dstPath)
-			if err := copyDir(srcPath, dstPath); err != nil {
-				return err
+			var n, err = copyDir(srcPath, dstPath)
+			copied += n
+			if err != nil {
+				return copied, err
 			}
-		} else {
-			logger.Infof("Copying file: %s to %s", srcPath, dstPath)
-			if err := os.Rename(srcPath, dstPath); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
-func readAppMappingsFile(filename string) ([][2]string, error) {
-	file, err := os.Open(filename)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
-
-	var mappings [][2]string
-	var scanner = bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.TrimSpace(line)
-		if line == "" || line[0] == '#' {
-			continue // Skip empty lines and comments
+			continue
 		}
 
-		var parts = strings.SplitN(line, ":", 2)
-		if len(parts) != 2 {
-			return nil, fmt.Errorf("invalid mapping format: %s", line)
+		if err := os.Rename(srcPath, dstPath); err != nil {
+			return copied, err
 		}
-
-		mappings = append(mappings, [2]string{strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])})
+		copied++
 	}
 
-	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("error reading file: %w", err)
-	}
-
-	return mappings, nil
+	return copied, nil
 }
