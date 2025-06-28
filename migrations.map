@@ -1,0 +1,8 @@
+# go run .\dev\migrator\main.go makemigrations
+# go run .\dev\migrator\main.go clearmigrations
+# go run .\dev\migrator\main.go migrate
+pages:src/contrib/pages/migrations
+revisions:src/contrib/revisions/migrations
+session:src/contrib/session/migrations
+openauth2:src/contrib/openauth2/migrations
+ 

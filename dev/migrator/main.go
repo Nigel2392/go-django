@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 
@@ -27,13 +30,6 @@ import (
 // which is used to provide the migration filesystem to the migrator engine
 
 const ROOT_MIGRATION_DIR = "./migrations"
-
-var appMapping = [][2]string{
-	{"pages", "src/contrib/pages/migrations"},
-	{"revisions", "src/contrib/revisions/migrations"},
-	{"session", "src/contrib/session/migrations"},
-	{"openauth2", "src/contrib/openauth2/migrations"},
-}
 
 func main() {
 	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/db.sqlite3")
@@ -73,6 +69,12 @@ func main() {
 	schemaEditor, err := migrator.GetSchemaEditor(db.Driver())
 	if err != nil {
 		panic(err)
+	}
+
+	appMapping, err := readAppMappingsFile("migrations.map")
+	if err != nil {
+		logger.Errorf("Failed to read app mappings: %v", err)
+		return
 	}
 
 	var engine = migrator.NewMigrationEngine(
@@ -197,4 +199,35 @@ func copyDir(src, dst string) error {
 	}
 
 	return nil
+}
+
+func readAppMappingsFile(filename string) ([][2]string, error) {
+	file, err := os.Open(filename)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	var mappings [][2]string
+	var scanner = bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+		if line == "" || line[0] == '#' {
+			continue // Skip empty lines and comments
+		}
+
+		var parts = strings.SplitN(line, ":", 2)
+		if len(parts) != 2 {
+			return nil, fmt.Errorf("invalid mapping format: %s", line)
+		}
+
+		mappings = append(mappings, [2]string{strings.TrimSpace(parts[0]), strings.TrimSpace(parts[1])})
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("error reading file: %w", err)
+	}
+
+	return mappings, nil
 }
