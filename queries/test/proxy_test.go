@@ -41,6 +41,10 @@ func (b *ProxyModel) FieldDefs() attrs.Definitions {
 	)
 }
 
+func (b *ProxyModel) Validate(ctx context.Context) error {
+	return b.Model.Validate(ctx)
+}
+
 type ProxiedModel struct {
 	models.Model
 	*ProxyModel

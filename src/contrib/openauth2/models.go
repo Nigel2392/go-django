@@ -159,7 +159,7 @@ func (u *User) ContentObject() (interface{}, error) {
 	return u.object, nil
 }
 
-func (o *User) BeforeCreate(qs *queries.GenericQuerySet) error {
+func (o *User) BeforeCreate(ctx context.Context) error {
 	if o.CreatedAt.Time().IsZero() {
 		o.CreatedAt = drivers.CurrentDateTime()
 	}
@@ -167,27 +167,27 @@ func (o *User) BeforeCreate(qs *queries.GenericQuerySet) error {
 	return core.SIGNAL_BEFORE_USER_CREATE.Send(o)
 }
 
-func (o *User) AfterCreate(qs *queries.GenericQuerySet) error {
+func (o *User) AfterCreate(ctx context.Context) error {
 	return core.SIGNAL_AFTER_USER_CREATE.Send(o)
 }
 
-func (o *User) BeforeUpdate(qs *queries.GenericQuerySet) error {
+func (o *User) BeforeUpdate(ctx context.Context) error {
 	return core.SIGNAL_BEFORE_USER_UPDATE.Send(o)
 }
 
-func (o *User) AfterUpdate(qs *queries.GenericQuerySet) error {
+func (o *User) AfterUpdate(ctx context.Context) error {
 	return core.SIGNAL_AFTER_USER_UPDATE.Send(o)
 }
 
-func (o *User) BeforeDelete(qs *queries.GenericQuerySet) error {
+func (o *User) BeforeDelete(ctx context.Context) error {
 	return core.SIGNAL_BEFORE_USER_DELETE.Send(o.ID)
 }
 
-func (o *User) AfterDelete(qs *queries.GenericQuerySet) error {
+func (o *User) AfterDelete(ctx context.Context) error {
 	return core.SIGNAL_AFTER_USER_DELETE.Send(o.ID)
 }
 
-func (o *User) BeforeSave(qs *queries.GenericQuerySet) error {
+func (o *User) BeforeSave(ctx context.Context) error {
 	o.UpdatedAt = drivers.CurrentDateTime()
 	return nil
 }

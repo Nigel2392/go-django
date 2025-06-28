@@ -1,6 +1,7 @@
 package revisions
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"reflect"
@@ -27,7 +28,7 @@ type Revision struct {
 	CreatedAt   time.Time `json:"created_at"`
 }
 
-func (r *Revision) BeforeCreate(qs *queries.GenericQuerySet) error {
+func (r *Revision) BeforeCreate(context.Context) error {
 	if r.CreatedAt.IsZero() {
 		r.CreatedAt = time.Now()
 	}

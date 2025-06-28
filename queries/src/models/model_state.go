@@ -80,6 +80,22 @@ func (m *ModelState) change(fieldName string) {
 	m.changed[fieldName] = struct{}{}
 }
 
+// Mark a field as changed in the model's state.
+// It will also check the state to ensure that the changed fields
+// are up to date before marking the field as changed.
+func (m *ModelState) Mark(fieldName string) {
+	if m == nil {
+		return
+	}
+
+	if m.model == nil {
+		panic("model state is not properly initialized: model is nil")
+	}
+
+	// mark the field as changed
+	m.change(fieldName)
+}
+
 // Changed returns true if the model's state has changed,
 // meaning that at least one field has been modified
 // since the last time the state was checked or reset.

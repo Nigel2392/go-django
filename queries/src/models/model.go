@@ -7,6 +7,7 @@ import (
 	"maps"
 	"reflect"
 
+	"github.com/Nigel2392/go-django/queries/internal"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/fields"
@@ -685,7 +686,7 @@ func (m *Model) Saved() bool {
 //
 // This is useful for setup after the model has been loaded from the database,
 // such as setting the initial state of the model and marking it as loaded from the database.
-func (m *Model) AfterQuery(_ *queries.GenericQuerySet) error {
+func (m *Model) AfterQuery(ctx context.Context) error {
 	m.checkValid()
 	m.setupInitialState()
 	m.internals.fromDB = true
@@ -696,7 +697,7 @@ func (m *Model) AfterQuery(_ *queries.GenericQuerySet) error {
 //
 // This is useful for setup after the model has been saved to the database,
 // such as setting the initial state of the model and marking it as loaded from the database.
-func (m *Model) AfterSave(_ *queries.GenericQuerySet) error {
+func (m *Model) AfterSave(ctx context.Context) error {
 	m.checkValid()
 	m.setupInitialState()
 	m.internals.fromDB = true
@@ -729,6 +730,12 @@ func (m *Model) DataStore() queries.ModelDataStore {
 		m.data = make(MapDataStore)
 	}
 	return m.data
+}
+
+// Validate checks if the model is valid.
+func (m *Model) Validate(ctx context.Context) error {
+	m.checkValid()
+	return nil
 }
 
 // Save saves the model to the database.
@@ -774,9 +781,28 @@ type SaveConfig struct {
 	// If the model is not loaded from the database, all fields will be saved.
 	Fields []string
 
+	// IncludeFields are fields which must be saved, even if they have not changed
+	// according to the model's state.
+	// This is used to force the save operation to include fields
+	// that are not changed, but must be saved for some reason.
+	IncludeFields []string
+
 	// Force indicates whether to force the save operation,
 	// even if no fields have changed.
 	Force bool
+}
+
+func (cnf SaveConfig) fields() []string {
+	// if the fields are not set, we return all fields
+	if len(cnf.Fields) == 0 && len(cnf.IncludeFields) == 0 {
+		return nil
+	}
+
+	// if the fields are set, we return them
+	var fields = make([]string, 0, len(cnf.Fields)+len(cnf.IncludeFields))
+	fields = append(fields, cnf.Fields...)
+	fields = append(fields, cnf.IncludeFields...)
+	return fields
 }
 
 // SaveObject saves the model's object to the database.
@@ -804,15 +830,29 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		cnf.this = m.internals.object.Interface().(attrs.Definer)
 	}
 
+	// Create an actor for the model,
+	// if the model does not implement the
+	// actor interfaces, this is a no-op.
+	var actor = queries.Actor(cnf.this)
+	ctx, err = actor.BeforeSave(ctx)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to run BeforeSave for model %T: %w",
+			cnf.this, err,
+		)
+	}
+
 	// check if anything has changed,
-	if !m.internals.state.Changed(true) && m.internals.fromDB && !cnf.Force {
-		// if nothing has changed, we can skip saving
+	var fields = internal.NewSet(cnf.fields()...)
+	if m.internals.state == nil && m.internals.fromDB && !cnf.Force && len(fields) == 0 {
+		// if the model was loaded from the database and no fields have changed and the state is nil,
+		// we can skip saving
 		return nil
 	}
 
-	var fields = make(map[string]struct{}, len(cnf.Fields))
-	for _, field := range cnf.Fields {
-		fields[field] = struct{}{}
+	if !m.internals.state.Changed(true) && m.internals.fromDB && !cnf.Force && len(fields) == 0 {
+		// if nothing has changed, we can skip saving
+		return nil
 	}
 
 	var (
@@ -830,8 +870,8 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		// if there was a list of fields provided and if
 		// the field is not in the list of fields to save, we skip it
 		var mustInclField bool
-		if len(cnf.Fields) > 0 {
-			if _, ok := fields[head.Value.Name()]; !ok && !cnf.Force && m.internals.fromDB {
+		if len(fields) > 0 {
+			if !fields.Contains(head.Value.Name()) && !cnf.Force && m.internals.fromDB {
 				continue
 			}
 			mustInclField = true
@@ -841,6 +881,13 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		var hasChanged = m.internals.state.HasChanged(head.Value.Name())
 		if !hasChanged && !mustInclField && !cnf.Force && m.internals.fromDB {
 			continue
+		}
+
+		if err = queries.Validate(ctx, head.Value); err != nil {
+			return fmt.Errorf(
+				"failed to validate field %s in model %T: %w",
+				head.Value.Name(), cnf.this, err,
+			)
 		}
 
 		// Check if the field is a Saver or a SaveableField.

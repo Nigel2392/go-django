@@ -46,7 +46,7 @@ var command_create_user = &command.Cmd[createUserStorage]{
 			break
 		}
 
-		u, err := queries.GetQuerySet(&User{}).Create(&User{
+		u, err := queries.GetQuerySet(&User{}).ExplicitSave().Create(&User{
 			UniqueIdentifier: identifier,
 			ProviderName:     provider,
 			Data:             []byte{},

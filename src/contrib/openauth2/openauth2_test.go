@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/models"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/openauth2"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -103,7 +104,7 @@ func getUser(t *testing.T, id uint64) *openauth2.User {
 
 func TestContentObject(t *testing.T) {
 	var user = &openauth2.User{
-		UniqueIdentifier: "TestTokenSource",
+		UniqueIdentifier: "TestContentObject",
 		ProviderName:     "test",
 		Data:             []byte(`{"name": "Test User"}`),
 		AccessToken:      "test-access-token",
@@ -127,7 +128,7 @@ func TestContentObject(t *testing.T) {
 
 func TestToString(t *testing.T) {
 	var user = &openauth2.User{
-		UniqueIdentifier: "TestTokenSource",
+		UniqueIdentifier: "TestToString",
 		ProviderName:     "test",
 		Data:             []byte(`{"name": "Test User"}`),
 		AccessToken:      "test-access-token",
@@ -145,8 +146,9 @@ func TestToString(t *testing.T) {
 }
 
 func TestTokenSource(t *testing.T) {
+	var ctx = context.Background()
 	var timeNow = drivers.CurrentTimestamp()
-	var user, err = openauth2.CreateUser(context.Background(), &openauth2.User{
+	var user = models.Setup(&openauth2.User{
 		UniqueIdentifier: "TestTokenSource",
 		ProviderName:     "test",
 		Data:             []byte(`{"name": "Test User"}`),
@@ -157,9 +159,13 @@ func TestTokenSource(t *testing.T) {
 		IsAdministrator:  false,
 		IsActive:         true,
 	})
+
+	var err = user.Save(ctx)
 	if err != nil {
 		t.Fatal(err)
 	}
+
+	t.Logf("Created user: %s", attrs.ToString(user))
 
 	//	defer func() {
 	//		if _, err := queries.DeleteObject(user); err != nil {
@@ -167,7 +173,7 @@ func TestTokenSource(t *testing.T) {
 	//		}
 	//	}()
 
-	var ts = openauth2.TokenSource(user)
+	var ts = openauth2.TokenSource(user.SetContext(ctx))
 	if ts == nil {
 		t.Fatal("TokenSource returned nil")
 	}
@@ -251,9 +257,10 @@ func TestTokenSource(t *testing.T) {
 }
 
 func TestRefreshToken(t *testing.T) {
+	var ctx = context.Background()
 	var timeNow = drivers.CurrentTimestamp()
-	var user, err = openauth2.CreateUser(context.Background(), &openauth2.User{
-		UniqueIdentifier: "TestTokenSource",
+	var user, err = openauth2.CreateUser(ctx, &openauth2.User{
+		UniqueIdentifier: "TestRefreshToken",
 		ProviderName:     "test",
 		Data:             []byte(`{"name": "Test User"}`),
 		AccessToken:      "test-access-token",
@@ -314,7 +321,7 @@ func TestRefreshToken(t *testing.T) {
 			t.Errorf("Expected token type 'Bearer', got '%s'", token.TokenType)
 		}
 
-		if !token.Expiry.Local().Equal(expiry.Time()) {
+		if !token.Expiry.Equal(expiry.Time()) {
 			t.Errorf("Expected expiry %s, got %s", expiry.Time(), token.Expiry)
 		}
 	})

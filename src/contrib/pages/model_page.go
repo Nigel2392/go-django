@@ -73,13 +73,13 @@ func (n *PageNode) IsRoot() bool {
 	return n.Depth == 0
 }
 
-func (n *PageNode) BeforeCreate(_ *queries.GenericQuerySet) error {
+func (n *PageNode) BeforeCreate(context.Context) error {
 	n.CreatedAt = time.Now()
 	n.UpdatedAt = n.CreatedAt
 	return nil
 }
 
-func (n *PageNode) BeforeUpdate(_ *queries.GenericQuerySet) error {
+func (n *PageNode) BeforeUpdate(context.Context) error {
 	n.UpdatedAt = time.Now()
 	return nil
 }

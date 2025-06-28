@@ -1089,9 +1089,8 @@ func TestPageNode(t *testing.T) {
 		node.ContentType = pages.DefinitionForObject(page).ContentType().TypeName()
 
 		t.Logf("Created page %s for %s (%d)", node.Title, page.Description, page.Reference().PK)
-
-		fmt.Printf("REFERENCE: %+v\n", page.Reference())
-		fmt.Printf("NODE: %+v\n", node)
+		t.Logf("REFERENCE: %+v", page.Reference())
+		t.Logf("NODE: %+v", node)
 
 		if err := pages.UpdateNode(queryCtx, page.Reference()); err != nil {
 			t.Fatalf("failed to update node: %v", err)

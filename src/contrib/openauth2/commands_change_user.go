@@ -50,7 +50,7 @@ var command_change_user = &command.Cmd[changeUserStorage]{
 			u.Object.IsActive = !stored.inactive
 
 			// Save the changes to the user
-			_, err = qs.Select("IsAdministrator", "IsActive").Filter("ID", u.Object.ID).Update(&User{
+			_, err = qs.Select("IsAdministrator", "IsActive").Filter("ID", u.Object.ID).ExplicitSave().Update(&User{
 				IsAdministrator: u.Object.IsAdministrator,
 				IsActive:        u.Object.IsActive,
 			})

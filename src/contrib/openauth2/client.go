@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"sync"
 
-	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"golang.org/x/oauth2"
 )
@@ -55,11 +54,7 @@ func (s *savingTokenSource) Token() (*oauth2.Token, error) {
 			ctx = context.Background()
 		}
 
-		_, err = queries.GetQuerySetWithContext(ctx, s.u).
-			ExplicitSave().
-			Select("AccessToken", "RefreshToken", "TokenType", "ExpiresAt").
-			Filter("ID", s.u.ID).
-			Update(s.u)
+		err = s.u.Save(ctx)
 	}
 
 	return t, err

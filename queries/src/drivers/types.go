@@ -239,6 +239,9 @@ func (t UUID) IsZero() bool { return (uuid.UUID)(t) == uuid.Nil }
 func CurrentTimestamp() Timestamp {
 	return Timestamp(time.Now().UTC().Truncate(time.Millisecond))
 }
+func (t Timestamp) String() string {
+	return t.Time().Format(time.RFC3339Nano)
+}
 func (t Timestamp) IsZero() bool { return t.Time().IsZero() }
 func (t Timestamp) Add(d time.Duration) Timestamp {
 	return Timestamp(t.Time().Add(d).Truncate(time.Millisecond))
@@ -252,6 +255,9 @@ func (t Timestamp) Value() (driver.Value, error) {
 func CurrentLocalTime() LocalTime {
 	return LocalTime(time.Now().Local().Truncate(time.Second))
 }
+func (t LocalTime) String() string {
+	return t.Time().Format(time.RFC3339)
+}
 func (t LocalTime) IsZero() bool { return t.Time().IsZero() }
 func (t LocalTime) Add(d time.Duration) LocalTime {
 	return LocalTime(t.Time().Add(d).Truncate(time.Second))
@@ -264,6 +270,9 @@ func (t LocalTime) Value() (driver.Value, error) {
 
 func CurrentDateTime() DateTime {
 	return DateTime(time.Now().UTC().Truncate(time.Second))
+}
+func (t DateTime) String() string {
+	return t.Time().Format(time.RFC3339)
 }
 func (t DateTime) IsZero() bool { return t.Time().IsZero() }
 func (t DateTime) Add(d time.Duration) DateTime {

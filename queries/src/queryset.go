@@ -382,10 +382,22 @@ func (qs *QuerySet[T]) WithTransaction(tx drivers.Transaction) (drivers.Transact
 // GetOrCreateTransaction returns the current transaction if one exists,
 // or starts a new transaction if the QuerySet is not already in a transaction and QUERYSET_CREATE_IMPLICIT_TRANSACTION is true.
 func (qs *QuerySet[T]) GetOrCreateTransaction() (tx drivers.Transaction, err error) {
-	if !qs.compiler.InTransaction() && QUERYSET_CREATE_IMPLICIT_TRANSACTION {
+	// Check if we need to start a transaction
+	var inTransaction = qs.compiler.InTransaction()
+	if !inTransaction && QUERYSET_CREATE_IMPLICIT_TRANSACTION {
 		return qs.StartTransaction(qs.context)
 	}
+
+	// It doesn't really matter if we are in a transaction or not,
+	// the DB interface could be a transaction under the hood
+	// but we don't do anything with it - it was started out of our control.
 	tx = &nullTransaction{qs.compiler.DB()}
+
+	// if we are in a transaction, we need to bind it to the QuerySet context
+	if inTransaction {
+		qs.context = transactionToContext(qs.context, tx, qs.compiler.DatabaseName())
+	}
+
 	return tx, nil
 }
 
@@ -1648,10 +1660,8 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 		if o == nil {
 			return nil
 		}
-		return runActor(
-			actsAfterQuery, o,
-			ChangeObjectsType[T, attrs.Definer](qs),
-		)
+		_, err = runActor(qs.context, actsAfterQuery, o)
+		return err
 	}
 
 	rows, err := newRows[T](
@@ -2171,27 +2181,26 @@ func (qs *QuerySet[T]) Create(value T) (T, error) {
 			)
 		}
 
-		if err = sendSignal(SignalPreModelSave, value, qs.compiler); err != nil {
+		var actor = Actor(value)
+		ctx, err := actor.BeforeCreate(qs.context)
+		if err != nil {
 			return *new(T), errors.Wrapf(
-				err, "failed to send pre save signal for %T", value,
+				err, "failed to run ActsBeforeCreate for %T", value,
 			)
 		}
 
-		var ctx = qs.context
-		if qs.compiler.InTransaction() {
-			ctx = transactionToContext(ctx, qs.compiler.Transaction(), qs.compiler.DatabaseName())
-		}
-
-		err = saver.Save(ctx)
+		// create a fake context to retain control over the save operation
+		// and actor methods
+		err = saver.Save(actor.Fake(ctx, actsAfterSave))
 		if err != nil {
 			return *new(T), errors.Wrapf(
 				err, "failed to save object %T", value,
 			)
 		}
 
-		if err = sendSignal(SignalPostModelSave, value, qs.compiler); err != nil {
+		if _, err = actor.AfterCreate(ctx); err != nil {
 			return *new(T), errors.Wrapf(
-				err, "failed to send post save signal for %T", value,
+				err, "failed to run ActsAfterCreate for %T", value,
 			)
 		}
 
@@ -2238,23 +2247,27 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 		}
 
 		if saver, ok := any(value).(models.ContextSaver); ok {
-			if err := sendSignal(SignalPreModelSave, value, qs.compiler); err != nil {
-				return 0, err
+			var actor = Actor(value)
+			ctx, err := actor.BeforeSave(qs.context)
+			if err != nil {
+				return 0, errors.Wrapf(
+					err, "failed to run ActsBeforeUpdate for %T", value,
+				)
 			}
 
-			var ctx = qs.context
-			if qs.compiler.InTransaction() {
-				ctx = transactionToContext(ctx, qs.compiler.Transaction(), qs.compiler.DatabaseName())
-			}
-
-			var err = saver.Save(ctx)
+			// create a fake context to retain control over the save operation
+			// and actor methods
+			err = saver.Save(actor.Fake(ctx, actsAfterSave))
 			if err != nil {
 				return 0, err
 			}
 
-			if err := sendSignal(SignalPostModelSave, value, qs.compiler); err != nil {
-				return 0, err
+			if _, err = actor.AfterSave(qs.context); err != nil {
+				return 0, errors.Wrapf(
+					err, "failed to run ActsAfterUpdate for %T", value,
+				)
 			}
+
 			return 1, tx.Commit(qs.context)
 		}
 	}
@@ -2302,10 +2315,18 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			)
 		}
 
-		if err = runActor(actsBeforeCreate, object, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+		if _, err = runActor(qs.context, actsBeforeCreate, object); err != nil {
 			return nil, errors.Wrapf(
 				err,
 				"failed to run ActsBeforeCreate for %T",
+				object,
+			)
+		}
+
+		if err = Validate(qs.context, object); err != nil {
+			return nil, errors.Wrapf(
+				err,
+				"failed to validate object %T before create",
 				object,
 			)
 		}
@@ -2400,10 +2421,18 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 
 		for _, row := range objects {
 
-			if err := runActor(actsAfterCreate, row, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+			if _, err = runActor(qs.context, actsAfterCreate, row); err != nil {
 				return nil, errors.Wrapf(
 					err,
 					"failed to run ActsAfterCreate for %T",
+					row,
+				)
+			}
+
+			if err = Validate(qs.context, row); err != nil {
+				return nil, errors.Wrapf(
+					err,
+					"failed to validate object %T after create",
 					row,
 				)
 			}
@@ -2462,10 +2491,18 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			//		row = Setup[T](row)
 			//	}
 
-			if err := runActor(actsAfterCreate, row, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+			if _, err = runActor(qs.context, actsAfterCreate, row); err != nil {
 				return nil, errors.Wrapf(
 					err,
 					"failed to run ActsAfterCreate for %T",
+					row,
+				)
+			}
+
+			if err = Validate(qs.context, row); err != nil {
+				return nil, errors.Wrapf(
+					err,
+					"failed to validate object %T after create",
 					row,
 				)
 			}
@@ -2524,10 +2561,18 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				}
 			}
 
-			if err := runActor(actsAfterCreate, row, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+			if _, err = runActor(qs.context, actsAfterCreate, row); err != nil {
 				return nil, errors.Wrapf(
 					err,
 					"failed to run ActsAfterCreate for %T",
+					row,
+				)
+			}
+
+			if err = Validate(qs.context, row); err != nil {
+				return nil, errors.Wrapf(
+					err,
+					"failed to validate object %T after create",
 					row,
 				)
 			}
@@ -2616,9 +2661,15 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 			))
 		}
 
-		if err := runActor(actsBeforeUpdate, obj, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+		if _, err = runActor(qs.context, actsBeforeUpdate, obj); err != nil {
 			return 0, errors.Wrapf(
 				err, "failed to run ActsBeforeUpdate for %T", obj,
+			)
+		}
+
+		if err = Validate(qs.context, obj); err != nil {
+			return 0, errors.Wrapf(
+				err, "failed to validate object %T before update", obj,
 			)
 		}
 
@@ -2706,19 +2757,27 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 
 	if len(objects) > 0 && res == 0 {
 		return 0, errors.Wrapf(
-			query_errors.ErrNoRows,
-			"no rows updated for %T",
-			qs.internals.Model.Object,
+			query_errors.ErrNoChanges,
+			"no rows updated for %T, expected %d rows",
+			qs.internals.Model.Object, len(objects),
 		)
 	}
 
 	// Must always run the after update actor
 	// even if it was not implemented - the signal must be sent
 	for _, obj := range objects {
-		if err := runActor(actsAfterUpdate, obj, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+		if _, err = runActor(qs.context, actsAfterUpdate, obj); err != nil {
 			return 0, errors.Wrapf(
 				err,
 				"failed to run ActsAfterUpdate for %T",
+				obj,
+			)
+		}
+
+		if err = Validate(qs.context, obj); err != nil {
+			return 0, errors.Wrapf(
+				err,
+				"failed to validate object %T after update",
 				obj,
 			)
 		}
@@ -2797,7 +2856,7 @@ func (qs *QuerySet[T]) BatchUpdate(objects []T, exprs ...any) (int64, error) {
 
 		if count == 0 {
 			return 0, errors.Wrapf(
-				query_errors.ErrNoRows,
+				query_errors.ErrNoChanges,
 				"no rows updated for batch %d of %T",
 				batchNum, qs.internals.Model.Object,
 			)
@@ -2828,7 +2887,7 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 
 	if len(objects) > 0 {
 		for _, obj := range objects {
-			if err := runActor(actsBeforeDelete, obj, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+			if _, err = runActor(qs.context, actsBeforeDelete, obj); err != nil {
 				return 0, errors.Wrapf(
 					err, "failed to run ActsBeforeDelete for %T", obj,
 				)
@@ -2860,7 +2919,7 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 
 	if len(objects) > 0 {
 		for _, obj := range objects {
-			if err := runActor(actsAfterDelete, obj, ChangeObjectsType[T, attrs.Definer](qs)); err != nil {
+			if _, err = runActor(qs.context, actsAfterDelete, obj); err != nil {
 				return 0, errors.Wrapf(
 					err, "failed to run ActsAfterDelete for %T", obj,
 				)
