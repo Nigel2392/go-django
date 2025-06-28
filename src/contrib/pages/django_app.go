@@ -92,6 +92,9 @@ var (
 var (
 	//go:embed assets
 	assetsFS embed.FS
+
+	//go:embed migrations/*
+	migrationFS embed.FS
 )
 
 // Returns the pages app object itself
@@ -106,7 +109,7 @@ func App() *PageAppConfig {
 // NewAppConfig returns a new pages app config.
 //
 // This is used to initialize the pages app, set up routes, and register the admin application.
-func NewAppConfig() *PageAppConfig {
+func NewAppConfig() django.AppConfig {
 
 	attrs.RegisterModel(&PageNode{})
 
@@ -394,7 +397,12 @@ func NewAppConfig() *PageAppConfig {
 		return nil
 	}
 
-	return pageApp
+	return &migrator.MigratorAppConfig{
+		AppConfig: pageApp,
+		MigrationFS: filesystem.Sub(
+			migrationFS, "migrations/pages",
+		),
+	}
 }
 
 type pageLogDefinition struct {

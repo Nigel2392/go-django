@@ -1,0 +1,52 @@
+{
+  "table": {
+    "table": "sessions",
+    "model": "github.com/Nigel2392/go-django/src/contrib/session.Session",
+    "fields": [
+      {
+        "name": "Token",
+        "column": "token",
+        "use_in_db": true,
+        "max_length": 43,
+        "nullable": true,
+        "primary": true,
+        "default": ""
+      },
+      {
+        "name": "Data",
+        "column": "data",
+        "use_in_db": true,
+        "default": null
+      },
+      {
+        "name": "Expiry",
+        "column": "expiry",
+        "use_in_db": true,
+        "default": 0
+      }
+    ],
+    "indexes": [
+      {
+        "name": "sessions_expiry_idx",
+        "type": "",
+        "columns": [
+          "Expiry"
+        ]
+      },
+      {
+        "name": "sessions_token_idx",
+        "type": "",
+        "columns": [
+          "Token"
+        ],
+        "unique": true
+      }
+    ],
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

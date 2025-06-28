@@ -301,10 +301,6 @@ func (r *RelationField[T]) IsProxy() bool {
 	return r.cnf.IsProxy
 }
 
-func (f *RelationField[T]) AllowReverseRelation() bool {
-	return !f.IsProxy()
-}
-
 func (f *RelationField[T]) GenerateTargetClause(qs *queries.QuerySet[attrs.Definer], inter *queries.QuerySetInternals, lhs queries.ClauseTarget, rhs queries.ClauseTarget) queries.JoinDef {
 
 	var joinType = queries.TypeJoinLeft

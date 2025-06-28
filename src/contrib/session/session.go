@@ -1,6 +1,7 @@
 package session
 
 import (
+	"embed"
 	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -9,11 +10,15 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/mux/middleware/sessions"
 	"github.com/alexedwards/scs/v2"
 	"github.com/alexedwards/scs/v2/memstore"
 )
+
+//go:embed migrations/*
+var migrationFS embed.FS
 
 func NewAppConfig() django.AppConfig {
 	attrs.RegisterModel(&Session{})
@@ -78,5 +83,10 @@ func NewAppConfig() django.AppConfig {
 		)
 	}
 
-	return app
+	return &migrator.MigratorAppConfig{
+		AppConfig: app,
+		MigrationFS: filesystem.Sub(
+			migrationFS, "migrations/session",
+		),
+	}
 }

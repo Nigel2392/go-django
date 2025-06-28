@@ -2,7 +2,6 @@ package openauth2
 
 import (
 	"embed"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -39,6 +38,9 @@ var (
 
 	//go:embed assets/*
 	assets embed.FS
+
+	//go:embed migrations/*
+	migrationFS embed.FS
 )
 
 type Config struct {
@@ -91,9 +93,9 @@ func NewAppConfig(cnf Config) django.AppConfig {
 	}
 
 	App.Init = func(settings django.Settings, db drivers.Database) error {
-		if len(App.Config.AuthConfigurations) == 0 {
-			return errors.New("OpenAuth2: No providers configured")
-		}
+		//if len(App.Config.AuthConfigurations) == 0 {
+		//	return errors.New("OpenAuth2: No providers configured")
+		//}
 
 		if !django.AppInstalled("migrator") {
 			var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())
@@ -325,7 +327,13 @@ func NewAppConfig(cnf Config) django.AppConfig {
 		},
 	)
 
-	return App
+	return &migrator.MigratorAppConfig{
+		AppConfig: App,
+		MigrationFS: filesystem.Sub(
+			migrationFS,
+			"migrations/openauth2",
+		),
+	}
 }
 
 func (a *OpenAuth2AppConfig) Provider(name string) (*AuthConfig, error) {

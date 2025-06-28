@@ -13,7 +13,7 @@ import (
 
 var (
 	_ queries.ActsBeforeCreate = (*PageNode)(nil)
-	_ queries.ActsBeforeUpdate = (*PageNode)(nil)
+	_ queries.ActsAfterSave    = (*PageNode)(nil)
 )
 
 type PageNode struct {
@@ -26,9 +26,9 @@ type PageNode struct {
 	UrlPath          string     `json:"url_path" attrs:"readonly;blank"`
 	Slug             string     `json:"slug"`
 	StatusFlags      StatusFlag `json:"status_flags" attrs:"null;blank"`
-	PageID           int64      `json:"page_id" attrs:""`
-	ContentType      string     `json:"content_type" attrs:""`
-	LatestRevisionID int64      `json:"latest_revision_id" attrs:""`
+	PageID           int64      `json:"page_id" attrs:"null;blank"`
+	ContentType      string     `json:"content_type" attrs:"null;blank"`
+	LatestRevisionID int64      `json:"latest_revision_id" attrs:"null;blank"`
 	CreatedAt        time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
 	UpdatedAt        time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
 }
@@ -74,13 +74,23 @@ func (n *PageNode) IsRoot() bool {
 }
 
 func (n *PageNode) BeforeCreate(context.Context) error {
-	n.CreatedAt = time.Now()
-	n.UpdatedAt = n.CreatedAt
+	if n.CreatedAt.IsZero() {
+		n.CreatedAt = time.Now()
+	}
+
+	if n.UpdatedAt.IsZero() {
+		n.UpdatedAt = n.CreatedAt
+	}
+
 	return nil
 }
 
-func (n *PageNode) BeforeUpdate(context.Context) error {
-	n.UpdatedAt = time.Now()
+func (n *PageNode) BeforeSave(context.Context) error {
+	if !n.CreatedAt.IsZero() && n.UpdatedAt.IsZero() {
+		n.UpdatedAt = n.CreatedAt
+	} else {
+		n.UpdatedAt = time.Now()
+	}
 	return nil
 }
 

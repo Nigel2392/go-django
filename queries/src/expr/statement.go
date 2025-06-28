@@ -556,9 +556,13 @@ func (s *ExpressionStatement) SQL() (string, []any) {
 //
 // Example usage:
 //
-//	 # sets the field name to the first field found in the statement, I.E. ![Field1]:
-//
-//		stmt, fields, values := ParseExprStatement("![Field1] = ![Age] + ?[1] + ![Height] + ?[2] * ?[1]", 3, 4)
+//	 stmt := ParseExprStatement(
+//			"SELECT * FROM ![Table] WHERE ![Field1] = ?[0] AND ![Field2] = ?[1] AND EXPR(MyExpression)",
+//			"users", 42, "active",
+//	     expr.PARSER.Expressions(map[string]expr.Expression{
+//				"MyExpression": expr.Q("Field2", "MyTitle")
+//			})
+//		)
 func ParseExprStatement(statement string, value []any) *ExpressionStatement {
 
 	return &ExpressionStatement{
