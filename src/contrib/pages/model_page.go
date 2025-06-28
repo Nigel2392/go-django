@@ -7,6 +7,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/gosimple/slug"
 )
@@ -28,7 +29,7 @@ type PageNode struct {
 	StatusFlags      StatusFlag `json:"status_flags" attrs:"null;blank"`
 	PageID           int64      `json:"page_id" attrs:"null;blank"`
 	ContentType      string     `json:"content_type" attrs:"null;blank"`
-	LatestRevisionID int64      `json:"latest_revision_id" attrs:"null;blank"`
+	LatestRevisionID int64      `json:"latest_revision_id"`
 	CreatedAt        time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
 	UpdatedAt        time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
 }
@@ -136,7 +137,15 @@ func (n *PageNode) FieldDefs() attrs.Definitions {
 			attrs.NewField(n, "StatusFlags"),
 			attrs.NewField(n, "PageID"),
 			attrs.NewField(n, "ContentType"),
-			attrs.NewField(n, "LatestRevisionID"),
+			attrs.NewField(n, "LatestRevisionID", &attrs.FieldConfig{
+				Null:   true,
+				Blank:  true,
+				Column: "latest_revision_id",
+				RelForeignKey: attrs.Relate(
+					&revisions.Revision{},
+					"", nil,
+				),
+			}),
 			attrs.NewField(n, "CreatedAt"),
 			attrs.NewField(n, "UpdatedAt"),
 		}
