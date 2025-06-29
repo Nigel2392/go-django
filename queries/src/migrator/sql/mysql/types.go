@@ -30,7 +30,7 @@ func init() {
 	registerType(drivers.TypeBytes, Type__blob)
 	registerType(drivers.TypeBool, Type__bool)
 	registerType(drivers.TypeFloat, Type__float)
-	registerType(drivers.TypeUUID, Type__string)
+	registerType(drivers.TypeUUID, Type__uuid)
 	registerType(drivers.TypeBLOB, Type__blob)
 	registerType(drivers.TypeJSON, Type__string)
 	registerType(drivers.TypeTimestamp, Type__timestamp)
@@ -81,6 +81,10 @@ func Type__char(c *migrator.Column) string {
 	sb.WriteString(strconv.FormatInt(max, 10))
 	sb.WriteString(")")
 	return sb.String()
+}
+
+func Type__uuid(c *migrator.Column) string {
+	return "CHAR(36)"
 }
 
 func Type__blob(c *migrator.Column) string {

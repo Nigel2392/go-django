@@ -14,7 +14,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/goldcrest"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/pkg/errors"
 )
@@ -129,10 +128,15 @@ type MigrationLog interface {
 }
 
 type MigrationEngine struct {
+	// BasePath is the path to the migration directory where migration files are stored.
+	//
+	// This is used to read and write migration files.
+	BasePath string
+
 	// The path to the directory where the migration files are stored.
 	//
 	// This is used to load the migration files and apply them to the database.
-	Path string
+	Paths []string
 
 	// SchemaEditor is the schema editor used to apply the migrations to the database.
 	//
@@ -165,55 +169,34 @@ type MigrationEngine struct {
 	apps *orderedmap.OrderedMap[string, django.AppConfig]
 }
 
-func NewMigrationEngine(path string, schemaEditor SchemaEditor, apps ...string) *MigrationEngine {
-	var (
-		appMap               = orderedmap.NewOrderedMap[string, django.AppConfig]()
-		migrationDirectories = make(map[string]fs.FS)
-	)
+func (m *MigrationEngine) Dirs() []string {
+	var dirs = make([]string, 0, len(m.Paths)+1)
+	dirs = append(dirs, m.BasePath)
+	dirs = append(dirs, m.Paths...)
+	return dirs
+}
 
-	if len(apps) == 0 {
-		appMap = django.Global.Apps
-		for head := appMap.Front(); head != nil; head = head.Next() {
-			var app = head.Value
-			if mgAppCnf, ok := app.(MigrationAppConfig); ok {
-				var fs = mgAppCnf.GetMigrationFS()
-				if fs != nil {
-					migrationDirectories[head.Key] = fs
-				}
-			}
-		}
-	} else {
-		for _, app := range apps {
-			var appConfig = django.GetApp[django.AppConfig](app)
-
-			if mgAppCnf, ok := appConfig.(MigrationAppConfig); ok {
-				var fs = mgAppCnf.GetMigrationFS()
-				if fs != nil {
-					migrationDirectories[app] = fs
-				}
-			} else {
-
-				// Try to get the migration FS from a hook
-				var filesystems = goldcrest.Get[fs.FS](fileSystemHookName(
-					app,
-				))
-
-				if len(filesystems) > 0 {
-					var fileSystems = filesystem.NewMultiFS(filesystems...)
-					migrationDirectories[app] = fileSystems
-				}
-			}
-
-			appMap.Set(app, appConfig)
+func defaultOptions(options []EngineOption) []EngineOption {
+	if len(options) == 0 {
+		return []EngineOption{
+			EngineOptionApps(),
 		}
 	}
+	return options
+}
 
-	return &MigrationEngine{
-		Path:                 path,
-		SchemaEditor:         schemaEditor,
-		MigrationFilesystems: migrationDirectories,
-		apps:                 appMap,
+func NewMigrationEngine(path string, schemaEditor SchemaEditor, opts ...EngineOption) *MigrationEngine {
+
+	var engine = &MigrationEngine{
+		BasePath:     path,
+		SchemaEditor: schemaEditor,
 	}
+
+	for _, opt := range defaultOptions(opts) {
+		opt(engine)
+	}
+
+	return engine
 }
 
 func (m *MigrationEngine) Log(action ActionType, file *MigrationFile, table *Changed[*ModelTable], column *Changed[*Column], index *Changed[*Index]) {
@@ -844,7 +827,7 @@ func indexesEqual(a, b Index) bool {
 //
 // The migration file is used to apply the migrations to the database.
 func (e *MigrationEngine) WriteMigration(migration *MigrationFile) error {
-	var filePath = filepath.Join(e.Path, migration.AppName, migration.ModelName, migration.FileName())
+	var filePath = filepath.Join(e.BasePath, migration.AppName, migration.ModelName, migration.FileName())
 
 	if _, err := os.Stat(filePath); err == nil {
 		return fmt.Errorf("migration file %q already exists", filePath)
@@ -870,7 +853,7 @@ func (e *MigrationEngine) WriteMigration(migration *MigrationFile) error {
 //
 // These migration files are used to apply the migrations to the database.
 func (e *MigrationEngine) ReadMigrations() ([]*MigrationFile, error) {
-	os.MkdirAll(e.Path, 0755)
+	os.MkdirAll(e.BasePath, 0755)
 
 	var migrations = make([]*MigrationFile, 0)
 
@@ -911,15 +894,19 @@ func (e *MigrationEngine) ReadMigrations() ([]*MigrationFile, error) {
 		}
 	}
 
-	var path = filepath.FromSlash(e.Path)
-	path = filepath.ToSlash(path)
-	var dirFS = os.DirFS(path)
-	var directories, err = fs.ReadDir(dirFS, ".")
+	var mfs = filesystem.NewMultiFS()
+	for _, dir := range e.Dirs() {
+		var path = filepath.FromSlash(dir)
+		path = filepath.ToSlash(path)
+		mfs.Add(os.DirFS(path), nil)
+	}
+
+	var directories, err = fs.ReadDir(mfs, ".")
 	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		return []*MigrationFile{}, nil
 	} else if err != nil {
 		return nil, errors.Wrapf(
-			err, "failed to read migration directory %q", e.Path,
+			err, "failed to read migration directories %v", e.Dirs(),
 		)
 	}
 
@@ -929,7 +916,7 @@ func (e *MigrationEngine) ReadMigrations() ([]*MigrationFile, error) {
 		}
 
 		var workingPath = appMigrationDir.Name()
-		if _, err = fs.Stat(dirFS, workingPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		if _, err = fs.Stat(mfs, workingPath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			continue
 		}
 		if err != nil {
@@ -938,7 +925,7 @@ func (e *MigrationEngine) ReadMigrations() ([]*MigrationFile, error) {
 			)
 		}
 
-		var files, err = fs.ReadDir(dirFS, workingPath)
+		var files, err = fs.ReadDir(mfs, workingPath)
 		if err != nil && !errors.Is(err, fs.ErrNotExist) {
 			continue
 		} else if err != nil {
@@ -959,7 +946,7 @@ func (e *MigrationEngine) ReadMigrations() ([]*MigrationFile, error) {
 			var filesDir = filepath.Join(workingPath, modelMigrationDir.Name())
 
 			migrationFiles, err := e.readMigrationDirFS(
-				dirFS, filesDir, appMigrationDir.Name(), modelMigrationDir.Name(),
+				mfs, filesDir, appMigrationDir.Name(), modelMigrationDir.Name(),
 			)
 			if err != nil {
 				return nil, err

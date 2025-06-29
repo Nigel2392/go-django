@@ -7,13 +7,13 @@ import (
 	"github.com/Nigel2392/goldcrest"
 )
 
-func RegisterFileSystem(app string, fs fs.FS) int8 {
-	if app == "" || fs == nil {
+func RegisterFileSystem(app string, fSys fs.FS) int8 {
+	if app == "" || fSys == nil {
 		panic("app name and filesystem cannot be nil")
 	}
 
 	goldcrest.Register(
-		fileSystemHookName(app), 0, fs,
+		fileSystemHookName(app), 0, func() fs.FS { return fSys },
 	)
 
 	return 0
