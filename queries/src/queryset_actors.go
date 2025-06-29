@@ -271,10 +271,10 @@ performAction:
 		// we must execute the AfterSave action
 		return s.execute(ctx, actsAfterSave)
 	default:
-		logger.Warnf(
-			"Executed %s for object %T: %s",
-			which, s.obj, attrs.ToString(s.obj),
-		)
+		//	logger.Warnf(
+		//		"Executed %s for object %T: %s",
+		//		which, s.obj, attrs.ToString(s.obj),
+		//	)
 
 		// no additional actions to perform
 		return ctx, nil

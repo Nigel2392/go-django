@@ -4,7 +4,7 @@ migrate:
 
   apps:
     - pages:
-        setup: src/contrib/pages
+        # setup: src/contrib/pages
         dst: src/contrib/pages/migrations
 
     - session: 

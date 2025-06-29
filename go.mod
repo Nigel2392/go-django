@@ -31,7 +31,6 @@ require (
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.14.0
-	github.com/jackc/pgx/v5 v5.7.4
 	github.com/jinzhu/inflection v1.0.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/qdm12/reprint v0.0.0-20200326205758-722754a53494
@@ -59,6 +58,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
+	github.com/jackc/pgx/v5 v5.7.4 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/lestrrat-go/strftime v1.0.4 // indirect

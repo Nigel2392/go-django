@@ -136,19 +136,14 @@ func PrimaryKey(d Definer) interface{} {
 		return rV.Uint()
 	case reflect.String:
 		return rV.String()
-	default:
-
-		switch v := v.(type) {
-		case fmt.Stringer:
-			return v.String()
-		}
-
-		assert.Fail(
-			"primary key %T is not of type int, uint or string",
-			v,
-		)
 	}
-	return nil
+
+	switch v := v.(type) {
+	case fmt.Stringer:
+		return v.String()
+	}
+
+	return v
 }
 
 // SetMany sets multiple fields on a Definer.

@@ -29,6 +29,7 @@ $UsingQueriesTestDirs = @(
     "./src/contrib/session/...",
     "./src/contrib/revisions/...",
     "./src/contrib/openauth2/...",
+    "./src/contrib/reports/audit_logs/...",
     "./queries/..."
 )
 

@@ -5,125 +5,78 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/backend"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
-type AuditLogFilter = backend.AuditLogFilter
-
-const (
-	AuditLogFilterID           = backend.AuditLogFilterID
-	AuditLogFilterType         = backend.AuditLogFilterType
-	AuditLogFilterLevel_EQ     = backend.AuditLogFilterLevel_EQ
-	AuditLogFilterLevel_GT     = backend.AuditLogFilterLevel_GT
-	AuditLogFilterLevel_LT     = backend.AuditLogFilterLevel_LT
-	AuditLogFilterTimestamp_EQ = backend.AuditLogFilterTimestamp_EQ
-	AuditLogFilterTimestamp_GT = backend.AuditLogFilterTimestamp_GT
-	AuditLogFilterTimestamp_LT = backend.AuditLogFilterTimestamp_LT
-	AuditLogFilterUserID       = backend.AuditLogFilterUserID
-	AuditLogFilterObjectID     = backend.AuditLogFilterObjectID
-	AuditLogFilterContentType  = backend.AuditLogFilterContentType
-	AuditLogFilterData         = backend.AuditLogFilterData
-)
-
-func NewAuditLogFilter(name string, value ...interface{}) AuditLogFilter {
-	return &auditlogFilter{
-		name:  name,
-		value: value,
-	}
-}
-
-type auditlogFilter struct {
-	name  string
-	value []interface{}
-}
-
-func (f *auditlogFilter) Is(name string) bool {
-	return f.name == name
-}
-
-func (f *auditlogFilter) Name() string {
-	return f.name
-}
-
-func (f *auditlogFilter) Value() []interface{} {
-	return f.value
-}
-
-func FilterType(values ...string) AuditLogFilter {
+func FilterType(values ...string) expr.Expression {
 	var v = make([]interface{}, len(values))
 	for i, value := range values {
 		v[i] = value
 	}
-	return &auditlogFilter{
-		name:  AuditLogFilterType,
-		value: v,
+	if len(v) > 1 {
+		return expr.Q("Type__in", v)
 	}
+	return expr.Q("Type", v[0])
 }
 
-func FilterLevelEqual(values ...logger.LogLevel) AuditLogFilter {
+func FilterLevel(values ...logger.LogLevel) expr.Expression {
 	var v = make([]interface{}, len(values))
 	for i, value := range values {
 		v[i] = value
 	}
-	return &auditlogFilter{
-		name:  AuditLogFilterLevel_EQ,
-		value: v,
+	if len(v) > 1 {
+		return expr.Q("Level__in", v)
 	}
+	return expr.Q("Level", v[0])
 }
 
-func FilterLevelGreaterThan(value logger.LogLevel) AuditLogFilter {
-	return &auditlogFilter{
-		name:  AuditLogFilterLevel_GT,
-		value: []interface{}{value},
-	}
+func FilterLevelGT(value logger.LogLevel) expr.Expression {
+	return expr.Q("Level__gt", value)
 }
 
-func FilterLevelLessThan(value logger.LogLevel) AuditLogFilter {
-	return &auditlogFilter{
-		name:  AuditLogFilterLevel_LT,
-		value: []interface{}{value},
-	}
+func FilterLevelLT(value logger.LogLevel) expr.Expression {
+	return expr.Q("Level__lt", value)
 }
 
-func FilterTimestampEqual(values ...time.Time) AuditLogFilter {
+func FilterTimestamp(values ...time.Time) expr.Expression {
 	var v = make([]interface{}, len(values))
 	for i, value := range values {
 		v[i] = value
 	}
-	return &auditlogFilter{
-		name:  AuditLogFilterTimestamp_EQ,
-		value: v,
+	if len(v) > 1 {
+		return expr.Q("Timestamp__in", v)
 	}
+	return expr.Q("Timestamp", v[0])
 }
 
-func FilterUserID(values ...interface{}) AuditLogFilter {
-	return &auditlogFilter{
-		name:  AuditLogFilterUserID,
-		value: values,
+func FilterUserID(values ...interface{}) expr.Expression {
+	if len(values) > 1 {
+		return expr.Q("UserID__in", values)
 	}
+	return expr.Q("UserID", values[0])
 }
 
-func FilterObjectID(values ...interface{}) AuditLogFilter {
-	return &auditlogFilter{
-		name:  AuditLogFilterObjectID,
-		value: values,
+func FilterObjectID(values ...interface{}) expr.Expression {
+	if len(values) > 1 {
+		return expr.Q("ObjectID__in", values)
 	}
+	return expr.Q("ObjectID", values[0])
 }
 
-func FilterContentType(values ...contenttypes.ContentType) AuditLogFilter {
+func FilterContentType(values ...contenttypes.ContentType) expr.Expression {
 	var v = make([]interface{}, len(values))
 	for i, value := range values {
 		v[i] = value.TypeName()
 	}
-	return &auditlogFilter{
-		name:  AuditLogFilterContentType,
-		value: v,
+	if len(v) > 1 {
+		return expr.Q("ContentType__in", v)
 	}
+	return expr.Q("ContentType", v[0])
 }
 
-func FilterData(values ...interface{}) AuditLogFilter {
+func FilterData(values ...interface{}) expr.Expression {
 	var v = make([]interface{}, len(values))
 	for i, value := range values {
 		var b = new(bytes.Buffer)
@@ -132,8 +85,8 @@ func FilterData(values ...interface{}) AuditLogFilter {
 		}
 		v[i] = b.Bytes()
 	}
-	return &auditlogFilter{
-		name:  AuditLogFilterData,
-		value: values,
+	if len(v) > 1 {
+		return expr.Q("Data__in", v)
 	}
+	return expr.Q("Data", v[0])
 }

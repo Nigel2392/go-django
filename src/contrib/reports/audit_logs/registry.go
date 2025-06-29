@@ -22,9 +22,6 @@ type auditLogRegistry struct {
 	// Definitions are used for formatting the message to users or performing any additional operations on the log entry
 	// before it is shown to the user
 	definitions map[string]Definition
-
-	// Backend is used to store and retrieve log entries
-	backend StorageBackend
 }
 
 var registry = &auditLogRegistry{
@@ -33,11 +30,6 @@ var registry = &auditLogRegistry{
 	filters:      make(map[string][]EntryFilter),
 	handlers:     make(map[string][]EntryHandler),
 	definitions:  make(map[string]Definition),
-	backend:      NewInMemoryStorageBackend(),
-}
-
-func Backend() StorageBackend {
-	return registry.backend
 }
 
 func RegisterFilter(filter EntryFilter) {

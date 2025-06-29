@@ -2,13 +2,13 @@ package auditlogs
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
-	"time"
 
-	"github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/backend"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -22,16 +22,14 @@ var (
 	LogUnknownTypes bool = false
 )
 
-type LogEntry = backend.LogEntry
-
 type EntryFilter interface {
 	Type() string
-	EntryFilter(message LogEntry) bool
+	EntryFilter(message *Entry) bool
 }
 
 type EntryHandler interface {
 	Type() string
-	Handle(w io.Writer, message LogEntry) error
+	Handle(w io.Writer, message *Entry) error
 }
 
 type LogEntryAction interface {
@@ -46,9 +44,7 @@ type Definition interface {
 	GetActions(r *http.Request, logEntry LogEntry) []LogEntryAction
 }
 
-type StorageBackend = backend.StorageBackend
-
-func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data map[string]interface{}) (uuid.UUID, error) {
+func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject attrs.Definer, data map[string]interface{}) (uuid.UUID, error) {
 
 	if !Logs.IsReady() {
 		return uuid.Nil, ErrLogsNotReady
@@ -67,17 +63,16 @@ func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data 
 	}
 
 	var entry = &Entry{
-		Typ:  entryType,
+		Typ:  drivers.String(entryType),
 		Lvl:  level,
-		Time: time.Now(),
-		Src:  data,
+		Time: drivers.CurrentTimestamp(),
+		Src:  drivers.JSON[map[string]any]{Data: data},
 	}
 
 	var (
 		filtersForTyp  []EntryFilter
 		handlersForTyp []EntryHandler
 		output         *bytes.Buffer = new(bytes.Buffer)
-		e              LogEntry      = entry
 		err            error
 		ok             bool
 	)
@@ -93,7 +88,9 @@ func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data 
 		)
 
 		entry.Obj = forObject
-		entry.ObjID = primary.GetValue()
+		entry.ObjID = drivers.JSON[any]{
+			Data: primary.GetValue(),
+		}
 		entry.CType = contentType
 
 		filtersForTyp, ok = filtersMap[pkgPath]
@@ -132,14 +129,14 @@ func Log(entryType string, level logger.LogLevel, forObject attrs.Definer, data 
 	}
 
 	for _, filter := range filtersForTyp {
-		if !filter.EntryFilter(e) {
+		if !filter.EntryFilter(entry) {
 			logger.Warnf("filter %q rejected log entry", filter.Type())
 			return uuid.Nil, nil
 		}
 	}
 
 	for _, handler := range handlersForTyp {
-		if err := handler.Handle(output, e); err != nil {
+		if err := handler.Handle(output, entry); err != nil {
 			return uuid.Nil, err
 		}
 	}
@@ -148,9 +145,7 @@ storeLogEntry:
 	logger.Logf(
 		level, "Adding new %q entry to audit log", entryType,
 	)
-	if registry.backend != nil {
-		return registry.backend.Store(e)
-	}
 
-	return uuid.Nil, err
+	err = entry.Save(ctx)
+	return entry.ID(), err
 }

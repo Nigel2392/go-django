@@ -1,19 +1,21 @@
 package auditlogs
 
 import (
+	"fmt"
 	"io/fs"
 	"net/http"
 	"strconv"
 	"unicode"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
-	"github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/backend"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -28,7 +30,6 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/options"
-	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
@@ -39,11 +40,11 @@ import (
 )
 
 type AuditLogs struct {
-	*apps.AppConfig
+	*apps.DBRequiredAppConfig
 }
 
 var Logs *AuditLogs = &AuditLogs{
-	AppConfig: apps.NewAppConfig("auditlogs"),
+	DBRequiredAppConfig: apps.NewDBAppConfig("auditlogs"),
 }
 
 //go:embed assets/*
@@ -54,44 +55,30 @@ func NewAppConfig() django.AppConfig {
 		"reports",
 	}
 
-	//	Logs.ModelObjects = []attrs.Definer{
-	//		&Entry{},
-	//	}
+	Logs.ModelObjects = []attrs.Definer{
+		&Entry{},
+	}
 
-	Logs.Init = func(settings django.Settings) error {
+	Logs.Init = func(settings django.Settings, db drivers.Database) error {
 
-		if registry.backend == nil {
-			var db = django.ConfigGet[drivers.Database](
-				django.Global.Settings,
-				django.APPVAR_DATABASE,
-			)
-
-			if db == nil {
-				goto continueInit
+		if !django.AppInstalled("migrator") {
+			var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())
+			if err != nil {
+				return fmt.Errorf("failed to get schema editor: %w", err)
 			}
 
-			var backend, err = backend.GetBackend(db.Driver())
-			if err != nil {
-				if errors.Is(err, models.ErrBackendNotFound) {
-					registry.backend = NewInMemoryStorageBackend()
-					goto continueInit
+			var table = migrator.NewModelTable(&Entry{})
+			if err := schemaEditor.CreateTable(table, true); err != nil {
+				return fmt.Errorf("failed to create pages table: %w", err)
+			}
+
+			for _, index := range table.Indexes() {
+				if err := schemaEditor.AddIndex(table, index, true); err != nil {
+					return fmt.Errorf("failed to create index %s: %w", index.Name(), err)
 				}
-				return errors.Wrap(err, "Failed to get audit logs backend")
 			}
-
-			if err = backend.CreateTable(db); err != nil {
-				return errors.Wrap(err, "Failed to create audit logs table")
-			}
-
-			qs, err := backend.NewQuerySet(db)
-			if err != nil {
-				return errors.Wrap(err, "Failed to create audit logs query set")
-			}
-
-			registry.backend = qs
 		}
 
-	continueInit:
 		goldcrest.Register(
 			reports.ReportsMenuHook, 0,
 			reports.ReportsMenuHookFunc(func() []menu.MenuItem {
@@ -169,7 +156,7 @@ func NewAppConfig() django.AppConfig {
 					data["content_type"] = cTypeDef.ContentType()
 				}
 
-				if _, err := Log(hookName, level, instance, data); err != nil {
+				if _, err := Log(r.Context(), hookName, level, instance, data); err != nil {
 					logger.Warn(err)
 				}
 			}),
@@ -228,82 +215,48 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var adminCtx = admin.NewContext(r, admin.AdminSite, nil)
-	var backend = Backend()
-	if backend == nil {
-		except.Fail(
-			http.StatusInternalServerError,
-			"Failed to setup audit logs backend",
-		)
-		return
-	}
 
-	var logFilters = make([]AuditLogFilter, 0)
-	var filterType = r.URL.Query()["type"]
-	if len(filterType) > 0 {
-		logFilters = append(logFilters, FilterType(filterType...))
-	}
-
-	var filterUser = r.URL.Query()["user"]
-	if len(filterUser) > 0 {
-		var userIds = make([]interface{}, 0, len(filterUser))
-		for _, u := range filterUser {
-			if isNumber(u) {
-				userId, _ := strconv.Atoi(u)
-				userIds = append(userIds, userId)
-			} else {
-				userIds = append(userIds, u)
-			}
-		}
-		logFilters = append(logFilters, FilterUserID(userIds...))
-	}
-
-	var filterObjects = r.URL.Query()["object_id"]
-	if len(filterObjects) > 0 {
-		var objectIds = make([]interface{}, 0, len(filterObjects))
-		for _, o := range filterObjects {
-			if isNumber(o) {
-				objId, _ := strconv.Atoi(o)
-				objectIds = append(objectIds, objId)
-			} else {
-				objectIds = append(objectIds, o)
-			}
-		}
-		logFilters = append(logFilters, FilterObjectID(objectIds...))
-	}
-
-	objectPackage := r.URL.Query().Get("content_type")
-	if objectPackage != "" {
-		var contentType = contenttypes.DefinitionForType(
-			objectPackage,
-		)
-		if contentType != nil {
-			logFilters = append(logFilters, FilterContentType(
-				contentType.ContentType(),
-			))
-		}
-	}
-
-	var filter = filters.NewFilters[LogEntry](
+	var filter = filters.NewFilters[*Entry](
 		"filters",
 	)
 
-	filter.Add(&filters.BaseFilterSpec[LogEntry]{
+	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
 		SpecName:  "type",
 		FormField: fields.CharField(),
-		Apply: func(value interface{}, objectList []LogEntry) error {
+		Apply: func(value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
 			if fields.IsZero(value) {
-				return nil
+				return object, nil
 			}
 
-			var v = value.(string)
-			if v != "" {
-				logFilters = append(logFilters, FilterType(v))
-			}
-			return nil
+			return object.Filter("Type", value), nil
 		},
 	})
 
-	filter.Add(&filters.BaseFilterSpec[LogEntry]{
+	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
+		SpecName:  "object_id",
+		FormField: fields.CharField(),
+		Apply: func(value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
+			if fields.IsZero(value) {
+				return object, nil
+			}
+
+			return object.Filter("ObjectID", value), nil
+		},
+	})
+
+	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
+		SpecName:  "content_type",
+		FormField: fields.CharField(),
+		Apply: func(value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
+			if fields.IsZero(value) {
+				return object, nil
+			}
+
+			return object.Filter("ContentType", value), nil
+		},
+	})
+
+	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
 		SpecName: "level",
 		FormField: fields.CharField(fields.Widget(
 			options.NewSelectInput(nil, func() []widgets.Option {
@@ -315,56 +268,62 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 				}
 			}),
 		)),
-		Apply: func(value interface{}, objectList []LogEntry) error {
+		Apply: func(value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
 			if fields.IsZero(value) {
-				return nil
+				return object, nil
 			}
 
 			var v = value.(string)
 			var level, err = strconv.Atoi(v)
 			if err != nil {
-				return err
+				return nil, errors.Wrapf(err, "Invalid log level: %s", v)
 			}
-			logFilters = append(logFilters, FilterLevelEqual(
-				logger.LogLevel(level),
-			))
-			return nil
+			return object.Filter("Level", logger.LogLevel(level)), nil
 		},
 	})
 
-	var paginator = pagination.Paginator[LogEntry]{
+	var (
+		err error
+		qs  = queries.GetQuerySet(&Entry{})
+	)
+
+	qs, err = filter.Filter(r.URL.Query(), qs)
+	if err != nil {
+		logger.Errorf("Failed to filter audit logs: %v", err)
+		except.Fail(
+			http.StatusInternalServerError,
+			"Failed to filter audit logs",
+		)
+		return
+	}
+
+	var paginator = pagination.Paginator[[]LogEntry, LogEntry]{
 		GetObject: func(l LogEntry) LogEntry {
 			return Define(r, l)
 		},
 		GetObjects: func(i1, i2 int) ([]LogEntry, error) {
-			var (
-				objects []LogEntry
-				err     error
-			)
+			objectRows, err := qs.
+				Offset(i1).
+				Limit(i2).
+				All()
 
-			if err = filter.Filter(r.URL.Query(), nil); err != nil {
-				return nil, errors.Wrap(err, "Failed to filter audit logs")
-			}
-
-			if len(logFilters) > 0 {
-				objects, err = backend.EntryFilter(
-					logFilters, i1, i2,
-				)
-			} else {
-				objects, err = backend.RetrieveMany(
-					i1, i2,
-				)
-			}
 			if err != nil {
 				return nil, err
 			}
+
+			var objects = make([]LogEntry, len(objectRows))
+			for i, row := range objectRows {
+				objects[i] = row.Object
+			}
+
 			return objects, nil
 		},
 		GetCount: func() (int, error) {
-			if len(logFilters) > 0 {
-				return backend.CountFilter(logFilters)
+			var count, err = qs.Count()
+			if err != nil {
+				return 0, errors.Wrap(err, "Failed to count audit logs")
 			}
-			return backend.Count()
+			return int(count), nil
 		},
 		Amount: 15,
 	}
@@ -377,7 +336,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		pageNum = 1
 	}
 
-	var page, err = paginator.Page(pageNum)
+	page, err := paginator.Page(pageNum)
 	if err != nil && !errors.Is(err, pagination.ErrNoResults) {
 		logger.Errorf("Failed to retrieve audit logs: %v", err)
 		except.Fail(
@@ -392,14 +351,8 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	//	definitions[i] = Define(r, log)
 	//}
 
-	var objectId string
-	if len(filterObjects) > 0 {
-		objectId = filterObjects[0]
-	}
-
-	adminCtx.Set("content_type", objectPackage)
-	adminCtx.Set("object_id", objectId)
-	adminCtx.Set("log_filters", logFilters)
+	adminCtx.Set("content_type", filter.Form().CleanedData()["content_type"])
+	adminCtx.Set("object_id", filter.Form().CleanedData()["object_id"])
 	adminCtx.Set("paginator", page)
 	adminCtx.Set("form", filter.Form())
 	adminCtx.Set(

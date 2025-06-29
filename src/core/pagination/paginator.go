@@ -19,7 +19,7 @@ type PageObject[T any] interface {
 	Count() int
 
 	// A list of results on this page
-	// Results() iter.Seq[T]
+	// Results() iter.Seq[S, E]
 	Results() []T
 
 	// The current page number
@@ -73,15 +73,15 @@ func GetPageNum(n any) int {
 }
 
 // Paginator holds pagination logic
-type Paginator[T any] struct {
-	GetObject  func(T) T
-	GetObjects func(amount int, offset int) ([]T, error)
+type Paginator[S ~[]E, E any] struct {
+	GetObject  func(E) E
+	GetObjects func(amount int, offset int) (S, error)
 	GetCount   func() (int, error)
 	Amount     int
 	cnt        int
 }
 
-func (p *Paginator[T]) NumPages() (int, error) {
+func (p *Paginator[S, E]) NumPages() (int, error) {
 	count, err := p.GetCount()
 	if err != nil {
 		return 0, err
@@ -89,7 +89,7 @@ func (p *Paginator[T]) NumPages() (int, error) {
 	return (count + p.PerPage() - 1) / p.PerPage(), nil
 }
 
-func (p *Paginator[T]) Count() (int, error) {
+func (p *Paginator[S, E]) Count() (int, error) {
 	if p.cnt == 0 {
 		count, err := p.GetCount()
 		if err != nil {
@@ -100,11 +100,11 @@ func (p *Paginator[T]) Count() (int, error) {
 	return p.cnt, nil
 }
 
-func (p *Paginator[T]) PerPage() int {
+func (p *Paginator[S, E]) PerPage() int {
 	return p.Amount
 }
 
-func (p *Paginator[T]) Page(n int) (PageObject[T], error) {
+func (p *Paginator[S, E]) Page(n int) (PageObject[E], error) {
 	var amount = p.PerPage()
 
 	if amount == 0 {
@@ -127,5 +127,5 @@ func (p *Paginator[T]) Page(n int) (PageObject[T], error) {
 		}
 	}
 
-	return &pageObject[T]{num: n - 1, results: results, paginator: p}, nil
+	return &pageObject[E]{num: n - 1, results: results, paginator: p}, nil
 }

@@ -363,7 +363,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			addData["parent"] = p.ID()
 		}
 
-		auditlogs.Log(
+		auditlogs.Log(ctx,
 			"pages:add",
 			logger.INF,
 			page.Reference(),
@@ -371,7 +371,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		)
 
 		if p != nil && p.ID() > 0 {
-			auditlogs.Log("pages:add_child", logger.INF, p, map[string]interface{}{
+			auditlogs.Log(ctx, "pages:add_child", logger.INF, p, map[string]interface{}{
 				"page_id": ref.ID(),
 				"label":   ref.Title,
 				"cType":   cType.PkgPath(),
@@ -379,7 +379,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		}
 
 		if publishPage {
-			auditlogs.Log("pages:publish", logger.INF, p, map[string]interface{}{
+			auditlogs.Log(ctx, "pages:publish", logger.INF, p, map[string]interface{}{
 				"page_id": ref.ID(),
 				"label":   ref.Title,
 				"cType":   cType.PkgPath(),
@@ -543,20 +543,20 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			return err
 		}
 
-		auditlogs.Log("pages:edit", logger.INF, p, map[string]interface{}{
+		auditlogs.Log(ctx, "pages:edit", logger.INF, p, map[string]interface{}{
 			"page_id": page.ID(),
 			"label":   page.Reference().Title,
 		})
 
 		if wasPublished {
-			auditlogs.Log("pages:publish", logger.INF, p, map[string]interface{}{
+			auditlogs.Log(ctx, "pages:publish", logger.INF, p, map[string]interface{}{
 				"page_id": page.ID(),
 				"label":   page.Reference().Title,
 			})
 		}
 
 		if wasUnpublished {
-			auditlogs.Log("pages:unpublish", logger.INF, p, map[string]interface{}{
+			auditlogs.Log(ctx, "pages:unpublish", logger.INF, p, map[string]interface{}{
 				"page_id": page.ID(),
 				"label":   page.Reference().Title,
 			})
@@ -686,7 +686,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			logger.Warnf("Page %q (%v) deleted but content node has no Delete() method", p.Title, p.ID())
 		}
 
-		auditlogs.Log("pages:delete", logger.WRN, p, map[string]interface{}{
+		auditlogs.Log(r.Context(), "pages:delete", logger.WRN, p, map[string]interface{}{
 			"page_id": p.ID(),
 			"label":   p.Title,
 		})
@@ -752,7 +752,7 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 			return
 		}
 
-		auditlogs.Log("pages:unpublish", logger.WRN, p, map[string]interface{}{
+		auditlogs.Log(r.Context(), "pages:unpublish", logger.WRN, p, map[string]interface{}{
 			"unpublish_children": unpublishChildren,
 			"page_id":            p.ID(),
 			"label":              p.Title,

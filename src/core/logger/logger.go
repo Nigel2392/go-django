@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"reflect"
 	"strings"
 	"sync"
 	"time"
@@ -19,11 +20,7 @@ func (l LogLevel) String() string {
 }
 
 func (l LogLevel) Value() (driver.Value, error) {
-	var v, ok = levelMap[l]
-	if !ok {
-		return nil, fmt.Errorf("unknown log level %d", l)
-	}
-	return v, nil
+	return int64(l), nil
 }
 
 func (l *LogLevel) Scan(value interface{}) error {
@@ -33,6 +30,12 @@ func (l *LogLevel) Scan(value interface{}) error {
 		s = v
 	case []byte:
 		s = string(v)
+	case int64, int32, int16, int8, int:
+		*l = LogLevel(reflect.ValueOf(v).Int())
+		return nil
+	case uint64, uint32, uint16, uint8, uint:
+		*l = LogLevel(reflect.ValueOf(v).Uint())
+		return nil
 	default:
 		return fmt.Errorf("cannot scan %T into LogLevel", value)
 	}
