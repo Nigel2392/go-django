@@ -3,7 +3,8 @@ migrate:
     - ./migrations
 
   apps:
-    - pages: 
+    - pages:
+        setup: src/contrib/pages
         dst: src/contrib/pages/migrations
 
     - session: 

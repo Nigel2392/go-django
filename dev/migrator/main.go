@@ -5,6 +5,7 @@ import (
 	"flag"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/yaml.v3"
@@ -18,6 +19,8 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/logger"
+
+	_ "embed"
 )
 
 // utility application to easily generate migrations during development
@@ -34,12 +37,34 @@ import (
 const ROOT_MIGRATION_DIR = "./migrations"
 const MIGRATION_MAP_FILE = "./migrations.yml"
 
+//go:embed setupfile.go.txt
+var setupFile string
+
 func main() {
+
+	// Setup global tool arguments
+	// This allows us to use the same arguments for all commands
+	var (
+		apps    Apps
+		confDir string
+	)
+
+	var fSet = flag.NewFlagSet("migrator", flag.ContinueOnError)
+	fSet.Var(&apps, "app", "App to include in the migration engine (can be specified multiple times)")
+	fSet.StringVar(&confDir, "conf", MIGRATION_MAP_FILE, "Path to the migration configuration file")
+	if err := fSet.Parse(os.Args[1:]); err != nil {
+		if err == flag.ErrHelp {
+			os.Exit(0)
+		}
+		panic(err)
+	}
+
+	// Read the YAML configuration file
 	var __cnf = new(struct {
 		Migrate MigrationConfig `yaml:"migrate"`
 	})
 
-	var file, err = os.Open(MIGRATION_MAP_FILE)
+	var file, err = os.Open(confDir)
 	if err != nil {
 		logger.Errorf("Failed to open migration map file: %v", err)
 		return
@@ -53,6 +78,8 @@ func main() {
 		return
 	}
 
+	// Setup the database connection
+	// Use the configuration from the YAML file or default to SQLite
 	var config = __cnf.Migrate
 	var dbConf = &DatabaseConfig{
 		Engine: "sqlite3",
@@ -71,6 +98,7 @@ func main() {
 		panic(err)
 	}
 
+	// Initialize the Go-Django application with the database and other configurations
 	app := django.App(
 		django.Configure(map[string]interface{}{
 			django.APPVAR_DATABASE: db,
@@ -97,14 +125,42 @@ func main() {
 		panic(err)
 	}
 
+	// Setup the migration engine's schema editor
 	schemaEditor, err := migrator.GetSchemaEditor(db.Driver())
 	if err != nil {
 		panic(err)
 	}
 
+	// If no apps were provided, we use all apps in the above
+	// django.Apps() call
+	if apps.Len() == 0 {
+		apps = AppList(
+			django.Global.Apps.Keys()...,
+		)
+	}
+
+	var opts = make([]migrator.EngineOption, 0, 2)
+	opts = append(opts,
+		migrator.EngineOptionApps(apps.List()...),
+	)
+
+	if len(config.SourceDirs) == 0 {
+		config.SourceDirs = []string{ROOT_MIGRATION_DIR}
+	}
+
+	var rootDir string
+	if len(config.SourceDirs) > 0 {
+		rootDir = config.SourceDirs[0]
+
+		if len(config.SourceDirs) > 1 {
+			opts = append(opts,
+				migrator.EngineOptionDirs(config.SourceDirs[1:]...),
+			)
+		}
+	}
+
 	var engine = migrator.NewMigrationEngine(
-		ROOT_MIGRATION_DIR,
-		schemaEditor,
+		rootDir, schemaEditor, opts...,
 	)
 
 	var reg = command.NewRegistry(
@@ -122,8 +178,14 @@ func main() {
 			}
 
 			for app, conf := range config.Targets.Iter() {
+
+				if _, ok := apps.Lookup(app); !ok {
+					logger.Debugf("Skipping app %q as it is not included")
+					continue
+				}
+
 				var n, err = copyDir(
-					filepath.Join(ROOT_MIGRATION_DIR, app),
+					filepath.Join(rootDir, app),
 					filepath.Join(conf.Destination, app),
 				)
 				if err != nil {
@@ -136,6 +198,37 @@ func main() {
 				}
 
 				logger.Infof("Copied migrations from %q to %q", app, conf.Destination)
+
+				if conf.Setup != "" && !wasSetup(conf.Setup) {
+
+					// the setupfile needs to know where <app_package>/<<migrations_dir(s)>>/<app_name> is located
+					var diff, err = filepath.Rel(conf.Setup, conf.Destination)
+					if err != nil {
+						return err
+					}
+
+					var mDir = filepath.ToSlash(filepath.Join(diff, app))
+					logger.Warnf("Using migration directory %q for app %q", mDir, app)
+
+					var setupFilePath = filepath.Join(conf.Setup, "setup.migrator.go")
+					var replacer = strings.NewReplacer(
+						"{{APP_NAME}}", app,
+						"{{MIGRATIONS_DIR}}", filepath.Dir(mDir),
+					)
+					if err := os.WriteFile(setupFilePath, []byte(replacer.Replace(setupFile)), 0644); err != nil {
+						return err
+					}
+					logger.Infof("Created setup file for app %q at %q", app, setupFilePath)
+				}
+
+				// Remove the migration directory if it exists
+				var migrationDir = filepath.Join(rootDir, app)
+				if _, err := os.Stat(migrationDir); err == nil || !os.IsNotExist(err) {
+					if err := os.RemoveAll(migrationDir); err != nil {
+						return err
+					}
+					logger.Debugf("Removed migration directory %q for app %q", migrationDir, app)
+				}
 			}
 
 			return nil
@@ -150,8 +243,14 @@ func main() {
 
 			var anyRemoved bool
 			for app, conf := range config.Targets.Iter() {
+
+				if _, ok := apps.Lookup(app); !ok {
+					logger.Debugf("Skipping app %q as it is not included")
+					continue
+				}
+
 				var (
-					migrationDir    = filepath.Join(ROOT_MIGRATION_DIR, app)
+					migrationDir    = filepath.Join(rootDir, app)
 					dirRemoved      = false
 					appMigrationDir = filepath.Join(conf.Destination, app)
 					appDirRemoved   = false
@@ -166,6 +265,14 @@ func main() {
 
 				if _, err := os.Stat(appMigrationDir); err == nil || !os.IsNotExist(err) {
 					if err := os.RemoveAll(appMigrationDir); err != nil {
+						return err
+					}
+					appDirRemoved = true
+				}
+
+				if conf.Setup != "" && wasSetup(conf.Setup) {
+					var setupFilePath = filepath.Join(conf.Setup, "setup.migrator.go")
+					if err := os.Remove(setupFilePath); err != nil && !os.IsNotExist(err) {
 						return err
 					}
 					appDirRemoved = true
@@ -193,12 +300,32 @@ func main() {
 		},
 	})
 
-	if err := reg.ExecCommand(os.Args[1:]); err != nil {
+	if err := reg.ExecCommand(fSet.Args()); err != nil {
 		if err == flag.ErrHelp {
 			os.Exit(0)
 		}
 		panic(err)
 	}
+}
+
+func wasSetup(pathToApp string) bool {
+	var setupFilePath = filepath.Join(pathToApp, "setup.migrator.go")
+	if _, err := os.Stat(setupFilePath); err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		panic(err)
+	}
+
+	var file, err = os.ReadFile(setupFilePath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false
+		}
+		panic(err)
+	}
+
+	return file != nil && len(file) > 0
 }
 
 func copyDir(src, dst string) (copied int, err error) {

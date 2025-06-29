@@ -1,0 +1,13 @@
+package {{APP_NAME}}
+
+import (
+	"embed"
+
+	"github.com/Nigel2392/go-django/queries/src/migrator"
+	"github.com/Nigel2392/go-django/src/core/filesystem"
+)
+
+//go:embed {{MIGRATIONS_DIR}}/*
+var migrationFileFS embed.FS
+
+var _ = migrator.RegisterFileSystem("{{APP_NAME}}", filesystem.Sub(migrationFileFS, "{{MIGRATIONS_DIR}}/{{APP_NAME}}"))
