@@ -10,6 +10,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"gopkg.in/yaml.v3"
 
+	"github.com/Nigel2392/go-django/dev/migrator/conf"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
@@ -39,7 +40,7 @@ import (
 const ROOT_MIGRATION_DIR = "./migrations"
 const MIGRATION_MAP_FILE = "./migrations.yml"
 
-//go:embed setupfile.go.txt
+//go:embed assets/setupfile.go.txt
 var setupFile string
 
 func main() {
@@ -47,7 +48,7 @@ func main() {
 	// Setup global tool arguments
 	// This allows us to use the same arguments for all commands
 	var (
-		apps    Apps
+		apps    conf.Apps
 		confDir string
 	)
 
@@ -63,7 +64,7 @@ func main() {
 
 	// Read the YAML configuration file
 	var __cnf = new(struct {
-		Migrate MigrationConfig `yaml:"migrate"`
+		Migrate conf.MigrationConfig `yaml:"migrate"`
 	})
 
 	var file, err = os.Open(confDir)
@@ -83,7 +84,7 @@ func main() {
 	// Setup the database connection
 	// Use the configuration from the YAML file or default to SQLite
 	var config = __cnf.Migrate
-	var dbConf = &DatabaseConfig{
+	var dbConf = &conf.DatabaseConfig{
 		Engine: "sqlite3",
 		DSN:    "./.private/db.sqlite3",
 	}
@@ -138,7 +139,7 @@ func main() {
 	// If no apps were provided, we use all apps in the above
 	// django.Apps() call
 	if apps.Len() == 0 {
-		apps = AppList(
+		apps = conf.AppList(
 			django.Global.Apps.Keys()...,
 		)
 	}

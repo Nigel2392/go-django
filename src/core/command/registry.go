@@ -4,28 +4,70 @@ import (
 	"flag"
 	"os"
 
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/pkg/errors"
 )
 
+var BUILTINS = make([]Command, 0)
+
+func init() {
+	BUILTINS = append(BUILTINS, &HelpCommand{
+		ID:   "help",
+		Desc: "List all available commands and their usage information",
+	})
+}
+
 type Registry interface {
+	Name() string
+	Which(cmdName string) (Command, bool)
 	Register(cmd Command)
+	Unregister(cmdName string) error
 	Commands() []Command
 	ExecCommand(args []string) error
 }
 
 type commandRegistry struct {
-	commands *orderedmap.OrderedMap[string, Command]
+	name          string
+	errorHandling flag.ErrorHandling
+	commands      *orderedmap.OrderedMap[string, Command]
 }
 
 func NewRegistry(flagsetName string, errorHandling flag.ErrorHandling) Registry {
-	return &commandRegistry{
-		commands: orderedmap.NewOrderedMap[string, Command](),
+	var reg = &commandRegistry{
+		name:          flagsetName,
+		errorHandling: errorHandling,
+		commands:      orderedmap.NewOrderedMap[string, Command](),
 	}
+
+	// Register built-in commands
+	for _, cmd := range BUILTINS {
+		reg.Register(cmd)
+	}
+
+	return reg
+}
+
+func (r *commandRegistry) Name() string {
+	return r.name
+}
+
+func (r *commandRegistry) Which(cmdName string) (Command, bool) {
+	return r.commands.Get(cmdName)
 }
 
 func (r *commandRegistry) Register(cmd Command) {
 	r.commands.Set(cmd.Name(), cmd)
+}
+
+func (r *commandRegistry) Unregister(cmdName string) error {
+	if r.commands.Delete(cmdName) {
+		return nil
+	}
+	return errors.Wrapf(
+		ErrUnknownCommand,
+		"could not unregister command %q", cmdName,
+	)
 }
 
 func (r *commandRegistry) Commands() []Command {
@@ -54,41 +96,57 @@ func (r *commandRegistry) ExecCommand(args []string) error {
 	}
 
 	var m Manager = &manager{
-		stdout: os.Stdout,
-		stderr: os.Stderr,
+		stdout: logger.PWriter(cmdName, logger.INF),
+		stderr: logger.PWriter(cmdName, logger.INF),
 		stdin:  os.Stdin,
 		cmd:    cmd,
+		reg:    r,
 	}
 
-	var flagSet = flag.NewFlagSet(cmdName, flag.ContinueOnError)
-	var err = cmd.AddFlags(m, flagSet)
+	var remaining = arguments
+	if cmd, ok := cmd.(CommandAdder); ok {
+		var flagSet = flag.NewFlagSet(cmdName, flag.ContinueOnError)
+		var err = cmd.AddFlags(m, flagSet)
+		if err != nil {
+			return errors.Wrapf(
+				err,
+				"could not add flags for command %q",
+				cmdName,
+			)
+		}
+
+		if flagSet.NFlag() > 0 {
+			err = flagSet.Parse(arguments)
+			if err != nil {
+				return errors.Wrapf(
+					err,
+					"could not parse flags for command %q",
+					cmdName,
+				)
+			}
+		}
+	}
+
+	var err = cmd.Exec(m, remaining)
 	if err != nil {
-		return errors.Wrapf(
-			err,
-			"could not add flags for command %q",
-			cmdName,
-		)
+
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+
+		switch r.errorHandling {
+		case flag.ExitOnError:
+			logger.Debugf("Error executing command %q: %s", cmdName, err.Error())
+			os.Exit(1)
+		case flag.ContinueOnError:
+			logger.Debugf("Error executing command %q: %s", cmdName, err.Error())
+		case flag.PanicOnError:
+			panic(errors.Wrapf(
+				err, "Error executing command %q", cmdName,
+			))
+		}
 	}
-
-	err = flagSet.Parse(arguments)
-	if err != nil {
-		return errors.Wrapf(
-			err,
-			"could not parse flags for command %q",
-			cmdName,
-		)
-	}
-
-	var remaining = flagSet.Args()
-
-	//  if len(remaining) > 0 && !cmd.AcceptsRemaining() {
-	//  	return fmt.Errorf(
-	//  		"too many arguments for command %q: %v",
-	//  		cmdName, remaining,
-	//  	)
-	//  }
-
-	return cmd.Exec(m, remaining)
+	return nil
 }
 
 func parseCommand(args []string) (cmdName string, arguments []string) {

@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"fmt"
 	"io"
 	"os"
 )
@@ -13,9 +14,22 @@ func printArgs(levelStr string, format string, args ...interface{}) {
 	//	fmt.Printf("[%s] %s\n", levelStr, fmt.Sprintf(format, args...))
 }
 
+type prefixerwriter struct {
+	label    string
+	logLevel LogLevel
+	out      io.Writer
+}
+
+func (p prefixerwriter) Write(b []byte) (n int, err error) {
+	if p.label != "" {
+		return fmt.Fprintf(p.out, "[%s] %s", p.label, string(b))
+	}
+	return fmt.Fprintf(p.out, "[%s] %s", p.logLevel.String(), string(b))
+}
+
 var (
 	Writer    = func(level LogLevel) io.Writer { return os.Stdout }
-	PWriter   = func(label string, level LogLevel) io.Writer { return os.Stdout }
+	PWriter   = func(label string, level LogLevel) io.Writer { return prefixerwriter{label, level, os.Stdout} }
 	NameSpace = func(label string) Log { return nil }
 
 	SetOutput func(level LogLevel, w io.Writer) = func(level LogLevel, w io.Writer) {}

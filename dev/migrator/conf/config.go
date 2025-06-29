@@ -1,4 +1,4 @@
-package main
+package conf
 
 type MigrationTarget struct {
 	Setup       string `yaml:"setup"`

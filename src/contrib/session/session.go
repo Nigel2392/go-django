@@ -66,13 +66,13 @@ func NewAppConfig() django.AppConfig {
 				}
 			}
 
-			logger.Info("Using QueryStore for session storage")
+			logger.Debug("Using QueryStore for session storage")
 			sessionManager.Store = NewQueryStore(db)
 			return nil
 		}
 
 	memstore:
-		logger.Info("Using memstore for session storage")
+		logger.Debug("Using memstore for session storage")
 		sessionManager.Store = memstore.New()
 		return nil
 	}

@@ -12,10 +12,11 @@ import (
 var _ Manager = (*manager)(nil)
 
 type manager struct {
-	stdout *os.File
-	stderr *os.File
+	stdout io.Writer
+	stderr io.Writer
 	stdin  *os.File
 	cmd    Command
+	reg    Registry
 }
 
 func (m *manager) Log(message string) {
@@ -36,6 +37,10 @@ func (m *manager) Stderr() io.Writer {
 
 func (m *manager) Stdin() io.Reader {
 	return m.stdin
+}
+
+func (m *manager) Registry() Registry {
+	return m.reg
 }
 
 func (m *manager) Input(question string) (string, error) {
