@@ -96,8 +96,8 @@ func (r *commandRegistry) ExecCommand(args []string) error {
 	}
 
 	var m Manager = &manager{
-		stdout: logger.PWriter(cmdName, logger.INF),
-		stderr: logger.PWriter(cmdName, logger.INF),
+		stdout: os.Stdout,
+		stderr: os.Stdout,
 		stdin:  os.Stdin,
 		cmd:    cmd,
 		reg:    r,
@@ -115,7 +115,7 @@ func (r *commandRegistry) ExecCommand(args []string) error {
 			)
 		}
 
-		if flagSet.NFlag() > 0 {
+		if hasFlags(flagSet) {
 			err = flagSet.Parse(arguments)
 			if err != nil {
 				return errors.Wrapf(
@@ -158,4 +158,16 @@ func parseCommand(args []string) (cmdName string, arguments []string) {
 	arguments = args[1:]
 
 	return
+}
+
+func hasFlags(flagset *flag.FlagSet) bool {
+	if flagset == nil {
+		return false
+	}
+
+	var ct = 0
+	flagset.VisitAll(func(f *flag.Flag) {
+		ct++
+	})
+	return ct > 0
 }

@@ -173,10 +173,14 @@ func main() {
 		flag.ContinueOnError,
 	)
 
-	reg.Register(&command.Cmd[any]{
+	reg.Register(&command.Cmd[conf.Apps]{
 		ID:   "makemigrations",
 		Desc: "Create new database migrations to be applied with `migrate`",
-		Execute: func(m command.Manager, stored any, args []string) error {
+		FlagFunc: func(m command.Manager, stored *conf.Apps, f *flag.FlagSet) error {
+			f.Var(stored, "app", "App to include in the migration engine (can be specified multiple times)")
+			return nil
+		},
+		Execute: func(m command.Manager, stored conf.Apps, args []string) error {
 			var err = engine.MakeMigrations()
 			if err != nil {
 				return err

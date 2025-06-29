@@ -125,11 +125,10 @@ func (c *HelpCommand) Exec(m Manager, args []string) error {
 					)
 				}
 
-				if flagger.NFlag() > 0 {
+				if hasFlags(flagger) {
 					flagsAdded = true
 					flagger.SetOutput(buf)
 					flagger.PrintDefaults()
-					fmt.Fprintln(buf)
 				}
 			}
 
@@ -164,9 +163,23 @@ func (c *HelpCommand) Exec(m Manager, args []string) error {
 		}
 
 		var description string
+		var argsPlaceholder string
 		var commandName = cmd.Name()
 		if d, ok := cmd.(CommandDescriptor); ok {
 			description = d.Description()
+		}
+
+		if adder, ok := cmd.(CommandAdder); ok {
+			var flagSet = flag.NewFlagSet(commandName, flag.ContinueOnError)
+			if err := adder.AddFlags(m, flagSet); err != nil {
+				return errors.Wrapf(
+					err, "could not add flags for command %q",
+					commandName,
+				)
+			}
+			if hasFlags(flagSet) {
+				argsPlaceholder = " [...]"
+			}
 		}
 
 		commandName = fmt.Sprintf("%s%s<%s>%s",
@@ -176,9 +189,9 @@ func (c *HelpCommand) Exec(m Manager, args []string) error {
 		)
 
 		if description != "" {
-			fmt.Fprintf(buf, "    %s\n      %s\n", commandName, description)
+			fmt.Fprintf(buf, "    %s%s\n      %s\n", commandName, argsPlaceholder, description)
 		} else {
-			fmt.Fprintf(buf, "    %s\n", commandName)
+			fmt.Fprintf(buf, "    %s%s\n", commandName, argsPlaceholder)
 		}
 	}
 
