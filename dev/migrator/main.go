@@ -395,9 +395,15 @@ func copyDir(src, dst string) (copied int, err error) {
 			continue
 		}
 
+		if _, err := os.Stat(dstPath); err == nil {
+			logger.Debugf("Skipping existing file %q", dstPath)
+			continue
+		}
+
 		if err := os.Rename(srcPath, dstPath); err != nil {
 			return copied, err
 		}
+
 		copied++
 	}
 
