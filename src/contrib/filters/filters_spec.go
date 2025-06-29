@@ -7,24 +7,24 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
-type BaseFilterSpec[ListT any] struct {
+type BaseFilterSpec[T any] struct {
 	SpecName  string
 	FormField fields.Field
-	Apply     func(value interface{}, objectList []ListT) error
+	Apply     func(value interface{}, object T) (T, error)
 }
 
-func (b *BaseFilterSpec[ListT]) Name() string {
+func (b *BaseFilterSpec[T]) Name() string {
 	return b.SpecName
 }
 
-func (b *BaseFilterSpec[ListT]) Field() fields.Field {
+func (b *BaseFilterSpec[T]) Field() fields.Field {
 	return b.FormField
 }
 
-func (b *BaseFilterSpec[ListT]) Filter(value interface{}, objectList []ListT) error {
+func (b *BaseFilterSpec[T]) Filter(value interface{}, object T) (T, error) {
 	if b.Apply == nil {
 		logger.Fatalf(1, "Apply function is not defined for filter %s", b.Name())
-		return errors.New("apply function is not defined")
+		return *new(T), errors.New("apply function is not defined")
 	}
-	return b.Apply(value, objectList)
+	return b.Apply(value, object)
 }

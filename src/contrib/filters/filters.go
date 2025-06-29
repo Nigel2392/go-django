@@ -3,12 +3,14 @@ package filters
 import (
 	"errors"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-type FilterSpec[ListT any] interface {
+type FilterSpec[T attrs.Definer] interface {
 	// Name returns the name of the filter.
 	Name() string
 
@@ -21,16 +23,16 @@ type FilterSpec[ListT any] interface {
 	Field() fields.Field
 
 	// Filter filters the object list.
-	Filter(value interface{}, objectList []ListT) error
+	Filter(value interface{}, object *queries.QuerySet[T]) (*queries.QuerySet[T], error)
 }
 
-type Filters[ListT any] struct {
+type Filters[T attrs.Definer] struct {
 	form  *forms.BaseForm
-	specs *orderedmap.OrderedMap[string, FilterSpec[ListT]]
+	specs *orderedmap.OrderedMap[string, FilterSpec[T]]
 }
 
-func NewFilters[ListT any](formPrefix string, specs ...FilterSpec[ListT]) *Filters[ListT] {
-	var s = orderedmap.NewOrderedMap[string, FilterSpec[ListT]]()
+func NewFilters[T attrs.Definer](formPrefix string, specs ...FilterSpec[T]) *Filters[T] {
+	var s = orderedmap.NewOrderedMap[string, FilterSpec[T]]()
 	for _, spec := range specs {
 		s.Set(spec.Name(), spec)
 	}
@@ -44,25 +46,25 @@ func NewFilters[ListT any](formPrefix string, specs ...FilterSpec[ListT]) *Filte
 		opts...,
 	)
 
-	return &Filters[ListT]{
+	return &Filters[T]{
 		specs: s,
 		form:  form,
 	}
 }
 
-func (f *Filters[ListT]) Add(spec FilterSpec[ListT]) {
+func (f *Filters[T]) Add(spec FilterSpec[T]) {
 	f.specs.Set(spec.Name(), spec)
 }
 
-func (f *Filters[ListT]) Specs() *orderedmap.OrderedMap[string, FilterSpec[ListT]] {
+func (f *Filters[T]) Specs() *orderedmap.OrderedMap[string, FilterSpec[T]] {
 	return f.specs
 }
 
-func (f *Filters[ListT]) Form() *forms.BaseForm {
+func (f *Filters[T]) Form() *forms.BaseForm {
 	return f.form
 }
 
-func (f *Filters[ListT]) Filter(data map[string][]string, objects []ListT) error {
+func (f *Filters[T]) Filter(data map[string][]string, object *queries.QuerySet[T]) (*queries.QuerySet[T], error) {
 	f.form.Reset()
 
 	f.form.FormFields = orderedmap.NewOrderedMap[string, fields.Field]()
@@ -94,7 +96,7 @@ func (f *Filters[ListT]) Filter(data map[string][]string, objects []ListT) error
 			errors.Join(f.form.ErrorList_...),
 		)
 
-		return errors.Join(errList...)
+		return nil, errors.Join(errList...)
 	}
 
 	var cleanedData = f.form.CleanedData()
@@ -105,8 +107,15 @@ func (f *Filters[ListT]) Filter(data map[string][]string, objects []ListT) error
 			continue
 		}
 
-		spec.Filter(value, objects)
+		var err error
+		object, err = spec.Filter(value, object)
+		if err != nil {
+			return nil, errors.Join(
+				err,
+				errors.New("filtering failed for: "+spec.Name()),
+			)
+		}
 	}
 
-	return nil
+	return object, nil
 }
