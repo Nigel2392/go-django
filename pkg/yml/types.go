@@ -1,75 +1,13 @@
-package conf
+package yml
 
 import (
 	"fmt"
 	"iter"
 	"reflect"
-	"strings"
 
 	"github.com/elliotchance/orderedmap/v2"
 	"gopkg.in/yaml.v3"
 )
-
-type Apps struct {
-	appNames []string
-	appMap   map[string]int
-}
-
-func AppList(apps ...string) Apps {
-	var i = &Apps{
-		appNames: make([]string, 0, len(apps)),
-		appMap:   make(map[string]int, len(apps)),
-	}
-
-	for _, app := range apps {
-		if err := i.Set(app); err != nil {
-			panic(fmt.Errorf("error setting app %s: %w", app, err))
-		}
-	}
-
-	return *i
-}
-
-func (i *Apps) String() string {
-	return strings.Join(i.appNames, ", ")
-}
-
-func (i *Apps) Len() int {
-	if i.appNames == nil {
-		return 0
-	}
-	return len(i.appNames)
-}
-
-func (i *Apps) List() []string {
-	if i.appNames == nil {
-		return nil
-	}
-	return i.appNames
-}
-
-func (i *Apps) Set(value string) error {
-	if i.appMap == nil {
-		i.appMap = make(map[string]int)
-	}
-	if i.appNames == nil {
-		i.appNames = make([]string, 0)
-	}
-	if _, ok := i.appMap[value]; ok {
-		return fmt.Errorf("app %s already set", value)
-	}
-	i.appMap[value] = len(i.appNames)
-	i.appNames = append(i.appNames, value)
-	return nil
-}
-
-func (i *Apps) Lookup(name string) (int, bool) {
-	if i.appMap == nil {
-		return -1, false
-	}
-	index, ok := i.appMap[name]
-	return index, ok
-}
 
 type OrderedMap[K comparable, V any] struct {
 	*yaml.Node                   `yaml:",inline"`
@@ -132,10 +70,6 @@ func (n *OrderedMap[K, V]) scanNode(keyNode *yaml.Node, valueNode *yaml.Node) er
 	)
 	return nil
 }
-
-var (
-	ErrInvalidKind = fmt.Errorf("invalid kind from *yaml.Node")
-)
 
 func (n *OrderedMap[K, V]) unmarshalYAML_Mapping(node *yaml.Node) error {
 	for i := 0; i < len(node.Content); i += 2 {

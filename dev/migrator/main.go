@@ -21,6 +21,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/Nigel2392/go-django/src/core/command/flags"
 	"github.com/Nigel2392/go-django/src/core/logger"
 
 	_ "embed"
@@ -35,7 +36,6 @@ import (
 
 // go run ./dev/migrator makemigrations
 // go run ./dev/migrator clearmigrations
-// go run ./dev/migrator migrate
 
 const ROOT_MIGRATION_DIR = "./migrations"
 const MIGRATION_MAP_FILE = "./migrations.yml"
@@ -48,12 +48,16 @@ func main() {
 	// Setup global tool arguments
 	// This allows us to use the same arguments for all commands
 	var (
-		apps    conf.Apps
+		apps    flags.List
 		confDir string
 	)
 
+	var bindAppsFlagVar = func(fset *flag.FlagSet, where *flags.List) {
+		fset.Var(where, "app", "Apps to include (can be specified multiple times)")
+	}
+
 	var fSet = flag.NewFlagSet("migrator", flag.ContinueOnError)
-	fSet.Var(&apps, "app", "App to include in the migration engine (can be specified multiple times)")
+	bindAppsFlagVar(fSet, &apps)
 	fSet.StringVar(&confDir, "conf", MIGRATION_MAP_FILE, "Path to the migration configuration file")
 	if err := fSet.Parse(os.Args[1:]); err != nil {
 		if err == flag.ErrHelp {
@@ -139,7 +143,7 @@ func main() {
 	// If no apps were provided, we use all apps in the above
 	// django.Apps() call
 	if apps.Len() == 0 {
-		apps = conf.AppList(
+		apps = flags.NewList(
 			django.Global.Apps.Keys()...,
 		)
 	}
@@ -173,14 +177,14 @@ func main() {
 		flag.ContinueOnError,
 	)
 
-	reg.Register(&command.Cmd[conf.Apps]{
+	reg.Register(&command.Cmd[flags.List]{
 		ID:   "makemigrations",
 		Desc: "Create new database migrations to be applied with `migrate`",
-		FlagFunc: func(m command.Manager, stored *conf.Apps, f *flag.FlagSet) error {
-			f.Var(stored, "app", "App to include in the migration engine (can be specified multiple times)")
+		FlagFunc: func(m command.Manager, stored *flags.List, f *flag.FlagSet) error {
+			bindAppsFlagVar(f, stored)
 			return nil
 		},
-		Execute: func(m command.Manager, stored conf.Apps, args []string) error {
+		Execute: func(m command.Manager, stored flags.List, args []string) error {
 			var err = engine.MakeMigrations()
 			if err != nil {
 				return err
@@ -189,10 +193,17 @@ func main() {
 			for app, conf := range config.Targets.Iter() {
 
 				if _, ok := apps.Lookup(app); !ok {
+					if stored.Len() > 0 {
+						if _, ok := stored.Lookup(app); ok {
+							goto copy
+						}
+					}
+
 					logger.Debugf("Skipping app %q as it is not included")
 					continue
 				}
 
+			copy:
 				var n, err = copyDir(
 					filepath.Join(rootDir, app),
 					filepath.Join(conf.Destination, app),
@@ -244,10 +255,22 @@ func main() {
 		},
 	})
 
-	reg.Register(&command.Cmd[any]{
-		ID:   "clearmigrations",
-		Desc: "Clear all migration files for all apps",
-		Execute: func(m command.Manager, stored any, args []string) error {
+	type clearParam struct {
+		apps        flags.List
+		clearSource bool
+		clearDest   bool
+	}
+
+	reg.Register(&command.Cmd[clearParam]{
+		ID: "clearmigrations",
+		FlagFunc: func(m command.Manager, stored *clearParam, f *flag.FlagSet) error {
+			bindAppsFlagVar(f, &stored.apps)
+			f.BoolVar(&stored.clearSource, "src", true, "Clear migration files in the source directory")
+			f.BoolVar(&stored.clearDest, "dst", true, "Clear migration files in the destination directory")
+			return nil
+		},
+		Desc: "Clear migration files in the source and/or destination directories",
+		Execute: func(m command.Manager, stored clearParam, args []string) error {
 			logger.Warn("Clearing all migration files...")
 
 			var anyRemoved bool
@@ -265,21 +288,21 @@ func main() {
 					appDirRemoved   = false
 				)
 
-				if _, err := os.Stat(migrationDir); err == nil || !os.IsNotExist(err) {
+				if _, err := os.Stat(migrationDir); (err == nil || !os.IsNotExist(err)) && stored.clearSource {
 					if err := os.RemoveAll(migrationDir); err != nil {
 						return err
 					}
 					dirRemoved = true
 				}
 
-				if _, err := os.Stat(appMigrationDir); err == nil || !os.IsNotExist(err) {
+				if _, err := os.Stat(appMigrationDir); (err == nil || !os.IsNotExist(err)) && stored.clearDest {
 					if err := os.RemoveAll(appMigrationDir); err != nil {
 						return err
 					}
 					appDirRemoved = true
 				}
 
-				if conf.Setup != "" && wasSetup(conf.Setup) {
+				if conf.Setup != "" && wasSetup(conf.Setup) && stored.clearDest {
 					var setupFilePath = filepath.Join(conf.Setup, "setup.migrator.go")
 					if err := os.Remove(setupFilePath); err != nil && !os.IsNotExist(err) {
 						return err
