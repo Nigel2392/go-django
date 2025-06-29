@@ -14,7 +14,7 @@ __pycache__/
 .private/
 .web/
 
-migrations/
+./migrations/
 
 # Distribution / packaging
 .Python

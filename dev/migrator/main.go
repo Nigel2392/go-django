@@ -15,6 +15,8 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/openauth2"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
+	"github.com/Nigel2392/go-django/src/contrib/reports"
+	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/command"
@@ -117,6 +119,8 @@ func main() {
 			pages.NewAppConfig,
 			revisions.NewAppConfig,
 			migrator.NewAppConfig,
+			reports.NewAppConfig,
+			auditlogs.NewAppConfig,
 			openauth2.NewAppConfig(openauth2.Config{}),
 		),
 	)

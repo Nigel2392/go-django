@@ -163,25 +163,27 @@ func NewAppConfig() django.AppConfig {
 		)
 	}
 
-	Logs.TemplateConfig = &tpl.Config{
-		AppName: "auditlogs",
-		FS: filesystem.NewMultiFS(
-			filesystem.NewMatchFS(
-				tplFS,
-				filesystem.MatchAnd(
-					filesystem.MatchPrefix("auditlogs/"),
-					filesystem.MatchOr(
-						filesystem.MatchSuffix(".tmpl"),
+	if admin.AdminSite.TemplateConfig != nil {
+		Logs.TemplateConfig = &tpl.Config{
+			AppName: "auditlogs",
+			FS: filesystem.NewMultiFS(
+				filesystem.NewMatchFS(
+					tplFS,
+					filesystem.MatchAnd(
+						filesystem.MatchPrefix("auditlogs/"),
+						filesystem.MatchOr(
+							filesystem.MatchSuffix(".tmpl"),
+						),
 					),
 				),
+				filesystem.NewMatchFS(
+					admin.AdminSite.TemplateConfig.FS,
+					admin.AdminSite.TemplateConfig.Matches,
+				),
 			),
-			filesystem.NewMatchFS(
-				admin.AdminSite.TemplateConfig.FS,
-				admin.AdminSite.TemplateConfig.Matches,
-			),
-		),
-		Bases: admin.AdminSite.TemplateConfig.Bases,
-		Funcs: admin.AdminSite.TemplateConfig.Funcs,
+			Bases: admin.AdminSite.TemplateConfig.Bases,
+			Funcs: admin.AdminSite.TemplateConfig.Funcs,
+		}
 	}
 
 	Logs.Ready = func() error {

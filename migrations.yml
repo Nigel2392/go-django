@@ -15,4 +15,7 @@ migrate:
 
     - revisions: 
         dst: src/contrib/revisions/migrations
+
+    - auditlogs: 
+        dst: src/contrib/reports/audit_logs/migrations
  
