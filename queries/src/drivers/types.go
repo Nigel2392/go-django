@@ -137,7 +137,34 @@ type (
 	DateTime  time.Time
 )
 
-func (t JSON[T]) DBType(obj attrs.Definer, field attrs.Field) Type {
+func (t UUID) String() string {
+	return uuid.UUID(t).String()
+}
+
+func (t UUID) IsZero() bool {
+	if !(t[0] == 0 && t[1] == 0 && t[14] == 0 && t[15] == 0) {
+		return false
+	}
+	return uuid.UUID(t) == uuid.Nil
+}
+
+func (t *UUID) Scan(value any) error {
+
+	// handle pgx uuid - it is provided as a [16]byte slice
+	// which google/uuid.UUID does not support scanning
+	if v, ok := value.([16]byte); ok {
+		*t = UUID(v)
+		return nil
+	}
+
+	return (*uuid.UUID)(t).Scan(value)
+}
+
+func (t UUID) Value() (driver.Value, error) {
+	return uuid.UUID(t).Value()
+}
+
+func (t JSON[T]) DBType() Type {
 	return TypeJSON
 }
 
@@ -175,7 +202,7 @@ func (t JSON[T]) IsZero() bool {
 }
 
 func (t JSON[T]) Value() (driver.Value, error) {
-	var bytes, err = json.Marshal(t)
+	var bytes, err = json.Marshal(t.Data)
 	if err != nil {
 		return nil, errs.Wrap(err, "failed to marshal Text value")
 	}
@@ -208,6 +235,30 @@ func (j *JSON[T]) Scan(value any) error {
 	return nil
 }
 
+func (t JSON[T]) MarshalJSON() ([]byte, error) {
+	if t.Null {
+		return json.Marshal(nil)
+	}
+	return json.Marshal(t.Data)
+}
+
+func (t *JSON[T]) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		t.Null = true
+		t.Data = *new(T)
+		return nil
+	}
+
+	var newT T
+	if err := json.Unmarshal(data, &newT); err != nil {
+		return errs.Wrap(err, "failed to unmarshal JSON value")
+	}
+
+	t.Null = false
+	t.Data = newT
+	return nil
+}
+
 func (t *timeType) Scan(value any) error {
 	switch v := value.(type) {
 	case time.Time:
@@ -233,8 +284,6 @@ func (t *timeType) Scan(value any) error {
 	}
 	return nil
 }
-
-func (t UUID) IsZero() bool { return (uuid.UUID)(t) == uuid.Nil }
 
 func CurrentTimestamp() Timestamp {
 	return Timestamp(time.Now().UTC().Truncate(time.Millisecond))
@@ -283,90 +332,3 @@ func (t *DateTime) Scan(value any) error { return (*timeType)(t).Scan(value) }
 func (t DateTime) Value() (driver.Value, error) {
 	return t.Time(), nil
 }
-
-//
-//	func (t *Text) Scan(value any) error {
-//		switch v := value.(type) {
-//		case string:
-//			*t = Text(v)
-//		case []byte:
-//			*t = Text(v)
-//		}
-//		return query_errors.ErrTypeMismatch
-//	}
-//
-//	func (s *String) Scan(value any) error {
-//		switch v := value.(type) {
-//		case string:
-//			*s = String(v)
-//		case []byte:
-//			*s = String(v)
-//		}
-//		return query_errors.ErrTypeMismatch
-//	}
-//
-//	func (i *Int) Scan(value any) error {
-//		var rvSelf = reflect.ValueOf(i).Elem()
-//		var rvValue = reflect.ValueOf(value)
-//		if rvValue.Type() == rvSelf.Type() || rvValue.Type().ConvertibleTo(rvSelf.Type()) {
-//			rvSelf.Set(rvValue.Convert(rvSelf.Type()))
-//			return nil
-//		}
-//		return query_errors.ErrTypeMismatch
-//	}
-//
-//	func (b *Bool) Scan(value any) error {
-//		var rvSelf = reflect.ValueOf(b).Elem()
-//		var rvValue = reflect.ValueOf(value)
-//		switch rvValue.Kind() {
-//		case reflect.Bool:
-//			rvSelf.SetBool(rvValue.Bool())
-//			return nil
-//		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-//			if rvValue.Int() == 0 {
-//				rvSelf.SetBool(false)
-//			} else {
-//				rvSelf.SetBool(true)
-//			}
-//			return nil
-//		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
-//			if rvValue.Uint() == 0 {
-//				rvSelf.SetBool(false)
-//			} else {
-//				rvSelf.SetBool(true)
-//			}
-//			return nil
-//		case reflect.String:
-//			if rvValue.String() == "true" || rvValue.String() == "1" {
-//				rvSelf.SetBool(true)
-//			}
-//			if rvValue.String() == "false" || rvValue.String() == "0" {
-//				rvSelf.SetBool(false)
-//			}
-//			return nil
-//		}
-//		return query_errors.ErrTypeMismatch
-//	}
-//
-//	func (b *Bytes) Scan(value any) error {
-//		switch v := value.(type) {
-//		case []byte:
-//			*b = Bytes(v)
-//		case string:
-//			*b = Bytes(v)
-//		default:
-//			return query_errors.ErrTypeMismatch
-//		}
-//		return nil
-//	}
-//
-//	func (f *Float) Scan(value any) error {
-//		var rvSelf = reflect.ValueOf(f).Elem()
-//		var rvValue = reflect.ValueOf(value)
-//		if rvValue.Type() == rvSelf.Type() || rvValue.Type().ConvertibleTo(rvSelf.Type()) {
-//			rvSelf.Set(rvValue.Convert(rvSelf.Type()))
-//			return nil
-//		}
-//		return query_errors.ErrTypeMismatch
-//	}
-//
