@@ -161,7 +161,7 @@ func (t UUID) Value() (driver.Value, error) {
 	return uuid.UUID(t).Value()
 }
 
-func (t JSON[T]) Type() dbtype.Type {
+func (t JSON[T]) DBType() dbtype.Type {
 	return dbtype.JSON
 }
 
