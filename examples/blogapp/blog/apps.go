@@ -2,16 +2,15 @@ package blog
 
 import (
 	"context"
-	"database/sql"
 	"flag"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/Nigel2392/go-django/example/blogapp/pages"
-	django "github.com/Nigel2392/go-django/src"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -52,9 +51,9 @@ var blog *apps.DBRequiredAppConfig
 
 func NewAppConfig() *apps.DBRequiredAppConfig {
 	var appconfig = apps.NewDBAppConfig("blog")
-	appconfig.AddCommand(myCustomCommand)
-	appconfig.Init = func(settings django.Settings, db *sql.DB) error {
-		return CreateTable(db)
+
+	appconfig.ModelObjects = []attrs.Definer{
+		&BlogPage{},
 	}
 
 	appconfig.ModelObjects = []attrs.Definer{
@@ -101,7 +100,11 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 				"github.com/Nigel2392/go-django-example/src/blog.BlogPage",
 			},
 			GetForID: func(ctx context.Context, ref *pages.PageNode, id int64) (pages.Page, error) {
-				return getBlogPage(ref, id)
+				var row, err = queries.GetQuerySet(&BlogPage{}).Filter("ID", id).First()
+				if err != nil {
+					return nil, errors.Wrapf(err, "failed to get blog page with ID %d", id)
+				}
+				return row.Object, nil
 			},
 		})
 		blog = appconfig

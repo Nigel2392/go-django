@@ -1,0 +1,182 @@
+package dbtype
+
+import (
+	"reflect"
+
+	"github.com/Nigel2392/go-django/src/core/logger"
+)
+
+type Type int
+
+const (
+	Invalid Type = iota
+	Text
+	String
+	Char
+	Int
+	Uint
+	Float
+	Decimal
+	Bool
+	UUID
+	Bytes
+	JSON
+	BLOB
+	Timestamp
+	LocalTime
+	DateTime
+
+	DEFAULT = Text // Default type used when no specific type is registered
+
+)
+
+var typeNames = map[Type]string{
+	Invalid:   "INVALID",
+	Text:      "TEXT",
+	String:    "STRING",
+	Char:      "CHAR",
+	Int:       "INT",
+	Uint:      "UINT",
+	Float:     "FLOAT",
+	Decimal:   "DECIMAL",
+	Bool:      "BOOL",
+	UUID:      "UUID",
+	Bytes:     "BYTES",
+	JSON:      "JSON",
+	BLOB:      "BLOB",
+	Timestamp: "TIMESTAMP",
+	LocalTime: "LOCALTIME",
+	DateTime:  "DATETIME",
+}
+
+var typesByName = func() map[string]Type {
+	types := make(map[string]Type, len(typeNames))
+	for t, name := range typeNames {
+		types[name] = t
+	}
+	return types
+}
+
+func (t Type) String() string {
+	return TYPES.String(t)
+}
+
+func NewFromString(s string) (Type, bool) {
+	if typ, exists := typesByName()[s]; exists {
+		return typ, true
+	}
+	return Invalid, false
+}
+
+var TYPES = typeRegistry{
+	byType:  make(map[reflect.Type]Type),
+	byKind:  make(map[reflect.Kind]Type),
+	strings: make(map[Type]string),
+}
+
+func Add(srcTyp any, dbType Type, forceKind ...bool) {
+	if srcTyp == nil {
+		return
+	}
+
+	TYPES.Add(srcTyp, dbType, forceKind...)
+}
+
+func For(typ reflect.Type) (dbType Type, exists bool) {
+	if typ == nil {
+		return DEFAULT, false
+	}
+	return TYPES.For(typ)
+}
+
+type typeRegistry struct {
+	byType  map[reflect.Type]Type
+	byKind  map[reflect.Kind]Type
+	strings map[Type]string
+}
+
+func (r *typeRegistry) registerType(typ reflect.Type, dbType Type) {
+	if typ == nil {
+		return
+	}
+	if _, exists := r.byType[typ]; exists {
+		logger.Warnf(
+			"Type %s already registered with type %s, overwriting with %d",
+			typ.String(), r.byType[typ], dbType,
+		)
+	}
+	r.byType[typ] = dbType
+}
+
+func (r *typeRegistry) registerKind(knd reflect.Kind, dbType Type) {
+	if knd == reflect.Invalid {
+		return
+	}
+	if _, exists := r.byKind[knd]; exists {
+		logger.Warnf(
+			"Kind %s already registered with type %d, overwriting with %d",
+			knd.String(), r.byKind[knd], dbType,
+		)
+	}
+	r.byKind[knd] = dbType
+}
+
+func (r *typeRegistry) String(typ Type) string {
+	if str, exists := r.strings[typ]; exists {
+		return str
+	}
+	return "UNKNOWN"
+}
+
+func (r *typeRegistry) Add(srcTyp any, dbType Type, forceKind ...bool) {
+	var (
+		typ reflect.Type
+		knd reflect.Kind
+	)
+	switch v := srcTyp.(type) {
+	case reflect.Type:
+		typ = v
+	case reflect.Value:
+		typ = v.Type()
+	case reflect.Kind:
+		knd = v
+	default:
+		typ = reflect.TypeOf(srcTyp)
+	}
+
+	var useKind bool
+	if len(forceKind) > 0 {
+		useKind = forceKind[0]
+
+		if typ != nil && useKind {
+			knd = typ.Kind()
+		}
+	}
+
+	if typ != nil {
+		logger.Debugf("Registering type %s as %d", typ.String(), dbType)
+		r.registerType(typ, dbType)
+	}
+
+	if useKind || knd != reflect.Invalid {
+		logger.Debugf("Registering kind %s as %d", knd.String(), dbType)
+		r.registerKind(knd, dbType)
+	}
+}
+
+func (r *typeRegistry) For(typ reflect.Type) (dbType Type, exists bool) {
+	if typ == nil {
+		goto retFalse
+	}
+
+	if dbType, exists = r.byType[typ]; exists {
+		return dbType, true
+	}
+
+	if dbType, exists = r.byKind[typ.Kind()]; exists {
+		return dbType, true
+	}
+
+retFalse:
+	return DEFAULT, false
+}

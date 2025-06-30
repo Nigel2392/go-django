@@ -3,9 +3,24 @@ package attrs
 import (
 	"fmt"
 	"reflect"
+
+	_ "unsafe"
 )
 
 var cachedStructs = make(reflectStructFieldMap) // Cache for struct fields and methods
+
+// add a global function so internal packages can linkname to it
+//
+//go:linkname getStructField
+func getStructField(typ reflect.Type, name string) (reflect.StructField, bool) {
+	// Indirect the type to get the underlying type
+	typIndirected := typ
+	if typ.Kind() == reflect.Ptr {
+		typIndirected = typ.Elem()
+	}
+
+	return cachedStructs.getField(typIndirected, name)
+}
 
 type structType struct {
 	methods map[string]reflect.Method

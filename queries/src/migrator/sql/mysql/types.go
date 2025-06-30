@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 )
 
@@ -15,40 +16,40 @@ const (
 	int32_max = 1 << 31
 )
 
-func registerType(t drivers.Type, fn func(c *migrator.Column) string) {
+func registerType(t dbtype.Type, fn func(c *migrator.Column) string) {
 	migrator.RegisterColumnType(&drivers.DriverMySQL{}, t, fn)
 	migrator.RegisterColumnType(&drivers.DriverMariaDB{}, t, fn)
 }
 
 // MYSQL TYPES
 func init() {
-	registerType(drivers.TypeText, Type__string)
-	registerType(drivers.TypeChar, Type__char)
-	registerType(drivers.TypeString, Type__string)
-	registerType(drivers.TypeInt, Type__int)
-	registerType(drivers.TypeUint, Type__int)
-	registerType(drivers.TypeBytes, Type__blob)
-	registerType(drivers.TypeBool, Type__bool)
-	registerType(drivers.TypeFloat, Type__float)
-	registerType(drivers.TypeDecimal, Type__decimal)
-	registerType(drivers.TypeUUID, Type__uuid)
-	registerType(drivers.TypeBLOB, Type__blob)
-	registerType(drivers.TypeJSON, Type__string)
-	registerType(drivers.TypeTimestamp, Type__timestamp)
-	registerType(drivers.TypeLocalTime, Type__datetime)
-	registerType(drivers.TypeDateTime, Type__datetime)
+	registerType(dbtype.Text, Type__string)
+	registerType(dbtype.Char, Type__char)
+	registerType(dbtype.String, Type__string)
+	registerType(dbtype.Int, Type__int)
+	registerType(dbtype.Uint, Type__int)
+	registerType(dbtype.Bytes, Type__blob)
+	registerType(dbtype.Bool, Type__bool)
+	registerType(dbtype.Float, Type__float)
+	registerType(dbtype.Decimal, Type__decimal)
+	registerType(dbtype.UUID, Type__uuid)
+	registerType(dbtype.BLOB, Type__blob)
+	registerType(dbtype.JSON, Type__string)
+	registerType(dbtype.Timestamp, Type__timestamp)
+	registerType(dbtype.LocalTime, Type__datetime)
+	registerType(dbtype.DateTime, Type__datetime)
 }
 
 func Type__string(c *migrator.Column) string {
 	var max int64 = c.MaxLength
 
 	var dbType = c.DBType()
-	if dbType == drivers.TypeText {
+	if dbType == dbtype.Text {
 		// If the field is of type drivers.Text, we use TEXT type
 		return "TEXT"
 	}
 
-	if (dbType == drivers.TypeString) && (max > 0 && max <= 255) || c.FieldType() == reflect.TypeOf(drivers.String("")) {
+	if (dbType == dbtype.String) && (max > 0 && max <= 255) || c.FieldType() == reflect.TypeOf(drivers.String("")) {
 		if max > 0 && max <= 255 {
 			return fmt.Sprintf("VARCHAR(%d)", max)
 		}

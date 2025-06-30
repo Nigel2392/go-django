@@ -9,6 +9,7 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
@@ -146,10 +147,10 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	return col
 }
 
-func (c *Column) DBType() drivers.Type {
+func (c *Column) DBType() dbtype.Type {
 	var fieldType = c.FieldType()
 	var fieldVal = reflect.New(fieldType).Elem()
-	var dbType drivers.Type
+	var dbType dbtype.Type
 	if dbTypeDefiner, ok := fieldVal.Interface().(CanColumnDBType); ok {
 		return dbTypeDefiner.DBType(c)
 	} else if dbTypeDefiner, ok := c.Field.(CanColumnDBType); ok {

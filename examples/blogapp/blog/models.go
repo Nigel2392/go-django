@@ -5,19 +5,25 @@ import (
 	"fmt"
 	"net/http"
 
-	queries "github.com/Nigel2392/go-django-queries/src"
-	"github.com/Nigel2392/go-django-queries/src/models"
-	"github.com/Nigel2392/go-django/example/blogapp/pages"
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
+	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
 type BlogPage struct {
 	models.Model    `table:"blog_pages"`
 	*pages.PageNode `proxy:"-"`
 	Editor          *editor.EditorJSBlockData
+}
+
+func (b *BlogPage) ID() int64 {
+	return b.PageNode.PageID
+}
+
+func (b *BlogPage) Reference() *pages.PageNode {
+	return b.PageNode
 }
 
 func (b *BlogPage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -33,29 +39,6 @@ func (b *BlogPage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Fprintln(w, "</div></body></html>")
 
-}
-
-func (b *BlogPage) Save(ctx context.Context) error {
-	var err error
-	if b.ID() == 0 {
-		var id int64
-		id, err = createBlogPage(b.Title, b.Editor)
-		b.PageID = id
-	} else {
-		err = updateBlogPage(b.PageNode.PageID, b.Title, b.Editor)
-	}
-	if err != nil {
-		logger.Errorf("Error saving blog page: %v\n", err)
-	}
-	return err
-}
-
-func (b *BlogPage) ID() int64 {
-	return b.PageNode.PageID
-}
-
-func (b *BlogPage) Reference() *pages.PageNode {
-	return b.PageNode
 }
 
 var (
@@ -102,22 +85,31 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 			Blank:    true,
 			Column:   "",
 		})},
-		attrs.NewField(n, "Editor", &attrs.FieldConfig{
-			Default:  &editor.EditorJSBlockData{},
-			Label:    "Rich Text Editor",
+		editor.NewField(n, "Editor", editor.FieldConfig{
+			Label:    "Editor",
 			HelpText: "This is a rich text editor. You can add images, videos, and other media to your blog post.",
-			FormField: func(opts ...func(fields.Field)) fields.Field {
-				var editor = editor.EditorJSField(
-					[]string{
-						// "paragraph",
-						// "text-align",
-						// "list",
-					},
-					opts...,
-				)
-				return editor
-			},
+			//Features: []string{
+			//	"paragraph",
+			//	"text-align",
+			//	"list",
+			//},
 		}),
+		//attrs.NewField(n, "Editor", &attrs.FieldConfig{
+		//	Default:  &editor.EditorJSBlockData{},
+		//	Label:    "Rich Text Editor",
+		//	HelpText: "This is a rich text editor. You can add images, videos, and other media to your blog post.",
+		//	FormField: func(opts ...func(fields.Field)) fields.Field {
+		//		var editor = editor.EditorJSField(
+		//			[]string{
+		//				// "paragraph",
+		//				// "text-align",
+		//				// "list",
+		//			},
+		//			opts...,
+		//		)
+		//		return editor
+		//	},
+		//}),
 		&CantSelectField{attrs.NewField(n.PageNode, "CreatedAt", &attrs.FieldConfig{
 			ReadOnly: true,
 			Label:    "Created At",

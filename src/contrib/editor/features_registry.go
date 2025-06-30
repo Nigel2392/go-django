@@ -7,6 +7,7 @@ import (
 	"html/template"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/PuerkitoBio/goquery"
@@ -39,6 +40,10 @@ type EditorJSBlockData struct {
 	Blocks   []FeatureBlock `json:"blocks"`
 	Version  string         `json:"version"`
 	Features []BaseFeature  `json:"-"`
+}
+
+func (e *EditorJSBlockData) DBType() dbtype.Type {
+	return dbtype.JSON
 }
 
 func (e *EditorJSBlockData) Value() (driver.Value, error) {

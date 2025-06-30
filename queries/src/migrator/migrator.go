@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 
-	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -23,7 +23,7 @@ const (
 )
 
 type CanColumnDBType interface {
-	DBType(*Column) drivers.Type
+	DBType(*Column) dbtype.Type
 }
 
 type CanSQL[T any] interface {

@@ -5,6 +5,8 @@ import (
 	"database/sql/driver"
 	"encoding/json"
 	"reflect"
+	"regexp"
+	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
@@ -125,6 +127,24 @@ const (
 type Definer interface {
 	// Retrieves the field definitions for the model.
 	FieldDefs() Definitions
+}
+
+var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
+var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
+var nameMap = make(map[string]string)
+
+// ColumnName returns a column name for the given field name.
+// To get an actual column name for a field, you should use the
+// `ColumnName` method on the `attrs.FieldDefinition`.
+func ColumnName(str string) string {
+	if col, ok := nameMap[str]; ok {
+		return col
+	}
+	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
+	col := strings.ToLower(snake)
+	nameMap[str] = col
+	return col
 }
 
 // A binder is a value which can be bound to a model.

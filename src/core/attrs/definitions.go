@@ -223,7 +223,7 @@ func (d *ObjectDefinitions) TableName() string {
 	if rTyp.Kind() == reflect.Ptr {
 		rTyp = rTyp.Elem()
 	}
-	var tableName = toSnakeCase(rTyp.Name())
+	var tableName = ColumnName(rTyp.Name())
 	return tableName
 }
 

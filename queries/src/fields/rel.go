@@ -167,16 +167,13 @@ func (m *RelationField[T]) ForSelectAll() bool {
 	return false
 }
 
-//go:linkname toSnakeCase github.com/Nigel2392/go-django/src/core/attrs.toSnakeCase
-func toSnakeCase(str string) string
-
 func (r *RelationField[T]) ColumnName() string {
 	if r.cnf.ColumnName == "" {
 		var from = r.cnf.Rel.From()
 		if from != nil {
 			return from.Field().ColumnName()
 		}
-		return toSnakeCase(r.Name())
+		return attrs.ColumnName(r.Name())
 	}
 	return r.cnf.ColumnName
 }

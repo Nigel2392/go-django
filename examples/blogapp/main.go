@@ -5,20 +5,20 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"os"
 
-	"github.com/Nigel2392/go-django/example/blogapp/blog"
-	"github.com/Nigel2392/go-django/example/blogapp/todos"
+	"github.com/Nigel2392/go-django/examples/blogapp/blog"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
-	"github.com/Nigel2392/go-django/src/contrib/blocks"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features"
 	"github.com/Nigel2392/go-django/src/contrib/editor/features/images"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
+	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 
@@ -35,24 +35,21 @@ import (
 )
 
 func main() {
+	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/db.blogapp.sqlite3")
+	if err != nil {
+		panic(err)
+	}
 
 	var app = django.App(
 		django.Configure(map[string]interface{}{
-			"ALLOWED_HOSTS": []string{"*"},
-			"DEBUG":         true,
-			"HOST":          "127.0.0.1",
-			"PORT":          "8080",
-			"DATABASE": func() drivers.Database {
-				// var db, err = drivers.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
-				var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/db.sqlite3")
-				if err != nil {
-					panic(err)
-				}
-				return db
-			}(),
-			django.APPVAR_RECOVERER: false,
-
-			"AUTH_EMAIL_LOGIN": true,
+			django.APPVAR_ALLOWED_HOSTS:   []string{"*"},
+			django.APPVAR_DEBUG:           true,
+			django.APPVAR_HOST:            "127.0.0.1",
+			django.APPVAR_PORT:            "8080",
+			django.APPVAR_DATABASE:        db,
+			django.APPVAR_RECOVERER:       false,
+			auth.APP_AUTH_EMAIL_LOGIN:     true,
+			migrator.APPVAR_MIGRATION_DIR: "./migrations-blogapp",
 		}),
 		// django.AppMiddleware(
 		// middleware.DefaultLogger.Intercept,
@@ -67,13 +64,10 @@ func main() {
 			auditlogs.NewAppConfig,
 			reports.NewAppConfig,
 			editor.NewAppConfig,
-			// core.NewAppConfig,
-			blocks.NewAppConfig,
 			blog.NewAppConfig,
-			todos.NewAppConfig,
 			images.NewAppConfig(&images.Options{
 				MediaBackend: mediafiles.GetDefault(),
-				MediaDir:     "images",
+				MediaDir:     "images-blogapp",
 			}),
 			migrator.NewAppConfig,
 		),
@@ -86,7 +80,7 @@ func main() {
 		http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
 	)), "pages")
 
-	var err = app.Initialize()
+	err = app.Initialize()
 	if err != nil {
 		panic(err)
 	}
@@ -95,25 +89,27 @@ func main() {
 		logger.DBG,
 	)
 
-	blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()
-	if err != nil {
-		panic(fmt.Errorf("failed to get blog pages: %w", err))
-	}
-	fmt.Println("Blog pages:", len(blogPages))
-	for page := range blogPages.Objects() {
-		fmt.Printf(" - %s (ID: %d, %d)\n", page.Title, page.ID(), page.PageNode.PageID)
-	}
-
-	err = staticfiles.Collect(func(path string, f fs.File) error {
-		var stat, err = f.Stat()
+	if len(os.Args) == 1 {
+		blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()
 		if err != nil {
-			return err
+			panic(fmt.Errorf("failed to get blog pages: %w", err))
 		}
-		fmt.Println("Collected", path, stat.Size())
-		return nil
-	})
-	if err != nil {
-		panic(err)
+		fmt.Println("Blog pages:", len(blogPages))
+		for page := range blogPages.Objects() {
+			fmt.Printf(" - %s (ID: %d, %d)\n", page.Title, page.ID(), page.PageNode.PageID)
+		}
+
+		err = staticfiles.Collect(func(path string, f fs.File) error {
+			var stat, err = f.Stat()
+			if err != nil {
+				return err
+			}
+			fmt.Println("Collected", path, stat.Size())
+			return nil
+		})
+		if err != nil {
+			panic(err)
+		}
 	}
 
 	if err := app.Serve(); err != nil {

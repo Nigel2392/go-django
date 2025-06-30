@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 )
 
@@ -15,21 +16,21 @@ const (
 // SQLITE TYPES
 func init() {
 	// register types
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeText, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeChar, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeString, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeInt, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeUint, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeBytes, Type__blob)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeBLOB, Type__blob)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeBool, Type__bool)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeFloat, Type__float)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeDecimal, Type__decimal)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeUUID, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeJSON, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeTimestamp, Type__datetime)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeLocalTime, Type__datetime)
-	migrator.RegisterColumnType(&drivers.DriverSQLite{}, drivers.TypeDateTime, Type__datetime)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Text, Type__string)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Char, Type__string)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.String, Type__string)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Int, Type__int)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Uint, Type__int)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Bytes, Type__blob)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.BLOB, Type__blob)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Bool, Type__bool)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Float, Type__float)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Decimal, Type__decimal)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.UUID, Type__string)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.JSON, Type__string)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Timestamp, Type__datetime)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.LocalTime, Type__datetime)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.DateTime, Type__datetime)
 }
 
 func Type__string(c *migrator.Column) string {

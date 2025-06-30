@@ -85,6 +85,10 @@ func ListObjectsByIDs[T attrs.Definer, T2 any](object T, offset, limit uint64, i
 //
 // It takes an offset and a limit as parameters and returns a slice of objects of type T.
 func ListObjects[T attrs.Definer](object T, offset, limit uint64, ordering ...string) ([]T, error) {
+	if offset > 0 && limit == 0 {
+		limit = MAX_DEFAULT_RESULTS
+	}
+
 	var obj = internal.NewObjectFromIface(object).(T)
 	var d, err = GetQuerySet(obj).
 		OrderBy(ordering...).

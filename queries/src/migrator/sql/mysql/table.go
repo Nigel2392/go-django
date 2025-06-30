@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -195,7 +196,7 @@ func (m *MySQLSchemaEditor) AddIndex(table migrator.Table, index migrator.Index,
 		w.WriteString("`")
 		var fieldType = col.DBType()
 		switch {
-		case fieldType == drivers.TypeString || fieldType == drivers.TypeText || fieldType == drivers.TypeChar:
+		case fieldType == dbtype.String || fieldType == dbtype.Text || fieldType == dbtype.Char:
 			// MySQL requires a length for VARCHAR, CHAR, and TEXT types in indexes.
 
 			if col.MaxLength > 0 {

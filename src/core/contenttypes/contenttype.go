@@ -8,9 +8,14 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/pkg/errors"
 )
+
+func init() {
+	dbtype.Add((ContentType)(nil), dbtype.Text)
+}
 
 var _ sql.Scanner = (*BaseContentType[any])(nil)
 var _ driver.Valuer = (*BaseContentType[any])(nil)
@@ -23,6 +28,10 @@ type BaseContentType[T any] struct {
 	rTypeElem reflect.Type
 	pkgPath   string
 	modelName string
+}
+
+func (c *BaseContentType[T]) DBType() dbtype.Type {
+	return dbtype.Text
 }
 
 // ContentType is an interface that defines the methods that a content type must implement.

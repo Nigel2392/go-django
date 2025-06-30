@@ -7,11 +7,11 @@ import (
 )
 
 type Todo struct {
-	models.Model
-	ID          int
-	Title       string
-	Description string
-	Done        bool
+	models.Model `table:"todos"`
+	ID           int
+	Title        string
+	Description  string
+	Done         bool
 }
 
 func (m *Todo) FieldDefs() attrs.Definitions {

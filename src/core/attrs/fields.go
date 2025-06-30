@@ -327,7 +327,7 @@ func (f *FieldDef) ColumnName() string {
 		return f.attrDef.Column
 	}
 
-	return toSnakeCase(f.field_t.Name)
+	return ColumnName(f.fieldName)
 }
 
 func relFromConfig[T FieldDefinition](f T, cnf *FieldConfig) Relation {

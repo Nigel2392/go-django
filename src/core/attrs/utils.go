@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/mail"
 	"reflect"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -17,15 +16,6 @@ var (
 	ErrEmptyString      = errors.New("empty string")
 	ErrConvertingString = errors.New("error converting string to number")
 )
-
-var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
-var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
-
-func toSnakeCase(str string) string {
-	snake := matchFirstCap.ReplaceAllString(str, "${1}_${2}")
-	snake = matchAllCap.ReplaceAllString(snake, "${1}_${2}")
-	return strings.ToLower(snake)
-}
 
 // DefinerList converts a slice of []T where the underlying type is of type Definer to []Definer.
 func DefinerList[T Definer](list []T) []Definer {

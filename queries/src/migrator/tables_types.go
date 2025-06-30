@@ -5,21 +5,21 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 )
 
 var (
-	drivers_to_types = make(map[reflect.Type]map[drivers.Type]func(c *Column) string)
+	drivers_to_types = make(map[reflect.Type]map[dbtype.Type]func(c *Column) string)
 )
 
 // RegisterColumnType registers a function to convert a field to a database type for a specific driver and type.
 //
 // The function will be called with the field as an argument and should return the database type as a string.
-func RegisterColumnType(driver driver.Driver, typ drivers.Type, fn func(c *Column) string) {
+func RegisterColumnType(driver driver.Driver, typ dbtype.Type, fn func(c *Column) string) {
 	t := reflect.TypeOf(driver)
 	m, ok := drivers_to_types[t]
 	if !ok || m == nil {
-		m = make(map[drivers.Type]func(c *Column) string)
+		m = make(map[dbtype.Type]func(c *Column) string)
 		drivers_to_types[t] = m
 	}
 
@@ -42,7 +42,7 @@ func GetFieldType(driver driver.Driver, c *Column) string {
 	return fn(c)
 }
 
-func getType(driver driver.Driver, typ drivers.Type) func(c *Column) string {
+func getType(driver driver.Driver, typ dbtype.Type) func(c *Column) string {
 	t := reflect.TypeOf(driver)
 
 	// First: absolute type match

@@ -68,71 +68,71 @@ func NewAppConfig() django.AppConfig {
 			),
 		})
 
-		return nil
-	}
-
-	var _ = admin.RegisterApp(
-		"todos",
-		admin.AppOptions{
-			RegisterToAdminMenu: true,
-			AppLabel:            trans.S("Todo App"),
-			AppDescription:      trans.S("Manage the todos for your todo app."),
-			MenuLabel:           trans.S("Todos"),
-		},
-		admin.ModelOptions{
-			Model:               &Todo{},
-			RegisterToAdminMenu: true,
-			Labels: map[string]func() string{
-				"ID":          trans.S("ID"),
-				"Title":       trans.S("Todo Title"),
-				"Description": trans.S("Todo Description"),
-				"Done":        trans.S("Is Done"),
+		var _ = admin.RegisterApp(
+			"todos",
+			admin.AppOptions{
+				RegisterToAdminMenu: true,
+				AppLabel:            trans.S("Todo App"),
+				AppDescription:      trans.S("Manage the todos for your todo app."),
+				MenuLabel:           trans.S("Todos"),
 			},
-			AddView: admin.FormViewOptions{
-				ViewOptions: admin.ViewOptions{
-					Exclude: []string{"ID"},
+			admin.ModelOptions{
+				Model:               &Todo{},
+				RegisterToAdminMenu: true,
+				Labels: map[string]func() string{
+					"ID":          trans.S("ID"),
+					"Title":       trans.S("Todo Title"),
+					"Description": trans.S("Todo Description"),
+					"Done":        trans.S("Is Done"),
 				},
-				Panels: []admin.Panel{
-					admin.TitlePanel(
-						admin.FieldPanel("Title"),
-					),
-					admin.FieldPanel("Description"),
-					admin.FieldPanel("Done"),
-				},
-			},
-			EditView: admin.FormViewOptions{
-				ViewOptions: admin.ViewOptions{
-					Exclude: []string{"ID"},
-				},
-				Panels: []admin.Panel{
-					admin.TitlePanel(
-						admin.FieldPanel("Title"),
-					),
-					admin.FieldPanel("Description"),
-					admin.FieldPanel("Done"),
-				},
-			},
-			ListView: admin.ListViewOptions{
-				ViewOptions: admin.ViewOptions{
-					Fields: []string{
-						"ID",
-						"Title",
-						"Description",
-						"Done",
+				AddView: admin.FormViewOptions{
+					ViewOptions: admin.ViewOptions{
+						Exclude: []string{"ID"},
+					},
+					Panels: []admin.Panel{
+						admin.TitlePanel(
+							admin.FieldPanel("Title"),
+						),
+						admin.FieldPanel("Description"),
+						admin.FieldPanel("Done"),
 					},
 				},
-				Columns: map[string]list.ListColumn[attrs.Definer]{
-					"Title": list.LinkColumn(
-						trans.S("Title"),
-						"Title", func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-							return django.Reverse("admin:apps:model:edit", "todos", "Todo", defs.Get("ID"))
-						},
-					),
+				EditView: admin.FormViewOptions{
+					ViewOptions: admin.ViewOptions{
+						Exclude: []string{"ID"},
+					},
+					Panels: []admin.Panel{
+						admin.TitlePanel(
+							admin.FieldPanel("Title"),
+						),
+						admin.FieldPanel("Description"),
+						admin.FieldPanel("Done"),
+					},
 				},
-				PerPage: 25,
+				ListView: admin.ListViewOptions{
+					ViewOptions: admin.ViewOptions{
+						Fields: []string{
+							"ID",
+							"Title",
+							"Description",
+							"Done",
+						},
+					},
+					Columns: map[string]list.ListColumn[attrs.Definer]{
+						"Title": list.LinkColumn(
+							trans.S("Title"),
+							"Title", func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+								return django.Reverse("admin:apps:model:edit", "todos", "Todo", defs.Get("ID"))
+							},
+						),
+					},
+					PerPage: 25,
+				},
 			},
-		},
-	)
+		)
+
+		return nil
+	}
 
 	return cfg
 }

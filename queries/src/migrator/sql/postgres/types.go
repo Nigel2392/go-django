@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 )
 
@@ -18,33 +19,33 @@ const (
 // POSTGRES TYPES
 func init() {
 	// register types
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeText, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeChar, Type__char)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeString, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeInt, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeUint, Type__int)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeBytes, Type__blob)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeBool, Type__bool)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeFloat, Type__float)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeDecimal, Type__decimal)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeUUID, Type__uuid)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeBLOB, Type__blob)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeJSON, Type__string)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeTimestamp, Type__datetime)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeLocalTime, Type__localtime)
-	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeDateTime, Type__datetime)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Text, Type__string)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Char, Type__char)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.String, Type__string)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Int, Type__int)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Uint, Type__int)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Bytes, Type__blob)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Bool, Type__bool)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Float, Type__float)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Decimal, Type__decimal)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.UUID, Type__uuid)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.BLOB, Type__blob)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.JSON, Type__string)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Timestamp, Type__datetime)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.LocalTime, Type__localtime)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.DateTime, Type__datetime)
 }
 
 func Type__string(c *migrator.Column) string {
 	var max int64 = c.MaxLength
 
 	var dbType = c.DBType()
-	if dbType == drivers.TypeText {
+	if dbType == dbtype.Text {
 		// If the field is of type drivers.Text, we use TEXT type
 		return "TEXT"
 	}
 
-	if (dbType == drivers.TypeString) && (max > 0 && max <= 255) || c.FieldType() == reflect.TypeOf(drivers.String("")) {
+	if (dbType == dbtype.String) && (max > 0 && max <= 255) || c.FieldType() == reflect.TypeOf(drivers.String("")) {
 		if max > 0 && max <= 255 {
 			return fmt.Sprintf("VARCHAR(%d)", max)
 		}
@@ -80,7 +81,7 @@ func Type__decimal(c *migrator.Column) string {
 }
 
 func Type__uuid(c *migrator.Column) string {
-	if c.DBType() == drivers.TypeUUID {
+	if c.DBType() == dbtype.UUID {
 		return "UUID"
 	}
 
@@ -98,11 +99,11 @@ func Type__char(c *migrator.Column) string {
 
 func Type__blob(c *migrator.Column) string {
 	var dbType = c.DBType()
-	if dbType == drivers.TypeBytes {
+	if dbType == dbtype.Bytes {
 		return "BYTEA"
 	}
 
-	if dbType == drivers.TypeBLOB {
+	if dbType == dbtype.BLOB {
 		return "BYTEA"
 	}
 
