@@ -883,7 +883,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 			continue
 		}
 
-		if err = queries.Validate(ctx, head.Value); err != nil {
+		if err := head.Value.Validate(); err != nil {
 			return fmt.Errorf(
 				"failed to validate field %s in model %T: %w",
 				head.Value.Name(), cnf.this, err,

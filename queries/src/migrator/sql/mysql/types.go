@@ -30,6 +30,7 @@ func init() {
 	registerType(drivers.TypeBytes, Type__blob)
 	registerType(drivers.TypeBool, Type__bool)
 	registerType(drivers.TypeFloat, Type__float)
+	registerType(drivers.TypeDecimal, Type__decimal)
 	registerType(drivers.TypeUUID, Type__uuid)
 	registerType(drivers.TypeBLOB, Type__blob)
 	registerType(drivers.TypeJSON, Type__string)
@@ -81,6 +82,20 @@ func Type__char(c *migrator.Column) string {
 	sb.WriteString(strconv.FormatInt(max, 10))
 	sb.WriteString(")")
 	return sb.String()
+}
+
+func Type__decimal(c *migrator.Column) string {
+	var precision, scale int64 = c.Precision, c.Scale
+
+	if precision == 0 {
+		precision = 10
+	}
+
+	if scale == 0 {
+		scale = 5
+	}
+
+	return fmt.Sprintf("DECIMAL(%d, %d)", precision, scale)
 }
 
 func Type__uuid(c *migrator.Column) string {

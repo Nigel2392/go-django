@@ -1,0 +1,15 @@
+name: abc
+number: 123
+active: false
+items:
+  - item1:
+      number: 1
+      active: true
+
+  - item2:
+      number: 2
+      active: false
+    
+  - item3:
+      number: 3
+      active: true

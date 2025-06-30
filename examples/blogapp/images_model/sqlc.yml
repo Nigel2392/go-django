@@ -1,0 +1,31 @@
+version: "2"
+plugins:
+  - name: go-django-definitions-plugin
+    process:
+      cmd: "go-django-definitions"
+      
+sql:
+  - schema: "./sql/schema.mysql.sql"
+    queries: "./sql/queries.sql"
+    engine: "mysql"
+    codegen:
+    - out: ./
+      plugin: go-django-definitions-plugin
+      options:
+        out: "gen.go"
+        package: "images" 
+        generate_admin_setup: true
+        generate_models_methods: false
+
+    gen:
+      go:
+        package: "images"
+        out: "./"
+        output_db_file_name: "db.sqlc.go"
+        output_querier_file_name: "querier.sqlc.go"
+        output_models_file_name: "models.sqlc.go"
+        emit_json_tags: true
+        emit_empty_slices: true
+        emit_result_struct_pointers: true
+        emit_interface: false
+        query_parameter_limit: 8

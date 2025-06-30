@@ -23,6 +23,8 @@ type Column struct {
 	MaxLength    int64              `json:"max_length,omitempty"`
 	MinValue     float64            `json:"min_value,omitempty"`
 	MaxValue     float64            `json:"max_value,omitempty"`
+	Precision    int64              `json:"precision,omitempty"`
+	Scale        int64              `json:"scale,omitempty"` // for decimal types
 	Unique       bool               `json:"unique,omitempty"`
 	Nullable     bool               `json:"nullable,omitempty"`
 	Primary      bool               `json:"primary,omitempty"`
@@ -64,6 +66,8 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	attrAutoIncrement, _ := internal.GetFromAttrs[bool](atts, attrs.AttrAutoIncrementKey)
 	attrUnique, _ := internal.GetFromAttrs[bool](atts, attrs.AttrUniqueKey)
 	attrReverseAlias, _ := internal.GetFromAttrs[string](atts, attrs.AttrReverseAliasKey)
+	attrPrecision, _ := internal.GetFromAttrs[int64](atts, attrs.AttrPrecisionKey)
+	attrScale, _ := internal.GetFromAttrs[int64](atts, attrs.AttrScaleKey)
 	attrOnDelete, _ := internal.GetFromAttrs[Action](atts, AttrOnDeleteKey)
 	attrOnUpdate, _ := internal.GetFromAttrs[Action](atts, AttrOnUpdateKey)
 
@@ -119,6 +123,8 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 		MinValue:     attrMinValue,
 		MaxValue:     attrMaxValue,
 		Unique:       attrUnique,
+		Precision:    attrPrecision,
+		Scale:        attrScale,
 		Auto:         attrAutoIncrement || CanAutoIncrement(field),
 		Primary:      field.IsPrimary(),
 		Default:      dflt,

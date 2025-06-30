@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/google/uuid"
+	"github.com/shopspring/decimal"
 )
 
 func init() {
@@ -48,6 +49,7 @@ func init() {
 	TYPES.Add(Timestamp{}, TypeTimestamp, "TIMESTAMP")
 	TYPES.Add(LocalTime{}, TypeLocalTime, "LOCALTIME")
 	TYPES.Add(DateTime{}, TypeDateTime, "DATETIME")
+	TYPES.Add(decimal.Decimal{}, TypeDecimal, "DECIMAL")
 
 	TYPES.Add(*new(any), TypeJSON, "")
 	TYPES.Add(*new(string), TypeString, "")
@@ -76,6 +78,7 @@ func init() {
 	TYPES.Add(sql.NullBool{}, TypeBool, "")
 	TYPES.Add(sql.NullByte{}, TypeBytes, "")
 	TYPES.Add(sql.NullTime{}, TypeDateTime, "")
+	TYPES.Add(decimal.NullDecimal{}, TypeDecimal, "")
 
 	TYPES.Add(sql.Null[Text]{}, TypeText, "")
 	TYPES.Add(sql.Null[String]{}, TypeString, "")
@@ -108,6 +111,7 @@ func init() {
 	TYPES.Add(sql.Null[bool]{}, TypeBool, "")
 	TYPES.Add(sql.Null[uuid.UUID]{}, TypeUUID, "")
 	TYPES.Add(sql.Null[time.Time]{}, TypeDateTime, "")
+	TYPES.Add(sql.Null[decimal.Decimal]{}, TypeDecimal, "")
 
 	TYPES.Add((contenttypes.ContentType)(nil), TypeText, "")
 	TYPES.Add(contenttypes.BaseContentType[attrs.Definer]{}, TypeText, "")

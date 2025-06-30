@@ -131,6 +131,9 @@ func SupportsReturning(db interface{ Driver() driver.Driver }) SupportsReturning
 }
 
 // Change allows you to change a driver's properties within a function.
+//
+// This is only really useful for testing purposes, where you might want to
+// change the behavior of a driver during tests.
 func Change(name string, fn func(driver *Driver)) {
 	if driver, exists := drivers.byName[name]; exists {
 		fn(driver)

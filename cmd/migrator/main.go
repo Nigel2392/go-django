@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	_ "github.com/mattn/go-sqlite3"
-	"gopkg.in/yaml.v3"
 
-	"github.com/Nigel2392/go-django/dev/migrator/conf"
+	"github.com/Nigel2392/go-django/cmd/migrator/conf"
+	"github.com/Nigel2392/go-django/pkg/yml"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
@@ -48,8 +48,8 @@ func main() {
 	// Setup global tool arguments
 	// This allows us to use the same arguments for all commands
 	var (
-		apps    flags.List
-		confDir string
+		apps       flags.List
+		configFile string
 	)
 
 	var bindAppsFlagVar = func(fset *flag.FlagSet, where *flags.List) {
@@ -58,7 +58,7 @@ func main() {
 
 	var fSet = flag.NewFlagSet("migrator", flag.ContinueOnError)
 	bindAppsFlagVar(fSet, &apps)
-	fSet.StringVar(&confDir, "conf", MIGRATION_MAP_FILE, "Path to the migration configuration file")
+	fSet.StringVar(&configFile, "conf", MIGRATION_MAP_FILE, "Path to the migration configuration file")
 	if err := fSet.Parse(os.Args[1:]); err != nil {
 		if err == flag.ErrHelp {
 			os.Exit(0)
@@ -71,18 +71,8 @@ func main() {
 		Migrate conf.MigrationConfig `yaml:"migrate"`
 	})
 
-	var file, err = os.Open(confDir)
-	if err != nil {
-		logger.Errorf("Failed to open migration map file: %v", err)
-		return
-	}
-	defer file.Close()
-
-	decoder := yaml.NewDecoder(file)
-	decoder.KnownFields(true)
-	if err = decoder.Decode(__cnf); err != nil {
-		logger.Errorf("Failed to decode migration map file: %v", err)
-		return
+	if err := yml.Unmarshal(configFile, __cnf, true); err != nil {
+		panic(err)
 	}
 
 	// Setup the database connection
@@ -357,7 +347,7 @@ func wasSetup(pathToApp string) bool {
 		panic(err)
 	}
 
-	return file != nil && len(file) > 0
+	return len(file) > 0
 }
 
 func copyDir(src, dst string) (copied int, err error) {

@@ -1,0 +1,49 @@
+{{ define "title" }}Todos{{ end }}
+
+{{ define "extra_css" }}
+    <link rel="stylesheet" href="{{ static "todos/css/todos.css" }}">
+{{ end }}
+
+{{ define "extra_js" }}
+    <script src="{{ static "todos/js/todos.js" }}"></script>
+{{ end }}
+
+{{ define "content" }}
+
+    <div class="todo-list-wrapper">
+        {{ $page := (.Get "Page") }}
+        {{ $csrfToken := (.Get "CsrfToken") }}
+
+        <!-- Range over the paginator results -->
+        {{ range $todo := $page.Results }}
+
+            <div class="todo-item">
+
+                <h3>{{ $todo.Title }}</h3>
+                <p>{{ $todo.Description }}</p>
+                
+                <!-- Submit to the todos app URL, use the template function to generate the URL based on what was previously defined. -->
+                <form class="todo-form" action="{{ url "todos:done" $todo.ID }}" method="POST">
+                    <input type="hidden" class="csrftoken-input" name="csrf_token" value="{{ $csrfToken }}">
+                    <button type="submit" class="update">
+                        {{ if $todo.Done }}Unmark{{ else }}Mark{{ end }} as done
+                    </button>
+                </form>
+            </div>
+
+        {{ else }}
+            <p>No todos found</p>
+        {{ end }}
+
+        <!-- 
+         Paginator buttons - takes in:
+            1. Page query parameter name.
+            2. max amount page numbers shown.
+            3. included and the query parameters. 
+
+         Under the hood this uses a templ.Component.
+         -->
+        {{ $page.HTML "page" 5 .Request.URL.Query }}
+    </div>
+
+{{ end }}

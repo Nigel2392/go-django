@@ -49,7 +49,7 @@ func setup[T attrs.Definer](model T) (T, error) {
 
 // Validator is a generic interface that can be implemented by objects, fields and more
 // to indicate that the object can be validated before being saved to the database.
-type Validator interface {
+type ContextValidator interface {
 	// Validate is called to validate the model before it is saved to the database.
 	// It should return an error if the validation fails.
 	Validate(ctx context.Context) error
@@ -57,7 +57,8 @@ type Validator interface {
 
 // Validate allows a model to be validated before being saved to the database
 func Validate(ctx context.Context, validate any) error {
-	if validator, ok := validate.(Validator); ok {
+
+	if validator, ok := validate.(ContextValidator); ok {
 		if err := validator.Validate(ctx); err != nil {
 			return fmt.Errorf("error validating %T: %w", validate, err)
 		}

@@ -111,6 +111,12 @@ const (
 
 	// AttrReverseAliasKey (string) is the reverse alias of the field.
 	AttrReverseAliasKey = "field.reverse_alias"
+
+	// AttrPrecisionKey (int64) is the precision of a field which supports it, such as a decimal field.
+	AttrPrecisionKey = "field.precision"
+
+	// AttrScaleKey (int64) is the scale of a field which supports it, such as a decimal field.
+	AttrScaleKey = "field.scale"
 )
 
 // Definer is the interface that wraps the FieldDefs method.
@@ -369,13 +375,11 @@ type FieldDefinition interface {
 	//
 	// If not, the field should panic when trying to set the value, unless the force parameter passed to the `SetValue` method is true.
 	AllowEdit() bool
+
 	// Retrieves the form field for the field.
 	//
 	// This is used to generate forms for the field.
 	FormField() fields.Field
-
-	// Validates the field's value.
-	Validate() error
 }
 
 // CanSignalChanged is an interface for models so that fields can signal their changes to the model.
@@ -441,16 +445,17 @@ type Field interface {
 	GetValue() interface{}
 
 	// Retrieves the default value of the field.
-	//
-	// Fields should also check the main model instance for methods like `GetDefault<FieldName>` to retrieve the default value.
 	GetDefault() interface{}
 
 	// Sets the value of the field.
 	//
-	// If the field is not allowed to be edited, this method should panic.
+	// If the field is not allowed to be edited and the force parameter is false, this method should panic.
 	// If the field is not allowed to be null, this method should panic when trying to set the value to nil / a reflect.Invalid value.
-	// If the field is not allowed to be blank, this method should panic when trying to set the value to a blank value if the field is not of types:
+	// If the field is not allowed to be blank, this method should panic when trying to set the value to a blank value if the field is not a primitive type.
 	SetValue(v interface{}, force bool) error
+
+	// Validates the field's value.
+	Validate() error
 }
 
 // CanRelatedName is an interface for fields that have a related name.

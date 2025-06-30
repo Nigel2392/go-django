@@ -2,6 +2,9 @@ go 1.24.2
 
 use (
 	.
-	./dev/migrator
+	./cmd/migrator
+	./examples/blogapp
+	./examples/todoapp
+	./pkg/yml
 	./queries
 )

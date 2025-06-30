@@ -16,9 +16,7 @@ type OrderedMap[K comparable, V any] struct {
 
 func (n *OrderedMap[K, V]) Iter() iter.Seq2[K, V] {
 	if n.OrderedMap == nil {
-		return func(yield func(K, V) bool) {
-			return
-		}
+		return func(yield func(K, V) bool) {}
 	}
 
 	return func(yield func(K, V) bool) {
@@ -39,8 +37,11 @@ func reflectScanNode[T any](valueNode *yaml.Node, rValue reflect.Value) error {
 
 func (n *OrderedMap[K, V]) scanNode(keyNode *yaml.Node, valueNode *yaml.Node) error {
 	var (
-		rKey   = reflect.ValueOf(new(K)).Elem()
-		rValue = reflect.ValueOf(new(V)).Elem()
+		kV K
+		vV V
+		// make sure the values are adressable
+		rKey   = reflect.ValueOf(&kV).Elem()
+		rValue = reflect.ValueOf(&vV).Elem()
 	)
 
 	switch rValue.Kind() {
@@ -51,8 +52,8 @@ func (n *OrderedMap[K, V]) scanNode(keyNode *yaml.Node, valueNode *yaml.Node) er
 	}
 
 	for _, v := range []*reflect.Value{&rKey, &rValue} {
-		if v.Kind() == reflect.Ptr && v.IsNil() {
-			*v = reflect.New(v.Type().Elem()).Elem()
+		if v.Kind() == reflect.Ptr {
+			*v = reflect.New(v.Type().Elem())
 		}
 	}
 

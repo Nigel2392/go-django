@@ -16,6 +16,7 @@ const (
 	TypeInt
 	TypeUint
 	TypeFloat
+	TypeDecimal
 	TypeBool
 	TypeUUID
 	TypeBytes

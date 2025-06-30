@@ -26,6 +26,7 @@ func init() {
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeBytes, Type__blob)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeBool, Type__bool)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeFloat, Type__float)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeDecimal, Type__decimal)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeUUID, Type__uuid)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeBLOB, Type__blob)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, drivers.TypeJSON, Type__string)
@@ -59,6 +60,23 @@ func Type__string(c *migrator.Column) string {
 	sb.WriteString(strconv.FormatInt(max, 10))
 	sb.WriteString(")")
 	return sb.String()
+}
+
+func Type__decimal(c *migrator.Column) string {
+	var precision, scale int64 = c.Precision, c.Scale
+	if precision <= 0 {
+		precision = 10
+	}
+
+	if scale == 0 {
+		scale = 5
+	}
+
+	if scale < 0 || scale > precision {
+		scale = precision
+	}
+
+	return fmt.Sprintf("DECIMAL(%d, %d)", precision, scale)
 }
 
 func Type__uuid(c *migrator.Column) string {
