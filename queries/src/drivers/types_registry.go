@@ -7,23 +7,11 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
-// CanDBType is an interface that defines a method to get the database type of a value.
-//
-// It can be implemented by both [attrs.Field], or the [reflect.Type] returned by [attrs.Field.Type]
-type CanDBType interface {
-	DBType() dbtype.Type
-}
-
-// CanDBTypeString is a type that can be used to define a field that can return a database type as a string.
-type CanDBTypeString interface {
-	DBType() string
-}
-
 // FieldType returns the reflect.Type of the field definition.
 //
 // It does so by calling [attrs.FieldDefinition.Type] on the field.
 //
-// If the field is a relation, it will return the primary field's reflect.Type of the related model.
+// If the field is a relation, it will return the related models' primary field reflect.Type
 func FieldType(field attrs.FieldDefinition) reflect.Type {
 	if field == nil {
 		return nil
@@ -59,14 +47,12 @@ func FieldType(field attrs.FieldDefinition) reflect.Type {
 // If it does not implement [CanDBType], it will check the [TYPES] registry to find the database type
 // based on the field's reflect.Type.
 func DBType(field attrs.FieldDefinition) (dbType dbtype.Type, ok bool) {
-	var fieldType = FieldType(field)
-	var fieldVal = reflect.New(fieldType).Elem()
 
-	if dbTypeDefiner, ok := fieldVal.Interface().(CanDBType); ok {
+	if dbTypeDefiner, ok := field.(dbtype.CanDBType); ok {
 		return dbTypeDefiner.DBType(), true
 	}
 
-	if dbTypeDefiner, ok := fieldVal.Interface().(CanDBTypeString); ok {
+	if dbTypeDefiner, ok := field.(dbtype.CanDBTypeString); ok {
 		var dbTypeStr = dbTypeDefiner.DBType()
 		var dbType, ok = dbtype.NewFromString(dbTypeStr)
 		if ok {
@@ -74,11 +60,13 @@ func DBType(field attrs.FieldDefinition) (dbType dbtype.Type, ok bool) {
 		}
 	}
 
-	if dbTypeDefiner, ok := field.(CanDBType); ok {
+	var fieldType = FieldType(field)
+	var fieldVal = reflect.New(fieldType).Elem()
+	if dbTypeDefiner, ok := fieldVal.Interface().(dbtype.CanDBType); ok {
 		return dbTypeDefiner.DBType(), true
 	}
 
-	if dbTypeDefiner, ok := field.(CanDBTypeString); ok {
+	if dbTypeDefiner, ok := fieldVal.Interface().(dbtype.CanDBTypeString); ok {
 		var dbTypeStr = dbTypeDefiner.DBType()
 		var dbType, ok = dbtype.NewFromString(dbTypeStr)
 		if ok {

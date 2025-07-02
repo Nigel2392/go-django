@@ -1,6 +1,7 @@
 package attrs
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
@@ -11,6 +12,8 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
+	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -86,7 +89,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 		instance_v     = instance_v_ptr.Elem()
 	)
 
-	var field_t, ok = cachedStructs.getField(instance_t, name)
+	var field_t, ok = attrutils.GetStructField(instance_t, name)
 	assert.True(ok, "field %q not found in %T", name, instance)
 
 	// var directlyInteractible = ok
@@ -192,24 +195,65 @@ func (f *FieldDef) signalChanges(value interface{}) {
 	f.defs.SignalChange(f, value)
 }
 
-// model is equal to instance_t
-func (f *FieldDef) OnModelRegister(model Definer) error {
-	var sTyp, ok = cachedStructs[f.instance_t]
-	if !ok {
-		sTyp = &structType{
-			methods: make(map[string]reflect.Method),
-			fields:  make(map[string]reflect.StructField),
-		}
-		cachedStructs[f.instance_t] = sTyp
+// Check checks if the field is valid and can be used.
+func (f *FieldDef) Check(ctx context.Context) []checks.Message {
+	var messages []checks.Message
+
+	if f.attrDef.MaxLength < 0 || f.attrDef.MaxLength < f.attrDef.MinLength && f.attrDef.MaxLength > 0 {
+		var messageText = fmt.Sprintf(
+			"Field \"%s\" in model \"%T\" has an invalid max_length (%d)",
+			f.Name(), f.instance_v_ptr.Interface(), f.attrDef.MaxLength,
+		)
+		messages = append(messages, checks.Error(
+			"field.invalid_max_length",
+			messageText,
+			f, "",
+		))
 	}
 
-	sTyp.fields[f.fieldName] = f.field_t
+	if f.attrDef.MinLength < 0 {
+		var messageText = fmt.Sprintf(
+			"Field \"%s\" in model \"%T\" has an invalid min_length (%d).",
+			f.Name(), f.instance_v_ptr.Interface(), f.attrDef.MinLength,
+		)
+		messages = append(messages, checks.Error(
+			"field.invalid_min_length",
+			messageText,
+			f, "",
+		))
+	}
 
-	var (
-		getDefaultMethod reflect.Method
-		setValueMethod   reflect.Method
-		getValueMethod   reflect.Method
-	)
+	if f.attrDef.MaxLength > 0 && f.attrDef.MinLength > 0 && f.attrDef.MaxLength < f.attrDef.MinLength {
+		var messageText = fmt.Sprintf(
+			"Field \"%s\" in model \"%T\" has an invalid max_length (%d) less than min_length (%d).",
+			f.Name(), f.instance_v_ptr.Interface(), f.attrDef.MaxLength, f.attrDef.MinLength,
+		)
+		messages = append(messages, checks.Error(
+			"field.invalid_length",
+			messageText,
+			f, "",
+		))
+	}
+
+	if f.attrDef.MaxValue < f.attrDef.MinValue && f.attrDef.MaxValue > 0 {
+		var messageText = fmt.Sprintf(
+			"Field \"%s\" in model \"%T\" has an invalid max_value (%f) less than min_value (%f).",
+			f.Name(), f.instance_v_ptr.Interface(), f.attrDef.MaxValue, f.attrDef.MinValue,
+		)
+		messages = append(messages, checks.Error(
+			"field.invalid_value",
+			messageText,
+			f, "",
+		))
+	}
+
+	return messages
+}
+
+// model is equal to instance_t
+func (f *FieldDef) OnModelRegister(model Definer) error {
+
+	attrutils.AddStructField(f.instance_t_ptr, f.fieldName, f.field_t)
 
 	if ALLOW_METHOD_CHECKS {
 		var (
@@ -218,19 +262,16 @@ func (f *FieldDef) OnModelRegister(model Definer) error {
 			getValueMethodName = nameGetValue(f)
 		)
 
-		getDefaultMethod, ok = f.instance_t.MethodByName(defaultMethodName)
-		if ok {
-			sTyp.methods[defaultMethodName] = getDefaultMethod
+		if getDefaultMethod, ok := f.instance_t.MethodByName(defaultMethodName); ok {
+			attrutils.AddStructMethod(f.instance_t_ptr, defaultMethodName, getDefaultMethod)
 		}
 
-		setValueMethod, ok = f.instance_t.MethodByName(setValueMethodName)
-		if ok {
-			sTyp.methods[setValueMethodName] = setValueMethod
+		if setValueMethod, ok := f.instance_t.MethodByName(setValueMethodName); ok {
+			attrutils.AddStructMethod(f.instance_t_ptr, setValueMethodName, setValueMethod)
 		}
 
-		getValueMethod, ok = f.instance_t.MethodByName(getValueMethodName)
-		if ok {
-			sTyp.methods[getValueMethodName] = getValueMethod
+		if getValueMethod, ok := f.instance_t.MethodByName(getValueMethodName); ok {
+			attrutils.AddStructMethod(f.instance_t_ptr, getValueMethodName, getValueMethod)
 		}
 	}
 
@@ -411,7 +452,7 @@ func (f *FieldDef) Validate() error {
 	if f.attrDef.MinValue > 0 || f.attrDef.MinValue < 0 || f.attrDef.MaxValue > 0 || f.attrDef.MaxValue < 0 {
 		if slices.Contains([]reflect.Kind{reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 			reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64}, rV.Kind()) {
-			var num, err = CastToNumber[float64](v)
+			var num, err = attrutils.CastToNumber[float64](v)
 			if err != nil {
 				return fmt.Errorf(
 					"field %q is not a number: %w",
@@ -500,7 +541,7 @@ func (f *FieldDef) GetDefault() interface{} {
 
 	if ALLOW_METHOD_CHECKS {
 		var funcName = nameGetDefault(f)
-		var method, ok = cachedStructs.getMethod(f.instance_t, funcName)
+		var method, ok = attrutils.GetStructMethod(f.instance_t_ptr, funcName)
 		if ok {
 			var out []reflect.Value
 			switch method.Type.In(0) {
@@ -711,7 +752,7 @@ func (f *FieldDef) GetValue() interface{} {
 
 	if ALLOW_METHOD_CHECKS {
 		var methodName = nameGetValue(f)
-		var method, ok = cachedStructs.getMethod(f.instance_t, methodName)
+		var method, ok = attrutils.GetStructMethod(f.instance_t_ptr, methodName)
 		if ok {
 			var outVal any
 			switch method.Type.In(0) {
@@ -760,7 +801,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	// Try user-defined setter method like Set<FieldName>
 	if ALLOW_METHOD_CHECKS && !force {
 		var setterName = nameSetValue(f)
-		var method, ok = cachedStructs.getMethod(f.instance_t, setterName)
+		var method, ok = attrutils.GetStructMethod(f.instance_t_ptr, setterName)
 		if ok {
 			var arg, ok = django_reflect.RConvert(&rv, method.Type.In(1))
 			assert.True(ok,
@@ -1039,4 +1080,16 @@ func (f *FieldDef) Value() (driver.Value, error) {
 	}
 
 	return f.driverValue(v)
+}
+
+func nameGetDefault(f *FieldDef) string {
+	return fmt.Sprintf("GetDefault%s", f.field_t.Name)
+}
+
+func nameSetValue(f *FieldDef) string {
+	return fmt.Sprintf("Set%s", f.field_t.Name)
+}
+
+func nameGetValue(f *FieldDef) string {
+	return fmt.Sprintf("Get%s", f.field_t.Name)
 }

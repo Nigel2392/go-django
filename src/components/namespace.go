@@ -1,5 +1,7 @@
 package components
 
+import "github.com/Nigel2392/go-django/src/internal/django_reflect"
+
 type namespace struct {
 	name string
 	*ComponentRegistry
@@ -7,8 +9,8 @@ type namespace struct {
 
 func (n *namespace) Render(name string, args ...interface{}) Component {
 	var (
-		cmpFn *reflectFunc
-		cmap  map[string]*reflectFunc
+		cmpFn *django_reflect.Func
+		cmap  map[string]*django_reflect.Func
 		ok    bool
 	)
 	if cmap, ok = n.ns_components[n.name]; !ok {
@@ -17,12 +19,13 @@ func (n *namespace) Render(name string, args ...interface{}) Component {
 	if cmpFn, ok = cmap[name]; !ok {
 		return nil
 	}
-	return cmpFn.Call(args...).(Component)
+	var ret = cmpFn.Call(args...)
+	return ret[0].(Component)
 }
 
 func (n *namespace) Register(name string, componentFn ComponentFunc) {
 	if _, ok := n.ns_components[n.name]; !ok {
-		n.ns_components[n.name] = make(map[string]*reflectFunc)
+		n.ns_components[n.name] = make(map[string]*django_reflect.Func)
 	}
 
 	n.ns_components[n.name][name] = n.newComponent(componentFn)

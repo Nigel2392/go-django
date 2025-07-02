@@ -121,9 +121,9 @@ func TestMigrator(t *testing.T) {
 	t.Run("TestMigrationAddField", func(t *testing.T) {
 		testsql.ExtendedDefinitions = true
 
-		needsToMigrate, err := engine.NeedsToMigrate()
+		needsToMigrate, err := engine.NeedsToMakeMigrations()
 		if err != nil {
-			t.Fatalf("NeedsToMigrate failed: %v", err)
+			t.Fatalf("NeedsToMakeMigrations failed: %v", err)
 		}
 
 		if len(needsToMigrate) != 5 {
@@ -215,9 +215,9 @@ func TestMigrator(t *testing.T) {
 	t.Run("TestMigrationRemoveField", func(t *testing.T) {
 		testsql.ExtendedDefinitions = false
 
-		var needsToMigrate, err = engine.NeedsToMigrate()
+		var needsToMigrate, err = engine.NeedsToMakeMigrations()
 		if err != nil {
-			t.Fatalf("NeedsToMigrate failed: %v", err)
+			t.Fatalf("NeedsToMakeMigrations failed: %v", err)
 		}
 
 		if len(needsToMigrate) != 5 {
@@ -310,9 +310,9 @@ func TestMigrator(t *testing.T) {
 		testsql.ExtendedDefinitionsProfile = true
 		testsql.ExtendedDefinitionsTodo = true
 
-		var needsToMigrate, err = engine.NeedsToMigrate()
+		var needsToMigrate, err = engine.NeedsToMakeMigrations()
 		if err != nil {
-			t.Fatalf("NeedsToMigrate failed: %v", err)
+			t.Fatalf("NeedsToMakeMigrations failed: %v", err)
 		}
 
 		if len(needsToMigrate) != 2 {

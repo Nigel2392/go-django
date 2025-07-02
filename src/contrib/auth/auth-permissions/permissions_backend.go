@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/mux/middleware/authentication"
 )
@@ -48,8 +49,8 @@ func (pb *PermissionsBackend) HasObjectPermission(r *http.Request, obj interface
 	}
 
 	var err error
-	primary, err = attrs.CastToNumber[uint64](primary)
-	if err != nil && (errors.Is(err, attrs.ErrEmptyString) || errors.Is(err, attrs.ErrConvertingString)) {
+	primary, err = attrutils.CastToNumber[uint64](primary)
+	if err != nil && (errors.Is(err, attrutils.ErrEmptyString) || errors.Is(err, attrutils.ErrConvertingString)) {
 		return false
 	}
 

@@ -11,6 +11,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
@@ -385,7 +386,7 @@ func (e *DataModelField[T]) GetValue() interface{} {
 }
 
 func castToNumber[T any](s string) (any, error) {
-	var n, err = attrs.CastToNumber[T](s)
+	var n, err = attrutils.CastToNumber[T](s)
 	return n, err
 }
 

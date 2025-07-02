@@ -1,10 +1,14 @@
 package apps
 
 import (
+	"context"
+	"fmt"
+
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
@@ -135,4 +139,82 @@ func (a *AppConfig) OnReady() error {
 	}
 	a.ready = true
 	return err
+}
+
+func (a *AppConfig) Check(ctx context.Context, settings django.Settings) []checks.Message {
+	var messages = make([]checks.Message, 0)
+	for _, model := range a.ModelObjects {
+		if checker, ok := model.(checks.Checker); ok {
+			var m = checker.Check(ctx)
+			messages = append(messages, m...)
+			continue
+		}
+
+		var messageText = fmt.Sprintf(
+			"Model \"%T\" does not implement checks.Checker interface",
+			model,
+		)
+		messages = append(messages, checks.Warning(
+			"model.cant_check",
+			messageText,
+			model,
+		))
+
+		var primary attrs.Field
+		var defs = model.FieldDefs()
+		for _, field := range defs.Fields() {
+
+			if field.IsPrimary() {
+				if primary != nil {
+					var messageText = fmt.Sprintf(
+						"Model \"%T\" has multiple primary key fields: \"%s\" and \"%s\"",
+						model,
+						primary.Name(),
+						field.Name(),
+					)
+					messages = append(messages, checks.Warning(
+						"model.multiple_primary_keys",
+						messageText,
+						model,
+					))
+					continue
+				}
+
+				primary = field
+			}
+
+			var _, ok = drivers.DBType(field)
+			if !ok {
+				var messageText = fmt.Sprintf(
+					"Field \"%s\" in model \"%T\" does not have a valid database type",
+					field.Name(), model,
+				)
+				messages = append(messages, checks.Warning(
+					"field.invalid_db_type",
+					messageText,
+					field,
+				))
+				continue
+			}
+
+			if fieldChecker, ok := field.(checks.Checker); ok {
+				var m = fieldChecker.Check(ctx)
+				messages = append(messages, m...)
+				continue
+			}
+		}
+
+		if primary == nil && !attrs.IsThroughModel(model) {
+			var messageText = fmt.Sprintf(
+				"Model \"%T\" does not have a primary key field",
+				model,
+			)
+			messages = append(messages, checks.Warning(
+				"model.no_primary_key",
+				messageText,
+				model,
+			))
+		}
+	}
+	return messages
 }

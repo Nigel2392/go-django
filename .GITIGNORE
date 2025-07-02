@@ -15,6 +15,9 @@ __pycache__/
 .web/
 
 ./migrations/
+./migrations-blogapp/
+./migrations-todoapp/
+./queries/src/migrator/migrations/
 
 # Distribution / packaging
 .Python

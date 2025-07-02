@@ -30,6 +30,18 @@ const (
 
 )
 
+// CanDBType is an interface that defines a method to get the database type of a value.
+//
+// It can be implemented by both [attrs.Field], or the [reflect.Type] returned by [attrs.Field.Type]
+type CanDBType interface {
+	DBType() Type
+}
+
+// CanDBTypeString is a type that can be used to define a field that can return a database type as a string.
+type CanDBTypeString interface {
+	DBType() string
+}
+
 var typeNames = map[Type]string{
 	Invalid:   "INVALID",
 	Text:      "TEXT",

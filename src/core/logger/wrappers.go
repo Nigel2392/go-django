@@ -61,8 +61,9 @@ func ColoredLogWrapper(l LogLevel, s string) string {
 }
 
 var logWrapperMap = map[LogLevel]func(l LogLevel, s string) string{
-	DBG: wrapLog(CMD_Green),
-	INF: wrapLog(CMD_Cyan),
-	WRN: wrapLog(CMD_Yellow),
-	ERR: wrapLog(CMD_Red, CMD_Bold),
+	DBG:  wrapLog(CMD_Green),
+	INF:  wrapLog(CMD_Cyan),
+	WRN:  wrapLog(CMD_Yellow),
+	ERR:  wrapLog(CMD_Red, CMD_Bold),
+	CRIT: wrapLog(CMD_Red, CMD_Bold),
 }

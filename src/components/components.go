@@ -5,7 +5,11 @@ import (
 	"io"
 	"reflect"
 	"strings"
+
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 )
+
+type ComponentFunc = django_reflect.Function
 
 type Registry interface {
 	Register(name string, componentFn ComponentFunc)
@@ -17,26 +21,19 @@ type Component interface {
 }
 
 type ComponentRegistry struct {
-	ns_components map[string]map[string]*reflectFunc
-	components    map[string]*reflectFunc
+	ns_components map[string]map[string]*django_reflect.Func
+	components    map[string]*django_reflect.Func
 }
 
 func NewComponentRegistry() *ComponentRegistry {
 	return &ComponentRegistry{
-		ns_components: make(map[string]map[string]*reflectFunc),
-		components:    make(map[string]*reflectFunc),
+		ns_components: make(map[string]map[string]*django_reflect.Func),
+		components:    make(map[string]*django_reflect.Func),
 	}
 }
 
-func (r *ComponentRegistry) newComponent(fn ComponentFunc) *reflectFunc {
-	rTyp := reflect.TypeOf(fn)
-	rVal := reflect.ValueOf(fn)
-
-	return &reflectFunc{
-		fn:   fn,
-		rTyp: rTyp,
-		rVal: rVal,
-	}
+func (r *ComponentRegistry) newComponent(fn ComponentFunc) *django_reflect.Func {
+	return django_reflect.NewFunc(fn, reflect.TypeOf((*Component)(nil)).Elem())
 }
 
 func (r *ComponentRegistry) Namespace(name string) Registry {
@@ -58,7 +55,8 @@ func (r *ComponentRegistry) Register(name string, componentFn ComponentFunc) {
 
 func (r *ComponentRegistry) Render(name string, args ...interface{}) Component {
 	if c, ok := r.components[name]; ok {
-		return c.Call(args...).(Component)
+		var ret = c.Call(args...)
+		return ret[0].(Component)
 	}
 
 	var hasDot = strings.Contains(name, ".")
@@ -75,7 +73,8 @@ func (r *ComponentRegistry) Render(name string, args ...interface{}) Component {
 	var n = parts[1]
 
 	if c, ok := r.ns_components[ns][n]; ok {
-		return c.Call(args...).(Component)
+		var ret = c.Call(args...)
+		return ret[0].(Component)
 	}
 
 	return nil

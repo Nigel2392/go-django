@@ -9,51 +9,51 @@ import (
 	"golang.org/x/term"
 )
 
-var _ Manager = (*manager)(nil)
+var _ Manager = (*CommandManager)(nil)
 
-type manager struct {
-	stdout io.Writer
-	stderr io.Writer
-	stdin  *os.File
-	cmd    Command
-	reg    Registry
+type CommandManager struct {
+	OUT io.Writer
+	ERR io.Writer
+	IN  *os.File
+	Cmd Command
+	Reg Registry
 }
 
-func (m *manager) Log(message string) {
-	fmt.Fprintln(m.stdout, message)
+func (m *CommandManager) Log(message string) {
+	fmt.Fprintln(m.OUT, message)
 }
 
-func (m *manager) Logf(format string, args ...interface{}) {
-	fmt.Fprintf(m.stdout, format, args...)
+func (m *CommandManager) Logf(format string, args ...interface{}) {
+	fmt.Fprintf(m.OUT, format, args...)
 }
 
-func (m *manager) Stdout() io.Writer {
-	return m.stdout
+func (m *CommandManager) Stdout() io.Writer {
+	return m.OUT
 }
 
-func (m *manager) Stderr() io.Writer {
-	return m.stderr
+func (m *CommandManager) Stderr() io.Writer {
+	return m.ERR
 }
 
-func (m *manager) Stdin() io.Reader {
-	return m.stdin
+func (m *CommandManager) Stdin() io.Reader {
+	return m.IN
 }
 
-func (m *manager) Registry() Registry {
-	return m.reg
+func (m *CommandManager) Registry() Registry {
+	return m.Reg
 }
 
-func (m *manager) Input(question string) (string, error) {
-	fmt.Fprint(m.stdout, question)
-	var reader = bufio.NewReader(m.stdin)
+func (m *CommandManager) Input(question string) (string, error) {
+	fmt.Fprint(m.OUT, question)
+	var reader = bufio.NewReader(m.IN)
 	var input, _, err = reader.ReadLine()
 	return string(input), err
 }
 
-func (m *manager) ProtectedInput(question string) (string, error) {
-	fmt.Fprint(m.stdout, question)
+func (m *CommandManager) ProtectedInput(question string) (string, error) {
+	fmt.Fprint(m.OUT, question)
 	var bytesPass, err = term.ReadPassword(
-		int(m.stdin.Fd()),
+		int(m.IN.Fd()),
 	)
 	if err != nil {
 		return "", err
@@ -62,6 +62,6 @@ func (m *manager) ProtectedInput(question string) (string, error) {
 	return string(bytesPass), nil
 }
 
-func (m *manager) Command() Command {
-	return m.cmd
+func (m *CommandManager) Command() Command {
+	return m.Cmd
 }

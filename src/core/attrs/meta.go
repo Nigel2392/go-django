@@ -1,12 +1,19 @@
 package attrs
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
 
+	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/elliotchance/orderedmap/v2"
+)
+
+const (
+	MetaStorageKeyAttrs = "attrs.fields.attributes"
 )
 
 type modelMeta struct {
@@ -222,6 +229,7 @@ func RegisterModel(model Definer) {
 		}
 	}
 
+	var fieldAttrs = make(map[string]map[string]any)
 	var fields = defs.Fields()
 	for _, field := range fields {
 		var name = field.Name()
@@ -239,6 +247,9 @@ func RegisterModel(model Definer) {
 				))
 			}
 		}
+
+		var attrs = field.Attrs()
+		fieldAttrs[name] = attrs
 
 		var rel = field.Rel()
 		if rel == nil {
@@ -268,6 +279,13 @@ func RegisterModel(model Definer) {
 				goto setRel
 			}
 
+			throughMeta.stored.Set(
+				"through.model", true,
+			)
+			throughMeta.stored.Set(
+				storageKey, nil,
+			)
+
 			// Send signal that the through model is being registered
 			OnThroughModelRegister.Send(SignalThroughModelMeta{
 				Source:      meta.model,
@@ -290,6 +308,9 @@ func RegisterModel(model Definer) {
 		}
 	}
 
+	// Store the field attributes in the meta
+	meta.stored.Set("attrs.fields.attributes", fieldAttrs)
+
 	// Set the model as setup
 	meta.setup = true
 
@@ -299,6 +320,59 @@ func RegisterModel(model Definer) {
 		Definitions: staticDefs,
 		Meta:        meta,
 	})
+}
+
+type fieldAttributeContextKey struct {
+	obj uintptr
+}
+
+func addToContext(ctx context.Context, key Definer, value any) context.Context {
+	var k = fieldAttributeContextKey{obj: reflect.ValueOf(key).Pointer()}
+	return context.WithValue(ctx, k, value)
+}
+
+func getFromContext(ctx context.Context, key Definer) (map[string]map[string]any, bool) {
+	var k = fieldAttributeContextKey{obj: reflect.ValueOf(key).Pointer()}
+	var attrMapObj, ok = ctx.Value(k).(map[string]map[string]any)
+	if !ok {
+		return nil, false
+	}
+	return attrMapObj, true
+}
+
+// FieldAttribute retrieves an attribute of a field in a model.
+//
+// It returns the context with the field attribute map, the attribute value, and a boolean indicating if the attribute was found.
+//
+// The context can be used for subsequent calls to retrieve attributes without needing to re-fetch them from the model meta.
+func FieldAttribute[T any](ctx context.Context, model Definer, fieldName string, attrName string) (context.Context, T, bool) {
+	var fieldAttrMap, ok = getFromContext(ctx, model)
+	if !ok {
+		m := GetModelMeta(model)
+		attrMapObj, ok := m.Storage(MetaStorageKeyAttrs)
+		assert.True(ok, "FieldAttribute: expected attribute map in model meta, got %T", attrMapObj)
+
+		fieldAttrMap, ok = attrMapObj.(map[string]map[string]any)
+		assert.True(ok, "FieldAttribute: expected map[string]map[string]any, got %T", attrMapObj)
+
+		ctx = addToContext(ctx, model, fieldAttrMap)
+	}
+
+	attrMap, ok := fieldAttrMap[fieldName]
+	assert.True(
+		ok, "FieldAttribute: expected attribute map for field %q in model %T, but the field was not found",
+		fieldName, model,
+	)
+
+	n, ok, err := attrutils.AttrFromMap[T](attrMap, attrName)
+	if err != nil {
+		assert.Fail(
+			"FieldAttribute: error getting attribute %q for field %q in model %T: %v",
+			attrName, fieldName, model, err,
+		)
+	}
+
+	return ctx, n, ok
 }
 
 func GetModelMeta(model any) ModelMeta {
@@ -337,6 +411,17 @@ func IsModelRegistered(model Definer) bool {
 		return false
 	}
 	return mdl.setup
+}
+
+func IsThroughModel(m Definer) bool {
+	if meta, ok := modelReg[reflect.TypeOf(m)]; ok {
+		if v, ok := meta.Storage("through.model"); ok {
+			if v.(bool) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 func GetRelationMeta(m Definer, name string) (Relation, bool) {

@@ -25,6 +25,7 @@ type Registry interface {
 	Unregister(cmdName string) error
 	Commands() []Command
 	ExecCommand(args []string) error
+	ExecCommandOpts(args []string, opts ...func(c *CommandManager)) error
 }
 
 type commandRegistry struct {
@@ -81,6 +82,10 @@ func (r *commandRegistry) Commands() []Command {
 }
 
 func (r *commandRegistry) ExecCommand(args []string) error {
+	return r.ExecCommandOpts(args)
+}
+
+func (r *commandRegistry) ExecCommandOpts(args []string, opts ...func(c *CommandManager)) error {
 	var cmdName, arguments = parseCommand(args)
 	if cmdName == "" {
 		return errors.Wrap(ErrNoCommand, "no command provided")
@@ -95,12 +100,16 @@ func (r *commandRegistry) ExecCommand(args []string) error {
 		)
 	}
 
-	var m Manager = &manager{
-		stdout: os.Stdout,
-		stderr: os.Stdout,
-		stdin:  os.Stdin,
-		cmd:    cmd,
-		reg:    r,
+	var m = &CommandManager{
+		OUT: os.Stdout,
+		ERR: os.Stdout,
+		IN:  os.Stdin,
+		Cmd: cmd,
+		Reg: r,
+	}
+
+	for _, opt := range opts {
+		opt(m)
 	}
 
 	var remaining = arguments

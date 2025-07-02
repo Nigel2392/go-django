@@ -329,7 +329,86 @@ func (m *MigrationEngine) Migrate() error {
 	return nil
 }
 
-func (m *MigrationEngine) NeedsToMigrate() ([]*contenttypes.BaseContentType[attrs.Definer], error) {
+type NeedsToMigrateInfo struct {
+	model *contenttypes.BaseContentType[attrs.Definer]
+	mig   *MigrationFile
+	app   django.AppConfig
+}
+
+func (n *NeedsToMigrateInfo) Model() attrs.Definer {
+	if n.model == nil {
+		return nil
+	}
+	return n.model.New()
+}
+
+func (n *NeedsToMigrateInfo) Migration() *MigrationFile {
+	return n.mig
+}
+
+func (n *NeedsToMigrateInfo) App() django.AppConfig {
+	return n.app
+}
+
+func (m *MigrationEngine) NeedsToMigrate() ([]NeedsToMigrateInfo, error) {
+	if err := m.SchemaEditor.Setup(); err != nil {
+		return nil, errors.Wrap(err, "failed to setup schema editor")
+	}
+
+	var migrations, err = m.ReadMigrations()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read migrations")
+	}
+
+	m.Migrations = make(map[string]map[string][]*MigrationFile)
+	m.dependencies = make(map[string]map[string][]*MigrationFile)
+	for _, migration := range migrations {
+		m.storeMigration(migration)
+	}
+
+	var needsToMigrate = make([]NeedsToMigrateInfo, 0)
+	for head := m.apps.Front(); head != nil; head = head.Next() {
+		var (
+			def     = head.Value
+			appName = head.Key
+		)
+
+		for _, model := range def.Models() {
+			var cType = contenttypes.NewContentType(model)
+			var modelName = cType.Model()
+
+			var last = m.GetLastMigration(appName, modelName)
+			if last == nil {
+				logger.Debugf("No migrations found for %s.%s", appName, modelName)
+				continue
+			}
+
+			var hasApplied, err = m.SchemaEditor.HasMigration(
+				last.AppName,
+				last.ModelName,
+				last.FileName(),
+			)
+			if err != nil {
+				return nil, errors.Wrapf(
+					err, "failed to check if migration %q has been applied", last.Name,
+				)
+			}
+
+			if !hasApplied {
+				logger.Debugf("Migration %q for %s.%s needs to be applied", last.FileName(), appName, modelName)
+				needsToMigrate = append(needsToMigrate, NeedsToMigrateInfo{
+					model: cType,
+					mig:   last,
+					app:   head.Value,
+				})
+			}
+		}
+	}
+
+	return needsToMigrate, nil
+}
+
+func (m *MigrationEngine) NeedsToMakeMigrations() ([]*contenttypes.BaseContentType[attrs.Definer], error) {
 
 	if err := m.SchemaEditor.Setup(); err != nil {
 		return nil, errors.Wrap(err, "failed to setup schema editor")

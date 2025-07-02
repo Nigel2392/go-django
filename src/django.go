@@ -20,6 +20,7 @@ import (
 	core "github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -93,6 +94,9 @@ type AppConfig interface {
 	// These models can then be used throughout the go-django application.
 	Models() []attrs.Definer
 
+	Processors() []func(ctx.ContextWithRequest)
+	Templates() *tpl.Config
+
 	// Initialize your application.
 	//
 	// This can be used to retrieve variables / objects from settings (like a database).
@@ -106,11 +110,12 @@ type AppConfig interface {
 	//
 	// I.E.: The 'sessions' app must always be registered before 'auth' in order for the auth app to work.
 	Initialize(settings Settings) error
-	Processors() []func(ctx.ContextWithRequest)
-	Templates() *tpl.Config
 
 	// All apps have been initialized before OnReady() is called.
 	OnReady() error
+
+	// Check is used to check the application for any issues.
+	Check(ctx context.Context, settings Settings) []checks.Message
 }
 
 // The global application struct.
@@ -402,6 +407,43 @@ func (a *Application) Flagged(flag AppFlag) bool {
 	return (a.flags & flag) != 0
 }
 
+func (a *Application) logCheckMessages(messages []checks.Message) (errCnt, critCnt, warnCnt, infoCnt int) {
+	slices.SortStableFunc(messages, func(a, b checks.Message) int {
+		if a.Type < b.Type {
+			return -1
+		} else if a.Type > b.Type {
+			return 1
+		}
+		return 0
+	})
+
+	for _, msg := range messages {
+
+		switch msg.Type {
+		case checks.ERROR:
+			errCnt++
+		case checks.CRITICAL:
+			critCnt++
+		case checks.WARNING:
+			warnCnt++
+		case checks.INFO:
+			infoCnt++
+		case checks.DEBUG:
+			// Debug messages are not counted
+			continue
+		default:
+			a.Log.Warnf("Unknown message type %s: %s", msg.Type, msg.Text)
+			continue
+		}
+
+		if !msg.Silenced() {
+			a.Log.Log(msg.Type, msg)
+		}
+	}
+
+	return errCnt, critCnt, warnCnt, infoCnt
+}
+
 func (a *Application) Initialize() error {
 
 	if a.initialized.Load() {
@@ -410,7 +452,7 @@ func (a *Application) Initialize() error {
 
 	if a.Log == nil {
 		a.Log = &logger.Logger{
-			Level:      logger.INF,
+			Level:      logger.GetLevel(),
 			OutputTime: true,
 			Prefix:     "django",
 			WrapPrefix: logger.ColoredLogWrapper,
@@ -504,11 +546,14 @@ func (a *Application) Initialize() error {
 	})
 
 	a.Commands.Register(sqlShellCommand)
+	a.Commands.Register(runChecksCommand)
 
 	for _, appFunc := range a.apps {
 		var app = appFunc()
 		a.Apps.Set(app.Name(), app)
 	}
+
+	core.BeforeModelsReady.Send(a)
 
 	// Load all models for the application first
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
@@ -538,6 +583,26 @@ func (a *Application) Initialize() error {
 		if err = app.Initialize(a.Settings); err != nil {
 			return errors.Wrapf(err, "Error initializing app %s", app.Name())
 		}
+	}
+	var c = context.Background()
+	if messages := checks.RunCheck(c, checks.TagSettings, a, a.Settings); len(messages) > 0 {
+		a.logCheckMessages(messages)
+	}
+
+	if messages := checks.RunCheck(c, checks.TagSecurity, a, a.Settings); len(messages) > 0 {
+		a.logCheckMessages(messages)
+	}
+
+	var groups = make([][]checks.Message, 0, a.Apps.Len())
+	for h := a.Apps.Front(); h != nil; h = h.Next() {
+		groups = append(
+			groups,
+			h.Value.Check(c, a.Settings),
+		)
+	}
+
+	for _, group := range groups {
+		a.logCheckMessages(group)
 	}
 
 	var r Mux = a.Mux
@@ -571,6 +636,10 @@ func (a *Application) Initialize() error {
 		a.Mux.Use(
 			middleware.Recoverer(a.ServerError),
 		)
+	}
+
+	if messages := checks.RunCheck(c, checks.TagCommands, a, a.Settings, a.Commands.Commands()); len(messages) > 0 {
+		a.logCheckMessages(messages)
 	}
 
 	a.initialized.Store(true)

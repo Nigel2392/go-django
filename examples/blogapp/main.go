@@ -29,7 +29,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	_ "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
-	"github.com/Nigel2392/go-django/src/core/logger"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -80,14 +79,14 @@ func main() {
 		http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
 	)), "pages")
 
+	// logger.SetLevel(
+	// logger.ERR,
+	// )
+
 	err = app.Initialize()
 	if err != nil {
 		panic(err)
 	}
-
-	app.Log.SetLevel(
-		logger.DBG,
-	)
 
 	if len(os.Args) == 1 {
 		blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()

@@ -7,6 +7,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-signals"
@@ -32,7 +33,7 @@ func CT_ListObjects(obj attrs.Definer) func(offset, limit uint) ([]interface{}, 
 		if err != nil {
 			return nil, err
 		}
-		return attrs.InterfaceList(results), nil
+		return attrutils.InterfaceList(results), nil
 	}
 }
 
@@ -45,7 +46,7 @@ func CT_ListObjectsByIDs(obj attrs.Definer) func(i []interface{}) ([]interface{}
 		if err != nil {
 			return nil, err
 		}
-		return attrs.InterfaceList(results), nil
+		return attrutils.InterfaceList(results), nil
 	}
 }
 
@@ -63,7 +64,7 @@ func ListObjectsByIDs[T attrs.Definer, T2 any](object T, offset, limit uint64, i
 	var d, err = GetQuerySet(obj).
 		Filter(
 			fmt.Sprintf("%s__in", primaryField.Name()),
-			attrs.InterfaceList(ids)...,
+			attrutils.InterfaceList(ids)...,
 		).
 		Limit(int(limit)).
 		Offset(int(offset)).

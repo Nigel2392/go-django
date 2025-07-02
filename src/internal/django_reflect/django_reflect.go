@@ -18,6 +18,14 @@ func RConvert(v *reflect.Value, t reflect.Type) (*reflect.Value, bool) {
 		return v, true
 	}
 
+	if t.Kind() == reflect.Interface && v.Type().Implements(t) {
+		// return the value as an interface
+		var z = reflect.New(t)
+		z.Elem().Set(*v)
+		*v = z.Elem()
+		return v, true
+	}
+
 	// Handle pointer-to-value or value-to-pointer
 	if v.Kind() == reflect.Ptr && t.Kind() != reflect.Ptr {
 		if v.IsNil() {

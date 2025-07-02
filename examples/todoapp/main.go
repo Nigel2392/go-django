@@ -12,7 +12,6 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	_ "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
-	"github.com/Nigel2392/go-django/src/core/logger"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -26,7 +25,7 @@ func main() {
 	var app = django.App(
 		django.Configure(map[string]interface{}{
 			django.APPVAR_ALLOWED_HOSTS:   []string{"*"},
-			django.APPVAR_DEBUG:           true,
+			django.APPVAR_DEBUG:           false,
 			django.APPVAR_HOST:            "127.0.0.1",
 			django.APPVAR_PORT:            "8080",
 			django.APPVAR_DATABASE:        db,
@@ -51,10 +50,6 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
-
-	app.Log.SetLevel(
-		logger.DBG,
-	)
 
 	if err := app.Serve(); err != nil {
 		panic(err)

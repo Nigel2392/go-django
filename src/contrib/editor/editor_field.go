@@ -8,15 +8,13 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
 var (
 	_ attrs.Field = (*Field)(nil)
 )
-
-//go:linkname getStructField github.com/Nigel2392/go-django/src/core/attrs.getStructField
-func getStructField(typ reflect.Type, name string) (reflect.StructField, bool)
 
 type FieldConfig struct {
 	// Label is the label for the field.
@@ -96,7 +94,7 @@ func NewField(forModel attrs.Definer, name string, cnf ...FieldConfig) *Field {
 	modelT = modelT.Elem()
 	modelV = modelV.Elem()
 
-	var structField, ok = getStructField(modelT, name)
+	var structField, ok = attrutils.GetStructField(modelT, name)
 	if !ok {
 		panic(fmt.Errorf("NewField: model %T has no field %q", forModel, name))
 	}

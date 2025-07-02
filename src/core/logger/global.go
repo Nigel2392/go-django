@@ -28,13 +28,14 @@ func (p prefixerwriter) Write(b []byte) (n int, err error) {
 }
 
 var (
-	Writer    = func(level LogLevel) io.Writer { return os.Stdout }
-	PWriter   = func(label string, level LogLevel) io.Writer { return prefixerwriter{label, level, os.Stdout} }
-	NameSpace = func(label string) Log { return nil }
+	defaultLogLevel = INF
+	Writer          = func(level LogLevel) io.Writer { return os.Stdout }
+	PWriter         = func(label string, level LogLevel) io.Writer { return prefixerwriter{label, level, os.Stdout} }
+	NameSpace       = func(label string) Log { return nil }
 
 	SetOutput func(level LogLevel, w io.Writer) = func(level LogLevel, w io.Writer) {}
-	SetLevel  func(level LogLevel)              = func(level LogLevel) {}
-	GetLevel  func() (level LogLevel)           = func() (level LogLevel) { return DBG }
+	SetLevel  func(level LogLevel)              = func(level LogLevel) { defaultLogLevel = level }
+	GetLevel  func() (level LogLevel)           = func() (level LogLevel) { return defaultLogLevel }
 
 	Debug  = func(args ...interface{}) { printArgs("DEBUG", "", args...) }
 	Info   = func(args ...interface{}) { printArgs("INFO", "", args...) }

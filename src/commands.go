@@ -11,6 +11,18 @@ import (
 	"github.com/Nigel2392/go-django/src/core/command"
 )
 
+var runChecksCommand = &command.Cmd[any]{
+	ID:   "check",
+	Desc: "Run all registered checks for the go-django application",
+	//FlagFunc: func(m command.Manager, stored *any, f *flag.FlagSet) error {
+	//	return nil
+	//},
+	Execute: func(m command.Manager, stored any, args []string) error {
+
+		return nil
+	},
+}
+
 func makeQuery(query string, m command.Manager, db drivers.Database) error {
 	rows, err := db.QueryContext(context.Background(), query)
 	if err != nil {

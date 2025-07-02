@@ -19,6 +19,10 @@ func (l LogLevel) String() string {
 	return levelMap[l]
 }
 
+func (l LogLevel) LT(other LogLevel) bool {
+	return l <= other
+}
+
 func (l LogLevel) Value() (driver.Value, error) {
 	return int64(l), nil
 }
@@ -51,17 +55,19 @@ var (
 	ErrOutputInvalid = errors.New("output is invalid")
 
 	levelMap = map[LogLevel]string{
-		DBG: "DEBUG",
-		INF: "INFO",
-		WRN: "WARN",
-		ERR: "ERROR",
+		DBG:  "DEBUG",
+		INF:  "INFO",
+		WRN:  "WARN",
+		ERR:  "ERROR",
+		CRIT: "CRITICAL",
 	}
 
 	revMap = map[string]LogLevel{
-		levelMap[DBG]: DBG,
-		levelMap[INF]: INF,
-		levelMap[WRN]: WRN,
-		levelMap[ERR]: ERR,
+		levelMap[DBG]:  DBG,
+		levelMap[INF]:  INF,
+		levelMap[WRN]:  WRN,
+		levelMap[ERR]:  ERR,
+		levelMap[CRIT]: CRIT,
 	}
 )
 
@@ -77,6 +83,9 @@ const (
 
 	// ERR is used for errors.
 	ERR
+
+	// CRIT is used for critical errors that should not be ignored.
+	CRIT LogLevel = 100
 
 	// OutputAll is used to output all log levels in the SetOutput function.
 	OutputAll LogLevel = -1
@@ -245,6 +254,7 @@ func (l *Logger) validateOutputs() {
 // Returns the output for the given log level.
 func (l *Logger) Output(level LogLevel) io.Writer {
 	l.validateOutputs()
+
 	switch level {
 	case DBG:
 		return l.OutputDebug
@@ -255,10 +265,10 @@ func (l *Logger) Output(level LogLevel) io.Writer {
 	case ERR:
 		return l.OutputError
 	}
-	if l.Level < DBG {
+	if level < DBG {
 		return l.OutputDebug
 	}
-	if l.Level > ERR {
+	if level > ERR {
 		return l.OutputError
 	}
 	return nil
@@ -323,62 +333,61 @@ func (l *Logger) PWriter(label string, level LogLevel) io.Writer {
 }
 
 func (l *Logger) Debug(args ...interface{}) {
-	if l.Level <= DBG {
+	if l.Level.LT(DBG) {
 		l.log(DBG, args...)
 	}
 }
 
 func (l *Logger) Info(args ...interface{}) {
-	if l.Level <= INF {
+	if l.Level.LT(INF) {
 		l.log(INF, args...)
 	}
 }
 
 func (l *Logger) Warn(args ...interface{}) {
-	if l.Level <= WRN {
+	if l.Level.LT(WRN) {
 		l.log(WRN, args...)
 	}
 }
 
 func (l *Logger) Error(args ...interface{}) {
-	if l.Level <= ERR {
+	if l.Level.LT(ERR) {
 		l.log(ERR, args...)
 	}
 }
 
+func (l *Logger) Fatal(errorcode int, args ...interface{}) {
+	l.log(CRIT, args...)
+	os.Exit(errorcode)
+}
+
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	if l.Level <= DBG {
+	if l.Level.LT(DBG) {
 		l.logf(DBG, format, args...)
 	}
 }
 
 func (l *Logger) Infof(format string, args ...interface{}) {
-	if l.Level <= INF {
+	if l.Level.LT(INF) {
 		l.logf(INF, format, args...)
 	}
 }
 
 func (l *Logger) Warnf(format string, args ...interface{}) {
-	if l.Level <= WRN {
+	if l.Level.LT(WRN) {
 		l.logf(WRN, format, args...)
 	}
 }
 
 func (l *Logger) Errorf(format string, args ...interface{}) {
-	if l.Level <= ERR {
+	if l.Level.LT(ERR) {
 		l.logf(ERR, format, args...)
 	}
 }
 
 // Fatal is a convenience function for logging an error and exiting the program.
-func (l *Logger) Fatal(errorcode int, args ...interface{}) {
-	l.Error(args...)
-	os.Exit(errorcode)
-}
-
-// Fatalf is a convenience function for logging an error and exiting the program.
 func (l *Logger) Fatalf(errorcode int, format string, args ...interface{}) {
-	l.Errorf(format, args...)
+	l.logf(CRIT, format, args...)
 	os.Exit(errorcode)
 }
 
@@ -391,17 +400,20 @@ func (l *Logger) Logf(level LogLevel, format string, args ...interface{}) {
 }
 
 func (l *Logger) WriteString(s string) (n int, err error) {
-	if l.Level <= DBG {
+	if l.Level.LT(DBG) {
 		return l.log(DBG, s)
 	}
-	if l.Level <= INF {
+	if l.Level.LT(INF) {
 		return l.log(INF, s)
 	}
-	if l.Level <= WRN {
+	if l.Level.LT(WRN) {
 		return l.log(WRN, s)
 	}
-	if l.Level <= ERR {
+	if l.Level.LT(ERR) {
 		return l.log(ERR, s)
+	}
+	if l.Level.LT(CRIT) {
+		return l.log(CRIT, s)
 	}
 	return l.log(INF, s)
 }

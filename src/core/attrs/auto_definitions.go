@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/tags"
 )
 
@@ -237,7 +238,7 @@ func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
 				continue
 			}
 
-			var field_t, ok = cachedStructs.getField(instance_t, name)
+			var field_t, ok = attrutils.GetStructField(instance_t, name)
 			assert.True(ok, "field %q not found in %T", name, instance)
 
 			var (

@@ -2,6 +2,8 @@ go 1.24.2
 
 use (
 	.
+	./cmd/go-django
+	./cmd/go-django-definitions
 	./cmd/migrator
 	./examples/blogapp
 	./examples/todoapp
