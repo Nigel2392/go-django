@@ -58,7 +58,7 @@ func (m *CommandManager) ProtectedInput(question string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	fmt.Println()
+	fmt.Fprintln(m.OUT)
 	return string(bytesPass), nil
 }
 

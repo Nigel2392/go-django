@@ -140,7 +140,11 @@ func (r *commandRegistry) ExecCommandOpts(args []string, opts ...func(c *Command
 	if err != nil {
 
 		if errors.Is(err, flag.ErrHelp) {
-			return nil
+			return ErrShouldExit
+		}
+
+		if errors.Is(err, ErrShouldExit) {
+			return err
 		}
 
 		switch r.errorHandling {
