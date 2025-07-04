@@ -46,9 +46,10 @@ func main() {
 			django.APPVAR_HOST:            "127.0.0.1",
 			django.APPVAR_PORT:            "8080",
 			django.APPVAR_DATABASE:        db,
-			django.APPVAR_RECOVERER:       false,
 			auth.APP_AUTH_EMAIL_LOGIN:     true,
-			migrator.APPVAR_MIGRATION_DIR: "./migrations-blogapp",
+			migrator.APPVAR_MIGRATION_DIR: "./.private/migrations-blogapp",
+
+			// django.APPVAR_RECOVERER:       false,
 		}),
 		// django.AppMiddleware(
 		// middleware.DefaultLogger.Intercept,
@@ -87,6 +88,19 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	//	var user = &auth_models.User{}
+	//	var e, _ = mail.ParseAddress("admin@localhost")
+	//	user.Email = (*drivers.Email)(e)
+	//	user.Username = "admin"
+	//
+	//	if err = auth.SetPassword(user, "Administrator123"); err != nil {
+	//		panic(err)
+	//	}
+	//
+	//	if _, err := auth_models.CreateUser(context.Background(), user); err != nil {
+	//		panic(fmt.Errorf("failed to create admin user: %w", err))
+	//	}
 
 	if len(os.Args) == 1 {
 		blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()

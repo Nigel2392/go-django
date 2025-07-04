@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 
 	"github.com/Nigel2392/go-django/examples/todoapp/todos"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -11,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/contrib/session"
+	"github.com/Nigel2392/go-django/src/core/command"
 	_ "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -31,7 +33,7 @@ func main() {
 			django.APPVAR_DATABASE:        db,
 			django.APPVAR_RECOVERER:       false,
 			auth.APP_AUTH_EMAIL_LOGIN:     true,
-			migrator.APPVAR_MIGRATION_DIR: "./migrations-todoapp",
+			migrator.APPVAR_MIGRATION_DIR: "./.private/migrations-todoapp",
 		}),
 		// django.AppMiddleware(
 		// middleware.DefaultLogger.Intercept,
@@ -48,6 +50,11 @@ func main() {
 
 	err = app.Initialize()
 	if err != nil {
+		if errors.Is(err, command.ErrShouldExit) {
+			// This is expected when running commands like `makemigrations` or `migrate`
+			return
+		}
+
 		panic(err)
 	}
 

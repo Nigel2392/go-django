@@ -6,6 +6,7 @@ use (
 	./cmd/go-django-definitions
 	./cmd/migrator
 	./examples/blogapp
+	./examples/openauth2app
 	./examples/todoapp
 	./pkg/yml
 	./queries

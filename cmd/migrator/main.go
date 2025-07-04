@@ -108,6 +108,7 @@ func main() {
 		}),
 		django.Flag(
 			django.FlagSkipCmds,
+			django.FlagSkipChecks,
 		),
 		django.Apps(
 			session.NewAppConfig,

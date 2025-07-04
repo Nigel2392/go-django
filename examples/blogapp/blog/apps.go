@@ -56,10 +56,6 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 		&BlogPage{},
 	}
 
-	appconfig.ModelObjects = []attrs.Definer{
-		&BlogPage{},
-	}
-
 	appconfig.Ready = func() error {
 		pages.Register(&pages.PageDefinition{
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
@@ -110,5 +106,6 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 		blog = appconfig
 		return nil
 	}
+
 	return appconfig
 }

@@ -1,6 +1,6 @@
 migrate:
   src:
-    - ./migrations
+    - ./.private/migrations-django
 
   apps:
     - pages:
