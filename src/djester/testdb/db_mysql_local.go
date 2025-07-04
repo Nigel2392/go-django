@@ -76,7 +76,7 @@ func open() (which string, db drivers.Database) {
 		time.Sleep(5 * time.Second)
 	}
 
-	_, err = questDb.ExecContext(context.Background(), `SET SESSION sql_mode = CONCAT(@@sql_mode, ',STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO')`)
+	_, err = db.ExecContext(context.Background(), `SET SESSION sql_mode = CONCAT(@@sql_mode, ',STRICT_ALL_TABLES,ERROR_FOR_DIVISION_BY_ZERO')`)
 	if err != nil {
 		panic(fmt.Errorf("failed to set SQL mode: %w", err))
 	}
