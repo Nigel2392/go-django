@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 )
@@ -62,7 +61,6 @@ func (d *queryWrapper[T]) QueryRowContext(ctx context.Context, query string, arg
 func (d *queryWrapper[T]) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	var res, err = d.conn.ExecContext(ctx, query, args...)
 	LogSQL(ctx, "sql.DB", err, query, args...)
-	fmt.Printf("ExecContext: %s %v\n", query, err)
 	return res, databaseError(d.d, err)
 }
 
