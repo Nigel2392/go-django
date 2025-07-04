@@ -245,7 +245,7 @@ func (j *JSON[T]) Scan(value any) error {
 		j.Null = true
 	default:
 		return errors.TypeMismatch.Wrapf(
-			"cannot scan %T into JSON[T]: %w", value,
+			"cannot scan %T into JSON[T]", value,
 		)
 	}
 	if len(bytes) == 0 {
@@ -305,6 +305,7 @@ func (t *timeType) Scan(value any) error {
 	default:
 		return errors.TypeMismatch.Wrapf(
 			"cannot scan %T into timeType",
+			value,
 		)
 	}
 	return nil
@@ -424,7 +425,7 @@ func (e *Email) Scan(src interface{}) error {
 		return nil
 	default:
 		return errors.TypeMismatch.Wrapf(
-			"cannot scan %T into Email: %w", src,
+			"cannot scan %T into Email", src,
 		)
 	}
 }
