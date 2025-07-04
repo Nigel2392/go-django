@@ -12,6 +12,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/elliotchance/orderedmap/v2"
@@ -20,6 +21,8 @@ import (
 
 const (
 	MIGRATION_FILE_SUFFIX = ".mig"
+
+	ErrNoChanges errs.Error = "migrations not created, no changes detected."
 )
 
 type Dependency struct {
@@ -96,6 +99,14 @@ type MigrationFile struct {
 	Actions []MigrationAction `json:"actions"`
 }
 
+func (m *MigrationFile) String() string {
+	return fmt.Sprintf("%s:%s:%s", m.AppName, m.ModelName, m.FileName())
+}
+
+func (m *MigrationFile) GoString() string {
+	return fmt.Sprintf("%s:%s:%s", m.AppName, m.ModelName, m.FileName())
+}
+
 func (m *MigrationFile) addDependency(appName, modelName, name string) {
 	if m.Dependencies == nil {
 		m.Dependencies = make([]Dependency, 0)
@@ -132,6 +143,14 @@ type MigrationEngine struct {
 	//
 	// This is used to read and write migration files.
 	BasePath string
+
+	// Fake indicates whether the migration engine is in fake mode.
+	//
+	// If true, the migration engine will not apply any migrations to the database,
+	// nor will it write any migration files.
+	//
+	// It is useful for testing purposes or when you want to see what migrations would be applied without actually applying them.
+	Fake bool
 
 	// The path to the directory where the migration files are stored.
 	//
@@ -211,18 +230,18 @@ func (m *MigrationEngine) GetLastMigration(appName, modelName string) *Migration
 	return latestFromMap(m.Migrations, appName, modelName)
 }
 
-func (m *MigrationEngine) Migrate() error {
+func (m *MigrationEngine) Migrate(apps ...string) error {
 
 	if err := m.SchemaEditor.Setup(); err != nil {
 		return errors.Wrap(err, "failed to setup schema editor")
 	}
 
-	var migrations, err = m.ReadMigrations()
+	var migrations, err = m.ReadMigrations(apps...)
 	if err != nil {
 		return errors.Wrap(err, "failed to read migrations")
 	}
 
-	var unappliedMigrations = make([]*MigrationFile, 0)
+	var migrationInfos = make([]*migrationFileInfo, 0, len(migrations))
 	for _, migration := range migrations {
 		var hasApplied, err = m.SchemaEditor.HasMigration(
 			migration.AppName,
@@ -236,16 +255,14 @@ func (m *MigrationEngine) Migrate() error {
 			)
 		}
 
-		if hasApplied {
-			continue
-		}
-
-		unappliedMigrations = append(unappliedMigrations, migration)
+		migrationInfos = append(migrationInfos, &migrationFileInfo{
+			MigrationFile: migration,
+			migrated:      hasApplied,
+		})
 	}
 
-	if len(unappliedMigrations) == 0 {
-		logger.Info("No new migrations to apply, did you forget to call MakeMigrations?")
-		return nil
+	if len(migrationInfos) == 0 {
+		return ErrNoChanges
 	}
 
 	m.Migrations = make(map[string]map[string][]*MigrationFile)
@@ -254,12 +271,17 @@ func (m *MigrationEngine) Migrate() error {
 		m.storeMigration(migration)
 	}
 
-	graph, err := m.buildDependencyGraph(unappliedMigrations)
+	graph, err := m.buildDependencyGraph(migrationInfos)
 	if err != nil {
 		return err
 	}
 
 	for _, n := range graph {
+
+		if n.mig.migrated {
+			logger.Debugf("migration %s:%s:%s has already been applied, skipping", n.mig.AppName, n.mig.ModelName, n.mig.FileName())
+			continue
+		}
 
 		if has, err := m.SchemaEditor.HasMigration(n.mig.AppName, n.mig.ModelName, n.mig.FileName()); err != nil {
 			logger.Errorf("failed to check if migration %q has been applied: %v", n.mig.FileName(), err)
@@ -270,6 +292,14 @@ func (m *MigrationEngine) Migrate() error {
 		}
 
 		var defs = n.mig.Table.Object.FieldDefs()
+
+		if m.Fake {
+			logger.Debugf(
+				"Skipping migration %q for model %s.%s in fake mode",
+				n.mig.FileName(), n.mig.AppName, n.mig.ModelName,
+			)
+			continue
+		}
 
 		for _, action := range n.mig.Actions {
 			var err error
@@ -350,12 +380,12 @@ func (n *NeedsToMigrateInfo) App() django.AppConfig {
 	return n.app
 }
 
-func (m *MigrationEngine) NeedsToMigrate() ([]NeedsToMigrateInfo, error) {
+func (m *MigrationEngine) NeedsToMigrate(apps ...string) ([]NeedsToMigrateInfo, error) {
 	if err := m.SchemaEditor.Setup(); err != nil {
 		return nil, errors.Wrap(err, "failed to setup schema editor")
 	}
 
-	var migrations, err = m.ReadMigrations()
+	var migrations, err = m.ReadMigrations(apps...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read migrations")
 	}
@@ -367,13 +397,13 @@ func (m *MigrationEngine) NeedsToMigrate() ([]NeedsToMigrateInfo, error) {
 	}
 
 	var needsToMigrate = make([]NeedsToMigrateInfo, 0)
-	for head := m.apps.Front(); head != nil; head = head.Next() {
-		var (
-			def     = head.Value
-			appName = head.Key
-		)
+	for _, appName := range apps {
+		var app, ok = m.apps.Get(appName)
+		if !ok || app == nil {
+			return nil, fmt.Errorf("app %q not found in migration engines' apps list", appName)
+		}
 
-		for _, model := range def.Models() {
+		for _, model := range app.Models() {
 			var cType = contenttypes.NewContentType(model)
 			var modelName = cType.Model()
 
@@ -399,7 +429,7 @@ func (m *MigrationEngine) NeedsToMigrate() ([]NeedsToMigrateInfo, error) {
 				needsToMigrate = append(needsToMigrate, NeedsToMigrateInfo{
 					model: cType,
 					mig:   last,
-					app:   head.Value,
+					app:   app,
 				})
 			}
 		}
@@ -408,13 +438,17 @@ func (m *MigrationEngine) NeedsToMigrate() ([]NeedsToMigrateInfo, error) {
 	return needsToMigrate, nil
 }
 
-func (m *MigrationEngine) NeedsToMakeMigrations() ([]*contenttypes.BaseContentType[attrs.Definer], error) {
+func (m *MigrationEngine) NeedsToMakeMigrations(apps ...string) ([]*contenttypes.BaseContentType[attrs.Definer], error) {
+
+	if len(apps) == 0 {
+		apps = m.apps.Keys()
+	}
 
 	if err := m.SchemaEditor.Setup(); err != nil {
 		return nil, errors.Wrap(err, "failed to setup schema editor")
 	}
 
-	var migrations, err = m.ReadMigrations()
+	var migrations, err = m.ReadMigrations(apps...)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to read migrations")
 	}
@@ -426,13 +460,13 @@ func (m *MigrationEngine) NeedsToMakeMigrations() ([]*contenttypes.BaseContentTy
 	}
 
 	var needsToMigrate = make([]*contenttypes.BaseContentType[attrs.Definer], 0)
-	for head := m.apps.Front(); head != nil; head = head.Next() {
-		var (
-			def     = head.Value
-			appName = head.Key
-		)
+	for _, appName := range apps {
+		var app, ok = m.apps.Get(appName)
+		if !ok || app == nil {
+			return nil, fmt.Errorf("app %q not found in migration engines' apps list", appName)
+		}
 
-		for _, model := range def.Models() {
+		for _, model := range app.Models() {
 			var cType = contenttypes.NewContentType(model)
 			var modelName = cType.Model()
 
@@ -462,13 +496,17 @@ func (m *MigrationEngine) NeedsToMakeMigrations() ([]*contenttypes.BaseContentTy
 	return needsToMigrate, nil
 }
 
-func (m *MigrationEngine) MakeMigrations() error {
+func (m *MigrationEngine) MakeMigrations(apps ...string) error {
+
+	if len(apps) == 0 {
+		apps = m.apps.Keys()
+	}
 
 	if err := m.SchemaEditor.Setup(); err != nil {
 		return errors.Wrap(err, "failed to setup schema editor")
 	}
 
-	var migrations, err = m.ReadMigrations()
+	var migrations, err = m.ReadMigrations(apps...)
 	if err != nil {
 		return errors.Wrap(err, "failed to read migrations")
 	}
@@ -484,13 +522,14 @@ func (m *MigrationEngine) MakeMigrations() error {
 		dependencies    = make(map[string]map[string]*MigrationFile)
 		migrationsFound = false
 	)
-	for head := m.apps.Front(); head != nil; head = head.Next() {
-		var (
-			def     = head.Value
-			appName = head.Key
-		)
 
-		for _, model := range def.Models() {
+	for _, appName := range apps {
+		var app, ok = m.apps.Get(appName)
+		if !ok || app == nil {
+			return fmt.Errorf("app %q not found in migration engines' apps list", appName)
+		}
+
+		for _, model := range app.Models() {
 
 			if !CanMigrate(model) {
 				logger.Debugf("Skipping model %T, migrations are disabled", model)
@@ -514,6 +553,10 @@ func (m *MigrationEngine) MakeMigrations() error {
 
 			var last = m.GetLastMigration(mig.AppName, mig.ModelName)
 			if !m.makeMigrationDiff(mig, last, mig.Table) {
+				logger.Debugf(
+					"No changes detected for model %s.%s, (checked %s), skipping migration",
+					mig.AppName, mig.ModelName, last.FileName(),
+				)
 				continue
 			}
 
@@ -537,19 +580,35 @@ func (m *MigrationEngine) MakeMigrations() error {
 	}
 
 	if !migrationsFound {
-		logger.Warn("Migrations were not created - no changes were detected.")
-		return nil
+		return ErrNoChanges
 	}
 
 	// Check for dependencies and write migration files
 	for _, mig := range migrationList {
 
+		if len(mig.Table.Columns()) == 0 && len(mig.Actions) == 0 {
+			continue
+		}
+
 		// Check for dependencies
 	colLoop:
 		for _, col := range mig.Table.Columns() {
+
 			if col.Rel != nil {
+				var relApp = getModelApp(col.Rel.TargetModel.New())
+				if relApp == nil {
+					//	logger.Warnf(
+					//		"Could not find app for model %T, related to migration %q/%q",
+					//		col.Rel.TargetModel.New(), mig.AppName, mig.ModelName,
+					//	)
+					//	continue colLoop
+					return fmt.Errorf(
+						"could not find app for model %T, related to migration %q/%q",
+						col.Rel.TargetModel.New(), mig.AppName, mig.ModelName,
+					)
+				}
+
 				var (
-					relApp      = getModelApp(col.Rel.TargetModel.New())
 					relAppName  = relApp.Name()
 					relModel    = col.Rel.TargetModel.Model()
 					depMigs, ok = m.dependencies[relAppName][relModel]
@@ -605,6 +664,14 @@ func (m *MigrationEngine) MakeMigrations() error {
 		}
 
 		// Write the migration file
+		if m.Fake {
+			logger.Debugf(
+				"Skipping writing migration file %q for model %s.%s in fake mode",
+				mig.FileName(), mig.AppName, mig.ModelName,
+			)
+			continue
+		}
+
 		if err := m.WriteMigration(mig); err != nil {
 			return err
 		}
@@ -614,17 +681,22 @@ func (m *MigrationEngine) MakeMigrations() error {
 }
 
 type node struct {
-	mig      *MigrationFile
+	mig      *migrationFileInfo
 	deps     []*node
 	visited  bool
 	visiting bool
 }
 
-func (m *MigrationEngine) buildDependencyGraph(migrations []*MigrationFile) ([]*node, error) {
+type migrationFileInfo struct {
+	*MigrationFile
+	migrated bool
+}
+
+func (m *MigrationEngine) buildDependencyGraph(migrations []*migrationFileInfo) ([]*node, error) {
 	var nodeMap = make(map[string]*node)
 
 	// helper to create a unique key for lookup
-	var key = func(m *MigrationFile) string {
+	var key = func(m *migrationFileInfo) string {
 		return fmt.Sprintf("%s:%s:%s", m.AppName, m.ModelName, m.FileName())
 	}
 
@@ -666,7 +738,7 @@ func (m *MigrationEngine) buildDependencyGraph(migrations []*MigrationFile) ([]*
 				//}
 				//depMigs, ok := deps[dep.ModelName]
 				//if !ok || len(depMigs) == 0 {
-				return nil, fmt.Errorf("dependency %q not found", depKey)
+				return nil, fmt.Errorf("dependency %q not found for migration %q/%q: %+v", depKey, n.mig.AppName, n.mig.ModelName, nodeMap)
 				//}
 				//depNode = &node{mig: depMigs[len(depMigs)-1]}
 				// ------- comment this out to ignore missing dependencies
@@ -931,15 +1003,29 @@ func (e *MigrationEngine) WriteMigration(migration *MigrationFile) error {
 // ReadMigrations reads the migration files from the specified path and returns a list of migration files.
 //
 // These migration files are used to apply the migrations to the database.
-func (e *MigrationEngine) ReadMigrations() ([]*MigrationFile, error) {
+func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, error) {
+
 	os.MkdirAll(e.BasePath, 0755)
 
-	var migrations = make([]*MigrationFile, 0)
+	if len(apps) == 0 {
+		apps = e.apps.Keys()
+	}
 
-	for appName, fSys := range e.MigrationFilesystems {
-		var app, ok = e.apps.Get(appName)
+	var migrations = make([]*MigrationFile, 0)
+	for _, appName := range apps {
+		app, ok := e.apps.Get(appName)
 		if !ok || app == nil {
 			return nil, fmt.Errorf("app %q not found in migration engines' apps list", appName)
+		}
+
+		fSys, ok := e.MigrationFilesystems[appName]
+		if !ok {
+			logger.Debugf(
+				"Skip reading migrations FS for app %q, no migration filesystem found", appName,
+			)
+
+			// no actual issue, just means no special filesystem for this app
+			continue
 		}
 
 		var models = app.Models()
@@ -1014,7 +1100,13 @@ func (e *MigrationEngine) ReadMigrations() ([]*MigrationFile, error) {
 		}
 
 		if _, ok := e.apps.Get(appMigrationDir.Name()); !ok {
-			panic(fmt.Sprintf("app %q not found in migration engines' apps list", appMigrationDir.Name()))
+			logger.Debugf(
+				"Skip reading migrations for app %q, not found in migration engines' apps list", appMigrationDir.Name(),
+			)
+			// no actual issue, just means no migrations for this app, or the app is currently not registered
+			// in the migration engine, so we skip it
+			continue
+			// panic(fmt.Sprintf("app %q not found in migration engines' apps list", appMigrationDir.Name()))
 		}
 
 		for _, modelMigrationDir := range files {

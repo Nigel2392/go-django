@@ -552,10 +552,6 @@ func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column
 			}
 		case nil:
 			w.WriteString("NULL")
-		default:
-			panic(fmt.Errorf(
-				"unsupported default value type %T (%v)", v, v,
-			))
 		}
 	}
 

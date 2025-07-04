@@ -12,6 +12,8 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
+        "go_type": "int64",
+        "db_type": "INT",
         "default": 0
       },
       {
@@ -21,13 +23,18 @@
         "relation": {
           "type": "OneToOne",
           "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User"
-        }
+        },
+        "go_type": "int64",
+        "db_type": "INT",
+        "default": null
       },
       {
         "name": "Biography",
         "column": "biography",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
@@ -35,6 +42,8 @@
         "column": "website",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       }
     ],

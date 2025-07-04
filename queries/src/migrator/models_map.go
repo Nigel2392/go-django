@@ -21,7 +21,7 @@ func getModelApp(model any) django.AppConfig {
 	return nil
 }
 
-var _, _ = core.OnDjangoReady.Listen(func(s signals.Signal[any], a any) error {
+var _, _ = core.OnModelsReady.Listen(func(s signals.Signal[any], a any) error {
 	var app = a.(*django.Application)
 	var apps = app.Apps
 	for head := apps.Front(); head != nil; head = head.Next() {

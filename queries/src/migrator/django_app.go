@@ -63,6 +63,9 @@ func NewAppConfig() *migratorAppConfig {
 			app.MigrationDir,
 			schemaEditor,
 		)
+
+		app.engine.MigrationLog = &MigrationEngineConsoleLog{}
+
 		return nil
 	}
 

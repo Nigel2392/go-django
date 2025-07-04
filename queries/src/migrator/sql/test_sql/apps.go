@@ -13,6 +13,9 @@ import (
 //go:embed auth_migrations/*
 var auth_migrations embed.FS
 
+//go:embed broad_migrations/*
+var broad_migrations embed.FS
+
 func NewAuthAppConfig() django.AppConfig {
 	var cnf = apps.NewAppConfig("auth")
 	var app = &migrator.MigratorAppConfig{
@@ -44,4 +47,17 @@ func NewBlogAppConfig() django.AppConfig {
 		&BlogComment{},
 	}
 	return app
+}
+
+func NewBroadAppConfig() django.AppConfig {
+	var app = apps.NewAppConfig("broad")
+	app.ModelObjects = []attrs.Definer{
+		&Broad{},
+	}
+	return &migrator.MigratorAppConfig{
+		AppConfig: app,
+		MigrationFS: filesystem.Sub(
+			broad_migrations, "broad_migrations/broad",
+		),
+	}
 }

@@ -9,6 +9,8 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
+        "go_type": "int64",
+        "db_type": "INT",
         "default": 0
       },
       {
@@ -17,6 +19,8 @@
         "use_in_db": true,
         "max_length": 255,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
@@ -25,6 +29,8 @@
         "use_in_db": true,
         "max_length": 255,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
@@ -32,6 +38,8 @@
         "column": "age",
         "use_in_db": true,
         "max_value": 120,
+        "go_type": "int32",
+        "db_type": "INT",
         "default": 0
       },
       {
@@ -39,6 +47,8 @@
         "column": "first_name",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
@@ -46,6 +56,8 @@
         "column": "last_name",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       }
     ],

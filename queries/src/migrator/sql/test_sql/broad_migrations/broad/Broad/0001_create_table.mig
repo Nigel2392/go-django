@@ -1,0 +1,715 @@
+{
+  "table": {
+    "table": "broad",
+    "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.Broad",
+    "fields": [
+      {
+        "name": "Field_Drivers_Text",
+        "column": "field__drivers__text",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Text",
+        "db_type": "TEXT",
+        "default": "default text"
+      },
+      {
+        "name": "Field_Drivers_String",
+        "column": "field__drivers__string",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.String",
+        "db_type": "STRING",
+        "default": "default string"
+      },
+      {
+        "name": "Field_Drivers_Char",
+        "column": "field__drivers__char",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Char",
+        "db_type": "CHAR",
+        "default": "default char"
+      },
+      {
+        "name": "Field_Drivers_Int",
+        "column": "field__drivers__int",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Int",
+        "db_type": "INT",
+        "default": 42
+      },
+      {
+        "name": "Field_Drivers_Uint",
+        "column": "field__drivers__uint",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Uint",
+        "db_type": "UINT",
+        "default": 42
+      },
+      {
+        "name": "Field_Drivers_Float",
+        "column": "field__drivers__float",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Float",
+        "db_type": "FLOAT",
+        "default": 3.14
+      },
+      {
+        "name": "Field_Drivers_Bool",
+        "column": "field__drivers__bool",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Bool",
+        "db_type": "BOOL",
+        "default": true
+      },
+      {
+        "name": "Field_Drivers_Bytes",
+        "column": "field__drivers__bytes",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Bytes",
+        "db_type": "BYTES",
+        "default": "ZGVmYXVsdCBieXRlcw=="
+      },
+      {
+        "name": "Field_Drivers_BLOB",
+        "column": "field__drivers_blob",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.BLOB",
+        "db_type": "BLOB",
+        "default": "ZGVmYXVsdCBibG9i"
+      },
+      {
+        "name": "Field_Drivers_UUID",
+        "column": "field__drivers_uuid",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.UUID",
+        "db_type": "UUID",
+        "default": "550e8400-e29b-41d4-a716-446655440000"
+      },
+      {
+        "name": "Field_Drivers_Timestamp",
+        "column": "field__drivers__timestamp",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Timestamp",
+        "db_type": "TIMESTAMP",
+        "default": "2000-09-23T22:51:00Z"
+      },
+      {
+        "name": "Field_Drivers_LocalTime",
+        "column": "field__drivers__local_time",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.LocalTime",
+        "db_type": "LOCALTIME",
+        "default": "2000-09-23T22:51:00Z"
+      },
+      {
+        "name": "Field_Drivers_DateTime",
+        "column": "field__drivers__date_time",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.DateTime",
+        "db_type": "DATETIME",
+        "default": "2000-09-23T22:51:00Z"
+      },
+      {
+        "name": "Field_Drivers_Email",
+        "column": "field__drivers__email",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Email",
+        "db_type": "STRING",
+        "default": {
+          "Name": "",
+          "Address": "default@example.com"
+        }
+      },
+      {
+        "name": "Field_Drivers_Decimal",
+        "column": "field__drivers__decimal",
+        "use_in_db": true,
+        "go_type": "github.com/shopspring/decimal.Decimal",
+        "db_type": "DECIMAL",
+        "default": "420.69"
+      },
+      {
+        "name": "Field_any",
+        "column": "field_any",
+        "use_in_db": true,
+        "go_type": "interface {}",
+        "db_type": "JSON",
+        "default": "\"default any\""
+      },
+      {
+        "name": "Field_string",
+        "column": "field_string",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": "default string"
+      },
+      {
+        "name": "Field_byte",
+        "column": "field_byte",
+        "use_in_db": true,
+        "go_type": "",
+        "db_type": "BYTES",
+        "default": "ZGVmYXVsdCBieXRl"
+      },
+      {
+        "name": "Field_int",
+        "column": "field_int",
+        "use_in_db": true,
+        "go_type": "int",
+        "db_type": "INT",
+        "default": 42
+      },
+      {
+        "name": "Field_int8",
+        "column": "field_int8",
+        "use_in_db": true,
+        "go_type": "int8",
+        "db_type": "INT",
+        "default": 42
+      },
+      {
+        "name": "Field_int16",
+        "column": "field_int16",
+        "use_in_db": true,
+        "go_type": "int16",
+        "db_type": "INT",
+        "default": 42
+      },
+      {
+        "name": "Field_int32",
+        "column": "field_int32",
+        "use_in_db": true,
+        "go_type": "int32",
+        "db_type": "INT",
+        "default": 42
+      },
+      {
+        "name": "Field_int64",
+        "column": "field_int64",
+        "use_in_db": true,
+        "go_type": "int64",
+        "db_type": "INT",
+        "default": 42
+      },
+      {
+        "name": "Field_uint",
+        "column": "field_uint",
+        "use_in_db": true,
+        "go_type": "uint",
+        "db_type": "UINT",
+        "default": 42
+      },
+      {
+        "name": "Field_uint8",
+        "column": "field_uint8",
+        "use_in_db": true,
+        "go_type": "uint8",
+        "db_type": "UINT",
+        "default": 42
+      },
+      {
+        "name": "Field_uint16",
+        "column": "field_uint16",
+        "use_in_db": true,
+        "go_type": "uint16",
+        "db_type": "UINT",
+        "default": 42
+      },
+      {
+        "name": "Field_uint32",
+        "column": "field_uint32",
+        "use_in_db": true,
+        "go_type": "uint32",
+        "db_type": "UINT",
+        "default": 42
+      },
+      {
+        "name": "Field_uint64",
+        "column": "field_uint64",
+        "use_in_db": true,
+        "go_type": "uint64",
+        "db_type": "UINT",
+        "default": 42
+      },
+      {
+        "name": "Field_float32",
+        "column": "field_float32",
+        "use_in_db": true,
+        "go_type": "float32",
+        "db_type": "FLOAT",
+        "default": 3.14
+      },
+      {
+        "name": "Field_float64",
+        "column": "field_float64",
+        "use_in_db": true,
+        "go_type": "float64",
+        "db_type": "FLOAT",
+        "default": 3.14
+      },
+      {
+        "name": "Field_bool",
+        "column": "field_bool",
+        "use_in_db": true,
+        "go_type": "bool",
+        "db_type": "BOOL",
+        "default": true
+      },
+      {
+        "name": "Field_UUID",
+        "column": "field_uuid",
+        "use_in_db": true,
+        "go_type": "github.com/google/uuid.UUID",
+        "db_type": "UUID",
+        "default": "550e8400-e29b-41d4-a716-446655440000"
+      },
+      {
+        "name": "Field_Time",
+        "column": "field__time",
+        "use_in_db": true,
+        "go_type": "time.Time",
+        "db_type": "DATETIME",
+        "default": "2000-09-23T22:51:00Z"
+      },
+      {
+        "name": "Field_NullString",
+        "column": "field__null_string",
+        "use_in_db": true,
+        "go_type": "database/sql.NullString",
+        "db_type": "TEXT",
+        "default": {
+          "String": "default null string",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_NullFloat64",
+        "column": "field__null_float64",
+        "use_in_db": true,
+        "go_type": "database/sql.NullFloat64",
+        "db_type": "FLOAT",
+        "default": {
+          "Float64": 3.14,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_NullInt64",
+        "column": "field__null_int64",
+        "use_in_db": true,
+        "go_type": "database/sql.NullInt64",
+        "db_type": "INT",
+        "default": {
+          "Int64": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_NullInt32",
+        "column": "field__null_int32",
+        "use_in_db": true,
+        "go_type": "database/sql.NullInt32",
+        "db_type": "INT",
+        "default": {
+          "Int32": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_NullInt16",
+        "column": "field__null_int16",
+        "use_in_db": true,
+        "go_type": "database/sql.NullInt16",
+        "db_type": "INT",
+        "default": {
+          "Int16": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_NullBool",
+        "column": "field__null_bool",
+        "use_in_db": true,
+        "go_type": "database/sql.NullBool",
+        "db_type": "BOOL",
+        "default": {
+          "Bool": true,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_NullTime",
+        "column": "field__null_time",
+        "use_in_db": true,
+        "go_type": "database/sql.NullTime",
+        "db_type": "DATETIME",
+        "default": {
+          "Time": "2000-09-23T22:51:00Z",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_NullDecimal",
+        "column": "field__null_decimal",
+        "use_in_db": true,
+        "go_type": "github.com/shopspring/decimal.NullDecimal",
+        "db_type": "DECIMAL",
+        "default": "420.69"
+      },
+      {
+        "name": "Field_Null_Drivers_Text",
+        "column": "field__null__drivers__text",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.Text]",
+        "db_type": "TEXT",
+        "default": {
+          "V": "default null text",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Drivers_String",
+        "column": "field__null__drivers__string",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.String]",
+        "db_type": "STRING",
+        "default": {
+          "V": "default null string",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Drivers_Char",
+        "column": "field__null__drivers__char",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.Char]",
+        "db_type": "CHAR",
+        "default": {
+          "V": "default null char",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Drivers_Int",
+        "column": "field__null__drivers__int",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.Int]",
+        "db_type": "INT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Drivers_Uint",
+        "column": "field__null__drivers__uint",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.Uint]",
+        "db_type": "UINT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Drivers_Float",
+        "column": "field__null__drivers__float",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.Float]",
+        "db_type": "FLOAT",
+        "default": {
+          "V": 3.14,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Drivers_Bool",
+        "column": "field__null__drivers__bool",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.Bool]",
+        "db_type": "BOOL",
+        "default": {
+          "V": true,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Drivers_Bytes",
+        "column": "field__null__drivers__bytes",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.Bytes]",
+        "db_type": "BYTES",
+        "default": {
+          "V": "AQID",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Drivers_UUID",
+        "column": "field__null__drivers_uuid",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.UUID]",
+        "db_type": "UUID",
+        "default": {
+          "V": "550e8400-e29b-41d4-a716-446655440000",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Timestamp",
+        "column": "field__null__timestamp",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.Timestamp]",
+        "db_type": "TIMESTAMP",
+        "default": {
+          "V": "2000-09-23T22:51:00Z",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_LocalTime",
+        "column": "field__null__local_time",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.LocalTime]",
+        "db_type": "LOCALTIME",
+        "default": {
+          "V": "2000-09-23T22:51:00Z",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_DateTime",
+        "column": "field__null__date_time",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.DateTime]",
+        "db_type": "DATETIME",
+        "default": {
+          "V": "2000-09-23T22:51:00Z",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Email",
+        "column": "field__null__email",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/Nigel2392/go-django/queries/src/drivers.Email]",
+        "db_type": "STRING",
+        "default": {
+          "V": {
+            "Name": "",
+            "Address": "default@example.com"
+          },
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_any",
+        "column": "field__null_any",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[interface {}]",
+        "db_type": "JSON",
+        "default": {
+          "V": "default null any",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_string",
+        "column": "field__null_string",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[string]",
+        "db_type": "STRING",
+        "default": {
+          "V": "default null string",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_int",
+        "column": "field__null_int",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[int]",
+        "db_type": "INT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_int8",
+        "column": "field__null_int8",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[int8]",
+        "db_type": "INT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_int16",
+        "column": "field__null_int16",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[int16]",
+        "db_type": "INT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_int32",
+        "column": "field__null_int32",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[int32]",
+        "db_type": "INT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_int64",
+        "column": "field__null_int64",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[int64]",
+        "db_type": "INT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_uint",
+        "column": "field__null_uint",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[uint]",
+        "db_type": "UINT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_uint8",
+        "column": "field__null_uint8",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[uint8]",
+        "db_type": "UINT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_uint16",
+        "column": "field__null_uint16",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[uint16]",
+        "db_type": "UINT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_uint32",
+        "column": "field__null_uint32",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[uint32]",
+        "db_type": "UINT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_uint64",
+        "column": "field__null_uint64",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[uint64]",
+        "db_type": "UINT",
+        "default": {
+          "V": 42,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_float32",
+        "column": "field__null_float32",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[float32]",
+        "db_type": "FLOAT",
+        "default": {
+          "V": 3.14,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_float64",
+        "column": "field__null_float64",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[float64]",
+        "db_type": "FLOAT",
+        "default": {
+          "V": 3.14,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_bool",
+        "column": "field__null_bool",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[bool]",
+        "db_type": "BOOL",
+        "default": {
+          "V": true,
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_UUID",
+        "column": "field__null_uuid",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/google/uuid.UUID]",
+        "db_type": "UUID",
+        "default": {
+          "V": "550e8400-e29b-41d4-a716-446655440000",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Time",
+        "column": "field__null__time",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[time.Time]",
+        "db_type": "DATETIME",
+        "default": {
+          "V": "2000-09-23T22:51:00Z",
+          "Valid": true
+        }
+      },
+      {
+        "name": "Field_Null_Decimal",
+        "column": "field__null__decimal",
+        "use_in_db": true,
+        "go_type": "database/sql.Null[github.com/shopspring/decimal.Decimal]",
+        "db_type": "DECIMAL",
+        "default": {
+          "V": "420.69",
+          "Valid": true
+        }
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

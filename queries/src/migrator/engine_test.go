@@ -3,46 +3,57 @@ package migrator_test
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
 	_ "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	testsql "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/pkg/errors"
 )
 
 func init() {
 	attrs.RegisterModel(&testsql.User{})
 	attrs.RegisterModel(&testsql.Todo{})
 	attrs.RegisterModel(&testsql.Profile{})
+	attrs.RegisterModel(&testsql.Broad{})
 }
 
 func TestMigrator(t *testing.T) {
 
-	var (
-		_ = django.App(
-			django.Configure(make(map[string]interface{})),
-			django.Apps(
-				testsql.NewAuthAppConfig,
-				testsql.NewTodoAppConfig,
-				testsql.NewBlogAppConfig,
-			),
-			django.Flag(
-				django.FlagSkipCmds,
-			),
-		).Initialize()
-		// db, _ = drivers.Open(context.Background(),"sqlite3", "file:./migrator_test.db")
-		// tmpDir = t.TempDir()
-		tmpDir = "./migrations"
-		editor = testsql.NewTestMigrationEngine(t)
-		engine = migrator.NewMigrationEngine(
-			tmpDir,
-			editor,
-		)
-		// editor = sqlite.NewSQLiteSchemaEditor(db)
+	django.Global = nil
+	dbtype.TYPES.Unlock()
+	var app = django.App(
+		django.Configure(make(map[string]interface{})),
+		django.Apps(
+			testsql.NewAuthAppConfig,
+			testsql.NewTodoAppConfig,
+			testsql.NewBlogAppConfig,
+		),
+		django.Flag(
+			django.FlagSkipCmds,
+			django.FlagSkipDepsCheck,
+			django.FlagSkipChecks,
+		),
 	)
+
+	if err := app.Initialize(); err != nil {
+		t.Fatalf("failed to initialize app: %v", err)
+	}
+
+	// db, _ = drivers.Open(context.Background(),"sqlite3", "file:./migrator_test.db")
+	// tmpDir = t.TempDir()
+	var tmpDir = "./migrations"
+	var editor = testsql.NewTestMigrationEngine(t)
+	var engine = migrator.NewMigrationEngine(
+		tmpDir,
+		editor,
+	)
+	// editor = sqlite.NewSQLiteSchemaEditor(db)
 	engine.SchemaEditor = editor
 	engine.MigrationLog = &migrator.MigrationEngineConsoleLog{}
 
@@ -397,6 +408,79 @@ func TestMigrator(t *testing.T) {
 
 		if latestMigrationUser.Actions[len(latestMigrationUser.Actions)-1].ActionType != migrator.ActionRemoveField {
 			t.Fatalf("expected last action to be RemoveField, got %s", latestMigrationUser.Actions[len(latestMigrationUser.Actions)-1].ActionType)
+		}
+	})
+}
+
+func TestMigratorBroad(t *testing.T) {
+	django.Global = nil
+	dbtype.TYPES.Unlock()
+	var app = django.App(
+		django.Configure(make(map[string]interface{})),
+		django.Apps(
+			testsql.NewBroadAppConfig,
+		),
+		django.Flag(
+			django.FlagSkipCmds,
+			django.FlagSkipDepsCheck,
+			django.FlagSkipChecks,
+		),
+	)
+
+	if err := app.Initialize(); err != nil {
+		t.Fatalf("App initialization failed: %v", err)
+	}
+
+	var tmpDir = "./migrations"
+	var editor = testsql.NewTestMigrationEngine(t)
+	var engine = migrator.NewMigrationEngine(
+		tmpDir,
+		editor,
+	)
+
+	engine.SchemaEditor = editor
+	engine.MigrationLog = &migrator.MigrationEngineConsoleLog{
+		Prefix: "TestMigratorBroad",
+	}
+
+	os.RemoveAll(tmpDir)
+
+	t.Logf("Migration directory: %s, proceeding to \"makemigrations\"", tmpDir)
+
+	if err := engine.MakeMigrations(); err == nil || !errors.Is(err, migrator.ErrNoChanges) {
+		t.Fatalf("expected MakeMigrations to return ErrNoChanges, got: %v", err)
+	}
+
+	if len(engine.Migrations["broad"]) == 0 {
+		t.Fatalf("expected migrations exist, got none")
+	}
+
+	// The following tests default values and their types after
+	// the migration has been JSON encoded and decoded.
+	//
+	// This is to ensure that the default values always
+	// match the expected types, even after serialization.
+	//
+	// TODO:
+	//   I see an issue here where when: the default values are generic types,
+	//   the JSON encoding/decoding may not be able to retrieve the proper
+	//   type information due to generic types not getting registered
+	//   the same way as concrete types (see [drivers/dbtype/types.Add]).
+	t.Run("TestBroadTableDefaultValues", func(t *testing.T) {
+		var mig = engine.GetLastMigration("broad", "Broad")
+		if mig == nil {
+			t.Fatalf("expected a migration for 'Broad', got nil")
+		}
+
+		var table = mig.Table
+		var m = testsql.BroadDefaultValues()
+
+		for _, col := range table.Columns() {
+			var m = m[col.Name]
+
+			if !reflect.DeepEqual(col.Default, m) {
+				t.Errorf("expected column %s default value to be \"%v\" (%T), got \"%v\" (%T)", col.Name, m, m, col.Default, col.Default)
+			}
 		}
 	})
 }

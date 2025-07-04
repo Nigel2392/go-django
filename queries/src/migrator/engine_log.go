@@ -10,12 +10,12 @@ import (
 var _ MigrationLog = &MigrationEngineConsoleLog{}
 
 type MigrationEngineConsoleLog struct {
+	Prefix string
 }
 
 func (e *MigrationEngineConsoleLog) Log(action ActionType, file *MigrationFile, table *Changed[*ModelTable], column *Changed[*Column], index *Changed[*Index]) {
 	var msg strings.Builder
 
-	// Common prefix
 	fmt.Fprintf(&msg, "%s/%s: ", file.AppName, file.ModelName)
 
 	model := table.New.ModelName()
@@ -42,5 +42,9 @@ func (e *MigrationEngineConsoleLog) Log(action ActionType, file *MigrationFile, 
 		fmt.Fprintf(&msg, "Remove field %s on table %s for model %s", column.Old.Name, tableName, model)
 	}
 
-	logger.Info(msg.String())
+	if e.Prefix != "" {
+		logger.NameSpace(e.Prefix).Info(msg.String())
+	} else {
+		logger.Info(msg.String())
+	}
 }

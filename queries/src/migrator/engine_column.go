@@ -30,7 +30,7 @@ type Column struct {
 	Nullable     bool               `json:"nullable,omitempty"`
 	Primary      bool               `json:"primary,omitempty"`
 	Auto         bool               `json:"auto,omitempty"`
-	Default      interface{}        `json:"default,omitempty"`
+	Default      interface{}        `json:"default"`
 	ReverseAlias string             `json:"reverse_alias,omitempty"`
 	Rel          *MigrationRelation `json:"relation,omitempty"`
 }
@@ -112,6 +112,14 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 			dflt = nil // zero value, no default
 		}
 	}
+	var nullable = field.AllowNull()
+	nullable = nullable || (rel != nil && rel.TargetField != nil && rel.TargetField.AllowNull())
+	if drivers.FieldType(field).Kind() == reflect.String && !attrUnique {
+		nullable = true // strings are not nullable in the database
+		if attrs.IsZero(dflt) {
+			dflt = ""
+		}
+	}
 
 	var col = Column{
 		Table:        table,
@@ -128,21 +136,11 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 		Scale:        attrScale,
 		Auto:         attrAutoIncrement || CanAutoIncrement(field),
 		Primary:      field.IsPrimary(),
+		Nullable:     nullable,
 		Default:      dflt,
 		ReverseAlias: attrReverseAlias,
 		Rel:          rel,
 	}
-
-	var nullable = field.AllowNull()
-	nullable = nullable || (rel != nil && rel.TargetField != nil && rel.TargetField.AllowNull())
-	if col.FieldType().Kind() == reflect.String && !col.Unique {
-		nullable = true // strings are not nullable in the database
-		if attrs.IsZero(col.Default) {
-			col.Default = ""
-		}
-	}
-
-	col.Nullable = nullable
 
 	return col
 }
