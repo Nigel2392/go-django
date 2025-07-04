@@ -96,7 +96,7 @@ func PluckRowValues[ValueT any, ModelT attrs.Definer](rows Rows[ModelT], pathToF
 					return // Stop yielding if the yield function returns false
 				}
 			} else {
-				panic(errors.Errorf("type mismatch on pluckRows: %v (%T != %T)", value, *new(ValueT), value))
+				panic(errors.Errorf(errors.CodeTypeMismatch, "type mismatch on pluckRows: %v (%T != %T)", value, *new(ValueT), value))
 			}
 		}
 	}
