@@ -82,6 +82,7 @@ func TestDjester(t *testing.T) {
 		},
 		Flags: []django.AppFlag{
 			django.FlagSkipCmds,
+			django.FlagSkipChecks,
 		},
 		Apps: []djester.AppInitFuncOrAppConfig{
 			newApp,
