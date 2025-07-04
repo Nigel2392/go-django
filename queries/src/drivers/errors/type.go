@@ -41,7 +41,12 @@ func (e Error) Error() string {
 		reasonStr = string(rBytes)
 	}
 
-	return fmt.Sprintf("%s%s", e.Message, reasonStr)
+	var code = e.Code
+	if code == "" {
+		code = CodeUnknown
+	}
+
+	return fmt.Sprintf("%s: %s%s", code, e.Message, reasonStr)
 }
 
 func (e Error) WithCause(reason error) Error {

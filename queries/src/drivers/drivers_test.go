@@ -2,10 +2,12 @@ package drivers_test
 
 import (
 	"context"
+	"os"
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/djester/testdb"
 	sqlite3 "github.com/mattn/go-sqlite3"
 )
@@ -131,6 +133,12 @@ func TestDatabaseErrors(t *testing.T) {
 		t.Skip("Skipping database error tests for PostgreSQL")
 		return
 	}
+
+	logger.Setup(&logger.Logger{
+		Level:       logger.DBG,
+		WrapPrefix:  logger.ColoredLogWrapper,
+		OutputDebug: os.Stdout,
+	})
 
 	var tests = []testDatabaseError{
 		{

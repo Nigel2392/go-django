@@ -3,6 +3,7 @@ package errors
 type GoCode string
 
 const (
+	CodeUnknown        GoCode = "Unknown"
 	CodeNotImplemented GoCode = "NotImplemented"
 	CodeNoDatabase     GoCode = "NoDatabase"
 	CodeUnknownDriver  GoCode = "UnknownDriver"
