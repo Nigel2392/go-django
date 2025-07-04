@@ -9,6 +9,8 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
+        "go_type": "int64",
+        "db_type": "INT",
         "default": 0
       },
       {
@@ -16,6 +18,8 @@
         "column": "title",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
@@ -23,18 +27,24 @@
         "column": "path",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
         "name": "Depth",
         "column": "depth",
         "use_in_db": true,
+        "go_type": "int64",
+        "db_type": "INT",
         "default": 0
       },
       {
         "name": "Numchild",
         "column": "numchild",
         "use_in_db": true,
+        "go_type": "int64",
+        "db_type": "INT",
         "default": 0
       },
       {
@@ -42,6 +52,8 @@
         "column": "url_path",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
@@ -49,6 +61,8 @@
         "column": "slug",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
@@ -56,6 +70,8 @@
         "column": "status_flags",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "github.com/Nigel2392/go-django/src/contrib/pages.StatusFlag",
+        "db_type": "INT",
         "default": 0
       },
       {
@@ -63,6 +79,8 @@
         "column": "page_id",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "int64",
+        "db_type": "INT",
         "default": 0
       },
       {
@@ -70,6 +88,8 @@
         "column": "content_type",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
@@ -77,18 +97,24 @@
         "column": "latest_revision_id",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "int64",
+        "db_type": "INT",
         "default": 0
       },
       {
         "name": "CreatedAt",
         "column": "created_at",
         "use_in_db": true,
+        "go_type": "time.Time",
+        "db_type": "DATETIME",
         "default": "0001-01-01T00:00:00Z"
       },
       {
         "name": "UpdatedAt",
         "column": "updated_at",
         "use_in_db": true,
+        "go_type": "time.Time",
+        "db_type": "DATETIME",
         "default": "0001-01-01T00:00:00Z"
       }
     ],

@@ -1,11 +1,10 @@
 package openauth2
 
 import (
-	"errors"
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -37,7 +36,7 @@ func UserFromRequest(r *http.Request) *User {
 		Filter("ID", userID).
 		Filter("IsActive", true).
 		Get()
-	if err != nil && errors.Is(err, query_errors.ErrNoRows) {
+	if err != nil && errors.Is(err, errors.NoRows) {
 		return UnAuthenticatedUser()
 	} else if err != nil {
 		except.Fail(

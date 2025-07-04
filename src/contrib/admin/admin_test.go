@@ -163,6 +163,7 @@ func init() {
 		),
 		django.Flag(
 			django.FlagSkipDepsCheck,
+			django.FlagSkipChecks,
 			django.FlagSkipCmds,
 		),
 	)

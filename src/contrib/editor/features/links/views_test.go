@@ -32,6 +32,7 @@ func TestViews(t *testing.T) {
 		django.Flag(
 			django.FlagSkipCmds,
 			django.FlagSkipDepsCheck,
+			django.FlagSkipChecks,
 		),
 	)
 

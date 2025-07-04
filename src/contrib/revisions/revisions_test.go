@@ -126,7 +126,7 @@ func init() {
 	var app = django.App(
 		django.AppSettings(settings),
 		django.Apps(revisions.NewAppConfig),
-		django.Flag(django.FlagSkipCmds),
+		django.Flag(django.FlagSkipCmds, django.FlagSkipChecks),
 	)
 
 	if err := app.Initialize(); err != nil {

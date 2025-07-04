@@ -9,6 +9,8 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
+        "go_type": "uint64",
+        "db_type": "UINT",
         "default": 0
       },
       {
@@ -17,6 +19,8 @@
         "use_in_db": true,
         "max_length": 255,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
@@ -25,12 +29,16 @@
         "use_in_db": true,
         "max_length": 255,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
         "name": "Data",
         "column": "data",
         "use_in_db": true,
+        "go_type": "encoding/json.RawMessage",
+        "db_type": "JSON",
         "default": null
       },
       {
@@ -38,6 +46,8 @@
         "column": "access_token",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Text",
+        "db_type": "TEXT",
         "default": ""
       },
       {
@@ -45,6 +55,8 @@
         "column": "refresh_token",
         "use_in_db": true,
         "nullable": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Text",
+        "db_type": "TEXT",
         "default": ""
       },
       {
@@ -53,6 +65,8 @@
         "use_in_db": true,
         "max_length": 50,
         "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
         "default": ""
       },
       {
@@ -60,30 +74,40 @@
         "column": "expires_at",
         "use_in_db": true,
         "max_length": 6,
-        "default": {}
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Timestamp",
+        "db_type": "TIMESTAMP",
+        "default": "0001-01-01T00:00:00Z"
       },
       {
         "name": "CreatedAt",
         "column": "created_at",
         "use_in_db": true,
-        "default": {}
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.DateTime",
+        "db_type": "DATETIME",
+        "default": "0001-01-01T00:00:00Z"
       },
       {
         "name": "UpdatedAt",
         "column": "updated_at",
         "use_in_db": true,
-        "default": {}
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.DateTime",
+        "db_type": "DATETIME",
+        "default": "0001-01-01T00:00:00Z"
       },
       {
         "name": "IsAdministrator",
         "column": "is_administrator",
         "use_in_db": true,
+        "go_type": "bool",
+        "db_type": "BOOL",
         "default": false
       },
       {
         "name": "IsActive",
         "column": "is_active",
         "use_in_db": true,
+        "go_type": "bool",
+        "db_type": "BOOL",
         "default": false
       }
     ],

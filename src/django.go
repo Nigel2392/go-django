@@ -16,6 +16,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/components"
 	core "github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -155,6 +156,7 @@ var (
 const (
 	FlagSkipDepsCheck AppFlag = 1 << iota
 	FlagSkipCmds
+	FlagSkipChecks
 )
 
 func GetApp[T AppConfig](name string) T {
@@ -407,41 +409,68 @@ func (a *Application) Flagged(flag AppFlag) bool {
 	return (a.flags & flag) != 0
 }
 
-func (a *Application) logCheckMessages(messages []checks.Message) (errCnt, critCnt, warnCnt, infoCnt int) {
-	slices.SortStableFunc(messages, func(a, b checks.Message) int {
-		if a.Type < b.Type {
-			return -1
-		} else if a.Type > b.Type {
-			return 1
+func chainMessages(sort bool, messages ...[]checks.Message) ([]checks.Message, int) {
+	if len(messages) == 0 {
+		return []checks.Message{}, 0
+	}
+
+	var totalLen = 0
+	for _, msgs := range messages {
+		totalLen += len(msgs)
+	}
+
+	var (
+		offset       = 0
+		allMessages  = make([]checks.Message, totalLen)
+		seriousCount = 0
+	)
+
+	for _, msgs := range messages {
+
+		copy(allMessages[offset:], msgs)
+		offset += len(msgs)
+
+		for _, msg := range msgs {
+			if msg.IsSerious() && !msg.Silenced() {
+				seriousCount++
+			}
 		}
-		return 0
-	})
+	}
+
+	if sort {
+		slices.SortStableFunc(allMessages, func(a, b checks.Message) int {
+			if a.Type > b.Type {
+				return 1
+			}
+			if a.Type < b.Type {
+				return -1
+			}
+			return 0
+		})
+	}
+
+	return allMessages, seriousCount
+}
+
+func (a *Application) logCheckMessages(_ context.Context, whenChecks string, msgs ...[]checks.Message) (loggedSerious bool) {
+	var messages, seriousCount = chainMessages(
+		true, msgs...,
+	)
+
+	if seriousCount > 0 {
+		a.Log.Errorf(
+			"%s have failed and %d %q error(s) were found",
+			whenChecks, seriousCount, checks.SERIOUS_TYPE,
+		)
+	}
 
 	for _, msg := range messages {
-
-		switch msg.Type {
-		case checks.ERROR:
-			errCnt++
-		case checks.CRITICAL:
-			critCnt++
-		case checks.WARNING:
-			warnCnt++
-		case checks.INFO:
-			infoCnt++
-		case checks.DEBUG:
-			// Debug messages are not counted
-			continue
-		default:
-			a.Log.Warnf("Unknown message type %s: %s", msg.Type, msg.Text)
-			continue
-		}
-
 		if !msg.Silenced() {
 			a.Log.Log(msg.Type, msg)
 		}
 	}
 
-	return errCnt, critCnt, warnCnt, infoCnt
+	return seriousCount > 0
 }
 
 func (a *Application) Initialize() error {
@@ -468,6 +497,19 @@ func (a *Application) Initialize() error {
 
 	if err := assert.False(a.Settings == nil, "Settings cannot be nil"); err != nil {
 		return err
+	}
+
+	var c = context.Background()
+	var shouldErr bool
+	if !a.Flagged(FlagSkipChecks) {
+		shouldErr = a.logCheckMessages(
+			c, "Startup checks",
+			checks.RunCheck(c, checks.TagSettings, a, a.Settings),
+			checks.RunCheck(c, checks.TagSecurity, a, a.Settings),
+		)
+		if shouldErr {
+			return errors.New("Startup checks failed")
+		}
 	}
 
 	a.Mux.NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
@@ -553,6 +595,17 @@ func (a *Application) Initialize() error {
 		a.Apps.Set(app.Name(), app)
 	}
 
+	// Lock the dbtype registry to prevent any changes
+	//
+	// This is done before any models are registered
+	// to ensure that all dbtypes are registered
+	// before they can be "used".
+	//
+	// Not locking the registry does not have any actual downsides,
+	// but it is good practise to make sure all types are registered
+	// before the models can use them.
+	dbtype.Lock()
+
 	core.BeforeModelsReady.Send(a)
 
 	// Load all models for the application first
@@ -566,7 +619,7 @@ func (a *Application) Initialize() error {
 
 	core.OnModelsReady.Send(a)
 
-	var err error
+	// First app loop to initialze and register commands
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
 		var deps = app.Dependencies()
@@ -580,43 +633,8 @@ func (a *Application) Initialize() error {
 			}
 		}
 
-		if err = app.Initialize(a.Settings); err != nil {
+		if err := app.Initialize(a.Settings); err != nil {
 			return errors.Wrapf(err, "Error initializing app %s", app.Name())
-		}
-	}
-	var c = context.Background()
-	if messages := checks.RunCheck(c, checks.TagSettings, a, a.Settings); len(messages) > 0 {
-		a.logCheckMessages(messages)
-	}
-
-	if messages := checks.RunCheck(c, checks.TagSecurity, a, a.Settings); len(messages) > 0 {
-		a.logCheckMessages(messages)
-	}
-
-	var groups = make([][]checks.Message, 0, a.Apps.Len())
-	for h := a.Apps.Front(); h != nil; h = h.Next() {
-		groups = append(
-			groups,
-			h.Value.Check(c, a.Settings),
-		)
-	}
-
-	for _, group := range groups {
-		a.logCheckMessages(group)
-	}
-
-	var r Mux = a.Mux
-	for h := a.Apps.Front(); h != nil; h = h.Next() {
-		var app = h.Value
-
-		app.BuildRouting(r)
-
-		var processors = app.Processors()
-		tpl.RequestProcessors(processors...)
-
-		var templates = app.Templates()
-		if templates != nil {
-			tpl.Add(*templates)
 		}
 
 		var commands = app.Commands()
@@ -625,9 +643,98 @@ func (a *Application) Initialize() error {
 		}
 	}
 
+	if !a.Flagged(FlagSkipChecks) {
+		if messages := checks.RunCheck(c, checks.TagCommands, a, a.Settings, a.Commands.Commands()); len(messages) > 0 {
+			shouldErr = a.logCheckMessages(c, "Command checks", messages)
+			if shouldErr {
+				return errors.New("Command checks failed")
+			}
+		}
+	}
+
+	// Check if running commands is disabled
+	if !a.Flagged(FlagSkipCmds) {
+
+		if len(os.Args) == 2 && slices.Contains([]string{"help", "--help", "-h"}, os.Args[1]) {
+			os.Args[1] = "help"
+		}
+
+		var fs = flag.NewFlagSet("django", flag.ContinueOnError)
+		fs.SetOutput(os.Stdout)
+
+		var flagVerbose = fs.Bool("v", false, "Enable verbose output")
+
+		fs.Parse(os.Args[1:])
+
+		if *flagVerbose {
+			a.Log.SetLevel(logger.DBG)
+		}
+
+		var commandsRan = true
+		var err = a.Commands.ExecCommand(fs.Args())
+		switch {
+		case errors.Is(err, command.ErrNoCommand):
+			commandsRan = false
+			err = nil
+		case errors.Is(err, command.ErrShouldExit):
+			return err
+
+		case errors.Is(err, command.ErrUnknownCommand):
+			a.Log.Fatalf(1, "Error running command: %s", err)
+			return nil
+
+		case errors.Is(err, flag.ErrHelp):
+			os.Exit(0)
+			return nil
+
+		case err != nil:
+			return err
+		}
+
+		if !ConfigGet(a.Settings, APPVAR_CONTINUE_AFTER_COMMANDS, false) && commandsRan {
+			return command.ErrShouldExit
+		}
+
+		if commandsRan {
+			a.Log.Infof("Commands executed, continuing with application initialization")
+		}
+	}
+
+	// Second app loop to build routing and templates
+	var groups = make([][]checks.Message, 0, a.Apps.Len())
+	for h := a.Apps.Front(); h != nil; h = h.Next() {
+		h.Value.BuildRouting(a.Mux)
+
+		var processors = h.Value.Processors()
+		tpl.RequestProcessors(processors...)
+
+		var templates = h.Value.Templates()
+		if templates != nil {
+			tpl.Add(*templates)
+		}
+
+		if !a.Flagged(FlagSkipChecks) {
+			groups = append(
+				groups,
+				h.Value.Check(c, a.Settings),
+			)
+		}
+	}
+
+	if !a.Flagged(FlagSkipChecks) {
+		shouldErr = a.logCheckMessages(
+			c, "Application checks", groups...,
+		)
+		if shouldErr {
+			return errors.New("Application checks failed")
+		}
+	}
+
+	// Third app loop to call OnReady() for each app, AFTER
+	// all apps have been fully setup.
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
-		if err = app.OnReady(); err != nil {
+		if err := app.OnReady(); err != nil {
 			return err
 		}
 	}
@@ -638,40 +745,9 @@ func (a *Application) Initialize() error {
 		)
 	}
 
-	if messages := checks.RunCheck(c, checks.TagCommands, a, a.Settings, a.Commands.Commands()); len(messages) > 0 {
-		a.logCheckMessages(messages)
-	}
-
 	a.initialized.Store(true)
 
 	core.OnDjangoReady.Send(a)
-
-	// Check if running commands is disabled
-	if a.Flagged(FlagSkipCmds) {
-		return nil
-	}
-
-	if len(os.Args) == 2 && slices.Contains([]string{"help", "--help", "-h"}, os.Args[1]) {
-		os.Args[1] = "help"
-	}
-
-	err = a.Commands.ExecCommand(os.Args[1:])
-	switch {
-	case errors.Is(err, command.ErrNoCommand):
-		return nil
-	case errors.Is(err, command.ErrUnknownCommand):
-		a.Log.Fatalf(1, "Error running command: %s", err)
-		return nil
-	case errors.Is(err, flag.ErrHelp):
-		os.Exit(0)
-		return nil
-	}
-	if err != nil {
-		return err
-	}
-	if !ConfigGet(a.Settings, APPVAR_CONTINUE_AFTER_COMMANDS, false) {
-		os.Exit(0)
-	}
 
 	return nil
 }

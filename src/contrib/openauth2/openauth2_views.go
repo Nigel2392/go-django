@@ -2,12 +2,11 @@ package openauth2
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -169,7 +168,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 
 	// Check if the user already exists in the database
 	user, err := GetUserByIdentifier(r.Context(), a.Provider, identifier)
-	if err != nil && !errors.Is(err, query_errors.ErrNoRows) {
+	if err != nil && !errors.Is(err, errors.NoRows) {
 		// An error occurred while retrieving the user from the database
 		// Log the error and return a 500 status code
 		logger.Errorf("Failed to retrieve user from database: %s", err)
@@ -178,7 +177,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 			"Failed to retrieve user from database",
 		)
 		return
-	} else if err != nil && errors.Is(err, query_errors.ErrNoRows) {
+	} else if err != nil && errors.Is(err, errors.NoRows) {
 		logger.Debug("User not found in database, creating new user")
 		// User not found, create a new user in the database
 		user, err = queries.GetQuerySetWithContext(r.Context(), &User{}).Create(&User{

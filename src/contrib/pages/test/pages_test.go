@@ -44,7 +44,9 @@ func init() {
 	if django.Global == nil {
 		django.App(django.Configure(map[string]interface{}{
 			django.APPVAR_DATABASE: sqlDB,
-		}))
+		}),
+			django.Flag(django.FlagSkipDepsCheck),
+		)
 
 		logger.Setup(&logger.Logger{
 			Level:       logger.DBG,

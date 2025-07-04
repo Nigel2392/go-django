@@ -10,18 +10,24 @@
         "max_length": 43,
         "nullable": true,
         "primary": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Char",
+        "db_type": "CHAR",
         "default": ""
       },
       {
         "name": "Data",
         "column": "data",
         "use_in_db": true,
+        "go_type": "[]uint8",
+        "db_type": "BYTES",
         "default": null
       },
       {
         "name": "Expiry",
         "column": "expiry",
         "use_in_db": true,
+        "go_type": "int64",
+        "db_type": "INT",
         "default": 0
       }
     ],

@@ -180,6 +180,7 @@ func TestOnRegisterRun(t *testing.T) {
 		django.Flag(
 			django.FlagSkipDepsCheck,
 			django.FlagSkipCmds,
+			django.FlagSkipChecks,
 		),
 		django.Apps(
 			editor.NewAppConfig,

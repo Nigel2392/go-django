@@ -5,10 +5,10 @@ import (
 	"flag"
 	"net/mail"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	django_models "github.com/Nigel2392/go-django/src/models"
 )
 
 type createUserStorage struct {
@@ -59,7 +59,7 @@ var command_create_user = &command.Cmd[createUserStorage]{
 				email = ""
 			}
 
-			u.Email = (*django_models.Email)(e)
+			u.Email = (*drivers.Email)(e)
 			u.Username = username
 
 			if password != password2 {

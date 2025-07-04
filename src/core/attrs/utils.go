@@ -1,7 +1,6 @@
 package attrs
 
 import (
-	"errors"
 	"fmt"
 	"net/mail"
 	"reflect"
@@ -10,11 +9,6 @@ import (
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
-)
-
-var (
-	ErrEmptyString      = errors.New("empty string")
-	ErrConvertingString = errors.New("error converting string to number")
 )
 
 // DefinerList converts a slice of []T where the underlying type is of type Definer to []Definer.

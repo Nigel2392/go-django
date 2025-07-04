@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/models"
 )
@@ -16,17 +17,17 @@ var (
 type Password string
 
 type User struct {
-	ID              uint64        `json:"id" attrs:"primary;readonly"`
-	CreatedAt       time.Time     `json:"created_at" attrs:"readonly"`
-	UpdatedAt       time.Time     `json:"updated_at" attrs:"readonly"`
-	Email           *models.Email `json:"email"`
-	Username        string        `json:"username"`
-	Password        Password      `json:"password"`
-	FirstName       string        `json:"first_name"`
-	LastName        string        `json:"last_name"`
-	IsAdministrator bool          `json:"is_administrator" attrs:"blank;default=true"`
-	IsActive        bool          `json:"is_active" attrs:"blank;default=true"`
-	IsLoggedIn      bool          `json:"is_logged_in"`
+	ID              uint64         `json:"id" attrs:"primary;readonly"`
+	CreatedAt       time.Time      `json:"created_at" attrs:"readonly"`
+	UpdatedAt       time.Time      `json:"updated_at" attrs:"readonly"`
+	Email           *drivers.Email `json:"email"`
+	Username        string         `json:"username"`
+	Password        Password       `json:"password"`
+	FirstName       string         `json:"first_name"`
+	LastName        string         `json:"last_name"`
+	IsAdministrator bool           `json:"is_administrator" attrs:"blank"`
+	IsActive        bool           `json:"is_active" attrs:"blank;default=true"`
+	IsLoggedIn      bool           `json:"is_logged_in"`
 }
 
 func (u *User) String() string {

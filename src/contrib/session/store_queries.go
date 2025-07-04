@@ -2,15 +2,14 @@ package session
 
 import (
 	"context"
-	"errors"
 	"log"
 	"sync"
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -96,7 +95,7 @@ func (p *QueryStore) Find(token string) ([]byte, bool, error) {
 		Filter("Token", token).
 		Filter("Expiry__gt", time.Now().UTC().UnixNano()).
 		Get()
-	if err != nil && errors.Is(err, query_errors.ErrNoRows) {
+	if err != nil && errors.Is(err, errors.NoRows) {
 		return nil, false, nil
 	} else if err != nil {
 		return nil, false, err

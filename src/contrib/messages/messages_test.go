@@ -75,6 +75,7 @@ func init() {
 		django.Flag(
 			django.FlagSkipDepsCheck,
 			django.FlagSkipCmds,
+			django.FlagSkipChecks,
 		),
 	)
 

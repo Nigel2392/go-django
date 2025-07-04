@@ -59,6 +59,7 @@ func init() {
 		django.Flag(
 			django.FlagSkipCmds,
 			django.FlagSkipDepsCheck,
+			django.FlagSkipChecks,
 		),
 		django.AppLogger(&logger.Logger{
 			Level:       logger.DBG,

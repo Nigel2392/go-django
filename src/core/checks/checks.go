@@ -42,6 +42,8 @@ const (
 	WARNING  Type = logger.WRN
 	INFO     Type = logger.INF
 	DEBUG    Type = logger.DBG
+
+	SERIOUS_TYPE = ERROR
 )
 
 type Checker interface {
@@ -56,6 +58,17 @@ type Message struct {
 	Text   string
 }
 
+// New creates a new message with the same ID and type as the original message,
+//
+// but with a new object and an optional hint.
+//
+// It is used to create a new message with the same ID and type as an existing message,
+// but with a different object and/or hint.
+//
+// This is useful when you want to create global messages that can be reused
+// with different objects or hints, while still keeping the same ID and type.
+//
+// Any Message created with this method will still compare as equal when calling [Message.Is].
 func (m Message) New(object any, hint ...string) Message {
 	var hintText = m.Hint
 	if len(hint) > 0 {
@@ -70,10 +83,36 @@ func (m Message) New(object any, hint ...string) Message {
 	}
 }
 
+// Is checks if the message is of the same type and ID as another message.
+//
+// It is used to compare messages for equality, ignoring the text and object fields.
+//
+// It should still compare as true when it is compared to a message called with [Message.New]().
+func (m Message) Is(other Message) bool {
+	return m.ID == other.ID &&
+		m.Type == other.Type &&
+		m.Text == other.Text
+}
+
+// IsSerious checks if the message is of a serious type (ERROR or higher).
+// It is used to determine if the message should be treated as a serious issue
+//
+// If, for any reason, the seriousness comparison needs to be changed,
+// it can be done by changing the value of [SERIOUS_TYPE].
+func (m Message) IsSerious() bool {
+	return m.Type >= SERIOUS_TYPE
+}
+
+// Silenced checks if the message is silenced or not.
+//
+// A message is silenced if its ID is in the registry's silenced list,
+// or if its type (analogous to logger's log level) is lower than the current logger level.
 func (m Message) Silenced() bool {
 	return registry.Silenced(m.ID) || m.Type.LT(logger.GetLevel())
 }
 
+// String returns a string representation of the message.
+// It includes the ID, type, object type (if any), text, and hint (if any).
 func (m Message) String() string {
 	var sb strings.Builder
 	sb.WriteString(m.ID)
@@ -163,21 +202,13 @@ const (
 	TagModels   Tag = "models"
 )
 
-var allTags = [...]Tag{
-	TagSettings,
-	TagSecurity,
-	TagCommands,
-	TagModels,
-}
-
 var (
-	registry  = NewCheckRegistry()
-	Register  = registry.Register
-	RunChecks = registry.RunChecks
-	RunCheck  = registry.RunCheck
-	Silence   = registry.Silence
-	Silenced  = registry.Silenced
-	HasTag    = registry.HasTag
+	registry = NewCheckRegistry()
+	Register = registry.Register
+	RunCheck = registry.RunCheck
+	Silence  = registry.Silence
+	Silenced = registry.Silenced
+	HasTag   = registry.HasTag
 )
 
 type checkRegistry struct {
@@ -237,28 +268,6 @@ func (r *checkRegistry) Register(tag Tag, check any) USELESS {
 	)
 
 	return USELESS{}
-}
-
-func (r *checkRegistry) RunChecks(ctx context.Context, tags []Tag, args ...any) CheckResult {
-	if len(tags) == 0 {
-		tags = allTags[:]
-	}
-
-	var results = &checksResult{}
-	for _, tag := range tags {
-		if !r.HasTag(tag) {
-			continue
-		}
-
-		var res = r.RunCheck(ctx, tag, args...)
-		if len(res) == 0 {
-			continue
-		}
-
-		results.m = append(results.m, res...)
-	}
-
-	return results
 }
 
 func (r *checkRegistry) RunCheck(ctx context.Context, tag Tag, args ...any) []Message {

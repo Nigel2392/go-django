@@ -50,6 +50,9 @@ var Logs *AuditLogs = &AuditLogs{
 //go:embed assets/*
 var templateFileSys embed.FS
 
+//go:embed migrations/*
+var migrationFileSys embed.FS
+
 func NewAppConfig() django.AppConfig {
 	Logs.Deps = []string{
 		"reports",
@@ -194,7 +197,12 @@ func NewAppConfig() django.AppConfig {
 		return nil
 	}
 
-	return Logs
+	return &migrator.MigratorAppConfig{
+		AppConfig: Logs,
+		MigrationFS: filesystem.Sub(
+			migrationFileSys, "migrations/auditlogs",
+		),
+	}
 }
 
 func isNumber(v string) bool {

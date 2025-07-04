@@ -2,12 +2,11 @@ package pages
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
 )
 
 func rowsToNodes(rows queries.Rows[*PageNode]) []*PageNode {
@@ -150,7 +149,7 @@ func deleteDescendants(ctx context.Context, path string, depth int64) error {
 		return err
 	}
 	if deleted == 0 {
-		return query_errors.ErrNoRows
+		return errors.NoRows
 	}
 	return err
 }
@@ -163,7 +162,7 @@ func deleteNode(ctx context.Context, id int64) error {
 		return err
 	}
 	if deleted == 0 {
-		return query_errors.ErrNoRows
+		return errors.NoRows
 	}
 	return err
 }
@@ -176,7 +175,7 @@ func deleteNodes(ctx context.Context, id []int64) error {
 		return err
 	}
 	if deleted == 0 {
-		return query_errors.ErrNoRows
+		return errors.NoRows
 	}
 	return err
 }
@@ -342,7 +341,7 @@ func updateNode(ctx context.Context, node *PageNode) error {
 		return err
 	}
 	if updated == 0 {
-		return query_errors.ErrNoRows
+		return errors.NoChanges
 	}
 	return nil
 }
@@ -362,7 +361,7 @@ func updateNodePathAndDepth(ctx context.Context, path string, depth int64, iD in
 		return err
 	}
 	if updated == 0 {
-		return query_errors.ErrNoRows
+		return errors.NoChanges
 	}
 	return nil
 }
@@ -382,7 +381,7 @@ func updateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) err
 		return err
 	}
 	if updated == 0 {
-		return query_errors.ErrNoRows
+		return errors.NoChanges
 	}
 	return nil
 }

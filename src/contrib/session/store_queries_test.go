@@ -50,7 +50,7 @@ func init() {
 	if django.Global == nil {
 		django.App(django.Configure(map[string]interface{}{
 			django.APPVAR_DATABASE: db,
-		}))
+		}), django.Flag(django.FlagSkipChecks))
 
 		logger.Setup(&logger.Logger{
 			Level:       logger.DBG,
