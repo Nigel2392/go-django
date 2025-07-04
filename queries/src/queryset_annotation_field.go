@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -65,7 +66,10 @@ func (q *queryField[T]) GetValue() any         { return q.value }
 func (q *queryField[T]) SetValue(v any, _ bool) error {
 	val, ok := v.(T)
 	if !ok {
-		return fmt.Errorf("type mismatch on queryField[%T]: %v", *new(T), v)
+		return errors.TypeMismatch.WithCause(fmt.Errorf(
+			"expected value of type %T, got %T: %v",
+			*new(T), v, v,
+		))
 	}
 	q.value = val
 	return nil

@@ -3,11 +3,10 @@ package queries
 import (
 	"fmt"
 
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/elliotchance/orderedmap/v2"
-	"github.com/pkg/errors"
 )
 
 // objectRelation contains metadata about the list of related objects and
@@ -117,7 +116,7 @@ func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl at
 
 	if r.hasMultiRelations && r.anyOfRootScannable == nil {
 		return nil, fmt.Errorf(
-			"no root row selected to build relations for %T", mdl,
+			"no root scannable field found for model %T, cannot build relations", mdl,
 		)
 	}
 
@@ -381,7 +380,7 @@ func buildChainParts(actualField *scannableField) []chainPart {
 		if primaryVal == nil || fields.IsZero(primaryVal) {
 			var err error
 			pk, err = GetUniqueKey(defs)
-			if err != nil && !errors.Is(err, query_errors.ErrNoUniqueKey) {
+			if err != nil && !errors.Is(err, errors.NoUniqueKey) {
 				panic(fmt.Sprintf("error getting unique key for field %s: %v", cur.chainKey, err))
 			}
 		}

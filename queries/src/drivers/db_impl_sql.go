@@ -4,9 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"errors"
+	"fmt"
 
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 )
 
 type stdlibQuerier interface {
@@ -15,19 +15,19 @@ type stdlibQuerier interface {
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
 }
 
-func OpenSQL(driverName, dsn string, opts ...OpenOption) (Database, error) {
+func OpenSQL(driverName string, drv *Driver, dsn string, opts ...OpenOption) (Database, error) {
 	db, err := sql.Open(driverName, dsn)
 	if err != nil {
 		return nil, err
 	}
 
 	for _, opt := range opts {
-		if err := opt(driverName, db); err != nil && !errors.Is(err, query_errors.ErrNotImplemented) {
+		if err := opt(driverName, db); err != nil && !errors.Is(err, errors.NotImplemented) {
 			return nil, err
 		}
 	}
 
-	return &dbWrapper{queryWrapper: queryWrapper[*sql.DB]{conn: db}}, nil
+	return &dbWrapper{queryWrapper: queryWrapper[*sql.DB]{conn: db, d: drv}}, nil
 }
 
 func SQLDBOption(opt func(driverName string, db *sql.DB) error) OpenOption {
@@ -35,30 +35,35 @@ func SQLDBOption(opt func(driverName string, db *sql.DB) error) OpenOption {
 		if sqlDB, ok := db.(*sql.DB); ok {
 			return opt(driverName, sqlDB)
 		}
-		return query_errors.ErrNotImplemented
+		return errors.NotImplemented
 	}
 }
 
 type queryWrapper[T stdlibQuerier] struct {
 	conn T
+	d    *Driver
 }
 
 func (d *queryWrapper[T]) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
 	var res, err = d.conn.QueryContext(ctx, query, args...)
 	LogSQL(ctx, "sql.DB", err, query, args...)
-	return res, err
+	return res, databaseError(d.d, err)
 }
 
 func (d *queryWrapper[T]) QueryRowContext(ctx context.Context, query string, args ...any) SQLRow {
 	var res = d.conn.QueryRowContext(ctx, query, args...)
 	LogSQL(ctx, "sql.DB", res.Err(), query, args...)
-	return res
+	return &sqlRowWrapper{
+		Row: res,
+		d:   d.d,
+	}
 }
 
 func (d *queryWrapper[T]) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	var res, err = d.conn.ExecContext(ctx, query, args...)
 	LogSQL(ctx, "sql.DB", err, query, args...)
-	return res, err
+	fmt.Printf("ExecContext: %s %v\n", query, err)
+	return res, databaseError(d.d, err)
 }
 
 type dbWrapper struct {
@@ -68,16 +73,16 @@ type dbWrapper struct {
 func (d *dbWrapper) Begin(ctx context.Context) (Transaction, error) {
 	tx, err := d.queryWrapper.conn.BeginTx(ctx, nil)
 	if err != nil {
-		return nil, err
+		return nil, databaseError(d.d, err)
 	}
 	return &txWrapper{
-		queryWrapper: queryWrapper[*sql.Tx]{conn: tx},
+		queryWrapper: queryWrapper[*sql.Tx]{conn: tx, d: d.d},
 	}, nil
 }
 
 func (d *dbWrapper) Ping(ctx context.Context) error {
 	LogSQL(ctx, "sql.DB", nil, "PING")
-	return d.queryWrapper.conn.PingContext(ctx)
+	return databaseError(d.d, d.queryWrapper.conn.PingContext(ctx))
 }
 
 func (d *dbWrapper) Driver() driver.Driver {
@@ -85,7 +90,7 @@ func (d *dbWrapper) Driver() driver.Driver {
 }
 
 func (d *dbWrapper) Close() error {
-	return d.queryWrapper.conn.Close()
+	return databaseError(d.d, d.queryWrapper.conn.Close())
 }
 
 type txWrapper struct {
@@ -95,11 +100,20 @@ type txWrapper struct {
 func (t *txWrapper) Commit(ctx context.Context) error {
 	var err = t.queryWrapper.conn.Commit()
 	LogSQL(ctx, "sql.Tx", err, "COMMIT")
-	return err
+	return databaseError(t.d, err)
 }
 
 func (t *txWrapper) Rollback(ctx context.Context) error {
 	var err = t.queryWrapper.conn.Rollback()
 	LogSQL(ctx, "sql.Tx", err, "ROLLBACK")
-	return err
+	return databaseError(t.d, err)
+}
+
+type sqlRowWrapper struct {
+	*sql.Row
+	d *Driver
+}
+
+func (r *sqlRowWrapper) Err() error {
+	return databaseError(r.d, r.Row.Err())
 }

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 )
@@ -48,7 +48,10 @@ func GenerateObjectsWhereClause[T attrs.Definer](objects ...T) ([]expr.ClauseExp
 		// for selections, this can be based on multiple fields of the object.
 		var q, has = modelMeta.Storage(__GENERATE_WHERE_CLAUSE_FOR_OBJECTS)
 		if !has {
-			return nil, fmt.Errorf("model %T has no primary key defined and no function registered to generate a where clauuse", objects[0])
+			return nil, errors.NotImplemented.WithCause(fmt.Errorf(
+				"model %T has no primary key defined and no function registered to generate a where clause",
+				objects[0],
+			))
 		}
 
 		var or = make([]expr.Expression, 0, len(objects))
@@ -89,7 +92,10 @@ func GenerateObjectsWhereClause[T attrs.Definer](objects ...T) ([]expr.ClauseExp
 			}
 
 		default:
-			return nil, fmt.Errorf("model %T has no primary key defined, cannot delete", objects[0])
+			return nil, errors.NoUniqueKey.WithCause(fmt.Errorf(
+				"model %T has no primary key defined, cannot generate where clause",
+				objects[0],
+			))
 		}
 
 		return []expr.ClauseExpression{expr.Or(or...)}, nil
@@ -146,10 +152,10 @@ func GetUniqueKey(modelObject any) (any, error) {
 		if o.IsPrimary() {
 			var val, err = o.Value()
 			if err != nil {
-				return nil, fmt.Errorf(
+				return nil, errors.ValueError.WithCause(fmt.Errorf(
 					"error getting primary key value for field %q in object %T: %w",
 					o.Name(), obj, err,
-				)
+				))
 			}
 
 			if !fields.IsZero(val) {
@@ -162,10 +168,10 @@ func GetUniqueKey(modelObject any) (any, error) {
 		objDefs = obj.FieldDefs()
 
 	default:
-		return nil, fmt.Errorf(
+		return nil, errors.TypeMismatch.WithCause(fmt.Errorf(
 			"unexpected type for model object %T, expected attrs.Definer or attrs.Definitions",
 			modelObject,
-		)
+		))
 	}
 
 createKey:
@@ -179,10 +185,10 @@ createKey:
 	if primaryField != nil {
 		primaryVal, err = primaryField.Value()
 		if err != nil {
-			return nil, fmt.Errorf(
-				"error getting primary key value for object %T: %w",
-				obj, err,
-			)
+			return nil, errors.ValueError.WithCause(fmt.Errorf(
+				"error getting primary key value for object %T: %w: %w",
+				obj, errors.NoUniqueKey, err,
+			))
 		}
 
 		if !fields.IsZero(primaryVal) {
@@ -192,10 +198,10 @@ createKey:
 
 	var uniqueFields = getMetaUniqueFields(modelMeta)
 	if len(uniqueFields) == 0 {
-		return nil, fmt.Errorf(
-			"model %T (%v) has no unique fields or unique together fields, cannot generate unique key: %w",
-			obj, primaryVal, query_errors.ErrNoUniqueKey,
-		)
+		return nil, errors.NoUniqueKey.WithCause(fmt.Errorf(
+			"model %T (%v) has no unique fields or unique together fields, cannot generate unique key",
+			obj, primaryVal,
+		))
 	}
 
 uniqueFieldsLoop:
@@ -209,10 +215,10 @@ uniqueFieldsLoop:
 
 			var val, err = field.Value()
 			if err != nil {
-				return nil, fmt.Errorf(
+				return nil, errors.ValueError.WithCause(fmt.Errorf(
 					"error getting value for field %q in model %T: %w",
 					fieldName, obj, err,
-				)
+				))
 			}
 
 			if val == nil || fields.IsZero(val) {
@@ -279,8 +285,8 @@ uniqueFieldsLoop:
 		}
 	}
 
-	return nil, fmt.Errorf(
-		"model %T has does not have enough unique fields or unique together fields set to generate a unique key: %w",
-		obj, query_errors.ErrNoUniqueKey,
-	)
+	return nil, errors.NoUniqueKey.WithCause(fmt.Errorf(
+		"model %T has does not have enough unique fields or unique together fields set to generate a unique key",
+		obj,
+	))
 }

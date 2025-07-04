@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 )
 
 type funcLookupsRegistry struct {
@@ -48,9 +48,9 @@ func (l *funcLookupsRegistry) lookupFunc(driver driver.Driver, lookup string) (f
 func (l *funcLookupsRegistry) Lookup(inf *ExpressionInfo, lookup string, value []Expression, funcParams []any) (sql string, args []any, err error) {
 	var fn, ok = l.lookupFunc(inf.Driver, lookup)
 	if !ok {
-		return "", nil, fmt.Errorf(
-			"function %q not found for driver %T: %w",
-			lookup, inf.Driver, query_errors.ErrUnsupportedLookup)
+		return "", nil, errors.UnsupportedLookup.WithCause(fmt.Errorf(
+			"function %q not found for driver %T", lookup, inf.Driver,
+		))
 	}
 
 	sql, args, err = fn(inf, value, funcParams)

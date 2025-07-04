@@ -5,10 +5,9 @@ import (
 	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/pkg/errors"
 )
 
 type transactionContextKey struct{}
@@ -69,7 +68,10 @@ func StartTransaction(ctx context.Context, database ...string) (context.Context,
 	var compiler = Compiler(databaseName)
 	tx, err = compiler.StartTransaction(ctx)
 	if err != nil {
-		return ctx, nil, errors.Wrap(err, "StartTransaction: failed to start transaction")
+		return ctx, nil, errors.FailedStartTransaction.WithCause(fmt.Errorf(
+			"failed to start transaction for database %q: %w",
+			databaseName, err,
+		))
 	}
 
 	ctx = transactionToContext(ctx, tx, compiler.DatabaseName())
@@ -105,11 +107,10 @@ func RunInTransaction[T attrs.Definer](c context.Context, fn func(ctx context.Co
 		// cross-database transactions are not supported
 		var databaseName = qs.compiler.DatabaseName()
 		if dbName != databaseName {
-			panicFromNewQuerySet = fmt.Errorf(
-				"RunInTransaction, %q != %q: %w",
+			panicFromNewQuerySet = errors.CrossDatabaseTransaction.WithCause(fmt.Errorf(
+				"RunInTransaction: database name mismatch, expected %q, got %q",
 				dbName, databaseName,
-				query_errors.ErrCrossDatabaseTransaction,
-			)
+			))
 			panic(panicFromNewQuerySet)
 		}
 

@@ -74,5 +74,9 @@ func DBType(field attrs.FieldDefinition) (dbType dbtype.Type, ok bool) {
 		}
 	}
 
+	if fieldType.Kind() == reflect.Ptr {
+		fieldType = fieldType.Elem()
+	}
+
 	return dbtype.TYPES.For(fieldType)
 }

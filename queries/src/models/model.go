@@ -2,7 +2,7 @@ package models
 
 import (
 	"context"
-	"errors"
+	"database/sql"
 	"fmt"
 	"maps"
 	"reflect"
@@ -10,8 +10,8 @@ import (
 	"github.com/Nigel2392/go-django/queries/internal"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/fields"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -756,10 +756,14 @@ func (m *Model) Save(ctx context.Context) error {
 	}
 
 	if m.internals == nil || m.internals.object == nil {
-		return fmt.Errorf(
-			"cannot save object: %w: %w",
-			query_errors.ErrNotImplemented, ErrModelInitialized,
-		)
+		return errors.NotImplemented.WithCause(fmt.Errorf(
+			"cannot save model %T: %w",
+			m.internals.object.Interface(), ErrModelInitialized,
+		))
+		//return fmt.Errorf(
+		//	"cannot save object: %w: %w",
+		//	errors.ErrNotImplemented, ErrModelInitialized,
+		//)
 	}
 
 	var this = m.internals.object.Interface().(attrs.Definer)
@@ -936,7 +940,10 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	// these are fields that can be / should be saved before the model itself is saved.
 	for _, field := range saveBeforeSelf {
 		if err := saveField(ctx, &cnf, field, saveRegularField); err != nil {
-			return err
+			return errors.SaveFailed.WithCause(fmt.Errorf(
+				"failed to save field %q in model %T: %w",
+				field.Name(), cnf.this, err,
+			))
 		}
 	}
 
@@ -967,19 +974,20 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		if saved {
 			s = "update"
 		}
-		return fmt.Errorf(
+		return errors.SaveFailed.WithCause(fmt.Errorf(
 			"failed to %s model %T: %w",
 			s, m.internals.object.Interface(), err,
-		)
+		))
 	}
 
 	// If no changes were made and the model was saved,
 	// we return an error indicating that no rows were affected.
 	if saved && updated == 0 {
-		return fmt.Errorf(
-			"model %T was not updated, no rows affected",
-			m.internals.object.Interface(),
-		)
+		// sql.ErrNoRows
+		return errors.NoChanges.WithCause(fmt.Errorf(
+			"model %T was not saved: %w",
+			m.internals.object.Interface(), sql.ErrNoRows,
+		))
 	}
 
 	// Save all fields that depend on the model itself,
@@ -1014,7 +1022,7 @@ func saveField[T attrs.FieldDefinition](ctx context.Context, cnf *SaveConfig, fi
 	}
 
 	if err != nil {
-		if !errors.Is(err, query_errors.ErrNotImplemented) {
+		if !errors.Is(err, errors.NotImplemented) {
 			return fmt.Errorf(
 				"failed to save field %q in model %T: %w",
 				field.Name(), cnf.this, err,

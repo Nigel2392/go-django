@@ -2,29 +2,20 @@ package drivers
 
 import (
 	"context"
-	"database/sql"
 	"database/sql/driver"
+	"fmt"
 
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
-	"github.com/go-sql-driver/mysql"
-	pg_stdlib "github.com/jackc/pgx/v5/stdlib"
-	"github.com/mattn/go-sqlite3"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 
 	"reflect"
 )
 
-const (
-	SQLITE3_DRIVER_NAME  = "sqlite3"
-	MYSQL_DRIVER_NAME    = "mysql"
-	MARIADB_DRIVER_NAME  = "mariadb"
-	POSTGRES_DRIVER_NAME = "postgres"
-)
-
 type Driver struct {
-	Name              string
-	SupportsReturning SupportsReturningType
-	Driver            driver.Driver
-	Open              func(ctx context.Context, dsn string, opts ...OpenOption) (Database, error)
+	Name               string
+	SupportsReturning  SupportsReturningType
+	Driver             driver.Driver
+	Open               func(ctx context.Context, drv *Driver, dsn string, opts ...OpenOption) (Database, error)
+	BuildDatabaseError func(err error) errors.DatabaseError
 }
 
 type driverRegistry struct {
@@ -39,39 +30,6 @@ var drivers = &driverRegistry{
 
 type OpenOption func(driverName string, db any) error
 
-func init() {
-	sql.Register(MARIADB_DRIVER_NAME, DriverMariaDB{})
-
-	Register(SQLITE3_DRIVER_NAME, Driver{
-		SupportsReturning: SupportsReturningColumns,
-		Driver:            &DriverSQLite{},
-		Open: func(ctx context.Context, dsn string, opts ...OpenOption) (Database, error) {
-			return OpenSQL(SQLITE3_DRIVER_NAME, dsn, opts...)
-		},
-	})
-	Register(MYSQL_DRIVER_NAME, Driver{
-		SupportsReturning: SupportsReturningLastInsertId,
-		Driver:            &DriverMySQL{},
-		Open: func(ctx context.Context, dsn string, opts ...OpenOption) (Database, error) {
-			return OpenSQL(MYSQL_DRIVER_NAME, dsn, opts...)
-		},
-	})
-	Register(MARIADB_DRIVER_NAME, Driver{
-		SupportsReturning: SupportsReturningColumns,
-		Driver:            &DriverMariaDB{},
-		Open: func(ctx context.Context, dsn string, opts ...OpenOption) (Database, error) {
-			return OpenSQL(MARIADB_DRIVER_NAME, dsn, opts...)
-		},
-	})
-	Register(POSTGRES_DRIVER_NAME, Driver{
-		SupportsReturning: SupportsReturningColumns,
-		Driver:            &DriverPostgres{},
-		Open: func(ctx context.Context, dsn string, opts ...OpenOption) (Database, error) {
-			return OpenPGX(ctx, dsn, opts...)
-		},
-	})
-}
-
 /*
 Package drivers provides a shortcut to access the registered drivers
 and their capabilities. It allows you to check if a driver supports
@@ -85,36 +43,6 @@ const (
 	SupportsReturningLastInsertId SupportsReturningType = "last_insert_id"
 	SupportsReturningColumns      SupportsReturningType = "columns"
 )
-
-type (
-	DriverPostgres = pg_stdlib.Driver
-	DriverMySQL    = mysql.MySQLDriver
-	DriverSQLite   = sqlite3.SQLiteDriver
-	DriverMariaDB  struct {
-		mysql.MySQLDriver
-	}
-	connectorMariaDB struct {
-		driver.Connector
-	}
-)
-
-func (d DriverMariaDB) Open(dsn string) (driver.Conn, error) {
-	return d.MySQLDriver.Open(dsn)
-}
-
-func (d DriverMariaDB) OpenConnector(dsn string) (driver.Connector, error) {
-	connector, err := d.MySQLDriver.OpenConnector(dsn)
-	if err != nil {
-		return nil, err
-	}
-	return &connectorMariaDB{
-		Connector: connector,
-	}, nil
-}
-
-func (c *connectorMariaDB) Driver() driver.Driver {
-	return &DriverMariaDB{}
-}
 
 // SupportsReturning returns the type of returning supported by the database.
 // It can be one of the following:
@@ -187,6 +115,8 @@ func Retrieve(nameOrType any) (*Driver, bool) {
 		return driver, exists
 	case driver.Driver:
 		return Retrieve(reflect.TypeOf(v))
+	case *Driver:
+		return v, true
 	case interface{ Driver() driver.Driver }:
 		return Retrieve(reflect.TypeOf(v.Driver()))
 	}
@@ -197,9 +127,37 @@ func Retrieve(nameOrType any) (*Driver, bool) {
 //
 // This should always be used instead of directly using sql.Open or pgx.Connect.
 func Open(ctx context.Context, driverName, dsn string, opts ...OpenOption) (Database, error) {
-	opener, exists := drivers.byName[driverName]
+	driver, exists := drivers.byName[driverName]
 	if !exists {
-		return nil, query_errors.ErrUnknownDriver
+		return nil, errors.UnknownDriver.WithCause(fmt.Errorf(
+			"driver not found: %s", driverName,
+		))
 	}
-	return opener.Open(ctx, dsn, opts...)
+
+	var db, err = driver.Open(ctx, driver, dsn, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return db, nil
+}
+
+// DatabaseError converts a driver error to a [errors.DatabaseError] and a boolean indicating
+// whether the driver was able to convert the error.
+func DatabaseError(driverOrName any, err error) (errors.DatabaseError, error, bool) {
+	var d, ok = Retrieve(driverOrName)
+	if !ok || d == nil || d.BuildDatabaseError == nil {
+		return nil, err, false
+	}
+
+	var dbErr = d.BuildDatabaseError(err)
+	return dbErr, dbErr, true
+}
+
+// databaseError is used internally to convert a driver error to a
+// [errors.DatabaseError]
+func databaseError(d *Driver, err error) error {
+	if d == nil || d.BuildDatabaseError == nil || err == nil {
+		return err
+	}
+	return d.BuildDatabaseError(err)
 }

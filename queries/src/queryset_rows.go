@@ -4,10 +4,9 @@ import (
 	"iter"
 	"strings"
 
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/errs"
-	"github.com/pkg/errors"
 )
 
 const errStopIteration errs.Error = "stop iteration"
@@ -68,7 +67,7 @@ func (rows Rows[T]) Pluck(pathToField string) iter.Seq2[int, attrs.Field] {
 			if errors.Is(err, errStopIteration) {
 				return // Stop iteration if the yield function returned false
 			}
-			if err != nil && errors.Is(err, query_errors.ErrFieldNotFound) {
+			if err != nil && errors.Is(err, errors.FieldNotFound) {
 				panic(errors.Wrapf(err, "error getting field %s from row", pathToField))
 			} else if err != nil {
 				panic(errors.Wrapf(err, "error getting field %s from row", pathToField))

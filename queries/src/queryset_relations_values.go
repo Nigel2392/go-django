@@ -128,7 +128,7 @@ func (rl *RelRevFK[T]) SetValues(objects []attrs.Definer) {
 			uniqueKey, err = GetUniqueKey(obj)
 
 			if err != nil {
-				panic(fmt.Sprintf("cannot set related object %T without a generated unique key: %v", obj, err))
+				panic(fmt.Errorf("cannot set related object %T without a generated unique key: %w", obj, err))
 			}
 		}
 
@@ -283,7 +283,7 @@ func (rl *RelM2M[T1, T2]) SetValues(rel []Relation) {
 			var err error
 			uniqueKey, err = GetUniqueKey(r.Model())
 			if err != nil {
-				panic(fmt.Sprintf("cannot set related object %T without a generated unique key: %v", r.Model(), err))
+				panic(fmt.Errorf("cannot set related object %T without a generated unique key: %w", r.Model(), err))
 			}
 		}
 

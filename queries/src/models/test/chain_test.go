@@ -45,7 +45,9 @@ func init() {
 		OutputError: os.Stdout,
 	})
 
-	django.App(django.Configure(settings))
+	django.App(django.Configure(settings),
+		django.Flag(django.FlagSkipDepsCheck),
+	)
 
 	quest.Table[*testing.T](nil, &Page{}, &BlogPage{}, &BlogPageCategory{}).Create()
 }

@@ -4,8 +4,8 @@ import (
 	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/internal"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 )
@@ -35,14 +35,14 @@ func newThroughProxy(throughDefinition attrs.Through) *throughProxy {
 	if proxy.sourceField, ok = defs.Field(sourceFieldStr); !ok {
 		panic(fmt.Errorf(
 			"source field %s not found in through model %T: %w",
-			sourceFieldStr, throughInstance, query_errors.ErrFieldNotFound,
+			sourceFieldStr, throughInstance, errors.FieldNotFound,
 		))
 	}
 
 	if proxy.targetField, ok = defs.Field(targetFieldStr); !ok {
 		panic(fmt.Errorf(
 			"target field %s not found in through model %T: %w",
-			targetFieldStr, throughInstance, query_errors.ErrFieldNotFound,
+			targetFieldStr, throughInstance, errors.FieldNotFound,
 		))
 	}
 
@@ -212,7 +212,9 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 		var err error
 		targetsToSave, err = t.createTargets(targetsToSave)
 		if err != nil {
-			return nil, 0, fmt.Errorf("failed to save targets: %w", err)
+			return nil, 0, errors.SaveFailed.WithCause(fmt.Errorf(
+				"failed to create targets %T: %w", targetsToSave, err,
+			))
 		}
 		created = int64(len(targetsToSave))
 	}
@@ -233,7 +235,11 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 		throughModels = make([]attrs.Definer, 0, len(targets))
 	)
 	if err != nil {
-		return nil, created, fmt.Errorf("failed to get primary key for source object %T: %w", t.source.Object, err)
+		// return nil, created, fmt.Errorf("failed to get primary key for source object %T: %w", t.source.Object, err)
+		return nil, created, errors.ValueError.WithCause(fmt.Errorf(
+			"failed to get primary key for source object %T: %w: %w",
+			t.source.Object, err, errors.NoUniqueKey,
+		))
 	}
 
 	for _, target := range targets {
@@ -251,21 +257,30 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 			fieldDefs   = newInstance.FieldDefs()
 		)
 		if err != nil {
-			return nil, created, fmt.Errorf("failed to get primary key for target %T: %w", target, err)
+			return nil, created, errors.ValueError.WithCause(fmt.Errorf(
+				"failed to get primary key for target %T: %w: %w",
+				target, err, errors.NoUniqueKey,
+			))
 		}
 
 		if sourceField, ok = fieldDefs.Field(throughSourceFieldStr); !ok {
-			return nil, created, query_errors.ErrFieldNotFound
+			return nil, created, errors.FieldNotFound.WithCause(fmt.Errorf(
+				"source field %s not found in through model %T: %w",
+				throughSourceFieldStr, throughObj, errors.FieldNotFound,
+			))
 		}
 		if targetField, ok = fieldDefs.Field(throughTargetFieldStr); !ok {
-			return nil, created, query_errors.ErrFieldNotFound
+			return nil, created, errors.FieldNotFound.WithCause(fmt.Errorf(
+				"target field %s not found in through model %T: %w",
+				throughTargetFieldStr, throughObj, errors.FieldNotFound,
+			))
 		}
 
 		if err := sourceField.Scan(sourceObjectPk); err != nil {
-			return nil, created, err
+			return nil, created, errors.ValueError.WithCause(err)
 		}
 		if err := targetField.Scan(targetPk); err != nil {
-			return nil, created, err
+			return nil, created, errors.ValueError.WithCause(err)
 		}
 
 		// Create a new relation object
@@ -437,7 +452,10 @@ targetLoop:
 
 		var val, err = GetUniqueKey(target)
 		if err != nil {
-			return 0, fmt.Errorf("failed to get unique key for target %T: %w", target, err)
+			return 0, errors.ValueError.WithCause(fmt.Errorf(
+				"failed to get unique key for target %T: %w: %w",
+				target, err, errors.NoUniqueKey,
+			))
 		}
 
 		pkValues = append(pkValues, val)
@@ -466,7 +484,10 @@ targetLoop:
 	}
 
 	if deleted == 0 {
-		return 0, fmt.Errorf("no through objects deleted for targets %v", pkValues)
+		// return 0, fmt.Errorf("no through objects deleted for targets %v", pkValues)
+		return 0, errors.NoChanges.WithCause(fmt.Errorf(
+			"no through objects deleted for targets %v", pkValues,
+		))
 	}
 
 	var relList = r.backRef.GetValues()
@@ -493,7 +514,10 @@ targetLoop:
 	uniqueKeyCheck:
 		var val, err = GetUniqueKey(model)
 		if err != nil {
-			return 0, fmt.Errorf("failed to get unique key for relation %T: %w", model, err)
+			return 0, errors.ValueError.WithCause(fmt.Errorf(
+				"failed to get unique key for relation %T: %w: %w",
+				model, err, errors.NoUniqueKey,
+			))
 		}
 
 		if _, ok := pkMap[val]; !ok {

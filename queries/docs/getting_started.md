@@ -30,7 +30,7 @@ import (
     "github.com/Nigel2392/go-django/queries/queries/expr"
     "github.com/Nigel2392/go-django/queries/queries/fields"
     "github.com/Nigel2392/go-django/queries/queries/models"
-    "github.com/Nigel2392/go-django/queries/queries/query_errors"
+    "github.com/Nigel2392/go-django/queries/queries/qerr"
     "github.com/Nigel2392/go-django/src/core/attrs"
 )
 ```

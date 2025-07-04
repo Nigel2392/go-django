@@ -305,8 +305,8 @@ It returns a pointer to a `Row[T]` containing the result, or an error if the que
 
 It will return one of the following errors:
 
-* `query_errors.ErrNoRows` if no rows are found.
-* `query_errors.ErrMultipleRows` if more than one row is found.
+* `qerr.ErrNoRows` if no rows are found.
+* `qerr.ErrMultipleRows` if more than one row is found.
 
 Or it will return the error from the database driver if the query fails.
 

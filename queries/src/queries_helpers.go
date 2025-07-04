@@ -5,13 +5,12 @@ import (
 	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/internal"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-signals"
-	"github.com/pkg/errors"
 )
 
 // CT_GetObject retrieves an object from the database by its identifier.
@@ -122,20 +121,19 @@ func GetObject[T attrs.Definer](object T, identifier any) (T, error) {
 	)
 
 	if err := primaryField.SetValue(identifier, true); err != nil {
-		return obj, err
+		return obj, errors.ValueError.WithCause(err)
 	}
 
 	primaryValue, err := primaryField.Value()
 	if err != nil {
-		return obj, err
+		return obj, errors.ValueError.WithCause(err)
 	}
 
 	if fields.IsZero(primaryValue) {
-		return obj, errors.Wrapf(
-			query_errors.ErrFieldNull,
-			"Primary field %q cannot be null",
+		return obj, errors.FieldNull.WithCause(fmt.Errorf(
+			"primary field %q cannot be null",
 			primaryField.Name(),
-		)
+		))
 	}
 
 	d, err := GetQuerySet(obj).

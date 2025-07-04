@@ -14,15 +14,14 @@ import (
 	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/elliotchance/orderedmap/v2"
-	"github.com/pkg/errors"
 
 	_ "unsafe"
 )
@@ -217,7 +216,9 @@ func Objects[T attrs.Definer](model T, database ...string) *QuerySet[T] {
 	)
 
 	if tableName == "" {
-		panic(query_errors.ErrNoTableName)
+		panic(errors.NoTableName.WithCause(fmt.Errorf(
+			"model %T has no table name", model,
+		)))
 	}
 
 	var orderBy []string
@@ -283,7 +284,7 @@ func ChangeObjectsType[OldT, NewT attrs.Definer](qs *QuerySet[OldT]) *QuerySet[N
 		panic(fmt.Errorf(
 			"ChangeObjectsType: cannot change QuerySet type from %T to %T: %w",
 			qs.internals.Model.Object, new(NewT),
-			query_errors.ErrTypeMismatch,
+			errors.TypeMismatch,
 		))
 	}
 
@@ -345,7 +346,10 @@ func (qs *QuerySet[T]) WithContext(ctx context.Context) *QuerySet[T] {
 	var tx, dbName, ok = transactionFromContext(ctx)
 	if ok && dbName == qs.compiler.DatabaseName() {
 		// if the context already has a transaction, use it
-		qs.compiler.WithTransaction(tx)
+		_, err := qs.WithTransaction(tx)
+		if err != nil {
+			panic(errors.Wrap(err, "WithContext: failed to bind transaction to QuerySet"))
+		}
 	}
 
 	qs.context = ctx
@@ -358,12 +362,15 @@ func (qs *QuerySet[T]) WithContext(ctx context.Context) *QuerySet[T] {
 func (qs *QuerySet[T]) StartTransaction(ctx context.Context) (drivers.Transaction, error) {
 	var tx, err = qs.compiler.StartTransaction(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "StartTransaction: failed to start transaction")
+		return nil, errors.FailedStartTransaction.WithCause(err).Wrapf(
+			"failed to start transaction for QuerySet %T", qs.internals.Model.Object,
+		)
 	}
+
 	// bind the transaction to the queryset context
 	ctx = transactionToContext(ctx, tx, qs.compiler.DatabaseName())
 	qs.context = ctx
-	return tx, err //, nil
+	return tx, nil
 }
 
 // WithTransaction wraps the transaction and binds it to the QuerySet compiler.
@@ -376,7 +383,7 @@ func (qs *QuerySet[T]) WithTransaction(tx drivers.Transaction) (drivers.Transact
 	// bind the transaction to the queryset context
 	ctx := transactionToContext(qs.context, tx, qs.compiler.DatabaseName())
 	qs.context = ctx
-	return tx, err //, nil
+	return tx, nil
 }
 
 // GetOrCreateTransaction returns the current transaction if one exists,
@@ -1670,7 +1677,9 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 		runActors,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "QuerySet.All: failed to create rows")
+		return nil, errors.NoRows.WithCause(fmt.Errorf(
+			"failed to create rows object for QuerySet.All: %w", err,
+		))
 	}
 
 	for resultIndex, row := range results {
@@ -1694,7 +1703,10 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 			val := row[j]
 
 			if err := f.Scan(val); err != nil {
-				return nil, errors.Wrapf(err, "failed to scan field %q (%T) in %T", f.Name(), f, f.Instance())
+				return nil, errors.ValueError.WithCause(errors.Wrapf(
+					err, "failed to scan field %q (%T) in %T",
+					f.Name(), f, f.Instance(),
+				))
 			}
 
 			// If it's a virtual field not in the model, store as annotation
@@ -1734,12 +1746,12 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 			var rootRow = rows.rootRow(scannables)
 			uniqueValue, err = GetUniqueKey(rootRow.field)
 			switch {
-			case err != nil && errors.Is(err, query_errors.ErrNoUniqueKey) && rows.hasMultiRelations:
+			case err != nil && errors.Is(err, errors.NoUniqueKey) && rows.hasMultiRelations:
 				return nil, errors.Wrapf(
 					err, "failed to get unique key for %T, but has multi relations",
 					rootRow.object,
 				)
-			case err != nil && errors.Is(err, query_errors.ErrNoUniqueKey):
+			case err != nil && errors.Is(err, errors.NoUniqueKey):
 				// if no unique key is found, we can use the result index as a unique value
 				// this is only valid for the root object, as it is not a relation
 				uniqueValue = resultIndex + 1
@@ -1802,11 +1814,10 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 			var val = row[j]
 
 			if err = f.Scan(val); err != nil {
-				return nil, errors.Wrapf(
-					err,
-					"failed to scan field %q in %T",
-					f.Name(), row,
-				)
+				return nil, errors.ValueError.WithCause(fmt.Errorf(
+					"failed to scan field %q in %T: %w",
+					f.Name(), row, err,
+				))
 			}
 
 			// generate dict key for the field
@@ -1834,17 +1845,17 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 			}
 
 			if key == "" {
-				return nil, fmt.Errorf(
+				panic(fmt.Errorf(
 					"QuerySet.Values: empty key for field %q in %T",
 					f.Name(), row,
-				)
+				))
 			}
 
 			if _, ok := values[key]; ok {
-				return nil, fmt.Errorf(
+				return nil, errors.ValueError.WithCause(fmt.Errorf(
 					"QuerySet.Values: duplicate key %q for field %q in %T",
 					key, f.Name(), row,
-				)
+				))
 			}
 
 			values[key] = value
@@ -1884,11 +1895,10 @@ func (qs *QuerySet[T]) ValuesList(fields ...any) ([][]interface{}, error) {
 			var val = row[j]
 
 			if err = f.Scan(val); err != nil {
-				return nil, errors.Wrapf(
-					err,
-					"failed to scan field %q in %T",
-					f.Name(), row,
-				)
+				return nil, errors.ValueError.WithCause(fmt.Errorf(
+					"failed to scan field %q in %T: %w",
+					f.Name(), row, err,
+				))
 			}
 
 			var v = f.GetValue()
@@ -1951,7 +1961,10 @@ func (qs *QuerySet[T]) Aggregate(annotations map[string]expr.Expression) (map[st
 	for i, field := range scannables {
 		if vf, ok := field.field.(AliasField); ok {
 			if err := vf.Scan(row[i]); err != nil {
-				return nil, err
+				return nil, errors.ValueError.WithCause(errors.Wrapf(
+					err, "failed to scan field %q (%T) in %T",
+					vf.Name(), vf, qs.internals.Model.Object,
+				))
 			}
 
 			// If the value is a byte slice, convert it to a string
@@ -1983,9 +1996,9 @@ func (qs *QuerySet[T]) Aggregate(annotations map[string]expr.Expression) (map[st
 //
 // It panics if the queryset has no where clause.
 //
-// If no rows are found, it returns queries.query_errors.ErrNoRows.
+// If no rows are found, it returns queries.errors.ErrNoRows.
 //
-// If multiple rows are found, it returns queries.query_errors.ErrMultipleRows.
+// If multiple rows are found, it returns queries.errors.ErrMultipleRows.
 func (qs *QuerySet[T]) Get() (*Row[T], error) {
 	if qs.cached != nil && qs.useCache {
 		return qs.cached.(*Row[T]), nil
@@ -2003,7 +2016,9 @@ func (qs *QuerySet[T]) Get() (*Row[T], error) {
 
 	var resCnt = len(results)
 	if resCnt == 0 {
-		return nillRow, query_errors.ErrNoRows
+		return nillRow, errors.NoRows.WithCause(fmt.Errorf(
+			"no rows found for %T", qs.internals.Model.Object,
+		))
 	}
 
 	if resCnt > 1 {
@@ -2014,11 +2029,10 @@ func (qs *QuerySet[T]) Get() (*Row[T], error) {
 			errResCnt = strconv.Itoa(MAX_GET_RESULTS-1) + "+"
 		}
 
-		return nillRow, errors.Wrapf(
-			query_errors.ErrMultipleRows,
+		return nillRow, errors.MultipleRows.WithCause(fmt.Errorf(
 			"multiple rows returned for %T: %s rows",
 			qs.internals.Model.Object, errResCnt,
-		)
+		))
 	}
 
 	if qs.useCache {
@@ -2039,16 +2053,16 @@ func (qs *QuerySet[T]) Get() (*Row[T], error) {
 func (qs *QuerySet[T]) GetOrCreate(value T) (T, bool, error) {
 
 	if len(qs.internals.Where) == 0 {
-		panic(query_errors.ErrNoWhereClause)
+		panic(errors.NoWhereClause.WithCause(fmt.Errorf(
+			"QuerySet.GetOrCreate: no where clause for %T", qs.internals.Model.Object,
+		)))
 	}
 
 	// If the queryset is already in a transaction, that transaction will be used
 	// automatically.
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
-		return *new(T), false, errors.Wrapf(
-			err, "failed to get transaction for %T", qs.internals.Model.Object,
-		)
+		return *new(T), false, errors.FailedStartTransaction.WithCause(err)
 	}
 	defer tx.Rollback(qs.context)
 
@@ -2056,7 +2070,7 @@ func (qs *QuerySet[T]) GetOrCreate(value T) (T, bool, error) {
 	qs.useCache = false
 	row, err := qs.Get()
 	if err != nil {
-		if errors.Is(err, query_errors.ErrNoRows) {
+		if errors.Is(err, errors.NoRows) {
 			goto create
 		} else {
 			return *new(T), false, errors.Wrapf(
@@ -2082,7 +2096,6 @@ create:
 
 	// Object was created successfully, commit the transaction
 	return obj, true, tx.Commit(qs.context)
-	// return obj[0], true, commitTransaction()
 }
 
 // First is used to retrieve the first row from the database.
@@ -2096,7 +2109,7 @@ func (qs *QuerySet[T]) First() (*Row[T], error) {
 		return nil, err
 	}
 	if len(results) == 0 {
-		return nil, query_errors.ErrNoRows
+		return nil, errors.NoRows
 	}
 	return results[0], nil
 
@@ -2164,9 +2177,7 @@ func (qs *QuerySet[T]) Create(value T) (T, error) {
 
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
-		return *new(T), errors.Wrapf(
-			err, "failed to get transaction for %T", qs.internals.Model.Object,
-		)
+		return *new(T), errors.FailedStartTransaction.WithCause(err)
 	}
 	defer tx.Rollback(qs.context)
 
@@ -2193,9 +2204,9 @@ func (qs *QuerySet[T]) Create(value T) (T, error) {
 		// and actor methods
 		err = saver.Save(actor.Fake(ctx, actsAfterSave))
 		if err != nil {
-			return *new(T), errors.Wrapf(
+			return *new(T), errors.SaveFailed.WithCause(errors.Wrapf(
 				err, "failed to save object %T", value,
-			)
+			))
 		}
 
 		if _, err = actor.AfterCreate(ctx); err != nil {
@@ -2214,7 +2225,7 @@ func (qs *QuerySet[T]) Create(value T) (T, error) {
 
 	var support = qs.compiler.SupportsReturning()
 	if len(result) == 0 && support != drivers.SupportsReturningNone {
-		return *new(T), query_errors.ErrNoRows
+		return *new(T), errors.NoRows
 	}
 
 	return result[0], tx.Commit(qs.context)
@@ -2232,9 +2243,7 @@ func (qs *QuerySet[T]) Create(value T) (T, error) {
 func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
-		return 0, errors.Wrapf(
-			err, "failed to get transaction for %T", qs.internals.Model.Object,
-		)
+		return 0, errors.FailedStartTransaction.WithCause(err)
 	}
 	defer tx.Rollback(qs.context)
 
@@ -2259,7 +2268,9 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 			// and actor methods
 			err = saver.Save(actor.Fake(ctx, actsAfterSave))
 			if err != nil {
-				return 0, err
+				return 0, errors.SaveFailed.WithCause(errors.Wrapf(
+					err, "failed to save object %T", value,
+				))
 			}
 
 			if _, err = actor.AfterSave(qs.context); err != nil {
@@ -2274,9 +2285,9 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 
 	c, err := qs.BulkUpdate([]T{value}, expressions...)
 	if err != nil {
-		return 0, errors.Wrapf(
+		return 0, errors.NoChanges.WithCause(errors.Wrapf(
 			err, "failed to update object %T", qs.internals.Model.Object,
-		)
+		))
 	}
 
 	return c, tx.Commit(qs.context)
@@ -2294,9 +2305,7 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
-		return nil, errors.Wrapf(
-			err, "failed to get transaction for %T", qs.internals.Model.Object,
-		)
+		return nil, errors.FailedStartTransaction.WithCause(err)
 	}
 	defer tx.Rollback(qs.context)
 
@@ -2362,16 +2371,19 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 
 			var value, err = field.Value()
 			if err != nil {
-				panic(fmt.Errorf("failed to get value for field %q: %w", field.Name(), err))
+				// panic(fmt.Errorf("failed to get value for field %q: %w", field.Name(), err))
+				return nil, errors.ValueError.WithCause(errors.Wrapf(
+					err, "failed to get value for field %q in %T",
+					field.Name(), object,
+				))
 			}
 
 			var rVal = reflect.ValueOf(value)
 			if value == nil && !field.AllowNull() ||
 				rVal.Kind() == reflect.Ptr && rVal.IsNil() && !field.AllowNull() {
-				panic(errors.Wrapf(
-					query_errors.ErrFieldNull,
-					"field %q cannot be null",
-					field.Name(),
+				return nil, errors.FieldNull.WithCause(fmt.Errorf(
+					"field %q cannot be null in %T",
+					field.Name(), object,
 				))
 			}
 
@@ -2412,11 +2424,15 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 	case support == drivers.SupportsReturningNone:
 
 		if len(results) > 0 {
-			return nil, errors.Wrapf(
-				query_errors.ErrLastInsertId,
+			//return nil, errors.Wrapf(
+			//	errors.ErrLastInsertId,
+			//	"expected no results returned after insert, got %d",
+			//	len(results),
+			//)
+			return nil, errors.LastInsertId.WithCause(fmt.Errorf(
 				"expected no results returned after insert, got %d",
 				len(results),
-			)
+			))
 		}
 
 		for _, row := range objects {
@@ -2458,11 +2474,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		}
 
 		if len(results) != len(objects) {
-			return nil, errors.Wrapf(
-				query_errors.ErrLastInsertId,
+			return nil, errors.LastInsertId.WithCause(fmt.Errorf(
 				"expected %d results returned after insert, got %d",
 				len(objects), len(results),
-			)
+			))
 		}
 
 		for i, row := range objects {
@@ -2471,19 +2486,17 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			var prim = rowDefs.Primary()
 			if prim != nil {
 				if len(results[i]) != 1 {
-					return nil, errors.Wrapf(
-						query_errors.ErrLastInsertId,
+					return nil, errors.LastInsertId.WithCause(fmt.Errorf(
 						"expected 1 result returned after insert, got %d (%+v)",
 						len(results[i]), results[i],
-					)
+					))
 				}
 				var id = results[i][0].(int64)
 				if err := prim.SetValue(id, true); err != nil {
-					return nil, errors.Wrapf(
-						err,
-						"failed to set primary key %q in %T",
-						prim.Name(), row,
-					)
+					return nil, errors.ValueError.WithCause(fmt.Errorf(
+						"failed to set primary key %q in %T: %w: %w",
+						prim.Name(), row, err, errors.LastInsertId,
+					))
 				}
 			}
 
@@ -2511,11 +2524,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 	case support == drivers.SupportsReturningColumns:
 
 		if len(results) != len(objects) {
-			return nil, errors.Wrapf(
-				query_errors.ErrLastInsertId,
+			return nil, errors.LastInsertId.WithCause(fmt.Errorf(
 				"expected %d results returned after insert, got %d (len(results) != len(objects))",
 				len(objects), len(results),
-			)
+			))
 		}
 
 		for i, row := range objects {
@@ -2530,20 +2542,19 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			}
 
 			if len(scannables) != resLen {
-				return nil, errors.Wrapf(
-					query_errors.ErrLastInsertId,
+				return nil, errors.LastInsertId.WithCause(fmt.Errorf(
 					"expected %d results returned after insert, got %d (len(scannables) != resLen)",
-					len(scannables), len(results),
-				)
+					len(scannables), len(results[i]),
+				))
 			}
 
 			var idx = 0
 			if prim != nil {
 				if err := prim.Scan(results[i][0]); err != nil {
-					return nil, errors.Wrapf(
+					return nil, errors.ValueError.WithCause(errors.Wrapf(
 						err, "failed to scan primary key %q in %T",
 						prim.Name(), row,
-					)
+					))
 				}
 				idx++
 			}
@@ -2553,11 +2564,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				var val = results[i][j+idx]
 
 				if err := f.Scan(val); err != nil {
-					return nil, errors.Wrapf(
-						err,
-						"failed to scan field %q in %T",
-						f.Name(), row,
-					)
+					return nil, errors.ValueError.WithCause(fmt.Errorf(
+						"failed to scan field %q in %T: %w",
+						f.Name(), row, err,
+					))
 				}
 			}
 
@@ -2578,11 +2588,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			}
 		}
 	default:
-		return nil, errors.Wrapf(
-			query_errors.ErrLastInsertId,
+		return nil, errors.LastInsertId.WithCause(fmt.Errorf(
 			"unsupported returning method %q for %T",
 			support, qs.internals.Model.Object,
-		)
+		))
 	}
 
 	return objects, tx.Commit(qs.context)
@@ -2599,9 +2608,7 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
-		return 0, errors.Wrapf(
-			err, "failed to get transaction for %T", qs.internals.Model.Object,
-		)
+		return 0, errors.FailedStartTransaction.WithCause(err)
 	}
 	defer tx.Rollback(qs.context)
 
@@ -2707,14 +2714,16 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 
 			var value, err = field.Value()
 			if err != nil {
-				panic(fmt.Errorf("failed to get value for field %q: %w", field.Name(), err))
+				return 0, errors.ValueError.WithCause(errors.Wrapf(
+					err, "failed to get value for field %q in %T",
+					field.Name(), obj,
+				))
 			}
 
 			if value == nil && !field.AllowNull() {
-				panic(errors.Wrapf(
-					query_errors.ErrFieldNull,
-					"field %q cannot be null",
-					field.Name(),
+				return 0, errors.FieldNull.WithCause(fmt.Errorf(
+					"field %q cannot be null in %T",
+					field.Name(), obj,
 				))
 			}
 
@@ -2726,10 +2735,7 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 			var err error
 			info.Where, err = GenerateObjectsWhereClause(obj)
 			if err != nil {
-				return 0, errors.Wrapf(
-					err, "failed to generate where clause for %T",
-					qs.internals.Model.Object,
-				)
+				return 0, errors.NoWhereClause.WithCause(err)
 			}
 		} else {
 			info.Where = where
@@ -2756,11 +2762,10 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 	}
 
 	if len(objects) > 0 && res == 0 {
-		return 0, errors.Wrapf(
-			query_errors.ErrNoChanges,
+		return 0, errors.NoChanges.WithCause(fmt.Errorf(
 			"no rows updated for %T, expected %d rows",
 			qs.internals.Model.Object, len(objects),
-		)
+		))
 	}
 
 	// Must always run the after update actor
@@ -2799,9 +2804,7 @@ func (qs *QuerySet[T]) BatchCreate(objects []T) ([]T, error) {
 
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
-		return nil, errors.Wrapf(
-			err, "failed to get transaction for %T", qs.internals.Model.Object,
-		)
+		return nil, errors.FailedStartTransaction.WithCause(err)
 	}
 	defer tx.Rollback(qs.context)
 
@@ -2839,9 +2842,7 @@ func (qs *QuerySet[T]) BatchUpdate(objects []T, exprs ...any) (int64, error) {
 
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
-		return 0, errors.Wrapf(
-			err, "failed to get transaction for %T", qs.internals.Model.Object,
-		)
+		return 0, errors.FailedStartTransaction.WithCause(err)
 	}
 	defer tx.Rollback(qs.context)
 
@@ -2855,11 +2856,10 @@ func (qs *QuerySet[T]) BatchUpdate(objects []T, exprs ...any) (int64, error) {
 		}
 
 		if count == 0 {
-			return 0, errors.Wrapf(
-				query_errors.ErrNoChanges,
+			return 0, errors.NoChanges.WithCause(fmt.Errorf(
 				"no rows updated for batch %d of %T",
 				batchNum, qs.internals.Model.Object,
-			)
+			))
 		}
 
 		updatedObjects += count
@@ -2879,9 +2879,7 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
-		return 0, errors.Wrapf(
-			err, "failed to get transaction for %T", qs.internals.Model.Object,
-		)
+		return 0, errors.FailedStartTransaction.WithCause(err)
 	}
 	defer tx.Rollback(qs.context)
 
@@ -2896,10 +2894,10 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 
 		var where, err = GenerateObjectsWhereClause(objects...)
 		if err != nil {
-			return 0, errors.Wrapf(
+			return 0, errors.NoWhereClause.WithCause(errors.Wrapf(
 				err, "failed to generate where clause for %T",
 				qs.internals.Model.Object,
-			)
+			))
 		}
 
 		qs.internals.Where = append(qs.internals.Where, where...)
@@ -2994,7 +2992,9 @@ func (qs *QuerySet[T]) updateFields(obj attrs.Definer) (attrs.Definitions, []att
 			for _, field := range info.Fields {
 				var f, ok = defs.Field(field.Name())
 				if !ok {
-					panic(fmt.Errorf("field %q not found in %T", field.Name(), obj))
+					panic(errors.FieldNotFound.WithCause(fmt.Errorf(
+						"field %q not found in %T", field.Name(), obj,
+					)))
 				}
 				fields = append(fields, f)
 			}

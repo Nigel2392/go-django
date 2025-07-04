@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/pkg/errors"
 )
 
 // newSettableRelation creates a new instance of a SettableRelation or SettableMultiThroughRelation.
@@ -245,13 +244,17 @@ func isNil(v reflect.Value) bool {
 func walkFieldValues(obj attrs.Definitions, chain []string, idx *int, depth int, yield func(walkInfo) bool) error {
 
 	if depth > len(chain)-1 {
-		return fmt.Errorf("depth %d exceeds chain length %d: %w", depth, len(chain), query_errors.ErrFieldNotFound)
+		return errors.FieldNotFound.WithCause(fmt.Errorf(
+			"depth %d exceeds chain length %d", depth, len(chain),
+		))
 	}
 
 	var fieldName = chain[depth]
 	var field, ok = obj.Field(fieldName)
 	if !ok {
-		return fmt.Errorf("field %s not found in object %T: %w", fieldName, obj, query_errors.ErrFieldNotFound)
+		return errors.FieldNotFound.WithCause(fmt.Errorf(
+			"field %s not found in object %T", fieldName, obj,
+		))
 	}
 
 	if depth == len(chain)-1 {
@@ -273,7 +276,9 @@ func walkFieldValues(obj attrs.Definitions, chain []string, idx *int, depth int,
 	var rVal = reflect.ValueOf(value)
 
 	if isNil(rVal) && fieldType == nil {
-		return fmt.Errorf("field %s in object %T is nil: %w", fieldName, obj, query_errors.ErrNilPointer)
+		return errors.NilPointer.WithCause(fmt.Errorf(
+			"field %s in object %T is nil", fieldName, obj,
+		))
 	}
 
 	if isNil(rVal) && fieldType != nil && fieldType.Implements(reflect.TypeOf((*attrs.Binder)(nil)).Elem()) {
@@ -287,7 +292,7 @@ func walkFieldValues(obj attrs.Definitions, chain []string, idx *int, depth int,
 		// If the field is a Definer, we can walk its fields
 		var definer = value.(attrs.Definer).FieldDefs()
 		if err := walkFieldValues(definer, chain, idx, depth+1, yield); err != nil {
-			if errors.Is(err, query_errors.ErrNilPointer) {
+			if errors.Is(err, errors.NilPointer) {
 				return nil // Skip nil pointers
 			}
 			return fmt.Errorf("%s: %w", fieldName, err)
@@ -301,7 +306,7 @@ func walkFieldValues(obj attrs.Definitions, chain []string, idx *int, depth int,
 			return nil
 		}
 		if err := walkFieldValues(model.FieldDefs(), chain, idx, depth+1, yield); err != nil {
-			if errors.Is(err, query_errors.ErrNilPointer) {
+			if errors.Is(err, errors.NilPointer) {
 				return nil // Skip nil pointers
 			}
 			return fmt.Errorf("%s: %w", fieldName, err)
@@ -318,7 +323,7 @@ func walkFieldValues(obj attrs.Definitions, chain []string, idx *int, depth int,
 		for _, rel := range relatedObjects {
 			var modelDefs = rel.FieldDefs()
 			if err := walkFieldValues(modelDefs, chain, idx, depth+1, yield); err != nil {
-				if errors.Is(err, query_errors.ErrNilPointer) {
+				if errors.Is(err, errors.NilPointer) {
 					continue // Skip nil relations
 				}
 				return fmt.Errorf("%s: %w", fieldName, err)
@@ -329,10 +334,10 @@ func walkFieldValues(obj attrs.Definitions, chain []string, idx *int, depth int,
 		var value = value.(ThroughRelationValue)
 		var model, _ = value.GetValue()
 		if model == nil {
-			return query_errors.ErrNilPointer
+			return errors.NilPointer
 		}
 		if err := walkFieldValues(model.FieldDefs(), chain, idx, depth+1, yield); err != nil {
-			if errors.Is(err, query_errors.ErrNilPointer) {
+			if errors.Is(err, errors.NilPointer) {
 				return nil // Skip nil pointers
 			}
 			return fmt.Errorf("%s: %w", fieldName, err)
@@ -347,7 +352,7 @@ func walkFieldValues(obj attrs.Definitions, chain []string, idx *int, depth int,
 		for _, rel := range relatedObjects {
 			var modelDefs = rel.Model().FieldDefs()
 			if err := walkFieldValues(modelDefs, chain, idx, depth+1, yield); err != nil {
-				if errors.Is(err, query_errors.ErrNilPointer) {
+				if errors.Is(err, errors.NilPointer) {
 					continue // Skip nil relations
 				}
 				return fmt.Errorf("%s: %w", fieldName, err)
@@ -363,7 +368,7 @@ func walkFieldValues(obj attrs.Definitions, chain []string, idx *int, depth int,
 				continue // Skip nil elements
 			}
 			if err := walkFieldValues(elem.(attrs.Definer).FieldDefs(), chain, idx, depth+1, yield); err != nil {
-				if errors.Is(err, query_errors.ErrNilPointer) {
+				if errors.Is(err, errors.NilPointer) {
 					continue // Skip elements where the field is nil
 				}
 				return fmt.Errorf("%s[%d]: %w", fieldName, i, err)
@@ -383,7 +388,7 @@ func walkFieldValues(obj attrs.Definitions, chain []string, idx *int, depth int,
 				continue // Skip relations with nil model
 			}
 			if err := walkFieldValues(rel.Model().FieldDefs(), chain, idx, depth+1, yield); err != nil {
-				if errors.Is(err, query_errors.ErrNilPointer) {
+				if errors.Is(err, errors.NilPointer) {
 					continue // Skip elements where the field is nil
 				}
 				return fmt.Errorf("%s[%d]: %w", fieldName, i, err)

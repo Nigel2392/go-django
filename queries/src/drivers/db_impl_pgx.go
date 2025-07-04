@@ -4,11 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"database/sql/driver"
-	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -27,19 +26,19 @@ type pgxConn interface {
 	Begin(ctx context.Context) (pgx.Tx, error)
 }
 
-func OpenPGX(ctx context.Context, dsn string, opts ...OpenOption) (Database, error) {
+func OpenPGX(ctx context.Context, drv *Driver, dsn string, opts ...OpenOption) (Database, error) {
 	var pool, err = pgxpool.New(ctx, dsn)
 	if err != nil {
-		return nil, err
+		return nil, databaseError(drv, err)
 	}
 
 	for _, opt := range opts {
-		if err := opt(POSTGRES_DRIVER_NAME, pool); err != nil && !errors.Is(err, query_errors.ErrNotImplemented) {
+		if err := opt(POSTGRES_DRIVER_NAME, pool); err != nil && !errors.Is(err, errors.NotImplemented) {
 			return nil, err
 		}
 	}
 
-	var qW = queryWrapperPGX[*pgxpool.Pool]{conn: pool}
+	var qW = queryWrapperPGX[*pgxpool.Pool]{conn: pool, d: drv}
 	var cW = connWrapperPGX[*pgxpool.Pool]{queryWrapperPGX: qW}
 	return &poolWrapperPGX{connWrapperPGX: cW}, nil
 }
@@ -49,28 +48,29 @@ func PGXOption(opt func(driverName string, db *pgxpool.Pool) error) OpenOption {
 		if pool, ok := db.(*pgxpool.Pool); ok {
 			return opt(driverName, pool)
 		}
-		return query_errors.ErrNotImplemented
+		return errors.NotImplemented
 	}
 }
 
 type queryWrapperPGX[T pgxQuerier] struct {
 	conn T
+	d    *Driver
 }
 
 func (c *queryWrapperPGX[T]) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
 	var rows, err = c.conn.Query(ctx, query, args...)
 	LogSQL(ctx, fmt.Sprintf("%T", c.conn), err, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, databaseError(c.d, err)
 	}
-	return &pgxRows{Rows: rows}, nil
+	return &pgxRows{Rows: rows, d: c.d}, nil
 }
 
 func (c *queryWrapperPGX[T]) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
 	result, err := c.conn.Exec(ctx, query, args...)
 	LogSQL(ctx, fmt.Sprintf("%T", c.conn), err, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, databaseError(c.d, err)
 	}
 	return &pgResult{CommandTag: result}, nil
 }
@@ -82,7 +82,7 @@ func (c *queryWrapperPGX[T]) QueryRowContext(ctx context.Context, query string, 
 	} else {
 		LogSQL(ctx, fmt.Sprintf("%T", c.conn), nil, query, args...)
 	}
-	return &pgxRow{Row: row}
+	return &pgxRow{Row: row, d: c.d}
 }
 
 func (c *queryWrapperPGX[T]) SendBatch(ctx context.Context, batch *pgx.Batch) pgx.BatchResults {
@@ -108,7 +108,7 @@ func (c *connWrapperPGX[T]) Close() error {
 }
 
 func (c *connWrapperPGX[T]) Ping(ctx context.Context) error {
-	return c.conn.Ping(ctx)
+	return databaseError(c.d, c.conn.Ping(ctx))
 }
 
 func (c *connWrapperPGX[T]) Driver() driver.Driver {
@@ -118,10 +118,10 @@ func (c *connWrapperPGX[T]) Driver() driver.Driver {
 func (c *connWrapperPGX[T]) Begin(ctx context.Context) (Transaction, error) {
 	tx, err := c.conn.Begin(ctx)
 	if err != nil {
-		return nil, err
+		return nil, databaseError(c.d, err)
 	}
 	return &pgxTx{
-		queryWrapperPGX: queryWrapperPGX[pgx.Tx]{conn: tx},
+		queryWrapperPGX: queryWrapperPGX[pgx.Tx]{conn: tx, d: c.d},
 		ctx:             ctx,
 	}, nil
 }
@@ -141,9 +141,9 @@ func (p *poolWrapperPGX) Close() error {
 func (p *poolWrapperPGX) Acquire(ctx context.Context) (Database, error) {
 	conn, err := p.conn.Acquire(ctx)
 	if err != nil {
-		return nil, err
+		return nil, databaseError(p.d, err)
 	}
-	return &connWrapperPGX[*pgxpool.Conn]{queryWrapperPGX: queryWrapperPGX[*pgxpool.Conn]{conn: conn}}, nil
+	return &connWrapperPGX[*pgxpool.Conn]{queryWrapperPGX: queryWrapperPGX[*pgxpool.Conn]{conn: conn, d: p.d}}, nil
 }
 
 type pgxTx struct {
@@ -152,15 +152,16 @@ type pgxTx struct {
 }
 
 func (p *pgxTx) Commit(ctx context.Context) error {
-	return p.conn.Commit(p.ctx)
+	return databaseError(p.d, p.conn.Commit(p.ctx))
 }
 
 func (p *pgxTx) Rollback(ctx context.Context) error {
-	return p.conn.Rollback(p.ctx)
+	return databaseError(p.d, p.conn.Rollback(p.ctx))
 }
 
 type pgxRows struct {
 	pgx.Rows
+	d *Driver
 }
 
 func (r *pgxRows) Close() error {
@@ -181,13 +182,18 @@ func (r *pgxRows) Columns() ([]string, error) {
 	return result, nil
 }
 
+func (r *pgxRows) Err() error {
+	return databaseError(r.d, r.Rows.Err())
+}
+
 type pgxRow struct {
 	pgx.Row
+	d *Driver
 }
 
 func (r *pgxRow) Err() error {
 	if canErr, ok := r.Row.(interface{ Err() error }); ok {
-		return canErr.Err()
+		return databaseError(r.d, canErr.Err())
 	}
 	return nil
 }
@@ -197,7 +203,7 @@ type pgResult struct {
 }
 
 func (p *pgResult) LastInsertId() (int64, error) {
-	return 0, query_errors.ErrNotImplemented
+	return 0, errors.NotImplemented
 }
 
 func (p *pgResult) RowsAffected() (int64, error) {

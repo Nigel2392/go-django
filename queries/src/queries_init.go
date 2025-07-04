@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/internal"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -30,7 +30,7 @@ func init() {
 
 		primaryValue, err := primaryField.Value()
 		if err != nil {
-			return false, err
+			return false, errors.ValueError.WithCause(err)
 		}
 
 		if primaryValue == nil || fields.IsZero(primaryValue) {
@@ -62,7 +62,7 @@ func init() {
 
 		primaryValue, err := primaryField.Value()
 		if err != nil {
-			return false, err
+			return false, errors.ValueError.WithCause(err)
 		}
 
 		if primaryValue == nil || fields.IsZero(primaryValue) {
@@ -188,10 +188,14 @@ var _, _ = attrs.OnModelRegister.Listen(func(s signals.Signal[attrs.SignalModelM
 
 	var uniqueFields = getMetaUniqueFields(meta.Meta)
 	if len(uniqueFields) == 0 {
-		return fmt.Errorf(
-			"model %T has no unique fields or unique together fields, cannot generate where clause: %w",
-			meta.Definer, query_errors.ErrFieldNotFound,
-		)
+		//return fmt.Errorf(
+		//	"model %T has no unique fields or unique together fields, cannot generate where clause: %w",
+		//	meta.Definer, errors.ErrFieldNotFound,
+		//)
+		return errors.FieldNotFound.WithCause(fmt.Errorf(
+			"model %T has no unique fields or unique together fields, cannot generate where clause",
+			meta.Definer,
+		))
 	}
 
 	// Create a generator function to generate a where clause
@@ -248,10 +252,10 @@ var _, _ = attrs.OnModelRegister.Listen(func(s signals.Signal[attrs.SignalModelM
 
 			// If we have no unique fields, we cannot generate a where clause
 			if objExpr == nil {
-				return nil, fmt.Errorf(
-					"model %T has does not have enough unique fields or unique together fields set to generate a where clause: %w",
-					meta.Definer, query_errors.ErrNoWhereClause,
-				)
+				return nil, errors.NoWhereClause.WithCause(fmt.Errorf(
+					"model %T has does not have enough unique fields or unique together fields set to generate a where clause",
+					meta.Definer,
+				))
 			}
 
 			// Add the object expression to the list of or expressions

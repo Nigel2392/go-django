@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/pkg/errors"
 )
 
 type actorFlag int
@@ -248,7 +247,7 @@ performAction:
 	ctx = markActorSeen(ctx, which, s.obj)
 
 	var err = fn(ctx)
-	var isErrSkip = errors.Is(err, query_errors.ErrNotImplemented)
+	var isErrSkip = errors.Is(err, errors.NotImplemented)
 	if err != nil && !isErrSkip {
 		return ctx, fmt.Errorf(
 			"failed to execute %s for object %T: %w",
@@ -283,7 +282,7 @@ performAction:
 
 // Fake is a no-op method that marks the actor as seen in the context.
 //
-// # It is used to ensure that the actor is seen in the context
+// It is used to ensure that the actor is seen in the context.
 //
 // This is useful if a function which might execute an actor
 // returns no context - if an actor was already executed in said function

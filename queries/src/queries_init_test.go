@@ -10,11 +10,10 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/models"
-	"github.com/pkg/errors"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 )
 
 func init() {
@@ -42,7 +41,10 @@ func init() {
 		OutputError: os.Stdout,
 	})
 
-	django.App(django.Configure(settings))
+	django.App(
+		django.Configure(settings),
+		django.Flag(django.FlagSkipDepsCheck),
+	)
 
 }
 
@@ -70,6 +72,7 @@ func (m *User) FieldDefs() attrs.Definitions {
 	return attrs.AutoDefinitions(m)
 }
 
+// Test [models.MODEL_SAVE_HOOK] for the User model registered in ./queries_init.go
 func TestModelsSave(t *testing.T) {
 	var saved, err = models.SaveModel(context.Background(), &User{
 		Name:      "John Doe",
@@ -134,6 +137,7 @@ func TestModelsSave(t *testing.T) {
 	}
 }
 
+// Test [models.MODEL_DELETE_HOOK] for the User model registered in ./queries_init.go
 func TestModelsDelete(t *testing.T) {
 	var user = &User{
 		Name:      "John Doe",
@@ -179,7 +183,7 @@ func TestModelsDelete(t *testing.T) {
 	_, err = queries.Objects[*User](&User{}).
 		Filter("ID", user.ID).
 		Get()
-	if !errors.Is(err, query_errors.ErrNoRows) {
+	if !errors.Is(err, errors.NoRows) {
 		t.Fatalf("expected no rows error, got: %v", err)
 	}
 }

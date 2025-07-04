@@ -3,7 +3,6 @@ package queries_test
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -11,10 +10,10 @@ import (
 	"github.com/Nigel2392/go-django/queries/internal"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/queries/src/models"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/Nigel2392/go-django/queries/src/quest"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -1653,7 +1652,7 @@ func TestQueryGetErrNoRows(t *testing.T) {
 		t.Fatalf("Expected an error, got nil")
 	}
 
-	if !errors.Is(err, query_errors.ErrNoRows) {
+	if !errors.Is(err, errors.NoRows) {
 		t.Fatalf("Expected ErrNoRows, got %v", err)
 	}
 
@@ -1681,7 +1680,7 @@ func TestQueryGetMultipleRows(t *testing.T) {
 		t.Fatalf("Expected an error, got nil")
 	}
 
-	if !errors.Is(err, query_errors.ErrMultipleRows) {
+	if !errors.Is(err, errors.MultipleRows) {
 		t.Fatalf("Expected ErrMultipleRows, got %v", err)
 	}
 
@@ -2969,7 +2968,7 @@ func TestTransactionRollbackAfterInsert(t *testing.T) {
 	t.Logf("Transaction rolled back, no object should be created (local obj: %+v %T)", obj, obj)
 
 	dbObj, err := queries.GetQuerySetWithContext(ctx, &TestTransaction{}).Get()
-	if err == nil || !errors.Is(err, query_errors.ErrNoRows) {
+	if err == nil || !errors.Is(err, errors.NoRows) {
 		t.Fatalf("Expected error, got nil: %+v", dbObj.Object)
 		return
 	}

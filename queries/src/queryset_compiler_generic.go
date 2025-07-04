@@ -11,12 +11,11 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -413,7 +412,7 @@ func (g *genericQueryBuilder) StartTransaction(ctx context.Context) (drivers.Tra
 
 	var tx, err = g.queryInfo.DB.Begin(ctx)
 	if err != nil {
-		return nil, query_errors.ErrFailedStartTransaction
+		return nil, errors.FailedStartTransaction.WithCause(err)
 	}
 
 	// logger.Debugf("Starting transaction for %s", g.DatabaseName())
@@ -423,11 +422,11 @@ func (g *genericQueryBuilder) StartTransaction(ctx context.Context) (drivers.Tra
 
 func (g *genericQueryBuilder) WithTransaction(t drivers.Transaction) (drivers.Transaction, error) {
 	if g.InTransaction() {
-		return nil, query_errors.ErrTransactionStarted
+		return nil, errors.TransactionStarted
 	}
 
 	if t == nil {
-		return nil, query_errors.ErrTransactionNil
+		return nil, errors.TransactionNil
 	}
 
 	g.transaction = &wrappedTransaction{t, g}
@@ -436,14 +435,14 @@ func (g *genericQueryBuilder) WithTransaction(t drivers.Transaction) (drivers.Tr
 
 func (g *genericQueryBuilder) CommitTransaction(ctx context.Context) error {
 	if !g.InTransaction() {
-		return query_errors.ErrNoTransaction
+		return errors.NoTransaction
 	}
 	return g.transaction.Commit(ctx)
 }
 
 func (g *genericQueryBuilder) RollbackTransaction(ctx context.Context) error {
 	if !g.InTransaction() {
-		return query_errors.ErrNoTransaction
+		return errors.NoTransaction
 	}
 	return g.transaction.Rollback(ctx)
 }
@@ -1307,11 +1306,10 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 					Params:  nil,
 				},
 				Execute: func(query string, args ...any) ([][]interface{}, error) {
-					return nil, fmt.Errorf(
-						"cannot build create query, number of fields (%d) does not match number of values (%d): %w",
+					return nil, errors.TypeMismatch.WithCause(fmt.Errorf(
+						"cannot build create query, number of fields (%d) does not match number of values (%d)",
 						len(object.Fields), len(object.Values),
-						query_errors.ErrTypeMismatch,
-					)
+					))
 				},
 			}
 		}
@@ -1396,9 +1394,13 @@ func (g *mysqlQueryBuilder) querySupportsLastInsertId(
 			idList = fmt.Sprintf(" (%v)", allIds)
 		}
 
-		return nil, fmt.Errorf(
-			"expected %d last insert ids, got %d%s: %w",
-			len(objects), len(allIds), idList, query_errors.ErrLastInsertId)
+		//return nil, fmt.Errorf(
+		//	"expected %d last insert ids, got %d%s: %w",
+		//	len(objects), len(allIds), idList, errors.ErrLastInsertId)
+		return nil, errors.LastInsertId.WithCause(fmt.Errorf(
+			"expected %d last insert ids, got %d%s",
+			len(objects), len(allIds), idList,
+		))
 	}
 
 	if _, ok := availableForLastInsertId[internals.Model.Primary.Type().Kind()]; ok {

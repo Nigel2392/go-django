@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 
 	_ "unsafe"
@@ -222,10 +222,9 @@ func (r *RelationField[T]) Save(ctx context.Context) error {
 
 	switch r.cnf.Rel.Type() {
 	case attrs.RelManyToMany, attrs.RelOneToMany:
-		return fmt.Errorf(
-			"cannot save relation %s with type %s: %w",
-			r.Name(), r.cnf.Rel.Type(), query_errors.ErrNotImplemented,
-		)
+		return errors.NotImplemented.WithCause(fmt.Errorf(
+			"cannot save relation %s with type %s", r.Name(), r.cnf.Rel.Type(),
+		))
 
 	case attrs.RelOneToOne:
 
@@ -242,10 +241,10 @@ func (r *RelationField[T]) Save(ctx context.Context) error {
 		}
 	}
 
-	return fmt.Errorf(
-		"cannot save relation %s with type %s, value %T does not implement saveableDefiner or saveableRelation: %w",
-		r.Name(), r.cnf.Rel.Type(), val, query_errors.ErrNotImplemented,
-	)
+	return errors.NotImplemented.WithCause(fmt.Errorf(
+		"cannot save relation %s with type %s, value %T does not implement saveableDefiner or saveableRelation",
+		r.Name(), r.cnf.Rel.Type(), val,
+	))
 }
 
 func (r *RelationField[T]) GetTargetField() attrs.FieldDefinition {

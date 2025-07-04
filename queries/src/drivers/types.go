@@ -4,7 +4,9 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"net/mail"
 	"reflect"
 	"time"
 
@@ -44,10 +46,12 @@ func init() {
 	dbtype.Add(Float(0.0), dbtype.Float)
 	dbtype.Add(Bool(false), dbtype.Bool)
 	dbtype.Add(Bytes(nil), dbtype.Bytes)
+	dbtype.Add(BLOB(nil), dbtype.BLOB)
 	dbtype.Add(UUID(uuid.UUID{}), dbtype.UUID)
 	dbtype.Add(Timestamp{}, dbtype.Timestamp)
 	dbtype.Add(LocalTime{}, dbtype.LocalTime)
 	dbtype.Add(DateTime{}, dbtype.DateTime)
+	dbtype.Add(Email{}, dbtype.String)
 	dbtype.Add(decimal.Decimal{}, dbtype.Decimal)
 
 	dbtype.Add(*new(any), dbtype.JSON)
@@ -68,6 +72,7 @@ func init() {
 	dbtype.Add(*new(bool), dbtype.Bool)
 	dbtype.Add(*new(uuid.UUID), dbtype.UUID)
 	dbtype.Add(*new(time.Time), dbtype.DateTime)
+	dbtype.Add(reflect.TypeOf((interface{})(nil)), dbtype.JSON)
 
 	dbtype.Add(sql.NullString{}, dbtype.Text)
 	dbtype.Add(sql.NullFloat64{}, dbtype.Float)
@@ -91,6 +96,7 @@ func init() {
 	dbtype.Add(sql.Null[Timestamp]{}, dbtype.Timestamp)
 	dbtype.Add(sql.Null[LocalTime]{}, dbtype.LocalTime)
 	dbtype.Add(sql.Null[DateTime]{}, dbtype.DateTime)
+	dbtype.Add(sql.Null[Email]{}, dbtype.String)
 
 	dbtype.Add(sql.Null[any]{}, dbtype.JSON)
 	dbtype.Add(sql.Null[string]{}, dbtype.String)
@@ -122,11 +128,13 @@ type (
 	Float       float64
 	Bool        bool
 	Bytes       []byte
+	BLOB        []byte
 	JSON[T any] struct {
 		Data T
 		Null bool
 	}
-	UUID uuid.UUID
+	UUID  uuid.UUID
+	Email mail.Address
 
 	timeType  time.Time
 	Timestamp time.Time
@@ -159,6 +167,27 @@ func (t *UUID) Scan(value any) error {
 
 func (t UUID) Value() (driver.Value, error) {
 	return uuid.UUID(t).Value()
+}
+
+func (t UUID) MarshalJSON() ([]byte, error) {
+	if t.IsZero() {
+		return json.Marshal(nil)
+	}
+	return json.Marshal(uuid.UUID(t).String())
+}
+
+func (t *UUID) UnmarshalJSON(data []byte) error {
+	if len(data) == 0 || string(data) == "null" {
+		*t = UUID(uuid.Nil)
+		return nil
+	}
+	var u uuid.UUID
+	if err := json.Unmarshal(data, &u); err != nil {
+		return errs.Wrap(err, "failed to unmarshal UUID value")
+	}
+
+	*t = UUID(u)
+	return nil
 }
 
 func (t JSON[T]) DBType() dbtype.Type {
@@ -282,6 +311,19 @@ func (t *timeType) Scan(value any) error {
 	return nil
 }
 
+func (t timeType) MarshalJSON() ([]byte, error) {
+	return (time.Time)(t).MarshalJSON()
+}
+
+func (t *timeType) UnmarshalJSON(data []byte) error {
+	var _t time.Time
+	if err := _t.UnmarshalJSON(data); err != nil {
+		return errs.Wrap(err, "failed to unmarshal timeType")
+	}
+	*t = timeType(_t)
+	return nil
+}
+
 func CurrentTimestamp() Timestamp {
 	return Timestamp(time.Now().UTC().Truncate(time.Millisecond))
 }
@@ -296,6 +338,15 @@ func (t Timestamp) Time() time.Time       { return time.Time(t).Truncate(time.Mi
 func (t *Timestamp) Scan(value any) error { return (*timeType)(t).Scan(value) }
 func (t Timestamp) Value() (driver.Value, error) {
 	return t.Time(), nil
+}
+func (t Timestamp) MarshalJSON() ([]byte, error) { return (time.Time)(t).MarshalJSON() }
+func (t *Timestamp) UnmarshalJSON(data []byte) error {
+	var _t time.Time
+	if err := _t.UnmarshalJSON(data); err != nil {
+		return errs.Wrap(err, "failed to unmarshal Timestamp")
+	}
+	*t = Timestamp(_t)
+	return nil
 }
 
 func CurrentLocalTime() LocalTime {
@@ -313,6 +364,17 @@ func (t *LocalTime) Scan(value any) error { return (*timeType)(t).Scan(value) }
 func (t LocalTime) Value() (driver.Value, error) {
 	return t.Time(), nil
 }
+func (t LocalTime) MarshalJSON() ([]byte, error) {
+	return (time.Time)(t).MarshalJSON()
+}
+func (t *LocalTime) UnmarshalJSON(data []byte) error {
+	var _t time.Time
+	if err := _t.UnmarshalJSON(data); err != nil {
+		return errs.Wrap(err, "failed to unmarshal LocalTime")
+	}
+	*t = LocalTime(_t)
+	return nil
+}
 
 func CurrentDateTime() DateTime {
 	return DateTime(time.Now().UTC().Truncate(time.Second))
@@ -328,4 +390,45 @@ func (t DateTime) Time() time.Time       { return time.Time(t).Truncate(time.Sec
 func (t *DateTime) Scan(value any) error { return (*timeType)(t).Scan(value) }
 func (t DateTime) Value() (driver.Value, error) {
 	return t.Time(), nil
+}
+func (t DateTime) MarshalJSON() ([]byte, error) {
+	return (time.Time)(t).MarshalJSON()
+}
+func (t *DateTime) UnmarshalJSON(data []byte) error {
+	var _t time.Time
+	if err := _t.UnmarshalJSON(data); err != nil {
+		return errs.Wrap(err, "failed to unmarshal DateTime")
+	}
+	*t = DateTime(_t)
+	return nil
+}
+
+func (e Email) String() string {
+	return e.Address
+}
+
+func (e *Email) Scan(src interface{}) error {
+	switch v := src.(type) {
+	case string:
+		a, err := mail.ParseAddress(v)
+		if err != nil {
+			return err
+		}
+		*e = Email(*a)
+		return nil
+	case []byte:
+		a, err := mail.ParseAddress(string(v))
+		if err != nil {
+			return err
+		}
+		*e = Email(*a)
+		return nil
+	default:
+		return errors.New("invalid email type")
+	}
+}
+
+func (e Email) Value() (driver.Value, error) {
+	var addr = e.Address
+	return addr, nil
 }

@@ -9,7 +9,7 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/jmoiron/sqlx"
@@ -240,16 +240,16 @@ func DriverValue(arg any) (driver.Value, error) {
 			//  byte slice, e.g. for binary data
 			arg = rVal.Bytes()
 		} else {
-			return nil, fmt.Errorf(
-				"unsupported slice type for driver.Value: %s (%T): %w",
-				rVal.Type().Elem().Kind(), arg, query_errors.ErrTypeMismatch,
-			)
+			return nil, errors.TypeMismatch.WithCause(fmt.Errorf(
+				"unsupported slice type for driver.Value: %s (%T)",
+				rVal.Type().Elem().Kind(), arg,
+			))
 		}
 	default:
-		return nil, fmt.Errorf(
-			"unsupported type for driver.Value: %s (%T): %w",
-			rVal.Kind(), arg, query_errors.ErrTypeMismatch,
-		)
+		return nil, errors.TypeMismatch.WithCause(fmt.Errorf(
+			"unsupported type for driver.Value: %s (%T)",
+			rVal.Kind(), arg,
+		))
 	}
 
 	return arg, nil
@@ -261,12 +261,16 @@ func GetQueryInfo(dbKey string) (*QueryInfo, error) {
 		dbKey,
 	)
 	if !ok {
-		return nil, query_errors.ErrNoDatabase
+		return nil, errors.NoDatabase.WithCause(fmt.Errorf(
+			"no database connection found for key %q", dbKey,
+		))
 	}
 
 	var sqlxDriver = SqlxDriverName(db)
 	if sqlxDriver == "" {
-		return nil, query_errors.ErrUnknownDriver
+		return nil, errors.UnknownDriver.WithCause(fmt.Errorf(
+			"unknown driver for database connection %q", dbKey,
+		))
 	}
 
 	var queryInfo = &QueryInfo{

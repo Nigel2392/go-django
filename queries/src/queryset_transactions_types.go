@@ -3,11 +3,11 @@ package queries
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+
 	"github.com/Nigel2392/go-django/queries/src/drivers"
-	"github.com/Nigel2392/go-django/queries/src/query_errors"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
@@ -43,7 +43,7 @@ type wrappedTransaction struct {
 
 func (w *wrappedTransaction) Rollback(ctx context.Context) error {
 	if !w.compiler.InTransaction() {
-		return query_errors.ErrNoTransaction
+		return errors.NoTransaction
 	}
 	if w.compiler != nil {
 		w.compiler.transaction = nil
@@ -54,25 +54,27 @@ func (w *wrappedTransaction) Rollback(ctx context.Context) error {
 	}
 	logger.Warnf("Rolling back transaction for %s (%v)", w.compiler.DatabaseName(), err)
 	if err != nil {
-		return fmt.Errorf("failed to rollback transaction for %s: %w", w.compiler.DatabaseName(), err)
+		return errors.RollbackFailed.WithCause(fmt.Errorf(
+			"failed to rollback transaction for %s: %w",
+			w.compiler.DatabaseName(), err,
+		))
 	}
 	return nil
 }
 
 func (w *wrappedTransaction) Commit(ctx context.Context) error {
 	if !w.compiler.InTransaction() {
-		return query_errors.ErrNoTransaction
+		return errors.NoTransaction
 	}
 	if w.compiler != nil {
 		w.compiler.transaction = nil
 	}
 	var err = w.Transaction.Commit(ctx)
-	// logger.Debugf("Committing transaction for %s (%v)", w.compiler.DatabaseName(), err)
-	if errors.Is(err, sql.ErrTxDone) {
-		return nil
-	}
 	if err != nil {
-		return fmt.Errorf("failed to commit transaction for %s: %w", w.compiler.DatabaseName(), err)
+		return errors.CommitFailed.WithCause(fmt.Errorf(
+			"failed to commit transaction for %s: %w",
+			w.compiler.DatabaseName(), err,
+		))
 	}
 	return nil
 }
