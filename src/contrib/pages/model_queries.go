@@ -25,7 +25,7 @@ func updateNodes(ctx context.Context, nodes []*PageNode) error {
 		return fmt.Errorf("failed to prepare nodes for update: %w", err)
 	}
 	if updated == 0 {
-		return errors.New("no nodes were updated")
+		return errors.New(errors.CodeNoChanges, "no nodes were updated")
 	}
 	return nil
 }
@@ -53,7 +53,7 @@ func updateDescendantPaths(ctx context.Context, oldUrlPath, newUrlPath, pageNode
 		return fmt.Errorf("failed to update descendant paths: %w", err)
 	}
 	if updated == 0 {
-		return errors.New("no descendant paths were updated")
+		return errors.New(errors.CodeNoChanges, "no descendant paths were updated")
 	}
 	return err
 }
