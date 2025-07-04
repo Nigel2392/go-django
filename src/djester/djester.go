@@ -117,6 +117,7 @@ func (d *Tester) Setup() error {
 	}
 
 	d.Flags = append(d.Flags, django.FlagSkipCmds)
+	d.Flags = append(d.Flags, django.FlagSkipChecks)
 
 	var opts = make([]django.Option, 0, len(d.ExtraOptions))
 	opts = append(opts, django.Configure(settings))

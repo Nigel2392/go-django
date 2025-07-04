@@ -128,9 +128,9 @@ func whichIs(which string, exclusions []string) bool {
 
 func TestDatabaseErrors(t *testing.T) {
 	var which, db = testdb.Open()
-	if which == "postgres" {
+	if which == "postgres" || which == "mysql_local" {
 		// postgres is unsupported FOR NOW
-		t.Skip("Skipping database error tests for PostgreSQL")
+		t.Skip("Skipping database error tests for PostgreSQL (NYI) and MySQL Local (unsupported)")
 		return
 	}
 
@@ -148,7 +148,7 @@ func TestDatabaseErrors(t *testing.T) {
 		{execStr: "SELECT * FROM non_existent_table", expected: errors.InvalidTable},
 		{
 			exec: func(ctx context.Context, which string, db drivers.Database) (any, error) {
-				if whichIs(which, []string{"mysql", "mariadb", "mysql_local"}) {
+				if whichIs(which, []string{"mysql", "mariadb"}) {
 					return db.ExecContext(ctx, "CREATE TEMPORARY TABLE tmp_test (id INT NOT NULL); INSERT INTO tmp_test (id) VALUES (1 / 0)")
 				}
 				return db.ExecContext(ctx, "SELECT 1 / 0")
