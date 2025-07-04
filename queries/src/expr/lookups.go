@@ -5,7 +5,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 )
 
 func init() {
@@ -98,11 +98,13 @@ func init() {
 	})
 }
 
-const (
-	ErrLookupNotFound    errs.Error = "lookup not found"
-	ErrTransformNotFound errs.Error = "transform not found"
-	ErrLookupArgsInvalid errs.Error = "lookup arguments invalid"
+var (
+	ErrLookupNotFound    errors.Error = errors.New("LookupNotFound", "lookup not found")
+	ErrTransformNotFound errors.Error = errors.New("TransformNotFound", "transform not found")
+	ErrLookupArgsInvalid errors.Error = errors.New("LookupArgsInvalid", "lookup arguments invalid")
+)
 
+const (
 	LOOKUP_EXACT = "exact"
 	LOOKUP_NOT   = "not"
 	LOOKUP_GT    = "gt"

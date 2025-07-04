@@ -1,91 +1,119 @@
 package errors
 
-type Code string
+type GoCode string
 
-func (c Code) String() string {
+const (
+	CodeNotImplemented GoCode = "NotImplemented"
+	CodeNoDatabase     GoCode = "NoDatabase"
+	CodeUnknownDriver  GoCode = "UnknownDriver"
+	CodeNoTableName    GoCode = "NoTableName"
+	CodeNoWhereClause  GoCode = "NoWhereClause"
+
+	CodeLastInsertId  GoCode = "LastInsertId"
+	CodeFieldNull     GoCode = "FieldNull"
+	CodeNilPointer    GoCode = "NilPointer"
+	CodeFieldNotFound GoCode = "FieldNotFound"
+	CodeTypeMismatch  GoCode = "TypeMismatch"
+	CodeValueError    GoCode = "ValueError"
+
+	CodeUnsupportedLookup GoCode = "UnsupportedLookup"
+	CodeAlreadyExecuted   GoCode = "AlreadyExecuted"
+	CodeNoUniqueKey       GoCode = "NoUniqueKey"
+	CodeSaveFailed        GoCode = "SaveFailed"
+
+	CodeNoChanges          GoCode = "NoChanges"
+	CodeNoResults          GoCode = "NoResults"
+	CodeNoRows             GoCode = "NoRows"
+	CodeMultipleRows       GoCode = "MultipleRows"
+	CodeUnexpectedRowCount GoCode = "UnexpectedRowCount"
+)
+
+type DBCode string
+
+func (c DBCode) String() string {
 	return string(c)
 }
 
 const (
-	CodeInvalid Code = "E000"
+	CodeInvalid DBCode = "E000"
 
 	// Common Errors Across All
-	CodeGenericError         Code = "E001"
-	CodeConnectionFailed     Code = "E002"
-	CodeAuthenticationFailed Code = "E003"
-	CodeProtocolError        Code = "E004"
-	CodeTimeout              Code = "E005"
-	CodeInternalError        Code = "E006"
-	CodeConnectionClosed     Code = "E007"
-	CodeConnectionLost       Code = "E008"
+	CodeGenericError         DBCode = "E001"
+	CodeConnectionFailed     DBCode = "E002"
+	CodeAuthenticationFailed DBCode = "E003"
+	CodeProtocolError        DBCode = "E004"
+	CodeTimeout              DBCode = "E005"
+	CodeInternalError        DBCode = "E006"
+	CodeConnectionClosed     DBCode = "E007"
+	CodeConnectionLost       DBCode = "E008"
 
 	// DDL/Schema Errors
-	CodeExists             Code = "E109"
-	CodeNotExists          Code = "E110"
-	CodeInvalidTable       Code = "E111"
-	CodeTableExists        Code = "E112"
-	CodeTableNotFound      Code = "E113"
-	CodeInvalidColumn      Code = "E114"
-	CodeColumnExists       Code = "E115"
-	CodeColumnNotFound     Code = "E116"
-	CodeIndexExists        Code = "E117"
-	CodeIndexNotFound      Code = "E118"
-	CodeConstraintExists   Code = "E119"
-	CodeConstraintNotFound Code = "E120"
+	CodeExists             DBCode = "E109"
+	CodeNotExists          DBCode = "E110"
+	CodeInvalidTable       DBCode = "E111"
+	CodeTableExists        DBCode = "E112"
+	CodeTableNotFound      DBCode = "E113"
+	CodeInvalidColumn      DBCode = "E114"
+	CodeColumnExists       DBCode = "E115"
+	CodeColumnNotFound     DBCode = "E116"
+	CodeIndexExists        DBCode = "E117"
+	CodeIndexNotFound      DBCode = "E118"
+	CodeConstraintExists   DBCode = "E119"
+	CodeConstraintNotFound DBCode = "E120"
 
 	// Data & Type Errors
-	CodeTypeMismatch   Code = "E201"
-	CodeInvalidEnum    Code = "E202"
-	CodeStringTooLong  Code = "E203"
-	CodeInvalidDefault Code = "E204"
-	CodeDateOutOfRange Code = "E205"
-	CodeEncodingError  Code = "E206"
-	CodePrecisionLoss  Code = "E207"
-	CodeDivisionByZero Code = "E208"
+	CodeDBTypeMismatch DBCode = "E201"
+	CodeInvalidEnum    DBCode = "E202"
+	CodeStringTooLong  DBCode = "E203"
+	CodeInvalidDefault DBCode = "E204"
+	CodeDateOutOfRange DBCode = "E205"
+	CodeEncodingError  DBCode = "E206"
+	CodePrecisionLoss  DBCode = "E207"
+	CodeDivisionByZero DBCode = "E208"
 
 	// Constraint errors
-	CodeConstraintViolation      Code = "E301"
-	CodeForeignKeyViolation      Code = "E302"
-	CodeUniqueViolation          Code = "E303"
-	CodeNotNullViolation         Code = "E304"
-	CodeCheckConstraintViolation Code = "E305"
+	CodeConstraintViolation      DBCode = "E301"
+	CodeForeignKeyViolation      DBCode = "E302"
+	CodeUniqueViolation          DBCode = "E303"
+	CodeNotNullViolation         DBCode = "E304"
+	CodeCheckConstraintViolation DBCode = "E305"
 
 	// Transaction Errors
-	CodeTransactionStarted       Code = "E401"
-	CodeTransactionDeadlock      Code = "E402"
-	CodeFailedStartTransaction   Code = "E403"
-	CodeNoTransaction            Code = "E404"
-	CodeTransactionNil           Code = "E405"
-	CodeRollbackFailed           Code = "E406"
-	CodeCommitFailed             Code = "E407"
-	CodeSavepointFailed          Code = "E408"
-	CodeCrossDatabaseTransaction Code = "E409"
+	CodeTransactionStarted       DBCode = "E401"
+	CodeTransactionDeadlock      DBCode = "E402"
+	CodeFailedStartTransaction   DBCode = "E403"
+	CodeNoTransaction            DBCode = "E404"
+	CodeTransactionNil           DBCode = "E405"
+	CodeRollbackFailed           DBCode = "E406"
+	CodeCommitFailed             DBCode = "E407"
+	CodeSavepointFailed          DBCode = "E408"
+	CodeCrossDatabaseTransaction DBCode = "E409"
 
 	// Query / QueryRow / Exec
-	CodeSyntaxError          Code = "E501"
-	CodeDeadlockDetected     Code = "E502"
-	CodeQueryCanceled        Code = "E503"
-	CodeQueryTimeout         Code = "E504"
-	CodeTooManyConnections   Code = "E505"
-	CodeOutOfMemory          Code = "E506"
-	CodeIOError              Code = "E507"
-	CodeDiskFull             Code = "E508"
-	CodePermissionDenied     Code = "E509"
-	CodeSerializationFailure Code = "E510"
+	CodeSyntaxError          DBCode = "E501"
+	CodeDeadlockDetected     DBCode = "E502"
+	CodeQueryCanceled        DBCode = "E503"
+	CodeQueryTimeout         DBCode = "E504"
+	CodeTooManyConnections   DBCode = "E505"
+	CodeOutOfMemory          DBCode = "E506"
+	CodeIOError              DBCode = "E507"
+	CodeDiskFull             DBCode = "E508"
+	CodePermissionDenied     DBCode = "E509"
+	CodeSerializationFailure DBCode = "E510"
 
 	// Planning / Execution
-	CodeAmbiguousColumn        Code = "E601"
-	CodeUnsupportedFeature     Code = "E602"
-	CodeFunctionNotImplemented Code = "E603"
-	CodeInvalidCast            Code = "E604"
+	CodeAmbiguousColumn        DBCode = "E601"
+	CodeUnsupportedFeature     DBCode = "E602"
+	CodeFunctionNotImplemented DBCode = "E603"
+	CodeInvalidCast            DBCode = "E604"
 
 	// System/Internal
-	CodeCorruptedData     Code = "E701"
-	CodeInconsistentState Code = "E702"
-	CodeAssertionFailure  Code = "E703"
+	CodeCorruptedData     DBCode = "E701"
+	CodeInconsistentState DBCode = "E702"
+	CodeAssertionFailure  DBCode = "E703"
 )
 
-var databaseErrors = map[Code]DatabaseError{
+var databaseErrors = map[DBCode]DatabaseError{
 	CodeGenericError:             GenericError,
 	CodeTransactionStarted:       TransactionStarted,
 	CodeFailedStartTransaction:   FailedStartTransaction,
@@ -108,7 +136,7 @@ var databaseErrors = map[Code]DatabaseError{
 	CodeDivisionByZero:           DivisionByZero,
 	CodeInvalidColumn:            InvalidColumn,
 	CodeInvalidTable:             InvalidTable,
-	CodeTypeMismatch:             DBTypeMismatch,
+	CodeDBTypeMismatch:           DBTypeMismatch,
 	CodeTooManyConnections:       TooManyConnections,
 	CodeOutOfMemory:              OutOfMemory,
 	CodeIOError:                  IOError,

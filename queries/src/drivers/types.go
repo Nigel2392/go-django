@@ -4,14 +4,12 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
-	"errors"
-	"fmt"
 	"net/mail"
 	"reflect"
 	"time"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
-	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
@@ -183,7 +181,7 @@ func (t *UUID) UnmarshalJSON(data []byte) error {
 	}
 	var u uuid.UUID
 	if err := json.Unmarshal(data, &u); err != nil {
-		return errs.Wrap(err, "failed to unmarshal UUID value")
+		return errors.Wrap(err, "failed to unmarshal UUID value")
 	}
 
 	*t = UUID(u)
@@ -230,7 +228,7 @@ func (t JSON[T]) IsZero() bool {
 func (t JSON[T]) Value() (driver.Value, error) {
 	var bytes, err = json.Marshal(t.Data)
 	if err != nil {
-		return nil, errs.Wrap(err, "failed to marshal Text value")
+		return nil, errors.Wrap(err, "failed to marshal Text value")
 	}
 	return string(bytes), nil
 }
@@ -246,7 +244,9 @@ func (j *JSON[T]) Scan(value any) error {
 	case nil:
 		j.Null = true
 	default:
-		return errs.ErrInvalidType
+		return errors.TypeMismatch.Wrapf(
+			"cannot scan %T into JSON[T]: %w", value,
+		)
 	}
 	if len(bytes) == 0 {
 		j.Null = true
@@ -254,7 +254,7 @@ func (j *JSON[T]) Scan(value any) error {
 		return nil
 	}
 	if err := json.Unmarshal(bytes, &newT); err != nil {
-		return errs.Wrap(err, "failed to unmarshal JSON value")
+		return errors.Wrap(err, "failed to unmarshal JSON value")
 	}
 	j.Null = false
 	j.Data = newT
@@ -277,7 +277,7 @@ func (t *JSON[T]) UnmarshalJSON(data []byte) error {
 
 	var newT T
 	if err := json.Unmarshal(data, &newT); err != nil {
-		return errs.Wrap(err, "failed to unmarshal JSON value")
+		return errors.Wrap(err, "failed to unmarshal JSON value")
 	}
 
 	t.Null = false
@@ -303,9 +303,8 @@ func (t *timeType) Scan(value any) error {
 	case uint64:
 		*t = timeType(time.Unix(int64(v), 0))
 	default:
-		return fmt.Errorf(
-			"cannot scan %T into timeType: %w",
-			value, errs.ErrInvalidType,
+		return errors.TypeMismatch.Wrapf(
+			"cannot scan %T into timeType",
 		)
 	}
 	return nil
@@ -318,7 +317,7 @@ func (t timeType) MarshalJSON() ([]byte, error) {
 func (t *timeType) UnmarshalJSON(data []byte) error {
 	var _t time.Time
 	if err := _t.UnmarshalJSON(data); err != nil {
-		return errs.Wrap(err, "failed to unmarshal timeType")
+		return errors.Wrap(err, "failed to unmarshal timeType")
 	}
 	*t = timeType(_t)
 	return nil
@@ -343,7 +342,7 @@ func (t Timestamp) MarshalJSON() ([]byte, error) { return (time.Time)(t).Marshal
 func (t *Timestamp) UnmarshalJSON(data []byte) error {
 	var _t time.Time
 	if err := _t.UnmarshalJSON(data); err != nil {
-		return errs.Wrap(err, "failed to unmarshal Timestamp")
+		return errors.Wrap(err, "failed to unmarshal Timestamp")
 	}
 	*t = Timestamp(_t)
 	return nil
@@ -370,7 +369,7 @@ func (t LocalTime) MarshalJSON() ([]byte, error) {
 func (t *LocalTime) UnmarshalJSON(data []byte) error {
 	var _t time.Time
 	if err := _t.UnmarshalJSON(data); err != nil {
-		return errs.Wrap(err, "failed to unmarshal LocalTime")
+		return errors.Wrap(err, "failed to unmarshal LocalTime")
 	}
 	*t = LocalTime(_t)
 	return nil
@@ -397,7 +396,7 @@ func (t DateTime) MarshalJSON() ([]byte, error) {
 func (t *DateTime) UnmarshalJSON(data []byte) error {
 	var _t time.Time
 	if err := _t.UnmarshalJSON(data); err != nil {
-		return errs.Wrap(err, "failed to unmarshal DateTime")
+		return errors.Wrap(err, "failed to unmarshal DateTime")
 	}
 	*t = DateTime(_t)
 	return nil
@@ -424,7 +423,9 @@ func (e *Email) Scan(src interface{}) error {
 		*e = Email(*a)
 		return nil
 	default:
-		return errors.New("invalid email type")
+		return errors.TypeMismatch.Wrapf(
+			"cannot scan %T into Email: %w", src,
+		)
 	}
 }
 

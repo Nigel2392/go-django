@@ -8,15 +8,12 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
-	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 )
 
 type CastType uint
 
 const (
-	ErrCastTypeNotImplemented   errs.Error = "cast type is not implemented"
-	ErrCastTypeNoColumnProvided errs.Error = "cast type requires a column to be provided"
-
 	CastTypeUnknown CastType = iota
 	CastTypeString
 	CastTypeText
@@ -31,6 +28,17 @@ const (
 	CastTypeUUID
 	CastTypeNull
 	CastTypeArray
+)
+
+var (
+	ErrCastTypeNotImplemented errors.Error = errors.New(
+		"CastTypeNotImplemented",
+		"cast type is not implemented",
+	)
+	ErrCastTypeNoColumnProvided errors.Error = errors.New(
+		"CastTypeNoColumnProvided",
+		"cast type requires a column to be provided",
+	)
 )
 
 func init() {

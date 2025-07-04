@@ -21,29 +21,28 @@ for wrapping and unwrapping errors from `github.com/pkg/errors`.
 */
 
 var (
-	NotImplemented    Error = New("Not implemented")
-	NoDatabase        Error = New("No database connection")
-	UnknownDriver     Error = New("Unknown driver")
-	NoTableName       Error = New("No table name")
-	NoWhereClause     Error = New("No where clause in query")
-	FieldNull         Error = New("Field cannot be null")
-	LastInsertId      Error = New("Last insert id is not valid")
-	UnsupportedLookup Error = New("Unsupported lookup type")
-	AlreadyExecuted   Error = New("Query has already been executed")
+	NotImplemented    Error = New(CodeNotImplemented, "Not implemented")
+	NoDatabase        Error = New(CodeNoDatabase, "No database connection")
+	UnknownDriver     Error = New(CodeUnknownDriver, "Unknown driver")
+	NoTableName       Error = New(CodeNoTableName, "No table name")
+	NoWhereClause     Error = New(CodeNoWhereClause, "No where clause in query")
+	FieldNull         Error = New(CodeFieldNull, "Field cannot be null")
+	LastInsertId      Error = New(CodeLastInsertId, "Last insert id is not valid")
+	UnsupportedLookup Error = New(CodeUnsupportedLookup, "Unsupported lookup type")
+	AlreadyExecuted   Error = New(CodeAlreadyExecuted, "Query has already been executed")
 
-	TypeMismatch  Error = New("received type does not match expected type")
-	NilPointer    Error = New("received nil pointer, expected a pointer to initialized value")
-	FieldNotFound Error = New("field not found in model definition")
-	ValueError    Error = New("error retrieving value")
-	NoUniqueKey   Error = New("could not find unique key for model")
-	SaveFailed    Error = New("failed to save model")
+	TypeMismatch  Error = New(CodeTypeMismatch, "received type does not match expected type")
+	NilPointer    Error = New(CodeNilPointer, "received nil pointer, expected a pointer to initialized value")
+	FieldNotFound Error = New(CodeFieldNotFound, "field not found in model definition")
+	ValueError    Error = New(CodeValueError, "error retrieving value")
+	NoUniqueKey   Error = New(CodeNoUniqueKey, "could not find unique key for model")
+	SaveFailed    Error = New(CodeSaveFailed, "failed to save model")
 
-	// ResultSet Errors
-	NoChanges          Error = New("No changes were made", sql.ErrNoRows)
-	NoResults          Error = New("No results found", sql.ErrNoRows)
-	NoRows             Error = New("No rows in result set", sql.ErrNoRows)
-	MultipleRows       Error = New("Multiple rows in result set")
-	UnexpectedRowCount Error = New("Unexpected row count in result set", sql.ErrNoRows)
+	NoChanges          Error = New(CodeNoChanges, "No changes were made", sql.ErrNoRows)
+	NoResults          Error = New(CodeNoResults, "No results found", sql.ErrNoRows)
+	NoRows             Error = New(CodeNoRows, "No rows in result set", sql.ErrNoRows)
+	MultipleRows       Error = New(CodeMultipleRows, "Multiple rows in result set")
+	UnexpectedRowCount Error = New(CodeUnexpectedRowCount, "Unexpected row count in result set", sql.ErrNoRows)
 
 	// Common Errors Across All
 	GenericError         DatabaseError = dbError(CodeGenericError, "Error")
@@ -70,7 +69,7 @@ var (
 	ConstraintNotFound DatabaseError = dbError(CodeConstraintNotFound, "Constraint not found", NotExists)
 
 	// Data & Type Errors
-	DBTypeMismatch      DatabaseError = dbError(CodeTypeMismatch, "Type mismatch or invalid cast", TypeMismatch)
+	DBTypeMismatch      DatabaseError = dbError(CodeDBTypeMismatch, "Type mismatch or invalid cast", TypeMismatch)
 	InvalidEnumValue    DatabaseError = dbError(CodeInvalidEnum, "Invalid enum value")
 	StringTooLong       DatabaseError = dbError(CodeStringTooLong, "String value is too long")
 	InvalidDefaultValue DatabaseError = dbError(CodeInvalidDefault, "Invalid default value")

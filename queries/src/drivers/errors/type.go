@@ -7,13 +7,15 @@ import (
 )
 
 type Error struct {
+	Code    GoCode
 	Reason  error
 	Message string
 	Related []error
 }
 
-func New(message string, related ...error) Error {
+func New(code GoCode, message string, related ...error) Error {
 	return Error{
+		Code:    code,
 		Message: message,
 		Related: related,
 	}
@@ -21,8 +23,9 @@ func New(message string, related ...error) Error {
 
 // Errorf formats according to a format specifier and returns the string
 // as a value that satisfies error.
-func Errorf(format string, args ...interface{}) error {
+func Errorf(code GoCode, format string, args ...interface{}) error {
 	return Error{
+		Code:    code,
 		Message: fmt.Sprintf(format, args...),
 	}
 }
@@ -57,9 +60,35 @@ func (e Error) WithCause(reason error) Error {
 	}
 }
 
+func (e Error) Wrap(message string) Error {
+	return Error{
+		Code:    e.Code,
+		Message: message,
+		Reason:  e.Reason,
+		Related: e.Related,
+	}
+}
+
+func (e Error) Wrapf(format string, args ...any) Error {
+	return Error{
+		Code:    e.Code,
+		Message: fmt.Sprintf(format, args...),
+		Reason:  e.Reason,
+		Related: e.Related,
+	}
+}
+
+func (e Error) equals(other Error) bool {
+	// If the codes are the same, we consider them equal.
+	if e.Code == other.Code && e.Code != "" {
+		return true
+	}
+	return e.Message == other.Message
+}
+
 func (e Error) Is(chk error) bool {
-	if e2, ok := chk.(Error); ok {
-		return (e.Message == e2.Message)
+	if e2, ok := chk.(Error); ok && e.equals(e2) {
+		return true
 	}
 	if chk == nil {
 		return false
@@ -88,7 +117,7 @@ func (e Error) Cause() error {
 
 type DatabaseError interface {
 	Error() string
-	Code() Code
+	Code() DBCode
 	Reason() error
 	WithCause(otherErr error) DatabaseError
 	Wrap(message string) DatabaseError
@@ -96,7 +125,7 @@ type DatabaseError interface {
 }
 
 type databaseError struct {
-	code    Code
+	code    DBCode
 	message string
 	reason  error
 	related []error
@@ -114,7 +143,7 @@ func InvalidDatabaseError(err error) DatabaseError {
 	}
 }
 
-func UnknownDatabaseError(code Code, message string, related ...error) DatabaseError {
+func UnknownDatabaseError(code DBCode, message string, related ...error) DatabaseError {
 	var err = new(databaseError)
 	err.code = code
 	err.message = message
@@ -123,7 +152,7 @@ func UnknownDatabaseError(code Code, message string, related ...error) DatabaseE
 	return err
 }
 
-func dbError(code Code, message string, related ...error) DatabaseError {
+func dbError(code DBCode, message string, related ...error) DatabaseError {
 	var err = new(databaseError)
 	err.code = code
 	err.message = message
@@ -132,7 +161,7 @@ func dbError(code Code, message string, related ...error) DatabaseError {
 	return err
 }
 
-func (e *databaseError) Code() Code {
+func (e *databaseError) Code() DBCode {
 	return e.code
 }
 
