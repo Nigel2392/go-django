@@ -17,11 +17,10 @@ package auth
 import (
 	"net/http"
 
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	"github.com/Nigel2392/go-django/src/core"
 )
 
-func Login(r *http.Request, u *models.User) (*models.User, error) {
+func Login(r *http.Request, u *User) (*User, error) {
 	core.SIGNAL_USER_LOGGED_IN.Send(core.UserWithRequest{
 		User: u,
 		Req:  r,

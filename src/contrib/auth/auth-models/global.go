@@ -7,10 +7,6 @@ import (
 	models "github.com/Nigel2392/go-django/src/models"
 )
 
-var (
-	queries DBQuerier
-)
-
 type Querier interface {
 	Count(ctx context.Context) (int64, error)
 	CountMany(ctx context.Context, isActive bool, isAdministrator bool) (int64, error)
@@ -46,10 +42,6 @@ func (q *dbQuerier) Begin(ctx context.Context) (drivers.Transaction, error) {
 }
 
 func NewQueries(db drivers.Database) (DBQuerier, error) {
-	if queries != nil {
-		return queries, nil
-	}
-
 	var backend, err = BackendForDB(db.Driver())
 	if err != nil {
 		return nil, err

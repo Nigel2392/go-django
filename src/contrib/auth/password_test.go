@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/Nigel2392/go-django/src/contrib/auth"
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 )
 
@@ -171,8 +170,8 @@ func TestPasswords(t *testing.T) {
 		for _, test := range passwordHashTests {
 			t.Run(test.TestName, func(t *testing.T) {
 				test.ExpectedError = test.ExpectedError || len(test.Errors) != 0
-				var u = &models.User{
-					Password: models.Password(test.Hash),
+				var u = &auth.User{
+					Password: auth.Password(test.Hash),
 				}
 
 				if !auth.IS_HASHED(string(u.Password)) {
@@ -207,8 +206,8 @@ func TestPasswords(t *testing.T) {
 
 	for _, test := range passwordSetTests {
 		t.Run(test.TestName, func(t *testing.T) {
-			var u = &models.User{
-				Password: models.Password(test.Hash),
+			var u = &auth.User{
+				Password: auth.Password(test.Hash),
 			}
 
 			var err = auth.SetPassword(u, test.Password)

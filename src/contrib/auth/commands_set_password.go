@@ -3,7 +3,7 @@ package auth
 import (
 	"context"
 
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
@@ -14,7 +14,7 @@ var command_set_password = &command.Cmd[interface{}]{
 	Execute: func(m command.Manager, stored interface{}, args []string) error {
 		var (
 			ctx                 = context.Background()
-			uRow                *models.User
+			user                *User
 			identifier          string
 			password, password2 string
 			err                 error
@@ -52,17 +52,22 @@ var command_set_password = &command.Cmd[interface{}]{
 				continue
 			}
 
-			var err error
+			var userRow *queries.Row[*User]
 			if Auth.LoginWithEmail {
-				uRow, err = Auth.Queries.RetrieveByEmail(ctx, identifier)
+				userRow, err = queries.GetQuerySetWithContext(ctx, &User{}).
+					Filter("Email", identifier).
+					Get()
 			} else {
-				uRow, err = Auth.Queries.RetrieveByUsername(ctx, identifier)
+				userRow, err = queries.GetQuerySetWithContext(ctx, &User{}).
+					Filter("Username", identifier).
+					Get()
 			}
 			if err != nil {
 				logger.Fatal(1, err)
 			}
 
-			if err = SetPassword(uRow, password); err != nil {
+			user = userRow.Object
+			if err = SetPassword(user, password); err != nil {
 				logger.Warn(err)
 				continue
 			}
@@ -70,10 +75,6 @@ var command_set_password = &command.Cmd[interface{}]{
 			break
 		}
 
-		return Auth.Queries.UpdateUser(
-			ctx, uRow.Email.Address, uRow.Username, string(uRow.Password),
-			uRow.FirstName, uRow.LastName, uRow.IsAdministrator, uRow.IsActive, uRow.ID,
-		)
-
+		return user.Save(ctx)
 	},
 }

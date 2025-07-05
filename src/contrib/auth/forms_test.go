@@ -31,10 +31,6 @@ func init() {
 		panic(err)
 	}
 
-	auth.Auth.Queries, err = auth_models.NewQueries(db)
-	if err != nil {
-		panic(err)
-	}
 }
 
 type testUser struct {

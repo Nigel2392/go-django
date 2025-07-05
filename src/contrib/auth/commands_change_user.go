@@ -5,7 +5,7 @@ import (
 	"flag"
 	"net/mail"
 
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
@@ -25,19 +25,14 @@ var command_change_user = &command.Cmd[changeUserStorage]{
 	},
 	Execute: func(m command.Manager, stored changeUserStorage, args []string) error {
 		var (
-			u          = &models.User{}
-			retrieve   func(context.Context, string) (*models.User, error)
+			u          = &User{}
+			ctx        = context.Background()
 			identifier string
 			err        error
 		)
 
-		if Auth.LoginWithEmail {
-			retrieve = Auth.Queries.RetrieveByEmail
-		} else {
-			retrieve = Auth.Queries.RetrieveByUsername
-		}
-
 		for {
+			var userRow *queries.Row[*User]
 			if Auth.LoginWithEmail {
 				if identifier, err = m.Input("Enter email: "); err != nil {
 					continue
@@ -49,31 +44,33 @@ var command_change_user = &command.Cmd[changeUserStorage]{
 					identifier = ""
 					continue
 				}
+
+				userRow, err = queries.GetQuerySetWithContext(ctx, &User{}).
+					Filter("Email", identifier).
+					Get()
+
 			} else {
 				if identifier, err = m.Input("Enter username: "); err != nil {
 					continue
 				}
-			}
 
-			u, err = retrieve(
-				context.Background(),
-				identifier,
-			)
+				userRow, err = queries.GetQuerySetWithContext(ctx, &User{}).
+					Filter("Username", identifier).
+					Get()
+			}
 
 			if err != nil {
 				logger.Warn("Error retrieving user: %v", err)
 				identifier = ""
 				continue
 			}
-
+			u = userRow.Object
 			break
 		}
 
 		u.IsAdministrator = stored.super
 		u.IsActive = !stored.inactive
 
-		var ctx = context.Background()
-		err = models.UpdateUser(ctx, u)
-		return err
+		return u.Save(ctx)
 	},
 }

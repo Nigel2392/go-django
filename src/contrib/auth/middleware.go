@@ -3,7 +3,7 @@ package auth
 import (
 	"net/http"
 
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -12,18 +12,18 @@ import (
 
 const SESSION_COOKIE_NAME = "user_authentication"
 
-func UnAuthenticatedUser() *models.User {
-	return &models.User{
+func UnAuthenticatedUser() *User {
+	return &User{
 		IsLoggedIn: false,
 	}
 }
 
 // Get the user from a request.
-func UserFromRequest(r *http.Request) *models.User {
+func UserFromRequest(r *http.Request) *User {
 
 	var u = authentication.Retrieve(r)
 	if u != nil {
-		return u.(*models.User)
+		return u.(*User)
 	}
 
 	var session = sessions.Retrieve(r)
@@ -42,11 +42,12 @@ func UserFromRequest(r *http.Request) *models.User {
 	if !ok {
 		return UnAuthenticatedUser()
 	}
-	var user, err = Auth.Queries.RetrieveByID(r.Context(), uidInt)
+	var userRow, err = queries.GetQuerySet(&User{}).Filter("ID", uidInt).Get()
 	if err != nil {
 		return UnAuthenticatedUser()
 	}
 
+	user := userRow.Object
 	user.IsLoggedIn = true
 	return user
 }

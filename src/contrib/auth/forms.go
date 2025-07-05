@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/mail"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -204,7 +204,9 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 					errs.ErrFieldRequired, "Email is required",
 				)}
 			}
-			_, err = Auth.Queries.RetrieveByEmail(ctx, email.(*mail.Address).Address)
+			_, err = queries.GetQuerySetWithContext(ctx, &User{}).
+				Filter("Email", email.(*mail.Address).Address).
+				Get()
 			if err == nil {
 				return []error{errors.Wrap(
 					autherrors.ErrUserExists, "Email exists",
@@ -225,7 +227,9 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 					errs.ErrFieldRequired, "Username is required",
 				)}
 			}
-			_, err = Auth.Queries.RetrieveByUsername(ctx, username.(string))
+			_, err = queries.GetQuerySetWithContext(ctx, &User{}).
+				Filter("Username", username.(string)).
+				Get()
 			if err == nil {
 				return []error{errors.Wrap(
 					autherrors.ErrUserExists, "Username exists",
@@ -241,7 +245,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 type BaseUserForm struct {
 	*forms.BaseForm
 	Request  *http.Request
-	Instance *models.User
+	Instance *User
 	canSave  bool
 	config   *RegisterFormConfig
 }
@@ -268,7 +272,7 @@ func (f *BaseUserForm) basicChecks() error {
 	return nil
 }
 
-func (f *BaseUserForm) Save() (*models.User, error) {
+func (f *BaseUserForm) Save() (*User, error) {
 	if err := f.basicChecks(); err != nil {
 		return nil, err
 	}
@@ -282,7 +286,7 @@ func (f *BaseUserForm) Save() (*models.User, error) {
 		err     error
 	)
 	if f.Instance == nil {
-		f.Instance = &models.User{}
+		f.Instance = &User{}
 	}
 	if f.config == nil {
 		f.config = &RegisterFormConfig{}
@@ -333,19 +337,24 @@ func (f *BaseUserForm) Login() error {
 	var (
 		ctx     = f.Request.Context()
 		cleaned = f.CleanedData()
-		user    *models.User
+		userRow *queries.Row[*User]
 		err     error
 	)
 	if Auth.LoginWithEmail {
 		var m = cleaned["email"].(*mail.Address)
-		user, err = Auth.Queries.RetrieveByEmail(ctx, m.Address)
+		userRow, err = queries.GetQuerySetWithContext(ctx, &User{}).
+			Filter("Email", m.Address).
+			Get()
 	} else {
-		user, err = Auth.Queries.RetrieveByUsername(ctx, cleaned["username"].(string))
+		userRow, err = queries.GetQuerySetWithContext(ctx, &User{}).
+			Filter("Username", cleaned["username"]).
+			Get()
 	}
 	if err != nil {
 		return autherrors.ErrGenericAuthFail
 	}
 
+	var user = userRow.Object
 	if err := CheckPassword(user, string(cleaned["password"].(PasswordString))); err != nil {
 		return autherrors.ErrGenericAuthFail
 	}

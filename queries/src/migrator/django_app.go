@@ -21,14 +21,41 @@ type MigrationAppConfig interface {
 	GetMigrationFS() fs.FS
 }
 
+//
+//	type ActsAfterMakeMigrations interface {
+//		MigrationsMade(ctx context.Context, schema SchemaEditor) error
+//	}
+//
+//	type ActsAfterMigrate interface {
+//		Migrated(ctx context.Context, schema SchemaEditor) error
+//	}
+
 type MigratorAppConfig struct {
 	django.AppConfig
 	MigrationFS fs.FS
+	//	AfterMakeMigrations func(ctx context.Context, schema SchemaEditor) error
+	//	AfterMigrate        func(ctx context.Context, schema SchemaEditor) error
 }
 
 func (m *MigratorAppConfig) GetMigrationFS() fs.FS {
 	return m.MigrationFS
 }
+
+//	func (m *MigratorAppConfig) MigrationsMade(ctx context.Context, schema SchemaEditor) error {
+//		if m.AfterMakeMigrations == nil {
+//			return nil
+//		}
+//
+//		return m.AfterMakeMigrations(ctx, schema)
+//	}
+//
+//	func (m *MigratorAppConfig) Migrated(ctx context.Context, schema SchemaEditor) error {
+//		if m.AfterMigrate == nil {
+//			return nil
+//		}
+//
+//		return m.AfterMigrate(ctx, schema)
+//	}
 
 type migratorAppConfig struct {
 	*apps.DBRequiredAppConfig

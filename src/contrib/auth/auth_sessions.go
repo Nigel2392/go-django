@@ -6,14 +6,13 @@ package auth
 import (
 	"net/http"
 
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
-func Login(r *http.Request, u *models.User) (*models.User, error) {
+func Login(r *http.Request, u *User) (*User, error) {
 	var session = sessions.Retrieve(r)
 	except.Assert(session != nil, 500, "session is nil")
 

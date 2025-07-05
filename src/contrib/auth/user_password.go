@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -73,15 +72,15 @@ func isBcryptHash(s string) bool {
 	return err == nil
 }
 
-func SetPassword(u *models.User, password string) error {
+func SetPassword(u *User, password string) error {
 	var pw, err = HASHER(password)
 	if err != nil {
 		return err
 	}
-	u.Password = models.Password(pw)
+	u.Password = Password(pw)
 	return nil
 }
 
-func CheckPassword(u *models.User, password string) error {
+func CheckPassword(u *User, password string) error {
 	return CHECKER(string(u.Password), password)
 }

@@ -6,7 +6,6 @@ import (
 	"net/mail"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
@@ -26,7 +25,7 @@ var command_create_user = &command.Cmd[createUserStorage]{
 	},
 	Execute: func(m command.Manager, stored createUserStorage, args []string) error {
 		var (
-			u                   = &models.User{}
+			u                   = &User{}
 			isValid             = false
 			email, username     string
 			password, password2 string
@@ -87,7 +86,6 @@ var command_create_user = &command.Cmd[createUserStorage]{
 		u.IsActive = !stored.inactive
 
 		var ctx = context.Background()
-		_, err = models.CreateUser(ctx, u)
-		return err
+		return u.Save(ctx)
 	},
 }

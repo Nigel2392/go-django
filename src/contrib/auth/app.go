@@ -1,16 +1,14 @@
 package auth
 
 import (
-	"context"
 	"fmt"
 	"net/http"
-	"strconv"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
-	models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -22,14 +20,11 @@ import (
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
-	django_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/alexedwards/scs/v2"
 
-	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-models/auth-models-mysql"
-	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-models/auth-models-sqlite"
 	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/auth-permissions-mysql"
 	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/auth-permissions-sqlite"
 )
@@ -37,7 +32,6 @@ import (
 // The AuthApplication struct is the main struct used for the auth app.
 type AuthApplication struct {
 	*apps.AppConfig
-	Queries        models.DBQuerier
 	Session        *scs.SessionManager
 	LoginWithEmail bool
 }
@@ -55,7 +49,7 @@ func NewAppConfig() django.AppConfig {
 		command_set_password,
 	}
 	app.ModelObjects = []attrs.Definer{
-		&models.User{},
+		&User{},
 	}
 	app.Routing = func(m django.Mux) {
 		m.Use(
@@ -90,27 +84,26 @@ func NewAppConfig() django.AppConfig {
 		assert.True(ok, "DATABASE setting is required for 'auth' app")
 
 		db, ok := dbInt.(drivers.Database)
-		assert.True(ok, "DATABASE setting must adhere to auth-models.drivers.DB interface")
+		assert.True(ok, "DATABASE setting must adhere to auth-drivers.DB interface")
 
-		var (
-			q   models.DBQuerier
-			b   django_models.Backend[models.Querier]
-			err error
-		)
+		if !django.AppInstalled("migrator") {
+			var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())
+			if err != nil {
+				return fmt.Errorf("failed to get schema editor: %w", err)
+			}
 
-		if q, err = models.NewQueries(db); err != nil {
-			return err
+			var table = migrator.NewModelTable(&User{})
+			if err := schemaEditor.CreateTable(table, true); err != nil {
+				return fmt.Errorf("failed to create pages table: %w", err)
+			}
+
+			for _, index := range table.Indexes() {
+				if err := schemaEditor.AddIndex(table, index, true); err != nil {
+					return fmt.Errorf("failed to create index %s: %w", index.Name(), err)
+				}
+			}
 		}
 
-		if b, err = models.BackendForDB(db.Driver()); err != nil {
-			return err
-		}
-
-		if err := b.CreateTable(db); err != nil {
-			return err
-		}
-
-		Auth.Queries = q
 		Auth.Session = sess
 		Auth.CtxProcessors = []func(ctx.ContextWithRequest){}
 
@@ -143,37 +136,10 @@ func NewAppConfig() django.AppConfig {
 		// This allows for the user model to be used in the admin app,
 		// as well as in other apps that require it.
 		contenttypes.Register(&contenttypes.ContentTypeDefinition{
-			ContentObject:  &models.User{},
+			ContentObject:  &User{},
 			GetLabel:       trans.S("User"),
 			GetPluralLabel: trans.S("Users"),
 			GetDescription: trans.S("User model for authentication"),
-			GetInstance: func(i interface{}) (interface{}, error) {
-				var id, ok = i.(int)
-				if !ok {
-					var u, err = strconv.Atoi(fmt.Sprint(i))
-					if err != nil {
-						return nil, err
-					}
-					id = u
-				}
-				return Auth.Queries.RetrieveByID(
-					context.Background(),
-					uint64(id),
-				)
-			},
-			GetInstances: func(amount, offset uint) ([]interface{}, error) {
-				var users, err = Auth.Queries.Retrieve(
-					context.Background(), int32(amount), int32(offset),
-				)
-				if err != nil {
-					return nil, err
-				}
-				var items = make([]interface{}, 0)
-				for _, u := range users {
-					items = append(items, u)
-				}
-				return items, nil
-			},
 		})
 
 		// Register the user model and the auth app with the admin app.
@@ -189,7 +155,7 @@ func NewAppConfig() django.AppConfig {
 			},
 			// Register the user model with the admin app.
 			admin.ModelOptions{
-				Model:               &models.User{},
+				Model:               &User{},
 				RegisterToAdminMenu: true,
 				Labels: map[string]func() string{
 					"ID":              trans.S("ID"),
@@ -269,7 +235,7 @@ func NewAppConfig() django.AppConfig {
 		)
 
 		// Register the auth apps' password field with go-django.
-		attrs.RegisterFormFieldType(models.Password(""), func(opts ...func(fields.Field)) fields.Field {
+		attrs.RegisterFormFieldType(Password(""), func(opts ...func(fields.Field)) fields.Field {
 			var newOpts = []func(fields.Field){
 				fields.HelpText("Enter your password"),
 				fields.Required(true),
@@ -328,7 +294,7 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 		if password1 != "" && password2 != "" && password1 != password2 {
 			return []error{autherrors.ErrPwdNoMatch}
 		} else if password1 != "" && password2 != "" && password1 == password2 {
-			var fake = *(instance.(*models.User))
+			var fake = *(instance.(*User))
 			SetPassword(&fake, string(password1))
 			cleaned["Password"] = string(fake.Password)
 		}

@@ -585,6 +585,67 @@ type RebindCompiler interface {
 	Rebind(s string) string
 }
 
+//	// A queryset is a collection of queries that can be executed against a database.
+//	//
+//	// It is used to retrieve, create, update, and delete objects from the database.
+//	// It is also used to filter, order, and annotate the objects in the database.
+//	type querySet[T attrs.Definer, QS any, ITRNL any] interface {
+//		Aggregate(annotations map[string]expr.Expression) (map[string]any, error)
+//		All() (Rows[T], error)
+//		Annotate(aliasOrAliasMap interface{}, exprs ...expr.Expression) QS
+//		BatchCreate(objects []T) ([]T, error)
+//		BatchUpdate(objects []T, exprs ...any) (int64, error)
+//		BulkCreate(objects []T) ([]T, error)
+//		BulkUpdate(objects []T, expressions ...any) (int64, error)
+//		Clone() QS
+//		Compiler() QueryCompiler
+//		Context() context.Context
+//		Count() (int64, error)
+//		Create(value T) (T, error)
+//		DB() drivers.DB
+//		Delete(objects ...T) (int64, error)
+//		Distinct() QS
+//		Exec(sqlStr string, args ...interface{}) (sql.Result, error)
+//		Exists() (bool, error)
+//		ExplicitSave() QS
+//		Filter(key interface{}, vals ...interface{}) QS
+//		First() (*Row[T], error)
+//		ForUpdate() QS
+//		Get() (*Row[T], error)
+//		GetOrCreate(value T) (T, bool, error)
+//		GetOrCreateTransaction() (tx drivers.Transaction, err error)
+//		GoString() string
+//		GroupBy(fields ...any) QS
+//		Having(key interface{}, vals ...interface{}) QS
+//		Last() (*Row[T], error)
+//		LatestQuery() QueryInfo
+//		Limit(n int) QS
+//		Model() attrs.Definer
+//		Offset(n int) QS
+//		OrderBy(fields ...string) QS
+//		Prefix(prefix string) QS
+//		Reverse() QS
+//		Row(sqlStr string, args ...interface{}) drivers.SQLRow
+//		Rows(sqlStr string, args ...interface{}) (drivers.SQLRows, error)
+//		Scope(scopes ...func(QS, ITRNL) QS) QS
+//		Select(fields ...any) QS
+//		StartTransaction(ctx context.Context) (drivers.Transaction, error)
+//		String() string
+//		Update(value T, expressions ...any) (int64, error)
+//		Values(fields ...any) ([]map[string]any, error)
+//		ValuesList(fields ...any) ([][]interface{}, error)
+//		WithContext(ctx context.Context) QS
+//		WithTransaction(tx drivers.Transaction) (drivers.Transaction, error)
+//	}
+//
+//	type ModelQuerySet[T attrs.Definer] interface {
+//		querySet[T, *QuerySet[T], *QuerySetInternals]
+//	}
+//
+//	type ModelGenericQuerySet interface {
+//		QuerySet[attrs.Definer]
+//	}
+
 var compilerRegistry = make(map[reflect.Type]func(defaultDB string) QueryCompiler)
 
 // RegisterCompiler registers a compiler for a given driver.

@@ -127,7 +127,7 @@ if you need a content type to join to a model that has a polymorphic relation.
 
 ```go
 type TargetClauseField interface {
-    GenerateTargetClause(qs *QuerySet[attrs.Definer], internals *QuerySetInternals, lhs ClauseTarget, rhs ClauseTarget) JoinDef
+    GenerateTargetClause(qs QuerySet[attrs.Definer], internals *QuerySetInternals, lhs ClauseTarget, rhs ClauseTarget) JoinDef
 }
 ```
 
@@ -142,7 +142,7 @@ for custom JOIN logic based on the field's definition and the through model.
 
 ```go
 type TargetClauseThroughField interface {
-    GenerateTargetThroughClause(qs *QuerySet[attrs.Definer], internals *QuerySetInternals, lhs ClauseTarget, through ThroughClauseTarget, rhs ClauseTarget) (JoinDef, JoinDef)
+    GenerateTargetThroughClause(qs QuerySet[attrs.Definer], internals *QuerySetInternals, lhs ClauseTarget, through ThroughClauseTarget, rhs ClauseTarget) (JoinDef, JoinDef)
 }
 ```
 
@@ -232,7 +232,7 @@ Overrides the queryset returned when using `GetQuerySet()`.
 ```go
 type QuerySetDefiner interface {
     attrs.Definer
-    GetQuerySet() *QuerySet[attrs.Definer]
+    GetQuerySet() QuerySet[attrs.Definer]
 }
 ```
 
@@ -245,7 +245,7 @@ Basically the `GetQuerySet`, but the queryset is already passed in and should be
 ```go
 type QuerySetChanger interface {
     attrs.Definer
-    ChangeQuerySet(qs *QuerySet[attrs.Definer]) *QuerySet[attrs.Definer]
+    ChangeQuerySet(qs QuerySet[attrs.Definer]) QuerySet[attrs.Definer]
 }
 ```
 
@@ -474,21 +474,21 @@ type QueryCompiler interface {
     // BuildSelectQuery builds a select query with the given parameters.
     BuildSelectQuery(
         ctx context.Context,
-        qs *QuerySet[attrs.Definer],
+        qs QuerySet[attrs.Definer],
         internals *QuerySetInternals,
     ) CompiledQuery[[][]interface{}]
 
     // BuildCountQuery builds a count query with the given parameters.
     BuildCountQuery(
         ctx context.Context,
-        qs *QuerySet[attrs.Definer],
+        qs QuerySet[attrs.Definer],
         internals *QuerySetInternals,
     ) CompiledQuery[int64]
 
     // BuildCreateQuery builds a create query with the given parameters.
     BuildCreateQuery(
         ctx context.Context,
-        qs *QuerySet[attrs.Definer],
+        qs QuerySet[attrs.Definer],
         internals *QuerySetInternals,
         objects []*FieldInfo[attrs.Field],
         values []any,
@@ -504,7 +504,7 @@ type QueryCompiler interface {
     // BuildUpdateQuery builds an update query with the given parameters.
     BuildDeleteQuery(
         ctx context.Context,
-        qs *QuerySet[attrs.Definer],
+        qs QuerySet[attrs.Definer],
         internals *QuerySetInternals,
     ) CompiledQuery[int64]
 }
