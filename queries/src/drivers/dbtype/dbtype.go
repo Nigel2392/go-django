@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"iter"
 	"reflect"
-	"sync/atomic"
+	"sync"
 
+	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-signals"
 )
 
 type Type int
@@ -23,6 +25,7 @@ const (
 	Decimal
 	Bool
 	UUID
+	ULID
 	Bytes
 	JSON
 	BLOB
@@ -56,6 +59,7 @@ var typeNames = map[Type]string{
 	Decimal:   "DECIMAL",
 	Bool:      "BOOL",
 	UUID:      "UUID",
+	ULID:      "ULID",
 	Bytes:     "BYTES",
 	JSON:      "JSON",
 	BLOB:      "BLOB",
@@ -76,7 +80,7 @@ func (t Type) String() string {
 	if name, exists := typeNames[t]; exists {
 		return name
 	}
-	return "UNKNOWN"
+	return "INVALID"
 }
 
 func (t Type) MarshalJSON() ([]byte, error) {
@@ -104,29 +108,66 @@ func NewFromString(s string) (Type, bool) {
 	return Invalid, false
 }
 
-var TYPES = typeRegistry{
-	byType: make(map[reflect.Type]Type),
-	byKind: make(map[reflect.Kind]Type),
+// The TypeRegistry interface defines methods for managing a registry of database types.
+// It is only used for the signal before the type registry is locked.
+type TypeRegistry interface {
+	Add(srcTyp any, dbType Type, forceKind ...bool) bool
+	For(typ reflect.Type) (dbType Type, exists bool)
+	IsLocked() bool
+	Lock() (success bool)
+	Types() iter.Seq2[reflect.Type, Type]
+	Unlock()
 }
 
+var TYPES = &typeRegistry{
+	byType: make(map[reflect.Type]Type),
+	byKind: make(map[reflect.Kind]Type),
+	Locked: signals.New[TypeRegistry]("dbtype.TYPES.Locked"),
+}
+
+// Add a type to the registry.
+//
+// The srcTyp can be a [reflect.Type], [reflect.Value], [reflect.Kind], or we use reflect.TypeOf(srcTyp) to get the type.
+// The dbType is the database type to bind to the srcTyp.
+//
+// If forceKind is true, the kind of the srcTyp will be used to register the type as well.
+//
+// After adding the type, calling `For(reflect.Type)` will return the dbType for the srcTyp.
+//
+// This function will only return false if the type registry is locked.
 func Add(srcTyp any, dbType Type, forceKind ...bool) bool {
 	return TYPES.Add(srcTyp, dbType, forceKind...)
 }
 
+// For returns the database type for the given [reflect.Type].
+//
+// If the type is not registered, it will return the default type (Text).
 func For(typ reflect.Type) (dbType Type, exists bool) {
 	return TYPES.For(typ)
 }
 
+// Types returns a sequence of all registered types in the registry.
+// It yields pairs of [reflect.Type] and [Type], allowing iteration over all registered types.
+// This is useful for introspection, debugging purposes and type management.
+//
+// Currently, it is only used in [drivers.registerTypeConversions] for converting a [string] of `<pkgpath.typename>` to [reflect.Type] for the
+// initialization of default values during migrations for older migration files who's default value type might not match the current type.
+// this is because the type registry provides a nice and unified way to handle go types which are also used in the database drivers.
 func Types() iter.Seq2[reflect.Type, Type] {
 	return TYPES.Types()
 }
 
+// Lock locks the type registry.
+//
+// This is used to prevent further modifications to the type registry after it has been locked.
+//
+// It is used to ensure that the type registry is not modified after everything has been setup and registered.
 func Lock() {
-	if TYPES.locked.CompareAndSwap(false, true) {
-		return
+	if !TYPES.Lock() {
+		// if you are looking at this, and you really need to unlock the type registry,
+		// for some reason, please interact with the TYPES variable directly.
+		panic("Type registry is already locked, cannot lock again")
 	}
-	// logger.Warn("Type registry is already locked, cannot modify types")
-	panic("Type registry is already locked, cannot modify types")
 }
 
 // IsLocked checks if the type registry is locked.
@@ -143,7 +184,17 @@ func IsLocked() bool {
 type typeRegistry struct {
 	byType map[reflect.Type]Type
 	byKind map[reflect.Kind]Type
-	locked atomic.Bool
+
+	// we use TryLock to avoid deadlocks in some cases - this is
+	// so types can still be registered inside of the Locked
+	// signal, which is sent when the type registry is locked.
+	//
+	// we use a mutex to ensure that the locked state is consistent
+	// during function calls, using an atomic.Bool would not be enough
+	// because the value is read and written multiple times
+	mu     sync.Mutex
+	locked bool
+	Locked signals.Signal[TypeRegistry]
 }
 
 func (r *typeRegistry) registerType(typ reflect.Type, dbType Type) {
@@ -174,8 +225,11 @@ func (r *typeRegistry) registerKind(knd reflect.Kind, dbType Type) {
 }
 
 func (r *typeRegistry) Add(srcTyp any, dbType Type, forceKind ...bool) bool {
+	if r.mu.TryLock() {
+		defer r.mu.Unlock()
+	}
 
-	if r.locked.Load() {
+	if r.locked {
 		logger.Warn("Type registry is locked, cannot add new types")
 		return false
 	}
@@ -242,23 +296,39 @@ func (r *typeRegistry) Types() iter.Seq2[reflect.Type, Type] {
 	}
 }
 
-func (r *typeRegistry) Lock() {
-	if r.locked.CompareAndSwap(false, true) {
-		return
+func (r *typeRegistry) Lock() bool {
+	if r.mu.TryLock() {
+		defer r.mu.Unlock()
 	}
-	logger.Warn("Type registry is already locked, cannot modify types")
+
+	if !r.locked {
+		assert.Err(r.Locked.Send(r))
+		r.locked = true
+		return true
+	}
+
+	return false
 }
 
 func (r *typeRegistry) IsLocked() bool {
-	return r.locked.Load()
+	if r.mu.TryLock() {
+		defer r.mu.Unlock()
+	}
+	return r.locked
 }
 
 // Unlock releases the lock on the type registry.
 //
 // This is only used in tests, and thus not exported as a global function.
 func (r *typeRegistry) Unlock() {
-	if r.locked.CompareAndSwap(true, false) {
+	if r.mu.TryLock() {
+		defer r.mu.Unlock()
+	}
+
+	if r.locked {
+		r.locked = false
 		return
 	}
+
 	logger.Warn("Type registry is not locked, cannot unlock")
 }

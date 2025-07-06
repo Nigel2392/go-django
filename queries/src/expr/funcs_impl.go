@@ -99,6 +99,8 @@ func newFunc(funcLookup string, value []any, expr ...any) *Function {
 	var inner = make([]Expression, 0, len(expr))
 	for _, e := range expr {
 		switch v := e.(type) {
+		case ExpressionBuilder:
+			inner = append(inner, v.BuildExpression())
 		case Expression:
 			inner = append(inner, v)
 		case string:
@@ -145,6 +147,10 @@ func CONCAT(expr ...any) *Function {
 
 func SUBSTR(expr any, start, length any) *Function {
 	return newFunc("SUBSTR", []any{start, length}, expr)
+}
+
+func EXISTS(expr any) *Function {
+	return newFunc("EXISTS", []any{}, expr)
 }
 
 func UPPER(expr any) *Function {

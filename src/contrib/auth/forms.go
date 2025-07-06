@@ -7,8 +7,10 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -286,8 +288,11 @@ func (f *BaseUserForm) Save() (*User, error) {
 		err     error
 	)
 	if f.Instance == nil {
-		f.Instance = &User{}
+		f.Instance = attrs.NewObject[*User](&User{})
 	}
+
+	f.Instance = models.Setup(f.Instance)
+
 	if f.config == nil {
 		f.config = &RegisterFormConfig{}
 	}

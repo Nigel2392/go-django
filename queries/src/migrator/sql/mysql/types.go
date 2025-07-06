@@ -33,6 +33,7 @@ func init() {
 	registerType(dbtype.Float, Type__float)
 	registerType(dbtype.Decimal, Type__decimal)
 	registerType(dbtype.UUID, Type__uuid)
+	registerType(dbtype.ULID, Type__ulid)
 	registerType(dbtype.BLOB, Type__blob)
 	registerType(dbtype.JSON, Type__string)
 	registerType(dbtype.Timestamp, Type__timestamp)
@@ -65,6 +66,12 @@ func Type__string(c *migrator.Column) string {
 	sb.WriteString(strconv.FormatInt(max, 10))
 	sb.WriteString(")")
 	return sb.String()
+}
+
+func Type__ulid(c *migrator.Column) string {
+	// ULID is stored as a string of 26 characters
+	// in MySQL, we can use VARCHAR(26) for this purpose
+	return "VARCHAR(26)"
 }
 
 func Type__char(c *migrator.Column) string {

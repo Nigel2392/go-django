@@ -757,8 +757,7 @@ func (m *Model) Save(ctx context.Context) error {
 
 	if m.internals == nil || m.internals.object == nil {
 		return errors.NotImplemented.WithCause(fmt.Errorf(
-			"cannot save model %T: %w",
-			m.internals.object.Interface(), ErrModelInitialized,
+			"cannot save model %w", ErrModelInitialized,
 		))
 		//return fmt.Errorf(
 		//	"cannot save object: %w: %w",
@@ -951,7 +950,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	var querySet = cnf.QuerySet
 	if querySet == nil {
 		querySet = queries.
-			Objects(cnf.this).
+			GetQuerySet(cnf.this).
 			Select(selectFields...).
 			ExplicitSave()
 	}

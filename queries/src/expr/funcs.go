@@ -216,6 +216,22 @@ func init() {
 		args = value[0].SQL(&sb)
 		return fmt.Sprintf("DATE(%s)", sb.String()), args, nil
 	})
+	RegisterFunc("EXISTS", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
+		if len(value) != 1 {
+			return "", []any{}, fmt.Errorf("EXISTS lookup requires exactly one value")
+		}
+		var sb strings.Builder
+		args = value[0].SQL(&sb)
+		switch d.(type) {
+		case *drivers.DriverMySQL, *drivers.DriverMariaDB:
+			return fmt.Sprintf("EXISTS (%s)", sb.String()), args, nil
+		case *drivers.DriverPostgres:
+			return fmt.Sprintf("EXISTS (%s)", sb.String()), args, nil
+		case *drivers.DriverSQLite:
+			return fmt.Sprintf("EXISTS (%s)", sb.String()), args, nil
+		}
+		return "", nil, fmt.Errorf("unsupported driver for EXISTS: %T", d)
+	})
 	RegisterFunc("DATE_FORMAT", func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error) {
 		if len(value) != 1 && len(funcParams) != 1 {
 			return "", []any{}, fmt.Errorf("DATE_FORMAT lookup requires exactly one value and one format parameter")

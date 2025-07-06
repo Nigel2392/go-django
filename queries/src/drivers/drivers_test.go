@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/djester/testdb"
+	"github.com/go-sql-driver/mysql"
 	sqlite3 "github.com/mattn/go-sqlite3"
 )
 
@@ -105,6 +106,56 @@ func TestSqliteDatabaseError(t *testing.T) {
 
 			if got.Code() != test.expected.Code() {
 				t.Errorf("Expected %s, got %s", test.expected.Code(), got.Code())
+			}
+		})
+	}
+}
+
+func TestMySQLDatabaseError(t *testing.T) {
+	tests := []struct {
+		name     string
+		mysqlErr *mysql.MySQLError
+		expected errors.DatabaseError
+	}{
+		{"DuplicateEntry", &mysql.MySQLError{Number: 1062, Message: "Duplicate entry"}, errors.UniqueViolation},
+		{"BadNull", &mysql.MySQLError{Number: 1048, Message: "Column cannot be null"}, errors.NullViolation},
+		{"NoReferencedRow", &mysql.MySQLError{Number: 1216}, errors.ForeignKeyViolation},
+		{"RowIsReferenced", &mysql.MySQLError{Number: 1451}, errors.ForeignKeyViolation},
+		{"CheckViolation", &mysql.MySQLError{Number: 3819}, errors.CheckViolation},
+		{"SyntaxError", &mysql.MySQLError{Number: 1064}, errors.SyntaxError},
+		{"InvalidColumn", &mysql.MySQLError{Number: 1054}, errors.InvalidColumn},
+		{"InvalidTable", &mysql.MySQLError{Number: 1146}, errors.InvalidTable},
+		{"DivisionByZero", &mysql.MySQLError{Number: 1365}, errors.DivisionByZero},
+		{"TypeMismatch", &mysql.MySQLError{Number: 1264}, errors.DBTypeMismatch},
+		{"QueryTimeout", &mysql.MySQLError{Number: 1205}, errors.QueryTimeout},
+		{"Deadlock", &mysql.MySQLError{Number: 1213}, errors.DeadlockDetected},
+		{"ConnectionFailed", &mysql.MySQLError{Number: 2002}, errors.ConnectionFailed},
+		{"ConnectionLost", &mysql.MySQLError{Number: 2013}, errors.ConnectionLost},
+		{"ConnectionClosed", &mysql.MySQLError{Number: 2006}, errors.ConnectionClosed},
+		{"AuthFailed", &mysql.MySQLError{Number: 1045}, errors.AuthenticationFailed},
+		{"PermissionDenied", &mysql.MySQLError{Number: 1044}, errors.PermissionDenied},
+		{"TooManyConnections", &mysql.MySQLError{Number: 1040}, errors.TooManyConnections},
+		{"OutOfMemory", &mysql.MySQLError{Number: 1037}, errors.OutOfMemory},
+		{"DiskFull", &mysql.MySQLError{Number: 1021}, errors.DiskFull},
+
+		// Fallback case: unknown code but "syntax" in message
+		{"Fallback_Syntax", &mysql.MySQLError{Number: 9999, Message: "some syntax error"}, errors.SyntaxError},
+		// Unknown error: should return InternalError
+		{"UnknownError", &mysql.MySQLError{Number: 9999, Message: "some unknown error"}, errors.InternalError},
+	}
+
+	d, _ := drivers.Retrieve("mysql")
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			got := d.BuildDatabaseError(test.mysqlErr)
+
+			if got == nil {
+				t.Errorf("Expected %v, got nil", test.expected)
+				return
+			}
+			if got.Code() != test.expected.Code() {
+				t.Errorf("Expected code %s, got %s", test.expected.Code(), got.Code())
 			}
 		})
 	}

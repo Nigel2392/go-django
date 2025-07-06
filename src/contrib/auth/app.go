@@ -24,9 +24,6 @@ import (
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/alexedwards/scs/v2"
-
-	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/auth-permissions-mysql"
-	_ "github.com/Nigel2392/go-django/src/contrib/auth/auth-permissions/auth-permissions-sqlite"
 )
 
 // The AuthApplication struct is the main struct used for the auth app.
@@ -50,6 +47,11 @@ func NewAppConfig() django.AppConfig {
 	}
 	app.ModelObjects = []attrs.Definer{
 		&User{},
+		&Group{},
+		&Permission{},
+		&UserGroup{},
+		&GroupPermission{},
+		&UserPermission{},
 	}
 	app.Routing = func(m django.Mux) {
 		m.Use(

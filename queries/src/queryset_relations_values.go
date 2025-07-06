@@ -107,6 +107,13 @@ func (rl *RelRevFK[T]) Objects() *RelManyToOneQuerySet[T] {
 	return rl.relatedQuerySet
 }
 
+func (rl *RelRevFK[T]) Cache() *orderedmap.OrderedMap[any, T] {
+	if rl.relations == nil {
+		rl.relations = orderedmap.NewOrderedMap[any, T]()
+	}
+	return rl.relations
+}
+
 // SetValues sets the related objects on the relation.
 func (rl *RelRevFK[T]) SetValues(objects []attrs.Definer) {
 	if rl.relations == nil {
@@ -237,6 +244,13 @@ func (rl *RelM2M[T1, T2]) BindToModel(parent attrs.Definer, parentField attrs.Fi
 		Field:  parentField,
 	}
 	return nil
+}
+
+func (rl *RelM2M[T1, T2]) Cache() *orderedmap.OrderedMap[any, RelO2O[T1, T2]] {
+	if rl.relations == nil {
+		rl.relations = orderedmap.NewOrderedMap[any, RelO2O[T1, T2]]()
+	}
+	return rl.relations
 }
 
 func (rl *RelM2M[T1, T2]) Objects() *RelManyToManyQuerySet[T1] {

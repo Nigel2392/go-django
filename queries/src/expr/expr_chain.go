@@ -75,6 +75,10 @@ func Chain(expr ...any) NamedExpression {
 
 	for i, e := range expr {
 
+		if exprBuilder, ok := e.(ExpressionBuilder); ok {
+			e = exprBuilder.BuildExpression()
+		}
+
 		if n, ok := e.(NamedExpression); ok && (i == 0 || i > 0 && fieldName == "") {
 			fieldName = n.FieldName()
 		}

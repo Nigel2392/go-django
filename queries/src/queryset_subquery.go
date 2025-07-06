@@ -6,6 +6,7 @@ import (
 	_ "unsafe"
 
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
 //go:linkname newFunc github.com/Nigel2392/go-django/queries/src/expr.newFunc
@@ -53,9 +54,7 @@ func (s *subqueryExpr) SQL(sb *strings.Builder) []any {
 			sb.WriteString(" ")
 		}
 
-		sb.WriteString("(")
 		sb.WriteString(sql)
-		sb.WriteString(")")
 	}
 
 	args = append(args, s.q.Args()...)
@@ -87,29 +86,9 @@ func (s *subqueryExpr) Resolve(inf *expr.ExpressionInfo) expr.Expression {
 	return nE
 }
 
-func Subquery(qs *GenericQuerySet) expr.Expression {
-	if qs.internals.Limit == MAX_DEFAULT_RESULTS {
-		qs.internals.Limit = 0
-	}
-
-	q := qs.queryAll()
+func Subquery[T attrs.Definer, QS BaseQuerySet[T, QS]](qs QS) expr.Expression {
+	q := qs.Limit(0).QueryAll()
 	return &subqueryExpr{
 		q: q,
-	}
-}
-
-func SubqueryCount(qs *GenericQuerySet) *subqueryExpr {
-	q := qs.queryCount()
-	return &subqueryExpr{
-		q:  q,
-		op: "COUNT",
-	}
-}
-
-func SubqueryExists(qs *GenericQuerySet) expr.Expression {
-	q := qs.queryAll()
-	return &subqueryExpr{
-		q:  q,
-		op: "EXISTS",
 	}
 }

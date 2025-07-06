@@ -21,6 +21,11 @@ func When(keyOrExpr interface{}, vals ...any) *when {
 			lhs: Q(v, vals...),
 		}
 
+	case ExpressionBuilder:
+		return &when{
+			lhs: v.BuildExpression(),
+		}
+
 	case LogicalExpression, ClauseExpression:
 		var whenExpr = when{
 			lhs: v.(Expression),
@@ -93,6 +98,15 @@ func Case(cases ...any) *CaseExpression {
 				panic("default value cannot be nil")
 			}
 			dflt = v
+		case ExpressionBuilder:
+			if dflt != nil {
+				panic("default value already set, cannot add more when clauses")
+			}
+			var expr = v.BuildExpression()
+			if expr == nil {
+				panic("default value cannot be nil")
+			}
+			dflt = expr
 		default:
 			var exprs = expressionFromInterface[Expression](v, true)
 			if len(exprs) == 0 || len(exprs) > 1 {

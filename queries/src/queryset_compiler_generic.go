@@ -54,7 +54,7 @@ func newExpressionInfo(g *genericQueryBuilder, qs *QuerySet[attrs.Definer], i *Q
 	return &expr.ExpressionInfo{
 		Driver: g.driver,
 		Model: attrs.NewObject[attrs.Definer](
-			qs.Model(),
+			qs.Meta().Model(),
 		),
 		Quote:           g.QuoteString,
 		QuoteIdentifier: g.QuoteIdentifier,
@@ -594,7 +594,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 	// e.g. for 2 rows of 3 fields: [[1, 2, 4], [2, 3, 5]] -> [1, 2, 4, 2, 3, 5]
 ) CompiledQuery[[][]interface{}] {
 	var (
-		model   = attrs.NewObject[attrs.Definer](qs.Model())
+		model   = attrs.NewObject[attrs.Definer](qs.Meta().Model())
 		query   = new(strings.Builder)
 		support = drivers.SupportsReturning(
 			g.queryInfo.DB,
@@ -619,7 +619,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 
 	query.WriteString("INSERT INTO ")
 	query.WriteString(g.quote)
-	query.WriteString(internals.Model.TableName)
+	query.WriteString(internals.Model.Table)
 	query.WriteString(g.quote)
 	query.WriteString(" (")
 
@@ -820,7 +820,7 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 		written = true
 		query.WriteString("UPDATE ")
 		query.WriteString(g.quote)
-		query.WriteString(internals.Model.TableName)
+		query.WriteString(internals.Model.Table)
 		query.WriteString(g.quote)
 		query.WriteString(" SET ")
 
@@ -890,7 +890,7 @@ func (g *genericQueryBuilder) BuildDeleteQuery(
 	var args = make([]any, 0)
 	query.WriteString("DELETE FROM ")
 	query.WriteString(g.quote)
-	query.WriteString(internals.Model.TableName)
+	query.WriteString(internals.Model.Table)
 	query.WriteString(g.quote)
 
 	args = append(
@@ -927,7 +927,7 @@ func (g *genericQueryBuilder) BuildDeleteQuery(
 
 func (g *genericQueryBuilder) writeTableName(sb *strings.Builder, internals *QuerySetInternals) {
 	sb.WriteString(g.quote)
-	sb.WriteString(internals.Model.TableName)
+	sb.WriteString(internals.Model.Table)
 	sb.WriteString(g.quote)
 }
 
@@ -1116,15 +1116,7 @@ func (g *postgresQueryBuilder) BuildUpdateQuery(
 	objects []UpdateInfo,
 ) CompiledQuery[int64] {
 	if len(objects) == 0 {
-		return &QueryObject[int64]{
-			QueryInformation: QueryInformation{
-				Builder: g,
-				Stmt:    "",
-				Object:  attrs.NewObject[attrs.Definer](qs.Model()),
-				Params:  nil,
-			},
-			Execute: func(query string, args ...any) (int64, error) { return 0, nil },
-		}
+		return ErrorQueryObject[int64](qs.Meta().Model(), g, nil)
 	}
 
 	var (
@@ -1164,7 +1156,7 @@ func (g *postgresQueryBuilder) BuildUpdateQuery(
 			Builder: g,
 			Stmt:    strings.Join(stmts, "; "),
 			Params:  args,
-			Object:  qs.Model(),
+			Object:  qs.Meta().Model(),
 		},
 		Execute: func(query string, args ...any) (int64, error) {
 			var br = conner.SendBatch(ctx, batch)
@@ -1196,15 +1188,7 @@ func (g *mariaDBQueryBuilder) BuildUpdateQuery(
 	objects []UpdateInfo,
 ) CompiledQuery[int64] {
 	if len(objects) == 0 {
-		return &QueryObject[int64]{
-			QueryInformation: QueryInformation{
-				Builder: g,
-				Stmt:    "",
-				Object:  attrs.NewObject[attrs.Definer](qs.Model()),
-				Params:  nil,
-			},
-			Execute: func(query string, args ...any) (int64, error) { return 0, nil },
-		}
+		return ErrorQueryObject[int64](qs.Meta().Model(), g, nil)
 	}
 
 	var query = g.genericQueryBuilder.BuildUpdateQuery(
@@ -1216,7 +1200,7 @@ func (g *mariaDBQueryBuilder) BuildUpdateQuery(
 			Builder: g,
 			Stmt:    query.SQL(),
 			Params:  query.Args(),
-			Object:  qs.Model(),
+			Object:  qs.Meta().Model(),
 		},
 		Execute: func(query string, args ...any) (int64, error) {
 			var res, err = getDriverResult(g.DB().ExecContext(ctx, query, args...))
@@ -1278,17 +1262,7 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 ) CompiledQuery[[][]interface{}] {
 
 	if len(objects) == 0 {
-		return &QueryObject[[][]interface{}]{
-			QueryInformation: QueryInformation{
-				Builder: g,
-				Stmt:    "",
-				Object:  attrs.NewObject[attrs.Definer](qs.Model()),
-				Params:  nil,
-			},
-			Execute: func(query string, args ...any) ([][]interface{}, error) {
-				return nil, nil
-			},
-		}
+		return ErrorQueryObject[[][]interface{}](qs.Meta().Model(), g, nil)
 	}
 
 	var (
@@ -1298,27 +1272,19 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 	for _, object := range objects {
 
 		if len(object.Fields) != len(object.Values) {
-			return &QueryObject[[][]interface{}]{
-				QueryInformation: QueryInformation{
-					Builder: g,
-					Stmt:    "",
-					Object:  attrs.NewObject[attrs.Definer](qs.Model()),
-					Params:  nil,
-				},
-				Execute: func(query string, args ...any) ([][]interface{}, error) {
-					return nil, errors.TypeMismatch.WithCause(fmt.Errorf(
-						"cannot build create query, number of fields (%d) does not match number of values (%d)",
-						len(object.Fields), len(object.Values),
-					))
-				},
-			}
+			return ErrorQueryObject[[][]interface{}](
+				qs.Meta().Model(), g, errors.TypeMismatch.WithCause(fmt.Errorf(
+					"cannot build create query, number of fields (%d) does not match number of values (%d)",
+					len(object.Fields), len(object.Values),
+				)),
+			)
 		}
 
 		var query = new(strings.Builder)
 
 		query.WriteString("INSERT INTO ")
 		query.WriteString(g.quote)
-		query.WriteString(internals.Model.TableName)
+		query.WriteString(internals.Model.Table)
 		query.WriteString(g.quote)
 		query.WriteString(" (")
 
@@ -1351,7 +1317,7 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 			Builder: g,
 			Stmt:    g.queryInfo.DBX(strings.Join(stmt, "; ")),
 			Params:  values,
-			Object:  attrs.NewObject[attrs.Definer](qs.Model()),
+			Object:  attrs.NewObject[attrs.Definer](qs.Meta().Model()),
 		},
 		Execute: func(query string, args ...any) ([][]interface{}, error) {
 			if internals.Model.Primary != nil {

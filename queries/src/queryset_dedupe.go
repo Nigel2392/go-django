@@ -336,7 +336,6 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
 		}
 
 		root = append(root, &Row[T]{
-			QuerySet:    qs,
 			Through:     obj.object.through,
 			Object:      definer.(T),
 			Annotations: obj.annotations,

@@ -29,6 +29,7 @@ func init() {
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Float, Type__float)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Decimal, Type__decimal)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.UUID, Type__uuid)
+	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.ULID, Type__ulid)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.BLOB, Type__blob)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.JSON, Type__string)
 	migrator.RegisterColumnType(&drivers.DriverPostgres{}, dbtype.Timestamp, Type__datetime)
@@ -61,6 +62,10 @@ func Type__string(c *migrator.Column) string {
 	sb.WriteString(strconv.FormatInt(max, 10))
 	sb.WriteString(")")
 	return sb.String()
+}
+
+func Type__ulid(c *migrator.Column) string {
+	return "VARCHAR(26)"
 }
 
 func Type__decimal(c *migrator.Column) string {

@@ -26,11 +26,11 @@ func Q(fieldLookup string, value ...any) *ExprNode {
 }
 
 func And(exprs ...Expression) *ExprGroup {
-	return &ExprGroup{children: exprs, op: OpAnd}
+	return &ExprGroup{children: exprs, op: OpAnd, wrap: true}
 }
 
 func Or(exprs ...Expression) *ExprGroup {
-	return &ExprGroup{children: exprs, op: OpOr}
+	return &ExprGroup{children: exprs, op: OpOr, wrap: true}
 }
 
 type ExprNode struct {
@@ -106,11 +106,11 @@ func (e *ExprNode) IsNot() bool {
 }
 
 func (e *ExprNode) And(exprs ...Expression) ClauseExpression {
-	return &ExprGroup{children: append([]Expression{e}, exprs...), op: OpAnd}
+	return &ExprGroup{children: append([]Expression{e}, exprs...), op: OpAnd, wrap: true}
 }
 
 func (e *ExprNode) Or(exprs ...Expression) ClauseExpression {
-	return &ExprGroup{children: append([]Expression{e}, exprs...), op: OpOr}
+	return &ExprGroup{children: append([]Expression{e}, exprs...), op: OpOr, wrap: true}
 }
 
 func (e *ExprNode) Clone() Expression {
@@ -130,13 +130,14 @@ type ExprGroup struct {
 	children []Expression
 	op       ExprOp
 	not      bool
+	wrap     bool
 }
 
 func (g *ExprGroup) SQL(sb *strings.Builder) []any {
 	if g.not {
 		sb.WriteString("NOT ")
 	}
-	if len(g.children) > 1 {
+	if g.wrap {
 		sb.WriteString("(")
 	}
 	var args = make([]any, 0)
@@ -151,7 +152,7 @@ func (g *ExprGroup) SQL(sb *strings.Builder) []any {
 
 		args = append(args, child.SQL(sb)...)
 	}
-	if len(g.children) > 1 {
+	if g.wrap {
 		sb.WriteString(")")
 	}
 	return args
@@ -167,11 +168,11 @@ func (g *ExprGroup) IsNot() bool {
 }
 
 func (g *ExprGroup) And(exprs ...Expression) ClauseExpression {
-	return &ExprGroup{children: append([]Expression{g}, exprs...), op: OpAnd}
+	return &ExprGroup{children: append([]Expression{g}, exprs...), op: OpAnd, wrap: true}
 }
 
 func (g *ExprGroup) Or(exprs ...Expression) ClauseExpression {
-	return &ExprGroup{children: append([]Expression{g}, exprs...), op: OpOr}
+	return &ExprGroup{children: append([]Expression{g}, exprs...), op: OpOr, wrap: true}
 }
 
 func (g *ExprGroup) Clone() Expression {
@@ -183,6 +184,7 @@ func (g *ExprGroup) Clone() Expression {
 		children: clone,
 		op:       g.op,
 		not:      g.not,
+		wrap:     g.wrap,
 	}
 }
 
@@ -210,6 +212,11 @@ func Logical(expr ...any) LogicalExpression {
 	var fieldName string
 	var inner = make([]Expression, 0, len(expr))
 	for i, e := range expr {
+
+		if exprBuilder, ok := e.(ExpressionBuilder); ok {
+			e = exprBuilder.BuildExpression()
+		}
+
 		if n, ok := e.(NamedExpression); ok && i == 0 {
 			fieldName = n.FieldName()
 		}

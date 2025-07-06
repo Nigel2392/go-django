@@ -126,9 +126,9 @@ func init() {
 			switch {
 			case strings.Contains(err.Error(), "syntax error"):
 				return errors.SyntaxError.WithCause(err)
-			case strings.Contains(err.Error(), "no such table"):
+			case strings.Contains(err.Error(), "no such table"), strings.Contains(err.Error(), "table not found"):
 				return errors.InvalidTable.WithCause(err)
-			case strings.Contains(err.Error(), "no such column"):
+			case strings.Contains(err.Error(), "no such column"), strings.Contains(err.Error(), "no column named"):
 				return errors.InvalidColumn.WithCause(err)
 			}
 

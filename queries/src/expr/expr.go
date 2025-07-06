@@ -154,6 +154,10 @@ func (c *TableColumn) Validate() error {
 	return nil
 }
 
+type ExpressionBuilder interface {
+	BuildExpression() Expression
+}
+
 type ResolvedExpression interface {
 	SQL(sb *strings.Builder) []any
 }

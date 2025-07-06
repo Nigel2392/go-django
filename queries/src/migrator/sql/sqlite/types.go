@@ -27,6 +27,7 @@ func init() {
 	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Float, Type__float)
 	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Decimal, Type__decimal)
 	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.UUID, Type__string)
+	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.ULID, Type__string)
 	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.JSON, Type__string)
 	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.Timestamp, Type__datetime)
 	migrator.RegisterColumnType(&drivers.DriverSQLite{}, dbtype.LocalTime, Type__datetime)

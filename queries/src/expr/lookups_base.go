@@ -66,6 +66,8 @@ func (l *LogicalLookup) NormalizeArgs(inf *ExpressionInfo, values []any) ([]any,
 	switch v := v.(type) {
 	case Expression:
 		return []any{v.Resolve(inf)}, nil
+	case ExpressionBuilder:
+		return []any{v.BuildExpression().Resolve(inf)}, nil
 	}
 
 	return l.BaseLookup.NormalizeArgs(inf, values)
@@ -226,7 +228,12 @@ func (l *InLookup) NormalizeArgs(inf *ExpressionInfo, values []any) ([]any, erro
 		if len(values) > 1 {
 			return nil, fmt.Errorf("lookup %s cannot be used with an expression and additional values", l.Identifier)
 		}
-		return []any{v}, nil
+		return []any{v.Resolve(inf)}, nil
+	case ExpressionBuilder:
+		if len(values) > 1 {
+			return nil, fmt.Errorf("lookup %s cannot be used with an expression builder and additional values", l.Identifier)
+		}
+		return []any{v.BuildExpression().Resolve(inf)}, nil
 	}
 
 	return flattenList(values), nil

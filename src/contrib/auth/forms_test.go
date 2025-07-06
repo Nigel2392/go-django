@@ -2,35 +2,59 @@ package auth_test
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"testing"
 
+	"github.com/Nigel2392/go-django/queries/src/quest"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
-	auth_models "github.com/Nigel2392/go-django/src/contrib/auth/auth-models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/Nigel2392/go-django/src/forms/fields"
-	"github.com/Nigel2392/go-django/src/models"
 )
 
-var backend models.Backend[auth_models.Querier]
-
 func init() {
+	testing.Init()
 
-	var _, db = testdb.Open()
-	var err error
-	backend, err = auth_models.BackendForDB(db.Driver())
-	if err != nil {
-		panic(err)
+	flag.Parse()
+
+	var which, db = testdb.Open()
+	var settings = map[string]interface{}{
+		django.APPVAR_DATABASE: db,
 	}
 
-	if err := backend.CreateTable(db); err != nil {
-		panic(err)
+	logger.Setup(&logger.Logger{
+		Level:       logger.DBG,
+		WrapPrefix:  logger.ColoredLogWrapper,
+		OutputDebug: os.Stdout,
+		OutputInfo:  os.Stdout,
+		OutputWarn:  os.Stdout,
+		OutputError: os.Stdout,
+	})
+
+	django.App(django.Configure(settings))
+
+	logger.Debugf("Using %s database for queries tests", which)
+
+	if !testing.Verbose() {
+		logger.SetLevel(logger.WRN)
 	}
 
+	var tables = quest.Table[*testing.T](nil,
+		&auth.User{},
+		&auth.Group{},
+		&auth.Permission{},
+		&auth.UserGroup{},
+		&auth.GroupPermission{},
+		&auth.UserPermission{},
+	)
+	tables.Create()
 }
 
 type testUser struct {
@@ -282,7 +306,7 @@ func TestRegisterForm(t *testing.T) {
 
 			var user, err = form.Save()
 			if err != nil {
-				t.Errorf("Error saving user: %v", err)
+				t.Errorf("Error saving user: %v (%+v)", err, test)
 				return
 			}
 

@@ -599,11 +599,7 @@ func (a *Application) Initialize() error {
 	//
 	// This is done before any models are registered
 	// to ensure that all dbtypes are registered
-	// before they can be "used".
-	//
-	// Not locking the registry does not have any actual downsides,
-	// but it is good practise to make sure all types are registered
-	// before the models can use them.
+	// before they can be used.
 	dbtype.Lock()
 
 	core.BeforeModelsReady.Send(a)
@@ -676,6 +672,7 @@ func (a *Application) Initialize() error {
 		case errors.Is(err, command.ErrNoCommand):
 			commandsRan = false
 			err = nil
+
 		case errors.Is(err, command.ErrShouldExit):
 			return err
 

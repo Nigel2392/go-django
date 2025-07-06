@@ -81,14 +81,16 @@ func (t *relatedQuerySet[T, T2]) setup() {
 
 		newTargetObj     = internal.NewObjectFromIface(t.rel.Model())
 		newTargetObjDefs = newTargetObj.FieldDefs()
-		qs               = GetQuerySet(newTargetObj.(T))
-		throughModel     = t.rel.Through()
+
+		// probably should not use a queryset from the model's getqueryset method? right?
+		qs           = Objects(newTargetObj.(T))
+		throughModel = t.rel.Through()
 	)
 
 	var targetFieldInfo = &FieldInfo[attrs.FieldDefinition]{
 		Model: qs.internals.Model.Object,
 		Table: Table{
-			Name: qs.internals.Model.TableName,
+			Name: qs.internals.Model.Table,
 		},
 		Fields: ForSelectAllFields[attrs.FieldDefinition](
 			newTargetObjDefs,
@@ -104,7 +106,7 @@ func (t *relatedQuerySet[T, T2]) setup() {
 				Name: throughObject.defs.TableName(),
 				Alias: fmt.Sprintf(
 					"%s_through",
-					qs.internals.Model.TableName,
+					qs.internals.Model.Table,
 				),
 			},
 			Fields: ForSelectAllFields[attrs.FieldDefinition](throughObject.defs),
@@ -144,7 +146,7 @@ func (t *relatedQuerySet[T, T2]) setup() {
 				Name: throughObject.defs.TableName(),
 				Alias: fmt.Sprintf(
 					"%s_through",
-					qs.internals.Model.TableName,
+					qs.internals.Model.Table,
 				),
 			},
 			JoinDefCondition: condition,
@@ -168,7 +170,7 @@ func (t *relatedQuerySet[T, T2]) setup() {
 		qs.internals.Fields, targetFieldInfo,
 	)
 
-	t.originalQs = *qs.Clone()
+	t.originalQs = *qs.clone()
 	t.qs = qs
 	t.JoinDefCondition = condition
 
@@ -535,7 +537,7 @@ func (r *RelManyToManyQuerySet[T]) ClearTargets() (int64, error) {
 	}
 
 	var throughModel = newThroughProxy(r.rel.Through())
-	var throughIdsResult, err = r.qs.Select(r.qs.internals.Model.Primary.Name()).ValuesList()
+	var throughIdsResult, err = r.qs.Select(r.qs.Meta().PrimaryKey().Name()).ValuesList()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get through object IDs: %w", err)
 	}

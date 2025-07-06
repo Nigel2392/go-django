@@ -273,17 +273,18 @@ func RegisterModel(model Definer) {
 
 			var storageKey = fmt.Sprintf(
 				"through.%s",
-				meta.ContentType().TypeName(),
+				throughMeta.ContentType().TypeName(),
 			)
-			if _, wasSent := throughMeta.stored.Get(storageKey); wasSent {
+			fmt.Printf("Registering through model %s for %T\n", storageKey, meta.model)
+			if _, wasSent := meta.stored.Get(storageKey); wasSent {
 				goto setRel
 			}
 
 			throughMeta.stored.Set(
 				"through.model", true,
 			)
-			throughMeta.stored.Set(
-				storageKey, nil,
+			meta.stored.Set(
+				storageKey, true,
 			)
 
 			// Send signal that the through model is being registered

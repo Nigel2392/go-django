@@ -60,6 +60,11 @@ type RawNamedExpression struct {
 func F(statement any, value ...any) NamedExpression {
 	var stmt *ExpressionStatement
 	var fieldName string
+
+	if exprBuilder, ok := statement.(ExpressionBuilder); ok {
+		statement = exprBuilder.BuildExpression()
+	}
+
 	switch v := statement.(type) {
 	case string:
 		stmt = ParseExprStatement(v, value)

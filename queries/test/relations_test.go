@@ -855,7 +855,7 @@ var manyToManyTests = []ManyToManyTest{
 			var user2 = rows[1].Object
 			var m2mSet, ok = user2.DataStore().GetValue("ModelManyToManySet")
 			if !ok {
-				t.Fatalf("Expected ModelManyToManySet to be set: %+v\n\t%s", user2.Model, rows[1].QuerySet.LatestQuery().SQL())
+				t.Fatalf("Expected ModelManyToManySet to be set: %+v", user2.Model)
 			}
 
 			set = m2mSet.([]attrs.Definer)
@@ -910,7 +910,7 @@ var manyToManyTests = []ManyToManyTest{
 				user1, ok = profile1.DataStore().GetValue("User")
 			)
 			if !ok {
-				t.Fatalf("Expected User to be set: %+v\n\t%s", profile1.Model, rows[0].QuerySet.LatestQuery().SQL())
+				t.Fatalf("Expected User to be set: %+v", profile1.Model)
 			}
 
 			t.Logf("Profile 1: %+v", profile1)
@@ -918,7 +918,7 @@ var manyToManyTests = []ManyToManyTest{
 
 			m2mSet, ok := user1.(*User).DataStore().GetValue("ModelManyToManySet")
 			if !ok {
-				t.Fatalf("Expected ModelManyToManySet to be set: %+v\n\t%s", user1.(*User).Model, rows[0].QuerySet.LatestQuery().SQL())
+				t.Fatalf("Expected ModelManyToManySet to be set: %+v", user1.(*User).Model)
 			}
 
 			var set = m2mSet.([]attrs.Definer)
@@ -971,7 +971,7 @@ var manyToManyTests = []ManyToManyTest{
 
 			user2, ok := profile2.DataStore().GetValue("User")
 			if !ok {
-				t.Fatalf("Expected User to be set: %+v\n\t%s", profile2.Model, rows[1].QuerySet.LatestQuery().SQL())
+				t.Fatalf("Expected User to be set: %+v", profile2.Model)
 			}
 
 			t.Logf("Profile 2: %+v", profile2)
@@ -979,7 +979,7 @@ var manyToManyTests = []ManyToManyTest{
 
 			m2mSet, ok = user2.(*User).DataStore().GetValue("ModelManyToManySet")
 			if !ok {
-				t.Fatalf("Expected ModelManyToManySet to be set: %+v\n\t%s", profile2.Model, rows[1].QuerySet.LatestQuery().SQL())
+				t.Fatalf("Expected ModelManyToManySet to be set: %+v", profile2.Model)
 			}
 
 			set = m2mSet.([]attrs.Definer)
@@ -1162,11 +1162,11 @@ var manyToManyTests = []ManyToManyTest{
 			var checkRow = func(t *testing.T, row *queries.Row[*ModelManyToMany], actual *queries.RelM2M[*ModelManyToMany_Target, *ModelManyToMany_Through], expected []*ModelManyToMany_Target, expectedReverse map[int64][]*ModelManyToMany) {
 				var idx = 0
 				if actual.Parent == nil || actual.Parent.Object == nil {
-					t.Fatalf("Expected actual.Parent.Object to be set: %+v\n\t%s", row.Object.Model, row.QuerySet.LatestQuery().SQL())
+					t.Fatalf("Expected actual.Parent.Object to be set: %+v", row.Object.Model)
 				}
 
 				if len(actual.AsList()) != len(expected) {
-					t.Fatalf("Expected %d items in actual.AsList(), got %d: %+v\n\t%s", len(expected), len(actual.AsList()), row.Object.Model, row.QuerySet.LatestQuery().SQL())
+					t.Fatalf("Expected %d items in actual.AsList(), got %d: %+v", len(expected), len(actual.AsList()), row.Object.Model)
 				}
 
 				for i, item := range actual.AsList() {
@@ -1182,12 +1182,12 @@ var manyToManyTests = []ManyToManyTest{
 
 					rev, ok := target.DataStore().GetValue("TargetReverse")
 					if !ok {
-						t.Fatalf("Expected Target.TargetReverse to be set: %+v\n\t%s", target.Model, row.QuerySet.LatestQuery().SQL())
+						t.Fatalf("Expected Target.TargetReverse to be set: %+v", target.Model)
 					}
 
 					revList, ok := rev.([]queries.Relation)
 					if !ok {
-						t.Fatalf("Expected Target.TargetReverse to be a list: %+v\n\t%s", target.Model, row.QuerySet.LatestQuery().SQL())
+						t.Fatalf("Expected Target.TargetReverse to be a list: %+v", target.Model)
 					}
 
 					expectedRev := expectedReverse[target.ID]
@@ -1196,10 +1196,10 @@ var manyToManyTests = []ManyToManyTest{
 							t.Logf("revTarget %d: %+v", j, revTarget)
 						}
 						t.Errorf(
-							"Expected Target.TargetReverse %q to be a list of length %d, got %d: %+v\n\t%s",
+							"Expected Target.TargetReverse %q to be a list of length %d, got %d: %+v",
 							target.Name,
 							len(expectedRev), len(revList),
-							target.Model, row.QuerySet.LatestQuery().SQL(),
+							target.Model,
 						)
 						t.FailNow()
 					}
@@ -1318,8 +1318,6 @@ var manyToManyTests = []ManyToManyTest{
 			if err != nil {
 				t.Fatalf("Failed to get Target objects for row 0: %v", err)
 			}
-
-			t.Logf("QuerySet Arguments: %+v", row.QuerySet.LatestQuery().Args())
 
 			for _, item := range a {
 				var through = item.Through.(*ModelManyToMany_Through)
@@ -1867,12 +1865,12 @@ func TestPluckManyToManyRows(t *testing.T) {
 		for _, target := range row.Object.Target.AsList() {
 			var rev, ok = target.Object.DataStore().GetValue("TargetReverse")
 			if !ok {
-				t.Fatalf("Expected Target.TargetReverse to be set: %+v\n\t%s", target.Object.Model, row.QuerySet.LatestQuery().SQL())
+				t.Fatalf("Expected Target.TargetReverse to be set: %+v", target.Object.Model)
 			}
 
 			revList, ok := rev.(*queries.RelM2M[attrs.Definer, attrs.Definer])
 			if !ok {
-				t.Fatalf("Expected Target.TargetReverse to be a list: %+v %T\n\t%s", target.Object.Model, rev, row.QuerySet.LatestQuery().SQL())
+				t.Fatalf("Expected Target.TargetReverse to be a list: %+v %T", target.Object.Model, rev)
 			}
 
 			for _, revItem := range revList.AsList() {

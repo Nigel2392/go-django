@@ -10,6 +10,8 @@ func expressionFromInterface[T Expression](exprValue interface{}, asValue bool) 
 	switch v := exprValue.(type) {
 	case Expression:
 		exprs = append(exprs, v.(T))
+	case ExpressionBuilder:
+		exprs = append(exprs, v.BuildExpression().(T))
 	case []Expression:
 		for _, expr := range v {
 			exprs = append(exprs, expr.(T))

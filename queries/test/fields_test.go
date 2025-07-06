@@ -202,7 +202,7 @@ func TestVirtualFieldsQuerySetSingleObjectTestStruct(t *testing.T) {
 		t.Fatalf("Failed to create object: %v, %T", err, err)
 	}
 
-	var qs = queries.Objects[attrs.Definer](test)
+	var qs = queries.GetQuerySet[attrs.Definer](test)
 	qs = qs.Select("*")
 	qs = qs.Filter("ID", test.ID)
 	qs = qs.Filter("TestNameLower", "test1")

@@ -165,6 +165,16 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 				flds[i] = u
 			}
 
+		case []any:
+			var unpacked, err = UnpackFieldsFromArgs(definer, v...)
+			if err != nil {
+				return nil, fmt.Errorf(
+					"fieldsFromArgs (%T): %v",
+					definer, err,
+				)
+			}
+			flds = unpacked
+
 		// func() (field, ?error)
 		case func() Field:
 			fld = v()

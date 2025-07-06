@@ -288,11 +288,17 @@ var _, _ = attrs.OnThroughModelRegister.Listen(func(s signals.Signal[attrs.Signa
 	)
 
 	if _, ok := throughDefs.Field(sourceFieldStr); !ok {
-		panic("source field not found in through model meta")
+		panic(fmt.Sprintf(
+			"source field %q not found in through model meta of %T (%T %+v)",
+			sourceFieldStr, throughModel, d.ThroughInfo.(*attrs.ThroughModel).This, d.ThroughInfo,
+		))
 	}
 
 	if _, ok := throughDefs.Field(targetFieldStr); !ok {
-		panic("target field not found in through model meta")
+		panic(fmt.Sprintf(
+			"target field %q not found in through model meta of %T (%T %+v)",
+			targetFieldStr, throughModel, d.ThroughInfo.(*attrs.ThroughModel).This, d.ThroughInfo,
+		))
 	}
 
 	// See [GenerateObjectsWhereClause] for the implementation details

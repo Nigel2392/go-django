@@ -113,6 +113,8 @@ func DBToDefaultGoType(dbType dbtype.Type) reflect.Type {
 		scanTo = new(Bool)
 	case dbtype.UUID:
 		scanTo = new(UUID)
+	case dbtype.ULID:
+		scanTo = new(ULID)
 	case dbtype.Bytes:
 		scanTo = new(Bytes)
 	case dbtype.BLOB:

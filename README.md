@@ -10,11 +10,8 @@ The goal is to provide a similar experience to Django, but with the performance 
 
 At the core this is meant to be a web framework, but it also includes sub-packages to create a CMS-like experience.
 
-There is a caveat though; we try to touch the database as little as possible.
-
-This means that we don't have a full ORM like Django does.
-
-Any database logic should be implemented by the end-developer, but all sub-packages which require it do provide backends to use with MySQL and SQLite. Postgres is not planned yet.
+Any database logic can be implemented with the [`queries`](./queries/README.md) subpackage, providing an experience similar to
+the Django ORM.
 
 Latest version: `v1.7.0`
 
@@ -79,14 +76,26 @@ go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.7.0
 - [pages](./docs/apps/pages/readme.md)
 - [editorjs](./docs/apps/editor.md) (WIP)
 
+## Tested Databases
+
+GO-Django is tested to work on the following databases:
+
+But more tests / databases will be added over time.
+
+* SQLite through [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3)
+* MySQL through [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql)
+* Local MYSQL with [dolthub/go-mysql-server](https://github.com/dolthub/go-mysql-server) through [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) (used internally for testing)
+* MariaDB through [a custom driver](https://github.com/Nigel2392/go-django/queries/blob/main/src/drivers/drivers.go#L38) (with returning support, custom driver - use "mariadb" in `drivers.Open(...)`)
+* Postgres through [jackc/pgx](https://github.com/jackc/pgx)
+
 ### Examples
 
 - [Todo App](./docs/examples/todos.md)
 - [Blog App](./docs/examples/blog.md)
 
-### Third-Party & Related Projects
+### How to work with models in the database
 
-- [go-django-queries](https://github.com/Nigel2392/go-django/tree/main/queries) - A library to help you create SQL queries specialized (and only useful) for go-django models.
+- [go-django-queries](./queries/README.md) - A library to help you create SQL queries specialized (and only useful) for go-django models.
 
 ## Help Needed
 

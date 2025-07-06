@@ -105,7 +105,7 @@ func RunInTransaction[T attrs.Definer](c context.Context, fn func(ctx context.Co
 
 		// a transaction cannot be started if the database name is different
 		// cross-database transactions are not supported
-		var databaseName = qs.compiler.DatabaseName()
+		var databaseName = qs.Compiler().DatabaseName()
 		if dbName != databaseName {
 			panicFromNewQuerySet = errors.CrossDatabaseTransaction.WithCause(fmt.Errorf(
 				"RunInTransaction: database name mismatch, expected %q, got %q",

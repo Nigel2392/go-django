@@ -1,10 +1,11 @@
 $dirname = Split-Path -Parent $MyInvocation.MyCommand.Path
 $dirname = Split-Path -Leaf $dirname
 
-$BASE_TEST_DIR = "./src/..."
+$BASE_TEST_DIR = "./src/... ./queries/..."
+$DOCKER_COMPOSE_FILE = "./test-databases.docker-compose.yml"
 
 # Reset test docker containers
-docker-compose -f "./test-databases.docker-compose.yml" down
+docker-compose -f "$DOCKER_COMPOSE_FILE" down
 
 # Databases to test (these translate to Go build tags)
 $Databases = @(
@@ -20,32 +21,6 @@ $DockerDatabases = @{
     "mysql" = $true   
     "mariadb"  = $true
     "postgres" = $true
-}
-
-# UsingQueriesTestDirs is a list of directory strings to be appended
-# to the test command when running tests that use the queries package
-$UsingQueriesTestDirs = @(
-    "./src/contrib/pages/...",
-    "./src/contrib/session/...",
-    "./src/contrib/revisions/...",
-    "./src/contrib/openauth2/...",
-    "./src/contrib/reports/audit_logs/...",
-    "./queries/..."
-)
-
-# AllTestDirs is a list of all directories that will be tested
-# when all of the test supports the database 
-$AllTestDirs = $UsingQueriesTestDirs + @(
-    $BASE_TEST_DIR
-)
-
-# UsingQueriesDatabases is a list of databases that use the queries package
-$UsingQueriesDatabases = @{
-    "sqlite" = $AllTestDirs
-    "mysql_local" = $AllTestDirs
-    "mysql" = $AllTestDirs
-    "mariadb" = $UsingQueriesTestDirs
-    "postgres" = $UsingQueriesTestDirs
 }
 
 # Empty test array will be built out
@@ -88,15 +63,26 @@ if ($testsToRun.Count -eq 0) {
     $testsToRun = $Databases
 }
 
-# Run tests for each database type
+$upString = ""
 foreach ($Database in $testsToRun) {
-
     # Check if the argument is a valid Docker database type
     # if it is, reset the corresponding Docker volume and start the container
     if ($DockerDatabases.ContainsKey($Database)) {
         docker volume rm "${dirname}_go-django_${Database}_data"
-        docker-compose -f "./test-databases.docker-compose.yml" up $Database -d
+        $upString += " $Database"
     }
+}
+
+if ($upString -ne "") {
+    # Start the Docker containers for the specified databases
+    Write-Host "Starting Docker containers for:$upString"
+    Invoke-Expression "docker-compose -f $DOCKER_COMPOSE_FILE up -d$upString"
+} else {
+    Write-Host "No Docker databases specified, skipping container start."
+}
+
+# Run tests for each database type
+foreach ($Database in $testsToRun) {
 
     $cmd = "go test -tags=`"testing_auth test $Database`" --timeout=30s"
     if ($flags.verbose) {
@@ -106,8 +92,7 @@ foreach ($Database in $testsToRun) {
         $cmd += " --failfast"
     }
     
-    $testDirs = $UsingQueriesDatabases[$Database] -join " "
-    $cmd += " $testDirs"
+    $cmd += " $BASE_TEST_DIR"
 
     Write-Host "Running tests for $Database"
     Write-Host "Command: $cmd"

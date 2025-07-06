@@ -55,14 +55,19 @@ Continue with [Getting Started](./docs/getting_started.md)…
 
 We try to support as many features as possible, but some stuff is either not supported, implemented or tested yet.
 
+## TODO:
+
+* Implement eficient prefetching of multiple- relations
+
 ### Tested Databases
 
 But more tests / databases will be added over time.
 
 * SQLite through [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3)
 * MySQL through [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql)
+* Local MYSQL with [dolthub/go-mysql-server](https://github.com/dolthub/go-mysql-server) through [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) (used internally for testing)
 * MariaDB through [a custom driver](https://github.com/Nigel2392/go-django/queries/blob/main/src/drivers/drivers.go#L38) (with returning support, custom driver - use "mariadb" in `drivers.Open(...)`)
-* [dolthub/go-mysql-server](https://github.com/dolthub/go-mysql-server) through [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql)
+* Postgres through [jackc/pgx](https://github.com/jackc/pgx)
 
 #### Caveats
 

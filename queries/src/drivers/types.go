@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/google/uuid"
+	"github.com/oklog/ulid/v2"
 	"github.com/shopspring/decimal"
 )
 
@@ -69,6 +70,7 @@ func init() {
 	dbtype.Add(*new(float64), dbtype.Float)
 	dbtype.Add(*new(bool), dbtype.Bool)
 	dbtype.Add(*new(uuid.UUID), dbtype.UUID)
+	dbtype.Add(*new(ulid.ULID), dbtype.ULID)
 	dbtype.Add(*new(time.Time), dbtype.DateTime)
 	dbtype.Add(reflect.TypeOf((interface{})(nil)), dbtype.JSON)
 
@@ -95,6 +97,7 @@ func init() {
 	dbtype.Add(sql.Null[LocalTime]{}, dbtype.LocalTime)
 	dbtype.Add(sql.Null[DateTime]{}, dbtype.DateTime)
 	dbtype.Add(sql.Null[Email]{}, dbtype.String)
+	dbtype.Add(sql.Null[ULID]{}, dbtype.ULID)
 
 	dbtype.Add(sql.Null[any]{}, dbtype.JSON)
 	dbtype.Add(sql.Null[string]{}, dbtype.String)
@@ -115,6 +118,7 @@ func init() {
 	dbtype.Add(sql.Null[uuid.UUID]{}, dbtype.UUID)
 	dbtype.Add(sql.Null[time.Time]{}, dbtype.DateTime)
 	dbtype.Add(sql.Null[decimal.Decimal]{}, dbtype.Decimal)
+	dbtype.Add(sql.Null[ulid.ULID]{}, dbtype.ULID)
 }
 
 type (
@@ -132,6 +136,7 @@ type (
 		Null bool
 	}
 	UUID  uuid.UUID
+	ULID  ulid.ULID
 	Email mail.Address
 
 	timeType  time.Time
@@ -139,6 +144,29 @@ type (
 	LocalTime time.Time
 	DateTime  time.Time
 )
+
+// Complete shim for the ulid.ULID type
+func (id ULID) Bytes() []byte                      { return (ulid.ULID)(id).Bytes() }
+func (id ULID) Compare(other ulid.ULID) int        { return (ulid.ULID)(id).Compare(other) }
+func (id ULID) Entropy() []byte                    { return (ulid.ULID)(id).Entropy() }
+func (id ULID) IsZero() bool                       { return (ulid.ULID)(id).IsZero() }
+func (id ULID) MarshalBinary() ([]byte, error)     { return (ulid.ULID)(id).MarshalBinary() }
+func (id ULID) MarshalBinaryTo(dst []byte) error   { return (ulid.ULID)(id).MarshalBinaryTo(dst) }
+func (id ULID) MarshalText() ([]byte, error)       { return (ulid.ULID)(id).MarshalText() }
+func (id ULID) MarshalTextTo(dst []byte) error     { return (ulid.ULID)(id).MarshalTextTo(dst) }
+func (id *ULID) Scan(src interface{}) error        { return (*ulid.ULID)(id).Scan(src) }
+func (id *ULID) SetEntropy(e []byte) error         { return (*ulid.ULID)(id).SetEntropy(e) }
+func (id *ULID) SetTime(ms uint64) error           { return (*ulid.ULID)(id).SetTime(ms) }
+func (id ULID) String() string                     { return (ulid.ULID)(id).String() }
+func (id ULID) Time() uint64                       { return (ulid.ULID)(id).Time() }
+func (id ULID) Timestamp() time.Time               { return (ulid.ULID)(id).Timestamp() }
+func (id *ULID) UnmarshalBinary(data []byte) error { return (*ulid.ULID)(id).UnmarshalBinary(data) }
+func (id *ULID) UnmarshalText(v []byte) error      { return (*ulid.ULID)(id).UnmarshalText(v) }
+func (id ULID) Value() (driver.Value, error)       { return (ulid.ULID)(id).Value() }
+
+func NewUUID() UUID {
+	return (UUID)(uuid.New())
+}
 
 func (t UUID) String() string {
 	return uuid.UUID(t).String()
@@ -401,6 +429,14 @@ func (t *DateTime) UnmarshalJSON(data []byte) error {
 	}
 	*t = DateTime(_t)
 	return nil
+}
+
+func MustParseEmail(addr string) *Email {
+	a, err := mail.ParseAddress(addr)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to parse email address"))
+	}
+	return (*Email)(a)
 }
 
 func (e Email) String() string {

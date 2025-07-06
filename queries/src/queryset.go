@@ -26,6 +26,10 @@ import (
 	_ "unsafe"
 )
 
+//QUERYSET EEN INTERFACE MAKEN
+//Objects() RETURNS NIET INTERFACE
+//GetQuerySet() RETURNS WEL INTERFACE
+
 const (
 	// Maximum number of results to return when using the `Get` method.
 	//
@@ -56,11 +60,27 @@ var QUERYSET_CREATE_IMPLICIT_TRANSACTION = true
 // It contains the model's meta information, primary key field, all fields,
 // and the table name.
 type modelInfo struct {
-	Primary   attrs.FieldDefinition
-	Object    attrs.Definer
-	Fields    []attrs.FieldDefinition
-	TableName string
-	OrderBy   []string
+	Primary  attrs.FieldDefinition
+	Object   attrs.Definer
+	Fields   []attrs.FieldDefinition
+	Table    string
+	Ordering []string
+}
+
+func (m modelInfo) Model() attrs.Definer {
+	return m.Object
+}
+
+func (m modelInfo) TableName() string {
+	return m.Table
+}
+
+func (m modelInfo) PrimaryKey() attrs.FieldDefinition {
+	return m.Primary
+}
+
+func (m modelInfo) OrderBy() []string {
+	return m.Ordering
 }
 
 // Internals contains the internal state of the QuerySet.
@@ -160,7 +180,7 @@ func GetQuerySet[T attrs.Definer](model T) *QuerySet[T] {
 	if m, ok := any(model).(QuerySetDefiner); ok {
 		_ = m.FieldDefs() // ensure the model is initialized
 		var qs = m.GetQuerySet()
-		qs = qs.Clone()
+		qs = qs.clone()
 		return ChangeObjectsType[attrs.Definer, T](qs)
 	}
 
@@ -231,11 +251,11 @@ func Objects[T attrs.Definer](model T, database ...string) *QuerySet[T] {
 		context:  context.Background(),
 		internals: &QuerySetInternals{
 			Model: modelInfo{
-				Primary:   primary,
-				Object:    model,
-				Fields:    definitions.Fields(),
-				TableName: tableName,
-				OrderBy:   orderBy,
+				Primary:  primary,
+				Object:   model,
+				Fields:   definitions.Fields(),
+				Table:    tableName,
+				Ordering: orderBy,
 			},
 			Annotations: orderedmap.NewOrderedMap[string, attrs.Field](),
 			Where:       make([]expr.ClauseExpression, 0),
@@ -304,9 +324,16 @@ func (qs *QuerySet[T]) DB() drivers.DB {
 	return qs.compiler.DB()
 }
 
-// Return the model which the queryset is for.
-func (qs *QuerySet[T]) Model() attrs.Definer {
-	return qs.internals.Model.Object
+// Meta returns the model meta information for the QuerySet.
+func (qs *QuerySet[T]) Meta() ModelMeta {
+	// return a new model meta object with the model information
+	return &modelInfo{
+		Primary:  qs.internals.Model.Primary,
+		Object:   qs.internals.Model.Object,
+		Fields:   qs.internals.Model.Fields,
+		Table:    qs.internals.Model.Table,
+		Ordering: qs.internals.Model.Ordering,
+	}
 }
 
 // Return the compiler which the queryset is using.
@@ -408,13 +435,7 @@ func (qs *QuerySet[T]) GetOrCreateTransaction() (tx drivers.Transaction, err err
 	return tx, nil
 }
 
-// Clone creates a new QuerySet with the same parameters as the original one.
-//
-// It is used to create a new QuerySet with the same parameters as the original one, so that the original one is not modified.
-//
-// It is a shallow clone, underlying values like `*queries.Expr` are not cloned and have built- in immutability.
-func (qs *QuerySet[T]) Clone() *QuerySet[T] {
-
+func (qs *QuerySet[T]) clone() *QuerySet[T] {
 	return &QuerySet[T]{
 		AliasGen: qs.AliasGen.Clone(),
 		internals: &QuerySetInternals{
@@ -448,6 +469,15 @@ func (qs *QuerySet[T]) Clone() *QuerySet[T] {
 	}
 }
 
+// Clone creates a new QuerySet with the same parameters as the original one.
+//
+// It is used to create a new QuerySet with the same parameters as the original one, so that the original one is not modified.
+//
+// It is a shallow clone, underlying values like `*queries.Expr` are not cloned and have built- in immutability.
+func (qs *QuerySet[T]) Clone() *QuerySet[T] {
+	return qs.clone()
+}
+
 // Prefix sets the prefix for the alias generator
 func (qs *QuerySet[T]) Prefix(prefix string) *QuerySet[T] {
 	qs.AliasGen.Prefix = prefix
@@ -463,8 +493,8 @@ func (qs *QuerySet[T]) String() string {
 	var sb = strings.Builder{}
 	sb.WriteString("QuerySet{")
 
-	qs = qs.Clone()
-	qs = qs.Limit(MAX_GET_RESULTS)
+	qs = qs.clone()
+	qs.internals.Limit = MAX_GET_RESULTS
 
 	var rows, err = qs.All()
 	if err != nil {
@@ -575,7 +605,7 @@ func (qs *QuerySet[T]) unpackFields(fields ...any) (infos []FieldInfo[attrs.Fiel
 	infos = make([]FieldInfo[attrs.FieldDefinition], 0, len(qs.internals.Fields))
 	var info = FieldInfo[attrs.FieldDefinition]{
 		Table: Table{
-			Name: qs.internals.Model.TableName,
+			Name: qs.internals.Model.Table,
 		},
 		Fields: make([]attrs.FieldDefinition, 0),
 	}
@@ -611,7 +641,7 @@ func (qs *QuerySet[T]) unpackFields(fields ...any) (infos []FieldInfo[attrs.Fiel
 			if ok {
 				infos = append(infos, FieldInfo[attrs.FieldDefinition]{
 					Table: Table{
-						Name: qs.internals.Model.TableName,
+						Name: qs.internals.Model.Table,
 					},
 					Fields: []attrs.FieldDefinition{field},
 				})
@@ -1151,7 +1181,7 @@ func (qs *QuerySet[T]) addSubProxies(info *FieldInfo[attrs.FieldDefinition], nod
 // `Select("Relation.*")`
 // `Select("*", "Relation.Field1", "Relation.Field2", "Relation.Nested.*")`
 func (qs *QuerySet[T]) Select(fields ...any) *QuerySet[T] {
-	qs = qs.Clone()
+	qs = qs.clone()
 
 	qs.internals.Fields = make([]*FieldInfo[attrs.FieldDefinition], 0)
 	if qs.internals.joinsMap == nil {
@@ -1201,7 +1231,7 @@ fieldsLoop:
 			var currInfo = &FieldInfo[attrs.FieldDefinition]{
 				Model: qs.internals.Model.Object,
 				Table: Table{
-					Name: qs.internals.Model.TableName,
+					Name: qs.internals.Model.Table,
 				},
 				Fields: ForSelectAllFields[attrs.FieldDefinition](qs.internals.Model.Object),
 			}
@@ -1223,7 +1253,7 @@ fieldsLoop:
 			// on selecting all fields
 			if qs.internals.Annotations.Len() > 0 {
 				var info = &FieldInfo[attrs.FieldDefinition]{
-					Table:  Table{Name: qs.internals.Model.TableName},
+					Table:  Table{Name: qs.internals.Model.Table},
 					Fields: make([]attrs.FieldDefinition, 0, qs.internals.Annotations.Len()),
 				}
 
@@ -1247,7 +1277,7 @@ fieldsLoop:
 			}
 			qs.internals.Fields = append(qs.internals.Fields, &FieldInfo[attrs.FieldDefinition]{
 				Table: Table{
-					Name: qs.internals.Model.TableName,
+					Name: qs.internals.Model.Table,
 				},
 				Fields: []attrs.FieldDefinition{field},
 			})
@@ -1264,6 +1294,18 @@ fieldsLoop:
 
 		// The field might be a relation
 		var rel = field.Rel()
+
+		//		if rel != nil && !allFields {
+		//			// this field cannot be used in a query without an asterisk
+		//			// because it is a multi- relation field
+		//			var relType = rel.Type()
+		//			if relType == attrs.RelManyToMany || relType == attrs.RelOneToMany {
+		//				panic(fmt.Errorf(
+		//					"field %q (%T) is a relation field without a column name, use Select(\"%s.*\") to select all fields of the relation",
+		//					selectedField, field, field.Name(),
+		//				))
+		//			}
+		//		}
 
 		// If all fields of the relation are requested, we need to add the relation
 		// to the join list. We also need to add the parent field to the chain.
@@ -1353,7 +1395,7 @@ fieldsLoop:
 //
 // By default the `__exact` (=) operator is used, each where clause is separated by `AND`.
 func (qs *QuerySet[T]) Filter(key interface{}, vals ...interface{}) *QuerySet[T] {
-	var nqs = qs.Clone()
+	var nqs = qs.clone()
 	nqs.internals.Where = append(qs.internals.Where, expr.Express(key, vals...)...)
 	return nqs
 }
@@ -1364,7 +1406,7 @@ func (qs *QuerySet[T]) Filter(key interface{}, vals ...interface{}) *QuerySet[T]
 //
 // The key can be a field name (string), an expr.Expression (expr.Expression) or a map of field names to values.
 func (qs *QuerySet[T]) Having(key interface{}, vals ...interface{}) *QuerySet[T] {
-	var nqs = qs.Clone()
+	var nqs = qs.clone()
 	nqs.internals.Having = append(qs.internals.Having, expr.Express(key, vals...)...)
 	return nqs
 }
@@ -1373,7 +1415,7 @@ func (qs *QuerySet[T]) Having(key interface{}, vals ...interface{}) *QuerySet[T]
 //
 // It takes a list of field names as arguments and returns a new QuerySet with the grouped results.
 func (qs *QuerySet[T]) GroupBy(fields ...any) *QuerySet[T] {
-	var nqs = qs.Clone()
+	var nqs = qs.clone()
 	nqs.internals.GroupBy, _ = qs.unpackFields(fields...)
 	return nqs
 }
@@ -1384,7 +1426,7 @@ func (qs *QuerySet[T]) GroupBy(fields ...any) *QuerySet[T] {
 //
 // The field names can be prefixed with a minus sign (-) to indicate descending order.
 func (qs *QuerySet[T]) OrderBy(fields ...string) *QuerySet[T] {
-	var nqs = qs.Clone()
+	var nqs = qs.clone()
 	nqs.internals.OrderBy = nqs.compileOrderBy(fields...)
 	return nqs
 }
@@ -1397,7 +1439,7 @@ func (qs *QuerySet[T]) compileOrderBy(fields ...string) []OrderBy {
 	var orderBy = make([]OrderBy, 0, len(fields))
 
 	if len(fields) == 0 {
-		fields = qs.internals.Model.OrderBy
+		fields = qs.internals.Model.Ordering
 	}
 
 	for _, field := range fields {
@@ -1464,21 +1506,21 @@ func (qs *QuerySet[T]) Reverse() *QuerySet[T] {
 			Desc:   !ord.Desc,
 		})
 	}
-	var nqs = qs.Clone()
+	var nqs = qs.clone()
 	nqs.internals.OrderBy = ordBy
 	return nqs
 }
 
 // Limit is used to limit the number of results returned by a query.
 func (qs *QuerySet[T]) Limit(n int) *QuerySet[T] {
-	var nqs = qs.Clone()
+	var nqs = qs.clone()
 	nqs.internals.Limit = n
 	return nqs
 }
 
 // Offset is used to set the offset of the results returned by a query.
 func (qs *QuerySet[T]) Offset(n int) *QuerySet[T] {
-	var nqs = qs.Clone()
+	var nqs = qs.clone()
 	nqs.internals.Offset = n
 	return nqs
 }
@@ -1487,7 +1529,7 @@ func (qs *QuerySet[T]) Offset(n int) *QuerySet[T] {
 //
 // It is used to prevent other transactions from modifying the rows until the current transaction is committed or rolled back.
 func (qs *QuerySet[T]) ForUpdate() *QuerySet[T] {
-	var nqs = qs.Clone()
+	var nqs = qs.clone()
 	nqs.internals.ForUpdate = true
 	return nqs
 }
@@ -1496,7 +1538,7 @@ func (qs *QuerySet[T]) ForUpdate() *QuerySet[T] {
 //
 // It is used to remove duplicate rows from the results.
 func (qs *QuerySet[T]) Distinct() *QuerySet[T] {
-	var nqs = qs.Clone()
+	var nqs = qs.clone()
 	nqs.internals.Distinct = true
 	return nqs
 }
@@ -1517,7 +1559,7 @@ func (qs *QuerySet[T]) annotate(alias string, expr expr.Expression) {
 	if qs.internals.annotations == nil {
 		qs.internals.annotations = &FieldInfo[attrs.FieldDefinition]{
 			Table: Table{
-				Name: qs.internals.Model.TableName,
+				Name: qs.internals.Model.Table,
 			},
 			Fields: make([]attrs.FieldDefinition, 0, qs.internals.Annotations.Len()),
 		}
@@ -1542,7 +1584,7 @@ func (qs *QuerySet[T]) annotate(alias string, expr expr.Expression) {
 //
 // If a map is provided, the keys are used as aliases for the expr.Expressions.
 func (qs *QuerySet[T]) Annotate(aliasOrAliasMap interface{}, exprs ...expr.Expression) *QuerySet[T] {
-	qs = qs.Clone()
+	qs = qs.clone()
 
 	switch aliasOrAliasMap := aliasOrAliasMap.(type) {
 	case string:
@@ -1582,7 +1624,7 @@ func (qs *QuerySet[T]) Annotate(aliasOrAliasMap interface{}, exprs ...expr.Expre
 // The queryset is modified in place, so the original QuerySet is changed.
 func (qs *QuerySet[T]) Scope(scopes ...func(*QuerySet[T], *QuerySetInternals) *QuerySet[T]) *QuerySet[T] {
 	var (
-		newQs   = qs.Clone()
+		newQs   = qs.clone()
 		changed bool
 	)
 	for _, scopeFunc := range scopes {
@@ -1597,7 +1639,14 @@ func (qs *QuerySet[T]) Scope(scopes ...func(*QuerySet[T], *QuerySetInternals) *Q
 	return qs
 }
 
-func (qs *QuerySet[T]) queryAll(fields ...any) CompiledQuery[[][]interface{}] {
+func (qs *QuerySet[T]) BuildExpression() expr.Expression {
+	var subquery = &subqueryExpr{
+		q: qs.QueryAll(),
+	}
+	return subquery
+}
+
+func (qs *QuerySet[T]) QueryAll(fields ...any) CompiledQuery[[][]interface{}] {
 	// Select all fields if no fields are provided
 	//
 	// Override the pointer to the original QuerySet with the Select("*") QuerySet
@@ -1619,7 +1668,7 @@ func (qs *QuerySet[T]) queryAll(fields ...any) CompiledQuery[[][]interface{}] {
 	return query
 }
 
-func (qs *QuerySet[T]) queryAggregate() CompiledQuery[[][]interface{}] {
+func (qs *QuerySet[T]) QueryAggregate() CompiledQuery[[][]interface{}] {
 	var dereferenced = *qs.internals
 	dereferenced.OrderBy = nil     // no order by for aggregates
 	dereferenced.Limit = 0         // no limit for aggregates
@@ -1635,7 +1684,7 @@ func (qs *QuerySet[T]) queryAggregate() CompiledQuery[[][]interface{}] {
 	return query
 }
 
-func (qs *QuerySet[T]) queryCount() CompiledQuery[int64] {
+func (qs *QuerySet[T]) QueryCount() CompiledQuery[int64] {
 	var q = qs.compiler.BuildCountQuery(
 		qs.context,
 		ChangeObjectsType[T, attrs.Definer](qs),
@@ -1657,7 +1706,7 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 		return qs.cached.([]*Row[T]), nil
 	}
 
-	var resultQuery = qs.queryAll()
+	var resultQuery = qs.QueryAll()
 	var results, err = resultQuery.Exec()
 	if err != nil {
 		return nil, err
@@ -1796,7 +1845,7 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 		return qs.cached.([]map[string]any), nil
 	}
 
-	var resultQuery = qs.queryAll(fields...)
+	var resultQuery = qs.QueryAll(fields...)
 	var results, err = resultQuery.Exec()
 	if err != nil {
 		return nil, err
@@ -1879,7 +1928,7 @@ func (qs *QuerySet[T]) ValuesList(fields ...any) ([][]interface{}, error) {
 		return qs.cached.([][]any), nil
 	}
 
-	var resultQuery = qs.queryAll(fields...)
+	var resultQuery = qs.QueryAll(fields...)
 	var results, err = resultQuery.Exec()
 	if err != nil {
 		return nil, err
@@ -1940,7 +1989,7 @@ func (qs *QuerySet[T]) Aggregate(annotations map[string]expr.Expression) (map[st
 		qs.annotate(alias, expr)
 	}
 
-	var query = qs.queryAggregate()
+	var query = qs.QueryAggregate()
 	var results, err = query.Exec()
 	if err != nil {
 		return nil, err
@@ -2004,11 +2053,11 @@ func (qs *QuerySet[T]) Get() (*Row[T], error) {
 		return qs.cached.(*Row[T]), nil
 	}
 
-	var nillRow = &Row[T]{
-		QuerySet: qs,
-	}
+	var nillRow = &Row[T]{}
 
-	*qs = *qs.Limit(MAX_GET_RESULTS)
+	// limit to max_get_results
+	qs.internals.Limit = MAX_GET_RESULTS
+
 	var results, err = qs.All()
 	if err != nil {
 		return nillRow, err
@@ -2103,14 +2152,17 @@ create:
 // It returns a Query that can be executed to get the result, which is a Row object
 // that contains the model object and a map of annotations.
 func (qs *QuerySet[T]) First() (*Row[T], error) {
-	*qs = *qs.Limit(1)
+	qs.internals.Limit = 1 // limit to 1 row
+
 	var results, err = qs.All()
 	if err != nil {
 		return nil, err
 	}
+
 	if len(results) == 0 {
 		return nil, errors.NoRows
 	}
+
 	return results[0], nil
 
 }
@@ -2153,7 +2205,7 @@ func (qs *QuerySet[T]) Exists() (bool, error) {
 //
 // It returns a CountQuery that can be executed to get the result, which is an int64 indicating the number of rows.
 func (qs *QuerySet[T]) Count() (int64, error) {
-	var q = qs.queryCount()
+	var q = qs.QueryCount()
 	var count, err = q.Exec()
 	if err != nil {
 		return 0, err

@@ -173,6 +173,18 @@ func (r *RelationField[T]) ColumnName() string {
 		if from != nil {
 			return from.Field().ColumnName()
 		}
+
+		if !r.IsProxy() && r.cnf.ColumnName == "" {
+			switch r.cnf.Rel.Type() {
+			case attrs.RelOneToOne, attrs.RelOneToMany, attrs.RelManyToMany:
+				var meta = attrs.GetModelMeta(r.Model)
+				var defs = meta.Definitions()
+				var primary = defs.Primary()
+
+				return primary.ColumnName()
+			}
+		}
+
 		return attrs.ColumnName(r.Name())
 	}
 	return r.cnf.ColumnName

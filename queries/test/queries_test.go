@@ -227,7 +227,6 @@ func (t *OneToOneWithThrough) FieldDefs() attrs.Definitions {
 		fields.NewOneToOneField[*queries.RelO2O[*OneToOneWithThrough_Target, *OneToOneWithThrough_Through]](t, "Target", &fields.FieldConfig{
 			ScanTo:      &t.Through,
 			ReverseName: "TargetReverse",
-			ColumnName:  "id",
 			Rel: attrs.Relate(
 				&OneToOneWithThrough_Target{},
 				"", &attrs.ThroughModel{
@@ -337,7 +336,6 @@ func (t *ModelManyToMany) FieldDefs() attrs.Definitions {
 		fields.NewManyToManyField[*queries.RelM2M[*ModelManyToMany_Target, *ModelManyToMany_Through]](t, "Target", &fields.FieldConfig{
 			ScanTo:      &t.Target,
 			ReverseName: "TargetReverse",
-			ColumnName:  "id",
 			Rel: attrs.Relate(
 				&ModelManyToMany_Target{},
 				"", &attrs.ThroughModel{
@@ -692,7 +690,7 @@ func TestQuerySet_Filter(t *testing.T) {
 		t.Fatalf("Expected query to be not nil")
 	}
 
-	if query.Model() == nil {
+	if query.Meta().Model() == nil {
 		t.Fatalf("Expected query model to be not nil")
 	}
 

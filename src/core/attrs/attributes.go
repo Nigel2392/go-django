@@ -62,7 +62,7 @@ func FieldNames(d any, exclude []string) []string {
 	}
 
 	switch d.(type) {
-	case Definer, []Field, []FieldDefinition:
+	case Definer, []Field, []FieldDefinition, Definitions:
 		return fieldNames(d, exclude)
 	}
 

@@ -84,6 +84,10 @@ func Value(v any, unsafe ...bool) Expression {
 		return expr
 	}
 
+	if exprBuilder, ok := v.(ExpressionBuilder); ok {
+		return exprBuilder.BuildExpression()
+	}
+
 	var s bool
 	if len(unsafe) > 0 && unsafe[0] {
 		s = true

@@ -21,7 +21,6 @@ type Row[T attrs.Definer] struct {
 	Object      T
 	Through     attrs.Definer // The through model instance, if applicable
 	Annotations map[string]any
-	QuerySet    *QuerySet[T]
 }
 
 // A collection of Row[T] objects, where T is a type that implements attrs.Definer.
