@@ -1833,8 +1833,8 @@ func (qs *QuerySet[T]) Scope(scopes ...func(*QuerySet[T], *QuerySetInternals) *Q
 }
 
 func (qs *QuerySet[T]) BuildExpression() expr.Expression {
-	var subquery = &subqueryExpr{
-		q: qs.Limit(0).QueryAll(),
+	var subquery = &subqueryExpr[T, *QuerySet[T]]{
+		qs: qs.Limit(0),
 	}
 	return subquery
 }

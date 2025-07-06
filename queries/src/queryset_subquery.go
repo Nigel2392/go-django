@@ -12,17 +12,17 @@ import (
 //go:linkname newFunc github.com/Nigel2392/go-django/queries/src/expr.newFunc
 func newFunc(funcLookup string, value []any, expr ...any) *expr.Function
 
-var _ expr.Expression = (*subqueryExpr)(nil)
+var _ expr.Expression = (*subqueryExpr[attrs.Definer, *QuerySet[attrs.Definer]])(nil)
 
-type subqueryExpr struct {
+type subqueryExpr[T attrs.Definer, QS BaseQuerySet[T, QS]] struct {
 	field expr.Expression
-	q     QueryInfo
+	qs    QS
 	op    string
 	not   bool
 	used  bool
 }
 
-func (s *subqueryExpr) SQL(sb *strings.Builder) []any {
+func (s *subqueryExpr[T, QS]) SQL(sb *strings.Builder) []any {
 	var written bool
 	var args = make([]any, 0)
 	if s.field != nil {
@@ -48,7 +48,8 @@ func (s *subqueryExpr) SQL(sb *strings.Builder) []any {
 		written = true
 	}
 
-	var sql = s.q.SQL()
+	var query = s.qs.QueryAll()
+	var sql = query.SQL()
 	if sql != "" {
 		if written {
 			sb.WriteString(" ")
@@ -57,13 +58,13 @@ func (s *subqueryExpr) SQL(sb *strings.Builder) []any {
 		sb.WriteString(sql)
 	}
 
-	args = append(args, s.q.Args()...)
+	args = append(args, query.Args()...)
 	return args
 }
 
-func (s *subqueryExpr) Clone() expr.Expression {
-	return &subqueryExpr{
-		q:     s.q,
+func (s *subqueryExpr[T, QS]) Clone() expr.Expression {
+	return &subqueryExpr[T, QS]{
+		qs:    s.qs.Clone(),
 		not:   s.not,
 		used:  s.used,
 		field: s.field,
@@ -71,12 +72,12 @@ func (s *subqueryExpr) Clone() expr.Expression {
 	}
 }
 
-func (s *subqueryExpr) Resolve(inf *expr.ExpressionInfo) expr.Expression {
+func (s *subqueryExpr[T, QS]) Resolve(inf *expr.ExpressionInfo) expr.Expression {
 	if inf.Model == nil || s.used {
 		return s
 	}
 
-	var nE = s.Clone().(*subqueryExpr)
+	var nE = s.Clone().(*subqueryExpr[T, QS])
 	nE.used = true
 
 	if nE.field != nil {
@@ -87,8 +88,7 @@ func (s *subqueryExpr) Resolve(inf *expr.ExpressionInfo) expr.Expression {
 }
 
 func Subquery[T attrs.Definer, QS BaseQuerySet[T, QS]](qs QS) expr.Expression {
-	q := qs.Limit(0).QueryAll()
-	return &subqueryExpr{
-		q: q,
+	return &subqueryExpr[T, QS]{
+		qs: qs.Limit(0),
 	}
 }
