@@ -226,10 +226,11 @@ func WalkRelationChain(m Definer, includeFinalRel bool, path []string) (*Relatio
 					Depth:     idx,
 					Prev:      chain.Final, // the previous part in the chain
 					ChainPart: field.Name(),
-					FieldRel:  fieldRel,
-					Through:   fieldRel.Through(),
-					Model:     fieldRel.Model(),
-					Field:     fieldRel.Field(),
+
+					FieldRel: fieldRel,
+					Through:  fieldRel.Through(),
+					Model:    fieldRel.Model(),
+					Field:    fieldRel.Field(),
 				}
 
 				// all the target’s fields

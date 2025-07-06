@@ -237,7 +237,7 @@ func NewAppConfig() django.AppConfig {
 		)
 
 		// Register the auth apps' password field with go-django.
-		attrs.RegisterFormFieldType(Password(""), func(opts ...func(fields.Field)) fields.Field {
+		attrs.RegisterFormFieldType(NewPassword(""), func(opts ...func(fields.Field)) fields.Field {
 			var newOpts = []func(fields.Field){
 				fields.HelpText("Enter your password"),
 				fields.Required(true),
@@ -297,8 +297,8 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 			return []error{autherrors.ErrPwdNoMatch}
 		} else if password1 != "" && password2 != "" && password1 == password2 {
 			var fake = *(instance.(*User))
-			SetPassword(&fake, string(password1))
-			cleaned["Password"] = string(fake.Password)
+			fake.SetPassword(string(password1))
+			cleaned["Password"] = string(fake.Password.String())
 		}
 		return nil
 	})

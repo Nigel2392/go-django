@@ -311,9 +311,7 @@ func (f *BaseUserForm) Save() (*User, error) {
 	}
 
 	var pw = cleaned["password"].(PasswordString)
-	if err := SetPassword(f.Instance, string(pw)); err != nil {
-		return nil, errors.Wrap(err, "Error setting password")
-	}
+	f.Instance.SetPassword(string(pw))
 
 	f.Instance.IsActive = !f.config.IsInactive
 	f.Instance.IsAdministrator = false

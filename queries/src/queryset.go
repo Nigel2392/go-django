@@ -83,6 +83,37 @@ func (m modelInfo) OrderBy() []string {
 	return m.Ordering
 }
 
+type PreloadResults struct {
+	rowsRaw Rows[attrs.Definer]
+	rowsMap map[any][]*Row[attrs.Definer]
+}
+
+type Preload struct {
+	FieldName   string
+	Path        string
+	Chain       []string
+	Rel         attrs.Relation
+	Primary     attrs.FieldDefinition
+	Source      attrs.Definer
+	SourceField attrs.FieldDefinition
+	Results     *PreloadResults
+}
+
+type QuerySetPreloads struct {
+	Preloads []Preload
+	mapping  map[string]Preload
+}
+
+func (p *QuerySetPreloads) Copy() *QuerySetPreloads {
+	if p == nil {
+		return nil
+	}
+	return &QuerySetPreloads{
+		Preloads: slices.Clone(p.Preloads),
+		mapping:  maps.Clone(p.mapping),
+	}
+}
+
 // Internals contains the internal state of the QuerySet.
 //
 // It includes all nescessary information for
@@ -91,6 +122,7 @@ type QuerySetInternals struct {
 	Model       modelInfo
 	Annotations *orderedmap.OrderedMap[string, attrs.Field]
 	Fields      []*FieldInfo[attrs.FieldDefinition]
+	Preload     *QuerySetPreloads
 	Where       []expr.ClauseExpression
 	Having      []expr.ClauseExpression
 	Joins       []JoinDef
@@ -440,6 +472,7 @@ func (qs *QuerySet[T]) clone() *QuerySet[T] {
 		AliasGen: qs.AliasGen.Clone(),
 		internals: &QuerySetInternals{
 			Model:       qs.internals.Model,
+			Preload:     qs.internals.Preload.Copy(),
 			Annotations: qs.internals.Annotations.Copy(),
 			Fields:      slices.Clone(qs.internals.Fields),
 			Where:       slices.Clone(qs.internals.Where),
@@ -1295,18 +1328,6 @@ fieldsLoop:
 		// The field might be a relation
 		var rel = field.Rel()
 
-		//		if rel != nil && !allFields {
-		//			// this field cannot be used in a query without an asterisk
-		//			// because it is a multi- relation field
-		//			var relType = rel.Type()
-		//			if relType == attrs.RelManyToMany || relType == attrs.RelOneToMany {
-		//				panic(fmt.Errorf(
-		//					"field %q (%T) is a relation field without a column name, use Select(\"%s.*\") to select all fields of the relation",
-		//					selectedField, field, field.Name(),
-		//				))
-		//			}
-		//		}
-
 		// If all fields of the relation are requested, we need to add the relation
 		// to the join list. We also need to add the parent field to the chain.
 		//
@@ -1385,6 +1406,178 @@ fieldsLoop:
 	}
 
 	return qs
+}
+
+//
+//	func (qs *QuerySet[T]) SelectThroughObjects(throughModel attrs.Through, throughKeyField string, subquery *QuerySet[attrs.Definer]) *QuerySet[T] {
+//		if subquery == nil {
+//			panic(fmt.Errorf("SelectThroughObjects: subquery cannot be nil"))
+//		}
+//
+//		if throughModel == nil {
+//			panic(fmt.Errorf("SelectThroughObjects: throughModel cannot be nil"))
+//		}
+//
+//		if throughKeyField == "" {
+//			panic(fmt.Errorf("SelectThroughObjects: throughKeyField cannot be empty"))
+//		}
+//
+//		qs = qs.clone()
+//
+//		qs.internals.Fields = make([]*FieldInfo[attrs.FieldDefinition], 0, 1)
+//
+//		var targetFieldInfo = &FieldInfo[attrs.FieldDefinition]{
+//			Model: qs.internals.Model.Object,
+//			Table: Table{
+//				Name: qs.internals.Model.Table,
+//			},
+//			Fields: ForSelectAllFields[attrs.FieldDefinition](
+//				qs.internals.Model.Fields,
+//			),
+//		}
+//
+//		var throughObject = newThroughProxy(throughModel)
+//		targetFieldInfo.Through = &FieldInfo[attrs.FieldDefinition]{
+//			Model: throughObject.object,
+//			Table: Table{
+//				Name: throughObject.defs.TableName(),
+//				Alias: fmt.Sprintf(
+//					"%s_through",
+//					subquery.internals.Model.Table,
+//				),
+//			},
+//			Fields: ForSelectAllFields[attrs.FieldDefinition](throughObject.defs),
+//		}
+//
+//		var condition = &JoinDefCondition{
+//			Operator: expr.EQ,
+//			ConditionA: expr.TableColumn{
+//				TableOrAlias: targetFieldInfo.Table.Name,
+//				FieldColumn:  qs.internals.Model.Primary,
+//			},
+//			ConditionB: expr.TableColumn{
+//				TableOrAlias: targetFieldInfo.Through.Table.Alias,
+//				FieldColumn:  throughObject.targetField,
+//			},
+//		}
+//
+//		var throughFieldColumn, _ = subquery.internals.Model.Object.FieldDefs().Field(throughKeyField)
+//		condition.Next = &JoinDefCondition{
+//			Operator: expr.EQ,
+//			ConditionA: expr.TableColumn{
+//				TableOrAlias: targetFieldInfo.Through.Table.Alias,
+//				FieldColumn:  throughObject.sourceField,
+//			},
+//			ConditionB: expr.TableColumn{
+//				TableOrAlias: subquery.internals.Model.Table,
+//				FieldColumn:  throughFieldColumn,
+//			},
+//		}
+//
+//		var join = JoinDef{
+//			TypeJoin: TypeJoinInner,
+//			Table: Table{
+//				Name: throughObject.defs.TableName(),
+//				Alias: fmt.Sprintf(
+//					"%s_through",
+//					subquery.internals.Model.Table,
+//				),
+//			},
+//			JoinDefCondition: condition,
+//		}
+//
+//		qs.internals.Fields = append(qs.internals.Fields, targetFieldInfo)
+//		qs.internals.AddJoin(join)
+//
+//		return qs
+//	}
+
+func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
+	// Preload is a no-op for QuerySet, as it is used to load related fields
+	// in the initial query. The Select method already handles this.
+	//
+	// If you want to preload specific fields, use the Select method instead.
+	var nqs = qs.clone()
+	nqs.internals.Preload = &QuerySetPreloads{
+		Preloads: make([]Preload, 0, len(fields)),
+		mapping:  make(map[string]Preload, len(fields)),
+	}
+	for _, field := range fields {
+		var preload Preload
+		switch v := field.(type) {
+		case string:
+			preload = Preload{
+				Path:  v,
+				Chain: strings.Split(v, "."),
+			}
+		case Preload:
+			if v.Path == "" {
+				panic("Preload: empty path in Preload")
+			}
+
+			v.Chain = strings.Split(v.Path, ".")
+			preload = v
+
+		default:
+			panic(fmt.Errorf("Preload: invalid field type %T, can be one of [string, Preload]", v))
+		}
+
+		var relatrionChain, err = attrs.WalkRelationChain(
+			qs.internals.Model.Object, true, preload.Chain,
+		)
+		if err != nil {
+			panic(fmt.Errorf("Preload: %w", err))
+		}
+
+		var preloads = make([]Preload, 0, len(relatrionChain.Chain))
+		var curr = relatrionChain.Root
+		var partIdx = 0
+		for curr != nil {
+
+			var meta = attrs.GetModelMeta(curr.Model)
+			var defs = meta.Definitions()
+
+			// create a preload for each part of the chain
+			// (if the preload is not already present in the mapping)
+			var subChain = relatrionChain.Chain[:partIdx+1]
+			var preloadPath = strings.Join(subChain, ".")
+			if _, ok := nqs.internals.Preload.mapping[preloadPath]; !ok {
+				var preload = Preload{
+					FieldName:   relatrionChain.Chain[partIdx],
+					Path:        preloadPath,
+					Chain:       subChain,
+					Rel:         curr.FieldRel,
+					Source:      curr.Model,
+					SourceField: curr.Field,
+					Primary:     defs.Primary(),
+				}
+				preloads = append(
+					preloads, preload,
+				)
+			}
+
+			curr = curr.Next
+			partIdx++
+		}
+
+		slices.SortStableFunc(preloads, func(a, b Preload) int {
+			return strings.Compare(a.Path, b.Path)
+		})
+
+		for _, preload := range preloads {
+			if _, ok := nqs.internals.Preload.mapping[preload.Path]; ok {
+				panic(fmt.Errorf("Preload: preload for %q already exists", preload.Path))
+			}
+			nqs.internals.Preload.mapping[preload.Path] = preload
+		}
+
+		nqs.internals.Preload.Preloads = append(
+			nqs.internals.Preload.Preloads, preloads...,
+		)
+
+	}
+
+	return nqs
 }
 
 // Filter is used to filter the results of a query.
@@ -1641,7 +1834,7 @@ func (qs *QuerySet[T]) Scope(scopes ...func(*QuerySet[T], *QuerySetInternals) *Q
 
 func (qs *QuerySet[T]) BuildExpression() expr.Expression {
 	var subquery = &subqueryExpr{
-		q: qs.QueryAll(),
+		q: qs.Limit(0).QueryAll(),
 	}
 	return subquery
 }
@@ -1720,9 +1913,113 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 		return err
 	}
 
+	var preloads = orderedmap.NewOrderedMap[string, []*Preload]()
+	//	if qs.internals.Preload != nil {
+	//		for _, preload := range qs.internals.Preload.Preloads {
+	//			fmt.Printf(
+	//				"Preloading %s for %T with source %T and field %s and primary %s\n",
+	//				preload.Path, qs.internals.Model.Object, preload.Source, preload.SourceField.Name(), preload.Primary.Name(),
+	//			)
+	//
+	//			var (
+	//				relType    = preload.Rel.Type()
+	//				relThrough = preload.Rel.Through()
+	//
+	//				preloadObjects Rows[attrs.Definer]
+	//				err            error
+	//			)
+	//
+	//			switch {
+	//			case relThrough == nil && relType == attrs.RelOneToMany:
+	//				preloadObjects, err = GetQuerySet(preload.Source).
+	//					WithContext(qs.context).
+	//					Filter(fmt.Sprintf("%s__in", preload.Primary.Name()), qs.clone().Select(preload.SourceField.Name())).
+	//					All()
+	//
+	//			case (relType == attrs.RelOneToOne || relType == attrs.RelManyToMany) && relThrough != nil:
+	//				var (
+	//					sourceFieldName = relThrough.SourceField()
+	//					targetFieldName = relThrough.TargetField()
+	//				)
+	//
+	//				var throughSubquery = GetQuerySet(relThrough.Model()).
+	//					WithContext(qs.context).
+	//					Select(targetFieldName).
+	//					Filter(fmt.Sprintf("%s__in", sourceFieldName), qs.clone().Select(preload.SourceField.Name()))
+	//
+	//				preloadObjects, err = GetQuerySet(preload.Source).
+	//					WithContext(qs.context).
+	//					// SelectThroughObjects(relThrough, targetFieldName, throughSubquery).
+	//					Filter(fmt.Sprintf("%s__in", preload.Primary.Name()), throughSubquery).
+	//					All()
+	//
+	//			default:
+	//				return nil, errors.TypeMismatch.Wrapf(
+	//					"unsupported relation type %s for preload %s", relType, preload.Path,
+	//				)
+	//			}
+	//			if err != nil {
+	//				return nil, errors.Wrapf(
+	//					err, "failed to preload %s for %T", preload.Path, qs.internals.Model.Object,
+	//				)
+	//			}
+	//
+	//			var result = &PreloadResults{
+	//				rowsRaw: preloadObjects,
+	//				rowsMap: make(map[any][]*Row[attrs.Definer], len(preloadObjects)),
+	//			}
+	//
+	//			for _, row := range preloadObjects {
+	//				//switch {
+	//				//case relThrough == nil:
+	//				var defs = row.Object.FieldDefs()
+	//				var primary, _ = defs.Field(preload.SourceField.Name())
+	//				// result.rowsMap[primary.GetValue()] = row
+	//				var primaryVal = primary.GetValue()
+	//				if slice, ok := result.rowsMap[primaryVal]; ok {
+	//					result.rowsMap[primaryVal] = append(slice, row)
+	//				} else {
+	//					var rows = make([]*Row[attrs.Definer], 0, 1)
+	//					rows = append(rows, row)
+	//					result.rowsMap[primaryVal] = rows
+	//				}
+	//
+	//				//default:
+	//				//	var defs = row.Through.FieldDefs()
+	//				//	var sourceField, _ = defs.Field(relThrough.SourceField())
+	//				//	var sourceValue = sourceField.GetValue()
+	//				//	// result.rowsMap[sourceValue] = row
+	//				//	if slice, ok := result.rowsMap[sourceValue]; ok {
+	//				//		result.rowsMap[sourceValue] = append(slice, row)
+	//				//	} else {
+	//				//		var rows = make([]*Row[attrs.Definer], 0, 1)
+	//				//		rows = append(rows, row)
+	//				//		result.rowsMap[sourceValue] = rows
+	//				//	}
+	//				//}
+	//			}
+	//
+	//			preload.Results = result
+	//
+	//			// chain example: "author.books.title" -> "author.books"
+	//			var chainParts = strings.Join(preload.Chain[:len(preload.Chain)-1], ".")
+	//			if existing, ok := preloads.Get(chainParts); ok {
+	//				// if the preload already exists, append the new preload to the existing one
+	//				existing = append(existing, &preload)
+	//				preloads.Set(chainParts, existing)
+	//			} else {
+	//				// otherwise, create a new slice with the preload
+	//				var p = make([]*Preload, 0, 1)
+	//				p = append(p, &preload)
+	//				preloads.Set(chainParts, p)
+	//			}
+	//		}
+	//	}
+
 	rows, err := newRows[T](
 		qs.internals.Fields,
 		internal.NewObjectFromIface(qs.internals.Model.Object),
+		preloads,
 		runActors,
 	)
 	if err != nil {

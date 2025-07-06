@@ -603,6 +603,7 @@ type BaseQuerySet[T attrs.Definer, QS any] interface {
 	Clone() QS
 	Distinct() QS
 	Select(fields ...any) QS
+	Preload(fields ...any) QS
 	Filter(key interface{}, vals ...interface{}) QS
 	GroupBy(fields ...any) QS
 	Limit(n int) QS

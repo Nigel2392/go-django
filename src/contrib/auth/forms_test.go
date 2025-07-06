@@ -2,60 +2,16 @@ package auth_test
 
 import (
 	"errors"
-	"flag"
 	"fmt"
 	"net/http"
 	"net/url"
-	"os"
 	"testing"
 
-	"github.com/Nigel2392/go-django/queries/src/quest"
-	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/errs"
-	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 )
-
-func init() {
-	testing.Init()
-
-	flag.Parse()
-
-	var which, db = testdb.Open()
-	var settings = map[string]interface{}{
-		django.APPVAR_DATABASE: db,
-	}
-
-	logger.Setup(&logger.Logger{
-		Level:       logger.DBG,
-		WrapPrefix:  logger.ColoredLogWrapper,
-		OutputDebug: os.Stdout,
-		OutputInfo:  os.Stdout,
-		OutputWarn:  os.Stdout,
-		OutputError: os.Stdout,
-	})
-
-	django.App(django.Configure(settings))
-
-	logger.Debugf("Using %s database for queries tests", which)
-
-	if !testing.Verbose() {
-		logger.SetLevel(logger.WRN)
-	}
-
-	var tables = quest.Table[*testing.T](nil,
-		&auth.User{},
-		&auth.Group{},
-		&auth.Permission{},
-		&auth.UserGroup{},
-		&auth.GroupPermission{},
-		&auth.UserPermission{},
-	)
-	tables.Create()
-}
 
 type testUser struct {
 	ID              uint64

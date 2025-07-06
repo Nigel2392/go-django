@@ -67,11 +67,7 @@ var command_set_password = &command.Cmd[interface{}]{
 			}
 
 			user = userRow.Object
-			if err = SetPassword(user, password); err != nil {
-				logger.Warn(err)
-				continue
-			}
-
+			user.SetPassword(password)
 			break
 		}
 

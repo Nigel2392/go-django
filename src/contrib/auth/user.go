@@ -5,6 +5,7 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/queries/src/models"
@@ -17,8 +18,6 @@ var (
 	_ queries.ActsBeforeSave     = (*User)(nil)
 	_ queries.ActsBeforeCreate   = (*User)(nil)
 )
-
-type Password string
 
 type UserGroup struct {
 	UserID  drivers.Uint `json:"user_id" attrs:"primary;readonly"`
@@ -122,7 +121,7 @@ type User struct {
 	UpdatedAt       drivers.DateTime `json:"updated_at" attrs:"readonly"`
 	Email           *drivers.Email   `json:"email"`
 	Username        string           `json:"username"`
-	Password        Password         `json:"password"`
+	Password        *Password        `json:"password"`
 	FirstName       string           `json:"first_name"`
 	LastName        string           `json:"last_name"`
 	IsAdministrator bool             `json:"is_administrator" attrs:"blank"`
@@ -137,12 +136,22 @@ func (u *User) String() string {
 	return u.Username
 }
 
+func (u *User) SetPassword(password string) *User {
+	u.Password = NewPassword(password)
+	return u
+}
+
 func (u *User) BeforeCreate(ctx context.Context) error {
 	u.CreatedAt = drivers.CurrentDateTime()
 	return nil
 }
 
 func (u *User) BeforeSave(ctx context.Context) error {
+
+	if u.Password.IsZero() {
+		return errors.ValueError.Wrap("password cannot be empty")
+	}
+
 	u.UpdatedAt = drivers.CurrentDateTime()
 	return nil
 }
@@ -157,10 +166,12 @@ func (u *User) Fields() []any {
 		attrs.Unbound("Email", &attrs.FieldConfig{
 			Column:    "email",
 			MaxLength: 255,
+			MinLength: 3,
 		}),
 		attrs.Unbound("Username", &attrs.FieldConfig{
 			Column:    "username",
 			MaxLength: 16,
+			MinLength: 3,
 		}),
 		attrs.Unbound("FirstName", &attrs.FieldConfig{
 			Column:    "first_name",
@@ -231,7 +242,12 @@ func (u *User) IsAdmin() bool {
 	return u.IsAdministrator && u.IsActive
 }
 
-func (u *User) HasObjectPermission(obj interface{}, perms ...string) bool {
+func (u *User) HasObjectPermission(ctx context.Context, obj interface{}, perms ...string) bool {
+
+	if u.IsAdmin() || len(perms) == 0 {
+		return true
+	}
+
 	// First we check the direct user permission cache.
 	var pCache = u.Permissions.Cache()
 	if pCache != nil && pCache.Len() > 0 {
@@ -314,7 +330,10 @@ func (u *User) HasObjectPermission(obj interface{}, perms ...string) bool {
 		))
 	}
 
-	var exists, err = GetUserQuerySet().Filter(expr.Q("ID", u.ID), expr.And(q...)).Exists()
+	var exists, err = GetUserQuerySet().
+		WithContext(ctx).
+		Filter(expr.Q("ID", u.ID), expr.And(q...)).
+		Exists()
 	if err != nil {
 		return false
 	}

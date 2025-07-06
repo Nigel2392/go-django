@@ -115,7 +115,7 @@ var passwordHashTests = []passwordTest{
 		Password:      "Password!123",
 		Hash:          "notHashedPassword",
 		ExpectedError: true,
-		Errors:        []error{errExpectedHash},
+		Errors:        []error{autherrors.ErrPasswordInvalid},
 	},
 }
 
@@ -132,8 +132,6 @@ var passwordSetTests = []passwordTest{
 		Errors:   []error{autherrors.ErrPwdHashMismatch},
 	},
 }
-
-var errExpectedHash = errors.New("expected hashed password, got invalid hash")
 
 func TestPasswords(t *testing.T) {
 	t.Run("Validation", func(t *testing.T) {
@@ -171,16 +169,7 @@ func TestPasswords(t *testing.T) {
 			t.Run(test.TestName, func(t *testing.T) {
 				test.ExpectedError = test.ExpectedError || len(test.Errors) != 0
 				var u = &auth.User{
-					Password: auth.Password(test.Hash),
-				}
-
-				if !auth.IS_HASHED(string(u.Password)) {
-					if test.ExpectedError && !errors.Is(errExpectedHash, test.Errors[0]) {
-						t.Errorf("expected hashed password, got invalid hash")
-						return
-					}
-					t.Logf("password is not hashed (nor expected to be), skipping test")
-					return
+					Password: auth.NewHashedPassword(test.Hash),
 				}
 
 				var err = auth.CheckPassword(u, test.Password)
@@ -207,10 +196,10 @@ func TestPasswords(t *testing.T) {
 	for _, test := range passwordSetTests {
 		t.Run(test.TestName, func(t *testing.T) {
 			var u = &auth.User{
-				Password: auth.Password(test.Hash),
+				Password: auth.NewHashedPassword(test.Hash),
 			}
 
-			var err = auth.SetPassword(u, test.Password)
+			var _, err = u.SetPassword(test.Password).Password.Value()
 			if test.ExpectedError {
 				if err == nil {
 					t.Error("expected error, got nil")

@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/internal"
@@ -179,6 +180,7 @@ func (t *relatedQuerySet[T, T2]) setup() {
 func (t *relatedQuerySet[T, T2]) createTargets(targets []T) ([]T, error) {
 	t.setup()
 	return t.originalQs.Clone().BulkCreate(targets)
+	// return t.originalQs.Clone().WithContext(t.qs.context).BulkCreate(targets)
 }
 
 func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relation, created int64, _ error) {
@@ -296,12 +298,18 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 		relations = append(relations, rel)
 	}
 
-	_, err = GetQuerySet(throughObj).BulkCreate(throughModels)
+	_, err = GetQuerySet(throughObj).WithContext(t.qs.context).BulkCreate(throughModels)
 	if err != nil {
 		return nil, created, err
 	}
 
 	return relations, created, nil
+}
+
+func (t *relatedQuerySet[T, T2]) WithContext(ctx context.Context) T2 {
+	t.setup()
+	t.qs = t.qs.WithContext(ctx)
+	return t.embedder
 }
 
 func (t *relatedQuerySet[T, T2]) Filter(key any, vals ...any) T2 {
@@ -466,6 +474,7 @@ targetLoop:
 
 	var throughModel = newThroughProxy(r.rel.Through())
 	var throughQs = GetQuerySet(throughModel.object).
+		WithContext(r.qs.context).
 		Filter(
 			expr.Q(
 				throughModel.sourceField.Name(),
@@ -537,7 +546,7 @@ func (r *RelManyToManyQuerySet[T]) ClearTargets() (int64, error) {
 	}
 
 	var throughModel = newThroughProxy(r.rel.Through())
-	var throughIdsResult, err = r.qs.Select(r.qs.Meta().PrimaryKey().Name()).ValuesList()
+	var throughIdsResult, err = r.qs.Select(r.qs.Meta().PrimaryKey().Name()).WithContext(r.qs.context).ValuesList()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get through object IDs: %w", err)
 	}
@@ -548,6 +557,7 @@ func (r *RelManyToManyQuerySet[T]) ClearTargets() (int64, error) {
 	}
 
 	var throughQs = GetQuerySet(throughModel.object).
+		WithContext(r.qs.context).
 		Filter(
 			expr.Q(
 				throughModel.sourceField.Name(),

@@ -35,5 +35,5 @@ func (pb *PermissionsBackend) HasObjectPermission(r *http.Request, obj interface
 	}
 
 	var u = user.(*User)
-	return u.HasObjectPermission(obj, perms...)
+	return u.HasObjectPermission(r.Context(), obj, perms...)
 }

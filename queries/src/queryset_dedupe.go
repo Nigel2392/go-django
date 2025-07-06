@@ -61,15 +61,16 @@ type rows[T attrs.Definer] struct {
 	possibleDuplicates []*scannableField // possible duplicate fields that can be added to the rows
 	hasMultiRelations  bool              // if the rows have multi-valued relations
 
-	objects *orderedmap.OrderedMap[any, *rootObject]
-	forEach func(attrs.Definer) error
+	preloads *orderedmap.OrderedMap[string, []*Preload]
+	objects  *orderedmap.OrderedMap[any, *rootObject]
+	forEach  func(attrs.Definer) error
 }
 
 // Initialize a new rows structure for the given model type.
 // It will scan the fields of the model and build a list of scannable fields that can be used to retrieve the root object.
 // It will also add possible duplicate fields to the list, which can be used to deduplicate relations later on.
 // The forEach function is called for each object that is added to the rows structure,
-func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl attrs.Definer, forEach func(attrs.Definer) error) (*rows[T], error) {
+func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl attrs.Definer, preloads *orderedmap.OrderedMap[string, []*Preload], forEach func(attrs.Definer) error) (*rows[T], error) {
 	var seen = make(map[string]struct{}, 0)
 	var scannables = getScannableFields(
 		fields, mdl,
@@ -79,6 +80,7 @@ func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl at
 		objects:            orderedmap.NewOrderedMap[any, *rootObject](),
 		possibleDuplicates: make([]*scannableField, 0),
 		hasMultiRelations:  false,
+		preloads:           preloads,
 		forEach:            forEach,
 	}
 
@@ -244,13 +246,41 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 }
 
 func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
-	var addRelations func(*object, uint64) error
+	var addRelations func(*object, uint64, string) error
 	// addRelations is a recursive function that traverses the object and its relations,
 	// and sets the related objects on the provided parent object.
-	addRelations = func(obj *object, depth uint64) error {
+	addRelations = func(obj *object, depth uint64, objPath string) error {
 
 		if obj.uniqueValue == nil {
 			panic(fmt.Sprintf("object %T has no primary key, cannot deduplicate relations", obj.obj))
+		}
+
+		var preloads, ok = r.preloads.Get(objPath)
+		if ok {
+			for _, preload := range preloads {
+				var (
+					relType    = preload.Rel.Type()
+					relThrough = preload.Rel.Through()
+				)
+
+				var fieldToSet, ok = obj.fieldDefs.Field(preload.FieldName)
+				if !ok {
+					return fmt.Errorf("field %q not found in object %T", preload.FieldName, obj.obj)
+				}
+
+				fmt.Println("preloading relation", objPath, preload.FieldName, relType, relThrough, fieldToSet.Name())
+				for _, obj := range preload.Results.rowsRaw {
+					fmt.Println("preload object", objPath, obj.Object, obj.Through)
+				}
+				//fmt.Println(preload.Results.rowsMap)
+				//switch {
+				//case relThrough == nil && relType == attrs.RelOneToMany:
+				//	fmt.Println("preloading OneToMany relation", objPath, preload.SourceField.Name())
+				//case (relType == attrs.RelOneToOne || relType == attrs.RelManyToMany) && relThrough != nil:
+				//	fmt.Println("preloading OneToOne or ManyToMany relation with through model", objPath, *preload)
+				//default:
+				//}
+			}
 		}
 
 		for relName, rel := range obj.relations {
@@ -261,7 +291,14 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
 					continue
 				}
 
-				if err := addRelations(relatedObj, depth+1); err != nil {
+				var newObjPath = objPath
+				if newObjPath == "" {
+					newObjPath = relName
+				} else {
+					newObjPath = fmt.Sprintf("%s.%s", newObjPath, relName)
+				}
+
+				if err := addRelations(relatedObj, depth+1, newObjPath); err != nil {
 					return fmt.Errorf("object %T: %w", obj, err)
 				}
 
@@ -314,7 +351,7 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
 		}
 
 		// add the relations to each object recursively
-		if err := addRelations(obj.object, 0); err != nil {
+		if err := addRelations(obj.object, 0, ""); err != nil {
 			return nil, fmt.Errorf("failed to add relations for object with primary key %v: %w", obj.object.uniqueValue, err)
 		}
 

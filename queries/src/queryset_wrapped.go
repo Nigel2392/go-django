@@ -79,6 +79,12 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Select(fields ...any) CONV {
 	return w.embedder
 }
 
+func (w *WrappedQuerySet[T, CONV, ORIG]) Preload(fields ...any) CONV {
+	w.setup()
+	w.BaseQuerySet = w.BaseQuerySet.Preload(fields...)
+	return w.embedder
+}
+
 func (w *WrappedQuerySet[T, CONV, ORIG]) Filter(key interface{}, vals ...interface{}) CONV {
 	w.setup()
 	w.BaseQuerySet = w.BaseQuerySet.Filter(key, vals...)

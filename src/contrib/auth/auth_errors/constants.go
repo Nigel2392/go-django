@@ -14,8 +14,8 @@ const (
 	ErrInvalidUsername errs.Error = "invalid username"
 	ErrUserExists      errs.Error = "user already exists"
 	ErrIsActive        errs.Error = "user account is not active"
-	ErrPasswordInvalid errs.Error = "invalid password"
-	ErrPwdHashMismatch errs.Error = "password is not valid"
+	ErrPasswordInvalid errs.Error = "password is not valid"
+	ErrPwdHashMismatch errs.Error = ErrPasswordInvalid
 	ErrPwdNoMatch      errs.Error = "passwords do not match"
 	ErrGenericAuthFail errs.Error = "authentication failed"
 	ErrNoSession       errs.Error = "no session found"

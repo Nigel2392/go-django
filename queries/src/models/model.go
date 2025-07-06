@@ -893,6 +893,11 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 			)
 		}
 
+		//	fmt.Printf(
+		//		"[SaveObject] Model %T field %s changed: %v, must include: %v, force: %v, value: %#v\n",
+		//		cnf.this, head.Value.Name(), hasChanged, mustInclField, cnf.Force, head.Value.GetValue(),
+		//	)
+
 		// Check if the field is a Saver or a SaveableField.
 		// If it is a Saver, we need to panic and inform the user
 		// that they need to use a ContextSaver to maintain transaction integrity.

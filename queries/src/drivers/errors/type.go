@@ -32,7 +32,7 @@ func Errorf(code GoCode, format string, args ...interface{}) error {
 
 func (e Error) Error() string {
 	var reasonStr string
-	if e.Reason != nil && !errors.Is(e.Reason, e) {
+	if e.Reason != nil {
 		var reason = e.Reason.Error()
 		var rBytes = make([]byte, len(reason)+2)
 		rBytes[0] = ':'
@@ -52,13 +52,27 @@ func (e Error) Error() string {
 func (e Error) WithCause(reason error) Error {
 	if e.Reason != nil {
 		return Error{
+			Code:    e.Code,
 			Message: e.Message,
 			Reason:  errors.Join(e.Reason, reason),
 			Related: e.Related,
 		}
 	}
 
+	//	if diff, ok := reason.(Error); ok && diff.Code == e.Code &&
+	//		// If the reason is already an Error with the same code, we can just return it.
+	//		if e.Message != diff.Message && e.Message != "" {
+	//			if diff.Reason == nil {
+	//				diff.Reason = errors.New(e.Message)
+	//			} else {
+	//				diff.Reason = Wrap(diff.Reason, e.Message)
+	//			}
+	//		}
+	//		return diff
+	//	}
+
 	return Error{
+		Code:    e.Code,
 		Message: e.Message,
 		Reason:  reason,
 		Related: e.Related,

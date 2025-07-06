@@ -75,10 +75,7 @@ var command_create_user = &command.Cmd[createUserStorage]{
 				continue
 			}
 
-			if err = SetPassword(u, password); err != nil {
-				logger.Warn(err)
-				continue
-			}
+			u.SetPassword(password)
 			isValid = true
 		}
 

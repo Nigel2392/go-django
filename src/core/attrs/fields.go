@@ -1002,7 +1002,7 @@ func (f *FieldDef) Scan(value any) error {
 	return nil
 }
 
-func (f *FieldDef) driverValue(value any) (driver.Value, error) {
+func (f *FieldDef) _driverValue(value any) (driver.Value, error) {
 	var v reflect.Value
 	switch val := value.(type) {
 	case reflect.Value:
@@ -1059,27 +1059,46 @@ func (f *FieldDef) driverValue(value any) (driver.Value, error) {
 	)
 }
 
+func (f *FieldDef) driverValue() (driver.Value, error) {
+	var v = f.field_v
+	if v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+		if !v.IsValid() || v.IsNil() {
+			var def = f.GetDefault()
+			f.SetValue(def, true)
+			return f._driverValue(def)
+		}
+		v = v.Elem()
+	}
+
+	if v.IsZero() {
+		return f._driverValue(f.GetDefault())
+	}
+
+	return f._driverValue(v)
+}
+
 // Returns the value of the field as a driver.Value.
 //
 // This value should be used for storing the field in a database.
 //
 // If the field is nil or the zero value, the default value is returned.
 func (f *FieldDef) Value() (driver.Value, error) {
-	var v = f.field_v
-	if v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
-		if !v.IsValid() || v.IsNil() {
-			var def = f.GetDefault()
-			f.SetValue(def, true)
-			return f.driverValue(def)
-		}
-		v = v.Elem()
+	var val, err = f.driverValue()
+	if err != nil {
+		return nil, fmt.Errorf(
+			"failed to get value for field %q (%T): %w",
+			f.field_t.Name, f.field_v.Interface(), err,
+		)
 	}
 
-	if v.IsZero() {
-		return f.driverValue(f.GetDefault())
-	}
+	//	if reflect.ValueOf(val).IsZero() && !f.AllowBlank() {
+	//		return nil, fmt.Errorf(
+	//			"field %q (%T) is not allowed to be blank",
+	//			f.field_t.Name, f.field_v.Interface(),
+	//		)
+	//	}
 
-	return f.driverValue(v)
+	return val, nil
 }
 
 func nameGetDefault(f *FieldDef) string {
