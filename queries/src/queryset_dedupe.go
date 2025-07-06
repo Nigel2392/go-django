@@ -2,8 +2,10 @@ package queries
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/elliotchance/orderedmap/v2"
@@ -71,7 +73,7 @@ type rows[T attrs.Definer] struct {
 // It will scan the fields of the model and build a list of scannable fields that can be used to retrieve the root object.
 // It will also add possible duplicate fields to the list, which can be used to deduplicate relations later on.
 // The forEach function is called for each object that is added to the rows structure,
-func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl attrs.Definer, preloads *orderedmap.OrderedMap[string, []*Preload], forEach func(attrs.Definer) error) (*rows[T], error) {
+func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl attrs.Definer, forEach func(attrs.Definer) error) (*rows[T], error) {
 	var seen = make(map[string]struct{}, 0)
 	var scannables = getScannableFields(
 		fields, mdl,
@@ -81,7 +83,7 @@ func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl at
 		objects:            orderedmap.NewOrderedMap[any, *rootObject](),
 		possibleDuplicates: make([]*scannableField, 0),
 		hasMultiRelations:  false,
-		preloads:           preloads,
+		preloads:           orderedmap.NewOrderedMap[string, []*Preload](),
 		forEach:            forEach,
 		seen:               make(map[string]map[any]struct{}, len(scannables)),
 	}
@@ -261,6 +263,172 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 		current = child
 		idx++
 	}
+}
+
+func (r *rows[T]) compilePreload(preload *Preload, qs *QuerySet[T]) error {
+	if len(r.seen) == 0 {
+		return errors.NoUniqueKey.Wrapf(
+			"QuerySet.All: no 'seen' map for preload %q", preload.FieldName,
+		)
+	}
+
+	var pkMap = r.seen[strings.Join(preload.Chain[:len(preload.Chain)-1], ".")]
+	if pkMap == nil {
+		return errors.ValueError.WithCause(fmt.Errorf(
+			"QuerySet.All: no primary key map for preload %q", preload.FieldName,
+		))
+	}
+
+	var pks = make([]any, 0, len(pkMap))
+	for pk := range pkMap {
+		pks = append(pks, pk)
+	}
+
+	var (
+		// relType    = preload.Rel.Type()
+		relThrough = preload.Rel.Through()
+	)
+
+	var subQueryset = GetQuerySetWithContext(qs.context, preload.Model)
+	var targetFieldInfo = &FieldInfo[attrs.FieldDefinition]{
+		Model: subQueryset.internals.Model.Object,
+		Table: Table{
+			Name: subQueryset.internals.Model.Table,
+		},
+		Fields: ForSelectAllFields[attrs.FieldDefinition](
+			subQueryset.internals.Model.Fields,
+		),
+	}
+
+	if relThrough != nil {
+		var throughObject = newThroughProxy(relThrough)
+
+		targetFieldInfo.Through = &FieldInfo[attrs.FieldDefinition]{
+			Model: throughObject.object,
+			Table: Table{
+				Name: throughObject.defs.TableName(),
+				Alias: fmt.Sprintf(
+					"%s_through",
+					subQueryset.internals.Model.Table,
+				),
+			},
+			Fields: ForSelectAllFields[attrs.FieldDefinition](throughObject.defs),
+		}
+
+		var condition = &JoinDefCondition{
+			Operator: expr.EQ,
+			ConditionA: expr.TableColumn{
+				TableOrAlias: targetFieldInfo.Table.Name,
+				FieldColumn:  qs.internals.Model.Primary,
+			},
+			ConditionB: expr.TableColumn{
+				TableOrAlias: targetFieldInfo.Through.Table.Alias,
+				FieldColumn:  throughObject.targetField,
+			},
+		}
+
+		condition.Next = &JoinDefCondition{
+			Operator: expr.IN,
+			ConditionA: expr.TableColumn{
+				TableOrAlias: targetFieldInfo.Through.Table.Alias,
+				FieldColumn:  throughObject.sourceField,
+			},
+			ConditionB: expr.TableColumn{
+				Values: []any{pks},
+			},
+		}
+
+		var join = JoinDef{
+			TypeJoin: TypeJoinInner,
+			Table: Table{
+				Name: throughObject.defs.TableName(),
+				Alias: fmt.Sprintf(
+					"%s_through",
+					subQueryset.internals.Model.Table,
+				),
+			},
+			JoinDefCondition: condition,
+		}
+
+		subQueryset.internals.AddJoin(join)
+	} else {
+		var targetField = preload.Rel.Field()
+		if targetField == nil {
+			targetField = subQueryset.internals.Model.Primary
+		}
+
+		subQueryset.internals.Where = append(subQueryset.internals.Where, expr.Expr(
+			targetField.Name(),
+			expr.LOOKUP_IN,
+			pks,
+			// t.source.Object.FieldDefs().Primary().GetValue(),
+		))
+	}
+
+	subQueryset.internals.Fields = append(
+		subQueryset.internals.Fields, targetFieldInfo,
+	)
+
+	subQueryset.internals.Limit = 0 // preload all objects
+	subQueryset.internals.Offset = 0
+	var preloadObjects, err = subQueryset.All()
+	if err != nil {
+		return errors.Wrapf(
+			err, "failed to preload %s for %T", preload.Path, qs.internals.Model.Object,
+		)
+	}
+
+	var result = &PreloadResults{
+		rowsRaw: preloadObjects,
+		rowsMap: make(map[any][]*Row[attrs.Definer], len(preloadObjects)),
+	}
+
+	for _, row := range preloadObjects {
+		switch {
+		case relThrough == nil:
+			var defs = row.Object.FieldDefs()
+			var primary, _ = defs.Field(preload.Primary.Name())
+			// result.rowsMap[primary.GetValue()] = row
+			var primaryVal = primary.GetValue()
+			if slice, ok := result.rowsMap[primaryVal]; ok {
+				result.rowsMap[primaryVal] = append(slice, row)
+			} else {
+				var rows = make([]*Row[attrs.Definer], 0, 1)
+				rows = append(rows, row)
+				result.rowsMap[primaryVal] = rows
+			}
+
+		default:
+			var defs = row.Through.FieldDefs()
+			var sourceField, _ = defs.Field(relThrough.SourceField())
+			var sourceValue = sourceField.GetValue()
+			// result.rowsMap[sourceValue] = row
+			if slice, ok := result.rowsMap[sourceValue]; ok {
+				result.rowsMap[sourceValue] = append(slice, row)
+			} else {
+				var rows = make([]*Row[attrs.Definer], 0, 1)
+				rows = append(rows, row)
+				result.rowsMap[sourceValue] = rows
+			}
+		}
+	}
+
+	preload.Results = result
+
+	// chain example: "author.books.title" -> "author.books"
+	var chainParts = strings.Join(preload.Chain[:len(preload.Chain)-1], ".")
+	if existing, ok := r.preloads.Get(chainParts); ok {
+		// if the preload already exists, append the new preload to the existing one
+		existing = append(existing, preload)
+		r.preloads.Set(chainParts, existing)
+	} else {
+		// otherwise, create a new slice with the preload
+		var p = make([]*Preload, 0, 1)
+		p = append(p, preload)
+		r.preloads.Set(chainParts, p)
+	}
+
+	return nil
 }
 
 func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {

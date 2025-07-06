@@ -1913,11 +1913,9 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 		return err
 	}
 
-	var preloads = orderedmap.NewOrderedMap[string, []*Preload]()
 	rows, err := newRows[T](
 		qs.internals.Fields,
 		internal.NewObjectFromIface(qs.internals.Model.Object),
-		preloads,
 		runActors,
 	)
 	if err != nil {
@@ -2028,162 +2026,7 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 
 	if qs.internals.Preload != nil {
 		for _, preload := range qs.internals.Preload.Preloads {
-			var pkMap = rows.seen[strings.Join(preload.Chain[:len(preload.Chain)-1], ".")]
-			if pkMap == nil {
-				return nil, errors.ValueError.WithCause(fmt.Errorf(
-					"QuerySet.All: no primary key map for preload %q", preload.FieldName,
-				))
-			}
-
-			var pks = make([]any, 0, len(pkMap))
-			for pk := range pkMap {
-				pks = append(pks, pk)
-			}
-
-			var (
-				// relType    = preload.Rel.Type()
-				relThrough = preload.Rel.Through()
-			)
-
-			var subQueryset = GetQuerySetWithContext(qs.context, preload.Model)
-			var targetFieldInfo = &FieldInfo[attrs.FieldDefinition]{
-				Model: subQueryset.internals.Model.Object,
-				Table: Table{
-					Name: subQueryset.internals.Model.Table,
-				},
-				Fields: ForSelectAllFields[attrs.FieldDefinition](
-					subQueryset.internals.Model.Fields,
-				),
-			}
-
-			if relThrough != nil {
-				var throughObject = newThroughProxy(relThrough)
-
-				targetFieldInfo.Through = &FieldInfo[attrs.FieldDefinition]{
-					Model: throughObject.object,
-					Table: Table{
-						Name: throughObject.defs.TableName(),
-						Alias: fmt.Sprintf(
-							"%s_through",
-							subQueryset.internals.Model.Table,
-						),
-					},
-					Fields: ForSelectAllFields[attrs.FieldDefinition](throughObject.defs),
-				}
-
-				var condition = &JoinDefCondition{
-					Operator: expr.EQ,
-					ConditionA: expr.TableColumn{
-						TableOrAlias: targetFieldInfo.Table.Name,
-						FieldColumn:  qs.internals.Model.Primary,
-					},
-					ConditionB: expr.TableColumn{
-						TableOrAlias: targetFieldInfo.Through.Table.Alias,
-						FieldColumn:  throughObject.targetField,
-					},
-				}
-
-				condition.Next = &JoinDefCondition{
-					Operator: expr.IN,
-					ConditionA: expr.TableColumn{
-						TableOrAlias: targetFieldInfo.Through.Table.Alias,
-						FieldColumn:  throughObject.sourceField,
-					},
-					ConditionB: expr.TableColumn{
-						Values: []any{pks},
-					},
-				}
-
-				var join = JoinDef{
-					TypeJoin: TypeJoinInner,
-					Table: Table{
-						Name: throughObject.defs.TableName(),
-						Alias: fmt.Sprintf(
-							"%s_through",
-							subQueryset.internals.Model.Table,
-						),
-					},
-					JoinDefCondition: condition,
-				}
-
-				subQueryset.internals.AddJoin(join)
-			} else {
-				var targetField = preload.Rel.Field()
-				if targetField == nil {
-					targetField = subQueryset.internals.Model.Primary
-				}
-
-				subQueryset.internals.Where = append(subQueryset.internals.Where, expr.Expr(
-					targetField.Name(),
-					expr.LOOKUP_IN,
-					pks,
-					// t.source.Object.FieldDefs().Primary().GetValue(),
-				))
-			}
-
-			subQueryset.internals.Fields = append(
-				subQueryset.internals.Fields, targetFieldInfo,
-			)
-
-			subQueryset.internals.Limit = 0 // preload all objects
-			subQueryset.internals.Offset = 0
-			var preloadObjects, err = subQueryset.All()
-			if err != nil {
-				return nil, errors.Wrapf(
-					err, "failed to preload %s for %T", preload.Path, qs.internals.Model.Object,
-				)
-			}
-
-			var result = &PreloadResults{
-				rowsRaw: preloadObjects,
-				rowsMap: make(map[any][]*Row[attrs.Definer], len(preloadObjects)),
-			}
-
-			for _, row := range preloadObjects {
-				switch {
-				case relThrough == nil:
-					var defs = row.Object.FieldDefs()
-					var primary, _ = defs.Field(preload.Primary.Name())
-					// result.rowsMap[primary.GetValue()] = row
-					var primaryVal = primary.GetValue()
-					if slice, ok := result.rowsMap[primaryVal]; ok {
-						result.rowsMap[primaryVal] = append(slice, row)
-					} else {
-						var rows = make([]*Row[attrs.Definer], 0, 1)
-						rows = append(rows, row)
-						result.rowsMap[primaryVal] = rows
-					}
-
-				default:
-					var defs = row.Through.FieldDefs()
-					var sourceField, _ = defs.Field(relThrough.SourceField())
-					var sourceValue = sourceField.GetValue()
-					// result.rowsMap[sourceValue] = row
-					if slice, ok := result.rowsMap[sourceValue]; ok {
-						result.rowsMap[sourceValue] = append(slice, row)
-					} else {
-						var rows = make([]*Row[attrs.Definer], 0, 1)
-						rows = append(rows, row)
-						result.rowsMap[sourceValue] = rows
-					}
-				}
-			}
-
-			preload.Results = result
-
-			// chain example: "author.books.title" -> "author.books"
-			var chainParts = strings.Join(preload.Chain[:len(preload.Chain)-1], ".")
-			if existing, ok := preloads.Get(chainParts); ok {
-				// if the preload already exists, append the new preload to the existing one
-				existing = append(existing, &preload)
-				preloads.Set(chainParts, existing)
-			} else {
-				// otherwise, create a new slice with the preload
-				var p = make([]*Preload, 0, 1)
-				p = append(p, &preload)
-				preloads.Set(chainParts, p)
-			}
-
+			rows.compilePreload(&preload, qs)
 		}
 	}
 
