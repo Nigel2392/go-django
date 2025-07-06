@@ -32,6 +32,7 @@ const (
 	LT  LogicalOp = "<"
 	GTE LogicalOp = ">="
 	LTE LogicalOp = "<="
+	IN  LogicalOp = "IN"
 
 	ADD LogicalOp = "+"
 	SUB LogicalOp = "-"
@@ -119,19 +120,19 @@ type TableColumn struct {
 	ForUpdate bool
 
 	// The value to use for the placeholder if the field column is not specified
-	Value any
+	Values []any
 }
 
 func (c *TableColumn) Validate() error {
 	if c.TableOrAlias != "" && (c.ForUpdate || c.RawSQL != "") {
-		return fmt.Errorf("cannot format column with (ForUpdate or RawSQL) and TableOrAlias: %v", c)
+		return fmt.Errorf("cannot format column with (Expression, ForUpdate or RawSQL) and TableOrAlias: %v", c)
 	}
 
-	if c.RawSQL == "" && c.Value == nil && c.FieldColumn == nil && c.FieldAlias == "" {
-		return fmt.Errorf("cannot format column with no value, raw SQL, field alias or field column: %v", c)
+	if c.RawSQL == "" && len(c.Values) == 0 && c.FieldColumn == nil && c.FieldAlias == "" {
+		return fmt.Errorf("cannot format column with no value, raw SQL, field alias, expression or field column: %v", c)
 	}
 
-	if c.ForUpdate && c.Value != nil {
+	if c.ForUpdate && len(c.Values) > 0 {
 		return fmt.Errorf("columns do not handle update values, ForUpdate and Value cannot be used together: %v", c)
 	}
 
@@ -147,7 +148,7 @@ func (c *TableColumn) Validate() error {
 		return fmt.Errorf("cannot format column with ForUpdate and FieldAlias: %v", c)
 	}
 
-	if c.FieldAlias != "" && c.Value != nil {
+	if c.FieldAlias != "" && len(c.Values) > 0 {
 		return fmt.Errorf("cannot format column with FieldAlias and Value: %v", c)
 	}
 

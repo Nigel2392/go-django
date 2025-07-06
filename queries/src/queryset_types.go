@@ -75,8 +75,8 @@ func writeCol(sb *strings.Builder, col *expr.TableColumn) {
 		length += len(n)
 		list = append(list, n)
 	}
-	if col.Value != "" {
-		var n = fmt.Sprint(col.Value)
+	for _, v := range col.Values {
+		var n = fmt.Sprint(v)
 		length += len(n)
 		list = append(list, n)
 	}

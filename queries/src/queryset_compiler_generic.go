@@ -363,13 +363,41 @@ func (g *genericQueryBuilder) FormatColumn(col *expr.TableColumn) (string, []any
 
 	case col.RawSQL != "":
 		sb.WriteString(col.RawSQL)
-		if col.Value != nil {
-			args = append(args, col.Value)
+		args = append(args, col.Values...)
+		//if col.Value != nil {
+		//	args = append(args, col.Value)
+		//}
+
+	case len(col.Values) > 0:
+		var flattened bool = false
+		var values = make([]any, 0, len(col.Values))
+		for _, v := range col.Values {
+			if val, ok := v.([]interface{}); ok {
+				values = append(values, val...)
+				flattened = true
+			} else {
+				values = append(values, v)
+			}
 		}
 
-	case col.Value != nil:
-		sb.WriteString(generic_PLACEHOLDER)
-		args = append(args, col.Value)
+		if len(values) > 1 || flattened {
+			sb.WriteString("(")
+		}
+
+		for i, v := range values {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			sb.WriteString(generic_PLACEHOLDER)
+			args = append(args, v)
+		}
+
+		if len(values) > 1 || flattened {
+			sb.WriteString(")")
+		}
+
+		//sb.WriteString(generic_PLACEHOLDER)
+		//args = append(args, col.Value)
 
 	case col.FieldAlias != "":
 		aliasWritten = true

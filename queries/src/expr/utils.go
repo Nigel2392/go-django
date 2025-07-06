@@ -3,6 +3,8 @@ package expr
 import (
 	"fmt"
 	"reflect"
+
+	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
 func expressionFromInterface[T Expression](exprValue interface{}, asValue bool) []T {
@@ -22,6 +24,19 @@ func expressionFromInterface[T Expression](exprValue interface{}, asValue bool) 
 		for _, expr := range v {
 			exprs = append(exprs, expressionFromInterface[T](expr, asValue)...)
 		}
+	case attrs.Field:
+		var val, err = v.Value()
+		if err != nil {
+			panic(fmt.Errorf("failed to get value from field %q: %w", v.Name(), err))
+		}
+
+		if asValue {
+			exprs = append(exprs, Value(val).(T))
+		} else {
+			exprs = append(exprs, Field(v.Name()).(T))
+		}
+	case attrs.FieldDefinition:
+		exprs = append(exprs, Field(v.Name()).(T))
 	case string:
 		if asValue {
 			exprs = append(exprs, Value(v).(T))

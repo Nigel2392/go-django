@@ -61,6 +61,7 @@ type rows[T attrs.Definer] struct {
 	possibleDuplicates []*scannableField // possible duplicate fields that can be added to the rows
 	hasMultiRelations  bool              // if the rows have multi-valued relations
 
+	seen     map[string]map[any]struct{} // seen is used to deduplicate relations
 	preloads *orderedmap.OrderedMap[string, []*Preload]
 	objects  *orderedmap.OrderedMap[any, *rootObject]
 	forEach  func(attrs.Definer) error
@@ -82,6 +83,7 @@ func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl at
 		hasMultiRelations:  false,
 		preloads:           preloads,
 		forEach:            forEach,
+		seen:               make(map[string]map[any]struct{}, len(scannables)),
 	}
 
 	// add possible duplicate fields to the list
@@ -176,6 +178,14 @@ func (r *rows[T]) addRoot(uniqueValue any, obj attrs.Definer, through attrs.Defi
 		annotations: annotations,
 	}
 
+	var seenM, ok = r.seen[""]
+	if !ok {
+		seenM = make(map[any]struct{}, 0)
+		r.seen[""] = seenM
+	}
+
+	seenM[uniqueValue] = struct{}{}
+
 	r.objects.Set(uniqueValue, root)
 	return root
 }
@@ -236,6 +246,14 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 				relations:   make(map[string]*objectRelation),
 				through:     through,
 			}
+
+			var seenM, ok = r.seen[part.chain]
+			if !ok {
+				seenM = make(map[any]struct{}, 0)
+				r.seen[part.chain] = seenM
+			}
+
+			seenM[part.uniqueValue] = struct{}{}
 
 			next.objects.Set(part.uniqueValue, child)
 		}

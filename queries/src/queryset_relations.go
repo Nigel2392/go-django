@@ -132,12 +132,10 @@ func (t *relatedQuerySet[T, T2]) setup() {
 				FieldColumn:  throughObject.sourceField,
 			},
 			ConditionB: expr.TableColumn{
-				TableOrAlias: "",
-				FieldColumn:  nil,
-				Value: t.source.Object.
+				Values: []any{t.source.Object.
 					FieldDefs().
 					Primary().
-					GetValue(),
+					GetValue()},
 			},
 		}
 

@@ -233,7 +233,7 @@ func (f *genericForeignKeyField[T]) GenerateTargetClause(qs *queries.QuerySet[at
 			Operator: expr.EQ,
 			ConditionB: expr.TableColumn{
 				RawSQL: "?",
-				Value:  sourceType.TypeName(),
+				Values: []any{sourceType.TypeName()},
 			},
 		},
 	}

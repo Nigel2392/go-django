@@ -4,6 +4,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -58,6 +59,96 @@ func (e *field) Resolve(inf *ExpressionInfo) Expression {
 	var nE = e.Clone().(*field)
 	nE.used = true
 	nE.field = inf.ResolveExpressionField(nE.fieldName)
+	return nE
+}
+
+// values is a struct that implements the Expression interface.
+// It is used to represent multiple values in SQL queries.
+//
+// these values will always be wrapped in parentheses
+// and can be used in IN clauses or other expressions that require multiple values.
+type values struct {
+	values      []any
+	used        bool
+	placeholder string        // Placeholder for the values, if needed
+	driver      driver.Driver // Driver used for the expression, for type casting
+}
+
+// Values creates a values expression from a slice of values.
+// It is used to represent multiple values in SQL queries, allowing for both safe and unsafe usage.
+// It can be used like so:
+//
+//	Values([]any{"value1", "value2"})
+func Values(vs ...any) Expression {
+	if len(vs) == 0 {
+		panic("values cannot be empty")
+	}
+
+	return &values{
+		values: slices.Clone(vs),
+		used:   false,
+	}
+}
+
+func (e *values) SQL(sb *strings.Builder) []any {
+
+	sb.WriteString("(")
+
+	for i, v := range e.values {
+		if i > 0 {
+			sb.WriteString(", ")
+		}
+
+		sb.WriteString(e.placeholder)
+
+		if _, ok := e.driver.(*drivers.DriverPostgres); ok {
+			var rVal = reflect.ValueOf(v)
+			switch rVal.Kind() {
+			case reflect.String:
+				sb.WriteString("::TEXT")
+			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+				sb.WriteString("::INT")
+			case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+				sb.WriteString("::INT")
+			case reflect.Float32, reflect.Float64:
+				sb.WriteString("::FLOAT")
+			case reflect.Bool:
+				sb.WriteString("::BOOLEAN")
+			case reflect.Slice, reflect.Array:
+				if rVal.Type().Elem().Kind() == reflect.Uint8 {
+					sb.WriteString("::BYTEA")
+				} else {
+					sb.WriteString("::TEXT[]")
+				}
+			default:
+				panic(fmt.Errorf("unsupported value type %T in expression", v))
+			}
+		}
+	}
+
+	sb.WriteString(")")
+
+	return slices.Clone(e.values)
+}
+
+func (e *values) Clone() Expression {
+	return &values{
+		values:      slices.Clone(e.values),
+		used:        e.used,
+		placeholder: e.placeholder,
+		driver:      e.driver,
+	}
+}
+
+func (e *values) Resolve(inf *ExpressionInfo) Expression {
+	if inf.Model == nil || e.used {
+		return e
+	}
+
+	var nE = e.Clone().(*values)
+	nE.used = true
+	nE.placeholder = inf.Placeholder
+	nE.driver = inf.Driver
 	return nE
 }
 

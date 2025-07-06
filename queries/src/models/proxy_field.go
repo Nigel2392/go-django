@@ -207,7 +207,7 @@ func (f *proxyField) GenerateTargetClause(qs *queries.QuerySet[attrs.Definer], i
 			Operator: expr.EQ,
 			ConditionB: expr.TableColumn{
 				RawSQL: "?",
-				Value:  sourceType.TypeName(),
+				Values: []any{sourceType.TypeName()},
 			},
 		},
 	}
