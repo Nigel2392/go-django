@@ -203,7 +203,7 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 	var root = chain[0]
 	var obj, ok = r.objects.Get(root.uniqueValue)
 	if !ok {
-		panic(fmt.Sprintf("root object with primary key %v not found in rows, root needs to be added with rows.addRoot", root.uniqueValue))
+		panic(fmt.Sprintf("root object with primary key %v %T not found in rows, root needs to be added with rows.addRoot", root.uniqueValue, root.uniqueValue))
 	}
 	var current = obj.object
 	var idx = 1
@@ -273,7 +273,8 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 		)
 	}
 
-	var pkMap = r.seen[strings.Join(preload.Chain[:len(preload.Chain)-1], ".")]
+	var preloadPath = strings.Join(preload.Chain[:len(preload.Chain)-1], ".")
+	var pkMap = r.seen[preloadPath]
 	if pkMap == nil {
 		return errors.ValueError.WithCause(fmt.Errorf(
 			"QuerySet.All: no primary key map for preload %q", preload.FieldName,
@@ -472,8 +473,12 @@ func (r *rows[T]) compilePreload(objPath string, obj *object) error {
 
 			var rows = preload.Results.rowsMap[fieldValue]
 			for _, row := range rows {
+				var val, err = row.Object.FieldDefs().Primary().Value()
+				if err != nil {
+					return fmt.Errorf("failed to get value for primary field %q: %w", row.Object.FieldDefs().Primary().Name(), err)
+				}
 				var relatedObj = &baseRelation{
-					uniqueValue: row.Object.FieldDefs().Primary().GetValue(),
+					uniqueValue: val,
 					object:      row.Object,
 					through:     nil,
 				}
@@ -489,8 +494,12 @@ func (r *rows[T]) compilePreload(objPath string, obj *object) error {
 
 			var rows = preload.Results.rowsMap[value]
 			for _, row := range rows {
+				var val, err = row.Object.FieldDefs().Primary().Value()
+				if err != nil {
+					return fmt.Errorf("failed to get value for primary field %q: %w", row.Object.FieldDefs().Primary().Name(), err)
+				}
 				var relatedObj = &baseRelation{
-					uniqueValue: row.Object.FieldDefs().Primary().GetValue(),
+					uniqueValue: val,
 					object:      row.Object,
 					through:     row.Through,
 				}
@@ -670,9 +679,12 @@ func buildChainParts(actualField *scannableField) []chainPart {
 		)
 
 		var (
-			pk         = primary.GetValue()
+			pk, err    = primary.Value()
 			primaryVal = pk
 		)
+		if err != nil {
+			panic(fmt.Sprintf("error getting primary key value for field %s: %v", cur.chainKey, err))
+		}
 		if primaryVal == nil || fields.IsZero(primaryVal) {
 			var err error
 			pk, err = GetUniqueKey(defs)

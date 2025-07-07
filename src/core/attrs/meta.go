@@ -31,7 +31,7 @@ func (m *modelMeta) Model() Definer {
 
 func (m *modelMeta) Definitions() StaticDefinitions {
 	if m.definitions == nil {
-		m.definitions = newStaticDefinitions(m.model)
+		m.definitions = newStaticDefinitions(NewObject[Definer](m.model))
 	}
 	return m.definitions
 }
@@ -128,6 +128,8 @@ func registerReverseRelation(
 	if !ok {
 		RegisterModel(targetModel)
 		meta = modelReg[targetType]
+	} else {
+		meta.definitions = nil
 	}
 
 	// Step 3: Build reversed chain

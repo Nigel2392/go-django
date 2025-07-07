@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"net/mail"
 	"reflect"
+	"strconv"
 	"time"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
@@ -144,6 +145,28 @@ type (
 	LocalTime time.Time
 	DateTime  time.Time
 )
+
+func (t Int) String() string {
+	return strconv.FormatInt(int64(t), 10)
+}
+func (t Uint) String() string {
+	return strconv.FormatUint(uint64(t), 10)
+}
+func (t Float) String() string {
+	return strconv.FormatFloat(float64(t), 'f', -1, 64)
+}
+func (t Bool) String() string {
+	if t {
+		return "true"
+	}
+	return "false"
+}
+func (t Bytes) String() string {
+	return string(t)
+}
+func (t BLOB) String() string {
+	return string(t)
+}
 
 // Complete shim for the ulid.ULID type
 func (id ULID) Bytes() []byte                      { return (ulid.ULID)(id).Bytes() }

@@ -614,6 +614,7 @@ func (a *Application) Initialize() error {
 	}
 
 	core.OnModelsReady.Send(a)
+	attrs.ResetDefinitions.Send(nil)
 
 	// First app loop to initialze and register commands
 	for h := a.Apps.Front(); h != nil; h = h.Next() {

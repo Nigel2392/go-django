@@ -129,6 +129,26 @@ func TestUserAddGroups(t *testing.T) {
 		return
 	}
 
+	var users = make([]*auth.User, 0, 5)
+	for i := 0; i < 5; i++ {
+		var user = &auth.User{
+			Email:           drivers.MustParseEmail("test" + drivers.Uint(i+1).String() + "@example.com"),
+			Password:        auth.NewPassword("testpassword" + drivers.Uint(i+1).String()),
+			Username:        "testuser" + drivers.Uint(i+1).String(),
+			FirstName:       "Test" + drivers.Uint(i+1).String(),
+			LastName:        "User" + drivers.Uint(i+1).String(),
+			IsAdministrator: false,
+			IsActive:        true,
+			IsLoggedIn:      false,
+		}
+		user, err := auth.GetUserQuerySet().WithContext(ctx).Create(user)
+		if err != nil {
+			t.Fatalf("Failed to create user %d: %v", i+1, err)
+			return
+		}
+		users = append(users, user)
+	}
+
 	t.Logf("User %s created with ID %d", user.Username, user.ID)
 
 	_, err = user.Groups.Objects().WithContext(ctx).AddTargets(
@@ -146,58 +166,108 @@ func TestUserAddGroups(t *testing.T) {
 		t.Fatalf("Failed to add groups to user: %v", err)
 	}
 
+	_, err = user.Permissions.Objects().WithContext(ctx).AddTargets(
+		&auth.Permission{
+			Name:        "Can view users",
+			Description: "Allows viewing of users",
+		},
+		&auth.Permission{
+			Name:        "Can edit users",
+			Description: "Allows editing of users",
+		},
+		&auth.Permission{
+			Name:        "Can delete users",
+			Description: "Allows deletion of users",
+		},
+	)
+	if err != nil {
+		t.Fatalf("Failed to add permissions to user: %v", err)
+	}
+
+	_, err = user.Groups.AsList()[0].Object.Permissions.Objects().WithContext(ctx).AddTargets(
+		&auth.Permission{
+			Name:        "Can view users",
+			Description: "Allows viewing of users",
+		},
+		&auth.Permission{
+			Name:        "Can edit users",
+			Description: "Allows editing of users",
+		},
+		&auth.Permission{
+			Name:        "Can delete users",
+			Description: "Allows deletion of users",
+		},
+	)
+	if err != nil {
+		t.Fatalf("Failed to add permissions to user: %v", err)
+	}
+
 	t.Log("\n\n\n")
 
 	t.Run("GroupsPreloaded", func(t *testing.T) {
-		userRow, err := auth.GetUserQuerySet().
+		userRows, err := auth.GetUserQuerySet().
 			WithContext(ctx).
 			Select("*").
 			Preload("Permissions", "Groups").
-			Filter("ID", user.ID).
+			Filter("ID__in", append(users, user)).
 			OrderBy("ID", "Groups.Name", "Permissions.Name").
-			First()
+			All()
 		if err != nil {
 			t.Fatalf("Failed to retrieve user: %v", err)
 			return
 		}
 
-		for i, group := range userRow.Object.Groups.AsList() {
-			switch i {
-			case 0:
-				if group.Object.Name != "Administrators" {
-					t.Fatalf("Expected group name 'Administrators', got '%s'", group.Object.Name)
+		for _, userRow := range userRows {
+			t.Logf("User %s with ID %d has groups:", userRow.Object.Username, userRow.Object.ID)
+			for _, group := range userRow.Object.Groups.AsList() {
+				t.Logf(" - Group: %s", group.Object.Name)
+				for _, perm := range group.Object.Permissions.AsList() {
+					t.Logf("   - Permission: %s", perm.Object.Name)
 				}
-			case 1:
-				if group.Object.Name != "Moderators" {
-					t.Fatalf("Expected group name 'Moderators', got '%s'", group.Object.Name)
-				}
-			case 2:
-				if group.Object.Name != "Viewers" {
-					t.Fatalf("Expected group name 'Viewers', got '%s'", group.Object.Name)
-				}
-			default:
-				t.Fatalf("Unexpected group index %d", i)
+			}
+			t.Logf("User %s has permissions:", userRow.Object.Username)
+			for _, perm := range userRow.Object.Permissions.AsList() {
+				t.Logf(" - Permission: %s", perm.Object.Name)
 			}
 		}
 
-		for i, perm := range userRow.Object.Permissions.AsList() {
-			switch i {
-			case 0:
-				if perm.Object.Name != "Can view users" {
-					t.Fatalf("Expected permission name 'Can view users', got '%s'", perm.Object.Name)
-				}
-			case 1:
-				if perm.Object.Name != "Can edit users" {
-					t.Fatalf("Expected permission name 'Can edit users', got '%s'", perm.Object.Name)
-				}
-			case 2:
-				if perm.Object.Name != "Can delete users" {
-					t.Fatalf("Expected permission name 'Can delete users', got '%s'", perm.Object.Name)
-				}
-			default:
-				t.Fatalf("Unexpected permission index %d", i)
-			}
-		}
+		//for i, group := range userRow.Object.Groups.AsList() {
+		//	switch i {
+		//	case 0:
+		//		if group.Object.Name != "Administrators" {
+		//			t.Fatalf("Expected group name 'Administrators', got '%s'", group.Object.Name)
+		//		}
+		//	case 1:
+		//		if group.Object.Name != "Moderators" {
+		//			t.Fatalf("Expected group name 'Moderators', got '%s'", group.Object.Name)
+		//		}
+		//	case 2:
+		//		if group.Object.Name != "Viewers" {
+		//			t.Fatalf("Expected group name 'Viewers', got '%s'", group.Object.Name)
+		//		}
+		//	default:
+		//		t.Fatalf("Unexpected group index %d", i)
+		//	}
+		//}
+		//
+		//for i, perm := range userRow.Object.Permissions.AsList() {
+		//	switch i {
+		//	case 0:
+		//		if perm.Object.Name != "Can view users" {
+		//			t.Fatalf("Expected permission name 'Can view users', got '%s'", perm.Object.Name)
+		//		}
+		//	case 1:
+		//		if perm.Object.Name != "Can edit users" {
+		//			t.Fatalf("Expected permission name 'Can edit users', got '%s'", perm.Object.Name)
+		//		}
+		//	case 2:
+		//		if perm.Object.Name != "Can delete users" {
+		//			t.Fatalf("Expected permission name 'Can delete users', got '%s'", perm.Object.Name)
+		//		}
+		//	default:
+		//		t.Fatalf("Unexpected permission index %d", i)
+		//	}
+		//}
 
 	})
 

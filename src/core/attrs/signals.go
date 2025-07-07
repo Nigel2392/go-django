@@ -53,6 +53,18 @@ var (
 	// This is only sent from the forward relation side,
 	// not when the through model is actually registered.
 	OnThroughModelRegister = throughSignalPool.Get("attrs.OnThroughModelRegister")
+
+	// ResetDefinitions is a signal that can be sent to reset the static definitions of all models.
+	//
+	// This should be done after all models have been registered, so that the static definitions have enough information to be built correctly.
+	ResetDefinitions = signals.New[any]("attrs.ResetDefinitions")
+
+	_, _ = ResetDefinitions.Listen(func(s signals.Signal[any], a any) error {
+		for _, meta := range modelReg {
+			meta.definitions = newStaticDefinitions(NewObject[Definer](meta.model))
+		}
+		return nil
+	})
 )
 
 const (

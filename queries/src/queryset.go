@@ -1425,11 +1425,30 @@ func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, aut
 	}
 
 	var curr = relatrionChain.Root
+
+	if curr.Next == nil {
+		return relatrionChain, []string{}, nil
+	}
+
 	var partIdx = 0
 	var aliasList = make([]string, 0, len(relatrionChain.Chain))
 	for curr != nil {
 
-		var meta = attrs.GetModelMeta(curr.Model)
+		if curr.FieldRel == nil && partIdx == len(fieldPath)-1 {
+			// If the current part is the last part of the chain and it has no relation,
+			// we can skip adding it to the join list.
+			// This is useful for fields that are not relations, but are still part of the chain.
+			break
+		}
+
+		if curr.FieldRel == nil {
+			return relatrionChain, aliasList, fmt.Errorf(
+				"WalkField: curr.FieldRel is nil for  %q (%d / %d)",
+				selectedField, partIdx, len(fieldPath)-1,
+			)
+		}
+
+		var meta = attrs.GetModelMeta(curr.FieldRel.Model())
 		var defs = meta.Definitions()
 
 		// create a preload path for each part of the relation chain
@@ -1441,14 +1460,6 @@ func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, aut
 		))
 
 		if !autoJoin {
-			goto nextIter
-		}
-
-		fmt.Printf("WalkField: %d, %d", partIdx, len(relatrionChain.Chain)-1)
-		if curr.FieldRel == nil && partIdx == len(relatrionChain.Chain)-1 {
-			// If the current part is the last part of the chain and it has no relation,
-			// we can skip adding it to the join list.
-			// This is useful for fields that are not relations, but are still part of the chain.
 			goto nextIter
 		}
 
@@ -1483,18 +1494,23 @@ func (qs *QuerySet[T]) addRelationChainPart(curr *attrs.RelationChainPart, alias
 		relType    = curr.FieldRel.Type()
 		relThrough = curr.FieldRel.Through()
 
-		meta = attrs.GetModelMeta(curr.Model)
+		meta = attrs.GetModelMeta(curr.FieldRel.Model())
 		defs = meta.Definitions()
 	)
 
 	// Build information for joining tables
 	// This is required to still correctly handle where clauses
 	// and other query modifications which might require the related fields.
+
 	var lhsAlias string
 	if len(aliasList) > 1 {
 		lhsAlias = aliasList[len(aliasList)-2]
 	} else {
 		lhsAlias = qs.internals.Model.Table
+	}
+
+	if qs.internals.joinsMap == nil {
+		qs.internals.joinsMap = make(map[string]struct{}, len(qs.internals.Joins))
 	}
 
 	var rhsAlias string = aliasList[len(aliasList)-1]
@@ -1546,7 +1562,7 @@ func (qs *QuerySet[T]) addRelationChainPart(curr *attrs.RelationChainPart, alias
 		}
 
 		var join1 = JoinDef{
-			TypeJoin: TypeJoinInner,
+			TypeJoin: TypeJoinLeft,
 			Table: Table{
 				Name:  throughDefs.TableName(),
 				Alias: throughAlias,
@@ -1563,13 +1579,14 @@ func (qs *QuerySet[T]) addRelationChainPart(curr *attrs.RelationChainPart, alias
 				},
 			},
 		}
+
 		if _, ok := qs.internals.joinsMap[join1.JoinDefCondition.String()]; !ok {
 			qs.internals.Joins = append(qs.internals.Joins, join1)
 			qs.internals.joinsMap[join1.JoinDefCondition.String()] = struct{}{}
 		}
 
 		var join2 = JoinDef{
-			TypeJoin: TypeJoinInner,
+			TypeJoin: TypeJoinLeft,
 			Table: Table{
 				Name:  defs.TableName(),
 				Alias: rhsAlias,
