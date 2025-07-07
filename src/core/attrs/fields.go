@@ -1002,6 +1002,8 @@ func (f *FieldDef) Scan(value any) error {
 	return nil
 }
 
+var _DRIVER_VALUE = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
+
 func (f *FieldDef) _driverValue(value any) (driver.Value, error) {
 	var v reflect.Value
 	switch val := value.(type) {
@@ -1021,21 +1023,39 @@ func (f *FieldDef) _driverValue(value any) (driver.Value, error) {
 		return v.Interface(), nil
 	}
 
-	if v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
-		if v.IsNil() {
-			return nil, nil
-		}
-		v = v.Elem()
+	if (v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface) && v.IsNil() {
+		return nil, nil
 	}
 
 	assert.Err(BindValueToModel(
 		f.Instance(), f, v,
 	))
 
+	if v.Kind() == reflect.Ptr || v.Kind() == reflect.Interface {
+		v = v.Elem()
+	}
+
+	if v.Type().Implements(_DRIVER_VALUE) {
+		var valuer = v.Interface().(driver.Valuer)
+		return valuer.Value()
+	}
+
 	switch v.Kind() {
-	case reflect.String, reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
-		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
-		reflect.Float32, reflect.Float64, reflect.Bool:
+	case reflect.String:
+		return v.String(), nil
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return v.Int(), nil
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return v.Uint(), nil
+	case reflect.Float32, reflect.Float64:
+		return v.Float(), nil
+	case reflect.Bool:
+		return v.Bool(), nil
+	case reflect.Slice, reflect.Array:
+		if v.Type().Elem().Kind() == reflect.Uint8 {
+			// byte slice, return as []byte
+			return v.Bytes(), nil
+		}
 		return v.Interface(), nil
 	case reflect.Struct:
 		switch f.field_v.Interface().(type) {

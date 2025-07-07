@@ -83,7 +83,6 @@ func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl at
 		objects:            orderedmap.NewOrderedMap[any, *rootObject](),
 		possibleDuplicates: make([]*scannableField, 0),
 		hasMultiRelations:  false,
-		preloads:           orderedmap.NewOrderedMap[string, []*Preload](),
 		forEach:            forEach,
 		seen:               make(map[string]map[any]struct{}, len(scannables)),
 	}
@@ -249,6 +248,8 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 				through:     through,
 			}
 
+			// Store seen objects in map - this is later used for prefetching relations
+			// and deduplicating relations.
 			var seenM, ok = r.seen[part.chain]
 			if !ok {
 				seenM = make(map[any]struct{}, 0)
@@ -265,7 +266,7 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 	}
 }
 
-func (r *rows[T]) compilePreload(preload *Preload, qs *QuerySet[T]) error {
+func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 	if len(r.seen) == 0 {
 		return errors.NoUniqueKey.Wrapf(
 			"QuerySet.All: no 'seen' map for preload %q", preload.FieldName,
@@ -388,8 +389,13 @@ func (r *rows[T]) compilePreload(preload *Preload, qs *QuerySet[T]) error {
 		case relThrough == nil:
 			var defs = row.Object.FieldDefs()
 			var primary, _ = defs.Field(preload.Primary.Name())
-			// result.rowsMap[primary.GetValue()] = row
-			var primaryVal = primary.GetValue()
+			var primaryVal, err = primary.Value()
+			if err != nil {
+				return errors.Wrapf(
+					err, "failed to get value for primary field %q", primary.Name(),
+				)
+			}
+
 			if slice, ok := result.rowsMap[primaryVal]; ok {
 				result.rowsMap[primaryVal] = append(slice, row)
 			} else {
@@ -401,8 +407,13 @@ func (r *rows[T]) compilePreload(preload *Preload, qs *QuerySet[T]) error {
 		default:
 			var defs = row.Through.FieldDefs()
 			var sourceField, _ = defs.Field(relThrough.SourceField())
-			var sourceValue = sourceField.GetValue()
-			// result.rowsMap[sourceValue] = row
+			var sourceValue, err = sourceField.Value()
+			if err != nil {
+				return errors.Wrapf(
+					err, "failed to get value for source field %q", sourceField.Name(),
+				)
+			}
+
 			if slice, ok := result.rowsMap[sourceValue]; ok {
 				result.rowsMap[sourceValue] = append(slice, row)
 			} else {
@@ -431,7 +442,94 @@ func (r *rows[T]) compilePreload(preload *Preload, qs *QuerySet[T]) error {
 	return nil
 }
 
+func (r *rows[T]) compilePreload(objPath string, obj *object) error {
+	if r.preloads == nil {
+		return nil
+	}
+
+	var preloads, ok = r.preloads.Get(objPath)
+	if !ok {
+		return nil
+	}
+
+	for _, preload := range preloads {
+		var (
+			relThrough = preload.Rel.Through()
+		)
+
+		var fieldToSet, ok = obj.fieldDefs.Field(preload.FieldName)
+		if !ok {
+			return fmt.Errorf("field %q not found in object %T", preload.FieldName, obj.obj)
+		}
+
+		var relatedObjects = make([]Relation, 0, len(preload.Results.rowsMap))
+		if relThrough == nil {
+			// load the related objects directly using value from fieldToSet as the map key
+			var fieldValue, err = fieldToSet.Value()
+			if err != nil {
+				return fmt.Errorf("failed to get value for field %q: %w", fieldToSet.Name(), err)
+			}
+
+			var rows = preload.Results.rowsMap[fieldValue]
+			for _, row := range rows {
+				var relatedObj = &baseRelation{
+					uniqueValue: row.Object.FieldDefs().Primary().GetValue(),
+					object:      row.Object,
+					through:     nil,
+				}
+				relatedObjects = append(relatedObjects, relatedObj)
+			}
+		} else {
+			// load the related objects using the through model
+			var prim = obj.fieldDefs.Primary()
+			var value, err = prim.Value()
+			if err != nil {
+				return fmt.Errorf("failed to get value for primary field %q: %w", prim.Name(), err)
+			}
+
+			var rows = preload.Results.rowsMap[value]
+			for _, row := range rows {
+				var relatedObj = &baseRelation{
+					uniqueValue: row.Object.FieldDefs().Primary().GetValue(),
+					object:      row.Object,
+					through:     row.Through,
+				}
+
+				// If the related object implements ThroughModelSetter, we set the through model
+				if def, ok := relatedObj.object.(ThroughModelSetter); ok {
+					def.SetThroughModel(relatedObj.through)
+				}
+
+				relatedObjects = append(relatedObjects, relatedObj)
+			}
+		}
+
+		if len(relatedObjects) == 0 {
+			// If there are no related objects, we can skip setting the relation
+			continue
+		}
+
+		// Set the related objects on the parent object
+		setRelatedObjects(
+			preload.FieldName, preload.Rel.Type(), obj.obj, relatedObjects,
+		)
+	}
+
+	return nil
+}
+
 func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
+
+	if qs.internals.Preload != nil {
+		r.preloads = orderedmap.NewOrderedMap[string, []*Preload]()
+
+		for _, preload := range qs.internals.Preload.Preloads {
+			if err := r.queryPreloads(&preload, qs); err != nil {
+				return nil, fmt.Errorf("failed to query preload %q: %w", preload.FieldName, err)
+			}
+		}
+	}
+
 	var addRelations func(*object, uint64, string) error
 	// addRelations is a recursive function that traverses the object and its relations,
 	// and sets the related objects on the provided parent object.
@@ -441,32 +539,8 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
 			panic(fmt.Sprintf("object %T has no primary key, cannot deduplicate relations", obj.obj))
 		}
 
-		var preloads, ok = r.preloads.Get(objPath)
-		if ok {
-			for _, preload := range preloads {
-				var (
-					relType    = preload.Rel.Type()
-					relThrough = preload.Rel.Through()
-				)
-
-				var fieldToSet, ok = obj.fieldDefs.Field(preload.FieldName)
-				if !ok {
-					return fmt.Errorf("field %q not found in object %T", preload.FieldName, obj.obj)
-				}
-
-				fmt.Println("preloading relation", objPath, preload.FieldName, relType, relThrough, fieldToSet.Name())
-				for _, obj := range preload.Results.rowsRaw {
-					fmt.Println("preload object", objPath, obj.Object, obj.Through)
-				}
-				//fmt.Println(preload.Results.rowsMap)
-				//switch {
-				//case relThrough == nil && relType == attrs.RelOneToMany:
-				//	fmt.Println("preloading OneToMany relation", objPath, preload.SourceField.Name())
-				//case (relType == attrs.RelOneToOne || relType == attrs.RelManyToMany) && relThrough != nil:
-				//	fmt.Println("preloading OneToOne or ManyToMany relation with through model", objPath, *preload)
-				//default:
-				//}
-			}
+		if err := r.compilePreload(objPath, obj); err != nil {
+			return fmt.Errorf("failed to compile preload %q: %w", objPath, err)
 		}
 
 		for relName, rel := range obj.relations {

@@ -26,8 +26,6 @@ type UserGroup struct {
 
 type UserQuerySet struct {
 	*queries.WrappedQuerySet[*User, *UserQuerySet, *queries.QuerySet[*User]]
-	prefetchGroups      bool
-	prefetchPermissions bool
 }
 
 // var _ queries.QuerySetCanAfterExec = (*UserQuerySet)(nil)

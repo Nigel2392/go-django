@@ -151,10 +151,10 @@ func TestUserAddGroups(t *testing.T) {
 	t.Run("GroupsPreloaded", func(t *testing.T) {
 		userRow, err := auth.GetUserQuerySet().
 			WithContext(ctx).
-			Select("*", "Groups.*").
-			Preload("Groups").
+			Select("*").
+			Preload("Permissions", "Groups").
 			Filter("ID", user.ID).
-			OrderBy("ID", "Groups.Name").
+			OrderBy("ID", "Groups.Name", "Permissions.Name").
 			First()
 		if err != nil {
 			t.Fatalf("Failed to retrieve user: %v", err)
@@ -179,6 +179,26 @@ func TestUserAddGroups(t *testing.T) {
 				t.Fatalf("Unexpected group index %d", i)
 			}
 		}
+
+		for i, perm := range userRow.Object.Permissions.AsList() {
+			switch i {
+			case 0:
+				if perm.Object.Name != "Can view users" {
+					t.Fatalf("Expected permission name 'Can view users', got '%s'", perm.Object.Name)
+				}
+			case 1:
+				if perm.Object.Name != "Can edit users" {
+					t.Fatalf("Expected permission name 'Can edit users', got '%s'", perm.Object.Name)
+				}
+			case 2:
+				if perm.Object.Name != "Can delete users" {
+					t.Fatalf("Expected permission name 'Can delete users', got '%s'", perm.Object.Name)
+				}
+			default:
+				t.Fatalf("Unexpected permission index %d", i)
+			}
+		}
+
 	})
 
 	t.Log("\n\n\n")
