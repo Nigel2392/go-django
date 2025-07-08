@@ -1003,6 +1003,7 @@ func (f *FieldDef) Scan(value any) error {
 }
 
 var _DRIVER_VALUE = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
+var maxInt64 uint64 = 1<<63 - 1
 
 func (f *FieldDef) _driverValue(value any) (driver.Value, error) {
 	var v reflect.Value

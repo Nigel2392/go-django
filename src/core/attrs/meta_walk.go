@@ -97,7 +97,7 @@ func WalkMetaFieldsFunc(m Definer, path []string, fn WalkFieldsFunc) error {
 			f, ok     = defs.Field(part)
 		)
 		if !ok {
-			return fmt.Errorf("field %q not found in %T", part, current)
+			return fmt.Errorf("field %q not found in %T (%v)", part, current, FieldNames(defs.Fields(), nil))
 		}
 
 		var (

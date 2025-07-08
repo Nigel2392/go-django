@@ -63,10 +63,15 @@ type rows[T attrs.Definer] struct {
 	possibleDuplicates []*scannableField // possible duplicate fields that can be added to the rows
 	hasMultiRelations  bool              // if the rows have multi-valued relations
 
-	seen     map[string]map[any]struct{} // seen is used to deduplicate relations
+	seen     map[string]*seenObject // seen is used to deduplicate relations
 	preloads *orderedmap.OrderedMap[string, []*Preload]
 	objects  *orderedmap.OrderedMap[any, *rootObject]
 	forEach  func(attrs.Definer) error
+}
+
+type seenObject struct {
+	pks     []any
+	objects map[any]*object
 }
 
 // Initialize a new rows structure for the given model type.
@@ -84,7 +89,7 @@ func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl at
 		possibleDuplicates: make([]*scannableField, 0),
 		hasMultiRelations:  false,
 		forEach:            forEach,
-		seen:               make(map[string]map[any]struct{}, len(scannables)),
+		seen:               make(map[string]*seenObject, 0),
 	}
 
 	// add possible duplicate fields to the list
@@ -181,11 +186,15 @@ func (r *rows[T]) addRoot(uniqueValue any, obj attrs.Definer, through attrs.Defi
 
 	var seenM, ok = r.seen[""]
 	if !ok {
-		seenM = make(map[any]struct{}, 0)
+		seenM = &seenObject{
+			pks:     make([]any, 0, 1),
+			objects: make(map[any]*object, 0),
+		}
 		r.seen[""] = seenM
 	}
 
-	seenM[uniqueValue] = struct{}{}
+	seenM.pks = append(seenM.pks, uniqueValue)
+	seenM.objects[uniqueValue] = root.object
 
 	r.objects.Set(uniqueValue, root)
 	return root
@@ -252,11 +261,15 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 			// and deduplicating relations.
 			var seenM, ok = r.seen[part.chain]
 			if !ok {
-				seenM = make(map[any]struct{}, 0)
+				seenM = &seenObject{
+					pks:     make([]any, 0, 1),
+					objects: make(map[any]*object, 0),
+				}
 				r.seen[part.chain] = seenM
 			}
 
-			seenM[part.uniqueValue] = struct{}{}
+			seenM.pks = append(seenM.pks, part.uniqueValue)
+			seenM.objects[part.uniqueValue] = child
 
 			next.objects.Set(part.uniqueValue, child)
 		}
@@ -274,16 +287,11 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 	}
 
 	var preloadPath = strings.Join(preload.Chain[:len(preload.Chain)-1], ".")
-	var pkMap = r.seen[preloadPath]
-	if pkMap == nil {
+	var seenObj = r.seen[preloadPath]
+	if seenObj == nil {
 		return errors.ValueError.WithCause(fmt.Errorf(
 			"QuerySet.All: no primary key map for preload %q", preload.FieldName,
 		))
-	}
-
-	var pks = make([]any, 0, len(pkMap))
-	for pk := range pkMap {
-		pks = append(pks, pk)
 	}
 
 	var (
@@ -291,7 +299,13 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 		relThrough = preload.Rel.Through()
 	)
 
-	var subQueryset = GetQuerySetWithContext(qs.context, preload.Model)
+	var subQueryset = preload.QuerySet
+	if subQueryset == nil {
+		subQueryset = GetQuerySet(preload.Model)
+	}
+
+	subQueryset = subQueryset.WithContext(qs.Context())
+
 	var targetFieldInfo = &FieldInfo[attrs.FieldDefinition]{
 		Model: subQueryset.internals.Model.Object,
 		Table: Table{
@@ -336,7 +350,7 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 				FieldColumn:  throughObject.sourceField,
 			},
 			ConditionB: expr.TableColumn{
-				Values: []any{pks},
+				Values: []any{seenObj.pks},
 			},
 		}
 
@@ -354,21 +368,49 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 
 		subQueryset.internals.AddJoin(join)
 	} else {
+		var pks = seenObj.pks
 		var targetField = preload.Rel.Field()
 		if targetField == nil {
 			targetField = subQueryset.internals.Model.Primary
+		}
+
+		// If the relation is a forward o2o or m2o relation,
+		// the PK list is not actually the primary keys of the related objects,
+		// but the primary keys of the parent objects - change the pk list accordingly.
+		if preload.Rel.Type() == attrs.RelManyToOne || preload.Rel.Type() == attrs.RelOneToOne && preload.Rel.Through() == nil {
+			pks = make([]any, 0, len(seenObj.pks))
+			for _, obj := range seenObj.objects {
+				var field, ok = obj.fieldDefs.Field(preload.FieldName)
+				if !ok {
+					return errors.FieldNotFound.Wrapf(
+						"QuerySet.All: preload %q has no field %q in model %T (%#v)",
+						preload.FieldName, preload.Field.Name(), qs.internals.Model.Object, preload,
+					)
+				}
+
+				var val, err = field.Value()
+				if err != nil {
+					return errors.Wrapf(
+						err, "failed to get value for field %q (%#v)", field.Name(), preload,
+					)
+				}
+
+				if !fields.IsZero(val) {
+					pks = append(pks, val)
+				}
+			}
 		}
 
 		subQueryset.internals.Where = append(subQueryset.internals.Where, expr.Expr(
 			targetField.Name(),
 			expr.LOOKUP_IN,
 			pks,
-			// t.source.Object.FieldDefs().Primary().GetValue(),
 		))
 	}
 
 	subQueryset.internals.Fields = append(
-		subQueryset.internals.Fields, targetFieldInfo,
+		[]*FieldInfo[attrs.FieldDefinition]{targetFieldInfo},
+		subQueryset.internals.Fields...,
 	)
 
 	subQueryset.internals.Limit = 0 // preload all objects
@@ -386,143 +428,129 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 	}
 
 	for _, row := range preloadObjects {
+		var (
+			rowDefs    = row.Object.FieldDefs()
+			parentObj  *object
+			parentOk   bool
+			primaryVal any
+			sourceVal  any
+		)
 		switch {
 		case relThrough == nil:
-			var defs = row.Object.FieldDefs()
-			var primary, _ = defs.Field(preload.Primary.Name())
-			var primaryVal, err = primary.Value()
-			if err != nil {
-				return errors.Wrapf(
-					err, "failed to get value for primary field %q", primary.Name(),
+			var sourceField, ok = rowDefs.Field(preload.Rel.Field().Name())
+			if !ok {
+				return errors.FieldNotFound.Wrapf(
+					"QuerySet.All: preload %q has no field %q in model %T (%#v)",
+					preload.FieldName, preload.Field.Name(), qs.internals.Model.Object, preload,
 				)
 			}
 
-			if slice, ok := result.rowsMap[primaryVal]; ok {
-				result.rowsMap[primaryVal] = append(slice, row)
+			sourceVal, err = sourceField.Value()
+			if err != nil {
+				return errors.Wrapf(
+					err, "failed to get value for source field %q (%#v)", sourceField.Name(), preload,
+				)
+			}
+
+			primaryVal, err = rowDefs.Primary().Value()
+			if err != nil {
+				return errors.Wrapf(
+					err, "failed to get value for primary field %q (%#v)", sourceField.Name(), preload,
+				)
+			}
+
+			if slice, ok := result.rowsMap[sourceVal]; ok {
+				result.rowsMap[sourceVal] = append(slice, row)
 			} else {
 				var rows = make([]*Row[attrs.Definer], 0, 1)
 				rows = append(rows, row)
-				result.rowsMap[primaryVal] = rows
+				result.rowsMap[sourceVal] = rows
 			}
+
+			parentObj, parentOk = seenObj.objects[sourceVal]
 
 		default:
 			var defs = row.Through.FieldDefs()
 			var sourceField, _ = defs.Field(relThrough.SourceField())
-			var sourceValue, err = sourceField.Value()
+			sourceVal, err = sourceField.Value()
 			if err != nil {
 				return errors.Wrapf(
 					err, "failed to get value for source field %q", sourceField.Name(),
 				)
 			}
 
-			if slice, ok := result.rowsMap[sourceValue]; ok {
-				result.rowsMap[sourceValue] = append(slice, row)
+			var targetField, _ = defs.Field(relThrough.TargetField())
+			primaryVal, err = targetField.Value()
+			if err != nil {
+				return errors.Wrapf(
+					err, "failed to get value for target field %q", targetField.Name(),
+				)
+			}
+
+			if slice, ok := result.rowsMap[sourceVal]; ok {
+				result.rowsMap[sourceVal] = append(slice, row)
 			} else {
 				var rows = make([]*Row[attrs.Definer], 0, 1)
 				rows = append(rows, row)
-				result.rowsMap[sourceValue] = rows
+				result.rowsMap[sourceVal] = rows
 			}
+
+			parentObj, parentOk = seenObj.objects[sourceVal]
 		}
-	}
 
-	preload.Results = result
+		if !parentOk {
+			return errors.ValueError.WithCause(fmt.Errorf(
+				"QuerySet.All: no parent object found for preload %q with primary key %v (%T) in %v",
+				preload.FieldName, sourceVal, sourceVal, seenObj.objects,
+			))
+		}
 
-	// chain example: "author.books.title" -> "author.books"
-	var chainParts = strings.Join(preload.Chain[:len(preload.Chain)-1], ".")
-	if existing, ok := r.preloads.Get(chainParts); ok {
-		// if the preload already exists, append the new preload to the existing one
-		existing = append(existing, preload)
-		r.preloads.Set(chainParts, existing)
-	} else {
-		// otherwise, create a new slice with the preload
-		var p = make([]*Preload, 0, 1)
-		p = append(p, preload)
-		r.preloads.Set(chainParts, p)
-	}
-
-	return nil
-}
-
-func (r *rows[T]) compilePreload(objPath string, obj *object) error {
-	if r.preloads == nil {
-		return nil
-	}
-
-	var preloads, ok = r.preloads.Get(objPath)
-	if !ok {
-		return nil
-	}
-
-	for _, preload := range preloads {
-		var (
-			relThrough = preload.Rel.Through()
-		)
-
-		var fieldToSet, ok = obj.fieldDefs.Field(preload.FieldName)
+		var seenM, ok = r.seen[preload.Path]
 		if !ok {
-			return fmt.Errorf("field %q not found in object %T", preload.FieldName, obj.obj)
+			seenM = &seenObject{
+				pks:     make([]any, 0, 1),
+				objects: make(map[any]*object, 0),
+			}
+			r.seen[preload.Path] = seenM
 		}
 
-		var relatedObjects = make([]Relation, 0, len(preload.Results.rowsMap))
-		if relThrough == nil {
-			// load the related objects directly using value from fieldToSet as the map key
-			var fieldValue, err = fieldToSet.Value()
-			if err != nil {
-				return fmt.Errorf("failed to get value for field %q: %w", fieldToSet.Name(), err)
-			}
-
-			var rows = preload.Results.rowsMap[fieldValue]
-			for _, row := range rows {
-				var val, err = row.Object.FieldDefs().Primary().Value()
-				if err != nil {
-					return fmt.Errorf("failed to get value for primary field %q: %w", row.Object.FieldDefs().Primary().Name(), err)
-				}
-				var relatedObj = &baseRelation{
-					uniqueValue: val,
-					object:      row.Object,
-					through:     nil,
-				}
-				relatedObjects = append(relatedObjects, relatedObj)
-			}
-		} else {
-			// load the related objects using the through model
-			var prim = obj.fieldDefs.Primary()
-			var value, err = prim.Value()
-			if err != nil {
-				return fmt.Errorf("failed to get value for primary field %q: %w", prim.Name(), err)
-			}
-
-			var rows = preload.Results.rowsMap[value]
-			for _, row := range rows {
-				var val, err = row.Object.FieldDefs().Primary().Value()
-				if err != nil {
-					return fmt.Errorf("failed to get value for primary field %q: %w", row.Object.FieldDefs().Primary().Name(), err)
-				}
-				var relatedObj = &baseRelation{
-					uniqueValue: val,
-					object:      row.Object,
-					through:     row.Through,
-				}
-
-				// If the related object implements ThroughModelSetter, we set the through model
-				if def, ok := relatedObj.object.(ThroughModelSetter); ok {
-					def.SetThroughModel(relatedObj.through)
-				}
-
-				relatedObjects = append(relatedObjects, relatedObj)
-			}
+		var obj = &object{
+			uniqueValue: primaryVal,
+			through:     row.Through,
+			fieldDefs:   rowDefs,
+			obj:         row.Object,
+			relations:   make(map[string]*objectRelation),
 		}
 
-		if len(relatedObjects) == 0 {
-			// If there are no related objects, we can skip setting the relation
-			continue
+		seenM.pks = append(seenM.pks, primaryVal)
+		seenM.objects[primaryVal] = obj
+
+		relationMap, ok := parentObj.relations[preload.FieldName]
+		if !ok {
+			relationMap = &objectRelation{
+				relTyp:  preload.Rel.Type(),
+				objects: orderedmap.NewOrderedMap[any, *object](),
+			}
+			parentObj.relations[preload.FieldName] = relationMap
 		}
 
-		// Set the related objects on the parent object
-		setRelatedObjects(
-			preload.FieldName, preload.Rel.Type(), obj.obj, relatedObjects,
-		)
+		relationMap.objects.Set(primaryVal, obj)
 	}
+
+	//preload.Results = result
+	//
+	//// chain example: "author.books.title" -> "author.books"
+	//var chainParts = strings.Join(preload.Chain[:len(preload.Chain)-1], ".")
+	//if existing, ok := r.preloads.Get(chainParts); ok {
+	//	// if the preload already exists, append the new preload to the existing one
+	//	existing = append(existing, preload)
+	//	r.preloads.Set(chainParts, existing)
+	//} else {
+	//	// otherwise, create a new slice with the preload
+	//	var p = make([]*Preload, 0, 1)
+	//	p = append(p, preload)
+	//	r.preloads.Set(chainParts, p)
+	//}
 
 	return nil
 }
@@ -546,10 +574,6 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
 
 		if obj.uniqueValue == nil {
 			panic(fmt.Sprintf("object %T has no primary key, cannot deduplicate relations", obj.obj))
-		}
-
-		if err := r.compilePreload(objPath, obj); err != nil {
-			return fmt.Errorf("failed to compile preload %q: %w", objPath, err)
 		}
 
 		for relName, rel := range obj.relations {

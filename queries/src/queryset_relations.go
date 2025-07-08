@@ -198,10 +198,16 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 	)
 	for _, target := range targets {
 		var (
-			defs    = target.FieldDefs()
-			primary = defs.Primary()
-			pkValue = primary.GetValue()
+			defs         = target.FieldDefs()
+			primary      = defs.Primary()
+			pkValue, err = primary.Value()
 		)
+		if err != nil {
+			return nil, 0, errors.ValueError.WithCause(fmt.Errorf(
+				"failed to get primary key for target %T: %w: %w",
+				target, err, errors.NoUniqueKey,
+			))
+		}
 
 		if fields.IsZero(pkValue) {
 			targetsToSave = append(targetsToSave, target)
@@ -507,10 +513,16 @@ targetLoop:
 	var newRels = make([]Relation, 0, len(relList))
 	for _, rel := range relList {
 		var (
-			model     = rel.Model()
-			fieldDefs = model.FieldDefs()
-			pkValue   = fieldDefs.Primary().GetValue()
+			model        = rel.Model()
+			fieldDefs    = model.FieldDefs()
+			pkValue, err = fieldDefs.Primary().Value()
 		)
+		if err != nil {
+			return 0, errors.ValueError.WithCause(fmt.Errorf(
+				"failed to get primary key for relation %T: %w: %w",
+				model, err, errors.NoUniqueKey,
+			))
+		}
 
 		if fields.IsZero(pkValue) {
 			goto uniqueKeyCheck
@@ -521,7 +533,7 @@ targetLoop:
 		}
 
 	uniqueKeyCheck:
-		var val, err = GetUniqueKey(model)
+		val, err := GetUniqueKey(model)
 		if err != nil {
 			return 0, errors.ValueError.WithCause(fmt.Errorf(
 				"failed to get unique key for relation %T: %w: %w",

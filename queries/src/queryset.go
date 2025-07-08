@@ -101,6 +101,7 @@ type Preload struct {
 	Rel       attrs.Relation
 	Primary   attrs.FieldDefinition
 	Model     attrs.Definer
+	QuerySet  *QuerySet[attrs.Definer]
 	Field     attrs.FieldDefinition
 	Results   *PreloadResults
 }
@@ -1670,7 +1671,7 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 
 			// only add new preload if the preload is not already present in the mapping
 			if _, ok := nqs.internals.Preload.mapping[preloadPath]; !ok {
-				var preload = Preload{
+				var loadDef = Preload{
 					FieldName: relatrionChain.Chain[partIdx],
 					Path:      preloadPath,
 					Chain:     subChain,
@@ -1679,8 +1680,14 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 					Field:     curr.Field,
 					Primary:   defs.Primary(),
 				}
+
+				// Set the QuerySet for the preload
+				if partIdx == len(relatrionChain.Chain)-1 {
+					loadDef.QuerySet = preload.QuerySet
+				}
+
 				preloads = append(
-					preloads, preload,
+					preloads, loadDef,
 				)
 
 				if err := qs.addRelationChainPart(curr, aliasList); err != nil {

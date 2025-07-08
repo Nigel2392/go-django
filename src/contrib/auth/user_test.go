@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/quest"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/djester/testdb"
 )
@@ -184,6 +185,7 @@ func TestUserAddGroups(t *testing.T) {
 		t.Fatalf("Failed to add permissions to user: %v", err)
 	}
 
+	// add 3 perms to admin group
 	_, err = user.Groups.AsList()[0].Object.Permissions.Objects().WithContext(ctx).AddTargets(
 		&auth.Permission{
 			Name:        "Can view users",
@@ -208,7 +210,7 @@ func TestUserAddGroups(t *testing.T) {
 		userRows, err := auth.GetUserQuerySet().
 			WithContext(ctx).
 			Select("*").
-			Preload("Permissions", "Groups").
+			Preload("Permissions", "Groups", "Groups.Permissions", "Groups.Permissions.GroupPermissions").
 			Filter("ID__in", append(users, user)).
 			OrderBy("ID", "Groups.Name", "Permissions.Name").
 			All()
@@ -223,6 +225,17 @@ func TestUserAddGroups(t *testing.T) {
 				t.Logf(" - Group: %s", group.Object.Name)
 				for _, perm := range group.Object.Permissions.AsList() {
 					t.Logf("   - Permission: %s", perm.Object.Name)
+					var groupPermsObj, ok = perm.Object.DataStore().GetValue("GroupPermissions")
+					if ok {
+						var groupPerms, ok = groupPermsObj.(*queries.RelM2M[attrs.Definer, attrs.Definer])
+						if !ok {
+							t.Fatalf("Expected GroupPermissions to be of type *queries.RelM2M, got %T", groupPermsObj)
+						}
+
+						for _, groupPerm := range groupPerms.AsList() {
+							t.Logf("     - Group Permission: %s", groupPerm.Object.(*auth.Group).Name)
+						}
+					}
 				}
 			}
 			t.Logf("User %s has permissions:", userRow.Object.Username)

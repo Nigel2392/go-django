@@ -75,7 +75,7 @@ func (m *Profile) FieldDefs() attrs.Definitions {
 
 type User struct {
 	models.Model
-	ID                 int
+	ID                 uint64
 	Name               string
 	Profile            *Profile
 	ModelManyToManySet *queries.RelRevFK[attrs.Definer]
@@ -288,7 +288,7 @@ func (t *OneToOneWithThrough_Target) FieldDefs() attrs.Definitions {
 
 type ModelManyToMany struct {
 	models.Model
-	ID    int64
+	ID    uint64
 	Title string
 	User  *User
 	// Target []*ModelManyToMany_Target
@@ -402,7 +402,7 @@ func (t *ModelManyToMany_Through) FieldDefs() attrs.Definitions {
 
 type ModelManyToMany_Target struct {
 	models.Model
-	ID   int64
+	ID   uint64
 	Name string
 	Age  int
 }

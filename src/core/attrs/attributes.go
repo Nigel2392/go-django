@@ -25,6 +25,8 @@ func fieldNames(d any, exclude []string) []string {
 		for i, field := range f {
 			fields[i] = field
 		}
+	case StaticDefinitions:
+		fields = d.Fields()
 	case []Field:
 		fields = make([]FieldDefinition, len(d))
 		for i, f := range d {
@@ -62,7 +64,7 @@ func FieldNames(d any, exclude []string) []string {
 	}
 
 	switch d.(type) {
-	case Definer, []Field, []FieldDefinition, Definitions:
+	case Definer, []Field, []FieldDefinition, Definitions, StaticDefinitions:
 		return fieldNames(d, exclude)
 	}
 
