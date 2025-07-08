@@ -116,8 +116,11 @@ func (g *genericQueryBuilder) This() QueryCompiler {
 	return g.self
 }
 
-func (g *genericQueryBuilder) Rebind(s string) string {
-	return g.queryInfo.DBX(s)
+func (g *genericQueryBuilder) Rebind(ctx context.Context, s string) string {
+	if !IsSubqueryContext(ctx) {
+		return g.queryInfo.DBX(s)
+	}
+	return s
 }
 
 func (g *genericQueryBuilder) DatabaseName() string {
@@ -525,7 +528,7 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 
 	return &QueryObject[[][]interface{}]{
 		QueryInformation: QueryInformation{
-			Stmt:    g.queryInfo.DBX(query.String()),
+			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Model,
 			Params:  args,
 			Builder: g,
@@ -595,7 +598,7 @@ func (g *genericQueryBuilder) BuildCountQuery(
 	return &QueryObject[int64]{
 		QueryInformation: QueryInformation{
 			Builder: g,
-			Stmt:    g.queryInfo.DBX(query.String()),
+			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Model,
 			Params:  args,
 		},
@@ -735,7 +738,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 	return &QueryObject[[][]interface{}]{
 		QueryInformation: QueryInformation{
 			Builder: g,
-			Stmt:    g.queryInfo.DBX(query.String()),
+			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  model,
 			Params:  values,
 		},
@@ -894,7 +897,7 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 	return &QueryObject[int64]{
 		QueryInformation: QueryInformation{
 			Builder: g,
-			Stmt:    g.queryInfo.DBX(query.String()),
+			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Model,
 			Params:  args,
 		},
@@ -939,7 +942,7 @@ func (g *genericQueryBuilder) BuildDeleteQuery(
 	return &QueryObject[int64]{
 		QueryInformation: QueryInformation{
 			Builder: g,
-			Stmt:    g.queryInfo.DBX(query.String()),
+			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Model,
 			Params:  args,
 		},
@@ -1343,7 +1346,7 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 	return &QueryObject[[][]interface{}]{
 		QueryInformation: QueryInformation{
 			Builder: g,
-			Stmt:    g.queryInfo.DBX(strings.Join(stmt, "; ")),
+			Stmt:    g.Rebind(ctx, strings.Join(stmt, "; ")),
 			Params:  values,
 			Object:  attrs.NewObject[attrs.Definer](qs.Meta().Model()),
 		},

@@ -1970,7 +1970,7 @@ func (qs *QuerySet[T]) Scope(scopes ...func(*QuerySet[T], *QuerySetInternals) *Q
 
 func (qs *QuerySet[T]) BuildExpression() expr.Expression {
 	var subquery = &subqueryExpr[T, *QuerySet[T]]{
-		qs: qs.Limit(0),
+		qs: qs.Limit(0).WithContext(makeSubqueryContext(qs.Context())),
 	}
 	return subquery
 }
@@ -3320,7 +3320,7 @@ func (qs *QuerySet[T]) tryParseExprStatement(sqlStr string, args ...interface{})
 	sqlStr, args = resolved.SQL()
 
 	if rebinder, ok := qs.compiler.(RebindCompiler); ok {
-		sqlStr = rebinder.Rebind(sqlStr)
+		sqlStr = rebinder.Rebind(qs.Context(), sqlStr)
 	}
 
 	qs.latestQuery = &QueryInformation{

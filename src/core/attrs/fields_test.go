@@ -348,7 +348,7 @@ func TestModelFieldsValuer(t *testing.T) {
 		t.Errorf("expected %v, got %v", nil, err)
 	}
 
-	if v.(int) != 1 {
+	if v.(int64) != 1 {
 		t.Errorf("expected %d, got %d", 1, v.(int))
 	}
 

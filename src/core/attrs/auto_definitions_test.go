@@ -208,7 +208,7 @@ func TestModelAutoFieldDefinitionsPrimary(t *testing.T) {
 		t.Errorf("expected no error, got %v", err)
 	}
 
-	if v.(int) != 2 {
+	if v.(int64) != 2 {
 		t.Errorf("(Value()) expected %d, got %d", 2, v.(int))
 	}
 

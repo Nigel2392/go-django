@@ -32,6 +32,7 @@ $testsToRun = @(
 $flags = @{
     verbose = $true
     failslow = $false
+    runTests = $true
 }
 
 # Check script arguments that were passed in
@@ -43,6 +44,10 @@ foreach ($arg in $args) {
         }
         "failslow" {
             $flags.failslow = $true
+            continue
+        }
+        "fake" {
+            $flags.runTests = $false
             continue
         }
         "down" {
@@ -79,6 +84,12 @@ if ($upString -ne "") {
     Invoke-Expression "docker-compose -f $DOCKER_COMPOSE_FILE up -d$upString"
 } else {
     Write-Host "No Docker databases specified, skipping container start."
+}
+
+# If the runTests flag is false, skip the test execution
+if (-not $flags.runTests) {
+    Write-Host "Skipping test execution as per the 'fake' flag."
+    exit 0
 }
 
 # Run tests for each database type

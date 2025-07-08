@@ -59,6 +59,14 @@ var (
 	// This should be done after all models have been registered, so that the static definitions have enough information to be built correctly.
 	ResetDefinitions = signals.New[any]("attrs.ResetDefinitions")
 
+	//_, _ = OnModelRegister.Listen(func(s signals.Signal[SignalModelMeta], smm SignalModelMeta) error {
+	//	return ResetDefinitions.Send(nil)
+	//})
+
+	// This makes sure to reset the static definitions after all models have been registered.
+	//
+	// This is so reverse fields are visible in the static definitions - these
+	// can only be built after all models have been registered.
 	_, _ = ResetDefinitions.Listen(func(s signals.Signal[any], a any) error {
 		for _, meta := range modelReg {
 			meta.definitions = newStaticDefinitions(NewObject[Definer](meta.model))

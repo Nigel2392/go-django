@@ -583,7 +583,7 @@ type QueryCompiler interface {
 // rebind functionality will not be available when calling [QuerySet.Rows], [QuerySet.Row] and [QuerySet.Exec].
 type RebindCompiler interface {
 	QueryCompiler
-	Rebind(s string) string
+	Rebind(ctx context.Context, s string) string
 }
 
 type ModelMeta interface {

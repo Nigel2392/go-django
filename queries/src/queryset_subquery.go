@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"context"
 	"strings"
 
 	_ "unsafe"
@@ -87,8 +88,25 @@ func (s *subqueryExpr[T, QS]) Resolve(inf *expr.ExpressionInfo) expr.Expression 
 	return nE
 }
 
+type subqueryContextKey struct{}
+
+func IsSubqueryContext(ctx context.Context) bool {
+	var v, ok = ctx.Value(subqueryContextKey{}).(bool)
+	if !ok {
+		return false
+	}
+	return v
+}
+
+func makeSubqueryContext(ctx context.Context) context.Context {
+	if IsSubqueryContext(ctx) {
+		return ctx
+	}
+	return context.WithValue(ctx, subqueryContextKey{}, true)
+}
+
 func Subquery[T attrs.Definer, QS BaseQuerySet[T, QS]](qs QS) expr.Expression {
 	return &subqueryExpr[T, QS]{
-		qs: qs.Limit(0),
+		qs: qs.Limit(0).WithContext(makeSubqueryContext(qs.Context())),
 	}
 }
