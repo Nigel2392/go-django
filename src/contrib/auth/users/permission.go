@@ -1,4 +1,4 @@
-package auth
+package users
 
 import (
 	"github.com/Nigel2392/go-django/queries/src/models"

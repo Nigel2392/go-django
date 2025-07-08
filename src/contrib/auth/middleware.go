@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -14,7 +15,9 @@ const SESSION_COOKIE_NAME = "user_authentication"
 
 func UnAuthenticatedUser() *User {
 	return &User{
-		IsLoggedIn: false,
+		Base: users.Base{
+			IsLoggedIn: false,
+		},
 	}
 }
 
@@ -42,7 +45,10 @@ func UserFromRequest(r *http.Request) *User {
 	if !ok {
 		return UnAuthenticatedUser()
 	}
-	var userRow, err = queries.GetQuerySet(&User{}).Filter("ID", uidInt).Get()
+	var userRow, err = queries.GetQuerySet(&User{}).
+		Preload("Groups", "Permissions", "Groups.Permissions").
+		Filter("ID", uidInt).
+		Get()
 	if err != nil {
 		return UnAuthenticatedUser()
 	}

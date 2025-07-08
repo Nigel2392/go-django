@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
@@ -47,11 +48,11 @@ func NewAppConfig() django.AppConfig {
 	}
 	app.ModelObjects = []attrs.Definer{
 		&User{},
-		&Group{},
-		&Permission{},
-		&UserGroup{},
-		&GroupPermission{},
-		&UserPermission{},
+		&users.Group{},
+		&users.Permission{},
+		&users.UserGroup{},
+		&users.GroupPermission{},
+		&users.UserPermission{},
 	}
 	app.Routing = func(m django.Mux) {
 		m.Use(

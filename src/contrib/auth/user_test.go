@@ -12,9 +12,12 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/quest"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/djester/testdb"
+
+	_ "unsafe"
 )
 
 func TestMain(m *testing.M) {
@@ -46,11 +49,11 @@ func TestMain(m *testing.M) {
 
 	var tables = quest.Table[*testing.T](nil,
 		&auth.User{},
-		&auth.Group{},
-		&auth.Permission{},
-		&auth.UserGroup{},
-		&auth.GroupPermission{},
-		&auth.UserPermission{},
+		&users.Group{},
+		&users.Permission{},
+		&users.UserGroup{},
+		&users.GroupPermission{},
+		&users.UserPermission{},
 	)
 	tables.Create()
 	defer tables.Drop()
@@ -66,13 +69,15 @@ func TestMain(m *testing.M) {
 
 func TestUserPassword(t *testing.T) {
 	var user = models.Setup(&auth.User{
-		Email:           drivers.MustParseEmail("test@example.com"),
-		Password:        auth.NewPassword("testpassword"),
-		Username:        "testuser",
-		FirstName:       "Test",
-		LastName:        "User",
-		IsAdministrator: false,
-		IsActive:        true,
+		Email:     drivers.MustParseEmail("test@example.com"),
+		Password:  auth.NewPassword("testpassword"),
+		Username:  "testuser",
+		FirstName: "Test",
+		LastName:  "User",
+		Base: users.Base{
+			IsAdministrator: false,
+			IsActive:        true,
+		},
 	})
 
 	if err := user.Password.Check("testpassword"); err != nil {
@@ -115,14 +120,15 @@ func TestUserAddGroups(t *testing.T) {
 	}()
 
 	var u = &auth.User{
-		Email:           drivers.MustParseEmail("test@example.com"),
-		Password:        auth.NewPassword("testpassword"),
-		Username:        "testuser",
-		FirstName:       "Test",
-		LastName:        "User",
-		IsAdministrator: false,
-		IsActive:        true,
-		IsLoggedIn:      false,
+		Email:     drivers.MustParseEmail("test@example.com"),
+		Password:  auth.NewPassword("testpassword"),
+		Username:  "testuser",
+		FirstName: "Test",
+		LastName:  "User",
+		Base: users.Base{
+			IsAdministrator: false,
+			IsActive:        true,
+		},
 	}
 	user, err := auth.GetUserQuerySet().WithContext(ctx).Create(u)
 	if err != nil {
@@ -130,36 +136,37 @@ func TestUserAddGroups(t *testing.T) {
 		return
 	}
 
-	var users = make([]*auth.User, 0, 5)
+	var userList = make([]*auth.User, 0, 5)
 	for i := 0; i < 5; i++ {
 		var user = &auth.User{
-			Email:           drivers.MustParseEmail("test" + drivers.Uint(i+1).String() + "@example.com"),
-			Password:        auth.NewPassword("testpassword" + drivers.Uint(i+1).String()),
-			Username:        "testuser" + drivers.Uint(i+1).String(),
-			FirstName:       "Test" + drivers.Uint(i+1).String(),
-			LastName:        "User" + drivers.Uint(i+1).String(),
-			IsAdministrator: false,
-			IsActive:        true,
-			IsLoggedIn:      false,
+			Email:     drivers.MustParseEmail("test" + drivers.Uint(i+1).String() + "@example.com"),
+			Password:  auth.NewPassword("testpassword" + drivers.Uint(i+1).String()),
+			Username:  "testuser" + drivers.Uint(i+1).String(),
+			FirstName: "Test" + drivers.Uint(i+1).String(),
+			LastName:  "User" + drivers.Uint(i+1).String(),
+			Base: users.Base{
+				IsAdministrator: false,
+				IsActive:        true,
+			},
 		}
 		user, err := auth.GetUserQuerySet().WithContext(ctx).Create(user)
 		if err != nil {
 			t.Fatalf("Failed to create user %d: %v", i+1, err)
 			return
 		}
-		users = append(users, user)
+		userList = append(userList, user)
 	}
 
 	t.Logf("User %s created with ID %d", user.Username, user.ID)
 
 	_, err = user.Groups.Objects().WithContext(ctx).AddTargets(
-		&auth.Group{
+		&users.Group{
 			Name: "Administrators",
 		},
-		&auth.Group{
+		&users.Group{
 			Name: "Moderators",
 		},
-		&auth.Group{
+		&users.Group{
 			Name: "Viewers",
 		},
 	)
@@ -168,15 +175,15 @@ func TestUserAddGroups(t *testing.T) {
 	}
 
 	_, err = user.Permissions.Objects().WithContext(ctx).AddTargets(
-		&auth.Permission{
+		&users.Permission{
 			Name:        "Can view users",
 			Description: "Allows viewing of users",
 		},
-		&auth.Permission{
+		&users.Permission{
 			Name:        "Can edit users",
 			Description: "Allows editing of users",
 		},
-		&auth.Permission{
+		&users.Permission{
 			Name:        "Can delete users",
 			Description: "Allows deletion of users",
 		},
@@ -187,15 +194,15 @@ func TestUserAddGroups(t *testing.T) {
 
 	// add 3 perms to admin group
 	_, err = user.Groups.AsList()[0].Object.Permissions.Objects().WithContext(ctx).AddTargets(
-		&auth.Permission{
+		&users.Permission{
 			Name:        "Can view users",
 			Description: "Allows viewing of users",
 		},
-		&auth.Permission{
+		&users.Permission{
 			Name:        "Can edit users",
 			Description: "Allows editing of users",
 		},
-		&auth.Permission{
+		&users.Permission{
 			Name:        "Can delete users",
 			Description: "Allows deletion of users",
 		},
@@ -211,7 +218,7 @@ func TestUserAddGroups(t *testing.T) {
 			WithContext(ctx).
 			Select("*").
 			Preload("Permissions", "Groups", "Groups.Permissions", "Groups.Permissions.GroupPermissions").
-			Filter("ID__in", append(users, user)).
+			Filter("ID__in", append(userList, user)).
 			OrderBy("ID", "Groups.Name", "Permissions.Name").
 			All()
 		if err != nil {
@@ -233,7 +240,7 @@ func TestUserAddGroups(t *testing.T) {
 						}
 
 						for _, groupPerm := range groupPerms.AsList() {
-							t.Logf("     - Group Permission: %s", groupPerm.Object.(*auth.Group).Name)
+							t.Logf("     - Group Permission: %s", groupPerm.Object.(*users.Group).Name)
 						}
 					}
 				}
@@ -371,14 +378,15 @@ func TestUserAddPermissions(t *testing.T) {
 	}()
 
 	var u = &auth.User{
-		Email:           drivers.MustParseEmail("test@example.com"),
-		Password:        auth.NewPassword("testpassword"),
-		Username:        "testuser",
-		FirstName:       "Test",
-		LastName:        "User",
-		IsAdministrator: false,
-		IsActive:        true,
-		IsLoggedIn:      false,
+		Email:     drivers.MustParseEmail("test@example.com"),
+		Password:  auth.NewPassword("testpassword"),
+		Username:  "testuser",
+		FirstName: "Test",
+		LastName:  "User",
+		Base: users.Base{
+			IsAdministrator: false,
+			IsActive:        true,
+		},
 	}
 	user, err := auth.GetUserQuerySet().WithContext(ctx).Create(u)
 	if err != nil {
@@ -387,15 +395,15 @@ func TestUserAddPermissions(t *testing.T) {
 	}
 
 	_, err = user.Permissions.Objects().WithContext(ctx).AddTargets(
-		&auth.Permission{
+		&users.Permission{
 			Name:        "Can view users",
 			Description: "Allows viewing of users",
 		},
-		&auth.Permission{
+		&users.Permission{
 			Name:        "Can edit users",
 			Description: "Allows editing of users",
 		},
-		&auth.Permission{
+		&users.Permission{
 			Name:        "Can delete users",
 			Description: "Allows deletion of users",
 		},
@@ -440,6 +448,9 @@ func TestUserAddPermissions(t *testing.T) {
 	}
 }
 
+//go:linkname cacheFlags github.com/Nigel2392/go-django/src/contrib/auth/users.cacheFlags
+func cacheFlags(ctx context.Context, disableCache bool, disableDB bool) context.Context
+
 func TestUserHasPermissions(t *testing.T) {
 	var ctx = context.Background()
 	ctx, tx, err := queries.StartTransaction(ctx)
@@ -454,14 +465,15 @@ func TestUserHasPermissions(t *testing.T) {
 	}()
 
 	var u = &auth.User{
-		Email:           drivers.MustParseEmail("test@example.com"),
-		Password:        auth.NewPassword("testpassword"),
-		Username:        "testuser",
-		FirstName:       "Test",
-		LastName:        "User",
-		IsAdministrator: false,
-		IsActive:        true,
-		IsLoggedIn:      false,
+		Email:     drivers.MustParseEmail("test@example.com"),
+		Password:  auth.NewPassword("testpassword"),
+		Username:  "testuser",
+		FirstName: "Test",
+		LastName:  "User",
+		Base: users.Base{
+			IsAdministrator: false,
+			IsActive:        true,
+		},
 	}
 	user, err := auth.GetUserQuerySet().
 		WithContext(ctx).
@@ -473,7 +485,7 @@ func TestUserHasPermissions(t *testing.T) {
 
 	_, err = user.Groups.Objects().
 		WithContext(ctx).
-		AddTarget(&auth.Group{
+		AddTarget(&users.Group{
 			Name: "Administrators",
 		})
 	if err != nil {
@@ -483,41 +495,80 @@ func TestUserHasPermissions(t *testing.T) {
 	_, err = user.Permissions.Objects().
 		WithContext(ctx).
 		AddTargets(
-			&auth.Permission{
+			&users.Permission{
 				Name:        "Can view users",
 				Description: "Allows viewing of users",
 			},
-			&auth.Permission{
+			&users.Permission{
 				Name:        "Can edit users",
 				Description: "Allows editing of users",
-			},
-			&auth.Permission{
-				Name:        "Can delete users",
-				Description: "Allows deletion of users",
 			},
 		)
 	if err != nil {
 		t.Fatalf("Failed to add permissions to user: %v", err)
 	}
 
-	userRow, err := auth.GetUserQuerySet().
+	_, err = user.Groups.AsList()[0].Object.Permissions.Objects().
 		WithContext(ctx).
-		Filter("ID", user.ID).
-		First()
+		AddTargets(&users.Permission{
+			Name:        "Can delete users",
+			Description: "Allows deletion of users",
+		})
 	if err != nil {
-		t.Fatalf("Failed to retrieve user: %v", err)
+		t.Fatalf("Failed to add permissions to group: %v", err)
 	}
 
-	u = userRow.Object
-	if !u.HasObjectPermission(ctx, nil, "Can view users", "Can edit users") {
-		t.Errorf("User should have 'Can view users' and 'Can edit users' permissions, but does not")
-	}
+	t.Run("WithPreload", func(t *testing.T) {
+		userRow, err := auth.GetUserQuerySet().
+			WithContext(ctx).
+			Preload("Permissions", "Groups", "Groups.Permissions").
+			Filter("ID", user.ID).
+			First()
+		if err != nil {
+			t.Fatalf("Failed to retrieve user: %v", err)
+		}
 
-	if !u.HasObjectPermission(ctx, nil, "Can delete users") {
-		t.Errorf("User should have 'Can delete users' permission, but does not")
-	}
+		u = userRow.Object
 
-	if u.HasObjectPermission(ctx, nil, "Can create users") {
-		t.Errorf("User should not have 'Can create users' permission, but does")
-	}
+		t.Logf("Checking permissions for user: %s", u.Username)
+
+		var contextWithFlags = cacheFlags(ctx, false, true)
+		if !u.HasObjectPermission(contextWithFlags, nil, "Can view users", "Can edit users") {
+			t.Errorf("User should have 'Can view users' and 'Can edit users' permissions, but does not")
+		}
+
+		if !u.HasObjectPermission(contextWithFlags, nil, "Can delete users") {
+			t.Errorf("User should have 'Can delete users' permission, but does not")
+		}
+
+		if u.HasObjectPermission(contextWithFlags, nil, "Can create users") {
+			t.Errorf("User should not have 'Can create users' permission, but does")
+		}
+	})
+
+	t.Run("WithoutPreload", func(t *testing.T) {
+		userRow, err := auth.GetUserQuerySet().
+			WithContext(ctx).
+			Filter("ID", user.ID).
+			First()
+		if err != nil {
+			t.Fatalf("Failed to retrieve user: %v", err)
+		}
+
+		u = userRow.Object
+
+		t.Logf("Checking permissions for user: %s", u.Username)
+
+		if !u.HasObjectPermission(ctx, nil, "Can view users", "Can edit users") {
+			t.Errorf("User should have 'Can view users' and 'Can edit users' permissions, but does not")
+		}
+
+		if !u.HasObjectPermission(ctx, nil, "Can delete users") {
+			t.Errorf("User should have 'Can delete users' permission, but does not")
+		}
+
+		if u.HasObjectPermission(ctx, nil, "Can create users") {
+			t.Errorf("User should not have 'Can create users' permission, but does")
+		}
+	})
 }

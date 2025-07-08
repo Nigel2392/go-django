@@ -561,7 +561,7 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
 		r.preloads = orderedmap.NewOrderedMap[string, []*Preload]()
 
 		for _, preload := range qs.internals.Preload.Preloads {
-			if err := r.queryPreloads(&preload, qs); err != nil {
+			if err := r.queryPreloads(preload, qs); err != nil {
 				return nil, fmt.Errorf("failed to query preload %q: %w", preload.FieldName, err)
 			}
 		}

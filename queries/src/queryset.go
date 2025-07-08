@@ -107,8 +107,8 @@ type Preload struct {
 }
 
 type QuerySetPreloads struct {
-	Preloads []Preload
-	mapping  map[string]Preload
+	Preloads []*Preload
+	mapping  map[string]*Preload
 }
 
 func (p *QuerySetPreloads) Copy() *QuerySetPreloads {
@@ -1622,8 +1622,8 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 	// If you want to preload specific fields, use the Select method instead.
 	var nqs = qs.clone()
 	nqs.internals.Preload = &QuerySetPreloads{
-		Preloads: make([]Preload, 0, len(fields)),
-		mapping:  make(map[string]Preload, len(fields)),
+		Preloads: make([]*Preload, 0, len(fields)),
+		mapping:  make(map[string]*Preload, len(fields)),
 	}
 	for _, field := range fields {
 		var preload Preload
@@ -1652,7 +1652,7 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 			panic(fmt.Errorf("Preload: %w", err))
 		}
 
-		var preloads = make([]Preload, 0, len(relatrionChain.Chain))
+		var preloads = make([]*Preload, 0, len(relatrionChain.Chain))
 		var curr = relatrionChain.Root
 		var partIdx = 0
 		var aliasList = make([]string, 0, len(relatrionChain.Chain))
@@ -1670,8 +1670,10 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 			))
 
 			// only add new preload if the preload is not already present in the mapping
+			fmt.Printf("Preload Path: %s for %T and field %q\n", preloadPath, curr.Model, curr.Field.Name())
 			if _, ok := nqs.internals.Preload.mapping[preloadPath]; !ok {
-				var loadDef = Preload{
+				fmt.Printf("Adding Preload: %s for %T and field %q\n", preloadPath, curr.Model, curr.Field.Name())
+				var loadDef = &Preload{
 					FieldName: relatrionChain.Chain[partIdx],
 					Path:      preloadPath,
 					Chain:     subChain,
@@ -1686,6 +1688,7 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 					loadDef.QuerySet = preload.QuerySet
 				}
 
+				nqs.internals.Preload.mapping[preload.Path] = loadDef
 				preloads = append(
 					preloads, loadDef,
 				)
@@ -1699,20 +1702,13 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 			partIdx++
 		}
 
-		slices.SortStableFunc(preloads, func(a, b Preload) int {
-			return strings.Compare(a.Path, b.Path)
-		})
-
-		for _, preload := range preloads {
-			if _, ok := nqs.internals.Preload.mapping[preload.Path]; ok {
-				panic(fmt.Errorf("Preload: preload for %q already exists", preload.Path))
-			}
-			nqs.internals.Preload.mapping[preload.Path] = preload
-		}
-
 		nqs.internals.Preload.Preloads = append(
 			nqs.internals.Preload.Preloads, preloads...,
 		)
+
+		slices.SortStableFunc(nqs.internals.Preload.Preloads, func(a, b *Preload) int {
+			return strings.Compare(a.Path, b.Path)
+		})
 
 	}
 
