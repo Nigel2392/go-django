@@ -5,6 +5,7 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/command"
 )
 
@@ -54,8 +55,10 @@ var command_create_user = &command.Cmd[createUserStorage]{
 			RefreshToken:     "",
 			TokenType:        "",
 			ExpiresAt:        drivers.Timestamp{},
-			IsAdministrator:  stored.super,
-			IsActive:         !stored.inactive,
+			Base: users.Base{
+				IsAdministrator: stored.super,
+				IsActive:        !stored.inactive,
+			},
 		})
 		if err != nil {
 			m.Logf("Error creating user: %s", err)

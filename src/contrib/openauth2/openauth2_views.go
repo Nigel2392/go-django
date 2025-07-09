@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/views"
@@ -188,8 +189,10 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 			RefreshToken:     drivers.Text(token.RefreshToken),
 			TokenType:        token.TokenType,
 			ExpiresAt:        drivers.Timestamp(token.Expiry),
-			IsAdministrator:  false,
-			IsActive:         !oa.Config.UserDefaultIsDisabled,
+			Base: users.Base{
+				IsAdministrator: false,
+				IsActive:        !oa.Config.UserDefaultIsDisabled,
+			},
 		})
 		except.AssertNil(
 			err, http.StatusInternalServerError,

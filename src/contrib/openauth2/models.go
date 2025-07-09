@@ -10,6 +10,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"golang.org/x/oauth2"
@@ -47,7 +48,8 @@ var (
 )
 
 type User struct {
-	models.Model     `table:"openauth2_users"`
+	models.Model `table:"openauth2_users"`
+	users.Base
 	ID               uint64            `json:"id"`
 	UniqueIdentifier string            `json:"unique_identifier"`
 	ProviderName     string            `json:"provider_name"`
@@ -58,9 +60,6 @@ type User struct {
 	ExpiresAt        drivers.Timestamp `json:"expires_at"`
 	CreatedAt        drivers.DateTime  `json:"created_at"`
 	UpdatedAt        drivers.DateTime  `json:"updated_at"`
-	IsAdministrator  bool              `json:"is_administrator"`
-	IsActive         bool              `json:"is_active"`
-	IsLoggedIn       bool              `json:"is_logged_in"`
 
 	context context.Context
 	object  interface{}
@@ -205,121 +204,105 @@ func (o *User) FieldDefs() attrs.Definitions {
 	)
 }
 
-func (o *User) Fields(this attrs.Definer) []attrs.Field {
-	var fields = make([]attrs.Field, 12)
-	fields[0] = attrs.NewField(
-		o, "ID", &attrs.FieldConfig{
-			Null:     false,
-			Blank:    false,
-			ReadOnly: true,
-			Label:    "ID",
-			Primary:  true,
-			Column:   "id",
-		},
-	)
-	fields[1] = attrs.NewField(
-		o, "UniqueIdentifier", &attrs.FieldConfig{
-			Null:      false,
-			Blank:     false,
-			ReadOnly:  true,
-			Label:     "Unique Identifier",
-			Column:    "unique_identifier",
-			MaxLength: 255,
-		},
-	)
-	fields[2] = attrs.NewField(
-		o, "ProviderName", &attrs.FieldConfig{
-			Null:      false,
-			Blank:     false,
-			ReadOnly:  true,
-			Label:     "Provider Name",
-			Column:    "provider_name",
-			MaxLength: 255,
-		},
-	)
-	fields[3] = attrs.NewField(
-		o, "Data", &attrs.FieldConfig{
-			Null:     false,
-			Blank:    true,
-			ReadOnly: true,
-			Label:    "Data",
-			Column:   "data",
-		},
-	)
-	fields[4] = attrs.NewField(
-		o, "AccessToken", &attrs.FieldConfig{
-			Null:     false,
-			Blank:    true,
-			ReadOnly: true,
-			Label:    "Access Token",
-			Column:   "access_token",
-		},
-	)
-	fields[5] = attrs.NewField(
-		o, "RefreshToken", &attrs.FieldConfig{
-			Null:     false,
-			Blank:    true,
-			ReadOnly: true,
-			Label:    "Refresh Token",
-			Column:   "refresh_token",
-		},
-	)
-	fields[6] = attrs.NewField(
-		o, "TokenType", &attrs.FieldConfig{
-			Null:      false,
-			Blank:     true,
-			ReadOnly:  true,
-			Label:     "Token Type",
-			Column:    "token_type",
-			MaxLength: 50,
-		},
-	)
-	fields[7] = attrs.NewField(
-		o, "ExpiresAt", &attrs.FieldConfig{
-			Null:      false,
-			Blank:     true,
-			ReadOnly:  true,
-			MaxLength: 6, // precision for fractional seconds
-			Label:     "Expires At",
-			Column:    "expires_at",
-		},
-	)
-	fields[8] = attrs.NewField(
-		o, "CreatedAt", &attrs.FieldConfig{
-			Null:     false,
-			Blank:    true,
-			ReadOnly: true,
-			Label:    "Created At",
-			Column:   "created_at",
-		},
-	)
-	fields[9] = attrs.NewField(
-		o, "UpdatedAt", &attrs.FieldConfig{
-			Null:     false,
-			Blank:    true,
-			ReadOnly: true,
-			Label:    "Updated At",
-			Column:   "updated_at",
-		},
-	)
-	fields[10] = attrs.NewField(
-		o, "IsAdministrator", &attrs.FieldConfig{
-			Null:   false,
-			Blank:  true,
-			Label:  "Is Administrator",
-			Column: "is_administrator",
-		},
-	)
-	fields[11] = attrs.NewField(
-		o, "IsActive", &attrs.FieldConfig{
-			Null:   false,
-			Blank:  true,
-			Label:  "Is Active",
-			Column: "is_active",
-		},
-	)
-
-	return fields
+func (o *User) Fields(this attrs.Definer) []any {
+	return []any{
+		attrs.NewField(
+			o, "ID", &attrs.FieldConfig{
+				Null:     false,
+				Blank:    false,
+				ReadOnly: true,
+				Label:    "ID",
+				Primary:  true,
+				Column:   "id",
+			},
+		),
+		attrs.NewField(
+			o, "UniqueIdentifier", &attrs.FieldConfig{
+				Null:      false,
+				Blank:     false,
+				ReadOnly:  true,
+				Label:     "Unique Identifier",
+				Column:    "unique_identifier",
+				MaxLength: 255,
+			},
+		),
+		attrs.NewField(
+			o, "ProviderName", &attrs.FieldConfig{
+				Null:      false,
+				Blank:     false,
+				ReadOnly:  true,
+				Label:     "Provider Name",
+				Column:    "provider_name",
+				MaxLength: 255,
+			},
+		),
+		attrs.NewField(
+			o, "Data", &attrs.FieldConfig{
+				Null:     false,
+				Blank:    true,
+				ReadOnly: true,
+				Label:    "Data",
+				Column:   "data",
+			},
+		),
+		attrs.NewField(
+			o, "AccessToken", &attrs.FieldConfig{
+				Null:     false,
+				Blank:    true,
+				ReadOnly: true,
+				Label:    "Access Token",
+				Column:   "access_token",
+			},
+		),
+		attrs.NewField(
+			o, "RefreshToken", &attrs.FieldConfig{
+				Null:     false,
+				Blank:    true,
+				ReadOnly: true,
+				Label:    "Refresh Token",
+				Column:   "refresh_token",
+			},
+		),
+		attrs.NewField(
+			o, "TokenType", &attrs.FieldConfig{
+				Null:      false,
+				Blank:     true,
+				ReadOnly:  true,
+				Label:     "Token Type",
+				Column:    "token_type",
+				MaxLength: 50,
+			},
+		),
+		attrs.NewField(
+			o, "ExpiresAt", &attrs.FieldConfig{
+				Null:      false,
+				Blank:     true,
+				ReadOnly:  true,
+				MaxLength: 6, // precision for fractional seconds
+				Label:     "Expires At",
+				Column:    "expires_at",
+			},
+		),
+		attrs.NewField(
+			o, "CreatedAt", &attrs.FieldConfig{
+				Null:     false,
+				Blank:    true,
+				ReadOnly: true,
+				Label:    "Created At",
+				Column:   "created_at",
+			},
+		),
+		attrs.NewField(
+			o, "UpdatedAt", &attrs.FieldConfig{
+				Null:     false,
+				Blank:    true,
+				ReadOnly: true,
+				Label:    "Updated At",
+				Column:   "updated_at",
+			},
+		),
+		o.Base.Fields(this),
+	}
 }
 
 func (o *User) contentObjectFields(this attrs.Definer) []attrs.Field {

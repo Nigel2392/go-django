@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/contrib/openauth2"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -112,8 +113,10 @@ func TestContentObject(t *testing.T) {
 		RefreshToken:     "test-refresh-token",
 		TokenType:        "Bearer",
 		ExpiresAt:        drivers.Timestamp(time.Now()),
-		IsAdministrator:  false,
-		IsActive:         true,
+		Base: users.Base{
+			IsAdministrator: false,
+			IsActive:        true,
+		},
 	}
 
 	var contentObj, err = user.ContentObject()
@@ -136,8 +139,10 @@ func TestToString(t *testing.T) {
 		RefreshToken:     "test-refresh-token",
 		TokenType:        "Bearer",
 		ExpiresAt:        drivers.Timestamp(time.Now()),
-		IsAdministrator:  false,
-		IsActive:         true,
+		Base: users.Base{
+			IsAdministrator: false,
+			IsActive:        true,
+		},
 	}
 
 	var s = attrs.ToString(user)
@@ -157,8 +162,10 @@ func TestTokenSource(t *testing.T) {
 		RefreshToken:     "test-refresh-token",
 		TokenType:        "Bearer",
 		ExpiresAt:        timeNow,
-		IsAdministrator:  false,
-		IsActive:         true,
+		Base: users.Base{
+			IsAdministrator: false,
+			IsActive:        true,
+		},
 	})
 
 	var err = user.Save(ctx)
@@ -268,8 +275,10 @@ func TestRefreshToken(t *testing.T) {
 		RefreshToken:     "test-refresh-token",
 		TokenType:        "Bearer",
 		ExpiresAt:        timeNow,
-		IsAdministrator:  false,
-		IsActive:         true,
+		Base: users.Base{
+			IsAdministrator: false,
+			IsActive:        true,
+		},
 	})
 	if err != nil {
 		t.Fatal(err)

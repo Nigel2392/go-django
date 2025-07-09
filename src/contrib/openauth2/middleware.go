@@ -5,15 +5,18 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
-func UnAuthenticatedUser() *User {
+func UnauthenticatedUser() *User {
 	return &User{
-		IsLoggedIn: false,
+		Base: users.Base{
+			IsLoggedIn: false,
+		},
 	}
 }
 
@@ -29,7 +32,7 @@ func UserFromRequest(r *http.Request) *User {
 
 	var userID = session.Get(USER_ID_SESSION_KEY)
 	if userID == nil {
-		return UnAuthenticatedUser()
+		return UnauthenticatedUser()
 	}
 
 	var userRow, err = queries.GetQuerySet(&User{}).
@@ -37,13 +40,13 @@ func UserFromRequest(r *http.Request) *User {
 		Filter("IsActive", true).
 		Get()
 	if err != nil && errors.Is(err, errors.NoRows) {
-		return UnAuthenticatedUser()
+		return UnauthenticatedUser()
 	} else if err != nil {
 		except.Fail(
 			http.StatusInternalServerError,
 			"Failed to retrieve user from database",
 		)
-		return UnAuthenticatedUser()
+		return UnauthenticatedUser()
 	}
 
 	userRow.Object.IsLoggedIn = true

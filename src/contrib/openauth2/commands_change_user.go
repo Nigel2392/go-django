@@ -5,6 +5,7 @@ import (
 	"flag"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/command"
 )
 
@@ -51,8 +52,10 @@ var command_change_user = &command.Cmd[changeUserStorage]{
 
 			// Save the changes to the user
 			_, err = qs.Select("IsAdministrator", "IsActive").Filter("ID", u.Object.ID).ExplicitSave().Update(&User{
-				IsAdministrator: u.Object.IsAdministrator,
-				IsActive:        u.Object.IsActive,
+				Base: users.Base{
+					IsAdministrator: u.Object.IsAdministrator,
+					IsActive:        u.Object.IsActive,
+				},
 			})
 
 			return err == nil, err
