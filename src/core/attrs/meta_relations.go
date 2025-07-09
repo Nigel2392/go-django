@@ -2,7 +2,6 @@ package attrs
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
@@ -119,27 +118,76 @@ func deferredMapKey(d *deferredRelation) string {
 		typ         = d.typ
 		modelType   = d.model_type
 		targetField = d.target_field
-		extra       = make([]string, 0, 3)
 	)
 
-	if d.through_Ctype != "" {
-		extra = append(extra, d.through_Ctype)
-		extra = append(extra, d.through_source)
-		extra = append(extra, d.through_target)
-	}
-
-	if len(extra) > 0 {
-		return fmt.Sprintf(
-			"%d:%s:%s:%s",
-			typ, modelType,
-			targetField,
-			strings.Join(extra, ":"),
-		)
-	}
 	return fmt.Sprintf(
 		"%d:%s:%s",
 		typ, modelType, targetField,
 	)
+}
+
+func ThroughDeferred(
+	contentType string,
+	sourceField string,
+	targetField string,
+) Through {
+	return &deferredThroughModel{
+		contentType: contentType,
+		sourceField: sourceField,
+		targetField: targetField,
+	}
+}
+
+func RelatedDeferred(
+	typ RelationType,
+	modelContentType string,
+	targetField string,
+	through Through,
+) Relation {
+	return &deferredRelation{
+		typ:          typ,
+		model_type:   modelContentType,
+		target_field: targetField,
+		through:      through,
+	}
+}
+
+type deferredThroughModel struct {
+	contentType string
+	sourceField string
+	targetField string
+
+	mdl Definer
+}
+
+func (d *deferredThroughModel) setup() {
+	if d.mdl != nil {
+		return // already set up
+	}
+
+	var cType = contenttypes.DefinitionForType(d.contentType)
+	if cType == nil {
+		panic(fmt.Errorf("content type %q not found for deferring through model", d.contentType))
+	}
+
+	d.mdl = cType.Object().(Definer)
+}
+
+func (d *deferredThroughModel) Model() Definer {
+	if d.mdl != nil {
+		return d.mdl
+	}
+
+	d.setup()
+	return d.mdl
+}
+
+func (d *deferredThroughModel) SourceField() string {
+	return d.sourceField
+}
+
+func (d *deferredThroughModel) TargetField() string {
+	return d.targetField
 }
 
 // deferredRelation is a relation that is deferred until it is needed.
@@ -149,16 +197,12 @@ func deferredMapKey(d *deferredRelation) string {
 // it is currently only used when registering with [AutoDefinitions],
 // as the contenttype might not be immediately available.
 type deferredRelation struct {
-	typ            RelationType
-	model_type     string
-	target_field   string
-	through_Ctype  string
-	through_source string
-	through_target string
-
-	mdl     Definer
-	field   Field
-	through Through
+	typ          RelationType
+	model_type   string
+	target_field string
+	mdl          Definer
+	field        Field
+	through      Through
 }
 
 func (d *deferredRelation) setup() {
@@ -184,19 +228,6 @@ func (d *deferredRelation) setup() {
 			panic(fmt.Errorf("field %q not found in model %T", d.target_field, d.mdl))
 		}
 		d.field = f
-	}
-
-	if d.through_Ctype != "" {
-		var throughCtype = contenttypes.DefinitionForType(d.through_Ctype)
-		if throughCtype == nil {
-			panic(fmt.Errorf("content type %q not found for deferring relation", d.through_Ctype))
-		}
-
-		d.through = &ThroughModel{
-			This:   throughCtype.Object().(Definer),
-			Source: d.through_source,
-			Target: d.through_target,
-		}
 	}
 
 	deferredMap[k] = d
@@ -235,10 +266,6 @@ func (d *deferredRelation) Field() FieldDefinition {
 func (d *deferredRelation) Through() Through {
 	if d.through != nil {
 		return d.through
-	}
-
-	if d.through_Ctype == "" {
-		return nil
 	}
 
 	d.setup()

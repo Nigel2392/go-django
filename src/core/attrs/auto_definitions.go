@@ -75,6 +75,7 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 				targetField = v[1]
 			}
 
+			var through Through
 			if len(v) > 2 {
 				if len(v) != 5 {
 					assert.Fail(
@@ -83,18 +84,18 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 					)
 				}
 
-				throughModel = v[2]
-				throughSource = v[3]
-				throughTarget = v[4]
+				through = &deferredThroughModel{
+					contentType: throughModel,
+					sourceField: throughSource,
+					targetField: throughTarget,
+				}
 			}
 
 			data.RelOneToOne = &deferredRelation{
-				typ:            RelOneToOne,
-				model_type:     v[0],
-				target_field:   targetField,
-				through_Ctype:  throughModel,
-				through_source: throughSource,
-				through_target: throughTarget,
+				typ:          RelOneToOne,
+				through:      through,
+				model_type:   v[0],
+				target_field: targetField,
 			}
 
 		case "default":
