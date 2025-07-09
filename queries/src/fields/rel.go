@@ -215,7 +215,7 @@ func (r *RelationField[T]) AllowEdit() bool {
 func (r *RelationField[T]) AllowDBEdit() bool {
 	switch r.cnf.Rel.Type() {
 	case attrs.RelOneToOne, attrs.RelManyToOne:
-		return r.cnf.IsProxy && r.cnf.AllowEdit
+		return r.cnf.AllowEdit
 	}
 	return false
 }

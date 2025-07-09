@@ -49,8 +49,10 @@ func Table[T testing.TB](t T, model ...attrs.Definer) *DBTables[T] {
 	}
 
 	table.tables = make([]*migrator.ModelTable, len(model))
-	for i, m := range model {
+	for _, m := range model {
 		attrs.RegisterModel(m)
+	}
+	for i, m := range model {
 		table.tables[i] = migrator.NewModelTable(m)
 	}
 	table.schema = schemaEditor

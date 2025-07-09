@@ -1658,8 +1658,10 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 		var aliasList = make([]string, 0, len(relatrionChain.Chain))
 		for curr != nil {
 
-			var meta = attrs.GetModelMeta(curr.Model)
-			var defs = meta.Definitions()
+			var (
+				meta = attrs.GetModelMeta(curr.Model)
+				defs = meta.Definitions()
+			)
 
 			// create a preload path for each part of the relation chain
 			var subChain = relatrionChain.Chain[:partIdx+1]
@@ -1670,9 +1672,14 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 			))
 
 			// only add new preload if the preload is not already present in the mapping
-			fmt.Printf("Preload Path: %s for %T and field %q\n", preloadPath, curr.Model, curr.Field.Name())
 			if _, ok := nqs.internals.Preload.mapping[preloadPath]; !ok {
-				fmt.Printf("Adding Preload: %s for %T and field %q\n", preloadPath, curr.Model, curr.Field.Name())
+				if partIdx < len(relatrionChain.Chain)-1 {
+					panic(fmt.Errorf(
+						"Preload: all previous preloads for path %q must be included in the QuerySet %v",
+						preload.Path, subChain,
+					))
+				}
+
 				var loadDef = &Preload{
 					FieldName: relatrionChain.Chain[partIdx],
 					Path:      preloadPath,
@@ -2125,23 +2132,49 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 		// required in case the root object has a through relation bound to it
 		if rows.hasRoot() {
 			var rootRow = rows.rootRow(scannables)
-			uniqueValue, err = GetUniqueKey(rootRow.field)
-			switch {
-			case err != nil && errors.Is(err, errors.NoUniqueKey) && rows.hasMultiRelations:
-				return nil, errors.Wrapf(
-					err, "failed to get unique key for %T, but has multi relations",
-					rootRow.object,
-				)
-			case err != nil && errors.Is(err, errors.NoUniqueKey):
-				// if no unique key is found, we can use the result index as a unique value
-				// this is only valid for the root object, as it is not a relation
-				uniqueValue = resultIndex + 1
+
+			// if the root object has no through relation
+			// we can use the unique key of the root object
+			// as the unique value for the root object.
+			//
+			// otherwise, we should use the through object to
+			// generate the unique value to not clash with other objects
+			if rootRow.through == nil {
+				uniqueValue, err = GetUniqueKey(rootRow.field)
+				switch {
+				case err != nil && errors.Is(err, errors.NoUniqueKey) && rows.hasMultiRelations:
+					return nil, errors.Wrapf(
+						err, "failed to get unique key for %T, but has multi relations",
+						rootRow.object,
+					)
+				case err != nil && errors.Is(err, errors.NoUniqueKey):
+					// if no unique key is found, we can use the result index as a unique value
+					// this is only valid for the root object, as it is not a relation
+					uniqueValue = resultIndex + 1
+				}
 			}
 
 			// if the root object has a through relation
 			// we should store it in the rows tree for
 			// binding it to the root.
 			throughObj = rootRow.through
+
+			// If the root object has a through relation,
+			// we need to get the unique value from the through object
+			// if the through object is not nil, we can get the unique value from it
+			//
+			// this logic is kept in line in [buildChainParts] to ensure
+			// data consistency across the relations.
+			if throughObj != nil {
+				uniqueValue, err = GetUniqueKey(throughObj)
+				if err != nil {
+					return nil, errors.Wrapf(
+						err, "failed to get unique key from through object %T",
+						throughObj,
+					)
+				}
+			}
+
 		}
 
 		// fake unique value for the root object is OK

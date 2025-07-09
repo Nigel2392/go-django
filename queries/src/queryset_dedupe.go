@@ -742,5 +742,17 @@ func buildChainParts(actualField *scannableField) []chainPart {
 		stack[i], stack[j] = stack[j], stack[i]
 	}
 
+	// If the root object has a through model, we need to set the unique value
+	// based on said through model.
+	//
+	// this logic is kept in line in [QuerySet.All] before generating the root row.
+	if len(stack) > 0 && stack[0].through != nil {
+		var uq, err = GetUniqueKey(stack[0].through)
+		if err != nil {
+			panic(fmt.Sprintf("error getting unique key for through model %T: %v", stack[0].through, err))
+		}
+		stack[0].uniqueValue = uq
+	}
+
 	return stack
 }

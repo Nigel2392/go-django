@@ -204,7 +204,7 @@ func (a *AppConfig) Check(ctx context.Context, settings django.Settings) []check
 			}
 		}
 
-		if primary == nil && !attrs.IsThroughModel(model) {
+		if primary == nil && !attrs.ThroughModelMeta(model).IsThroughModel {
 			var messageText = fmt.Sprintf(
 				"Model \"%T\" does not have a primary key field",
 				model,

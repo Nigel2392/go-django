@@ -12,7 +12,6 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
 const __GENERATE_WHERE_CLAUSE_FOR_OBJECTS = "queries.__GENERATE_WHERE_CLAUSE_FOR_OBJECTS"
@@ -26,7 +25,7 @@ const __GENERATE_WHERE_CLAUSE_FOR_OBJECTS = "queries.__GENERATE_WHERE_CLAUSE_FOR
 //
 //   - If the model does not have a primary key defined,
 //     it will try to generate a where clause based on
-//     the unique fields or unique together fields.
+//     the unique fields or unique together attrs.
 //
 //   - If no primary key, unique fields or unique together
 //     fields are defined, it will return an error.
@@ -158,7 +157,7 @@ func GetUniqueKey(modelObject any) (any, error) {
 				))
 			}
 
-			if !fields.IsZero(val) {
+			if !attrs.IsZero(val) {
 				return val, nil
 			}
 
@@ -177,10 +176,37 @@ func GetUniqueKey(modelObject any) (any, error) {
 createKey:
 	var (
 		modelMeta    = attrs.GetModelMeta(obj)
+		throughMeta  = attrs.ThroughModelMeta(obj)
 		primaryField = objDefs.Primary()
 		primaryVal   any
 		err          error
 	)
+
+	if throughMeta.IsThroughModel {
+		var throughMeta = attrs.ThroughModelMeta(obj)
+		var sourceField = throughMeta.GetSourceField(nil, objDefs)
+		var targetField = throughMeta.GetTargetField(nil, objDefs)
+
+		val1, err := sourceField.Value()
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "failed to get value for source field %q in through object %T",
+				sourceField.Name(), obj,
+			)
+		}
+
+		val2, err := targetField.Value()
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "failed to get value for target field %q in through object %T",
+				targetField.Name(), obj,
+			)
+		}
+
+		if !attrs.IsZero(val1) && !attrs.IsZero(val2) {
+			return fmt.Sprintf("%v:%v", val1, val2), nil
+		}
+	}
 
 	if primaryField != nil {
 		primaryVal, err = primaryField.Value()
@@ -191,7 +217,7 @@ createKey:
 			))
 		}
 
-		if !fields.IsZero(primaryVal) {
+		if !attrs.IsZero(primaryVal) {
 			return primaryVal, nil
 		}
 	}
@@ -206,7 +232,7 @@ createKey:
 
 uniqueFieldsLoop:
 	for _, fieldNames := range uniqueFields {
-		var uniqueKeyParts = make([]keyPart, 0, len(uniqueFields)*2)
+		var uniqueKeyParts = make([]keyPart, 0, len(fieldNames))
 		for _, fieldName := range fieldNames {
 			var field, ok = objDefs.Field(fieldName)
 			if !ok {
@@ -221,7 +247,7 @@ uniqueFieldsLoop:
 				))
 			}
 
-			if val == nil || fields.IsZero(val) {
+			if val == nil || attrs.IsZero(val) {
 				continue uniqueFieldsLoop
 			}
 
@@ -283,10 +309,13 @@ uniqueFieldsLoop:
 				sb.WriteString(fmt.Sprintf("%x", hashBytes))
 			}
 		}
+
+		// Generate a unique key by hashing the string representation
+		return sb.String(), nil
 	}
 
 	return nil, errors.NoUniqueKey.WithCause(fmt.Errorf(
-		"model %T has does not have enough unique fields or unique together fields set to generate a unique key",
+		"model %T not have enough unique fields or unique together fields set to generate a unique key",
 		obj,
 	))
 }

@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	MetaStorageKeyAttrs = "attrs.fields.attributes"
+	MetaStorageKeyAttrs = "fields.attributes"
 )
 
 type modelMeta struct {
@@ -277,13 +277,19 @@ func RegisterModel(model Definer) {
 				"through.%s",
 				throughMeta.ContentType().TypeName(),
 			)
-			fmt.Printf("Registering through model %s for %T\n", storageKey, meta.model)
+
 			if _, wasSent := meta.stored.Get(storageKey); wasSent {
 				goto setRel
 			}
 
 			throughMeta.stored.Set(
-				"through.model", true,
+				"through.model", ThroughMeta{
+					IsThroughModel: true,
+					Source:         meta.model,
+					Target:         rel.Model(),
+					SourceField:    through.SourceField(),
+					TargetField:    through.TargetField(),
+				},
 			)
 			meta.stored.Set(
 				storageKey, true,
@@ -312,7 +318,7 @@ func RegisterModel(model Definer) {
 	}
 
 	// Store the field attributes in the meta
-	meta.stored.Set("attrs.fields.attributes", fieldAttrs)
+	meta.stored.Set("fields.attributes", fieldAttrs)
 
 	// Set the model as setup
 	meta.setup = true
@@ -405,7 +411,7 @@ func GetModelMeta(model any) ModelMeta {
 		return meta
 	}
 
-	panic(fmt.Errorf("model %T not registered with `attrs.RegisterModel`, could not retrieve meta", model))
+	panic(fmt.Errorf("model %T not registered with `RegisterModel`, could not retrieve meta", model))
 }
 
 func IsModelRegistered(model Definer) bool {
@@ -416,15 +422,62 @@ func IsModelRegistered(model Definer) bool {
 	return mdl.setup
 }
 
-func IsThroughModel(m Definer) bool {
+type ThroughMeta struct {
+	IsThroughModel bool
+	Source         Definer
+	Target         Definer
+	SourceField    string
+	TargetField    string
+}
+
+func (t ThroughMeta) GetSourceField(targetModel Definer, throughDefs Definitions) Field {
+	var (
+		field Field
+		ok    bool
+	)
+	switch reflect.TypeOf(targetModel) {
+	case reflect.TypeOf(t.Source):
+		field, ok = throughDefs.Field(t.SourceField)
+	case reflect.TypeOf(t.Target):
+		field, ok = throughDefs.Field(t.TargetField)
+	case nil:
+		field, ok = throughDefs.Field(t.SourceField)
+	}
+	if !ok {
+		panic(fmt.Errorf("model %T does not have field %q or %q", throughDefs.Instance(), t.SourceField, t.TargetField))
+	}
+	return field
+}
+
+func (t ThroughMeta) GetTargetField(targetModel Definer, throughDefs Definitions) Field {
+	var (
+		field Field
+		ok    bool
+	)
+	switch reflect.TypeOf(targetModel) {
+	case reflect.TypeOf(t.Source):
+		field, ok = throughDefs.Field(t.TargetField)
+	case reflect.TypeOf(t.Target):
+		field, ok = throughDefs.Field(t.SourceField)
+	case nil:
+		field, ok = throughDefs.Field(t.TargetField)
+	}
+	if !ok {
+		panic(fmt.Errorf("model %T does not have field %q or %q", throughDefs.Instance(), t.TargetField, t.SourceField))
+	}
+	return field
+}
+
+func ThroughModelMeta(m Definer) ThroughMeta {
 	if meta, ok := modelReg[reflect.TypeOf(m)]; ok {
 		if v, ok := meta.Storage("through.model"); ok {
-			if v.(bool) {
-				return true
+			if t, ok := v.(ThroughMeta); ok {
+				return t
 			}
 		}
 	}
-	return false
+	// panic(fmt.Errorf("model %T is not a through model, or does not have a through model meta", m))
+	return ThroughMeta{}
 }
 
 func GetRelationMeta(m Definer, name string) (Relation, bool) {
@@ -449,7 +502,7 @@ func StoreOnMeta(m Definer, key string, value any) {
 	if meta, ok := modelReg[rType]; ok {
 		meta.stored.Set(key, value)
 	} else {
-		panic(fmt.Errorf("model %T not registered with `attrs.RegisterModel`, cannot store value %q", m, key))
+		panic(fmt.Errorf("model %T not registered with `RegisterModel`, cannot store value %q", m, key))
 	}
 }
 
