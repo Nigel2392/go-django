@@ -19,13 +19,15 @@ func (p *Permission) FieldDefs() attrs.Definitions {
 			Primary:  true,
 		}),
 		attrs.NewField(p, "Name", &attrs.FieldConfig{
-			Label:    "Permission Name",
-			HelpText: "Name of the permission. This is the name that will be displayed in the UI.",
+			Label:     "Permission Name",
+			HelpText:  "Name of the permission. This is the name that will be displayed in the UI.",
+			MaxLength: 255,
 		}),
 		attrs.NewField(p, "Description", &attrs.FieldConfig{
-			Blank:    true,
-			Label:    "Description",
-			HelpText: "Description of the permission. This is the description that will be displayed in the UI.",
+			Blank:     true,
+			Label:     "Description",
+			HelpText:  "Description of the permission. This is the description that will be displayed in the UI.",
+			MaxLength: 1024,
 		}),
 	}
 	return p.Model.Define(p, fields)

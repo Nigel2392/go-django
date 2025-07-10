@@ -22,13 +22,15 @@ func (g *Group) FieldDefs() attrs.Definitions {
 			Primary:  true,
 		}),
 		attrs.NewField(g, "Name", &attrs.FieldConfig{
-			Label:    "Group Name",
-			HelpText: "Name of the group. This is the name that will be displayed in the UI.",
+			Label:     "Group Name",
+			HelpText:  "Name of the group. This is the name that will be displayed in the UI.",
+			MaxLength: 255,
 		}),
 		attrs.NewField(g, "Description", &attrs.FieldConfig{
-			Blank:    true,
-			Label:    "Description",
-			HelpText: "Description of the group. This is the description that will be displayed in the UI.",
+			Blank:     true,
+			Label:     "Description",
+			HelpText:  "Description of the group. This is the description that will be displayed in the UI.",
+			MaxLength: 1024,
 		}),
 		fields.NewManyToManyField[*queries.RelM2M[*Permission, *GroupPermission]](
 			g, "Permissions", &fields.FieldConfig{
