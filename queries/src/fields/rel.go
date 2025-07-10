@@ -167,6 +167,12 @@ func (m *RelationField[T]) ForSelectAll() bool {
 	return false
 }
 
+func (r *RelationField[T]) CanMigrate() bool {
+	var relType = r.cnf.Rel.Type()
+	return !(relType == attrs.RelManyToMany) && !(relType == attrs.RelOneToMany) &&
+		!(relType == attrs.RelOneToOne && r.cnf.Through != nil)
+}
+
 func (r *RelationField[T]) ColumnName() string {
 	if r.cnf.ColumnName == "" {
 		var from = r.cnf.Rel.From()

@@ -53,6 +53,31 @@
   "actions": [
     {
       "action": "create_table"
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "sessions_expiry_idx",
+          "type": "",
+          "columns": [
+            "Expiry"
+          ]
+        }
+      }
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "sessions_token_idx",
+          "type": "",
+          "columns": [
+            "Token"
+          ],
+          "unique": true
+        }
+      }
     }
   ]
 }

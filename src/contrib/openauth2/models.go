@@ -73,14 +73,6 @@ func (u *User) String() string {
 	)
 }
 
-func (u *User) IsAdmin() bool {
-	return u.IsAdministrator && u.IsActive
-}
-
-func (u *User) IsAuthenticated() bool {
-	return u.IsLoggedIn && u.IsActive
-}
-
 func (u *User) SetContext(ctx context.Context) *User {
 	u.context = ctx
 	return u

@@ -62,6 +62,7 @@ type FieldConfig struct {
 	Setter               func(Definer, interface{}) error                    // A custom setter for the field
 	Getter               func(Definer) (interface{}, bool)                   // A custom getter for the field
 	OnInit               func(Definer, *FieldDef, *FieldConfig) *FieldConfig // A function that is called when the field is initialized
+	Embedded             bool
 }
 
 type FieldDef struct {
@@ -428,6 +429,10 @@ func (f *FieldDef) AllowBlank() bool {
 
 func (f *FieldDef) AllowEdit() bool {
 	return !f.attrDef.ReadOnly
+}
+
+func (f *FieldDef) Embedded() bool {
+	return f.attrDef.Embedded
 }
 
 func (f *FieldDef) Validate() error {

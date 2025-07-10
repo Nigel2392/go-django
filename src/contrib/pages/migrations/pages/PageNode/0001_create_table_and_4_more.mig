@@ -155,6 +155,56 @@
   "actions": [
     {
       "action": "create_table"
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "",
+          "type": "",
+          "columns": [
+            "Path"
+          ]
+        }
+      }
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "",
+          "type": "",
+          "columns": [
+            "PageID"
+          ]
+        }
+      }
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "",
+          "type": "",
+          "columns": [
+            "ContentType"
+          ]
+        }
+      }
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "",
+          "type": "",
+          "columns": [
+            "Slug",
+            "Depth"
+          ],
+          "unique": true
+        }
+      }
     }
   ]
 }

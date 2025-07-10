@@ -38,7 +38,7 @@ func changed[T any](old, new T) *Changed[T] {
 }
 
 type IndexDefiner interface {
-	DatabaseIndexes() []Index
+	DatabaseIndexes(obj attrs.Definer) []Index
 }
 
 type Index struct {
@@ -88,7 +88,7 @@ func (i Index) Columns() []Column {
 	for _, col := range i.Fields {
 		var tableCol, ok = i.table.Fields.Get(col)
 		if !ok {
-			panic(fmt.Sprintf("column %s not found in table %s", col, i.table.TableName()))
+			panic(fmt.Sprintf("column %s not found in table %s: %v", col, i.table.TableName(), i.table.Fields.Keys()))
 		}
 
 		cols = append(cols, tableCol)
@@ -168,7 +168,7 @@ func NewModelTable(obj attrs.Definer) *ModelTable {
 	}
 
 	if idxDef, ok := obj.(IndexDefiner); ok {
-		indexes := idxDef.DatabaseIndexes()
+		indexes := idxDef.DatabaseIndexes(obj)
 		t.Index = make([]Index, 0, len(indexes))
 		for _, idx := range indexes {
 			t.Index = append(t.Index, Index{

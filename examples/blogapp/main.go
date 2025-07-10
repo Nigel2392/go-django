@@ -2,10 +2,14 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io/fs"
 	"net/http"
+	"net/mail"
 	"os"
 
 	"github.com/Nigel2392/go-django/examples/blogapp/blog"
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
@@ -18,13 +22,17 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/src/models"
 
 	// auditlogs_mysql "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/audit_logs_mysql"
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
 
 	"github.com/Nigel2392/go-django/src/contrib/session"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	_ "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
+	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/logger"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -79,6 +87,12 @@ func main() {
 		),
 	)
 
+	checks.Shutup("model.cant_check", true)
+	checks.Shutup("admin.model_not_fully_implemented", true)
+	checks.Shutup("field.invalid_db_type", func(m checks.Message) bool {
+		return m.Object.(attrs.Field).Name() == "GroupPermissions"
+	})
+
 	mediafiles.SetDefault("filesystem")
 
 	pages.SetRoutePrefix("/pages")
@@ -95,41 +109,39 @@ func main() {
 		panic(err)
 	}
 
-	//	var user = &auth_models.User{}
-	//	var e, _ = mail.ParseAddress("admin@localhost")
-	//	user.Email = (*drivers.Email)(e)
-	//	user.Username = "admin"
-	//
-	//	if err = auth.SetPassword(user, "Administrator123"); err != nil {
-	//		panic(err)
-	//	}
-	//
-	//	if _, err := auth_models.CreateUser(context.Background(), user); err != nil {
-	//		panic(fmt.Errorf("failed to create admin user: %w", err))
-	//	}
+	var user = &auth.User{}
+	var e, _ = mail.ParseAddress("admin@localhost")
+	user.Email = (*drivers.Email)(e)
+	user.Username = "admin"
+	user.IsAdministrator = true
+	user.SetPassword("Administrator123")
 
-	//if len(os.Args) == 1 {
-	//	blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()
-	//	if err != nil {
-	//		panic(fmt.Errorf("failed to get blog pages: %w", err))
-	//	}
-	//	fmt.Println("Blog pages:", len(blogPages))
-	//	for page := range blogPages.Objects() {
-	//		fmt.Printf(" - %s (ID: %d, %d)\n", page.Title, page.ID(), page.PageNode.PageID)
-	//	}
-	//
-	//	err = staticfiles.Collect(func(path string, f fs.File) error {
-	//		var stat, err = f.Stat()
-	//		if err != nil {
-	//			return err
-	//		}
-	//		fmt.Println("Collected", path, stat.Size())
-	//		return nil
-	//	})
-	//	if err != nil {
-	//		panic(err)
-	//	}
-	//}
+	if _, err := models.SaveModel(context.Background(), user); err != nil {
+		panic(fmt.Errorf("failed to create admin user: %w", err))
+	}
+
+	if len(os.Args) == 1 {
+		blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()
+		if err != nil {
+			panic(fmt.Errorf("failed to get blog pages: %w", err))
+		}
+		fmt.Println("Blog pages:", len(blogPages))
+		for page := range blogPages.Objects() {
+			fmt.Printf(" - %s (ID: %d, %d)\n", page.Title, page.ID(), page.PageNode.PageID)
+		}
+
+		err = staticfiles.Collect(func(path string, f fs.File) error {
+			var stat, err = f.Stat()
+			if err != nil {
+				return err
+			}
+			fmt.Println("Collected", path, stat.Size())
+			return nil
+		})
+		if err != nil {
+			panic(err)
+		}
+	}
 
 	if err := app.Serve(); err != nil {
 		panic(err)

@@ -104,6 +104,9 @@ func embedsModel(rTyp reflect.Type) bool {
 //	}
 
 func isProxyField(field reflect.StructField) bool {
+	if field.Tag.Get("proxy") == "false" || field.Tag.Get("proxy") == "-" {
+		return false
+	}
 	return field.Type.Kind() == reflect.Ptr &&
 		field.Type.Elem().Kind() == reflect.Struct &&
 		(field.Tag.Get("proxy") == "true" || field.Anonymous && embedsModel(field.Type))

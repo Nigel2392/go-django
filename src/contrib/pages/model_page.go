@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"reflect"
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -94,7 +95,10 @@ func (n *PageNode) BeforeSave(context.Context) error {
 	return nil
 }
 
-func (n *PageNode) DatabaseIndexes() []migrator.Index {
+func (n *PageNode) DatabaseIndexes(obj attrs.Definer) []migrator.Index {
+	if reflect.TypeOf(obj) != reflect.TypeOf(n) {
+		return nil
+	}
 	return []migrator.Index{
 		{Fields: []string{"Path"}, Unique: false},
 		{Fields: []string{"PageID"}, Unique: false},

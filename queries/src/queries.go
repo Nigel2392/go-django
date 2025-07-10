@@ -69,7 +69,6 @@ func Validate(ctx context.Context, validate any) error {
 
 type SaveableField interface {
 	attrs.Field
-
 	// Save is called to save the field's value to the database.
 	// It should return an error if the save operation fails.
 	Save(ctx context.Context) error
@@ -183,6 +182,10 @@ func ForSelectAll(f attrs.FieldDefinition) bool {
 	if f == nil {
 		return false
 	}
+	if attrs.IsEmbeddedField(f) {
+		// If the field is embedded, it should not be selected in the query.
+		return false
+	}
 	if f.ColumnName() == "" { // dont select fields without a column name
 		if _, ok := f.(AliasField); !ok {
 			return false
@@ -209,6 +212,10 @@ type ForDBEditableField interface {
 // * If the field implements ForDBEditableField, it checks if it is for edit.
 func ForDBEdit(f attrs.FieldDefinition) bool {
 	if f == nil {
+		return false
+	}
+	if attrs.IsEmbeddedField(f) {
+		// If the field is embedded, it should not be saved to the database.
 		return false
 	}
 	if f.ColumnName() == "" { // dont save fields without a column name

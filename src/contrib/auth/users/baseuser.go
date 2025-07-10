@@ -12,6 +12,10 @@ import (
 	_ "unsafe"
 )
 
+//	const (
+//		APPVAR_USER_ACTIVE_DEFAULT = "auth.users.active_default"
+//	)
+
 type Base struct {
 	IsAdministrator bool `json:"is_administrator" attrs:"blank"`
 	IsActive        bool `json:"is_active" attrs:"blank;default=true"`
@@ -20,6 +24,10 @@ type Base struct {
 	Groups      *queries.RelM2M[*Group, *UserGroup]           `json:"-"`
 	Permissions *queries.RelM2M[*Permission, *UserPermission] `json:"-"`
 	backref     attrs.Definer
+}
+
+func (u *Base) getBaseModel() *Base {
+	return u
 }
 
 func (u *Base) Fields(user attrs.Definer) []any {
@@ -32,6 +40,11 @@ func (u *Base) Fields(user attrs.Definer) []any {
 		}),
 		attrs.NewField(user, "IsActive", &attrs.FieldConfig{
 			Column: "is_active",
+			//	Default: django.ConfigGet(
+			//		django.Global.Settings,
+			//		APPVAR_USER_ACTIVE_DEFAULT,
+			//		true, // Default to true if not set
+			//	),
 		}),
 		fields.NewManyToManyField[*queries.RelM2M[*Group, *UserGroup]](
 			user, "Groups", &fields.FieldConfig{

@@ -478,6 +478,19 @@ type Field interface {
 	Validate() error
 }
 
+type Embedder interface {
+	// Embedded should return true if the field belongs to a model
+	// that is embedded in another model.
+	Embedded() bool
+}
+
+func IsEmbeddedField[T FieldDefinition](f T) bool {
+	if t, ok := any(f).(Embedder); ok {
+		return t.Embedded()
+	}
+	return false
+}
+
 // CanRelatedName is an interface for fields that have a related name.
 //
 // This is used to define the name of the field in the related model.

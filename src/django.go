@@ -23,6 +23,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
@@ -410,7 +411,7 @@ func (a *Application) Flagged(flag AppFlag) bool {
 	return (a.flags & flag) != 0
 }
 
-func chainMessages(sort bool, messages ...[]checks.Message) ([]checks.Message, int) {
+func chainMessages(ctx context.Context, sort bool, messages ...[]checks.Message) ([]checks.Message, int) {
 	if len(messages) == 0 {
 		return []checks.Message{}, 0
 	}
@@ -432,7 +433,7 @@ func chainMessages(sort bool, messages ...[]checks.Message) ([]checks.Message, i
 		offset += len(msgs)
 
 		for _, msg := range msgs {
-			if msg.IsSerious() && !msg.Silenced() {
+			if msg.IsSerious() && !msg.Silenced(ctx) {
 				seriousCount++
 			}
 		}
@@ -461,7 +462,7 @@ func chainMessages(sort bool, messages ...[]checks.Message) ([]checks.Message, i
 
 func (a *Application) logCheckMessages(ctx context.Context, whenChecks string, msgs ...[]checks.Message) (loggedSerious bool) {
 	var messages, seriousCount = chainMessages(
-		true, msgs...,
+		ctx, true, msgs...,
 	)
 
 	if seriousCount > 0 {
@@ -472,7 +473,7 @@ func (a *Application) logCheckMessages(ctx context.Context, whenChecks string, m
 	}
 
 	for _, msg := range messages {
-		if !msg.Silenced() {
+		if !msg.Silenced(ctx) {
 			a.Log.Log(msg.Type, msg.String(ctx))
 		}
 	}
@@ -611,16 +612,35 @@ func (a *Application) Initialize() error {
 
 	core.BeforeModelsReady.Send(a)
 
-	// Load all models for the application first
+	var allModels = make([]attrs.Definer, 0)
+	// Register all models in the contenttypes registry before
+	// actually setting up the models themselves.
+	// This is done to ensure that all models are registered
+	// and lazy / deferred relations can be resolved
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 		var app = h.Value
 		var models = app.Models()
 		for _, model := range models {
-			attrs.RegisterModel(model)
+			contenttypes.Register(&contenttypes.ContentTypeDefinition{
+				ContentObject: model,
+			})
+			allModels = append(allModels, model)
 		}
 	}
 
+	// Register all models in the attrs registry
+	// after all models have been registered
+	// to the contenttypes registry
+	for _, model := range allModels {
+		attrs.RegisterModel(model)
+	}
+
 	core.OnModelsReady.Send(a)
+
+	// Send a reset definitions signal to the attrs package
+	// This is to ensure that all static definitions are reset
+	// and all fields are included the next time the static definitions
+	// are set up for the model.
 	attrs.ResetDefinitions.Send(nil)
 
 	// First app loop to initialze and register commands

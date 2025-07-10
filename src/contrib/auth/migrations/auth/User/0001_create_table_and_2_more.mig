@@ -134,12 +134,55 @@
         "default": null
       }
     ],
-    "indexes": null,
+    "indexes": [
+      {
+        "name": "auth_users_email_idx",
+        "type": "btree",
+        "columns": [
+          "Email"
+        ],
+        "unique": true
+      },
+      {
+        "name": "auth_users_username_idx",
+        "type": "btree",
+        "columns": [
+          "Username"
+        ],
+        "unique": true
+      }
+    ],
     "comment": ""
   },
   "actions": [
     {
       "action": "create_table"
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "auth_users_email_idx",
+          "type": "btree",
+          "columns": [
+            "Email"
+          ],
+          "unique": true
+        }
+      }
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "auth_users_username_idx",
+          "type": "btree",
+          "columns": [
+            "Username"
+          ],
+          "unique": true
+        }
+      }
     }
   ]
 }

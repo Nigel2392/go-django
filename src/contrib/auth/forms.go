@@ -7,15 +7,16 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/mux"
-	"github.com/pkg/errors"
 )
 
 const postMethod = mux.POST
@@ -354,6 +355,9 @@ func (f *BaseUserForm) Login() error {
 			Get()
 	}
 	if err != nil {
+		if !errors.Is(err, errors.NoRows) {
+			logger.Errorf("Error getting user: %v", err)
+		}
 		return autherrors.ErrGenericAuthFail
 	}
 

@@ -106,8 +106,8 @@ func (m Message) IsSerious() bool {
 //
 // A message is silenced if its ID is in the registry's silenced list,
 // or if its type (analogous to logger's log level) is lower than the current logger level.
-func (m Message) Silenced() bool {
-	return registry.Silenced(m.ID) || m.Type.LT(logger.GetLevel())
+func (m Message) Silenced(ctx context.Context) bool {
+	return registry.Silenced(m) || m.Type.LT(logger.GetLevel())
 }
 
 type TypeStringer interface {
@@ -244,33 +244,46 @@ var (
 	registry = NewCheckRegistry()
 	Register = registry.Register
 	RunCheck = registry.RunCheck
-	Silence  = registry.Silence
-	Silenced = registry.Silenced
+	Shutup   = registry.Shutup
 	HasTag   = registry.HasTag
 )
 
 type checkRegistry struct {
 	checks   map[Tag][]*django_reflect.Func
-	silenced map[string]struct{}
+	silenced map[string]func(m Message) bool
 }
 
 func NewCheckRegistry() *checkRegistry {
 	return &checkRegistry{
 		checks:   make(map[Tag][]*django_reflect.Func),
-		silenced: make(map[string]struct{}),
+		silenced: make(map[string]func(m Message) bool),
 	}
 }
 
-func (r *checkRegistry) Silenced(id string) bool {
-	_, ok := r.silenced[id]
-	return ok
+func (r *checkRegistry) Silenced(m Message) bool {
+	if fn, ok := r.silenced[m.ID]; ok {
+		return fn(m)
+	}
+
+	return m.Type.LT(logger.GetLevel())
 }
 
-func (r *checkRegistry) Silence(id string, silenced bool) {
-	if silenced {
-		r.silenced[id] = struct{}{}
-	} else {
-		delete(r.silenced, id)
+func (r *checkRegistry) Shutup(id string, yes any) {
+	switch yes := yes.(type) {
+	case bool:
+		if yes {
+			r.silenced[id] = func(m Message) bool {
+				return true
+			}
+		} else {
+			delete(r.silenced, id)
+		}
+	case func(m Message) bool:
+		r.silenced[id] = yes
+	default:
+		panic(fmt.Sprintf(
+			"shutup expects a bool or a function, got %T", yes,
+		))
 	}
 }
 

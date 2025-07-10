@@ -14,7 +14,7 @@ import (
 
 type BlogPage struct {
 	models.Model    `table:"blog_pages"`
-	*pages.PageNode `proxy:"-"`
+	*pages.PageNode //`proxy:"-"`
 	Editor          *editor.EditorJSBlockData
 }
 
@@ -58,6 +58,10 @@ func (f *CantSelectField) AllowDBEdit() bool {
 	return false
 }
 
+func (f *CantSelectField) CanMigrate() bool {
+	return false
+}
+
 func (n *BlogPage) FieldDefs() attrs.Definitions {
 	if n.PageNode == nil {
 		n.PageNode = &pages.PageNode{}
@@ -68,23 +72,26 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 			ReadOnly: true,
 			Column:   "id",
 		}),
-		&CantSelectField{attrs.NewField(n.PageNode, "Title", &attrs.FieldConfig{
+		attrs.NewField(n.PageNode, "Title", &attrs.FieldConfig{
+			Embedded: true,
 			Label:    "Title",
 			HelpText: "How do you want your post to be remembered?",
 			Column:   "",
-		})},
-		&CantSelectField{attrs.NewField(n.PageNode, "UrlPath", &attrs.FieldConfig{
+		}),
+		attrs.NewField(n.PageNode, "UrlPath", &attrs.FieldConfig{
+			Embedded: true,
 			ReadOnly: true,
 			Label:    "URL Path",
 			HelpText: "The URL path for this blog post.",
 			Column:   "",
-		})},
-		&CantSelectField{attrs.NewField(n.PageNode, "Slug", &attrs.FieldConfig{
+		}),
+		attrs.NewField(n.PageNode, "Slug", &attrs.FieldConfig{
+			Embedded: true,
 			Label:    "Slug",
 			HelpText: "The slug for this blog post.",
 			Blank:    true,
 			Column:   "",
-		})},
+		}),
 		editor.NewField(n, "Editor", editor.FieldConfig{
 			Label:    "Editor",
 			HelpText: "This is a rich text editor. You can add images, videos, and other media to your blog post.",
@@ -110,17 +117,19 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 		//		return editor
 		//	},
 		//}),
-		&CantSelectField{attrs.NewField(n.PageNode, "CreatedAt", &attrs.FieldConfig{
+		attrs.NewField(n.PageNode, "CreatedAt", &attrs.FieldConfig{
+			Embedded: true,
 			ReadOnly: true,
 			Label:    "Created At",
 			HelpText: "The date and time this blog post was created.",
 			Column:   "",
-		})},
-		&CantSelectField{attrs.NewField(n.PageNode, "UpdatedAt", &attrs.FieldConfig{
+		}),
+		attrs.NewField(n.PageNode, "UpdatedAt", &attrs.FieldConfig{
+			Embedded: true,
 			ReadOnly: true,
 			Label:    "Updated At",
 			HelpText: "The date and time this blog post was last updated.",
 			Column:   "",
-		})},
+		}),
 	)
 }

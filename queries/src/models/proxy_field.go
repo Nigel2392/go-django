@@ -68,6 +68,10 @@ func (f *proxyField) AllowReverseRelation() bool {
 	return false
 }
 
+func (f *proxyField) CanMigrate() bool {
+	return false
+}
+
 func (f *proxyField) GetSourcePrimary() attrs.FieldDefinition {
 	var primary = f.model.internals.defs.Primary()
 	if primary == nil {

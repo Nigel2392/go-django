@@ -53,6 +53,7 @@ func (c *Column) String() string {
 }
 
 func NewTableColumn(table Table, field attrs.Field) Column {
+
 	var atts = field.Attrs()
 
 	attrUseInDB, ok := internal.GetFromAttrs[bool](atts, AttrUseInDBKey)
@@ -62,6 +63,10 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 
 	if canMigrator, ok := field.(CanMigrate); ok {
 		attrUseInDB = canMigrator.CanMigrate()
+	}
+
+	if attrs.IsEmbeddedField(field) {
+		attrUseInDB = false
 	}
 
 	attrMaxLength, _ := internal.GetFromAttrs[int64](atts, attrs.AttrMaxLengthKey)

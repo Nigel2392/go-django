@@ -310,6 +310,7 @@ func (m *MigrationEngine) Migrate(apps ...string) error {
 
 		for _, action := range n.mig.Actions {
 			var err error
+
 			switch action.ActionType {
 			case ActionCreateTable:
 				err = m.SchemaEditor.CreateTable(n.mig.Table, false)
@@ -318,24 +319,37 @@ func (m *MigrationEngine) Migrate(apps ...string) error {
 			case ActionRenameTable:
 				err = m.SchemaEditor.RenameTable(action.Table.Old, action.Table.New.TableName())
 			case ActionAddField:
+				if !action.Field.New.UseInDB {
+					continue
+				}
 				action.Field.New.Table = n.mig.Table
 				action.Field.New.Field, _ = defs.Field(action.Field.New.Name)
 				err = m.SchemaEditor.AddField(n.mig.Table, *action.Field.New)
 			case ActionAlterField:
+				if !(action.Field.New.UseInDB && action.Field.Old.UseInDB) {
+					continue
+				}
 				action.Field.Old.Table = n.mig.Table
 				action.Field.Old.Field, _ = defs.Field(action.Field.Old.Name)
 				action.Field.New.Table = n.mig.Table
 				action.Field.New.Field, _ = defs.Field(action.Field.New.Name)
 				err = m.SchemaEditor.AlterField(n.mig.Table, *action.Field.Old, *action.Field.New)
 			case ActionRemoveField:
+				if !action.Field.Old.UseInDB {
+					continue
+				}
 				action.Field.Old.Table = n.mig.Table
 				action.Field.Old.Field, _ = defs.Field(action.Field.Old.Name)
 				err = m.SchemaEditor.RemoveField(n.mig.Table, *action.Field.Old)
 			case ActionAddIndex:
+				action.Index.New.table = n.mig.Table
 				err = m.SchemaEditor.AddIndex(n.mig.Table, *action.Index.New, false)
 			case ActionDropIndex:
+				action.Index.Old.table = n.mig.Table
 				err = m.SchemaEditor.DropIndex(n.mig.Table, *action.Index.Old, false)
 			case ActionRenameIndex:
+				action.Index.Old.table = n.mig.Table
+				action.Index.New.table = n.mig.Table
 				err = m.SchemaEditor.RenameIndex(n.mig.Table, action.Index.Old.Name(), action.Index.New.Name())
 			// case ActionAlterUniqueTogether:
 			// 	err = m.SchemaEditor.AlterUniqueTogether(action.Table.New, action.Field.New.Unique)
@@ -793,6 +807,12 @@ func (m *MigrationEngine) makeMigrationDiff(migration *MigrationFile, last *Migr
 	if last == nil || last.Table == nil {
 		migration.addAction(ActionCreateTable, nil, nil, nil)
 		m.Log(ActionCreateTable, migration, unchanged(table), nil, nil)
+
+		for _, idx := range table.Indexes() {
+			migration.addAction(ActionAddIndex, nil, nil, changed(nil, &idx))
+			m.Log(ActionAddIndex, migration, unchanged(table), nil, unchanged(&idx))
+		}
+
 		return true
 	}
 

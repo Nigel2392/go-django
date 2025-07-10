@@ -46,7 +46,7 @@ func (s *Session) FieldDefs() attrs.Definitions {
 	).WithTableName("sessions")
 }
 
-func (s *Session) DatabaseIndexes() []migrator.Index {
+func (s *Session) DatabaseIndexes(obj attrs.Definer) []migrator.Index {
 	return []migrator.Index{
 		{
 			Identifier: "sessions_expiry_idx",

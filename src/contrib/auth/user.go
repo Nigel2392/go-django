@@ -6,6 +6,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -13,9 +14,11 @@ import (
 )
 
 var (
-	_ django_models.ContextSaver = (*User)(nil)
-	_ queries.ActsBeforeSave     = (*User)(nil)
-	_ queries.ActsBeforeCreate   = (*User)(nil)
+	_ django_models.ContextSaver    = (*User)(nil)
+	_ queries.UniqueTogetherDefiner = (*User)(nil)
+	_ migrator.IndexDefiner         = (*User)(nil)
+	_ queries.ActsBeforeSave        = (*User)(nil)
+	_ queries.ActsBeforeCreate      = (*User)(nil)
 )
 
 type UserQuerySet struct {
@@ -47,6 +50,32 @@ type User struct {
 
 func (u *User) String() string {
 	return u.Username
+}
+
+func (u *User) UniqueTogether() [][]string {
+	return [][]string{
+		{"Email"},
+		{"Username"},
+	}
+}
+
+func (u *User) DatabaseIndexes(obj attrs.Definer) []migrator.Index {
+	return []migrator.Index{
+		{
+			Identifier: "auth_users_email_idx",
+			Type:       "btree",
+			Fields:     []string{"Email"},
+			Unique:     true,
+			// Comment:    "Index for email uniqueness",
+		},
+		{
+			Identifier: "auth_users_username_idx",
+			Type:       "btree",
+			Fields:     []string{"Username"},
+			Unique:     true,
+			// Comment:    "Index for username uniqueness",
+		},
+	}
 }
 
 func (u *User) SetPassword(password string) *User {
