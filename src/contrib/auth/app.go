@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"embed"
 	"fmt"
 	"net/http"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
@@ -35,6 +37,9 @@ type AuthApplication struct {
 }
 
 var Auth *AuthApplication = &AuthApplication{}
+
+//go:embed migrations/*
+var migrationFS embed.FS
 
 func NewAppConfig() django.AppConfig {
 	var app = &AuthApplication{
@@ -255,7 +260,12 @@ func NewAppConfig() django.AppConfig {
 
 	*Auth = *app
 
-	return app
+	return &migrator.MigratorAppConfig{
+		AppConfig: app,
+		MigrationFS: filesystem.Sub(
+			migrationFS, "migrations/auth",
+		),
+	}
 }
 
 func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {

@@ -531,7 +531,7 @@ func (m *MigrationEngine) MakeMigrations(apps ...string) error {
 
 		for _, model := range app.Models() {
 
-			if !CanMigrate(model) {
+			if !CheckCanMigrate(model) {
 				logger.Debugf("Skipping model %T, migrations are disabled", model)
 				continue
 			}
@@ -755,6 +755,7 @@ func (m *MigrationEngine) buildDependencyGraph(migrations []*migrationFileInfo) 
 			return nil
 		}
 		if n.visiting {
+			// return nil
 			return fmt.Errorf("cyclic dependency detected for migration: %s", key(n.mig))
 		}
 		n.visiting = true

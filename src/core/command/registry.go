@@ -149,10 +149,10 @@ func (r *commandRegistry) ExecCommandOpts(args []string, opts ...func(c *Command
 
 		switch r.errorHandling {
 		case flag.ExitOnError:
-			logger.Debugf("Error executing command %q: %s", cmdName, err.Error())
+			logger.Warnf("Error executing command %q: %s", cmdName, err.Error())
 			os.Exit(1)
 		case flag.ContinueOnError:
-			logger.Debugf("Error executing command %q: %s", cmdName, err.Error())
+			logger.Warnf("Error executing command %q: %s", cmdName, err.Error())
 		case flag.PanicOnError:
 			panic(errors.Wrapf(
 				err, "Error executing command %q", cmdName,

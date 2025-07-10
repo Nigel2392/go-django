@@ -18,7 +18,7 @@
         "name": "Data",
         "column": "data",
         "use_in_db": true,
-        "go_type": "[]uint8",
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Bytes",
         "db_type": "BYTES",
         "default": null
       },

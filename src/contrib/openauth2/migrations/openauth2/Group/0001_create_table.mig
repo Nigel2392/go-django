@@ -1,0 +1,81 @@
+{
+  "dependencies": [
+    "openauth2:Permission:0001_create_table.mig",
+    "openauth2:User:0001_create_table.mig"
+  ],
+  "table": {
+    "table": "auth_groups",
+    "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.Group",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "go_type": "uint64",
+        "db_type": "UINT",
+        "default": 0
+      },
+      {
+        "name": "Name",
+        "column": "name",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "Description",
+        "column": "description",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "Permissions",
+        "column": "id",
+        "relation": {
+          "type": "ManyToMany",
+          "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.Permission",
+          "field": "ID",
+          "through": {
+            "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.GroupPermission",
+            "source_field": "GroupID",
+            "target_field": "PermissionID"
+          }
+        },
+        "go_type": "uint64",
+        "db_type": "UINT",
+        "default": null
+      },
+      {
+        "name": "UserGroups",
+        "column": "id",
+        "relation": {
+          "type": "ManyToMany",
+          "model": "github.com/Nigel2392/go-django/src/contrib/openauth2.User",
+          "field": "Groups",
+          "through": {
+            "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.UserGroup",
+            "source_field": "GroupID",
+            "target_field": "UserID"
+          }
+        },
+        "go_type": "*github.com/Nigel2392/go-django/queries/src.RelM2M[*github.com/Nigel2392/go-django/src/contrib/auth/users.Group,*github.com/Nigel2392/go-django/src/contrib/auth/users.UserGroup]",
+        "db_type": "TEXT",
+        "default": null
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

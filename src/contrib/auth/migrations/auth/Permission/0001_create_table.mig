@@ -1,0 +1,81 @@
+{
+  "dependencies": [
+    "auth:Group:0001_create_table.mig",
+    "auth:User:0001_create_table.mig"
+  ],
+  "table": {
+    "table": "auth_permissions",
+    "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.Permission",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "go_type": "uint64",
+        "db_type": "UINT",
+        "default": 0
+      },
+      {
+        "name": "Name",
+        "column": "name",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "Description",
+        "column": "description",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "GroupPermissions",
+        "column": "id",
+        "relation": {
+          "type": "ManyToMany",
+          "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.Group",
+          "field": "Permissions",
+          "through": {
+            "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.GroupPermission",
+            "source_field": "PermissionID",
+            "target_field": "GroupID"
+          }
+        },
+        "go_type": "*github.com/Nigel2392/go-django/queries/src.RelM2M[*github.com/Nigel2392/go-django/src/contrib/auth/users.Permission,*github.com/Nigel2392/go-django/src/contrib/auth/users.GroupPermission]",
+        "db_type": "TEXT",
+        "default": null
+      },
+      {
+        "name": "UserPermissions",
+        "column": "id",
+        "relation": {
+          "type": "ManyToMany",
+          "model": "github.com/Nigel2392/go-django/src/contrib/auth.User",
+          "field": "Permissions",
+          "through": {
+            "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.UserPermission",
+            "source_field": "PermissionID",
+            "target_field": "UserID"
+          }
+        },
+        "go_type": "*github.com/Nigel2392/go-django/queries/src.RelM2M[*github.com/Nigel2392/go-django/src/contrib/auth/users.Permission,*github.com/Nigel2392/go-django/src/contrib/auth/users.UserPermission]",
+        "db_type": "TEXT",
+        "default": null
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

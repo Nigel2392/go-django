@@ -18,14 +18,13 @@ func EngineOptionApps(apps ...string) EngineOption {
 	)
 
 	if len(apps) == 0 {
-		appMap = django.Global.Apps
-		for head := appMap.Front(); head != nil; head = head.Next() {
+		for head := django.Global.Apps.Front(); head != nil; head = head.Next() {
 			var app = head.Value
 			var fs = getAppConfigFS(app)
 			if fs != nil {
 				migrationDirectories[head.Key] = fs
 			}
-			appMap.Set(head.Key, app)
+			appMap.Set(head.Key, head.Value)
 		}
 
 		goto retOption

@@ -1,11 +1,11 @@
 {
   "dependencies": [
-    "openauth2:Group:0001_create_table.mig",
-    "openauth2:Permission:0001_create_table.mig"
+    "auth:Group:0001_create_table.mig",
+    "auth:Permission:0001_create_table.mig"
   ],
   "table": {
-    "table": "openauth2_users",
-    "model": "github.com/Nigel2392/go-django/src/contrib/openauth2.User",
+    "table": "auth_users",
+    "model": "github.com/Nigel2392/go-django/src/contrib/auth.User",
     "fields": [
       {
         "name": "ID",
@@ -18,69 +18,54 @@
         "default": 0
       },
       {
-        "name": "UniqueIdentifier",
-        "column": "unique_identifier",
+        "name": "Email",
+        "column": "email",
         "use_in_db": true,
+        "min_length": 3,
         "max_length": 255,
-        "nullable": true,
-        "go_type": "string",
+        "go_type": "*github.com/Nigel2392/go-django/queries/src/drivers.Email",
         "db_type": "STRING",
-        "default": ""
-      },
-      {
-        "name": "ProviderName",
-        "column": "provider_name",
-        "use_in_db": true,
-        "max_length": 255,
-        "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
-      },
-      {
-        "name": "Data",
-        "column": "data",
-        "use_in_db": true,
-        "go_type": "encoding/json.RawMessage",
-        "db_type": "JSON",
         "default": null
       },
       {
-        "name": "AccessToken",
-        "column": "access_token",
+        "name": "Username",
+        "column": "username",
         "use_in_db": true,
-        "nullable": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Text",
-        "db_type": "TEXT",
-        "default": ""
-      },
-      {
-        "name": "RefreshToken",
-        "column": "refresh_token",
-        "use_in_db": true,
-        "nullable": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Text",
-        "db_type": "TEXT",
-        "default": ""
-      },
-      {
-        "name": "TokenType",
-        "column": "token_type",
-        "use_in_db": true,
-        "max_length": 50,
+        "min_length": 3,
+        "max_length": 16,
         "nullable": true,
         "go_type": "string",
         "db_type": "STRING",
         "default": ""
       },
       {
-        "name": "ExpiresAt",
-        "column": "expires_at",
+        "name": "FirstName",
+        "column": "first_name",
         "use_in_db": true,
-        "max_length": 6,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Timestamp",
-        "db_type": "TIMESTAMP",
-        "default": "0001-01-01T00:00:00Z"
+        "max_length": 75,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "LastName",
+        "column": "last_name",
+        "use_in_db": true,
+        "max_length": 75,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "Password",
+        "column": "password",
+        "use_in_db": true,
+        "max_length": 255,
+        "go_type": "*github.com/Nigel2392/go-django/src/contrib/auth.Password",
+        "db_type": "STRING",
+        "default": null
       },
       {
         "name": "CreatedAt",

@@ -77,6 +77,11 @@ type AppConfig interface {
 	// All of theses dependencies must be registered before the application is initialized.
 	Dependencies() []string
 
+	// Models is used to define the models for the app.
+	//
+	// These models can then be used throughout the go-django application.
+	Models() []attrs.Definer
+
 	// Commands for the application.
 	//
 	// These commands can be used to run tasks from the command line.
@@ -84,19 +89,17 @@ type AppConfig interface {
 	// The commands are registered in the Django command registry.
 	Commands() []command.Command
 
+	// All apps have been initialized before OnReady() is called.
+	OnReady() error
+
+	// Check is used to check the application for any issues.
+	Check(ctx context.Context, settings Settings) []checks.Message
+
 	// BuildRouting is used to define the routes for the application.
 	// It can also be used to define middleware for the application.
 	//
 	// A Mux object is passed to the function which can be used to define routes.
 	BuildRouting(mux Mux)
-
-	// Models is used to define the models for the app.
-	//
-	// These models can then be used throughout the go-django application.
-	Models() []attrs.Definer
-
-	Processors() []func(ctx.ContextWithRequest)
-	Templates() *tpl.Config
 
 	// Initialize your application.
 	//
@@ -112,11 +115,9 @@ type AppConfig interface {
 	// I.E.: The 'sessions' app must always be registered before 'auth' in order for the auth app to work.
 	Initialize(settings Settings) error
 
-	// All apps have been initialized before OnReady() is called.
-	OnReady() error
+	Processors() []func(ctx.ContextWithRequest)
 
-	// Check is used to check the application for any issues.
-	Check(ctx context.Context, settings Settings) []checks.Message
+	Templates() *tpl.Config
 }
 
 // The global application struct.

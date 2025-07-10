@@ -1,0 +1,31 @@
+{
+  "table": {
+    "table": "auth_user_groups",
+    "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.UserGroup",
+    "fields": [
+      {
+        "name": "UserID",
+        "column": "user_id",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Uint",
+        "db_type": "UINT",
+        "default": 0
+      },
+      {
+        "name": "GroupID",
+        "column": "group_id",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Uint",
+        "db_type": "UINT",
+        "default": 0
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

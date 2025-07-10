@@ -20,6 +20,7 @@ func FieldType(field attrs.FieldDefinition) reflect.Type {
 	var rel = field.Rel()
 	if rel != nil {
 		var relField = rel.Field()
+
 		if relField == nil {
 			relField = rel.Model().FieldDefs().Primary()
 		}

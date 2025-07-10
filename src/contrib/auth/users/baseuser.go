@@ -37,7 +37,6 @@ func (u *Base) Fields(user attrs.Definer) []any {
 			user, "Groups", &fields.FieldConfig{
 				ScanTo:      &u.Groups,
 				ReverseName: "UserGroups",
-				ColumnName:  "",
 				Rel: attrs.Relate(
 					&Group{}, "",
 					&attrs.ThroughModel{
@@ -52,7 +51,6 @@ func (u *Base) Fields(user attrs.Definer) []any {
 			user, "Permissions", &fields.FieldConfig{
 				ScanTo:      &u.Permissions,
 				ReverseName: "UserPermissions",
-				ColumnName:  "",
 				Rel: attrs.Relate(
 					&Permission{}, "",
 					&attrs.ThroughModel{

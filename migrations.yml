@@ -13,6 +13,12 @@ migrate:
     - openauth2: 
         dst: src/contrib/openauth2/migrations
 
+    - auth:
+        dst: src/contrib/auth/migrations
+
+    - users:
+        dst: src/contrib/auth/users/migrations
+
     - revisions: 
         dst: src/contrib/revisions/migrations
 

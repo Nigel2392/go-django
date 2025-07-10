@@ -60,6 +60,10 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 		attrUseInDB = true
 	}
 
+	if canMigrator, ok := field.(CanMigrate); ok {
+		attrUseInDB = canMigrator.CanMigrate()
+	}
+
 	attrMaxLength, _ := internal.GetFromAttrs[int64](atts, attrs.AttrMaxLengthKey)
 	attrMinLength, _ := internal.GetFromAttrs[int64](atts, attrs.AttrMinLengthKey)
 	attrMinValue, _ := internal.GetFromAttrs[float64](atts, attrs.AttrMinValueKey)
@@ -80,8 +84,9 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 			fRel.Model(),
 		)
 
+		var relType = fRel.Type()
 		rel = &MigrationRelation{
-			Type:        fRel.Type(),
+			Type:        relType,
 			TargetModel: cType,
 			TargetField: fRel.Field(),
 			OnDelete:    attrOnDelete,
@@ -89,6 +94,12 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 		}
 
 		var through = fRel.Through()
+		if relType == attrs.RelManyToMany || relType == attrs.RelOneToMany || (relType == attrs.RelOneToOne && through != nil) {
+			// many-to-many, one-to-many or one-to-one with through table do not directly
+			// store the field in the table, so we set attrUseInDB to false.
+			attrUseInDB = false
+		}
+
 		if through != nil {
 			rel.Through = &MigrationRelationThrough{
 				Model:       contenttypes.NewContentType(through.Model()),
@@ -156,7 +167,7 @@ func (c *Column) DBType() dbtype.Type {
 	}
 
 	dbType, ok := drivers.DBType(c.Field)
-	if !ok {
+	if !ok && c.UseInDB {
 		panic(fmt.Sprintf(
 			"no database type registered for field %s of type %s",
 			c.Field.Name(), fieldType.String(),

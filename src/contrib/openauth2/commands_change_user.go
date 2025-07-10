@@ -14,7 +14,7 @@ type changeUserStorage struct {
 	inactive bool
 }
 
-var command_change_user = &command.Cmd[changeUserStorage]{
+var command_change_user command.Command = &command.Cmd[changeUserStorage]{
 	ID:   "changeuser",
 	Desc: "Change oauth2 user's administrator and active status by identifier and provider",
 	FlagFunc: func(m command.Manager, stored *changeUserStorage, f *flag.FlagSet) error {

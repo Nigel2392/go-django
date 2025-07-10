@@ -1,0 +1,31 @@
+{
+  "table": {
+    "table": "auth_group_permissions",
+    "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.GroupPermission",
+    "fields": [
+      {
+        "name": "GroupID",
+        "column": "group_id",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Uint",
+        "db_type": "UINT",
+        "default": 0
+      },
+      {
+        "name": "PermissionID",
+        "column": "permission_id",
+        "use_in_db": true,
+        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.Uint",
+        "db_type": "UINT",
+        "default": 0
+      }
+    ],
+    "indexes": null,
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    }
+  ]
+}

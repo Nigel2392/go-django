@@ -3,6 +3,7 @@ package migrator
 import (
 	"context"
 	"database/sql"
+	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -30,7 +31,7 @@ type CanSQL[T any] interface {
 	SQL(T) (string, []any)
 }
 
-type CanModelMigrate interface {
+type CanMigrate interface {
 	CanMigrate() bool
 }
 
@@ -66,35 +67,44 @@ type Table interface {
 	Indexes() []Index
 }
 
-// Embed this struct in your model to prevent it from being migrated.
+// Embed this struct in your model or fields to indicate that it cannot be migrated.
 type CantMigrate struct{}
 
 func (c *CantMigrate) CanMigrate() bool {
 	return false
 }
 
-func CanMigrate(obj attrs.Definer) bool {
-	var meta = attrs.GetModelMeta(obj)
-	if meta == nil {
-		return false
-	}
+func CheckCanMigrate(obj any) bool {
 
-	if canMigrator, ok := obj.(CanModelMigrate); ok {
+	if canMigrator, ok := obj.(CanMigrate); ok {
 		return canMigrator.CanMigrate()
 	}
 
-	var canMigrate, ok = meta.Storage(MetaAllowMigrateKey)
-	if !ok {
-		return true
+	if obj, ok := obj.(attrs.Definer); ok {
+		var meta = attrs.GetModelMeta(obj)
+		if meta == nil {
+			return false
+		}
+
+		var canMigrate, ok = meta.Storage(MetaAllowMigrateKey)
+		if !ok {
+			return true
+		}
+
+		switch canMigrate := canMigrate.(type) {
+		case bool:
+			return canMigrate
+		case int, int8, int16, int32, int64,
+			uint, uint8, uint16, uint32, uint64,
+			float32, float64:
+			return (!EqualDefaultValue(0, canMigrate)) // if canMigrate != 0
+		default:
+			panic(fmt.Errorf(
+				"CheckCanMigrate: unexpected type %T for MetaAllowMigrateKey, expected bool or numeric type",
+				canMigrate,
+			))
+		}
 	}
 
-	switch canMigrate := canMigrate.(type) {
-	case bool:
-		return canMigrate
-	case int, int8, int16, int32, int64,
-		uint, uint8, uint16, uint32, uint64,
-		float32, float64:
-		return (!EqualDefaultValue(0, canMigrate)) // if canMigrate != 0
-	}
-	return false
+	return true
 }

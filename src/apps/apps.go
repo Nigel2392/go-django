@@ -15,6 +15,11 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
+var (
+	_ django.AppConfig = (*AppConfig)(nil)
+	_ django.AppConfig = (*DBRequiredAppConfig)(nil)
+)
+
 type AppConfig struct {
 	AppName        string
 	Deps           []string

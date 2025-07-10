@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -90,6 +91,11 @@ func NewAppConfig(cnf Config) django.AppConfig {
 
 	App.ModelObjects = []attrs.Definer{
 		&User{},
+		&users.Group{},
+		&users.Permission{},
+		&users.UserGroup{},
+		&users.GroupPermission{},
+		&users.UserPermission{},
 	}
 
 	App.Init = func(settings django.Settings, db drivers.Database) error {

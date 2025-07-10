@@ -101,7 +101,7 @@ func main() {
 			django.APPVAR_DATABASE: db,
 		}),
 		django.AppLogger(&logger.Logger{
-			Level:       logger.INF,
+			Level:       logger.DBG,
 			OutputDebug: os.Stdout,
 			Prefix:      "migrator",
 			WrapPrefix:  logger.ColoredLogWrapper,
@@ -117,6 +117,7 @@ func main() {
 			migrator.NewAppConfig,
 			reports.NewAppConfig,
 			auditlogs.NewAppConfig,
+			// auth.NewAppConfig,
 			openauth2.NewAppConfig(openauth2.Config{}),
 		),
 	)
@@ -190,7 +191,7 @@ func main() {
 						}
 					}
 
-					logger.Debugf("Skipping app %q as it is not included")
+					logger.Debugf("Skipping app %q as it is not included", app)
 					continue
 				}
 
@@ -268,7 +269,7 @@ func main() {
 			for app, conf := range config.Targets.Iter() {
 
 				if _, ok := apps.Lookup(app); !ok {
-					logger.Debugf("Skipping app %q as it is not included")
+					logger.Debugf("Skipping app %q as it is not included", app)
 					continue
 				}
 

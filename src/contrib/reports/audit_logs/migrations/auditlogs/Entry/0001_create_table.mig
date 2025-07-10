@@ -52,7 +52,7 @@
         "column": "object",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "interface {}",
+        "go_type": "",
         "db_type": "JSON",
         "default": null
       },
