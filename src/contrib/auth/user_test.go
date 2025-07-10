@@ -58,6 +58,8 @@ func TestMain(m *testing.M) {
 	tables.Create()
 	defer tables.Drop()
 
+	attrs.ResetDefinitions.Send(nil)
+
 	exitCode := m.Run()
 	if exitCode != 0 {
 		// If the test run failed, we can log an error or perform cleanup if necessary.

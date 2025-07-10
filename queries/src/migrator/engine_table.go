@@ -151,8 +151,15 @@ func NewModelTable(obj attrs.Definer) *ModelTable {
 		return 0
 	})
 
+	var meta = attrs.GetModelMeta(obj)
 	for _, field := range fields {
 		if field.ColumnName() == "" {
+			continue
+		}
+
+		var _, ok = meta.Reverse(field.Name())
+		if ok {
+			// This is a reverse relation, skip it.
 			continue
 		}
 

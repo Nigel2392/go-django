@@ -162,15 +162,15 @@ func registerReverseRelation(
 	}
 
 	// Step 5: Store in reverseRelations
-	if _, ok := meta.reverse.Get(reverseAlias); ok {
+	if rel, ok := meta.reverse.Get(reverseAlias); ok {
 		// Cannot register a reverse relation with the same name twice
 		// This is a programming error and can happen if you have two reverse relations
 		// from two different models to the same model with the same name
 		//
 		// e.g. if you have two models A and B, and both have a reverse relation to C with the same name
 		panic(fmt.Errorf(
-			"reverse relation %q from %T on %T was already registered, please use a different related name",
-			reverseAlias, fromModel, targetModel,
+			"reverse relation %q from %T on %T was already registered by %T, please use a different related name",
+			reverseAlias, fromModel, targetModel, rel.Model(),
 		))
 	}
 

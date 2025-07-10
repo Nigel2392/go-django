@@ -1,7 +1,6 @@
 {
   "dependencies": [
-    "auth:Permission:0001_create_table.mig",
-    "auth:User:0001_create_table.mig"
+    "auth:Permission:0001_create_table.mig"
   ],
   "table": {
     "table": "auth_groups",
@@ -50,23 +49,6 @@
         },
         "go_type": "uint64",
         "db_type": "UINT",
-        "default": null
-      },
-      {
-        "name": "UserGroups",
-        "column": "id",
-        "relation": {
-          "type": "ManyToMany",
-          "model": "github.com/Nigel2392/go-django/src/contrib/auth.User",
-          "field": "Groups",
-          "through": {
-            "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.UserGroup",
-            "source_field": "GroupID",
-            "target_field": "UserID"
-          }
-        },
-        "go_type": "*github.com/Nigel2392/go-django/queries/src.RelM2M[*github.com/Nigel2392/go-django/src/contrib/auth/users.Group,*github.com/Nigel2392/go-django/src/contrib/auth/users.UserGroup]",
-        "db_type": "TEXT",
         "default": null
       }
     ],

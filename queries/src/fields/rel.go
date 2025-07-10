@@ -190,6 +190,15 @@ func (r *RelationField[T]) ColumnName() string {
 	return r.cnf.ColumnName
 }
 
+func (r *RelationField[T]) AllowReverseRelation() bool {
+	// If the field is a proxy, it cannot have a reverse relation
+	if r.cnf.IsProxy {
+		return false
+	}
+
+	return !r.cnf.NoReverseRelation
+}
+
 type (
 	saveableDefiner interface {
 		attrs.Definer

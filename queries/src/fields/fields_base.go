@@ -257,6 +257,10 @@ func NewDataModelField[T any](forModel attrs.Definer, dst any, name string, cnf 
 	return f
 }
 
+func (f *DataModelField[T]) TypeString() string {
+	return fmt.Sprintf("%T.%s", f.Model, f.name)
+}
+
 func (f *DataModelField[T]) signalChange(val any) {
 	if f.fieldRef != nil {
 		f.defs.SignalChange(f.fieldRef, val)

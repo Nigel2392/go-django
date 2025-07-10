@@ -342,6 +342,10 @@ func (f *FieldDef) Name() string {
 	return f.fieldName
 }
 
+func (f *FieldDef) TypeString() string {
+	return fmt.Sprintf("%s.%s", f.instance_t.Name(), f.field_t.Type.Name())
+}
+
 func (f *FieldDef) Tag(name string) string {
 	return f.field_t.Tag.Get(name)
 }

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -64,7 +66,7 @@ func NewAppConfig() django.AppConfig {
 			AddUserMiddleware(),
 		)
 
-		if django.ConfigGet(django.Global.Settings, APP_REGISTER_AUTH_URLS, true) {
+		if django.ConfigGet(django.Global.Settings, APPVAR_REGISTER_AUTH_URLS, true) {
 			var g = m.Any("/auth", nil, "auth")
 			g.Handle(mux.GET, "/login", mux.NewHandler(viewUserLogin), "login")
 			g.Handle(mux.POST, "/login", mux.NewHandler(viewUserLogin))
@@ -77,7 +79,7 @@ func NewAppConfig() django.AppConfig {
 	}
 	app.Init = func(settings django.Settings) error {
 
-		loginWithEmail, ok := settings.Get(APP_AUTH_EMAIL_LOGIN)
+		loginWithEmail, ok := settings.Get(APPVAR_AUTH_EMAIL_LOGIN)
 		if ok {
 			Auth.LoginWithEmail = loginWithEmail.(bool)
 		}
@@ -266,6 +268,27 @@ func NewAppConfig() django.AppConfig {
 			migrationFS, "migrations/auth",
 		),
 	}
+}
+
+func (app *AuthApplication) Check(ctx context.Context, settings django.Settings) []checks.Message {
+	var messages = app.AppConfig.Check(ctx, settings)
+
+	//	APPVAR_AUTH_EMAIL_LOGIN
+	//	APPVAR_REGISTER_AUTH_URLS
+	//	APPVAR_LOGIN_REDIRECT_URL
+
+	if _, ok := settings.Get(APPVAR_LOGIN_REDIRECT_URL); !ok {
+		messages = append(messages, checks.Warningf(
+			"auth.login_redirect_url_not_set",
+			"Login redirect URL is not set, using default value %q",
+			nil, fmt.Sprintf("Set the %q setting to change the login redirect URL",
+				APPVAR_LOGIN_REDIRECT_URL,
+			),
+			DEFAULT_LOGIN_REDIRECT_URL,
+		))
+	}
+
+	return messages
 }
 
 func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {

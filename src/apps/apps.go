@@ -155,13 +155,9 @@ func (a *AppConfig) Check(ctx context.Context, settings django.Settings) []check
 			continue
 		}
 
-		var messageText = fmt.Sprintf(
-			"Model \"%T\" does not implement checks.Checker interface",
-			model,
-		)
 		messages = append(messages, checks.Warning(
 			"model.cant_check",
-			messageText,
+			"Model does not implement checks.Checker interface",
 			model,
 		))
 
@@ -172,8 +168,7 @@ func (a *AppConfig) Check(ctx context.Context, settings django.Settings) []check
 			if field.IsPrimary() {
 				if primary != nil {
 					var messageText = fmt.Sprintf(
-						"Model \"%T\" has multiple primary key fields: \"%s\" and \"%s\"",
-						model,
+						"Model has multiple primary key fields: \"%s\" and \"%s\"",
 						primary.Name(),
 						field.Name(),
 					)
@@ -190,13 +185,9 @@ func (a *AppConfig) Check(ctx context.Context, settings django.Settings) []check
 
 			var _, ok = drivers.DBType(field)
 			if !ok {
-				var messageText = fmt.Sprintf(
-					"Field \"%s\" in model \"%T\" does not have a valid database type",
-					field.Name(), model,
-				)
 				messages = append(messages, checks.Warning(
 					"field.invalid_db_type",
-					messageText,
+					"Field does not have a valid database type",
 					field,
 				))
 				continue
@@ -210,13 +201,9 @@ func (a *AppConfig) Check(ctx context.Context, settings django.Settings) []check
 		}
 
 		if primary == nil && !attrs.ThroughModelMeta(model).IsThroughModel {
-			var messageText = fmt.Sprintf(
-				"Model \"%T\" does not have a primary key field",
-				model,
-			)
 			messages = append(messages, checks.Warning(
 				"model.no_primary_key",
-				messageText,
+				"Model does not have a primary key field",
 				model,
 			))
 		}

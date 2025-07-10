@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/contrib/auth"
 	"github.com/Nigel2392/go-django/src/contrib/openauth2"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
@@ -117,7 +118,7 @@ func main() {
 			migrator.NewAppConfig,
 			reports.NewAppConfig,
 			auditlogs.NewAppConfig,
-			// auth.NewAppConfig,
+			auth.NewAppConfig,
 			openauth2.NewAppConfig(openauth2.Config{}),
 		),
 	)

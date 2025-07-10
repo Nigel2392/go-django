@@ -97,10 +97,11 @@ func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
 			logLevel,
 			"%s %s %s %s",
 			logger.Colorize(
+				r.Context(),
 				method_color,
 				r.Method,
 			),
-			colorizeTimeTaken(timeTaken),
+			colorizeTimeTaken(r.Context(), timeTaken),
 			remoteAddr,
 			pathBuf.String(),
 		)
@@ -110,14 +111,14 @@ func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
 // colorizeTimeTaken colorizes the time taken based on the time taken.
 //
 // The longer the time taken, the more red the color, starting from green.
-func colorizeTimeTaken(t time.Duration) string {
+func colorizeTimeTaken(ctx context.Context, t time.Duration) string {
 	switch {
 	case t < time.Millisecond*150:
-		return logger.Colorize(logger.CMD_Green, t)
+		return logger.Colorize(ctx, logger.CMD_Green, t)
 	case t < time.Millisecond*600:
-		return logger.Colorize(logger.CMD_Yellow, t)
+		return logger.Colorize(ctx, logger.CMD_Yellow, t)
 	default:
-		return logger.Colorize(logger.CMD_Red, t)
+		return logger.Colorize(ctx, logger.CMD_Red, t)
 	}
 }
 

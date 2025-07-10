@@ -90,8 +90,7 @@ func (m Message) New(object any, hint ...string) Message {
 // It should still compare as true when it is compared to a message called with [Message.New]().
 func (m Message) Is(other Message) bool {
 	return m.ID == other.ID &&
-		m.Type == other.Type &&
-		m.Text == other.Text
+		m.Type == other.Type
 }
 
 // IsSerious checks if the message is of a serious type (ERROR or higher).
@@ -111,19 +110,58 @@ func (m Message) Silenced() bool {
 	return registry.Silenced(m.ID) || m.Type.LT(logger.GetLevel())
 }
 
+type TypeStringer interface {
+	TypeString() string
+}
+
 // String returns a string representation of the message.
 // It includes the ID, type, object type (if any), text, and hint (if any).
-func (m Message) String() string {
+func (m Message) String(ctx context.Context) string {
 	var sb strings.Builder
+
 	sb.WriteString(m.ID)
+
 	if m.Object != nil {
-		sb.WriteString(fmt.Sprintf(" (%T)", m.Object))
+		sb.WriteString(" ")
+		sb.WriteString("(")
+		var typeStr string
+		switch typ := m.Object.(type) {
+		case string:
+			typeStr = typ
+		case TypeStringer:
+			typeStr = typ.TypeString()
+		default:
+			var ts = fmt.Sprintf("%T", m.Object)
+			if len(ts) > 30 {
+				// If the type string is too long, truncate it to 30 characters
+				ts = fmt.Sprintf("%s...", ts[:27])
+			}
+			typeStr = ts
+		}
+		sb.WriteString(logger.Colorize(
+			ctx, logger.CMD_Red,
+			typeStr,
+		))
+		sb.WriteString(")")
 	}
 
 	sb.WriteString(fmt.Sprintf(": %s", m.Text))
 
 	if m.Hint != "" {
-		sb.WriteString(fmt.Sprintf("\n(Hint: %s)\n", m.Hint))
+		//sb.WriteString(fmt.Sprintf(
+		//	"\n\t(%s%sHint:%s %s)\n",
+		//	logger.CMD_Bold, logger.CMD_Green,
+		//	logger.CMD_Reset,
+		//	m.Hint,
+		//))
+		sb.WriteString("\n\t(")
+		sb.WriteString(logger.Colorize(
+			ctx, []string{logger.CMD_Bold, logger.CMD_Green},
+			"Hint:",
+		))
+		sb.WriteString(" ")
+		sb.WriteString(m.Hint)
+		sb.WriteString(")\n")
 	}
 
 	return sb.String()

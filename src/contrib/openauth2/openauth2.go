@@ -1,6 +1,7 @@
 package openauth2
 
 import (
+	"context"
 	"embed"
 	"fmt"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -22,7 +24,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
@@ -167,12 +168,10 @@ func NewAppConfig(cnf Config) django.AppConfig {
 
 		for _, c := range App.Config.AuthConfigurations {
 			if c.Provider == "" {
-				logger.Warnf("OpenAuth2: Missing provider name for %q, proider will not be used", c.Oauth2.ClientID)
 				continue
 			}
 
 			if c.Oauth2 == nil {
-				logger.Warnf("OpenAuth2: Missing Oauth2 config for %q, provider will not be used", c.Provider)
 				continue
 			}
 
@@ -340,6 +339,58 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			"migrations/openauth2",
 		),
 	}
+}
+
+func (a *OpenAuth2AppConfig) Check(ctx context.Context, settings django.Settings) []checks.Message {
+	var messages = a.DBRequiredAppConfig.Check(ctx, settings)
+
+	if len(a.Config.AuthConfigurations) == 0 {
+		messages = append(messages, checks.Error(
+			"openauth2.no_providers",
+			"OpenAuth2: No providers configured",
+			nil,
+		))
+	}
+
+	for _, cnf := range a.Config.AuthConfigurations {
+		if cnf.Provider == "" {
+			messages = append(messages, checks.Error(
+				"openauth2.provider_missing",
+				"OpenAuth2: Provider name is missing",
+				cnf,
+			))
+			continue
+		}
+
+		if cnf.Oauth2 == nil {
+			messages = append(messages, checks.Error(
+				"openauth2.oauth2_missing",
+				"OpenAuth2: OAuth2 configuration is missing",
+				cnf.Provider,
+			))
+			continue
+		}
+
+		if cnf.Oauth2.ClientID == "" {
+			messages = append(messages, checks.Error(
+				"openauth2.client_id_missing",
+				"OpenAuth2: Client ID is missing",
+				cnf.Provider,
+			))
+			continue
+		}
+
+		if cnf.Oauth2.ClientSecret == "" {
+			messages = append(messages, checks.Error(
+				"openauth2.client_secret_missing",
+				"OpenAuth2: Client Secret is missing for provider",
+				cnf.Provider,
+			))
+			continue
+		}
+	}
+
+	return messages
 }
 
 func (a *OpenAuth2AppConfig) Provider(name string) (*AuthConfig, error) {

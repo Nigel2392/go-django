@@ -73,6 +73,7 @@ func main() {
 			Level:       logger.INF,
 			OutputTime:  true,
 			WrapPrefix:  logger.ColoredLogWrapper,
+			OutputDebug: os.Stdout,
 			OutputInfo:  os.Stdout,
 			OutputWarn:  os.Stdout,
 			OutputError: os.Stdout,

@@ -12,7 +12,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/media"
-	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
@@ -117,14 +116,6 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 		"Model name must match regex %v",
 		nameRegex,
 	)
-
-	var implementsSave, implementsDelete = models.ImplementsMethods(opts.Model)
-	if !implementsSave || !implementsDelete {
-		logger.Warnf(
-			"Model %q is not fully implemented, canSave: %t, canDelete: %t",
-			model.GetName(), implementsSave, implementsDelete,
-		)
-	}
 
 	a.Models.Set(model.GetName(), model)
 

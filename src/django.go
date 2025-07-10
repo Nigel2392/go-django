@@ -446,14 +446,20 @@ func chainMessages(sort bool, messages ...[]checks.Message) ([]checks.Message, i
 			if a.Type < b.Type {
 				return -1
 			}
-			return 0
+			//switch {
+			//case a.Hint == "" && b.Hint != "":
+			//	return -1
+			//case a.Hint != "" && b.Hint == "":
+			//	return 1
+			//}
+			return strings.Compare(b.ID, a.ID)
 		})
 	}
 
 	return allMessages, seriousCount
 }
 
-func (a *Application) logCheckMessages(_ context.Context, whenChecks string, msgs ...[]checks.Message) (loggedSerious bool) {
+func (a *Application) logCheckMessages(ctx context.Context, whenChecks string, msgs ...[]checks.Message) (loggedSerious bool) {
 	var messages, seriousCount = chainMessages(
 		true, msgs...,
 	)
@@ -467,7 +473,7 @@ func (a *Application) logCheckMessages(_ context.Context, whenChecks string, msg
 
 	for _, msg := range messages {
 		if !msg.Silenced() {
-			a.Log.Log(msg.Type, msg)
+			a.Log.Log(msg.Type, msg.String(ctx))
 		}
 	}
 

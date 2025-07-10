@@ -8,18 +8,49 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/pkg/errors"
 )
 
 var runChecksCommand = &command.Cmd[any]{
 	ID:   "check",
 	Desc: "Run all registered checks for the go-django application",
-	//FlagFunc: func(m command.Manager, stored *any, f *flag.FlagSet) error {
-	//	return nil
-	//},
 	Execute: func(m command.Manager, stored any, args []string) error {
 
-		return nil
+		var context = context.Background()
+		var shouldErr = Global.logCheckMessages(
+			context, "Startup checks",
+			checks.RunCheck(context, checks.TagSettings, Global, Global.Settings),
+			checks.RunCheck(context, checks.TagSecurity, Global, Global.Settings),
+		)
+		if shouldErr {
+			return errors.New("Startup checks failed")
+		}
+
+		if messages := checks.RunCheck(context, checks.TagCommands, Global, Global.Settings, Global.Commands.Commands()); len(messages) > 0 {
+			shouldErr = Global.logCheckMessages(context, "Command checks", messages)
+			if shouldErr {
+				return errors.New("Command checks failed")
+			}
+		}
+
+		var groups = make([][]checks.Message, 0, Global.Apps.Len())
+		for h := Global.Apps.Front(); h != nil; h = h.Next() {
+			groups = append(
+				groups,
+				h.Value.Check(context, Global.Settings),
+			)
+		}
+
+		shouldErr = Global.logCheckMessages(
+			context, "Application checks", groups...,
+		)
+		if shouldErr {
+			return errors.New("Application checks failed")
+		}
+
+		return command.ErrShouldExit
 	},
 }
 

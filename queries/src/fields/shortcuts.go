@@ -9,15 +9,16 @@ import (
 
 type FieldConfig struct {
 	DataModelFieldConfig
-	ScanTo      any
-	Nullable    bool
-	AllowEdit   bool
-	IsProxy     bool
-	ReverseName string
-	ColumnName  string
-	TargetField string
-	Through     attrs.Through
-	Rel         attrs.Relation
+	ScanTo            any
+	Nullable          bool
+	AllowEdit         bool
+	IsProxy           bool
+	ReverseName       string
+	NoReverseRelation bool // If true, the field will not create a reverse relation in the model meta.
+	ColumnName        string
+	TargetField       string
+	Through           attrs.Through
+	Rel               attrs.Relation
 }
 
 type unbound[T attrs.Field] struct {

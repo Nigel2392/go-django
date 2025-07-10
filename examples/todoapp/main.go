@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"errors"
+	"os"
 
 	"github.com/Nigel2392/go-django/examples/todoapp/todos"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -14,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/command"
 	_ "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
+	"github.com/Nigel2392/go-django/src/core/logger"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -32,12 +34,18 @@ func main() {
 			django.APPVAR_PORT:            "8080",
 			django.APPVAR_DATABASE:        db,
 			django.APPVAR_RECOVERER:       false,
-			auth.APP_AUTH_EMAIL_LOGIN:     true,
+			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
 			migrator.APPVAR_MIGRATION_DIR: "./.private/migrations-todoapp",
 		}),
-		// django.AppMiddleware(
-		// middleware.DefaultLogger.Intercept,
-		// ),
+		django.AppLogger(&logger.Logger{
+			Level:       logger.INF,
+			OutputTime:  true,
+			WrapPrefix:  logger.ColoredLogWrapper,
+			OutputDebug: os.Stdout,
+			OutputInfo:  os.Stdout,
+			OutputWarn:  os.Stdout,
+			OutputError: os.Stdout,
+		}),
 		django.Apps(
 			session.NewAppConfig,
 			auth.NewAppConfig,

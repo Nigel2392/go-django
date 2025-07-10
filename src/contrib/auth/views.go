@@ -60,8 +60,8 @@ func (v *AuthView[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	} else {
 		var nextURLSetting = django.ConfigGet[interface{}](
 			django.Global.Settings,
-			APP_LOGIN_REDIRECT_URL,
-			"/",
+			APPVAR_LOGIN_REDIRECT_URL,
+			DEFAULT_LOGIN_REDIRECT_URL,
 		)
 		context.Set("NextURL", callOrString(
 			nextURLSetting, req,
@@ -110,8 +110,8 @@ formSuccess:
 	if nextURL == "" {
 		var nextURLSetting = django.ConfigGet[interface{}](
 			django.Global.Settings,
-			APP_LOGIN_REDIRECT_URL,
-			"/",
+			APPVAR_LOGIN_REDIRECT_URL,
+			DEFAULT_LOGIN_REDIRECT_URL,
 		)
 		nextURL = callOrString(nextURLSetting, req)
 	}

@@ -242,6 +242,7 @@ func (m *MigrationEngine) Migrate(apps ...string) error {
 	}
 
 	var migrationInfos = make([]*migrationFileInfo, 0, len(migrations))
+	var wereApplied int
 	for _, migration := range migrations {
 		var hasApplied, err = m.SchemaEditor.HasMigration(
 			migration.AppName,
@@ -259,11 +260,17 @@ func (m *MigrationEngine) Migrate(apps ...string) error {
 			MigrationFile: migration,
 			migrated:      hasApplied,
 		})
+
+		if hasApplied {
+			wereApplied++
+		}
 	}
 
-	if len(migrationInfos) == 0 {
+	if wereApplied == len(migrationInfos) {
 		return ErrNoChanges
 	}
+
+	logger.Debugf("Found %d migrations to apply", len(migrationInfos)-wereApplied)
 
 	m.Migrations = make(map[string]map[string][]*MigrationFile)
 	m.dependencies = make(map[string]map[string][]*MigrationFile)

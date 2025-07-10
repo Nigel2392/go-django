@@ -1,8 +1,4 @@
 {
-  "dependencies": [
-    "openauth2:Group:0001_create_table.mig",
-    "openauth2:User:0001_create_table.mig"
-  ],
   "table": {
     "table": "auth_permissions",
     "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.Permission",
@@ -34,40 +30,6 @@
         "go_type": "string",
         "db_type": "STRING",
         "default": ""
-      },
-      {
-        "name": "GroupPermissions",
-        "column": "id",
-        "relation": {
-          "type": "ManyToMany",
-          "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.Group",
-          "field": "Permissions",
-          "through": {
-            "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.GroupPermission",
-            "source_field": "PermissionID",
-            "target_field": "GroupID"
-          }
-        },
-        "go_type": "*github.com/Nigel2392/go-django/queries/src.RelM2M[*github.com/Nigel2392/go-django/src/contrib/auth/users.Permission,*github.com/Nigel2392/go-django/src/contrib/auth/users.GroupPermission]",
-        "db_type": "TEXT",
-        "default": null
-      },
-      {
-        "name": "UserPermissions",
-        "column": "id",
-        "relation": {
-          "type": "ManyToMany",
-          "model": "github.com/Nigel2392/go-django/src/contrib/openauth2.User",
-          "field": "Permissions",
-          "through": {
-            "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.UserPermission",
-            "source_field": "PermissionID",
-            "target_field": "UserID"
-          }
-        },
-        "go_type": "*github.com/Nigel2392/go-django/queries/src.RelM2M[*github.com/Nigel2392/go-django/src/contrib/auth/users.Permission,*github.com/Nigel2392/go-django/src/contrib/auth/users.UserPermission]",
-        "db_type": "TEXT",
-        "default": null
       }
     ],
     "indexes": null,

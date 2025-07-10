@@ -35,8 +35,9 @@ func (u *Base) Fields(user attrs.Definer) []any {
 		}),
 		fields.NewManyToManyField[*queries.RelM2M[*Group, *UserGroup]](
 			user, "Groups", &fields.FieldConfig{
-				ScanTo:      &u.Groups,
-				ReverseName: "UserGroups",
+				ScanTo:            &u.Groups,
+				ReverseName:       "UserGroups",
+				NoReverseRelation: true,
 				Rel: attrs.Relate(
 					&Group{}, "",
 					&attrs.ThroughModel{
@@ -49,8 +50,9 @@ func (u *Base) Fields(user attrs.Definer) []any {
 		),
 		fields.NewManyToManyField[*queries.RelM2M[*Permission, *UserPermission]](
 			user, "Permissions", &fields.FieldConfig{
-				ScanTo:      &u.Permissions,
-				ReverseName: "UserPermissions",
+				ScanTo:            &u.Permissions,
+				ReverseName:       "UserPermissions",
+				NoReverseRelation: true,
 				Rel: attrs.Relate(
 					&Permission{}, "",
 					&attrs.ThroughModel{

@@ -37,6 +37,21 @@ type MigratorAppConfig struct {
 	//	AfterMigrate        func(ctx context.Context, schema SchemaEditor) error
 }
 
+func (m *MigratorAppConfig) Check(ctx context.Context, settings django.Settings) []checks.Message {
+	var messages = m.AppConfig.Check(ctx, settings)
+
+	if m.MigrationFS == nil {
+		messages = append(messages, checks.Warning(
+			"migrator.apps.fs_not_set",
+			"Migration file system is not set",
+			nil,
+			"",
+		))
+	}
+
+	return messages
+}
+
 func (m *MigratorAppConfig) GetMigrationFS() fs.FS {
 	return m.MigrationFS
 }
@@ -117,7 +132,7 @@ func (a *migratorAppConfig) Check(ctx context.Context, settings django.Settings)
 	}
 
 	for _, cType := range cTypes {
-		messages = append(messages, checks.Error(
+		messages = append(messages, checks.Warning(
 			"migrator.engine.needs_makemigrations",
 			"Migrations need to be made",
 			cType.New(), "create new migrations by running `<your.executable> makemigrations`",
@@ -135,7 +150,7 @@ func (a *migratorAppConfig) Check(ctx context.Context, settings django.Settings)
 	}
 
 	for _, info := range needsToMigrate {
-		messages = append(messages, checks.Critical(
+		messages = append(messages, checks.Warning(
 			"migrator.engine.needs_migrate",
 			fmt.Sprintf(
 				"Migration \"%s/%s/%s\" needs to be applied",

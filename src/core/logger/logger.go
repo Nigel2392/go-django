@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"context"
 	"database/sql/driver"
 	"errors"
 	"fmt"
@@ -209,7 +210,8 @@ type Logger struct {
 
 	// WrapPrefix determines how the prefix should be wrapped
 	// based on the LogLevel.
-	WrapPrefix func(LogLevel, string) string
+	WrapPrefix func(context.Context, LogLevel, string) string
+	Context    context.Context
 }
 
 // SetOutput sets the output for the given log level.
@@ -231,12 +233,12 @@ func (l *Logger) SetOutput(level LogLevel, w io.Writer) {
 	}
 }
 
-// validateOutputs ensures that the outputs are not nil.
+// setup ensures that the outputs are not nil.
 //
 // If an output is nil before a lower importance output, it will be set to io.Discard.
 //
 // If an output is nil after a higher importance output, the output will be set to the higher importance output.
-func (l *Logger) validateOutputs() {
+func (l *Logger) setup() {
 	if l.OutputDebug == nil {
 		l.OutputDebug = io.Discard
 	}
@@ -249,11 +251,15 @@ func (l *Logger) validateOutputs() {
 	if l.OutputError == nil {
 		l.OutputError = l.OutputWarn
 	}
+
+	if l.Context == nil {
+		l.Context = context.Background()
+	}
 }
 
 // Returns the output for the given log level.
 func (l *Logger) Output(level LogLevel) io.Writer {
-	l.validateOutputs()
+	l.setup()
 
 	switch level {
 	case DBG:
@@ -296,6 +302,7 @@ func (l *Logger) Copy() *Logger {
 		OutputInfo:  l.OutputInfo,
 		OutputWarn:  l.OutputWarn,
 		OutputError: l.OutputError,
+		Context:     l.Context,
 	}
 }
 
@@ -362,7 +369,7 @@ func (l *Logger) Fatal(errorcode int, args ...interface{}) {
 }
 
 func (l *Logger) Debugf(format string, args ...interface{}) {
-	if l.Level.LT(DBG) {
+	if DBG.LT(l.Level) {
 		l.logf(DBG, format, args...)
 	}
 }
@@ -439,7 +446,7 @@ func (l *Logger) writePrefix(level LogLevel, w io.Writer) {
 
 	var prefix = b.String()
 	if l.WrapPrefix != nil {
-		prefix = l.WrapPrefix(level, prefix)
+		prefix = l.WrapPrefix(l.Context, level, prefix)
 	}
 
 	_, _ = w.Write([]byte(prefix))
@@ -469,7 +476,7 @@ func (l *Logger) log(level LogLevel, args ...interface{}) (int, error) {
 
 	var message = b.String()
 	if l.WrapPrefix != nil {
-		message = l.WrapPrefix(level, message)
+		message = l.WrapPrefix(l.Context, level, message)
 	}
 
 	var (

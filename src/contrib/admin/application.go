@@ -74,19 +74,19 @@ func (a *AdminApplication) AuthLoginHandler() func(w http.ResponseWriter, r *htt
 }
 
 func (a *AdminApplication) configureAuth(config AuthConfig) {
-	if config.GetLoginForm != nil {
+	if a.auth != nil && a.auth.GetLoginForm != nil {
 		logger.Warn(
 			"AdminApplication.configureAuth: GetLoginForm was already set",
 		)
 	}
 
-	if config.GetLoginHandler != nil {
+	if a.auth != nil && a.auth.GetLoginHandler != nil {
 		logger.Warn(
 			"AdminApplication.configureAuth: GetLoginHandler was already set",
 		)
 	}
 
-	if config.Logout != nil {
+	if a.auth != nil && a.auth.Logout != nil {
 		logger.Warn(
 			"AdminApplication.configureAuth: Logout was already set",
 		)
@@ -94,7 +94,7 @@ func (a *AdminApplication) configureAuth(config AuthConfig) {
 
 	if config.GetLoginForm != nil && config.GetLoginHandler != nil {
 		logger.Warn(
-			"AdminApplication.configureAuth: GetLoginForm and GetLoginHandler were both set, only the handler will be used",
+			"AdminApplication.configureAuth: GetLoginForm and GetLoginHandler were both set in config, only the handler will be used",
 		)
 	}
 
@@ -106,12 +106,6 @@ func (a *AdminApplication) RegisterApp(name string, appOptions AppOptions, opts 
 	assert.False(
 		a.IsReady(),
 		"AdminApplication is already initialized",
-	)
-
-	assert.True(
-		nameRegex.MatchString(name),
-		"App name must match regex %v",
-		nameRegex,
 	)
 
 	var app = &AppDefinition{

@@ -2,13 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
-	"io/fs"
 	"net/http"
 	"os"
 
 	"github.com/Nigel2392/go-django/examples/blogapp/blog"
-	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
@@ -28,7 +25,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	_ "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/logger"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -46,10 +43,19 @@ func main() {
 			django.APPVAR_HOST:            "127.0.0.1",
 			django.APPVAR_PORT:            "8080",
 			django.APPVAR_DATABASE:        db,
-			auth.APP_AUTH_EMAIL_LOGIN:     true,
+			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
 			migrator.APPVAR_MIGRATION_DIR: "./.private/migrations-blogapp",
 
 			// django.APPVAR_RECOVERER:       false,
+		}),
+		django.AppLogger(&logger.Logger{
+			Level:       logger.DBG,
+			OutputTime:  true,
+			WrapPrefix:  logger.ColoredLogWrapper,
+			OutputDebug: os.Stdout,
+			OutputInfo:  os.Stdout,
+			OutputWarn:  os.Stdout,
+			OutputError: os.Stdout,
 		}),
 		// django.AppMiddleware(
 		// middleware.DefaultLogger.Intercept,
@@ -102,28 +108,28 @@ func main() {
 	//		panic(fmt.Errorf("failed to create admin user: %w", err))
 	//	}
 
-	if len(os.Args) == 1 {
-		blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()
-		if err != nil {
-			panic(fmt.Errorf("failed to get blog pages: %w", err))
-		}
-		fmt.Println("Blog pages:", len(blogPages))
-		for page := range blogPages.Objects() {
-			fmt.Printf(" - %s (ID: %d, %d)\n", page.Title, page.ID(), page.PageNode.PageID)
-		}
-
-		err = staticfiles.Collect(func(path string, f fs.File) error {
-			var stat, err = f.Stat()
-			if err != nil {
-				return err
-			}
-			fmt.Println("Collected", path, stat.Size())
-			return nil
-		})
-		if err != nil {
-			panic(err)
-		}
-	}
+	//if len(os.Args) == 1 {
+	//	blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()
+	//	if err != nil {
+	//		panic(fmt.Errorf("failed to get blog pages: %w", err))
+	//	}
+	//	fmt.Println("Blog pages:", len(blogPages))
+	//	for page := range blogPages.Objects() {
+	//		fmt.Printf(" - %s (ID: %d, %d)\n", page.Title, page.ID(), page.PageNode.PageID)
+	//	}
+	//
+	//	err = staticfiles.Collect(func(path string, f fs.File) error {
+	//		var stat, err = f.Stat()
+	//		if err != nil {
+	//			return err
+	//		}
+	//		fmt.Println("Collected", path, stat.Size())
+	//		return nil
+	//	})
+	//	if err != nil {
+	//		panic(err)
+	//	}
+	//}
 
 	if err := app.Serve(); err != nil {
 		panic(err)

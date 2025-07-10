@@ -2,6 +2,7 @@ package admin
 
 import (
 	"bytes"
+	"context"
 	"embed"
 	"fmt"
 	"html/template"
@@ -18,12 +19,14 @@ import (
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -336,6 +339,41 @@ func NewAppConfig() django.AppConfig {
 	}
 
 	return AdminSite
+}
+
+func (a *AdminApplication) Check(ctx context.Context, settings django.Settings) []checks.Message {
+	var messages = a.AppConfig.Check(ctx, settings)
+	for head := a.Apps.Front(); head != nil; head = head.Next() {
+
+		var app = head.Value
+		if !nameRegex.MatchString(app.Name) {
+			messages = append(messages, checks.Criticalf(
+				"admin.app_name_invalid",
+				"App name does not match regex %v", app.Name,
+				"",
+				nameRegex,
+			))
+		}
+
+		for front := app.Models.Front(); front != nil; front = front.Next() {
+			var implementsSave, implementsDelete = models.ImplementsMethods(front.Value.Model)
+			if !implementsSave || !implementsDelete {
+				//logger.Warnf(
+				//	"Model %q is not fully implemented, canSave: %t, canDelete: %t",
+				//	front.Value.GetName(), implementsSave, implementsDelete,
+				//)
+				messages = append(messages, checks.Warningf(
+					"admin.model_not_fully_implemented",
+					"Model %q is not fully implemented, canSave: %t, canDelete: %t",
+					front.Value.Model,
+					"Implement both models.ContextSaver and models.ContextDeleter interfaces to"+
+						" avoid issues with saving or deleting instances of this model.",
+					front.Value.GetName(), implementsSave, implementsDelete,
+				))
+			}
+		}
+	}
+	return messages
 }
 
 func newHandler(handler func(w http.ResponseWriter, r *http.Request)) mux.Handler {

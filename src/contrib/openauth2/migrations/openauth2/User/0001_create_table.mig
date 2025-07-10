@@ -1,7 +1,7 @@
 {
   "dependencies": [
-    "openauth2:Group:0001_create_table.mig",
-    "openauth2:Permission:0001_create_table.mig"
+    "auth:Group:0001_create_table.mig",
+    "auth:Permission:0001_create_table.mig"
   ],
   "table": {
     "table": "openauth2_users",

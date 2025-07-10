@@ -27,7 +27,7 @@ import (
 var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition) {
 	if !app.Options.EnableIndexView {
 		except.RaiseNotFound(
-			"app %s does not have an i,ndex view",
+			"app %q does not have an index view",
 			app.Label(),
 		)
 		return
