@@ -309,7 +309,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	)
 
 	qs, err = filter.Filter(r.URL.Query(), qs)
-	if err != nil {
+	if err != nil && !errors.Is(err, filters.FormError) {
 		logger.Errorf("Failed to filter audit logs: %v", err)
 		except.Fail(
 			http.StatusInternalServerError,

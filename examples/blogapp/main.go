@@ -57,7 +57,7 @@ func main() {
 			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
 			migrator.APPVAR_MIGRATION_DIR: "./.private/blogapp/migrations",
 
-			// django.APPVAR_RECOVERER: false,
+			django.APPVAR_RECOVERER: false,
 		}),
 		django.AppLogger(&logger.Logger{
 			Level:       logger.DBG,

@@ -64,6 +64,8 @@ func (f *Filters[T]) Form() *forms.BaseForm {
 	return f.form
 }
 
+var FormError = errors.New("form is not valid")
+
 func (f *Filters[T]) Filter(data map[string][]string, object *queries.QuerySet[T]) (*queries.QuerySet[T], error) {
 	f.form.Reset()
 
@@ -96,7 +98,12 @@ func (f *Filters[T]) Filter(data map[string][]string, object *queries.QuerySet[T
 			errors.Join(f.form.ErrorList_...),
 		)
 
-		return nil, errors.Join(errList...)
+		errList = append(
+			errList,
+			FormError,
+		)
+
+		return object, errors.Join(errList...)
 	}
 
 	var cleanedData = f.form.CleanedData()

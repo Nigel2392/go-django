@@ -71,6 +71,15 @@
         <div class="auditlogs-filters">
             <form method="get" action="{{ .Get "actionURL" }}">
 
+                {{ $errorList := (.Get "form").ErrorList }}
+                {{ if (gt (len $errorList) 0) }}
+                    <ul class="error-list">
+                        {{ range $Error := $errorList }}
+                            <li class="error"><p>{{ $Error }}</p></li>
+                        {{ end }}
+                    </ul>
+                {{ end }}
+
                 {{ range $Field := (.Get "form").Fields }}        
                     <div class="panel">
 
