@@ -2,6 +2,7 @@ package attrs
 
 import (
 	"reflect"
+	"sync"
 
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-signals"
@@ -99,22 +100,68 @@ type DefaultGetter func(f Field, new_field_t_indirected reflect.Type, field_v re
 //				return fields.JSONField[json.RawMessage](opts...)
 //			},
 //	 	)
+
+var (
+	registeredFormFieldTypes = make(map[reflect.Type]FormFieldGetter)
+	_registerFormFieldHook   = &sync.Once{}
+)
+
+func registerFormFieldHook() {
+	_registerFormFieldHook.Do(func() {
+		goldcrest.Register(HookFormFieldForType, 100,
+			FormFieldGetter(func(f Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
+
+				var valTyp = field_v.Type()
+				if field_v.IsValid() && valTyp != nil {
+					if getter, exists := registeredFormFieldTypes[valTyp]; exists {
+						return getter(f, new_field_t_indirected, field_v, opts...)
+					}
+				}
+
+				if getter, exists := registeredFormFieldTypes[new_field_t_indirected]; exists {
+					return getter(f, new_field_t_indirected, field_v, opts...)
+				}
+
+				return nil, false
+			}),
+		)
+	})
+}
+
 func RegisterFormFieldType(valueOfType any, getField func(opts ...func(fields.Field)) fields.Field) {
 	var typ reflect.Type
 	switch v := valueOfType.(type) {
 	case reflect.Type:
 		typ = v
+	case reflect.Value:
+		typ = v.Type()
 	default:
 		typ = reflect.TypeOf(valueOfType)
 	}
-	goldcrest.Register(HookFormFieldForType, 100,
-		FormFieldGetter(func(f Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
-			if field_v.IsValid() && field_v.Type() == typ || new_field_t_indirected == typ {
-				return getField(opts...), true
-			}
-			return nil, false
-		}),
-	)
+
+	// Register the getter function for the type
+	registeredFormFieldTypes[typ] = func(f Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
+		return getField(opts...), true
+	}
+
+	registerFormFieldHook()
+}
+
+func RegisterFormFieldGetter(valueOfType any, getField FormFieldGetter) {
+	var typ reflect.Type
+	switch v := valueOfType.(type) {
+	case reflect.Type:
+		typ = v
+	case reflect.Value:
+		typ = v.Type()
+	default:
+		typ = reflect.TypeOf(valueOfType)
+	}
+
+	// Register the getter function for the type
+	registeredFormFieldTypes[typ] = getField
+
+	registerFormFieldHook()
 }
 
 // RegisterDefaultType registers a default value to be used for that specific type.

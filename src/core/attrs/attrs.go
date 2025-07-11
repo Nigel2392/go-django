@@ -7,10 +7,12 @@ import (
 	"reflect"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/shopspring/decimal"
@@ -25,12 +27,13 @@ func init() {
 			return fields.JSONField[json.RawMessage](opts...)
 		},
 	)
-	RegisterFormFieldType(
-		decimal.Decimal{},
-		func(opts ...func(fields.Field)) fields.Field {
-			return fields.DecimalField(opts...)
-		},
-	)
+	RegisterFormFieldType(decimal.Decimal{}, func(opts ...func(fields.Field)) fields.Field {
+		return fields.DecimalField(opts...)
+	})
+	RegisterFormFieldType(time.Time{}, func(opts ...func(fields.Field)) fields.Field {
+		return fields.DateField(widgets.DateWidgetTypeDateTime, opts...)
+	})
+
 	RegisterFormFieldType(
 		mediafiles.SimpleStoredObject{},
 		func(opts ...func(fields.Field)) fields.Field {

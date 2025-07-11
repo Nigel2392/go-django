@@ -11,6 +11,9 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	formfields "github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/google/uuid"
 	"github.com/oklog/ulid/v2"
 	"github.com/shopspring/decimal"
@@ -48,6 +51,7 @@ func init() {
 	dbtype.Add(Bytes(nil), dbtype.Bytes)
 	dbtype.Add(BLOB(nil), dbtype.BLOB)
 	dbtype.Add(UUID(uuid.UUID{}), dbtype.UUID)
+	dbtype.Add(ULID(ulid.ULID{}), dbtype.ULID)
 	dbtype.Add(Timestamp{}, dbtype.Timestamp)
 	dbtype.Add(LocalTime{}, dbtype.LocalTime)
 	dbtype.Add(DateTime{}, dbtype.DateTime)
@@ -120,6 +124,49 @@ func init() {
 	dbtype.Add(sql.Null[time.Time]{}, dbtype.DateTime)
 	dbtype.Add(sql.Null[decimal.Decimal]{}, dbtype.Decimal)
 	dbtype.Add(sql.Null[ulid.ULID]{}, dbtype.ULID)
+
+	attrs.RegisterFormFieldType(Text(""), func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.CharField(append(opts, formfields.Widget(widgets.NewTextarea(nil)))...)
+	})
+	attrs.RegisterFormFieldType(String(""), func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.CharField(opts...)
+	})
+	attrs.RegisterFormFieldType(Char(""), func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.CharField(opts...)
+	})
+	attrs.RegisterFormFieldType(Int(0), func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.NumberField[Int](opts...)
+	})
+	attrs.RegisterFormFieldType(Uint(0), func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.NumberField[Uint](opts...)
+	})
+	attrs.RegisterFormFieldType(Float(0.0), func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.NumberField[Float](opts...)
+	})
+	attrs.RegisterFormFieldType(Bool(false), func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.BooleanField(opts...)
+	})
+	attrs.RegisterFormFieldType(UUID{}, func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.CharField(opts...)
+	})
+	attrs.RegisterFormFieldType(ULID{}, func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.CharField(opts...)
+	})
+	attrs.RegisterFormFieldType(Timestamp{}, func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.DateField(widgets.DateWidgetTypeDateTime, opts...)
+	})
+	attrs.RegisterFormFieldType(LocalTime{}, func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.DateField(widgets.DateWidgetTypeDateTime, opts...)
+	})
+	attrs.RegisterFormFieldType(DateTime{}, func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.DateField(widgets.DateWidgetTypeDateTime, opts...)
+	})
+	attrs.RegisterFormFieldType(Email{}, func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.EmailField(opts...)
+	})
+	attrs.RegisterFormFieldType(JSON[any]{}, func(opts ...func(formfields.Field)) formfields.Field {
+		return formfields.JSONField[any](opts...)
+	})
 }
 
 type (

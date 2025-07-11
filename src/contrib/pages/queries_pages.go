@@ -27,7 +27,7 @@ func SavePage(ctx context.Context, parent *PageNode, p SaveablePage) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
-	defer transaction.Rollback(ctx)
+	defer transaction.Rollback(querySet.Context())
 
 	var ref = p.Reference()
 	if ref.ContentType == "" && !reflect.DeepEqual(ref, p) {
@@ -69,7 +69,7 @@ func SavePage(ctx context.Context, parent *PageNode, p SaveablePage) error {
 
 	var saved bool
 	saved, err = django_models.SaveModel(
-		ctx, p,
+		querySet.Context(), p,
 	)
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func SavePage(ctx context.Context, parent *PageNode, p SaveablePage) error {
 		return err
 	}
 
-	return transaction.Commit(ctx)
+	return transaction.Commit(querySet.Context())
 }
 
 // UpdatePage updates a page object in the database.
@@ -139,7 +139,7 @@ func UpdatePage(ctx context.Context, p SaveablePage) error {
 		return err
 	}
 
-	err = p.Save(ctx)
+	err = p.Save(qs.Context())
 	if err != nil {
 		return err
 	}

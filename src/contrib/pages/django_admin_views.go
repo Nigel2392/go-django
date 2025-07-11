@@ -131,7 +131,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	}
 
 	var parent_object *PageNode
-	var qs = NewPageQuerySet()
+	var qs = NewPageQuerySet().WithContext(r.Context())
 	if p.Depth > 0 {
 		var parent, err = qs.ParentNode(
 			p.Path,
@@ -346,7 +346,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			)
 		} else {
 			var n = d.(*PageNode)
-			var qs = NewPageQuerySet()
+			var qs = NewPageQuerySet().WithContext(ctx)
 			_, err = qs.insertNode(n)
 		}
 		if err != nil {
@@ -531,10 +531,10 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				wasUnpublished = true
 			}
 
-			err = UpdatePage(context.Background(), page)
+			err = UpdatePage(ctx, page)
 		} else {
 			var n = d.(*PageNode)
-			var qs = NewPageQuerySet()
+			var qs = NewPageQuerySet().WithContext(ctx)
 			err = qs.UpdateNode(n)
 
 		}
@@ -659,7 +659,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 		}
 
 		var parent *PageNode
-		var qs = NewPageQuerySet()
+		var qs = NewPageQuerySet().WithContext(r.Context())
 		if p.Depth > 0 {
 			parent, err = qs.ParentNode(
 				p.Path,
@@ -746,7 +746,7 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		}
 
 		var unpublishChildren = r.FormValue("unpublish-children") == "unpublish-children"
-		var qs = NewPageQuerySet()
+		var qs = NewPageQuerySet().WithContext(r.Context())
 		if err := qs.UnpublishNode(p, unpublishChildren); err != nil {
 			except.Fail(500, "Failed to unpublish page: %s", err)
 			return

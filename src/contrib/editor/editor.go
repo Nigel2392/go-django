@@ -12,7 +12,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
-	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 )
 
@@ -42,23 +41,17 @@ func NewAppConfig() django.AppConfig {
 	//
 	// If the struct which the field belongs to defines a `Get<FieldName>Features() []string` method,
 	// then these features will be used to build the editorjs widget.
-	var editorDataTyp = reflect.TypeOf(&EditorJSBlockData{})
-	goldcrest.Register(attrs.HookFormFieldForType, 100,
-		attrs.FormFieldGetter(func(f attrs.Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
-			if field_v.IsValid() && field_v.Type() == editorDataTyp || new_field_t_indirected == editorDataTyp {
-				var instance = f.Instance()
-				var featuresFunc, ok = attrs.Method[func() []string](
-					instance, fmt.Sprintf("Get%sFeatures", f.Name()),
-				)
-				var features []string = nil
-				if ok {
-					features = featuresFunc()
-				}
-				return EditorJSField(features, opts...), true
-			}
-			return nil, false
-		}),
-	)
+	attrs.RegisterFormFieldGetter(&EditorJSBlockData{}, func(f attrs.Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
+		var instance = f.Instance()
+		var featuresFunc, ok = attrs.Method[func() []string](
+			instance, fmt.Sprintf("Get%sFeatures", f.Name()),
+		)
+		var features []string = nil
+		if ok {
+			features = featuresFunc()
+		}
+		return EditorJSField(features, opts...), true
+	})
 
 	staticfiles.AddFS(
 		editorJS_FS,
