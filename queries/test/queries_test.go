@@ -454,6 +454,64 @@ func (t *TestTransaction) FieldDefs() attrs.Definitions {
 	).WithTableName("queries-test_transaction")
 }
 
+type UniqueSource struct {
+	models.Model
+	ID     int64
+	Name   string
+	Target *UniqueTarget
+}
+
+func (u *UniqueSource) UniqueTogether() [][]string {
+	return [][]string{{"Name"}}
+}
+
+func (u *UniqueSource) FieldDefs() attrs.Definitions {
+	return u.Model.Define(u,
+		attrs.NewField(u, "ID", &attrs.FieldConfig{
+			Column:  "id",
+			Primary: true,
+		}),
+		attrs.NewField(u, "Name", &attrs.FieldConfig{
+			Column:    "name",
+			MaxLength: 100,
+			Attributes: map[string]any{
+				attrs.AttrUniqueKey: true,
+			},
+		}),
+		attrs.NewField(u, "Target", &attrs.FieldConfig{
+			Null:          true,
+			Column:        "target_id",
+			RelForeignKey: attrs.Relate(&UniqueTarget{}, "", nil),
+		}),
+	).WithTableName("queries-unique_source")
+}
+
+type UniqueTarget struct {
+	models.Model
+	ID   int64
+	Name string
+}
+
+func (u *UniqueTarget) UniqueTogether() [][]string {
+	return [][]string{{"Name"}}
+}
+
+func (u *UniqueTarget) FieldDefs() attrs.Definitions {
+	return u.Model.Define(u,
+		attrs.NewField(u, "ID", &attrs.FieldConfig{
+			Column:  "id",
+			Primary: true,
+		}),
+		attrs.NewField(u, "Name", &attrs.FieldConfig{
+			Column:    "name",
+			MaxLength: 100,
+			Attributes: map[string]any{
+				attrs.AttrUniqueKey: true,
+			},
+		}),
+	).WithTableName("queries-unique_target")
+}
+
 func init() {
 
 	// create tables
@@ -477,6 +535,9 @@ func init() {
 		&Book{},
 
 		&TestTransaction{},
+
+		&UniqueTarget{},
+		&UniqueSource{},
 	)
 
 	// Reset the definitions to ensure all models are registered

@@ -46,7 +46,7 @@ type queryWrapper[T stdlibQuerier] struct {
 func (d *queryWrapper[T]) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
 	var res, err = d.conn.QueryContext(ctx, query, args...)
 	LogSQL(ctx, "sql.DB", err, query, args...)
-	return res, databaseError(d.d, err)
+	return &sqlRowsWrapper{Rows: res, d: d.d}, databaseError(d.d, err)
 }
 
 func (d *queryWrapper[T]) QueryRowContext(ctx context.Context, query string, args ...any) SQLRow {
@@ -114,4 +114,23 @@ type sqlRowWrapper struct {
 
 func (r *sqlRowWrapper) Err() error {
 	return databaseError(r.d, r.Row.Err())
+}
+
+type sqlRowsWrapper struct {
+	*sql.Rows
+	d *Driver
+}
+
+func (r *sqlRowsWrapper) Scan(dest ...any) error {
+	if err := r.Rows.Scan(dest...); err != nil {
+		return databaseError(r.d, err)
+	}
+	return nil
+}
+
+func (r *sqlRowsWrapper) Err() error {
+	if err := r.Rows.Err(); err != nil {
+		return databaseError(r.d, err)
+	}
+	return nil
 }

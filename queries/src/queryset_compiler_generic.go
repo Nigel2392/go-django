@@ -772,7 +772,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 
 					result = append(result, []interface{}{*id})
 				}
-				return result, nil
+				return result, rows.Err()
 
 			case drivers.SupportsReturningColumns:
 
@@ -805,7 +805,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 					results = append(results, result)
 				}
 
-				return results, nil
+				return results, rows.Err()
 
 			case drivers.SupportsReturningNone:
 				_, err = g.DB().ExecContext(ctx, query, args...)
