@@ -125,9 +125,9 @@ func ValidateCharacters(isRegister bool, flags PasswordCharacterFlag) func(field
 			}
 			var pw, ok = i.(string)
 			if !ok {
-				var password, ok = i.(PasswordString)
+				var password, ok = i.(*Password)
 				if ok {
-					pw = string(password)
+					pw = string(password.Raw)
 					goto validate
 				}
 				return errs.ErrInvalidType

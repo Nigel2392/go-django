@@ -31,7 +31,14 @@ func updateNodes(ctx context.Context, nodes []*PageNode) error {
 }
 
 func updateDescendantPaths(ctx context.Context, oldUrlPath, newUrlPath, pageNodePath string, id int64) error {
-	var updated, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+	//Annotate(
+	//	"ChildCount",
+	//	expr.COUNT(queries.GetQuerySet(&PageNode{}).
+	//		Filter("Path__startswith", pageNodePath).
+	//		Filter("Depth__gt", expr.Logical(expr.LENGTH(expr.V(pageNodePath))).ADD(expr.V(1, true)))),
+	//).
+
+	var _, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
 		Select("UrlPath").
 		Filter(
 			expr.Expr("Path", expr.LOOKUP_STARTSWITH, pageNodePath),
@@ -49,13 +56,13 @@ func updateDescendantPaths(ctx context.Context, oldUrlPath, newUrlPath, pageNode
 				),
 			),
 		)
-	if err != nil {
+	if err != nil && !errors.Is(err, errors.NoChanges) {
 		return fmt.Errorf("failed to update descendant paths: %w", err)
 	}
-	if updated == 0 {
-		return errors.New(errors.CodeNoChanges, "no descendant paths were updated")
-	}
-	return err
+	//if updated == 0 {
+	//	return errors.New(errors.CodeNoChanges, "no descendant paths were updated")
+	//}
+	return nil
 }
 
 func incrementNumChild(ctx context.Context, id int64) (*PageNode, error) {

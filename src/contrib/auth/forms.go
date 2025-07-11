@@ -311,8 +311,8 @@ func (f *BaseUserForm) Save() (*User, error) {
 		f.Instance.LastName = cleaned["lastName"].(string)
 	}
 
-	var pw = cleaned["password"].(PasswordString)
-	f.Instance.SetPassword(string(pw))
+	var pw = cleaned["password"].(*Password)
+	f.Instance.Password = pw
 
 	f.Instance.IsActive = !f.config.IsInactive
 	f.Instance.IsAdministrator = false
@@ -362,7 +362,7 @@ func (f *BaseUserForm) Login() error {
 	}
 
 	var user = userRow.Object
-	if err := CheckPassword(user, string(cleaned["password"].(PasswordString))); err != nil {
+	if err := CheckPassword(user, string(cleaned["password"].(*Password).Raw)); err != nil {
 		return autherrors.ErrGenericAuthFail
 	}
 

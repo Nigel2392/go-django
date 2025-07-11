@@ -150,7 +150,7 @@ func NewField(forModel attrs.Definer, name string, cnf ...FieldConfig) *Field {
 				fieldV.Set(reflect.Zero(structFieldType))
 				return nil
 			}
-			fieldV.Set(v.Elem())
+			fieldV.Set(v)
 			return nil
 		}
 		setters.direct = func(f *Field, v reflect.Value) error {
@@ -194,13 +194,19 @@ func (f *Field) setupInitialVal() {
 		ok   bool
 	)
 	switch {
-	case f.fieldV.Kind() == reflect.Pointer && !f.fieldV.IsNil():
-		data, ok = f.fieldV.Interface().(*EditorJSBlockData)
+	case f.fieldV.Kind() == reflect.Pointer: // && !f.fieldV.IsNil():
+		// data, ok = f.fieldV.Interface().(*EditorJSBlockData)
+		if f.fieldV.IsNil() {
+			f.fieldV = reflect.NewAt(_BLOCK_DATA_TYPE, f.fieldV.UnsafePointer())
+			data, ok = f.fieldV.Interface().(*EditorJSBlockData)
+		} else {
+			data, ok = f.fieldV.Interface().(*EditorJSBlockData)
+		}
 	case f.fieldV.Kind() == reflect.Struct:
 		data, ok = f.fieldV.Addr().Interface().(*EditorJSBlockData)
 	}
 	if !ok {
-		panic(fmt.Errorf("Field %s in model %T is not of type *EditorJSBlockData", f.name, f.instance))
+		panic(fmt.Errorf("Field %s in model %T is not of type *EditorJSBlockData: %T", f.name, f.instance, f.fieldV.Interface()))
 	}
 
 	if data != nil {

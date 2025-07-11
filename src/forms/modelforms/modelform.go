@@ -226,16 +226,22 @@ func (f *BaseModelForm[T]) Load() {
 	}
 
 	var initialData = make(map[string]interface{})
+	var fieldDefs = model.FieldDefs()
 	if !f.modelIsNil(model) {
 		for _, def := range f.InstanceFields {
 			var n = def.Name()
 			if !def.AllowEdit() {
 				continue
 			}
+
 			if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, n) {
 				continue
 			}
-			initialData[n] = attrs.Get[any](model, n)
+
+			var field, ok = fieldDefs.Field(n)
+			assert.True(ok, "Field %q not found in %T", n, model)
+
+			initialData[n] = field.GetValue()
 		}
 	} else {
 		for _, def := range f.Definition.Fields() {
@@ -243,10 +249,15 @@ func (f *BaseModelForm[T]) Load() {
 			if !def.AllowEdit() {
 				continue
 			}
+
 			if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, n) {
 				continue
 			}
-			initialData[n] = def.GetDefault()
+
+			var field, ok = fieldDefs.Field(n)
+			assert.True(ok, "Field %q not found in %T", n, model)
+
+			initialData[n] = field.GetDefault()
 		}
 	}
 

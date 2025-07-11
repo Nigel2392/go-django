@@ -3,9 +3,10 @@ package auth
 import (
 	"net/http"
 
-	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/Nigel2392/mux/middleware/sessions"
@@ -45,11 +46,16 @@ func UserFromRequest(r *http.Request) *User {
 	if !ok {
 		return UnAuthenticatedUser()
 	}
-	var userRow, err = queries.GetQuerySet(&User{}).
-		Preload("Groups", "Permissions", "Groups.Permissions").
+	var userRow, err = GetUserQuerySet().
+		WithContext(r.Context()).
+		Select("*").
+		Preload("Permissions", "Groups", "Groups.Permissions").
 		Filter("ID", uidInt).
 		Get()
 	if err != nil {
+		if !errors.Is(err, errors.NoRows) {
+			logger.Errorf("Failed to get user from session: %v", err)
+		}
 		return UnAuthenticatedUser()
 	}
 

@@ -22,7 +22,6 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
-	"github.com/Nigel2392/go-django/src/models"
 
 	// auditlogs_mysql "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/audit_logs_mysql"
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
@@ -54,7 +53,7 @@ func main() {
 			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
 			migrator.APPVAR_MIGRATION_DIR: "./.private/migrations-blogapp",
 
-			// django.APPVAR_RECOVERER:       false,
+			django.APPVAR_RECOVERER: false,
 		}),
 		django.AppLogger(&logger.Logger{
 			Level:       logger.DBG,
@@ -114,11 +113,14 @@ func main() {
 	user.Email = (*drivers.Email)(e)
 	user.Username = "admin"
 	user.IsAdministrator = true
-	user.SetPassword("Administrator123")
+	user.IsActive = true
+	user.SetPassword("Administrator123!")
 
-	if _, err := models.SaveModel(context.Background(), user); err != nil {
+	if user, _, err = queries.GetQuerySet(&auth.User{}).Filter("Email", e.Address).GetOrCreate(user); err != nil {
 		panic(fmt.Errorf("failed to create admin user: %w", err))
 	}
+
+	fmt.Println("Admin user created:", user.ID, user.Username, user.Email, user.IsAdministrator, user.IsActive)
 
 	if len(os.Args) == 1 {
 		blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()

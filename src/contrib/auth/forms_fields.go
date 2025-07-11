@@ -8,17 +8,15 @@ import (
 
 var _ (fields.Field) = (*PasswordField)(nil)
 
-type PasswordString string
-
 type PasswordField struct {
 	*fields.BaseField
-	Validators []func(PasswordString) error
+	Validators []func(*Password) error
 }
 
-func PasswordValidators(fn ...func(PasswordString) error) func(*PasswordField) {
+func PasswordValidators(fn ...func(*Password) error) func(*PasswordField) {
 	return func(p *PasswordField) {
 		if p.Validators == nil {
-			p.Validators = make([]func(PasswordString) error, 0)
+			p.Validators = make([]func(*Password) error, 0)
 		}
 		p.Validators = append(p.Validators, fn...)
 	}
@@ -66,6 +64,23 @@ func NewPasswordField(config PasswordFieldOptions, opts ...func(fields.Field)) *
 	return p
 }
 
+func (p *PasswordField) ValueToForm(value interface{}) interface{} {
+	var val, ok = value.(*Password)
+	if !ok {
+		return nil
+	}
+
+	if val.IsZero() {
+		return ""
+	}
+
+	if val.Hash != "" {
+		return val.Hash
+	}
+
+	return val.Raw
+}
+
 func (p *PasswordField) Clean(value interface{}) (interface{}, error) {
 	var val, ok = value.(string)
 	if !ok {
@@ -78,7 +93,7 @@ func (p *PasswordField) Clean(value interface{}) (interface{}, error) {
 		return nil, nil
 	}
 
-	var pw = PasswordString(val)
+	var pw = NewPassword(val)
 
 	for _, v := range p.Validators {
 		if err := v(pw); err != nil {

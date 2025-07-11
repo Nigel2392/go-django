@@ -886,6 +886,13 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 			continue
 		}
 
+		if attrs.IsEmbeddedField(head.Value) {
+			// if the field is an embedded field, we skip it
+			// as it is not a field that can be saved directly
+			// and it will be handled by the parent model.
+			continue
+		}
+
 		if err := head.Value.Validate(); err != nil {
 			return fmt.Errorf(
 				"failed to validate field %s in model %T: %w",

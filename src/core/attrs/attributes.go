@@ -208,6 +208,8 @@ func Get[T any](d Definer, name string) T {
 		return t
 	case *T:
 		return *t
+	case nil:
+		return *(new(T))
 	default:
 		assert.Fail(
 			"get (%T): field %q is not of type %T",

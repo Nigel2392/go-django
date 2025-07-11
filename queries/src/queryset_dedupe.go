@@ -290,7 +290,7 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 	var seenObj = r.seen[preloadPath]
 	if seenObj == nil {
 		return errors.ValueError.WithCause(fmt.Errorf(
-			"QuerySet.All: no primary key map for preload %q", preload.FieldName,
+			"QuerySet.All: no primary key map for preload %q in %v", preload.FieldName, r.seen,
 		))
 	}
 
@@ -427,6 +427,15 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 		rowsMap: make(map[any][]*Row[attrs.Definer], len(preloadObjects)),
 	}
 
+	var seenM, ok = r.seen[preload.Path]
+	if !ok {
+		seenM = &seenObject{
+			pks:     make([]any, 0, 1),
+			objects: make(map[any]*object, 0),
+		}
+		r.seen[preload.Path] = seenM
+	}
+
 	for _, row := range preloadObjects {
 		var (
 			rowDefs    = row.Object.FieldDefs()
@@ -503,15 +512,6 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 				"QuerySet.All: no parent object found for preload %q with primary key %v (%T) in %v",
 				preload.FieldName, sourceVal, sourceVal, seenObj.objects,
 			))
-		}
-
-		var seenM, ok = r.seen[preload.Path]
-		if !ok {
-			seenM = &seenObject{
-				pks:     make([]any, 0, 1),
-				objects: make(map[any]*object, 0),
-			}
-			r.seen[preload.Path] = seenM
 		}
 
 		var obj = &object{

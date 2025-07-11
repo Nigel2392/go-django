@@ -324,15 +324,15 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 			return nil
 		}
 		var (
-			password1 = password1Int.(PasswordString)
-			password2 = password2Int.(PasswordString)
+			password1 = password1Int.(*Password)
+			password2 = password2Int.(*Password)
 		)
-		if password1 != "" && password2 != "" && password1 != password2 {
+		if password1.Raw != "" && password2.Raw != "" && password1.Raw != password2.Raw {
 			return []error{autherrors.ErrPwdNoMatch}
-		} else if password1 != "" && password2 != "" && password1 == password2 {
+		} else if password1.Raw != "" && password2.Raw != "" && password1.Raw == password2.Raw {
 			var fake = *(instance.(*User))
-			fake.SetPassword(string(password1))
-			cleaned["Password"] = string(fake.Password.String())
+			fake.SetPassword(string(password1.Raw))
+			cleaned["Password"] = fake.Password
 		}
 		return nil
 	})

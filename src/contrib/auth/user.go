@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 	django_models "github.com/Nigel2392/go-django/src/models"
 )
 
@@ -91,7 +92,7 @@ func (u *User) BeforeCreate(ctx context.Context) error {
 func (u *User) BeforeSave(ctx context.Context) error {
 
 	if u.Password.IsZero() {
-		return errors.ValueError.Wrap("password cannot be empty")
+		return errors.ValueError.Wrapf("password cannot be empty: %+v", u.Password)
 	}
 
 	u.UpdatedAt = drivers.CurrentDateTime()
@@ -109,6 +110,7 @@ func (u *User) Fields() []any {
 			Column:    "email",
 			MaxLength: 255,
 			MinLength: 3,
+			FormField: fields.EmailField,
 		}),
 		attrs.Unbound("Username", &attrs.FieldConfig{
 			Column:    "username",
