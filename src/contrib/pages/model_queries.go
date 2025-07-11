@@ -340,7 +340,14 @@ func (qs *PageQuerySet) insertNode(node *PageNode) (int64, error) {
 
 func (qs *PageQuerySet) updateNode(node *PageNode) error {
 	qs = qs.Reset()
-	var updated, err = qs.
+
+	transaction, err := qs.GetOrCreateTransaction()
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer transaction.Rollback(qs.Context())
+
+	updated, err := qs.
 		Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt").
 		Filter("PK", node.PK).
 		ExplicitSave().
@@ -348,15 +355,29 @@ func (qs *PageQuerySet) updateNode(node *PageNode) error {
 	if err != nil {
 		return err
 	}
+
 	if updated == 0 {
-		return errors.NoChanges
+		// still commit the transaction as opposed to rolling it back
+		// some databases might have issues reporting back the amount of updated rows
+		return errors.Join(
+			errors.NoChanges,
+			transaction.Commit(qs.Context()),
+		)
 	}
-	return nil
+
+	return transaction.Commit(qs.Context())
 }
 
 func (qs *PageQuerySet) updateNodePathAndDepth(path string, depth int64, iD int64) error {
 	qs = qs.Reset()
-	var updated, err = qs.
+
+	transaction, err := qs.GetOrCreateTransaction()
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer transaction.Rollback(qs.Context())
+
+	updated, err := qs.
 		Select("Path", "Depth").
 		Filter("PK", iD).
 		ExplicitSave().
@@ -369,15 +390,29 @@ func (qs *PageQuerySet) updateNodePathAndDepth(path string, depth int64, iD int6
 	if err != nil {
 		return err
 	}
+
 	if updated == 0 {
-		return errors.NoChanges
+		// still commit the transaction as opposed to rolling it back
+		// some databases might have issues reporting back the amount of updated rows
+		return errors.Join(
+			errors.NoChanges,
+			transaction.Commit(qs.Context()),
+		)
 	}
-	return nil
+
+	return transaction.Commit(qs.Context())
 }
 
 func (qs *PageQuerySet) updateNodeStatusFlags(statusFlags int64, iD int64) error {
 	qs = qs.Reset()
-	var updated, err = qs.
+
+	transaction, err := qs.GetOrCreateTransaction()
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer transaction.Rollback(qs.Context())
+
+	updated, err := qs.
 		Select("StatusFlags").
 		Filter("PK", iD).
 		ExplicitSave().
@@ -390,8 +425,15 @@ func (qs *PageQuerySet) updateNodeStatusFlags(statusFlags int64, iD int64) error
 	if err != nil {
 		return err
 	}
+
 	if updated == 0 {
-		return errors.NoChanges
+		// still commit the transaction as opposed to rolling it back
+		// some databases might have issues reporting back the amount of updated rows
+		return errors.Join(
+			errors.NoChanges,
+			transaction.Commit(qs.Context()),
+		)
 	}
-	return nil
+
+	return transaction.Commit(qs.Context())
 }

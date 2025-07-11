@@ -29,3 +29,8 @@ type CanTargetDefiner interface {
 	TargetContentTypeField() attrs.FieldDefinition
 	TargetPrimaryField() attrs.FieldDefinition
 }
+
+type CanControlSaving interface {
+	attrs.Definer
+	ControlsEmbedderSaving() bool
+}

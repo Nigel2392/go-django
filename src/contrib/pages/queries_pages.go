@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	django_models "github.com/Nigel2392/go-django/src/models"
 	"github.com/pkg/errors"
@@ -23,7 +22,7 @@ func SavePage(ctx context.Context, parent *PageNode, p SaveablePage) error {
 		return UpdatePage(ctx, p)
 	}
 
-	var querySet = queries.GetQuerySet(&PageNode{}).WithContext(ctx)
+	var querySet = NewPageQuerySet().WithContext(ctx)
 	var transaction, err = querySet.GetOrCreateTransaction()
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
@@ -92,14 +91,12 @@ func SavePage(ctx context.Context, parent *PageNode, p SaveablePage) error {
 		)
 	}
 
-	var qs = NewPageQuerySet().WithContext(ctx)
-
 	if ref.Path == "" {
-		err = qs.CreateChildNode(
+		err = querySet.CreateChildNode(
 			parent, ref,
 		)
 	} else {
-		err = qs.UpdateNode(
+		err = querySet.UpdateNode(
 			ref,
 		)
 	}
@@ -131,18 +128,23 @@ func UpdatePage(ctx context.Context, p SaveablePage) error {
 	}
 
 	var qs = NewPageQuerySet().WithContext(ctx)
+	var tx, err = qs.GetOrCreateTransaction()
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+
+	defer tx.Rollback(qs.Context())
+
 	if err := qs.UpdateNode(ref); err != nil {
 		return err
 	}
 
-	var saved, err = django_models.SaveModel(ctx, p)
+	err = p.Save(ctx)
 	if err != nil {
 		return err
 	}
-	if !saved {
-		return fmt.Errorf("page %T could not be saved", p)
-	}
-	return nil
+
+	return tx.Commit(qs.Context())
 }
 
 // DeletePage deletes a page object from the database.
@@ -150,19 +152,25 @@ func UpdatePage(ctx context.Context, p SaveablePage) error {
 // It calls page.Delete() to delete the custom page object after the reference node is deleted.
 //
 // FixTree is called after the page is deleted to ensure the tree is in a consistent state.
-func DeletePage(ctx context.Context, p DeletablePage) (err error) {
+func DeletePage(ctx context.Context, p DeletablePage) error {
 	var ref = p.Reference()
 	if ref.PK == 0 {
 		return fmt.Errorf("page id must not be zero")
 	}
 
 	var qs = NewPageQuerySet().WithContext(ctx)
+	var tx, err = qs.GetOrCreateTransaction()
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer tx.Rollback(qs.Context())
+
 	if err = qs.DeleteNode(ref); err != nil {
 		return err
 	}
 
 	var deleted bool
-	deleted, err = django_models.DeleteModel(ctx, p)
+	deleted, err = django_models.DeleteModel(qs.Context(), p)
 	if err != nil {
 		return err
 	}
@@ -171,5 +179,9 @@ func DeletePage(ctx context.Context, p DeletablePage) (err error) {
 		return fmt.Errorf("page %T could not be deleted", p)
 	}
 
-	return FixTree(ctx)
+	if err = FixTree(qs.Context()); err != nil {
+		return errors.Wrap(err, "failed to fix tree after page deletion")
+	}
+
+	return tx.Commit(qs.Context())
 }

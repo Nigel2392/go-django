@@ -128,6 +128,42 @@ func (f *proxyField) IsProxy() bool {
 	return true
 }
 
+func (f *proxyField) GenerateTargetClause(qs *queries.QuerySet[attrs.Definer], inter *queries.QuerySetInternals, lhs queries.ClauseTarget, rhs queries.ClauseTarget) queries.JoinDef {
+	if f.cnf == nil || f.cnf.Proxy == nil {
+		panic("ProxyFieldConfig.Proxy must not be nil")
+	}
+	f.setupRelatedFields()
+	var sourceType = contenttypes.NewContentType(f.obj)
+	var cond = queries.JoinDefCondition{
+		ConditionA: expr.TableColumn{
+			TableOrAlias: lhs.Table.Alias,
+			FieldColumn:  f.GetSourcePrimary(),
+		},
+		Operator: expr.EQ,
+		ConditionB: expr.TableColumn{
+			TableOrAlias: rhs.Table.Alias,
+			FieldColumn:  f.LinkedPrimaryField(),
+		},
+		Next: &queries.JoinDefCondition{
+			ConditionA: expr.TableColumn{
+				TableOrAlias: rhs.Table.Alias,
+				FieldColumn:  f.LinkedCTypeField(),
+			},
+			Operator: expr.EQ,
+			ConditionB: expr.TableColumn{
+				RawSQL: "?",
+				Values: []any{sourceType.TypeName()},
+			},
+		},
+	}
+
+	return queries.JoinDef{
+		Table:            rhs.Table,
+		TypeJoin:         queries.TypeJoinInner,
+		JoinDefCondition: &cond,
+	}
+}
+
 func (f *proxyField) Save(ctx context.Context, parent attrs.Definer) error {
 
 	var proxyObject = f.GetValue()
@@ -185,40 +221,4 @@ func (f *proxyField) Save(ctx context.Context, parent attrs.Definer) error {
 	}
 
 	return saver.Save(ctx)
-}
-
-func (f *proxyField) GenerateTargetClause(qs *queries.QuerySet[attrs.Definer], inter *queries.QuerySetInternals, lhs queries.ClauseTarget, rhs queries.ClauseTarget) queries.JoinDef {
-	if f.cnf == nil || f.cnf.Proxy == nil {
-		panic("ProxyFieldConfig.Proxy must not be nil")
-	}
-	f.setupRelatedFields()
-	var sourceType = contenttypes.NewContentType(f.obj)
-	var cond = queries.JoinDefCondition{
-		ConditionA: expr.TableColumn{
-			TableOrAlias: lhs.Table.Alias,
-			FieldColumn:  f.GetSourcePrimary(),
-		},
-		Operator: expr.EQ,
-		ConditionB: expr.TableColumn{
-			TableOrAlias: rhs.Table.Alias,
-			FieldColumn:  f.LinkedPrimaryField(),
-		},
-		Next: &queries.JoinDefCondition{
-			ConditionA: expr.TableColumn{
-				TableOrAlias: rhs.Table.Alias,
-				FieldColumn:  f.LinkedCTypeField(),
-			},
-			Operator: expr.EQ,
-			ConditionB: expr.TableColumn{
-				RawSQL: "?",
-				Values: []any{sourceType.TypeName()},
-			},
-		},
-	}
-
-	return queries.JoinDef{
-		Table:            rhs.Table,
-		TypeJoin:         queries.TypeJoinInner,
-		JoinDefCondition: &cond,
-	}
 }

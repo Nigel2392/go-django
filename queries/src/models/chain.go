@@ -54,6 +54,10 @@ type BaseModelProxy struct {
 	// is pointing to.
 	targetFieldName string
 
+	// controlsSaving indicates whether the proxy
+	// should control the saving of the target object.
+	controlsSaving bool
+
 	// the previous model in the chain, if any
 	prev *BaseModelInfo
 	// the next model in the chain, if any
@@ -144,6 +148,7 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 			var (
 				ctypeFieldName  = field.Tag.Get("ctype")
 				targetFieldName = field.Tag.Get("target")
+				controlsSave    = false
 			)
 
 			if (ctypeFieldName == "" || targetFieldName == "") && field.Type.Implements(reflect.TypeOf((*CanTargetDefiner)(nil)).Elem()) {
@@ -153,12 +158,18 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 				targetFieldName = newTargetDefiner.TargetPrimaryField().Name()
 			}
 
+			if field.Type.Implements(reflect.TypeOf((*CanControlSaving)(nil)).Elem()) {
+				var newControlSaver = reflect.New(field.Type.Elem()).Interface().(CanControlSaving)
+				controlsSave = newControlSaver.ControlsEmbedderSaving()
+			}
+
 			base.proxies = append(base.proxies, &BaseModelProxy{
 				prev:            base,
 				rootField:       &field,
 				directField:     &field,
 				cTypeFieldName:  ctypeFieldName,
 				targetFieldName: targetFieldName,
+				controlsSaving:  controlsSave,
 				next:            buildModelChain(field.Type),
 			})
 
@@ -206,12 +217,18 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 						var (
 							ctypeFieldName  = subField.Tag.Get("ctype")
 							targetFieldName = subField.Tag.Get("target")
+							controlsSave    = false
 						)
 
 						if (ctypeFieldName == "" || targetFieldName == "") && subField.Type.Implements(reflect.TypeOf((*CanTargetDefiner)(nil)).Elem()) {
 							var newTargetDefiner = reflect.New(subField.Type.Elem()).Interface().(CanTargetDefiner)
 							ctypeFieldName = newTargetDefiner.TargetContentTypeField().Name()
 							targetFieldName = newTargetDefiner.TargetPrimaryField().Name()
+						}
+
+						if field.Type.Implements(reflect.TypeOf((*CanControlSaving)(nil)).Elem()) {
+							var newControlSaver = reflect.New(subField.Type.Elem()).Interface().(CanControlSaving)
+							controlsSave = newControlSaver.ControlsEmbedderSaving()
 						}
 
 						field.Index = append(field.Index, subField.Index...)
@@ -221,6 +238,7 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 							prev:            base,
 							cTypeFieldName:  ctypeFieldName,
 							targetFieldName: targetFieldName,
+							controlsSaving:  controlsSave,
 							next:            buildModelChain(subField.Type),
 						})
 						break structLoop

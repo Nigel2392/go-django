@@ -37,6 +37,12 @@ func (qs *PageQuerySet) AddRoot(node *PageNode) error {
 		return fmt.Errorf("node path must be empty")
 	}
 
+	transaction, err := qs.GetOrCreateTransaction()
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer transaction.Rollback(qs.Context())
+
 	previousRootNodeCount, err := qs.CountRootNodes(StatusFlagNone)
 	if err != nil {
 		return err
@@ -56,6 +62,10 @@ func (qs *PageQuerySet) AddRoot(node *PageNode) error {
 	}
 
 	node.PK = id
+
+	if err = transaction.Commit(qs.Context()); err != nil {
+		return errors.Wrap(err, "failed to commit transaction")
+	}
 
 	return SignalRootCreated.Send(&PageNodeSignal{
 		BaseSignal: BaseSignal{
@@ -153,7 +163,13 @@ func (qs *PageQuerySet) UpdateNode(node *PageNode) error {
 		return fmt.Errorf("node title must not be empty")
 	}
 
-	var oldRecord, err = qs.GetNodeByID(node.PK)
+	transaction, err := qs.GetOrCreateTransaction()
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer transaction.Rollback(qs.Context())
+
+	oldRecord, err := qs.GetNodeByID(node.PK)
 	if err != nil {
 		return errors.Wrapf(err, "failed to retrieve old record with PK %d", node.PK)
 	}
@@ -184,6 +200,10 @@ func (qs *PageQuerySet) UpdateNode(node *PageNode) error {
 	)
 	if err != nil {
 		return errors.Wrap(err, "failed to update node")
+	}
+
+	if err = transaction.Commit(qs.Context()); err != nil {
+		return errors.Wrap(err, "failed to commit transaction")
 	}
 
 	return SignalNodeUpdated.Send(&PageNodeSignal{
@@ -250,7 +270,13 @@ func (qs *PageQuerySet) DeleteNode(node *PageNode) error { //, newParent *PageNo
 		return qs.DeleteRootNode(node)
 	}
 
-	var parentPath, err = ancestorPath(
+	var tx, err = qs.GetOrCreateTransaction()
+	if err != nil {
+		return errors.Wrap(err, "failed to start transaction")
+	}
+	defer tx.Rollback(qs.Context())
+
+	parentPath, err := ancestorPath(
 		node.Path, 1,
 	)
 	if err != nil {
@@ -263,12 +289,6 @@ func (qs *PageQuerySet) DeleteNode(node *PageNode) error { //, newParent *PageNo
 	if err != nil {
 		return err
 	}
-
-	tx, err := qs.GetOrCreateTransaction()
-	if err != nil {
-		return errors.Wrap(err, "failed to start transaction")
-	}
-	defer tx.Rollback(qs.Context())
 
 	var descendants []*PageNode
 	descendants, err = qs.GetDescendants(
