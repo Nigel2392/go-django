@@ -41,6 +41,7 @@ type FieldConfig struct {
 	Blank                bool                                                // Whether the field allows blank values
 	ReadOnly             bool                                                // Whether the field is read-only
 	Primary              bool                                                // Whether the field is a primary key
+	Embedded             bool                                                // Whether the field is an embedded field
 	NameOverride         string                                              // An optional override for the field name
 	Label                string                                              // The label for the field
 	HelpText             string                                              // The help text for the field
@@ -62,7 +63,6 @@ type FieldConfig struct {
 	Setter               func(Definer, interface{}) error                    // A custom setter for the field
 	Getter               func(Definer) (interface{}, bool)                   // A custom getter for the field
 	OnInit               func(Definer, *FieldDef, *FieldConfig) *FieldConfig // A function that is called when the field is initialized
-	Embedded             bool
 }
 
 type FieldDef struct {

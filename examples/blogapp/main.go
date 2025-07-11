@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"net/http"
@@ -22,6 +23,8 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+	"github.com/Nigel2392/mux"
+	"github.com/google/uuid"
 
 	// auditlogs_mysql "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs/audit_logs_mysql"
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
@@ -38,7 +41,7 @@ import (
 )
 
 func main() {
-	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/db.blogapp.sqlite3")
+	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/blogapp/db.sqlite3")
 	if err != nil {
 		panic(err)
 	}
@@ -51,9 +54,9 @@ func main() {
 			django.APPVAR_PORT:            "8080",
 			django.APPVAR_DATABASE:        db,
 			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
-			migrator.APPVAR_MIGRATION_DIR: "./.private/migrations-blogapp",
+			migrator.APPVAR_MIGRATION_DIR: "./.private/blogapp/migrations",
 
-			django.APPVAR_RECOVERER: false,
+			// django.APPVAR_RECOVERER: false,
 		}),
 		django.AppLogger(&logger.Logger{
 			Level:       logger.DBG,
@@ -99,6 +102,33 @@ func main() {
 		http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
 	)), "pages")
 
+	// Register a route for chrome devtools
+	// This is used to allow Chrome DevTools to connect to the app for debugging.
+	// It serves a JSON file at /.well-known/appspecific/com.chrome.devtools.json
+	// The file contains the workspace root and a UUID for the devtools session.
+	// This allows for directly editing files in the app's directory from Chrome DevTools.
+	//
+	// Kinda cool? Yes. Useless? For sure.
+	var devToolsID = uuid.NewString()
+	app.Mux.Any("/.well-known/appspecific/com.chrome.devtools.json", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+
+		var wd, _ = os.Getwd()
+		var devtools = map[string]map[string]string{
+			"workspace": {
+				"root": wd,
+				"uuid": devToolsID,
+			},
+		}
+
+		if err := json.NewEncoder(w).Encode(devtools); err != nil {
+			logger.Errorf("Failed to encode devtools file: %v", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+			return
+		}
+	}))
+
 	// logger.SetLevel(
 	// logger.ERR,
 	// )
@@ -120,7 +150,7 @@ func main() {
 		panic(fmt.Errorf("failed to create admin user: %w", err))
 	}
 
-	fmt.Println("Admin user created:", user.ID, user.Username, user.Email, user.IsAdministrator, user.IsActive)
+	logger.Info("Admin user created:", user.ID, user.Username, user.Email, user.IsAdministrator, user.IsActive)
 
 	if len(os.Args) == 1 {
 		blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()

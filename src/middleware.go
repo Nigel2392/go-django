@@ -13,40 +13,50 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
-type loggingEnabledKey string
+type staticRouteKey struct{}
 
 var DEFAULT_LOGGING_ENABLED = true
 var method_color = []string{logger.CMD_Cyan, logger.CMD_Bold}
-var logKey loggingEnabledKey = "logging"
 
-func LoggingEnabled(r *http.Request) bool {
-	var enabled = r.Context().Value(logKey)
-	if enabled == nil {
-		return DEFAULT_LOGGING_ENABLED
+func IsStaticRoute(r *http.Request) bool {
+	var isStaticRoute = r.Context().Value(staticRouteKey{})
+	if isStaticRoute, ok := isStaticRoute.(*bool); ok {
+		return *isStaticRoute
 	}
-	if enabled, ok := enabled.(*bool); ok {
-		return *enabled
-	}
-	return DEFAULT_LOGGING_ENABLED
+	return false
 }
 
-func LogRequest(r *http.Request, enabled bool) *http.Request {
+func MarkStatic(r *http.Request, isStatic bool) *http.Request {
 	var ctx = r.Context()
-	if v := ctx.Value(logKey); v != nil {
+	if v := ctx.Value(staticRouteKey{}); v != nil {
 		if v, ok := v.(*bool); ok {
-			*v = enabled
+			*v = isStatic
 		}
 		return r
 	}
 
-	ctx = context.WithValue(ctx, logKey, &enabled)
+	ctx = context.WithValue(ctx, staticRouteKey{}, &isStatic)
 	return r.WithContext(ctx)
 }
 
-func LoggingDisabledMiddleware(next mux.Handler) mux.Handler {
+func MarkStaticRouteMiddleware(next mux.Handler) mux.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		next.ServeHTTP(w, LogRequest(r, false))
+		next.ServeHTTP(w, MarkStatic(r, true))
 	})
+}
+
+func NonStaticMiddleware(middleware mux.Middleware) mux.Middleware {
+	return func(next mux.Handler) mux.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if IsStaticRoute(r) {
+				next.ServeHTTP(w, r)
+				return
+			}
+
+			var handler = middleware(next)
+			handler.ServeHTTP(w, r)
+		})
+	}
 }
 
 // loggerMiddleware is a middleware that logs the request method, time taken, remote address and path of the request.
@@ -67,13 +77,12 @@ func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var startTime = time.Now()
 
-		r = LogRequest(r, true)
-
 		next.ServeHTTP(w, r)
 
 		var logLevel = logger.INF
-		if !LoggingEnabled(r) {
+		if IsStaticRoute(r) {
 			logLevel = logger.DBG
+			// return
 		}
 
 		var (

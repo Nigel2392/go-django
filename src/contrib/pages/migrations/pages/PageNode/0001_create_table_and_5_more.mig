@@ -144,6 +144,15 @@
         "name": "",
         "type": "",
         "columns": [
+          "PageID",
+          "ContentType"
+        ],
+        "unique": true
+      },
+      {
+        "name": "",
+        "type": "",
+        "columns": [
           "Slug",
           "Depth"
         ],
@@ -189,6 +198,20 @@
           "columns": [
             "ContentType"
           ]
+        }
+      }
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "",
+          "type": "",
+          "columns": [
+            "PageID",
+            "ContentType"
+          ],
+          "unique": true
         }
       }
     },

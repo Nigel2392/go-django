@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -70,5 +71,7 @@ func UserFromRequestPure(r *http.Request) authentication.User {
 
 // Add a user to a request, if one exists in the session.
 func AddUserMiddleware() mux.Middleware {
-	return authentication.AddUserMiddleware(UserFromRequestPure)
+	return django.NonStaticMiddleware(authentication.AddUserMiddleware(
+		UserFromRequestPure,
+	))
 }

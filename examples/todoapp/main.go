@@ -21,7 +21,7 @@ import (
 )
 
 func main() {
-	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/db.todoapp.sqlite3")
+	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/todoapp/db.sqlite3")
 	if err != nil {
 		panic(err)
 	}
@@ -35,7 +35,7 @@ func main() {
 			django.APPVAR_DATABASE:        db,
 			django.APPVAR_RECOVERER:       false,
 			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
-			migrator.APPVAR_MIGRATION_DIR: "./.private/migrations-todoapp",
+			migrator.APPVAR_MIGRATION_DIR: "./.private/todoapp/migrations",
 		}),
 		django.AppLogger(&logger.Logger{
 			Level:       logger.INF,

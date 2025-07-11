@@ -574,7 +574,7 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 				results = append(results, result)
 			}
 
-			return results, nil
+			return results, rows.Err()
 		},
 	}
 }
@@ -612,7 +612,7 @@ func (g *genericQueryBuilder) BuildCountQuery(
 				}
 				return 0, errors.Wrap(err, "failed to scan row")
 			}
-			return count, nil
+			return count, row.Err()
 		},
 	}
 }
@@ -633,17 +633,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 	)
 
 	if len(objects) == 0 {
-		return &QueryObject[[][]interface{}]{
-			QueryInformation: QueryInformation{
-				Builder: g,
-				Stmt:    "",
-				Object:  model,
-				Params:  nil,
-			},
-			Execute: func(query string, args ...any) ([][]interface{}, error) {
-				return nil, nil
-			},
-		}
+		return ErrorQueryObject[[][]interface{}](model, g.This(), nil)
 	}
 
 	var object = objects[0]

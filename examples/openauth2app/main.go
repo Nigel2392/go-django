@@ -54,7 +54,7 @@ func main() {
 
 	godotenv.Load("./.private/.env")
 
-	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/db.openauth2app.sqlite3")
+	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/openauth2app/db.sqlite3")
 	if err != nil {
 		panic(err)
 	}
@@ -67,7 +67,7 @@ func main() {
 			django.APPVAR_PORT:            "8080",
 			django.APPVAR_DATABASE:        db,
 			django.APPVAR_RECOVERER:       false,
-			migrator.APPVAR_MIGRATION_DIR: "./.private/migrations-openauth2app",
+			migrator.APPVAR_MIGRATION_DIR: "./.private/openauth2app/migrations",
 		}),
 		django.AppLogger(&logger.Logger{
 			Level:       logger.INF,

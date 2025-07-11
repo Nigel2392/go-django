@@ -484,6 +484,10 @@ type Embedder interface {
 	Embedded() bool
 }
 
+// IsEmbeddedField returns true if the field was marked as embedded.
+//
+// This is used to determine if the field is an embedded field in a model, I.E.
+// it belongs to an embedded or proxy model.
 func IsEmbeddedField[T FieldDefinition](f T) bool {
 	if t, ok := any(f).(Embedder); ok {
 		return t.Embedded()

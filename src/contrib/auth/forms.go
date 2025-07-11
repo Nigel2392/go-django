@@ -242,6 +242,11 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 		return nil
 	})
 
+	f.BaseForm.OnInvalidFuncs = append(f.BaseForm.OnInvalidFuncs, func(_ forms.Form) {
+		delete(f.BaseForm.InvalidDefaults, "password")
+		delete(f.BaseForm.InvalidDefaults, "passwordConfirm")
+	})
+
 	return forms.Initialize(f, formOpts...)
 }
 

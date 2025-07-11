@@ -122,15 +122,11 @@ type sqlRowsWrapper struct {
 }
 
 func (r *sqlRowsWrapper) Scan(dest ...any) error {
-	if err := r.Rows.Scan(dest...); err != nil {
-		return databaseError(r.d, err)
-	}
-	return nil
+	err := r.Rows.Scan(dest...)
+	return databaseError(r.d, err)
 }
 
 func (r *sqlRowsWrapper) Err() error {
-	if err := r.Rows.Err(); err != nil {
-		return databaseError(r.d, err)
-	}
-	return nil
+	err := r.Rows.Err()
+	return databaseError(r.d, err)
 }

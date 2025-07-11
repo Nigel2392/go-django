@@ -41,7 +41,9 @@ func NewAppConfig() django.AppConfig {
 	}
 
 	app.Routing = func(m django.Mux) {
-		m.Use(MessagesMiddleware)
+		m.Use(django.NonStaticMiddleware(
+			MessagesMiddleware,
+		))
 	}
 
 	return app

@@ -22,14 +22,6 @@ import (
 	which allows them to be checked for their state and return messages.
 */
 
-//  type (
-//  	TagDatabaseFunc  func(ctx context.Context, args ...any) []Message // *django.Application, drivers.Database
-//  	TagSettingsFunc  func(ctx context.Context, args ...any) []Message // *django.Application, django.Settings
-//  	TagSecurityFunc  func(ctx context.Context, args ...any) []Message // *django.Application, django.Settings
-//  	TagCommandsFunc  func(ctx context.Context, args ...any) []Message // *django.Application, django.AppConfig, []command.Command
-//  	TagModelsFunc    func(ctx context.Context, args ...any) []Message // *django.Application, attrs.Definer
-//  )
-
 type (
 	Type = logger.LogLevel
 

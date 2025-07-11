@@ -79,7 +79,9 @@ func NewAppConfig() django.AppConfig {
 
 	app.Routing = func(m django.Mux) {
 		m.Use(
-			sessions.SessionMiddleware(sessionManager),
+			django.NonStaticMiddleware(
+				sessions.SessionMiddleware(sessionManager),
+			),
 		)
 	}
 

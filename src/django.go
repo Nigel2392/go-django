@@ -544,13 +544,12 @@ func (a *Application) Initialize() error {
 	)
 
 	if staticUrl != "" {
-		a.Mux.Handle(
+		var rt = a.Mux.Handle(
 			mux.GET,
 			fmt.Sprintf("%s*", staticUrl),
-			LoggingDisabledMiddleware(
-				http.StripPrefix(staticUrl, staticfiles.EntryHandler),
-			),
+			http.StripPrefix(staticUrl, staticfiles.EntryHandler),
 		)
+		rt.Preprocess(MarkStaticRouteMiddleware)
 	}
 
 	tpl.Processors(func(val any) {
