@@ -644,9 +644,14 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 	query.WriteString(g.quote)
 	query.WriteString(" (")
 
+	var primaryIncluded bool
 	for i, field := range object.Fields {
 		if i > 0 {
 			query.WriteString(", ")
+		}
+
+		if field.IsPrimary() {
+			primaryIncluded = true
 		}
 
 		query.WriteString(g.quote)
@@ -692,7 +697,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 		query.WriteString(" RETURNING ")
 
 		var written = false
-		if internals.Model.Primary != nil {
+		if internals.Model.Primary != nil && !primaryIncluded {
 			query.WriteString(g.quote)
 			query.WriteString(
 				internals.Model.Primary.ColumnName(),
@@ -721,7 +726,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 	if len(objects) > 0 {
 		fieldLen = len(objects[0].Fields)
 	}
-	if internals.Model.Primary != nil {
+	if internals.Model.Primary != nil && !primaryIncluded {
 		fieldLen++
 	}
 

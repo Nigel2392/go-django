@@ -51,6 +51,7 @@ type GitHubUser struct {
 }
 
 func main() {
+	os.MkdirAll("./.private/openauth2app", 0755)
 
 	godotenv.Load("./.private/.env")
 

@@ -1852,6 +1852,9 @@ func (qs *QuerySet[T]) Reverse() *QuerySet[T] {
 
 // Limit is used to limit the number of results returned by a query.
 func (qs *QuerySet[T]) Limit(n int) *QuerySet[T] {
+	if n <= 0 {
+		return qs
+	}
 	var nqs = qs.clone()
 	nqs.internals.Limit = n
 	return nqs
@@ -1859,6 +1862,9 @@ func (qs *QuerySet[T]) Limit(n int) *QuerySet[T] {
 
 // Offset is used to set the offset of the results returned by a query.
 func (qs *QuerySet[T]) Offset(n int) *QuerySet[T] {
+	if n <= 0 {
+		return qs
+	}
 	var nqs = qs.clone()
 	nqs.internals.Offset = n
 	return nqs
@@ -1979,6 +1985,9 @@ func (qs *QuerySet[T]) Scope(scopes ...func(*QuerySet[T], *QuerySetInternals) *Q
 }
 
 func (qs *QuerySet[T]) BuildExpression() expr.Expression {
+	qs = qs.clone()
+	qs.internals.Limit = 0  // no limit for subqueries
+	qs.internals.Offset = 0 // no offset for subqueries
 	var subquery = &subqueryExpr[T, *QuerySet[T]]{
 		qs: qs.Limit(0).WithContext(makeSubqueryContext(qs.Context())),
 	}
@@ -2777,13 +2786,13 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				continue
 			}
 
+			if migrator.CanAutoIncrement(field) || !ForDBEdit(field) {
+				continue
+			}
+
 			var isPrimary = field.IsPrimary()
 			if isPrimary && primary == nil {
 				primary = field
-			}
-
-			if migrator.CanAutoIncrement(field) || !ForDBEdit(field) {
-				continue
 			}
 
 			var value, err = field.Value()
@@ -2954,19 +2963,28 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				newDefs    = row.FieldDefs()
 				prim       = newDefs.Primary()
 			)
-			if prim != nil {
+
+			// only decrease the result length if the primary key is not set
+			//
+			// the underlying compiler should ensure that there is no duplicate
+			// primary key in the RETURNING clause **IF** there was no primary key
+			// included in the query (i.e. primary == nil).
+			if prim != nil && primary == nil {
 				resLen--
 			}
 
 			if len(scannables) != resLen {
 				return nil, errors.LastInsertId.WithCause(fmt.Errorf(
 					"expected %d results returned after insert, got %d (len(scannables) != resLen)",
-					len(scannables), len(results[i]),
+					len(scannables), resLen,
 				))
 			}
 
+			// the underlying compiler should ensure that there is no duplicate
+			// primary key in the RETURNING clause **IF** there was no primary key
+			// included in the query (i.e. primary == nil).
 			var idx = 0
-			if prim != nil {
+			if prim != nil && primary == nil {
 				if err := prim.Scan(results[i][0]); err != nil {
 					return nil, errors.ValueError.WithCause(errors.Wrapf(
 						err, "failed to scan primary key %q in %T",

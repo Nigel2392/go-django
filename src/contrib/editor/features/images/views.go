@@ -132,6 +132,7 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Respond with the file path
+	logger.Debugf("File uploaded successfully: %s", filePath)
 	var jsonResp = map[string]interface{}{
 		"status":   "success",
 		"filePath": filePath,

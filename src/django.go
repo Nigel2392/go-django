@@ -537,18 +537,22 @@ func (a *Application) Initialize() error {
 	)
 
 	var staticUrl = a.staticURL()
-
-	a.Log.Debugf(
-		"Initializing static files at '%s'",
-		staticUrl,
-	)
-
 	if staticUrl != "" {
+		a.Log.Debugf(
+			"Initializing static files at %q",
+			staticUrl,
+		)
+
 		var rt = a.Mux.Handle(
 			mux.GET,
 			fmt.Sprintf("%s*", staticUrl),
 			http.StripPrefix(staticUrl, staticfiles.EntryHandler),
 		)
+
+		// middleware will run before any other,
+		// this is to allow easily identifying which
+		// route is a static route, and to allow
+		// for possibly disabling / enabling some features.
 		rt.Preprocess(MarkStaticRouteMiddleware)
 	}
 

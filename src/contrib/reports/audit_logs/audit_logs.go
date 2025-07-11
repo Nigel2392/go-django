@@ -9,6 +9,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -19,7 +20,7 @@ var (
 	ErrLogEntryNotFound = errors.New("log entry not found")
 	ErrLogsNotReady     = errors.New("audit logs app not ready")
 
-	LogUnknownTypes bool = false
+	LogUnknownTypes bool = true
 )
 
 type EntryFilter interface {
@@ -62,12 +63,12 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 
 	}
 
-	var entry = &Entry{
+	var entry = models.Setup(&Entry{
 		Typ:  drivers.String(entryType),
 		Lvl:  level,
 		Time: drivers.CurrentTimestamp(),
 		Src:  drivers.JSON[map[string]any]{Data: data},
-	}
+	})
 
 	var (
 		filtersForTyp  []EntryFilter
@@ -146,6 +147,10 @@ storeLogEntry:
 		level, "Adding new %q entry to audit log", entryType,
 	)
 
-	err = entry.Save(ctx)
+	if err = entry.Create(ctx); err != nil {
+		logger.Errorf("Error saving log entry: %v", err)
+		return uuid.Nil, err
+	}
+
 	return entry.ID(), err
 }

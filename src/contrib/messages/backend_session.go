@@ -87,7 +87,7 @@ func (b *SessionBackend) Store(message Message) error {
 	}
 
 	logger.Debugf(
-		"Storing into backend, message: %s, level: %d, extraTags: %v",
+		"Storing into backend, message: %s, level: %v, extraTags: %v",
 		message.Message(), message.Tag(), message.ExtraTags(),
 	)
 

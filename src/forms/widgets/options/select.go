@@ -20,23 +20,27 @@ type OptionsWidget struct {
 	BlankLabel   string
 }
 
-func NewOptionWidget(type_ string, templateName string, attrs map[string]string, choices func() []widgets.Option) *OptionsWidget {
-	return &OptionsWidget{
+func NewOptionWidget(type_ string, templateName string, attrs map[string]string, choices func() []widgets.Option, options ...func(*OptionsWidget)) *OptionsWidget {
+	var w = &OptionsWidget{
 		BaseWidget: widgets.NewBaseWidget(type_, templateName, attrs),
 		Choices:    choices,
 	}
+	for _, opt := range options {
+		opt(w)
+	}
+	return w
 }
 
-func NewCheckboxInput(attrs map[string]string, choices func() []widgets.Option) *OptionsWidget {
-	return NewOptionWidget("checkbox", "forms/widgets/checkbox.html", attrs, choices)
+func NewCheckboxInput(attrs map[string]string, choices func() []widgets.Option, opts ...func(*OptionsWidget)) *OptionsWidget {
+	return NewOptionWidget("checkbox", "forms/widgets/checkbox.html", attrs, choices, opts...)
 }
 
-func NewRadioInput(attrs map[string]string, choices func() []widgets.Option) *OptionsWidget {
-	return NewOptionWidget("radio", "forms/widgets/radio.html", attrs, choices)
+func NewRadioInput(attrs map[string]string, choices func() []widgets.Option, opts ...func(*OptionsWidget)) *OptionsWidget {
+	return NewOptionWidget("radio", "forms/widgets/radio.html", attrs, choices, opts...)
 }
 
-func NewSelectInput(attrs map[string]string, choices func() []widgets.Option) *OptionsWidget {
-	return NewOptionWidget("select", "forms/widgets/select.html", attrs, choices)
+func NewSelectInput(attrs map[string]string, choices func() []widgets.Option, opts ...func(*OptionsWidget)) *OptionsWidget {
+	return NewOptionWidget("select", "forms/widgets/select.html", attrs, choices, opts...)
 }
 
 func (o *OptionsWidget) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {
@@ -82,6 +86,10 @@ func (o *OptionsWidget) Validate(value interface{}) []error {
 		values = []string{v}
 	case []string:
 		values = v
+	}
+
+	if (len(values) == 0 || len(values) == 1 && values[0] == "") && o.IncludeBlank {
+		return nil
 	}
 
 	for _, valueStr := range values {
@@ -143,4 +151,16 @@ func (m *MultiSelectWidget) Media() media.Media {
 		),
 	})
 	return formMedia
+}
+
+func IncludeBlank(b bool) func(*OptionsWidget) {
+	return func(o *OptionsWidget) {
+		o.IncludeBlank = b
+	}
+}
+
+func BlankLabel(label string) func(*OptionsWidget) {
+	return func(o *OptionsWidget) {
+		o.BlankLabel = label
+	}
 }

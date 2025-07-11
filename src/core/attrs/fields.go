@@ -444,15 +444,15 @@ func (f *FieldDef) Validate() error {
 
 			if f.attrDef.MinLength > 0 && rV.Len() < int(f.attrDef.MinLength) {
 				return fmt.Errorf(
-					"field %q must be at least %d characters long",
-					f.field_t.Name, f.attrDef.MinLength,
+					"field %q must be at least %d characters long, got %d",
+					f.field_t.Name, f.attrDef.MinLength, rV.Len(),
 				)
 			}
 
 			if f.attrDef.MaxLength > 0 && rV.Len() > int(f.attrDef.MaxLength) {
 				return fmt.Errorf(
-					"field %q must be at most %d characters long",
-					f.field_t.Name, f.attrDef.MaxLength,
+					"field %q must be at most %d characters long, got %d",
+					f.field_t.Name, f.attrDef.MaxLength, rV.Len(),
 				)
 			}
 		}

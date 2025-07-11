@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
-	"strconv"
-	"unicode"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -205,15 +203,6 @@ func NewAppConfig() django.AppConfig {
 	}
 }
 
-func isNumber(v string) bool {
-	for _, c := range v {
-		if !unicode.IsDigit(c) {
-			return false
-		}
-	}
-	return true
-}
-
 func auditLogView(w http.ResponseWriter, r *http.Request) {
 
 	if !permissions.HasPermission(r, "auditlogs:list") {
@@ -255,14 +244,37 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	})
 
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
-		SpecName:  "content_type",
-		FormField: fields.CharField(),
+		SpecName: "content_type",
+		FormField: fields.CharField(fields.Widget(
+			options.NewSelectInput(nil, func() []widgets.Option {
+				var vals, err = queries.GetQuerySet(&Entry{}).Distinct().ValuesList("ContentType")
+				if err != nil {
+					logger.Errorf("Failed to get content types for audit logs: %v", err)
+					except.Fail(
+						http.StatusInternalServerError,
+						"Failed to get content types for audit logs",
+					)
+					return nil
+				}
+
+				var opts = make([]widgets.Option, len(vals))
+				for i, val := range vals {
+					var cType = val[0].(*contenttypes.BaseContentType[interface{}])
+					opts[i] = &widgets.FormOption{
+						OptValue: cType.ShortTypeName(),
+						OptLabel: cType.Model(),
+					}
+				}
+
+				return opts
+			}, options.IncludeBlank(true)),
+		)),
 		Apply: func(value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
 			if fields.IsZero(value) {
 				return object, nil
 			}
 
-			return object.Filter("ContentType", value), nil
+			return object.Filter("ContentType__endswith", value), nil
 		},
 	})
 
@@ -271,22 +283,21 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		FormField: fields.CharField(fields.Widget(
 			options.NewSelectInput(nil, func() []widgets.Option {
 				return []widgets.Option{
-					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.DBG)), OptLabel: trans.T("Debug")},
-					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.INF)), OptLabel: trans.T("Info")},
-					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.WRN)), OptLabel: trans.T("Warning")},
-					&widgets.FormOption{OptValue: strconv.Itoa(int(logger.ERR)), OptLabel: trans.T("Error")},
+					&widgets.FormOption{OptValue: logger.DBG.String(), OptLabel: trans.T("Debug")},
+					&widgets.FormOption{OptValue: logger.INF.String(), OptLabel: trans.T("Info")},
+					&widgets.FormOption{OptValue: logger.WRN.String(), OptLabel: trans.T("Warning")},
+					&widgets.FormOption{OptValue: logger.ERR.String(), OptLabel: trans.T("Error")},
 				}
-			}),
+			}, options.IncludeBlank(true)),
 		)),
 		Apply: func(value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
 			if fields.IsZero(value) {
 				return object, nil
 			}
 
-			var v = value.(string)
-			var level, err = strconv.Atoi(v)
+			var level, err = logger.ParseLogLevel(value.(string))
 			if err != nil {
-				return nil, errors.Wrapf(err, "Invalid log level: %s", v)
+				return nil, errors.Wrapf(err, "Invalid log level: %v", value)
 			}
 			return object.Filter("Level", logger.LogLevel(level)), nil
 		},
@@ -313,8 +324,8 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		},
 		GetObjects: func(i1, i2 int) ([]LogEntry, error) {
 			objectRows, err := qs.
-				Offset(i1).
-				Limit(i2).
+				Offset(i2).
+				Limit(i1).
 				All()
 
 			if err != nil {
@@ -361,8 +372,6 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	//	definitions[i] = Define(r, log)
 	//}
 
-	adminCtx.Set("content_type", filter.Form().CleanedData()["content_type"])
-	adminCtx.Set("object_id", filter.Form().CleanedData()["object_id"])
 	adminCtx.Set("paginator", page)
 	adminCtx.Set("form", filter.Form())
 	adminCtx.Set(

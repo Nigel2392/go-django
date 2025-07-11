@@ -750,25 +750,63 @@ func (m *Model) Validate(ctx context.Context) error {
 // The object embedding the model can choose to implement the
 // [canSaveObject] interface to provide a custom save implementation.
 func (m *Model) Save(ctx context.Context) error {
-	if m.internals != nil && m.internals.defs == nil && m.internals.object != nil {
-		var obj = m.internals.object.Interface().(attrs.Definer)
-		obj.FieldDefs()
-	}
-
 	if m.internals == nil || m.internals.object == nil {
 		return errors.NotImplemented.WithCause(fmt.Errorf(
 			"cannot save model %w", ErrModelInitialized,
 		))
-		//return fmt.Errorf(
-		//	"cannot save object: %w: %w",
-		//	errors.ErrNotImplemented, ErrModelInitialized,
-		//)
+	}
+
+	var config SaveConfig
+	if cnf, ok := saveConfigFromContext(ctx); ok {
+		config = cnf
 	}
 
 	var this = m.internals.object.Interface().(attrs.Definer)
-	return this.(SaveableObject).SaveObject(ctx, SaveConfig{
-		this: this,
-	})
+	config.this = this
+
+	return this.(SaveableObject).SaveObject(ctx, config)
+}
+
+// Create saves the model to the database as a new object.
+//
+// It checks if the model is properly initialized and if the model's definitions
+// are set up. If the model is not initialized, it returns an error.
+func (m *Model) Create(ctx context.Context) error {
+	if m.internals == nil || m.internals.object == nil {
+		return errors.NotImplemented.WithCause(fmt.Errorf(
+			"cannot save model %w", ErrModelInitialized,
+		))
+	}
+
+	var config SaveConfig
+	if cnf, ok := saveConfigFromContext(ctx); ok {
+		config = cnf
+	}
+
+	var this = m.internals.object.Interface().(attrs.Definer)
+	config.this = this
+	config.ForceCreate = true
+
+	return this.(SaveableObject).SaveObject(ctx, config)
+}
+
+type saveConfigContextKey struct{}
+
+func NewSaveConfigContext(SaveConfig SaveConfig) context.Context {
+	return SaveConfigContext(context.Background(), SaveConfig)
+}
+
+func SaveConfigContext(ctx context.Context, cnf SaveConfig) context.Context {
+	return context.WithValue(ctx, saveConfigContextKey{}, cnf)
+}
+
+func saveConfigFromContext(ctx context.Context) (SaveConfig, bool) {
+	var cnf, ok = ctx.Value(saveConfigContextKey{}).(SaveConfig)
+	if !ok {
+		return SaveConfig{}, false
+	}
+
+	return cnf, true
 }
 
 type SaveConfig struct {
@@ -790,9 +828,13 @@ type SaveConfig struct {
 	// that are not changed, but must be saved for some reason.
 	IncludeFields []string
 
-	// Force indicates whether to force the save operation,
-	// even if no fields have changed.
-	Force bool
+	ForceCreate bool
+	ForceUpdate bool
+}
+
+func (cnf SaveConfig) Force() bool {
+	// if ForceCreate or ForceUpdate is set, we force the save operation
+	return cnf.ForceCreate || cnf.ForceUpdate
 }
 
 func (cnf SaveConfig) fields() []string {
@@ -820,12 +862,17 @@ func (cnf SaveConfig) fields() []string {
 // A config struct [SaveConfig] is used to pass the model's object, queryset, fields to save,
 // and a force flag to indicate whether to force the save operation.
 func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
-	if m.internals == nil || m.internals.defs == nil {
+	if m.internals == nil || m.internals.object == nil {
 		return fmt.Errorf(
 			"cannot save fields for %T: %w",
 			m.internals.object.Interface(),
 			ErrModelInitialized,
 		)
+	}
+
+	if m.internals.defs == nil {
+		var obj = m.internals.object.Interface().(attrs.Definer)
+		obj.FieldDefs()
 	}
 
 	// Setup the "this" object if not provided.
@@ -847,13 +894,13 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 
 	// check if anything has changed,
 	var fields = internal.NewSet(cnf.fields()...)
-	if m.internals.state == nil && m.internals.fromDB && !cnf.Force && len(fields) == 0 {
+	if m.internals.state == nil && m.internals.fromDB && !cnf.Force() && len(fields) == 0 {
 		// if the model was loaded from the database and no fields have changed and the state is nil,
 		// we can skip saving
 		return nil
 	}
 
-	if !m.internals.state.Changed(true) && m.internals.fromDB && !cnf.Force && len(fields) == 0 {
+	if !m.internals.state.Changed(true) && m.internals.fromDB && !cnf.Force() && len(fields) == 0 {
 		// if nothing has changed, we can skip saving
 		return nil
 	}
@@ -874,7 +921,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		// the field is not in the list of fields to save, we skip it
 		var mustInclField bool
 		if len(fields) > 0 {
-			if !fields.Contains(head.Value.Name()) && !cnf.Force && m.internals.fromDB {
+			if !fields.Contains(head.Value.Name()) && !cnf.Force() && m.internals.fromDB {
 				continue
 			}
 			mustInclField = true
@@ -882,7 +929,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 
 		// No changes were made to the field, we can skip it.
 		var hasChanged = m.internals.state.HasChanged(head.Value.Name())
-		if !hasChanged && !mustInclField && !cnf.Force && m.internals.fromDB {
+		if !hasChanged && !mustInclField && !cnf.Force() && m.internals.fromDB {
 			continue
 		}
 
@@ -928,7 +975,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 
 	// if no changes were made and the force flag is not set,
 	// we can skip saving the model
-	if !anyChanges && !cnf.Force && len(cnf.Fields) == 0 && m.internals.fromDB {
+	if !anyChanges && !cnf.Force() && len(cnf.Fields) == 0 && m.internals.fromDB {
 		return nil
 	}
 
@@ -975,14 +1022,14 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	// If the model is already saved, it will update the model,
 	var updated int64
 	var saved = m.Saved()
-	if saved {
+	if saved && !cnf.ForceCreate || cnf.ForceUpdate {
 		updated, err = querySet.Update(cnf.this)
 	} else {
 		_, err = querySet.Create(cnf.this)
 	}
 	if err != nil {
 		var s = "create"
-		if saved {
+		if saved && !cnf.ForceCreate || cnf.ForceUpdate {
 			s = "update"
 		}
 		return errors.SaveFailed.WithCause(fmt.Errorf(
@@ -993,7 +1040,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 
 	// If no changes were made and the model was saved,
 	// we return an error indicating that no rows were affected.
-	if saved && updated == 0 {
+	if (saved || cnf.ForceUpdate) && updated == 0 && !cnf.ForceCreate {
 		// sql.ErrNoRows
 		return errors.NoChanges.WithCause(fmt.Errorf(
 			"model %T was not saved: %w",

@@ -7,8 +7,6 @@
     <div id="auditlogs">
         <div class="auditlog-list">
             {{ $page := (.Get "paginator") }}
-            {{ $content_type := (.Get "content_type") }}
-            {{ $object_id := (.Get "object_id") }}
 
             {{ range $log := $page.Results }}
                 <div class="auditlog-list-item auditlog-{{ $log.Level.String }}">
@@ -72,14 +70,6 @@
 
         <div class="auditlogs-filters">
             <form method="get" action="{{ .Get "actionURL" }}">
-
-                {{ if $content_type }}
-                    <input type="hidden" name="content_type" value="{{ $content_type }}">
-                {{ end }}
-
-                {{ if $object_id }}
-                    <input type="hidden" name="object_id" value="{{ $object_id }}">
-                {{ end }}
 
                 {{ range $Field := (.Get "form").Fields }}        
                     <div class="panel">
