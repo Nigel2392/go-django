@@ -17,7 +17,6 @@ type listResponse struct {
 
 func listPages(w http.ResponseWriter, r *http.Request) {
 	var (
-		ctx          = r.Context()
 		mainItemID   = r.URL.Query().Get(pages.PageIDVariableName)
 		getParentStr = r.URL.Query().Get("get_parent")
 		response     = &listResponse{}
@@ -35,8 +34,9 @@ func listPages(w http.ResponseWriter, r *http.Request) {
 
 	// If the main item ID is empty, we fetch all root nodes.
 	// Then continue to render the response JSON
+	var qs = pages.NewPageQuerySet()
 	if mainItemID == "" {
-		items, err = pages.GetNodesByDepth(ctx, 0, pages.StatusFlagPublished, 0, 1000)
+		items, err = qs.GetNodesByDepth(0, pages.StatusFlagPublished, 0, 1000)
 		if err != nil {
 			except.Fail(http.StatusInternalServerError, err)
 			return
@@ -59,7 +59,7 @@ func listPages(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	mainItem, err = pages.GetNodeByID(ctx, int64(idInt))
+	mainItem, err = qs.GetNodeByID(int64(idInt))
 	if err != nil {
 		except.Fail(http.StatusNotFound, err)
 		return
@@ -67,7 +67,7 @@ func listPages(w http.ResponseWriter, r *http.Request) {
 
 	if getParent && !mainItem.IsRoot() {
 		// Main item isn't a root node; we can safely fetch the parent node.
-		mainItem, err = pages.ParentNode(ctx, mainItem.Path, int(mainItem.Depth))
+		mainItem, err = qs.ParentNode(mainItem.Path, int(mainItem.Depth))
 		if err != nil {
 			except.Fail(http.StatusInternalServerError, err)
 			return
@@ -76,7 +76,7 @@ func listPages(w http.ResponseWriter, r *http.Request) {
 	} else if getParent && mainItem.IsRoot() {
 		// Main item is a root node; we can't fetch the parent node.
 		// Instead, override items and render the menu JSON.
-		items, err = pages.GetNodesByDepth(ctx, 0, pages.StatusFlagPublished, 0, 1000)
+		items, err = qs.GetNodesByDepth(0, pages.StatusFlagPublished, 0, 1000)
 		if err != nil {
 			except.Fail(http.StatusInternalServerError, err)
 			return
@@ -85,7 +85,7 @@ func listPages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch child nodes of the main item.
-	items, err = pages.GetChildNodes(ctx, mainItem, pages.StatusFlagPublished, 0, 1000)
+	items, err = qs.GetChildNodes(mainItem, pages.StatusFlagPublished, 0, 1000)
 	if err != nil {
 		except.Fail(http.StatusInternalServerError, err)
 		return

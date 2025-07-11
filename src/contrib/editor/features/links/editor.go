@@ -1,7 +1,6 @@
 package links
 
 import (
-	"context"
 	"embed"
 	"fmt"
 	"strconv"
@@ -109,8 +108,9 @@ var PageLinkFeature = &PageLinkFeatureBlock{
 			pageIds = append(pageIds, int64(id))
 		}
 
-		var pageList, err = pages.GetNodesByIDs(
-			context.Background(), pageIds,
+		var qs = pages.NewPageQuerySet()
+		var pageList, err = qs.GetNodesByIDs(
+			pageIds,
 		)
 		if err != nil {
 			return errors.Wrap(

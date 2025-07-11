@@ -2,7 +2,6 @@ package pages_test
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -141,11 +140,11 @@ func (u *DummyUser) IsAdmin() bool {
 func TestPageMenuHandler(t *testing.T) {
 
 	// Insert test data
-	var ctx = context.Background()
-	for _, node := range nodes {
+	var qs = pages.NewPageQuerySet()
+	for i, node := range nodes {
 
 		if node.Depth > 0 {
-			var parentNode, err = pages.ParentNode(ctx, node.Path, int(node.Depth))
+			var parentNode, err = qs.ParentNode(node.Path, int(node.Depth))
 			if err != nil {
 				panic(err)
 			}
@@ -155,14 +154,15 @@ func TestPageMenuHandler(t *testing.T) {
 			node.SetUrlPath(nil)
 		}
 
-		if _, err := insertNode(ctx, node); err != nil {
+		if _, err := insertNode(qs, node); err != nil {
 			panic(errors.Wrapf(
-				err, "failed to insert node %s", node.Title,
+				err, "failed to insert node [%d/%d] %s",
+				i, len(nodes), node.Title,
 			))
 		}
 	}
 
-	allNodes, err := pages.AllNodes(ctx, pages.StatusFlagNone, 0, 1000)
+	allNodes, err := qs.AllNodes(pages.StatusFlagNone, 0, 1000)
 	if err != nil {
 		t.Fatalf("failed to retrieve all nodes: %v", err)
 	}
@@ -174,7 +174,7 @@ func TestPageMenuHandler(t *testing.T) {
 
 	tree.FixTree()
 
-	err = updateNodes(ctx, nodeRefs)
+	err = updateNodes(qs, nodeRefs)
 	if err != nil {
 		t.Fatalf("failed to update nodes: %v", err)
 	}
@@ -190,7 +190,7 @@ func TestPageMenuHandler(t *testing.T) {
 				q.Set("get_parent", test.getParent)
 			}
 			r.URL.RawQuery = q.Encode()
-			r = r.WithContext(ctx)
+			r = r.WithContext(qs.Context())
 			var m = authentication.AddUserMiddleware(func(r *http.Request) authentication.User {
 				return &DummyUser{IsAdministrator: true}
 			})

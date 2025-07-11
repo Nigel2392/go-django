@@ -35,6 +35,9 @@ func Register(definition *PageDefinition) {
 
 // Return the custom page object belonging to the given node
 func Specific(ctx context.Context, node *PageNode) (Page, error) {
+	if node.PageID == 0 {
+		return node, nil
+	}
 	return pageRegistryObject.SpecificInstance(ctx, node)
 }
 

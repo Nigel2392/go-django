@@ -479,7 +479,7 @@ func (g *genericQueryBuilder) RollbackTransaction(ctx context.Context) error {
 }
 
 func (g *genericQueryBuilder) InTransaction() bool {
-	return g.transaction != nil
+	return g.transaction != nil && !g.transaction.Finished()
 }
 
 func (g *genericQueryBuilder) SupportsReturning() drivers.SupportsReturningType {
@@ -1409,7 +1409,7 @@ var (
 
 func getDriverResult(res driver.Result, err error) (driver.Result, error) {
 	if err != nil {
-		return res, fmt.Errorf("failed to get driver result: %w", err)
+		return res, err
 	}
 
 	var rVal = reflect.ValueOf(&res)

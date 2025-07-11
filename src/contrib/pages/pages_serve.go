@@ -90,13 +90,14 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 
 	var (
 		context   = context.Background()
+		qs        = NewPageQuerySet().WithContext(req.Context())
 		pathParts = mux.Vars(req).GetAll("*")
 		page      *PageNode
 		err       error
 	)
 
 	if len(pathParts) == 0 {
-		var pages, err = GetNodesByDepth(context, 0, StatusFlagNone, 0, 1000)
+		var pages, err = qs.GetNodesByDepth(0, StatusFlagNone, 0, 1000)
 		if err != nil {
 			goto checkError
 		}
@@ -115,7 +116,7 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 	} else {
 		var p *PageNode
 		for i, part := range pathParts {
-			p, err = GetNodeBySlug(context, part, int64(i), page.Path)
+			p, err = qs.GetNodeBySlug(part, int64(i), page.Path)
 			if err != nil {
 				err = errors.Wrapf(
 					err, "Error getting page by slug (%d): %s/%s", i, page.Path, part,

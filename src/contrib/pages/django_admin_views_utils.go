@@ -44,7 +44,6 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 	return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
 
 		var (
-			ctx       = req.Context()
 			routeVars = mux.Vars(req)
 			pageID    = routeVars.GetInt(PageIDVariableName)
 		)
@@ -53,7 +52,8 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 			return
 		}
 
-		var page, err = GetNodeByID(ctx, int64(pageID))
+		var qs = NewPageQuerySet().WithContext(req.Context())
+		var page, err = qs.GetNodeByID(int64(pageID))
 		if err != nil {
 			except.Fail(http.StatusNotFound, "Failed to get page")
 			return
@@ -69,9 +69,10 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 
 func getPageBreadcrumbs(r *http.Request, p *PageNode, urlForLast bool) ([]admin.BreadCrumb, error) {
 	var breadcrumbs = make([]admin.BreadCrumb, 0, p.Depth+2)
+	var qs = NewPageQuerySet().WithContext(r.Context())
 	if p.Depth > 0 {
-		var ancestors, err = AncestorNodes(
-			r.Context(), p.Path, int(p.Depth)+1,
+		var ancestors, err = qs.AncestorNodes(
+			p.Path, int(p.Depth)+1,
 		)
 		if err != nil {
 			return nil, err

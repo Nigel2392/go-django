@@ -91,6 +91,9 @@ var pageAdminModelOptions = admin.ModelOptions{
 				func(_ *http.Request, _ attrs.Definitions, row attrs.Definer) interface{} {
 					var node = row.(*PageNode)
 					var ctype = DefinitionForType(node.ContentType)
+					if ctype == nil {
+						return "Unknown"
+					}
 					return ctype.Label()
 				},
 			),
@@ -140,10 +143,11 @@ var pageAdminModelOptions = admin.ModelOptions{
 func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 	var n = d.(*PageNode)
 	var err error
+	var qs = NewPageQuerySet().WithContext(ctx)
 	if n.PK == 0 {
-		_, err = insertNode(ctx, n)
+		_, err = qs.insertNode(n)
 	} else {
-		err = UpdateNode(ctx, n)
+		err = qs.UpdateNode(n)
 	}
 
 	if err != nil {
@@ -168,12 +172,13 @@ func FixTree(ctx context.Context) error {
 	}
 	defer transaction.Rollback(ctx)
 
-	allNodesCount, err := CountNodes(ctx, StatusFlagNone)
+	var qs = NewPageQuerySet().WithContext(ctx)
+	allNodesCount, err := qs.CountNodes(StatusFlagNone)
 	if err != nil {
 		return errors.Wrap(err, "failed to count nodes")
 	}
 
-	allNodes, err := AllNodes(ctx, StatusFlagNone, 0, int32(allNodesCount))
+	allNodes, err := qs.AllNodes(StatusFlagNone, 0, int32(allNodesCount))
 	if err != nil {
 		return errors.Wrap(err, "failed to get all nodes")
 	}
@@ -182,7 +187,7 @@ func FixTree(ctx context.Context) error {
 
 	tree.FixTree()
 
-	err = updateNodes(ctx, allNodes)
+	err = qs.updateNodes(allNodes)
 	if err != nil {
 		return errors.Wrap(err, "failed to update nodes")
 	}

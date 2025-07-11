@@ -410,7 +410,7 @@ func (qs *QuerySet[T]) WithContext(ctx context.Context) *QuerySet[T] {
 	}
 
 	var tx, dbName, ok = transactionFromContext(ctx)
-	if ok && dbName == qs.compiler.DatabaseName() {
+	if ok && dbName == qs.compiler.DatabaseName() && !qs.compiler.InTransaction() {
 		// if the context already has a transaction, use it
 		_, err := qs.WithTransaction(tx)
 		if err != nil {
@@ -468,7 +468,9 @@ func (qs *QuerySet[T]) GetOrCreateTransaction() (tx drivers.Transaction, err err
 
 	// if we are in a transaction, we need to bind it to the QuerySet context
 	if inTransaction {
-		qs.context = transactionToContext(qs.context, tx, qs.compiler.DatabaseName())
+		qs.context = transactionToContext(
+			qs.context, tx, qs.compiler.DatabaseName(),
+		)
 	}
 
 	return tx, nil
@@ -1989,7 +1991,7 @@ func (qs *QuerySet[T]) BuildExpression() expr.Expression {
 	qs.internals.Limit = 0  // no limit for subqueries
 	qs.internals.Offset = 0 // no offset for subqueries
 	var subquery = &subqueryExpr[T, *QuerySet[T]]{
-		qs: qs.Limit(0).WithContext(makeSubqueryContext(qs.Context())),
+		qs: qs.WithContext(makeSubqueryContext(qs.Context())),
 	}
 	return subquery
 }

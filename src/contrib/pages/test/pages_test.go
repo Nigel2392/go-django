@@ -22,17 +22,17 @@ import (
 
 var _, sqlDB = testdb.Open()
 
-//go:linkname insertNode github.com/Nigel2392/go-django/src/contrib/pages.insertNode
-func insertNode(ctx context.Context, node *pages.PageNode) (*pages.PageNode, error)
+//go:linkname insertNode github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).insertNode
+func insertNode(qs *pages.PageQuerySet, node *pages.PageNode) (*pages.PageNode, error)
 
-//go:linkname updateNodes github.com/Nigel2392/go-django/src/contrib/pages.updateNodes
-func updateNodes(ctx context.Context, nodes []*pages.PageNode) error
+//go:linkname updateNodes github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).updateNodes
+func updateNodes(qs *pages.PageQuerySet, nodes []*pages.PageNode) error
 
-//go:linkname incrementNumChild github.com/Nigel2392/go-django/src/contrib/pages.incrementNumChild
-func incrementNumChild(ctx context.Context, pk int64) (*pages.PageNode, error)
+//go:linkname incrementNumChild github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).incrementNumChild
+func incrementNumChild(qs *pages.PageQuerySet, pk int64) (*pages.PageNode, error)
 
-//go:linkname decrementNumChild github.com/Nigel2392/go-django/src/contrib/pages.decrementNumChild
-func decrementNumChild(ctx context.Context, pk int64) (*pages.PageNode, error)
+//go:linkname decrementNumChild github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).decrementNumChild
+func decrementNumChild(qs *pages.PageQuerySet, pk int64) (*pages.PageNode, error)
 
 func init() {
 	sqlDB.ExecContext(context.Background(), "DROP TABLE IF EXISTS test_pages")
@@ -350,8 +350,10 @@ func TestPageNode(t *testing.T) {
 		panic(fmt.Errorf("failed to create pages table: %s", err))
 	}
 
+	var qs = pages.NewPageQuerySet().WithContext(queryCtx)
+
 	t.Run("Root", func(t *testing.T) {
-		var err = pages.CreateRootNode(queryCtx, rootNode)
+		var err = qs.AddRoot(rootNode)
 		if err != nil {
 			t.Fatal(err)
 			return
@@ -397,7 +399,7 @@ func TestPageNode(t *testing.T) {
 
 			t.Logf("Adding child node to root: %+v", childNode)
 
-			var err = pages.CreateChildNode(queryCtx, rootNode, childNode)
+			var err = qs.CreateChildNode(rootNode, childNode)
 			if err != nil {
 				t.Fatal(err)
 				return
@@ -411,7 +413,7 @@ func TestPageNode(t *testing.T) {
 				t.Fatalf("expected ID 2, got %d", childNode.PK)
 			}
 
-			childNode, err = pages.GetNodeByID(queryCtx, childNode.PK)
+			childNode, err = qs.GetNodeByID(childNode.PK)
 			if err != nil {
 				t.Fatal(err)
 				return
@@ -457,7 +459,7 @@ func TestPageNode(t *testing.T) {
 
 				t.Logf("Getting children of root node: %+v", rootNode)
 
-				var children, err = pages.GetChildNodes(queryCtx, rootNode, pages.StatusFlagNone, 0, 1000)
+				var children, err = qs.GetChildNodes(rootNode, pages.StatusFlagNone, 0, 1000)
 				if err != nil {
 					t.Fatal(err)
 					return
@@ -484,7 +486,7 @@ func TestPageNode(t *testing.T) {
 
 				t.Logf("Adding sub-child node to child: %+v", subChildNode)
 
-				var err = pages.CreateChildNode(queryCtx, childNode, &subChildNode)
+				var err = qs.CreateChildNode(childNode, &subChildNode)
 				if err != nil {
 					t.Fatal(err)
 					return
@@ -519,7 +521,7 @@ func TestPageNode(t *testing.T) {
 				}
 
 				t.Run("GetAncestors", func(t *testing.T) {
-					var ancestors, err = pages.AncestorNodes(queryCtx, subChildNode.Path, int(subChildNode.Depth)+1)
+					var ancestors, err = qs.AncestorNodes(subChildNode.Path, int(subChildNode.Depth)+1)
 					if err != nil {
 						t.Fatal(err)
 						return
@@ -542,7 +544,7 @@ func TestPageNode(t *testing.T) {
 				})
 
 				t.Run("GetRootDescendants", func(t *testing.T) {
-					var descendants, err = pages.GetDescendants(queryCtx, rootNode.Path, 0, pages.StatusFlagNone, 0, 1000)
+					var descendants, err = qs.GetDescendants(rootNode.Path, 0, pages.StatusFlagNone, 0, 1000)
 					if err != nil {
 						t.Fatal(err)
 						return
@@ -565,7 +567,7 @@ func TestPageNode(t *testing.T) {
 				})
 
 				t.Run("ParentNode", func(t *testing.T) {
-					var parent, err = pages.ParentNode(queryCtx, subChildNode.Path, int(subChildNode.Depth))
+					var parent, err = qs.ParentNode(subChildNode.Path, int(subChildNode.Depth))
 					if err != nil {
 						t.Fatal(err)
 						return
@@ -577,13 +579,13 @@ func TestPageNode(t *testing.T) {
 				})
 
 				t.Run("DeleteNode", func(t *testing.T) {
-					var err = pages.DeleteNode(queryCtx, &subChildNode)
+					var err = qs.DeleteNode(&subChildNode)
 					if err != nil {
 						t.Fatal(err)
 						return
 					}
 
-					descendants, err := pages.GetDescendants(queryCtx, rootNode.Path, 0, pages.StatusFlagNone, 0, 1000)
+					descendants, err := qs.GetDescendants(rootNode.Path, 0, pages.StatusFlagNone, 0, 1000)
 					if err != nil {
 						t.Fatal(err)
 						return
@@ -594,7 +596,7 @@ func TestPageNode(t *testing.T) {
 						return
 					}
 
-					childNode, err = pages.GetNodeByID(queryCtx, childNode.PK)
+					childNode, err = qs.GetNodeByID(childNode.PK)
 					if err != nil {
 						t.Fatal(err)
 						return
@@ -618,7 +620,7 @@ func TestPageNode(t *testing.T) {
 		}
 
 		t.Run("AddSibling", func(t *testing.T) {
-			var err = pages.CreateChildNode(queryCtx, rootNode, &childSiblingNode)
+			var err = qs.CreateChildNode(rootNode, &childSiblingNode)
 			if err != nil {
 				t.Fatal(err)
 				return
@@ -661,7 +663,7 @@ func TestPageNode(t *testing.T) {
 			}
 
 			t.Run("GetChildren", func(t *testing.T) {
-				var children, err = pages.GetChildNodes(queryCtx, rootNode, pages.StatusFlagNone, 0, 1000)
+				var children, err = qs.GetChildNodes(rootNode, pages.StatusFlagNone, 0, 1000)
 				if err != nil {
 					t.Fatal(err)
 					return
@@ -684,7 +686,7 @@ func TestPageNode(t *testing.T) {
 			})
 
 			t.Run("AddSubChild", func(t *testing.T) {
-				var err = pages.CreateChildNode(queryCtx, &childSiblingNode, &childSiblingSubChildNode)
+				var err = qs.CreateChildNode(&childSiblingNode, &childSiblingSubChildNode)
 				if err != nil {
 					t.Fatal(err)
 					return
@@ -716,7 +718,7 @@ func TestPageNode(t *testing.T) {
 				}
 
 				t.Run("GetAncestors", func(t *testing.T) {
-					var ancestors, err = pages.AncestorNodes(queryCtx, childSiblingSubChildNode.Path, int(childSiblingSubChildNode.Depth)+1)
+					var ancestors, err = qs.AncestorNodes(childSiblingSubChildNode.Path, int(childSiblingSubChildNode.Depth)+1)
 					if err != nil {
 						t.Fatal(err)
 						return
@@ -748,7 +750,7 @@ func TestPageNode(t *testing.T) {
 				}
 
 				t.Run("GetRootDescendants", func(t *testing.T) {
-					var descendants, err = pages.GetDescendants(queryCtx, rootNode.Path, 0, pages.StatusFlagNone, 0, 1000)
+					var descendants, err = qs.GetDescendants(rootNode.Path, 0, pages.StatusFlagNone, 0, 1000)
 					if err != nil {
 						t.Fatal(err)
 						return
@@ -806,7 +808,7 @@ func TestPageNode(t *testing.T) {
 				}
 
 				t.Run("IncNumChild", func(t *testing.T) {
-					var node, err = incrementNumChild(queryCtx, childSiblingNode.PK)
+					var node, err = incrementNumChild(qs, childSiblingNode.PK)
 					if err != nil {
 						t.Fatal(err)
 						return
@@ -835,7 +837,7 @@ func TestPageNode(t *testing.T) {
 				}
 
 				t.Run("DecNumChild", func(t *testing.T) {
-					var node, err = decrementNumChild(queryCtx, childSiblingNode.PK)
+					var node, err = decrementNumChild(qs, childSiblingNode.PK)
 					if err != nil {
 						t.Fatal(err)
 						return
@@ -917,7 +919,7 @@ func TestPageNode(t *testing.T) {
 
 		for _, test := range slugsTests {
 			t.Run(fmt.Sprintf("Traverse-Slug-%s", test.slug), func(t *testing.T) {
-				var node, err = pages.GetNodeBySlug(queryCtx, test.slug, test.depth, test.path)
+				var node, err = qs.GetNodeBySlug(test.slug, test.depth, test.path)
 				if err != nil {
 					t.Fatalf("expected no error, got %v (%s %s)", err, test.slug, test.path)
 					return
@@ -945,7 +947,7 @@ func TestPageNode(t *testing.T) {
 	}
 
 	for _, node := range nodesToUpdate {
-		if err := pages.CreateRootNode(queryCtx, node); err != nil {
+		if err := qs.AddRoot(node); err != nil {
 			t.Fatal(err)
 		}
 		if len(node.Path) != pages.STEP_LEN {
@@ -958,14 +960,14 @@ func TestPageNode(t *testing.T) {
 	}
 
 	t.Run("UpdateNodes", func(t *testing.T) {
-		var err = updateNodes(queryCtx, nodesToUpdate)
+		var err = updateNodes(qs, nodesToUpdate)
 		if err != nil {
 			t.Fatal(err)
 			return
 		}
 
 		for _, node := range nodesToUpdate {
-			var updatedNode, err = pages.GetNodeByID(queryCtx, node.PK)
+			var updatedNode, err = qs.GetNodeByID(node.PK)
 			if err != nil {
 				t.Fatal(err)
 				return
@@ -991,18 +993,18 @@ func TestPageNode(t *testing.T) {
 
 	t.Run("MoveNode", func(t *testing.T) {
 
-		if err := pages.CreateChildNode(queryCtx, childNode, &subChildNode2); err != nil {
+		if err := qs.CreateChildNode(childNode, &subChildNode2); err != nil {
 			t.Fatal(err)
 			return
 		}
 
-		var err = pages.MoveNode(queryCtx, childNode, nodesToUpdate[0])
+		var err = qs.MoveNode(childNode, nodesToUpdate[0])
 		if err != nil {
 			t.Fatal(err)
 			return
 		}
 
-		sub, err := pages.GetNodeByID(queryCtx, childNode.PK)
+		sub, err := qs.GetNodeByID(childNode.PK)
 		if err != nil {
 			t.Fatal(err)
 			return
@@ -1027,7 +1029,7 @@ func TestPageNode(t *testing.T) {
 		childNode = sub
 
 		t.Run("CheckMovedNodeChild", func(t *testing.T) {
-			subSub, err := pages.GetNodeByID(queryCtx, subChildNode2.PK)
+			subSub, err := qs.GetNodeByID(subChildNode2.PK)
 			if err != nil {
 				t.Fatal(err)
 				return
@@ -1049,7 +1051,7 @@ func TestPageNode(t *testing.T) {
 				t.Fatalf("expected Numchild 1, got %d", sub.Numchild)
 			}
 
-			parentNode, err := pages.ParentNode(queryCtx, subSub.Path, int(subSub.Depth))
+			parentNode, err := qs.ParentNode(subSub.Path, int(subSub.Depth))
 			if err != nil {
 				t.Fatal(err)
 				return
@@ -1094,7 +1096,7 @@ func TestPageNode(t *testing.T) {
 		t.Logf("REFERENCE: %+v", page.Reference())
 		t.Logf("NODE: %+v", node)
 
-		if err := pages.UpdateNode(queryCtx, page.Reference()); err != nil {
+		if err := qs.UpdateNode(page.Reference()); err != nil {
 			t.Fatalf("failed to update node: %v", err)
 		}
 

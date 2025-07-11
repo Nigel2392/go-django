@@ -36,7 +36,6 @@ type pageMenuResponse struct {
 
 func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	var (
-		ctx        = r.Context()
 		mainItemID = r.URL.Query().Get(PageIDVariableName)
 		getParent  = r.URL.Query().Get("get_parent")
 		response   = &pageMenuResponse{}
@@ -45,6 +44,9 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 		idInt      int
 		prntBool   bool
 		err        error
+		qs         = NewPageQuerySet().WithContext(
+			r.Context(),
+		)
 	)
 
 	if !permissions.HasPermission(r, "pages:list") {
@@ -53,7 +55,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if mainItemID == "" {
-		items, err = GetNodesByDepth(ctx, 0, StatusFlagNone, 0, 1000)
+		items, err = qs.GetNodesByDepth(0, StatusFlagNone, 0, 1000)
 		if err != nil {
 			except.Fail(http.StatusInternalServerError, err)
 			return
@@ -76,7 +78,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	mainItem, err = GetNodeByID(ctx, int64(idInt))
+	mainItem, err = qs.GetNodeByID(int64(idInt))
 	if err != nil {
 		except.Fail(http.StatusNotFound, err)
 		return
@@ -84,7 +86,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 
 	if prntBool && !mainItem.IsRoot() {
 		// Main item isn't a root node; we can safely fetch the parent node.
-		mainItem, err = ParentNode(ctx, mainItem.Path, int(mainItem.Depth))
+		mainItem, err = qs.ParentNode(mainItem.Path, int(mainItem.Depth))
 		if err != nil {
 			except.Fail(http.StatusInternalServerError, err)
 			return
@@ -93,7 +95,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	} else if prntBool && mainItem.IsRoot() {
 		// Main item is a root node; we can't fetch the parent node.
 		// Instead, override items and render the menu JSON.
-		items, err = GetNodesByDepth(ctx, 0, StatusFlagNone, 0, 1000)
+		items, err = qs.GetNodesByDepth(0, StatusFlagNone, 0, 1000)
 		if err != nil {
 			except.Fail(http.StatusInternalServerError, err)
 			return
@@ -102,7 +104,7 @@ func pageMenuHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch child nodes of the main item.
-	items, err = GetChildNodes(ctx, mainItem, StatusFlagNone, 0, 1000)
+	items, err = qs.GetChildNodes(mainItem, StatusFlagNone, 0, 1000)
 	if err != nil {
 		except.Fail(http.StatusInternalServerError, err)
 		return

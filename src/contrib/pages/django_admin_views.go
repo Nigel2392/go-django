@@ -131,9 +131,9 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	}
 
 	var parent_object *PageNode
+	var qs = NewPageQuerySet()
 	if p.Depth > 0 {
-		var parent, err = ParentNode(
-			r.Context(),
+		var parent, err = qs.ParentNode(
 			p.Path,
 			int(p.Depth),
 		)
@@ -188,8 +188,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			},
 		},
 		GetListFn: func(amount, offset uint) ([]attrs.Definer, error) {
-			var ctx = r.Context()
-			var nodes, err = GetChildNodes(ctx, p, StatusFlagNone, int32(offset), int32(amount))
+			var nodes, err = qs.GetChildNodes(p, StatusFlagNone, int32(offset), int32(amount))
 			if err != nil {
 				return nil, err
 			}
@@ -347,9 +346,8 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			)
 		} else {
 			var n = d.(*PageNode)
-			_, err = insertNode(
-				ctx, n,
-			)
+			var qs = NewPageQuerySet()
+			_, err = qs.insertNode(n)
 		}
 		if err != nil {
 			return err
@@ -533,10 +531,11 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				wasUnpublished = true
 			}
 
-			err = UpdatePage(ctx, page)
+			err = UpdatePage(context.Background(), page)
 		} else {
 			var n = d.(*PageNode)
-			err = UpdateNode(ctx, n)
+			var qs = NewPageQuerySet()
+			err = qs.UpdateNode(n)
 
 		}
 		if err != nil {
@@ -660,9 +659,9 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 		}
 
 		var parent *PageNode
+		var qs = NewPageQuerySet()
 		if p.Depth > 0 {
-			parent, err = ParentNode(
-				r.Context(),
+			parent, err = qs.ParentNode(
 				p.Path,
 				int(p.Depth),
 			)
@@ -678,7 +677,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 				return
 			}
 		} else {
-			if err := DeleteNode(r.Context(), p); err != nil {
+			if err := qs.DeleteNode(p); err != nil {
 				except.Fail(500, "Failed to delete page: %s", err)
 				return
 			}
@@ -697,7 +696,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			http.Redirect(w, r, django.Reverse("admin:pages:list", parent.ID()), http.StatusSeeOther)
 			return
 		}
-		http.Redirect(w, r, django.Reverse("admin:pages:root_list"), http.StatusSeeOther)
+		http.Redirect(w, r, django.Reverse("admin:pages"), http.StatusSeeOther)
 		return
 	}
 
@@ -747,7 +746,8 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		}
 
 		var unpublishChildren = r.FormValue("unpublish-children") == "unpublish-children"
-		if err := UnpublishNode(r.Context(), p, unpublishChildren); err != nil {
+		var qs = NewPageQuerySet()
+		if err := qs.UnpublishNode(p, unpublishChildren); err != nil {
 			except.Fail(500, "Failed to unpublish page: %s", err)
 			return
 		}

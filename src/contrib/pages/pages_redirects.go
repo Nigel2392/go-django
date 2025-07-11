@@ -24,8 +24,9 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	page, err := GetNodeByID(
-		r.Context(), int64(id),
+	var qs = NewPageQuerySet().WithContext(r.Context())
+	page, err := qs.GetNodeByID(
+		int64(id),
 	)
 	if err != nil {
 		except.Fail(http.StatusNotFound, err)

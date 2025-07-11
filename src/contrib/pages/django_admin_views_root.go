@@ -71,8 +71,8 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 			},
 		},
 		GetListFn: func(amount, offset uint) ([]attrs.Definer, error) {
-			var ctx = r.Context()
-			var nodes, err = GetNodesByDepth(ctx, 0, StatusFlagNone, int32(offset), int32(amount))
+			var qs = NewPageQuerySet().WithContext(r.Context())
+			var nodes, err = qs.GetNodesByDepth(0, StatusFlagNone, int32(offset), int32(amount))
 			if err != nil {
 				return nil, err
 			}
@@ -208,7 +208,8 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			}
 		}
 
-		err = CreateRootNode(ctx, ref)
+		var qs = NewPageQuerySet().WithContext(ctx)
+		err = qs.AddRoot(ref)
 		if err != nil {
 			return err
 		}
@@ -222,13 +223,9 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			}
 
 			ref.PageID = page.ID()
-			err = UpdateNode(
-				ctx, ref,
-			)
+			err = qs.UpdateNode(ref)
 		} else if n, ok := d.(*PageNode); ok {
-			_, err = insertNode(
-				ctx, n,
-			)
+			_, err = qs.insertNode(n)
 		} else {
 			err = fmt.Errorf("invalid page type: %T", d)
 		}

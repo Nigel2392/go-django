@@ -11,12 +11,14 @@ var _ BaseQuerySet[attrs.Definer, *QuerySet[attrs.Definer]] = (*WrappedQuerySet[
 
 type WrappedQuerySet[T attrs.Definer, CONV BaseQuerySet[T, CONV], ORIG BaseQuerySet[T, ORIG]] struct {
 	BaseQuerySet[T, ORIG]
+	original ORIG
 	embedder CONV
 }
 
 func WrapQuerySet[T attrs.Definer, CONV BaseQuerySet[T, CONV], ORIG BaseQuerySet[T, ORIG]](qs ORIG, embedder CONV) *WrappedQuerySet[T, CONV, ORIG] {
 	return &WrappedQuerySet[T, CONV, ORIG]{
 		BaseQuerySet: qs,
+		original:     qs.Clone(),
 		embedder:     embedder,
 	}
 }
@@ -32,6 +34,13 @@ type (
 		AfterExec(res any) error
 	}
 )
+
+func (w *WrappedQuerySet[T, CONV, ORIG]) Reset() CONV {
+	w.BaseQuerySet = w.original.Clone().WithContext(
+		w.BaseQuerySet.Context(),
+	)
+	return w.embedder
+}
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) setup() {
 	if canSetup, ok := any(w.embedder).(attrs.CanSetup); ok {

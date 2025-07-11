@@ -1,7 +1,6 @@
 package pages
 
 import (
-	"context"
 	"fmt"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -17,8 +16,9 @@ func rowsToNodes(rows queries.Rows[*PageNode]) []*PageNode {
 	return nodes
 }
 
-func updateNodes(ctx context.Context, nodes []*PageNode) error {
-	var updated, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) updateNodes(nodes []*PageNode) error {
+	qs = qs.Reset()
+	var updated, err = qs.
 		Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt").
 		BulkUpdate(nodes)
 	if err != nil {
@@ -30,7 +30,7 @@ func updateNodes(ctx context.Context, nodes []*PageNode) error {
 	return nil
 }
 
-func updateDescendantPaths(ctx context.Context, oldUrlPath, newUrlPath, pageNodePath string, id int64) error {
+func (qs *PageQuerySet) updateDescendantPaths(oldUrlPath, newUrlPath, pageNodePath string, id int64) error {
 	//Annotate(
 	//	"ChildCount",
 	//	expr.COUNT(queries.GetQuerySet(&PageNode{}).
@@ -38,7 +38,8 @@ func updateDescendantPaths(ctx context.Context, oldUrlPath, newUrlPath, pageNode
 	//		Filter("Depth__gt", expr.Logical(expr.LENGTH(expr.V(pageNodePath))).ADD(expr.V(1, true)))),
 	//).
 
-	var _, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+	qs = qs.Reset()
+	var _, err = qs.
 		Select("UrlPath").
 		Filter(
 			expr.Expr("Path", expr.LOOKUP_STARTSWITH, pageNodePath),
@@ -65,9 +66,10 @@ func updateDescendantPaths(ctx context.Context, oldUrlPath, newUrlPath, pageNode
 	return nil
 }
 
-func incrementNumChild(ctx context.Context, id int64) (*PageNode, error) {
+func (qs *PageQuerySet) incrementNumChild(id int64) (*PageNode, error) {
 
-	var ct, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+	qs = qs.Reset()
+	var ct, err = qs.
 		Select("Numchild").
 		Filter("PK", id).
 		ExplicitSave().
@@ -82,11 +84,12 @@ func incrementNumChild(ctx context.Context, id int64) (*PageNode, error) {
 		return nil, fmt.Errorf("no nodes were updated for id %d", id)
 	}
 
-	return GetNodeByID(ctx, id)
+	return qs.GetNodeByID(id)
 }
 
-func decrementNumChild(ctx context.Context, id int64) (*PageNode, error) {
-	var ct, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) decrementNumChild(id int64) (*PageNode, error) {
+	qs = qs.Reset()
+	var ct, err = qs.
 		Select("Numchild").
 		Filter("PK", id).
 		ExplicitSave().
@@ -100,11 +103,12 @@ func decrementNumChild(ctx context.Context, id int64) (*PageNode, error) {
 	if ct == 0 {
 		return nil, fmt.Errorf("no nodes were updated for id %d", id)
 	}
-	return GetNodeByID(ctx, id)
+	return qs.GetNodeByID(id)
 }
 
-func AllNodes(ctx context.Context, statusFlags StatusFlag, offset int32, limit int32, orderings ...string) ([]*PageNode, error) {
-	var nodes, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) AllNodes(statusFlags StatusFlag, offset int32, limit int32, orderings ...string) ([]*PageNode, error) {
+	qs = qs.Reset()
+	var nodes, err = qs.
 		Filter("StatusFlags__bitand", statusFlags).
 		OrderBy(orderings...).
 		Limit(int(limit)).
@@ -116,8 +120,9 @@ func AllNodes(ctx context.Context, statusFlags StatusFlag, offset int32, limit i
 	return rowsToNodes(nodes), nil
 }
 
-func CountNodes(ctx context.Context, statusFlags StatusFlag) (int64, error) {
-	var nodesCount, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) CountNodes(statusFlags StatusFlag) (int64, error) {
+	qs = qs.Reset()
+	var nodesCount, err = qs.
 		Filter("StatusFlags__bitand", statusFlags).
 		Count()
 	if err != nil {
@@ -126,8 +131,9 @@ func CountNodes(ctx context.Context, statusFlags StatusFlag) (int64, error) {
 	return nodesCount, nil
 }
 
-func CountNodesByTypeHash(ctx context.Context, contentType string) (int64, error) {
-	var nodesCount, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) CountNodesByTypeHash(contentType string) (int64, error) {
+	qs = qs.Reset()
+	var nodesCount, err = qs.
 		Filter("ContentType", contentType).
 		Count()
 	if err != nil {
@@ -136,8 +142,9 @@ func CountNodesByTypeHash(ctx context.Context, contentType string) (int64, error
 	return nodesCount, nil
 }
 
-func CountRootNodes(ctx context.Context, statusFlags StatusFlag) (int64, error) {
-	var count, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) CountRootNodes(statusFlags StatusFlag) (int64, error) {
+	qs = qs.Reset()
+	var count, err = qs.
 		Filter("Depth", 0).
 		Filter("StatusFlags__bitand", statusFlags).
 		Count()
@@ -147,11 +154,16 @@ func CountRootNodes(ctx context.Context, statusFlags StatusFlag) (int64, error) 
 	return count, nil
 }
 
-func deleteDescendants(ctx context.Context, path string, depth int64) error {
-	var deleted, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
-		Filter("Path__startswith", path).
-		Filter("Depth__gt", depth).
-		Delete()
+func (qs *PageQuerySet) deleteNodes(id []int64) error {
+	qs = qs.Reset()
+
+	if len(id) == 1 {
+		qs = qs.Filter("PK", id[0])
+	} else if len(id) > 1 {
+		qs = qs.Filter("PK__in", id)
+	}
+
+	var deleted, err = qs.Delete()
 	if err != nil {
 		return err
 	}
@@ -161,34 +173,9 @@ func deleteDescendants(ctx context.Context, path string, depth int64) error {
 	return err
 }
 
-func deleteNode(ctx context.Context, id int64) error {
-	var deleted, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
-		Filter("PK", id).
-		Delete()
-	if err != nil {
-		return err
-	}
-	if deleted == 0 {
-		return errors.NoRows
-	}
-	return err
-}
-
-func deleteNodes(ctx context.Context, id []int64) error {
-	var deleted, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
-		Filter("PK__in", id).
-		Delete()
-	if err != nil {
-		return err
-	}
-	if deleted == 0 {
-		return errors.NoRows
-	}
-	return err
-}
-
-func GetChildNodes(ctx context.Context, node *PageNode, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
-	var rows, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) GetChildNodes(node *PageNode, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
+	qs = qs.Reset()
+	var rows, err = qs.
 		Select("*").
 		Filter(
 			expr.Expr("Depth", expr.LOOKUP_EXACT, node.Depth+1),
@@ -206,8 +193,9 @@ func GetChildNodes(ctx context.Context, node *PageNode, statusFlags StatusFlag, 
 	return rowsToNodes(rows), nil
 }
 
-func GetDescendants(ctx context.Context, path string, depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
-	var rows, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) GetDescendants(path string, depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
+	qs = qs.Reset()
+	var rows, err = qs.
 		Filter(
 			expr.Expr("Path", expr.LOOKUP_STARTSWITH, path),
 			expr.Expr("Depth", expr.LOOKUP_GT, depth),
@@ -223,8 +211,9 @@ func GetDescendants(ctx context.Context, path string, depth int64, statusFlags S
 	return rowsToNodes(rows), nil
 }
 
-func GetNodeByID(ctx context.Context, id int64) (*PageNode, error) {
-	var row, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) GetNodeByID(id int64) (*PageNode, error) {
+	qs = qs.Reset()
+	var row, err = qs.
 		Filter("PK", id).
 		Get()
 	if err != nil {
@@ -233,8 +222,9 @@ func GetNodeByID(ctx context.Context, id int64) (*PageNode, error) {
 	return row.Object, nil
 }
 
-func GetNodeByPath(ctx context.Context, path string) (*PageNode, error) {
-	var row, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) GetNodeByPath(path string) (*PageNode, error) {
+	qs = qs.Reset()
+	var row, err = qs.
 		Filter("Path", path).
 		Get()
 	if err != nil {
@@ -243,8 +233,9 @@ func GetNodeByPath(ctx context.Context, path string) (*PageNode, error) {
 	return row.Object, nil
 }
 
-func GetNodeBySlug(ctx context.Context, slug string, depth int64, path string) (*PageNode, error) {
-	var row, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) GetNodeBySlug(slug string, depth int64, path string) (*PageNode, error) {
+	qs = qs.Reset()
+	var row, err = qs.
 		Filter(
 			expr.Expr("Depth", expr.LOOKUP_EXACT, depth),
 			expr.Expr("Slug", expr.LOOKUP_IEXACT, slug),
@@ -257,8 +248,9 @@ func GetNodeBySlug(ctx context.Context, slug string, depth int64, path string) (
 	return row.Object, nil
 }
 
-func GetNodesByDepth(ctx context.Context, depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
-	var rows, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) GetNodesByDepth(depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
+	qs = qs.Reset()
+	var rows, err = qs.
 		Filter(
 			expr.Expr("Depth", expr.LOOKUP_EXACT, depth),
 			expr.Expr("StatusFlags", expr.LOOKUP_BITAND, statusFlags),
@@ -273,8 +265,9 @@ func GetNodesByDepth(ctx context.Context, depth int64, statusFlags StatusFlag, o
 	return rowsToNodes(rows), nil
 }
 
-func GetNodesByIDs(ctx context.Context, id []int64) ([]*PageNode, error) {
-	var rows, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) GetNodesByIDs(id []int64) ([]*PageNode, error) {
+	qs = qs.Reset()
+	var rows, err = qs.
 		Filter("PK__in", id).
 		All()
 	if err != nil {
@@ -283,8 +276,9 @@ func GetNodesByIDs(ctx context.Context, id []int64) ([]*PageNode, error) {
 	return rowsToNodes(rows), nil
 }
 
-func GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]*PageNode, error) {
-	var rows, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) GetNodesByPageIDs(pageID []int64) ([]*PageNode, error) {
+	qs = qs.Reset()
+	var rows, err = qs.
 		Filter("PageID__in", pageID).
 		All()
 	if err != nil {
@@ -293,8 +287,9 @@ func GetNodesByPageIDs(ctx context.Context, pageID []int64) ([]*PageNode, error)
 	return rowsToNodes(rows), nil
 }
 
-func GetNodesByTypeHash(ctx context.Context, contentType string, offset int32, limit int32) ([]*PageNode, error) {
-	var rows, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) GetNodesByTypeHash(contentType string, offset int32, limit int32) ([]*PageNode, error) {
+	qs = qs.Reset()
+	var rows, err = qs.
 		Filter("ContentType", contentType).
 		Limit(int(limit)).
 		Offset(int(offset)).
@@ -306,8 +301,9 @@ func GetNodesByTypeHash(ctx context.Context, contentType string, offset int32, l
 	return rowsToNodes(rows), nil
 }
 
-func GetNodesByTypeHashes(ctx context.Context, contentType []string, offset int32, limit int32) ([]*PageNode, error) {
-	var rows, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) GetNodesByTypeHashes(contentType []string, offset int32, limit int32) ([]*PageNode, error) {
+	qs = qs.Reset()
+	var rows, err = qs.
 		Filter("ContentType__in", contentType).
 		Limit(int(limit)).
 		Offset(int(offset)).
@@ -319,8 +315,9 @@ func GetNodesByTypeHashes(ctx context.Context, contentType []string, offset int3
 	return rowsToNodes(rows), nil
 }
 
-func GetNodesForPaths(ctx context.Context, path []string) ([]*PageNode, error) {
-	var rows, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) GetNodesForPaths(path []string) ([]*PageNode, error) {
+	qs = qs.Reset()
+	var rows, err = qs.
 		Filter("Path__in", path).
 		All()
 	if err != nil {
@@ -329,17 +326,21 @@ func GetNodesForPaths(ctx context.Context, path []string) ([]*PageNode, error) {
 	return rowsToNodes(rows), nil
 }
 
-func insertNode(ctx context.Context, node *PageNode) (int64, error) {
+func (qs *PageQuerySet) insertNode(node *PageNode) (int64, error) {
 	var err error
-	node, err = queries.GetQuerySet(node).WithContext(ctx).ExplicitSave().Create(node)
+	qs = qs.Reset()
+	node, err = qs.
+		ExplicitSave().
+		Create(node)
 	if err != nil {
 		return 0, err
 	}
 	return node.PK, nil
 }
 
-func updateNode(ctx context.Context, node *PageNode) error {
-	var updated, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) updateNode(node *PageNode) error {
+	qs = qs.Reset()
+	var updated, err = qs.
 		Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt").
 		Filter("PK", node.PK).
 		ExplicitSave().
@@ -353,8 +354,9 @@ func updateNode(ctx context.Context, node *PageNode) error {
 	return nil
 }
 
-func updateNodePathAndDepth(ctx context.Context, path string, depth int64, iD int64) error {
-	var updated, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) updateNodePathAndDepth(path string, depth int64, iD int64) error {
+	qs = qs.Reset()
+	var updated, err = qs.
 		Select("Path", "Depth").
 		Filter("PK", iD).
 		ExplicitSave().
@@ -373,8 +375,9 @@ func updateNodePathAndDepth(ctx context.Context, path string, depth int64, iD in
 	return nil
 }
 
-func updateNodeStatusFlags(ctx context.Context, statusFlags int64, iD int64) error {
-	var updated, err = queries.GetQuerySet(&PageNode{}).WithContext(ctx).
+func (qs *PageQuerySet) updateNodeStatusFlags(statusFlags int64, iD int64) error {
+	qs = qs.Reset()
+	var updated, err = qs.
 		Select("StatusFlags").
 		Filter("PK", iD).
 		ExplicitSave().

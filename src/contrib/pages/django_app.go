@@ -194,16 +194,14 @@ func NewAppConfig() django.AppConfig {
 					default:
 						return nil, errs.ErrInvalidType
 					}
-					var ctx = context.Background()
-					var node, err = GetNodeByID(ctx, id)
+					var node, err = NewPageQuerySet().GetNodeByID(id)
 					if err != nil {
 						return nil, err
 					}
 					return &node, nil
 				},
 				GetInstances: func(amount, offset uint) ([]interface{}, error) {
-					var ctx = context.Background()
-					var nodes, err = AllNodes(ctx, StatusFlagNone, int32(offset), int32(amount))
+					var nodes, err = NewPageQuerySet().AllNodes(StatusFlagNone, int32(offset), int32(amount))
 					var items = make([]interface{}, 0)
 					for _, n := range nodes {
 						n := n

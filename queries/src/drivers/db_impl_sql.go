@@ -93,15 +93,22 @@ func (d *dbWrapper) Close() error {
 
 type txWrapper struct {
 	queryWrapper[*sql.Tx]
+	finished bool
+}
+
+func (p *txWrapper) Finished() bool {
+	return p.finished
 }
 
 func (t *txWrapper) Commit(ctx context.Context) error {
+	defer func() { t.finished = true }()
 	var err = t.queryWrapper.conn.Commit()
 	LogSQL(ctx, "sql.Tx", err, "COMMIT")
 	return databaseError(t.d, err)
 }
 
 func (t *txWrapper) Rollback(ctx context.Context) error {
+	defer func() { t.finished = true }()
 	var err = t.queryWrapper.conn.Rollback()
 	LogSQL(ctx, "sql.Tx", err, "ROLLBACK")
 	return databaseError(t.d, err)

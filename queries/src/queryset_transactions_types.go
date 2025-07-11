@@ -19,6 +19,16 @@ func NullTransction() drivers.Transaction {
 	return &nullTransaction{DB: nil}
 }
 
+// NullTransactions should be used when no transaction is needed, it will not
+// commit or rollback anything, it is a no-op transaction,
+// finished should always return false.
+func (n *nullTransaction) Finished() bool {
+	if finisher, ok := n.DB.(interface{ Finished() bool }); ok {
+		return finisher.Finished()
+	}
+	return false
+}
+
 func (n *nullTransaction) Rollback(context.Context) error {
 	return nil
 }

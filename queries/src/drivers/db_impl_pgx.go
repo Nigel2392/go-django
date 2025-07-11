@@ -148,14 +148,21 @@ func (p *poolWrapperPGX) Acquire(ctx context.Context) (Database, error) {
 
 type pgxTx struct {
 	queryWrapperPGX[pgx.Tx]
-	ctx context.Context
+	ctx      context.Context
+	finished bool
+}
+
+func (p *pgxTx) Finished() bool {
+	return p.finished
 }
 
 func (p *pgxTx) Commit(ctx context.Context) error {
+	defer func() { p.finished = true }()
 	return databaseError(p.d, p.conn.Commit(p.ctx))
 }
 
 func (p *pgxTx) Rollback(ctx context.Context) error {
+	defer func() { p.finished = true }()
 	return databaseError(p.d, p.conn.Rollback(p.ctx))
 }
 

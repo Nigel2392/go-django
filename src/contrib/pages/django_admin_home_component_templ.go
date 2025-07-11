@@ -82,14 +82,16 @@ func (p *PagesAdminHomeComponent) Media() media.Media {
 }
 
 func (p *PagesAdminHomeComponent) HTML() template.HTML {
-	var pages, err = AllNodes(
-		p.Request.Context(),
-		StatusFlagNone,
-		0, _ADMIN_HOMEPAGE_PAGE_COUNT,
+	var qs = NewPageQuerySet().WithContext(
+        p.Request.Context(),
+	)
+    var pages, err = qs.AllNodes(
+        StatusFlagNone,
+        0, _ADMIN_HOMEPAGE_PAGE_COUNT,
 		"-UpdatedAt",
 		"-Numchild",
 		"Path",
-	)
+    )
 	if err != nil {
 		return template.HTML("")
 	}

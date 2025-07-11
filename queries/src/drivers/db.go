@@ -67,6 +67,9 @@ type Database interface {
 // depending on whether all operations succeed or if any operation fails.
 type Transaction interface {
 	DB
+
+	// Finished returns true if the transaction has been committed or rolled back.
+	Finished() bool
 	Commit(context.Context) error
 	Rollback(context.Context) error
 }

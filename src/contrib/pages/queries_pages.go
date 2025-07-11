@@ -92,13 +92,15 @@ func SavePage(ctx context.Context, parent *PageNode, p SaveablePage) error {
 		)
 	}
 
+	var qs = NewPageQuerySet().WithContext(ctx)
+
 	if ref.Path == "" {
-		err = CreateChildNode(
-			ctx, parent, ref,
+		err = qs.CreateChildNode(
+			parent, ref,
 		)
 	} else {
-		err = UpdateNode(
-			ctx, ref,
+		err = qs.UpdateNode(
+			ref,
 		)
 	}
 	if err != nil {
@@ -128,7 +130,8 @@ func UpdatePage(ctx context.Context, p SaveablePage) error {
 		ref.ContentType = cType.TypeName()
 	}
 
-	if err := UpdateNode(ctx, ref); err != nil {
+	var qs = NewPageQuerySet().WithContext(ctx)
+	if err := qs.UpdateNode(ref); err != nil {
 		return err
 	}
 
@@ -153,7 +156,8 @@ func DeletePage(ctx context.Context, p DeletablePage) (err error) {
 		return fmt.Errorf("page id must not be zero")
 	}
 
-	if err = DeleteNode(ctx, ref); err != nil {
+	var qs = NewPageQuerySet().WithContext(ctx)
+	if err = qs.DeleteNode(ref); err != nil {
 		return err
 	}
 

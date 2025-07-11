@@ -113,7 +113,8 @@ func (n *PageNode) Specific(ctx context.Context) (Page, error) {
 }
 
 func (n *PageNode) Children(ctx context.Context) ([]*PageNode, error) {
-	return GetChildNodes(ctx, n, StatusFlagNone, 0, 1000)
+	var qs = NewPageQuerySet().WithContext(ctx)
+	return qs.GetChildNodes(n, StatusFlagNone, 0, 1000)
 }
 
 func (n *PageNode) TargetContentTypeField() attrs.FieldDefinition {

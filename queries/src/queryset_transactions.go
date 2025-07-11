@@ -22,12 +22,15 @@ func transactionFromContext(ctx context.Context) (tx drivers.Transaction, databa
 	if !ok {
 		return nil, "", false
 	}
-	return t.Transaction, t.DatabaseName, t.Transaction != nil
+	return t.Transaction, t.DatabaseName, t.Transaction != nil && !t.Transaction.Finished()
 }
 
 func transactionToContext(ctx context.Context, tx drivers.Transaction, dbName string) context.Context {
 	if tx == nil {
 		panic("transactionToContext: transaction is nil")
+	}
+	if tx.Finished() {
+		return ctx
 	}
 	return context.WithValue(ctx, transactionContextKey{}, &transactionContextValue{
 		Transaction:  tx,

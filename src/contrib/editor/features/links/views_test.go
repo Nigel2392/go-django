@@ -1,12 +1,12 @@
 package links_test
 
 import (
-	"context"
 	"fmt"
 	"net/http/httptest"
 	"strings"
 	"testing"
 
+	"github.com/Nigel2392/go-django/queries/src/quest"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features/links"
@@ -36,6 +36,9 @@ func TestViews(t *testing.T) {
 		),
 	)
 
+	var tables = quest.Table(t, &pages.PageNode{})
+	defer tables.Drop()
+
 	pages.SetRoutePrefix("/pages")
 
 	var err = app.Initialize()
@@ -49,8 +52,9 @@ func TestViews(t *testing.T) {
 	var page = &pages.PageNode{
 		Title: "Google",
 	}
-	err = pages.CreateRootNode(
-		context.Background(), page,
+	var qs = pages.NewPageQuerySet()
+	err = qs.AddRoot(
+		page,
 	)
 	if err != nil {
 		t.Fatal(err)
