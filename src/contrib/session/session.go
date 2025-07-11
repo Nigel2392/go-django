@@ -46,8 +46,9 @@ func NewAppConfig() django.AppConfig {
 		db, ok = dbInt.(drivers.Database)
 		assert.True(ok, "DATABASE setting must be of type drivers.Database")
 
-		switch db.Driver().(type) {
+		switch d := db.Driver().(type) {
 		case *drivers.DriverMySQL, *drivers.DriverMariaDB, *drivers.DriverPostgres, *drivers.DriverSQLite:
+
 			if !django.AppInstalled("migrator") {
 				var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())
 				if err != nil {
@@ -67,6 +68,19 @@ func NewAppConfig() django.AppConfig {
 			}
 
 			logger.Debug("Using QueryStore for session storage")
+			sessionManager.Store = NewQueryStore(db)
+			return nil
+
+		default:
+
+			// If the driver is registered to the drivers package,
+			// we assume it supports QueryStore.
+			var _, ok = drivers.Retrieve(d)
+			if !ok {
+				return fmt.Errorf("unsupported driver for session storage: %T", d)
+			}
+
+			logger.Warnf("Using QueryStore for session storage with driver %T", d)
 			sessionManager.Store = NewQueryStore(db)
 			return nil
 		}
