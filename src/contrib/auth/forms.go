@@ -186,7 +186,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 
 	f.SetValidators(func(f forms.Form) []error {
 		var cleaned = f.CleanedData()
-		if cleaned["password"] != cleaned["passwordConfirm"] {
+		if cleaned["password"].(*Password).Raw != cleaned["passwordConfirm"].(*Password).Raw {
 			return []error{autherrors.ErrPwdNoMatch}
 		}
 		return nil
