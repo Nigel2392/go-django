@@ -5,7 +5,8 @@ import (
 	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
-	"github.com/pkg/errors"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 )
 
 type PageQuerySet struct {
@@ -377,19 +378,24 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 		return errors.Wrap(err, "failed to get descendants")
 	}
 
-	var nodesPtr = make([]*PageNode, len(nodes)+1)
-	nodesPtr[0] = node
-
 	for _, descendant := range nodes {
 		descendant := descendant
 		descendant.Path = newParent.Path + descendant.Path[node.Depth*STEP_LEN:]
 		descendant.Depth = (newParent.Depth + descendant.Depth + 1) - node.Depth
-		// descendant.UrlPath = path.Join(newParent.UrlPath, descendant.Slug)
-		// nodesPtr[i+1] = &descendant
+	}
 
-		if err = qs.updateNodePathAndDepth(descendant.Path, descendant.Depth, descendant.PK); err != nil {
-			return errors.Wrap(err, "failed to update descendant")
-		}
+	updated, err := qs.
+		Reset().
+		Select("Path", "Depth").
+		ExplicitSave().
+		BulkUpdate(nodes)
+
+	if err != nil {
+		return errors.Wrap(err, "failed to update descendants")
+	}
+
+	if updated == 0 {
+		return errors.NoChanges.Wrapf("failed to update descendants for node with path %s", node.Path)
 	}
 
 	// Update url paths of descendants
@@ -427,7 +433,7 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 			Ctx: qs.Context(),
 		},
 		Node:      node,
-		Nodes:     nodesPtr,
+		Nodes:     nodes,
 		OldParent: oldParent,
 		NewParent: newParent,
 	})
@@ -463,25 +469,35 @@ func (qs *PageQuerySet) UnpublishNode(node *PageNode, unpublishChildren bool) er
 	}
 	defer transaction.Rollback(qs.Context())
 
-	if node.StatusFlags.Is(StatusFlagPublished) {
-		node.StatusFlags &^= StatusFlagPublished
+	if !node.StatusFlags.Is(StatusFlagPublished) {
+		return nil
 	}
 
-	var nodes []*PageNode = make([]*PageNode, 1)
+	var xp expr.ClauseExpression = expr.Q("PK", node.PK)
 	if unpublishChildren {
-		descendants, err := qs.GetDescendants(node.Path, node.Depth, StatusFlagNone, 0, 1000)
-		if err != nil {
-			return err
-		}
-
-		nodes = make([]*PageNode, len(descendants)+1)
-		copy(nodes, descendants)
+		xp = expr.Or(
+			xp,
+			expr.And(
+				expr.Q("StatusFlags__bitand", int64(StatusFlagPublished)),
+				expr.Q("Path__startswith", node.Path),
+				expr.Q("Depth__gt", node.Depth),
+			),
+		)
 	}
 
-	nodes[len(nodes)-1] = node
-
-	if err := qs.updateNodes(nodes); err != nil {
-		return err
+	updated, err := qs.
+		ExplicitSave().
+		Select("StatusFlags").
+		Filter(xp).
+		Update(
+			&PageNode{},
+			expr.Expr("StatusFlags", expr.LOOKUP_BITAND, ^int64(StatusFlagPublished)),
+		)
+	if err != nil {
+		return errors.Wrap(err, "failed to update node status flags")
+	}
+	if updated == 0 {
+		return errors.NoChanges.Wrapf("failed to unpublish node with PK %d", node.PK)
 	}
 
 	return transaction.Commit(qs.Context())

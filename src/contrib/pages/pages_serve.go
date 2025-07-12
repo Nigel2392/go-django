@@ -92,7 +92,7 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
 		context   = context.Background()
 		qs        = NewPageQuerySet().WithContext(req.Context())
 		pathParts = mux.Vars(req).GetAll("*")
-		page      *PageNode
+		page      = &PageNode{}
 		err       error
 	)
 

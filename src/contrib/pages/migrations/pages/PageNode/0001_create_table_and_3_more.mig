@@ -124,21 +124,8 @@
         "type": "",
         "columns": [
           "Path"
-        ]
-      },
-      {
-        "name": "",
-        "type": "",
-        "columns": [
-          "PageID"
-        ]
-      },
-      {
-        "name": "",
-        "type": "",
-        "columns": [
-          "ContentType"
-        ]
+        ],
+        "unique": true
       },
       {
         "name": "",
@@ -173,31 +160,8 @@
           "type": "",
           "columns": [
             "Path"
-          ]
-        }
-      }
-    },
-    {
-      "action": "add_index",
-      "index": {
-        "new": {
-          "name": "",
-          "type": "",
-          "columns": [
-            "PageID"
-          ]
-        }
-      }
-    },
-    {
-      "action": "add_index",
-      "index": {
-        "new": {
-          "name": "",
-          "type": "",
-          "columns": [
-            "ContentType"
-          ]
+          ],
+          "unique": true
         }
       }
     },

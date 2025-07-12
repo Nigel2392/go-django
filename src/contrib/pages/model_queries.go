@@ -19,6 +19,7 @@ func rowsToNodes(rows queries.Rows[*PageNode]) []*PageNode {
 func (qs *PageQuerySet) updateNodes(nodes []*PageNode) error {
 	qs = qs.Reset()
 	var updated, err = qs.
+		ExplicitSave().
 		Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt").
 		BulkUpdate(nodes)
 	if err != nil {
@@ -347,32 +348,6 @@ func (qs *PageQuerySet) updateNode(node *PageNode) error {
 		Filter("PK", node.PK).
 		ExplicitSave().
 		Update(node)
-	if err != nil {
-		return err
-	}
-
-	if updated == 0 {
-		// still commit the transaction as opposed to rolling it back
-		// some databases might have issues reporting back the amount of updated rows
-		return errors.NoChanges
-	}
-
-	return nil
-}
-
-func (qs *PageQuerySet) updateNodePathAndDepth(path string, depth int64, iD int64) error {
-	qs = qs.Reset()
-
-	updated, err := qs.
-		Select("Path", "Depth").
-		Filter("PK", iD).
-		ExplicitSave().
-		Update(
-			&PageNode{
-				Path:  path,
-				Depth: depth,
-			},
-		)
 	if err != nil {
 		return err
 	}
