@@ -54,13 +54,13 @@ func (b *SessionBackend) Get() (msgs []Message, AllRetrieved bool) {
 
 	var sessionMessages = session.Get(sessionBackendKey)
 	if sessionMessages == nil {
-		logger.Debug("No messages found in session")
+		logger.NameSpace(MESSAGES_NAMESPACE).Debug("No messages found in session")
 		return nil, false
 	}
 
 	var ok bool
 	if msgs, ok = sessionMessages.([]Message); ok {
-		logger.Debugf("Retrieved %d messages from session", len(msgs))
+		logger.NameSpace(MESSAGES_NAMESPACE).Debugf("Retrieved %d messages from session", len(msgs))
 		return msgs, true
 	}
 
@@ -86,7 +86,7 @@ func (b *SessionBackend) Store(message Message) error {
 		sessionMessages = make([]Message, 0)
 	}
 
-	logger.Debugf(
+	logger.NameSpace(MESSAGES_NAMESPACE).Debugf(
 		"Storing into backend, message: %s, level: %v, extraTags: %v",
 		message.Message(), message.Tag(), message.ExtraTags(),
 	)

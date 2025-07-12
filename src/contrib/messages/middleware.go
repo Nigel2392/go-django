@@ -3,7 +3,6 @@ package messages
 import (
 	"net/http"
 
-	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/mux"
 )
 
@@ -14,6 +13,7 @@ func MessagesMiddleware(next mux.Handler) mux.Handler {
 			return
 		}
 
+		var logger = app.Logger()
 		backend, err := app.initBackend(r)
 		if backend == nil || err != nil {
 			if err != nil {

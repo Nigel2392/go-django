@@ -2,11 +2,15 @@ package drivers
 
 import (
 	"context"
+	"sync"
 
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
-var LOG_SQL_QUERIES = true
+var (
+	LOG_SQL_QUERIES   = true
+	LOG_SQL_NAMESPACE = "SQL"
+)
 
 type canLogContextKey struct{}
 
@@ -28,6 +32,25 @@ func wasLogged(level logger.LogLevel) bool {
 	return logger.GetLevel() <= level
 }
 
+var (
+	_setupLogger = &sync.Once{}
+	localLogger  logger.Log
+)
+
+func getLogger() logger.Log {
+	if localLogger != nil {
+		return localLogger
+	}
+
+	localLogger = logger.NameSpace(LOG_SQL_NAMESPACE)
+
+	if localLogger == nil {
+		return &logger.Logger{}
+	}
+
+	return localLogger
+}
+
 // LogSQL logs the SQL query and its arguments if logging is enabled in the context.
 //
 // It logs the query with the source of the query (from) and the error if it exists.
@@ -38,10 +61,10 @@ func LogSQL(ctx context.Context, from string, err error, query string, args ...a
 		return false
 	}
 	if err != nil {
-		logger.Errorf("[%s.Query]: %s: %s %v", from, err.Error(), query, args)
+		getLogger().Errorf("[%s.Query]: %s: %s %v", from, err.Error(), query, args)
 		return wasLogged(logger.ERR)
 	}
-	logger.Debugf("[%s.Query]: %s %v", from, query, args)
+	getLogger().Debugf("[%s.Query]: %s %v", from, query, args)
 	return wasLogged(logger.DBG)
 }
 
@@ -66,7 +89,7 @@ func LogSQLScope(ctx context.Context, log bool, fn func(context.Context) error) 
 
 	// probably should do this only when query could be logged? right?
 	if err != nil && log && logged {
-		logger.Errorf("Error in LogSQLScope: %v", err)
+		getLogger().Errorf("Error in LogSQLScope: %v", err)
 	}
 
 	return newCtx, err, logged

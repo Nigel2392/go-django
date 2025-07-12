@@ -86,15 +86,20 @@ var pageAdminModelOptions = admin.ModelOptions{
 					return template.HTML("")
 				},
 			),
-			"ContentType": list.FuncColumn(
+			"ContentType": list.HTMLColumn(
 				trans.S("Content Type"),
-				func(_ *http.Request, _ attrs.Definitions, row attrs.Definer) interface{} {
+				func(_ *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
 					var node = row.(*PageNode)
 					var ctype = DefinitionForType(node.ContentType)
-					if ctype == nil {
-						return "Unknown"
+					var typStr = "Unknown"
+					if ctype != nil {
+						typStr = ctype.Label()
 					}
-					return ctype.Label()
+
+					return template.HTML(fmt.Sprintf(
+						`<span class="badge">%s</span>`,
+						typStr,
+					))
 				},
 			),
 		},

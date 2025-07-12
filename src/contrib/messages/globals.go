@@ -73,8 +73,8 @@ func ConfigureBackend(initBackend func(r *http.Request) (MessageBackend, error))
 }
 
 func AddMessage(r *http.Request, tag MessageTag, message string, extraTags ...MessageTag) error {
-	if !django.AppInstalled("messages") {
-		logger.Warn("Messages app not installed, not sending any messages")
+	if !django.AppInstalled(MESSAGES_NAMESPACE) {
+		logger.NameSpace(MESSAGES_NAMESPACE).Warn("Messages app not installed, not sending any messages")
 		return ErrMessagesNotInstalled
 	}
 
@@ -83,7 +83,7 @@ func AddMessage(r *http.Request, tag MessageTag, message string, extraTags ...Me
 		return ErrBackendNotConfigured
 	}
 
-	logger.Debugf(
+	app.Logger().Debugf(
 		"Adding message: %s, level: %d, extraTags: %v",
 		message, tag, extraTags,
 	)

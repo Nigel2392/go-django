@@ -87,7 +87,6 @@ func (qs *PageQuerySet) AddRoot(node *PageNode) error {
 func (qs *PageQuerySet) CreateChildNode(parent, child *PageNode) error {
 
 	qs = qs.Reset()
-	qs = qs.ExplicitSave()
 
 	var transaction, err = qs.GetOrCreateTransaction()
 	if err != nil {
@@ -111,13 +110,14 @@ func (qs *PageQuerySet) CreateChildNode(parent, child *PageNode) error {
 	child.SetUrlPath(parent)
 	child.Path = parent.Path + buildPathPart(parent.Numchild)
 	child.Depth = parent.Depth + 1
-	child, err = qs.Create(child)
+	child.PK, err = qs.insertNode(child)
 	if err != nil {
 		return err
 	}
 
 	parent.Numchild++
 	updated, err := qs.
+		ExplicitSave().
 		Select("Numchild").
 		Filter("PK", parent.PK).
 		Update(parent)
@@ -264,11 +264,11 @@ func (qs *PageQuerySet) DeleteRootNode(node *PageNode) error {
 
 // DeleteNode deletes a page node.
 func (qs *PageQuerySet) DeleteNode(node *PageNode) error { //, newParent *PageNode) error {
-	qs = qs.Reset()
-
 	if node.Depth == 0 {
 		return qs.DeleteRootNode(node)
 	}
+
+	qs = qs.Reset()
 
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
@@ -280,14 +280,14 @@ func (qs *PageQuerySet) DeleteNode(node *PageNode) error { //, newParent *PageNo
 		node.Path, 1,
 	)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to get parent path for node with path %s", node.Path)
 	}
 
 	parent, err := qs.GetNodeByPath(
 		parentPath,
 	)
 	if err != nil {
-		return err
+		return errors.Wrapf(err, "failed to get parent node for node with path %s", node.Path)
 	}
 
 	var descendants []*PageNode
@@ -295,7 +295,7 @@ func (qs *PageQuerySet) DeleteNode(node *PageNode) error { //, newParent *PageNo
 		node.Path, node.Depth-1, StatusFlagNone, 0, 1000,
 	)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to get descendants")
 	}
 
 	var ids = make([]int64, len(descendants))
@@ -314,12 +314,12 @@ func (qs *PageQuerySet) DeleteNode(node *PageNode) error { //, newParent *PageNo
 
 	err = qs.deleteNodes(ids)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to delete descendants")
 	}
 
 	prnt, err := qs.decrementNumChild(parent.PK)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to decrement parent numchild")
 	}
 	*parent = *prnt
 

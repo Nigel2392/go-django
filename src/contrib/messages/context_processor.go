@@ -16,7 +16,7 @@ func RequestMessageContext(c ctx.ContextWithRequest) {
 	c.Set("messages", messages)
 	c.Set("DEFAULT_MESSAGE_LEVELS", app.Tags)
 
-	logger.Debugf(
+	logger.NameSpace(MESSAGES_NAMESPACE).Debugf(
 		"Messages context processor: %T, stored messages: %d",
 		backend, len(messages),
 	)

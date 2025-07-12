@@ -31,7 +31,7 @@ var (
 	defaultLogLevel = INF
 	Writer          = func(level LogLevel) io.Writer { return os.Stdout }
 	PWriter         = func(label string, level LogLevel) io.Writer { return prefixerwriter{label, level, os.Stdout} }
-	NameSpace       = func(label string) Log { return nil }
+	NameSpace       = func(label string) Log { return &Logger{} }
 
 	SetOutput func(level LogLevel, w io.Writer) = func(level LogLevel, w io.Writer) {}
 	SetLevel  func(level LogLevel)              = func(level LogLevel) { defaultLogLevel = level }

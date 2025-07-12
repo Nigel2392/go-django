@@ -429,12 +429,12 @@ func (l *Logger) writePrefix(level LogLevel, w io.Writer) {
 	var b = new(bytes.Buffer)
 
 	_, _ = b.Write([]byte("["))
-	if l.Prefix != "" {
-		_, _ = b.Write([]byte(l.Prefix))
-		_, _ = b.Write([]byte(" / "))
-	}
-
 	_, _ = b.Write([]byte(level.String()))
+
+	if l.Prefix != "" {
+		_, _ = b.Write([]byte(" / "))
+		_, _ = b.Write([]byte(l.Prefix))
+	}
 
 	if l.OutputTime {
 		_, _ = b.Write([]byte(" / "))

@@ -100,9 +100,7 @@ func (n *PageNode) DatabaseIndexes(obj attrs.Definer) []migrator.Index {
 		return nil
 	}
 	return []migrator.Index{
-		{Fields: []string{"Path"}, Unique: false},
-		{Fields: []string{"PageID"}, Unique: false},
-		{Fields: []string{"ContentType"}, Unique: false},
+		{Fields: []string{"Path"}, Unique: true},
 		{Fields: []string{"PageID", "ContentType"}, Unique: true},
 		{Fields: []string{"Slug", "Depth"}, Unique: true},
 	}

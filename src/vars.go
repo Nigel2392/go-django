@@ -41,6 +41,9 @@ const (
 	// Log all routes that are accessed
 	APPVAR_ROUTE_LOGGING_ENABLED = "ROUTE_LOGGING_ENABLED" // bool
 
+	// Log static routes that are accessed
+	APPVAR_STATIC_ROUTE_LOGGING_ENABLED = "STATIC_ROUTE_LOGGING_ENABLED" // bool
+
 	// Wether the webserver is behind a proxy
 	// This is so the application knows to use different headers to, for example
 	// get the remote address of the client

@@ -317,6 +317,7 @@ func (qs *PageQuerySet) GetNodesByTypeHashes(contentType []string, offset int32,
 
 func (qs *PageQuerySet) GetNodesForPaths(path []string) ([]*PageNode, error) {
 	qs = qs.Reset()
+
 	var rows, err = qs.
 		Filter("Path__in", path).
 		All()
@@ -341,12 +342,6 @@ func (qs *PageQuerySet) insertNode(node *PageNode) (int64, error) {
 func (qs *PageQuerySet) updateNode(node *PageNode) error {
 	qs = qs.Reset()
 
-	transaction, err := qs.GetOrCreateTransaction()
-	if err != nil {
-		return errors.Wrap(err, "failed to start transaction")
-	}
-	defer transaction.Rollback(qs.Context())
-
 	updated, err := qs.
 		Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt").
 		Filter("PK", node.PK).
@@ -359,23 +354,14 @@ func (qs *PageQuerySet) updateNode(node *PageNode) error {
 	if updated == 0 {
 		// still commit the transaction as opposed to rolling it back
 		// some databases might have issues reporting back the amount of updated rows
-		return errors.Join(
-			errors.NoChanges,
-			transaction.Commit(qs.Context()),
-		)
+		return errors.NoChanges
 	}
 
-	return transaction.Commit(qs.Context())
+	return nil
 }
 
 func (qs *PageQuerySet) updateNodePathAndDepth(path string, depth int64, iD int64) error {
 	qs = qs.Reset()
-
-	transaction, err := qs.GetOrCreateTransaction()
-	if err != nil {
-		return errors.Wrap(err, "failed to start transaction")
-	}
-	defer transaction.Rollback(qs.Context())
 
 	updated, err := qs.
 		Select("Path", "Depth").
@@ -394,13 +380,10 @@ func (qs *PageQuerySet) updateNodePathAndDepth(path string, depth int64, iD int6
 	if updated == 0 {
 		// still commit the transaction as opposed to rolling it back
 		// some databases might have issues reporting back the amount of updated rows
-		return errors.Join(
-			errors.NoChanges,
-			transaction.Commit(qs.Context()),
-		)
+		return errors.NoChanges
 	}
 
-	return transaction.Commit(qs.Context())
+	return nil
 }
 
 func (qs *PageQuerySet) updateNodeStatusFlags(statusFlags int64, iD int64) error {

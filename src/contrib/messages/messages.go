@@ -6,11 +6,16 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/logger"
+)
+
+const (
+	MESSAGES_NAMESPACE = "messages"
 )
 
 var (
 	app *MessageAppConfig = &MessageAppConfig{
-		AppConfig: apps.NewAppConfig("messages"),
+		AppConfig: apps.NewAppConfig(MESSAGES_NAMESPACE),
 	}
 )
 
@@ -47,6 +52,10 @@ func NewAppConfig() django.AppConfig {
 	}
 
 	return app
+}
+
+func (m *MessageAppConfig) Logger() logger.Log {
+	return logger.NameSpace(MESSAGES_NAMESPACE)
 }
 
 func (m *MessageAppConfig) ConfigureTags(tags MessageTags) {

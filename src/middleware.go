@@ -97,6 +97,7 @@ func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
 		return next
 	}
 
+	var log = a.Log.NameSpace("HTTP")
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var startTime = time.Now()
 
@@ -104,7 +105,7 @@ func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
 
 		var logLevel = logger.INF
 		if IsStaticRouteRequest(r) {
-			if !ConfigGet(a.Settings, APPVAR_DEBUG, true) {
+			if !ConfigGet(a.Settings, APPVAR_DEBUG, true) || !ConfigGet(a.Settings, APPVAR_STATIC_ROUTE_LOGGING_ENABLED, false) {
 				return
 			}
 			logLevel = logger.DBG
@@ -127,7 +128,7 @@ func (a *Application) loggerMiddleware(next mux.Handler) mux.Handler {
 			pathBuf.WriteString(r.URL.RawQuery)
 		}
 
-		a.Log.Logf(
+		log.Logf(
 			logLevel,
 			"%s %s %s %s",
 			logger.Colorize(

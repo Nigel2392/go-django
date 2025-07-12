@@ -50,7 +50,8 @@ func TestViews(t *testing.T) {
 	defer server.Close()
 
 	var page = &pages.PageNode{
-		Title: "Google",
+		Title:       "Google",
+		ContentType: "fake.Page",
 	}
 	var qs = pages.NewPageQuerySet()
 	err = qs.AddRoot(

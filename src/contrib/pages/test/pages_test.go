@@ -9,7 +9,7 @@ import (
 	_ "unsafe"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
-	"github.com/Nigel2392/go-django/queries/src/migrator"
+	"github.com/Nigel2392/go-django/queries/src/quest"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -19,8 +19,6 @@ import (
 	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/Nigel2392/go-signals"
 )
-
-var _, sqlDB = testdb.Open()
 
 //go:linkname insertNode github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).insertNode
 func insertNode(qs *pages.PageQuerySet, node *pages.PageNode) (*pages.PageNode, error)
@@ -34,8 +32,9 @@ func incrementNumChild(qs *pages.PageQuerySet, pk int64) (*pages.PageNode, error
 //go:linkname decrementNumChild github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).decrementNumChild
 func decrementNumChild(qs *pages.PageQuerySet, pk int64) (*pages.PageNode, error)
 
-func init() {
-	sqlDB.ExecContext(context.Background(), "DROP TABLE IF EXISTS test_pages")
+func TestMain(m *testing.M) {
+
+	var _, sqlDB = testdb.Open()
 
 	attrs.RegisterModel(&pages.PageNode{})
 	attrs.RegisterModel(&TestPage{})
@@ -58,23 +57,19 @@ func init() {
 		})
 	}
 
-	var _, err = sqlDB.ExecContext(context.Background(), "DROP TABLE IF EXISTS PageNode")
-	if err != nil {
-		panic(fmt.Errorf("failed to drop PageNode table: %s", err))
-	}
+	var t = quest.Table[*testing.T](nil,
+		&pages.PageNode{},
+		&TestPage{},
+	)
 
-	schemaEditor, err := migrator.GetSchemaEditor(sqlDB.Driver())
-	if err != nil {
-		panic(fmt.Errorf("failed to get schema editor: %s", err))
-	}
+	t.Create()
 
-	if err := schemaEditor.CreateTable(migrator.NewModelTable(&pages.PageNode{}), false); err != nil {
-		panic(fmt.Errorf("failed to create pages table: %s", err))
-	}
+	exitCode := m.Run()
 
-	if _, err := sqlDB.ExecContext(context.Background(), testPageCREATE_TABLE); err != nil {
-		panic(err)
-	}
+	t.Drop()
+
+	os.Exit(exitCode)
+
 }
 
 var _ pages.Page = &TestPage{}
@@ -336,19 +331,7 @@ func TestPageNode(t *testing.T) {
 		return nil
 	})
 
-	schemaEditor, err := migrator.GetSchemaEditor(sqlDB.Driver())
-	if err != nil {
-		panic(fmt.Errorf("failed to get schema editor: %s", err))
-	}
-
-	var pageTbl = migrator.NewModelTable(&pages.PageNode{})
-	if err := schemaEditor.DropTable(pageTbl, false); err != nil {
-		panic(fmt.Errorf("failed to drop pages table: %s", err))
-	}
-
-	if err := schemaEditor.CreateTable(pageTbl, false); err != nil {
-		panic(fmt.Errorf("failed to create pages table: %s", err))
-	}
+	var lastId = int64(0)
 
 	var qs = pages.NewPageQuerySet().WithContext(queryCtx)
 
@@ -359,9 +342,11 @@ func TestPageNode(t *testing.T) {
 			return
 		}
 
-		if rootNode.PK != 1 {
-			t.Fatalf("expected ID 1, got %d", rootNode.PK)
+		if rootNode.PK == 0 {
+			t.Fatal("expected ID not 0, got 0")
 		}
+
+		lastId = rootNode.PK
 
 		if rootNode.Path != "001" {
 			t.Fatalf("expected Path 1, got %s", rootNode.Path)
@@ -409,8 +394,8 @@ func TestPageNode(t *testing.T) {
 				t.Fatalf("expected Path 001, got %s", rootNode.Path)
 			}
 
-			if childNode.PK != 2 {
-				t.Fatalf("expected ID 2, got %d", childNode.PK)
+			if childNode.PK != lastId+1 {
+				t.Fatalf("expected ID %d, got %d", lastId+1, childNode.PK)
 			}
 
 			childNode, err = qs.GetNodeByID(childNode.PK)
@@ -492,8 +477,8 @@ func TestPageNode(t *testing.T) {
 					return
 				}
 
-				if subChildNode.PK != 3 {
-					t.Fatalf("expected ID 3, got %d", subChildNode.PK)
+				if subChildNode.PK != lastId+2 {
+					t.Fatalf("expected ID %d, got %d", lastId+2, subChildNode.PK)
 				}
 
 				if subChildNode.Path != "001001001" {
@@ -626,8 +611,8 @@ func TestPageNode(t *testing.T) {
 				return
 			}
 
-			if childSiblingNode.PK != 4 {
-				t.Fatalf("expected ID 3, got %d", childSiblingNode.PK)
+			if childSiblingNode.PK != lastId+3 {
+				t.Fatalf("expected ID %d, got %d", lastId+3, childSiblingNode.PK)
 			}
 
 			if childSiblingNode.Path != "001002" {
@@ -697,8 +682,8 @@ func TestPageNode(t *testing.T) {
 					return
 				}
 
-				if childSiblingSubChildNode.PK != 5 {
-					t.Fatalf("expected ID 5, got %d", childSiblingSubChildNode.PK)
+				if childSiblingSubChildNode.PK != lastId+4 {
+					t.Fatalf("expected ID %d, got %d", lastId+4, childSiblingSubChildNode.PK)
 				}
 
 				if childSiblingSubChildNode.Path != "001002001" {
@@ -1071,11 +1056,8 @@ func TestPageNode(t *testing.T) {
 		GetForID: func(ctx context.Context, ref *pages.PageNode, id int64) (pages.Page, error) {
 			var page = &DBTestPage{}
 			page.Ref = ref
-			var row = sqlDB.QueryRowContext(ctx, testPageByID, id)
-			if err := row.Scan(&page.Identifier, &page.Description); err != nil {
-				return nil, err
-			}
-			return page, nil
+			var row, err = queries.GetQuerySet(&DBTestPage{}).Filter("Identifier", id).First()
+			return row.Object, err
 		},
 	})
 

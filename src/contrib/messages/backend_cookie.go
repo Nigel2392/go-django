@@ -74,7 +74,7 @@ func NewCookieBackend(r *http.Request) (MessageBackend, error) {
 	var cookie, err = r.Cookie(key.Name)
 	if err != nil {
 		if err != http.ErrNoCookie {
-			logger.Errorf("Error retrieving cookie: %v", err)
+			logger.NameSpace(MESSAGES_NAMESPACE).Errorf("Error retrieving cookie: %v", err)
 		}
 	}
 
@@ -82,7 +82,7 @@ func NewCookieBackend(r *http.Request) (MessageBackend, error) {
 	if cookie != nil {
 		messages, err = decodeMessages(cookie.Value)
 		if err != nil {
-			logger.Errorf("Error decoding cookie: %v", err)
+			logger.NameSpace(MESSAGES_NAMESPACE).Errorf("Error decoding cookie: %v", err)
 			messages = make([]Message, 0)
 		}
 	}
