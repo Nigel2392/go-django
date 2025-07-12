@@ -506,7 +506,7 @@ func TestPageNode(t *testing.T) {
 				}
 
 				t.Run("GetAncestors", func(t *testing.T) {
-					var ancestors, err = qs.AncestorNodes(subChildNode.Path, int(subChildNode.Depth)+1)
+					var ancestors, err = qs.GetAncestors(subChildNode.Path, subChildNode.Depth)
 					if err != nil {
 						t.Fatal(err)
 						return
@@ -703,7 +703,7 @@ func TestPageNode(t *testing.T) {
 				}
 
 				t.Run("GetAncestors", func(t *testing.T) {
-					var ancestors, err = qs.AncestorNodes(childSiblingSubChildNode.Path, int(childSiblingSubChildNode.Depth)+1)
+					var ancestors, err = qs.GetAncestors(childSiblingSubChildNode.Path, childSiblingSubChildNode.Depth)
 					if err != nil {
 						t.Fatal(err)
 						return

@@ -71,8 +71,8 @@ func getPageBreadcrumbs(r *http.Request, p *PageNode, urlForLast bool) ([]admin.
 	var breadcrumbs = make([]admin.BreadCrumb, 0, p.Depth+2)
 	var qs = NewPageQuerySet().WithContext(r.Context())
 	if p.Depth > 0 {
-		var ancestors, err = qs.AncestorNodes(
-			p.Path, int(p.Depth)+1,
+		var ancestors, err = qs.GetAncestors(
+			p.Path, p.Depth,
 		)
 		if err != nil {
 			return nil, err

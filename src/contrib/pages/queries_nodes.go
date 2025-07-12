@@ -23,6 +23,44 @@ func NewPageQuerySet() *PageQuerySet {
 	return pageQuerySet
 }
 
+func (qs *PageQuerySet) StatusFlags(statusFlags StatusFlag) *PageQuerySet {
+	return qs.Filter("StatusFlags__bitand", statusFlags)
+}
+
+func (qs *PageQuerySet) Ancestors(parentPath string, depth int64) *PageQuerySet {
+	depth++
+
+	var paths = make([]string, depth)
+	for i := 1; i < int(depth); i++ {
+		var path, err = ancestorPath(
+			parentPath, int64(i),
+		)
+		if err != nil {
+			panic(errors.Wrapf(
+				err, "failed to get ancestor path for %s at depth %d",
+				path, i,
+			))
+		}
+		paths[i] = path
+	}
+
+	return qs.Filter("Path__in", paths)
+}
+
+func (qs *PageQuerySet) Descendants(path string, depth int64) *PageQuerySet {
+	return qs.Filter(
+		expr.Expr("Path", expr.LOOKUP_STARTSWITH, path),
+		expr.Expr("Depth", expr.LOOKUP_GT, depth),
+	)
+}
+
+func (qs *PageQuerySet) Children(path string, depth int64) *PageQuerySet {
+	return qs.Filter(
+		expr.Expr("Path", expr.LOOKUP_STARTSWITH, path),
+		expr.Expr("Depth", expr.LOOKUP_EXACT, depth+1),
+	)
+}
+
 func (qs *PageQuerySet) saveSpecific(node *PageNode, creating bool) error {
 
 	if _, ok := node.PageObject.(*PageNode); ok || node.PageObject == nil {
@@ -89,16 +127,14 @@ func (qs *PageQuerySet) AddRoot(node *PageNode) error {
 	node.SetUrlPath(nil)
 	node.Depth = 0
 
-	if err := qs.saveSpecific(node, true); err != nil {
+	if err = qs.saveSpecific(node, true); err != nil {
 		return errors.Wrap(err, "failed to save specific instance")
 	}
 
-	id, err := qs.insertNode(node)
+	node.PK, err = qs.insertNode(node)
 	if err != nil {
 		return err
 	}
-
-	node.PK = id
 
 	if err = transaction.Commit(qs.Context()); err != nil {
 		return errors.Wrap(err, "failed to commit transaction")
@@ -562,24 +598,5 @@ func (qs *PageQuerySet) ParentNode(path string, depth int) (v *PageNode, err err
 	}
 	return qs.GetNodeByPath(
 		parentPath,
-	)
-}
-
-// AncestorNodes returns the ancestor nodes of the given node.
-//
-// The path is a PageNode.Path, the depth is the depth of the page.
-func (qs *PageQuerySet) AncestorNodes(p string, depth int) ([]*PageNode, error) {
-	var paths = make([]string, depth)
-	for i := 1; i < int(depth); i++ {
-		var path, err = ancestorPath(
-			p, int64(i),
-		)
-		if err != nil {
-			return nil, err
-		}
-		paths[i] = path
-	}
-	return qs.GetNodesForPaths(
-		paths,
 	)
 }

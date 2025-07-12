@@ -8,6 +8,7 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/quest"
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features/links"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
@@ -26,6 +27,9 @@ func TestViews(t *testing.T) {
 			django.APPVAR_DATABASE:      db,
 		}),
 		django.Apps(
+			// make sure no indexes are created by faking the migrator app
+			// indexes aren't needed for this test
+			&apps.AppConfig{AppName: "migrator"},
 			pages.NewAppConfig,
 			editor.NewAppConfig,
 		),
@@ -37,6 +41,7 @@ func TestViews(t *testing.T) {
 	)
 
 	var tables = quest.Table(t, &pages.PageNode{})
+	tables.Create()
 	defer tables.Drop()
 
 	pages.SetRoutePrefix("/pages")

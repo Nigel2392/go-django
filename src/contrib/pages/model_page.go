@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"time"
 
@@ -19,20 +20,25 @@ var (
 
 type PageNode struct {
 	models.Model     `table:"PageNode"`
-	PK               int64        `json:"id" attrs:"primary;readonly;column=id"`
-	Title            string       `json:"title"`
-	Path             string       `json:"path"`
-	Depth            int64        `json:"depth" attrs:"blank"`
-	Numchild         int64        `json:"numchild" attrs:"blank"`
-	UrlPath          string       `json:"url_path" attrs:"readonly;blank"`
-	Slug             string       `json:"slug"`
-	StatusFlags      StatusFlag   `json:"status_flags" attrs:"null;blank"`
-	PageID           int64        `json:"page_id" attrs:"null;blank"`
-	ContentType      string       `json:"content_type" attrs:"null;blank"`
-	LatestRevisionID int64        `json:"latest_revision_id"`
-	CreatedAt        time.Time    `json:"created_at" attrs:"readonly;label=Created At"`
-	UpdatedAt        time.Time    `json:"updated_at" attrs:"readonly;label=Updated At"`
-	PageObject       SaveablePage `json:"-" attrs:"-"`
+	PK               int64      `json:"id" attrs:"primary;readonly;column=id"`
+	Title            string     `json:"title"`
+	Path             string     `json:"path"`
+	Depth            int64      `json:"depth" attrs:"blank"`
+	Numchild         int64      `json:"numchild" attrs:"blank"`
+	UrlPath          string     `json:"url_path" attrs:"readonly;blank"`
+	Slug             string     `json:"slug"`
+	StatusFlags      StatusFlag `json:"status_flags" attrs:"null;blank"`
+	PageID           int64      `json:"page_id" attrs:"null;blank"`
+	ContentType      string     `json:"content_type" attrs:"null;blank"`
+	LatestRevisionID int64      `json:"latest_revision_id"`
+	CreatedAt        time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
+	UpdatedAt        time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
+
+	PageObject SaveablePage `json:"-" attrs:"-"`
+
+	// _parent is used to cache the parent node
+	// It is not saved to the database and is only used for performance optimization
+	_parent *PageNode `json:"-" attrs:"-"`
 }
 
 func (n *PageNode) SetUrlPath(parent *PageNode) (newPath, oldPath string) {
@@ -112,9 +118,85 @@ func (n *PageNode) Specific(ctx context.Context) (Page, error) {
 	return Specific(ctx, n)
 }
 
-func (n *PageNode) Children(ctx context.Context) ([]*PageNode, error) {
-	var qs = NewPageQuerySet().WithContext(ctx)
-	return qs.GetChildNodes(n, StatusFlagNone, 0, 1000)
+func (n *PageNode) Parent(ctx context.Context, refresh ...bool) (parent *PageNode, err error) {
+	if n.Depth == 0 {
+		return nil, nil
+	}
+
+	var refreshFlag bool
+	if len(refresh) > 0 {
+		refreshFlag = refresh[0]
+	}
+
+	if !refreshFlag && n._parent != nil {
+		return n._parent, nil
+	}
+
+	parent, err = NewPageQuerySet().
+		WithContext(ctx).
+		ParentNode(n.Path, int(n.Depth))
+	if err != nil {
+		return nil, err
+	}
+
+	n._parent = parent
+	return parent, nil
+}
+
+func (n *PageNode) AddChild(ctx context.Context, child *PageNode) error {
+	if child == nil {
+		return fmt.Errorf("child node cannot be nil")
+	}
+
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	var err = NewPageQuerySet().
+		WithContext(ctx).
+		AddChild(n, child)
+	if err != nil {
+		return fmt.Errorf("failed to add child node: %w", err)
+	}
+
+	child._parent = n
+	return nil
+}
+
+func (n *PageNode) Move(ctx context.Context, newParent *PageNode) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	var err = NewPageQuerySet().
+		WithContext(ctx).
+		MoveNode(n, newParent)
+	if err != nil {
+		return fmt.Errorf("failed to move node: %w", err)
+	}
+
+	n._parent = newParent
+	return nil
+}
+
+func (n *PageNode) Publish(ctx context.Context) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	return NewPageQuerySet().
+		WithContext(ctx).
+		PublishNode(n)
+}
+
+func (n *PageNode) Unpublish(ctx context.Context, unpublishChildren bool) error {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+
+	return NewPageQuerySet().
+		WithContext(ctx).
+		UnpublishNode(n, unpublishChildren)
 }
 
 func (n *PageNode) TargetContentTypeField() attrs.FieldDefinition {
