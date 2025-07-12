@@ -2,7 +2,6 @@ package pages
 
 import (
 	"context"
-	"fmt"
 	"slices"
 	"strings"
 
@@ -161,10 +160,14 @@ func (p *pageRegistry) SpecificInstance(ctx context.Context, node *PageNode) (Pa
 	}
 
 	if node.PageID == 0 {
-		panic(fmt.Sprintf(
-			"pages: SpecificInstance called with node %s that has no PageID (%+v)",
-			typeName, node,
-		))
+		return node, ErrNoPageID.Wrapf(
+			"pages: SpecificInstance called with node %s that has no PageID (%q)",
+			typeName, node.Title,
+		)
+		//panic(fmt.Sprintf(
+		//	"pages: SpecificInstance called with node %s that has no PageID (%+v)",
+		//	typeName, node,
+		//))
 	}
 
 	return definition.GetForID(ctx, node, node.PageID)

@@ -34,7 +34,7 @@ type PageNode struct {
 	CreatedAt        time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
 	UpdatedAt        time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
 
-	PageObject SaveablePage `json:"-" attrs:"-"`
+	PageObject Page `json:"-" attrs:"-"`
 
 	// _parent is used to cache the parent node
 	// It is not saved to the database and is only used for performance optimization
@@ -114,8 +114,35 @@ func (n *PageNode) DatabaseIndexes(obj attrs.Definer) []migrator.Index {
 	}
 }
 
-func (n *PageNode) Specific(ctx context.Context) (Page, error) {
-	return Specific(ctx, n)
+func (n *PageNode) Ancestors() *PageQuerySet {
+	return NewPageQuerySet().Ancestors(n.Path, n.Depth)
+}
+
+func (n *PageNode) Descendants() *PageQuerySet {
+	return NewPageQuerySet().Descendants(n.Path, n.Depth)
+}
+
+func (n *PageNode) Children() *PageQuerySet {
+	return NewPageQuerySet().Children(n.Path, n.Depth)
+}
+
+func (n *PageNode) Specific(ctx context.Context, refresh ...bool) (Page, error) {
+	var refreshFlag bool
+	if len(refresh) > 0 {
+		refreshFlag = refresh[0]
+	}
+
+	if !refreshFlag && n.PageObject != nil {
+		return n.PageObject, nil
+	}
+
+	var p, err = Specific(ctx, n)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get specific page for node %d: %w", n.PK, err)
+	}
+
+	n.PageObject = p
+	return p, nil
 }
 
 func (n *PageNode) Parent(ctx context.Context, refresh ...bool) (parent *PageNode, err error) {

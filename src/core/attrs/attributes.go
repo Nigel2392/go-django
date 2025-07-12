@@ -186,8 +186,22 @@ func ForceSet(d Definer, name string, value interface{}) error {
 //
 // Type assertions are used to ensure that the value is of the correct type,
 // as well as providing less work for the caller.
-func Get[T any](d Definer, name string) T {
-	var defs = d.FieldDefs()
+func Get[T any](d any, name string) T {
+	var defs Definitions
+
+	switch d := d.(type) {
+	case Definer:
+		defs = d.FieldDefs()
+	case Definitions:
+		defs = d
+	default:
+		assert.Fail(
+			"get (%T): expected Definer or Definitions, got %T",
+			d, d,
+		)
+		return *(new(T))
+	}
+
 	var f, ok = defs.Field(name)
 	if !ok {
 
@@ -210,12 +224,34 @@ func Get[T any](d Definer, name string) T {
 		return *t
 	case nil:
 		return *(new(T))
-	default:
-		assert.Fail(
-			"get (%T): field %q is not of type %T",
-			d, name, v,
-		)
+		//	default:
+		//		assert.Fail(
+		//			"get (%T): field %q is not of type %T",
+		//			d, name, v,
+		//		)
 	}
+
+	var (
+		n       T
+		resultT = reflect.TypeOf(n)
+		resultV = reflect.New(resultT)
+		rVal    = reflect.ValueOf(v)
+	)
+
+	if rVal.Type().AssignableTo(resultT) {
+		resultV.Elem().Set(rVal)
+		return resultV.Elem().Interface().(T)
+	}
+
+	if rVal.Type().ConvertibleTo(resultT) {
+		resultV.Elem().Set(rVal.Convert(resultT))
+		return resultV.Elem().Interface().(T)
+	}
+
+	assert.Fail(
+		"get (%T): field %q is not of type %T, got %T",
+		d, name, resultT, rVal.Type(),
+	)
 	return *(new(T))
 }
 

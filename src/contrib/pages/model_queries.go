@@ -25,7 +25,7 @@ func (qs *PageQuerySet) queryNodes() ([]*PageNode, error) {
 }
 
 func (qs *PageQuerySet) updateNodes(nodes []*PageNode) error {
-	qs = qs.Reset()
+
 	var updated, err = qs.
 		ExplicitSave().
 		Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt").
@@ -47,7 +47,6 @@ func (qs *PageQuerySet) updateDescendantPaths(oldUrlPath, newUrlPath, pageNodePa
 	//		Filter("Depth__gt", expr.Logical(expr.LENGTH(expr.V(pageNodePath))).ADD(expr.V(1, true)))),
 	//).
 
-	qs = qs.Reset()
 	var _, err = qs.
 		Select("UrlPath").
 		Filter(
@@ -77,7 +76,6 @@ func (qs *PageQuerySet) updateDescendantPaths(oldUrlPath, newUrlPath, pageNodePa
 
 func (qs *PageQuerySet) incrementNumChild(id int64) (*PageNode, error) {
 
-	qs = qs.Reset()
 	var ct, err = qs.
 		Select("Numchild").
 		Filter("PK", id).
@@ -97,7 +95,7 @@ func (qs *PageQuerySet) incrementNumChild(id int64) (*PageNode, error) {
 }
 
 func (qs *PageQuerySet) decrementNumChild(id int64) (*PageNode, error) {
-	qs = qs.Reset()
+
 	var ct, err = qs.
 		Select("Numchild").
 		Filter("PK", id).
@@ -116,7 +114,6 @@ func (qs *PageQuerySet) decrementNumChild(id int64) (*PageNode, error) {
 }
 
 func (qs *PageQuerySet) AllNodes(statusFlags StatusFlag, offset int32, limit int32, orderings ...string) ([]*PageNode, error) {
-	qs = qs.Reset()
 	return qs.Filter("StatusFlags__bitand", statusFlags).
 		OrderBy(orderings...).
 		Limit(int(limit)).
@@ -124,42 +121,7 @@ func (qs *PageQuerySet) AllNodes(statusFlags StatusFlag, offset int32, limit int
 		queryNodes()
 }
 
-func (qs *PageQuerySet) CountNodes(statusFlags StatusFlag) (int64, error) {
-	qs = qs.Reset()
-	var nodesCount, err = qs.
-		Filter("StatusFlags__bitand", statusFlags).
-		Count()
-	if err != nil {
-		return 0, err
-	}
-	return nodesCount, nil
-}
-
-func (qs *PageQuerySet) CountNodesByTypeHash(contentType string) (int64, error) {
-	qs = qs.Reset()
-	var nodesCount, err = qs.
-		Filter("ContentType", contentType).
-		Count()
-	if err != nil {
-		return 0, err
-	}
-	return nodesCount, nil
-}
-
-func (qs *PageQuerySet) CountRootNodes(statusFlags StatusFlag) (int64, error) {
-	qs = qs.Reset()
-	var count, err = qs.
-		Filter("Depth", 0).
-		Filter("StatusFlags__bitand", statusFlags).
-		Count()
-	if err != nil {
-		return 0, err
-	}
-	return count, nil
-}
-
 func (qs *PageQuerySet) deleteNodes(id []int64) error {
-	qs = qs.Reset()
 
 	if len(id) == 1 {
 		qs = qs.Filter("PK", id[0])
@@ -177,35 +139,7 @@ func (qs *PageQuerySet) deleteNodes(id []int64) error {
 	return err
 }
 
-func (qs *PageQuerySet) GetChildNodes(node *PageNode, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
-	qs = qs.Reset()
-	return qs.Children(node.Path, node.Depth).
-		Filter("StatusFlags__bitand", statusFlags).
-		Limit(int(limit)).
-		Offset(int(offset)).
-		OrderBy("Path").
-		queryNodes()
-}
-
-func (qs *PageQuerySet) GetDescendants(path string, depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
-	qs = qs.Reset()
-	return qs.Descendants(path, depth).
-		Filter("StatusFlags__bitand", statusFlags).
-		Limit(int(limit)).
-		Offset(int(offset)).
-		OrderBy("Path").
-		queryNodes()
-}
-
-// AncestorNodes returns the ancestor nodes of the given node.
-//
-// The path is a PageNode.Path, the depth is the depth of the page.
-func (qs *PageQuerySet) GetAncestors(p string, depth int64) ([]*PageNode, error) {
-	return qs.Reset().Ancestors(p, depth).queryNodes()
-}
-
 func (qs *PageQuerySet) GetNodeByID(id int64) (*PageNode, error) {
-	qs = qs.Reset()
 	var row, err = qs.
 		Filter("PK", id).
 		Get()
@@ -216,7 +150,7 @@ func (qs *PageQuerySet) GetNodeByID(id int64) (*PageNode, error) {
 }
 
 func (qs *PageQuerySet) GetNodeByPath(path string) (*PageNode, error) {
-	qs = qs.Reset()
+
 	var row, err = qs.
 		Filter("Path", path).
 		Get()
@@ -227,7 +161,7 @@ func (qs *PageQuerySet) GetNodeByPath(path string) (*PageNode, error) {
 }
 
 func (qs *PageQuerySet) GetNodeBySlug(slug string, depth int64, path string) (*PageNode, error) {
-	qs = qs.Reset()
+
 	var row, err = qs.
 		Filter(
 			expr.Expr("Depth", expr.LOOKUP_EXACT, depth),
@@ -242,7 +176,7 @@ func (qs *PageQuerySet) GetNodeBySlug(slug string, depth int64, path string) (*P
 }
 
 func (qs *PageQuerySet) GetNodesByDepth(depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
-	qs = qs.Reset()
+
 	return qs.StatusFlags(statusFlags).
 		Filter(
 			expr.Expr("Depth", expr.LOOKUP_EXACT, depth),
@@ -254,42 +188,12 @@ func (qs *PageQuerySet) GetNodesByDepth(depth int64, statusFlags StatusFlag, off
 }
 
 func (qs *PageQuerySet) GetNodesByIDs(id []int64) ([]*PageNode, error) {
-	qs = qs.Reset()
 	return qs.Filter("PK__in", id).queryNodes()
-}
-
-func (qs *PageQuerySet) GetNodesByPageIDs(pageID []int64) ([]*PageNode, error) {
-	qs = qs.Reset()
-	return qs.Filter("PageID__in", pageID).
-		OrderBy("Path").
-		queryNodes()
-}
-
-func (qs *PageQuerySet) GetNodesByTypeHash(contentType string, offset int32, limit int32) ([]*PageNode, error) {
-	qs = qs.Reset()
-	return qs.Filter("ContentType", contentType).
-		Limit(int(limit)).
-		Offset(int(offset)).
-		OrderBy("Path").
-		queryNodes()
-}
-
-func (qs *PageQuerySet) GetNodesByTypeHashes(contentType []string, offset int32, limit int32) ([]*PageNode, error) {
-	qs = qs.Reset()
-	return qs.Filter("ContentType__in", contentType).
-		Limit(int(limit)).
-		Offset(int(offset)).
-		OrderBy("Path").
-		queryNodes()
-}
-
-func (qs *PageQuerySet) GetNodesForPaths(path []string) ([]*PageNode, error) {
-	return qs.Reset().Filter("Path__in", path).queryNodes()
 }
 
 func (qs *PageQuerySet) insertNode(node *PageNode) (int64, error) {
 	var err error
-	qs = qs.Reset()
+
 	node, err = qs.
 		ExplicitSave().
 		Create(node)
@@ -300,7 +204,6 @@ func (qs *PageQuerySet) insertNode(node *PageNode) (int64, error) {
 }
 
 func (qs *PageQuerySet) updateNode(node *PageNode) error {
-	qs = qs.Reset()
 
 	updated, err := qs.
 		Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt").
@@ -321,7 +224,6 @@ func (qs *PageQuerySet) updateNode(node *PageNode) error {
 }
 
 func (qs *PageQuerySet) updateNodeStatusFlags(statusFlags int64, iD int64) error {
-	qs = qs.Reset()
 
 	transaction, err := qs.GetOrCreateTransaction()
 	if err != nil {

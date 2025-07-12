@@ -9,16 +9,18 @@ import (
 
 var _ BaseQuerySet[attrs.Definer, *QuerySet[attrs.Definer]] = (*WrappedQuerySet[attrs.Definer, *GenericQuerySet, *QuerySet[attrs.Definer]])(nil)
 
-type WrappedQuerySet[T attrs.Definer, CONV BaseQuerySet[T, CONV], ORIG BaseQuerySet[T, ORIG]] struct {
+type WrappedQuerySet[T attrs.Definer, CONV any, ORIG BaseQuerySet[T, ORIG]] struct {
 	BaseQuerySet[T, ORIG]
-	original ORIG
 	embedder CONV
 }
 
-func WrapQuerySet[T attrs.Definer, CONV BaseQuerySet[T, CONV], ORIG BaseQuerySet[T, ORIG]](qs ORIG, embedder CONV) *WrappedQuerySet[T, CONV, ORIG] {
+func WrapQuerySet[T attrs.Definer, CONV any, ORIG BaseQuerySet[T, ORIG]](qs ORIG, embedder CONV) *WrappedQuerySet[T, CONV, ORIG] {
+	if _, ok := any(embedder).(QuerySetCanClone[T, CONV, ORIG]); !ok {
+		panic("embedder must implement QuerySetCanClone[T, CONV, ORIG]")
+	}
+
 	return &WrappedQuerySet[T, CONV, ORIG]{
 		BaseQuerySet: qs,
-		original:     qs.Clone(),
 		embedder:     embedder,
 	}
 }
@@ -33,13 +35,13 @@ type (
 	QuerySetCanAfterExec interface {
 		AfterExec(res any) error
 	}
+	QuerySetCanClone[T attrs.Definer, CONV any, ORIG BaseQuerySet[T, ORIG]] interface {
+		CloneQuerySet(*WrappedQuerySet[T, CONV, ORIG]) CONV
+	}
 )
 
-func (w *WrappedQuerySet[T, CONV, ORIG]) Reset() CONV {
-	w.BaseQuerySet = w.original.Clone().WithContext(
-		w.BaseQuerySet.Context(),
-	)
-	return w.embedder
+func (w *WrappedQuerySet[T, CONV, ORIG]) Base() ORIG {
+	return w.BaseQuerySet.Clone()
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) setup() {
@@ -72,84 +74,107 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) BuildExpression() expr.Expression {
 	return w.BaseQuerySet.BuildExpression()
 }
 
+func (w *WrappedQuerySet[T, CONV, ORIG]) clone() *WrappedQuerySet[T, CONV, ORIG] {
+	var wrapped = &WrappedQuerySet[T, CONV, ORIG]{
+		BaseQuerySet: w.BaseQuerySet.Clone(),
+	}
+	var cloner = any(w.embedder).(QuerySetCanClone[T, CONV, ORIG])
+	wrapped.embedder = cloner.CloneQuerySet(wrapped)
+	return wrapped
+}
+
 func (w *WrappedQuerySet[T, CONV, ORIG]) Clone() CONV {
-	w.BaseQuerySet = w.BaseQuerySet.Clone()
+	w = w.clone()
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Distinct() CONV {
+	w = w.clone()
 	w.BaseQuerySet = w.BaseQuerySet.Distinct()
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Select(fields ...any) CONV {
+	w = w.clone()
 	w.setup()
 	w.BaseQuerySet = w.BaseQuerySet.Select(fields...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Preload(fields ...any) CONV {
+	w = w.clone()
 	w.setup()
 	w.BaseQuerySet = w.BaseQuerySet.Preload(fields...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Filter(key interface{}, vals ...interface{}) CONV {
+	w = w.clone()
 	w.setup()
 	w.BaseQuerySet = w.BaseQuerySet.Filter(key, vals...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) GroupBy(fields ...any) CONV {
+	w = w.clone()
 	w.setup()
 	w.BaseQuerySet = w.BaseQuerySet.GroupBy(fields...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Limit(n int) CONV {
+	w = w.clone()
 	w.BaseQuerySet = w.BaseQuerySet.Limit(n)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Offset(n int) CONV {
+	w = w.clone()
 	w.BaseQuerySet = w.BaseQuerySet.Offset(n)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) OrderBy(fields ...string) CONV {
+	w = w.clone()
 	w.setup()
 	w.BaseQuerySet = w.BaseQuerySet.OrderBy(fields...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Reverse() CONV {
+	w = w.clone()
 	w.BaseQuerySet = w.BaseQuerySet.Reverse()
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) ExplicitSave() CONV {
+	w = w.clone()
 	w.BaseQuerySet = w.BaseQuerySet.ExplicitSave()
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Annotate(aliasOrAliasMap interface{}, exprs ...expr.Expression) CONV {
+	w = w.clone()
 	w.setup()
 	w.BaseQuerySet = w.BaseQuerySet.Annotate(aliasOrAliasMap, exprs...)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) ForUpdate() CONV {
+	w = w.clone()
 	w.BaseQuerySet = w.BaseQuerySet.ForUpdate()
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Prefix(prefix string) CONV {
+	w = w.clone()
 	w.setup()
 	w.BaseQuerySet = w.BaseQuerySet.Prefix(prefix)
 	return w.embedder
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) Having(key interface{}, vals ...interface{}) CONV {
+	w = w.clone()
 	w.setup()
 	w.BaseQuerySet = w.BaseQuerySet.Having(key, vals...)
 	return w.embedder

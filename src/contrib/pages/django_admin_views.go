@@ -345,7 +345,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		switch page := d.(type) {
 		case *PageNode:
 			ref = page
-		case SaveablePage:
+		case Page:
 			ref.PageObject = page
 		default:
 			return fmt.Errorf("invalid page type: %T", d)
@@ -537,7 +537,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		switch page := d.(type) {
 		case *PageNode:
 			ref = page
-		case SaveablePage:
+		case Page:
 			ref.PageObject = page
 		default:
 			return fmt.Errorf("invalid page type: %T", d)

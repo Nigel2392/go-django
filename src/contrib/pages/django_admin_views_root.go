@@ -211,7 +211,7 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 		switch page := d.(type) {
 		case *PageNode:
 			ref = page
-		case SaveablePage:
+		case Page:
 			ref.PageObject = page
 		default:
 			return fmt.Errorf("invalid page type: %T", d)

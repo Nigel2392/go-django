@@ -11,10 +11,6 @@ type Page interface {
 	attrs.Definer
 	ID() int64
 	Reference() *PageNode
-}
-
-type SaveablePage interface {
-	Page
 	dj_models.ContextSaver
 }
 

@@ -63,10 +63,11 @@ type rows[T attrs.Definer] struct {
 	possibleDuplicates []*scannableField // possible duplicate fields that can be added to the rows
 	hasMultiRelations  bool              // if the rows have multi-valued relations
 
-	seen     map[string]*seenObject // seen is used to deduplicate relations
-	preloads *orderedmap.OrderedMap[string, []*Preload]
-	objects  *orderedmap.OrderedMap[any, *rootObject]
-	forEach  func(attrs.Definer) error
+	seen       map[string]*seenObject // seen is used to deduplicate relations
+	preloads   *orderedmap.OrderedMap[string, []*Preload]
+	objects    *orderedmap.OrderedMap[any, *rootObject]
+	forEach    func(attrs.Definer) error
+	foreachRow func(qs *QuerySet[T], row *Row[T]) error
 }
 
 type seenObject struct {
@@ -78,7 +79,7 @@ type seenObject struct {
 // It will scan the fields of the model and build a list of scannable fields that can be used to retrieve the root object.
 // It will also add possible duplicate fields to the list, which can be used to deduplicate relations later on.
 // The forEach function is called for each object that is added to the rows structure,
-func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl attrs.Definer, forEach func(attrs.Definer) error) (*rows[T], error) {
+func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl attrs.Definer, forEach func(attrs.Definer) error, forEachRow func(qs *QuerySet[T], row *Row[T]) error) (*rows[T], error) {
 	var seen = make(map[string]struct{}, 0)
 	var scannables = getScannableFields(
 		fields, mdl,
@@ -89,6 +90,7 @@ func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl at
 		possibleDuplicates: make([]*scannableField, 0),
 		hasMultiRelations:  false,
 		forEach:            forEach,
+		foreachRow:         forEachRow,
 		seen:               make(map[string]*seenObject, 0),
 	}
 
@@ -636,6 +638,7 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
 		return nil
 	}
 
+	var rowIdx = 0
 	var root = make([]*Row[T], 0, r.objects.Len())
 	for head := r.objects.Front(); head != nil; head = head.Next() {
 		var obj = head.Value
@@ -665,11 +668,23 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
 			throughSetter.SetThroughModel(obj.object.through)
 		}
 
-		root = append(root, &Row[T]{
-			Through:     obj.object.through,
-			Object:      definer.(T),
-			Annotations: obj.annotations,
-		})
+		var row = &Row[T]{
+			Object:          definer.(T),
+			ObjectFieldDefs: obj.object.fieldDefs,
+			Annotations:     obj.annotations,
+			Through:         obj.object.through,
+		}
+
+		if r.foreachRow != nil {
+			if err := r.foreachRow(qs, row); err != nil {
+				return nil, fmt.Errorf("error in foreachRow for object %T (%d/%d): %w",
+					definer, rowIdx, r.objects.Len(), err,
+				)
+			}
+		}
+
+		root = append(root, row)
+		rowIdx++
 	}
 
 	return root, nil

@@ -200,6 +200,7 @@ type QuerySet[T attrs.Definer] struct {
 	internals    *QuerySetInternals
 	compiler     QueryCompiler
 	AliasGen     *alias.Generator
+	forEachRow   func(qs *QuerySet[T], row *Row[T]) error
 	explicitSave bool
 	latestQuery  QueryInfo
 	useCache     bool
@@ -355,6 +356,17 @@ func ChangeObjectsType[OldT, NewT attrs.Definer](qs *QuerySet[OldT]) *QuerySet[N
 		cached:       qs.cached,
 		internals:    qs.internals,
 		context:      qs.context,
+		forEachRow: func(_ *QuerySet[NewT], row *Row[NewT]) error {
+			if qs.forEachRow != nil {
+				return qs.forEachRow(qs, &Row[OldT]{
+					Object:          any(row.Object).(OldT),
+					ObjectFieldDefs: row.ObjectFieldDefs,
+					Through:         row.Through,
+					Annotations:     row.Annotations,
+				})
+			}
+			return nil
+		},
 	}
 }
 
@@ -500,6 +512,7 @@ func (qs *QuerySet[T]) clone() *QuerySet[T] {
 			// this is to prevent the previous annotations
 			// from being modified by the cloned QuerySet
 		},
+		forEachRow:   qs.forEachRow,
 		explicitSave: qs.explicitSave,
 		useCache:     qs.useCache,
 		compiler:     qs.compiler,
@@ -2044,6 +2057,12 @@ func (qs *QuerySet[T]) QueryCount() CompiledQuery[int64] {
 	return q
 }
 
+func (qs *QuerySet[T]) ForEachRow(rowFunc func(qs *QuerySet[T], row *Row[T]) error) *QuerySet[T] {
+	qs = qs.clone()
+	qs.forEachRow = rowFunc
+	return qs
+}
+
 // All is used to retrieve all rows from the database.
 //
 // It returns a Query that can be executed to get the results, which is a slice of Row objects.
@@ -2070,10 +2089,11 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 		return err
 	}
 
-	rows, err := newRows[T](
+	rows, err := newRows(
 		qs.internals.Fields,
 		internal.NewObjectFromIface(qs.internals.Model.Object),
 		runActors,
+		qs.forEachRow,
 	)
 	if err != nil {
 		return nil, errors.NoRows.WithCause(fmt.Errorf(

@@ -163,6 +163,17 @@ func main() {
 			fmt.Printf(" - %s (ID: %d, %d)\n", page.Title, page.ID(), page.PageNode.PageID)
 		}
 
+		pages, err := pages.NewPageQuerySet().Specific().Unpublished().All()
+		if err != nil {
+			panic(fmt.Errorf("failed to get pages: %w", err))
+		}
+
+		fmt.Println("Pages:", len(pages))
+		for page := range pages.Objects() {
+			fmt.Printf(" - %s (ID: %d, %d)\n", page.Title, page.ID(), page.PageID)
+			fmt.Printf("   - PageObject: %+v\n", page.PageObject)
+		}
+
 		//err = staticfiles.Collect(func(path string, f fs.File) error {
 		//	var stat, err = f.Stat()
 		//	if err != nil {

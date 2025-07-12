@@ -18,9 +18,10 @@ const errStopIteration errs.Error = "stop iteration"
 // The annotations map contains additional data that is not part of the model object,
 // such as calculated fields or additional information derived from the query.
 type Row[T attrs.Definer] struct {
-	Object      T
-	Through     attrs.Definer // The through model instance, if applicable
-	Annotations map[string]any
+	Object          T
+	ObjectFieldDefs attrs.Definitions
+	Through         attrs.Definer // The through model instance, if applicable
+	Annotations     map[string]any
 }
 
 // A collection of Row[T] objects, where T is a type that implements attrs.Definer.

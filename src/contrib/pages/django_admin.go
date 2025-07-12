@@ -178,7 +178,7 @@ func FixTree(ctx context.Context) error {
 	defer transaction.Rollback(ctx)
 
 	var qs = NewPageQuerySet().WithContext(ctx)
-	allNodesCount, err := qs.CountNodes(StatusFlagNone)
+	allNodesCount, err := qs.Count()
 	if err != nil {
 		return errors.Wrap(err, "failed to count nodes")
 	}

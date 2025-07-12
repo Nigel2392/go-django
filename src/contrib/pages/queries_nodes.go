@@ -7,33 +7,195 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/elliotchance/orderedmap/v2"
 )
+
+var (
+	// _ queries.QuerySetCanBeforeExec = (*PageQuerySet)(nil)
+	_ queries.QuerySetCanAfterExec                                                     = (*PageQuerySet)(nil)
+	_ queries.QuerySetCanClone[*PageNode, *PageQuerySet, *queries.QuerySet[*PageNode]] = (*PageQuerySet)(nil)
+)
+
+type specificPage struct {
+	ids   []int64
+	pages map[int64]*Page
+}
+
+type specificPreloadInfo = orderedmap.OrderedMap[string, *specificPage]
+
+func variableBool(b ...bool) bool {
+	var v bool
+	if len(b) > 0 {
+		v = b[0]
+	}
+	return v
+}
 
 type PageQuerySet struct {
 	*queries.WrappedQuerySet[*PageNode, *PageQuerySet, *queries.QuerySet[*PageNode]]
+	preload *specificPreloadInfo
 }
 
 func NewPageQuerySet() *PageQuerySet {
 	var pageQuerySet = &PageQuerySet{}
 	pageQuerySet.WrappedQuerySet = queries.WrapQuerySet(
-		queries.GetQuerySet(&PageNode{}),
+		queries.GetQuerySet(&PageNode{}).ForEachRow(
+			pageQuerySet.forEachRow,
+		),
 		pageQuerySet,
 	)
 	return pageQuerySet
 }
 
-func (qs *PageQuerySet) StatusFlags(statusFlags StatusFlag) *PageQuerySet {
-	return qs.Filter("StatusFlags__bitand", statusFlags)
+func (qs *PageQuerySet) CloneQuerySet(wrapped *queries.WrappedQuerySet[*PageNode, *PageQuerySet, *queries.QuerySet[*PageNode]]) *PageQuerySet {
+	return &PageQuerySet{
+		WrappedQuerySet: wrapped,
+	}
 }
 
-func (qs *PageQuerySet) Ancestors(parentPath string, depth int64) *PageQuerySet {
+// forEachRow is used to preload the page object for each row.
+//
+// It stores each page row in a map, keyed by the content type.
+// This allows us to efficiently retrieve the page object later when
+// fetching the specific page instance for a node.
+func (qs *PageQuerySet) forEachRow(base *queries.QuerySet[*PageNode], row *queries.Row[*PageNode]) error {
+	if qs.preload == nil {
+		return nil
+	}
+
+	if row.Object.PageID == 0 || row.Object.ContentType == "" {
+		logger.Warnf("page with ID %d has no content type or page ID, skipping preload", row.Object.PageID)
+		return nil
+	}
+
+	var preload, exists = qs.preload.Get(
+		row.Object.ContentType,
+	)
+	if !exists {
+		preload = &specificPage{
+			ids:   make([]int64, 0, 1),
+			pages: make(map[int64]*Page, 1),
+		}
+	}
+
+	preload.ids = append(preload.ids, row.Object.PageID)
+	preload.pages[row.Object.PageID] = &row.Object.PageObject
+
+	qs.preload.Set(
+		row.Object.ContentType,
+		preload,
+	)
+
+	return nil
+}
+
+func (qs *PageQuerySet) AfterExec(res any) error {
+	if qs.preload == nil || qs.preload.Len() == 0 {
+		return nil
+	}
+
+	var specific = qs.preload
+	qs.preload = nil
+
+	for head := specific.Front(); head != nil; head = head.Next() {
+		var definition = DefinitionForType(head.Key)
+		if definition == nil {
+			return errors.New(errors.CodeNoRows, fmt.Sprintf(
+				"no content type definition found for %s",
+				head.Key,
+			))
+		}
+
+		var model = definition.Object().(Page)
+		var defs = model.FieldDefs()
+		var primaryField = defs.Primary()
+		var rows, err = queries.GetQuerySet(model).
+			Filter(fmt.Sprintf("%s__in", primaryField.Name()), head.Value.ids).
+			All()
+		if err != nil {
+			return errors.Wrapf(err, "failed to get rows for content type %s", head.Key)
+		}
+
+		for _, row := range rows {
+			var primary = row.ObjectFieldDefs.Primary()
+			var pk = attrs.Get[int64](row.ObjectFieldDefs, primary.Name())
+			var page, exists = head.Value.pages[pk]
+			if !exists {
+				return errors.New(errors.CodeNoRows, fmt.Sprintf(
+					"no page found for content type %s with PK %d",
+					head.Key, pk,
+				))
+			}
+
+			*page = row.Object
+		}
+	}
+
+	return nil
+}
+
+func (qs *PageQuerySet) Specific() *PageQuerySet {
+	qs = qs.Clone()
+	qs.preload = orderedmap.NewOrderedMap[string, *specificPage]()
+	return qs
+}
+
+func (qs *PageQuerySet) statusFlags(statusFlags StatusFlag) expr.ClauseExpression {
+	// return qs.Filter("StatusFlags__bitand", statusFlags)
+	return expr.Expr("StatusFlags", expr.LOOKUP_BITAND, statusFlags)
+}
+
+func (qs *PageQuerySet) StatusFlags(statusFlags StatusFlag) *PageQuerySet {
+	return qs.Filter(qs.statusFlags(statusFlags))
+}
+
+func (qs *PageQuerySet) Published() *PageQuerySet {
+	return qs.Filter(qs.statusFlags(StatusFlagPublished))
+}
+
+func (qs *PageQuerySet) Unpublished() *PageQuerySet {
+	return qs.Filter(qs.statusFlags(StatusFlagPublished).Not(true))
+}
+
+func (qs *PageQuerySet) Types(types ...any) *PageQuerySet {
+	if len(types) == 0 {
+		return qs
+	}
+
+	var typeNames = make([]string, len(types))
+	for i, t := range types {
+		switch v := t.(type) {
+		case string:
+			typeNames[i] = contenttypes.ReverseAlias(v)
+		case attrs.Definer:
+			typeNames[i] = contenttypes.NewContentType(v).TypeName()
+		case contenttypes.ContentType:
+			typeNames[i] = v.TypeName()
+		default:
+			panic(fmt.Errorf(
+				"invalid type %T for ForTypes, expected string, attrs.Definer or contenttypes.ContentType", t,
+			))
+		}
+	}
+
+	return qs.Filter("ContentType__in", typeNames)
+}
+
+func (qs *PageQuerySet) Ancestors(path string, depth int64, inclusive ...bool) *PageQuerySet {
 	depth++
 
+	var incl = variableBool(inclusive...)
 	var paths = make([]string, depth)
-	for i := 1; i < int(depth); i++ {
+	var start = 0
+	if !incl {
+		start = 1
+	}
+	for i := start; i < int(depth); i++ {
 		var path, err = ancestorPath(
-			parentPath, int64(i),
+			path, int64(i),
 		)
 		if err != nil {
 			panic(errors.Wrapf(
@@ -47,11 +209,21 @@ func (qs *PageQuerySet) Ancestors(parentPath string, depth int64) *PageQuerySet 
 	return qs.Filter("Path__in", paths)
 }
 
-func (qs *PageQuerySet) Descendants(path string, depth int64) *PageQuerySet {
-	return qs.Filter(
+func (qs *PageQuerySet) Descendants(path string, depth int64, inclusive ...bool) *PageQuerySet {
+	var incl = variableBool(inclusive...)
+	var exp = expr.And(
 		expr.Expr("Path", expr.LOOKUP_STARTSWITH, path),
 		expr.Expr("Depth", expr.LOOKUP_GT, depth),
 	)
+
+	if incl {
+		exp = expr.Or(
+			exp,
+			expr.Expr("Path", expr.LOOKUP_EXACT, path),
+		)
+	}
+
+	return qs.Filter(exp)
 }
 
 func (qs *PageQuerySet) Children(path string, depth int64) *PageQuerySet {
@@ -59,6 +231,70 @@ func (qs *PageQuerySet) Children(path string, depth int64) *PageQuerySet {
 		expr.Expr("Path", expr.LOOKUP_STARTSWITH, path),
 		expr.Expr("Depth", expr.LOOKUP_EXACT, depth+1),
 	)
+}
+
+func (qs *PageQuerySet) Siblings(path string, depth int64, inclusive ...bool) *PageQuerySet {
+	var incl = variableBool(inclusive...)
+	var parentPath, err = ancestorPath(path, 1)
+	if err != nil {
+		panic(errors.Wrapf(err, "failed to get parent path for %s", path))
+	}
+
+	qs = qs.Filter(
+		expr.Expr("Path", expr.LOOKUP_STARTSWITH, parentPath),
+		expr.Expr("Depth", expr.LOOKUP_EXACT, depth),
+	)
+
+	if !incl {
+		qs = qs.Filter(
+			expr.Expr("Path", expr.LOOKUP_EXACT, path).Not(true),
+		)
+	}
+
+	return qs
+}
+
+func (qs *PageQuerySet) AncestorOf(node *PageNode, inclusive ...bool) *PageQuerySet {
+	return qs.Ancestors(node.Path, node.Depth, inclusive...)
+}
+
+func (qs *PageQuerySet) DescendantOf(node *PageNode, inclusive ...bool) *PageQuerySet {
+	return qs.Descendants(node.Path, node.Depth, inclusive...)
+}
+
+func (qs *PageQuerySet) ChildrenOf(node *PageNode) *PageQuerySet {
+	return qs.Children(node.Path, node.Depth)
+}
+
+func (qs *PageQuerySet) SiblingsOf(node *PageNode, inclusive ...bool) *PageQuerySet {
+	return qs.Siblings(node.Path, node.Depth, inclusive...)
+}
+
+func (qs *PageQuerySet) GetChildNodes(node *PageNode, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
+
+	return qs.Children(node.Path, node.Depth).
+		Filter("StatusFlags__bitand", statusFlags).
+		Limit(int(limit)).
+		Offset(int(offset)).
+		OrderBy("Path").
+		queryNodes()
+}
+
+func (qs *PageQuerySet) GetDescendants(path string, depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
+
+	return qs.Descendants(path, depth).
+		Filter("StatusFlags__bitand", statusFlags).
+		Limit(int(limit)).
+		Offset(int(offset)).
+		OrderBy("Path").
+		queryNodes()
+}
+
+// AncestorNodes returns the ancestor nodes of the given node.
+//
+// The path is a PageNode.Path, the depth is the depth of the page.
+func (qs *PageQuerySet) GetAncestors(p string, depth int64) ([]*PageNode, error) {
+	return qs.Ancestors(p, depth).queryNodes()
 }
 
 func (qs *PageQuerySet) saveSpecific(node *PageNode, creating bool) error {
@@ -102,7 +338,6 @@ func (qs *PageQuerySet) saveSpecific(node *PageNode, creating bool) error {
 //
 // The node path is set to a new path part based on the number of root nodes.
 func (qs *PageQuerySet) AddRoot(node *PageNode) error {
-	qs = qs.Reset()
 
 	if node.Path != "" {
 		return fmt.Errorf("node path must be empty")
@@ -114,7 +349,7 @@ func (qs *PageQuerySet) AddRoot(node *PageNode) error {
 	}
 	defer transaction.Rollback(qs.Context())
 
-	previousRootNodeCount, err := qs.CountRootNodes(StatusFlagNone)
+	previousRootNodeCount, err := qs.Filter("Depth", 0).Count()
 	if err != nil {
 		return err
 	}
@@ -158,8 +393,6 @@ func (qs *PageQuerySet) AddRoot(node *PageNode) error {
 //
 // The child node path is set to a new path part based on the number of children of the parent node.
 func (qs *PageQuerySet) AddChild(parent, child *PageNode) error {
-
-	qs = qs.Reset()
 
 	var transaction, err = qs.GetOrCreateTransaction()
 	if err != nil {
@@ -226,7 +459,6 @@ func (qs *PageQuerySet) AddChild(parent, child *PageNode) error {
 //
 // In that case, it will also update the url paths of all descendants.
 func (qs *PageQuerySet) UpdateNode(node *PageNode) error {
-	qs = qs.Reset()
 
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
@@ -299,7 +531,6 @@ func (qs *PageQuerySet) UpdateNode(node *PageNode) error {
 
 // DeleteRootNode deletes a root node.
 func (qs *PageQuerySet) DeleteRootNode(node *PageNode) error {
-	qs = qs.Reset()
 
 	if node.Depth != 0 {
 		return fmt.Errorf("node is not a root node")
@@ -349,8 +580,6 @@ func (qs *PageQuerySet) DeleteNode(node *PageNode) error { //, newParent *PageNo
 	if node.Depth == 0 {
 		return qs.DeleteRootNode(node)
 	}
-
-	qs = qs.Reset()
 
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
@@ -416,7 +645,6 @@ func (qs *PageQuerySet) DeleteNode(node *PageNode) error { //, newParent *PageNo
 //
 // This function will update the url paths of all descendants, as well as the tree paths of the node and its descendants.
 func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
-	qs = qs.Reset()
 
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
@@ -466,7 +694,6 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 	}
 
 	updated, err := qs.
-		Reset().
 		Select("Path", "Depth").
 		ExplicitSave().
 		BulkUpdate(nodes)

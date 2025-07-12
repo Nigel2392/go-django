@@ -15,11 +15,12 @@ import (
 )
 
 var (
-	_ django_models.ContextSaver    = (*User)(nil)
-	_ queries.UniqueTogetherDefiner = (*User)(nil)
-	_ migrator.IndexDefiner         = (*User)(nil)
-	_ queries.ActsBeforeSave        = (*User)(nil)
-	_ queries.ActsBeforeCreate      = (*User)(nil)
+	_ django_models.ContextSaver                                               = (*User)(nil)
+	_ queries.UniqueTogetherDefiner                                            = (*User)(nil)
+	_ migrator.IndexDefiner                                                    = (*User)(nil)
+	_ queries.ActsBeforeSave                                                   = (*User)(nil)
+	_ queries.ActsBeforeCreate                                                 = (*User)(nil)
+	_ queries.QuerySetCanClone[*User, *UserQuerySet, *queries.QuerySet[*User]] = (*UserQuerySet)(nil)
 )
 
 type UserQuerySet struct {
@@ -29,10 +30,16 @@ type UserQuerySet struct {
 func GetUserQuerySet() *UserQuerySet {
 	userQuerySet := &UserQuerySet{}
 	userQuerySet.WrappedQuerySet = queries.WrapQuerySet(
-		queries.GetQuerySet[*User](&User{}),
+		queries.GetQuerySet(&User{}),
 		userQuerySet,
 	)
 	return userQuerySet
+}
+
+func (qs *UserQuerySet) CloneQuerySet(wrapped *queries.WrappedQuerySet[*User, *UserQuerySet, *queries.QuerySet[*User]]) *UserQuerySet {
+	return &UserQuerySet{
+		WrappedQuerySet: wrapped,
+	}
 }
 
 type User struct {
