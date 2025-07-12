@@ -384,7 +384,7 @@ func TestPageNode(t *testing.T) {
 
 			t.Logf("Adding child node to root: %+v", childNode)
 
-			var err = qs.CreateChildNode(rootNode, childNode)
+			var err = qs.AddChild(rootNode, childNode)
 			if err != nil {
 				t.Fatal(err)
 				return
@@ -471,7 +471,7 @@ func TestPageNode(t *testing.T) {
 
 				t.Logf("Adding sub-child node to child: %+v", subChildNode)
 
-				var err = qs.CreateChildNode(childNode, &subChildNode)
+				var err = qs.AddChild(childNode, &subChildNode)
 				if err != nil {
 					t.Fatal(err)
 					return
@@ -605,7 +605,7 @@ func TestPageNode(t *testing.T) {
 		}
 
 		t.Run("AddSibling", func(t *testing.T) {
-			var err = qs.CreateChildNode(rootNode, &childSiblingNode)
+			var err = qs.AddChild(rootNode, &childSiblingNode)
 			if err != nil {
 				t.Fatal(err)
 				return
@@ -671,7 +671,7 @@ func TestPageNode(t *testing.T) {
 			})
 
 			t.Run("AddSubChild", func(t *testing.T) {
-				var err = qs.CreateChildNode(&childSiblingNode, &childSiblingSubChildNode)
+				var err = qs.AddChild(&childSiblingNode, &childSiblingSubChildNode)
 				if err != nil {
 					t.Fatal(err)
 					return
@@ -978,7 +978,7 @@ func TestPageNode(t *testing.T) {
 
 	t.Run("MoveNode", func(t *testing.T) {
 
-		if err := qs.CreateChildNode(childNode, &subChildNode2); err != nil {
+		if err := qs.AddChild(childNode, &subChildNode2); err != nil {
 			t.Fatal(err)
 			return
 		}

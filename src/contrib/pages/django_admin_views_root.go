@@ -208,27 +208,18 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			}
 		}
 
-		var qs = NewPageQuerySet().WithContext(ctx)
-		err = qs.AddRoot(ref)
-		if err != nil {
-			return err
+		switch page := d.(type) {
+		case *PageNode:
+			ref = page
+		case SaveablePage:
+			ref.PageObject = page
+		default:
+			return fmt.Errorf("invalid page type: %T", d)
 		}
 
-		if page, ok := d.(SaveablePage); ok {
-			err = SavePage(
-				ctx, nil, page,
-			)
-			if err != nil {
-				return err
-			}
-
-			ref.PageID = page.ID()
-			err = qs.UpdateNode(ref)
-		} else if n, ok := d.(*PageNode); ok {
-			_, err = qs.insertNode(n)
-		} else {
-			err = fmt.Errorf("invalid page type: %T", d)
-		}
+		err = NewPageQuerySet().
+			WithContext(ctx).
+			AddRoot(ref)
 		if err != nil {
 			return err
 		}

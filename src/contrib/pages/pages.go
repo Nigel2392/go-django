@@ -8,12 +8,12 @@ import (
 )
 
 type Page interface {
+	attrs.Definer
 	ID() int64
 	Reference() *PageNode
 }
 
 type SaveablePage interface {
-	attrs.Definer
 	Page
 	dj_models.ContextSaver
 }

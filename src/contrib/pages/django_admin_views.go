@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -340,15 +341,18 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			}
 		}
 
-		if page, ok := d.(SaveablePage); ok {
-			err = SavePage(
-				ctx, p, page,
-			)
-		} else {
-			var n = d.(*PageNode)
-			var qs = NewPageQuerySet().WithContext(ctx)
-			_, err = qs.insertNode(n)
+		var qs = NewPageQuerySet().WithContext(ctx)
+		switch page := d.(type) {
+		case *PageNode:
+			ref = page
+		case SaveablePage:
+			ref.PageObject = page
+		default:
+			return fmt.Errorf("invalid page type: %T", d)
 		}
+		err = qs.AddChild(
+			p, ref,
+		)
 		if err != nil {
 			return err
 		}
@@ -516,28 +520,31 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		var (
 			wasPublished, wasUnpublished bool
 		)
-		if page, ok := d.(SaveablePage); ok {
 
-			var ref = page.Reference()
-			if publishPage && !ref.StatusFlags.Is(StatusFlagPublished) {
-				ref.StatusFlags |= StatusFlagPublished
-				wasPublished = true
-			}
-
-			// If no children it is safe to unpublish the page straight away,
-			// otherwise we will later redirect to an unpublish page- view.
-			if ref.Numchild == 0 && unpublishPage && ref.StatusFlags.Is(StatusFlagPublished) {
-				ref.StatusFlags &^= StatusFlagPublished
-				wasUnpublished = true
-			}
-
-			err = UpdatePage(ctx, page)
-		} else {
-			var n = d.(*PageNode)
-			var qs = NewPageQuerySet().WithContext(ctx)
-			err = qs.UpdateNode(n)
-
+		var ref = page.Reference()
+		if publishPage && !ref.StatusFlags.Is(StatusFlagPublished) {
+			ref.StatusFlags |= StatusFlagPublished
+			wasPublished = true
 		}
+
+		// If no children it is safe to unpublish the page straight away,
+		// otherwise we will later redirect to an unpublish page- view.
+		if ref.Numchild == 0 && unpublishPage && ref.StatusFlags.Is(StatusFlagPublished) {
+			ref.StatusFlags &^= StatusFlagPublished
+			wasUnpublished = true
+		}
+
+		switch page := d.(type) {
+		case *PageNode:
+			ref = page
+		case SaveablePage:
+			ref.PageObject = page
+		default:
+			return fmt.Errorf("invalid page type: %T", d)
+		}
+		err = NewPageQuerySet().
+			WithContext(ctx).
+			UpdateNode(ref)
 		if err != nil {
 			return err
 		}

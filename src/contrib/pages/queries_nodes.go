@@ -7,6 +7,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
 
 type PageQuerySet struct {
@@ -20,6 +21,37 @@ func NewPageQuerySet() *PageQuerySet {
 		pageQuerySet,
 	)
 	return pageQuerySet
+}
+
+func (qs *PageQuerySet) saveSpecific(node *PageNode, creating bool) error {
+
+	if _, ok := node.PageObject.(*PageNode); ok || node.PageObject == nil {
+		return nil
+	}
+
+	if creating || node.ContentType == "" {
+		node.ContentType = contenttypes.
+			NewContentType(node.PageObject).
+			TypeName()
+	}
+
+	err := node.PageObject.Save(qs.Context())
+	if err != nil {
+		return errors.Wrap(err, "failed to save page object")
+	}
+
+	if !creating || node.PageID != 0 {
+		return nil
+	}
+
+	var (
+		srcDefs     = node.PageObject.FieldDefs()
+		dstDefs     = node.FieldDefs()
+		refField, _ = dstDefs.Field("PageID")
+		srcVal, _   = srcDefs.Primary().Value()
+	)
+
+	return refField.Scan(srcVal)
 }
 
 // CreateRootNode creates a new root node.
@@ -57,6 +89,10 @@ func (qs *PageQuerySet) AddRoot(node *PageNode) error {
 	node.SetUrlPath(nil)
 	node.Depth = 0
 
+	if err := qs.saveSpecific(node, true); err != nil {
+		return errors.Wrap(err, "failed to save specific instance")
+	}
+
 	id, err := qs.insertNode(node)
 	if err != nil {
 		return err
@@ -85,7 +121,7 @@ func (qs *PageQuerySet) AddRoot(node *PageNode) error {
 // The child node title must not be empty, if not provided the page's slug (and thus URLPath) will be based on the page's title.
 //
 // The child node path is set to a new path part based on the number of children of the parent node.
-func (qs *PageQuerySet) CreateChildNode(parent, child *PageNode) error {
+func (qs *PageQuerySet) AddChild(parent, child *PageNode) error {
 
 	qs = qs.Reset()
 
@@ -111,6 +147,11 @@ func (qs *PageQuerySet) CreateChildNode(parent, child *PageNode) error {
 	child.SetUrlPath(parent)
 	child.Path = parent.Path + buildPathPart(parent.Numchild)
 	child.Depth = parent.Depth + 1
+
+	if err := qs.saveSpecific(child, true); err != nil {
+		return errors.Wrap(err, "failed to save specific instance")
+	}
+
 	child.PK, err = qs.insertNode(child)
 	if err != nil {
 		return err
@@ -169,6 +210,10 @@ func (qs *PageQuerySet) UpdateNode(node *PageNode) error {
 		return errors.Wrap(err, "failed to start transaction")
 	}
 	defer transaction.Rollback(qs.Context())
+
+	if err = qs.saveSpecific(node, false); err != nil {
+		return errors.Wrap(err, "failed to save specific instance")
+	}
 
 	oldRecord, err := qs.GetNodeByID(node.PK)
 	if err != nil {

@@ -19,19 +19,20 @@ var (
 
 type PageNode struct {
 	models.Model     `table:"PageNode"`
-	PK               int64      `json:"id" attrs:"primary;readonly;column=id"`
-	Title            string     `json:"title"`
-	Path             string     `json:"path"`
-	Depth            int64      `json:"depth" attrs:"blank"`
-	Numchild         int64      `json:"numchild" attrs:"blank"`
-	UrlPath          string     `json:"url_path" attrs:"readonly;blank"`
-	Slug             string     `json:"slug"`
-	StatusFlags      StatusFlag `json:"status_flags" attrs:"null;blank"`
-	PageID           int64      `json:"page_id" attrs:"null;blank"`
-	ContentType      string     `json:"content_type" attrs:"null;blank"`
-	LatestRevisionID int64      `json:"latest_revision_id"`
-	CreatedAt        time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
-	UpdatedAt        time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
+	PK               int64        `json:"id" attrs:"primary;readonly;column=id"`
+	Title            string       `json:"title"`
+	Path             string       `json:"path"`
+	Depth            int64        `json:"depth" attrs:"blank"`
+	Numchild         int64        `json:"numchild" attrs:"blank"`
+	UrlPath          string       `json:"url_path" attrs:"readonly;blank"`
+	Slug             string       `json:"slug"`
+	StatusFlags      StatusFlag   `json:"status_flags" attrs:"null;blank"`
+	PageID           int64        `json:"page_id" attrs:"null;blank"`
+	ContentType      string       `json:"content_type" attrs:"null;blank"`
+	LatestRevisionID int64        `json:"latest_revision_id"`
+	CreatedAt        time.Time    `json:"created_at" attrs:"readonly;label=Created At"`
+	UpdatedAt        time.Time    `json:"updated_at" attrs:"readonly;label=Updated At"`
+	PageObject       SaveablePage `json:"-" attrs:"-"`
 }
 
 func (n *PageNode) SetUrlPath(parent *PageNode) (newPath, oldPath string) {
