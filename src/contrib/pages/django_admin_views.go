@@ -653,18 +653,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			return
 		}
 
-		var instance, err = p.Specific(r.Context())
-		except.Assert(
-			err == nil, 500,
-			err,
-		)
-
-		var page, ok = instance.(pageDefiner)
-		if !ok {
-			page = p
-			// logger.Fatalf(1, "instance does not adhere to attrs.Definer: %T", instance)
-		}
-
+		var err error
 		var parent *PageNode
 		var qs = NewPageQuerySet().WithContext(r.Context())
 		if p.Depth > 0 {
@@ -678,18 +667,9 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			}
 		}
 
-		if page, ok := page.(DeletablePage); ok {
-			if err := DeletePage(r.Context(), page); err != nil {
-				except.Fail(500, "Failed to delete page: %s", err)
-				return
-			}
-		} else {
-			if err := qs.DeleteNode(p); err != nil {
-				except.Fail(500, "Failed to delete page: %s", err)
-				return
-			}
-
-			logger.Warnf("Page %q (%v) deleted but content node has no Delete() method", p.Title, p.ID())
+		if err := qs.DeleteNode(p); err != nil {
+			except.Fail(500, "Failed to delete page: %s", err)
+			return
 		}
 
 		auditlogs.Log(r.Context(), "pages:delete", logger.WRN, p, map[string]interface{}{

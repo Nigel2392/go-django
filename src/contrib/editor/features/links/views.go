@@ -85,7 +85,7 @@ func listPages(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Fetch child nodes of the main item.
-	items, err = qs.GetChildNodes(mainItem, pages.StatusFlagPublished, 0, 1000)
+	items, err = qs.ChildrenOf(mainItem).Published().AllNodes()
 	if err != nil {
 		except.Fail(http.StatusInternalServerError, err)
 		return

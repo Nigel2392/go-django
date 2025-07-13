@@ -162,7 +162,7 @@ func TestPageMenuHandler(t *testing.T) {
 		}
 	}
 
-	allNodes, err := qs.AllNodes(pages.StatusFlagNone, 0, 1000)
+	allNodes, err := qs.AllNodes()
 	if err != nil {
 		t.Fatalf("failed to retrieve all nodes: %v", err)
 	}

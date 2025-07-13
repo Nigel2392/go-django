@@ -183,7 +183,7 @@ func FixTree(ctx context.Context) error {
 		return errors.Wrap(err, "failed to count nodes")
 	}
 
-	allNodes, err := qs.AllNodes(StatusFlagNone, 0, int32(allNodesCount))
+	allNodes, err := qs.Offset(0).Limit(int(allNodesCount)).AllNodes()
 	if err != nil {
 		return errors.Wrap(err, "failed to get all nodes")
 	}

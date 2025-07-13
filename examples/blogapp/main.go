@@ -160,17 +160,17 @@ func main() {
 		}
 		fmt.Println("Blog pages:", len(blogPages))
 		for page := range blogPages.Objects() {
-			fmt.Printf(" - %s (ID: %d, %d)\n", page.Title, page.ID(), page.PageNode.PageID)
+			fmt.Printf(" - %q (ID: %d, %d)\n", page.Title, page.ID(), page.PageNode.PageID)
 		}
 
-		pages, err := pages.NewPageQuerySet().Specific().Unpublished().All()
+		pages, err := pages.NewPageQuerySet().Specific().Unpublished().Types(&blog.BlogPage{}).All()
 		if err != nil {
 			panic(fmt.Errorf("failed to get pages: %w", err))
 		}
 
 		fmt.Println("Pages:", len(pages))
 		for page := range pages.Objects() {
-			fmt.Printf(" - %s (ID: %d, %d)\n", page.Title, page.ID(), page.PageID)
+			fmt.Printf(" - %q (ID: %d, %d)\n", page.Title, page.ID(), page.PageID)
 			fmt.Printf("   - PageObject: %+v\n", page.PageObject)
 		}
 

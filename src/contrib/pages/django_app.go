@@ -201,7 +201,7 @@ func NewAppConfig() django.AppConfig {
 					return &node, nil
 				},
 				GetInstances: func(amount, offset uint) ([]interface{}, error) {
-					var nodes, err = NewPageQuerySet().AllNodes(StatusFlagNone, int32(offset), int32(amount))
+					var nodes, err = NewPageQuerySet().Offset(int(offset)).Limit(int(amount)).AllNodes()
 					var items = make([]interface{}, 0)
 					for _, n := range nodes {
 						n := n

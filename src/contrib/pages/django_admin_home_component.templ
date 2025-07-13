@@ -36,13 +36,11 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 	var qs = NewPageQuerySet().WithContext(
         p.Request.Context(),
 	)
-    var pages, err = qs.AllNodes(
-        StatusFlagNone,
-        0, _ADMIN_HOMEPAGE_PAGE_COUNT,
-		"-UpdatedAt",
-		"-Numchild",
-		"Path",
-    )
+	var pages, err = qs.
+		Offset(0).
+		Limit(int(_ADMIN_HOMEPAGE_PAGE_COUNT)).
+		OrderBy("-UpdatedAt", "-Numchild", "Path").
+		AllNodes()
     if err != nil {
         return template.HTML("")
     }
