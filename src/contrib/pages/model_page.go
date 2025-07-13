@@ -181,7 +181,7 @@ func (n *PageNode) AddChild(ctx context.Context, child *PageNode) error {
 
 	var err = NewPageQuerySet().
 		WithContext(ctx).
-		AddChild(n, child)
+		AddChildren(n, child)
 	if err != nil {
 		return fmt.Errorf("failed to add child node: %w", err)
 	}

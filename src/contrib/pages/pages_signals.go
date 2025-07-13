@@ -15,7 +15,8 @@ type PageNodeSignal struct {
 	BaseSignal
 
 	// The current node, a child node or parent node depending on the signal.
-	Node *PageNode
+	Node  *PageNode
+	Nodes []*PageNode
 
 	// The current page ID, the parent page ID or a child's page ID depending on the signal.
 	PageID int64

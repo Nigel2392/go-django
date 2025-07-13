@@ -150,7 +150,7 @@ func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 	var err error
 	var qs = NewPageQuerySet().WithContext(ctx)
 	if n.PK == 0 {
-		_, err = qs.insertNode(n)
+		_, err = qs.ExplicitSave().Create(n)
 	} else {
 		err = qs.UpdateNode(n)
 	}

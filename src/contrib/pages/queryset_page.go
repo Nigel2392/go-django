@@ -100,36 +100,48 @@ func (qs *SpecificPageQuerySet) SiblingsOf(node *PageNode, inclusive ...bool) *S
 }
 
 func (qs *SpecificPageQuerySet) All() (queries.Rows[Page], error) {
+	// Use iter method of the base queryset to not have to
+	// iterate over all rows multiple times.
 	var rowCount, baseRows, err = qs.WrappedQuerySet.Base().Base().IterAll()
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to get all rows for specific pages")
 	}
 
-	var rowIdx int
-	var rows = make(queries.Rows[Page], rowCount)
+	// Create a new map to hold the specific page content type and ID-list pairs.
 	var preloadMap = orderedmap.NewOrderedMap[string, *specificPage]()
+	var rows = make(queries.Rows[Page], rowCount)
+	var rowIdx int
 	for row, err := range baseRows {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to get row %d for specific pages", rowIdx)
 		}
 
 		var specificPageRow = &queries.Row[Page]{
-			Object:          row.Object.PageObject,
 			ObjectFieldDefs: row.ObjectFieldDefs,
 			Through:         row.Through,
 			Annotations:     row.Annotations,
+
+			// currently we set the object to the node isntead of the specific page,
+			// if a specific page can be found, it will be properly set to the right object
+			// later in the prefetch loop.
+			Object: row.Object,
 		}
 
 		// If the page has no content type or page ID, we skip it,
-		// it cannot be preloaded - we will add the page node as is.
+		// it cannot be preloaded - log a warning.
 		if row.Object.PageID == 0 || row.Object.ContentType == "" {
 			logger.Warnf("page with ID %d has no content type or page ID, skipping preload", row.Object.PageID)
-			specificPageRow.Object = row.Object
+
+			// add the row to the results, increase idx
 			rows[rowIdx] = specificPageRow
 			rowIdx++
 			continue
 		}
 
+		// Cache a reference to the specific page row in
+		// the preload map - this allows us to efficiently
+		// set the page object later in a single query
+		// for each content type and id list combination.
 		var preload, exists = preloadMap.Get(
 			row.Object.ContentType,
 		)
@@ -148,6 +160,7 @@ func (qs *SpecificPageQuerySet) All() (queries.Rows[Page], error) {
 			preload,
 		)
 
+		// add the row to the results, increase idx
 		rows[rowIdx] = specificPageRow
 		rowIdx++
 	}
@@ -156,8 +169,8 @@ func (qs *SpecificPageQuerySet) All() (queries.Rows[Page], error) {
 		return rows, err
 	}
 
-	// Reset the preload map
-
+	// prefetch all rows for each content type
+	// and set the page object for each row.
 	for head := preloadMap.Front(); head != nil; head = head.Next() {
 		var definition = DefinitionForType(head.Key)
 		if definition == nil {

@@ -194,19 +194,15 @@ func (qs *PageQuerySet) GetAncestors(p string, depth int64) ([]*PageNode, error)
 	return qs.Ancestors(p, depth).AllNodes()
 }
 
-// CreateRootNode creates a new root node.
+// AddRoots creates new root nodes.
 //
-// The node path must be empty.
-//
-// The node title must not be empty.
-//
-// The child node title must not be empty, if not provided the page's slug (and thus URLPath) will be based on the page's title.
-//
-// The node path is set to a new path part based on the number of root nodes.
-func (qs *PageQuerySet) AddRoot(node *PageNode) error {
-
-	if node.Path != "" {
-		return fmt.Errorf("node path must be empty")
+// The following conditions **must** be met for each node:
+// - The node path must be empty.
+// - The node title must not be empty.
+// - The node title must not be empty, if not provided the page's slug (and thus URLPath) will be based on the page's title.
+func (qs *PageQuerySet) AddRoots(nodes ...*PageNode) error {
+	if len(nodes) == 0 {
+		return fmt.Errorf("no nodes provided")
 	}
 
 	transaction, err := qs.GetOrCreateTransaction()
@@ -220,19 +216,31 @@ func (qs *PageQuerySet) AddRoot(node *PageNode) error {
 		return err
 	}
 
-	node.Path = buildPathPart(previousRootNodeCount)
-	if node.Title == "" {
-		return fmt.Errorf("node title must not be empty")
+	for _, node := range nodes {
+		if node.Path != "" {
+			return fmt.Errorf("node path must be empty")
+		}
+
+		node.Path = buildPathPart(previousRootNodeCount)
+		if node.Title == "" {
+			return fmt.Errorf("node title must not be empty")
+		}
+
+		node.SetUrlPath(nil)
+		node.Depth = 0
+
+		// this is kinda inefficient, but we really DO want to call the [models.ContextSaver.Save] method
+		// to ensure that the page object is saved correctly, might there be some specific logic in said method.
+		if err = qs.saveSpecific(node, true); err != nil {
+			return errors.Wrap(err, "failed to save specific instance")
+		}
+
+		// Increase the count for each addition,
+		// this will ensure that the next root node will have a unique path.
+		previousRootNodeCount++
 	}
 
-	node.SetUrlPath(nil)
-	node.Depth = 0
-
-	if err = qs.saveSpecific(node, true); err != nil {
-		return errors.Wrap(err, "failed to save specific instance")
-	}
-
-	node.PK, err = qs.insertNode(node)
+	nodes, err = qs.ExplicitSave().BulkCreate(nodes)
 	if err != nil {
 		return err
 	}
@@ -245,8 +253,15 @@ func (qs *PageQuerySet) AddRoot(node *PageNode) error {
 		BaseSignal: BaseSignal{
 			Ctx: qs.Context(),
 		},
-		Node: node,
+		Nodes: nodes,
 	})
+}
+
+// AddRoot creates a new root node.
+//
+// For more information, see [PageQuerySet.AddRoots].
+func (qs *PageQuerySet) AddRoot(node *PageNode) error {
+	return qs.AddRoots(node)
 }
 
 // CreateChildNode creates a new child node.
@@ -258,7 +273,11 @@ func (qs *PageQuerySet) AddRoot(node *PageNode) error {
 // The child node title must not be empty, if not provided the page's slug (and thus URLPath) will be based on the page's title.
 //
 // The child node path is set to a new path part based on the number of children of the parent node.
-func (qs *PageQuerySet) AddChild(parent, child *PageNode) error {
+func (qs *PageQuerySet) AddChildren(parent *PageNode, children ...*PageNode) error {
+
+	if len(children) == 0 {
+		return fmt.Errorf("no children provided")
+	}
 
 	var transaction, err = qs.GetOrCreateTransaction()
 	if err != nil {
@@ -270,29 +289,33 @@ func (qs *PageQuerySet) AddChild(parent, child *PageNode) error {
 		return fmt.Errorf("parent path must not be empty")
 	}
 
-	if child.Path != "" {
-		return fmt.Errorf("child path must be empty")
+	for _, child := range children {
+		if child.Path != "" {
+			return fmt.Errorf("child path must be empty")
+		}
+
+		child.Title = strings.TrimSpace(child.Title)
+		if child.Title == "" {
+			return fmt.Errorf("child title must not be empty")
+		}
+
+		child.SetUrlPath(parent)
+		child.Path = parent.Path + buildPathPart(parent.Numchild)
+		child.Depth = parent.Depth + 1
+
+		// this is kinda inefficient, but we really DO want to call the [models.ContextSaver.Save] method
+		// to ensure that the page object is saved correctly, might there be some specific logic in said method.
+		if err := qs.saveSpecific(child, true); err != nil {
+			return errors.Wrap(err, "failed to save specific instance")
+		}
 	}
 
-	child.Title = strings.TrimSpace(child.Title)
-	if child.Title == "" {
-		return fmt.Errorf("child title must not be empty")
-	}
-
-	child.SetUrlPath(parent)
-	child.Path = parent.Path + buildPathPart(parent.Numchild)
-	child.Depth = parent.Depth + 1
-
-	if err := qs.saveSpecific(child, true); err != nil {
-		return errors.Wrap(err, "failed to save specific instance")
-	}
-
-	child.PK, err = qs.insertNode(child)
+	children, err = qs.ExplicitSave().BulkCreate(children)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "failed to create child nodes")
 	}
 
-	parent.Numchild++
+	parent.Numchild += int64(len(children))
 	updated, err := qs.
 		ExplicitSave().
 		Select("Numchild").
@@ -314,7 +337,7 @@ func (qs *PageQuerySet) AddChild(parent, child *PageNode) error {
 		BaseSignal: BaseSignal{
 			Ctx: qs.Context(),
 		},
-		Node:   child,
+		Nodes:  children,
 		PageID: parent.PageID,
 	})
 }
@@ -933,18 +956,6 @@ func (qs *PageQuerySet) deleteNodes(nodes []*PageNode) error {
 	}
 
 	return err
-}
-
-func (qs *PageQuerySet) insertNode(node *PageNode) (int64, error) {
-	var err error
-
-	node, err = qs.
-		ExplicitSave().
-		Create(node)
-	if err != nil {
-		return 0, err
-	}
-	return node.PK, nil
 }
 
 func (qs *PageQuerySet) updateNode(node *PageNode) error {

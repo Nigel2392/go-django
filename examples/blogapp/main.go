@@ -163,7 +163,11 @@ func main() {
 			fmt.Printf(" - %q (ID: %d, %d)\n", page.Title, page.ID(), page.PageNode.PageID)
 		}
 
-		pages, err := pages.NewPageQuerySet().Specific().Unpublished().Types(&blog.BlogPage{}).All()
+		pages, err := pages.NewPageQuerySet().
+			Specific().
+			Types(&blog.BlogPage{}).
+			Unpublished().
+			All()
 		if err != nil {
 			panic(fmt.Errorf("failed to get pages: %w", err))
 		}

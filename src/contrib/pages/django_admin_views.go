@@ -350,7 +350,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		default:
 			return fmt.Errorf("invalid page type: %T", d)
 		}
-		err = qs.AddChild(
+		err = qs.AddChildren(
 			p, ref,
 		)
 		if err != nil {

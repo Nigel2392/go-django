@@ -154,7 +154,7 @@ func TestPageMenuHandler(t *testing.T) {
 			node.SetUrlPath(nil)
 		}
 
-		if _, err := insertNode(qs, node); err != nil {
+		if _, err := qs.ExplicitSave().Create(node); err != nil {
 			panic(errors.Wrapf(
 				err, "failed to insert node [%d/%d] %s",
 				i, len(nodes), node.Title,

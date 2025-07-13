@@ -20,9 +20,6 @@ import (
 	"github.com/Nigel2392/go-signals"
 )
 
-//go:linkname insertNode github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).insertNode
-func insertNode(qs *pages.PageQuerySet, node *pages.PageNode) (*pages.PageNode, error)
-
 //go:linkname updateNodes github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).updateNodes
 func updateNodes(qs *pages.PageQuerySet, nodes []*pages.PageNode) error
 
@@ -380,11 +377,11 @@ func TestPageNode(t *testing.T) {
 			t.Fatalf("expected ContentType empty, got %s", rootNode.ContentType)
 		}
 
-		t.Run("AddChild", func(t *testing.T) {
+		t.Run("AddChildren", func(t *testing.T) {
 
 			t.Logf("Adding child node to root: %+v", childNode)
 
-			var err = qs.AddChild(rootNode, childNode)
+			var err = qs.AddChildren(rootNode, childNode)
 			if err != nil {
 				t.Fatal(err)
 				return
@@ -471,7 +468,7 @@ func TestPageNode(t *testing.T) {
 
 				t.Logf("Adding sub-child node to child: %+v", subChildNode)
 
-				var err = qs.AddChild(childNode, &subChildNode)
+				var err = qs.AddChildren(childNode, &subChildNode)
 				if err != nil {
 					t.Fatal(err)
 					return
@@ -605,7 +602,7 @@ func TestPageNode(t *testing.T) {
 		}
 
 		t.Run("AddSibling", func(t *testing.T) {
-			var err = qs.AddChild(rootNode, &childSiblingNode)
+			var err = qs.AddChildren(rootNode, &childSiblingNode)
 			if err != nil {
 				t.Fatal(err)
 				return
@@ -671,7 +668,7 @@ func TestPageNode(t *testing.T) {
 			})
 
 			t.Run("AddSubChild", func(t *testing.T) {
-				var err = qs.AddChild(&childSiblingNode, &childSiblingSubChildNode)
+				var err = qs.AddChildren(&childSiblingNode, &childSiblingSubChildNode)
 				if err != nil {
 					t.Fatal(err)
 					return
@@ -990,7 +987,7 @@ func TestPageNode(t *testing.T) {
 
 	t.Run("MoveNode", func(t *testing.T) {
 
-		if err := qs.AddChild(childNode, &subChildNode2); err != nil {
+		if err := qs.AddChildren(childNode, &subChildNode2); err != nil {
 			t.Fatal(err)
 			return
 		}
