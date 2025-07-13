@@ -169,9 +169,10 @@ func main() {
 		}
 
 		fmt.Println("Pages:", len(pages))
-		for page := range pages.Objects() {
+		for specificPage := range pages.Objects() {
+			var page = specificPage.Reference()
 			fmt.Printf(" - %q (ID: %d, %d)\n", page.Title, page.ID(), page.PageID)
-			fmt.Printf("   - PageObject: %+v\n", page.PageObject)
+			fmt.Printf("   - PageObject: %+v\n", specificPage)
 		}
 
 		//err = staticfiles.Collect(func(path string, f fs.File) error {

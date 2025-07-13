@@ -2063,22 +2063,15 @@ func (qs *QuerySet[T]) ForEachRow(rowFunc func(qs *QuerySet[T], row *Row[T]) err
 	return qs
 }
 
-// All is used to retrieve all rows from the database.
+// IterAll returns an iterator over all rows in the QuerySet, and the amount of rows to iterate over.
 //
-// It returns a Query that can be executed to get the results, which is a slice of Row objects.
-//
-// Each Row object contains the model object and a map of annotations.
-//
-// If no fields are provided, it selects all fields from the model, see `Select()` for more details.
-func (qs *QuerySet[T]) All() (Rows[T], error) {
-	if qs.cached != nil && qs.useCache {
-		return qs.cached.([]*Row[T]), nil
-	}
+// If [ForEachRow] is set, it will be used to process each row inside of the iterator.
+func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 
 	var resultQuery = qs.QueryAll()
 	var results, err = resultQuery.Exec()
 	if err != nil {
-		return nil, err
+		return 0, nil, err
 	}
 
 	var runActors = func(o attrs.Definer) error {
@@ -2089,14 +2082,13 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 		return err
 	}
 
-	rows, err := newRows(
+	rows, err := newRows[T](
 		qs.internals.Fields,
 		internal.NewObjectFromIface(qs.internals.Model.Object),
 		runActors,
-		qs.forEachRow,
 	)
 	if err != nil {
-		return nil, errors.NoRows.WithCause(fmt.Errorf(
+		return 0, nil, errors.NoRows.WithCause(fmt.Errorf(
 			"failed to create rows object for QuerySet.All: %w", err,
 		))
 	}
@@ -2122,7 +2114,7 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 			val := row[j]
 
 			if err := f.Scan(val); err != nil {
-				return nil, errors.ValueError.WithCause(errors.Wrapf(
+				return 0, nil, errors.ValueError.WithCause(errors.Wrapf(
 					err, "failed to scan field %q (%T) in %T",
 					f.Name(), f, f.Instance(),
 				))
@@ -2174,7 +2166,7 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 				uniqueValue, err = GetUniqueKey(rootRow.field)
 				switch {
 				case err != nil && errors.Is(err, errors.NoUniqueKey) && rows.hasMultiRelations:
-					return nil, errors.Wrapf(
+					return 0, nil, errors.Wrapf(
 						err, "failed to get unique key for %T, but has multi relations",
 						rootRow.object,
 					)
@@ -2199,7 +2191,7 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 			if throughObj != nil {
 				uniqueValue, err = GetUniqueKey(throughObj)
 				if err != nil {
-					return nil, errors.Wrapf(
+					return 0, nil, errors.Wrapf(
 						err, "failed to get unique key from through object %T",
 						throughObj,
 					)
@@ -2227,7 +2219,74 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 		}
 	}
 
-	return rows.compile(qs)
+	rowCount, rowIter, err := rows.compile(qs)
+	if err != nil {
+		return 0, nil, errors.Wrapf(
+			err, "failed to compile rows for QuerySet.All",
+		)
+	}
+
+	return rowCount, func(yield func(*Row[T], error) bool) {
+		var next, stop = iter.Pull2(rowIter)
+		for {
+			var row, err, valid = next()
+			if !valid {
+				break
+			}
+
+			if qs.forEachRow != nil {
+				if err := qs.forEachRow(qs, row); err != nil {
+					//return nil, errors.Wrapf(
+					//	err, "failed to execute forEachRow for QuerySet.All: %s", err,
+					//)
+					// stop the iteration and return the error
+					yield(nil, errors.Wrapf(
+						err, "failed to execute forEachRow for QuerySet.All: %s", err,
+					))
+					stop()
+					break
+				}
+			}
+
+			if !yield(row, err) {
+				stop()
+				break
+			}
+		}
+	}, nil
+}
+
+// All is used to retrieve all rows from the database.
+//
+// It returns a Query that can be executed to get the results, which is a slice of Row objects.
+//
+// Each Row object contains the model object and a map of annotations.
+//
+// If no fields are provided, it selects all fields from the model, see `Select()` for more details.
+func (qs *QuerySet[T]) All() (Rows[T], error) {
+	if qs.cached != nil && qs.useCache {
+		return qs.cached.([]*Row[T]), nil
+	}
+
+	rowIdx := 0
+	rowCount, rowIter, err := qs.IterAll()
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "failed to compile rows for QuerySet.All: %s", err,
+		)
+	}
+
+	root := make([]*Row[T], rowCount)
+	for row, err := range rowIter {
+		if err != nil {
+			return nil, err
+		}
+
+		root[rowIdx] = row
+		rowIdx++
+	}
+
+	return root, nil
 }
 
 // Values is used to retrieve a list of dictionaries from the database.
@@ -2485,7 +2544,6 @@ func (qs *QuerySet[T]) Get() (*Row[T], error) {
 	}
 
 	return results[0], nil
-
 }
 
 // GetOrCreate is used to retrieve a single row from the database or create it if it does not exist.

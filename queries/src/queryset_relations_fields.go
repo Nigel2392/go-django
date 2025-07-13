@@ -52,12 +52,14 @@ var (
 //
 // through models will not be set using [ThroughModelSetter.SetThroughModel] here
 // to avoid cluttered, complex and unreadable code in the switch statement.
-func setRelatedObjects(relName string, relTyp attrs.RelationType, obj attrs.Definer, relatedObjects []Relation) {
+func setRelatedObjects(relName string, relTyp attrs.RelationType, obj attrs.Definer, relatedObjects []Relation) error {
 
 	var fieldDefs = obj.FieldDefs()
 	var field, ok = fieldDefs.Field(relName)
 	if !ok {
-		panic(fmt.Sprintf("relation %s not found in field defs of %T", relName, obj))
+		return errors.FieldNotFound.WithCause(fmt.Errorf(
+			"relation %s not found in object %T", relName, obj,
+		))
 	}
 
 	var (
@@ -71,7 +73,9 @@ func setRelatedObjects(relName string, relTyp attrs.RelationType, obj attrs.Defi
 		//
 		// no through model is expected
 		if len(relatedObjects) > 1 {
-			panic(fmt.Sprintf("expected at most one related object for %s, got %d", relName, len(relatedObjects)))
+			return errors.UnexpectedRowCount.WithCause(fmt.Errorf(
+				"expected at most one related object for %s, got %d", relName, len(relatedObjects),
+			))
 		}
 
 		var relatedObject attrs.Definer
@@ -90,6 +94,11 @@ func setRelatedObjects(relName string, relTyp attrs.RelationType, obj attrs.Defi
 			// If the field is a Definer, we can set the related object directly
 			// This is useful for fields that are not RelationValue but still need to be set
 			field.SetValue(relatedObject, true)
+		default:
+			return errors.TypeMismatch.WithCause(fmt.Errorf(
+				"expected field %s to be a RelationValue or Definer, got %s",
+				relName, fieldType,
+			))
 		}
 
 	case attrs.RelOneToMany:
@@ -126,7 +135,10 @@ func setRelatedObjects(relName string, relTyp attrs.RelationType, obj attrs.Defi
 			field.SetValue(slice.Interface(), true)
 
 		default:
-			panic(fmt.Sprintf("expected field %s to be a RelationValue, MultiRelationValue, or slice of Definer, got %s", relName, fieldType))
+			return errors.TypeMismatch.WithCause(fmt.Errorf(
+				"expected field %s to be a MultiRelationValue, slice of Definer, or slice of Relation, got %s",
+				relName, fieldType,
+			))
 		}
 
 	case attrs.RelOneToOne:
@@ -134,7 +146,9 @@ func setRelatedObjects(relName string, relTyp attrs.RelationType, obj attrs.Defi
 		//
 		// a through model COULD BE expected, but it is not required
 		if len(relatedObjects) > 1 {
-			panic(fmt.Sprintf("expected at most one related object for %s, got %d", relName, len(relatedObjects)))
+			return errors.UnexpectedRowCount.WithCause(fmt.Errorf(
+				"expected at most one related object for %s, got %d", relName, len(relatedObjects),
+			))
 		}
 
 		var relatedObject Relation
@@ -164,8 +178,10 @@ func setRelatedObjects(relName string, relTyp attrs.RelationType, obj attrs.Defi
 			field.SetValue(relatedObject.Model(), true)
 
 		default:
-			panic(fmt.Sprintf("expected field %s to be a RelationValue, ThroughRelationValue, Relation, or Definer, got %s", relName, fieldType))
-
+			return errors.TypeMismatch.WithCause(fmt.Errorf(
+				"expected field %s to be a RelationValue, ThroughRelationValue, Relation, or Definer, got %s",
+				relName, fieldType,
+			))
 		}
 
 	case attrs.RelManyToMany:
@@ -213,13 +229,20 @@ func setRelatedObjects(relName string, relTyp attrs.RelationType, obj attrs.Defi
 			field.SetValue(slice.Interface(), true)
 
 		default:
-			panic(fmt.Sprintf("expected field %s to be a SettableMultiRelation, SettableMultiThroughRelation, or a slice of Relation/Definer, got %s", relName, fieldType))
+			return errors.TypeMismatch.WithCause(fmt.Errorf(
+				"expected field %s to be a SettableMultiRelation, SettableMultiThroughRelation, or a slice of Relation/Definer, got %s",
+				relName, fieldType,
+			))
 		}
 	default:
-		panic(fmt.Sprintf("unknown relation type %s for field %s in %T", relTyp, relName, obj))
+		// panic(fmt.Sprintf("unknown relation type %s for field %s in %T", relTyp, relName, obj))
+		return errors.TypeMismatch.WithCause(fmt.Errorf(
+			"unknown relation type %s for field %s in %T", relTyp, relName, obj,
+		))
 	}
 
 	// field.SetValue(fieldValue, true)
+	return nil
 }
 
 type walkInfo struct {

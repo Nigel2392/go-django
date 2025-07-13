@@ -17,7 +17,7 @@ const errStopIteration errs.Error = "stop iteration"
 //
 // The annotations map contains additional data that is not part of the model object,
 // such as calculated fields or additional information derived from the query.
-type Row[T attrs.Definer] struct {
+type Row[T any] struct {
 	Object          T
 	ObjectFieldDefs attrs.Definitions
 	Through         attrs.Definer // The through model instance, if applicable
@@ -27,7 +27,7 @@ type Row[T attrs.Definer] struct {
 // A collection of Row[T] objects, where T is a type that implements attrs.Definer.
 //
 // This collection is used to represent the result set of a QuerySet.
-type Rows[T attrs.Definer] []*Row[T]
+type Rows[T any] []*Row[T]
 
 func (r Rows[T]) Len() int {
 	return len(r)
@@ -63,7 +63,7 @@ func (rows Rows[T]) Pluck(pathToField string) iter.Seq2[int, attrs.Field] {
 		}
 
 		for _, row := range rows {
-			var err = walkFieldValues(row.Object.FieldDefs(), fieldNames, &idx, 0, yieldFn)
+			var err = walkFieldValues(any(row.Object).(attrs.Definer).FieldDefs(), fieldNames, &idx, 0, yieldFn)
 			if errors.Is(err, errStopIteration) {
 				return // Stop iteration if the yield function returned false
 			}

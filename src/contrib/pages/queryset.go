@@ -9,34 +9,16 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
-	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
 var (
 	// _ queries.QuerySetCanBeforeExec = (*PageQuerySet)(nil)
-	_ queries.QuerySetCanAfterExec                                                     = (*PageQuerySet)(nil)
 	_ queries.QuerySetCanClone[*PageNode, *PageQuerySet, *queries.QuerySet[*PageNode]] = (*PageQuerySet)(nil)
 )
 
-type specificPage struct {
-	ids   []int64
-	pages map[int64]*Page
-}
-
-type specificPreloadInfo = orderedmap.OrderedMap[string, *specificPage]
-
-func variableBool(b ...bool) bool {
-	var v bool
-	if len(b) > 0 {
-		v = b[0]
-	}
-	return v
-}
-
 type PageQuerySet struct {
 	*queries.WrappedQuerySet[*PageNode, *PageQuerySet, *queries.QuerySet[*PageNode]]
-	preload *specificPreloadInfo
 }
 
 func NewPageQuerySet() *PageQuerySet {
@@ -49,108 +31,14 @@ func NewPageQuerySet() *PageQuerySet {
 }
 
 func (qs *PageQuerySet) CloneQuerySet(wrapped *queries.WrappedQuerySet[*PageNode, *PageQuerySet, *queries.QuerySet[*PageNode]]) *PageQuerySet {
-	var preload = qs.preload
-	if preload != nil {
-		preload = preload.Copy()
-	}
-
-	qs = &PageQuerySet{
+	return &PageQuerySet{
 		WrappedQuerySet: wrapped,
-		preload:         preload,
 	}
-
-	wrapped.BaseQuerySet = wrapped.
-		Base().
-		ForEachRow(qs.forEachRow)
-
-	return qs
 }
 
-// forEachRow is used to preload the page object for each row.
-//
-// It stores each page row in a map, keyed by the content type.
-// This allows us to efficiently retrieve the page object later when
-// fetching the specific page instance for a node.
-func (qs *PageQuerySet) forEachRow(base *queries.QuerySet[*PageNode], row *queries.Row[*PageNode]) error {
-	if qs.preload == nil {
-		return nil
-	}
-
-	if row.Object.PageID == 0 || row.Object.ContentType == "" {
-		logger.Warnf("page with ID %d has no content type or page ID, skipping preload", row.Object.PageID)
-		return nil
-	}
-
-	var preload, exists = qs.preload.Get(
-		row.Object.ContentType,
-	)
-	if !exists {
-		preload = &specificPage{
-			ids:   make([]int64, 0, 1),
-			pages: make(map[int64]*Page, 1),
-		}
-	}
-
-	preload.ids = append(preload.ids, row.Object.PageID)
-	preload.pages[row.Object.PageID] = &row.Object.PageObject
-
-	qs.preload.Set(
-		row.Object.ContentType,
-		preload,
-	)
-
-	return nil
-}
-
-func (qs *PageQuerySet) AfterExec(res any) error {
-	if qs.preload == nil || qs.preload.Len() == 0 {
-		return nil
-	}
-
-	var specific = qs.preload
-	qs.preload = nil
-
-	for head := specific.Front(); head != nil; head = head.Next() {
-		var definition = DefinitionForType(head.Key)
-		if definition == nil {
-			return errors.New(errors.CodeNoRows, fmt.Sprintf(
-				"no content type definition found for %s",
-				head.Key,
-			))
-		}
-
-		var model = definition.Object().(Page)
-		var defs = model.FieldDefs()
-		var primaryField = defs.Primary()
-		var rows, err = queries.GetQuerySet(model).
-			Filter(fmt.Sprintf("%s__in", primaryField.Name()), head.Value.ids).
-			All()
-		if err != nil {
-			return errors.Wrapf(err, "failed to get rows for content type %s", head.Key)
-		}
-
-		for _, row := range rows {
-			var primary = row.ObjectFieldDefs.Primary()
-			var pk = attrs.Get[int64](row.ObjectFieldDefs, primary.Name())
-			var page, exists = head.Value.pages[pk]
-			if !exists {
-				return errors.New(errors.CodeNoRows, fmt.Sprintf(
-					"no page found for content type %s with PK %d",
-					head.Key, pk,
-				))
-			}
-
-			*page = row.Object
-		}
-	}
-
-	return nil
-}
-
-func (qs *PageQuerySet) Specific() *PageQuerySet {
+func (qs *PageQuerySet) Specific() *SpecificPageQuerySet {
 	qs = qs.Clone()
-	qs.preload = orderedmap.NewOrderedMap[string, *specificPage]()
-	return qs
+	return newSpecificPageQuerySet(qs)
 }
 
 func (qs *PageQuerySet) StatusFlags(statusFlags StatusFlag) *PageQuerySet {

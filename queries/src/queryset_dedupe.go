@@ -2,6 +2,7 @@ package queries
 
 import (
 	"fmt"
+	"iter"
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -63,11 +64,10 @@ type rows[T attrs.Definer] struct {
 	possibleDuplicates []*scannableField // possible duplicate fields that can be added to the rows
 	hasMultiRelations  bool              // if the rows have multi-valued relations
 
-	seen       map[string]*seenObject // seen is used to deduplicate relations
-	preloads   *orderedmap.OrderedMap[string, []*Preload]
-	objects    *orderedmap.OrderedMap[any, *rootObject]
-	forEach    func(attrs.Definer) error
-	foreachRow func(qs *QuerySet[T], row *Row[T]) error
+	seen     map[string]*seenObject // seen is used to deduplicate relations
+	preloads *orderedmap.OrderedMap[string, []*Preload]
+	objects  *orderedmap.OrderedMap[any, *rootObject]
+	forEach  func(attrs.Definer) error
 }
 
 type seenObject struct {
@@ -79,7 +79,7 @@ type seenObject struct {
 // It will scan the fields of the model and build a list of scannable fields that can be used to retrieve the root object.
 // It will also add possible duplicate fields to the list, which can be used to deduplicate relations later on.
 // The forEach function is called for each object that is added to the rows structure,
-func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl attrs.Definer, forEach func(attrs.Definer) error, forEachRow func(qs *QuerySet[T], row *Row[T]) error) (*rows[T], error) {
+func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl attrs.Definer, forEach func(attrs.Definer) error) (*rows[T], error) {
 	var seen = make(map[string]struct{}, 0)
 	var scannables = getScannableFields(
 		fields, mdl,
@@ -90,7 +90,6 @@ func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl at
 		possibleDuplicates: make([]*scannableField, 0),
 		hasMultiRelations:  false,
 		forEach:            forEach,
-		foreachRow:         forEachRow,
 		seen:               make(map[string]*seenObject, 0),
 	}
 
@@ -557,14 +556,14 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 	return nil
 }
 
-func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
+func (r *rows[T]) compile(qs *QuerySet[T]) (count int, rowIter iter.Seq2[*Row[T], error], err error) {
 
 	if qs.internals.Preload != nil {
 		r.preloads = orderedmap.NewOrderedMap[string, []*Preload]()
 
 		for _, preload := range qs.internals.Preload.Preloads {
 			if err := r.queryPreloads(preload, qs); err != nil {
-				return nil, fmt.Errorf("failed to query preload %q: %w", preload.FieldName, err)
+				return 0, nil, fmt.Errorf("failed to query preload %q: %w", preload.FieldName, err)
 			}
 		}
 	}
@@ -575,7 +574,10 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
 	addRelations = func(obj *object, depth uint64, objPath string) error {
 
 		if obj.uniqueValue == nil {
-			panic(fmt.Sprintf("object %T has no primary key, cannot deduplicate relations", obj.obj))
+			// panic(fmt.Sprintf("object %T has no primary key, cannot deduplicate relations", obj.obj))
+			return fmt.Errorf(
+				"object %T has no primary key, cannot deduplicate relations", obj.obj,
+			)
 		}
 
 		for relName, rel := range obj.relations {
@@ -618,7 +620,9 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
 			}
 
 			// aways set the related objects on the parent object
-			setRelatedObjects(relName, rel.relTyp, obj.obj, relatedObjects)
+			if err := setRelatedObjects(relName, rel.relTyp, obj.obj, relatedObjects); err != nil {
+				return fmt.Errorf("failed to set related objects for relation %q on object %T: %w", relName, obj.obj, err)
+			}
 		}
 
 		if r.forEach != nil {
@@ -638,56 +642,49 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (Rows[T], error) {
 		return nil
 	}
 
-	var rowIdx = 0
-	var root = make([]*Row[T], 0, r.objects.Len())
-	for head := r.objects.Front(); head != nil; head = head.Next() {
-		var obj = head.Value
-		if obj == nil {
-			continue
-		}
+	return r.objects.Len(), iter.Seq2[*Row[T], error](func(yield func(*Row[T], error) bool) {
 
-		// add the relations to each object recursively
-		if err := addRelations(obj.object, 0, ""); err != nil {
-			return nil, fmt.Errorf("failed to add relations for object with primary key %v: %w", obj.object.uniqueValue, err)
-		}
+		for head := r.objects.Front(); head != nil; head = head.Next() {
+			var obj = head.Value
+			if obj == nil {
+				continue
+			}
 
-		var definer = obj.object.obj
-		if definer == nil {
-			continue
-		}
+			if err := addRelations(obj.object, 0, ""); err != nil {
+				yield(nil, fmt.Errorf("failed to add relations for object with primary key %v: %w", obj.object.uniqueValue, err))
+				return
+			}
 
-		// Annotate the object if it implements the Annotator interface
-		if annotator, ok := definer.(Annotator); ok {
-			annotator.Annotate(obj.annotations)
-		}
+			var definer = obj.object.obj
+			if definer == nil {
+				continue
+			}
 
-		// If the definer implements ThroughModelSetter, we set the through model directly on the object.
-		// This is not done inside the [setRelatedObjects] function to avoid
-		// unreadable and complex code.
-		if throughSetter, ok := definer.(ThroughModelSetter); ok && obj.object.through != nil {
-			throughSetter.SetThroughModel(obj.object.through)
-		}
+			// Annotate the object if it implements the Annotator interface
+			if annotator, ok := definer.(Annotator); ok {
+				annotator.Annotate(obj.annotations)
+			}
 
-		var row = &Row[T]{
-			Object:          definer.(T),
-			ObjectFieldDefs: obj.object.fieldDefs,
-			Annotations:     obj.annotations,
-			Through:         obj.object.through,
-		}
+			// If the definer implements ThroughModelSetter, we set the through model directly on the object.
+			// This is not done inside the [setRelatedObjects] function to avoid
+			// unreadable and complex code.
+			if throughSetter, ok := definer.(ThroughModelSetter); ok && obj.object.through != nil {
+				throughSetter.SetThroughModel(obj.object.through)
+			}
 
-		if r.foreachRow != nil {
-			if err := r.foreachRow(qs, row); err != nil {
-				return nil, fmt.Errorf("error in foreachRow for object %T (%d/%d): %w",
-					definer, rowIdx, r.objects.Len(), err,
-				)
+			var row = &Row[T]{
+				Object:          definer.(T),
+				ObjectFieldDefs: obj.object.fieldDefs,
+				Annotations:     obj.annotations,
+				Through:         obj.object.through,
+			}
+
+			if !yield(row, nil) {
+				return
 			}
 		}
+	}), nil
 
-		root = append(root, row)
-		rowIdx++
-	}
-
-	return root, nil
 }
 
 // a chainPart represents a part of a relation chain.
