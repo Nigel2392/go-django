@@ -578,11 +578,10 @@ func (qs *PageQuerySet) DeleteNode(node *PageNode) error { //, newParent *PageNo
 		return errors.Wrap(err, "failed to delete descendants")
 	}
 
-	prnt, err := qs.decrementNumChild(parent.PK)
+	err = qs.decrementNumChild(parent.PK)
 	if err != nil {
 		return errors.Wrap(err, "failed to decrement parent numchild")
 	}
-	*parent = *prnt
 
 	return tx.Commit(qs.Context())
 }
@@ -671,13 +670,13 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 		return errors.Wrap(err, "failed to update descendant paths")
 	}
 
-	prnt, err := qs.incrementNumChild(newParent.PK)
+	err = qs.incrementNumChild(newParent.PK)
 	if err != nil {
 		return errors.Wrap(err, "failed to increment new parent numchild")
 	}
-	*newParent = *prnt
+	newParent.Numchild++
 
-	_, err = qs.decrementNumChild(oldParent.PK)
+	err = qs.decrementNumChild(oldParent.PK)
 	if err != nil {
 		return errors.Wrap(err, "failed to decrement old parent numchild")
 	}
@@ -932,8 +931,7 @@ func (qs *PageQuerySet) updateDescendantPaths(oldUrlPath, newUrlPath, pageNodePa
 	return nil
 }
 
-func (qs *PageQuerySet) incrementNumChild(id int64) (*PageNode, error) {
-
+func (qs *PageQuerySet) incrementNumChild(id int64) error {
 	var ct, err = qs.
 		Select("Numchild").
 		Filter("PK", id).
@@ -943,17 +941,15 @@ func (qs *PageQuerySet) incrementNumChild(id int64) (*PageNode, error) {
 			expr.As("Numchild", expr.Logical("Numchild").ADD(1)),
 		)
 	if err != nil {
-		return nil, fmt.Errorf("failed to increment numchild: %w", err)
+		return fmt.Errorf("failed to increment numchild: %w", err)
 	}
 	if ct == 0 {
-		return nil, fmt.Errorf("no nodes were updated for id %d", id)
+		return fmt.Errorf("no nodes were updated for id %d", id)
 	}
-
-	return qs.GetNodeByID(id)
+	return nil
 }
 
-func (qs *PageQuerySet) decrementNumChild(id int64) (*PageNode, error) {
-
+func (qs *PageQuerySet) decrementNumChild(id int64) error {
 	var ct, err = qs.
 		Select("Numchild").
 		Filter("PK", id).
@@ -963,12 +959,12 @@ func (qs *PageQuerySet) decrementNumChild(id int64) (*PageNode, error) {
 			expr.As("Numchild", expr.Logical("Numchild").SUB(1)),
 		)
 	if err != nil {
-		return nil, fmt.Errorf("failed to decrement numchild: %w", err)
+		return fmt.Errorf("failed to decrement numchild: %w", err)
 	}
 	if ct == 0 {
-		return nil, fmt.Errorf("no nodes were updated for id %d", id)
+		return fmt.Errorf("no nodes were updated for id %d", id)
 	}
-	return qs.GetNodeByID(id)
+	return nil
 }
 
 func (qs *PageQuerySet) deleteNodes(nodes []*PageNode) error {

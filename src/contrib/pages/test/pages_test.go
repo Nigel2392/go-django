@@ -27,10 +27,10 @@ func insertNode(qs *pages.PageQuerySet, node *pages.PageNode) (*pages.PageNode, 
 func updateNodes(qs *pages.PageQuerySet, nodes []*pages.PageNode) error
 
 //go:linkname incrementNumChild github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).incrementNumChild
-func incrementNumChild(qs *pages.PageQuerySet, pk int64) (*pages.PageNode, error)
+func incrementNumChild(qs *pages.PageQuerySet, pk int64) error
 
 //go:linkname decrementNumChild github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).decrementNumChild
-func decrementNumChild(qs *pages.PageQuerySet, pk int64) (*pages.PageNode, error)
+func decrementNumChild(qs *pages.PageQuerySet, pk int64) error
 
 func TestMain(m *testing.M) {
 
@@ -793,7 +793,13 @@ func TestPageNode(t *testing.T) {
 				}
 
 				t.Run("IncNumChild", func(t *testing.T) {
-					var node, err = incrementNumChild(qs, childSiblingNode.PK)
+					var err = incrementNumChild(qs, childSiblingNode.PK)
+					if err != nil {
+						t.Fatal(err)
+						return
+					}
+
+					node, err := qs.GetNodeByID(childSiblingNode.PK)
 					if err != nil {
 						t.Fatal(err)
 						return
@@ -822,7 +828,13 @@ func TestPageNode(t *testing.T) {
 				}
 
 				t.Run("DecNumChild", func(t *testing.T) {
-					var node, err = decrementNumChild(qs, childSiblingNode.PK)
+					var err = decrementNumChild(qs, childSiblingNode.PK)
+					if err != nil {
+						t.Fatal(err)
+						return
+					}
+
+					node, err := qs.GetNodeByID(childSiblingNode.PK)
 					if err != nil {
 						t.Fatal(err)
 						return
