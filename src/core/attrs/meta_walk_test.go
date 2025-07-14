@@ -745,6 +745,7 @@ var relationChainTests = []relationChainTest{
 		ExpectedModel:   &OneToOneWithThrough_Target{},
 		ExpectedChain:   []string{"Target"},
 		ExpectedFields:  []string{"Name"},
+		ExcludeFinalRel: true,
 
 		Model: &OneToOneWithThrough{},
 		Chain: "Target.Name",

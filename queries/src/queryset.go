@@ -95,15 +95,16 @@ type PreloadResults struct {
 }
 
 type Preload struct {
-	FieldName string
-	Path      string
-	Chain     []string
-	Rel       attrs.Relation
-	Primary   attrs.FieldDefinition
-	Model     attrs.Definer
-	QuerySet  *QuerySet[attrs.Definer]
-	Field     attrs.FieldDefinition
-	Results   *PreloadResults
+	FieldName  string
+	Path       string
+	ParentPath string
+	Chain      []string
+	Rel        attrs.Relation
+	Primary    attrs.FieldDefinition
+	Model      attrs.Definer
+	QuerySet   *QuerySet[attrs.Definer]
+	Field      attrs.FieldDefinition
+	Results    *PreloadResults
 }
 
 type QuerySetPreloads struct {
@@ -1430,59 +1431,39 @@ fieldsLoop:
 	return qs
 }
 
-func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, autoJoin bool) (chain *attrs.RelationChain, aliases []string, err error) {
+func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, autoJoin bool) (*attrs.RelationChain, []string, error) {
 
 	var fieldPath = strings.Split(selectedField, ".")
-	relatrionChain, err := attrs.WalkRelationChain(
+	var relatrionChain, err = attrs.WalkRelationChain(
 		qs.internals.Model.Object, includeFinalRel, fieldPath,
 	)
 	if err != nil {
 		return relatrionChain, []string{}, err
-	}
-
-	var curr = relatrionChain.Root
-
-	if curr.Next == nil {
-		return relatrionChain, []string{}, nil
+		// panic(fmt.Errorf("WalkField: failed to walk relation chain for %q: %w", selectedField, err))
 	}
 
 	var partIdx = 0
+	var curr = relatrionChain.Root
 	var aliasList = make([]string, 0, len(relatrionChain.Chain))
 	for curr != nil {
-
-		if curr.FieldRel == nil && partIdx == len(fieldPath)-1 {
-			// If the current part is the last part of the chain and it has no relation,
-			// we can skip adding it to the join list.
-			// This is useful for fields that are not relations, but are still part of the chain.
-			break
-		}
-
-		if curr.FieldRel == nil {
-			return relatrionChain, aliasList, fmt.Errorf(
-				"WalkField: curr.FieldRel is nil for  %q (%d / %d)",
-				selectedField, partIdx, len(fieldPath)-1,
-			)
-		}
-
-		var meta = attrs.GetModelMeta(curr.FieldRel.Model())
-		var defs = meta.Definitions()
-
-		// create a preload path for each part of the relation chain
-		var subChain = relatrionChain.Chain[:partIdx+1]
-		var preloadPath = strings.Join(subChain, ".")
+		var (
+			meta = attrs.GetModelMeta(curr.Model)
+			defs = meta.Definitions()
+		)
+		var preloadPath = strings.Join(relatrionChain.Chain[:partIdx], ".")
 
 		aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
 			defs.TableName(), preloadPath,
 		))
 
-		if !autoJoin {
+		if !autoJoin || partIdx == 0 { // skip the root model
 			goto nextIter
 		}
 
 		// Build information for joining tables
 		// This is required to still correctly handle where clauses
 		// and other query modifications which might require the related fields.
-		if err = qs.addRelationChainPart(curr, aliasList); err != nil {
+		if err = qs.addRelationChainPart(curr.Prev, curr, aliasList); err != nil {
 			return relatrionChain, aliasList, fmt.Errorf(
 				"WalkField: failed to add relation chain part for %q / %q: %w",
 				preloadPath, selectedField, err,
@@ -1497,20 +1478,20 @@ func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, aut
 	return relatrionChain, aliasList, nil
 }
 
-func (qs *QuerySet[T]) addRelationChainPart(curr *attrs.RelationChainPart, aliasList []string) error {
+func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart, aliasList []string) error {
 	if curr == nil {
 		return fmt.Errorf("addRelationChainPart: curr is nil")
 	}
 
-	if curr.FieldRel == nil {
+	if curr.Model == nil {
 		return fmt.Errorf("addRelationChainPart: curr.FieldRel is nil for %q", curr.Field.Name())
 	}
 
 	var (
-		relType    = curr.FieldRel.Type()
-		relThrough = curr.FieldRel.Through()
+		relType    = prev.Field.Rel().Type()
+		relThrough = prev.Field.Rel().Through()
 
-		meta = attrs.GetModelMeta(curr.FieldRel.Model())
+		meta = attrs.GetModelMeta(curr.Model)
 		defs = meta.Definitions()
 	)
 
@@ -1518,23 +1499,27 @@ func (qs *QuerySet[T]) addRelationChainPart(curr *attrs.RelationChainPart, alias
 	// This is required to still correctly handle where clauses
 	// and other query modifications which might require the related fields.
 
-	var lhsAlias string
-	if len(aliasList) > 1 {
-		lhsAlias = aliasList[len(aliasList)-2]
-	} else {
-		lhsAlias = qs.internals.Model.Table
-	}
-
 	if qs.internals.joinsMap == nil {
 		qs.internals.joinsMap = make(map[string]struct{}, len(qs.internals.Joins))
 	}
 
-	var rhsAlias string = aliasList[len(aliasList)-1]
 	switch {
 	case (relType == attrs.RelManyToOne || relType == attrs.RelOneToMany || (relType == attrs.RelOneToOne && relThrough == nil)):
+
+		var (
+			lhsAlias = qs.internals.Model.Table
+			rhsAlias = defs.TableName()
+		)
+		if len(aliasList) == 1 {
+			rhsAlias = aliasList[0]
+		} else if len(aliasList) > 1 {
+			lhsAlias = aliasList[len(aliasList)-2]
+			rhsAlias = aliasList[len(aliasList)-1]
+		}
+
 		// we join without a through table
 		var join = JoinDef{
-			TypeJoin: calcJoinType(curr.FieldRel, curr.Field),
+			TypeJoin: calcJoinType(prev.FieldRel, prev.Field),
 			Table: Table{
 				Name:  defs.TableName(),
 				Alias: rhsAlias,
@@ -1544,12 +1529,12 @@ func (qs *QuerySet[T]) addRelationChainPart(curr *attrs.RelationChainPart, alias
 		join.JoinDefCondition = &JoinDefCondition{
 			ConditionA: expr.TableColumn{
 				TableOrAlias: lhsAlias,
-				FieldColumn:  curr.Field,
+				FieldColumn:  prev.Field,
 			},
 			Operator: expr.EQ,
 			ConditionB: expr.TableColumn{
 				TableOrAlias: rhsAlias,
-				FieldColumn:  curr.FieldRel.Field(),
+				FieldColumn:  prev.FieldRel.Field(),
 			},
 		}
 
@@ -1558,6 +1543,16 @@ func (qs *QuerySet[T]) addRelationChainPart(curr *attrs.RelationChainPart, alias
 			qs.internals.joinsMap[join.JoinDefCondition.String()] = struct{}{}
 		}
 	case relType == attrs.RelManyToMany || relType == attrs.RelOneToOne:
+		var (
+			lhsAlias string
+			rhsAlias string = aliasList[len(aliasList)-1]
+		)
+		if len(aliasList) > 1 {
+			lhsAlias = aliasList[len(aliasList)-2]
+		} else {
+			lhsAlias = qs.internals.Model.Table
+		}
+
 		var through = relThrough.Model()
 		var throughMeta = attrs.GetModelMeta(through)
 		var throughDefs = throughMeta.Definitions()
@@ -1586,7 +1581,7 @@ func (qs *QuerySet[T]) addRelationChainPart(curr *attrs.RelationChainPart, alias
 			JoinDefCondition: &JoinDefCondition{
 				ConditionA: expr.TableColumn{
 					TableOrAlias: lhsAlias,
-					FieldColumn:  curr.Field,
+					FieldColumn:  prev.Field,
 				},
 				Operator: expr.EQ,
 				ConditionB: expr.TableColumn{
@@ -1615,7 +1610,7 @@ func (qs *QuerySet[T]) addRelationChainPart(curr *attrs.RelationChainPart, alias
 				Operator: expr.EQ,
 				ConditionB: expr.TableColumn{
 					TableOrAlias: rhsAlias,
-					FieldColumn:  curr.FieldRel.Field(),
+					FieldColumn:  prev.FieldRel.Field(),
 				},
 			},
 		}
@@ -1669,8 +1664,19 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 
 		var preloads = make([]*Preload, 0, len(relatrionChain.Chain))
 		var curr = relatrionChain.Root
+
 		var partIdx = 0
 		var aliasList = make([]string, 0, len(relatrionChain.Chain))
+		var currModelMeta = attrs.GetModelMeta(curr.Model)
+		aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
+			currModelMeta.Definitions().TableName(), "",
+		))
+
+		curr = curr.Next
+		if curr == nil {
+			panic(fmt.Errorf("Preload: no relation chain found for %q", preload.Path))
+		}
+
 		for curr != nil {
 
 			var (
@@ -1679,8 +1685,10 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 			)
 
 			// create a preload path for each part of the relation chain
+
 			var subChain = relatrionChain.Chain[:partIdx+1]
-			var preloadPath = strings.Join(subChain, ".")
+			var preloadPath = strings.Join(relatrionChain.Chain[:partIdx+1], ".")
+			var parentPath = strings.Join(relatrionChain.Chain[:partIdx], ".")
 
 			aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
 				defs.TableName(), preloadPath,
@@ -1688,21 +1696,22 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 
 			// only add new preload if the preload is not already present in the mapping
 			if _, ok := nqs.internals.Preload.mapping[preloadPath]; !ok {
-				if partIdx < len(relatrionChain.Chain)-1 {
-					panic(fmt.Errorf(
-						"Preload: all previous preloads for path %q must be included in the QuerySet %v",
-						preload.Path, subChain,
-					))
-				}
+				//	if partIdx < len(relatrionChain.Chain)-1 {
+				//		panic(fmt.Errorf(
+				//			"Preload: all previous preloads for path %q must be included in the QuerySet %v",
+				//			preload.Path, subChain,
+				//		))
+				//	}
 
 				var loadDef = &Preload{
-					FieldName: relatrionChain.Chain[partIdx],
-					Path:      preloadPath,
-					Chain:     subChain,
-					Rel:       curr.FieldRel,
-					Model:     curr.Model,
-					Field:     curr.Field,
-					Primary:   defs.Primary(),
+					FieldName:  relatrionChain.Chain[partIdx],
+					Path:       preloadPath,
+					ParentPath: parentPath,
+					Chain:      subChain,
+					Rel:        curr.Prev.FieldRel,
+					Model:      curr.Model,
+					Field:      curr.Prev.Field,
+					Primary:    defs.Primary(),
 				}
 
 				// Set the QuerySet for the preload
@@ -1710,12 +1719,12 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 					loadDef.QuerySet = preload.QuerySet
 				}
 
-				nqs.internals.Preload.mapping[preload.Path] = loadDef
+				nqs.internals.Preload.mapping[preloadPath] = loadDef
 				preloads = append(
 					preloads, loadDef,
 				)
 
-				if err := qs.addRelationChainPart(curr, aliasList); err != nil {
+				if err := qs.addRelationChainPart(curr.Prev, curr, aliasList); err != nil {
 					panic(fmt.Errorf("Preload: %w", err))
 				}
 			}
@@ -3559,6 +3568,12 @@ func (qs *QuerySet[T]) batch(objects []T, size int) iter.Seq2[int, []T] {
 }
 
 func calcJoinType(rel attrs.Relation, parentField attrs.FieldDefinition) JoinType {
+	if rel == nil {
+		panic(fmt.Errorf(
+			"calcJoinType: relation is nil for field %q in model %T",
+			parentField.Name(), parentField.Instance(),
+		))
+	}
 	var relType = rel.Type()
 	switch relType {
 	case attrs.RelManyToOne:

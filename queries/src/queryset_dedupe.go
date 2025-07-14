@@ -3,7 +3,6 @@ package queries
 import (
 	"fmt"
 	"iter"
-	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -287,11 +286,10 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 		)
 	}
 
-	var preloadPath = strings.Join(preload.Chain[:len(preload.Chain)-1], ".")
-	var seenObj = r.seen[preloadPath]
+	var seenObj = r.seen[preload.ParentPath]
 	if seenObj == nil {
 		return errors.ValueError.WithCause(fmt.Errorf(
-			"QuerySet.All: no primary key map for preload %q in %v", preload.FieldName, r.seen,
+			"QuerySet.All: no primary key map for preload %q / %q in %v", preload.FieldName, preload.ParentPath, r.seen,
 		))
 	}
 

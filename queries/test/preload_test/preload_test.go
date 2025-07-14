@@ -52,7 +52,7 @@ func TestPreload(t *testing.T) {
 
 	t.Run("TestBookHasAuthors", func(t *testing.T) {
 		bookRows, err := queries.GetQuerySet(&PreloadBook{}).
-			Preload("Authors").
+			Preload("Authors.Books").
 			All()
 		if err != nil {
 			t.Fatalf("Failed to get book: %v", err)
@@ -69,6 +69,10 @@ func TestPreload(t *testing.T) {
 			}
 
 			t.Logf("Book %s has %d authors", book.Title, book.Authors.Len())
+
+			if len(book.Authors.AsList()) == 0 {
+				t.Fatalf("Expected book %s to have authors, got none", book.Title)
+			}
 
 			for _, authorRow := range book.Authors.AsList() {
 				var author = authorRow.Object.(*PreloadAuthor)
@@ -88,7 +92,7 @@ func TestPreload(t *testing.T) {
 					t.Fatalf("Expected author %s to have book %s, got none", author.Name, book.Title)
 				}
 
-				// t.Logf("Author %q wrote book %q", author.Name, book.Title)
+				t.Logf("Author %q wrote book %q", author.Name, book.Title)
 			}
 		}
 	})

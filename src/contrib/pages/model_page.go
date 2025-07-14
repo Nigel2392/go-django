@@ -34,6 +34,11 @@ type PageNode struct {
 	CreatedAt        time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
 	UpdatedAt        time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
 
+	// PageObject is the specific page object associated with this node.
+	//
+	// It is used to cache the specific page object for performance optimization.
+	//
+	// It is also used to save the specific page object when the node is saved.
 	PageObject Page `json:"-" attrs:"-"`
 
 	// _parent is used to cache the parent node
@@ -67,6 +72,19 @@ func (n *PageNode) SetUrlPath(parent *PageNode) (newPath, oldPath string) {
 
 	n.UrlPath = string(buf)
 	return n.UrlPath, oldPath
+}
+
+func (n *PageNode) SetSpecificPageObject(p Page) {
+	if p == nil {
+		n.PageObject = nil
+		return
+	}
+
+	if reflect.TypeOf(p) != reflect.TypeOf(n.PageObject) {
+		n.PageObject = nil
+	}
+
+	n.PageObject = p
 }
 
 func (n *PageNode) ID() int64 {
