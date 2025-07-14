@@ -1519,32 +1519,57 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 
 	switch {
 	case (relType == attrs.RelManyToOne || relType == attrs.RelOneToMany || (relType == attrs.RelOneToOne && relThrough == nil)):
+		var join JoinDef
+		if clause, ok := prev.Field.(TargetClauseField); ok {
+			var prevMeta = attrs.GetModelMeta(prev.Model)
+			var prevDefs = prevMeta.Definitions()
+			join = clause.GenerateTargetClause(
+				ChangeObjectsType[T, attrs.Definer](qs),
+				qs.internals,
+				ClauseTarget{ // LHS
+					Table: Table{
+						Name:  prevDefs.TableName(),
+						Alias: lhsAlias,
+					},
+					Model: prev.Model,
+					Field: prev.Field,
+				},
+				ClauseTarget{ // RHS
+					Table: Table{
+						Name:  defs.TableName(),
+						Alias: rhsAlias,
+					},
+					Model: curr.Model,
+					Field: prev.FieldRel.Field(),
+				},
+			)
+		} else {
+			join = JoinDef{ // LHS -> RHS
+				TypeJoin: calcJoinType(prev.FieldRel, prev.Field),
+				Table: Table{
+					Name:  defs.TableName(),
+					Alias: rhsAlias,
+				},
+			}
 
-		// we join without a through table
-		var join = JoinDef{
-			TypeJoin: calcJoinType(prev.FieldRel, prev.Field),
-			Table: Table{
-				Name:  defs.TableName(),
-				Alias: rhsAlias,
-			},
-		}
-
-		join.JoinDefCondition = &JoinDefCondition{
-			ConditionA: expr.TableColumn{
-				TableOrAlias: lhsAlias,
-				FieldColumn:  prev.Field,
-			},
-			Operator: expr.EQ,
-			ConditionB: expr.TableColumn{
-				TableOrAlias: rhsAlias,
-				FieldColumn:  prev.FieldRel.Field(),
-			},
+			join.JoinDefCondition = &JoinDefCondition{
+				ConditionA: expr.TableColumn{
+					TableOrAlias: lhsAlias,
+					FieldColumn:  prev.Field,
+				},
+				Operator: expr.EQ,
+				ConditionB: expr.TableColumn{
+					TableOrAlias: rhsAlias,
+					FieldColumn:  prev.FieldRel.Field(),
+				},
+			}
 		}
 
 		if _, ok := qs.internals.joinsMap[join.JoinDefCondition.String()]; !ok {
 			qs.internals.Joins = append(qs.internals.Joins, join)
 			qs.internals.joinsMap[join.JoinDefCondition.String()] = struct{}{}
 		}
+
 	case relType == attrs.RelManyToMany || relType == attrs.RelOneToOne:
 
 		var through = relThrough.Model()
@@ -1566,23 +1591,77 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 				relThrough.TargetField(), through) //lint:ignore ST1005 Provides information about the source
 		}
 
-		var join1 = JoinDef{
-			TypeJoin: TypeJoinLeft,
-			Table: Table{
-				Name:  throughDefs.TableName(),
-				Alias: throughAlias,
-			},
-			JoinDefCondition: &JoinDefCondition{
-				ConditionA: expr.TableColumn{
-					TableOrAlias: lhsAlias,
-					FieldColumn:  prev.Field,
+		var join1, join2 JoinDef
+		if clause, ok := prev.Field.(TargetClauseThroughField); ok {
+			var prevMeta = attrs.GetModelMeta(prev.Model)
+			var prevDefs = prevMeta.Definitions()
+			join1, join2 = clause.GenerateTargetThroughClause(
+				ChangeObjectsType[T, attrs.Definer](qs),
+				qs.internals,
+				ClauseTarget{ // LHS
+					Table: Table{
+						Name:  prevDefs.TableName(),
+						Alias: lhsAlias,
+					},
+					Model: prev.Model,
+					Field: prev.Field,
 				},
-				Operator: expr.EQ,
-				ConditionB: expr.TableColumn{
-					TableOrAlias: throughAlias,
-					FieldColumn:  throughSourceField,
+				ThroughClauseTarget{ // THROUGH
+					Table: Table{
+						Name:  throughDefs.TableName(),
+						Alias: throughAlias,
+					},
+					Model: through,
+					Left:  throughSourceField,
+					Right: throughTargetField,
 				},
-			},
+				ClauseTarget{ // RHS
+					Table: Table{
+						Name:  defs.TableName(),
+						Alias: rhsAlias,
+					},
+					Model: curr.Model,
+					Field: prev.FieldRel.Field(),
+				},
+			)
+		} else {
+			join1 = JoinDef{ // LHS -> THROUGH
+				TypeJoin: TypeJoinLeft,
+				Table: Table{
+					Name:  throughDefs.TableName(),
+					Alias: throughAlias,
+				},
+				JoinDefCondition: &JoinDefCondition{
+					ConditionA: expr.TableColumn{
+						TableOrAlias: lhsAlias,
+						FieldColumn:  prev.Field,
+					},
+					Operator: expr.EQ,
+					ConditionB: expr.TableColumn{
+						TableOrAlias: throughAlias,
+						FieldColumn:  throughSourceField,
+					},
+				},
+			}
+
+			join2 = JoinDef{ // THROUGH -> RHS
+				TypeJoin: TypeJoinLeft,
+				Table: Table{
+					Name:  defs.TableName(),
+					Alias: rhsAlias,
+				},
+				JoinDefCondition: &JoinDefCondition{
+					ConditionA: expr.TableColumn{
+						TableOrAlias: throughAlias,
+						FieldColumn:  throughTargetField,
+					},
+					Operator: expr.EQ,
+					ConditionB: expr.TableColumn{
+						TableOrAlias: rhsAlias,
+						FieldColumn:  prev.FieldRel.Field(),
+					},
+				},
+			}
 		}
 
 		if _, ok := qs.internals.joinsMap[join1.JoinDefCondition.String()]; !ok {
@@ -1590,28 +1669,11 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 			qs.internals.joinsMap[join1.JoinDefCondition.String()] = struct{}{}
 		}
 
-		var join2 = JoinDef{
-			TypeJoin: TypeJoinLeft,
-			Table: Table{
-				Name:  defs.TableName(),
-				Alias: rhsAlias,
-			},
-			JoinDefCondition: &JoinDefCondition{
-				ConditionA: expr.TableColumn{
-					TableOrAlias: throughAlias,
-					FieldColumn:  throughTargetField,
-				},
-				Operator: expr.EQ,
-				ConditionB: expr.TableColumn{
-					TableOrAlias: rhsAlias,
-					FieldColumn:  prev.FieldRel.Field(),
-				},
-			},
-		}
 		if _, ok := qs.internals.joinsMap[join2.JoinDefCondition.String()]; !ok {
 			qs.internals.Joins = append(qs.internals.Joins, join2)
 			qs.internals.joinsMap[join2.JoinDefCondition.String()] = struct{}{}
 		}
+
 	default:
 		return fmt.Errorf("addRelationChainPart: unsupported relation type %s for field %q", relType, curr.Field.Name())
 	}
