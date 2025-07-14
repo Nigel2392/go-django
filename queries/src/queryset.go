@@ -1431,14 +1431,17 @@ fieldsLoop:
 	return qs
 }
 
-func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, autoJoin bool) (*attrs.RelationChain, []string, error) {
+func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, autoJoin bool) (relChain *attrs.RelationChain, aliases []string, annotation attrs.Field, err error) {
+	if annotation, ok := qs.internals.Annotations.Get(selectedField); ok {
+		return nil, []string{}, annotation, nil
+	}
 
-	var fieldPath = strings.Split(selectedField, ".")
-	var relatrionChain, err = attrs.WalkRelationChain(
+	fieldPath := strings.Split(selectedField, ".")
+	relatrionChain, err := attrs.WalkRelationChain(
 		qs.internals.Model.Object, includeFinalRel, fieldPath,
 	)
 	if err != nil {
-		return relatrionChain, []string{}, err
+		return relatrionChain, []string{}, nil, err
 		// panic(fmt.Errorf("WalkField: failed to walk relation chain for %q: %w", selectedField, err))
 	}
 
@@ -1464,7 +1467,7 @@ func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, aut
 		// This is required to still correctly handle where clauses
 		// and other query modifications which might require the related fields.
 		if err = qs.addRelationChainPart(curr.Prev, curr, aliasList); err != nil {
-			return relatrionChain, aliasList, fmt.Errorf(
+			return relatrionChain, aliasList, nil, fmt.Errorf(
 				"WalkField: failed to add relation chain part for %q / %q: %w",
 				preloadPath, selectedField, err,
 			)
@@ -1475,7 +1478,7 @@ func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, aut
 		partIdx++
 	}
 
-	return relatrionChain, aliasList, nil
+	return relatrionChain, aliasList, nil, nil
 }
 
 func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart, aliasList []string) error {
@@ -1811,16 +1814,16 @@ func (qs *QuerySet[T]) compileOrderBy(fields ...string) []OrderBy {
 
 		var obj attrs.Definer
 		var field attrs.FieldDefinition
-		var chain, aliases, err = qs.WalkField(
+		var chain, aliases, annotation, err = qs.WalkField(
 			ord, false, true,
 		)
 		if err != nil {
-			var ok bool
-			field, ok = qs.internals.Annotations.Get(ord)
-			if !ok {
-				panic(err)
-			}
+			panic(err)
+		}
+
+		if annotation != nil {
 			obj = qs.internals.Model.Object
+			field = annotation
 		} else {
 			obj = chain.Final.Model
 			field = chain.Final.Field
