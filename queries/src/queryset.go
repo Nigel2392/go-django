@@ -2268,15 +2268,15 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 		return qs.cached.([]*Row[T]), nil
 	}
 
-	rowIdx := 0
-	rowCount, rowIter, err := qs.IterAll()
+	var rowIdx = 0
+	var rowCount, rowIter, err = qs.IterAll()
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "failed to compile rows for QuerySet.All: %s", err,
 		)
 	}
 
-	root := make([]*Row[T], rowCount)
+	var root = make([]*Row[T], rowCount)
 	for row, err := range rowIter {
 		if err != nil {
 			return nil, err
