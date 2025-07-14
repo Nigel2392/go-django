@@ -1506,19 +1506,19 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 		qs.internals.joinsMap = make(map[string]struct{}, len(qs.internals.Joins))
 	}
 
+	var (
+		lhsAlias = qs.internals.Model.Table
+		rhsAlias = defs.TableName()
+	)
+	if len(aliasList) == 1 {
+		rhsAlias = aliasList[0]
+	} else if len(aliasList) > 1 {
+		lhsAlias = aliasList[len(aliasList)-2]
+		rhsAlias = aliasList[len(aliasList)-1]
+	}
+
 	switch {
 	case (relType == attrs.RelManyToOne || relType == attrs.RelOneToMany || (relType == attrs.RelOneToOne && relThrough == nil)):
-
-		var (
-			lhsAlias = qs.internals.Model.Table
-			rhsAlias = defs.TableName()
-		)
-		if len(aliasList) == 1 {
-			rhsAlias = aliasList[0]
-		} else if len(aliasList) > 1 {
-			lhsAlias = aliasList[len(aliasList)-2]
-			rhsAlias = aliasList[len(aliasList)-1]
-		}
 
 		// we join without a through table
 		var join = JoinDef{
@@ -1546,15 +1546,6 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 			qs.internals.joinsMap[join.JoinDefCondition.String()] = struct{}{}
 		}
 	case relType == attrs.RelManyToMany || relType == attrs.RelOneToOne:
-		var (
-			lhsAlias string
-			rhsAlias string = aliasList[len(aliasList)-1]
-		)
-		if len(aliasList) > 1 {
-			lhsAlias = aliasList[len(aliasList)-2]
-		} else {
-			lhsAlias = qs.internals.Model.Table
-		}
 
 		var through = relThrough.Model()
 		var throughMeta = attrs.GetModelMeta(through)
