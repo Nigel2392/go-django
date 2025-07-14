@@ -104,29 +104,29 @@ func TestQuerySetWalkFields(t *testing.T) {
 	for _, test := range walk_qs_fields_test {
 		t.Run(fmt.Sprintf("%T.%s", test.Model, test.FieldPath), func(t *testing.T) {
 			var querySet = queries.GetQuerySet(test.Model)
-			var chain, aliasses, _, err = querySet.WalkField(test.FieldPath, test.IncludeFinalRel, true)
+			var res, err = querySet.WalkField(test.FieldPath, test.IncludeFinalRel, true)
 			if err != nil {
 				t.Fatalf("WalkField(%s) failed: %v", test.FieldPath, err)
 			}
 
 			if len(test.Aliases) > 0 {
-				if len(aliasses) != len(test.Aliases) {
-					t.Fatalf("Expected %d aliases, got %d", len(test.Aliases), len(aliasses))
+				if len(res.Aliases) != len(test.Aliases) {
+					t.Fatalf("Expected %d aliases, got %d", len(test.Aliases), len(res.Aliases))
 				}
 
-				for i, alias := range aliasses {
+				for i, alias := range res.Aliases {
 					if alias != test.Aliases[i] {
 						t.Errorf("Expected alias %s, got %s", test.Aliases[i], alias)
 					}
 				}
 			}
 
-			if len(chain.Chain) != len(test.Nodes)-1 {
-				t.Errorf("Expected %d nodes in chain, got %d (%v)", len(test.Nodes)-1, len(chain.Chain), chain.Chain)
+			if len(res.Chain.Chain) != len(test.Nodes)-1 {
+				t.Errorf("Expected %d nodes in chain, got %d (%v)", len(test.Nodes)-1, len(res.Chain.Chain), res.Chain.Chain)
 			}
 
 			var idx = 0
-			var curr = chain.Root
+			var curr = res.Chain.Root
 			for curr != nil {
 
 				t.Logf("Checking node %d: %s (%T)", idx, curr.ChainPart, curr.Model)

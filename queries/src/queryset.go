@@ -1431,9 +1431,23 @@ fieldsLoop:
 	return qs
 }
 
-func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, autoJoin bool) (relChain *attrs.RelationChain, aliases []string, annotation attrs.Field, err error) {
+type WalkFieldResult[T attrs.Definer] struct {
+	Chain      *attrs.RelationChain
+	Aliases    []string
+	Annotation attrs.Field
+
+	qs *QuerySet[T]
+}
+
+func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, autoJoin bool) (res *WalkFieldResult[T], err error) {
+
+	res = &WalkFieldResult[T]{
+		qs: qs,
+	}
+
 	if annotation, ok := qs.internals.Annotations.Get(selectedField); ok {
-		return nil, []string{}, annotation, nil
+		res.Annotation = annotation
+		return res, nil
 	}
 
 	fieldPath := strings.Split(selectedField, ".")
@@ -1441,13 +1455,15 @@ func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, aut
 		qs.internals.Model.Object, includeFinalRel, fieldPath,
 	)
 	if err != nil {
-		return relatrionChain, []string{}, nil, err
-		// panic(fmt.Errorf("WalkField: failed to walk relation chain for %q: %w", selectedField, err))
+		return nil, err
 	}
 
 	var partIdx = 0
 	var curr = relatrionChain.Root
-	var aliasList = make([]string, 0, len(relatrionChain.Chain))
+
+	res.Chain = relatrionChain
+	res.Aliases = make([]string, 0, len(relatrionChain.Chain))
+
 	for curr != nil {
 		var (
 			meta = attrs.GetModelMeta(curr.Model)
@@ -1455,7 +1471,7 @@ func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, aut
 		)
 		var preloadPath = strings.Join(relatrionChain.Chain[:partIdx], ".")
 
-		aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
+		res.Aliases = append(res.Aliases, qs.AliasGen.GetTableAlias(
 			defs.TableName(), preloadPath,
 		))
 
@@ -1466,8 +1482,8 @@ func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, aut
 		// Build information for joining tables
 		// This is required to still correctly handle where clauses
 		// and other query modifications which might require the related fields.
-		if err = qs.addRelationChainPart(curr.Prev, curr, aliasList); err != nil {
-			return relatrionChain, aliasList, nil, fmt.Errorf(
+		if err = qs.addRelationChainPart(curr.Prev, curr, res.Aliases); err != nil {
+			return nil, fmt.Errorf(
 				"WalkField: failed to add relation chain part for %q / %q: %w",
 				preloadPath, selectedField, err,
 			)
@@ -1478,7 +1494,7 @@ func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, aut
 		partIdx++
 	}
 
-	return relatrionChain, aliasList, nil, nil
+	return res, nil
 }
 
 func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart, aliasList []string) error {
@@ -1570,7 +1586,7 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 			qs.internals.joinsMap[join.JoinDefCondition.String()] = struct{}{}
 		}
 
-	case relType == attrs.RelManyToMany || relType == attrs.RelOneToOne:
+	case (relType == attrs.RelManyToMany || relType == attrs.RelOneToOne) && (relThrough != nil):
 
 		var through = relThrough.Model()
 		var throughMeta = attrs.GetModelMeta(through)
@@ -1865,34 +1881,51 @@ func (qs *QuerySet[T]) compileOrderBy(fields ...string) []OrderBy {
 			ord = strings.TrimPrefix(ord, "-")
 		}
 
-		var obj attrs.Definer
-		var field attrs.FieldDefinition
-		var chain, aliases, annotation, err = qs.WalkField(
+		var res, err = qs.WalkField(
 			ord, false, true,
 		)
 		if err != nil {
 			panic(err)
 		}
 
-		if annotation != nil {
-			obj = qs.internals.Model.Object
-			field = annotation
+		if res.Chain == nil && res.Annotation == nil {
+			panic(errors.FieldNotFound.Wrapf(
+				"WalkFieldResult.TableColumn: no chain or annotation present for %T, cannot create TableColumn",
+				res.qs.internals.Model.Object,
+			))
+		}
+
+		if (res.Chain != nil && len(res.Chain.Fields) > 1) && res.Annotation == nil {
+			panic(errors.FieldNotFound.Wrapf(
+				"WalkFieldResult.TableColumn: multiple fields in chain %q for %T without annotation present, cannot create TableColumn",
+				res.Chain.Fields, res.qs.internals.Model.Object,
+			))
+		}
+
+		var (
+			obj   attrs.Definer
+			field attrs.FieldDefinition
+		)
+
+		if res.Annotation != nil {
+			obj = res.qs.internals.Model.Object
+			field = res.Annotation
 		} else {
-			obj = chain.Final.Model
-			field = chain.Final.Field
+			obj = res.Chain.Final.Model
+			field = res.Chain.Final.Field
 		}
 
 		var defs = obj.FieldDefs()
 		var tableAlias string
-		if len(aliases) > 0 {
-			tableAlias = aliases[len(aliases)-1]
+		if len(res.Aliases) > 0 {
+			tableAlias = res.Aliases[len(res.Aliases)-1]
 		} else {
 			tableAlias = defs.TableName()
 		}
 
 		var alias string
 		if vF, ok := field.(AliasField); ok {
-			alias = qs.AliasGen.GetFieldAlias(
+			alias = res.qs.AliasGen.GetFieldAlias(
 				tableAlias, vF.Alias(),
 			)
 		}
