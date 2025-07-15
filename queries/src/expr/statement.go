@@ -89,7 +89,7 @@ var PARSER = &statement{
 				return info.QuoteIdentifier(defs.TableName()), []any{}, nil
 			}
 
-			var _, _, f, _, _, _, err = internal.WalkFields(info.Model, fieldPath, info.AliasGen)
+			var _, _, f, _, _, _, err = internal.WalkFields(info.Model, fieldPath, info.Resolver.Alias())
 			if err != nil {
 				return "", []any{}, fmt.Errorf(
 					"error when walking fields: %w", err,
@@ -108,7 +108,7 @@ var PARSER = &statement{
 				defs           = current.FieldDefs()
 				tableName      = defs.TableName()
 				lhs_tableName  = info.QuoteIdentifier(tableName)
-				rhs_tableAlias = info.QuoteIdentifier(info.AliasGen.GetTableAlias(
+				rhs_tableAlias = info.QuoteIdentifier(info.Resolver.Alias().GetTableAlias(
 					defs.TableName(), fieldPath,
 				))
 			)

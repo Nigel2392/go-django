@@ -4,7 +4,6 @@ import (
 	"database/sql/driver"
 	"fmt"
 
-	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/elliotchance/orderedmap/v2"
@@ -100,8 +99,8 @@ type ExpressionInfo struct {
 	// Model is the base model of the queryset.
 	Model attrs.Definer
 
-	// The AliasGen is used to generate aliases for the fields in the query.
-	AliasGen *alias.Generator
+	// Resolver is the field resolver used to resolve fields in the queryset.
+	Resolver FieldResolver
 
 	// Placeholder is the placeholder to use in the query.
 	//
@@ -206,56 +205,17 @@ func newResolvedField(fieldPath, sqlText string, field attrs.FieldDefinition, ar
 	}
 }
 
-func (inf *ExpressionInfo) ResolveExpressionField(field string) *ResolvedField {
-	var current, _, f, chain, aliases, isRelated, err = internal.WalkFields(inf.Model, field, inf.AliasGen)
+type FieldResolver interface {
+	Alias() *alias.Generator
+	Resolve(fieldName string, inf *ExpressionInfo) (model attrs.Definer, field attrs.FieldDefinition, col *TableColumn, err error)
+}
+
+func (inf *ExpressionInfo) ResolveExpressionField(fieldName string) *ResolvedField {
+	var _, field, col, err = inf.Resolver.Resolve(fieldName, inf)
 	if err != nil {
-		if fld, ok := inf.Annotations.Get(field); ok {
-			f = fld
-		} else {
-			panic(err)
-		}
+		panic(fmt.Errorf("failed to resolve field %s: %w", field, err))
 	}
 
-	var col = &TableColumn{}
-	var args []any
-	if (!inf.ForUpdate) || (isRelated || len(chain) > 0) {
-		var aliasStr string
-		switch {
-		case len(aliases) > 0:
-			aliasStr = aliases[len(aliases)-1]
-		case current != nil:
-			aliasStr = current.FieldDefs().TableName()
-		default:
-			aliasStr = inf.Model.FieldDefs().TableName()
-		}
-
-		if s, ok := f.(VirtualField); ok && !inf.SupportsWhereAlias {
-			// If the field is a virtual field and the database does not support
-			// WHERE expressions with aliases, we need to use the raw SQL of the
-			// virtual field.
-			var sql string
-			sql, args = s.SQL(inf)
-			col.RawSQL = sql
-			goto newField
-		}
-
-		if s, ok := f.(AliasField); ok {
-			// If the field is an alias field, we need to use the alias of the field.
-			col.FieldAlias = inf.AliasGen.GetFieldAlias(
-				aliasStr, s.Alias(),
-			)
-			goto newField
-		}
-
-		col.TableOrAlias = aliasStr
-		col.FieldColumn = f
-
-	newField:
-		var sql, _ = inf.FormatField(col)
-		return newResolvedField(field, sql, f, args)
-	}
-
-	col.FieldColumn = f
-	var sql, _ = inf.FormatField(col)
-	return newResolvedField(field, sql, f, []any{})
+	var sql, args = inf.FormatField(col)
+	return newResolvedField(fieldName, sql, field, args)
 }

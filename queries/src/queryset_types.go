@@ -233,7 +233,7 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 		col.RawSQL = rawSql
 
 		if fieldAlias != "" && !forUpdate {
-			col.FieldAlias = inf.AliasGen.GetFieldAlias(
+			col.FieldAlias = inf.Resolver.Alias().GetFieldAlias(
 				tableAlias, fieldAlias,
 			)
 		}

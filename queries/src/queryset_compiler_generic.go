@@ -58,7 +58,7 @@ func newExpressionInfo(g *genericQueryBuilder, qs *QuerySet[attrs.Definer], i *Q
 		),
 		Quote:           g.QuoteString,
 		QuoteIdentifier: g.QuoteIdentifier,
-		AliasGen:        qs.AliasGen,
+		Resolver:        qs,
 		FormatField:     g.FormatColumn,
 		Placeholder:     generic_PLACEHOLDER,
 		Lookups: expr.ExpressionLookupInfo{

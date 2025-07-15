@@ -798,162 +798,6 @@ func (qs *QuerySet[T]) unpackFields(fields ...any) (infos []FieldInfo[attrs.Fiel
 	return infos, hasRelated
 }
 
-func addProxyChain[T attrs.Definer](qs *QuerySet[T], chain []string, proxyM, joinM map[string]struct{}, info *FieldInfo[attrs.FieldDefinition], aliases []string) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
-	var (
-		chainKey = strings.Join(chain, ".")
-		infos    = make([]*FieldInfo[attrs.FieldDefinition], 0, 1)
-		joins    = make([]JoinDef, 0, 1)
-	)
-	if _, ok := proxyM[chainKey]; !ok {
-		var subInfos, subJoins = qs.addProxies(
-			info, aliases,
-		)
-
-		infos = append(infos, subInfos...)
-		joins = append(joins, subJoins...)
-	}
-
-	return infos, joins
-}
-
-func (qs *QuerySet[T]) addProxies(info *FieldInfo[attrs.FieldDefinition], aliasses []string) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
-	var proxyChain = ProxyFields(info.Model)
-	return qs.addSubProxies(info, proxyChain, aliasses)
-}
-
-func (qs *QuerySet[T]) addSubProxies(info *FieldInfo[attrs.FieldDefinition], node *proxyTree, aliasses []string) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
-
-	var (
-		sourceMeta      = attrs.GetModelMeta(info.Model)
-		sourceDefs      = sourceMeta.Definitions()
-		sourceTableName = sourceDefs.TableName()
-		infos           = make([]*FieldInfo[attrs.FieldDefinition], 0, node.FieldsLen())
-		joins           = make([]JoinDef, 0, node.FieldsLen())
-	)
-
-	for head := node.fields.Front(); head != nil; head = head.Next() {
-
-		var chain = append(
-			info.Chain,
-			head.Value.Name(),
-		)
-
-		var (
-			rel             = head.Value.Rel()
-			targetModel     = rel.Model()
-			targetDefs      = targetModel.FieldDefs()
-			targetTableName = targetDefs.TableName()
-			condA_Alias     = sourceTableName
-			condB_Alias     = targetTableName
-			subAliasses     = append( // initialize a new slice for sub aliasses
-				aliasses,
-				qs.AliasGen.GetTableAlias(
-					targetTableName, chain,
-				),
-			)
-		)
-
-		if len(subAliasses) == 1 {
-			condB_Alias = subAliasses[0]
-		} else if len(subAliasses) > 1 {
-			condA_Alias = subAliasses[len(subAliasses)-2]
-			condB_Alias = subAliasses[len(subAliasses)-1]
-		}
-
-		var targetField = getTargetField(
-			head.Value,
-			targetDefs,
-		)
-
-		if clause, ok := head.Value.(TargetClauseField); ok {
-			var lhs = ClauseTarget{
-				Model: info.Model,
-				Table: Table{
-					Name:  sourceTableName,
-					Alias: condA_Alias,
-				},
-				Field: head.Value,
-			}
-			var rhs = ClauseTarget{
-				Table: Table{
-					Name:  targetTableName,
-					Alias: condB_Alias,
-				},
-				Field: targetField,
-			}
-
-			var join = clause.GenerateTargetClause(
-				ChangeObjectsType[T, attrs.Definer](qs),
-				qs.internals,
-				lhs, rhs,
-			)
-
-			var info = &FieldInfo[attrs.FieldDefinition]{
-				SourceField: head.Value,
-				RelType:     rel.Type(),
-				Model:       targetModel,
-				Table: Table{
-					Name:  targetTableName,
-					Alias: condB_Alias,
-				},
-				Fields: ForSelectAllFields[attrs.FieldDefinition](
-					targetDefs,
-				),
-				Chain: chain,
-			}
-
-			joins = append(joins, join)
-			infos = append(infos, info)
-
-			if proxy, ok := node.proxies.Get(head.Key); ok {
-				var subInfos, subJoins = qs.addSubProxies(info, proxy.tree, subAliasses)
-				infos = append(infos, subInfos...)
-				joins = append(joins, subJoins...)
-			}
-
-			continue
-		}
-
-		var join = JoinDef{
-			TypeJoin: calcJoinType(rel, head.Value),
-			Table: Table{
-				Name:  targetTableName,
-				Alias: condB_Alias,
-			},
-			JoinDefCondition: &JoinDefCondition{
-				ConditionA: expr.TableColumn{
-					TableOrAlias: condA_Alias,
-					FieldColumn:  head.Value,
-				},
-				Operator: expr.EQ,
-				ConditionB: expr.TableColumn{
-					TableOrAlias: condB_Alias,
-					FieldColumn:  targetField,
-				},
-			},
-		}
-
-		var info = &FieldInfo[attrs.FieldDefinition]{
-			SourceField: head.Value,
-			RelType:     rel.Type(),
-			Model:       targetModel,
-			Table: Table{
-				Name:  targetTableName,
-				Alias: condB_Alias,
-			},
-			Fields: ForSelectAllFields[attrs.FieldDefinition](
-				targetDefs,
-			),
-			Chain: chain,
-		}
-
-		joins = append(joins, join)
-		infos = append(infos, info)
-	}
-
-	return infos, joins
-}
-
 // Select is used to select specific fields from the model.
 //
 // It takes a list of field names as arguments and returns a new QuerySet with the selected fields.
@@ -1123,6 +967,82 @@ const (
 	WalkFlagSelectSubFields
 	WalkFlagAddProxies
 )
+
+var _ expr.FieldResolver = (*QuerySet[attrs.Definer])(nil)
+
+func (qs *QuerySet[T]) Alias() *alias.Generator {
+	if qs.AliasGen == nil {
+		qs.AliasGen = alias.NewGenerator()
+	}
+	return qs.AliasGen
+}
+
+func (qs *QuerySet[T]) Resolve(fieldName string, inf *expr.ExpressionInfo) (attrs.Definer, attrs.FieldDefinition, *expr.TableColumn, error) {
+	var res, err = qs.WalkField(fieldName, nil, WalkFlagAddJoins)
+	if err != nil {
+		panic(err)
+	}
+
+	var field attrs.FieldDefinition = res.Annotation
+	if field == nil {
+		if res.Chain == nil || res.Chain.Final == nil {
+			return nil, nil, nil, fmt.Errorf(
+				"Resolve: field %q not found in model %T", fieldName, inf.Model,
+			)
+		}
+		field = res.Chain.Final.Field
+	}
+
+	var model = qs.internals.Model.Object
+	if res.Chain != nil && res.Chain.Final != nil {
+		model = res.Chain.Final.Model
+	}
+
+	var col = &expr.TableColumn{}
+	var args []any
+	if (!inf.ForUpdate) || (len(res.Chain.Chain) > 0) {
+		var aliasStr string
+		switch {
+		case len(res.Aliases) > 0:
+			aliasStr = res.Aliases[len(res.Aliases)-1]
+		case res.Chain != nil && res.Chain.Final != nil:
+			var meta = attrs.GetModelMeta(res.Chain.Final.Model)
+			var resDefs = meta.Definitions()
+			aliasStr = resDefs.TableName()
+			// aliasStr = res.Chain.Final.FieldDefs().TableName()
+		default:
+			aliasStr = qs.internals.Model.Table
+		}
+
+		if s, ok := field.(VirtualField); ok && !inf.SupportsWhereAlias {
+			// If the field is a virtual field and the database does not support
+			// WHERE expressions with aliases, we need to use the raw SQL of the
+			// virtual field.
+			var sql string
+			sql, args = s.SQL(inf)
+			col.RawSQL = sql
+			col.Values = args
+			goto newField
+		}
+
+		if s, ok := field.(AliasField); ok {
+			// If the field is an alias field, we need to use the alias of the field.
+			col.FieldAlias = qs.AliasGen.GetFieldAlias(
+				aliasStr, s.Alias(),
+			)
+			goto newField
+		}
+
+		col.TableOrAlias = aliasStr
+		col.FieldColumn = field
+
+	newField:
+		return model, field, col, nil
+	}
+
+	col.FieldColumn = field
+	return model, field, col, nil
+}
 
 func (qs *QuerySet[T]) WalkField(selectedField string, namedExprs map[string]expr.NamedExpression, flag ...WalkFlag) (res *WalkFieldResult[T], err error) {
 
@@ -1516,6 +1436,162 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 	}
 
 	return infos, joins, nil
+}
+
+func addProxyChain[T attrs.Definer](qs *QuerySet[T], chain []string, proxyM, joinM map[string]struct{}, info *FieldInfo[attrs.FieldDefinition], aliases []string) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
+	var (
+		chainKey = strings.Join(chain, ".")
+		infos    = make([]*FieldInfo[attrs.FieldDefinition], 0, 1)
+		joins    = make([]JoinDef, 0, 1)
+	)
+	if _, ok := proxyM[chainKey]; !ok {
+		var subInfos, subJoins = qs.addProxies(
+			info, aliases,
+		)
+
+		infos = append(infos, subInfos...)
+		joins = append(joins, subJoins...)
+	}
+
+	return infos, joins
+}
+
+func (qs *QuerySet[T]) addProxies(info *FieldInfo[attrs.FieldDefinition], aliasses []string) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
+	var proxyChain = ProxyFields(info.Model)
+	return qs.addSubProxies(info, proxyChain, aliasses)
+}
+
+func (qs *QuerySet[T]) addSubProxies(info *FieldInfo[attrs.FieldDefinition], node *proxyTree, aliasses []string) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
+
+	var (
+		sourceMeta      = attrs.GetModelMeta(info.Model)
+		sourceDefs      = sourceMeta.Definitions()
+		sourceTableName = sourceDefs.TableName()
+		infos           = make([]*FieldInfo[attrs.FieldDefinition], 0, node.FieldsLen())
+		joins           = make([]JoinDef, 0, node.FieldsLen())
+	)
+
+	for head := node.fields.Front(); head != nil; head = head.Next() {
+
+		var chain = append(
+			info.Chain,
+			head.Value.Name(),
+		)
+
+		var (
+			rel             = head.Value.Rel()
+			targetModel     = rel.Model()
+			targetDefs      = targetModel.FieldDefs()
+			targetTableName = targetDefs.TableName()
+			condA_Alias     = sourceTableName
+			condB_Alias     = targetTableName
+			subAliasses     = append( // initialize a new slice for sub aliasses
+				aliasses,
+				qs.AliasGen.GetTableAlias(
+					targetTableName, chain,
+				),
+			)
+		)
+
+		if len(subAliasses) == 1 {
+			condB_Alias = subAliasses[0]
+		} else if len(subAliasses) > 1 {
+			condA_Alias = subAliasses[len(subAliasses)-2]
+			condB_Alias = subAliasses[len(subAliasses)-1]
+		}
+
+		var targetField = getTargetField(
+			head.Value,
+			targetDefs,
+		)
+
+		if clause, ok := head.Value.(TargetClauseField); ok {
+			var lhs = ClauseTarget{
+				Model: info.Model,
+				Table: Table{
+					Name:  sourceTableName,
+					Alias: condA_Alias,
+				},
+				Field: head.Value,
+			}
+			var rhs = ClauseTarget{
+				Table: Table{
+					Name:  targetTableName,
+					Alias: condB_Alias,
+				},
+				Field: targetField,
+			}
+
+			var join = clause.GenerateTargetClause(
+				ChangeObjectsType[T, attrs.Definer](qs),
+				qs.internals,
+				lhs, rhs,
+			)
+
+			var info = &FieldInfo[attrs.FieldDefinition]{
+				SourceField: head.Value,
+				RelType:     rel.Type(),
+				Model:       targetModel,
+				Table: Table{
+					Name:  targetTableName,
+					Alias: condB_Alias,
+				},
+				Fields: ForSelectAllFields[attrs.FieldDefinition](
+					targetDefs,
+				),
+				Chain: chain,
+			}
+
+			joins = append(joins, join)
+			infos = append(infos, info)
+
+			if proxy, ok := node.proxies.Get(head.Key); ok {
+				var subInfos, subJoins = qs.addSubProxies(info, proxy.tree, subAliasses)
+				infos = append(infos, subInfos...)
+				joins = append(joins, subJoins...)
+			}
+
+			continue
+		}
+
+		var join = JoinDef{
+			TypeJoin: calcJoinType(rel, head.Value),
+			Table: Table{
+				Name:  targetTableName,
+				Alias: condB_Alias,
+			},
+			JoinDefCondition: &JoinDefCondition{
+				ConditionA: expr.TableColumn{
+					TableOrAlias: condA_Alias,
+					FieldColumn:  head.Value,
+				},
+				Operator: expr.EQ,
+				ConditionB: expr.TableColumn{
+					TableOrAlias: condB_Alias,
+					FieldColumn:  targetField,
+				},
+			},
+		}
+
+		var info = &FieldInfo[attrs.FieldDefinition]{
+			SourceField: head.Value,
+			RelType:     rel.Type(),
+			Model:       targetModel,
+			Table: Table{
+				Name:  targetTableName,
+				Alias: condB_Alias,
+			},
+			Fields: ForSelectAllFields[attrs.FieldDefinition](
+				targetDefs,
+			),
+			Chain: chain,
+		}
+
+		joins = append(joins, join)
+		infos = append(infos, info)
+	}
+
+	return infos, joins
 }
 
 func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {

@@ -884,71 +884,124 @@ func TestQueryRelated(t *testing.T) {
 		t.Fatalf("Failed to insert todo: %v", err)
 	}
 
-	var qs = queries.GetQuerySet[attrs.Definer](&Todo{}).
-		Select("ID", "Title", "Description", "Done", "User.Name", "User.Profile.*").
-		Filter(
-			expr.Q("Title__icontains", "new test"),
-			expr.Q("Done", false),
-			expr.Q("User.Name__icontains", "test"),
-		).
-		OrderBy("-ID", "-User.Name").
-		Limit(5)
-	todos, err := qs.All()
-	if err != nil {
-		t.Fatalf("Failed to filter todos: %v (%s)", err, qs.LatestQuery().SQL())
-	}
+	t.Run("WithSelect", func(t *testing.T) {
+		var qs = queries.GetQuerySet[attrs.Definer](&Todo{}).
+			Select("ID", "Title", "Description", "Done", "User.Name", "User.Profile.*").
+			Filter(
+				expr.Q("Title__icontains", "new test"),
+				expr.Q("Done", false),
+				expr.Q("User.Name__icontains", "test"),
+			).
+			OrderBy("-ID", "-User.Name").
+			Limit(5)
+		todos, err := qs.All()
+		if err != nil {
+			t.Fatalf("Failed to filter todos: %v (%s)", err, qs.LatestQuery().SQL())
+		}
 
-	if len(todos) != 1 {
-		t.Fatalf("Expected 1 todo, got %d", len(todos))
-	}
+		if len(todos) != 1 {
+			t.Fatalf("Expected 1 todo, got %d", len(todos))
+		}
 
-	var dbTodo = todos[0].Object.(*Todo)
-	t.Logf("Created todo: %+v, %+v", todo, todo.User)
-	t.Logf("Filtered todo: %+v, %+v", dbTodo, dbTodo.User)
+		var dbTodo = todos[0].Object.(*Todo)
+		t.Logf("Created todo: %+v, %+v", todo, todo.User)
+		t.Logf("Filtered todo: %+v, %+v", dbTodo, dbTodo.User)
 
-	if dbTodo.ID != todo.ID || todo.ID == 0 {
-		t.Fatalf("Expected todo ID %d, got %d", todo.ID, dbTodo.ID)
-	}
+		if dbTodo.ID != todo.ID || todo.ID == 0 {
+			t.Fatalf("Expected todo ID %d, got %d", todo.ID, dbTodo.ID)
+		}
 
-	if dbTodo.Title != todo.Title {
-		t.Fatalf("Expected todo title %q, got %q", todo.Title, dbTodo.Title)
-	}
+		if dbTodo.Title != todo.Title {
+			t.Fatalf("Expected todo title %q, got %q", todo.Title, dbTodo.Title)
+		}
 
-	if dbTodo.Description != todo.Description {
-		t.Fatalf("Expected todo description %q, got %q", todo.Description, dbTodo.Description)
-	}
+		if dbTodo.Description != todo.Description {
+			t.Fatalf("Expected todo description %q, got %q", todo.Description, dbTodo.Description)
+		}
 
-	if dbTodo.Done != todo.Done {
-		t.Fatalf("Expected todo done %v, got %v", todo.Done, dbTodo.Done)
-	}
+		if dbTodo.Done != todo.Done {
+			t.Fatalf("Expected todo done %v, got %v", todo.Done, dbTodo.Done)
+		}
 
-	if dbTodo.User == nil {
-		t.Fatalf("Expected todo user to be not nil")
-	}
+		if dbTodo.User == nil {
+			t.Fatalf("Expected todo user to be not nil")
+		}
 
-	if dbTodo.User.ID != 0 {
-		t.Fatalf("Expected todo user ID to be 0, got %d:\n\t%s", dbTodo.User.ID, qs.LatestQuery().SQL())
-	}
+		if dbTodo.User.ID != 0 {
+			t.Fatalf("Expected todo user ID to be 0, got %d:\n\t%s", dbTodo.User.ID, qs.LatestQuery().SQL())
+		}
 
-	if dbTodo.User.Name != todo.User.Name {
-		t.Fatalf("Expected todo user name %q, got %q", todo.User.Name, dbTodo.User.Name)
-	}
+		if dbTodo.User.Name != todo.User.Name {
+			t.Fatalf("Expected todo user name %q, got %q", todo.User.Name, dbTodo.User.Name)
+		}
 
-	if dbTodo.User.Profile == nil {
-		t.Fatalf("Expected todo user profile to be not nil")
-	}
+		if dbTodo.User.Profile == nil {
+			t.Fatalf("Expected todo user profile to be not nil")
+		}
 
-	if dbTodo.User.Profile.ID != todo.User.Profile.ID {
-		t.Fatalf("Expected todo user profile ID %d, got %d", todo.User.Profile.ID, dbTodo.User.Profile.ID)
-	}
+		if dbTodo.User.Profile.ID != todo.User.Profile.ID {
+			t.Fatalf("Expected todo user profile ID %d, got %d", todo.User.Profile.ID, dbTodo.User.Profile.ID)
+		}
 
-	if dbTodo.User.Profile.Name != todo.User.Profile.Name {
-		t.Fatalf("Expected todo user profile name %q, got %q", todo.User.Profile.Name, dbTodo.User.Profile.Name)
-	}
+		if dbTodo.User.Profile.Name != todo.User.Profile.Name {
+			t.Fatalf("Expected todo user profile name %q, got %q", todo.User.Profile.Name, dbTodo.User.Profile.Name)
+		}
 
-	if dbTodo.User.Profile.Email != todo.User.Profile.Email {
-		t.Fatalf("Expected todo user profile email %q, got %q", todo.User.Profile.Email, dbTodo.User.Profile.Email)
-	}
+		if dbTodo.User.Profile.Email != todo.User.Profile.Email {
+			t.Fatalf("Expected todo user profile email %q, got %q", todo.User.Profile.Email, dbTodo.User.Profile.Email)
+		}
+	})
+
+	t.Run("WithoutSelect", func(t *testing.T) {
+		var qs = queries.GetQuerySet[attrs.Definer](&Todo{}).
+			Filter(
+				expr.Q("Title__icontains", "new test"),
+				expr.Q("Done", false),
+				expr.Q("User.Name__icontains", "test"),
+			).
+			OrderBy("-ID", "-User.Name").
+			Limit(5)
+		todos, err := qs.All()
+		if err != nil {
+			t.Fatalf("Failed to filter todos: %v (%s)", err, qs.LatestQuery().SQL())
+		}
+
+		if len(todos) != 1 {
+			t.Fatalf("Expected 1 todo, got %d", len(todos))
+		}
+
+		var dbTodo = todos[0].Object.(*Todo)
+		t.Logf("Created todo: %+v, %+v", todo, todo.User)
+		t.Logf("Filtered todo: %+v, %+v", dbTodo, dbTodo.User)
+
+		if dbTodo.ID != todo.ID || todo.ID == 0 {
+			t.Fatalf("Expected todo ID %d, got %d", todo.ID, dbTodo.ID)
+		}
+
+		if dbTodo.Title != todo.Title {
+			t.Fatalf("Expected todo title %q, got %q", todo.Title, dbTodo.Title)
+		}
+
+		if dbTodo.Description != todo.Description {
+			t.Fatalf("Expected todo description %q, got %q", todo.Description, dbTodo.Description)
+		}
+
+		if dbTodo.Done != todo.Done {
+			t.Fatalf("Expected todo done %v, got %v", todo.Done, dbTodo.Done)
+		}
+
+		if dbTodo.User == nil {
+			t.Fatalf("Expected todo user to be not nil")
+		}
+
+		if dbTodo.User.ID != user.ID || user.ID == 0 {
+			t.Fatalf("Expected todo user ID to be %d, got %d:\n\t%s", user.ID, dbTodo.User.ID, qs.LatestQuery().SQL())
+		}
+
+		if dbTodo.User.Name != "" {
+			t.Fatalf("Expected todo user name to be empty, got %q", dbTodo.User.Name)
+		}
+	})
 }
 
 func TestQueryRelatedMultiple(t *testing.T) {
