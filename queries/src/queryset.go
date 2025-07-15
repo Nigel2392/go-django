@@ -745,14 +745,14 @@ func (qs *QuerySet[T]) unpackFields(fields ...any) (infos []*FieldInfo[attrs.Fie
 		}
 
 		hasRelated = hasRelated || res.Chain != nil && res.Chain.Root.Next != nil
-		if !hasRelated {
+		if res.Chain != nil && res.Chain.Root.Next != nil {
+			infos = append(infos, res.Fields...)
+		} else {
 			if res.Chain == nil || len(res.Chain.Fields) == 0 {
 				info.Fields = append(info.Fields, res.Annotation)
 			} else {
-				info.Fields = append(info.Fields, res.Chain.Fields...)
+				info.Fields = append(info.Fields, res.Chain.Final.Field)
 			}
-		} else {
-			infos = append(infos, res.Fields...)
 		}
 	}
 

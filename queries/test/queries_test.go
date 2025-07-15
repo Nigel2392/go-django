@@ -2601,6 +2601,77 @@ func TestQueryGroupBy(t *testing.T) {
 	var expression = expr.SUBSTR(expr.LOWER("Title"), 1, 2)
 	var qs = queries.GetQuerySet(&Todo{}).
 		Annotate("shortTitle", expression).
+		GroupBy(expression)
+	// GroupBy(expr.FuncSubstr("![Title]", 1, 2))
+
+	grouped, err := qs.All()
+	if err != nil {
+		t.Fatalf("Failed to group todos: %v", err)
+		return
+	}
+
+	if len(grouped) == 0 {
+		t.Fatalf("Expected at least 1 group, got 0")
+		return
+	}
+
+	t.Logf("Grouped todos: %d groups found, expecting %d unique titles", len(grouped), len(allTodosTitleMap))
+	if len(grouped) != len(allTodosTitleMap) {
+		t.Fatalf("Expected %d groups, got %d", len(allTodosTitleMap), len(grouped))
+		return
+	}
+
+	for _, group := range grouped {
+
+		var shortTitle = group.Annotations["shortTitle"]
+		if shortTitle == nil {
+			t.Fatalf("Expected shortTitle annotation to be not nil")
+			return
+		}
+
+		if _, exists := allTodosTitleMap[shortTitle.(string)]; !exists {
+			t.Fatalf("Expected shortTitle %q to be in allTodosTitleMap", shortTitle)
+			return
+		}
+
+		t.Logf("Grouped todo: %+v", group.Object)
+	}
+}
+
+func TestQueryGroupByAnnotation(t *testing.T) {
+	var todos = []*Todo{
+		{Title: "GroupBy1", Description: "Description GroupBy", Done: false},
+		{Title: "GroupBy2", Description: "Description GroupBy", Done: true},
+		{Title: "GroupBy3", Description: "Description GroupBy", Done: false},
+	}
+
+	for _, todo := range todos {
+		if err := queries.CreateObject(todo); err != nil {
+			t.Fatalf("Failed to insert todo: %v", err)
+		}
+	}
+
+	allTodos, err := queries.GetQuerySet(&Todo{}).Limit(10000).All()
+	if err != nil {
+		t.Fatalf("Failed to get all todos: %v", err)
+		return
+	}
+
+	var allTodosTitleMap = make(map[string]struct{})
+	for _, todo := range allTodos {
+
+		short := strings.ToLower(todo.Object.Title)
+		short = short[:2] // Get first 2 characters
+		if _, exists := allTodosTitleMap[short]; exists {
+			continue
+		}
+
+		allTodosTitleMap[short] = struct{}{}
+	}
+
+	var expression = expr.SUBSTR(expr.LOWER("Title"), 1, 2)
+	var qs = queries.GetQuerySet(&Todo{}).
+		Annotate("shortTitle", expression).
 		GroupBy("shortTitle")
 	// GroupBy(expr.FuncSubstr("![Title]", 1, 2))
 
