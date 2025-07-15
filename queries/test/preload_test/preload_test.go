@@ -92,19 +92,20 @@ func TestPreload(t *testing.T) {
 					t.Fatalf("Expected author %s to have book %s, got none", author.Name, book.Title)
 				}
 
-				t.Logf("Author %q wrote book %q", author.Name, book.Title)
+				t.Logf("Nested Author %q wrote book %q", author.Name, book.Title)
 			}
 		}
 	})
 
 	t.Run("TestBooksHasAuthorsWithProfile", func(t *testing.T) {
-		bookRows, err := queries.GetQuerySet(&PreloadBook{}).
+		var qs = queries.GetQuerySet(&PreloadBook{}).
 			Preload(queries.Preload{
 				Path: "Authors",
 				QuerySet: queries.GetQuerySet[attrs.Definer](&PreloadAuthor{}).
 					Select("Profile.*"),
-			}).
-			All()
+			})
+
+		bookRows, err := qs.All()
 		if err != nil {
 			t.Fatalf("Failed to get book with authors and profile: %v", err)
 		}
@@ -125,7 +126,11 @@ func TestPreload(t *testing.T) {
 				var author = authorRow.Object.(*PreloadAuthor)
 				var profile = authorToProfileMap[author.ID]
 				if profile == nil {
-					t.Fatalf("Expected author %s to have a profile, got none", author.Name)
+					t.Fatalf("Expected author %s to have a profile, got none:\n\t%s", author.Name, qs.LatestQuery().SQL())
+				}
+
+				if author.Profile == nil {
+					t.Fatalf("Expected author %s to have a profile, but it is nil:\n\t%s", author.Name, qs.LatestQuery().SQL())
 				}
 
 				if author.Profile.ID != profile.ID {

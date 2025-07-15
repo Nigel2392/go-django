@@ -141,8 +141,9 @@ type QuerySetInternals struct {
 	ForUpdate   bool
 	Distinct    bool
 
-	joinsMap map[string]struct{}
-	proxyMap map[string]struct{}
+	fieldsMap map[string]*FieldInfo[attrs.FieldDefinition]
+	joinsMap  map[string]struct{}
+	proxyMap  map[string]struct{}
 
 	// a pointer to the annotations field info
 	// to avoid having to create a new one every time
@@ -162,6 +163,42 @@ func (i *QuerySetInternals) AddJoin(join JoinDef) {
 	if _, exists := i.joinsMap[key]; !exists {
 		i.joinsMap[key] = struct{}{}
 		i.Joins = append(i.Joins, join)
+	}
+}
+
+func (i *QuerySetInternals) AddField(field *FieldInfo[attrs.FieldDefinition]) {
+	if i.fieldsMap == nil {
+		i.fieldsMap = make(map[string]*FieldInfo[attrs.FieldDefinition])
+	}
+
+	var key string
+	if len(field.Fields) == 1 {
+		var fld = field.Fields[0]
+		var fieldName = fld.Name()
+		if aliasField, ok := fld.(AliasField); ok {
+			var alias = aliasField.Alias()
+			if alias != "" {
+				fieldName = alias
+			}
+		}
+
+		if len(field.Chain) > 0 {
+			key = fmt.Sprintf("%s.%s", strings.Join(field.Chain, "."), fieldName)
+		} else {
+			key = fieldName
+		}
+	} else {
+		key = strings.Join(field.Chain, ".")
+	}
+
+	if info, exists := i.fieldsMap[key]; !exists {
+		i.fieldsMap[key] = field
+		i.Fields = append(i.Fields, field)
+	} else {
+		logger.Warnf(
+			"QuerySetInternals.AddField: field %q already exists in the queryset, skipping: %+v",
+			key, info,
+		)
 	}
 }
 
@@ -506,8 +543,10 @@ func (qs *QuerySet[T]) clone() *QuerySet[T] {
 			Offset:      qs.internals.Offset,
 			ForUpdate:   qs.internals.ForUpdate,
 			Distinct:    qs.internals.Distinct,
-			joinsMap:    maps.Clone(qs.internals.joinsMap),
-			proxyMap:    maps.Clone(qs.internals.proxyMap),
+
+			fieldsMap: maps.Clone(qs.internals.fieldsMap),
+			joinsMap:  maps.Clone(qs.internals.joinsMap),
+			proxyMap:  maps.Clone(qs.internals.proxyMap),
 
 			// annotations are not cloned
 			// this is to prevent the previous annotations
@@ -759,303 +798,6 @@ func (qs *QuerySet[T]) unpackFields(fields ...any) (infos []FieldInfo[attrs.Fiel
 	return infos, hasRelated
 }
 
-func (qs *QuerySet[T]) addJoinForFK(foreignKey attrs.Relation, parentDefs attrs.Definitions, parentField attrs.Field, field attrs.Field, chain, aliases []string, all bool, proxyM, joinM map[string]struct{}) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
-	var (
-		target      = foreignKey.Model()
-		relField    = foreignKey.Field()
-		targetDefs  = target.FieldDefs()
-		targetTable = targetDefs.TableName()
-		parentTable = parentDefs.TableName()
-		condA_Alias = parentTable
-		condB_Alias = targetTable
-	)
-
-	if relField == nil {
-		relField = targetDefs.Primary()
-	}
-
-	if len(aliases) == 1 {
-		condB_Alias = aliases[0]
-	} else if len(aliases) > 1 {
-		condA_Alias = aliases[len(aliases)-2]
-		condB_Alias = aliases[len(aliases)-1]
-	}
-
-	var includedFields []attrs.FieldDefinition
-	if all {
-		includedFields = ForSelectAllFields[attrs.FieldDefinition](
-			targetDefs.Fields(),
-		)
-	} else {
-		includedFields = []attrs.FieldDefinition{field}
-	}
-
-	var info = &FieldInfo[attrs.FieldDefinition]{
-		RelType:     foreignKey.Type(),
-		SourceField: field,
-		Table: Table{
-			Name:  targetTable,
-			Alias: condB_Alias,
-		},
-		Model:  target,
-		Fields: includedFields,
-		Chain:  chain,
-	}
-
-	var join JoinDef
-	if clause, ok := parentField.(TargetClauseField); ok {
-		var lhs = ClauseTarget{
-			Table: Table{
-				Name:  parentTable,
-				Alias: condA_Alias,
-			},
-			Model: parentDefs.Instance(),
-			Field: parentField,
-		}
-		var rhs = ClauseTarget{
-			Table: Table{
-				Name:  targetTable,
-				Alias: condB_Alias,
-			},
-			Model: target,
-			Field: relField,
-		}
-		join = clause.GenerateTargetClause(
-			ChangeObjectsType[T, attrs.Definer](qs),
-			qs.internals,
-			lhs, rhs,
-		)
-	} else {
-		join = JoinDef{
-			TypeJoin: calcJoinType(foreignKey, parentField),
-			Table: Table{
-				Name:  targetTable,
-				Alias: condB_Alias,
-			},
-			JoinDefCondition: &JoinDefCondition{
-				ConditionA: expr.TableColumn{
-					TableOrAlias: condA_Alias,
-					FieldColumn:  parentField,
-				},
-				Operator: expr.EQ,
-				ConditionB: expr.TableColumn{
-					TableOrAlias: condB_Alias,
-					FieldColumn:  relField,
-				},
-			},
-		}
-	}
-
-	var infos = make([]*FieldInfo[attrs.FieldDefinition], 0, 1)
-	var joins = make([]JoinDef, 0, 1)
-
-	infos = append(infos, info)
-
-	var key = join.JoinDefCondition.String()
-	if _, ok := joinM[key]; !ok {
-		joinM[key] = struct{}{}
-		joins = append(joins, join)
-	}
-
-	// add the proxy joins if the field is a proxy
-	// add the proxy joins if the field is a proxy
-	var subInfos, subJoins = addProxyChain(
-		qs, chain, proxyM, joinM, info, aliases,
-	)
-	infos = append(infos, subInfos...)
-	joins = append(joins, subJoins...)
-	return infos, joins
-}
-
-func (qs *QuerySet[T]) addJoinForM2M(manyToMany attrs.Relation, parentDefs attrs.Definitions, parentField attrs.Field, field attrs.Field, chain, aliases []string, all bool, proxyM, joinM map[string]struct{}) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
-	var through = manyToMany.Through()
-	if through == nil {
-		panic(fmt.Errorf("manyToMany relation %T.%s does not have a through table", manyToMany.Model(), field.Name()))
-	}
-
-	// through model info
-	var (
-		throughModel = through.Model()
-		throughMeta  = attrs.GetModelMeta(throughModel)
-		throughDefs  = throughMeta.Definitions()
-		throughTable = throughDefs.TableName()
-
-		target      = manyToMany.Model()
-		targetDefs  = target.FieldDefs()
-		targetTable = targetDefs.TableName()
-		// targetField = getTargetField()
-	)
-
-	throughSourceField, ok := throughDefs.Field(through.SourceField())
-	if !ok {
-		panic(fmt.Errorf("field %q not found in %T", through.SourceField(), throughModel))
-	}
-	throughTargetField, ok := throughDefs.Field(through.TargetField())
-	if !ok {
-		panic(fmt.Errorf("field %q not found in %T", through.TargetField(), throughModel))
-	}
-
-	var parentAlias string
-	var parentTable = parentDefs.TableName()
-	if len(aliases) > 1 {
-		parentAlias = aliases[len(aliases)-2]
-	} else {
-		parentAlias = parentTable
-	}
-
-	var (
-		alias        = aliases[len(aliases)-1]
-		aliasThrough = fmt.Sprintf("%s_through", alias)
-		targetField  = getTargetField(
-			throughTargetField,
-			targetDefs,
-		)
-	)
-
-	var (
-		join1 JoinDef
-		join2 JoinDef
-	)
-	if clause, ok := parentField.(TargetClauseThroughField); ok {
-		var lhs = ClauseTarget{
-			Table: Table{
-				Name:  parentTable,
-				Alias: parentAlias,
-			},
-			Model: parentDefs.Instance(),
-			Field: parentField,
-		}
-		var through = ThroughClauseTarget{
-			Table: Table{
-				Name:  throughTable,
-				Alias: aliasThrough,
-			},
-			Model: throughModel,
-			Left:  throughSourceField,
-			Right: throughTargetField,
-		}
-		var rhs = ClauseTarget{
-			Table: Table{
-				Name:  targetTable,
-				Alias: alias,
-			},
-			Model: target,
-			Field: targetField,
-		}
-		join1, join2 = clause.GenerateTargetThroughClause(
-			ChangeObjectsType[T, attrs.Definer](qs),
-			qs.internals,
-			lhs, through, rhs,
-		)
-	} else {
-		// JOIN through table
-		join1 = JoinDef{
-			TypeJoin: TypeJoinInner,
-			Table: Table{
-				Name:  throughTable,
-				Alias: aliasThrough,
-			},
-			JoinDefCondition: &JoinDefCondition{
-				Operator: expr.EQ,
-				ConditionA: expr.TableColumn{
-					TableOrAlias: parentAlias,
-					FieldColumn:  parentField,
-				},
-				ConditionB: expr.TableColumn{
-					TableOrAlias: aliasThrough,
-					FieldColumn:  throughSourceField,
-				},
-			},
-		}
-
-		// JOIN target table
-		join2 = JoinDef{
-			TypeJoin: TypeJoinInner,
-			Table: Table{
-				Name:  targetTable,
-				Alias: alias,
-			},
-			JoinDefCondition: &JoinDefCondition{
-				Operator: expr.EQ,
-				ConditionA: expr.TableColumn{
-					TableOrAlias: aliasThrough,
-					FieldColumn:  throughTargetField,
-				},
-				ConditionB: expr.TableColumn{
-					TableOrAlias: alias,
-					FieldColumn:  targetField,
-				},
-			},
-		}
-	}
-
-	// Prevent duplicate joins
-	var (
-		joins = make([]JoinDef, 0, 2)
-		infos = make([]*FieldInfo[attrs.FieldDefinition], 0, 1)
-		key1  = join1.JoinDefCondition.String()
-		key2  = join2.JoinDefCondition.String()
-	)
-	if _, ok := joinM[key1]; !ok {
-		joins = append(joins, join1)
-		joinM[key1] = struct{}{}
-	}
-	if _, ok := joinM[key2]; !ok {
-		joins = append(joins, join2)
-		joinM[key2] = struct{}{}
-	}
-
-	var includedFields []attrs.FieldDefinition
-	if all {
-		includedFields = ForSelectAllFields[attrs.FieldDefinition](
-			targetDefs.Fields(),
-		)
-	} else {
-		includedFields = []attrs.FieldDefinition{field}
-	}
-
-	var currInfo = &FieldInfo[attrs.FieldDefinition]{
-		RelType:     manyToMany.Type(),
-		SourceField: field,
-		Model:       target,
-		Table: Table{
-			Name:  targetTable,
-			Alias: alias,
-		},
-		Fields: includedFields,
-		Chain:  chain,
-		Through: &FieldInfo[attrs.FieldDefinition]{
-			RelType:     manyToMany.Type(),
-			SourceField: field,
-			Model:       throughModel,
-			Table: Table{
-				Name:  throughTable,
-				Alias: aliasThrough,
-			},
-			Fields: throughDefs.Fields(),
-		},
-	}
-
-	infos = append(infos, currInfo)
-
-	// add the proxy joins if the field is a proxy
-	var subInfos, subJoins = addProxyChain(
-		qs, chain, proxyM, joinM, currInfo, aliases,
-	)
-	infos = append(infos, subInfos...)
-	joins = append(joins, subJoins...)
-
-	return infos, joins
-}
-
-func (qs *QuerySet[T]) addJoinForO2O(oneToOne attrs.Relation, parentDefs attrs.Definitions, parentField attrs.Field, field attrs.Field, chain, aliases []string, all bool, proxyM, joinM map[string]struct{}) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
-	var through = oneToOne.Through()
-	if through == nil {
-		return qs.addJoinForFK(oneToOne, parentDefs, parentField, field, chain, aliases, all, proxyM, joinM)
-	}
-	return qs.addJoinForM2M(oneToOne, parentDefs, parentField, field, chain, aliases, all, proxyM, joinM)
-}
-
 func addProxyChain[T attrs.Definer](qs *QuerySet[T], chain []string, proxyM, joinM map[string]struct{}, info *FieldInfo[attrs.FieldDefinition], aliases []string) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
 	var (
 		chainKey = strings.Join(chain, ".")
@@ -1068,14 +810,7 @@ func addProxyChain[T attrs.Definer](qs *QuerySet[T], chain []string, proxyM, joi
 		)
 
 		infos = append(infos, subInfos...)
-
-		for _, join := range subJoins {
-			var key = join.JoinDefCondition.String()
-			if _, ok := joinM[key]; !ok {
-				joins = append(joins, join)
-				joinM[key] = struct{}{}
-			}
-		}
+		joins = append(joins, subJoins...)
 	}
 
 	return infos, joins
@@ -1240,6 +975,8 @@ func (qs *QuerySet[T]) Select(fields ...any) *QuerySet[T] {
 	qs = qs.clone()
 
 	qs.internals.Fields = make([]*FieldInfo[attrs.FieldDefinition], 0)
+	qs.internals.fieldsMap = make(map[string]*FieldInfo[attrs.FieldDefinition], 0)
+
 	if qs.internals.joinsMap == nil {
 		qs.internals.joinsMap = make(map[string]struct{}, len(qs.internals.Joins))
 	}
@@ -1252,11 +989,11 @@ func (qs *QuerySet[T]) Select(fields ...any) *QuerySet[T] {
 		fields = []any{"*"}
 	}
 
-fieldsLoop:
-	for _, selectedFieldObj := range fields {
-
+	var selectedFieldsList = make([]string, 0, len(fields))
+	var namedExprs = make(map[string]expr.NamedExpression, 0)
+	for _, field := range fields {
 		var selectedField string
-		switch v := selectedFieldObj.(type) {
+		switch v := field.(type) {
 		case string:
 			selectedField = v
 		case expr.NamedExpression:
@@ -1265,12 +1002,22 @@ fieldsLoop:
 			if selectedField == "" {
 				panic(fmt.Errorf("Select: empty field name for %T", v))
 			}
+
+			namedExprs[selectedField] = v
 		case *FieldInfo[attrs.FieldDefinition]:
-			qs.internals.Fields = append(qs.internals.Fields, v)
-			continue fieldsLoop
+			qs.internals.AddField(v)
+			continue
 		default:
 			panic(fmt.Errorf("Select: invalid field type %T, can be one of [string, NamedExpression]", v))
 		}
+
+		selectedFieldsList = append(
+			selectedFieldsList, selectedField,
+		)
+	}
+
+fieldsLoop:
+	for _, selectedField := range selectedFieldsList {
 
 		var allFields bool
 		if strings.HasSuffix(selectedField, "*") {
@@ -1293,16 +1040,18 @@ fieldsLoop:
 			}
 
 			// Add the current model fields to the queryset selection
-			qs.internals.Fields = append(
-				qs.internals.Fields, currInfo,
-			)
+			qs.internals.AddField(currInfo)
 
 			// add proxy chain for the model
 			var subInfos, subJoins = addProxyChain(
 				qs, []string{}, qs.internals.proxyMap, qs.internals.joinsMap, currInfo, []string{},
 			)
-			qs.internals.Fields = append(qs.internals.Fields, subInfos...)
-			qs.internals.Joins = append(qs.internals.Joins, subJoins...)
+			for _, info := range subInfos {
+				qs.internals.AddField(info)
+			}
+			for _, join := range subJoins {
+				qs.internals.AddJoin(join)
+			}
 
 			// reselect all annotations
 			// this is needed to ensure that annotations are not lost
@@ -1323,109 +1072,33 @@ fieldsLoop:
 			continue fieldsLoop
 		}
 
-		var current, parent, field, chain, aliases, isRelated, err = internal.WalkFields(
-			qs.internals.Model.Object, selectedField, qs.AliasGen,
-		)
+		var flags = WalkFlagAddJoins | WalkFlagAddProxies
+		if allFields {
+			flags |= WalkFlagAllFields
+		}
+
+		var res, err = qs.WalkField(selectedField, namedExprs, flags)
 		if err != nil {
-			field, ok := qs.internals.Annotations.Get(selectedField)
-			if !ok {
-				panic(err)
-			}
-			qs.internals.Fields = append(qs.internals.Fields, &FieldInfo[attrs.FieldDefinition]{
+			panic(fmt.Errorf("failed to walk field %q: %w", selectedField, err))
+		}
+
+		if res.Annotation != nil {
+			qs.internals.AddField(&FieldInfo[attrs.FieldDefinition]{
 				Table: Table{
 					Name: qs.internals.Model.Table,
 				},
-				Fields: []attrs.FieldDefinition{field},
+				Fields: []attrs.FieldDefinition{res.Annotation},
 			})
 			continue fieldsLoop
 		}
 
-		// Check if expression, wrap it in exprField
-		if expr, ok := selectedFieldObj.(expr.NamedExpression); ok {
-			field = &exprField{
-				Field: field,
-				expr:  expr,
-			}
+		for _, info := range res.Fields {
+			qs.internals.AddField(info)
 		}
 
-		// The field might be a relation
-		var rel = field.Rel()
-
-		// If all fields of the relation are requested, we need to add the relation
-		// to the join list. We also need to add the parent field to the chain.
-		//
-		// this must be in line with alias generation in internal.WalkFields!!!
-		if (rel != nil) && allFields {
-			chain = append(chain, field.Name())
-			var (
-				meta = attrs.GetModelMeta(rel.Model())
-				defs = meta.Definitions()
-			)
-			aliases = append(aliases, qs.AliasGen.GetTableAlias(
-				defs.TableName(), selectedField,
-			))
-			parent = current
-			isRelated = true
+		for _, join := range res.Joins {
+			qs.internals.AddJoin(join)
 		}
-
-		if len(chain) > 0 && isRelated {
-
-			var (
-				infos []*FieldInfo[attrs.FieldDefinition]
-				join  []JoinDef
-			)
-
-			var parentDefs = parent.FieldDefs()
-			var parentField, ok = parentDefs.Field(chain[len(chain)-1])
-			if !ok {
-				panic(fmt.Errorf("field %q not found in %T", chain[len(chain)-1], parent))
-			}
-
-			if rel == nil {
-				rel = parentField.Rel()
-			}
-
-			switch rel.Type() {
-			case attrs.RelManyToOne:
-				infos, join = qs.addJoinForFK(rel, parentDefs, parentField, field, chain, aliases, allFields, qs.internals.proxyMap, qs.internals.joinsMap)
-			case attrs.RelOneToOne:
-				infos, join = qs.addJoinForO2O(rel, parentDefs, parentField, field, chain, aliases, allFields, qs.internals.proxyMap, qs.internals.joinsMap)
-			case attrs.RelManyToMany:
-				infos, join = qs.addJoinForM2M(rel, parentDefs, parentField, field, chain, aliases, allFields, qs.internals.proxyMap, qs.internals.joinsMap)
-			case attrs.RelOneToMany:
-				infos, join = qs.addJoinForFK(rel, parentDefs, parentField, field, chain, aliases, allFields, qs.internals.proxyMap, qs.internals.joinsMap)
-			default:
-				panic(fmt.Errorf("field %q (%T) is not a relation %s", field.Name(), field, rel.Type()))
-			}
-
-			if len(infos) > 0 {
-				qs.internals.Fields = append(qs.internals.Fields, infos...)
-				qs.internals.Joins = append(qs.internals.Joins, join...)
-			}
-
-			continue fieldsLoop
-		}
-
-		var defs = current.FieldDefs()
-		var tableName = defs.TableName()
-		var currInfo = &FieldInfo[attrs.FieldDefinition]{
-			Model: current,
-			Table: Table{
-				Name: tableName,
-			},
-			Fields: []attrs.FieldDefinition{field},
-			Chain:  chain,
-		}
-
-		qs.internals.Fields = append(qs.internals.Fields, currInfo)
-
-		// add proxy chain for the model
-		// the root model always has an empty chain key
-		var subInfos, subJoins = addProxyChain(
-			qs, []string{}, qs.internals.proxyMap, qs.internals.joinsMap, currInfo, []string{},
-		)
-		qs.internals.Fields = append(qs.internals.Fields, subInfos...)
-		qs.internals.Joins = append(qs.internals.Joins, subJoins...)
 	}
 
 	return qs
@@ -1435,24 +1108,68 @@ type WalkFieldResult[T attrs.Definer] struct {
 	Chain      *attrs.RelationChain
 	Aliases    []string
 	Annotation attrs.Field
+	Fields     []*FieldInfo[attrs.FieldDefinition]
+	Joins      []JoinDef
 
 	qs *QuerySet[T]
 }
 
-func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, autoJoin bool) (res *WalkFieldResult[T], err error) {
+type WalkFlag int
+
+const (
+	WalkFlagNone      WalkFlag = 0
+	WalkFlagAllFields WalkFlag = 1 << iota
+	WalkFlagAddJoins
+	WalkFlagSelectSubFields
+	WalkFlagAddProxies
+)
+
+func (qs *QuerySet[T]) WalkField(selectedField string, namedExprs map[string]expr.NamedExpression, flag ...WalkFlag) (res *WalkFieldResult[T], err error) {
+
+	var flags = WalkFlagNone
+	for _, f := range flag {
+		flags |= f
+	}
+
+	// When adding proxies, it is required to also add joins.
+	if flags&WalkFlagAddProxies != 0 && flags&WalkFlagAddJoins == 0 {
+		panic(fmt.Errorf(
+			"WalkField: WalkFlagAddProxies requires WalkFlagAddJoins to be set if WalkFlagAddProxies is set",
+		))
+	}
 
 	res = &WalkFieldResult[T]{
 		qs: qs,
 	}
 
 	if annotation, ok := qs.internals.Annotations.Get(selectedField); ok {
+
+		if namedExpr, ok := namedExprs[selectedField]; ok {
+			annotation = &exprField{
+				Field: annotation,
+				expr:  namedExpr,
+			}
+		}
+
 		res.Annotation = annotation
 		return res, nil
 	}
 
+	if qs.internals.fieldsMap == nil {
+		qs.internals.fieldsMap = make(map[string]*FieldInfo[attrs.FieldDefinition], 0)
+	}
+
+	if qs.internals.joinsMap == nil {
+		qs.internals.joinsMap = make(map[string]struct{})
+	}
+
+	if qs.internals.proxyMap == nil {
+		qs.internals.proxyMap = make(map[string]struct{}, 0)
+	}
+
 	fieldPath := strings.Split(selectedField, ".")
 	relatrionChain, err := attrs.WalkRelationChain(
-		qs.internals.Model.Object, includeFinalRel, fieldPath,
+		qs.internals.Model.Object, flags&WalkFlagAllFields != 0, fieldPath,
 	)
 	if err != nil {
 		return nil, err
@@ -1466,28 +1183,78 @@ func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, aut
 
 	for curr != nil {
 		var (
-			meta = attrs.GetModelMeta(curr.Model)
-			defs = meta.Definitions()
+			fields      []*FieldInfo[attrs.FieldDefinition]
+			joins       []JoinDef
+			meta        = attrs.GetModelMeta(curr.Model)
+			defs        = meta.Definitions()
+			preloadPath = strings.Join(relatrionChain.Chain[:partIdx], ".")
 		)
-		var preloadPath = strings.Join(relatrionChain.Chain[:partIdx], ".")
 
-		res.Aliases = append(res.Aliases, qs.AliasGen.GetTableAlias(
+		var exprKey = curr.Field.Name()
+		if len(preloadPath) > 0 {
+			exprKey = fmt.Sprintf("%s.%s", preloadPath, exprKey)
+		}
+
+		if namedExpr, ok := namedExprs[exprKey]; ok {
+			curr.Field = &exprField{
+				Field: curr.Field.(attrs.Field),
+				expr:  namedExpr,
+			}
+		}
+
+		var alias = qs.AliasGen.GetTableAlias(
 			defs.TableName(), preloadPath,
-		))
+		)
+		res.Aliases = append(res.Aliases, alias)
 
-		if !autoJoin || partIdx == 0 { // skip the root model
+		if partIdx == 0 && curr.Next == nil {
+			var fields = []attrs.FieldDefinition{curr.Field}
+			if flags&WalkFlagAllFields != 0 {
+				fields = ForSelectAllFields[attrs.FieldDefinition](
+					defs.Fields(),
+				)
+			}
+
+			var base = &FieldInfo[attrs.FieldDefinition]{
+				Model: curr.Model,
+				Table: Table{
+					Name: defs.TableName(),
+					// Alias: alias,
+				},
+				Chain:  []string{},
+				Fields: fields,
+			}
+
+			res.Fields = append(
+				res.Fields, base,
+			)
+		}
+
+		if flags&WalkFlagAddJoins == 0 || partIdx == 0 { // skip the root model
 			goto nextIter
 		}
 
 		// Build information for joining tables
 		// This is required to still correctly handle where clauses
 		// and other query modifications which might require the related fields.
-		if err = qs.addRelationChainPart(curr.Prev, curr, res.Aliases); err != nil {
+		if fields, joins, err = qs.addRelationChainPart(curr.Prev, curr, res.Aliases, flags); err != nil {
 			return nil, fmt.Errorf(
 				"WalkField: failed to add relation chain part for %q / %q: %w",
 				preloadPath, selectedField, err,
 			)
 		}
+
+		if curr.Next == nil || flags&WalkFlagSelectSubFields != 0 {
+			res.Fields = append(
+				res.Fields,
+				fields...,
+			)
+		}
+
+		res.Joins = append(
+			res.Joins,
+			joins...,
+		)
 
 	nextIter:
 		curr = curr.Next
@@ -1497,21 +1264,24 @@ func (qs *QuerySet[T]) WalkField(selectedField string, includeFinalRel bool, aut
 	return res, nil
 }
 
-func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart, aliasList []string) error {
+func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart, aliasList []string, flags WalkFlag) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef, error) {
 	if curr == nil {
-		return fmt.Errorf("addRelationChainPart: curr is nil")
+		return nil, nil, fmt.Errorf("addRelationChainPart: curr is nil")
 	}
 
 	if curr.Model == nil {
-		return fmt.Errorf("addRelationChainPart: curr.FieldRel is nil for %q", curr.Field.Name())
+		return nil, nil, fmt.Errorf("addRelationChainPart: curr.FieldRel is nil for %q", curr.Field.Name())
 	}
 
 	var (
 		relType    = prev.Field.Rel().Type()
 		relThrough = prev.Field.Rel().Through()
 
-		meta = attrs.GetModelMeta(curr.Model)
-		defs = meta.Definitions()
+		info  *FieldInfo[attrs.FieldDefinition]
+		infos = make([]*FieldInfo[attrs.FieldDefinition], 0, 1)
+		joins = make([]JoinDef, 0, 1)
+		meta  = attrs.GetModelMeta(curr.Model)
+		defs  = meta.Definitions()
 	)
 
 	// Build information for joining tables
@@ -1533,12 +1303,27 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 		rhsAlias = aliasList[len(aliasList)-1]
 	}
 
+	var includedFields = []attrs.FieldDefinition{curr.Field}
+	if flags&WalkFlagAllFields != 0 {
+		includedFields = ForSelectAllFields[attrs.FieldDefinition](
+			defs.Fields(),
+		)
+	}
+
+	var relField = prev.FieldRel.Field()
+	if relField == nil {
+		currMeta := attrs.GetModelMeta(curr.Model)
+		currDefs := currMeta.Definitions()
+		relField = currDefs.Primary()
+	}
+
 	switch {
 	case (relType == attrs.RelManyToOne || relType == attrs.RelOneToMany || (relType == attrs.RelOneToOne && relThrough == nil)):
 		var join JoinDef
 		if clause, ok := prev.Field.(TargetClauseField); ok {
 			var prevMeta = attrs.GetModelMeta(prev.Model)
 			var prevDefs = prevMeta.Definitions()
+
 			join = clause.GenerateTargetClause(
 				ChangeObjectsType[T, attrs.Definer](qs),
 				qs.internals,
@@ -1556,7 +1341,7 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 						Alias: rhsAlias,
 					},
 					Model: curr.Model,
-					Field: prev.FieldRel.Field(),
+					Field: relField,
 				},
 			)
 		} else {
@@ -1576,15 +1361,25 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 				Operator: expr.EQ,
 				ConditionB: expr.TableColumn{
 					TableOrAlias: rhsAlias,
-					FieldColumn:  prev.FieldRel.Field(),
+					FieldColumn:  relField,
 				},
 			}
 		}
 
-		if _, ok := qs.internals.joinsMap[join.JoinDefCondition.String()]; !ok {
-			qs.internals.Joins = append(qs.internals.Joins, join)
-			qs.internals.joinsMap[join.JoinDefCondition.String()] = struct{}{}
+		info = &FieldInfo[attrs.FieldDefinition]{
+			RelType:     relType,
+			SourceField: prev.Field,
+			Table: Table{
+				Name:  defs.TableName(),
+				Alias: rhsAlias,
+			},
+			Model:  curr.Model,
+			Fields: includedFields,
+			Chain:  prev.Chain(),
 		}
+
+		infos = append(infos, info)
+		joins = append(joins, join)
 
 	case (relType == attrs.RelManyToMany || relType == attrs.RelOneToOne) && (relThrough != nil):
 
@@ -1595,14 +1390,14 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 
 		throughSourceField, ok := throughDefs.Field(relThrough.SourceField())
 		if !ok {
-			return fmt.Errorf(
+			return infos, joins, fmt.Errorf(
 				"Join: through source field %q not found in %T",
 				relThrough.SourceField(), through) //lint:ignore ST1005 Provides information about the source
 		}
 
 		throughTargetField, ok := throughDefs.Field(relThrough.TargetField())
 		if !ok {
-			return fmt.Errorf(
+			return infos, joins, fmt.Errorf(
 				"Join: through target field %q not found in %T",
 				relThrough.TargetField(), through) //lint:ignore ST1005 Provides information about the source
 		}
@@ -1637,7 +1432,7 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 						Alias: rhsAlias,
 					},
 					Model: curr.Model,
-					Field: prev.FieldRel.Field(),
+					Field: relField,
 				},
 			)
 		} else {
@@ -1674,27 +1469,53 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 					Operator: expr.EQ,
 					ConditionB: expr.TableColumn{
 						TableOrAlias: rhsAlias,
-						FieldColumn:  prev.FieldRel.Field(),
+						FieldColumn:  relField,
 					},
 				},
 			}
 		}
 
-		if _, ok := qs.internals.joinsMap[join1.JoinDefCondition.String()]; !ok {
-			qs.internals.Joins = append(qs.internals.Joins, join1)
-			qs.internals.joinsMap[join1.JoinDefCondition.String()] = struct{}{}
+		info = &FieldInfo[attrs.FieldDefinition]{
+			RelType:     relType,
+			SourceField: prev.Field,
+			Table: Table{
+				Name:  defs.TableName(),
+				Alias: rhsAlias,
+			},
+			Model:  curr.Model,
+			Fields: includedFields,
+			Chain:  prev.Chain(),
+			Through: &FieldInfo[attrs.FieldDefinition]{
+				RelType:     relType,
+				SourceField: prev.Field,
+				Model:       through,
+				Table: Table{
+					Name:  throughDefs.TableName(),
+					Alias: throughAlias,
+				},
+				Fields: ForSelectAllFields[attrs.FieldDefinition](throughDefs.Fields()),
+			},
 		}
 
-		if _, ok := qs.internals.joinsMap[join2.JoinDefCondition.String()]; !ok {
-			qs.internals.Joins = append(qs.internals.Joins, join2)
-			qs.internals.joinsMap[join2.JoinDefCondition.String()] = struct{}{}
-		}
+		infos = append(infos, info)
+		joins = append(joins, join1, join2)
 
 	default:
-		return fmt.Errorf("addRelationChainPart: unsupported relation type %s for field %q", relType, curr.Field.Name())
+		return infos, joins, fmt.Errorf("addRelationChainPart: unsupported relation type %s for field %q", relType, curr.Field.Name())
 	}
 
-	return nil
+	if flags&WalkFlagAddProxies != 0 {
+		var subInfos, subJoins = addProxyChain(
+			qs, curr.Chain(),
+			qs.internals.proxyMap,
+			qs.internals.joinsMap,
+			info, aliasList,
+		)
+		infos = append(infos, subInfos...)
+		joins = append(joins, subJoins...)
+	}
+
+	return infos, joins, nil
 }
 
 func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
@@ -1702,11 +1523,16 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 	// in the initial query. The Select method already handles this.
 	//
 	// If you want to preload specific fields, use the Select method instead.
-	var nqs = qs.clone()
-	nqs.internals.Preload = &QuerySetPreloads{
+	qs = qs.clone()
+	qs.internals.Preload = &QuerySetPreloads{
 		Preloads: make([]*Preload, 0, len(fields)),
 		mapping:  make(map[string]*Preload, len(fields)),
 	}
+
+	if qs.internals.joinsMap == nil {
+		qs.internals.joinsMap = make(map[string]struct{})
+	}
+
 	for _, field := range fields {
 		var preload Preload
 		switch v := field.(type) {
@@ -1767,7 +1593,7 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 			))
 
 			// only add new preload if the preload is not already present in the mapping
-			if _, ok := nqs.internals.Preload.mapping[preloadPath]; !ok {
+			if _, ok := qs.internals.Preload.mapping[preloadPath]; !ok {
 				//	if partIdx < len(relatrionChain.Chain)-1 {
 				//		panic(fmt.Errorf(
 				//			"Preload: all previous preloads for path %q must be included in the QuerySet %v",
@@ -1791,31 +1617,41 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 					loadDef.QuerySet = preload.QuerySet
 				}
 
-				nqs.internals.Preload.mapping[preloadPath] = loadDef
+				qs.internals.Preload.mapping[preloadPath] = loadDef
 				preloads = append(
 					preloads, loadDef,
 				)
 
-				if err := qs.addRelationChainPart(curr.Prev, curr, aliasList); err != nil {
+				var joins []JoinDef
+				if _, joins, err = qs.addRelationChainPart(curr.Prev, curr, aliasList, WalkFlagNone); err != nil {
 					panic(fmt.Errorf("Preload: %w", err))
 				}
+
+				for _, join := range joins {
+					var key = join.JoinDefCondition.String()
+					if _, ok := qs.internals.joinsMap[key]; !ok {
+						qs.internals.Joins = append(qs.internals.Joins, join)
+						qs.internals.joinsMap[key] = struct{}{}
+					}
+				}
+
 			}
 
 			curr = curr.Next
 			partIdx++
 		}
 
-		nqs.internals.Preload.Preloads = append(
-			nqs.internals.Preload.Preloads, preloads...,
+		qs.internals.Preload.Preloads = append(
+			qs.internals.Preload.Preloads, preloads...,
 		)
 
-		slices.SortStableFunc(nqs.internals.Preload.Preloads, func(a, b *Preload) int {
+		slices.SortStableFunc(qs.internals.Preload.Preloads, func(a, b *Preload) int {
 			return strings.Compare(a.Path, b.Path)
 		})
 
 	}
 
-	return nqs
+	return qs
 }
 
 // Filter is used to filter the results of a query.
@@ -1882,7 +1718,7 @@ func (qs *QuerySet[T]) compileOrderBy(fields ...string) []OrderBy {
 		}
 
 		var res, err = qs.WalkField(
-			ord, false, true,
+			ord, nil, WalkFlagAddJoins,
 		)
 		if err != nil {
 			panic(err)
@@ -1900,6 +1736,10 @@ func (qs *QuerySet[T]) compileOrderBy(fields ...string) []OrderBy {
 				"WalkFieldResult.TableColumn: multiple fields in chain %q for %T without annotation present, cannot create TableColumn",
 				res.Chain.Fields, res.qs.internals.Model.Object,
 			))
+		}
+
+		for _, join := range res.Joins {
+			qs.internals.AddJoin(join)
 		}
 
 		var (

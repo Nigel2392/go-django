@@ -927,7 +927,7 @@ func TestQueryRelated(t *testing.T) {
 	}
 
 	if dbTodo.User.ID != 0 {
-		t.Fatalf("Expected todo user ID to be 0, got %d", dbTodo.User.ID)
+		t.Fatalf("Expected todo user ID to be 0, got %d:\n\t%s", dbTodo.User.ID, qs.LatestQuery().SQL())
 	}
 
 	if dbTodo.User.Name != todo.User.Name {

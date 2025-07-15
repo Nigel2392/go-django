@@ -179,6 +179,8 @@ func TestMain(m *testing.M) {
 	authorToProfileMap[preloadAuthors[2].ID] = preloadAuthorProfiles[2]
 	authorToProfileMap[preloadAuthors[3].ID] = preloadAuthorProfiles[3]
 
+	logger.Debug("Running preload tests")
+
 	var exitCode = m.Run()
 	if err := db.Close(); err != nil {
 		logger.Errorf("Failed to close test database: %v", err)

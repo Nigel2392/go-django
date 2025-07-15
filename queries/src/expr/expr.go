@@ -257,6 +257,6 @@ type AliasField interface {
 //
 // For example: this is used in fields.ExpressionField to render the expression as SQL.
 type VirtualField interface {
-	attrs.Field
+	attrs.FieldDefinition
 	SQL(inf *ExpressionInfo) (string, []any)
 }

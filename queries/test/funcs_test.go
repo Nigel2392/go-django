@@ -20,10 +20,10 @@ func TestSelectFuncExpr(t *testing.T) {
 	}
 
 	t.Run("SelectNameSubString", func(t *testing.T) {
-		var rows, err = queries.Objects[attrs.Definer](test).
+		var qs = queries.Objects[attrs.Definer](test).
 			Select("ID", expr.SUBSTR(expr.UPPER("Name"), expr.Value(1), expr.Value(9)), "Text").
-			Filter("ID", test.ID).
-			All()
+			Filter("ID", test.ID)
+		var rows, err = qs.All()
 
 		if err != nil {
 			t.Fatalf("Failed to execute query: %v", err)
@@ -33,6 +33,9 @@ func TestSelectFuncExpr(t *testing.T) {
 			t.Fatal("expected at least one result")
 		}
 
+		t.Logf("SQL: %s", qs.LatestQuery().SQL())
+		t.Logf("ARGS: %v", qs.LatestQuery().Args())
+
 		if rows[0].Object.(*TestStruct).ID != test.ID {
 			t.Errorf("expected ID = %d, got %d", test.ID, rows[0].Object.(*TestStruct).ID)
 		}
@@ -40,6 +43,10 @@ func TestSelectFuncExpr(t *testing.T) {
 		if rows[0].Object.(*TestStruct).Name != strings.ToUpper(test.Name[0:9]) {
 			// Note: Name is aliassed to Substr(Name, 0, 9)
 			t.Errorf("expected Name = %q, got %q", strings.ToUpper(test.Name[0:9]), rows[0].Object.(*TestStruct).Name)
+		}
+
+		if rows[0].Object.(*TestStruct).Text != test.Text {
+			t.Errorf("expected Text = %q, got %q", test.Text, rows[0].Object.(*TestStruct).Text)
 		}
 
 		t.Logf("Row: %#v", rows[0].Object.(*TestStruct))

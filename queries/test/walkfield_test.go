@@ -104,7 +104,13 @@ func TestQuerySetWalkFields(t *testing.T) {
 	for _, test := range walk_qs_fields_test {
 		t.Run(fmt.Sprintf("%T.%s", test.Model, test.FieldPath), func(t *testing.T) {
 			var querySet = queries.GetQuerySet(test.Model)
-			var res, err = querySet.WalkField(test.FieldPath, test.IncludeFinalRel, true)
+
+			var flag = queries.WalkFlagAddJoins
+			if test.IncludeFinalRel {
+				flag |= queries.WalkFlagAllFields
+			}
+
+			var res, err = querySet.WalkField(test.FieldPath, nil, flag)
 			if err != nil {
 				t.Fatalf("WalkField(%s) failed: %v", test.FieldPath, err)
 			}

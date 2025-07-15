@@ -623,7 +623,7 @@ func Test_Annotated_ValuesList(t *testing.T) {
 		t.Fatal("expected at least one result")
 	}
 	if len(values[0]) != 2 {
-		t.Errorf("expected 2 fields per row, got %d", len(values[0]))
+		t.Errorf("expected 2 fields per row, got %d (%v)", len(values[0]), values[0])
 	}
 }
 
@@ -907,6 +907,9 @@ func TestAnnotatedValuesListWithSelectExpressions(t *testing.T) {
 
 	if len(rows[0]) != 3 {
 		t.Errorf("expected 3 fields per row, got %d", len(rows[0]))
+		for i, v := range rows[0] {
+			t.Logf("Row[0][%d]: %v", i, v)
+		}
 	}
 
 	if rows[0][0] != test.ID {

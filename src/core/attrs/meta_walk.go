@@ -175,8 +175,12 @@ type RelationChainPart struct {
 	FieldRel  Relation           // the relation of the field in the current part
 	Model     Definer            // the current target model
 	Through   Through            // the through relation to get to the target model, if any
-	Field     FieldDefinition    // the field in the current target model
+	Field     FieldDefinition    // the field in the current model, possibly containing the next relation
 	Depth     int                // corresponds to the index in chain.Chain
+}
+
+func (p *RelationChainPart) Chain() []string {
+	return p.chain.Chain[:p.Depth+1]
 }
 
 type RelationChain struct {

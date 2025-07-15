@@ -121,6 +121,7 @@ type JoinDef struct {
 //
 // It is both used by the QuerySet and by the QueryCompiler.
 type FieldInfo[FieldType attrs.FieldDefinition] struct {
+	Annotating  bool // Whether the field is being annotated
 	SourceField FieldType
 	Model       attrs.Definer
 	RelType     attrs.RelationType

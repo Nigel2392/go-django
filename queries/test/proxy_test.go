@@ -223,13 +223,14 @@ func TestLinkedToProxiedModel(t *testing.T) {
 		t.Fatalf("Failed to save linked model: %v", err)
 	}
 
-	var loadedLinkedModel, err = queries.GetQuerySet(&LinkedToProxiedModel{}).
+	var qs = queries.GetQuerySet(&LinkedToProxiedModel{}).
 		WithContext(ctx).
 		Select("*", "ProxiedModel.*").
-		Filter("ID", linkedModel.ID).
-		First()
+		Filter("ID", linkedModel.ID)
+
+	var loadedLinkedModel, err = qs.First()
 	if err != nil {
-		t.Fatalf("Failed to load linked model: %v", err)
+		t.Fatalf("Failed to load linked model: %v:\n\t%s", err, qs.LatestQuery().SQL())
 	}
 
 	if loadedLinkedModel == nil {
