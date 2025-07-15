@@ -511,13 +511,20 @@ func (m *Model) Define(def attrs.Definer, flds ...any) *attrs.ObjectDefinitions 
 			var (
 				field attrs.Field
 
-				key            = head.Key
-				value          = head.Value
-				typ            = value.Type()
-				from           = value.From()
-				fromModelField = from.Field()
+				key   = head.Key
+				value = head.Value
+				typ   = value.Type()
+				from  = value.From()
 			)
 
+			//	if reflect.TypeOf(value.Model()) == reflect.TypeOf(def) {
+			//		panic(fmt.Errorf(
+			//			"reverse relation %q in model %T is not allowed to point to itself",
+			//			key, def,
+			//		))
+			//	}
+
+			var fromModelField = from.Field()
 			if fromModelField == nil {
 				panic(fmt.Errorf(
 					"reverse relation %q in model %T does not have a field defined",

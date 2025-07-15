@@ -131,17 +131,22 @@
         "name": "",
         "type": "",
         "columns": [
-          "PageID",
-          "ContentType"
-        ],
-        "unique": true
+          "PageID"
+        ]
       },
       {
         "name": "",
         "type": "",
         "columns": [
-          "Slug",
-          "Depth"
+          "ContentType"
+        ]
+      },
+      {
+        "name": "",
+        "type": "",
+        "columns": [
+          "PageID",
+          "ContentType"
         ],
         "unique": true
       }
@@ -172,10 +177,8 @@
           "name": "",
           "type": "",
           "columns": [
-            "PageID",
-            "ContentType"
-          ],
-          "unique": true
+            "PageID"
+          ]
         }
       }
     },
@@ -186,8 +189,20 @@
           "name": "",
           "type": "",
           "columns": [
-            "Slug",
-            "Depth"
+            "ContentType"
+          ]
+        }
+      }
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "",
+          "type": "",
+          "columns": [
+            "PageID",
+            "ContentType"
           ],
           "unique": true
         }

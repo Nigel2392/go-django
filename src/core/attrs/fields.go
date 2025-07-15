@@ -899,6 +899,7 @@ var (
 )
 
 func (f *FieldDef) Scan(value any) error {
+
 	if f.field_v.Kind() == reflect.Ptr && f.field_v.IsNil() {
 		f.field_v.Set(reflect.New(f.field_t.Type.Elem()))
 	}
@@ -925,8 +926,31 @@ func (f *FieldDef) Scan(value any) error {
 		return scanner.Scan(value)
 	}
 
-	if rv.Type() == f.field_v.Type() {
+	if rv.Type() == f.field_v.Type() || (f.field_t.Type.Kind() == reflect.Interface && rv.Type().Implements(f.field_t.Type)) {
 		f.field_v.Set(rv)
+		return nil
+	}
+
+	var rel = f.Rel()
+	// Custom handling for definer types - this is required in case field_v is an interface type instead of a concrete type.
+	if f.field_t.Type.Kind() == reflect.Interface && f.field_t.Type.Implements(reflect.TypeOf((*Definer)(nil)).Elem()) && rel != nil && (rel.Type() == RelManyToOne || rel.Type() == RelOneToOne) {
+		if f.field_v.IsNil() {
+			var model = NewObject[Definer](rel.Model())
+			var defs = model.FieldDefs()
+			var prim = defs.Primary()
+			if err := prim.Scan(value); err != nil {
+				return fmt.Errorf("failed to scan primary key for %T: %w", rel.Model(), err)
+			}
+			f.field_v.Set(reflect.ValueOf(model))
+		} else {
+			var model = f.field_v.Interface().(Definer)
+			var defs = model.FieldDefs()
+			var prim = defs.Primary()
+			if err := prim.Scan(value); err != nil {
+				return fmt.Errorf("failed to scan primary key for %T: %w", rel.Model(), err)
+			}
+			f.field_v.Set(reflect.ValueOf(model))
+		}
 		return nil
 	}
 
@@ -1068,12 +1092,12 @@ func (f *FieldDef) _driverValue(value any) (driver.Value, error) {
 		}
 		return v.Interface(), nil
 	case reflect.Struct:
-		switch f.field_v.Interface().(type) {
+		switch val := f.field_v.Interface().(type) {
 		case driver.Valuer:
-			var valuer = f.field_v.Interface().(driver.Valuer)
+			var valuer = val.(driver.Valuer)
 			return valuer.Value()
 		case Definer:
-			var def = f.field_v.Interface().(Definer)
+			var def = val.(Definer)
 			var pk = PrimaryKey(def)
 			return pk, nil
 		}

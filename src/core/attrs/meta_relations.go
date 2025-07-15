@@ -34,6 +34,7 @@ func (t *ThroughModel) TargetField() string {
 
 type relationTarget struct {
 	model    Definer
+	defs     Definitions
 	field    FieldDefinition
 	fieldStr string
 	prev     RelationTarget
@@ -52,15 +53,18 @@ func (r *relationTarget) Field() FieldDefinition {
 		return r.field
 	}
 
-	var defs = r.model.FieldDefs()
+	if r.defs == nil {
+		r.defs = GetModelMeta(r.model).Model().FieldDefs()
+	}
+
 	if r.fieldStr != "" {
 		var ok bool
-		r.field, ok = defs.Field(r.fieldStr)
+		r.field, ok = r.defs.Field(r.fieldStr)
 		if !ok {
 			panic(fmt.Errorf("field %q not found in model %T", r.fieldStr, r.model))
 		}
 	} else {
-		r.field = defs.Primary()
+		r.field = r.defs.Primary()
 	}
 
 	return r.field
@@ -207,13 +211,13 @@ type deferredRelation struct {
 
 func (d *deferredRelation) setup() {
 
-	var k = deferredMapKey(d)
-	if existing, ok := deferredMap[k]; ok {
-		d.mdl = existing.mdl
-		d.field = existing.field
-		d.through = existing.through
-		return
-	}
+	//	var k = deferredMapKey(d)
+	//	if existing, ok := deferredMap[k]; ok {
+	//		d.mdl = existing.mdl
+	//		d.field = existing.field
+	//		d.through = existing.through
+	//		return
+	//	}
 
 	var cType = contenttypes.DefinitionForType(d.model_type)
 	if cType == nil {
@@ -230,7 +234,7 @@ func (d *deferredRelation) setup() {
 		d.field = f
 	}
 
-	deferredMap[k] = d
+	// deferredMap[k] = d
 }
 
 func (d *deferredRelation) Type() RelationType {

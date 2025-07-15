@@ -30,6 +30,12 @@ func FieldType(field attrs.FieldDefinition) reflect.Type {
 	}
 
 	var fTyp = field.Type()
+	if fTyp.Kind() == reflect.Interface && rel != nil {
+		var modelTyp = rel.Model()
+		var fieldDef = modelTyp.FieldDefs()
+		return FieldType(fieldDef.Primary())
+	}
+
 	if field.Type().Implements(reflect.TypeOf((*attrs.Definer)(nil)).Elem()) {
 		// if the field is a definer, we return the type of the underlying object
 		var definerType = fTyp.Elem()

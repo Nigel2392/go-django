@@ -1,3 +1,5 @@
+//go:build (!mysql && !postgres && !mariadb) || (!mysql && !postgres && !mysql_local && !mariadb && !sqlite)
+
 package auditlogs_test
 
 import (
@@ -8,7 +10,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/go-django/queries/src/migrator"
+	testsql "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql"
 	django "github.com/Nigel2392/go-django/src"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -49,14 +51,21 @@ var entryIds = []uuid.UUID{
 
 func init() {
 
-	attrs.RegisterModel(&auditlogs.Entry{})
-
 	var _, db = testdb.Open()
+	var app = django.Global
 	if django.Global == nil {
-		django.App(django.Configure(map[string]interface{}{
+		app = django.App(django.Configure(map[string]interface{}{
 			django.APPVAR_DATABASE: db,
 		}),
-			django.Flag(django.FlagSkipDepsCheck),
+			django.Flag(
+				django.FlagSkipDepsCheck,
+				django.FlagSkipChecks,
+				django.FlagSkipCmds,
+			),
+			django.Apps(
+				testsql.NewAuthAppConfig,
+				auditlogs.NewAppConfig,
+			),
 		)
 
 		logger.Setup(&logger.Logger{
@@ -69,20 +78,8 @@ func init() {
 		})
 	}
 
-	schemaEditor, err := migrator.GetSchemaEditor(db.Driver())
-	if err != nil {
-		panic(fmt.Errorf("failed to get schema editor: %w", err))
-	}
-
-	var table = migrator.NewModelTable(&auditlogs.Entry{})
-	if err := schemaEditor.CreateTable(table, true); err != nil {
-		panic(fmt.Errorf("failed to create pages table: %w", err))
-	}
-
-	for _, index := range table.Indexes() {
-		if err := schemaEditor.AddIndex(table, index, true); err != nil {
-			panic(fmt.Errorf("failed to create index %s: %w", index.Name(), err))
-		}
+	if err := app.Initialize(); err != nil {
+		panic(fmt.Errorf("failed to initialize app: %w", err))
 	}
 
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
@@ -93,11 +90,13 @@ func init() {
 
 	for i := 0; i < len(entryIds); i++ {
 		var entry = &auditlogs.Entry{
-			Id:    drivers.UUID(entryIds[i]),
-			Typ:   drivers.String(fmt.Sprintf("type-%d", i)),
-			Lvl:   logger.LogLevel(i % 4),
-			Time:  drivers.CurrentTimestamp(),
-			UsrID: drivers.JSON[any]{Data: fmt.Sprintf("user-%d", i)},
+			Id:   drivers.UUID(entryIds[i]),
+			Typ:  drivers.String(fmt.Sprintf("type-%d", i)),
+			Lvl:  logger.LogLevel(i % 4),
+			Time: drivers.CurrentTimestamp(),
+			Usr: &testsql.User{
+				ID: int64(i),
+			},
 			ObjID: drivers.JSON[any]{Data: fmt.Sprintf("object-%d", i)},
 			CType: contenttypes.NewContentType[any](&auditlogs.Entry{}),
 			Src: drivers.JSON[map[string]interface{}]{
@@ -109,7 +108,7 @@ func init() {
 		entries = append(entries, entry)
 	}
 
-	_, err = queries.GetQuerySet(&auditlogs.Entry{}).BulkCreate(entries)
+	_, err := queries.GetQuerySet(&auditlogs.Entry{}).BulkCreate(entries)
 	if err != nil {
 		panic(err)
 	}
@@ -159,8 +158,7 @@ func TestRetrieveTyped(t *testing.T) {
 
 func TestRetrieveForUser(t *testing.T) {
 	for i := 0; i < len(entryIds); i++ {
-		var id = drivers.JSON[any]{Data: fmt.Sprintf("user-%d", i)}
-		entryRows, err := queries.GetQuerySet(&auditlogs.Entry{}).Filter("UserID", id).All()
+		entryRows, err := queries.GetQuerySet(&auditlogs.Entry{}).Filter("User", i).All()
 		if err != nil {
 			t.Fatalf("%d %s", i, err)
 		}
@@ -170,8 +168,11 @@ func TestRetrieveForUser(t *testing.T) {
 		if entryRows[0].Object.ID() != entryIds[i] {
 			t.Fatalf("%d expected id %s, got %s", i, entryIds[i], entryRows[0].Object.ID())
 		}
-		if entryRows[0].Object.UsrID != id {
-			t.Fatalf("%d expected user id %v, got %v", i, id, entryRows[0].Object.UsrID)
+		if entryRows[0].Object.Usr == nil {
+			t.Fatalf("%d expected user to be set, got nil", i)
+		}
+		if attrs.Get[int64](entryRows[0].Object.Usr, "ID") != int64(i) {
+			t.Fatalf("%d expected user id %v, got %v", i, i, entryRows[0].Object.Usr)
 		}
 	}
 }
@@ -272,10 +273,10 @@ func TestFilter(t *testing.T) {
 					t.Fatalf("%d expected level %d, got %d", i, entry.Object.Level(), fromDB.Object.Level())
 				}
 
-				if fromDB.Object.UserID() != entry.Object.UserID() {
-					t.Fatalf("%d expected user id %v, got %v", i, entry.Object.UserID(), fromDB.Object.UserID())
+				if attrs.PrimaryKey(fromDB.Object.User()) != attrs.PrimaryKey(entry.Object.User()) {
+					t.Fatalf("%d expected user id %v, got %v", i, attrs.PrimaryKey(entry.Object.User()), attrs.PrimaryKey(fromDB.Object.User()))
 				}
-			}
+			} //
 
 		})
 	}

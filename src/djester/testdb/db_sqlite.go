@@ -14,6 +14,7 @@ const ENGINE = "sqlite3"
 func open() (which string, db drivers.Database) {
 	// var openDSN = "file::memory:?cache=shared&_loc=auto"
 	var openDSN = "file::memory:?cache=shared&_loc=auto&mode=memory"
+	// var openDSN = "./test.sqlite?_loc=auto&mode=memory&cache=shared"
 	var sqlDB, err = drivers.Open(
 		context.Background(),
 		ENGINE,

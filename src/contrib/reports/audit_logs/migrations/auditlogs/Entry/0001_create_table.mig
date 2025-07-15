@@ -1,4 +1,7 @@
 {
+  "dependencies": [
+    "auth:User:0001_create_table_and_2_more.mig"
+  ],
   "table": {
     "table": "entry",
     "model": "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs.Entry",
@@ -39,12 +42,16 @@
         "default": "0001-01-01T00:00:00Z"
       },
       {
-        "name": "UserID",
+        "name": "User",
         "column": "user_id",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "github.com/Nigel2392/go-django/queries/src/drivers.JSON[interface {}]",
-        "db_type": "JSON",
+        "relation": {
+          "type": "ManyToOne",
+          "model": "github.com/Nigel2392/go-django/src/contrib/auth.User"
+        },
+        "go_type": "uint64",
+        "db_type": "UINT",
         "default": null
       },
       {

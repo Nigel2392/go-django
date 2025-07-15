@@ -7,11 +7,13 @@ import (
 	dj_models "github.com/Nigel2392/go-django/src/models"
 )
 
+var _ dj_models.ContextSaver = (Page)(nil)
+
 type Page interface {
 	attrs.Definer
 	ID() int64
 	Reference() *PageNode
-	dj_models.ContextSaver
+	Save(c context.Context) error
 }
 
 type DeletablePage interface {

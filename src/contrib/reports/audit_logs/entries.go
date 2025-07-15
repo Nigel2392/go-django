@@ -8,6 +8,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -23,7 +24,7 @@ type LogEntry interface {
 	Type() string
 	Level() logger.LogLevel
 	Timestamp() time.Time
-	UserID() interface{}
+	User() users.User
 	ObjectID() interface{}
 	ContentType() contenttypes.ContentType
 	Data() map[string]interface{}
@@ -34,7 +35,7 @@ type Entry struct {
 	Id    drivers.UUID                         `db:"id" json:"id"`
 	Typ   drivers.String                       `db:"type" json:"type"`
 	Time  drivers.Timestamp                    `db:"timestamp" json:"timestamp"`
-	UsrID drivers.JSON[any]                    `db:"user_id" json:"user_id"`
+	Usr   users.User                           `db:"user" json:"user"`
 	ObjID drivers.JSON[any]                    `db:"object_id" json:"object_id"`
 	CType *contenttypes.BaseContentType[any]   `db:"content_type" json:"content_type"`
 	Src   drivers.JSON[map[string]interface{}] `db:"data" json:"data"`
@@ -108,8 +109,8 @@ func (l *Entry) Timestamp() time.Time {
 	return time.Time(l.Time)
 }
 
-func (l *Entry) UserID() interface{} {
-	return l.UsrID.Data
+func (l *Entry) User() users.User {
+	return l.Usr
 }
 
 func (l *Entry) Object() interface{} {
@@ -152,10 +153,15 @@ func (l *Entry) Fields(attrs.Definer) []attrs.Field {
 			Column:       "timestamp",
 			Null:         false,
 		}),
-		attrs.NewField(l, "UsrID", &attrs.FieldConfig{
-			NameOverride: "UserID",
+		attrs.NewField(l, "Usr", &attrs.FieldConfig{
+			NameOverride: "User",
 			Column:       "user_id",
 			Null:         true,
+			RelForeignKey: attrs.RelatedDeferred(
+				attrs.RelManyToOne,
+				users.GetUserModelString(),
+				"", nil,
+			),
 		}),
 		attrs.NewField(l, "Obj", &attrs.FieldConfig{
 			NameOverride: "Object",

@@ -147,11 +147,25 @@ func main() {
 	user.IsActive = true
 	user.SetPassword("Administrator123!")
 
-	if user, _, err = queries.GetQuerySet(&auth.User{}).Filter("Email", e.Address).GetOrCreate(user); err != nil {
+	if user, _, err = queries.GetQuerySet(&auth.User{}).Preload("EntrySet").Filter("Email", e.Address).GetOrCreate(user); err != nil {
 		panic(fmt.Errorf("failed to create admin user: %w", err))
 	}
 
 	logger.Infof("Admin user created: %v %s %s %t %t", user.ID, user.Username, user.Email, user.IsAdministrator, user.IsActive)
+
+	var entrySet, ok = user.DataStore().GetValue("EntrySet")
+	if !ok {
+		panic("EntrySet not found in user data store")
+	}
+	entries, ok := entrySet.(*queries.RelRevFK[attrs.Definer])
+	if !ok {
+		panic(fmt.Errorf("EntrySet is not a slice of *auditlogs.Entry, got %T", entrySet))
+	}
+
+	for _, entry := range entries.AsList() {
+		entry := entry.(*auditlogs.Entry)
+		logger.Infof("Entry: %v %v %v %v", entry.ID, entry.Src, entry.Usr, entry.ObjectID)
+	}
 
 	if len(os.Args) == 1 {
 		blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()

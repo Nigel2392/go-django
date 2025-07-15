@@ -7,14 +7,31 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/mux/middleware/authentication"
 
 	_ "unsafe"
 )
 
-//	const (
-//		APPVAR_USER_ACTIVE_DEFAULT = "auth.users.active_default"
-//	)
+type User interface {
+	attrs.Definer
+	authentication.User
+}
+
+var lazyUser = contenttypes.NewLazyRegistry(func(def *contenttypes.ContentTypeDefinition) bool {
+	_, ok := def.ContentObject.(baseModelGetter)
+	_, ok2 := def.ContentObject.(User)
+	return ok || ok2
+})
+
+func GetUserModel(typeNames ...string) *contenttypes.ContentTypeDefinition {
+	return lazyUser.Load(typeNames...)
+}
+
+func GetUserModelString(typeNames ...string) string {
+	return lazyUser.LoadString(typeNames...)
+}
 
 type Base struct {
 	IsAdministrator bool `json:"is_administrator" attrs:"blank"`
@@ -29,6 +46,10 @@ type Base struct {
 func (u *Base) getBaseModel() *Base {
 	return u
 }
+
+//	const (
+// 		APPVAR_USER_ACTIVE_DEFAULT = "auth.users.active_default"
+//	)
 
 func (u *Base) Fields(user attrs.Definer) []any {
 

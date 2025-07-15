@@ -5,6 +5,8 @@ import (
 	"slices"
 	"strings"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-signals"
 )
@@ -23,8 +25,8 @@ func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
 		panic("pages: RegisterPageDefinition definition is nil")
 	}
 
-	if definition.ContentObject == nil || definition.GetForID == nil {
-		panic("pages: RegisterPageDefinition definition is missing PageObject or GetForID")
+	if definition.ContentObject == nil {
+		panic("pages: RegisterPageDefinition definition is missing PageObject")
 	}
 
 	if definition.ContentTypeDefinition == nil {
@@ -168,6 +170,24 @@ func (p *pageRegistry) SpecificInstance(ctx context.Context, node *PageNode) (Pa
 		//	"pages: SpecificInstance called with node %s that has no PageID (%+v)",
 		//	typeName, node,
 		//))
+	}
+
+	if definition.GetForID == nil {
+		var newObject = attrs.NewObject[Page](definition.ContentObject)
+		var meta = attrs.GetModelMeta(newObject)
+		var defs = meta.Definitions()
+		var querySet = queries.GetQuerySet(newObject).
+			WithContext(ctx).
+			Filter(defs.Primary().Name(), node.PageID)
+
+		var row, err = querySet.Get()
+		if err != nil {
+			return nil, ErrNoPage.Wrapf(
+				"pages: SpecificInstance failed to get page for node %s with PageID %d: %v",
+				typeName, node.PageID, err,
+			)
+		}
+		return row.Object, nil
 	}
 
 	return definition.GetForID(ctx, node, node.PageID)

@@ -10,10 +10,13 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/google/uuid"
+
+	_ "unsafe"
 )
 
 var (
@@ -45,6 +48,9 @@ type Definition interface {
 	GetActions(r *http.Request, logEntry LogEntry) []LogEntryAction
 }
 
+//go:linkname context_user_key github.com/Nigel2392/mux/middleware/authentication.context_user_key
+var context_user_key string = "mux.middleware.authentication.User"
+
 func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject attrs.Definer, data map[string]interface{}) (uuid.UUID, error) {
 
 	if !Logs.IsReady() {
@@ -60,14 +66,19 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 			logger.Warn(err)
 			return uuid.Nil, err
 		}
-
 	}
 
+	logger.Errorf("Logging new entry of type %q with level %s, context key %q, data: %v",
+		entryType, level, context_user_key, ctx.Value(context_user_key),
+	)
+
+	var user, _ = ctx.Value(context_user_key).(users.User)
 	var entry = models.Setup(&Entry{
 		Typ:  drivers.String(entryType),
 		Lvl:  level,
 		Time: drivers.CurrentTimestamp(),
 		Src:  drivers.JSON[map[string]any]{Data: data},
+		Usr:  user,
 	})
 
 	var (

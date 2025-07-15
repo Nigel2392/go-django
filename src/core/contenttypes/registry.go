@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"slices"
 	"strings"
+
+	"github.com/Nigel2392/go-signals"
 )
 
 // ContentTypeRegistry is a struct that holds information about all registered models.
@@ -13,13 +15,20 @@ type ContentTypeRegistry struct {
 	registry   map[string]*ContentTypeDefinition
 	aliases    map[string][]string
 	aliasesRev map[string]string
+
+	onRegister signals.Signal[*ContentTypeDefinition]
 }
 
 // NewContentTypeRegistry creates a new ContentTypeRegistry instance.
 //
 // Generally, the package-level functions should be used instead of creating a new instance
 func NewContentTypeRegistry() *ContentTypeRegistry {
-	return &ContentTypeRegistry{}
+	return &ContentTypeRegistry{
+		registry:   make(map[string]*ContentTypeDefinition),
+		aliases:    make(map[string][]string),
+		aliasesRev: make(map[string]string),
+		onRegister: signals.New[*ContentTypeDefinition]("contenttypes.OnRegister"),
+	}
 }
 
 // Aliases returns a list of aliases for the given model's type name.
@@ -120,6 +129,8 @@ func (p *ContentTypeRegistry) Register(definition *ContentTypeDefinition) {
 			p.RegisterAlias(alias, typeName)
 		}
 	}
+
+	p.onRegister.Send(definition)
 }
 
 // EditDefinition edits the definition for the given model.
@@ -263,7 +274,9 @@ func (p *ContentTypeRegistry) GetInstancesByIDs(typeName string, ids []interface
 	return definition.InstancesByIDs(ids)
 }
 
-var contentTypeRegistryObject = &ContentTypeRegistry{}
+var (
+	contentTypeRegistryObject = NewContentTypeRegistry()
+)
 
 // Register registers a model with the registry.
 func Register(definition *ContentTypeDefinition) *ContentTypeDefinition {
@@ -326,4 +339,12 @@ func GetInstances(typeName string, amount, offset uint) ([]interface{}, error) {
 // If the model does not implement GetInstancesByID, it will fall back to calling GetInstance for each ID.
 func GetInstancesByIDs(typeName string, ids []interface{}) ([]interface{}, error) {
 	return contentTypeRegistryObject.GetInstancesByIDs(typeName, ids)
+}
+
+// OnRegister allows a function to be called when a new content type is registered.
+func OnRegister(fn func(def *ContentTypeDefinition)) (signals.Receiver[*ContentTypeDefinition], error) {
+	return contentTypeRegistryObject.onRegister.Listen(func(s signals.Signal[*ContentTypeDefinition], ctd *ContentTypeDefinition) error {
+		fn(ctd)
+		return nil
+	})
 }

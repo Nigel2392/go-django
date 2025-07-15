@@ -322,6 +322,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](page)
+	form.WithContext(r.Context())
 	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](
 		form, panels...,
 	)
@@ -493,6 +494,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](page)
+	form.WithContext(r.Context())
 	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
 
 	adminForm.Load()

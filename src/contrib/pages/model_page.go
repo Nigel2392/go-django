@@ -14,6 +14,7 @@ import (
 )
 
 var (
+	_ Page                     = (*PageNode)(nil)
 	_ queries.ActsBeforeCreate = (*PageNode)(nil)
 	_ queries.ActsAfterSave    = (*PageNode)(nil)
 )

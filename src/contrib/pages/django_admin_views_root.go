@@ -189,6 +189,7 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](page)
+	form.WithContext(r.Context())
 	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](
 		form, panels...,
 	)

@@ -7,6 +7,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/google/uuid"
 	"github.com/shopspring/decimal"
 )
@@ -21,6 +22,8 @@ var (
 	DEFAULT_UUID = uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
 )
 
+var _ authentication.User = &User{}
+
 type User struct {
 	ID        int64  `attrs:"primary"`
 	Name      string `attrs:"max_length=255"`
@@ -29,6 +32,14 @@ type User struct {
 	IsActive  bool   `attrs:"-"`
 	FirstName string `attrs:"-"`
 	LastName  string `attrs:"-"`
+}
+
+func (m *User) IsAdmin() bool {
+	return m.Name == "admin"
+}
+
+func (m *User) IsAuthenticated() bool {
+	return m.IsActive
 }
 
 func (m *User) FieldDefs() attrs.Definitions {
