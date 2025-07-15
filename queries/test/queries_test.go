@@ -2601,7 +2601,7 @@ func TestQueryGroupBy(t *testing.T) {
 	var expression = expr.SUBSTR(expr.LOWER("Title"), 1, 2)
 	var qs = queries.GetQuerySet(&Todo{}).
 		Annotate("shortTitle", expression).
-		GroupBy(expression)
+		GroupBy("shortTitle")
 	// GroupBy(expr.FuncSubstr("![Title]", 1, 2))
 
 	grouped, err := qs.All()

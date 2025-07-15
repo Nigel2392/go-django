@@ -137,6 +137,9 @@ type ExpressionInfo struct {
 	// SupportsWhereExpressionAlias indicates if the database supports WHERE expressions with aliases.
 	SupportsWhereAlias bool
 
+	// SupportsAsExpr indicates if the current method of building expressions support aliasing the expression.
+	SupportsAsExpr bool
+
 	// Annotations is a map of queryset annotations (fields).
 	Annotations *orderedmap.OrderedMap[string, attrs.Field]
 }

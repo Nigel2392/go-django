@@ -10,7 +10,6 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -89,14 +88,14 @@ var PARSER = &statement{
 				return info.QuoteIdentifier(defs.TableName()), []any{}, nil
 			}
 
-			var _, _, f, _, _, _, err = internal.WalkFields(info.Model, fieldPath, info.Resolver.Alias())
+			var _, field, _, err = info.Resolver.Resolve(fieldPath, info)
 			if err != nil {
 				return "", []any{}, fmt.Errorf(
 					"error when walking fields: %w", err,
 				)
 			}
 
-			var rel = f.Rel()
+			var rel = field.Rel()
 			if rel == nil {
 				return "", []any{}, fmt.Errorf(
 					"field %q is not a relation, cannot resolve table name", fieldPath,

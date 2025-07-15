@@ -71,6 +71,7 @@ func newExpressionInfo(g *genericQueryBuilder, qs *QuerySet[attrs.Definer], i *Q
 		ForUpdate:          updating,
 		Annotations:        i.Annotations,
 		SupportsWhereAlias: supportsWhereAlias,
+		SupportsAsExpr:     true,
 	}
 }
 
@@ -1002,6 +1003,7 @@ func (g *genericQueryBuilder) writeJoins(sb *strings.Builder, inf *expr.Expressi
 }
 
 func (g *genericQueryBuilder) writeWhereClause(sb *strings.Builder, inf *expr.ExpressionInfo, where []expr.ClauseExpression) []any {
+
 	var args = make([]any, 0)
 	if len(where) > 0 {
 		sb.WriteString(" WHERE ")
@@ -1012,7 +1014,11 @@ func (g *genericQueryBuilder) writeWhereClause(sb *strings.Builder, inf *expr.Ex
 	return args
 }
 
-func (g *genericQueryBuilder) writeGroupBy(sb *strings.Builder, inf *expr.ExpressionInfo, groupBy []FieldInfo[attrs.FieldDefinition]) []any {
+func (g *genericQueryBuilder) writeGroupBy(sb *strings.Builder, inf *expr.ExpressionInfo, groupBy []*FieldInfo[attrs.FieldDefinition]) []any {
+
+	var infCpy = *inf
+	infCpy.SupportsAsExpr = false // Disable AS expressions in WHERE clauses
+
 	var args = make([]any, 0)
 	if len(groupBy) > 0 {
 		sb.WriteString(" GROUP BY ")
@@ -1022,7 +1028,7 @@ func (g *genericQueryBuilder) writeGroupBy(sb *strings.Builder, inf *expr.Expres
 			}
 
 			args = append(
-				args, info.WriteFields(sb, inf)...,
+				args, info.WriteFields(sb, &infCpy)...,
 			)
 		}
 	}

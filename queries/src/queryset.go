@@ -134,7 +134,7 @@ type QuerySetInternals struct {
 	Where       []expr.ClauseExpression
 	Having      []expr.ClauseExpression
 	Joins       []JoinDef
-	GroupBy     []FieldInfo[attrs.FieldDefinition]
+	GroupBy     []*FieldInfo[attrs.FieldDefinition]
 	OrderBy     []OrderBy
 	Limit       int
 	Offset      int
@@ -339,7 +339,7 @@ func Objects[T attrs.Definer](model T, database ...string) *QuerySet[T] {
 			Where:       make([]expr.ClauseExpression, 0),
 			Having:      make([]expr.ClauseExpression, 0),
 			Joins:       make([]JoinDef, 0),
-			GroupBy:     make([]FieldInfo[attrs.FieldDefinition], 0),
+			GroupBy:     make([]*FieldInfo[attrs.FieldDefinition], 0),
 			OrderBy:     make([]OrderBy, 0),
 			Limit:       MAX_DEFAULT_RESULTS,
 			Offset:      0,
@@ -696,9 +696,9 @@ func (qs *QuerySet[T]) GoString() string {
 // This function will make sure to map each provided field name to a model field.
 //
 // Relations are also respected, joins are automatically added to the query.
-func (qs *QuerySet[T]) unpackFields(fields ...any) (infos []FieldInfo[attrs.FieldDefinition], hasRelated bool) {
-	infos = make([]FieldInfo[attrs.FieldDefinition], 0, len(qs.internals.Fields))
-	var info = FieldInfo[attrs.FieldDefinition]{
+func (qs *QuerySet[T]) unpackFields(fields ...any) (infos []*FieldInfo[attrs.FieldDefinition], hasRelated bool) {
+	infos = make([]*FieldInfo[attrs.FieldDefinition], 0, len(qs.internals.Fields))
+	var info = &FieldInfo[attrs.FieldDefinition]{
 		Table: Table{
 			Name: qs.internals.Model.Table,
 		},
@@ -712,8 +712,9 @@ func (qs *QuerySet[T]) unpackFields(fields ...any) (infos []FieldInfo[attrs.Fiel
 		}
 	}
 
+	var fieldNames = make([]string, 0, len(fields))
+	var exprFields = make(map[string]expr.NamedExpression, 0)
 	for _, selectedFieldObj := range fields {
-
 		var selectedField string
 		switch v := selectedFieldObj.(type) {
 		case string:
@@ -724,71 +725,35 @@ func (qs *QuerySet[T]) unpackFields(fields ...any) (infos []FieldInfo[attrs.Fiel
 			if selectedField == "" {
 				panic(fmt.Errorf("Select: empty field name for %T", v))
 			}
+
+			exprFields[selectedField] = v
 		default:
 			panic(fmt.Errorf("Select: invalid field type %T, can be one of [string, NamedExpression]", v))
 		}
 
-		var current, parent, field, chain, aliases, isRelated, err = internal.WalkFields(
-			qs.internals.Model.Object, selectedField, qs.AliasGen,
+		fieldNames = append(fieldNames, selectedField)
+	}
+
+	for _, field := range fieldNames {
+
+		var res, err = qs.WalkField(
+			field, exprFields,
+			WalkFlagAddJoins,
 		)
 		if err != nil {
-			field, ok := qs.internals.Annotations.Get(selectedField)
-			if ok {
-				infos = append(infos, FieldInfo[attrs.FieldDefinition]{
-					Table: Table{
-						Name: qs.internals.Model.Table,
-					},
-					Fields: []attrs.FieldDefinition{field},
-				})
-				continue
-			}
-
-			panic(err)
+			panic(fmt.Errorf("failed to walk field %q: %w", field, err))
 		}
 
-		if expr, ok := selectedFieldObj.(expr.NamedExpression); ok {
-			field = &exprField{
-				Field: field,
-				expr:  expr,
-			}
-		}
-
-		// The field might be a relation
-		var rel = field.Rel()
-
-		if (rel != nil) || (len(chain) > 0 || isRelated) {
-			var relType attrs.RelationType
-			if rel != nil {
-				relType = rel.Type()
+		hasRelated = hasRelated || res.Chain != nil && res.Chain.Root.Next != nil
+		if !hasRelated {
+			if res.Chain == nil || len(res.Chain.Fields) == 0 {
+				info.Fields = append(info.Fields, res.Annotation)
 			} else {
-				var parentMeta = attrs.GetModelMeta(parent)
-				var parentDefs = parentMeta.Definitions()
-				var parentField, ok = parentDefs.Field(chain[len(chain)-1])
-				if !ok {
-					panic(fmt.Errorf("field %q not found in %T", chain[len(chain)-1], parent))
-				}
-				relType = parentField.Rel().Type()
+				info.Fields = append(info.Fields, res.Chain.Fields...)
 			}
-
-			var relMeta = attrs.GetModelMeta(current)
-			var relDefs = relMeta.Definitions()
-			var tableName = relDefs.TableName()
-			infos = append(infos, FieldInfo[attrs.FieldDefinition]{
-				SourceField: field,
-				Model:       current,
-				RelType:     relType,
-				Table: Table{
-					Name:  tableName,
-					Alias: aliases[len(aliases)-1],
-				},
-				Fields: relDefs.Fields(),
-				Chain:  chain,
-			})
-
-			continue
+		} else {
+			infos = append(infos, res.Fields...)
 		}
-
-		info.Fields = append(info.Fields, field)
 	}
 
 	if len(info.Fields) > 0 {
@@ -1025,7 +990,7 @@ func (qs *QuerySet[T]) Resolve(fieldName string, inf *expr.ExpressionInfo) (attr
 			goto newField
 		}
 
-		if s, ok := field.(AliasField); ok {
+		if s, ok := field.(AliasField); ok && inf.SupportsAsExpr {
 			// If the field is an alias field, we need to use the alias of the field.
 			col.FieldAlias = qs.AliasGen.GetFieldAlias(
 				aliasStr, s.Alias(),
