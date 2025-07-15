@@ -50,7 +50,7 @@ func TestQuerySetRawExecution(t *testing.T) {
 		todos_m[todo.ID] = todo
 	}
 
-	var query = `SELECT ![ID], EXPR(UpperTitle), ![User.ID], ![User.Name], ![User.Profile.ID], ![User.Profile.Name], ![User.Profile.Email]
+	var query = `SELECT ![ID], EXPR(UpperTitle), ![User.ID], ![UserName], ![User.Profile.ID], ![User.Profile.Name], ![User.Profile.Email]
 	FROM TABLE(SELF)
 	INNER JOIN
 		TABLE(User) ON ![User.ID] = ![User]
@@ -65,7 +65,7 @@ func TestQuerySetRawExecution(t *testing.T) {
 	LIMIT ?[2]
 	OFFSET ?[3]`
 
-	rows, err := queries.GetQuerySet(&Todo{}).Rows(
+	rows, err := queries.GetQuerySet(&Todo{}).Annotate("UserName", expr.UPPER("User.Name")).Rows(
 		query,
 		expr.PARSER.Expr.Expressions(map[string]expr.Expression{
 			"UpperTitle": expr.UPPER("Title"),
@@ -103,6 +103,14 @@ func TestQuerySetRawExecution(t *testing.T) {
 
 		if strings.ToUpper(checkTodo.Title) != todo.Title {
 			t.Fatalf("Expected Title %q, got %q", strings.ToUpper(checkTodo.Title), todo.Title)
+		}
+
+		if checkTodo.User.ID != todo.User.ID {
+			t.Fatalf("Expected User ID %d, got %d", checkTodo.User.ID, todo.User.ID)
+		}
+
+		if strings.ToUpper(checkTodo.User.Name) != todo.User.Name {
+			t.Fatalf("Expected User Name %q, got %q", strings.ToUpper(checkTodo.User.Name), todo.User.Name)
 		}
 
 		t.Logf("Row %d: %+v", count, todo)

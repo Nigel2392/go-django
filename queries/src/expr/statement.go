@@ -70,6 +70,8 @@ var PARSER = &statement{
 		},
 		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
 			var fieldName = in[1]
+			info.SupportsWhereAlias = false
+			info.SupportsAsExpr = false
 			var resolvedField = info.ResolveExpressionField(fieldName)
 			return resolvedField.SQLText, resolvedField.SQLArgs, nil
 		},
