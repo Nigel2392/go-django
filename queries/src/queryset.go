@@ -122,9 +122,38 @@ func (p *QuerySetPreloads) Copy() *QuerySetPreloads {
 	if p == nil {
 		return nil
 	}
+
+	var (
+		preloads = make([]*Preload, len(p.Preloads))
+		mapping  = make(map[string]*Preload, len(p.mapping))
+	)
+
+	for i, preload := range p.Preloads {
+
+		var querySet = preload.QuerySet
+		if querySet != nil {
+			querySet = querySet.clone()
+		}
+
+		preloads[i] = &Preload{
+			FieldName:  preload.FieldName,
+			Path:       preload.Path,
+			ParentPath: preload.ParentPath,
+			Chain:      preload.Chain,
+			Rel:        preload.Rel,
+			Primary:    preload.Primary,
+			Model:      preload.Model,
+			QuerySet:   querySet,
+			Field:      preload.Field,
+			Results:    preload.Results,
+		}
+
+		mapping[preload.Path] = preloads[i]
+	}
+
 	return &QuerySetPreloads{
-		Preloads: slices.Clone(p.Preloads),
-		mapping:  maps.Clone(p.mapping),
+		Preloads: preloads,
+		mapping:  mapping,
 	}
 }
 
@@ -860,7 +889,7 @@ fieldsLoop:
 
 			// add proxy chain for the model
 			var subInfos, subJoins = addProxyChain(
-				qs, []string{}, qs.internals.proxyMap, qs.internals.joinsMap, currInfo, []string{},
+				qs, []string{}, qs.internals.proxyMap, currInfo, []string{},
 			)
 			for _, info := range subInfos {
 				qs.internals.AddField(info)
@@ -1218,15 +1247,156 @@ func (qs *QuerySet[T]) WalkField(selectedField string, options ...func(*WalkOpti
 	return res, nil
 }
 
+func (qs *QuerySet[T]) SelectRelated(fields ...string) *QuerySet[T] {
+	if qs.internals.fieldsMap == nil {
+		qs.internals.fieldsMap = make(map[string]*FieldInfo[attrs.FieldDefinition], 0)
+	}
+
+	if qs.internals.joinsMap == nil {
+		qs.internals.joinsMap = make(map[string]struct{})
+	}
+
+	if qs.internals.proxyMap == nil {
+		qs.internals.proxyMap = make(map[string]struct{}, 0)
+	}
+
+	for _, field := range fields {
+		fieldPath := strings.Split(field, ".")
+		relatrionChain, err := attrs.WalkRelationChain(
+			qs.internals.Model.Object, true, fieldPath,
+		)
+		if err != nil {
+			panic(fmt.Errorf("SelectRelated: %w", err))
+		}
+
+		var curr = relatrionChain.Root
+
+		var partIdx = 0
+		var aliasList = make([]string, 0, len(relatrionChain.Chain))
+		var currModelMeta = attrs.GetModelMeta(curr.Model)
+		aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
+			currModelMeta.Definitions().TableName(), "",
+		))
+
+		if len(qs.internals.Fields) == 0 {
+			// If no fields are selected, we need to select all fields from the model
+			// to ensure that the related fields are also selected.
+			var defs = currModelMeta.Definitions()
+			var info = &FieldInfo[attrs.FieldDefinition]{
+				Model: curr.Model,
+				Table: Table{
+					Name: defs.TableName(),
+				},
+				Fields: ForSelectAllFields[attrs.FieldDefinition](
+					defs.Fields(),
+				),
+			}
+
+			qs.internals.AddField(info)
+
+			var subInfos, subJoins = addProxyChain(
+				qs, []string{}, qs.internals.proxyMap, info, aliasList,
+			)
+			for _, info := range subInfos {
+				qs.internals.AddField(info)
+			}
+			for _, join := range subJoins {
+				qs.internals.AddJoin(join)
+			}
+		}
+
+		curr = curr.Next
+		if curr == nil {
+			panic(fmt.Errorf("SelectRelated: no relation chain found for %q", field))
+		}
+
+		for curr != nil {
+			var (
+				meta        = attrs.GetModelMeta(curr.Model)
+				defs        = meta.Definitions()
+				preloadPath = strings.Join(relatrionChain.Chain[:partIdx+1], ".")
+			)
+
+			var exprKey = curr.Field.Name()
+			if len(preloadPath) > 0 {
+				exprKey = fmt.Sprintf("%s.%s", preloadPath, exprKey)
+			}
+
+			var alias = qs.AliasGen.GetTableAlias(
+				defs.TableName(), preloadPath,
+			)
+			aliasList = append(aliasList, alias)
+
+			if curr.Prev.FieldRel.Type() == attrs.RelOneToMany ||
+				curr.Prev.FieldRel.Type() == attrs.RelManyToMany {
+				// If the relation is a one-to-many or many-to-many relation,
+				// it cannot be used in a select related query.
+				//	var _, hasPreload = qs.internals.Preload.mapping[preloadPath]
+				//	if hasPreload && curr.Next != nil {
+				//		// The relation is already preloaded, so we can skip it.
+				//		curr = curr.Next
+				//		partIdx++
+				//		continue
+				//	}
+
+				// With a lot of messy work this could be made to work,
+				// but generally I think it is not worth it, and even consider it
+				// bad practice to use a one-to-many or many-to-many relation in a select related query
+				// if it wasnt already preloaded.
+				panic(fmt.Errorf(
+					"SelectRelated: field %q is a %s relation, cannot be used in select related query, "+
+						"please use Preload with a custom QuerySet and SelectRelated on the QuerySet to load this relation",
+					preloadPath, curr.Prev.FieldRel.Type(),
+				))
+			}
+
+			// Build information for joining tables
+			// This is required to still correctly handle where clauses
+			// and other query modifications which might require the related fields.
+			var baseInfo, proxyInfo, err = qs.addRelationChainPart(
+				curr.Prev, curr, aliasList, WalkFlagAddProxies|WalkFlagAllFields,
+			)
+			if err != nil {
+				panic(fmt.Errorf(
+					"SelectRelated: failed to add relation chain part for %q / %q: %w",
+					preloadPath, field, err,
+				))
+			}
+
+			var fields = append(
+				baseInfo.infos,
+				proxyInfo.infos...,
+			)
+
+			var joins = append(
+				baseInfo.joins,
+				proxyInfo.joins...,
+			)
+
+			for _, info := range fields {
+				qs.internals.AddField(info)
+			}
+
+			for _, join := range joins {
+				qs.internals.AddJoin(join)
+			}
+
+			curr = curr.Next
+			partIdx++
+		}
+	}
+
+	return qs
+}
+
 func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
-	// Preload is a no-op for QuerySet, as it is used to load related fields
-	// in the initial query. The Select method already handles this.
-	//
-	// If you want to preload specific fields, use the Select method instead.
 	qs = qs.clone()
-	qs.internals.Preload = &QuerySetPreloads{
-		Preloads: make([]*Preload, 0, len(fields)),
-		mapping:  make(map[string]*Preload, len(fields)),
+
+	if qs.internals.Preload == nil {
+		qs.internals.Preload = &QuerySetPreloads{
+			Preloads: make([]*Preload, 0, len(fields)),
+			mapping:  make(map[string]*Preload, len(fields)),
+		}
 	}
 
 	if qs.internals.joinsMap == nil {
@@ -1301,13 +1471,6 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 
 			// only add new preload if the preload is not already present in the mapping
 			if _, ok := qs.internals.Preload.mapping[preloadPath]; !ok {
-				//	if partIdx < len(relatrionChain.Chain)-1 {
-				//		panic(fmt.Errorf(
-				//			"Preload: all previous preloads for path %q must be included in the QuerySet %v",
-				//			preload.Path, subChain,
-				//		))
-				//	}
-
 				var loadDef = &Preload{
 					FieldName:  relatrionChain.Chain[partIdx],
 					Path:       preloadPath,
@@ -1632,7 +1795,6 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 		var subInfos, subJoins = addProxyChain(
 			qs, curr.Chain(),
 			qs.internals.proxyMap,
-			qs.internals.joinsMap,
 			info, aliasList,
 		)
 		proxyJoins.infos = append(proxyJoins.infos, subInfos...)
@@ -1642,7 +1804,7 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 	return baseJoins, proxyJoins, nil
 }
 
-func addProxyChain[T attrs.Definer](qs *QuerySet[T], chain []string, proxyM, joinM map[string]struct{}, info *FieldInfo[attrs.FieldDefinition], aliases []string) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
+func addProxyChain[T attrs.Definer](qs *QuerySet[T], chain []string, proxyM map[string]struct{}, info *FieldInfo[attrs.FieldDefinition], aliases []string) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
 	var (
 		chainKey = strings.Join(chain, ".")
 		infos    = make([]*FieldInfo[attrs.FieldDefinition], 0, 1)
@@ -2164,10 +2326,8 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 		return err
 	}
 
-	rows, err := newRows[T](
-		qs.internals.Fields,
-		internal.NewObjectFromIface(qs.internals.Model.Object),
-		runActors,
+	rows, err := newRows(
+		qs, runActors,
 	)
 	if err != nil {
 		return 0, nil, errors.NoRows.WithCause(fmt.Errorf(
@@ -2294,14 +2454,11 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 		)
 
 		for _, possibleDuplicate := range rows.possibleDuplicates {
-			var chainParts = buildChainParts(
-				scannables[possibleDuplicate.idx],
-			)
-			rows.addRelationChain(chainParts)
+			rows.addRelationChain(scannables[possibleDuplicate.idx])
 		}
 	}
 
-	rowCount, rowIter, err := rows.compile(qs)
+	rowCount, rowIter, err := rows.compile()
 	if err != nil {
 		return 0, nil, errors.Wrapf(
 			err, "failed to compile rows for QuerySet.All",

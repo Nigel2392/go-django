@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"iter"
 
+	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -63,10 +64,10 @@ type rows[T attrs.Definer] struct {
 	possibleDuplicates []*scannableField // possible duplicate fields that can be added to the rows
 	hasMultiRelations  bool              // if the rows have multi-valued relations
 
-	seen     map[string]*seenObject // seen is used to deduplicate relations
-	preloads *orderedmap.OrderedMap[string, []*Preload]
-	objects  *orderedmap.OrderedMap[any, *rootObject]
-	forEach  func(attrs.Definer) error
+	seen    map[string]*seenObject // seen is used to deduplicate relations
+	objects *orderedmap.OrderedMap[any, *rootObject]
+	forEach func(attrs.Definer) error
+	qs      *QuerySet[T]
 }
 
 type seenObject struct {
@@ -78,10 +79,12 @@ type seenObject struct {
 // It will scan the fields of the model and build a list of scannable fields that can be used to retrieve the root object.
 // It will also add possible duplicate fields to the list, which can be used to deduplicate relations later on.
 // The forEach function is called for each object that is added to the rows structure,
-func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl attrs.Definer, forEach func(attrs.Definer) error) (*rows[T], error) {
+func newRows[T attrs.Definer](qs *QuerySet[T], forEach func(attrs.Definer) error) (*rows[T], error) {
 	var seen = make(map[string]struct{}, 0)
+	var fields = qs.internals.Fields
+	var model = internal.NewObjectFromIface(qs.internals.Model.Object)
 	var scannables = getScannableFields(
-		fields, mdl,
+		fields, model,
 	)
 
 	var r = &rows[T]{
@@ -90,6 +93,7 @@ func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl at
 		hasMultiRelations:  false,
 		forEach:            forEach,
 		seen:               make(map[string]*seenObject, 0),
+		qs:                 qs,
 	}
 
 	// add possible duplicate fields to the list
@@ -126,7 +130,7 @@ func newRows[T attrs.Definer](fields []*FieldInfo[attrs.FieldDefinition], mdl at
 
 	if r.hasMultiRelations && r.anyOfRootScannable == nil {
 		return nil, fmt.Errorf(
-			"no root scannable field found for model %T, cannot build relations", mdl,
+			"no root scannable field found for model %T, cannot build relations", model,
 		)
 	}
 
@@ -207,8 +211,9 @@ func (r *rows[T]) addRoot(uniqueValue any, obj attrs.Definer, through attrs.Defi
 //
 // the root object has to be added with [addRoot] before this method is called,
 // otherwise it will panic.
-func (r *rows[T]) addRelationChain(chain []chainPart) {
+func (r *rows[T]) addRelationChain(scannable *scannableField) {
 
+	var chain = r.buildChainParts(scannable)
 	var root = chain[0]
 	var obj, ok = r.objects.Get(root.uniqueValue)
 	if !ok {
@@ -227,7 +232,8 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 		// ManyToOne and OneToOne relations are special cases where the primary key can be zero.
 		//
 		// This also means that any deeper relations cannot be traversed, I.E. we break the loop.
-		if fields.IsZero(part.uniqueValue) && !(part.relTyp == attrs.RelManyToOne || part.relTyp == attrs.RelOneToOne) {
+		var isZeroVal = fields.IsZero(part.uniqueValue)
+		if isZeroVal && !(part.relTyp == attrs.RelManyToOne || part.relTyp == attrs.RelOneToOne) {
 			break
 		}
 
@@ -279,7 +285,7 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 	}
 }
 
-func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
+func (r *rows[T]) queryPreloads(preload *Preload) error {
 	if len(r.seen) == 0 {
 		return errors.NoUniqueKey.Wrapf(
 			"QuerySet.All: no 'seen' map for preload %q", preload.FieldName,
@@ -309,7 +315,7 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 		subQueryset = GetQuerySet(preload.Model)
 	}
 
-	subQueryset = subQueryset.WithContext(qs.Context())
+	subQueryset = subQueryset.WithContext(r.qs.Context())
 
 	var targetFieldInfo = &FieldInfo[attrs.FieldDefinition]{
 		Model: subQueryset.internals.Model.Object,
@@ -340,7 +346,7 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 			Operator: expr.EQ,
 			ConditionA: expr.TableColumn{
 				TableOrAlias: targetFieldInfo.Table.Name,
-				FieldColumn:  qs.internals.Model.Primary,
+				FieldColumn:  r.qs.internals.Model.Primary,
 			},
 			ConditionB: expr.TableColumn{
 				TableOrAlias: targetFieldInfo.Through.Table.Alias,
@@ -389,7 +395,7 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 				if !ok {
 					return errors.FieldNotFound.Wrapf(
 						"QuerySet.All: preload %q has no field %q in model %T (%#v)",
-						preload.FieldName, preload.Field.Name(), qs.internals.Model.Object, preload,
+						preload.FieldName, preload.Field.Name(), r.qs.internals.Model.Object, preload,
 					)
 				}
 
@@ -413,17 +419,21 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 		))
 	}
 
-	subQueryset.internals.Fields = append(
-		[]*FieldInfo[attrs.FieldDefinition]{targetFieldInfo},
-		subQueryset.internals.Fields...,
-	)
+	if field, ok := subQueryset.internals.fieldsMap[""]; ok {
+		field.Through = targetFieldInfo.Through
+	} else {
+		subQueryset.internals.Fields = append(
+			[]*FieldInfo[attrs.FieldDefinition]{targetFieldInfo},
+			subQueryset.internals.Fields...,
+		)
+	}
 
 	subQueryset.internals.Limit = 0 // preload all objects
 	subQueryset.internals.Offset = 0
 	var preloadObjects, err = subQueryset.All()
 	if err != nil {
 		return errors.Wrapf(
-			err, "failed to preload %s for %T", preload.Path, qs.internals.Model.Object,
+			err, "failed to preload %s for %T", preload.Path, r.qs.internals.Model.Object,
 		)
 	}
 
@@ -455,7 +465,7 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 			if !ok {
 				return errors.FieldNotFound.Wrapf(
 					"QuerySet.All: preload %q has no field %q in model %T (%#v)",
-					preload.FieldName, preload.Field.Name(), qs.internals.Model.Object, preload,
+					preload.FieldName, preload.Field.Name(), r.qs.internals.Model.Object, preload,
 				)
 			}
 
@@ -560,13 +570,11 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 	return nil
 }
 
-func (r *rows[T]) compile(qs *QuerySet[T]) (count int, rowIter iter.Seq2[*Row[T], error], err error) {
+func (r *rows[T]) compile() (count int, rowIter iter.Seq2[*Row[T], error], err error) {
 
-	if qs.internals.Preload != nil {
-		r.preloads = orderedmap.NewOrderedMap[string, []*Preload]()
-
-		for _, preload := range qs.internals.Preload.Preloads {
-			if err := r.queryPreloads(preload, qs); err != nil {
+	if r.qs.internals.Preload != nil {
+		for _, preload := range r.qs.internals.Preload.Preloads {
+			if err := r.queryPreloads(preload); err != nil {
 				return 0, nil, fmt.Errorf("failed to query preload %q: %w", preload.FieldName, err)
 			}
 		}
@@ -694,6 +702,7 @@ func (r *rows[T]) compile(qs *QuerySet[T]) (count int, rowIter iter.Seq2[*Row[T]
 // a chainPart represents a part of a relation chain.
 // it contains information about the relation and object.
 type chainPart struct {
+	// preload     *Preload
 	relTyp      attrs.RelationType
 	chain       string
 	uniqueValue any
@@ -708,7 +717,7 @@ type chainPart struct {
 //
 // The [getScannableFields] function builds this chain of *scannableField objects,
 // which represent the fields that can be scanned from the database.
-func buildChainParts(actualField *scannableField) []chainPart {
+func (r *rows[T]) buildChainParts(actualField *scannableField) []chainPart {
 	// Get the stack of fields from target to parent
 	var stack = make([]chainPart, 0)
 	for cur := actualField; cur != nil; cur = cur.srcField {
@@ -737,13 +746,37 @@ func buildChainParts(actualField *scannableField) []chainPart {
 			pk = primaryVal
 		}
 
+		// var preload *Preload
 		if (cur.relType == attrs.RelManyToMany || cur.relType == attrs.RelOneToMany) && fields.IsZero(pk) {
+
+			/*
+				the commented out code might be useful in the future
+				it is a check to see if the current chain part is being preloaded
+				and if it is, we could POSSIBLY, MAYBE properly handle the relation??
+
+				```go
+					var preloads = &QuerySetPreloads{}
+					if r.qs.internals.Preload != nil {
+						preloads = r.qs.internals.Preload
+					}
+
+					var hasPreload bool
+					preload, hasPreload = preloads.mapping[cur.chainKey]
+					if !hasPreload {
+						panic(fmt.Sprintf(
+							"cannot build chain part for field %s with zero primary key in ManyToMany or OneToMany relation", cur.chainKey,
+						))
+					}
+				```
+			*/
+
 			panic(fmt.Sprintf(
 				"cannot build chain part for field %s with zero primary key in ManyToMany or OneToMany relation", cur.chainKey,
 			))
 		}
 
 		stack = append(stack, chainPart{
+			// preload:     preload,
 			relTyp:      cur.relType,
 			chain:       cur.chainPart,
 			uniqueValue: pk,

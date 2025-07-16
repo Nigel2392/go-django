@@ -97,12 +97,51 @@ func TestPreload(t *testing.T) {
 		}
 	})
 
+	t.Run("TestAuthorOnlyProfile", func(t *testing.T) {
+		var qs = queries.GetQuerySet(&PreloadAuthor{}).SelectRelated("Profile")
+		authorRows, err := qs.All()
+		if err != nil {
+			t.Fatalf("Failed to get author with profile: %v", err)
+		}
+
+		if len(authorRows) != 4 {
+			t.Fatalf("Expected 4 authors, got %d", len(authorRows))
+		}
+
+		for _, authorRow := range authorRows {
+			var author = authorRow.Object
+			if author.Profile == nil {
+				t.Fatalf("Expected author %s to have a profile, got none:\n\t%s", author.Name, qs.LatestQuery().SQL())
+			}
+
+			var profile = authorToProfileMap[author.ID]
+			if profile == nil {
+				t.Fatalf("Expected author %s to have a profile, got none:\n\t%s", author.Name, qs.LatestQuery().SQL())
+			}
+
+			if author.Profile.ID != profile.ID {
+				t.Fatalf("Expected author %s to have profile ID %d, got %d", author.Name, profile.ID, author.Profile.ID)
+			}
+
+			if author.Profile.Email.Address != profile.Email.Address {
+				t.Fatalf("Expected author %s profile email %s to match profile email %s", author.Name, author.Profile.Email.Address, profile.Email.Address)
+			}
+			if author.Profile.FirstName != profile.FirstName {
+				t.Fatalf("Expected author %s profile first name %s to match profile first name %s", author.Name, author.Profile.FirstName, profile.FirstName)
+			}
+			if author.Profile.LastName != profile.LastName {
+				t.Fatalf("Expected author %s profile last name %s to match profile last name %s", author.Name, author.Profile.LastName, profile.LastName)
+			}
+
+		}
+	})
+
 	t.Run("TestBooksHasAuthorsWithProfile", func(t *testing.T) {
 		var qs = queries.GetQuerySet(&PreloadBook{}).
 			Preload(queries.Preload{
 				Path: "Authors",
 				QuerySet: queries.GetQuerySet[attrs.Definer](&PreloadAuthor{}).
-					Select("Profile.*"),
+					SelectRelated("Profile"),
 			})
 
 		bookRows, err := qs.All()
