@@ -419,7 +419,7 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 		))
 	}
 
-	if field, ok := subQueryset.internals.fieldsMap[""]; ok {
+	if field, ok := subQueryset.internals.fieldsMap["*"]; ok {
 		field.Through = targetFieldInfo.Through
 	} else {
 		subQueryset.internals.Fields = append(

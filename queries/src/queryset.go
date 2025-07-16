@@ -223,7 +223,11 @@ func (i *QuerySetInternals) AddField(field *FieldInfo[attrs.FieldDefinition]) {
 			key = fieldName
 		}
 	} else {
-		key = strings.Join(field.Chain, ".")
+		if len(field.Chain) > 0 {
+			key = fmt.Sprintf("%s.*", strings.Join(field.Chain, "."))
+		} else {
+			key = "*"
+		}
 	}
 
 	if info, exists := i.fieldsMap[key]; !exists {
