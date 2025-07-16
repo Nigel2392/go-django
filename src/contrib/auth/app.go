@@ -242,6 +242,18 @@ func NewAppConfig() django.AppConfig {
 					PerPage: 25,
 				},
 			},
+			admin.ModelOptions{
+				Name:                "Groups",
+				Model:               &users.Group{},
+				RegisterToAdminMenu: true,
+				MenuOrder:           2,
+			},
+			admin.ModelOptions{
+				Name:                "Permissions",
+				Model:               &users.Permission{},
+				RegisterToAdminMenu: true,
+				MenuOrder:           3,
+			},
 		)
 
 		// Register the auth apps' password field with go-django.

@@ -104,10 +104,16 @@
         "column": "id",
         "relation": {
           "type": "ManyToMany",
-          "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.Group",
+          "model": {
+            "content_type": "github.com/Nigel2392/go-django/src/contrib/auth/users.Group",
+            "lazy_model_key": ""
+          },
           "field": "ID",
           "through": {
-            "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.UserGroup",
+            "model": {
+              "content_type": "github.com/Nigel2392/go-django/src/contrib/auth/users.UserGroup",
+              "lazy_model_key": ""
+            },
             "source_field": "UserID",
             "target_field": "GroupID"
           }
@@ -121,10 +127,16 @@
         "column": "id",
         "relation": {
           "type": "ManyToMany",
-          "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.Permission",
+          "model": {
+            "content_type": "github.com/Nigel2392/go-django/src/contrib/auth/users.Permission",
+            "lazy_model_key": ""
+          },
           "field": "ID",
           "through": {
-            "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.UserPermission",
+            "model": {
+              "content_type": "github.com/Nigel2392/go-django/src/contrib/auth/users.UserPermission",
+              "lazy_model_key": ""
+            },
             "source_field": "UserID",
             "target_field": "PermissionID"
           }

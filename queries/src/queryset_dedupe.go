@@ -293,6 +293,12 @@ func (r *rows[T]) queryPreloads(preload *Preload, qs *QuerySet[T]) error {
 		))
 	}
 
+	if len(seenObj.pks) == 0 {
+		// cannot query this preload, no primary keys found
+		// return to avoid unnecessary queries
+		return nil
+	}
+
 	var (
 		// relType    = preload.Rel.Type()
 		relThrough = preload.Rel.Through()

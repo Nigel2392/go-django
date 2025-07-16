@@ -67,6 +67,16 @@ func NewContentType[T any](p T) *BaseContentType[T] {
 	}
 }
 
+// ChangeBaseType changes the BaseContentType to a new type.
+func ChangeBaseType[OldT, NewT any](c *BaseContentType[OldT]) *BaseContentType[NewT] {
+	return &BaseContentType[NewT]{
+		rType:     c.rType,
+		rTypeElem: c.rTypeElem,
+		pkgPath:   c.pkgPath,
+		modelName: c.modelName,
+	}
+}
+
 // PkgPath returns the package path of the model.
 // It is the full import path of the package that the model is defined in.
 //

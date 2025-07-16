@@ -85,6 +85,13 @@ type MigrationFile struct {
 	// If a migration file has dependencies, it will not be applied until all of its dependencies have been applied.
 	Dependencies []Dependency `json:"dependencies,omitempty"`
 
+	// Lazy dependencies exist in case a relation is lazy loaded - these get special handling to ensure
+	// proper dependency management, as the model should be considered "generic", i.e. for defining 2 separate user models,
+	// but maintaining the same relation.
+	//
+	// These lazy dependencies will be loaded using contenttypes.LoadModel().
+	LazyDependencies []string `json:"lazy_dependencies,omitempty"`
+
 	// The SQL commands to be executed in the
 	// migration file.
 	//
@@ -116,6 +123,15 @@ func (m *MigrationFile) addDependency(appName, modelName, name string) {
 		ModelName: modelName,
 		Name:      name,
 	})
+}
+
+func (m *MigrationFile) addLazyDependency(modelKey string) {
+	if m.LazyDependencies == nil {
+		m.LazyDependencies = make([]string, 0)
+	}
+	if !slices.Contains(m.LazyDependencies, modelKey) {
+		m.LazyDependencies = append(m.LazyDependencies, modelKey)
+	}
 }
 
 func (m *MigrationFile) addAction(actionType ActionType, table *Changed[*ModelTable], column *Changed[*Column], index *Changed[*Index]) {
@@ -607,80 +623,89 @@ func (m *MigrationEngine) MakeMigrations(apps ...string) error {
 	// Check for dependencies and write migration files
 	for _, mig := range migrationList {
 
-		if len(mig.Table.Columns()) == 0 && len(mig.Actions) == 0 {
+		var cols = mig.Table.Columns()
+		if len(cols) == 0 && len(mig.Actions) == 0 {
 			continue
 		}
 
 		// Check for dependencies
 	colLoop:
-		for _, col := range mig.Table.Columns() {
+		for _, col := range cols {
 
 			if col.Rel != nil {
-				var relApp = getModelApp(col.Rel.TargetModel.New())
-				if relApp == nil {
-					//	logger.Warnf(
-					//		"Could not find app for model %T, related to migration %q/%q",
-					//		col.Rel.TargetModel.New(), mig.AppName, mig.ModelName,
-					//	)
-					//	continue colLoop
-					return fmt.Errorf(
-						"could not find app for model %T, related to migration %q/%q",
-						col.Rel.TargetModel.New(), mig.AppName, mig.ModelName,
+
+				if col.Rel.IsLazy() { // translates to `m.TargetModel.LazyModelKey != ""`
+					var relModelKey = col.Rel.TargetModel.LazyModelKey
+					mig.addLazyDependency(relModelKey)
+				} else {
+					var relApp = getModelApp(col.Rel.TargetModel.Object())
+					if relApp == nil {
+						//	logger.Warnf(
+						//		"Could not find app for model %T, related to migration %q/%q",
+						//		col.Rel.TargetModel.New(), mig.AppName, mig.ModelName,
+						//	)
+						//	continue colLoop
+						return fmt.Errorf(
+							"could not find app for model %T, related to migration %q/%q",
+							col.Rel.TargetModel.Object(), mig.AppName, mig.ModelName,
+						)
+					}
+
+					var (
+						relAppName  = relApp.Name()
+						relModel    = col.Rel.TargetModel.ContentType().Model()
+						depMigs, ok = m.dependencies[relAppName][relModel]
+						// depMig, ok = dependencies[relAppName][relModel]
 					)
-				}
+					if !ok || len(depMigs) == 0 {
+						logger.Warnf(
+							"Dependency %q/%q not found for migration %q/%q",
+							relAppName, relModel, mig.AppName, mig.ModelName,
+						)
+						continue
+					}
 
-				var (
-					relAppName  = relApp.Name()
-					relModel    = col.Rel.TargetModel.Model()
-					depMigs, ok = m.dependencies[relAppName][relModel]
-					// depMig, ok = dependencies[relAppName][relModel]
-				)
-				if !ok || len(depMigs) == 0 {
-					logger.Warnf(
-						"Dependency %q/%q not found for migration %q/%q",
-						relAppName, relModel, mig.AppName, mig.ModelName,
+					// walk old migrations and check if the latest dependency
+					// migration is already in the list of dependencies of
+					// one of the older migrations
+					var (
+						depMig    = depMigs[len(depMigs)-1]
+						appMigs   map[string][]*MigrationFile
+						modelMigs []*MigrationFile
 					)
-					continue
-				}
 
-				// walk old migrations and check if the latest dependency
-				// migration is already in the list of dependencies of
-				// one of the older migrations
-				var (
-					depMig    = depMigs[len(depMigs)-1]
-					appMigs   map[string][]*MigrationFile
-					modelMigs []*MigrationFile
-				)
+					appMigs, ok = m.dependencies[mig.AppName]
+					if !ok {
+						goto addDep
+					}
 
-				appMigs, ok = m.dependencies[mig.AppName]
-				if !ok {
-					goto addDep
-				}
+					modelMigs, ok = appMigs[mig.ModelName]
+					if !ok {
+						goto addDep
+					}
 
-				modelMigs, ok = appMigs[mig.ModelName]
-				if !ok {
-					goto addDep
-				}
-
-				if len(modelMigs) >= 2 {
-					var modelMigs = modelMigs[:len(modelMigs)-1]
-					for i := len(modelMigs) - 1; i >= 0; i-- {
-						var mig = modelMigs[i]
-						for _, oldDep := range mig.Dependencies {
-							if oldDep.AppName == relAppName && oldDep.ModelName == relModel && oldDep.Name == depMig.FileName() {
-								continue colLoop
+					// check if the dependency migration is already in the list of dependencies
+					// of the current models' migration files
+					if len(modelMigs) >= 2 {
+						var modelMigs = modelMigs[:len(modelMigs)-1]
+						for i := len(modelMigs) - 1; i >= 0; i-- {
+							var mig = modelMigs[i]
+							for _, oldDep := range mig.Dependencies {
+								if oldDep.AppName == relAppName && oldDep.ModelName == relModel && oldDep.Name == depMig.FileName() {
+									continue colLoop
+								}
 							}
 						}
 					}
-				}
 
-				// add dependency to the migration file
-			addDep:
-				logger.Debugf(
-					"Adding dependency \"%s/%s\" to migration \"%s/%s\"",
-					depMig.ModelName, depMig.FileName(), mig.ModelName, mig.FileName(),
-				)
-				mig.addDependency(relAppName, relModel, depMig.FileName())
+					// add dependency to the migration file
+				addDep:
+					logger.Debugf(
+						"Adding dependency \"%s/%s\" to migration \"%s/%s\"",
+						depMig.ModelName, depMig.FileName(), mig.ModelName, mig.FileName(),
+					)
+					mig.addDependency(relAppName, relModel, depMig.FileName())
+				}
 			}
 		}
 
@@ -763,6 +788,28 @@ func (m *MigrationEngine) buildDependencyGraph(migrations []*migrationFileInfo) 
 				//}
 				//depNode = &node{mig: depMigs[len(depMigs)-1]}
 				// ------- comment this out to ignore missing dependencies
+			}
+			n.deps = append(n.deps, depNode)
+		}
+
+		for _, lazyDep := range n.mig.LazyDependencies {
+			// lazy dependencies are loaded using contenttypes.LoadModel()
+			var lazyModel = contenttypes.LoadModel(lazyDep)
+			var app = getModelApp(lazyModel.Object())
+			if app == nil {
+				return nil, fmt.Errorf("could not find app for lazy model %T, related to migration %q/%q", lazyModel.Object(), n.mig.AppName, n.mig.ModelName)
+			}
+
+			var cType = contenttypes.NewContentType(lazyModel.Object())
+			if cType == nil {
+				return nil, fmt.Errorf("could not create content type for lazy model %T, related to migration %q/%q", lazyModel.Object(), n.mig.AppName, n.mig.ModelName)
+			}
+
+			var lastMigration = m.GetLastMigration(app.Name(), cType.Model())
+			var depKey = fmt.Sprintf("%s:%s:%s", app.Name(), cType.Model(), lastMigration.FileName())
+			depNode, ok := nodeMap[depKey]
+			if !ok {
+				return nil, fmt.Errorf("lazy dependency %q not found for migration %q/%q", depKey, n.mig.AppName, n.mig.ModelName)
 			}
 			n.deps = append(n.deps, depNode)
 		}
@@ -1220,14 +1267,15 @@ func (e *MigrationEngine) readMigrationDirFS(dir fs.FS, dirPath, appName, modelN
 		}
 
 		migrations = append(migrations, &MigrationFile{
-			Name:         name,
-			AppName:      appName,
-			ModelName:    modelName,
-			Order:        orderNum,
-			Table:        migrationFile.Table,
-			Actions:      migrationFile.Actions,
-			Dependencies: migrationFile.Dependencies,
-			ContentType:  contenttypes.NewContentType(migrationFile.Table.Object),
+			Name:             name,
+			AppName:          appName,
+			ModelName:        modelName,
+			Order:            orderNum,
+			Table:            migrationFile.Table,
+			Actions:          migrationFile.Actions,
+			Dependencies:     migrationFile.Dependencies,
+			LazyDependencies: migrationFile.LazyDependencies,
+			ContentType:      contenttypes.NewContentType(migrationFile.Table.Object),
 		})
 	}
 

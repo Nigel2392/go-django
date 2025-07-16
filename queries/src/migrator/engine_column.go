@@ -84,15 +84,29 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	var rel *MigrationRelation
 	var fRel = field.Rel()
 	if fRel != nil {
+		var model *MigrationModel
 
-		var cType = contenttypes.NewContentType(
-			fRel.Model(),
-		)
+		if typ, ok := fRel.(attrs.LazyRelation); ok {
+			var modelKey = typ.ModelKey()
+			if modelKey != "" {
+				model = &MigrationModel{
+					LazyModelKey: typ.ModelKey(),
+				}
+			}
+		}
+
+		if model == nil {
+			model = &MigrationModel{
+				CType: contenttypes.NewContentType(
+					fRel.Model(),
+				),
+			}
+		}
 
 		var relType = fRel.Type()
 		rel = &MigrationRelation{
 			Type:        relType,
-			TargetModel: cType,
+			TargetModel: model,
 			TargetField: fRel.Field(),
 			OnDelete:    attrOnDelete,
 			OnUpdate:    attrOnUpdate,
@@ -106,8 +120,26 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 		}
 
 		if through != nil {
+			var model *MigrationModel
+			if typ, ok := through.(attrs.LazyThrough); ok {
+				var modelKey = typ.ModelKey()
+				if modelKey != "" {
+					model = &MigrationModel{
+						LazyModelKey: typ.ModelKey(),
+					}
+				}
+			}
+
+			if model == nil {
+				model = &MigrationModel{
+					CType: contenttypes.NewContentType(
+						through.Model(),
+					),
+				}
+			}
+
 			rel.Through = &MigrationRelationThrough{
-				Model:       contenttypes.NewContentType(through.Model()),
+				Model:       model,
 				SourceField: through.SourceField(),
 				TargetField: through.TargetField(),
 			}
@@ -332,9 +364,12 @@ func (c *Column) Equals(other *Column) bool {
 		}
 
 		if c.Rel.TargetModel != nil {
-			if c.Rel.TargetModel.TypeName() != other.TargetModel.TypeName() {
+			if !c.Rel.TargetModel.Equals(other.TargetModel) {
 				return false
 			}
+			//if c.Rel.TargetModel.TypeName() != other.TargetModel.TypeName() {
+			//	return false
+			//}
 		}
 
 		if (c.Rel.TargetField == nil) != (other.TargetField == nil) {

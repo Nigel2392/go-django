@@ -19,7 +19,9 @@ type User interface {
 	authentication.User
 }
 
-var lazyUser = contenttypes.NewLazyRegistry(func(def *contenttypes.ContentTypeDefinition) bool {
+const MODEL_KEY = "users.User"
+
+var lazyUser = contenttypes.NewLazyRegistry(MODEL_KEY, func(def *contenttypes.ContentTypeDefinition) bool {
 	_, ok := def.ContentObject.(baseModelGetter)
 	_, ok2 := def.ContentObject.(User)
 	return ok || ok2

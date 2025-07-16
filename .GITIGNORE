@@ -17,7 +17,8 @@ __pycache__/
 ./migrations/
 ./migrations-blogapp/
 ./migrations-todoapp/
-./queries/src/migrator/migrations/
+./queries/src/migrator/migrations
+./queries/src/migrator/migrations/*
 
 # Distribution / packaging
 .Python

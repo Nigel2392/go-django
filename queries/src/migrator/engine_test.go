@@ -12,18 +12,16 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	testsql "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql"
 	django "github.com/Nigel2392/go-django/src"
-	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/pkg/errors"
 )
 
-func init() {
-	attrs.RegisterModel(&testsql.User{})
-	attrs.RegisterModel(&testsql.Todo{})
-	attrs.RegisterModel(&testsql.Profile{})
-	attrs.RegisterModel(&testsql.Broad{})
-}
-
 func TestMigrator(t *testing.T) {
+
+	contenttypes.Register(&contenttypes.ContentTypeDefinition{
+		ContentObject: &users.Base{},
+	})
 
 	django.Global = nil
 	dbtype.TYPES.Unlock()
@@ -186,7 +184,7 @@ func TestMigrator(t *testing.T) {
 			t.Fatalf("expected 2 migrations, got %d", len(engine.Migrations["blog"]))
 		}
 
-		if len(engine.Migrations["auth"]["Profile"]) != 6 {
+		if len(engine.Migrations["auth"]["Profile"]) != 4 {
 			t.Fatalf("expected 6 migrations for Profile, got %d", len(engine.Migrations["auth"]["Profile"]))
 		}
 
@@ -198,16 +196,16 @@ func TestMigrator(t *testing.T) {
 			t.Fatalf("expected 4 migration for User, got %d", len(engine.Migrations["auth"]["User"]))
 		}
 
-		if len(latestMigrationProfile.Dependencies) != 1 {
-			t.Fatalf("expected 1 dependency for Profile, got %d", len(latestMigrationProfile.Dependencies))
+		if len(latestMigrationProfile.LazyDependencies) != 1 {
+			t.Fatalf("expected 1 dependency for Profile, got %d", len(latestMigrationProfile.LazyDependencies))
 		}
 
 		if latestMigrationProfile.Actions[len(latestMigrationProfile.Actions)-1].ActionType != migrator.ActionAddField {
 			t.Fatalf("expected last action to be AddField, got %s", latestMigrationProfile.Actions[len(latestMigrationProfile.Actions)-1].ActionType)
 		}
 
-		if len(latestMigrationTodo.Dependencies) != 1 {
-			t.Fatalf("expected 1 dependency for Todo, got %d", len(latestMigrationTodo.Dependencies))
+		if len(latestMigrationTodo.LazyDependencies) != 1 {
+			t.Fatalf("expected 1 dependency for Todo, got %d", len(latestMigrationTodo.LazyDependencies))
 		}
 
 		if latestMigrationTodo.Actions[len(latestMigrationTodo.Actions)-1].ActionType != migrator.ActionAddField {
@@ -279,8 +277,8 @@ func TestMigrator(t *testing.T) {
 			t.Fatalf("expected 2 migrations for 'blog', got %d", len(engine.Migrations["blog"]))
 		}
 
-		if len(engine.Migrations["auth"]["Profile"]) != 7 {
-			t.Fatalf("expected 7 migrations for Profile, got %d", len(engine.Migrations["auth"]["Profile"]))
+		if len(engine.Migrations["auth"]["Profile"]) != 5 {
+			t.Fatalf("expected 5 migrations for Profile, got %d", len(engine.Migrations["auth"]["Profile"]))
 		}
 
 		if len(engine.Migrations["todo"]["Todo"]) != 3 {
@@ -291,16 +289,16 @@ func TestMigrator(t *testing.T) {
 			t.Fatalf("expected 5 migration for User, got %d", len(engine.Migrations["auth"]["User"]))
 		}
 
-		if len(latestMigrationProfile.Dependencies) != 1 {
-			t.Fatalf("expected 1 dependency for Profile, got %d", len(latestMigrationProfile.Dependencies))
+		if len(latestMigrationProfile.LazyDependencies) != 1 {
+			t.Fatalf("expected 1 dependency for Profile, got %d", len(latestMigrationProfile.LazyDependencies))
 		}
 
 		if latestMigrationProfile.Actions[len(latestMigrationProfile.Actions)-1].ActionType != migrator.ActionRemoveField {
 			t.Fatalf("expected last action to be RemoveField, got %s", latestMigrationProfile.Actions[len(latestMigrationProfile.Actions)-1].ActionType)
 		}
 
-		if len(latestMigrationTodo.Dependencies) != 1 {
-			t.Fatalf("expected 1 dependency for Todo, got %d", len(latestMigrationTodo.Dependencies))
+		if len(latestMigrationTodo.LazyDependencies) != 1 {
+			t.Fatalf("expected 1 dependency for Todo, got %d", len(latestMigrationTodo.LazyDependencies))
 		}
 
 		if latestMigrationTodo.Actions[len(latestMigrationTodo.Actions)-1].ActionType != migrator.ActionRemoveField {
@@ -374,8 +372,8 @@ func TestMigrator(t *testing.T) {
 			t.Fatalf("expected 2 migrations for 'blog', got %d", len(engine.Migrations["blog"]))
 		}
 
-		if len(engine.Migrations["auth"]["Profile"]) != 8 {
-			t.Fatalf("expected 8 migrations for Profile, got %d", len(engine.Migrations["auth"]["Profile"]))
+		if len(engine.Migrations["auth"]["Profile"]) != 6 {
+			t.Fatalf("expected 6 migrations for Profile, got %d", len(engine.Migrations["auth"]["Profile"]))
 		}
 
 		if len(engine.Migrations["todo"]["Todo"]) != 4 {
@@ -386,16 +384,16 @@ func TestMigrator(t *testing.T) {
 			t.Fatalf("expected 5 migration for User, got %d", len(engine.Migrations["auth"]["User"]))
 		}
 
-		if len(latestMigrationProfile.Dependencies) != 0 {
-			t.Fatalf("expected 0 dependencies for Profile, got %d", len(latestMigrationProfile.Dependencies))
+		if len(latestMigrationProfile.LazyDependencies) != 1 {
+			t.Fatalf("expected 0 dependencies for Profile, got %d", len(latestMigrationProfile.LazyDependencies))
 		}
 
 		if latestMigrationProfile.Actions[len(latestMigrationProfile.Actions)-1].ActionType != migrator.ActionAddField {
 			t.Fatalf("expected last action to be AddField, got %s", latestMigrationProfile.Actions[len(latestMigrationProfile.Actions)-1].ActionType)
 		}
 
-		if len(latestMigrationTodo.Dependencies) != 0 {
-			t.Fatalf("expected 0 dependencies for Todo, got %d", len(latestMigrationTodo.Dependencies))
+		if len(latestMigrationTodo.LazyDependencies) != 1 {
+			t.Fatalf("expected 0 dependencies for Todo, got %d", len(latestMigrationTodo.LazyDependencies))
 		}
 
 		if latestMigrationTodo.Actions[len(latestMigrationTodo.Actions)-1].ActionType != migrator.ActionAddField {

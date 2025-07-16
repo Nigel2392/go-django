@@ -42,34 +42,88 @@ var actions_map = map[Action]string{
 }
 
 type migrationRelationSerialized struct {
-	Type        attrs.RelationType                           `json:"type"`                // The type of the relation
-	TargetModel *contenttypes.BaseContentType[attrs.Definer] `json:"model"`               // The target model of the relation
-	TargetField string                                       `json:"field,omitempty"`     // The field in the target model
-	Through     *MigrationRelationThrough                    `json:"through,omitempty"`   // The through model of the relation
-	OnDelete    Action                                       `json:"on_delete,omitempty"` // The on delete action of the relation
-	OnUpdate    Action                                       `json:"on_update,omitempty"` // The on update action of the relation
+	Type        attrs.RelationType        `json:"type"`                // The type of the relation
+	TargetModel *MigrationModel           `json:"model"`               // The target model of the relation
+	TargetField string                    `json:"field,omitempty"`     // The field in the target model
+	Through     *MigrationRelationThrough `json:"through,omitempty"`   // The through model of the relation
+	OnDelete    Action                    `json:"on_delete,omitempty"` // The on delete action of the relation
+	OnUpdate    Action                    `json:"on_update,omitempty"` // The on update action of the relation
 }
 
 type MigrationRelationThrough struct {
-	Model       *contenttypes.BaseContentType[attrs.Definer] `json:"model"`        // The through model of the relation
-	SourceField string                                       `json:"source_field"` // The source field of the relation
-	TargetField string                                       `json:"target_field"` // The target field of the relation
+	Model       *MigrationModel `json:"model"`        // The through model of the relation
+	SourceField string          `json:"source_field"` // The source field of the relation
+	TargetField string          `json:"target_field"` // The target field of the relation
+}
+
+type MigrationModel struct {
+	CType        *contenttypes.BaseContentType[attrs.Definer] `json:"content_type"`   // The content type of the model
+	LazyModelKey string                                       `json:"lazy_model_key"` // The lazy model key of the model, in case it is a lazy relation.
+
+	def *contenttypes.ContentTypeDefinition `json:"-"`
+}
+
+func (m *MigrationModel) Equals(other *MigrationModel) bool {
+	if m == nil || other == nil {
+		return m == other
+	}
+	if m.LazyModelKey != "" && other.LazyModelKey != "" {
+		return m.LazyModelKey == other.LazyModelKey
+	}
+	if m.CType != nil && other.CType != nil {
+		return m.CType.TypeName() == other.CType.TypeName()
+	}
+	return false
+}
+
+func (m *MigrationModel) Object() attrs.Definer {
+	if m.CType == nil {
+		if m.LazyModelKey == "" {
+			panic("MigrationModel has no ContentType or LazyModelKey set")
+		}
+		m.def = contenttypes.LoadModel(m.LazyModelKey)
+		return m.def.ContentType().New().(attrs.Definer)
+	}
+	return m.CType.New()
+}
+
+func (m *MigrationModel) ContentType() contenttypes.ContentType {
+	if m.def != nil {
+		return m.def.ContentType()
+	}
+
+	if m.LazyModelKey != "" {
+		m.def = contenttypes.LoadModel(m.LazyModelKey)
+		return m.def.ContentType()
+	}
+
+	if m.CType == nil {
+		panic("MigrationModel has no ContentType or LazyModelKey set")
+	}
+	return contenttypes.ChangeBaseType[attrs.Definer, any](m.CType)
 }
 
 type MigrationRelation struct {
-	Type        attrs.RelationType                           `json:"type"`                // The type of the relation
-	TargetModel *contenttypes.BaseContentType[attrs.Definer] `json:"model"`               // The target model of the relation
-	TargetField attrs.FieldDefinition                        `json:"field,omitempty"`     // The field in the target model
-	Through     *MigrationRelationThrough                    `json:"through,omitempty"`   // The through model of the relation
-	OnDelete    Action                                       `json:"on_delete,omitempty"` // The on delete action of the relation
-	OnUpdate    Action                                       `json:"on_update,omitempty"` // The on update action of the relation
+	Type        attrs.RelationType        `json:"type"`                // The type of the relation
+	TargetModel *MigrationModel           `json:"model"`               // The target model of the relation
+	TargetField attrs.FieldDefinition     `json:"field,omitempty"`     // The field in the target model
+	Through     *MigrationRelationThrough `json:"through,omitempty"`   // The through model of the relation
+	OnDelete    Action                    `json:"on_delete,omitempty"` // The on delete action of the relation
+	OnUpdate    Action                    `json:"on_update,omitempty"` // The on update action of the relation
 }
 
 func (m *MigrationRelation) Model() attrs.Definer {
 	if m.TargetModel == nil {
 		return nil
 	}
-	return m.TargetModel.New()
+	return m.TargetModel.Object()
+}
+
+func (m *MigrationRelation) IsLazy() bool {
+	if m.TargetModel == nil {
+		return false
+	}
+	return m.TargetModel.LazyModelKey != ""
 }
 
 func (m *MigrationRelation) Field() attrs.FieldDefinition {
@@ -100,7 +154,7 @@ func (m *MigrationRelation) UnmarshalJSON(data []byte) error {
 		)
 	}
 
-	var obj = rel.TargetModel.New()
+	var obj = rel.TargetModel.Object()
 	if obj == nil {
 		return nil
 	}

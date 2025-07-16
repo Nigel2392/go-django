@@ -17,13 +17,14 @@ var (
 	_ Page                     = (*PageNode)(nil)
 	_ queries.ActsBeforeCreate = (*PageNode)(nil)
 	_ queries.ActsAfterSave    = (*PageNode)(nil)
+	_ models.CanControlSaving  = (*PageNode)(nil)
 )
 
 type PageNode struct {
 	models.Model     `table:"PageNode"`
 	PK               int64      `json:"id" attrs:"primary;readonly;column=id"`
 	Title            string     `json:"title"`
-	Path             string     `json:"path"`
+	Path             string     `json:"path" attrs:"blank"`
 	Depth            int64      `json:"depth" attrs:"blank"`
 	Numchild         int64      `json:"numchild" attrs:"blank"`
 	UrlPath          string     `json:"url_path" attrs:"readonly;blank"`
@@ -257,17 +258,12 @@ func (n *PageNode) TargetPrimaryField() attrs.FieldDefinition {
 	return f
 }
 
+func (n *PageNode) ControlsEmbedderSaving() bool {
+	return true
+}
+
 func (n *PageNode) FieldDefs() attrs.Definitions {
 	return n.Model.Define(n, func(d attrs.Definer) []attrs.Field {
-
-		//	var relForeignKey attrs.Relation
-		//	if django.AppInstalled != nil && django.AppInstalled("revisions") {
-		//		relForeignKey = attrs.Relate(
-		//			&revisions.Revision{},
-		//			"", nil,
-		//		)
-		//	}
-
 		return []attrs.Field{
 			attrs.NewField(n, "PK"),
 			attrs.NewField(n, "Title"),

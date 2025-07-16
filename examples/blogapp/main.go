@@ -186,11 +186,11 @@ func main() {
 			panic(fmt.Errorf("failed to get pages: %w", err))
 		}
 
-		fmt.Println("Pages:", len(pages))
+		fmt.Println("Specific Pages:", len(pages))
 		for specificPage := range pages.Objects() {
 			var page = specificPage.Reference()
 			fmt.Printf(" - %q (ID: %d, %d)\n", page.Title, page.ID(), page.PageID)
-			fmt.Printf("   - PageObject: %+v\n", specificPage)
+			fmt.Printf("   - PageObject: %+v\n", specificPage.(*blog.BlogPage))
 		}
 
 		//err = staticfiles.Collect(func(path string, f fs.File) error {

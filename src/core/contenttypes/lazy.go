@@ -5,6 +5,8 @@ import (
 	"strings"
 )
 
+var lazyRegistry = make(map[string]*LazyRegistry)
+
 // A lazy registry for content types.
 //
 // This allows for lazy loading of content types, which can be useful in cases where
@@ -25,7 +27,7 @@ type LazyRegistry struct {
 }
 
 // NewLazyRegistry creates a new lazy registry for content types.
-func NewLazyRegistry(check func(*ContentTypeDefinition) bool) LazyRegistry {
+func NewLazyRegistry(modelKey string, check func(*ContentTypeDefinition) bool) *LazyRegistry {
 
 	var (
 		models       = make(map[string]*ContentTypeDefinition)
@@ -49,10 +51,12 @@ func NewLazyRegistry(check func(*ContentTypeDefinition) bool) LazyRegistry {
 		panic(fmt.Errorf("could not hook into contenttypes registry: %w", err))
 	}
 
-	return LazyRegistry{
+	var reg = &LazyRegistry{
 		models:       models,
 		defaultModel: defaultModel,
 	}
+	lazyRegistry[modelKey] = reg
+	return reg
 }
 
 // Load loads a content type definition by its type name.
@@ -75,14 +79,9 @@ func (r LazyRegistry) Load(typeNames ...string) *ContentTypeDefinition {
 		}
 	}
 
-	var mapKeys = make([]string, 0, len(r.models))
-	for k := range r.models {
-		mapKeys = append(mapKeys, k)
-	}
-
 	panic(fmt.Errorf(
 		"LazyRegistry.Load(): called with unknown type name %q, available types: %v",
-		strings.Join(typeNames, ", "), mapKeys,
+		strings.Join(typeNames, ", "), mapKeys(r.models),
 	))
 }
 
@@ -104,13 +103,47 @@ func (r LazyRegistry) LoadString(typeNames ...string) string {
 		}
 	}
 
-	var mapKeys = make([]string, 0, len(r.models))
-	for k := range r.models {
-		mapKeys = append(mapKeys, k)
-	}
-
 	panic(fmt.Errorf(
 		"LazyRegistry.Load(): called with unknown type name %q, available types: %v",
-		strings.Join(typeNames, ", "), mapKeys,
+		strings.Join(typeNames, ", "), mapKeys(r.models),
 	))
+}
+
+func mapKeys[V any](m map[string]V) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	return keys
+}
+
+// LoadModel loads a content type definition by its type name and returns the model.
+func LoadModel(modelKey string, typeNames ...string) *ContentTypeDefinition {
+	var reg, ok = lazyRegistry[modelKey]
+	if !ok {
+		var ct = DefinitionForType(modelKey)
+		if ct != nil {
+			return ct
+		}
+
+		panic(fmt.Errorf(
+			"LazyRegistry.LoadModel(): called with unknown model key %q in lazyRegistry with keys %v",
+			modelKey, mapKeys(lazyRegistry)),
+		)
+	}
+
+	return reg.Load(typeNames...)
+}
+
+// LoadModelString loads a content type definition by its type name and returns its short type name.
+func LoadModelString(modelKey string, typeNames ...string) string {
+	var reg, ok = lazyRegistry[modelKey]
+	if !ok {
+		panic(fmt.Errorf(
+			"LazyRegistry.LoadModelString(): called with unknown model key %q in lazyRegistry with keys %v",
+			modelKey, mapKeys(lazyRegistry)),
+		)
+	}
+
+	return reg.LoadString(typeNames...)
 }

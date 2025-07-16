@@ -1,6 +1,6 @@
 {
-  "dependencies": [
-    "auth:User:0001_create_table_and_2_more.mig"
+  "lazy_dependencies": [
+    "users.User"
   ],
   "table": {
     "table": "entry",
@@ -48,7 +48,10 @@
         "nullable": true,
         "relation": {
           "type": "ManyToOne",
-          "model": "github.com/Nigel2392/go-django/src/contrib/auth.User"
+          "model": {
+            "content_type": null,
+            "lazy_model_key": "users.User"
+          }
         },
         "go_type": "uint64",
         "db_type": "UINT",

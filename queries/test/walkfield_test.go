@@ -110,7 +110,7 @@ func TestQuerySetWalkFields(t *testing.T) {
 				flag |= queries.WalkFlagAllFields
 			}
 
-			var res, err = querySet.WalkField(test.FieldPath, nil, flag)
+			var res, err = querySet.WalkField(test.FieldPath, queries.OptFlags(flag))
 			if err != nil {
 				t.Fatalf("WalkField(%s) failed: %v", test.FieldPath, err)
 			}

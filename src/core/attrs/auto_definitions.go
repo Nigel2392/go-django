@@ -60,9 +60,9 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 			}
 
 			data.RelForeignKey = &deferredRelation{
-				typ:          RelManyToOne,
-				model_type:   v[0],
-				target_field: targetField,
+				typ:         RelManyToOne,
+				modelKey:    v[0],
+				targetField: targetField,
 			}
 		case "o2o":
 			var (
@@ -85,17 +85,17 @@ func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
 				}
 
 				through = &deferredThroughModel{
-					contentType: throughModel,
+					modelKey:    throughModel,
 					sourceField: throughSource,
 					targetField: throughTarget,
 				}
 			}
 
 			data.RelOneToOne = &deferredRelation{
-				typ:          RelOneToOne,
-				through:      through,
-				model_type:   v[0],
-				target_field: targetField,
+				typ:         RelOneToOne,
+				through:     through,
+				modelKey:    v[0],
+				targetField: targetField,
 			}
 
 		case "default":

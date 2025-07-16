@@ -16,12 +16,6 @@ type Page interface {
 	Save(c context.Context) error
 }
 
-type DeletablePage interface {
-	attrs.Definer
-	Page
-	dj_models.ContextDeleter
-}
-
 var pageRegistryObject = &pageRegistry{}
 
 // Register a page definition

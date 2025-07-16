@@ -114,29 +114,29 @@ func (r *typedRelation) From() RelationTarget {
 	return r.Relation.From()
 }
 
+func (r *typedRelation) ModelKey() string {
+	if lz, ok := r.Relation.(LazyRelation); ok {
+		return lz.ModelKey()
+	}
+	return ""
+}
+
 var deferredMap = make(map[string]*deferredRelation)
 
 func deferredMapKey(d *deferredRelation) string {
-
-	var (
-		typ         = d.typ
-		modelType   = d.model_type
-		targetField = d.target_field
-	)
-
 	return fmt.Sprintf(
 		"%d:%s:%s",
-		typ, modelType, targetField,
+		d.typ, d.modelKey, d.targetField,
 	)
 }
 
 func ThroughDeferred(
-	contentType string,
+	modelKey string,
 	sourceField string,
 	targetField string,
 ) Through {
 	return &deferredThroughModel{
-		contentType: contentType,
+		modelKey:    modelKey,
 		sourceField: sourceField,
 		targetField: targetField,
 	}
@@ -144,20 +144,27 @@ func ThroughDeferred(
 
 func RelatedDeferred(
 	typ RelationType,
-	modelContentType string,
+	modelKey string,
 	targetField string,
 	through Through,
-) Relation {
+) LazyRelation {
 	return &deferredRelation{
-		typ:          typ,
-		model_type:   modelContentType,
-		target_field: targetField,
-		through:      through,
+		typ:         typ,
+		modelKey:    modelKey,
+		targetField: targetField,
+		through:     through,
 	}
 }
 
+var (
+	_ LazyThrough  = &deferredThroughModel{}
+	_ Through      = &deferredThroughModel{}
+	_ LazyRelation = &deferredRelation{}
+	_ Relation     = &deferredRelation{}
+)
+
 type deferredThroughModel struct {
-	contentType string
+	modelKey    string
 	sourceField string
 	targetField string
 
@@ -169,9 +176,9 @@ func (d *deferredThroughModel) setup() {
 		return // already set up
 	}
 
-	var cType = contenttypes.DefinitionForType(d.contentType)
+	var cType = contenttypes.LoadModel(d.modelKey)
 	if cType == nil {
-		panic(fmt.Errorf("content type %q not found for deferring through model", d.contentType))
+		panic(fmt.Errorf("content type %q not found for deferring through model", d.modelKey))
 	}
 
 	d.mdl = cType.Object().(Definer)
@@ -184,6 +191,10 @@ func (d *deferredThroughModel) Model() Definer {
 
 	d.setup()
 	return d.mdl
+}
+
+func (d *deferredThroughModel) ModelKey() string {
+	return d.modelKey
 }
 
 func (d *deferredThroughModel) SourceField() string {
@@ -201,12 +212,12 @@ func (d *deferredThroughModel) TargetField() string {
 // it is currently only used when registering with [AutoDefinitions],
 // as the contenttype might not be immediately available.
 type deferredRelation struct {
-	typ          RelationType
-	model_type   string
-	target_field string
-	mdl          Definer
-	field        Field
-	through      Through
+	typ         RelationType
+	modelKey    string
+	targetField string
+	mdl         Definer
+	field       Field
+	through     Through
 }
 
 func (d *deferredRelation) setup() {
@@ -219,17 +230,22 @@ func (d *deferredRelation) setup() {
 	//		return
 	//	}
 
-	var cType = contenttypes.DefinitionForType(d.model_type)
+	var cType = contenttypes.LoadModel(d.modelKey)
 	if cType == nil {
-		panic(fmt.Errorf("content type %q not found for deferring relation", d.model_type))
+		panic(fmt.Errorf("content type %q not found for deferring relation", d.modelKey))
 	}
 
+	//var cType = contenttypes.DefinitionForType(d.model_type)
+	//if cType == nil {
+	//	panic(fmt.Errorf("content type %q not found for deferring relation", d.model_type))
+	//}
+
 	d.mdl = cType.Object().(Definer)
-	if d.target_field != "" {
+	if d.targetField != "" {
 		var defs = d.mdl.FieldDefs()
-		var f, ok = defs.Field(d.target_field)
+		var f, ok = defs.Field(d.targetField)
 		if !ok {
-			panic(fmt.Errorf("field %q not found in model %T", d.target_field, d.mdl))
+			panic(fmt.Errorf("field %q not found in model %T", d.targetField, d.mdl))
 		}
 		d.field = f
 	}
@@ -254,12 +270,16 @@ func (d *deferredRelation) Model() Definer {
 	return d.mdl
 }
 
+func (d *deferredRelation) ModelKey() string {
+	return d.modelKey
+}
+
 func (d *deferredRelation) Field() FieldDefinition {
 	if d.field != nil {
 		return d.field
 	}
 
-	if d.target_field == "" {
+	if d.targetField == "" {
 		return nil
 	}
 

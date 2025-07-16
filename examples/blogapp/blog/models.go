@@ -14,7 +14,7 @@ import (
 
 type BlogPage struct {
 	models.Model    `table:"blog_pages"`
-	*pages.PageNode `proxy:"-"`
+	*pages.PageNode //`proxy:"-"`
 	Editor          *editor.EditorJSBlockData
 }
 

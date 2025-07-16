@@ -94,6 +94,12 @@ type PreloadResults struct {
 	rowsMap map[any][]*Row[attrs.Definer]
 }
 
+type (
+	// custom string type for preloads, this allows us to
+	// skip having to set up possible expensive database joins
+	NoJoins string
+)
+
 type Preload struct {
 	FieldName  string
 	Path       string
@@ -737,8 +743,9 @@ func (qs *QuerySet[T]) unpackFields(fields ...any) (infos []*FieldInfo[attrs.Fie
 	for _, field := range fieldNames {
 
 		var res, err = qs.WalkField(
-			field, exprFields,
-			WalkFlagAddJoins,
+			field,
+			OptExpressions(exprFields),
+			OptFlags(WalkFlagAddJoins),
 		)
 		if err != nil {
 			panic(fmt.Errorf("failed to walk field %q: %w", field, err))
@@ -886,7 +893,11 @@ fieldsLoop:
 			flags |= WalkFlagAllFields
 		}
 
-		var res, err = qs.WalkField(selectedField, namedExprs, flags)
+		var res, err = qs.WalkField(
+			selectedField,
+			OptExpressions(namedExprs),
+			OptFlags(flags),
+		)
 		if err != nil {
 			panic(fmt.Errorf("failed to walk field %q: %w", selectedField, err))
 		}
@@ -913,28 +924,6 @@ fieldsLoop:
 	return qs
 }
 
-type WalkFieldResult[T attrs.Definer] struct {
-	Chain      *attrs.RelationChain
-	Aliases    []string
-	Annotation attrs.Field
-	Fields     []*FieldInfo[attrs.FieldDefinition]
-	Joins      []JoinDef
-
-	qs *QuerySet[T]
-}
-
-type WalkFlag int
-
-const (
-	WalkFlagNone      WalkFlag = 0
-	WalkFlagAllFields WalkFlag = 1 << iota
-	WalkFlagAddJoins
-	WalkFlagSelectSubFields
-	WalkFlagAddProxies
-)
-
-var _ expr.FieldResolver = (*QuerySet[attrs.Definer])(nil)
-
 func (qs *QuerySet[T]) Alias() *alias.Generator {
 	if qs.AliasGen == nil {
 		qs.AliasGen = alias.NewGenerator()
@@ -943,7 +932,7 @@ func (qs *QuerySet[T]) Alias() *alias.Generator {
 }
 
 func (qs *QuerySet[T]) Resolve(fieldName string, inf *expr.ExpressionInfo) (attrs.Definer, attrs.FieldDefinition, *expr.TableColumn, error) {
-	var res, err = qs.WalkField(fieldName, nil, WalkFlagAddJoins)
+	var res, err = qs.WalkField(fieldName, OptFlags(WalkFlagAddJoins))
 	if err != nil {
 		panic(err)
 	}
@@ -1009,15 +998,87 @@ func (qs *QuerySet[T]) Resolve(fieldName string, inf *expr.ExpressionInfo) (attr
 	return model, field, col, nil
 }
 
-func (qs *QuerySet[T]) WalkField(selectedField string, namedExprs map[string]expr.NamedExpression, flag ...WalkFlag) (res *WalkFieldResult[T], err error) {
+type WalkFieldResult[T attrs.Definer] struct {
+	Chain      *attrs.RelationChain
+	Aliases    []string
+	Annotation attrs.Field
+	Fields     []*FieldInfo[attrs.FieldDefinition]
+	Joins      []JoinDef
 
-	var flags = WalkFlagNone
-	for _, f := range flag {
-		flags |= f
+	qs *QuerySet[T]
+}
+
+type WalkFlag int
+
+const (
+	WalkFlagNone      WalkFlag = 0
+	WalkFlagAllFields WalkFlag = 1 << iota
+	WalkFlagAddJoins
+	WalkFlagSelectSubFields
+	WalkFlagAddProxies
+)
+
+var _ expr.FieldResolver = (*QuerySet[attrs.Definer])(nil)
+
+type WalkOptions struct {
+	Expressions map[string]expr.NamedExpression // named expressions to use for the field
+	Flags       WalkFlag                        // flags to use for the walk
+}
+
+func OptFlags(flags ...WalkFlag) func(*WalkOptions) {
+	return func(opts *WalkOptions) {
+		for _, f := range flags {
+			opts.Flags |= f
+		}
+	}
+}
+
+func OptExpressions(exprs ...any) func(*WalkOptions) {
+	return func(opts *WalkOptions) {
+		if opts.Expressions == nil {
+			opts.Expressions = make(map[string]expr.NamedExpression, len(exprs))
+		}
+		for _, e := range exprs {
+			switch v := e.(type) {
+			case expr.NamedExpression:
+				var fieldName = v.FieldName()
+				if fieldName == "" {
+					panic(fmt.Errorf("WalkExpressions: empty field name for %T", e))
+				}
+				if _, exists := opts.Expressions[fieldName]; exists {
+					panic(fmt.Errorf("WalkExpressions: duplicate field name %q for %T", fieldName, e))
+				}
+				opts.Expressions[fieldName] = v
+			case map[string]expr.NamedExpression:
+				for key, namedExpr := range v {
+					if key == "" {
+						panic(fmt.Errorf("WalkExpressions: empty field name for %T", namedExpr))
+					}
+					if _, exists := opts.Expressions[key]; exists {
+						panic(fmt.Errorf("WalkExpressions: duplicate field name %q for %T", key, namedExpr))
+					}
+					opts.Expressions[key] = namedExpr
+				}
+			default:
+				panic(fmt.Errorf("WalkExpressions: invalid expression type %T, can be NamedExpression", v))
+			}
+		}
+	}
+}
+
+func (qs *QuerySet[T]) WalkField(selectedField string, options ...func(*WalkOptions)) (res *WalkFieldResult[T], err error) {
+
+	var opts = &WalkOptions{
+		Expressions: make(map[string]expr.NamedExpression, 0),
+		Flags:       WalkFlagNone,
+	}
+
+	for _, opt := range options {
+		opt(opts)
 	}
 
 	// When adding proxies, it is required to also add joins.
-	if flags&WalkFlagAddProxies != 0 && flags&WalkFlagAddJoins == 0 {
+	if opts.Flags&WalkFlagAddProxies != 0 && opts.Flags&WalkFlagAddJoins == 0 {
 		panic(fmt.Errorf(
 			"WalkField: WalkFlagAddProxies requires WalkFlagAddJoins to be set if WalkFlagAddProxies is set",
 		))
@@ -1029,7 +1090,7 @@ func (qs *QuerySet[T]) WalkField(selectedField string, namedExprs map[string]exp
 
 	if annotation, ok := qs.internals.Annotations.Get(selectedField); ok {
 
-		if namedExpr, ok := namedExprs[selectedField]; ok {
+		if namedExpr, ok := opts.Expressions[selectedField]; ok {
 			annotation = &exprField{
 				Field: annotation,
 				expr:  namedExpr,
@@ -1054,7 +1115,7 @@ func (qs *QuerySet[T]) WalkField(selectedField string, namedExprs map[string]exp
 
 	fieldPath := strings.Split(selectedField, ".")
 	relatrionChain, err := attrs.WalkRelationChain(
-		qs.internals.Model.Object, flags&WalkFlagAllFields != 0, fieldPath,
+		qs.internals.Model.Object, opts.Flags&WalkFlagAllFields != 0, fieldPath,
 	)
 	if err != nil {
 		return nil, err
@@ -1068,8 +1129,6 @@ func (qs *QuerySet[T]) WalkField(selectedField string, namedExprs map[string]exp
 
 	for curr != nil {
 		var (
-			fields      []*FieldInfo[attrs.FieldDefinition]
-			joins       []JoinDef
 			meta        = attrs.GetModelMeta(curr.Model)
 			defs        = meta.Definitions()
 			preloadPath = strings.Join(relatrionChain.Chain[:partIdx], ".")
@@ -1080,7 +1139,7 @@ func (qs *QuerySet[T]) WalkField(selectedField string, namedExprs map[string]exp
 			exprKey = fmt.Sprintf("%s.%s", preloadPath, exprKey)
 		}
 
-		if namedExpr, ok := namedExprs[exprKey]; ok {
+		if namedExpr, ok := opts.Expressions[exprKey]; ok {
 			curr.Field = &exprField{
 				Field: curr.Field.(attrs.Field),
 				expr:  namedExpr,
@@ -1094,7 +1153,7 @@ func (qs *QuerySet[T]) WalkField(selectedField string, namedExprs map[string]exp
 
 		if partIdx == 0 && curr.Next == nil {
 			var fields = []attrs.FieldDefinition{curr.Field}
-			if flags&WalkFlagAllFields != 0 {
+			if opts.Flags&WalkFlagAllFields != 0 {
 				fields = ForSelectAllFields[attrs.FieldDefinition](
 					defs.Fields(),
 				)
@@ -1115,33 +1174,43 @@ func (qs *QuerySet[T]) WalkField(selectedField string, namedExprs map[string]exp
 			)
 		}
 
-		if flags&WalkFlagAddJoins == 0 || partIdx == 0 { // skip the root model
-			goto nextIter
+		if opts.Flags&WalkFlagAddJoins == 0 || partIdx == 0 { // skip the root model
+			curr = curr.Next
+			partIdx++
+			continue
 		}
 
 		// Build information for joining tables
 		// This is required to still correctly handle where clauses
 		// and other query modifications which might require the related fields.
-		if fields, joins, err = qs.addRelationChainPart(curr.Prev, curr, res.Aliases, flags); err != nil {
+		var baseInfo, proxyInfo, err = qs.addRelationChainPart(
+			curr.Prev, curr, res.Aliases, opts.Flags,
+		)
+		if err != nil {
 			return nil, fmt.Errorf(
 				"WalkField: failed to add relation chain part for %q / %q: %w",
 				preloadPath, selectedField, err,
 			)
 		}
 
-		if curr.Next == nil || flags&WalkFlagSelectSubFields != 0 {
+		if curr.Next == nil || opts.Flags&WalkFlagSelectSubFields != 0 {
 			res.Fields = append(
 				res.Fields,
-				fields...,
+				append(
+					baseInfo.infos,
+					proxyInfo.infos...,
+				)...,
 			)
 		}
 
 		res.Joins = append(
 			res.Joins,
-			joins...,
+			append(
+				baseInfo.joins,
+				proxyInfo.joins...,
+			)...,
 		)
 
-	nextIter:
 		curr = curr.Next
 		partIdx++
 	}
@@ -1149,7 +1218,169 @@ func (qs *QuerySet[T]) WalkField(selectedField string, namedExprs map[string]exp
 	return res, nil
 }
 
-func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart, aliasList []string, flags WalkFlag) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef, error) {
+func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
+	// Preload is a no-op for QuerySet, as it is used to load related fields
+	// in the initial query. The Select method already handles this.
+	//
+	// If you want to preload specific fields, use the Select method instead.
+	qs = qs.clone()
+	qs.internals.Preload = &QuerySetPreloads{
+		Preloads: make([]*Preload, 0, len(fields)),
+		mapping:  make(map[string]*Preload, len(fields)),
+	}
+
+	if qs.internals.joinsMap == nil {
+		qs.internals.joinsMap = make(map[string]struct{})
+	}
+
+	for _, field := range fields {
+		var preload Preload
+		var autoJoin = true
+		switch v := field.(type) {
+		case string:
+			preload = Preload{
+				Path:  v,
+				Chain: strings.Split(v, "."),
+			}
+		case Preload:
+			if v.Path == "" {
+				panic("Preload: empty path in Preload")
+			}
+
+			v.Chain = strings.Split(v.Path, ".")
+			preload = v
+		case NoJoins:
+			autoJoin = false
+			preload = Preload{
+				Path:  string(v),
+				Chain: strings.Split(string(v), "."),
+			}
+
+		default:
+			panic(fmt.Errorf("Preload: invalid field type %T, can be one of [string, Preload]", v))
+		}
+
+		var relatrionChain, err = attrs.WalkRelationChain(
+			qs.internals.Model.Object, true, preload.Chain,
+		)
+		if err != nil {
+			panic(fmt.Errorf("Preload: %w", err))
+		}
+
+		var preloads = make([]*Preload, 0, len(relatrionChain.Chain))
+		var curr = relatrionChain.Root
+
+		var partIdx = 0
+		var aliasList = make([]string, 0, len(relatrionChain.Chain))
+		var currModelMeta = attrs.GetModelMeta(curr.Model)
+		aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
+			currModelMeta.Definitions().TableName(), "",
+		))
+
+		curr = curr.Next
+		if curr == nil {
+			panic(fmt.Errorf("Preload: no relation chain found for %q", preload.Path))
+		}
+
+		for curr != nil {
+
+			var (
+				meta = attrs.GetModelMeta(curr.Model)
+				defs = meta.Definitions()
+			)
+
+			// create a preload path for each part of the relation chain
+
+			var subChain = relatrionChain.Chain[:partIdx+1]
+			var preloadPath = strings.Join(relatrionChain.Chain[:partIdx+1], ".")
+			var parentPath = strings.Join(relatrionChain.Chain[:partIdx], ".")
+
+			aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
+				defs.TableName(), preloadPath,
+			))
+
+			// only add new preload if the preload is not already present in the mapping
+			if _, ok := qs.internals.Preload.mapping[preloadPath]; !ok {
+				//	if partIdx < len(relatrionChain.Chain)-1 {
+				//		panic(fmt.Errorf(
+				//			"Preload: all previous preloads for path %q must be included in the QuerySet %v",
+				//			preload.Path, subChain,
+				//		))
+				//	}
+
+				var loadDef = &Preload{
+					FieldName:  relatrionChain.Chain[partIdx],
+					Path:       preloadPath,
+					ParentPath: parentPath,
+					Chain:      subChain,
+					Rel:        curr.Prev.FieldRel,
+					Model:      curr.Model,
+					Field:      curr.Prev.Field,
+					Primary:    defs.Primary(),
+				}
+
+				// Set the QuerySet for the preload
+				if partIdx == len(relatrionChain.Chain)-1 {
+					loadDef.QuerySet = preload.QuerySet
+				}
+
+				qs.internals.Preload.mapping[preloadPath] = loadDef
+				preloads = append(
+					preloads, loadDef,
+				)
+
+				var baseInfo, proxyInfo, err = qs.addRelationChainPart(
+					curr.Prev, curr, aliasList, WalkFlagNone,
+				)
+				if err != nil {
+					panic(fmt.Errorf(
+						"Preload: failed to add relation chain part for %q / %q: %w",
+						preloadPath, preload.Path, err,
+					))
+				}
+
+				// proxy joins must always get added to the QuerySet
+				var joins []JoinDef
+				if autoJoin {
+					joins = append(
+						baseInfo.joins,
+						proxyInfo.joins...,
+					)
+				}
+
+				for _, join := range joins {
+					var key = join.JoinDefCondition.String()
+					if _, ok := qs.internals.joinsMap[key]; !ok {
+						qs.internals.Joins = append(qs.internals.Joins, join)
+						qs.internals.joinsMap[key] = struct{}{}
+					}
+				}
+
+			}
+
+			curr = curr.Next
+			partIdx++
+		}
+
+		qs.internals.Preload.Preloads = append(
+			qs.internals.Preload.Preloads, preloads...,
+		)
+
+		slices.SortStableFunc(qs.internals.Preload.Preloads, func(a, b *Preload) int {
+			return strings.Compare(a.Path, b.Path)
+		})
+
+	}
+
+	return qs
+}
+
+type joinResults struct {
+	infos []*FieldInfo[attrs.FieldDefinition]
+	joins []JoinDef
+}
+
+func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart, aliasList []string, flags WalkFlag) (*joinResults, *joinResults, error) {
 	if curr == nil {
 		return nil, nil, fmt.Errorf("addRelationChainPart: curr is nil")
 	}
@@ -1197,9 +1428,7 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 
 	var relField = prev.FieldRel.Field()
 	if relField == nil {
-		currMeta := attrs.GetModelMeta(curr.Model)
-		currDefs := currMeta.Definitions()
-		relField = currDefs.Primary()
+		relField = defs.Primary()
 	}
 
 	switch {
@@ -1275,14 +1504,14 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 
 		throughSourceField, ok := throughDefs.Field(relThrough.SourceField())
 		if !ok {
-			return infos, joins, fmt.Errorf(
+			return nil, nil, fmt.Errorf(
 				"Join: through source field %q not found in %T",
 				relThrough.SourceField(), through) //lint:ignore ST1005 Provides information about the source
 		}
 
 		throughTargetField, ok := throughDefs.Field(relThrough.TargetField())
 		if !ok {
-			return infos, joins, fmt.Errorf(
+			return nil, nil, fmt.Errorf(
 				"Join: through target field %q not found in %T",
 				relThrough.TargetField(), through) //lint:ignore ST1005 Provides information about the source
 		}
@@ -1386,7 +1615,17 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 		joins = append(joins, join1, join2)
 
 	default:
-		return infos, joins, fmt.Errorf("addRelationChainPart: unsupported relation type %s for field %q", relType, curr.Field.Name())
+		return nil, nil, fmt.Errorf("addRelationChainPart: unsupported relation type %s for field %q", relType, curr.Field.Name())
+	}
+
+	var baseJoins = &joinResults{
+		infos: infos,
+		joins: joins,
+	}
+
+	var proxyJoins = &joinResults{
+		infos: make([]*FieldInfo[attrs.FieldDefinition], 0, 1),
+		joins: make([]JoinDef, 0, 1),
 	}
 
 	if flags&WalkFlagAddProxies != 0 {
@@ -1396,11 +1635,11 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 			qs.internals.joinsMap,
 			info, aliasList,
 		)
-		infos = append(infos, subInfos...)
-		joins = append(joins, subJoins...)
+		proxyJoins.infos = append(proxyJoins.infos, subInfos...)
+		proxyJoins.joins = append(proxyJoins.joins, subJoins...)
 	}
 
-	return infos, joins, nil
+	return baseJoins, proxyJoins, nil
 }
 
 func addProxyChain[T attrs.Definer](qs *QuerySet[T], chain []string, proxyM, joinM map[string]struct{}, info *FieldInfo[attrs.FieldDefinition], aliases []string) ([]*FieldInfo[attrs.FieldDefinition], []JoinDef) {
@@ -1559,142 +1798,6 @@ func (qs *QuerySet[T]) addSubProxies(info *FieldInfo[attrs.FieldDefinition], nod
 	return infos, joins
 }
 
-func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
-	// Preload is a no-op for QuerySet, as it is used to load related fields
-	// in the initial query. The Select method already handles this.
-	//
-	// If you want to preload specific fields, use the Select method instead.
-	qs = qs.clone()
-	qs.internals.Preload = &QuerySetPreloads{
-		Preloads: make([]*Preload, 0, len(fields)),
-		mapping:  make(map[string]*Preload, len(fields)),
-	}
-
-	if qs.internals.joinsMap == nil {
-		qs.internals.joinsMap = make(map[string]struct{})
-	}
-
-	for _, field := range fields {
-		var preload Preload
-		switch v := field.(type) {
-		case string:
-			preload = Preload{
-				Path:  v,
-				Chain: strings.Split(v, "."),
-			}
-		case Preload:
-			if v.Path == "" {
-				panic("Preload: empty path in Preload")
-			}
-
-			v.Chain = strings.Split(v.Path, ".")
-			preload = v
-
-		default:
-			panic(fmt.Errorf("Preload: invalid field type %T, can be one of [string, Preload]", v))
-		}
-
-		var relatrionChain, err = attrs.WalkRelationChain(
-			qs.internals.Model.Object, true, preload.Chain,
-		)
-		if err != nil {
-			panic(fmt.Errorf("Preload: %w", err))
-		}
-
-		var preloads = make([]*Preload, 0, len(relatrionChain.Chain))
-		var curr = relatrionChain.Root
-
-		var partIdx = 0
-		var aliasList = make([]string, 0, len(relatrionChain.Chain))
-		var currModelMeta = attrs.GetModelMeta(curr.Model)
-		aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
-			currModelMeta.Definitions().TableName(), "",
-		))
-
-		curr = curr.Next
-		if curr == nil {
-			panic(fmt.Errorf("Preload: no relation chain found for %q", preload.Path))
-		}
-
-		for curr != nil {
-
-			var (
-				meta = attrs.GetModelMeta(curr.Model)
-				defs = meta.Definitions()
-			)
-
-			// create a preload path for each part of the relation chain
-
-			var subChain = relatrionChain.Chain[:partIdx+1]
-			var preloadPath = strings.Join(relatrionChain.Chain[:partIdx+1], ".")
-			var parentPath = strings.Join(relatrionChain.Chain[:partIdx], ".")
-
-			aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
-				defs.TableName(), preloadPath,
-			))
-
-			// only add new preload if the preload is not already present in the mapping
-			if _, ok := qs.internals.Preload.mapping[preloadPath]; !ok {
-				//	if partIdx < len(relatrionChain.Chain)-1 {
-				//		panic(fmt.Errorf(
-				//			"Preload: all previous preloads for path %q must be included in the QuerySet %v",
-				//			preload.Path, subChain,
-				//		))
-				//	}
-
-				var loadDef = &Preload{
-					FieldName:  relatrionChain.Chain[partIdx],
-					Path:       preloadPath,
-					ParentPath: parentPath,
-					Chain:      subChain,
-					Rel:        curr.Prev.FieldRel,
-					Model:      curr.Model,
-					Field:      curr.Prev.Field,
-					Primary:    defs.Primary(),
-				}
-
-				// Set the QuerySet for the preload
-				if partIdx == len(relatrionChain.Chain)-1 {
-					loadDef.QuerySet = preload.QuerySet
-				}
-
-				qs.internals.Preload.mapping[preloadPath] = loadDef
-				preloads = append(
-					preloads, loadDef,
-				)
-
-				var joins []JoinDef
-				if _, joins, err = qs.addRelationChainPart(curr.Prev, curr, aliasList, WalkFlagNone); err != nil {
-					panic(fmt.Errorf("Preload: %w", err))
-				}
-
-				for _, join := range joins {
-					var key = join.JoinDefCondition.String()
-					if _, ok := qs.internals.joinsMap[key]; !ok {
-						qs.internals.Joins = append(qs.internals.Joins, join)
-						qs.internals.joinsMap[key] = struct{}{}
-					}
-				}
-
-			}
-
-			curr = curr.Next
-			partIdx++
-		}
-
-		qs.internals.Preload.Preloads = append(
-			qs.internals.Preload.Preloads, preloads...,
-		)
-
-		slices.SortStableFunc(qs.internals.Preload.Preloads, func(a, b *Preload) int {
-			return strings.Compare(a.Path, b.Path)
-		})
-
-	}
-
-	return qs
-}
-
 // Filter is used to filter the results of a query.
 //
 // It takes a key and a list of values as arguments and returns a new QuerySet with the filtered results.
@@ -1759,7 +1862,7 @@ func (qs *QuerySet[T]) compileOrderBy(fields ...string) []OrderBy {
 		}
 
 		var res, err = qs.WalkField(
-			ord, nil, WalkFlagAddJoins,
+			ord, OptFlags(WalkFlagAddJoins),
 		)
 		if err != nil {
 			panic(err)

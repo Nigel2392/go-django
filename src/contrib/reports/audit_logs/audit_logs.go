@@ -68,10 +68,6 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 		}
 	}
 
-	logger.Errorf("Logging new entry of type %q with level %s, context key %q, data: %v",
-		entryType, level, context_user_key, ctx.Value(context_user_key),
-	)
-
 	var user, _ = ctx.Value(context_user_key).(users.User)
 	var entry = models.Setup(&Entry{
 		Typ:  drivers.String(entryType),

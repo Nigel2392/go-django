@@ -41,10 +41,16 @@
         "column": "id",
         "relation": {
           "type": "ManyToMany",
-          "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.Permission",
+          "model": {
+            "content_type": "github.com/Nigel2392/go-django/src/contrib/auth/users.Permission",
+            "lazy_model_key": ""
+          },
           "field": "ID",
           "through": {
-            "model": "github.com/Nigel2392/go-django/src/contrib/auth/users.GroupPermission",
+            "model": {
+              "content_type": "github.com/Nigel2392/go-django/src/contrib/auth/users.GroupPermission",
+              "lazy_model_key": ""
+            },
             "source_field": "GroupID",
             "target_field": "PermissionID"
           }

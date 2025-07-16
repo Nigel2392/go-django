@@ -1,13 +1,11 @@
 package blog
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"net/http"
 	"time"
 
-	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
@@ -95,14 +93,14 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 			ParentPageTypes: []string{
 				"github.com/Nigel2392/go-django-example/src/blog.BlogPage",
 			},
-			GetForID: func(ctx context.Context, ref *pages.PageNode, id int64) (pages.Page, error) {
-				var row, err = queries.GetQuerySet(&BlogPage{}).Filter("PageID", id).First()
-				if err != nil {
-					return nil, errors.Wrapf(err, "failed to get blog page with ID %d", id)
-				}
-				*row.Object.PageNode = *ref
-				return row.Object, nil
-			},
+			//GetForID: func(ctx context.Context, ref *pages.PageNode, id int64) (pages.Page, error) {
+			//	var row, err = queries.GetQuerySet(&BlogPage{}).Filter("PageID", id).First()
+			//	if err != nil {
+			//		return nil, errors.Wrapf(err, "failed to get blog page with ID %d", id)
+			//	}
+			//	*row.Object.PageNode = *ref
+			//	return row.Object, nil
+			//},
 		})
 		blog = appconfig
 		return nil

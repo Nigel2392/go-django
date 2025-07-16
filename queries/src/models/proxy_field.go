@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -32,6 +33,7 @@ type ProxyFieldConfig struct {
 	Proxy            attrs.Definer
 	ContentTypeField string
 	TargetField      string
+	AllowEdit        bool
 }
 
 func newProxyField(model *Model, definer attrs.Definer, niceName string, internalName string, cnf *ProxyFieldConfig) *proxyField {
@@ -66,6 +68,13 @@ func (f *proxyField) ForSelectAll() bool {
 
 func (f *proxyField) AllowReverseRelation() bool {
 	return false
+}
+
+func (f *proxyField) AllowDBEdit() bool {
+	if f.cnf == nil {
+		return false
+	}
+	return f.cnf.AllowEdit
 }
 
 func (f *proxyField) CanMigrate() bool {
@@ -165,6 +174,12 @@ func (f *proxyField) GenerateTargetClause(qs *queries.QuerySet[attrs.Definer], i
 }
 
 func (f *proxyField) Save(ctx context.Context, parent attrs.Definer) error {
+	if !f.AllowDBEdit() {
+		return errors.NotImplemented.Wrapf(
+			"cannot save proxy field %s in model %T: field is read-only",
+			f.Name(), f.obj,
+		)
+	}
 
 	var proxyObject = f.GetValue()
 	if proxyObject == nil {

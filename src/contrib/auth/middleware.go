@@ -3,6 +3,7 @@ package auth
 import (
 	"net/http"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
@@ -50,7 +51,10 @@ func UserFromRequest(r *http.Request) *User {
 	var userRow, err = GetUserQuerySet().
 		WithContext(r.Context()).
 		Select("*").
-		Preload("Permissions", "Groups", "Groups.Permissions").
+		Preload(
+			queries.NoJoins("Permissions"),
+			queries.NoJoins("Groups.Permissions"),
+		).
 		Filter("ID", uidInt).
 		Get()
 	if err != nil {

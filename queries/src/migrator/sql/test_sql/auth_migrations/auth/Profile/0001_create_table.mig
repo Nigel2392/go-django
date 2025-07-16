@@ -1,6 +1,6 @@
 {
-  "dependencies": [
-    "auth:User:0001_create_table.mig"
+  "lazy_dependencies": [
+    "users.User"
   ],
   "table": {
     "table": "profile",
@@ -22,7 +22,10 @@
         "use_in_db": true,
         "relation": {
           "type": "OneToOne",
-          "model": "github.com/Nigel2392/go-django/queries/src/migrator/sql/test_sql.User"
+          "model": {
+            "content_type": null,
+            "lazy_model_key": "users.User"
+          }
         },
         "go_type": "int64",
         "db_type": "INT",

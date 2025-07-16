@@ -219,7 +219,7 @@ func TestUserAddGroups(t *testing.T) {
 		userRows, err := auth.GetUserQuerySet().
 			WithContext(ctx).
 			Select("*").
-			Preload("Permissions", "Groups", "Groups.Permissions", "Groups.Permissions.GroupPermissions").
+			Preload("Permissions", "Groups.Permissions.GroupPermissions").
 			Filter("ID__in", append(userList, user)).
 			OrderBy("ID", "Groups.Name", "Permissions.Name").
 			All()
@@ -523,7 +523,7 @@ func TestUserHasPermissions(t *testing.T) {
 	t.Run("WithPreload", func(t *testing.T) {
 		userRow, err := auth.GetUserQuerySet().
 			WithContext(ctx).
-			Preload("Permissions", "Groups", "Groups.Permissions").
+			Preload("Permissions", "Groups.Permissions").
 			Filter("ID", user.ID).
 			First()
 		if err != nil {

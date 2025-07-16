@@ -43,11 +43,11 @@ func (l *Letter) FieldDefs() attrs.Definitions {
 }
 
 var (
-	lazyUserModel = contenttypes.NewLazyRegistry(func(ctd *contenttypes.ContentTypeDefinition) bool {
+	lazyUserModel = contenttypes.NewLazyRegistry("users.User", func(ctd *contenttypes.ContentTypeDefinition) bool {
 		_, ok := ctd.ContentObject.(authentication.User)
 		return ok
 	})
-	lazyBlogPage = contenttypes.NewLazyRegistry(func(ctd *contenttypes.ContentTypeDefinition) bool {
+	lazyBlogPage = contenttypes.NewLazyRegistry("lazyBlogPage", func(ctd *contenttypes.ContentTypeDefinition) bool {
 		_, ok := ctd.ContentObject.(*testsql.BlogPost)
 		return ok
 	})
@@ -141,4 +141,33 @@ func TestSetUser(t *testing.T) {
 			t.Fatalf("Expected Author field model to be *test_sql.User, got %T", rel.Model())
 		}
 	})
+}
+
+func TestLazyUserModelWithModelKey(t *testing.T) {
+	ctd := contenttypes.LoadModel("users.User")
+
+	if ctd == nil {
+		t.Fatal("Lazy user model should not be nil")
+	}
+
+	if reflect.TypeOf(ctd.ContentObject) != reflect.TypeOf(&testsql.User{}) {
+		t.Fatalf("Expected content object type to be *test_sql.User, got %T", ctd.ContentObject)
+	}
+
+	var userString = lazyUserModel.LoadString()
+	if userString != "test_sql.User" {
+		t.Fatalf("Expected user model string to be 'test_sql.User', got '%s'", userString)
+	}
+}
+
+func TestLazyBlogPageWithModelKey(t *testing.T) {
+	ctd := contenttypes.LoadModel("lazyBlogPage", "test_sql.BlogPost")
+
+	if ctd == nil {
+		t.Fatal("Lazy blog page should not be nil")
+	}
+
+	if reflect.TypeOf(ctd.ContentObject) != reflect.TypeOf(&testsql.BlogPost{}) {
+		t.Fatalf("Expected content object type to be *test_sql.BlogPost, got %T", ctd.ContentObject)
+	}
 }

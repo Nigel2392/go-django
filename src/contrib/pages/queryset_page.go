@@ -71,7 +71,7 @@ func (qs *SpecificPageQuerySet) Unpublished() *SpecificPageQuerySet {
 
 func (qs *SpecificPageQuerySet) Types(types ...any) *SpecificPageQuerySet {
 	qs = qs.Clone()
-	qs.WrappedQuerySet.BaseQuerySet = qs.WrappedQuerySet.Base().Types()
+	qs.WrappedQuerySet.BaseQuerySet = qs.WrappedQuerySet.Base().Types(types...)
 	return qs
 }
 
@@ -271,4 +271,82 @@ func (qs *SpecificPageQuerySet) First() (*queries.Row[Page], error) {
 func (qs *SpecificPageQuerySet) Last() (*queries.Row[Page], error) {
 	*qs = *qs.Reverse()
 	return qs.First()
+}
+
+// AddRoot adds a root page to the queryset.
+//
+// It is a wrapper around AddRoots that takes a single page.
+func (qs *SpecificPageQuerySet) AddRoot(page Page) error {
+	return qs.AddRoots(page)
+}
+
+// AddRoots adds multiple root pages to the queryset.
+//
+// It does so by creating PageNode objects for each page,
+// and then passing it to the [PageQuerySet]'s AddRoots method.
+func (qs *SpecificPageQuerySet) AddRoots(pages ...Page) error {
+	var nodes = make([]*PageNode, 0, len(pages))
+	for _, page := range pages {
+		if page == nil {
+			continue
+		}
+
+		var node = page.Reference()
+		node.PageObject = page
+		nodes = append(nodes, node)
+	}
+
+	return qs.WrappedQuerySet.Base().AddRoots(nodes...)
+}
+
+// AddChildren adds child pages to a parent page.
+// It creates PageNode objects for each child page and
+// then passes them to the [PageQuerySet]'s AddChildren method.
+func (qs *SpecificPageQuerySet) AddChildren(parent Page, children ...Page) error {
+	var parentNode = parent.Reference()
+	parentNode.PageObject = parent
+
+	var childNodes = make([]*PageNode, 0, len(children))
+	for _, child := range children {
+		if child == nil {
+			continue
+		}
+
+		var childNode = child.Reference()
+		childNode.PageObject = child
+	}
+
+	return qs.WrappedQuerySet.Base().AddChildren(parentNode, childNodes...)
+}
+
+// DeletePage deletes a page from the queryset.
+func (qs *SpecificPageQuerySet) DeletePage(page Page) error {
+	var node = page.Reference()
+	node.PageObject = page
+	return qs.WrappedQuerySet.Base().DeleteNode(node)
+}
+
+// MovePage moves a page and all it's children under a new parent page.
+func (qs *SpecificPageQuerySet) MovePage(page Page, newParent Page) error {
+	var (
+		ref1 = page.Reference()
+		ref2 = newParent.Reference()
+	)
+	ref1.PageObject = page
+	ref2.PageObject = newParent
+	return qs.WrappedQuerySet.Base().MoveNode(ref1, ref2)
+}
+
+// PublishPage publishes the given page.
+func (qs *SpecificPageQuerySet) PublishPage(page Page) error {
+	var node = page.Reference()
+	node.PageObject = page
+	return qs.WrappedQuerySet.Base().PublishNode(node)
+}
+
+// UnpublishPage unpublishes the given page.
+func (qs *SpecificPageQuerySet) UnpublishPage(page Page, unpublishChildren bool) error {
+	var node = page.Reference()
+	node.PageObject = page
+	return qs.WrappedQuerySet.Base().UnpublishNode(node, unpublishChildren)
 }

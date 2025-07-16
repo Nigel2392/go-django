@@ -77,6 +77,10 @@ type TestPage struct {
 	Description string
 }
 
+func (t *TestPage) ID() int64 {
+	return t.Identifier
+}
+
 func (t *TestPage) FieldDefs() attrs.Definitions {
 	return attrs.Define(t,
 		attrs.Unbound("Identifier", &attrs.FieldConfig{
@@ -149,10 +153,6 @@ func nodeDiff(a, b *pages.PageNode) map[string]string { // map of name: v != v
 	return diff
 }
 
-func (t *TestPage) ID() int64 {
-	return int64(t.Identifier)
-}
-
 func (t *TestPage) Reference() *pages.PageNode {
 	return t.Ref
 }
@@ -163,6 +163,14 @@ func (t *TestPage) Save(ctx context.Context) error {
 
 type DBTestPage struct {
 	TestPage
+}
+
+func (t *DBTestPage) ID() int64 {
+	return t.Identifier
+}
+
+func (t *DBTestPage) Reference() *pages.PageNode {
+	return t.TestPage.Reference()
 }
 
 func (t *DBTestPage) Save(ctx context.Context) error {

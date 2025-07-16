@@ -95,8 +95,8 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 					return u
 				}
 				var q = url.Query()
-				q.Set("object_id", strconv.Itoa(int(row.(*PageNode).ID())))
-				q.Set("content_type", contenttypes.NewContentType(row).ShortTypeName())
+				q.Set("filters-object_id", strconv.Itoa(int(row.(*PageNode).ID())))
+				q.Set("filters-content_type", contenttypes.NewContentType(row).ShortTypeName())
 				url.RawQuery = q.Encode()
 				return url.String()
 			},

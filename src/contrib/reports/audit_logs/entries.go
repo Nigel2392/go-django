@@ -159,7 +159,7 @@ func (l *Entry) Fields(attrs.Definer) []attrs.Field {
 			Null:         true,
 			RelForeignKey: attrs.RelatedDeferred(
 				attrs.RelManyToOne,
-				users.GetUserModelString(),
+				users.MODEL_KEY,
 				"", nil,
 			),
 		}),

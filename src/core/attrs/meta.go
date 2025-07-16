@@ -199,6 +199,15 @@ func RegisterModel(model Definer) {
 		return
 	}
 
+	defer func() {
+		if r := recover(); r != nil {
+			panic(fmt.Errorf(
+				"error registering model %T: %v\n",
+				model, r,
+			))
+		}
+	}()
+
 	// set the model in the registry early - reverse relations may need it
 	// if the model is self-referential (e.g. a tree structure)
 	var meta = &modelMeta{

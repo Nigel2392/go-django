@@ -60,7 +60,7 @@ func (m *User) FieldDefs() attrs.Definitions {
 
 type Profile struct {
 	ID        int64  `attrs:"primary"`
-	User      *User  `attrs:"o2o=test_sql.User;column=user_id"`
+	User      *User  `attrs:"o2o=users.User;column=user_id"`
 	Image     string `attrs:"-"`
 	Biography string `attrs:"-"`
 	Website   string `attrs:"-"`
@@ -86,7 +86,7 @@ type Todo struct {
 	ID          int64     `attrs:"primary"`
 	Title       string    `attrs:"max_length=255"`
 	Completed   bool      `attrs:"default=false"`
-	User        *User     `attrs:"fk=test_sql.User;column=user_id"`
+	User        *User     `attrs:"fk=users.User;column=user_id"`
 	Description string    `attrs:"-"`
 	CreatedAt   time.Time `attrs:"-"`
 	UpdatedAt   time.Time `attrs:"-"`
@@ -112,7 +112,7 @@ type BlogPost struct {
 	ID        int64     `attrs:"primary"`
 	Title     string    `attrs:"max_length=255"`
 	Body      string    `attrs:"max_length=255"`
-	Author    *User     `attrs:"fk=test_sql.User;column=author_id"`
+	Author    *User     `attrs:"fk=users.User;column=author_id"`
 	Published bool      `attrs:"-"`
 	CreatedAt time.Time `attrs:"-"`
 	UpdatedAt time.Time `attrs:"-"`
@@ -133,7 +133,7 @@ func (m *BlogPost) FieldDefs() attrs.Definitions {
 type BlogComment struct {
 	ID        int64     `attrs:"primary"`
 	Body      string    `attrs:"max_length=255"`
-	Author    *User     `attrs:"fk=test_sql.User;column=author_id"`
+	Author    *User     `attrs:"fk=users.User;column=author_id"`
 	Post      *BlogPost `attrs:"fk=test_sql.BlogPost;column=post_id"`
 	CreatedAt time.Time `attrs:"-"`
 	UpdatedAt time.Time `attrs:"-"`

@@ -257,6 +257,20 @@ type Relation interface {
 	Through() Through
 }
 
+type LazyThrough interface {
+	Through
+
+	// ModelKey returns the key of the model in the lazy registry.
+	ModelKey() string
+}
+
+type LazyRelation interface {
+	Relation
+
+	// ModelKey returns the key of the model in the lazy registry.
+	ModelKey() string
+}
+
 // CanMeta is an interface for defining a model that can have meta information.
 //
 // This meta information is then stored on the ModelMeta interface.

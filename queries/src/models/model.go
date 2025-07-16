@@ -589,14 +589,15 @@ func (m *Model) Define(def attrs.Definer, flds ...any) *attrs.ObjectDefinitions 
 					Proxy:            newProxyObj,
 					ContentTypeField: proxy.cTypeFieldName,
 					TargetField:      proxy.targetFieldName,
+					AllowEdit:        true,
 				})
 
-			//	case proxy.cTypeFieldName != "" && proxy.targetFieldName != "" && proxy.controlsSaving:
-			//		field = newSavingProxyField(m, def, proxy.rootField.Name, fieldName, &ProxyFieldConfig{
-			//			Proxy:            newProxyObj,
-			//			ContentTypeField: proxy.cTypeFieldName,
-			//			TargetField:      proxy.targetFieldName,
-			//		})
+			case proxy.cTypeFieldName != "" && proxy.targetFieldName != "" && proxy.controlsSaving:
+				field = newProxyField(m, def, proxy.rootField.Name, fieldName, &ProxyFieldConfig{
+					Proxy:            newProxyObj,
+					ContentTypeField: proxy.cTypeFieldName,
+					TargetField:      proxy.targetFieldName,
+				})
 			default:
 				panic(fmt.Errorf(
 					"proxy %s in model %T does not have a content type field or target field defined",
