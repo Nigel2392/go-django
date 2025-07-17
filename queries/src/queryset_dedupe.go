@@ -419,7 +419,11 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 		))
 	}
 
+	// If the root object was already selected, it is OK
+	// to use the existing field info.
+	// set the through model for later deduping.
 	if field, ok := subQueryset.internals.fieldsMap["*"]; ok {
+		// can also do *field = *targetFieldInfo
 		field.Through = targetFieldInfo.Through
 	} else {
 		subQueryset.internals.Fields = append(
