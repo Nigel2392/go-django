@@ -257,3 +257,40 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 
 	return []any{}, false, true
 }
+
+func generateFieldInfoKey[FieldType attrs.FieldDefinition](field *FieldInfo[FieldType]) (string, error) {
+	var key string
+	switch {
+	case field.Model == nil:
+		key = "__annotations__"
+	case len(field.Fields) == 1:
+		var fld = field.Fields[0]
+		var fieldName = fld.Name()
+
+		if aliasField, ok := any(fld).(AliasField); ok {
+			var alias = aliasField.Alias()
+			if alias != "" {
+				fieldName = alias
+			}
+		}
+
+		key = fieldName
+	case len(field.Fields) > 1:
+		key = "*"
+	default:
+		return "", fmt.Errorf(
+			"field must have at least one field, got %d",
+			len(field.Fields),
+		)
+	}
+
+	if len(field.Chain) > 0 {
+		key = fmt.Sprintf(
+			"%s.%s",
+			strings.Join(field.Chain, "."),
+			key,
+		)
+	}
+
+	return key, nil
+}

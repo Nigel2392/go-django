@@ -179,14 +179,6 @@ type QuerySetInternals struct {
 	fieldsMap map[string]*FieldInfo[attrs.FieldDefinition]
 	joinsMap  map[string]struct{}
 	proxyMap  map[string]struct{}
-
-	// a pointer to the annotations field info
-	// to avoid having to create a new one every time
-	// an annotation is added
-	//
-	// this is not cloned to prevent
-	// a clone from changing the annotations
-	annotations *FieldInfo[attrs.FieldDefinition]
 }
 
 func (i *QuerySetInternals) AddJoin(join JoinDef) {
@@ -206,44 +198,40 @@ func (i *QuerySetInternals) AddField(field *FieldInfo[attrs.FieldDefinition]) {
 		i.fieldsMap = make(map[string]*FieldInfo[attrs.FieldDefinition])
 	}
 
-	var key string
-	if len(field.Fields) == 1 {
-		var fld = field.Fields[0]
-		var fieldName = fld.Name()
-
-		if aliasField, ok := fld.(AliasField); ok {
-			var alias = aliasField.Alias()
-			if alias != "" {
-				fieldName = alias
-			}
-		}
-
-		key = fieldName
-	} else {
-		if field.Model != nil {
-			key = "*"
-		} else {
-			// dont want annotations to clash with the root
-			key = "__annotations__"
-		}
-	}
-
-	if len(field.Chain) > 0 {
-		key = fmt.Sprintf(
-			"%s.%s",
-			strings.Join(field.Chain, "."),
-			key,
-		)
+	var key, err = generateFieldInfoKey(field)
+	if err != nil {
+		panic(errors.Wrapf(
+			err, "AddField: failed to generate key for field %s",
+			field.SourceField.Name(),
+		))
 	}
 
 	if info, exists := i.fieldsMap[key]; !exists {
 		i.fieldsMap[key] = field
 		i.Fields = append(i.Fields, field)
 	} else {
-		logger.Warnf(
-			"QuerySetInternals.AddField: field %q already exists in the queryset, skipping: %+v",
-			key, info,
-		)
+
+		if field.Model == nil {
+			// if the field is an annotation, it is safe to update the existing field
+			info.Fields = append(info.Fields, field.Fields...)
+			return
+		}
+
+		if field.Through != nil && info.Through == nil {
+			// if the field already exists, but the through model is not set,
+			// set the through model to the new field's through model
+			info.Through = field.Through
+
+			logger.Debugf(
+				"QuerySetInternals.AddField: field %q already exists in the queryset, updating through model: %+v",
+				key, field.Through,
+			)
+		} else {
+			logger.Warnf(
+				"QuerySetInternals.AddField: field %q already exists in the queryset, skipping: %+v",
+				key, info,
+			)
+		}
 	}
 }
 
@@ -921,7 +909,7 @@ fieldsLoop:
 					info.Fields = append(info.Fields, head.Value)
 				}
 
-				qs.internals.Fields = append(qs.internals.Fields, info)
+				qs.internals.AddField(info)
 			}
 
 			continue fieldsLoop
@@ -2171,24 +2159,23 @@ func (qs *QuerySet[T]) ExplicitSave() *QuerySet[T] {
 
 func (qs *QuerySet[T]) annotate(alias string, expr expr.Expression) {
 	// If the has not been added to the annotations, we need to add it
-	if qs.internals.annotations == nil {
-		qs.internals.annotations = &FieldInfo[attrs.FieldDefinition]{
-			Table: Table{
-				Name: qs.internals.Model.Table,
-			},
-			Fields: make([]attrs.FieldDefinition, 0, qs.internals.Annotations.Len()),
-		}
-		qs.internals.Fields = append(
-			qs.internals.Fields, qs.internals.annotations,
-		)
-	}
+	//if qs.internals.annotations == nil {
+	//	qs.internals.annotations = &FieldInfo[attrs.FieldDefinition]{
+	//		Table: Table{
+	//			Name: qs.internals.Model.Table,
+	//		},
+	//		Fields: make([]attrs.FieldDefinition, 0, qs.internals.Annotations.Len()),
+	//	}
+	//	qs.internals.add
+	//}
 
 	// Add the field to the annotations
 	var field = newQueryField[any](alias, expr)
 	qs.internals.Annotations.Set(alias, field)
-	qs.internals.annotations.Fields = append(
-		qs.internals.annotations.Fields, field,
-	)
+	qs.internals.AddField(&FieldInfo[attrs.FieldDefinition]{
+		Table:  Table{Name: qs.internals.Model.Table},
+		Fields: []attrs.FieldDefinition{field},
+	})
 }
 
 // Annotate is used to add annotations to the results of a query.
