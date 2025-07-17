@@ -223,10 +223,14 @@ func (i *QuerySetInternals) AddField(field *FieldInfo[attrs.FieldDefinition]) {
 			key = fieldName
 		}
 	} else {
-		if len(field.Chain) > 0 {
-			key = fmt.Sprintf("%s.*", strings.Join(field.Chain, "."))
+		if field.Model != nil {
+			if len(field.Chain) > 0 {
+				key = fmt.Sprintf("%s.*", strings.Join(field.Chain, "."))
+			} else {
+				key = "*"
+			}
 		} else {
-			key = "*"
+			key = "__annotations__"
 		}
 	}
 
@@ -1475,6 +1479,7 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 
 			// only add new preload if the preload is not already present in the mapping
 			if _, ok := qs.internals.Preload.mapping[preloadPath]; !ok {
+
 				var loadDef = &Preload{
 					FieldName:  relatrionChain.Chain[partIdx],
 					Path:       preloadPath,
