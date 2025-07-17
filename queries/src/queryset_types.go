@@ -279,7 +279,7 @@ func generateFieldInfoKey[FieldType attrs.FieldDefinition](field *FieldInfo[Fiel
 		key = "*"
 	default:
 		return "", fmt.Errorf(
-			"field must have at least one field, got %d",
+			"FieldInfo must have at least one field, got %d",
 			len(field.Fields),
 		)
 	}
