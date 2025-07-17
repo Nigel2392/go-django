@@ -210,6 +210,7 @@ func (i *QuerySetInternals) AddField(field *FieldInfo[attrs.FieldDefinition]) {
 	if len(field.Fields) == 1 {
 		var fld = field.Fields[0]
 		var fieldName = fld.Name()
+
 		if aliasField, ok := fld.(AliasField); ok {
 			var alias = aliasField.Alias()
 			if alias != "" {
@@ -217,21 +218,22 @@ func (i *QuerySetInternals) AddField(field *FieldInfo[attrs.FieldDefinition]) {
 			}
 		}
 
-		if len(field.Chain) > 0 {
-			key = fmt.Sprintf("%s.%s", strings.Join(field.Chain, "."), fieldName)
-		} else {
-			key = fieldName
-		}
+		key = fieldName
 	} else {
 		if field.Model != nil {
-			if len(field.Chain) > 0 {
-				key = fmt.Sprintf("%s.*", strings.Join(field.Chain, "."))
-			} else {
-				key = "*"
-			}
+			key = "*"
 		} else {
+			// dont want annotations to clash with the root
 			key = "__annotations__"
 		}
+	}
+
+	if len(field.Chain) > 0 {
+		key = fmt.Sprintf(
+			"%s.%s",
+			strings.Join(field.Chain, "."),
+			key,
+		)
 	}
 
 	if info, exists := i.fieldsMap[key]; !exists {
