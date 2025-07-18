@@ -19,5 +19,14 @@ jobs:
       with:
         go-version: '1.22'
 
-    - name: Build
+    - name: Build ./src/...
       run: go build -v --tags="testing_auth test" ./src/...
+
+    - name: Build ./examples/todoapp
+      run: go build -v ./examples/todoapp
+    
+    - name: Build ./examples/blogapp
+      run: go build -v ./examples/blogapp
+
+    - name: Build ./examples/openauth2app
+      run: go build -v ./examples/openauth2app
