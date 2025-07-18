@@ -57,7 +57,7 @@ func main() {
 			django.APPVAR_HOST:          "127.0.0.1",
 			django.APPVAR_PORT:          "8080",
 			django.APPVAR_DATABASE:      db,
-			django.APPVAR_RECOVERER:     false,
+			// django.APPVAR_RECOVERER:     false,
 
 			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
 			migrator.APPVAR_MIGRATION_DIR: "./.private/todoapp/migrations",
@@ -113,6 +113,9 @@ func main() {
 	// Username: 	admin
 	// Email: 		admin@localhost
 	// Password: 	Administrator123!
+	//
+	// You can log in to the admin interface at
+	// http://127.0.0.1:8080/admin/login/
 	var user = &auth.User{}
 	var e, _ = mail.ParseAddress("admin@localhost")
 	user.Email = (*drivers.Email)(e)
