@@ -1,0 +1,19 @@
+{{ define "base" }}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+        {{ block "extra_css" . }}{{ end }}
+
+        <title>{{ block "title" . }}{{ end }}</title>
+    </head>
+    <body>
+
+        {{ block "content" . }}{{ end }}
+
+        {{ block "extra_js" . }}{{ end }}
+    </body>
+</html>
+{{ end }}
