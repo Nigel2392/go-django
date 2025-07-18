@@ -1,8 +1,8 @@
 # Writing Queries
 
-This guide covers advanced techniques for writing complex queries using the `go-django-queries` package.
+This guide covers practical techniques for writing queries using the `go-django-queries` package.
 
-Building on the [QuerySet Reference](./queryset.md), this document explores practical patterns and advanced use cases for constructing sophisticated database queries.
+Building on the [QuerySet Reference](./queryset.md), this document explores patterns for constructing database queries based on actual usage patterns from the test suite.
 
 ---
 
@@ -34,9 +34,8 @@ Use method chaining for more readable query construction:
 
 ```go
 users, err := queries.GetQuerySet(&User{}).
-    Select("*", "Profile.*").
     Filter("IsActive", true).
-    Filter("Profile.Country", "US").
+    Filter("Email__contains", "@example.com").
     OrderBy("-CreatedAt").
     Limit(20).
     All()
@@ -47,7 +46,364 @@ users, err := queries.GetQuerySet(&User{}).
 Build queries dynamically based on conditions:
 
 ```go
-func GetUsersWithFilters(country string, minAge int, orderBy string) ([]User, error) {
+func GetUsersWithFilters(country string, minAge int, orderBy string) ([]*User, error) {
+    qs := queries.GetQuerySet(&User{})
+    
+    if country != "" {
+        qs = qs.Filter("Country", country)
+    }
+    
+    if minAge > 0 {
+        qs = qs.Filter("Age__gte", minAge)
+    }
+    
+    if orderBy != "" {
+        qs = qs.OrderBy(orderBy)
+    }
+    
+    return qs.All()
+}
+```
+
+---
+
+## 🔍 Expression-Based Filtering
+
+### Using Q Expressions
+
+Use `expr.Q()` for complex queries:
+
+```go
+// Simple Q expression
+users, err := queries.GetQuerySet(&User{}).
+    Filter(expr.Q("IsActive", true)).
+    All()
+
+// Complex filtering with nested conditions
+users, err := queries.GetQuerySet(&User{}).
+    Filter(expr.Q("Age__gte", 18)).
+    Filter(expr.Q("Country", "US")).
+    All()
+```
+
+### Logical Operators
+
+Use explicit logical operators for complex conditions:
+
+```go
+// OR conditions - use explicit expr.Or()
+users, err := queries.GetQuerySet(&User{}).
+    Filter(expr.Or(
+        expr.Q("Country", "US"),
+        expr.Q("Country", "CA"),
+    )).
+    All()
+
+// AND conditions - use explicit expr.And()
+users, err := queries.GetQuerySet(&User{}).
+    Filter(expr.And(
+        expr.Q("IsActive", true),
+        expr.Q("Age__gte", 18),
+    )).
+    All()
+
+// Complex nested conditions
+users, err := queries.GetQuerySet(&User{}).
+    Filter(expr.And(
+        expr.Q("IsActive", true),
+        expr.Or(
+            expr.Q("Role", "admin"),
+            expr.Q("Role", "moderator"),
+        ),
+    )).
+    All()
+```
+
+### Field Expressions
+
+Use field expressions for comparisons between fields:
+
+```go
+// Compare fields using expr.Expr
+users, err := queries.GetQuerySet(&User{}).
+    Filter(expr.Expr("CreatedAt", expr.LOOKUP_LT, "UpdatedAt")).
+    All()
+
+// Bitwise operations
+pages, err := queries.GetQuerySet(&Page{}).
+    Filter(expr.Expr("StatusFlags", expr.LOOKUP_BITAND, StatusFlagPublished)).
+    All()
+```
+
+---
+
+## 📊 Aggregations and Annotations
+
+### Basic Aggregations
+
+Use aggregation functions for calculations:
+
+```go
+// Count records
+count, err := queries.GetQuerySet(&User{}).
+    Filter("IsActive", true).
+    Count()
+
+// Aggregate specific fields
+avgAge, err := queries.GetQuerySet(&User{}).
+    Filter("IsActive", true).
+    Aggregate("Age", "avg")
+```
+
+### Annotations
+
+Add computed fields to your queries:
+
+```go
+// Annotate with count
+users, err := queries.GetQuerySet(&User{}).
+    Annotate("PostCount", expr.Count("ID")).
+    All()
+
+// Access annotated fields
+for _, user := range users {
+    fmt.Printf("User: %s, Posts: %d\n", user.Name, user.PostCount)
+}
+```
+
+### Case Expressions
+
+Use case expressions for conditional logic:
+
+```go
+// Simple case expression
+users, err := queries.GetQuerySet(&User{}).
+    Annotate("UserType", 
+        expr.Case(
+            expr.When(expr.Q("IsAdmin", true), "Admin"),
+            expr.When(expr.Q("IsModerator", true), "Moderator"),
+            expr.Value("Regular"),
+        ),
+    ).
+    All()
+```
+
+---
+
+## 🔧 Advanced Query Techniques
+
+### Raw SQL Expressions
+
+Use raw SQL for complex operations:
+
+```go
+// Raw SQL expression
+users, err := queries.GetQuerySet(&User{}).
+    Filter(expr.Raw("AGE > ?", 18)).
+    All()
+
+// Raw field expression
+users, err := queries.GetQuerySet(&User{}).
+    Update(&User{}, 
+        expr.F("![UpdatedAt] = CURRENT_TIMESTAMP"),
+    )
+```
+
+### Subqueries
+
+Use subqueries for complex filtering:
+
+```go
+// Subquery for filtering
+activeUsers, err := queries.GetQuerySet(&User{}).
+    Filter("ID", queries.Subquery(
+        queries.GetQuerySet(&Session{}).
+            Filter("IsActive", true).
+            Values("UserID"),
+    )).
+    All()
+```
+
+### Exists Queries
+
+Check for existence of related records:
+
+```go
+// Users with posts
+usersWithPosts, err := queries.GetQuerySet(&User{}).
+    Filter(expr.Exists(
+        queries.GetQuerySet(&Post{}).
+            Filter("Author", expr.OuterRef("ID")),
+    )).
+    All()
+```
+
+---
+
+## 🎯 Query Optimization
+
+### Select Related
+
+Always select related data to avoid N+1 queries:
+
+```go
+// Load related data in one query
+posts, err := queries.GetQuerySet(&Post{}).
+    Select("*", "Author.*", "Category.*").
+    All()
+```
+
+### Prefetch Related
+
+Use prefetch for reverse relationships:
+
+```go
+// Prefetch related objects
+users, err := queries.GetQuerySet(&User{}).
+    Prefetch("Posts").
+    All()
+```
+
+### Distinct
+
+Remove duplicate results:
+
+```go
+// Get unique users who have posts
+users, err := queries.GetQuerySet(&User{}).
+    Filter(expr.Q("Posts__ID__isnull", false)).
+    Distinct().
+    All()
+```
+
+### Indexes and Database Hints
+
+Use database-specific optimizations:
+
+```go
+// Use index hints (database-specific)
+users, err := queries.GetQuerySet(&User{}).
+    Filter("Email", "user@example.com").
+    Extra("USE INDEX (email_idx)").
+    All()
+```
+
+---
+
+## 🧪 Testing Strategies
+
+### Test Data Setup
+
+Create reusable test data:
+
+```go
+func setupTestData(t *testing.T) (*User, []*Post) {
+    user := &User{Name: "Test User", Email: "test@example.com"}
+    createdUser, err := queries.GetQuerySet(user).Create(user)
+    require.NoError(t, err)
+    
+    posts := []*Post{
+        {Title: "Post 1", Author: createdUser},
+        {Title: "Post 2", Author: createdUser},
+    }
+    createdPosts, err := queries.GetQuerySet(&Post{}).BulkCreate(posts)
+    require.NoError(t, err)
+    
+    return createdUser, createdPosts
+}
+```
+
+### Query Testing
+
+Test complex queries thoroughly:
+
+```go
+func TestComplexQuery(t *testing.T) {
+    user, posts := setupTestData(t)
+    
+    // Test complex filtering
+    results, err := queries.GetQuerySet(&Post{}).
+        Filter(expr.And(
+            expr.Q("Author", user.ID),
+            expr.Q("Title__contains", "Post"),
+        )).
+        OrderBy("Title").
+        All()
+    
+    require.NoError(t, err)
+    assert.Len(t, results, 2)
+    assert.Equal(t, "Post 1", results[0].Title)
+}
+```
+
+### Performance Testing
+
+Test query performance:
+
+```go
+func BenchmarkComplexQuery(b *testing.B) {
+    setupTestData(b)
+    
+    b.ResetTimer()
+    for i := 0; i < b.N; i++ {
+        _, err := queries.GetQuerySet(&Post{}).
+            Select("*", "Author.*").
+            Filter("Published", true).
+            OrderBy("-CreatedAt").
+            Limit(100).
+            All()
+        if err != nil {
+            b.Fatal(err)
+        }
+    }
+}
+```
+
+---
+
+## 📚 Real-World Examples
+
+### User Management
+
+```go
+// Get active users with recent activity
+activeUsers, err := queries.GetQuerySet(&User{}).
+    Filter(expr.And(
+        expr.Q("IsActive", true),
+        expr.Q("LastLogin__gte", time.Now().AddDate(0, 0, -30)),
+    )).
+    OrderBy("-LastLogin").
+    Limit(100).
+    All()
+```
+
+### Content Management
+
+```go
+// Get published posts by category
+posts, err := queries.GetQuerySet(&Post{}).
+    Filter(expr.And(
+        expr.Q("Published", true),
+        expr.Q("Category", category),
+    )).
+    Select("*", "Author.*").
+    OrderBy("-PublishedAt").
+    All()
+```
+
+### Analytics
+
+```go
+// User engagement analytics
+stats, err := queries.GetQuerySet(&User{}).
+    Annotate("PostCount", expr.Count("Posts")).
+    Annotate("CommentCount", expr.Count("Comments")).
+    Filter(expr.Q("PostCount__gt", 0)).
+    OrderBy("-PostCount").
+    All()
+```
+
+This guide provides practical patterns for writing queries in the go-django-queries package, all based on actual usage patterns from the test suite.
     qs := queries.GetQuerySet(&User{}).Select("*", "Profile.*")
     
     if country != "" {

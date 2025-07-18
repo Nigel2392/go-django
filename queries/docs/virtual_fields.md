@@ -1,6 +1,6 @@
 # Virtual Fields
 
-This document covers virtual fields in the `go-django-queries` package, which allow you to create computed fields that are calculated at query time rather than stored in the database.
+This document covers virtual fields in the `go-django-queries` package, which allow you to create computed fields that are calculated at query time using SQL expressions.
 
 Virtual fields enable you to add dynamic, calculated values to your models without modifying your database schema.
 
@@ -11,657 +11,404 @@ Virtual fields enable you to add dynamic, calculated values to your models witho
 Virtual fields are computed fields that exist only during query execution. They are not stored in the database but are calculated on-the-fly using SQL expressions.
 
 Virtual fields are useful for:
-- Calculated values (e.g., full name from first and last name)
-- Aggregations (e.g., count of related objects)
+- Field calculations (e.g., mathematical operations)
+- String manipulations (e.g., concatenation, formatting)
 - Conditional logic (e.g., status based on multiple conditions)
-- Data transformations (e.g., formatting dates or numbers)
+- Data aggregations (e.g., counts, sums)
 
 ---
 
 ## 🏗️ Creating Virtual Fields
 
-### Basic Virtual Field
+### Basic Virtual Field with Annotations
 
-Create a virtual field using an expression:
+The most common way to create virtual fields is using annotations:
 
 ```go
-type User struct {
-    models.Model
-    ID        int
-    FirstName string
-    LastName  string
-    // FullName is not stored in database but calculated
-    FullName  string
-}
+// Add a computed field to calculate user age
+users, err := queries.GetQuerySet(&User{}).
+    Annotate("Age", expr.F("YEAR(CURRENT_DATE) - YEAR(![BirthDate])", "BirthDate")).
+    All()
 
-func (m *User) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{
-            Primary: true,
-        }),
-        attrs.NewField(m, "FirstName", nil),
-        attrs.NewField(m, "LastName", nil),
-        // Virtual field that concatenates first and last name
-        fields.NewVirtualField[string](m, &m.FullName, "FullName", 
-            expr.Concat("FirstName", expr.Value(" "), "LastName")),
-    ).WithTableName("users")
+// Access the virtual field
+for _, user := range users {
+    fmt.Printf("User: %s, Age: %d\n", user.Name, user.Age)
 }
 ```
 
-### Virtual Field with Complex Logic
+### String Concatenation
 
-Create virtual fields with more complex expressions:
+Create virtual fields that combine multiple fields:
 
 ```go
-type Order struct {
-    models.Model
-    ID          int
-    SubTotal    float64
-    TaxRate     float64
-    ShippingFee float64
-    // Virtual fields
-    TaxAmount   float64
-    Total       float64
-    Status      string
-}
+// Concatenate first and last name
+users, err := queries.GetQuerySet(&User{}).
+    Annotate("FullName", expr.CONCAT(
+        expr.Field("FirstName"),
+        expr.Value(" "),
+        expr.Field("LastName"),
+    )).
+    All()
+```
 
-func (m *Order) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{
-            Primary: true,
-        }),
-        attrs.NewField(m, "SubTotal", nil),
-        attrs.NewField(m, "TaxRate", nil),
-        attrs.NewField(m, "ShippingFee", nil),
-        // Calculate tax amount
-        fields.NewVirtualField[float64](m, &m.TaxAmount, "TaxAmount",
-            expr.Mul("SubTotal", "TaxRate")),
-        // Calculate total
-        fields.NewVirtualField[float64](m, &m.Total, "Total",
-            expr.Add("SubTotal", 
-                expr.Mul("SubTotal", "TaxRate"),
-                "ShippingFee")),
-        // Status based on conditions
-        fields.NewVirtualField[string](m, &m.Status, "Status",
-            expr.Case(
-                expr.When(expr.Q("SubTotal__gte", 1000), "Premium"),
-                expr.When(expr.Q("SubTotal__gte", 500), "Standard"),
-                expr.Default("Basic"),
-            )),
-    ).WithTableName("orders")
-}
+### Mathematical Operations
+
+Use logical expressions for calculations:
+
+```go
+// Calculate total price with tax
+products, err := queries.GetQuerySet(&Product{}).
+    Annotate("TotalPrice", 
+        expr.Logical("Price").MUL(expr.Value(1.08)),
+    ).
+    All()
+
+// Calculate discount percentage
+products, err := queries.GetQuerySet(&Product{}).
+    Annotate("DiscountPercent",
+        expr.Logical("OriginalPrice").SUB("CurrentPrice").
+        DIV("OriginalPrice").MUL(expr.Value(100)),
+    ).
+    All()
 ```
 
 ---
 
-## 🎯 Types of Virtual Fields
+## 🔍 Conditional Virtual Fields
 
-### Calculated Fields
+### Case-When Logic
 
-Perform mathematical operations on existing fields:
+Create virtual fields based on conditional logic:
 
 ```go
-// Rectangle model with calculated area
-type Rectangle struct {
-    models.Model
-    ID     int
-    Width  float64
-    Height float64
-    Area   float64 // Virtual field
-}
-
-func (m *Rectangle) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-        attrs.NewField(m, "Width", nil),
-        attrs.NewField(m, "Height", nil),
-        fields.NewVirtualField[float64](m, &m.Area, "Area",
-            expr.Mul("Width", "Height")),
-    ).WithTableName("rectangles")
-}
+// Create status field based on multiple conditions
+users, err := queries.GetQuerySet(&User{}).
+    Annotate("Status", 
+        expr.Case(
+            expr.When(expr.Q("IsActive", true), "Active"),
+            expr.When(expr.Q("IsBlocked", true), "Blocked"), 
+            expr.Value("Inactive"),
+        ),
+    ).
+    All()
 ```
 
-### String Manipulation Fields
+### Complex Conditional Logic
 
-Transform and format text fields:
-
-```go
-type Person struct {
-    models.Model
-    ID           int
-    FirstName    string
-    LastName     string
-    Email        string
-    // Virtual fields
-    DisplayName  string
-    EmailDomain  string
-    Initials     string
-}
-
-func (m *Person) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-        attrs.NewField(m, "FirstName", nil),
-        attrs.NewField(m, "LastName", nil),
-        attrs.NewField(m, "Email", nil),
-        // Full name with title
-        fields.NewVirtualField[string](m, &m.DisplayName, "DisplayName",
-            expr.Concat("FirstName", expr.Value(" "), "LastName")),
-        // Extract domain from email
-        fields.NewVirtualField[string](m, &m.EmailDomain, "EmailDomain",
-            expr.FuncSubstring("Email", 
-                expr.Add(expr.FuncPosition(expr.Value("@"), "Email"), expr.Value(1)))),
-        // Create initials
-        fields.NewVirtualField[string](m, &m.Initials, "Initials",
-            expr.Concat(
-                expr.FuncSubstring("FirstName", expr.Value(1), expr.Value(1)),
-                expr.FuncSubstring("LastName", expr.Value(1), expr.Value(1)),
-            )),
-    ).WithTableName("people")
-}
-```
-
-### Date and Time Fields
-
-Work with dates and times:
+Use nested conditions for more complex logic:
 
 ```go
-type Event struct {
-    models.Model
-    ID          int
-    Title       string
-    StartDate   time.Time
-    EndDate     time.Time
-    // Virtual fields
-    Duration    int    // In days
-    IsUpcoming  bool
-    MonthYear   string
-}
-
-func (m *Event) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-        attrs.NewField(m, "Title", nil),
-        attrs.NewField(m, "StartDate", nil),
-        attrs.NewField(m, "EndDate", nil),
-        // Calculate duration in days
-        fields.NewVirtualField[int](m, &m.Duration, "Duration",
-            expr.FuncExtract("day", expr.Sub("EndDate", "StartDate"))),
-        // Check if event is upcoming
-        fields.NewVirtualField[bool](m, &m.IsUpcoming, "IsUpcoming",
-            expr.Gt("StartDate", expr.Now())),
-        // Format month and year
-        fields.NewVirtualField[string](m, &m.MonthYear, "MonthYear",
-            expr.FuncToChar("StartDate", expr.Value("Mon YYYY"))),
-    ).WithTableName("events")
-}
+// User classification based on activity
+users, err := queries.GetQuerySet(&User{}).
+    Annotate("UserType",
+        expr.Case(
+            expr.When(expr.Q("IsAdmin", true), "Administrator"),
+            expr.When(expr.And(
+                expr.Q("PostCount__gte", 10),
+                expr.Q("IsActive", true),
+            ), "Power User"),
+            expr.When(expr.Q("PostCount__gte", 5), "Regular User"),
+            expr.Value("New User"),
+        ),
+    ).
+    All()
 ```
 
 ---
 
 ## 📊 Aggregation Virtual Fields
 
-### Count Relations
+### Count Aggregations
 
-Count related objects:
-
-```go
-type User struct {
-    models.Model
-    ID        int
-    Name      string
-    Email     string
-    // Virtual aggregation fields
-    TodoCount int
-    CompletedTodoCount int
-}
-
-func (m *User) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-        attrs.NewField(m, "Name", nil),
-        attrs.NewField(m, "Email", nil),
-        // Count all todos
-        fields.NewVirtualField[int](m, &m.TodoCount, "TodoCount",
-            expr.Count("TodoSet.ID")),
-        // Count completed todos
-        fields.NewVirtualField[int](m, &m.CompletedTodoCount, "CompletedTodoCount",
-            expr.Count("TodoSet.ID", expr.Q("TodoSet.Done", true))),
-    ).WithTableName("users")
-}
-```
-
-### Sum and Average Fields
-
-Calculate sums and averages:
+Use count functions for aggregating related data:
 
 ```go
-type Customer struct {
-    models.Model
-    ID               int
-    Name             string
-    // Virtual aggregation fields
-    TotalOrders      int
-    TotalSpent       float64
-    AverageOrderValue float64
-}
-
-func (m *Customer) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-        attrs.NewField(m, "Name", nil),
-        // Count total orders
-        fields.NewVirtualField[int](m, &m.TotalOrders, "TotalOrders",
-            expr.Count("OrderSet.ID")),
-        // Sum total amount spent
-        fields.NewVirtualField[float64](m, &m.TotalSpent, "TotalSpent",
-            expr.Sum("OrderSet.Total")),
-        // Calculate average order value
-        fields.NewVirtualField[float64](m, &m.AverageOrderValue, "AverageOrderValue",
-            expr.Avg("OrderSet.Total")),
-    ).WithTableName("customers")
-}
-```
-
----
-
-## 🔄 Conditional Virtual Fields
-
-### Case-When Logic
-
-Create virtual fields with conditional logic:
-
-```go
-type Employee struct {
-    models.Model
-    ID          int
-    Name        string
-    Salary      float64
-    Department  string
-    YearsOfService int
-    // Virtual fields
-    SalaryGrade string
-    Seniority   string
-    BonusRate   float64
-}
-
-func (m *Employee) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-        attrs.NewField(m, "Name", nil),
-        attrs.NewField(m, "Salary", nil),
-        attrs.NewField(m, "Department", nil),
-        attrs.NewField(m, "YearsOfService", nil),
-        // Salary grade based on salary range
-        fields.NewVirtualField[string](m, &m.SalaryGrade, "SalaryGrade",
-            expr.Case(
-                expr.When(expr.Q("Salary__gte", 100000), "A"),
-                expr.When(expr.Q("Salary__gte", 80000), "B"),
-                expr.When(expr.Q("Salary__gte", 60000), "C"),
-                expr.Default("D"),
-            )),
-        // Seniority based on years of service
-        fields.NewVirtualField[string](m, &m.Seniority, "Seniority",
-            expr.Case(
-                expr.When(expr.Q("YearsOfService__gte", 10), "Senior"),
-                expr.When(expr.Q("YearsOfService__gte", 5), "Mid-Level"),
-                expr.When(expr.Q("YearsOfService__gte", 2), "Junior"),
-                expr.Default("Entry-Level"),
-            )),
-        // Bonus rate based on department and seniority
-        fields.NewVirtualField[float64](m, &m.BonusRate, "BonusRate",
-            expr.Case(
-                expr.When(expr.Q("Department", "Sales").And(expr.Q("YearsOfService__gte", 5)), 0.15),
-                expr.When(expr.Q("Department", "Sales"), 0.10),
-                expr.When(expr.Q("Department", "Engineering").And(expr.Q("YearsOfService__gte", 3)), 0.12),
-                expr.When(expr.Q("Department", "Engineering"), 0.08),
-                expr.Default(0.05),
-            )),
-    ).WithTableName("employees")
-}
-```
-
----
-
-## 🏃 Using Virtual Fields in Queries
-
-### Select Virtual Fields
-
-Include virtual fields in your queries:
-
-```go
-// Query with virtual fields
+// Count related objects
 users, err := queries.GetQuerySet(&User{}).
-    Select("*", "FullName", "TodoCount").
+    Annotate("PostCount", expr.Count("ID")).
     All()
 
-// Access virtual field values
-for _, row := range users {
-    user := row.Value()
-    fmt.Printf("User: %s, Todos: %d\n", user.FullName, user.TodoCount)
-}
-```
-
-### Filter by Virtual Fields
-
-Filter results using virtual fields:
-
-```go
-// Find users with many todos
-activeUsers, err := queries.GetQuerySet(&User{}).
-    Select("*", "TodoCount").
-    Filter("TodoCount__gte", 10).
-    All()
-
-// Find premium orders
-premiumOrders, err := queries.GetQuerySet(&Order{}).
-    Select("*", "Status", "Total").
-    Filter("Status", "Premium").
-    All()
-```
-
-### Order by Virtual Fields
-
-Order results by virtual field values:
-
-```go
-// Order users by todo count
+// Conditional counting using case expressions
 users, err := queries.GetQuerySet(&User{}).
-    Select("*", "TodoCount").
-    OrderBy("-TodoCount").
-    All()
-
-// Order events by duration
-events, err := queries.GetQuerySet(&Event{}).
-    Select("*", "Duration").
-    OrderBy("Duration").
-    All()
-```
-
----
-
-## 🔍 Advanced Virtual Field Patterns
-
-### Nested Virtual Fields
-
-Create virtual fields that reference other virtual fields:
-
-```go
-type Product struct {
-    models.Model
-    ID          int
-    Name        string
-    Price       float64
-    Cost        float64
-    // Virtual fields
-    Margin      float64
-    MarginPct   float64
-    ProfitLevel string
-}
-
-func (m *Product) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-        attrs.NewField(m, "Name", nil),
-        attrs.NewField(m, "Price", nil),
-        attrs.NewField(m, "Cost", nil),
-        // Calculate margin
-        fields.NewVirtualField[float64](m, &m.Margin, "Margin",
-            expr.Sub("Price", "Cost")),
-        // Calculate margin percentage
-        fields.NewVirtualField[float64](m, &m.MarginPct, "MarginPct",
-            expr.Mul(
-                expr.Div(expr.Sub("Price", "Cost"), "Price"),
-                expr.Value(100),
-            )),
-        // Profit level based on margin percentage
-        fields.NewVirtualField[string](m, &m.ProfitLevel, "ProfitLevel",
+    Annotate("PublishedPostCount",
+        expr.Count(
             expr.Case(
-                expr.When(expr.Gt(
-                    expr.Div(expr.Sub("Price", "Cost"), "Price"), 
-                    expr.Value(0.5),
-                ), "High"),
-                expr.When(expr.Gt(
-                    expr.Div(expr.Sub("Price", "Cost"), "Price"), 
-                    expr.Value(0.3),
-                ), "Medium"),
-                expr.Default("Low"),
-            )),
-    ).WithTableName("products")
-}
+                expr.When(expr.Q("Posts__Published", true), expr.Field("Posts__ID")),
+                expr.Value(nil),
+            ),
+        ),
+    ).
+    All()
 ```
 
-### Virtual Fields with Subqueries
+### Other Aggregations
 
-Use subqueries in virtual fields:
+Use various aggregation functions:
 
 ```go
-type Category struct {
-    models.Model
-    ID              int
-    Name            string
-    // Virtual fields using subqueries
-    ProductCount    int
-    AvgProductPrice float64
-    TopProductName  string
-}
-
-func (m *Category) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-        attrs.NewField(m, "Name", nil),
-        // Count products in category
-        fields.NewVirtualField[int](m, &m.ProductCount, "ProductCount",
-            expr.Count("ProductSet.ID")),
-        // Average product price
-        fields.NewVirtualField[float64](m, &m.AvgProductPrice, "AvgProductPrice",
-            expr.Avg("ProductSet.Price")),
-        // Name of most expensive product
-        fields.NewVirtualField[string](m, &m.TopProductName, "TopProductName",
-            expr.Subquery(
-                queries.GetQuerySet(&Product{}).
-                    Select("Name").
-                    Filter("Category", expr.OuterRef("ID")).
-                    OrderBy("-Price").
-                    Limit(1),
-            )),
-    ).WithTableName("categories")
-}
+// Sum, average, min, max
+orders, err := queries.GetQuerySet(&Order{}).
+    Annotate("TotalAmount", expr.Sum("OrderItems__Price")).
+    Annotate("AverageItemPrice", expr.Avg("OrderItems__Price")).
+    Annotate("MinItemPrice", expr.Min("OrderItems__Price")).
+    Annotate("MaxItemPrice", expr.Max("OrderItems__Price")).
+    All()
 ```
 
 ---
 
-## 🔧 Custom Virtual Field Expressions
+## 🗓️ Date and Time Virtual Fields
 
-### Creating Custom Expressions
+### Date Functions
 
-Build custom expressions for virtual fields:
+Create virtual fields for date operations:
 
 ```go
-// Custom distance calculation expression
-type DistanceExpression struct {
-    fromLat, fromLng, toLat, toLng float64
-}
+// Extract parts of dates
+posts, err := queries.GetQuerySet(&Post{}).
+    Annotate("Year", expr.F("YEAR(![CreatedAt])", "CreatedAt")).
+    Annotate("Month", expr.F("MONTH(![CreatedAt])", "CreatedAt")).
+    Annotate("DayOfWeek", expr.F("DAYOFWEEK(![CreatedAt])", "CreatedAt")).
+    All()
+```
 
-func (d *DistanceExpression) SQL(inf *expr.ExpressionInfo) (string, []interface{}) {
-    return `6371 * acos(
-        cos(radians(?)) * cos(radians(?)) * 
-        cos(radians(?) - radians(?)) + 
-        sin(radians(?)) * sin(radians(?))
-    )`, []interface{}{d.fromLat, d.toLat, d.toLng, d.fromLng, d.fromLat, d.toLat}
-}
+### Date Calculations
 
-func (d *DistanceExpression) Clone() expr.Expression {
-    return &DistanceExpression{
-        fromLat: d.fromLat,
-        fromLng: d.fromLng,
-        toLat:   d.toLat,
-        toLng:   d.toLng,
-    }
-}
+Calculate time differences:
 
-func (d *DistanceExpression) Resolve(inf *expr.ExpressionInfo) expr.Expression {
-    return d
-}
+```go
+// Days since creation
+posts, err := queries.GetQuerySet(&Post{}).
+    Annotate("DaysOld", 
+        expr.F("DATEDIFF(CURRENT_DATE, ![CreatedAt])", "CreatedAt"),
+    ).
+    All()
+```
 
-// Use in virtual field
-type Location struct {
-    models.Model
-    ID            int
-    Name          string
-    Latitude      float64
-    Longitude     float64
-    // Virtual field for distance to specific point
-    DistanceToCenter float64
-}
+---
 
-func (m *Location) FieldDefs() attrs.Definitions {
-    centerLat, centerLng := 40.7128, -74.0060 // NYC coordinates
-    
-    return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
-        attrs.NewField(m, "Name", nil),
-        attrs.NewField(m, "Latitude", nil),
-        attrs.NewField(m, "Longitude", nil),
-        fields.NewVirtualField[float64](m, &m.DistanceToCenter, "DistanceToCenter",
-            &DistanceExpression{
-                fromLat: centerLat,
-                fromLng: centerLng,
-                toLat:   0, // Will be replaced with actual latitude
-                toLng:   0, // Will be replaced with actual longitude
-            }),
-    ).WithTableName("locations")
-}
+## 🔧 Advanced Virtual Field Techniques
+
+### Raw SQL Expressions
+
+Use raw SQL for complex calculations:
+
+```go
+// Complex string manipulation
+users, err := queries.GetQuerySet(&User{}).
+    Annotate("InitializedName",
+        expr.Raw("CONCAT(LEFT(first_name, 1), '. ', last_name)"),
+    ).
+    All()
+```
+
+### Logical Expressions
+
+Use logical expressions for field operations:
+
+```go
+// Update with calculated values
+updated, err := queries.GetQuerySet(&Product{}).
+    Select("Price", "DiscountRate").
+    Update(&Product{},
+        expr.As("FinalPrice", 
+            expr.Logical("Price").MUL(
+                expr.Logical(expr.Value(1)).SUB("DiscountRate"),
+            ),
+        ),
+    )
 ```
 
 ---
 
 ## 🎯 Performance Considerations
 
-### Virtual Field Performance
+### Indexing Virtual Fields
 
-Virtual fields are calculated at query time, so consider:
+While virtual fields aren't stored, consider indexing the underlying fields:
 
-1. **Database Load**: Complex virtual fields increase query complexity
-2. **Indexing**: Virtual fields cannot be indexed directly
-3. **Caching**: Consider caching results for expensive calculations
+```sql
+-- Index fields used in virtual field calculations
+CREATE INDEX idx_users_birth_date ON users(birth_date);
+CREATE INDEX idx_posts_created_at ON posts(created_at);
+```
 
-### Optimization Strategies
+### Query Optimization
+
+Optimize virtual field queries:
 
 ```go
-// Good: Simple virtual fields
-fields.NewVirtualField[string](m, &m.FullName, "FullName",
-    expr.Concat("FirstName", expr.Value(" "), "LastName"))
+// Use virtual fields in filtering efficiently
+users, err := queries.GetQuerySet(&User{}).
+    Annotate("Age", expr.F("YEAR(CURRENT_DATE) - YEAR(![BirthDate])", "BirthDate")).
+    Filter("Age__gte", 18).  // Filter on virtual field
+    All()
+```
 
-// Consider caching: Complex aggregations
-fields.NewVirtualField[float64](m, &m.ComplexScore, "ComplexScore",
-    expr.Add(
-        expr.Mul("Factor1", expr.Value(0.3)),
-        expr.Mul("Factor2", expr.Value(0.5)),
-        expr.Mul("Factor3", expr.Value(0.2)),
-    ))
+### Caching Strategies
 
-// Use indexes on underlying fields
-// CREATE INDEX idx_users_first_last ON users(first_name, last_name);
+For expensive virtual field calculations, consider caching:
+
+```go
+// Cache results of expensive calculations
+type UserWithStats struct {
+    User
+    PostCount    int    `json:"post_count"`
+    AvgRating    float64 `json:"avg_rating"`
+    LastPostDate time.Time `json:"last_post_date"`
+}
+
+// Use computed fields for frequently accessed data
+func GetUserStats(userID int64) (*UserWithStats, error) {
+    // Check cache first
+    if cached := getFromCache(userID); cached != nil {
+        return cached, nil
+    }
+    
+    // Compute and cache
+    user, err := queries.GetQuerySet(&User{}).
+        Annotate("PostCount", expr.Count("Posts")).
+        Annotate("AvgRating", expr.Avg("Posts__Rating")).
+        Annotate("LastPostDate", expr.Max("Posts__CreatedAt")).
+        Filter("ID", userID).
+        First()
+    
+    if err != nil {
+        return nil, err
+    }
+    
+    result := &UserWithStats{
+        User:         *user,
+        PostCount:    user.PostCount,
+        AvgRating:    user.AvgRating,
+        LastPostDate: user.LastPostDate,
+    }
+    
+    setCache(userID, result)
+    return result, nil
+}
 ```
 
 ---
 
 ## 🧪 Testing Virtual Fields
 
-### Testing Virtual Field Logic
+### Unit Tests
 
-Test virtual fields with unit tests:
+Test virtual field calculations:
 
 ```go
-func TestUserVirtualFields(t *testing.T) {
-    // Create test user
+func TestVirtualFields(t *testing.T) {
+    // Setup test data
     user := &User{
         FirstName: "John",
         LastName:  "Doe",
+        BirthDate: time.Date(1990, 1, 1, 0, 0, 0, 0, time.UTC),
     }
-    err := queries.CreateObject(user)
-    assert.NoError(t, err)
+    _, err := queries.GetQuerySet(user).Create(user)
+    require.NoError(t, err)
     
-    // Query with virtual fields
-    users, err := queries.GetQuerySet(&User{}).
-        Select("*", "FullName").
+    // Test virtual field calculation
+    result, err := queries.GetQuerySet(&User{}).
+        Annotate("FullName", expr.CONCAT(
+            expr.Field("FirstName"),
+            expr.Value(" "),
+            expr.Field("LastName"),
+        )).
         Filter("ID", user.ID).
-        All()
+        First()
     
-    assert.NoError(t, err)
-    assert.Len(t, users, 1)
-    
-    resultUser := users[0].Value()
-    assert.Equal(t, "John Doe", resultUser.FullName)
-}
-
-func TestOrderVirtualFields(t *testing.T) {
-    // Create test order
-    order := &Order{
-        SubTotal:    100.0,
-        TaxRate:     0.08,
-        ShippingFee: 10.0,
-    }
-    err := queries.CreateObject(order)
-    assert.NoError(t, err)
-    
-    // Query with virtual fields
-    orders, err := queries.GetQuerySet(&Order{}).
-        Select("*", "TaxAmount", "Total", "Status").
-        Filter("ID", order.ID).
-        All()
-    
-    assert.NoError(t, err)
-    assert.Len(t, orders, 1)
-    
-    resultOrder := orders[0].Value()
-    assert.Equal(t, 8.0, resultOrder.TaxAmount)
-    assert.Equal(t, 118.0, resultOrder.Total)
-    assert.Equal(t, "Basic", resultOrder.Status)
+    require.NoError(t, err)
+    assert.Equal(t, "John Doe", result.FullName)
 }
 ```
 
----
+### Integration Tests
 
-## 💡 Best Practices
-
-### Design Guidelines
-
-1. **Keep It Simple**: Virtual fields should be easy to understand and maintain
-2. **Performance Aware**: Consider the performance impact of complex calculations
-3. **Naming**: Use clear, descriptive names for virtual fields
-4. **Documentation**: Document complex virtual field logic
-
-### Common Patterns
+Test virtual fields in complex scenarios:
 
 ```go
-// Good: Clear, simple virtual fields
-FullName    string // Concatenation
-Age         int    // Date calculation
-IsActive    bool   // Boolean logic
-TotalCount  int    // Simple aggregation
-
-// Be careful with: Complex calculations that might be slow
-ComplexScore float64 // Multiple joins and calculations
-```
-
-### Error Handling
-
-```go
-// Handle potential errors in virtual field expressions
-func (m *SafeCalculation) FieldDefs() attrs.Definitions {
-    return m.Model.Define(m,
-        // ... other fields ...
-        fields.NewVirtualField[float64](m, &m.SafeRatio, "SafeRatio",
+func TestComplexVirtualFields(t *testing.T) {
+    // Test conditional virtual fields
+    users, err := queries.GetQuerySet(&User{}).
+        Annotate("Status",
             expr.Case(
-                expr.When(expr.Q("Denominator", 0), expr.Value(0.0)),
-                expr.Default(expr.Div("Numerator", "Denominator")),
-            )),
-    )
+                expr.When(expr.Q("IsActive", true), "Active"),
+                expr.Value("Inactive"),
+            ),
+        ).
+        Filter("Status", "Active").
+        All()
+    
+    require.NoError(t, err)
+    for _, user := range users {
+        assert.Equal(t, "Active", user.Status)
+        assert.True(t, user.IsActive)
+    }
 }
 ```
 
 ---
 
-Continue with [Models](./models/models.md) to learn more about model definitions and relationships…
+## 📚 Real-World Examples
+
+### E-commerce
+
+```go
+// Product pricing with discounts
+products, err := queries.GetQuerySet(&Product{}).
+    Annotate("FinalPrice",
+        expr.Case(
+            expr.When(expr.Q("OnSale", true),
+                expr.Logical("Price").MUL(
+                    expr.Logical(expr.Value(1)).SUB("DiscountRate"),
+                ),
+            ),
+            expr.Field("Price"),
+        ),
+    ).
+    Annotate("Savings",
+        expr.Case(
+            expr.When(expr.Q("OnSale", true),
+                expr.Logical("Price").SUB("FinalPrice"),
+            ),
+            expr.Value(0),
+        ),
+    ).
+    All()
+```
+
+### User Analytics
+
+```go
+// User engagement metrics
+users, err := queries.GetQuerySet(&User{}).
+    Annotate("EngagementScore",
+        expr.Logical("PostCount").MUL(expr.Value(2)).ADD(
+            expr.Logical("CommentCount").MUL(expr.Value(1)),
+        ).ADD(
+            expr.Logical("LikeCount").MUL(expr.Value(0.5)),
+        ),
+    ).
+    OrderBy("-EngagementScore").
+    All()
+```
+
+### Content Management
+
+```go
+// Article statistics
+articles, err := queries.GetQuerySet(&Article{}).
+    Annotate("WordCount", expr.LENGTH("Content")).
+    Annotate("ReadingTime", 
+        expr.Logical(expr.LENGTH("Content")).DIV(expr.Value(200)), // Assuming 200 WPM
+    ).
+    Annotate("Popularity",
+        expr.Logical("ViewCount").MUL(expr.Value(0.3)).ADD(
+            expr.Logical("ShareCount").MUL(expr.Value(0.7)),
+        ),
+    ).
+    All()
+```
+
+This comprehensive guide covers virtual fields in the go-django-queries package, providing practical examples based on actual usage patterns.

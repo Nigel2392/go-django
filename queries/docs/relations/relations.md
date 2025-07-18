@@ -2,7 +2,7 @@
 
 This document covers how to define and work with relationships between models in the `go-django-queries` package.
 
-The queries package supports all the common relationship types found in Django and other ORMs, including Foreign Keys, One-to-One, One-to-Many, and Many-to-Many relationships.
+The queries package supports relationships through field definitions and proxy models, enabling you to build complex queries across related data.
 
 ---
 
@@ -15,14 +15,14 @@ A Foreign Key creates a many-to-one relationship where many instances of the cur
 ```go
 type User struct {
     models.Model
-    ID       int
+    ID       int64
     Name     string
     Email    string
 }
 
 type Todo struct {
     models.Model
-    ID          int
+    ID          int64
     Title       string
     Description string
     Done        bool
@@ -31,23 +31,270 @@ type Todo struct {
 
 func (m *Todo) FieldDefs() attrs.Definitions {
     return m.Model.Define(m,
-        attrs.NewField(m, "ID", &attrs.FieldConfig{
-            Primary: true,
-        }),
-        attrs.NewField(m, "Title", nil),
-        attrs.NewField(m, "Description", nil),
-        attrs.NewField(m, "Done", nil),
-        attrs.NewField(m, "User", &attrs.FieldConfig{
-            RelForeignKey: attrs.Relate(&User{}, "", nil),
-            Column:        "user_id",
-        }),
-    ).WithTableName("todos")
+        attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
+        attrs.Unbound("Title"),
+        attrs.Unbound("Description"),
+        attrs.Unbound("Done"),
+        attrs.Unbound("User"),
+    )
 }
 ```
 
 ### One-to-One
 
-A One-to-One relationship links each instance of a model to exactly one instance of another model.
+A One-to-One relationship links each instance of a model to exactly one instance of another model. This is commonly used for extending models with additional data.
+
+```go
+type User struct {
+    models.Model
+    ID       int64
+    Name     string
+    Email    string
+}
+
+type Profile struct {
+    models.Model
+    ID       int64
+    User     *User  // One-to-One relationship with User
+    Bio      string
+    Location string
+}
+
+func (m *Profile) FieldDefs() attrs.Definitions {
+    return m.Model.Define(m,
+        attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
+        attrs.Unbound("User"),
+        attrs.Unbound("Bio"),
+        attrs.Unbound("Location"),
+    )
+}
+```
+
+### Proxy Models
+
+Proxy models allow you to create relationships between models through embedded structures. This is useful for creating complex hierarchical models:
+
+```go
+type Page struct {
+    models.Model
+    ID          int64
+    Title       string
+    Description string
+    PageID      int64
+    PageContentType *contenttypes.BaseContentType[attrs.Definer]
+}
+
+type BlogPage struct {
+    models.Model
+    Proxy               *Page `proxy:"true"`
+    PageID              int64
+    Author              string
+    Tags                []string
+    Category            string
+    CategoryContentType *contenttypes.BaseContentType[attrs.Definer]
+}
+
+func (b *BlogPage) FieldDefs() attrs.Definitions {
+    return b.Model.Define(b,
+        fields.Embed("Proxy"),
+        attrs.Unbound("PageID", &attrs.FieldConfig{Primary: true}),
+        attrs.Unbound("Author"),
+        attrs.Unbound("Tags"),
+        attrs.Unbound("Category"),
+        attrs.Unbound("CategoryContentType"),
+    )
+}
+```
+
+---
+
+## 🔍 Querying Relations
+
+### Basic Filtering
+
+Filter by related field values:
+
+```go
+// Get all todos for a specific user
+todos, err := queries.GetQuerySet(&Todo{}).
+    Filter("User", userID).
+    All()
+
+// Get all todos for users with specific email
+todos, err := queries.GetQuerySet(&Todo{}).
+    Filter("User__Email", "user@example.com").
+    All()
+```
+
+### Using Expressions
+
+Use expressions for more complex relationship queries:
+
+```go
+// Filter using expressions
+todos, err := queries.GetQuerySet(&Todo{}).
+    Filter(expr.Q("User", userID)).
+    All()
+
+// Complex filtering with AND/OR
+todos, err := queries.GetQuerySet(&Todo{}).
+    Filter(expr.Or(
+        expr.Q("User", userID),
+        expr.Q("Done", true),
+    )).
+    All()
+```
+
+### Joins and Selecting
+
+Select related data to avoid N+1 queries:
+
+```go
+// Select related user data
+todos, err := queries.GetQuerySet(&Todo{}).
+    Select("*", "User.*").
+    Filter("Done", false).
+    All()
+
+// Access related data
+for _, todo := range todos {
+    if todo.User != nil {
+        fmt.Printf("Todo: %s, User: %s\n", todo.Title, todo.User.Name)
+    }
+}
+```
+
+---
+
+## 📊 Advanced Relationship Queries
+
+### Aggregating Related Data
+
+Count related objects:
+
+```go
+// Count todos per user (using annotations)
+users, err := queries.GetQuerySet(&User{}).
+    Annotate("TodoCount", expr.Count("ID")).
+    All()
+```
+
+### Complex Filtering
+
+Filter based on related object properties:
+
+```go
+// Get users who have completed todos
+users, err := queries.GetQuerySet(&User{}).
+    Filter(expr.Q("Todo__Done", true)).
+    Distinct().
+    All()
+```
+
+### Subqueries
+
+Use subqueries for complex relationship filtering:
+
+```go
+// Get todos from active users
+activeTodos, err := queries.GetQuerySet(&Todo{}).
+    Filter("User", queries.Subquery(
+        queries.GetQuerySet(&User{}).
+            Filter("IsActive", true).
+            Values("ID"),
+    )).
+    All()
+```
+
+---
+
+## 🎯 Best Practices
+
+### Performance Optimization
+
+1. **Use Select Related**: Always use `Select()` to load related data in one query
+2. **Avoid N+1 Queries**: Load related data upfront rather than in loops
+3. **Use Indexes**: Create database indexes on foreign key fields
+
+### Code Organization
+
+1. **Clear Relationships**: Make relationships explicit in model definitions
+2. **Consistent Naming**: Use consistent naming conventions for related fields
+3. **Documentation**: Document complex relationships in code comments
+
+### Testing
+
+```go
+func TestUserTodos(t *testing.T) {
+    // Create test user
+    user := &User{Name: "Test User", Email: "test@example.com"}
+    _, err := queries.GetQuerySet(user).Create(user)
+    require.NoError(t, err)
+    
+    // Create test todos
+    todos := []*Todo{
+        {Title: "Todo 1", Done: false, User: user},
+        {Title: "Todo 2", Done: true, User: user},
+    }
+    _, err = queries.GetQuerySet(&Todo{}).BulkCreate(todos)
+    require.NoError(t, err)
+    
+    // Test relationship query
+    userTodos, err := queries.GetQuerySet(&Todo{}).
+        Filter("User", user.ID).
+        All()
+    require.NoError(t, err)
+    assert.Len(t, userTodos, 2)
+}
+```
+
+---
+
+## 🔧 Advanced Features
+
+### Generic Relations
+
+Use content types for generic foreign keys:
+
+```go
+type Comment struct {
+    models.Model
+    ID              int64
+    Content         string
+    ContentType     *contenttypes.BaseContentType[attrs.Definer]
+    ObjectID        int64
+}
+
+func (c *Comment) FieldDefs() attrs.Definitions {
+    return c.Model.Define(c,
+        attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
+        attrs.Unbound("Content"),
+        attrs.Unbound("ContentType"),
+        attrs.Unbound("ObjectID"),
+    )
+}
+```
+
+### Proxy Field Relations
+
+Create complex join conditions using proxy fields:
+
+```go
+type BlogPageCategory struct {
+    models.Model
+    *BlogPage
+    Category string
+}
+
+func (b *BlogPageCategory) FieldDefs() attrs.Definitions {
+    return b.Model.Define(b,
+        fields.Embed("BlogPage"),
+        attrs.Unbound("Category", &attrs.FieldConfig{Primary: true}),
+    )
+}
+```
+
+This comprehensive guide covers the relationship patterns used in the go-django-queries package. All examples are based on actual test patterns and should work with the current implementation.
 
 ```go
 type Profile struct {
