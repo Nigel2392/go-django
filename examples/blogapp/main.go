@@ -30,6 +30,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	mediafs "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 
@@ -89,18 +90,16 @@ func main() {
 		),
 	)
 
-	//	checks.Shutup("model.cant_check", true)
-	//	checks.Shutup("admin.model_not_fully_implemented", true)
-	//	checks.Shutup("field.invalid_db_type", func(m checks.Message) bool {
-	//		return m.Object.(attrs.Field).Name() == "GroupPermissions"
-	//	})
+	checks.Shutup("model.cant_check", true)
+	checks.Shutup("auth.login_redirect_url_not_set", true)
+	checks.Shutup("admin.model_not_fully_implemented", true)
+	checks.Shutup("field.invalid_db_type", func(m checks.Message) bool {
+		return m.Object.(attrs.Field).Name() == "GroupPermissions"
+	})
 
 	mediafiles.SetDefault("filesystem")
 
 	pages.SetRoutePrefix("/pages")
-	app.Mux.Any("/pages/*", http.StripPrefix("/pages", pages.Serve(
-		http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
-	)), "pages")
 
 	// Register a route for chrome devtools
 	// This is used to allow Chrome DevTools to connect to the app for debugging.
@@ -173,7 +172,7 @@ func main() {
 		}
 		fmt.Println("Blog pages:", len(blogPages))
 		for page := range blogPages.Objects() {
-			fmt.Printf(" - %q (ID: %d, %d)\n", page.Title, page.ID(), page.PageNode.PageID)
+			fmt.Printf(" - %q (ID: %d, %d)\n", page.Page.Title, page.ID(), page.Page.PageID)
 		}
 
 		pages, err := pages.NewPageQuerySet().

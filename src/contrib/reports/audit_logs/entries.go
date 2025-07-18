@@ -44,6 +44,10 @@ type Entry struct {
 	Obj interface{} `json:"-"`
 }
 
+func (l *Entry) OrderBy() []string {
+	return []string{"-Timestamp"}
+}
+
 func (l *Entry) BeforeSave(ctx context.Context) error {
 	if l.Id.IsZero() {
 		l.Id = drivers.UUID(uuid.New())

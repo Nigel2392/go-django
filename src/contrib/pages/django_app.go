@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"path"
 	"reflect"
-	"strconv"
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -22,7 +21,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
-	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
@@ -158,10 +156,7 @@ func NewAppConfig() django.AppConfig {
 			pageApp.routePrefix = "/" + pageApp.routePrefix
 		}
 
-		if strings.HasSuffix(pageApp.routePrefix, "/") && len(pageApp.routePrefix) > 1 {
-			pageApp.routePrefix = pageApp.routePrefix[:len(pageApp.routePrefix)-1]
-		}
-
+		pageApp.routePrefix = strings.TrimSuffix(pageApp.routePrefix, "/")
 		var handler = http.StripPrefix(pageApp.routePrefix, Serve(
 			http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
 		))
@@ -181,22 +176,7 @@ func NewAppConfig() django.AppConfig {
 				GetDescription: trans.S("A page in a hierarchical page tree- structure."),
 				GetObject:      func() any { return &PageNode{} },
 				GetInstance: func(identifier any) (interface{}, error) {
-					var id int64
-					switch v := identifier.(type) {
-					case int:
-						id = int64(v)
-					case int64:
-						id = v
-					case string:
-						var err error
-						id, err = strconv.ParseInt(v, 10, 64)
-						if err != nil {
-							return nil, err
-						}
-					default:
-						return nil, errs.ErrInvalidType
-					}
-					var node, err = NewPageQuerySet().GetNodeByID(id)
+					var node, err = NewPageQuerySet().Filter("ID", identifier).Get()
 					if err != nil {
 						return nil, err
 					}
@@ -206,7 +186,6 @@ func NewAppConfig() django.AppConfig {
 					var nodes, err = NewPageQuerySet().Offset(int(offset)).Limit(int(amount)).AllNodes()
 					var items = make([]interface{}, 0)
 					for _, n := range nodes {
-						n := n
 						items = append(items, &n)
 					}
 					return items, err

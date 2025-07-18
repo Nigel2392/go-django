@@ -141,11 +141,11 @@ func getPageActions(rq *http.Request, p *PageNode) []admin.Action {
 
 		var q = url.Query()
 		q.Set(
-			"object_id",
+			"filters-object_id",
 			strconv.Itoa(int(p.ID())),
 		)
 		q.Set(
-			"content_type",
+			"filters-content_type",
 			contenttypes.NewContentType(p).ShortTypeName(),
 		)
 		url.RawQuery = q.Encode()

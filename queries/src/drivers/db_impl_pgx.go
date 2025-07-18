@@ -116,7 +116,8 @@ func (c *connWrapperPGX[T]) Driver() driver.Driver {
 }
 
 func (c *connWrapperPGX[T]) Begin(ctx context.Context) (Transaction, error) {
-	tx, err := c.conn.Begin(ctx)
+	var tx, err = c.conn.Begin(ctx)
+	LogSQL(ctx, fmt.Sprintf("%T", c.conn), err, "BEGIN")
 	if err != nil {
 		return nil, databaseError(c.d, err)
 	}
@@ -158,12 +159,16 @@ func (p *pgxTx) Finished() bool {
 
 func (p *pgxTx) Commit(ctx context.Context) error {
 	defer func() { p.finished = true }()
-	return databaseError(p.d, p.conn.Commit(p.ctx))
+	var err = p.conn.Commit(p.ctx)
+	LogSQL(ctx, fmt.Sprintf("%T", p.conn), err, "COMMIT")
+	return databaseError(p.d, err)
 }
 
 func (p *pgxTx) Rollback(ctx context.Context) error {
 	defer func() { p.finished = true }()
-	return databaseError(p.d, p.conn.Rollback(p.ctx))
+	var err = p.conn.Rollback(p.ctx)
+	LogSQL(ctx, fmt.Sprintf("%T", p.conn), err, "ROLLBACK")
+	return databaseError(p.d, err)
 }
 
 type pgxRows struct {

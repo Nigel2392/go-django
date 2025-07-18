@@ -21,8 +21,9 @@ import (
 
 var (
 	// Internal interfaces that the model should implement
-	_ _ModelInterface = &Model{}
-	_ SaveableObject  = &Model{}
+	_ _ModelInterface  = &Model{}
+	_ SaveableObject   = &Model{}
+	_ DeleteableObject = &Model{}
 
 	// Third party interfaces that the model should implement
 	_ models.ContextSaver                  = &Model{}
@@ -779,7 +780,22 @@ func (m *Model) Save(ctx context.Context) error {
 	var this = m.internals.object.Interface().(attrs.Definer)
 	config.this = this
 
-	return this.(SaveableObject).SaveObject(ctx, config)
+	// This should be true, mostly - UNLESS a model
+	// embeds another model that implements the
+	// SaveableObject interface, in which case
+	// this will turn into an ambiguous method call,
+	// thus it cannot be done - this also means the object likely
+	// does not override the SaveObject method, meaning it is safe
+	// to call the default [Model.SaveObject] method.
+	if saveAble, ok := this.(SaveableObject); ok {
+		return saveAble.SaveObject(ctx, config)
+	}
+
+	logger.Debugf(
+		"Model %T does not implement the `SaveableObject` interface, using default save method",
+		this,
+	)
+	return m.SaveObject(ctx, config)
 }
 
 // Create saves the model to the database as a new object.
@@ -802,7 +818,17 @@ func (m *Model) Create(ctx context.Context) error {
 	config.this = this
 	config.ForceCreate = true
 
-	return this.(SaveableObject).SaveObject(ctx, config)
+	// See the comment in [Model.Save] for more information
+	// about a possibly ambiguous method call.
+	if saveAble, ok := this.(SaveableObject); ok {
+		return saveAble.SaveObject(ctx, config)
+	}
+
+	logger.Debugf(
+		"Model %T does not implement the `SaveableObject` interface, using default save method",
+		this,
+	)
+	return m.SaveObject(ctx, config)
 }
 
 // Update saves the model to the database as an update operation.
@@ -824,7 +850,18 @@ func (m *Model) Update(ctx context.Context) error {
 	var this = m.internals.object.Interface().(attrs.Definer)
 	config.this = this
 	config.ForceUpdate = true
-	return this.(SaveableObject).SaveObject(ctx, config)
+
+	// See the comment in [Model.Save] for more information
+	// about a possibly ambiguous method call.
+	if saveAble, ok := this.(SaveableObject); ok {
+		return saveAble.SaveObject(ctx, config)
+	}
+
+	logger.Debugf(
+		"Model %T does not implement the `SaveableObject` interface, using default save method",
+		this,
+	)
+	return m.SaveObject(ctx, config)
 }
 
 // Delete deletes the model from the database.
@@ -836,7 +873,18 @@ func (m *Model) Delete(ctx context.Context) error {
 	}
 
 	var this = m.internals.object.Interface().(attrs.Definer)
-	return this.(DeleteableObject).DeleteObject(ctx)
+
+	// See the comment in [Model.Save] for more information
+	// about a possibly ambiguous method call.
+	if deleteAble, ok := this.(DeleteableObject); ok {
+		return deleteAble.DeleteObject(ctx)
+	}
+
+	logger.Debugf(
+		"Model %T does not implement the `DeleteableObject` interface, using default delete method",
+		this,
+	)
+	return m.DeleteObject(ctx)
 }
 
 type saveConfigContextKey struct{}

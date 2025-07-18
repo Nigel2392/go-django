@@ -69,7 +69,8 @@ type dbWrapper struct {
 }
 
 func (d *dbWrapper) Begin(ctx context.Context) (Transaction, error) {
-	tx, err := d.queryWrapper.conn.BeginTx(ctx, nil)
+	var tx, err = d.queryWrapper.conn.BeginTx(ctx, nil)
+	LogSQL(ctx, "sql.DB", err, "BEGIN")
 	if err != nil {
 		return nil, databaseError(d.d, err)
 	}

@@ -209,6 +209,7 @@ func DriverValue(arg any) (driver.Value, error) {
 				"failed to get value from driver.Valuer: %w", err,
 			)
 		}
+
 	case attrs.Definer:
 		var defs = v.FieldDefs()
 		var prim = defs.Primary()
@@ -257,8 +258,7 @@ func DriverValue(arg any) (driver.Value, error) {
 
 func GetQueryInfo(dbKey string) (*QueryInfo, error) {
 	var db, ok = django.ConfigGetOK[drivers.Database](
-		django.Global.Settings,
-		dbKey,
+		django.Global.Settings, dbKey,
 	)
 	if !ok {
 		return nil, errors.NoDatabase.WithCause(fmt.Errorf(
