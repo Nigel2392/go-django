@@ -462,6 +462,7 @@ func (qs *PageQuerySet) Delete(nodes ...*PageNode) (int64, error) {
 
 	var allNodesExpr = make([]expr.ClauseExpression, 0, len(nodes))
 	var parentNodePaths = make([]string, 0, len(nodes))
+	var seenParents = make(map[string]struct{}, len(nodes))
 	for _, node := range nodes {
 		allNodesExpr = append(allNodesExpr, expr.And(
 			expr.Expr("Path", expr.LOOKUP_STARTSWITH, node.Path),
@@ -478,6 +479,11 @@ func (qs *PageQuerySet) Delete(nodes ...*PageNode) (int64, error) {
 				)
 			}
 
+			if _, exists := seenParents[parentPath]; exists {
+				continue // Skip already seen parent paths
+			}
+
+			seenParents[parentPath] = struct{}{}
 			parentNodePaths = append(
 				parentNodePaths,
 				parentPath,
