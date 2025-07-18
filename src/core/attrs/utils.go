@@ -2,6 +2,7 @@ package attrs
 
 import (
 	"fmt"
+	"iter"
 	"net/mail"
 	"reflect"
 	"strconv"
@@ -263,4 +264,263 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 
 	}
 	return fields, nil
+}
+
+// UnpackFieldsFromArgsIter unpacks the fields from the given arguments.
+//
+// It returns an iterator that yields fields and errors.
+//
+// The fields are passed as variadic arguments, and can be of many types:
+//
+// - Field: a field (or any type that implements the Field interface)
+// - []Field: a slice of fields
+// - UnboundFieldConstruuctor: a constructor for a field that needs to be bound
+// - []UnboundFieldConstructor: a slice of unbound field constructors
+// - UnboundField: an unbound field that needs to be bound
+// - []UnboundField: a slice of unbound fields that need to be bound
+// - iter.Seq2[Field, error]: iterators to possibly increase performance
+// - func() iter.Seq2[Field, error]: iterators to possibly increase performance
+// - func(Definer) iter.Seq2[Field, error]: iterators to possibly increase performance
+// - func() []any: a function of which the result will be recursively unpacked
+// - func() Field: a function that returns a field
+// - func() (Field, error): a function that returns a field and an error
+// - func() []Field: a function that returns a slice of fields
+// - func() ([]Field, error): a function that returns a slice of fields and an error
+// - func(d Definer) []any: a function that takes a Definer and returns a slice of any to be recursively unpacked
+// - func(d Definer) Field: a function that takes a Definer and returns a field
+// - func(d Definer) (Field, error): a function that takes a Definer and returns a field and an error
+// - func(d Definer) []Field: a function that takes a Definer and returns a slice of fields
+// - func(d Definer) ([]Field, error): a function that takes a Definer and returns a slice of fields and an error
+// - func(d T1) []any: a function that takes a Definer of type T1 and returns a slice of any to be recursively unpacked
+// - func(d T1) Field: a function that takes a Definer of type T1 and returns a field
+// - func(d T1) (Field, error): a function that takes a Definer of type T1 and returns a field and an error
+// - func(d T1) []Field: a function that takes a Definer of type T1 and returns a slice of fields
+// - func(d T1) ([]Field, error): a function that takes a Definer of type T1 and returns a slice of fields and an error
+// - string: a field name, which will be converted to a Field with no configuration
+func UnpackFieldsFromArgsIter[T1 Definer, T2 any](definer T1, args ...T2) iter.Seq2[Field, error] {
+	return func(yield func(Field, error) bool) {
+		var yieldMultiple = func(err error, fld []Field) bool {
+			if err != nil {
+				yield(nil, fmt.Errorf(
+					"fieldsFromArgs (%T): %v",
+					definer, err,
+				))
+				return false
+			}
+
+			for _, f := range fld {
+				if !yield(f, nil) {
+					return false
+				}
+			}
+			return true
+		}
+
+		var yieldIter = func(iterator iter.Seq2[Field, error]) bool {
+			for f, err := range iterator {
+				if err != nil {
+					yield(nil, fmt.Errorf(
+						"fieldsFromArgs (%T): %v",
+						definer, err,
+					))
+					return false
+				}
+				if !yield(f, nil) {
+					return false
+				}
+			}
+			return true
+		}
+
+		for _, f := range args {
+			switch v := any(f).(type) {
+			case Field:
+				if !yield(v, nil) {
+					return
+				}
+			case []Field:
+				if !yieldMultiple(nil, v) {
+					return
+				}
+
+			case UnboundFieldConstructor:
+				var fld, err = v.BindField(definer)
+				if err != nil {
+					yield(nil, fmt.Errorf(
+						"fieldsFromArgs (%T): %v",
+						definer, err,
+					))
+					return
+				}
+				if !yield(fld, nil) {
+					return
+				}
+			case []UnboundFieldConstructor:
+				for _, u := range v {
+					var fld, err = u.BindField(definer)
+					if err != nil {
+						yield(nil, fmt.Errorf(
+							"fieldsFromArgs (%T): %v",
+							definer, err,
+						))
+						return
+					}
+
+					if !yield(fld, nil) {
+						return
+					}
+				}
+
+			case []UnboundField:
+				for _, u := range v {
+					var fld, err = u.BindField(definer)
+					if err != nil {
+						yield(nil, fmt.Errorf(
+							"fieldsFromArgs (%T): %v",
+							definer, err,
+						))
+						return
+					}
+
+					if !yield(fld, nil) {
+						return
+					}
+				}
+
+			case []any:
+				var iterator = UnpackFieldsFromArgsIter(definer, v...)
+				if !yieldIter(iterator) {
+					return
+				}
+
+			case iter.Seq2[Field, error]:
+				if !yieldIter(v) {
+					return
+				}
+
+			case func() iter.Seq2[Field, error]:
+				var iterator = v()
+				if !yieldIter(iterator) {
+					return
+				}
+
+			case func(Definer) iter.Seq2[Field, error]:
+				var iterator = v(definer)
+				if !yieldIter(iterator) {
+					return
+				}
+
+			// func() (field, ?error)
+			case func() Field:
+				if !yield(v(), nil) {
+					return
+				}
+			case func() (Field, error):
+				var fld, err = v()
+				if !yield(fld, err) {
+					return
+				}
+
+			// func() ([]field, ?error)
+			case func() []any:
+				var iterator = UnpackFieldsFromArgsIter(definer, v()...)
+				if !yieldIter(iterator) {
+					return
+				}
+
+			// func(t1) (field, ?error)
+			case func(d T1) Field:
+				if !yield(v(definer), nil) {
+					return
+				}
+
+			case func(d T1) (Field, error):
+				var fld, err = v(definer)
+				if err != nil {
+					yield(nil, fmt.Errorf(
+						"fieldsFromArgs (%T): %v",
+						definer, err,
+					))
+					return
+				}
+
+				if !yield(fld, nil) {
+					return
+				}
+
+			// func(t1) ([]field, ?error)
+			case func(d T1) []any:
+				var iterator = UnpackFieldsFromArgsIter(definer, v(definer)...)
+				if !yieldIter(iterator) {
+					return
+				}
+
+			case func(d T1) []Field:
+				if !yieldMultiple(nil, v(definer)) {
+					return
+				}
+
+			case func(d T1) ([]Field, error):
+				var flds, err = v(definer)
+				if !yieldMultiple(err, flds) {
+					return
+				}
+
+			// func(d Definer) (field, ?error)
+			case func(d Definer) Field:
+				if !yield(v(definer), nil) {
+					return
+				}
+			case func(d Definer) (Field, error):
+				var fld, err = v(definer)
+				if err != nil {
+					yield(nil, fmt.Errorf(
+						"fieldsFromArgs (%T): %v",
+						definer, err,
+					))
+					return
+				}
+				if !yield(fld, nil) {
+					return
+				}
+
+			// func(d Definer) ([]field, ?error)
+			case func(d Definer) []any:
+				var iterator = UnpackFieldsFromArgsIter(definer, v(definer)...)
+				if !yieldIter(iterator) {
+					return
+				}
+
+			case func(d Definer) []Field:
+				if !yieldMultiple(nil, v(definer)) {
+					return
+				}
+
+			case func(d Definer) ([]Field, error):
+				var flds, err = v(definer)
+				if err != nil {
+					yield(nil, fmt.Errorf(
+						"fieldsFromArgs (%T): %v",
+						definer, err,
+					))
+					return
+				}
+				if !yieldMultiple(err, flds) {
+					return
+				}
+
+			case string:
+				if !yield(NewField(definer, v, nil), nil) {
+					return
+				}
+
+			default:
+				yield(nil, fmt.Errorf(
+					"fieldsFromArgs (%T): unsupported field type %T",
+					definer, f,
+				))
+				return
+			}
+		}
+	}
 }

@@ -66,7 +66,7 @@ func Embed(nameOrScan any, options ...EmbedOptions) func(d attrs.Definer) []attr
 		assert.True(ok, "field %q in %T must implement attrs.Definer, got %T", nameOrScan, d, fieldval.Interface())
 
 		if len(opts.EmbedFields) > 0 {
-			var fields, err = attrs.UnpackFieldsFromArgs(definer, opts.EmbedFields...)
+			var fields, err = attrs.UnpackFieldsFromArgs(definer, opts.EmbedFields)
 			assert.True(err == nil, "failed to unpack fields: %v", err)
 			return fields
 		}

@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"iter"
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/fields"
@@ -232,4 +233,131 @@ func BenchmarkFieldDefs(b *testing.B) {
 		}
 	})
 
+}
+
+/*
+benchmark iterator performance itself
+
+the iter.Pull function is so fucking slow... never use.
+*/
+type Field struct {
+	Name string
+}
+
+var SAMPLE = []Field{
+	{"A"}, {"B"}, {"C"}, {"D"}, {"E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}, {"K"}, {"L"}, {"M"}, {"N"}, {"O"}, {"P"}, {"Q"}, {"R"}, {"S"}, {"T"}, {"U"}, {"V"}, {"W"}, {"X"}, {"Y"}, {"Z"},
+	{"A"}, {"B"}, {"C"}, {"D"}, {"E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}, {"K"}, {"L"}, {"M"}, {"N"}, {"O"}, {"P"}, {"Q"}, {"R"}, {"S"}, {"T"}, {"U"}, {"V"}, {"W"}, {"X"}, {"Y"}, {"Z"},
+	{"A"}, {"B"}, {"C"}, {"D"}, {"E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}, {"K"}, {"L"}, {"M"}, {"N"}, {"O"}, {"P"}, {"Q"}, {"R"}, {"S"}, {"T"}, {"U"}, {"V"}, {"W"}, {"X"}, {"Y"}, {"Z"},
+	{"A"}, {"B"}, {"C"}, {"D"}, {"E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}, {"K"}, {"L"}, {"M"}, {"N"}, {"O"}, {"P"}, {"Q"}, {"R"}, {"S"}, {"T"}, {"U"}, {"V"}, {"W"}, {"X"}, {"Y"}, {"Z"},
+	{"A"}, {"B"}, {"C"}, {"D"}, {"E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}, {"K"}, {"L"}, {"M"}, {"N"}, {"O"}, {"P"}, {"Q"}, {"R"}, {"S"}, {"T"}, {"U"}, {"V"}, {"W"}, {"X"}, {"Y"}, {"Z"},
+	{"A"}, {"B"}, {"C"}, {"D"}, {"E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}, {"K"}, {"L"}, {"M"}, {"N"}, {"O"}, {"P"}, {"Q"}, {"R"}, {"S"}, {"T"}, {"U"}, {"V"}, {"W"}, {"X"}, {"Y"}, {"Z"},
+	{"A"}, {"B"}, {"C"}, {"D"}, {"E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}, {"K"}, {"L"}, {"M"}, {"N"}, {"O"}, {"P"}, {"Q"}, {"R"}, {"S"}, {"T"}, {"U"}, {"V"}, {"W"}, {"X"}, {"Y"}, {"Z"},
+	{"A"}, {"B"}, {"C"}, {"D"}, {"E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}, {"K"}, {"L"}, {"M"}, {"N"}, {"O"}, {"P"}, {"Q"}, {"R"}, {"S"}, {"T"}, {"U"}, {"V"}, {"W"}, {"X"}, {"Y"}, {"Z"},
+	{"A"}, {"B"}, {"C"}, {"D"}, {"E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}, {"K"}, {"L"}, {"M"}, {"N"}, {"O"}, {"P"}, {"Q"}, {"R"}, {"S"}, {"T"}, {"U"}, {"V"}, {"W"}, {"X"}, {"Y"}, {"Z"},
+	{"A"}, {"B"}, {"C"}, {"D"}, {"E"}, {"F"}, {"G"}, {"H"}, {"I"}, {"J"}, {"K"}, {"L"}, {"M"}, {"N"}, {"O"}, {"P"}, {"Q"}, {"R"}, {"S"}, {"T"}, {"U"}, {"V"}, {"W"}, {"X"}, {"Y"}, {"Z"},
+}
+
+func BenchmarkFlatAppend(b *testing.B) {
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		out := make([]Field, 0, len(SAMPLE))
+		for _, f := range SAMPLE {
+			out = append(out, f)
+		}
+		_ = out
+	}
+}
+
+func BenchmarkFlatIterator(b *testing.B) {
+	var iterator = func(yield func(Field) bool) {
+		for _, f := range SAMPLE {
+			if !yield(f) {
+				return
+			}
+		}
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		out := make([]Field, 0, len(SAMPLE))
+		for f := range iterator {
+			out = append(out, f)
+		}
+
+		_ = out
+	}
+}
+
+func BenchmarkNestedIteratorForLoop(b *testing.B) {
+
+	var iterator = func(yield func(Field) bool) {
+		for _, f := range SAMPLE {
+			if !yield(f) {
+				return
+			}
+		}
+	}
+
+	var nestedIterator = func(iterator iter.Seq[Field]) iter.Seq[Field] {
+		return func(yield func(Field) bool) {
+			for f := range iterator {
+				if !yield(f) {
+					return
+				}
+			}
+		}
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		out := make([]Field, 0, len(SAMPLE))
+		for f := range nestedIterator(iterator) {
+			out = append(out, f)
+		}
+
+		_ = out
+	}
+}
+
+func BenchmarkNestedIteratorPull(b *testing.B) {
+	var iterator = func(yield func(Field) bool) {
+		for _, f := range SAMPLE {
+			if !yield(f) {
+				return
+			}
+		}
+	}
+
+	var nestedIterator = func(iterator iter.Seq[Field]) iter.Seq[Field] {
+		return func(yield func(Field) bool) {
+
+			var next, stop = iter.Pull(iterator)
+
+			for {
+				var next, valid = next()
+				if !valid {
+					stop()
+					return
+				}
+
+				if !yield(next) {
+					stop()
+					return
+				}
+			}
+		}
+	}
+
+	b.ResetTimer()
+
+	for i := 0; i < b.N; i++ {
+		out := make([]Field, 0, len(SAMPLE))
+		for f := range nestedIterator(iterator) {
+			out = append(out, f)
+		}
+
+		_ = out
+	}
 }

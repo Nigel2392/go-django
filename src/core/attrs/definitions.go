@@ -22,10 +22,6 @@ type ObjectDefinitions struct {
 // For information about the arguments, see the
 // [UnpackFieldsFromArgs] function.
 func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions {
-	var fields, err = UnpackFieldsFromArgs(d, fieldDefinitions...)
-	if err != nil {
-		assert.Fail("define (%T): %v", d, err)
-	}
 
 	var defs = &ObjectDefinitions{
 		Object: d,
@@ -33,7 +29,12 @@ func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions
 
 	var primaryField string
 	var m = orderedmap.NewOrderedMap[string, Field]()
-	for _, f := range fields {
+	var fieldsIter = UnpackFieldsFromArgsIter(d, fieldDefinitions...)
+	for f, err := range fieldsIter {
+		if err != nil {
+			assert.Fail("define (%T): %v", d, err)
+			continue
+		}
 
 		if f.IsPrimary() && primaryField == "" {
 			primaryField = f.Name()

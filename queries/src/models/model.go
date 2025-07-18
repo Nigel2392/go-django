@@ -501,12 +501,8 @@ func (m *Model) Define(def attrs.Definer, flds ...any) *attrs.ObjectDefinitions 
 	if m.internals.defs == nil {
 
 		var tableName = m.internals.base.base.Tag.Get("table")
-		var _fields, err = attrs.UnpackFieldsFromArgs(def, flds...)
-		assert.True(
-			err == nil,
-			"failed to unpack fields from args: %v", err,
-		)
-
+		var _fieldsIter = attrs.UnpackFieldsFromArgsIter(def, flds...)
+		var _fields = make([]attrs.Field, 0, 2)
 		var meta = attrs.GetModelMeta(def)
 		for head := meta.ReverseMap().Front(); head != nil; head = head.Next() {
 			var (
@@ -610,7 +606,9 @@ func (m *Model) Define(def attrs.Definer, flds ...any) *attrs.ObjectDefinitions 
 			_fields = append(_fields, field)
 		}
 
-		m.internals.defs = attrs.Define(def, _fields...)
+		m.internals.defs = attrs.Define[attrs.Definer, any](
+			def, _fieldsIter, _fields,
+		)
 
 		if tableName != "" && m.internals.defs.Table == "" {
 			m.internals.defs.Table = tableName

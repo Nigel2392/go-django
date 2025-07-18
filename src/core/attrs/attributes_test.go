@@ -452,3 +452,170 @@ func TestModelForceSetReadOnlyStructTag(t *testing.T) {
 		t.Errorf("expected %q, got %q", "new name", m.Name)
 	}
 }
+
+func BenchmarkUnpackFieldsFromArgs(b *testing.B) {
+	var m = &ModelTest{
+		S:           "string",
+		I8:          8,
+		I16:         16,
+		I32:         32,
+		I64:         64,
+		U8:          8,
+		U16:         16,
+		U32:         32,
+		U64:         64,
+		F32:         32.32,
+		F64:         64.64,
+		NullBool:    sql.NullBool{Bool: true, Valid: true},
+		NullInt64:   sql.NullInt64{Int64: 64, Valid: true},
+		NullInt32:   sql.NullInt32{Int32: 32, Valid: true},
+		NullInt16:   sql.NullInt16{Int16: 16, Valid: true},
+		NullFloat64: sql.NullFloat64{Float64: 64.64, Valid: true},
+		NullString:  sql.NullString{String: "string", Valid: true},
+		NullTime:    sql.NullTime{Time: now(), Valid: true},
+		B:           true,
+		M:           map[string]interface{}{"key": "value"},
+		A:           []interface{}{"a", "b", "c"},
+	}
+
+	b.ResetTimer()
+	var fields = m.FieldDefs().Fields()
+	for i := 0; i < b.N; i++ {
+		var _, err = attrs.UnpackFieldsFromArgs[attrs.Definer, any](m, fields)
+		if err != nil {
+			b.Fatal(err)
+		}
+	}
+}
+
+func BenchmarkUnpackFieldsFromArgsIter(b *testing.B) {
+	var m = &ModelTest{
+		S:           "string",
+		I8:          8,
+		I16:         16,
+		I32:         32,
+		I64:         64,
+		U8:          8,
+		U16:         16,
+		U32:         32,
+		U64:         64,
+		F32:         32.32,
+		F64:         64.64,
+		NullBool:    sql.NullBool{Bool: true, Valid: true},
+		NullInt64:   sql.NullInt64{Int64: 64, Valid: true},
+		NullInt32:   sql.NullInt32{Int32: 32, Valid: true},
+		NullInt16:   sql.NullInt16{Int16: 16, Valid: true},
+		NullFloat64: sql.NullFloat64{Float64: 64.64, Valid: true},
+		NullString:  sql.NullString{String: "string", Valid: true},
+		NullTime:    sql.NullTime{Time: now(), Valid: true},
+		B:           true,
+		M:           map[string]interface{}{"key": "value"},
+		A:           []interface{}{"a", "b", "c"},
+	}
+
+	b.ResetTimer()
+	var fields = m.FieldDefs().Fields()
+	for i := 0; i < b.N; i++ {
+		var iterator = attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](m, fields)
+		var slice = make([]any, 0, 22)
+		for field, err := range iterator {
+			if err != nil {
+				b.Fatal(err)
+			}
+			slice = append(slice, field)
+		}
+		if len(slice) != 22 {
+			b.Fatalf("expected 22 fields, got %d", len(slice))
+		}
+	}
+}
+
+func BenchmarkUnpackFieldsFromArgsIterFunc(b *testing.B) {
+	var m = &ModelTest{
+		S:           "string",
+		I8:          8,
+		I16:         16,
+		I32:         32,
+		I64:         64,
+		U8:          8,
+		U16:         16,
+		U32:         32,
+		U64:         64,
+		F32:         32.32,
+		F64:         64.64,
+		NullBool:    sql.NullBool{Bool: true, Valid: true},
+		NullInt64:   sql.NullInt64{Int64: 64, Valid: true},
+		NullInt32:   sql.NullInt32{Int32: 32, Valid: true},
+		NullInt16:   sql.NullInt16{Int16: 16, Valid: true},
+		NullFloat64: sql.NullFloat64{Float64: 64.64, Valid: true},
+		NullString:  sql.NullString{String: "string", Valid: true},
+		NullTime:    sql.NullTime{Time: now(), Valid: true},
+		B:           true,
+		M:           map[string]interface{}{"key": "value"},
+		A:           []interface{}{"a", "b", "c"},
+	}
+
+	b.ResetTimer()
+	var fields = m.FieldDefs().Fields()
+	var fieldsFn = func(attrs.Definer) []attrs.Field {
+		return fields
+	}
+	for i := 0; i < b.N; i++ {
+		var iterator = attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](m, fieldsFn)
+		var slice = make([]any, 0, 22)
+		for field, err := range iterator {
+			if err != nil {
+				b.Fatal(err)
+			}
+			slice = append(slice, field)
+		}
+		if len(slice) != 22 {
+			b.Fatalf("expected 22 fields, got %d", len(slice))
+		}
+	}
+}
+
+func BenchmarkUnpackFieldsFromArgsIterNested(b *testing.B) {
+	var m = &ModelTest{
+		S:           "string",
+		I8:          8,
+		I16:         16,
+		I32:         32,
+		I64:         64,
+		U8:          8,
+		U16:         16,
+		U32:         32,
+		U64:         64,
+		F32:         32.32,
+		F64:         64.64,
+		NullBool:    sql.NullBool{Bool: true, Valid: true},
+		NullInt64:   sql.NullInt64{Int64: 64, Valid: true},
+		NullInt32:   sql.NullInt32{Int32: 32, Valid: true},
+		NullInt16:   sql.NullInt16{Int16: 16, Valid: true},
+		NullFloat64: sql.NullFloat64{Float64: 64.64, Valid: true},
+		NullString:  sql.NullString{String: "string", Valid: true},
+		NullTime:    sql.NullTime{Time: now(), Valid: true},
+		B:           true,
+		M:           map[string]interface{}{"key": "value"},
+		A:           []interface{}{"a", "b", "c"},
+	}
+
+	b.ResetTimer()
+	var fields = m.FieldDefs().Fields()
+	var fieldsFn = func(attrs.Definer) []attrs.Field {
+		return fields
+	}
+	for i := 0; i < b.N; i++ {
+		var iterator = attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](m, attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](m, fieldsFn))
+		var slice = make([]any, 0, 22)
+		for field, err := range iterator {
+			if err != nil {
+				b.Fatal(err)
+			}
+			slice = append(slice, field)
+		}
+		if len(slice) != 22 {
+			b.Fatalf("expected 22 fields, got %d", len(slice))
+		}
+	}
+}

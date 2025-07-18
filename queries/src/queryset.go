@@ -2469,29 +2469,26 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 	}
 
 	return rowCount, func(yield func(*Row[T], error) bool) {
-		var next, stop = iter.Pull2(rowIter)
-		for {
-			var row, err, valid = next()
-			if !valid {
+		for row, err := range rowIter {
+			if err != nil {
+				// stop the iteration and return the error
+				yield(nil, errors.Wrapf(
+					err, "failed to iterate rows for QuerySet.All: %s", err,
+				))
 				break
 			}
 
 			if qs.forEachRow != nil {
 				if err := qs.forEachRow(qs, row); err != nil {
-					//return nil, errors.Wrapf(
-					//	err, "failed to execute forEachRow for QuerySet.All: %s", err,
-					//)
 					// stop the iteration and return the error
 					yield(nil, errors.Wrapf(
 						err, "failed to execute forEachRow for QuerySet.All: %s", err,
 					))
-					stop()
 					break
 				}
 			}
 
-			if !yield(row, err) {
-				stop()
+			if !yield(row, nil) {
 				break
 			}
 		}
