@@ -18,8 +18,8 @@ func (m *Todo) FieldDefs() attrs.Definitions {
 	return m.Model.Define(m, func(attrs.Definer) []attrs.Field {
 		return []attrs.Field{
 			attrs.NewField(m, "ID", &attrs.FieldConfig{
-				Primary:  true,
-				ReadOnly: true,
+				Primary:  true, // this field is the primary key
+				ReadOnly: true, // this field is read-only
 				Label:    "ID",
 				HelpText: "The unique identifier of the model",
 			}),
@@ -30,6 +30,9 @@ func (m *Todo) FieldDefs() attrs.Definitions {
 			attrs.NewField(m, "Description", &attrs.FieldConfig{
 				Label:    "Description",
 				HelpText: "A description of the todo",
+
+				// register a custom widget for this field
+				// this will render a textarea instead of a text input
 				FormWidget: func(cfg attrs.FieldConfig) widgets.Widget {
 					return widgets.NewTextarea(nil)
 				},

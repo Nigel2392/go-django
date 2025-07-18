@@ -25,22 +25,30 @@ func NewAppConfig() django.AppConfig {
 		"todos",
 	)
 
+	// Set up routing for this app
 	cfg.Routing = func(m django.Mux) {
 		var todosGroup = m.Any("/todos", nil, "todos")
 		todosGroup.Get("/list", mux.NewHandler(ListTodos), "list")
 		todosGroup.Post("/<<id>>/done", mux.NewHandler(MarkTodoDone), "done")
 	}
 
+	// Models which are a part of this app
+	// All models should be registered by an AppConfig.
 	cfg.ModelObjects = []attrs.Definer{
 		&Todo{},
 	}
 
+	// An initializer function that will be called when the app is initialized
+	//
+	// This is where you can set up templates, static files, and other app-specific configurations.
 	cfg.Init = func(settings django.Settings, db drivers.Database) error {
 		var (
 			tplFS    = filesystem.Sub(todosFS, "assets/templates")
 			staticFS = filesystem.Sub(todosFS, "assets/static")
 		)
 
+		// Set up the static files for this app
+		// They are stored in the "assets/static" directory
 		staticfiles.AddFS(staticFS, filesystem.MatchAnd(
 			filesystem.MatchPrefix("todos/"),
 			filesystem.MatchOr(
@@ -55,6 +63,8 @@ func NewAppConfig() django.AppConfig {
 			),
 		))
 
+		// Set up the templates for this app
+		// They are stored in the "assets/templates" directory
 		tpl.Add(tpl.Config{
 			AppName: "todos",
 			FS:      tplFS,
@@ -68,23 +78,33 @@ func NewAppConfig() django.AppConfig {
 			),
 		})
 
+		// Register the app to the admin interface
 		var _ = admin.RegisterApp(
 			"todos",
+
+			// Register the Todo app to the admin interface
 			admin.AppOptions{
 				RegisterToAdminMenu: true,
 				AppLabel:            trans.S("Todo App"),
 				AppDescription:      trans.S("Manage the todos for your todo app."),
 				MenuLabel:           trans.S("Todos"),
 			},
+
+			// Register the Todo model to the admin interface
 			admin.ModelOptions{
 				Model:               &Todo{},
 				RegisterToAdminMenu: true,
+
+				// Customize the labels for the fields in the admin interface
 				Labels: map[string]func() string{
 					"ID":          trans.S("ID"),
 					"Title":       trans.S("Todo Title"),
 					"Description": trans.S("Todo Description"),
 					"Done":        trans.S("Is Done"),
 				},
+
+				// Custom fields for the admin interface
+				// when creating a new todo
 				AddView: admin.FormViewOptions{
 					ViewOptions: admin.ViewOptions{
 						Exclude: []string{"ID"},
@@ -97,6 +117,9 @@ func NewAppConfig() django.AppConfig {
 						admin.FieldPanel("Done"),
 					},
 				},
+
+				// Custom fields for the admin interface
+				// when editing an existing todo
 				EditView: admin.FormViewOptions{
 					ViewOptions: admin.ViewOptions{
 						Exclude: []string{"ID"},
@@ -109,7 +132,12 @@ func NewAppConfig() django.AppConfig {
 						admin.FieldPanel("Done"),
 					},
 				},
+
+				// Custom fields for the admin interface
+				// when listing todos
 				ListView: admin.ListViewOptions{
+
+					// These fields will be displayed in the list view
 					ViewOptions: admin.ViewOptions{
 						Fields: []string{
 							"ID",
@@ -118,6 +146,10 @@ func NewAppConfig() django.AppConfig {
 							"Done",
 						},
 					},
+
+					// Define custom columns for the list view
+					//
+					// The "Title" column will be a link to the edit view of the todo
 					Columns: map[string]list.ListColumn[attrs.Definer]{
 						"Title": list.LinkColumn(
 							trans.S("Title"),
@@ -126,6 +158,8 @@ func NewAppConfig() django.AppConfig {
 							},
 						),
 					},
+
+					// The amount of items to display per page
 					PerPage: 25,
 				},
 			},
