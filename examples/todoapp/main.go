@@ -107,6 +107,12 @@ func main() {
 
 	// Create a new user instance if it did not exist
 	// already, this will be the (demo) admin user.
+	//
+	// The user will have the following credentials:
+	//
+	// Username: 	admin
+	// Email: 		admin@localhost
+	// Password: 	Administrator123!
 	var user = &auth.User{}
 	var e, _ = mail.ParseAddress("admin@localhost")
 	user.Email = (*drivers.Email)(e)
