@@ -34,9 +34,20 @@ func Apps(apps ...any) func(*Application) error {
 }
 
 func AppLogger(w logger.Log) func(*Application) error {
+	// Immediately set up the logger, just in case
+	// someone needs to log anything before calling [App]
+	logger.Setup(w)
+
 	return func(a *Application) error {
-		logger.Setup(w)
 		a.Log = w
 		return nil
+	}
+}
+
+func Configure(m map[string]interface{}) func(*Application) error {
+	return func(a *Application) error {
+		var s = Config(m)
+		a.Settings = s
+		return s.Bind(a)
 	}
 }

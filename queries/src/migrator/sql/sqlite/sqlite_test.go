@@ -27,7 +27,7 @@ func init() {
 	}
 
 	var editor = sqlite.NewSQLiteSchemaEditor(db)
-	if err = editor.Setup(); err != nil {
+	if err = editor.Setup(context.Background()); err != nil {
 		panic(fmt.Sprintf("failed to setup db: %v", err))
 	}
 }
@@ -138,11 +138,11 @@ func TestTableTypes(t *testing.T) {
 func TestCreateMigrationEntry(t *testing.T) {
 	var editor = sqlite.NewSQLiteSchemaEditor(db)
 
-	if err := editor.StoreMigration("test_migration_app", "test_migration_model", "test_migration_name"); err != nil {
+	if err := editor.StoreMigration(context.Background(), "test_migration_app", "test_migration_model", "test_migration_name"); err != nil {
 		t.Errorf("failed to store migration: %v", err)
 	}
 
-	var has, err = editor.HasMigration("test_migration_app", "test_migration_model", "test_migration_name")
+	var has, err = editor.HasMigration(context.Background(), "test_migration_app", "test_migration_model", "test_migration_name")
 	if err != nil {
 		t.Errorf("failed to check migration: %v", err)
 	}
@@ -151,12 +151,12 @@ func TestCreateMigrationEntry(t *testing.T) {
 		t.Errorf("expected migration to exist, but it does not")
 	}
 
-	err = editor.RemoveMigration("test_migration_app", "test_migration_model", "test_migration_name")
+	err = editor.RemoveMigration(context.Background(), "test_migration_app", "test_migration_model", "test_migration_name")
 	if err != nil {
 		t.Errorf("failed to delete migration: %v", err)
 	}
 
-	hasAfterDelete, err := editor.HasMigration("test_migration_app", "test_migration_model", "test_migration_name")
+	hasAfterDelete, err := editor.HasMigration(context.Background(), "test_migration_app", "test_migration_model", "test_migration_name")
 	if err != nil {
 		t.Errorf("failed to check migration after delete: %v", err)
 	}

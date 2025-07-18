@@ -1,6 +1,7 @@
 package migrator
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -246,9 +247,9 @@ func (m *MigrationEngine) GetLastMigration(appName, modelName string) *Migration
 	return latestFromMap(m.Migrations, appName, modelName)
 }
 
-func (m *MigrationEngine) Migrate(apps ...string) error {
+func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 
-	if err := m.SchemaEditor.Setup(); err != nil {
+	if err := m.SchemaEditor.Setup(ctx); err != nil {
 		return errors.Wrap(err, "failed to setup schema editor")
 	}
 
@@ -261,6 +262,7 @@ func (m *MigrationEngine) Migrate(apps ...string) error {
 	var wereApplied int
 	for _, migration := range migrations {
 		var hasApplied, err = m.SchemaEditor.HasMigration(
+			ctx,
 			migration.AppName,
 			migration.ModelName,
 			migration.FileName(),
@@ -306,7 +308,7 @@ func (m *MigrationEngine) Migrate(apps ...string) error {
 			continue
 		}
 
-		if has, err := m.SchemaEditor.HasMigration(n.mig.AppName, n.mig.ModelName, n.mig.FileName()); err != nil {
+		if has, err := m.SchemaEditor.HasMigration(ctx, n.mig.AppName, n.mig.ModelName, n.mig.FileName()); err != nil {
 			logger.Errorf("failed to check if migration %q has been applied: %v", n.mig.FileName(), err)
 			continue
 		} else if has {
@@ -329,18 +331,18 @@ func (m *MigrationEngine) Migrate(apps ...string) error {
 
 			switch action.ActionType {
 			case ActionCreateTable:
-				err = m.SchemaEditor.CreateTable(n.mig.Table, false)
+				err = m.SchemaEditor.CreateTable(ctx, n.mig.Table, false)
 			case ActionDropTable:
-				err = m.SchemaEditor.DropTable(action.Table.Old, false)
+				err = m.SchemaEditor.DropTable(ctx, action.Table.Old, false)
 			case ActionRenameTable:
-				err = m.SchemaEditor.RenameTable(action.Table.Old, action.Table.New.TableName())
+				err = m.SchemaEditor.RenameTable(ctx, action.Table.Old, action.Table.New.TableName())
 			case ActionAddField:
 				if !action.Field.New.UseInDB {
 					continue
 				}
 				action.Field.New.Table = n.mig.Table
 				action.Field.New.Field, _ = defs.Field(action.Field.New.Name)
-				err = m.SchemaEditor.AddField(n.mig.Table, *action.Field.New)
+				err = m.SchemaEditor.AddField(ctx, n.mig.Table, *action.Field.New)
 			case ActionAlterField:
 				if !(action.Field.New.UseInDB && action.Field.Old.UseInDB) {
 					continue
@@ -349,24 +351,24 @@ func (m *MigrationEngine) Migrate(apps ...string) error {
 				action.Field.Old.Field, _ = defs.Field(action.Field.Old.Name)
 				action.Field.New.Table = n.mig.Table
 				action.Field.New.Field, _ = defs.Field(action.Field.New.Name)
-				err = m.SchemaEditor.AlterField(n.mig.Table, *action.Field.Old, *action.Field.New)
+				err = m.SchemaEditor.AlterField(ctx, n.mig.Table, *action.Field.Old, *action.Field.New)
 			case ActionRemoveField:
 				if !action.Field.Old.UseInDB {
 					continue
 				}
 				action.Field.Old.Table = n.mig.Table
 				action.Field.Old.Field, _ = defs.Field(action.Field.Old.Name)
-				err = m.SchemaEditor.RemoveField(n.mig.Table, *action.Field.Old)
+				err = m.SchemaEditor.RemoveField(ctx, n.mig.Table, *action.Field.Old)
 			case ActionAddIndex:
 				action.Index.New.table = n.mig.Table
-				err = m.SchemaEditor.AddIndex(n.mig.Table, *action.Index.New, false)
+				err = m.SchemaEditor.AddIndex(ctx, n.mig.Table, *action.Index.New, false)
 			case ActionDropIndex:
 				action.Index.Old.table = n.mig.Table
-				err = m.SchemaEditor.DropIndex(n.mig.Table, *action.Index.Old, false)
+				err = m.SchemaEditor.DropIndex(ctx, n.mig.Table, *action.Index.Old, false)
 			case ActionRenameIndex:
 				action.Index.Old.table = n.mig.Table
 				action.Index.New.table = n.mig.Table
-				err = m.SchemaEditor.RenameIndex(n.mig.Table, action.Index.Old.Name(), action.Index.New.Name())
+				err = m.SchemaEditor.RenameIndex(ctx, n.mig.Table, action.Index.Old.Name(), action.Index.New.Name())
 			// case ActionAlterUniqueTogether:
 			// 	err = m.SchemaEditor.AlterUniqueTogether(action.Table.New, action.Field.New.Unique)
 			// case ActionAlterIndexTogether:
@@ -382,6 +384,7 @@ func (m *MigrationEngine) Migrate(apps ...string) error {
 			}
 		}
 		err = m.SchemaEditor.StoreMigration(
+			ctx,
 			n.mig.AppName,
 			n.mig.ModelName,
 			n.mig.FileName(),
@@ -417,8 +420,13 @@ func (n *NeedsToMigrateInfo) App() django.AppConfig {
 	return n.app
 }
 
-func (m *MigrationEngine) NeedsToMigrate(apps ...string) ([]NeedsToMigrateInfo, error) {
-	if err := m.SchemaEditor.Setup(); err != nil {
+func (m *MigrationEngine) NeedsToMigrate(ctx context.Context, apps ...string) ([]NeedsToMigrateInfo, error) {
+
+	if len(apps) == 0 {
+		apps = m.apps.Keys()
+	}
+
+	if err := m.SchemaEditor.Setup(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to setup schema editor")
 	}
 
@@ -451,6 +459,7 @@ func (m *MigrationEngine) NeedsToMigrate(apps ...string) ([]NeedsToMigrateInfo, 
 			}
 
 			var hasApplied, err = m.SchemaEditor.HasMigration(
+				ctx,
 				last.AppName,
 				last.ModelName,
 				last.FileName(),
@@ -462,7 +471,6 @@ func (m *MigrationEngine) NeedsToMigrate(apps ...string) ([]NeedsToMigrateInfo, 
 			}
 
 			if !hasApplied {
-				logger.Debugf("Migration %q for %s.%s needs to be applied", last.FileName(), appName, modelName)
 				needsToMigrate = append(needsToMigrate, NeedsToMigrateInfo{
 					model: cType,
 					mig:   last,
@@ -475,13 +483,13 @@ func (m *MigrationEngine) NeedsToMigrate(apps ...string) ([]NeedsToMigrateInfo, 
 	return needsToMigrate, nil
 }
 
-func (m *MigrationEngine) NeedsToMakeMigrations(apps ...string) ([]*contenttypes.BaseContentType[attrs.Definer], error) {
+func (m *MigrationEngine) NeedsToMakeMigrations(ctx context.Context, apps ...string) ([]*contenttypes.BaseContentType[attrs.Definer], error) {
 
 	if len(apps) == 0 {
 		apps = m.apps.Keys()
 	}
 
-	if err := m.SchemaEditor.Setup(); err != nil {
+	if err := m.SchemaEditor.Setup(ctx); err != nil {
 		return nil, errors.Wrap(err, "failed to setup schema editor")
 	}
 
@@ -533,13 +541,13 @@ func (m *MigrationEngine) NeedsToMakeMigrations(apps ...string) ([]*contenttypes
 	return needsToMigrate, nil
 }
 
-func (m *MigrationEngine) MakeMigrations(apps ...string) error {
+func (m *MigrationEngine) MakeMigrations(ctx context.Context, apps ...string) error {
 
 	if len(apps) == 0 {
 		apps = m.apps.Keys()
 	}
 
-	if err := m.SchemaEditor.Setup(); err != nil {
+	if err := m.SchemaEditor.Setup(ctx); err != nil {
 		return errors.Wrap(err, "failed to setup schema editor")
 	}
 
@@ -1095,11 +1103,10 @@ func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, erro
 
 		fSys, ok := e.MigrationFilesystems[appName]
 		if !ok {
-			logger.Debugf(
-				"Skip reading migrations FS for app %q, no migration filesystem found", appName,
-			)
-
 			// no actual issue, just means no special filesystem for this app
+			//	logger.Debugf(
+			//		"Skip reading migrations FS for app %q, no migration filesystem found", appName,
+			//	)
 			continue
 		}
 

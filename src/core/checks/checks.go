@@ -122,6 +122,10 @@ func (m Message) String(ctx context.Context) string {
 			typeStr = typ
 		case TypeStringer:
 			typeStr = typ.TypeString()
+		case int, int8, int16, int32, int64,
+			uint, uint8, uint16, uint32, uint64,
+			float32, float64:
+			typeStr = fmt.Sprintf("%v", typ)
 		default:
 			var ts = fmt.Sprintf("%T", m.Object)
 			if len(ts) > 30 {
@@ -153,7 +157,7 @@ func (m Message) String(ctx context.Context) string {
 		))
 		sb.WriteString(" ")
 		sb.WriteString(m.Hint)
-		sb.WriteString(")\n")
+		sb.WriteString(")")
 	}
 
 	return sb.String()

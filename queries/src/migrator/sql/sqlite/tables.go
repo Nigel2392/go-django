@@ -74,12 +74,12 @@ func (m *SQLiteSchemaEditor) Execute(ctx context.Context, query string, args ...
 	return result, nil
 }
 
-func (m *SQLiteSchemaEditor) Setup() error {
+func (m *SQLiteSchemaEditor) Setup(ctx context.Context) error {
 	if m.tablesCreated {
 		return nil
 	}
 	_, err := m.Execute(
-		context.Background(),
+		ctx,
 		createTableMigrations,
 	)
 	if err != nil {
@@ -89,32 +89,32 @@ func (m *SQLiteSchemaEditor) Setup() error {
 	return nil
 }
 
-func (m *SQLiteSchemaEditor) StoreMigration(appName string, modelName string, migrationName string) error {
-	_, err := m.Execute(context.Background(), insertTableMigrations, appName, modelName, migrationName)
+func (m *SQLiteSchemaEditor) StoreMigration(ctx context.Context, appName string, modelName string, migrationName string) error {
+	_, err := m.Execute(ctx, insertTableMigrations, appName, modelName, migrationName)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (m *SQLiteSchemaEditor) HasMigration(appName string, modelName string, migrationName string) (bool, error) {
+func (m *SQLiteSchemaEditor) HasMigration(ctx context.Context, appName string, modelName string, migrationName string) (bool, error) {
 	var count int
-	var err = m.queryRow(context.Background(), selectTableMigrations, appName, modelName, migrationName).Scan(&count)
+	var err = m.queryRow(ctx, selectTableMigrations, appName, modelName, migrationName).Scan(&count)
 	if err != nil {
 		return false, err
 	}
 	return count > 0, nil
 }
 
-func (m *SQLiteSchemaEditor) RemoveMigration(appName string, modelName string, migrationName string) error {
-	_, err := m.Execute(context.Background(), deleteTableMigrations, appName, modelName, migrationName)
+func (m *SQLiteSchemaEditor) RemoveMigration(ctx context.Context, appName string, modelName string, migrationName string) error {
+	_, err := m.Execute(ctx, deleteTableMigrations, appName, modelName, migrationName)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func (m *SQLiteSchemaEditor) CreateTable(table migrator.Table, ifNotExists bool) error {
+func (m *SQLiteSchemaEditor) CreateTable(ctx context.Context, table migrator.Table, ifNotExists bool) error {
 	var w strings.Builder
 	w.WriteString("CREATE TABLE ")
 	if ifNotExists {
@@ -147,11 +147,11 @@ func (m *SQLiteSchemaEditor) CreateTable(table migrator.Table, ifNotExists bool)
 	w.WriteString("\n")
 
 	// Execute the query
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *SQLiteSchemaEditor) DropTable(table migrator.Table, ifExists bool) error {
+func (m *SQLiteSchemaEditor) DropTable(ctx context.Context, table migrator.Table, ifExists bool) error {
 	var w strings.Builder
 	w.WriteString("DROP TABLE ")
 	if ifExists {
@@ -163,11 +163,11 @@ func (m *SQLiteSchemaEditor) DropTable(table migrator.Table, ifExists bool) erro
 	w.WriteString("\n")
 
 	// Execute the query
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *SQLiteSchemaEditor) RenameTable(table migrator.Table, newName string) error {
+func (m *SQLiteSchemaEditor) RenameTable(ctx context.Context, table migrator.Table, newName string) error {
 	var w strings.Builder
 	w.WriteString("ALTER TABLE `")
 	w.WriteString(table.TableName())
@@ -177,11 +177,11 @@ func (m *SQLiteSchemaEditor) RenameTable(table migrator.Table, newName string) e
 	w.WriteString("\n")
 
 	// Execute the query
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *SQLiteSchemaEditor) AddIndex(table migrator.Table, index migrator.Index, ifNotExists bool) error {
+func (m *SQLiteSchemaEditor) AddIndex(ctx context.Context, table migrator.Table, index migrator.Index, ifNotExists bool) error {
 	var w strings.Builder
 	if index.Unique {
 		w.WriteString("CREATE UNIQUE INDEX ")
@@ -215,11 +215,11 @@ func (m *SQLiteSchemaEditor) AddIndex(table migrator.Table, index migrator.Index
 	w.WriteString("\n")
 
 	// Execute the query
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *SQLiteSchemaEditor) DropIndex(table migrator.Table, index migrator.Index, ifExists bool) error {
+func (m *SQLiteSchemaEditor) DropIndex(ctx context.Context, table migrator.Table, index migrator.Index, ifExists bool) error {
 	var w strings.Builder
 	w.WriteString("DROP INDEX ")
 	if ifExists {
@@ -231,11 +231,11 @@ func (m *SQLiteSchemaEditor) DropIndex(table migrator.Table, index migrator.Inde
 	w.WriteString("\n")
 
 	// Execute the query
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *SQLiteSchemaEditor) RenameIndex(table migrator.Table, oldName string, newName string) error {
+func (m *SQLiteSchemaEditor) RenameIndex(ctx context.Context, table migrator.Table, oldName string, newName string) error {
 	var w strings.Builder
 	w.WriteString("ALTER INDEX `")
 	w.WriteString(oldName)
@@ -245,7 +245,7 @@ func (m *SQLiteSchemaEditor) RenameIndex(table migrator.Table, oldName string, n
 	w.WriteString("\n")
 
 	// Execute the query
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
@@ -305,7 +305,7 @@ func (m *SQLiteSchemaEditor) RenameIndex(table migrator.Table, oldName string, n
 //		return err
 //	}
 
-func (m *SQLiteSchemaEditor) AddField(table migrator.Table, col migrator.Column) error {
+func (m *SQLiteSchemaEditor) AddField(ctx context.Context, table migrator.Table, col migrator.Column) error {
 	var w strings.Builder
 	w.WriteString("ALTER TABLE `")
 	w.WriteString(table.TableName())
@@ -316,11 +316,11 @@ func (m *SQLiteSchemaEditor) AddField(table migrator.Table, col migrator.Column)
 	w.WriteString("\n")
 
 	// Execute the query
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *SQLiteSchemaEditor) RemoveField(table migrator.Table, col migrator.Column) error {
+func (m *SQLiteSchemaEditor) RemoveField(ctx context.Context, table migrator.Table, col migrator.Column) error {
 	var w strings.Builder
 	w.WriteString("ALTER TABLE `")
 	w.WriteString(table.TableName())
@@ -330,16 +330,16 @@ func (m *SQLiteSchemaEditor) RemoveField(table migrator.Table, col migrator.Colu
 	w.WriteString("\n")
 
 	// Execute the query
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 func (m *SQLiteSchemaEditor) AlterField(
+	ctx context.Context,
 	table migrator.Table,
 	oldCol migrator.Column,
 	newCol migrator.Column,
 ) error {
 	var (
-		ctx           = context.Background()
 		tableName     = table.TableName()
 		tempTableName = tableName + "__tmp"
 		columns       = table.Columns()
@@ -426,7 +426,7 @@ func (m *SQLiteSchemaEditor) AlterField(
 	}
 
 	// Step 3: Create temp table
-	if err := m.CreateTable(newTable, false); err != nil {
+	if err := m.CreateTable(ctx, newTable, false); err != nil {
 		return fmt.Errorf("create temp table: %w", err)
 	}
 
@@ -443,7 +443,7 @@ func (m *SQLiteSchemaEditor) AlterField(
 	}
 
 	// Step 5: Drop original table
-	if err := m.DropTable(table, false); err != nil {
+	if err := m.DropTable(ctx, table, false); err != nil {
 		return fmt.Errorf("drop original table: %w", err)
 	}
 

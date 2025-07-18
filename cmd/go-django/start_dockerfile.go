@@ -125,6 +125,7 @@ func (d *Dockerfile) defaults() {
 	if d.DefaultPort == 0 {
 		d.DefaultPort = 8080
 	}
+
 	var info, ok = debug.ReadBuildInfo()
 	if ok {
 		d.GoVersion = strings.TrimPrefix(
@@ -133,7 +134,7 @@ func (d *Dockerfile) defaults() {
 	}
 
 	if d.GoVersion == "" {
-		d.GoVersion = "1.23.2"
+		d.GoVersion = "1.24.5"
 	}
 
 	if d.ExecutableName == "" {

@@ -36,27 +36,27 @@ type CanMigrate interface {
 }
 
 type SchemaEditor interface {
-	Setup() error
-	StoreMigration(appName string, modelName string, migrationName string) error
-	HasMigration(appName string, modelName string, migrationName string) (bool, error)
-	RemoveMigration(appName string, modelName string, migrationName string) error
+	Setup(ctx context.Context) error
+	StoreMigration(ctx context.Context, appName string, modelName string, migrationName string) error
+	HasMigration(ctx context.Context, appName string, modelName string, migrationName string) (bool, error)
+	RemoveMigration(ctx context.Context, appName string, modelName string, migrationName string) error
 
 	Execute(ctx context.Context, query string, args ...any) (sql.Result, error)
 
-	CreateTable(table Table, ifNotExists bool) error
-	DropTable(table Table, ifExists bool) error
-	RenameTable(table Table, newName string) error
+	CreateTable(ctx context.Context, table Table, ifNotExists bool) error
+	DropTable(ctx context.Context, table Table, ifExists bool) error
+	RenameTable(ctx context.Context, table Table, newName string) error
 
-	AddIndex(table Table, index Index, ifNotExists bool) error
-	DropIndex(table Table, index Index, ifExists bool) error
-	RenameIndex(table Table, oldName string, newName string) error
+	AddIndex(ctx context.Context, table Table, index Index, ifNotExists bool) error
+	DropIndex(ctx context.Context, table Table, index Index, ifExists bool) error
+	RenameIndex(ctx context.Context, table Table, oldName string, newName string) error
 
 	//	AlterUniqueTogether(table Table, unique bool) error
 	//	AlterIndexTogether(table Table, unique bool) error
 
-	AddField(table Table, col Column) error
-	AlterField(table Table, old Column, newCol Column) error
-	RemoveField(table Table, col Column) error
+	AddField(ctx context.Context, table Table, col Column) error
+	AlterField(ctx context.Context, table Table, old Column, newCol Column) error
+	RemoveField(ctx context.Context, table Table, col Column) error
 }
 
 type Table interface {

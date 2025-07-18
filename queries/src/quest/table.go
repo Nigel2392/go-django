@@ -90,7 +90,7 @@ func (t *DBTables[T]) Create() {
 			fmt.Printf("Creating table: %s\n", table.TableName())
 		}
 
-		err := t.schema.CreateTable(table, false)
+		err := t.schema.CreateTable(context.Background(), table, false)
 		if err != nil {
 			t.fatalf("Failed to create table (%s): %v", table.ModelName(), err)
 			return
@@ -106,7 +106,7 @@ func (t *DBTables[T]) Drop() {
 	}
 
 	for _, table := range t.tables {
-		err := t.schema.DropTable(table, false)
+		err := t.schema.DropTable(context.Background(), table, false)
 		if err != nil {
 			t.fatalf("Failed to drop table (%s): %v", table.ModelName(), err)
 		}

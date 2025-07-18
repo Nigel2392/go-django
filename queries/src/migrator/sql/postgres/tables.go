@@ -51,24 +51,24 @@ func NewPostgresSchemaEditor(db drivers.Database) *PostgresSchemaEditor {
 	return &PostgresSchemaEditor{db: db}
 }
 
-func (m *PostgresSchemaEditor) Setup() error {
-	_, err := m.Execute(context.Background(), createTableMigrations)
+func (m *PostgresSchemaEditor) Setup(ctx context.Context) error {
+	_, err := m.Execute(ctx, createTableMigrations)
 	return err
 }
 
-func (m *PostgresSchemaEditor) StoreMigration(appName string, modelName string, migrationName string) error {
-	_, err := m.Execute(context.Background(), insertTableMigrations, appName, modelName, migrationName)
+func (m *PostgresSchemaEditor) StoreMigration(ctx context.Context, appName string, modelName string, migrationName string) error {
+	_, err := m.Execute(ctx, insertTableMigrations, appName, modelName, migrationName)
 	return err
 }
 
-func (m *PostgresSchemaEditor) HasMigration(appName string, modelName string, migrationName string) (bool, error) {
+func (m *PostgresSchemaEditor) HasMigration(ctx context.Context, appName string, modelName string, migrationName string) (bool, error) {
 	var count int
-	err := m.QueryRow(context.Background(), selectTableMigrations, appName, modelName, migrationName).Scan(&count)
+	err := m.QueryRow(ctx, selectTableMigrations, appName, modelName, migrationName).Scan(&count)
 	return count > 0, err
 }
 
-func (m *PostgresSchemaEditor) RemoveMigration(appName string, modelName string, migrationName string) error {
-	_, err := m.Execute(context.Background(), deleteTableMigrations, appName, modelName, migrationName)
+func (m *PostgresSchemaEditor) RemoveMigration(ctx context.Context, appName string, modelName string, migrationName string) error {
+	_, err := m.Execute(ctx, deleteTableMigrations, appName, modelName, migrationName)
 	return err
 }
 
@@ -81,7 +81,7 @@ func (m *PostgresSchemaEditor) Execute(ctx context.Context, query string, args .
 	return m.db.ExecContext(ctx, query, args...)
 }
 
-func (m *PostgresSchemaEditor) CreateTable(table migrator.Table, ifNotExists bool) error {
+func (m *PostgresSchemaEditor) CreateTable(ctx context.Context, table migrator.Table, ifNotExists bool) error {
 	var w strings.Builder
 	w.WriteString(`CREATE TABLE `)
 	if ifNotExists {
@@ -106,11 +106,11 @@ func (m *PostgresSchemaEditor) CreateTable(table migrator.Table, ifNotExists boo
 
 	w.WriteString(");")
 
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *PostgresSchemaEditor) DropTable(table migrator.Table, ifExists bool) error {
+func (m *PostgresSchemaEditor) DropTable(ctx context.Context, table migrator.Table, ifExists bool) error {
 	var w strings.Builder
 	w.WriteString(`DROP TABLE `)
 	if ifExists {
@@ -119,22 +119,22 @@ func (m *PostgresSchemaEditor) DropTable(table migrator.Table, ifExists bool) er
 	w.WriteString(`"`)
 	w.WriteString(table.TableName())
 	w.WriteString(`" CASCADE;`)
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *PostgresSchemaEditor) RenameTable(table migrator.Table, newName string) error {
+func (m *PostgresSchemaEditor) RenameTable(ctx context.Context, table migrator.Table, newName string) error {
 	var w strings.Builder
 	w.WriteString(`ALTER TABLE "`)
 	w.WriteString(table.TableName())
 	w.WriteString(`" RENAME TO "`)
 	w.WriteString(newName)
 	w.WriteString(`";`)
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *PostgresSchemaEditor) AddIndex(table migrator.Table, index migrator.Index, ifNotExists bool) error {
+func (m *PostgresSchemaEditor) AddIndex(ctx context.Context, table migrator.Table, index migrator.Index, ifNotExists bool) error {
 	var w strings.Builder
 	if index.Unique {
 		w.WriteString(`CREATE UNIQUE INDEX `)
@@ -159,11 +159,11 @@ func (m *PostgresSchemaEditor) AddIndex(table migrator.Table, index migrator.Ind
 	}
 	w.WriteString(");")
 
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *PostgresSchemaEditor) DropIndex(table migrator.Table, index migrator.Index, ifExists bool) error {
+func (m *PostgresSchemaEditor) DropIndex(ctx context.Context, table migrator.Table, index migrator.Index, ifExists bool) error {
 	var w strings.Builder
 	w.WriteString(`DROP INDEX `)
 	if ifExists {
@@ -172,44 +172,44 @@ func (m *PostgresSchemaEditor) DropIndex(table migrator.Table, index migrator.In
 	w.WriteString(`"`)
 	w.WriteString(index.Name())
 	w.WriteString(`";`)
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *PostgresSchemaEditor) RenameIndex(table migrator.Table, oldName string, newName string) error {
+func (m *PostgresSchemaEditor) RenameIndex(ctx context.Context, table migrator.Table, oldName string, newName string) error {
 	var w strings.Builder
 	w.WriteString(`ALTER INDEX "`)
 	w.WriteString(oldName)
 	w.WriteString(`" RENAME TO "`)
 	w.WriteString(newName)
 	w.WriteString(`";`)
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *PostgresSchemaEditor) AddField(table migrator.Table, col migrator.Column) error {
+func (m *PostgresSchemaEditor) AddField(ctx context.Context, table migrator.Table, col migrator.Column) error {
 	var w strings.Builder
 	w.WriteString(`ALTER TABLE "`)
 	w.WriteString(table.TableName())
 	w.WriteString(`" ADD COLUMN `)
 	m.WriteColumn(&w, col)
 	w.WriteString(";")
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *PostgresSchemaEditor) RemoveField(table migrator.Table, col migrator.Column) error {
+func (m *PostgresSchemaEditor) RemoveField(ctx context.Context, table migrator.Table, col migrator.Column) error {
 	var w strings.Builder
 	w.WriteString(`ALTER TABLE "`)
 	w.WriteString(table.TableName())
 	w.WriteString(`" DROP COLUMN IF EXISTS "`)
 	w.WriteString(col.Field.ColumnName())
 	w.WriteString(`" CASCADE;`)
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *PostgresSchemaEditor) AlterField(table migrator.Table, oldCol migrator.Column, newCol migrator.Column) error {
+func (m *PostgresSchemaEditor) AlterField(ctx context.Context, table migrator.Table, oldCol migrator.Column, newCol migrator.Column) error {
 	var (
 		w         strings.Builder
 		tableName = table.TableName()
@@ -303,7 +303,7 @@ func (m *PostgresSchemaEditor) AlterField(table migrator.Table, oldCol migrator.
 	sql := strings.TrimSuffix(w.String(), ",")
 
 	// Execute ALTER TABLE ... for collected changes
-	if _, err := m.Execute(context.Background(), sql); err != nil {
+	if _, err := m.Execute(ctx, sql); err != nil {
 		return fmt.Errorf("alter field failed: %w\nquery: %s", err, sql)
 	}
 

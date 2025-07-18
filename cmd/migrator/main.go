@@ -160,6 +160,7 @@ func main() {
 		}
 	}
 
+	var ctx = context.Background()
 	var engine = migrator.NewMigrationEngine(
 		rootDir, schemaEditor, opts...,
 	)
@@ -177,7 +178,7 @@ func main() {
 			return nil
 		},
 		Execute: func(m command.Manager, stored flags.List, args []string) error {
-			var err = engine.MakeMigrations()
+			var err = engine.MakeMigrations(ctx)
 			if err != nil {
 				return err
 			}

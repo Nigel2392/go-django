@@ -38,12 +38,12 @@ func NewTestMigrationEngine(t *testing.T) *TestMigrationEngine {
 	}
 }
 
-func (t *TestMigrationEngine) Setup() error {
+func (t *TestMigrationEngine) Setup(ctx context.Context) error {
 	t.SetupCalled = true
 	return nil
 }
 
-func (t *TestMigrationEngine) StoreMigration(appName string, modelName string, migrationName string) error {
+func (t *TestMigrationEngine) StoreMigration(ctx context.Context, appName string, modelName string, migrationName string) error {
 	t.t.Logf("Storing migration: \"%s/%s/%s\"", appName, modelName, migrationName)
 	if t.StoredMigrations == nil {
 		t.StoredMigrations = make(map[string]map[string]map[string]struct{})
@@ -58,7 +58,7 @@ func (t *TestMigrationEngine) StoreMigration(appName string, modelName string, m
 	return nil
 }
 
-func (t *TestMigrationEngine) HasMigration(appName string, modelName string, migrationName string) (bool, error) {
+func (t *TestMigrationEngine) HasMigration(ctx context.Context, appName string, modelName string, migrationName string) (bool, error) {
 	t.t.Logf("Checking migration: \"%s/%s/%s\"", appName, modelName, migrationName)
 	if t.StoredMigrations == nil {
 		return false, nil
@@ -75,7 +75,7 @@ func (t *TestMigrationEngine) HasMigration(appName string, modelName string, mig
 	return true, nil
 }
 
-func (t *TestMigrationEngine) RemoveMigration(appName string, modelName string, migrationName string) error {
+func (t *TestMigrationEngine) RemoveMigration(ctx context.Context, appName string, modelName string, migrationName string) error {
 	t.t.Logf("Removing migration: \"%s/%s/%s\"", appName, modelName, migrationName)
 	if t.StoredMigrations == nil {
 		return nil
@@ -103,32 +103,32 @@ func (t *TestMigrationEngine) Execute(ctx context.Context, query string, args ..
 	t.RawSQL = append(t.RawSQL, SQL{SQL: query, Params: args})
 	return nil, nil
 }
-func (t *TestMigrationEngine) CreateTable(table migrator.Table, _ bool) error {
+func (t *TestMigrationEngine) CreateTable(ctx context.Context, table migrator.Table, _ bool) error {
 	t.t.Logf("Creating table: %s for object %T", table.TableName(), table.Model())
 	t.Actions = append(t.Actions, Action{Type: migrator.ActionCreateTable, Table: table})
 	return nil
 }
-func (t *TestMigrationEngine) DropTable(table migrator.Table, _ bool) error {
+func (t *TestMigrationEngine) DropTable(ctx context.Context, table migrator.Table, _ bool) error {
 	t.t.Logf("Dropping table: %s for object %T", table.TableName(), table.Model())
 	t.Actions = append(t.Actions, Action{Type: migrator.ActionDropTable, Table: table})
 	return nil
 }
-func (t *TestMigrationEngine) RenameTable(table migrator.Table, newName string) error {
+func (t *TestMigrationEngine) RenameTable(ctx context.Context, table migrator.Table, newName string) error {
 	t.t.Logf("Renaming table: %s for object %T", table.TableName(), table.Model())
 	t.Actions = append(t.Actions, Action{Type: migrator.ActionRenameTable, Table: table})
 	return nil
 }
-func (t *TestMigrationEngine) AddIndex(table migrator.Table, index migrator.Index, _ bool) error {
+func (t *TestMigrationEngine) AddIndex(ctx context.Context, table migrator.Table, index migrator.Index, _ bool) error {
 	t.t.Logf("Adding index: %s for object %T", table.TableName(), table.Model())
 	t.Actions = append(t.Actions, Action{Type: migrator.ActionAddIndex, Table: table, Index: index})
 	return nil
 }
-func (t *TestMigrationEngine) DropIndex(table migrator.Table, index migrator.Index, _ bool) error {
+func (t *TestMigrationEngine) DropIndex(ctx context.Context, table migrator.Table, index migrator.Index, _ bool) error {
 	t.t.Logf("Dropping index: %s for object %T", table.TableName(), table.Model())
 	t.Actions = append(t.Actions, Action{Type: migrator.ActionDropIndex, Table: table, Index: index})
 	return nil
 }
-func (t *TestMigrationEngine) RenameIndex(table migrator.Table, oldName string, newName string) error {
+func (t *TestMigrationEngine) RenameIndex(ctx context.Context, table migrator.Table, oldName string, newName string) error {
 	t.t.Logf("Renaming index: %s for object %T", table.TableName(), table.Model())
 	t.Actions = append(t.Actions, Action{Type: migrator.ActionRenameIndex, Table: table})
 	return nil
@@ -143,17 +143,17 @@ func (t *TestMigrationEngine) RenameIndex(table migrator.Table, oldName string, 
 //		t.Actions = append(t.Actions, Action{Type: migrator.ActionAlterIndexTogether, Table: table})
 //		return nil
 //	}
-func (t *TestMigrationEngine) AddField(table migrator.Table, col migrator.Column) error {
+func (t *TestMigrationEngine) AddField(ctx context.Context, table migrator.Table, col migrator.Column) error {
 	t.t.Logf("Adding field: %s for object %T", table.TableName(), table.Model())
 	t.Actions = append(t.Actions, Action{Type: migrator.ActionAddField, Table: table, Field: col})
 	return nil
 }
-func (t *TestMigrationEngine) AlterField(table migrator.Table, old migrator.Column, newCol migrator.Column) error {
+func (t *TestMigrationEngine) AlterField(ctx context.Context, table migrator.Table, old migrator.Column, newCol migrator.Column) error {
 	t.t.Logf("Altering field: %s for object %T", table.TableName(), table.Model())
 	t.Actions = append(t.Actions, Action{Type: migrator.ActionAlterField, Table: table, Field: newCol})
 	return nil
 }
-func (t *TestMigrationEngine) RemoveField(table migrator.Table, col migrator.Column) error {
+func (t *TestMigrationEngine) RemoveField(ctx context.Context, table migrator.Table, col migrator.Column) error {
 	t.t.Logf("Removing field: %s for object %T", table.TableName(), table.Model())
 	t.Actions = append(t.Actions, Action{Type: migrator.ActionRemoveField, Table: table, Field: col})
 	return nil

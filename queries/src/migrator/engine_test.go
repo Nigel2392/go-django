@@ -1,6 +1,7 @@
 package migrator_test
 
 import (
+	"context"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -58,7 +59,7 @@ func TestMigrator(t *testing.T) {
 	os.RemoveAll(tmpDir)
 
 	// MakeMigrations
-	if err := engine.MakeMigrations(); err != nil {
+	if err := engine.MakeMigrations(context.Background()); err != nil {
 		t.Fatalf("MakeMigrations failed: %v", err)
 	}
 
@@ -80,7 +81,7 @@ func TestMigrator(t *testing.T) {
 	}
 
 	// Migrate
-	if err := engine.Migrate(); err != nil {
+	if err := engine.Migrate(context.Background()); err != nil {
 		t.Fatalf("Migrate failed: %v", err)
 	}
 
@@ -130,7 +131,7 @@ func TestMigrator(t *testing.T) {
 	t.Run("TestMigrationAddField", func(t *testing.T) {
 		testsql.ExtendedDefinitions = true
 
-		needsToMigrate, err := engine.NeedsToMakeMigrations()
+		needsToMigrate, err := engine.NeedsToMakeMigrations(context.Background())
 		if err != nil {
 			t.Fatalf("NeedsToMakeMigrations failed: %v", err)
 		}
@@ -139,7 +140,7 @@ func TestMigrator(t *testing.T) {
 			t.Fatalf("expected 5 migrations, got %d", len(needsToMigrate))
 		}
 
-		if err := engine.MakeMigrations(); err != nil {
+		if err := engine.MakeMigrations(context.Background()); err != nil {
 			t.Fatalf("MakeMigrations failed: %v", err)
 		}
 
@@ -162,7 +163,7 @@ func TestMigrator(t *testing.T) {
 		}
 
 		// Migrate
-		if err := engine.Migrate(); err != nil {
+		if err := engine.Migrate(context.Background()); err != nil {
 			t.Fatalf("Migrate failed: %v", err)
 		}
 
@@ -224,7 +225,7 @@ func TestMigrator(t *testing.T) {
 	t.Run("TestMigrationRemoveField", func(t *testing.T) {
 		testsql.ExtendedDefinitions = false
 
-		var needsToMigrate, err = engine.NeedsToMakeMigrations()
+		var needsToMigrate, err = engine.NeedsToMakeMigrations(context.Background())
 		if err != nil {
 			t.Fatalf("NeedsToMakeMigrations failed: %v", err)
 		}
@@ -233,7 +234,7 @@ func TestMigrator(t *testing.T) {
 			t.Fatalf("expected 5 migrations, got %d", len(needsToMigrate))
 		}
 
-		if err := engine.MakeMigrations(); err != nil {
+		if err := engine.MakeMigrations(context.Background()); err != nil {
 			t.Fatalf("MakeMigrations failed: %v", err)
 		}
 
@@ -256,7 +257,7 @@ func TestMigrator(t *testing.T) {
 		}
 
 		// Migrate
-		if err := engine.Migrate(); err != nil {
+		if err := engine.Migrate(context.Background()); err != nil {
 			t.Fatalf("Migrate failed: %v", err)
 		}
 
@@ -319,7 +320,7 @@ func TestMigrator(t *testing.T) {
 		testsql.ExtendedDefinitionsProfile = true
 		testsql.ExtendedDefinitionsTodo = true
 
-		var needsToMigrate, err = engine.NeedsToMakeMigrations()
+		var needsToMigrate, err = engine.NeedsToMakeMigrations(context.Background())
 		if err != nil {
 			t.Fatalf("NeedsToMakeMigrations failed: %v", err)
 		}
@@ -328,7 +329,7 @@ func TestMigrator(t *testing.T) {
 			t.Fatalf("expected 2 migrations, got %d", len(needsToMigrate))
 		}
 
-		if err := engine.MakeMigrations(); err != nil {
+		if err := engine.MakeMigrations(context.Background()); err != nil {
 			t.Fatalf("MakeMigrations failed: %v", err)
 		}
 
@@ -351,7 +352,7 @@ func TestMigrator(t *testing.T) {
 		}
 
 		// Migrate
-		if err := engine.Migrate(); err != nil {
+		if err := engine.Migrate(context.Background()); err != nil {
 			t.Fatalf("Migrate failed: %v", err)
 		}
 
@@ -445,7 +446,7 @@ func TestMigratorBroad(t *testing.T) {
 
 	t.Logf("Migration directory: %s, proceeding to \"makemigrations\"", tmpDir)
 
-	if err := engine.MakeMigrations(); err == nil || !errors.Is(err, migrator.ErrNoChanges) {
+	if err := engine.MakeMigrations(context.Background()); err == nil || !errors.Is(err, migrator.ErrNoChanges) {
 		t.Fatalf("expected MakeMigrations to return ErrNoChanges, got: %v", err)
 	}
 

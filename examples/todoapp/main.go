@@ -8,53 +8,44 @@ import (
 	"net/mail"
 	"os"
 
-	"github.com/Nigel2392/go-django/examples/blogapp/blog"
+	"github.com/Nigel2392/go-django/examples/todoapp/todos"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
-	"github.com/Nigel2392/go-django/src/contrib/editor"
-	_ "github.com/Nigel2392/go-django/src/contrib/editor/features"
-	"github.com/Nigel2392/go-django/src/contrib/editor/features/images"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
-	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
-	"github.com/Nigel2392/mux"
-	"github.com/google/uuid"
-
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
-
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/checks"
-	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
-	mediafs "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
-
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/mux"
+	"github.com/google/uuid"
 )
 
 func main() {
-	os.MkdirAll("./.private/blogapp", 0755)
+	os.MkdirAll("./.private/todoapp", 0755)
 
-	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/blogapp/db.sqlite3")
+	var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/todoapp/db.sqlite3")
 	if err != nil {
 		panic(err)
 	}
 
 	var app = django.App(
 		django.Configure(map[string]interface{}{
-			django.APPVAR_ALLOWED_HOSTS:   []string{"*"},
-			django.APPVAR_DEBUG:           true,
-			django.APPVAR_HOST:            "127.0.0.1",
-			django.APPVAR_PORT:            "8080",
-			django.APPVAR_DATABASE:        db,
-			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
-			migrator.APPVAR_MIGRATION_DIR: "./.private/blogapp/migrations",
+			django.APPVAR_ALLOWED_HOSTS: []string{"*"},
+			django.APPVAR_DEBUG:         true,
+			django.APPVAR_HOST:          "127.0.0.1",
+			django.APPVAR_PORT:          "8080",
+			django.APPVAR_DATABASE:      db,
+			django.APPVAR_RECOVERER:     false,
 
-			django.APPVAR_RECOVERER: false,
+			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
+			migrator.APPVAR_MIGRATION_DIR: "./.private/todoapp/migrations",
 		}),
 		django.AppLogger(&logger.Logger{
 			Level:       logger.DBG,
@@ -65,25 +56,16 @@ func main() {
 			OutputWarn:  os.Stdout,
 			OutputError: os.Stdout,
 		}),
-		// django.AppMiddleware(
-		// middleware.DefaultLogger.Intercept,
-		// ),
 		django.Apps(
 			session.NewAppConfig,
 			auth.NewAppConfig,
 			admin.NewAppConfig,
 			messages.NewAppConfig,
-			pages.NewAppConfig,
 			revisions.NewAppConfig,
 			auditlogs.NewAppConfig,
 			reports.NewAppConfig,
-			editor.NewAppConfig,
-			blog.NewAppConfig,
-			images.NewAppConfig(&images.Options{
-				MediaBackend: mediafs.NewBackend("./.private/blogapp/media", 0),
-				MediaDir:     "images",
-			}),
 			migrator.NewAppConfig,
+			todos.NewAppConfig,
 		),
 	)
 
@@ -93,10 +75,6 @@ func main() {
 	checks.Shutup("field.invalid_db_type", func(m checks.Message) bool {
 		return m.Object.(attrs.Field).Name() == "GroupPermissions"
 	})
-
-	mediafiles.SetDefault("filesystem")
-
-	pages.SetRoutePrefix("/pages")
 
 	// Register a route for chrome devtools
 	// This is used to allow Chrome DevTools to connect to the app for debugging.
@@ -125,10 +103,6 @@ func main() {
 		}
 	}))
 
-	// logger.SetLevel(
-	// logger.ERR,
-	// )
-
 	err = app.Initialize()
 	if err != nil {
 		panic(err)
@@ -152,6 +126,7 @@ func main() {
 	if !ok {
 		panic("EntrySet not found in user data store")
 	}
+
 	entries, ok := entrySet.(*queries.RelRevFK[attrs.Definer])
 	if !ok {
 		panic(fmt.Errorf("EntrySet is not a slice of *auditlogs.Entry, got %T", entrySet))
@@ -163,42 +138,14 @@ func main() {
 	}
 
 	if len(os.Args) == 1 {
-		blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()
+		todoItems, err := queries.GetQuerySet(&todos.Todo{}).All()
 		if err != nil {
 			panic(fmt.Errorf("failed to get blog pages: %w", err))
 		}
-		fmt.Println("Blog pages:", len(blogPages))
-		for page := range blogPages.Objects() {
-			fmt.Printf(" - %q (ID: %d, %d)\n", page.Page.Title, page.ID(), page.Page.PageID)
+		fmt.Println("Todos:", len(todoItems))
+		for todo := range todoItems.Objects() {
+			fmt.Printf(" - %q (ID: %d, %+v)\n", todo.Title, todo.ID, todo)
 		}
-
-		pages, err := pages.NewPageQuerySet().
-			Specific().
-			Types(&blog.BlogPage{}).
-			Unpublished().
-			All()
-		if err != nil {
-			panic(fmt.Errorf("failed to get pages: %w", err))
-		}
-
-		fmt.Println("Specific Pages:", len(pages))
-		for specificPage := range pages.Objects() {
-			var page = specificPage.Reference()
-			fmt.Printf(" - %q (ID: %d, %d)\n", page.Title, page.ID(), page.PageID)
-			fmt.Printf("   - PageObject: %+v\n", specificPage.(*blog.BlogPage))
-		}
-
-		//err = staticfiles.Collect(func(path string, f fs.File) error {
-		//	var stat, err = f.Stat()
-		//	if err != nil {
-		//		return err
-		//	}
-		//	fmt.Println("Collected", path, stat.Size())
-		//	return nil
-		//})
-		//if err != nil {
-		//	panic(err)
-		//}
 	}
 
 	if err := app.Serve(); err != nil {

@@ -13,7 +13,8 @@ import (
 )
 
 const (
-	DEFAULT_MIGRATION_DIR = "./migrations"
+	DEFAULT_MIGRATION_DIR      = "./migrations"
+	MAGIC_AMOUNT_OF_MIGRATIONS = 3
 )
 
 type MigrationAppConfig interface {
@@ -121,7 +122,7 @@ func NewAppConfig() *migratorAppConfig {
 
 func (a *migratorAppConfig) Check(ctx context.Context, settings django.Settings) []checks.Message {
 	var messages = a.AppConfig.Check(ctx, settings)
-	var cTypes, err = a.engine.NeedsToMakeMigrations()
+	var cTypes, err = a.engine.NeedsToMakeMigrations(ctx)
 	if err != nil {
 		messages = append(messages, checks.Critical(
 			"migrator.engine.error",
@@ -131,15 +132,26 @@ func (a *migratorAppConfig) Check(ctx context.Context, settings django.Settings)
 		return messages
 	}
 
+	if len(cTypes) > MAGIC_AMOUNT_OF_MIGRATIONS {
+		messages = append(messages, checks.Critical(
+			"migrator.engine.too_many_migrations",
+			fmt.Sprintf("Too many migrations need to be made"),
+			len(cTypes),
+			"run `<your.executable> makemigrations` to create new migrations",
+		))
+		goto checkMigrate
+	}
+
 	for _, cType := range cTypes {
-		messages = append(messages, checks.Warning(
+		messages = append(messages, checks.Critical(
 			"migrator.engine.needs_makemigrations",
 			"Migrations need to be made",
 			cType.New(), "create new migrations by running `<your.executable> makemigrations`",
 		))
 	}
 
-	needsToMigrate, err := a.engine.NeedsToMigrate()
+checkMigrate:
+	needsToMigrate, err := a.engine.NeedsToMigrate(ctx)
 	if err != nil {
 		messages = append(messages, checks.Critical(
 			"migrator.engine.error",
@@ -149,8 +161,18 @@ func (a *migratorAppConfig) Check(ctx context.Context, settings django.Settings)
 		return messages
 	}
 
+	if len(needsToMigrate) > MAGIC_AMOUNT_OF_MIGRATIONS {
+		messages = append(messages, checks.Critical(
+			"migrator.engine.too_many_migrations",
+			fmt.Sprintf("Too many migrations to apply"),
+			len(needsToMigrate),
+			"run `<your.executable> migrate` to apply the migrations to the database",
+		))
+		return messages
+	}
+
 	for _, info := range needsToMigrate {
-		messages = append(messages, checks.Warning(
+		messages = append(messages, checks.Critical(
 			"migrator.engine.needs_migrate",
 			fmt.Sprintf(
 				"Migration \"%s/%s/%s\" needs to be applied",

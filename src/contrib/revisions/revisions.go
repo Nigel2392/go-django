@@ -1,6 +1,7 @@
 package revisions
 
 import (
+	"context"
 	"embed"
 	"fmt"
 
@@ -48,12 +49,12 @@ func NewAppConfig() django.AppConfig {
 			}
 
 			var table = migrator.NewModelTable(&Revision{})
-			if err := schemaEditor.CreateTable(table, true); err != nil {
+			if err := schemaEditor.CreateTable(context.Background(), table, true); err != nil {
 				return fmt.Errorf("failed to create pages table: %w", err)
 			}
 
 			for _, index := range table.Indexes() {
-				if err := schemaEditor.AddIndex(table, index, true); err != nil {
+				if err := schemaEditor.AddIndex(context.Background(), table, index, true); err != nil {
 					return fmt.Errorf("failed to create index %s: %w", index.Name(), err)
 				}
 			}

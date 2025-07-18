@@ -54,7 +54,7 @@ const (
 	);`
 	insertTableMigrations = `INSERT INTO migrations (app_name, model_name, migration_name) VALUES (?, ?, ?);`
 	deleteTableMigrations = `DELETE FROM migrations WHERE app_name = ? AND model_name = ? AND migration_name = ?;`
-	selectTableMigrations = `SELECT COUNT(*) FROM migrations WHERE app_name = ? AND model_name = ? AND migration_name = ? LIMIT 1;`
+	selectTableMigrations = `SELECT EXISTS(SELECT * FROM migrations WHERE app_name = ? AND model_name = ? AND migration_name = ? LIMIT 1);`
 )
 
 type MySQLSchemaEditor struct {
@@ -66,11 +66,11 @@ func NewMySQLSchemaEditor(db drivers.Database) *MySQLSchemaEditor {
 	return &MySQLSchemaEditor{db: db}
 }
 
-func (m *MySQLSchemaEditor) Setup() error {
+func (m *MySQLSchemaEditor) Setup(ctx context.Context) error {
 	if m.tablesCreated {
 		return nil
 	}
-	_, err := m.db.ExecContext(context.Background(), createTableMigrations)
+	_, err := m.db.ExecContext(ctx, createTableMigrations)
 	if err != nil {
 		return err
 	}
@@ -78,22 +78,22 @@ func (m *MySQLSchemaEditor) Setup() error {
 	return nil
 }
 
-func (m *MySQLSchemaEditor) StoreMigration(appName, modelName, migrationName string) error {
-	_, err := m.Execute(context.Background(), insertTableMigrations, appName, modelName, migrationName)
+func (m *MySQLSchemaEditor) StoreMigration(ctx context.Context, appName, modelName, migrationName string) error {
+	_, err := m.Execute(ctx, insertTableMigrations, appName, modelName, migrationName)
 	return err
 }
 
-func (m *MySQLSchemaEditor) HasMigration(appName, modelName, migrationName string) (bool, error) {
+func (m *MySQLSchemaEditor) HasMigration(ctx context.Context, appName, modelName, migrationName string) (bool, error) {
 	var count int
-	err := m.queryRow(context.Background(), selectTableMigrations, appName, modelName, migrationName).Scan(&count)
+	err := m.queryRow(ctx, selectTableMigrations, appName, modelName, migrationName).Scan(&count)
 	if err != nil {
 		return false, err
 	}
 	return count > 0, nil
 }
 
-func (m *MySQLSchemaEditor) RemoveMigration(appName, modelName, migrationName string) error {
-	_, err := m.Execute(context.Background(), deleteTableMigrations, appName, modelName, migrationName)
+func (m *MySQLSchemaEditor) RemoveMigration(ctx context.Context, appName, modelName, migrationName string) error {
+	_, err := m.Execute(ctx, deleteTableMigrations, appName, modelName, migrationName)
 	return err
 }
 
@@ -111,7 +111,7 @@ func (m *MySQLSchemaEditor) Execute(ctx context.Context, query string, args ...a
 	return result, nil
 }
 
-func (m *MySQLSchemaEditor) CreateTable(table migrator.Table, ifNotExists bool) error {
+func (m *MySQLSchemaEditor) CreateTable(ctx context.Context, table migrator.Table, ifNotExists bool) error {
 	var w strings.Builder
 	w.WriteString("CREATE TABLE ")
 	if ifNotExists {
@@ -134,11 +134,11 @@ func (m *MySQLSchemaEditor) CreateTable(table migrator.Table, ifNotExists bool) 
 		written = true
 	}
 	w.WriteString("\n);")
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *MySQLSchemaEditor) DropTable(table migrator.Table, ifExists bool) error {
+func (m *MySQLSchemaEditor) DropTable(ctx context.Context, table migrator.Table, ifExists bool) error {
 	var w strings.Builder
 	w.WriteString("DROP TABLE ")
 	if ifExists {
@@ -147,22 +147,22 @@ func (m *MySQLSchemaEditor) DropTable(table migrator.Table, ifExists bool) error
 	w.WriteString("`")
 	w.WriteString(table.TableName())
 	w.WriteString("`;")
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *MySQLSchemaEditor) RenameTable(table migrator.Table, newName string) error {
+func (m *MySQLSchemaEditor) RenameTable(ctx context.Context, table migrator.Table, newName string) error {
 	query := fmt.Sprintf("RENAME TABLE `%s` TO `%s`;", table.TableName(), newName)
-	_, err := m.Execute(context.Background(), query)
+	_, err := m.Execute(ctx, query)
 	return err
 }
 
-func (m *MySQLSchemaEditor) AddIndex(table migrator.Table, index migrator.Index, ifNotExists bool) error {
+func (m *MySQLSchemaEditor) AddIndex(ctx context.Context, table migrator.Table, index migrator.Index, ifNotExists bool) error {
 
 	if ifNotExists {
 		// MySQL does not support IF NOT EXISTS for CREATE INDEX, so we need to check manually.
 		var exists bool
-		err := m.queryRow(context.Background(),
+		err := m.queryRow(ctx,
 			"SELECT COUNT(*) FROM information_schema.statistics WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ?",
 			table.TableName(), index.Name(),
 		).Scan(&exists)
@@ -210,47 +210,47 @@ func (m *MySQLSchemaEditor) AddIndex(table migrator.Table, index migrator.Index,
 		}
 	}
 	w.WriteString(");")
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *MySQLSchemaEditor) DropIndex(table migrator.Table, index migrator.Index, ifExists bool) error {
+func (m *MySQLSchemaEditor) DropIndex(ctx context.Context, table migrator.Table, index migrator.Index, ifExists bool) error {
 	// MySQL does not support IF EXISTS for DROP INDEX, so we just drop it
 	// without checking if it exists.
 	// If you want to check before dropping, you would need to query the information_schema.
 	// This is a workaround, as MySQL does not support IF EXISTS for DROP INDEX.
 	query := fmt.Sprintf("DROP INDEX `%s` ON `%s`;", index.Name(), table.TableName())
-	_, err := m.Execute(context.Background(), query)
+	_, err := m.Execute(ctx, query)
 	return err
 }
 
-func (m *MySQLSchemaEditor) RenameIndex(table migrator.Table, oldName, newName string) error {
+func (m *MySQLSchemaEditor) RenameIndex(ctx context.Context, table migrator.Table, oldName, newName string) error {
 	// MySQL does not support RENAME INDEX directly, workaround required
 	return fmt.Errorf("mysql does not support RENAME INDEX directly, please drop and recreate")
 }
 
-func (m *MySQLSchemaEditor) AddField(table migrator.Table, col migrator.Column) error {
+func (m *MySQLSchemaEditor) AddField(ctx context.Context, table migrator.Table, col migrator.Column) error {
 	var w strings.Builder
 	w.WriteString("ALTER TABLE `")
 	w.WriteString(table.TableName())
 	w.WriteString("` ADD COLUMN ")
 	WriteColumn(&w, col)
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 
-func (m *MySQLSchemaEditor) RemoveField(table migrator.Table, col migrator.Column) error {
+func (m *MySQLSchemaEditor) RemoveField(ctx context.Context, table migrator.Table, col migrator.Column) error {
 	query := fmt.Sprintf("ALTER TABLE `%s` DROP COLUMN `%s`;", table.TableName(), col.Column)
-	_, err := m.Execute(context.Background(), query)
+	_, err := m.Execute(ctx, query)
 	return err
 }
 
-func (m *MySQLSchemaEditor) AlterField(table migrator.Table, oldCol, newCol migrator.Column) error {
+func (m *MySQLSchemaEditor) AlterField(ctx context.Context, table migrator.Table, oldCol, newCol migrator.Column) error {
 	query := fmt.Sprintf("ALTER TABLE `%s` MODIFY COLUMN ", table.TableName())
 	var w strings.Builder
 	w.WriteString(query)
 	WriteColumn(&w, newCol)
-	_, err := m.Execute(context.Background(), w.String())
+	_, err := m.Execute(ctx, w.String())
 	return err
 }
 

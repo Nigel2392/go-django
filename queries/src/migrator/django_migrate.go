@@ -1,6 +1,7 @@
 package migrator
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -28,8 +29,9 @@ var commandMigrate = &command.Cmd[migrationFlags]{
 		engine.Fake = stored.Fake
 
 		var appsList = stored.Apps.List()
+		var ctx = context.Background()
 
-		var types, err = engine.NeedsToMakeMigrations(appsList...)
+		var types, err = engine.NeedsToMakeMigrations(ctx, appsList...)
 		if err != nil {
 			return err
 		}
@@ -41,7 +43,7 @@ var commandMigrate = &command.Cmd[migrationFlags]{
 			)
 		}
 
-		err = engine.Migrate(appsList...)
+		err = engine.Migrate(ctx, appsList...)
 		if errors.Is(err, ErrNoChanges) {
 			logger.Info(err)
 			return errors.Join(

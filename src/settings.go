@@ -29,14 +29,6 @@ func Config(m map[string]interface{}) Settings {
 	}
 }
 
-func Configure(m map[string]interface{}) func(*Application) error {
-	return func(a *Application) error {
-		var s = Config(m)
-		a.Settings = s
-		return s.Bind(a)
-	}
-}
-
 func (s *settings) Bind(app *Application) error {
 	s.a = app
 	app.Settings = s
