@@ -805,6 +805,40 @@ func (m *Model) Create(ctx context.Context) error {
 	return this.(SaveableObject).SaveObject(ctx, config)
 }
 
+// Update saves the model to the database as an update operation.
+//
+// It checks if the model is properly initialized and if the model's definitions
+// are set up. If the model is not initialized, it returns an error.
+func (m *Model) Update(ctx context.Context) error {
+	if m.internals == nil || m.internals.object == nil {
+		return errors.NotImplemented.WithCause(fmt.Errorf(
+			"cannot save model %w", ErrModelInitialized,
+		))
+	}
+
+	var config SaveConfig
+	if cnf, ok := saveConfigFromContext(ctx); ok {
+		config = cnf
+	}
+
+	var this = m.internals.object.Interface().(attrs.Definer)
+	config.this = this
+	config.ForceUpdate = true
+	return this.(SaveableObject).SaveObject(ctx, config)
+}
+
+// Delete deletes the model from the database.
+func (m *Model) Delete(ctx context.Context) error {
+	if m.internals == nil || m.internals.object == nil {
+		return errors.NotImplemented.WithCause(fmt.Errorf(
+			"cannot delete model %w", ErrModelInitialized,
+		))
+	}
+
+	var this = m.internals.object.Interface().(attrs.Definer)
+	return this.(DeleteableObject).DeleteObject(ctx)
+}
+
 type saveConfigContextKey struct{}
 
 func NewSaveConfigContext(SaveConfig SaveConfig) context.Context {
@@ -1077,6 +1111,61 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	m.internals.fromDB = true
 
 	return transaction.Commit(ctx)
+}
+
+func (m *Model) DeleteObject(ctx context.Context) error {
+	var this = m.internals.object.Interface().(attrs.Definer)
+	var defs = this.FieldDefs()
+	var prim = defs.Primary()
+	if prim == nil {
+		return fmt.Errorf(
+			"cannot delete model %T: no primary key defined",
+			this,
+		)
+	}
+
+	where, err := queries.GenerateObjectsWhereClause(this)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to generate where clause for model %T: %w",
+			this, err,
+		)
+	}
+
+	actor := queries.Actor(this)
+	ctx, err = actor.BeforeDelete(ctx)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to run BeforeDelete for model %T: %w",
+			this, err,
+		)
+	}
+
+	_, err = queries.GetQuerySet(this).
+		Filter(where).
+		Delete()
+	if err != nil {
+		return fmt.Errorf(
+			"failed to delete model %T: %w",
+			this, err,
+		)
+	}
+
+	// After the delete operation, we can reset the model's state
+	m.internals.fromDB = false
+	if m.internals.state != nil {
+		m.internals.state.Reset()
+	}
+
+	_, err = actor.AfterDelete(ctx)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to run AfterDelete for model %T: %w",
+			this, err,
+		)
+	}
+
+	return nil
 }
 
 func saveRegularField(ctx context.Context, cnf *SaveConfig, field queries.SaveableField) error {

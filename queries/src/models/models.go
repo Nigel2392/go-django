@@ -18,6 +18,10 @@ type SaveableObject interface {
 	SaveObject(ctx context.Context, cnf SaveConfig) error
 }
 
+type DeleteableObject interface {
+	DeleteObject(ctx context.Context) error
+}
+
 type private struct{}
 
 type _ModelInterface interface {

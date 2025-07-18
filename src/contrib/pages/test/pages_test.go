@@ -24,10 +24,10 @@ import (
 func updateNodes(qs *pages.PageQuerySet, nodes []*pages.PageNode) error
 
 //go:linkname incrementNumChild github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).incrementNumChild
-func incrementNumChild(qs *pages.PageQuerySet, pk int64) error
+func incrementNumChild(qs *pages.PageQuerySet, pk ...int64) error
 
 //go:linkname decrementNumChild github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).decrementNumChild
-func decrementNumChild(qs *pages.PageQuerySet, pk int64) error
+func decrementNumChild(qs *pages.PageQuerySet, pk ...int64) error
 
 func TestMain(m *testing.M) {
 
@@ -569,7 +569,7 @@ func TestPageNode(t *testing.T) {
 				})
 
 				t.Run("DeleteNode", func(t *testing.T) {
-					var err = qs.DeleteNode(&subChildNode)
+					var _, err = qs.Delete(&subChildNode)
 					if err != nil {
 						t.Fatal(err)
 						return

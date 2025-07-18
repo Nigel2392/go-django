@@ -287,9 +287,7 @@ func (r *rows[T]) addRelationChain(scannable *scannableField) {
 
 func (r *rows[T]) queryPreloads(preload *Preload) error {
 	if len(r.seen) == 0 {
-		return errors.NoUniqueKey.Wrapf(
-			"QuerySet.All: no 'seen' map for preload %q", preload.FieldName,
-		)
+		return nil
 	}
 
 	var seenObj = r.seen[preload.ParentPath]

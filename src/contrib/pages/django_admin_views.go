@@ -669,7 +669,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			}
 		}
 
-		if err := qs.DeleteNode(p); err != nil {
+		if _, err := qs.Delete(p); err != nil {
 			except.Fail(500, "Failed to delete page: %s", err)
 			return
 		}

@@ -468,6 +468,11 @@ func (qs *QuerySet[T]) LatestQuery() QueryInfo {
 	return qs.latestQuery
 }
 
+// HasWhereClause returns true if the QuerySet has a WHERE clause.
+func (qs *QuerySet[T]) HasWhereClause() bool {
+	return len(qs.internals.Where) > 0
+}
+
 // Context returns the context of the QuerySet.
 //
 // It is used to pass a context to the QuerySet, which is mainly used

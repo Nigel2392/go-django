@@ -2,7 +2,6 @@ package pages
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"runtime"
 	"slices"
@@ -17,11 +16,6 @@ import (
 
 type pageRegistry struct {
 	registry map[string]*PageDefinition
-}
-
-var direct_page_methods = [...]string{
-	"ID",
-	"Reference",
 }
 
 func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
@@ -41,16 +35,6 @@ func (p *pageRegistry) RegisterPageDefinition(definition *PageDefinition) {
 	if definition.ContentTypeDefinition == nil {
 		var cType = definition.ContentType()
 		definition.ContentTypeDefinition = contenttypes.DefinitionForType(cType.TypeName())
-	}
-
-	var rTyp = reflect.TypeOf(definition.ContentObject)
-	for _, methodName := range direct_page_methods {
-		if isPromoted(rTyp, methodName) {
-			panic(fmt.Errorf(
-				"pages: RegisterPageDefinition called with definition %T that has a promoted method %s, this is not allowed",
-				definition.ContentType().New(), methodName,
-			))
-		}
 	}
 
 	var contentType = definition.ContentType()

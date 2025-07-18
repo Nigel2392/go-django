@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"net/http"
 	"path"
+	"reflect"
 	"strconv"
 	"strings"
 
@@ -19,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -401,6 +403,29 @@ func NewAppConfig() django.AppConfig {
 			migrationFS, "migrations/pages",
 		),
 	}
+}
+
+var direct_page_methods = [...]string{
+	"ID",
+	"Reference",
+}
+
+func (p *PageAppConfig) Check(ctx context.Context, settings django.Settings) []checks.Message {
+	var messages = p.AppConfig.Check(ctx, settings)
+	for _, def := range pageRegistryObject.ListDefinitions() {
+		var rTyp = reflect.TypeOf(def.ContentObject)
+		for _, methodName := range direct_page_methods {
+			if isPromoted(rTyp, methodName) {
+				messages = append(messages, checks.Critical(
+					"pages.method_promoted",
+					fmt.Sprintf("promoted method %q is not allowed", methodName),
+					def.ContentObject,
+					"Please directly define the method on your page type.",
+				))
+			}
+		}
+	}
+	return messages
 }
 
 type pageLogDefinition struct {

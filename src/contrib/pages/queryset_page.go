@@ -23,8 +23,6 @@ type specificPage struct {
 	pages map[int64]*queries.Row[Page]
 }
 
-type specificPreloadInfo = orderedmap.OrderedMap[string, *specificPage]
-
 func variableBool(b ...bool) bool {
 	var v bool
 	if len(b) > 0 {
@@ -323,7 +321,8 @@ func (qs *SpecificPageQuerySet) AddChildren(parent Page, children ...Page) error
 func (qs *SpecificPageQuerySet) DeletePage(page Page) error {
 	var node = page.Reference()
 	node.PageObject = page
-	return qs.WrappedQuerySet.Base().DeleteNode(node)
+	_, err := qs.WrappedQuerySet.Base().Delete(node)
+	return err
 }
 
 // MovePage moves a page and all it's children under a new parent page.

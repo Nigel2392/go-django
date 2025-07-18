@@ -30,7 +30,6 @@ import (
 
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	mediafs "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 
@@ -90,11 +89,11 @@ func main() {
 		),
 	)
 
-	checks.Shutup("model.cant_check", true)
-	checks.Shutup("admin.model_not_fully_implemented", true)
-	checks.Shutup("field.invalid_db_type", func(m checks.Message) bool {
-		return m.Object.(attrs.Field).Name() == "GroupPermissions"
-	})
+	//	checks.Shutup("model.cant_check", true)
+	//	checks.Shutup("admin.model_not_fully_implemented", true)
+	//	checks.Shutup("field.invalid_db_type", func(m checks.Message) bool {
+	//		return m.Object.(attrs.Field).Name() == "GroupPermissions"
+	//	})
 
 	mediafiles.SetDefault("filesystem")
 

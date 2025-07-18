@@ -178,7 +178,6 @@ func (qs *PageQuerySet) GetChildNodes(node *PageNode, statusFlags StatusFlag, of
 }
 
 func (qs *PageQuerySet) GetDescendants(path string, depth int64, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {
-
 	return qs.Descendants(path, depth).
 		Filter("StatusFlags__bitand", statusFlags).
 		Limit(int(limit)).
@@ -240,7 +239,7 @@ func (qs *PageQuerySet) AddRoots(nodes ...*PageNode) error {
 		previousRootNodeCount++
 	}
 
-	nodes, err = qs.ExplicitSave().BulkCreate(nodes)
+	nodes, err = qs.ExplicitSave().Base().BulkCreate(nodes)
 	if err != nil {
 		return err
 	}
@@ -310,13 +309,14 @@ func (qs *PageQuerySet) AddChildren(parent *PageNode, children ...*PageNode) err
 		}
 	}
 
-	children, err = qs.ExplicitSave().BulkCreate(children)
+	children, err = qs.ExplicitSave().Base().BulkCreate(children)
 	if err != nil {
 		return errors.Wrap(err, "failed to create child nodes")
 	}
 
 	parent.Numchild += int64(len(children))
 	updated, err := qs.
+		Base().
 		ExplicitSave().
 		Select("Numchild").
 		Filter("PK", parent.PK).
@@ -418,83 +418,209 @@ func (qs *PageQuerySet) UpdateNode(node *PageNode) error {
 	})
 }
 
-// DeleteRootNode deletes a root node.
-func (qs *PageQuerySet) DeleteRootNode(node *PageNode) error {
+func (qs *PageQuerySet) Create(*PageNode) (*PageNode, error) {
+	panic("Create is not implemented for PageQuerySet, use AddRoots or AddChildren instead or call qs.Base() for advanced usage")
+}
 
-	if node.Depth != 0 {
-		return fmt.Errorf("node is not a root node")
+func (qs *PageQuerySet) Update(*PageNode, ...any) (int64, error) {
+	panic("Update is not implemented for PageQuerySet, use UpdateNode instead or call qs.Base() for advanced usage")
+}
+
+func (qs *PageQuerySet) BulkCreate([]*PageNode) ([]*PageNode, error) {
+	panic("BulkCreate is not implemented for PageQuerySet, use AddRoots or AddChildren instead or call qs.Base() for advanced usage")
+}
+
+func (qs *PageQuerySet) BulkUpdate([]*PageNode, ...any) (int64, error) {
+	panic("BulkUpdate is not implemented for PageQuerySet, use UpdateNode instead or call qs.Base() for advanced usage")
+}
+
+func (qs *PageQuerySet) BatchCreate([]*PageNode) ([]*PageNode, error) {
+	panic("BatchCreate is not implemented for PageQuerySet, use AddRoots or AddChildren instead or call qs.Base() for advanced usage")
+}
+
+func (qs *PageQuerySet) BatchUpdate([]*PageNode, ...any) (int64, error) {
+	panic("BatchUpdate is not implemented for PageQuerySet, use UpdateNode instead or call qs.Base() for advanced usage")
+}
+
+func (qs *PageQuerySet) Delete(nodes ...*PageNode) (int64, error) {
+	if qs.Base().HasWhereClause() {
+
+		if len(nodes) > 0 {
+			return 0, errors.ValueError.Wrapf(
+				"QuerySet.Delete: cannot delete nodes when the QuerySet has a WHERE clause",
+			)
+		}
+
+		return qs.Base().Delete(nodes...)
 	}
 
-	if node.Path == "" {
-		return fmt.Errorf("node path must not be empty")
-	}
-
-	transaction, err := qs.GetOrCreateTransaction()
+	var transaction, err = qs.GetOrCreateTransaction()
 	if err != nil {
-		return errors.Wrap(err, "failed to start transaction")
+		return 0, errors.Wrap(err, "failed to start transaction")
 	}
 	defer transaction.Rollback(qs.Context())
 
-	descendants, err := qs.GetDescendants(
-		node.Path, node.Depth+1, StatusFlagNone, 0, 1000,
-	)
+	var allNodesExpr = make([]expr.ClauseExpression, 0, len(nodes))
+	var parentNodePaths = make([]string, 0, len(nodes))
+	for _, node := range nodes {
+		allNodesExpr = append(allNodesExpr, expr.And(
+			expr.Expr("Path", expr.LOOKUP_STARTSWITH, node.Path),
+			expr.Expr("Depth", expr.LOOKUP_GTE, node.Depth),
+		))
+
+		if node.Depth > 0 {
+			var parentPath, err = ancestorPath(
+				node.Path, 1,
+			)
+			if err != nil {
+				return 0, errors.Wrapf(
+					err, "failed to get parent path for node with path %s", node.Path,
+				)
+			}
+
+			parentNodePaths = append(
+				parentNodePaths,
+				parentPath,
+			)
+		}
+	}
+
+	nodeCount, nodeIter, err := qs.Base().Filter(allNodesExpr).IterAll()
 	if err != nil {
-		return errors.Wrap(err, "failed to get descendants")
+		return 0, errors.Wrap(err, "failed to query nodes")
 	}
 
-	err = qs.deleteNodes(append(descendants, node))
+	var ids = make([]int64, 0, nodeCount)
+	var seenIds = make(map[int64]struct{}, nodeCount)
+	var cTypes = orderedmap.NewOrderedMap[string, []int64]()
+	for row, err := range nodeIter {
+		if err != nil {
+			return 0, errors.Wrap(err, "failed to iterate over nodes")
+		}
+
+		if _, ok := seenIds[row.Object.PK]; ok {
+			continue // Skip already seen nodes
+		}
+
+		seenIds[row.Object.PK] = struct{}{}
+		ids = append(ids, row.Object.PK)
+
+		if row.Object.ContentType != "" {
+			var idList, ok = cTypes.Get(row.Object.ContentType)
+			if !ok {
+				idList = make([]int64, 0, 1)
+			}
+			idList = append(idList, row.Object.PageID)
+			cTypes.Set(row.Object.ContentType, idList)
+		}
+
+		var err = SignalNodeBeforeDelete.Send(&PageNodeSignal{
+			BaseSignal: BaseSignal{
+				Ctx: qs.Context(),
+			},
+			Node:   row.Object,
+			PageID: row.Object.PageID,
+		})
+
+		if err != nil {
+			return 0, fmt.Errorf(
+				"error in before delete signal for node %d: %w", row.Object.PK, err,
+			)
+		}
+	}
+
+	if len(ids) == 0 {
+		return 0, errors.New(errors.CodeNoRows, "no nodes to delete")
+	}
+
+	for head := cTypes.Front(); head != nil; head = head.Next() {
+		var definition = DefinitionForType(head.Key)
+		if definition == nil {
+			return 0, errors.New(errors.CodeNoRows, fmt.Sprintf(
+				"no content type definition found for %s",
+				head.Key,
+			))
+		}
+
+		var model = definition.Object().(Page)
+		var defs = model.FieldDefs()
+		var primaryField = defs.Primary()
+
+		var (
+			filterName  string
+			filterValue any = head.Value
+		)
+		if len(head.Value) == 1 {
+			filterName = primaryField.Name()
+			filterValue = head.Value[0]
+		} else {
+			filterName = fmt.Sprintf("%s__in", primaryField.Name())
+			filterValue = head.Value
+		}
+
+		var deleted, err = queries.GetQuerySetWithContext(qs.Context(), model).
+			Filter(filterName, filterValue).
+			Delete()
+		if err != nil {
+			return 0, errors.Wrapf(err, "failed to delete %s nodes", head.Key)
+		}
+
+		if deleted == 0 {
+			return 0, errors.NoChanges.Wrapf(
+				"failed to delete %s nodes with ids %v", head.Key, head.Value,
+			)
+		}
+	}
+
+	// Delete the nodes from the database
+	deleted, err := qs.Base().
+		Filter(allNodesExpr).
+		Delete()
 	if err != nil {
-		return errors.Wrap(err, "failed to delete nodes")
+		return 0, errors.Wrap(err, "failed to delete nodes")
 	}
 
-	return transaction.Commit(qs.Context())
-}
-
-// DeleteNode deletes a page node.
-func (qs *PageQuerySet) DeleteNode(node *PageNode) error { //, newParent *PageNode) error {
-	if node.Depth == 0 {
-		return qs.DeleteRootNode(node)
+	if deleted == 0 {
+		return 0, errors.NoChanges.Wrapf(
+			"failed to delete nodes with paths %v", parentNodePaths,
+		)
 	}
 
-	var tx, err = qs.GetOrCreateTransaction()
-	if err != nil {
-		return errors.Wrap(err, "failed to start transaction")
-	}
-	defer tx.Rollback(qs.Context())
+	if len(parentNodePaths) > 0 {
 
-	parentPath, err := ancestorPath(
-		node.Path, 1,
-	)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get parent path for node with path %s", node.Path)
-	}
+		var (
+			filterName  string
+			filterValue any = parentNodePaths[0]
+		)
+		if len(parentNodePaths) == 1 {
+			filterName = "Path"
+			filterValue = parentNodePaths[0]
+		} else {
+			filterName = "Path__in"
+			filterValue = parentNodePaths
+		}
 
-	parent, err := qs.GetNodeByPath(
-		parentPath,
-	)
-	if err != nil {
-		return errors.Wrapf(err, "failed to get parent node for node with path %s", node.Path)
-	}
+		var ct, err = qs.
+			Base().
+			Select("Numchild").
+			Filter(filterName, filterValue).
+			ExplicitSave().
+			Update(
+				&PageNode{},
+				expr.As("Numchild", expr.Logical("Numchild").SUB(1)),
+			)
+		if err != nil {
+			return deleted, errors.Wrap(err, "failed to decrement numchild for parent nodes")
+		}
 
-	var descendants []*PageNode
-	descendants, err = qs.GetDescendants(
-		node.Path, node.Depth-1, StatusFlagNone, 0, 1000,
-	)
-	if err != nil {
-		return errors.Wrap(err, "failed to get descendants")
-	}
-
-	err = qs.deleteNodes(descendants)
-	if err != nil {
-		return errors.Wrap(err, "failed to delete descendants")
-	}
-
-	err = qs.decrementNumChild(parent.PK)
-	if err != nil {
-		return errors.Wrap(err, "failed to decrement parent numchild")
+		if ct == 0 {
+			return deleted, errors.NoChanges.Wrapf(
+				"failed to decrement numchild for parent nodes with paths %v", parentNodePaths,
+			)
+		}
 	}
 
-	return tx.Commit(qs.Context())
+	return deleted, transaction.Commit(qs.Context())
 }
 
 // MoveNode moves a node to a new parent.
@@ -554,6 +680,7 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 	}
 
 	updated, err := qs.
+		Base().
 		Select("Path", "Depth").
 		ExplicitSave().
 		BulkUpdate(nodes)
@@ -654,6 +781,7 @@ func (qs *PageQuerySet) UnpublishNode(node *PageNode, unpublishChildren bool) er
 	}
 
 	updated, err := qs.
+		Base().
 		ExplicitSave().
 		Select("StatusFlags").
 		Filter(xp).
@@ -795,6 +923,7 @@ func (qs *PageQuerySet) saveSpecific(node *PageNode, creating bool) error {
 func (qs *PageQuerySet) updateNodes(nodes []*PageNode) error {
 
 	var updated, err = qs.
+		Base().
 		ExplicitSave().
 		Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt").
 		BulkUpdate(nodes)
@@ -816,6 +945,7 @@ func (qs *PageQuerySet) updateDescendantPaths(oldUrlPath, newUrlPath, pageNodePa
 	//).
 
 	var _, err = qs.
+		Base().
 		Select("UrlPath").
 		Filter(
 			expr.Expr("Path", expr.LOOKUP_STARTSWITH, pageNodePath),
@@ -842,10 +972,23 @@ func (qs *PageQuerySet) updateDescendantPaths(oldUrlPath, newUrlPath, pageNodePa
 	return nil
 }
 
-func (qs *PageQuerySet) incrementNumChild(id int64) error {
+func (qs *PageQuerySet) incrementNumChild(id ...int64) error {
+	var (
+		filterName  string
+		filterValue any
+	)
+	if len(id) == 1 {
+		filterName = "PK"
+		filterValue = id[0]
+	} else {
+		filterName = "PK__in"
+		filterValue = id
+	}
+
 	var ct, err = qs.
+		Base().
 		Select("Numchild").
-		Filter("PK", id).
+		Filter(filterName, filterValue).
 		ExplicitSave().
 		Update(
 			&PageNode{},
@@ -860,10 +1003,23 @@ func (qs *PageQuerySet) incrementNumChild(id int64) error {
 	return nil
 }
 
-func (qs *PageQuerySet) decrementNumChild(id int64) error {
+func (qs *PageQuerySet) decrementNumChild(id ...int64) error {
+	var (
+		filterName  string
+		filterValue any
+	)
+	if len(id) == 1 {
+		filterName = "PK"
+		filterValue = id[0]
+	} else {
+		filterName = "PK__in"
+		filterValue = id
+	}
+
 	var ct, err = qs.
+		Base().
 		Select("Numchild").
-		Filter("PK", id).
+		Filter(filterName, filterValue).
 		ExplicitSave().
 		Update(
 			&PageNode{},
@@ -894,7 +1050,7 @@ func (qs *PageQuerySet) deleteNodes(nodes []*PageNode) error {
 			if !ok {
 				idList = make([]int64, 0, 1)
 			}
-			idList = append(idList, node.PK)
+			idList = append(idList, node.PageID)
 			cTypes.Set(node.ContentType, idList)
 		}
 
@@ -919,7 +1075,7 @@ func (qs *PageQuerySet) deleteNodes(nodes []*PageNode) error {
 		qs = qs.Filter("PK__in", ids)
 	}
 
-	var deleted, err = qs.Delete()
+	var deleted, err = qs.Base().Delete()
 	if err != nil {
 		return err
 	}
@@ -961,6 +1117,7 @@ func (qs *PageQuerySet) deleteNodes(nodes []*PageNode) error {
 func (qs *PageQuerySet) updateNode(node *PageNode) error {
 
 	updated, err := qs.
+		Base().
 		Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt").
 		Filter("PK", node.PK).
 		ExplicitSave().
@@ -987,6 +1144,7 @@ func (qs *PageQuerySet) updateNodeStatusFlags(statusFlags int64, iD int64) error
 	defer transaction.Rollback(qs.Context())
 
 	updated, err := qs.
+		Base().
 		Select("StatusFlags").
 		Filter("PK", iD).
 		ExplicitSave().
