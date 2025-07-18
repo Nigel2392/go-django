@@ -57,6 +57,13 @@ type queryWrapperPGX[T pgxQuerier] struct {
 	d    *Driver
 }
 
+func (c *queryWrapperPGX[T]) Unwrap() any {
+	if unwrapper, ok := any(c.conn).(Unwrapper); ok {
+		return unwrapper.Unwrap()
+	}
+	return c.conn
+}
+
 func (c *queryWrapperPGX[T]) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
 	var rows, err = c.conn.Query(ctx, query, args...)
 	LogSQL(ctx, fmt.Sprintf("%T", c.conn), err, query, args...)

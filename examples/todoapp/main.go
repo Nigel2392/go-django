@@ -124,7 +124,13 @@ func main() {
 	user.IsActive = true
 	user.SetPassword("Administrator123!")
 
-	if user, _, err = queries.GetQuerySet(&auth.User{}).Preload("EntrySet").Filter("Email", e.Address).GetOrCreate(user); err != nil {
+	user, _, err = queries.
+		GetQuerySet(&auth.User{}).
+		Preload("EntrySet").
+		Filter("Email", e.Address).
+		GetOrCreate(user)
+
+	if err != nil {
 		panic(fmt.Errorf("failed to create admin user: %w", err))
 	}
 

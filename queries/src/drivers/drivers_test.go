@@ -2,6 +2,7 @@ package drivers_test
 
 import (
 	"context"
+	"database/sql"
 	"os"
 	"testing"
 
@@ -240,4 +241,38 @@ func TestDatabaseErrors(t *testing.T) {
 			t.Log(err)
 		})
 	}
+}
+
+func TestUnwrap(t *testing.T) {
+	var db, err = drivers.Open(context.Background(), "sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open database: %v", err)
+	}
+
+	var unwrapped = db.Unwrap()
+	if unwrapped == nil {
+		t.Fatal("Unwrapped database is nil")
+	}
+
+	if _, ok := unwrapped.(*sql.DB); !ok {
+		t.Fatalf("Expected unwrapped type *sql.DB, got %T", unwrapped)
+	}
+
+	tx, err := db.Begin(context.Background())
+	if err != nil {
+		t.Fatalf("Failed to begin transaction: %v", err)
+	}
+
+	tx.Rollback(context.Background())
+
+	var unwrappedTx = tx.Unwrap()
+	if unwrappedTx == nil {
+		t.Fatal("Unwrapped transaction is nil")
+	}
+
+	if _, ok := unwrappedTx.(*sql.Tx); !ok {
+		t.Fatalf("Expected unwrapped transaction type *sql.Tx, got %T", unwrappedTx)
+	}
+
+	t.Logf("Unwrapped database: %T, Unwrapped transaction: %T", unwrapped, unwrappedTx)
 }

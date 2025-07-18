@@ -6,6 +6,11 @@ import (
 	"database/sql/driver"
 )
 
+type Unwrapper interface {
+	// Unwrap returns the underlying database connection.
+	Unwrap() any
+}
+
 // SQLRow interface represents a single row result from a database query.
 //
 // It provides methods to check for errors and scan the row's data into destination variables.
@@ -39,6 +44,7 @@ type SQLRows interface {
 // If a transaction was started, the queryset should return the transaction instead of the database connection
 // when calling [github.com/Nigel2392/go-django/queries/src.QuerySet.DB].
 type DB interface {
+	Unwrap() any
 	QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error)
 	QueryRowContext(ctx context.Context, query string, args ...any) SQLRow
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)

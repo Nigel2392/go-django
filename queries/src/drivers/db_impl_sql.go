@@ -43,6 +43,13 @@ type queryWrapper[T stdlibQuerier] struct {
 	d    *Driver
 }
 
+func (d *queryWrapper[T]) Unwrap() any {
+	if unwrapper, ok := any(d.conn).(Unwrapper); ok {
+		return unwrapper.Unwrap()
+	}
+	return d.conn
+}
+
 func (d *queryWrapper[T]) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
 	var res, err = d.conn.QueryContext(ctx, query, args...)
 	LogSQL(ctx, "sql.DB", err, query, args...)
