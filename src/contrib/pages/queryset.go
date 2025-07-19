@@ -606,6 +606,8 @@ func (qs *PageQuerySet) Delete(nodes ...*PageNode) (int64, error) {
 			filterValue = parentNodePaths
 		}
 
+		// Custom query to decrement the Numchild field of parent nodes
+		// decrementNumChild does not query by Path, but by PK,
 		var ct, err = qs.
 			Base().
 			Select("Numchild").
@@ -1038,86 +1040,6 @@ func (qs *PageQuerySet) decrementNumChild(id ...int64) error {
 		return fmt.Errorf("no nodes were updated for id %d", id)
 	}
 	return nil
-}
-
-func (qs *PageQuerySet) deleteNodes(nodes []*PageNode) error {
-
-	if !qs.Compiler().InTransaction() && queries.QUERYSET_CREATE_IMPLICIT_TRANSACTION {
-		panic("deleteNodes should be called within a transaction")
-	}
-
-	var ids = make([]int64, len(nodes))
-	var cTypes = orderedmap.NewOrderedMap[string, []int64]()
-	for i, node := range nodes {
-		ids[i] = node.PK
-
-		if node.ContentType != "" {
-			var idList, ok = cTypes.Get(node.ContentType)
-			if !ok {
-				idList = make([]int64, 0, 1)
-			}
-			idList = append(idList, node.PageID)
-			cTypes.Set(node.ContentType, idList)
-		}
-
-		var err = SignalNodeBeforeDelete.Send(&PageNodeSignal{
-			BaseSignal: BaseSignal{
-				Ctx: qs.Context(),
-			},
-			Node:   node,
-			PageID: node.PageID,
-		})
-
-		if err != nil {
-			return fmt.Errorf(
-				"error in before delete signal for node %d: %w", node.PK, err,
-			)
-		}
-	}
-
-	if len(ids) == 1 {
-		qs = qs.Filter("PK", ids[0])
-	} else if len(ids) > 1 {
-		qs = qs.Filter("PK__in", ids)
-	}
-
-	var deleted, err = qs.Base().Delete()
-	if err != nil {
-		return err
-	}
-
-	for head := cTypes.Front(); head != nil; head = head.Next() {
-		var definition = DefinitionForType(head.Key)
-		if definition == nil {
-			return errors.New(errors.CodeNoRows, fmt.Sprintf(
-				"no content type definition found for %s",
-				head.Key,
-			))
-		}
-
-		var model = definition.Object().(Page)
-		var defs = model.FieldDefs()
-		var primaryField = defs.Primary()
-		var deleted, err = queries.GetQuerySetWithContext(qs.Context(), model).
-			Filter(fmt.Sprintf("%s__in", primaryField.Name()), head.Value).
-			Delete()
-		if err != nil {
-			return errors.Wrapf(err, "failed to delete %s nodes", head.Key)
-		}
-
-		if deleted == 0 {
-			return errors.New(errors.CodeNoRows, fmt.Sprintf(
-				"no %s nodes were deleted",
-				head.Key,
-			))
-		}
-	}
-
-	if deleted == 0 {
-		return errors.NoRows
-	}
-
-	return err
 }
 
 func (qs *PageQuerySet) updateNode(node *PageNode) error {
