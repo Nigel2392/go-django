@@ -89,7 +89,19 @@ type isZeroer interface {
 var _isZeroerType = reflect.TypeOf((*isZeroer)(nil)).Elem()
 
 func IsZero(value interface{}) bool {
-	var rv = reflect.ValueOf(value)
+	var rv reflect.Value
+	switch v := value.(type) {
+	case reflect.Value:
+		rv = v
+	case *reflect.Value:
+		if v == nil {
+			return true
+		}
+		rv = *v
+	default:
+		rv = reflect.ValueOf(value)
+	}
+
 	if !rv.IsValid() {
 		return true
 	}

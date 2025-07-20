@@ -53,6 +53,10 @@ func (qs *PageQuerySet) Unpublished() *PageQuerySet {
 	return qs.Filter(qs.statusFlags(StatusFlagPublished).Not(true))
 }
 
+func (qs *PageQuerySet) RootPages() *PageQuerySet {
+	return qs.Filter("Depth", 0)
+}
+
 func (qs *PageQuerySet) Types(types ...any) *PageQuerySet {
 	if len(types) == 0 {
 		return qs

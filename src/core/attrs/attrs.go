@@ -50,7 +50,8 @@ func init() {
 //   - For pointers it checks if the pointer is nil
 //     or if the value it points to is a zero value.
 func IsZero(value interface{}) bool {
-	return django_reflect.IsZero(value)
+	var rv = reflect.ValueOf(value)
+	return django_reflect.IsZero(value) && rv.Kind() != reflect.Bool && rv.Kind() != reflect.String
 }
 
 // CanCreateObject is an interface for models that can create new objects of the same type.

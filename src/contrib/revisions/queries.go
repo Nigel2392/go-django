@@ -154,19 +154,30 @@ func GetRevisionsByObject(obj attrs.Definer, limit int, offset int) ([]*Revision
 
 	var cTypeDef = contenttypes.DefinitionForObject(obj)
 	var cType = cTypeDef.ContentType()
-	rows, err := queries.GetQuerySet(&Revision{}).
+	rowCount, rowsIter, err := queries.GetQuerySet(&Revision{}).
 		Filter("ObjectID", string(objectID)).
 		Filter("ContentType", cType.TypeName()).
 		Limit(limit).
 		Offset(offset).
 		OrderBy("-CreatedAt").
-		All()
+		IterAll()
 	if err != nil {
 		return nil, errors.Wrap(
 			err, "GetRevisionsByObject",
 		)
 	}
-	return slices.Collect(rows.Objects()), nil
+	var idx = 0
+	var revisions = make([]*Revision, 0, rowCount)
+	for row, err := range rowsIter {
+		if err != nil {
+			return nil, errors.Wrapf(
+				err, "GetRevisionsByObject: row %d", idx,
+			)
+		}
+		revisions = append(revisions, row.Object)
+		idx++
+	}
+	return revisions, nil
 }
 
 func CreateRevision(forObj attrs.Definer) (*Revision, error) {

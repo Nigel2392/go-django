@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/errs"
-	"github.com/pkg/errors"
 )
 
 func init() {
@@ -149,7 +149,9 @@ func (c *BaseContentType[T]) Scan(src interface{}) error {
 	case string:
 		var registryObj = DefinitionForType(src)
 		if registryObj == nil {
-			return errors.Errorf("invalid content type: %s, are you sure it is registered?", src)
+			return errors.InvalidContentType.Wrapf(
+				"invalid content type: %s, are you sure it is registered?", src,
+			)
 		}
 		var newCtype = NewContentType(registryObj.ContentObject.(T))
 		*c = *newCtype
@@ -187,7 +189,9 @@ func (c *BaseContentType[T]) UnmarshalJSON(data []byte) error {
 
 	var registryObj = DefinitionForType(typeString)
 	if registryObj == nil {
-		return errors.Errorf("invalid content type: %s, are you sure it is registered?", typeString)
+		return errors.NotImplemented.Wrapf(
+			"invalid content type: %s, are you sure it is registered?", typeString,
+		)
 	}
 
 	var newCtype = NewContentType(registryObj.ContentObject.(T))

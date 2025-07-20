@@ -41,6 +41,7 @@ type BaseModelForm[T attrs.Definer] struct {
 	Definition     attrs.Definitions
 	InstanceFields []attrs.Field
 	context        context.Context
+	initialData    map[string]interface{}
 
 	flags modelFormFlag
 
@@ -69,6 +70,28 @@ func NewBaseModelForm[T attrs.Definer](model T, opts ...func(forms.Form)) *BaseM
 	f.SetInstance(f.Model)
 
 	return f
+}
+
+// Add InitialData sets the initial data for the form.
+//
+// This is done on the wrapped [ModelForm] and not on the [BaseForm] itself.
+// The [BaseForm] will reset all initial data once the form is loaded with [forms.WithRequestData].
+// This means that any initial data would otherwise be lost.
+func (f *BaseModelForm[T]) SetInitialData(initial map[string]interface{}) {
+	assert.False(
+		f.wasSet(formLoaded),
+		"Initial data cannot be set after the form fields have been loaded",
+	)
+
+	f.initialData = initial
+}
+
+func (f *BaseModelForm[T]) InitialData() map[string]interface{} {
+	if f.initialData == nil {
+		f.initialData = make(map[string]interface{})
+	}
+
+	return f.initialData
 }
 
 func (f *BaseModelForm[T]) modelIsNil(model T) bool {
@@ -183,6 +206,7 @@ func (f *BaseModelForm[T]) SetExclude(exclude ...string) {
 }
 
 func (f *BaseModelForm[T]) Reset() {
+	f.initialData = nil
 	f.BaseForm.Reset()
 	f.setFlag(formLoaded, false)
 }
@@ -288,7 +312,7 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 			continue
 		}
 
-		var _, ok = f.Definition.Field(fieldname)
+		var field, ok = f.Definition.Field(fieldname)
 		assert.True(ok, "Field %q not found in %T", fieldname, f.Model)
 
 		value, ok := cleaned[fieldname]
@@ -296,7 +320,7 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 			continue
 		}
 
-		if err := attrs.Set(f.Model, fieldname, value); err != nil {
+		if err := field.SetValue(value, true); err != nil {
 			f.AddError(
 				fieldname,
 				err,

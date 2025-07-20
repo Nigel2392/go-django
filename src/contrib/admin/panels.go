@@ -180,7 +180,7 @@ func (a *AdminForm[T]) SetPrefix(prefix string) {
 func (a *AdminForm[T]) SetInitial(initial map[string]interface{}) {
 	a.Form.SetInitial(initial)
 }
-func (a *AdminForm[T]) SetValidators(validators ...func(forms.Form) []error) {
+func (a *AdminForm[T]) SetValidators(validators ...func(forms.Form, map[string]interface{}) []error) {
 	a.Form.SetValidators(validators...)
 }
 func (a *AdminForm[T]) Ordering(o []string) {

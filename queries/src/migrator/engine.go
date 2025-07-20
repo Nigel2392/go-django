@@ -1196,13 +1196,24 @@ func (e *MigrationEngine) ReadMigrations(apps ...string) ([]*MigrationFile, erro
 				continue
 			}
 
-			var filesDir = filepath.Join(workingPath, modelMigrationDir.Name())
+			var model, ok = getModelByApp(appMigrationDir.Name(), modelMigrationDir.Name())
+			if model == nil || !ok {
+				logger.Debugf(
+					"Skip reading migrations for model %q.%q, not found in migration engines' apps list",
+					appMigrationDir.Name(), modelMigrationDir.Name(),
+				)
+				continue
+			}
 
+			var filesDir = filepath.Join(workingPath, modelMigrationDir.Name())
 			migrationFiles, err := e.readMigrationDirFS(
 				mfs, filesDir, appMigrationDir.Name(), modelMigrationDir.Name(),
 			)
 			if err != nil {
-				return nil, err
+				return nil, errors.Wrapf(
+					err, "failed to read migration directory %q for app %q", filesDir,
+					appMigrationDir.Name(),
+				)
 			}
 
 			migrations = append(migrations, migrationFiles...)

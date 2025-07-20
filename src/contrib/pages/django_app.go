@@ -18,7 +18,9 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -111,11 +113,15 @@ func App() *PageAppConfig {
 // This is used to initialize the pages app, set up routes, and register the admin application.
 func NewAppConfig() django.AppConfig {
 
-	attrs.RegisterModel(&PageNode{})
-
 	var routePrefixSet = false
 
+	pageApp.Deps = []string{
+		"admin",
+		"settings",
+	}
+
 	pageApp.ModelObjects = []attrs.Definer{
+		&Site{},
 		&PageNode{},
 	}
 
@@ -174,21 +180,27 @@ func NewAppConfig() django.AppConfig {
 				ContentObject:  &PageNode{},
 				GetLabel:       trans.S("Page"),
 				GetDescription: trans.S("A page in a hierarchical page tree- structure."),
-				GetObject:      func() any { return &PageNode{} },
+				GetInstanceLabel: func(a any) string {
+					var page, ok = a.(*PageNode)
+					if !ok {
+						assert.Fail("object %T is not a PageNode", a)
+					}
+					return fmt.Sprintf(
+						"%s (%d)",
+						page.Title, page.ID(),
+					)
+				},
+				GetObject: func() any { return &PageNode{} },
 				GetInstance: func(identifier any) (interface{}, error) {
-					var node, err = NewPageQuerySet().Filter("ID", identifier).Get()
+					var node, err = NewPageQuerySet().Filter("PK", identifier).Get()
 					if err != nil {
 						return nil, err
 					}
-					return &node, nil
+					return node.Object, nil
 				},
 				GetInstances: func(amount, offset uint) ([]interface{}, error) {
 					var nodes, err = NewPageQuerySet().Offset(int(offset)).Limit(int(amount)).AllNodes()
-					var items = make([]interface{}, 0)
-					for _, n := range nodes {
-						items = append(items, &n)
-					}
-					return items, err
+					return attrutils.InterfaceList(nodes), err
 				},
 			},
 			GetForID: func(ctx context.Context, ref *PageNode, id int64) (Page, error) {

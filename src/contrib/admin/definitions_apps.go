@@ -200,22 +200,22 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 				})
 			}
 
-			//	var hooks = goldcrest.Get[RegisterAppMenuItemHookFunc](
-			//		fmt.Sprintf("%s:%s", RegisterMenuItemHook, a.Name),
-			//	)
-			//
-			//	for _, hook := range hooks {
-			//		if hook == nil {
-			//			continue
-			//		}
-			//
-			//		var items = hook(site, a)
-			//		if len(items) == 0 {
-			//			continue
-			//		}
-			//
-			//		menuItem.Menu.Items = append(menuItem.Menu.Items, items...)
-			//	}
+			var hooks = goldcrest.Get[RegisterAppMenuItemHookFunc](
+				fmt.Sprintf("%s:%s", RegisterMenuItemHook, a.Name),
+			)
+
+			for _, hook := range hooks {
+				if hook == nil {
+					continue
+				}
+
+				var items = hook(site, a)
+				if len(items) == 0 {
+					continue
+				}
+
+				menuItem.Menu.Items = append(menuItem.Menu.Items, items...)
+			}
 
 			for front := a.Models.Front(); front != nil; front = front.Next() {
 				var model = front.Value

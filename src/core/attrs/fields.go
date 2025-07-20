@@ -9,6 +9,8 @@ import (
 	"net/mail"
 	"reflect"
 	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -685,6 +687,21 @@ func (f *FieldDef) FormField() fields.Field {
 		formField = fields.SQLNullField[float64](opts...)
 	case sql.NullTime:
 		formField = fields.SQLNullField[time.Time](opts...)
+	case Definer:
+		formField = newDefinerField(f, opts...)
+	}
+
+	if formField != nil {
+		goto returnField
+	}
+
+	switch reflect.New(typForNew).Interface().(type) {
+	case *time.Time:
+		formField = fields.DateField(widgets.DateWidgetTypeDateTime, opts...)
+	case *mail.Address:
+		formField = fields.EmailField(opts...)
+	case Definer:
+		formField = newDefinerField(f, opts...)
 	}
 
 	if formField != nil {
@@ -728,7 +745,10 @@ returnField:
 				chooser.BaseChooserOptions{
 					TargetObject: f.attrDef.RelForeignKey.Model(),
 					GetPrimaryKey: func(i interface{}) interface{} {
-						var def = i.(Definer)
+						var def, ok = i.(Definer)
+						if !ok {
+							assert.Fail("object %T is not a Definer", i)
+						}
 						return PrimaryKey(def)
 					},
 				},
@@ -845,9 +865,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 			return assert.Err(scanner.ScanAttribute(
 				rvPtr.Interface(),
 			))
-		}
-		// String to primitive fallback
-		if rv.Kind() == reflect.String {
+		} else if rv.Kind() == reflect.String {
 			switch f.field_t.Type.Kind() {
 			case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
 				reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
@@ -861,9 +879,22 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 				}
 				val := num.Elem()
 				rvPtr = &val
+			case reflect.Bool:
+				b, err := strconv.ParseBool(rv.String())
+				if err != nil {
+					return assert.Fail("field %q cannot be converted to bool: %v", f.field_t.Name, err)
+				}
+				val := reflect.ValueOf(b)
+				rvPtr = &val
 			default:
-				return assert.Fail("type mismatch for field %q", f.field_t.Name)
+				return assert.Fail("type mismatch for field %q: expected %q, got %q",
+					f.field_t.Name, typeName(f.field_t.Type), typeName(rv.Type()),
+				)
 			}
+		} else {
+			return assert.Fail("value %q not convertible to %q for field %q",
+				rv.Type(), f.field_t.Type, f.field_t.Name,
+			)
 		}
 	}
 
@@ -1124,7 +1155,7 @@ func (f *FieldDef) driverValue() (driver.Value, error) {
 		v = v.Elem()
 	}
 
-	if v.IsZero() {
+	if IsZero(v) {
 		return f._driverValue(f.GetDefault())
 	}
 
@@ -1165,4 +1196,47 @@ func nameSetValue(f *FieldDef) string {
 
 func nameGetValue(f *FieldDef) string {
 	return fmt.Sprintf("Get%s", f.field_t.Name)
+}
+
+func typeName(t reflect.Type) string {
+	var sb strings.Builder
+	_typeName(&sb, t)
+	return sb.String()
+}
+
+func _typeName(sb *strings.Builder, t reflect.Type) {
+	if t.Kind() == reflect.Ptr {
+		sb.WriteString("*")
+		_typeName(sb, t.Elem())
+		return
+	}
+
+	switch t.Kind() {
+	case reflect.Map:
+		sb.WriteString("map[")
+		_typeName(sb, t.Key())
+		sb.WriteString("]")
+	case reflect.Slice, reflect.Array:
+		sb.WriteString("[]")
+		_typeName(sb, t.Elem())
+	case reflect.Chan:
+		sb.WriteString("chan<")
+		_typeName(sb, t.Elem())
+		sb.WriteString(">")
+	case reflect.Func:
+		sb.WriteString("func(")
+		for i := 0; i < t.NumIn(); i++ {
+			if i > 0 {
+				sb.WriteString(", ")
+			}
+			_typeName(sb, t.In(i))
+		}
+		sb.WriteString(") ")
+		if t.NumOut() > 0 {
+			sb.WriteString(" ")
+			_typeName(sb, t.Out(0))
+		}
+	default:
+		sb.WriteString(t.Name())
+	}
 }

@@ -1,8 +1,6 @@
 package blog
 
 import (
-	"context"
-	"fmt"
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -10,12 +8,19 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 )
 
 var (
 	_ models.SaveableObject   = (*BlogPage)(nil)
 	_ models.DeleteableObject = (*BlogPage)(nil)
 )
+
+type BlogContext struct {
+	ctx.ContextWithRequest
+	Page pages.Page
+}
 
 type BlogPage struct {
 	models.Model `table:"blog_pages"`
@@ -32,18 +37,23 @@ func (b *BlogPage) Reference() *pages.PageNode {
 }
 
 func (b *BlogPage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Serve the blog page here.
-	// fmt.Fprintf(w, "Blog page: %s\n", b.Title)
-	fmt.Fprintln(w, "<html><head><title>Blog Page</title></head><body>")
-	fmt.Fprintf(w, "<h1>%s</h1><div>", b.Page.Title)
-	var ctx = context.Background()
-	for _, block := range b.Editor.Blocks {
-		if err := block.Render(ctx, w); err != nil && editor.RENDER_ERRORS {
-			fmt.Fprintf(w, "Error (%s): %s", block.Type(), err)
-		}
-	}
-	fmt.Fprintln(w, "</div></body></html>")
 
+	// Create a new RequestContext
+	// Add the page object to the context
+	var context ctx.ContextWithRequest = ctx.RequestContext(r)
+	context = &BlogContext{
+		ContextWithRequest: context,
+		Page:               b,
+	}
+
+	// Render the template
+	var err = tpl.FRender(
+		w, context, "blog",
+		"blog/page.tmpl",
+	)
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+	}
 }
 
 var (

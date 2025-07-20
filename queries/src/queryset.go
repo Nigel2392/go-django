@@ -3038,6 +3038,30 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 	return c, tx.Commit(qs.context)
 }
 
+type ValidationContext struct {
+	context.Context
+	Data map[string]interface{}
+}
+
+func (vc *ValidationContext) SetValue(key string, value any) {
+	if vc.Data == nil {
+		vc.Data = make(map[string]interface{})
+	}
+	vc.Data[key] = value
+}
+
+func (vc *ValidationContext) HasValue(key string) bool {
+	_, ok := vc.Data[key]
+	return ok
+}
+
+func (vc *ValidationContext) Value(key any) any {
+	if _, ok := key.(ValidationContext); ok {
+		return vc
+	}
+	return vc.Context.Value(key)
+}
+
 // BulkCreate is used to create multiple objects in the database.
 //
 // It takes a list of definer objects as arguments and returns a Query that can be executed
@@ -3059,8 +3083,11 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		primary attrs.Field
 	)
 
-	for _, object := range objects {
+	var context = &ValidationContext{
+		Context: qs.context,
+	}
 
+	for _, object := range objects {
 		var err error
 		object, err = setup(object)
 		if err != nil {
@@ -3069,7 +3096,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			)
 		}
 
-		if _, err = runActor(qs.context, actsBeforeCreate, object); err != nil {
+		if _, err = runActor(context, actsBeforeCreate, object); err != nil {
 			return nil, errors.Wrapf(
 				err,
 				"failed to run ActsBeforeCreate for %T",
@@ -3077,7 +3104,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			)
 		}
 
-		if err = Validate(qs.context, object); err != nil {
+		if err = Validate(context, object); err != nil {
 			return nil, errors.Wrapf(
 				err,
 				"failed to validate object %T before create",
@@ -3149,7 +3176,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 
 	var support = qs.compiler.SupportsReturning()
 	var resultQuery = qs.compiler.BuildCreateQuery(
-		qs.context,
+		context,
 		ChangeObjectsType[T, attrs.Definer](qs),
 		qs.internals,
 		infos,
@@ -3182,18 +3209,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 
 		for _, row := range objects {
 
-			if _, err = runActor(qs.context, actsAfterCreate, row); err != nil {
+			if _, err = runActor(context, actsAfterCreate, row); err != nil {
 				return nil, errors.Wrapf(
 					err,
 					"failed to run ActsAfterCreate for %T",
-					row,
-				)
-			}
-
-			if err = Validate(qs.context, row); err != nil {
-				return nil, errors.Wrapf(
-					err,
-					"failed to validate object %T after create",
 					row,
 				)
 			}
@@ -3204,7 +3223,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		// No results are returned, we cannot set the primary key
 		// so we can return and commit the transaction
 		if qs.internals.Model.Primary == nil || !migrator.CanAutoIncrement(qs.internals.Model.Primary) {
-			return objects, tx.Commit(qs.context)
+			return objects, tx.Commit(context)
 		}
 
 		// If no results are returned, we cannot set the primary key
@@ -3215,7 +3234,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				"no results returned after insert, cannot set primary key for %T",
 				qs.internals.Model.Object,
 			)
-			return objects, tx.Commit(qs.context)
+			return objects, tx.Commit(context)
 		}
 
 		if len(results) != len(objects) {
@@ -3249,18 +3268,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			//		row = Setup[T](row)
 			//	}
 
-			if _, err = runActor(qs.context, actsAfterCreate, row); err != nil {
+			if _, err = runActor(context, actsAfterCreate, row); err != nil {
 				return nil, errors.Wrapf(
 					err,
 					"failed to run ActsAfterCreate for %T",
-					row,
-				)
-			}
-
-			if err = Validate(qs.context, row); err != nil {
-				return nil, errors.Wrapf(
-					err,
-					"failed to validate object %T after create",
 					row,
 				)
 			}
@@ -3325,18 +3336,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				}
 			}
 
-			if _, err = runActor(qs.context, actsAfterCreate, row); err != nil {
+			if _, err = runActor(context, actsAfterCreate, row); err != nil {
 				return nil, errors.Wrapf(
 					err,
 					"failed to run ActsAfterCreate for %T",
-					row,
-				)
-			}
-
-			if err = Validate(qs.context, row); err != nil {
-				return nil, errors.Wrapf(
-					err,
-					"failed to validate object %T after create",
 					row,
 				)
 			}
@@ -3348,7 +3351,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		))
 	}
 
-	return objects, tx.Commit(qs.context)
+	return objects, tx.Commit(context)
 }
 
 // BulkUpdate is used to update multiple objects in the database.
@@ -3397,9 +3400,13 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 	}
 
 	var (
-		infos = make([]UpdateInfo, 0, len(objects))
-		where = slices.Clone(qs.internals.Where)
-		joins = slices.Clone(qs.internals.Joins)
+		infos   = make([]UpdateInfo, 0, len(objects))
+		where   = slices.Clone(qs.internals.Where)
+		joins   = slices.Clone(qs.internals.Joins)
+		context = &ValidationContext{
+			Context: qs.context,
+			Data:    make(map[string]interface{}, len(objects)),
+		}
 	)
 
 	var typ reflect.Type
@@ -3422,13 +3429,13 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 			))
 		}
 
-		if _, err = runActor(qs.context, actsBeforeUpdate, obj); err != nil {
+		if _, err = runActor(context, actsBeforeUpdate, obj); err != nil {
 			return 0, errors.Wrapf(
 				err, "failed to run ActsBeforeUpdate for %T", obj,
 			)
 		}
 
-		if err = Validate(qs.context, obj); err != nil {
+		if err = Validate(context, obj); err != nil {
 			return 0, errors.Wrapf(
 				err, "failed to validate object %T before update", obj,
 			)
@@ -3503,7 +3510,7 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 	}
 
 	var resultQuery = qs.compiler.BuildUpdateQuery(
-		qs.context,
+		context,
 		ChangeObjectsType[T, attrs.Definer](qs),
 		qs.internals,
 		infos,
@@ -3522,27 +3529,26 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 		))
 	}
 
+	var _, canAfterUpdate = qs.internals.Model.Object.(ActsAfterUpdate)
+	var _, actsAfterSave = qs.internals.Model.Object.(ActsAfterSave)
+	if !canAfterUpdate && !actsAfterSave {
+		goto commitTransaction
+	}
+
 	// Must always run the after update actor
 	// even if it was not implemented - the signal must be sent
 	for _, obj := range objects {
-		if _, err = runActor(qs.context, actsAfterUpdate, obj); err != nil {
+		if _, err = runActor(context, actsAfterUpdate, obj); err != nil {
 			return 0, errors.Wrapf(
 				err,
 				"failed to run ActsAfterUpdate for %T",
 				obj,
 			)
 		}
-
-		if err = Validate(qs.context, obj); err != nil {
-			return 0, errors.Wrapf(
-				err,
-				"failed to validate object %T after update",
-				obj,
-			)
-		}
 	}
 
-	return res, tx.Commit(qs.context)
+commitTransaction:
+	return res, tx.Commit(context)
 }
 
 // BatchCreate is used to create multiple objects in the database.

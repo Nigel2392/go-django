@@ -22,6 +22,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/src/contrib/settings"
 	"github.com/Nigel2392/mux"
 	"github.com/google/uuid"
 
@@ -74,6 +75,7 @@ func main() {
 			admin.NewAppConfig,
 			messages.NewAppConfig,
 			pages.NewAppConfig,
+			settings.NewAppConfig,
 			revisions.NewAppConfig,
 			auditlogs.NewAppConfig,
 			reports.NewAppConfig,
@@ -134,19 +136,23 @@ func main() {
 		panic(err)
 	}
 
+	var created bool
 	var user = &auth.User{}
 	var e, _ = mail.ParseAddress("admin@localhost")
 	user.Email = (*drivers.Email)(e)
 	user.Username = "admin"
 	user.IsAdministrator = true
 	user.IsActive = true
-	user.SetPassword("Administrator123!")
 
-	if user, _, err = queries.GetQuerySet(&auth.User{}).Preload("EntrySet").Filter("Email", e.Address).GetOrCreate(user); err != nil {
+	if user, created, err = queries.GetQuerySet(&auth.User{}).Preload("EntrySet").Filter("Email", e.Address).GetOrCreate(user); err != nil {
 		panic(fmt.Errorf("failed to create admin user: %w", err))
 	}
 
-	logger.Infof("Admin user created: %v %s %s %t %t", user.ID, user.Username, user.Email, user.IsAdministrator, user.IsActive)
+	if created {
+		logger.Infof("Admin user created: %v %s %s %t %t", user.ID, user.Username, user.Email, user.IsAdministrator, user.IsActive)
+	} else {
+		logger.Infof("Admin user already exists: %v %s %s %t %t", user.ID, user.Username, user.Email, user.IsAdministrator, user.IsActive)
+	}
 
 	var entrySet, ok = user.DataStore().GetValue("EntrySet")
 	if !ok {
@@ -175,7 +181,7 @@ func main() {
 		pages, err := pages.NewPageQuerySet().
 			Specific().
 			Types(&blog.BlogPage{}).
-			Unpublished().
+			// Unpublished().
 			All()
 		if err != nil {
 			panic(fmt.Errorf("failed to get pages: %w", err))

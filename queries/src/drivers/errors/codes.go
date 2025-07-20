@@ -3,12 +3,13 @@ package errors
 type GoCode string
 
 const (
-	CodeUnknown        GoCode = "Unknown"
-	CodeNotImplemented GoCode = "NotImplemented"
-	CodeNoDatabase     GoCode = "NoDatabase"
-	CodeUnknownDriver  GoCode = "UnknownDriver"
-	CodeNoTableName    GoCode = "NoTableName"
-	CodeNoWhereClause  GoCode = "NoWhereClause"
+	CodeUnknown             GoCode = "Unknown"
+	CodeNotImplemented      GoCode = "NotImplemented"
+	CodeNoDatabase          GoCode = "NoDatabase"
+	CodeUnknownDriver       GoCode = "UnknownDriver"
+	CodeNoTableName         GoCode = "NoTableName"
+	CodeNoWhereClause       GoCode = "NoWhereClause"
+	CodeContentTypeNotFound GoCode = "ContentTypeNotFound"
 
 	CodeLastInsertId  GoCode = "LastInsertId"
 	CodeFieldNull     GoCode = "FieldNull"
@@ -21,6 +22,7 @@ const (
 	CodeAlreadyExecuted   GoCode = "AlreadyExecuted"
 	CodeNoUniqueKey       GoCode = "NoUniqueKey"
 	CodeSaveFailed        GoCode = "SaveFailed"
+	CodeCheckFailed       GoCode = "CheckFailed"
 
 	CodeNoChanges          GoCode = "NoChanges"
 	CodeNoResults          GoCode = "NoResults"

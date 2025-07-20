@@ -48,12 +48,8 @@ func When(keyOrExpr interface{}, vals ...any) *when {
 		return &whenExpr
 
 	case Expression:
-		if len(vals) == 0 {
-			panic("no values provided for when clause (rhs)")
-		}
 		return &when{
 			lhs: v,
-			rhs: Value(vals[0]),
 		}
 
 	default:

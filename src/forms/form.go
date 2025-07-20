@@ -33,7 +33,7 @@ type BaseForm struct {
 	Cleaned         map[string]interface{}
 	Defaults        map[string]interface{}
 
-	Validators      []func(Form) []error
+	Validators      []func(Form, map[string]interface{}) []error
 	OnValidFuncs    []func(Form)
 	OnInvalidFuncs  []func(Form)
 	OnFinalizeFuncs []func(Form)
@@ -319,6 +319,9 @@ func (f *BaseForm) CleanedData() map[string]interface{} {
 	if f.Errors != nil {
 		except.Assert(f.Errors.Len() == 0, 500, "You cannot access cleaned data if the form is invalid.")
 	}
+	if len(f.ErrorList_) > 0 {
+		except.Assert(len(f.ErrorList_) == 0, 500, "You cannot access cleaned data if the form has errors.")
+	}
 	except.Assert(f.Cleaned != nil, 500, "You must call IsValid() before accessing cleaned data.")
 	return f.Cleaned
 }
@@ -459,20 +462,20 @@ func (f *BaseForm) FieldOrder() []string {
 	return f.fieldOrder
 }
 
-func (f *BaseForm) SetValidators(validators ...func(Form) []error) {
+func (f *BaseForm) SetValidators(validators ...func(Form, map[string]interface{}) []error) {
 	if f.Validators == nil {
-		f.Validators = make([]func(Form) []error, 0)
+		f.Validators = make([]func(Form, map[string]interface{}) []error, 0)
 	}
 	f.Validators = append(f.Validators, validators...)
 }
 
 func (f *BaseForm) Validate() {
 	if f.Validators == nil {
-		f.Validators = make([]func(Form) []error, 0)
+		f.Validators = make([]func(Form, map[string]interface{}) []error, 0)
 	}
 
 	for _, validator := range f.Validators {
-		var errors = validator(f)
+		var errors = validator(f, f.Cleaned)
 		if len(errors) > 0 {
 			for _, err := range errors {
 				switch e := err.(type) {

@@ -184,18 +184,16 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 		),
 	)
 
-	f.SetValidators(func(f forms.Form) []error {
-		var cleaned = f.CleanedData()
+	f.SetValidators(func(f forms.Form, cleaned map[string]any) []error {
 		if cleaned["password"].(*Password).Raw != cleaned["passwordConfirm"].(*Password).Raw {
 			return []error{autherrors.ErrPwdNoMatch}
 		}
 		return nil
 	})
 
-	f.SetValidators(func(f forms.Form) []error {
+	f.SetValidators(func(f forms.Form, cleaned map[string]any) []error {
 		var (
 			ctx      = context.Background()
-			cleaned  = f.CleanedData()
 			err      error
 			email    = cleaned["email"]
 			username = cleaned["username"]

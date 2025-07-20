@@ -56,7 +56,7 @@ type Form interface {
 	Prefix() string
 	SetPrefix(prefix string)
 	SetInitial(initial map[string]interface{})
-	SetValidators(validators ...func(Form) []error)
+	SetValidators(validators ...func(Form, map[string]interface{}) []error)
 	Ordering([]string)
 	FieldOrder() []string
 

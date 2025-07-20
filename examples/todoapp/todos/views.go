@@ -18,7 +18,7 @@ func ListTodos(w http.ResponseWriter, r *http.Request) {
 		Amount: 25,
 		// Define a function to retrieve a list of objects based on the amount and offset
 		GetObjects: func(amount, offset int) ([]*Todo, error) {
-			var rows, err = queries.ListObjects(&Todo{}, uint64(amount), uint64(offset))
+			var rows, err = queries.ListObjects(&Todo{}, uint64(offset), uint64(amount))
 			return rows, err
 		},
 		GetCount: func() (int, error) {

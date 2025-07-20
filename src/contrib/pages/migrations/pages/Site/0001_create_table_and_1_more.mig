@@ -1,0 +1,107 @@
+{
+  "dependencies": [
+    "pages:PageNode:0001_create_table_and_4_more.mig"
+  ],
+  "table": {
+    "table": "sites",
+    "model": "github.com/Nigel2392/go-django/src/contrib/pages.Site",
+    "fields": [
+      {
+        "name": "ID",
+        "column": "id",
+        "use_in_db": true,
+        "primary": true,
+        "auto": true,
+        "go_type": "int64",
+        "db_type": "INT",
+        "default": 0
+      },
+      {
+        "name": "Name",
+        "column": "site_name",
+        "use_in_db": true,
+        "min_length": 2,
+        "max_length": 64,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "Domain",
+        "column": "domain",
+        "use_in_db": true,
+        "min_length": 2,
+        "max_length": 256,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
+      },
+      {
+        "name": "Port",
+        "column": "port",
+        "use_in_db": true,
+        "min_value": 1,
+        "max_value": 65535,
+        "go_type": "int",
+        "db_type": "INT",
+        "default": 80
+      },
+      {
+        "name": "Default",
+        "column": "is_default_site",
+        "use_in_db": true,
+        "go_type": "bool",
+        "db_type": "BOOL",
+        "default": false
+      },
+      {
+        "name": "Root",
+        "column": "root_page_id",
+        "use_in_db": true,
+        "nullable": true,
+        "relation": {
+          "type": "ManyToOne",
+          "model": {
+            "content_type": "github.com/Nigel2392/go-django/src/contrib/pages.PageNode",
+            "lazy_model_key": ""
+          },
+          "field": "PK"
+        },
+        "go_type": "int64",
+        "db_type": "INT",
+        "default": null
+      }
+    ],
+    "indexes": [
+      {
+        "name": "",
+        "type": "",
+        "columns": [
+          "Domain"
+        ],
+        "unique": true
+      }
+    ],
+    "comment": ""
+  },
+  "actions": [
+    {
+      "action": "create_table"
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "",
+          "type": "",
+          "columns": [
+            "Domain"
+          ],
+          "unique": true
+        }
+      }
+    }
+  ]
+}

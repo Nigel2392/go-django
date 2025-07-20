@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
@@ -14,7 +16,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/models"
@@ -126,6 +127,20 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 			},
 		},
 		GetListFn: func(amount, offset uint) ([]attrs.Definer, error) {
+			if model.ListView.GetQuerySet != nil {
+				var qs = model.ListView.GetQuerySet(adminSite, app, model).
+					WithContext(r.Context()).
+					Offset(int(offset)).
+					Limit(int(amount))
+
+				var rows, err = qs.All()
+				if err != nil {
+					return nil, err
+				}
+
+				return slices.Collect(rows.Objects()), nil
+			}
+
 			return model.GetListInstances(amount, offset)
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
@@ -251,15 +266,33 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 
 		if err != nil {
 			context.Set("error", err)
-		}
 
-		messages.Warning(r,
-			fmt.Sprintf(
-				"Successfully deleted %s (%v)",
-				attrs.ToString(instance),
-				attrs.PrimaryKey(instance),
-			),
-		)
+			var asErr = &errors.Error{Code: errors.CodeCheckFailed}
+			if errors.As(err, asErr) {
+				err = asErr.Wrapf(
+					"failed to delete %s (%v)",
+					attrs.ToString(instance),
+					attrs.PrimaryKey(instance),
+				)
+			}
+
+			messages.Error(r,
+				fmt.Sprintf(
+					"Failed to delete %s (%v): %v",
+					attrs.ToString(instance),
+					attrs.PrimaryKey(instance),
+					err,
+				),
+			)
+		} else {
+			messages.Warning(r,
+				fmt.Sprintf(
+					"Successfully deleted %s (%v)",
+					attrs.ToString(instance),
+					attrs.PrimaryKey(instance),
+				),
+			)
+		}
 
 		var listViewURL = django.Reverse("admin:apps:model", app.Name, model.GetName())
 		http.Redirect(w, r, listViewURL, http.StatusSeeOther)
@@ -413,7 +446,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			for _, def := range model.ModelFields(opts.ViewOptions, instance) {
 				var v = def.GetValue()
 				var n = def.Name()
-				if fields.IsZero(v) {
+				if attrs.IsZero(v) {
 					initial[n] = def.GetDefault()
 				} else {
 					initial[n] = v

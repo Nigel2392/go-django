@@ -2,9 +2,11 @@ package admin
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -90,6 +92,9 @@ type ListViewOptions struct {
 	//
 	// This does mean that any logic provided by the admin when listing the models should be implemented by the developer.
 	GetHandler func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) views.View
+
+	// GetQuerySet is a function that returns a queries.QuerySet to use for the list view.
+	GetQuerySet func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) *queries.QuerySet[attrs.Definer]
 }
 
 type DeleteViewOptions struct {
@@ -277,6 +282,7 @@ func (o *ModelDefinition) FormatColumn(field string) any {
 
 	return func(_ *http.Request, defs attrs.Definitions, _ attrs.Definer) interface{} {
 		var value = defs.Get(field)
+		fmt.Printf("Formatting value for field %s: %v\n", field, value)
 		return format(value)
 	}
 }

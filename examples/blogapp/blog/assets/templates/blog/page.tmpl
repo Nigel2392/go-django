@@ -1,0 +1,15 @@
+{{ define "title" }}{{ .Page.Page.Title }}{{ end }}
+
+{{ define "extra_css" }}
+    <link rel="stylesheet" href="{{ static "blog/css/blog.css" }}">
+{{ end }}
+
+{{ define "content" }}
+
+    <div class="blog-wrapper">
+
+        {{ .Page.Editor.MustRender }} 
+
+    </div>
+
+{{ end }}

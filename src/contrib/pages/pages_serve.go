@@ -1,15 +1,15 @@
 package pages
 
 import (
-	"context"
 	"net/http"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/mux"
-	"github.com/pkg/errors"
+	"github.com/a-h/templ"
 )
 
 var (
@@ -81,90 +81,65 @@ type PageTemplateRenderView interface {
 	Render(w http.ResponseWriter, req *http.Request, template string, page Page, context ctx.Context) error
 }
 
+type PageComponentView interface {
+	PageContextGetter
+	Render(req *http.Request, page Page) templ.Component
+}
+
 // Register to the page definition.
 type PageServeView struct{}
 
 func (v *PageServeView) ServeXXX(w http.ResponseWriter, req *http.Request) {}
 
-func (v *PageServeView) TakeControl(w http.ResponseWriter, req *http.Request) {
-
-	var (
-		context   = context.Background()
-		qs        = NewPageQuerySet().WithContext(req.Context())
-		pathParts = mux.Vars(req).GetAll("*")
-		page      = &PageNode{}
-		err       error
-	)
-
-	if len(pathParts) == 0 {
-		var pages, err = qs.GetNodesByDepth(0, StatusFlagNone, 0, 1000)
-		if err != nil {
-			goto checkError
-		}
-
-		if len(pages) == 0 {
-			pageNotFound(w, req, nil, pathParts)
-			return
-		}
-
-		for _, p := range pages {
-			if p.StatusFlags.Is(StatusFlagPublished) {
-				page = p
-				break
-			}
-		}
-	} else {
-		var p *PageNode
-		for i, part := range pathParts {
-			p, err = qs.GetNodeBySlug(part, int64(i), page.Path)
-			if err != nil {
-				err = errors.Wrapf(
-					err, "Error getting page by slug (%d): %s/%s", i, page.Path, part,
-				)
-				break
-			}
-			page = p
-		}
-	}
-
-checkError:
-	if err != nil || page.ID() == 0 {
+func (v *PageServeView) TakeControl(w http.ResponseWriter, r *http.Request) {
+	var pathParts = mux.Vars(r).GetAll("*")
+	var req, site, err = SiteForRequest(r)
+	if err != nil {
 		pageNotFound(w, req, err, pathParts)
 		return
 	}
 
-	if page.ID() == 0 {
-		err = errors.New("No page found, ID is 0")
+	if len(pathParts) > 0 && pathParts[0] == site.Root.Slug {
+		pathParts = pathParts[1:]
+	}
+
+	pageObject, err := site.Root.Route(req, pathParts)
+	if err != nil {
 		pageNotFound(w, req, err, pathParts)
 		return
 	}
 
+	if pageObject.ID() == 0 {
+		pageNotFound(w, req, ErrNoPageID, pathParts)
+		return
+	}
+
+	var page = pageObject.Reference()
 	if page.StatusFlags.Is(StatusFlagDeleted) ||
 		page.StatusFlags.Is(StatusFlagHidden) ||
 		!page.StatusFlags.Is(StatusFlagPublished) {
-		err = errors.New("Page is not published")
+		err = errors.CheckFailed.Wrap("Page is not published")
+		pageNotFound(w, req, err, pathParts)
+		return
+	}
+
+	specific, err := page.Specific(req.Context())
+	if err != nil {
 		pageNotFound(w, req, err, pathParts)
 		return
 	}
 
 	var definition = DefinitionForType(page.ContentType)
 	if definition == nil {
-		err = errors.New("No definition found for page")
-		pageNotFound(w, req, err, pathParts)
-		return
-	}
-
-	specific, err := page.Specific(context)
-	if err != nil {
+		err = errors.NotImplemented.Wrap("No definition found for page")
 		pageNotFound(w, req, err, pathParts)
 		return
 	}
 
 	var view = definition.PageView(specific)
 	var handler, ok = specific.(http.Handler)
-
 	if view == nil && !ok {
-		err = errors.New("No view found for page")
+		err = errors.NotImplemented.Wrap("No view found for page")
 		pageNotFound(w, req, err, pathParts)
 		return
 	}

@@ -70,6 +70,8 @@ func (o *Select) GetContextData(id, name string, value interface{}, widgetAttrs 
 			values = []string{v}
 		case []string:
 			values = v
+		default:
+			values = []string{fmt.Sprintf("%v", v)}
 		}
 	}
 

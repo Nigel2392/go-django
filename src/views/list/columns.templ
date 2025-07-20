@@ -3,7 +3,6 @@ package list
 import (
     "github.com/Nigel2392/go-django/src/core/attrs"
     "github.com/Nigel2392/go-django/src/core/assert"
-    "github.com/Nigel2392/go-django/src/forms/fields"
 	"html/template"
 	"time"
 	"net/http"
@@ -52,7 +51,7 @@ func (c *fieldColumn[T]) data(r *http.Request, defs attrs.Definitions, _ T) inte
 	}
 
 	var d = field.GetValue()
-	if fields.IsZero(d) {
+	if attrs.IsZero(d) {
 		return field.GetDefault()
 	}
 

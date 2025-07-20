@@ -216,6 +216,11 @@ func (t BLOB) String() string {
 }
 
 // Complete shim for the ulid.ULID type
+
+func NewULID() ULID {
+	return ULID(ulid.Make())
+}
+
 func (id ULID) Bytes() []byte                      { return (ulid.ULID)(id).Bytes() }
 func (id ULID) Compare(other ulid.ULID) int        { return (ulid.ULID)(id).Compare(other) }
 func (id ULID) Entropy() []byte                    { return (ulid.ULID)(id).Entropy() }

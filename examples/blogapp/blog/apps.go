@@ -1,17 +1,23 @@
 package blog
 
 import (
+	"embed"
 	"flag"
 	"fmt"
 	"net/http"
 	"time"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/pkg/errors"
 )
@@ -47,11 +53,54 @@ var myCustomCommand = &command.Cmd[customCommandObj]{
 
 var blog *apps.DBRequiredAppConfig
 
+//go:embed assets/**
+var blogFS embed.FS
+
 func NewAppConfig() *apps.DBRequiredAppConfig {
 	var appconfig = apps.NewDBAppConfig("blog")
 
 	appconfig.ModelObjects = []attrs.Definer{
 		&BlogPage{},
+	}
+
+	appconfig.Init = func(settings django.Settings, db drivers.Database) error {
+		var (
+			tplFS    = filesystem.Sub(blogFS, "assets/templates")
+			staticFS = filesystem.Sub(blogFS, "assets/static")
+		)
+
+		// Set up the static files for this app
+		// They are stored in the "assets/static" directory
+		staticfiles.AddFS(staticFS, filesystem.MatchAnd(
+			filesystem.MatchPrefix("blog/"),
+			filesystem.MatchOr(
+				filesystem.MatchExt(".css"),
+				filesystem.MatchExt(".js"),
+				filesystem.MatchExt(".png"),
+				filesystem.MatchExt(".jpg"),
+				filesystem.MatchExt(".jpeg"),
+				filesystem.MatchExt(".svg"),
+				filesystem.MatchExt(".gif"),
+				filesystem.MatchExt(".ico"),
+			),
+		))
+
+		// Set up the templates for this app
+		// They are stored in the "assets/templates" directory
+		tpl.Add(tpl.Config{
+			AppName: "blog",
+			FS:      tplFS,
+			Bases: []string{
+				"blog/base.tmpl",
+			},
+			Matches: filesystem.MatchAnd(
+				filesystem.MatchPrefix("blog/"),
+				filesystem.MatchExt(".tmpl"),
+				filesystem.MatchExt(".tmpl"),
+			),
+		})
+
+		return nil
 	}
 
 	appconfig.Ready = func() error {

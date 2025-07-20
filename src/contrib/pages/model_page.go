@@ -3,13 +3,16 @@ package pages
 import (
 	"context"
 	"fmt"
+	"net/http"
 	"reflect"
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/mux"
 	"github.com/gosimple/slug"
 )
 
@@ -46,6 +49,69 @@ type PageNode struct {
 	// _parent is used to cache the parent node
 	// It is not saved to the database and is only used for performance optimization
 	_parent *PageNode `json:"-" attrs:"-"`
+}
+
+var ErrRouteNotFound = mux.ErrRouteNotFound
+
+type RoutablePage interface {
+	Route(r *http.Request, pathComponents []string) (Page, error)
+}
+
+func (n *PageNode) Route(r *http.Request, pathComponents []string) (Page, error) {
+
+	if len(pathComponents) == 0 {
+		if n.StatusFlags.Is(StatusFlagDeleted) ||
+			n.StatusFlags.Is(StatusFlagHidden) ||
+			!n.StatusFlags.Is(StatusFlagPublished) {
+			return nil, fmt.Errorf("page is not published: %w", ErrRouteNotFound)
+		}
+
+		return n, nil
+	}
+
+	var pageRow, err = n.Children().
+		WithContext(r.Context()).
+		Filter("Slug", pathComponents[0]).
+		Get()
+	if err != nil {
+		if !errors.Is(err, errors.NoRows) {
+			return nil, fmt.Errorf("failed to get page by path %q: %w", pathComponents, err)
+		}
+		return nil, fmt.Errorf("page not found for path %q: %w", pathComponents, ErrRouteNotFound)
+	}
+
+	if pageRow.Object == nil {
+		return nil, fmt.Errorf("page not found for path %q: %w", pathComponents, ErrRouteNotFound)
+	}
+
+	var cType = DefinitionForType(pageRow.Object.ContentType)
+	if cType != nil {
+		if _, ok := cType.Object().(RoutablePage); !ok {
+			goto routePageNode
+		}
+
+		var rTyp = reflect.TypeOf(cType.Object())
+		if isPromoted(rTyp, "Route") {
+			goto routePageNode
+		}
+
+		var specific, err = pageRow.Object.Specific(r.Context())
+		if err != nil {
+			return nil, fmt.Errorf(
+				"failed to get specific page for node %d: %w",
+				pageRow.Object.PK, err,
+			)
+		}
+
+		var ref = specific.Reference()
+		ref.SetSpecificPageObject(pageRow.Object)
+		ref._parent = n
+
+		return specific.(RoutablePage).Route(r, pathComponents[1:])
+	}
+
+routePageNode:
+	return pageRow.Object.Route(r, pathComponents[1:])
 }
 
 func (n *PageNode) Ancestors() *PageQuerySet {
@@ -194,10 +260,6 @@ func (n *PageNode) SetSpecificPageObject(p Page) {
 		return
 	}
 
-	if reflect.TypeOf(p) != reflect.TypeOf(n.PageObject) {
-		n.PageObject = nil
-	}
-
 	n.PageObject = p
 }
 
@@ -211,6 +273,18 @@ func (n *PageNode) Reference() *PageNode {
 
 func (n *PageNode) IsRoot() bool {
 	return n.Depth == 0
+}
+
+func (n *PageNode) IsPublished() bool {
+	return n.StatusFlags&StatusFlagPublished != 0
+}
+
+func (n *PageNode) IsHidden() bool {
+	return n.StatusFlags&StatusFlagHidden != 0
+}
+
+func (n *PageNode) IsDeleted() bool {
+	return n.StatusFlags&StatusFlagDeleted != 0
 }
 
 func (n *PageNode) BeforeCreate(context.Context) error {

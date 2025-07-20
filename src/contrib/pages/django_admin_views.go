@@ -308,12 +308,14 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		panels     []admin.Panel
 	)
 	if definition == nil || definition.AddPanels == nil {
-		panels = make([]admin.Panel, fieldDefs.Len())
+		panels = make([]admin.Panel, 0, fieldDefs.Len())
+		for _, def := range fieldDefs.Fields() {
+			var formField = def.FormField()
+			if formField == nil {
+				continue
+			}
 
-		for i, def := range fieldDefs.Fields() {
-			panels[i] = admin.FieldPanel(
-				def.Name(),
-			)
+			panels = append(panels, admin.FieldPanel(def.Name()))
 		}
 	} else {
 		panels = definition.AddPanels(
@@ -436,13 +438,6 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		GetFormFn: func(req *http.Request) *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]] {
 			return adminForm
 		},
-		GetInitialFn: func(req *http.Request) map[string]interface{} {
-			var initial = make(map[string]interface{})
-			for _, field := range fieldDefs.Fields() {
-				initial[field.Name()] = field.GetValue()
-			}
-			return initial
-		},
 		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer]]) {
 			var instance = form.Instance()
 			assert.False(instance == nil, "instance is nil after form submission")
@@ -484,10 +479,14 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	var definition = DefinitionForObject(page)
 	var panels []admin.Panel
 	if definition == nil || definition.EditPanels == nil {
-		panels = make([]admin.Panel, fieldDefs.Len())
+		panels = make([]admin.Panel, 0, fieldDefs.Len())
+		for _, def := range fieldDefs.Fields() {
+			var formField = def.FormField()
+			if formField == nil {
+				continue
+			}
 
-		for i, def := range fieldDefs.Fields() {
-			panels[i] = admin.FieldPanel(def.Name())
+			panels = append(panels, admin.FieldPanel(def.Name()))
 		}
 	} else {
 		panels = definition.EditPanels(r, page)

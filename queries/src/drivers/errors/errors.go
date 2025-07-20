@@ -21,15 +21,17 @@ for wrapping and unwrapping errors from `github.com/pkg/errors`.
 */
 
 var (
-	NotImplemented    Error = New(CodeNotImplemented, "Not implemented")
-	NoDatabase        Error = New(CodeNoDatabase, "No database connection")
-	UnknownDriver     Error = New(CodeUnknownDriver, "Unknown driver")
-	NoTableName       Error = New(CodeNoTableName, "No table name")
-	NoWhereClause     Error = New(CodeNoWhereClause, "No where clause in query")
-	FieldNull         Error = New(CodeFieldNull, "Field cannot be null")
-	LastInsertId      Error = New(CodeLastInsertId, "Last insert id is not valid")
-	UnsupportedLookup Error = New(CodeUnsupportedLookup, "Unsupported lookup type")
-	AlreadyExecuted   Error = New(CodeAlreadyExecuted, "Query has already been executed")
+	NotImplemented     Error = New(CodeNotImplemented, "Not implemented")
+	NoDatabase         Error = New(CodeNoDatabase, "No database connection")
+	UnknownDriver      Error = New(CodeUnknownDriver, "Unknown driver")
+	NoTableName        Error = New(CodeNoTableName, "No table name")
+	NoWhereClause      Error = New(CodeNoWhereClause, "No where clause in query")
+	FieldNull          Error = New(CodeFieldNull, "Field cannot be null")
+	LastInsertId       Error = New(CodeLastInsertId, "Last insert id is not valid")
+	UnsupportedLookup  Error = New(CodeUnsupportedLookup, "Unsupported lookup type")
+	AlreadyExecuted    Error = New(CodeAlreadyExecuted, "Query has already been executed")
+	CheckFailed        Error = New(CodeCheckFailed, "Check failed")
+	InvalidContentType Error = New(CodeContentTypeNotFound, "Content type not found")
 
 	TypeMismatch  Error = New(CodeTypeMismatch, "received type does not match expected type")
 	NilPointer    Error = New(CodeNilPointer, "received nil pointer, expected a pointer to initialized value")

@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
@@ -326,25 +327,33 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 		fields.Required(false),
 	))
 
-	form.SetValidators(func(f forms.Form) []error {
+	var user = instance.(*User)
+	fmt.Printf("Instance: %+v\n", *user)
+	form.SetValidators(func(f forms.Form, cleaned map[string]interface{}) []error {
+
 		var (
-			cleaned      = f.CleanedData()
 			password1Int = cleaned["Password"]
 			password2Int = cleaned["PasswordConfirm"]
+			password1, _ = password1Int.(*Password)
+			password2, _ = password2Int.(*Password)
 		)
-		if password2Int == nil || password2Int == "" {
-			return nil
+		if password2 == nil || password2.Raw == "" {
+			if password1 != nil && password1.Raw == user.Password.Hash {
+				delete(cleaned, "Password")
+				delete(cleaned, "PasswordConfirm")
+				return nil
+			}
+
+			return []error{errors.Wrap(
+				autherrors.ErrPwdNoMatch,
+				"Password confirmation is required when changing the password",
+			)}
 		}
-		var (
-			password1 = password1Int.(*Password)
-			password2 = password2Int.(*Password)
-		)
+
 		if password1.Raw != "" && password2.Raw != "" && password1.Raw != password2.Raw {
 			return []error{autherrors.ErrPwdNoMatch}
 		} else if password1.Raw != "" && password2.Raw != "" && password1.Raw == password2.Raw {
-			var fake = *(instance.(*User))
-			fake.SetPassword(string(password1.Raw))
-			cleaned["Password"] = fake.Password
+			cleaned["Password"] = NewPassword(password1.Raw)
 		}
 		return nil
 	})

@@ -40,6 +40,7 @@ func (m *Todo) FieldDefs() attrs.Definitions {
 			attrs.NewField(m, "Done", &attrs.FieldConfig{
 				Label:    "Done",
 				HelpText: "Indicates whether the todo is done or not",
+				Blank:    true,
 			}),
 		}
 	})
