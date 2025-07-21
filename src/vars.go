@@ -1,5 +1,7 @@
 package django
 
+import "fmt"
+
 const (
 
 	// Run the application in debug mode
@@ -55,3 +57,7 @@ const (
 	// Disable nosurf middleware for the application
 	APPVAR_DISABLE_NOSURF = "DISABLE_NOSURF" // bool
 )
+
+func APPVAR_ErrorCode(code int) string {
+	return fmt.Sprintf("HandleErrorCode%d", code)
+}

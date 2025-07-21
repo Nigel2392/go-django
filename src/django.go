@@ -291,7 +291,7 @@ func (a *Application) handleErrorCodePure(w http.ResponseWriter, r *http.Request
 
 	assert.False(code == 0, "code cannot be 0")
 
-	var handler, ok = a.Settings.Get(fmt.Sprintf("EntryHandler%d", code))
+	var handler, ok = a.Settings.Get(APPVAR_ErrorCode(code))
 	if handler != nil && ok {
 		handler.(func(http.ResponseWriter, *http.Request, except.ServerError))(w, r, err)
 		return
@@ -521,10 +521,8 @@ func (a *Application) Initialize() error {
 	}
 
 	a.Mux.NotFoundHandler = func(w http.ResponseWriter, r *http.Request) {
-		a.ServerError(except.NewServerError(
-			http.StatusNotFound,
-			"Page not found",
-		), w, r)
+		err := except.NewServerError(http.StatusNotFound, "Page not found")
+		a.ServerError(err, w, r)
 	}
 
 	a.Mux.Use(

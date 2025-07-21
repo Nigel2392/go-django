@@ -5,6 +5,7 @@ go 1.24.2
 require (
 	github.com/Nigel2392/go-signals v1.0.8
 	github.com/Nigel2392/goldcrest v1.0.4
+	github.com/Nigel2392/mux v1.3.9
 	github.com/dolthub/go-mysql-server v0.20.0
 	github.com/elliotchance/orderedmap/v2 v2.2.0
 	github.com/go-sql-driver/mysql v1.9.2
@@ -12,6 +13,7 @@ require (
 	github.com/jackc/pgx/v5 v5.7.4
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/mattn/go-sqlite3 v1.14.28
+	github.com/oklog/ulid/v2 v2.1.1
 	github.com/pkg/errors v0.9.1
 	github.com/shopspring/decimal v1.4.0
 )

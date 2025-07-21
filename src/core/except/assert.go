@@ -1,6 +1,7 @@
 package except
 
 import (
+	"errors"
 	"reflect"
 	"slices"
 
@@ -15,6 +16,11 @@ type ServerError interface {
 }
 
 func GetServerError(err error) ServerError {
+	var s ServerError
+	if errors.As(err, &s) {
+		return s
+	}
+
 	switch e := err.(type) {
 	case ServerError:
 		return e

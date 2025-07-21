@@ -1,7 +1,9 @@
 package pages
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -154,8 +156,11 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, r *http.Request) {
 		viewCtx, err = c.GetContext(req, specific)
 	}
 	if err != nil {
-		// http.Error(w, "Internal server error", http.StatusInternalServerError)
 		logger.Errorf("Error getting context: %v", err)
+		except.Fail(
+			http.StatusInternalServerError,
+			"Internal server error: %v", err,
+		)
 		return
 	}
 
@@ -218,6 +223,7 @@ func pageNotFound(_ http.ResponseWriter, _ *http.Request, err error, pathParts [
 	}
 	except.Fail(
 		http.StatusNotFound,
-		"Page not found: %v", pathParts,
+		"Page not found: %s",
+		fmt.Sprintf("/%s", strings.Join(pathParts, "/")),
 	)
 }
