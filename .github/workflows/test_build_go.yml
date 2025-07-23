@@ -3,7 +3,20 @@
 
 name: Build application
 on: [pull_request, push]
+on:
+  # Trigger on push to specific branches or all branches
+  push:
+    paths:
+      - '**.go'
+      - 'go.work'
+      - 'go.mod'
+      - '.github/workflows/*'
 
+  pull_request:
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - '.github/workflows/*'
 jobs:
   build:
     env:

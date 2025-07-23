@@ -2,8 +2,22 @@
 # For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
 
 name: (Queries) Test package
-on: [pull_request, push]
+on:
+  # Trigger on push to specific branches or all branches
+  push:
+    paths:
+      - 'queries/go.mod'
+      - 'queries/**/*.go'
 
+      - 'go.work'
+      - 'go.mod'
+      - '.github/workflows/*'
+
+  pull_request:
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - '.github/workflows/*'
 jobs:
   build:
     env:
