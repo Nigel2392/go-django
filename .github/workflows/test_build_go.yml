@@ -35,4 +35,4 @@ jobs:
       run: go build -v ./examples/server_errors
 
     - name: Build ./examples/formsapp
-      run: go build -v ./examples/formsapp
+      run: go build -v ./examples/formsapp/...
