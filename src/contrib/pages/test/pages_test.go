@@ -9,6 +9,7 @@ import (
 	_ "unsafe"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/quest"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
@@ -1063,6 +1064,93 @@ func TestPageNode(t *testing.T) {
 				t.Fatalf("expected %+v, got %+v", sub, parentNode)
 			}
 		})
+
+	})
+
+	t.Run("TestRecursiveWalk", func(t *testing.T) {
+		var query = `WITH RECURSIVE parent_walk AS (
+    -- Start with the node of interest
+    SELECT
+        ![node.PK],
+        ![node.Title],
+        ![node.Path],
+        ![node.Depth],
+        ![node.Numchild],
+        ![node.UrlPath],
+        ![node.Slug],
+        ![node.StatusFlags],
+        ![node.PageID],
+        ![node.ContentType],
+        ![node.LatestRevisionID],
+        ![node.CreatedAt],
+        ![node.UpdatedAt],
+        0 AS level
+    FROM TABLE(SELF) node
+    WHERE ![node.PK] = ?
+
+    UNION ALL
+	SELECT
+        ![p.PK],
+		![p.Title],
+		![p.Path],
+		![p.Depth],
+		![p.Numchild],
+		![p.UrlPath],
+		![p.Slug],
+		![p.StatusFlags],
+		![p.PageID],
+		![p.ContentType],
+		![p.LatestRevisionID],
+		![p.CreatedAt],
+		![p.UpdatedAt],
+		pw.level + 1 AS level
+    FROM TABLE(SELF) p
+    INNER JOIN parent_walk pw
+      ON ![p.Path] = EXPR(pwPathSubstr)
+)
+SELECT *
+FROM parent_walk
+ORDER BY level DESC;`
+
+		var rows, err = queries.GetQuerySet(&pages.PageNode{}).Rows(
+			query,
+			expr.PARSER.Expr.Expressions(map[string]expr.Expression{
+				"pwPathSubstr": expr.SUBSTR(
+					"pw.Path", 1,
+					expr.LENGTH("pw.Path").SUB(expr.Value(pages.STEP_LEN))),
+			}),
+
+			subChildNode2.PK,
+			pages.STEP_LEN,
+		)
+		if err != nil {
+			t.Fatal(err)
+			return
+		}
+
+		defer rows.Close()
+		var nodes []pages.PageNode
+		for rows.Next() {
+			var node = pages.PageNode{}
+			var level int64
+			if err := rows.Scan(&node.PK, &node.Title, &node.Path, &node.Depth, &node.Numchild, &node.UrlPath, &node.Slug, &node.StatusFlags, &node.PageID, &node.ContentType, &node.LatestRevisionID, &node.CreatedAt, &node.UpdatedAt, &level); err != nil {
+				t.Fatal(err)
+				return
+			}
+
+			node.Annotations = make(map[string]any)
+			node.Annotations["level"] = level
+			nodes = append(nodes, node)
+		}
+
+		if err := rows.Err(); err != nil {
+			t.Fatal(err)
+			return
+		}
+
+		for i, node := range nodes {
+			t.Logf("Level: %d, Node %d: %+v", node.Annotations["level"], i, node)
+		}
 	})
 
 	pages.Register(&pages.PageDefinition{
