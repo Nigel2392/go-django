@@ -50,17 +50,17 @@ func TestQuerySetRawExecution(t *testing.T) {
 		todos_m[todo.ID] = todo
 	}
 
-	var query = `SELECT ![ID], EXPR(UpperTitle), ![User.ID], ![UserName], ![User.Profile.ID], ![User.Profile.Name], ![User.Profile.Email]
-	FROM TABLE(SELF)
+	var query = `SELECT ![p.ID], EXPR(UpperTitle), ![User.ID], ![UserName], ![User.Profile.ID], ![User.Profile.Name], ![User.Profile.Email]
+	FROM TABLE(SELF) as p
 	INNER JOIN
-		TABLE(User) ON ![User.ID] = ![User]
+		TABLE(User) ON ![User.ID] = ![p.User]
 	INNER JOIN
 		TABLE(User.Profile) ON ![User.Profile.ID] = ![User.Profile]
 	WHERE 
-		![Done] = ?[1] AND 
+		![p.Done] = ?[1] AND 
 		EXPR(WhereFilter)
 	ORDER BY 
-		![ID] DESC,
+		![p.ID] DESC,
 		![User.ID] ASC
 	LIMIT ?[2]
 	OFFSET ?[3]`
@@ -68,9 +68,9 @@ func TestQuerySetRawExecution(t *testing.T) {
 	rows, err := queries.GetQuerySet(&Todo{}).Annotate("UserName", expr.UPPER("User.Name")).Rows(
 		query,
 		expr.PARSER.Expr.Expressions(map[string]expr.Expression{
-			"UpperTitle": expr.UPPER("Title"),
-			"WhereFilter": expr.Q("Title__istartswith", "TestQuerySetRow").And(
-				expr.Q("User__in", users),
+			"UpperTitle": expr.UPPER("p.Title"),
+			"WhereFilter": expr.Q("p.Title__istartswith", "TestQuerySetRow").And(
+				expr.Q("User.ID__in", users),
 			),
 		}),
 		false, 1000, 0,

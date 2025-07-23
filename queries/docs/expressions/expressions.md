@@ -141,10 +141,34 @@ An example of using a `NamedExpression` to annotate a queryset might look like t
 
 ```go
 qs := queries.GetQuerySet(&Product{}).
-    Select("ID", expr.FuncLower("Name"), "Price")
+    Select("ID", expr.LOWER("Name"), "Price")
 ```
 
 This will select the `ID` and `Price` fields, and also fetch the `Name` field as a lowercased value.
+
+#### Special case
+
+Since GO's struct fields cannot start with a lowercase letter, we took advantage of that.
+
+Fieldpaths in expressions can as a matter of fact, start with lowercase letters. These would then indicate a table alias.
+
+Take the following examples.
+
+With an alias:
+
+```go
+var expr = expr.LOWER("Name") // translates to column `product`.`name`
+```
+
+Without an alias:
+
+```go
+var expr = expr.LOWER("p_t.Name") // translates to `p_t`.`name`
+```
+
+This is only really useful for raw expressions. The ORM will otherwise handle
+any table alias for the specified field.
+
 
 ## Functions to create expressions
 

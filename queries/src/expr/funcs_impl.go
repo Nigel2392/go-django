@@ -95,7 +95,12 @@ func (e *Function) Resolve(inf *ExpressionInfo) Expression {
 	return nE
 }
 
-func newFunc(funcLookup string, value []any, expr ...any) *Function {
+type LogicalNamedExpressionFunc interface {
+	NamedExpression
+	LogicalExpression
+}
+
+func newFunc(funcLookup string, value []any, expr ...any) LogicalNamedExpressionFunc {
 	var inner = make([]Expression, 0, len(expr))
 	for _, e := range expr {
 		switch v := e.(type) {
@@ -110,77 +115,77 @@ func newFunc(funcLookup string, value []any, expr ...any) *Function {
 		}
 	}
 
-	return &Function{
+	return newChainExpr(&Function{
 		funcLookup: funcLookup,
 		args:       value,
 		inner:      inner,
-	}
+	})
 }
 
-func SUM(expr ...any) *Function {
+func SUM(expr ...any) LogicalNamedExpressionFunc {
 	return newFunc("SUM", []any{}, expr...)
 }
 
-func COUNT(expr ...any) *Function {
+func COUNT(expr ...any) LogicalNamedExpressionFunc {
 	return newFunc("COUNT", []any{}, expr...)
 }
 
-func AVG(expr ...any) *Function {
+func AVG(expr ...any) LogicalNamedExpressionFunc {
 	return newFunc("AVG", []any{}, expr...)
 }
 
-func MAX(expr ...any) *Function {
+func MAX(expr ...any) LogicalNamedExpressionFunc {
 	return newFunc("MAX", []any{}, expr...)
 }
 
-func MIN(expr ...any) *Function {
+func MIN(expr ...any) LogicalNamedExpressionFunc {
 	return newFunc("MIN", []any{}, expr...)
 }
 
-func COALESCE(expr ...any) *Function {
+func COALESCE(expr ...any) LogicalNamedExpressionFunc {
 	return newFunc("COALESCE", []any{}, expr...)
 }
 
-func CONCAT(expr ...any) *Function {
+func CONCAT(expr ...any) LogicalNamedExpressionFunc {
 	return newFunc("CONCAT", []any{}, expr...)
 }
 
-func SUBSTR(expr any, start, length any) *Function {
+func SUBSTR(expr any, start, length any) LogicalNamedExpressionFunc {
 	return newFunc("SUBSTR", []any{start, length}, expr)
 }
 
-func EXISTS(expr any) *Function {
+func EXISTS(expr any) LogicalNamedExpressionFunc {
 	return newFunc("EXISTS", []any{}, expr)
 }
 
-func UPPER(expr any) *Function {
+func UPPER(expr any) LogicalNamedExpressionFunc {
 	return newFunc("UPPER", []any{}, expr)
 }
 
-func LOWER(expr any) *Function {
+func LOWER(expr any) LogicalNamedExpressionFunc {
 	return newFunc("LOWER", []any{}, expr)
 }
 
-func LENGTH(expr any) *Function {
+func LENGTH(expr any) LogicalNamedExpressionFunc {
 	return newFunc("LENGTH", []any{}, expr)
 }
 
-func NOW() *Function {
+func NOW() LogicalNamedExpressionFunc {
 	return newFunc("NOW", []any{})
 }
 
-func UTCNOW() *Function {
+func UTCNOW() LogicalNamedExpressionFunc {
 	return newFunc("UTCNOW", []any{})
 }
 
-func LOCALTIMESTAMP() *Function {
+func LOCALTIMESTAMP() LogicalNamedExpressionFunc {
 	return newFunc("LOCALTIMESTAMP", []any{})
 }
 
-func DATE(expr any) *Function {
+func DATE(expr any) LogicalNamedExpressionFunc {
 	return newFunc("DATE", []any{}, expr)
 }
 
-func DATE_FORMAT(expr any, format string) *Function {
+func DATE_FORMAT(expr any, format string) LogicalNamedExpressionFunc {
 	return newFunc("DATE_FORMAT", []any{format}, expr)
 }

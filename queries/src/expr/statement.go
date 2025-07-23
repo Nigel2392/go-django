@@ -72,6 +72,7 @@ var PARSER = &statement{
 			var fieldName = in[1]
 			info.SupportsWhereAlias = false
 			info.SupportsAsExpr = false
+
 			var resolvedField = info.ResolveExpressionField(fieldName)
 			return resolvedField.SQLText, resolvedField.SQLArgs, nil
 		},

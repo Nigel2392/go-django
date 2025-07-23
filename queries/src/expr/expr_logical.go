@@ -204,6 +204,20 @@ type logicalChainExpr struct {
 	inner     []Expression
 }
 
+func newChainExpr(expr NamedExpression) *logicalChainExpr {
+	if expr == nil {
+		panic(fmt.Errorf("cannot create logicalChainExpr with nil expression"))
+	}
+
+	return &logicalChainExpr{
+		fieldName: expr.FieldName(),
+		field:     nil,
+		used:      false,
+		forUpdate: false,
+		inner:     []Expression{expr},
+	}
+}
+
 func Logical(expr ...any) LogicalExpression {
 	if len(expr) == 0 {
 		panic(fmt.Errorf("logicalChainExpr requires at least one inner expression"))
@@ -261,15 +275,15 @@ func (l *logicalChainExpr) SQL(sb *strings.Builder) []any {
 		panic(fmt.Errorf("SQL logicalChainExpr has no inner expressions"))
 	}
 	var args = make([]any, 0)
-	if l.field != nil {
-		if l.field.SQLText != "" {
-			sb.WriteString(l.field.SQLText)
-		}
-		if l.forUpdate && l.field.SQLText != "" {
-			sb.WriteString(" = ")
-		}
-		args = append(args, l.field.SQLArgs...)
-	}
+	//if l.field != nil {
+	//	if l.field.SQLText != "" {
+	//		sb.WriteString(l.field.SQLText)
+	//	}
+	//	if l.forUpdate && l.field.SQLText != "" {
+	//		sb.WriteString(" = ")
+	//	}
+	//	args = append(args, l.field.SQLArgs...)
+	//}
 	for _, inner := range l.inner {
 		args = append(args, inner.SQL(sb)...)
 	}

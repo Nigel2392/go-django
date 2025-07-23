@@ -3,6 +3,7 @@ package expr
 import (
 	"database/sql/driver"
 	"fmt"
+	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -214,9 +215,22 @@ type FieldResolver interface {
 }
 
 func (inf *ExpressionInfo) ResolveExpressionField(fieldName string) *ResolvedField {
+	// A field can never be lowercase, so if the first part is lowercase,
+	// we assume it's an alias and the rest is the field name.
+	var alias string
+	var firstDot = strings.Index(fieldName, ".")
+	if firstDot != -1 && strings.ToLower(fieldName[:firstDot]) == fieldName[:firstDot] {
+		alias = fieldName[:firstDot]
+		fieldName = fieldName[firstDot+1:]
+	}
+
 	var _, field, col, err = inf.Resolver.Resolve(fieldName, inf)
 	if err != nil {
 		panic(fmt.Errorf("failed to resolve field %s: %w", field, err))
+	}
+
+	if alias != "" {
+		col.TableOrAlias = alias
 	}
 
 	var sql, args = inf.FormatField(col)
