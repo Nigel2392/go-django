@@ -45,6 +45,11 @@ func main() {
 		panic(err)
 	}
 
+	// This is the filesystem which will be used
+	var mediaBackend = mediafs.NewBackend("./.private/blogapp/media", 0)
+	mediafiles.RegisterBackend("filesystem", mediaBackend)
+	mediafiles.SetDefault("filesystem")
+
 	var app = django.App(
 		django.Configure(map[string]interface{}{
 			django.APPVAR_ALLOWED_HOSTS:   []string{"*"},
@@ -82,23 +87,23 @@ func main() {
 			editor.NewAppConfig,
 			blog.NewAppConfig,
 			images.NewAppConfig(&images.Options{
-				MediaBackend: mediafs.NewBackend("./.private/blogapp/media", 0),
+				MediaBackend: mediaBackend,
 				MediaDir:     "images",
 			}),
 			migrator.NewAppConfig,
 		),
 	)
 
+	// Blog pages will be served from this route.
+	pages.SetRoutePrefix("/")
+
+	// Silence the following check messages
 	checks.Shutup("model.cant_check", true)
 	checks.Shutup("auth.login_redirect_url_not_set", true)
 	checks.Shutup("admin.model_not_fully_implemented", true)
 	checks.Shutup("field.invalid_db_type", func(m checks.Message) bool {
 		return m.Object.(attrs.Field).Name() == "GroupPermissions"
 	})
-
-	mediafiles.SetDefault("filesystem")
-
-	pages.SetRoutePrefix("/pages")
 
 	// Register a route for chrome devtools
 	// This is used to allow Chrome DevTools to connect to the app for debugging.
