@@ -168,11 +168,11 @@ func NewAppConfig() django.AppConfig {
 		))
 		django.Global.Mux.Any(
 			fmt.Sprintf("%s/", pageApp.routePrefix),
-			handler, "pages_home",
+			handler, "page",
 		)
 		django.Global.Mux.Any(
 			fmt.Sprintf("%s/*", pageApp.routePrefix),
-			handler, "pages",
+			&pageRouteResolver{handler}, "pages",
 		)
 
 		Register(&PageDefinition{

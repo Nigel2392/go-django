@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 	"testing"
 
 	_ "unsafe"
@@ -1064,7 +1065,6 @@ func TestPageNode(t *testing.T) {
 				t.Fatalf("expected %+v, got %+v", sub, parentNode)
 			}
 		})
-
 	})
 
 	t.Run("TestRecursiveWalk", func(t *testing.T) {
@@ -1146,6 +1146,34 @@ ORDER BY level DESC;`
 		if err := rows.Err(); err != nil {
 			t.Fatal(err)
 			return
+		}
+
+		nodeRows, err := queries.GetQuerySet(&pages.PageNode{}).
+			Filter("PK__in", []int64{
+				nodesToUpdate[0].PK,
+				childNode.PK,
+				subChildNode2.PK,
+			}).
+			OrderBy("Path").
+			All()
+		if err != nil {
+			t.Fatal(err)
+			return
+		}
+
+		var expectedNodes = slices.Collect(nodeRows.Objects())
+
+		if len(nodes) != len(expectedNodes) {
+			t.Fatalf("expected %d nodes, got %d", len(expectedNodes), len(nodes))
+			return
+		}
+
+		for i, node := range nodes {
+			if !nodesEqual(&node, expectedNodes[i]) {
+				t.Logf("%d != %d", expectedNodes[i].PK, node.PK)
+				t.Fatalf("expected got (%+v)", nodeDiff(expectedNodes[i], &nodes[i]))
+				return
+			}
 		}
 
 		for i, node := range nodes {

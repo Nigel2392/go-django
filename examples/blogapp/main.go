@@ -95,7 +95,7 @@ func main() {
 	)
 
 	// Blog pages will be served from this route.
-	pages.SetRoutePrefix("/")
+	pages.SetRoutePrefix("/pages")
 
 	// Silence the following check messages
 	checks.Shutup("model.cant_check", true)
@@ -197,6 +197,7 @@ func main() {
 			var page = specificPage.Reference()
 			fmt.Printf(" - %q (ID: %d, %d)\n", page.Title, page.ID(), page.PageID)
 			fmt.Printf("   - PageObject: %+v\n", specificPage.(*blog.BlogPage))
+			fmt.Printf("   - PageURL: %s\n", django.Reverse("pages", page.ID()))
 		}
 
 		//err = staticfiles.Collect(func(path string, f fs.File) error {
