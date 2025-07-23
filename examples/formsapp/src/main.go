@@ -27,7 +27,7 @@ func main() {
 
 	pages.SetRoutePrefix("/pages")
 
-	err = app.Initialize()
+	var err = app.Initialize()
 	if err != nil {
 		panic(err)
 	}
