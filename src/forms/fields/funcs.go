@@ -62,9 +62,27 @@ func Required(b bool) func(Field) {
 }
 
 func ReadOnly(b bool) func(Field) {
+	if !b {
+		return func(f Field) {}
+	}
 	return func(f Field) {
 		f.SetAttrs(map[string]string{"readonly": ""})
 		f.SetReadOnly(b)
+	}
+}
+
+func Placeholder(placeholder string) func(Field) {
+	return func(f Field) {
+		f.SetAttrs(map[string]string{"placeholder": placeholder})
+	}
+}
+
+func Attributes(attrs map[string]string) func(Field) {
+	return func(f Field) {
+		if attrs == nil {
+			attrs = make(map[string]string)
+		}
+		f.SetAttrs(attrs)
 	}
 }
 

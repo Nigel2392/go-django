@@ -6,6 +6,7 @@ use (
 	./cmd/go-django-definitions
 	./cmd/migrator
 	./examples/blogapp
+	./examples/formsapp
 	./examples/openauth2app
 	./examples/server_errors
 	./examples/todoapp

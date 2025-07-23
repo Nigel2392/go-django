@@ -1,0 +1,89 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ .Get "Title" }} | {{ .Get "ProjectName" }}{{ end }}
+
+{{ define "extra_css" }}
+    <link rel="stylesheet" type="text/css" href="{{ static "formsapp/css/formsapp.css" }}">
+    {{ $Media := (.Get "form").Media }}
+    {{ range $css := $Media.CSS }}
+        {{ $css }}
+    {{ end }}
+{{ end }}
+
+{{ define "extra_js" }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $js := $Media.JS }}
+        {{ $js }}
+    {{ end }}
+{{ end }}
+
+{{ define "content" }}
+    
+    <div class="center-display">
+        
+        <div class="top-nav">
+            <div class="top-nav-item">
+                <a href="{{ .Get "ProjectURL" }}" class="top-nav-item--link">
+                    <img src="{{ static "formsapp/img/logo.png" }}" alt="logo" class="top-nav-item--logo">
+                    <span class="top-nav-item--title">{{ .Get "ProjectName" }}</span>
+                </a>
+            </div>
+            <div class="top-nav-item">
+                <span class="top-nav-item--releases">
+                    <a href="{{ .Get "ProjectURL" }}/tags" class="top-nav-item--releases--link">
+                        View our releases
+                    </a>
+                </span>
+            </div>
+        </div>
+
+        <div class="main-display">
+
+            <img src="{{ static "formsapp/img/go-django.png" }}" alt="welcome" class="main-display--img">
+            <h1>Welcome to the contact page for the {{ .Get "ProjectName" }} project!</h1>
+            <h2>Please, fill in the below contact form - it doesnt do anything, but that's ok!</h2>
+
+
+            <form method="POST" action="{{ .Get "ContactURL" }}">
+
+                <!-- The CSRF token is required, otherwise you will receive a http.StatusCodeBadRequest error page. -->
+                <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+
+                {{ $errorList := (.Get "Form").ErrorList }}
+                {{ if (gt (len $errorList) 0) }}
+                    <ul class="error-list">
+                        {{ range $Error := $errorList }}
+                            <li class="error"><p>{{ $Error }}</p></li>
+                        {{ end }}
+                    </ul>
+                {{ end }}
+
+                {{ range $Field := (.Get "Form").Fields }}        
+
+                    <div class="form-field">
+                        {{ $Field.Label }}
+
+                        {{ if (gt (len $Field.Errors) 0) }}
+                            <ul class="error-list">
+                                {{ range $Error := $Field.Errors }}
+                                    <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
+                                {{ end }}
+                            </ul>
+                        {{ end }}
+
+                        {{ if (ne $Field.HelpText "") }}
+                            <p class="help-text">{{ $Field.HelpText }}</p>
+                        {{ end }}
+
+                        {{ $Field.Field }}
+                    </div>
+
+                {{ end }}
+
+                <input type="submit" value="{{ T "Submit" }}">
+            </form>
+
+        </div>
+    </div>
+
+{{ end }}
