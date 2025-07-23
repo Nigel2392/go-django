@@ -41,13 +41,6 @@ func NewAppConfig() django.AppConfig {
 			filesystem.MatchPrefix("formsapp/"),
 			filesystem.MatchOr(
 				filesystem.MatchExt(".css"),
-				filesystem.MatchExt(".js"),
-				filesystem.MatchExt(".png"),
-				filesystem.MatchExt(".jpg"),
-				filesystem.MatchExt(".jpeg"),
-				filesystem.MatchExt(".svg"),
-				filesystem.MatchExt(".gif"),
-				filesystem.MatchExt(".ico"),
 			),
 		))
 
