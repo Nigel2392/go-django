@@ -3,7 +3,6 @@ package main
 import (
 	formsapp "github.com/Nigel2392/go-django/examples/formsapp/src/formsapp"
 	django "github.com/Nigel2392/go-django/src"
-	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/core/logger"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -24,8 +23,6 @@ func main() {
 			formsapp.NewAppConfig,
 		),
 	)
-
-	pages.SetRoutePrefix("/pages")
 
 	var err = app.Initialize()
 	if err != nil {
