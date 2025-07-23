@@ -1,0 +1,29 @@
+{{ define "title" }}{{ .Page.Page.Title }}{{ end }}
+
+{{ define "extra_css" }}
+    <link rel="stylesheet" href="{{ static "chocolaterie/css/chocolaterie.css" }}">
+{{ end }}
+
+{{ define "content" }}
+
+    <div class="chocolaterie-wrapper">
+
+        <div class="page-title">
+            <h1>{{ .Page.Title }}</h1>
+        </div>
+
+        <div class="page-description">
+            {{ .Page.Description.MustRender }}
+        </div> 
+
+        <div class="page-chocolates">
+            <ul>
+                {{ range .Chocolates }}
+                    <li>{{ .Name }} - {{ .Price }} - {{ .Weight }}g</li>
+                {{ end }}
+            </ul>
+        </div>
+
+    </div>
+
+{{ end }}
