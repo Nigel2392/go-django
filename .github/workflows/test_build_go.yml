@@ -30,3 +30,9 @@ jobs:
 
     - name: Build ./examples/openauth2app
       run: go build -v ./examples/openauth2app
+
+    - name: Build ./examples/server_errors
+      run: go build -v ./examples/server_errors
+
+    - name: Build ./examples/formsapp
+      run: go build -v ./examples/formsapp
