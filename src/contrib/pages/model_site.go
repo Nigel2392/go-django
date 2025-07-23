@@ -2,8 +2,10 @@ package pages
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
+	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -89,6 +91,15 @@ type Site struct {
 	Port         int
 	Default      bool
 	Root         *PageNode
+}
+
+func (n *Site) URL() string {
+	var sb = &strings.Builder{}
+	sb.WriteString(n.Domain)
+	if n.Port != 80 && n.Port != 443 {
+		sb.WriteString(fmt.Sprintf(":%d", n.Port))
+	}
+	return sb.String()
 }
 
 func (n *Site) FieldDefs() attrs.Definitions {

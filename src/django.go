@@ -323,9 +323,6 @@ func (a *Application) Reverse(name string, args ...any) string {
 	}
 
 	var l = len(rt)
-	if !strings.HasPrefix(rt, "/") {
-		l += 1
-	}
 	if !strings.HasSuffix(rt, "/") {
 		l += 1
 	}
@@ -335,12 +332,7 @@ func (a *Application) Reverse(name string, args ...any) string {
 	}
 
 	var buf = make([]byte, l)
-	if !strings.HasPrefix(rt, "/") {
-		buf[0] = '/'
-		copy(buf[1:], rt)
-	} else {
-		copy(buf, rt)
-	}
+	copy(buf, rt)
 
 	if !strings.HasSuffix(rt, "/") {
 		buf[l-1] = '/'

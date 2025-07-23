@@ -1,6 +1,7 @@
 package pages
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 
@@ -19,7 +20,7 @@ type pageRouteResolver struct {
 	mux.Handler
 }
 
-func (p *pageRouteResolver) Reverse(variables ...interface{}) (string, error) {
+func (p *pageRouteResolver) Reverse(baseURL string, variables ...interface{}) (string, error) {
 	if len(variables) == 0 {
 		return "", mux.ErrNotEnoughVariables
 	}
@@ -110,6 +111,12 @@ ORDER BY level DESC;`
 		if err := rows.Scan(&path, &slug, &level); err != nil {
 			return "", err
 		}
+
+		if level == 0 {
+			// Skip the root node
+			continue
+		}
+
 		urlParts = append(urlParts, slug)
 	}
 
@@ -117,7 +124,34 @@ ORDER BY level DESC;`
 		return "", err
 	}
 
-	return strings.Join(urlParts, "/"), nil
+	return fmt.Sprintf(
+		"%s%s",
+		baseURL,
+		strings.Join(urlParts, "/"),
+	), nil
+
+	//siteRows, err := queries.GetQuerySet(&Site{}).
+	//	Filter("Root", rootID).
+	//	OrderBy("Default").
+	//	All()
+	//if err != nil {
+	//	return "", err
+	//}
+	//
+	//if len(siteRows) == 0 {
+	//	return fmt.Sprintf("%s%s", baseURL, strings.Join(urlParts, "/")), nil
+	//	//	return "", errors.NoRows.Wrapf(
+	//	//		"no site found for page with ID %d", pageID,
+	//	//	)
+	//}
+	//
+	//var site = siteRows[0].Object
+	//return fmt.Sprintf(
+	//	"%s%s%s",
+	//	site.URL(),
+	//	baseURL,
+	//	strings.Join(urlParts, "/"),
+	//), nil
 }
 
 func (p *pageRouteResolver) Match(vars mux.Variables, path []string) (bool, mux.Variables) {
