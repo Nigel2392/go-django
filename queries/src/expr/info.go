@@ -112,7 +112,7 @@ type ExpressionInfo struct {
 	//
 	// It takes a TableColumn and returns the formatted field as a string
 	// and a slice of possible args that can be used in the query.
-	FormatField func(*TableColumn) (string, []any)
+	FormatField func(*alias.Generator, *TableColumn) (string, []any)
 
 	// Quote is a function that quotes the given string for use in a SQL query.
 	Quote func(string) string
@@ -233,6 +233,16 @@ func (inf *ExpressionInfo) ResolveExpressionField(fieldName string) *ResolvedFie
 		col.TableOrAlias = alias
 	}
 
-	var sql, args = inf.FormatField(col)
+	//	var aliasGen = inf.Resolver.Alias()
+	//	if col.TableOrAlias != "" && aliasGen.Prefix != "" {
+	//		col.TableOrAlias = fmt.Sprintf(
+	//			"%s_%s",
+	//			aliasGen.Prefix,
+	//			col.TableOrAlias,
+	//		)
+	//	}
+
+	var aliasGen = inf.Resolver.Alias()
+	var sql, args = inf.FormatField(aliasGen, col)
 	return newResolvedField(fieldName, sql, field, args)
 }

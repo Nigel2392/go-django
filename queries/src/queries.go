@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
@@ -515,7 +516,7 @@ type QueryCompiler interface {
 	// FormatColumn formats the given field column to be used in a query.
 	// It should return the column name with the quotes applied.
 	// Expressions should use this method to format the column name.
-	FormatColumn(tableColumn *expr.TableColumn) (string, []any)
+	FormatColumn(aliasGen *alias.Generator, tableColumn *expr.TableColumn) (string, []any)
 
 	// SupportsReturning returns the type of returning supported by the database.
 	// It can be one of the following:
@@ -606,6 +607,7 @@ type ModelMeta interface {
 // It is also used to filter, order, and annotate the objects in the database.
 type BaseQuerySet[T attrs.Definer, QS any] interface {
 	expr.ExpressionBuilder
+	expr.FieldResolver
 
 	Clone() QS
 	Distinct() QS

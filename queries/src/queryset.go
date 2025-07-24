@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
@@ -166,6 +167,7 @@ type QuerySetInternals struct {
 	Annotations *orderedmap.OrderedMap[string, attrs.Field]
 	Fields      []*FieldInfo[attrs.FieldDefinition]
 	Preload     *QuerySetPreloads
+	Unions      []*QuerySet[attrs.Definer]
 	Where       []expr.ClauseExpression
 	Having      []expr.ClauseExpression
 	Joins       []JoinDef
@@ -191,6 +193,21 @@ func (i *QuerySetInternals) AddJoin(join JoinDef) {
 		i.joinsMap[key] = struct{}{}
 		i.Joins = append(i.Joins, join)
 	}
+}
+
+func (i *QuerySetInternals) HasField(f *FieldInfo[attrs.FieldDefinition]) bool {
+	if i.fieldsMap == nil {
+		return false
+	}
+	var key, err = generateFieldInfoKey(f)
+	if err != nil {
+		panic(errors.Wrapf(
+			err, "HasField: failed to generate key for field %s",
+			f.SourceField.Name(),
+		))
+	}
+	_, exists := i.fieldsMap[key]
+	return exists
 }
 
 func (i *QuerySetInternals) AddField(field *FieldInfo[attrs.FieldDefinition]) {
@@ -581,6 +598,7 @@ func (qs *QuerySet[T]) clone() *QuerySet[T] {
 			Offset:      qs.internals.Offset,
 			ForUpdate:   qs.internals.ForUpdate,
 			Distinct:    qs.internals.Distinct,
+			Unions:      slices.Clone(qs.internals.Unions),
 
 			fieldsMap: maps.Clone(qs.internals.fieldsMap),
 			joinsMap:  maps.Clone(qs.internals.joinsMap),
@@ -967,6 +985,10 @@ func (qs *QuerySet[T]) Resolve(fieldName string, inf *expr.ExpressionInfo) (attr
 	var res, err = qs.WalkField(fieldName, OptFlags(WalkFlagAddJoins))
 	if err != nil {
 		panic(err)
+	}
+
+	for _, join := range res.Joins {
+		qs.internals.AddJoin(join)
 	}
 
 	var field attrs.FieldDefinition = res.Annotation
@@ -1382,6 +1404,15 @@ func (qs *QuerySet[T]) SelectRelated(fields ...string) *QuerySet[T] {
 
 			for _, join := range joins {
 				qs.internals.AddJoin(join)
+			}
+
+			for _, union := range qs.internals.Unions {
+				for _, info := range fields {
+					union.internals.AddField(info)
+				}
+				for _, join := range joins {
+					union.internals.AddJoin(join)
+				}
 			}
 
 			curr = curr.Next
@@ -1973,7 +2004,13 @@ func (qs *QuerySet[T]) addSubProxies(info *FieldInfo[attrs.FieldDefinition], nod
 // By default the `__exact` (=) operator is used, each where clause is separated by `AND`.
 func (qs *QuerySet[T]) Filter(key interface{}, vals ...interface{}) *QuerySet[T] {
 	var nqs = qs.clone()
+
 	nqs.internals.Where = append(qs.internals.Where, expr.Express(key, vals...)...)
+
+	for i := range nqs.internals.Unions {
+		nqs.internals.Unions[i] = nqs.internals.Unions[i].Filter(key, vals...)
+	}
+
 	return nqs
 }
 
@@ -1985,6 +2022,11 @@ func (qs *QuerySet[T]) Filter(key interface{}, vals ...interface{}) *QuerySet[T]
 func (qs *QuerySet[T]) Having(key interface{}, vals ...interface{}) *QuerySet[T] {
 	var nqs = qs.clone()
 	nqs.internals.Having = append(qs.internals.Having, expr.Express(key, vals...)...)
+
+	for i := range nqs.internals.Unions {
+		nqs.internals.Unions[i] = nqs.internals.Unions[i].Having(key, vals...)
+	}
+
 	return nqs
 }
 
@@ -1994,6 +2036,11 @@ func (qs *QuerySet[T]) Having(key interface{}, vals ...interface{}) *QuerySet[T]
 func (qs *QuerySet[T]) GroupBy(fields ...any) *QuerySet[T] {
 	var nqs = qs.clone()
 	nqs.internals.GroupBy, _ = qs.unpackFields(fields...)
+
+	for i := range nqs.internals.Unions {
+		nqs.internals.Unions[i] = nqs.internals.Unions[i].GroupBy(fields...)
+	}
+
 	return nqs
 }
 
@@ -2005,6 +2052,11 @@ func (qs *QuerySet[T]) GroupBy(fields ...any) *QuerySet[T] {
 func (qs *QuerySet[T]) OrderBy(fields ...string) *QuerySet[T] {
 	var nqs = qs.clone()
 	nqs.internals.OrderBy = nqs.compileOrderBy(fields...)
+
+	for i := range nqs.internals.Unions {
+		nqs.internals.Unions[i] = nqs.internals.Unions[i].OrderBy(fields...)
+	}
+
 	return nqs
 }
 
@@ -2109,7 +2161,13 @@ func (qs *QuerySet[T]) Reverse() *QuerySet[T] {
 		})
 	}
 	var nqs = qs.clone()
+
 	nqs.internals.OrderBy = ordBy
+
+	for i := range nqs.internals.Unions {
+		nqs.internals.Unions[i] = nqs.internals.Unions[i].Reverse()
+	}
+
 	return nqs
 }
 
@@ -2130,6 +2188,88 @@ func (qs *QuerySet[T]) Offset(n int) *QuerySet[T] {
 	}
 	var nqs = qs.clone()
 	nqs.internals.Offset = n
+	return nqs
+}
+
+type comparingField struct {
+	GoType reflect.Type
+	DBType dbtype.Type
+	Field  attrs.FieldDefinition
+}
+
+// Union is used to combine the results of two queries.
+//
+// It takes another QuerySet as an argument and returns a new QuerySet with the combined results.
+func (qs *QuerySet[T]) Union(other *QuerySet[attrs.Definer]) *QuerySet[T] {
+	var fieldsListThis = make([]comparingField, 0, len(qs.internals.Fields))
+	for _, info := range qs.internals.Fields {
+		for _, field := range info.Fields {
+			var fieldType, ok = drivers.DBType(field)
+			if !ok {
+				panic(fmt.Errorf(
+					"QuerySet.Union: field %q (%T) does not have a valid DB type, cannot union",
+					field.Name(), field,
+				))
+			}
+
+			fieldsListThis = append(fieldsListThis, comparingField{
+				GoType: field.Type(),
+				DBType: fieldType,
+				Field:  field,
+			})
+		}
+	}
+
+	var fieldsListOther = make([]comparingField, 0, len(other.internals.Fields))
+	for _, info := range other.internals.Fields {
+		for _, field := range info.Fields {
+			var fieldType, ok = drivers.DBType(field)
+			if !ok {
+				panic(fmt.Errorf(
+					"QuerySet.Union: field %q (%T) does not have a valid DB type, cannot union",
+					field.Name(), field,
+				))
+			}
+
+			fieldsListOther = append(fieldsListOther, comparingField{
+				GoType: field.Type(),
+				DBType: fieldType,
+				Field:  field,
+			})
+		}
+	}
+
+	if len(fieldsListThis) != len(fieldsListOther) {
+		panic(fmt.Errorf(
+			"QuerySet.Union: cannot union QuerySets with different number of fields (%d != %d)",
+			len(fieldsListThis), len(fieldsListOther),
+		))
+	}
+
+	for i, fieldThis := range fieldsListThis {
+		var fieldOther = fieldsListOther[i]
+		if fieldThis.DBType != fieldOther.DBType {
+
+			switch {
+			case fieldThis.GoType.AssignableTo(fieldOther.GoType),
+				fieldOther.GoType.AssignableTo(fieldThis.GoType),
+				fieldThis.GoType.ConvertibleTo(fieldOther.GoType),
+				fieldOther.GoType.ConvertibleTo(fieldThis.GoType):
+				continue
+			}
+
+			panic(fmt.Errorf(
+				"QuerySet.Union: cannot union QuerySets with different field types (%s != %s) for field %q and %q",
+				fieldThis.DBType, fieldOther.DBType, fieldThis.Field.Name(), fieldOther.Field.Name(),
+			))
+		}
+	}
+
+	var nqs = qs.clone()
+	other = other.clone()
+	other.internals.Limit = 0  // no limit for unions
+	other.internals.Offset = 0 // no offset for unions
+	nqs.internals.Unions = append(nqs.internals.Unions, other)
 	return nqs
 }
 
@@ -2251,7 +2391,7 @@ func (qs *QuerySet[T]) BuildExpression() expr.Expression {
 	qs.internals.Limit = 0  // no limit for subqueries
 	qs.internals.Offset = 0 // no offset for subqueries
 	var subquery = &subqueryExpr[T, *QuerySet[T]]{
-		qs: qs.WithContext(makeSubqueryContext(qs.Context())),
+		qs: qs.WithContext(expr.MakeSubqueryContext(qs.Context())),
 	}
 	return subquery
 }
@@ -2279,16 +2419,15 @@ func (qs *QuerySet[T]) QueryAll(fields ...any) CompiledQuery[[][]interface{}] {
 }
 
 func (qs *QuerySet[T]) QueryAggregate() CompiledQuery[[][]interface{}] {
-	var dereferenced = *qs.internals
-	dereferenced.OrderBy = nil     // no order by for aggregates
-	dereferenced.Limit = 0         // no limit for aggregates
-	dereferenced.Offset = 0        // no offset for aggregates
-	dereferenced.ForUpdate = false // no for update for aggregates
-	dereferenced.Distinct = false  // no distinct for aggregates
+	qs.internals.OrderBy = nil     // no order by for aggregates
+	qs.internals.Limit = 0         // no limit for aggregates
+	qs.internals.Offset = 0        // no offset for aggregates
+	qs.internals.ForUpdate = false // no for update for aggregates
+	qs.internals.Distinct = false  // no distinct for aggregates
 	var query = qs.compiler.BuildSelectQuery(
 		qs.context,
 		ChangeObjectsType[T, attrs.Definer](qs),
-		&dereferenced,
+		qs.internals,
 	)
 	qs.latestQuery = query
 	return query
@@ -2876,14 +3015,12 @@ func (qs *QuerySet[T]) Last() (*Row[T], error) {
 // It returns a Query that can be executed to get the result,
 // which is a boolean indicating if any rows exist.
 func (qs *QuerySet[T]) Exists() (bool, error) {
-
-	var dereferenced = *qs.internals
-	dereferenced.Limit = 1  // limit to 1 row
-	dereferenced.Offset = 0 // no offset for exists
+	qs.internals.Limit = 1  // limit to 1 row
+	qs.internals.Offset = 0 // no offset for exists
 	var resultQuery = qs.compiler.BuildCountQuery(
 		qs.context,
 		ChangeObjectsType[T, attrs.Definer](qs),
-		&dereferenced,
+		qs.internals,
 	)
 	qs.latestQuery = resultQuery
 

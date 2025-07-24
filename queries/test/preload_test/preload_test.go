@@ -10,6 +10,7 @@ import (
 func TestPreload(t *testing.T) {
 	t.Run("TestAuthorHasBooks", func(t *testing.T) {
 		authorRows, err := queries.GetQuerySet(&PreloadAuthor{}).
+			Prefix("authors_books_qs").
 			Preload("Books").
 			All()
 		if err != nil {

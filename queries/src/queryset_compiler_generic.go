@@ -10,6 +10,7 @@ import (
 	"unsafe"
 
 	"github.com/Nigel2392/go-django/queries/internal"
+	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -51,15 +52,15 @@ func newExpressionInfo(g *genericQueryBuilder, qs *QuerySet[attrs.Definer], i *Q
 		panic(fmt.Errorf("unknown database driver: %s", dbName))
 	}
 
-	return &expr.ExpressionInfo{
+	var exprInfo = &expr.ExpressionInfo{
 		Driver: g.driver,
 		Model: attrs.NewObject[attrs.Definer](
 			qs.Meta().Model(),
 		),
 		Quote:           g.QuoteString,
 		QuoteIdentifier: g.QuoteIdentifier,
-		Resolver:        qs,
 		FormatField:     g.FormatColumn,
+		Resolver:        qs,
 		Placeholder:     generic_PLACEHOLDER,
 		Lookups: expr.ExpressionLookupInfo{
 			PrepForLikeQuery: g.PrepForLikeQuery,
@@ -73,6 +74,8 @@ func newExpressionInfo(g *genericQueryBuilder, qs *QuerySet[attrs.Definer], i *Q
 		SupportsWhereAlias: supportsWhereAlias,
 		SupportsAsExpr:     true,
 	}
+
+	return exprInfo
 }
 
 const generic_PLACEHOLDER = "?"
@@ -118,7 +121,7 @@ func (g *genericQueryBuilder) This() QueryCompiler {
 }
 
 func (g *genericQueryBuilder) Rebind(ctx context.Context, s string) string {
-	if !IsSubqueryContext(ctx) {
+	if !expr.IsSubqueryContext(ctx) {
 		return g.queryInfo.DBX(s)
 	}
 	return s
@@ -336,7 +339,7 @@ func (g *genericQueryBuilder) ExpressionInfo(
 	return newExpressionInfo(g, qs, internals, false)
 }
 
-func (g *genericQueryBuilder) FormatColumn(col *expr.TableColumn) (string, []any) {
+func (g *genericQueryBuilder) FormatColumn(aliasGen *alias.Generator, col *expr.TableColumn) (string, []any) {
 	var (
 		sb   = new(strings.Builder)
 		args = make([]any, 0, 1)
@@ -349,6 +352,12 @@ func (g *genericQueryBuilder) FormatColumn(col *expr.TableColumn) (string, []any
 
 	if col.TableOrAlias != "" {
 		sb.WriteString(g.quote)
+
+		if aliasGen.Prefix != "" {
+			sb.WriteString(aliasGen.Prefix)
+			sb.WriteString("_")
+		}
+
 		sb.WriteString(col.TableOrAlias)
 		sb.WriteString(g.quote)
 		sb.WriteString(".")
@@ -515,12 +524,44 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 	}
 
 	query.WriteString(" FROM ")
-	g.writeTableName(query, internals)
+	g.writeTableName(query, qs.AliasGen, internals)
+
+	// First we must resolve all where, having clauses & group by clauses.
+	// These might add joins to the queryset, so this
+	// must be done before we write the joins to the query.
+	var sb2 = new(strings.Builder)
+	var args2 = make([]any, 0, 8)
+	args2 = append(args2, g.writeWhereClause(sb2, inf, internals.Where)...)
+	args2 = append(args2, g.writeGroupBy(sb2, inf, internals.GroupBy)...)
+	args2 = append(args2, g.writeHaving(sb2, inf, internals.Having)...)
+
+	// Write the joins to the query.
 	args = append(args, g.writeJoins(query, inf, internals.Joins)...)
-	args = append(args, g.writeWhereClause(query, inf, internals.Where)...)
-	args = append(args, g.writeGroupBy(query, inf, internals.GroupBy)...)
-	args = append(args, g.writeHaving(query, inf, internals.Having)...)
-	g.writeOrderBy(query, internals.OrderBy)
+
+	// Actually write the where and group by clauses to the query.
+	query.WriteString(sb2.String())
+	args = append(args, args2...)
+
+	for _, union := range internals.Unions {
+		union.context = expr.MakeSubqueryContext(ctx)
+		var queryObj = g.BuildSelectQuery(
+			union.context, union, union.internals,
+		)
+
+		query.WriteString(" UNION ")
+
+		if union.internals.Distinct {
+			query.WriteString("DISTINCT ")
+		}
+
+		query.WriteString(queryObj.SQL())
+		args = append(args, queryObj.Args()...)
+	}
+
+	if !expr.IsSubqueryContext(ctx) {
+		g.writeOrderBy(query, qs.AliasGen, internals.OrderBy)
+	}
+
 	args = append(args, g.writeLimitOffset(query, internals.Limit, internals.Offset)...)
 
 	if internals.ForUpdate {
@@ -589,11 +630,40 @@ func (g *genericQueryBuilder) BuildCountQuery(
 	var query = new(strings.Builder)
 	var args = make([]any, 0)
 	query.WriteString("SELECT COUNT(*) FROM ")
-	g.writeTableName(query, internals)
+	g.writeTableName(query, qs.AliasGen, internals)
 
+	// First we must resolve all where clauses & group by clauses.
+	// These might add joins to the queryset, so this
+	// must be done before we write the joins to the query.
+	var sb2 = new(strings.Builder)
+	var args2 = make([]any, 0, 8)
+	args2 = append(args2, g.writeWhereClause(sb2, inf, internals.Where)...)
+	args2 = append(args2, g.writeGroupBy(sb2, inf, internals.GroupBy)...)
+	args2 = append(args2, g.writeHaving(sb2, inf, internals.Having)...)
+
+	// Write the joins to the query.
 	args = append(args, g.writeJoins(query, inf, internals.Joins)...)
-	args = append(args, g.writeWhereClause(query, inf, internals.Where)...)
-	args = append(args, g.writeGroupBy(query, inf, internals.GroupBy)...)
+
+	// Actually write the where and group by clauses to the query.
+	query.WriteString(sb2.String())
+	args = append(args, args2...)
+
+	for _, union := range internals.Unions {
+		union.context = expr.MakeSubqueryContext(ctx)
+		var queryObj = g.BuildSelectQuery(
+			union.context, union, union.internals,
+		)
+
+		query.WriteString(" UNION ")
+
+		if union.internals.Distinct {
+			query.WriteString("DISTINCT ")
+		}
+
+		query.WriteString(queryObj.SQL())
+		args = append(args, queryObj.Args()...)
+	}
+
 	args = append(args, g.writeLimitOffset(query, internals.Limit, internals.Offset)...)
 
 	return &QueryObject[int64]{
@@ -952,14 +1022,24 @@ func (g *genericQueryBuilder) BuildDeleteQuery(
 	}
 }
 
-func (g *genericQueryBuilder) writeTableName(sb *strings.Builder, internals *QuerySetInternals) {
+func (g *genericQueryBuilder) writeTableName(sb *strings.Builder, aliasGen *alias.Generator, internals *QuerySetInternals) {
 	sb.WriteString(g.quote)
 	sb.WriteString(internals.Model.Table)
 	sb.WriteString(g.quote)
+
+	if aliasGen.Prefix != "" {
+		sb.WriteString(" AS ")
+		sb.WriteString(g.quote)
+		sb.WriteString(aliasGen.Prefix)
+		sb.WriteString("_")
+		sb.WriteString(internals.Model.Table)
+		sb.WriteString(g.quote)
+	}
 }
 
 func (g *genericQueryBuilder) writeJoins(sb *strings.Builder, inf *expr.ExpressionInfo, joins []JoinDef) []any {
 	var args = make([]any, 0)
+	var aliasGen = inf.Resolver.Alias()
 	for _, join := range joins {
 		sb.WriteString(" ")
 		sb.WriteString(string(join.TypeJoin))
@@ -971,6 +1051,12 @@ func (g *genericQueryBuilder) writeJoins(sb *strings.Builder, inf *expr.Expressi
 		if join.Table.Alias != "" {
 			sb.WriteString(" AS ")
 			sb.WriteString(g.quote)
+
+			if aliasGen.Prefix != "" {
+				sb.WriteString(aliasGen.Prefix)
+				sb.WriteString("_")
+			}
+
 			sb.WriteString(join.Table.Alias)
 			sb.WriteString(g.quote)
 		}
@@ -979,7 +1065,7 @@ func (g *genericQueryBuilder) writeJoins(sb *strings.Builder, inf *expr.Expressi
 		var condition = join.JoinDefCondition
 		for condition != nil {
 
-			var col, argsCol = g.FormatColumn(&condition.ConditionA)
+			var col, argsCol = g.FormatColumn(aliasGen, &condition.ConditionA)
 			sb.WriteString(col)
 			args = append(args, argsCol...)
 
@@ -987,7 +1073,7 @@ func (g *genericQueryBuilder) writeJoins(sb *strings.Builder, inf *expr.Expressi
 			sb.WriteString(string(condition.Operator))
 			sb.WriteString(" ")
 
-			col, argsCol = g.FormatColumn(&condition.ConditionB)
+			col, argsCol = g.FormatColumn(aliasGen, &condition.ConditionB)
 			sb.WriteString(col)
 			args = append(args, argsCol...)
 
@@ -1046,7 +1132,7 @@ func (g *genericQueryBuilder) writeHaving(sb *strings.Builder, inf *expr.Express
 	return args
 }
 
-func (g *genericQueryBuilder) writeOrderBy(sb *strings.Builder, orderBy []OrderBy) {
+func (g *genericQueryBuilder) writeOrderBy(sb *strings.Builder, aliasGen *alias.Generator, orderBy []OrderBy) {
 	if len(orderBy) > 0 {
 		sb.WriteString(" ORDER BY ")
 
@@ -1062,7 +1148,7 @@ func (g *genericQueryBuilder) writeOrderBy(sb *strings.Builder, orderBy []OrderB
 				))
 			}
 
-			var sql, _ = g.FormatColumn(&field.Column)
+			var sql, _ = g.FormatColumn(aliasGen, &field.Column)
 			sb.WriteString(sql)
 
 			if field.Desc {

@@ -44,11 +44,6 @@ func (a *Generator) GetFieldAlias(tableAlias, alias string) string {
 	//return fmt.Sprintf("%s_%s", tableAlias, alias)
 	var aliasBuilder strings.Builder
 
-	if a.Prefix != "" {
-		aliasBuilder.WriteString(a.Prefix)
-		aliasBuilder.WriteString("_")
-	}
-
 	if tableAlias != "" {
 		aliasBuilder.WriteString(tableAlias)
 		aliasBuilder.WriteString("_")
@@ -72,11 +67,6 @@ func (a *Generator) GetTableAlias(currentTable string, chainorKey any) string {
 	}
 
 	var aliasBuilder strings.Builder
-	if a.Prefix != "" {
-		aliasBuilder.WriteString(a.Prefix)
-		aliasBuilder.WriteString("_")
-	}
-
 	if key == "" && currentTable != "" {
 		aliasBuilder.WriteString(currentTable)
 		return aliasBuilder.String()

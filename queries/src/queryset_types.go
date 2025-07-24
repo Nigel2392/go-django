@@ -223,6 +223,7 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 	} else {
 		tableAlias = f.Table.Alias
 	}
+
 	var col = &expr.TableColumn{}
 	if ve, ok := field.(VirtualField); ok && inf.Model != nil {
 		var rawSql, a = ve.SQL(inf)
@@ -238,7 +239,7 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 			)
 		}
 
-		var fmtSql, extra = inf.FormatField(col)
+		var fmtSql, extra = inf.FormatField(inf.Resolver.Alias(), col)
 		sb.WriteString(fmtSql)
 		args = append(args, a...)
 		args = append(args, extra...)
@@ -252,7 +253,7 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 	col.FieldColumn = field
 	col.ForUpdate = forUpdate
 
-	var fmtSql, _ = inf.FormatField(col)
+	var fmtSql, _ = inf.FormatField(inf.Resolver.Alias(), col)
 	sb.WriteString(fmtSql)
 
 	return []any{}, false, true
