@@ -500,7 +500,7 @@ func (qs *QuerySet[T]) Peek() expr.QueryInformation {
 		selectFields = make([]attrs.FieldDefinition, 0, len(qs.internals.Fields))
 		groupBy      = make([]attrs.FieldDefinition, 0, len(qs.internals.GroupBy))
 		joins        = make([]expr.Join, len(qs.internals.Joins))
-		unions       = make([]expr.QueryInformation, len(qs.internals.Unions))
+		unions       = make([]expr.FieldResolver, len(qs.internals.Unions))
 	)
 
 	for _, field := range qs.internals.Fields {
@@ -516,16 +516,16 @@ func (qs *QuerySet[T]) Peek() expr.QueryInformation {
 	}
 
 	for i, union := range qs.internals.Unions {
-		unions[i] = union.Peek()
+		unions[i] = union
 	}
 
 	var info = expr.QueryInformation{
 		Meta:      qs.Meta(),
 		Select:    selectFields,
 		GroupBy:   groupBy,
+		Unions:    unions,
 		Where:     qs.internals.Where,
 		Having:    qs.internals.Having,
-		Unions:    unions,
 		OrderBy:   qs.internals.OrderBy,
 		Limit:     qs.internals.Limit,
 		Offset:    qs.internals.Offset,

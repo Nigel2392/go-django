@@ -324,7 +324,7 @@ type QueryInformation struct {
 	Joins     []Join
 	Where     []ClauseExpression
 	Having    []ClauseExpression
-	Unions    []QueryInformation
+	Unions    []FieldResolver
 	OrderBy   []OrderBy
 	Limit     int
 	Offset    int
