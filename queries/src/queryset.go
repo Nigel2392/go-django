@@ -2173,9 +2173,6 @@ func (qs *QuerySet[T]) Reverse() *QuerySet[T] {
 
 // Limit is used to limit the number of results returned by a query.
 func (qs *QuerySet[T]) Limit(n int) *QuerySet[T] {
-	if n <= 0 {
-		return qs
-	}
 	var nqs = qs.clone()
 	nqs.internals.Limit = n
 	return nqs
@@ -2183,9 +2180,6 @@ func (qs *QuerySet[T]) Limit(n int) *QuerySet[T] {
 
 // Offset is used to set the offset of the results returned by a query.
 func (qs *QuerySet[T]) Offset(n int) *QuerySet[T] {
-	if n <= 0 {
-		return qs
-	}
 	var nqs = qs.clone()
 	nqs.internals.Offset = n
 	return nqs

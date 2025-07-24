@@ -83,7 +83,7 @@ func (e *outerRef) Resolve(inf *ExpressionInfo) Expression {
 		panic(fmt.Errorf("failed to resolve outer reference %s: no parent subquery context found", nE.fieldName))
 	}
 
-	var _, field, col, err = outer.Resolver.Resolve(nE.fieldName, inf)
+	var _, field, col, err = outer.Resolver.Resolve(nE.fieldName, outer)
 	if err != nil {
 		panic(fmt.Errorf("failed to resolve field %s: %w", field, err))
 	}
@@ -92,7 +92,7 @@ func (e *outerRef) Resolve(inf *ExpressionInfo) Expression {
 		col.TableOrAlias = alias
 	}
 
-	var sql, args = inf.FormatField(outer.Resolver.Alias(), col)
+	var sql, args = outer.FormatField(outer.Resolver.Alias(), col)
 	nE.field = newResolvedField(nE.fieldName, sql, field, args)
 
 	return nE
