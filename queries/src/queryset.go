@@ -172,7 +172,7 @@ type QuerySetInternals struct {
 	Having      []expr.ClauseExpression
 	Joins       []JoinDef
 	GroupBy     []*FieldInfo[attrs.FieldDefinition]
-	OrderBy     []OrderBy
+	OrderBy     []expr.OrderBy
 	Limit       int
 	Offset      int
 	ForUpdate   bool
@@ -292,6 +292,7 @@ type QuerySet[T attrs.Definer] struct {
 	explicitSave bool
 	latestQuery  QueryInfo
 	useCache     bool
+	peekInfo     *expr.QueryInformation
 	cached       any
 }
 
@@ -390,7 +391,7 @@ func Objects[T attrs.Definer](model T, database ...string) *QuerySet[T] {
 			Having:      make([]expr.ClauseExpression, 0),
 			Joins:       make([]JoinDef, 0),
 			GroupBy:     make([]*FieldInfo[attrs.FieldDefinition], 0),
-			OrderBy:     make([]OrderBy, 0),
+			OrderBy:     make([]expr.OrderBy, 0),
 			Limit:       MAX_DEFAULT_RESULTS,
 			Offset:      0,
 		},
@@ -464,7 +465,7 @@ func (qs *QuerySet[T]) DB() drivers.DB {
 }
 
 // Meta returns the model meta information for the QuerySet.
-func (qs *QuerySet[T]) Meta() ModelMeta {
+func (qs *QuerySet[T]) Meta() expr.ModelMeta {
 	// return a new model meta object with the model information
 	return &modelInfo{
 		Primary:  qs.internals.Model.Primary,
@@ -488,6 +489,51 @@ func (qs *QuerySet[T]) LatestQuery() QueryInfo {
 // HasWhereClause returns true if the QuerySet has a WHERE clause.
 func (qs *QuerySet[T]) HasWhereClause() bool {
 	return len(qs.internals.Where) > 0
+}
+
+func (qs *QuerySet[T]) Peek() expr.QueryInformation {
+	if qs.peekInfo != nil {
+		return *qs.peekInfo
+	}
+
+	var (
+		selectFields = make([]attrs.FieldDefinition, 0, len(qs.internals.Fields))
+		groupBy      = make([]attrs.FieldDefinition, 0, len(qs.internals.GroupBy))
+		joins        = make([]expr.Join, len(qs.internals.Joins))
+		unions       = make([]expr.QueryInformation, len(qs.internals.Unions))
+	)
+
+	for _, field := range qs.internals.Fields {
+		selectFields = append(selectFields, field.Fields...)
+	}
+
+	for _, field := range qs.internals.GroupBy {
+		groupBy = append(groupBy, field.Fields...)
+	}
+
+	for i, join := range qs.internals.Joins {
+		joins[i] = &join
+	}
+
+	for i, union := range qs.internals.Unions {
+		unions[i] = union.Peek()
+	}
+
+	var info = expr.QueryInformation{
+		Meta:      qs.Meta(),
+		Select:    selectFields,
+		GroupBy:   groupBy,
+		Where:     qs.internals.Where,
+		Having:    qs.internals.Having,
+		Unions:    unions,
+		OrderBy:   qs.internals.OrderBy,
+		Limit:     qs.internals.Limit,
+		Offset:    qs.internals.Offset,
+		ForUpdate: qs.internals.ForUpdate,
+		Distinct:  qs.internals.Distinct,
+	}
+	qs.peekInfo = &info
+	return info
 }
 
 // Context returns the context of the QuerySet.
@@ -1749,7 +1795,7 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 			)
 		} else {
 			join1 = JoinDef{ // LHS -> THROUGH
-				TypeJoin: TypeJoinLeft,
+				TypeJoin: expr.TypeJoinLeft,
 				Table: Table{
 					Name:  throughDefs.TableName(),
 					Alias: throughAlias,
@@ -1768,7 +1814,7 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 			}
 
 			join2 = JoinDef{ // THROUGH -> RHS
-				TypeJoin: TypeJoinLeft,
+				TypeJoin: expr.TypeJoinLeft,
 				Table: Table{
 					Name:  defs.TableName(),
 					Alias: rhsAlias,
@@ -2064,8 +2110,8 @@ func (qs *QuerySet[T]) OrderBy(fields ...string) *QuerySet[T] {
 //
 // it processes the field names, checks for descending order (indicated by a leading minus sign),
 // and generates the appropriate TableColumn and FieldAlias for each field.
-func (qs *QuerySet[T]) compileOrderBy(fields ...string) []OrderBy {
-	var orderBy = make([]OrderBy, 0, len(fields))
+func (qs *QuerySet[T]) compileOrderBy(fields ...string) []expr.OrderBy {
+	var orderBy = make([]expr.OrderBy, 0, len(fields))
 
 	if len(fields) == 0 {
 		fields = qs.internals.Model.Ordering
@@ -2137,7 +2183,7 @@ func (qs *QuerySet[T]) compileOrderBy(fields ...string) []OrderBy {
 			field = nil
 		}
 
-		orderBy = append(orderBy, OrderBy{
+		orderBy = append(orderBy, expr.OrderBy{
 			Column: expr.TableColumn{
 				TableOrAlias: tableAlias,
 				FieldColumn:  field,
@@ -2153,9 +2199,9 @@ func (qs *QuerySet[T]) compileOrderBy(fields ...string) []OrderBy {
 //
 // It returns a new QuerySet with the reversed order.
 func (qs *QuerySet[T]) Reverse() *QuerySet[T] {
-	var ordBy = make([]OrderBy, 0, len(qs.internals.OrderBy))
+	var ordBy = make([]expr.OrderBy, 0, len(qs.internals.OrderBy))
 	for _, ord := range qs.internals.OrderBy {
-		ordBy = append(ordBy, OrderBy{
+		ordBy = append(ordBy, expr.OrderBy{
 			Column: ord.Column,
 			Desc:   !ord.Desc,
 		})
@@ -2309,7 +2355,7 @@ func (qs *QuerySet[T]) annotate(alias string, expr expr.Expression) {
 	//}
 
 	// Add the field to the annotations
-	var field = newQueryField[any](alias, expr)
+	var field = newQueryField(alias, expr)
 	qs.internals.Annotations.Set(alias, field)
 	qs.internals.AddField(&FieldInfo[attrs.FieldDefinition]{
 		Table:  Table{Name: qs.internals.Model.Table},
@@ -3934,7 +3980,7 @@ func (qs *QuerySet[T]) batch(objects []T, size int) iter.Seq2[int, []T] {
 	}
 }
 
-func calcJoinType(rel attrs.Relation, parentField attrs.FieldDefinition) JoinType {
+func calcJoinType(rel attrs.Relation, parentField attrs.FieldDefinition) expr.JoinType {
 	if rel == nil {
 		panic(fmt.Errorf(
 			"calcJoinType: relation is nil for field %q in model %T",
@@ -3945,24 +3991,24 @@ func calcJoinType(rel attrs.Relation, parentField attrs.FieldDefinition) JoinTyp
 	switch relType {
 	case attrs.RelManyToOne:
 		if !parentField.AllowNull() {
-			return TypeJoinInner
+			return expr.TypeJoinInner
 		}
-		return TypeJoinLeft
+		return expr.TypeJoinLeft
 
 	case attrs.RelOneToOne:
 		if rel.Through() != nil {
-			return TypeJoinInner
+			return expr.TypeJoinInner
 		}
 		if !parentField.AllowNull() {
-			return TypeJoinInner
+			return expr.TypeJoinInner
 		}
-		return TypeJoinLeft
+		return expr.TypeJoinLeft
 
 	case attrs.RelOneToMany:
-		return TypeJoinLeft
+		return expr.TypeJoinLeft
 
 	case attrs.RelManyToMany:
-		return TypeJoinInner
+		return expr.TypeJoinInner
 
 	default:
 		panic(fmt.Errorf("unknown relation type %d for field %q", relType, parentField.Name()))

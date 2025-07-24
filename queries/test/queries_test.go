@@ -3379,6 +3379,28 @@ func TestQuerySetRows(t *testing.T) {
 	}
 }
 
+func TestOuterRefSubQuery(t *testing.T) {
+	qs := queries.GetQuerySet(&User{}).
+		Select("ID", "Name").
+		Annotate("LatestTodoTitle", queries.Subquery(queries.GetQuerySet(&Todo{}).
+			Select("Title").
+			Filter("User.ID", expr.OuterRef("ID")).
+			OrderBy("-ID").
+			Limit(1)),
+		).
+		Filter("LatestTodoTitle__isnull", false)
+
+	users, err := qs.All()
+	if err != nil {
+		t.Fatalf("Failed to query users: %v", err)
+	}
+
+	for _, u := range users {
+		title := u.Annotations["LatestTodoTitle"]
+		t.Logf("User: %v, Latest Todo: %v", u.Object.Name, title)
+	}
+}
+
 func TestQuerySetRow(t *testing.T) {
 	var tables = quest.Table(t, &TestRowsAffected{})
 	tables.Create()

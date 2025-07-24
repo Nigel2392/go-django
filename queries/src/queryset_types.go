@@ -8,43 +8,36 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
-type (
-	// JoinType represents the type of join to use in a query.
-	//
-	// It is used to specify how to join two tables in a query.
-	JoinType string
-)
-
-const (
-	TypeJoinLeft  JoinType = "LEFT JOIN"
-	TypeJoinRight JoinType = "RIGHT JOIN"
-	TypeJoinInner JoinType = "INNER JOIN"
-	TypeJoinFull  JoinType = "FULL JOIN"
-	TypeJoinCross JoinType = "CROSS JOIN"
-)
-
 // A table represents a database table.
 type Table struct {
 	Name  string
 	Alias string
 }
 
-// OrderBy represents an order by clause in a query.
-//
-// It contains the table to order by, the field to order by, an optional alias for the field,
-// and a boolean indicating whether to order in descending order.
-//
-// It is used to specify how to order the results of a query.
-type OrderBy struct {
-	Column expr.TableColumn // The field to order by
-	Desc   bool
-}
+var _ expr.Join = (*JoinDef)(nil)
+var _ expr.JoinCondition = (*JoinDefCondition)(nil)
 
 type JoinDefCondition struct {
 	ConditionA expr.TableColumn  // The first condition to join on
 	ConditionB expr.TableColumn  // The second condition to join on
 	Operator   expr.LogicalOp    // The operator to use to join the two conditions
 	Next       *JoinDefCondition // The next join condition, if any
+}
+
+func (j *JoinDefCondition) LHS() expr.TableColumn {
+	return j.ConditionA
+}
+
+func (j *JoinDefCondition) RHS() expr.TableColumn {
+	return j.ConditionB
+}
+
+func (j *JoinDefCondition) Op() expr.LogicalOp {
+	return j.Operator
+}
+
+func (j *JoinDefCondition) NextCondition() expr.JoinCondition {
+	return j.Next
 }
 
 func writeCol(sb *strings.Builder, col *expr.TableColumn) {
@@ -113,8 +106,27 @@ func (j *JoinDefCondition) String() string {
 // See [expr.LogicalOp] for different logical operators.
 type JoinDef struct {
 	Table            Table
-	TypeJoin         JoinType
+	TypeJoin         expr.JoinType
 	JoinDefCondition *JoinDefCondition
+}
+
+func (j *JoinDef) TableName() string {
+	return j.Table.Name
+}
+
+func (j *JoinDef) TableAlias() string {
+	return j.Table.Alias
+}
+
+func (j *JoinDef) Type() expr.JoinType {
+	return j.TypeJoin
+}
+
+func (j *JoinDef) Condition() expr.JoinCondition {
+	if j.JoinDefCondition == nil {
+		return nil
+	}
+	return j.JoinDefCondition
 }
 
 // FieldInfo represents information about a field in a query.

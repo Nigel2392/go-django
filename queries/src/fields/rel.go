@@ -326,9 +326,9 @@ func (r *RelationField[T]) IsProxy() bool {
 
 func (f *RelationField[T]) GenerateTargetClause(qs *queries.QuerySet[attrs.Definer], inter *queries.QuerySetInternals, lhs queries.ClauseTarget, rhs queries.ClauseTarget) queries.JoinDef {
 
-	var joinType = queries.TypeJoinLeft
+	var joinType = expr.TypeJoinLeft
 	if !f.cnf.Nullable && !f.hasMany() {
-		joinType = queries.TypeJoinInner
+		joinType = expr.TypeJoinInner
 	}
 
 	return queries.JoinDef{
@@ -350,9 +350,9 @@ func (f *RelationField[T]) GenerateTargetClause(qs *queries.QuerySet[attrs.Defin
 
 func (f *RelationField[T]) GenerateTargetThroughClause(qs *queries.QuerySet[attrs.Definer], inter *queries.QuerySetInternals, lhs queries.ClauseTarget, thru queries.ThroughClauseTarget, rhs queries.ClauseTarget) (queries.JoinDef, queries.JoinDef) {
 
-	var joinType = queries.TypeJoinLeft
+	var joinType = expr.TypeJoinLeft
 	if !f.cnf.Nullable && !f.hasMany() {
-		joinType = queries.TypeJoinInner
+		joinType = expr.TypeJoinInner
 	}
 
 	var sourceToThrough = queries.JoinDef{

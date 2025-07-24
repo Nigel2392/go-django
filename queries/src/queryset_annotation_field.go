@@ -6,36 +6,35 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
 var (
-	_ VirtualField = &queryField[any]{}
+	_ VirtualField = &queryField{}
 	_ VirtualField = &exprField{}
 )
 
 // a field used internally in queryset annotations
 // to represent a query expression.
-type queryField[T any] struct {
+type queryField struct {
 	name  string
 	expr  expr.Expression
-	value T
+	value any
 }
 
-func newQueryField[T any](name string, expr expr.Expression) *queryField[T] {
-	return &queryField[T]{name: name, expr: expr}
+func newQueryField(name string, expr expr.Expression) *queryField {
+	return &queryField{name: name, expr: expr}
 }
 
-func (q *queryField[T]) BindToDefinitions(defs attrs.Definitions) {
+func (q *queryField) BindToDefinitions(defs attrs.Definitions) {
 	// this is a no-op, as query fields are not bound to definitions
 	// they are used directly in expressions and queries, not anywhere external
 	// or as part of a model definition.
 }
 
-func (q *queryField[T]) FieldDefinitions() attrs.Definitions {
+func (q *queryField) FieldDefinitions() attrs.Definitions {
 	// query fields do not have field definitions, as they are not part of a model
 	// they are used directly in expressions and queries, not anywhere external
 	// or as part of a model definition.
@@ -44,8 +43,8 @@ func (q *queryField[T]) FieldDefinitions() attrs.Definitions {
 
 // VirtualField
 
-func (q *queryField[T]) Alias() string { return q.name }
-func (q *queryField[T]) SQL(inf *expr.ExpressionInfo) (string, []any) {
+func (q *queryField) Alias() string { return q.name }
+func (q *queryField) SQL(inf *expr.ExpressionInfo) (string, []any) {
 	var sqlBuilder = &strings.Builder{}
 	var expr = q.expr.Resolve(inf)
 	var args = expr.SQL(sqlBuilder)
@@ -53,37 +52,37 @@ func (q *queryField[T]) SQL(inf *expr.ExpressionInfo) (string, []any) {
 }
 
 // attrs.Field minimal impl
-func (q *queryField[T]) Name() string          { return q.name }
-func (q *queryField[T]) ColumnName() string    { return "" }
-func (q *queryField[T]) Tag(string) string     { return "" }
-func (q *queryField[T]) Type() reflect.Type    { return reflect.TypeOf(new(T)).Elem() }
-func (q *queryField[T]) Attrs() map[string]any { return map[string]any{} }
-func (q *queryField[T]) IsPrimary() bool       { return false }
-func (q *queryField[T]) AllowNull() bool       { return true }
-func (q *queryField[T]) AllowBlank() bool      { return true }
-func (q *queryField[T]) AllowEdit() bool       { return false }
-func (q *queryField[T]) GetValue() any         { return q.value }
-func (q *queryField[T]) SetValue(v any, _ bool) error {
-	val, ok := v.(T)
-	if !ok {
-		return errors.TypeMismatch.WithCause(fmt.Errorf(
-			"expected value of type %T, got %T: %v",
-			*new(T), v, v,
-		))
-	}
-	q.value = val
+func (q *queryField) Name() string          { return q.name }
+func (q *queryField) ColumnName() string    { return "" }
+func (q *queryField) Tag(string) string     { return "" }
+func (q *queryField) Type() reflect.Type    { return reflect.TypeOf(new(interface{})).Elem() }
+func (q *queryField) Attrs() map[string]any { return map[string]any{} }
+func (q *queryField) IsPrimary() bool       { return false }
+func (q *queryField) AllowNull() bool       { return true }
+func (q *queryField) AllowBlank() bool      { return true }
+func (q *queryField) AllowEdit() bool       { return false }
+func (q *queryField) GetValue() any         { return q.value }
+func (q *queryField) SetValue(v any, _ bool) error {
+	//	val, ok := v.(T)
+	//	if !ok {
+	//		return errors.TypeMismatch.WithCause(fmt.Errorf(
+	//			"expected value of type %T, got %T: %v",
+	//			*new(T), v, v,
+	//		))
+	//	}
+	q.value = v
 	return nil
 }
-func (q *queryField[T]) Value() (driver.Value, error) { return q.value, nil }
-func (q *queryField[T]) Scan(v any) error             { return q.SetValue(v, false) }
-func (q *queryField[T]) GetDefault() any              { return nil }
-func (q *queryField[T]) Instance() attrs.Definer      { return nil }
-func (q *queryField[T]) Rel() attrs.Relation          { return nil }
-func (q *queryField[T]) FormField() fields.Field      { return nil }
-func (q *queryField[T]) Validate() error              { return nil }
-func (q *queryField[T]) Label() string                { return q.name }
-func (q *queryField[T]) ToString() string             { return fmt.Sprint(q.value) }
-func (q *queryField[T]) HelpText() string             { return "" }
+func (q *queryField) Value() (driver.Value, error) { return q.value, nil }
+func (q *queryField) Scan(v any) error             { return q.SetValue(v, false) }
+func (q *queryField) GetDefault() any              { return nil }
+func (q *queryField) Instance() attrs.Definer      { return nil }
+func (q *queryField) Rel() attrs.Relation          { return nil }
+func (q *queryField) FormField() fields.Field      { return nil }
+func (q *queryField) Validate() error              { return nil }
+func (q *queryField) Label() string                { return q.name }
+func (q *queryField) ToString() string             { return fmt.Sprint(q.value) }
+func (q *queryField) HelpText() string             { return "" }
 
 var _ VirtualField = &exprField{}
 

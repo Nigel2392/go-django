@@ -15,20 +15,15 @@ func newFunc(funcLookup string, value []any, expr ...any) *expr.Function
 var _ expr.Expression = (*subqueryExpr[attrs.Definer, *QuerySet[attrs.Definer]])(nil)
 
 type subqueryExpr[T attrs.Definer, QS BaseQuerySet[T, QS]] struct {
-	field expr.Expression
-	qs    QS
-	op    string
-	not   bool
-	used  bool
+	qs   QS
+	op   string
+	not  bool
+	used bool
 }
 
 func (s *subqueryExpr[T, QS]) SQL(sb *strings.Builder) []any {
 	var written bool
 	var args = make([]any, 0)
-	if s.field != nil {
-		args = append(args, s.field.SQL(sb)...)
-		written = true
-	}
 
 	if s.not {
 		if written {
@@ -49,26 +44,35 @@ func (s *subqueryExpr[T, QS]) SQL(sb *strings.Builder) []any {
 	}
 
 	var query = s.qs.QueryAll()
+	var info = s.qs.Peek()
 	var sql = query.SQL()
 	if sql != "" {
 		if written {
 			sb.WriteString(" ")
 		}
 
+		if info.Limit == 1 {
+			sb.WriteString("(")
+		}
+
 		sb.WriteString(sql)
+
+		if info.Limit == 1 {
+			sb.WriteString(")")
+		}
+
+		args = append(args, query.Args()...)
 	}
 
-	args = append(args, query.Args()...)
 	return args
 }
 
 func (s *subqueryExpr[T, QS]) Clone() expr.Expression {
 	return &subqueryExpr[T, QS]{
-		qs:    s.qs.Clone(),
-		not:   s.not,
-		used:  s.used,
-		field: s.field,
-		op:    s.op,
+		qs:   s.qs.Clone(),
+		not:  s.not,
+		used: s.used,
+		op:   s.op,
 	}
 }
 
@@ -85,15 +89,11 @@ func (s *subqueryExpr[T, QS]) Resolve(inf *expr.ExpressionInfo) expr.Expression 
 		nE.qs.Context(), inf,
 	))
 
-	if nE.field != nil {
-		nE.field = nE.field.Resolve(inf)
-	}
-
 	return nE
 }
 
 func Subquery[T attrs.Definer, QS BaseQuerySet[T, QS]](qs QS) expr.Expression {
 	return &subqueryExpr[T, QS]{
-		qs: qs.Limit(0).WithContext(expr.MakeSubqueryContext(qs.Context())),
+		qs: qs.WithContext(expr.MakeSubqueryContext(qs.Context())),
 	}
 }

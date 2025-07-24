@@ -594,13 +594,6 @@ type RebindCompiler interface {
 	Rebind(ctx context.Context, s string) string
 }
 
-type ModelMeta interface {
-	Model() attrs.Definer
-	TableName() string
-	PrimaryKey() attrs.FieldDefinition
-	OrderBy() []string
-}
-
 // A queryset is a collection of queries that can be executed against a database.
 //
 // It is used to retrieve, create, update, and delete objects from the database.
@@ -657,11 +650,10 @@ type BaseQuerySet[T attrs.Definer, QS any] interface {
 	ForUpdate() QS
 	Prefix(prefix string) QS
 	DB() drivers.DB
-	Meta() ModelMeta
+	Meta() expr.ModelMeta
 	Compiler() QueryCompiler
 	Having(key interface{}, vals ...interface{}) QS
 	LatestQuery() QueryInfo
-	Context() context.Context
 	WithContext(ctx context.Context) QS
 
 	// Lazy methods for retrieving queries

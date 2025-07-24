@@ -18,11 +18,6 @@ func IsSubqueryContext(ctx context.Context) bool {
 	return v
 }
 
-func ParentFromSubqueryContext(ctx context.Context) (*ExpressionInfo, bool) {
-	var v, ok = ctx.Value(parentQueryContextKey{}).(*ExpressionInfo)
-	return v, ok
-}
-
 func MakeSubqueryContext(ctx context.Context) context.Context {
 	if IsSubqueryContext(ctx) {
 		return ctx
@@ -30,11 +25,12 @@ func MakeSubqueryContext(ctx context.Context) context.Context {
 	return context.WithValue(ctx, subqueryContextKey{}, true)
 }
 
-func AddParentSubqueryContext(ctx context.Context, inf *ExpressionInfo) context.Context {
-	if IsSubqueryContext(ctx) {
-		return ctx
-	}
+func ParentFromSubqueryContext(ctx context.Context) (*ExpressionInfo, bool) {
+	var v, ok = ctx.Value(parentQueryContextKey{}).(*ExpressionInfo)
+	return v, ok
+}
 
+func AddParentSubqueryContext(ctx context.Context, inf *ExpressionInfo) context.Context {
 	return context.WithValue(ctx, parentQueryContextKey{}, inf)
 }
 
@@ -78,7 +74,7 @@ func (e *outerRef) Resolve(inf *ExpressionInfo) Expression {
 		nE.fieldName = nE.fieldName[firstDot+1:]
 	}
 
-	var outer, ok = ParentFromSubqueryContext(inf.Resolver.(interface{ Context() context.Context }).Context())
+	var outer, ok = ParentFromSubqueryContext(inf.Resolver.Context())
 	if !ok {
 		panic(fmt.Errorf("failed to resolve outer reference %s: no parent subquery context found", nE.fieldName))
 	}

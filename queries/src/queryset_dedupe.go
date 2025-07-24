@@ -364,7 +364,7 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 		}
 
 		var join = JoinDef{
-			TypeJoin: TypeJoinInner,
+			TypeJoin: expr.TypeJoinInner,
 			Table: Table{
 				Name: throughObject.defs.TableName(),
 				Alias: fmt.Sprintf(

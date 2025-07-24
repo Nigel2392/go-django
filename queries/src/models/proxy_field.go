@@ -168,7 +168,7 @@ func (f *proxyField) GenerateTargetClause(qs *queries.QuerySet[attrs.Definer], i
 
 	return queries.JoinDef{
 		Table:            rhs.Table,
-		TypeJoin:         queries.TypeJoinInner,
+		TypeJoin:         expr.TypeJoinInner,
 		JoinDefCondition: &cond,
 	}
 }

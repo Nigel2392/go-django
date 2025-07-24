@@ -240,7 +240,7 @@ func (f *genericForeignKeyField[T]) GenerateTargetClause(qs *queries.QuerySet[at
 
 	return queries.JoinDef{
 		Table:            rhs.Table,
-		TypeJoin:         queries.TypeJoinInner,
+		TypeJoin:         expr.TypeJoinInner,
 		JoinDefCondition: &cond,
 	}
 }

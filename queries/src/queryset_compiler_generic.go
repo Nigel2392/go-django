@@ -1132,7 +1132,7 @@ func (g *genericQueryBuilder) writeHaving(sb *strings.Builder, inf *expr.Express
 	return args
 }
 
-func (g *genericQueryBuilder) writeOrderBy(sb *strings.Builder, aliasGen *alias.Generator, orderBy []OrderBy) {
+func (g *genericQueryBuilder) writeOrderBy(sb *strings.Builder, aliasGen *alias.Generator, orderBy []expr.OrderBy) {
 	if len(orderBy) > 0 {
 		sb.WriteString(" ORDER BY ")
 

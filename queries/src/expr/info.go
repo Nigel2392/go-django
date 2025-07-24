@@ -209,11 +209,6 @@ func newResolvedField(fieldPath, sqlText string, field attrs.FieldDefinition, ar
 	}
 }
 
-type FieldResolver interface {
-	Alias() *alias.Generator
-	Resolve(fieldName string, inf *ExpressionInfo) (model attrs.Definer, field attrs.FieldDefinition, col *TableColumn, err error)
-}
-
 func (inf *ExpressionInfo) ResolveExpressionField(fieldName string) *ResolvedField {
 	// A field can never be lowercase, so if the first part is lowercase,
 	// we assume it's an alias and the rest is the field name.

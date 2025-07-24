@@ -1,11 +1,13 @@
 package expr
 
 import (
+	"context"
 	"database/sql/driver"
 	"fmt"
 	"reflect"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -259,4 +261,80 @@ type AliasField interface {
 type VirtualField interface {
 	attrs.FieldDefinition
 	SQL(inf *ExpressionInfo) (string, []any)
+}
+
+// OrderBy represents an order by clause in a query.
+//
+// It contains the table to order by, the field to order by, an optional alias for the field,
+// and a boolean indicating whether to order in descending order.
+//
+// It is used to specify how to order the results of a query.
+type OrderBy struct {
+	Column TableColumn // The field to order by
+	Desc   bool
+}
+
+type ModelMeta interface {
+	Model() attrs.Definer
+	TableName() string
+	PrimaryKey() attrs.FieldDefinition
+	OrderBy() []string
+}
+
+type (
+	// JoinType represents the type of join to use in a query.
+	//
+	// It is used to specify how to join two tables in a query.
+	JoinType string
+)
+
+const (
+	TypeJoinLeft  JoinType = "LEFT JOIN"
+	TypeJoinRight JoinType = "RIGHT JOIN"
+	TypeJoinInner JoinType = "INNER JOIN"
+	TypeJoinFull  JoinType = "FULL JOIN"
+	TypeJoinCross JoinType = "CROSS JOIN"
+)
+
+type Join interface {
+	TableName() string
+	TableAlias() string
+	Type() JoinType
+	Condition() JoinCondition
+}
+
+type JoinCondition interface {
+	// LHS returns the left-hand side of the join condition.
+	LHS() TableColumn
+
+	// RHS returns the right-hand side of the join condition.
+	RHS() TableColumn
+
+	// Op returns the operator used in the join condition.
+	Op() LogicalOp
+
+	// NextCondition returns the next join condition, if any.
+	NextCondition() JoinCondition
+}
+
+type QueryInformation struct {
+	Meta      ModelMeta
+	Select    []attrs.FieldDefinition
+	GroupBy   []attrs.FieldDefinition
+	Joins     []Join
+	Where     []ClauseExpression
+	Having    []ClauseExpression
+	Unions    []QueryInformation
+	OrderBy   []OrderBy
+	Limit     int
+	Offset    int
+	ForUpdate bool
+	Distinct  bool
+}
+
+type FieldResolver interface {
+	Alias() *alias.Generator
+	Peek() QueryInformation
+	Context() context.Context
+	Resolve(fieldName string, inf *ExpressionInfo) (model attrs.Definer, field attrs.FieldDefinition, col *TableColumn, err error)
 }

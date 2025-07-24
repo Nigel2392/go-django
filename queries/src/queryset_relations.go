@@ -140,7 +140,7 @@ func (t *relatedQuerySet[T, T2]) setup() {
 		}
 
 		var join = JoinDef{
-			TypeJoin: TypeJoinInner,
+			TypeJoin: expr.TypeJoinInner,
 			Table: Table{
 				Name: throughObject.defs.TableName(),
 				Alias: fmt.Sprintf(
