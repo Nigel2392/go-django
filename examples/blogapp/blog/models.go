@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/trans"
 )
 
 var (
@@ -105,8 +106,8 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 			Blank:    true,
 		}),
 		editor.NewField(n, "Editor", editor.FieldConfig{
-			Label:    "Editor",
-			HelpText: "This is a rich text editor. You can add images, videos, and other media to your blog post.",
+			Label:    trans.S("Editor"),
+			HelpText: trans.S("This is a rich text editor. You can add images, videos, and other media to your blog post."),
 			//Features: []string{
 			//	"paragraph",
 			//	"text-align",

@@ -585,7 +585,9 @@ func (a *Application) Initialize() error {
 			c.Render(ctx, buf)
 			return template.HTML(buf.String())
 		},
-		"T": trans.T,
+		"T": func(s string, args ...any) string {
+			return trans.T(context.Background(), s, args...)
+		},
 	})
 
 	a.Commands.Register(sqlShellCommand)

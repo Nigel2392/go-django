@@ -1,6 +1,7 @@
 package contenttypes
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"reflect"
@@ -27,17 +28,17 @@ type ContentTypeDefinition struct {
 	// A function that returns the human-readable name of the model.
 	//
 	// This can be used to provide a custom name for the model.
-	GetLabel func() string
+	GetLabel func(ctx context.Context) string
 
 	// A function to return a pluralized version of the model's name.
 	//
 	// This can be used to provide a custom plural name for the model.
-	GetPluralLabel func() string
+	GetPluralLabel func(ctx context.Context) string
 
 	// A function that returns a description of the model.
 	//
 	// This should return an accurate description of the model and what it represents.
-	GetDescription func() string
+	GetDescription func(ctx context.Context) string
 
 	// A function which returns the label for an instance of the content type.
 	//
@@ -51,15 +52,15 @@ type ContentTypeDefinition struct {
 	GetObject func() any
 
 	// A function to retrieve an instance of the model by its ID.
-	GetInstance func(interface{}) (interface{}, error)
+	GetInstance func(context.Context, interface{}) (interface{}, error)
 
 	// A function to get a list of instances of the model.
-	GetInstances func(amount, offset uint) ([]interface{}, error)
+	GetInstances func(ctx context.Context, amount, offset uint) ([]interface{}, error)
 
 	// A function to get a list of instances of the model by a list of IDs.
 	//
 	// Falls back to calling Instance for each ID if GetInstancesByID is not implemented.
-	GetInstancesByIDs func([]interface{}) ([]interface{}, error)
+	GetInstancesByIDs func(context.Context, []interface{}) ([]interface{}, error)
 
 	// A list of aliases for the model.
 	//
@@ -95,27 +96,27 @@ func (c *ContentTypeDefinition) Name() string {
 }
 
 // Returns the model's human-readable name.
-func (p *ContentTypeDefinition) Label() string {
+func (p *ContentTypeDefinition) Label(ctx context.Context) string {
 	if p.GetLabel != nil {
-		return p.GetLabel()
+		return p.GetLabel(ctx)
 	}
 	return p.Name()
 }
 
 // Returns a description of the model and what it represents.
-func (p *ContentTypeDefinition) Description() string {
+func (p *ContentTypeDefinition) Description(ctx context.Context) string {
 	if p.GetDescription != nil {
-		return p.GetDescription()
+		return p.GetDescription(ctx)
 	}
 	return ""
 }
 
 // Returns the pluralized version of the model's name.
-func (p *ContentTypeDefinition) PluralLabel() string {
+func (p *ContentTypeDefinition) PluralLabel(ctx context.Context) string {
 	if p.GetPluralLabel != nil {
-		return p.GetPluralLabel()
+		return p.GetPluralLabel(ctx)
 	}
-	return text.Pluralize(p.Label())
+	return text.Pluralize(p.Label(ctx))
 }
 
 // Returns the human-readable name of an instance of the model.
@@ -146,18 +147,18 @@ func (p *ContentTypeDefinition) Object() any {
 }
 
 // Returns an instance of the model by its ID.
-func (p *ContentTypeDefinition) Instance(id interface{}) (interface{}, error) {
+func (p *ContentTypeDefinition) Instance(ctx context.Context, id interface{}) (interface{}, error) {
 	if p.GetInstance != nil {
-		return p.GetInstance(id)
+		return p.GetInstance(ctx, id)
 	}
 	assert.Fail("GetInstance not implemented for model %s", p.ContentType().TypeName())
 	return nil, nil
 }
 
 // Returns a list of instances of the model.
-func (p *ContentTypeDefinition) Instances(amount, offset uint) ([]interface{}, error) {
+func (p *ContentTypeDefinition) Instances(ctx context.Context, amount, offset uint) ([]interface{}, error) {
 	if p.GetInstances != nil {
-		return p.GetInstances(amount, offset)
+		return p.GetInstances(ctx, amount, offset)
 	}
 	assert.Fail("GetInstances not implemented for model %s", p.ContentType().TypeName())
 	return nil, nil
@@ -166,9 +167,9 @@ func (p *ContentTypeDefinition) Instances(amount, offset uint) ([]interface{}, e
 // Returns a list of instances of the model by a list of IDs.
 //
 // Falls back to calling Instance for each ID if GetInstancesByID is not implemented.
-func (p *ContentTypeDefinition) InstancesByIDs(ids []interface{}) ([]interface{}, error) {
+func (p *ContentTypeDefinition) InstancesByIDs(ctx context.Context, ids []interface{}) ([]interface{}, error) {
 	if p.GetInstancesByIDs != nil {
-		return p.GetInstancesByIDs(ids)
+		return p.GetInstancesByIDs(ctx, ids)
 	}
 
 	var instancesCh = make(chan interface{}, len(ids))
@@ -176,7 +177,7 @@ func (p *ContentTypeDefinition) InstancesByIDs(ids []interface{}) ([]interface{}
 	for _, id := range ids {
 		var id = id
 		go func(id interface{}) {
-			var instance, err = p.Instance(id)
+			var instance, err = p.Instance(ctx, id)
 			if err != nil {
 				errorsCh <- err
 				return

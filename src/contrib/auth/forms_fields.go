@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"context"
+
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
@@ -81,7 +83,7 @@ func (p *PasswordField) ValueToForm(value interface{}) interface{} {
 	return val.Raw
 }
 
-func (p *PasswordField) Clean(value interface{}) (interface{}, error) {
+func (p *PasswordField) Clean(ctx context.Context, value interface{}) (interface{}, error) {
 	var val, ok = value.(string)
 	if !ok {
 		return nil, errs.ErrInvalidType

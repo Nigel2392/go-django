@@ -62,9 +62,9 @@ func NewContactForm(request *http.Request) forms.Form {
 	}
 
 	var form = forms.NewBaseForm(
+		request.Context(),
 		// Either directly pass the initialization options here
 		// or see the [forms.Initialize] function below.
-
 		forms.WithRequestData(
 			// If the request method is not POST, we will not parse the form data.
 			// This is useful for GET requests where we want to display the form without processing it

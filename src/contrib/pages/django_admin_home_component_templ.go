@@ -5,18 +5,21 @@ package pages
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
+import (
+	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
 
-import "github.com/Nigel2392/go-django/src/contrib/admin"
-import "html/template"
-import "bytes"
-import "net/http"
-import "github.com/Nigel2392/go-django/src/views/list"
-import "github.com/Nigel2392/go-django/src/core/attrs"
-import "github.com/Nigel2392/go-django/src"
-import "github.com/Nigel2392/go-django/src/core/trans"
-import "github.com/Nigel2392/go-django/src/forms/media"
+	"bytes"
+	"html/template"
+	"net/http"
+
+	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/views/list"
+)
 
 var (
 	_ADMIN_HOMEPAGE_PAGE_COUNT int32 = 5
@@ -53,7 +56,7 @@ func (p *PagesAdminHomeComponent) html(upper *list.List[attrs.Definer]) templ.Co
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T("Pages"))
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(p.Request.Context(), "Pages"))
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin_home_component.templ`, Line: 25, Col: 34}
 		}
@@ -106,7 +109,7 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 
 	var columns = make([]list.ListColumn[attrs.Definer], len(model.ListView.Fields)+1)
 	for i, field := range model.ListView.Fields {
-		columns[i+1] = model.GetColumn(model.ListView, field)
+		columns[i+1] = model.GetColumn(p.Request.Context(), model.ListView, field)
 	}
 
 	columns[0] = columns[1]

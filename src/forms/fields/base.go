@@ -1,6 +1,7 @@
 package fields
 
 import (
+	"context"
 	"maps"
 
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -15,8 +16,8 @@ type BaseField struct {
 	ReadOnly_    bool
 	Attributes   map[string]string
 	Validators   []func(interface{}) error
-	FormLabel    func() string
-	FormHelpText func() string
+	FormLabel    func(ctx context.Context) string
+	FormHelpText func(ctx context.Context) string
 	FormWidget   widgets.Widget
 	Caser        *cases.Caser
 }
@@ -59,11 +60,11 @@ func (i *BaseField) Hide(hidden bool) {
 	i.FormWidget.Hide(hidden)
 }
 
-func (i *BaseField) SetLabel(label func() string) {
+func (i *BaseField) SetLabel(label func(ctx context.Context) string) {
 	i.FormLabel = label
 }
 
-func (i *BaseField) SetHelpText(helpText func() string) {
+func (i *BaseField) SetHelpText(helpText func(ctx context.Context) string) {
 	i.FormHelpText = helpText
 }
 
@@ -106,16 +107,16 @@ func (i *BaseField) Attrs() map[string]string {
 	return i.Attributes
 }
 
-func (i *BaseField) Label() string {
+func (i *BaseField) Label(ctx context.Context) string {
 	if i.FormLabel != nil {
-		return i.FormLabel()
+		return i.FormLabel(ctx)
 	}
 	return i.Caser.String(i.FieldName)
 }
 
-func (i *BaseField) HelpText() string {
+func (i *BaseField) HelpText(ctx context.Context) string {
 	if i.FormHelpText != nil {
-		return i.FormHelpText()
+		return i.FormHelpText(ctx)
 	}
 	return ""
 }
@@ -124,11 +125,11 @@ func (i *BaseField) HasChanged(initial, data interface{}) bool {
 	return initial != data
 }
 
-func (i *BaseField) Clean(value interface{}) (interface{}, error) {
+func (i *BaseField) Clean(ctx context.Context, value interface{}) (interface{}, error) {
 	return value, nil
 }
 
-func (i *BaseField) Validate(value interface{}) []error {
+func (i *BaseField) Validate(ctx context.Context, value interface{}) []error {
 	var errors = make([]error, 0)
 	for _, validator := range i.Validators {
 		if err := validator(value); err != nil {
@@ -138,7 +139,7 @@ func (i *BaseField) Validate(value interface{}) []error {
 
 	var widget = i.Widget()
 	if widget != nil {
-		var errs = widget.Validate(value)
+		var errs = widget.Validate(ctx, value)
 		if len(errs) > 0 {
 			errors = append(errors, errs...)
 		}

@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"reflect"
@@ -11,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
@@ -34,13 +36,13 @@ type AppOptions struct {
 	EnableIndexView bool
 
 	// Applabel must return a human readable label for the app.
-	AppLabel func() string
+	AppLabel func(ctx context.Context) string
 
 	// AppDescription must return a human readable description of this app.
-	AppDescription func() string
+	AppDescription func(ctx context.Context) string
 
 	// MenuLabel must return a human readable label for the menu, this is how the app's name will appear in the admin's navigation.
-	MenuLabel func() string
+	MenuLabel func(ctx context.Context) string
 
 	// MenuOrder is the order in which the app will appear in the admin's navigation.
 	MenuOrder int
@@ -127,16 +129,16 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 	return model
 }
 
-func (a *AppDefinition) Label() string {
+func (a *AppDefinition) Label(ctx context.Context) string {
 	if a.Options.AppLabel != nil {
-		return a.Options.AppLabel()
+		return a.Options.AppLabel(ctx)
 	}
 	return a.Name
 }
 
-func (a *AppDefinition) Description() string {
+func (a *AppDefinition) Description(ctx context.Context) string {
 	if a.Options.AppDescription != nil {
-		return a.Options.AppDescription()
+		return a.Options.AppDescription(ctx)
 	}
 	return ""
 }
@@ -179,7 +181,7 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 
 	var menuLabel = a.Options.MenuLabel
 	if menuLabel == nil {
-		menuLabel = func() string {
+		menuLabel = func(ctx context.Context) string {
 			return a.Name
 		}
 	}
@@ -218,13 +220,13 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 				var menuIcon templ.Component
 				if model.ModelOptions.MenuIcon != nil {
 					menuIcon = templ.Raw(
-						model.ModelOptions.MenuIcon(),
+						model.ModelOptions.MenuIcon(r.Context()),
 					)
 				}
 
 				var item = &menu.Item{
 					BaseItem: menu.BaseItem{
-						Label:    model.getMenuLabel,
+						Label:    model.getMenuLabel(r.Context()),
 						Ordering: model.MenuOrder,
 						Logo:     menuIcon,
 						Hidden: !permissions.HasObjectPermission(
@@ -245,7 +247,7 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 		var menuItem = &menu.SubmenuItem{
 			BaseItem: menu.BaseItem{
 				ItemName: a.Name,
-				Label:    menuLabel,
+				Label:    menuLabel(r.Context()),
 				Logo:     menuIcon,
 				Ordering: a.Options.MenuOrder,
 				Hidden: !permissions.HasPermission(
@@ -258,15 +260,13 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 		}
 
 		if a.Options.EnableIndexView {
-			var menuLabel func() string = a.Options.MenuLabel
+			var menuLabel func(ctx context.Context) string = a.Options.MenuLabel
 			if menuLabel == nil {
-				menuLabel = func() string {
-					return a.Name
-				}
+				menuLabel = trans.S(a.Name)
 			}
 			menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
 				BaseItem: menu.BaseItem{
-					Label: menuLabel,
+					Label: menuLabel(r.Context()),
 				},
 				Link: func() string {
 					return django.Reverse("admin:apps", a.Name)

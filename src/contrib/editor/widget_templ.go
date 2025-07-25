@@ -5,17 +5,16 @@ package editor
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-
-	"context"
 	"io"
 
-	"github.com/Nigel2392/go-django/src"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
+
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
@@ -112,8 +111,8 @@ func (b *EditorJSWidget) ValueToGo(value interface{}) (interface{}, error) {
 	return ValueToGo(b.Features, editorJsData)
 }
 
-func (b *EditorJSWidget) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {
-	var context = b.BaseWidget.GetContextData(id, name, value, attrs)
+func (b *EditorJSWidget) GetContextData(ctx context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context {
+	var context = b.BaseWidget.GetContextData(ctx, id, name, value, attrs)
 	// ...
 	return context
 }
@@ -225,7 +224,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 	})
 }
 
-func (b *EditorJSWidget) RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
+func (b *EditorJSWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
 	var valueStr string
 	if value == nil || value == "" {
 		value = "{}"
@@ -246,7 +245,7 @@ func (b *EditorJSWidget) RenderWithErrors(w io.Writer, id, name string, value in
 	}
 
 getContext:
-	var widgetCtx = b.GetContextData(id, name, value, attrs)
+	var widgetCtx = b.GetContextData(ctx, id, name, value, attrs)
 	if errors != nil {
 		widgetCtx.Set("errors", errors)
 	}
@@ -264,8 +263,8 @@ getContext:
 	return component.Render(renderCtx, w)
 }
 
-func (b *EditorJSWidget) Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(w, id, name, value, nil, attrs)
+func (b *EditorJSWidget) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
+	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
 }
 
 func (b *EditorJSWidget) Media() media.Media {

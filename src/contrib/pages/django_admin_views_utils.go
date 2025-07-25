@@ -123,7 +123,7 @@ func getPageActions(rq *http.Request, p *PageNode) []admin.Action {
 		actions = append(actions, admin.Action{
 			Icon:   "icon-view",
 			Target: "_blank",
-			Title:  trans.T("View Live"),
+			Title:  trans.T(rq.Context(), "View Live"),
 			URL:    URLPath(p),
 		})
 	}
@@ -152,7 +152,7 @@ func getPageActions(rq *http.Request, p *PageNode) []admin.Action {
 
 		actions = append(actions, admin.Action{
 			Icon:  "icon-history",
-			Title: trans.T("History"),
+			Title: trans.T(rq.Context(), "History"),
 			URL:   url.String(),
 		})
 	}

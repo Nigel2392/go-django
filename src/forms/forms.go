@@ -1,6 +1,7 @@
 package forms
 
 import (
+	"context"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -13,11 +14,11 @@ import (
 )
 
 type Cleaner interface {
-	Clean(value interface{}) (interface{}, error)
+	Clean(ctx context.Context, value interface{}) (interface{}, error)
 }
 
 type Validator interface {
-	Validate(value interface{}) []error
+	Validate(ctx context.Context, value interface{}) []error
 }
 
 type BoundField interface {
@@ -53,6 +54,8 @@ type FieldError interface {
 type Form interface {
 	FormRenderer
 
+	Context() context.Context
+	WithContext(ctx context.Context)
 	Prefix() string
 	SetPrefix(prefix string)
 	SetInitial(initial map[string]interface{})

@@ -1,6 +1,7 @@
 package filters
 
 import (
+	"context"
 	"errors"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -31,7 +32,7 @@ type Filters[T attrs.Definer] struct {
 	specs *orderedmap.OrderedMap[string, FilterSpec[T]]
 }
 
-func NewFilters[T attrs.Definer](formPrefix string, specs ...FilterSpec[T]) *Filters[T] {
+func NewFilters[T attrs.Definer](ctx context.Context, formPrefix string, specs ...FilterSpec[T]) *Filters[T] {
 	var s = orderedmap.NewOrderedMap[string, FilterSpec[T]]()
 	for _, spec := range specs {
 		s.Set(spec.Name(), spec)
@@ -43,6 +44,7 @@ func NewFilters[T attrs.Definer](formPrefix string, specs ...FilterSpec[T]) *Fil
 	}
 
 	var form = forms.NewBaseForm(
+		ctx,
 		opts...,
 	)
 

@@ -1,6 +1,7 @@
 package contenttypes_test
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"testing"
@@ -54,8 +55,8 @@ var (
 	}
 )
 
-func getInstanceFunc(modelName string) func(interface{}) (interface{}, error) {
-	return func(id interface{}) (interface{}, error) {
+func getInstanceFunc(modelName string) func(context.Context, interface{}) (interface{}, error) {
+	return func(ctx context.Context, id interface{}) (interface{}, error) {
 		idInt, ok := id.(int)
 		if !ok {
 			return nil, fmt.Errorf("invalid ID type")
@@ -67,8 +68,8 @@ func getInstanceFunc(modelName string) func(interface{}) (interface{}, error) {
 	}
 }
 
-func getInstancesFunc(modelName string) func(uint, uint) ([]interface{}, error) {
-	return func(amount, offset uint) ([]interface{}, error) {
+func getInstancesFunc(modelName string) func(context.Context, uint, uint) ([]interface{}, error) {
+	return func(ctx context.Context, amount, offset uint) ([]interface{}, error) {
 		instances := instanceStorage[modelName]
 		var results []interface{}
 		var count uint
@@ -130,7 +131,7 @@ func TestContentType(t *testing.T) {
 		}
 		defOne = &contenttypes.ContentTypeDefinition{
 			ContentObject: &TestStructOne{},
-			GetLabel: func() string {
+			GetLabel: func(ctx context.Context) string {
 				return "test struct one"
 			},
 			Aliases: aliasOne,
@@ -145,7 +146,7 @@ func TestContentType(t *testing.T) {
 		}
 		defTwo = &contenttypes.ContentTypeDefinition{
 			ContentObject: TestStructTwo{},
-			GetLabel: func() string {
+			GetLabel: func(ctx context.Context) string {
 				return "test struct two"
 			},
 			Aliases: aliasTwo,
@@ -160,7 +161,7 @@ func TestContentType(t *testing.T) {
 		}
 		defThree = &contenttypes.ContentTypeDefinition{
 			ContentObject: (*TestStructThree)(nil),
-			GetLabel: func() string {
+			GetLabel: func(ctx context.Context) string {
 				return "test struct three"
 			},
 			Aliases: aliasThree,
@@ -403,22 +404,22 @@ func TestContentType(t *testing.T) {
 			}
 		})
 		t.Run("TestGetInstance", func(t *testing.T) {
-			instance, err := contenttypes.GetInstance("contenttypes_test.TestStructOne", 1)
+			instance, err := contenttypes.GetInstance(context.Background(), "contenttypes_test.TestStructOne", 1)
 			if err != nil || instance.(*TestStructOne).ID != 1 {
 				t.Errorf("expected instance with ID 1, got %v, error: %v", instance, err)
 			}
-			instance, err = contenttypes.GetInstance("contenttypes_test.TestStructTwo", 1)
+			instance, err = contenttypes.GetInstance(context.Background(), "contenttypes_test.TestStructTwo", 1)
 			if err != nil || instance.(TestStructTwo).ID != 1 {
 				t.Errorf("expected instance with ID 1, got %v, error: %v", instance, err)
 			}
-			instance, err = contenttypes.GetInstance("contenttypes_test.TestStructThree", 1)
+			instance, err = contenttypes.GetInstance(context.Background(), "contenttypes_test.TestStructThree", 1)
 			if err != nil || instance.(*TestStructThree).ID != 1 {
 				t.Errorf("expected instance with ID 1, got %v, error: %v", instance, err)
 			}
 		})
 
 		t.Run("TestGetInstances", func(t *testing.T) {
-			instances, err := contenttypes.GetInstances("contenttypes_test.TestStructOne", 2, 0)
+			instances, err := contenttypes.GetInstances(context.Background(), "contenttypes_test.TestStructOne", 2, 0)
 			if err != nil || len(instances) != 2 {
 				t.Errorf("expected 2 instances, got %v, error: %v", instances, err)
 			}
@@ -427,7 +428,7 @@ func TestContentType(t *testing.T) {
 				t.Errorf("expected instance with ID 1, got %v", instances[0])
 			}
 
-			instances, err = contenttypes.GetInstances("contenttypes_test.TestStructTwo", 1, 0)
+			instances, err = contenttypes.GetInstances(context.Background(), "contenttypes_test.TestStructTwo", 1, 0)
 			if err != nil || len(instances) != 1 {
 				t.Errorf("expected 1 instance, got %v, error: %v", instances, err)
 			}
@@ -442,7 +443,7 @@ func TestContentType(t *testing.T) {
 			ids := []interface{}{1, 2}
 
 			// Case 1: Test when `GetInstancesByID` is defined
-			defOne.GetInstancesByIDs = func(ids []interface{}) ([]interface{}, error) {
+			defOne.GetInstancesByIDs = func(ctx context.Context, ids []interface{}) ([]interface{}, error) {
 				var instances []interface{}
 				for _, id := range ids {
 					if instance, exists := instanceStorage["TestStructOne"][id.(int)]; exists {
@@ -455,7 +456,7 @@ func TestContentType(t *testing.T) {
 			}
 
 			t.Run("With GetInstancesByID defined", func(t *testing.T) {
-				instances, err := defOne.InstancesByIDs(ids)
+				instances, err := defOne.InstancesByIDs(context.Background(), ids)
 				if err != nil {
 					t.Errorf("expected nil error, got %v", err)
 				}
@@ -468,7 +469,7 @@ func TestContentType(t *testing.T) {
 			defOne.GetInstancesByIDs = nil // Remove custom `GetInstancesByID`
 
 			t.Run("Without GetInstancesByID, fallback to GetInstance", func(t *testing.T) {
-				instances, err := defOne.InstancesByIDs(ids)
+				instances, err := defOne.InstancesByIDs(context.Background(), ids)
 				if err != nil {
 					t.Errorf("expected nil error, got %v", err)
 				}
@@ -499,7 +500,7 @@ func TestContentType(t *testing.T) {
 		t.Run("TestRegisterDuplicateContentType", func(t *testing.T) {
 			var defOneCpy = &contenttypes.ContentTypeDefinition{
 				ContentObject: &TestStructOne{},
-				GetLabel: func() string {
+				GetLabel: func(ctx context.Context) string {
 					return "test struct twooooo"
 				},
 				Aliases: aliasOne,
@@ -517,8 +518,8 @@ func TestContentType(t *testing.T) {
 			contenttypes.Register(defOneCpy)
 
 			var Ctype = contenttypes.DefinitionForObject(&TestStructOne{})
-			if Ctype.GetLabel() != "test struct twooooo" {
-				t.Errorf("expected %q, got %q", "test struct twooooo", Ctype.GetLabel())
+			if Ctype.GetLabel(context.Background()) != "test struct twooooo" {
+				t.Errorf("expected %q, got %q", "test struct twooooo", Ctype.GetLabel(context.Background()))
 			}
 			if Ctype.Aliases[0] != "contenttypes.TestStructOne" {
 				t.Errorf("expected %q, got %q", "contenttypes.TestStructOne", Ctype.Aliases[0])
@@ -528,30 +529,30 @@ func TestContentType(t *testing.T) {
 		})
 
 		t.Run("TestPluralLabelAndDescription", func(t *testing.T) {
-			if defOne.PluralLabel() != "test struct ones" {
-				t.Errorf("expected plural label 'test struct ones', got %s", defOne.PluralLabel())
+			if defOne.PluralLabel(context.Background()) != "test struct ones" {
+				t.Errorf("expected plural label 'test struct ones', got %s", defOne.PluralLabel(context.Background()))
 			}
-			if defOne.Description() != "" {
-				t.Errorf("expected empty description, got %s", defOne.Description())
+			if defOne.Description(context.Background()) != "" {
+				t.Errorf("expected empty description, got %s", defOne.Description(context.Background()))
 			}
-			defOne.GetDescription = func() string {
+			defOne.GetDescription = func(ctx context.Context) string {
 				return "A test struct"
 			}
-			if defOne.Description() != "A test struct" {
-				t.Errorf("expected description 'A test struct', got %s", defOne.Description())
+			if defOne.Description(context.Background()) != "A test struct" {
+				t.Errorf("expected description 'A test struct', got %s", defOne.Description(context.Background()))
 			}
 		})
 
 		t.Run("TestEditDefinition", func(t *testing.T) {
-			newLabelFunc := func() string { return "modified label" }
+			newLabelFunc := func(ctx context.Context) string { return "modified label" }
 			newDef := &contenttypes.ContentTypeDefinition{
 				ContentObject: &TestStructOne{},
 				GetLabel:      newLabelFunc,
 			}
 			contenttypes.EditDefinition(newDef)
 			updatedDef := contenttypes.DefinitionForObject(&TestStructOne{})
-			if updatedDef.GetLabel() != "modified label" {
-				t.Errorf("expected updated label modified label, got %s", updatedDef.GetLabel())
+			if updatedDef.GetLabel(context.Background()) != "modified label" {
+				t.Errorf("expected updated label modified label, got %s", updatedDef.GetLabel(context.Background()))
 			}
 		})
 	})

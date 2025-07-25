@@ -110,7 +110,7 @@ func NewAppConfig() django.AppConfig {
 				items.Append(&menu.Item{
 					BaseItem: menu.BaseItem{
 						ItemName: "logout",
-						Label:    trans.S("Logout"),
+						Label:    trans.T(r.Context(), "Logout"),
 						Logo: templ.Raw(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
 	<!-- The MIT License (MIT) -->
 	<!-- Copyright (c) 2011-2024 The Bootstrap Authors -->
@@ -409,7 +409,7 @@ func newInstanceHandler(handler func(w http.ResponseWriter, req *http.Request, a
 			return
 		}
 
-		var instance, err = model.GetInstance(modelID)
+		var instance, err = model.GetInstance(req.Context(), modelID)
 		if err != nil {
 			except.Fail(
 				http.StatusInternalServerError,

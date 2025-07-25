@@ -5,15 +5,17 @@ package blocks
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
+import (
+	"context"
+	"fmt"
+	"io"
+	"strconv"
 
-import "io"
-import "github.com/Nigel2392/go-django/src/core/ctx"
-import "github.com/Nigel2392/go-django/src/forms/widgets"
-import "strconv"
-import "context"
-import "fmt"
+	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
+)
 
 func renderWithErrors(fn func(w io.Writer, id string, name string, value interface{}, errors []error, attrs map[string]string) error, id string, name string, value interface{}, errors []error, attrs map[string]string) templ.Component {
 	return templ.ComponentFunc(func(tmplCtx context.Context, tmplW io.Writer) error {
@@ -21,16 +23,16 @@ func renderWithErrors(fn func(w io.Writer, id string, name string, value interfa
 	})
 }
 
-func renderForm(b Block, id string, name string, value interface{}, errors []error, tplCtx ctx.Context) templ.Component {
+func renderForm(ctx context.Context, b Block, id string, name string, value interface{}, errors []error, tplCtx ctx.Context) templ.Component {
 	return templ.ComponentFunc(func(tmplCtx context.Context, tmplW io.Writer) error {
-		return b.RenderForm(tmplW, id, name, value, errors, tplCtx)
+		return b.RenderForm(ctx, tmplW, id, name, value, errors, tplCtx)
 	})
 }
 
-func renderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext, errors []error) error {
+func renderBlockWidget(ctx context.Context, w io.Writer, widget *BlockWidget, blockCtx *BlockContext, errors []error) error {
 	w.Write([]byte("<div class=\"django-block-widget-wrapper\">\n"))
 	w.Write([]byte("\t<div class=\"django-block-widget\">\n"))
-	var err = widget.BlockDef.RenderForm(w, blockCtx.ID, blockCtx.Name, blockCtx.Value, errors, blockCtx)
+	var err = widget.BlockDef.RenderForm(ctx, w, blockCtx.ID, blockCtx.Name, blockCtx.Value, errors, blockCtx)
 	if err != nil {
 		return err
 	}
@@ -39,7 +41,7 @@ func renderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext,
 	return nil
 }
 
-func (b *FieldBlock) RenderTempl(id, name string, value interface{}, telepath string, errors []error, tplCtx ctx.Context) templ.Component {
+func (b *FieldBlock) RenderTempl(topContext context.Context, id, name string, value interface{}, telepath string, errors []error, tplCtx ctx.Context) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -102,7 +104,7 @@ func (b *FieldBlock) RenderTempl(id, name string, value interface{}, telepath st
 	})
 }
 
-func (b *StructBlock) RenderTempl(id, name string, valueMap map[string]interface{}, telepath string, errors *BaseBlockValidationError[string], tplCtx ctx.Context) templ.Component {
+func (b *StructBlock) RenderTempl(topContext context.Context, id, name string, valueMap map[string]interface{}, telepath string, errors *BaseBlockValidationError[string], tplCtx ctx.Context) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -170,7 +172,7 @@ func (b *StructBlock) RenderTempl(id, name string, valueMap map[string]interface
 	})
 }
 
-func (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, telepath string, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context) templ.Component {
+func (l *ListBlock) RenderTempl(topContext context.Context, id, name string, valueArr []*ListBlockValue, telepath string, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -366,7 +368,7 @@ func (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, tel
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = widgets.LabelComponent("list-block", l.Child.Label(), id).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = widgets.LabelComponent("list-block", l.Child.Label(topContext), id).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -375,7 +377,7 @@ func (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, tel
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = renderForm(l.Child, id, key, v.Data, newErrs, tplCtx).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = renderForm(topContext, l.Child, id, key, v.Data, newErrs, tplCtx).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -384,7 +386,7 @@ func (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, tel
 				return templ_7745c5c3_Err
 			}
 			templ_7745c5c3_Err = widgets.HelpTextComponent(
-				"list-block", l.Child.HelpText(),
+				"list-block", l.Child.HelpText(topContext),
 			).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err

@@ -30,7 +30,7 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 		{
 			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool { return true },
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				return trans.T("View Live")
+				return trans.T(r.Context(), "View Live")
 			},
 			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				return URLPath(row.(*PageNode))
@@ -42,7 +42,7 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 				return permissions.HasObjectPermission(r, row, "pages:add")
 			},
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				return trans.T("Add Child")
+				return trans.T(r.Context(), "Add Child")
 			},
 			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				var primaryField = defs.Primary()
@@ -63,7 +63,7 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 				return permissions.HasObjectPermission(r, row, "pages:edit")
 			},
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				return trans.T("Edit Page")
+				return trans.T(r.Context(), "Edit Page")
 			},
 			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				var primaryField = defs.Primary()
@@ -84,7 +84,7 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 				return django.AppInstalled("auditlogs") && permissions.HasObjectPermission(r, row, "auditlogs:list")
 			},
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				return trans.T("History")
+				return trans.T(r.Context(), "History")
 			},
 			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				var u = django.Reverse(
@@ -113,7 +113,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 	var columns = make([]list.ListColumn[attrs.Definer], len(m.ListView.Fields)+1)
 	for i, field := range m.ListView.Fields {
-		columns[i+1] = m.GetColumn(m.ListView, field)
+		columns[i+1] = m.GetColumn(r.Context(), m.ListView, field)
 	}
 
 	var next = django.Reverse(
@@ -174,7 +174,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				context.Set("parent_object", parent_object)
 				context.Set(
 					"model_name",
-					contentType.Label(),
+					contentType.Label(r.Context()),
 				)
 
 				var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
@@ -323,7 +323,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		)
 	}
 
-	var form = modelforms.NewBaseModelForm[attrs.Definer](page)
+	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), page)
 	form.WithContext(r.Context())
 	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](
 		form, panels...,
@@ -492,7 +492,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		panels = definition.EditPanels(r, page)
 	}
 
-	var form = modelforms.NewBaseModelForm[attrs.Definer](page)
+	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), page)
 	form.WithContext(r.Context())
 	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
 

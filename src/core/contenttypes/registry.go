@@ -1,6 +1,7 @@
 package contenttypes
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -191,7 +192,7 @@ func (p *ContentTypeRegistry) ListDefinitions() []*ContentTypeDefinition {
 	slices.SortStableFunc(definitions, func(a, b *ContentTypeDefinition) int {
 		var result = strings.Compare(a.ContentType().Model(), b.ContentType().Model())
 		if result == 0 {
-			return strings.Compare(a.Description(), b.Description())
+			return strings.Compare(a.Description(context.Background()), b.Description(context.Background()))
 		}
 		return result
 	})
@@ -250,28 +251,28 @@ func (p *ContentTypeRegistry) DefinitionForPackage(toplevelPkgName string, typeN
 	return nil
 }
 
-func (p *ContentTypeRegistry) GetInstance(typeName string, id interface{}) (interface{}, error) {
+func (p *ContentTypeRegistry) GetInstance(ctx context.Context, typeName string, id interface{}) (interface{}, error) {
 	var definition = p.DefinitionForType(typeName)
 	if definition == nil {
 		return nil, fmt.Errorf("ContentTypeRegistry: GetInstance called for unknown type %s", typeName)
 	}
-	return definition.Instance(id)
+	return definition.Instance(ctx, id)
 }
 
-func (p *ContentTypeRegistry) GetInstances(typeName string, amount, offset uint) ([]interface{}, error) {
+func (p *ContentTypeRegistry) GetInstances(ctx context.Context, typeName string, amount, offset uint) ([]interface{}, error) {
 	var definition = p.DefinitionForType(typeName)
 	if definition == nil {
 		return nil, fmt.Errorf("ContentTypeRegistry: GetInstances called for unknown type %s", typeName)
 	}
-	return definition.Instances(amount, offset)
+	return definition.Instances(ctx, amount, offset)
 }
 
-func (p *ContentTypeRegistry) GetInstancesByIDs(typeName string, ids []interface{}) ([]interface{}, error) {
+func (p *ContentTypeRegistry) GetInstancesByIDs(ctx context.Context, typeName string, ids []interface{}) ([]interface{}, error) {
 	var definition = p.DefinitionForType(typeName)
 	if definition == nil {
 		return nil, fmt.Errorf("ContentTypeRegistry: GetInstancesByIDs called for unknown type %s", typeName)
 	}
-	return definition.InstancesByIDs(ids)
+	return definition.InstancesByIDs(ctx, ids)
 }
 
 var (
@@ -325,20 +326,20 @@ func DefinitionForPackage(toplevelPkgName string, typeName string) *ContentTypeD
 }
 
 // GetInstance returns an instance of the model by its ID.
-func GetInstance(typeName string, id interface{}) (interface{}, error) {
-	return contentTypeRegistryObject.GetInstance(typeName, id)
+func GetInstance(ctx context.Context, typeName string, id interface{}) (interface{}, error) {
+	return contentTypeRegistryObject.GetInstance(ctx, typeName, id)
 }
 
 // GetInstances returns a list of instances of the model.
-func GetInstances(typeName string, amount, offset uint) ([]interface{}, error) {
-	return contentTypeRegistryObject.GetInstances(typeName, amount, offset)
+func GetInstances(ctx context.Context, typeName string, amount, offset uint) ([]interface{}, error) {
+	return contentTypeRegistryObject.GetInstances(ctx, typeName, amount, offset)
 }
 
 // GetInstancesByIDs returns a list of instances of the model by a list of IDs.
 //
 // If the model does not implement GetInstancesByID, it will fall back to calling GetInstance for each ID.
-func GetInstancesByIDs(typeName string, ids []interface{}) ([]interface{}, error) {
-	return contentTypeRegistryObject.GetInstancesByIDs(typeName, ids)
+func GetInstancesByIDs(ctx context.Context, typeName string, ids []interface{}) ([]interface{}, error) {
+	return contentTypeRegistryObject.GetInstancesByIDs(ctx, typeName, ids)
 }
 
 // OnRegister allows a function to be called when a new content type is registered.

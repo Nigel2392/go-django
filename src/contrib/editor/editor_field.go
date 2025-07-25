@@ -1,6 +1,7 @@
 package editor
 
 import (
+	"context"
 	"database/sql/driver"
 	"fmt"
 	"reflect"
@@ -9,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
@@ -18,10 +20,10 @@ var (
 
 type FieldConfig struct {
 	// Label is the label for the field.
-	Label string
+	Label func(ctx context.Context) string
 
 	// HelpText is the help text for the field.
-	HelpText string
+	HelpText func(ctx context.Context) string
 
 	// Features is a list of features to enable for the editor.
 	Features []string
@@ -406,17 +408,20 @@ func (e *Field) Validate() error {
 	return nil
 }
 
-func (e *Field) Label() string {
-	if e.config.Label != "" {
-		return e.config.Label
+func (e *Field) Label(ctx context.Context) string {
+	if e.config.Label != nil {
+		return e.config.Label(ctx)
 	}
-	return e.Name()
+	return trans.T(ctx, e.Name())
 }
 
 func (e *Field) ToString() string {
 	return fmt.Sprint(e.GetValue())
 }
 
-func (e *Field) HelpText() string {
-	return e.config.HelpText
+func (e *Field) HelpText(ctx context.Context) string {
+	if e.config.HelpText != nil {
+		return e.config.HelpText(ctx)
+	}
+	return ""
 }

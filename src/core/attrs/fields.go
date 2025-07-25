@@ -303,14 +303,14 @@ func (f *FieldDef) Type() reflect.Type {
 	return f.field_t.Type
 }
 
-func (f *FieldDef) Label() string {
+func (f *FieldDef) Label(ctx context.Context) string {
 	if f.attrDef.Label != "" {
-		return trans.T(f.attrDef.Label)
+		return trans.T(ctx, f.attrDef.Label)
 	}
 
 	// if f.directlyInteractible {
 	if labeler, ok := f.field_v.Interface().(Labeler); ok {
-		return labeler.Label()
+		return labeler.Label(ctx)
 	}
 	// }
 
@@ -318,21 +318,21 @@ func (f *FieldDef) Label() string {
 	if rel != nil {
 		var cTypeDef = contenttypes.DefinitionForObject(rel)
 		if cTypeDef != nil {
-			return cTypeDef.Label()
+			return cTypeDef.Label(ctx)
 		}
 	}
 
-	return trans.T(capCaser.String(f.Name()))
+	return trans.T(ctx, capCaser.String(f.Name()))
 }
 
-func (f *FieldDef) HelpText() string {
+func (f *FieldDef) HelpText(ctx context.Context) string {
 	// if f.directlyInteractible {
 	if helpTexter, ok := f.field_v.Interface().(Helper); ok {
-		return trans.T(helpTexter.HelpText())
+		return helpTexter.HelpText(ctx)
 	}
 	// }
 	if f.attrDef.HelpText != "" {
-		return trans.T(f.attrDef.HelpText)
+		return trans.T(ctx, f.attrDef.HelpText)
 	}
 	return ""
 }
@@ -611,7 +611,7 @@ func (f *FieldDef) FormField() fields.Field {
 		var cTypeDef = contenttypes.DefinitionForObject(rel)
 		if cTypeDef != nil {
 			opts = append(opts, fields.Label(
-				cTypeDef.Label(),
+				cTypeDef.Label,
 			))
 		}
 	} else {

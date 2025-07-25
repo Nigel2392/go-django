@@ -1,6 +1,7 @@
 package attrs
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
@@ -566,14 +567,14 @@ type Labeler interface {
 	// Label returns the human-readable name of the field.
 	//
 	// This is the name that is displayed to the user in for example, forms and column headers.
-	Label() string
+	Label(ctx context.Context) string
 }
 
 type Helper interface {
 	// HelpText returns a description of the field.
 	//
 	// This is displayed to the user in for example, forms.
-	HelpText() string
+	HelpText(ctx context.Context) string
 }
 
 type Scanner interface {

@@ -1,6 +1,7 @@
 package options
 
 import (
+	"context"
 	"io"
 	"net/url"
 
@@ -43,8 +44,8 @@ func NewSelectInput(attrs map[string]string, choices func() []widgets.Option, op
 	return NewOptionWidget("select", "forms/widgets/select.html", attrs, choices, opts...)
 }
 
-func (o *OptionsWidget) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {
-	var base_context = o.BaseWidget.GetContextData(id, name, value, attrs)
+func (o *OptionsWidget) GetContextData(ctx context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context {
+	var base_context = o.BaseWidget.GetContextData(ctx, id, name, value, attrs)
 	var choices = o.Choices()
 
 	var values []string
@@ -70,7 +71,7 @@ func (o *OptionsWidget) GetContextData(id, name string, value interface{}, attrs
 	return base_context
 }
 
-func (o *OptionsWidget) Validate(value interface{}) []error {
+func (o *OptionsWidget) Validate(ctx context.Context, value interface{}) []error {
 	if value == nil {
 		return nil
 	}
@@ -109,8 +110,8 @@ func (o *OptionsWidget) Validate(value interface{}) []error {
 	return errors
 }
 
-func (b *OptionsWidget) RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
-	var context = b.GetContextData(id, name, value, attrs)
+func (b *OptionsWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
+	var context = b.GetContextData(ctx, id, name, value, attrs)
 	if errors != nil {
 		context.Set("errors", errors)
 	}
@@ -118,8 +119,8 @@ func (b *OptionsWidget) RenderWithErrors(w io.Writer, id, name string, value int
 	return tpl.FRender(w, context, b.TemplateName)
 }
 
-func (b *OptionsWidget) Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(w, id, name, value, nil, attrs)
+func (b *OptionsWidget) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
+	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
 }
 
 type MultiSelectWidget struct {
@@ -132,7 +133,7 @@ func NewMultiSelectInput(attrs map[string]string, choices func() []widgets.Optio
 	}
 }
 
-func (m *MultiSelectWidget) ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
+func (m *MultiSelectWidget) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
 	var values, ok = data[name]
 	if !ok {
 		return nil, nil

@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"context"
 	"database/sql/driver"
 	"fmt"
 	"reflect"
@@ -73,16 +74,16 @@ func (q *queryField) SetValue(v any, _ bool) error {
 	q.value = v
 	return nil
 }
-func (q *queryField) Value() (driver.Value, error) { return q.value, nil }
-func (q *queryField) Scan(v any) error             { return q.SetValue(v, false) }
-func (q *queryField) GetDefault() any              { return nil }
-func (q *queryField) Instance() attrs.Definer      { return nil }
-func (q *queryField) Rel() attrs.Relation          { return nil }
-func (q *queryField) FormField() fields.Field      { return nil }
-func (q *queryField) Validate() error              { return nil }
-func (q *queryField) Label() string                { return q.name }
-func (q *queryField) ToString() string             { return fmt.Sprint(q.value) }
-func (q *queryField) HelpText() string             { return "" }
+func (q *queryField) Value() (driver.Value, error)        { return q.value, nil }
+func (q *queryField) Scan(v any) error                    { return q.SetValue(v, false) }
+func (q *queryField) GetDefault() any                     { return nil }
+func (q *queryField) Instance() attrs.Definer             { return nil }
+func (q *queryField) Rel() attrs.Relation                 { return nil }
+func (q *queryField) FormField() fields.Field             { return nil }
+func (q *queryField) Validate() error                     { return nil }
+func (q *queryField) Label(ctx context.Context) string    { return q.name }
+func (q *queryField) ToString() string                    { return fmt.Sprint(q.value) }
+func (q *queryField) HelpText(ctx context.Context) string { return "" }
 
 var _ VirtualField = &exprField{}
 

@@ -35,7 +35,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 
 	var columns = make([]list.ListColumn[attrs.Definer], len(m.ListView.Fields)+1)
 	for i, field := range m.ListView.Fields {
-		columns[i+1] = m.GetColumn(m.ListView, field)
+		columns[i+1] = m.GetColumn(r.Context(), m.ListView, field)
 	}
 
 	columns[0] = columns[1]
@@ -190,7 +190,7 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 		)
 	}
 
-	var form = modelforms.NewBaseModelForm[attrs.Definer](page)
+	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), page)
 	form.WithContext(r.Context())
 	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](
 		form, panels...,

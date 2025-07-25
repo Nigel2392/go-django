@@ -191,15 +191,15 @@ func NewAppConfig() django.AppConfig {
 					)
 				},
 				GetObject: func() any { return &PageNode{} },
-				GetInstance: func(identifier any) (interface{}, error) {
-					var node, err = NewPageQuerySet().Filter("PK", identifier).Get()
+				GetInstance: func(ctx context.Context, identifier any) (interface{}, error) {
+					var node, err = NewPageQuerySet().WithContext(ctx).Filter("PK", identifier).Get()
 					if err != nil {
 						return nil, err
 					}
 					return node.Object, nil
 				},
-				GetInstances: func(amount, offset uint) ([]interface{}, error) {
-					var nodes, err = NewPageQuerySet().Offset(int(offset)).Limit(int(amount)).AllNodes()
+				GetInstances: func(ctx context.Context, amount, offset uint) ([]interface{}, error) {
+					var nodes, err = NewPageQuerySet().WithContext(ctx).Offset(int(offset)).Limit(int(amount)).AllNodes()
 					return attrutils.InterfaceList(nodes), err
 				},
 			},
@@ -217,7 +217,7 @@ func NewAppConfig() django.AppConfig {
 		admin.RegisterGlobalMenuItem(admin.RegisterMenuItemHookFunc(func(r *http.Request, site *admin.AdminApplication, items components.Items[menu.MenuItem]) {
 			items.Append(&PagesMenuItem{
 				BaseItem: menu.BaseItem{
-					Label:    trans.S("Pages"),
+					Label:    trans.T(r.Context(), "Pages"),
 					ItemName: "pages",
 					Ordering: -1000,
 					Hidden:   !permissions.HasPermission(r, "pages:list"),
@@ -436,7 +436,7 @@ func (p *pageLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []
 	}
 	return []auditlogs.LogEntryAction{
 		&auditlogs.BaseAction{
-			DisplayLabel: trans.T("Edit Live Page"),
+			DisplayLabel: trans.T(r.Context(), "Edit Live Page"),
 			ActionURL: fmt.Sprintf("%s?%s=%s",
 				django.Reverse("admin:pages:edit", id),
 				"next",

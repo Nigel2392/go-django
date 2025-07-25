@@ -76,7 +76,7 @@ func sortDefinitions(definitions []*PageDefinition) {
 	slices.SortStableFunc(definitions, func(a, b *PageDefinition) int {
 		var result = strings.Compare(a.ContentType().Model(), b.ContentType().Model())
 		if result == 0 {
-			return strings.Compare(a.Description(), b.Description())
+			return strings.Compare(a.Description(context.Background()), b.Description(context.Background()))
 		}
 		return result
 	})

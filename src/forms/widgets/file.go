@@ -2,6 +2,7 @@ package widgets
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"net/url"
 	"path/filepath"
@@ -61,12 +62,12 @@ func NewFileInput(attrs map[string]string, validators ...func(filename string, f
 	return widget
 }
 
-func (f *FileWidget) ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
+func (f *FileWidget) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
 	var _, ok = files[name]
 	return !ok
 }
 
-func (f *FileWidget) ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
+func (f *FileWidget) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
 	var fileList, ok = files[name]
 	if !ok {
 		return nil, nil

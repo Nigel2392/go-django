@@ -1,6 +1,7 @@
 package blocks_test
 
 import (
+	"context"
 	"net/mail"
 	"reflect"
 	"testing"
@@ -96,7 +97,7 @@ func TestListBlock(t *testing.T) {
 	var b = NewListBlock()
 
 	t.Run("ValueFromDataDict", func(t *testing.T) {
-		var data, err = b.ValueFromDataDict(ListBlockDataRaw, nil, "test_list_block")
+		var data, err = b.ValueFromDataDict(context.Background(), ListBlockDataRaw, nil, "test_list_block")
 
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)

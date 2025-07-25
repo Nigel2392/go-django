@@ -5,14 +5,15 @@ package pages
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
-	"github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
-	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
+
 	"strings"
+
+	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/trans"
 )
 
 type PagesMenuItem struct {
@@ -110,7 +111,7 @@ func (p *PagesMenuItem) Component() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T("Root Pages"))
+		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, "Root Pages"))
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 46, Col: 29}
 		}

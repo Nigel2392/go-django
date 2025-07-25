@@ -4,6 +4,7 @@
 
 {{ define "content" }}
     <div class="pages-type-list">
+        {{ $request := .Request }} 
         {{ $pageObj := (.Get "page_object") }}
         {{ range $index, $page := (.Get "definitions") }}
             <a href="{{ url "admin:pages:add" $pageObj.ID $page.AppLabel $page.Model }}" class="pages-type-list-item">
@@ -16,11 +17,11 @@
                         </svg>
                     </div>
                     <div class="text">
-                        <p>{{ $page.Label }}</p>
+                        <p>{{ ($page.Label $request.Context) }}</p>
                     </div>
                 </div>
                 <div class="description">
-                    {{ $description := $page.Description }}
+                    {{ $description := ($page.Description $request.Context) }}
                     {{ if $description }}
                         <p>{{ $description }}</p>
                     {{ end }}

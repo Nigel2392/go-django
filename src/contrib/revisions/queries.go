@@ -94,7 +94,7 @@ func (r *Revision) AsObject() (attrs.Definer, error) {
 // ObjectFromDB will return the object that this revision is for.
 //
 // It will NOT populate the object with the data from the revision.
-func (r *Revision) ObjectFromDB() (attrs.Definer, error) {
+func (r *Revision) ObjectFromDB(ctx context.Context) (attrs.Definer, error) {
 	var cTypeDef = contenttypes.DefinitionForType(r.ContentType)
 	var primaryKey = attrs.PrimaryKey(
 		cTypeDef.Object().(attrs.Definer),
@@ -106,7 +106,7 @@ func (r *Revision) ObjectFromDB() (attrs.Definer, error) {
 		return nil, err
 	}
 
-	objInstance, err := cTypeDef.Instance(newPrimaryKey)
+	objInstance, err := cTypeDef.Instance(ctx, newPrimaryKey)
 	if err != nil {
 		return nil, err
 	}

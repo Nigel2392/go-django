@@ -39,7 +39,7 @@ var pageAdminAppOptions = admin.AppOptions{
 var pageAdminModelOptions = admin.ModelOptions{
 	Name:  AdminPagesModelPath,
 	Model: &PageNode{},
-	Labels: map[string]func() string{
+	Labels: map[string]func(ctx context.Context) string{
 		"ID":          trans.S("ID"),
 		"Title":       trans.S("Title"),
 		"Path":        trans.S("Tree Path"),
@@ -88,12 +88,12 @@ var pageAdminModelOptions = admin.ModelOptions{
 			),
 			"ContentType": list.HTMLColumn(
 				trans.S("Content Type"),
-				func(_ *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
+				func(r *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
 					var node = row.(*PageNode)
 					var ctype = DefinitionForType(node.ContentType)
 					var typStr = "Unknown"
 					if ctype != nil {
-						typStr = ctype.Label()
+						typStr = ctype.Label(r.Context())
 					}
 
 					return template.HTML(fmt.Sprintf(

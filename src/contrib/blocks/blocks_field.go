@@ -23,7 +23,7 @@ func NewFieldBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	return base
 }
 
-func (b *FieldBlock) RenderForm(w io.Writer, id, name string, value interface{}, errors []error, c ctx.Context) error {
+func (b *FieldBlock) RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, c ctx.Context) error {
 	var blockArgs = map[string]interface{}{
 		"id":     id,
 		"name":   name,
@@ -37,27 +37,29 @@ func (b *FieldBlock) RenderForm(w io.Writer, id, name string, value interface{},
 		return err
 	}
 
-	return b.RenderTempl(id, name, value, string(bt), errors, c).Render(context.Background(), w)
+	return b.RenderTempl(ctx, id, name, value, string(bt), errors, c).Render(context.Background(), w)
 }
 
 func (b *FieldBlock) Adapter() telepath.Adapter {
+	var ctx = context.Background()
 	return &telepath.ObjectAdapter[*FieldBlock]{
 		JSConstructor: "django.blocks.FieldBlock",
 		GetJSArgs: func(obj *FieldBlock) []interface{} {
 			return []interface{}{map[string]interface{}{
 				"name":     obj.Name(),
-				"label":    obj.Label(),
-				"helpText": obj.HelpText(),
+				"label":    obj.Label(ctx),
+				"helpText": obj.HelpText(ctx),
 				"required": obj.Field().Required(),
-				"html":     obj.RenderHTML(),
+				"html":     obj.RenderHTML(ctx),
 			}}
 		},
 	}
 }
 
-func (b *FieldBlock) RenderHTML() string {
+func (b *FieldBlock) RenderHTML(ctx context.Context) string {
 	var w = new(bytes.Buffer)
 	b.FormField.Widget().Render(
+		ctx,
 		w,
 		"__ID__",
 		"__PREFIX__",

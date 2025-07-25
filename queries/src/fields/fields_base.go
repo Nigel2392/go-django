@@ -1,6 +1,7 @@
 package fields
 
 import (
+	"context"
 	"database/sql/driver"
 	"fmt"
 	"reflect"
@@ -13,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/goldcrest"
 )
@@ -570,7 +572,7 @@ func (e *DataModelField[T]) FormField() fields.Field {
 		var cTypeDef = contenttypes.DefinitionForObject(rel)
 		if cTypeDef != nil {
 			opts = append(opts, fields.Label(
-				cTypeDef.Label(),
+				cTypeDef.Label,
 			))
 		}
 	} else {
@@ -609,14 +611,14 @@ func (e *DataModelField[T]) Validate() error {
 	return nil
 }
 
-func (e *DataModelField[T]) Label() string {
-	return e.name
+func (e *DataModelField[T]) Label(ctx context.Context) string {
+	return trans.T(ctx, e.name)
 }
 
 func (e *DataModelField[T]) ToString() string {
 	return fmt.Sprint(e.GetValue())
 }
 
-func (e *DataModelField[T]) HelpText() string {
+func (e *DataModelField[T]) HelpText(ctx context.Context) string {
 	return ""
 }

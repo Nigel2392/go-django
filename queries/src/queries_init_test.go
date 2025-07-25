@@ -217,7 +217,7 @@ func TestContentTypesDefinitions(t *testing.T) {
 	}
 
 	t.Run("TestInstance", func(t *testing.T) {
-		var objectByID, err = cTypeDef.Instance(users[2].ID)
+		var objectByID, err = cTypeDef.Instance(context.Background(), users[2].ID)
 		if err != nil {
 			t.Fatalf("failed to get object by ID: %v", err)
 		}
@@ -234,7 +234,7 @@ func TestContentTypesDefinitions(t *testing.T) {
 	t.Run("TestInstancesByIDs", func(t *testing.T) {
 		// Test InstancesByIDs method
 		var ids = []any{users[1].ID, users[2].ID}
-		objectsByID, err := cTypeDef.InstancesByIDs(ids)
+		objectsByID, err := cTypeDef.InstancesByIDs(context.Background(), ids)
 		if err != nil {
 			t.Fatalf("failed to get objects by IDs: %v", err)
 		}
@@ -252,7 +252,7 @@ func TestContentTypesDefinitions(t *testing.T) {
 
 	t.Run("TestInstances", func(t *testing.T) {
 		// Test Instances method
-		instances, err := cTypeDef.Instances(3, 0)
+		instances, err := cTypeDef.Instances(context.Background(), 3, 0)
 		if err != nil {
 			t.Fatalf("failed to get instances: %v", err)
 		}

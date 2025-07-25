@@ -1,6 +1,10 @@
 package fields
 
-import "github.com/Nigel2392/go-django/src/core/errs"
+import (
+	"context"
+
+	"github.com/Nigel2392/go-django/src/core/errs"
+)
 
 var _ Field = (*ProtectedFormField)(nil)
 
@@ -31,16 +35,16 @@ func (pw *ProtectedFormField) ValueToGo(value interface{}) (interface{}, error) 
 	return val, nil
 }
 
-func (pw *ProtectedFormField) Clean(value interface{}) (interface{}, error) {
-	var val, err = pw.Field.Clean(value)
+func (pw *ProtectedFormField) Clean(ctx context.Context, value interface{}) (interface{}, error) {
+	var val, err = pw.Field.Clean(ctx, value)
 	if err != nil {
 		return nil, pw.ErrorMessage(err)
 	}
 	return val, nil
 }
 
-func (pw *ProtectedFormField) Validate(value interface{}) []error {
-	var errors = pw.Field.Validate(value)
+func (pw *ProtectedFormField) Validate(ctx context.Context, value interface{}) []error {
+	var errors = pw.Field.Validate(ctx, value)
 	if len(errors) != 0 {
 		var merged = pw.ErrorMessage(
 			errs.NewMultiError(errors...),

@@ -48,6 +48,7 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 	var f = &BaseUserForm{
 		Request: r,
 		BaseForm: forms.NewBaseForm(
+			r.Context(),
 			forms.WithRequestData(postMethod, r),
 		),
 	}
@@ -101,6 +102,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 	var f = &BaseUserForm{
 		Request: r,
 		BaseForm: forms.NewBaseForm(
+			r.Context(),
 			forms.WithRequestData(postMethod, r),
 		),
 		canSave: true,

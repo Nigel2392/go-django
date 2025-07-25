@@ -5,17 +5,17 @@ package pagination
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
 	"context"
 	"fmt"
-	"github.com/Nigel2392/go-django/src/core/trans"
 	"html/template"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
 )
 
 type pageObject[T any] struct {
@@ -86,7 +86,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
-			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T("Previous"))
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(context.Background(), "Previous"))
 			if templ_7745c5c3_Err != nil {
 				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 46, Col: 102}
 			}
@@ -191,7 +191,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T("Next"))
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(context.Background(), "Next"))
 			if templ_7745c5c3_Err != nil {
 				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 72, Col: 98}
 			}

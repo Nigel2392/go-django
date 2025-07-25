@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/shopspring/decimal"
 )
@@ -101,8 +102,8 @@ func (n *ChocolateListPage) FieldDefs() attrs.Definitions {
 			Blank:    true,
 		}),
 		editor.NewField(n, "Description", editor.FieldConfig{
-			Label:    "Description",
-			HelpText: "This is a rich text editor. You can add images, videos, and other media to your chocolate list page.",
+			Label:    trans.S("Description"),
+			HelpText: trans.S("This is a rich text editor. You can add images, videos, and other media to your chocolate list page."),
 			//Features: []string{
 			//	"paragraph",
 			//	"text-align",

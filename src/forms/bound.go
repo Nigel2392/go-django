@@ -2,6 +2,7 @@ package forms
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"html/template"
 
@@ -11,27 +12,29 @@ import (
 )
 
 type BoundFormField struct {
-	FormWidget widgets.Widget
-	FormField  fields.Field
-	FormName   string
-	FormAttrs  map[string]string
-	FormValue  interface{}
-	FormErrors []error
-	CachedHTML template.HTML
+	FormWidget  widgets.Widget
+	FormField   fields.Field
+	FormName    string
+	FormAttrs   map[string]string
+	FormValue   interface{}
+	FormErrors  []error
+	FormContext context.Context
+	CachedHTML  template.HTML
 }
 
-func NewBoundFormField(w widgets.Widget, f fields.Field, name string, value interface{}, errors []error) BoundField {
+func NewBoundFormField(ctx context.Context, w widgets.Widget, f fields.Field, name string, value interface{}, errors []error) BoundField {
 
 	if errors == nil {
 		errors = make([]error, 0)
 	}
 
 	var bw = &BoundFormField{
-		FormWidget: w,
-		FormField:  f,
-		FormName:   name,
-		FormValue:  value,
-		FormErrors: errors,
+		FormWidget:  w,
+		FormField:   f,
+		FormName:    name,
+		FormValue:   value,
+		FormErrors:  errors,
+		FormContext: ctx,
 	}
 
 	var attrs = f.Attrs()
@@ -60,7 +63,7 @@ func (b *BoundFormField) ID() string {
 
 func (b *BoundFormField) Label() template.HTML {
 	var (
-		labelText = b.FormField.Label()
+		labelText = b.FormField.Label(b.FormContext)
 	)
 	return template.HTML(
 		fmt.Sprintf("<label for=\"%s\">%s</label>", b.ID(), labelText),
@@ -69,17 +72,21 @@ func (b *BoundFormField) Label() template.HTML {
 
 func (b *BoundFormField) HelpText() template.HTML {
 	var (
-		helpText = b.FormField.HelpText()
+		helpText = b.FormField.HelpText(b.FormContext)
 	)
 	return template.HTML(helpText)
 }
 
 func (b *BoundFormField) Field() template.HTML {
+	if b.FormContext == nil {
+		panic("BoundFormField: FormContext is nil")
+	}
+
 	if b.CachedHTML == "" {
 		var err error
 		var buf = new(bytes.Buffer)
 		err = b.FormWidget.RenderWithErrors(
-			buf, b.ID(), b.FormName, b.FormValue, b.FormErrors, b.FormAttrs,
+			b.FormContext, buf, b.ID(), b.FormName, b.FormValue, b.FormErrors, b.FormAttrs,
 		)
 		b.CachedHTML = template.HTML(buf.String())
 		assert.True(err == nil, err)

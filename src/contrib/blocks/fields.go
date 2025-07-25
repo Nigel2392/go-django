@@ -1,6 +1,10 @@
 package blocks
 
-import "github.com/Nigel2392/go-django/src/forms/fields"
+import (
+	"context"
+
+	"github.com/Nigel2392/go-django/src/forms/fields"
+)
 
 type BlockFormField struct {
 	*fields.BaseField
@@ -31,10 +35,10 @@ func (bw *BlockFormField) ValueToForm(value interface{}) interface{} {
 	return bw.Block.ValueToForm(value)
 }
 
-func (bw *BlockFormField) Validate(value interface{}) []error {
-	return bw.Block.Validate(value)
+func (bw *BlockFormField) Validate(ctx context.Context, value interface{}) []error {
+	return bw.Block.Validate(ctx, value)
 }
 
-func (bw *BlockFormField) Clean(value interface{}) (interface{}, error) {
-	return bw.Block.Clean(value)
+func (bw *BlockFormField) Clean(ctx context.Context, value interface{}) (interface{}, error) {
+	return bw.Block.Clean(ctx, value)
 }

@@ -2,6 +2,7 @@ package widgets_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"strings"
 	"testing"
@@ -23,7 +24,7 @@ func TestNewTextInput(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := textInput.Render(&buffer, "text-input-id", "text-input-name", "", attrs)
+	err := textInput.Render(context.Background(), &buffer, "text-input-id", "text-input-name", "", attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -62,7 +63,7 @@ func TestNewTextarea(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := textarea.Render(&buffer, "textarea-id", "textarea-name", "", attrs)
+	err := textarea.Render(context.Background(), &buffer, "textarea-id", "textarea-name", "", attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -98,7 +99,7 @@ func TestNewEmailInput(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := emailInput.Render(&buffer, "email-input-id", "email-input-name", "", attrs)
+	err := emailInput.Render(context.Background(), &buffer, "email-input-id", "email-input-name", "", attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -134,7 +135,7 @@ func TestNewPasswordInput(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := passwordInput.Render(&buffer, "password-input-id", "password-input-name", "", attrs)
+	err := passwordInput.Render(context.Background(), &buffer, "password-input-id", "password-input-name", "", attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -170,7 +171,7 @@ func TestNewHiddenInput(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := hiddenInput.Render(&buffer, "hidden-input-id", "hidden-input-name", "secret-value", attrs)
+	err := hiddenInput.Render(context.Background(), &buffer, "hidden-input-id", "hidden-input-name", "secret-value", attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -206,7 +207,7 @@ func TestNewNumberInput(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := numberInput.Render(&buffer, "number-input-id", "number-input-name", 5, attrs)
+	err := numberInput.Render(context.Background(), &buffer, "number-input-id", "number-input-name", 5, attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -254,7 +255,7 @@ func TestNewBooleanInput(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := booleanInput.Render(&buffer, "boolean-input-id", "boolean-input-name", true, attrs)
+	err := booleanInput.Render(context.Background(), &buffer, "boolean-input-id", "boolean-input-name", true, attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -293,7 +294,7 @@ func TestNewDateInput(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := dateInput.Render(&buffer, "date-input-id", "date-input-name", "2024-01-01", attrs)
+	err := dateInput.Render(context.Background(), &buffer, "date-input-id", "date-input-name", "2024-01-01", attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -354,7 +355,7 @@ func TestNewFileInput(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := fileInput.Render(&buffer, "file-input-id", "file-input-name", nil, attrs)
+	err := fileInput.Render(context.Background(), &buffer, "file-input-id", "file-input-name", nil, attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -418,7 +419,7 @@ func TestNewCheckboxInput(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := checkboxInput.Render(&buffer, "checkbox-input-id", "checkbox-input-name", "1", attrs)
+	err := checkboxInput.Render(context.Background(), &buffer, "checkbox-input-id", "checkbox-input-name", "1", attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -451,7 +452,7 @@ func TestNewRadioInput(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := radioInput.Render(&buffer, "radio-input-id", "radio-input-name", "1", attrs)
+	err := radioInput.Render(context.Background(), &buffer, "radio-input-id", "radio-input-name", "1", attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -484,7 +485,7 @@ func TestNewSelectInput(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := selectInput.Render(&buffer, "select-input-id", "select-input-name", "1", attrs)
+	err := selectInput.Render(context.Background(), &buffer, "select-input-id", "select-input-name", "1", attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}
@@ -514,7 +515,7 @@ func TestNewSelectInputWithBlankOption(t *testing.T) {
 
 	// Render the widget and check the output HTML
 	var buffer bytes.Buffer
-	err := selectInput.Render(&buffer, "select-input-id", "select-input-name", "1", attrs)
+	err := selectInput.Render(context.Background(), &buffer, "select-input-id", "select-input-name", "1", attrs)
 	if err != nil {
 		t.Fatalf("Render failed: %v", err)
 	}

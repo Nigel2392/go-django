@@ -162,6 +162,14 @@ func (a *AdminForm[T]) EditContext(key string, context ctx.Context) {
 	context.Set(key, a.BoundForm())
 }
 
+func (a *AdminForm[T]) Context() context.Context {
+	return a.Form.Context()
+}
+
+func (a *AdminForm[T]) WithContext(ctx context.Context) {
+	a.Form.WithContext(ctx)
+}
+
 func (a *AdminForm[T]) AsP() template.HTML {
 	return a.Form.AsP()
 }

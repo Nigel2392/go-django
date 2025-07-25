@@ -1,6 +1,7 @@
 package widgets_test
 
 import (
+	"context"
 	"errors"
 	"net/url"
 	"testing"
@@ -14,7 +15,7 @@ func TestValueFromDataDict(t *testing.T) {
 	var (
 		w           = widgets.NewTextInput(map[string]string{})
 		data        = url.Values{"field": []string{"value"}}
-		value, errs = w.ValueFromDataDict(data, nil, "field")
+		value, errs = w.ValueFromDataDict(context.Background(), data, nil, "field")
 	)
 	if len(errs) != 0 {
 		t.Errorf("expected %d, got %d", 0, len(errs))
@@ -28,7 +29,7 @@ func TestValueOmittedFromData(t *testing.T) {
 	var (
 		d = url.Values{}
 		w = widgets.NewTextInput(map[string]string{})
-		v = w.ValueOmittedFromData(d, nil, "field")
+		v = w.ValueOmittedFromData(context.Background(), d, nil, "field")
 	)
 	t.Run("empty", func(t *testing.T) {
 		if v != true {
@@ -38,7 +39,7 @@ func TestValueOmittedFromData(t *testing.T) {
 
 	t.Run("value", func(t *testing.T) {
 		d.Set("field", "value")
-		v = w.ValueOmittedFromData(d, nil, "field")
+		v = w.ValueOmittedFromData(context.Background(), d, nil, "field")
 		if v != false {
 			t.Errorf("expected %v, got %v", false, v)
 		}
@@ -57,14 +58,14 @@ func TestOptionsWidgetValidate(t *testing.T) {
 	})
 
 	t.Run("valid", func(t *testing.T) {
-		var errorList = w.Validate("value1")
+		var errorList = w.Validate(context.Background(), "value1")
 		if len(errorList) != 0 {
 			t.Errorf("expected %d, got %d", 0, len(errorList))
 		}
 	})
 
 	t.Run("invalid", func(t *testing.T) {
-		var errorList = w.Validate("invalid")
+		var errorList = w.Validate(context.Background(), "invalid")
 
 		if len(errorList) != 1 {
 			t.Errorf("expected %d, got %d", 1, len(errorList))

@@ -57,16 +57,16 @@ type PageDefinition struct {
 	_childPageTypes  map[string]struct{}
 }
 
-func (p *PageDefinition) Label() string {
+func (p *PageDefinition) Label(ctx context.Context) string {
 	if p.GetLabel != nil {
-		return p.GetLabel()
+		return p.GetLabel(ctx)
 	}
 	return ""
 }
 
-func (p *PageDefinition) Description() string {
+func (p *PageDefinition) Description(ctx context.Context) string {
 	if p.GetDescription != nil {
-		return p.GetDescription()
+		return p.GetDescription(ctx)
 	}
 	return ""
 }

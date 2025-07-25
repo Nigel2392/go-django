@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"context"
 	"io"
 	"net/url"
 
@@ -17,12 +18,12 @@ import (
 type Block interface {
 	Name() string
 	SetName(name string)
-	Label() string
-	HelpText() string
+	Label(ctx context.Context) string
+	HelpText(ctx context.Context) string
 	Field() fields.Field
 	SetField(field fields.Field)
-	RenderForm(w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error
-	Render(w io.Writer, value interface{}, context ctx.Context) error
+	RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error
+	Render(ctx context.Context, w io.Writer, value interface{}, context ctx.Context) error
 	GetDefault() interface{}
 	telepath.AdapterGetter
 	media.MediaDefiner
@@ -37,11 +38,11 @@ type BaseBlock struct {
 	Name_      string
 	Template   string
 	FormField  fields.Field
-	Validators []func(interface{}) error
+	Validators []func(context.Context, interface{}) error
 	Default    func() interface{}
 
-	LabelFunc func() string
-	HelpFunc  func() string
+	LabelFunc func(ctx context.Context) string
+	HelpFunc  func(ctx context.Context) string
 }
 
 func (b *BaseBlock) Name() string {
@@ -72,28 +73,28 @@ func (b *BaseBlock) FormContext(name string, value interface{}, context ctx.Cont
 	return blockCtx
 }
 
-func (b *BaseBlock) RenderForm(w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error {
+func (b *BaseBlock) RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error {
 	var blockCtx = b.FormContext(name, value, context)
 	blockCtx.Errors = errors
-	return b.Field().Widget().RenderWithErrors(w, id, name, value, errors, blockCtx.Attrs)
+	return b.Field().Widget().RenderWithErrors(ctx, w, id, name, value, errors, blockCtx.Attrs)
 }
 
-func (b *BaseBlock) Render(w io.Writer, value interface{}, context ctx.Context) error {
+func (b *BaseBlock) Render(ctx context.Context, w io.Writer, value interface{}, context ctx.Context) error {
 	var blockCtx = NewBlockContext(b, context)
 	blockCtx.Value = value
 	return tpl.FRender(w, blockCtx, b.Template)
 }
 
-func (b *BaseBlock) Label() string {
+func (b *BaseBlock) Label(ctx context.Context) string {
 	if b.LabelFunc != nil {
-		return b.LabelFunc()
+		return b.LabelFunc(ctx)
 	}
-	return b.Field().Label()
+	return b.Field().Label(ctx)
 }
 
-func (b *BaseBlock) HelpText() string {
+func (b *BaseBlock) HelpText(ctx context.Context) string {
 	if b.HelpFunc != nil {
-		return b.HelpFunc()
+		return b.HelpFunc(ctx)
 	}
 	return ""
 }
@@ -113,27 +114,27 @@ func (b *BaseBlock) ValueToForm(value interface{}) interface{} {
 	return b.Field().ValueToForm(value)
 }
 
-func (b *BaseBlock) ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
-	return b.Field().Widget().ValueOmittedFromData(data, files, name)
+func (b *BaseBlock) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
+	return b.Field().Widget().ValueOmittedFromData(ctx, data, files, name)
 }
 
-func (b *BaseBlock) ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
-	return b.Field().Widget().ValueFromDataDict(data, files, name)
+func (b *BaseBlock) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
+	return b.Field().Widget().ValueFromDataDict(ctx, data, files, name)
 }
 
-func (b *BaseBlock) Validate(value interface{}) []error {
+func (b *BaseBlock) Validate(ctx context.Context, value interface{}) []error {
 
 	for _, validator := range b.Validators {
-		if err := validator(value); err != nil {
+		if err := validator(ctx, value); err != nil {
 			return []error{err}
 		}
 	}
 
-	return b.Field().Validate(value)
+	return b.Field().Validate(ctx, value)
 }
 
-func (b *BaseBlock) Clean(value interface{}) (interface{}, error) {
-	return b.Field().Clean(value)
+func (b *BaseBlock) Clean(ctx context.Context, value interface{}) (interface{}, error) {
+	return b.Field().Clean(ctx, value)
 }
 
 func (b *BaseBlock) Media() media.Media {

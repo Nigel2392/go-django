@@ -26,3 +26,11 @@ func (c *HTTPRequestContext) Request() *http.Request {
 func (c *HTTPRequestContext) CSRFToken() string {
 	return c.CsrfToken
 }
+
+func (c *HTTPRequestContext) Set(key string, value any) {
+	if v, ok := value.(Editor); ok {
+		v.EditContext(key, c)
+		return
+	}
+	c.StructContext.Set(key, value)
+}

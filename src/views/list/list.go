@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -11,7 +12,7 @@ import (
 )
 
 type ListColumn[T attrs.Definer] interface {
-	Header() templ.Component
+	Header(ctx context.Context) templ.Component
 	Component(r *http.Request, defs attrs.Definitions, row T) templ.Component
 }
 

@@ -1,6 +1,7 @@
 package blocks_test
 
 import (
+	"context"
 	"maps"
 	"net/mail"
 	"net/url"
@@ -64,7 +65,7 @@ func TestStructBlock(t *testing.T) {
 	b.SetName("test_block")
 
 	t.Run("ValueFromDataDict", func(t *testing.T) {
-		var data, err = b.ValueFromDataDict(structBlockDataRaw, nil, "test_block")
+		var data, err = b.ValueFromDataDict(context.Background(), structBlockDataRaw, nil, "test_block")
 
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
@@ -184,7 +185,7 @@ func TestStructBlock(t *testing.T) {
 	t.Run("NestedStructBlock", func(t *testing.T) {
 
 		t.Run("ValueFromDataDict", func(t *testing.T) {
-			var data, err = b.ValueFromDataDict(nestedStructBlockDataRaw, nil, "test_block")
+			var data, err = b.ValueFromDataDict(context.Background(), nestedStructBlockDataRaw, nil, "test_block")
 
 			if err != nil {
 				t.Errorf("Expected no error, got %v", err)

@@ -1,6 +1,7 @@
 package revisions_test
 
 import (
+	"context"
 	"reflect"
 	"strconv"
 	"testing"
@@ -79,8 +80,8 @@ func init() {
 		var obj = obj
 		contenttypes.Register(&contenttypes.ContentTypeDefinition{
 			ContentObject: obj,
-			GetLabel:      func() string { return reflect.TypeOf(obj).Name() },
-			GetInstance: func(identifier interface{}) (interface{}, error) {
+			GetLabel:      func(ctx context.Context) string { return reflect.TypeOf(obj).Name() },
+			GetInstance: func(ctx context.Context, identifier interface{}) (interface{}, error) {
 				var id int64
 				switch v := identifier.(type) {
 				case int:

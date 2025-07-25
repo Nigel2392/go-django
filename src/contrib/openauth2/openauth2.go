@@ -223,9 +223,10 @@ func NewAppConfig(cnf Config) django.AppConfig {
 
 			return u.String()
 		},
-		GetInstance: func(id interface{}) (interface{}, error) {
+		GetInstance: func(ctx context.Context, id interface{}) (interface{}, error) {
 			var instance, err = queries.
 				GetQuerySet(&User{}).
+				WithContext(ctx).
 				Filter("ID", id).
 				Get()
 			if err != nil {
@@ -234,9 +235,10 @@ func NewAppConfig(cnf Config) django.AppConfig {
 
 			return instance.Object, nil
 		},
-		GetInstances: func(amount, offset uint) ([]interface{}, error) {
+		GetInstances: func(ctx context.Context, amount, offset uint) ([]interface{}, error) {
 			var instances, err = queries.
 				GetQuerySet(&User{}).
+				WithContext(ctx).
 				Limit(int(amount)).
 				Offset(int(offset)).
 				All()
@@ -283,7 +285,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			ListView: admin.ListViewOptions{
 				PerPage: 20,
 				ViewOptions: admin.ViewOptions{
-					Labels: map[string]func() string{
+					Labels: map[string]func(context.Context) string{
 						"ProviderName": trans.S("Provider"),
 					},
 					Fields: []string{

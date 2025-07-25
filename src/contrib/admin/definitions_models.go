@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/views"
@@ -28,7 +29,7 @@ type ViewOptions struct {
 	// This is a map of field name to a function that returns the label for the field.
 	//
 	// Allowing for custom labels for fields in the view.
-	Labels map[string]func() string
+	Labels map[string]func(ctx context.Context) string
 }
 
 // Options for a model-specific form view.
@@ -151,7 +152,7 @@ type ModelOptions struct {
 	// MenuIcon is a function that returns the icon for the model in the admin menu.
 	//
 	// This should return an HTML element, I.E. "<svg>...</svg>".
-	MenuIcon func() string
+	MenuIcon func(ctx context.Context) string
 
 	// MenuOrder is the order of the model in the admin menu.
 	MenuOrder int
@@ -159,7 +160,7 @@ type ModelOptions struct {
 	// MenuLabel is the label for the model in the admin menu.
 	//
 	// This is used for the model's label in the admin.
-	MenuLabel func() string
+	MenuLabel func(ctx context.Context) string
 
 	// DisallowCreate is a flag that determines if the model should be disallowed from being created.
 	//
@@ -204,7 +205,7 @@ type ModelOptions struct {
 	// This provides a simple top- level override for the labels of the fields in the model.
 	//
 	// Any custom labels for fields implemented in the AddView, EditView or ListView will take precedence over these labels.
-	Labels map[string]func() string
+	Labels map[string]func(ctx context.Context) string
 
 	// Model is the object that the above- defined options are for.
 	Model attrs.Definer
@@ -217,6 +218,14 @@ type ModelDefinition struct {
 	_app    *AppDefinition
 	_rModel reflect.Type
 	_cType  *contenttypes.ContentTypeDefinition
+}
+
+func (o *ModelDefinition) EditContext(key string, context ctx.Context) {
+	var rq = context.(ctx.ContextWithRequest)
+	context.Set(key, &WrappedModelDefinition{
+		Wrapped: o,
+		Context: rq.Request().Context(),
+	})
 }
 
 func (o *ModelDefinition) rModel() reflect.Type {
@@ -244,22 +253,22 @@ func (o *ModelDefinition) GetName() string {
 	return o.ModelOptions.Name
 }
 
-func (o *ModelDefinition) Label() string {
-	return o._cType.Label()
+func (o *ModelDefinition) Label(ctx context.Context) string {
+	return o._cType.Label(ctx)
 }
 
-func (o *ModelDefinition) PluralLabel() string {
-	return o._cType.PluralLabel()
+func (o *ModelDefinition) PluralLabel(ctx context.Context) string {
+	return o._cType.PluralLabel(ctx)
 }
 
-func (o *ModelDefinition) getMenuLabel() string {
+func (o *ModelDefinition) getMenuLabel(ctx context.Context) string {
 	if o.ModelOptions.MenuLabel != nil {
-		return o.ModelOptions.MenuLabel()
+		return o.ModelOptions.MenuLabel(ctx)
 	}
-	return o.Label()
+	return o.Label(ctx)
 }
 
-func (o *ModelDefinition) GetColumn(opts ListViewOptions, field string) list.ListColumn[attrs.Definer] {
+func (o *ModelDefinition) GetColumn(ctx context.Context, opts ListViewOptions, field string) list.ListColumn[attrs.Definer] {
 	if opts.Columns != nil {
 		var col, ok = opts.Columns[field]
 		if ok {
@@ -272,7 +281,7 @@ func (o *ModelDefinition) GetColumn(opts ListViewOptions, field string) list.Lis
 	)
 }
 
-func (o *ModelDefinition) GetLabel(opts ViewOptions, field string, default_ string) func() string {
+func (o *ModelDefinition) GetLabel(opts ViewOptions, field string, default_ string) func(ctx context.Context) string {
 	if opts.Labels != nil {
 		var label, ok = opts.Labels[field]
 		if ok {
@@ -285,7 +294,7 @@ func (o *ModelDefinition) GetLabel(opts ViewOptions, field string, default_ stri
 			return label
 		}
 	}
-	return func() string {
+	return func(ctx context.Context) string {
 		return default_
 	}
 }
@@ -325,16 +334,16 @@ func (m *ModelDefinition) ModelFields(opts ViewOptions, instace attrs.Definer) [
 	return fields
 }
 
-func (m *ModelDefinition) GetInstance(identifier any) (attrs.Definer, error) {
-	var instance, err = m._cType.Instance(identifier)
+func (m *ModelDefinition) GetInstance(ctx context.Context, identifier any) (attrs.Definer, error) {
+	var instance, err = m._cType.Instance(ctx, identifier)
 	if err != nil {
 		return nil, err
 	}
 	return instance.(attrs.Definer), nil
 }
 
-func (m *ModelDefinition) GetListInstances(amount, offset uint) ([]attrs.Definer, error) {
-	var instances, err = m._cType.Instances(amount, offset)
+func (m *ModelDefinition) GetListInstances(ctx context.Context, amount, offset uint) ([]attrs.Definer, error) {
+	var instances, err = m._cType.Instances(ctx, amount, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -363,4 +372,37 @@ func (m *ModelDefinition) OnRegister(a *AdminApplication, app *AppDefinition) {
 			return false
 		}
 	})
+}
+
+type WrappedModelDefinition struct {
+	Wrapped *ModelDefinition
+	Context context.Context
+}
+
+func (o *WrappedModelDefinition) GetName() string {
+	return o.Wrapped.GetName()
+}
+
+func (o *WrappedModelDefinition) NewInstance() attrs.Definer {
+	return o.Wrapped.NewInstance()
+}
+
+func (o *WrappedModelDefinition) Label() string {
+	return o.Wrapped.Label(o.Context)
+}
+
+func (o *WrappedModelDefinition) PluralLabel() string {
+	return o.Wrapped.PluralLabel(o.Context)
+}
+
+func (o *WrappedModelDefinition) DisallowCreate() bool {
+	return o.Wrapped.ModelOptions.DisallowCreate
+}
+
+func (o *WrappedModelDefinition) DisallowEdit() bool {
+	return o.Wrapped.ModelOptions.DisallowEdit
+}
+
+func (o *WrappedModelDefinition) DisallowDelete() bool {
+	return o.Wrapped.ModelOptions.DisallowDelete
 }

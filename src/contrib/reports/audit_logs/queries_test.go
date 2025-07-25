@@ -3,6 +3,7 @@
 package auditlogs_test
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"testing"
@@ -85,7 +86,7 @@ func init() {
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		ContentObject: &auditlogs.Entry{},
 		GetObject:     func() interface{} { return &auditlogs.Entry{} },
-		GetLabel:      func() string { return "Entry" },
+		GetLabel:      func(ctx context.Context) string { return "Entry" },
 	})
 
 	for i := 0; i < len(entryIds); i++ {

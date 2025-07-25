@@ -1,6 +1,7 @@
 package fields
 
 import (
+	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -11,12 +12,12 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
 
-func getTextFn(v any) func() string {
-	var fn func() string
+func getTextFn(v any) func(ctx context.Context) string {
+	var fn func(ctx context.Context) string
 	switch v := v.(type) {
 	case string:
 		fn = trans.S(v)
-	case func() string:
+	case func(ctx context.Context) string:
 		fn = v
 	}
 	return fn

@@ -13,7 +13,7 @@ import (
 	"github.com/a-h/templ"
 )
 
-type ReportsMenuHookFunc = func() []menu.MenuItem
+type ReportsMenuHookFunc = func(r *http.Request) []menu.MenuItem
 
 type ReportsApp struct {
 	*apps.AppConfig
@@ -39,14 +39,14 @@ func NewAppConfig() django.AppConfig {
 						continue
 					}
 
-					var items = f()
+					var items = f(r)
 					menuItems = append(menuItems, items...)
 				}
 
 				items.Append(&menu.SubmenuItem{
 					BaseItem: menu.BaseItem{
 						ItemName: "reports",
-						Label:    trans.S("Reports"),
+						Label:    trans.T(r.Context(), "Reports"),
 						Ordering: 990,
 						Logo: templ.Raw(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-journal-text" viewBox="0 0 16 16">
   <path d="M5 10.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 0 1h-2a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5m0-2a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 0 1h-5a.5.5 0 0 1-.5-.5"/>

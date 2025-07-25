@@ -16,8 +16,8 @@ import (
 // CT_GetObject retrieves an object from the database by its identifier.
 //
 // This is a function with the CT_ prefix to indicate that it is a function to be used in a `contenttypes.ContentTypeDefinition` context.
-func CT_GetObject(obj attrs.Definer) func(identifier any) (interface{}, error) {
-	return func(identifier any) (interface{}, error) {
+func CT_GetObject(obj attrs.Definer) func(ctx context.Context, identifier any) (interface{}, error) {
+	return func(ctx context.Context, identifier any) (interface{}, error) {
 		var obj, err = GetObject(obj, identifier)
 		return obj, err
 	}
@@ -26,8 +26,8 @@ func CT_GetObject(obj attrs.Definer) func(identifier any) (interface{}, error) {
 // CT_ListObjects lists objects from the database.
 //
 // This is a function with the CT_ prefix to indicate that it is a function to be used in a `contenttypes.ContentTypeDefinition` context.
-func CT_ListObjects(obj attrs.Definer) func(offset, limit uint) ([]interface{}, error) {
-	return func(amount, offset uint) ([]interface{}, error) {
+func CT_ListObjects(obj attrs.Definer) func(ctx context.Context, offset, limit uint) ([]interface{}, error) {
+	return func(ctx context.Context, amount, offset uint) ([]interface{}, error) {
 		var results, err = ListObjects[attrs.Definer](obj, uint64(offset), uint64(amount))
 		if err != nil {
 			return nil, err
@@ -39,8 +39,8 @@ func CT_ListObjects(obj attrs.Definer) func(offset, limit uint) ([]interface{}, 
 // CT_ListObjectsByIDs lists objects from the database by their IDs.
 //
 // This is a function with the CT_ prefix to indicate that it is a function to be used in a `contenttypes.ContentTypeDefinition` context.
-func CT_ListObjectsByIDs(obj attrs.Definer) func(i []interface{}) ([]interface{}, error) {
-	return func(ids []interface{}) ([]interface{}, error) {
+func CT_ListObjectsByIDs(obj attrs.Definer) func(ctx context.Context, i []interface{}) ([]interface{}, error) {
+	return func(ctx context.Context, ids []interface{}) ([]interface{}, error) {
 		var results, err = ListObjectsByIDs[attrs.Definer, any](obj, 0, 1000, ids)
 		if err != nil {
 			return nil, err

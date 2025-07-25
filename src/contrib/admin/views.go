@@ -29,7 +29,7 @@ var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminAp
 	if !app.Options.EnableIndexView {
 		except.RaiseNotFound(
 			"app %q does not have an index view",
-			app.Label(),
+			app.Label(r.Context()),
 		)
 		return
 	}
@@ -49,7 +49,7 @@ var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminAp
 	var modelNames = make([]string, models.Len())
 	var i = 0
 	for front := models.Front(); front != nil; front = front.Next() {
-		modelNames[i] = front.Value.Label()
+		modelNames[i] = front.Value.Label(r.Context())
 		i++
 	}
 
@@ -104,7 +104,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 
 	var columns = make([]list.ListColumn[attrs.Definer], len(model.ListView.Fields))
 	for i, field := range model.ListView.Fields {
-		columns[i] = model.GetColumn(model.ListView, field)
+		columns[i] = model.GetColumn(r.Context(), model.ListView, field)
 	}
 
 	var amount = model.ListView.PerPage
@@ -141,7 +141,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 				return slices.Collect(rows.Objects()), nil
 			}
 
-			return model.GetListInstances(amount, offset)
+			return model.GetListInstances(r.Context(), amount, offset)
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
 			return list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {
@@ -316,7 +316,7 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 	if f, ok := instance.(FormDefiner); ok {
 		form = f.AdminForm(r, app, model)
 	} else {
-		var modelForm = modelforms.NewBaseModelForm(instance)
+		var modelForm = modelforms.NewBaseModelForm(r.Context(), instance)
 		for _, field := range model.ModelFields(opts.ViewOptions, instance) {
 			var (
 				name      = field.Name()
@@ -334,7 +334,7 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 			var label = model.GetLabel(
 				opts.ViewOptions,
 				name,
-				field.Label(),
+				field.Label(r.Context()),
 			)
 
 			formfield.SetLabel(label)

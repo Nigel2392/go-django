@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"context"
 	"io"
 	"net/url"
 
@@ -33,7 +34,7 @@ func (bw *BlockWidget) IsHidden() bool {
 	return false
 }
 
-func (bw *BlockWidget) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {
+func (bw *BlockWidget) GetContextData(c context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context {
 	var (
 		blockCtx = NewBlockContext(
 			bw.BlockDef,
@@ -49,8 +50,8 @@ func (bw *BlockWidget) GetContextData(id, name string, value interface{}, attrs 
 	return blockCtx
 }
 
-func (bw *BlockWidget) RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
-	var ctxData = bw.GetContextData(id, name, value, attrs)
+func (bw *BlockWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
+	var ctxData = bw.GetContextData(ctx, id, name, value, attrs)
 
 	for i, err := range errors {
 		switch e := err.(type) {
@@ -61,7 +62,7 @@ func (bw *BlockWidget) RenderWithErrors(w io.Writer, id, name string, value inte
 		}
 	}
 
-	return renderBlockWidget(w, bw, ctxData.(*BlockContext), errors)
+	return renderBlockWidget(ctx, w, bw, ctxData.(*BlockContext), errors)
 }
 
 func (bw *BlockWidget) FormType() string {
@@ -72,8 +73,8 @@ func (bw *BlockWidget) IdForLabel(name string) string {
 	return name
 }
 
-func (bw *BlockWidget) Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return bw.RenderWithErrors(w, id, name, value, nil, attrs)
+func (bw *BlockWidget) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
+	return bw.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
 }
 
 func (bw *BlockWidget) ValueToGo(value interface{}) (interface{}, error) {
@@ -84,20 +85,20 @@ func (bw *BlockWidget) ValueToForm(value interface{}) interface{} {
 	return bw.BlockDef.ValueToForm(value)
 }
 
-func (bw *BlockWidget) ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
-	return bw.BlockDef.ValueOmittedFromData(data, files, name)
+func (bw *BlockWidget) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
+	return bw.BlockDef.ValueOmittedFromData(ctx, data, files, name)
 }
 
-func (bw *BlockWidget) ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
-	return bw.BlockDef.ValueFromDataDict(data, files, name)
+func (bw *BlockWidget) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
+	return bw.BlockDef.ValueFromDataDict(ctx, data, files, name)
 }
 
-func (bw *BlockWidget) Validate(value interface{}) []error {
-	return bw.BlockDef.Validate(value)
+func (bw *BlockWidget) Validate(ctx context.Context, value interface{}) []error {
+	return bw.BlockDef.Validate(ctx, value)
 }
 
-func (bw *BlockWidget) Clean(value interface{}) (interface{}, error) {
-	return bw.BlockDef.Clean(value)
+func (bw *BlockWidget) Clean(ctx context.Context, value interface{}) (interface{}, error) {
+	return bw.BlockDef.Clean(ctx, value)
 }
 
 func (bw *BlockWidget) Media() media.Media {

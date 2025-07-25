@@ -2,6 +2,7 @@ package admin_test
 
 import (
 	"bytes"
+	"context"
 	"encoding/gob"
 	"fmt"
 	"net/http"
@@ -124,13 +125,13 @@ func init() {
 
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		ContentObject: &TestModelStruct{},
-		GetInstance: func(identifier any) (interface{}, error) {
+		GetInstance: func(ctx context.Context, identifier any) (interface{}, error) {
 			return &TestModelStruct{
 				ID:   1,
 				Name: "Test",
 			}, nil
 		},
-		GetInstances: func(amount, offset uint) ([]interface{}, error) {
+		GetInstances: func(ctx context.Context, amount, offset uint) ([]interface{}, error) {
 			return []interface{}{
 				&TestModelStruct{
 					ID:   1,

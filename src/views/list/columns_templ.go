@@ -5,23 +5,24 @@ package list
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
-	"github.com/Nigel2392/go-django/src/core/assert"
-	"github.com/Nigel2392/go-django/src/core/attrs"
+	"context"
 	"html/template"
 	"net/http"
 	"time"
+
+	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
 )
 
 type funcColumn[T attrs.Definer] struct {
-	header func() string
+	header func(ctx context.Context) string
 	data   func(r *http.Request, defs attrs.Definitions, row T) interface{}
 }
 
-func (c *funcColumn[T]) Header() templ.Component {
+func (c *funcColumn[T]) Header(ctx context.Context) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -44,7 +45,7 @@ func (c *funcColumn[T]) Header() templ.Component {
 		ctx = templ.ClearChildren(ctx)
 		assert.False(c.header == nil, "Column header is nil")
 		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(c.header())
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 18, Col: 16}
 		}
@@ -92,16 +93,16 @@ func (c *funcColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T
 	})
 }
 
-func FuncColumn[T attrs.Definer](header func() string, data func(r *http.Request, defs attrs.Definitions, row T) interface{}) ListColumn[T] {
+func FuncColumn[T attrs.Definer](header func(ctx context.Context) string, data func(r *http.Request, defs attrs.Definitions, row T) interface{}) ListColumn[T] {
 	return &funcColumn[T]{header, data}
 }
 
 type fieldColumn[T attrs.Definer] struct {
-	header    func() string
+	header    func(ctx context.Context) string
 	fieldName string
 }
 
-func (c *fieldColumn[T]) Header() templ.Component {
+func (c *fieldColumn[T]) Header(ctx context.Context) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -124,7 +125,7 @@ func (c *fieldColumn[T]) Header() templ.Component {
 		ctx = templ.ClearChildren(ctx)
 		assert.False(c.header == nil, "Column header is nil")
 		var templ_7745c5c3_Var6 string
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(c.header())
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 38, Col: 16}
 		}
@@ -197,7 +198,7 @@ func (c *fieldColumn[T]) Component(r *http.Request, defs attrs.Definitions, row 
 	})
 }
 
-func FieldColumn[T attrs.Definer](header func() string, fieldName string) ListColumn[T] {
+func FieldColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string) ListColumn[T] {
 	return &fieldColumn[T]{header, fieldName}
 }
 
@@ -206,7 +207,7 @@ type titleFieldColumn[T attrs.Definer] struct {
 	getURL  func(r *http.Request, defs attrs.Definitions, row T) string
 }
 
-func (c *titleFieldColumn[T]) Header() templ.Component {
+func (c *titleFieldColumn[T]) Header(ctx context.Context) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -231,7 +232,7 @@ func (c *titleFieldColumn[T]) Header() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = c.wrapped.Header().Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = c.wrapped.Header(ctx).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -347,7 +348,7 @@ func (c *htmlColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T
 	})
 }
 
-func HTMLColumn[T attrs.Definer](header func() string, getHTML func(r *http.Request, defs attrs.Definitions, row T) template.HTML) ListColumn[T] {
+func HTMLColumn[T attrs.Definer](header func(ctx context.Context) string, getHTML func(r *http.Request, defs attrs.Definitions, row T) template.HTML) ListColumn[T] {
 	return &htmlColumn[T]{
 		fieldColumn: fieldColumn[T]{header: header},
 		getHTML:     getHTML,
@@ -413,14 +414,14 @@ func (c *linkColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T
 	})
 }
 
-func LinkColumn[T attrs.Definer](header func() string, fieldName string, getURL func(r *http.Request, defs attrs.Definitions, row T) string) ListColumn[T] {
+func LinkColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string, getURL func(r *http.Request, defs attrs.Definitions, row T) string) ListColumn[T] {
 	return &linkColumn[T]{
 		fieldColumn: fieldColumn[T]{header, fieldName},
 		getURL:      getURL,
 	}
 }
 
-func Column[T attrs.Definer](header func() string, getter any) ListColumn[T] {
+func Column[T attrs.Definer](header func(ctx context.Context) string, getter any) ListColumn[T] {
 	switch g := getter.(type) {
 	case func(r *http.Request, defs attrs.Definitions, row T) interface{}:
 		return &funcColumn[T]{header, g}

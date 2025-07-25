@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -27,8 +28,8 @@ type Action struct {
 
 type PageOptions struct {
 	Request     *http.Request
-	TitleFn     func() string
-	SubtitleFn  func() string
+	TitleFn     func(ctx context.Context) string
+	SubtitleFn  func(ctx context.Context) string
 	MediaFn     func() media.Media
 	BreadCrumbs []BreadCrumb
 	Actions     []Action
@@ -38,14 +39,14 @@ func (p *PageOptions) Title() string {
 	if p.TitleFn == nil {
 		return ""
 	}
-	return p.TitleFn()
+	return p.TitleFn(p.Request.Context())
 }
 
 func (p *PageOptions) Subtitle() string {
 	if p.SubtitleFn == nil {
 		return ""
 	}
-	return p.SubtitleFn()
+	return p.SubtitleFn(p.Request.Context())
 }
 
 func (p *PageOptions) Media() media.Media {
@@ -123,6 +124,10 @@ func (c *adminContext) Get(key string) interface{} {
 }
 
 func (c *adminContext) Set(key string, value interface{}) {
+	if v, ok := value.(ctx.Editor); ok {
+		v.EditContext(key, c)
+		return
+	}
 	switch key {
 	case "site", "Site":
 		c.Site = value.(*AdminApplication)

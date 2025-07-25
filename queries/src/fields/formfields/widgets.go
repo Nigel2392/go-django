@@ -1,6 +1,7 @@
 package formfields
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/url"
@@ -49,9 +50,9 @@ func (o *ModelSelect) ValueToForm(value interface{}) interface{} {
 	return fmt.Sprintf("%v", value)
 }
 
-func (o *ModelSelect) GetContextData(id, name string, value interface{}, widgetAttrs map[string]string) ctx.Context {
-	var base_context = o.BaseWidget.GetContextData(id, name, value, widgetAttrs)
-	var modelInstances, err = o.QuerySet()
+func (o *ModelSelect) GetContextData(ctx context.Context, id, name string, value interface{}, widgetAttrs map[string]string) ctx.Context {
+	var base_context = o.BaseWidget.GetContextData(ctx, id, name, value, widgetAttrs)
+	var modelInstances, err = o.QuerySet(ctx)
 	if err != nil {
 		logger.Errorf(
 			"error getting model instances for model: %s, %s",
@@ -101,8 +102,8 @@ func (o *ModelSelect) GetContextData(id, name string, value interface{}, widgetA
 	return base_context
 }
 
-func (b *ModelSelect) RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
-	var context = b.GetContextData(id, name, value, attrs)
+func (b *ModelSelect) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
+	var context = b.GetContextData(ctx, id, name, value, attrs)
 	if errors != nil {
 		context.Set("errors", errors)
 	}
@@ -110,8 +111,8 @@ func (b *ModelSelect) RenderWithErrors(w io.Writer, id, name string, value inter
 	return tpl.FRender(w, context, b.TemplateName)
 }
 
-func (b *ModelSelect) Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(w, id, name, value, nil, attrs)
+func (b *ModelSelect) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
+	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
 }
 
 type MultiSelectWidget[T attrs.Definer] struct {
@@ -168,7 +169,7 @@ func (o *MultiSelectWidget[T]) ValueToGo(value interface{}) (interface{}, error)
 	return objects, nil
 }
 
-func (o *MultiSelectWidget[T]) Choices() []widgets.Option {
+func (o *MultiSelectWidget[T]) Choices(ctx context.Context) []widgets.Option {
 	var choices = make([]widgets.Option, 0)
 	var chosen = make([]any, 0)
 
@@ -179,7 +180,7 @@ func (o *MultiSelectWidget[T]) Choices() []widgets.Option {
 		},
 	}
 
-	var selectedRows, err = backRef.Objects().All()
+	var selectedRows, err = backRef.Objects().WithContext(ctx).All()
 	if err != nil {
 		except.Fail(
 			500, "error getting queryset for MultiSelectWidget: %s", err,
@@ -204,6 +205,8 @@ func (o *MultiSelectWidget[T]) Choices() []widgets.Option {
 	} else {
 		querySet = queries.GetQuerySet(o.Relation.Model().(T))
 	}
+
+	querySet = querySet.WithContext(ctx)
 
 	var meta = attrs.GetModelMeta(o.Relation.Model())
 	var metaDefs = meta.Definitions()
@@ -236,9 +239,9 @@ func (o *MultiSelectWidget[T]) Choices() []widgets.Option {
 	return choices
 }
 
-func (o *MultiSelectWidget[T]) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {
-	var base_context = o.BaseWidget.GetContextData(id, name, value, attrs)
-	var choices = o.Choices()
+func (o *MultiSelectWidget[T]) GetContextData(ctx context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context {
+	var base_context = o.BaseWidget.GetContextData(ctx, id, name, value, attrs)
+	var choices = o.Choices(ctx)
 
 	base_context.Set(
 		"choices",
@@ -253,14 +256,14 @@ func (o *MultiSelectWidget[T]) GetContextData(id, name string, value interface{}
 	return base_context
 }
 
-func (o *MultiSelectWidget[T]) Validate(value interface{}) []error {
+func (o *MultiSelectWidget[T]) Validate(ctx context.Context, value interface{}) []error {
 	if value == nil {
 		return nil
 	}
 
 	var (
 		errors  []error
-		choices = o.Choices()
+		choices = o.Choices(ctx)
 		values  []string
 	)
 
@@ -288,7 +291,7 @@ func (o *MultiSelectWidget[T]) Validate(value interface{}) []error {
 	return errors
 }
 
-func (b *MultiSelectWidget[T]) RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
+func (b *MultiSelectWidget[T]) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
 	defer func() {
 		if r := recover(); r != nil {
 			var stackTrace = debug.Stack()
@@ -301,7 +304,7 @@ func (b *MultiSelectWidget[T]) RenderWithErrors(w io.Writer, id, name string, va
 			)
 		}
 	}()
-	var context = b.GetContextData(id, name, value, attrs)
+	var context = b.GetContextData(ctx, id, name, value, attrs)
 	if errors != nil {
 		context.Set("errors", errors)
 	}
@@ -309,11 +312,11 @@ func (b *MultiSelectWidget[T]) RenderWithErrors(w io.Writer, id, name string, va
 	return tpl.FRender(w, context, b.TemplateName)
 }
 
-func (b *MultiSelectWidget[T]) Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(w, id, name, value, nil, attrs)
+func (b *MultiSelectWidget[T]) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
+	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
 }
 
-func (m *MultiSelectWidget[T]) ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
+func (m *MultiSelectWidget[T]) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
 	var values, ok = data[name]
 	if !ok {
 		return nil, nil

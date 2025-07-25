@@ -1,6 +1,7 @@
 package chooser
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -46,14 +47,14 @@ func (o *BaseChooser) ModelDefinition() *contenttypes.ContentTypeDefinition {
 	return o.forModelDefinition
 }
 
-func (o *BaseChooser) QuerySet() ([]interface{}, error) {
+func (o *BaseChooser) QuerySet(ctx context.Context) ([]interface{}, error) {
 	if o.Opts.Queryset != nil {
 		return o.Opts.Queryset()
 	}
-	return o.forModelDefinition.Instances(1000, 0)
+	return o.forModelDefinition.Instances(ctx, 1000, 0)
 }
 
-func (o *BaseChooser) Validate(value interface{}) []error {
+func (o *BaseChooser) Validate(ctx context.Context, value interface{}) []error {
 	if value == nil {
 		return nil
 	}
@@ -77,7 +78,7 @@ func (o *BaseChooser) Validate(value interface{}) []error {
 		}
 
 		var modelInstances, err = o.forModelDefinition.InstancesByIDs(
-			values,
+			ctx, values,
 		)
 
 		if err != nil {
@@ -96,7 +97,7 @@ func (o *BaseChooser) Validate(value interface{}) []error {
 
 	default:
 		var modelInstance, err = o.forModelDefinition.Instance(
-			value,
+			ctx, value,
 		)
 		if err != nil {
 			errors = append(

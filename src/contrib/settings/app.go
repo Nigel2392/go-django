@@ -67,7 +67,7 @@ func NewAppConfig() django.AppConfig {
 				items.Append(&menu.SubmenuItem{
 					BaseItem: menu.BaseItem{
 						ItemName: "settings",
-						Label:    trans.S("Settings"),
+						Label:    trans.T(r.Context(), "Settings"),
 					},
 					Menu: &menu.Menu{
 						Items: menuItems,
@@ -95,7 +95,7 @@ func NewAppConfig() django.AppConfig {
 				Name:                "Site",
 				MenuLabel:           trans.S("Sites"),
 				Model:               &pages.Site{},
-				Labels: map[string]func() string{
+				Labels: map[string]func(ctx context.Context) string{
 					"Name":    trans.S("Site Name"),
 					"Domain":  trans.S("Domain"),
 					"Port":    trans.S("Port"),

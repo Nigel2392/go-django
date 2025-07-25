@@ -1,6 +1,7 @@
 package forms
 
 import (
+	"context"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -32,6 +33,7 @@ type BaseForm struct {
 	Files           map[string][]filesystem.FileHeader
 	Cleaned         map[string]interface{}
 	Defaults        map[string]interface{}
+	FormContext     context.Context
 
 	Validators      []func(Form, map[string]interface{}) []error
 	OnValidFuncs    []func(Form)
@@ -39,12 +41,13 @@ type BaseForm struct {
 	OnFinalizeFuncs []func(Form)
 }
 
-func NewBaseForm(opts ...func(Form)) *BaseForm {
+func NewBaseForm(ctx context.Context, opts ...func(Form)) *BaseForm {
 	var f = &BaseForm{
 		FormFields:      orderedmap.NewOrderedMap[string, fields.Field](),
 		FormWidgets:     orderedmap.NewOrderedMap[string, widgets.Widget](),
 		Initial:         make(map[string]interface{}),
 		InvalidDefaults: make(map[string]interface{}),
+		FormContext:     ctx,
 	}
 	for _, opt := range opts {
 		opt(f)
@@ -76,6 +79,14 @@ func (f *BaseForm) setup() {
 	if f.InvalidDefaults == nil {
 		f.InvalidDefaults = make(map[string]interface{})
 	}
+}
+
+func (f *BaseForm) Context() context.Context {
+	return f.FormContext
+}
+
+func (f *BaseForm) WithContext(ctx context.Context) {
+	f.FormContext = ctx
 }
 
 func (f *BaseForm) FormValue(name string) interface{} {
@@ -208,6 +219,7 @@ func (f *BaseForm) BoundFields() *orderedmap.OrderedMap[string, BoundField] {
 		)
 
 		ret.Set(k, NewBoundFormField(
+			f.FormContext,
 			widget,
 			v,
 			f.prefix(k),
@@ -398,8 +410,8 @@ func (f *BaseForm) FullClean() {
 			widget = v.Widget()
 		}
 
-		if !widget.ValueOmittedFromData(f.Raw, f.Files, f.prefix(k)) {
-			initial, errors = widget.ValueFromDataDict(f.Raw, f.Files, f.prefix(k))
+		if !widget.ValueOmittedFromData(f.FormContext, f.Raw, f.Files, f.prefix(k)) {
+			initial, errors = widget.ValueFromDataDict(f.FormContext, f.Raw, f.Files, f.prefix(k))
 		}
 
 		if len(errors) > 0 {
@@ -425,14 +437,14 @@ func (f *BaseForm) FullClean() {
 		// This is important so we add the right value to the invalid defaults.
 		initial = data
 
-		data, err = v.Clean(initial)
+		data, err = v.Clean(f.FormContext, initial)
 		if err != nil {
 			f.AddError(k, err)
 			f.InvalidDefaults[k] = initial
 			continue
 		}
 
-		errors = v.Validate(data)
+		errors = v.Validate(f.FormContext, data)
 		if len(errors) > 0 {
 			var errList = make([]error, 0, len(errors))
 			for _, err := range errors {
@@ -582,7 +594,7 @@ func (f *BaseForm) HasChanged() bool {
 		}
 
 		if _, ok := f.Initial[k]; !ok {
-			var omitted = v.ValueOmittedFromData(f.Raw, f.Files, f.prefix(k))
+			var omitted = v.ValueOmittedFromData(f.FormContext, f.Raw, f.Files, f.prefix(k))
 			if !omitted {
 				return true
 			}

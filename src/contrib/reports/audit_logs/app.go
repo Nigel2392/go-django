@@ -83,10 +83,10 @@ func NewAppConfig() django.AppConfig {
 
 		goldcrest.Register(
 			reports.ReportsMenuHook, 0,
-			reports.ReportsMenuHookFunc(func() []menu.MenuItem {
+			reports.ReportsMenuHookFunc(func(r *http.Request) []menu.MenuItem {
 				var auditLogItem = &menu.Item{
 					BaseItem: menu.BaseItem{
-						Label: trans.S("Audit Logs"),
+						Label: trans.T(r.Context(), "Audit Logs"),
 					},
 					Link: func() string {
 						return django.Reverse("admin:auditlogs")
@@ -217,7 +217,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	var adminCtx = admin.NewContext(r, admin.AdminSite, nil)
 
 	var filter = filters.NewFilters[*Entry](
-		"filters",
+		r.Context(), "filters",
 	)
 
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
@@ -284,10 +284,10 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		FormField: fields.CharField(fields.Widget(
 			options.NewSelectInput(nil, func() []widgets.Option {
 				return []widgets.Option{
-					&widgets.FormOption{OptValue: logger.DBG.String(), OptLabel: trans.T("Debug")},
-					&widgets.FormOption{OptValue: logger.INF.String(), OptLabel: trans.T("Info")},
-					&widgets.FormOption{OptValue: logger.WRN.String(), OptLabel: trans.T("Warning")},
-					&widgets.FormOption{OptValue: logger.ERR.String(), OptLabel: trans.T("Error")},
+					&widgets.FormOption{OptValue: logger.DBG.String(), OptLabel: trans.T(r.Context(), "Debug")},
+					&widgets.FormOption{OptValue: logger.INF.String(), OptLabel: trans.T(r.Context(), "Info")},
+					&widgets.FormOption{OptValue: logger.WRN.String(), OptLabel: trans.T(r.Context(), "Warning")},
+					&widgets.FormOption{OptValue: logger.ERR.String(), OptLabel: trans.T(r.Context(), "Error")},
 				}
 			}, options.IncludeBlank(true)),
 		)),

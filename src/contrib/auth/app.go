@@ -175,7 +175,7 @@ func NewAppConfig() django.AppConfig {
 			admin.ModelOptions{
 				Model:               &User{},
 				RegisterToAdminMenu: true,
-				Labels: map[string]func() string{
+				Labels: map[string]func(ctx context.Context) string{
 					"ID":              trans.S("ID"),
 					"Email":           trans.S("Email"),
 					"Username":        trans.S("Username"),

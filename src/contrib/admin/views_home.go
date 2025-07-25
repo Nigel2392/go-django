@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"context"
 	"html/template"
 	"net/http"
 
@@ -25,18 +26,18 @@ type AdminPageComponent interface {
 	Media() media.Media
 }
 
-func getFuncTyped[T any](text any, request *http.Request, fallBack func() T) func() T {
+func getFuncTyped[T any](text any, request *http.Request, fallBack func(ctx context.Context) T) func(ctx context.Context) T {
 	switch t := text.(type) {
 	case T:
-		return func() T {
+		return func(ctx context.Context) T {
 			return t
 		}
 
-	case func() T:
+	case func(ctx context.Context) T:
 		return t
 
 	case func(*http.Request) T:
-		return func() T {
+		return func(ctx context.Context) T {
 			return t(request)
 		}
 	}
@@ -61,7 +62,7 @@ var HomeHandler = &views.BaseView{
 			django.Global.Settings,
 			APPVAR_HOME_PAGE_SUBTITLE,
 			func(r *http.Request) string {
-				return trans.T(
+				return trans.T(r.Context(),
 					"Welcome to the Go-Django admin dashboard, %s!",
 					attrs.ToString(user),
 				)

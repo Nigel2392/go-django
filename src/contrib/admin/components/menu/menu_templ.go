@@ -5,17 +5,17 @@ package menu
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
 	"bytes"
 	"context"
+	"slices"
+	"strconv"
 	"strings"
+
+	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
 )
-import "strconv"
-import "slices"
-import "github.com/Nigel2392/go-django/src/core/assert"
 
 type ctxKey string
 
@@ -150,7 +150,7 @@ type BaseItem struct {
 	Classes  []string
 	Ordering int
 	Logo     templ.Component
-	Label    func() string
+	Label    string
 }
 
 func (i *BaseItem) Name() string {
@@ -159,8 +159,8 @@ func (i *BaseItem) Name() string {
 			return i.ID
 		}
 
-		if i.Label != nil {
-			var name = i.Label()
+		if i.Label != "" {
+			var name = i.Label
 			name = strings.ReplaceAll(name, " ", "-")
 			name = strings.ToLower(name)
 			return name
@@ -217,7 +217,7 @@ func (i *BaseItem) Inner() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var6 string
-		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(i.Label())
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(i.Label)
 		if templ_7745c5c3_Err != nil {
 			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 103, Col: 12}
 		}
@@ -254,7 +254,7 @@ func (i *BaseItem) Component() templ.Component {
 			templ_7745c5c3_Var7 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		assert.False(i.Label == nil, "menu item must have a label")
+		assert.False(i.Label == "", "menu item must have a label")
 		var templ_7745c5c3_Var8 = []any{strings.Join(append(i.Classes, "menu-item-content"), " ")}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var8...)
 		if templ_7745c5c3_Err != nil {
@@ -344,7 +344,7 @@ func (i *Item) Component() templ.Component {
 			templ_7745c5c3_Var11 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		assert.False(i.Label == nil, "menu item must have a label")
+		assert.False(i.Label == "", "menu item must have a label")
 		var templ_7745c5c3_Var12 = []any{strings.Join(append(i.LinkClasses, "menu-item-link"), " ")}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var12...)
 		if templ_7745c5c3_Err != nil {
@@ -516,7 +516,7 @@ func (s *SubmenuItem) Component() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		if s.Logo != nil || s.Label != nil {
+		if s.Logo != nil || s.Label != "" {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, "<div class=\"menu-header\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -535,15 +535,15 @@ func (s *SubmenuItem) Component() templ.Component {
 					return templ_7745c5c3_Err
 				}
 			}
-			if s.Label != nil {
-				var text = s.Label()
+			if s.Label != "" {
+				var text = s.Label
 				if text != "" {
 					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 35, "<div class=\"menu-text\">")
 					if templ_7745c5c3_Err != nil {
 						return templ_7745c5c3_Err
 					}
 					var templ_7745c5c3_Var20 string
-					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(s.Label())
+					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(s.Label)
 					if templ_7745c5c3_Err != nil {
 						return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 185, Col: 19}
 					}

@@ -1,6 +1,7 @@
 package forms_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"html/template"
@@ -88,7 +89,7 @@ func inputEquals(widget field, type_, name, value string, attrs map[string]strin
 
 func GetTestForm() forms.Form {
 	var form forms.Form = forms.Initialize(
-		forms.NewBaseForm(),
+		forms.NewBaseForm(context.Background()),
 		forms.WithFields(
 			fields.EmailField(
 				fields.Label("Email"),
@@ -157,7 +158,7 @@ func TestInputEquals(t *testing.T) {
 }
 
 func TestFormRequired(t *testing.T) {
-	var form = forms.NewBaseForm()
+	var form = forms.NewBaseForm(context.Background())
 	form = forms.Initialize(
 		form,
 		forms.WithFields(

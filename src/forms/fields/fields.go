@@ -1,6 +1,10 @@
 package fields
 
-import "github.com/Nigel2392/go-django/src/forms/widgets"
+import (
+	"context"
+
+	"github.com/Nigel2392/go-django/src/forms/widgets"
+)
 
 type Field interface {
 	Attrs() map[string]string
@@ -8,19 +12,19 @@ type Field interface {
 	Hide(hidden bool)
 
 	SetName(name string)
-	SetLabel(label func() string)
-	SetHelpText(helpText func() string)
+	SetLabel(label func(ctx context.Context) string)
+	SetHelpText(helpText func(ctx context.Context) string)
 	SetValidators(validators ...func(interface{}) error)
 	SetWidget(widget widgets.Widget)
 
 	Name() string
-	Label() string
-	HelpText() string
-	Validate(value interface{}) []error
+	Label(ctx context.Context) string
+	HelpText(ctx context.Context) string
+	Validate(ctx context.Context, value interface{}) []error
 	Widget() widgets.Widget
 	HasChanged(initial, data interface{}) bool
 
-	Clean(value interface{}) (interface{}, error)
+	Clean(ctx context.Context, value interface{}) (interface{}, error)
 	ValueToForm(value interface{}) interface{}
 	ValueToGo(value interface{}) (interface{}, error)
 	Required() bool

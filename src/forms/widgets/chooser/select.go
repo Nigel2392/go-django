@@ -1,6 +1,7 @@
 package chooser
 
 import (
+	"context"
 	"fmt"
 	"io"
 
@@ -36,9 +37,9 @@ func (o *Select) ValueToForm(value interface{}) interface{} {
 	return fmt.Sprintf("%v", value)
 }
 
-func (o *Select) GetContextData(id, name string, value interface{}, widgetAttrs map[string]string) ctx.Context {
-	var base_context = o.BaseWidget.GetContextData(id, name, value, widgetAttrs)
-	var modelInstances, err = o.QuerySet()
+func (o *Select) GetContextData(ctx context.Context, id, name string, value interface{}, widgetAttrs map[string]string) ctx.Context {
+	var base_context = o.BaseWidget.GetContextData(ctx, id, name, value, widgetAttrs)
+	var modelInstances, err = o.QuerySet(ctx)
 	if err != nil {
 		logger.Errorf(
 			"error getting model instances for model: %s, %s",
@@ -88,8 +89,8 @@ func (o *Select) GetContextData(id, name string, value interface{}, widgetAttrs 
 	return base_context
 }
 
-func (b *Select) RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
-	var context = b.GetContextData(id, name, value, attrs)
+func (b *Select) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
+	var context = b.GetContextData(ctx, id, name, value, attrs)
 	if errors != nil {
 		context.Set("errors", errors)
 	}
@@ -97,6 +98,6 @@ func (b *Select) RenderWithErrors(w io.Writer, id, name string, value interface{
 	return tpl.FRender(w, context, b.TemplateName)
 }
 
-func (b *Select) Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(w, id, name, value, nil, attrs)
+func (b *Select) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
+	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
 }

@@ -1,6 +1,7 @@
 package todos
 
 import (
+	"context"
 	"embed"
 	"net/http"
 
@@ -96,7 +97,7 @@ func NewAppConfig() django.AppConfig {
 				RegisterToAdminMenu: true,
 
 				// Customize the labels for the fields in the admin interface
-				Labels: map[string]func() string{
+				Labels: map[string]func(context.Context) string{
 					"ID":          trans.S("ID"),
 					"Title":       trans.S("Todo Title"),
 					"Description": trans.S("Todo Description"),

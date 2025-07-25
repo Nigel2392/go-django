@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"context"
 	"io"
 	"net/url"
 
@@ -19,12 +20,12 @@ type FormValueConverter interface {
 
 type FormValueOmitter interface {
 	// Check if the value is omitted from the data provided.
-	ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool
+	ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool
 }
 
 type FormValueGetter interface {
 	// Get the value from the provided data.
-	ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error)
+	ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error)
 }
 
 type FormValuer interface {
@@ -39,10 +40,10 @@ type Widget interface {
 	FormType() string
 	SetAttrs(attrs map[string]string)
 	IdForLabel(id string) string
-	GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context
-	RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error
-	Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error
-	Validate(value interface{}) []error
+	GetContextData(ctx context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context
+	RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error
+	Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error
+	Validate(ctx context.Context, value interface{}) []error
 
 	FormValuer
 	media.MediaDefiner

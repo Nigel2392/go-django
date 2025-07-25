@@ -1,6 +1,7 @@
 package widgets
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"maps"
@@ -44,18 +45,21 @@ func (b *BaseWidget) ValueToGo(value interface{}) (interface{}, error) {
 }
 
 func (b *BaseWidget) ValueToForm(value interface{}) interface{} {
-	return value
+	if value == nil {
+		return nil
+	}
+	return fmt.Sprintf("%v", value)
 }
 
-func (b *BaseWidget) Validate(value interface{}) []error {
+func (b *BaseWidget) Validate(ctx context.Context, value interface{}) []error {
 	return nil
 }
 
-func (b *BaseWidget) ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
+func (b *BaseWidget) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
 	return !data.Has(name)
 }
 
-func (b *BaseWidget) ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
+func (b *BaseWidget) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
 	var value string
 	if data.Has(name) {
 		value = strings.TrimSpace(data.Get(name))
@@ -63,7 +67,7 @@ func (b *BaseWidget) ValueFromDataDict(data url.Values, files map[string][]files
 	return value, nil
 }
 
-func (b *BaseWidget) GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context {
+func (b *BaseWidget) GetContextData(c context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context {
 	var widgetAttrs = make(map[string]string)
 	for k, v := range b.BaseAttrs {
 		var attr, ok = attrs[k]
@@ -99,8 +103,8 @@ func (b *BaseWidget) GetContextData(id, name string, value interface{}, attrs ma
 	})
 }
 
-func (b *BaseWidget) RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
-	var context = b.GetContextData(id, name, value, attrs)
+func (b *BaseWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
+	var context = b.GetContextData(ctx, id, name, value, attrs)
 	if errors != nil {
 		context.Set("errors", errors)
 	}
@@ -108,8 +112,8 @@ func (b *BaseWidget) RenderWithErrors(w io.Writer, id, name string, value interf
 	return tpl.FRender(w, context, b.TemplateName)
 }
 
-func (b *BaseWidget) Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(w, id, name, value, nil, attrs)
+func (b *BaseWidget) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
+	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
 }
 
 func (b *BaseWidget) FormType() string {

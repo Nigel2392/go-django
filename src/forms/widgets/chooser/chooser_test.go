@@ -1,6 +1,7 @@
 package chooser_test
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -23,18 +24,18 @@ type MockContentTypeDefinition struct {
 	contenttypes.ContentTypeDefinition
 }
 
-func (m *MockContentTypeDefinition) GetInstances(amount, offset uint) ([]interface{}, error) {
+func (m *MockContentTypeDefinition) GetInstances(ctx context.Context, amount, offset uint) ([]interface{}, error) {
 	return []interface{}{"instance1", "instance2"}, nil
 }
 
-func (m *MockContentTypeDefinition) GetInstancesByIDs(ids []interface{}) ([]interface{}, error) {
+func (m *MockContentTypeDefinition) GetInstancesByIDs(ctx context.Context, ids []interface{}) ([]interface{}, error) {
 	if len(ids) == 2 && ids[0] == "id1" && ids[1] == "id2" {
 		return []interface{}{"instance1", "instance2"}, nil
 	}
 	return nil, errors.New("some model instances not found")
 }
 
-func (m *MockContentTypeDefinition) GetInstance(id interface{}) (interface{}, error) {
+func (m *MockContentTypeDefinition) GetInstance(ctx context.Context, id interface{}) (interface{}, error) {
 	if id == "valid_id" {
 		return "valid_instance", nil
 	}
@@ -66,7 +67,7 @@ func TestBaseChooserQuerySet(t *testing.T) {
 		TargetObject: &MockContentTypeDefinition{},
 	}, nil)
 
-	results, err := chooserWidget.QuerySet()
+	results, err := chooserWidget.QuerySet(context.Background())
 	if err != nil {
 		t.Fatalf("QuerySet returned error: %v", err)
 	}
@@ -82,7 +83,7 @@ func TestBaseChooserValidateWithValidID(t *testing.T) {
 		TargetObject: &MockContentTypeDefinition{},
 	}, nil)
 
-	errors := chooserWidget.Validate("valid_id")
+	errors := chooserWidget.Validate(context.Background(), "valid_id")
 	if len(errors) != 0 {
 		t.Fatalf("Expected no errors, got %d", len(errors))
 	}
@@ -95,7 +96,7 @@ func TestBaseChooserValidateWithInvalidID(t *testing.T) {
 		TargetObject: &MockContentTypeDefinition{},
 	}, nil)
 
-	errors := chooserWidget.Validate("invalid_id")
+	errors := chooserWidget.Validate(context.Background(), "invalid_id")
 	if len(errors) == 0 {
 		t.Fatal("Expected errors, got none")
 	}
@@ -108,7 +109,7 @@ func TestBaseChooserValidateWithValidIDArray(t *testing.T) {
 		TargetObject: &MockContentTypeDefinition{},
 	}, nil)
 
-	errors := chooserWidget.Validate([]interface{}{"id1", "id2"})
+	errors := chooserWidget.Validate(context.Background(), []interface{}{"id1", "id2"})
 	if len(errors) != 0 {
 		t.Fatalf("Expected no errors, got %d", len(errors))
 	}
@@ -121,7 +122,7 @@ func TestBaseChooserValidateWithInvalidIDArray(t *testing.T) {
 		TargetObject: &MockContentTypeDefinition{},
 	}, nil)
 
-	errors := chooserWidget.Validate([]interface{}{"invalid_id1", "invalid_id2"})
+	errors := chooserWidget.Validate(context.Background(), []interface{}{"invalid_id1", "invalid_id2"})
 	if len(errors) == 0 {
 		t.Fatal("Expected errors, got none")
 	}
