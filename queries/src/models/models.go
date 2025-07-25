@@ -3,6 +3,7 @@ package models
 import (
 	"context"
 
+	_ "github.com/Nigel2392/go-django/queries/src/fields/formfields"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/errs"
 )

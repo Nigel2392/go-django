@@ -218,6 +218,8 @@ func NewAppConfig() django.AppConfig {
 						admin.FieldPanel("PasswordConfirm"),
 						admin.FieldPanel("IsAdministrator"),
 						admin.FieldPanel("IsActive"),
+						admin.FieldPanel("Permissions"),
+						admin.FieldPanel("Groups"),
 					},
 				},
 				// Customize the view / fields for the user models' list view.
@@ -314,6 +316,8 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 		"IsActive",
 		"Password",
 		"PasswordConfirm",
+		"Permissions",
+		"Groups",
 	})
 
 	form.AddField("PasswordConfirm", NewPasswordField(
@@ -328,7 +332,6 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 	))
 
 	var user = instance.(*User)
-	fmt.Printf("Instance: %+v\n", *user)
 	form.SetValidators(func(f forms.Form, cleaned map[string]interface{}) []error {
 
 		var (

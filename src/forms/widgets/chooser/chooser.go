@@ -42,6 +42,10 @@ func BaseChooserWidget(opts BaseChooserOptions, attrs map[string]string) *BaseCh
 	}
 }
 
+func (o *BaseChooser) ModelDefinition() *contenttypes.ContentTypeDefinition {
+	return o.forModelDefinition
+}
+
 func (o *BaseChooser) QuerySet() ([]interface{}, error) {
 	if o.Opts.Queryset != nil {
 		return o.Opts.Queryset()

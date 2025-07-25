@@ -175,12 +175,14 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 		panels     []admin.Panel
 	)
 	if definition == nil || definition.AddPanels == nil {
-		panels = make([]admin.Panel, fieldDefs.Len())
+		panels = make([]admin.Panel, 0, fieldDefs.Len())
+		for _, def := range fieldDefs.Fields() {
+			var formField = def.FormField()
+			if formField == nil {
+				continue
+			}
 
-		for i, def := range fieldDefs.Fields() {
-			panels[i] = admin.FieldPanel(
-				def.Name(),
-			)
+			panels = append(panels, admin.FieldPanel(def.Name()))
 		}
 	} else {
 		panels = definition.AddPanels(

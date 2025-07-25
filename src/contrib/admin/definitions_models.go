@@ -2,7 +2,6 @@ package admin
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 	"reflect"
 
@@ -282,7 +281,6 @@ func (o *ModelDefinition) FormatColumn(field string) any {
 
 	return func(_ *http.Request, defs attrs.Definitions, _ attrs.Definer) interface{} {
 		var value = defs.Get(field)
-		fmt.Printf("Formatting value for field %s: %v\n", field, value)
 		return format(value)
 	}
 }

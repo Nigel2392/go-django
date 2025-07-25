@@ -569,7 +569,7 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 	}
 
 	return &QueryObject[[][]interface{}]{
-		QueryInformation: QueryInformation{
+		QueryInfo: &QueryInformation{
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Model,
 			Params:  args,
@@ -667,7 +667,7 @@ func (g *genericQueryBuilder) BuildCountQuery(
 	args = append(args, g.writeLimitOffset(query, internals.Limit, internals.Offset)...)
 
 	return &QueryObject[int64]{
-		QueryInformation: QueryInformation{
+		QueryInfo: &QueryInformation{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Model,
@@ -802,7 +802,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 	}
 
 	return &QueryObject[[][]interface{}]{
-		QueryInformation: QueryInformation{
+		QueryInfo: &QueryInformation{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  model,
@@ -961,7 +961,7 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 	}
 
 	return &QueryObject[int64]{
-		QueryInformation: QueryInformation{
+		QueryInfo: &QueryInformation{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Model,
@@ -1006,7 +1006,7 @@ func (g *genericQueryBuilder) BuildDeleteQuery(
 	)
 
 	return &QueryObject[int64]{
-		QueryInformation: QueryInformation{
+		QueryInfo: &QueryInformation{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Model,
@@ -1270,7 +1270,7 @@ func (g *postgresQueryBuilder) BuildUpdateQuery(
 	}
 
 	return &QueryObject[int64]{
-		QueryInformation: QueryInformation{
+		QueryInfo: &QueryInformation{
 			Builder: g,
 			Stmt:    strings.Join(stmts, "; "),
 			Params:  args,
@@ -1314,7 +1314,7 @@ func (g *mariaDBQueryBuilder) BuildUpdateQuery(
 	)
 
 	return &QueryObject[int64]{
-		QueryInformation: QueryInformation{
+		QueryInfo: &QueryInformation{
 			Builder: g,
 			Stmt:    query.SQL(),
 			Params:  query.Args(),
@@ -1431,7 +1431,7 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 	}
 
 	return &QueryObject[[][]interface{}]{
-		QueryInformation: QueryInformation{
+		QueryInfo: &QueryInformation{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, strings.Join(stmt, "; ")),
 			Params:  values,

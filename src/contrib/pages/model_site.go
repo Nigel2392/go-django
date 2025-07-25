@@ -13,11 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/contrib/pages/validators"
-	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
-	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/Nigel2392/go-django/src/forms/widgets/chooser"
 	"github.com/Nigel2392/mux"
 )
 
@@ -166,28 +162,6 @@ func (n *Site) Fields(d attrs.Definer) []attrs.Field {
 			RelForeignKey: attrs.Relate(
 				&PageNode{}, "", nil,
 			),
-			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
-				return chooser.SelectWidget(
-					false, "",
-					chooser.BaseChooserOptions{
-						TargetObject: &PageNode{},
-						Queryset: func() ([]interface{}, error) {
-							var nodes, err = NewPageQuerySet().
-								RootPages().
-								AllNodes()
-							return attrutils.InterfaceList(nodes), err
-						},
-						GetPrimaryKey: func(i interface{}) interface{} {
-							var def, ok = i.(*PageNode)
-							if !ok {
-								assert.Fail("object %T is not a Definer", i)
-							}
-							return def.ID()
-						},
-					},
-					nil,
-				)
-			},
 		}),
 	}
 }

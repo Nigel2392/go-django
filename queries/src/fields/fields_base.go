@@ -12,7 +12,9 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/goldcrest"
 )
 
 var _ attrs.Field = &DataModelField[any]{}
@@ -43,8 +45,9 @@ type DataModelField[T any] struct {
 	// field type
 	fieldRef attrs.Field
 
-	setters []func(f *DataModelField[T], v any) error
-	getters []func(f *DataModelField[T]) (any, bool)
+	setters   []func(f *DataModelField[T], v any) error
+	getters   []func(f *DataModelField[T]) (any, bool)
+	formfield fields.Field // Form field for the data model field
 }
 
 func typeName(t reflect.Type) string {
@@ -129,6 +132,7 @@ func dataModelsetter[T any](f *DataModelField[T], v any) error {
 type DataModelFieldConfig struct {
 	ResultType reflect.Type // Type of the result of the expression
 	Ref        attrs.Field  // Reference to the field in the model
+	Formfield  fields.Field // Form field for the data model field
 }
 
 func NewDataModelField[T any](forModel attrs.Definer, dst any, name string, cnf ...DataModelFieldConfig) *DataModelField[T] {
@@ -246,6 +250,7 @@ func NewDataModelField[T any](forModel attrs.Definer, dst any, name string, cnf 
 	var f = &DataModelField[T]{
 		Model:     forModel,
 		dataModel: dataModel,
+		formfield: conf.Formfield,
 		val:       dstV,
 		_Type:     Type,
 		name:      name,
@@ -499,6 +504,18 @@ func (e *DataModelField[T]) SetValue(v interface{}, force bool) error {
 		return nil
 	}
 
+	if e._Type.Implements(reflect.TypeOf((*attrs.Scanner)(nil)).Elem()) {
+		var scanner, ok = v.(attrs.Scanner)
+		if !ok {
+			return fmt.Errorf("value %v (%T) is not a Scanner", v, v)
+		}
+		if err := scanner.ScanAttribute(v); err != nil {
+			return fmt.Errorf("failed to scan value %v (%T): %w", v, v, err)
+		}
+		e.setQueryValue(scanner)
+		return nil
+	}
+
 	return fmt.Errorf("value %v (%T) is not of type %s", v, v, typeName(e._Type))
 }
 
@@ -542,7 +559,50 @@ func (e *DataModelField[T]) Rel() attrs.Relation {
 }
 
 func (e *DataModelField[T]) FormField() fields.Field {
-	return nil
+
+	if e.formfield != nil {
+		return e.formfield
+	}
+
+	var opts = make([]func(fields.Field), 0)
+	var rel = e.Rel()
+	if rel != nil {
+		var cTypeDef = contenttypes.DefinitionForObject(rel)
+		if cTypeDef != nil {
+			opts = append(opts, fields.Label(
+				cTypeDef.Label(),
+			))
+		}
+	} else {
+		opts = append(opts, fields.Label(e.Label))
+	}
+	opts = append(opts, fields.HelpText(e.HelpText))
+
+	if !e.AllowBlank() {
+		opts = append(opts, fields.Required(true))
+	}
+
+	var formField fields.Field
+	var typForNew reflect.Type = e._Type
+	if e._Type.Kind() == reflect.Ptr {
+		typForNew = e._Type.Elem()
+	}
+
+	var field attrs.Field = e
+	if e.fieldRef != nil {
+		field = e.fieldRef
+		typForNew = e.fieldRef.Type()
+	}
+
+	for _, hook := range goldcrest.Get[attrs.FormFieldGetter](attrs.HookFormFieldForType) {
+		if field, ok := hook(field, typForNew, e.val, opts...); ok {
+			formField = field
+			goto returnField
+		}
+	}
+
+returnField:
+	return formField
 }
 
 func (e *DataModelField[T]) Validate() error {

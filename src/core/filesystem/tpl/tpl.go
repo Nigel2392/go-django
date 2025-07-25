@@ -8,10 +8,12 @@ import (
 	"maps"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-signals"
 	"github.com/pkg/errors"
 )
 
@@ -20,6 +22,7 @@ type Renderer interface {
 	Processors(funcs ...func(any))
 	Override(funcs ...func(any) (any, error))
 	RequestProcessors(funcs ...func(ctx.ContextWithRequest))
+	FirstRender() signals.Signal[*TemplateRenderer]
 	Render(buffer io.Writer, data any, appKey string, path ...string) error
 	Funcs(funcs template.FuncMap)
 }
@@ -41,22 +44,25 @@ func (t *templates) Lt(other *templates) bool {
 }
 
 type TemplateRenderer struct {
-	configs         []*templates
-	cache           map[string]*templateObject
-	ctxFuncs        []func(any)
-	ctxOverrides    []func(any) (any, error)
-	requestCtxFuncs []func(ctx.ContextWithRequest)
-	funcs           template.FuncMap
-	fs              *filesystem.MultiFS
+	configs           []*templates
+	cache             map[string]*templateObject
+	ctxFuncs          []func(any)
+	ctxOverrides      []func(any) (any, error)
+	requestCtxFuncs   []func(ctx.ContextWithRequest)
+	funcs             template.FuncMap
+	fs                *filesystem.MultiFS
+	firstRender       atomic.Bool
+	firstRenderSignal signals.Signal[*TemplateRenderer]
 }
 
 func NewRenderer() *TemplateRenderer {
 	var r = &TemplateRenderer{
-		funcs:           make(template.FuncMap),
-		cache:           make(map[string]*templateObject),
-		ctxFuncs:        make([]func(any), 0),
-		requestCtxFuncs: make([]func(ctx.ContextWithRequest), 0),
-		fs:              filesystem.NewMultiFS(),
+		funcs:             make(template.FuncMap),
+		cache:             make(map[string]*templateObject),
+		ctxFuncs:          make([]func(any), 0),
+		requestCtxFuncs:   make([]func(ctx.ContextWithRequest), 0),
+		fs:                filesystem.NewMultiFS(),
+		firstRenderSignal: signals.New[*TemplateRenderer]("tpl.FirstRender"),
 	}
 	r.Funcs(template.FuncMap{
 		"include": func(context any, baseKey string, path ...string) template.HTML {
@@ -219,7 +225,21 @@ func (r *TemplateRenderer) getTemplate(baseKey string, path ...string) (*templat
 	return t, nil
 }
 
+func (r *TemplateRenderer) onFirstRender() {
+	r.firstRenderSignal.Send(r)
+}
+
+func (r *TemplateRenderer) FirstRender() signals.Signal[*TemplateRenderer] {
+	return r.firstRenderSignal
+}
+
 func (r *TemplateRenderer) Render(b io.Writer, context any, baseKey string, path ...string) error {
+
+	if !r.firstRender.Load() {
+		r.firstRender.Store(true)
+		r.onFirstRender()
+	}
+
 	if context != nil {
 		for _, f := range r.ctxFuncs {
 			assert.False(f == nil, "nil context function")

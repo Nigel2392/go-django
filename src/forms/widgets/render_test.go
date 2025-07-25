@@ -6,15 +6,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Nigel2392/go-django/src/forms"
+	_ "github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/pkg/errors"
 )
-
-func init() {
-	forms.InitTemplateLibrary()
-}
 
 func TestNewTextInput(t *testing.T) {
 	attrs := map[string]string{"placeholder": "Enter text", "class": "text-input"}

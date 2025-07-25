@@ -25,6 +25,10 @@ type ModelForm[T any] interface {
 	SetInstance(model T)
 }
 
+type ModelFieldSaver interface {
+	SaveField(ctx context.Context, field attrs.Field, value interface{}) error
+}
+
 type modelFormFlag int
 
 const (
@@ -320,7 +324,18 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 			continue
 		}
 
-		if err := field.SetValue(value, true); err != nil {
+		formField, ok := f.Field(fieldname)
+		if !ok {
+			continue
+		}
+
+		if saver, ok := formField.(ModelFieldSaver); ok {
+			err = saver.SaveField(ctx, field, value)
+		} else {
+			err = field.SetValue(value, true)
+		}
+
+		if err != nil {
 			f.AddError(
 				fieldname,
 				err,

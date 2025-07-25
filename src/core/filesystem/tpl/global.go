@@ -6,6 +6,7 @@ import (
 	"io"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-signals"
 )
 
 var Global Renderer
@@ -32,6 +33,10 @@ func Processors(funcs ...func(any)) {
 
 func RequestProcessors(funcs ...func(ctx.ContextWithRequest)) {
 	Global.RequestProcessors(funcs...)
+}
+
+func FirstRender() signals.Signal[*TemplateRenderer] {
+	return Global.FirstRender()
 }
 
 func FRender(b io.Writer, context any, baseKey string, path ...string) error {

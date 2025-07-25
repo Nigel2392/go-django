@@ -20,7 +20,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/Nigel2392/go-django/src/forms/widgets/chooser"
 	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"github.com/Nigel2392/goldcrest"
 	"golang.org/x/text/cases"
@@ -737,28 +736,6 @@ returnField:
 		formField.SetWidget(
 			f.attrDef.FormWidget(f.attrDef),
 		)
-	case f.attrDef.RelForeignKey != nil:
-		formField.SetWidget(
-			chooser.SelectWidget(
-				f.AllowBlank(),
-				"--------",
-				chooser.BaseChooserOptions{
-					TargetObject: f.attrDef.RelForeignKey.Model(),
-					GetPrimaryKey: func(i interface{}) interface{} {
-						var def, ok = i.(Definer)
-						if !ok {
-							assert.Fail("object %T is not a Definer", i)
-						}
-						return PrimaryKey(def)
-					},
-				},
-				nil,
-			),
-		)
-	case f.attrDef.RelManyToMany != nil:
-
-	case f.attrDef.RelOneToOne != nil:
-
 	}
 
 	f.formField = formField

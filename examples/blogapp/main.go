@@ -148,6 +148,7 @@ func main() {
 	user.Username = "admin"
 	user.IsAdministrator = true
 	user.IsActive = true
+	user.Password = auth.NewPassword("Administrator123!")
 
 	if user, created, err = queries.GetQuerySet(&auth.User{}).Preload("EntrySet").Filter("Email", e.Address).GetOrCreate(user); err != nil {
 		panic(fmt.Errorf("failed to create admin user: %w", err))

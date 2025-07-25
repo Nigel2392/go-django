@@ -34,7 +34,7 @@ func (q *QueryInformation) Compiler() QueryCompiler {
 
 func ErrorQueryObject[T1 any](object attrs.Definer, builder QueryCompiler, possibleError error) *QueryObject[T1] {
 	return &QueryObject[T1]{
-		QueryInformation: QueryInformation{
+		QueryInfo: &QueryInformation{
 			Object:  object,
 			Builder: builder,
 		},
@@ -45,10 +45,10 @@ func ErrorQueryObject[T1 any](object attrs.Definer, builder QueryCompiler, possi
 }
 
 type QueryObject[T1 any] struct {
-	QueryInformation
+	QueryInfo
 	Execute func(sql string, args ...any) (T1, error)
 }
 
 func (q *QueryObject[T1]) Exec() (T1, error) {
-	return q.Execute(q.Stmt, q.Params...)
+	return q.Execute(q.SQL(), q.Args()...)
 }

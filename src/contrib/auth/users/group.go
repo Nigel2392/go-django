@@ -15,6 +15,10 @@ type Group struct {
 	Permissions  *queries.RelM2M[*Permission, *GroupPermission] `json:"-"`
 }
 
+func (g *Group) String() string {
+	return g.Name
+}
+
 func (g *Group) FieldDefs() attrs.Definitions {
 	var fields = []attrs.Field{
 		attrs.NewField(g, "ID", &attrs.FieldConfig{

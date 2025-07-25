@@ -40,7 +40,7 @@ func (f *fieldPanel) Fields() []string {
 func (f *fieldPanel) Bind(form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	var bf, ok = boundFields[f.fieldname]
 	if !ok {
-		panic(fmt.Sprintf("Field %s not found", f.fieldname))
+		panic(fmt.Sprintf("Field %s not found in bound fields: %v", f.fieldname, boundFields))
 	}
 
 	return &BoundFormPanel[forms.Form, *fieldPanel]{

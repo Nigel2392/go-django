@@ -260,6 +260,23 @@ func (rl *RelM2M[T1, T2]) Objects() *RelManyToManyQuerySet[T1] {
 	return rl.relatedQuerySet
 }
 
+//	func (rl *RelM2M[T1, T2]) ScanAttribute(src any) error {
+//		switch v := src.(type) {
+//		case *RelM2M[T1, T2]:
+//			rl.relations = v.relations
+//			rl.relatedQuerySet = v.relatedQuerySet
+//			rl.Parent = v.Parent
+//			return nil
+//		case RelM2M[attrs.Definer, attrs.Definer]:
+//			rl.Parent = v.ParentInfo()
+//			rl.SetValues(v.GetValues())
+//			rl.relatedQuerySet = nil
+//		case []attrs.Definer:
+//
+//
+//		}
+//	}
+
 func (rl *RelM2M[T1, T2]) SetValues(rel []Relation) {
 	if rl == nil {
 		panic("cannot set values on nil RelM2M")

@@ -12,6 +12,10 @@ type Permission struct {
 	Description  string `json:"description"`
 }
 
+func (p *Permission) String() string {
+	return p.Name
+}
+
 func (p *Permission) FieldDefs() attrs.Definitions {
 	var fields = []attrs.Field{
 		attrs.NewField(p, "ID", &attrs.FieldConfig{

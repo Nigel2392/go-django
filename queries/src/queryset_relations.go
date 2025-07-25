@@ -423,7 +423,7 @@ func (r *RelManyToManyQuerySet[T]) SetTargets(targets []T) (added int64, err err
 	}
 
 	_, err = r.ClearTargets()
-	if err != nil {
+	if err != nil && !errors.Is(err, errors.NoChanges) {
 		return 0, fmt.Errorf("failed to clear targets: %w", err)
 	}
 
@@ -559,6 +559,10 @@ func (r *RelManyToManyQuerySet[T]) ClearTargets() (int64, error) {
 	var throughIdsResult, err = r.qs.Select(r.qs.Meta().PrimaryKey().Name()).WithContext(r.qs.context).ValuesList()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get through object IDs: %w", err)
+	}
+
+	if len(throughIdsResult) == 0 {
+		return 0, errors.NoChanges.Wrap("no through objects to clear")
 	}
 
 	var throughIds = make([]any, 0, len(throughIdsResult))

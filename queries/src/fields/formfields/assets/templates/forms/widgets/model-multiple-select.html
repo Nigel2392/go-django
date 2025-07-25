@@ -1,0 +1,47 @@
+{{ define "model-multiple-select" }}
+    {{ $choices := (.Get "choices") }}
+    {{ $ctx := . }}
+
+    <div class="multiple-select">
+
+        <div class="multiple-select-controls">
+            <button type="button" class="multiple-select-remove" data-remove>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-left" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/>
+                </svg>
+            </button>
+            <button type="button" class="multiple-select-remove-all" data-remove-all>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-double-left" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M8.354 1.646a.5.5 0 0 1 0 .708L2.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/>
+                    <path fill-rule="evenodd" d="M12.354 1.646a.5.5 0 0 1 0 .708L6.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"/>
+                </svg>
+            </button>
+            <button type="button" class="multiple-select-add-all" data-add-all>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-double-right" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M3.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L9.293 8 3.646 2.354a.5.5 0 0 1 0-.708"/>
+                    <path fill-rule="evenodd" d="M7.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L13.293 8 7.646 2.354a.5.5 0 0 1 0-.708"/>
+                </svg>
+            </button>
+            <button type="button" class="multiple-select-add" data-add>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chevron-right" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"/>
+                </svg>
+            </button>
+        </div>
+
+        <div class="multiple-select-chooser" id="{{ .Get "id" }}-chooser">
+            <select data-deselected="true" multiple {{ safeAttrs (include (.Get "attrs") "forms/widgets/attrs.html") }}>
+                {{ range $choice := $choices }}{{ if not $choice.Selected }}
+                    <option value="{{ $choice.Value }}">{{ $choice.Label }}</option>{{ end }}
+                {{ end }}
+            </select>
+    
+            <select data-selected="true" name="{{ .Get "name" }}" id="{{ .Get "id" }}" multiple {{ safeAttrs (include (.Get "attrs") "forms/widgets/attrs.html") }}>
+                {{ range $choice := $choices }}{{ if $choice.Selected }}
+                    <option value="{{ $choice.Value }}" selected>{{ $choice.Label }}</option>{{ end }}
+                {{ end }}
+            </select>
+        </div>
+    </div>
+
+{{ end }}

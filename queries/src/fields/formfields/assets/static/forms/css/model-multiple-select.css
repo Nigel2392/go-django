@@ -1,0 +1,26 @@
+.multiple-select {
+    display: flex;
+    flex-direction: column;
+}
+.multiple-select-controls {
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+}
+.multiple-select-add {
+    
+}
+.multiple-select-add-all {
+    
+}
+.multiple-select-remove {
+    
+}
+.multiple-select-remove-all {
+    
+}
+.multiple-select-chooser {
+    display: flex;
+    flex-direction: row;
+}

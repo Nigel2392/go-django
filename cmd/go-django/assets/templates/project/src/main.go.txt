@@ -7,6 +7,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
+	"github.com/Nigel2392/go-django/src/contrib/settings"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -42,6 +43,7 @@ func main() {
 			auth.NewAppConfig,
 			admin.NewAppConfig,
 			pages.NewAppConfig,
+			settings.NewAppConfig,
 			auditlogs.NewAppConfig,
 			reports.NewAppConfig,
 			$( packageString .ProjectName ).NewAppConfig,
