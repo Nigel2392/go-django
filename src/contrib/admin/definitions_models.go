@@ -112,12 +112,33 @@ type DeleteViewOptions struct {
 	DeleteInstance func(context.Context, attrs.Definer) error
 }
 
-func viewDefaults(o *ViewOptions, mdl any) {
+func viewDefaults(o *ViewOptions, mdl any, check func(attrs.FieldDefinition, attrs.Definer) bool) {
 	if len(o.Fields) > 0 && len(o.Exclude) > 0 {
 		assert.Fail("Fields and Exclude cannot be used together")
 	}
 	if len(o.Fields) == 0 {
-		o.Fields = attrs.FieldNames(mdl, o.Exclude)
+		var exclMap = make(map[string]struct{}, len(o.Exclude))
+		for _, field := range o.Exclude {
+			exclMap[field] = struct{}{}
+		}
+		var meta = attrs.GetModelMeta(mdl)
+		var defs = meta.Definitions()
+		var fields = defs.Fields()
+		o.Fields = make([]string, 0, len(fields))
+		for _, field := range fields {
+			if _, ok := exclMap[field.Name()]; ok {
+				continue
+			}
+
+			if check != nil && !check(field, mdl.(attrs.Definer)) {
+				continue
+			}
+
+			o.Fields = append(
+				o.Fields,
+				field.Name(),
+			)
+		}
 	}
 }
 
@@ -325,7 +346,21 @@ func (m *ModelDefinition) GetListInstances(amount, offset uint) ([]attrs.Definer
 }
 
 func (m *ModelDefinition) OnRegister(a *AdminApplication, app *AppDefinition) {
-	viewDefaults(&m.AddView.ViewOptions, m.Model)
-	viewDefaults(&m.EditView.ViewOptions, m.Model)
-	viewDefaults(&m.ListView.ViewOptions, m.Model)
+	viewDefaults(&m.AddView.ViewOptions, m.Model, nil)
+	viewDefaults(&m.EditView.ViewOptions, m.Model, nil)
+	viewDefaults(&m.ListView.ViewOptions, m.Model, func(fd attrs.FieldDefinition, d attrs.Definer) bool {
+		var rel = fd.Rel()
+		if rel == nil {
+			return true
+		}
+		var relType = rel.Type()
+		var relThrough = rel.Through()
+		switch {
+		case relType == attrs.RelManyToOne,
+			relType == attrs.RelOneToOne && relThrough == nil:
+			return true
+		default:
+			return false
+		}
+	})
 }
