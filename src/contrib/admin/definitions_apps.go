@@ -21,7 +21,12 @@ import (
 
 type AppOptions struct {
 	// RegisterToAdminMenu allows for registering this app to the admin menu by default.
-	RegisterToAdminMenu bool
+	RegisterToAdminMenu any
+
+	// FullAdminMenu allows for always displaying the full admin menu for this app.
+	//
+	// Otherwise, if the app only has one model, it will be displayed directly in the admin menu.
+	FullAdminMenu bool
 
 	// EnableIndexView allows for enabling the index view for this app.
 	//
@@ -152,78 +157,64 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 		goldcrest.Register(RegisterGlobalMediaHook, 0, hookFn)
 	}
 
-	if a.Options.RegisterToAdminMenu {
-		var menuLabel = a.Options.MenuLabel
-		if menuLabel == nil {
-			menuLabel = func() string {
-				return a.Name
-			}
+	if a.Options.RegisterToAdminMenu == nil {
+		return
+	}
+
+	var registerAppToAdminMenuHook string
+	switch v := a.Options.RegisterToAdminMenu.(type) {
+	case bool:
+		if !v {
+			return
+		}
+		registerAppToAdminMenuHook = RegisterMenuItemHook
+	case string:
+		registerAppToAdminMenuHook = v
+	default:
+		assert.Fail(
+			"RegisterToAdminMenu must be a bool or string, got %T",
+			v,
+		)
+	}
+
+	var menuLabel = a.Options.MenuLabel
+	if menuLabel == nil {
+		menuLabel = func() string {
+			return a.Name
+		}
+	}
+
+	var menuIcon templ.Component
+	if a.Options.MenuIcon != nil {
+		menuIcon = templ.Raw(
+			a.Options.MenuIcon(),
+		)
+	}
+
+	for front := a.Models.Front(); front != nil; front = front.Next() {
+		var model = front.Value
+
+		if model.ModelOptions.RegisterToAdminMenu == nil {
+			continue
 		}
 
-		var menuIcon templ.Component
-		if a.Options.MenuIcon != nil {
-			menuIcon = templ.Raw(
-				a.Options.MenuIcon(),
+		var registerToAdminMenuHook string
+		switch v := model.ModelOptions.RegisterToAdminMenu.(type) {
+		case bool:
+			if !v {
+				continue
+			}
+			registerToAdminMenuHook = fmt.Sprintf(
+				"%s:%s",
+				RegisterMenuItemHook, a.Name,
 			)
+		case string:
+			registerToAdminMenuHook = v
 		}
 
-		var hookFn = func(r *http.Request, site *AdminApplication, items components.Items[menu.MenuItem]) {
-			var menuItem = &menu.SubmenuItem{
-				BaseItem: menu.BaseItem{
-					ItemName: a.Name,
-					Label:    menuLabel,
-					Logo:     menuIcon,
-					Ordering: a.Options.MenuOrder,
-					Hidden: !permissions.HasPermission(
-						r, fmt.Sprintf("admin:view_app:%s", a.Name),
-					),
-				},
-				Menu: &menu.Menu{
-					Items: make([]menu.MenuItem, 0),
-				},
-			}
-
-			if a.Options.EnableIndexView {
-				var menuLabel func() string = a.Options.MenuLabel
-				if menuLabel == nil {
-					menuLabel = func() string {
-						return a.Name
-					}
-				}
-				menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
-					BaseItem: menu.BaseItem{
-						Label: menuLabel,
-					},
-					Link: func() string {
-						return django.Reverse("admin:apps", a.Name)
-					},
-				})
-			}
-
-			var hooks = goldcrest.Get[RegisterAppMenuItemHookFunc](
-				fmt.Sprintf("%s:%s", RegisterMenuItemHook, a.Name),
-			)
-
-			for _, hook := range hooks {
-				if hook == nil {
-					continue
-				}
-
-				var items = hook(site, a)
-				if len(items) == 0 {
-					continue
-				}
-
-				menuItem.Menu.Items = append(menuItem.Menu.Items, items...)
-			}
-
-			for front := a.Models.Front(); front != nil; front = front.Next() {
-				var model = front.Value
-
-				if !model.ModelOptions.RegisterToAdminMenu {
-					continue
-				}
-
+		goldcrest.Register(
+			registerToAdminMenuHook, 0,
+			RegisterAppMenuItemHookFunc(func(r *http.Request, adminSite *AdminApplication, app *AppDefinition) []menu.MenuItem {
 				var menuIcon templ.Component
 				if model.ModelOptions.MenuIcon != nil {
 					menuIcon = templ.Raw(
@@ -231,7 +222,7 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 					)
 				}
 
-				menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
+				var item = &menu.Item{
 					BaseItem: menu.BaseItem{
 						Label:    model.getMenuLabel,
 						Ordering: model.MenuOrder,
@@ -243,12 +234,78 @@ func (a *AppDefinition) OnReady(adminSite *AdminApplication) {
 					Link: func() string {
 						return django.Reverse("admin:apps:model", a.Name, model.GetName())
 					},
-				})
-			}
+				}
+				return []menu.MenuItem{item}
+			}),
+		)
 
-			items.Append(menuItem)
+	}
+
+	var hookFunc = RegisterMenuItemHookFunc(func(r *http.Request, site *AdminApplication, items components.Items[menu.MenuItem]) {
+		var menuItem = &menu.SubmenuItem{
+			BaseItem: menu.BaseItem{
+				ItemName: a.Name,
+				Label:    menuLabel,
+				Logo:     menuIcon,
+				Ordering: a.Options.MenuOrder,
+				Hidden: !permissions.HasPermission(
+					r, fmt.Sprintf("admin:view_app:%s", a.Name),
+				),
+			},
+			Menu: &menu.Menu{
+				Items: make([]menu.MenuItem, 0),
+			},
 		}
 
-		goldcrest.Register(RegisterMenuItemHook, 0, RegisterMenuItemHookFunc(hookFn))
+		if a.Options.EnableIndexView {
+			var menuLabel func() string = a.Options.MenuLabel
+			if menuLabel == nil {
+				menuLabel = func() string {
+					return a.Name
+				}
+			}
+			menuItem.Menu.Items = append(menuItem.Menu.Items, &menu.Item{
+				BaseItem: menu.BaseItem{
+					Label: menuLabel,
+				},
+				Link: func() string {
+					return django.Reverse("admin:apps", a.Name)
+				},
+			})
+		}
+
+		var hooks = goldcrest.Get[RegisterAppMenuItemHookFunc](
+			fmt.Sprintf("%s:%s", RegisterMenuItemHook, a.Name),
+		)
+
+		for _, hook := range hooks {
+			if hook == nil {
+				continue
+			}
+
+			var items = hook(r, site, a)
+			if len(items) == 0 {
+				continue
+			}
+
+			menuItem.Menu.Items = append(menuItem.Menu.Items, items...)
+		}
+
+		if len(menuItem.Menu.Items) == 1 && !a.Options.FullAdminMenu {
+			items.Append(menuItem.Menu.Items[0])
+		} else {
+			items.Append(menuItem)
+		}
+	})
+
+	var hookFn any = hookFunc
+	if registerAppToAdminMenuHook != RegisterMenuItemHook {
+		hookFn = RegisterAppMenuItemHookFunc(func(r *http.Request, adminSite *AdminApplication, app *AppDefinition) []menu.MenuItem {
+			var items = components.NewItems[menu.MenuItem]()
+			hookFunc(r, adminSite, items)
+			return items.All()
+		})
 	}
+
+	goldcrest.Register(registerAppToAdminMenuHook, 0, hookFn)
 }

@@ -40,7 +40,7 @@ var (
 
 type (
 	RegisterMenuItemHookFunc       = func(r *http.Request, adminSite *AdminApplication, items components.Items[menu.MenuItem])
-	RegisterAppMenuItemHookFunc    func(adminSite *AdminApplication, app *AppDefinition) []menu.MenuItem
+	RegisterAppMenuItemHookFunc    func(r *http.Request, adminSite *AdminApplication, app *AppDefinition) []menu.MenuItem
 	RegisterFooterMenuItemHookFunc = func(r *http.Request, adminSite *AdminApplication, items components.Items[menu.MenuItem])
 	RegisterMediaHookFunc          = func(adminSite *AdminApplication) media.Media
 	RegisterBreadCrumbHookFunc     = func(r *http.Request, adminSite *AdminApplication) []BreadCrumb

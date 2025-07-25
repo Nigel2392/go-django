@@ -36,7 +36,8 @@ type Chocolate struct {
 func (c *Chocolate) FieldDefs() attrs.Definitions {
 	return c.Model.Define(c,
 		attrs.Unbound("ID", &attrs.FieldConfig{
-			Primary: true,
+			Primary:  true,
+			ReadOnly: true,
 		}),
 		attrs.Unbound("Name", &attrs.FieldConfig{
 			MinLength: 2,

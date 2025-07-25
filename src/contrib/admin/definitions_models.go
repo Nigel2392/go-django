@@ -197,7 +197,7 @@ type ModelOptions struct {
 	DeleteView DeleteViewOptions
 
 	// RegisterToAdminMenu is a flag that determines if the model should be automatically registered to the admin menu.
-	RegisterToAdminMenu bool
+	RegisterToAdminMenu any
 
 	// Labels for the fields in the model.
 	//
