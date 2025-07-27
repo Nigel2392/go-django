@@ -189,7 +189,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 		return nil
 	}
 
-	App.Routing = func(m django.Mux) {
+	App.Routing = func(m mux.Multiplexer) {
 		m.Use(
 			AddUserMiddleware(),
 		)

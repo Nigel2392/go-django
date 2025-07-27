@@ -4,9 +4,9 @@ import (
 	"context"
 	"io"
 
-	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/mux"
 	"github.com/PuerkitoBio/goquery"
 )
 
@@ -32,7 +32,7 @@ type BaseFeature interface {
 	// OnRegister is called when the feature is registered.
 	//
 	// It is allowed to add custom routes or do other setup here.
-	OnRegister(django.Mux) error
+	OnRegister(mux.Multiplexer) error
 
 	// OnValidate is called when the feature is validated.
 	OnValidate(BlockData) error

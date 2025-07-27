@@ -152,16 +152,16 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 
 	var (
 		vars       = mux.Vars(r)
-		app_label  = vars.Get("app_label")
+		app_name   = vars.Get("app_name")
 		model_name = vars.Get("model_name")
 	)
 
-	if app_label == "" || model_name == "" {
-		except.Fail(http.StatusBadRequest, "app_label and model_name are required")
+	if app_name == "" || model_name == "" {
+		except.Fail(http.StatusBadRequest, "app_name and model_name are required")
 		return
 	}
 
-	var cTypeDef = contenttypes.DefinitionForPackage(app_label, model_name)
+	var cTypeDef = contenttypes.DefinitionForPackage(app_name, model_name)
 	if cTypeDef == nil {
 		except.Fail(http.StatusNotFound, "content type not found")
 		return

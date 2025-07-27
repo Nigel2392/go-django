@@ -21,7 +21,7 @@ import (
 
 func newApp() *apps.AppConfig {
 	app := apps.NewAppConfig("djester_selftest")
-	app.Routing = func(m django.Mux) {
+	app.Routing = func(m mux.Multiplexer) {
 		m.Handle("GET", "/ping", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
 			w.Write([]byte("pong"))
 		}))

@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/command/flags"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/urfave/cli/v2"
 	"gopkg.in/yaml.v3"
@@ -167,7 +168,7 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 
 				slices.Sort(keys) // Sort keys to ensure consistent order
 
-				var newLocales = orderedmap.NewOrderedMap[Locale, Translation]()
+				var newLocales = orderedmap.NewOrderedMap[trans.Locale, trans.Translation]()
 				for _, key := range keys {
 					if value, ok := locales.Get(key); ok {
 						newLocales.Set(key, value)

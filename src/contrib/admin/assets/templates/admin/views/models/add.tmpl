@@ -19,7 +19,7 @@
         {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}
         {{ include $Form "admin/shared/forms/form.tmpl" }}
         <div class="form-buttons">
-            <input class="button secondary" type="submit" value="Submit">
+            <input class="button secondary" type="submit" value="{{ T "Submit" }}">
             {{ $BackURL := (.Get "BackURL") }}
             {{ if $BackURL }}
                 <a class="button warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>

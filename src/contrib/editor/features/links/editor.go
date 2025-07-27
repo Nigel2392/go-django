@@ -68,7 +68,7 @@ var PageLinkFeature = &PageLinkFeatureBlock{
 			}
 			return fb
 		},
-		Register: func(m django.Mux) {
+		Register: func(m mux.Multiplexer) {
 			staticfiles.AddFS(
 				filesystem.Sub(linksFs, "static"),
 				filesystem.MatchPrefix("links/editorjs"),

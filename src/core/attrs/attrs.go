@@ -137,6 +137,7 @@ type Definer interface {
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
 var nameMap = make(map[string]string)
+var labelMap = make(map[string]string)
 
 // ColumnName returns a column name for the given field name.
 // To get an actual column name for a field, you should use the
@@ -150,6 +151,27 @@ func ColumnName(str string) string {
 	col := strings.ToLower(snake)
 	nameMap[str] = col
 	return col
+}
+
+// NiceName returns a human-readable name for the given field name.
+func NiceName(str string) string {
+	if label, ok := labelMap[str]; ok {
+		return label
+	}
+	snake := matchFirstCap.ReplaceAllString(str, "${1} ${2}")
+	snake = matchAllCap.ReplaceAllString(snake, "${1} ${2}")
+	var split = strings.Split(snake, " ")
+	for i, word := range split {
+		switch strings.ToLower(word) {
+		case "id", "pk", "uuid", "url":
+			split[i] = strings.ToUpper(word)
+		default:
+			split[i] = capCaser.String(word)
+		}
+	}
+	label := strings.Join(split, " ")
+	labelMap[str] = label
+	return label
 }
 
 // A binder is a value which can be bound to a model.

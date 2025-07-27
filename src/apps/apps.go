@@ -23,7 +23,7 @@ var (
 type AppConfig struct {
 	AppName        string
 	Deps           []string
-	Routing        func(django.Mux)
+	Routing        func(mux.Multiplexer)
 	Cmd            []command.Command
 	Init           func(settings django.Settings) error
 	Ready          func() error
@@ -80,7 +80,7 @@ func NewAppConfig(name string) *AppConfig {
 
 func NewAppConfigForHandler(name string, method string, path string, handler mux.Handler) *AppConfig {
 	var app = NewAppConfig(name)
-	app.Routing = func(m django.Mux) {
+	app.Routing = func(m mux.Multiplexer) {
 		m.Handle(method, path, handler, name)
 	}
 	return app
@@ -120,7 +120,7 @@ func (a *AppConfig) Processors() []func(ctx.ContextWithRequest) {
 	return a.CtxProcessors
 }
 
-func (a *AppConfig) BuildRouting(m django.Mux) {
+func (a *AppConfig) BuildRouting(m mux.Multiplexer) {
 	if a.Routing != nil {
 		a.Routing(m)
 	}

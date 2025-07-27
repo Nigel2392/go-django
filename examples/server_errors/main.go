@@ -66,7 +66,7 @@ func main() {
 		// or the app config struct directly.
 		django.Apps(&apps.AppConfig{
 			AppName: "server_errors",
-			Routing: func(m django.Mux) {
+			Routing: func(m mux.Multiplexer) {
 				m.Any("/", mux.NewHandler(Index))
 				m.Any("/raise/<<code>>", mux.NewHandler(RaiseErrorCode))
 			},

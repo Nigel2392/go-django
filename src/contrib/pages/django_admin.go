@@ -67,16 +67,16 @@ var pageAdminModelOptions = admin.ModelOptions{
 		Columns: map[string]list.ListColumn[attrs.Definer]{
 			"Children": list.HTMLColumn[attrs.Definer](
 				func(ctx context.Context) string { return "" },
-				func(_ *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
+				func(r *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
 					var node = row.(*PageNode)
 					if node.Numchild > 0 {
 						var url = django.Reverse(
 							"admin:pages:list",
 							node.PK,
 						)
-						var childText = "child"
+						var childText = trans.T(r.Context(), "child")
 						if node.Numchild > 1 || node.Numchild == 0 {
-							childText = "children"
+							childText = trans.T(r.Context(), "children")
 						}
 						return template.HTML(fmt.Sprintf(
 							`<a href="%s" class="button primary hollow">%d %s</a>`,

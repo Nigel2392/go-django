@@ -135,7 +135,19 @@ func (c *adminContext) Set(key string, value interface{}) {
 	case "page", "Page":
 		c.Page = value.(*PageOptions)
 	}
+
 	c.Context.Set(key, value)
+}
+
+func (c *adminContext) Data() map[string]interface{} {
+	var data = c.Context.Data()
+	if c.Page != nil {
+		data["page"] = c.Page
+	}
+	if c.Site != nil {
+		data["site"] = c.Site
+	}
+	return data
 }
 
 func (c *adminContext) SetPage(page PageOptions) {

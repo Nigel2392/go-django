@@ -3,9 +3,9 @@
 Routing is the process of mapping URLs to views.
 This is done by defining URL patterns in the `Routing` attribute of your `AppConfig`.
 
-The `Routing` attribute is a function that takes a `django.Mux` object as an argument.
+The `Routing` attribute is a function that takes a `mux.Multiplexer` object as an argument.
 
-The `django.Mux` object is used to register routes, the interface is defined as follows:
+The `mux.Multiplexer` object is used to register routes, the interface is defined as follows:
 
 ```go
 type Mux interface {
@@ -22,11 +22,11 @@ type Mux interface {
 }
 ```
 
-Any `*mux.Route` returned from this interface will also adhere to the `django.Mux` interface.
+Any `*mux.Route` returned from this interface will also adhere to the `mux.Multiplexer` interface.
 
 ## URLs
 
-Routes are registered using the `Handle` method on the `django.Mux` object.
+Routes are registered using the `Handle` method on the `mux.Multiplexer` object.
 
 There are also convenience methods for the most common HTTP methods:
 
@@ -46,7 +46,7 @@ There are also convenience methods for the most common HTTP methods:
 ### Example
 
 ```go
-myCustomApp.Routing = func(m django.Mux) {
+myCustomApp.Routing = func(m mux.Multiplexer) {
     m.Handle(mux.GET, "/", mux.NewHandler(Index), "index"),
     m.Handle(mux.GET, "/about", mux.NewHandler(About), "about"),
 }
@@ -113,14 +113,14 @@ func Static(r *http.Request, w http.ResponseWriter) {
 
 ## Middleware
 
-Middleware can be registered using the `Use` method on the `django.Mux` object.
+Middleware can be registered using the `Use` method on the `mux.Multiplexer` object.
 
 It works the same way as the `http.Handler` middleware, but with a few differences.
 
 ### Example
 
 ```go
-myCustomApp.Routing = func(m django.Mux) {
+myCustomApp.Routing = func(m mux.Multiplexer) {
     m.Use(func(next mux.Handler) mux.Handler {
         return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
 

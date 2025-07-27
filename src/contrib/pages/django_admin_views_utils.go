@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/mux"
@@ -58,6 +59,22 @@ func pageHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinitio
 			except.Fail(http.StatusNotFound, "Failed to get page")
 			return
 		}
+
+		var app django.AppConfig = pageApp
+		if page.PageID != 0 && page.ContentType != "" {
+			var pagesDef = DefinitionForType(page.ContentType)
+			var appConf, ok = django.GetAppForModel(pagesDef.Object().(attrs.Definer))
+			if !ok {
+				logger.Error("Failed to get django.AppConfig for page type %q", page.ContentType)
+				except.Fail(http.StatusNotFound, "App for page type not found")
+				return
+			}
+			app = appConf
+		}
+
+		req = req.WithContext(django.ContextWithApp(
+			req.Context(), app,
+		))
 
 		var handler = pageAdminAppHandler(func(w http.ResponseWriter, req *http.Request, app *admin.AppDefinition, model *admin.ModelDefinition) {
 			fn(w, req, app, model, page)
@@ -106,7 +123,7 @@ func getPageBreadcrumbs(r *http.Request, p *PageNode, urlForLast bool) ([]admin.
 		breadcrumbs = append(breadcrumbs, b)
 	} else {
 		breadcrumbs = append(breadcrumbs, admin.BreadCrumb{
-			Title: "Root Pages",
+			Title: trans.T(r.Context(), "Root Pages"),
 			URL:   django.Reverse("admin:pages"),
 		})
 	}

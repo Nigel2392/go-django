@@ -67,7 +67,7 @@ var ImageFeature = &ImageFeatureBlock{
 			}
 			return fb
 		},
-		Register: func(m django.Mux) {
+		Register: func(m mux.Multiplexer) {
 			staticfiles.AddFS(
 				filesystem.Sub(imagesFS, "static"),
 				filesystem.MatchPrefix("images/editorjs"),

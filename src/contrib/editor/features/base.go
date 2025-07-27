@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/mux"
 	"github.com/PuerkitoBio/goquery"
 	"github.com/a-h/templ"
 	"github.com/pkg/errors"
@@ -28,7 +29,7 @@ type BaseFeature struct {
 	CSSFles       []string
 	Validate      func(editor.BlockData) error
 	Build         func(*FeatureBlock) *FeatureBlock
-	Register      func(django.Mux)
+	Register      func(mux.Multiplexer)
 }
 
 // Name returns the name of the feature.
@@ -39,7 +40,7 @@ func (b *BaseFeature) Name() string {
 // OnRegister is called when the feature is registered.
 //
 // It is allowed to add custom routes or do other setup here.
-func (b *BaseFeature) OnRegister(m django.Mux) error {
+func (b *BaseFeature) OnRegister(m mux.Multiplexer) error {
 	if b.Register != nil {
 		b.Register(m)
 	}

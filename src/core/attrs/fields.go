@@ -332,7 +332,7 @@ func (f *FieldDef) Label(ctx context.Context) string {
 		}
 	}
 
-	return trans.T(ctx, capCaser.String(f.Name()))
+	return trans.T(ctx, NiceName(f.field_t.Name))
 }
 
 func (f *FieldDef) HelpText(ctx context.Context) string {

@@ -5,6 +5,7 @@ import (
 	"io"
 	"io/fs"
 	"path/filepath"
+	"sync"
 	"time"
 )
 
@@ -51,7 +52,11 @@ type cachedFile[T fs.FS] struct {
 	_reader io.Reader
 }
 
-func (c *cachedFile[T]) clone() *cachedFile[T] {
+// setup creates a copy of the cached file struct, not its contents.
+// it is used to setup the file when calling fs.Open(path) to avoid
+// modifying the original cached file (like setting the reader).
+func (c *cachedFile[T]) setup() *cachedFile[T] {
+
 	return &cachedFile[T]{
 		fs:      c.fs,
 		path:    c.path,
@@ -77,18 +82,23 @@ func (c *cachedFile[T]) Stat() (fs.FileInfo, error) {
 type CacheFS[T fs.FS] struct {
 	FS    T
 	Files map[string]*cachedFile[T]
+	mu    sync.Mutex
 }
 
 func NewCacheFS[T fs.FS](fsys T) *CacheFS[T] {
 	return &CacheFS[T]{
 		FS:    fsys,
 		Files: make(map[string]*cachedFile[T]),
+		mu:    sync.Mutex{},
 	}
 }
 
 // Changed should be called when the underlying filesystem changes,
 // to invalidate the cache, when no paths are provided it will clear the entire cache.
 func (c *CacheFS[T]) Changed(paths ...string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if len(paths) == 0 {
 		clear(c.Files)
 		return
@@ -100,13 +110,16 @@ func (c *CacheFS[T]) Changed(paths ...string) {
 }
 
 func (c *CacheFS[T]) Open(path string) (fs.File, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
 	if cached, ok := c.Files[path]; ok {
 
 		if cached == nil {
 			return nil, fs.ErrNotExist
 		}
 
-		return cached.clone(), nil
+		return cached.setup(), nil
 	}
 
 	file, err := c.FS.Open(path)
@@ -142,7 +155,7 @@ func (c *CacheFS[T]) Open(path string) (fs.File, error) {
 
 	c.Files[path] = f
 
-	return f.clone(), nil
+	return f.setup(), nil
 }
 
 func (c *CacheFS[T]) ReadDir(name string) ([]fs.DirEntry, error) {

@@ -16,7 +16,7 @@
         
         <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
         <div class="buttons">
-            <button class="button secondary" type="submit" value="Submit">
+            <button class="button secondary" type="submit" value="{{ T "Submit" }}">
                 {{ T "Unpublish this node" }}
             </button>
             <button class="button danger hollow" type="submit" name="unpublish-children" value="unpublish-children">

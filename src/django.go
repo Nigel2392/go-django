@@ -40,20 +40,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-// The interface for our multiplexer
-//
-// This is a wrapper around the nigel2392/mux.Mux interface
-type Mux interface {
-	Use(middleware ...mux.Middleware)
-	Handle(method string, path string, handler mux.Handler, name ...string) *mux.Route
-	AddRoute(route *mux.Route)
+type (
+	appContextKey struct{}
+	Locale        = string
+	Untranslated  = string
+	Translation   = string
+)
 
-	Any(path string, handler mux.Handler, name ...string) *mux.Route
-	Get(path string, handler mux.Handler, name ...string) *mux.Route
-	Post(path string, handler mux.Handler, name ...string) *mux.Route
-	Put(path string, handler mux.Handler, name ...string) *mux.Route
-	Patch(path string, handler mux.Handler, name ...string) *mux.Route
-	Delete(path string, handler mux.Handler, name ...string) *mux.Route
+func AppFromContext(ctx context.Context) (AppConfig, bool) {
+	app, ok := ctx.Value(appContextKey{}).(AppConfig)
+	return app, ok
+}
+
+func ContextWithApp(ctx context.Context, app AppConfig) context.Context {
+	return context.WithValue(ctx, appContextKey{}, app)
 }
 
 // AppConfig is the interface that must be implemented by all Django applications.
@@ -100,7 +100,7 @@ type AppConfig interface {
 	// It can also be used to define middleware for the application.
 	//
 	// A Mux object is passed to the function which can be used to define routes.
-	BuildRouting(mux Mux)
+	BuildRouting(mux mux.Multiplexer)
 
 	// Initialize your application.
 	//
@@ -139,6 +139,7 @@ type Application struct {
 	Mux         *mux.Mux
 	Log         logger.Log
 	Commands    command.Registry
+	models      map[reflect.Type]string
 	flags       AppFlag
 	quitter     func() error
 	initialized *atomic.Bool
@@ -169,6 +170,16 @@ func GetApp[T AppConfig](name string) T {
 	return a
 }
 
+func GetAppForModel(model attrs.Definer) (AppConfig, bool) {
+	var rTyp = reflect.TypeOf(model)
+	var appName, ok = Global.models[rTyp]
+	if !ok {
+		return nil, false
+	}
+	app, ok := Global.Apps.Get(appName)
+	return app, ok
+}
+
 func App(opts ...Option) *Application {
 	if Global == nil {
 		Global = &Application{
@@ -180,6 +191,7 @@ func App(opts ...Option) *Application {
 				flag.ContinueOnError,
 			),
 			initialized: new(atomic.Bool),
+			models:      make(map[reflect.Type]string),
 		}
 
 		AppInstalled = Global.AppInstalled
@@ -591,14 +603,12 @@ func (a *Application) Initialize() error {
 	})
 
 	// If the request is available it is possible to base some fuctions on said request.
-	tpl.RequestFuncs(map[string]func(*http.Request) tpl.TemplateFunc{
-		"csrf_token": func(req *http.Request) tpl.TemplateFunc {
-			return func() template.HTML {
+	tpl.RequestFuncs(func(req *http.Request) template.FuncMap {
+		return template.FuncMap{
+			"csrf_token": func() template.HTML {
 				return template.HTML(nosurf.Token(req))
-			}
-		},
-		"csrf_field": func(req *http.Request) tpl.TemplateFunc {
-			return func(cookieName ...string) template.HTML {
+			},
+			"csrf_field": func(cookieName ...string) template.HTML {
 				var cookie string
 				if len(cookieName) > 0 && cookieName[0] != "" {
 					cookie = cookieName[0]
@@ -609,23 +619,17 @@ func (a *Application) Initialize() error {
 					`<input type="hidden" name="%s" value="%s">`,
 					cookie, nosurf.Token(req),
 				))
-			}
-		},
-		"has_object_perm": func(req *http.Request) tpl.TemplateFunc {
-			return func(obj interface{}, perms ...string) bool {
+			},
+			"has_object_perm": func(obj interface{}, perms ...string) bool {
 				return permissions.HasObjectPermission(req, obj, perms...)
-			}
-		},
-		"has_perm": func(req *http.Request) tpl.TemplateFunc {
-			return func(perm ...string) bool {
+			},
+			"has_perm": func(perm ...string) bool {
 				return permissions.HasPermission(req, perm...)
-			}
-		},
-		"T": func(req *http.Request) tpl.TemplateFunc {
-			return func(s string, args ...any) string {
+			},
+			"T": func(s string, args ...any) string {
 				return trans.T(req.Context(), s, args...)
-			}
-		},
+			},
+		}
 	})
 
 	a.Commands.Register(sqlShellCommand)
@@ -657,6 +661,8 @@ func (a *Application) Initialize() error {
 			contenttypes.Register(&contenttypes.ContentTypeDefinition{
 				ContentObject: model,
 			})
+			var rTyp = reflect.TypeOf(model)
+			a.models[rTyp] = app.Name()
 			allModels = append(allModels, model)
 		}
 	}
@@ -761,7 +767,14 @@ func (a *Application) Initialize() error {
 	// Second app loop to build routing and templates
 	var groups = make([][]checks.Message, 0, a.Apps.Len())
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
-		h.Value.BuildRouting(a.Mux)
+
+		h.Value.BuildRouting(a.Mux.Namespace(mux.NamespaceOptions{
+			OnRouteServe: func(r *http.Request) *http.Request {
+				return r.WithContext(ContextWithApp(
+					r.Context(), h.Value,
+				))
+			},
+		}))
 
 		var processors = h.Value.Processors()
 		tpl.RequestProcessors(processors...)

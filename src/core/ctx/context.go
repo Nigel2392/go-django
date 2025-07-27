@@ -17,6 +17,7 @@ type Editor interface {
 type Context interface {
 	Setter
 	Getter
+	Data() map[string]any
 }
 
 type ContextWithRequest interface {
@@ -45,4 +46,8 @@ func (c *context) Set(key string, value any) {
 
 func (c *context) Get(key string) any {
 	return c.data[key]
+}
+
+func (c *context) Data() map[string]any {
+	return c.data
 }

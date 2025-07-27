@@ -15,7 +15,7 @@ var _ trans.TranslationBackend = &Translator{}
 type localeContextKey struct{}
 
 type Translator struct {
-	translations map[Locale]map[Untranslated]Translation
+	translations map[trans.Locale]map[trans.Untranslated]trans.Translation
 }
 
 func (t *Translator) Translate(ctx context.Context, v string) string {
@@ -28,16 +28,19 @@ func (t *Translator) Translate(ctx context.Context, v string) string {
 		locale    = LocaleFromContext(ctx)
 		localeStr = locale.String()
 		checks    = localeChecks(locale)
+
+		locTranslations = t.translations
+		translations    map[string]trans.Translation
+		translation     trans.Translation
 	)
 
-	var (
-		ok           bool
-		translations map[string]Translation
-		translation  Translation
-	)
+	var app, ok = django.AppFromContext(ctx)
+	if ok {
+		logger.Debugf("Translating %q in app %s", v, app.Name())
+	}
 
 	for _, check := range checks {
-		if translations, ok = t.translations[check]; ok {
+		if translations, ok = locTranslations[check]; ok {
 			break
 		}
 	}
@@ -61,7 +64,7 @@ func (t *Translator) Translate(ctx context.Context, v string) string {
 		)
 	}
 
-	if translation == "" {
+	if ok && translation == "" {
 		logger.Debugf(
 			"Translation for locale '%s' and key '%s' is empty, returning original value: %q",
 			localeStr, v, v,

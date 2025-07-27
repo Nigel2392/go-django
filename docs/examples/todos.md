@@ -148,7 +148,7 @@ func NewAppConfig() *TodosAppConfig {
         // Do any extra setup which depends on other apps
     }
 
-    todosApp.Routing = func(m django.Mux) {
+    todosApp.Routing = func(m mux.Multiplexer) {
         // ...<a href="#setting-up-routes">Setting up routes</a>
     }
 
@@ -165,7 +165,7 @@ Creation, editing and deletion of todos will be done via the [admin interface](.
 This app will only need a route for displaying the list of todos, and for marking todos as done.
 
 <pre>
-todosApp.Routing = func(m django.Mux) {
+todosApp.Routing = func(m mux.Multiplexer) {
     // Create a new group for the todos app
     var todosGroup = m.Any("/todos", nil, "todos")
 

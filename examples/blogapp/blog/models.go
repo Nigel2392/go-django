@@ -47,6 +47,8 @@ func (b *BlogPage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		Page:               b,
 	}
 
+	context.Set("blog_page", b)
+
 	// Render the template
 	var err = tpl.FRender(
 		w, context, "blog",

@@ -165,13 +165,13 @@ Let's expand on the `NewCustomAppConfig` function from above.
 
 The `AppConfig.Routing` function is used to register routes for the app.
 
-This function is called with a `django.Mux` object, which is used to register routes.
+This function is called with a `mux.Multiplexer` object, which is used to register routes.
 
 Routes and middleware further explained in the [routing](./routing.md#URLs) documentation.
 
 ```go
 // Register routes
-myCustomApp.Routing = func(m django.Mux) {
+myCustomApp.Routing = func(m mux.Multiplexer) {
     m.Handle(mux.GET, "/", Index, "index"),
     m.Handle(mux.GET, "/about", About, "about"),
 }

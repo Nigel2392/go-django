@@ -104,7 +104,7 @@ func (d *Tester) Setup() error {
 
 	if len(d.Handlers) > 0 {
 		var app = apps.NewAppConfig("djester")
-		app.Routing = func(mux django.Mux) {
+		app.Routing = func(mux mux.Multiplexer) {
 			for _, handler := range d.Handlers {
 				if handler.Name == "" {
 					mux.Handle(handler.Method, handler.Route, handler.Handler)

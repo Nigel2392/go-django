@@ -11,23 +11,19 @@ import (
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/Nigel2392/mux"
 )
 
 type Finder interface {
 	Find(fSys fs.FS) ([]Match, error)
 }
 
-type (
-	Locale       = string
-	Translation  = string
-	Untranslated = string
-)
-
 type TranslationsAppConfig struct {
 	*apps.AppConfig
 	finders            []Finder
 	filesystems        []fs.FS
-	translations       map[Locale]map[Untranslated]Translation
+	translations       map[trans.Locale]map[trans.Untranslated]trans.Translation
+	appTranslations    map[string]map[trans.Locale]map[trans.Untranslated]trans.Translation
 	translationMatches []Match
 }
 
@@ -41,14 +37,14 @@ func NewAppConfig() django.AppConfig {
 
 	var cfg = &TranslationsAppConfig{
 		AppConfig:    apps.NewAppConfig("translations"),
-		translations: make(map[Locale]map[Untranslated]Translation),
+		translations: make(map[trans.Locale]map[trans.Untranslated]trans.Translation),
 	}
 
 	cfg.Cmd = []command.Command{
 		makeTranslationsCommand,
 	}
 
-	cfg.Routing = func(m django.Mux) {
+	cfg.Routing = func(m mux.Multiplexer) {
 		m.Use(TranslatorMiddleware())
 	}
 
@@ -74,6 +70,7 @@ func NewAppConfig() django.AppConfig {
 					},
 				),
 			},
+			&godjangoModelsFinder{},
 		}
 
 		for _, hook := range goldcrest.Get[TranslationFinderHook](TranslationFinderHookName) {
@@ -118,12 +115,11 @@ func NewAppConfig() django.AppConfig {
 					continue
 				}
 
-				var locale = Locale(head.Key)
-				if _, ok := cfg.translations[locale]; !ok {
-					cfg.translations[locale] = make(map[Untranslated]Translation)
+				if _, ok := cfg.translations[head.Key]; !ok {
+					cfg.translations[head.Key] = make(map[trans.Untranslated]trans.Translation)
 				}
 
-				cfg.translations[locale][m.Text] = Translation(head.Value)
+				cfg.translations[head.Key][m.Text] = head.Value
 			}
 		}
 

@@ -26,7 +26,7 @@ type Renderer interface {
 	FirstRender() signals.Signal[*TemplateRenderer]
 	Render(buffer io.Writer, data any, appKey string, path ...string) error
 	Funcs(funcs template.FuncMap)
-	RequestFuncs(funcs map[string]func(*http.Request) TemplateFunc)
+	RequestFuncs(funcs func(*http.Request) template.FuncMap)
 }
 
 type Config struct {
@@ -51,7 +51,7 @@ type TemplateRenderer struct {
 	ctxFuncs          []func(any)
 	ctxOverrides      []func(any) (any, error)
 	requestCtxFuncs   []func(ctx.ContextWithRequest)
-	reqFuncs          map[string]func(*http.Request) TemplateFunc
+	reqFuncs          []func(*http.Request) template.FuncMap
 	funcs             template.FuncMap
 	fs                *filesystem.CacheFS[*filesystem.MultiFS]
 	firstRender       atomic.Bool
@@ -113,11 +113,8 @@ func (r *TemplateRenderer) Funcs(funcs template.FuncMap) {
 	maps.Copy(r.funcs, funcs)
 }
 
-func (r *TemplateRenderer) RequestFuncs(funcs map[string]func(*http.Request) TemplateFunc) {
-	if r.reqFuncs == nil {
-		r.reqFuncs = make(map[string]func(*http.Request) TemplateFunc)
-	}
-	maps.Copy(r.reqFuncs, funcs)
+func (r *TemplateRenderer) RequestFuncs(funcs func(*http.Request) template.FuncMap) {
+	r.reqFuncs = append(r.reqFuncs, funcs)
 }
 
 func (r *TemplateRenderer) Override(funcs ...func(any) (any, error)) {
@@ -262,7 +259,7 @@ func (r *TemplateRenderer) FirstRender() signals.Signal[*TemplateRenderer] {
 
 type TemplateFunc = any
 
-func (r *TemplateRenderer) getTemplateForRequest(req *http.Request, baseKey string, path []string, buildFuncs map[string]func(*http.Request) TemplateFunc) (*templateObject, error) {
+func (r *TemplateRenderer) getTemplateForRequest(req *http.Request, baseKey string, path []string, buildFuncs []func(*http.Request) template.FuncMap) (*templateObject, error) {
 	assert.False(
 		len(path) == 0 && baseKey == "",
 		"path is required",
@@ -284,8 +281,8 @@ func (r *TemplateRenderer) getTemplateForRequest(req *http.Request, baseKey stri
 	funcMap := make(template.FuncMap)
 	maps.Copy(funcMap, r.funcs)
 	maps.Copy(funcMap, cfg.Funcs)
-	for k, f := range buildFuncs {
-		funcMap[k] = f(req)
+	for _, fn := range buildFuncs {
+		maps.Copy(funcMap, fn(req))
 	}
 
 	tpls := r.getTemplatePaths(cfg, baseKey, path)

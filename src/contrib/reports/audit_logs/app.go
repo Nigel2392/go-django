@@ -263,7 +263,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 					var cType = val[0].(*contenttypes.BaseContentType[interface{}])
 					opts[i] = &widgets.FormOption{
 						OptValue: cType.ShortTypeName(),
-						OptLabel: cType.Model(),
+						OptLabel: trans.T(r.Context(), cType.Model()),
 					}
 				}
 

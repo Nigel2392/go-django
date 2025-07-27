@@ -27,7 +27,7 @@ func NewAppConfig() django.AppConfig {
 	)
 
 	// Set up routing for this app
-	cfg.Routing = func(m django.Mux) {
+	cfg.Routing = func(m mux.Multiplexer) {
 		var todosGroup = m.Any("/todos", nil, "todos")
 		todosGroup.Get("/list", mux.NewHandler(ListTodos), "list")
 		todosGroup.Post("/<<id>>/done", mux.NewHandler(MarkTodoDone), "done")

@@ -101,3 +101,28 @@ func (bc *BlockContext) Get(name string) interface{} {
 func (bc *BlockContext) Request() *http.Request {
 	return bc.Request_
 }
+
+func (bc *BlockContext) Data() map[string]interface{} {
+	data := make(map[string]interface{}, 6+len(bc.Attrs))
+	data["ID"] = bc.ID
+	data["Block"] = bc.BlockDef
+	data["Name"] = bc.Name
+	data["Value"] = bc.Value
+	data["Errors"] = bc.Errors
+	data["Attrs"] = bc.Attrs
+	data["Context"] = bc.Context
+
+	if bc.Request_ != nil {
+		data["Request"] = bc.Request_
+	}
+
+	if len(bc.BlockHTML) > 0 {
+		data["BlockHTML"] = bc.BlockHTML
+	}
+
+	for key, value := range bc.Context.Data() {
+		data[key] = value
+	}
+
+	return data
+}

@@ -90,7 +90,7 @@ func (m MockBaseFeature) OnValidate(editor.BlockData) error {
 	return nil
 }
 
-func (m MockBaseFeature) OnRegister(mx django.Mux) error {
+func (m MockBaseFeature) OnRegister(mx mux.Multiplexer) error {
 	mx.Any("/mock", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("mock"))
 	}), "mock")

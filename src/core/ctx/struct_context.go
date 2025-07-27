@@ -1,6 +1,7 @@
 package ctx
 
 import (
+	"maps"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -50,7 +51,7 @@ func (c *StructContext) Set(key string, value any) {
 	}
 
 	if !c.DeniesContext {
-		if context, ok := c.obj.(Context); ok {
+		if context, ok := c.obj.(Setter); ok {
 			context.Set(key, value)
 			return
 		}
@@ -73,7 +74,7 @@ func (c *StructContext) Set(key string, value any) {
 
 func (c *StructContext) Get(key string) any {
 	if !c.DeniesContext && c.obj != nil {
-		if context, ok := c.obj.(Context); ok {
+		if context, ok := c.obj.(Getter); ok {
 			return context.Get(key)
 		}
 	}
@@ -83,4 +84,13 @@ func (c *StructContext) Get(key string) any {
 	}
 
 	return c.data[key]
+}
+
+func (c *StructContext) Data() map[string]any {
+	var data = make(map[string]any, len(c.data)+len(c.fields))
+	maps.Copy(data, c.data)
+	for key, field := range c.fields {
+		data[key] = field.Interface()
+	}
+	return data
 }

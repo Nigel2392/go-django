@@ -62,7 +62,7 @@ func NewAppConfig() django.AppConfig {
 		&users.GroupPermission{},
 		&users.UserPermission{},
 	}
-	app.Routing = func(m django.Mux) {
+	app.Routing = func(m mux.Multiplexer) {
 		m.Use(
 			AddUserMiddleware(),
 		)
@@ -155,7 +155,7 @@ func NewAppConfig() django.AppConfig {
 
 		// Register the user model and the auth app with the admin app.
 		var _ = admin.RegisterApp(
-			"Auth",
+			"auth",
 			// Register the auth app with the admin app.
 			admin.AppOptions{
 				RegisterToAdminMenu: true,
@@ -245,7 +245,7 @@ func NewAppConfig() django.AppConfig {
 						"Email": list.LinkColumn(
 							trans.S("Email"),
 							"Email", func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-								return django.Reverse("admin:apps:model:edit", "Auth", "User", defs.Get("ID"))
+								return django.Reverse("admin:apps:model:edit", "auth", "User", defs.Get("ID"))
 							},
 						),
 					},

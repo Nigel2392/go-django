@@ -1,9 +1,13 @@
 package ctx
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/justinas/nosurf"
+)
 
 type HTTPRequestContext struct {
-	*StructContext
+	Context
 	HttpRequest *http.Request
 	CsrfToken   string
 }
@@ -11,11 +15,10 @@ type HTTPRequestContext struct {
 func RequestContext(r *http.Request) *HTTPRequestContext {
 	var request = &HTTPRequestContext{
 		HttpRequest: r,
+		Context:     NewContext(nil),
+		CsrfToken:   nosurf.Token(r),
 	}
 
-	var c = NewStructContext(request)
-	request.StructContext = c.(*StructContext)
-	request.StructContext.DeniesContext = true // prevent infinite recursion
 	return request
 }
 
@@ -32,5 +35,16 @@ func (c *HTTPRequestContext) Set(key string, value any) {
 		v.EditContext(key, c)
 		return
 	}
-	c.StructContext.Set(key, value)
+
+	c.Context.Set(key, value)
+}
+
+func (c *HTTPRequestContext) Get(key string) any {
+	switch key {
+	case "csrf_token", "CsrfToken", "CSRFToken":
+		return c.CsrfToken
+	case "request", "Request":
+		return c.HttpRequest
+	}
+	return c.Context.Get(key)
 }

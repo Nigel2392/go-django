@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/Nigel2392/mux"
 	"github.com/a-h/templ"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -69,7 +70,7 @@ type AppDefinition struct {
 	Models  *orderedmap.OrderedMap[
 		string, *ModelDefinition,
 	]
-	Routing func(django.Mux)
+	Routing func(mux.Multiplexer)
 }
 
 func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {

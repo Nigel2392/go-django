@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/pkg/yml"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/elliotchance/orderedmap/v2"
 	"gopkg.in/yaml.v3"
 )
@@ -15,16 +16,16 @@ type Match struct {
 	Comment    string
 	Line       int
 	Col        int
-	Text       Untranslated
+	Text       trans.Untranslated
 	Preference int // the higher the number, the more preferred this Match is
-	Locales    *orderedmap.OrderedMap[Locale, Translation]
+	Locales    *orderedmap.OrderedMap[trans.Locale, trans.Translation]
 }
 
 type ymlMatch struct {
-	Path       string                              `yaml:"path"`
-	Text       Untranslated                        `yaml:"text"`
-	Preference int                                 `yaml:"preference,omitempty"`
-	Locales    yml.OrderedMap[Locale, Translation] `yaml:"locales,omitempty"`
+	Path       string                                          `yaml:"path"`
+	Text       trans.Untranslated                              `yaml:"text"`
+	Preference int                                             `yaml:"preference,omitempty"`
+	Locales    yml.OrderedMap[trans.Locale, trans.Translation] `yaml:"locales,omitempty"`
 }
 
 var (

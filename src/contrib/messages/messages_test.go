@@ -28,7 +28,7 @@ var (
 
 func newTestAppConfig() django.AppConfig {
 	var app = apps.NewAppConfig("testapp")
-	app.Routing = func(m django.Mux) {
+	app.Routing = func(m mux.Multiplexer) {
 		m.Handle(mux.ANY, "/", mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
 			backend = messages.BackendFromContext(req)
 			w.Write([]byte("Hello World"))

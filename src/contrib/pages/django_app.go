@@ -320,11 +320,11 @@ func NewAppConfig() django.AppConfig {
 
 		// Add new root page
 		pagesRoute.Any(
-			"/<<app_label>>/<<model_name>>/add", pageAdminAppHandler(addRootPageHandler), "root_add",
+			"/<<app_name>>/<<model_name>>/add", pageAdminAppHandler(addRootPageHandler), "root_add",
 		)
 
 		// List all pages
-		// Delibirately after the add page route
+		// Deliberately after the add page route
 		pagesRoute.Get(
 			fmt.Sprintf("/<<%s>>", PageIDVariableName),
 			pageHandler(listPageHandler), "list",
@@ -348,7 +348,7 @@ func NewAppConfig() django.AppConfig {
 
 		// Add new page type to a parent page
 		pagesRoute.Any(
-			fmt.Sprintf("/<<%s>>/<<app_label>>/<<model_name>>/add", PageIDVariableName),
+			fmt.Sprintf("/<<%s>>/<<app_name>>/<<model_name>>/add", PageIDVariableName),
 			pageHandler(addPageHandler), "add",
 		)
 

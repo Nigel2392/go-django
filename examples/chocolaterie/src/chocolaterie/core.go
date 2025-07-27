@@ -31,7 +31,7 @@ func NewAppConfig() django.AppConfig {
 		&ChocolateListPage{},
 	}
 
-	cfg.Routing = func(m django.Mux) {
+	cfg.Routing = func(m mux.Multiplexer) {
 		m.Handle(mux.GET, "/", mux.NewHandler(Index))
 	}
 

@@ -3,6 +3,8 @@ package translations
 import (
 	"bufio"
 	"bytes"
+	"context"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/printer"
@@ -13,6 +15,8 @@ import (
 	"strconv"
 	"strings"
 
+	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/dlclark/regexp2"
 )
@@ -88,10 +92,11 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 				var col = rexMatch.Index + 1 // column is 1-based
 
 				matches = append(matches, Match{
-					Path: path,
-					Line: lineNum,
-					Col:  col,
-					Text: capture,
+					Path:    path,
+					Line:    lineNum,
+					Col:     col,
+					Text:    capture,
+					Comment: "[TemplateFinder]",
 				})
 
 				matchCount++
@@ -223,7 +228,7 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 				Line:    pos.Line,
 				Col:     pos.Column,
 				Text:    unquoted,
-				Comment: currentFuncName,
+				Comment: fmt.Sprintf("[GoFileFinder]: %s", currentFuncName),
 			})
 
 			return true
@@ -234,6 +239,55 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 
 	if err != nil {
 		return nil, err
+	}
+
+	return matches, nil
+}
+
+type godjangoModelsFinder struct {
+}
+
+func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Match, error) {
+	var apps = django.Global.Apps
+	if apps == nil {
+		return nil, nil
+	}
+
+	var matches []Match
+	var lineNum int
+	for head := apps.Front(); head != nil; head = head.Next() {
+		lineNum++
+
+		var app = head.Value
+		var models = app.Models()
+		var col int
+
+		for _, model := range models {
+			col++
+
+			var cType = contenttypes.NewContentType(model)
+			var match = Match{
+				Path:    filepath.Join(".models", app.Name(), cType.Model()),
+				Line:    lineNum,
+				Col:     col,
+				Text:    cType.Model(),
+				Comment: fmt.Sprintf("[ModelFinder]: %s", cType.ShortTypeName()),
+			}
+
+			matches = append(matches, match)
+
+			var fieldDefs = model.FieldDefs()
+			for i, field := range fieldDefs.Fields() {
+				var fieldMatch = Match{
+					Path:    filepath.Join(".models", app.Name(), cType.Model(), "fields"),
+					Line:    col,
+					Col:     i,
+					Text:    field.Label(context.Background()),
+					Comment: fmt.Sprintf("[ModelFinder.Field]: %s.%s", cType.ShortTypeName(), field.Name()),
+				}
+				matches = append(matches, fieldMatch)
+			}
+		}
 	}
 
 	return matches, nil

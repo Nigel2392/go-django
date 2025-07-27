@@ -24,7 +24,7 @@ func Funcs(funcs template.FuncMap) {
 	Global.Funcs(funcs)
 }
 
-func RequestFuncs(funcs map[string]func(*http.Request) TemplateFunc) {
+func RequestFuncs(funcs func(*http.Request) template.FuncMap) {
 	Global.RequestFuncs(funcs)
 }
 

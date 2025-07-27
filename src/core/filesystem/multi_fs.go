@@ -3,6 +3,7 @@ package filesystem
 import (
 	"errors"
 	"io/fs"
+	"sync"
 )
 
 // MultiFS is a filesystem that combines multiple filesystems.
@@ -17,6 +18,7 @@ import (
 type MultiFS struct {
 	fs     []fs.FS
 	cached map[string]int
+	mu     sync.Mutex
 }
 
 // NewMultiFS creates a new MultiFS filesystem that combines the given filesystems.
@@ -29,6 +31,7 @@ func NewMultiFS(fileSystems ...fs.FS) *MultiFS {
 	return &MultiFS{
 		fs:     fileSystems,
 		cached: make(map[string]int),
+		mu:     sync.Mutex{},
 	}
 }
 
@@ -40,6 +43,9 @@ func NewMultiFS(fileSystems ...fs.FS) *MultiFS {
 //
 // A regular `fs.FS` is added to the pool if no matcher-func is given.
 func (m *MultiFS) Add(fs fs.FS, matches func(filepath string) bool) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	if matches == nil {
 		m.fs = append(m.fs, fs)
 	} else {
@@ -51,6 +57,8 @@ func (m *MultiFS) Add(fs fs.FS, matches func(filepath string) bool) {
 //
 // It will try to open the file in each filesystem in the order they were added.
 func (m *MultiFS) Open(name string) (fs.File, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 
 	// Try to open the file from the fs at the cached index
 	// if exists and when Open is called the returned error
