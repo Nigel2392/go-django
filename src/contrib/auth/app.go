@@ -333,8 +333,12 @@ func initAuthEditForm(instance attrs.Definer, form modelforms.ModelForm[attrs.De
 			IsRegistering:     true,
 			UseDefaultOptions: false,
 		},
-		fields.Label("Password Confirm"),
-		fields.HelpText("Enter the password again to confirm"),
+		fields.Label(trans.S(
+			"Password Confirm",
+		)),
+		fields.HelpText(trans.S(
+			"Enter the password again to confirm",
+		)),
 		fields.Required(false),
 	))
 

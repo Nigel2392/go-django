@@ -23,6 +23,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/contrib/settings"
+	"github.com/Nigel2392/go-django/src/contrib/translations"
 	"github.com/Nigel2392/mux"
 	"github.com/google/uuid"
 
@@ -59,6 +60,7 @@ func main() {
 			django.APPVAR_DATABASE:        db,
 			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
 			migrator.APPVAR_MIGRATION_DIR: "./.private/blogapp/migrations",
+			// translations.APPVAR_TRANSLATIONS_DEFAULT_LOCALE: language.Dutch,
 
 			django.APPVAR_RECOVERER: false,
 		}),
@@ -91,6 +93,7 @@ func main() {
 				MediaDir:     "images",
 			}),
 			migrator.NewAppConfig,
+			translations.NewAppConfig,
 		),
 	)
 

@@ -6,7 +6,6 @@ package list
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
 import (
-	"context"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -54,8 +53,7 @@ func (l *List[T]) Render() string {
 
 	var component = l.Component()
 	var b strings.Builder
-	var ctx = context.Background()
-	component.Render(ctx, &b)
+	component.Render(l.request.Context(), &b)
 	return b.String()
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/contrib/pages/validators"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/mux"
 )
 
@@ -115,13 +116,13 @@ func (n *Site) DatabaseIndexes(obj attrs.Definer) []migrator.Index {
 func (n *Site) Fields(d attrs.Definer) []attrs.Field {
 	return []attrs.Field{
 		attrs.NewField(n, "ID", &attrs.FieldConfig{
-			HelpText: "The unique identifier for the site.",
+			HelpText: trans.S("The unique identifier for the site."),
 			Primary:  true,
 			Column:   "id",
 			ReadOnly: true,
 		}),
 		attrs.NewField(n, "Name", &attrs.FieldConfig{
-			HelpText:  "The name of the site.",
+			HelpText:  trans.S("The name of the site."),
 			Column:    "site_name",
 			Null:      false,
 			Blank:     false,
@@ -129,7 +130,7 @@ func (n *Site) Fields(d attrs.Definer) []attrs.Field {
 			MaxLength: 64,
 		}),
 		attrs.NewField(n, "Domain", &attrs.FieldConfig{
-			HelpText:  "The domain of the site, e.g. example.com.",
+			HelpText:  trans.S("The domain of the site, e.g. example.com."),
 			Column:    "domain",
 			Null:      false,
 			Blank:     false,
@@ -140,7 +141,7 @@ func (n *Site) Fields(d attrs.Definer) []attrs.Field {
 			},
 		}),
 		attrs.NewField(n, "Port", &attrs.FieldConfig{
-			HelpText: "The port of the site, e.g. 80 for HTTP or 443 for HTTPS.",
+			HelpText: trans.S("The port of the site, e.g. 80 for HTTP or 443 for HTTPS."),
 			Column:   "port",
 			Null:     false,
 			Blank:    false,
@@ -149,14 +150,14 @@ func (n *Site) Fields(d attrs.Definer) []attrs.Field {
 			MaxValue: 65535,
 		}),
 		attrs.NewField(n, "Default", &attrs.FieldConfig{
-			HelpText: "Whether this site is the default site. Only one site can be the default site.",
+			HelpText: trans.S("Whether this site is the default site. Only one site can be the default site."),
 			Column:   "is_default_site",
 			Null:     false,
 			Blank:    true,
 			Default:  false,
 		}),
 		attrs.NewField(n, "Root", &attrs.FieldConfig{
-			HelpText: "The root page of the site. This is the page that will be displayed when the site is accessed.",
+			HelpText: trans.S("The root page of the site. This is the page that will be displayed when the site is accessed."),
 			Column:   "root_page_id",
 			Null:     true,
 			RelForeignKey: attrs.Relate(

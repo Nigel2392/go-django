@@ -44,8 +44,8 @@ type FieldConfig struct {
 	Primary              bool                                                // Whether the field is a primary key
 	Embedded             bool                                                // Whether the field is an embedded field
 	NameOverride         string                                              // An optional override for the field name
-	Label                string                                              // The label for the field
-	HelpText             string                                              // The help text for the field
+	Label                any                                                 // The label for the field
+	HelpText             any                                                 // The help text for the field
 	Column               string                                              // The name of the column in the database
 	MinLength            int64                                               // The minimum length of the field
 	MaxLength            int64                                               // The maximum length of the field
@@ -304,8 +304,18 @@ func (f *FieldDef) Type() reflect.Type {
 }
 
 func (f *FieldDef) Label(ctx context.Context) string {
-	if f.attrDef.Label != "" {
-		return trans.T(ctx, f.attrDef.Label)
+	if f.attrDef.Label != nil {
+		switch label := f.attrDef.Label.(type) {
+		case string:
+			return trans.T(ctx, label)
+		case func(ctx context.Context) string:
+			return label(ctx)
+		default:
+			panic(fmt.Sprintf(
+				"Label for field %q (%T) is not a `string` or `function(context) string`, got %T",
+				f.field_t.Name, f.field_v.Interface(), label,
+			))
+		}
 	}
 
 	// if f.directlyInteractible {
@@ -326,14 +336,24 @@ func (f *FieldDef) Label(ctx context.Context) string {
 }
 
 func (f *FieldDef) HelpText(ctx context.Context) string {
-	// if f.directlyInteractible {
 	if helpTexter, ok := f.field_v.Interface().(Helper); ok {
 		return helpTexter.HelpText(ctx)
 	}
-	// }
-	if f.attrDef.HelpText != "" {
-		return trans.T(ctx, f.attrDef.HelpText)
+
+	if f.attrDef.HelpText != nil {
+		switch helpText := f.attrDef.HelpText.(type) {
+		case string:
+			return trans.T(ctx, helpText)
+		case func(ctx context.Context) string:
+			return helpText(ctx)
+		default:
+			panic(fmt.Sprintf(
+				"HelpText for field %q (%T) is not a `string` or `function(context) string`, got %T",
+				f.field_t.Name, f.field_v.Interface(), helpText,
+			))
+		}
 	}
+
 	return ""
 }
 
@@ -617,6 +637,7 @@ func (f *FieldDef) FormField() fields.Field {
 	} else {
 		opts = append(opts, fields.Label(f.Label))
 	}
+
 	opts = append(opts, fields.HelpText(f.HelpText))
 
 	if f.attrDef.ReadOnly {

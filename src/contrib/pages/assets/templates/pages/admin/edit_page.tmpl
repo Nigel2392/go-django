@@ -21,11 +21,11 @@
             <button class="button secondary" type="submit" value="Submit">
                 {{ T "Save" }}
             </button>
-            {{ if (and (not (.Get "is_published")) (has_perm .Request "pages:publish")) }}
+            {{ if (and (not (.Get "is_published")) (has_perm  "pages:publish")) }}
                 <button class="button secondary" type="submit" name="publish-page" value="publish-page">
                     {{ T "Save and Publish" }}
                 </button>
-            {{ else if (and (.Get "is_published") (has_perm .Request "pages:publish")) }}
+            {{ else if (and (.Get "is_published") (has_perm  "pages:publish")) }}
                 <button class="button secondary" type="submit" name="unpublish-page" value="unpublish-page">
                     {{ T "Unpublish and Save" }}
                 </button>

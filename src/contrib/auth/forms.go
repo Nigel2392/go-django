@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/mux"
@@ -126,8 +127,12 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 		f.AddField(
 			"username",
 			fields.CharField(
-				fields.Label("Username"),
-				fields.HelpText("Enter your username"),
+				fields.Label(trans.S(
+					"Username",
+				)),
+				fields.HelpText(trans.S(
+					"Enter your username",
+				)),
 				fields.Required(true),
 				fields.MinLength(3),
 				fields.MaxLength(75),
@@ -140,8 +145,12 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 		f.AddField(
 			"firstName",
 			fields.CharField(
-				fields.Label("First Name"),
-				fields.HelpText("Enter your first name"),
+				fields.Label(trans.S(
+					"First Name",
+				)),
+				fields.HelpText(trans.S(
+					"Enter your first name",
+				)),
 				fields.Required(true),
 				fields.MinLength(2),
 				fields.MaxLength(75),
@@ -151,8 +160,12 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 		f.AddField(
 			"lastName",
 			fields.CharField(
-				fields.Label("Last Name"),
-				fields.HelpText("Enter your last name"),
+				fields.Label(trans.S(
+					"Last Name",
+				)),
+				fields.HelpText(trans.S(
+					"Enter your last name",
+				)),
 				fields.Required(true),
 				fields.MinLength(2),
 				fields.MaxLength(75),
@@ -167,8 +180,12 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 				Flags:         ChrFlagDEFAULT,
 				IsRegistering: true,
 			},
-			fields.Label("Password"),
-			fields.HelpText("Enter your password"),
+			fields.Label(trans.S(
+				"Password",
+			)),
+			fields.HelpText(trans.S(
+				"Enter your password",
+			)),
 			fields.Required(true),
 		),
 	)
@@ -180,8 +197,12 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 				Flags:         ChrFlagDEFAULT,
 				IsRegistering: true,
 			},
-			fields.Label("Password Confirm"),
-			fields.HelpText("Enter the password again to confirm"),
+			fields.Label(trans.S(
+				"Password Confirm",
+			)),
+			fields.HelpText(trans.S(
+				"Enter the password again to confirm",
+			)),
 			fields.Required(true),
 		),
 	)
@@ -204,7 +225,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 		if registerConfig.AlwaysAllLoginFields || Auth.LoginWithEmail {
 			if email == nil {
 				return []error{errors.Wrap(
-					errs.ErrFieldRequired, "Email is required",
+					errs.ErrFieldRequired, trans.T(r.Context(), "Email is required"),
 				)}
 			}
 			_, err = queries.GetQuerySetWithContext(ctx, &User{}).
@@ -212,7 +233,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 				Get()
 			if err == nil {
 				return []error{errors.Wrap(
-					autherrors.ErrUserExists, "Email exists",
+					autherrors.ErrUserExists, trans.T(r.Context(), "Email exists"),
 				)}
 			}
 
@@ -227,7 +248,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 		if registerConfig.AlwaysAllLoginFields || !Auth.LoginWithEmail {
 			if username == nil {
 				return []error{errors.Wrap(
-					errs.ErrFieldRequired, "Username is required",
+					errs.ErrFieldRequired, trans.T(r.Context(), "Username is required"),
 				)}
 			}
 			_, err = queries.GetQuerySetWithContext(ctx, &User{}).
@@ -235,7 +256,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 				Get()
 			if err == nil {
 				return []error{errors.Wrap(
-					autherrors.ErrUserExists, "Username exists",
+					autherrors.ErrUserExists, trans.T(r.Context(), "Username exists"),
 				)}
 			}
 		}
@@ -274,7 +295,10 @@ func (f *BaseUserForm) basicChecks() error {
 	}
 
 	if f.Cleaned == nil {
-		return errs.Error("Form not cleaned")
+		return errs.Error(trans.T(
+			f.Request.Context(),
+			"Form is not cleaned",
+		))
 	}
 
 	return nil
@@ -324,13 +348,13 @@ func (f *BaseUserForm) Save() (*User, error) {
 
 	err = f.Instance.Save(f.Request.Context())
 	if err != nil {
-		return nil, errors.Wrap(err, "Error saving user")
+		return nil, errors.Wrap(err, trans.T(f.Request.Context(), "Error saving user"))
 	}
 
 	if f.config.AutoLogin {
 		var user, err = Login(f.Request, f.Instance)
 		if err != nil {
-			return nil, errors.Wrap(err, "Error logging in user")
+			return nil, errors.Wrap(err, trans.T(f.Request.Context(), "Error logging in user"))
 		}
 		f.Instance = user
 	}

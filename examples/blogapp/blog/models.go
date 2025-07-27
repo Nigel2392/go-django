@@ -91,18 +91,18 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 		attrs.NewField(n.Page, "Title", &attrs.FieldConfig{
 			Embedded: true,
 			Label:    "Title",
-			HelpText: "How do you want your post to be remembered?",
+			HelpText: trans.S("How do you want your post to be remembered?"),
 		}),
 		attrs.NewField(n.Page, "UrlPath", &attrs.FieldConfig{
 			Embedded: true,
 			ReadOnly: true,
 			Label:    "URL Path",
-			HelpText: "The URL path for this blog post.",
+			HelpText: trans.S("The URL path for this blog post."),
 		}),
 		attrs.NewField(n.Page, "Slug", &attrs.FieldConfig{
 			Embedded: true,
 			Label:    "Slug",
-			HelpText: "The slug for this blog post.",
+			HelpText: trans.S("The slug for this blog post."),
 			Blank:    true,
 		}),
 		editor.NewField(n, "Editor", editor.FieldConfig{
@@ -118,13 +118,13 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 			Embedded: true,
 			ReadOnly: true,
 			Label:    "Created At",
-			HelpText: "The date and time this blog post was created.",
+			HelpText: trans.S("The date and time this blog post was created."),
 		}),
 		attrs.NewField(n.Page, "UpdatedAt", &attrs.FieldConfig{
 			Embedded: true,
 			ReadOnly: true,
 			Label:    "Updated At",
-			HelpText: "The date and time this blog post was last updated.",
+			HelpText: trans.S("The date and time this blog post was last updated."),
 		}),
 	)
 }

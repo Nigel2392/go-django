@@ -4,9 +4,9 @@
 
 {{ block "header" . }}
     <div class="view-header">
-        {{ if (has_perm .Request "pages:add") }}
+        {{ if (has_perm  "pages:add") }}
             <div class="buttons">
-                {{ if (has_perm .Request "pages:add") }}
+                {{ if (has_perm  "pages:add") }}
                     <a href="{{ url "admin:pages:root_type" }}" class="button primary">{{ T "Add Root Page" }}</a>
                 {{ end }}
             </div>

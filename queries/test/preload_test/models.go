@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 )
 
 var (
@@ -32,7 +33,7 @@ func (pb *PreloadBook) FieldDefs() attrs.Definitions {
 		}),
 		attrs.Unbound("Title", &attrs.FieldConfig{
 			Label:     "Book Title",
-			HelpText:  "Title of the book. This is the title that will be displayed in the UI.",
+			HelpText:  trans.S("Title of the book. This is the title that will be displayed in the UI."),
 			MaxLength: 100,
 		}),
 	)
@@ -141,7 +142,7 @@ func (pa *PreloadAuthor) FieldDefs() attrs.Definitions {
 		}),
 		attrs.Unbound("Name", &attrs.FieldConfig{
 			Label:     "Author Name",
-			HelpText:  "Name of the author. This is the name that will be displayed in the UI.",
+			HelpText:  trans.S("Name of the author. This is the name that will be displayed in the UI."),
 			MaxLength: 100,
 		}),
 		attrs.Unbound("CreatedAt", &attrs.FieldConfig{

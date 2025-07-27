@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"html/template"
 	"io"
+	"net/http"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-signals"
@@ -21,6 +22,10 @@ func Add(c Config) {
 
 func Funcs(funcs template.FuncMap) {
 	Global.Funcs(funcs)
+}
+
+func RequestFuncs(funcs map[string]func(*http.Request) TemplateFunc) {
+	Global.RequestFuncs(funcs)
 }
 
 func Overrides(funcs ...func(any) (any, error)) {

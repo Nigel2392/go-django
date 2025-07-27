@@ -21,7 +21,7 @@
             <button class="button secondary" type="submit">
                 {{ T "Save" }}
             </button>
-            {{ if (has_perm .Request "pages:publish") }}
+            {{ if (has_perm  "pages:publish") }}
                 <button class="button secondary" type="submit" name="publish-page" value="publish-page">
                     {{ T "Save and Publish" }}
                 </button>

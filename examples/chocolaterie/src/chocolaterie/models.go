@@ -87,18 +87,18 @@ func (n *ChocolateListPage) FieldDefs() attrs.Definitions {
 		attrs.NewField(n.Page, "Title", &attrs.FieldConfig{
 			Embedded: true,
 			Label:    "Title",
-			HelpText: "How do you want your page to be remembered?",
+			HelpText: trans.S("How do you want your page to be remembered?"),
 		}),
 		attrs.NewField(n.Page, "UrlPath", &attrs.FieldConfig{
 			Embedded: true,
 			ReadOnly: true,
 			Label:    "URL Path",
-			HelpText: "The URL path for this chocolate list page.",
+			HelpText: trans.S("The URL path for this chocolate list page."),
 		}),
 		attrs.NewField(n.Page, "Slug", &attrs.FieldConfig{
 			Embedded: true,
 			Label:    "Slug",
-			HelpText: "The slug for this chocolate list page.",
+			HelpText: trans.S("The slug for this chocolate list page."),
 			Blank:    true,
 		}),
 		editor.NewField(n, "Description", editor.FieldConfig{
@@ -114,13 +114,13 @@ func (n *ChocolateListPage) FieldDefs() attrs.Definitions {
 			Embedded: true,
 			ReadOnly: true,
 			Label:    "Created At",
-			HelpText: "The date and time this chocolate list page was created.",
+			HelpText: trans.S("The date and time this chocolate list page was created."),
 		}),
 		attrs.NewField(n.Page, "UpdatedAt", &attrs.FieldConfig{
 			Embedded: true,
 			ReadOnly: true,
 			Label:    "Updated At",
-			HelpText: "The date and time this chocolate list page was last updated.",
+			HelpText: trans.S("The date and time this chocolate list page was last updated."),
 		}),
 	)
 }

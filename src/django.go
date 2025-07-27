@@ -590,6 +590,44 @@ func (a *Application) Initialize() error {
 		},
 	})
 
+	// If the request is available it is possible to base some fuctions on said request.
+	tpl.RequestFuncs(map[string]func(*http.Request) tpl.TemplateFunc{
+		"csrf_token": func(req *http.Request) tpl.TemplateFunc {
+			return func() template.HTML {
+				return template.HTML(nosurf.Token(req))
+			}
+		},
+		"csrf_field": func(req *http.Request) tpl.TemplateFunc {
+			return func(cookieName ...string) template.HTML {
+				var cookie string
+				if len(cookieName) > 0 && cookieName[0] != "" {
+					cookie = cookieName[0]
+				} else {
+					cookie = nosurf.CookieName
+				}
+				return template.HTML(fmt.Sprintf(
+					`<input type="hidden" name="%s" value="%s">`,
+					cookie, nosurf.Token(req),
+				))
+			}
+		},
+		"has_object_perm": func(req *http.Request) tpl.TemplateFunc {
+			return func(obj interface{}, perms ...string) bool {
+				return permissions.HasObjectPermission(req, obj, perms...)
+			}
+		},
+		"has_perm": func(req *http.Request) tpl.TemplateFunc {
+			return func(perm ...string) bool {
+				return permissions.HasPermission(req, perm...)
+			}
+		},
+		"T": func(req *http.Request) tpl.TemplateFunc {
+			return func(s string, args ...any) string {
+				return trans.T(req.Context(), s, args...)
+			}
+		},
+	})
+
 	a.Commands.Register(sqlShellCommand)
 	a.Commands.Register(runChecksCommand)
 

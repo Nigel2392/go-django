@@ -3,6 +3,7 @@ package todos
 import (
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
 
@@ -21,15 +22,15 @@ func (m *Todo) FieldDefs() attrs.Definitions {
 				Primary:  true, // this field is the primary key
 				ReadOnly: true, // this field is read-only
 				Label:    "ID",
-				HelpText: "The unique identifier of the model",
+				HelpText: trans.S("The unique identifier of the model"),
 			}),
 			attrs.NewField(m, "Title", &attrs.FieldConfig{
 				Label:    "Title",
-				HelpText: "The title of the todo",
+				HelpText: trans.S("The title of the todo"),
 			}),
 			attrs.NewField(m, "Description", &attrs.FieldConfig{
 				Label:    "Description",
-				HelpText: "A description of the todo",
+				HelpText: trans.S("A description of the todo"),
 
 				// register a custom widget for this field
 				// this will render a textarea instead of a text input
@@ -39,7 +40,7 @@ func (m *Todo) FieldDefs() attrs.Definitions {
 			}),
 			attrs.NewField(m, "Done", &attrs.FieldConfig{
 				Label:    "Done",
-				HelpText: "Indicates whether the todo is done or not",
+				HelpText: trans.S("Indicates whether the todo is done or not"),
 				Blank:    true,
 			}),
 		}

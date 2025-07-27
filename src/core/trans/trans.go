@@ -3,8 +3,9 @@ package trans
 import "context"
 
 type TranslationBackend interface {
-	Translate(v string) string
-	Translatef(v string, args ...any) string
+	Translate(ctx context.Context, v string) string
+	Translatef(ctx context.Context, v string, args ...any) string
+	Locale(ctx context.Context) string
 }
 
 var DefaultBackend TranslationBackend = &SprintBackend{}
@@ -17,7 +18,14 @@ func S(v string, args ...any) func(ctx context.Context) string {
 
 func T(ctx context.Context, v string, args ...any) string {
 	if len(args) == 0 {
-		return DefaultBackend.Translate(v)
+		return DefaultBackend.Translate(ctx, v)
 	}
-	return DefaultBackend.Translatef(v, args...)
+	return DefaultBackend.Translatef(ctx, v, args...)
+}
+
+func Locale(ctx context.Context) string {
+	if DefaultBackend == nil {
+		return ""
+	}
+	return DefaultBackend.Locale(ctx)
 }

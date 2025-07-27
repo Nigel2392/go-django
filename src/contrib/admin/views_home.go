@@ -62,7 +62,8 @@ var HomeHandler = &views.BaseView{
 			django.Global.Settings,
 			APPVAR_HOME_PAGE_SUBTITLE,
 			func(r *http.Request) string {
-				return trans.T(r.Context(),
+				return trans.T(
+					r.Context(),
 					"Welcome to the Go-Django admin dashboard, %s!",
 					attrs.ToString(user),
 				)

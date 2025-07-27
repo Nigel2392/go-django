@@ -7,7 +7,7 @@
         {{ $app := (.Get "app") }}
         {{ $model := (.Get "model") }}
         <div class="view-header">
-            {{ if (and (not $model.DisallowCreate) (has_object_perm .Request $model.NewInstance "admin:add")) }}
+            {{ if (and (not $model.DisallowCreate) (has_object_perm  $model.NewInstance "admin:add")) }}
                 <div class="buttons">
                     <a href="{{ url "admin:apps:model:add" $app.Name $model.GetName }}" class="button primary">{{ T "Add" }}</a>
                 </div>

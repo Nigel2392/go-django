@@ -17,7 +17,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/Nigel2392/go-signals"
 )
@@ -205,7 +204,7 @@ func TestPageRegistry(t *testing.T) {
 
 		var definition = &pages.PageDefinition{
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
-				GetLabel: trans.S(""),
+				GetLabel: func(ctx context.Context) string { return "" },
 				ContentObject: &TestPage{
 					Ref: &pages.PageNode{
 						PK:     1,
@@ -1184,7 +1183,7 @@ ORDER BY level DESC;`
 	pages.Register(&pages.PageDefinition{
 		ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 			ContentObject: &DBTestPage{},
-			GetLabel:      trans.S(""),
+			GetLabel:      func(ctx context.Context) string { return "" },
 		},
 		GetForID: func(ctx context.Context, ref *pages.PageNode, id int64) (pages.Page, error) {
 			var page = &DBTestPage{}

@@ -1,0 +1,258 @@
+package translations
+
+import (
+	"flag"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+
+	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/command"
+	"github.com/Nigel2392/go-django/src/core/command/flags"
+	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/elliotchance/orderedmap/v2"
+	"github.com/urfave/cli/v2"
+	"gopkg.in/yaml.v3"
+)
+
+type translationsCommandContext struct {
+	dir  flags.List
+	locs flags.List
+	file string
+}
+
+var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
+	ID:   "make-translations",
+	Desc: "Search for translation strings in the project files",
+	FlagFunc: func(m command.Manager, stored *translationsCommandContext, f *flag.FlagSet) error {
+		stored.dir = flags.NewList(django.ConfigGet(django.Global.Settings, APPVAR_TRANSLATIONS_DIR, []string{})...)
+		stored.locs = flags.NewList(django.ConfigGet[[]string](django.Global.Settings, APPVAR_TRANSLATIONS_LOCALES)...)
+		stored.file = django.ConfigGet(django.Global.Settings, APPVAR_TRANSLATIONS_FILE, translationsFile)
+
+		f.Var(&stored.dir, "dir", "The directory to search for translation strings")
+		f.Var(&stored.locs, "locales", "Generate the following locales for the translation strings")
+		f.StringVar(&stored.file, "file", translationsFile, "Output the found translations to a file (default is translations.yml)")
+
+		return nil
+	},
+	Execute: func(m command.Manager, stored translationsCommandContext, args []string) (err error) {
+
+		if stored.dir.Len() == 0 {
+			var projectPath, err = os.Getwd()
+			if err != nil {
+				return err
+			}
+
+			stored.dir = flags.NewList(projectPath)
+		}
+
+		var matches = make([]Match, 0)
+		var dirFsys []fs.FS
+		for _, dir := range stored.dir.List() {
+			dirFsys = append(dirFsys, os.DirFS(filepath.ToSlash(dir)))
+		}
+
+		var locales = stored.locs
+		if locales.Len() == 0 {
+			locales = flags.NewList()
+		}
+
+		for _, fsys := range append(dirFsys, translatorApp.filesystems...) {
+			for _, finder := range translatorApp.finders {
+				var found, err = finder.Find(fsys)
+				if err != nil {
+					return cli.Exit(
+						"Error finding translations: "+err.Error(), 1,
+					)
+				}
+
+				matches = append(matches, found...)
+			}
+		}
+
+		if len(matches) == 0 {
+			logger.Info("No translation strings found.")
+			return nil
+		}
+
+		var outputFile = stored.file
+		if outputFile == "" {
+			outputFile = translationsFile
+		}
+
+		logger.Infof("Writing translations to: %s", outputFile)
+
+		var oldMatchMap = make(map[string]Match)
+		for _, m := range translatorApp.translationMatches {
+			if _, ok := oldMatchMap[m.Text]; !ok {
+				oldMatchMap[m.Text] = m
+			}
+		}
+
+		sortMatches(matches)
+
+		var newMatches = make([]*Match, 0, len(matches))
+		var foundMatches = make(map[string]*Match)
+		for _, m := range matches {
+
+			// Check if we already have this Match in the old matches
+			//
+			// If so, we should preserve its locales (and thus also its translations)
+			if oldItem, ok := oldMatchMap[m.Text]; ok {
+				m.Locales = oldItem.Locales // Preserve locales
+				if oldItem.Comment != m.Comment && m.Comment == "" {
+					m.Comment = oldItem.Comment
+				}
+			}
+
+			// Initialize locales if not already set up
+			if m.Locales == nil {
+				m.Locales = orderedmap.NewOrderedMap[string, string]()
+			}
+
+			// Ensure all requested locales are present
+			// If a locale is not found, it will be added with an empty string value
+			for _, locale := range locales.List() {
+				if _, ok := m.Locales.Get(locale); !ok {
+					m.Locales.Set(locale, "")
+				}
+			}
+
+			// If we already have a Match with the same text, we can skip adding it again
+			if foundMatch, ok := foundMatches[m.Text]; ok && m.Locales.Len() > 0 {
+				for head := m.Locales.Front(); head != nil; head = head.Next() {
+
+					if head.Value == "" {
+						continue // Skip empty translations
+					}
+
+					foundMatch.Locales.Set(head.Key, head.Value)
+				}
+				continue
+			}
+
+			newMatches = append(newMatches, &m)
+			foundMatches[m.Text] = &m
+		}
+
+		file, err := os.OpenFile(
+			outputFile,
+			os.O_CREATE|os.O_RDWR, 0644,
+		)
+		if err != nil {
+			return cli.Exit(
+				"Error creating output file: "+err.Error(), 1,
+			)
+		}
+		defer file.Close()
+
+		// Clear the file content
+		file.Truncate(0)
+
+		// Encode the new matches to YAML
+		// Write each Match as a separate YAML document
+		// This can be done by delimiting each Match with "---"
+		for i, m := range newMatches {
+
+			if i > 0 {
+				file.WriteString("---\n\n") // YAML document separator
+			}
+
+			var locales = m.Locales
+			if locales != nil {
+				var keys = locales.Keys()
+
+				slices.Sort(keys) // Sort keys to ensure consistent order
+
+				var newLocales = orderedmap.NewOrderedMap[Locale, Translation]()
+				for _, key := range keys {
+					if value, ok := locales.Get(key); ok {
+						newLocales.Set(key, value)
+					}
+				}
+
+				m.Locales = newLocales
+			}
+
+			var encoder = yaml.NewEncoder(file)
+			encoder.SetIndent(2)
+			if err := encoder.Encode(m); err != nil {
+				return cli.Exit(
+					"Error encoding new translations: "+err.Error(), 1,
+				)
+			}
+
+			if err := encoder.Close(); err != nil {
+				return cli.Exit(
+					"Error closing encoder: "+err.Error(), 1,
+				)
+			}
+
+			file.WriteString("\n") // Ensure each Match is on a new line
+		}
+
+		// Success!
+		logger.Infof("Translations written to %s successfully.", outputFile)
+		return nil
+	},
+}
+
+func readTranslationsYAML(rd io.Reader, slice []Match) ([]Match, error) {
+	var dec = yaml.NewDecoder(rd)
+	dec.KnownFields(true)
+
+	for {
+		var m Match
+		if err := dec.Decode(&m); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, cli.Exit(
+				"Error decoding existing translation: "+err.Error(), 1,
+			)
+		}
+		slice = append(slice, m)
+	}
+	return slice, nil
+}
+
+func comparePaths(a, b Match) int {
+	if a.Path != b.Path {
+		return strings.Compare(a.Path, b.Path)
+	}
+	if a.Line != b.Line {
+		return a.Line - b.Line
+	}
+	if a.Col != b.Col {
+		return a.Col - b.Col
+	}
+	return 0
+}
+
+func matchCompare(a, b Match) int {
+	// 3. Text: non-empty before empty, alpha
+	if a.Text == "" && b.Text == "" {
+		return 0
+	}
+
+	if a.Text == "" {
+		return 1 // a is empty, b not: b first
+	}
+
+	if b.Text == "" {
+		return -1 // b is empty, a not: a first
+	}
+
+	return 0
+}
+
+func sortMatches(matches []Match) {
+	slices.SortStableFunc(matches, comparePaths)
+	slices.SortStableFunc(matches, matchCompare)
+	slices.SortStableFunc(matches, func(a, b Match) int {
+		return b.Preference - a.Preference // higher first
+	})
+}

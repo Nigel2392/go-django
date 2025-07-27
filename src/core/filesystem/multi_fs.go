@@ -15,7 +15,8 @@ import (
 //
 // This allows for faster skipping of filesystems that do not contain the file.
 type MultiFS struct {
-	fs []fs.FS
+	fs     []fs.FS
+	cached map[string]int
 }
 
 // NewMultiFS creates a new MultiFS filesystem that combines the given filesystems.
@@ -25,7 +26,10 @@ func NewMultiFS(fileSystems ...fs.FS) *MultiFS {
 	if len(fileSystems) == 0 {
 		fileSystems = make([]fs.FS, 0)
 	}
-	return &MultiFS{fs: fileSystems}
+	return &MultiFS{
+		fs:     fileSystems,
+		cached: make(map[string]int),
+	}
 }
 
 // Add adds the given filesystem to the MultiFS filesystem.
@@ -47,12 +51,35 @@ func (m *MultiFS) Add(fs fs.FS, matches func(filepath string) bool) {
 //
 // It will try to open the file in each filesystem in the order they were added.
 func (m *MultiFS) Open(name string) (fs.File, error) {
-	for i := len(m.fs) - 1; i >= 0; i-- {
-		f := m.fs[i]
-		file, err := f.Open(name)
-		if err != nil && errors.Is(err, fs.ErrNotExist) {
-			continue
+
+	// Try to open the file from the fs at the cached index
+	// if exists and when Open is called the returned error
+	// is fs.ErrNotFound - we will keep looking
+	if fsIndex, ok := m.cached[name]; ok {
+		var f, err = m.fs[fsIndex].Open(name)
+		if err != nil {
+			if !errors.Is(err, fs.ErrNotExist) {
+				goto loopOverFilesystems
+			}
+			return nil, err
 		}
+
+		return f, nil
+	}
+
+loopOverFilesystems:
+	for i := len(m.fs) - 1; i >= 0; i-- {
+		var fsys = m.fs[i]
+		var file, err = fsys.Open(name)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
+			return nil, err
+		}
+
+		m.cached[name] = i
+
 		return file, err
 	}
 

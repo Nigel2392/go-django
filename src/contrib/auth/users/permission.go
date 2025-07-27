@@ -3,6 +3,7 @@ package users
 import (
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/trans"
 )
 
 type Permission struct {
@@ -24,13 +25,13 @@ func (p *Permission) FieldDefs() attrs.Definitions {
 		}),
 		attrs.NewField(p, "Name", &attrs.FieldConfig{
 			Label:     "Permission Name",
-			HelpText:  "Name of the permission. This is the name that will be displayed in the UI.",
+			HelpText:  trans.S("Name of the permission. This is the name that will be displayed in the UI."),
 			MaxLength: 255,
 		}),
 		attrs.NewField(p, "Description", &attrs.FieldConfig{
 			Blank:     true,
 			Label:     "Description",
-			HelpText:  "Description of the permission. This is the description that will be displayed in the UI.",
+			HelpText:  trans.S("Description of the permission. This is the description that will be displayed in the UI."),
 			MaxLength: 1024,
 		}),
 	}

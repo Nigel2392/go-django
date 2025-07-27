@@ -66,7 +66,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 		},
 		Columns: map[string]list.ListColumn[attrs.Definer]{
 			"Children": list.HTMLColumn[attrs.Definer](
-				trans.S(""),
+				func(ctx context.Context) string { return "" },
 				func(_ *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
 					var node = row.(*PageNode)
 					if node.Numchild > 0 {
@@ -91,7 +91,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 				func(r *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
 					var node = row.(*PageNode)
 					var ctype = DefinitionForType(node.ContentType)
-					var typStr = "Unknown"
+					var typStr = trans.T(r.Context(), "Unknown")
 					if ctype != nil {
 						typStr = ctype.Label(r.Context())
 					}
