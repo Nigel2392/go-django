@@ -3,6 +3,7 @@ package pages
 import (
 	"fmt"
 	"reflect"
+	"strconv"
 	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -20,6 +21,16 @@ type pageRouteResolver struct {
 	mux.Handler
 }
 
+// This is a custom resolver for page routes that allows us to reverse the URL of a page
+// based on its ID or Page object. It also matches the URL to the page's slug.
+//
+// It can be used with django.Reverse to generate URLs for pages, example:
+//
+//	django.Reverse("pages:page", page)
+//	django.Reverse("pages:page", page.ID())
+//
+// When passed anything other than a Page, string, int64 or value which can be converted to int64,
+// it will return an error.
 func (p *pageRouteResolver) Reverse(baseURL string, variables ...interface{}) (string, error) {
 	if len(variables) == 0 {
 		return "", mux.ErrNotEnoughVariables
@@ -34,6 +45,14 @@ func (p *pageRouteResolver) Reverse(baseURL string, variables ...interface{}) (s
 		pageID = v.ID()
 	case int64:
 		pageID = v
+	case string:
+		var id, err = strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return "", errors.ValueError.WithCause(err).Wrapf(
+				"cannot reverse page route, expected a Page or number type, got %T", variables[0],
+			)
+		}
+		pageID = id
 	default:
 		var lhs = reflect.ValueOf(pageID)
 		var rhs = reflect.ValueOf(variables[0])
