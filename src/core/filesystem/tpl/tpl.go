@@ -18,12 +18,20 @@ import (
 	"github.com/pkg/errors"
 )
 
+type TemplateFunc = any
+
+type Template interface {
+	Name() string
+	Execute(w io.Writer, data any) error
+}
+
 type Renderer interface {
 	Add(cfg Config)
 	Processors(funcs ...func(any))
 	Override(funcs ...func(any) (any, error))
 	RequestProcessors(funcs ...func(ctx.ContextWithRequest))
 	FirstRender() signals.Signal[*TemplateRenderer]
+	GetTemplate(baseKey string, path ...string) Template
 	Render(buffer io.Writer, data any, appKey string, path ...string) error
 	Funcs(funcs template.FuncMap)
 	RequestFuncs(funcs func(*http.Request) template.FuncMap)
@@ -47,7 +55,8 @@ func (t *templates) Lt(other *templates) bool {
 
 type TemplateRenderer struct {
 	configs           []*templates
-	cache             map[string]*templateObject
+	configMap         map[string]*templates
+	cache             map[string]*template.Template
 	ctxFuncs          []func(any)
 	ctxOverrides      []func(any) (any, error)
 	requestCtxFuncs   []func(ctx.ContextWithRequest)
@@ -60,8 +69,10 @@ type TemplateRenderer struct {
 
 func NewRenderer() *TemplateRenderer {
 	var r = &TemplateRenderer{
+		configs:           make([]*templates, 0),
+		configMap:         make(map[string]*templates),
 		funcs:             make(template.FuncMap),
-		cache:             make(map[string]*templateObject),
+		cache:             make(map[string]*template.Template),
 		ctxFuncs:          make([]func(any), 0),
 		requestCtxFuncs:   make([]func(ctx.ContextWithRequest), 0),
 		fs:                filesystem.NewCacheFS(filesystem.NewMultiFS()),
@@ -139,36 +150,61 @@ func (r *TemplateRenderer) Add(cfg Config) {
 
 	r.fs.FS.Add(cfg.FS, cfg.Matches)
 	r.configs = append(r.configs, config)
+
+	if config.AppName != "" {
+		r.configMap[config.AppName] = config
+	}
+
 	r.fs.Changed()
 }
 
-type templateObject struct {
-	name  string
-	paths []string
-	cfg   *templates
-	t     *template.Template
+func (r *TemplateRenderer) FirstRender() signals.Signal[*TemplateRenderer] {
+	return r.firstRenderSignal
 }
 
-func (t *templateObject) Execute(w io.Writer, data any) error {
-	var name = getTemplateName(t.paths[0])
-	var tpl = t.t.Lookup(name)
-	return tpl.ExecuteTemplate(w, name, data)
+func (r *TemplateRenderer) GetTemplate(baseKey string, path ...string) Template {
+	path, baseKey = normalizeTemplatePath(baseKey, path...)
+
+	config, err := r.getTemplateConfig(baseKey, path)
+	if err != nil {
+		panic(errors.Wrapf(
+			err, "failed to get template config for %s", strings.Join(path, ", "),
+		))
+	}
+
+	var tpls = r.getTemplatePaths(config, baseKey, path)
+	return &templateObject{
+		path:     path,
+		name:     getTemplateName(path[0]),
+		baseName: getTemplateName(tpls[0]),
+		allPaths: tpls,
+		config:   config,
+		renderer: r,
+	}
 }
 
-func getTemplateName(path string) string {
-	name := filepath.Base(
-		filepath.ToSlash(path),
-	)
+func (r *TemplateRenderer) Render(buffer io.Writer, context any, baseKey string, path ...string) error {
+	if !r.firstRender.Load() {
+		r.firstRender.Store(true)
+		r.onFirstRender()
+	}
 
-	name = strings.TrimSuffix(
-		name, filepath.Ext(name),
-	)
-	return name
+	var tmpl = r.GetTemplate(baseKey, path...)
+	return tmpl.Execute(buffer, context)
+}
+
+func (r *TemplateRenderer) onFirstRender() {
+	r.firstRenderSignal.Send(r)
 }
 
 func (r *TemplateRenderer) getTemplateConfig(baseKey string, path []string) (*templates, error) {
-	// Check if the templates for this path have already been cached
 	var cfg *templates
+	if baseKey != "" {
+		if c, ok := r.configMap[baseKey]; ok {
+			return c, nil
+		}
+	}
+
 	for _, c := range r.configs {
 		if baseKey == c.AppName || c.Matches != nil && c.Matches(path[0]) {
 			cfg = c
@@ -198,120 +234,55 @@ func (r *TemplateRenderer) getTemplatePaths(cfg *templates, baseKey string, path
 	return tpls
 }
 
-func (r *TemplateRenderer) getTemplate(baseKey string, path []string) (*templateObject, error) {
+func (r *TemplateRenderer) getTemplate(name string, basePath string, paths []string, config *templates) (*template.Template, error) {
 
-	assert.False(
-		len(path) == 0 && baseKey == "",
-		"path is required",
-	)
-
-	if len(path) == 0 {
-		path = []string{baseKey}
-		baseKey = ""
-	}
-
-	if tmpl, ok := r.cache[path[0]]; ok && tmpl != nil {
+	if tmpl, ok := r.cache[basePath]; ok && tmpl != nil {
 		return tmpl, nil
 	}
 
-	var name = getTemplateName(path[0])
-	var cfg, err = r.getTemplateConfig(baseKey, path)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "failed to get template config for %s", strings.Join(path, ", "),
-		)
-	}
-
+	var err error
 	var funcMap = make(template.FuncMap)
 	maps.Copy(funcMap, r.funcs)
-	maps.Copy(funcMap, cfg.Funcs)
+	maps.Copy(funcMap, config.Funcs)
 
 	tmpl := template.New(name)
 	tmpl = tmpl.Funcs(funcMap)
 
-	tpls := r.getTemplatePaths(cfg, baseKey, path)
-	tmpl, err = tmpl.ParseFS(r.fs, tpls...)
+	tmpl, err = tmpl.ParseFS(r.fs, paths...)
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "failed to parse template %s", path,
+			err, "failed to parse template %s", paths,
 		)
 	}
 
-	var t = &templateObject{
-		name:  name,
-		cfg:   cfg,
-		paths: tpls,
-		t:     tmpl,
-	}
+	r.cache[basePath] = tmpl
 
-	r.cache[path[0]] = t
-
-	return t, nil
+	return tmpl, nil
 }
 
-func (r *TemplateRenderer) onFirstRender() {
-	r.firstRenderSignal.Send(r)
-}
-
-func (r *TemplateRenderer) FirstRender() signals.Signal[*TemplateRenderer] {
-	return r.firstRenderSignal
-}
-
-type TemplateFunc = any
-
-func (r *TemplateRenderer) getTemplateForRequest(req *http.Request, baseKey string, path []string, buildFuncs []func(*http.Request) template.FuncMap) (*templateObject, error) {
-	assert.False(
-		len(path) == 0 && baseKey == "",
-		"path is required",
-	)
-
-	if len(path) == 0 {
-		path = []string{baseKey}
-		baseKey = ""
-	}
-
-	var name = getTemplateName(path[0])
-	var cfg, err = r.getTemplateConfig(baseKey, path)
-	if err != nil {
-		return nil, errors.Wrapf(
-			err, "failed to get template config for %s", strings.Join(path, ", "),
-		)
-	}
+func (r *TemplateRenderer) getTemplateForRequest(name string, paths []string, config *templates, req *http.Request, buildFuncs []func(*http.Request) template.FuncMap) (*template.Template, error) {
 
 	funcMap := make(template.FuncMap)
 	maps.Copy(funcMap, r.funcs)
-	maps.Copy(funcMap, cfg.Funcs)
+	maps.Copy(funcMap, config.Funcs)
 	for _, fn := range buildFuncs {
 		maps.Copy(funcMap, fn(req))
 	}
 
-	tpls := r.getTemplatePaths(cfg, baseKey, path)
+	var err error
 	tmpl := template.New(name)
 	tmpl = tmpl.Funcs(funcMap)
-	tmpl, err = tmpl.ParseFS(r.fs, tpls...)
+	tmpl, err = tmpl.ParseFS(r.fs, paths...)
 	if err != nil {
 		return nil, errors.Wrapf(
-			err, "failed to parse template %s", path,
+			err, "failed to parse templates %v", paths,
 		)
 	}
 
-	var t = &templateObject{
-		name:  name,
-		cfg:   cfg,
-		paths: cfg.Bases,
-		t:     tmpl,
-	}
-
-	return t, nil
+	return tmpl, nil
 }
 
-func (r *TemplateRenderer) Render(b io.Writer, context any, baseKey string, path ...string) error {
-
-	if !r.firstRender.Load() {
-		r.firstRender.Store(true)
-		r.onFirstRender()
-	}
-
+func (r *TemplateRenderer) setupTemplateContext(context any) (any, *http.Request, error) {
 	var request *http.Request
 	if context != nil {
 		for _, f := range r.ctxFuncs {
@@ -322,7 +293,7 @@ func (r *TemplateRenderer) Render(b io.Writer, context any, baseKey string, path
 		if requestContext, ok := context.(ctx.ContextWithRequest); ok {
 			var req = requestContext.Request()
 			if req == nil {
-				goto render
+				goto overrideContext
 			}
 
 			request = req
@@ -334,7 +305,7 @@ func (r *TemplateRenderer) Render(b io.Writer, context any, baseKey string, path
 		}
 	}
 
-render:
+overrideContext:
 	var err error
 	for _, f := range r.ctxOverrides {
 		if f == nil {
@@ -343,22 +314,34 @@ render:
 
 		context, err = f(context)
 		if err != nil {
-			return errors.Wrap(err, "failed to override context")
+			return context, nil, errors.Wrap(err, "failed to override context")
 		}
 	}
 
-	var tmpl *templateObject
-	if request != nil {
-		tmpl, err = r.getTemplateForRequest(request, baseKey, path, r.reqFuncs)
-	} else {
-		tmpl, err = r.getTemplate(baseKey, path)
-	}
-	if err != nil {
-		return errors.Wrap(err, "failed to get template")
+	return context, request, nil
+}
+
+func normalizeTemplatePath(baseKey string, path ...string) ([]string, string) {
+	assert.False(
+		len(path) == 0 && baseKey == "",
+		"path is required",
+	)
+
+	if len(path) == 0 {
+		path = []string{baseKey}
+		baseKey = ""
 	}
 
-	return errors.Wrap(
-		tmpl.Execute(b, context),
-		"failed to render template",
+	return path, baseKey
+}
+
+func getTemplateName(path string) string {
+	name := filepath.Base(
+		filepath.ToSlash(path),
 	)
+
+	name = strings.TrimSuffix(
+		name, filepath.Ext(name),
+	)
+	return name
 }

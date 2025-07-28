@@ -40,6 +40,10 @@ func RequestProcessors(funcs ...func(ctx.ContextWithRequest)) {
 	Global.RequestProcessors(funcs...)
 }
 
+func GetTemplate(baseKey string, path ...string) Template {
+	return Global.GetTemplate(baseKey, path...)
+}
+
 func FirstRender() signals.Signal[*TemplateRenderer] {
 	return Global.FirstRender()
 }
