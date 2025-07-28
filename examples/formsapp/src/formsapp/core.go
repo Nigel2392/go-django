@@ -20,7 +20,7 @@ func NewAppConfig() django.AppConfig {
 		"core",
 	)
 
-	cfg.Routing = func(m django.Mux) {
+	cfg.Routing = func(m mux.Multiplexer) {
 		m.Handle(mux.GET, "/", mux.NewHandler(Index), "index")
 		m.Handle(mux.GET, "/contact", mux.NewHandler(Contact), "contact")
 		m.Handle(mux.POST, "/contact", mux.NewHandler(Contact), "contact")
