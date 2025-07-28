@@ -7,8 +7,11 @@
 {{ define "content" }}
 
     <div class="blog-wrapper">
+        
 
         <h1>{{ .Data.blog_page.Page.Title }}</h1>
+
+        <h2>Hello, {{ user.Username }}!</h2>
 
         {{ .Page.Editor.MustRender }} 
 

@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
@@ -18,6 +19,8 @@ const SESSION_COOKIE_NAME = "user_authentication"
 
 func UnAuthenticatedUser() *User {
 	return &User{
+		Username: "AnonymousUser",
+		Email:    &drivers.Email{Address: "<unknown>"},
 		Base: users.Base{
 			IsLoggedIn: false,
 		},

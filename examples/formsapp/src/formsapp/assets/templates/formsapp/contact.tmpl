@@ -47,7 +47,8 @@
             <form method="POST" action="{{ .Get "ContactURL" }}">
 
                 <!-- The CSRF token is required, otherwise you will receive a http.StatusCodeBadRequest error page. -->
-                <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+                {{ csrf_field }}
+                <!-- <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}"> -->
 
                 {{ $errorList := (.Get "Form").ErrorList }}
                 {{ if (gt (len $errorList) 0) }}

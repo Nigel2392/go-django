@@ -4,7 +4,7 @@
 
 {{ define "content" }}
     <form method="post" action="{{ (.Get "PostURL") }}" class="admin-form" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+        {{ csrf_field }}
         <div class="buttons">
             <button class="button danger" type="submit" value="{{ T "Submit" }}">
                 {{ T "Delete this node and all it's children" }}

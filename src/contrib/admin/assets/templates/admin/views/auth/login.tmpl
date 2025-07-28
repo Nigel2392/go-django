@@ -15,7 +15,7 @@
             {{ component "admin.header" 1 $headingText $subText }}
 
             <form method="post" action="{{ .Get "LoginURL" }}">
-                <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+                {{ csrf_field }}
                 
                 {{ $Form := (.Get "form") }}
                 {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}

@@ -579,7 +579,7 @@ It will also populate the previously defined blocks in the base template.
 
     <div class="todo-list-wrapper">
         {{ $page := (.Get "Page") }}
-        {{ $csrfToken := (.Get "CsrfToken") }}
+        {{ $csrfToken := (csrf_token) }}
 
         <!-- Range over the paginator results -->
         {{ range $todo := $page.Results }}

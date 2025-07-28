@@ -35,6 +35,7 @@ import (
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware"
+	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/justinas/nosurf"
 	"github.com/pkg/errors"
@@ -567,10 +568,6 @@ func (a *Application) Initialize() error {
 		ctx.Set("Settings", a.Settings)
 	})
 
-	tpl.RequestProcessors(func(rc ctx.ContextWithRequest) {
-		rc.Set("CsrfToken", nosurf.Token(rc.Request()))
-	})
-
 	tpl.Funcs(template.FuncMap{
 		"safe": func(s string) template.HTML {
 			return template.HTML(s)
@@ -620,11 +617,20 @@ func (a *Application) Initialize() error {
 					cookie, nosurf.Token(req),
 				))
 			},
+			"request": func() *http.Request {
+				return req
+			},
+			"user": func() interface{} {
+				return authentication.Retrieve(req)
+			},
 			"has_object_perm": func(obj interface{}, perms ...string) bool {
 				return permissions.HasObjectPermission(req, obj, perms...)
 			},
 			"has_perm": func(perm ...string) bool {
 				return permissions.HasPermission(req, perm...)
+			},
+			"language": func() Locale {
+				return trans.LocaleFromContext(req.Context())
 			},
 			"T": func(s string, args ...any) string {
 				return trans.T(req.Context(), s, args...)

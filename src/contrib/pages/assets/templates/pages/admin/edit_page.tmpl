@@ -11,7 +11,7 @@
 
 {{ define "content" }}
     <form method="post" action="{{ .Get ("PostURL") }}" class="admin-form" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ .CsrfToken }}">
+        {{ csrf_field }}
 
         {{ $Form := (.Get "form") }}
         {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}
