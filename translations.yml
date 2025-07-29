@@ -1,3 +1,17 @@
+generator: "godjango"
+created: "2023-10-01T12:00:00Z"
+translators:
+  - Nigel
+locales:
+  nl:
+    num_plural_forms: 2
+    plural_rule: n != 1
+  en:
+    num_plural_forms: 2
+    plural_rule: n != 1
+
+---
+
 # [ModelFinder]: audit_logs.Entry
 path: .models\auditlogs\Entry:8:1
 text: Entry
@@ -518,6 +532,38 @@ locales:
 
 ---
 
+# [TemplateFinder]: {{ "my-text-to-translate1" | T }}
+path: examples/blogapp/blog/assets/templates/blog/page.tmpl:11:9
+text: my-text-to-translate1
+locales:
+  nl: mijn-tekst-om-te-vertalen1
+
+---
+
+# [TemplateFinder]: {{ T "my-text-to-translate2" | T }}
+path: examples/blogapp/blog/assets/templates/blog/page.tmpl:12:9
+text: my-text-to-translate2
+locales:
+  nl: mijn-tekst-om-te-vertalen2
+
+---
+
+# [TemplateFinder]: {{ "my-text-to-translate3" | T | html }}
+path: examples/blogapp/blog/assets/templates/blog/page.tmpl:13:9
+text: my-text-to-translate3
+locales:
+  nl: mijn-tekst-om-te-vertalen3
+
+---
+
+# [TemplateFinder]: {{ "my-text-to-translate4" | T | html | html }}
+path: examples/blogapp/blog/assets/templates/blog/page.tmpl:14:9
+text: my-text-to-translate4
+locales:
+  nl: mijn-tekst-om-te-vertalen4
+
+---
+
 # [GoFileFinder]: *BlogPage.FieldDefs
 path: examples/blogapp/blog/models.go:96:22
 text: How do you want your post to be remembered?
@@ -646,8 +692,8 @@ locales:
 
 ---
 
-# [TemplateFinder]
-path: examples/formsapp/src/formsapp/assets/templates/formsapp/contact.tmpl:83:45
+# [TemplateFinder]: {{ T "Submit" }}
+path: examples/formsapp/src/formsapp/assets/templates/formsapp/contact.tmpl:84:45
 text: Submit
 locales:
   nl: Verzenden
@@ -751,14 +797,14 @@ locales:
 ---
 
 # [GoFileFinder]: NewAppConfig
-path: src/contrib/admin/admin.go:113:38
+path: src/contrib/admin/admin.go:114:38
 text: Logout
 locales:
   nl: Uitloggen
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Adminsite" }}
 path: src/contrib/admin/assets/templates/admin/skeleton.tmpl:8:100
 text: Adminsite
 locales:
@@ -766,7 +812,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Login" }}
 path: src/contrib/admin/assets/templates/admin/views/auth/login.tmpl:3:21
 text: Login
 locales:
@@ -774,7 +820,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Permission Error" }}
 path: src/contrib/admin/assets/templates/admin/views/auth/relogin.tmpl:3:21
 text: Permission Error
 locales:
@@ -782,7 +828,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "You do not have permissions to access the admin site." }}
 path: src/contrib/admin/assets/templates/admin/views/auth/relogin.tmpl:17:28
 text: You do not have permissions to access the admin site.
 locales:
@@ -790,7 +836,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Please contact your administrator to get access, or log out and try again with a different account." }}
 path: src/contrib/admin/assets/templates/admin/views/auth/relogin.tmpl:18:20
 text: Please contact your administrator to get access, or log out and try again with a different account.
 locales:
@@ -798,7 +844,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Log in with a different account" }}
 path: src/contrib/admin/assets/templates/admin/views/auth/relogin.tmpl:22:17
 text: Log in with a different account
 locales:
@@ -806,7 +852,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Cancel" }}
 path: src/contrib/admin/assets/templates/admin/views/models/add.tmpl:25:72
 text: Cancel
 locales:
@@ -814,7 +860,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Back" }}
 path: src/contrib/admin/assets/templates/admin/views/models/add.tmpl:27:127
 text: Back
 locales:
@@ -822,7 +868,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Are you sure you want to delete this object?" }}
 path: src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:10:12
 text: Are you sure you want to delete this object?
 locales:
@@ -830,7 +876,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "This action cannot be reversed." }}
 path: src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:11:12
 text: This action cannot be reversed.
 locales:
@@ -838,7 +884,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Delete" }}
 path: src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:26:152
 text: Delete
 locales:
@@ -846,7 +892,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Add" }}
 path: src/contrib/admin/assets/templates/admin/views/models/list.tmpl:12:112
 text: Add
 locales:
@@ -854,7 +900,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "List" }}
 path: src/contrib/admin/assets/templates/admin/views/models/list.tmpl:16:40
 text: List
 locales:
@@ -1102,7 +1148,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Installed OAuth2 Providers" }}
 path: src/contrib/openauth2/assets/templates/oauth2/admin/components/providers.tmpl:6:17
 text: Installed OAuth2 Providers
 locales:
@@ -1110,7 +1156,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Documentation" }}
 path: src/contrib/openauth2/assets/templates/oauth2/admin/components/providers.tmpl:24:33
 text: Documentation
 locales:
@@ -1166,7 +1212,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Save" }}
 path: src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:24:17
 text: Save
 locales:
@@ -1174,7 +1220,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Save and Publish" }}
 path: src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:28:21
 text: Save and Publish
 locales:
@@ -1182,7 +1228,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Add Child Page" }}
 path: src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:13:96
 text: Add Child Page
 locales:
@@ -1190,7 +1236,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Edit Page" }}
 path: src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:16:96
 text: Edit Page
 locales:
@@ -1198,7 +1244,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Delete Page" }}
 path: src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:19:104
 text: Delete Page
 locales:
@@ -1206,7 +1252,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Root List" }}
 path: src/contrib/pages/assets/templates/pages/admin/admin_list_root.tmpl:3:21
 text: Root List
 locales:
@@ -1214,7 +1260,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Add Root Page" }}
 path: src/contrib/pages/assets/templates/pages/admin/admin_list_root.tmpl:10:88
 text: Add Root Page
 locales:
@@ -1222,7 +1268,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Delete this node and all it's children" }}
 path: src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:10:17
 text: Delete this node and all it's children
 locales:
@@ -1230,7 +1276,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Edit" }}
 path: src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:3:21
 text: Edit
 locales:
@@ -1238,7 +1284,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Unpublish and Save" }}
 path: src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:30:21
 text: Unpublish and Save
 locales:
@@ -1246,7 +1292,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Unpublish" }}
 path: src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:3:21
 text: Unpublish
 locales:
@@ -1254,16 +1300,16 @@ locales:
 
 ---
 
-# [TemplateFinder]
-path: src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:20:17
+# [TemplateFinder]: {{ T "Unpublish this node" }}
+path: src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:21:17
 text: Unpublish this node
 locales:
   nl: Publicatie van dit knooppunt ongedaan maken
 
 ---
 
-# [TemplateFinder]
-path: src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:23:17
+# [TemplateFinder]: {{ T "Unpublish this node and all its children" }}
+path: src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:24:17
 text: Unpublish this node and all its children
 locales:
   nl: Publicatie van dit knooppunt en alle onderliggende pagina's ongedaan maken
@@ -1307,6 +1353,22 @@ path: src/contrib/pages/django_admin.go:47:26
 text: Number of Children
 locales:
   nl: Aantal onderliggende pagina's
+
+---
+
+# [GoFileFinder]:
+path: src/contrib/pages/django_admin.go:77:44
+text: child
+locales:
+  nl: kind
+
+---
+
+# [GoFileFinder]:
+path: src/contrib/pages/django_admin.go:79:41
+text: children
+locales:
+  nl: kinderen
 
 ---
 
@@ -1546,7 +1608,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "Actions" }}
 path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:28:148
 text: Actions
 locales:
@@ -1554,7 +1616,7 @@ locales:
 
 ---
 
-# [TemplateFinder]
+# [TemplateFinder]: {{ T "No audit logs found" }}
 path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:62:61
 text: No audit logs found
 locales:
