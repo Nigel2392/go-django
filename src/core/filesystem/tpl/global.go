@@ -44,6 +44,10 @@ func GetTemplate(baseKey string, path ...string) Template {
 	return Global.GetTemplate(baseKey, path...)
 }
 
+func GetTemplateFromString(name string, content string, funcs template.FuncMap) Template {
+	return Global.GetTemplateFromString(name, content, funcs)
+}
+
 func FirstRender() signals.Signal[*TemplateRenderer] {
 	return Global.FirstRender()
 }

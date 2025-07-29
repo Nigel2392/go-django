@@ -32,6 +32,7 @@ type Renderer interface {
 	RequestProcessors(funcs ...func(ctx.ContextWithRequest))
 	FirstRender() signals.Signal[*TemplateRenderer]
 	GetTemplate(baseKey string, path ...string) Template
+	GetTemplateFromString(name string, content string, funcs template.FuncMap) Template
 	Render(buffer io.Writer, data any, appKey string, path ...string) error
 	Funcs(funcs template.FuncMap)
 	RequestFuncs(funcs func(*http.Request) template.FuncMap)
@@ -183,6 +184,15 @@ func (r *TemplateRenderer) GetTemplate(baseKey string, path ...string) Template 
 	}
 }
 
+func (r *TemplateRenderer) GetTemplateFromString(name string, content string, funcs template.FuncMap) Template {
+	return &stringTemplateObject{
+		name:     name,
+		renderer: r,
+		content:  content,
+		funcs:    funcs,
+	}
+}
+
 func (r *TemplateRenderer) Render(buffer io.Writer, context any, baseKey string, path ...string) error {
 	if !r.firstRender.Load() {
 		r.firstRender.Store(true)
@@ -234,10 +244,15 @@ func (r *TemplateRenderer) getTemplatePaths(cfg *templates, baseKey string, path
 	return tpls
 }
 
-func (r *TemplateRenderer) getTemplate(name string, basePath string, paths []string, config *templates) (*template.Template, error) {
+func (r *TemplateRenderer) getTemplate(name string, basePath string, paths []string, config *templates, fromCache bool, fsys fs.FS) (*template.Template, error) {
+	if fsys == nil {
+		fsys = r.fs
+	}
 
-	if tmpl, ok := r.cache[basePath]; ok && tmpl != nil {
-		return tmpl, nil
+	if fromCache {
+		if tmpl, ok := r.cache[basePath]; ok && tmpl != nil {
+			return tmpl, nil
+		}
 	}
 
 	var err error
@@ -248,7 +263,7 @@ func (r *TemplateRenderer) getTemplate(name string, basePath string, paths []str
 	tmpl := template.New(name)
 	tmpl = tmpl.Funcs(funcMap)
 
-	tmpl, err = tmpl.ParseFS(r.fs, paths...)
+	tmpl, err = tmpl.ParseFS(fsys, paths...)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "failed to parse template %s", paths,
@@ -260,7 +275,10 @@ func (r *TemplateRenderer) getTemplate(name string, basePath string, paths []str
 	return tmpl, nil
 }
 
-func (r *TemplateRenderer) getTemplateForRequest(name string, paths []string, config *templates, req *http.Request, buildFuncs []func(*http.Request) template.FuncMap) (*template.Template, error) {
+func (r *TemplateRenderer) getTemplateForRequest(name string, paths []string, config *templates, req *http.Request, buildFuncs []func(*http.Request) template.FuncMap, fsys fs.FS) (*template.Template, error) {
+	if fsys == nil {
+		fsys = r.fs
+	}
 
 	funcMap := make(template.FuncMap)
 	maps.Copy(funcMap, r.funcs)
@@ -272,10 +290,35 @@ func (r *TemplateRenderer) getTemplateForRequest(name string, paths []string, co
 	var err error
 	tmpl := template.New(name)
 	tmpl = tmpl.Funcs(funcMap)
-	tmpl, err = tmpl.ParseFS(r.fs, paths...)
+	tmpl, err = tmpl.ParseFS(fsys, paths...)
 	if err != nil {
 		return nil, errors.Wrapf(
 			err, "failed to parse templates %v", paths,
+		)
+	}
+
+	return tmpl, nil
+}
+
+func (r *TemplateRenderer) getTemplateFromString(name string, content string, beforeParse ...func(*template.Template, template.FuncMap) error) (*template.Template, error) {
+	funcMap := make(template.FuncMap)
+	maps.Copy(funcMap, r.funcs)
+
+	tmpl := template.New(name)
+	tmpl = tmpl.Funcs(funcMap)
+
+	for _, fn := range beforeParse {
+		if err := fn(tmpl, funcMap); err != nil {
+			return nil, errors.Wrapf(
+				err, "failed to execute beforeParse function for template %s", name,
+			)
+		}
+	}
+
+	tmpl, err := tmpl.Parse(content)
+	if err != nil {
+		return nil, errors.Wrapf(
+			err, "failed to parse template %s", name,
 		)
 	}
 

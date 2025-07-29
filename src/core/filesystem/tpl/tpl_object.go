@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
+	"net/http"
 
 	"github.com/pkg/errors"
 )
@@ -25,15 +27,7 @@ func (t *templateObject) Name() string {
 	return t.name
 }
 
-func (t *templateObject) Execute(w io.Writer, data any) error {
-	var context, request, err = t.renderer.setupTemplateContext(data)
-	if err != nil {
-		return errors.Wrapf(
-			err, "failed to setup template context for %s / %s / %s",
-			t.name, t.path[0], t.allPaths[0],
-		)
-	}
-
+func (t *templateObject) getTemplate(request *http.Request, paths []string, allowCached bool, fsys fs.FS) (tmpl *template.Template, forRequest bool, err error) {
 	// If the template is already set, we can use it directly, unless:
 	// 1. The template is nil (not yet loaded)
 	// 2. A request is provided, thus the template requires a request
@@ -43,19 +37,41 @@ func (t *templateObject) Execute(w io.Writer, data any) error {
 	// This will cache the template for the next render call if no request is provided during this, or the next call.
 	if t.template == nil || request != nil || t.templateRequiresRequest {
 		if request != nil {
-			t.templateRequiresRequest = true
-			t.template, err = t.renderer.getTemplateForRequest(
-				t.name, t.allPaths, t.config, request, t.renderer.reqFuncs,
+			forRequest = true
+			tmpl, err = t.renderer.getTemplateForRequest(
+				t.name, paths, t.config, request, t.renderer.reqFuncs, fsys,
 			)
 		} else {
-			t.templateRequiresRequest = false
-			t.template, err = t.renderer.getTemplate(
-				t.name, t.path[0], t.allPaths, t.config,
+			forRequest = false
+			tmpl, err = t.renderer.getTemplate(
+				t.name, t.path[0], paths, t.config, allowCached, fsys,
 			)
 		}
 	}
 	if err != nil {
-		return errors.Wrap(err, "failed to get template")
+		return nil, false, errors.Wrap(err, "failed to get template")
+	}
+
+	return tmpl, forRequest, nil
+}
+
+func (t *templateObject) Execute(w io.Writer, data any) error {
+	var context, request, err = t.renderer.setupTemplateContext(data)
+	if err != nil {
+		return errors.Wrapf(
+			err, "failed to setup template context for %s / %s / %s",
+			t.name, t.path[0], t.allPaths[0],
+		)
+	}
+
+	// Allow for using cached templates if no request is provided.
+	// Use nil fsys to use the default filesystem
+	t.template, t.templateRequiresRequest, err = t.getTemplate(request, t.allPaths, true, nil)
+	if err != nil {
+		return errors.Wrapf(
+			err, "failed to get template %s for %s / %s",
+			t.name, t.path[0], t.allPaths[0],
+		)
 	}
 
 	var tmpl = t.template.Lookup(t.baseName)
