@@ -3,6 +3,8 @@ package translations
 import (
 	"context"
 	"fmt"
+	"hash/fnv"
+	"strconv"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -15,8 +17,9 @@ var _ trans.TranslationBackend = &Translator{}
 type localeContextKey struct{}
 
 type Translator struct {
-	translations    map[trans.Locale]map[trans.Untranslated]trans.Translation
-	appTranslations map[string]trans.LocaleMap
+	hdr             *translationHeader
+	translations    map[trans.Locale]map[trans.Untranslated][]trans.Translation
+	appTranslations map[string]map[trans.Locale]map[trans.Untranslated][]trans.Translation
 }
 
 func (t *Translator) Translate(ctx context.Context, v string) string {
@@ -37,9 +40,16 @@ func (t *Translator) Translate(ctx context.Context, v string) string {
 
 	appTranslations, ok := t.appTranslations[app.Name()]
 	if ok {
-		var t, ok = getTranslationFromMap(appTranslations, checks, v)
-		if ok && t != "" {
+		var t, ok, err = getTranslationFromMap(appTranslations, checks, v, 0)
+		if ok && t != "" && err == nil {
 			return t
+		}
+		if err != nil {
+			logger.Errorf(
+				"Failed to get translation for app %s, locale '%s' and key '%s': %v",
+				app.Name(), locale.String(), v, err,
+			)
+			return v
 		}
 
 		logger.Debugf(
@@ -48,9 +58,19 @@ func (t *Translator) Translate(ctx context.Context, v string) string {
 		)
 	}
 
-	var translation trans.Translation
-	if translation, ok = getTranslationFromMap(t.translations, checks, v); ok && translation != "" {
+	var (
+		translation trans.Translation
+		err         error
+	)
+	if translation, ok, err = getTranslationFromMap(t.translations, checks, v, 0); ok && translation != "" {
 		return translation
+	}
+	if err != nil {
+		logger.Errorf(
+			"Failed to get translation for locale '%s' and key '%s': %v",
+			locale.String(), v, err,
+		)
+		return v
 	}
 
 	if translation == "" {
@@ -76,10 +96,54 @@ func (t *Translator) Translatef(ctx context.Context, v string, args ...any) stri
 }
 
 func (t *Translator) Pluralize(ctx context.Context, singular, plural string, n int) string {
-	if n == 1 {
-		return t.Translate(ctx, singular)
+	if singular == "" && plural == "" {
+		return ""
 	}
-	return t.Translate(ctx, plural)
+
+	var (
+		locale = LocaleFromContext(ctx)
+		checks = localeChecks(locale)
+		hash   = getHashForPluralTexts(singular, plural)
+	)
+
+	for _, check := range checks {
+		if _, ok := t.hdr.hdr.Locales.Get(check); !ok {
+			logger.Debugf(
+				"Locale '%s' not found in translation header, using default plural rule (n != 1)",
+				check,
+			)
+			continue
+		}
+
+		var pluralIdx, err = t.hdr.pluralIndex(check, n)
+		if err != nil {
+			logger.Errorf(
+				"Failed to get plural index for locale '%s' and count %d: %v",
+				check, n, err,
+			)
+			return singular // Fallback to singular if plural index cannot be determined
+		}
+
+		translation, ok, err := getTranslationFromMap(t.translations, checks, hash, pluralIdx)
+		if err != nil {
+			logger.Errorf(
+				"Failed to get translation for locale '%s', plural index %d and hash '%s': %v",
+				check, pluralIdx, hash, err,
+			)
+			continue
+		}
+		if !ok {
+			logger.Debugf(
+				"Plural translation for locale '%s', plural index %d and hash '%s' not found, using default plural rule (n != 1)",
+				check, pluralIdx, hash,
+			)
+			continue
+		}
+
+		return translation
+	}
+
+	return singular
 }
 
 func (t *Translator) Pluralizef(ctx context.Context, singular, plural string, n int, args ...any) string {
@@ -152,13 +216,17 @@ func Translate(v string, locales ...language.Tag) (string, bool) {
 
 	for _, locale := range locales {
 		for _, check := range localeChecks(locale) {
+			if _, ok := t.hdr.hdr.Locales.Get(check); !ok {
+				continue
+			}
+
 			var translations, ok = t.translations[check]
 			if !ok {
 				continue
 			}
 
-			if t, ok := translations[v]; ok && t != "" {
-				return t, true
+			if t, ok := translations[v]; ok && t[0] != "" {
+				return t[0], true
 			}
 		}
 	}
@@ -166,9 +234,16 @@ func Translate(v string, locales ...language.Tag) (string, bool) {
 	return v, false
 }
 
-func getTranslationFromMap(localeMap map[trans.Locale]map[trans.Untranslated]trans.Translation, checks []string, v string) (trans.Translation, bool) {
+func getHashForPluralTexts(singular, plural string) string {
+	var hash = fnv.New32a()
+	hash.Write([]byte(singular))
+	hash.Write([]byte(plural))
+	return strconv.FormatUint(uint64(hash.Sum32()), 10)
+}
+
+func getTranslationFromMap(localeMap map[trans.Locale]map[trans.Untranslated][]trans.Translation, checks []string, v string, idx int) (trans.Translation, bool, error) {
 	var (
-		translations map[trans.Untranslated]trans.Translation
+		translations map[trans.Untranslated][]trans.Translation
 		ok           bool
 	)
 
@@ -178,11 +253,23 @@ func getTranslationFromMap(localeMap map[trans.Locale]map[trans.Untranslated]tra
 		}
 	}
 	if !ok {
-		return v, false
+		return v, false, nil
 	}
 
 	translation, ok := translations[v]
-	return translation, ok
+
+	if ok && (idx < 0 || idx >= len(translation)) {
+		return v, false, fmt.Errorf(
+			"index %d out of bounds for translations with %d entries",
+			idx, len(translation),
+		)
+	}
+
+	if ok {
+		return translation[idx], true, nil
+	}
+
+	return v, false, nil
 }
 
 func localeChecks(locale language.Tag) []string {

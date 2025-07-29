@@ -2,15 +2,95 @@ package translations
 
 import (
 	"fmt"
+	"reflect"
+	"strconv"
 	"time"
 
+	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/casbin/govaluate"
 	"github.com/elliotchance/orderedmap/v2"
 	"gopkg.in/yaml.v3"
 )
 
+type translationHeader struct {
+	hdr      *FileTranslationsHeader
+	exprs    map[trans.Locale]*govaluate.EvaluableExpression
+	wasSetup bool
+}
+
+func newTranslationHeader(header *FileTranslationsHeader) *translationHeader {
+	var t = &translationHeader{
+		hdr:   header,
+		exprs: make(map[trans.Locale]*govaluate.EvaluableExpression),
+	}
+
+	return t
+}
+
+func (t *translationHeader) setup() {
+	if t.wasSetup {
+		return
+	}
+
+	t.wasSetup = true
+
+	if t.hdr != nil && t.hdr.Locales != nil && t.hdr.Locales.Len() > 0 {
+		for head := t.hdr.Locales.Front(); head != nil; head = head.Next() {
+			var expr, err = govaluate.NewEvaluableExpression(head.Value.PluralRule)
+			if err != nil {
+				panic(fmt.Errorf("failed to parse plural rule for locale %s: %w", head.Key, err))
+			}
+			t.exprs[head.Key] = expr
+		}
+	}
+}
+
+func (t *translationHeader) pluralIndex(locale trans.Locale, count int) (int, error) {
+	t.setup()
+
+	if expr, ok := t.exprs[locale]; ok {
+		result, err := expr.Evaluate(map[string]any{"n": count})
+		if err != nil {
+			return 0, fmt.Errorf("failed to evaluate plural rule for locale %s: %w", locale, err)
+		}
+
+		switch v := result.(type) {
+		case bool:
+			if v {
+				return 1, nil // Plural form
+			}
+			return 0, nil // Singular form
+		case int, int8, int16, int32, int64:
+			var rv = reflect.ValueOf(v)
+			return int(rv.Int()), nil // Return the integer value as plural form index
+		case float32, float64:
+			var rv = reflect.ValueOf(v)
+			return int(rv.Float()), nil // Return the float value as plural form index
+		case string:
+			value, err := strconv.Atoi(v)
+			if err != nil {
+				return 0, err
+			}
+			return value, nil
+		default:
+			return 0, fmt.Errorf("unexpected result type %T for plural rule evaluation", v)
+		}
+	}
+
+	logger.Debugf(
+		"Plural rule for locale '%s' not found, using default rule (n != 1)", locale,
+	)
+
+	if count > 1 {
+		return 1, nil
+	}
+	return 0, nil
+}
+
 type TranslationHeaderLocale struct {
-	NumPluralForms int    `yaml:"num_plural_forms"` // Number of plural forms, e.g. 2 for English (singular, plural)
-	PluralRule     string `yaml:"plural_rule"`      // (n != 1), (n % 10 == 1 && n % 100 != 11), etc.
+	NumPluralForms int    `yaml:"nplural"` // Number of plural forms, e.g. 2 for English (singular, plural)
+	PluralRule     string `yaml:"rule"`    // (n != 1), (n % 10 == 1 && n % 100 != 11), etc.
 }
 
 type FileTranslationsHeader struct {
@@ -92,6 +172,7 @@ func (h *FileTranslationsHeader) UnmarshalYAML(node *yaml.Node) error {
 func (h *FileTranslationsHeader) MarshalYAML() (any, error) {
 	var root = &yaml.Node{
 		Kind:        yaml.MappingNode,
+		Style:       yaml.FoldedStyle,
 		Tag:         "!!map",
 		HeadComment: h.Comment,
 	}

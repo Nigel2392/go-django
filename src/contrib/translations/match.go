@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Nigel2392/go-django/pkg/yml"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/elliotchance/orderedmap/v2"
 	"gopkg.in/yaml.v3"
@@ -18,14 +17,13 @@ type Match struct {
 	Col        int
 	Text       trans.Untranslated
 	Preference int // the higher the number, the more preferred this Match is
-	Locales    *orderedmap.OrderedMap[trans.Locale, trans.Translation]
+	Locales    *orderedmap.OrderedMap[trans.Locale, []trans.Translation]
 }
 
 type ymlMatch struct {
-	Path       string                                          `yaml:"path"`
-	Text       trans.Untranslated                              `yaml:"text"`
-	Preference int                                             `yaml:"preference,omitempty"`
-	Locales    yml.OrderedMap[trans.Locale, trans.Translation] `yaml:"locales,omitempty"`
+	Path       string             `yaml:"path"`
+	Text       trans.Untranslated `yaml:"text"`
+	Preference int                `yaml:"preference,omitempty"`
 }
 
 var (
@@ -68,12 +66,61 @@ func (m *Match) UnmarshalYAML(node *yaml.Node) error {
 		m.Comment = node.LineComment
 	}
 
-	m.Locales = orderedmap.NewOrderedMap[string, string]()
-
-	if yml.Locales.OrderedMap != nil {
-		for head := yml.Locales.OrderedMap.Front(); head != nil; head = head.Next() {
-			m.Locales.Set(head.Key, head.Value)
+	var localesNode *yaml.Node
+	for idx, item := range node.Content {
+		if idx%2 != 0 {
+			continue
 		}
+
+		if item.Value == "locales" {
+			if idx+1 < len(node.Content) {
+				localesNode = node.Content[idx+1]
+			} else {
+				return fmt.Errorf("expected value node after 'locales', but found none")
+			}
+		}
+	}
+
+	if localesNode == nil {
+		return nil // No locales defined, nothing to do
+	}
+
+	if localesNode.Kind != yaml.MappingNode {
+		return fmt.Errorf(
+			"expected mapping node for locales, got %d", localesNode.Kind,
+		)
+	}
+
+	m.Locales = orderedmap.NewOrderedMap[trans.Locale, []trans.Translation]()
+	for i := 0; i < len(localesNode.Content); {
+		if i+1 >= len(localesNode.Content) {
+			return fmt.Errorf("expected value node after key %s, but found none", localesNode.Content[i].Value)
+		}
+		var key = localesNode.Content[i].Value
+		var valueNode = localesNode.Content[i+1]
+
+		switch valueNode.Kind {
+		case yaml.ScalarNode:
+			// Single translation
+			m.Locales.Set(key, []string{valueNode.Value})
+		case yaml.MappingNode:
+			// Multiple translations
+			var translations = make([]string, 0)
+			for j := 0; j < len(valueNode.Content); j += 2 {
+				if j+1 >= len(valueNode.Content) {
+					return fmt.Errorf("expected value node after key %s, but found none", valueNode.Content[j].Value)
+				}
+				translations = append(translations, valueNode.Content[j+1].Value)
+			}
+			m.Locales.Set(key, translations)
+		default:
+			return fmt.Errorf(
+				"unexpected node kind %d for locale %s, expected scalar or mapping",
+				valueNode.Kind, key,
+			)
+		}
+
+		i += 2 // Move to the next key-value pair
 	}
 
 	return nil
@@ -116,12 +163,40 @@ func (m Match) MarshalYAML() (interface{}, error) {
 					Tag:   "!!str",
 					Value: head.Key,
 				},
-				&yaml.Node{
+			)
+
+			if len(head.Value) == 1 {
+				nodeContent = append(nodeContent, &yaml.Node{
 					Kind:  yaml.ScalarNode,
 					Tag:   "!!str",
-					Value: head.Value,
-				},
-			)
+					Value: head.Value[0],
+				})
+			} else {
+
+				var mapNode = &yaml.Node{
+					Kind:    yaml.MappingNode,
+					Tag:     "!!map",
+					Content: make([]*yaml.Node, 0, len(head.Value)*2),
+				}
+
+				for idx, text := range head.Value {
+					mapNode.Content = append(mapNode.Content,
+						&yaml.Node{
+							Kind:  yaml.ScalarNode,
+							Tag:   "!!str",
+							Value: strconv.Itoa(idx),
+						},
+						&yaml.Node{
+							Kind:  yaml.ScalarNode,
+							Tag:   "!!str",
+							Value: text,
+						},
+					)
+				}
+
+				nodeContent = append(nodeContent, mapNode)
+			}
+
 		}
 
 		if len(nodeContent) > 0 {

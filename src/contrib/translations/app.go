@@ -22,10 +22,10 @@ type TranslationsAppConfig struct {
 	*apps.AppConfig
 	finders         []Finder
 	filesystems     []fs.FS
-	translations    map[trans.Locale]map[trans.Untranslated]trans.Translation
-	appTranslations map[string]map[trans.Locale]map[trans.Untranslated]trans.Translation
+	translations    map[trans.Locale]map[trans.Untranslated][]trans.Translation
+	appTranslations map[string]map[trans.Locale]map[trans.Untranslated][]trans.Translation
 
-	translationHeader  *FileTranslationsHeader
+	translationHeader  *translationHeader
 	translationMatches []Match
 }
 
@@ -39,7 +39,7 @@ func NewAppConfig() django.AppConfig {
 
 	var cfg = &TranslationsAppConfig{
 		AppConfig:    apps.NewAppConfig("translations"),
-		translations: make(map[trans.Locale]map[trans.Untranslated]trans.Translation),
+		translations: make(map[trans.Locale]map[trans.Untranslated][]trans.Translation),
 	}
 
 	cfg.Cmd = []command.Command{
@@ -98,11 +98,13 @@ func NewAppConfig() django.AppConfig {
 		}
 		defer file.Close()
 
-		cfg.translationHeader = &FileTranslationsHeader{}
-		cfg.translationMatches, err = readTranslationsYAML(file, cfg.translationHeader, make([]Match, 0))
+		var hdr = &FileTranslationsHeader{}
+		cfg.translationMatches, err = readTranslationsYAML(file, hdr, make([]Match, 0))
 		if err != nil {
 			return err
 		}
+
+		cfg.translationHeader = newTranslationHeader(hdr)
 
 		for _, m := range cfg.translationMatches {
 			if m.Locales == nil || m.Locales.Len() == 0 {
@@ -110,12 +112,12 @@ func NewAppConfig() django.AppConfig {
 			}
 
 			for head := m.Locales.Front(); head != nil; head = head.Next() {
-				if head.Value == "" {
+				if len(head.Value) == 0 || head.Value[0] == "" {
 					continue
 				}
 
 				if _, ok := cfg.translations[head.Key]; !ok {
-					cfg.translations[head.Key] = make(map[trans.Untranslated]trans.Translation)
+					cfg.translations[head.Key] = make(map[trans.Untranslated][]trans.Translation)
 				}
 
 				cfg.translations[head.Key][m.Text] = head.Value
