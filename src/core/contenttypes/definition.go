@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/utils/text"
 )
 
@@ -100,7 +101,7 @@ func (p *ContentTypeDefinition) Label(ctx context.Context) string {
 	if p.GetLabel != nil {
 		return p.GetLabel(ctx)
 	}
-	return p.Name()
+	return trans.T(ctx, p.Name())
 }
 
 // Returns a description of the model and what it represents.

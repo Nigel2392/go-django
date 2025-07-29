@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/url"
+	"runtime/debug"
 	"strconv"
 	"strings"
 
@@ -22,13 +23,21 @@ type pageObject[T any] struct {
 	num       int
 	results   []T
 	paginator Pagination[T]
+	context   context.Context
 }
 
 func (p *pageObject[T]) HTML(queryParam string, numPageNumbers int, queryParams url.Values) template.HTML {
+	defer func() {
+		if r := recover(); r != nil {
+			var stack = debug.Stack()
+			panic(fmt.Errorf("failed to render paginator component: %v\nStack trace:\n%s", r, stack))
+		}
+	}()
 	var b = new(strings.Builder)
 	var cmp = p.Component(queryParam, numPageNumbers, queryParams)
-	var ctx = context.Background()
-	cmp.Render(ctx, b)
+	if err := cmp.Render(p.context, b); err != nil {
+		panic(fmt.Errorf("failed to render paginator component: %w", err))
+	}
 	return template.HTML(b.String())
 }
 

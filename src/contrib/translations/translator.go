@@ -38,24 +38,26 @@ func (t *Translator) Translate(ctx context.Context, v string) string {
 		logger.Debugf("Translating %q in app %s", v, app.Name())
 	}
 
-	appTranslations, ok := t.appTranslations[app.Name()]
-	if ok {
-		var t, ok, err = getTranslationFromMap(appTranslations, checks, v, 0)
-		if ok && t != "" && err == nil {
-			return t
-		}
-		if err != nil {
-			logger.Errorf(
-				"Failed to get translation for app %s, locale '%s' and key '%s': %v",
-				app.Name(), locale.String(), v, err,
-			)
-			return v
-		}
+	if t.appTranslations != nil {
+		appTranslations, ok := t.appTranslations[app.Name()]
+		if ok {
+			var t, ok, err = getTranslationFromMap(appTranslations, checks, v, 0)
+			if ok && t != "" && err == nil {
+				return t
+			}
+			if err != nil {
+				logger.Errorf(
+					"Failed to get translation for app %s, locale '%s' and key '%s': %v",
+					app.Name(), locale.String(), v, err,
+				)
+				return v
+			}
 
-		logger.Debugf(
-			"Translation for app %s, locale '%s' and key '%s' not found, checking global translations",
-			app.Name(), locale.String(), v,
-		)
+			logger.Debugf(
+				"Translation for app %s, locale '%s' and key '%s' not found, checking global translations",
+				app.Name(), locale.String(), v,
+			)
+		}
 	}
 
 	var (

@@ -15,7 +15,8 @@ import (
 func ListTodos(w http.ResponseWriter, r *http.Request) {
 	// Create a new paginator for the Todo model
 	var paginator = pagination.Paginator[[]*Todo, *Todo]{
-		Amount: 25,
+		Context: r.Context(),
+		Amount:  25,
 		// Define a function to retrieve a list of objects based on the amount and offset
 		GetObjects: func(amount, offset int) ([]*Todo, error) {
 			var rows, err = queries.ListObjects(&Todo{}, uint64(offset), uint64(amount))

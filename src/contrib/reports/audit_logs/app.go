@@ -320,6 +320,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var paginator = pagination.Paginator[[]LogEntry, LogEntry]{
+		Context: r.Context(),
 		GetObject: func(l LogEntry) LogEntry {
 			return Define(r, l)
 		},

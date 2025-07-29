@@ -174,6 +174,7 @@ func NewAppConfig() django.AppConfig {
 			// Register the user model with the admin app.
 			admin.ModelOptions{
 				Model:               &User{},
+				MenuLabel:           trans.S("Users"),
 				RegisterToAdminMenu: true,
 				Labels: map[string]func(ctx context.Context) string{
 					"ID":              trans.S("ID"),
@@ -254,12 +255,14 @@ func NewAppConfig() django.AppConfig {
 			},
 			admin.ModelOptions{
 				Name:                "Groups",
+				MenuLabel:           trans.S("Groups"),
 				Model:               &users.Group{},
 				RegisterToAdminMenu: true,
 				MenuOrder:           2,
 			},
 			admin.ModelOptions{
 				Name:                "Permissions",
+				MenuLabel:           trans.S("Permissions"),
 				Model:               &users.Permission{},
 				RegisterToAdminMenu: true,
 				MenuOrder:           3,

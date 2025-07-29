@@ -1,6 +1,7 @@
 package pagination
 
 import (
+	"context"
 	"errors"
 	"reflect"
 	"strconv"
@@ -74,6 +75,7 @@ func GetPageNum(n any) int {
 
 // Paginator holds pagination logic
 type Paginator[S ~[]E, E any] struct {
+	Context    context.Context
 	GetObject  func(E) E
 	GetObjects func(amount int, offset int) (S, error)
 	GetCount   func() (int, error)
@@ -127,5 +129,5 @@ func (p *Paginator[S, E]) Page(n int) (PageObject[E], error) {
 		}
 	}
 
-	return &pageObject[E]{num: n - 1, results: results, paginator: p}, nil
+	return &pageObject[E]{num: n - 1, results: results, paginator: p, context: p.Context}, nil
 }
