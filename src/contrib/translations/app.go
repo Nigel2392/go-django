@@ -20,10 +20,12 @@ type Finder interface {
 
 type TranslationsAppConfig struct {
 	*apps.AppConfig
-	finders            []Finder
-	filesystems        []fs.FS
-	translations       map[trans.Locale]map[trans.Untranslated]trans.Translation
-	appTranslations    map[string]map[trans.Locale]map[trans.Untranslated]trans.Translation
+	finders         []Finder
+	filesystems     []fs.FS
+	translations    map[trans.Locale]map[trans.Untranslated]trans.Translation
+	appTranslations map[string]map[trans.Locale]map[trans.Untranslated]trans.Translation
+
+	translationHeader  *FileTranslationsHeader
 	translationMatches []Match
 }
 
@@ -49,10 +51,6 @@ func NewAppConfig() django.AppConfig {
 	}
 
 	cfg.Init = func(settings django.Settings) error {
-		trans.DefaultBackend = &Translator{
-			translations: cfg.translations,
-		}
-
 		cfg.finders = []Finder{
 			&templateTranslationsFinder{
 				extensions: django.ConfigGet(
@@ -100,7 +98,8 @@ func NewAppConfig() django.AppConfig {
 		}
 		defer file.Close()
 
-		cfg.translationMatches, err = readTranslationsYAML(file, make([]Match, 0))
+		cfg.translationHeader = &FileTranslationsHeader{}
+		cfg.translationMatches, err = readTranslationsYAML(file, cfg.translationHeader, make([]Match, 0))
 		if err != nil {
 			return err
 		}
@@ -123,6 +122,13 @@ func NewAppConfig() django.AppConfig {
 			}
 		}
 
+		return nil
+	}
+
+	cfg.Ready = func() error {
+		trans.DefaultBackend = &Translator{
+			translations: cfg.translations,
+		}
 		return nil
 	}
 

@@ -17,6 +17,8 @@ type (
 type TranslationBackend interface {
 	Translate(ctx context.Context, v Untranslated) Translation
 	Translatef(ctx context.Context, v Untranslated, args ...any) Translation
+	Pluralize(ctx context.Context, singular, plural Untranslated, n int) Translation
+	Pluralizef(ctx context.Context, singular, plural Untranslated, n int, args ...any) Translation
 	Locale(ctx context.Context) Locale
 }
 
@@ -33,11 +35,16 @@ func T(ctx context.Context, v Untranslated, args ...any) Translation {
 	return DefaultBackend.Translatef(ctx, v, args...)
 }
 
+func P(ctx context.Context, singular, plural Untranslated, n int, args ...any) Translation {
+	if len(args) == 0 {
+		return DefaultBackend.Pluralize(ctx, singular, plural, n)
+	}
+	return DefaultBackend.Pluralizef(ctx, singular, plural, n, args...)
+}
+
 func LocaleFromContext(ctx context.Context) Locale {
 	if DefaultBackend == nil {
 		return ""
 	}
 	return DefaultBackend.Locale(ctx)
 }
-
-var appTranslationsRegistry = make(map[string]LocaleMap)

@@ -15,7 +15,8 @@ var _ trans.TranslationBackend = &Translator{}
 type localeContextKey struct{}
 
 type Translator struct {
-	translations map[trans.Locale]map[trans.Untranslated]trans.Translation
+	translations    map[trans.Locale]map[trans.Untranslated]trans.Translation
+	appTranslations map[string]trans.LocaleMap
 }
 
 func (t *Translator) Translate(ctx context.Context, v string) string {
@@ -25,13 +26,8 @@ func (t *Translator) Translate(ctx context.Context, v string) string {
 	}
 
 	var (
-		locale    = LocaleFromContext(ctx)
-		localeStr = locale.String()
-		checks    = localeChecks(locale)
-
-		locTranslations = t.translations
-		translations    map[string]trans.Translation
-		translation     trans.Translation
+		locale = LocaleFromContext(ctx)
+		checks = localeChecks(locale)
 	)
 
 	var app, ok = django.AppFromContext(ctx)
@@ -39,35 +35,33 @@ func (t *Translator) Translate(ctx context.Context, v string) string {
 		logger.Debugf("Translating %q in app %s", v, app.Name())
 	}
 
-	for _, check := range checks {
-		if translations, ok = locTranslations[check]; ok {
-			break
+	appTranslations, ok := t.appTranslations[app.Name()]
+	if ok {
+		var t, ok = getTranslationFromMap(appTranslations, checks, v)
+		if ok && t != "" {
+			return t
 		}
-	}
 
-	if !ok {
 		logger.Debugf(
-			"Locales '%v' not found in translations, returning original value: %q",
-			checks, v,
+			"Translation for app %s, locale '%s' and key '%s' not found, checking global translations",
+			app.Name(), locale.String(), v,
 		)
-		return v
 	}
 
-	if translation, ok = translations[v]; ok && translation != "" {
+	var translation trans.Translation
+	if translation, ok = getTranslationFromMap(t.translations, checks, v); ok && translation != "" {
 		return translation
 	}
 
-	if !ok {
-		logger.Debugf(
-			"Translation for locale '%s' and key '%s' not found, returning original value: %q",
-			localeStr, v, v,
-		)
-	}
-
-	if ok && translation == "" {
+	if translation == "" {
 		logger.Debugf(
 			"Translation for locale '%s' and key '%s' is empty, returning original value: %q",
-			localeStr, v, v,
+			locale.String(), v, v,
+		)
+	} else {
+		logger.Debugf(
+			"Translation for locale '%s' and key '%s' not found, returning original value: %q",
+			locale.String(), v, v,
 		)
 	}
 
@@ -79,6 +73,20 @@ func (t *Translator) Translatef(ctx context.Context, v string, args ...any) stri
 		return t.Translate(ctx, v)
 	}
 	return fmt.Sprintf(t.Translate(ctx, v), args...)
+}
+
+func (t *Translator) Pluralize(ctx context.Context, singular, plural string, n int) string {
+	if n == 1 {
+		return t.Translate(ctx, singular)
+	}
+	return t.Translate(ctx, plural)
+}
+
+func (t *Translator) Pluralizef(ctx context.Context, singular, plural string, n int, args ...any) string {
+	if n == 1 {
+		return t.Translatef(ctx, singular, args...)
+	}
+	return t.Translatef(ctx, plural, args...)
 }
 
 func (t *Translator) Locale(ctx context.Context) string {
@@ -156,6 +164,25 @@ func Translate(v string, locales ...language.Tag) (string, bool) {
 	}
 
 	return v, false
+}
+
+func getTranslationFromMap(localeMap map[trans.Locale]map[trans.Untranslated]trans.Translation, checks []string, v string) (trans.Translation, bool) {
+	var (
+		translations map[trans.Untranslated]trans.Translation
+		ok           bool
+	)
+
+	for _, check := range checks {
+		if translations, ok = localeMap[check]; ok {
+			break
+		}
+	}
+	if !ok {
+		return v, false
+	}
+
+	translation, ok := translations[v]
+	return translation, ok
 }
 
 func localeChecks(locale language.Tag) []string {

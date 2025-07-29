@@ -22,9 +22,23 @@ import (
 )
 
 var (
-	translationTemplateRegexStr = `\{\{\s*T\s*"((?:[^"\\]|\\.)*)"\s*\}\}`
-	translationTemplateRegex    = regexp2.MustCompile(
+	t_funcName                  = "T"
+	l_delim                     = `\{\{`
+	r_delim                     = `\}\}`
+	translationTemplateRegexStr = fmt.Sprintf(
+		`%s\s*%s\s*"((?:[^"\\]|\\.)*)"[a-zA-Z0-9\.\-\_\s\|]*%s`,
+		l_delim, t_funcName, r_delim,
+	)
+	translationTemplatePipeRegexStr = fmt.Sprintf(
+		`%s\s*(?:"((?:[^"\\]|\\.)+)"|(\w[\w\d\-_]*))\s*\|\s*%s\b[^}]*%s`,
+		l_delim, t_funcName, r_delim,
+	)
+	translationTemplateRegex = regexp2.MustCompile(
 		translationTemplateRegexStr,
+		regexp2.RE2,
+	)
+	translationTemplatePipeRegex = regexp2.MustCompile(
+		translationTemplatePipeRegexStr,
 		regexp2.RE2,
 	)
 )
@@ -86,21 +100,49 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 			lineNum++
 			line := scanner.Text()
 
+			// Capture stuff like {{ T "my-text" }} and {{ T "my-text" | html | myfunc }}
+			// note: also captures {{ T "my-text" | T }} and {{ T "my-text" | html | myfunc }}
 			var rexMatch, err = translationTemplateRegex.FindStringMatch(line)
 			for rexMatch != nil && err == nil {
 				var capture = rexMatch.Groups()[1].Captures[0].String()
 				var col = rexMatch.Index + 1 // column is 1-based
-
 				matches = append(matches, Match{
-					Path:    path,
-					Line:    lineNum,
-					Col:     col,
-					Text:    capture,
-					Comment: "[TemplateFinder]",
+					Path: path,
+					Line: lineNum,
+					Col:  col,
+					Text: capture,
+					Comment: fmt.Sprintf(
+						"[TemplateFinder]: %s",
+						rexMatch.String(),
+					),
 				})
 
 				matchCount++
 				rexMatch, err = translationTemplateRegex.FindNextMatch(rexMatch)
+			}
+			if err != nil {
+				file.Close()
+				return nil, err
+			}
+
+			// Capture stuff like {{ "my-text" | T }} and {{ "my-text" | T | html }} but not {{ "my-text" | html | T }}
+			rexMatch, err = translationTemplatePipeRegex.FindStringMatch(line)
+			for rexMatch != nil && err == nil {
+				var capture = rexMatch.Groups()[1].Captures[0].String()
+				var col = rexMatch.Index + 1 // column is 1-based
+				matches = append(matches, Match{
+					Path: path,
+					Line: lineNum,
+					Col:  col,
+					Text: capture,
+					Comment: fmt.Sprintf(
+						"[TemplateFinder]: %s",
+						rexMatch.String(),
+					),
+				})
+
+				matchCount++
+				rexMatch, err = translationTemplatePipeRegex.FindNextMatch(rexMatch)
 			}
 			if err != nil {
 				file.Close()
