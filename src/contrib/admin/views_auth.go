@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
@@ -121,7 +122,7 @@ func reloginHandler(w http.ResponseWriter, req *http.Request) {
 	if user == nil || !user.IsAuthenticated() {
 		autherrors.Fail(
 			http.StatusUnauthorized,
-			"You need to login",
+			trans.T(req.Context(), "You need to login"),
 			next,
 		)
 		return
@@ -161,7 +162,7 @@ func logoutHandler(w http.ResponseWriter, req *http.Request) {
 	if err := AdminSite.AuthLogout(req); err != nil {
 		except.Fail(
 			http.StatusInternalServerError,
-			"Failed to logout due to unexpected error",
+			trans.T(req.Context(), "Failed to logout due to unexpected error"),
 		)
 		return
 	}

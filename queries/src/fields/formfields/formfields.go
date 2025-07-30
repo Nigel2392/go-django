@@ -156,7 +156,7 @@ func (f *ForeignKeyFormField) Widget() widgets.Widget {
 		"--------",
 		chooser.BaseChooserOptions{
 			TargetObject: f.Relation.Model(),
-			GetPrimaryKey: func(i interface{}) interface{} {
+			GetPrimaryKey: func(_ context.Context, i interface{}) interface{} {
 				var def, ok = i.(attrs.Definer)
 				if !ok {
 					assert.Fail("object %T is not a Definer", i)

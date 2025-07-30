@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -42,9 +43,9 @@ func callOrString(fnOrStr interface{}, req *http.Request) string {
 }
 
 func (v *AuthView[T]) GetContext(req *http.Request) (ctx.Context, error) {
-	except.Assert(v.TemplateName != "", 500, "TemplateName is required")
-	except.Assert(v.getForm != nil, 500, "GetForm is required")
-	except.Assert(v.onValid != nil, 500, "OnValid is required")
+	except.Assert(v.TemplateName != "", http.StatusInternalServerError, "TemplateName is required")
+	except.Assert(v.getForm != nil, http.StatusInternalServerError, "GetForm is required")
+	except.Assert(v.onValid != nil, http.StatusInternalServerError, "OnValid is required")
 
 	var context, err = v.BaseView.GetContext(req)
 	if err != nil {
@@ -201,7 +202,9 @@ func LogoutView(w http.ResponseWriter, r *http.Request) {
 			"Failed to log user out: %v", err,
 		)
 		except.Fail(
-			500, "Failed to log out",
+			500, trans.T(r.Context(),
+				"Failed to logout due to unexpected error",
+			),
 		)
 		return
 	}

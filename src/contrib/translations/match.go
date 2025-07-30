@@ -10,30 +10,32 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Match struct {
+type Translation struct {
 	Path       string
 	Comment    string
 	Line       int
 	Col        int
 	Text       trans.Untranslated
+	Plural     trans.Untranslated
 	Preference int // the higher the number, the more preferred this Match is
 	Locales    *orderedmap.OrderedMap[trans.Locale, []trans.Translation]
 }
 
-type ymlMatch struct {
+type ymlTranslation struct {
 	Path       string             `yaml:"path"`
 	Text       trans.Untranslated `yaml:"text"`
+	Plural     trans.Untranslated `yaml:"plural,omitempty"`
 	Preference int                `yaml:"preference,omitempty"`
 }
 
 var (
-	_ yaml.Marshaler   = Match{}
-	_ yaml.Unmarshaler = &Match{}
+	_ yaml.Marshaler   = Translation{}
+	_ yaml.Unmarshaler = &Translation{}
 )
 
-func (m *Match) UnmarshalYAML(node *yaml.Node) error {
+func (m *Translation) UnmarshalYAML(node *yaml.Node) error {
 
-	var yml ymlMatch
+	var yml ymlTranslation
 	if err := node.Decode(&yml); err != nil {
 		return fmt.Errorf("failed to decode Match: %w", err)
 	}
@@ -57,6 +59,7 @@ func (m *Match) UnmarshalYAML(node *yaml.Node) error {
 	m.Line = line
 	m.Col = col
 	m.Text = yml.Text
+	m.Plural = yml.Plural
 	m.Preference = yml.Preference
 
 	switch {
@@ -126,7 +129,7 @@ func (m *Match) UnmarshalYAML(node *yaml.Node) error {
 	return nil
 }
 
-func (m Match) MarshalYAML() (interface{}, error) {
+func (m Translation) MarshalYAML() (interface{}, error) {
 	var n = yaml.Node{
 		Kind: yaml.MappingNode,
 		Tag:  "!!map",
@@ -152,6 +155,21 @@ func (m Match) MarshalYAML() (interface{}, error) {
 				Value: m.Text,
 			},
 		},
+	}
+
+	if m.Plural != "" {
+		n.Content = append(n.Content,
+			&yaml.Node{
+				Kind:  yaml.ScalarNode,
+				Tag:   "!!str",
+				Value: "plural",
+			},
+			&yaml.Node{
+				Kind:  yaml.ScalarNode,
+				Tag:   "!!str",
+				Value: m.Plural,
+			},
+		)
 	}
 
 	if m.Locales != nil {
@@ -183,7 +201,7 @@ func (m Match) MarshalYAML() (interface{}, error) {
 					mapNode.Content = append(mapNode.Content,
 						&yaml.Node{
 							Kind:  yaml.ScalarNode,
-							Tag:   "!!str",
+							Tag:   "!!int",
 							Value: strconv.Itoa(idx),
 						},
 						&yaml.Node{

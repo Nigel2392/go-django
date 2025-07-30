@@ -15,7 +15,7 @@ import (
 )
 
 type Finder interface {
-	Find(fSys fs.FS) ([]Match, error)
+	Find(fSys fs.FS) ([]Translation, error)
 }
 
 type TranslationsAppConfig struct {
@@ -26,7 +26,7 @@ type TranslationsAppConfig struct {
 	appTranslations map[string]map[trans.Locale]map[trans.Untranslated][]trans.Translation
 
 	translationHeader  *translationHeader
-	translationMatches []Match
+	translationMatches []Translation
 }
 
 var translatorApp *TranslationsAppConfig
@@ -99,37 +99,22 @@ func NewAppConfig() django.AppConfig {
 		defer file.Close()
 
 		var hdr = &FileTranslationsHeader{}
-		cfg.translationMatches, err = readTranslationsYAML(file, hdr, make([]Match, 0))
+		cfg.translationMatches, err = readTranslationsYAML(file, hdr, make([]Translation, 0))
 		if err != nil {
 			return err
 		}
 
 		cfg.translationHeader = newTranslationHeader(hdr)
-
-		for _, m := range cfg.translationMatches {
-			if m.Locales == nil || m.Locales.Len() == 0 {
-				continue
-			}
-
-			for head := m.Locales.Front(); head != nil; head = head.Next() {
-				if len(head.Value) == 0 || head.Value[0] == "" {
-					continue
-				}
-
-				if _, ok := cfg.translations[head.Key]; !ok {
-					cfg.translations[head.Key] = make(map[trans.Untranslated][]trans.Translation)
-				}
-
-				cfg.translations[head.Key][m.Text] = head.Value
-			}
-		}
+		cfg.translations = mapFromTranslations(cfg.translationMatches)
 
 		return nil
 	}
 
 	cfg.Ready = func() error {
 		trans.DefaultBackend = &Translator{
-			translations: cfg.translations,
+			hdr:             cfg.translationHeader,
+			translations:    cfg.translations,
+			appTranslations: cfg.appTranslations,
 		}
 		return nil
 	}

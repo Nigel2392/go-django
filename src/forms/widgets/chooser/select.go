@@ -52,7 +52,7 @@ func (o *Select) GetContextData(ctx context.Context, id, name string, value inte
 	var choices = make([]widgets.Option, 0, len(modelInstances))
 	for _, modelInstance := range modelInstances {
 
-		var value = o.Opts.GetPrimaryKey(modelInstance)
+		var value = o.Opts.GetPrimaryKey(ctx, modelInstance)
 		var labelStr = o.forModelDefinition.InstanceLabel(
 			modelInstance,
 		)

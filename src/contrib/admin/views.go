@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"slices"
 
-	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
@@ -16,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/models"
@@ -28,7 +28,7 @@ import (
 var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition) {
 	if !app.Options.EnableIndexView {
 		except.RaiseNotFound(
-			"app %q does not have an index view",
+			trans.T(r.Context(), "app %q does not have an index view"),
 			app.Label(r.Context()),
 		)
 		return
@@ -169,10 +169,10 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 	}
 
 	if model.DisallowCreate {
-		messages.Error(r, "This model does not allow creation")
+		messages.Error(r, trans.T(r.Context(), "This model does not allow creation"))
 		autherrors.Fail(
 			http.StatusForbidden,
-			"This model does not allow creation",
+			trans.T(r.Context(), "This model does not allow creation"),
 			django.Reverse("admin:apps:model", app.Name, model.GetName()),
 		)
 		return
@@ -198,10 +198,10 @@ var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 	}
 
 	if model.DisallowEdit {
-		messages.Error(r, "This model does not allow editing")
+		messages.Error(r, trans.T(r.Context(), "This model does not allow editing"))
 		autherrors.Fail(
 			http.StatusForbidden,
-			"This model does not allow editing",
+			trans.T(r.Context(), "This model does not allow editing"),
 			django.Reverse("admin:apps:model", app.Name, model.GetName()),
 		)
 		return
@@ -226,10 +226,10 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 	}
 
 	if model.DisallowDelete {
-		messages.Error(r, "This model does not allow deletion")
+		messages.Error(r, trans.T(r.Context(), "This model does not allow deletion"))
 		autherrors.Fail(
 			http.StatusForbidden,
-			"This model does not allow deletion",
+			trans.T(r.Context(), "This model does not allow deletion"),
 			django.Reverse("admin:apps:model", app.Name, model.GetName()),
 		)
 		return
@@ -259,34 +259,24 @@ var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite 
 			deleted, err = models.DeleteModel(r.Context(), instance)
 			assert.False(
 				err == nil && !deleted,
-				"model %T not deleted, model does not implement models.Deleter interface",
-				instance,
+				trans.T(r.Context(),
+					"model %T not deleted, model does not implement models.Deleter interface", instance,
+				),
 			)
 		}
 
 		if err != nil {
 			context.Set("error", err)
-
-			var asErr = &errors.Error{Code: errors.CodeCheckFailed}
-			if errors.As(err, asErr) {
-				err = asErr.Wrapf(
-					"failed to delete %s (%v)",
-					attrs.ToString(instance),
-					attrs.PrimaryKey(instance),
-				)
-			}
-
 			messages.Error(r,
-				fmt.Sprintf(
-					"Failed to delete %s (%v): %v",
+				trans.T(r.Context(),
+					"Failed to delete %s (%v)",
 					attrs.ToString(instance),
 					attrs.PrimaryKey(instance),
-					err,
 				),
 			)
 		} else {
 			messages.Warning(r,
-				fmt.Sprintf(
+				trans.T(r.Context(),
 					"Successfully deleted %s (%v)",
 					attrs.ToString(instance),
 					attrs.PrimaryKey(instance),
@@ -353,10 +343,12 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 					return err
 				}
 
-				return assert.True(
-					saved,
-					"model %T not saved, model does not implement models.Saver interface",
-					instance,
+				return except.Assert(
+					saved, http.StatusInternalServerError,
+					trans.T(r.Context(),
+						"model %T not saved, model does not implement models.Saver interface",
+						instance,
+					),
 				)
 			}
 		}
@@ -464,10 +456,12 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				hook(req, AdminSite, model, instance)
 			}
 
-			except.AssertNotNil(instance, 500, "instance is nil after form submission")
+			except.AssertNotNil(instance, 500, trans.T(
+				r.Context(), "instance is nil after form submission",
+			))
 
 			messages.Success(req,
-				fmt.Sprintf(
+				trans.T(r.Context(),
 					"Successfully saved %s (%v)",
 					attrs.ToString(instance),
 					attrs.PrimaryKey(instance),

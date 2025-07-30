@@ -23,11 +23,16 @@ import (
 
 var (
 	t_funcName                  = "T"
+	p_funcName                  = "P"
 	l_delim                     = `\{\{`
 	r_delim                     = `\}\}`
 	translationTemplateRegexStr = fmt.Sprintf(
-		`%s\s*%s\s*"((?:[^"\\]|\\.)*)"[a-zA-Z0-9\.\-\_\s\|]*%s`,
-		l_delim, t_funcName, r_delim,
+		`%s\s*%s\s*"((?:[^"\\]|\\.)*)"(?:[a-zA-Z0-9]|[^a-zA-Z0-9%s])*%s`,
+		l_delim, t_funcName, r_delim, r_delim,
+	)
+	translationTemplateRegexPluralStr = fmt.Sprintf(
+		`%s\s*%s\s*"((?:[^"\\]|\\.)*)"\s*"((?:[^"\\]|\\.)*)"(?:[a-zA-Z0-9]|[^a-zA-Z0-9%s])*%s`,
+		l_delim, p_funcName, r_delim, r_delim,
 	)
 	translationTemplatePipeRegexStr = fmt.Sprintf(
 		`%s\s*(?:"((?:[^"\\]|\\.)+)"|(\w[\w\d\-_]*))\s*\|\s*%s\b[^}]*%s`,
@@ -35,6 +40,10 @@ var (
 	)
 	translationTemplateRegex = regexp2.MustCompile(
 		translationTemplateRegexStr,
+		regexp2.RE2,
+	)
+	translationTemplateRegexPlural = regexp2.MustCompile(
+		translationTemplateRegexPluralStr,
 		regexp2.RE2,
 	)
 	translationTemplatePipeRegex = regexp2.MustCompile(
@@ -47,7 +56,7 @@ type templateTranslationsFinder struct {
 	extensions []string
 }
 
-func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
+func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 	var paths []string
 
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
@@ -70,7 +79,7 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 	}
 
 	var closers []func() error
-	var matches []Match
+	var matches []Translation
 	defer func() {
 		for _, closer := range closers {
 			if err := closer(); err != nil {
@@ -106,7 +115,7 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 			for rexMatch != nil && err == nil {
 				var capture = rexMatch.Groups()[1].Captures[0].String()
 				var col = rexMatch.Index + 1 // column is 1-based
-				matches = append(matches, Match{
+				matches = append(matches, Translation{
 					Path: path,
 					Line: lineNum,
 					Col:  col,
@@ -130,7 +139,7 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 			for rexMatch != nil && err == nil {
 				var capture = rexMatch.Groups()[1].Captures[0].String()
 				var col = rexMatch.Index + 1 // column is 1-based
-				matches = append(matches, Match{
+				matches = append(matches, Translation{
 					Path: path,
 					Line: lineNum,
 					Col:  col,
@@ -148,6 +157,29 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 				file.Close()
 				return nil, err
 			}
+
+			// Capture stuff like {{ P "my-text" "my-text" var }} and {{ P "my-text" "my-text" var | html | myfunc }}
+			rexMatch, err = translationTemplateRegexPlural.FindStringMatch(line)
+			for rexMatch != nil && err == nil {
+				var capture = rexMatch.Groups()[1].Captures[0].String()
+				var plural = rexMatch.Groups()[2].Captures[0].String()
+				var col = rexMatch.Index + 1 // column is 1-based
+				matches = append(matches, Translation{
+					Path:    path,
+					Line:    lineNum,
+					Col:     col,
+					Text:    capture,
+					Plural:  plural,
+					Comment: fmt.Sprintf("[TemplateFinder]: %s", rexMatch.String()),
+				})
+
+				matchCount++
+				rexMatch, err = translationTemplateRegexPlural.FindNextMatch(rexMatch)
+			}
+			if err != nil {
+				file.Close()
+				return nil, err
+			}
 		}
 
 		file.Close()
@@ -160,8 +192,8 @@ type goTranslationsFinder struct {
 	packageAliases []string
 }
 
-func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
-	var matches []Match
+func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
+	var matches []Translation
 
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -222,7 +254,7 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 			}
 
 			selector, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok || (selector.Sel.Name != "S" && selector.Sel.Name != "T") {
+			if !ok || (selector.Sel.Name != "S" && selector.Sel.Name != "T" && selector.Sel.Name != "P") {
 				return true
 			}
 
@@ -231,27 +263,37 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 				return true
 			}
 
-			var arg *ast.BasicLit
+			var (
+				ok1, ok2         bool = true, true
+				singular, plural *ast.BasicLit
+			)
 			switch selector.Sel.Name {
 			case "S":
 				if len(call.Args) == 0 {
 					logger.Warnf("Skipping %s: expected at least 1 argument for S, got none", path)
 					return true
 				}
-				arg, ok = call.Args[0].(*ast.BasicLit)
+				singular, ok1 = call.Args[0].(*ast.BasicLit)
 			case "T":
 				if len(call.Args) < 2 {
 					logger.Warnf("Skipping %s: expected at least 2 arguments for T, got %d", path, len(call.Args))
 					return true
 				}
-				arg, ok = call.Args[1].(*ast.BasicLit)
+				singular, ok1 = call.Args[1].(*ast.BasicLit)
+			case "P":
+				if len(call.Args) < 3 {
+					logger.Warnf("Skipping %s: expected at least 3 arguments for P, got %d", path, len(call.Args))
+					return true
+				}
+				singular, ok1 = call.Args[1].(*ast.BasicLit)
+				plural, ok2 = call.Args[2].(*ast.BasicLit)
 			default:
 				logger.Warnf("Skipping %s: unsupported selector %s", path, selector.Sel.Name)
 				return true
 			}
 
-			if !ok || arg.Kind != token.STRING {
-				logger.Warnf("Skipping %s: expected string argument for %s, got %v", path, selector.Sel.Name, arg)
+			if !ok1 || !ok2 || singular.Kind != token.STRING || plural != nil && plural.Kind != token.STRING {
+				logger.Warnf("Skipping %s: expected string argument for %s", path, selector.Sel.Name)
 				return true
 			}
 
@@ -259,17 +301,26 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 				return true
 			}
 
-			pos := fset.Position(arg.Pos())
-			unquoted, err := strconv.Unquote(arg.Value)
+			pos := fset.Position(singular.Pos())
+			singularUnquoted, err := strconv.Unquote(singular.Value)
 			if err != nil {
-				unquoted = arg.Value
+				singularUnquoted = singular.Value
 			}
 
-			matches = append(matches, Match{
+			var pluralUnquoted string
+			if plural != nil {
+				pluralUnquoted, err = strconv.Unquote(plural.Value)
+				if err != nil {
+					pluralUnquoted = plural.Value
+				}
+			}
+
+			matches = append(matches, Translation{
 				Path:    path,
 				Line:    pos.Line,
 				Col:     pos.Column,
-				Text:    unquoted,
+				Text:    singularUnquoted,
+				Plural:  pluralUnquoted,
 				Comment: fmt.Sprintf("[GoFileFinder]: %s", currentFuncName),
 			})
 
@@ -289,13 +340,13 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Match, error) {
 type godjangoModelsFinder struct {
 }
 
-func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Match, error) {
+func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Translation, error) {
 	var apps = django.Global.Apps
 	if apps == nil {
 		return nil, nil
 	}
 
-	var matches []Match
+	var matches []Translation
 	var lineNum int
 	for head := apps.Front(); head != nil; head = head.Next() {
 		lineNum++
@@ -308,7 +359,7 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Match, error) {
 			col++
 
 			var cType = contenttypes.NewContentType(model)
-			var match = Match{
+			var match = Translation{
 				Path:    filepath.Join(".models", app.Name(), cType.Model()),
 				Line:    lineNum,
 				Col:     col,
@@ -320,7 +371,7 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Match, error) {
 
 			var fieldDefs = model.FieldDefs()
 			for i, field := range fieldDefs.Fields() {
-				var fieldMatch = Match{
+				var fieldMatch = Translation{
 					Path:    filepath.Join(".models", app.Name(), cType.Model(), "fields"),
 					Line:    col,
 					Col:     i,

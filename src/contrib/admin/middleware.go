@@ -6,6 +6,7 @@ import (
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -16,7 +17,7 @@ func RequiredMiddleware(next mux.Handler) mux.Handler {
 		var user = authentication.Retrieve(req)
 
 		if user == nil || !user.IsAuthenticated() {
-			autherrors.Fail(http.StatusUnauthorized, "You need to login", req.URL.Path)
+			autherrors.Fail(http.StatusUnauthorized, trans.T(req.Context(), "You need to login"), req.URL.Path)
 		}
 
 		if user.IsAdmin() {

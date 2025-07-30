@@ -14,8 +14,8 @@ var _ widgets.Widget = &BaseChooser{}
 
 type BaseChooserOptions struct {
 	TargetObject  interface{}
-	GetPrimaryKey func(interface{}) interface{}
-	Queryset      func() ([]interface{}, error)
+	GetPrimaryKey func(ctx context.Context, i interface{}) interface{}
+	Queryset      func(ctx context.Context) ([]interface{}, error)
 }
 
 type BaseChooser struct {
@@ -49,7 +49,7 @@ func (o *BaseChooser) ModelDefinition() *contenttypes.ContentTypeDefinition {
 
 func (o *BaseChooser) QuerySet(ctx context.Context) ([]interface{}, error) {
 	if o.Opts.Queryset != nil {
-		return o.Opts.Queryset()
+		return o.Opts.Queryset(ctx)
 	}
 	return o.forModelDefinition.Instances(ctx, 1000, 0)
 }

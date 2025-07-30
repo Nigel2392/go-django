@@ -231,10 +231,10 @@ func (h *FileTranslationsHeader) MarshalYAML() (any, error) {
 			localesNodeMap.Content = append(localesNodeMap.Content,
 				&yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: head.Key},
 				&yaml.Node{Kind: yaml.MappingNode, Content: []*yaml.Node{
-					{Kind: yaml.ScalarNode, Tag: "!!str", Value: "num_plural_forms"},
+					{Kind: yaml.ScalarNode, Tag: "!!str", Value: "nplural"},
 					{Kind: yaml.ScalarNode, Tag: "!!int", Value: fmt.Sprintf("%d", head.Value.NumPluralForms)},
 
-					{Kind: yaml.ScalarNode, Tag: "!!str", Value: "plural_rule"},
+					{Kind: yaml.ScalarNode, Tag: "!!str", Value: "rule"},
 					{Kind: yaml.ScalarNode, Tag: "!!str", Value: head.Value.PluralRule},
 				}},
 			)

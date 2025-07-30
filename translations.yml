@@ -4,11 +4,11 @@ translators:
   - Nigel
 locales:
   nl:
-    num_plural_forms: 2
-    plural_rule: n != 1
+    nplural: 2
+    rule: '(n != 1) ? 1 : 0'
   en:
-    num_plural_forms: 2
-    plural_rule: n != 1
+    nplural: 2
+    rule: '(n != 1) ? 1 : 0'
 
 ---
 
@@ -532,38 +532,6 @@ locales:
 
 ---
 
-# [TemplateFinder]: {{ "my-text-to-translate1" | T }}
-path: examples/blogapp/blog/assets/templates/blog/page.tmpl:11:9
-text: my-text-to-translate1
-locales:
-  nl: mijn-tekst-om-te-vertalen1
-
----
-
-# [TemplateFinder]: {{ T "my-text-to-translate2" | T }}
-path: examples/blogapp/blog/assets/templates/blog/page.tmpl:12:9
-text: my-text-to-translate2
-locales:
-  nl: mijn-tekst-om-te-vertalen2
-
----
-
-# [TemplateFinder]: {{ "my-text-to-translate3" | T | html }}
-path: examples/blogapp/blog/assets/templates/blog/page.tmpl:13:9
-text: my-text-to-translate3
-locales:
-  nl: mijn-tekst-om-te-vertalen3
-
----
-
-# [TemplateFinder]: {{ "my-text-to-translate4" | T | html | html }}
-path: examples/blogapp/blog/assets/templates/blog/page.tmpl:14:9
-text: my-text-to-translate4
-locales:
-  nl: mijn-tekst-om-te-vertalen4
-
----
-
 # [GoFileFinder]: *BlogPage.FieldDefs
 path: examples/blogapp/blog/models.go:96:22
 text: How do you want your post to be remembered?
@@ -852,6 +820,14 @@ locales:
 
 ---
 
+# [TemplateFinder]: {{ T "Add %s" (.Get "model").Label }}
+path: src/contrib/admin/assets/templates/admin/views/models/add.tmpl:3:21
+text: Add %s
+locales:
+  nl: '%s toevoegen'
+
+---
+
 # [TemplateFinder]: {{ T "Cancel" }}
 path: src/contrib/admin/assets/templates/admin/views/models/add.tmpl:25:72
 text: Cancel
@@ -865,6 +841,14 @@ path: src/contrib/admin/assets/templates/admin/views/models/add.tmpl:27:127
 text: Back
 locales:
   nl: Terug
+
+---
+
+# [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }}
+path: src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:3:21
+text: Delete %s
+locales:
+  nl: '%s verwijderen'
 
 ---
 
@@ -884,11 +868,27 @@ locales:
 
 ---
 
+# [TemplateFinder]: {{ T "Edit %s" (.Get "model").Label }}
+path: src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:3:21
+text: Edit %s
+locales:
+  nl: '%s bewerken'
+
+---
+
 # [TemplateFinder]: {{ T "Delete" }}
 path: src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:26:152
 text: Delete
 locales:
   nl: Verwijderen
+
+---
+
+# [TemplateFinder]: {{ T "List %s" (.Get "model").PluralLabel }}
+path: src/contrib/admin/assets/templates/admin/views/models/list.tmpl:3:21
+text: List %s
+locales:
+  nl: '%s- lijst'
 
 ---
 
@@ -900,11 +900,107 @@ locales:
 
 ---
 
-# [TemplateFinder]: {{ T "List" }}
-path: src/contrib/admin/assets/templates/admin/views/models/list.tmpl:16:40
-text: List
+# [TemplateFinder]: {{ T "%s List" $model.Label }}
+path: src/contrib/admin/assets/templates/admin/views/models/list.tmpl:16:21
+text: '%s List'
 locales:
-  nl: Lijst
+  nl: '%s- lijst'
+
+---
+
+# [GoFileFinder]: RequiredMiddleware
+path: src/contrib/admin/middleware.go:20:68
+text: You need to login
+locales:
+  nl: Je moet inloggen
+
+---
+
+# [GoFileFinder]:
+path: src/contrib/admin/views.go:31:25
+text: app %q does not have an index view
+locales:
+  nl: app %q heeft geen indexweergave
+
+---
+
+# [GoFileFinder]:
+path: src/contrib/admin/views.go:172:42
+text: This model does not allow creation
+locales:
+  nl: Dit model staat geen creatie toe.
+
+---
+
+# [GoFileFinder]:
+path: src/contrib/admin/views.go:201:42
+text: This model does not allow editing
+locales:
+  nl: Dit model staat geen bewerking toe.
+
+---
+
+# [GoFileFinder]:
+path: src/contrib/admin/views.go:229:42
+text: This model does not allow deletion
+locales:
+  nl: Dit model staat geen verwijdering toe.
+
+---
+
+# [GoFileFinder]:
+path: src/contrib/admin/views.go:263:6
+text: model %T not deleted, model does not implement models.Deleter interface
+locales:
+  nl: model %T niet verwijderd, model implementeert de models.Deleter interface niet
+
+---
+
+# [GoFileFinder]:
+path: src/contrib/admin/views.go:272:6
+text: Failed to delete %s (%v)
+locales:
+  nl: Verwijderen van %s (%v) mislukt
+
+---
+
+# [GoFileFinder]:
+path: src/contrib/admin/views.go:280:6
+text: Successfully deleted %s (%v)
+locales:
+  nl: Verwijderen van %s (%v) succesvol
+
+---
+
+# [GoFileFinder]: GetAdminForm
+path: src/contrib/admin/views.go:349:7
+text: model %T not saved, model does not implement models.Saver interface
+locales:
+  nl: model %T niet opgeslagen, model implementeert de models.Saver interface niet
+
+---
+
+# [GoFileFinder]: newInstanceView
+path: src/contrib/admin/views.go:460:18
+text: instance is nil after form submission
+locales:
+  nl: object is NULL na formulierindiening
+
+---
+
+# [GoFileFinder]: newInstanceView
+path: src/contrib/admin/views.go:465:6
+text: Successfully saved %s (%v)
+locales:
+  nl: Succesvol opgeslagen %s (%v)
+
+---
+
+# [GoFileFinder]: logoutHandler
+path: src/contrib/admin/views_auth.go:165:27
+text: Failed to logout due to unexpected error
+locales:
+  nl: Uitloggen mislukt door onverwachte fout
 
 ---
 
@@ -965,7 +1061,7 @@ locales:
 ---
 
 # [GoFileFinder]: NewAppConfig
-path: src/contrib/auth/app.go:182:33
+path: src/contrib/auth/app.go:183:33
 text: First name
 locales:
   nl: Voornaam
@@ -973,7 +1069,7 @@ locales:
 ---
 
 # [GoFileFinder]: NewAppConfig
-path: src/contrib/auth/app.go:183:33
+path: src/contrib/auth/app.go:184:33
 text: Last name
 locales:
   nl: Achternaam
@@ -981,7 +1077,7 @@ locales:
 ---
 
 # [GoFileFinder]: NewAppConfig
-path: src/contrib/auth/app.go:185:33
+path: src/contrib/auth/app.go:186:33
 text: Is administrator
 locales:
   nl: Is beheerder
@@ -989,7 +1085,7 @@ locales:
 ---
 
 # [GoFileFinder]: NewAppConfig
-path: src/contrib/auth/app.go:186:33
+path: src/contrib/auth/app.go:187:33
 text: Is active
 locales:
   nl: Is actief
@@ -997,7 +1093,7 @@ locales:
 ---
 
 # [GoFileFinder]: NewAppConfig
-path: src/contrib/auth/app.go:187:33
+path: src/contrib/auth/app.go:188:33
 text: Created at
 locales:
   nl: Aangemaakt op
@@ -1005,7 +1101,7 @@ locales:
 ---
 
 # [GoFileFinder]: NewAppConfig
-path: src/contrib/auth/app.go:188:33
+path: src/contrib/auth/app.go:189:33
 text: Updated at
 locales:
   nl: Bijgewerkt op
@@ -1013,7 +1109,7 @@ locales:
 ---
 
 # [GoFileFinder]: initAuthEditForm
-path: src/contrib/auth/app.go:337:4
+path: src/contrib/auth/app.go:340:4
 text: Password Confirm
 locales:
   nl: Bevestig wachtwoord
@@ -1021,7 +1117,7 @@ locales:
 ---
 
 # [GoFileFinder]: initAuthEditForm
-path: src/contrib/auth/app.go:340:4
+path: src/contrib/auth/app.go:343:4
 text: Enter the password again to confirm
 locales:
   nl: Voer het wachtwoord opnieuw in ter bevestiging
@@ -1228,6 +1324,14 @@ locales:
 
 ---
 
+# [TemplateFinder]: {{ T "List" }}
+path: src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:3:21
+text: List
+locales:
+  nl: Lijst
+
+---
+
 # [TemplateFinder]: {{ T "Add Child Page" }}
 path: src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:13:96
 text: Add Child Page
@@ -1357,18 +1461,13 @@ locales:
 ---
 
 # [GoFileFinder]:
-path: src/contrib/pages/django_admin.go:77:44
-text: child
+path: src/contrib/pages/django_admin.go:81:22
+text: '%d child'
+plural: '%d children'
 locales:
-  nl: kind
-
----
-
-# [GoFileFinder]:
-path: src/contrib/pages/django_admin.go:79:41
-text: children
-locales:
-  nl: kinderen
+  nl:
+    0: '%d kind'
+    1: '%d kinderen'
 
 ---
 
@@ -1601,7 +1700,7 @@ locales:
 ---
 
 # [GoFileFinder]: auditLogView
-path: src/contrib/reports/audit_logs/app.go:387:23
+path: src/contrib/reports/audit_logs/app.go:388:23
 text: View all audit logs
 locales:
   nl: Bekijk alle auditlogs
@@ -1665,7 +1764,7 @@ locales:
 ---
 
 # [GoFileFinder]: *pageObject[T].Component
-path: src/core/pagination/paginator_object_templ.go:89:97
+path: src/core/pagination/paginator_object_templ.go:98:97
 text: Previous
 locales:
   nl: Vorige
@@ -1673,7 +1772,7 @@ locales:
 ---
 
 # [GoFileFinder]: *pageObject[T].Component
-path: src/core/pagination/paginator_object_templ.go:194:97
+path: src/core/pagination/paginator_object_templ.go:203:97
 text: Next
 locales:
   nl: Volgende

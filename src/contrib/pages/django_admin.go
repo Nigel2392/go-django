@@ -74,13 +74,13 @@ var pageAdminModelOptions = admin.ModelOptions{
 							"admin:pages:list",
 							node.PK,
 						)
-						var childText = trans.T(r.Context(), "child")
-						if node.Numchild > 1 || node.Numchild == 0 {
-							childText = trans.T(r.Context(), "children")
-						}
+
 						return template.HTML(fmt.Sprintf(
-							`<a href="%s" class="button primary hollow">%d %s</a>`,
-							url, node.Numchild, childText,
+							`<a href="%s" class="button primary hollow">%s</a>`,
+							url, trans.P(
+								r.Context(), "%d child", "%d children",
+								int(node.Numchild), node.Numchild,
+							),
 						))
 					}
 					return template.HTML("")

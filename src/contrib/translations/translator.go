@@ -22,6 +22,14 @@ type Translator struct {
 	appTranslations map[string]map[trans.Locale]map[trans.Untranslated][]trans.Translation
 }
 
+func NewTranslator(hdr *FileTranslationsHeader, translations map[trans.Locale]map[trans.Untranslated][]trans.Translation, appTranslations map[string]map[trans.Locale]map[trans.Untranslated][]trans.Translation) *Translator {
+	return &Translator{
+		hdr:             newTranslationHeader(hdr),
+		translations:    translations,
+		appTranslations: appTranslations,
+	}
+}
+
 func (t *Translator) Translate(ctx context.Context, v string) string {
 
 	if v == "" {
@@ -149,10 +157,7 @@ func (t *Translator) Pluralize(ctx context.Context, singular, plural string, n i
 }
 
 func (t *Translator) Pluralizef(ctx context.Context, singular, plural string, n int, args ...any) string {
-	if n == 1 {
-		return t.Translatef(ctx, singular, args...)
-	}
-	return t.Translatef(ctx, plural, args...)
+	return fmt.Sprintf(t.Pluralize(ctx, singular, plural, n), args...)
 }
 
 func (t *Translator) Locale(ctx context.Context) string {
