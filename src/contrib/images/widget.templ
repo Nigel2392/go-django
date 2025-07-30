@@ -1,0 +1,39 @@
+package images
+
+import (
+    "github.com/Nigel2392/go-django/src/core/attrs"
+    "github.com/Nigel2392/go-django/src/forms/widgets"
+    "github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src"
+)
+
+var _ widgets.Widget = (*ImageWidget)(nil)
+
+type ImageWidget struct {
+    widgets.BaseWidget
+}
+
+func (w *ImageWidget) Media() media.Media {
+    var m = media.NewMedia()
+	m.AddJS(&media.JSAsset{
+		URL: django.Static("images_model/js/widget.js"),
+	})
+    return m
+}
+
+templ (w *ImageWidget) Component(id, name string, value interface{}) {
+    <div class="image-chooser-container" data-id={ id } data-name={ name }>
+
+        <input type="hidden" id={ id } name={ name } value={ attrs.ToString(value) }>
+
+        <div class="image-chooser-preview">
+        
+        </div>
+        
+        <div class="image-chooser-controls">
+            <button class="image-chooser-controls--choose-new"></button>
+            <button class="image-chooser-controls--clear-selection"></button>
+            <button class="image-chooser-controls--edit"></button>
+        </div>
+    </div>
+}

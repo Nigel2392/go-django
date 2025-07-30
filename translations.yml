@@ -8,8 +8,8 @@ locales:
     rule: '(n != 1) ? 1 : 0'
   en:
     nplural: 2
-    rule: '(n != 1) ? 1 : 0'
-
+    rule: '(n != 1)
+    
 ---
 
 # [ModelFinder]: audit_logs.Entry
@@ -1680,6 +1680,588 @@ path: src/contrib/reports/audit_logs/app.go:288:88
 text: Info
 locales:
   nl: Info
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:289:88
+text: Warning
+locales:
+  nl: Waarschuwing
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:290:88
+text: Error
+locales:
+  nl: Fout
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:388:23
+text: View all audit logs
+locales:
+  nl: Bekijk alle auditlogs
+
+---
+
+# [TemplateFinder]: {{ T "Actions" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:28:148
+text: Actions
+locales:
+  nl: Acties
+
+---
+
+# [TemplateFinder]: {{ T "No audit logs found" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:62:61
+text: No audit logs found
+locales:
+  nl: Geen auditlogs gevonden
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:70:38
+text: Settings
+locales:
+  nl: Instellingen
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:96:34
+text: Sites
+locales:
+  nl: Sites
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:99:25
+text: Site Name
+locales:
+  nl: Sitenaam
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:102:25
+text: Is Default Site
+locales:
+  nl: Is standaardsite
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:103:25
+text: Root Page
+locales:
+  nl: Hoofdpagina
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:98:97
+text: Previous
+locales:
+  nl: Vorige
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:203:97
+text: Next
+locales:
+  nl: Volgende
+l: Info
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:289:88
+text: Warning
+locales:
+  nl: Waarschuwing
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:290:88
+text: Error
+locales:
+  nl: Fout
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:388:23
+text: View all audit logs
+locales:
+  nl: Bekijk alle auditlogs
+
+---
+
+# [TemplateFinder]: {{ T "Actions" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:28:148
+text: Actions
+locales:
+  nl: Acties
+
+---
+
+# [TemplateFinder]: {{ T "No audit logs found" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:62:61
+text: No audit logs found
+locales:
+  nl: Geen auditlogs gevonden
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:70:38
+text: Settings
+locales:
+  nl: Instellingen
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:96:34
+text: Sites
+locales:
+  nl: Sites
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:99:25
+text: Site Name
+locales:
+  nl: Sitenaam
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:102:25
+text: Is Default Site
+locales:
+  nl: Is standaardsite
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:103:25
+text: Root Page
+locales:
+  nl: Hoofdpagina
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:98:97
+text: Previous
+locales:
+  nl: Vorige
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:203:97
+text: Next
+locales:
+  nl: Volgende
+l: Info
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:289:88
+text: Warning
+locales:
+  nl: Waarschuwing
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:290:88
+text: Error
+locales:
+  nl: Fout
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:388:23
+text: View all audit logs
+locales:
+  nl: Bekijk alle auditlogs
+
+---
+
+# [TemplateFinder]: {{ T "Actions" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:28:148
+text: Actions
+locales:
+  nl: Acties
+
+---
+
+# [TemplateFinder]: {{ T "No audit logs found" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:62:61
+text: No audit logs found
+locales:
+  nl: Geen auditlogs gevonden
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:70:38
+text: Settings
+locales:
+  nl: Instellingen
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:96:34
+text: Sites
+locales:
+  nl: Sites
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:99:25
+text: Site Name
+locales:
+  nl: Sitenaam
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:102:25
+text: Is Default Site
+locales:
+  nl: Is standaardsite
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:103:25
+text: Root Page
+locales:
+  nl: Hoofdpagina
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:98:97
+text: Previous
+locales:
+  nl: Vorige
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:203:97
+text: Next
+locales:
+  nl: Volgende
+l: Info
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:289:88
+text: Warning
+locales:
+  nl: Waarschuwing
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:290:88
+text: Error
+locales:
+  nl: Fout
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:388:23
+text: View all audit logs
+locales:
+  nl: Bekijk alle auditlogs
+
+---
+
+# [TemplateFinder]: {{ T "Actions" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:28:148
+text: Actions
+locales:
+  nl: Acties
+
+---
+
+# [TemplateFinder]: {{ T "No audit logs found" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:62:61
+text: No audit logs found
+locales:
+  nl: Geen auditlogs gevonden
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:70:38
+text: Settings
+locales:
+  nl: Instellingen
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:96:34
+text: Sites
+locales:
+  nl: Sites
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:99:25
+text: Site Name
+locales:
+  nl: Sitenaam
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:102:25
+text: Is Default Site
+locales:
+  nl: Is standaardsite
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:103:25
+text: Root Page
+locales:
+  nl: Hoofdpagina
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:98:97
+text: Previous
+locales:
+  nl: Vorige
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:203:97
+text: Next
+locales:
+  nl: Volgende
+l: Info
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:289:88
+text: Warning
+locales:
+  nl: Waarschuwing
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:290:88
+text: Error
+locales:
+  nl: Fout
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:388:23
+text: View all audit logs
+locales:
+  nl: Bekijk alle auditlogs
+
+---
+
+# [TemplateFinder]: {{ T "Actions" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:28:148
+text: Actions
+locales:
+  nl: Acties
+
+---
+
+# [TemplateFinder]: {{ T "No audit logs found" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:62:61
+text: No audit logs found
+locales:
+  nl: Geen auditlogs gevonden
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:70:38
+text: Settings
+locales:
+  nl: Instellingen
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:96:34
+text: Sites
+locales:
+  nl: Sites
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:99:25
+text: Site Name
+locales:
+  nl: Sitenaam
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:102:25
+text: Is Default Site
+locales:
+  nl: Is standaardsite
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:103:25
+text: Root Page
+locales:
+  nl: Hoofdpagina
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:98:97
+text: Previous
+locales:
+  nl: Vorige
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:203:97
+text: Next
+locales:
+  nl: Volgende
+l: Info
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:289:88
+text: Warning
+locales:
+  nl: Waarschuwing
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:290:88
+text: Error
+locales:
+  nl: Fout
+
+---
+
+# [GoFileFinder]: auditLogView
+path: src/contrib/reports/audit_logs/app.go:388:23
+text: View all audit logs
+locales:
+  nl: Bekijk alle auditlogs
+
+---
+
+# [TemplateFinder]: {{ T "Actions" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:28:148
+text: Actions
+locales:
+  nl: Acties
+
+---
+
+# [TemplateFinder]: {{ T "No audit logs found" }}
+path: src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:62:61
+text: No audit logs found
+locales:
+  nl: Geen auditlogs gevonden
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:70:38
+text: Settings
+locales:
+  nl: Instellingen
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:96:34
+text: Sites
+locales:
+  nl: Sites
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:99:25
+text: Site Name
+locales:
+  nl: Sitenaam
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:102:25
+text: Is Default Site
+locales:
+  nl: Is standaardsite
+
+---
+
+# [GoFileFinder]: NewAppConfig
+path: src/contrib/settings/app.go:103:25
+text: Root Page
+locales:
+  nl: Hoofdpagina
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:98:97
+text: Previous
+locales:
+  nl: Vorige
+
+---
+
+# [GoFileFinder]: *pageObject[T].Component
+path: src/core/pagination/paginator_object_templ.go:203:97
+text: Next
+locales:
+  nl: Volgende
+l: Info
 
 ---
 
