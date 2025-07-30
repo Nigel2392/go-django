@@ -13,8 +13,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/memory"
 	"github.com/Nigel2392/mux"
-
-	_ "embed"
 )
 
 type (
@@ -34,12 +32,6 @@ type (
 
 var (
 	app *AppConfig
-
-	//go:embed sql/schema.mysql.sql
-	schemaMySQL string
-
-	//go:embed sql/schema.sqlite.sql
-	schemaSqlite string
 )
 
 func NewAppConfig(opts *Options) *AppConfig {
