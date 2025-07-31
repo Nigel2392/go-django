@@ -6,6 +6,8 @@ import (
 
 var DefaultBackend TranslationBackend = &SprintBackend{}
 
+const PACKAGE_PATH = "github.com/Nigel2392/go-django/src/core/trans"
+
 type (
 	Locale             = string
 	Translation        = string

@@ -235,6 +235,7 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 	}
 
 	var funcNames = slices.Collect(maps.Keys(f.functions))
+	var trans_package_path = fmt.Sprintf("\"%s\"", trans.PACKAGE_PATH)
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -259,6 +260,22 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 			// You can log but skip the file if broken
 			logger.Warnf("Skipping broken Go file: %s", path)
 			return nil
+		}
+
+		var transPackageImport string
+		for _, imp := range file.Imports {
+			if imp.Path.Value == trans_package_path {
+				if imp.Name != nil {
+					if imp.Name.Name == "." {
+						transPackageImport = ""
+					} else {
+						transPackageImport = imp.Name.Name
+					}
+				} else {
+					transPackageImport = "trans"
+				}
+				break
+			}
 		}
 
 		var currentFuncName string
@@ -314,7 +331,8 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 				return true
 			}
 
-			if !slices.Contains(f.packageAliases, xIdent.Name) {
+			if xIdent.Name != transPackageImport && !slices.Contains(f.packageAliases, xIdent.Name) {
+				logger.Warnf("Skipping %s: %s.%s is not a valid translation package", path, xIdent.Name, selector.Sel.Name)
 				return true
 			}
 
