@@ -32,7 +32,7 @@ func (b *FieldBlock) RenderForm(ctx context.Context, w io.Writer, id, name strin
 		"type":   b.Field().Widget().FormType(),
 		"block":  b,
 	}
-	var bt, err = telepath.PackJSON(JSContext, blockArgs)
+	var bt, err = telepath.PackJSON(ctx, JSContext, blockArgs)
 	if err != nil {
 		return err
 	}
@@ -40,8 +40,7 @@ func (b *FieldBlock) RenderForm(ctx context.Context, w io.Writer, id, name strin
 	return b.RenderTempl(id, name, value, string(bt), errors, c).Render(ctx, w)
 }
 
-func (b *FieldBlock) Adapter() telepath.Adapter {
-	var ctx = context.Background()
+func (b *FieldBlock) Adapter(ctx context.Context) telepath.Adapter {
 	return &telepath.ObjectAdapter[*FieldBlock]{
 		JSConstructor: "django.blocks.FieldBlock",
 		GetJSArgs: func(obj *FieldBlock) []interface{} {

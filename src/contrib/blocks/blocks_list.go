@@ -372,7 +372,7 @@ func (l *ListBlock) RenderForm(ctx context.Context, w io.Writer, id, name string
 		"block":      l,
 		"childBlock": l.Child,
 	}
-	var bt, err = telepath.PackJSON(JSContext, blockArgs)
+	var bt, err = telepath.PackJSON(ctx, JSContext, blockArgs)
 	if err != nil {
 		return err
 	}
@@ -380,8 +380,7 @@ func (l *ListBlock) RenderForm(ctx context.Context, w io.Writer, id, name string
 	return l.RenderTempl(id, name, valueArr, string(bt), listBlockErrors, ctxData).Render(ctx, w)
 }
 
-func (m *ListBlock) Adapter() telepath.Adapter {
-	var ctx = context.Background()
+func (m *ListBlock) Adapter(ctx context.Context) telepath.Adapter {
 	return &telepath.ObjectAdapter[*ListBlock]{
 		JSConstructor: "django.blocks.ListBlock",
 		GetJSArgs: func(obj *ListBlock) []interface{} {

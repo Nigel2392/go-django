@@ -141,7 +141,7 @@ func (b *BaseBlock) Media() media.Media {
 	return b.Field().Widget().Media()
 }
 
-func (b *BaseBlock) Adapter() telepath.Adapter {
+func (b *BaseBlock) Adapter(ctx context.Context) telepath.Adapter {
 	return nil
 }
 

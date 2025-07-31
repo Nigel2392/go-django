@@ -62,6 +62,14 @@ module.exports = [
         ]),
     },
     {
+        entry: './src/contrib/images/assets/static_src/index.ts',
+        output: {
+            'path': path.resolve(__dirname, 'src/contrib/images/assets/static/images/js/'),
+            'filename': 'index.js'
+        },
+        ...baseConfig(),
+    },
+    {
         entry: './src/contrib/pages/assets/static_src/index.ts',
         output: {
             'path': path.resolve(__dirname, 'src/contrib/pages/assets/static/pages/admin/js/'),

@@ -22,6 +22,10 @@
       "src/contrib/pages/assets/static_src/**/*.ts",
       "src/contrib/pages/assets/static_src/**/*.tsx",
 
+      "src/contrib/images/assets/static_src/**/*.js",
+      "src/contrib/images/assets/static_src/**/*.ts",
+      "src/contrib/images/assets/static_src/**/*.tsx",
+
       "src/contrib/editor/static_src/**/*.js",
       "src/contrib/editor/static_src/**/*.ts",
       "src/contrib/editor/static_src/**/*.tsx",
@@ -40,6 +44,10 @@
       "src/contrib/admin/assets/static_src/**/*.test.ts",
       "src/contrib/admin/assets/static_src/**/*.test.tsx",
       
+      "src/contrib/pages/assets/static_src/**/*.test.js",
+      "src/contrib/pages/assets/static_src/**/*.test.ts",
+      "src/contrib/pages/assets/static_src/**/*.test.tsx",
+
       "src/contrib/pages/assets/static_src/**/*.test.js",
       "src/contrib/pages/assets/static_src/**/*.test.ts",
       "src/contrib/pages/assets/static_src/**/*.test.tsx",

@@ -268,7 +268,7 @@ func (m *StructBlock) RenderForm(ctx context.Context, w io.Writer, id, name stri
 		}()),
 	}
 
-	var bt, err = telepath.PackJSON(JSContext, blockArgs)
+	var bt, err = telepath.PackJSON(ctx, JSContext, blockArgs)
 	if err != nil {
 		return err
 	}
@@ -278,8 +278,7 @@ func (m *StructBlock) RenderForm(ctx context.Context, w io.Writer, id, name stri
 	).Render(ctx, w)
 }
 
-func (m *StructBlock) Adapter() telepath.Adapter {
-	var ctx = context.Background()
+func (m *StructBlock) Adapter(ctx context.Context) telepath.Adapter {
 	return &telepath.ObjectAdapter[*StructBlock]{
 		JSConstructor: "django.blocks.StructBlock",
 		GetJSArgs: func(obj *StructBlock) []interface{} {
