@@ -111,19 +111,30 @@ func (t *Translator) Pluralize(ctx context.Context, singular, plural string, n i
 	}
 
 	var (
-		locale = LocaleFromContext(ctx)
-		checks = localeChecks(locale)
-		hash   = getHashForPluralTexts(singular, plural)
+		locale      = LocaleFromContext(ctx)
+		checks      = localeChecks(locale)
+		hash        = getHashForPluralTexts(singular, plural)
+		foundChecks = make([]string, 0, len(checks))
 	)
 
+	// Loop over all locale checks to find the first matching translation
+	//
+	// If no translation is found, we will try to find the appropriate plural form
+	// based on the plural rules defined in the translation header.
+	//
+	// If no translation header is found, we will use the default plural rule (n != 1).
 	for _, check := range checks {
 		if _, ok := t.hdr.hdr.Locales.Get(check); !ok {
-			logger.Debugf(
-				"Locale '%s' not found in translation header, using default plural rule (n != 1)",
-				check,
-			)
+			//	logger.Debugf(
+			//		"Locale '%s' not found in translation header, using default plural rule (n != 1)",
+			//		check,
+			//	)
 			continue
 		}
+
+		// add the check to foundChecks in case no translation is found in the first
+		// loop, so we can check it again later
+		foundChecks = append(foundChecks, check)
 
 		var pluralIdx, err = t.hdr.pluralIndex(check, n)
 		if err != nil {
@@ -143,16 +154,45 @@ func (t *Translator) Pluralize(ctx context.Context, singular, plural string, n i
 			continue
 		}
 		if !ok {
-			logger.Debugf(
-				"Plural translation for locale '%s', plural index %d and hash '%s' not found, using default plural rule (n != 1)",
-				check, pluralIdx, hash,
-			)
+			//	logger.Debugf(
+			//		"Plural translation for locale '%s', plural index %d and hash '%s' not found, using default plural rule (n != 1)",
+			//		check, pluralIdx, hash,
+			//	)
 			continue
 		}
 
 		return translation
 	}
 
+	// If we reach here, it means no translation was found for the plural form
+	// Some headers may have been found however, this means that we can try to use
+	// the headers' plural rules to determine the plural form.
+	for _, check := range foundChecks {
+		if _, ok := t.hdr.hdr.Locales.Get(check); !ok {
+			//	logger.Debugf(
+			//		"Locale '%s' not found in translation header, using default plural rule (n != 1)",
+			//		check,
+			//	)
+			continue
+		}
+
+		var pluralIdx, err = t.hdr.pluralIndex(check, n)
+		if err != nil {
+			logger.Errorf(
+				"Failed to get plural index for locale '%s' and count %d: %v",
+				check, n, err,
+			)
+			return singular // Fallback to singular if plural index cannot be determined
+		}
+
+		if pluralIdx == 0 {
+			return singular
+		}
+
+		return plural
+	}
+
+	// Fallback to the default plural rule (n != 1)
 	if n != 1 {
 		return plural
 	}
