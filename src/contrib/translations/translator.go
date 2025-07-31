@@ -192,7 +192,8 @@ func (t *Translator) Pluralize(ctx context.Context, singular, plural string, n i
 		return plural
 	}
 
-	// Fallback to the default plural rule (n != 1)
+	// Fallback to the default plural rule (n != 1
+	// if no plural rule was found for the locale
 	if n != 1 {
 		return plural
 	}

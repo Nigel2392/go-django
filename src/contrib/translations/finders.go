@@ -186,7 +186,7 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 					}
 
 					matches = append(matches, Translation{
-						Path:   path,
+						Path:   filepath.ToSlash(path),
 						Line:   lineNum,
 						Col:    col,
 						Text:   singular,
@@ -339,7 +339,7 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 			}
 
 			matches = append(matches, Translation{
-				Path:    path,
+				Path:    filepath.ToSlash(path),
 				Line:    pos.Line,
 				Col:     pos.Column,
 				Text:    singularUnquoted,
@@ -383,7 +383,7 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Translation, error) {
 
 			var cType = contenttypes.NewContentType(model)
 			var match = Translation{
-				Path:    filepath.Join(".models", app.Name(), cType.Model()),
+				Path:    filepath.ToSlash(filepath.Join(".models", app.Name(), cType.Model())),
 				Line:    lineNum,
 				Col:     col,
 				Text:    cType.Model(),
@@ -395,7 +395,7 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Translation, error) {
 			var fieldDefs = model.FieldDefs()
 			for i, field := range fieldDefs.Fields() {
 				var fieldMatch = Translation{
-					Path:    filepath.Join(".models", app.Name(), cType.Model(), "fields"),
+					Path:    filepath.ToSlash(filepath.Join(".models", app.Name(), cType.Model(), "fields")),
 					Line:    col,
 					Col:     i,
 					Text:    field.Label(context.Background()),

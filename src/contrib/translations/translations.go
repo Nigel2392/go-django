@@ -173,7 +173,16 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 			}
 
 			// If we already have a Translation with the same text, we can skip adding it again
-			if foundMatch, ok := foundMatches[key]; ok && m.Locales.Len() > 0 {
+			if foundMatch, ok := foundMatches[key]; ok {
+
+				foundMatch.Paths = append(foundMatch.Paths, fmt.Sprintf(
+					"%s:%d:%d", m.Path, m.Line, m.Col,
+				))
+
+				if m.Locales == nil || m.Locales.Len() == 0 {
+					continue // Skip matches without locales
+				}
+
 				for head := m.Locales.Front(); head != nil; head = head.Next() {
 
 					if len(head.Value) == 0 || head.Value[0] == "" {

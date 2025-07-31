@@ -2,6 +2,7 @@ package translations
 
 import (
 	"fmt"
+	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 
 type Translation struct {
 	Path       string
+	Paths      []string
 	Comment    string
 	Line       int
 	Col        int
@@ -40,24 +42,6 @@ func (m *Translation) UnmarshalYAML(node *yaml.Node) error {
 		return fmt.Errorf("failed to decode Match: %w", err)
 	}
 
-	var split = strings.SplitN(yml.Path, ":", 3)
-	if len(split) < 3 {
-		return fmt.Errorf("invalid path format: %s", yml.Path)
-	}
-
-	line, err := strconv.Atoi(split[1])
-	if err != nil {
-		return fmt.Errorf("invalid line number in path %s: %w", yml.Path, err)
-	}
-
-	col, err := strconv.Atoi(split[2])
-	if err != nil {
-		return fmt.Errorf("invalid column number in path %s: %w", yml.Path, err)
-	}
-
-	m.Path = split[0]
-	m.Line = line
-	m.Col = col
 	m.Text = yml.Text
 	m.Plural = yml.Plural
 	m.Preference = yml.Preference
@@ -131,31 +115,55 @@ func (m *Translation) UnmarshalYAML(node *yaml.Node) error {
 
 func (m Translation) MarshalYAML() (interface{}, error) {
 	var n = yaml.Node{
-		Kind: yaml.MappingNode,
-		Tag:  "!!map",
+		Kind:    yaml.MappingNode,
+		Tag:     "!!map",
 		Content: []*yaml.Node{
-			{
-				Kind:  yaml.ScalarNode,
-				Tag:   "!!str",
-				Value: "path",
-			},
-			{
-				Kind:  yaml.ScalarNode,
-				Tag:   "!!str",
-				Value: fmt.Sprintf("%s:%d:%d", m.Path, m.Line, m.Col),
-			},
-			{
-				Kind:  yaml.ScalarNode,
-				Tag:   "!!str",
-				Value: "text",
-			},
-			{
-				Kind:  yaml.ScalarNode,
-				Tag:   "!!str",
-				Value: m.Text,
-			},
+			//	{
+			//		Kind:  yaml.ScalarNode,
+			//		Tag:   "!!str",
+			//		Value: "path",
+			//	},
+			//	{
+			//		Kind:  yaml.ScalarNode,
+			//		Tag:   "!!str",
+			//		Value: fmt.Sprintf("%s:%d:%d", m.Path, m.Line, m.Col),
+			//	},
 		},
 	}
+
+	n.Content = append(n.Content,
+		&yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!str",
+			Value: "paths",
+		},
+		&yaml.Node{
+			Kind:    yaml.SequenceNode,
+			Style:   yaml.FoldedStyle,
+			Tag:     "!!seq",
+			Content: make([]*yaml.Node, len(m.Paths)+1),
+		},
+	)
+	for i, path := range append([]string{filepath.ToSlash(fmt.Sprintf("%s:%d:%d", m.Path, m.Line, m.Col))}, m.Paths...) {
+		n.Content[len(n.Content)-1].Content[i] = &yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!str",
+			Value: path,
+		}
+	}
+
+	n.Content = append(n.Content,
+		&yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!str",
+			Value: "text",
+		},
+		&yaml.Node{
+			Kind:  yaml.ScalarNode,
+			Tag:   "!!str",
+			Value: m.Text,
+		},
+	)
 
 	if m.Plural != "" {
 		n.Content = append(n.Content,
