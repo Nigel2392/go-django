@@ -153,6 +153,10 @@ func (t *Translator) Pluralize(ctx context.Context, singular, plural string, n i
 		return translation
 	}
 
+	if n != 1 {
+		return plural
+	}
+
 	return singular
 }
 

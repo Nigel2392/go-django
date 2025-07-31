@@ -5,6 +5,7 @@
 {{ define "content" }}
 
     {{ block "heading" . }}
+        {{ $count := (.Data.view_paginator_object).Count }}
         {{ $page := (.Get "page_object") }}
         <div class="view-header">
             {{ if (or (or (has_perm  "pages:add") (has_perm  "pages:edit")) (has_perm  "pages:delete")) }}
@@ -21,7 +22,7 @@
                 </div>
             {{ end }}
             <div class="title-text">
-                <h1>{{ .Get "model_name" }} &quot;{{ $page.Title }}&quot;</h1>
+                <h1>{{ .Get "model_name" }} &quot;{{ $page.Title }}&quot;{{ if gt $count 0 }} ({{ P "%d child" "%d children" $count $count }}){{ end }}</h1>
             </div>
         </div>
     {{ end }}
@@ -29,5 +30,9 @@
     <div class="pages-list list-wrapper">
         {{ $list := (.Get "view_list") }}
         {{ safe $list.Render }}
+    </div>
+
+    <div class="pages-list-paginator list-paginator">
+        {{ (.Data.view_paginator_object).HTML "page" 5 .Request.URL.Query }}
     </div>
 {{ end }}

@@ -635,6 +635,9 @@ func (a *Application) Initialize() error {
 			"T": func(s string, args ...any) string {
 				return trans.T(req.Context(), s, args...)
 			},
+			"P": func(single, plural string, count int, args ...any) string {
+				return trans.P(req.Context(), single, plural, count, args...)
+			},
 		}
 	})
 

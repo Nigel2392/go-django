@@ -1,11 +1,15 @@
 package list
 
 import (
+	"errors"
 	"net/http"
+	"reflect"
 	"strconv"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/pagination"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/a-h/templ"
 )
@@ -27,7 +31,20 @@ type View[T attrs.Definer] struct {
 	DefaultAmount    uint64
 	ListColumns      []ListColumn[T]
 	TitleFieldColumn func(ListColumn[T]) ListColumn[T]
-	GetListFn        func(amount, offset uint) ([]T, error)
+	QuerySet         func(r *http.Request) *queries.QuerySet[T]
+}
+
+func (v *View[T]) GetQuerySet(r *http.Request) *queries.QuerySet[T] {
+	var qs *queries.QuerySet[T]
+	if v.QuerySet == nil {
+		var newObj = attrs.NewObject[T](
+			reflect.TypeOf(new(T)).Elem(),
+		)
+		qs = queries.GetQuerySet(newObj)
+	} else {
+		qs = v.QuerySet(r)
+	}
+	return qs.WithContext(r.Context())
 }
 
 func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
@@ -52,7 +69,7 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	}
 
 	if pageValue == "" {
-		page = 0
+		page = 1
 	} else {
 		page, err = strconv.ParseUint(pageValue, 10, 64)
 	}
@@ -60,21 +77,36 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 		return base, err
 	}
 
+	var paginator = &pagination.QueryPaginator[T]{
+		Context: req.Context(),
+		Amount:  int(amount),
+		BaseQuerySet: func() *queries.QuerySet[T] {
+			return v.GetQuerySet(req)
+		},
+	}
+
 	var cols = v.Columns()
 	if v.TitleFieldColumn != nil && len(cols) > 0 {
 		cols[0] = v.TitleFieldColumn(cols[0])
 	}
 
-	list, err := v.GetListFn(uint(amount), uint(page))
-	if err != nil {
+	pageObject, err := paginator.Page(int(page))
+	if err != nil && !errors.Is(err, pagination.ErrNoResults) {
 		return base, err
 	}
 
-	listObj := NewList(req, list, cols...)
+	var results []T
+	if pageObject != nil {
+		results = pageObject.Results()
+	}
+
+	listObj := NewList(req, results, cols...)
 
 	base.Set("view_list", listObj)
 	base.Set("view_amount", amount)
 	base.Set("view_page", page)
+	base.Set("view_paginator", paginator)
+	base.Set("view_paginator_object", pageObject)
 	base.Set("view_max_amount", v.MaxAmount)
 	base.Set("view_amount_param", v.AmountParam)
 	base.Set("view_page_param", v.PageParam)

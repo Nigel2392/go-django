@@ -38,8 +38,8 @@ class Workflow implements GenericWorkflow {
         }
         
         if (step) {
-            step.start(...args);
             this.currentStep = stepName;
+            step.start(...args);
         } else {
             console.error(`Step ${stepName} not found in workflow`);
             this.currentStep = null;

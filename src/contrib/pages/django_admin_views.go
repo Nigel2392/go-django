@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strconv"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
@@ -188,17 +189,13 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				return context, nil
 			},
 		},
-		GetListFn: func(amount, offset uint) ([]attrs.Definer, error) {
-			var nodes, err = qs.GetChildNodes(p, StatusFlagNone, int32(offset), int32(amount))
-			if err != nil {
-				return nil, err
-			}
-			var items = make([]attrs.Definer, 0, len(nodes))
-			for _, n := range nodes {
-				n := n
-				items = append(items, n)
-			}
-			return items, nil
+		QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
+			return queries.ChangeObjectsType[*PageNode, attrs.Definer](
+				NewPageQuerySet().
+					WithContext(r.Context()).
+					ChildrenOf(p).
+					Base(),
+			)
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
 			return list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {

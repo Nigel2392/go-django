@@ -4,8 +4,8 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"slices"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
@@ -126,22 +126,11 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 				return context, nil
 			},
 		},
-		GetListFn: func(amount, offset uint) ([]attrs.Definer, error) {
+		QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
 			if model.ListView.GetQuerySet != nil {
-				var qs = model.ListView.GetQuerySet(adminSite, app, model).
-					WithContext(r.Context()).
-					Offset(int(offset)).
-					Limit(int(amount))
-
-				var rows, err = qs.All()
-				if err != nil {
-					return nil, err
-				}
-
-				return slices.Collect(rows.Objects()), nil
+				return model.ListView.GetQuerySet(adminSite, app, model)
 			}
-
-			return model.GetListInstances(r.Context(), amount, offset)
+			return queries.GetQuerySet(model.NewInstance())
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
 			return list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {
