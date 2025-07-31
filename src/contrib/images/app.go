@@ -13,8 +13,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/memory"
 	"github.com/Nigel2392/mux"
-
-	_ "embed"
 )
 
 type (
