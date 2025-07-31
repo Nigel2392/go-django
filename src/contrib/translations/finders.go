@@ -10,6 +10,7 @@ import (
 	"go/printer"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strconv"
@@ -18,25 +19,24 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/dlclark/regexp2"
 )
 
 var (
-	t_funcName                  = "T"
-	p_funcName                  = "P"
 	l_delim                     = `\{\{`
 	r_delim                     = `\}\}`
 	translationTemplateRegexStr = fmt.Sprintf(
 		`%s\s*%s\s*"((?:[^"\\]|\\.)*)"(?:[a-zA-Z0-9]|[^a-zA-Z0-9%s])*%s`,
-		l_delim, t_funcName, r_delim, r_delim,
+		l_delim, "T", r_delim, r_delim,
 	)
 	translationTemplateRegexPluralStr = fmt.Sprintf(
 		`%s\s*%s\s*"((?:[^"\\]|\\.)*)"\s*"((?:[^"\\]|\\.)*)"(?:[a-zA-Z0-9]|[^a-zA-Z0-9%s])*%s`,
-		l_delim, p_funcName, r_delim, r_delim,
+		l_delim, "P", r_delim, r_delim,
 	)
 	translationTemplatePipeRegexStr = fmt.Sprintf(
 		`%s\s*(?:"((?:[^"\\]|\\.)+)"|(\w[\w\d\-_]*))\s*\|\s*%s\b[^}]*%s`,
-		l_delim, t_funcName, r_delim,
+		l_delim, "T", r_delim,
 	)
 	translationTemplateRegex = regexp2.MustCompile(
 		translationTemplateRegexStr,
@@ -52,8 +52,14 @@ var (
 	)
 )
 
+type templateTranslationMatcher struct {
+	regex *regexp2.Regexp
+	exec  func(*regexp2.Match) (trans.Untranslated, trans.Untranslated, int, error)
+}
+
 type templateTranslationsFinder struct {
 	extensions []string
+	matches    []templateTranslationMatcher
 }
 
 func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
@@ -109,76 +115,39 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 			lineNum++
 			line := scanner.Text()
 
-			// Capture stuff like {{ T "my-text" }} and {{ T "my-text" | html | myfunc }}
-			// note: also captures {{ T "my-text" | T }} and {{ T "my-text" | html | myfunc }}
-			var rexMatch, err = translationTemplateRegex.FindStringMatch(line)
-			for rexMatch != nil && err == nil {
-				var capture = rexMatch.Groups()[1].Captures[0].String()
-				var col = rexMatch.Index + 1 // column is 1-based
-				matches = append(matches, Translation{
-					Path: path,
-					Line: lineNum,
-					Col:  col,
-					Text: capture,
-					Comment: fmt.Sprintf(
-						"[TemplateFinder]: %s",
-						rexMatch.String(),
-					),
-				})
+			for _, matcher := range f.matches {
+				rexMatch, err := matcher.regex.FindStringMatch(line)
+				if err != nil {
+					file.Close()
+					return nil, err
+				}
 
-				matchCount++
-				rexMatch, err = translationTemplateRegex.FindNextMatch(rexMatch)
-			}
-			if err != nil {
-				file.Close()
-				return nil, err
-			}
+				for rexMatch != nil && err == nil {
+					singular, plural, col, err := matcher.exec(rexMatch)
+					if err != nil {
+						file.Close()
+						return nil, err
+					}
 
-			// Capture stuff like {{ "my-text" | T }} and {{ "my-text" | T | html }} but not {{ "my-text" | html | T }}
-			rexMatch, err = translationTemplatePipeRegex.FindStringMatch(line)
-			for rexMatch != nil && err == nil {
-				var capture = rexMatch.Groups()[1].Captures[0].String()
-				var col = rexMatch.Index + 1 // column is 1-based
-				matches = append(matches, Translation{
-					Path: path,
-					Line: lineNum,
-					Col:  col,
-					Text: capture,
-					Comment: fmt.Sprintf(
-						"[TemplateFinder]: %s",
-						rexMatch.String(),
-					),
-				})
+					matches = append(matches, Translation{
+						Path:   path,
+						Line:   lineNum,
+						Col:    col,
+						Text:   singular,
+						Plural: plural,
+						Comment: fmt.Sprintf(
+							"[TemplateFinder]: %s",
+							rexMatch.String(),
+						),
+					})
 
-				matchCount++
-				rexMatch, err = translationTemplatePipeRegex.FindNextMatch(rexMatch)
-			}
-			if err != nil {
-				file.Close()
-				return nil, err
-			}
-
-			// Capture stuff like {{ P "my-text" "my-text" var }} and {{ P "my-text" "my-text" var | html | myfunc }}
-			rexMatch, err = translationTemplateRegexPlural.FindStringMatch(line)
-			for rexMatch != nil && err == nil {
-				var capture = rexMatch.Groups()[1].Captures[0].String()
-				var plural = rexMatch.Groups()[2].Captures[0].String()
-				var col = rexMatch.Index + 1 // column is 1-based
-				matches = append(matches, Translation{
-					Path:    path,
-					Line:    lineNum,
-					Col:     col,
-					Text:    capture,
-					Plural:  plural,
-					Comment: fmt.Sprintf("[TemplateFinder]: %s", rexMatch.String()),
-				})
-
-				matchCount++
-				rexMatch, err = translationTemplateRegexPlural.FindNextMatch(rexMatch)
-			}
-			if err != nil {
-				file.Close()
-				return nil, err
+					matchCount++
+					rexMatch, err = matcher.regex.FindNextMatch(rexMatch)
+				}
+				if err != nil {
+					file.Close()
+					return nil, err
+				}
 			}
 		}
 
@@ -190,11 +159,13 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 
 type goTranslationsFinder struct {
 	packageAliases []string
+	functions      map[string]func(call *ast.CallExpr, xIdent *ast.Ident, currentFunc string) (singular, plural *ast.BasicLit, err error)
 }
 
 func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 	var matches []Translation
 
+	var funcNames = slices.Collect(maps.Keys(f.functions))
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -254,7 +225,7 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 			}
 
 			selector, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok || (selector.Sel.Name != "S" && selector.Sel.Name != "T" && selector.Sel.Name != "P") {
+			if !ok || !slices.Contains(funcNames, selector.Sel.Name) {
 				return true
 			}
 
@@ -263,36 +234,13 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 				return true
 			}
 
-			var (
-				ok1, ok2         bool = true, true
-				singular, plural *ast.BasicLit
-			)
-			switch selector.Sel.Name {
-			case "S":
-				if len(call.Args) == 0 {
-					logger.Warnf("Skipping %s: expected at least 1 argument for S, got none", path)
-					return true
-				}
-				singular, ok1 = call.Args[0].(*ast.BasicLit)
-			case "T":
-				if len(call.Args) < 2 {
-					logger.Warnf("Skipping %s: expected at least 2 arguments for T, got %d", path, len(call.Args))
-					return true
-				}
-				singular, ok1 = call.Args[1].(*ast.BasicLit)
-			case "P":
-				if len(call.Args) < 3 {
-					logger.Warnf("Skipping %s: expected at least 3 arguments for P, got %d", path, len(call.Args))
-					return true
-				}
-				singular, ok1 = call.Args[1].(*ast.BasicLit)
-				plural, ok2 = call.Args[2].(*ast.BasicLit)
-			default:
-				logger.Warnf("Skipping %s: unsupported selector %s", path, selector.Sel.Name)
+			singular, plural, err := f.functions[selector.Sel.Name](call, xIdent, currentFuncName)
+			if err != nil {
+				logger.Warnf("Skipping %s: %v", path, err)
 				return true
 			}
 
-			if !ok1 || !ok2 || singular.Kind != token.STRING || plural != nil && plural.Kind != token.STRING {
+			if !ok || singular.Kind != token.STRING || plural != nil && plural.Kind != token.STRING {
 				logger.Warnf("Skipping %s: expected string argument for %s", path, selector.Sel.Name)
 				return true
 			}
