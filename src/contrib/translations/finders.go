@@ -12,10 +12,12 @@ import (
 	"io/fs"
 	"maps"
 	"path/filepath"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -24,32 +26,91 @@ import (
 )
 
 var (
-	l_delim                     = `\{\{`
-	r_delim                     = `\}\}`
-	translationTemplateRegexStr = fmt.Sprintf(
-		`%s\s*%s\s*"((?:[^"\\]|\\.)*)"(?:[a-zA-Z0-9]|[^a-zA-Z0-9%s])*%s`,
-		l_delim, "T", r_delim, r_delim,
-	)
-	translationTemplateRegexPluralStr = fmt.Sprintf(
-		`%s\s*%s\s*"((?:[^"\\]|\\.)*)"\s*"((?:[^"\\]|\\.)*)"(?:[a-zA-Z0-9]|[^a-zA-Z0-9%s])*%s`,
-		l_delim, "P", r_delim, r_delim,
-	)
-	translationTemplatePipeRegexStr = fmt.Sprintf(
-		`%s\s*(?:"((?:[^"\\]|\\.)+)"|(\w[\w\d\-_]*))\s*\|\s*%s\b[^}]*%s`,
-		l_delim, "T", r_delim,
-	)
-	translationTemplateRegex = regexp2.MustCompile(
-		translationTemplateRegexStr,
-		regexp2.RE2,
-	)
-	translationTemplateRegexPlural = regexp2.MustCompile(
-		translationTemplateRegexPluralStr,
-		regexp2.RE2,
-	)
-	translationTemplatePipeRegex = regexp2.MustCompile(
-		translationTemplatePipeRegexStr,
-		regexp2.RE2,
-	)
+	l_delim_re = `\{\{`
+	r_delim_re = `\}\}`
+
+	templateTranslationMatchers = []templateTranslationMatcher{
+		{
+			regex: regexp2.MustCompile(
+				fmt.Sprintf(
+					`%s\s*%s\s*"((?:[^"\\]|\\.)*)"(?:[a-zA-Z0-9]|[^a-zA-Z0-9%s])*%s`,
+					l_delim_re, "T", r_delim_re, r_delim_re,
+				),
+				regexp2.RE2,
+			),
+			exec: func(match *regexp2.Match) (trans.Untranslated, trans.Untranslated, int, error) {
+				var capture = match.Groups()[1].Captures[0].String()
+				var col = match.Index + 1 // column is 1-based
+				return capture, "", col, nil
+			},
+		},
+		{
+			regex: regexp2.MustCompile(
+				fmt.Sprintf(
+					`%s\s*%s\s*"((?:[^"\\]|\\.)*)"\s*"((?:[^"\\]|\\.)*)"(?:[a-zA-Z0-9]|[^a-zA-Z0-9%s])*%s`,
+					l_delim_re, "P", r_delim_re, r_delim_re,
+				),
+				regexp2.RE2,
+			),
+			exec: func(match *regexp2.Match) (trans.Untranslated, trans.Untranslated, int, error) {
+				var capture = match.Groups()[1].Captures[0].String()
+				var plural = match.Groups()[2].Captures[0].String()
+				var col = match.Index + 1 // column is 1-based
+				return capture, plural, col, nil
+			},
+		},
+		{
+			regex: regexp2.MustCompile(
+				fmt.Sprintf(
+					`%s\s*(?:"((?:[^"\\]|\\.)+)"|(\w[\w\d\-_]*))\s*\|\s*%s\b[^}]*%s`,
+					l_delim_re, "T", r_delim_re,
+				),
+				regexp2.RE2,
+			),
+			exec: func(match *regexp2.Match) (trans.Untranslated, trans.Untranslated, int, error) {
+				var capture = match.Groups()[1].Captures[0].String()
+				var col = match.Index + 1 // column is 1-based
+				return capture, "", col, nil
+			},
+		},
+	}
+
+	goFileTranslationMatchers = map[string]func(call *ast.CallExpr, xIdent *ast.Ident, currentFunc string) (singular, plural *ast.BasicLit, err error){
+		"S": func(call *ast.CallExpr, xIdent *ast.Ident, currentFunc string) (singular, plural *ast.BasicLit, err error) {
+			if len(call.Args) == 0 {
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"expected at least 1 argument for S, got %d", len(call.Args),
+				)
+			}
+			singular, ok := call.Args[0].(*ast.BasicLit)
+			return singular, nil, errIfNotOk(ok, "expected a string literal for S")
+		},
+		"T": func(call *ast.CallExpr, xIdent *ast.Ident, currentFunc string) (singular, plural *ast.BasicLit, err error) {
+			if len(call.Args) < 2 {
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"expected at least 2 arguments for T, got %d", len(call.Args),
+				)
+			}
+			singular, ok := call.Args[1].(*ast.BasicLit)
+			return singular, nil, errIfNotOk(ok, "expected a string literal for T")
+		},
+		"P": func(call *ast.CallExpr, xIdent *ast.Ident, currentFunc string) (singular, plural *ast.BasicLit, err error) {
+			if len(call.Args) < 3 {
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"expected at least 3 arguments for P, got %d", len(call.Args),
+				)
+			}
+			singular, ok := call.Args[1].(*ast.BasicLit)
+			if !ok {
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"expected a string literal for P, got %s", reflect.TypeOf(call.Args[1]),
+				)
+			}
+
+			plural, ok = call.Args[2].(*ast.BasicLit)
+			return singular, plural, errIfNotOk(ok, "expected a string literal for P")
+		},
+	}
 )
 
 type templateTranslationMatcher struct {
@@ -64,6 +125,10 @@ type templateTranslationsFinder struct {
 
 func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 	var paths []string
+
+	if f.matches == nil {
+		f.matches = templateTranslationMatchers
+	}
 
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -164,6 +229,10 @@ type goTranslationsFinder struct {
 
 func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 	var matches []Translation
+
+	if f.functions == nil {
+		f.functions = goFileTranslationMatchers
+	}
 
 	var funcNames = slices.Collect(maps.Keys(f.functions))
 	err := fs.WalkDir(fsys, ".", func(path string, d fs.DirEntry, err error) error {
