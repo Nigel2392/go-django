@@ -160,19 +160,12 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 	}()
 
 	for _, path := range paths {
-		file, err := fsys.Open(path)
+		src, err := fs.ReadFile(fsys, path)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read file %s: %w", path, err)
 		}
 
-		defer func() {
-			if err := recover(); err != nil {
-				closers = append(closers, file.Close)
-				logger.Errorf("Error processing file %s: %v", path, err)
-			}
-		}()
-
-		scanner := bufio.NewScanner(file)
+		scanner := bufio.NewScanner(bytes.NewReader(src))
 		lineNum := 0
 		matchCount := 0
 
@@ -183,14 +176,12 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 			for _, matcher := range f.matches {
 				rexMatch, err := matcher.regex.FindStringMatch(line)
 				if err != nil {
-					file.Close()
 					return nil, err
 				}
 
 				for rexMatch != nil && err == nil {
 					singular, plural, col, err := matcher.exec(rexMatch)
 					if err != nil {
-						file.Close()
 						return nil, err
 					}
 
@@ -210,13 +201,10 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 					rexMatch, err = matcher.regex.FindNextMatch(rexMatch)
 				}
 				if err != nil {
-					file.Close()
 					return nil, err
 				}
 			}
 		}
-
-		file.Close()
 	}
 
 	return matches, nil
