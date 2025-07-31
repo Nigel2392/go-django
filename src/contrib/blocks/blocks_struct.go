@@ -274,8 +274,8 @@ func (m *StructBlock) RenderForm(ctx context.Context, w io.Writer, id, name stri
 	}
 
 	return m.RenderTempl(
-		ctx, id, name, valueMap, string(bt), errs, ctxData,
-	).Render(context.Background(), w)
+		id, name, valueMap, string(bt), errs, ctxData,
+	).Render(ctx, w)
 }
 
 func (m *StructBlock) Adapter() telepath.Adapter {

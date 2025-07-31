@@ -66,7 +66,7 @@ type BaseItem struct {
 	Classes []string
 	Ordering int
 	Logo templ.Component
-	Label func() string
+	Label string
 }
 
 func (i *BaseItem) Name() string {
@@ -75,8 +75,8 @@ func (i *BaseItem) Name() string {
 			return i.ID
 		}
 		
-		if i.Label != nil {
-			var name = i.Label()
+		if i.Label != "" {
+			var name = i.Label
 			name = strings.ReplaceAll(name, " ", "-")
 			name = strings.ToLower(name)
 			return name
@@ -100,12 +100,12 @@ templ (i *BaseItem) Inner() {
 		</div>
 	}
 	<div class="menu-item-label">
-		{i.Label()}
+		{i.Label}
 	</div>
 }
 
 templ (i *BaseItem) Component() {
-	{{ assert.False(i.Label == nil, "menu item must have a label")}}
+	{{ assert.False(i.Label == "", "menu item must have a label")}}
 	<div class={ strings.Join(append(i.Classes, "menu-item-content"), " ") } if i.ID != "" { id={ i.ID } }>
 		@i.Inner()
 	</div>
@@ -123,7 +123,7 @@ func (i *Item) Order() int {
 }
 
 templ (i *Item) Component() {
-	{{ assert.False(i.Label == nil, "menu item must have a label")}}
+	{{ assert.False(i.Label == "", "menu item must have a label")}}
 	<a class={ strings.Join(append(i.LinkClasses, "menu-item-link"), " ") } if i.ID != "" { id={ i.LinkID } } href={ templ.SafeURL(i.Link()) }>
 		@i.BaseItem.Component()
 	</a>
@@ -168,7 +168,7 @@ templ (s *SubmenuItem) Component() {
 
 		<div class="menu-item-menu-wrapper">
 			<div class="menu-item-menu">
-				if s.Logo != nil || s.Label != nil {
+				if s.Logo != nil || s.Label != "" {
 					<div class="menu-header">
 
 						if s.Logo != nil {
@@ -177,12 +177,12 @@ templ (s *SubmenuItem) Component() {
 							</div>
 						}
 
-						if s.Label != nil {
+						if s.Label != "" {
 						
-							{{ var text = s.Label() }}
+							{{ var text = s.Label }}
 							if text != "" {
 								<div class="menu-text">
-									{s.Label()}
+									{s.Label}
 								</div>
 							}
 						}

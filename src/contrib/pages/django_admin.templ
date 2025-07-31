@@ -43,7 +43,7 @@ templ (p *PagesMenuItem) Component() {
 			<div class="menu-item pages-root-menu-item header-menu-item">
 				<a class="menu-item-content menu-item-link" href={ templ.SafeURL(django.Reverse("admin:pages")) }>
 					<div class="menu-item-label">
-						{ trans.T("Root Pages") }
+						{ trans.T(ctx, "Root Pages") }
 					</div>
 				</a>
 			</div>

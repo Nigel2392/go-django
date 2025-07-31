@@ -8,7 +8,7 @@ locales:
     rule: '(n != 1) ? 1 : 0'
   en:
     nplural: 2
-    rule: '(n != 1)
+    rule: '(n != 1)'
     
 ---
 

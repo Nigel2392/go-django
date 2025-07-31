@@ -45,7 +45,7 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryP
 		<section class="pagination--paginator">
 			<div class="prev">
 				if p.HasPrev() {
-					<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Prev(), q)) }>{ trans.T("Previous") }</a>
+					<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Prev(), q)) }>{ trans.T(ctx, "Previous") }</a>
 				}
 			</div>
 			{{ var start = p.PageNum() - numPageNumbers }}
@@ -71,7 +71,7 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryP
 			</div>
 			<div class="next">
 				if p.HasNext() {
-					<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Next(), q)) }>{ trans.T("Next") }</a>
+					<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Next(), q)) }>{ trans.T(ctx, "Next") }</a>
 				}
 			</div>
 		</section>

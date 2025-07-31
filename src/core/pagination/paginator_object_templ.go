@@ -5,18 +5,17 @@ package pagination
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
+import "github.com/a-h/templ"
+import templruntime "github.com/a-h/templ/runtime"
+
 import (
 	"context"
 	"fmt"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"html/template"
 	"net/url"
-	"runtime/debug"
 	"strconv"
 	"strings"
-
-	"github.com/Nigel2392/go-django/src/core/trans"
-	"github.com/a-h/templ"
-	templruntime "github.com/a-h/templ/runtime"
 )
 
 type pageObject[T any] struct {
@@ -27,12 +26,6 @@ type pageObject[T any] struct {
 }
 
 func (p *pageObject[T]) HTML(queryParam string, numPageNumbers int, queryParams url.Values) template.HTML {
-	defer func() {
-		if r := recover(); r != nil {
-			var stack = debug.Stack()
-			panic(fmt.Errorf("failed to render paginator component: %v\nStack trace:\n%s", r, stack))
-		}
-	}()
 	var b = new(strings.Builder)
 	var cmp = p.Component(queryParam, numPageNumbers, queryParams)
 	if err := cmp.Render(p.context, b); err != nil {
@@ -95,9 +88,9 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var3 string
-			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(context.Background(), "Previous"))
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, "Previous"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 46, Col: 102}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 48, Col: 107}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -142,7 +135,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				var templ_7745c5c3_Var5 string
 				templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 61, Col: 102}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 63, Col: 102}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 				if templ_7745c5c3_Err != nil {
@@ -169,7 +162,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 65, Col: 93}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 67, Col: 93}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -200,9 +193,9 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var9 string
-			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(context.Background(), "Next"))
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, "Next"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 72, Col: 98}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/paginator_object.templ`, Line: 74, Col: 103}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {

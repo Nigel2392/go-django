@@ -13,16 +13,16 @@ func renderWithErrors(fn func(w io.Writer, id string, name string, value interfa
     })
 }
 
-func renderForm(b Block, id string, name string, value interface{}, errors []error, tplCtx ctx.Context) templ.Component {
+func renderForm(ctx context.Context,b Block, id string, name string, value interface{}, errors []error, tplCtx ctx.Context) templ.Component {
     return templ.ComponentFunc(func(tmplCtx context.Context, tmplW io.Writer) error {
-        return b.RenderForm(tmplW, id, name, value, errors, tplCtx)
+        return b.RenderForm(ctx, tmplW, id, name, value, errors, tplCtx)
     })
 }
 
-func renderBlockWidget(w io.Writer, widget *BlockWidget, blockCtx *BlockContext, errors []error) error {
+func renderBlockWidget(ctx context.Context,w io.Writer, widget *BlockWidget, blockCtx *BlockContext, errors []error) error {
     w.Write([]byte("<div class=\"django-block-widget-wrapper\">\n"))
     w.Write([]byte("\t<div class=\"django-block-widget\">\n"))
-    var err = widget.BlockDef.RenderForm(w, blockCtx.ID, blockCtx.Name, blockCtx.Value, errors, blockCtx)
+    var err = widget.BlockDef.RenderForm(ctx, w, blockCtx.ID, blockCtx.Name, blockCtx.Value, errors, blockCtx)
     if err != nil {
         return err
     }
@@ -86,15 +86,15 @@ templ (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, te
                     <input type="hidden" id={ blockId } name={ blockId } value={ v.ID.String() }>
                     <input type="hidden" id={ orderId } name={ orderId } value={ strconv.Itoa(v.Order) }>
 
-                    @widgets.LabelComponent("list-block", l.Child.Label(), id)
+                    @widgets.LabelComponent("list-block", l.Child.Label(ctx), id)
 
                     {{ var newErrs = listBlockErrors.Get(i) }}
                     <div data-list-block-field-content>
-                        @renderForm(l.Child, id, key, v.Data, newErrs, tplCtx)
+                        @renderForm(ctx, l.Child, id, key, v.Data, newErrs, tplCtx)
                     </div>
 
                     @widgets.HelpTextComponent(
-                        "list-block", l.Child.HelpText(),
+                        "list-block", l.Child.HelpText(ctx),
                     )
         	    </div>
 	    	}

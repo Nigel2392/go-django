@@ -5,14 +5,13 @@ package admin
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import (
-	"context"
-	"net/http"
+import "github.com/a-h/templ"
+import templruntime "github.com/a-h/templ/runtime"
 
+import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/a-h/templ"
-	templruntime "github.com/a-h/templ/runtime"
+	"net/http"
 )
 
 type ListAction[T attrs.Definer] struct {
@@ -139,11 +138,11 @@ func (l *ListAction[T]) Component(r *http.Request, defs attrs.Definitions, row T
 }
 
 type ListActionsColumn[T attrs.Definer] struct {
-	Heading func(context.Context) string
+	Heading func() string
 	Actions []*ListAction[T]
 }
 
-func (l *ListActionsColumn[T]) Header(ctx context.Context) templ.Component {
+func (l *ListActionsColumn[T]) Header() templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -166,7 +165,7 @@ func (l *ListActionsColumn[T]) Header(ctx context.Context) templ.Component {
 		ctx = templ.ClearChildren(ctx)
 		if l.Heading != nil {
 			var templ_7745c5c3_Var10 string
-			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(l.Heading(ctx))
+			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(l.Heading())
 			if templ_7745c5c3_Err != nil {
 				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/action_column.templ`, Line: 40, Col: 21}
 			}
@@ -202,7 +201,7 @@ func (l *ListActionsColumn[T]) Component(r *http.Request, defs attrs.Definitions
 		ctx = templ.ClearChildren(ctx)
 		var heading string
 		if l.Heading != nil {
-			heading = l.Heading(r.Context())
+			heading = l.Heading()
 		}
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div data-controller=\"dropdown\" class=\"dropdown\"><button type=\"button\" class=\"dropdown__toggle dropdown__toggle--icon\" data-dropdown-target=\"toggle\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {

@@ -37,7 +37,7 @@ func (b *FieldBlock) RenderForm(ctx context.Context, w io.Writer, id, name strin
 		return err
 	}
 
-	return b.RenderTempl(ctx, id, name, value, string(bt), errors, c).Render(context.Background(), w)
+	return b.RenderTempl(id, name, value, string(bt), errors, c).Render(ctx, w)
 }
 
 func (b *FieldBlock) Adapter() telepath.Adapter {

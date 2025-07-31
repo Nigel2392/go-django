@@ -1,7 +1,6 @@
 package list
 
 import (
-	"context"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"runtime/debug"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -46,8 +45,7 @@ func (l *List[T]) Render() string {
 
 	var component = l.Component()
 	var b strings.Builder
-	var ctx = context.Background()
-	component.Render(ctx, &b)
+	component.Render(l.request.Context(), &b)
 	return b.String()
 }
 
