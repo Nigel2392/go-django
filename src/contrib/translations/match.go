@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/elliotchance/orderedmap/v2"
@@ -247,10 +248,25 @@ func (m Translation) MarshalYAML() (interface{}, error) {
 		}
 	}
 
-	n.HeadComment = strings.Join(append(
-		[]string{fmt.Sprintf("%s:%d:%d", m.Path, m.Line, m.Col)}, m.Paths...),
-		"\n",
-	)
+	if len(m.Paths) > 0 {
+		var sb = new(strings.Builder)
+		var w = tabwriter.NewWriter(
+			sb, 0, 4, 1, ' ', tabwriter.TabIndent,
+		)
+
+		for _, comment := range append([]string{fmt.Sprintf("%s\t%s:%d:%d", m.Comment, m.Path, m.Line, m.Col)}, m.Paths...) {
+			if _, err := fmt.Fprintln(w, comment); err != nil {
+				return nil, fmt.Errorf("failed to write comment: %w", err)
+			}
+		}
+
+		if err := w.Flush(); err != nil {
+			return nil, fmt.Errorf("failed to flush writer: %w", err)
+		}
+		n.HeadComment = sb.String()
+	} else {
+		n.HeadComment = fmt.Sprintf("%s %s:%d:%d", m.Comment, m.Path, m.Line, m.Col)
+	}
 
 	return &n, nil
 }

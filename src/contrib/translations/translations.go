@@ -176,7 +176,7 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 			if foundMatch, ok := foundMatches[key]; ok {
 
 				foundMatch.Paths = append(foundMatch.Paths, fmt.Sprintf(
-					"%s:%d:%d", m.Path, m.Line, m.Col,
+					"%s\t%s:%d:%d", m.Comment, m.Path, m.Line, m.Col,
 				))
 
 				if m.Locales == nil || m.Locales.Len() == 0 {

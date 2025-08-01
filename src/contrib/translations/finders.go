@@ -192,7 +192,7 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 						Text:   singular,
 						Plural: plural,
 						Comment: fmt.Sprintf(
-							"[TemplateFinder]: %s",
+							"[TemplateFinder]:\t%s",
 							rexMatch.String(),
 						),
 					})
@@ -344,7 +344,7 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 				Col:     pos.Column,
 				Text:    singularUnquoted,
 				Plural:  pluralUnquoted,
-				Comment: fmt.Sprintf("[GoFileFinder]: %s", currentFuncName),
+				Comment: fmt.Sprintf("[GoFileFinder]:\t%s", currentFuncName),
 			})
 
 			return true
@@ -387,7 +387,7 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Translation, error) {
 				Line:    lineNum,
 				Col:     col,
 				Text:    cType.Model(),
-				Comment: fmt.Sprintf("[ModelFinder]: %s", cType.ShortTypeName()),
+				Comment: fmt.Sprintf("[ModelFinder]:\t%s", cType.ShortTypeName()),
 			}
 
 			matches = append(matches, match)
@@ -399,7 +399,7 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Translation, error) {
 					Line:    col,
 					Col:     i,
 					Text:    field.Label(context.Background()),
-					Comment: fmt.Sprintf("[ModelFinder.Field]: %s.%s", cType.ShortTypeName(), field.Name()),
+					Comment: fmt.Sprintf("[ModelFinder.Field]:\t%s.%s", cType.ShortTypeName(), field.Name()),
 				}
 				matches = append(matches, fieldMatch)
 			}
