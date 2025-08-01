@@ -265,7 +265,7 @@ func (m Translation) MarshalYAML() (interface{}, error) {
 		}
 		n.HeadComment = sb.String()
 	} else {
-		n.HeadComment = fmt.Sprintf("%s %s:%d:%d", m.Comment, m.Path, m.Line, m.Col)
+		n.HeadComment = fmt.Sprintf("%s\n%s:%d:%d", m.Comment, m.Path, m.Line, m.Col)
 	}
 
 	return &n, nil
