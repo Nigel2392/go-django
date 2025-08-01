@@ -251,13 +251,19 @@ func choosePageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 	}
 
 	var definitions []*PageDefinition
+	var contentType string = p.ContentType
+	if contentType == "" {
+		contentType = contenttypes.NewContentType(p).TypeName()
+	}
 	if p.ContentType != "" && p.ContentType != contenttypes.NewContentType(p).TypeName() {
 		definitions = ListDefinitionsForType(p.ContentType)
 	} else {
 		definitions = ListDefinitions()
 	}
 	definitions = FilterCreatableDefinitions(
-		definitions,
+		definitions, func(pd *PageDefinition) bool {
+			return pd.IsValidParentType(contentType)
+		},
 	)
 	var view = &views.BaseView{
 		AllowedMethods:  []string{http.MethodGet},

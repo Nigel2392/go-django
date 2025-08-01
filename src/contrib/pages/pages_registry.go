@@ -82,10 +82,17 @@ func sortDefinitions(definitions []*PageDefinition) {
 	})
 }
 
-func FilterCreatableDefinitions(definitions []*PageDefinition) []*PageDefinition {
+func FilterCreatableDefinitions(definitions []*PageDefinition, otherChecks ...func(*PageDefinition) bool) []*PageDefinition {
 	var creatable = make([]*PageDefinition, 0, len(definitions))
 	for _, definition := range definitions {
-		if !definition.DissallowCreate {
+		var canCreate = !definition.DissallowCreate
+		for _, check := range otherChecks {
+			if !check(definition) {
+				canCreate = false
+				break
+			}
+		}
+		if canCreate {
 			creatable = append(creatable, definition)
 		}
 	}

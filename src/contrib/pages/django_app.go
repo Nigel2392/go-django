@@ -228,6 +228,7 @@ func NewAppConfig() django.AppConfig {
 
 		admin.RegisterHomePageComponent(admin.RegisterHomePageComponentHookFunc(func(r *http.Request, a *admin.AdminApplication) admin.AdminPageComponent {
 			return &PagesAdminHomeComponent{
+				ListFields:       []string{"Title", "UrlPath", "Numchild", "UpdatedAt", "Children"},
 				AdminApplication: a,
 				Request:          r,
 			}

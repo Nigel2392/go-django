@@ -23,6 +23,7 @@ var (
 )
 
 type PagesAdminHomeComponent struct {
+	ListFields       []string
 	AdminApplication *admin.AdminApplication
 	Request          *http.Request
 }
@@ -55,7 +56,7 @@ func (p *PagesAdminHomeComponent) html(upper *list.List[attrs.Definer]) templ.Co
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, "Pages"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin_home_component.templ`, Line: 25, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin_home_component.templ`, Line: 26, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -104,8 +105,8 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 		return template.HTML("")
 	}
 
-	var columns = make([]list.ListColumn[attrs.Definer], len(model.ListView.Fields)+1)
-	for i, field := range model.ListView.Fields {
+	var columns = make([]list.ListColumn[attrs.Definer], len(p.ListFields)+1)
+	for i, field := range p.ListFields {
 		columns[i+1] = model.GetColumn(p.Request.Context(), model.ListView, field)
 	}
 

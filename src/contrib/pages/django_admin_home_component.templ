@@ -15,6 +15,7 @@ var (
 )
 
 type PagesAdminHomeComponent struct {
+	ListFields []string
     AdminApplication *admin.AdminApplication
     Request *http.Request
 }
@@ -55,8 +56,8 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 		return template.HTML("")
 	}
 
-	var columns = make([]list.ListColumn[attrs.Definer], len(model.ListView.Fields)+1)
-	for i, field := range model.ListView.Fields {
+	var columns = make([]list.ListColumn[attrs.Definer], len(p.ListFields)+1)
+	for i, field := range p.ListFields {
 		columns[i+1] = model.GetColumn(p.Request.Context(), model.ListView, field)
 	}
 

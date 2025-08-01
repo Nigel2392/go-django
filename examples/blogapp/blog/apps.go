@@ -140,8 +140,11 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 				}
 			},
 			ParentPageTypes: []string{
-				"github.com/Nigel2392/go-django-example/src/blog.BlogPage",
+				"github.com/Nigel2392/go-django/examples/blogapp/blog.BlogPage",
 			},
+			//	ChildPageTypes: []string{
+			//		"github.com/Nigel2392/go-django/examples/blogapp/blog.BlogPage",
+			//	},
 			//GetForID: func(ctx context.Context, ref *pages.PageNode, id int64) (pages.Page, error) {
 			//	var row, err = queries.GetQuerySet(&BlogPage{}).Filter("PageID", id).First()
 			//	if err != nil {
