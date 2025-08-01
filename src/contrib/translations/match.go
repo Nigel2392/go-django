@@ -130,31 +130,31 @@ func (m Translation) MarshalYAML() (interface{}, error) {
 		},
 	}
 
-	var pathStyle = yaml.FlowStyle
-	if len(m.Paths) > 0 {
-		pathStyle = yaml.FoldedStyle
-	}
-
-	n.Content = append(n.Content,
-		&yaml.Node{
-			Kind:  yaml.ScalarNode,
-			Tag:   "!!str",
-			Value: "paths",
-		},
-		&yaml.Node{
-			Kind:    yaml.SequenceNode,
-			Style:   pathStyle,
-			Tag:     "!!seq",
-			Content: make([]*yaml.Node, len(m.Paths)+1),
-		},
-	)
-	for i, path := range append([]string{fmt.Sprintf("%s:%d:%d", m.Path, m.Line, m.Col)}, m.Paths...) {
-		n.Content[len(n.Content)-1].Content[i] = &yaml.Node{
-			Kind:  yaml.ScalarNode,
-			Tag:   "!!str",
-			Value: path,
-		}
-	}
+	//	var pathStyle = yaml.FlowStyle
+	//	if len(m.Paths) > 0 {
+	//		pathStyle = yaml.FoldedStyle
+	//	}
+	//
+	//	n.Content = append(n.Content,
+	//		&yaml.Node{
+	//			Kind:  yaml.ScalarNode,
+	//			Tag:   "!!str",
+	//			Value: "paths",
+	//		},
+	//		&yaml.Node{
+	//			Kind:    yaml.SequenceNode,
+	//			Style:   pathStyle,
+	//			Tag:     "!!seq",
+	//			Content: make([]*yaml.Node, len(m.Paths)+1),
+	//		},
+	//	)
+	//	for i, path := range append([]string{fmt.Sprintf("%s:%d:%d", m.Path, m.Line, m.Col)}, m.Paths...) {
+	//		n.Content[len(n.Content)-1].Content[i] = &yaml.Node{
+	//			Kind:  yaml.ScalarNode,
+	//			Tag:   "!!str",
+	//			Value: path,
+	//		}
+	//	}
 
 	n.Content = append(n.Content,
 		&yaml.Node{
@@ -247,7 +247,10 @@ func (m Translation) MarshalYAML() (interface{}, error) {
 		}
 	}
 
-	n.HeadComment = strings.TrimSpace(m.Comment)
+	n.HeadComment = strings.Join(append(
+		[]string{fmt.Sprintf("%s:%d:%d", m.Path, m.Line, m.Col)}, m.Paths...),
+		"\n",
+	)
 
 	return &n, nil
 }
