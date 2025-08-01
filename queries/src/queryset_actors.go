@@ -171,7 +171,6 @@ func (s *ObjectActor) execute(ctx context.Context, which actorFlag) (context.Con
 				}
 				return saver.BeforeSave(ctx)
 			}
-			goto performAction
 		}
 	case actsAfterSave:
 		if saver, ok := s.obj.(ActsAfterSave); ok {
@@ -185,57 +184,46 @@ func (s *ObjectActor) execute(ctx context.Context, which actorFlag) (context.Con
 				}
 				return saver.AfterSave(ctx)
 			}
-			goto performAction
 		}
 	case actsBeforeCreate:
 		if creator, ok := s.obj.(ActsBeforeCreate); ok {
 			fn = creator.BeforeCreate
-			goto performAction
 		}
 	case actsAfterCreate:
 		if creator, ok := s.obj.(ActsAfterCreate); ok {
 			fn = creator.AfterCreate
-			goto performAction
 		}
 	case actsBeforeUpdate:
 		if updater, ok := s.obj.(ActsBeforeUpdate); ok {
 			fn = updater.BeforeUpdate
-			goto performAction
 		}
 	case actsAfterUpdate:
 		if updater, ok := s.obj.(ActsAfterUpdate); ok {
 			fn = updater.AfterUpdate
-			goto performAction
 		}
 	case actsBeforeDelete:
 		if deleter, ok := s.obj.(ActsBeforeDelete); ok {
 			fn = deleter.BeforeDelete
-			goto performAction
 		}
 	case actsAfterDelete:
 		if deleter, ok := s.obj.(ActsAfterDelete); ok {
 			fn = deleter.AfterDelete
-			goto performAction
 		}
 	case actsAfterQuery:
 		if afterQuery, ok := s.obj.(ActsAfterQuery); ok {
 			fn = afterQuery.AfterQuery
-			goto performAction
 		}
 	default:
 		return ctx, fmt.Errorf("unknown actor flag: %d", which)
 	}
 
-	// this return statement might look iffy, but it saves us from
-	// having to write a lot of boilerplate code for each actor interface
-	//
-	// if we are here, it means the object does not implement the
-	// respective actor interface, so we just return the context unchanged
-	return ctx, nil
+	//	// this return statement might look iffy, but it saves us from
+	//	// having to write a lot of boilerplate code for each actor interface
+	//	//
+	//	// if we are here, it means the object does not implement the
+	//	// respective actor interface, so we just return the context unchanged
+	//	return ctx, nil
 
-	// if we are here, it means the object implements the actor interface
-	// as it has jumped to the performAction label
-performAction:
 	if hasSeenActor(ctx, which, s.obj) {
 		return ctx, nil
 	}
@@ -246,20 +234,24 @@ performAction:
 
 	ctx = markActorSeen(ctx, which, s.obj)
 
-	var err = fn(ctx)
-	var isErrSkip = errors.Is(err, errors.NotImplemented)
-	if err != nil && !isErrSkip {
-		return ctx, fmt.Errorf(
-			"failed to execute %s for object %T: %w",
-			which, s.obj, err,
-		)
-	}
+	// the fn can be nil, but we still need to keep going
+	// to ensure that any additional required actors are run
+	if fn != nil {
+		var err = fn(ctx)
+		var isErrSkip = errors.Is(err, errors.NotImplemented)
+		if err != nil && !isErrSkip {
+			return ctx, fmt.Errorf(
+				"failed to execute %s for object %T: %w",
+				which, s.obj, err,
+			)
+		}
 
-	if isErrSkip {
-		logger.Warnf(
-			"Skipped %s for object %T: %s",
-			which, s.obj, attrs.ToString(s.obj),
-		)
+		if isErrSkip {
+			logger.Warnf(
+				"Skipped %s for object %T: %s",
+				which, s.obj, attrs.ToString(s.obj),
+			)
+		}
 	}
 
 	switch which {

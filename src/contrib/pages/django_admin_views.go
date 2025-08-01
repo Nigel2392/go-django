@@ -29,7 +29,9 @@ import (
 func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 	return []*admin.ListAction[attrs.Definer]{
 		{
-			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool { return true },
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+				return row.(Page).Reference().IsPublished()
+			},
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				return trans.T(r.Context(), "View Live")
 			},
@@ -124,6 +126,10 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 			},
 		},
 	}
+}
+
+func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition) {
+	except.Fail(http.StatusNotFound, "Outdated pages handler not implemented")
 }
 
 func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {

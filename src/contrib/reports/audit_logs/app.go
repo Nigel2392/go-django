@@ -81,21 +81,18 @@ func NewAppConfig() django.AppConfig {
 			}
 		}
 
-		goldcrest.Register(
-			reports.ReportsMenuHook, 0,
-			reports.ReportsMenuHookFunc(func(r *http.Request) []menu.MenuItem {
-				var auditLogItem = &menu.Item{
-					BaseItem: menu.BaseItem{
-						Label: trans.T(r.Context(), "Audit Logs"),
-					},
-					Link: func() string {
-						return django.Reverse("admin:auditlogs")
-					},
-				}
+		reports.RegisterMenuItem(func(r *http.Request) []menu.MenuItem {
+			var auditLogItem = &menu.Item{
+				BaseItem: menu.BaseItem{
+					Label: trans.T(r.Context(), "Audit Logs"),
+				},
+				Link: func() string {
+					return django.Reverse("admin:auditlogs")
+				},
+			}
 
-				return []menu.MenuItem{auditLogItem}
-			}),
-		)
+			return []menu.MenuItem{auditLogItem}
+		})
 
 		return nil
 	}

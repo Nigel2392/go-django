@@ -18,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
+	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -215,6 +216,20 @@ func NewAppConfig() django.AppConfig {
 			return nil
 		}
 
+		reports.RegisterMenuItem(func(r *http.Request) []menu.MenuItem {
+			return []menu.MenuItem{
+				&menu.Item{
+					BaseItem: menu.BaseItem{
+						Ordering: 1000,
+						Label:    trans.T(r.Context(), "Outdated Pages"),
+					},
+					Link: func() string {
+						return django.Reverse("admin:pages:outdated")
+					},
+				},
+			}
+		})
+
 		admin.RegisterGlobalMenuItem(admin.RegisterMenuItemHookFunc(func(r *http.Request, site *admin.AdminApplication, items components.Items[menu.MenuItem]) {
 			items.Append(&PagesMenuItem{
 				BaseItem: menu.BaseItem{
@@ -317,6 +332,11 @@ func NewAppConfig() django.AppConfig {
 
 		var pagesRoute = admin.AdminSite.Route.Get(
 			"/pages", pageAdminAppHandler(listRootPageHandler), "pages",
+		)
+
+		// Add outdated pages handler
+		pagesRoute.Get(
+			"/outdated", pageAdminAppHandler(outdatedPagesHandler), "outdated",
 		)
 
 		// Choose new root page type

@@ -126,11 +126,7 @@ func (n *PageNode) BeforeCreate(context.Context) error {
 }
 
 func (n *PageNode) BeforeSave(context.Context) error {
-	if !n.CreatedAt.IsZero() && n.UpdatedAt.IsZero() {
-		n.UpdatedAt = n.CreatedAt
-	} else {
-		n.UpdatedAt = time.Now()
-	}
+	n.UpdatedAt = time.Now()
 	return nil
 }
 
