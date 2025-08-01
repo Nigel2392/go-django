@@ -2,7 +2,6 @@ package translations
 
 import (
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 
@@ -131,6 +130,11 @@ func (m Translation) MarshalYAML() (interface{}, error) {
 		},
 	}
 
+	var pathStyle = yaml.FlowStyle
+	if len(m.Paths) > 0 {
+		pathStyle = yaml.FoldedStyle
+	}
+
 	n.Content = append(n.Content,
 		&yaml.Node{
 			Kind:  yaml.ScalarNode,
@@ -139,12 +143,12 @@ func (m Translation) MarshalYAML() (interface{}, error) {
 		},
 		&yaml.Node{
 			Kind:    yaml.SequenceNode,
-			Style:   yaml.FoldedStyle,
+			Style:   pathStyle,
 			Tag:     "!!seq",
 			Content: make([]*yaml.Node, len(m.Paths)+1),
 		},
 	)
-	for i, path := range append([]string{filepath.ToSlash(fmt.Sprintf("%s:%d:%d", m.Path, m.Line, m.Col))}, m.Paths...) {
+	for i, path := range append([]string{fmt.Sprintf("%s:%d:%d", m.Path, m.Line, m.Col)}, m.Paths...) {
 		n.Content[len(n.Content)-1].Content[i] = &yaml.Node{
 			Kind:  yaml.ScalarNode,
 			Tag:   "!!str",
