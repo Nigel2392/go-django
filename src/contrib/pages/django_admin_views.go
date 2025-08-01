@@ -701,6 +701,16 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 				return nil, err
 			}
 
+			nodes, err := p.Descendants().
+				WithContext(r.Context()).
+				AllNodes()
+			if err != nil {
+				except.Fail(500, "Failed to get child nodes: %s", err)
+				return nil, err
+			}
+
+			context.Set("Nodes", nodes)
+
 			context.SetPage(admin.PageOptions{
 				TitleFn:     trans.S("Delete %q", p.Title),
 				SubtitleFn:  trans.S("Are you sure you want to delete this page?"),

@@ -10,9 +10,11 @@ import (
 	"go/printer"
 	"go/token"
 	"io/fs"
+	"iter"
 	"maps"
 	"path/filepath"
 	"reflect"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -22,56 +24,32 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
-	"github.com/dlclark/regexp2"
 )
 
 var (
-	l_delim_re = `\{\{`
-	r_delim_re = `\}\}`
+	templateTranslationMatchers = map[string]func(tokens []string, colIdx, idx int) (string, string, int, int, bool){
+		"T": func(tokens []string, colIdx, idx int) (string, string, int, int, bool) {
+			if idx+1 >= len(tokens) || !strings.HasPrefix(tokens[idx+1], `"`) {
+				return "", "", 0, 0, false
+			}
+			raw := tokens[idx+1]
+			// Remove outer quotes and unescape string
+			quoted := raw[1 : len(raw)-1]
+			unescaped := strings.ReplaceAll(quoted, `\"`, `"`)
+			unescaped = strings.ReplaceAll(unescaped, `\\`, `\`)
+			return unescaped, "", colIdx, idx + 1, true
+		},
+		"P": func(tokens []string, colIdx, idx int) (string, string, int, int, bool) {
+			if idx+2 >= len(tokens) || !strings.HasPrefix(tokens[idx+1], `"`) || !strings.HasPrefix(tokens[idx+2], `"`) {
+				return "", "", 0, 0, false
+			}
 
-	templateTranslationMatchers = []templateTranslationMatcher{
-		{
-			regex: regexp2.MustCompile(
-				fmt.Sprintf(
-					`%s\s*%s\s*"((?:[^"\\]|\\.)*)"(?:[a-zA-Z0-9]|[^a-zA-Z0-9%s])*%s`,
-					l_delim_re, "T", r_delim_re, r_delim_re,
-				),
-				regexp2.RE2,
-			),
-			exec: func(match *regexp2.Match) (trans.Untranslated, trans.Untranslated, int, error) {
-				var capture = match.Groups()[1].Captures[0].String()
-				var col = match.Index + 1 // column is 1-based
-				return capture, "", col, nil
-			},
-		},
-		{
-			regex: regexp2.MustCompile(
-				fmt.Sprintf(
-					`%s\s*%s\s*"((?:[^"\\]|\\.)*)"\s*"((?:[^"\\]|\\.)*)"(?:[a-zA-Z0-9]|[^a-zA-Z0-9%s])*%s`,
-					l_delim_re, "P", r_delim_re, r_delim_re,
-				),
-				regexp2.RE2,
-			),
-			exec: func(match *regexp2.Match) (trans.Untranslated, trans.Untranslated, int, error) {
-				var capture = match.Groups()[1].Captures[0].String()
-				var plural = match.Groups()[2].Captures[0].String()
-				var col = match.Index + 1 // column is 1-based
-				return capture, plural, col, nil
-			},
-		},
-		{
-			regex: regexp2.MustCompile(
-				fmt.Sprintf(
-					`%s\s*(?:"((?:[^"\\]|\\.)+)"|(\w[\w\d\-_]*))\s*\|\s*%s\b[^}]*%s`,
-					l_delim_re, "T", r_delim_re,
-				),
-				regexp2.RE2,
-			),
-			exec: func(match *regexp2.Match) (trans.Untranslated, trans.Untranslated, int, error) {
-				var capture = match.Groups()[1].Captures[0].String()
-				var col = match.Index + 1 // column is 1-based
-				return capture, "", col, nil
-			},
+			var singularRaw = tokens[idx+1]
+			var pluralRaw = tokens[idx+2]
+			// Remove outer quotes and unescape string
+			var singular = strings.ReplaceAll(singularRaw[1:len(singularRaw)-1], `\"`, `"`)
+			var plural = strings.ReplaceAll(pluralRaw[1:len(pluralRaw)-1], `\"`, `"`)
+			return singular, plural, idx + 2, colIdx, true
 		},
 	}
 
@@ -113,14 +91,64 @@ var (
 	}
 )
 
-type templateTranslationMatcher struct {
-	regex *regexp2.Regexp
-	exec  func(*regexp2.Match) (trans.Untranslated, trans.Untranslated, int, error)
+type templateTranslation struct {
+	singular   string
+	plural     string
+	regexMatch string
+	col        int
+}
+
+func parseGoTemplateTCalls(template string, parseFuncs map[string]func(tokens []string, col, idx int) (string, string, int, int, bool)) iter.Seq2[int, templateTranslation] {
+	blockRegex := regexp.MustCompile(`\{\{(.*?)\}\}`)
+	blocks := blockRegex.FindAllStringSubmatchIndex(template, -1)
+
+	tokenRegex := regexp.MustCompile(`[A-Za-z_][A-Za-z0-9_]*|"(?:\\.|[^"\\])*"|[(){}:=|]`)
+
+	return func(yield func(int, templateTranslation) bool) {
+		for matchIdx, match := range blocks {
+			blockStart := match[0]        // Start of the full {{...}} block
+			blockContentStart := match[2] // Start of the inner block content
+			blockContent := template[blockContentStart:match[3]]
+
+			tokenPositions := tokenRegex.FindAllStringIndex(blockContent, -1)
+			tokenStrings := tokenRegex.FindAllString(blockContent, -1)
+
+			for i := 0; i < len(tokenStrings); i++ {
+				tokenStart := tokenPositions[i][0]
+				absoluteOffset := blockStart + 2 + tokenStart // 2 accounts for the opening `{{`
+
+				fn, ok := parseFuncs[tokenStrings[i]]
+				if !ok {
+					continue
+				}
+
+				singular, plural, _, newI, ok := fn(tokenStrings, absoluteOffset, i)
+				if !ok {
+					logger.Warnf(
+						"Skipping template translation in %q: %s",
+						template, fmt.Sprintf("Invalid T call at index %d: %s", i, tokenStrings[i]),
+					)
+					continue
+				}
+
+				if !yield(matchIdx+i, templateTranslation{
+					singular:   singular,
+					plural:     plural,
+					regexMatch: template[match[0]:match[1]],
+					col:        absoluteOffset + 1, // Convert to 1-based index
+				}) {
+					return
+				}
+
+				i = newI
+			}
+		}
+	}
 }
 
 type templateTranslationsFinder struct {
 	extensions []string
-	matches    []templateTranslationMatcher
+	matches    map[string]func(tokens []string, colIdx, idx int) (string, string, int, int, bool)
 }
 
 func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
@@ -173,36 +201,26 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 			lineNum++
 			line := scanner.Text()
 
-			for _, matcher := range f.matches {
-				rexMatch, err := matcher.regex.FindStringMatch(line)
-				if err != nil {
-					return nil, err
+			for _, t := range parseGoTemplateTCalls(line, f.matches) {
+				if t.singular == "" {
+					continue
 				}
 
-				for rexMatch != nil && err == nil {
-					singular, plural, col, err := matcher.exec(rexMatch)
-					if err != nil {
-						return nil, err
-					}
-
-					matches = append(matches, Translation{
-						Path:   filepath.ToSlash(path),
-						Line:   lineNum,
-						Col:    col,
-						Text:   singular,
-						Plural: plural,
-						Comment: fmt.Sprintf(
-							"[TemplateFinder]:\t%s",
-							rexMatch.String(),
-						),
-					})
-
-					matchCount++
-					rexMatch, err = matcher.regex.FindNextMatch(rexMatch)
+				var col = t.col + 1 // Convert to 1-based index
+				var match = Translation{
+					Path:   filepath.ToSlash(path),
+					Line:   lineNum,
+					Col:    col,
+					Text:   t.singular,
+					Plural: t.plural,
+					Comment: fmt.Sprintf(
+						"[TemplateFinder]:\t%s",
+						t.regexMatch,
+					),
 				}
-				if err != nil {
-					return nil, err
-				}
+
+				matches = append(matches, match)
+				matchCount++
 			}
 		}
 	}
