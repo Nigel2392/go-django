@@ -102,6 +102,27 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 				return url.String()
 			},
 		},
+		{
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+				return permissions.HasObjectPermission(r, row, "pages:delete")
+			},
+			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				return trans.T(r.Context(), "Delete Page")
+			},
+			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				var primaryField = defs.Primary()
+				if primaryField == nil {
+					return ""
+				}
+				var u = django.Reverse(
+					"admin:pages:delete",
+					primaryField.GetValue(),
+				)
+				return addNextUrl(
+					u, next,
+				)
+			},
+		},
 	}
 }
 
@@ -701,7 +722,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 				return nil, err
 			}
 
-			nodes, err := p.Descendants().
+			nodes, err := p.Descendants(true).
 				WithContext(r.Context()).
 				AllNodes()
 			if err != nil {

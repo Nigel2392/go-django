@@ -39,6 +39,10 @@ func (g *Group) FieldDefs() attrs.Definitions {
 		}),
 		fields.NewManyToManyField[*queries.RelM2M[*Permission, *GroupPermission]](
 			g, "Permissions", &fields.FieldConfig{
+				DataModelFieldConfig: fields.DataModelFieldConfig{
+					Label:    trans.S("Permissions"),
+					HelpText: trans.S("The permissions this group has."),
+				},
 				ScanTo:      &g.Permissions,
 				ReverseName: "GroupPermissions",
 				ColumnName:  "id",

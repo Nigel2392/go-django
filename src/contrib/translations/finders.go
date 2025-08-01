@@ -27,29 +27,33 @@ import (
 )
 
 var (
-	templateTranslationMatchers = map[string]func(tokens []string, colIdx, idx int) (string, string, int, int, bool){
-		"T": func(tokens []string, colIdx, idx int) (string, string, int, int, bool) {
-			if idx+1 >= len(tokens) || !strings.HasPrefix(tokens[idx+1], `"`) {
-				return "", "", 0, 0, false
+	templateTranslationMatchers = map[string]func(tokens []string, colIdx, idx int) (string, string, int, int, error){
+		"T": func(tokens []string, colIdx, idx int) (string, string, int, int, error) {
+			if idx+1 >= len(tokens) || !(strings.HasPrefix(tokens[idx+1], `"`) || strings.HasPrefix(tokens[idx+1], "`")) {
+				return "", "", 0, 0, fmt.Errorf("expected a string literal after T at index %d", idx)
 			}
-			raw := tokens[idx+1]
 			// Remove outer quotes and unescape string
-			quoted := raw[1 : len(raw)-1]
-			unescaped := strings.ReplaceAll(quoted, `\"`, `"`)
-			unescaped = strings.ReplaceAll(unescaped, `\\`, `\`)
-			return unescaped, "", colIdx, idx + 1, true
-		},
-		"P": func(tokens []string, colIdx, idx int) (string, string, int, int, bool) {
-			if idx+2 >= len(tokens) || !strings.HasPrefix(tokens[idx+1], `"`) || !strings.HasPrefix(tokens[idx+2], `"`) {
-				return "", "", 0, 0, false
+			unescaped, err := strconv.Unquote(tokens[idx+1])
+			if err != nil {
+				return "", "", 0, 0, fmt.Errorf("failed to unquote string %q: %w", tokens[idx+1], err)
 			}
 
-			var singularRaw = tokens[idx+1]
-			var pluralRaw = tokens[idx+2]
-			// Remove outer quotes and unescape string
-			var singular = strings.ReplaceAll(singularRaw[1:len(singularRaw)-1], `\"`, `"`)
-			var plural = strings.ReplaceAll(pluralRaw[1:len(pluralRaw)-1], `\"`, `"`)
-			return singular, plural, idx + 2, colIdx, true
+			return unescaped, "", colIdx, idx + 1, nil
+		},
+		"P": func(tokens []string, colIdx, idx int) (string, string, int, int, error) {
+			if idx+2 >= len(tokens) || !(strings.HasPrefix(tokens[idx+1], `"`) || strings.HasPrefix(tokens[idx+1], "`")) || !(strings.HasPrefix(tokens[idx+2], `"`) || strings.HasPrefix(tokens[idx+2], `'`)) {
+				return "", "", 0, 0, fmt.Errorf("expected string literals for P at indices %d and %d", idx+1, idx+2)
+			}
+
+			singular, err := strconv.Unquote(tokens[idx+1])
+			if err != nil {
+				return "", "", 0, 0, fmt.Errorf("failed to unquote singular string %q: %w", tokens[idx+1], err)
+			}
+			plural, err := strconv.Unquote(tokens[idx+2])
+			if err != nil {
+				return "", "", 0, 0, fmt.Errorf("failed to unquote plural string %q: %w", tokens[idx+2], err)
+			}
+			return singular, plural, idx + 2, colIdx, nil
 		},
 	}
 
@@ -98,8 +102,8 @@ type templateTranslation struct {
 	col        int
 }
 
-func parseGoTemplateTCalls(template string, parseFuncs map[string]func(tokens []string, col, idx int) (string, string, int, int, bool)) iter.Seq2[int, templateTranslation] {
-	blockRegex := regexp.MustCompile(`\{\{(.*?)\}\}`)
+func parseGoTemplateTCalls(template string, parseFuncs map[string]func(tokens []string, col, idx int) (string, string, int, int, error)) iter.Seq2[int, templateTranslation] {
+	blockRegex := regexp.MustCompile(`\{\{((?:.|\n|\r\n|\t)*?)\}\}`)
 	blocks := blockRegex.FindAllStringSubmatchIndex(template, -1)
 
 	tokenRegex := regexp.MustCompile(`[A-Za-z_][A-Za-z0-9_]*|"(?:\\.|[^"\\])*"|[(){}:=|]`)
@@ -122,11 +126,11 @@ func parseGoTemplateTCalls(template string, parseFuncs map[string]func(tokens []
 					continue
 				}
 
-				singular, plural, _, newI, ok := fn(tokenStrings, absoluteOffset, i)
-				if !ok {
+				singular, plural, _, newI, err := fn(tokenStrings, absoluteOffset, i)
+				if err != nil {
 					logger.Warnf(
-						"Skipping template translation in %q: %s",
-						template, fmt.Sprintf("Invalid T call at index %d: %s", i, tokenStrings[i]),
+						"Skipping template translation in %q: %s: %v",
+						template, fmt.Sprintf("Invalid T call at index %d: %s", i, tokenStrings[i]), err,
 					)
 					continue
 				}
@@ -148,7 +152,7 @@ func parseGoTemplateTCalls(template string, parseFuncs map[string]func(tokens []
 
 type templateTranslationsFinder struct {
 	extensions []string
-	matches    map[string]func(tokens []string, colIdx, idx int) (string, string, int, int, bool)
+	matches    map[string]func(tokens []string, colIdx, idx int) (string, string, int, int, error)
 }
 
 func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {

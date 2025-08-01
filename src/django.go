@@ -573,6 +573,18 @@ func (a *Application) Initialize() error {
 			return template.HTML(s)
 		},
 		"static": a.Static,
+		"repeat": func(str any, cnt any) template.HTML {
+			var s = fmt.Sprintf("%v", str)
+			var count = reflect.ValueOf(cnt).Int()
+			if count <= 0 {
+				return ""
+			}
+			var buf = new(bytes.Buffer)
+			for i := int64(0); i < count; i++ {
+				buf.WriteString(s)
+			}
+			return template.HTML(buf.String())
+		},
 		"url": func(name string, args ...any) template.URL {
 			var rt, err = a.Mux.Reverse(name, args...)
 			switch {

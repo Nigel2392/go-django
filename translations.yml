@@ -27,6 +27,7 @@ locales:
 # [ModelFinder.Field]: revisions.Revision.ID .models/revisions/Revision/fields:1:0
 # [GoFileFinder]:      NewAppConfig          examples/todoapp/todos/todo.go:101:29
 # [GoFileFinder]:      NewAppConfig          src/contrib/auth/app.go:180:33
+# [GoFileFinder]:      *User.Fields          src/contrib/auth/user.go:116:22
 # [GoFileFinder]:      *Image.FieldDefs      src/contrib/images/models.go:97:22
 # [GoFileFinder]:                            src/contrib/pages/django_admin.go:43:26
 text: ID
@@ -117,6 +118,8 @@ locales:
 # [ModelFinder.Field]: users.Group.Permissions .models/auth/Group/fields:2:3
 # [ModelFinder.Field]: auth.User.Permissions   .models/auth/User/fields:1:11
 # [GoFileFinder]:      NewAppConfig            src/contrib/auth/app.go:265:34
+# [GoFileFinder]:      *Base.Fields            src/contrib/auth/users/baseuser.go:99:24
+# [GoFileFinder]:      *Group.FieldDefs        src/contrib/auth/users/group.go:43:24
 text: Permissions
 locales:
   nl: Rechten
@@ -161,9 +164,9 @@ locales:
 ---
 
 # [ModelFinder.Field]:	users.Permission.GroupPermissions .models/auth/Permission/fields:3:3
-text: GroupPermissions
+text: Group Permissions
 locales:
-  nl: GroepRechten
+  nl: Groepsrechten
 
 ---
 
@@ -176,9 +179,12 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: auth.User.Email .models/auth/User/fields:1:1
-# [GoFileFinder]:      NewAppConfig    src/contrib/auth/app.go:181:33
-# [GoFileFinder]:      NewAppConfig    src/contrib/auth/app.go:247:16
+# [ModelFinder.Field]: auth.User.Email  .models/auth/User/fields:1:1
+# [GoFileFinder]:      NewAppConfig     src/contrib/auth/app.go:181:33
+# [GoFileFinder]:      NewAppConfig     src/contrib/auth/app.go:247:16
+# [GoFileFinder]:      UserLoginForm    src/contrib/auth/forms.go:65:26
+# [GoFileFinder]:      UserRegisterForm src/contrib/auth/forms.go:117:26
+# [GoFileFinder]:      *User.Fields     src/contrib/auth/user.go:124:23
 text: Email
 locales:
   nl: E-mail
@@ -187,7 +193,9 @@ locales:
 
 # [ModelFinder.Field]: auth.User.Username .models/auth/User/fields:1:2
 # [GoFileFinder]:      NewAppConfig       src/contrib/auth/app.go:182:33
+# [GoFileFinder]:      UserLoginForm      src/contrib/auth/forms.go:76:26
 # [GoFileFinder]:      UserRegisterForm   src/contrib/auth/forms.go:131:6
+# [GoFileFinder]:      *User.Fields       src/contrib/auth/user.go:131:23
 text: Username
 locales:
   nl: Gebruikersnaam
@@ -196,6 +204,7 @@ locales:
 
 # [ModelFinder.Field]: auth.User.FirstName .models/auth/User/fields:1:3
 # [GoFileFinder]:      UserRegisterForm    src/contrib/auth/forms.go:149:6
+# [GoFileFinder]:      *User.Fields        src/contrib/auth/user.go:137:23
 text: First Name
 locales:
   nl: Voornaam
@@ -204,6 +213,7 @@ locales:
 
 # [ModelFinder.Field]: auth.User.LastName .models/auth/User/fields:1:4
 # [GoFileFinder]:      UserRegisterForm   src/contrib/auth/forms.go:164:6
+# [GoFileFinder]:      *User.Fields       src/contrib/auth/user.go:143:23
 text: Last Name
 locales:
   nl: Achternaam
@@ -212,7 +222,9 @@ locales:
 
 # [ModelFinder.Field]: auth.User.Password .models/auth/User/fields:1:5
 # [GoFileFinder]:      NewAppConfig       src/contrib/auth/app.go:185:33
+# [GoFileFinder]:      UserLoginForm      src/contrib/auth/forms.go:93:25
 # [GoFileFinder]:      UserRegisterForm   src/contrib/auth/forms.go:184:5
+# [GoFileFinder]:      *User.Fields       src/contrib/auth/user.go:149:23
 text: Password
 locales:
   nl: Wachtwoord
@@ -223,6 +235,7 @@ locales:
 # [ModelFinder.Field]: blog.BlogPage.CreatedAt      .models/blog/BlogPage/fields:1:5
 # [ModelFinder.Field]: pages.PageNode.CreatedAt     .models/pages/PageNode/fields:2:11
 # [ModelFinder.Field]: revisions.Revision.CreatedAt .models/revisions/Revision/fields:1:4
+# [GoFileFinder]:      *User.Fields                 src/contrib/auth/user.go:153:22
 # [GoFileFinder]:      *Image.FieldDefs             src/contrib/images/models.go:120:22
 # [GoFileFinder]:                                   src/contrib/pages/django_admin.go:53:26
 text: Created At
@@ -234,6 +247,7 @@ locales:
 # [ModelFinder.Field]: auth.User.UpdatedAt      .models/auth/User/fields:1:7
 # [ModelFinder.Field]: blog.BlogPage.UpdatedAt  .models/blog/BlogPage/fields:1:6
 # [ModelFinder.Field]: pages.PageNode.UpdatedAt .models/pages/PageNode/fields:2:12
+# [GoFileFinder]:      *User.Fields             src/contrib/auth/user.go:158:22
 # [GoFileFinder]:                               src/contrib/pages/django_admin.go:54:26
 text: Updated At
 locales:
@@ -241,14 +255,16 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	auth.User.IsAdministrator .models/auth/User/fields:1:8
+# [ModelFinder.Field]: auth.User.IsAdministrator .models/auth/User/fields:1:8
+# [GoFileFinder]:      *Base.Fields              src/contrib/auth/users/baseuser.go:64:22
 text: Is Administrator
 locales:
   nl: Is Beheerder
 
 ---
 
-# [ModelFinder.Field]:	auth.User.IsActive .models/auth/User/fields:1:9
+# [ModelFinder.Field]: auth.User.IsActive .models/auth/User/fields:1:9
+# [GoFileFinder]:      *Base.Fields       src/contrib/auth/users/baseuser.go:69:22
 text: Is Active
 locales:
   nl: Is Actief
@@ -257,6 +273,7 @@ locales:
 
 # [ModelFinder.Field]: auth.User.Groups .models/auth/User/fields:1:10
 # [GoFileFinder]:      NewAppConfig     src/contrib/auth/app.go:258:34
+# [GoFileFinder]:      *Base.Fields     src/contrib/auth/users/baseuser.go:80:24
 text: Groups
 locales:
   nl: Groepen
@@ -264,9 +281,9 @@ locales:
 ---
 
 # [ModelFinder.Field]:	auth.User.EntrySet .models/auth/User/fields:1:12
-text: EntrySet
+text: Entry Set
 locales:
-  nl: Logboek
+  nl: Invoerset
 
 ---
 
@@ -346,7 +363,7 @@ locales:
 ---
 
 # [ModelFinder.Field]: blog.BlogPage.Page .models/blog/BlogPage/fields:1:7
-# [GoFileFinder]:      NewAppConfig       src/contrib/pages/django_app.go:181:29
+# [GoFileFinder]:      NewAppConfig       src/contrib/pages/django_app.go:182:29
 text: Page
 locales:
   nl: Pagina
@@ -369,15 +386,13 @@ locales:
 
 # [ModelFinder.Field]: pages.PageNode.Path .models/pages/PageNode/fields:2:2
 # [GoFileFinder]:      *Image.FieldDefs    src/contrib/images/models.go:112:19
-# [TemplateFinder]:    {{ T "Path" }}      src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:14:25
 text: Path
 locales:
   nl: Pad
 
 ---
 
-# [ModelFinder.Field]: pages.PageNode.Depth .models/pages/PageNode/fields:2:3
-# [TemplateFinder]:    {{ T "Depth" }}      src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:15:25
+# [ModelFinder.Field]:	pages.PageNode.Depth .models/pages/PageNode/fields:2:3
 text: Depth
 locales:
   nl: Diepte
@@ -417,9 +432,9 @@ locales:
 ---
 
 # [ModelFinder.Field]:	pages.PageNode.SiteSet .models/pages/PageNode/fields:2:13
-text: SiteSet
+text: Site Set
 locales:
-  nl: Sites
+  nl: Site Set
 
 ---
 
@@ -642,7 +657,7 @@ locales:
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/add.tmpl:22:70
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:15:67
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:24:70
-# [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:24:68
+# [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:46:68
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:21:71
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:20:71
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:107:84
@@ -812,7 +827,7 @@ locales:
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:31:76
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:35:75
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/choose_root_page_type.tmpl:34:75
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:33:78
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:51:78
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:35:76
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:28:76
 text: Cancel
@@ -828,7 +843,7 @@ locales:
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:33:95
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:37:123
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/choose_root_page_type.tmpl:36:84
-# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:35:126
+# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:53:126
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:37:124
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:30:124
 text: Back
@@ -1097,10 +1112,27 @@ locales:
 
 ---
 
-# [GoFileFinder]:	UserRegisterForm src/contrib/auth/forms.go:134:6
+# [GoFileFinder]: UserLoginForm    src/contrib/auth/forms.go:66:29
+# [GoFileFinder]: UserRegisterForm src/contrib/auth/forms.go:118:29
+text: Enter your email address
+locales:
+  nl: Voer je e-mailadres in
+
+---
+
+# [GoFileFinder]: UserLoginForm    src/contrib/auth/forms.go:77:29
+# [GoFileFinder]: UserRegisterForm src/contrib/auth/forms.go:134:6
 text: Enter your username
 locales:
   nl: Voer je gebruikersnaam in
+
+---
+
+# [GoFileFinder]: UserLoginForm    src/contrib/auth/forms.go:94:28
+# [GoFileFinder]: UserRegisterForm src/contrib/auth/forms.go:187:5
+text: Enter your password
+locales:
+  nl: Voer je wachtwoord in
 
 ---
 
@@ -1115,13 +1147,6 @@ locales:
 text: Enter your last name
 locales:
   nl: Voer je achternaam in
-
----
-
-# [GoFileFinder]:	UserRegisterForm src/contrib/auth/forms.go:187:5
-text: Enter your password
-locales:
-  nl: Voer je wachtwoord in
 
 ---
 
@@ -1174,6 +1199,90 @@ locales:
 
 ---
 
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:117:22
+text: The unique identifier for this user.
+locales:
+  nl: Het unieke identificatienummer voor deze gebruiker.
+
+---
+
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:125:23
+text: The email address of the user.
+locales:
+  nl: Het e-mailadres van de gebruiker.
+
+---
+
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:132:23
+text: The username of the user.
+locales:
+  nl: De gebruikersnaam van de gebruiker.
+
+---
+
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:138:23
+text: The first name of the user.
+locales:
+  nl: De voornaam van de gebruiker.
+
+---
+
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:144:23
+text: The last name of the user.
+locales:
+  nl: De achternaam van de gebruiker.
+
+---
+
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:150:23
+text: The user's password. It is stored as a hash.
+locales:
+  nl: Het wachtwoord van de gebruiker. Het wordt opgeslagen als een hash.
+
+---
+
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:154:22
+text: The date and time when the user was created.
+locales:
+  nl: De datum en tijd waarop de gebruiker is aangemaakt.
+
+---
+
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:159:22
+text: The date and time when the user was last updated.
+locales:
+  nl: De datum en tijd waarop de gebruiker voor het laatst is bijgewerkt.
+
+---
+
+# [GoFileFinder]:	*Base.Fields src/contrib/auth/users/baseuser.go:65:22
+text: Whether the user is an administrator
+locales:
+  nl: Of de gebruiker een administrator is.
+
+---
+
+# [GoFileFinder]:	*Base.Fields src/contrib/auth/users/baseuser.go:70:22
+text: Whether the user is active and can log in.
+locales:
+  nl: Of de gebruiker actief is en kan inloggen.
+
+---
+
+# [GoFileFinder]:	*Base.Fields src/contrib/auth/users/baseuser.go:81:24
+text: The groups this user belongs to.
+locales:
+  nl: De groepen waartoe deze gebruiker behoort.
+
+---
+
+# [GoFileFinder]:	*Base.Fields src/contrib/auth/users/baseuser.go:100:24
+text: The permissions this user has.
+locales:
+  nl: De machtigingen die deze gebruiker heeft.
+
+---
+
 # [GoFileFinder]:	*Group.FieldDefs src/contrib/auth/users/group.go:31:23
 text: Name of the group. This is the name that will be displayed in the UI.
 locales:
@@ -1185,6 +1294,13 @@ locales:
 text: Description of the group. This is the description that will be displayed in the UI.
 locales:
   nl: De beschrijving van de groep. Dit is de beschrijving die in de gebruikersinterface wordt weergegeven.
+
+---
+
+# [GoFileFinder]:	*Group.FieldDefs src/contrib/auth/users/group.go:44:24
+text: The permissions this group has.
+locales:
+  nl: De machtigingen die deze groep heeft.
 
 ---
 
@@ -1320,14 +1436,14 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ T "Add Child Page" }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:14:100
+# [TemplateFinder]:	{{ T "Add Child Page" }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:15:100
 text: Add Child Page
 locales:
   nl: Kindpagina toevoegen
 
 ---
 
-# [TemplateFinder]: {{ T "Edit Page" }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:17:100
+# [TemplateFinder]: {{ T "Edit Page" }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:18:100
 # [GoFileFinder]:   getListActions      src/contrib/pages/django_admin_views.go:67:33
 text: Edit Page
 locales:
@@ -1335,14 +1451,15 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ T "Delete Page" }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:20:108
+# [TemplateFinder]: {{ T "Delete Page" }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:21:108
+# [GoFileFinder]:   getListActions        src/contrib/pages/django_admin_views.go:110:33
 text: Delete Page
 locales:
   nl: Pagina verwijderen
 
 ---
 
-# [TemplateFinder]: {{ P "%d child" "%d children" $count $count }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:25:100
+# [TemplateFinder]: {{ P "%d child" "%d children" $count $count }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:26:100
 # [GoFileFinder]:                                                  src/contrib/pages/django_admin.go:81:22
 text: '%d child'
 plural: '%d children'
@@ -1367,7 +1484,7 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ P "%d page" "%d pages" $count $count }} src/contrib/pages/assets/templates/pages/admin/admin_list_root.tmpl:16:60
+# [TemplateFinder]:	{{ P "%d page" "%d pages" $count $count }} src/contrib/pages/assets/templates/pages/admin/admin_list_root.tmpl:17:60
 text: '%d page'
 plural: '%d pages'
 locales:
@@ -1377,17 +1494,44 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ T "Delete this node and all it's children" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:26:25
-text: Delete this node and all it's children
+# [TemplateFinder]:	{{ T "This action cannot be undone." }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:8:16
+text: This action cannot be undone.
 locales:
-  nl: Verwijder dit knooppunt en alle onderliggende pagina's
+  nl: Deze actie kan niet ongedaan worden gemaakt.
 
 ---
 
-# [TemplateFinder]:	{{ T "Delete this node" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:28:25
-text: Delete this node
+# [TemplateFinder]:	{{ P "If you delete this page, %d child will also be deleted." "If you delete this page, %d children will also be deleted." (len .Data.Nodes) (len .Data.Nodes) }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:10:20
+text: If you delete this page, %d child will also be deleted.
+plural: If you delete this page, %d children will also be deleted.
 locales:
-  nl: Verwijder dit knooppunt
+  nl:
+    0: "Als je deze pagina verwijdert, wordt er ook %d kind verwijderd."
+    1: "Als je deze pagina verwijdert, worden er ook %d kinderen verwijderd"
+
+---
+
+# [TemplateFinder]:	{{ T "Live" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:20:204
+text: Live
+locales:
+  nl: Live
+
+---
+
+# [TemplateFinder]:	{{ T "Unpublished" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:26:199
+text: Unpublished
+locales:
+  nl: Ongepubliceerd
+
+---
+
+# [TemplateFinder]:	{{ P "Delete this node" "Delete this node and all it's children" (len .Data.Nodes) }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:47:21
+text: Delete this node
+plural: Delete this node and all it's children
+locales:
+  nl:
+    0: Verwijder dit knooppunt
+    1: Verwijder dit knooppunt en alle onderliggende pagina's
 
 ---
 
@@ -1428,7 +1572,7 @@ locales:
 
 # [GoFileFinder]:                               src/contrib/pages/django_admin.go:25:26
 # [GoFileFinder]: *PagesAdminHomeComponent.html src/contrib/pages/django_admin_home_component_templ.go:56:79
-# [GoFileFinder]: NewAppConfig                  src/contrib/pages/django_app.go:220:37
+# [GoFileFinder]: NewAppConfig                  src/contrib/pages/django_app.go:221:37
 text: Pages
 locales:
   nl: Pagina's
@@ -1502,7 +1646,7 @@ locales:
 
 ---
 
-# [GoFileFinder]: choosePageTypeHandler     src/contrib/pages/django_admin_views.go:264:26
+# [GoFileFinder]: choosePageTypeHandler     src/contrib/pages/django_admin_views.go:285:26
 # [GoFileFinder]: chooseRootPageTypeHandler src/contrib/pages/django_admin_views_root.go:132:25
 text: Choose Page Type
 locales:
@@ -1510,7 +1654,7 @@ locales:
 
 ---
 
-# [GoFileFinder]: choosePageTypeHandler     src/contrib/pages/django_admin_views.go:265:26
+# [GoFileFinder]: choosePageTypeHandler     src/contrib/pages/django_admin_views.go:286:26
 # [GoFileFinder]: chooseRootPageTypeHandler src/contrib/pages/django_admin_views_root.go:133:25
 text: Select the type of page you want to create
 locales:
@@ -1518,7 +1662,7 @@ locales:
 
 ---
 
-# [GoFileFinder]: addPageHandler     src/contrib/pages/django_admin_views.go:427:27
+# [GoFileFinder]: addPageHandler     src/contrib/pages/django_admin_views.go:448:27
 # [GoFileFinder]: addRootPageHandler src/contrib/pages/django_admin_views_root.go:279:23
 text: Add %q
 locales:
@@ -1526,35 +1670,35 @@ locales:
 
 ---
 
-# [GoFileFinder]:	editPageHandler src/contrib/pages/django_admin_views.go:600:27
+# [GoFileFinder]:	editPageHandler src/contrib/pages/django_admin_views.go:621:27
 text: Edit %q
 locales:
   nl: '%q bewerken'
 
 ---
 
-# [GoFileFinder]:	deletePageHandler src/contrib/pages/django_admin_views.go:715:26
+# [GoFileFinder]:	deletePageHandler src/contrib/pages/django_admin_views.go:736:26
 text: Delete %q
 locales:
   nl: '%q verwijderen'
 
 ---
 
-# [GoFileFinder]:	deletePageHandler src/contrib/pages/django_admin_views.go:716:26
+# [GoFileFinder]:	deletePageHandler src/contrib/pages/django_admin_views.go:737:26
 text: Are you sure you want to delete this page?
 locales:
   nl: Weet je zeker dat je deze pagina wilt verwijderen?
 
 ---
 
-# [GoFileFinder]:	unpublishPageHandler src/contrib/pages/django_admin_views.go:783:26
+# [GoFileFinder]:	unpublishPageHandler src/contrib/pages/django_admin_views.go:804:26
 text: Unpublish %q
 locales:
   nl: '%q depubliceren'
 
 ---
 
-# [GoFileFinder]:	unpublishPageHandler src/contrib/pages/django_admin_views.go:784:26
+# [GoFileFinder]:	unpublishPageHandler src/contrib/pages/django_admin_views.go:805:26
 text: |-
   Unpublishing a page will remove it from the live site
   Optionally, you can unpublish all child pages
@@ -1572,14 +1716,14 @@ locales:
 
 ---
 
-# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:182:29
+# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:183:29
 text: A page in a hierarchical page tree- structure.
 locales:
   nl: Een pagina in een hiërarchische boomstructuur.
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetActions src/contrib/pages/django_app.go:439:39
+# [GoFileFinder]:	*pageLogDefinition.GetActions src/contrib/pages/django_app.go:444:39
 text: Edit Live Page
 locales:
   nl: Live pagina bewerken

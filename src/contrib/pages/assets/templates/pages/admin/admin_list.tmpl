@@ -6,6 +6,7 @@
 
     {{ block "heading" . }}
         {{ $count := (.Data.view_paginator_object).Count }}
+        {{ if not $count }}{{ $count = 0 }}{{ end }}
         {{ $page := (.Get "page_object") }}
         <div class="view-header">
             {{ if (or (or (has_perm  "pages:add") (has_perm  "pages:edit")) (has_perm  "pages:delete")) }}

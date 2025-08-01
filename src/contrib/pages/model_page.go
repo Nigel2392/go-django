@@ -114,12 +114,12 @@ routePageNode:
 	return pageRow.Object.Route(r, pathComponents[1:])
 }
 
-func (n *PageNode) Ancestors() *PageQuerySet {
-	return NewPageQuerySet().Ancestors(n.Path, n.Depth)
+func (n *PageNode) Ancestors(inclusive ...bool) *PageQuerySet {
+	return NewPageQuerySet().Ancestors(n.Path, n.Depth, inclusive...)
 }
 
-func (n *PageNode) Descendants() *PageQuerySet {
-	return NewPageQuerySet().Descendants(n.Path, n.Depth)
+func (n *PageNode) Descendants(inclusive ...bool) *PageQuerySet {
+	return NewPageQuerySet().Descendants(n.Path, n.Depth, inclusive...)
 }
 
 func (n *PageNode) Children() *PageQuerySet {

@@ -43,6 +43,9 @@ type DataModelField[T any] struct {
 	// _Type is the type of the result of the expression
 	_Type reflect.Type
 
+	// config is the configuration of the field
+	cnf *DataModelFieldConfig
+
 	// fieldRef is the back reference in case this field is embedded in another
 	// field type
 	fieldRef attrs.Field
@@ -132,6 +135,8 @@ func dataModelsetter[T any](f *DataModelField[T], v any) error {
 }
 
 type DataModelFieldConfig struct {
+	Label      any
+	HelpText   any
 	ResultType reflect.Type // Type of the result of the expression
 	Ref        attrs.Field  // Reference to the field in the model
 	Formfield  fields.Field // Form field for the data model field
@@ -259,6 +264,7 @@ func NewDataModelField[T any](forModel attrs.Definer, dst any, name string, cnf 
 		fieldRef:  conf.Ref,
 		getters:   getters,
 		setters:   setters,
+		cnf:       &conf,
 	}
 
 	return f
@@ -611,14 +617,59 @@ func (e *DataModelField[T]) Validate() error {
 	return nil
 }
 
-func (e *DataModelField[T]) Label(ctx context.Context) string {
-	return trans.T(ctx, e.name)
-}
-
 func (e *DataModelField[T]) ToString() string {
 	return fmt.Sprint(e.GetValue())
 }
 
-func (e *DataModelField[T]) HelpText(ctx context.Context) string {
+func (f *DataModelField[T]) Label(ctx context.Context) string {
+	var field attrs.Field = f
+	if f.fieldRef != nil {
+		field = f.fieldRef
+	}
+
+	if f.cnf.Label != nil {
+		switch label := f.cnf.Label.(type) {
+		case string:
+			return trans.T(ctx, label)
+		case func(ctx context.Context) string:
+			return label(ctx)
+		default:
+			panic(fmt.Sprintf(
+				"Label for field %q (%T) is not a `string` or `function(context) string`, got %T",
+				f.name, field, label,
+			))
+		}
+	}
+
+	var rel = f.Rel()
+	if rel != nil {
+		var cTypeDef = contenttypes.DefinitionForObject(rel)
+		if cTypeDef != nil {
+			return cTypeDef.Label(ctx)
+		}
+	}
+
+	return trans.T(ctx, attrs.NiceName(f.name))
+}
+
+func (f *DataModelField[T]) HelpText(ctx context.Context) string {
+	var field attrs.Field = f
+	if f.fieldRef != nil {
+		field = f.fieldRef
+	}
+	if f.cnf.HelpText != nil {
+		switch helpText := f.cnf.HelpText.(type) {
+		case string:
+			return trans.T(ctx, helpText)
+		case func(ctx context.Context) string:
+			return helpText(ctx)
+		default:
+			panic(fmt.Sprintf(
+				"HelpText for field %q (%T) is not a `string` or `function(context) string`, got %T",
+				f.name, field, helpText,
+			))
+		}
+	}
+
 	return ""
 }

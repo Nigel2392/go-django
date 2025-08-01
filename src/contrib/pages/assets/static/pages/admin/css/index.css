@@ -1,4 +1,3 @@
-
 .pages-list tr td:first-child {
     max-width: 900px;
     white-space: nowrap;
@@ -221,4 +220,41 @@
 }
 .pages-unpublish-form .buttons > button {
     margin-right: 1em;
+}
+
+.model-list-display {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    justify-content: center;
+    padding: 0.325em 1em;
+    padding-bottom: 0.5em;
+}
+.model-list-item {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    width: 100%;
+    padding: 0.325em 1em;
+    border-bottom: 1px dotted var(--secondary-bg-color);
+}
+.model-list-item-icon svg {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2em;
+    height: 2em;
+    margin-right: 0.725em;
+}
+.model-list-item-icon-success {
+    color: var(--success-bg-color);
+}
+.model-list-item-icon-danger {
+    color: var(--danger-bg-color);
+}
+.model-list-item-link {
+    font-size: 1.25em;
+    text-decoration: none;
+    color: var(--text-color);
+    flex: 1;
 }

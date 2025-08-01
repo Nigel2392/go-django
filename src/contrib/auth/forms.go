@@ -62,8 +62,8 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 		f.AddField(
 			"email",
 			fields.Protect(fields.EmailField(
-				fields.Label("Email"),
-				fields.HelpText("Enter your email address"),
+				fields.Label(trans.S("Email")),
+				fields.HelpText(trans.S("Enter your email address")),
 				fields.Required(true),
 				fields.MinLength(5),
 				fields.MaxLength(254),
@@ -73,8 +73,8 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 		f.AddField(
 			"username",
 			fields.Protect(fields.CharField(
-				fields.Label("Username"),
-				fields.HelpText("Enter your username"),
+				fields.Label(trans.S("Username")),
+				fields.HelpText(trans.S("Enter your username")),
 				fields.Required(true),
 				fields.MinLength(3),
 				fields.MaxLength(75),
@@ -90,8 +90,8 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 				Flags:         ChrFlagDEFAULT,
 				IsRegistering: false,
 			},
-			fields.Label("Password"),
-			fields.HelpText("Enter your password"),
+			fields.Label(trans.S("Password")),
+			fields.HelpText(trans.S("Enter your password")),
 			fields.Required(true),
 		), func(err error) error { return autherrors.ErrInvalidLogin }),
 	)
@@ -114,8 +114,8 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 		f.AddField(
 			"email",
 			fields.EmailField(
-				fields.Label("Email"),
-				fields.HelpText("Enter your email address"),
+				fields.Label(trans.S("Email")),
+				fields.HelpText(trans.S("Enter your email address")),
 				fields.Required(true),
 				fields.MinLength(5),
 				fields.MaxLength(254),

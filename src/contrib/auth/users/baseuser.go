@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/mux/middleware/authentication"
 
 	_ "unsafe"
@@ -59,10 +60,14 @@ func (u *Base) Fields(user attrs.Definer) []any {
 
 	return []any{
 		attrs.NewField(user, "IsAdministrator", &attrs.FieldConfig{
-			Column: "is_administrator",
+			Column:   "is_administrator",
+			Label:    trans.S("Is Administrator"),
+			HelpText: trans.S("Whether the user is an administrator"),
 		}),
 		attrs.NewField(user, "IsActive", &attrs.FieldConfig{
-			Column: "is_active",
+			Column:   "is_active",
+			Label:    trans.S("Is Active"),
+			HelpText: trans.S("Whether the user is active and can log in."),
 			//	Default: django.ConfigGet(
 			//		django.Global.Settings,
 			//		APPVAR_USER_ACTIVE_DEFAULT,
@@ -71,6 +76,10 @@ func (u *Base) Fields(user attrs.Definer) []any {
 		}),
 		fields.NewManyToManyField[*queries.RelM2M[*Group, *UserGroup]](
 			user, "Groups", &fields.FieldConfig{
+				DataModelFieldConfig: fields.DataModelFieldConfig{
+					Label:    trans.S("Groups"),
+					HelpText: trans.S("The groups this user belongs to."),
+				},
 				ScanTo:            &u.Groups,
 				ReverseName:       "UserGroups",
 				NoReverseRelation: true,
@@ -86,6 +95,10 @@ func (u *Base) Fields(user attrs.Definer) []any {
 		),
 		fields.NewManyToManyField[*queries.RelM2M[*Permission, *UserPermission]](
 			user, "Permissions", &fields.FieldConfig{
+				DataModelFieldConfig: fields.DataModelFieldConfig{
+					Label:    trans.S("Permissions"),
+					HelpText: trans.S("The permissions this user has."),
+				},
 				ScanTo:            &u.Permissions,
 				ReverseName:       "UserPermissions",
 				NoReverseRelation: true,

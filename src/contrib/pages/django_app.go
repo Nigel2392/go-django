@@ -9,6 +9,7 @@ import (
 	"path"
 	"reflect"
 	"strings"
+	"text/template"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
@@ -268,6 +269,10 @@ func NewAppConfig() django.AppConfig {
 				),
 			),
 		)
+
+		tpl.Funcs(template.FuncMap{
+			"PageURL": URLPath,
+		})
 
 		pageApp.TemplateConfig = &tpl.Config{
 			AppName: "pages",
