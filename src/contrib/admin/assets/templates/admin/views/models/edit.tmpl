@@ -23,7 +23,7 @@
         <div class="form-buttons">
             <input class="button secondary" type="submit" value="{{ T "Submit" }}">
             {{ if (and (not $model.DisallowDelete) (has_object_perm  $model.NewInstance "admin:delete")) }}
-                <a class="button secondary" href="{{ url "admin:apps:model:delete" (.Get "app").Name $model.GetName (.Get "primaryField").GetValue }}">{{ T "Delete" }}</a>
+                <a class="button danger hollow" href="{{ url "admin:apps:model:delete" (.Get "app").Name $model.GetName (.Get "primaryField").GetValue }}">{{ T "Delete" }}</a>
             {{ end }}
 
             {{ $BackURL := (.Get "BackURL") }}

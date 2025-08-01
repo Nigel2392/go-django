@@ -717,6 +717,12 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 			context.Set("model", m)
 			context.Set("page_object", p)
 
+			var backURL string
+			if q := req.URL.Query().Get("next"); q != "" {
+				backURL = q
+			}
+			context.Set("BackURL", backURL)
+
 			var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
 			if err != nil {
 				return nil, err

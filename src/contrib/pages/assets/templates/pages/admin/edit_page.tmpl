@@ -9,6 +9,19 @@
     {{ end }}
 {{ end }}
 
+{{ block "header" . }}
+    <div class="view-header">
+        <div class="buttons">
+            {{ if (has_perm  "pages:delete") }}
+                <a href="{{ url "admin:pages:delete" .Data.page_object.ID }}?next={{ urlquery (url "admin:pages:edit" .Data.page_object.ID) }}" class="button danger hollow">{{ T "Delete Page" }}</a>
+            {{ end }}
+        </div>
+        <div class="title-text">
+            <h1>{{ .Page.Title }}</h1>
+        </div>
+    </div>
+{{ end }}
+
 {{ define "content" }}
     <form method="post" action="{{ .Get ("PostURL") }}" class="admin-form" enctype="multipart/form-data">
         {{ csrf_field }}

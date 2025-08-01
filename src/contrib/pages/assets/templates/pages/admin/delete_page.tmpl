@@ -5,7 +5,7 @@
 {{ define "content" }}
 
     <div class="view-description">
-        <p>{{ T "This action cannot be undone." }}</p>
+        <p>{{ T "This action cannot be reversed." }}</p>
         {{ if (len .Data.Nodes) }}
             <p>{{ P "If you delete this page, %d child will also be deleted." "If you delete this page, %d children will also be deleted." (len .Data.Nodes) (len .Data.Nodes) }}</p>
         {{ end }}
@@ -30,7 +30,7 @@
                         </svg>
                     {{ end }}
                 </div>
-                <a class="model-list-item-link" href="{{ url "admin:pages:edit" $node.ID }}?next={{ url "admin:pages:delete" $context.Data.page_object.ID }}">
+                <a class="model-list-item-link" href="{{ url "admin:pages:edit" $node.ID }}?next={{ urlquery (url "admin:pages:delete" $context.Data.page_object.ID) }}">
                     {{ if eq $idx 0 }}
                         <strong>{{ $node.Title }} ({{ $node.ID }})</strong>
                     {{ else }}

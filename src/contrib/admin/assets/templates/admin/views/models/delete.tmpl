@@ -7,7 +7,7 @@
     <form method="post" class="admin-form">
         {{ csrf_field }}
 
-        <p>{{ T "Are you sure you want to delete this object?" }}</p>
+        <p>{{ T "Are you sure you want to delete object with id %v?" .Data.primaryField.GetValue }}</p>
         <p>{{ T "This action cannot be reversed." }}</p>
 
 
