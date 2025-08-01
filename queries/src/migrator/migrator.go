@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
@@ -37,6 +38,7 @@ type CanMigrate interface {
 
 type SchemaEditor interface {
 	Setup(ctx context.Context) error
+	StartTransaction(ctx context.Context) (drivers.Transaction, error)
 	StoreMigration(ctx context.Context, appName string, modelName string, migrationName string) error
 	HasMigration(ctx context.Context, appName string, modelName string, migrationName string) (bool, error)
 	RemoveMigration(ctx context.Context, appName string, modelName string, migrationName string) error

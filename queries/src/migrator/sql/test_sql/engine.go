@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"testing"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 )
 
@@ -41,6 +43,10 @@ func NewTestMigrationEngine(t *testing.T) *TestMigrationEngine {
 func (t *TestMigrationEngine) Setup(ctx context.Context) error {
 	t.SetupCalled = true
 	return nil
+}
+
+func (t *TestMigrationEngine) StartTransaction(ctx context.Context) (drivers.Transaction, error) {
+	return queries.NullTransaction(), nil
 }
 
 func (t *TestMigrationEngine) StoreMigration(ctx context.Context, appName string, modelName string, migrationName string) error {

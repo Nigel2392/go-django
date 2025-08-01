@@ -118,7 +118,9 @@ func (t *txWrapper) Commit(ctx context.Context) error {
 func (t *txWrapper) Rollback(ctx context.Context) error {
 	defer func() { t.finished = true }()
 	var err = t.queryWrapper.conn.Rollback()
-	LogSQL(ctx, "sql.Tx", err, "ROLLBACK")
+	if err == nil || !errors.Is(err, sql.ErrTxDone) {
+		LogSQL(ctx, "sql.Tx", err, "ROLLBACK")
+	}
 	return databaseError(t.d, err)
 }
 

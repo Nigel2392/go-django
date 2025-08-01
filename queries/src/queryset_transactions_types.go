@@ -15,12 +15,12 @@ type nullTransaction struct {
 	drivers.DB
 }
 
-// NullTransction returns a no-op transaction that does not commit or rollback anything.
+// NullTransaction returns a no-op transaction that does not commit or rollback anything.
 //
 // It cannot be used for any database operations - the underlying DB is nil.
 //
 // The transaction Rollback and Commit methods are no-ops and will not perform any actions.
-func NullTransction() drivers.Transaction {
+func NullTransaction() drivers.Transaction {
 	return &nullTransaction{DB: nil}
 }
 

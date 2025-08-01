@@ -33,11 +33,3 @@ var pluralizer = pluralize.NewClient()
 func Pluralize(s string) string {
 	return pluralizer.Plural(s)
 }
-
-func Singularize(s string) string {
-	return pluralizer.Singular(s)
-}
-
-func IsPlural(s string) bool {
-	return pluralizer.IsPlural(s)
-}

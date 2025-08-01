@@ -301,6 +301,12 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 		return err
 	}
 
+	transaction, err := m.SchemaEditor.StartTransaction(ctx)
+	if err != nil {
+		return errors.Wrap(err, "failed to begin transaction")
+	}
+	defer transaction.Rollback(ctx)
+
 	for _, n := range graph {
 
 		if n.mig.migrated {
@@ -394,6 +400,10 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 				err, "failed to store migration %q", n.mig.Name,
 			)
 		}
+	}
+
+	if err := transaction.Commit(ctx); err != nil {
+		return errors.Wrap(err, "failed to commit transaction")
 	}
 
 	return nil

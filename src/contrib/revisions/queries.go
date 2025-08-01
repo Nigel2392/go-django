@@ -9,8 +9,10 @@ import (
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/pkg/errors"
 )
 
@@ -21,11 +23,35 @@ var (
 )
 
 type Revision struct {
-	ID          int64     `json:"id"`
-	ObjectID    string    `json:"object_id"`
-	ContentType string    `json:"content_type"`
-	Data        string    `json:"data"`
-	CreatedAt   time.Time `json:"created_at"`
+	models.Model `table:"revisions_revision"`
+	ID           int64     `json:"id"`
+	ObjectID     string    `json:"object_id"`
+	ContentType  string    `json:"content_type"`
+	Data         string    `json:"data"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+func NewRevision(forObj attrs.Definer) (*Revision, error) {
+	var objKey = attrs.PrimaryKey(forObj)
+	var dataBuf, err = json.Marshal(forObj)
+	if err != nil {
+		return nil, err
+	}
+
+	idSerialized, err := json.Marshal(objKey)
+	if err != nil {
+		return nil, err
+	}
+
+	var cTypeDef = contenttypes.DefinitionForObject(forObj)
+	var cType = cTypeDef.ContentType()
+	var rev = &Revision{
+		ObjectID:    string(idSerialized),
+		ContentType: cType.TypeName(),
+		Data:        string(dataBuf),
+	}
+
+	return rev, nil
 }
 
 func (r *Revision) BeforeCreate(context.Context) error {
@@ -40,22 +66,32 @@ func (r *Revision) OrderBy() []string {
 }
 
 func (r *Revision) FieldDefs() attrs.Definitions {
-	return attrs.Define(r,
+	return r.Model.Define(r,
 		attrs.Unbound("ID", &attrs.FieldConfig{
-			Primary: true,
-			Column:  "id",
+			Primary:  true,
+			Column:   "id",
+			Label:    trans.S("ID"),
+			HelpText: trans.S("The unique identifier for the revision."),
 		}),
 		attrs.Unbound("ObjectID", &attrs.FieldConfig{
-			Column: "object_id",
+			Column:   "object_id",
+			Label:    trans.S("Object ID"),
+			HelpText: trans.S("The unique identifier for the object this revision belongs to."),
 		}),
 		attrs.Unbound("ContentType", &attrs.FieldConfig{
-			Column: "content_type",
+			Column:   "content_type",
+			Label:    trans.S("Content Type"),
+			HelpText: trans.S("The content type of the object this revision belongs to."),
 		}),
 		attrs.Unbound("Data", &attrs.FieldConfig{
-			Column: "data",
+			Column:   "data",
+			Label:    trans.S("Data"),
+			HelpText: trans.S("The data of the revision, this is a snapshot of the object at the time of the revision."),
 		}),
 		attrs.Unbound("CreatedAt", &attrs.FieldConfig{
-			Column: "created_at",
+			Column:   "created_at",
+			Label:    trans.S("Created At"),
+			HelpText: trans.S("The date and time when the revision was created."),
 		}),
 	)
 }
@@ -181,26 +217,18 @@ func GetRevisionsByObject(obj attrs.Definer, limit int, offset int) ([]*Revision
 }
 
 func CreateRevision(forObj attrs.Definer) (*Revision, error) {
-	var objKey = attrs.PrimaryKey(forObj)
-	var dataBuf, err = json.Marshal(forObj)
-	if err != nil {
-		return nil, err
+	var revision *Revision
+	switch obj := forObj.(type) {
+	case *Revision:
+		revision = obj
+	default:
+		var rev, err = NewRevision(forObj)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to create revision")
+		}
+		revision = rev
 	}
-
-	idSerialized, err := json.Marshal(objKey)
-	if err != nil {
-		return nil, err
-	}
-
-	var cTypeDef = contenttypes.DefinitionForObject(forObj)
-	var cType = cTypeDef.ContentType()
-	var rev = &Revision{
-		ObjectID:    string(idSerialized),
-		ContentType: cType.TypeName(),
-		Data:        string(dataBuf),
-	}
-
-	return queries.GetQuerySet(&Revision{}).Create(rev)
+	return queries.GetQuerySet(&Revision{}).Create(revision)
 }
 
 func UpdateRevision(rev *Revision) error {

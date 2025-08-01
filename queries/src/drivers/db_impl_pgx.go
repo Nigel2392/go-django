@@ -174,7 +174,9 @@ func (p *pgxTx) Commit(ctx context.Context) error {
 func (p *pgxTx) Rollback(ctx context.Context) error {
 	defer func() { p.finished = true }()
 	var err = p.conn.Rollback(p.ctx)
-	LogSQL(ctx, fmt.Sprintf("%T", p.conn), err, "ROLLBACK")
+	if err == nil || !errors.Is(err, pgx.ErrTxClosed) {
+		LogSQL(ctx, fmt.Sprintf("%T", p.conn), err, "ROLLBACK")
+	}
 	return databaseError(p.d, err)
 }
 

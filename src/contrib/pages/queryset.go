@@ -224,6 +224,16 @@ func (qs *PageQuerySet) AddRoots(nodes ...*PageNode) error {
 			return fmt.Errorf("node path must be empty")
 		}
 
+		if node.ContentType != "" {
+			var definition = DefinitionForType(node.ContentType)
+			if definition != nil && definition.DisallowRoot {
+				return fmt.Errorf(
+					"content type %q does not allow to be a root node",
+					node.ContentType,
+				)
+			}
+		}
+
 		node.Path = buildPathPart(previousRootNodeCount)
 		if node.Title == "" {
 			return fmt.Errorf("node title must not be empty")
@@ -292,7 +302,13 @@ func (qs *PageQuerySet) AddChildren(parent *PageNode, children ...*PageNode) err
 		return fmt.Errorf("parent path must not be empty")
 	}
 
+	var parentDefinition *PageDefinition
+	if len(parent.ContentType) > 0 {
+		parentDefinition = DefinitionForType(parent.ContentType)
+	}
+
 	for _, child := range children {
+
 		if child.Path != "" {
 			return fmt.Errorf("child path must be empty")
 		}
@@ -302,6 +318,7 @@ func (qs *PageQuerySet) AddChildren(parent *PageNode, children ...*PageNode) err
 			return fmt.Errorf("child title must not be empty")
 		}
 
+		child._parent = parent
 		child.SetUrlPath(parent)
 		child.Path = parent.Path + buildPathPart(parent.Numchild)
 		child.Depth = parent.Depth + 1
@@ -310,6 +327,23 @@ func (qs *PageQuerySet) AddChildren(parent *PageNode, children ...*PageNode) err
 		// to ensure that the page object is saved correctly, might there be some specific logic in said method.
 		if err := qs.saveSpecific(child, true); err != nil {
 			return errors.Wrap(err, "failed to save specific instance")
+		}
+
+		if parentDefinition != nil && child.ContentType != "" && !parentDefinition.IsValidChildType(child.ContentType) {
+			return fmt.Errorf(
+				"child content type %q is not allowed under parent content type %q",
+				child.ContentType, parent.ContentType,
+			)
+		}
+
+		if child.ContentType != "" {
+			var childDefinition = DefinitionForType(child.ContentType)
+			if childDefinition != nil && parent.ContentType != "" && !childDefinition.IsValidParentType(parent.ContentType) {
+				return fmt.Errorf(
+					"child content type %q is not allowed under parent content type %q",
+					child.ContentType, parent.ContentType,
+				)
+			}
 		}
 	}
 
@@ -664,6 +698,35 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 		return fmt.Errorf("new parent is a descendant of the node")
 	}
 
+	var parentDefinition *PageDefinition
+	if newParent.ContentType != "" {
+		parentDefinition = DefinitionForType(newParent.ContentType)
+		if parentDefinition == nil {
+			return fmt.Errorf("no definition found for new parent content type %q", newParent.ContentType)
+		}
+
+		if node.ContentType != "" && !parentDefinition.IsValidChildType(node.ContentType) {
+			return fmt.Errorf(
+				"node content type %q is not allowed under new parent content type %q",
+				node.ContentType, newParent.ContentType,
+			)
+		}
+	}
+
+	if node.ContentType != "" {
+		var childDefinition = DefinitionForType(node.ContentType)
+		if childDefinition == nil {
+			return fmt.Errorf("no definition found for node content type %q", node.ContentType)
+		}
+
+		if node.ContentType != "" && !childDefinition.IsValidParentType(node.ContentType) {
+			return fmt.Errorf(
+				"node content type %q is not allowed under new parent content type %q",
+				node.ContentType, newParent.ContentType,
+			)
+		}
+	}
+
 	var tx, err = qs.GetOrCreateTransaction()
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
@@ -686,7 +749,6 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 	}
 
 	for _, descendant := range nodes {
-		descendant := descendant
 		descendant.Path = newParent.Path + descendant.Path[node.Depth*STEP_LEN:]
 		descendant.Depth = (newParent.Depth + descendant.Depth + 1) - node.Depth
 	}

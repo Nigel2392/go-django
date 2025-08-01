@@ -57,6 +57,38 @@ type PageDefinition struct {
 	_childPageTypes  map[string]struct{}
 }
 
+func (p *PageDefinition) IsValidParentType(typeName string) bool {
+	if p == nil || len(p.ParentPageTypes) == 0 {
+		return true // No restrictions, any type is valid
+	}
+
+	if p._parentPageTypes == nil {
+		p._parentPageTypes = make(map[string]struct{})
+		for _, parentType := range p.ParentPageTypes {
+			p._parentPageTypes[parentType] = struct{}{}
+		}
+	}
+
+	_, exists := p._parentPageTypes[typeName]
+	return exists
+}
+
+func (p *PageDefinition) IsValidChildType(typeName string) bool {
+	if p == nil || len(p.ChildPageTypes) == 0 {
+		return true // No restrictions, any type is valid
+	}
+
+	if p._childPageTypes == nil {
+		p._childPageTypes = make(map[string]struct{})
+		for _, childType := range p.ChildPageTypes {
+			p._childPageTypes[childType] = struct{}{}
+		}
+	}
+
+	_, exists := p._childPageTypes[typeName]
+	return exists
+}
+
 func (p *PageDefinition) Label(ctx context.Context) string {
 	if p.GetLabel != nil {
 		return p.GetLabel(ctx)

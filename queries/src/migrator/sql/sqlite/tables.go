@@ -89,6 +89,10 @@ func (m *SQLiteSchemaEditor) Setup(ctx context.Context) error {
 	return nil
 }
 
+func (m *SQLiteSchemaEditor) StartTransaction(ctx context.Context) (drivers.Transaction, error) {
+	return m.db.Begin(ctx)
+}
+
 func (m *SQLiteSchemaEditor) StoreMigration(ctx context.Context, appName string, modelName string, migrationName string) error {
 	_, err := m.Execute(ctx, insertTableMigrations, appName, modelName, migrationName)
 	if err != nil {

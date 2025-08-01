@@ -56,6 +56,10 @@ func (m *PostgresSchemaEditor) Setup(ctx context.Context) error {
 	return err
 }
 
+func (m *PostgresSchemaEditor) StartTransaction(ctx context.Context) (drivers.Transaction, error) {
+	return m.db.Begin(ctx)
+}
+
 func (m *PostgresSchemaEditor) StoreMigration(ctx context.Context, appName string, modelName string, migrationName string) error {
 	_, err := m.Execute(ctx, insertTableMigrations, appName, modelName, migrationName)
 	return err

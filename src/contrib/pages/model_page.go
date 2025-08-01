@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/mux"
 	"github.com/gosimple/slug"
@@ -49,6 +50,165 @@ type PageNode struct {
 	// _parent is used to cache the parent node
 	// It is not saved to the database and is only used for performance optimization
 	_parent *PageNode `json:"-" attrs:"-"`
+}
+
+func (n *PageNode) SetUrlPath(parent *PageNode) (newPath, oldPath string) {
+	oldPath = n.UrlPath
+
+	if n.Slug == "" && n.Title != "" {
+		n.Slug = slug.Make(n.Title)
+	}
+
+	var bufLen = len(n.Slug)
+	if parent == nil {
+		bufLen++
+	} else {
+		bufLen += len(parent.UrlPath) + 1
+	}
+
+	var buf = make([]byte, 0, bufLen)
+	if parent == nil {
+		buf = append(buf, '/')
+	} else {
+		buf = append(buf, parent.UrlPath...)
+		buf = append(buf, '/')
+	}
+
+	buf = append(buf, n.Slug...)
+
+	n.UrlPath = string(buf)
+	return n.UrlPath, oldPath
+}
+
+func (n *PageNode) SetSpecificPageObject(p Page) {
+	if p == nil {
+		n.PageObject = nil
+		return
+	}
+
+	n.PageObject = p
+}
+
+func (n *PageNode) ID() int64 {
+	return n.PK
+}
+
+func (n *PageNode) Reference() *PageNode {
+	return n
+}
+
+func (n *PageNode) IsRoot() bool {
+	return n.Depth == 0
+}
+
+func (n *PageNode) IsPublished() bool {
+	return n.StatusFlags&StatusFlagPublished != 0
+}
+
+func (n *PageNode) IsHidden() bool {
+	return n.StatusFlags&StatusFlagHidden != 0
+}
+
+func (n *PageNode) IsDeleted() bool {
+	return n.StatusFlags&StatusFlagDeleted != 0
+}
+
+func (n *PageNode) BeforeCreate(context.Context) error {
+	if n.CreatedAt.IsZero() {
+		n.CreatedAt = time.Now()
+	}
+
+	if n.UpdatedAt.IsZero() {
+		n.UpdatedAt = n.CreatedAt
+	}
+
+	return nil
+}
+
+func (n *PageNode) BeforeSave(context.Context) error {
+	if !n.CreatedAt.IsZero() && n.UpdatedAt.IsZero() {
+		n.UpdatedAt = n.CreatedAt
+	} else {
+		n.UpdatedAt = time.Now()
+	}
+	return nil
+}
+
+func (n *PageNode) DatabaseIndexes(obj attrs.Definer) []migrator.Index {
+	if reflect.TypeOf(obj) != reflect.TypeOf(n) {
+		return nil
+	}
+	return []migrator.Index{
+		{Fields: []string{"Path"}, Unique: true},
+		{Fields: []string{"UrlPath"}, Unique: true},
+		{Fields: []string{"PageID"}, Unique: false},
+		{Fields: []string{"ContentType"}, Unique: false},
+		{Fields: []string{"PageID", "ContentType"}, Unique: true},
+	}
+}
+
+func (n *PageNode) TargetContentTypeField() attrs.FieldDefinition {
+	var defs = n.FieldDefs()
+	var f, _ = defs.Field("ContentType")
+	return f
+}
+
+func (n *PageNode) TargetPrimaryField() attrs.FieldDefinition {
+	var defs = n.FieldDefs()
+	var f, _ = defs.Field("PageID")
+	return f
+}
+
+func (n *PageNode) ControlsEmbedderSaving() bool {
+	return true
+}
+
+func (n *PageNode) SaveObject(ctx context.Context, cnf models.SaveConfig) (err error) {
+	var creating = n.PK == 0 || cnf.ForceCreate
+	var querySet = NewPageQuerySet().WithContext(ctx)
+	if creating {
+		err = querySet.AddRoot(n)
+	} else {
+		err = querySet.UpdateNode(n)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to save page node: %w", err)
+	}
+	return nil
+}
+
+func (n *PageNode) DeleteObject(ctx context.Context) error {
+	var querySet = NewPageQuerySet().WithContext(ctx)
+	_, err := querySet.Delete(n)
+	if err != nil {
+		return fmt.Errorf("failed to delete page node: %w", err)
+	}
+	return nil
+}
+
+func (n *PageNode) FieldDefs() attrs.Definitions {
+	return n.Model.Define(n, func(d attrs.Definer) []attrs.Field {
+		return []attrs.Field{
+			attrs.NewField(n, "PK"),
+			attrs.NewField(n, "Title"),
+			attrs.NewField(n, "Path"),
+			attrs.NewField(n, "Depth"),
+			attrs.NewField(n, "Numchild"),
+			attrs.NewField(n, "UrlPath"),
+			attrs.NewField(n, "Slug"),
+			attrs.NewField(n, "StatusFlags"),
+			attrs.NewField(n, "PageID"),
+			attrs.NewField(n, "ContentType"),
+			attrs.NewField(n, "LatestRevisionID", &attrs.FieldConfig{
+				Null:   true,
+				Blank:  true,
+				Column: "latest_revision_id",
+				//	RelForeignKey: relForeignKey,
+			}),
+			attrs.NewField(n, "CreatedAt"),
+			attrs.NewField(n, "UpdatedAt"),
+		}
+	})
 }
 
 var ErrRouteNotFound = mux.ErrRouteNotFound
@@ -226,160 +386,19 @@ func (n *PageNode) Unpublish(ctx context.Context, unpublishChildren bool) error 
 		UnpublishNode(n, unpublishChildren)
 }
 
-func (n *PageNode) SetUrlPath(parent *PageNode) (newPath, oldPath string) {
-	oldPath = n.UrlPath
-
-	if n.Slug == "" && n.Title != "" {
-		n.Slug = slug.Make(n.Title)
-	}
-
-	var bufLen = len(n.Slug)
-	if parent == nil {
-		bufLen++
-	} else {
-		bufLen += len(parent.UrlPath) + 1
-	}
-
-	var buf = make([]byte, 0, bufLen)
-	if parent == nil {
-		buf = append(buf, '/')
-	} else {
-		buf = append(buf, parent.UrlPath...)
-		buf = append(buf, '/')
-	}
-
-	buf = append(buf, n.Slug...)
-
-	n.UrlPath = string(buf)
-	return n.UrlPath, oldPath
-}
-
-func (n *PageNode) SetSpecificPageObject(p Page) {
-	if p == nil {
-		n.PageObject = nil
-		return
-	}
-
-	n.PageObject = p
-}
-
-func (n *PageNode) ID() int64 {
-	return n.PK
-}
-
-func (n *PageNode) Reference() *PageNode {
-	return n
-}
-
-func (n *PageNode) IsRoot() bool {
-	return n.Depth == 0
-}
-
-func (n *PageNode) IsPublished() bool {
-	return n.StatusFlags&StatusFlagPublished != 0
-}
-
-func (n *PageNode) IsHidden() bool {
-	return n.StatusFlags&StatusFlagHidden != 0
-}
-
-func (n *PageNode) IsDeleted() bool {
-	return n.StatusFlags&StatusFlagDeleted != 0
-}
-
-func (n *PageNode) BeforeCreate(context.Context) error {
-	if n.CreatedAt.IsZero() {
-		n.CreatedAt = time.Now()
-	}
-
-	if n.UpdatedAt.IsZero() {
-		n.UpdatedAt = n.CreatedAt
-	}
-
-	return nil
-}
-
-func (n *PageNode) BeforeSave(context.Context) error {
-	if !n.CreatedAt.IsZero() && n.UpdatedAt.IsZero() {
-		n.UpdatedAt = n.CreatedAt
-	} else {
-		n.UpdatedAt = time.Now()
-	}
-	return nil
-}
-
-func (n *PageNode) DatabaseIndexes(obj attrs.Definer) []migrator.Index {
-	if reflect.TypeOf(obj) != reflect.TypeOf(n) {
-		return nil
-	}
-	return []migrator.Index{
-		{Fields: []string{"Path"}, Unique: true},
-		{Fields: []string{"PageID"}, Unique: false},
-		{Fields: []string{"ContentType"}, Unique: false},
-		{Fields: []string{"PageID", "ContentType"}, Unique: true},
-	}
-}
-
-func (n *PageNode) TargetContentTypeField() attrs.FieldDefinition {
-	var defs = n.FieldDefs()
-	var f, _ = defs.Field("ContentType")
-	return f
-}
-
-func (n *PageNode) TargetPrimaryField() attrs.FieldDefinition {
-	var defs = n.FieldDefs()
-	var f, _ = defs.Field("PageID")
-	return f
-}
-
-func (n *PageNode) ControlsEmbedderSaving() bool {
-	return true
-}
-
-func (n *PageNode) SaveObject(ctx context.Context, cnf models.SaveConfig) (err error) {
-	var creating = n.PK == 0 || cnf.ForceCreate
-	var querySet = NewPageQuerySet().WithContext(ctx)
-	if creating {
-		err = querySet.AddRoot(n)
-	} else {
-		err = querySet.UpdateNode(n)
-	}
+func (n *PageNode) CreateRevision(save bool) (*revisions.Revision, error) {
+	var revision, err = revisions.NewRevision(n)
 	if err != nil {
-		return fmt.Errorf("failed to save page node: %w", err)
+		return nil, fmt.Errorf("failed to create revision for page node %d: %w", n.PK, err)
 	}
-	return nil
-}
 
-func (n *PageNode) DeleteObject(ctx context.Context) error {
-	var querySet = NewPageQuerySet().WithContext(ctx)
-	_, err := querySet.Delete(n)
-	if err != nil {
-		return fmt.Errorf("failed to delete page node: %w", err)
-	}
-	return nil
-}
-
-func (n *PageNode) FieldDefs() attrs.Definitions {
-	return n.Model.Define(n, func(d attrs.Definer) []attrs.Field {
-		return []attrs.Field{
-			attrs.NewField(n, "PK"),
-			attrs.NewField(n, "Title"),
-			attrs.NewField(n, "Path"),
-			attrs.NewField(n, "Depth"),
-			attrs.NewField(n, "Numchild"),
-			attrs.NewField(n, "UrlPath"),
-			attrs.NewField(n, "Slug"),
-			attrs.NewField(n, "StatusFlags"),
-			attrs.NewField(n, "PageID"),
-			attrs.NewField(n, "ContentType"),
-			attrs.NewField(n, "LatestRevisionID", &attrs.FieldConfig{
-				Null:   true,
-				Blank:  true,
-				Column: "latest_revision_id",
-				//	RelForeignKey: relForeignKey,
-			}),
-			attrs.NewField(n, "CreatedAt"),
-			attrs.NewField(n, "UpdatedAt"),
+	if save {
+		_, err = revisions.CreateRevision(revision)
+		if err != nil {
+			return nil, fmt.Errorf("failed to save revision for page node %d: %w", n.PK, err)
 		}
-	})
+		n.LatestRevisionID = revision.ID
+	}
+
+	return revision, nil
 }

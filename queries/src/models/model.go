@@ -1085,7 +1085,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 			)
 		}
 	} else {
-		transaction = queries.NullTransction()
+		transaction = queries.NullTransaction()
 	}
 	defer transaction.Rollback(ctx)
 

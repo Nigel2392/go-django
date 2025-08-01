@@ -78,6 +78,10 @@ func (m *MySQLSchemaEditor) Setup(ctx context.Context) error {
 	return nil
 }
 
+func (m *MySQLSchemaEditor) StartTransaction(ctx context.Context) (drivers.Transaction, error) {
+	return m.db.Begin(ctx)
+}
+
 func (m *MySQLSchemaEditor) StoreMigration(ctx context.Context, appName, modelName, migrationName string) error {
 	_, err := m.Execute(ctx, insertTableMigrations, appName, modelName, migrationName)
 	return err
