@@ -7,6 +7,54 @@ import (
 	"time"
 )
 
+var (
+	Monday    = S("Monday")
+	Tuesday   = S("Tuesday")
+	Wednesday = S("Wednesday")
+	Thursday  = S("Thursday")
+	Friday    = S("Friday")
+	Saturday  = S("Saturday")
+	Sunday    = S("Sunday")
+
+	ShortMonday    = S("Mon")
+	ShortTuesday   = S("Tue")
+	ShortWednesday = S("Wed")
+	ShortThursday  = S("Thu")
+	ShortFriday    = S("Fri")
+	ShortSaturday  = S("Sat")
+	ShortSunday    = S("Sun")
+
+	January   = S("January")
+	February  = S("February")
+	March     = S("March")
+	April     = S("April")
+	May       = S("May")
+	June      = S("June")
+	July      = S("July")
+	August    = S("August")
+	September = S("September")
+	October   = S("October")
+	November  = S("November")
+	December  = S("December")
+
+	ShortJanuary   = S("Jan")
+	ShortFebruary  = S("Feb")
+	ShortMarch     = S("Mar")
+	ShortApril     = S("Apr")
+	ShortMay       = S("May")
+	ShortJune      = S("Jun")
+	ShortJuly      = S("Jul")
+	ShortAugust    = S("Aug")
+	ShortSeptember = S("Sep")
+	ShortOctober   = S("Oct")
+	ShortNovember  = S("Nov")
+	ShortDecember  = S("Dec")
+
+	AM   = S("AM")
+	PM   = S("PM")
+	AMPM = S("AM/PM")
+)
+
 type timeInfo struct {
 	time   time.Time
 	year   int
@@ -36,58 +84,6 @@ func newTimeInfo(t time.Time) *timeInfo {
 		nanos:  t.Nanosecond(),
 	}
 }
-
-var (
-	Monday    = S("Monday")
-	Tuesday   = S("Tuesday")
-	Wednesday = S("Wednesday")
-	Thursday  = S("Thursday")
-	Friday    = S("Friday")
-	Saturday  = S("Saturday")
-	Sunday    = S("Sunday")
-
-	ShortMonday    = S("Mon")
-	ShortTuesday   = S("Tue")
-	ShortWednesday = S("Wed")
-	ShortThursday  = S("Thu")
-	ShortFriday    = S("Fri")
-	ShortSaturday  = S("Sat")
-	ShortSunday    = S("Sun")
-)
-
-var (
-	January   = S("January")
-	February  = S("February")
-	March     = S("March")
-	April     = S("April")
-	May       = S("May")
-	June      = S("June")
-	July      = S("July")
-	August    = S("August")
-	September = S("September")
-	October   = S("October")
-	November  = S("November")
-	December  = S("December")
-
-	ShortJanuary   = S("Jan")
-	ShortFebruary  = S("Feb")
-	ShortMarch     = S("Mar")
-	ShortApril     = S("Apr")
-	ShortMay       = S("May")
-	ShortJune      = S("Jun")
-	ShortJuly      = S("Jul")
-	ShortAugust    = S("Aug")
-	ShortSeptember = S("Sep")
-	ShortOctober   = S("Oct")
-	ShortNovember  = S("Nov")
-	ShortDecember  = S("Dec")
-)
-
-var (
-	AM   = S("AM")
-	PM   = S("PM")
-	AMPM = S("AM/PM")
-)
 
 var (
 	formatMap = map[string]func(ctx context.Context, t *timeInfo) Translation{

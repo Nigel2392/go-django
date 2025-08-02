@@ -59,6 +59,20 @@ var timeFormatTests = []timeFormatTest{
 		Format:   "%d",
 		Expected: "01",
 	},
+	{
+		Format:   "It is %A, %B %d, %Y at %I:%M %p",
+		Expected: "It is Sunday, October 01, 2023 at 12:53 PM",
+	},
+	{
+		// Test escaping of percent sign
+		Format:   "Current time 100%%: %H:%M:%S",
+		Expected: "Current time 100%: 12:53:00",
+	},
+	{
+		// Test escaping of percent sign with multiple percent signs
+		Format:   "Current time 100%%%Y-%m-%d %%: %H:%M:%S",
+		Expected: "Current time 100%2023-10-01 %: 12:53:00",
+	},
 }
 
 func TestTimeFormat(t *testing.T) {
