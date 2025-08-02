@@ -26,6 +26,13 @@ func (b *SprintBackend) Pluralize(ctx context.Context, singular, plural string, 
 	return plural
 }
 
+func (b *SprintBackend) TimeFormat(ctx context.Context, short bool) string {
+	if short {
+		return DEFAULT_TIME_FORMAT
+	}
+	return DEFAULT_TIME_FORMAT
+}
+
 func (b *SprintBackend) Pluralizef(ctx context.Context, singular, plural string, n int, args ...any) string {
 	return fmt.Sprintf(b.Pluralize(ctx, singular, plural, n), args...)
 }

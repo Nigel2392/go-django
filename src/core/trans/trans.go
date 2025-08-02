@@ -3,6 +3,7 @@ package trans
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 	"time"
 )
@@ -24,6 +25,7 @@ type TranslationBackend interface {
 	Translatef(ctx context.Context, v Untranslated, args ...any) Translation
 	Pluralize(ctx context.Context, singular, plural Untranslated, n int) Translation
 	Pluralizef(ctx context.Context, singular, plural Untranslated, n int, args ...any) Translation
+	TimeFormat(ctx context.Context, short bool) Translation
 	Locale(ctx context.Context) Locale
 }
 
@@ -57,6 +59,11 @@ func P(ctx context.Context, singular, plural Untranslated, n int, args ...any) T
 	}
 	return DefaultBackend.Pluralizef(ctx, singular, plural, n, args...)
 }
+
+const (
+	SHORT_TIME_FORMAT = "SHORT_TIME_FORMAT"
+	LONG_TIME_FORMAT  = "LONG_TIME_FORMAT"
+)
 
 // Time formats a time.Time value into a Translation (alias for string) using the specified format.
 //
@@ -100,20 +107,44 @@ func P(ctx context.Context, singular, plural Untranslated, n int, args ...any) T
 // - %% 	an escaped percent sign
 func Time(ctx context.Context, t time.Time, format string) Translation {
 	var (
-		timeInfo   = newTimeInfo(t)
-		text       strings.Builder
-		formatting bool
-		flag       bool
+		timeInfo = newTimeInfo(t)
+		flags    = []byte{
+			'-',
+			'!',
+		}
+
+		text           strings.Builder
+		formatting     bool
+		currentFlags   []byte
+		currentFlagMap = make(map[byte]bool, len(flags))
 	)
+
+	switch format {
+	case SHORT_TIME_FORMAT:
+		format = DefaultBackend.TimeFormat(ctx, true)
+	case LONG_TIME_FORMAT:
+		format = DefaultBackend.TimeFormat(ctx, false)
+	}
 
 	for i := 0; i < len(format); i++ {
 		if format[i] == '%' && !formatting {
 			formatting = true
-			flag = false
+			currentFlags = make([]byte, 0, len(flags))
+			clear(currentFlagMap)
 			continue
 		}
 
 		if format[i] == '%' && formatting {
+
+			// panic if we have something like %..%
+			if len(currentFlags) > 0 {
+				panic(fmt.Errorf(
+					"unexpected %% in time format %s at position %d", format, i,
+				))
+			}
+
+			// set formatting to false if we have %%
+			// this is used to escape the percent sign
 			formatting = false
 		}
 
@@ -122,29 +153,44 @@ func Time(ctx context.Context, t time.Time, format string) Translation {
 			continue
 		}
 
-		if format[i] == '-' {
-			flag = true
+		if slices.Contains(flags, format[i]) {
+
+			if _, ok := currentFlagMap[format[i]]; ok {
+				panic(fmt.Errorf(
+					"duplicate flag %s in time format %s", string(format[i]), format,
+				))
+			}
+
+			currentFlags = append(currentFlags, format[i])
+			currentFlagMap[format[i]] = true
 			continue
 		}
 
 		// currently formatting
-		var formatKey string
-		if flag {
-			formatKey = string([]byte{'-', format[i]})
-		} else {
-			formatKey = string(format[i])
-		}
-
-		var formatFunc, ok = formatMap[formatKey]
+		var formatter, ok = formatMap[format[i]]
 		if !ok {
 			panic(fmt.Errorf(
-				"unknown format specifier %s in time format %s", formatKey, format,
+				"unknown format specifier %s in time format %s", string(format[i]), format,
 			))
 		}
 
-		var translated = formatFunc(ctx, timeInfo)
+		// call the format function with the current context, time info and specified flags
+		for _, flag := range currentFlags {
+			if !formatter.supportsFlag(flag) {
+				panic(fmt.Errorf(
+					"format specifier %s does not support flag %s in time format %s",
+					string(format[i]), string(flag), format,
+				))
+			}
+		}
+
+		var translated = formatter.format(ctx, timeInfo, currentFlagMap)
 		text.WriteString(translated)
+
+		// reset formatting state
 		formatting = false
+		currentFlags = make([]byte, 0, len(flags))
+		clear(currentFlagMap)
 	}
 
 	return text.String()

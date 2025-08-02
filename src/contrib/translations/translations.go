@@ -101,21 +101,43 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 
 		if len(locales.List()) > 0 {
 			for _, locale := range locales.List() {
-				if _, ok := translatorApp.translationHeader.hdr.Locales.Get(locale); ok {
-					continue // Locale already exists
-				}
 
 				var rule, ok = pluralRules[locale]
 				if !ok {
 					rule = pluralRule{
-						l: 2,
-						r: "(n != 1) ? 1 : 0",
+						l:   2,
+						r:   "(n != 1) ? 1 : 0",
+						stf: trans.DEFAULT_TIME_FORMAT,
+						ltf: trans.DEFAULT_TIME_FORMAT,
 					}
 				}
 
+				if loc, ok := translatorApp.translationHeader.hdr.Locales.Get(locale); ok {
+					if loc.LongTimeFormat == "" {
+						loc.LongTimeFormat = rule.ltf
+					}
+
+					if loc.ShortTimeFormat == "" {
+						loc.ShortTimeFormat = rule.stf
+					}
+
+					if loc.NumPluralForms == 0 {
+						loc.NumPluralForms = rule.l
+					}
+
+					if loc.PluralRule == "" {
+						loc.PluralRule = rule.r
+					}
+
+					translatorApp.translationHeader.hdr.Locales.Set(locale, loc)
+					continue // Locale already exists
+				}
+
 				translatorApp.translationHeader.hdr.Locales.Set(locale, TranslationHeaderLocale{
-					NumPluralForms: rule.l,
-					PluralRule:     rule.r,
+					NumPluralForms:  rule.l,
+					PluralRule:      rule.r,
+					ShortTimeFormat: rule.stf,
+					LongTimeFormat:  rule.ltf,
 				})
 			}
 		}

@@ -89,8 +89,10 @@ func (t *translationHeader) pluralIndex(locale trans.Locale, count int) (int, er
 }
 
 type TranslationHeaderLocale struct {
-	NumPluralForms int    `yaml:"nplural"` // Number of plural forms, e.g. 2 for English (singular, plural)
-	PluralRule     string `yaml:"rule"`    // (n != 1), (n % 10 == 1 && n % 100 != 11), etc.
+	NumPluralForms  int    `yaml:"nplural"`           // Number of plural forms, e.g. 2 for English (singular, plural)
+	PluralRule      string `yaml:"rule"`              // (n != 1), (n % 10 == 1 && n % 100 != 11), etc.
+	ShortTimeFormat string `yaml:"short_time_format"` // short time format, e.g. "%Y-%m-%d %H:%M:%S"
+	LongTimeFormat  string `yaml:"long_time_format"`  // long time format, e.g. "%A, %d %B %Y %H:%M:%S"
 }
 
 type FileTranslationsHeader struct {
@@ -236,6 +238,12 @@ func (h *FileTranslationsHeader) MarshalYAML() (any, error) {
 
 					{Kind: yaml.ScalarNode, Tag: "!!str", Value: "rule"},
 					{Kind: yaml.ScalarNode, Tag: "!!str", Value: head.Value.PluralRule},
+
+					{Kind: yaml.ScalarNode, Tag: "!!str", Value: "long_time_format"},
+					{Kind: yaml.ScalarNode, Tag: "!!str", Value: head.Value.LongTimeFormat},
+
+					{Kind: yaml.ScalarNode, Tag: "!!str", Value: "short_time_format"},
+					{Kind: yaml.ScalarNode, Tag: "!!str", Value: head.Value.ShortTimeFormat},
 				}},
 			)
 		}

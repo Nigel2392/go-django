@@ -217,6 +217,34 @@ func (t *Translator) Locale(ctx context.Context) string {
 	).String()
 }
 
+func defaultTimeFormat(short bool) string {
+	if short {
+		return "%Y-%m-%d %H:%M:%S"
+	}
+	return "%A, %d %B %Y %H:%M:%S"
+}
+
+func (t *Translator) TimeFormat(ctx context.Context, short bool) string {
+
+	if t.hdr == nil || t.hdr.hdr == nil {
+		return defaultTimeFormat(short)
+	}
+
+	var locale = LocaleFromContext(ctx)
+	var checks = localeChecks(locale)
+	for _, check := range checks {
+		if localeHeader, ok := t.hdr.hdr.Locales.Get(check); ok {
+			if short && localeHeader.ShortTimeFormat != "" {
+				return localeHeader.ShortTimeFormat
+			} else if !short && localeHeader.LongTimeFormat != "" {
+				return localeHeader.LongTimeFormat
+			}
+		}
+	}
+
+	return defaultTimeFormat(short)
+}
+
 func ContextWithLocale(ctx context.Context, locale language.Tag) context.Context {
 	return context.WithValue(ctx, localeContextKey{}, locale)
 }

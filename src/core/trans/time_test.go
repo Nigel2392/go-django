@@ -10,7 +10,7 @@ import (
 
 var DEFAULT_TIME, _ = time.Parse(
 	"2006-01-02 15:04:05",
-	"2023-10-01 12:53:00",
+	"2023-10-01 12:53:23",
 )
 
 type timeFormatTest struct {
@@ -21,7 +21,7 @@ type timeFormatTest struct {
 var timeFormatTests = []timeFormatTest{
 	{
 		Format:   "%Y-%m-%d %H:%M:%S",
-		Expected: "2023-10-01 12:53:00",
+		Expected: "2023-10-01 12:53:23",
 	},
 	{
 		Format:   "%d/%m/%Y",
@@ -37,15 +37,15 @@ var timeFormatTests = []timeFormatTest{
 	},
 	{
 		Format:   "%Y-%m-%d %H:%M:%S %z",
-		Expected: "2023-10-01 12:53:00 +00:00",
+		Expected: "2023-10-01 12:53:23 +00:00",
 	},
 	{
 		Format:   "%Y-%m-%d %H:%M:%S %Z",
-		Expected: "2023-10-01 12:53:00 UTC",
+		Expected: "2023-10-01 12:53:23 UTC",
 	},
 	{
 		Format:   "%Y-%m-%d %H:%M:%S %Z %z",
-		Expected: "2023-10-01 12:53:00 UTC +00:00",
+		Expected: "2023-10-01 12:53:23 UTC +00:00",
 	},
 	{
 		Format:   "%Y",
@@ -66,17 +66,58 @@ var timeFormatTests = []timeFormatTest{
 	{
 		// Test escaping of percent sign
 		Format:   "Current time 100%%: %H:%M:%S",
-		Expected: "Current time 100%: 12:53:00",
+		Expected: "Current time 100%: 12:53:23",
 	},
 	{
 		// Test escaping of percent sign with multiple percent signs
 		Format:   "Current time 100%%%Y-%m-%d %%: %H:%M:%S",
-		Expected: "Current time 100%2023-10-01 %: 12:53:00",
+		Expected: "Current time 100%2023-10-01 %: 12:53:23",
 	},
 	{
 		// Test week of year
 		Format:   "%U",
 		Expected: "39", // 1st week of October 2023
+	},
+
+	{
+		Format:   "%-m",
+		Expected: "10",
+	},
+	{
+		Format:   "%-d",
+		Expected: "1",
+	},
+	{
+		Format:   "%-y",
+		Expected: "23",
+	},
+	{
+		Format:   "%-Y",
+		Expected: "23",
+	},
+	{
+		Format:   "%-H",
+		Expected: "12",
+	},
+	{
+		Format:   "%-I",
+		Expected: "12",
+	},
+	{
+		Format:   "%-M",
+		Expected: "53",
+	},
+	{
+		Format:   "%-S",
+		Expected: "23",
+	},
+	{
+		Format:   "%-f",
+		Expected: "0",
+	},
+	{
+		Format:   "%-F",
+		Expected: "0",
 	},
 }
 

@@ -6,9 +6,8 @@ locales:
   nl:
     nplural: 2
     rule: '(n != 1) ? 1 : 0'
-  en:
-    nplural: 2
-    rule: '(n != 1) ? 1 : 0'
+    long_time_format: '%A %-d %B %Y om %H:%M:%S'
+    short_time_format: '%H:%M:%S %d-%m-%Y'
 
 ---
 
@@ -2075,281 +2074,281 @@ locales:
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:33:16
+# [GoFileFinder]:	 src/core/trans/time.go:15:16
 text: Monday
 locales:
   nl: Maandag
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:34:16
+# [GoFileFinder]:	 src/core/trans/time.go:16:16
 text: Tuesday
 locales:
   nl: Dinsdag
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:35:16
+# [GoFileFinder]:	 src/core/trans/time.go:17:16
 text: Wednesday
 locales:
   nl: Woensdag
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:36:16
+# [GoFileFinder]:	 src/core/trans/time.go:18:16
 text: Thursday
 locales:
   nl: Donderdag
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:37:16
+# [GoFileFinder]:	 src/core/trans/time.go:19:16
 text: Friday
 locales:
   nl: Vrijdag
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:38:16
+# [GoFileFinder]:	 src/core/trans/time.go:20:16
 text: Saturday
 locales:
   nl: Zaterdag
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:39:16
+# [GoFileFinder]:	 src/core/trans/time.go:21:16
 text: Sunday
 locales:
   nl: Zondag
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:41:21
+# [GoFileFinder]:	 src/core/trans/time.go:23:21
 text: Mon
 locales:
   nl: Ma
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:42:21
+# [GoFileFinder]:	 src/core/trans/time.go:24:21
 text: Tue
 locales:
   nl: Di
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:43:21
+# [GoFileFinder]:	 src/core/trans/time.go:25:21
 text: Wed
 locales:
   nl: Wo
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:44:21
+# [GoFileFinder]:	 src/core/trans/time.go:26:21
 text: Thu
 locales:
   nl: Do
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:45:21
+# [GoFileFinder]:	 src/core/trans/time.go:27:21
 text: Fri
 locales:
   nl: Vr
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:46:21
+# [GoFileFinder]:	 src/core/trans/time.go:28:21
 text: Sat
 locales:
   nl: Za
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:47:21
+# [GoFileFinder]:	 src/core/trans/time.go:29:21
 text: Sun
 locales:
   nl: Zo
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:51:16
+# [GoFileFinder]:	 src/core/trans/time.go:31:16
 text: January
 locales:
   nl: Januari
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:52:16
+# [GoFileFinder]:	 src/core/trans/time.go:32:16
 text: February
 locales:
   nl: Februari
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:53:16
+# [GoFileFinder]:	 src/core/trans/time.go:33:16
 text: March
 locales:
   nl: Maart
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:54:16
+# [GoFileFinder]:	 src/core/trans/time.go:34:16
 text: April
 locales:
   nl: April
 
 ---
 
-# [GoFileFinder]: newTimeInfo src/core/trans/time.go:55:16
-# [GoFileFinder]: newTimeInfo src/core/trans/time.go:68:21
+# [GoFileFinder]:  src/core/trans/time.go:35:16
+# [GoFileFinder]:  src/core/trans/time.go:48:21
 text: May
 locales:
   nl: Mei
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:56:16
+# [GoFileFinder]:	 src/core/trans/time.go:36:16
 text: June
 locales:
   nl: Juni
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:57:16
+# [GoFileFinder]:	 src/core/trans/time.go:37:16
 text: July
 locales:
   nl: Juli
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:58:16
+# [GoFileFinder]:	 src/core/trans/time.go:38:16
 text: August
 locales:
   nl: Augustus
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:59:16
+# [GoFileFinder]:	 src/core/trans/time.go:39:16
 text: September
 locales:
   nl: September
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:60:16
+# [GoFileFinder]:	 src/core/trans/time.go:40:16
 text: October
 locales:
   nl: Oktober
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:61:16
+# [GoFileFinder]:	 src/core/trans/time.go:41:16
 text: November
 locales:
   nl: November
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:62:16
+# [GoFileFinder]:	 src/core/trans/time.go:42:16
 text: December
 locales:
   nl: December
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:64:21
+# [GoFileFinder]:	 src/core/trans/time.go:44:21
 text: Jan
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:65:21
+# [GoFileFinder]:	 src/core/trans/time.go:45:21
 text: Feb
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:66:21
+# [GoFileFinder]:	 src/core/trans/time.go:46:21
 text: Mar
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:67:21
+# [GoFileFinder]:	 src/core/trans/time.go:47:21
 text: Apr
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:69:21
+# [GoFileFinder]:	 src/core/trans/time.go:49:21
 text: Jun
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:70:21
+# [GoFileFinder]:	 src/core/trans/time.go:50:21
 text: Jul
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:71:21
+# [GoFileFinder]:	 src/core/trans/time.go:51:21
 text: Aug
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:72:21
+# [GoFileFinder]:	 src/core/trans/time.go:52:21
 text: Sep
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:73:21
+# [GoFileFinder]:	 src/core/trans/time.go:53:21
 text: Oct
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:74:21
+# [GoFileFinder]:	 src/core/trans/time.go:54:21
 text: Nov
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:75:21
+# [GoFileFinder]:	 src/core/trans/time.go:55:21
 text: Dec
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:79:11
+# [GoFileFinder]:	 src/core/trans/time.go:57:11
 text: AM
 locales:
   nl: AM
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:80:11
+# [GoFileFinder]:	 src/core/trans/time.go:58:11
 text: PM
 locales:
   nl: PM
 
 ---
 
-# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:81:11
+# [GoFileFinder]:	 src/core/trans/time.go:59:11
 text: AM/PM
 locales:
   nl: AM/PM

@@ -208,7 +208,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 					var timeText, _ = FormatTimeDifference(r.Context(), node.UpdatedAt, time.Now())
 					return template.HTML(fmt.Sprintf(
 						`<span class="badge" data-controller="tooltip" data-tooltip-content-value="%s" data-tooltip-placement-value="%s" data-tooltip-offset-value="[0, %v]">%s</span>`,
-						trans.Time(r.Context(), node.UpdatedAt, "%A, %B %d, %Y %I:%M %p"), "bottom-start", 20, timeText,
+						trans.Time(r.Context(), node.UpdatedAt, trans.LONG_TIME_FORMAT), "bottom-start", 10, timeText,
 					))
 				},
 			),
