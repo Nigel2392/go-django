@@ -229,7 +229,7 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 
 	var view = &list.View[attrs.Definer]{
 		ListColumns:   columns,
-		DefaultAmount: 2,
+		DefaultAmount: 25,
 		PageParam:     "page",
 		AmountParam:   "amount",
 		BaseView: views.BaseView{
@@ -245,8 +245,13 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 				context.Set("model", m)
 				context.Set("filters", filter)
 
+				var count, err = qs.Count()
+				if err != nil {
+					return nil, err
+				}
+
 				context.SetPage(admin.PageOptions{
-					TitleFn:    trans.S("Outdated Pages"),
+					TitleFn:    trans.S("(%d) Outdated Pages", count),
 					SubtitleFn: trans.S("List of outdated pages"),
 				})
 				return context, nil

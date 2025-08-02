@@ -6,13 +6,18 @@ import (
 	"database/sql"
 	"fmt"
 	"hash"
+	"reflect"
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/fields/formfields"
 	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/fields"
+	django_formfields "github.com/Nigel2392/go-django/src/forms/fields"
 )
 
 var (
@@ -21,6 +26,43 @@ var (
 
 	ErrEmptyPath = fmt.Errorf("empty path")
 )
+
+func init() {
+	attrs.RegisterFormFieldGetter(&Image{}, func(f attrs.Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
+		var rel = f.Rel()
+		if rel == nil {
+			return nil, false
+		}
+
+		opts = append(opts, django_formfields.Widget(NewImageWidget(map[string]string{
+			"accept": "image/*",
+		})))
+
+		var relType = rel.Type()
+		switch relType {
+		case attrs.RelManyToOne:
+			return &formfields.ForeignKeyFormField{
+				BaseRelationField: formfields.BaseRelationField{
+					BaseField: django_formfields.NewField(opts...),
+					Field:     f,
+					Relation:  rel,
+				},
+			}, true
+		case attrs.RelOneToOne:
+			return &formfields.OneToOneFormField{
+				BaseRelationField: formfields.BaseRelationField{
+					BaseField: django_formfields.NewField(opts...),
+					Field:     f,
+					Relation:  rel,
+				},
+			}, true
+		default:
+			assert.Fail("unknown relation type %s for field %s", relType, f.Name())
+		}
+
+		return nil, false
+	})
+}
 
 func newImageHasher() hash.Hash {
 	return sha256.New()

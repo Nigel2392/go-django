@@ -17,6 +17,18 @@ type pageObject[T any] struct {
 	context   context.Context
 }
 
+func (p *pageObject[T]) FirstPage() int {
+	return 1
+}
+
+func (p *pageObject[T]) LastPage() int {
+	var numpages, err = p.Paginator().NumPages()
+	if err != nil {
+		return 1
+	}
+	return numpages
+}
+
 func (p *pageObject[T]) HTML(queryParam string, numPageNumbers int, queryParams url.Values) template.HTML {
 	var b = new(strings.Builder)
 	var cmp = p.Component(queryParam, numPageNumbers, queryParams)
@@ -45,6 +57,7 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryP
 		<section class="pagination--paginator">
 			<div class="prev">
 				if p.HasPrev() {
+					<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.FirstPage(), q)) }>{ trans.T(ctx, "<<") }</a>
 					<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Prev(), q)) }>{ trans.T(ctx, "Previous") }</a>
 				}
 			</div>
@@ -72,6 +85,10 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryP
 			<div class="next">
 				if p.HasNext() {
 					<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Next(), q)) }>{ trans.T(ctx, "Next") }</a>
+					{{ lastPage := p.LastPage() }}
+					if lastPage > 1 {
+						<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.LastPage(), q)) }>{ trans.T(ctx, ">>") }</a>
+					}
 				}
 			</div>
 		</section>

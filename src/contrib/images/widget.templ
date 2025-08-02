@@ -13,6 +13,14 @@ type ImageWidget struct {
     widgets.BaseWidget
 }
 
+func NewImageWidget(attrs map[string]string) *ImageWidget {
+    return &ImageWidget{
+        BaseWidget: *widgets.NewBaseWidget(
+            "file", "images/widget.templ", attrs,
+        ),
+    }
+}
+
 func (w *ImageWidget) Media() media.Media {
     var m = media.NewMedia()
 	m.AddJS(&media.JSAsset{
@@ -25,6 +33,7 @@ templ (w *ImageWidget) Component(id, name string, value interface{}) {
     <div class="image-chooser-container" data-id={ id } data-name={ name }>
 
         <input type="hidden" id={ id } name={ name } value={ attrs.ToString(value) }>
+        <input type="file" class="image-chooser-input" accept="image/*">
 
         <div class="image-chooser-preview">
         

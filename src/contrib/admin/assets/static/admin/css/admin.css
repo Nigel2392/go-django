@@ -72,6 +72,12 @@ body {
         color: #2e1f5e;
     }
 }
+hr {
+    border: 0;
+    height: 0;
+    border-top: 2px dotted var(--body-dark-bg-color);
+    margin: 1em 0;
+}
 h1 {
     font-size: 1.75rem;
     line-height: 1.2;
