@@ -10,8 +10,10 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"context"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"html/template"
 	"net/http"
 	"time"
@@ -47,7 +49,7 @@ func (c *booleanColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 19, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 21, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -127,7 +129,7 @@ func (c *funcColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 47, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 49, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -163,7 +165,7 @@ func (c *funcColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T
 			c.data(r, defs, row),
 		))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 53, Col: 5}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 55, Col: 5}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -207,7 +209,7 @@ func (c *fieldColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 67, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 69, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -236,10 +238,16 @@ func (c *fieldColumn[T]) data(r *http.Request, defs attrs.Definitions, _ T) inte
 
 	switch f := d.(type) {
 	case time.Time:
-		return f.Format("2006-01-02 15:04:05")
-	default:
-		return d
+		return trans.Time(r.Context(), f, "%A, %B %d, %Y %I:%M %p")
+	case drivers.DateTime:
+		return trans.Time(r.Context(), time.Time(f), "%A, %B %d, %Y %I:%M %p")
+	case drivers.LocalTime:
+		return trans.Time(r.Context(), time.Time(f), "%I:%M %p")
+	case drivers.Timestamp:
+		return trans.Time(r.Context(), time.Time(f), "%Y-%m-%d %H:%M:%S")
 	}
+
+	return d
 }
 
 func (c *fieldColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
@@ -268,7 +276,7 @@ func (c *fieldColumn[T]) Component(r *http.Request, defs attrs.Definitions, row 
 			c.data(r, defs, row),
 		))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 98, Col: 5}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 106, Col: 5}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {

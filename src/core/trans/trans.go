@@ -27,12 +27,19 @@ type TranslationBackend interface {
 	Locale(ctx context.Context) Locale
 }
 
+// S is a shortcut for translating a string with the default backend.
+//
+// It returns a function that can be used in templates to translate the string.
+// The function takes a context and returns a Translation (alias for string).
 func S(v Untranslated, args ...any) func(ctx context.Context) Translation {
 	return func(ctx context.Context) Translation {
 		return T(ctx, v, args...)
 	}
 }
 
+// T translates a string with the default backend.
+//
+// It returns a Translation (alias for string) that can be used in templates.
 func T(ctx context.Context, v Untranslated, args ...any) Translation {
 	if len(args) == 0 {
 		return DefaultBackend.Translate(ctx, v)
@@ -40,6 +47,10 @@ func T(ctx context.Context, v Untranslated, args ...any) Translation {
 	return DefaultBackend.Translatef(ctx, v, args...)
 }
 
+// P is a shortcut for pluralizing a string with the default backend.
+// It returns a function that can be used in templates to pluralize the string.
+// The function takes a context, singular and plural forms, and a count.
+// It returns a Translation (alias for string) that can be used in templates.
 func P(ctx context.Context, singular, plural Untranslated, n int, args ...any) Translation {
 	if len(args) == 0 {
 		return DefaultBackend.Pluralize(ctx, singular, plural, n)
@@ -47,6 +58,43 @@ func P(ctx context.Context, singular, plural Untranslated, n int, args ...any) T
 	return DefaultBackend.Pluralizef(ctx, singular, plural, n, args...)
 }
 
+// Time formats a time.Time value into a Translation (alias for string) using the specified format.
+//
+// It parses the format string and replaces format specifiers with their corresponding values.
+// The format codes are as follows:
+//
+// - %a 	short weekday na	(e.g., "Mon")
+// - %A 	full weekday nam	(e.g., "Monday")
+// - %w 	weekday number 		(1-7, Monday is 1, Sunday is 7)
+// - %b 	short month name	(e.g., "Jan")
+// - %B 	full month name 	(e.g., "January")
+// - %m 	month number 		(01-12)
+// - %-m	month number 		(1-12)
+// - %d 	day of the month	(01-31)
+// - %-d	day of the month	(1-31)
+// - %y 	year 				(4 digits, e.g., 2023)
+// - %-y	year 				(2 digits, e.g., 23)
+// - %Y 	year 				(4 digits, e.g., 2023)
+// - %-Y	year 				(2 digits, e.g., 23)
+// - %H 	hour 				(00-23)
+// - %-H	hour 				(0-23)
+// - %I 	hour 				(01-12)
+// - %-I	hour 				(1-12)
+// - %M 	minute 				(00-59)
+// - %-M	minute 				(0-59)
+// - %S 	second 				(00-59)
+// - %-S	second 				(0-59)
+// - %f 	milliseconds 		(000-999)
+// - %-f	milliseconds 		(0-999)
+// - %F 	microseconds 		(000000-999999)
+// - %-F	microseconds 		(0-999999)
+// - %z 	timezone offset 	(e.g., "+02:00")
+// - %Z 	timezone name 		(e.g., "UTC")
+// - %j 	day of the year 	(001-366)
+// - %U 	week number 		(00-53, Sunday as first day of week)
+// - %W 	week number 		(00-53, Monday as first day of week)
+// - %p 	AM/PM
+// - %% 	an escaped percent sign
 func Time(ctx context.Context, t time.Time, format string) Translation {
 	var (
 		timeInfo   = newTimeInfo(t)
@@ -99,6 +147,8 @@ func Time(ctx context.Context, t time.Time, format string) Translation {
 	return Translation(text.String())
 }
 
+// LocaleFromContext retrieves the locale from the current context.
+// If the default backend is not set, it returns an empty string.
 func LocaleFromContext(ctx context.Context) Locale {
 	if DefaultBackend == nil {
 		return ""

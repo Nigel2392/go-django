@@ -7,6 +7,8 @@ import (
 	"html/template"
 	"time"
 	"net/http"
+	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
 )
 
 type booleanColumn[T attrs.Definer] struct {
@@ -86,10 +88,16 @@ func (c *fieldColumn[T]) data(r *http.Request, defs attrs.Definitions, _ T) inte
 
 	switch f := d.(type) {
 		case time.Time:
-			return f.Format("2006-01-02 15:04:05")
-		default:
-			return d
+			return trans.Time(r.Context(), f, "%A, %B %d, %Y %I:%M %p")
+		case drivers.DateTime:
+			return trans.Time(r.Context(), time.Time(f), "%A, %B %d, %Y %I:%M %p")
+		case drivers.LocalTime:
+			return trans.Time(r.Context(), time.Time(f), "%I:%M %p")
+		case drivers.Timestamp:
+			return trans.Time(r.Context(), time.Time(f), "%Y-%m-%d %H:%M:%S")
 	}
+
+	return d
 }
 
 templ (c *fieldColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
