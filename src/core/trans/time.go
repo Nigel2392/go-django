@@ -3,6 +3,7 @@ package trans
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 )
 
@@ -224,7 +225,7 @@ var (
 		},
 		"-m": func(ctx context.Context, t *timeInfo) Translation { // month number (1-12)
 			var month = t.month
-			return fmt.Sprintf("%d", month)
+			return strconv.Itoa(int(month))
 		},
 		"d": func(ctx context.Context, t *timeInfo) Translation { // day of the month (01-31)
 			var day = t.day
@@ -232,7 +233,7 @@ var (
 		},
 		"-d": func(ctx context.Context, t *timeInfo) Translation { // day
 			var day = t.day
-			return fmt.Sprintf("%d", day)
+			return strconv.Itoa(day)
 		},
 		"y": func(ctx context.Context, t *timeInfo) Translation { // year (4 digits)
 			var year = t.year
@@ -256,7 +257,7 @@ var (
 		},
 		"-H": func(ctx context.Context, t *timeInfo) Translation { // hour (0-23)
 			var hour = t.hour
-			return fmt.Sprintf("%d", hour)
+			return strconv.Itoa(hour)
 		},
 		"I": func(ctx context.Context, t *timeInfo) Translation { // hour (01-12)
 			var hour = t.hour
@@ -276,7 +277,7 @@ var (
 			if hour > 12 {
 				hour -= 12
 			}
-			return fmt.Sprintf("%d", hour)
+			return strconv.Itoa(hour)
 		},
 		"M": func(ctx context.Context, t *timeInfo) Translation { // minute (
 			var minute = t.minute
@@ -284,7 +285,7 @@ var (
 		},
 		"-M": func(ctx context.Context, t *timeInfo) Translation { // minute (0-59)
 			var minute = t.minute
-			return fmt.Sprintf("%d", minute)
+			return strconv.Itoa(minute)
 		},
 		"S": func(ctx context.Context, t *timeInfo) Translation { // second (00-59)
 			var second = t.second
@@ -292,7 +293,7 @@ var (
 		},
 		"-S": func(ctx context.Context, t *timeInfo) Translation { // second (0-59)
 			var second = t.second
-			return fmt.Sprintf("%d", second)
+			return strconv.Itoa(second)
 		},
 		"f": func(ctx context.Context, t *timeInfo) Translation { // milliseconds (000-999)
 			var millis = t.millis
@@ -300,7 +301,7 @@ var (
 		},
 		"-f": func(ctx context.Context, t *timeInfo) Translation { // milliseconds (0-999)
 			var millis = t.millis
-			return fmt.Sprintf("%d", millis)
+			return strconv.Itoa(millis)
 		},
 		"F": func(ctx context.Context, t *timeInfo) Translation { // microseconds (000000-999999)
 			var micros = t.micros
@@ -308,7 +309,7 @@ var (
 		},
 		"-F": func(ctx context.Context, t *timeInfo) Translation { // microseconds (0-999999)
 			var micros = t.micros
-			return fmt.Sprintf("%d", micros)
+			return strconv.Itoa(micros)
 		},
 		"p": func(ctx context.Context, t *timeInfo) Translation { // AM/PM
 			var hour = t.hour
