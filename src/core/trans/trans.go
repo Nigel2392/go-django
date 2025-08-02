@@ -61,6 +61,9 @@ func P(ctx context.Context, singular, plural Untranslated, n int, args ...any) T
 // Time formats a time.Time value into a Translation (alias for string) using the specified format.
 //
 // It parses the format string and replaces format specifiers with their corresponding values.
+//
+// Values such as weekday names and month names are localized based on the current context's locale.
+//
 // The format codes are as follows:
 //
 // - %a 	short weekday na	(e.g., "Mon")
@@ -144,7 +147,7 @@ func Time(ctx context.Context, t time.Time, format string) Translation {
 		formatting = false
 	}
 
-	return Translation(text.String())
+	return text.String()
 }
 
 // LocaleFromContext retrieves the locale from the current context.

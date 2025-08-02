@@ -73,6 +73,11 @@ var timeFormatTests = []timeFormatTest{
 		Format:   "Current time 100%%%Y-%m-%d %%: %H:%M:%S",
 		Expected: "Current time 100%2023-10-01 %: 12:53:00",
 	},
+	{
+		// Test week of year
+		Format:   "%U",
+		Expected: "39", // 1st week of October 2023
+	},
 }
 
 func TestTimeFormat(t *testing.T) {
