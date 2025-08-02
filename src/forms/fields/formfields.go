@@ -255,12 +255,17 @@ func (f *FileStorageField) Save(value interface{}) (interface{}, error) {
 	if value == nil {
 		return nil, nil
 	}
+
 	var file, ok = value.(*widgets.FileObject)
 	if !ok {
 		return nil, errs.Wrap(
 			errs.ErrInvalidType,
 			fmt.Sprintf("Expected *widgets.FileObject, got %T", value),
 		)
+	}
+
+	if file.File == nil {
+		return mediafiles.Open(file.Name)
 	}
 
 	storage, ok := mediafiles.RetrieveBackend(f.StorageEngine)

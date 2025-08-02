@@ -122,6 +122,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 						admin.FieldPanel("UrlPath"),
 						admin.FieldPanel("Slug"),
 					),
+					admin.FieldPanel("Image"),
 					admin.FieldPanel("Editor"),
 				}
 			},
@@ -134,6 +135,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 						admin.FieldPanel("UrlPath"),
 						admin.FieldPanel("Slug"),
 					),
+					admin.FieldPanel("Image"),
 					admin.FieldPanel("Editor"),
 					admin.FieldPanel("CreatedAt"),
 					admin.FieldPanel("UpdatedAt"),

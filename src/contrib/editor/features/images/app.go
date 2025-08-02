@@ -30,7 +30,7 @@ func NewAppConfig(opts *Options) *AppConfig {
 	if app == nil {
 		app = &AppConfig{
 			AppConfig: apps.NewAppConfig(
-				"images",
+				"editorjs_images",
 			),
 		}
 	}

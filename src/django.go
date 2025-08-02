@@ -606,8 +606,19 @@ func (a *Application) Initialize() error {
 			c.Render(ctx, buf)
 			return template.HTML(buf.String())
 		},
-		"T": func(s string, args ...any) string {
-			return trans.T(context.Background(), s, args...)
+		"Translate": func(ctx any, s string, args ...any) string {
+			var c context.Context
+			switch v := ctx.(type) {
+			case context.Context:
+				c = v
+			case *http.Request:
+				c = v.Context()
+			case string:
+				return trans.T(context.Background(), v, args...)
+			default:
+				panic(fmt.Sprintf("Invalid context type %T for Translate function", ctx))
+			}
+			return trans.T(c, s, args...)
 		},
 	})
 

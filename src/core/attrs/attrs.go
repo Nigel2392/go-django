@@ -5,11 +5,13 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"encoding/json"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -35,10 +37,38 @@ func init() {
 		return fields.DateField(widgets.DateWidgetTypeDateTime, opts...)
 	})
 
-	RegisterFormFieldType(
+	RegisterFormFieldGetter(
 		mediafiles.SimpleStoredObject{},
-		func(opts ...func(fields.Field)) fields.Field {
-			return fields.FileField("", opts...)
+		func(f Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
+			var attrs = f.Attrs()
+			var uploadTo, ok = attrs[AttrUploadToKey]
+			if !ok {
+				uploadTo = ""
+			}
+
+			var uploadToFn func(fileObject *widgets.FileObject) string
+			switch uploadTo := uploadTo.(type) {
+			case string:
+				uploadToFn = func(fileObject *widgets.FileObject) string {
+					if uploadTo == "" {
+						return fileObject.Name
+					}
+					return filepath.Join(uploadTo, fileObject.Name)
+				}
+			case func() string:
+				uploadToFn = func(fileObject *widgets.FileObject) string { return filepath.Join(uploadTo(), fileObject.Name) }
+			case func(fileObject *widgets.FileObject) string:
+				uploadToFn = uploadTo
+			default:
+				assert.Fail(
+					"invalid uploadTo type %T for field %s",
+					uploadTo, f.Name(),
+				)
+			}
+
+			var formfield = fields.FileField("", opts...)
+			formfield.UploadTo = uploadToFn
+			return formfield, true
 		},
 	)
 }
@@ -124,6 +154,9 @@ const (
 
 	// AttrScaleKey (int64) is the scale of a field which supports it, such as a decimal field.
 	AttrScaleKey = "field.scale"
+
+	// AttrUploadToKey (string) is the upload path base for a file field.
+	AttrUploadToKey = "field.upload_to"
 )
 
 // Definer is the interface that wraps the FieldDefs method.

@@ -1,1 +1,17 @@
-{{ define "file" }}{{ include . "forms/widgets/input.html" }}{{ end }}
+{{ define "file" }}
+{{ if ne (or (eq .Data.file_value "") (eq .Data.file_value nil)) true }}
+<div class="file-path">
+    <span class="file-path">{{ Translate .Data.context "Path: %s" .Data.file_value }}</span>
+    <input type="hidden" name="{{ .Data.name }}_path" value="{{ .Data.file_value }}" />
+</div>
+{{ if ne .Data.required true }}
+    <div class="file-clear">
+        <input type="checkbox" name="{{ .Data.name }}_clear" id="{{ .Data.id }}_clear" value="1" class="file-clear-checkbox" />
+        <span for="{{ .Data.id }}_clear" class="file-clear-label">{{ Translate .Data.context "Clear file" }}</span>
+    </div>
+{{ end }}
+{{ end }}
+<div class="file-input">
+    {{ include . "forms/widgets/input.html" }}
+</div>
+{{ end }}

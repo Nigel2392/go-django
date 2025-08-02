@@ -3,11 +3,15 @@ package widgets
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"net/url"
 	"path/filepath"
 
+	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 )
 
 //
@@ -63,13 +67,30 @@ func NewFileInput(attrs map[string]string, validators ...func(filename string, f
 }
 
 func (f *FileWidget) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
-	var _, ok = files[name]
-	return !ok
+	var (
+		_, ok1 = files[name]
+		_, ok2 = data[fmt.Sprintf("%s_path", name)]
+	)
+
+	return !ok1 && !ok2
 }
 
 func (f *FileWidget) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
-	var fileList, ok = files[name]
-	if !ok {
+	var clearVal, ok = data[fmt.Sprintf("%s_clear", name)]
+	if ok && len(clearVal) > 0 && (clearVal[0] == "on" || clearVal[0] == "true" || clearVal[0] == "1") {
+		return nil, nil
+	}
+
+	fileList, hasFile := files[name]
+	pathVal, ok := data[fmt.Sprintf("%s_path", name)]
+	if ok && !hasFile && len(pathVal) > 0 && pathVal[0] != "" {
+		return &FileObject{
+			Name: pathVal[0],
+			File: nil,
+		}, nil
+	}
+
+	if !hasFile {
 		return nil, nil
 	}
 
@@ -101,5 +122,40 @@ func (f *FileWidget) ValueFromDataDict(ctx context.Context, data url.Values, fil
 }
 
 func (f *FileWidget) ValueToForm(value interface{}) interface{} {
-	return nil
+	switch v := value.(type) {
+	case *FileObject:
+		return v.Name
+	case mediafiles.StoredObject:
+		return v.Path()
+	case string:
+		return v
+	default:
+		return nil
+	}
+}
+
+func (f *FileWidget) GetContextData(c context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context {
+	var widgetCtx = f.BaseWidget.GetContextData(c, id, name, value, attrs)
+	var data = widgetCtx.Data()
+	var widgetAttrs = data["attrs"].(map[string]string)
+	var _, required = widgetAttrs["required"]
+	if required {
+		data["required"] = true
+	}
+	data["file_value"] = data["value"]
+	data["context"] = c
+	delete(data, "value")
+	return widgetCtx
+}
+
+func (f *FileWidget) RenderWithErrors(ctx context.Context, w io.Writer, id string, name string, value interface{}, errors []error, attrs map[string]string) error {
+	var widgetCtx = f.GetContextData(ctx, id, name, value, attrs)
+	if errors != nil {
+		widgetCtx.Set("errors", errors)
+	}
+	return tpl.FRender(w, widgetCtx, f.TemplateName)
+}
+
+func (f *FileWidget) Render(ctx context.Context, w io.Writer, id string, name string, value interface{}, attrs map[string]string) error {
+	return f.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
 }

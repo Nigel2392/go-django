@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 )
@@ -26,6 +27,7 @@ type BlogContext struct {
 type BlogPage struct {
 	models.Model `table:"blog_pages"`
 	Page         *pages.PageNode `proxy:"true"`
+	Image        *mediafiles.SimpleStoredObject
 	Editor       *editor.EditorJSBlockData
 }
 
@@ -105,6 +107,12 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 			Embedded: true,
 			Label:    "Slug",
 			HelpText: trans.S("The slug for this blog post."),
+			Blank:    true,
+		}),
+		attrs.NewField(n, "Image", &attrs.FieldConfig{
+			Label:    "Image",
+			HelpText: trans.S("The image for this blog post."),
+			Null:     true,
 			Blank:    true,
 		}),
 		editor.NewField(n, "Editor", editor.FieldConfig{

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"path/filepath"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/core/except"
 )
 
@@ -18,6 +19,10 @@ var (
 type SimpleStoredObject struct {
 	Filepath string
 	OpenFn   func(path string) (File, error)
+}
+
+func (s *SimpleStoredObject) DBType() dbtype.Type {
+	return dbtype.String
 }
 
 func (s *SimpleStoredObject) String() string {
@@ -59,6 +64,9 @@ func (s *SimpleStoredObject) Scan(value interface{}) error {
 }
 
 func (s *SimpleStoredObject) Value() (driver.Value, error) {
+	if s == nil {
+		return nil, nil
+	}
 	return s.Filepath, nil
 }
 
