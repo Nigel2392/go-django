@@ -15,6 +15,9 @@ type timeInfo struct {
 	hour   int
 	minute int
 	second int
+	millis int
+	micros int
+	nanos  int
 }
 
 func newTimeInfo(t time.Time) *timeInfo {
@@ -27,6 +30,9 @@ func newTimeInfo(t time.Time) *timeInfo {
 		hour:   t.Hour(),
 		minute: t.Minute(),
 		second: t.Second(),
+		millis: t.Nanosecond() / 1e6,
+		micros: t.Nanosecond() / 1e3,
+		nanos:  t.Nanosecond(),
 	}
 }
 
@@ -287,6 +293,22 @@ var (
 		"-S": func(ctx context.Context, t *timeInfo) Translation { // second (0-59)
 			var second = t.second
 			return fmt.Sprintf("%d", second)
+		},
+		"f": func(ctx context.Context, t *timeInfo) Translation { // milliseconds (000-999)
+			var millis = t.millis
+			return fmt.Sprintf("%03d", millis)
+		},
+		"-f": func(ctx context.Context, t *timeInfo) Translation { // milliseconds (0-999)
+			var millis = t.millis
+			return fmt.Sprintf("%d", millis)
+		},
+		"F": func(ctx context.Context, t *timeInfo) Translation { // microseconds (000000-999999)
+			var micros = t.micros
+			return fmt.Sprintf("%06d", micros)
+		},
+		"-F": func(ctx context.Context, t *timeInfo) Translation { // microseconds (0-999999)
+			var micros = t.micros
+			return fmt.Sprintf("%d", micros)
 		},
 		"p": func(ctx context.Context, t *timeInfo) Translation { // AM/PM
 			var hour = t.hour
