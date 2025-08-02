@@ -57,26 +57,36 @@ var (
 		},
 	}
 
-	goFileTranslationMatchers = map[string]func(call *ast.CallExpr, xIdent *ast.Ident, currentFunc string) (singular, plural *ast.BasicLit, err error){
-		"S": func(call *ast.CallExpr, xIdent *ast.Ident, currentFunc string) (singular, plural *ast.BasicLit, err error) {
+	goFileTranslationMatchers = map[string]func(call *ast.CallExpr, currentFunc string) (singular, plural *ast.BasicLit, err error){
+		"S": func(call *ast.CallExpr, currentFunc string) (singular, plural *ast.BasicLit, err error) {
 			if len(call.Args) == 0 {
 				return nil, nil, errors.TypeMismatch.Wrapf(
 					"expected at least 1 argument for S, got %d", len(call.Args),
 				)
 			}
 			singular, ok := call.Args[0].(*ast.BasicLit)
-			return singular, nil, errIfNotOk(ok, "expected a string literal for S")
+			if !ok {
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"expected a string literal for S, got %s (%s)", reflect.TypeOf(call.Args[0]), stringCall(call),
+				)
+			}
+			return singular, nil, nil
 		},
-		"T": func(call *ast.CallExpr, xIdent *ast.Ident, currentFunc string) (singular, plural *ast.BasicLit, err error) {
+		"T": func(call *ast.CallExpr, currentFunc string) (singular, plural *ast.BasicLit, err error) {
 			if len(call.Args) < 2 {
 				return nil, nil, errors.TypeMismatch.Wrapf(
 					"expected at least 2 arguments for T, got %d", len(call.Args),
 				)
 			}
 			singular, ok := call.Args[1].(*ast.BasicLit)
-			return singular, nil, errIfNotOk(ok, "expected a string literal for T")
+			if !ok {
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"expected a string literal for T, got %s (%s)", reflect.TypeOf(call.Args[1]), stringCall(call),
+				)
+			}
+			return singular, nil, nil
 		},
-		"P": func(call *ast.CallExpr, xIdent *ast.Ident, currentFunc string) (singular, plural *ast.BasicLit, err error) {
+		"P": func(call *ast.CallExpr, currentFunc string) (singular, plural *ast.BasicLit, err error) {
 			if len(call.Args) < 3 {
 				return nil, nil, errors.TypeMismatch.Wrapf(
 					"expected at least 3 arguments for P, got %d", len(call.Args),
@@ -85,7 +95,7 @@ var (
 			singular, ok := call.Args[1].(*ast.BasicLit)
 			if !ok {
 				return nil, nil, errors.TypeMismatch.Wrapf(
-					"expected a string literal for P, got %s", reflect.TypeOf(call.Args[1]),
+					"expected a string literal for P, got %s (%s)", reflect.TypeOf(call.Args[1]), stringCall(call),
 				)
 			}
 
@@ -94,6 +104,14 @@ var (
 		},
 	}
 )
+
+func stringCall(call *ast.CallExpr) string {
+	var buf = new(bytes.Buffer)
+	if err := printer.Fprint(buf, token.NewFileSet(), call); err != nil {
+		return fmt.Sprintf("error printing call: %v", err)
+	}
+	return buf.String()
+}
 
 type templateTranslation struct {
 	singular   string
@@ -234,7 +252,7 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 
 type goTranslationsFinder struct {
 	packageAliases []string
-	functions      map[string]func(call *ast.CallExpr, xIdent *ast.Ident, currentFunc string) (singular, plural *ast.BasicLit, err error)
+	functions      map[string]func(call *ast.CallExpr, currentFunc string) (singular, plural *ast.BasicLit, err error)
 }
 
 func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
@@ -272,9 +290,11 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 			return nil
 		}
 
+		var transPackageImported bool
 		var transPackageImport string
 		for _, imp := range file.Imports {
 			if imp.Path.Value == trans_package_path {
+				transPackageImported = true
 				if imp.Name != nil {
 					if imp.Name.Name == "." {
 						transPackageImport = ""
@@ -288,8 +308,13 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 			}
 		}
 
+		if !transPackageImported && len(f.packageAliases) == 0 && file.Name.Name != "trans" {
+			return nil
+		}
+
 		var currentFuncName string
 		var funcEnd token.Pos
+
 		ast.Inspect(file, func(n ast.Node) bool {
 
 			if n != nil && n.End() > funcEnd {
@@ -320,29 +345,45 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 				return true
 			}
 
-			selector, ok := call.Fun.(*ast.SelectorExpr)
-			if !ok || !slices.Contains(funcNames, selector.Sel.Name) {
+			var funcName string
+			var packageName string
+			var singular, plural *ast.BasicLit
+			switch fun := call.Fun.(type) {
+			case *ast.SelectorExpr:
+				if !slices.Contains(funcNames, fun.Sel.Name) {
+					return true
+				}
+
+				xIdent, ok := fun.X.(*ast.Ident)
+				if !ok {
+					logger.Warnf("Skipping %s: expected an identifier for %s", path, fun.Sel.Name)
+					return true
+				}
+				funcName = fun.Sel.Name
+				packageName = xIdent.Name
+			case *ast.Ident:
+				if !slices.Contains(funcNames, fun.Name) {
+					return true
+				}
+				funcName = fun.Name
+				packageName = transPackageImport
+			default:
 				return true
 			}
 
-			xIdent, ok := selector.X.(*ast.Ident)
-			if !ok {
-				return true
-			}
-
-			singular, plural, err := f.functions[selector.Sel.Name](call, xIdent, currentFuncName)
+			singular, plural, err = f.functions[funcName](call, funcName)
 			if err != nil {
-				logger.Warnf("Skipping %s: %v", path, err)
+				// logger.Warnf("Skipping %s: %v", path, err)
 				return true
 			}
 
-			if !ok || singular.Kind != token.STRING || plural != nil && plural.Kind != token.STRING {
-				logger.Warnf("Skipping %s: expected string argument for %s", path, selector.Sel.Name)
+			if singular.Kind != token.STRING || plural != nil && plural.Kind != token.STRING {
+				logger.Warnf("Skipping %s:%v:%v: expected string argument for %s", path, funcName)
 				return true
 			}
 
-			if xIdent.Name != transPackageImport && !slices.Contains(f.packageAliases, xIdent.Name) {
-				logger.Warnf("Skipping %s: %s.%s is not a valid translation package", path, xIdent.Name, selector.Sel.Name)
+			if file.Name.Name != transPackageImport && packageName != transPackageImport && !slices.Contains(f.packageAliases, packageName) {
+				logger.Warnf("Skipping %s: %s.%s is not a valid translation package", path, packageName, funcName)
 				return true
 			}
 

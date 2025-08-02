@@ -3114,8 +3114,12 @@ func (qs *QuerySet[T]) Create(value T) (T, error) {
 			)
 		}
 
+		var context = &ValidationContext{
+			Context: qs.context,
+		}
+
 		var actor = Actor(value)
-		ctx, err := actor.BeforeCreate(qs.context)
+		ctx, err := actor.BeforeCreate(context)
 		if err != nil {
 			return *new(T), errors.Wrapf(
 				err, "failed to run ActsBeforeCreate for %T", value,
@@ -3169,7 +3173,7 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 	}
 	defer tx.Rollback(qs.context)
 
-	if len(qs.internals.Where) == 0 && !qs.explicitSave {
+	if saver, ok := any(value).(models.ContextSaver); ok && len(qs.internals.Where) == 0 && !qs.explicitSave {
 
 		if _, err := setup(value); err != nil {
 			return 0, errors.Wrapf(
@@ -3177,32 +3181,34 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 			)
 		}
 
-		if saver, ok := any(value).(models.ContextSaver); ok {
-			var actor = Actor(value)
-			ctx, err := actor.BeforeSave(qs.context)
-			if err != nil {
-				return 0, errors.Wrapf(
-					err, "failed to run ActsBeforeUpdate for %T", value,
-				)
-			}
-
-			// create a fake context to retain control over the save operation
-			// and actor methods
-			err = saver.Save(actor.Fake(ctx, actsAfterSave))
-			if err != nil {
-				return 0, errors.SaveFailed.WithCause(errors.Wrapf(
-					err, "failed to save object %T", value,
-				))
-			}
-
-			if _, err = actor.AfterSave(qs.context); err != nil {
-				return 0, errors.Wrapf(
-					err, "failed to run ActsAfterUpdate for %T", value,
-				)
-			}
-
-			return 1, tx.Commit(qs.context)
+		var context = &ValidationContext{
+			Context: qs.context,
 		}
+
+		var actor = Actor(value)
+		ctx, err := actor.BeforeSave(context)
+		if err != nil {
+			return 0, errors.Wrapf(
+				err, "failed to run ActsBeforeUpdate for %T", value,
+			)
+		}
+
+		// create a fake context to retain control over the save operation
+		// and actor methods
+		err = saver.Save(actor.Fake(ctx, actsAfterSave))
+		if err != nil {
+			return 0, errors.SaveFailed.WithCause(errors.Wrapf(
+				err, "failed to save object %T", value,
+			))
+		}
+
+		if _, err = actor.AfterSave(qs.context); err != nil {
+			return 0, errors.Wrapf(
+				err, "failed to run ActsAfterUpdate for %T", value,
+			)
+		}
+
+		return 1, tx.Commit(qs.context)
 	}
 
 	c, err := qs.BulkUpdate([]T{value}, expressions...)

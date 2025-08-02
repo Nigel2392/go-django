@@ -37,3 +37,10 @@ table.list {
     padding-left: 0.25em;
     padding-right: 0.25em;
 }
+
+.list-check-yes {
+    color: var(--success-bg-color);
+}
+.list-check-no {
+    color: var(--danger-bg-color);
+}

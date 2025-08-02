@@ -29,7 +29,8 @@ locales:
 # [GoFileFinder]:      NewAppConfig          src/contrib/auth/app.go:180:33
 # [GoFileFinder]:      *User.Fields          src/contrib/auth/user.go:116:22
 # [GoFileFinder]:      *Image.FieldDefs      src/contrib/images/models.go:97:22
-# [GoFileFinder]:                            src/contrib/pages/django_admin.go:43:26
+# [GoFileFinder]:      FormatTimeDifference  src/contrib/pages/django_admin.go:143:26
+# [GoFileFinder]:      *Revision.FieldDefs   src/contrib/revisions/queries.go:73:22
 text: ID
 locales:
   nl: ID
@@ -237,7 +238,8 @@ locales:
 # [ModelFinder.Field]: revisions.Revision.CreatedAt .models/revisions/Revision/fields:1:4
 # [GoFileFinder]:      *User.Fields                 src/contrib/auth/user.go:153:22
 # [GoFileFinder]:      *Image.FieldDefs             src/contrib/images/models.go:120:22
-# [GoFileFinder]:                                   src/contrib/pages/django_admin.go:53:26
+# [GoFileFinder]:      FormatTimeDifference         src/contrib/pages/django_admin.go:153:26
+# [GoFileFinder]:      *Revision.FieldDefs          src/contrib/revisions/queries.go:93:22
 text: Created At
 locales:
   nl: Aangemaakt op
@@ -248,7 +250,7 @@ locales:
 # [ModelFinder.Field]: blog.BlogPage.UpdatedAt  .models/blog/BlogPage/fields:1:6
 # [ModelFinder.Field]: pages.PageNode.UpdatedAt .models/pages/PageNode/fields:2:12
 # [GoFileFinder]:      *User.Fields             src/contrib/auth/user.go:158:22
-# [GoFileFinder]:                               src/contrib/pages/django_admin.go:54:26
+# [GoFileFinder]:      FormatTimeDifference     src/contrib/pages/django_admin.go:154:26
 text: Updated At
 locales:
   nl: Bijgewerkt op
@@ -318,7 +320,7 @@ locales:
 
 # [ModelFinder.Field]: blog.BlogPage.PageID  .models/blog/BlogPage/fields:1:0
 # [ModelFinder.Field]: pages.PageNode.PageID .models/pages/PageNode/fields:2:8
-# [GoFileFinder]:                            src/contrib/pages/django_admin.go:51:26
+# [GoFileFinder]:      FormatTimeDifference  src/contrib/pages/django_admin.go:151:26
 text: Page ID
 locales:
   nl: Pagina-ID
@@ -329,7 +331,7 @@ locales:
 # [ModelFinder.Field]: pages.PageNode.Title .models/pages/PageNode/fields:2:1
 # [GoFileFinder]:      NewAppConfig         examples/todoapp/todos/todo.go:156:16
 # [GoFileFinder]:      *Image.FieldDefs     src/contrib/images/models.go:105:19
-# [GoFileFinder]:                           src/contrib/pages/django_admin.go:44:26
+# [GoFileFinder]:      FormatTimeDifference src/contrib/pages/django_admin.go:144:26
 text: Title
 locales:
   nl: Titel
@@ -338,16 +340,17 @@ locales:
 
 # [ModelFinder.Field]: blog.BlogPage.UrlPath  .models/blog/BlogPage/fields:1:2
 # [ModelFinder.Field]: pages.PageNode.UrlPath .models/pages/PageNode/fields:2:5
-# [GoFileFinder]:                             src/contrib/pages/django_admin.go:48:26
+# [GoFileFinder]:      FormatTimeDifference   src/contrib/pages/django_admin.go:148:26
+# [GoFileFinder]:      FormatTimeDifference   src/contrib/pages/django_admin.go:232:13
 text: URL Path
 locales:
   nl: URL-pad
 
 ---
 
-# [ModelFinder.Field]: blog.BlogPage.Slug  .models/blog/BlogPage/fields:1:3
-# [ModelFinder.Field]: pages.PageNode.Slug .models/pages/PageNode/fields:2:6
-# [GoFileFinder]:                          src/contrib/pages/django_admin.go:49:26
+# [ModelFinder.Field]: blog.BlogPage.Slug   .models/blog/BlogPage/fields:1:3
+# [ModelFinder.Field]: pages.PageNode.Slug  .models/pages/PageNode/fields:2:6
+# [GoFileFinder]:      FormatTimeDifference src/contrib/pages/django_admin.go:149:26
 text: Slug
 locales:
   nl: Slug
@@ -363,7 +366,7 @@ locales:
 ---
 
 # [ModelFinder.Field]: blog.BlogPage.Page .models/blog/BlogPage/fields:1:7
-# [GoFileFinder]:      NewAppConfig       src/contrib/pages/django_app.go:182:29
+# [GoFileFinder]:      NewAppConfig       src/contrib/pages/django_app.go:183:29
 text: Page
 locales:
   nl: Pagina
@@ -384,22 +387,25 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: pages.PageNode.Path .models/pages/PageNode/fields:2:2
-# [GoFileFinder]:      *Image.FieldDefs    src/contrib/images/models.go:112:19
+# [ModelFinder.Field]: pages.PageNode.Path      .models/pages/PageNode/fields:2:2
+# [GoFileFinder]:      *TreeNode.TreeNodeFields queries/src/models/modeltree/model.go:137:22
+# [GoFileFinder]:      *Image.FieldDefs         src/contrib/images/models.go:112:19
 text: Path
 locales:
   nl: Pad
 
 ---
 
-# [ModelFinder.Field]:	pages.PageNode.Depth .models/pages/PageNode/fields:2:3
+# [ModelFinder.Field]: pages.PageNode.Depth     .models/pages/PageNode/fields:2:3
+# [GoFileFinder]:      *TreeNode.TreeNodeFields queries/src/models/modeltree/model.go:142:22
 text: Depth
 locales:
   nl: Diepte
 
 ---
 
-# [ModelFinder.Field]:	pages.PageNode.Numchild .models/pages/PageNode/fields:2:4
+# [ModelFinder.Field]: pages.PageNode.Numchild  .models/pages/PageNode/fields:2:4
+# [GoFileFinder]:      *TreeNode.TreeNodeFields queries/src/models/modeltree/model.go:147:22
 text: Numchild
 locales:
   nl: Aantal kinderen
@@ -407,7 +413,7 @@ locales:
 ---
 
 # [ModelFinder.Field]: pages.PageNode.StatusFlags .models/pages/PageNode/fields:2:7
-# [GoFileFinder]:                                 src/contrib/pages/django_admin.go:50:26
+# [GoFileFinder]:      FormatTimeDifference       src/contrib/pages/django_admin.go:150:26
 text: Status Flags
 locales:
   nl: Statusvlaggen
@@ -416,8 +422,9 @@ locales:
 
 # [ModelFinder.Field]: pages.PageNode.ContentType     .models/pages/PageNode/fields:2:9
 # [ModelFinder.Field]: revisions.Revision.ContentType .models/revisions/Revision/fields:1:2
-# [GoFileFinder]:                                     src/contrib/pages/django_admin.go:52:26
-# [GoFileFinder]:                                     src/contrib/pages/django_admin.go:90:13
+# [GoFileFinder]:      FormatTimeDifference           src/contrib/pages/django_admin.go:152:26
+# [GoFileFinder]:      FormatTimeDifference           src/contrib/pages/django_admin.go:216:13
+# [GoFileFinder]:      *Revision.FieldDefs            src/contrib/revisions/queries.go:83:22
 text: Content Type
 locales:
   nl: Inhoudstype
@@ -489,7 +496,8 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	revisions.Revision.ObjectID .models/revisions/Revision/fields:1:1
+# [ModelFinder.Field]: revisions.Revision.ObjectID .models/revisions/Revision/fields:1:1
+# [GoFileFinder]:      *Revision.FieldDefs         src/contrib/revisions/queries.go:78:22
 text: Object ID
 locales:
   nl: Object-ID
@@ -498,6 +506,7 @@ locales:
 
 # [ModelFinder.Field]: revisions.Revision.Data .models/revisions/Revision/fields:1:3
 # [ModelFinder.Field]: session.Session.Data    .models/session/Session/fields:1:1
+# [GoFileFinder]:      *Revision.FieldDefs     src/contrib/revisions/queries.go:88:22
 text: Data
 locales:
   nl: Data
@@ -657,8 +666,8 @@ locales:
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/add.tmpl:22:70
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:15:67
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:24:70
-# [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:46:68
-# [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:21:71
+# [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:47:68
+# [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:34:71
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:20:71
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:107:84
 text: Submit
@@ -734,6 +743,27 @@ locales:
 text: Is Done
 locales:
   nl: Is voltooid
+
+---
+
+# [GoFileFinder]:	*TreeNode.TreeNodeFields queries/src/models/modeltree/model.go:138:22
+text: The path of the node in the tree, used to determine its position.
+locales:
+  nl: Het pad van de knoop in de boom, gebruikt om de positie te bepalen.
+
+---
+
+# [GoFileFinder]:	*TreeNode.TreeNodeFields queries/src/models/modeltree/model.go:143:22
+text: The depth of the node in the tree.
+locales:
+  nl: De diepte van de knoop in de boom.
+
+---
+
+# [GoFileFinder]:	*TreeNode.TreeNodeFields queries/src/models/modeltree/model.go:148:22
+text: The number of children of the node.
+locales:
+  nl: Het aantal kinderen van de knoop.
 
 ---
 
@@ -827,8 +857,8 @@ locales:
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:31:76
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:35:75
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/choose_root_page_type.tmpl:34:75
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:51:78
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:35:76
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:52:78
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:48:76
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:28:76
 text: Cancel
 locales:
@@ -843,8 +873,8 @@ locales:
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:33:95
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:37:123
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/choose_root_page_type.tmpl:36:84
-# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:53:126
-# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:37:124
+# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:54:126
+# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:50:124
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:30:124
 text: Back
 locales:
@@ -860,14 +890,15 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ T "Are you sure you want to delete this object?" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:10:16
-text: Are you sure you want to delete this object?
+# [TemplateFinder]:	{{ T "Are you sure you want to delete object with id %v?" .Data.primaryField.GetValue }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:10:16
+text: Are you sure you want to delete object with id %v?
 locales:
-  nl: Weet je zeker dat je dit object wilt verwijderen?
+  nl: Weet je zeker dat je het object met id %v wilt verwijderen?
 
 ---
 
-# [TemplateFinder]:	{{ T "This action cannot be reversed." }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:11:16
+# [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:11:16
+# [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:8:16
 text: This action cannot be reversed.
 locales:
   nl: Deze actie kan niet worden teruggedraaid.
@@ -882,7 +913,7 @@ locales:
 
 ---
 
-# [TemplateFinder]: {{ T "Delete" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:26:156
+# [TemplateFinder]: {{ T "Delete" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:26:160
 # [TemplateFinder]: {{ T "Delete" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:3:25
 text: Delete
 locales:
@@ -1411,7 +1442,7 @@ locales:
 
 # [TemplateFinder]: {{ T "Save" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:24:21
 # [TemplateFinder]: {{ T "Save" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:22:21
-# [TemplateFinder]: {{ T "Save" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:22:21
+# [TemplateFinder]: {{ T "Save" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:35:21
 text: Save
 locales:
   nl: Opslaan
@@ -1420,7 +1451,7 @@ locales:
 
 # [TemplateFinder]: {{ T "Save and Publish" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:28:25
 # [TemplateFinder]: {{ T "Save and Publish" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:26:25
-# [TemplateFinder]: {{ T "Save and Publish" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:26:25
+# [TemplateFinder]: {{ T "Save and Publish" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:39:25
 text: Save and Publish
 locales:
   nl: Opslaan en publiceren
@@ -1428,6 +1459,7 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "List" }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:3:25
+# [TemplateFinder]: {{ T "List" }} src/contrib/pages/assets/templates/pages/admin/admin_outdated_list.tmpl:3:25
 # [TemplateFinder]: {{ T "List" }} src/contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:3:25
 # [TemplateFinder]: {{ T "List" }} src/contrib/pages/assets/templates/pages/admin/choose_root_page_type.tmpl:3:25
 text: List
@@ -1444,7 +1476,7 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Edit Page" }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:18:100
-# [GoFileFinder]:   getListActions      src/contrib/pages/django_admin_views.go:67:33
+# [GoFileFinder]:   getListActions      src/contrib/pages/django_admin_views.go:70:33
 text: Edit Page
 locales:
   nl: Pagina bewerken
@@ -1452,7 +1484,8 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Delete Page" }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:21:108
-# [GoFileFinder]:   getListActions        src/contrib/pages/django_admin_views.go:110:33
+# [TemplateFinder]: {{ T "Delete Page" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:16:178
+# [GoFileFinder]:   getListActions        src/contrib/pages/django_admin_views.go:113:33
 text: Delete Page
 locales:
   nl: Pagina verwijderen
@@ -1460,7 +1493,7 @@ locales:
 ---
 
 # [TemplateFinder]: {{ P "%d child" "%d children" $count $count }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:26:100
-# [GoFileFinder]:                                                  src/contrib/pages/django_admin.go:81:22
+# [GoFileFinder]:   FormatTimeDifference                           src/contrib/pages/django_admin.go:181:22
 text: '%d child'
 plural: '%d children'
 locales:
@@ -1494,38 +1527,32 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ T "This action cannot be undone." }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:8:16
-text: This action cannot be undone.
-locales:
-  nl: Deze actie kan niet ongedaan worden gemaakt.
-
----
-
 # [TemplateFinder]:	{{ P "If you delete this page, %d child will also be deleted." "If you delete this page, %d children will also be deleted." (len .Data.Nodes) (len .Data.Nodes) }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:10:20
 text: If you delete this page, %d child will also be deleted.
 plural: If you delete this page, %d children will also be deleted.
 locales:
   nl:
-    0: "Als je deze pagina verwijdert, wordt er ook %d kind verwijderd."
-    1: "Als je deze pagina verwijdert, worden er ook %d kinderen verwijderd"
+    0: Als je deze pagina verwijdert, wordt er ook %d kind verwijderd.
+    1: Als je deze pagina verwijdert, worden er ook %d kinderen verwijderd
 
 ---
 
-# [TemplateFinder]:	{{ T "Live" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:20:204
+# [TemplateFinder]: {{ T "Live" }}       src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:21:204
+# [GoFileFinder]:   FormatTimeDifference src/contrib/pages/django_admin.go:190:13
 text: Live
 locales:
   nl: Live
 
 ---
 
-# [TemplateFinder]:	{{ T "Unpublished" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:26:199
+# [TemplateFinder]:	{{ T "Unpublished" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:27:199
 text: Unpublished
 locales:
   nl: Ongepubliceerd
 
 ---
 
-# [TemplateFinder]:	{{ P "Delete this node" "Delete this node and all it's children" (len .Data.Nodes) }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:47:21
+# [TemplateFinder]:	{{ P "Delete this node" "Delete this node and all it's children" (len .Data.Nodes) }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:48:21
 text: Delete this node
 plural: Delete this node and all it's children
 locales:
@@ -1542,7 +1569,7 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ T "Unpublish and Save" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:30:25
+# [TemplateFinder]:	{{ T "Unpublish and Save" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:43:25
 text: Unpublish and Save
 locales:
   nl: Depubliceren en opslaan
@@ -1570,44 +1597,153 @@ locales:
 
 ---
 
-# [GoFileFinder]:                               src/contrib/pages/django_admin.go:25:26
-# [GoFileFinder]: *PagesAdminHomeComponent.html src/contrib/pages/django_admin_home_component_templ.go:56:79
-# [GoFileFinder]: NewAppConfig                  src/contrib/pages/django_app.go:221:37
+# [GoFileFinder]:                               src/contrib/pages/django_admin.go:26:26
+# [GoFileFinder]: *PagesAdminHomeComponent.html src/contrib/pages/django_admin_home_component_templ.go:57:79
+# [GoFileFinder]: NewAppConfig                  src/contrib/pages/django_app.go:236:37
 text: Pages
 locales:
   nl: Pagina's
 
 ---
 
-# [GoFileFinder]:	 src/contrib/pages/django_admin.go:26:26
+# [GoFileFinder]:	 src/contrib/pages/django_admin.go:27:26
 text: Manage pages in a hierarchical structure.
 locales:
   nl: Beheer pagina's in een hiërarchische structuur.
 
 ---
 
-# [GoFileFinder]:	 src/contrib/pages/django_admin.go:45:26
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:91:38
+text: '%d year'
+plural: '%d years'
+locales:
+  nl:
+    0: '%d jaar'
+    1: '%d jaar'
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:94:38
+text: '%d month'
+plural: '%d months'
+locales:
+  nl:
+    0: '%d maand'
+    1: '%d maanden'
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:98:38
+text: '%d week'
+plural: '%d weeks'
+locales:
+  nl:
+    0: '%d week'
+    1: '%d weken'
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:102:38
+text: '%d day'
+plural: '%d days'
+locales:
+  nl:
+    0: '%d dag'
+    1: '%d dagen'
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:105:38
+text: '%d hour'
+plural: '%d hours'
+locales:
+  nl:
+    0: '%d uur'
+    1: '%d uren'
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:108:38
+text: '%d minute'
+plural: '%d minutes'
+locales:
+  nl:
+    0: '%d minuut'
+    1: '%d minuten'
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:121:24
+text: in %s
+locales:
+  nl: in %s
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:123:24
+text: in %s and %s
+locales:
+  nl: in %s en %s
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:128:24
+text: just now
+locales:
+  nl: zojuist
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:130:24
+text: '%s ago'
+locales:
+  nl: '%s geleden'
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:132:24
+text: '%s and %s ago'
+locales:
+  nl: '%s en %s geleden'
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:145:26
 text: Tree Path
 locales:
   nl: Boomstructuurpad
 
 ---
 
-# [GoFileFinder]:	 src/contrib/pages/django_admin.go:46:26
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:146:26
 text: Tree Depth
 locales:
   nl: Boomstructuurdikte
 
 ---
 
-# [GoFileFinder]:	 src/contrib/pages/django_admin.go:47:26
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:147:26
 text: Number of Children
 locales:
   nl: Aantal onderliggende pagina's
 
 ---
 
-# [GoFileFinder]:	 src/contrib/pages/django_admin.go:94:40
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:197:13
+text: Time since last update
+locales:
+  nl: Tijd sinds laatste update
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:204:29
+text: Never
+locales:
+  nl: Nooit
+
+---
+
+# [GoFileFinder]:	FormatTimeDifference src/contrib/pages/django_admin.go:220:40
 text: Unknown
 locales:
   nl: Onbekend
@@ -1623,7 +1759,7 @@ locales:
 
 ---
 
-# [GoFileFinder]: getListActions src/contrib/pages/django_admin_views.go:34:33
+# [GoFileFinder]: getListActions src/contrib/pages/django_admin_views.go:37:33
 # [GoFileFinder]: getPageActions src/contrib/pages/django_admin_views_utils.go:143:34
 text: View Live
 locales:
@@ -1631,14 +1767,14 @@ locales:
 
 ---
 
-# [GoFileFinder]:	getListActions src/contrib/pages/django_admin_views.go:46:33
+# [GoFileFinder]:	getListActions src/contrib/pages/django_admin_views.go:49:33
 text: Add Child
 locales:
   nl: Kind toevoegen
 
 ---
 
-# [GoFileFinder]: getListActions src/contrib/pages/django_admin_views.go:88:33
+# [GoFileFinder]: getListActions src/contrib/pages/django_admin_views.go:91:33
 # [GoFileFinder]: getPageActions src/contrib/pages/django_admin_views_utils.go:172:33
 text: History
 locales:
@@ -1646,7 +1782,22 @@ locales:
 
 ---
 
-# [GoFileFinder]: choosePageTypeHandler     src/contrib/pages/django_admin_views.go:285:26
+# [GoFileFinder]: outdatedPagesHandler src/contrib/pages/django_admin_views.go:176:26
+# [GoFileFinder]: NewAppConfig         src/contrib/pages/django_app.go:224:38
+text: Outdated Pages
+locales:
+  nl: Verouderde pagina's
+
+---
+
+# [GoFileFinder]:	outdatedPagesHandler src/contrib/pages/django_admin_views.go:177:26
+text: List of outdated pages
+locales:
+  nl: Lijst van verouderde pagina's
+
+---
+
+# [GoFileFinder]: choosePageTypeHandler     src/contrib/pages/django_admin_views.go:378:26
 # [GoFileFinder]: chooseRootPageTypeHandler src/contrib/pages/django_admin_views_root.go:132:25
 text: Choose Page Type
 locales:
@@ -1654,7 +1805,7 @@ locales:
 
 ---
 
-# [GoFileFinder]: choosePageTypeHandler     src/contrib/pages/django_admin_views.go:286:26
+# [GoFileFinder]: choosePageTypeHandler     src/contrib/pages/django_admin_views.go:379:26
 # [GoFileFinder]: chooseRootPageTypeHandler src/contrib/pages/django_admin_views_root.go:133:25
 text: Select the type of page you want to create
 locales:
@@ -1662,7 +1813,7 @@ locales:
 
 ---
 
-# [GoFileFinder]: addPageHandler     src/contrib/pages/django_admin_views.go:448:27
+# [GoFileFinder]: addPageHandler     src/contrib/pages/django_admin_views.go:541:27
 # [GoFileFinder]: addRootPageHandler src/contrib/pages/django_admin_views_root.go:279:23
 text: Add %q
 locales:
@@ -1670,35 +1821,35 @@ locales:
 
 ---
 
-# [GoFileFinder]:	editPageHandler src/contrib/pages/django_admin_views.go:621:27
+# [GoFileFinder]:	editPageHandler src/contrib/pages/django_admin_views.go:714:27
 text: Edit %q
 locales:
   nl: '%q bewerken'
 
 ---
 
-# [GoFileFinder]:	deletePageHandler src/contrib/pages/django_admin_views.go:736:26
+# [GoFileFinder]:	deletePageHandler src/contrib/pages/django_admin_views.go:835:26
 text: Delete %q
 locales:
   nl: '%q verwijderen'
 
 ---
 
-# [GoFileFinder]:	deletePageHandler src/contrib/pages/django_admin_views.go:737:26
+# [GoFileFinder]:	deletePageHandler src/contrib/pages/django_admin_views.go:836:26
 text: Are you sure you want to delete this page?
 locales:
   nl: Weet je zeker dat je deze pagina wilt verwijderen?
 
 ---
 
-# [GoFileFinder]:	unpublishPageHandler src/contrib/pages/django_admin_views.go:804:26
+# [GoFileFinder]:	unpublishPageHandler src/contrib/pages/django_admin_views.go:903:26
 text: Unpublish %q
 locales:
   nl: '%q depubliceren'
 
 ---
 
-# [GoFileFinder]:	unpublishPageHandler src/contrib/pages/django_admin_views.go:805:26
+# [GoFileFinder]:	unpublishPageHandler src/contrib/pages/django_admin_views.go:904:26
 text: |-
   Unpublishing a page will remove it from the live site
   Optionally, you can unpublish all child pages
@@ -1716,14 +1867,14 @@ locales:
 
 ---
 
-# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:183:29
+# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:184:29
 text: A page in a hierarchical page tree- structure.
 locales:
   nl: Een pagina in een hiërarchische boomstructuur.
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetActions src/contrib/pages/django_app.go:444:39
+# [GoFileFinder]:	*pageLogDefinition.GetActions src/contrib/pages/django_app.go:465:39
 text: Edit Live Page
 locales:
   nl: Live pagina bewerken
@@ -1779,8 +1930,8 @@ locales:
 
 ---
 
-# [GoFileFinder]:   NewAppConfig         src/contrib/reports/audit_logs/app.go:89:35
-# [GoFileFinder]:   auditLogView         src/contrib/reports/audit_logs/app.go:387:23
+# [GoFileFinder]:   NewAppConfig         src/contrib/reports/audit_logs/app.go:87:34
+# [GoFileFinder]:   auditLogView         src/contrib/reports/audit_logs/app.go:384:23
 # [TemplateFinder]: {{ T "Audit Logs" }} src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:3:25
 text: Audit Logs
 locales:
@@ -1788,35 +1939,35 @@ locales:
 
 ---
 
-# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:287:88
+# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:284:88
 text: Debug
 locales:
   nl: Debug
 
 ---
 
-# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:288:88
+# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:285:88
 text: Info
 locales:
   nl: Info
 
 ---
 
-# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:289:88
+# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:286:88
 text: Warning
 locales:
   nl: Waarschuwing
 
 ---
 
-# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:290:88
+# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:287:88
 text: Error
 locales:
   nl: Fout
 
 ---
 
-# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:388:23
+# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:385:23
 text: View all audit logs
 locales:
   nl: Bekijk alle auditlogs
@@ -1834,6 +1985,41 @@ locales:
 text: No audit logs found
 locales:
   nl: Geen auditlogs gevonden
+
+---
+
+# [GoFileFinder]:	*Revision.FieldDefs src/contrib/revisions/queries.go:74:22
+text: The unique identifier for the revision.
+locales:
+  nl: De unieke identificatie voor de revisie.
+
+---
+
+# [GoFileFinder]:	*Revision.FieldDefs src/contrib/revisions/queries.go:79:22
+text: The unique identifier for the object this revision belongs to.
+locales:
+  nl: De unieke identificatie voor het object waartoe deze revisie behoort.
+
+---
+
+# [GoFileFinder]:	*Revision.FieldDefs src/contrib/revisions/queries.go:84:22
+text: The content type of the object this revision belongs to.
+locales:
+  nl: Het inhoudstype van het object waartoe deze revisie behoort.
+
+---
+
+# [GoFileFinder]:	*Revision.FieldDefs src/contrib/revisions/queries.go:89:22
+text: The data of the revision, this is a snapshot of the object at the time of the revision.
+locales:
+  nl: De gegevens van de revisie, dit is een momentopname van het object op het moment van de revisie.
+
+---
+
+# [GoFileFinder]:	*Revision.FieldDefs src/contrib/revisions/queries.go:94:22
+text: The date and time when the revision was created.
+locales:
+  nl: De datum en tijd waarop de revisie is aangemaakt.
 
 ---
 
@@ -1886,4 +2072,285 @@ locales:
 text: Next
 locales:
   nl: Volgende
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:33:16
+text: Monday
+locales:
+  nl: Maandag
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:34:16
+text: Tuesday
+locales:
+  nl: Dinsdag
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:35:16
+text: Wednesday
+locales:
+  nl: Woensdag
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:36:16
+text: Thursday
+locales:
+  nl: Donderdag
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:37:16
+text: Friday
+locales:
+  nl: Vrijdag
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:38:16
+text: Saturday
+locales:
+  nl: Zaterdag
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:39:16
+text: Sunday
+locales:
+  nl: Zondag
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:41:21
+text: Mon
+locales:
+  nl: Ma
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:42:21
+text: Tue
+locales:
+  nl: Di
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:43:21
+text: Wed
+locales:
+  nl: Wo
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:44:21
+text: Thu
+locales:
+  nl: Do
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:45:21
+text: Fri
+locales:
+  nl: Vr
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:46:21
+text: Sat
+locales:
+  nl: Za
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:47:21
+text: Sun
+locales:
+  nl: Zo
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:51:16
+text: January
+locales:
+  nl: Januari
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:52:16
+text: February
+locales:
+  nl: Februari
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:53:16
+text: March
+locales:
+  nl: Maart
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:54:16
+text: April
+locales:
+  nl: April
+
+---
+
+# [GoFileFinder]: newTimeInfo src/core/trans/time.go:55:16
+# [GoFileFinder]: newTimeInfo src/core/trans/time.go:68:21
+text: May
+locales:
+  nl: Mei
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:56:16
+text: June
+locales:
+  nl: Juni
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:57:16
+text: July
+locales:
+  nl: Juli
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:58:16
+text: August
+locales:
+  nl: Augustus
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:59:16
+text: September
+locales:
+  nl: September
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:60:16
+text: October
+locales:
+  nl: Oktober
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:61:16
+text: November
+locales:
+  nl: November
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:62:16
+text: December
+locales:
+  nl: December
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:64:21
+text: Jan
+locales:
+  nl: ""
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:65:21
+text: Feb
+locales:
+  nl: ""
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:66:21
+text: Mar
+locales:
+  nl: ""
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:67:21
+text: Apr
+locales:
+  nl: ""
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:69:21
+text: Jun
+locales:
+  nl: ""
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:70:21
+text: Jul
+locales:
+  nl: ""
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:71:21
+text: Aug
+locales:
+  nl: ""
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:72:21
+text: Sep
+locales:
+  nl: ""
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:73:21
+text: Oct
+locales:
+  nl: ""
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:74:21
+text: Nov
+locales:
+  nl: ""
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:75:21
+text: Dec
+locales:
+  nl: ""
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:79:11
+text: AM
+locales:
+  nl: AM
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:80:11
+text: PM
+locales:
+  nl: PM
+
+---
+
+# [GoFileFinder]:	newTimeInfo src/core/trans/time.go:81:11
+text: AM/PM
+locales:
+  nl: AM/PM
 

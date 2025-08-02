@@ -2,6 +2,9 @@ package trans
 
 import (
 	"context"
+	"fmt"
+	"strings"
+	"time"
 )
 
 var DefaultBackend TranslationBackend = &SprintBackend{}
@@ -42,6 +45,58 @@ func P(ctx context.Context, singular, plural Untranslated, n int, args ...any) T
 		return DefaultBackend.Pluralize(ctx, singular, plural, n)
 	}
 	return DefaultBackend.Pluralizef(ctx, singular, plural, n, args...)
+}
+
+func Time(ctx context.Context, t time.Time, format string) Translation {
+	var (
+		timeInfo   = newTimeInfo(t)
+		text       strings.Builder
+		formatting bool
+		flag       bool
+	)
+
+	for i := 0; i < len(format); i++ {
+		if format[i] == '%' && !formatting {
+			formatting = true
+			flag = false
+			continue
+		}
+
+		if format[i] == '%' && formatting {
+			formatting = false
+		}
+
+		if !formatting {
+			text.WriteByte(format[i])
+			continue
+		}
+
+		if format[i] == '-' {
+			flag = true
+			continue
+		}
+
+		// currently formatting
+		var formatKey string
+		if flag {
+			formatKey = string([]byte{'-', format[i]})
+		} else {
+			formatKey = string(format[i])
+		}
+
+		var formatFunc, ok = formatMap[formatKey]
+		if !ok {
+			panic(fmt.Errorf(
+				"unknown format specifier %s in time format %s", formatKey, format,
+			))
+		}
+
+		var translated = formatFunc(ctx, timeInfo)
+		text.WriteString(translated)
+		formatting = false
+	}
+
+	return Translation(text.String())
 }
 
 func LocaleFromContext(ctx context.Context) Locale {

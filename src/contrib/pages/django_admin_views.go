@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
@@ -129,7 +130,87 @@ func getListActions(next string) []*admin.ListAction[attrs.Definer] {
 }
 
 func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition) {
-	except.Fail(http.StatusNotFound, "Outdated pages handler not implemented")
+	if !permissions.HasObjectPermission(r, nil, "pages:outdated", "pages:list") {
+		admin.ReLogin(w, r, r.URL.Path)
+		return
+	}
+
+	var outdatedAfter = django.ConfigGet(
+		django.Global.Settings,
+		APPVAR_OUTDATED_AFTER_DURATION,
+		time.Duration(24*time.Hour),
+	)
+
+	var listDisplay = django.ConfigGet(
+		django.Global.Settings,
+		APPVAR_OUTDATED_LIST_DISPLAY,
+		[]string{"Title", "UrlPath", "ContentType", "Live", "UpdatedAt", "Children"},
+	)
+
+	var columns = make([]list.ListColumn[attrs.Definer], len(listDisplay)+1)
+	for i, field := range listDisplay {
+		columns[i+1] = m.GetColumn(r.Context(), m.ListView, field)
+	}
+
+	columns[0] = columns[1]
+	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
+		Actions: getListActions(""),
+	}
+
+	var view = &list.View[attrs.Definer]{
+		ListColumns:   columns,
+		DefaultAmount: 100,
+		BaseView: views.BaseView{
+			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+			BaseTemplateKey: admin.BASE_KEY,
+			TemplateName:    "pages/admin/admin_outdated_list.tmpl",
+			GetContextFn: func(req *http.Request) (ctx.Context, error) {
+				var context = admin.NewContext(
+					req, admin.AdminSite, nil,
+				)
+
+				context.Set("app", a)
+				context.Set("model", m)
+
+				context.SetPage(admin.PageOptions{
+					TitleFn:    trans.S("Outdated Pages"),
+					SubtitleFn: trans.S("List of outdated pages"),
+				})
+				return context, nil
+			},
+		},
+		QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
+			return queries.ChangeObjectsType[*PageNode, attrs.Definer](
+				NewPageQuerySet().
+					WithContext(r.Context()).
+					Filter("UpdatedAt__lt", time.Now().Add(-outdatedAfter)).
+					OrderBy("UpdatedAt").
+					Base(),
+			)
+		},
+		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
+			return list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {
+				if !permissions.HasObjectPermission(r, instance, "pages:edit") {
+					return ""
+				}
+
+				var primaryField = defs.Primary()
+				if primaryField == nil {
+					return ""
+				}
+
+				var u = django.Reverse(
+					"admin:pages:edit",
+					primaryField.GetValue(),
+				)
+				return addNextUrl(
+					u, "",
+				)
+			})
+		},
+	}
+
+	views.Invoke(view, w, r)
 }
 
 func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {

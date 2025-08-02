@@ -67,9 +67,7 @@ func NewAppConfig() django.AppConfig {
 			},
 			&goTranslationsFinder{
 				packageAliases: django.ConfigGet(
-					django.Global.Settings, APPVAR_TRANSLATIONS_PACKAGES, []string{
-						// "trans",
-					},
+					django.Global.Settings, APPVAR_TRANSLATIONS_PACKAGES, []string{},
 				),
 				functions: goFileTranslationMatchers,
 			},

@@ -256,8 +256,13 @@ func (m *Model) CreateObject(object attrs.Definer) attrs.Definer {
 	}
 
 	var obj = reflect.ValueOf(object)
-	if !obj.IsValid() || obj.IsNil() {
+	if !obj.IsValid() {
 		return nil
+	}
+
+	if obj.IsNil() {
+		obj = reflect.New(obj.Type().Elem())
+		object = obj.Interface().(attrs.Definer)
 	}
 
 	var base = getModelChain(object)
@@ -275,7 +280,30 @@ func (m *Model) CreateObject(object attrs.Definer) attrs.Definer {
 		return nil
 	}
 
-	return newObj.Interface().(attrs.Definer)
+	var newDefiner = newObj.Interface().(attrs.Definer)
+	if len(base.base.Index) > 1 {
+		for i := 0; i < len(base.base.Index)-1; i++ {
+			if i == len(base.base.Index)-1 {
+				// if we are at the last index - it is the [Model] itself.
+				// we do not implement the [attrs.Embedded] interface.
+				break
+			}
+
+			var field = newObj.Elem().FieldByIndex(base.base.Index[:i+1])
+			if field.Addr().Type().Implements(reflect.TypeOf((*attrs.Embedded)(nil)).Elem()) {
+				var setupObj = field.Addr().Interface().(attrs.Embedded)
+				if err := setupObj.BindToEmbedder(newDefiner); err != nil {
+					assert.Fail(
+						"failed to bind embedded object %T to embedder %T: %v",
+						setupObj, newDefiner, err,
+					)
+					return newDefiner
+				}
+			}
+		}
+	}
+
+	return newDefiner
 }
 
 func (m *Model) Setup(def attrs.Definer) error {
@@ -333,6 +361,7 @@ func (m *Model) Setup(def attrs.Definer) error {
 		m.internals.defs = nil
 		m.changed = nil
 	}
+
 	// validate if it is the same object
 	// if not, clear the defs so any old fields pointing to the old
 	// object will be cleared
