@@ -76,16 +76,10 @@ var buildPathTestsFromPath = []buildPathTestFromPath{
 	{[]int64{1000}, "", modeltree.ErrInvalidPathLength},
 }
 
-//go:linkname buildPathPart github.com/Nigel2392/go-django/queries/src/models/modeltree.BuildPathPart
-func buildPathPart(numPreviousAncestors int) string
-
-//go:linkname ancestorPath github.com/Nigel2392/go-django/queries/src/models/modeltree.ParentPath
-func ancestorPath(path string, numAncestors int) (string, error)
-
 func TestPath(t *testing.T) {
 	for _, test := range buildPathTests {
 		t.Run(fmt.Sprintf("BuildPathPart(%d)", test.numPreviousAncestors), func(t *testing.T) {
-			actualPathPart := buildPathPart(test.numPreviousAncestors)
+			actualPathPart := modeltree.BuildNextPathPart(int64(test.numPreviousAncestors))
 			if actualPathPart != test.expectedPathPart {
 				t.Errorf("Expected %s, got %s", test.expectedPathPart, actualPathPart)
 			}
@@ -105,7 +99,7 @@ func TestPath(t *testing.T) {
 					}
 				}
 			}()
-			buildPathPart(-1)
+			modeltree.BuildNextPathPart(-1)
 		})
 
 		t.Run("NumPreviousAncestorsTooLarge", func(t *testing.T) {
@@ -120,7 +114,7 @@ func TestPath(t *testing.T) {
 					}
 				}
 			}()
-			buildPathPart(999)
+			modeltree.BuildNextPathPart(999)
 		})
 	})
 
@@ -128,7 +122,7 @@ func TestPath(t *testing.T) {
 		t.Run(fmt.Sprintf("AncestorPath(%s-%d)", test.path, test.numAncestors), func(t *testing.T) {
 			var actualPath string
 			var err error
-			actualPath, err = ancestorPath(test.path, test.numAncestors)
+			actualPath, err = modeltree.ParentPath(test.path, int64(test.numAncestors))
 			if test.expectedErr != nil {
 				if !errors.Is(err, test.expectedErr) {
 					t.Errorf("Expected error %v, got %v", test.expectedErr, err)

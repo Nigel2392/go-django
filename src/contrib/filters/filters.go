@@ -3,9 +3,11 @@ package filters
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/elliotchance/orderedmap/v2"
@@ -26,6 +28,8 @@ type FilterSpec[T attrs.Definer] interface {
 	// Filter filters the object list.
 	Filter(value interface{}, object *queries.QuerySet[T]) (*queries.QuerySet[T], error)
 }
+
+var _ ctx.Editor = &Filters[attrs.Definer]{}
 
 type Filters[T attrs.Definer] struct {
 	form  *forms.BaseForm
@@ -64,6 +68,11 @@ func (f *Filters[T]) Specs() *orderedmap.OrderedMap[string, FilterSpec[T]] {
 
 func (f *Filters[T]) Form() *forms.BaseForm {
 	return f.form
+}
+
+func (f *Filters[T]) EditContext(key string, c ctx.Context) {
+	c.Data()[key] = f
+	c.Set(fmt.Sprintf("%s_form", key), f.Form())
 }
 
 var FormError = errors.New("form is not valid")

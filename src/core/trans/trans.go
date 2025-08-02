@@ -3,7 +3,9 @@ package trans
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -53,11 +55,31 @@ func T(ctx context.Context, v Untranslated, args ...any) Translation {
 // It returns a function that can be used in templates to pluralize the string.
 // The function takes a context, singular and plural forms, and a count.
 // It returns a Translation (alias for string) that can be used in templates.
-func P(ctx context.Context, singular, plural Untranslated, n int, args ...any) Translation {
-	if len(args) == 0 {
-		return DefaultBackend.Pluralize(ctx, singular, plural, n)
+func P(ctx context.Context, singular, plural Untranslated, n any, args ...any) Translation {
+
+	var val int64
+	var rV = reflect.ValueOf(n)
+	switch rV.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		val = rV.Int()
+	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		val = int64(rV.Uint())
+	case reflect.Slice, reflect.Array, reflect.Map:
+		val = int64(rV.Len())
+	case reflect.String:
+		v, err := strconv.ParseInt(rV.String(), 10, 64)
+		if err != nil {
+			panic(fmt.Errorf("failed to parse string %q as int: %w", rV.String(), err))
+		}
+		val = v
+	default:
+		panic(fmt.Errorf("unsupported type %s for pluralization", rV.Kind()))
 	}
-	return DefaultBackend.Pluralizef(ctx, singular, plural, n, args...)
+
+	if len(args) == 0 {
+		return DefaultBackend.Pluralize(ctx, singular, plural, int(val))
+	}
+	return DefaultBackend.Pluralizef(ctx, singular, plural, int(val), args...)
 }
 
 const (

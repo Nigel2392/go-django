@@ -88,13 +88,13 @@ func (c *fieldColumn[T]) data(r *http.Request, defs attrs.Definitions, _ T) inte
 
 	switch f := d.(type) {
 		case time.Time:
-			return trans.Time(r.Context(), f, "%A, %B %d, %Y %I:%M %p")
+			return trans.Time(r.Context(), f, trans.LONG_TIME_FORMAT)
 		case drivers.DateTime:
-			return trans.Time(r.Context(), time.Time(f), "%A, %B %d, %Y %I:%M %p")
+			return trans.Time(r.Context(), time.Time(f), trans.LONG_TIME_FORMAT)
 		case drivers.LocalTime:
-			return trans.Time(r.Context(), time.Time(f), "%I:%M %p")
+			return trans.Time(r.Context(), time.Time(f), trans.SHORT_TIME_FORMAT)
 		case drivers.Timestamp:
-			return trans.Time(r.Context(), time.Time(f), "%Y-%m-%d %H:%M:%S")
+			return trans.Time(r.Context(), time.Time(f), trans.SHORT_TIME_FORMAT)
 	}
 
 	return d

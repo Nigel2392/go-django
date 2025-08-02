@@ -84,7 +84,7 @@ func GetTimeDiffInformation(t time.Time, diffFrom time.Time) (info TimeInformati
 }
 
 // FormatTimeAgo formats the time difference nicely, e.g. "1 year, 2 months, 3 weeks ago"
-func FormatTimeDifference(ctx context.Context, t time.Time, diffFrom time.Time) (string, TimeInformation) {
+func FormatTimeDifference(ctx context.Context, t time.Time, diffFrom time.Time) ([]string, TimeInformation) {
 	var parts = []string{}
 	var info = GetTimeDiffInformation(t, diffFrom)
 	if info.Years > 0 {
@@ -108,6 +108,11 @@ func FormatTimeDifference(ctx context.Context, t time.Time, diffFrom time.Time) 
 		parts = append(parts, trans.P(ctx, "%d minute", "%d minutes", info.Minutes, info.Minutes))
 	}
 
+	return parts, info
+}
+
+func FormatTimeSince(ctx context.Context, t time.Time, diffFrom time.Time) string {
+	var parts, info = FormatTimeDifference(ctx, t, diffFrom)
 	// Only show up to two largest units, e.g. "1 year, 2 months ago"
 	if len(parts) > 2 {
 		parts = parts[:2]
@@ -133,7 +138,7 @@ func FormatTimeDifference(ctx context.Context, t time.Time, diffFrom time.Time) 
 		}
 	}
 
-	return text, info
+	return text
 }
 
 var pageAdminModelOptions = admin.ModelOptions{
@@ -205,10 +210,11 @@ var pageAdminModelOptions = admin.ModelOptions{
 						))
 					}
 
-					var timeText, _ = FormatTimeDifference(r.Context(), node.UpdatedAt, time.Now())
 					return template.HTML(fmt.Sprintf(
 						`<span class="badge" data-controller="tooltip" data-tooltip-content-value="%s" data-tooltip-placement-value="%s" data-tooltip-offset-value="[0, %v]">%s</span>`,
-						trans.Time(r.Context(), node.UpdatedAt, trans.LONG_TIME_FORMAT), "bottom-start", 10, timeText,
+						trans.Time(r.Context(), node.UpdatedAt, trans.LONG_TIME_FORMAT), "bottom-start", 10, FormatTimeSince(
+							r.Context(), node.UpdatedAt, time.Now(),
+						),
 					))
 				},
 			),

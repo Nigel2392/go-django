@@ -258,3 +258,27 @@
     color: var(--text-color);
     flex: 1;
 }
+.outdated-pages-content {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap-reverse;
+    gap: 1rem;
+}
+.outdated-pages-list-wrapper {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+.outdated-pages-list-wrapper .list tr.column-group {
+    height: 2.5em;
+}
+.outdated-pages-list-wrapper .list tr.list-header th:last-child,
+.outdated-pages-list-wrapper .list tr.column-group td:last-child {
+    text-align: right;
+}
+.outdated-pages-filters {
+    display: flex;
+    flex-direction: column;
+    min-width: 300px;
+    padding: 1rem;
+}

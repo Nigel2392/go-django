@@ -89,5 +89,5 @@ func (p *QueryPaginator[T]) Page(n int) (PageObject[T], error) {
 		idx++
 	}
 
-	return NewPageObject(p.Context, p, n-1, resultRows), nil
+	return NewPageObject(p.Context, p, n, resultRows), nil
 }

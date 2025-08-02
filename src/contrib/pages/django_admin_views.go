@@ -9,8 +9,10 @@ import (
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -20,7 +22,10 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
@@ -144,7 +149,7 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 	var listDisplay = django.ConfigGet(
 		django.Global.Settings,
 		APPVAR_OUTDATED_LIST_DISPLAY,
-		[]string{"Title", "UrlPath", "ContentType", "Live", "UpdatedAt", "Children"},
+		[]string{"Title", "UrlPath", "ContentType", "Live", "UpdatedAt"},
 	)
 
 	var columns = make([]list.ListColumn[attrs.Definer], len(listDisplay)+1)
@@ -157,9 +162,76 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		Actions: getListActions(""),
 	}
 
+	var filter = filters.NewFilters[*PageNode](
+		r.Context(), "filters",
+	)
+
+	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*PageNode]]{
+		SpecName: "content_type",
+		FormField: fields.CharField(fields.Widget(
+			options.NewSelectInput(nil, func() []widgets.Option {
+				var vals, err = queries.GetQuerySet(&PageNode{}).Distinct().ValuesList("ContentType")
+				if err != nil {
+					logger.Errorf("Failed to get content types for audit logs: %v", err)
+					except.Fail(
+						http.StatusInternalServerError,
+						"Failed to get content types for audit logs",
+					)
+					return nil
+				}
+
+				var opts = make([]widgets.Option, 0, len(vals))
+				for _, val := range vals {
+					if val[0] == nil {
+						continue
+					}
+
+					var v = val[0].(string)
+					if v == "" {
+						continue
+					}
+
+					var cTypeDef = contenttypes.DefinitionForType(v)
+					if cTypeDef == nil {
+						logger.Errorf("Content type %q not found", v)
+						continue
+					}
+
+					var cType = cTypeDef.ContentType()
+					opts = append(opts, &widgets.FormOption{
+						OptValue: cType.ShortTypeName(),
+						OptLabel: trans.T(r.Context(), cType.Model()),
+					})
+				}
+
+				return opts
+			}, options.IncludeBlank(true)),
+		)),
+		Apply: func(value interface{}, object *queries.QuerySet[*PageNode]) (*queries.QuerySet[*PageNode], error) {
+			if fields.IsZero(value) {
+				return object, nil
+			}
+
+			return object.Filter("ContentType__endswith", value), nil
+		},
+	})
+
+	var qs = NewPageQuerySet().
+		WithContext(r.Context()).
+		Filter("UpdatedAt__lt", time.Now().Add(-outdatedAfter)).
+		OrderBy("UpdatedAt").
+		Base()
+
+	qs, err := filter.Filter(r.URL.Query(), qs)
+	if err != nil && !errors.Is(err, filters.FormError) {
+		except.Fail(http.StatusInternalServerError, err)
+	}
+
 	var view = &list.View[attrs.Definer]{
 		ListColumns:   columns,
-		DefaultAmount: 100,
+		DefaultAmount: 2,
+		PageParam:     "page",
+		AmountParam:   "amount",
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: admin.BASE_KEY,
@@ -171,6 +243,7 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 
 				context.Set("app", a)
 				context.Set("model", m)
+				context.Set("filters", filter)
 
 				context.SetPage(admin.PageOptions{
 					TitleFn:    trans.S("Outdated Pages"),
@@ -181,11 +254,7 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		},
 		QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
 			return queries.ChangeObjectsType[*PageNode, attrs.Definer](
-				NewPageQuerySet().
-					WithContext(r.Context()).
-					Filter("UpdatedAt__lt", time.Now().Add(-outdatedAfter)).
-					OrderBy("UpdatedAt").
-					Base(),
+				qs,
 			)
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
