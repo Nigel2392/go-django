@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 )
 
@@ -42,6 +43,14 @@ type ControlledView interface {
 type MethodsView interface {
 	View
 	Methods() []string
+}
+
+type BindableView interface {
+	View
+
+	// Bind binds the view to the request and response writer.
+	// It returns a new view, specific for said request.
+	Bind(w http.ResponseWriter, req *http.Request) (View, error)
 }
 
 type ContextGetter interface {
@@ -145,7 +154,7 @@ func Serve(view View) http.Handler {
 }
 
 func handleErrors(w http.ResponseWriter, req *http.Request, err error, code int) {
-	http.Error(w, "Error processing request", code)
+	except.Fail(code, err)
 }
 
 // Invoke invokes the view and appropriately handles the request.
@@ -209,6 +218,16 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 	if v, ok := view.(ControlledView); ok {
 		v.TakeControl(w, req)
 		return nil
+	}
+
+	if v, ok := view.(BindableView); ok {
+		var err error
+		view, err = v.Bind(w, req)
+		if err != nil {
+			django.App().Log.Error(err)
+			errFn(w, req, err, http.StatusInternalServerError)
+			return err
+		}
 	}
 
 	// Check if the view has a Serve<XXX> method.
