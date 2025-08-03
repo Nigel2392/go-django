@@ -21,7 +21,7 @@ import (
 
 var (
 	_ forms.Form                          = (*AdminForm[modelforms.ModelForm[attrs.Definer]])(nil)
-	_ modelforms.ModelForm[attrs.Definer] = (*AdminModelForm[modelforms.ModelForm[attrs.Definer]])(nil)
+	_ modelforms.ModelForm[attrs.Definer] = (*AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer])(nil)
 )
 
 type Panel interface {
@@ -336,37 +336,37 @@ func (a *AdminForm[T]) AddError(name string, errorList ...error) {
 	any(a.Form).(forms.ErrorAdder).AddError(name, errorList...)
 }
 
-type AdminModelForm[T modelforms.ModelForm[attrs.Definer]] struct {
-	*AdminForm[T]
+type AdminModelForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer] struct {
+	*AdminForm[T1]
 }
 
-func NewAdminModelForm[T modelforms.ModelForm[attrs.Definer]](form T, panels ...Panel) *AdminModelForm[T] {
-	return &AdminModelForm[T]{
+func NewAdminModelForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer](form T1, panels ...Panel) *AdminModelForm[T1, T2] {
+	return &AdminModelForm[T1, T2]{
 		AdminForm: NewAdminForm(form, panels...),
 	}
 }
 
-func (a *AdminModelForm[T]) Load() {
+func (a *AdminModelForm[T1, T2]) Load() {
 	a.Form.Load()
 }
-func (a *AdminModelForm[T]) Save() (map[string]interface{}, error) {
+func (a *AdminModelForm[T1, T2]) Save() (map[string]interface{}, error) {
 	return a.Form.Save()
 }
-func (a *AdminModelForm[T]) WithContext(ctx context.Context) {
+func (a *AdminModelForm[T1, T2]) WithContext(ctx context.Context) {
 	a.Form.WithContext(ctx)
 }
-func (a *AdminModelForm[T]) Context() context.Context {
+func (a *AdminModelForm[T1, T2]) Context() context.Context {
 	return a.Form.Context()
 }
-func (a *AdminModelForm[T]) SetFields(fields ...string) {
+func (a *AdminModelForm[T1, T2]) SetFields(fields ...string) {
 	a.Form.SetFields(fields...)
 }
-func (a *AdminModelForm[T]) SetExclude(exclude ...string) {
+func (a *AdminModelForm[T1, T2]) SetExclude(exclude ...string) {
 	a.Form.SetExclude(exclude...)
 }
-func (a *AdminModelForm[T]) Instance() attrs.Definer {
+func (a *AdminModelForm[T1, T2]) Instance() attrs.Definer {
 	return a.Form.Instance()
 }
-func (a *AdminModelForm[T]) SetInstance(model attrs.Definer) {
+func (a *AdminModelForm[T1, T2]) SetInstance(model T2) {
 	a.Form.SetInstance(model)
 }

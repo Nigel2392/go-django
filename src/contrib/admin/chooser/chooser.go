@@ -5,11 +5,13 @@ import (
 	"net/http"
 	"reflect"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/views"
@@ -19,6 +21,7 @@ import (
 )
 
 type Chooser interface {
+	Setup() error
 	GetTitle(ctx context.Context) string
 	GetModel() attrs.Definer
 	ListView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View
@@ -26,13 +29,7 @@ type Chooser interface {
 	UpdateView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View
 }
 
-type chooserRegistry struct {
-	choosers *orderedmap.OrderedMap[reflect.Type, Chooser]
-}
-
-var registry = &chooserRegistry{
-	choosers: orderedmap.NewOrderedMap[reflect.Type, Chooser](),
-}
+var choosers = orderedmap.NewOrderedMap[reflect.Type, Chooser]()
 
 var _, _ = core.OnModelsReady.Listen(func(s signals.Signal[any], a any) error {
 	if !django.AppInstalled("admin") {
@@ -40,12 +37,18 @@ var _, _ = core.OnModelsReady.Listen(func(s signals.Signal[any], a any) error {
 		return nil
 	}
 
+	for head := choosers.Front(); head != nil; head = head.Next() {
+		if err := head.Value.Setup(); err != nil {
+			return errors.Wrapf(err, "Error setting up chooser for model type %T", reflect.Zero(head.Key).Interface())
+		}
+	}
+
 	admin.RegisterModelsRouteHook(func(adminSite *admin.AdminApplication, route mux.Multiplexer) {
 		var chooserRoot = route.Any("chooser/", nil, "chooser")
 
 		chooserRoot.Handle(mux.ANY, "list/", admin.NewModelHandler("app_name", "model_name", func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) {
 			var modelTyp = reflect.TypeOf(model.Model)
-			chooser, ok := registry.choosers.Get(modelTyp)
+			chooser, ok := choosers.Get(modelTyp)
 			if !ok {
 				logger.Error("No chooser registered for model type %s", modelTyp)
 				except.Fail(
@@ -71,7 +74,7 @@ var _, _ = core.OnModelsReady.Listen(func(s signals.Signal[any], a any) error {
 		chooserRoot.Handle(mux.ANY, "create/", admin.NewModelHandler("app_name", "model_name", func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) {
 			var instanceObj = model.NewInstance()
 			var modelTyp = reflect.TypeOf(instanceObj)
-			chooser, ok := registry.choosers.Get(modelTyp)
+			chooser, ok := choosers.Get(modelTyp)
 			if !ok {
 				logger.Error("No chooser registered for model type %s", modelTyp)
 				except.Fail(
@@ -96,7 +99,7 @@ var _, _ = core.OnModelsReady.Listen(func(s signals.Signal[any], a any) error {
 
 		chooserRoot.Handle(mux.ANY, "update/<<model_id>>/", admin.NewInstanceHandler("app_name", "model_name", "model_id", func(w http.ResponseWriter, r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) {
 			var modelTyp = reflect.TypeOf(instance)
-			chooser, ok := registry.choosers.Get(modelTyp)
+			chooser, ok := choosers.Get(modelTyp)
 			if !ok {
 				logger.Error("No chooser registered for model type %s", modelTyp)
 				except.Fail(
@@ -131,6 +134,30 @@ type ChooserDefinition[T attrs.Definer] struct {
 	UpdatePage *ChooserFormPage[T]
 }
 
+func (c *ChooserDefinition[T]) Setup() error {
+	if c.Title == nil {
+		return errors.ValueError.Wrap("ChooserDefinition.Title cannot be nil")
+	}
+
+	if reflect.ValueOf(c.Model).IsNil() {
+		return errors.TypeMismatch.Wrap("ChooserDefinition.Model cannot be nil")
+	}
+
+	if c.ListPage != nil {
+		c.ListPage._Definition = c
+	}
+
+	if c.CreatePage != nil {
+		c.CreatePage._Definition = c
+	}
+
+	if c.UpdatePage != nil {
+		c.UpdatePage._Definition = c
+	}
+
+	return nil
+}
+
 func (c *ChooserDefinition[T]) GetTitle(ctx context.Context) string {
 	switch v := c.Title.(type) {
 	case string:
@@ -144,4 +171,33 @@ func (c *ChooserDefinition[T]) GetTitle(ctx context.Context) string {
 
 func (c *ChooserDefinition[T]) GetModel() attrs.Definer {
 	return c.Model
+}
+
+func (c *ChooserDefinition[T]) ListView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View {
+	if c.ListPage != nil {
+		c.ListPage._Definition = c
+	}
+	return c.ListPage
+}
+
+func (c *ChooserDefinition[T]) CreateView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View {
+	if c.CreatePage != nil {
+		c.CreatePage._Definition = c
+	}
+	return c.CreatePage
+}
+
+func (c *ChooserDefinition[T]) UpdateView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
+	if c.UpdatePage != nil {
+		c.UpdatePage._Definition = c
+	}
+	return c.UpdatePage
+}
+
+func (c *ChooserDefinition[T]) GetContext(req *http.Request, page, bound views.View) ctx.Context {
+	var ctx = ctx.RequestContext(req)
+	ctx.Set("chooser", c)
+	ctx.Set("chooser_page", page)
+	ctx.Set("chooser_view", bound)
+	return ctx
 }

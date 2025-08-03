@@ -347,12 +347,12 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 	return form
 }
 
-func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[*AdminModelForm[modelforms.ModelForm[attrs.Definer]]] {
+func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[*AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]] {
 
 	var definer = instance.FieldDefs()
 	var primary = definer.Primary()
 
-	return &views.FormView[*AdminModelForm[modelforms.ModelForm[attrs.Definer]]]{
+	return &views.FormView[*AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: BASE_KEY,
@@ -366,7 +366,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				return context, nil
 			},
 		},
-		GetFormFn: func(req *http.Request) *AdminModelForm[modelforms.ModelForm[attrs.Definer]] {
+		GetFormFn: func(req *http.Request) *AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer] {
 			var form modelforms.ModelForm[attrs.Definer]
 			if opts.GetForm != nil {
 				form = opts.GetForm(req, instance, opts.ViewOptions.Fields)
@@ -385,7 +385,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				form.AddWidget(name, widget)
 			}
 
-			var adminForm = &AdminModelForm[modelforms.ModelForm[attrs.Definer]]{
+			var adminForm = &AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]{
 				AdminForm: &AdminForm[modelforms.ModelForm[attrs.Definer]]{
 					Form:   form,
 					Panels: opts.Panels,
@@ -435,7 +435,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			}
 			return initial
 		},
-		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *AdminModelForm[modelforms.ModelForm[attrs.Definer]]) {
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]) {
 			var instance = form.Instance()
 
 			var hooks = goldcrest.Get[AdminModelHookFunc](

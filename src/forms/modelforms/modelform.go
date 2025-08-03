@@ -304,13 +304,54 @@ func (f *BaseModelForm[T]) Context() context.Context {
 	return f.context
 }
 
-func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
-	var cleaned, err = f.BaseForm.Save()
-	if err != nil {
-		return cleaned, err
+func (f *BaseModelForm[T]) IsValid() bool {
+	if !f.BaseForm.IsValid() {
+		return false
 	}
 
+	var cleaned, err = f.BaseForm.Save()
+	if err != nil {
+		f.AddFormError(err)
+		return false
+	}
+
+	for _, fieldname := range f.ModelFields {
+		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, fieldname) {
+			continue
+		}
+
+		var field, ok = f.Definition.Field(fieldname)
+		assert.True(ok, "Field %q not found in %T", fieldname, f.Model)
+
+		value, ok := cleaned[fieldname]
+		if !ok {
+			continue
+		}
+
+		formField, ok := f.Field(fieldname)
+		if !ok {
+			continue
+		}
+
+		if _, ok := formField.(ModelFieldSaver); ok {
+			continue
+		}
+
+		if err := field.SetValue(value, true); err != nil {
+			f.AddError(
+				fieldname,
+				err,
+			)
+		}
+	}
+
+	return len(f.ErrorList_) == 0 && (f.Errors == nil || f.Errors.Len() == 0)
+}
+
+func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
+	var cleaned = f.CleanedData()
 	var ctx = f.Context()
+	var err error
 	for _, fieldname := range f.ModelFields {
 		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, fieldname) {
 			continue
@@ -330,17 +371,13 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 		}
 
 		if saver, ok := formField.(ModelFieldSaver); ok {
-			err = saver.SaveField(ctx, field, value)
-		} else {
-			err = field.SetValue(value, true)
-		}
-
-		if err != nil {
-			f.AddError(
-				fieldname,
-				err,
-			)
-			return cleaned, err
+			if err := saver.SaveField(ctx, field, value); err != nil {
+				f.AddError(
+					fieldname,
+					err,
+				)
+				return cleaned, err
+			}
 		}
 	}
 

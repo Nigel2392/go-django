@@ -679,7 +679,9 @@ func (a *Application) Initialize() error {
 	// before they can be used.
 	dbtype.Lock()
 
-	core.BeforeModelsReady.Send(a)
+	if err := core.BeforeModelsReady.Send(a); err != nil {
+		return errors.Wrap(err, "Error sending BeforeModelsReady signal")
+	}
 
 	var allModels = make([]attrs.Definer, 0)
 	// Register all models in the contenttypes registry before
@@ -706,13 +708,17 @@ func (a *Application) Initialize() error {
 		attrs.RegisterModel(model)
 	}
 
-	core.OnModelsReady.Send(a)
+	if err := core.OnModelsReady.Send(a); err != nil {
+		return errors.Wrap(err, "Error sending OnModelsReady signal")
+	}
 
 	// Send a reset definitions signal to the attrs package
 	// This is to ensure that all static definitions are reset
 	// and all fields are included the next time the static definitions
 	// are set up for the model.
-	attrs.ResetDefinitions.Send(nil)
+	if err := attrs.ResetDefinitions.Send(nil); err != nil {
+		return errors.Wrap(err, "Error sending ResetDefinitions signal")
+	}
 
 	// First app loop to initialze and register commands
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
@@ -850,7 +856,9 @@ func (a *Application) Initialize() error {
 
 	a.initialized.Store(true)
 
-	core.OnDjangoReady.Send(a)
+	if err := core.OnDjangoReady.Send(a); err != nil {
+		return errors.Wrap(err, "Error sending OnDjangoReady signal")
+	}
 
 	return nil
 }

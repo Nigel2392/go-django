@@ -504,12 +504,20 @@ func (f *BaseForm) Validate() {
 func (f *BaseForm) IsValid() bool {
 	assert.False(f.Raw == nil, "You cannot call IsValid() without setting the data first.")
 
+	if f.Cleaned != nil {
+		return len(f.Cleaned) > 0 && f.Errors.Len() == 0 && len(f.ErrorList_) == 0
+	}
+
 	if f.Errors == nil {
 		f.Errors = orderedmap.NewOrderedMap[string, []error]()
+	} else if f.Errors.Len() > 0 {
+		return false
 	}
 
 	if f.ErrorList_ == nil {
 		f.ErrorList_ = make([]error, 0)
+	} else if len(f.ErrorList_) > 0 {
+		return false
 	}
 
 	if f.Cleaned == nil {
