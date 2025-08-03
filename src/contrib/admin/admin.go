@@ -35,6 +35,8 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
+type ModelHandlerFunc func(func(w http.ResponseWriter, req *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition)) mux.Handler
+
 var (
 	//go:embed assets/**
 	adminFS embed.FS
@@ -241,31 +243,31 @@ func NewAppConfig() django.AppConfig {
 
 		var baseModelsRoute = baseApps.Handle(
 			mux.ANY, "model/<<model_name>>/",
-			newModelHandler(ModelListHandler),
+			NewModelHandler("app_name", "model_name", ModelListHandler),
 			"model", // admin:apps:model
 		)
 
 		baseModelsRoute.Handle(
 			mux.ANY, "add/",
-			newModelHandler(ModelAddHandler),
+			NewModelHandler("app_name", "model_name", ModelAddHandler),
 			"add", // admin:apps:model:add
 		)
 
 		baseModelsRoute.Handle(
 			mux.ANY, "edit/<<model_id>>/",
-			newInstanceHandler(ModelEditHandler),
+			NewInstanceHandler("app_name", "model_name", "model_id", ModelEditHandler),
 			"edit", // admin:apps:model:edit
 		)
 
 		baseModelsRoute.Handle(
 			mux.ANY, "delete/<<model_id>>/",
-			newInstanceHandler(ModelDeleteHandler),
+			NewInstanceHandler("app_name", "model_name", "model_id", ModelDeleteHandler),
 			"delete", // admin:apps:model:delete
 		)
 
 		var hooks = goldcrest.Get[RegisterModelsRouteHookFunc](AdminModelHookRegisterRoute)
 		for _, hook := range hooks {
-			hook(AdminSite, baseModelsRoute, newModelHandler)
+			hook(AdminSite, baseModelsRoute)
 		}
 
 		// External / Extension URLs root
@@ -425,13 +427,13 @@ func newHandler(handler func(w http.ResponseWriter, r *http.Request)) mux.Handle
 	return mux.NewHandler(handler)
 }
 
-func newInstanceHandler(handler func(w http.ResponseWriter, req *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer)) mux.Handler {
+func NewInstanceHandler(appnameVar, modelVar, idVar string, handler func(w http.ResponseWriter, req *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer)) mux.Handler {
 	return newHandler(func(w http.ResponseWriter, req *http.Request) {
 		var (
 			vars      = mux.Vars(req)
-			appName   = vars.Get("app_name")
-			modelName = vars.Get("model_name")
-			modelID   = vars.Get("model_id")
+			appName   = vars.Get(appnameVar)
+			modelName = vars.Get(modelVar)
+			modelID   = vars.Get(idVar)
 		)
 
 		if modelName == "" || appName == "" || modelID == "" {
@@ -464,28 +466,39 @@ func newInstanceHandler(handler func(w http.ResponseWriter, req *http.Request, a
 	})
 }
 
-func newModelHandler(handler func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition)) mux.Handler {
+func NewModelHandler(appnameVar, modelVar string, handler func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition), fail ...func(w http.ResponseWriter, r *http.Request, msg string)) mux.Handler {
+	if len(fail) == 0 {
+		fail = append(fail, func(w http.ResponseWriter, r *http.Request, msg string) {
+			Home(w, r, msg)
+		})
+	}
+
+	if len(fail) > 1 {
+		assert.Fail("NewModelHandler: too many fail functions provided, only one is allowed")
+		return nil
+	}
+
 	return newHandler(func(w http.ResponseWriter, req *http.Request) {
 		var (
 			vars      = mux.Vars(req)
-			appName   = vars.Get("app_name")
-			modelName = vars.Get("model_name")
+			appName   = vars.Get(appnameVar)
+			modelName = vars.Get(modelVar)
 		)
 
 		if modelName == "" || appName == "" {
-			Home(w, req, "App and Model name is required")
+			fail[0](w, req, "App and Model name is required")
 			return
 		}
 
 		var app, ok = AdminSite.Apps.Get(appName)
 		if !ok {
-			Home(w, req, "App not found")
+			fail[0](w, req, "App not found")
 			return
 		}
 
 		model, ok := app.Models.Get(modelName)
 		if !ok {
-			Home(w, req, "Model not found")
+			fail[0](w, req, "Model not found")
 			return
 		}
 

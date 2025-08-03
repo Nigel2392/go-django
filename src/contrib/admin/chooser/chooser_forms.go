@@ -11,35 +11,35 @@ import (
 )
 
 var (
-	_ views.View         = (*ChooserFormView[attrs.Definer])(nil)
-	_ views.MethodsView  = (*ChooserFormView[attrs.Definer])(nil)
-	_ views.BindableView = (*ChooserFormView[attrs.Definer])(nil)
-	_ views.Renderer     = (*BoundChooserFormView[attrs.Definer])(nil)
+	_ views.View         = (*ChooserFormPage[attrs.Definer])(nil)
+	_ views.MethodsView  = (*ChooserFormPage[attrs.Definer])(nil)
+	_ views.BindableView = (*ChooserFormPage[attrs.Definer])(nil)
+	_ views.Renderer     = (*BoundChooserFormPage[attrs.Definer])(nil)
 )
 
-type ChooserFormView[T attrs.Definer] struct {
+type ChooserFormPage[T attrs.Definer] struct {
 	Template       string
 	AllowedMethods []string
 	Panels         []admin.Panel
-	Validate       []func(context.Context, *http.Request, T, *ChooserFormView[T]) error
-	Save           func(context.Context, *http.Request, T, *ChooserFormView[T]) error
+	Validate       []func(context.Context, *http.Request, T, *ChooserFormPage[T]) error
+	Save           func(context.Context, *http.Request, T, *ChooserFormPage[T]) error
 
 	_Definition *ChooserDefinition[T]
 }
 
-func (v *ChooserFormView[T]) ServeXXX(w http.ResponseWriter, req *http.Request) {
+func (v *ChooserFormPage[T]) ServeXXX(w http.ResponseWriter, req *http.Request) {
 	// Placeholder method, will never get called.
 }
 
-func (v *ChooserFormView[T]) Methods() []string {
+func (v *ChooserFormPage[T]) Methods() []string {
 	return v.AllowedMethods
 }
 
-func (v *ChooserFormView[T]) Bind(w http.ResponseWriter, req *http.Request) (views.View, error) {
-	var base = &BoundChooserFormView[T]{
-		ChooserFormView: v,
-		ResponseWriter:  w,
-		Request:         req,
+func (v *ChooserFormPage[T]) Bind(w http.ResponseWriter, req *http.Request) (views.View, error) {
+	var base = &BoundChooserFormPage[T]{
+		FormView:       v,
+		ResponseWriter: w,
+		Request:        req,
 		Model: attrs.NewObject[T](
 			reflect.TypeOf(v._Definition.Model),
 		),

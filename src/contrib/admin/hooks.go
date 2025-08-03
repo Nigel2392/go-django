@@ -55,7 +55,7 @@ type (
 	RegisterAdminAppPageComponentHookFunc = func(r *http.Request, adminSite *AdminApplication, app *AppDefinition) AdminPageComponent
 
 	AdminModelHookFunc          = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
-	RegisterModelsRouteHookFunc = func(adminSite *AdminApplication, route mux.Multiplexer, newHandler func(func(w http.ResponseWriter, req *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition)) mux.Handler)
+	RegisterModelsRouteHookFunc = func(adminSite *AdminApplication, route mux.Multiplexer)
 )
 
 // Register an item to the django admin menu (sidebar).

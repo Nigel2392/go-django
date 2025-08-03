@@ -11,9 +11,9 @@ import (
 	"github.com/Nigel2392/go-django/src/views/list"
 )
 
-var _ views.View = (*ChooserListView[attrs.Definer])(nil)
+var _ views.View = (*ChooserListPage[attrs.Definer])(nil)
 
-type ChooserListView[T attrs.Definer] struct {
+type ChooserListPage[T attrs.Definer] struct {
 	Template       string
 	AllowedMethods []string
 
@@ -47,6 +47,6 @@ type ChooserListView[T attrs.Definer] struct {
 	GetQuerySet func(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) *queries.QuerySet[T]
 }
 
-func (v *ChooserListView[T]) ServeXXX(w http.ResponseWriter, req *http.Request) {
+func (v *ChooserListPage[T]) ServeXXX(w http.ResponseWriter, req *http.Request) {
 	// Placeholder method, will never get called.
 }
