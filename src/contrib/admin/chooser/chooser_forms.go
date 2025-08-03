@@ -106,10 +106,12 @@ func (v *BoundChooserFormPage[T]) GetForm(req *http.Request) *admin.AdminModelFo
 
 func (v *BoundChooserFormPage[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	var c = v.View.GetContext(req, v)
-
+	c.Set("form", v.GetForm(req))
 	return c, nil
 }
 
 func (v *BoundChooserFormPage[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context) error {
+	var form = context.Get("form").(*admin.AdminModelForm[modelforms.ModelForm[T], T])
+	_ = form
 	return nil
 }
