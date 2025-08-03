@@ -10,6 +10,7 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
@@ -167,46 +168,100 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 	)
 
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*PageNode]]{
+		SpecName:  "search",
+		FormField: fields.CharField(fields.HelpText(trans.S("Search by title or URL path"))),
+		Apply: func(value interface{}, object *queries.QuerySet[*PageNode]) (*queries.QuerySet[*PageNode], error) {
+			if fields.IsZero(value) {
+				return object, nil
+			}
+
+			return object.Filter(expr.Or(
+				expr.Q("Title__icontains", value),
+				expr.Q("UrlPath__icontains", value),
+			)), nil
+		},
+	})
+
+	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*PageNode]]{
+		SpecName: "root_nodes",
+		FormField: fields.NumberField[int](
+			fields.HelpText(trans.S("Only show root nodes")),
+			fields.Widget(options.NewSelectInput(nil, func() []widgets.Option {
+				return []widgets.Option{
+					&widgets.FormOption{
+						OptValue: "0",
+						OptLabel: trans.T(r.Context(), "All"),
+					},
+					&widgets.FormOption{
+						OptValue: "1",
+						OptLabel: trans.T(r.Context(), "Yes"),
+					},
+					&widgets.FormOption{
+						OptValue: "2",
+						OptLabel: trans.T(r.Context(), "No"),
+					},
+				}
+			})),
+		),
+		Apply: func(value interface{}, object *queries.QuerySet[*PageNode]) (*queries.QuerySet[*PageNode], error) {
+			if fields.IsZero(value) {
+				return object, nil
+			}
+
+			switch v := value.(string); v {
+			case "1":
+				return object.Filter("Depth", 0), nil
+			case "2":
+				return object.Filter("Depth__gt", 0), nil
+			}
+
+			return object, nil
+		},
+	})
+
+	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*PageNode]]{
 		SpecName: "content_type",
-		FormField: fields.CharField(fields.Widget(
-			options.NewSelectInput(nil, func() []widgets.Option {
-				var vals, err = queries.GetQuerySet(&PageNode{}).Distinct().ValuesList("ContentType")
-				if err != nil {
-					logger.Errorf("Failed to get content types for audit logs: %v", err)
-					except.Fail(
-						http.StatusInternalServerError,
-						"Failed to get content types for audit logs",
-					)
-					return nil
-				}
-
-				var opts = make([]widgets.Option, 0, len(vals))
-				for _, val := range vals {
-					if val[0] == nil {
-						continue
+		FormField: fields.CharField(
+			fields.HelpText(trans.S("Filter by content type")),
+			fields.Widget(
+				options.NewSelectInput(nil, func() []widgets.Option {
+					var vals, err = queries.GetQuerySet(&PageNode{}).Distinct().ValuesList("ContentType")
+					if err != nil {
+						logger.Errorf("Failed to get content types for audit logs: %v", err)
+						except.Fail(
+							http.StatusInternalServerError,
+							"Failed to get content types for audit logs",
+						)
+						return nil
 					}
 
-					var v = val[0].(string)
-					if v == "" {
-						continue
+					var opts = make([]widgets.Option, 0, len(vals))
+					for _, val := range vals {
+						if val[0] == nil {
+							continue
+						}
+
+						var v = val[0].(string)
+						if v == "" {
+							continue
+						}
+
+						var cTypeDef = contenttypes.DefinitionForType(v)
+						if cTypeDef == nil {
+							logger.Errorf("Content type %q not found", v)
+							continue
+						}
+
+						var cType = cTypeDef.ContentType()
+						opts = append(opts, &widgets.FormOption{
+							OptValue: cType.ShortTypeName(),
+							OptLabel: trans.T(r.Context(), cType.Model()),
+						})
 					}
 
-					var cTypeDef = contenttypes.DefinitionForType(v)
-					if cTypeDef == nil {
-						logger.Errorf("Content type %q not found", v)
-						continue
-					}
-
-					var cType = cTypeDef.ContentType()
-					opts = append(opts, &widgets.FormOption{
-						OptValue: cType.ShortTypeName(),
-						OptLabel: trans.T(r.Context(), cType.Model()),
-					})
-				}
-
-				return opts
-			}, options.IncludeBlank(true)),
-		)),
+					return opts
+				}, options.IncludeBlank(true)),
+			)),
 		Apply: func(value interface{}, object *queries.QuerySet[*PageNode]) (*queries.QuerySet[*PageNode], error) {
 			if fields.IsZero(value) {
 				return object, nil
@@ -222,9 +277,16 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		OrderBy("UpdatedAt").
 		Base()
 
-	qs, err := filter.Filter(r.URL.Query(), qs)
+	var count, err = qs.Count()
+	if err != nil {
+		except.Fail(http.StatusInternalServerError, err)
+		return
+	}
+
+	qs, err = filter.Filter(r.URL.Query(), qs)
 	if err != nil && !errors.Is(err, filters.FormError) {
 		except.Fail(http.StatusInternalServerError, err)
+		return
 	}
 
 	var view = &list.View[attrs.Definer]{
@@ -244,11 +306,6 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 				context.Set("app", a)
 				context.Set("model", m)
 				context.Set("filters", filter)
-
-				var count, err = qs.Count()
-				if err != nil {
-					return nil, err
-				}
 
 				context.SetPage(admin.PageOptions{
 					TitleFn:    trans.S("(%d) Outdated Pages", count),

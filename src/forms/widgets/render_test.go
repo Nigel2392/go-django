@@ -3,15 +3,29 @@ package widgets_test
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io"
 	"strings"
 	"testing"
+	"text/template"
 
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	_ "github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/pkg/errors"
 )
+
+func init() {
+	tpl.Funcs(template.FuncMap{
+		"Translate": func(ctx context.Context, s string, args ...interface{}) string {
+			if len(args) > 0 {
+				return fmt.Sprintf(s, args...)
+			}
+			return s
+		},
+	})
+}
 
 func TestNewTextInput(t *testing.T) {
 	attrs := map[string]string{"placeholder": "Enter text", "class": "text-input"}

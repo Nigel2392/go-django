@@ -263,6 +263,11 @@ func NewAppConfig() django.AppConfig {
 			"delete", // admin:apps:model:delete
 		)
 
+		var hooks = goldcrest.Get[RegisterModelsRouteHookFunc](AdminModelHookRegisterRoute)
+		for _, hook := range hooks {
+			hook(AdminSite, baseModelsRoute, newModelHandler)
+		}
+
 		// External / Extension URLs root
 		var routeExtensions = AdminSite.Route.Handle(
 			mux.ANY, "ext/", nil,
@@ -275,9 +280,6 @@ func NewAppConfig() django.AppConfig {
 			if app.Routing != nil {
 				app.Routing(routeExtensions)
 			}
-			//for _, url := range app.URLs {
-			//	url.Register(routeExtensions)
-			//}
 		}
 
 		for front := AdminSite.Apps.Front(); front != nil; front = front.Next() {
@@ -409,16 +411,18 @@ func (a *AdminApplication) Check(ctx context.Context, settings django.Settings) 
 					front.Value.GetName(), implementsSave, implementsDelete,
 				))
 			}
+
+			messages = append(
+				messages,
+				front.Value.Check(ctx, app)...,
+			)
 		}
 	}
 	return messages
 }
 
 func newHandler(handler func(w http.ResponseWriter, r *http.Request)) mux.Handler {
-	return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
-
-		handler(w, req)
-	})
+	return mux.NewHandler(handler)
 }
 
 func newInstanceHandler(handler func(w http.ResponseWriter, req *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer)) mux.Handler {

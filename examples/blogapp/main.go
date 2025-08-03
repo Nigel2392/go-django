@@ -206,7 +206,7 @@ func main() {
 			var page = specificPage.Reference()
 			fmt.Printf(" - %q (ID: %d, %d)\n", page.Title, page.ID(), page.PageID)
 			fmt.Printf("   - PageObject: %+v\n", specificPage.(*blog.BlogPage))
-			fmt.Printf("   - PageURL: %s\n", django.Reverse("pages", page.ID()))
+			// fmt.Printf("   - PageURL: %s\n", django.Reverse("pages", page.ID()))
 		}
 
 		//err = staticfiles.Collect(func(path string, f fs.File) error {

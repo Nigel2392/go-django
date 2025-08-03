@@ -8,6 +8,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
@@ -122,6 +123,7 @@ func viewDefaults(o *ViewOptions, mdl any, check func(attrs.FieldDefinition, att
 		for _, field := range o.Exclude {
 			exclMap[field] = struct{}{}
 		}
+
 		var meta = attrs.GetModelMeta(mdl)
 		var defs = meta.Definitions()
 		var fields = defs.Fields()
@@ -141,6 +143,47 @@ func viewDefaults(o *ViewOptions, mdl any, check func(attrs.FieldDefinition, att
 			)
 		}
 	}
+}
+
+func panelDefaults(o *FormViewOptions, mdl attrs.Definer, nameOfMethod string) {
+	var method func() []Panel
+	var ok bool
+
+	if len(o.Fields) > 0 && len(o.Exclude) > 0 {
+		assert.Fail("Fields and Exclude cannot be used together")
+	}
+
+	if len(o.Panels) > 0 {
+		goto checkFields
+	}
+
+	method, ok = attrs.Method[func() []Panel](mdl, nameOfMethod)
+	if !ok {
+		return
+	}
+
+	o.Panels = method()
+
+checkFields:
+	if len(o.Fields) > 0 {
+		return
+	}
+
+	//	o.Fields = make([]string, 0, len(o.Panels))
+	//	var exclMap = make(map[string]struct{}, len(o.Exclude))
+	//	for _, field := range o.Exclude {
+	//		exclMap[field] = struct{}{}
+	//	}
+
+	//	for _, panel := range o.Panels {
+	//		for _, field := range panel.Fields() {
+	//			if _, ok := exclMap[field]; ok {
+	//				continue
+	//			}
+	//
+	//			o.Fields = append(o.Fields, field)
+	//		}
+	//	}
 }
 
 type ModelOptions struct {
@@ -355,8 +398,8 @@ func (m *ModelDefinition) GetListInstances(ctx context.Context, amount, offset u
 }
 
 func (m *ModelDefinition) OnRegister(a *AdminApplication, app *AppDefinition) {
-	viewDefaults(&m.AddView.ViewOptions, m.Model, nil)
-	viewDefaults(&m.EditView.ViewOptions, m.Model, nil)
+	panelDefaults(&m.AddView, m.Model, "GetAddPanels")
+	panelDefaults(&m.EditView, m.Model, "GetEditPanels")
 	viewDefaults(&m.ListView.ViewOptions, m.Model, func(fd attrs.FieldDefinition, d attrs.Definer) bool {
 		var rel = fd.Rel()
 		if rel == nil {
@@ -372,6 +415,38 @@ func (m *ModelDefinition) OnRegister(a *AdminApplication, app *AppDefinition) {
 			return false
 		}
 	})
+
+}
+
+func (m *ModelDefinition) Check(ctx context.Context, app *AppDefinition) []checks.Message {
+	var messages = make([]checks.Message, 0, 2)
+
+	if !m.ModelOptions.DisallowCreate && m.ModelOptions.AddView.GetHandler == nil && len(m.ModelOptions.AddView.Fields) == 0 && len(m.ModelOptions.AddView.Exclude) == 0 && len(m.ModelOptions.AddView.Panels) == 0 {
+		messages = append(messages, checks.Warning(
+			"admin.models.add_view.panels",
+			"Model has no fields or panels defined for AddView",
+			m.GetName(),
+		))
+	}
+
+	if !m.ModelOptions.DisallowEdit && m.ModelOptions.EditView.GetHandler == nil && len(m.ModelOptions.EditView.Fields) == 0 && len(m.ModelOptions.EditView.Exclude) == 0 && len(m.ModelOptions.EditView.Panels) == 0 {
+		messages = append(messages, checks.Warning(
+			"admin.models.edit_view.panels",
+			"Model has no fields or panels defined for EditView",
+			m.GetName(),
+		))
+	}
+
+	// If the model has a custom handler for the list view, we don't check the columns.
+	if m.ModelOptions.ListView.GetHandler == nil && len(m.ModelOptions.ListView.Columns) == 0 && len(m.ModelOptions.ListView.Fields) == 0 && len(m.ModelOptions.ListView.Exclude) == 0 {
+		messages = append(messages, checks.Warning(
+			"admin.models.list_view.panels",
+			"Model has no fields or panels defined for ListView",
+			m.GetName(),
+		))
+	}
+
+	return messages
 }
 
 type WrappedModelDefinition struct {

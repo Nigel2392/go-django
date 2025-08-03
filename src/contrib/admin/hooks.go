@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/Nigel2392/mux"
 )
 
 const (
@@ -23,9 +24,10 @@ const (
 	RegisterHomePageActionHook     = "admin:home:register_action"
 	RegisterHomePageComponentHook  = "admin:home:register_component"
 
-	AdminModelHookAdd    = "admin:model:add"
-	AdminModelHookEdit   = "admin:model:edit"
-	AdminModelHookDelete = "admin:model:delete"
+	AdminModelHookAdd           = "admin:model:add"
+	AdminModelHookEdit          = "admin:model:edit"
+	AdminModelHookDelete        = "admin:model:delete"
+	AdminModelHookRegisterRoute = "admin:model:register_route"
 )
 
 var (
@@ -52,7 +54,8 @@ type (
 
 	RegisterAdminAppPageComponentHookFunc = func(r *http.Request, adminSite *AdminApplication, app *AppDefinition) AdminPageComponent
 
-	AdminModelHookFunc = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
+	AdminModelHookFunc          = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
+	RegisterModelsRouteHookFunc = func(adminSite *AdminApplication, route mux.Multiplexer, newHandler func(func(w http.ResponseWriter, req *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition)) mux.Handler)
 )
 
 // Register an item to the django admin menu (sidebar).
@@ -116,6 +119,11 @@ func RegisterModelEditHook(f AdminModelHookFunc) {
 // Register a hook to be called when a model is deleted.
 func RegisterModelDeleteHook(f AdminModelHookFunc) {
 	goldcrest.Register(AdminModelHookDelete, 0, f)
+}
+
+// Register a hook to register a route for models.
+func RegisterModelsRouteHook(f RegisterModelsRouteHookFunc) {
+	goldcrest.Register(AdminModelHookRegisterRoute, 0, f)
 }
 
 // Register a custom component for an app registered to the admin.
