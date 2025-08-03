@@ -78,7 +78,6 @@ func (v *BoundChooserFormPage[T]) GetPanels() []admin.Panel {
 func (v *BoundChooserFormPage[T]) GetForm(req *http.Request) *admin.AdminModelForm[modelforms.ModelForm[T], T] {
 
 	var form = modelforms.NewBaseModelForm(req.Context(), v.Model)
-	form.WithContext(req.Context())
 	form.SaveInstance = func(ctx context.Context, t T) error {
 		if v.View.Save != nil {
 			return v.View.Save(ctx, req, t, v)

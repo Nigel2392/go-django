@@ -59,6 +59,7 @@ func NewBaseModelForm[T attrs.Definer](ctx context.Context, model T, opts ...fun
 	var f = &BaseModelForm[T]{
 		BaseForm: forms.NewBaseForm(ctx, opts...),
 		Model:    model,
+		context:  ctx,
 	}
 
 	var (
@@ -295,6 +296,7 @@ func (f *BaseModelForm[T]) Load() {
 
 func (f *BaseModelForm[T]) WithContext(ctx context.Context) {
 	f.context = ctx
+	f.BaseForm.FormContext = ctx
 }
 
 func (f *BaseModelForm[T]) Context() context.Context {
