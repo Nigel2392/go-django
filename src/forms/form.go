@@ -505,7 +505,7 @@ func (f *BaseForm) IsValid() bool {
 	assert.False(f.Raw == nil, "You cannot call IsValid() without setting the data first.")
 
 	if f.Cleaned != nil {
-		return len(f.Cleaned) > 0 && f.Errors.Len() == 0 && len(f.ErrorList_) == 0
+		return len(f.Cleaned) > 0 && len(f.ErrorList_) == 0 && (f.Errors == nil || f.Errors.Len() == 0)
 	}
 
 	if f.Errors == nil {

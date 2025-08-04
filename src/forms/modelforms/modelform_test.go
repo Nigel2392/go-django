@@ -3,6 +3,7 @@ package modelforms_test
 import (
 	"context"
 	"errors"
+	"net/url"
 	"reflect"
 	"testing"
 
@@ -150,11 +151,14 @@ func TestModelForm(t *testing.T) {
 		t.Run("SaveForm", func(t *testing.T) {
 			f.Load()
 
+			f.BaseForm.Raw = make(url.Values)
 			f.BaseForm.Cleaned = map[string]interface{}{
 				"ID":   2,
 				"Name": "new name",
 				"Age":  1,
 			}
+
+			f.IsValid()
 
 			if _, err := f.Save(); err != nil {
 				t.Errorf("expected %v, got %v", nil, err)
@@ -219,11 +223,13 @@ func TestModelForm(t *testing.T) {
 			}
 
 			t.Run("SaveForm", func(t *testing.T) {
+				f.BaseForm.Raw = make(url.Values)
 				f.BaseForm.Cleaned = map[string]interface{}{
 					"ID":   2,
 					"Name": "new name",
 					"Age":  1,
 				}
+				f.IsValid()
 
 				if _, err := f.Save(); err != nil {
 					t.Errorf("expected (err) %v, got %v", nil, err)
@@ -249,9 +255,11 @@ func TestModelForm(t *testing.T) {
 					"Name": "new name",
 					"Age":  -1,
 				}
+				f.BaseForm.Raw = make(url.Values)
+				f.IsValid()
 
-				if _, err := f.Save(); err == nil {
-					t.Errorf("expected (err) %v, got %v", errors.New("Age must be greater than 0"), err)
+				if f.Errors.Len() != 1 {
+					t.Errorf("expected (err) %v, got %v", errors.New("Age must be greater than 0"), f.ErrorList_)
 				}
 
 				if m.ID != 1 {
