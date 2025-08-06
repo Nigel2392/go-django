@@ -1,7 +1,9 @@
 package chooser
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"net/http"
 	"reflect"
 
@@ -13,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-signals"
@@ -200,4 +203,21 @@ func (c *ChooserDefinition[T]) GetContext(req *http.Request, page, bound views.V
 	ctx.Set("chooser_page", page)
 	ctx.Set("chooser_view", bound)
 	return ctx
+}
+
+type JSONHtmlResponse struct {
+	HTML string `json:"html"`
+}
+
+func (c *ChooserDefinition[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context, base, template string) error {
+	var buf = new(bytes.Buffer)
+	if err := tpl.FRender(buf, context, base, template); err != nil {
+		return err
+	}
+
+	var response = JSONHtmlResponse{
+		HTML: buf.String(),
+	}
+
+	return json.NewEncoder(w).Encode(response)
 }

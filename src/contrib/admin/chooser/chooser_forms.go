@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/views"
@@ -112,5 +113,5 @@ func (v *BoundChooserFormPage[T]) GetContext(req *http.Request) (ctx.Context, er
 func (v *BoundChooserFormPage[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context) error {
 	var form = context.Get("form").(*admin.AdminModelForm[modelforms.ModelForm[T], T])
 	_ = form
-	return nil
+	return tpl.FRender(w, context, v.View.Template)
 }
