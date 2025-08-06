@@ -78,9 +78,6 @@ class Modal {
         this.elements.root.dispatchEvent(newModalEvent("modal:close", this, event));
     }
 
-    get root(): ModalElement {
-        return this.elements.root;
-    }
 
     set root(value: ModalElement | HTMLElement | null) {
         if (value === null) {
@@ -98,10 +95,6 @@ class Modal {
         this.elements = Modal.newElements(this.elements.root);
     }
 
-    get dialog(): HTMLDialogElement {
-        return this.elements.dialog;
-    }
-
     set dialog(value: HTMLDialogElement | HTMLElement | null) {
         if (value === null) {
             this.disconnect();
@@ -113,10 +106,6 @@ class Modal {
             parent.replaceChild(value, this.elements.dialog);
         }
         this.elements.dialog = value as HTMLDialogElement;
-    }
-
-    get title(): HTMLElement {
-        return this.elements.title;
     }
 
     set title(value: HTMLElement | string | null) {
@@ -134,10 +123,6 @@ class Modal {
             }
             this.elements.title = value as HTMLElement;
         }
-    }
-
-    get errors(): HTMLElement {
-        return this.elements.errors;
     }
 
     set errors(value: HTMLElement | string[] | null) {
@@ -163,10 +148,6 @@ class Modal {
         this.elements.errors = value as HTMLElement;
     }
 
-    get content(): HTMLElement {
-        return this.elements.content;
-    }
-
     set content(value: HTMLElement | string | null) {
         if (value === null) {
             this.elements.content.textContent = "";
@@ -184,10 +165,6 @@ class Modal {
         }
     }
 
-    get footer(): HTMLElement {
-        return this.elements.footer;
-    }
-
     set footer(value: HTMLElement | string | null) {
         if (value === null) {
             this.elements.footer.textContent = "";
@@ -203,6 +180,29 @@ class Modal {
             }
             this.elements.footer = value as HTMLElement;
         }
+    }
+
+    get root(): ModalElement {
+        return this.elements.root;
+    }
+
+    get dialog(): HTMLDialogElement {
+        return this.elements.dialog;
+    }
+
+    get title(): HTMLElement {
+        return this.elements.title;
+    }
+
+    get errors(): HTMLElement {
+        return this.elements.errors;
+    }
+
+    get content(): HTMLElement {
+        return this.elements.content;
+    }
+    get footer(): HTMLElement {
+        return this.elements.footer;
     }
 }
 
