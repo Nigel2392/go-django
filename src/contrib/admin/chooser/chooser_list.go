@@ -78,7 +78,7 @@ func (v *ChooserListPage[T]) Bind(w http.ResponseWriter, req *http.Request) (vie
 	return base, nil
 }
 
-func (v *ChooserListPage[T]) GetContext(req *http.Request, bound *BoundChooserListPage[T]) ctx.Context {
+func (v *ChooserListPage[T]) GetContext(req *http.Request, bound *BoundChooserListPage[T]) *ModalContext {
 	var c = v._Definition.GetContext(req, v, bound)
 
 	return c

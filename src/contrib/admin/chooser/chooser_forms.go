@@ -52,9 +52,8 @@ func (v *ChooserFormPage[T]) Bind(w http.ResponseWriter, req *http.Request) (vie
 	return base, nil
 }
 
-func (v *ChooserFormPage[T]) GetContext(req *http.Request, bound *BoundChooserFormPage[T]) ctx.Context {
+func (v *ChooserFormPage[T]) GetContext(req *http.Request, bound *BoundChooserFormPage[T]) *ModalContext {
 	var c = v._Definition.GetContext(req, v, bound)
-
 	return c
 }
 

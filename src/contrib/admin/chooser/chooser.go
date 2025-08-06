@@ -20,6 +20,10 @@ type Chooser interface {
 	Setup() error
 	GetTitle(ctx context.Context) string
 	GetModel() attrs.Definer
+
+	CanCreate() bool
+	CanUpdate() bool
+
 	ListView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View
 	CreateView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View
 	UpdateView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View
@@ -73,6 +77,14 @@ func (c *ChooserDefinition[T]) GetModel() attrs.Definer {
 	return c.Model
 }
 
+func (c *ChooserDefinition[T]) CanCreate() bool {
+	return c.CreatePage != nil
+}
+
+func (c *ChooserDefinition[T]) CanUpdate() bool {
+	return c.UpdatePage != nil
+}
+
 func (c *ChooserDefinition[T]) ListView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View {
 	if c.ListPage != nil {
 		c.ListPage._Definition = c
@@ -94,12 +106,17 @@ func (c *ChooserDefinition[T]) UpdateView(adminSite *admin.AdminApplication, app
 	return c.UpdatePage
 }
 
-func (c *ChooserDefinition[T]) GetContext(req *http.Request, page, bound views.View) ctx.Context {
+func (c *ChooserDefinition[T]) GetContext(req *http.Request, page, bound views.View) *ModalContext {
 	var ctx = ctx.RequestContext(req)
 	ctx.Set("chooser", c)
 	ctx.Set("chooser_page", page)
 	ctx.Set("chooser_view", bound)
-	return ctx
+
+	return &ModalContext{
+		ContextWithRequest: ctx,
+		Definition:         c,
+		View:               bound,
+	}
 }
 
 type JSONHtmlResponse struct {

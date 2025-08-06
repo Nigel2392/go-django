@@ -57,7 +57,7 @@ func NewChooserWidget(model attrs.Definer, widgetAttrs map[string]string) *Choos
 		),
 		TemplateKey: "chooser",
 		Templates: []string{
-			"chooser/modal.tmpl",
+			"chooser/widget.tmpl",
 		},
 
 		Model:      model,
@@ -87,10 +87,13 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 
 	var urlMap = map[string]string{
 		"choose": django.Reverse("admin:chooser:list", appName, modelName),
-		"create": django.Reverse("admin:chooser:create", appName, modelName),
 	}
 
-	if !fields.IsZero(value) {
+	if b.Definition.CanCreate() {
+		urlMap["create"] = django.Reverse("admin:chooser:create", appName, modelName)
+	}
+
+	if b.Definition.CanUpdate() && !fields.IsZero(value) {
 		urlMap["update"] = django.Reverse("admin:chooser:update", appName, modelName, value)
 	}
 
