@@ -1,0 +1,26 @@
+{{ template "skeleton" . }}
+
+{{ define "modal_root" }}
+    <dialog class="godjango-modal" open>
+        {{ block "modal_header" . }}
+            <div class="godjango-modal-header" id="modal-title">
+
+            </div>
+        {{ end }}
+        {{ block "modal_errors" . }}
+            <div class="godjango-modal-errors" id="modal-errors" role="alert">
+
+            </div>
+        {{ end }}
+        {{ block "modal_content" . }}
+            <div class="godjango-modal-content" id="modal-content">
+
+            </div>
+        {{ end }}
+        {{ block "modal_footer" . }}
+            <div class="godjango-modal-footer" id="modal-footer">
+                
+            </div>
+        {{ end }}
+    </dialog>
+{{ end }}

@@ -1,0 +1,13 @@
+{{ define "skeleton" }}
+    <div class="godjango-modal-wrapper" data-controller="modal">
+        {{ block "modal_controls" . }}
+
+            {{ template "controls" . }}
+
+        {{ end }}
+
+        {{ block "modal_root" . }}
+
+        {{ end }}
+    </div>
+{{ end }}
