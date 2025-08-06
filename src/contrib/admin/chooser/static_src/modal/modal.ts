@@ -119,24 +119,90 @@ class Modal {
         return this.elements.title;
     }
 
-    set title(value: HTMLElement) {
-        var parent = this.elements.title.parentNode;
-        if (parent) {
-            parent.replaceChild(value, this.elements.title);
+    set title(value: HTMLElement | string | null) {
+        if (value === null) {
+            this.elements.title.textContent = "";
+            return;
         }
-        this.elements.title = value;
+
+        if (typeof value === "string") {
+            this.elements.title.textContent = value;
+        } else {
+            var parent = this.elements.title.parentNode;
+            if (parent) {
+                parent.replaceChild(value, this.elements.title);
+            }
+            this.elements.title = value as HTMLElement;
+        }
     }
 
     get errors(): HTMLElement {
         return this.elements.errors;
     }
 
+    set errors(value: HTMLElement | string[] | null) {
+        if (value === null) {
+            this.elements.errors.textContent = "";
+            return;
+        }
+
+        if (Array.isArray(value)) {
+            this.elements.errors.innerHTML = "";
+            value.forEach((error) => {
+                var errorElement = document.createElement("div");
+                errorElement.textContent = error;
+                this.elements.errors.appendChild(errorElement);
+            });
+            return;
+        }
+
+        var parent = this.elements.errors.parentNode;
+        if (parent) {
+            parent.replaceChild(value, this.elements.errors);
+        }
+        this.elements.errors = value as HTMLElement;
+    }
+
     get content(): HTMLElement {
         return this.elements.content;
     }
 
+    set content(value: HTMLElement | string | null) {
+        if (value === null) {
+            this.elements.content.textContent = "";
+            return;
+        }
+
+        if (typeof value === "string") {
+            this.elements.content.innerHTML = value;
+        } else {
+            var parent = this.elements.content.parentNode;
+            if (parent) {
+                parent.replaceChild(value, this.elements.content);
+            }
+            this.elements.content = value as HTMLElement;
+        }
+    }
+
     get footer(): HTMLElement {
         return this.elements.footer;
+    }
+
+    set footer(value: HTMLElement | string | null) {
+        if (value === null) {
+            this.elements.footer.textContent = "";
+            return;
+        }
+
+        if (typeof value === "string") {
+            this.elements.footer.innerHTML = value;
+        } else {
+            var parent = this.elements.footer.parentNode;
+            if (parent) {
+                parent.replaceChild(value, this.elements.footer);
+            }
+            this.elements.footer = value as HTMLElement;
+        }
     }
 }
 
