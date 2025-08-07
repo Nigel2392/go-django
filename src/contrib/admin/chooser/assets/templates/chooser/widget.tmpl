@@ -1,10 +1,16 @@
 {{ define "widget" }}
 
-<div class="chooser-widget {{ .Data.id }}-chooser">
+<div class="chooser-widget {{ .Data.id }}-chooser" 
+    data-controller="chooser"
+    data-chooser-listurl-value="{{ .Data.urls.list }}"
+    data-chooser-createurl-value="{{ .Data.urls.create }}"
+    data-chooser-updateurl-value="{{ .Data.urls.update }}"
+    data-chooser-title-value="{{ .Data.title }}"
+    >
 
-    <input type="hidden" name="{{ .Data.name }}" id="{{ .Data.id }}" {{ if (.Data.value) }}value="{{ .Data.value }}"{{ end }}{{ safeAttrs (include (.Data.attrs) "forms/widgets/attrs.html") }}/>
+    <input type="hidden" data-chooser-target="input" name="{{ .Data.name }}" id="{{ .Data.id }}" {{ if (.Data.value) }}value="{{ .Data.value }}"{{ end }}{{ safeAttrs (include (.Data.attrs) "forms/widgets/attrs.html") }}/>
     
-    <div class="chooser-widget-preview">
+    <div class="chooser-widget-preview" data-chooser-target="preview">
 
     </div>
 
@@ -17,7 +23,7 @@
             </button>
             <div data-dropdown-target="content" class="dropdown__content">
 
-                <button type="button" class="chooser-choose">
+                <button type="button" class="chooser-choose" data-chooser-target="open" data-action="click->chooser#open">
                     {{ Translate .Data.context "Choose" }}
                 </button>
 
@@ -27,14 +33,15 @@
                     </button>
                 {{ end }}
 
-                <button type="button" class="chooser-reset">
+                <button type="button" class="chooser-reset" data-chooser-target="clear" data-action="click->chooser#clear">
                     {{ Translate .Data.context "Clear" }}
                 </button>
 
             </div>
         </div>
-
     </div>
+
+    <div class="chooser-widget-modal" data-chooser-target="modal"></div>
 </div>
 
 {{ end }}

@@ -1,14 +1,75 @@
+:root {
+    --modal-background-color: rgba(0, 0, 0, 0.5);
+    --modal-header-background-color: #f8f9fa;
+    --modal-footer-background-color: #f8f9fa;
+    --modal-text-color: #212529;
+    --border-color: #dee2e6;
+    --border-radius: 0.3125rem;
+}
 .godjango-modal-wrapper {
-    
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    background-color: var(--modal-background-color);
+    align-items: center;
+    justify-content: center;
+    display: none;
+}
+.godjango-modal-wrapper:has(dialog[open]) {
+    display: flex;
 }
 dialog.godjango-modal {
-    
+    position: relative;
+    border: none;
+    color: var(--modal-text-color);
+    background-color: var(--modal-header-background-color);
+    border-radius: var(--border-radius, .3125rem);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    color: var(--modal-text-color);
+}
+dialog.godjango-modal[fullscreen] {
+    width: 100%;
+    height: 100%;
+    border-radius: 0;
+}
+dialog.godjango-modal:not([fullscreen]) {
+    width: 100%;
+    max-width: 900px;
+    max-height: 60vh;
 }
 .godjango-modal-controls {
-    
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
 }
 .godjango-modal-control {
-    
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--dropdown-text-color);
+    background-color: var(--modal-header-background-color);
+    border: var(--border-color) solid 1px;
+    cursor: pointer;    
+}
+.godjango-modal-control:first-of-type {
+    border-radius: 0 0 0 var(--border-radius, .3125rem);
+}
+.godjango-modal-control:last-of-type {
+    border-radius: 0 var(--border-radius, .3125rem) 0 0;
+}
+.godjango-modal-control > svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    fill: var(--modal-text-color);
+    cursor: pointer;
 }
 .godjango-modal-controls-modal-size {
     
@@ -16,17 +77,31 @@ dialog.godjango-modal {
 .godjango-modal-controls-modal-close {
     
 }
+
 .godjango-modal-header {
-    
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: var(--modal-header-background-color);
+    border-bottom: 1px solid var(--border-color);    
 }
-.godjango-modal-errors {
-    
+.godjango-modal-errors:has(*) {
+    padding: 0.5rem;
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+    border-radius: var(--border-radius, .3125rem);
+    margin-bottom: 1rem;
 }
 .godjango-modal-content {
-    
+    padding: 1rem;
+    overflow-y: auto;
+    max-height: 60vh;
 }
 .godjango-modal-footer {
-    
+    height: var(--border-radius, .3125rem);
+    width: 100%;
+    background-color: var(--modal-footer-background-color);
 }
 
 .chooser-widget {

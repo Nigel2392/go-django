@@ -99,6 +99,7 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 	}
 
 	ctx.Set("urls", urlMap)
+	ctx.Set("title", b.Definition.GetTitle(c))
 	return ctx
 }
 
@@ -112,6 +113,7 @@ func (b *ChooserWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, n
 			logger.Error(fmt.Errorf("error rendering chooser widget: %v: %s", r, debug.Stack()))
 		}
 	}()
+
 	var context = b.GetContextData(ctx, id, name, value, attrs)
 	if errors != nil {
 		context.Set("errors", errors)

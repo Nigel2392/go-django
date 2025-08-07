@@ -119,8 +119,9 @@ func (c *ChooserDefinition[T]) GetContext(req *http.Request, page, bound views.V
 	}
 }
 
-type JSONHtmlResponse struct {
-	HTML string `json:"html"`
+type ChooserResponse struct {
+	HTML        string `json:"html"`
+	PreviewHTML string `json:"preview_html,omitempty"`
 }
 
 func (c *ChooserDefinition[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context, base, template string) error {
@@ -129,7 +130,7 @@ func (c *ChooserDefinition[T]) Render(w http.ResponseWriter, req *http.Request, 
 		return err
 	}
 
-	var response = JSONHtmlResponse{
+	var response = ChooserResponse{
 		HTML: buf.String(),
 	}
 

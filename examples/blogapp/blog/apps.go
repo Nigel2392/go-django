@@ -140,7 +140,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 					),
 					admin.MultiPanel(
 						admin.FieldPanel("Image"),
-						// admin.FieldPanel("User"),
+						admin.FieldPanel("User"),
 					),
 					admin.FieldPanel("Editor"),
 					admin.FieldPanel("CreatedAt"),
