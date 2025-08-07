@@ -30,8 +30,9 @@ type Chooser interface {
 }
 
 type ChooserDefinition[T attrs.Definer] struct {
-	Model T
-	Title any // string or func(ctx context.Context) string
+	Model  T
+	Title  any // string or func(ctx context.Context) string
+	Labels map[string]func(ctx context.Context) string
 
 	ListPage   *ChooserListPage[T]
 	CreatePage *ChooserFormPage[T]
@@ -71,6 +72,24 @@ func (c *ChooserDefinition[T]) GetTitle(ctx context.Context) string {
 	}
 	assert.Fail("ChooserDefinition.Title must be a string or a function that returns a string")
 	return ""
+}
+
+func (o *ChooserDefinition[T]) GetLabel(labels map[string]func(context.Context) string, field string, default_ string) func(ctx context.Context) string {
+	if labels != nil {
+		var label, ok = labels[field]
+		if ok {
+			return label
+		}
+	}
+	if o.Labels != nil {
+		var label, ok = o.Labels[field]
+		if ok {
+			return label
+		}
+	}
+	return func(ctx context.Context) string {
+		return default_
+	}
 }
 
 func (c *ChooserDefinition[T]) GetModel() attrs.Definer {
