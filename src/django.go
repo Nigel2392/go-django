@@ -606,7 +606,7 @@ func (a *Application) Initialize() error {
 			c.Render(ctx, buf)
 			return template.HTML(buf.String())
 		},
-		"Translate": func(ctx any, s string, args ...any) string {
+		"Translate": func(ctx any, s any, args ...any) string {
 			var c context.Context
 			switch v := ctx.(type) {
 			case context.Context:
@@ -614,11 +614,19 @@ func (a *Application) Initialize() error {
 			case *http.Request:
 				c = v.Context()
 			case string:
-				return trans.T(context.Background(), v, args...)
+				return trans.T(context.Background(), v, append([]any{s}, args...)...)
+			case nil:
+				c = context.Background()
 			default:
 				panic(fmt.Sprintf("Invalid context type %T for Translate function", ctx))
 			}
-			return trans.T(c, s, args...)
+
+			var rS = reflect.ValueOf(s)
+			if rS.Kind() != reflect.String {
+				panic(fmt.Sprintf("Invalid string type %T for Translate function", s))
+			}
+
+			return trans.T(c, rS.String(), args...)
 		},
 	})
 

@@ -5,6 +5,9 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
+	"github.com/Nigel2392/go-django/src/contrib/auth"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -12,12 +15,20 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
 
 var (
 	_ models.SaveableObject   = (*BlogPage)(nil)
 	_ models.DeleteableObject = (*BlogPage)(nil)
 )
+
+func init() {
+	chooser.Register(&chooser.ChooserDefinition[users.User]{
+		Title: trans.S("User Chooser"),
+		Model: &auth.User{},
+	})
+}
 
 type BlogContext struct {
 	ctx.ContextWithRequest
@@ -29,6 +40,7 @@ type BlogPage struct {
 	Page         *pages.PageNode `proxy:"true"`
 	Image        *mediafiles.SimpleStoredObject
 	Editor       *editor.EditorJSBlockData
+	User         users.User
 }
 
 func (b *BlogPage) ID() int64 {
@@ -123,6 +135,21 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 			//	"text-align",
 			//	"list",
 			//},
+		}),
+		attrs.NewField(n, "User", &attrs.FieldConfig{
+			Label:    trans.S("User"),
+			HelpText: trans.S("The user who created this blog post."),
+			Null:     true,
+			RelForeignKey: attrs.RelatedDeferred(
+				attrs.RelManyToOne,
+				users.MODEL_KEY,
+				"", nil,
+			),
+			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+				return chooser.NewChooserWidget(
+					fc.RelForeignKey.Model(), fc.WidgetAttrs,
+				)
+			},
 		}),
 		attrs.NewField(n.Page, "CreatedAt", &attrs.FieldConfig{
 			Embedded: true,

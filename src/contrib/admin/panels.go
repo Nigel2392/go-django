@@ -348,7 +348,34 @@ func NewAdminModelForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer](form T1, p
 
 func (a *AdminModelForm[T1, T2]) Load() {
 	a.Form.Load()
+
+	var fields = a.Fields()
+	if len(a.Panels) == 0 {
+		a.Panels = make([]Panel, 0, len(fields))
+		for _, field := range fields {
+			a.Panels = append(
+				a.Panels,
+				FieldPanel(field.Name()),
+			)
+		}
+		return
+	}
+
+	var panelFields = make(map[string]struct{})
+	for _, panel := range a.Panels {
+		for _, field := range panel.Fields() {
+			panelFields[field] = struct{}{}
+		}
+	}
+
+	for _, field := range fields {
+		var fName = field.Name()
+		if _, ok := panelFields[fName]; !ok {
+			a.Form.DeleteField(fName)
+		}
+	}
 }
+
 func (a *AdminModelForm[T1, T2]) Save() (map[string]interface{}, error) {
 	return a.Form.Save()
 }

@@ -1,6 +1,7 @@
 package chooser
 
 import (
+	"embed"
 	"net/http"
 	"reflect"
 
@@ -10,6 +11,8 @@ import (
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/views"
@@ -17,18 +20,38 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
+//go:embed assets/**
+var choosersFS embed.FS
+
 var _, _ = core.OnModelsReady.Listen(func(s signals.Signal[any], a any) error {
 	if !django.AppInstalled("admin") {
 		logger.Error("Admin app is not installed, but chooser forms are being used.")
 		return nil
 	}
 
+	var (
+		templateFS = filesystem.Sub(choosersFS, "assets/templates")
+		staticFS   = filesystem.Sub(choosersFS, "assets/static")
+	)
+
 	tpl.Add(tpl.Config{
 		AppName: "chooser",
+		FS:      templateFS,
 		Bases: []string{
 			"chooser/skeleton.tmpl",
+			"chooser/controls.tmpl",
 		},
 	})
+
+	staticfiles.AddFS(staticFS, filesystem.MatchAnd(
+		filesystem.MatchPrefix("chooser/"),
+		filesystem.MatchOr(
+			filesystem.MatchExt(".css"),
+			filesystem.MatchExt(".js"),
+			filesystem.MatchExt(".png"),
+			filesystem.MatchExt(".jpg"),
+		),
+	))
 
 	for head := choosers.Front(); head != nil; head = head.Next() {
 		if err := head.Value.Setup(); err != nil {

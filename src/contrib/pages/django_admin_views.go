@@ -566,11 +566,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), page)
-	form.WithContext(r.Context())
-	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](
-		form, panels...,
-	)
-
+	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
 	adminForm.Load()
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) (err error) {
@@ -735,9 +731,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), page)
-	form.WithContext(r.Context())
 	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
-
 	adminForm.Load()
 
 	if err := r.ParseForm(); err != nil {

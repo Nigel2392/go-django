@@ -122,6 +122,10 @@ func (f *FileWidget) ValueFromDataDict(ctx context.Context, data url.Values, fil
 }
 
 func (f *FileWidget) ValueToForm(value interface{}) interface{} {
+	if value == nil {
+		return nil
+	}
+
 	switch v := value.(type) {
 	case *FileObject:
 		return v.Name

@@ -6,6 +6,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"reflect"
 	"slices"
 	"strings"
 
@@ -187,11 +188,7 @@ func (f *BaseForm) AddField(name string, field fields.Field) {
 }
 
 func (f *BaseForm) DeleteField(name string) bool {
-	var _, ok = f.FormFields.Get(name)
-	if ok {
-		f.FormFields.Delete(name)
-	}
-	return ok
+	return f.FormFields.Delete(name)
 }
 
 func (f *BaseForm) AddWidget(name string, widget widgets.Widget) {
@@ -208,14 +205,19 @@ func (f *BaseForm) BoundFields() *orderedmap.OrderedMap[string, BoundField] {
 			v          = head.Value
 			widget, ok = f.FormWidgets.Get(k)
 			errors, _  = f.Errors.Get(k)
-			value      interface{}
 		)
 		if !ok {
 			widget = v.Widget()
 		}
 
+		var value = f.FormValue(k)
+		var rV = reflect.ValueOf(value)
+		if (rV.Kind() == reflect.Interface || rV.Kind() == reflect.Ptr) && rV.IsNil() {
+			value = nil
+		}
+
 		value = v.ValueToForm(
-			f.FormValue(k),
+			value,
 		)
 
 		ret.Set(k, NewBoundFormField(

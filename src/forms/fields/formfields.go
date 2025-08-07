@@ -251,6 +251,14 @@ func FileField(engine string, opts ...func(Field)) *FileStorageField {
 	}
 }
 
+func (i *FileStorageField) ValueToGo(value interface{}) (interface{}, error) {
+	return i.Widget().ValueToGo(value)
+}
+
+func (i *FileStorageField) ValueToForm(value interface{}) interface{} {
+	return i.Widget().ValueToForm(value)
+}
+
 func (f *FileStorageField) Save(value interface{}) (interface{}, error) {
 	if value == nil {
 		return nil, nil
@@ -290,7 +298,7 @@ func (f *FileStorageField) Widget() widgets.Widget {
 	if f.FormWidget != nil {
 		return f.FormWidget
 	}
-	return widgets.NewFileInput(nil, f.Validators...)
+	return widgets.NewFileInput(f.Attributes, f.Validators...)
 }
 
 type Encoder interface {

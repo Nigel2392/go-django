@@ -173,7 +173,7 @@ func (r *TemplateRenderer) GetTemplate(baseKey string, path ...string) Template 
 		))
 	}
 
-	var tpls = r.getTemplatePaths(config, baseKey, path)
+	var tpls = r.getTemplatePaths(config, path)
 	return &templateObject{
 		path:     path,
 		name:     getTemplateName(path[0]),
@@ -209,6 +209,11 @@ func (r *TemplateRenderer) onFirstRender() {
 
 func (r *TemplateRenderer) getTemplateConfig(baseKey string, path []string) (*templates, error) {
 	var cfg *templates
+
+	if baseKey == "" {
+		return nil, nil
+	}
+
 	if baseKey != "" {
 		if c, ok := r.configMap[baseKey]; ok {
 			return c, nil
@@ -231,9 +236,9 @@ func (r *TemplateRenderer) getTemplateConfig(baseKey string, path []string) (*te
 	return cfg, nil
 }
 
-func (r *TemplateRenderer) getTemplatePaths(cfg *templates, baseKey string, path []string) []string {
+func (r *TemplateRenderer) getTemplatePaths(cfg *templates, path []string) []string {
 	var tpls []string
-	if baseKey != "" {
+	if cfg != nil {
 		tpls = make([]string, 0, len(cfg.Bases)+len(path))
 		tpls = append(tpls, cfg.Bases...)
 		tpls = append(tpls, path...)
@@ -258,7 +263,9 @@ func (r *TemplateRenderer) getTemplate(name string, basePath string, paths []str
 	var err error
 	var funcMap = make(template.FuncMap)
 	maps.Copy(funcMap, r.funcs)
-	maps.Copy(funcMap, config.Funcs)
+	if config != nil {
+		maps.Copy(funcMap, config.Funcs)
+	}
 
 	tmpl := template.New(name)
 	tmpl = tmpl.Funcs(funcMap)
@@ -282,7 +289,9 @@ func (r *TemplateRenderer) getTemplateForRequest(name string, paths []string, co
 
 	funcMap := make(template.FuncMap)
 	maps.Copy(funcMap, r.funcs)
-	maps.Copy(funcMap, config.Funcs)
+	if config != nil {
+		maps.Copy(funcMap, config.Funcs)
+	}
 	for _, fn := range buildFuncs {
 		maps.Copy(funcMap, fn(req))
 	}

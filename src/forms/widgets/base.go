@@ -48,6 +48,7 @@ func (b *BaseWidget) ValueToForm(value interface{}) interface{} {
 	if value == nil {
 		return nil
 	}
+
 	return fmt.Sprintf("%v", value)
 }
 
@@ -94,12 +95,13 @@ func (b *BaseWidget) GetContextData(c context.Context, id, name string, value in
 	}
 
 	return ctx.NewContext(map[string]interface{}{
-		"id":     id,
-		"type":   type_,
-		"name":   name,
-		"value":  value,
-		"attrs":  widgetAttrs,
-		"widget": b,
+		"id":      id,
+		"type":    type_,
+		"name":    name,
+		"value":   value,
+		"attrs":   widgetAttrs,
+		"widget":  b,
+		"context": c,
 	})
 }
 

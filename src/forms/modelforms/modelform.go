@@ -251,7 +251,10 @@ func (f *BaseModelForm[T]) Load() {
 			continue
 		}
 
-		f.AddField(name, formField)
+		_, ok = f.Field(name)
+		if !ok {
+			f.AddField(name, formField)
+		}
 	}
 
 	var initialData = make(map[string]interface{})

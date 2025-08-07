@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"runtime/debug"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
@@ -55,11 +57,10 @@ func NewChooserWidget(model attrs.Definer, widgetAttrs map[string]string) *Choos
 		BaseWidget: widgets.NewBaseWidget(
 			"file", "", widgetAttrs,
 		),
-		TemplateKey: "chooser",
+		TemplateKey: "",
 		Templates: []string{
 			"chooser/widget.tmpl",
 		},
-
 		Model:      model,
 		App:        app,
 		Definition: definition,
@@ -86,15 +87,15 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 	)
 
 	var urlMap = map[string]string{
-		"choose": django.Reverse("admin:chooser:list", appName, modelName),
+		"choose": django.Reverse("admin:apps:model:chooser:list", appName, modelName),
 	}
 
 	if b.Definition.CanCreate() {
-		urlMap["create"] = django.Reverse("admin:chooser:create", appName, modelName)
+		urlMap["create"] = django.Reverse("admin:apps:model:chooser:create", appName, modelName)
 	}
 
 	if b.Definition.CanUpdate() && !fields.IsZero(value) {
-		urlMap["update"] = django.Reverse("admin:chooser:update", appName, modelName, value)
+		urlMap["update"] = django.Reverse("admin:apps:model:chooser:update", appName, modelName, value)
 	}
 
 	ctx.Set("urls", urlMap)
@@ -102,6 +103,15 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 }
 
 func (b *ChooserWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
+	defer func() {
+		if r := recover(); r != nil {
+			if err, ok := r.(error); ok {
+				logger.Error(fmt.Errorf("error rendering chooser widget: %w: %s", err, debug.Stack()))
+				return
+			}
+			logger.Error(fmt.Errorf("error rendering chooser widget: %v: %s", r, debug.Stack()))
+		}
+	}()
 	var context = b.GetContextData(ctx, id, name, value, attrs)
 	if errors != nil {
 		context.Set("errors", errors)

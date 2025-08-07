@@ -28,6 +28,7 @@
 
         {{ $Form := (.Get "form") }}
         {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}
+        {{ include $Form.UnpackErrors "admin/shared/forms/error_unpack.tmpl" }}
         {{ include $Form "admin/shared/forms/form.tmpl" }}
 
         <div class="form-buttons">
