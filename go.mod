@@ -21,11 +21,12 @@ require (
 )
 
 require (
-	github.com/Nigel2392/go-django/queries v0.0.0-20250702171233-0a2606cd7d9e
+	github.com/Nigel2392/go-django/queries v0.0.0-20250807203520-f98d7f04fe3f
 	github.com/Nigel2392/go-telepath v1.2.4
 	github.com/Nigel2392/tags v1.0.0
 	github.com/PuerkitoBio/goquery v1.10.1
 	github.com/a-h/templ v0.3.833
+	github.com/casbin/govaluate v1.9.0
 	github.com/dolthub/go-mysql-server v0.20.0
 	github.com/gertd/go-pluralize v0.2.1
 	github.com/google/uuid v1.6.0
@@ -33,16 +34,18 @@ require (
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible
 	github.com/qdm12/reprint v0.0.0-20200326205758-722754a53494
 	github.com/shopspring/decimal v1.4.0
+	github.com/urfave/cli/v2 v2.27.5
 	golang.org/x/net v0.33.0
 	golang.org/x/oauth2 v0.29.0
 	golang.org/x/term v0.27.0
+	gopkg.in/yaml.v3 v3.0.1
 )
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
-	github.com/casbin/govaluate v1.9.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
+	github.com/cpuguy83/go-md2man/v2 v2.0.5 // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect
 	github.com/dolthub/flatbuffers/v23 v23.3.3-dh.2 // indirect
 	github.com/dolthub/go-icu-regex v0.0.0-20250327004329-6799764f2dad // indirect
@@ -58,9 +61,13 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jmoiron/sqlx v1.4.0 // indirect
 	github.com/lestrrat-go/strftime v1.0.4 // indirect
+	github.com/oklog/ulid/v2 v2.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/rogpeppe/go-internal v1.6.1 // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sirupsen/logrus v1.8.1 // indirect
 	github.com/tetratelabs/wazero v1.8.2 // indirect
+	github.com/xrash/smetrics v0.0.0-20240521201337-686a1a2994c1 // indirect
 	go.opentelemetry.io/otel v1.31.0 // indirect
 	go.opentelemetry.io/otel/trace v1.31.0 // indirect
 	golang.org/x/mod v0.21.0 // indirect

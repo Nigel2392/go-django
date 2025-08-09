@@ -40,6 +40,26 @@ var (
 
 			return unescaped, "", colIdx, idx + 1, nil
 		},
+		"Translate": func(tokens []string, colIdx, idx int) (string, string, int, int, error) {
+			switch {
+			case idx+1 < len(tokens) && (strings.HasPrefix(tokens[idx+1], `"`) || strings.HasPrefix(tokens[idx+1], "`")):
+				// Remove outer quotes and unescape string
+				unescaped, err := strconv.Unquote(tokens[idx+1])
+				if err != nil {
+					return "", "", 0, 0, fmt.Errorf("failed to unquote string %q: %w", tokens[idx+1], err)
+				}
+				return unescaped, "", colIdx, idx + 1, nil
+			case idx+2 < len(tokens) && (strings.HasPrefix(tokens[idx+2], `"`) || strings.HasPrefix(tokens[idx+2], "`")):
+				// Remove outer quotes and unescape string
+				unescaped, err := strconv.Unquote(tokens[idx+2])
+				if err != nil {
+					return "", "", 0, 0, fmt.Errorf("failed to unquote string %q: %w", tokens[idx+2], err)
+				}
+				return unescaped, "", colIdx, idx + 2, nil
+			}
+
+			return "", "", 0, 0, fmt.Errorf("expected string literals for Translate at indices %d and %d", idx+1, idx+2)
+		},
 		"P": func(tokens []string, colIdx, idx int) (string, string, int, int, error) {
 			if idx+2 >= len(tokens) || !(strings.HasPrefix(tokens[idx+1], `"`) || strings.HasPrefix(tokens[idx+1], "`")) || !(strings.HasPrefix(tokens[idx+2], `"`) || strings.HasPrefix(tokens[idx+2], `'`)) {
 				return "", "", 0, 0, fmt.Errorf("expected string literals for P at indices %d and %d", idx+1, idx+2)
@@ -124,7 +144,7 @@ func parseGoTemplateTCalls(template string, parseFuncs map[string]func(tokens []
 	blockRegex := regexp.MustCompile(`\{\{((?:.|\n|\r\n|\t)*?)\}\}`)
 	blocks := blockRegex.FindAllStringSubmatchIndex(template, -1)
 
-	tokenRegex := regexp.MustCompile(`[A-Za-z_][A-Za-z0-9_]*|"(?:\\.|[^"\\])*"|[(){}:=|]`)
+	tokenRegex := regexp.MustCompile(`[A-Za-z_][A-Za-z0-9_.]*|"(?:\\.|[^"\\])*"|[(){}:=|]`)
 
 	return func(yield func(int, templateTranslation) bool) {
 		for matchIdx, match := range blocks {

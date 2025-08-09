@@ -105,9 +105,9 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 
 	appconfig.Ready = func() error {
 		pages.Register(&pages.PageDefinition{
-			Prefetch: admin.Prefetch{
-				SelectRelated: []string{"User"},
-			},
+			// Prefetch: admin.Prefetch{
+			// SelectRelated: []string{"User"},
+			// },
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 				GetLabel:       trans.S("Blog Page"),
 				GetDescription: trans.S("A blog page with a rich text editor."),

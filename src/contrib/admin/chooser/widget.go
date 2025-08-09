@@ -4,19 +4,22 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/http"
 	"reflect"
 	"runtime/debug"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 )
 
 var _ widgets.Widget = (*ChooserWidget)(nil)
@@ -117,14 +120,38 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 		urlMap["create"] = django.Reverse("admin:apps:model:chooser:create", appName, modelName)
 	}
 
-	if b.Definition.CanUpdate() && !fields.IsZero(value) {
+	if b.Definition.CanUpdate() && !django_reflect.IsZero(value) {
 		urlMap["update"] = django.Reverse("admin:apps:model:chooser:update", appName, modelName, value)
 	}
 
 	ctx.Set("urls", urlMap)
 	ctx.Set("title", b.Definition.GetTitle(c))
-	ctx.Set("value", attrs.PrimaryKey(value.(attrs.Definer)))
-	ctx.Set("preview", b.Definition.GetPreviewString(c, value.(attrs.Definer)))
+
+	if django_reflect.IsZero(value) {
+		ctx.Set("value", nil)
+		ctx.Set("preview", nil)
+	} else {
+
+		var meta = attrs.GetModelMeta(b.Model)
+		var defs = meta.Definitions()
+		var primDef = defs.Primary()
+
+		var modelRow, err = queries.GetQuerySet(b.Model).
+			Filter(primDef.Name(), value).
+			Get()
+
+		if err != nil {
+			except.Fail(
+				http.StatusInternalServerError,
+				err,
+			)
+			return ctx
+		}
+
+		ctx.Set("value", attrs.PrimaryKey(modelRow.Object))
+		ctx.Set("preview", b.Definition.GetPreviewString(c, modelRow.Object))
+	}
+
 	return ctx
 }
 

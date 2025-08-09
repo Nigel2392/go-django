@@ -11,7 +11,7 @@
     <input type="hidden" data-chooser-target="input" name="{{ .Data.name }}" id="{{ .Data.id }}" {{ if (.Data.value) }}value="{{ .Data.value }}"{{ end }}{{ safeAttrs (include (.Data.attrs) "forms/widgets/attrs.html") }}/>
     
     <div class="chooser-widget-preview" data-chooser-target="preview">
-        {{ safe .Data.preview }}
+        {{ if .Data.preview }}{{ safe .Data.preview }}{{ end }}
     </div>
 
     <div class="chooser-widget-controls">
@@ -36,7 +36,6 @@
                 <button type="button" class="chooser-reset" data-chooser-target="clear" data-action="click->chooser#clear">
                     {{ Translate .Data.context "Clear" }}
                 </button>
-
             </div>
         </div>
     </div>

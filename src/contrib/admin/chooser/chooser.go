@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"reflect"
 
@@ -147,11 +148,23 @@ func (o *ChooserDefinition[T]) GetLabel(labels map[string]func(context.Context) 
 	}
 }
 
-func (c *ChooserDefinition[T]) GetPreviewString(ctx context.Context, instance attrs.Definer) string {
+func (c *ChooserDefinition[T]) GetPreviewString(ctx context.Context, instance attrs.Definer) (previewString string) {
 	if c.PreviewString != nil {
-		return c.PreviewString(ctx, instance.(T))
+		previewString = c.PreviewString(ctx, instance.(T))
 	}
-	return attrs.ToString(instance)
+
+	if previewString == "" {
+		previewString = attrs.ToString(instance)
+	}
+
+	if previewString == "" {
+		previewString = fmt.Sprintf(
+			"%T(%v)",
+			instance, attrs.PrimaryKey(instance),
+		)
+	}
+
+	return previewString
 }
 
 func (c *ChooserDefinition[T]) GetModel() attrs.Definer {

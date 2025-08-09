@@ -1,7 +1,7 @@
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
-github.com/Nigel2392/go-signals v1.0.8 h1:A7WchnawfSVk9FyMer5YtKUyDs5fIdKePnoumD56vgc=
+github.com/Nigel2392/go-signals v1.1.0 h1:DVVOe1Q+oyf+RloEcyW3g+uym83UijAIW8y3oRpYwSs=
 github.com/Nigel2392/goldcrest v1.0.4 h1:Xx+QLht6QjJ3Gg9uksgc6Ye1XjbtzQ1208ClZwoVWsg=
-github.com/Nigel2392/mux v1.3.9 h1:A1MzspaKTBZh+NzSDwiRO5Gmx8rIuxB5qfp1RI0cAy4=
+github.com/Nigel2392/mux v1.4.3 h1:7f3X+YoeIg4nXOKZEhjb94fhmWpQprJIdZzTcQTw158=
 github.com/VividCortex/gohistogram v1.0.0 h1:6+hBz+qvs0JOrrNhhmR7lFxo5sINxBCGXrdtl/UvroE=
 github.com/cespare/xxhash/v2 v2.2.0 h1:DC2CZ1Ep5Y4k3ZQ899DldepgrayRUGE6BBZ/cd9Cj44=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=

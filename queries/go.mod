@@ -3,9 +3,9 @@ module github.com/Nigel2392/go-django/queries
 go 1.24.2
 
 require (
-	github.com/Nigel2392/go-signals v1.0.8
+	github.com/Nigel2392/go-signals v1.1.0
 	github.com/Nigel2392/goldcrest v1.0.4
-	github.com/Nigel2392/mux v1.3.9
+	github.com/Nigel2392/mux v1.4.3
 	github.com/dolthub/go-mysql-server v0.20.0
 	github.com/elliotchance/orderedmap/v2 v2.2.0
 	github.com/go-sql-driver/mysql v1.9.2
