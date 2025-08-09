@@ -224,6 +224,13 @@ func WalkRelationChain(m Definer, includeFinalRel bool, path []string) (*Relatio
 				// include the relation in the chain
 				chain.Chain = append(chain.Chain, part)
 
+				var model = fieldRel.Model()
+				var field = fieldRel.Field()
+				if field == nil {
+					var defs = GetModelMeta(model).Definitions()
+					field = defs.Primary()
+				}
+
 				// rebuild p to carry through-model info
 				node.Next = &RelationChainPart{
 					chain:     chain,
@@ -234,8 +241,8 @@ func WalkRelationChain(m Definer, includeFinalRel bool, path []string) (*Relatio
 
 					FieldRel: fieldRel,
 					Through:  fieldRel.Through(),
-					Model:    fieldRel.Model(),
-					Field:    fieldRel.Field(),
+					Model:    model,
+					Field:    field,
 				}
 
 				// all the target’s fields

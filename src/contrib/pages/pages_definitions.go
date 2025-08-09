@@ -34,6 +34,9 @@ type PageDefinition struct {
 	// Callback function to be called before a reference node is deleted
 	OnReferenceBeforeDelete func(ctx context.Context, ref *PageNode, id int64) error
 
+	// Prefetches to use when calling Specific on a page.
+	Prefetch admin.Prefetch
+
 	// Maximum number of pages allowed for this model
 	// MaxNum          int
 

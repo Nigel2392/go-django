@@ -18,9 +18,5 @@ func Register(chooser Chooser) {
 		panic("Chooser already registered for model type: " + modelType.String())
 	}
 
-	if err := chooser.Setup(); err != nil {
-		panic("Failed to setup chooser: " + err.Error())
-	}
-
 	choosers.Set(modelType, chooser)
 }

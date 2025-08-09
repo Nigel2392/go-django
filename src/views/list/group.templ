@@ -5,22 +5,29 @@ import (
 	"net/http"
 )
 
-type ColumnGroup[T attrs.Definer] struct {
-	Definitons attrs.Definitions
+type ListColumnGroup[T attrs.Definer] struct {
+	Definitions attrs.Definitions
 	Columns    []ListColumn[T]
 	Instance   T
 }
 
-func (c *ColumnGroup[T]) AddColumn(column ListColumn[T]) {
+func NewColumnGroup[T attrs.Definer](r *http.Request, instance T, columns []ListColumn[T]) *ListColumnGroup[T] {
+	return &ListColumnGroup[T]{
+		Definitions: instance.FieldDefs(),
+		Columns:    columns,
+		Instance:   instance,
+	}
+}
+
+func (c *ListColumnGroup[T]) AddColumn(column ListColumn[T]) {
 	c.Columns = append(c.Columns, column)
 }
 
-
-templ (c *ColumnGroup[T]) Component(r *http.Request) {
+templ (c *ListColumnGroup[T]) Component(r *http.Request) {
 	<tr class="column-group">
 		for _, column := range c.Columns {
 			<td class="list-column">
-				@column.Component(r, c.Definitons, c.Instance)
+				@column.Component(r, c.Definitions, c.Instance)
 			</td>
 		}
 	</tr>

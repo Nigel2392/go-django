@@ -2,7 +2,7 @@
 
 <div class="chooser-widget {{ .Data.id }}-chooser" 
     data-controller="chooser"
-    data-chooser-listurl-value="{{ .Data.urls.list }}"
+    data-chooser-listurl-value="{{ .Data.urls.choose }}"
     data-chooser-createurl-value="{{ .Data.urls.create }}"
     data-chooser-updateurl-value="{{ .Data.urls.update }}"
     data-chooser-title-value="{{ .Data.title }}"
@@ -11,7 +11,7 @@
     <input type="hidden" data-chooser-target="input" name="{{ .Data.name }}" id="{{ .Data.id }}" {{ if (.Data.value) }}value="{{ .Data.value }}"{{ end }}{{ safeAttrs (include (.Data.attrs) "forms/widgets/attrs.html") }}/>
     
     <div class="chooser-widget-preview" data-chooser-target="preview">
-
+        {{ safe .Data.preview }}
     </div>
 
     <div class="chooser-widget-controls">

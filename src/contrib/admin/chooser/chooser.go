@@ -8,17 +8,21 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/views"
+	"github.com/Nigel2392/go-django/src/views/list"
 )
 
 type Chooser interface {
 	Setup() error
 	GetTitle(ctx context.Context) string
+	GetPreviewString(ctx context.Context, instance attrs.Definer) string
 	GetModel() attrs.Definer
 
 	CanCreate() bool
@@ -30,13 +34,18 @@ type Chooser interface {
 }
 
 type ChooserDefinition[T attrs.Definer] struct {
-	Model  T
-	Title  any // string or func(ctx context.Context) string
-	Labels map[string]func(ctx context.Context) string
+	Model         T
+	Title         any // string or func(ctx context.Context) string
+	Labels        map[string]func(ctx context.Context) string
+	PreviewString func(ctx context.Context, instance T) string
 
 	ListPage   *ChooserListPage[T]
 	CreatePage *ChooserFormPage[T]
 	UpdatePage *ChooserFormPage[T]
+
+	DjangoApp  django.AppConfig
+	AdminApp   *admin.AppDefinition
+	AdminModel *admin.ModelDefinition
 }
 
 func (c *ChooserDefinition[T]) Setup() error {
@@ -46,6 +55,52 @@ func (c *ChooserDefinition[T]) Setup() error {
 
 	if reflect.ValueOf(c.Model).IsNil() {
 		return errors.TypeMismatch.Wrap("ChooserDefinition.Model cannot be nil")
+	}
+
+	var djangoApp, ok = django.GetAppForModel(c.Model)
+	if !ok {
+		return errors.TypeMismatch.Wrapf(
+			"ChooserDefinition.Model is not a valid Django model, no app found for %T",
+			c.Model,
+		)
+	}
+
+	adminApp, ok := admin.AdminSite.Apps.Get(djangoApp.Name())
+	if !ok {
+		return errors.TypeMismatch.Wrapf(
+			"ChooserDefinition.Model is not a valid Django model, no admin app found for %s",
+			djangoApp.Name(),
+		)
+	}
+
+	var cType = contenttypes.NewContentType(c.Model)
+	adminModel, ok := adminApp.Models.Get(cType.Model())
+	if !ok {
+		return errors.TypeMismatch.Wrapf(
+			"ChooserDefinition.Model is not a valid Django model, no admin model found for %s",
+			cType.Model(),
+		)
+	}
+
+	c.DjangoApp = djangoApp
+	c.AdminApp = adminApp
+	c.AdminModel = adminModel
+
+	if c.ListPage == nil {
+
+		var newCols = make(map[string]list.ListColumn[T], len(c.AdminModel.ListView.Columns))
+		for name, col := range c.AdminModel.ListView.Columns {
+			newCols[name] = list.ChangeColumnType[T](col)
+		}
+
+		c.ListPage = &ChooserListPage[T]{
+			AllowedMethods: []string{"GET"},
+			Fields:         c.AdminModel.ListView.Fields,
+			Labels:         c.AdminModel.ListView.Labels,
+			Format:         c.AdminModel.ListView.Format,
+			Columns:        newCols,
+			PerPage:        20,
+		}
 	}
 
 	if c.ListPage != nil {
@@ -90,6 +145,13 @@ func (o *ChooserDefinition[T]) GetLabel(labels map[string]func(context.Context) 
 	return func(ctx context.Context) string {
 		return default_
 	}
+}
+
+func (c *ChooserDefinition[T]) GetPreviewString(ctx context.Context, instance attrs.Definer) string {
+	if c.PreviewString != nil {
+		return c.PreviewString(ctx, instance.(T))
+	}
+	return attrs.ToString(instance)
 }
 
 func (c *ChooserDefinition[T]) GetModel() attrs.Definer {
@@ -143,7 +205,7 @@ type ChooserResponse struct {
 	PreviewHTML string `json:"preview_html,omitempty"`
 }
 
-func (c *ChooserDefinition[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context, base, template string) error {
+func (c *ChooserDefinition[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context, base, template string, preview func(req *http.Request) string) error {
 	var buf = new(bytes.Buffer)
 	if err := tpl.FRender(buf, context, base, template); err != nil {
 		return err
@@ -151,6 +213,10 @@ func (c *ChooserDefinition[T]) Render(w http.ResponseWriter, req *http.Request, 
 
 	var response = ChooserResponse{
 		HTML: buf.String(),
+	}
+
+	if preview != nil {
+		response.PreviewHTML = preview(req)
 	}
 
 	return json.NewEncoder(w).Encode(response)

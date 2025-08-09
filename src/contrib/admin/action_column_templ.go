@@ -210,7 +210,7 @@ func (l *ListActionsColumn[T]) Component(r *http.Request, defs attrs.Definitions
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(heading)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/action_column.templ`, Line: 52, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/action_column.templ`, Line: 51, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {

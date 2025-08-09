@@ -13,17 +13,25 @@ import (
 	"net/http"
 )
 
-type ColumnGroup[T attrs.Definer] struct {
-	Definitons attrs.Definitions
-	Columns    []ListColumn[T]
-	Instance   T
+type ListColumnGroup[T attrs.Definer] struct {
+	Definitions attrs.Definitions
+	Columns     []ListColumn[T]
+	Instance    T
 }
 
-func (c *ColumnGroup[T]) AddColumn(column ListColumn[T]) {
+func NewColumnGroup[T attrs.Definer](r *http.Request, instance T, columns []ListColumn[T]) *ListColumnGroup[T] {
+	return &ListColumnGroup[T]{
+		Definitions: instance.FieldDefs(),
+		Columns:     columns,
+		Instance:    instance,
+	}
+}
+
+func (c *ListColumnGroup[T]) AddColumn(column ListColumn[T]) {
 	c.Columns = append(c.Columns, column)
 }
 
-func (c *ColumnGroup[T]) Component(r *http.Request) templ.Component {
+func (c *ListColumnGroup[T]) Component(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -53,7 +61,7 @@ func (c *ColumnGroup[T]) Component(r *http.Request) templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = column.Component(r, c.Definitons, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
+			templ_7745c5c3_Err = column.Component(r, c.Definitions, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

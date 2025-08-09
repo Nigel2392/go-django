@@ -39,6 +39,38 @@ func BooleanColumn[T attrs.Definer](header func(ctx context.Context) string, dat
 	return &booleanColumn[T]{header, data}
 }
 
+type dateTimeColumn[T attrs.Definer] struct {
+	fmt    string
+	header func(ctx context.Context) string
+	data   func(r *http.Request, defs attrs.Definitions, row T) time.Time
+}
+
+func DateTimeColumn[T attrs.Definer](fmt string, header func(ctx context.Context) string, data func(r *http.Request, defs attrs.Definitions, row T) time.Time) ListColumn[T] {
+	return &dateTimeColumn[T]{fmt, header, data}
+}
+
+templ (c *dateTimeColumn[T]) Header() {
+	{{ assert.False(c.header == nil, "Column header is nil") }}
+	{ c.header(ctx) }
+}
+
+templ (c *dateTimeColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
+	{{ var value = c.data(r, defs, row) }}
+	{ trans.Time(r.Context(), value, c.fmt) }
+}
+
+type wrappedColumn[T1, T2 attrs.Definer] struct {
+	ListColumn[T2]
+}
+
+templ (c *wrappedColumn[T1, T2]) Component(r *http.Request, defs attrs.Definitions, row T1) {
+	@c.ListColumn.Component(r, defs, any(row).(T2))
+}
+
+func ChangeColumnType[T1, T2 attrs.Definer](col ListColumn[T2]) ListColumn[T1] {
+	return &wrappedColumn[T1, T2]{col}
+}
+
 type funcColumn[T attrs.Definer] struct {
 	header func(ctx context.Context) string
 	data   func(r *http.Request, defs attrs.Definitions, row T) interface{}

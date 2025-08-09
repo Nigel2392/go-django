@@ -7,6 +7,7 @@ import (
 	"reflect"
 	"runtime/debug"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -59,7 +60,7 @@ func NewChooserWidget(model attrs.Definer, widgetAttrs map[string]string) *Choos
 		),
 		TemplateKey: "",
 		Templates: []string{
-			"chooser/widget.tmpl",
+			"chooser/widget/widget.tmpl",
 		},
 		Model:      model,
 		App:        app,
@@ -79,9 +80,31 @@ func (w *ChooserWidget) Media() media.Media {
 	return m
 }
 
-func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context {
+func (w *ChooserWidget) ValueToForm(value interface{}) interface{} {
+	return value
+}
+
+func (w *ChooserWidget) ValueToGo(value interface{}) (interface{}, error) {
+	if _, ok := value.(attrs.Definer); ok {
+		return value, nil
+	}
+
+	var newObj = attrs.NewObject[attrs.Definer](w.Model)
+	var defs = newObj.FieldDefs()
+	var prim = defs.Primary()
+	if err := prim.Scan(value); err != nil {
+		return nil, errors.Wrapf(
+			err, "failed to scan value into primary key field %q",
+			prim.Name(),
+		)
+	}
+
+	return newObj, nil
+}
+
+func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value interface{}, widgetAttrs map[string]string) ctx.Context {
 	var (
-		ctx       = b.BaseWidget.GetContextData(c, id, name, value, attrs)
+		ctx       = b.BaseWidget.GetContextData(c, id, name, value, widgetAttrs)
 		appName   = b.App.Name()
 		modelName = b.ContentType.Model()
 	)
@@ -100,6 +123,8 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 
 	ctx.Set("urls", urlMap)
 	ctx.Set("title", b.Definition.GetTitle(c))
+	ctx.Set("value", attrs.PrimaryKey(value.(attrs.Definer)))
+	ctx.Set("preview", b.Definition.GetPreviewString(c, value.(attrs.Definer)))
 	return ctx
 }
 

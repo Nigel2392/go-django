@@ -190,6 +190,14 @@ func (p *pageRegistry) SpecificInstance(ctx context.Context, node *PageNode) (Pa
 			WithContext(ctx).
 			Filter(defs.Primary().Name(), node.PageID)
 
+		if len(definition.Prefetch.SelectRelated) > 0 {
+			querySet = querySet.SelectRelated(definition.Prefetch.SelectRelated...)
+		}
+
+		if len(definition.Prefetch.PrefetchRelated) > 0 {
+			querySet = querySet.Preload(definition.Prefetch.PrefetchRelated...)
+		}
+
 		var row, err = querySet.Get()
 		if err != nil {
 			return nil, ErrNoPage.Wrapf(

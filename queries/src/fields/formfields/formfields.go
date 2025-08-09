@@ -105,45 +105,41 @@ type ForeignKeyFormField struct {
 }
 
 func (f *ForeignKeyFormField) ValueToForm(value interface{}) interface{} {
-	if value == nil {
-		return nil
-	}
-
-	if attrs.IsZero(value) {
-		return nil
-	}
-
-	switch v := value.(type) {
-	case attrs.Definer:
-		var defs = v.FieldDefs()
-		var prim = defs.Primary()
-		return prim.GetValue()
-	default:
-		return value
-	}
+	//	if value == nil {
+	//		return nil
+	//	}
+	//
+	//	if attrs.IsZero(value) {
+	//		return nil
+	//	}
+	//
+	//	switch v := value.(type) {
+	//	case attrs.Definer:
+	//		var defs = v.FieldDefs()
+	//		var prim = defs.Primary()
+	//		return prim.GetValue()
+	//	default:
+	//		return value
+	//	}
+	return f.Widget().ValueToForm(value)
 }
 
 func (f *ForeignKeyFormField) ValueToGo(value interface{}) (interface{}, error) {
-	var rT = f.Field.Type()
-	if rT.Kind() == reflect.Ptr {
-		rT = rT.Elem()
-	}
 
-	var rV = reflect.New(rT)
-	if definer, ok := rV.Interface().(attrs.Definer); ok {
-		var defs = definer.FieldDefs()
-		var prim = defs.Primary()
-		var err = prim.Scan(value)
-		if err != nil {
-			return nil, err
-		}
-		return rV.Interface(), nil
-	}
-
-	return nil, errors.TypeMismatch.Wrapf(
-		"Value %v (%T) is not a Definer",
-		value, value,
-	)
+	//	if _, ok := value.(attrs.Definer); ok {
+	//		return value, nil
+	//	}
+	//
+	//	var newObj = attrs.NewObject[attrs.Definer](f.Field.Rel().Model())
+	//	var defs = newObj.FieldDefs()
+	//	var prim = defs.Primary()
+	//	var err = prim.Scan(value)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	return newObj, nil
+	return f.Widget().ValueToGo(value)
 }
 
 func (f *ForeignKeyFormField) Widget() widgets.Widget {

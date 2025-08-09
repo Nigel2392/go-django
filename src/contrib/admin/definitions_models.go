@@ -17,6 +17,45 @@ import (
 	"github.com/Nigel2392/go-django/src/views/list"
 )
 
+type Prefetch struct {
+	SelectRelated   []string
+	PrefetchRelated []any
+}
+
+func (p *Prefetch) Merge(other Prefetch) {
+	var (
+		thisSelectMap   = make(map[string]struct{})
+		thisPrefetchMap = make(map[any]struct{})
+	)
+
+	for _, s := range p.SelectRelated {
+		thisSelectMap[s] = struct{}{}
+	}
+	for _, s := range p.PrefetchRelated {
+		thisPrefetchMap[s] = struct{}{}
+	}
+
+	var selectRelated = make([]string, len(p.SelectRelated), len(thisSelectMap)+len(other.SelectRelated))
+	var prefetchRelated = make([]any, len(p.PrefetchRelated), len(thisPrefetchMap)+len(other.PrefetchRelated))
+	copy(selectRelated, p.SelectRelated)
+	copy(prefetchRelated, p.PrefetchRelated)
+
+	for _, s := range other.SelectRelated {
+		if _, ok := thisSelectMap[s]; !ok {
+			selectRelated = append(selectRelated, s)
+		}
+	}
+
+	for _, s := range other.PrefetchRelated {
+		if _, ok := thisPrefetchMap[s]; !ok {
+			prefetchRelated = append(prefetchRelated, s)
+		}
+	}
+
+	p.SelectRelated = selectRelated
+	p.PrefetchRelated = prefetchRelated
+}
+
 // Basic options for a model-based view which includes a form.
 type ViewOptions struct {
 	// Fields to include for the model in the view
@@ -96,6 +135,9 @@ type ListViewOptions struct {
 
 	// GetQuerySet is a function that returns a queries.QuerySet to use for the list view.
 	GetQuerySet func(adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) *queries.QuerySet[attrs.Definer]
+
+	// Prefetch is used to define the prefetching options for the list view.
+	Prefetch Prefetch
 }
 
 type DeleteViewOptions struct {

@@ -92,7 +92,7 @@ func (v *ChooserListPage[T]) GetTemplate(r *http.Request) string {
 		return v.Template
 	}
 
-	return "chooser/views/list.html"
+	return "chooser/views/list.tmpl"
 }
 
 func (v *ChooserListPage[T]) getQuerySet(req *http.Request) *queries.QuerySet[T] {
@@ -162,7 +162,13 @@ func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (*list
 		return nil, err
 	}
 
-	return list.NewList(req, objects.Results(), v.GetListColumns(req)...), nil
+	var listObject = list.NewListWithGroups(req, objects.Results(), v.GetListColumns(req), func(r *http.Request, obj T, cols []list.ListColumn[T]) list.ColumnGroup[T] {
+		return &wrappedColumnGroup[T]{
+			ListColumnGroup: list.NewColumnGroup(r, obj, cols),
+			_Definition:     v._Definition,
+		}
+	})
+	return listObject, nil
 }
 
 func (v *ChooserListPage[T]) GetContext(req *http.Request, bound *BoundChooserListPage[T]) *ModalContext {
@@ -198,5 +204,7 @@ func (v *BoundChooserListPage[T]) GetContext(req *http.Request) (ctx.Context, er
 }
 
 func (v *BoundChooserListPage[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context) error {
-	return nil
+	return v.View._Definition.Render(w, req, context, "", v.View.GetTemplate(req), func(req *http.Request) string {
+		return ""
+	})
 }

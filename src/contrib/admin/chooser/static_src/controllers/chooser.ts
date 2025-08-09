@@ -7,7 +7,6 @@ type ChooserControllerElement = HTMLElement & { chooserController?: ChooserContr
 
 type ChooserResponse = {
     html:         string;
-    preview_html: string;
     errors?:      string[];
 }
 
@@ -47,7 +46,6 @@ class ChooserController extends Controller<any> {
         this.tryClose();
         this.element.chooserController = this;
         this.modal = new Modal(this.modalTarget);
-        this.modal.title = `<h1>${this.titleValue}</h1>`;
     }
 
     disconnect() {
@@ -89,8 +87,8 @@ class ChooserController extends Controller<any> {
         }
 
         var data: ChooserResponse = await response.json();
-        if (!data.html || !data.preview_html) {
-            throw new Error(`Invalid response from ${url}: missing html or preview_html`);
+        if (!data.html) {
+            throw new Error(`Invalid response from ${url}: missing html in ${Object.keys(data)}`);
         }
 
         if (data.errors && data.errors.length > 0) {
@@ -102,14 +100,53 @@ class ChooserController extends Controller<any> {
         return data;
     }
 
-    open(event?: ActionEvent) {
-        this.modal.open(event);
-        this.element.dispatchEvent(newChooserEvent("open", this, event));
+    async loadModalContent(url: string) {
+
+        console.debug("Loading modal content from:", url);
+
+        try {
+            const data = await this.fetch(url);
+            this.modal.content = data.html;
+        } catch (error) {
+            console.error("Error loading modal content:", error);
+        }
+
+        var groups = this.modal.content.querySelectorAll(".godjango-chooser-list-group") as NodeListOf<HTMLElement>;
+        groups.forEach((group) => {
+            group.addEventListener("click", () => {
+                console.log("Group clicked:", Object.keys(group.dataset), group.dataset);
+                var value = group.dataset.chooserValue;
+                var previewText = group.dataset.chooserPreview;
+                this.select(value, previewText);
+                this.close();
+            });
+        });
     }
 
-    close(event?: ActionEvent) {
+    select(value: string, previewText: string) {
+        this.inputTarget.value = value;
+        this.previewTarget.innerHTML = previewText;
+    }
+
+    async setup() {
+        this.modal.title = `<h1>${this.titleValue}</h1>`;
+        await this.loadModalContent(this.listurlValue);
+    }
+
+    async teardown() {
+
+    }
+
+    async open(event?: ActionEvent) {
+        this.modal.open(event);
+        await this.setup();
+        await this.element.dispatchEvent(newChooserEvent("open", this, event));
+    }
+
+    async close(event?: ActionEvent) {
         this.modal.close(event);
-        this.element.dispatchEvent(newChooserEvent("close", this, event));
+        await this.teardown();
+        await this.element.dispatchEvent(newChooserEvent("close", this, event));
     }
 }
 

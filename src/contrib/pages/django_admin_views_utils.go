@@ -33,7 +33,7 @@ func pageAdminAppHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppD
 
 		model, ok := app.Models.Get(AdminPagesModelPath)
 		if !ok {
-			except.Fail(http.StatusBadRequest, "Model not found")
+			except.Fail(http.StatusBadRequest, "Model %q not found in %v", AdminPagesModelPath, app.Models.Keys())
 			return
 		}
 

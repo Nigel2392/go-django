@@ -1388,9 +1388,11 @@ func (qs *QuerySet[T]) SelectRelated(fields ...string) *QuerySet[T] {
 				preloadPath = strings.Join(relatrionChain.Chain[:partIdx+1], ".")
 			)
 
-			var exprKey = curr.Field.Name()
-			if len(preloadPath) > 0 {
-				exprKey = fmt.Sprintf("%s.%s", preloadPath, exprKey)
+			if curr.Field == nil {
+				panic(fmt.Errorf(
+					"SelectRelated: no field found for %q / %T / %d / %T",
+					preloadPath, curr.Model, curr.Depth, qs.internals.Model.Object,
+				))
 			}
 
 			var alias = qs.AliasGen.GetTableAlias(

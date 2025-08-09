@@ -127,10 +127,19 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 			},
 		},
 		QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
+			var qs *queries.QuerySet[attrs.Definer]
 			if model.ListView.GetQuerySet != nil {
-				return model.ListView.GetQuerySet(adminSite, app, model)
+				qs = model.ListView.GetQuerySet(adminSite, app, model)
+			} else {
+				qs = queries.GetQuerySet(model.NewInstance())
 			}
-			return queries.GetQuerySet(model.NewInstance())
+			if len(model.ListView.Prefetch.SelectRelated) > 0 {
+				qs = qs.SelectRelated(model.ListView.Prefetch.SelectRelated...)
+			}
+			if len(model.ListView.Prefetch.PrefetchRelated) > 0 {
+				qs = qs.Preload(model.ListView.Prefetch.PrefetchRelated...)
+			}
+			return qs
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
 			return list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {

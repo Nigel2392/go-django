@@ -125,7 +125,7 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 		nameRegex,
 	)
 
-	a.Models.Set(model.GetName(), model)
+	a.Models.Set(cType.ContentType().Model(), model)
 
 	return model
 }

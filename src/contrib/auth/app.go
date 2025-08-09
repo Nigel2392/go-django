@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -247,6 +248,36 @@ func NewAppConfig() django.AppConfig {
 							trans.S("Email"),
 							"Email", func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 								return django.Reverse("admin:apps:model:edit", "auth", "User", defs.Get("ID"))
+							},
+						),
+						"IsAdministrator": list.BooleanColumn(
+							trans.S("Admin"),
+							func(r *http.Request, _ attrs.Definitions, row attrs.Definer) bool {
+								var user = row.(*User)
+								return user.IsAdministrator
+							},
+						),
+						"IsActive": list.BooleanColumn(
+							trans.S("Active"),
+							func(r *http.Request, _ attrs.Definitions, row attrs.Definer) bool {
+								var user = row.(*User)
+								return user.IsActive
+							},
+						),
+						"CreatedAt": list.DateTimeColumn(
+							trans.DEFAULT_TIME_FORMAT,
+							trans.S("Created At"),
+							func(r *http.Request, _ attrs.Definitions, row attrs.Definer) time.Time {
+								var user = row.(*User)
+								return user.CreatedAt.Time()
+							},
+						),
+						"UpdatedAt": list.DateTimeColumn(
+							trans.DEFAULT_TIME_FORMAT,
+							trans.S("Updated At"),
+							func(r *http.Request, _ attrs.Definitions, row attrs.Definer) time.Time {
+								var user = row.(*User)
+								return user.UpdatedAt.Time()
 							},
 						),
 					},

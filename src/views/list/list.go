@@ -19,6 +19,11 @@ type ListColumn[T attrs.Definer] interface {
 	Component(r *http.Request, defs attrs.Definitions, row T) templ.Component
 }
 
+type ColumnGroup[T attrs.Definer] interface {
+	AddColumn(column ListColumn[T])
+	Component(r *http.Request) templ.Component
+}
+
 //func Column[T any](header string, data func(row interface{}) string) ListColumn[T] {
 //	return &column[T]{header, data}
 //}

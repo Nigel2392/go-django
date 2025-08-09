@@ -24,6 +24,12 @@ type List[T attrs.Definer] struct {
 }
 
 func NewList[T attrs.Definer](r *http.Request, list []T, columns ...ListColumn[T]) *List[T] {
+	return NewListWithGroups(r, list, columns, func(r *http.Request, obj T, cols []ListColumn[T]) ColumnGroup[T] {
+		return NewColumnGroup(r, obj, cols)
+	})
+}
+
+func NewListWithGroups[T attrs.Definer](r *http.Request, list []T, columns []ListColumn[T], newGroup func(r *http.Request, obj T, cols []ListColumn[T]) ColumnGroup[T]) *List[T] {
 	var l = &List[T]{
 		Columns: columns,
 		groups:  make([]ColumnGroup[T], 0, len(list)),
@@ -31,13 +37,10 @@ func NewList[T attrs.Definer](r *http.Request, list []T, columns ...ListColumn[T
 	}
 
 	for _, item := range list {
-		var group = ColumnGroup[T]{
-			Definitons: item.FieldDefs(),
-			Columns:    columns,
-			Instance:   item,
-		}
-
-		l.groups = append(l.groups, group)
+		l.groups = append(
+			l.groups,
+			newGroup(r, item, columns),
+		)
 	}
 
 	return l

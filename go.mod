@@ -12,7 +12,7 @@ require (
 )
 
 require (
-	github.com/Nigel2392/go-signals v1.0.8
+	github.com/Nigel2392/go-signals v1.1.0
 	github.com/Nigel2392/goldcrest v1.0.4
 	github.com/alexedwards/scs/v2 v2.8.0
 	github.com/go-sql-driver/mysql v1.9.2

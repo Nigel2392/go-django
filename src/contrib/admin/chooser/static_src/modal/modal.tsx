@@ -82,7 +82,28 @@ class Modal {
         let root = element as ModalElement;
         root.modal = this;
         root.dataset.modal = "true";
+        this.connect(root);
+    }
+    
+    actions(): ActionMap {
+        return {
+            close: this.close.bind(this),
+            resize: (event: MouseEvent) => {
+                this.elements.dialog.toggleAttribute("fullscreen");
+            }
+        }
+    }
 
+    executeAction(action: string) {
+        const actions = this.actions();
+        if (actions[action]) {
+            actions[action]();
+        } else {
+            console.warn(`No action defined for ${action} in modal controls.`);
+        }
+    }
+
+    connect(root: ModalElement) {
         this.elements = new Elements(root);
         this.elements.modal = (
             <div class="godjango-modal-wrapper">
@@ -141,24 +162,6 @@ class Modal {
             }
         })
     }
-    
-    actions(): ActionMap {
-        return {
-            close: this.close.bind(this),
-            resize: (event: MouseEvent) => {
-                this.elements.dialog.toggleAttribute("fullscreen");
-            }
-        }
-    }
-
-    executeAction(action: string) {
-        const actions = this.actions();
-        if (actions[action]) {
-            actions[action]();
-        } else {
-            console.warn(`No action defined for ${action} in modal controls.`);
-        }
-    }
 
     disconnect() {
         this.elements.root.modal = null;
@@ -178,7 +181,7 @@ class Modal {
         this.elements.dialog.showModal();
         this.elements.root.dispatchEvent(newModalEvent("modal:open", this, event));
         setTimeout(() => {
-            this.elements.root.addEventListener("click", this.documentClickListener);
+            this.elements.modal.addEventListener("click", this.documentClickListener);
         });
     }
 
@@ -234,6 +237,17 @@ class Modal {
             this.elements.errors.innerHTML = value;
         } else {
             console.warn("Invalid errors value:", value);
+        }
+    }
+
+    set content(value: HTMLElement | string) {
+        if (typeof value === "string") {
+            this.elements.content.innerHTML = value;
+        } else if (value instanceof HTMLElement) {
+            this.elements.content.innerHTML = "";
+            this.elements.content.appendChild(value);
+        } else {
+            console.warn("Invalid content value:", value);
         }
     }
 

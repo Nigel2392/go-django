@@ -23,6 +23,15 @@ import (
 //go:embed assets/**
 var choosersFS embed.FS
 
+var _, _ = core.OnDjangoReady.Listen(func(s signals.Signal[any], a any) error {
+	for head := choosers.Front(); head != nil; head = head.Next() {
+		if err := head.Value.Setup(); err != nil {
+			return errors.Wrapf(err, "Error setting up chooser for model type %T", reflect.Zero(head.Key).Interface())
+		}
+	}
+	return nil
+})
+
 var _, _ = core.OnModelsReady.Listen(func(s signals.Signal[any], a any) error {
 	if !django.AppInstalled("admin") {
 		logger.Error("Admin app is not installed, but chooser forms are being used.")
@@ -38,8 +47,9 @@ var _, _ = core.OnModelsReady.Listen(func(s signals.Signal[any], a any) error {
 		AppName: "chooser",
 		FS:      templateFS,
 		Bases: []string{
-			"chooser/skeleton.tmpl",
-			"chooser/controls.tmpl",
+			"chooser/modal/skeleton.tmpl",
+			"chooser/modal/controls.tmpl",
+			"chooser/modal/modal.tmpl",
 		},
 	})
 
@@ -52,12 +62,6 @@ var _, _ = core.OnModelsReady.Listen(func(s signals.Signal[any], a any) error {
 			filesystem.MatchExt(".jpg"),
 		),
 	))
-
-	for head := choosers.Front(); head != nil; head = head.Next() {
-		if err := head.Value.Setup(); err != nil {
-			return errors.Wrapf(err, "Error setting up chooser for model type %T", reflect.Zero(head.Key).Interface())
-		}
-	}
 
 	admin.RegisterModelsRouteHook(func(adminSite *admin.AdminApplication, route mux.Multiplexer) {
 		var chooserRoot = route.Any("chooser/", nil, "chooser")

@@ -19,7 +19,7 @@ import (
 
 const (
 	AdminPagesAppName   = "pages"
-	AdminPagesModelPath = "Page"
+	AdminPagesModelPath = "PageNode"
 )
 
 var pageAdminAppOptions = admin.AppOptions{
