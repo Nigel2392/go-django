@@ -148,6 +148,11 @@ class ChooserController extends Controller<any> {
         await this.teardown();
         await this.element.dispatchEvent(newChooserEvent("close", this, event));
     }
+
+    async clear(event?: ActionEvent) {
+        this.inputTarget.value = "";
+        this.previewTarget.innerHTML = "";
+    }
 }
 
 export {

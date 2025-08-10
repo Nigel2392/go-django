@@ -42,12 +42,40 @@ func ModelSelectWidget(allowBlank bool, blankLabel string, opts chooser.BaseChoo
 		BlankLabel:   blankLabel,
 	}
 }
-
-func (o *ModelSelect) ValueToForm(value interface{}) interface{} {
+func (f *ModelSelect) ValueToForm(value interface{}) interface{} {
 	if value == nil {
-		return ""
+		return nil
 	}
-	return fmt.Sprintf("%v", value)
+
+	if attrs.IsZero(value) {
+		return nil
+	}
+
+	switch v := value.(type) {
+	case attrs.Definer:
+		var defs = v.FieldDefs()
+		var prim = defs.Primary()
+		return prim.GetValue()
+	default:
+		return value
+	}
+}
+
+func (f *ModelSelect) ValueToGo(value interface{}) (interface{}, error) {
+
+	if _, ok := value.(attrs.Definer); ok {
+		return value, nil
+	}
+
+	var newObj = attrs.NewObject[attrs.Definer](f.Opts.TargetObject)
+	var defs = newObj.FieldDefs()
+	var prim = defs.Primary()
+	var err = prim.Scan(value)
+	if err != nil {
+		return nil, err
+	}
+
+	return newObj, nil
 }
 
 func (o *ModelSelect) GetContextData(ctx context.Context, id, name string, value interface{}, widgetAttrs map[string]string) ctx.Context {

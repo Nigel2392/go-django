@@ -97,6 +97,7 @@ dialog.godjango-modal:not([fullscreen]) {
 }
 .godjango-modal-content {
     overflow-y: auto;
+    min-height: 200px;
     height: 100%;
 }
 .godjango-modal-footer {
@@ -111,14 +112,22 @@ dialog.godjango-modal:not([fullscreen]) {
     align-items: center;
     justify-content: space-between;
     width: 100%;
-    max-width: 175px;
+    max-width: 225px;
     padding: 0.5rem;
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius, .3125rem);
 }
-
+.chooser-widget .dropdown__toggle-icon {
+    transition: fill 0.3s ease;
+}
+.chooser-widget:hover .dropdown__toggle-icon {
+    fill: var(--secondary-bg-color);
+}
+.chooser-widget-preview {
+    flex: 1;
+}
 .chooser-widget-controls {
-
+    border-left: 1px solid var(--border-color);
 }
 .chooser-widget-controls .dropdown {
 
