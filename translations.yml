@@ -984,14 +984,14 @@ locales:
 # [TemplateFinder]:	{{ Translate .Data.context "Toggle dropdown menu" }} src/contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:19:129
 text: Toggle dropdown menu
 locales:
-  nl: "Klap menu in/uit"
+  nl: Klap menu in/uit
 
 ---
 
 # [TemplateFinder]:	{{ Translate .Data.context "Choose" }} src/contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:27:25
 text: Choose
 locales:
-  nl: "Kies"
+  nl: Kies
 
 ---
 
@@ -1006,7 +1006,7 @@ locales:
 # [TemplateFinder]:	{{ Translate .Data.context "Clear" }} src/contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:37:25
 text: Clear
 locales:
-  nl: "Wissen"
+  nl: Wissen
 
 ---
 
@@ -1196,14 +1196,14 @@ locales:
 # [GoFileFinder]:	NewAppConfig src/contrib/auth/app.go:254:16
 text: Admin
 locales:
-  nl: "Beheerder"
+  nl: Beheerder
 
 ---
 
 # [GoFileFinder]:	NewAppConfig src/contrib/auth/app.go:261:16
 text: Active
 locales:
-  nl: "Actief"
+  nl: Actief
 
 ---
 
@@ -2467,15 +2467,15 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ Translate .Data.context "Path: %s %T" .Data.file_value .Data.file_value }} src/forms/assets/templates/forms/widgets/file.html:7:33
-text: 'Path: %s %T'
+# [TemplateFinder]:	{{ Translate .Data.context "Path: %s" .Data.file_value .Data.file_value }} src/forms/assets/templates/forms/widgets/file.html:7:33
+text: 'Path: %s'
 locales:
-  nl: "Pad: %s %T"
+  nl: 'Pad: %s'
 
 ---
 
 # [TemplateFinder]:	{{ Translate .Data.context "Clear file" }} src/forms/assets/templates/forms/widgets/file.html:13:71
 text: Clear file
 locales:
-  nl: "Wis bestand"
+  nl: Wis bestand
 

@@ -91,7 +91,7 @@ class GoDjangoImageTool {
                     }
 
                     this.data.filePath = data.filePath;
-                    this.image.src = `${this.config.serveUrl}${data.filePath}`
+                    this.image.src = `${this.config.serveUrl}/${data.filePath}`
                     this.image.dataset.filePath = data.filePath;
                     fileInput.remove();
 
@@ -109,7 +109,7 @@ class GoDjangoImageTool {
 
         createFileInput = createFileInput.bind(this);
         if (this.data.filePath) {
-            this.image.src = `${this.config.serveUrl}${this.data.filePath}`
+            this.image.src = `${this.config.serveUrl}/${this.data.filePath}`
             this.image.dataset.filePath = this.data.filePath;
         } else {
             var fileInput = createFileInput(this.imageWrapper);

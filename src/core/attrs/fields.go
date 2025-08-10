@@ -77,6 +77,7 @@ type FieldDef struct {
 	field_v        reflect.Value
 	formField      fields.Field
 	fieldName      string
+	wasSet         bool // Whether the field was set at least once
 	// directlyInteractible bool
 }
 

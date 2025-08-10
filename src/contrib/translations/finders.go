@@ -239,6 +239,7 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 		lineNum := 0
 		matchCount := 0
 
+		var subMatches = make([]Translation, 0)
 		for scanner.Scan() {
 			lineNum++
 			line := scanner.Text()
@@ -261,9 +262,16 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 					),
 				}
 
-				matches = append(matches, match)
+				subMatches = append(subMatches, match)
 				matchCount++
 			}
+		}
+
+		if len(subMatches) > 0 {
+			logger.Debugf(
+				"Found %d template translations in %q", len(subMatches), path,
+			)
+			matches = append(matches, subMatches...)
 		}
 	}
 
@@ -334,7 +342,7 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 
 		var currentFuncName string
 		var funcEnd token.Pos
-
+		var subMatches = make([]Translation, 0)
 		ast.Inspect(file, func(n ast.Node) bool {
 
 			if n != nil && n.End() > funcEnd {
@@ -421,7 +429,7 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 				}
 			}
 
-			matches = append(matches, Translation{
+			subMatches = append(subMatches, Translation{
 				Path:    filepath.ToSlash(path),
 				Line:    pos.Line,
 				Col:     pos.Column,
@@ -432,6 +440,13 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 
 			return true
 		})
+
+		if len(subMatches) > 0 {
+			logger.Debugf(
+				"Found %d GO translations in %q", len(subMatches), path,
+			)
+			matches = append(matches, subMatches...)
+		}
 
 		return nil
 	})
@@ -475,6 +490,7 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Translation, error) {
 
 			matches = append(matches, match)
 
+			var fieldMatches = make([]Translation, 0)
 			var fieldDefs = model.FieldDefs()
 			for i, field := range fieldDefs.Fields() {
 				var fieldMatch = Translation{
@@ -484,8 +500,14 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Translation, error) {
 					Text:    field.Label(context.Background()),
 					Comment: fmt.Sprintf("[ModelFinder.Field]:\t%s.%s", cType.ShortTypeName(), field.Name()),
 				}
-				matches = append(matches, fieldMatch)
+				fieldMatches = append(fieldMatches, fieldMatch)
 			}
+
+			logger.Debugf(
+				"Found %d GO field translations for model %T", len(fieldMatches), cType.New(),
+			)
+
+			matches = append(matches, fieldMatches...)
 		}
 	}
 

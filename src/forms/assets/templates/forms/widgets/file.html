@@ -4,7 +4,7 @@
 </div>
 {{ if not (or (eq .Data.file_value "") (eq .Data.file_value nil)) }}
 <div class="file-path">
-    <span class="file-path">{{ Translate .Data.context "Path: %s %T" .Data.file_value .Data.file_value }}</span>
+    <span class="file-path">{{ Translate .Data.context "Path: %s" .Data.file_value }}</span>
     <input type="hidden" name="{{ .Data.name }}_path" value="{{ .Data.file_value }}" />
 </div>
 {{ if not .Data.required }}
