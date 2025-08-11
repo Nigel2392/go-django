@@ -1,0 +1,4 @@
+.file-clear .file-clear-checkbox:checked + .file-clear-label {
+    color: hsl( 0 100% 50% );
+    text-decoration: line-through;
+}

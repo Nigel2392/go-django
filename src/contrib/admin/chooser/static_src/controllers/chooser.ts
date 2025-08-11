@@ -150,8 +150,17 @@ class ChooserController extends Controller<any> {
     }
 
     async clear(event?: ActionEvent) {
+        if (this.inputTarget.value === "") {
+            return;
+        }
         this.inputTarget.value = "";
         this.previewTarget.innerHTML = "";
+        const currentColor = getComputedStyle(this.element).borderColor;
+        this.element.animate([{ borderColor: "red" }, { borderColor: currentColor }], {
+            fill: "forwards",
+            duration: 300,
+            easing: "ease-out",
+        });
     }
 }
 

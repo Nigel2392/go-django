@@ -248,8 +248,8 @@ a:hover {
 .panel:not(:has(.panel)) {
     margin-bottom: 1rem;
 }
-.panel label,
-.form-field label {
+.panel__heading label,
+.form-field label:not(.default-label) {
     color: hsl( 254.3 50.4% 24.5% );
     display: block;
     font-weight: 600;
@@ -308,6 +308,15 @@ a:hover {
     border-color: var(--border-color);
     color: var(--text-color);
     cursor: not-allowed
+}
+.panel .file-clear .file-clear-label {
+     -webkit-user-select: none; /* Safari */
+     -ms-user-select: none; /* IE 10 and IE 11 */
+     user-select: none; /* Standard syntax */
+}
+.panel .file-clear .file-clear-checkbox:checked + .file-clear-label {
+    color: hsl( 0 100% 50% );
+    text-decoration: line-through;
 }
 .panel.panel-title {
     font-size: 1.5rem;

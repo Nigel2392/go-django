@@ -50,9 +50,7 @@ func (bw *BlockWidget) GetContextData(c context.Context, id, name string, value 
 	return blockCtx
 }
 
-func (bw *BlockWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
-	var ctxData = bw.GetContextData(ctx, id, name, value, attrs)
-
+func (bw *BlockWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string, ctxData ctx.Context) error {
 	for i, err := range errors {
 		switch e := err.(type) {
 		case *errs.ValidationError[string]:
@@ -74,7 +72,7 @@ func (bw *BlockWidget) IdForLabel(name string) string {
 }
 
 func (bw *BlockWidget) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return bw.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
+	return bw.RenderWithErrors(ctx, w, id, name, value, nil, attrs, bw.GetContextData(ctx, id, name, value, attrs))
 }
 
 func (bw *BlockWidget) ValueToGo(value interface{}) (interface{}, error) {

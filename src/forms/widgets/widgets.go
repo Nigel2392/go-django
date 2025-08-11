@@ -41,7 +41,7 @@ type Widget interface {
 	SetAttrs(attrs map[string]string)
 	IdForLabel(id string) string
 	GetContextData(ctx context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context
-	RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error
+	RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string, context ctx.Context) error
 	Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error
 	Validate(ctx context.Context, value interface{}) []error
 

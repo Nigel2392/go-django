@@ -11,7 +11,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
-	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 )
 
 //
@@ -152,14 +151,6 @@ func (f *FileWidget) GetContextData(c context.Context, id, name string, value in
 	return widgetCtx
 }
 
-func (f *FileWidget) RenderWithErrors(ctx context.Context, w io.Writer, id string, name string, value interface{}, errors []error, attrs map[string]string) error {
-	var widgetCtx = f.GetContextData(ctx, id, name, value, attrs)
-	if errors != nil {
-		widgetCtx.Set("errors", errors)
-	}
-	return tpl.FRender(w, widgetCtx, f.TemplateName)
-}
-
 func (f *FileWidget) Render(ctx context.Context, w io.Writer, id string, name string, value interface{}, attrs map[string]string) error {
-	return f.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
+	return f.RenderWithErrors(ctx, w, id, name, value, nil, attrs, f.GetContextData(ctx, id, name, value, attrs))
 }

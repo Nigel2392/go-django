@@ -15,6 +15,7 @@ type BoundFormField struct {
 	FormWidget  widgets.Widget
 	FormField   fields.Field
 	FormName    string
+	FormID      string
 	FormAttrs   map[string]string
 	FormValue   interface{}
 	FormErrors  []error
@@ -28,20 +29,22 @@ func NewBoundFormField(ctx context.Context, w widgets.Widget, f fields.Field, na
 		errors = make([]error, 0)
 	}
 
-	var bw = &BoundFormField{
-		FormWidget:  w,
-		FormField:   f,
-		FormName:    name,
-		FormValue:   value,
-		FormErrors:  errors,
-		FormContext: ctx,
+	var attrs = f.Attrs()
+	if attrs == nil {
+		attrs = make(map[string]string)
 	}
 
-	var attrs = f.Attrs()
-	if attrs != nil {
-		bw.FormAttrs = attrs
-	} else {
-		bw.FormAttrs = make(map[string]string)
+	var bw = &BoundFormField{
+		FormWidget: w,
+		FormField:  f,
+		FormName:   name,
+		FormID: fmt.Sprintf(
+			"id_%s", w.IdForLabel(name),
+		),
+		FormValue:   value,
+		FormErrors:  errors,
+		FormAttrs:   attrs,
+		FormContext: ctx,
 	}
 
 	return bw
@@ -56,9 +59,7 @@ func (b *BoundFormField) Input() fields.Field {
 }
 
 func (b *BoundFormField) ID() string {
-	return fmt.Sprintf(
-		"id_%s", b.FormWidget.IdForLabel(b.FormName),
-	)
+	return b.FormID
 }
 
 func (b *BoundFormField) Label() template.HTML {
@@ -83,10 +84,20 @@ func (b *BoundFormField) Field() template.HTML {
 	}
 
 	if b.CachedHTML == "" {
+		var attrs = b.FormField.Attrs()
+		if attrs == nil {
+			attrs = make(map[string]string)
+		}
+
+		var widgetCtx = b.FormWidget.GetContextData(b.FormContext, b.FormID, b.FormName, b.FormValue, attrs)
+		if len(b.FormErrors) > 0 {
+			widgetCtx.Set("errors", b.FormErrors)
+		}
+
 		var err error
 		var buf = new(bytes.Buffer)
 		err = b.FormWidget.RenderWithErrors(
-			b.FormContext, buf, b.ID(), b.FormName, b.FormValue, b.FormErrors, b.FormAttrs,
+			b.FormContext, buf, b.FormID, b.FormName, b.FormValue, b.FormErrors, b.FormAttrs, widgetCtx,
 		)
 		b.CachedHTML = template.HTML(buf.String())
 		assert.True(err == nil, err)

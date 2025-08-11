@@ -10,7 +10,7 @@
 {{ if not .Data.required }}
     <div class="file-clear">
         <input type="checkbox" name="{{ .Data.name }}_clear" id="{{ .Data.id }}_clear" value="1" class="file-clear-checkbox" />
-        <span for="{{ .Data.id }}_clear" class="file-clear-label">{{ Translate .Data.context "Clear file" }}</span>
+        <label for="{{ .Data.id }}_clear" class="file-clear-label default-label">{{ Translate .Data.context "Clear file" }}</label>
     </div>
 {{ end }}
 {{ end }}

@@ -9,7 +9,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
@@ -110,17 +109,8 @@ func (o *OptionsWidget) Validate(ctx context.Context, value interface{}) []error
 	return errors
 }
 
-func (b *OptionsWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
-	var context = b.GetContextData(ctx, id, name, value, attrs)
-	if errors != nil {
-		context.Set("errors", errors)
-	}
-
-	return tpl.FRender(w, context, b.TemplateName)
-}
-
 func (b *OptionsWidget) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
+	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs, b.GetContextData(ctx, id, name, value, attrs))
 }
 
 type MultiSelectWidget struct {

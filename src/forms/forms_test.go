@@ -221,6 +221,9 @@ func TestFormRequired(t *testing.T) {
 		}); err != nil {
 			t.Errorf("Input HTML does not match for field 'last_name': %s", err)
 		}
+
+		t.Log(firstName.Field())
+		t.Log(lastName.Field())
 	})
 
 	t.Run("Valid", func(t *testing.T) {

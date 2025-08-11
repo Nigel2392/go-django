@@ -33,9 +33,11 @@
                     </button>
                 {{ end }}
 
-                <button type="button" class="chooser-reset" data-chooser-target="clear" data-action="click->chooser#clear">
-                    {{ Translate .Data.context "Clear" }}
-                </button>
+                {{ if not .Data.readonly }}
+                    <button type="button" class="chooser-reset" data-chooser-target="clear" data-action="click->chooser#clear">
+                        {{ Translate .Data.context "Clear" }}
+                    </button>
+                {{ end }}
             </div>
         </div>
     </div>

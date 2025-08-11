@@ -6,7 +6,6 @@ import (
 	"io"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
-	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
@@ -89,15 +88,6 @@ func (o *Select) GetContextData(ctx context.Context, id, name string, value inte
 	return base_context
 }
 
-func (b *Select) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
-	var context = b.GetContextData(ctx, id, name, value, attrs)
-	if errors != nil {
-		context.Set("errors", errors)
-	}
-
-	return tpl.FRender(w, context, b.TemplateName)
-}
-
 func (b *Select) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
+	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs, b.GetContextData(ctx, id, name, value, attrs))
 }

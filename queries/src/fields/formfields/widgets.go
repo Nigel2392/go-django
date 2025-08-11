@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"runtime/debug"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -16,7 +15,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
@@ -130,17 +128,8 @@ func (o *ModelSelect) GetContextData(ctx context.Context, id, name string, value
 	return base_context
 }
 
-func (b *ModelSelect) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
-	var context = b.GetContextData(ctx, id, name, value, attrs)
-	if errors != nil {
-		context.Set("errors", errors)
-	}
-
-	return tpl.FRender(w, context, b.TemplateName)
-}
-
 func (b *ModelSelect) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
+	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs, b.GetContextData(ctx, id, name, value, attrs))
 }
 
 type MultiSelectWidget[T attrs.Definer] struct {
@@ -317,31 +306,6 @@ func (o *MultiSelectWidget[T]) Validate(ctx context.Context, value interface{}) 
 	}
 
 	return errors
-}
-
-func (b *MultiSelectWidget[T]) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
-	defer func() {
-		if r := recover(); r != nil {
-			var stackTrace = debug.Stack()
-			logger.Errorf(
-				"error rendering MultiSelectWidget: %s\nStack trace:\n%s",
-				r, stackTrace,
-			)
-			except.Fail(
-				500, "error rendering MultiSelectWidget: %s", r,
-			)
-		}
-	}()
-	var context = b.GetContextData(ctx, id, name, value, attrs)
-	if errors != nil {
-		context.Set("errors", errors)
-	}
-
-	return tpl.FRender(w, context, b.TemplateName)
-}
-
-func (b *MultiSelectWidget[T]) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
 }
 
 func (m *MultiSelectWidget[T]) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {

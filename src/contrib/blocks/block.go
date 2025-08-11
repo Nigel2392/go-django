@@ -76,7 +76,10 @@ func (b *BaseBlock) FormContext(name string, value interface{}, context ctx.Cont
 func (b *BaseBlock) RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error {
 	var blockCtx = b.FormContext(name, value, context)
 	blockCtx.Errors = errors
-	return b.Field().Widget().RenderWithErrors(ctx, w, id, name, value, errors, blockCtx.Attrs)
+	return b.Field().Widget().RenderWithErrors(
+		ctx, w, id, name, value, errors, blockCtx.Attrs,
+		b.Field().Widget().GetContextData(ctx, id, name, value, blockCtx.Attrs),
+	)
 }
 
 func (b *BaseBlock) Render(ctx context.Context, w io.Writer, value interface{}, context ctx.Context) error {

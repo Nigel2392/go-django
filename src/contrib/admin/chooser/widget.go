@@ -59,7 +59,7 @@ func NewChooserWidget(model attrs.Definer, widgetAttrs map[string]string) *Choos
 
 	return &ChooserWidget{
 		BaseWidget: widgets.NewBaseWidget(
-			"file", "", widgetAttrs,
+			"text", "", widgetAttrs,
 		),
 		TemplateKey: "",
 		Templates: []string{
@@ -155,7 +155,7 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 	return ctx
 }
 
-func (b *ChooserWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
+func (b *ChooserWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string, context ctx.Context) error {
 	defer func() {
 		if r := recover(); r != nil {
 			if err, ok := r.(error); ok {
@@ -166,14 +166,9 @@ func (b *ChooserWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, n
 		}
 	}()
 
-	var context = b.GetContextData(ctx, id, name, value, attrs)
-	if errors != nil {
-		context.Set("errors", errors)
-	}
-
 	return tpl.FRender(w, context, b.TemplateKey, b.Templates...)
 }
 
 func (b *ChooserWidget) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
+	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs, b.GetContextData(ctx, id, name, value, attrs))
 }

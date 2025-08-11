@@ -225,7 +225,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 	})
 }
 
-func (b *EditorJSWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error {
+func (b *EditorJSWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string, widgetCtx ctx.Context) error {
 	var valueStr string
 	if value == nil || value == "" {
 		value = "{}"
@@ -246,11 +246,6 @@ func (b *EditorJSWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, 
 	}
 
 getContext:
-	var widgetCtx = b.GetContextData(ctx, id, name, value, attrs)
-	if errors != nil {
-		widgetCtx.Set("errors", errors)
-	}
-
 	var (
 		config    = buildConfig(widgetCtx, b.Features...)
 		renderCtx = context.Background()
@@ -265,7 +260,7 @@ getContext:
 }
 
 func (b *EditorJSWidget) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
-	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs)
+	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs, b.GetContextData(ctx, id, name, value, attrs))
 }
 
 func (b *EditorJSWidget) Media() media.Media {
