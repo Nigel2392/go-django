@@ -42,6 +42,9 @@ type Widget interface {
 	IdForLabel(id string) string
 	GetContextData(ctx context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context
 	RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string, context ctx.Context) error
+
+	// Render is basically the same as RenderWithErrors, except that it does not take a context.
+	// The widget should always be able to generate some sort of context itself based on the provided parameters.
 	Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error
 	Validate(ctx context.Context, value interface{}) []error
 

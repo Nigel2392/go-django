@@ -21,6 +21,28 @@ type BaseWidget struct {
 	BaseAttrs     map[string]string
 }
 
+func NewBaseWidget(type_ string, templateName string, attrs map[string]string) *BaseWidget {
+
+	if attrs == nil {
+		attrs = make(map[string]string)
+	}
+
+	if templateName == "" {
+		templateName = "forms/widgets/input.html"
+	}
+
+	if type_ == "" {
+		type_ = "text"
+	}
+
+	return &BaseWidget{
+		Type:          type_,
+		TemplateName:  templateName,
+		InputIsHidden: false,
+		BaseAttrs:     attrs,
+	}
+}
+
 func (b *BaseWidget) Hide(hidden bool) {
 	b.InputIsHidden = hidden
 }
@@ -119,26 +141,4 @@ func (b *BaseWidget) FormType() string {
 
 func (b *BaseWidget) Media() media.Media {
 	return media.NewMedia()
-}
-
-func NewBaseWidget(type_ string, templateName string, attrs map[string]string) *BaseWidget {
-
-	if attrs == nil {
-		attrs = make(map[string]string)
-	}
-
-	if templateName == "" {
-		templateName = "forms/widgets/input.html"
-	}
-
-	if type_ == "" {
-		type_ = "text"
-	}
-
-	return &BaseWidget{
-		Type:          type_,
-		TemplateName:  templateName,
-		InputIsHidden: false,
-		BaseAttrs:     attrs,
-	}
 }
