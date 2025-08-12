@@ -351,28 +351,21 @@ func NewAppConfig() django.AppConfig {
 			"PageURL": URLPath,
 		})
 
-		pageApp.TemplateConfig = &tpl.Config{
-			AppName: "pages",
-			FS: filesystem.NewMultiFS(
-				filesystem.NewMatchFS(
-					templateFileSys,
-					filesystem.MatchOr(
-						filesystem.MatchAnd(
-							filesystem.MatchPrefix("pages/"),
-							filesystem.MatchOr(
-								filesystem.MatchSuffix(".tmpl"),
-							),
+		pageApp.TemplateConfig = tpl.MergeConfig(
+			&tpl.Config{
+				AppName: "pages",
+				FS:      templateFileSys,
+				Matches: filesystem.MatchOr(
+					filesystem.MatchAnd(
+						filesystem.MatchPrefix("pages/"),
+						filesystem.MatchOr(
+							filesystem.MatchSuffix(".tmpl"),
 						),
 					),
 				),
-				filesystem.NewMatchFS(
-					admin.AdminSite.TemplateConfig.FS,
-					admin.AdminSite.TemplateConfig.Matches,
-				),
-			),
-			Bases: admin.AdminSite.TemplateConfig.Bases,
-			Funcs: admin.AdminSite.TemplateConfig.Funcs,
-		}
+			},
+			admin.AdminSite.TemplateConfig,
+		)
 	}
 
 	//	pageApp.Deps = []string{

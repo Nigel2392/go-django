@@ -2,6 +2,7 @@ package images
 
 import (
 	"context"
+	"embed"
 	"fmt"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -10,8 +11,12 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/memory"
+	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/mux"
 )
 
@@ -31,6 +36,9 @@ type (
 )
 
 var (
+	//go:embed assets/*
+	assetsFS embed.FS
+
 	app *AppConfig
 )
 
@@ -57,9 +65,22 @@ func NewAppConfig(opts *Options) *AppConfig {
 
 	app.Options = opts
 	app.Init = func(settings django.Settings, db drivers.Database) error {
+		tpl.Add(*tpl.MergeConfig(
+			&tpl.Config{
+				FS:      filesystem.Sub(assetsFS, "assets/templates"),
+				Matches: filesystem.MatchPrefix("images/"),
+			},
+			admin.AdminSite.TemplateConfig,
+		))
+		staticfiles.AddFS(filesystem.Sub(assetsFS, "assets/static"), nil)
+
 		admin.RegisterApp(
 			"images",
-			admin.AppOptions{},
+			admin.AppOptions{
+				RegisterToAdminMenu: true,
+				AppLabel:            trans.S("Images"),
+				MenuLabel:           trans.S("Images"),
+			},
 			AdminImageModelOptions(),
 		)
 

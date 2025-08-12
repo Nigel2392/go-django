@@ -46,6 +46,32 @@ type Config struct {
 	Funcs   template.FuncMap
 }
 
+func MergeConfig(dst, src *Config) *Config {
+	dst.FS = filesystem.NewMultiFS(
+		dst.FS,
+		src.FS,
+	)
+
+	dst.Bases = append(dst.Bases, src.Bases...)
+
+	switch {
+	case dst.Matches == nil:
+		dst.Matches = src.Matches
+	case dst.Matches != nil && src.Matches != nil:
+		dst.Matches = filesystem.MatchOr(
+			dst.Matches,
+			src.Matches,
+		)
+	}
+
+	var fm = make(template.FuncMap, len(dst.Funcs)+len(src.Funcs))
+	maps.Copy(fm, dst.Funcs)
+	maps.Copy(fm, src.Funcs)
+	dst.Funcs = fm
+
+	return dst
+}
+
 type templates struct {
 	*Config
 }

@@ -108,7 +108,7 @@ var (
 
 func registerFormFieldHook() {
 	_registerFormFieldHook.Do(func() {
-		goldcrest.Register(HookFormFieldForType, 100,
+		goldcrest.Register(HookFormFieldForType, 50,
 			FormFieldGetter(func(f Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
 
 				var valTyp = field_v.Type()
