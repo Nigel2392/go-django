@@ -2,6 +2,7 @@ package chooser
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -96,7 +97,7 @@ type ChooserListPage[T attrs.Definer] struct {
 	SearchFields []SearchField[T]
 
 	// BoundView returns a new bound view for the list page.
-	BoundView func(w http.ResponseWriter, req *http.Request) (views.View, error)
+	BoundView func(w http.ResponseWriter, req *http.Request, v *ChooserListPage[T], d *ChooserDefinition[T]) (views.View, error)
 
 	_Definition *ChooserDefinition[T]
 }
@@ -118,7 +119,7 @@ func (v *ChooserListPage[T]) Methods() []string {
 
 func (v *ChooserListPage[T]) Bind(w http.ResponseWriter, req *http.Request) (views.View, error) {
 	if v.BoundView != nil {
-		return v.BoundView(w, req)
+		return v.BoundView(w, req, v, v._Definition)
 	}
 
 	var base = &BoundChooserListPage[T]{
@@ -294,8 +295,8 @@ func (v *ChooserListPage[T]) GetContext(req *http.Request, bound *BoundChooserLi
 		"var":         v.SearchVar(),
 		"allowed":     len(v.SearchFields) > 0,
 		"value":       req.URL.Query().Get(v.SearchVar()),
-		"placeholder": v._Definition.GetLabel(v.Labels, v.SearchVar(), trans.T(req.Context(), "Search..."))(req.Context()),
-		"text":        v._Definition.GetLabel(v.Labels, v.SearchVar(), trans.T(req.Context(), "Search"))(req.Context()),
+		"placeholder": v._Definition.GetLabel(v.Labels, fmt.Sprintf("%s...", v.SearchVar()), trans.S("Search..."))(req.Context()),
+		"text":        v._Definition.GetLabel(v.Labels, v.SearchVar(), trans.S("Search"))(req.Context()),
 	})
 	return c
 }

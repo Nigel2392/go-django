@@ -154,7 +154,7 @@ func (c *ChooserDefinition[T]) GetTitle(ctx context.Context) string {
 	return ""
 }
 
-func (o *ChooserDefinition[T]) GetLabel(labels map[string]func(context.Context) string, field string, default_ string) func(ctx context.Context) string {
+func (o *ChooserDefinition[T]) GetLabel(labels map[string]func(context.Context) string, field string, default_ any) func(ctx context.Context) string {
 	if labels != nil {
 		var label, ok = labels[field]
 		if ok {
@@ -167,9 +167,16 @@ func (o *ChooserDefinition[T]) GetLabel(labels map[string]func(context.Context) 
 			return label
 		}
 	}
-	return func(ctx context.Context) string {
-		return default_
+	switch v := default_.(type) {
+	case string:
+		return func(ctx context.Context) string {
+			return v
+		}
+	case func(context.Context) string:
+		return v
 	}
+	assert.Fail("ChooserDefinition.GetLabel: default_ must be a string or a function that returns a string")
+	return nil
 }
 
 func (c *ChooserDefinition[T]) GetPreviewString(ctx context.Context, instance attrs.Definer) (previewString string) {
