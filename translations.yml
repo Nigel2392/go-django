@@ -27,7 +27,7 @@ locales:
 # [ModelFinder.Field]: revisions.Revision.ID .models/revisions/Revision/fields:1:0
 # [GoFileFinder]:      NewAppConfig          examples/todoapp/todos/todo.go:101:29
 # [GoFileFinder]:      NewAppConfig          src/contrib/auth/app.go:181:33
-# [GoFileFinder]:      *User.Fields          src/contrib/auth/user.go:116:22
+# [GoFileFinder]:      *User.Fields          src/contrib/auth/user.go:120:22
 # [GoFileFinder]:      *Image.FieldDefs      src/contrib/images/models.go:139:22
 # [GoFileFinder]:      FormatTimeSince       src/contrib/pages/django_admin.go:148:26
 # [GoFileFinder]:      *Revision.FieldDefs   src/contrib/revisions/queries.go:73:22
@@ -118,8 +118,8 @@ locales:
 
 # [ModelFinder.Field]: users.Group.Permissions .models/auth/Group/fields:2:3
 # [ModelFinder.Field]: auth.User.Permissions   .models/auth/User/fields:1:11
-# [GoFileFinder]:      NewAppConfig            src/contrib/auth/app.go:296:34
-# [GoFileFinder]:      *Base.Fields            src/contrib/auth/users/baseuser.go:99:24
+# [GoFileFinder]:      NewAppConfig            src/contrib/auth/app.go:294:34
+# [GoFileFinder]:      *Base.Fields            src/contrib/auth/users/baseuser.go:101:24
 # [GoFileFinder]:      *Group.FieldDefs        src/contrib/auth/users/group.go:43:24
 text: Permissions
 locales:
@@ -173,7 +173,7 @@ locales:
 
 # [ModelFinder]:       auth.User           .models/auth/User:2:1
 # [ModelFinder.Field]: blog.BlogPage.User  .models/blog/BlogPage/fields:1:6
-# [GoFileFinder]:      *BlogPage.FieldDefs examples/blogapp/blog/models.go:140:22
+# [GoFileFinder]:      *BlogPage.FieldDefs examples/blogapp/blog/models.go:174:22
 # [GoFileFinder]:      NewAppConfig        src/contrib/auth/app.go:152:28
 # [GoFileFinder]:      NewAppConfig        src/contrib/openauth2/openauth2.go:207:27
 text: User
@@ -187,7 +187,7 @@ locales:
 # [GoFileFinder]:      NewAppConfig     src/contrib/auth/app.go:248:16
 # [GoFileFinder]:      UserLoginForm    src/contrib/auth/forms.go:65:26
 # [GoFileFinder]:      UserRegisterForm src/contrib/auth/forms.go:117:26
-# [GoFileFinder]:      *User.Fields     src/contrib/auth/user.go:124:23
+# [GoFileFinder]:      *User.Fields     src/contrib/auth/user.go:128:23
 text: Email
 locales:
   nl: E-mail
@@ -198,7 +198,7 @@ locales:
 # [GoFileFinder]:      NewAppConfig       src/contrib/auth/app.go:183:33
 # [GoFileFinder]:      UserLoginForm      src/contrib/auth/forms.go:76:26
 # [GoFileFinder]:      UserRegisterForm   src/contrib/auth/forms.go:131:6
-# [GoFileFinder]:      *User.Fields       src/contrib/auth/user.go:131:23
+# [GoFileFinder]:      *User.Fields       src/contrib/auth/user.go:135:23
 text: Username
 locales:
   nl: Gebruikersnaam
@@ -207,7 +207,7 @@ locales:
 
 # [ModelFinder.Field]: auth.User.FirstName .models/auth/User/fields:1:3
 # [GoFileFinder]:      UserRegisterForm    src/contrib/auth/forms.go:149:6
-# [GoFileFinder]:      *User.Fields        src/contrib/auth/user.go:137:23
+# [GoFileFinder]:      *User.Fields        src/contrib/auth/user.go:141:23
 text: First Name
 locales:
   nl: Voornaam
@@ -216,7 +216,7 @@ locales:
 
 # [ModelFinder.Field]: auth.User.LastName .models/auth/User/fields:1:4
 # [GoFileFinder]:      UserRegisterForm   src/contrib/auth/forms.go:164:6
-# [GoFileFinder]:      *User.Fields       src/contrib/auth/user.go:143:23
+# [GoFileFinder]:      *User.Fields       src/contrib/auth/user.go:147:23
 text: Last Name
 locales:
   nl: Achternaam
@@ -227,7 +227,7 @@ locales:
 # [GoFileFinder]:      NewAppConfig       src/contrib/auth/app.go:186:33
 # [GoFileFinder]:      UserLoginForm      src/contrib/auth/forms.go:93:25
 # [GoFileFinder]:      UserRegisterForm   src/contrib/auth/forms.go:184:5
-# [GoFileFinder]:      *User.Fields       src/contrib/auth/user.go:149:23
+# [GoFileFinder]:      *User.Fields       src/contrib/auth/user.go:153:23
 text: Password
 locales:
   nl: Wachtwoord
@@ -240,7 +240,7 @@ locales:
 # [ModelFinder.Field]: pages.PageNode.CreatedAt     .models/pages/PageNode/fields:2:11
 # [ModelFinder.Field]: revisions.Revision.CreatedAt .models/revisions/Revision/fields:1:4
 # [GoFileFinder]:      NewAppConfig                 src/contrib/auth/app.go:269:16
-# [GoFileFinder]:      *User.Fields                 src/contrib/auth/user.go:153:22
+# [GoFileFinder]:      *User.Fields                 src/contrib/auth/user.go:157:22
 # [GoFileFinder]:      *Image.FieldDefs             src/contrib/images/models.go:162:22
 # [GoFileFinder]:      FormatTimeSince              src/contrib/pages/django_admin.go:158:26
 # [GoFileFinder]:      *Revision.FieldDefs          src/contrib/revisions/queries.go:93:22
@@ -254,7 +254,7 @@ locales:
 # [ModelFinder.Field]: blog.BlogPage.UpdatedAt  .models/blog/BlogPage/fields:1:8
 # [ModelFinder.Field]: pages.PageNode.UpdatedAt .models/pages/PageNode/fields:2:12
 # [GoFileFinder]:      NewAppConfig             src/contrib/auth/app.go:277:16
-# [GoFileFinder]:      *User.Fields             src/contrib/auth/user.go:158:22
+# [GoFileFinder]:      *User.Fields             src/contrib/auth/user.go:162:22
 # [GoFileFinder]:      FormatTimeSince          src/contrib/pages/django_admin.go:159:26
 text: Updated At
 locales:
@@ -271,7 +271,7 @@ locales:
 ---
 
 # [ModelFinder.Field]: auth.User.IsActive .models/auth/User/fields:1:9
-# [GoFileFinder]:      *Base.Fields       src/contrib/auth/users/baseuser.go:69:22
+# [GoFileFinder]:      *Base.Fields       src/contrib/auth/users/baseuser.go:70:22
 text: Is Active
 locales:
   nl: Is Actief
@@ -279,8 +279,8 @@ locales:
 ---
 
 # [ModelFinder.Field]: auth.User.Groups .models/auth/User/fields:1:10
-# [GoFileFinder]:      NewAppConfig     src/contrib/auth/app.go:289:34
-# [GoFileFinder]:      *Base.Fields     src/contrib/auth/users/baseuser.go:80:24
+# [GoFileFinder]:      NewAppConfig     src/contrib/auth/app.go:288:34
+# [GoFileFinder]:      *Base.Fields     src/contrib/auth/users/baseuser.go:82:24
 text: Groups
 locales:
   nl: Groepen
@@ -380,7 +380,7 @@ locales:
 ---
 
 # [ModelFinder.Field]: blog.BlogPage.Editor .models/blog/BlogPage/fields:1:5
-# [GoFileFinder]:      *BlogPage.FieldDefs  examples/blogapp/blog/models.go:131:22
+# [GoFileFinder]:      *BlogPage.FieldDefs  examples/blogapp/blog/models.go:165:22
 text: Editor
 locales:
   nl: Editor
@@ -388,7 +388,7 @@ locales:
 ---
 
 # [ModelFinder.Field]: blog.BlogPage.Page .models/blog/BlogPage/fields:1:9
-# [GoFileFinder]:      NewAppConfig       src/contrib/pages/django_app.go:183:29
+# [GoFileFinder]:      NewAppConfig       src/contrib/pages/django_app.go:191:29
 text: Page
 locales:
   nl: Pagina
@@ -584,63 +584,64 @@ locales:
 
 ---
 
-# [GoFileFinder]:	init examples/blogapp/blog/models.go:28:18
+# [GoFileFinder]: init         examples/blogapp/blog/models.go:31:18
+# [GoFileFinder]: NewAppConfig src/contrib/pages/django_app.go:274:19
 text: User Chooser
 locales:
   nl: Gebruikerskiezer
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:110:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:144:22
 text: How do you want your post to be remembered?
 locales:
   nl: Hoe wil je dat je bericht wordt herinnerd?
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:116:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:150:22
 text: The URL path for this blog post.
 locales:
   nl: Het URL-pad voor dit blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:121:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:155:22
 text: The slug for this blog post.
 locales:
   nl: De slug voor dit blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:126:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:160:22
 text: The image for this blog post.
 locales:
   nl: De afbeelding voor dit blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:132:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:166:22
 text: This is a rich text editor. You can add images, videos, and other media to your blog post.
 locales:
   nl: Dit is een rijke teksteditor. Je kunt afbeeldingen, video's en andere media toevoegen aan je blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:141:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:175:22
 text: The user who created this blog post.
 locales:
   nl: De gebruiker die dit blogbericht heeft aangemaakt.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:158:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:192:22
 text: The date and time this blog post was created.
 locales:
   nl: De datum en tijd waarop dit blogbericht is aangemaakt.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:164:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:198:22
 text: The date and time this blog post was last updated.
 locales:
   nl: De datum en tijd waarop dit blogbericht voor het laatst is bijgewerkt.
@@ -981,6 +982,27 @@ locales:
 
 ---
 
+# [TemplateFinder]:	{{ T "Back to list" }} src/contrib/admin/chooser/assets/templates/chooser/views/create.tmpl:6:84
+text: Back to list
+locales:
+  nl: Terug naar lijst
+
+---
+
+# [TemplateFinder]:	{{ T "Create" }} src/contrib/admin/chooser/assets/templates/chooser/views/create.tmpl:7:68
+text: Create
+locales:
+  nl: Aanmaken
+
+---
+
+# [TemplateFinder]:	{{ T "Create new" }} src/contrib/admin/chooser/assets/templates/chooser/views/list.tmpl:14:86
+text: Create new
+locales:
+  nl: Nieuw aanmaken
+
+---
+
 # [TemplateFinder]:	{{ Translate .Data.context "Toggle dropdown menu" }} src/contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:19:129
 text: Toggle dropdown menu
 locales:
@@ -995,18 +1017,24 @@ locales:
 
 ---
 
-# [TemplateFinder]: {{ Translate .Data.context "Edit" }} src/contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:32:29
-# [TemplateFinder]: {{ T "Edit" }}                       src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:3:25
-text: Edit
-locales:
-  nl: Bewerken
-
----
-
-# [TemplateFinder]:	{{ Translate .Data.context "Clear" }} src/contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:37:25
+# [TemplateFinder]:	{{ Translate .Data.context "Clear" }} src/contrib/admin/chooser/assets/templates/chooser/widget/widget.tmpl:32:29
 text: Clear
 locales:
   nl: Wissen
+
+---
+
+# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:297:89
+text: Search...
+locales:
+  nl: "Zoeken..."
+
+---
+
+# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:298:89
+text: Search
+locales:
+  nl: "Zoeken"
 
 ---
 
@@ -1207,7 +1235,7 @@ locales:
 
 ---
 
-# [GoFileFinder]: initAuthEditForm src/contrib/auth/app.go:371:4
+# [GoFileFinder]: initAuthEditForm src/contrib/auth/app.go:369:4
 # [GoFileFinder]: UserRegisterForm src/contrib/auth/forms.go:201:5
 text: Password Confirm
 locales:
@@ -1215,7 +1243,7 @@ locales:
 
 ---
 
-# [GoFileFinder]: initAuthEditForm src/contrib/auth/app.go:374:4
+# [GoFileFinder]: initAuthEditForm src/contrib/auth/app.go:372:4
 # [GoFileFinder]: UserRegisterForm src/contrib/auth/forms.go:204:5
 text: Enter the password again to confirm
 locales:
@@ -1310,56 +1338,56 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:117:22
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:121:22
 text: The unique identifier for this user.
 locales:
   nl: Het unieke identificatienummer voor deze gebruiker.
 
 ---
 
-# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:125:23
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:129:23
 text: The email address of the user.
 locales:
   nl: Het e-mailadres van de gebruiker.
 
 ---
 
-# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:132:23
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:136:23
 text: The username of the user.
 locales:
   nl: De gebruikersnaam van de gebruiker.
 
 ---
 
-# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:138:23
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:142:23
 text: The first name of the user.
 locales:
   nl: De voornaam van de gebruiker.
 
 ---
 
-# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:144:23
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:148:23
 text: The last name of the user.
 locales:
   nl: De achternaam van de gebruiker.
 
 ---
 
-# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:150:23
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:154:23
 text: The user's password. It is stored as a hash.
 locales:
   nl: Het wachtwoord van de gebruiker. Het wordt opgeslagen als een hash.
 
 ---
 
-# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:154:22
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:158:22
 text: The date and time when the user was created.
 locales:
   nl: De datum en tijd waarop de gebruiker is aangemaakt.
 
 ---
 
-# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:159:22
+# [GoFileFinder]:	*User.Fields src/contrib/auth/user.go:163:22
 text: The date and time when the user was last updated.
 locales:
   nl: De datum en tijd waarop de gebruiker voor het laatst is bijgewerkt.
@@ -1373,21 +1401,21 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*Base.Fields src/contrib/auth/users/baseuser.go:70:22
+# [GoFileFinder]:	*Base.Fields src/contrib/auth/users/baseuser.go:71:22
 text: Whether the user is active and can log in.
 locales:
   nl: Of de gebruiker actief is en kan inloggen.
 
 ---
 
-# [GoFileFinder]:	*Base.Fields src/contrib/auth/users/baseuser.go:81:24
+# [GoFileFinder]:	*Base.Fields src/contrib/auth/users/baseuser.go:83:24
 text: The groups this user belongs to.
 locales:
   nl: De groepen waartoe deze gebruiker behoort.
 
 ---
 
-# [GoFileFinder]:	*Base.Fields src/contrib/auth/users/baseuser.go:100:24
+# [GoFileFinder]:	*Base.Fields src/contrib/auth/users/baseuser.go:102:24
 text: The permissions this user has.
 locales:
   nl: De machtigingen die deze gebruiker heeft.
@@ -1618,6 +1646,13 @@ locales:
 
 ---
 
+# [TemplateFinder]:	{{ T "Edit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:3:25
+text: Edit
+locales:
+  nl: Bewerken
+
+---
+
 # [TemplateFinder]:	{{ T "Unpublish and Save" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:44:25
 text: Unpublish and Save
 locales:
@@ -1648,7 +1683,7 @@ locales:
 
 # [GoFileFinder]:                               src/contrib/pages/django_admin.go:26:26
 # [GoFileFinder]: *PagesAdminHomeComponent.html src/contrib/pages/django_admin_home_component_templ.go:57:79
-# [GoFileFinder]: NewAppConfig                  src/contrib/pages/django_app.go:236:37
+# [GoFileFinder]: NewAppConfig                  src/contrib/pages/django_app.go:244:37
 text: Pages
 locales:
   nl: Pagina's
@@ -1957,63 +1992,63 @@ locales:
 
 ---
 
-# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:184:29
+# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:192:29
 text: A page in a hierarchical page tree- structure.
 locales:
   nl: Een pagina in een hiërarchische boomstructuur.
 
 ---
 
-# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:224:38
+# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:232:38
 text: Outdated Pages
 locales:
   nl: Verouderde pagina's
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetActions src/contrib/pages/django_app.go:465:39
+# [GoFileFinder]:	*pageLogDefinition.GetActions src/contrib/pages/django_app.go:517:39
 text: Edit Live Page
 locales:
   nl: Live pagina bewerken
 
 ---
 
-# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:123:22
+# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:121:22
 text: The unique identifier for the site.
 locales:
   nl: De unieke identificatie voor de site.
 
 ---
 
-# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:129:23
+# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:127:23
 text: The name of the site.
 locales:
   nl: De naam van de site.
 
 ---
 
-# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:137:23
+# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:135:23
 text: The domain of the site, e.g. example.com.
 locales:
   nl: De domeinnaam van de site, bijv. example.com.
 
 ---
 
-# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:148:22
+# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:146:22
 text: The port of the site, e.g. 80 for HTTP or 443 for HTTPS.
 locales:
   nl: De poort van de site, bijv. 80 voor HTTP of 443 voor HTTPS.
 
 ---
 
-# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:157:22
+# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:155:22
 text: Whether this site is the default site. Only one site can be the default site.
 locales:
   nl: Of deze site de standaardsite is. Slechts één site kan de standaardsite zijn.
 
 ---
 
-# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:164:22
+# [GoFileFinder]:	*Site.Fields src/contrib/pages/model_site.go:162:22
 text: The root page of the site. This is the page that will be displayed when the site is accessed.
 locales:
   nl: De hoofdpagina van de site. Dit is de pagina die wordt weergegeven wanneer de site wordt geopend.
@@ -2158,28 +2193,28 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:103:80
+# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:122:80
 text: <<
 locales:
   nl: ""
 
 ---
 
-# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:125:80
+# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:152:80
 text: Previous
 locales:
   nl: Vorige
 
 ---
 
-# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:230:81
+# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:281:81
 text: Next
 locales:
   nl: Volgende
 
 ---
 
-# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:258:82
+# [GoFileFinder]:	*pageObject[T].Component src/core/pagination/page_object_templ.go:317:82
 text: '>>'
 locales:
   nl: ""
@@ -2467,14 +2502,14 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ Translate .Data.context "Path: %s" .Data.file_value .Data.file_value }} src/forms/assets/templates/forms/widgets/file.html:7:33
+# [TemplateFinder]:	{{ Translate .Data.context "Path: %s" .Data.file_value }} src/forms/assets/templates/forms/widgets/file.html:7:33
 text: 'Path: %s'
 locales:
   nl: 'Pad: %s'
 
 ---
 
-# [TemplateFinder]:	{{ Translate .Data.context "Clear file" }} src/forms/assets/templates/forms/widgets/file.html:13:71
+# [TemplateFinder]:	{{ Translate .Data.context "Clear file" }} src/forms/assets/templates/forms/widgets/file.html:13:86
 text: Clear file
 locales:
   nl: Wis bestand

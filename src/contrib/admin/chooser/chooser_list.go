@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/pagination"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 )
@@ -293,8 +294,8 @@ func (v *ChooserListPage[T]) GetContext(req *http.Request, bound *BoundChooserLi
 		"var":         v.SearchVar(),
 		"allowed":     len(v.SearchFields) > 0,
 		"value":       req.URL.Query().Get(v.SearchVar()),
-		"placeholder": v._Definition.GetLabel(v.Labels, v.SearchVar(), "Search...")(req.Context()),
-		"text":        v._Definition.GetLabel(v.Labels, v.SearchVar(), "Search")(req.Context()),
+		"placeholder": v._Definition.GetLabel(v.Labels, v.SearchVar(), trans.T(req.Context(), "Search..."))(req.Context()),
+		"text":        v._Definition.GetLabel(v.Labels, v.SearchVar(), trans.T(req.Context(), "Search"))(req.Context()),
 	})
 	return c
 }
