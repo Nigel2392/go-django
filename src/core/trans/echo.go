@@ -15,10 +15,6 @@ func (b *SprintBackend) Translatef(ctx context.Context, v string, args ...any) s
 	return fmt.Sprintf(v, args...)
 }
 
-func (b *SprintBackend) Locale(ctx context.Context) string {
-	return ""
-}
-
 func (b *SprintBackend) Pluralize(ctx context.Context, singular, plural string, n int) string {
 	if n == 1 {
 		return singular

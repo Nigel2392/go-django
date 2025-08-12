@@ -56,6 +56,9 @@ const (
 
 	// Disable nosurf middleware for the application
 	APPVAR_DISABLE_NOSURF = "DISABLE_NOSURF" // bool
+
+	// APPVAR_TRANSLATIONS_DEFAULT_LOCALE
+	APPVAR_TRANSLATIONS_DEFAULT_LOCALE = "TRANSLATIONS_DEFAULT_LOCALE" // string
 )
 
 func APPVAR_ErrorCode(code int) string {

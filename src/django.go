@@ -39,6 +39,7 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/justinas/nosurf"
 	"github.com/pkg/errors"
+	"golang.org/x/text/language"
 )
 
 type (
@@ -661,7 +662,7 @@ func (a *Application) Initialize() error {
 				return permissions.HasPermission(req, perm...)
 			},
 			"language": func() Locale {
-				return trans.LocaleFromContext(req.Context())
+				return trans.LocaleFromContext(req.Context()).String()
 			},
 			"T": func(s string, args ...any) string {
 				return trans.T(req.Context(), s, args...)
@@ -861,6 +862,12 @@ func (a *Application) Initialize() error {
 			middleware.Recoverer(a.ServerError),
 		)
 	}
+
+	trans.TRANSLATIONS_DEFAULT_LOCALE = ConfigGet(
+		a.Settings,
+		APPVAR_TRANSLATIONS_DEFAULT_LOCALE,
+		language.English,
+	)
 
 	a.initialized.Store(true)
 

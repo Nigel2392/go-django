@@ -14,8 +14,6 @@ import (
 
 var _ trans.TranslationBackend = &Translator{}
 
-type localeContextKey struct{}
-
 type Translator struct {
 	hdr             *translationHeader
 	translations    map[trans.Locale]map[trans.Untranslated][]trans.Translation
@@ -37,7 +35,7 @@ func (t *Translator) Translate(ctx context.Context, v string) string {
 	}
 
 	var (
-		locale = LocaleFromContext(ctx)
+		locale = trans.LocaleFromContext(ctx)
 		checks = localeChecks(locale)
 	)
 
@@ -111,7 +109,7 @@ func (t *Translator) Pluralize(ctx context.Context, singular, plural string, n i
 	}
 
 	var (
-		locale      = LocaleFromContext(ctx)
+		locale      = trans.LocaleFromContext(ctx)
 		checks      = localeChecks(locale)
 		hash        = getHashForPluralTexts(singular, plural)
 		foundChecks = make([]string, 0, len(checks))
@@ -205,18 +203,6 @@ func (t *Translator) Pluralizef(ctx context.Context, singular, plural string, n 
 	return fmt.Sprintf(t.Pluralize(ctx, singular, plural, n), args...)
 }
 
-func (t *Translator) Locale(ctx context.Context) string {
-	if locale, ok := ctx.Value(localeContextKey{}).(language.Tag); ok {
-		return locale.String()
-	}
-
-	return django.ConfigGet(
-		django.Global.Settings,
-		APPVAR_TRANSLATIONS_DEFAULT_LOCALE,
-		language.English,
-	).String()
-}
-
 func defaultTimeFormat(short bool) string {
 	if short {
 		return "%Y-%m-%d %H:%M:%S"
@@ -230,7 +216,7 @@ func (t *Translator) TimeFormat(ctx context.Context, short bool) string {
 		return defaultTimeFormat(short)
 	}
 
-	var locale = LocaleFromContext(ctx)
+	var locale = trans.LocaleFromContext(ctx)
 	var checks = localeChecks(locale)
 	for _, check := range checks {
 		if localeHeader, ok := t.hdr.hdr.Locales.Get(check); ok {
@@ -243,22 +229,6 @@ func (t *Translator) TimeFormat(ctx context.Context, short bool) string {
 	}
 
 	return defaultTimeFormat(short)
-}
-
-func ContextWithLocale(ctx context.Context, locale language.Tag) context.Context {
-	return context.WithValue(ctx, localeContextKey{}, locale)
-}
-
-func LocaleFromContext(ctx context.Context) language.Tag {
-	if locale, ok := ctx.Value(localeContextKey{}).(language.Tag); ok {
-		return locale
-	}
-
-	return django.ConfigGet(
-		django.Global.Settings,
-		APPVAR_TRANSLATIONS_DEFAULT_LOCALE,
-		language.English,
-	)
 }
 
 func Translate(v string, locales ...language.Tag) (string, bool) {

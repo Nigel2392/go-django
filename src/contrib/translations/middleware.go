@@ -5,6 +5,7 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/mux"
 	"golang.org/x/text/language"
 )
@@ -36,7 +37,7 @@ func TranslatorMiddleware() func(next mux.Handler) mux.Handler {
 			)
 
 			req = req.WithContext(
-				ContextWithLocale(req.Context(), tag),
+				trans.ContextWithLocale(req.Context(), tag),
 			)
 
 			logger.Debugf(
