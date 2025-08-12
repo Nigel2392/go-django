@@ -8,6 +8,7 @@ import (
 )
 
 type BoundPanel interface {
+    Hidden() bool
 	Component() templ.Component
 	Render() template.HTML
 }
@@ -30,12 +31,15 @@ templ (p *BoundFormPanel[T, P]) Component() {
     {{ var errors = p.Errors() }}
     {{ var helpText = p.HelpText() }}
     {{ var field = p.Field() }}
+    
     <div class="panel panel-default">
-        <div class="panel__heading">
-            <div class="panel__title">
-                @templ.Raw(string(label))
+        if !p.Hidden() {
+            <div class="panel__heading">
+                <div class="panel__title">
+                    @templ.Raw(string(label))
+                </div>
             </div>
-        </div>
+        }
         if len(errors) > 0 {
             <div class="panel__errors">
                 <ul>
@@ -45,7 +49,7 @@ templ (p *BoundFormPanel[T, P]) Component() {
                 </ul>
             </div>
         }
-        if helpText != "" {
+        if !p.Hidden() && helpText != "" {
             <div class="panel__help">
                 @templ.Raw(string(helpText))
             </div>
@@ -72,6 +76,11 @@ func (p *BoundTitlePanel[T, P]) Render() template.HTML {
 }
 
 templ (p *BoundTitlePanel[T, P]) Component() {
+    if p.Hidden() {
+        @p.BoundPanel.Component()
+        {{ return nil }}
+    }
+
     <div class="panel panel-title">
         <div class="panel__body">
             @p.BoundPanel.Component()
@@ -84,6 +93,10 @@ type BoundMultiPanel[T forms.Form] struct {
     Context context.Context
     Panels []BoundPanel
     Form T
+}
+
+func (p *BoundMultiPanel[T]) Hidden() bool {
+    return false // MultiPanel is never hidden
 }
 
 func (p *BoundMultiPanel[T]) Render() template.HTML {

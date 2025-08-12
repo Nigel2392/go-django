@@ -3,6 +3,21 @@
 {{ define "title" }}{{ T "Image List" }}{{ end }}
 
 {{ define "content" }}
+    {{ block "heading" . }}
+        {{ $app := (.Get "app") }}
+        {{ $model := (.Get "model") }}
+        <div class="view-header">
+            {{ if (and (not $model.DisallowCreate) (has_object_perm  $model.NewInstance "admin:add")) }}
+                <div class="buttons">
+                    <a href="{{ url "admin:apps:model:add" $app.Name $model.GetName }}" class="button primary">{{ T "Add" }}</a>
+                </div>
+            {{ end }}
+            <div class="title-text">
+                <h1>{{ T "%s List" $model.Label }} ({{if .Data.view_paginator_object}}{{ (.Data.view_paginator_object).Count }}{{else}}0{{end}})</h1>
+            </div>
+        </div>
+    {{ end }}
+
     <div class="images-list list-wrapper">
 
         {{ range $image := .Data.view_list }}

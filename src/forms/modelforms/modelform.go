@@ -173,12 +173,15 @@ func (f *BaseModelForm[T]) SetFields(fields ...string) {
 	f.ModelFields = make([]string, 0)
 
 	var fieldMap = make(map[string]struct{})
-	for _, field := range fields {
-		var _, assertFailed = fieldMap[field]
-		assert.False(assertFailed, "Field %q specified multiple times", field)
+	for _, fieldName := range fields {
+		var _, assertFailed = fieldMap[fieldName]
+		assert.False(assertFailed, "Field %q specified multiple times", fieldName)
 
-		var field, ok = f.Definition.Field(field)
-		assert.True(ok, "Field %q not found in %T", field, f.Model)
+		var field, ok = f.Definition.Field(fieldName)
+		if !ok {
+			fieldMap[fieldName] = struct{}{}
+			continue
+		}
 
 		f.ModelFields = append(f.ModelFields, field.Name())
 		fieldMap[field.Name()] = struct{}{}
@@ -201,7 +204,9 @@ func (f *BaseModelForm[T]) SetExclude(exclude ...string) {
 		assert.False(assertFailed, "Field %q specified multiple times", field)
 
 		var field, ok = f.Definition.Field(field)
-		assert.True(ok, "Field %q not found in %T", field, f.Model)
+		if !ok {
+			continue
+		}
 
 		f.ModelExclude = append(f.ModelExclude, field.Name())
 		fieldMap[field.Name()] = struct{}{}
@@ -243,10 +248,15 @@ func (f *BaseModelForm[T]) Load() {
 			continue
 		}
 
+		var formField fields.Field
 		var field, ok = f.Definition.Field(name)
-		assert.True(ok, "Field %q not found in %T", name, model)
+		if !ok {
+			formField, ok = f.BaseForm.Field(name)
+			assert.True(ok, "Field %q not found in %T", name, model)
+		} else {
+			formField = field.FormField()
+		}
 
-		var formField = field.FormField()
 		if formField == nil {
 			continue
 		}

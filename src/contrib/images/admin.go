@@ -1,16 +1,25 @@
 package images
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/pagination"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms"
+	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/views"
 )
 
@@ -34,16 +43,76 @@ func AdminImageModelOptions() admin.ModelOptions {
 		Model:               &Image{},
 		Name:                "Image",
 		AddView: admin.FormViewOptions{
+			FormInit: func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
+				var fileField = &fields.FileStorageField{
+					BaseField: fields.NewField(
+						fields.Label(trans.S("Image File")),
+						fields.HelpText(trans.S("Upload an image file")),
+						fields.Required(true),
+					),
+					StorageBackend: app.MediaBackend(),
+				}
+
+				form.AddField("ImageFile", fileField)
+				form.SetFields("Title", "ImageFile", "Path")
+
+				var pathField, ok = form.Field("Path")
+				if !ok {
+					assert.Fail("Path field not found in form")
+					return
+				}
+
+				var widget = pathField.Widget()
+				widget.Hide(true)
+
+				form.AddWidget("Path", widget)
+
+				form.SetValidators(func(f forms.Form, m map[string]interface{}) []error {
+					var fileFace, ok = m["ImageFile"]
+					if !ok {
+						return []error{errs.NewValidationError[string](
+							"ImageFile", "This field is required",
+						)}
+					}
+
+					fileObj, ok := fileFace.(*widgets.FileObject)
+					if !ok {
+						return []error{errs.NewValidationError[string](
+							"ImageFile", fmt.Sprintf("Invalid file type: %T", fileFace),
+						)}
+					}
+
+					var err error
+					fileFace, err = fileField.Save(fileObj)
+					if err != nil {
+						return []error{errs.NewValidationError[string](
+							"ImageFile", fmt.Sprintf("Failed to save file: %v", err),
+						)}
+					}
+
+					file, ok := fileFace.(mediafiles.StoredObject)
+					if !ok {
+						return []error{errs.NewValidationError[string](
+							"ImageFile", fmt.Sprintf("Invalid file type: %T", fileFace),
+						)}
+					}
+
+					m["Path"] = file.Path()
+
+					return nil
+				})
+			},
 			Panels: []admin.Panel{
 				admin.FieldPanel("ID"),
 				admin.FieldPanel("Title"),
 				admin.FieldPanel("Path"),
-				admin.FieldPanel("CreatedAt"),
-				admin.FieldPanel("FileSize"),
-				admin.FieldPanel("FileHash"),
+				admin.FieldPanel("ImageFile"),
 			},
 		},
 		EditView: admin.FormViewOptions{
+			FormInit: func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
+
+			},
 			Panels: []admin.Panel{
 				admin.FieldPanel("ID"),
 				admin.FieldPanel("Title"),
@@ -126,6 +195,10 @@ func AdminImageModelOptions() admin.ModelOptions {
 						context.Set("view_max_amount", maxAmount)
 						context.Set("view_amount_param", amountParam)
 						context.Set("view_page_param", pageParam)
+
+						// set model information
+						context.Set("app", app)
+						context.Set("model", model)
 						return context, nil
 					},
 				}

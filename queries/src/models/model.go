@@ -1029,6 +1029,10 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		return nil
 	}
 
+	if m.internals.defs == nil || m.internals.defs.ObjectFields == nil {
+		assert.Fail("Model %T is not properly initialized", m.internals.object.Interface())
+	}
+
 	var (
 		// if the model was not loaded from the database,
 		// we automatically assume all changes are to be saved

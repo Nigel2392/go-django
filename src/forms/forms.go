@@ -25,6 +25,7 @@ type BoundField interface {
 	ID() string
 	Name() string
 	Widget() widgets.Widget
+	Hidden() bool
 	Input() fields.Field
 	Label() template.HTML
 	HelpText() template.HTML

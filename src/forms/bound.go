@@ -62,6 +62,10 @@ func (b *BoundFormField) ID() string {
 	return b.FormID
 }
 
+func (b *BoundFormField) Hidden() bool {
+	return b.FormWidget.IsHidden()
+}
+
 func (b *BoundFormField) Label() template.HTML {
 	var (
 		labelText = b.FormField.Label(b.FormContext)

@@ -2589,7 +2589,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 			// otherwise, we should use the through object to
 			// generate the unique value to not clash with other objects
 			if rootRow.through == nil {
-				uniqueValue, err = GetUniqueKey(rootRow.field)
+				uniqueValue, err = GetUniqueKey(rootRow.object)
 				switch {
 				case err != nil && errors.Is(err, errors.NoUniqueKey) && rows.hasMultiRelations:
 					return 0, nil, errors.Wrapf(

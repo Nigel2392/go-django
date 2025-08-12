@@ -239,9 +239,10 @@ func (n *NullableSQLField[SQLType]) Widget() widgets.Widget {
 
 type FileStorageField struct {
 	*BaseField
-	StorageEngine string
-	UploadTo      func(fileObject *widgets.FileObject) string
-	Validators    []func(filename string, file io.Reader) error
+	StorageBackend mediafiles.Backend
+	StorageEngine  string
+	UploadTo       func(fileObject *widgets.FileObject) string
+	Validators     []func(filename string, file io.Reader) error
 }
 
 func FileField(engine string, opts ...func(Field)) *FileStorageField {
@@ -276,8 +277,11 @@ func (f *FileStorageField) Save(value interface{}) (interface{}, error) {
 		return mediafiles.Open(file.Name)
 	}
 
-	storage, ok := mediafiles.RetrieveBackend(f.StorageEngine)
-	assert.True(ok, "Storage engine %q not found", f.StorageEngine)
+	var storage = f.StorageBackend
+	if storage == nil {
+		storage, ok = mediafiles.RetrieveBackend(f.StorageEngine)
+		assert.True(ok, "Storage engine %q not found", f.StorageEngine)
+	}
 
 	if f.UploadTo == nil {
 		f.UploadTo = func(fileObject *widgets.FileObject) string {

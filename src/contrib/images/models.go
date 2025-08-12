@@ -103,10 +103,11 @@ func (o *Image) Validate(ctx context.Context) error {
 	if o.FileSize.Int32 < 0 {
 		return fmt.Errorf("file size cannot be negative")
 	}
-
-	if o.FileHash == "" {
-		return fmt.Errorf("file hash cannot be empty")
-	}
+	o.FileSize.Valid = true
+	//
+	//if o.FileHash == "" {
+	//	return fmt.Errorf("file hash cannot be empty")
+	//}
 
 	return nil
 }
@@ -136,8 +137,8 @@ func (o *Image) FieldDefs() attrs.Definitions {
 			Null:     true,
 			Blank:    true,
 			ReadOnly: true,
-			Label:    trans.S("ID"),
 			Primary:  true,
+			Label:    trans.S("ID"),
 		},
 	)
 	fields[1] = attrs.NewField(
@@ -174,5 +175,5 @@ func (o *Image) FieldDefs() attrs.Definitions {
 			Label: trans.S("File Hash"),
 		},
 	)
-	return attrs.Define(o, fields...)
+	return o.Model.Define(o, fields)
 }
