@@ -63,11 +63,13 @@ func (u *Base) Fields(user attrs.Definer) []any {
 			Column:   "is_administrator",
 			Label:    trans.S("Is Administrator"),
 			HelpText: trans.S("Whether the user is an administrator"),
+			Blank:    true,
 		}),
 		attrs.NewField(user, "IsActive", &attrs.FieldConfig{
 			Column:   "is_active",
 			Label:    trans.S("Is Active"),
 			HelpText: trans.S("Whether the user is active and can log in."),
+			Blank:    true,
 			//	Default: django.ConfigGet(
 			//		django.Global.Settings,
 			//		APPVAR_USER_ACTIVE_DEFAULT,

@@ -8,6 +8,12 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"github.com/Nigel2392/go-django/src/components"
+)
+
+var (
+	_ components.AttributeSetter = (*pageObject[any])(nil)
+	_ PageObject[any]            = (*pageObject[any])(nil)
 )
 
 type pageObject[T any] struct {
@@ -15,6 +21,7 @@ type pageObject[T any] struct {
 	results   []T
 	paginator Pagination[T]
 	context   context.Context
+	linkAttrs map[string]any
 }
 
 func (p *pageObject[T]) FirstPage() int {
@@ -38,6 +45,10 @@ func (p *pageObject[T]) HTML(queryParam string, numPageNumbers int, queryParams 
 	return template.HTML(b.String())
 }
 
+func (p *pageObject[T]) WithAttrs(attrs map[string]any) {
+	p.linkAttrs = attrs
+}
+
 templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryParams url.Values) {
 	{{ var count, err = p.Paginator().NumPages() }}
 	if err != nil {
@@ -57,8 +68,8 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryP
 		<section class="pagination--paginator">
 			<div class="prev">
 				if p.HasPrev() {
-					<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.FirstPage(), q)) }>{ trans.T(ctx, "<<") }</a>
-					<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Prev(), q)) }>{ trans.T(ctx, "Previous") }</a>
+					<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.FirstPage(), q)) }>{ trans.T(ctx, "<<") }</a>
+					<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.Prev(), q)) }>{ trans.T(ctx, "Previous") }</a>
 				}
 			</div>
 			{{ var start = p.PageNum() - numPageNumbers }}
@@ -73,21 +84,21 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryP
 				for i := start; i <= end; i++ {
 					if i == p.PageNum() {
 						<div class="page-number active">
-							<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, i, q)) } disabled>{ strconv.Itoa(i) }</a>
+							<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, i, q)) } disabled>{ strconv.Itoa(i) }</a>
 						</div>
 					} else {
 						<div class="page-number">
-							<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, i, q)) }>{ strconv.Itoa(i) }</a>
+							<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, i, q)) }>{ strconv.Itoa(i) }</a>
 						</div>
 					}
 				}
 			</div>
 			<div class="next">
 				if p.HasNext() {
-					<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.Next(), q)) }>{ trans.T(ctx, "Next") }</a>
+					<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.Next(), q)) }>{ trans.T(ctx, "Next") }</a>
 					{{ lastPage := p.LastPage() }}
 					if lastPage > 1 {
-						<a href={ templ.SafeURL(fmt.Sprintf("?%s=%d%s", queryParam, p.LastPage(), q)) }>{ trans.T(ctx, ">>") }</a>
+						<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.LastPage(), q)) }>{ trans.T(ctx, ">>") }</a>
 					}
 				}
 			</div>

@@ -10,15 +10,13 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/go-django/queries/src/fields/formfields"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/pages/validators"
-	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/Nigel2392/go-django/src/forms/widgets/chooser"
 	"github.com/Nigel2392/mux"
 )
 
@@ -168,37 +166,8 @@ func (n *Site) Fields(d attrs.Definer) []attrs.Field {
 				&PageNode{}, "", nil,
 			),
 			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
-				return formfields.ModelSelectWidget(
-					false,
-					"--------",
-					chooser.BaseChooserOptions{
-						TargetObject: &PageNode{},
-						Queryset: func(ctx context.Context) ([]interface{}, error) {
-							var rowCt, rows, err = queries.GetQuerySet(&PageNode{}).
-								WithContext(ctx).
-								Filter("Depth", 0).
-								IterAll()
-							if err != nil {
-								return nil, fmt.Errorf("failed to get root pages: %w", err)
-							}
-							var instances = make([]interface{}, 0, rowCt)
-							for row, err := range rows {
-								if err != nil {
-									return nil, fmt.Errorf("failed to iterate root pages: %w", err)
-								}
-								instances = append(instances, row.Object)
-							}
-							return instances, nil
-						},
-						GetPrimaryKey: func(ctx context.Context, i interface{}) interface{} {
-							var def, ok = i.(attrs.Definer)
-							if !ok {
-								assert.Fail("object %T is not a Definer", i)
-							}
-							return attrs.PrimaryKey(def)
-						},
-					},
-					nil,
+				return chooser.NewChooserWidget(
+					fc.RelForeignKey.Model(), fc.WidgetAttrs, "pages.nodes.root",
 				)
 			},
 		}),

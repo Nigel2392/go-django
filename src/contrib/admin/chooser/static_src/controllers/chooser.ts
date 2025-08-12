@@ -7,6 +7,8 @@ type ChooserControllerElement = HTMLElement & { chooserController?: ChooserContr
 
 type ChooserResponse = {
     html:         string;
+    preview?:     string;
+    pk?:          string;
     errors?:      string[];
 }
 
@@ -24,7 +26,7 @@ class ChooserController extends Controller<any> {
     modal: Modal;
     modalWrapper: HTMLElement;
 
-    static targets = ["open", "clear", "preview", "input"];
+    static targets = ["open", "clear", "preview", "input", "link"];
     static values = {
         listurl:   { type: String },
         createurl: { type: String },
@@ -40,6 +42,7 @@ class ChooserController extends Controller<any> {
     declare readonly clearTarget:   HTMLButtonElement;
     declare readonly previewTarget: HTMLDivElement;
     declare readonly inputTarget:   HTMLInputElement;
+    declare readonly linkTargets:   HTMLAnchorElement[];
 
     connect() {
         this.modalWrapper = document.getElementById("godjango-modal-wrapper");
@@ -61,21 +64,26 @@ class ChooserController extends Controller<any> {
     }
 
     async fetch(url: string, method: string = "GET", body?: any, headers?: HeadersInit): Promise<ChooserResponse> {
-        const response = await fetch(url, {
+        const opts: RequestInit = {
             method: method,
             headers: {
-                "Content-Type": "application/json",
+                "Accept": "application/json",
                 ...headers,
             },
-            body: body ? JSON.stringify(body) : undefined,
-        });
+        }
 
+        if (body && opts.method.toUpperCase() !== "GET") {
+            opts.body = body instanceof FormData ? body : JSON.stringify(body);
+        }
+        
+        const request = new Request(url, opts);
+        const response = await fetch(request);
         if (!response.ok) {
             throw new Error(`Failed to fetch ${url}: ${response.statusText}`);
         }
 
         var data: ChooserResponse = await response.json();
-        if (!data.html) {
+        if (!data.html && (!data.pk && !data.preview)) {
             throw new Error(`Invalid response from ${url}: missing html in ${Object.keys(data)}`);
         }
 
@@ -92,27 +100,23 @@ class ChooserController extends Controller<any> {
         return this.modal.content.querySelector(".godjango-chooser-list-form");
     }
 
-    async loadModalContent(url: string) {
+    async loadModalContent(url: string, method: string = "GET", body?: any, headers?: HeadersInit): Promise<ChooserResponse> {
 
         console.debug("Loading modal content from:", url);
 
         try {
-            const data = await this.fetch(url);
+            const data = await this.fetch(url, method, body, headers);
+
+            if (data.pk) {
+                return data;
+            }
+
             this.modal.content = data.html;
         } catch (error) {
             console.error("Error loading modal content:", error);
         }
 
-        var groups = this.modal.content.querySelectorAll(".godjango-chooser-list-group") as NodeListOf<HTMLElement>;
-        groups.forEach((group) => {
-            group.addEventListener("click", () => {
-                console.log("Group clicked:", Object.keys(group.dataset), group.dataset);
-                var value = group.dataset.chooserValue;
-                var previewText = group.dataset.chooserPreview;
-                this.select(value, previewText);
-                this.close();
-            });
-        });
+        return null;
     }
 
     select(value: string, previewText: string) {
@@ -132,6 +136,7 @@ class ChooserController extends Controller<any> {
     async open(event?: ActionEvent) {
         this.modal = new Modal(this.modalWrapper, {
             opened: true,
+            executeScriptsOnSet: true,
             onClose: async (event) => {
                 await this.teardown();
                 await this.element.dispatchEvent(newChooserEvent("close", this, event));
@@ -165,6 +170,16 @@ class ChooserController extends Controller<any> {
     async showList(url: string = this.listurlValue) {
         await this.loadModalContent(url);
 
+        var rows = this.modal.content.querySelectorAll(".godjango-chooser-list-group") as NodeListOf<HTMLElement>;
+        rows.forEach((row) => {
+            row.addEventListener("click", () => {
+                var value = row.dataset.chooserValue;
+                var previewText = row.dataset.chooserPreview;
+                this.select(value, previewText);
+                this.close();
+            });
+        });
+
         this.searchForm.addEventListener("submit", async (event) => {
             event.preventDefault();
 
@@ -172,11 +187,51 @@ class ChooserController extends Controller<any> {
             const searchParams = new URLSearchParams(formData as any);
             const url = `${this.listurlValue}?${searchParams.toString()}`;
             await this.showList(url);
-        })
+        });
+
+
+        var links = this.modal.content.querySelectorAll(".pagination a") as NodeListOf<HTMLAnchorElement>;
+        links.forEach((link) => {
+            link.addEventListener("click", async (event) => {
+                event.preventDefault();
+
+                const href = link.getAttribute("href");
+                if (href) {
+                    await this.showList(href);
+                } else {
+                    console.warn("Chooser link has no href:", link);
+                }
+            });
+        });
+
+        var createNewButton = this.modal.content.querySelector(".godjango-chooser-list-create") as HTMLButtonElement;
+        createNewButton.addEventListener("click", async (event) => {
+            event.preventDefault();
+            await this.showCreate();
+        });
     }
 
-    async showCreate() {
-        await this.loadModalContent(this.createurlValue);
+    async showCreate(url: string = this.createurlValue, method: string = "GET", body: any = null) {
+        let data = await this.loadModalContent(url, method, body);
+        if (data) {
+            this.select(data.pk, data.preview);
+            await this.close();
+            return;
+        }
+
+        const backToList = this.modal.content.querySelector("#back-to-list") as HTMLButtonElement;
+        backToList.addEventListener("click", async (event) => {
+            event.preventDefault();
+            await this.showList();
+        });
+
+        const form = this.modal.content.querySelector("form") as HTMLFormElement;
+        form.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(form);
+            await this.showCreate(url, "POST", formData);
+        });
     }
 }
 

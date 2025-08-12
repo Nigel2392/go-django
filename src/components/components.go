@@ -20,6 +20,10 @@ type Component interface {
 	Render(ctx context.Context, w io.Writer) error
 }
 
+type AttributeSetter interface {
+	WithAttrs(attrs map[string]any)
+}
+
 type ComponentRegistry struct {
 	ns_components map[string]map[string]*django_reflect.Func
 	components    map[string]*django_reflect.Func

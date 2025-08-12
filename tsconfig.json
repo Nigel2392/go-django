@@ -10,6 +10,10 @@
       "esModuleInterop": true,
     },
     "include": [
+      "src/forms/assets_static_src/**/*.js",
+      "src/forms/assets_static_src/**/*.ts",
+      "src/forms/assets_static_src/**/*.tsx",
+
       "src/contrib/blocks/assets/static_src/**/*.js",
       "src/contrib/blocks/assets/static_src/**/*.ts",
       "src/contrib/blocks/assets/static_src/**/*.tsx",
@@ -40,6 +44,11 @@
     ],
     "exclude": [
       "node_modules",
+
+      "src/forms/assets_static_src/**/*.test.js",
+      "src/forms/assets_static_src/**/*.test.ts",
+      "src/forms/assets_static_src/**/*.test.tsx",
+
       "src/contrib/blocks/assets/static_src/**/*.test.js",
       "src/contrib/blocks/assets/static_src/**/*.test.ts",
       "src/contrib/blocks/assets/static_src/**/*.test.tsx",

@@ -138,7 +138,7 @@ func (m *MultiSelectWidget) Media() media.Media {
 	)))
 	formMedia.AddJS(&media.JSAsset{
 		URL: django.Static(
-			"forms/js/multiple-select.js",
+			"forms/js/index.js",
 		),
 	})
 	return formMedia

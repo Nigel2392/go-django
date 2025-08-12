@@ -107,6 +107,10 @@ type FormViewOptions struct {
 	Panels []Panel
 }
 
+func (o *FormViewOptions) SetupDefaults(mdl attrs.Definer, nameOfMethod string) {
+	panelDefaults(o, mdl, nameOfMethod)
+}
+
 type ListViewOptions struct {
 	ViewOptions
 
@@ -440,8 +444,8 @@ func (m *ModelDefinition) GetListInstances(ctx context.Context, amount, offset u
 }
 
 func (m *ModelDefinition) OnRegister(a *AdminApplication, app *AppDefinition) {
-	panelDefaults(&m.AddView, m.Model, "GetAddPanels")
-	panelDefaults(&m.EditView, m.Model, "GetEditPanels")
+	m.AddView.SetupDefaults(m.Model, "GetAddPanels")
+	m.EditView.SetupDefaults(m.Model, "GetEditPanels")
 	viewDefaults(&m.ListView.ViewOptions, m.Model, func(fd attrs.FieldDefinition, d attrs.Definer) bool {
 		var rel = fd.Rel()
 		if rel == nil {

@@ -42,6 +42,7 @@ type PageObject[T any] interface {
 type Pagination[T any] interface {
 	// The amount of objects total
 	// This is used to calculate the number of pages
+	BaseURL() string
 	Count() (int, error)
 	Page(n int) (PageObject[T], error)
 	NumPages() (int, error)

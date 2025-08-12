@@ -40,9 +40,9 @@ function baseConfig(rules = []) {
 
 module.exports = [
     {
-        entry: './src/contrib/admin/assets/static_src/index.ts',
+        entry: './src/forms/assets_static_src/widgets/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'src/contrib/admin/assets/static/admin/js/'),
+            'path': path.resolve(__dirname, 'src/forms/assets/static/forms/js/'),
             'filename': 'index.js'
         },
         ...baseConfig([

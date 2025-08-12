@@ -149,10 +149,17 @@ dialog.godjango-modal:not([fullscreen]) {
 .godjango-chooser-list {
 
 }
-.godjango-chooser-list-form {
+.godjango-chooser-actions {
     padding: 0.5rem;
+    display: flex;
+    flex-direction: row;
     align-items: center;
+    justify-content: space-between;
     border-bottom: 1px solid var(--border-color);
+}
+.godjango-chooser-create .godjango-chooser-actions {
+    justify-content: flex-start;
+    margin-bottom: 1rem;
 }
 .godjango-chooser-list-form .form-field {
     display: flex;
@@ -188,4 +195,9 @@ dialog.godjango-modal:not([fullscreen]) {
 }
 .godjango-chooser-list-header-group {
 
+}
+.godjango-chooser-create .admin-form {
+    padding-left: 1rem;
+    padding-right: 1rem;
+    padding-bottom: 1rem;
 }

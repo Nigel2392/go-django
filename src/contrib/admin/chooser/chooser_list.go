@@ -4,10 +4,12 @@ import (
 	"context"
 	"net/http"
 	"reflect"
+	"strconv"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/components"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -224,9 +226,10 @@ func (v *ChooserListPage[T]) GetListColumns(req *http.Request) []list.ListColumn
 	return columns
 }
 
-func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (*list.List[T], error) {
+func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (*list.List[T], pagination.PageObject[T], error) {
 	var querySet = v.GetQuerySet(req)
 	var paginator = &pagination.QueryPaginator[T]{
+		URL:     req.URL.Path,
 		Context: req.Context(),
 		Amount:  int(amount),
 		BaseQuerySet: func() *queries.QuerySet[T] {
@@ -234,25 +237,41 @@ func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (*list
 		},
 	}
 
-	var objects, err = paginator.Page(page)
+	var pageObject, err = paginator.Page(page)
 	if err != nil && !errors.Is(err, errors.NoRows) {
-		return nil, errors.Wrapf(
+		return nil, nil, errors.Wrapf(
 			err, "failed to get page %d objects with amount %d",
 			page, amount,
 		)
 	}
 
-	var listObject = list.NewListWithGroups(req, objects.Results(), v.GetListColumns(req), func(r *http.Request, obj T, cols []list.ListColumn[T]) list.ColumnGroup[T] {
+	var listObject = list.NewListWithGroups(req, pageObject.Results(), v.GetListColumns(req), func(r *http.Request, obj T, cols []list.ListColumn[T]) list.ColumnGroup[T] {
 		return &wrappedColumnGroup[T]{
 			ListColumnGroup: list.NewColumnGroup(r, obj, cols),
 			_Definition:     v._Definition,
 		}
 	})
-	return listObject, nil
+
+	return listObject, pageObject, nil
+}
+
+func (v *ChooserListPage[T]) getPageNumber(req *http.Request) int {
+	var pageValue = req.URL.Query().Get("page")
+	if pageValue == "" {
+		return 1
+	}
+
+	var page, err = strconv.Atoi(pageValue)
+	if err != nil || page < 1 {
+		return 1
+	}
+
+	return page
 }
 
 func (v *ChooserListPage[T]) GetContext(req *http.Request, bound *BoundChooserListPage[T]) *ModalContext {
-	var listObj, err = v.GetList(req, int(v.PerPage), 1)
+	var page = v.getPageNumber(req)
+	var listObj, pageObject, err = v.GetList(req, int(v.PerPage), page)
 	if err != nil && !errors.Is(err, errors.NoResults) {
 		except.Fail(
 			http.StatusInternalServerError,
@@ -261,8 +280,15 @@ func (v *ChooserListPage[T]) GetContext(req *http.Request, bound *BoundChooserLi
 		return nil
 	}
 
+	if attrSetter, ok := pageObject.(components.AttributeSetter); ok {
+		attrSetter.WithAttrs(map[string]any{
+			"class": "chooser-link",
+		})
+	}
+
 	var c = v._Definition.GetContext(req, v, bound)
 	c.Set("list", listObj)
+	c.Set("page_object", pageObject)
 	c.Set("search", map[string]any{
 		"var":         v.SearchVar(),
 		"allowed":     len(v.SearchFields) > 0,
@@ -291,7 +317,5 @@ func (v *BoundChooserListPage[T]) GetContext(req *http.Request) (ctx.Context, er
 }
 
 func (v *BoundChooserListPage[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context) error {
-	return v.View._Definition.Render(w, req, context, "", v.View.GetTemplate(req), func(req *http.Request) string {
-		return ""
-	})
+	return v.View._Definition.Render(w, req, context, "", v.View.GetTemplate(req))
 }

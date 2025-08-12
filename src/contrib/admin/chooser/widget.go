@@ -33,9 +33,10 @@ type ChooserWidget struct {
 	Model       attrs.Definer
 	App         django.AppConfig
 	ContentType *contenttypes.BaseContentType[attrs.Definer]
+	ChooserKey  string
 }
 
-func NewChooserWidget(model attrs.Definer, widgetAttrs map[string]string) *ChooserWidget {
+func NewChooserWidget(model attrs.Definer, widgetAttrs map[string]string, chooserKey ...string) *ChooserWidget {
 
 	if model == nil {
 		panic("chooser widget requires a target model")
@@ -49,7 +50,9 @@ func NewChooserWidget(model attrs.Definer, widgetAttrs map[string]string) *Choos
 		))
 	}
 
-	definition, ok := choosers.Get(reflect.TypeOf(model))
+	var rTyp = reflect.TypeOf(model)
+
+	definitionsMap, ok := choosers.Get(rTyp)
 	if !ok {
 		panic(fmt.Sprintf(
 			"chooser widget requires a target chooser definition, no definition was found for %T",
@@ -57,7 +60,15 @@ func NewChooserWidget(model attrs.Definer, widgetAttrs map[string]string) *Choos
 		))
 	}
 
+	var keyName = DEFAULT_KEY
+	if len(chooserKey) > 0 {
+		keyName = chooserKey[0]
+	}
+
+	definition, ok := definitionsMap.Get(keyName)
+
 	return &ChooserWidget{
+		ChooserKey: keyName,
 		BaseWidget: widgets.NewBaseWidget(
 			"text", "", widgetAttrs,
 		),
@@ -105,6 +116,35 @@ func (w *ChooserWidget) ValueToGo(value interface{}) (interface{}, error) {
 	return newObj, nil
 }
 
+func (w *ChooserWidget) Validate(ctx context.Context, value interface{}) []error {
+	var errs = w.BaseWidget.Validate(ctx, value)
+	if len(errs) > 0 {
+		return errs
+	}
+
+	if !django_reflect.IsZero(value) {
+		var meta = attrs.GetModelMeta(w.Model)
+		var defs = meta.Definitions()
+		var primDef = defs.Primary()
+		var exists, err = queries.GetQuerySetWithContext(ctx, w.Model).
+			Filter(primDef.Name(), value).
+			Exists()
+		if err != nil {
+			return append(errs, errors.Wrapf(
+				err, "failed to check if model row exists for value %v", value,
+			))
+		}
+
+		if !exists {
+			return append(errs, errors.NoRows.Wrapf(
+				"model row does not exist for value %v", value,
+			))
+		}
+	}
+
+	return nil
+}
+
 func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value interface{}, widgetAttrs map[string]string) ctx.Context {
 	var (
 		ctx       = b.BaseWidget.GetContextData(c, id, name, value, widgetAttrs)
@@ -113,15 +153,11 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 	)
 
 	var urlMap = map[string]string{
-		"choose": django.Reverse("admin:apps:model:chooser:list", appName, modelName),
+		"choose": django.Reverse("admin:apps:model:chooser:list", appName, modelName, b.ChooserKey),
 	}
 
 	if b.Definition.CanCreate() {
-		urlMap["create"] = django.Reverse("admin:apps:model:chooser:create", appName, modelName)
-	}
-
-	if b.Definition.CanUpdate() && !django_reflect.IsZero(value) {
-		urlMap["update"] = django.Reverse("admin:apps:model:chooser:update", appName, modelName, value)
+		urlMap["create"] = django.Reverse("admin:apps:model:chooser:create", appName, modelName, b.ChooserKey)
 	}
 
 	ctx.Set("urls", urlMap)

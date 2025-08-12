@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -58,6 +59,9 @@ type User struct {
 }
 
 func (u *User) String() string {
+	if u.Username == "" {
+		return fmt.Sprintf("User<%d>", u.ID)
+	}
 	return u.Username
 }
 

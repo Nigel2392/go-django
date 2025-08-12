@@ -13,7 +13,6 @@ class Elements {
     private _dialog: HTMLDialogElement | null = null;
     private _controls: HTMLElement | null = null;
     private _title: HTMLElement | null = null;
-    private _errors: HTMLElement | null = null;
     private _content: HTMLElement | null = null;
     private _footer: HTMLElement | null = null;
 
@@ -42,13 +41,6 @@ class Elements {
         return this._title;
     }
 
-    get errors(): HTMLElement {
-        if (!this._errors) {
-            this._errors = this.root.querySelector(".godjango-modal-errors");
-        }
-        return this._errors;
-    }
-
     get content(): HTMLElement {
         if (!this._content) {
             this._content = this.root.querySelector(".godjango-modal-content");
@@ -75,6 +67,7 @@ function newModalEvent(action: "modal:open" | "modal:close", modal: Modal, event
 }
 
 type ModalConstructorOptions = {
+    executeScriptsOnSet?: boolean;
     opened?: boolean;
     onOpen?: (event: Event) => void;
     onClose?: (event: Event) => void;
@@ -138,8 +131,6 @@ class Modal {
                         </button>
                     </div>
                     <div class="godjango-modal-header" id="modal-title">
-                    </div>
-                    <div class="godjango-modal-errors" id="modal-errors" role="alert">
                     </div>
                     <div class="godjango-modal-content" id="modal-content">
                     </div>
@@ -240,24 +231,6 @@ class Modal {
         }
     }
 
-    set errors(value: string | string[]) {
-        if (Array.isArray(value)) {
-            this.elements.errors.innerHTML = "";
-            let errorList = document.createElement("ul");
-            value.forEach((error: string) => {
-                const errorItem = (
-                    <li>{error}</li>
-                );
-                errorList.appendChild(errorItem);
-            });
-            this.elements.errors.appendChild(errorList);
-        } else if (typeof value === "string") {
-            this.elements.errors.innerHTML = value;
-        } else {
-            console.warn("Invalid errors value:", value);
-        }
-    }
-
     set content(value: HTMLElement | string) {
         if (typeof value === "string") {
             this.elements.content.innerHTML = value;
@@ -266,6 +239,27 @@ class Modal {
             this.elements.content.appendChild(value);
         } else {
             console.warn("Invalid content value:", value);
+        }
+
+        if (this.options.executeScriptsOnSet) {
+            const scripts = this.elements.content.querySelectorAll("script");
+            scripts.forEach(oldScript => {
+                const newScript = document.createElement("script");
+                newScript.dataset.initialized = "true";
+
+                // Copy attributes
+                [...oldScript.attributes].forEach(attr =>
+                    newScript.setAttribute(attr.name, attr.value)
+                );
+            
+                // Inline script content
+                if (oldScript.textContent) {
+                    newScript.textContent = oldScript.textContent;
+                }
+            
+                // Replace the old script with the new one so the browser executes it
+                oldScript.parentNode.replaceChild(newScript, oldScript);
+            });
         }
     }
 
@@ -283,10 +277,6 @@ class Modal {
 
     get title(): HTMLElement {
         return this.elements.title;
-    }
-
-    get errors(): HTMLElement {
-        return this.elements.errors;
     }
 
     get content(): HTMLElement {

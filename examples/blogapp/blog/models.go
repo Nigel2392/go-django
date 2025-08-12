@@ -1,6 +1,7 @@
 package blog
 
 import (
+	"context"
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -17,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
 var (
@@ -28,6 +30,9 @@ func init() {
 	chooser.Register(&chooser.ChooserDefinition[*auth.User]{
 		Title: trans.S("User Chooser"),
 		Model: &auth.User{},
+		PreviewString: func(ctx context.Context, instance *auth.User) string {
+			return instance.Email.Address
+		},
 		ListPage: &chooser.ChooserListPage[*auth.User]{
 			SearchFields: []chooser.SearchField[*auth.User]{
 				{
@@ -47,7 +52,15 @@ func init() {
 					Lookup: expr.LOOKUP_ICONTANS,
 				},
 			},
+			QuerySet: func(r *http.Request, model *auth.User) *queries.QuerySet[*auth.User] {
+				var currentUser = authentication.Retrieve(r)
+				var user = currentUser.(*auth.User)
+				return queries.GetQuerySet(&auth.User{}).
+					Filter(expr.Q("ID", user.ID).Not(true)).
+					OrderBy("Email")
+			},
 		},
+		CreatePage: &chooser.ChooserFormPage[*auth.User]{},
 	})
 }
 

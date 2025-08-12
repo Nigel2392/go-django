@@ -1,18 +1,20 @@
 package chooser
 
 import (
-	"context"
+	"bytes"
+	"encoding/json"
+	"io"
 	"net/http"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
-	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
-	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/views"
+
+	_ "unsafe"
 )
 
 var (
@@ -25,9 +27,7 @@ var (
 type ChooserFormPage[T attrs.Definer] struct {
 	Template       string
 	AllowedMethods []string
-	Panels         []admin.Panel
-	Validate       []func(context.Context, *http.Request, T, *BoundChooserFormPage[T]) error
-	Save           func(context.Context, *http.Request, T, *BoundChooserFormPage[T]) error
+	Options        admin.FormViewOptions
 
 	_Definition *ChooserDefinition[T]
 }
@@ -40,15 +40,36 @@ func (v *ChooserFormPage[T]) Methods() []string {
 	return v.AllowedMethods
 }
 
+func (v *ChooserFormPage[T]) GetTemplate(req *http.Request) string {
+	if v.Template != "" {
+		return v.Template
+	}
+	return "chooser/views/create.tmpl"
+}
+
+//go:linkname newInstanceView github.com/Nigel2392/go-django/src/contrib/admin.newInstanceView
+func newInstanceView(tpl string, instance attrs.Definer, opts admin.FormViewOptions, app *admin.AppDefinition, model *admin.ModelDefinition, r *http.Request) *views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]
+
 func (v *ChooserFormPage[T]) Bind(w http.ResponseWriter, req *http.Request) (views.View, error) {
+	var modelObj = attrs.NewObject[T](
+		reflect.TypeOf(v._Definition.Model),
+	)
 	var base = &BoundChooserFormPage[T]{
+		FormView: newInstanceView(
+			"add",
+			modelObj,
+			v.Options,
+			v._Definition.AdminApp,
+			v._Definition.AdminModel,
+			req,
+		),
 		View:           v,
 		ResponseWriter: w,
 		Request:        req,
-		Model: attrs.NewObject[T](
-			reflect.TypeOf(v._Definition.Model),
-		),
+		Model:          modelObj,
 	}
+	base.FormView.TemplateName = v.GetTemplate(req)
+	base.FormView.BaseTemplateKey = ""
 	return base, nil
 }
 
@@ -58,59 +79,98 @@ func (v *ChooserFormPage[T]) GetContext(req *http.Request, bound *BoundChooserFo
 }
 
 type BoundChooserFormPage[T attrs.Definer] struct {
+	*views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]
 	View           *ChooserFormPage[T]
 	ResponseWriter http.ResponseWriter
 	Request        *http.Request
 	Model          T
+
+	isValid bool
 }
 
 func (v *BoundChooserFormPage[T]) ServeXXX(w http.ResponseWriter, req *http.Request) {
 	// Placeholder method, will never get called.
 }
 
-func (v *BoundChooserFormPage[T]) GetPanels() []admin.Panel {
-	if v.View.Panels != nil {
-		return v.View.Panels
-	}
-	return []admin.Panel{}
+type fakeWriter struct {
+	bytes.Buffer
+	headers    http.Header
+	statusCode int
 }
 
-func (v *BoundChooserFormPage[T]) GetForm(req *http.Request) *admin.AdminModelForm[modelforms.ModelForm[T], T] {
-
-	var form = modelforms.NewBaseModelForm(req.Context(), v.Model)
-	form.SaveInstance = func(ctx context.Context, t T) error {
-		if v.View.Save != nil {
-			return v.View.Save(ctx, req, t, v)
-		}
-
-		saved, err := models.SaveModel(ctx, t)
-		if err != nil {
-			return err
-		}
-		if !saved {
-			return errors.NoChanges.Wrap("model not saved, no changes made")
-		}
-
-		return nil
-	}
-
-	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[T]](
-		form, v.GetPanels()...,
-	)
-
-	adminForm.Load()
-
-	return adminForm
+func (w *fakeWriter) Header() http.Header {
+	return w.headers
 }
 
-func (v *BoundChooserFormPage[T]) GetContext(req *http.Request) (ctx.Context, error) {
-	var c = v.View.GetContext(req, v)
-	c.Set("form", v.GetForm(req))
-	return c, nil
+func (w *fakeWriter) WriteHeader(statusCode int) {
+	w.statusCode = statusCode
+}
+
+func (w *fakeWriter) Write(b []byte) (int, error) {
+	return w.Buffer.Write(b)
 }
 
 func (v *BoundChooserFormPage[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context) error {
-	var form = context.Get("form").(*admin.AdminModelForm[modelforms.ModelForm[T], T])
-	_ = form
-	return tpl.FRender(w, context, v.View.Template)
+	var writer = &fakeWriter{
+		Buffer:  bytes.Buffer{},
+		headers: make(http.Header),
+	}
+
+	v.FormView.SuccessFn = func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]) {
+
+		// Set isValidFlag to true
+		// This function will run inside of v.FormView.Render if the form is
+		// submitted successfully
+		//
+		// This is to ensure we don't encode a JSON response into [ChooserResponse.HTML]
+		v.isValid = true
+
+		var instance = form.Instance()
+		var pk = attrs.PrimaryKey(instance)
+		var err = json.NewEncoder(w).Encode(ChooserResponse{
+			Preview: v.View._Definition.GetPreviewString(
+				req.Context(), instance,
+			),
+			PK: pk,
+		})
+
+		if err == nil {
+			return
+		}
+
+		except.Fail(
+			http.StatusInternalServerError,
+			err,
+		)
+	}
+
+	if err := v.FormView.Render(writer, req, v.GetTemplate(req), context); err != nil {
+		return err
+	}
+
+	// Copy the response data for the fake writer passed to the view
+	if writer.statusCode != 0 {
+		w.WriteHeader(writer.statusCode)
+	}
+
+	if len(writer.headers) > 0 {
+		for key, values := range writer.headers {
+			for _, value := range values {
+				w.Header().Add(key, value)
+			}
+		}
+	}
+
+	// If the form is valid, the response is already JSON
+	// Copy the buffer and be done with it.
+	if v.isValid {
+		_, err := io.Copy(w, &writer.Buffer)
+		return err
+	}
+
+	var response = ChooserResponse{
+		HTML: writer.String(),
+	}
+
+	return json.NewEncoder(w).Encode(response)
 }

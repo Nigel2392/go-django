@@ -18,23 +18,23 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
+	"github.com/Nigel2392/mux"
 )
 
 type Chooser interface {
-	Setup() error
+	Setup(chooserKey string) error
 	GetTitle(ctx context.Context) string
 	GetPreviewString(ctx context.Context, instance attrs.Definer) string
 	GetModel() attrs.Definer
 
 	CanCreate() bool
-	CanUpdate() bool
 
 	ListView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View
 	CreateView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View
-	UpdateView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View
 }
 
 type ChooserDefinition[T attrs.Definer] struct {
+	ChooserKey    string
 	Model         T
 	Title         any // string or func(ctx context.Context) string
 	Labels        map[string]func(ctx context.Context) string
@@ -42,14 +42,13 @@ type ChooserDefinition[T attrs.Definer] struct {
 
 	ListPage   *ChooserListPage[T]
 	CreatePage *ChooserFormPage[T]
-	UpdatePage *ChooserFormPage[T]
 
 	DjangoApp  django.AppConfig
 	AdminApp   *admin.AppDefinition
 	AdminModel *admin.ModelDefinition
 }
 
-func (c *ChooserDefinition[T]) Setup() error {
+func (c *ChooserDefinition[T]) Setup(chooserKey string) error {
 	if c.Title == nil {
 		return errors.ValueError.Wrap("ChooserDefinition.Title cannot be nil")
 	}
@@ -86,6 +85,7 @@ func (c *ChooserDefinition[T]) Setup() error {
 	c.DjangoApp = djangoApp
 	c.AdminApp = adminApp
 	c.AdminModel = adminModel
+	c.ChooserKey = chooserKey
 
 	if c.ListPage == nil {
 
@@ -124,10 +124,20 @@ func (c *ChooserDefinition[T]) Setup() error {
 
 	if c.CreatePage != nil {
 		c.CreatePage._Definition = c
-	}
 
-	if c.UpdatePage != nil {
-		c.UpdatePage._Definition = c
+		if len(c.CreatePage.AllowedMethods) == 0 {
+			c.CreatePage.AllowedMethods = []string{"POST"}
+		}
+
+		if len(c.CreatePage.Options.Panels) == 0 &&
+			len(c.CreatePage.Options.Fields) == 0 &&
+			len(c.CreatePage.Options.Exclude) == 0 {
+			c.CreatePage.Options = c.AdminModel.AddView
+		}
+
+		c.CreatePage.Options.SetupDefaults(
+			c.Model, "GetAddPanels",
+		)
 	}
 
 	return nil
@@ -182,15 +192,11 @@ func (c *ChooserDefinition[T]) GetPreviewString(ctx context.Context, instance at
 }
 
 func (c *ChooserDefinition[T]) GetModel() attrs.Definer {
-	return c.Model
+	return attrs.NewObject[attrs.Definer](c.Model)
 }
 
 func (c *ChooserDefinition[T]) CanCreate() bool {
 	return c.CreatePage != nil
-}
-
-func (c *ChooserDefinition[T]) CanUpdate() bool {
-	return c.UpdatePage != nil
 }
 
 func (c *ChooserDefinition[T]) ListView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View {
@@ -207,18 +213,25 @@ func (c *ChooserDefinition[T]) CreateView(adminSite *admin.AdminApplication, app
 	return c.CreatePage
 }
 
-func (c *ChooserDefinition[T]) UpdateView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, instance attrs.Definer) views.View {
-	if c.UpdatePage != nil {
-		c.UpdatePage._Definition = c
-	}
-	return c.UpdatePage
-}
-
 func (c *ChooserDefinition[T]) GetContext(req *http.Request, page, bound views.View) *ModalContext {
 	var ctx = ctx.RequestContext(req)
 	ctx.Set("chooser", c)
 	ctx.Set("chooser_page", page)
 	ctx.Set("chooser_view", bound)
+
+	var urlVars = mux.Vars(req)
+	var appName = urlVars.Get("app_name")
+	var modelName = urlVars.Get("model_name")
+
+	var urlMap = map[string]string{
+		"choose": django.Reverse("admin:apps:model:chooser:list", appName, modelName, c.ChooserKey),
+	}
+
+	if c.CanCreate() {
+		urlMap["create"] = django.Reverse("admin:apps:model:chooser:create", appName, modelName, c.ChooserKey)
+	}
+
+	ctx.Set("urls", urlMap)
 
 	return &ModalContext{
 		ContextWithRequest: ctx,
@@ -228,11 +241,12 @@ func (c *ChooserDefinition[T]) GetContext(req *http.Request, page, bound views.V
 }
 
 type ChooserResponse struct {
-	HTML        string `json:"html"`
-	PreviewHTML string `json:"preview_html,omitempty"`
+	HTML    string `json:"html"`
+	Preview string `json:"preview,omitempty"`
+	PK      any    `json:"pk,omitempty"`
 }
 
-func (c *ChooserDefinition[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context, base, template string, preview func(req *http.Request) string) error {
+func (c *ChooserDefinition[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context, base, template string) error {
 	var buf = new(bytes.Buffer)
 	if err := tpl.FRender(buf, context, base, template); err != nil {
 		return err
@@ -240,10 +254,6 @@ func (c *ChooserDefinition[T]) Render(w http.ResponseWriter, req *http.Request, 
 
 	var response = ChooserResponse{
 		HTML: buf.String(),
-	}
-
-	if preview != nil {
-		response.PreviewHTML = preview(req)
 	}
 
 	return json.NewEncoder(w).Encode(response)

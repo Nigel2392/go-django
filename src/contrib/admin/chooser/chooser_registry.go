@@ -1,22 +1,41 @@
 package chooser
 
 import (
+	"fmt"
 	"reflect"
 
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-var choosers = orderedmap.NewOrderedMap[reflect.Type, Chooser]()
+const (
+	DEFAULT_KEY = "default"
+)
 
-func Register(chooser Chooser) {
+var choosers = orderedmap.NewOrderedMap[reflect.Type, *orderedmap.OrderedMap[string, Chooser]]()
+
+func Register(chooser Chooser, key ...string) {
+
+	var keyName = DEFAULT_KEY
+	if len(key) > 0 {
+		keyName = key[0]
+	}
+
 	var modelType = reflect.TypeOf(chooser.GetModel())
 	if modelType == nil {
 		panic("Chooser model type cannot be nil")
 	}
 
-	if _, exists := choosers.Get(modelType); exists {
-		panic("Chooser already registered for model type: " + modelType.String())
+	var definitionMap, ok = choosers.Get(modelType)
+	if !ok {
+		definitionMap = orderedmap.NewOrderedMap[string, Chooser]()
+		choosers.Set(modelType, definitionMap)
 	}
 
-	choosers.Set(modelType, chooser)
+	if !definitionMap.Set(keyName, chooser) {
+		// replaced existing chooser for key
+		panic(fmt.Sprintf(
+			"Chooser already registered for model type %s with key %s",
+			modelType.String(), keyName,
+		))
+	}
 }

@@ -13,6 +13,7 @@ type Paginator[S ~[]E, E any] struct {
 	GetObjects func(amount int, offset int) (S, error)
 	GetCount   func() (int, error)
 	Amount     int
+	URL        string
 	cnt        int
 }
 
@@ -33,6 +34,10 @@ func (p *Paginator[S, E]) Count() (int, error) {
 		p.cnt = count
 	}
 	return p.cnt, nil
+}
+
+func (p *Paginator[S, E]) BaseURL() string {
+	return p.URL
 }
 
 func (p *Paginator[S, E]) PerPage() int {

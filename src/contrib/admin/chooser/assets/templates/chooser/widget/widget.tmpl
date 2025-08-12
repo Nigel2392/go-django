@@ -27,12 +27,6 @@
                     {{ Translate .Data.context "Choose" }}
                 </button>
 
-                {{ if .Data.urls.update }}
-                    <button type="button" class="chooser-edit">
-                        {{ Translate .Data.context "Edit" }}
-                    </button>
-                {{ end }}
-
                 {{ if not .Data.readonly }}
                     <button type="button" class="chooser-reset" data-chooser-target="clear" data-action="click->chooser#clear">
                         {{ Translate .Data.context "Clear" }}

@@ -58,7 +58,7 @@ func init() {
 		return fSys
 	}))
 
-	goldcrest.Register(attrs.HookFormFieldForType, 100,
+	goldcrest.Register(attrs.HookFormFieldForType, 100, // order 100 to make sure other more specific hooks get a chance to run before this one.
 		attrs.FormFieldGetter(func(f attrs.Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(django_formfields.Field)) (django_formfields.Field, bool) {
 			var rel = f.Rel()
 			if rel == nil {

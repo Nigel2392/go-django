@@ -14,6 +14,7 @@ type QueryPaginator[T attrs.Definer] struct {
 	Context      context.Context
 	BaseQuerySet func() *queries.QuerySet[T]
 	GetObject    func(T) T
+	URL          string
 	Amount       int
 	cnt          int
 }
@@ -47,6 +48,10 @@ func (p *QueryPaginator[T]) Count() (int, error) {
 		p.cnt = int(count)
 	}
 	return p.cnt, nil
+}
+
+func (p *QueryPaginator[T]) BaseURL() string {
+	return p.URL
 }
 
 func (p *QueryPaginator[T]) PerPage() int {

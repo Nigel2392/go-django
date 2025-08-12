@@ -8,8 +8,10 @@ import (
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
@@ -35,6 +37,51 @@ var pageAdminAppOptions = admin.AppOptions{
 		)
 		return m
 	},
+}
+
+func init() {
+	var chooserDefinitionAllNodes = chooser.ChooserDefinition[*PageNode]{
+		Title: trans.S("User Chooser"),
+		Model: &PageNode{},
+		PreviewString: func(ctx context.Context, instance *PageNode) string {
+			return fmt.Sprintf("%q", instance.Title)
+		},
+		ListPage: &chooser.ChooserListPage[*PageNode]{
+			PerPage: 20,
+			SearchFields: []chooser.SearchField[*PageNode]{
+				{
+					Name:   "Title",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+				{
+					Name:   "Slug",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+				{
+					Name:   "UrlPath",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+				{
+					Name:   "ContentType",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+			},
+		},
+	}
+	var chooserDefinitionRootNodes = chooserDefinitionAllNodes
+	chooserDefinitionRootNodes.ListPage.Fields = []string{
+		"Title",
+		"Slug",
+		"ContentType",
+		"CreatedAt",
+		"UpdatedAt",
+	}
+	chooserDefinitionRootNodes.ListPage.QuerySet = func(r *http.Request, model *PageNode) *queries.QuerySet[*PageNode] {
+		return NewPageQuerySet().RootPages().Base()
+	}
+
+	chooser.Register(&chooserDefinitionAllNodes)
+	chooser.Register(&chooserDefinitionRootNodes, "pages.nodes.root")
 }
 
 type TimeInformation struct {
