@@ -11,11 +11,14 @@ import (
 	"strings"
 	"text/template"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
@@ -266,6 +269,50 @@ func NewAppConfig() django.AppConfig {
 		auditlogs.RegisterDefinition("pages:publish", newPageLogDefinition())
 		auditlogs.RegisterDefinition("pages:unpublish", newPageLogDefinition())
 		auditlogs.RegisterDefinition("pages:delete", auditlogs.SimpleDefinition())
+
+		var chooserDefinitionAllNodes = chooser.ChooserDefinition[*PageNode]{
+			Title: trans.S("User Chooser"),
+			Model: &PageNode{},
+			PreviewString: func(ctx context.Context, instance *PageNode) string {
+				return fmt.Sprintf("%q", instance.Title)
+			},
+			ListPage: &chooser.ChooserListPage[*PageNode]{
+				PerPage: 20,
+				SearchFields: []chooser.SearchField[*PageNode]{
+					{
+						Name:   "Title",
+						Lookup: expr.LOOKUP_ICONTANS,
+					},
+					{
+						Name:   "Slug",
+						Lookup: expr.LOOKUP_ICONTANS,
+					},
+					{
+						Name:   "UrlPath",
+						Lookup: expr.LOOKUP_ICONTANS,
+					},
+					{
+						Name:   "ContentType",
+						Lookup: expr.LOOKUP_ICONTANS,
+					},
+				},
+			},
+		}
+		var chooserDefinitionRootNodes = chooserDefinitionAllNodes
+		chooserDefinitionRootNodes.ListPage.Fields = []string{
+			"Title",
+			"Slug",
+			"ContentType",
+			"CreatedAt",
+			"UpdatedAt",
+		}
+		chooserDefinitionRootNodes.ListPage.QuerySet = func(r *http.Request, model *PageNode) *queries.QuerySet[*PageNode] {
+			return NewPageQuerySet().RootPages().Base()
+		}
+
+		chooser.Register(&chooserDefinitionAllNodes)
+		chooser.Register(&chooserDefinitionRootNodes, "pages.nodes.root")
+
 		return nil
 	}
 
