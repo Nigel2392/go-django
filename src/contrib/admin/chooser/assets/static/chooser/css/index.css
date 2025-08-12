@@ -135,6 +135,7 @@ dialog.godjango-modal:not([fullscreen]) {
     display: flex;
     align-items: center;
     justify-content: center;
+    padding-left: 0.5rem;
     width: 35px;
 }
 .chooser-widget-controls .dropdown {

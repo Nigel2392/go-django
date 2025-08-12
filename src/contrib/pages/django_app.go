@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"html"
 	"io/fs"
 	"net/http"
 	"path"
@@ -274,7 +275,15 @@ func NewAppConfig() django.AppConfig {
 			Title: trans.S("User Chooser"),
 			Model: &PageNode{},
 			PreviewString: func(ctx context.Context, instance *PageNode) string {
-				return fmt.Sprintf("%q", instance.Title)
+				if !instance.IsPublished() {
+					return html.EscapeString(instance.Title)
+				}
+
+				return fmt.Sprintf(
+					"<a href=\"%s\" target=\"_blank\">%s</a>",
+					URLPath(instance),
+					html.EscapeString(instance.Title),
+				)
 			},
 			ListPage: &chooser.ChooserListPage[*PageNode]{
 				PerPage: 20,
