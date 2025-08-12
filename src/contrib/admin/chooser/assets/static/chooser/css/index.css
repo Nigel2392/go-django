@@ -132,6 +132,9 @@ dialog.godjango-modal:not([fullscreen]) {
 }
 .chooser-widget-controls {
     border-left: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 35px;
 }
 .chooser-widget-controls .dropdown {
