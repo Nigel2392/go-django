@@ -125,13 +125,14 @@ dialog.godjango-modal:not([fullscreen]) {
 }
 .chooser-widget-preview {
     flex: 1;
-    max-width: 175px;
+    max-width: 190px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
 }
 .chooser-widget-controls {
     border-left: 1px solid var(--border-color);
+    width: 35px;
 }
 .chooser-widget-controls .dropdown {
 
