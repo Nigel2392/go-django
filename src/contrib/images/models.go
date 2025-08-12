@@ -134,7 +134,6 @@ func (o *Image) FieldDefs() attrs.Definitions {
 	var fields = make([]attrs.Field, 6)
 	fields[0] = attrs.NewField(
 		o, "ID", &attrs.FieldConfig{
-			Null:     true,
 			Blank:    true,
 			ReadOnly: true,
 			Primary:  true,

@@ -22,7 +22,7 @@
 
         {{ range $image := .Data.view_list }}
             <div class="image-item">
-                <img src="{{ $image.Path }}" alt="{{ $image.Title }}">
+                <img src="{{ url "images:serve" $image.Path }}" alt="{{ $image.Title }}">
                 <div class="image-metadata">
                     <h3>{{ $image.Title }}</h3>
                     <p>Uploaded on: {{ $image.CreatedAt }}</p>

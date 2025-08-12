@@ -109,7 +109,7 @@ func NewAppConfig(opts *Options) *AppConfig {
 		g.Get(
 			"/<<id>>",
 			mux.NewHandler(app.serveImageByIDView),
-			"serve",
+			"serve_id",
 		)
 		g.Post(
 			"/upload",
@@ -127,7 +127,7 @@ func NewAppConfig(opts *Options) *AppConfig {
 			"delete",
 		)
 		g.Get(
-			"/*",
+			"/serve/*",
 			mux.NewHandler(app.serveImageByPathView),
 			"serve",
 		)

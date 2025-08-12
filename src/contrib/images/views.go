@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
@@ -141,9 +142,11 @@ func (a *AppConfig) serveImageByPathView(w http.ResponseWriter, r *http.Request)
 	var fn = func(a *AppConfig, w http.ResponseWriter, r *http.Request) (*Image, error) {
 		var vars = mux.Vars(r)
 		var pathParts = vars.GetAll("*")
-		var filepath = path.Join(pathParts...)
+		var path = path.Join(pathParts...)
+		filepath := filepath.Clean(path)
+		filepath = strings.TrimPrefix(filepath, "/")
 
-		var imgRow, err = queries.GetQuerySet[*Image](&Image{}).
+		imgRow, err := queries.GetQuerySet[*Image](&Image{}).
 			WithContext(r.Context()).
 			Filter("Path", filepath).
 			Get()
