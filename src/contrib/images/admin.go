@@ -3,6 +3,7 @@ package images
 import (
 	"fmt"
 	"net/http"
+	"path/filepath"
 	"strconv"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -50,6 +51,9 @@ func AdminImageModelOptions() admin.ModelOptions {
 						fields.HelpText(trans.S("Upload an image file")),
 						fields.Required(true),
 					),
+					UploadTo: func(fileObject *widgets.FileObject) string {
+						return filepath.Join(app.MediaDir(), fileObject.Name)
+					},
 					StorageBackend: app.MediaBackend(),
 				}
 

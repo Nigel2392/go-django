@@ -143,12 +143,14 @@ func (a *AppConfig) serveImageByPathView(w http.ResponseWriter, r *http.Request)
 		var vars = mux.Vars(r)
 		var pathParts = vars.GetAll("*")
 		var path = path.Join(pathParts...)
-		filepath := filepath.Clean(path)
-		filepath = strings.TrimPrefix(filepath, "/")
+		path = filepath.Clean(path)
+		path = filepath.ToSlash(path)
+		path = strings.TrimPrefix(path, "/")
+		path = strings.TrimSuffix(path, "/")
 
 		imgRow, err := queries.GetQuerySet[*Image](&Image{}).
 			WithContext(r.Context()).
-			Filter("Path", filepath).
+			Filter("Path", path).
 			Get()
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving image by path: %w", err)
