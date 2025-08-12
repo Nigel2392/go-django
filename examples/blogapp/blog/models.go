@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
@@ -24,9 +25,29 @@ var (
 )
 
 func init() {
-	chooser.Register(&chooser.ChooserDefinition[users.User]{
+	chooser.Register(&chooser.ChooserDefinition[*auth.User]{
 		Title: trans.S("User Chooser"),
 		Model: &auth.User{},
+		ListPage: &chooser.ChooserListPage[*auth.User]{
+			SearchFields: []chooser.SearchField[*auth.User]{
+				{
+					Name:   "Username",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+				{
+					Name:   "Email",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+				{
+					Name:   "FirstName",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+				{
+					Name:   "LastName",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+			},
+		},
 	})
 }
 

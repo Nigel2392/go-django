@@ -1,12 +1,12 @@
 package list
 
 import (
-	"errors"
 	"net/http"
 	"reflect"
 	"strconv"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/pagination"
@@ -96,7 +96,7 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	}
 
 	pageObject, err := paginator.Page(int(page))
-	if err != nil && !errors.Is(err, pagination.ErrNoResults) {
+	if err != nil && !errors.Is(err, errors.NoRows) {
 		return base, err
 	}
 

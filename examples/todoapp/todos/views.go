@@ -2,10 +2,10 @@ package todos
 
 import (
 	"encoding/json"
-	"errors"
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/pagination"
@@ -38,7 +38,7 @@ func ListTodos(w http.ResponseWriter, r *http.Request) {
 	//
 	// This will return a PageObject[Todo] which contains the list of todos for the current page.
 	var page, err = paginator.Page(pageNum)
-	if err != nil && !errors.Is(err, pagination.ErrNoResults) {
+	if err != nil && !errors.Is(err, errors.NoRows) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}

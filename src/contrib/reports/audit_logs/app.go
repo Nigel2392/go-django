@@ -8,6 +8,7 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
@@ -33,7 +34,6 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
-	"github.com/pkg/errors"
 
 	"embed"
 )
@@ -357,7 +357,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	page, err := paginator.Page(pageNum)
-	if err != nil && !errors.Is(err, pagination.ErrNoResults) {
+	if err != nil && !errors.Is(err, errors.NoRows) {
 		logger.Errorf("Failed to retrieve audit logs: %v", err)
 		except.Fail(
 			http.StatusInternalServerError,

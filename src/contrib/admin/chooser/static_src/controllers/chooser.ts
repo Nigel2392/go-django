@@ -10,7 +10,7 @@ type ChooserResponse = {
     errors?:      string[];
 }
 
-function newChooserEvent(action: "open" | "close", modal: ChooserController, event?: ActionEvent): ChooserEvent {
+function newChooserEvent(action: "open" | "close", modal: ChooserController, event?: Event): ChooserEvent {
     return new CustomEvent("modal:" + action, {
         detail: {
             action: action,
@@ -22,8 +22,9 @@ function newChooserEvent(action: "open" | "close", modal: ChooserController, eve
 
 class ChooserController extends Controller<any> {
     modal: Modal;
+    modalWrapper: HTMLElement;
 
-    static targets = ["open", "clear", "preview", "input", "modal"];
+    static targets = ["open", "clear", "preview", "input"];
     static values = {
         listurl:   { type: String },
         createurl: { type: String },
@@ -33,43 +34,30 @@ class ChooserController extends Controller<any> {
 
     declare readonly listurlValue:   string;
     declare readonly createurlValue: string;
-    declare readonly updateurlValue: string;
     declare readonly titleValue:     string;
 
     declare readonly openTarget:    HTMLButtonElement;
     declare readonly clearTarget:   HTMLButtonElement;
     declare readonly previewTarget: HTMLDivElement;
     declare readonly inputTarget:   HTMLInputElement;
-    declare readonly modalTarget:   HTMLDivElement;
 
     connect() {
-        this.tryClose();
+        this.modalWrapper = document.getElementById("godjango-modal-wrapper");
+        if (!this.modalWrapper) {
+            this.modalWrapper = document.createElement("div");
+            this.modalWrapper.id = "godjango-modal-wrapper";
+            this.modalWrapper.className = "godjango-modal-wrapper";
+            document.body.appendChild(this.modalWrapper);
+        }
+
         this.element.chooserController = this;
-        this.modal = new Modal(this.modalTarget);
     }
 
     disconnect() {
         this.modal = null;
         this.element.chooserController = null;
         this.element.dataset.chooserController = "false";
-        this.element.remove();
-    }
-
-    tryClose() {
-        var choosers = document.querySelectorAll("[data-controller='chooser']");
-        if (choosers.length == 1) {
-            return;
-        }
-
-        console.warn(
-            "Multiple chooser controllers found on the page. This may cause unexpected behavior.",
-        );
-
-        choosers.forEach((chooser: ChooserControllerElement) => {
-            if (chooser !== this.element) {
-                chooser.chooserController?.disconnect();
-            }
-        });
+        this.modal.disconnect();
     }
 
     async fetch(url: string, method: string = "GET", body?: any, headers?: HeadersInit): Promise<ChooserResponse> {
@@ -98,6 +86,10 @@ class ChooserController extends Controller<any> {
         }
 
         return data;
+    }
+
+    private get searchForm(): HTMLFormElement | null {
+        return this.modal.content.querySelector(".godjango-chooser-list-form");
     }
 
     async loadModalContent(url: string) {
@@ -130,21 +122,26 @@ class ChooserController extends Controller<any> {
 
     async setup() {
         this.modal.title = `<h1>${this.titleValue}</h1>`;
-        await this.loadModalContent(this.listurlValue);
+        await this.showList();
     }
 
     async teardown() {
-
+        this.modal.disconnect();
     }
 
     async open(event?: ActionEvent) {
-        this.modal.open(event);
+        this.modal = new Modal(this.modalWrapper, {
+            opened: true,
+            onClose: async (event) => {
+                await this.teardown();
+                await this.element.dispatchEvent(newChooserEvent("close", this, event));
+            },
+        });
         await this.setup();
         await this.element.dispatchEvent(newChooserEvent("open", this, event));
     }
 
     async close(event?: ActionEvent) {
-        this.modal.close(event);
         await this.teardown();
         await this.element.dispatchEvent(newChooserEvent("close", this, event));
     }
@@ -153,14 +150,33 @@ class ChooserController extends Controller<any> {
         if (this.inputTarget.value === "") {
             return;
         }
+        
         this.inputTarget.value = "";
         this.previewTarget.innerHTML = "";
+        
         const currentColor = getComputedStyle(this.element).borderColor;
         this.element.animate([{ borderColor: "red" }, { borderColor: currentColor }], {
             fill: "forwards",
             duration: 300,
             easing: "ease-out",
         });
+    }
+
+    async showList(url: string = this.listurlValue) {
+        await this.loadModalContent(url);
+
+        this.searchForm.addEventListener("submit", async (event) => {
+            event.preventDefault();
+
+            const formData = new FormData(this.searchForm);
+            const searchParams = new URLSearchParams(formData as any);
+            const url = `${this.listurlValue}?${searchParams.toString()}`;
+            await this.showList(url);
+        })
+    }
+
+    async showCreate() {
+        await this.loadModalContent(this.createurlValue);
     }
 }
 

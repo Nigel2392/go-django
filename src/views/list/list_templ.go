@@ -5,15 +5,15 @@ package list
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
-	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/core/logger"
 	"net/http"
 	"runtime/debug"
 	"strings"
+
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
 )
 
 type List[T attrs.Definer] struct {
@@ -53,6 +53,11 @@ func (l *List[T]) Render() string {
 			panic(r)
 		}
 	}()
+
+	if l.request == nil {
+		logger.Error("List.Render called without a request")
+		return "<!-- List.Render called without a request -->"
+	}
 
 	var component = l.Component()
 	var b strings.Builder

@@ -74,15 +74,27 @@ function newModalEvent(action: "modal:open" | "modal:close", modal: Modal, event
     }) as ModalEvent;
 }
 
+type ModalConstructorOptions = {
+    opened?: boolean;
+    onOpen?: (event: Event) => void;
+    onClose?: (event: Event) => void;
+};
+
 class Modal {
+    private options: ModalConstructorOptions;
     private elements: Elements;
     private documentClickListener: (event: MouseEvent) => void;
 
-    constructor(element: HTMLElement) {
+    constructor(element: HTMLElement, opts: ModalConstructorOptions = {}) {
         let root = element as ModalElement;
         root.modal = this;
         root.dataset.modal = "true";
+        this.options = opts;
         this.connect(root);
+
+        if (this.options.opened) {
+            this.open();
+        }
     }
     
     actions(): ActionMap {
@@ -183,6 +195,9 @@ class Modal {
         setTimeout(() => {
             this.elements.modal.addEventListener("click", this.documentClickListener);
         });
+        if (this.options.onOpen) {
+            this.options.onOpen(event);
+        }
     }
 
     close(event?: Event) {
@@ -198,6 +213,9 @@ class Modal {
         this.elements.dialog.close();
         this.elements.root.dispatchEvent(newModalEvent("modal:close", this, event));
         this.elements.root.removeEventListener("click", this.documentClickListener);
+        if (this.options.onClose) {
+            this.options.onClose(event);
+        }
     }
 
     set controls(value: HTMLElement | string) {

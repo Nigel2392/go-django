@@ -2,7 +2,8 @@ package pagination
 
 import (
 	"context"
-	"errors"
+
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 )
 
 // Paginator holds pagination logic
@@ -42,17 +43,19 @@ func (p *Paginator[S, E]) Page(n int) (PageObject[E], error) {
 	var amount = p.PerPage()
 
 	if amount == 0 {
-		return nil, errors.New("amount of objects per page cannot be 0")
+		return nullPageObject(p.Context, p), errors.ValueError.Wrap(
+			"amount of objects per page cannot be 0",
+		)
 	}
 
 	var offset = (n - 1) * amount
 	results, err := p.GetObjects(amount, offset)
 	if err != nil {
-		return nil, err
+		return nullPageObject(p.Context, p), err
 	}
 
 	if len(results) == 0 {
-		return nil, ErrNoResults
+		return nullPageObject(p.Context, p), errors.NoRows
 	}
 
 	if p.GetObject != nil {

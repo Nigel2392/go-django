@@ -6,6 +6,8 @@ import (
 	"reflect"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -23,8 +25,39 @@ var (
 	_ views.Renderer     = (*BoundChooserListPage[attrs.Definer])(nil)
 )
 
+type SearchField[T attrs.Definer] struct {
+	Name            string
+	Lookup          string // expr.LOOKUP_EXACT is the default.
+	BuildExpression func(req *http.Request, sf SearchField[T], value any) expr.Expression
+}
+
+func (sf SearchField[T]) FieldName() string {
+	return sf.Name
+}
+
+func (sf SearchField[T]) FilterName() string {
+	if sf.Lookup == "" {
+		return sf.Name
+	}
+	var b = make([]byte, 0, len(sf.Name)+len(sf.Lookup)+2)
+	b = append(b, sf.Name...)
+	b = append(b, '_')
+	b = append(b, '_')
+	b = append(b, sf.Lookup...)
+	return string(b)
+}
+
+func (sf SearchField[T]) AsExpression(req *http.Request, value any) expr.Expression {
+	if sf.BuildExpression != nil {
+		return sf.BuildExpression(req, sf, value)
+	}
+
+	return expr.Q(sf.FilterName(), value)
+}
+
 type ChooserListPage[T attrs.Definer] struct {
 	Template       string
+	SearchQueryVar string
 	AllowedMethods []string
 
 	// Fields to include for the model in the view
@@ -56,10 +89,20 @@ type ChooserListPage[T attrs.Definer] struct {
 	// QuerySet is a function that returns a queries.QuerySet to use for the list view.
 	QuerySet func(r *http.Request, model T) *queries.QuerySet[T]
 
+	// SearchFields are the fields to search in the list view.
+	SearchFields []SearchField[T]
+
 	// BoundView returns a new bound view for the list page.
 	BoundView func(w http.ResponseWriter, req *http.Request) (views.View, error)
 
 	_Definition *ChooserDefinition[T]
+}
+
+func (v *ChooserListPage[T]) SearchVar() string {
+	if v.SearchQueryVar != "" {
+		return v.SearchQueryVar
+	}
+	return "search"
 }
 
 func (v *ChooserListPage[T]) ServeXXX(w http.ResponseWriter, req *http.Request) {
@@ -107,7 +150,41 @@ func (v *ChooserListPage[T]) getQuerySet(req *http.Request) *queries.QuerySet[T]
 
 func (v *ChooserListPage[T]) GetQuerySet(req *http.Request) *queries.QuerySet[T] {
 	var qs = v.getQuerySet(req)
-	return qs.WithContext(req.Context())
+	qs = qs.WithContext(req.Context())
+	return v.FilterQuerySet(qs, req)
+}
+
+func (v *ChooserListPage[T]) FilterQuerySet(qs *queries.QuerySet[T], req *http.Request) *queries.QuerySet[T] {
+	if len(v.SearchFields) == 0 {
+		return qs
+	}
+
+	var searchValue = req.URL.Query().Get(v.SearchVar())
+	if searchValue == "" {
+		return qs
+	}
+
+	var orExprs = make([]expr.Expression, 0, len(v.SearchFields))
+	for _, field := range v.SearchFields {
+
+		var expression = field.AsExpression(req, searchValue)
+		if expression == nil {
+			continue
+		}
+
+		orExprs = append(
+			orExprs,
+			expression,
+		)
+	}
+
+	if len(orExprs) == 0 {
+		return qs
+	}
+
+	return qs.Filter(
+		expr.Or(orExprs...),
+	)
 }
 
 func (v *ChooserListPage[T]) ColumnFormat(field string) any {
@@ -158,8 +235,11 @@ func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (*list
 	}
 
 	var objects, err = paginator.Page(page)
-	if err != nil {
-		return nil, err
+	if err != nil && !errors.Is(err, errors.NoRows) {
+		return nil, errors.Wrapf(
+			err, "failed to get page %d objects with amount %d",
+			page, amount,
+		)
 	}
 
 	var listObject = list.NewListWithGroups(req, objects.Results(), v.GetListColumns(req), func(r *http.Request, obj T, cols []list.ListColumn[T]) list.ColumnGroup[T] {
@@ -173,7 +253,7 @@ func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (*list
 
 func (v *ChooserListPage[T]) GetContext(req *http.Request, bound *BoundChooserListPage[T]) *ModalContext {
 	var listObj, err = v.GetList(req, int(v.PerPage), 1)
-	if err != nil {
+	if err != nil && !errors.Is(err, errors.NoResults) {
 		except.Fail(
 			http.StatusInternalServerError,
 			"Failed to get list for chooser page: %v", err,
@@ -183,6 +263,13 @@ func (v *ChooserListPage[T]) GetContext(req *http.Request, bound *BoundChooserLi
 
 	var c = v._Definition.GetContext(req, v, bound)
 	c.Set("list", listObj)
+	c.Set("search", map[string]any{
+		"var":         v.SearchVar(),
+		"allowed":     len(v.SearchFields) > 0,
+		"value":       req.URL.Query().Get(v.SearchVar()),
+		"placeholder": v._Definition.GetLabel(v.Labels, v.SearchVar(), "Search...")(req.Context()),
+		"text":        v._Definition.GetLabel(v.Labels, v.SearchVar(), "Search")(req.Context()),
+	})
 	return c
 }
 

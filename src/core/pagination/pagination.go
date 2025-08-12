@@ -2,13 +2,8 @@ package pagination
 
 import (
 	"context"
-	"errors"
 	"reflect"
 	"strconv"
-)
-
-var (
-	ErrNoResults = errors.New("no results found")
 )
 
 type PageObject[T any] interface {
@@ -75,4 +70,13 @@ func GetPageNum(n any) int {
 
 func NewPageObject[T any](ctx context.Context, paginator Pagination[T], num int, results []T) PageObject[T] {
 	return &pageObject[T]{num: num - 1, results: results, paginator: paginator, context: ctx}
+}
+
+func nullPageObject[T any](ctx context.Context, p Pagination[T]) PageObject[T] {
+	return &pageObject[T]{
+		paginator: p,
+		num:       0,
+		results:   make([]T, 0),
+		context:   ctx,
+	}
 }

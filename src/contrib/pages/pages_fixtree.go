@@ -2,7 +2,6 @@ package pages
 
 import (
 	"fmt"
-	"path"
 	"slices"
 	"strings"
 
@@ -66,7 +65,7 @@ func (n *Node) FixTree() {
 		// Fix all root nodes
 		var node = front.Value
 		node.Ref.Depth = 0
-		node.Ref.UrlPath = path.Join("/", node.Ref.Slug)
+		// node.Ref.UrlPath = path.Join("/", node.Ref.Slug)
 		node.Ref.Numchild = int64(node.Children.Len())
 		node.Ref.Path = buildPathPart(i)
 		i++
@@ -84,7 +83,7 @@ func (n *Node) fixChildren(depth int64) {
 			continue
 		}
 		node.Ref.Depth = depth
-		node.Ref.UrlPath = path.Join(n.Ref.UrlPath, node.Ref.Slug)
+		// node.Ref.UrlPath = path.Join(n.Ref.UrlPath, node.Ref.Slug)
 		node.Ref.Numchild = int64(node.Children.Len())
 		node.Ref.Path = n.Ref.Path + buildPathPart(i)
 		node.fixChildren(depth + 1)

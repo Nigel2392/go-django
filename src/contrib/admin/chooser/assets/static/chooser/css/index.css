@@ -147,7 +147,23 @@ dialog.godjango-modal:not([fullscreen]) {
 
 
 .godjango-chooser-list {
-    padding-top: 0.5rem;
+
+}
+.godjango-chooser-list-form {
+    padding: 0.5rem;
+    align-items: center;
+    border-bottom: 1px solid var(--border-color);
+}
+.godjango-chooser-list-form .form-field {
+    display: flex;
+    flex-direction: row;
+}
+.godjango-chooser-list-form .form-field input {
+    border-radius: var(--border-radius, .3125rem) 0 0 var(--border-radius, .3125rem);
+    width: unset;
+}
+.godjango-chooser-list-form .form-field button {
+    border-radius: 0 var(--border-radius, .3125rem) var(--border-radius, .3125rem) 0;
 }
 .godjango-chooser-list-column {
 

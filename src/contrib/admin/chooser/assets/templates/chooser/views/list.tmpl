@@ -1,5 +1,15 @@
 {{ define "list" }}
     <div class="godjango-chooser-list">
+        {{ if .Data.search.allowed }}
+            <div class="godjango-chooser-list-search">
+                <form method="get" class="godjango-chooser-list-form">
+                    <div class="form-field">
+                        <input type="text" name="{{ .Data.search.var }}" value="{{ .Data.search.value }}" placeholder="{{ .Data.search.placeholder }}" class="godjango-chooser-list-search-input">
+                        <button type="submit" class="godjango-chooser-list-search-button button secondary">{{ .Data.search.text }}</button>
+                    </div>
+                </form>
+            </div>
+        {{ end }}
         {{ safe .Data.list.Render }}
     </div>
 {{ end }}

@@ -24,6 +24,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/checks"
+	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
@@ -125,6 +126,10 @@ func NewAppConfig() django.AppConfig {
 	pageApp.ModelObjects = []attrs.Definer{
 		&Site{},
 		&PageNode{},
+	}
+
+	pageApp.Cmd = []command.Command{
+		commandFixTree,
 	}
 
 	pageApp.Init = func(settings django.Settings, db drivers.Database) error {

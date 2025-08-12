@@ -42,7 +42,7 @@ var (
 
 	NoChanges          Error = New(CodeNoChanges, "No changes were made", sql.ErrNoRows)
 	NoResults          Error = New(CodeNoResults, "No results found", sql.ErrNoRows)
-	NoRows             Error = New(CodeNoRows, "No rows in result set", sql.ErrNoRows)
+	NoRows             Error = New(CodeNoRows, "No rows in result set", sql.ErrNoRows, NoResults)
 	MultipleRows       Error = New(CodeMultipleRows, "Multiple rows in result set")
 	UnexpectedRowCount Error = New(CodeUnexpectedRowCount, "Unexpected row count in result set", sql.ErrNoRows)
 

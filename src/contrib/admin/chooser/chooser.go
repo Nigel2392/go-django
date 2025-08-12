@@ -89,24 +89,38 @@ func (c *ChooserDefinition[T]) Setup() error {
 
 	if c.ListPage == nil {
 
+		c.ListPage = &ChooserListPage[T]{}
+	}
+
+	if len(c.ListPage.AllowedMethods) == 0 {
+		c.ListPage.AllowedMethods = []string{"GET"}
+	}
+
+	if c.ListPage.PerPage == 0 {
+		c.ListPage.PerPage = 20
+	}
+
+	if len(c.ListPage.Fields) == 0 {
+		c.ListPage.Fields = c.AdminModel.ListView.Fields
+	}
+
+	if len(c.ListPage.Labels) == 0 {
+		c.ListPage.Labels = c.AdminModel.ListView.Labels
+	}
+
+	if len(c.ListPage.Format) == 0 {
+		c.ListPage.Format = c.AdminModel.ListView.Format
+	}
+
+	if len(c.ListPage.Columns) == 0 {
 		var newCols = make(map[string]list.ListColumn[T], len(c.AdminModel.ListView.Columns))
 		for name, col := range c.AdminModel.ListView.Columns {
 			newCols[name] = list.ChangeColumnType[T](col)
 		}
-
-		c.ListPage = &ChooserListPage[T]{
-			AllowedMethods: []string{"GET"},
-			Fields:         c.AdminModel.ListView.Fields,
-			Labels:         c.AdminModel.ListView.Labels,
-			Format:         c.AdminModel.ListView.Format,
-			Columns:        newCols,
-			PerPage:        20,
-		}
+		c.ListPage.Columns = newCols
 	}
 
-	if c.ListPage != nil {
-		c.ListPage._Definition = c
-	}
+	c.ListPage._Definition = c
 
 	if c.CreatePage != nil {
 		c.CreatePage._Definition = c

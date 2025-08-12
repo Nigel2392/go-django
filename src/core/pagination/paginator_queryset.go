@@ -57,7 +57,9 @@ func (p *QueryPaginator[T]) Page(n int) (PageObject[T], error) {
 	var amount = p.PerPage()
 
 	if amount == 0 {
-		return nil, errors.ValueError.Wrapf("amount of objects per page cannot be 0")
+		return nullPageObject(p.Context, p), errors.ValueError.Wrapf(
+			"amount of objects per page cannot be 0",
+		)
 	}
 
 	var offset = (n - 1) * amount
@@ -66,18 +68,18 @@ func (p *QueryPaginator[T]) Page(n int) (PageObject[T], error) {
 		Limit(amount).
 		IterAll()
 	if err != nil {
-		return nil, err
+		return nullPageObject(p.Context, p), err
 	}
 
 	if resultCnt == 0 {
-		return nil, ErrNoResults
+		return nullPageObject(p.Context, p), errors.NoRows
 	}
 
 	var idx = 0
 	var resultRows = make([]T, resultCnt)
 	for row, err := range resultIter {
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get row %d", idx)
+			return nullPageObject(p.Context, p), errors.Wrapf(err, "failed to get row %d", idx)
 		}
 
 		var obj = row.Object
