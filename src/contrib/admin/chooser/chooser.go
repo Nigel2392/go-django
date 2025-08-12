@@ -87,8 +87,14 @@ func (c *ChooserDefinition[T]) Setup(chooserKey string) error {
 	c.AdminModel = adminModel
 	c.ChooserKey = chooserKey
 
-	if c.ListPage == nil {
+	c.setupListPage()
+	c.setupCreatePage()
 
+	return nil
+}
+
+func (c *ChooserDefinition[T]) setupListPage() {
+	if c.ListPage == nil {
 		c.ListPage = &ChooserListPage[T]{}
 	}
 
@@ -121,26 +127,32 @@ func (c *ChooserDefinition[T]) Setup(chooserKey string) error {
 	}
 
 	c.ListPage._Definition = c
+}
 
-	if c.CreatePage != nil {
-		c.CreatePage._Definition = c
-
-		if len(c.CreatePage.AllowedMethods) == 0 {
-			c.CreatePage.AllowedMethods = []string{"POST"}
-		}
-
-		if len(c.CreatePage.Options.Panels) == 0 &&
-			len(c.CreatePage.Options.Fields) == 0 &&
-			len(c.CreatePage.Options.Exclude) == 0 {
-			c.CreatePage.Options = c.AdminModel.AddView
-		}
-
-		c.CreatePage.Options.SetupDefaults(
-			c.Model, "GetAddPanels",
-		)
+func (c *ChooserDefinition[T]) setupCreatePage() {
+	if c.CreatePage == nil {
+		return
 	}
 
-	return nil
+	c.CreatePage._Definition = c
+
+	if len(c.CreatePage.AllowedMethods) == 0 {
+		c.CreatePage.AllowedMethods = []string{"POST"}
+	}
+
+	if len(c.CreatePage.Options.Panels) == 0 &&
+		len(c.CreatePage.Options.Fields) == 0 &&
+		len(c.CreatePage.Options.Exclude) == 0 &&
+		len(c.CreatePage.Options.Widgets) == 0 &&
+		c.CreatePage.Options.FormInit != nil &&
+		c.CreatePage.Options.GetForm != nil &&
+		c.CreatePage.Options.GetHandler != nil {
+		c.CreatePage.Options = c.AdminModel.AddView
+	}
+
+	c.CreatePage.Options.SetupDefaults(
+		c.Model, "GetAddPanels",
+	)
 }
 
 func (c *ChooserDefinition[T]) GetTitle(ctx context.Context) string {
