@@ -16,6 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
@@ -156,11 +157,9 @@ func (c *ChooserDefinition[T]) setupCreatePage() {
 }
 
 func (c *ChooserDefinition[T]) GetTitle(ctx context.Context) string {
-	switch v := c.Title.(type) {
-	case string:
-		return v
-	case func(ctx context.Context) string:
-		return v(ctx)
+	var title, ok = trans.GetText(ctx, c.Title)
+	if ok {
+		return title
 	}
 	assert.Fail("ChooserDefinition.Title must be a string or a function that returns a string")
 	return ""
@@ -179,13 +178,8 @@ func (o *ChooserDefinition[T]) GetLabel(labels map[string]func(context.Context) 
 			return label
 		}
 	}
-	switch v := default_.(type) {
-	case string:
-		return func(ctx context.Context) string {
-			return v
-		}
-	case func(context.Context) string:
-		return v
+	if fn := trans.GetTextFunc(default_); fn != nil {
+		return fn
 	}
 	assert.Fail("ChooserDefinition.GetLabel: default_ must be a string or a function that returns a string")
 	return nil

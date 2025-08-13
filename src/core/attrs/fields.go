@@ -306,16 +306,9 @@ func (f *FieldDef) Type() reflect.Type {
 
 func (f *FieldDef) Label(ctx context.Context) string {
 	if f.attrDef.Label != nil {
-		switch label := f.attrDef.Label.(type) {
-		case string:
-			return trans.T(ctx, label)
-		case func(ctx context.Context) string:
-			return label(ctx)
-		default:
-			panic(fmt.Sprintf(
-				"Label for field %q (%T) is not a `string` or `function(context) string`, got %T",
-				f.field_t.Name, f.field_v.Interface(), label,
-			))
+		var text, ok = trans.GetText(ctx, f.attrDef.Label)
+		if ok {
+			return text
 		}
 	}
 

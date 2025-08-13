@@ -30,6 +30,17 @@
     height: 100%;
     height: 250px;
 }
+.images-list .image-item .image-title {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 0.5rem;
+    font-size: 1rem;
+    text-align: center;
+}
 .images-list .image-item .form-input {
     padding: 0.5rem;
     width: 16px;

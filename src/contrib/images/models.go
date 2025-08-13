@@ -164,14 +164,16 @@ func (o *Image) FieldDefs() attrs.Definitions {
 	)
 	fields[4] = attrs.NewField(
 		o, "FileSize", &attrs.FieldConfig{
-			Label: trans.S("File Size"),
+			Label:    trans.S("File Size"),
+			ReadOnly: true,
 		},
 	)
 	fields[5] = attrs.NewField(
 		o, "FileHash", &attrs.FieldConfig{
-			Null:  true,
-			Blank: true,
-			Label: trans.S("File Hash"),
+			Null:     true,
+			Blank:    true,
+			ReadOnly: true,
+			Label:    trans.S("File Hash"),
 		},
 	)
 	return o.Model.Define(o, fields)

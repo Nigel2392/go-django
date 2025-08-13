@@ -172,8 +172,8 @@ locales:
 ---
 
 # [ModelFinder]:       auth.User           .models/auth/User:2:1
-# [ModelFinder.Field]: blog.BlogPage.User  .models/blog/BlogPage/fields:1:6
-# [GoFileFinder]:      *BlogPage.FieldDefs examples/blogapp/blog/models.go:174:22
+# [ModelFinder.Field]: blog.BlogPage.User  .models/blog/BlogPage/fields:1:7
+# [GoFileFinder]:      *BlogPage.FieldDefs examples/blogapp/blog/models.go:189:22
 # [GoFileFinder]:      NewAppConfig        src/contrib/auth/app.go:152:28
 # [GoFileFinder]:      NewAppConfig        src/contrib/openauth2/openauth2.go:207:27
 text: User
@@ -235,7 +235,7 @@ locales:
 ---
 
 # [ModelFinder.Field]: auth.User.CreatedAt          .models/auth/User/fields:1:6
-# [ModelFinder.Field]: blog.BlogPage.CreatedAt      .models/blog/BlogPage/fields:1:7
+# [ModelFinder.Field]: blog.BlogPage.CreatedAt      .models/blog/BlogPage/fields:1:8
 # [ModelFinder.Field]: images.Image.CreatedAt       .models/images/Image/fields:1:3
 # [ModelFinder.Field]: pages.PageNode.CreatedAt     .models/pages/PageNode/fields:2:11
 # [ModelFinder.Field]: revisions.Revision.CreatedAt .models/revisions/Revision/fields:1:4
@@ -251,7 +251,7 @@ locales:
 ---
 
 # [ModelFinder.Field]: auth.User.UpdatedAt      .models/auth/User/fields:1:7
-# [ModelFinder.Field]: blog.BlogPage.UpdatedAt  .models/blog/BlogPage/fields:1:8
+# [ModelFinder.Field]: blog.BlogPage.UpdatedAt  .models/blog/BlogPage/fields:1:9
 # [ModelFinder.Field]: pages.PageNode.UpdatedAt .models/pages/PageNode/fields:2:12
 # [GoFileFinder]:      NewAppConfig             src/contrib/auth/app.go:277:16
 # [GoFileFinder]:      *User.Fields             src/contrib/auth/user.go:162:22
@@ -294,7 +294,8 @@ locales:
 
 ---
 
-# [ModelFinder.Field]:	auth.User.BlogPageSet .models/auth/User/fields:1:13
+# [ModelFinder.Field]: auth.User.BlogPageSet    .models/auth/User/fields:1:13
+# [ModelFinder.Field]: images.Image.BlogPageSet .models/images/Image/fields:1:6
 text: Blog Page Set
 locales:
   nl: Blogpagina-set
@@ -372,22 +373,30 @@ locales:
 
 # [ModelFinder.Field]: blog.BlogPage.Image .models/blog/BlogPage/fields:1:4
 # [ModelFinder]:       images.Image        .models/images/Image:13:1
-# [GoFileFinder]:                          src/contrib/images/admin.go:28:26
+# [GoFileFinder]:                          src/contrib/images/admin.go:29:26
 text: Image
 locales:
   nl: Afbeelding
 
 ---
 
-# [ModelFinder.Field]: blog.BlogPage.Editor .models/blog/BlogPage/fields:1:5
-# [GoFileFinder]:      *BlogPage.FieldDefs  examples/blogapp/blog/models.go:165:22
+# [ModelFinder.Field]: blog.BlogPage.Thumbnail .models/blog/BlogPage/fields:1:5
+# [GoFileFinder]:      *BlogPage.FieldDefs     examples/blogapp/blog/models.go:168:22
+text: Thumbnail
+locales:
+  nl: "Miniatuur"
+
+---
+
+# [ModelFinder.Field]: blog.BlogPage.Editor .models/blog/BlogPage/fields:1:6
+# [GoFileFinder]:      *BlogPage.FieldDefs  examples/blogapp/blog/models.go:180:22
 text: Editor
 locales:
   nl: Editor
 
 ---
 
-# [ModelFinder.Field]: blog.BlogPage.Page .models/blog/BlogPage/fields:1:9
+# [ModelFinder.Field]: blog.BlogPage.Page .models/blog/BlogPage/fields:1:10
 # [GoFileFinder]:      NewAppConfig       src/contrib/pages/django_app.go:192:29
 text: Page
 locales:
@@ -584,64 +593,86 @@ locales:
 
 ---
 
-# [GoFileFinder]: init         examples/blogapp/blog/models.go:31:18
-# [GoFileFinder]: NewAppConfig src/contrib/pages/django_app.go:275:19
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:136:24
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:162:24
+text: Cover Image
+locales:
+  nl: "Omslagafbeelding"
+
+---
+
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:137:24
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:163:24
+text: <p>Choose a cover image for your blog post.</p>
+locales:
+  nl: "<p>Kies een omslagafbeelding voor je blogbericht.</p>"
+
+---
+
+# [GoFileFinder]:	init examples/blogapp/blog/models.go:32:18
 text: User Chooser
 locales:
   nl: Gebruikerskiezer
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:144:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:146:22
 text: How do you want your post to be remembered?
 locales:
   nl: Hoe wil je dat je bericht wordt herinnerd?
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:150:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:152:22
 text: The URL path for this blog post.
 locales:
   nl: Het URL-pad voor dit blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:155:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:157:22
 text: The slug for this blog post.
 locales:
   nl: De slug voor dit blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:160:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:162:22
 text: The image for this blog post.
 locales:
   nl: De afbeelding voor dit blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:166:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:169:22
+text: The thumbnail for this blog post.
+locales:
+  nl: "Het miniatuur voor dit blogbericht."
+
+---
+
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:181:22
 text: This is a rich text editor. You can add images, videos, and other media to your blog post.
 locales:
   nl: Dit is een rijke teksteditor. Je kunt afbeeldingen, video's en andere media toevoegen aan je blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:175:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:190:22
 text: The user who created this blog post.
 locales:
   nl: De gebruiker die dit blogbericht heeft aangemaakt.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:192:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:207:22
 text: The date and time this blog post was created.
 locales:
   nl: De datum en tijd waarop dit blogbericht is aangemaakt.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:198:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:213:22
 text: The date and time this blog post was last updated.
 locales:
   nl: De datum en tijd waarop dit blogbericht voor het laatst is bijgewerkt.
@@ -722,12 +753,12 @@ locales:
 # [TemplateFinder]: {{ T "Submit" }} examples/formsapp/src/formsapp/assets/templates/formsapp/contact.tmpl:84:49
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/auth/login.tmpl:24:72
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/add.tmpl:22:70
-# [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:34:67
+# [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:40:67
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:24:70
-# [TemplateFinder]: {{ T "Submit" }} src/contrib/images/assets/templates/images/images_delete.tmpl:41:67
+# [TemplateFinder]: {{ T "Submit" }} src/contrib/images/assets/templates/images/images_delete.tmpl:50:67
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/admin_outdated_list.tmpl:56:84
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:46:68
-# [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:35:71
+# [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:22:71
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:20:71
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:107:84
 text: Submit
@@ -889,36 +920,36 @@ locales:
 
 ---
 
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/add.tmpl:25:76
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:37:76
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:31:76
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/images/assets/templates/images/images_delete.tmpl:44:76
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:33:76
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:31:76
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/add.tmpl:25:69
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:43:71
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:46:130
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:48:159
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:28:90
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/images/assets/templates/images/images_delete.tmpl:53:71
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/images/assets/templates/images/images_delete.tmpl:56:130
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/images/assets/templates/images/images_delete.tmpl:58:159
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:33:69
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:31:69
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:35:75
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/choose_root_page_type.tmpl:34:75
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:51:78
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:49:76
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:28:76
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:51:71
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:37:90
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:28:69
 text: Cancel
 locales:
   nl: Annuleren
 
 ---
 
-# [TemplateFinder]: {{ T "Back" }} src/contrib/admin/assets/templates/admin/views/models/add.tmpl:27:131
-# [TemplateFinder]: {{ T "Back" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:40:135
-# [TemplateFinder]: {{ T "Back" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:42:164
-# [TemplateFinder]: {{ T "Back" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:33:123
-# [TemplateFinder]: {{ T "Back" }} src/contrib/images/assets/templates/images/images_delete.tmpl:47:135
-# [TemplateFinder]: {{ T "Back" }} src/contrib/images/assets/templates/images/images_delete.tmpl:49:164
-# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:35:114
-# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:33:95
+# [TemplateFinder]: {{ T "Back" }} src/contrib/admin/assets/templates/admin/views/models/add.tmpl:27:124
+# [TemplateFinder]: {{ T "Back" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:30:137
+# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:35:107
+# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:33:88
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:37:123
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/choose_root_page_type.tmpl:36:84
-# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:53:126
-# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:51:124
-# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:30:124
+# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:53:119
+# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:39:138
+# [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/unpublish_page.tmpl:30:117
 text: Back
 locales:
   nl: Terug
@@ -926,33 +957,41 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:3:25
-# [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:10:13
+# [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:12:17
 # [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/images/assets/templates/images/images_delete.tmpl:3:25
-# [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/images/assets/templates/images/images_delete.tmpl:10:13
+# [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/images/assets/templates/images/images_delete.tmpl:12:17
 text: Delete %s
 locales:
   nl: '%s verwijderen'
 
 ---
 
-# [TemplateFinder]: {{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:16:43
-# [TemplateFinder]: {{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }} src/contrib/images/assets/templates/images/images_delete.tmpl:16:43
+# [TemplateFinder]: {{ T "Delete %d %s" (len .Data.pk_list) (.Get "model").PluralLabel }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:14:17
+# [TemplateFinder]: {{ T "Delete %d %s" (len .Data.pk_list) (.Get "model").PluralLabel }} src/contrib/images/assets/templates/images/images_delete.tmpl:14:17
+text: Delete %d %s
+locales:
+  nl: "%d %s verwijderen"
+
+---
+
+# [TemplateFinder]: {{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:22:43
+# [TemplateFinder]: {{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }} src/contrib/images/assets/templates/images/images_delete.tmpl:23:43
 text: Are you sure you want to delete objects with ids %v?
 locales:
   nl: Weet je zeker dat je objecten met id's %v wilt verwijderen?
 
 ---
 
-# [TemplateFinder]: {{ T "Are you sure you want to delete object %q with id %v?" (toString .Data.instance) (index .Data.pk_list 0) }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:18:43
-# [TemplateFinder]: {{ T "Are you sure you want to delete object %q with id %v?" (toString .Data.instance) (index .Data.pk_list 0) }} src/contrib/images/assets/templates/images/images_delete.tmpl:18:43
+# [TemplateFinder]: {{ T "Are you sure you want to delete object %q with id %v?" (toString .Data.instance) (index .Data.pk_list 0) }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:24:43
+# [TemplateFinder]: {{ T "Are you sure you want to delete object %q with id %v?" (toString .Data.instance) (index .Data.pk_list 0) }} src/contrib/images/assets/templates/images/images_delete.tmpl:25:43
 text: Are you sure you want to delete object %q with id %v?
 locales:
   nl: Weet je zeker dat je object %q met id %v wilt verwijderen?
 
 ---
 
-# [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:20:39
-# [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/images/assets/templates/images/images_delete.tmpl:20:39
+# [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:26:39
+# [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/images/assets/templates/images/images_delete.tmpl:27:39
 # [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:7:16
 text: This action cannot be reversed.
 locales:
@@ -968,7 +1007,7 @@ locales:
 
 ---
 
-# [TemplateFinder]: {{ T "Delete" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:26:160
+# [TemplateFinder]: {{ T "Delete" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:34:153
 # [TemplateFinder]: {{ T "Delete" }} src/contrib/images/assets/templates/images/image_list.tmpl:48:105
 # [TemplateFinder]: {{ T "Delete" }} src/contrib/images/assets/templates/images/image_list.tmpl:79:37
 # [TemplateFinder]: {{ T "Delete" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:3:25
@@ -1017,7 +1056,8 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ T "Create new" }} src/contrib/admin/chooser/assets/templates/chooser/views/list.tmpl:14:86
+# [TemplateFinder]: {{ T "Create new" }} src/contrib/admin/chooser/assets/templates/chooser/views/list.tmpl:16:86
+# [TemplateFinder]: {{ T "Create new" }} src/contrib/images/assets/templates/images/images_chooser_list.tmpl:18:86
 text: Create new
 locales:
   nl: Nieuw aanmaken
@@ -1045,14 +1085,14 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:298:96
+# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:320:96
 text: Search...
 locales:
   nl: Zoeken...
 
 ---
 
-# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:299:74
+# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:321:74
 text: Search
 locales:
   nl: Zoeken
@@ -1090,64 +1130,64 @@ locales:
 
 ---
 
-# [GoFileFinder]: *AdminDeleteView.Setup src/contrib/admin/views.go:263:42
-# [GoFileFinder]: *AdminDeleteView.Setup src/contrib/admin/views.go:266:25
+# [GoFileFinder]: *AdminDeleteView.Setup src/contrib/admin/views.go:264:42
+# [GoFileFinder]: *AdminDeleteView.Setup src/contrib/admin/views.go:267:25
 text: This model does not allow deletion
 locales:
   nl: Dit model staat geen verwijdering toe.
 
 ---
 
-# [GoFileFinder]:	*AdminDeleteView.ServePOST src/contrib/admin/views.go:296:5
+# [GoFileFinder]:	*AdminDeleteView.ServePOST src/contrib/admin/views.go:297:5
 text: model %T not deleted, model does not implement models.Deleter interface
 locales:
   nl: model %T niet verwijderd, model implementeert de models.Deleter interface niet
 
 ---
 
-# [GoFileFinder]:	*AdminDeleteView.ServePOST src/contrib/admin/views.go:312:5
+# [GoFileFinder]:	*AdminDeleteView.ServePOST src/contrib/admin/views.go:313:5
 text: 'Failed to delete %s (%v): %v'
 locales:
   nl: 'Verwijderen van %s (%v) mislukt: %v'
 
 ---
 
-# [GoFileFinder]:	*AdminDeleteView.ServePOST src/contrib/admin/views.go:321:5
+# [GoFileFinder]:	*AdminDeleteView.ServePOST src/contrib/admin/views.go:322:5
 text: Successfully deleted %s (%v)
 locales:
   nl: Verwijderen van %s (%v) succesvol
 
 ---
 
-# [GoFileFinder]:	*AdminDeleteView.GetContext src/contrib/admin/views.go:390:25
+# [GoFileFinder]:	*AdminDeleteView.GetContext src/contrib/admin/views.go:391:25
 text: No primary keys provided for bulk delete
 locales:
   nl: Geen primaire sleutels opgegeven voor bulkverwijdering
 
 ---
 
-# [GoFileFinder]:	*AdminDeleteView.GetContext src/contrib/admin/views.go:408:5
+# [GoFileFinder]:	*AdminDeleteView.GetContext src/contrib/admin/views.go:409:5
 text: 'Failed to retrieve instances for bulk delete: %v'
 locales:
   nl: 'Mislukt om instanties op te halen voor bulkverwijdering: %v'
 
 ---
 
-# [GoFileFinder]:	GetAdminForm src/contrib/admin/views.go:486:7
+# [GoFileFinder]:	GetAdminForm src/contrib/admin/views.go:487:7
 text: model %T not saved, model does not implement models.Saver interface
 locales:
   nl: model %T niet opgeslagen, model implementeert de models.Saver interface niet
 
 ---
 
-# [GoFileFinder]:	newInstanceView src/contrib/admin/views.go:580:18
+# [GoFileFinder]:	newInstanceView src/contrib/admin/views.go:581:18
 text: instance is nil after form submission
 locales:
   nl: object is NULL na formulierindiening
 
 ---
 
-# [GoFileFinder]:	newInstanceView src/contrib/admin/views.go:585:6
+# [GoFileFinder]:	newInstanceView src/contrib/admin/views.go:586:6
 text: Successfully saved %s (%v)
 locales:
   nl: Succesvol opgeslagen %s (%v)
@@ -1492,33 +1532,40 @@ locales:
 
 ---
 
-# [GoFileFinder]:              src/contrib/images/admin.go:29:26
-# [GoFileFinder]: NewAppConfig src/contrib/images/app.go:81:34
-# [GoFileFinder]: NewAppConfig src/contrib/images/app.go:82:34
+# [GoFileFinder]:              src/contrib/images/admin.go:30:26
+# [GoFileFinder]: NewAppConfig src/contrib/images/app.go:97:34
+# [GoFileFinder]: NewAppConfig src/contrib/images/app.go:98:34
 text: Images
 locales:
   nl: Afbeeldingen
 
 ---
 
-# [GoFileFinder]:	 src/contrib/images/admin.go:30:26
+# [GoFileFinder]:	 src/contrib/images/admin.go:31:26
 text: An image file
 locales:
   nl: Een afbeeldingsbestand
 
 ---
 
-# [GoFileFinder]:	AdminImageModelOptions src/contrib/images/admin.go:46:27
+# [GoFileFinder]:	AdminImageModelOptions src/contrib/images/admin.go:47:27
 text: Image File
 locales:
   nl: Afbeeldingsbestand
 
 ---
 
-# [GoFileFinder]:	AdminImageModelOptions src/contrib/images/admin.go:47:30
+# [GoFileFinder]:	AdminImageModelOptions src/contrib/images/admin.go:48:30
 text: Upload an image file
 locales:
   nl: Upload een afbeeldingsbestand
+
+---
+
+# [GoFileFinder]:	NewAppConfig src/contrib/images/app.go:105:19
+text: Image Chooser
+locales:
+  nl: "Afbeelding Kiezen"
 
 ---
 
@@ -1595,7 +1642,7 @@ locales:
 
 # [TemplateFinder]: {{ T "Save" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:24:21
 # [TemplateFinder]: {{ T "Save" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:22:21
-# [TemplateFinder]: {{ T "Save" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:36:21
+# [TemplateFinder]: {{ T "Save" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:23:21
 text: Save
 locales:
   nl: Opslaan
@@ -1604,7 +1651,7 @@ locales:
 
 # [TemplateFinder]: {{ T "Save and Publish" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:28:25
 # [TemplateFinder]: {{ T "Save and Publish" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:26:25
-# [TemplateFinder]: {{ T "Save and Publish" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:40:25
+# [TemplateFinder]: {{ T "Save and Publish" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:27:25
 text: Save and Publish
 locales:
   nl: Opslaan en publiceren
@@ -1637,7 +1684,7 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Delete Page" }} src/contrib/pages/assets/templates/pages/admin/admin_list.tmpl:21:108
-# [TemplateFinder]: {{ T "Delete Page" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:16:178
+# [TemplateFinder]: {{ T "Delete Page" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:43:171
 # [GoFileFinder]:   getListActions        src/contrib/pages/django_admin_views.go:119:33
 text: Delete Page
 locales:
@@ -1712,7 +1759,7 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ T "Unpublish and Save" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:44:25
+# [TemplateFinder]:	{{ T "Unpublish and Save" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:31:25
 text: Unpublish and Save
 locales:
   nl: Depubliceren en opslaan
@@ -2062,6 +2109,13 @@ locales:
 text: Outdated Pages
 locales:
   nl: Verouderde pagina's
+
+---
+
+# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:275:19
+text: Page Chooser
+locales:
+  nl: "Paginakeuze"
 
 ---
 

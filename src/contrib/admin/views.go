@@ -211,6 +211,7 @@ var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		except.AssertNil(err, 500, err)
 		return
 	}
+
 	var editView = newInstanceView("edit", instance, model.EditView, app, model, r)
 	views.Invoke(editView, w, r)
 	// if err := views.Invoke(editView, w, r); err != nil {

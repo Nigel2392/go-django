@@ -326,14 +326,45 @@ a.danger {
 }
 #main #content-wrapper #content .admin-form {
     flex: 1;
+    position: relative;
     display: flex;
     flex-direction: column;
 }
 
 #main #content-wrapper #content .admin-form .form-buttons {
+    position: sticky;
+    z-index: 1000;
+    bottom: 0.325rem;
+    left: 0;
+    display: flex;
+    background-color: var(--body-bg-color);
+    border: 1px solid var(--primary-bg-hover);
+    width: fit-content;
+    min-width: 200px;
+    max-width: 1040px;
     margin-top: auto;
-    margin-bottom: 0;
 }
+#main #content-wrapper #content .admin-form .form-buttons/*.inline*/ {
+    flex-direction: row;
+    padding: 0.5em 1em;
+}
+#main #content-wrapper #content .admin-form .form-buttons:has(.form-buttons__ending) {
+    width: 100%;
+}
+#main #content-wrapper #content .admin-form .form-buttons .form-buttons__ending {
+    margin-left: auto;
+}
+/* #main #content-wrapper #content .admin-form .form-buttons:not(.inline) { */
+    /* flex-direction: column; */
+/* } */
+/* #main #content-wrapper #content .admin-form .form-buttons:not(.inline) > *:is(button, a) { */
+    /* width: 100%; */
+    /* text-align: center; */
+    /* border-radius: 0; */
+    /* border: none; */
+    /* border-bottom: 1px solid var(--primary-bg-hover); */
+    /* margin: 0; */
+/* } */
 .header-sub-content .heading__title {
     text-wrap: balance;
     white-space: pre-line;
@@ -343,6 +374,7 @@ a.danger {
     flex-direction: column;
     justify-content: flex-start;
     align-items: flex-start;
+    flex-wrap: wrap;
     margin-bottom: 1em;
     gap: 0.75em;
 }
@@ -457,15 +489,15 @@ a.danger {
     font-size: 1.4rem;
     font-weight: 600;
 }
-.panel.panel-multi {
+.panel.panel-row {
     margin-bottom: 0;
 }
-.panel.panel-multi > .panel__body {
+.panel.panel-row > .panel__body {
     gap: 1rem;
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
 }
-.panel.panel-multi > .panel__body > * {
+.panel.panel-row > .panel__body > * {
     flex: 1 1 auto;
 }
 .panel .panel__help {

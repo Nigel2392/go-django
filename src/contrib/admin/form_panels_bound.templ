@@ -5,6 +5,8 @@ import (
     "context"
     "github.com/Nigel2392/go-django/src/forms"
     "html/template"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"net/http"
 )
 
 type BoundPanel interface {
@@ -16,6 +18,7 @@ type BoundPanel interface {
 type BoundFormPanel[T forms.Form, P Panel] struct {
 	forms.BoundField
     Context context.Context
+    Request *http.Request
     Panel P
 	Form T
 }
@@ -67,6 +70,7 @@ templ (p *BoundFormPanel[T, P]) Component() {
 type BoundTitlePanel[T forms.Form, P Panel] struct {
 	BoundPanel
     Context context.Context
+    Request *http.Request
 }
 
 func (p *BoundTitlePanel[T, P]) Render() template.HTML {
@@ -88,25 +92,26 @@ templ (p *BoundTitlePanel[T, P]) Component() {
     </div>
 }
 
-type BoundMultiPanel[T forms.Form] struct {
+type BoundRowPanel[T forms.Form] struct {
     LabelFn func() string
     Context context.Context
+    Request *http.Request
     Panels []BoundPanel
     Form T
 }
 
-func (p *BoundMultiPanel[T]) Hidden() bool {
-    return false // MultiPanel is never hidden
+func (p *BoundRowPanel[T]) Hidden() bool {
+    return false // RowPanel is never hidden
 }
 
-func (p *BoundMultiPanel[T]) Render() template.HTML {
+func (p *BoundRowPanel[T]) Render() template.HTML {
     var b bytes.Buffer
     p.Component().Render(p.Context, &b)
     return template.HTML(b.String())
 }
 
-templ (p *BoundMultiPanel[T]) Component() {
-    <div class="panel panel-multi">
+templ (p *BoundRowPanel[T]) Component() {
+    <div class="panel panel-row">
         if p.LabelFn != nil {
             <div class="panel__heading">
                 <div class="panel__title">
@@ -117,6 +122,73 @@ templ (p *BoundMultiPanel[T]) Component() {
         <div class="panel__body">
             for _, panel := range p.Panels {
                 @panel.Component()
+            }
+        </div>
+    </div>
+}
+
+type BoundPanelGroup[T forms.Form] struct {
+    BoundPanel
+    Context context.Context
+    Request *http.Request
+    Panels  []BoundPanel
+    Form    T
+}
+
+func (p *BoundPanelGroup[T]) Render() template.HTML {
+    var b bytes.Buffer
+    p.Component().Render(p.Context, &b)
+    return template.HTML(b.String())
+}
+
+templ (p *BoundPanelGroup[T]) Component() {
+    <div class="panel panel-group">
+        <div class="panel__body">
+            for _, panel := range p.Panels {
+                @panel.Component()
+            }
+        </div>
+    </div>
+}
+
+type BoundAlertPanel[T forms.Form] struct {
+    Context context.Context
+    Panel   *AlertPanel
+    Request *http.Request
+	Form    T
+}
+
+func (p *BoundAlertPanel[T]) Hidden() bool {
+    return p.Panel == nil
+}
+
+func (p *BoundAlertPanel[T]) Render() template.HTML {
+    var b bytes.Buffer
+    p.Component().Render(p.Context, &b)
+    return template.HTML(b.String())
+}
+
+templ (p *BoundAlertPanel[T]) Component() {
+    if p.Panel == nil {
+        {{ return nil }} // No panel to render
+    }
+    
+    <div class="panel panel-alert">
+        <div class={ "alert", string(p.Panel.GetType())  }>
+            if p.Panel.hasLabel() {
+                <div class="alert-title">
+                    @templ.Raw(p.Panel.GetLabel(p.Context))
+                </div>
+            }
+
+            if p.Panel.TemplateFile != "" {
+                {{ var html, err = tpl.Render(NewPanelContext(p.Request, p.Panel, p), p.Panel.TemplateFile) }}
+                if err != nil {
+                    {{ return err }}
+                }
+                @templ.Raw(string(html))
+            } else {
+                @templ.Raw(string(p.Panel.GetHTML(p.Context)))
             }
         </div>
     </div>

@@ -199,7 +199,7 @@ func NewAppConfig() django.AppConfig {
 							admin.FieldPanel("Email"),
 						),
 						admin.FieldPanel("Username"),
-						admin.MultiPanel(
+						admin.RowPanel(
 							admin.FieldPanel("FirstName"),
 							admin.FieldPanel("LastName"),
 						),
@@ -219,7 +219,7 @@ func NewAppConfig() django.AppConfig {
 							admin.FieldPanel("Email"),
 						),
 						admin.FieldPanel("Username"),
-						admin.MultiPanel(
+						admin.RowPanel(
 							admin.FieldPanel("FirstName"),
 							admin.FieldPanel("LastName"),
 						),

@@ -48,9 +48,9 @@
             </button>
             {{ $BackURL := (.Get "BackURL") }}
             {{ if $BackURL }}
-                <a class="button secondary hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
+                <a class="button secondary" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
             {{ else }}
-                <a class="button secondary hollow" href="{{ url "admin:pages:list" (.Get "page_object").Reference.ID }}">{{ T "Back" }}</a>
+                <a class="button secondary" href="{{ url "admin:pages:list" (.Get "page_object").Reference.ID }}">{{ T "Back" }}</a>
             {{ end }}
         </div>
     </form>

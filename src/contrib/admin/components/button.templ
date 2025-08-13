@@ -19,6 +19,7 @@ type ButtonConfig struct {
     Text string
     Icon templ.Component
     Type ButtonType
+	Attrs map[string]any
 }
 
 func NewButton(text string, args ...interface{}) templ.Component {
@@ -26,6 +27,7 @@ func NewButton(text string, args ...interface{}) templ.Component {
 	var (
 		iconComponent templ.Component
 		type_ 	   ButtonType = 0
+		attrs      map[string]any
 	)
 loop:
 	for _, arg := range args {
@@ -43,8 +45,10 @@ loop:
 			type_ |= ButtonType(t)
 		case uint:
 			type_ |= ButtonType(t)
-        case nil, any:
-            continue loop
+		case map[string]any:
+			attrs = t
+		case nil, any:
+			continue loop
 		default:
 			panic(fmt.Sprintf("Unknown type: %T\n", t))
 		}
@@ -54,6 +58,7 @@ loop:
 		Text: text,
 		Icon: iconComponent,
 		Type: type_,
+		Attrs: attrs,
 	}
 
 
@@ -123,7 +128,7 @@ func ButtonWarning(text string, icon any, hollow ...bool) templ.Component {
 
 
 templ Button(config ButtonConfig) {
-    <button class={ 
+    <button { config.Attrs... } class={ 
         "button",
         templ.KV("primary", config.Type & ButtonTypePrimary != 0),
         templ.KV("secondary", config.Type & ButtonTypeSecondary != 0),
@@ -137,4 +142,27 @@ templ Button(config ButtonConfig) {
         }
         { config.Text }
     </button>
+}
+
+templ Link(config ButtonConfig, href func() string) {
+	if href == nil {
+		panic("Link requires a href function")
+	}
+	if config.Text == "" && config.Icon == nil {
+		panic("Link requires either Text or Icon to be set")
+	}
+	<a { config.Attrs... } href={ templ.URL(href()) } class={
+		"button",
+		templ.KV("primary", config.Type & ButtonTypePrimary != 0),
+		templ.KV("secondary", config.Type & ButtonTypeSecondary != 0),
+		templ.KV("success", config.Type & ButtonTypeSuccess != 0),
+		templ.KV("danger", config.Type & ButtonTypeDanger != 0),
+		templ.KV("warning", config.Type & ButtonTypeWarning != 0),
+		templ.KV("hollow", config.Type & ButtonTypeHollow != 0),
+	}>
+		if config.Icon != nil {
+			@config.Icon
+		}
+		{ config.Text }
+	</a>
 }

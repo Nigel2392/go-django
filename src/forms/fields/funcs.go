@@ -1,7 +1,6 @@
 package fields
 
 import (
-	"context"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -12,19 +11,8 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
 
-func getTextFn(v any) func(ctx context.Context) string {
-	var fn func(ctx context.Context) string
-	switch v := v.(type) {
-	case string:
-		fn = trans.S(v)
-	case func(ctx context.Context) string:
-		fn = v
-	}
-	return fn
-}
-
 func Label(label any) func(Field) {
-	var fn = getTextFn(label)
+	var fn = trans.GetTextFunc(label)
 
 	assert.Truthy(fn,
 		"FieldLabel: invalid type %T", label,
@@ -36,7 +24,7 @@ func Label(label any) func(Field) {
 }
 
 func HelpText(helpText any) func(Field) {
-	var fn = getTextFn(helpText)
+	var fn = trans.GetTextFunc(helpText)
 
 	assert.Truthy(fn,
 		"FieldHelpText: invalid type %T", helpText,

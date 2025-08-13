@@ -272,7 +272,7 @@ func NewAppConfig() django.AppConfig {
 		auditlogs.RegisterDefinition("pages:delete", auditlogs.SimpleDefinition())
 
 		var chooserDefinitionAllNodes = chooser.ChooserDefinition[*PageNode]{
-			Title: trans.S("User Chooser"),
+			Title: trans.S("Page Chooser"),
 			Model: &PageNode{},
 			PreviewString: func(ctx context.Context, instance *PageNode) string {
 				if !instance.IsPublished() {

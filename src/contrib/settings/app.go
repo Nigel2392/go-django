@@ -149,7 +149,7 @@ func NewAppConfig() django.AppConfig {
 				AddView: admin.FormViewOptions{
 					Panels: []admin.Panel{
 						admin.TitlePanel(admin.FieldPanel("Name")),
-						admin.MultiPanel(
+						admin.RowPanel(
 							admin.FieldPanel("Domain"),
 							admin.FieldPanel("Port"),
 						),
@@ -160,7 +160,7 @@ func NewAppConfig() django.AppConfig {
 				EditView: admin.FormViewOptions{
 					Panels: []admin.Panel{
 						admin.TitlePanel(admin.FieldPanel("Name")),
-						admin.MultiPanel(
+						admin.RowPanel(
 							admin.FieldPanel("Domain"),
 							admin.FieldPanel("Port"),
 						),

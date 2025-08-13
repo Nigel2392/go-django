@@ -2,11 +2,9 @@ package admin
 
 import (
 	"context"
-	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
-	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -19,136 +17,10 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-var (
-	_ forms.Form                          = (*AdminForm[modelforms.ModelForm[attrs.Definer]])(nil)
-	_ modelforms.ModelForm[attrs.Definer] = (*AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer])(nil)
-)
-
-type Panel interface {
-	Fields() []string
-	Bind(form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel
-}
-
-type fieldPanel struct {
-	fieldname string
-}
-
-func (f *fieldPanel) Fields() []string {
-	return []string{f.fieldname}
-}
-
-func (f *fieldPanel) Bind(form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
-	var bf, ok = boundFields[f.fieldname]
-	if !ok {
-		panic(fmt.Sprintf("Field %s not found in bound fields: %v", f.fieldname, boundFields))
-	}
-
-	return &BoundFormPanel[forms.Form, *fieldPanel]{
-		Panel:      f,
-		Form:       form,
-		Context:    ctx,
-		BoundField: bf,
-	}
-}
-
-func FieldPanel(fieldname string) Panel {
-	return &fieldPanel{
-		fieldname: fieldname,
-	}
-}
-
-type titlePanel struct {
-	Panel
-}
-
-func (t *titlePanel) Fields() []string {
-	return t.Panel.Fields()
-}
-
-func (t *titlePanel) Bind(form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
-	return &BoundTitlePanel[forms.Form, *titlePanel]{
-		BoundPanel: t.Panel.Bind(form, ctx, boundFields),
-		Context:    ctx,
-	}
-}
-
-func TitlePanel(panel Panel) Panel {
-	return &titlePanel{
-		Panel: panel,
-	}
-}
-
-type multiPanel struct {
-	panels []Panel
-	Label  func() string
-}
-
-func (m *multiPanel) Fields() []string {
-	var fields = make([]string, 0)
-	for _, panel := range m.panels {
-		fields = append(fields, panel.Fields()...)
-	}
-	return fields
-}
-
-func (m *multiPanel) Bind(form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
-	var panels = make([]BoundPanel, 0)
-	for _, panel := range m.panels {
-		panels = append(panels, panel.Bind(form, ctx, boundFields))
-	}
-	return &BoundMultiPanel[forms.Form]{
-		LabelFn: m.Label,
-		Panels:  panels,
-		Context: ctx,
-		Form:    form,
-	}
-}
-
-func MultiPanel(panels ...Panel) Panel {
-	return &multiPanel{
-		panels: panels,
-	}
-}
-
-type PanelBoundForm struct {
-	forms.BoundForm
-	BoundPanels []BoundPanel
-	Panels      []Panel
-	Context     context.Context
-}
-
-func (b *PanelBoundForm) AsP() template.HTML {
-	var html = new(strings.Builder)
-	for _, panel := range b.BoundPanels {
-		var component = panel.Component()
-		component.Render(b.Context, html)
-	}
-	return template.HTML(html.String())
-}
-func (b *PanelBoundForm) AsUL() template.HTML {
-	var html = new(strings.Builder)
-	for _, panel := range b.BoundPanels {
-		var component = panel.Component()
-		component.Render(b.Context, html)
-	}
-	return template.HTML(html.String())
-}
-func (b *PanelBoundForm) Media() media.Media {
-	return b.BoundForm.Media()
-}
-func (b *PanelBoundForm) Fields() []forms.BoundField {
-	return b.BoundForm.Fields()
-}
-func (b *PanelBoundForm) ErrorList() []error {
-	return b.BoundForm.ErrorList()
-}
-func (b *PanelBoundForm) Errors() *orderedmap.OrderedMap[string, []error] {
-	return b.BoundForm.Errors()
-}
-
 type AdminForm[T forms.Form] struct {
-	Form   T
-	Panels []Panel
+	Form    T
+	Panels  []Panel
+	Request *http.Request
 }
 
 func NewAdminForm[T forms.Form](form T, panels ...Panel) *AdminForm[T] {
@@ -237,7 +109,7 @@ func (a *AdminForm[T]) BoundForm() forms.BoundForm {
 
 	if len(a.Panels) > 0 {
 		for _, panel := range a.Panels {
-			var boundPanel = panel.Bind(a.Form, boundForm.Context, boundMap)
+			var boundPanel = panel.Bind(a.Request, a.Form, boundForm.Context, boundMap)
 			boundForm.BoundPanels = append(
 				boundForm.BoundPanels, boundPanel,
 			)
@@ -255,7 +127,7 @@ func (a *AdminForm[T]) BoundForm() forms.BoundForm {
 
 		for _, field := range fields {
 			var panel = FieldPanel(field.Name())
-			var boundPanel = panel.Bind(a.Form, boundForm.Context, boundMap)
+			var boundPanel = panel.Bind(a.Request, a.Form, boundForm.Context, boundMap)
 			boundForm.BoundPanels = append(
 				boundForm.BoundPanels, boundPanel,
 			)
@@ -274,6 +146,7 @@ func (a *AdminForm[T]) ErrorList() []error {
 	return a.Form.ErrorList()
 }
 func (a *AdminForm[T]) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) forms.Form {
+	a.Request = r
 	return a.Form.WithData(data, files, r)
 }
 func (a *AdminForm[T]) InitialData() map[string]interface{} {

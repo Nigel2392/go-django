@@ -261,7 +261,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 			admin.TitlePanel(
 				admin.FieldPanel("Title"),
 			),
-			admin.MultiPanel(
+			admin.RowPanel(
 				admin.FieldPanel("Path"),
 				admin.FieldPanel("Depth"),
 			),
@@ -280,7 +280,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 			admin.TitlePanel(
 				admin.FieldPanel("Title"),
 			),
-			admin.MultiPanel(
+			admin.RowPanel(
 				admin.FieldPanel("Path"),
 				admin.FieldPanel("Depth"),
 			),

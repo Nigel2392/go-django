@@ -7,7 +7,13 @@
 {{ end }}
 
 {{ define "content" }}
-    <h1>{{ T "Delete %s" (.Get "model").Label }}</h1>
+    <h1>
+        {{ if .Data.instance }}
+            {{ T "Delete %s" (.Get "model").Label }}
+        {{ else }}
+            {{ T "Delete %d %s" (len .Data.pk_list) (.Get "model").PluralLabel }}
+        {{ end }}
+    </h1>
     <form method="post" class="admin-form">
         {{ csrf_field }}
 
@@ -30,16 +36,16 @@
             <input type="hidden" name="next" value="{{ .Data.BackURL }}">
         {{ end }}
 
-        <div class="form-buttons">
+        <div class="form-buttons inline">
             <input class="button danger" type="submit" value="{{ T "Submit" }}">
             {{ $BackURL := (.Get "BackURL") }}
             {{ if $BackURL }}
-                <a class="button warning hollow" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
+                <a class="button secondary" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
             {{ else }}
                 {{ if (gt (len .Data.pk_list) 1) }}
-                    <a class="button warning hollow" href="{{ url "admin:apps:model" (.Get "app").Name (.Get "model").GetName }}">{{ T "Back" }}</a>
+                    <a class="button secondary" href="{{ url "admin:apps:model" (.Get "app").Name (.Get "model").GetName }}">{{ T "Cancel" }}</a>
                 {{ else }}
-                    <a class="button warning hollow" href="{{ url "admin:apps:model:edit" (.Get "app").Name (.Get "model").GetName (index .Data.pk_list 0) }}">{{ T "Back" }}</a>
+                    <a class="button secondary" href="{{ url "admin:apps:model:edit" (.Get "app").Name (.Get "model").GetName (index .Data.pk_list 0) }}">{{ T "Cancel" }}</a>
                 {{ end }}
             {{ end }}
         </div>

@@ -25,6 +25,9 @@
             {{ range $image := .Data.list }}
                 <div class="godjango-chooser-list-group default-style image-item" data-chooser-value="{{ $image.ID }}" data-chooser-preview="{{ $image.PreviewHTML }}">
                     <img alt="{{ $image.Title }}" src="{{ url "images:serve" $image.Path }}" class="image-thumbnail">
+                    <div class="image-title">
+                        {{ $image.Title }}
+                    </div>
                 </div>
             {{ end }}
         </div>

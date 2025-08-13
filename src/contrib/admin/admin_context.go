@@ -50,10 +50,11 @@ func (p *PageOptions) Subtitle() string {
 }
 
 func (p *PageOptions) Media() media.Media {
-	if p.MediaFn == nil {
-		return media.NewMedia()
+	var media media.Media = media.NewMedia()
+	if p.MediaFn != nil {
+		media = media.Merge(p.MediaFn())
 	}
-	return p.MediaFn()
+	return media
 }
 
 func (p *PageOptions) GetBreadCrumbs() []BreadCrumb {

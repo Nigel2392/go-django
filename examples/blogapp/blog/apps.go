@@ -121,14 +121,23 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 					admin.TitlePanel(
 						admin.FieldPanel("Title"),
 					),
-					admin.MultiPanel(
+					admin.RowPanel(
 						admin.FieldPanel("UrlPath"),
 						admin.FieldPanel("Slug"),
 					),
-					admin.MultiPanel(
-						// admin.FieldPanel("Image"),
-						admin.FieldPanel("User"),
-						admin.FieldPanel("Thumbnail"),
+					admin.RowPanel(
+						admin.PanelGroup(
+							admin.FieldPanel("Image"),
+							admin.FieldPanel("User"),
+						),
+						admin.PanelGroup(
+							&admin.AlertPanel{
+								Type:  admin.ALERT_INFO,
+								Label: trans.S("Cover Image"),
+								HTML:  trans.S("<p>Choose a cover image for your blog post.</p>"),
+							},
+							admin.FieldPanel("Thumbnail"),
+						),
 					),
 					admin.FieldPanel("Editor"),
 				}
@@ -138,14 +147,23 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 					admin.TitlePanel(
 						admin.FieldPanel("Title"),
 					),
-					admin.MultiPanel(
+					admin.RowPanel(
 						admin.FieldPanel("UrlPath"),
 						admin.FieldPanel("Slug"),
 					),
-					admin.MultiPanel(
-						// admin.FieldPanel("Image"),
-						admin.FieldPanel("User"),
-						admin.FieldPanel("Thumbnail"),
+					admin.RowPanel(
+						admin.PanelGroup(
+							admin.FieldPanel("Image"),
+							admin.FieldPanel("User"),
+						),
+						admin.PanelGroup(
+							&admin.AlertPanel{
+								Type:  admin.ALERT_INFO,
+								Label: trans.S("Cover Image"),
+								HTML:  trans.S("<p>Choose a cover image for your blog post.</p>"),
+							},
+							admin.FieldPanel("Thumbnail"),
+						),
 					),
 					admin.FieldPanel("Editor"),
 					admin.FieldPanel("CreatedAt"),

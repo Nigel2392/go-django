@@ -1,9 +1,8 @@
 package chooser
 
 import (
-	"context"
-
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/views"
 )
 
@@ -16,11 +15,6 @@ type ModalContext struct {
 }
 
 func (c *ModalContext) GetTitle() string {
-	switch v := c.Title.(type) {
-	case string:
-		return v
-	case func(context.Context) string:
-		return v(c.Request().Context())
-	}
-	return ""
+	var t, _ = trans.GetText(c.Request().Context(), c.Title)
+	return t
 }

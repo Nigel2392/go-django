@@ -85,6 +85,34 @@ func P(ctx context.Context, singular, plural Untranslated, n any, args ...any) T
 	return DefaultBackend.Pluralizef(ctx, singular, plural, int(val), args...)
 }
 
+func GetTextFunc(v any) (fn func(ctx context.Context) Translation) {
+	if v == nil {
+		return nil
+	}
+
+	switch v := v.(type) {
+	case string:
+		fn = S(v)
+	case func(ctx context.Context) string:
+		fn = v
+	default:
+		panic(fmt.Errorf(
+			"unsupported type %T for translation", v,
+		))
+	}
+
+	return fn
+}
+
+func GetText(ctx context.Context, v any) (string, bool) {
+	var fn = GetTextFunc(v)
+	if fn == nil {
+		return "", false
+	}
+
+	return fn(ctx), true
+}
+
 const (
 	SHORT_TIME_FORMAT = "SHORT_TIME_FORMAT"
 	LONG_TIME_FORMAT  = "LONG_TIME_FORMAT"

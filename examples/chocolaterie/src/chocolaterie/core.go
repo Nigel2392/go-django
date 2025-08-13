@@ -112,7 +112,7 @@ func NewAppConfig() django.AppConfig {
 					admin.TitlePanel(
 						admin.FieldPanel("Title"),
 					),
-					admin.MultiPanel(
+					admin.RowPanel(
 						admin.FieldPanel("UrlPath"),
 						admin.FieldPanel("Slug"),
 					),
@@ -124,7 +124,7 @@ func NewAppConfig() django.AppConfig {
 					admin.TitlePanel(
 						admin.FieldPanel("Title"),
 					),
-					admin.MultiPanel(
+					admin.RowPanel(
 						admin.FieldPanel("UrlPath"),
 						admin.FieldPanel("Slug"),
 					),

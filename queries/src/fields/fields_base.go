@@ -622,22 +622,11 @@ func (e *DataModelField[T]) ToString() string {
 }
 
 func (f *DataModelField[T]) Label(ctx context.Context) string {
-	var field attrs.Field = f
-	if f.fieldRef != nil {
-		field = f.fieldRef
-	}
 
 	if f.cnf.Label != nil {
-		switch label := f.cnf.Label.(type) {
-		case string:
-			return trans.T(ctx, label)
-		case func(ctx context.Context) string:
-			return label(ctx)
-		default:
-			panic(fmt.Sprintf(
-				"Label for field %q (%T) is not a `string` or `function(context) string`, got %T",
-				f.name, field, label,
-			))
+		var text, ok = trans.GetText(ctx, f.cnf.Label)
+		if ok {
+			return text
 		}
 	}
 
@@ -653,23 +642,11 @@ func (f *DataModelField[T]) Label(ctx context.Context) string {
 }
 
 func (f *DataModelField[T]) HelpText(ctx context.Context) string {
-	var field attrs.Field = f
-	if f.fieldRef != nil {
-		field = f.fieldRef
-	}
 	if f.cnf.HelpText != nil {
-		switch helpText := f.cnf.HelpText.(type) {
-		case string:
-			return trans.T(ctx, helpText)
-		case func(ctx context.Context) string:
-			return helpText(ctx)
-		default:
-			panic(fmt.Sprintf(
-				"HelpText for field %q (%T) is not a `string` or `function(context) string`, got %T",
-				f.name, field, helpText,
-			))
+		var text, ok = trans.GetText(ctx, f.cnf.HelpText)
+		if ok {
+			return text
 		}
 	}
-
 	return ""
 }

@@ -55,7 +55,6 @@ func AdminImageModelOptions() admin.ModelOptions {
 			}
 
 			form.AddField("ImageFile", fileField)
-			form.SetFields("Title", "ImageFile", "Path")
 
 			var pathField, ok = form.Field("Path")
 			if !ok {
@@ -64,7 +63,9 @@ func AdminImageModelOptions() admin.ModelOptions {
 			}
 
 			var widget = pathField.Widget()
-			widget.Hide(true)
+			widget.SetAttrs(map[string]string{
+				"readonly": "readonly",
+			})
 
 			form.AddWidget("Path", widget)
 
@@ -155,6 +156,9 @@ func AdminImageModelOptions() admin.ModelOptions {
 				admin.FieldPanel("Title"),
 				admin.FieldPanel("Path"),
 				admin.FieldPanel("ImageFile"),
+				admin.FieldPanel("CreatedAt"),
+				admin.FieldPanel("FileSize"),
+				admin.FieldPanel("FileHash"),
 			},
 		},
 		DeleteView: admin.DeleteViewOptions{
