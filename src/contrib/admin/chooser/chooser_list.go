@@ -29,6 +29,10 @@ var (
 	_ views.Renderer     = (*BoundChooserListPage[attrs.Definer])(nil)
 )
 
+type Renderable interface {
+	Render() string
+}
+
 type SearchField[T attrs.Definer] struct {
 	Name            string
 	Lookup          string // expr.LOOKUP_EXACT is the default.
@@ -95,6 +99,9 @@ type ChooserListPage[T attrs.Definer] struct {
 
 	// SearchFields are the fields to search in the list view.
 	SearchFields []SearchField[T]
+
+	// NewList returns a new list object to render in the list view.
+	NewList func(req *http.Request, results []T) any
 
 	// BoundView returns a new bound view for the list page.
 	BoundView func(w http.ResponseWriter, req *http.Request, v *ChooserListPage[T], d *ChooserDefinition[T]) (views.View, error)
@@ -228,7 +235,7 @@ func (v *ChooserListPage[T]) GetListColumns(req *http.Request) []list.ListColumn
 	return columns
 }
 
-func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (*list.List[T], pagination.PageObject[T], error) {
+func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (any, pagination.PageObject[T], error) {
 	var querySet = v.GetQuerySet(req)
 	var paginator = &pagination.QueryPaginator[T]{
 		URL:     req.URL.Path,
@@ -247,14 +254,29 @@ func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (*list
 		)
 	}
 
-	var listObject = list.NewListWithGroups(req, pageObject.Results(), v.GetListColumns(req), func(r *http.Request, obj T, cols []list.ListColumn[T]) list.ColumnGroup[T] {
+	//	var listObject = list.NewListWithGroups(req, pageObject.Results(), v.GetListColumns(req), func(r *http.Request, obj T, cols []list.ListColumn[T]) list.ColumnGroup[T] {
+	//		return &wrappedColumnGroup[T]{
+	//			ListColumnGroup: list.NewColumnGroup(r, obj, cols),
+	//			_Definition:     v._Definition,
+	//		}
+	//	})
+
+	return v.getList(req, pageObject.Results()), pageObject, nil
+}
+
+func (v *ChooserListPage[T]) getList(req *http.Request, results []T) any {
+	if v.NewList != nil {
+		return v.NewList(req, results)
+	}
+
+	var listObject = list.NewListWithGroups(req, results, v.GetListColumns(req), func(r *http.Request, obj T, cols []list.ListColumn[T]) list.ColumnGroup[T] {
 		return &wrappedColumnGroup[T]{
 			ListColumnGroup: list.NewColumnGroup(r, obj, cols),
 			_Definition:     v._Definition,
 		}
 	})
 
-	return listObject, pageObject, nil
+	return listObject
 }
 
 func (v *ChooserListPage[T]) getPageNumber(req *http.Request) int {

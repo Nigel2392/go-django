@@ -105,9 +105,9 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 
 	appconfig.Ready = func() error {
 		pages.Register(&pages.PageDefinition{
-			// Prefetch: admin.Prefetch{
-			// SelectRelated: []string{"User"},
-			// },
+			Prefetch: admin.Prefetch{
+				SelectRelated: []string{"User", "Thumbnail"},
+			},
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 				GetLabel:       trans.S("Blog Page"),
 				GetDescription: trans.S("A blog page with a rich text editor."),
@@ -126,8 +126,9 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 						admin.FieldPanel("Slug"),
 					),
 					admin.MultiPanel(
-						admin.FieldPanel("Image"),
+						// admin.FieldPanel("Image"),
 						admin.FieldPanel("User"),
+						admin.FieldPanel("Thumbnail"),
 					),
 					admin.FieldPanel("Editor"),
 				}
@@ -142,8 +143,9 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 						admin.FieldPanel("Slug"),
 					),
 					admin.MultiPanel(
-						admin.FieldPanel("Image"),
+						// admin.FieldPanel("Image"),
 						admin.FieldPanel("User"),
+						admin.FieldPanel("Thumbnail"),
 					),
 					admin.FieldPanel("Editor"),
 					admin.FieldPanel("CreatedAt"),

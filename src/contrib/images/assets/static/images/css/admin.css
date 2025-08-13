@@ -10,8 +10,11 @@
     position: relative;
     border-radius: 4px;
     overflow: hidden;
-    height: 275px;
+    height: 250px;
     width: 250px;
+}
+.images-list .image-item:has(.image-checkbox) {
+    height: 275px;
 }
 .images-list .image-item img {
     max-width: 100%;
@@ -103,4 +106,20 @@
 .image-admin-preview:is(.small) .title,
 .image-admin-preview:has(.small) .title {
     display: none;
+}
+
+.images-list .godjango-chooser-list-group {
+    position: relative;
+}
+.images-list .godjango-chooser-list-group::after {
+    content: "";
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+.images-list .godjango-chooser-list-group:hover::after {
+    border: 3px solid var(--secondary-bg-color);
 }

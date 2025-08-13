@@ -59,7 +59,7 @@ func (a *AppConfig) serveImageFnView(fn func(*AppConfig, http.ResponseWriter, *h
 			return
 		}
 
-		if !permissions.HasPermission(r, "images.model:serve") {
+		if a.Options.CheckServePermissions && !permissions.HasPermission(r, "images.model:serve") {
 			autherrors.Fail(
 				403, "You do not have permission to view images",
 			)

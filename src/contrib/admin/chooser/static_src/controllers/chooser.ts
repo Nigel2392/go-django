@@ -180,15 +180,16 @@ class ChooserController extends Controller<any> {
             });
         });
 
-        this.searchForm.addEventListener("submit", async (event) => {
-            event.preventDefault();
+        if (this.searchForm) {
+            this.searchForm.addEventListener("submit", async (event) => {
+                event.preventDefault();
 
-            const formData = new FormData(this.searchForm);
-            const searchParams = new URLSearchParams(formData as any);
-            const url = `${this.listurlValue}?${searchParams.toString()}`;
-            await this.showList(url);
-        });
-
+                const formData = new FormData(this.searchForm);
+                const searchParams = new URLSearchParams(formData as any);
+                const url = `${this.listurlValue}?${searchParams.toString()}`;
+                await this.showList(url);
+            });
+        }
 
         var links = this.modal.content.querySelectorAll(".pagination a") as NodeListOf<HTMLAnchorElement>;
         links.forEach((link) => {

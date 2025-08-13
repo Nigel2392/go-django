@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"reflect"
 	"slices"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
 
 func sortComponents(components []AdminPageComponent) []AdminPageComponent {
@@ -24,24 +24,44 @@ func sortComponents(components []AdminPageComponent) []AdminPageComponent {
 	return components
 }
 
-func FindDefinition(model attrs.Definer) *ModelDefinition {
-	var modelType = reflect.TypeOf(model)
-	if modelType.Kind() == reflect.Ptr {
-		modelType = modelType.Elem()
+func FindDefinition(model any, appName ...string) *ModelDefinition {
+	var app = ""
+	if len(appName) > 0 {
+		app = appName[0]
+	}
+
+	var modelTypeName string
+	switch m := model.(type) {
+	case attrs.Definer:
+		var cType = contenttypes.NewContentType(m)
+		modelTypeName = cType.Model()
+	case string:
+		modelTypeName = m
+	default:
+		panic(fmt.Sprintf(
+			"FindDefinition requires a model of type attrs.Definer or string, got %T",
+			model,
+		))
+	}
+
+	if app != "" {
+		app, ok := AdminSite.Apps.Get(app)
+		if !ok {
+			return nil
+		}
+
+		m, ok := app.Models.Get(modelTypeName)
+		if ok {
+			return m
+		}
 	}
 
 	for head := AdminSite.Apps.Front(); head != nil; head = head.Next() {
 		var app = head.Value
-		for front := app.Models.Front(); front != nil; front = front.Next() {
-			var modelDef = front.Value
-			var typ = modelDef.rModel()
-			if typ.Kind() == reflect.Ptr {
-				typ = typ.Elem()
-			}
 
-			if typ == modelType {
-				return modelDef
-			}
+		var m, ok = app.Models.Get(modelTypeName)
+		if ok {
+			return m
 		}
 	}
 

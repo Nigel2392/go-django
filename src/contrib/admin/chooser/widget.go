@@ -11,6 +11,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -152,12 +153,14 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 		modelName = b.ContentType.Model()
 	)
 
+	var def = admin.FindDefinition(modelName, appName)
+
 	var urlMap = map[string]string{
-		"choose": django.Reverse("admin:apps:model:chooser:list", appName, modelName, b.ChooserKey),
+		"choose": django.Reverse("admin:apps:model:chooser:list", appName, def.GetName(), b.ChooserKey),
 	}
 
 	if b.Definition.CanCreate() {
-		urlMap["create"] = django.Reverse("admin:apps:model:chooser:create", appName, modelName, b.ChooserKey)
+		urlMap["create"] = django.Reverse("admin:apps:model:chooser:create", appName, def.GetName(), b.ChooserKey)
 	}
 
 	ctx.Set("urls", urlMap)

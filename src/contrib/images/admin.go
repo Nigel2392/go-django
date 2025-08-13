@@ -1,6 +1,7 @@
 package images
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
@@ -111,7 +112,7 @@ func AdminImageModelOptions() admin.ModelOptions {
 				// Base the title on the file name if not set
 				title, ok := m["Title"].(string)
 				if !ok || title == "" {
-					var fName = file.Name()
+					var fName = fileObj.Name
 					var baseName = filepath.Base(fName)
 					var ext = filepath.Ext(baseName)
 					if ext != "" {
@@ -119,6 +120,10 @@ func AdminImageModelOptions() admin.ModelOptions {
 					}
 					m["Title"] = baseName
 				}
+
+				// Delete the ImageFile field from the model's cleaned data
+				// This is to prevent the file from being saved again
+				delete(m, "ImageFile")
 
 				return nil
 			})
@@ -129,6 +134,12 @@ func AdminImageModelOptions() admin.ModelOptions {
 		RegisterToAdminMenu: true,
 		Model:               &Image{},
 		Name:                "image",
+		MenuIcon: func(ctx context.Context) string {
+			return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
+ 	<path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
+ 	<path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1z"/>
+</svg>`
+		},
 		AddView: admin.FormViewOptions{
 			FormInit: initAdminForm(false),
 			Panels: []admin.Panel{

@@ -701,7 +701,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		return
 	}
 
-	var instance, err = p.Specific(r.Context())
+	var instance, err = Specific(r.Context(), p, false)
 	except.Assert(
 		err == nil, 500,
 		err,

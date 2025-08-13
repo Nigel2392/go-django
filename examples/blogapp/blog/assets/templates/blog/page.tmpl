@@ -13,6 +13,8 @@
 
         <h2>Hello, {{ user.Username }}!</h2>
 
+        <img src="{{ url "images:serve" .Data.blog_page.Thumbnail.Path }}" alt="{{ .Data.blog_page.Thumbnail.Title }}">
+
         {{ .Page.Editor.MustRender }} 
 
     </div>

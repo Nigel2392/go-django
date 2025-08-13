@@ -26,11 +26,11 @@ func Register(definition *PageDefinition) {
 }
 
 // Return the custom page object belonging to the given node
-func Specific(ctx context.Context, node *PageNode) (Page, error) {
+func Specific(ctx context.Context, node *PageNode, withRelated bool) (Page, error) {
 	if node.PageID == 0 {
 		return node, nil
 	}
-	return pageRegistryObject.SpecificInstance(ctx, node)
+	return pageRegistryObject.SpecificInstance(ctx, node, withRelated)
 }
 
 // Return the content type definition for the given page type

@@ -26,11 +26,13 @@
                 <span class="title">{{ .Data.instance.Title }}</span>
             </div>
         {{ else if .Data.instances }}
-            <ul class="instances-preview">
-                {{ range $instance := .Data.instances }}
-                    <li data-instance-id="{{ $instance.ID }}">{{ $instance.Title }} ({{ $instance.Path }})</li>
+            <div class="instances-preview images-list list-wrapper">
+                {{ range $image := .Data.instances }}
+                    <div class="image-item">
+                        <img alt="{{ $image.Title }}" src="{{ url "images:serve" $image.Path }}" class="image-thumbnail">
+                    </div>
                 {{ end }}
-            </ul>
+            </div>
         {{ end }}
 
         {{ if .Data.BackURL }}

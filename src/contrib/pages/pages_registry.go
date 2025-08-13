@@ -159,7 +159,7 @@ func (p *pageRegistry) DefinitionForObject(page Page) *PageDefinition {
 	return p.registry[typeName]
 }
 
-func (p *pageRegistry) SpecificInstance(ctx context.Context, node *PageNode) (Page, error) {
+func (p *pageRegistry) SpecificInstance(ctx context.Context, node *PageNode, withRelated bool) (Page, error) {
 	var typeName = node.ContentType
 	var definition = p.DefinitionForType(
 		typeName,
@@ -190,12 +190,14 @@ func (p *pageRegistry) SpecificInstance(ctx context.Context, node *PageNode) (Pa
 			WithContext(ctx).
 			Filter(defs.Primary().Name(), node.PageID)
 
-		if len(definition.Prefetch.SelectRelated) > 0 {
-			querySet = querySet.SelectRelated(definition.Prefetch.SelectRelated...)
-		}
+		if withRelated {
+			if len(definition.Prefetch.SelectRelated) > 0 {
+				querySet = querySet.SelectRelated(definition.Prefetch.SelectRelated...)
+			}
 
-		if len(definition.Prefetch.PrefetchRelated) > 0 {
-			querySet = querySet.Preload(definition.Prefetch.PrefetchRelated...)
+			if len(definition.Prefetch.PrefetchRelated) > 0 {
+				querySet = querySet.Preload(definition.Prefetch.PrefetchRelated...)
+			}
 		}
 
 		var row, err = querySet.Get()

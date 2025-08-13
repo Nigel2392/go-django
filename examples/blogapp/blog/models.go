@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
+	"github.com/Nigel2392/go-django/src/contrib/images"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -74,6 +75,7 @@ type BlogPage struct {
 	Page         *pages.PageNode `proxy:"true"`
 	Image        *mediafiles.SimpleStoredObject
 	Editor       *editor.EditorJSBlockData
+	Thumbnail    *images.Image
 	User         users.User
 }
 
@@ -160,6 +162,19 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 			HelpText: trans.S("The image for this blog post."),
 			Null:     true,
 			Blank:    true,
+		}),
+		attrs.NewField(n, "Thumbnail", &attrs.FieldConfig{
+			Null:     true,
+			Label:    trans.S("Thumbnail"),
+			HelpText: trans.S("The thumbnail for this blog post."),
+			RelForeignKey: attrs.Relate(
+				&images.Image{}, "", nil,
+			),
+			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+				return chooser.NewChooserWidget(
+					fc.RelForeignKey.Model(), fc.WidgetAttrs,
+				)
+			},
 		}),
 		editor.NewField(n, "Editor", editor.FieldConfig{
 			Label:    trans.S("Editor"),

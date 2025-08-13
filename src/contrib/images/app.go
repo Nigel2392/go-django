@@ -4,12 +4,15 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"net/http"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
@@ -22,11 +25,12 @@ import (
 
 type (
 	Options struct {
-		MediaBackend     mediafiles.Backend
-		MediaDir         string
-		MaxByteSize      uint
-		AllowedFileExts  []string
-		AllowedMimeTypes []string
+		MediaBackend          mediafiles.Backend
+		MediaDir              string
+		MaxByteSize           uint
+		AllowedFileExts       []string
+		AllowedMimeTypes      []string
+		CheckServePermissions bool
 	}
 
 	AppConfig struct {
@@ -42,12 +46,24 @@ var (
 	app *AppConfig
 )
 
+type imageResult struct {
+	*Image
+	PreviewHTML string
+}
+
 func NewAppConfig(opts *Options) *AppConfig {
 	if app == nil {
 		app = &AppConfig{
 			DBRequiredAppConfig: apps.NewDBAppConfig(
 				"images",
 			),
+		}
+	}
+
+	if opts == nil {
+		opts = &Options{
+			MediaBackend: mediafiles.GetDefault(),
+			MediaDir:     "images",
 		}
 	}
 
@@ -84,6 +100,36 @@ func NewAppConfig(opts *Options) *AppConfig {
 			AdminImageModelOptions(),
 		)
 
+		chooser.Register(&chooser.ChooserDefinition[*Image]{
+			Model: &Image{},
+			Title: trans.S("Image Chooser"),
+			PreviewString: func(ctx context.Context, instance *Image) string {
+				return fmt.Sprintf(`<img src="%s" alt="%s">`,
+					django.Reverse("images:serve", instance.Path), instance.Title,
+				)
+			},
+			ListPage: &chooser.ChooserListPage[*Image]{
+				Template: "images/images_chooser_list.tmpl",
+				SearchFields: []chooser.SearchField[*Image]{
+					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
+					{Name: "Path", Lookup: expr.LOOKUP_ICONTANS},
+				},
+				NewList: func(req *http.Request, results []*Image) any {
+					var resultList = make([]imageResult, len(results))
+					for i, img := range results {
+						resultList[i] = imageResult{
+							Image: img,
+							PreviewHTML: fmt.Sprintf(`<img src="%s" alt="%s">`,
+								django.Reverse("images:serve", img.Path), img.Title,
+							),
+						}
+					}
+					return resultList
+				},
+			},
+			CreatePage: &chooser.ChooserFormPage[*Image]{},
+		})
+
 		if !django.AppInstalled("migrator") {
 			var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())
 			if err != nil {
@@ -106,11 +152,6 @@ func NewAppConfig(opts *Options) *AppConfig {
 	}
 	app.Routing = func(m mux.Multiplexer) {
 		var g = m.Any("/images", nil, "images")
-		g.Get(
-			"/<<id>>",
-			mux.NewHandler(app.serveImageByIDView),
-			"serve_id",
-		)
 		g.Post(
 			"/upload",
 			mux.NewHandler(app.serveImageUpload),
@@ -125,6 +166,11 @@ func NewAppConfig(opts *Options) *AppConfig {
 			"/<<id>>/delete",
 			mux.NewHandler(app.serveImageDeletion),
 			"delete",
+		)
+		g.Get(
+			"/<<id>>",
+			mux.NewHandler(app.serveImageByIDView),
+			"serve_id",
 		)
 		g.Get(
 			"/serve/*",

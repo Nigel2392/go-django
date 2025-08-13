@@ -125,7 +125,7 @@ func (v *PageServeView) TakeControl(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	specific, err := page.Specific(req.Context())
+	specific, err := Specific(r.Context(), page, true)
 	if err != nil {
 		pageNotFound(w, req, err, pathParts)
 		return

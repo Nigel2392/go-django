@@ -292,7 +292,7 @@ func (n *PageNode) Specific(ctx context.Context, refresh ...bool) (Page, error) 
 		return n.PageObject, nil
 	}
 
-	var p, err = Specific(ctx, n)
+	var p, err = Specific(ctx, n, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get specific page for node %d: %w", n.PK, err)
 	}
