@@ -19,10 +19,14 @@
     {{ end }}
 
     <div class="images-list list-wrapper">
+        {{ $app := (.Get "app") }}
+        {{ $model := (.Get "model") }}
 
         {{ range $image := .Data.view_list }}
             <div class="image-item">
-                <img src="{{ url "images:serve" $image.Path }}" alt="{{ $image.Title }}">
+                <a href="{{ url "admin:apps:model:edit" $app.Name $model.GetName $image.ID }}">
+                    <img src="{{ url "images:serve" $image.Path }}" alt="{{ $image.Title }}">
+                </a>
                 <div class="image-metadata">
                     <h3>{{ $image.Title }}</h3>
                     <p>Uploaded on: {{ $image.CreatedAt }}</p>

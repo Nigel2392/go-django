@@ -346,6 +346,10 @@ func NewAdminModelForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer](form T1, p
 	}
 }
 
+func (a *AdminModelForm[T1, T2]) SetOnLoad(fn func(model T2, initialData map[string]interface{})) {
+	a.Form.SetOnLoad(fn)
+}
+
 func (a *AdminModelForm[T1, T2]) Load() {
 	a.Form.Load()
 

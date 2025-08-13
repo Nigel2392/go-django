@@ -115,15 +115,80 @@ func AdminImageModelOptions() admin.ModelOptions {
 		},
 		EditView: admin.FormViewOptions{
 			FormInit: func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
+				var fileField = &fields.FileStorageField{
+					BaseField: fields.NewField(
+						fields.Label(trans.S("Image File")),
+						fields.HelpText(trans.S("Upload an image file")),
+						fields.Required(false),
+					),
+					UploadTo: func(fileObject *widgets.FileObject) string {
+						return filepath.Join(app.MediaDir(), fileObject.Name)
+					},
+					StorageBackend: app.MediaBackend(),
+				}
 
+				form.AddField("ImageFile", fileField)
+				form.SetFields("Title", "ImageFile", "Path")
+
+				var pathField, ok = form.Field("Path")
+				if !ok {
+					assert.Fail("Path field not found in form")
+					return
+				}
+
+				var widget = pathField.Widget()
+				widget.Hide(true)
+
+				form.AddWidget("Path", widget)
+
+				form.SetValidators(func(f forms.Form, m map[string]interface{}) []error {
+					var fileFace, ok = m["ImageFile"]
+					if !ok {
+						if fields.IsZero(m["Path"]) {
+							// If the path is empty, we require the file to be uploaded
+							return []error{errs.NewValidationError[string](
+								"ImageFile", "This field is required",
+							)}
+						}
+						return nil
+					}
+
+					fileObj, ok := fileFace.(*widgets.FileObject)
+					if !ok {
+						if fields.IsZero(m["Path"]) {
+							// If the path is empty, we require the file to be uploaded
+							return []error{errs.NewValidationError[string](
+								"ImageFile", "This field is required",
+							)}
+						}
+						return nil
+					}
+
+					var err error
+					fileFace, err = fileField.Save(fileObj)
+					if err != nil {
+						return []error{errs.NewValidationError[string](
+							"ImageFile", fmt.Sprintf("Failed to save file: %v", err),
+						)}
+					}
+
+					file, ok := fileFace.(mediafiles.StoredObject)
+					if !ok {
+						return []error{errs.NewValidationError[string](
+							"ImageFile", fmt.Sprintf("Invalid file type: %T", fileFace),
+						)}
+					}
+
+					m["Path"] = file.Path()
+
+					return nil
+				})
 			},
 			Panels: []admin.Panel{
 				admin.FieldPanel("ID"),
 				admin.FieldPanel("Title"),
 				admin.FieldPanel("Path"),
-				admin.FieldPanel("CreatedAt"),
-				admin.FieldPanel("FileSize"),
-				admin.FieldPanel("FileHash"),
+				admin.FieldPanel("ImageFile"),
 			},
 		},
 		ListView: admin.ListViewOptions{

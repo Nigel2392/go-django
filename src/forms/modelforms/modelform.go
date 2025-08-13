@@ -21,6 +21,7 @@ type ModelForm[T any] interface {
 	Context() context.Context
 	SetFields(fields ...string)
 	SetExclude(exclude ...string)
+	SetOnLoad(fn func(model T, initialData map[string]interface{}))
 	Instance() T
 	SetInstance(model T)
 }
@@ -46,6 +47,7 @@ type BaseModelForm[T attrs.Definer] struct {
 	InstanceFields []attrs.Field
 	context        context.Context
 	initialData    map[string]interface{}
+	OnLoad         func(model T, initialData map[string]interface{})
 
 	flags modelFormFlag
 
@@ -97,6 +99,10 @@ func (f *BaseModelForm[T]) InitialData() map[string]interface{} {
 	}
 
 	return f.initialData
+}
+
+func (w *BaseModelForm[T]) SetOnLoad(fn func(model T, initialData map[string]interface{})) {
+	w.OnLoad = fn
 }
 
 func (f *BaseModelForm[T]) modelIsNil(model T) bool {
@@ -269,6 +275,7 @@ func (f *BaseModelForm[T]) Load() {
 
 	var initialData = make(map[string]interface{})
 	var fieldDefs = model.FieldDefs()
+
 	if !f.modelIsNil(model) {
 		for _, def := range f.InstanceFields {
 			var n = def.Name()
@@ -301,6 +308,10 @@ func (f *BaseModelForm[T]) Load() {
 
 			initialData[n] = field.GetDefault()
 		}
+	}
+
+	if f.OnLoad != nil {
+		f.OnLoad(model, initialData)
 	}
 
 	f.SetInitial(initialData)
