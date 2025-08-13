@@ -265,6 +265,12 @@ func NewAppConfig() django.AppConfig {
 			"delete", // admin:apps:model:delete
 		)
 
+		baseModelsRoute.Handle(
+			mux.ANY, "delete/",
+			NewModelHandler("app_name", "model_name", ModelBulkDeleteHandler),
+			"bulk_delete", // admin:apps:model:delete
+		)
+
 		var hooks = goldcrest.Get[RegisterModelsRouteHookFunc](AdminModelHookRegisterRoute)
 		for _, hook := range hooks {
 			hook(AdminSite, baseModelsRoute)
@@ -375,6 +381,7 @@ func NewAppConfig() django.AppConfig {
 
 func (a *AdminApplication) Check(ctx context.Context, settings django.Settings) []checks.Message {
 	var messages = a.AppConfig.Check(ctx, settings)
+
 	for head := a.Apps.Front(); head != nil; head = head.Next() {
 
 		var app = head.Value
@@ -447,7 +454,7 @@ func NewInstanceHandler(appnameVar, modelVar, idVar string, handler func(w http.
 			return
 		}
 
-		model, ok := app.Models.Get(modelName)
+		model, ok := app.modelsByName[modelName]
 		if !ok {
 			except.Fail(http.StatusBadRequest, "Model not found")
 			return
@@ -496,7 +503,7 @@ func NewModelHandler(appnameVar, modelVar string, handler func(w http.ResponseWr
 			return
 		}
 
-		model, ok := app.Models.Get(modelName)
+		model, ok := app.modelsByName[modelName]
 		if !ok {
 			fail[0](w, req, "Model not found")
 			return

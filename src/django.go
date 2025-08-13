@@ -586,6 +586,9 @@ func (a *Application) Initialize() error {
 			}
 			return template.HTML(buf.String())
 		},
+		"toString": func(v any) string {
+			return attrs.ToString(v)
+		},
 		"url": func(name string, args ...any) template.URL {
 			var rt, err = a.Mux.Reverse(name, args...)
 			switch {

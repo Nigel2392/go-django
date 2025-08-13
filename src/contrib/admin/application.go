@@ -114,6 +114,7 @@ func (a *AdminApplication) RegisterApp(name string, appOptions AppOptions, opts 
 		Models: orderedmap.NewOrderedMap[
 			string, *ModelDefinition,
 		](),
+		modelsByName: make(map[string]*ModelDefinition),
 	}
 
 	for _, opt := range opts {

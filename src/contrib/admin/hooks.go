@@ -55,6 +55,7 @@ type (
 	RegisterAdminAppPageComponentHookFunc = func(r *http.Request, adminSite *AdminApplication, app *AppDefinition) AdminPageComponent
 
 	AdminModelHookFunc          = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instance attrs.Definer)
+	AdminModelDeleteFunc        = func(r *http.Request, adminSite *AdminApplication, model *ModelDefinition, instances []attrs.Definer)
 	RegisterModelsRouteHookFunc = func(adminSite *AdminApplication, route mux.Multiplexer)
 )
 
@@ -117,7 +118,7 @@ func RegisterModelEditHook(f AdminModelHookFunc) {
 }
 
 // Register a hook to be called when a model is deleted.
-func RegisterModelDeleteHook(f AdminModelHookFunc) {
+func RegisterModelDeleteHook(f AdminModelDeleteFunc) {
 	goldcrest.Register(AdminModelHookDelete, 0, f)
 }
 

@@ -276,6 +276,15 @@ checkValid:
 		return n, false
 	}
 
+	var nT = reflect.TypeOf(n)
+	if !m.Type().AssignableTo(nT) && !m.Type().ConvertibleTo(nT) {
+		return n, false
+	}
+
+	if m.Type().ConvertibleTo(nT) {
+		m = m.Convert(nT)
+	}
+
 	var i = m.Interface()
 	if i == nil {
 		return n, false

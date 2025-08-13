@@ -20,11 +20,18 @@
             <p class="alert-text">{{ T "This action cannot be reversed." }}</p>
         </div>
 
-        <ul class="instances-preview">
-            {{ range $instance := .Data.instances }}
-                <li>{{ toString $instance }}</li>
-            {{ end }}
-        </ul>
+        {{ if .Data.instance }}
+            <div class="image-admin-preview">
+                <img alt="{{ .Data.instance.Title }}" src="{{ url "images:serve" .Data.instance.Path }}" class="image-thumbnail">
+                <span class="title">{{ .Data.instance.Title }}</span>
+            </div>
+        {{ else if .Data.instances }}
+            <ul class="instances-preview">
+                {{ range $instance := .Data.instances }}
+                    <li data-instance-id="{{ $instance.ID }}">{{ $instance.Title }} ({{ $instance.Path }})</li>
+                {{ end }}
+            </ul>
+        {{ end }}
 
         {{ if .Data.BackURL }}
             <input type="hidden" name="next" value="{{ .Data.BackURL }}">

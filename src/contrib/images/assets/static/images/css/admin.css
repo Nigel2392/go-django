@@ -1,0 +1,106 @@
+.images-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    margin-top: 1rem;
+    gap: 1rem;
+}
+
+.images-list .image-item {
+    display: flex;
+    position: relative;
+    border-radius: 4px;
+    overflow: hidden;
+    height: 275px;
+    width: 250px;
+}
+.images-list .image-item img {
+    max-width: 100%;
+    max-height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: auto;
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+    height: 250px;
+}
+.images-list .image-item .form-input {
+    padding: 0.5rem;
+    width: 16px;
+    z-index: 1;
+}
+.images-list .image-item .form-input:focus,
+.images-list .image-item .form-input:focus-within {
+    outline: none;
+}
+.images-list .image-item a.link {
+    z-index: 1;
+    padding: 0 0.5rem;
+    background-color: var(--w-color-grey-50);
+    width: fit-content;
+    height: fit-content;
+}
+.images-list .image-item .image-checkbox {
+    display: flex;
+    flex-direction: row;
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: min-content;
+    background-color: white;
+    z-index: 1;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border: 1px solid var(--border-color);
+}
+.images-list .image-item .image-checkbox a:last-child {
+    margin-left: auto;
+}
+
+.image-admin-preview {
+    --max-preview-width: 350px;
+    --max-preview-height: 350px;
+    --image-padding: 0.5rem;
+
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-color);
+    width: fit-content;
+    overflow: hidden;
+    border-radius: var(--border-radius);
+}
+.image-admin-preview .title {
+    width: 100%;
+    text-align: center;
+    font-weight: 600;
+    font-size: 1.2em;
+    padding: 0.5rem;
+}
+.image-admin-preview img {
+    max-width: var(--max-preview-width);
+    max-height: var(--max-preview-height);
+    padding: var(--image-padding);
+    height: auto;
+    flex: 1;
+}
+.image-admin-preview.image-thumbnail,
+.image-admin-preview .image-thumbnail {
+    --max-preview-width: 800px;
+    --max-preview-height: 550px;
+    --image-padding: 0;
+}
+.image-admin-preview.small,
+.image-admin-preview .small {
+    --max-preview-width: 100px;
+    --max-preview-height: 100px;
+    --image-padding: 0.25rem;
+}
+
+.image-admin-preview:is(.small) .title,
+.image-admin-preview:has(.small) .title {
+    display: none;
+}

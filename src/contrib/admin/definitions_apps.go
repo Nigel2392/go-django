@@ -70,7 +70,8 @@ type AppDefinition struct {
 	Models  *orderedmap.OrderedMap[
 		string, *ModelDefinition,
 	]
-	Routing func(mux.Multiplexer)
+	Routing      func(mux.Multiplexer)
+	modelsByName map[string]*ModelDefinition
 }
 
 func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
@@ -126,6 +127,7 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 	)
 
 	a.Models.Set(cType.ContentType().Model(), model)
+	a.modelsByName[model.GetName()] = model
 
 	return model
 }

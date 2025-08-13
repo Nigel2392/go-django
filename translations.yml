@@ -28,7 +28,7 @@ locales:
 # [GoFileFinder]:      NewAppConfig          examples/todoapp/todos/todo.go:101:29
 # [GoFileFinder]:      NewAppConfig          src/contrib/auth/app.go:181:33
 # [GoFileFinder]:      *User.Fields          src/contrib/auth/user.go:120:22
-# [GoFileFinder]:      *Image.FieldDefs      src/contrib/images/models.go:139:22
+# [GoFileFinder]:      *Image.FieldDefs      src/contrib/images/models.go:140:22
 # [GoFileFinder]:      FormatTimeSince       src/contrib/pages/django_admin.go:148:26
 # [GoFileFinder]:      *Revision.FieldDefs   src/contrib/revisions/queries.go:73:22
 text: ID
@@ -118,7 +118,7 @@ locales:
 
 # [ModelFinder.Field]: users.Group.Permissions .models/auth/Group/fields:2:3
 # [ModelFinder.Field]: auth.User.Permissions   .models/auth/User/fields:1:11
-# [GoFileFinder]:      NewAppConfig            src/contrib/auth/app.go:294:34
+# [GoFileFinder]:      NewAppConfig            src/contrib/auth/app.go:295:34
 # [GoFileFinder]:      *Base.Fields            src/contrib/auth/users/baseuser.go:101:24
 # [GoFileFinder]:      *Group.FieldDefs        src/contrib/auth/users/group.go:43:24
 text: Permissions
@@ -372,7 +372,7 @@ locales:
 
 # [ModelFinder.Field]: blog.BlogPage.Image .models/blog/BlogPage/fields:1:4
 # [ModelFinder]:       images.Image        .models/images/Image:13:1
-# [GoFileFinder]:                          src/contrib/images/admin.go:10:26
+# [GoFileFinder]:                          src/contrib/images/admin.go:28:26
 text: Image
 locales:
   nl: Afbeelding
@@ -388,7 +388,7 @@ locales:
 ---
 
 # [ModelFinder.Field]: blog.BlogPage.Page .models/blog/BlogPage/fields:1:9
-# [GoFileFinder]:      NewAppConfig       src/contrib/pages/django_app.go:191:29
+# [GoFileFinder]:      NewAppConfig       src/contrib/pages/django_app.go:192:29
 text: Page
 locales:
   nl: Pagina
@@ -585,7 +585,7 @@ locales:
 ---
 
 # [GoFileFinder]: init         examples/blogapp/blog/models.go:31:18
-# [GoFileFinder]: NewAppConfig src/contrib/pages/django_app.go:274:19
+# [GoFileFinder]: NewAppConfig src/contrib/pages/django_app.go:275:19
 text: User Chooser
 locales:
   nl: Gebruikerskiezer
@@ -722,8 +722,9 @@ locales:
 # [TemplateFinder]: {{ T "Submit" }} examples/formsapp/src/formsapp/assets/templates/formsapp/contact.tmpl:84:49
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/auth/login.tmpl:24:72
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/add.tmpl:22:70
-# [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:15:67
+# [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:34:67
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:24:70
+# [TemplateFinder]: {{ T "Submit" }} src/contrib/images/assets/templates/images/images_delete.tmpl:41:67
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/admin_outdated_list.tmpl:56:84
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:46:68
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:35:71
@@ -889,8 +890,9 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/add.tmpl:25:76
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:18:76
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:37:76
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:31:76
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/images/assets/templates/images/images_delete.tmpl:44:76
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:33:76
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:31:76
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:35:75
@@ -905,8 +907,11 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Back" }} src/contrib/admin/assets/templates/admin/views/models/add.tmpl:27:131
-# [TemplateFinder]: {{ T "Back" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:20:167
+# [TemplateFinder]: {{ T "Back" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:40:135
+# [TemplateFinder]: {{ T "Back" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:42:164
 # [TemplateFinder]: {{ T "Back" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:33:123
+# [TemplateFinder]: {{ T "Back" }} src/contrib/images/assets/templates/images/images_delete.tmpl:47:135
+# [TemplateFinder]: {{ T "Back" }} src/contrib/images/assets/templates/images/images_delete.tmpl:49:164
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:35:114
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:33:95
 # [TemplateFinder]: {{ T "Back" }} src/contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:37:123
@@ -921,21 +926,33 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:3:25
-# [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:6:13
+# [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:10:13
+# [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/images/assets/templates/images/images_delete.tmpl:3:25
+# [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/images/assets/templates/images/images_delete.tmpl:10:13
 text: Delete %s
 locales:
   nl: '%s verwijderen'
 
 ---
 
-# [TemplateFinder]:	{{ T "Are you sure you want to delete object with id %v?" .Data.primaryField.GetValue }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:10:16
-text: Are you sure you want to delete object with id %v?
+# [TemplateFinder]: {{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:16:43
+# [TemplateFinder]: {{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }} src/contrib/images/assets/templates/images/images_delete.tmpl:16:43
+text: Are you sure you want to delete objects with ids %v?
 locales:
-  nl: Weet je zeker dat je het object met id %v wilt verwijderen?
+  nl: Weet je zeker dat je objecten met id's %v wilt verwijderen?
 
 ---
 
-# [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:11:16
+# [TemplateFinder]: {{ T "Are you sure you want to delete object %q with id %v?" (toString .Data.instance) (index .Data.pk_list 0) }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:18:43
+# [TemplateFinder]: {{ T "Are you sure you want to delete object %q with id %v?" (toString .Data.instance) (index .Data.pk_list 0) }} src/contrib/images/assets/templates/images/images_delete.tmpl:18:43
+text: Are you sure you want to delete object %q with id %v?
+locales:
+  nl: Weet je zeker dat je object %q met id %v wilt verwijderen?
+
+---
+
+# [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:20:39
+# [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/images/assets/templates/images/images_delete.tmpl:20:39
 # [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:7:16
 text: This action cannot be reversed.
 locales:
@@ -952,6 +969,8 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Delete" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:26:160
+# [TemplateFinder]: {{ T "Delete" }} src/contrib/images/assets/templates/images/image_list.tmpl:48:105
+# [TemplateFinder]: {{ T "Delete" }} src/contrib/images/assets/templates/images/image_list.tmpl:79:37
 # [TemplateFinder]: {{ T "Delete" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:3:25
 text: Delete
 locales:
@@ -967,6 +986,7 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Add" }} src/contrib/admin/assets/templates/admin/views/models/list.tmpl:12:116
+# [TemplateFinder]: {{ T "Add" }} src/contrib/images/assets/templates/images/image_list.tmpl:45:124
 # [TemplateFinder]: {{ T "Add" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:3:25
 # [TemplateFinder]: {{ T "Add" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:3:25
 text: Add
@@ -975,7 +995,8 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ T "%s List" $model.Label }} src/contrib/admin/assets/templates/admin/views/models/list.tmpl:16:25
+# [TemplateFinder]: {{ T "%s List" $model.Label }} src/contrib/admin/assets/templates/admin/views/models/list.tmpl:16:25
+# [TemplateFinder]: {{ T "%s List" $model.Label }} src/contrib/images/assets/templates/images/image_list.tmpl:53:25
 text: '%s List'
 locales:
   nl: '%s- lijst'
@@ -1024,17 +1045,17 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:297:89
+# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:298:96
 text: Search...
 locales:
-  nl: "Zoeken..."
+  nl: Zoeken...
 
 ---
 
-# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:298:89
+# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:299:74
 text: Search
 locales:
-  nl: "Zoeken"
+  nl: Zoeken
 
 ---
 
@@ -1046,73 +1067,87 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 src/contrib/admin/views.go:31:25
+# [GoFileFinder]:	 src/contrib/admin/views.go:32:25
 text: app %q does not have an index view
 locales:
   nl: app %q heeft geen indexweergave
 
 ---
 
-# [GoFileFinder]:  src/contrib/admin/views.go:170:42
-# [GoFileFinder]:  src/contrib/admin/views.go:173:25
+# [GoFileFinder]:  src/contrib/admin/views.go:171:42
+# [GoFileFinder]:  src/contrib/admin/views.go:174:25
 text: This model does not allow creation
 locales:
   nl: Dit model staat geen creatie toe.
 
 ---
 
-# [GoFileFinder]:  src/contrib/admin/views.go:199:42
-# [GoFileFinder]:  src/contrib/admin/views.go:202:25
+# [GoFileFinder]:  src/contrib/admin/views.go:200:42
+# [GoFileFinder]:  src/contrib/admin/views.go:203:25
 text: This model does not allow editing
 locales:
   nl: Dit model staat geen bewerking toe.
 
 ---
 
-# [GoFileFinder]:  src/contrib/admin/views.go:227:42
-# [GoFileFinder]:  src/contrib/admin/views.go:230:25
+# [GoFileFinder]: *AdminDeleteView.Setup src/contrib/admin/views.go:263:42
+# [GoFileFinder]: *AdminDeleteView.Setup src/contrib/admin/views.go:266:25
 text: This model does not allow deletion
 locales:
   nl: Dit model staat geen verwijdering toe.
 
 ---
 
-# [GoFileFinder]:	 src/contrib/admin/views.go:261:6
+# [GoFileFinder]:	*AdminDeleteView.ServePOST src/contrib/admin/views.go:296:5
 text: model %T not deleted, model does not implement models.Deleter interface
 locales:
   nl: model %T niet verwijderd, model implementeert de models.Deleter interface niet
 
 ---
 
-# [GoFileFinder]:	 src/contrib/admin/views.go:270:6
-text: Failed to delete %s (%v)
+# [GoFileFinder]:	*AdminDeleteView.ServePOST src/contrib/admin/views.go:312:5
+text: 'Failed to delete %s (%v): %v'
 locales:
-  nl: Verwijderen van %s (%v) mislukt
+  nl: 'Verwijderen van %s (%v) mislukt: %v'
 
 ---
 
-# [GoFileFinder]:	 src/contrib/admin/views.go:278:6
+# [GoFileFinder]:	*AdminDeleteView.ServePOST src/contrib/admin/views.go:321:5
 text: Successfully deleted %s (%v)
 locales:
   nl: Verwijderen van %s (%v) succesvol
 
 ---
 
-# [GoFileFinder]:	GetAdminForm src/contrib/admin/views.go:347:7
+# [GoFileFinder]:	*AdminDeleteView.GetContext src/contrib/admin/views.go:390:25
+text: No primary keys provided for bulk delete
+locales:
+  nl: Geen primaire sleutels opgegeven voor bulkverwijdering
+
+---
+
+# [GoFileFinder]:	*AdminDeleteView.GetContext src/contrib/admin/views.go:408:5
+text: 'Failed to retrieve instances for bulk delete: %v'
+locales:
+  nl: 'Mislukt om instanties op te halen voor bulkverwijdering: %v'
+
+---
+
+# [GoFileFinder]:	GetAdminForm src/contrib/admin/views.go:486:7
 text: model %T not saved, model does not implement models.Saver interface
 locales:
   nl: model %T niet opgeslagen, model implementeert de models.Saver interface niet
 
 ---
 
-# [GoFileFinder]:	newInstanceView src/contrib/admin/views.go:435:18
+# [GoFileFinder]:	newInstanceView src/contrib/admin/views.go:580:18
 text: instance is nil after form submission
 locales:
   nl: object is NULL na formulierindiening
 
 ---
 
-# [GoFileFinder]:	newInstanceView src/contrib/admin/views.go:440:6
+# [GoFileFinder]:	newInstanceView src/contrib/admin/views.go:585:6
 text: Successfully saved %s (%v)
 locales:
   nl: Succesvol opgeslagen %s (%v)
@@ -1235,7 +1270,7 @@ locales:
 
 ---
 
-# [GoFileFinder]: initAuthEditForm src/contrib/auth/app.go:369:4
+# [GoFileFinder]: initAuthEditForm src/contrib/auth/app.go:371:4
 # [GoFileFinder]: UserRegisterForm src/contrib/auth/forms.go:201:5
 text: Password Confirm
 locales:
@@ -1243,7 +1278,7 @@ locales:
 
 ---
 
-# [GoFileFinder]: initAuthEditForm src/contrib/auth/app.go:372:4
+# [GoFileFinder]: initAuthEditForm src/contrib/auth/app.go:374:4
 # [GoFileFinder]: UserRegisterForm src/contrib/auth/forms.go:204:5
 text: Enter the password again to confirm
 locales:
@@ -1457,17 +1492,48 @@ locales:
 
 ---
 
-# [GoFileFinder]:	 src/contrib/images/admin.go:11:26
+# [GoFileFinder]:              src/contrib/images/admin.go:29:26
+# [GoFileFinder]: NewAppConfig src/contrib/images/app.go:81:34
+# [GoFileFinder]: NewAppConfig src/contrib/images/app.go:82:34
 text: Images
 locales:
   nl: Afbeeldingen
 
 ---
 
-# [GoFileFinder]:	 src/contrib/images/admin.go:12:26
+# [GoFileFinder]:	 src/contrib/images/admin.go:30:26
 text: An image file
 locales:
   nl: Een afbeeldingsbestand
+
+---
+
+# [GoFileFinder]:	AdminImageModelOptions src/contrib/images/admin.go:46:27
+text: Image File
+locales:
+  nl: Afbeeldingsbestand
+
+---
+
+# [GoFileFinder]:	AdminImageModelOptions src/contrib/images/admin.go:47:30
+text: Upload an image file
+locales:
+  nl: Upload een afbeeldingsbestand
+
+---
+
+# [TemplateFinder]:	{{ T "Image List" }} src/contrib/images/assets/templates/images/image_list.tmpl:3:25
+text: Image List
+locales:
+  nl: Afbeeldingenlijst
+
+---
+
+# [TemplateFinder]: {{ T "Edit" }} src/contrib/images/assets/templates/images/image_list.tmpl:74:37
+# [TemplateFinder]: {{ T "Edit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:3:25
+text: Edit
+locales:
+  nl: Bewerken
 
 ---
 
@@ -1646,13 +1712,6 @@ locales:
 
 ---
 
-# [TemplateFinder]:	{{ T "Edit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:3:25
-text: Edit
-locales:
-  nl: Bewerken
-
----
-
 # [TemplateFinder]:	{{ T "Unpublish and Save" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:44:25
 text: Unpublish and Save
 locales:
@@ -1683,7 +1742,7 @@ locales:
 
 # [GoFileFinder]:                               src/contrib/pages/django_admin.go:26:26
 # [GoFileFinder]: *PagesAdminHomeComponent.html src/contrib/pages/django_admin_home_component_templ.go:57:79
-# [GoFileFinder]: NewAppConfig                  src/contrib/pages/django_app.go:244:37
+# [GoFileFinder]: NewAppConfig                  src/contrib/pages/django_app.go:245:37
 text: Pages
 locales:
   nl: Pagina's
@@ -1992,21 +2051,21 @@ locales:
 
 ---
 
-# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:192:29
+# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:193:29
 text: A page in a hierarchical page tree- structure.
 locales:
   nl: Een pagina in een hiërarchische boomstructuur.
 
 ---
 
-# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:232:38
+# [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:233:38
 text: Outdated Pages
 locales:
   nl: Verouderde pagina's
 
 ---
 
-# [GoFileFinder]:	*pageLogDefinition.GetActions src/contrib/pages/django_app.go:517:39
+# [GoFileFinder]:	*pageLogDefinition.GetActions src/contrib/pages/django_app.go:519:39
 text: Edit Live Page
 locales:
   nl: Live pagina bewerken
@@ -2063,7 +2122,7 @@ locales:
 ---
 
 # [GoFileFinder]:   NewAppConfig         src/contrib/reports/audit_logs/app.go:87:34
-# [GoFileFinder]:   auditLogView         src/contrib/reports/audit_logs/app.go:384:23
+# [GoFileFinder]:   auditLogView         src/contrib/reports/audit_logs/app.go:391:23
 # [TemplateFinder]: {{ T "Audit Logs" }} src/contrib/reports/audit_logs/assets/templates/auditlogs/views/logs.tmpl:3:25
 text: Audit Logs
 locales:
@@ -2071,35 +2130,35 @@ locales:
 
 ---
 
-# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:284:88
+# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:291:88
 text: Debug
 locales:
   nl: Debug
 
 ---
 
-# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:285:88
+# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:292:88
 text: Info
 locales:
   nl: Info
 
 ---
 
-# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:286:88
+# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:293:88
 text: Warning
 locales:
   nl: Waarschuwing
 
 ---
 
-# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:287:88
+# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:294:88
 text: Error
 locales:
   nl: Fout
 
 ---
 
-# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:385:23
+# [GoFileFinder]:	auditLogView src/contrib/reports/audit_logs/app.go:392:23
 text: View all audit logs
 locales:
   nl: Bekijk alle auditlogs

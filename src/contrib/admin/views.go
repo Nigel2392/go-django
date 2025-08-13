@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"slices"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
@@ -217,85 +218,223 @@ var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 	// }
 }
 
-var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
-	if !permissions.HasObjectPermission(r, instance, "admin:delete") {
+type AdminDeleteView struct {
+	views.BaseView
+	Permissions []string
+	Writer      http.ResponseWriter
+	Request     *http.Request
+	AdminSite   *AdminApplication
+	App         *AppDefinition
+	Model       *ModelDefinition
+	Instances   []attrs.Definer
+}
+
+func (v *AdminDeleteView) Instance() attrs.Definer {
+	if len(v.Instances) == 0 {
+		except.Fail(
+			http.StatusInternalServerError,
+			"AdminDeleteView.Instance called with no model instances",
+		)
+	}
+	return v.Instances[0]
+}
+
+func (v *AdminDeleteView) PrimaryField() attrs.FieldDefinition {
+	var meta = attrs.GetModelMeta(v.Model.Model)
+	var defs = meta.Definitions()
+	return defs.Primary()
+}
+
+func (v *AdminDeleteView) PKList() []interface{} {
+	var pks = make([]interface{}, len(v.Instances))
+	for i, instance := range v.Instances {
+		pks[i] = attrs.PrimaryKey(instance)
+	}
+	return pks
+}
+
+func (v *AdminDeleteView) Setup(w http.ResponseWriter, r *http.Request) (http.ResponseWriter, *http.Request) {
+	if len(v.Permissions) > 0 && !permissions.HasObjectPermission(r, v.Instance(), v.Permissions...) {
 		ReLogin(w, r, r.URL.Path)
-		return
+		return nil, nil
 	}
 
-	if model.DisallowDelete {
+	if v.Model.DisallowDelete {
 		messages.Error(r, trans.T(r.Context(), "This model does not allow deletion"))
 		autherrors.Fail(
 			http.StatusForbidden,
 			trans.T(r.Context(), "This model does not allow deletion"),
-			django.Reverse("admin:apps:model", app.Name, model.GetName()),
+			django.Reverse("admin:apps:model", v.App.Name, v.Model.GetName()),
 		)
+		return nil, nil
+	}
+
+	v.Writer = w
+	v.Request = r
+
+	return w, r
+}
+
+func (v *AdminDeleteView) ServePOST(w http.ResponseWriter, r *http.Request) {
+
+	var hooks = goldcrest.Get[AdminModelDeleteFunc](
+		AdminModelHookDelete,
+	)
+	for _, hook := range hooks {
+		hook(r, AdminSite, v.Model, v.Instances)
+	}
+
+	var err error
+	if v.Model.DeleteView.DeleteInstances != nil {
+		err = v.Model.DeleteView.DeleteInstances(r.Context(), v.Instances)
+	} else {
+		var deleted int64
+		deleted, err = queries.GetQuerySetWithContext(r.Context(), v.Model.NewInstance()).Delete(v.Instances...)
+		assert.False(
+			err == nil && deleted == 0,
+			trans.T(r.Context(),
+				"model %T not deleted, model does not implement models.Deleter interface", v.Instance,
+			),
+		)
+	}
+
+	var pks interface{}
+	var pkList = v.PKList()
+	if len(pkList) == 1 {
+		pks = pkList[0]
+	} else {
+		pks = pkList
+	}
+
+	if err != nil {
+		messages.Error(r,
+			trans.T(r.Context(),
+				"Failed to delete %s (%v): %v",
+				v.Model._cType.Label(r.Context()),
+				pks,
+				err,
+			),
+		)
+	} else {
+		messages.Warning(r,
+			trans.T(r.Context(),
+				"Successfully deleted %s (%v)",
+				v.Model._cType.Label(r.Context()),
+				pks,
+			),
+		)
+	}
+
+	if nextURL := r.FormValue("next"); nextURL != "" {
+		http.Redirect(w, r, nextURL, http.StatusSeeOther)
 		return
 	}
 
+	var listViewURL = django.Reverse("admin:apps:model", v.App.Name, v.Model.GetName())
+	http.Redirect(w, r, listViewURL, http.StatusSeeOther)
+}
+
+func (v *AdminDeleteView) GetContext(req *http.Request) (ctx.Context, error) {
+
+	context := NewContext(req, v.AdminSite, nil)
+	context.Set("app", v.App)
+	context.Set("model", v.Model)
+	context.Set("instances", v.Instances)
+	context.Set("pk_list", v.PKList())
+
+	if len(v.Instances) == 1 {
+		context.Set("instance", v.Instance())
+		context.Set("primaryField", v.PrimaryField())
+	}
+
+	var next = req.FormValue("next")
+	if next != "" {
+		context.Set("BackURL", next)
+	}
+
+	return context, nil
+}
+
+var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {
 	if model.DeleteView.GetHandler != nil {
-		var err = views.Invoke(model.DeleteView.GetHandler(adminSite, app, model, instance), w, r)
+		var err = views.Invoke(model.DeleteView.GetHandler(adminSite, app, model, []attrs.Definer{instance}), w, r)
 		except.AssertNil(err, 500, err)
 		return
 	}
 
-	var err error
-	var context = NewContext(r, adminSite, nil)
-	if r.Method == http.MethodPost {
+	var deleteView = &AdminDeleteView{
+		BaseView: views.BaseView{
+			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+			BaseTemplateKey: BASE_KEY,
+			TemplateName:    "admin/views/models/delete.tmpl",
+		},
+		Permissions: []string{"admin:delete"},
+		Writer:      w,
+		Request:     r,
+		AdminSite:   adminSite,
+		App:         app,
+		Model:       model,
+		Instances:   []attrs.Definer{instance},
+	}
 
-		var hooks = goldcrest.Get[AdminModelHookFunc](
-			AdminModelHookDelete,
+	var err = views.Invoke(deleteView, w, r)
+	except.AssertNil(err, 500, err)
+}
+
+var ModelBulkDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition) {
+
+	var pkList = r.URL.Query()["pk_list"]
+	if len(pkList) == 0 {
+		except.Fail(
+			http.StatusBadRequest,
+			trans.T(r.Context(), "No primary keys provided for bulk delete"),
 		)
-		for _, hook := range hooks {
-			hook(r, AdminSite, model, instance)
-		}
-
-		if model.DeleteView.DeleteInstance != nil {
-			err = model.DeleteView.DeleteInstance(r.Context(), instance)
-		} else {
-			var deleted bool
-			deleted, err = models.DeleteModel(r.Context(), instance)
-			assert.False(
-				err == nil && !deleted,
-				trans.T(r.Context(),
-					"model %T not deleted, model does not implement models.Deleter interface", instance,
-				),
-			)
-		}
-
-		if err != nil {
-			context.Set("error", err)
-			messages.Error(r,
-				trans.T(r.Context(),
-					"Failed to delete %s (%v)",
-					attrs.ToString(instance),
-					attrs.PrimaryKey(instance),
-				),
-			)
-		} else {
-			messages.Warning(r,
-				trans.T(r.Context(),
-					"Successfully deleted %s (%v)",
-					attrs.ToString(instance),
-					attrs.PrimaryKey(instance),
-				),
-			)
-		}
-
-		var listViewURL = django.Reverse("admin:apps:model", app.Name, model.GetName())
-		http.Redirect(w, r, listViewURL, http.StatusSeeOther)
 		return
 	}
 
-	var definitions = instance.FieldDefs()
-	var primaryField = definitions.Primary()
+	var meta = attrs.GetModelMeta(model.Model)
+	var defs = meta.Definitions()
+	var prim = defs.Primary()
+	var instanceRows, err = queries.GetQuerySetWithContext(r.Context(), model.NewInstance()).
+		Filter(fmt.Sprintf("%s__in", prim.Name()), pkList).
+		SelectRelated(model.ListView.Prefetch.SelectRelated...).
+		Preload(model.ListView.Prefetch.PrefetchRelated...).
+		All()
 
-	context.Set("app", app)
-	context.Set("model", model)
-	context.Set("instance", instance)
-	context.Set("primaryField", primaryField)
+	if err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			trans.T(r.Context(),
+				"Failed to retrieve instances for bulk delete: %v",
+				err,
+			),
+		)
+		return
+	}
 
-	err = tpl.FRender(w, context, BASE_KEY, "admin/views/models/delete.tmpl")
+	var instances = slices.Collect(instanceRows.Objects())
+	if model.DeleteView.GetHandler != nil {
+		var err = views.Invoke(model.DeleteView.GetHandler(adminSite, app, model, instances), w, r)
+		except.AssertNil(err, 500, err)
+		return
+	}
+
+	var deleteView = &AdminDeleteView{
+		BaseView: views.BaseView{
+			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+			BaseTemplateKey: BASE_KEY,
+			TemplateName:    "admin/views/models/delete.tmpl",
+		},
+		Permissions: []string{"admin:delete"},
+		Writer:      w,
+		Request:     r,
+		AdminSite:   adminSite,
+		App:         app,
+		Model:       model,
+		Instances:   instances,
+	}
+
+	err = views.Invoke(deleteView, w, r)
 	except.AssertNil(err, 500, err)
 }
 
@@ -372,6 +511,12 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				context.Set("model", model)
 				context.Set("instance", instance)
 				context.Set("primaryField", primary)
+
+				var next = r.URL.Query().Get("next")
+				if next != "" {
+					context.Set("BackURL", next)
+				}
+
 				return context, nil
 			},
 		},
@@ -442,6 +587,11 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 					attrs.PrimaryKey(instance),
 				),
 			)
+
+			if nextURL := req.FormValue("next"); nextURL != "" {
+				http.Redirect(w, req, nextURL, http.StatusSeeOther)
+				return
+			}
 
 			var listViewURL = django.Reverse("admin:apps:model", app.Name, model.GetName())
 			http.Redirect(w, r, listViewURL, http.StatusSeeOther)

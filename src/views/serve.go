@@ -26,6 +26,8 @@ var httpMethods = []string{
 	http.MethodTrace,
 }
 
+type ContextHandlerFunc = func(w http.ResponseWriter, req *http.Request, ctx ctx.Context) error
+
 type View interface {
 	// ServeXXX is a method that will never get called.
 	// It is a placeholder for the actual method that will be called.
@@ -230,16 +232,6 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 		}
 	}
 
-	// Check if the view has a Serve<XXX> method.
-	var serveFn, ok = attrs.Method[http.HandlerFunc](
-		view, fmt.Sprintf("Serve%s", method),
-	)
-	if ok {
-		// Any matching serve method takes precedence over the fallback.
-		serveFn(w, req)
-		return nil
-	}
-
 	var (
 		context  ctx.Context
 		baseKey  string
@@ -257,6 +249,19 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 
 	if v, ok := view.(SetupView); ok {
 		w, req = v.Setup(w, req)
+		if w == nil || req == nil {
+			return nil
+		}
+	}
+
+	// Check if the view has a Serve<XXX> method.
+	var serveFn, ok = attrs.Method[http.HandlerFunc](
+		view, fmt.Sprintf("Serve%s", method),
+	)
+	if ok {
+		// Any matching serve method takes precedence over the fallback.
+		serveFn(w, req)
+		return nil
 	}
 
 	// Get the context if the view implements the ContextGetter interface.
@@ -277,6 +282,15 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 	context.Set("Request", req)
 	context.Set("Template", template)
 	context.Set("View", view)
+
+	serveFnCtx, ok := attrs.Method[ContextHandlerFunc](
+		view, fmt.Sprintf("Serve%s", method),
+	)
+	if ok {
+		// Any matching serve method takes precedence over the fallback.
+		serveFnCtx(w, req, context)
+		return nil
+	}
 
 	// Render the template immediately if the view implements the Renderer interface.
 	if renderer, ok := view.(Renderer); ok {

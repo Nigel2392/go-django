@@ -126,41 +126,48 @@ func NewAppConfig() django.AppConfig {
 	var hookNames = []string{
 		admin.AdminModelHookAdd,
 		admin.AdminModelHookEdit,
-		admin.AdminModelHookDelete,
+	}
+
+	var hookFunc = func(hookName string, r *http.Request, _ *admin.AdminApplication, model *admin.ModelDefinition, instance attrs.Definer) {
+		if !Logs.IsReady() {
+			return
+		}
+
+		var data = make(map[string]interface{})
+		var level logger.LogLevel = logger.DBG
+		switch hookName {
+		case admin.AdminModelHookAdd:
+			level = logger.INF
+		case admin.AdminModelHookEdit:
+			level = logger.INF
+		case admin.AdminModelHookDelete:
+			level = logger.WRN
+		}
+
+		data["model_name"] = model.Name
+		data["instance_id"] = attrs.PrimaryKey(instance)
+		var cTypeDef = contenttypes.DefinitionForObject(instance)
+		if cTypeDef != nil {
+			data["content_type"] = cTypeDef.ContentType()
+		}
+
+		if _, err := Log(r.Context(), hookName, level, instance, data); err != nil {
+			logger.Warn(err)
+		}
 	}
 
 	for _, hookName := range hookNames {
 		var hookName = hookName
-		goldcrest.Register(hookName, 0, admin.AdminModelHookFunc(
-			func(r *http.Request, adminSite *admin.AdminApplication, model *admin.ModelDefinition, instance attrs.Definer) {
-				if !Logs.IsReady() {
-					return
-				}
-
-				var data = make(map[string]interface{})
-				var level logger.LogLevel = logger.DBG
-				switch hookName {
-				case admin.AdminModelHookAdd:
-					level = logger.INF
-				case admin.AdminModelHookEdit:
-					level = logger.INF
-				case admin.AdminModelHookDelete:
-					level = logger.WRN
-				}
-
-				data["model_name"] = model.Name
-				data["instance_id"] = attrs.PrimaryKey(instance)
-				var cTypeDef = contenttypes.DefinitionForObject(instance)
-				if cTypeDef != nil {
-					data["content_type"] = cTypeDef.ContentType()
-				}
-
-				if _, err := Log(r.Context(), hookName, level, instance, data); err != nil {
-					logger.Warn(err)
-				}
-			}),
-		)
+		goldcrest.Register(hookName, 0, admin.AdminModelHookFunc(func(r *http.Request, adminSite *admin.AdminApplication, model *admin.ModelDefinition, instance attrs.Definer) {
+			hookFunc(hookName, r, adminSite, model, instance)
+		}))
 	}
+
+	goldcrest.Register(admin.AdminModelHookDelete, 0, admin.AdminModelDeleteFunc(func(r *http.Request, adminSite *admin.AdminApplication, model *admin.ModelDefinition, instances []attrs.Definer) {
+		for _, instance := range instances {
+			hookFunc(admin.AdminModelHookDelete, r, adminSite, model, instance)
+		}
+	}))
 
 	if admin.AdminSite.TemplateConfig != nil {
 		Logs.TemplateConfig = &tpl.Config{

@@ -1,32 +1,60 @@
 :root {
     --sidebar-width: 200px;
-    --text-color: #333;
     --border-color: hsl( 0 0% calc( 14.9% + 63.5%) );
     --border-radius: .3125rem;
     --color-link: #00778b;
     --color-link-hover: #006c80;
-    --body-bg-color: #f8f9fa;
-    --body-dark-bg-color: #ddd;
 
     --bg-color-button: #007bff;
     --text-color-button: #fff;
 
-    --primary-bg-color: #1f1f1f;
-    --primary-bg-hover: #313131;
-    --secondary-bg-color: #00778b;
-    --secondary-bg-hover: #006c80;
-    --success-bg-color: #1b8666;
-    --success-bg-hover: #166a51;
-    --warning-bg-color: #faa500;
-    --warning-bg-hover: #db9406;
-    --danger-bg-color: #bd3c46;
-    --danger-bg-hover: #b3343e;
+    --text-color-rgb: 51, 51, 51;
+    --body-bg-color-rgb: 248, 249, 250;
+    --body-dark-bg-color-rgb: 221, 221, 221;
 
-    --primary-text-color: #ffffff;
-    --secondary-text-color: #ffffff;
-    --success-text-color: #ffffff;
-    --warning-text-color: #ffffff;
-    --danger-text-color: #ffffff;
+    --text-color: rgb(var(--text-color-rgb));
+    --body-bg-color: rgb(var(--body-bg-color-rgb));
+    --body-dark-bg-color: rgb(var(--body-dark-bg-color-rgb));
+
+    --primary-bg-color-rgb: 31, 31, 31;
+    --primary-bg-hover-rgb: 49, 49, 49;
+    --secondary-bg-color-rgb: 0, 119, 139;
+    --secondary-bg-hover-rgb: 0, 108, 128;
+    --info-bg-color-rgb: 46, 117, 187;
+    --info-bg-hover-rgb: 34, 88, 141;
+    --success-bg-color-rgb: 27, 134, 102;
+    --success-bg-hover-rgb: 22, 106, 81;
+    --warning-bg-color-rgb: 250, 165, 0;
+    --warning-bg-hover-rgb: 219, 148, 6;
+    --danger-bg-color-rgb: 189, 60, 70;
+    --danger-bg-hover-rgb: 179, 52, 62;
+
+    --primary-text-color-rgb: 255, 255, 255;
+    --secondary-text-color-rgb: 255, 255, 255;
+    --info-text-color-rgb: 255, 255, 255;
+    --success-text-color-rgb: 255, 255, 255;
+    --warning-text-color-rgb: 255, 255, 255;
+    --danger-text-color-rgb: 255, 255, 255;
+
+    --primary-bg-color: rgb(var(--primary-bg-color-rgb));
+    --primary-bg-hover: rgb(var(--primary-bg-hover-rgb));
+    --secondary-bg-color: rgb(var(--secondary-bg-color-rgb));
+    --secondary-bg-hover: rgb(var(--secondary-bg-hover-rgb));
+    --info-bg-color: rgb(var(--info-bg-color-rgb));
+    --info-bg-hover: rgb(var(--info-bg-hover-rgb));
+    --success-bg-color: rgb(var(--success-bg-color-rgb));
+    --success-bg-hover: rgb(var(--success-bg-hover-rgb));
+    --warning-bg-color: rgb(var(--warning-bg-color-rgb));
+    --warning-bg-hover: rgb(var(--warning-bg-hover-rgb));
+    --danger-bg-color: rgb(var(--danger-bg-color-rgb));
+    --danger-bg-hover: rgb(var(--danger-bg-hover-rgb));
+
+    --primary-text-color: rgb(var(--primary-text-color-rgb));
+    --secondary-text-color: rgb(var(--secondary-text-color-rgb));
+    --info-text-color: rgb(var(--info-text-color-rgb));
+    --success-text-color: rgb(var(--success-text-color-rgb));
+    --warning-text-color: rgb(var(--warning-text-color-rgb));
+    --danger-text-color: rgb(var(--danger-text-color-rgb));
 
 
     --navigation-bg-color: #f8f9fa;
@@ -126,6 +154,84 @@ a {
 a:hover {
     color: var(--color-link-hover);
     text-decoration: dotted underline;
+}
+a.primary {
+    --color-link: var(--primary-bg-color);
+    --color-link-hover: var(--primary-bg-hover);
+}
+a.secondary {
+    --color-link: var(--secondary-bg-color);
+    --color-link-hover: var(--secondary-bg-hover);
+}
+a.info {
+    --color-link: var(--info-bg-color);
+    --color-link-hover: var(--info-bg-hover);
+}
+a.success {
+    --color-link: var(--success-bg-color);
+    --color-link-hover: var(--success-bg-hover);
+}
+a.warning {
+    --color-link: var(--warning-bg-color);
+    --color-link-hover: var(--warning-bg-hover);
+}
+a.danger {
+    --color-link: var(--danger-bg-color);
+    --color-link-hover: var(--danger-bg-hover);
+}
+.alert {
+    --alert-color-rgb: var(--text-color-rgb);
+    --alert-bg-color-rgb: var(--body-bg-color-rgb);
+    --alert-border-color: var(--border-color);
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    background-color: rgba(var(--alert-bg-color-rgb), 0.1);
+    color: rgb(var(--alert-color-rgb));
+    border: 1px solid var(--alert-border-color);
+    border-radius: var(--border-radius);
+    margin: 1rem 0;
+    padding: 1rem;
+}
+.alert .alert-title {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    border-bottom: 1px solid var(--alert-border-color);
+}
+.alert .alert-text,
+.alert p {
+    margin-top: 0;
+    margin-bottom: 0.325rem;
+}
+.alert.primary {
+    --alert-color-rgb: var(--text-color-rgb);
+    --alert-bg-color-rgb: var(--primary-bg-color-rgb);
+    --alert-border-color: var(--primary-bg-hover);
+}
+.alert.secondary {
+    --alert-color-rgb: var(--text-color-rgb);
+    --alert-bg-color-rgb: var(--secondary-bg-color-rgb);
+    --alert-border-color: var(--secondary-bg-hover);
+}
+.alert.info {
+    --alert-color-rgb: var(--text-color-rgb);
+    --alert-bg-color-rgb: var(--info-bg-color-rgb);
+    --alert-border-color: var(--info-bg-hover);
+}
+.alert.success {
+    --alert-color-rgb: var(--text-color-rgb);
+    --alert-bg-color-rgb: var(--success-bg-color-rgb);
+    --alert-border-color: var(--success-bg-hover);
+}
+.alert.warning {
+    --alert-color-rgb: var(--text-color-rgb);
+    --alert-bg-color-rgb: var(--warning-bg-color-rgb);
+    --alert-border-color: var(--warning-bg-hover);
+}
+.alert.danger {
+    --alert-color-rgb: var(--text-color-rgb);
+    --alert-bg-color-rgb: var(--danger-bg-color-rgb);
+    --alert-border-color: var(--danger-bg-hover);
 }
 #main {
     display: flex;
@@ -245,7 +351,7 @@ a:hover {
 .panel {
     max-width: 1040px;
 }
-.panel:not(:has(.panel)) {
+.panel:not(:has(.panel)):has(.panel__heading) {
     margin-bottom: 1rem;
 }
 .panel__heading label:not(.default-label),
@@ -414,6 +520,21 @@ a.button, .button a {
     cursor: pointer;
     width: auto
 }
+.button:disabled,
+.button[disabled] {
+    cursor: not-allowed !important;
+}
+.button:disabled::after,
+.button[disabled]::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    background-color: rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+}
 .button+.button {
     margin-inline-start:1rem
 }
@@ -440,6 +561,14 @@ a.button, .button a {
 .button.success:hover {
     background-color: var(--success-bg-hover);
     color: var(--success-text-color);
+}
+.button.info {
+    --bg-color-button: var(--info-bg-color);
+    --text-color-button: var(--info-text-color);
+}
+.button.info:hover {
+    background-color: var(--info-bg-hover);
+    color: var(--info-text-color);
 }
 .button.danger {
     --bg-color-button: var(--danger-bg-color);
@@ -517,12 +646,12 @@ a.button, .button a {
     color: var(--warning-text-color);
 }
 .bg-info {
-    background-color: var(--secondary-bg-color);
-    color: var(--secondary-text-color);
+    background-color: var(--info-bg-color);
+    color: var(--info-text-color);
 }
 .bg-debug {
-    background-color: var(--primary-bg-color);
-    color: var(--primary-text-color);
+    background-color: var(--secondary-bg-color);
+    color: var(--secondary-text-color);
 }
 
 @media screen and (min-width: 50em) {

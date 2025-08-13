@@ -286,12 +286,14 @@ func NewAppConfig() django.AppConfig {
 			},
 			admin.ModelOptions{
 				MenuLabel:           trans.S("Groups"),
+				Name:                "groups",
 				Model:               &users.Group{},
 				RegisterToAdminMenu: true,
 				MenuOrder:           2,
 			},
 			admin.ModelOptions{
 				MenuLabel:           trans.S("Permissions"),
+				Name:                "permissions",
 				Model:               &users.Permission{},
 				RegisterToAdminMenu: true,
 				MenuOrder:           3,

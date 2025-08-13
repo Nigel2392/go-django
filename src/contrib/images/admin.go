@@ -39,151 +39,106 @@ var _ = contenttypes.Register(&contenttypes.ContentTypeDefinition{
 })
 
 func AdminImageModelOptions() admin.ModelOptions {
-	return admin.ModelOptions{
-		RegisterToAdminMenu: true,
-		Model:               &Image{},
-		Name:                "Image",
-		AddView: admin.FormViewOptions{
-			FormInit: func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
-				var fileField = &fields.FileStorageField{
-					BaseField: fields.NewField(
-						fields.Label(trans.S("Image File")),
-						fields.HelpText(trans.S("Upload an image file")),
-						fields.Required(true),
-					),
-					UploadTo: func(fileObject *widgets.FileObject) string {
-						return filepath.Join(app.MediaDir(), fileObject.Name)
-					},
-					StorageBackend: app.MediaBackend(),
-				}
+	var initAdminForm = func(updating bool) func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
+		return func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
+			var fileField = &fields.FileStorageField{
+				BaseField: fields.NewField(
+					fields.Label(trans.S("Image File")),
+					fields.HelpText(trans.S("Upload an image file")),
+					fields.Required(false),
+				),
+				UploadTo: func(fileObject *widgets.FileObject) string {
+					return filepath.Join(app.MediaDir(), fileObject.Name)
+				},
+				StorageBackend: app.MediaBackend(),
+			}
 
-				form.AddField("ImageFile", fileField)
-				form.SetFields("Title", "ImageFile", "Path")
+			form.AddField("ImageFile", fileField)
+			form.SetFields("Title", "ImageFile", "Path")
 
-				var pathField, ok = form.Field("Path")
+			var pathField, ok = form.Field("Path")
+			if !ok {
+				assert.Fail("Path field not found in form")
+				return
+			}
+
+			var widget = pathField.Widget()
+			widget.Hide(true)
+
+			form.AddWidget("Path", widget)
+
+			// Validator for the ImageFile field
+			form.SetValidators(func(f forms.Form, m map[string]interface{}) []error {
+				var fileFace, ok = m["ImageFile"]
 				if !ok {
-					assert.Fail("Path field not found in form")
-					return
-				}
-
-				var widget = pathField.Widget()
-				widget.Hide(true)
-
-				form.AddWidget("Path", widget)
-
-				form.SetValidators(func(f forms.Form, m map[string]interface{}) []error {
-					var fileFace, ok = m["ImageFile"]
-					if !ok {
+					if !updating && fields.IsZero(m["Path"]) {
+						// If the path is empty, we require the file to be uploaded
 						return []error{errs.NewValidationError[string](
 							"ImageFile", "This field is required",
 						)}
 					}
-
-					fileObj, ok := fileFace.(*widgets.FileObject)
-					if !ok {
-						return []error{errs.NewValidationError[string](
-							"ImageFile", fmt.Sprintf("Invalid file type: %T", fileFace),
-						)}
-					}
-
-					var err error
-					fileFace, err = fileField.Save(fileObj)
-					if err != nil {
-						return []error{errs.NewValidationError[string](
-							"ImageFile", fmt.Sprintf("Failed to save file: %v", err),
-						)}
-					}
-
-					file, ok := fileFace.(mediafiles.StoredObject)
-					if !ok {
-						return []error{errs.NewValidationError[string](
-							"ImageFile", fmt.Sprintf("Invalid file type: %T", fileFace),
-						)}
-					}
-
-					m["Path"] = file.Path()
-
 					return nil
-				})
-			},
+				}
+
+				fileObj, ok := fileFace.(*widgets.FileObject)
+				if !ok {
+					if !updating && fields.IsZero(m["Path"]) {
+						// If the path is empty, we require the file to be uploaded
+						return []error{errs.NewValidationError[string](
+							"ImageFile", "This field is required",
+						)}
+					}
+					return nil
+				}
+
+				var err error
+				fileFace, err = fileField.Save(fileObj)
+				if err != nil {
+					return []error{errs.NewValidationError[string](
+						"ImageFile", fmt.Sprintf("Failed to save file: %v", err),
+					)}
+				}
+
+				file, ok := fileFace.(mediafiles.StoredObject)
+				if !ok {
+					return []error{errs.NewValidationError[string](
+						"ImageFile", fmt.Sprintf("Invalid file type: %T", fileFace),
+					)}
+				}
+
+				m["Path"] = file.Path()
+
+				// Base the title on the file name if not set
+				title, ok := m["Title"].(string)
+				if !ok || title == "" {
+					var fName = file.Name()
+					var baseName = filepath.Base(fName)
+					var ext = filepath.Ext(baseName)
+					if ext != "" {
+						baseName = baseName[:len(baseName)-len(ext)]
+					}
+					m["Title"] = baseName
+				}
+
+				return nil
+			})
+		}
+	}
+
+	return admin.ModelOptions{
+		RegisterToAdminMenu: true,
+		Model:               &Image{},
+		Name:                "image",
+		AddView: admin.FormViewOptions{
+			FormInit: initAdminForm(false),
 			Panels: []admin.Panel{
-				admin.FieldPanel("ID"),
 				admin.FieldPanel("Title"),
 				admin.FieldPanel("Path"),
 				admin.FieldPanel("ImageFile"),
 			},
 		},
 		EditView: admin.FormViewOptions{
-			FormInit: func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
-				var fileField = &fields.FileStorageField{
-					BaseField: fields.NewField(
-						fields.Label(trans.S("Image File")),
-						fields.HelpText(trans.S("Upload an image file")),
-						fields.Required(false),
-					),
-					UploadTo: func(fileObject *widgets.FileObject) string {
-						return filepath.Join(app.MediaDir(), fileObject.Name)
-					},
-					StorageBackend: app.MediaBackend(),
-				}
-
-				form.AddField("ImageFile", fileField)
-				form.SetFields("Title", "ImageFile", "Path")
-
-				var pathField, ok = form.Field("Path")
-				if !ok {
-					assert.Fail("Path field not found in form")
-					return
-				}
-
-				var widget = pathField.Widget()
-				widget.Hide(true)
-
-				form.AddWidget("Path", widget)
-
-				form.SetValidators(func(f forms.Form, m map[string]interface{}) []error {
-					var fileFace, ok = m["ImageFile"]
-					if !ok {
-						if fields.IsZero(m["Path"]) {
-							// If the path is empty, we require the file to be uploaded
-							return []error{errs.NewValidationError[string](
-								"ImageFile", "This field is required",
-							)}
-						}
-						return nil
-					}
-
-					fileObj, ok := fileFace.(*widgets.FileObject)
-					if !ok {
-						if fields.IsZero(m["Path"]) {
-							// If the path is empty, we require the file to be uploaded
-							return []error{errs.NewValidationError[string](
-								"ImageFile", "This field is required",
-							)}
-						}
-						return nil
-					}
-
-					var err error
-					fileFace, err = fileField.Save(fileObj)
-					if err != nil {
-						return []error{errs.NewValidationError[string](
-							"ImageFile", fmt.Sprintf("Failed to save file: %v", err),
-						)}
-					}
-
-					file, ok := fileFace.(mediafiles.StoredObject)
-					if !ok {
-						return []error{errs.NewValidationError[string](
-							"ImageFile", fmt.Sprintf("Invalid file type: %T", fileFace),
-						)}
-					}
-
-					m["Path"] = file.Path()
-
-					return nil
-				})
-			},
+			FormInit: initAdminForm(true),
 			Panels: []admin.Panel{
 				admin.FieldPanel("ID"),
 				admin.FieldPanel("Title"),
@@ -191,9 +146,24 @@ func AdminImageModelOptions() admin.ModelOptions {
 				admin.FieldPanel("ImageFile"),
 			},
 		},
+		DeleteView: admin.DeleteViewOptions{
+			GetHandler: func(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, instances []attrs.Definer) views.View {
+				return &admin.AdminDeleteView{
+					BaseView: views.BaseView{
+						BaseTemplateKey: "admin",
+						TemplateName:    "images/images_delete.tmpl",
+						AllowedMethods:  []string{"GET", "POST"},
+					},
+					Permissions: []string{"admin:delete"},
+					AdminSite:   adminSite,
+					App:         app,
+					Model:       model,
+					Instances:   instances,
+				}
+			},
+		},
 		ListView: admin.ListViewOptions{
 			GetHandler: func(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View {
-
 				const (
 					amountParam = "amount"
 					pageParam   = "page"
@@ -202,7 +172,7 @@ func AdminImageModelOptions() admin.ModelOptions {
 
 				return &views.BaseView{
 					BaseTemplateKey: "admin",
-					TemplateName:    "images/image_list.html",
+					TemplateName:    "images/image_list.tmpl",
 					GetContextFn: func(req *http.Request) (ctx.Context, error) {
 						var (
 							context = admin.NewContext(

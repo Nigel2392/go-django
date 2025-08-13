@@ -144,9 +144,9 @@ func (c *ChooserDefinition[T]) setupCreatePage() {
 		len(c.CreatePage.Options.Fields) == 0 &&
 		len(c.CreatePage.Options.Exclude) == 0 &&
 		len(c.CreatePage.Options.Widgets) == 0 &&
-		c.CreatePage.Options.FormInit != nil &&
-		c.CreatePage.Options.GetForm != nil &&
-		c.CreatePage.Options.GetHandler != nil {
+		c.CreatePage.Options.FormInit == nil &&
+		c.CreatePage.Options.GetForm == nil &&
+		c.CreatePage.Options.GetHandler == nil {
 		c.CreatePage.Options = c.AdminModel.AddView
 	}
 
