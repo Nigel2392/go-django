@@ -8,7 +8,7 @@ import (
 
 type ModalContext struct {
 	ctx.ContextWithRequest
-	Definition Chooser
+	Definition chooser
 	Title      any
 	Errors     []error
 	View       views.View

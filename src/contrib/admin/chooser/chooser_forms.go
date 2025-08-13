@@ -12,7 +12,9 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
+	"github.com/Nigel2392/goldcrest"
 
 	_ "unsafe"
 )
@@ -92,6 +94,18 @@ func (v *BoundChooserFormPage[T]) ServeXXX(w http.ResponseWriter, req *http.Requ
 	// Placeholder method, will never get called.
 }
 
+func (v *BoundChooserFormPage[T]) Setup(w http.ResponseWriter, req *http.Request) (http.ResponseWriter, *http.Request) {
+	if !permissions.HasObjectPermission(req, v.Model, "admin:add") {
+		except.Fail(
+			http.StatusForbidden,
+			"User does not have permission to add this object",
+		)
+		return nil, nil
+	}
+
+	return w, req
+}
+
 type fakeWriter struct {
 	bytes.Buffer
 	headers    http.Header
@@ -126,6 +140,10 @@ func (v *BoundChooserFormPage[T]) Render(w http.ResponseWriter, req *http.Reques
 		v.isValid = true
 
 		var instance = form.Instance()
+		for _, hook := range goldcrest.Get[admin.AdminModelHookFunc]("admin:model:add") {
+			hook(req, admin.AdminSite, v.View._Definition.AdminModel, instance)
+		}
+
 		var pk = attrs.PrimaryKey(instance)
 		var err = json.NewEncoder(w).Encode(ChooserResponse{
 			Preview: v.View._Definition.GetPreviewString(

@@ -30,7 +30,7 @@ type ChooserWidget struct {
 	TemplateKey string
 	Templates   []string
 
-	Definition  Chooser
+	Definition  chooser
 	Model       attrs.Definer
 	App         django.AppConfig
 	ContentType *contenttypes.BaseContentType[attrs.Definer]

@@ -22,7 +22,7 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
-type Chooser interface {
+type chooser interface {
 	Setup(chooserKey string) error
 	GetTitle(ctx context.Context) string
 	GetPreviewString(ctx context.Context, instance attrs.Definer) string

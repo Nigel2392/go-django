@@ -16,6 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/pagination"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 )
@@ -328,6 +329,21 @@ type BoundChooserListPage[T attrs.Definer] struct {
 	ResponseWriter http.ResponseWriter
 	Request        *http.Request
 	Model          T
+}
+
+func (v *BoundChooserListPage[T]) Setup(w http.ResponseWriter, req *http.Request) (http.ResponseWriter, *http.Request) {
+	v.ResponseWriter = w
+	v.Request = req
+
+	if !permissions.HasObjectPermission(req, v.Model, "admin:view_list") {
+		except.Fail(
+			http.StatusForbidden,
+			"User does not have permission to view this object",
+		)
+		return nil, nil
+	}
+
+	return w, req
 }
 
 func (v *BoundChooserListPage[T]) ServeXXX(w http.ResponseWriter, req *http.Request) {

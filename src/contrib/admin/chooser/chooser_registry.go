@@ -11,27 +11,27 @@ const (
 	DEFAULT_KEY = "default"
 )
 
-var choosers = orderedmap.NewOrderedMap[reflect.Type, *orderedmap.OrderedMap[string, Chooser]]()
+var choosers = orderedmap.NewOrderedMap[reflect.Type, *orderedmap.OrderedMap[string, chooser]]()
 
-func Register(chooser Chooser, key ...string) {
+func Register(chsr chooser, key ...string) {
 
 	var keyName = DEFAULT_KEY
 	if len(key) > 0 {
 		keyName = key[0]
 	}
 
-	var modelType = reflect.TypeOf(chooser.GetModel())
+	var modelType = reflect.TypeOf(chsr.GetModel())
 	if modelType == nil {
 		panic("Chooser model type cannot be nil")
 	}
 
 	var definitionMap, ok = choosers.Get(modelType)
 	if !ok {
-		definitionMap = orderedmap.NewOrderedMap[string, Chooser]()
+		definitionMap = orderedmap.NewOrderedMap[string, chooser]()
 		choosers.Set(modelType, definitionMap)
 	}
 
-	if !definitionMap.Set(keyName, chooser) {
+	if !definitionMap.Set(keyName, chsr) {
 		// replaced existing chooser for key
 		panic(fmt.Sprintf(
 			"Chooser already registered for model type %s with key %s",
