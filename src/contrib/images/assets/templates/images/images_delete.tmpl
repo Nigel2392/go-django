@@ -37,6 +37,7 @@
                 {{ range $image := .Data.instances }}
                     <div class="image-item">
                         <img alt="{{ $image.Title }}" src="{{ url "images:serve" $image.Path }}" class="image-thumbnail">
+                        <span class="image-title">{{ $image.Title }}</span>
                     </div>
                 {{ end }}
             </div>
