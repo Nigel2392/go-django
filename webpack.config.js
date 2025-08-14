@@ -70,12 +70,26 @@ module.exports = [
         ...baseConfig(),
     },
     {
-        entry: './src/contrib/images/assets/static_src/index.ts',
+        entry: './src/contrib/admin/static_src/index.ts',
         output: {
-            'path': path.resolve(__dirname, 'src/contrib/images/assets/static/images/js/'),
+            'path': path.resolve(__dirname, 'src/contrib/admin/assets/static/admin/js/'),
             'filename': 'index.js'
         },
-        ...baseConfig(),
+        ...baseConfig([
+            {
+                test: /\.css$/i,
+                use: [
+                    'style-loader',
+                    'css-loader',
+                ]
+            },
+            {
+                test: /\.ts$/i,
+                use: [
+                    "ts-loader",
+                ]
+            }
+        ]),
     },
     {
         entry: './src/contrib/pages/assets/static_src/index.ts',

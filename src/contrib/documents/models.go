@@ -1,4 +1,4 @@
-package images
+package documents
 
 import (
 	"context"
@@ -9,6 +9,7 @@ import (
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
@@ -16,18 +17,16 @@ import (
 )
 
 var (
-	_ queries.ActsBeforeCreate = (*Image)(nil)
-	_ queries.ContextValidator = (*Image)(nil)
-
-	ErrEmptyPath = fmt.Errorf("empty path")
+	_ queries.ActsBeforeCreate = (*Document)(nil)
+	_ queries.ContextValidator = (*Document)(nil)
 )
 
-func newImageHasher() hash.Hash {
+func newDocumentHasher() hash.Hash {
 	return sha256.New()
 }
 
 // readonly:id,created_at
-type Image struct {
+type Document struct {
 	models.Model
 	ID        uint32        `json:"id"`
 	Title     string        `json:"title"`
@@ -39,23 +38,25 @@ type Image struct {
 	file mediafiles.StoredObject
 }
 
-func (o *Image) String() string {
+func (o *Document) String() string {
 	return fmt.Sprintf(
-		"<Image %v>",
+		"<Document %v>",
 		o.ID,
 	)
 }
 
-func (o *Image) BeforeCreate(ctx context.Context) error {
+func (o *Document) BeforeCreate(ctx context.Context) error {
 	if o.CreatedAt.IsZero() {
 		o.CreatedAt = time.Now()
 	}
 	return nil
 }
 
-func (o *Image) Validate(ctx context.Context) error {
+func (o *Document) Validate(ctx context.Context) error {
 	if o.Path == "" {
-		return ErrEmptyPath
+		return errors.ValueError.Wrapf(
+			"Document path cannot be empty",
+		)
 	}
 
 	if o.FileSize.Int32 < 0 {
@@ -70,13 +71,15 @@ func (o *Image) Validate(ctx context.Context) error {
 	return nil
 }
 
-func (o *Image) File() (mediafiles.StoredObject, error) {
+func (o *Document) File() (mediafiles.StoredObject, error) {
 	if o.file != nil {
 		return o.file, nil
 	}
 
 	if o.Path == "" {
-		return nil, ErrEmptyPath
+		return nil, errors.ValueError.Wrapf(
+			"Document path cannot be empty",
+		)
 	}
 
 	var backend = app.MediaBackend()
@@ -88,7 +91,7 @@ func (o *Image) File() (mediafiles.StoredObject, error) {
 	return f, nil
 }
 
-func (o *Image) FieldDefs() attrs.Definitions {
+func (o *Document) FieldDefs() attrs.Definitions {
 	var fields = make([]attrs.Field, 6)
 	fields[0] = attrs.NewField(
 		o, "ID", &attrs.FieldConfig{
@@ -122,8 +125,8 @@ func (o *Image) FieldDefs() attrs.Definitions {
 	)
 	fields[4] = attrs.NewField(
 		o, "FileSize", &attrs.FieldConfig{
-			Blank: true,
-			Label: trans.S("File Size"),
+			Label:    trans.S("File Size"),
+			ReadOnly: true,
 		},
 	)
 	fields[5] = attrs.NewField(

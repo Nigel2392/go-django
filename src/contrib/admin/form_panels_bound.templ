@@ -35,12 +35,21 @@ templ (p *BoundFormPanel[T, P]) Component() {
     {{ var helpText = p.HelpText() }}
     {{ var field = p.Field() }}
     
-    <div class="panel panel-default">
+    <div class={ "panel", "panel-default", p.Panel.ClassName() } data-controller="panel">
         if !p.Hidden() {
-            <div class="panel__heading">
-                <div class="panel__title">
+            <div class="panel__heading" data-panel-target="heading">
+
+                <div class="panel__icon" data-panel-target="icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
+                      <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
+                      <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
+                    </svg>
+                </div>
+
+                <div class="panel__title" data-action="click->panel#toggle">
                     @templ.Raw(string(label))
                 </div>
+
             </div>
         }
         if len(errors) > 0 {
@@ -57,7 +66,7 @@ templ (p *BoundFormPanel[T, P]) Component() {
                 @templ.Raw(string(helpText))
             </div>
         }
-        <div class="panel__body">
+        <div class="panel__body" data-panel-target="content">
             <div class="form-field-wrapper">
                 <div class="form-field">
                     @templ.Raw(string(field))
@@ -69,6 +78,7 @@ templ (p *BoundFormPanel[T, P]) Component() {
 
 type BoundTitlePanel[T forms.Form, P Panel] struct {
 	BoundPanel
+	Panel   P
     Context context.Context
     Request *http.Request
 }
@@ -85,7 +95,7 @@ templ (p *BoundTitlePanel[T, P]) Component() {
         {{ return nil }}
     }
 
-    <div class="panel panel-title">
+    <div class={ "panel", "panel-title", p.Panel.ClassName() }>
         <div class="panel__body">
             @p.BoundPanel.Component()
         </div>
@@ -94,10 +104,11 @@ templ (p *BoundTitlePanel[T, P]) Component() {
 
 type BoundRowPanel[T forms.Form] struct {
     LabelFn func() string
+    Panel   *rowPanel
     Context context.Context
     Request *http.Request
-    Panels []BoundPanel
-    Form T
+    Panels  []BoundPanel
+    Form    T
 }
 
 func (p *BoundRowPanel[T]) Hidden() bool {
@@ -111,15 +122,24 @@ func (p *BoundRowPanel[T]) Render() template.HTML {
 }
 
 templ (p *BoundRowPanel[T]) Component() {
-    <div class="panel panel-row">
+    <div class={ "panel", "panel-row", p.Panel.ClassName() } data-controller="panel">
         if p.LabelFn != nil {
-            <div class="panel__heading">
-                <div class="panel__title">
+            <div class="panel__heading" data-panel-target="heading">
+
+                <div class="panel__icon" data-panel-target="icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
+                      <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
+                      <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
+                    </svg>
+                </div>
+
+                <div class="panel__title" data-action="click->panel#toggle">
                     @templ.Raw(p.LabelFn())
                 </div>
+
             </div>
         }
-        <div class="panel__body">
+        <div class="panel__body" data-panel-target="content">
             for _, panel := range p.Panels {
                 @panel.Component()
             }
@@ -129,6 +149,7 @@ templ (p *BoundRowPanel[T]) Component() {
 
 type BoundPanelGroup[T forms.Form] struct {
     BoundPanel
+    Panel   *panelGroup
     Context context.Context
     Request *http.Request
     Panels  []BoundPanel
@@ -142,7 +163,7 @@ func (p *BoundPanelGroup[T]) Render() template.HTML {
 }
 
 templ (p *BoundPanelGroup[T]) Component() {
-    <div class="panel panel-group">
+    <div class={ "panel", "panel-group", p.Panel.ClassName() }>
         <div class="panel__body">
             for _, panel := range p.Panels {
                 @panel.Component()
@@ -173,7 +194,7 @@ templ (p *BoundAlertPanel[T]) Component() {
         {{ return nil }} // No panel to render
     }
     
-    <div class="panel panel-alert">
+    <div class={ "panel", "panel-alert", p.Panel.ClassName() }>
         <div class={ "alert", string(p.Panel.GetType())  }>
             if p.Panel.hasLabel() {
                 <div class="alert-title">

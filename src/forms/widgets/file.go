@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"mime"
 	"net/url"
 	"path/filepath"
+	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -51,6 +53,7 @@ import (
 
 type FileWidget struct {
 	*BaseWidget
+	Extensions []string
 	Validators []func(filename string, file io.Reader) error
 }
 
@@ -59,10 +62,13 @@ type FileObject struct {
 	File *bytes.Buffer
 }
 
-func NewFileInput(attrs map[string]string, validators ...func(filename string, file io.Reader) error) Widget {
+func NewFileInput(attrs map[string]string, allowedMimeTypes []string, validators ...func(filename string, file io.Reader) error) Widget {
 	var base = NewBaseWidget("file", "forms/widgets/file.html", attrs)
-	var widget = &FileWidget{base, validators}
-	return widget
+	return &FileWidget{
+		BaseWidget: base,
+		Validators: validators,
+		Extensions: allowedMimeTypes,
+	}
 }
 
 func (f *FileWidget) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
@@ -137,6 +143,58 @@ func (f *FileWidget) ValueToForm(value interface{}) interface{} {
 	}
 }
 
+func (f *FileWidget) Validate(ctx context.Context, value interface{}) []error {
+	var errs = f.BaseWidget.Validate(ctx, value)
+	if len(errs) > 0 {
+		return errs
+	}
+
+	if value == nil {
+		return nil
+	}
+
+	var fileObj, ok = value.(*FileObject)
+	if !ok {
+		return append(errs, fmt.Errorf("expected *FileObject, got %T", value))
+	}
+
+	if fileObj.File == nil && fileObj.Name == "" {
+		return append(errs, fmt.Errorf("file is required"))
+	}
+
+	if len(f.Extensions) > 0 && fileObj.Name != "" {
+		var ext = filepath.Ext(fileObj.Name)
+		if ext == "" {
+			return append(errs, fmt.Errorf("file has no extension"))
+		}
+
+		var allowed = false
+		for _, allowedExt := range f.Extensions {
+
+			if !strings.HasPrefix(allowedExt, ".") {
+				allowedExt = "." + allowedExt
+			}
+
+			if strings.EqualFold(ext, allowedExt) {
+				allowed = true
+				break
+			}
+		}
+
+		if !allowed {
+			return append(errs, fmt.Errorf("file extension %s is not allowed", ext))
+		}
+	}
+
+	for _, validator := range f.Validators {
+		if err := validator(fileObj.Name, fileObj.File); err != nil {
+			errs = append(errs, err)
+		}
+	}
+
+	return errs
+}
+
 func (f *FileWidget) GetContextData(c context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context {
 	var widgetCtx = f.BaseWidget.GetContextData(c, id, name, value, attrs)
 	var data = widgetCtx.Data()
@@ -145,6 +203,26 @@ func (f *FileWidget) GetContextData(c context.Context, id, name string, value in
 	if required {
 		data["required"] = true
 	}
+
+	var extAttr = new(strings.Builder)
+	for i, ext := range f.Extensions {
+		if i > 0 {
+			extAttr.WriteString(",")
+		}
+
+		if !strings.HasPrefix(ext, ".") {
+			ext = "." + ext
+		}
+
+		var mimeType = mime.TypeByExtension(ext)
+		if mimeType == "" {
+			extAttr.WriteString(ext)
+		} else {
+			extAttr.WriteString(mimeType)
+		}
+	}
+
+	data["extensionsAttr"] = extAttr.String()
 	data["file_value"] = data["value"]
 	data["context"] = c
 	delete(data, "value")

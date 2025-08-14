@@ -241,8 +241,23 @@ type FileStorageField struct {
 	*BaseField
 	StorageBackend mediafiles.Backend
 	StorageEngine  string
+	Extensions     []string // Allowed file extensions
 	UploadTo       func(fileObject *widgets.FileObject) string
 	Validators     []func(filename string, file io.Reader) error
+}
+
+func FileFieldWithExtensions(allowedExtensions []string) func(Field) {
+	return func(f Field) {
+		var fld, ok = f.(*FileStorageField)
+		if !ok {
+			panic(fmt.Sprintf(
+				"FileFieldWithExtensions requires a FileStorageField, got %T",
+				f,
+			))
+		}
+
+		fld.Extensions = allowedExtensions
+	}
 }
 
 func FileField(engine string, opts ...func(Field)) *FileStorageField {
@@ -302,7 +317,7 @@ func (f *FileStorageField) Widget() widgets.Widget {
 	if f.FormWidget != nil {
 		return f.FormWidget
 	}
-	return widgets.NewFileInput(f.Attributes, f.Validators...)
+	return widgets.NewFileInput(f.Attributes, f.Extensions, f.Validators...)
 }
 
 type Encoder interface {

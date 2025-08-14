@@ -1,51 +1,48 @@
-package images
+package documents
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 	"path/filepath"
-	"strconv"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
-	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
-	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
-	"github.com/Nigel2392/go-django/src/core/pagination"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/views"
+	"github.com/Nigel2392/go-django/src/views/list"
 )
 
 var _ = contenttypes.Register(&contenttypes.ContentTypeDefinition{
-	GetLabel:       trans.S("Image"),
-	GetPluralLabel: trans.S("Images"),
-	GetDescription: trans.S("An image file"),
+	GetLabel:       trans.S("Document"),
+	GetPluralLabel: trans.S("Documents"),
+	GetDescription: trans.S("A document file"),
 	GetInstanceLabel: func(a any) string {
-		var image = a.(*Image)
-		if image.Title != "" {
-			return image.Title
+		var document = a.(*Document)
+		if document.Title != "" {
+			return document.Title
 		}
 		return ""
 	},
-	ContentObject: &Image{},
+	ContentObject: &Document{},
 })
 
-func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
+func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 	var initAdminForm = func(updating bool) func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
 		return func(instance attrs.Definer, form modelforms.ModelForm[attrs.Definer]) {
 			var fileField = &fields.FileStorageField{
 				BaseField: fields.NewField(
-					fields.Label(trans.S("Image File")),
-					fields.HelpText(trans.S("Upload an image file")),
+					fields.Label(trans.S("Document File")),
+					fields.HelpText(trans.S("Upload an document file")),
 					fields.Required(false),
 				),
 				Extensions: app.Options.AllowedFileExts,
@@ -55,7 +52,7 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 				StorageBackend: app.MediaBackend(),
 			}
 
-			form.AddField("ImageFile", fileField)
+			form.AddField("DocumentFile", fileField)
 
 			var pathWidget, ok = form.Widget("Path")
 			if !ok {
@@ -78,33 +75,17 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 					"readonly": "readonly",
 				})
 			}
-
-			//	hashWidget, ok := form.Widget("FileHash")
-			//	if !ok {
-			//		assert.Fail("FileHash field not found in form")
-			//		return
-			//	}
-			//	if !updating {
-			//		hashWidget.Hide(true)
-			//	} else {
-			//		hashWidget.SetAttrs(map[string]string{
-			//			"readonly": "readonly",
-			//			"disabled": "disabled",
-			//		})
-			//	}
-
 			form.AddWidget("Path", pathWidget)
 			form.AddWidget("FileSize", sizeWidget)
-			// form.AddWidget("FileHash", hashWidget)
 
-			// Validator for the ImageFile field
+			// Validator for the DocumentFile field
 			form.SetValidators(func(f forms.Form, m map[string]interface{}) []error {
-				var fileFace, ok = m["ImageFile"]
+				var fileFace, ok = m["DocumentFile"]
 				if !ok {
 					if !updating && fields.IsZero(m["Path"]) {
 						// If the path is empty, we require the file to be uploaded
 						return []error{errs.NewValidationError[string](
-							"ImageFile", trans.T(form.Context(), "This field is required"),
+							"DocumentFile", "This field is required",
 						)}
 					}
 					return nil
@@ -115,7 +96,7 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 					if !updating && fields.IsZero(m["Path"]) {
 						// If the path is empty, we require the file to be uploaded
 						return []error{errs.NewValidationError[string](
-							"ImageFile", trans.T(form.Context(), "This field is required"),
+							"DocumentFile", "This field is required",
 						)}
 					}
 					return nil
@@ -132,14 +113,14 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 				fileFace, err = fileField.Save(fileObj)
 				if err != nil {
 					return []error{errs.NewValidationError[string](
-						"ImageFile", fmt.Sprintf("Failed to save file: %v", err),
+						"DocumentFile", fmt.Sprintf("Failed to save file: %v", err),
 					)}
 				}
 
 				file, ok := fileFace.(mediafiles.StoredObject)
 				if !ok {
 					return []error{errs.NewValidationError[string](
-						"ImageFile", fmt.Sprintf("Invalid file type: %T", fileFace),
+						"DocumentFile", fmt.Sprintf("Invalid file type: %T", fileFace),
 					)}
 				}
 
@@ -157,9 +138,9 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 					m["Title"] = baseName
 				}
 
-				// Delete the ImageFile field from the model's cleaned data
+				// Delete the DocumentFile field from the model's cleaned data
 				// This is to prevent the file from being saved again
-				delete(m, "ImageFile")
+				delete(m, "DocumentFile")
 
 				return nil
 			})
@@ -168,12 +149,11 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 
 	return admin.ModelOptions{
 		RegisterToAdminMenu: true,
-		Model:               &Image{},
-		Name:                "image",
+		Model:               &Document{},
+		Name:                "document",
 		MenuIcon: func(ctx context.Context) string {
-			return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
- 	<path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
- 	<path d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1z"/>
+			return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-folder2-open" viewBox="0 0 16 16">
+  <path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h2.764c.958 0 1.76.56 2.311 1.184C7.985 3.648 8.48 4 9 4h4.5A1.5 1.5 0 0 1 15 5.5v.64c.57.265.94.876.856 1.546l-.64 5.124A2.5 2.5 0 0 1 12.733 15H3.266a2.5 2.5 0 0 1-2.481-2.19l-.64-5.124A1.5 1.5 0 0 1 1 6.14zM2 6h12v-.5a.5.5 0 0 0-.5-.5H9c-.964 0-1.71-.629-2.174-1.154C6.374 3.334 5.82 3 5.264 3H2.5a.5.5 0 0 0-.5.5zm-.367 1a.5.5 0 0 0-.496.562l.64 5.124A1.5 1.5 0 0 0 3.266 14h9.468a1.5 1.5 0 0 0 1.489-1.314l.64-5.124A.5.5 0 0 0 14.367 7z"/>
 </svg>`
 		},
 		AddView: admin.FormViewOptions{
@@ -181,9 +161,8 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 			Panels: []admin.Panel{
 				admin.FieldPanel("Title"),
 				admin.FieldPanel("Path"),
-				admin.FieldPanel("ImageFile"),
 				admin.FieldPanel("FileSize"),
-				// admin.FieldPanel("FileHash"),
+				admin.FieldPanel("DocumentFile"),
 			},
 		},
 		EditView: admin.FormViewOptions{
@@ -192,7 +171,7 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 				admin.FieldPanel("ID"),
 				admin.FieldPanel("Title"),
 				admin.FieldPanel("Path"),
-				admin.FieldPanel("ImageFile"),
+				admin.FieldPanel("DocumentFile"),
 				admin.FieldPanel("CreatedAt"),
 				admin.FieldPanel("FileSize"),
 				admin.FieldPanel("FileHash"),
@@ -203,7 +182,7 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 				return &admin.AdminDeleteView{
 					BaseView: views.BaseView{
 						BaseTemplateKey: "admin",
-						TemplateName:    "images/images_delete.tmpl",
+						TemplateName:    "documents/documents_delete.tmpl",
 						AllowedMethods:  []string{"GET", "POST"},
 					},
 					Permissions: []string{"admin:delete"},
@@ -215,84 +194,42 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 			},
 		},
 		ListView: admin.ListViewOptions{
-			GetHandler: func(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View {
-				const (
-					amountParam = "amount"
-					pageParam   = "page"
-					maxAmount   = 25
-				)
-
-				return &views.BaseView{
-					BaseTemplateKey: "admin",
-					TemplateName:    "images/image_list.tmpl",
-					GetContextFn: func(req *http.Request) (ctx.Context, error) {
-						var (
-							context = admin.NewContext(
-								req,
-								adminSite,
-								ctx.RequestContext(req),
-							)
-
-							amountValue = req.URL.Query().Get(amountParam)
-							pageValue   = req.URL.Query().Get(pageParam)
-							amount      uint64
-							page        uint64
-							err         error
-						)
-
-						if amountValue == "" {
-							amount = maxAmount
-						} else {
-							amount, err = strconv.ParseUint(amountValue, 10, 64)
-						}
-						if err != nil {
-							return context, err
-						}
-
-						if pageValue == "" {
-							page = 1
-						} else {
-							page, err = strconv.ParseUint(pageValue, 10, 64)
-						}
-						if err != nil {
-							return context, err
-						}
-
-						if amount > maxAmount {
-							amount = maxAmount
-						}
-
-						var paginator = &pagination.QueryPaginator[*Image]{
-							Context: req.Context(),
-							Amount:  int(amount),
-							BaseQuerySet: func() *queries.QuerySet[*Image] {
-								return queries.GetQuerySetWithContext(req.Context(), &Image{}).
-									OrderBy("-CreatedAt")
-							},
-						}
-
-						pageObject, err := paginator.Page(int(page))
-						if err != nil && !errors.Is(err, errors.NoRows) {
-							return context, err
-						}
-
-						context.Set("view_list", pageObject.Results())
-						context.Set("view_amount", amount)
-						context.Set("view_page", page)
-						context.Set("view_paginator", paginator)
-						context.Set("view_paginator_object", pageObject)
-
-						// set the constants
-						context.Set("view_max_amount", maxAmount)
-						context.Set("view_amount_param", amountParam)
-						context.Set("view_page_param", pageParam)
-
-						// set model information
-						context.Set("app", app)
-						context.Set("model", model)
-						return context, nil
+			PerPage: 25,
+			ViewOptions: admin.ViewOptions{
+				Fields: []string{
+					"Title", "FileName", "CreatedAt", "Size", "FileHash",
+				},
+			},
+			GetQuerySet: func(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) *queries.QuerySet[attrs.Definer] {
+				return queries.GetQuerySet[attrs.Definer](&Document{}).OrderBy("-CreatedAt")
+			},
+			Columns: map[string]list.ListColumn[attrs.Definer]{
+				"FileName": list.FuncColumn(
+					trans.S("File Name"),
+					func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {
+						var doc = row.(*Document)
+						return filepath.Base(doc.Path)
 					},
-				}
+				),
+				"Size": list.FuncColumn(
+					trans.S("Size"),
+					func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {
+						var doc = row.(*Document)
+						var size = doc.FileSize
+						switch {
+						case size.Int32 == 0:
+							return trans.T(r.Context(), "Unknown")
+						case size.Int32 < 1024:
+							return trans.T(r.Context(), "%dB", size.Int32)
+						case size.Int32 < 1024*1024:
+							return trans.T(r.Context(), "%dKB", size.Int32/1024)
+						case size.Int32 < 1024*1024*1024:
+							return trans.T(r.Context(), "%dMB", size.Int32/1024/1024)
+						default:
+							return trans.T(r.Context(), "%dGB", size.Int32/1024/1024/1024)
+						}
+					},
+				),
 			},
 		},
 	}

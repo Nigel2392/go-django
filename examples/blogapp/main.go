@@ -15,6 +15,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
+	"github.com/Nigel2392/go-django/src/contrib/documents"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features"
 	"github.com/Nigel2392/go-django/src/contrib/editor/features/images"
@@ -96,6 +97,10 @@ func main() {
 			images_app.NewAppConfig(&images_app.Options{
 				MediaBackend: mediaBackend,
 				MediaDir:     "images/blogpages",
+			}),
+			documents.NewAppConfig(&documents.Options{
+				MediaBackend: mediaBackend,
+				MediaDir:     "documents/blogpages",
 			}),
 			migrator.NewAppConfig,
 			translations.NewAppConfig,

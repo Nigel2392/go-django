@@ -35,15 +35,31 @@ func NewPanelContext(r *http.Request, panel Panel, boundPanel BoundPanel) *Panel
 
 type Panel interface {
 	Fields() []string
+	ClassName() string
+	Class(classes string) Panel
 	Bind(r *http.Request, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel
+}
+
+func PanelClass(className string, panel Panel) Panel {
+	return panel.Class(className)
 }
 
 type fieldPanel struct {
 	fieldname string
+	classname string
 }
 
 func (f *fieldPanel) Fields() []string {
 	return []string{f.fieldname}
+}
+
+func (f *fieldPanel) ClassName() string {
+	return f.classname
+}
+
+func (f *fieldPanel) Class(classname string) Panel {
+	f.classname = classname
+	return f
 }
 
 func (f *fieldPanel) Bind(r *http.Request, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
@@ -61,14 +77,29 @@ func (f *fieldPanel) Bind(r *http.Request, form forms.Form, ctx context.Context,
 	}
 }
 
-func FieldPanel(fieldname string) Panel {
+func FieldPanel(fieldname string, className ...string) Panel {
+	var c string
+	if len(className) > 0 {
+		c = className[0]
+	}
 	return &fieldPanel{
 		fieldname: fieldname,
+		classname: c,
 	}
 }
 
 type titlePanel struct {
 	Panel
+	classname string
+}
+
+func (t *titlePanel) Class(classname string) Panel {
+	t.classname = classname
+	return t
+}
+
+func (t *titlePanel) ClassName() string {
+	return t.classname
 }
 
 func (t *titlePanel) Fields() []string {
@@ -77,21 +108,37 @@ func (t *titlePanel) Fields() []string {
 
 func (t *titlePanel) Bind(r *http.Request, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	return &BoundTitlePanel[forms.Form, *titlePanel]{
+		Panel:      t,
 		BoundPanel: t.Panel.Bind(r, form, ctx, boundFields),
 		Context:    ctx,
 		Request:    r,
 	}
 }
 
-func TitlePanel(panel Panel) Panel {
+func TitlePanel(panel Panel, classname ...string) Panel {
+	var c string
+	if len(classname) > 0 {
+		c = classname[0]
+	}
 	return &titlePanel{
-		Panel: panel,
+		Panel:     panel,
+		classname: c,
 	}
 }
 
 type rowPanel struct {
-	panels []Panel
-	Label  func() string
+	panels    []Panel
+	Label     func() string
+	classname string
+}
+
+func (m *rowPanel) Class(classname string) Panel {
+	m.classname = classname
+	return m
+}
+
+func (m *rowPanel) ClassName() string {
+	return m.classname
 }
 
 func (m *rowPanel) Fields() []string {
@@ -109,6 +156,7 @@ func (m *rowPanel) Bind(r *http.Request, form forms.Form, ctx context.Context, b
 	}
 	return &BoundRowPanel[forms.Form]{
 		LabelFn: m.Label,
+		Panel:   m,
 		Panels:  panels,
 		Context: ctx,
 		Request: r,
@@ -123,7 +171,8 @@ func RowPanel(panels ...Panel) Panel {
 }
 
 type panelGroup struct {
-	panels []Panel
+	panels    []Panel
+	classname string
 }
 
 func (g *panelGroup) Fields() []string {
@@ -134,12 +183,22 @@ func (g *panelGroup) Fields() []string {
 	return fields
 }
 
+func (g *panelGroup) ClassName() string {
+	return g.classname
+}
+
+func (g *panelGroup) Class(classname string) Panel {
+	g.classname = classname
+	return g
+}
+
 func (g *panelGroup) Bind(r *http.Request, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	var panels = make([]BoundPanel, 0, len(g.panels))
 	for _, panel := range g.panels {
 		panels = append(panels, panel.Bind(r, form, ctx, boundFields))
 	}
 	return &BoundPanelGroup[forms.Form]{
+		Panel:   g,
 		Panels:  panels,
 		Context: ctx,
 		Request: r,
@@ -167,10 +226,20 @@ type AlertPanel struct {
 	Label        any
 	HTML         any
 	TemplateFile string
+	Classnames   string
 }
 
 func (a *AlertPanel) Fields() []string {
 	return []string{}
+}
+
+func (a *AlertPanel) ClassName() string {
+	return a.Classnames
+}
+
+func (a *AlertPanel) Class(classes string) Panel {
+	a.Classnames = classes
+	return a
 }
 
 func (a *AlertPanel) Bind(r *http.Request, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {

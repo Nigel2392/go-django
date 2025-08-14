@@ -1,4 +1,4 @@
-package images
+package documents
 
 import (
 	"context"
@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
@@ -46,8 +47,8 @@ var (
 	app *AppConfig
 )
 
-type imageResult struct {
-	*Image
+type documentResult struct {
+	*Document
 	PreviewHTML string
 }
 
@@ -55,7 +56,7 @@ func NewAppConfig(opts *Options) *AppConfig {
 	if app == nil {
 		app = &AppConfig{
 			DBRequiredAppConfig: apps.NewDBAppConfig(
-				"images",
+				"documents",
 			),
 		}
 	}
@@ -63,12 +64,12 @@ func NewAppConfig(opts *Options) *AppConfig {
 	if opts == nil {
 		opts = &Options{
 			MediaBackend: mediafiles.GetDefault(),
-			MediaDir:     "images",
+			MediaDir:     "documents",
 		}
 	}
 
 	if opts.MediaDir == "" {
-		opts.MediaDir = "images"
+		opts.MediaDir = "documents"
 	}
 
 	if opts.MaxByteSize == 0 {
@@ -76,11 +77,20 @@ func NewAppConfig(opts *Options) *AppConfig {
 	}
 
 	if opts.AllowedFileExts == nil {
-		opts.AllowedFileExts = []string{".jpg", ".jpeg", ".png", ".gif"}
+		opts.AllowedFileExts = []string{
+			".pdf", ".docx", ".doc", ".odt",
+			".xlsx", ".xls",
+			".pptx", ".ppt",
+			".txt", ".rtf",
+			".csv", ".tsv",
+			".zip", ".rar", ".7z",
+			".tar", ".gz", ".bz2",
+			".md", ".markdown",
+		}
 	}
 
 	app.ModelObjects = []attrs.Definer{
-		&Image{},
+		&Document{},
 	}
 
 	app.Options = opts
@@ -88,50 +98,40 @@ func NewAppConfig(opts *Options) *AppConfig {
 		tpl.Add(*tpl.MergeConfig(
 			&tpl.Config{
 				FS:      filesystem.Sub(assetsFS, "assets/templates"),
-				Matches: filesystem.MatchPrefix("images/"),
+				Matches: filesystem.MatchPrefix("documents/"),
 			},
 			admin.AdminSite.TemplateConfig,
 		))
 		staticfiles.AddFS(filesystem.Sub(assetsFS, "assets/static"), nil)
 
 		admin.RegisterApp(
-			"images",
+			"documents",
 			admin.AppOptions{
 				RegisterToAdminMenu: true,
-				AppLabel:            trans.S("Images"),
-				MenuLabel:           trans.S("Images"),
+				AppLabel:            trans.S("Documents"),
+				MenuLabel:           trans.S("Documents"),
 			},
-			AdminImageModelOptions(app),
+			AdminDocumentModelOptions(app),
 		)
 
-		chooser.Register(&chooser.ChooserDefinition[*Image]{
-			Model: &Image{},
-			Title: trans.S("Image Chooser"),
-			PreviewString: func(ctx context.Context, instance *Image) string {
-				return fmt.Sprintf(`<img src="%s" alt="%s">`,
-					django.Reverse("images:serve", instance.Path), instance.Title,
+		chooser.Register(&chooser.ChooserDefinition[*Document]{
+			Model: &Document{},
+			Title: trans.S("Document Chooser"),
+			PreviewString: func(ctx context.Context, instance *Document) string {
+				return fmt.Sprintf(`<a href="%s" target="_blank">%s</a>`,
+					django.Reverse("documents:serve", instance.Path), instance.Title,
 				)
 			},
-			ListPage: &chooser.ChooserListPage[*Image]{
-				Template: "images/images_chooser_list.tmpl",
-				SearchFields: []chooser.SearchField[*Image]{
+			ListPage: &chooser.ChooserListPage[*Document]{
+				QuerySet: func(r *http.Request, model *Document) *queries.QuerySet[*Document] {
+					return queries.GetQuerySet(model).OrderBy("-CreatedAt")
+				},
+				SearchFields: []chooser.SearchField[*Document]{
 					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
 					{Name: "Path", Lookup: expr.LOOKUP_ICONTANS},
 				},
-				NewList: func(req *http.Request, results []*Image) any {
-					var resultList = make([]imageResult, len(results))
-					for i, img := range results {
-						resultList[i] = imageResult{
-							Image: img,
-							PreviewHTML: fmt.Sprintf(`<img src="%s" alt="%s">`,
-								django.Reverse("images:serve", img.Path), img.Title,
-							),
-						}
-					}
-					return resultList
-				},
 			},
-			CreatePage: &chooser.ChooserFormPage[*Image]{},
+			CreatePage: &chooser.ChooserFormPage[*Document]{},
 		})
 
 		if !django.AppInstalled("migrator") {
@@ -140,9 +140,9 @@ func NewAppConfig(opts *Options) *AppConfig {
 				return fmt.Errorf("failed to get schema editor: %w", err)
 			}
 
-			var table = migrator.NewModelTable(&Image{})
+			var table = migrator.NewModelTable(&Document{})
 			if err := schemaEditor.CreateTable(context.Background(), table, true); err != nil {
-				return fmt.Errorf("failed to create images table: %w", err)
+				return fmt.Errorf("failed to create documents table: %w", err)
 			}
 
 			for _, index := range table.Indexes() {
@@ -154,16 +154,17 @@ func NewAppConfig(opts *Options) *AppConfig {
 
 		return nil
 	}
+
 	app.Routing = func(m mux.Multiplexer) {
-		var g = m.Any("/images", nil, "images")
+		var g = m.Any("/documents", nil, "documents")
 		g.Get(
 			"/<<id>>",
-			mux.NewHandler(app.serveImageByIDView),
+			mux.NewHandler(app.serveDocumentByIDView),
 			"serve_id",
 		)
 		g.Get(
 			"/serve/*",
-			mux.NewHandler(app.serveImageByPathView),
+			mux.NewHandler(app.serveDocumentByPathView),
 			"serve",
 		)
 	}

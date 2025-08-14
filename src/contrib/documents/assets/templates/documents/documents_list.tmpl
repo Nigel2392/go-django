@@ -1,0 +1,91 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ T "Image List" }}{{ end }}
+
+{{ define "extra_css" }}
+    <link rel="stylesheet" href="{{ static "documents/css/admin.css" }}">
+{{ end }}
+
+{{ define "extra_js" }}
+    <script type="text/javascript">
+        document.addEventListener("DOMContentLoaded", function() {
+            // Add event listener to delete links
+            let allImages = document.querySelectorAll('.document-item input[type="checkbox"]');
+            for (let checkbox of allImages) {
+                checkbox.addEventListener('change', function() {
+                    let deleteButton = document.querySelector('.delete-link');
+                    if (deleteButton) {
+                        deleteButton.disabled = !Array.from(allImages).some(input => input.checked);
+                    }
+                });
+            }
+        });
+    </script>
+{{ end }}
+
+
+{{ define "content_root" }}
+    {{ $app := (.Get "app") }}
+    {{ $model := (.Get "model") }}
+
+    <form method="get" class="godjango-search-form" action="{{ url "admin:apps:model:bulk_delete" $app.Name $model.GetName }}">
+        <div class="view-header">
+                {{/* 
+                    This section is for the buttons that appear at the top of the document list.
+                    It includes:
+                    - A button to add a new document if the model allows creation.
+                    - A button to delete selected documents if the model allows deletion.    
+                */}}
+                {{ $allowsCreate := (and (not $model.DisallowCreate) (has_object_perm $model.NewInstance "admin:add")) }}
+                {{ $allowsEdit := (and (not $model.DisallowEdit) (has_object_perm $model.NewInstance "admin:edit")) }}
+                {{ $allowsDelete := (and (not $model.DisallowDelete) (has_object_perm $model.NewInstance "admin:delete")) }}
+                {{ if (and $allowsCreate $allowsDelete) }}
+                    <div class="buttons">
+                        {{ if $allowsCreate }}
+                            <a href="{{ url "admin:apps:model:add" $app.Name $model.GetName }}" class="button primary">{{ T "Add" }}</a>
+                        {{ end }}
+                        {{ if $allowsDelete }}
+                            <button type="submit" disabled class="button danger hollow delete-link">{{ T "Delete" }}</button>
+                        {{ end }}
+                    </div>
+                {{ end }}
+            <div class="title-text">
+                <h1>{{ T "%s List" $model.Label }} ({{if .Data.view_paginator_object}}{{ (.Data.view_paginator_object).Count }}{{else}}0{{end}})</h1>
+            </div>
+        </div>
+        
+        <input type="hidden" name="next" value="{{ .Request.URL.Path }}">
+
+        <div class="documents-list list-wrapper">
+            {{ $app := (.Get "app") }}
+            {{ $model := (.Get "model") }}
+            {{ $request := .Request }}
+            
+            {{ range $document := .Data.view_list }}
+                <div class="document-item">
+                    <label for="document-{{ $document.ID }}">
+                        <img alt="{{ $document.Title }}" src="{{ url "documents:serve" $document.Path }}" class="document-thumbnail">
+                    </label>
+
+                    <div class="document-checkbox">
+                        <input type="checkbox" class="form-input" name="pk_list" value="{{ $document.ID }}" id="document-{{ $document.ID }}" />
+                        {{ if $allowsEdit }}
+                            <a href="{{ url "admin:apps:model:edit" $app.Name $model.GetName $document.ID }}?next={{ urlquery $request.URL.Path }}" class="link">
+                                {{ T "Edit" }}
+                            </a>
+                        {{ end }}
+                        {{ if $allowsDelete }}
+                            <a href="{{ url "admin:apps:model:delete" $app.Name $model.GetName $document.ID }}?next={{ urlquery $request.URL.Path }}" class="link danger">
+                                {{ T "Delete" }}
+                            </a>
+                        {{ end }}
+                    </div>
+                </div>
+            {{ end }}
+        </div>
+    </form>
+
+    <div class="documents-list-paginator list-paginator">
+        {{ (.Data.view_paginator_object).HTML "page" 5 .Request.URL.Query }}
+    </div>
+{{ end }}

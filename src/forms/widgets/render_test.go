@@ -360,7 +360,7 @@ func TestNewFileInput(t *testing.T) {
 	}
 
 	// Create the file input widget with the mock validator
-	fileInput := widgets.NewFileInput(nil, mockValidator)
+	fileInput := widgets.NewFileInput(nil, []string{}, mockValidator)
 
 	// Check widget type
 	if fileInput.FormType() != "file" {

@@ -1,4 +1,4 @@
-package images
+package documents
 
 import (
 	"bytes"
@@ -22,7 +22,7 @@ import (
 
 var _ widgets.BaseWidget
 
-func (a *AppConfig) serveImageFnView(fn func(*AppConfig, http.ResponseWriter, *http.Request) (*Image, error)) func(w http.ResponseWriter, r *http.Request) {
+func (a *AppConfig) serveDocumentFnView(fn func(*AppConfig, http.ResponseWriter, *http.Request) (*Document, error)) func(w http.ResponseWriter, r *http.Request) {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Deny any non-GET requests
 		if r.Method != http.MethodGet {
@@ -30,22 +30,22 @@ func (a *AppConfig) serveImageFnView(fn func(*AppConfig, http.ResponseWriter, *h
 			return
 		}
 
-		if a.Options.CheckServePermissions && !permissions.HasPermission(r, "images.model:serve") {
+		if a.Options.CheckServePermissions && !permissions.HasPermission(r, "documents.model:serve") {
 			autherrors.Fail(
-				403, "You do not have permission to view images",
+				403, "You do not have permission to view documents",
 			)
 			return
 		}
 
-		var image, err = fn(a, w, r)
+		var document, err = fn(a, w, r)
 		if err != nil {
-			logger.Error("Error retrieving image: %s", err)
-			http.Error(w, "Error retrieving image", http.StatusInternalServerError)
+			logger.Error("Error retrieving document: %s", err)
+			http.Error(w, "Error retrieving document", http.StatusInternalServerError)
 			return
 		}
 
 		var backend = a.MediaBackend()
-		fileObj, err := backend.Open(image.Path)
+		fileObj, err := backend.Open(document.Path)
 		if err != nil {
 			logger.Error("Error opening file object: %s", err)
 			http.Error(w, "Error opening file object", http.StatusInternalServerError)
@@ -82,35 +82,40 @@ func (a *AppConfig) serveImageFnView(fn func(*AppConfig, http.ResponseWriter, *h
 			return
 		}
 
+		w.Header().Set(
+			"Content-Disposition",
+			fmt.Sprintf("attachment; filename=%q", filepath.Base(document.Path)),
+		)
+
 		http.ServeContent(
-			w, r, image.Title, modTime, bytes.NewReader(buf),
+			w, r, filepath.Base(document.Path), modTime, bytes.NewReader(buf),
 		)
 	}
 }
 
-func (a *AppConfig) serveImageByIDView(w http.ResponseWriter, r *http.Request) {
-	var fn = func(a *AppConfig, w http.ResponseWriter, r *http.Request) (*Image, error) {
+func (a *AppConfig) serveDocumentByIDView(w http.ResponseWriter, r *http.Request) {
+	var fn = func(a *AppConfig, w http.ResponseWriter, r *http.Request) (*Document, error) {
 		var idStr = r.FormValue("id")
 		if idStr == "" {
-			return nil, errors.New("no image ID provided")
+			return nil, errors.New("no document ID provided")
 		}
 
-		var imgRow, err = queries.GetQuerySet[*Image](&Image{}).
+		var docRow, err = queries.GetQuerySet[*Document](&Document{}).
 			WithContext(r.Context()).
 			Filter("ID", idStr).
 			Get()
 		if err != nil {
-			return nil, fmt.Errorf("error retrieving image: %w", err)
+			return nil, fmt.Errorf("error retrieving document: %w", err)
 		}
-		return imgRow.Object, nil
+		return docRow.Object, nil
 	}
 
-	var view = a.serveImageFnView(fn)
+	var view = a.serveDocumentFnView(fn)
 	view(w, r)
 }
 
-func (a *AppConfig) serveImageByPathView(w http.ResponseWriter, r *http.Request) {
-	var fn = func(a *AppConfig, w http.ResponseWriter, r *http.Request) (*Image, error) {
+func (a *AppConfig) serveDocumentByPathView(w http.ResponseWriter, r *http.Request) {
+	var fn = func(a *AppConfig, w http.ResponseWriter, r *http.Request) (*Document, error) {
 		var vars = mux.Vars(r)
 		var pathParts = vars.GetAll("*")
 		var path = path.Join(pathParts...)
@@ -119,16 +124,16 @@ func (a *AppConfig) serveImageByPathView(w http.ResponseWriter, r *http.Request)
 		path = strings.TrimPrefix(path, "/")
 		path = strings.TrimSuffix(path, "/")
 
-		imgRow, err := queries.GetQuerySet[*Image](&Image{}).
+		docRow, err := queries.GetQuerySet[*Document](&Document{}).
 			WithContext(r.Context()).
 			Filter("Path", path).
 			Get()
 		if err != nil {
-			return nil, fmt.Errorf("error retrieving image by path: %w", err)
+			return nil, fmt.Errorf("error retrieving document by path: %w", err)
 		}
-		return imgRow.Object, nil
+		return docRow.Object, nil
 	}
 
-	var view = a.serveImageFnView(fn)
+	var view = a.serveDocumentFnView(fn)
 	view(w, r)
 }

@@ -129,6 +129,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 						admin.PanelGroup(
 							admin.FieldPanel("Image"),
 							admin.FieldPanel("User"),
+							admin.FieldPanel("Document"),
 						),
 						admin.PanelGroup(
 							&admin.AlertPanel{
@@ -138,8 +139,8 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 							},
 							admin.FieldPanel("Thumbnail"),
 						),
-					),
-					admin.FieldPanel("Editor"),
+					).Class("collapsible"),
+					admin.FieldPanel("Editor").Class("collapsible"),
 				}
 			},
 			EditPanels: func(r *http.Request, page pages.Page) []admin.Panel {
@@ -151,10 +152,11 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 						admin.FieldPanel("UrlPath"),
 						admin.FieldPanel("Slug"),
 					),
-					admin.RowPanel(
+					admin.PanelClass("collapsible", admin.RowPanel(
 						admin.PanelGroup(
 							admin.FieldPanel("Image"),
 							admin.FieldPanel("User"),
+							admin.FieldPanel("Document"),
 						),
 						admin.PanelGroup(
 							&admin.AlertPanel{
@@ -164,8 +166,8 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 							},
 							admin.FieldPanel("Thumbnail"),
 						),
-					),
-					admin.FieldPanel("Editor"),
+					)),
+					admin.PanelClass("collapsible", admin.FieldPanel("Editor")),
 					admin.FieldPanel("CreatedAt"),
 					admin.FieldPanel("UpdatedAt"),
 				}

@@ -1,15 +1,15 @@
 {{ define "file" }}
 <div class="file-input">
-    {{ include . "forms/widgets/input.html" }}
+    <input type="{{ .Get "type" }}" name="{{ .Get "name" }}" id="{{ .Get "id" }}" {{ if (.Get "value") }}value="{{ .Get "value" }}"{{ end }}{{ safeAttrs (include (.Get "attrs") "forms/widgets/attrs.html") }}{{ if .Data.extensionsAttr }} accept="{{ .Data.extensionsAttr }}"{{ end }}/>
 </div>
-{{ if not (or (eq .Data.file_value "") (eq .Data.file_value nil)) }}
+{{ if and (not (or (eq .Data.file_value "") (eq .Data.file_value nil))) (not .Data.errors) }}
 <div class="file-path">
     <span class="file-path">{{ Translate .Data.context "Path: %s" .Data.file_value }}</span>
     <input type="hidden" name="{{ .Data.name }}_path" value="{{ .Data.file_value }}" />
 </div>
-{{ if not .Data.required }}
+{{ if (and (not .Data.required ) (not .Data.errors)) }}
     <div class="file-clear">
-        <input type="checkbox" name="{{ .Data.name }}_clear" id="{{ .Data.id }}_clear" value="1" class="file-clear-checkbox" />
+        <input type="checkbox" name="{{ .Data.name }}_clear" id="{{ .Data.id }}_clear" value="1" class="file-clear-checkbox">
         <label for="{{ .Data.id }}_clear" class="file-clear-label default-label">{{ Translate .Data.context "Clear file" }}</label>
     </div>
 {{ end }}

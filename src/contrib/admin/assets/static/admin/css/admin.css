@@ -322,7 +322,7 @@ a.danger {
     display: flex;
     flex-direction: column;
     background-color: var(--body-bg-color);
-    padding: 0.5em 1em;
+    padding: 0.5em 2.25em;
 }
 #main #content-wrapper #content .admin-form {
     flex: 1;
@@ -371,7 +371,7 @@ a.danger {
 }
 .view-header {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     justify-content: flex-start;
     align-items: flex-start;
     flex-wrap: wrap;
@@ -474,6 +474,28 @@ a.danger {
 .form-field .file-clear .file-clear-checkbox:checked + .file-clear-label {
     color: hsl( 0 100% 50% );
     text-decoration: line-through;
+}
+.panel.collapsible.collapsed > .panel__body {
+    display: none;
+}
+.panel .panel__heading:has(> .panel__icon+.panel__title) {
+    display: flex;
+    flex-direction: row;
+    transform: translateX(-1.7rem);
+    cursor: pointer;
+}
+.panel .panel__heading:has(> .panel__icon+.panel__title) > .panel__title label {
+    cursor: pointer;
+}
+.panel .panel__heading .panel__icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    padding: 0 0.25rem;
+    transition: all 0.2s ease-in-out;
+}
+.panel .panel__heading:has(> .panel__icon+.panel__title):hover > .panel__icon {
+    transform: translateX(-5px);
+    color: var(--secondary-bg-color);
 }
 .panel.panel-title {
     font-size: 1.5rem;
@@ -688,6 +710,12 @@ a.button, .button a {
     color: var(--secondary-text-color);
 }
 
+@media screen and (min-width: 70em) {
+    #main #content-wrapper #content {
+        padding: 1.5em 4em;
+    }
+}
+
 @media screen and (min-width: 50em) {
     .button {
         font-size: .875rem;
@@ -705,9 +733,6 @@ a.button, .button a {
         line-height: calc(2.5em - 2px);
     }
     .view-header {
-        flex-direction: row;
-        align-items: center;
-
         & h1 {
             margin: 0;
         }

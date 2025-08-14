@@ -1,0 +1,68 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ T "Delete %s" (.Get "model").Label }}{{ end }}
+
+{{ define "extra_css" }}
+    <link rel="stylesheet" href="{{ static "documents/css/admin.css" }}">
+{{ end }}
+
+{{ define "content" }}
+    <h1>
+        {{ if .Data.instance }}
+            {{ T "Delete %s" (.Get "model").Label }}
+        {{ else }}
+            {{ T "Delete %d %s" (len .Data.pk_list) (.Get "model").PluralLabel }}
+        {{ end }}
+    </h1>
+
+    <form method="post" class="admin-form">
+        {{ csrf_field }}
+
+        <div class="alert danger">
+            {{ if (gt (len .Data.pk_list) 1) }}
+                <p class="alert-text">{{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }}</p>
+            {{ else }}
+                <p class="alert-text">{{ T "Are you sure you want to delete object %q with id %v?" (toString .Data.instance) (index .Data.pk_list 0) }}</p>
+            {{ end }}
+            <p class="alert-text">{{ T "This action cannot be reversed." }}</p>
+        </div>
+
+        {{ if .Data.instance }}
+            <ul>
+                <li class="document-admin-preview">
+                    <a href="{{ url "documents:serve" .Data.instance.Path }}" target="_blank" rel="noopener noreferrer">
+                        {{ .Data.instance.Title }}
+                    </a>
+                </li>
+            </ul>
+        {{ else if .Data.instances }}
+            <ul class="instances-preview documents-list list-wrapper">
+                {{ range $document := .Data.instances }}
+                    <li class="document-item">
+                        <a href="{{ url "documents:serve" $document.Path }}" target="_blank" rel="noopener noreferrer">
+                            {{ $document.Title }}
+                        </a>
+                    </li>
+                {{ end }}
+            </ul>
+        {{ end }}
+
+        {{ if .Data.BackURL }}
+            <input type="hidden" name="next" value="{{ .Data.BackURL }}">
+        {{ end }}
+
+        <div class="form-buttons inline">
+            <input class="button danger" type="submit" value="{{ T "Submit" }}">
+            {{ $BackURL := (.Get "BackURL") }}
+            {{ if $BackURL }}
+                <a class="button secondary" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
+            {{ else }}
+                {{ if (gt (len .Data.pk_list) 1) }}
+                    <a class="button secondary" href="{{ url "admin:apps:model" (.Get "app").Name (.Get "model").GetName }}">{{ T "Cancel" }}</a>
+                {{ else }}
+                    <a class="button secondary" href="{{ url "admin:apps:model:edit" (.Get "app").Name (.Get "model").GetName (index .Data.pk_list 0) }}">{{ T "Cancel" }}</a>
+                {{ end }}
+            {{ end }}
+        </div>
+    </form>
+{{ end }}

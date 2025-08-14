@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
+	"github.com/Nigel2392/go-django/src/contrib/documents"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	"github.com/Nigel2392/go-django/src/contrib/images"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
@@ -76,6 +77,7 @@ type BlogPage struct {
 	Image        *mediafiles.SimpleStoredObject
 	Editor       *editor.EditorJSBlockData
 	Thumbnail    *images.Image
+	Document     *documents.Document
 	User         users.User
 }
 
@@ -169,6 +171,19 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 			HelpText: trans.S("The thumbnail for this blog post."),
 			RelForeignKey: attrs.Relate(
 				&images.Image{}, "", nil,
+			),
+			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+				return chooser.NewChooserWidget(
+					fc.RelForeignKey.Model(), fc.WidgetAttrs,
+				)
+			},
+		}),
+		attrs.NewField(n, "Document", &attrs.FieldConfig{
+			Null:     true,
+			Label:    trans.S("Document"),
+			HelpText: trans.S("The document for this blog post."),
+			RelForeignKey: attrs.Relate(
+				&documents.Document{}, "", nil,
 			),
 			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
 				return chooser.NewChooserWidget(

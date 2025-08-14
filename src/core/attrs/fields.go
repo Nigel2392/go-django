@@ -846,6 +846,12 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 
 	rvPtr, ok := django_reflect.RConvert(&rv, f.field_t.Type)
 	if !ok {
+		if sqlScanner, ok := f.field_v.Addr().Interface().(sql.Scanner); ok {
+			return assert.Err(sqlScanner.Scan(
+				rvPtr.Interface(),
+			))
+		}
+
 		if scanner, ok := f.field_v.Interface().(Scanner); ok {
 
 			if f.field_v.Kind() == reflect.Ptr && f.field_v.IsNil() {

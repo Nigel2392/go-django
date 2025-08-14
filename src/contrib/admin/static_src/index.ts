@@ -1,6 +1,7 @@
 import { MenuController } from "./controllers/menu";
 import { DropdownController } from "./controllers/dropdown";
 import { TippyController } from "./controllers/tippy";
+import { PanelController } from "./controllers/panel";
 
 import { AdminSite } from "./app/app";
 
@@ -9,6 +10,7 @@ const app = new AdminSite({
         menu: MenuController,
         tooltip: TippyController,
         dropdown: DropdownController,
+        panel: PanelController,
     },
 });
 

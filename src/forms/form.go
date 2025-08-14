@@ -483,6 +483,19 @@ func (f *BaseForm) SetValidators(validators ...func(Form, map[string]interface{}
 	f.Validators = append(f.Validators, validators...)
 }
 
+func (f *BaseForm) addErrors(errorList ...error) {
+	for _, err := range errorList {
+		switch e := err.(type) {
+		case interface{ Unwrap() []error }:
+			f.addErrors(e.Unwrap()...)
+		case errs.ValidationError[string]:
+			f.AddError(e.Name, e.Err)
+		default:
+			f.AddFormError(e)
+		}
+	}
+}
+
 func (f *BaseForm) Validate() {
 	if f.Validators == nil {
 		f.Validators = make([]func(Form, map[string]interface{}) []error, 0)
@@ -491,14 +504,7 @@ func (f *BaseForm) Validate() {
 	for _, validator := range f.Validators {
 		var errors = validator(f, f.Cleaned)
 		if len(errors) > 0 {
-			for _, err := range errors {
-				switch e := err.(type) {
-				case interface{ Unwrap() []error }:
-					f.AddFormError(e.Unwrap()...)
-				default:
-					f.AddFormError(e)
-				}
-			}
+			f.addErrors(errors...)
 		}
 	}
 }

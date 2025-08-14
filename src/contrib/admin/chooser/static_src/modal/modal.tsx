@@ -1,4 +1,4 @@
-import { jsx } from "../../../assets/static_src/jsx";
+import { jsx } from "../../../static_src/jsx";
 
 type ModalEvent = Event & { detail: { action: "modal:open" | "modal:close", modal: Modal }};
 type ModalElement = HTMLElement & { modal?: Modal, dataset: { modal: string } };
