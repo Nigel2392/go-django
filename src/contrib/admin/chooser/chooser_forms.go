@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/permissions"
+	hut "github.com/Nigel2392/go-django/src/utils/httputils"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 
@@ -106,29 +107,8 @@ func (v *BoundChooserFormPage[T]) Setup(w http.ResponseWriter, req *http.Request
 	return w, req
 }
 
-type fakeWriter struct {
-	bytes.Buffer
-	headers    http.Header
-	statusCode int
-}
-
-func (w *fakeWriter) Header() http.Header {
-	return w.headers
-}
-
-func (w *fakeWriter) WriteHeader(statusCode int) {
-	w.statusCode = statusCode
-}
-
-func (w *fakeWriter) Write(b []byte) (int, error) {
-	return w.Buffer.Write(b)
-}
-
 func (v *BoundChooserFormPage[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context) error {
-	var writer = &fakeWriter{
-		Buffer:  bytes.Buffer{},
-		headers: make(http.Header),
-	}
+	var writer = hut.NewFakeWriter(new(bytes.Buffer))
 
 	v.FormView.SuccessFn = func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]) {
 
@@ -166,28 +146,19 @@ func (v *BoundChooserFormPage[T]) Render(w http.ResponseWriter, req *http.Reques
 		return err
 	}
 
-	// Copy the response data for the fake writer passed to the view
-	if writer.statusCode != 0 {
-		w.WriteHeader(writer.statusCode)
-	}
-
-	if len(writer.headers) > 0 {
-		for key, values := range writer.headers {
-			for _, value := range values {
-				w.Header().Add(key, value)
-			}
-		}
-	}
+	writer.CopyTo(
+		w, hut.FlagCopyHeader|hut.FlagCopyStatus,
+	)
 
 	// If the form is valid, the response is already JSON
 	// Copy the buffer and be done with it.
 	if v.isValid {
-		_, err := io.Copy(w, &writer.Buffer)
+		_, err := io.Copy(w, writer.WriteTo)
 		return err
 	}
 
 	var response = ChooserResponse{
-		HTML: writer.String(),
+		HTML: writer.WriteTo.String(),
 	}
 
 	return json.NewEncoder(w).Encode(response)
