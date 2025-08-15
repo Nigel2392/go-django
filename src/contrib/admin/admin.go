@@ -333,10 +333,11 @@ func NewAppConfig() django.AppConfig {
 			"icons": func() template.HTML {
 				return iconHTML
 			},
-			"icon": func(name string, attrs string) template.HTML {
+			"icon": func(name string, attrs ...string) template.HTML {
+				var attr = strings.Join(attrs, " ")
 				return template.HTML(fmt.Sprintf(`<svg class="icon-%s" %s>
 	<use href="#icon-%s"></use>
-</svg>`, name, attrs, name))
+</svg>`, name, attr, name))
 			},
 			"menu": func(r *http.Request) template.HTML {
 				var m = &menu.Menu{}
