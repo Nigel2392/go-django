@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 )
@@ -33,11 +35,42 @@ func NewPanelContext(r *http.Request, panel Panel, boundPanel BoundPanel) *Panel
 	}
 }
 
+const PANEL_ID_PREFIX = "panel"
+
+func BuildPanelID(panelIdx []int, extra ...string) string {
+	var b = new(strings.Builder)
+	var totalLen = len(PANEL_ID_PREFIX) + 1
+
+	totalLen += len(panelIdx) * 2
+
+	for i := 0; i < len(extra); i++ {
+		totalLen += len(extra[i])
+		totalLen++ // for the dash
+	}
+
+	b.Grow(totalLen)
+
+	b.WriteString(PANEL_ID_PREFIX)
+
+	for _, idx := range panelIdx {
+		b.WriteString("-")
+		b.WriteString(fmt.Sprintf("%d", idx))
+	}
+
+	// Append any extra strings
+	for i := 0; i < len(extra); i++ {
+		b.WriteString("-")
+		b.WriteString(extra[i])
+	}
+
+	return b.String()
+}
+
 type Panel interface {
 	Fields() []string
 	ClassName() string
 	Class(classes string) Panel
-	Bind(r *http.Request, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel
+	Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel
 }
 
 func PanelClass(className string, panel Panel) Panel {
@@ -62,7 +95,7 @@ func (f *fieldPanel) Class(classname string) Panel {
 	return f
 }
 
-func (f *fieldPanel) Bind(r *http.Request, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
+func (f *fieldPanel) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	var bf, ok = boundFields[f.fieldname]
 	if !ok {
 		panic(fmt.Sprintf("Field %s not found in bound fields: %v", f.fieldname, boundFields))
@@ -70,6 +103,7 @@ func (f *fieldPanel) Bind(r *http.Request, form forms.Form, ctx context.Context,
 
 	return &BoundFormPanel[forms.Form, *fieldPanel]{
 		Panel:      f,
+		PanelIndex: panelIdx,
 		Form:       form,
 		Context:    ctx,
 		BoundField: bf,
@@ -106,10 +140,11 @@ func (t *titlePanel) Fields() []string {
 	return t.Panel.Fields()
 }
 
-func (t *titlePanel) Bind(r *http.Request, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
+func (t *titlePanel) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	return &BoundTitlePanel[forms.Form, *titlePanel]{
 		Panel:      t,
-		BoundPanel: t.Panel.Bind(r, form, ctx, boundFields),
+		PanelIndex: panelIdx,
+		BoundPanel: t.Panel.Bind(r, panelIdx, form, ctx, boundFields),
 		Context:    ctx,
 		Request:    r,
 	}
@@ -128,7 +163,8 @@ func TitlePanel(panel Panel, classname ...string) Panel {
 
 type rowPanel struct {
 	panels    []Panel
-	Label     func() string
+	Label     func(context.Context) string
+	HelpText  func(context.Context) string
 	classname string
 }
 
@@ -149,18 +185,31 @@ func (m *rowPanel) Fields() []string {
 	return fields
 }
 
-func (m *rowPanel) Bind(r *http.Request, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
+func (m *rowPanel) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	var panels = make([]BoundPanel, 0)
-	for _, panel := range m.panels {
-		panels = append(panels, panel.Bind(r, form, ctx, boundFields))
+	for idx, panel := range m.panels {
+		var cpy = make([]int, len(panelIdx)+1)
+		copy(cpy, panelIdx)
+		cpy[len(cpy)-1] = idx
+		panels = append(panels, panel.Bind(r, cpy, form, ctx, boundFields))
 	}
 	return &BoundRowPanel[forms.Form]{
-		LabelFn: m.Label,
-		Panel:   m,
-		Panels:  panels,
-		Context: ctx,
-		Request: r,
-		Form:    form,
+		LabelFn:    m.Label,
+		HelpTextFn: m.HelpText,
+		Panel:      m,
+		Panels:     panels,
+		PanelIndex: panelIdx,
+		Context:    ctx,
+		Request:    r,
+		Form:       form,
+	}
+}
+
+func LabeledRowPanel(label any, helpText any, panels ...Panel) Panel {
+	return &rowPanel{
+		panels:   panels,
+		Label:    trans.GetTextFunc(label),
+		HelpText: trans.GetTextFunc(helpText),
 	}
 }
 
@@ -172,6 +221,8 @@ func RowPanel(panels ...Panel) Panel {
 
 type panelGroup struct {
 	panels    []Panel
+	Label     func(context.Context) string
+	HelpText  func(context.Context) string
 	classname string
 }
 
@@ -192,17 +243,31 @@ func (g *panelGroup) Class(classname string) Panel {
 	return g
 }
 
-func (g *panelGroup) Bind(r *http.Request, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
+func (g *panelGroup) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	var panels = make([]BoundPanel, 0, len(g.panels))
-	for _, panel := range g.panels {
-		panels = append(panels, panel.Bind(r, form, ctx, boundFields))
+	for idx, panel := range g.panels {
+		var cpy = make([]int, len(panelIdx)+1)
+		copy(cpy, panelIdx)
+		cpy[len(cpy)-1] = idx
+		panels = append(panels, panel.Bind(r, cpy, form, ctx, boundFields))
 	}
 	return &BoundPanelGroup[forms.Form]{
-		Panel:   g,
-		Panels:  panels,
-		Context: ctx,
-		Request: r,
-		Form:    form,
+		LabelFn:    g.Label,
+		HelpTextFn: g.HelpText,
+		Panel:      g,
+		Panels:     panels,
+		PanelIndex: panelIdx,
+		Context:    ctx,
+		Request:    r,
+		Form:       form,
+	}
+}
+
+func LabeledPanelGroup(label any, helpText any, panels ...Panel) Panel {
+	return &panelGroup{
+		panels:   panels,
+		Label:    trans.GetTextFunc(label),
+		HelpText: trans.GetTextFunc(helpText),
 	}
 }
 
@@ -242,12 +307,13 @@ func (a *AlertPanel) Class(classes string) Panel {
 	return a
 }
 
-func (a *AlertPanel) Bind(r *http.Request, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
+func (a *AlertPanel) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	return &BoundAlertPanel[forms.Form]{
-		Panel:   a,
-		Form:    form,
-		Context: ctx,
-		Request: r,
+		Panel:      a,
+		PanelIndex: panelIdx,
+		Form:       form,
+		Context:    ctx,
+		Request:    r,
 	}
 }
 

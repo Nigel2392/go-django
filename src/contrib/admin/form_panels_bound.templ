@@ -1,12 +1,13 @@
 package admin
 
 import (
+    "fmt"
     "bytes"
     "context"
-    "github.com/Nigel2392/go-django/src/forms"
-    "html/template"
-	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"net/http"
+    "html/template"
+    "github.com/Nigel2392/go-django/src/forms"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 )
 
 type BoundPanel interface {
@@ -17,6 +18,7 @@ type BoundPanel interface {
 
 type BoundFormPanel[T forms.Form, P Panel] struct {
 	forms.BoundField
+    PanelIndex []int
     Context context.Context
     Request *http.Request
     Panel P
@@ -34,19 +36,20 @@ templ (p *BoundFormPanel[T, P]) Component() {
     {{ var errors = p.Errors() }}
     {{ var helpText = p.HelpText() }}
     {{ var field = p.Field() }}
-    
-    <div class={ "panel", "panel-default", p.Panel.ClassName() } data-controller="panel">
+    {{ var panelId = BuildPanelID(p.PanelIndex, p.BoundField.ID()) }}
+
+    <div class={ "panel", "panel-default", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId }>
         if !p.Hidden() {
             <div class="panel__heading" data-panel-target="heading">
 
-                <div class="panel__icon" data-panel-target="icon">
+                <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
                       <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
                       <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
                     </svg>
-                </div>
+                </a>
 
-                <div class="panel__title" data-action="click->panel#toggle">
+                <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
                     @templ.Raw(string(label))
                 </div>
 
@@ -79,6 +82,7 @@ templ (p *BoundFormPanel[T, P]) Component() {
 type BoundTitlePanel[T forms.Form, P Panel] struct {
 	BoundPanel
 	Panel   P
+    PanelIndex []int
     Context context.Context
     Request *http.Request
 }
@@ -103,8 +107,10 @@ templ (p *BoundTitlePanel[T, P]) Component() {
 }
 
 type BoundRowPanel[T forms.Form] struct {
-    LabelFn func() string
+    LabelFn func(context.Context) string
+    HelpTextFn func(context.Context) string
     Panel   *rowPanel
+    PanelIndex []int
     Context context.Context
     Request *http.Request
     Panels  []BoundPanel
@@ -122,23 +128,31 @@ func (p *BoundRowPanel[T]) Render() template.HTML {
 }
 
 templ (p *BoundRowPanel[T]) Component() {
-    <div class={ "panel", "panel-row", p.Panel.ClassName() } data-controller="panel">
+    {{ var panelId = BuildPanelID(p.PanelIndex, "panel-row") }}
+    <div class={ "panel", "panel-row", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId }>
         if p.LabelFn != nil {
             <div class="panel__heading" data-panel-target="heading">
 
-                <div class="panel__icon" data-panel-target="icon">
+                <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
                       <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
                       <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
                     </svg>
-                </div>
+                </a>
 
-                <div class="panel__title" data-action="click->panel#toggle">
-                    @templ.Raw(p.LabelFn())
+                <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
+                    <label>@templ.Raw(p.LabelFn(ctx))</label>
                 </div>
 
             </div>
         }
+
+        if p.HelpTextFn != nil {
+            <div class="panel__help">
+                @templ.Raw(string(p.HelpTextFn(ctx)))
+            </div>
+        }
+
         <div class="panel__body" data-panel-target="content">
             for _, panel := range p.Panels {
                 @panel.Component()
@@ -150,6 +164,9 @@ templ (p *BoundRowPanel[T]) Component() {
 type BoundPanelGroup[T forms.Form] struct {
     BoundPanel
     Panel   *panelGroup
+    PanelIndex []int
+    LabelFn func(context.Context) string
+    HelpTextFn func(context.Context) string
     Context context.Context
     Request *http.Request
     Panels  []BoundPanel
@@ -163,7 +180,31 @@ func (p *BoundPanelGroup[T]) Render() template.HTML {
 }
 
 templ (p *BoundPanelGroup[T]) Component() {
-    <div class={ "panel", "panel-group", p.Panel.ClassName() }>
+    {{ var panelId = BuildPanelID(p.PanelIndex, "panel-group") }}
+    <div class={ "panel", "panel-group", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId }>
+        if p.LabelFn != nil {
+            <div class="panel__heading" data-panel-target="heading">
+
+                <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
+                      <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
+                      <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
+                    </svg>
+                </a>
+
+                <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
+                    <label>@templ.Raw(p.LabelFn(ctx))</label>
+                </div>
+
+            </div>
+        }
+
+        if p.HelpTextFn != nil {
+            <div class="panel__help">
+                @templ.Raw(string(p.HelpTextFn(ctx)))
+            </div>
+        }
+
         <div class="panel__body">
             for _, panel := range p.Panels {
                 @panel.Component()
@@ -175,6 +216,7 @@ templ (p *BoundPanelGroup[T]) Component() {
 type BoundAlertPanel[T forms.Form] struct {
     Context context.Context
     Panel   *AlertPanel
+    PanelIndex []int
     Request *http.Request
 	Form    T
 }

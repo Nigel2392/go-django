@@ -22,13 +22,15 @@ locales:
 # [ModelFinder.Field]: users.Group.ID        .models/auth/Group/fields:2:0
 # [ModelFinder.Field]: users.Permission.ID   .models/auth/Permission/fields:3:0
 # [ModelFinder.Field]: auth.User.ID          .models/auth/User/fields:1:0
+# [ModelFinder.Field]: documents.Document.ID .models/documents/Document/fields:1:0
 # [ModelFinder.Field]: images.Image.ID       .models/images/Image/fields:1:0
 # [ModelFinder.Field]: pages.Site.ID         .models/pages/Site/fields:1:0
 # [ModelFinder.Field]: revisions.Revision.ID .models/revisions/Revision/fields:1:0
 # [GoFileFinder]:      NewAppConfig          examples/todoapp/todos/todo.go:101:29
 # [GoFileFinder]:      NewAppConfig          src/contrib/auth/app.go:181:33
 # [GoFileFinder]:      *User.Fields          src/contrib/auth/user.go:120:22
-# [GoFileFinder]:      *Image.FieldDefs      src/contrib/images/models.go:140:22
+# [GoFileFinder]:      *Document.FieldDefs   src/contrib/documents/models.go:101:22
+# [GoFileFinder]:      *Image.FieldDefs      src/contrib/images/models.go:98:22
 # [GoFileFinder]:      FormatTimeSince       src/contrib/pages/django_admin.go:148:26
 # [GoFileFinder]:      *Revision.FieldDefs   src/contrib/revisions/queries.go:73:22
 text: ID
@@ -172,8 +174,8 @@ locales:
 ---
 
 # [ModelFinder]:       auth.User           .models/auth/User:2:1
-# [ModelFinder.Field]: blog.BlogPage.User  .models/blog/BlogPage/fields:1:7
-# [GoFileFinder]:      *BlogPage.FieldDefs examples/blogapp/blog/models.go:189:22
+# [ModelFinder.Field]: blog.BlogPage.User  .models/blog/BlogPage/fields:1:8
+# [GoFileFinder]:      *BlogPage.FieldDefs examples/blogapp/blog/models.go:204:22
 # [GoFileFinder]:      NewAppConfig        src/contrib/auth/app.go:152:28
 # [GoFileFinder]:      NewAppConfig        src/contrib/openauth2/openauth2.go:207:27
 text: User
@@ -235,13 +237,15 @@ locales:
 ---
 
 # [ModelFinder.Field]: auth.User.CreatedAt          .models/auth/User/fields:1:6
-# [ModelFinder.Field]: blog.BlogPage.CreatedAt      .models/blog/BlogPage/fields:1:8
+# [ModelFinder.Field]: blog.BlogPage.CreatedAt      .models/blog/BlogPage/fields:1:9
+# [ModelFinder.Field]: documents.Document.CreatedAt .models/documents/Document/fields:1:3
 # [ModelFinder.Field]: images.Image.CreatedAt       .models/images/Image/fields:1:3
 # [ModelFinder.Field]: pages.PageNode.CreatedAt     .models/pages/PageNode/fields:2:11
 # [ModelFinder.Field]: revisions.Revision.CreatedAt .models/revisions/Revision/fields:1:4
 # [GoFileFinder]:      NewAppConfig                 src/contrib/auth/app.go:269:16
 # [GoFileFinder]:      *User.Fields                 src/contrib/auth/user.go:157:22
-# [GoFileFinder]:      *Image.FieldDefs             src/contrib/images/models.go:162:22
+# [GoFileFinder]:      *Document.FieldDefs          src/contrib/documents/models.go:123:22
+# [GoFileFinder]:      *Image.FieldDefs             src/contrib/images/models.go:120:22
 # [GoFileFinder]:      FormatTimeSince              src/contrib/pages/django_admin.go:158:26
 # [GoFileFinder]:      *Revision.FieldDefs          src/contrib/revisions/queries.go:93:22
 text: Created At
@@ -251,7 +255,7 @@ locales:
 ---
 
 # [ModelFinder.Field]: auth.User.UpdatedAt      .models/auth/User/fields:1:7
-# [ModelFinder.Field]: blog.BlogPage.UpdatedAt  .models/blog/BlogPage/fields:1:9
+# [ModelFinder.Field]: blog.BlogPage.UpdatedAt  .models/blog/BlogPage/fields:1:10
 # [ModelFinder.Field]: pages.PageNode.UpdatedAt .models/pages/PageNode/fields:2:12
 # [GoFileFinder]:      NewAppConfig             src/contrib/auth/app.go:277:16
 # [GoFileFinder]:      *User.Fields             src/contrib/auth/user.go:162:22
@@ -294,8 +298,9 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: auth.User.BlogPageSet    .models/auth/User/fields:1:13
-# [ModelFinder.Field]: images.Image.BlogPageSet .models/images/Image/fields:1:6
+# [ModelFinder.Field]: auth.User.BlogPageSet          .models/auth/User/fields:1:13
+# [ModelFinder.Field]: documents.Document.BlogPageSet .models/documents/Document/fields:1:6
+# [ModelFinder.Field]: images.Image.BlogPageSet       .models/images/Image/fields:1:6
 text: Blog Page Set
 locales:
   nl: Blogpagina-set
@@ -340,12 +345,14 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: blog.BlogPage.Title  .models/blog/BlogPage/fields:1:1
-# [ModelFinder.Field]: images.Image.Title   .models/images/Image/fields:1:1
-# [ModelFinder.Field]: pages.PageNode.Title .models/pages/PageNode/fields:2:1
-# [GoFileFinder]:      NewAppConfig         examples/todoapp/todos/todo.go:156:16
-# [GoFileFinder]:      *Image.FieldDefs     src/contrib/images/models.go:147:19
-# [GoFileFinder]:      FormatTimeSince      src/contrib/pages/django_admin.go:149:26
+# [ModelFinder.Field]: blog.BlogPage.Title      .models/blog/BlogPage/fields:1:1
+# [ModelFinder.Field]: documents.Document.Title .models/documents/Document/fields:1:1
+# [ModelFinder.Field]: images.Image.Title       .models/images/Image/fields:1:1
+# [ModelFinder.Field]: pages.PageNode.Title     .models/pages/PageNode/fields:2:1
+# [GoFileFinder]:      NewAppConfig             examples/todoapp/todos/todo.go:156:16
+# [GoFileFinder]:      *Document.FieldDefs      src/contrib/documents/models.go:108:19
+# [GoFileFinder]:      *Image.FieldDefs         src/contrib/images/models.go:105:19
+# [GoFileFinder]:      FormatTimeSince          src/contrib/pages/django_admin.go:149:26
 text: Title
 locales:
   nl: Titel
@@ -381,22 +388,32 @@ locales:
 ---
 
 # [ModelFinder.Field]: blog.BlogPage.Thumbnail .models/blog/BlogPage/fields:1:5
-# [GoFileFinder]:      *BlogPage.FieldDefs     examples/blogapp/blog/models.go:168:22
+# [GoFileFinder]:      *BlogPage.FieldDefs     examples/blogapp/blog/models.go:170:22
 text: Thumbnail
 locales:
-  nl: "Miniatuur"
+  nl: Miniatuur
 
 ---
 
-# [ModelFinder.Field]: blog.BlogPage.Editor .models/blog/BlogPage/fields:1:6
-# [GoFileFinder]:      *BlogPage.FieldDefs  examples/blogapp/blog/models.go:180:22
+# [ModelFinder.Field]: blog.BlogPage.Document .models/blog/BlogPage/fields:1:6
+# [ModelFinder]:       documents.Document     .models/documents/Document:14:1
+# [GoFileFinder]:      *BlogPage.FieldDefs    examples/blogapp/blog/models.go:183:22
+# [GoFileFinder]:                             src/contrib/documents/admin.go:26:26
+text: Document
+locales:
+  nl: "Document"
+
+---
+
+# [ModelFinder.Field]: blog.BlogPage.Editor .models/blog/BlogPage/fields:1:7
+# [GoFileFinder]:      *BlogPage.FieldDefs  examples/blogapp/blog/models.go:195:22
 text: Editor
 locales:
   nl: Editor
 
 ---
 
-# [ModelFinder.Field]: blog.BlogPage.Page .models/blog/BlogPage/fields:1:10
+# [ModelFinder.Field]: blog.BlogPage.Page .models/blog/BlogPage/fields:1:11
 # [GoFileFinder]:      NewAppConfig       src/contrib/pages/django_app.go:192:29
 text: Page
 locales:
@@ -404,25 +421,31 @@ locales:
 
 ---
 
-# [ModelFinder.Field]: images.Image.Path   .models/images/Image/fields:1:2
-# [ModelFinder.Field]: pages.PageNode.Path .models/pages/PageNode/fields:2:2
-# [GoFileFinder]:      *Image.FieldDefs    src/contrib/images/models.go:154:19
+# [ModelFinder.Field]: documents.Document.Path .models/documents/Document/fields:1:2
+# [ModelFinder.Field]: images.Image.Path       .models/images/Image/fields:1:2
+# [ModelFinder.Field]: pages.PageNode.Path     .models/pages/PageNode/fields:2:2
+# [GoFileFinder]:      *Document.FieldDefs     src/contrib/documents/models.go:115:19
+# [GoFileFinder]:      *Image.FieldDefs        src/contrib/images/models.go:112:19
 text: Path
 locales:
   nl: Pad
 
 ---
 
-# [ModelFinder.Field]: images.Image.FileSize .models/images/Image/fields:1:4
-# [GoFileFinder]:      *Image.FieldDefs      src/contrib/images/models.go:167:19
+# [ModelFinder.Field]: documents.Document.FileSize .models/documents/Document/fields:1:4
+# [ModelFinder.Field]: images.Image.FileSize       .models/images/Image/fields:1:4
+# [GoFileFinder]:      *Document.FieldDefs         src/contrib/documents/models.go:128:22
+# [GoFileFinder]:      *Image.FieldDefs            src/contrib/images/models.go:126:19
 text: File Size
 locales:
   nl: Bestandsgrootte
 
 ---
 
-# [ModelFinder.Field]: images.Image.FileHash .models/images/Image/fields:1:5
-# [GoFileFinder]:      *Image.FieldDefs      src/contrib/images/models.go:174:19
+# [ModelFinder.Field]: documents.Document.FileHash .models/documents/Document/fields:1:5
+# [ModelFinder.Field]: images.Image.FileHash       .models/images/Image/fields:1:5
+# [GoFileFinder]:      *Document.FieldDefs         src/contrib/documents/models.go:137:22
+# [GoFileFinder]:      *Image.FieldDefs            src/contrib/images/models.go:134:22
 text: File Hash
 locales:
   nl: Bestandshash
@@ -593,86 +616,93 @@ locales:
 
 ---
 
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:136:24
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:162:24
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:137:24
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:164:24
 text: Cover Image
 locales:
-  nl: "Omslagafbeelding"
+  nl: Omslagafbeelding
 
 ---
 
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:137:24
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:163:24
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:138:24
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:165:24
 text: <p>Choose a cover image for your blog post.</p>
 locales:
-  nl: "<p>Kies een omslagafbeelding voor je blogbericht.</p>"
+  nl: <p>Kies een omslagafbeelding voor je blogbericht.</p>
 
 ---
 
-# [GoFileFinder]:	init examples/blogapp/blog/models.go:32:18
+# [GoFileFinder]:	init examples/blogapp/blog/models.go:33:18
 text: User Chooser
 locales:
   nl: Gebruikerskiezer
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:146:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:148:22
 text: How do you want your post to be remembered?
 locales:
   nl: Hoe wil je dat je bericht wordt herinnerd?
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:152:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:154:22
 text: The URL path for this blog post.
 locales:
   nl: Het URL-pad voor dit blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:157:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:159:22
 text: The slug for this blog post.
 locales:
   nl: De slug voor dit blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:162:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:164:22
 text: The image for this blog post.
 locales:
   nl: De afbeelding voor dit blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:169:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:171:22
 text: The thumbnail for this blog post.
 locales:
-  nl: "Het miniatuur voor dit blogbericht."
+  nl: Het miniatuur voor dit blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:181:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:184:22
+text: The document for this blog post.
+locales:
+  nl: "Het document voor dit blogbericht."
+
+---
+
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:196:22
 text: This is a rich text editor. You can add images, videos, and other media to your blog post.
 locales:
   nl: Dit is een rijke teksteditor. Je kunt afbeeldingen, video's en andere media toevoegen aan je blogbericht.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:190:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:205:22
 text: The user who created this blog post.
 locales:
   nl: De gebruiker die dit blogbericht heeft aangemaakt.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:207:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:222:22
 text: The date and time this blog post was created.
 locales:
   nl: De datum en tijd waarop dit blogbericht is aangemaakt.
 
 ---
 
-# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:213:22
+# [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:228:22
 text: The date and time this blog post was last updated.
 locales:
   nl: De datum en tijd waarop dit blogbericht voor het laatst is bijgewerkt.
@@ -755,7 +785,8 @@ locales:
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/add.tmpl:22:70
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:40:67
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:24:70
-# [TemplateFinder]: {{ T "Submit" }} src/contrib/images/assets/templates/images/images_delete.tmpl:50:67
+# [TemplateFinder]: {{ T "Submit" }} src/contrib/documents/assets/templates/documents/documents_delete.tmpl:55:67
+# [TemplateFinder]: {{ T "Submit" }} src/contrib/images/assets/templates/images/images_delete.tmpl:51:67
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/admin_outdated_list.tmpl:56:84
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:46:68
 # [TemplateFinder]: {{ T "Submit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:22:71
@@ -925,9 +956,12 @@ locales:
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:46:130
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:48:159
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:28:90
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/images/assets/templates/images/images_delete.tmpl:53:71
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/images/assets/templates/images/images_delete.tmpl:56:130
-# [TemplateFinder]: {{ T "Cancel" }} src/contrib/images/assets/templates/images/images_delete.tmpl:58:159
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/documents/assets/templates/documents/documents_delete.tmpl:58:71
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/documents/assets/templates/documents/documents_delete.tmpl:61:130
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/documents/assets/templates/documents/documents_delete.tmpl:63:159
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/images/assets/templates/images/images_delete.tmpl:54:71
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/images/assets/templates/images/images_delete.tmpl:57:130
+# [TemplateFinder]: {{ T "Cancel" }} src/contrib/images/assets/templates/images/images_delete.tmpl:59:159
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:33:69
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:31:69
 # [TemplateFinder]: {{ T "Cancel" }} src/contrib/pages/assets/templates/pages/admin/choose_page_type.tmpl:35:75
@@ -958,6 +992,8 @@ locales:
 
 # [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:3:25
 # [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:12:17
+# [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/documents/assets/templates/documents/documents_delete.tmpl:3:25
+# [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/documents/assets/templates/documents/documents_delete.tmpl:12:17
 # [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/images/assets/templates/images/images_delete.tmpl:3:25
 # [TemplateFinder]: {{ T "Delete %s" (.Get "model").Label }} src/contrib/images/assets/templates/images/images_delete.tmpl:12:17
 text: Delete %s
@@ -967,14 +1003,16 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Delete %d %s" (len .Data.pk_list) (.Get "model").PluralLabel }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:14:17
+# [TemplateFinder]: {{ T "Delete %d %s" (len .Data.pk_list) (.Get "model").PluralLabel }} src/contrib/documents/assets/templates/documents/documents_delete.tmpl:14:17
 # [TemplateFinder]: {{ T "Delete %d %s" (len .Data.pk_list) (.Get "model").PluralLabel }} src/contrib/images/assets/templates/images/images_delete.tmpl:14:17
 text: Delete %d %s
 locales:
-  nl: "%d %s verwijderen"
+  nl: '%d %s verwijderen'
 
 ---
 
 # [TemplateFinder]: {{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:22:43
+# [TemplateFinder]: {{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }} src/contrib/documents/assets/templates/documents/documents_delete.tmpl:23:43
 # [TemplateFinder]: {{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }} src/contrib/images/assets/templates/images/images_delete.tmpl:23:43
 text: Are you sure you want to delete objects with ids %v?
 locales:
@@ -983,6 +1021,7 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Are you sure you want to delete object %q with id %v?" (toString .Data.instance) (index .Data.pk_list 0) }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:24:43
+# [TemplateFinder]: {{ T "Are you sure you want to delete object %q with id %v?" (toString .Data.instance) (index .Data.pk_list 0) }} src/contrib/documents/assets/templates/documents/documents_delete.tmpl:25:43
 # [TemplateFinder]: {{ T "Are you sure you want to delete object %q with id %v?" (toString .Data.instance) (index .Data.pk_list 0) }} src/contrib/images/assets/templates/images/images_delete.tmpl:25:43
 text: Are you sure you want to delete object %q with id %v?
 locales:
@@ -991,6 +1030,7 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/admin/assets/templates/admin/views/models/delete.tmpl:26:39
+# [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/documents/assets/templates/documents/documents_delete.tmpl:27:39
 # [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/images/assets/templates/images/images_delete.tmpl:27:39
 # [TemplateFinder]: {{ T "This action cannot be reversed." }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:7:16
 text: This action cannot be reversed.
@@ -1008,6 +1048,8 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Delete" }} src/contrib/admin/assets/templates/admin/views/models/edit.tmpl:34:153
+# [TemplateFinder]: {{ T "Delete" }} src/contrib/documents/assets/templates/documents/documents_list.tmpl:48:105
+# [TemplateFinder]: {{ T "Delete" }} src/contrib/documents/assets/templates/documents/documents_list.tmpl:79:37
 # [TemplateFinder]: {{ T "Delete" }} src/contrib/images/assets/templates/images/image_list.tmpl:48:105
 # [TemplateFinder]: {{ T "Delete" }} src/contrib/images/assets/templates/images/image_list.tmpl:79:37
 # [TemplateFinder]: {{ T "Delete" }} src/contrib/pages/assets/templates/pages/admin/delete_page.tmpl:3:25
@@ -1025,6 +1067,7 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "Add" }} src/contrib/admin/assets/templates/admin/views/models/list.tmpl:12:116
+# [TemplateFinder]: {{ T "Add" }} src/contrib/documents/assets/templates/documents/documents_list.tmpl:45:124
 # [TemplateFinder]: {{ T "Add" }} src/contrib/images/assets/templates/images/image_list.tmpl:45:124
 # [TemplateFinder]: {{ T "Add" }} src/contrib/pages/assets/templates/pages/admin/add_page.tmpl:3:25
 # [TemplateFinder]: {{ T "Add" }} src/contrib/pages/assets/templates/pages/admin/add_root_page.tmpl:3:25
@@ -1035,6 +1078,7 @@ locales:
 ---
 
 # [TemplateFinder]: {{ T "%s List" $model.Label }} src/contrib/admin/assets/templates/admin/views/models/list.tmpl:16:25
+# [TemplateFinder]: {{ T "%s List" $model.Label }} src/contrib/documents/assets/templates/documents/documents_list.tmpl:53:25
 # [TemplateFinder]: {{ T "%s List" $model.Label }} src/contrib/images/assets/templates/images/image_list.tmpl:53:25
 text: '%s List'
 locales:
@@ -1085,14 +1129,14 @@ locales:
 
 ---
 
-# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:320:96
+# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:321:96
 text: Search...
 locales:
   nl: Zoeken...
 
 ---
 
-# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:321:74
+# [GoFileFinder]:	*ChooserListPage[T].GetContext src/contrib/admin/chooser/chooser_list.go:322:74
 text: Search
 locales:
   nl: Zoeken
@@ -1532,9 +1576,123 @@ locales:
 
 ---
 
-# [GoFileFinder]:              src/contrib/images/admin.go:30:26
-# [GoFileFinder]: NewAppConfig src/contrib/images/app.go:97:34
-# [GoFileFinder]: NewAppConfig src/contrib/images/app.go:98:34
+# [GoFileFinder]:                           src/contrib/documents/admin.go:27:26
+# [GoFileFinder]: AdminDocumentModelOptions src/contrib/documents/admin.go:154:32
+# [GoFileFinder]: NewAppConfig              src/contrib/documents/app.go:111:34
+# [GoFileFinder]: NewAppConfig              src/contrib/documents/app.go:112:34
+text: Documents
+locales:
+  nl: "Documenten"
+
+---
+
+# [GoFileFinder]:	 src/contrib/documents/admin.go:28:26
+text: A document file
+locales:
+  nl: "Een documentbestand"
+
+---
+
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:44:27
+text: Document File
+locales:
+  nl: "Documentbestand"
+
+---
+
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:45:30
+text: Upload an document file
+locales:
+  nl: "Upload een documentbestand"
+
+---
+
+# [GoFileFinder]: AdminDocumentModelOptions src/contrib/documents/admin.go:107:44
+# [GoFileFinder]: AdminImageModelOptions    src/contrib/images/admin.go:126:44
+text: File is empty, please try to upload it again
+locales:
+  nl: "Het bestand is leeg, probeer het opnieuw te uploaden."
+
+---
+
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:209:14
+text: File Name
+locales:
+  nl: "Bestandsnaam"
+
+---
+
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:216:14
+text: Size
+locales:
+  nl: "Grootte"
+
+---
+
+# [GoFileFinder]: AdminDocumentModelOptions src/contrib/documents/admin.go:222:36
+# [GoFileFinder]: FormatTimeSince           src/contrib/pages/django_admin.go:226:40
+text: Unknown
+locales:
+  nl: Onbekend
+
+---
+
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:224:36
+text: '%dB'
+locales:
+  nl: '%dB'
+
+---
+
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:226:36
+text: '%dKB'
+locales:
+  nl: '%dKB'
+
+---
+
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:228:36
+text: '%dMB'
+locales:
+  nl: '%dMB'
+
+---
+
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:230:36
+text: '%dGB'
+locales:
+  nl: '%dGB'
+
+---
+
+# [GoFileFinder]:	NewAppConfig src/contrib/documents/app.go:119:19
+text: Document Chooser
+locales:
+  nl: "Document Kiezen"
+
+---
+
+# [TemplateFinder]: {{ T "Image List" }} src/contrib/documents/assets/templates/documents/documents_list.tmpl:3:25
+# [TemplateFinder]: {{ T "Image List" }} src/contrib/images/assets/templates/images/image_list.tmpl:3:25
+text: Image List
+locales:
+  nl: Afbeeldingenlijst
+
+---
+
+# [TemplateFinder]: {{ T "Edit" }} src/contrib/documents/assets/templates/documents/documents_list.tmpl:74:37
+# [TemplateFinder]: {{ T "Edit" }} src/contrib/images/assets/templates/images/image_list.tmpl:74:37
+# [TemplateFinder]: {{ T "Edit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:3:25
+text: Edit
+locales:
+  nl: Bewerken
+
+---
+
+# [GoFileFinder]:                        src/contrib/images/admin.go:30:26
+# [GoFileFinder]: AdminImageModelOptions src/contrib/images/admin.go:173:32
+# [GoFileFinder]: NewAppConfig           src/contrib/images/app.go:101:34
+# [GoFileFinder]: NewAppConfig           src/contrib/images/app.go:102:34
 text: Images
 locales:
   nl: Afbeeldingen
@@ -1562,25 +1720,18 @@ locales:
 
 ---
 
-# [GoFileFinder]:	NewAppConfig src/contrib/images/app.go:105:19
+# [GoFileFinder]: AdminImageModelOptions src/contrib/images/admin.go:107:45
+# [GoFileFinder]: AdminImageModelOptions src/contrib/images/admin.go:118:45
+text: This field is required
+locales:
+  nl: "Dit veld is verplicht."
+
+---
+
+# [GoFileFinder]:	NewAppConfig src/contrib/images/app.go:109:19
 text: Image Chooser
 locales:
-  nl: "Afbeelding Kiezen"
-
----
-
-# [TemplateFinder]:	{{ T "Image List" }} src/contrib/images/assets/templates/images/image_list.tmpl:3:25
-text: Image List
-locales:
-  nl: Afbeeldingenlijst
-
----
-
-# [TemplateFinder]: {{ T "Edit" }} src/contrib/images/assets/templates/images/image_list.tmpl:74:37
-# [TemplateFinder]: {{ T "Edit" }} src/contrib/pages/assets/templates/pages/admin/edit_page.tmpl:3:25
-text: Edit
-locales:
-  nl: Bewerken
+  nl: Afbeelding Kiezen
 
 ---
 
@@ -1933,13 +2084,6 @@ locales:
 
 ---
 
-# [GoFileFinder]:	FormatTimeSince src/contrib/pages/django_admin.go:226:40
-text: Unknown
-locales:
-  nl: Onbekend
-
----
-
 # [GoFileFinder]: *PagesMenuItem.Component src/contrib/pages/django_admin_templ.go:113:79
 # [GoFileFinder]: listRootPageHandler      src/contrib/pages/django_admin_views_root.go:67:26
 # [GoFileFinder]: getPageBreadcrumbs       src/contrib/pages/django_admin_views_utils.go:126:32
@@ -2115,7 +2259,7 @@ locales:
 # [GoFileFinder]:	NewAppConfig src/contrib/pages/django_app.go:275:19
 text: Page Chooser
 locales:
-  nl: "Paginakeuze"
+  nl: Paginakeuze
 
 ---
 

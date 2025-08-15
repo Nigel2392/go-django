@@ -386,6 +386,7 @@ a.danger {
 .panel {
     max-width: var(--max-panel-width, 1040px);
 }
+.panel.panel-margin,
 .panel:not(:has(.panel)):has(.panel__heading) {
     margin-bottom: 1rem;
 }
@@ -475,6 +476,7 @@ a.danger {
     color: hsl( 0 100% 50% );
     text-decoration: line-through;
 }
+.panel.collapsible.collapsed > .panel__help,
 .panel.collapsible.collapsed > .panel__body {
     display: none;
 }
@@ -482,7 +484,6 @@ a.danger {
     display: flex;
     flex-direction: row;
     transform: translateX(-1.7rem);
-    cursor: pointer;
 }
 .panel .panel__heading:has(> .panel__icon+.panel__title) > .panel__title label {
     cursor: pointer;
@@ -492,6 +493,7 @@ a.danger {
     height: 1.5rem;
     padding: 0 0.25rem;
     transition: all 0.2s ease-in-out;
+    cursor: pointer;
 }
 .panel .panel__heading:has(> .panel__icon+.panel__title):hover > .panel__icon {
     transform: translateX(-5px);
@@ -513,6 +515,9 @@ a.danger {
 }
 .panel.panel-row {
     margin-bottom: 0;
+}
+.panel.panel-row.collapsible.collapsed {
+    margin-bottom: 1rem;
 }
 .panel.panel-row > .panel__body {
     gap: 1rem;

@@ -62,9 +62,13 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 				assert.Fail("Path field not found in form")
 				return
 			}
-			pathWidget.SetAttrs(map[string]string{
-				"readonly": "readonly",
-			})
+			if !updating {
+				pathWidget.Hide(true)
+			} else {
+				pathWidget.SetAttrs(map[string]string{
+					"readonly": "readonly",
+				})
+			}
 
 			sizeWidget, ok := form.Widget("FileSize")
 			if !ok {
@@ -170,6 +174,7 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 		RegisterToAdminMenu: true,
 		Model:               &Image{},
 		Name:                "image",
+		MenuLabel:           trans.S("Images"),
 		MenuIcon: func(ctx context.Context) string {
 			return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
  	<path d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
@@ -193,9 +198,13 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 				admin.FieldPanel("Title"),
 				admin.FieldPanel("Path"),
 				admin.FieldPanel("ImageFile"),
-				admin.FieldPanel("CreatedAt"),
-				admin.FieldPanel("FileSize"),
-				admin.FieldPanel("FileHash"),
+				admin.PanelClass("collapsed", admin.LabeledPanelGroup(
+					trans.S("File Metadata"),
+					trans.S("Metadata about the file"),
+					admin.FieldPanel("CreatedAt"),
+					admin.FieldPanel("FileSize"),
+					admin.FieldPanel("FileHash"),
+				)),
 			},
 		},
 		DeleteView: admin.DeleteViewOptions{

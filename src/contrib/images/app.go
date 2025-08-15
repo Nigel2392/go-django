@@ -76,7 +76,9 @@ func NewAppConfig(opts *Options) *AppConfig {
 	}
 
 	if opts.AllowedFileExts == nil {
-		opts.AllowedFileExts = []string{".jpg", ".jpeg", ".png", ".gif"}
+		opts.AllowedFileExts = []string{
+			".jpg", ".jpeg", ".png", ".gif", ".svg", ".webp",
+		}
 	}
 
 	app.ModelObjects = []attrs.Definer{
