@@ -43,7 +43,7 @@ var (
 	//go:embed assets/*
 	assetsFS embed.FS
 
-	app *AppConfig
+	App *AppConfig
 )
 
 type imageResult struct {
@@ -52,8 +52,8 @@ type imageResult struct {
 }
 
 func NewAppConfig(opts *Options) *AppConfig {
-	if app == nil {
-		app = &AppConfig{
+	if App == nil {
+		App = &AppConfig{
 			DBRequiredAppConfig: apps.NewDBAppConfig(
 				"images",
 			),
@@ -81,12 +81,12 @@ func NewAppConfig(opts *Options) *AppConfig {
 		}
 	}
 
-	app.ModelObjects = []attrs.Definer{
+	App.ModelObjects = []attrs.Definer{
 		&Image{},
 	}
 
-	app.Options = opts
-	app.Init = func(settings django.Settings, db drivers.Database) error {
+	App.Options = opts
+	App.Init = func(settings django.Settings, db drivers.Database) error {
 		tpl.Add(*tpl.MergeConfig(
 			&tpl.Config{
 				FS:      filesystem.Sub(assetsFS, "assets/templates"),
@@ -103,7 +103,7 @@ func NewAppConfig(opts *Options) *AppConfig {
 				AppLabel:            trans.S("Images"),
 				MenuLabel:           trans.S("Images"),
 			},
-			AdminImageModelOptions(app),
+			AdminImageModelOptions(App),
 		)
 
 		chooser.Register(&chooser.ChooserDefinition[*Image]{
@@ -156,21 +156,21 @@ func NewAppConfig(opts *Options) *AppConfig {
 
 		return nil
 	}
-	app.Routing = func(m mux.Multiplexer) {
+	App.Routing = func(m mux.Multiplexer) {
 		var g = m.Any("/images", nil, "images")
 		g.Get(
 			"/<<id>>",
-			mux.NewHandler(app.serveImageByIDView),
+			mux.NewHandler(App.serveImageByIDView),
 			"serve_id",
 		)
 		g.Get(
 			"/serve/*",
-			mux.NewHandler(app.serveImageByPathView),
+			mux.NewHandler(App.serveImageByPathView),
 			"serve",
 		)
 	}
 
-	return app
+	return App
 }
 
 func (c *AppConfig) MediaBackend() mediafiles.Backend {

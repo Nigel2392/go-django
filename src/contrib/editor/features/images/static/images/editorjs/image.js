@@ -35,7 +35,7 @@ class GoDjangoImageTool {
     }
 
     validate(savedData) {
-        return savedData.filePath && savedData.filePath.length > 0;
+        return savedData.filePath && savedData.filePath.length > 0 && savedData.id;
     }
   
     render(){
@@ -90,8 +90,11 @@ class GoDjangoImageTool {
                         return;
                     }
 
+                    this.data.id = data.id;
+                    this.data.caption = data.caption;
                     this.data.filePath = data.filePath;
                     this.image.src = `${this.config.serveUrl}/${data.filePath}`
+                    this.image.dataset.id = data.id;
                     this.image.dataset.filePath = data.filePath;
                     fileInput.remove();
 
@@ -110,6 +113,8 @@ class GoDjangoImageTool {
         createFileInput = createFileInput.bind(this);
         if (this.data.filePath) {
             this.image.src = `${this.config.serveUrl}/${this.data.filePath}`
+            this.image.dataset.id = this.data.id;
+            this.image.dataset.caption = this.data.caption || '';
             this.image.dataset.filePath = this.data.filePath;
         } else {
             var fileInput = createFileInput(this.imageWrapper);
@@ -139,6 +144,8 @@ class GoDjangoImageTool {
     save(blockContent) {
         const image = blockContent.querySelector('img');
         return {
+            id: image.dataset.id,
+            caption: image.dataset.caption,
             filePath: image.dataset.filePath,
         };
     }

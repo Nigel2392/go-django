@@ -401,7 +401,7 @@ locales:
 # [GoFileFinder]:                             src/contrib/documents/admin.go:26:26
 text: Document
 locales:
-  nl: "Document"
+  nl: Document
 
 ---
 
@@ -616,19 +616,48 @@ locales:
 
 ---
 
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:137:24
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:164:24
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:129:15
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:157:15
+text: Media
+locales:
+  nl: "Media"
+
+---
+
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:138:24
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:169:24
 text: Cover Image
 locales:
   nl: Omslagafbeelding
 
 ---
 
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:138:24
-# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:165:24
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:139:24
+# [GoFileFinder]: NewAppConfig examples/blogapp/blog/apps.go:170:24
 text: <p>Choose a cover image for your blog post.</p>
 locales:
   nl: <p>Kies een omslagafbeelding voor je blogbericht.</p>
+
+---
+
+# [GoFileFinder]:	NewAppConfig examples/blogapp/blog/apps.go:158:15
+text: Media files associated with this blog post.
+locales:
+  nl: "Media-bestanden die aan dit blogbericht zijn gekoppeld."
+
+---
+
+# [GoFileFinder]:	NewAppConfig examples/blogapp/blog/apps.go:160:16
+text: Choosers
+locales:
+  nl: "Kiezers"
+
+---
+
+# [GoFileFinder]:	NewAppConfig examples/blogapp/blog/apps.go:161:16
+text: Choosers for media files
+locales:
+  nl: "Kiezers voor media-bestanden"
 
 ---
 
@@ -677,7 +706,7 @@ locales:
 # [GoFileFinder]:	*BlogPage.FieldDefs examples/blogapp/blog/models.go:184:22
 text: The document for this blog post.
 locales:
-  nl: "Het document voor dit blogbericht."
+  nl: Het document voor dit blogbericht.
 
 ---
 
@@ -1577,59 +1606,75 @@ locales:
 ---
 
 # [GoFileFinder]:                           src/contrib/documents/admin.go:27:26
-# [GoFileFinder]: AdminDocumentModelOptions src/contrib/documents/admin.go:154:32
+# [GoFileFinder]: AdminDocumentModelOptions src/contrib/documents/admin.go:159:32
 # [GoFileFinder]: NewAppConfig              src/contrib/documents/app.go:111:34
 # [GoFileFinder]: NewAppConfig              src/contrib/documents/app.go:112:34
 text: Documents
 locales:
-  nl: "Documenten"
+  nl: Documenten
 
 ---
 
 # [GoFileFinder]:	 src/contrib/documents/admin.go:28:26
 text: A document file
 locales:
-  nl: "Een documentbestand"
+  nl: Een documentbestand
 
 ---
 
 # [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:44:27
 text: Document File
 locales:
-  nl: "Documentbestand"
+  nl: Documentbestand
 
 ---
 
 # [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:45:30
 text: Upload an document file
 locales:
-  nl: "Upload een documentbestand"
+  nl: Upload een documentbestand
 
 ---
 
-# [GoFileFinder]: AdminDocumentModelOptions src/contrib/documents/admin.go:107:44
-# [GoFileFinder]: AdminImageModelOptions    src/contrib/images/admin.go:126:44
+# [GoFileFinder]: AdminDocumentModelOptions src/contrib/documents/admin.go:112:44
+# [GoFileFinder]: AdminImageModelOptions    src/contrib/images/admin.go:130:44
 text: File is empty, please try to upload it again
 locales:
-  nl: "Het bestand is leeg, probeer het opnieuw te uploaden."
+  nl: Het bestand is leeg, probeer het opnieuw te uploaden.
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:209:14
+# [GoFileFinder]: AdminDocumentModelOptions src/contrib/documents/admin.go:182:14
+# [GoFileFinder]: AdminImageModelOptions    src/contrib/images/admin.go:202:14
+text: File Metadata
+locales:
+  nl: "Bestandsmetadata"
+
+---
+
+# [GoFileFinder]: AdminDocumentModelOptions src/contrib/documents/admin.go:183:14
+# [GoFileFinder]: AdminImageModelOptions    src/contrib/images/admin.go:203:14
+text: Metadata about the file
+locales:
+  nl: "Metadata over het bestand"
+
+---
+
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:218:14
 text: File Name
 locales:
-  nl: "Bestandsnaam"
+  nl: Bestandsnaam
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:216:14
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:225:14
 text: Size
 locales:
-  nl: "Grootte"
+  nl: Grootte
 
 ---
 
-# [GoFileFinder]: AdminDocumentModelOptions src/contrib/documents/admin.go:222:36
+# [GoFileFinder]: AdminDocumentModelOptions src/contrib/documents/admin.go:231:36
 # [GoFileFinder]: FormatTimeSince           src/contrib/pages/django_admin.go:226:40
 text: Unknown
 locales:
@@ -1637,28 +1682,28 @@ locales:
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:224:36
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:233:36
 text: '%dB'
 locales:
   nl: '%dB'
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:226:36
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:235:36
 text: '%dKB'
 locales:
   nl: '%dKB'
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:228:36
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:237:36
 text: '%dMB'
 locales:
   nl: '%dMB'
 
 ---
 
-# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:230:36
+# [GoFileFinder]:	AdminDocumentModelOptions src/contrib/documents/admin.go:239:36
 text: '%dGB'
 locales:
   nl: '%dGB'
@@ -1668,7 +1713,7 @@ locales:
 # [GoFileFinder]:	NewAppConfig src/contrib/documents/app.go:119:19
 text: Document Chooser
 locales:
-  nl: "Document Kiezen"
+  nl: Document Kiezen
 
 ---
 
@@ -1690,9 +1735,9 @@ locales:
 ---
 
 # [GoFileFinder]:                        src/contrib/images/admin.go:30:26
-# [GoFileFinder]: AdminImageModelOptions src/contrib/images/admin.go:173:32
-# [GoFileFinder]: NewAppConfig           src/contrib/images/app.go:101:34
-# [GoFileFinder]: NewAppConfig           src/contrib/images/app.go:102:34
+# [GoFileFinder]: AdminImageModelOptions src/contrib/images/admin.go:177:32
+# [GoFileFinder]: NewAppConfig           src/contrib/images/app.go:103:34
+# [GoFileFinder]: NewAppConfig           src/contrib/images/app.go:104:34
 text: Images
 locales:
   nl: Afbeeldingen
@@ -1720,15 +1765,15 @@ locales:
 
 ---
 
-# [GoFileFinder]: AdminImageModelOptions src/contrib/images/admin.go:107:45
-# [GoFileFinder]: AdminImageModelOptions src/contrib/images/admin.go:118:45
+# [GoFileFinder]: AdminImageModelOptions src/contrib/images/admin.go:111:45
+# [GoFileFinder]: AdminImageModelOptions src/contrib/images/admin.go:122:45
 text: This field is required
 locales:
-  nl: "Dit veld is verplicht."
+  nl: Dit veld is verplicht.
 
 ---
 
-# [GoFileFinder]:	NewAppConfig src/contrib/images/app.go:109:19
+# [GoFileFinder]:	NewAppConfig src/contrib/images/app.go:111:19
 text: Image Chooser
 locales:
   nl: Afbeelding Kiezen

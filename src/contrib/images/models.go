@@ -2,10 +2,8 @@ package images
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"fmt"
-	"hash"
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -17,14 +15,11 @@ import (
 
 var (
 	_ queries.ActsBeforeCreate = (*Image)(nil)
+	_ queries.ActsAfterSave    = (*Image)(nil)
 	_ queries.ContextValidator = (*Image)(nil)
 
 	ErrEmptyPath = fmt.Errorf("empty path")
 )
-
-func newImageHasher() hash.Hash {
-	return sha256.New()
-}
 
 // readonly:id,created_at
 type Image struct {
@@ -79,7 +74,7 @@ func (o *Image) File() (mediafiles.StoredObject, error) {
 		return nil, ErrEmptyPath
 	}
 
-	var backend = app.MediaBackend()
+	var backend = App.MediaBackend()
 	var f, err = backend.Open(o.Path)
 	if err != nil {
 		return nil, err

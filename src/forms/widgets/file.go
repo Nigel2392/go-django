@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"mime"
 	"net/url"
 	"path/filepath"
 	"strings"
@@ -13,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
+	"github.com/Nigel2392/go-django/src/utils/fileutils"
 )
 
 //
@@ -205,20 +205,15 @@ func (f *FileWidget) GetContextData(c context.Context, id, name string, value in
 	}
 
 	var extAttr = new(strings.Builder)
-	for i, ext := range f.Extensions {
+	for i, mime := range fileutils.MimeTypesForExtsSeq(f.Extensions) {
 		if i > 0 {
 			extAttr.WriteString(",")
 		}
 
-		if !strings.HasPrefix(ext, ".") {
-			ext = "." + ext
-		}
-
-		var mimeType = mime.TypeByExtension(ext)
-		if mimeType == "" {
-			extAttr.WriteString(ext)
+		if mime == "" {
+			extAttr.WriteString(f.Extensions[i])
 		} else {
-			extAttr.WriteString(mimeType)
+			extAttr.WriteString(mime)
 		}
 	}
 

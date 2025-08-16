@@ -47,6 +47,12 @@ type Config struct {
 }
 
 func MergeConfig(dst, src *Config) *Config {
+	if dst == nil {
+		return src
+	}
+	if src == nil {
+		return dst
+	}
 	dst.FS = filesystem.NewMultiFS(
 		dst.FS,
 		src.FS,

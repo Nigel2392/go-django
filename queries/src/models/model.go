@@ -777,7 +777,6 @@ func (m *Model) DataStore() queries.ModelDataStore {
 
 // Validate checks if the model is valid.
 func (m *Model) Validate(ctx context.Context) error {
-	m.checkValid()
 	return nil
 }
 
@@ -1033,6 +1032,21 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		assert.Fail("Model %T is not properly initialized", m.internals.object.Interface())
 	}
 
+	// Start transaction, if one was already started this is a no-op.
+	var transaction drivers.Transaction
+	if queries.QUERYSET_CREATE_IMPLICIT_TRANSACTION {
+		ctx, transaction, err = queries.StartTransaction(ctx)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to start transaction for model %T: %w",
+				m.internals.object.Interface(), err,
+			)
+		}
+	} else {
+		transaction = queries.NullTransaction()
+	}
+	defer transaction.Rollback(ctx)
+
 	var (
 		// if the model was not loaded from the database,
 		// we automatically assume all changes are to be saved
@@ -1101,26 +1115,18 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		anyChanges = true
 	}
 
+	if err := m.internals.object.Interface().(queries.ContextValidator).Validate(ctx); err != nil {
+		return fmt.Errorf(
+			"failed to validate model %T: %w",
+			cnf.this, err,
+		)
+	}
+
 	// if no changes were made and the force flag is not set,
 	// we can skip saving the model
 	if !anyChanges && !cnf.Force() && len(cnf.Fields) == 0 && m.internals.fromDB {
 		return nil
 	}
-
-	// Start transaction, if one was already started this is a no-op.
-	var transaction drivers.Transaction
-	if queries.QUERYSET_CREATE_IMPLICIT_TRANSACTION {
-		ctx, transaction, err = queries.StartTransaction(ctx)
-		if err != nil {
-			return fmt.Errorf(
-				"failed to start transaction for model %T: %w",
-				m.internals.object.Interface(), err,
-			)
-		}
-	} else {
-		transaction = queries.NullTransaction()
-	}
-	defer transaction.Rollback(ctx)
 
 	// Save fields which do not depend on the model itself,
 	// these are fields that can be / should be saved before the model itself is saved.

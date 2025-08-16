@@ -22,6 +22,7 @@
     display: flex;
 }
 dialog.godjango-modal {
+    --modalSize: calc(100% - 2em);
     position: relative;
     border: none;
     color: var(--modal-text-color);
@@ -31,6 +32,8 @@ dialog.godjango-modal {
     color: var(--modal-text-color);
     display: flex;
     flex-direction: column;
+    max-width: var(--modalSize);
+    max-height: var(--modalSize);
 }
 dialog.godjango-modal[fullscreen] {
     width: 100%;
@@ -39,7 +42,7 @@ dialog.godjango-modal[fullscreen] {
 }
 dialog.godjango-modal:not([fullscreen]) {
     width: 100%;
-    max-width: min(1200px, 100%);
+    max-width: min(1200px, var(--modalSize));
     max-height: 60vh;
 }
 .godjango-modal-controls {

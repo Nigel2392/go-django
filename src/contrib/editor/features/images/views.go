@@ -1,20 +1,19 @@
 package images
 
 import (
-	"bytes"
+	"database/sql"
 	"encoding/json"
-	"io"
 	"net/http"
-	"path"
 	"path/filepath"
 	"slices"
 
+	"github.com/Nigel2392/go-django/queries/src/models"
+	django "github.com/Nigel2392/go-django/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
-	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/contrib/images"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/utils/httputils"
-	"github.com/Nigel2392/mux"
 	"github.com/justinas/nosurf"
 )
 
@@ -49,7 +48,7 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Parse the multipart form data
-	var maxBytes = app.MaxByteSize()
+	var maxBytes = images.App.MaxByteSize()
 	if err := r.ParseMultipartForm(int64(maxBytes)); err != nil {
 		logger.Error("Error parsing form: %s", err)
 		httputils.JSONHttpError(w, "Error parsing form", http.StatusInternalServerError)
@@ -81,7 +80,7 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the file extension is allowed.
 	// This can be spoofed.
-	var allowedExtensions = app.AllowedFileExts()
+	var allowedExtensions = images.App.AllowedFileExts()
 	var ext = filepath.Ext(hdr.Filename)
 	if len(allowedExtensions) > 0 && !slices.Contains(allowedExtensions, ext) {
 		logger.Error("File extension not allowed: %s", ext)
@@ -91,7 +90,7 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 
 	// Check if the file MIME type is allowed.
 	// This can be spoofed.
-	var allowedMimeTypes = app.AllowedMimeTypes()
+	var allowedMimeTypes = images.App.AllowedMimeTypes()
 	var mime = hdr.Header.Get("Content-Type")
 
 	if len(allowedMimeTypes) > 0 && !slices.Contains(allowedMimeTypes, mime) {
@@ -105,8 +104,8 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 	defer file.Close()
 
 	// Save the file to the media backend
-	var backend = app.MediaBackend()
-	var mediaDir = app.MediaDir()
+	var backend = images.App.MediaBackend()
+	var mediaDir = images.App.MediaDir()
 	var filePath = filepath.Join(
 		mediaDir,
 		hdr.Filename,
@@ -118,11 +117,35 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var caption = r.FormValue("caption")
+	if caption == "" {
+		caption = filepath.Base(hdr.Filename)
+		caption = caption[:len(caption)-len(ext)] // Remove the extension
+	}
+
+	var image = models.Setup(&images.Image{
+		Title: caption,
+		Path:  filePath,
+		FileSize: sql.NullInt32{
+			Int32: int32(hdr.Size),
+			Valid: true,
+		},
+	})
+
+	if err := image.Save(r.Context()); err != nil {
+		logger.Error("Error saving image: %s", err)
+		httputils.JSONHttpError(w, "Error saving image", http.StatusInternalServerError)
+		return
+	}
+
 	// Respond with the file path
 	logger.Debugf("File uploaded successfully: %s", filePath)
 	var jsonResp = map[string]interface{}{
 		"status":   "success",
-		"filePath": filePath,
+		"id":       image.ID,
+		"caption":  image.Title,
+		"filePath": image.Path,
+		"url":      django.Reverse("images:serve", image.Path),
 	}
 
 	err = json.NewEncoder(w).Encode(jsonResp)
@@ -132,51 +155,4 @@ func uploadImage(w http.ResponseWriter, r *http.Request) {
 			w, "Error encoding response", http.StatusInternalServerError,
 		)
 	}
-}
-
-func viewImage(w http.ResponseWriter, r *http.Request) {
-	var backend = app.MediaBackend()
-	var filePath = path.Join(mux.Vars(r)["*"]...)
-	var fileObj, err = backend.Open(filePath)
-	if err != nil {
-		logger.Error("Error opening file (%s): %s", filePath, err)
-		http.Error(w, err_open_generic, http.StatusInternalServerError)
-		return
-	}
-
-	file, err := fileObj.Open()
-	if err != nil {
-		logger.Error("Error opening file object: %s", err)
-		http.Error(w, err_open_generic, http.StatusInternalServerError)
-		return
-	}
-
-	defer file.Close()
-
-	stat, err := file.Stat()
-	if err != nil {
-		logger.Error("Error reading file stat: %s", err)
-		http.Error(w, err_open_generic, http.StatusInternalServerError)
-		return
-	}
-
-	modTime, err := stat.TimeModified()
-	if err != nil {
-		logger.Error("Error retrieving file modified time: %s", err)
-		http.Error(w, err_open_generic, http.StatusInternalServerError)
-		return
-	}
-
-	var buf = new(bytes.Buffer)
-	if _, err := io.Copy(buf, file); err != nil {
-		logger.Error("Error reading file content: %s", err)
-		except.Fail(
-			http.StatusInternalServerError,
-			"Error reading file content",
-		)
-		return
-	}
-
-	var reader = bytes.NewReader(buf.Bytes())
-	http.ServeContent(w, r, filePath, modTime, reader)
 }

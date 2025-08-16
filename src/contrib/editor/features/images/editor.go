@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"path"
+	"reflect"
 	"strings"
+	"sync"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
@@ -21,6 +23,7 @@ import (
 
 func init() {
 	editor.Register(ImageFeature)
+	editor.Register(ImagesFeature)
 }
 
 //go:embed static/**/*
@@ -31,10 +34,9 @@ type ImageFeatureBlock features.Block
 func (i *ImageFeatureBlock) Config(widgetContext ctx.Context) map[string]interface{} {
 	var cfg = (*features.Block)(i).Config(widgetContext)
 	cfg["uploadUrl"] = django.Reverse("editor:upload-image")
-	var serveURL = strings.TrimSuffix(
-		django.Reverse("editor:images"), "/",
+	cfg["serveUrl"] = strings.TrimSuffix(
+		django.Reverse("images:serve"), "/",
 	)
-	cfg["serveUrl"] = strings.TrimSuffix(serveURL, "*")
 	return cfg
 }
 
@@ -57,6 +59,23 @@ func (b *ImageFeatureBlock) RenderBlock(fb editor.FeatureBlock, c context.Contex
 	return (*features.Block)(b).RenderBlock(fb, c, w)
 }
 
+var onFeatureRegisterOnce sync.Once
+
+func onFeatureRegister(m mux.Multiplexer) {
+	onFeatureRegisterOnce.Do(func() {
+		staticfiles.AddFS(
+			filesystem.Sub(imagesFS, "static"),
+			filesystem.MatchPrefix("images/editorjs"),
+		)
+
+		m.Any(
+			"/upload-image",
+			mux.NewHandler(uploadImage),
+			"upload-image",
+		)
+	})
+}
+
 var ImageFeature = &ImageFeatureBlock{
 	BaseFeature: features.BaseFeature{
 		Type:          "image",
@@ -67,22 +86,20 @@ var ImageFeature = &ImageFeatureBlock{
 			}
 			return fb
 		},
-		Register: func(m mux.Multiplexer) {
-			staticfiles.AddFS(
-				filesystem.Sub(imagesFS, "static"),
-				filesystem.MatchPrefix("images/editorjs"),
-			)
-			m.Any(
-				"/upload-image",
-				mux.NewHandler(uploadImage),
-				"upload-image",
-			)
-			m.Get(
-				"/images/*",
-				mux.NewHandler(viewImage),
-				"images",
-			)
+		Validate: func(bd editor.BlockData) error {
+			var rImage = reflect.ValueOf(bd.Data["image"])
+			if rImage.Kind() != reflect.Map {
+				return errors.New("image data is not a map")
+			}
+			if rImage.MapIndex(reflect.ValueOf("id")).IsNil() {
+				return errors.New("image id not found")
+			}
+			if rImage.MapIndex(reflect.ValueOf("filePath")).IsNil() {
+				return errors.New("image filePath not found")
+			}
+			return nil
 		},
+		Register: onFeatureRegister,
 	},
 	RenderFunc: renderImage,
 }
@@ -90,11 +107,9 @@ var ImageFeature = &ImageFeatureBlock{
 func renderImage(fb editor.FeatureBlock, c context.Context, w io.Writer) error {
 	var url = fb.Data().Data["filePath"]
 	var caption = fb.Data().Data["caption"]
+	var id = fb.Data().Data["id"]
 	var serveURL = strings.TrimSuffix(
-		django.Reverse("editor:images"), "/",
-	)
-	serveURL = strings.TrimSuffix(
-		serveURL, "*",
+		django.Reverse("images:serve"), "/",
 	)
 
 	if url == nil {
@@ -106,9 +121,81 @@ func renderImage(fb editor.FeatureBlock, c context.Context, w io.Writer) error {
 	}
 
 	fmt.Fprintf(w,
-		"<img data-block-id=\"%s\" src=\"%s\" alt=\"%s\" />",
-		fb.ID(), path.Join(serveURL, url.(string)), caption,
+		"<img data-block-id=\"%s\" src=\"%s\" alt=\"%s\" data-id=\"%v\" />",
+		fb.ID(), path.Join(serveURL, url.(string)), caption, id,
 	)
+
+	return nil
+}
+
+var ImagesFeature = &ImageFeatureBlock{
+	BaseFeature: features.BaseFeature{
+		Type:          "images",
+		JSConstructor: "GoDjangoImagesTool",
+		Build: func(fb *features.FeatureBlock) *features.FeatureBlock {
+			fb.GetString = func(d editor.BlockData) string {
+				var rImages = reflect.ValueOf(d.Data["images"])
+				var imagesLen int
+				if rImages.Kind() == reflect.Slice {
+					imagesLen = rImages.Len()
+				}
+				return fmt.Sprintf(
+					"%d images",
+					imagesLen,
+				)
+			}
+			return fb
+		},
+		Validate: func(bd editor.BlockData) error {
+			var rImages = reflect.ValueOf(bd.Data["images"])
+			if rImages.Kind() != reflect.Slice {
+				return errors.New("images data is not a slice")
+			}
+
+			for i := 0; i < rImages.Len(); i++ {
+				var img = rImages.Index(i).Interface().(map[string]interface{})
+				if img["id"] == nil {
+					return errors.New("image id not found")
+				}
+				if img["filePath"] == nil {
+					return errors.New("image filePath not found")
+				}
+			}
+			return nil
+		},
+		Register: onFeatureRegister,
+	},
+	RenderFunc: renderImages,
+}
+
+func renderImages(fb editor.FeatureBlock, c context.Context, w io.Writer) error {
+	var imagesData = fb.Data().Data["images"]
+	if imagesData == nil {
+		return errors.New("images data not found")
+	}
+
+	var rImages = reflect.ValueOf(imagesData)
+	if rImages.Kind() != reflect.Slice {
+		return errors.New("images data is not a slice")
+	}
+
+	fmt.Fprint(w, "<div class=\"multi-images\" data-block-id=\"")
+	fmt.Fprint(w, fb.ID())
+	fmt.Fprint(w, "\">")
+
+	for i := 0; i < rImages.Len(); i++ {
+		var img = rImages.Index(i).Interface().(map[string]interface{})
+		var id = img["id"].(string)
+		var url = img["filePath"].(string)
+		var caption = img["caption"].(string)
+
+		fmt.Fprintf(
+			w, "<img src=\"%s\" alt=\"%s\" data-index=\"%d\" data-id=\"%v\" />",
+			url, caption, i, id,
+		)
+	}
+
+	fmt.Fprint(w, "</div>")
 
 	return nil
 }
