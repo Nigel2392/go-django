@@ -6,9 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"path"
 	"reflect"
-	"strings"
 	"sync"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -34,9 +32,7 @@ type ImageFeatureBlock features.Block
 func (i *ImageFeatureBlock) Config(widgetContext ctx.Context) map[string]interface{} {
 	var cfg = (*features.Block)(i).Config(widgetContext)
 	cfg["uploadUrl"] = django.Reverse("editor:upload-image")
-	cfg["serveUrl"] = strings.TrimSuffix(
-		django.Reverse("images:serve"), "/",
-	)
+	cfg["serveUrl"] = django.Reverse("images:serve_id", "<<id>>")
 	return cfg
 }
 
@@ -87,7 +83,7 @@ var ImageFeature = &ImageFeatureBlock{
 			return fb
 		},
 		Validate: func(bd editor.BlockData) error {
-			var rImage = reflect.ValueOf(bd.Data["image"])
+			var rImage = reflect.ValueOf(bd.Data)
 			if rImage.Kind() != reflect.Map {
 				return errors.New("image data is not a map")
 			}
@@ -105,16 +101,8 @@ var ImageFeature = &ImageFeatureBlock{
 }
 
 func renderImage(fb editor.FeatureBlock, c context.Context, w io.Writer) error {
-	var url = fb.Data().Data["filePath"]
 	var caption = fb.Data().Data["caption"]
 	var id = fb.Data().Data["id"]
-	var serveURL = strings.TrimSuffix(
-		django.Reverse("images:serve"), "/",
-	)
-
-	if url == nil {
-		return errors.New("image url not found")
-	}
 
 	if caption == nil {
 		caption = ""
@@ -122,7 +110,7 @@ func renderImage(fb editor.FeatureBlock, c context.Context, w io.Writer) error {
 
 	fmt.Fprintf(w,
 		"<img data-block-id=\"%s\" src=\"%s\" alt=\"%s\" data-id=\"%v\" />",
-		fb.ID(), path.Join(serveURL, url.(string)), caption, id,
+		fb.ID(), django.Reverse("images:serve_id", id), caption, id,
 	)
 
 	return nil
@@ -186,12 +174,10 @@ func renderImages(fb editor.FeatureBlock, c context.Context, w io.Writer) error 
 	for i := 0; i < rImages.Len(); i++ {
 		var img = rImages.Index(i).Interface().(map[string]interface{})
 		var id = img["id"].(string)
-		var url = img["filePath"].(string)
-		var caption = img["caption"].(string)
 
 		fmt.Fprintf(
 			w, "<img src=\"%s\" alt=\"%s\" data-index=\"%d\" data-id=\"%v\" />",
-			url, caption, i, id,
+			django.Reverse("images:serve_id", id), img["caption"].(string), i, id,
 		)
 	}
 

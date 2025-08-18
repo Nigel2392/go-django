@@ -90,14 +90,11 @@ func (a *AppConfig) serveImageFnView(fn func(*AppConfig, http.ResponseWriter, *h
 
 func (a *AppConfig) serveImageByIDView(w http.ResponseWriter, r *http.Request) {
 	var fn = func(a *AppConfig, w http.ResponseWriter, r *http.Request) (*Image, error) {
-		var idStr = r.FormValue("id")
-		if idStr == "" {
-			return nil, errors.New("no image ID provided")
-		}
-
-		var imgRow, err = queries.GetQuerySet[*Image](&Image{}).
+		var vars = mux.Vars(r)
+		var id = vars.Get("id")
+		var imgRow, err = queries.GetQuerySet(&Image{}).
 			WithContext(r.Context()).
-			Filter("ID", idStr).
+			Filter("ID", id).
 			Get()
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving image: %w", err)
