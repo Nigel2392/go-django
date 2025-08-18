@@ -1115,11 +1115,14 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		anyChanges = true
 	}
 
-	if err := m.internals.object.Interface().(queries.ContextValidator).Validate(ctx); err != nil {
-		return fmt.Errorf(
-			"failed to validate model %T: %w",
-			cnf.this, err,
-		)
+	validator, ok := m.internals.object.Interface().(queries.ContextValidator)
+	if ok {
+		if err := validator.Validate(ctx); err != nil {
+			return fmt.Errorf(
+				"failed to validate model %T: %w",
+				cnf.this, err,
+			)
+		}
 	}
 
 	// if no changes were made and the force flag is not set,
