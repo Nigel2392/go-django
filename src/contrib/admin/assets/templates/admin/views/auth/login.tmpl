@@ -19,7 +19,10 @@
                 
                 {{ $Form := (.Get "form") }}
                 {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}
-                {{ include $Form "admin/shared/forms/form.tmpl" }}
+
+                {{ range $Field := $Form.Fields }}
+                    {{ include $Field "admin/shared/forms/form_panel.tmpl" }}
+                {{ end }}
                 
                 <input class="button primary" type="submit" value="{{ T "Submit" }}">
             </form>

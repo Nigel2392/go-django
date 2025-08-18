@@ -9,6 +9,7 @@ import "github.com/Nigel2392/go-django/src/core/attrs"
 import "github.com/Nigel2392/go-django/src"
 import "github.com/Nigel2392/go-django/src/core/trans"
 import "github.com/Nigel2392/go-django/src/forms/media"
+import "github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 
 var (
     _ADMIN_HOMEPAGE_PAGE_COUNT int32 = 5
@@ -56,13 +57,13 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 		return template.HTML("")
 	}
 
-	var columns = make([]list.ListColumn[attrs.Definer], len(p.ListFields)+1)
+	var cols = make([]list.ListColumn[attrs.Definer], len(p.ListFields)+1)
 	for i, field := range p.ListFields {
-		columns[i+1] = model.GetColumn(p.Request.Context(), model.ListView, field)
+		cols[i+1] = model.GetColumn(p.Request.Context(), model.ListView, field)
 	}
 
-	columns[0] = columns[1]
-	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
+	cols[0] = cols[1]
+	cols[1] = &columns.ListActionsColumn[attrs.Definer]{
 		Actions: getListActions(django.Reverse("admin")),
 	}
 
@@ -74,7 +75,7 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
     var listComponent = list.NewList(
 		p.Request,
         pagesList,
-		columns...,
+		cols...,
     )
 
 	var b bytes.Buffer

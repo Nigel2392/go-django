@@ -1,0 +1,35 @@
+{{ define "form_panel" }}
+    <div class="panel panel-default">
+        <div class="panel__heading">
+            <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
+                {{ .Label }}
+            </div>
+        </div>
+
+        {{ $errors := .Errors }}
+        {{ if gt (len $errors) 0 }}
+            <div class="panel__errors">
+                <ul>
+                    {{ range $err := $errors }}
+                        <li class="panel__error">{{ $err }}</li>
+                    {{ end }}
+                </ul>
+            </div>
+        {{ end }}
+
+        {{ $help := .HelpText }}
+        {{ if gt (len $help) 0 }}
+            <div class="panel__help">
+                {{ $help }}
+            </div>
+        {{ end }}
+
+        <div class="panel__body">
+            <div class="form-field-wrapper">
+                <div class="form-field">
+                    {{ .Field }}
+                </div>
+            </div>
+        </div>
+    </div>
+{{ end }}

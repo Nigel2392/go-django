@@ -90,10 +90,7 @@ func main() {
 			reports.NewAppConfig,
 			editor.NewAppConfig,
 			blog.NewAppConfig,
-			images.NewAppConfig(&images.Options{
-				MediaBackend: mediaBackend,
-				MediaDir:     "images",
-			}),
+			images.NewAppConfig,
 			images_app.NewAppConfig(&images_app.Options{
 				MediaBackend: mediaBackend,
 				MediaDir:     "images/blogpages",

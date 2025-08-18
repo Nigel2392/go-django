@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
@@ -33,8 +34,8 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
-func getListActions(next string) []*admin.ListAction[attrs.Definer] {
-	return []*admin.ListAction[attrs.Definer]{
+func getListActions(next string) []*columns.ListAction[attrs.Definer] {
+	return []*columns.ListAction[attrs.Definer]{
 		{
 			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
 				return row.(Page).Reference().IsPublished()
@@ -153,13 +154,13 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		[]string{"Title", "UrlPath", "ContentType", "Live", "UpdatedAt"},
 	)
 
-	var columns = make([]list.ListColumn[attrs.Definer], len(listDisplay)+1)
+	var cols = make([]list.ListColumn[attrs.Definer], len(listDisplay)+1)
 	for i, field := range listDisplay {
-		columns[i+1] = m.GetColumn(r.Context(), m.ListView, field)
+		cols[i+1] = m.GetColumn(r.Context(), m.ListView, field)
 	}
 
-	columns[0] = columns[1]
-	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
+	cols[0] = cols[1]
+	cols[1] = &columns.ListActionsColumn[attrs.Definer]{
 		Actions: getListActions(""),
 	}
 
@@ -290,7 +291,7 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 	}
 
 	var view = &list.View[attrs.Definer]{
-		ListColumns:   columns,
+		ListColumns:   cols,
 		DefaultAmount: 25,
 		PageParam:     "page",
 		AmountParam:   "amount",
@@ -351,9 +352,9 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		return
 	}
 
-	var columns = make([]list.ListColumn[attrs.Definer], len(m.ListView.Fields)+1)
+	var cols = make([]list.ListColumn[attrs.Definer], len(m.ListView.Fields)+1)
 	for i, field := range m.ListView.Fields {
-		columns[i+1] = m.GetColumn(r.Context(), m.ListView, field)
+		cols[i+1] = m.GetColumn(r.Context(), m.ListView, field)
 	}
 
 	var next = django.Reverse(
@@ -361,8 +362,8 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		p.ID(),
 	)
 
-	columns[0] = columns[1]
-	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
+	cols[0] = cols[1]
+	cols[1] = &columns.ListActionsColumn[attrs.Definer]{
 		Actions: getListActions(next),
 	}
 
@@ -386,7 +387,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	}
 
 	var view = &list.View[attrs.Definer]{
-		ListColumns:   columns,
+		ListColumns:   cols,
 		DefaultAmount: amount,
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},

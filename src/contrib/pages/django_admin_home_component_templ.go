@@ -17,6 +17,7 @@ import "github.com/Nigel2392/go-django/src/core/attrs"
 import "github.com/Nigel2392/go-django/src"
 import "github.com/Nigel2392/go-django/src/core/trans"
 import "github.com/Nigel2392/go-django/src/forms/media"
+import "github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 
 var (
 	_ADMIN_HOMEPAGE_PAGE_COUNT int32 = 5
@@ -56,7 +57,7 @@ func (p *PagesAdminHomeComponent) html(upper *list.List[attrs.Definer]) templ.Co
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, "Pages"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin_home_component.templ`, Line: 26, Col: 39}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin_home_component.templ`, Line: 27, Col: 39}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -105,13 +106,13 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 		return template.HTML("")
 	}
 
-	var columns = make([]list.ListColumn[attrs.Definer], len(p.ListFields)+1)
+	var cols = make([]list.ListColumn[attrs.Definer], len(p.ListFields)+1)
 	for i, field := range p.ListFields {
-		columns[i+1] = model.GetColumn(p.Request.Context(), model.ListView, field)
+		cols[i+1] = model.GetColumn(p.Request.Context(), model.ListView, field)
 	}
 
-	columns[0] = columns[1]
-	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
+	cols[0] = cols[1]
+	cols[1] = &columns.ListActionsColumn[attrs.Definer]{
 		Actions: getListActions(django.Reverse("admin")),
 	}
 
@@ -123,7 +124,7 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 	var listComponent = list.NewList(
 		p.Request,
 		pagesList,
-		columns...,
+		cols...,
 	)
 
 	var b bytes.Buffer

@@ -8,6 +8,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -34,13 +35,13 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		"admin:pages",
 	)
 
-	var columns = make([]list.ListColumn[attrs.Definer], len(m.ListView.Fields)+1)
+	var cols = make([]list.ListColumn[attrs.Definer], len(m.ListView.Fields)+1)
 	for i, field := range m.ListView.Fields {
-		columns[i+1] = m.GetColumn(r.Context(), m.ListView, field)
+		cols[i+1] = m.GetColumn(r.Context(), m.ListView, field)
 	}
 
-	columns[0] = columns[1]
-	columns[1] = &admin.ListActionsColumn[attrs.Definer]{
+	cols[0] = cols[1]
+	cols[1] = &columns.ListActionsColumn[attrs.Definer]{
 		Actions: getListActions(next),
 	}
 
@@ -50,7 +51,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 	}
 
 	var view = &list.View[attrs.Definer]{
-		ListColumns:   columns,
+		ListColumns:   cols,
 		DefaultAmount: amount,
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},

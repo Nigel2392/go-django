@@ -22,7 +22,7 @@ type LoginForm interface {
 	Login() error
 }
 
-var LoginHandler = &views.FormView[*AdminForm[LoginForm]]{
+var LoginHandler = &views.FormView[LoginForm]{
 	BaseView: views.BaseView{
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: "admin",
@@ -49,19 +49,17 @@ var LoginHandler = &views.FormView[*AdminForm[LoginForm]]{
 			return context, nil
 		},
 	},
-	GetFormFn: func(req *http.Request) *AdminForm[LoginForm] {
+	GetFormFn: func(req *http.Request) LoginForm {
 		var loginForm = AdminSite.AuthLoginForm(
 			req,
 		)
-		return &AdminForm[LoginForm]{
-			Form: loginForm,
-		}
+		return loginForm
 	},
-	ValidFn: func(req *http.Request, form *AdminForm[LoginForm]) error {
-		form.Form.SetRequest(req)
-		return form.Form.Login()
+	ValidFn: func(req *http.Request, form LoginForm) error {
+		form.SetRequest(req)
+		return form.Login()
 	},
-	SuccessFn: func(w http.ResponseWriter, req *http.Request, form *AdminForm[LoginForm]) {
+	SuccessFn: func(w http.ResponseWriter, req *http.Request, form LoginForm) {
 		var nextURL = req.URL.Query().Get("next")
 		if nextURL == "" {
 			nextURL = django.Reverse("admin:home")
