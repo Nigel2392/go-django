@@ -43,9 +43,14 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request) templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var extraEncoded, err = json.Marshal(c._Definition.GetExtraData(r.Context(), c.Instance))
-		if err != nil {
-			return err
+		var data = c._Definition.GetExtraData(r.Context(), c.Instance)
+		var dataBytes []byte
+		var err error
+		if data != nil {
+			dataBytes, err = json.Marshal(data)
+			if err != nil {
+				return err
+			}
 		}
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<tr class=\"column-group godjango-chooser-list-group\" data-chooser-value=\"")
 		if templ_7745c5c3_Err != nil {
@@ -54,7 +59,7 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(attrs.ToString(attrs.PrimaryKey(c.Instance)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 23, Col: 122}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 122}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -67,7 +72,7 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(c._Definition.GetPreviewString(r.Context(), c.Instance))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 23, Col: 203}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 203}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -78,9 +83,9 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var4 string
-		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(string(extraEncoded))
+		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(string(dataBytes))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 23, Col: 246}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 243}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {

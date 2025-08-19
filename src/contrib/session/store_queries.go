@@ -11,9 +11,11 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/alexedwards/scs/v2"
 )
 
 var (
+	_ scs.CtxStore          = (*QueryStore)(nil)
 	_ migrator.IndexDefiner = (*Session)(nil)
 	_ attrs.Definer         = (*Session)(nil)
 )
@@ -87,11 +89,28 @@ func NewQueryStoreWithCleanupInterval(db drivers.Database, cleanupInterval time.
 	return p
 }
 
+func (p *QueryStore) Find(token string) ([]byte, bool, error) {
+	return p.FindCtx(context.Background(), token)
+}
+
+func (p *QueryStore) Commit(token string, b []byte, expiry time.Time) error {
+	return p.CommitCtx(context.Background(), token, b, expiry)
+}
+
+func (p *QueryStore) Delete(token string) error {
+	return p.DeleteCtx(context.Background(), token)
+}
+
+func (p *QueryStore) All() (map[string][]byte, error) {
+	return p.AllCtx(context.Background())
+}
+
 // Find returns the data for a given session token from the QueryStore instance.
 // If the session token is not found or is expired, the returned exists flag will
 // be set to false.
-func (p *QueryStore) Find(token string) ([]byte, bool, error) {
+func (p *QueryStore) FindCtx(ctx context.Context, token string) ([]byte, bool, error) {
 	var row, err = queries.GetQuerySet(&Session{}).
+		WithContext(ctx).
 		Filter("Token", token).
 		Filter("Expiry__gt", time.Now().UTC().UnixNano()).
 		Get()
@@ -106,7 +125,7 @@ func (p *QueryStore) Find(token string) ([]byte, bool, error) {
 // Commit adds a session token and data to the QueryStore instance with the
 // given expiry time. If the session token already exists, then the data and expiry
 // time are updated.
-func (p *QueryStore) Commit(token string, b []byte, expiry time.Time) error {
+func (p *QueryStore) CommitCtx(ctx context.Context, token string, b []byte, expiry time.Time) error {
 
 	var session = &Session{
 		Token:  drivers.Char(token),
@@ -114,12 +133,15 @@ func (p *QueryStore) Commit(token string, b []byte, expiry time.Time) error {
 		Expiry: expiry.UTC().UnixNano(),
 	}
 
-	var querySet = queries.GetQuerySet(session).Filter("Token", token)
+	var querySet = queries.GetQuerySet(session).
+		WithContext(ctx).
+		Filter("Token", token)
+
 	var transaction, err = querySet.GetOrCreateTransaction()
 	if err != nil {
 		return err
 	}
-	defer transaction.Rollback(context.Background())
+	defer transaction.Rollback(ctx)
 
 	obj, created, err := querySet.GetOrCreate(session)
 	if err != nil {
@@ -127,7 +149,7 @@ func (p *QueryStore) Commit(token string, b []byte, expiry time.Time) error {
 	}
 
 	if created {
-		return transaction.Commit(context.Background())
+		return transaction.Commit(ctx)
 
 	}
 
@@ -139,21 +161,22 @@ func (p *QueryStore) Commit(token string, b []byte, expiry time.Time) error {
 		return err
 	}
 
-	return transaction.Commit(context.Background())
+	return transaction.Commit(ctx)
 
 }
 
 // Delete removes a session token and corresponding data from the QueryStore
 // instance.
-func (p *QueryStore) Delete(token string) error {
-	var _, err = queries.GetQuerySet(&Session{}).Filter("Token", token).Delete()
+func (p *QueryStore) DeleteCtx(ctx context.Context, token string) error {
+	var _, err = queries.GetQuerySet(&Session{}).WithContext(ctx).Filter("Token", token).Delete()
 	return err
 }
 
 // All returns a map containing the token and data for all active (i.e.
 // not expired) sessions in the QueryStore instance.
-func (p *QueryStore) All() (map[string][]byte, error) {
+func (p *QueryStore) AllCtx(ctx context.Context) (map[string][]byte, error) {
 	var rows, err = queries.GetQuerySet(&Session{}).
+		WithContext(ctx).
 		Select("Token", "Data").
 		Filter("Expiry__gt", time.Now().UTC().UnixNano()).
 		All()

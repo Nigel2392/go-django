@@ -176,6 +176,7 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 		var primDef = defs.Primary()
 
 		var modelRow, err = queries.GetQuerySet(b.Model).
+			WithContext(c).
 			Filter(primDef.Name(), value).
 			Get()
 

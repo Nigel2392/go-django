@@ -132,13 +132,18 @@ func NewAppConfig(opts *Options) *AppConfig {
 					var resultList = make([]imageResult, len(results))
 					for i, img := range results {
 
-						var dataStr, _ = json.Marshal(def.GetExtraData(req.Context(), img))
+						var dataBytes []byte
+						var data = def.GetExtraData(req.Context(), img)
+						if data != nil {
+							dataBytes, _ = json.Marshal(data)
+						}
+
 						resultList[i] = imageResult{
 							Image: img,
 							PreviewHTML: fmt.Sprintf(`<img src="%s" alt="%s">`,
 								django.Reverse("images:serve", img.Path), img.Title,
 							),
-							ExtraData: string(dataStr),
+							ExtraData: string(dataBytes),
 						}
 					}
 					return resultList
