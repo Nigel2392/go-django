@@ -18,9 +18,9 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/documents"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features"
-	"github.com/Nigel2392/go-django/src/contrib/editor/features/images"
+	_ "github.com/Nigel2392/go-django/src/contrib/editor/features/images"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features/links"
-	images_app "github.com/Nigel2392/go-django/src/contrib/images"
+	images "github.com/Nigel2392/go-django/src/contrib/images"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
@@ -91,8 +91,7 @@ func main() {
 			reports.NewAppConfig,
 			editor.NewAppConfig,
 			blog.NewAppConfig,
-			images.NewAppConfig,
-			images_app.NewAppConfig(&images_app.Options{
+			images.NewAppConfig(&images.Options{
 				MediaBackend: mediaBackend,
 				MediaDir:     "images/blogpages",
 			}),

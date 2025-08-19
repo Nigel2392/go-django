@@ -1,9 +1,10 @@
-.codex-editor {
+
+.editorjs-widget-container .codex-editor {
     border: 3px dotted rgb(46 31 94 / 20%);
     border-bottom-style: dashed;
     border-top-style: dashed;
 }
-.codex-editor::after {
+.editorjs-widget-container .codex-editor::after {
     position: absolute;
     bottom: 10px;
     left: 50%;
@@ -11,14 +12,14 @@
     content: 'Click to edit...';
     opacity: 0.5;
 }
-.ce-block__content > * {
+.editorjs-widget-container .ce-block__content > * {
     padding-left: 0.325em;
     padding-right: 0.325em;
 }
-.ce-block:has(:focus-within) {
+.editorjs-widget-container .ce-block:has(:focus-within) {
     outline: 2px solid var(--color-link);
 }
-.ce-block *:focus,
-.ce-block *:focus-within {
+.editorjs-widget-container .ce-block *:focus,
+.editorjs-widget-container .ce-block *:focus-within {
     outline: unset;
 }

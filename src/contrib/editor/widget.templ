@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 )
 
 func getSafe[T any](m map[string]interface{}, key string) (value T) {
@@ -41,20 +42,54 @@ func NewEditorJSWidget(features ...string) *EditorJSWidget {
 	}
 }
 
+func (b *EditorJSWidget) Validate(ctx context.Context, value interface{}) []error {
+	var editorJsData EditorJSData
+
+	switch value := value.(type) {
+	case *EditorJSBlockData:
+		var blocks = make([]BlockData, 0)
+		var featuresMap = make(map[string]struct{})
+		for _, feature := range b.Features {
+			featuresMap[feature] = struct{}{}
+		}
+		for _, block := range value.Blocks {
+			if _, ok := featuresMap[block.Type()]; !ok {
+				continue
+			}
+			var data = block.Data()
+			blocks = append(blocks, data)
+		}
+
+		editorJsData = EditorJSData{
+			Time:    value.Time,
+			Version: value.Version,
+			Blocks:  blocks,
+		}
+
+	case EditorJSData:
+		editorJsData = value
+	default:
+		return []error{errors.TypeMismatch.Wrapf(
+			"invalid value type: %T", value,
+		)}
+	}
+
+	return EditorRegistry.Validate(b.Features, editorJsData)
+}
+
 func (b *EditorJSWidget) ValueToForm(value interface{}) interface{} {
 	var editorJsData EditorJSData
 	if fields.IsZero(value) {
 		return editorJsData
 	}
 
-	var featuresMap = make(map[string]struct{})
-	for _, feature := range b.Features {
-		featuresMap[feature] = struct{}{}
-	}
-
 	switch value := value.(type) {
 	case *EditorJSBlockData:
 		var blocks = make([]BlockData, 0)
+		var featuresMap = make(map[string]struct{})
+		for _, feature := range b.Features {
+			featuresMap[feature] = struct{}{}
+		}
 
 		for _, block := range value.Blocks {
 			if _, ok := featuresMap[block.Type()]; !ok {
@@ -64,13 +99,11 @@ func (b *EditorJSWidget) ValueToForm(value interface{}) interface{} {
 			blocks = append(blocks, data)
 		}
 
-		var d = EditorJSData{
+		editorJsData = EditorJSData{
 			Time:    value.Time,
 			Version: value.Version,
 			Blocks:  blocks,
 		}
-
-		editorJsData = d
 	case EditorJSData:
 		editorJsData = value
 	case string:

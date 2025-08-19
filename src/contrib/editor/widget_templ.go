@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/a-h/templ"
 	templruntime "github.com/a-h/templ/runtime"
 
@@ -48,20 +49,54 @@ func NewEditorJSWidget(features ...string) *EditorJSWidget {
 	}
 }
 
+func (b *EditorJSWidget) Validate(ctx context.Context, value interface{}) []error {
+	var editorJsData EditorJSData
+
+	switch value := value.(type) {
+	case *EditorJSBlockData:
+		var blocks = make([]BlockData, 0)
+		var featuresMap = make(map[string]struct{})
+		for _, feature := range b.Features {
+			featuresMap[feature] = struct{}{}
+		}
+		for _, block := range value.Blocks {
+			if _, ok := featuresMap[block.Type()]; !ok {
+				continue
+			}
+			var data = block.Data()
+			blocks = append(blocks, data)
+		}
+
+		editorJsData = EditorJSData{
+			Time:    value.Time,
+			Version: value.Version,
+			Blocks:  blocks,
+		}
+
+	case EditorJSData:
+		editorJsData = value
+	default:
+		return []error{errors.TypeMismatch.Wrapf(
+			"invalid value type: %T", value,
+		)}
+	}
+
+	return EditorRegistry.Validate(b.Features, editorJsData)
+}
+
 func (b *EditorJSWidget) ValueToForm(value interface{}) interface{} {
 	var editorJsData EditorJSData
 	if fields.IsZero(value) {
 		return editorJsData
 	}
 
-	var featuresMap = make(map[string]struct{})
-	for _, feature := range b.Features {
-		featuresMap[feature] = struct{}{}
-	}
-
 	switch value := value.(type) {
 	case *EditorJSBlockData:
 		var blocks = make([]BlockData, 0)
+		var featuresMap = make(map[string]struct{})
+		for _, feature := range b.Features {
+			featuresMap[feature] = struct{}{}
+		}
 
 		for _, block := range value.Blocks {
 			if _, ok := featuresMap[block.Type()]; !ok {
@@ -71,18 +106,15 @@ func (b *EditorJSWidget) ValueToForm(value interface{}) interface{} {
 			blocks = append(blocks, data)
 		}
 
-		var d = EditorJSData{
+		editorJsData = EditorJSData{
 			Time:    value.Time,
 			Version: value.Version,
 			Blocks:  blocks,
 		}
-
-		editorJsData = d
 	case EditorJSData:
 		editorJsData = value
 	case string:
 		return value
-
 	default:
 		panic(fmt.Sprintf("Invalid value type: %T", value))
 	}
@@ -148,7 +180,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%s-container", id))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 114, Col: 45}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 149, Col: 45}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -161,7 +193,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(templ.JSONString(config))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 114, Col: 176}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 149, Col: 176}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -174,7 +206,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(id)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 117, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 152, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -187,7 +219,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 118, Col: 23}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 153, Col: 23}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -200,7 +232,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(value)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 119, Col: 25}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 154, Col: 25}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -213,7 +245,7 @@ func (b *EditorJSWidget) Component(id, name, value string, errors []error, attrs
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(fmt.Sprintf("%s-editor", id))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 122, Col: 83}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/editor/widget.templ`, Line: 157, Col: 83}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {

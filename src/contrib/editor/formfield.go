@@ -1,11 +1,14 @@
 package editor
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
+
+var _ fields.Field = (*EditorJSFormField)(nil)
 
 type EditorJSFormField struct {
 	*fields.JSONFormField[EditorJSData]
@@ -32,6 +35,11 @@ func (e *EditorJSFormField) Widget() widgets.Widget {
 		return e.widgetOverride(e.Features...)
 	}
 	return NewEditorJSWidget(e.Features...)
+}
+
+func (e *EditorJSFormField) Validate(ctx context.Context, value interface{}) []error {
+	var widget = e.Widget()
+	return widget.Validate(ctx, value)
 }
 
 func (e *EditorJSFormField) HasChanged(initial, data interface{}) bool {

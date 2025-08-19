@@ -22,6 +22,11 @@ type FeatureBlock interface {
 	Data() BlockData
 }
 
+type PrefetchableFeatureBlock interface {
+	FeatureBlock
+	WithData(ctx context.Context, data BlockData)
+}
+
 type BaseFeature interface {
 	// Name returns the name of the feature.
 	Name() string
@@ -42,6 +47,12 @@ type BaseFeature interface {
 
 	// Media return's the feature's static / media files.
 	Media() media.Media
+}
+
+type PrefetchableFeature interface {
+	BaseFeature
+	Render(BlockData) FeatureBlock // actually should implement [PrefetchableFeatureBlock]
+	PrefetchData(ctx context.Context, data []BlockData) (map[string]BlockData, error)
 }
 
 // FeatureBlockRenderer is a feature that can render a block.

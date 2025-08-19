@@ -37,6 +37,10 @@
       "src/contrib/editor/features/links/static_src/**/*.js",
       "src/contrib/editor/features/links/static_src/**/*.ts",
       "src/contrib/editor/features/links/static_src/**/*.tsx",
+  
+      "src/contrib/editor/features/images/static_src/**/*.js",
+      "src/contrib/editor/features/images/static_src/**/*.ts",
+      "src/contrib/editor/features/images/static_src/**/*.tsx",
     ],
     "exclude": [
       "node_modules",
@@ -48,6 +52,10 @@
       "src/contrib/blocks/assets/static_src/**/*.test.js",
       "src/contrib/blocks/assets/static_src/**/*.test.ts",
       "src/contrib/blocks/assets/static_src/**/*.test.tsx",
+
+      "src/contrib/editor/features/images/static_src/**/*.test.js",
+      "src/contrib/editor/features/images/static_src/**/*.test.ts",
+      "src/contrib/editor/features/images/static_src/**/*.test.tsx",
 
       "src/contrib/admin/static_src/**/*.test.js",
       "src/contrib/admin/static_src/**/*.test.ts",

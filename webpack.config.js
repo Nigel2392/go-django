@@ -27,7 +27,7 @@ function baseConfig(rules = []) {
     }
     return {
         resolve: {
-            extensions: ['.ts', '.tsx', 'css', '...'],
+            extensions: ['.ts', '.tsx', '.css', '...'],
         },
         mode: 'production',
         module: {
@@ -59,6 +59,26 @@ module.exports = [
                     "ts-loader",
                 ]
             }
+        ]),
+    },
+    {
+        entry: './src/contrib/editor/features/images/static_src/image.ts',
+        output: {
+            'path': path.resolve(__dirname, 'src/contrib/editor/features/images/static/images/editorjs/'),
+            'filename': 'image.js'
+        },
+        ...baseConfig([
+            tsLoaderConfig, tsxLoaderConfig,
+        ]),
+    },
+    {
+        entry: './src/contrib/editor/features/images/static_src/images.ts',
+        output: {
+            'path': path.resolve(__dirname, 'src/contrib/editor/features/images/static/images/editorjs/'),
+            'filename': 'images.js'
+        },
+        ...baseConfig([
+            tsLoaderConfig, tsxLoaderConfig,
         ]),
     },
     {

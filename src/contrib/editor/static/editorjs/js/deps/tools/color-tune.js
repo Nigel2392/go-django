@@ -35,6 +35,7 @@ class BaseColorTune {
         }
 
         this.data.color = this.data.color || this.constructor[`defaultColor${this.constructor.name}`] || null;
+        this.data.stretched = this.data.stretched || this.constructor[`defaultStretched${this.constructor.name}`] || false;
 
         setTimeout(() => {
             this.api.listeners.on(this.block.holder, 'keydown', this.handleKeyDown.bind(this));
@@ -46,6 +47,7 @@ class BaseColorTune {
                 });
 
                 this.constructor[`defaultColor${this.constructor.name}`] = null;
+                this.constructor[`defaultStretched${this.constructor.name}`] = null;
             }
         }, 0);
     }
@@ -71,9 +73,15 @@ class BaseColorTune {
     }
 
     handleKeyDown(event) {
-        if (event.key === 'Enter' && this.data.color && !event.ctrlKey) {
-            this.constructor[`defaultColor${this.constructor.name}`] = this.data.color;
+        if (event.key === 'Enter' && !event.ctrlKey) {
+            if (this.data.color) {
+                this.constructor[`defaultColor${this.constructor.name}`] = this.data.color;
+            }
+            if (this.data.stretched) {
+                this.constructor[`defaultStretched${this.constructor.name}`] = this.data.stretched;
+            }
         }
+        
 
         // CTRL ALT R - reset color
         if (event.key === 'r' && event.ctrlKey && event.altKey && this.data.color) {

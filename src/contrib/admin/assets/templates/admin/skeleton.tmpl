@@ -27,9 +27,10 @@
         {{ block "root" . }}{{ end }}
 
         {{ icons }}
+        
         <script src="{{ static "admin/js/index.js" }}"></script>
         {{ range $js := $Media.JS }}
-            {{ $js }}
+        {{ $js }}
         {{ end }}
         {{ block "extra_js" . }}{{ end }}
     </body>

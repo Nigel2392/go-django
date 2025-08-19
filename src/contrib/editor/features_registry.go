@@ -80,7 +80,48 @@ func (e *EditorJSBlockData) String() string {
 func (e *EditorJSBlockData) Render() (template.HTML, error) {
 	var ctx = context.Background()
 	var b = new(strings.Builder)
+	var prefetchableBlocks = make(map[string]PrefetchableFeature)
+	for _, feature := range e.Features {
+		if prefetchable, ok := feature.(PrefetchableFeature); ok {
+			prefetchableBlocks[feature.Name()] = prefetchable
+		}
+	}
+
+	var dataForPrefetch = make(map[string][]BlockData)
+	var prefetchedData = make(map[string]map[string]BlockData)
+	if len(prefetchableBlocks) > 0 {
+		for _, block := range e.Blocks {
+			if _, ok := prefetchableBlocks[block.Type()]; ok {
+				dataForPrefetch[block.Type()] = append(dataForPrefetch[block.Type()], block.Data())
+			} else {
+				dataForPrefetch[block.Type()] = []BlockData{block.Data()}
+			}
+		}
+
+		for name, feature := range prefetchableBlocks {
+			data, err := feature.PrefetchData(ctx, dataForPrefetch[name])
+			if err != nil {
+				return "", err
+			}
+
+			prefetchedData[name] = data
+		}
+	}
+
 	for _, block := range e.Blocks {
+		if dataMap, ok := prefetchedData[block.Type()]; ok {
+			if data, ok := dataMap[block.ID()]; ok {
+				prefetchableBlock, ok := block.(PrefetchableFeatureBlock)
+				if !ok {
+					panic(fmt.Sprintf(
+						"block %q is not a PrefetchableFeatureBlock",
+						block.ID(),
+					))
+				}
+				prefetchableBlock.WithData(ctx, data)
+			}
+		}
+
 		if err := block.Render(ctx, b); err != nil && RENDER_ERRORS {
 			fmt.Fprintf(b, "Error (%s): %s", block.Type(), err)
 		}
@@ -259,10 +300,6 @@ func (e *editorRegistry) ValueToGo(tools []string, data EditorJSData) (*EditorJS
 			continue
 		}
 
-		if err := feature.OnValidate(block); err != nil {
-			return blockData, err
-		}
-
 		var b FeatureBlockRenderer
 		if b, ok = feature.(FeatureBlockRenderer); !ok {
 			return blockData, fmt.Errorf("feature %q marked as feature but does not implement FeatureBlockRenderer", block.Type)
@@ -293,6 +330,43 @@ func (e *editorRegistry) ValueToGo(tools []string, data EditorJSData) (*EditorJS
 
 	blockData.Blocks = blockList
 	return blockData, nil
+}
+
+func (e *editorRegistry) Validate(tools []string, data EditorJSData) []error {
+	var blocks = data.Blocks
+	var errs []error
+	for _, block := range blocks {
+		feature, ok := e.features.Get(block.Type)
+		if !ok {
+			continue
+		}
+
+		if err := feature.OnValidate(block); err != nil {
+			errs = append(errs, err)
+		}
+
+		for k := range block.Tunes {
+			var tuneFeature, ok = e.features.Get(k)
+			if !ok {
+				continue
+			}
+
+			var tuneFeatureBlock BlockTuneFeature
+			if tuneFeatureBlock, ok = tuneFeature.(BlockTuneFeature); !ok {
+				errs = append(errs, fmt.Errorf(
+					"feature %q marked as tune but does not implement BlockTuneFeature", k,
+				))
+			}
+
+			var err = tuneFeatureBlock.OnValidate(block)
+			if err != nil {
+				errs = append(errs, fmt.Errorf(
+					"tune feature %q validation failed: %w", k, err,
+				))
+			}
+		}
+	}
+	return errs
 }
 
 var (
