@@ -7,15 +7,12 @@ import (
 	"fmt"
 	"io"
 	"reflect"
-	"strconv"
 	"sync"
 
-	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	"github.com/Nigel2392/go-django/src/contrib/editor/features"
-	"github.com/Nigel2392/go-django/src/contrib/images"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
@@ -121,57 +118,57 @@ var ImageFeature = &ImageFeatureBlock{
 		},
 		RenderFunc: renderImage,
 	},
-	Prefetch: func(ctx context.Context, data []editor.BlockData) (map[string]editor.BlockData, error) {
-		var dataMap = make(map[uint32][]*editor.BlockData)
-		var idList = make([]uint32, 0, len(data))
-
-		for _, d := range data {
-			var intVal, err = strconv.Atoi(d.Data["id"].(string))
-			if err != nil {
-				return nil, err
-			}
-
-			idList = append(idList, uint32(intVal))
-			var slice, ok = dataMap[uint32(intVal)]
-			if !ok {
-				slice = make([]*editor.BlockData, 0)
-			}
-			slice = append(slice, &d)
-			dataMap[uint32(intVal)] = slice
-		}
-
-		var rowCnt, rowIter, err = queries.GetQuerySet(&images.Image{}).
-			Filter("ID__in", idList).
-			IterAll()
-		if err != nil {
-			return nil, err
-		}
-
-		var objMap = make(map[string]editor.BlockData, rowCnt)
-		for row, err := range rowIter {
-			if err != nil {
-				return nil, err
-			}
-
-			var dataObjs, ok = dataMap[row.Object.ID]
-			if !ok {
-				return nil, errors.New("data object not found in dataMap")
-			}
-
-			// Map the data object to the image
-			for _, dataObj := range dataObjs {
-
-				if caption := dataObj.Data["caption"]; caption == nil || caption == "" || caption == "undefined" {
-					dataObj.Data["caption"] = row.Object.Title
-				}
-
-				dataObj.Data["serve_url"] = django.Reverse("images:serve", row.Object.Path)
-				objMap[dataObj.ID] = *dataObj
-			}
-		}
-
-		return objMap, nil
-	},
+	//	Prefetch: func(ctx context.Context, data []editor.BlockData) (map[string]editor.BlockData, error) {
+	//		var dataMap = make(map[uint32][]*editor.BlockData)
+	//		var idList = make([]uint32, 0, len(data))
+	//
+	//		for _, d := range data {
+	//			var intVal, err = strconv.Atoi(d.Data["id"].(string))
+	//			if err != nil {
+	//				return nil, err
+	//			}
+	//
+	//			idList = append(idList, uint32(intVal))
+	//			var slice, ok = dataMap[uint32(intVal)]
+	//			if !ok {
+	//				slice = make([]*editor.BlockData, 0)
+	//			}
+	//			slice = append(slice, &d)
+	//			dataMap[uint32(intVal)] = slice
+	//		}
+	//
+	//		var rowCnt, rowIter, err = queries.GetQuerySet(&images.Image{}).
+	//			Filter("ID__in", idList).
+	//			IterAll()
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//
+	//		var objMap = make(map[string]editor.BlockData, rowCnt)
+	//		for row, err := range rowIter {
+	//			if err != nil {
+	//				return nil, err
+	//			}
+	//
+	//			var dataObjs, ok = dataMap[row.Object.ID]
+	//			if !ok {
+	//				return nil, errors.New("data object not found in dataMap")
+	//			}
+	//
+	//			// Map the data object to the image
+	//			for _, dataObj := range dataObjs {
+	//
+	//				if caption := dataObj.Data["caption"]; caption == nil || caption == "" || caption == "undefined" {
+	//					dataObj.Data["caption"] = row.Object.Title
+	//				}
+	//
+	//				dataObj.Data["serve_url"] = django.Reverse("images:serve", row.Object.Path)
+	//				objMap[dataObj.ID] = *dataObj
+	//			}
+	//		}
+	//
+	//		return objMap, nil
+	//	},
 }
 
 func renderImage(fb editor.FeatureBlock, c context.Context, w io.Writer) error {
@@ -252,83 +249,83 @@ var ImagesFeature = &ImageFeatureBlock{
 		},
 		RenderFunc: renderImages,
 	},
-	Prefetch: func(ctx context.Context, data []editor.BlockData) (map[string]editor.BlockData, error) {
-		var dataMap = make(map[uint32][]*editor.BlockData)
-		var idList = make([]uint32, 0, len(data))
-
-		for _, d := range data {
-
-			if _, ok := d.Data["ids"]; !ok {
-				return nil, errors.New("ids not found in block data")
-			}
-
-			var rImages = reflect.ValueOf(d.Data["ids"])
-			if rImages.Kind() != reflect.Slice {
-				return nil, errors.New("images data is not a slice")
-			}
-
-			for i := 0; i < rImages.Len(); i++ {
-				var idFace = rImages.Index(i).Interface()
-				if idFace == nil {
-					return nil, fmt.Errorf("image id at index %d is nil", i)
-				}
-
-				var id, ok = idFace.(string)
-				if id == "" || !ok {
-					return nil, fmt.Errorf("image id at index %d is not valid: %v", i, idFace)
-				}
-
-				var intVal, err = strconv.Atoi(id)
-				if err != nil {
-					return nil, err
-				}
-
-				idList = append(idList, uint32(intVal))
-				slice, ok := dataMap[uint32(intVal)]
-				if !ok {
-					slice = make([]*editor.BlockData, 0)
-				}
-				slice = append(slice, &d)
-				dataMap[uint32(intVal)] = slice
-			}
-		}
-
-		var rowCnt, rowIter, err = queries.GetQuerySet(&images.Image{}).
-			Filter("ID__in", idList).
-			IterAll()
-		if err != nil {
-			return nil, err
-		}
-
-		var objMap = make(map[string]editor.BlockData, rowCnt)
-		for row, err := range rowIter {
-			if err != nil {
-				return nil, err
-			}
-
-			var dataObjs, ok = dataMap[row.Object.ID]
-			if !ok {
-				return nil, errors.New("data object not found in dataMap")
-			}
-
-			// Map the data object to the image
-			for _, dataObj := range dataObjs {
-
-				var serveURLs, ok = dataObj.Data["serve_urls"].([]string)
-				if !ok {
-					serveURLs = []string{django.Reverse("images:serve", row.Object.Path)}
-				} else {
-					serveURLs = append(serveURLs, django.Reverse("images:serve", row.Object.Path))
-				}
-
-				dataObj.Data["serve_urls"] = serveURLs
-
-				objMap[dataObj.ID] = *dataObj
-			}
-		}
-
-		return objMap, nil
-	},
+	//	Prefetch: func(ctx context.Context, data []editor.BlockData) (map[string]editor.BlockData, error) {
+	//		var dataMap = make(map[uint32][]*editor.BlockData)
+	//		var idList = make([]uint32, 0, len(data))
+	//
+	//		for _, d := range data {
+	//
+	//			if _, ok := d.Data["ids"]; !ok {
+	//				return nil, errors.New("ids not found in block data")
+	//			}
+	//
+	//			var rImages = reflect.ValueOf(d.Data["ids"])
+	//			if rImages.Kind() != reflect.Slice {
+	//				return nil, errors.New("images data is not a slice")
+	//			}
+	//
+	//			for i := 0; i < rImages.Len(); i++ {
+	//				var idFace = rImages.Index(i).Interface()
+	//				if idFace == nil {
+	//					return nil, fmt.Errorf("image id at index %d is nil", i)
+	//				}
+	//
+	//				var id, ok = idFace.(string)
+	//				if id == "" || !ok {
+	//					return nil, fmt.Errorf("image id at index %d is not valid: %v", i, idFace)
+	//				}
+	//
+	//				var intVal, err = strconv.Atoi(id)
+	//				if err != nil {
+	//					return nil, err
+	//				}
+	//
+	//				idList = append(idList, uint32(intVal))
+	//				slice, ok := dataMap[uint32(intVal)]
+	//				if !ok {
+	//					slice = make([]*editor.BlockData, 0)
+	//				}
+	//				slice = append(slice, &d)
+	//				dataMap[uint32(intVal)] = slice
+	//			}
+	//		}
+	//
+	//		var rowCnt, rowIter, err = queries.GetQuerySet(&images.Image{}).
+	//			Filter("ID__in", idList).
+	//			IterAll()
+	//		if err != nil {
+	//			return nil, err
+	//		}
+	//
+	//		var objMap = make(map[string]editor.BlockData, rowCnt)
+	//		for row, err := range rowIter {
+	//			if err != nil {
+	//				return nil, err
+	//			}
+	//
+	//			var dataObjs, ok = dataMap[row.Object.ID]
+	//			if !ok {
+	//				return nil, errors.New("data object not found in dataMap")
+	//			}
+	//
+	//			// Map the data object to the image
+	//			for _, dataObj := range dataObjs {
+	//
+	//				var serveURLs, ok = dataObj.Data["serve_urls"].([]string)
+	//				if !ok {
+	//					serveURLs = []string{django.Reverse("images:serve", row.Object.Path)}
+	//				} else {
+	//					serveURLs = append(serveURLs, django.Reverse("images:serve", row.Object.Path))
+	//				}
+	//
+	//				dataObj.Data["serve_urls"] = serveURLs
+	//
+	//				objMap[dataObj.ID] = *dataObj
+	//			}
+	//		}
+	//
+	//		return objMap, nil
+	//	},
 }
 
 func renderImages(fb editor.FeatureBlock, c context.Context, w io.Writer) error {
