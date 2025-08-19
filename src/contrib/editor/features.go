@@ -85,5 +85,5 @@ type BlockTuneFeature interface {
 
 type InlineFeature interface {
 	BaseFeature
-	ParseInlineData(soup *goquery.Document) error
+	ParseInlineData(soup *goquery.Selection) error
 }

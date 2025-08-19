@@ -35,7 +35,9 @@ func (i *PageLinkFeatureBlock) Config(widgetContext ctx.Context) map[string]inte
 	var cfg = (*features.InlineFeature)(i).Config(widgetContext)
 	cfg["pageListURL"] = django.Reverse(
 		"admin:apps:model:chooser:list",
-		"pages", "PageNode", chooser.DEFAULT_KEY,
+		pages.AdminPagesAppName,
+		pages.AdminPagesModelPath,
+		chooser.DEFAULT_KEY,
 	)
 	cfg["pageViewURL"] = django.Reverse("pages_redirect", "<<id>>")
 	return cfg
@@ -53,7 +55,7 @@ func (b *PageLinkFeatureBlock) Render(d editor.BlockData) editor.FeatureBlock {
 	return (*features.InlineFeature)(b).Render(d)
 }
 
-func (b *PageLinkFeatureBlock) ParseInlineData(doc *goquery.Document) error {
+func (b *PageLinkFeatureBlock) ParseInlineData(doc *goquery.Selection) error {
 	return (*features.InlineFeature)(b).ParseInlineData(doc)
 }
 

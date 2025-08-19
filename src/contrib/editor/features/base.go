@@ -159,7 +159,7 @@ type InlineFeature struct {
 	RebuildElementFn  func(*InlineFeatureElement) error
 }
 
-func (b *InlineFeature) ParseInlineData(doc *goquery.Document) error {
+func (b *InlineFeature) ParseInlineData(doc *goquery.Selection) error {
 	var elements = doc.Find(b.TagName).FilterFunction(func(i int, s *goquery.Selection) bool {
 		if b.Class != "" && !s.HasClass(b.Class) {
 			return false

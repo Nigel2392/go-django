@@ -127,14 +127,14 @@ func (e *EditorJSBlockData) Render() (template.HTML, error) {
 		}
 	}
 
-	var goQuerySelection, err = goquery.NewDocumentFromReader(
+	var goQueryDocument, err = goquery.NewDocumentFromReader(
 		strings.NewReader(b.String()),
 	)
-
 	if err != nil {
 		return "", err
 	}
 
+	var goQuerySelection = goQueryDocument.Find("body")
 	var inlines = make([]InlineFeature, 0)
 	for _, feature := range e.Features {
 		if inline, ok := feature.(InlineFeature); ok {
