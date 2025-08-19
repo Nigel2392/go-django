@@ -282,8 +282,7 @@ func (b *EditorJSWidget) RenderWithErrors(ctx context.Context, w io.Writer, id, 
 
 getContext:
 	var (
-		config    = buildConfig(widgetCtx, b.Features...)
-		renderCtx = context.Background()
+		config = buildConfig(widgetCtx, b.Features...)
 	)
 
 	config["holder"] = fmt.Sprintf("%s-editor", id)
@@ -291,7 +290,7 @@ getContext:
 		id, name, valueStr, errors, attrs, config,
 	)
 
-	return component.Render(renderCtx, w)
+	return component.Render(ctx, w)
 }
 
 func (b *EditorJSWidget) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {

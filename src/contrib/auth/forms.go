@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"context"
 	"net/http"
 	"net/mail"
 
@@ -216,7 +215,7 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 
 	f.SetValidators(func(f forms.Form, cleaned map[string]any) []error {
 		var (
-			ctx      = context.Background()
+			ctx      = f.Context()
 			err      error
 			email    = cleaned["email"]
 			username = cleaned["username"]
