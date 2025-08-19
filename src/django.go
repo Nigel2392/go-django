@@ -533,7 +533,6 @@ func (a *Application) Initialize() error {
 	}
 
 	a.Mux.Use(
-		RequestSignalMiddleware,
 		// middleware.Recoverer(a.veryBadServerError),
 		middleware.AllowedHosts(
 			ConfigGet(a.Settings, APPVAR_ALLOWED_HOSTS, []string{"*"})...,
@@ -904,7 +903,7 @@ func (a *Application) Serve() error {
 		a.Settings, APPVAR_DISABLE_NOSURF, false,
 	)
 
-	var httpHandler http.Handler = a.Mux
+	var httpHandler http.Handler = RequestSignalMiddleware(a.Mux)
 	if !disableNosurf {
 		var handler = nosurf.New(a.Mux)
 		var hooks = goldcrest.Get[NosurfSetupHook](HOOK_SETUP_NOSURF)
