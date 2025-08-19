@@ -1,7 +1,9 @@
 {{ define "form_panel" }}
+    <!-- Mimics the panel components from form_panels_bound  -->
+    <!-- Is used for regular form boundfield interface types as opposed to the panels itself -->
     <div class="panel panel-default">
         <div class="panel__heading">
-            <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
+            <div class="panel__title">
                 {{ .Label }}
             </div>
         </div>
