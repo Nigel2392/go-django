@@ -8,9 +8,11 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/src/core/cache"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
@@ -92,13 +94,31 @@ func (a *AppConfig) serveImageByIDView(w http.ResponseWriter, r *http.Request) {
 	var fn = func(a *AppConfig, w http.ResponseWriter, r *http.Request) (*Image, error) {
 		var vars = mux.Vars(r)
 		var id = vars.Get("id")
-		var imgRow, err = queries.GetQuerySet(&Image{}).
+
+		var cacheKey = fmt.Sprintf("contrib:images:%s", id)
+		var cachedObj, err = cache.Get(cacheKey)
+		if err != nil && !errors.Is(err, cache.ErrItemNotFound) {
+			return nil, fmt.Errorf("error retrieving cached image: %w", err)
+		}
+
+		if cachedObj != nil {
+			return cachedObj.(*Image), nil
+		}
+
+		imgRow, err := queries.GetQuerySet(&Image{}).
 			WithContext(r.Context()).
 			Filter("ID", id).
 			Get()
 		if err != nil {
 			return nil, fmt.Errorf("error retrieving image: %w", err)
 		}
+
+		// Cache the retrieved image
+		err = cache.Set(cacheKey, imgRow.Object, time.Hour)
+		if err != nil {
+			return nil, fmt.Errorf("error caching image: %w", err)
+		}
+
 		return imgRow.Object, nil
 	}
 
@@ -115,14 +135,10 @@ func (a *AppConfig) serveImageByPathView(w http.ResponseWriter, r *http.Request)
 		path = filepath.ToSlash(path)
 		path = strings.TrimPrefix(path, "/")
 		path = strings.TrimSuffix(path, "/")
-		imgRow, err := queries.GetQuerySet(&Image{}).
-			WithContext(r.Context()).
-			Filter("Path", path).
-			Get()
-		if err != nil {
-			return nil, fmt.Errorf("error retrieving image by path: %w", err)
-		}
-		return imgRow.Object, nil
+
+		var title = filepath.Base(path)
+		title = strings.TrimSuffix(title, filepath.Ext(title))
+		return &Image{Path: path, Title: title}, nil
 	}
 
 	var view = a.serveImageFnView(fn)
