@@ -4,6 +4,7 @@ type ChooserResponse = {
     html:         string;
     preview?:     string;
     pk?:          string;
+    data?:        any;
     errors?:      string[];
 }
 
@@ -12,7 +13,9 @@ type ChooserConfig = {
     listurl:    string;
     createurl?:  string;
     modalClass?: string;
-    onChosen?:   (value: string, previewText: string) => void;
+    onChosen?:   (value: string, previewText: string, data?: any) => void;
+    onOpen?:     () => void;
+    onClosed?:   () => void;
 };
 
 class Chooser {
@@ -98,12 +101,12 @@ class Chooser {
         return null;
     }
 
-    select(value: string, previewText: string) {
+    select(value: string, previewText: string, data?: any) {
         if (!this.config.onChosen) {
             console.error("Chooser onChosen callback is not defined");
             return;
         }
-        this.config.onChosen(value, previewText);
+        this.config.onChosen(value, previewText, data);
     }
 
     async setup() {
@@ -119,14 +122,24 @@ class Chooser {
         this.modal = new Modal(this.modalWrapper, {
             opened: true,
             executeScriptsOnSet: true,
+            onOpen: () => {
+                if (this.config.onOpen) {
+                    this.config.onOpen();
+                }
+            },
             onClose: async (event) => {
                 await this.teardown();
+
+                if (this.config.onClosed) {
+                    this.config.onClosed();
+                }
             },
         });
         await this.setup();
     }
 
     async close() {
+        this.modal.close();
         await this.teardown();
     }
 
@@ -138,7 +151,7 @@ class Chooser {
             row.addEventListener("click", () => {
                 var value = row.dataset.chooserValue;
                 var previewText = row.dataset.chooserPreview;
-                this.select(value, previewText);
+                this.select(value, previewText, JSON.parse(row.dataset.chooserData || "{}"));
                 this.close();
             });
         });
@@ -168,11 +181,12 @@ class Chooser {
             });
         });
 
-        if (this.config.createurl) {
-            var createNewButton = this.modal.content.querySelector(".godjango-chooser-list-create") as HTMLButtonElement;
+        var createNewButton = this.modal.content.querySelector(".godjango-chooser-list-create a") as HTMLAnchorElement;
+        if (createNewButton) {
             createNewButton.addEventListener("click", async (event) => {
                 event.preventDefault();
-                await this.showCreate();
+                let createURL = this.config.createurl || createNewButton.href;
+                await this.showCreate(createURL);
             });
         }
     }
@@ -180,7 +194,7 @@ class Chooser {
     async showCreate(url: string = this.config.createurl, method: string = "GET", body: any = null) {
         let data = await this.loadModalContent(url, method, body);
         if (data) {
-            this.select(data.pk, data.preview);
+            this.select(data.pk, data.preview, data.data);
             await this.close();
             return;
         }

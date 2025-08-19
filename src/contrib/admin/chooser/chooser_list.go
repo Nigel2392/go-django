@@ -21,8 +21,6 @@ import (
 	"github.com/Nigel2392/go-django/src/views/list"
 )
 
-var _ views.View = (*ChooserListPage[attrs.Definer])(nil)
-
 var (
 	_ views.View         = (*ChooserListPage[attrs.Definer])(nil)
 	_ views.MethodsView  = (*ChooserListPage[attrs.Definer])(nil)
@@ -102,7 +100,7 @@ type ChooserListPage[T attrs.Definer] struct {
 	SearchFields []SearchField[T]
 
 	// NewList returns a new list object to render in the list view.
-	NewList func(req *http.Request, results []T) any
+	NewList func(req *http.Request, results []T, def *ChooserDefinition[T]) any
 
 	// BoundView returns a new bound view for the list page.
 	BoundView func(w http.ResponseWriter, req *http.Request, v *ChooserListPage[T], d *ChooserDefinition[T]) (views.View, error)
@@ -267,7 +265,7 @@ func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (any, 
 
 func (v *ChooserListPage[T]) getList(req *http.Request, results []T) any {
 	if v.NewList != nil {
-		return v.NewList(req, results)
+		return v.NewList(req, results, v._Definition)
 	}
 
 	var listObject = list.NewListWithGroups(req, results, v.GetListColumns(req), func(r *http.Request, obj T, cols []list.ListColumn[T]) list.ColumnGroup[T] {

@@ -122,6 +122,12 @@ func NewAppConfig(opts *Options) *AppConfig {
 					django.Reverse("documents:serve", instance.Path), instance.Title,
 				)
 			},
+			ExtraData: func(ctx context.Context, instance *Document) map[string]any {
+				return map[string]any{
+					"caption":  instance.Title,
+					"filesize": instance.FileSize.Int32,
+				}
+			},
 			ListPage: &chooser.ChooserListPage[*Document]{
 				QuerySet: func(r *http.Request, model *Document) *queries.QuerySet[*Document] {
 					return queries.GetQuerySet(model).OrderBy("-CreatedAt")

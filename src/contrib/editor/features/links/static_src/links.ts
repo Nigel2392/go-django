@@ -134,7 +134,7 @@ class PageLinkTool {
         this.button.classList.add(this.api.styles.inlineToolButton);
         this.button.innerHTML = PageLinkIcon;
         this.chooser = new Chooser({
-            title: 'Select a page',
+            title:   (window as any).i18n.gettext('Select a page'),
             listurl: this.config.pageListURL,
         });
         return this.button

@@ -3,6 +3,7 @@ package images
 import (
 	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -49,6 +50,7 @@ var (
 type imageResult struct {
 	*Image
 	PreviewHTML string
+	ExtraData   string
 }
 
 func NewAppConfig(opts *Options) *AppConfig {
@@ -114,20 +116,29 @@ func NewAppConfig(opts *Options) *AppConfig {
 					django.Reverse("images:serve", instance.Path), instance.Title,
 				)
 			},
+			ExtraData: func(ctx context.Context, instance *Image) map[string]any {
+				return map[string]any{
+					"caption":  instance.Title,
+					"filesize": instance.FileSize.Int32,
+				}
+			},
 			ListPage: &chooser.ChooserListPage[*Image]{
 				Template: "images/images_chooser_list.tmpl",
 				SearchFields: []chooser.SearchField[*Image]{
 					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
 					{Name: "Path", Lookup: expr.LOOKUP_ICONTANS},
 				},
-				NewList: func(req *http.Request, results []*Image) any {
+				NewList: func(req *http.Request, results []*Image, def *chooser.ChooserDefinition[*Image]) any {
 					var resultList = make([]imageResult, len(results))
 					for i, img := range results {
+
+						var dataStr, _ = json.Marshal(def.GetExtraData(req.Context(), img))
 						resultList[i] = imageResult{
 							Image: img,
 							PreviewHTML: fmt.Sprintf(`<img src="%s" alt="%s">`,
 								django.Reverse("images:serve", img.Path), img.Title,
 							),
+							ExtraData: string(dataStr),
 						}
 					}
 					return resultList

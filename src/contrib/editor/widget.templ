@@ -73,6 +73,8 @@ func (b *EditorJSWidget) ValueToForm(value interface{}) interface{} {
 		editorJsData = d
 	case EditorJSData:
 		editorJsData = value
+	case string:
+		return value
 	default:
 		panic(fmt.Sprintf("Invalid value type: %T", value))
 	}

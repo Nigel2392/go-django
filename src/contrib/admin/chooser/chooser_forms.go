@@ -129,6 +129,9 @@ func (v *BoundChooserFormPage[T]) Render(w http.ResponseWriter, req *http.Reques
 			Preview: v.View._Definition.GetPreviewString(
 				req.Context(), instance,
 			),
+			ExtraData: v.View._Definition.GetExtraData(
+				req.Context(), instance,
+			),
 			PK: pk,
 		})
 

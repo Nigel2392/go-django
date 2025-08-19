@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	"github.com/Nigel2392/go-django/src/contrib/editor/features"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -30,7 +31,10 @@ type ImageFeatureBlock features.Block
 
 func (i *ImageFeatureBlock) Config(widgetContext ctx.Context) map[string]interface{} {
 	var cfg = (*features.Block)(i).Config(widgetContext)
-	cfg["uploadUrl"] = django.Reverse("editor:upload-image")
+	cfg["chooserURL"] = django.Reverse(
+		"admin:apps:model:chooser:list",
+		"images", "image", chooser.DEFAULT_KEY,
+	)
 	cfg["serveUrl"] = django.Reverse("images:serve_id", "<<id>>")
 	return cfg
 }
@@ -84,9 +88,6 @@ var ImageFeature = &ImageFeatureBlock{
 			if rImage.MapIndex(reflect.ValueOf("id")).IsNil() {
 				return errors.New("image id not found")
 			}
-			if rImage.MapIndex(reflect.ValueOf("filePath")).IsNil() {
-				return errors.New("image filePath not found")
-			}
 			return nil
 		},
 		Register: onFeatureRegister,
@@ -135,18 +136,25 @@ var ImagesFeature = &ImageFeatureBlock{
 			return fb
 		},
 		Validate: func(bd editor.BlockData) error {
-			var rImages = reflect.ValueOf(bd.Data["images"])
+			var rImages = reflect.ValueOf(bd.Data["ids"])
 			if rImages.Kind() != reflect.Slice {
 				return errors.New("images data is not a slice")
 			}
 
 			for i := 0; i < rImages.Len(); i++ {
-				var img = rImages.Index(i).Interface().(map[string]interface{})
-				if img["id"] == nil {
-					return errors.New("image id not found")
+				var idFace = rImages.Index(i).Interface()
+				if idFace == nil {
+					return fmt.Errorf(
+						"image id at index %d is nil", i,
+					)
 				}
-				if img["filePath"] == nil {
-					return errors.New("image filePath not found")
+
+				var id, ok = idFace.(string)
+				if id == "" || !ok {
+					return fmt.Errorf(
+						"image id at index %d is not valid: %v",
+						i, idFace,
+					)
 				}
 			}
 			return nil

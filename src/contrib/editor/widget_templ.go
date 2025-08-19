@@ -5,17 +5,16 @@ package editor
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-
-	"context"
 	"io"
 
-	"github.com/Nigel2392/go-django/src"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
+
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
@@ -81,6 +80,9 @@ func (b *EditorJSWidget) ValueToForm(value interface{}) interface{} {
 		editorJsData = d
 	case EditorJSData:
 		editorJsData = value
+	case string:
+		return value
+
 	default:
 		panic(fmt.Sprintf("Invalid value type: %T", value))
 	}

@@ -24,8 +24,11 @@ import (
 
 type chooser interface {
 	Setup(chooserKey string) error
+
 	GetTitle(ctx context.Context) string
 	GetPreviewString(ctx context.Context, instance attrs.Definer) string
+	GetExtraData(ctx context.Context, instance attrs.Definer) map[string]any
+
 	GetModel() attrs.Definer
 
 	CanCreate() bool
@@ -40,6 +43,7 @@ type ChooserDefinition[T attrs.Definer] struct {
 	Title         any // string or func(ctx context.Context) string
 	Labels        map[string]func(ctx context.Context) string
 	PreviewString func(ctx context.Context, instance T) string
+	ExtraData     func(ctx context.Context, instance T) map[string]any
 
 	ListPage   *ChooserListPage[T]
 	CreatePage *ChooserFormPage[T]
@@ -204,6 +208,13 @@ func (c *ChooserDefinition[T]) GetPreviewString(ctx context.Context, instance at
 	return previewString
 }
 
+func (c *ChooserDefinition[T]) GetExtraData(ctx context.Context, instance attrs.Definer) map[string]any {
+	if c.ExtraData != nil {
+		return c.ExtraData(ctx, instance.(T))
+	}
+	return map[string]any{}
+}
+
 func (c *ChooserDefinition[T]) GetModel() attrs.Definer {
 	return attrs.NewObject[attrs.Definer](c.Model)
 }
@@ -254,9 +265,10 @@ func (c *ChooserDefinition[T]) GetContext(req *http.Request, page, bound views.V
 }
 
 type ChooserResponse struct {
-	HTML    string `json:"html"`
-	Preview string `json:"preview,omitempty"`
-	PK      any    `json:"pk,omitempty"`
+	HTML      string         `json:"html"`
+	Preview   string         `json:"preview,omitempty"`
+	ExtraData map[string]any `json:"data,omitempty"`
+	PK        any            `json:"pk,omitempty"`
 }
 
 func (c *ChooserDefinition[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context, base, template string) error {

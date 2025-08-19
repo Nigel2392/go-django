@@ -168,7 +168,10 @@ class Modal {
 
     disconnect() {
         this.elements.root.modal = null;
-        this.elements.root.removeChild(this.elements.modal);
+
+        if (this.elements.modal) {
+            this.elements.root.removeChild(this.elements.modal);
+        }
     }
 
     open(event?: Event) {

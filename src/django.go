@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"html/template"
@@ -572,6 +573,10 @@ func (a *Application) Initialize() error {
 	tpl.Funcs(template.FuncMap{
 		"safe": func(s string) template.HTML {
 			return template.HTML(s)
+		},
+		"json": func(v any) string {
+			var b, _ = json.Marshal(v)
+			return string(b)
 		},
 		"static": a.Static,
 		"repeat": func(str any, cnt any) template.HTML {

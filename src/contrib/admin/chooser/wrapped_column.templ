@@ -3,6 +3,7 @@ package chooser
 import "github.com/Nigel2392/go-django/src/views/list"
 import "github.com/Nigel2392/go-django/src/core/attrs"
 import "net/http"
+import "encoding/json"
 
 type wrappedColumnGroup[T attrs.Definer] struct {
     *list.ListColumnGroup[T]
@@ -14,7 +15,12 @@ func (c *wrappedColumnGroup[T]) AddColumn(column list.ListColumn[T]) {
 }
 
 templ (c *wrappedColumnGroup[T]) Component(r *http.Request) {
-    <tr class="column-group godjango-chooser-list-group" data-chooser-value={ attrs.ToString(attrs.PrimaryKey(c.Instance)) } data-chooser-preview={ c._Definition.GetPreviewString(r.Context(), c.Instance) }>
+    {{ var extraEncoded, err = json.Marshal(c._Definition.GetExtraData(r.Context(), c.Instance)) }}
+    if err != nil {
+        {{ return err }}
+    }
+
+    <tr class="column-group godjango-chooser-list-group" data-chooser-value={ attrs.ToString(attrs.PrimaryKey(c.Instance)) } data-chooser-preview={ c._Definition.GetPreviewString(r.Context(), c.Instance) } data-chooser-data={ string(extraEncoded) }>
         for _, column := range c.Columns {
             <td class="list-column">
                 @column.Component(r, c.Definitions, c.Instance)
