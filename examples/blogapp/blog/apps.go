@@ -127,6 +127,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 					),
 					admin.LabeledRowPanel(
 						trans.S("Media"),
+						trans.S("Media files associated with this blog post."),
 						admin.PanelGroup(
 							admin.FieldPanel("Image"),
 							admin.FieldPanel("User"),
