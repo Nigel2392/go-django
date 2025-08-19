@@ -11,6 +11,9 @@ class PanelController extends Controller<HTMLElement> {
     ];
 
     declare panelValue: string;
+
+    declare hasLinkIconTarget: boolean;
+
     declare headingTarget: HTMLElement;
     declare linkIconTarget: HTMLElement;
     declare contentTarget: HTMLElement;
@@ -26,9 +29,11 @@ class PanelController extends Controller<HTMLElement> {
     }
 
     connect() {
-        this.linkIconTarget.addEventListener(
-            "click", this.scrollToContent.bind(this),
-        );
+        if (this.hasLinkIconTarget) {
+            this.linkIconTarget.addEventListener(
+                "click", this.scrollToContent.bind(this),
+            );
+        }
 
         let hash = window.location.hash;
         if (hash === `#${this.panelValue}`) {

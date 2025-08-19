@@ -89,10 +89,10 @@ func (t *translationHeader) pluralIndex(locale trans.Locale, count int) (int, er
 }
 
 type TranslationHeaderLocale struct {
-	NumPluralForms  int    `yaml:"nplural"`           // Number of plural forms, e.g. 2 for English (singular, plural)
-	PluralRule      string `yaml:"rule"`              // (n != 1), (n % 10 == 1 && n % 100 != 11), etc.
-	ShortTimeFormat string `yaml:"short_time_format"` // short time format, e.g. "%Y-%m-%d %H:%M:%S"
-	LongTimeFormat  string `yaml:"long_time_format"`  // long time format, e.g. "%A, %d %B %Y %H:%M:%S"
+	NumPluralForms  int    `yaml:"nplural" json:"nplural"`                     // Number of plural forms, e.g. 2 for English (singular, plural)
+	PluralRule      string `yaml:"rule" json:"rule"`                           // (n != 1), (n % 10 == 1 && n % 100 != 11), etc.
+	ShortTimeFormat string `yaml:"short_time_format" json:"short_time_format"` // short time format, e.g. "%Y-%m-%d %H:%M:%S"
+	LongTimeFormat  string `yaml:"long_time_format" json:"long_time_format"`   // long time format, e.g. "%A, %d %B %Y %H:%M:%S"
 }
 
 type FileTranslationsHeader struct {

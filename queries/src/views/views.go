@@ -8,11 +8,19 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/go-django/src/views"
 	django_views "github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/mux"
 )
 
 type BaseView = django_views.BaseView
+
+var (
+	_ views.ContextGetter = (*ObjectView[attrs.Definer])(nil)
+	_ views.Checker       = (*ObjectView[attrs.Definer])(nil)
+)
 
 type ObjectView[T attrs.Definer] struct {
 	BaseView
@@ -20,6 +28,32 @@ type ObjectView[T attrs.Definer] struct {
 	ContextVar  string // optional, used to store the object in the context
 	Object      T
 	Permissions []string
+}
+
+// Check checks the request before serving it.
+// Useful for checking if the request is valid before serving it.
+// Like checking permissions, etc...
+func (v *ObjectView[T]) Check(w http.ResponseWriter, req *http.Request) error {
+	if !permissions.HasPermission(req, v.Permissions...) {
+		return errors.PermissionDenied.Wrapf(
+			"user does not have permission to access %T", v.Object,
+		)
+	}
+	return nil
+}
+
+// Fail is a helper function to fail the request.
+// This can be used to redirect, etc.
+func (v *ObjectView[T]) Fail(w http.ResponseWriter, req *http.Request, err error) {
+	if errors.Is(err, errors.PermissionDenied) {
+		except.Fail(
+			http.StatusForbidden, err,
+		)
+	} else {
+		except.Fail(
+			http.StatusInternalServerError, err,
+		)
+	}
 }
 
 func (v *ObjectView[T]) GetQuerySet(r *http.Request) *queries.QuerySet[T] {

@@ -10,9 +10,11 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
+	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 )
@@ -51,9 +53,24 @@ func NewAppConfig() django.AppConfig {
 
 	cfg.Routing = func(m mux.Multiplexer) {
 		m.Use(TranslatorMiddleware())
+
+		m.Get(
+			"/i18n/translations.js",
+			mux.NewHandler(translationCatalog),
+			"translations.js",
+		)
 	}
 
 	cfg.Init = func(settings django.Settings) error {
+
+		admin.RegisterGlobalMedia(admin.RegisterMediaHookFunc(func(adminSite *admin.AdminApplication) media.Media {
+			var m = media.NewMedia()
+			m.AddJS(media.JS(
+				django.Reverse("translations.js"),
+			))
+			return m
+		}))
+
 		cfg.finders = []Finder{
 			&templateTranslationsFinder{
 				extensions: django.ConfigGet(

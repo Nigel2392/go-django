@@ -6,6 +6,7 @@ import (
 	"strconv"
 
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	"github.com/Nigel2392/go-django/src/contrib/editor/features"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
@@ -32,8 +33,11 @@ type PageLinkFeatureBlock features.InlineFeature
 
 func (i *PageLinkFeatureBlock) Config(widgetContext ctx.Context) map[string]interface{} {
 	var cfg = (*features.InlineFeature)(i).Config(widgetContext)
-	cfg["pageListURL"] = django.Reverse("editor:links:list-pages")
-	cfg["pageListQueryVar"] = pages.PageIDVariableName
+	cfg["pageListURL"] = django.Reverse(
+		"admin:apps:model:chooser:list",
+		"pages", "PageNode", chooser.DEFAULT_KEY,
+	)
+	cfg["pageViewURL"] = django.Reverse("pages_redirect", "<<id>>")
 	return cfg
 }
 
@@ -72,15 +76,6 @@ var PageLinkFeature = &PageLinkFeatureBlock{
 			staticfiles.AddFS(
 				filesystem.Sub(linksFs, "static"),
 				filesystem.MatchPrefix("links/editorjs"),
-			)
-			var linkRoute = m.Any(
-				"links",
-				nil, "links",
-			)
-			linkRoute.Get(
-				"/list-pages",
-				mux.NewHandler(listPages),
-				"list-pages",
 			)
 		},
 	},

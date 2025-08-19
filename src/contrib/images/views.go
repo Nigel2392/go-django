@@ -108,15 +108,14 @@ func (a *AppConfig) serveImageByIDView(w http.ResponseWriter, r *http.Request) {
 
 func (a *AppConfig) serveImageByPathView(w http.ResponseWriter, r *http.Request) {
 	var fn = func(a *AppConfig, w http.ResponseWriter, r *http.Request) (*Image, error) {
-		var vars = mux.Vars(r)
-		var pathParts = vars.GetAll("*")
-		var path = path.Join(pathParts...)
+		vars := mux.Vars(r)
+		pathParts := vars.GetAll("*")
+		path := path.Join(pathParts...)
 		path = filepath.Clean(path)
 		path = filepath.ToSlash(path)
 		path = strings.TrimPrefix(path, "/")
 		path = strings.TrimSuffix(path, "/")
-
-		imgRow, err := queries.GetQuerySet[*Image](&Image{}).
+		imgRow, err := queries.GetQuerySet(&Image{}).
 			WithContext(r.Context()).
 			Filter("Path", path).
 			Get()

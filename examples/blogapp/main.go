@@ -19,6 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features"
 	"github.com/Nigel2392/go-django/src/contrib/editor/features/images"
+	_ "github.com/Nigel2392/go-django/src/contrib/editor/features/links"
 	images_app "github.com/Nigel2392/go-django/src/contrib/images"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/contrib/pages"

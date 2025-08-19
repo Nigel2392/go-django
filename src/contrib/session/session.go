@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"fmt"
+	"time"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
@@ -28,6 +29,8 @@ func NewAppConfig() django.AppConfig {
 	var app = apps.NewAppConfig("session")
 
 	var sessionManager = scs.New()
+
+	sessionManager.Lifetime = time.Hour * 24 * 7
 
 	app.ModelObjects = []attrs.Definer{
 		&Session{},

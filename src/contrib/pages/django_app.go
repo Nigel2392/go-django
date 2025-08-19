@@ -40,8 +40,7 @@ import (
 
 type PageAppConfig struct {
 	*apps.DBRequiredAppConfig
-	routePrefix        string
-	useRedirectHandler bool
+	routePrefix string
 }
 
 // SetRoutePrefix sets the route prefix for the pages app.
@@ -53,20 +52,6 @@ func SetRoutePrefix(prefix string) {
 	}
 
 	pageApp.routePrefix = prefix
-}
-
-// SetUseRedirectHandler sets whether to use redirect handler for pages app.
-//
-// If set to true, a redirect handler will be registered at /__pages__/redirect/<page_id>
-//
-// This is useful when you want to redirect to a page when you only have the page id,
-// using this handler will skip the need for a database query to get the page url.
-func SetUseRedirectHandler(use bool) {
-	if pageApp == nil {
-		panic("app is nil")
-	}
-
-	pageApp.useRedirectHandler = use
 }
 
 // Returns the live URL path for the given page.
@@ -308,6 +293,8 @@ func NewAppConfig() django.AppConfig {
 			},
 		}
 		var chooserDefinitionRootNodes = chooserDefinitionAllNodes
+		var chooserDefinitionRootNodesListPage = *chooserDefinitionAllNodes.ListPage
+		chooserDefinitionRootNodes.ListPage = &chooserDefinitionRootNodesListPage
 		chooserDefinitionRootNodes.ListPage.Fields = []string{
 			"Title",
 			"Slug",
@@ -456,14 +443,12 @@ func NewAppConfig() django.AppConfig {
 			"/menu", mux.NewHandler(pageMenuHandler), "menu",
 		)
 
-		if pageApp.useRedirectHandler {
-			var djangoMux = django.Global.Mux
-			djangoMux.Get(
-				fmt.Sprintf("/__pages__/redirect/<<%s>>", PageIDVariableName),
-				mux.NewHandler(redirectHandler),
-				"pages_redirect",
-			)
-		}
+		var djangoMux = django.Global.Mux
+		djangoMux.Get(
+			fmt.Sprintf("/__pages__/redirect/<<%s>>", PageIDVariableName),
+			mux.NewHandler(redirectHandler),
+			"pages_redirect",
+		)
 
 		return nil
 	}

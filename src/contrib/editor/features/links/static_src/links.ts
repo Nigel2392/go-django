@@ -1,6 +1,7 @@
 import { API } from "@editorjs/editorjs";
 import { PageChooserModal, PageMenuResponsePage } from "./modal";
 import "./css/index.css";
+import { Chooser } from "../../../../admin/chooser/static_src/chooser/chooser";
 
 const PageLinkIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-link-45deg" viewBox="0 0 16 16">
   <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
@@ -21,7 +22,7 @@ type ConstructorObject = {
 
 type ToolConfig = {
     pageListURL: string,
-    pageListQueryVar: string,
+    pageViewURL: string,
 }
 
 class PageLinkTool {
@@ -30,7 +31,7 @@ class PageLinkTool {
     data: SavedData;
     api: API;
     config: ToolConfig;
-    modal: PageChooserModal;
+    chooser: Chooser;
     private _state: boolean;
 
     wrapperTag: HTMLAnchorElement;
@@ -52,9 +53,9 @@ class PageLinkTool {
 
         if (
             !this.config.pageListURL ||
-            !this.config.pageListQueryVar
+            !this.config.pageViewURL
         ) {
-            throw new Error("PageLinkTool requires pageMenuURL, retrievePageURL, and pageIDVar in config");
+            throw new Error("PageLinkTool requires pageListURL and pageViewURL in config");
         }
     }
 
@@ -92,13 +93,14 @@ class PageLinkTool {
             return;
         }
 
-        this.modal.open();
-        this.modal.onChosen = (page: PageMenuResponsePage) => {
-            this.wrap(range, page);
+        this.chooser.config.onChosen = (value: string, previewText: string) => {
+            this.wrap(range, value, previewText);
         };
+
+        this.chooser.open()
     }
     
-    wrap(range: Range, page: PageMenuResponsePage) {
+    wrap(range: Range, value: string, previewText: string) {
         let selectedText = range.extractContents();
 
         const previousWrapperTag = this.api.selection.findParentTag(this.tag);
@@ -107,8 +109,10 @@ class PageLinkTool {
         }
 
         this.wrapperTag = document.createElement(this.tag) as HTMLAnchorElement;
-        this.wrapperTag.dataset.pageId = page.id;
-        this.wrapperTag.href = page.url_path;
+        this.wrapperTag.dataset.pageId = value;
+        this.wrapperTag.href = this.config.pageViewURL.replace(
+            "<<id>>", value
+        );
 
         this.wrapperTag.classList.add(this.tagClass);
         this.wrapperTag.appendChild(selectedText);
@@ -129,11 +133,10 @@ class PageLinkTool {
         this.button.type = 'button';
         this.button.classList.add(this.api.styles.inlineToolButton);
         this.button.innerHTML = PageLinkIcon;
-        this.modal = new PageChooserModal({
-            pageListURL: this.config.pageListURL,
-            pageListQueryVar: this.config.pageListQueryVar,
-            translate: this.api.i18n.t.bind(this.api.i18n),
-        })
+        this.chooser = new Chooser({
+            title: 'Select a page',
+            listurl: this.config.pageListURL,
+        });
         return this.button
     }
     

@@ -237,11 +237,7 @@ func Translate(v string, locales ...language.Tag) (string, bool) {
 	}
 
 	if len(locales) == 0 {
-		locales = []language.Tag{django.ConfigGet(
-			django.Global.Settings,
-			APPVAR_TRANSLATIONS_DEFAULT_LOCALE,
-			language.English,
-		)}
+		locales = []language.Tag{trans.DefaultLocale()}
 
 		var settingsLocales = django.ConfigGet(
 			django.Global.Settings,

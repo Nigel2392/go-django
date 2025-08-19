@@ -265,3 +265,7 @@ func LocaleFromContext(ctx context.Context) language.Tag {
 
 	return TRANSLATIONS_DEFAULT_LOCALE
 }
+
+func DefaultLocale() language.Tag {
+	return TRANSLATIONS_DEFAULT_LOCALE
+}

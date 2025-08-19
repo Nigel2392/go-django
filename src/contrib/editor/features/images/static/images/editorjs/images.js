@@ -1,7 +1,7 @@
 (function(){
-const GoDjangoImageIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">
-  <path stroke="none" stroke-width="0" d="M6.002 5.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0"/>
-  <path stroke="none" stroke-width="0" d="M2.002 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2zm12 1a1 1 0 0 1 1 1v6.5l-3.777-1.947a.5.5 0 0 0-.577.093l-3.71 3.71-2.66-1.772a.5.5 0 0 0-.63.062L1.002 12V3a1 1 0 0 1 1-1z"/>
+    const GoDjangoImagesIcon = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-images" viewBox="0 0 16 16">
+  <path d="M4.502 9a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3"/>
+  <path d="M14.002 13a2 2 0 0 1-2 2h-10a2 2 0 0 1-2-2V5A2 2 0 0 1 2 3a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v8a2 2 0 0 1-1.998 2M14 2H4a1 1 0 0 0-1 1h9.002a2 2 0 0 1 2 2v7A1 1 0 0 0 15 11V3a1 1 0 0 0-1-1M2.002 4a1 1 0 0 0-1 1v8l2.646-2.354a.5.5 0 0 1 .63-.062l2.66 1.773 3.71-3.71a.5.5 0 0 1 .577-.094l1.777 1.947V5a1 1 0 0 0-1-1z"/>
 </svg>`;
 
 function getCsrfToken() {
@@ -15,7 +15,8 @@ function getCsrfToken() {
 const STATUS_SUCCESS = 'success';
 const STATUS_ERROR = 'error';
 
-class GoDjangoImageTool {
+
+class GoDjangoImagesTool {
     constructor({ data, api, config, block }) {
         if (!config) {
             config = {};
@@ -30,8 +31,8 @@ class GoDjangoImageTool {
 
     static get toolbox() {
       return {
-            title: window.i18n.gettext('Image'),
-            icon: GoDjangoImageIcon,
+            title: window.i18n.gettext('Images'),
+            icon: GoDjangoImagesIcon,
         };
     }
 
@@ -53,11 +54,6 @@ class GoDjangoImageTool {
             let element = document.createElement('p');
             element.textContent = message;
             element.style.color = 'red';
-            element.style.cursor = 'pointer';
-            element.addEventListener('click', () => {
-                element.remove();
-                fileInput.click();
-            });
             this.imageWrapper.appendChild(element);
             return;
         }
@@ -99,7 +95,7 @@ class GoDjangoImageTool {
                     this.data.id = data.id;
                     this.data.caption = data.caption;
                     this.data.filePath = data.filePath;
-                    this.image.src = this.config.serveUrl.replace("<<id>>", data.id);
+                    this.image.src = `${this.config.serveUrl}/${data.filePath}`
                     this.image.dataset.id = data.id;
                     this.image.dataset.filePath = data.filePath;
                     fileInput.remove();
@@ -118,7 +114,7 @@ class GoDjangoImageTool {
 
         createFileInput = createFileInput.bind(this);
         if (this.data.filePath) {
-            this.image.src = this.config.serveUrl.replace("<<id>>", this.data.id)
+            this.image.src = `${this.config.serveUrl}/${this.data.filePath}`
             this.image.dataset.id = this.data.id;
             this.image.dataset.caption = this.data.caption || '';
             this.image.dataset.filePath = this.data.filePath;
@@ -157,6 +153,5 @@ class GoDjangoImageTool {
     }
 }
 
-window.GoDjangoImageTool = GoDjangoImageTool;
-
+window.GoDjangoImagesTool = GoDjangoImagesTool;
 })()

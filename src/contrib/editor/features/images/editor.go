@@ -15,7 +15,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
-	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/mux"
 )
 
@@ -34,17 +33,6 @@ func (i *ImageFeatureBlock) Config(widgetContext ctx.Context) map[string]interfa
 	cfg["uploadUrl"] = django.Reverse("editor:upload-image")
 	cfg["serveUrl"] = django.Reverse("images:serve_id", "<<id>>")
 	return cfg
-}
-
-func (i *ImageFeatureBlock) Media() media.Media {
-	var m = media.NewMedia()
-	m.AddJS(
-		media.JS(django.Static("images/editorjs/image.js")),
-	)
-	m.AddCSS(
-		media.CSS(django.Static("images/editorjs/image.css")),
-	)
-	return m
 }
 
 func (b *ImageFeatureBlock) Render(d editor.BlockData) editor.FeatureBlock {
@@ -76,6 +64,12 @@ var ImageFeature = &ImageFeatureBlock{
 	BaseFeature: features.BaseFeature{
 		Type:          "image",
 		JSConstructor: "GoDjangoImageTool",
+		CSSFles: []string{
+			"images/editorjs/image.css",
+		},
+		JSFiles: []string{
+			"images/editorjs/image.js",
+		},
 		Build: func(fb *features.FeatureBlock) *features.FeatureBlock {
 			fb.GetString = func(d editor.BlockData) string {
 				return fmt.Sprintf("[%s](%s)", d.Data["caption"], d.Data["filePath"])
@@ -120,6 +114,12 @@ var ImagesFeature = &ImageFeatureBlock{
 	BaseFeature: features.BaseFeature{
 		Type:          "images",
 		JSConstructor: "GoDjangoImagesTool",
+		CSSFles: []string{
+			"images/editorjs/image.css",
+		},
+		JSFiles: []string{
+			"images/editorjs/images.js",
+		},
 		Build: func(fb *features.FeatureBlock) *features.FeatureBlock {
 			fb.GetString = func(d editor.BlockData) string {
 				var rImages = reflect.ValueOf(d.Data["images"])
