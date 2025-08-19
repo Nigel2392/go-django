@@ -181,7 +181,7 @@ func RequestSignalMiddleware(next mux.Handler) mux.Handler {
 			}
 		}
 
-		next.ServeHTTP(signal.W, signal.R)
+		signal.H.ServeHTTP(signal.W, signal.R)
 
 		core.SIGNAL_AFTER_REQUEST.Send(signal)
 	})
