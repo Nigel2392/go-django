@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
@@ -120,6 +121,21 @@ var pageAdminModelOptions = admin.ModelOptions{
 					var node = row.(*PageNode)
 
 					if !node.IsPublished() {
+						return template.HTML(fmt.Sprintf(
+							`<span class="badge warning">%s</span>`,
+							node.UrlPath,
+						))
+					}
+
+					var _, site, err = SiteForRequest(r)
+					if err != nil {
+						return template.HTML(fmt.Sprintf(
+							`<span class="badge warning">%s</span>`,
+							node.UrlPath,
+						))
+					}
+
+					if !strings.HasPrefix(node.Path, site.Root.Path) {
 						return template.HTML(fmt.Sprintf(
 							`<span class="badge warning">%s</span>`,
 							node.UrlPath,

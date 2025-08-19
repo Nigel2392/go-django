@@ -95,7 +95,8 @@ func (v *PageServeView) ServeXXX(w http.ResponseWriter, req *http.Request) {}
 
 func (v *PageServeView) TakeControl(w http.ResponseWriter, r *http.Request) {
 	var pathParts = mux.Vars(r).GetAll("*")
-	var req, site, err = SiteForRequest(r)
+	var requestContext, site, err = SiteForRequest(r)
+	var req = r.WithContext(requestContext)
 	if err != nil {
 		pageNotFound(w, req, err, pathParts)
 		return

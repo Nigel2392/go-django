@@ -17,7 +17,6 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/components"
 	core "github.com/Nigel2392/go-django/src/core"
@@ -915,11 +914,11 @@ func (a *Application) Serve() error {
 		httpHandler = handler
 	}
 
-	var originalHandler = httpHandler
-	httpHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		r = r.WithContext(drivers.SetLogSQLContext(r.Context(), false))
-		originalHandler.ServeHTTP(w, r)
-	})
+	//	var originalHandler = httpHandler
+	//	httpHandler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	//		r = r.WithContext(drivers.SetLogSQLContext(r.Context(), false))
+	//		originalHandler.ServeHTTP(w, r)
+	//	})
 
 	var (
 		HOST        = ConfigGet(a.Settings, APPVAR_HOST, "localhost")

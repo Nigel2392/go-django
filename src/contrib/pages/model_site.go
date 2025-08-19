@@ -40,46 +40,64 @@ type siteContextKey struct{}
 //			OrderBy("includedInFilter")
 //	}
 
-func siteForRequestQuerySet(r *http.Request) *queries.QuerySet[*Site] {
+func siteForRequestQuerySet(ctx context.Context, domain string) *queries.QuerySet[*Site] {
+
+	var exprs = make([]expr.Expression, 0, 2)
+	if domain != "" {
+		exprs = append(exprs, expr.Q("Domain", domain))
+	}
+	exprs = append(exprs, expr.Q("Default", true))
+
 	return queries.GetQuerySet(&Site{}).
-		WithContext(r.Context()).
 		SelectRelated("Root").
-		Filter(expr.Or(
-			expr.Q("Domain", mux.GetHost(r)),
-			expr.Q("Default", true),
-		)).
+		WithContext(ctx).
+		Filter(expr.Or(exprs...)).
 		OrderBy("Default")
 }
 
-func SiteForRequest(r *http.Request, fn ...func(qs *queries.QuerySet[*Site]) *queries.QuerySet[*Site]) (*http.Request, *Site, error) {
-	var siteVal = r.Context().Value(siteContextKey{})
+func SiteForRequest(requestOrContext any, fn ...func(qs *queries.QuerySet[*Site]) *queries.QuerySet[*Site]) (context.Context, *Site, error) {
+	var (
+		ctx  context.Context
+		host string
+	)
+	switch v := requestOrContext.(type) {
+	case *http.Request:
+		ctx = v.Context()
+		host = mux.GetHost(v)
+	case context.Context:
+		ctx = v
+	case nil:
+		ctx = context.Background()
+	default:
+		panic(fmt.Sprintf(
+			"expected *http.Request or context.Context, got %T",
+			v,
+		))
+	}
+
+	var siteVal = ctx.Value(siteContextKey{})
 	if siteVal != nil {
 		var site, ok = siteVal.(*Site)
 		if ok {
-			return r, site, nil
+			return ctx, site, nil
 		}
 	}
 
-	var qs = siteForRequestQuerySet(r)
+	var qs = siteForRequestQuerySet(ctx, host)
 	for _, f := range fn {
 		qs = f(qs)
 	}
 
 	var row, err = qs.First()
 	if err != nil {
-		if errors.Is(err, errors.NoRows) {
-			return r, nil, errors.NoRows.Wrapf(
-				"no site found for request %s", r.URL.String(),
-			)
-		}
-		return r, nil, err
+		return ctx, nil, err
 	}
 
-	r = r.WithContext(
-		context.WithValue(r.Context(), siteContextKey{}, row.Object),
-	)
+	if ctx != nil {
+		ctx = context.WithValue(ctx, siteContextKey{}, row.Object)
+	}
 
-	return r, row.Object, nil
+	return ctx, row.Object, nil
 }
 
 type Site struct {

@@ -264,6 +264,15 @@ func NewAppConfig() django.AppConfig {
 					return html.EscapeString(instance.Title)
 				}
 
+				var _, site, err = SiteForRequest(ctx)
+				if err != nil {
+					return html.EscapeString(instance.Title)
+				}
+
+				if !strings.HasPrefix(instance.Path, site.Root.Path) {
+					return html.EscapeString(instance.Title)
+				}
+
 				return fmt.Sprintf(
 					"<a href=\"%s\" target=\"_blank\">%s</a>",
 					URLPath(instance),
@@ -272,6 +281,13 @@ func NewAppConfig() django.AppConfig {
 			},
 			ListPage: &chooser.ChooserListPage[*PageNode]{
 				PerPage: 20,
+				Fields: []string{
+					"Title",
+					"Slug",
+					"ContentType",
+					"CreatedAt",
+					"UpdatedAt",
+				},
 				SearchFields: []chooser.SearchField[*PageNode]{
 					{
 						Name:   "Title",
@@ -295,13 +311,6 @@ func NewAppConfig() django.AppConfig {
 		var chooserDefinitionRootNodes = chooserDefinitionAllNodes
 		var chooserDefinitionRootNodesListPage = *chooserDefinitionAllNodes.ListPage
 		chooserDefinitionRootNodes.ListPage = &chooserDefinitionRootNodesListPage
-		chooserDefinitionRootNodes.ListPage.Fields = []string{
-			"Title",
-			"Slug",
-			"ContentType",
-			"CreatedAt",
-			"UpdatedAt",
-		}
 		chooserDefinitionRootNodes.ListPage.QuerySet = func(r *http.Request, model *PageNode) *queries.QuerySet[*PageNode] {
 			return NewPageQuerySet().RootPages().Base()
 		}
