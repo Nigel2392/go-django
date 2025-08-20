@@ -383,6 +383,46 @@ a.danger {
     flex-direction: row;
     align-items: center;
 }
+.tabpanel {
+
+}
+.tabpanel .tabpanel__controls {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    border-bottom: 1px solid var(--border-color);
+    padding: 1em 0;
+}
+.tabpanel .tabpanel__controls .tabpanel__control {
+    border: none;
+    background: none;
+    cursor: pointer;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    padding: 0;
+}
+.tabpanel .tabpanel__controls .tabpanel__control:hover {
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+}
+.tabpanel .tabpanel__controls .tabpanel__control+.tabpanel__control {
+    margin-left: 1em;
+}
+
+.tabpanel .tabpanel__content {
+    flex: 1;
+    display: flex;
+    margin-top: 1em;
+}
+.tabpanel .tabpanel__content .tabpanel__panel {
+    flex: 1;
+    display: none;
+    flex-direction: column;
+}
+.tabpanel .tabpanel__content .tabpanel__panel.active {
+    display: flex;
+}
 .panel {
     max-width: var(--max-panel-width, 1040px);
 }

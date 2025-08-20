@@ -25,7 +25,6 @@ func MessagesMiddleware(next mux.Handler) mux.Handler {
 			return
 		}
 
-		logger.Debugf("Messages backend initialized at %q: %T", r.URL.String(), backend)
 		r = setBackend(r, backend)
 		next.ServeHTTP(w, r)
 

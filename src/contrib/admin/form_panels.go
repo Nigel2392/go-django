@@ -5,66 +5,20 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/a-h/templ"
 )
 
 var (
 	_ forms.Form                          = (*AdminForm[modelforms.ModelForm[attrs.Definer]])(nil)
 	_ modelforms.ModelForm[attrs.Definer] = (*AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer])(nil)
 )
-
-type PanelContext struct {
-	*ctx.HTTPRequestContext
-	Panel      Panel
-	BoundPanel BoundPanel
-}
-
-func NewPanelContext(r *http.Request, panel Panel, boundPanel BoundPanel) *PanelContext {
-	return &PanelContext{
-		HTTPRequestContext: ctx.RequestContext(r),
-		Panel:              panel,
-		BoundPanel:         boundPanel,
-	}
-}
-
-const PANEL_ID_PREFIX = "panel"
-
-func BuildPanelID(panelIdx []int, extra ...string) string {
-	var b = new(strings.Builder)
-	var totalLen = len(PANEL_ID_PREFIX) + 1
-
-	totalLen += len(panelIdx) * 2
-
-	for i := 0; i < len(extra); i++ {
-		totalLen += len(extra[i])
-		totalLen++ // for the dash
-	}
-
-	b.Grow(totalLen)
-
-	b.WriteString(PANEL_ID_PREFIX)
-
-	for _, idx := range panelIdx {
-		b.WriteString("-")
-		b.WriteString(fmt.Sprintf("%d", idx))
-	}
-
-	// Append any extra strings
-	for i := 0; i < len(extra); i++ {
-		b.WriteString("-")
-		b.WriteString(extra[i])
-	}
-
-	return b.String()
-}
 
 type Panel interface {
 	Fields() []string
@@ -73,8 +27,10 @@ type Panel interface {
 	Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel
 }
 
-func PanelClass(className string, panel Panel) Panel {
-	return panel.Class(className)
+type BoundPanel interface {
+	Hidden() bool
+	Component() templ.Component
+	Render() template.HTML
 }
 
 type fieldPanel struct {
@@ -206,6 +162,16 @@ func (m *rowPanel) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx co
 }
 
 func LabeledRowPanel(label any, helpText any, panels ...Panel) Panel {
+	if pnl, ok := label.(Panel); ok {
+		panels = append([]Panel{pnl}, panels...)
+		label = nil
+	}
+
+	if pnl, ok := helpText.(Panel); ok {
+		panels = append([]Panel{pnl}, panels...)
+		helpText = nil
+	}
+
 	return &rowPanel{
 		panels:   panels,
 		Label:    trans.GetTextFunc(label),
@@ -264,6 +230,16 @@ func (g *panelGroup) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx 
 }
 
 func LabeledPanelGroup(label any, helpText any, panels ...Panel) Panel {
+	if pnl, ok := label.(Panel); ok {
+		panels = append([]Panel{pnl}, panels...)
+		label = nil
+	}
+
+	if pnl, ok := helpText.(Panel); ok {
+		panels = append([]Panel{pnl}, panels...)
+		helpText = nil
+	}
+
 	return &panelGroup{
 		panels:   panels,
 		Label:    trans.GetTextFunc(label),
@@ -359,4 +335,80 @@ func (a *AlertPanel) GetHTML(ctx context.Context) template.HTML {
 		"AlertPanel.GetHTML: unexpected HTML type %T", a.HTML,
 	)
 	return ""
+}
+
+var (
+	_ Panel = (*tabbedPanel)(nil)
+)
+
+type tabbedPanel struct {
+	className string
+	tabs      []TabPanel
+}
+
+func TabbedPanel(tabs ...TabPanel) Panel {
+	return &tabbedPanel{
+		tabs: tabs,
+	}
+}
+
+func PanelTab(title any, panels ...Panel) TabPanel {
+	if pnl, ok := title.(Panel); ok {
+		panels = append([]Panel{pnl}, panels...)
+		title = nil
+	}
+	return TabPanel{
+		title:  trans.GetTextFunc(title),
+		panels: panels,
+	}
+}
+
+type TabPanel struct {
+	title  any // string | func(context.Context) string
+	panels []Panel
+}
+
+func (t *tabbedPanel) Fields() []string {
+	var fields []string
+	for _, tab := range t.tabs {
+		for _, panel := range tab.panels {
+			fields = append(fields, panel.Fields()...)
+		}
+	}
+	return fields
+}
+
+func (t *tabbedPanel) ClassName() string {
+	return t.className
+}
+
+func (t *tabbedPanel) Class(classes string) Panel {
+	t.className = classes
+	return t
+}
+
+func (t *tabbedPanel) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
+	var boundTabs = make([]*boundTabPanel, 0, len(t.tabs))
+	for idx, tab := range t.tabs {
+		var cpy = make([]int, len(panelIdx)+1)
+		copy(cpy, panelIdx)
+		cpy[len(cpy)-1] = idx
+		var boundPanels = make([]BoundPanel, 0, len(tab.panels))
+		for _, panel := range tab.panels {
+			boundPanels = append(boundPanels, panel.Bind(
+				r, cpy, form, ctx, boundFields,
+			))
+		}
+		boundTabs = append(boundTabs, &boundTabPanel{
+			title:  trans.GetTextFunc(tab.title),
+			panels: boundPanels,
+		})
+	}
+
+	return &boundTabbedPanel{
+		request:  r,
+		panelIdx: panelIdx,
+		panels:   boundTabs,
+		context:  ctx,
+	}
 }

@@ -5,6 +5,7 @@ import { PanelController } from "./controllers/panel";
 
 import { AdminSite } from "./app/app";
 import { AccordionController } from "./controllers/accordion";
+import { TabPanelController } from "./controllers/panel_tab";
 
 const app = new AdminSite({
     controllers: {
@@ -13,6 +14,7 @@ const app = new AdminSite({
         dropdown: DropdownController,
         accordion: AccordionController,
         panel: PanelController,
+        tabpanel: TabPanelController,
     },
 });
 

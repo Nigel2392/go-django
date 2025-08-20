@@ -147,33 +147,41 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 			},
 			EditPanels: func(r *http.Request, page pages.Page) []admin.Panel {
 				return []admin.Panel{
-					admin.TitlePanel(
-						admin.FieldPanel("Title"),
-					),
-					admin.RowPanel(
-						admin.FieldPanel("UrlPath"),
-						admin.FieldPanel("Slug"),
-					),
-					admin.LabeledRowPanel(
-						trans.S("Media"),
-						trans.S("Media files associated with this blog post."),
-						admin.LabeledPanelGroup(
-							trans.S("Choosers"),
-							trans.S("Choosers for media files"),
-							admin.FieldPanel("Image"),
-							admin.FieldPanel("User"),
-							admin.FieldPanel("Document"),
+					admin.TabbedPanel(
+						admin.PanelTab(
+							trans.S("Content"),
+							admin.TitlePanel(
+								admin.FieldPanel("Title"),
+							),
+							admin.RowPanel(
+								admin.FieldPanel("UrlPath"),
+								admin.FieldPanel("Slug"),
+							),
+							admin.FieldPanel("Editor"),
 						),
-						admin.PanelGroup(
-							&admin.AlertPanel{
-								Type:  admin.ALERT_INFO,
-								Label: trans.S("Cover Image"),
-								HTML:  trans.S("<p>Choose a cover image for your blog post.</p>"),
-							},
-							admin.FieldPanel("Thumbnail"),
+						admin.PanelTab(
+							trans.S("Media"),
+							admin.LabeledRowPanel(
+								trans.S("Media"),
+								trans.S("Media files associated with this blog post."),
+								admin.LabeledPanelGroup(
+									trans.S("Choosers"),
+									trans.S("Choosers for media files"),
+									admin.FieldPanel("Image"),
+									admin.FieldPanel("User"),
+									admin.FieldPanel("Document"),
+								),
+								admin.PanelGroup(
+									&admin.AlertPanel{
+										Type:  admin.ALERT_INFO,
+										Label: trans.S("Cover Image"),
+										HTML:  trans.S("<p>Choose a cover image for your blog post.</p>"),
+									},
+									admin.FieldPanel("Thumbnail"),
+								),
+							),
 						),
 					),
-					admin.FieldPanel("Editor"),
 					admin.FieldPanel("CreatedAt"),
 					admin.FieldPanel("UpdatedAt"),
 				}

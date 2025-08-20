@@ -8,13 +8,8 @@ import (
     "html/template"
     "github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"strconv"
 )
-
-type BoundPanel interface {
-    Hidden() bool
-	Component() templ.Component
-	Render() template.HTML
-}
 
 type BoundFormPanel[T forms.Form, P Panel] struct {
 	forms.BoundField
@@ -254,5 +249,55 @@ templ (p *BoundAlertPanel[T]) Component() {
                 @templ.Raw(string(p.Panel.GetHTML(p.Context)))
             }
         </div>
+    </div>
+}
+
+// boundTabPanel
+// boundTabbedPanel
+
+type boundTabPanel struct {
+    title  func(context.Context) string
+    panels []BoundPanel
+}
+
+type boundTabbedPanel struct {
+    context  context.Context
+    request  *http.Request
+    panelIdx []int
+    panels   []*boundTabPanel
+}
+
+func (p *boundTabbedPanel) Render() template.HTML {
+    var b bytes.Buffer
+    p.Component().Render(p.context, &b)
+    return template.HTML(b.String())
+}
+
+func (p *boundTabbedPanel) Hidden() bool {
+    return len(p.panels) == 0
+}
+
+templ (p *boundTabbedPanel) Component() {
+    <div class="panel tabpanel" data-controller="tabpanel">
+
+        <div class="panel__body">
+            <div class="tabpanel__controls">
+                for i, tab := range p.panels {
+                    <button class={ "tabpanel__control" } data-action="click->tabpanel#select" data-tabpanel-index-param={ strconv.Itoa(i) }>
+                        @templ.Raw(tab.title(p.context))
+                    </button>
+                }
+            </div>
+            <div class="tabpanel__content">
+                for i, tab := range p.panels {
+                    <div class={ "tabpanel__panel" } data-tabpanel-target="tab" data-index={ strconv.Itoa(i) }>
+                        for _, panel := range tab.panels {
+                            @panel.Component()
+                        }
+                    </div>
+                }
+            </div>
+        </div>
+
     </div>
 }
