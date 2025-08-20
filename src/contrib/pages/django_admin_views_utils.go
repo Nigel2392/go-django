@@ -145,8 +145,7 @@ func getPageActions(rq *http.Request, p *PageNode) []admin.Action {
 		})
 	}
 
-	if django.AppInstalled("auditlogs") &&
-		permissions.HasPermission(rq, "auditlogs:list") {
+	if django.AppInstalled("auditlogs") && permissions.HasPermission(rq, "auditlogs:list") {
 		var u = django.Reverse(
 			"admin:auditlogs",
 		)

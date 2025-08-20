@@ -1,21 +1,23 @@
 {{ define "create" }}
 
     <div class="godjango-chooser-create">
+        {{ $Media := .Data.form.Media }}
+        {{ range $css := $Media.CSS }}
+            {{ $css }}
+        {{ end }}
+
         <form method="post" class="admin-form" enctype="multipart/form-data">
             <div class="godjango-chooser-actions">
                 <button type="button" id="back-to-list" class="button warning">{{ T "Back to list" }}</button>
                 <button type="submit" class="button secondary">{{ T "Create" }}</button>
             </div>
 
-            {{ $Media := .Data.form.Media }}
-            {{ range $css := $Media.CSS }}
-                {{ $css }}
-            {{ end }}
-
             {{ csrf_field }}
 
-            {{ include .Data.form.ErrorList "admin/shared/forms/error_list.tmpl" }}
-            {{ include .Data.form "admin/shared/forms/form.tmpl" }}
+            <div class="godjango-chooser-panels">
+                {{ include .Data.form.ErrorList "admin/shared/forms/error_list.tmpl" }}
+                {{ include .Data.form "admin/shared/forms/form.tmpl" }}
+            </div>
         </form>
 
         {{ $Media := .Data.form.Media }}

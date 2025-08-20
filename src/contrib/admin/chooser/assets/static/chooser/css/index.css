@@ -217,8 +217,14 @@ dialog.godjango-modal:not([fullscreen]) {
 .godjango-chooser-list-header-group {
 
 }
-.godjango-chooser-create .admin-form {
+.godjango-chooser-create .admin-form .godjango-chooser-panels {
     padding-left: 1rem;
     padding-right: 1rem;
     padding-bottom: 1rem;
+}
+.godjango-chooser-create .admin-form .godjango-chooser-panels .panel__icon {
+    display: none;
+}
+.godjango-chooser-create .admin-form .godjango-chooser-panels .panel__heading:has(> .panel__icon+.panel__title) {
+    transform: unset;
 }

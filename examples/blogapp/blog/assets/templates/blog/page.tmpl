@@ -13,7 +13,9 @@
 
         <h2>Hello, {{ user.Username }}!</h2>
 
+        {{ if .Data.blog_page.Thumbnail }}
         <img src="{{ url "images:serve" .Data.blog_page.Thumbnail.Path }}" alt="{{ .Data.blog_page.Thumbnail.Title }}">
+        {{ end }}
 
         {{ .Page.Editor.MustRender }} 
 
