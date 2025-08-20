@@ -76,8 +76,6 @@ class GoDjangoImagesTool {
             config = {};
         }
         
-        console.log(data)
-
         let stretched = data.stretched;
         if ("defaultStretched" in config && !("stretched" in data)) {
             stretched = config.defaultStretched;

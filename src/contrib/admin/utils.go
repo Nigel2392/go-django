@@ -34,6 +34,11 @@ func FindDefinition(model any, appName ...string) *ModelDefinition {
 	switch m := model.(type) {
 	case attrs.Definer:
 		var cType = contenttypes.NewContentType(m)
+
+		if app == "" {
+			app = cType.AppLabel()
+		}
+
 		modelTypeName = cType.Model()
 	case string:
 		modelTypeName = m
@@ -47,7 +52,7 @@ func FindDefinition(model any, appName ...string) *ModelDefinition {
 	if app != "" {
 		app, ok := AdminSite.Apps.Get(app)
 		if !ok {
-			return nil
+			goto slowFind
 		}
 
 		m, ok := app.Models.Get(modelTypeName)
@@ -56,6 +61,7 @@ func FindDefinition(model any, appName ...string) *ModelDefinition {
 		}
 	}
 
+slowFind:
 	for head := AdminSite.Apps.Front(); head != nil; head = head.Next() {
 		var app = head.Value
 

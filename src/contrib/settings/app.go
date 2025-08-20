@@ -92,7 +92,7 @@ func NewAppConfig() django.AppConfig {
 			},
 			admin.ModelOptions{
 				RegisterToAdminMenu: true,
-				Name:                "Site",
+				Name:                "site",
 				MenuLabel:           trans.S("Sites"),
 				Model:               &pages.Site{},
 				Labels: map[string]func(ctx context.Context) string{

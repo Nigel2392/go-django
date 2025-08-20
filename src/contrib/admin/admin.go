@@ -28,9 +28,11 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/models"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/a-h/templ"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -110,20 +112,61 @@ func NewAppConfig() django.AppConfig {
 		goldcrest.Register(
 			RegisterFooterMenuItemHook, 0,
 			RegisterFooterMenuItemHookFunc(func(r *http.Request, adminSite *AdminApplication, items cmpts.Items[menu.MenuItem]) {
-				items.Append(&menu.Item{
+
+				var menuItem = &menu.Menu{
+					Items: make([]menu.MenuItem, 0),
+				}
+
+				var user = authentication.Retrieve(r)
+				var model = FindDefinition(user)
+
+				if user.IsAdmin() && permissions.HasObjectPermission(r, user, "admin:edit") {
+					menuItem.Items = append(menuItem.Items, &menu.Item{
+						BaseItem: menu.BaseItem{
+							ItemName: "user_change",
+							Label:    trans.T(r.Context(), "Edit Account"),
+							Logo: templ.Raw(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person-gear" viewBox="0 0 16 16">
+								<!-- The MIT License (MIT) -->
+								<!-- Copyright (c) 2011-2024 The Bootstrap Authors -->
+								<path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0M8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4m.256 7a4.5 4.5 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10q.39 0 .74.025c.226-.341.496-.65.804-.918Q8.844 9.002 8 9c-5 0-6 3-6 4s1 1 1 1zm3.63-4.54c.18-.613 1.048-.613 1.229 0l.043.148a.64.64 0 0 0 .921.382l.136-.074c.561-.306 1.175.308.87.869l-.075.136a.64.64 0 0 0 .382.92l.149.045c.612.18.612 1.048 0 1.229l-.15.043a.64.64 0 0 0-.38.921l.074.136c.305.561-.309 1.175-.87.87l-.136-.075a.64.64 0 0 0-.92.382l-.045.149c-.18.612-1.048.612-1.229 0l-.043-.15a.64.64 0 0 0-.921-.38l-.136.074c-.561.305-1.175-.309-.87-.87l.075-.136a.64.64 0 0 0-.382-.92l-.148-.045c-.613-.18-.613-1.048 0-1.229l.148-.043a.64.64 0 0 0 .382-.921l-.074-.136c-.306-.561.308-1.175.869-.87l.136.075a.64.64 0 0 0 .92-.382zM14 12.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0"/>
+							</svg>`),
+						},
+						Link: func() string {
+							return django.Reverse(
+								"admin:apps:model:edit",
+								model.App().Name, model.GetName(), attrs.PrimaryKey(user.(attrs.Definer)),
+							)
+						},
+					})
+				}
+
+				menuItem.Items = append(menuItem.Items, &menu.Item{
 					BaseItem: menu.BaseItem{
 						ItemName: "logout",
 						Label:    trans.T(r.Context(), "Logout"),
 						Logo: templ.Raw(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-	<!-- The MIT License (MIT) -->
-	<!-- Copyright (c) 2011-2024 The Bootstrap Authors -->
-  	<path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
-  	<path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
-</svg>`),
+							<!-- The MIT License (MIT) -->
+							<!-- Copyright (c) 2011-2024 The Bootstrap Authors -->
+						  	<path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0z"/>
+						  	<path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708z"/>
+						</svg>`),
 					},
 					Link: func() string {
 						return django.Reverse("admin:logout")
 					},
+				})
+
+				items.Append(&menu.DropdownItem{
+					BaseItem: menu.BaseItem{
+						ItemName: "account_details",
+						Label:    trans.T(r.Context(), "Account Details"),
+						Logo: templ.Raw(`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16">
+							<!-- The MIT License (MIT) -->
+							<!-- Copyright (c) 2011-2024 The Bootstrap Authors -->
+							<path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/>
+						</svg>`),
+					},
+					Menu: menuItem,
 				})
 			}),
 		)
@@ -242,7 +285,7 @@ func NewAppConfig() django.AppConfig {
 		)
 
 		var baseModelsRoute = baseApps.Handle(
-			mux.ANY, "model/<<model_name>>/",
+			mux.ANY, "<<model_name>>/",
 			NewModelHandler("app_name", "model_name", ModelListHandler),
 			"model", // admin:apps:model
 		)

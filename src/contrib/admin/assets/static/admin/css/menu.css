@@ -45,6 +45,7 @@
     text-decoration: none;
     padding-left: 0.75em;
 }
+.menu .accordion-menu-item > .menu-item-content .accordion-item-text,
 .menu .submenu-menu-item > .menu-item-content .submenu-item-text,
 .menu .menu-item .menu-item-content {
     display: flex;
@@ -76,6 +77,14 @@
     vertical-align: middle;
     font-weight: 500;
 }
+.menu .accordion-menu-item > .menu-item-accordion-content {
+    height: 0;
+    overflow: hidden;
+}
+.menu .accordion-menu-item.open > .menu-item-accordion-content {
+    height: auto;
+}
+.menu .accordion-menu-item > .menu-item-content,
 .menu .submenu-menu-item > .menu-item-content {
     -webkit-touch-callout: none; /* iOS Safari */
     -webkit-user-select: none; /* Safari */
@@ -90,12 +99,15 @@
     justify-content: space-between;
     cursor: pointer;
 }
+.menu .accordion-menu-item > .menu-item-content .menu-item-label,
+.menu .accordion-menu-item > .menu-item-content .menu-item-logo,
 .menu .submenu-menu-item > .menu-item-content .menu-item-label,
 .menu .submenu-menu-item > .menu-item-content .menu-item-logo {
     padding-top: 1em;
     padding-bottom: 1em;
 }
-.menu .submenu-menu-item > .menu-item-content .menu-item-toggle {
+.menu .submenu-menu-item > .menu-item-content .menu-item-toggle,
+.menu .accordion-menu-item > .menu-item-content .menu-item-toggle {
     width: auto;
     height: 100%;
     /* color: var(--menu-toggle-text-color); */
@@ -112,7 +124,8 @@
     /* background-color: var(--menu-toggle-bg-color-hover); */
     /* color: var(--menu-toggle-text-color-hover); */
 /* } */
-.menu .submenu-menu-item > .menu-item-content .menu-item-toggle-icon {
+.menu .submenu-menu-item > .menu-item-content .menu-item-toggle-icon,
+.menu .accordion-menu-item > .menu-item-content .menu-item-toggle-icon {
     height: 100%;
     width: 2.5em;
     vertical-align: middle;
@@ -124,7 +137,8 @@
     background-color: var(--menu-bg-color-active);
     color: var(--menu-text-color-active);
 }
-.menu .submenu-menu-item.open > .menu-item-content .menu-item-toggle-icon {
+.menu .submenu-menu-item.open > .menu-item-content .menu-item-toggle-icon,
+.menu .accordion-menu-item.open > .menu-item-content .menu-item-toggle-icon {
     transform: rotate(-180deg);
 }
 .menu .submenu-menu-item > .menu-item-menu-wrapper {

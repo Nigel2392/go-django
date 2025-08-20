@@ -65,7 +65,6 @@ class GoDjangoImageTool {
             title:   window.i18n.gettext('Select an image'),
             listurl: this.config.chooserURL,
             onChosen: (value, previewText, data) => {
-                console.log(value, previewText, data);
                 this.data.id = value;
                 this.data.caption = data.title;
                 this.image.src = this.config.serveUrl.replace("<<id>>", value);

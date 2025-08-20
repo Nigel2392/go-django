@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/google/uuid"
 
 	_ "unsafe"
@@ -48,9 +49,6 @@ type Definition interface {
 	GetActions(r *http.Request, logEntry LogEntry) []LogEntryAction
 }
 
-//go:linkname context_user_key github.com/Nigel2392/mux/middleware/authentication.context_user_key
-var context_user_key string = "mux.middleware.authentication.User"
-
 func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject attrs.Definer, data map[string]interface{}) (uuid.UUID, error) {
 
 	if !Logs.IsReady() {
@@ -68,7 +66,7 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 		}
 	}
 
-	var user, _ = ctx.Value(context_user_key).(users.User)
+	var user = authentication.UserFromContext(ctx).(users.User)
 	var entry = models.Setup(&Entry{
 		Typ:  drivers.String(entryType),
 		Lvl:  level,

@@ -174,6 +174,7 @@ func NewAppConfig() django.AppConfig {
 			},
 			// Register the user model with the admin app.
 			admin.ModelOptions{
+				Name:                "user",
 				Model:               &User{},
 				MenuLabel:           trans.S("Users"),
 				RegisterToAdminMenu: true,
@@ -247,7 +248,7 @@ func NewAppConfig() django.AppConfig {
 						"Email": list.LinkColumn(
 							trans.S("Email"),
 							"Email", func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-								return django.Reverse("admin:apps:model:edit", "auth", "User", defs.Get("ID"))
+								return django.Reverse("admin:apps:model:edit", "auth", "user", defs.Get("ID"))
 							},
 						),
 						"IsAdministrator": list.BooleanColumn(

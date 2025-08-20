@@ -13,6 +13,13 @@ type ctxKey string
 
 const depthKey ctxKey = "menu-depth"
 
+var (
+	_ MenuItem = (*BaseItem)(nil)
+	_ MenuItem = (*Item)(nil)
+	_ MenuItem = (*SubmenuItem)(nil)
+	_ MenuItem = (*DropdownItem)(nil)
+)
+
 type Menu struct {
 	ID string
 	Classes []string
@@ -194,4 +201,57 @@ templ (s *SubmenuItem) Component() {
 			</div>
 		</div>
 	</div>
+}
+
+type DropdownItem SubmenuItem
+
+func (d *DropdownItem) Order() int {
+	return d.Ordering
+}
+
+func (d *DropdownItem) IsShown() bool {
+	var hidden = d.Hidden
+	if hidden {
+		return false
+	}
+
+	for _, item := range d.Menu.Items {
+		if item.IsShown() {
+			return true
+		}
+	}
+
+	return false
+}
+
+templ (s *DropdownItem) Component() {
+	{{ assert.False(s.Menu == nil, "dropdown item must have a menu")}}
+	{{ if s.MenuClasses == nil { s.MenuClasses = []string{} } }}
+
+	{{ var depth = ctx.Value(depthKey) }}
+	{{ var depthInt int = 1 }}
+	{{ if depth != nil { depthInt = depth.(int) + 1 } }}
+	{{ ctx = context.WithValue(ctx, depthKey, depthInt) }}
+
+	<div data-controller="accordion" class={ strings.Join(s.MenuClasses, " "), "accordion-menu-item menu-item", depthCss(depthInt) } if s.ID != "" { id={ s.MenuID } } aria-expanded="false">
+
+		<div class="menu-item-content" data-action="click->accordion#toggle">
+			<div class="accordion-item-text">
+				@s.BaseItem.Inner()
+			</div>
+			<button class="menu-item-toggle">
+				<svg xmlns="http://www.w3.org/2000/svg" class="menu-item-toggle-icon" fill="currentColor" viewBox="0 0 16 16">
+				  	<path fill-rule="evenodd" d="M8 12a.5.5 0 0 0 .5-.5V5.707l2.146 2.147a.5.5 0 0 0 .708-.708l-3-3a.5.5 0 0 0-.708 0l-3 3a.5.5 0 1 0 .708.708L7.5 5.707V11.5a.5.5 0 0 0 .5.5"/>
+				</svg>
+			</button>
+		</div>
+
+		<div class="menu-item-accordion-content">
+			@s.Menu.Component()
+		</div>
+	</div>
+}
+
+func (d *DropdownItem) Name() string {
+	return d.Label
 }

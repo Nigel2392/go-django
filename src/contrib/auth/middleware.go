@@ -29,12 +29,15 @@ func UnAuthenticatedUser() *User {
 
 // Get the user from a request.
 func UserFromRequest(r *http.Request) *User {
-
 	var u = authentication.Retrieve(r)
 	if u != nil {
 		return u.(*User)
 	}
 
+	return loadUserFromRequest(r)
+}
+
+func loadUserFromRequest(r *http.Request) *User {
 	var session = sessions.Retrieve(r)
 	except.Assert(
 		session != nil,
@@ -72,13 +75,13 @@ func UserFromRequest(r *http.Request) *User {
 	return user
 }
 
-func UserFromRequestPure(r *http.Request) authentication.User {
-	return UserFromRequest(r)
+func userFromRequestPure(r *http.Request) authentication.User {
+	return loadUserFromRequest(r)
 }
 
 // Add a user to a request, if one exists in the session.
 func AddUserMiddleware() mux.Middleware {
 	return django.NonStaticMiddleware(authentication.AddUserMiddleware(
-		UserFromRequestPure,
+		userFromRequestPure,
 	))
 }
