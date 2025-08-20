@@ -412,6 +412,12 @@ func NewAppConfig() django.AppConfig {
 			pageHandler(choosePageTypeHandler), "type",
 		)
 
+		//	// Preview page
+		//	pagesRoute.Get(
+		//		fmt.Sprintf("/<<%s>>/preview", PageIDVariableName),
+		//		pageHandler(previewPageHandler), "preview",
+		//	)
+
 		// Delete page
 		pagesRoute.Get(
 			fmt.Sprintf("/<<%s>>/delete", PageIDVariableName),

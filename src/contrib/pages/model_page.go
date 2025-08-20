@@ -382,14 +382,14 @@ func (n *PageNode) Unpublish(ctx context.Context, unpublishChildren bool) error 
 		UnpublishNode(n, unpublishChildren)
 }
 
-func (n *PageNode) CreateRevision(save bool) (*revisions.Revision, error) {
+func (n *PageNode) CreateRevision(ctx context.Context, save bool) (*revisions.Revision, error) {
 	var revision, err = revisions.NewRevision(n)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create revision for page node %d: %w", n.PK, err)
 	}
 
 	if save {
-		_, err = revisions.CreateRevision(revision)
+		_, err = revisions.CreateRevision(ctx, revision)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save revision for page node %d: %w", n.PK, err)
 		}

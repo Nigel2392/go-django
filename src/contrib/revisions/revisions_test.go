@@ -150,21 +150,21 @@ func TestCreateRevision(t *testing.T) {
 
 	time.Sleep(1 * time.Second)
 	revIDCounter++
-	artistRev, err := revisions.CreateRevision(&artist)
+	artistRev, err := revisions.CreateRevision(context.Background(), &artist)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(1 * time.Second)
 	revIDCounter++
-	laptopRev, err := revisions.CreateRevision(&laptop)
+	laptopRev, err := revisions.CreateRevision(context.Background(), &laptop)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(1 * time.Second)
 	revIDCounter++
-	bottleRev, err := revisions.CreateRevision(&bottle)
+	bottleRev, err := revisions.CreateRevision(context.Background(), &bottle)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -243,7 +243,7 @@ func TestCreateRevision(t *testing.T) {
 			t.Logf("Creating new revision for artist %d", artist.ID)
 			artist.Name = "John Doe"
 			revIDCounter++
-			artistRevLatest, err := revisions.CreateRevision(&artist)
+			artistRevLatest, err := revisions.CreateRevision(context.Background(), &artist)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -278,7 +278,7 @@ func TestCreateRevision(t *testing.T) {
 			t.Logf("Creating new revision for laptop %d", laptop.ID)
 			laptop.Resolution = "720p"
 			revIDCounter++
-			laptopRevLatest, err := revisions.CreateRevision(&laptop)
+			laptopRevLatest, err := revisions.CreateRevision(context.Background(), &laptop)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -313,7 +313,7 @@ func TestCreateRevision(t *testing.T) {
 			t.Logf("Creating new revision for bottle %d", bottle.ID)
 			bottle.Liters = 2
 			revIDCounter++
-			bottleRevLatest, err := revisions.CreateRevision(&bottle)
+			bottleRevLatest, err := revisions.CreateRevision(context.Background(), &bottle)
 			if err != nil {
 				t.Fatal(err)
 			}

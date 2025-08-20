@@ -216,7 +216,7 @@ func GetRevisionsByObject(obj attrs.Definer, limit int, offset int) ([]*Revision
 	return revisions, nil
 }
 
-func CreateRevision(forObj attrs.Definer) (*Revision, error) {
+func CreateRevision(ctx context.Context, forObj attrs.Definer) (*Revision, error) {
 	var revision *Revision
 	switch obj := forObj.(type) {
 	case *Revision:
@@ -228,15 +228,15 @@ func CreateRevision(forObj attrs.Definer) (*Revision, error) {
 		}
 		revision = rev
 	}
-	return queries.GetQuerySet(&Revision{}).Create(revision)
+	return queries.GetQuerySet(&Revision{}).WithContext(ctx).Create(revision)
 }
 
-func UpdateRevision(rev *Revision) error {
-	var _, err = queries.GetQuerySet(&Revision{}).Filter("ID", rev.ID).Update(rev)
+func UpdateRevision(ctx context.Context, rev *Revision) error {
+	var _, err = queries.GetQuerySet(&Revision{}).WithContext(ctx).Filter("ID", rev.ID).Update(rev)
 	return err
 }
 
-func DeleteRevision(rev *Revision) error {
-	var _, err = queries.GetQuerySet(&Revision{}).Filter("ID", rev.ID).Delete()
+func DeleteRevision(ctx context.Context, rev *Revision) error {
+	var _, err = queries.GetQuerySet(&Revision{}).WithContext(ctx).Filter("ID", rev.ID).Delete()
 	return err
 }
