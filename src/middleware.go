@@ -23,7 +23,7 @@ type staticRouteKey struct{}
 // It checks the request context for a value of type `*bool` with the key [staticRouteKey]{}.
 func IsStaticRouteRequest(r *http.Request) bool {
 	var isStaticRoute = r.Context().Value(staticRouteKey{})
-	if isStaticRoute, ok := isStaticRoute.(*bool); ok {
+	if isStaticRoute, ok := isStaticRoute.(*bool); ok && isStaticRoute != nil {
 		return *isStaticRoute
 	}
 	return false
