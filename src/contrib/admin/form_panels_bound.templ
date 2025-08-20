@@ -122,6 +122,8 @@ func (p *BoundRowPanel[T]) Render() template.HTML {
 }
 
 templ (p *BoundRowPanel[T]) Component() {
+    // if there is no label, there is nothing to link to, there wont be an icon.
+    // only create the panel ID if there is a label to ensure we don't increment the counter
     {{ var panelId string }}
     if p.LabelFn != nil {
         {{ panelId = BuildPanelID("panel-row", p.PanelIndex, "row") }}
@@ -179,6 +181,8 @@ func (p *BoundPanelGroup[T]) Render() template.HTML {
 }
 
 templ (p *BoundPanelGroup[T]) Component() {
+    // if there is no label, there is nothing to link to, there wont be an icon.
+    // only create the panel ID if there is a label to ensure we don't increment the counter
     {{ var panelId string }}
     if p.LabelFn != nil {
         {{ panelId = BuildPanelID("panel-group", p.PanelIndex, "group") }}
