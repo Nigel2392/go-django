@@ -196,6 +196,9 @@ a.danger {
     margin: 1rem 0;
     padding: 1rem;
 }
+.alert:first-child {
+    margin-top: 0;
+}
 .alert .alert-title {
     font-weight: 600;
     margin-bottom: 0.5rem;

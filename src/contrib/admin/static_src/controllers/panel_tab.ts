@@ -5,23 +5,24 @@ class TabPanelController extends Controller<HTMLElement> {
       "tab", "control",
     ];
 
+    declare hasParentTab: boolean;
     declare tabTargets: HTMLElement[];
     declare controlTargets: HTMLElement[];
 
     connect() {
         this.tabTargets[0].classList.add("active");
         this.controlTargets[0].classList.add("active");
+        this.hasParentTab = this.element.parentElement.closest(`[data-controller="${this.identifier}"]`) !== null;
 
-        if (window.location.hash) {
-
-            if (window.location.hash.startsWith("#tab-")) {
-                const index = parseInt(window.location.hash.split("-").pop() || "0", 10);
+        let selectQuerySelectorTab = true;
+        if (!this.hasParentTab && window.location.hash && window.location.hash.startsWith("#tab-")) {
+            const index = parseInt(window.location.hash.split("-").pop() || "0", 10);
+            this.selectTab(index, false);
+            selectQuerySelectorTab = false;
+        } else {
+            const index = this.tabTargets.findIndex(tab => !!tab.querySelector(window.location.hash));
+            if (index !== -1) {
                 this.selectTab(index, false);
-            } else {
-                const index = this.tabTargets.findIndex(tab => !!tab.querySelector(window.location.hash));
-                if (index !== -1) {
-                    this.selectTab(index, false);
-                }
             }
         }
     }
@@ -39,7 +40,7 @@ class TabPanelController extends Controller<HTMLElement> {
 
     selectTab(index: number, setHash: boolean = true) {
 
-        if (setHash) {
+        if (!this.hasParentTab && setHash) {
             window.location.hash = `#tab-${index}`;
         }
 

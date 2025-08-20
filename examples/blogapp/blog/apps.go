@@ -157,31 +157,34 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 								admin.FieldPanel("UrlPath"),
 								admin.FieldPanel("Slug"),
 							),
+							admin.FieldPanel("Image"),
 							admin.FieldPanel("Editor"),
 						),
 						admin.PanelTab(
 							trans.S("Media"),
-							admin.LabeledRowPanel(
-								trans.S("Media"),
-								trans.S("Media files associated with this blog post."),
-								admin.LabeledPanelGroup(
-									trans.S("Choosers"),
-									trans.S("Choosers for media files"),
-									admin.FieldPanel("Image"),
-									admin.FieldPanel("User"),
-									admin.LabeledRowPanel(
+							admin.LabeledPanelGroup(
+								trans.S("Choosers"),
+								trans.S("Choosers for media files"),
+								admin.TabbedPanel(
+									admin.PanelTab(
+										trans.S("User"),
+										admin.FieldPanel("User"),
+									),
+									admin.PanelTab(
 										trans.S("Document"),
-										trans.S("Document file associated with this blog post."),
 										admin.FieldPanel("Document"),
 									),
-								),
-								admin.PanelGroup(
-									&admin.AlertPanel{
-										Type:  admin.ALERT_INFO,
-										Label: trans.S("Cover Image"),
-										HTML:  trans.S("<p>Choose a cover image for your blog post.</p>"),
-									},
-									admin.FieldPanel("Thumbnail"),
+									admin.PanelTab(
+										trans.S("Thumbnail"),
+										admin.PanelGroup(
+											&admin.AlertPanel{
+												Type:  admin.ALERT_INFO,
+												Label: trans.S("Cover Image"),
+												HTML:  trans.S("<p>Choose a cover image for your blog post.</p>"),
+											},
+											admin.FieldPanel("Thumbnail"),
+										),
+									),
 								),
 							),
 						),
