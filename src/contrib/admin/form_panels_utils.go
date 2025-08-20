@@ -63,15 +63,15 @@ func BuildPanelID(key string, panelCount map[string]int, extra ...string) string
 
 	b.WriteString(PANEL_ID_PREFIX)
 
-	if panelIdx > 0 {
-		b.WriteString("-")
-		b.WriteString(strconv.Itoa(panelIdx))
-	}
-
 	// Append any extra strings
 	for i := 0; i < len(extra); i++ {
 		b.WriteString("-")
 		b.WriteString(extra[i])
+	}
+
+	if panelIdx > 0 {
+		b.WriteString("-")
+		b.WriteString(strconv.Itoa(panelIdx))
 	}
 
 	return b.String()

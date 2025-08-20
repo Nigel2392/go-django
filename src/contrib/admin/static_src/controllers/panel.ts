@@ -35,19 +35,36 @@ class PanelController extends Controller<HTMLElement> {
             );
         }
 
-        setTimeout(() => {
-            let hash = window.location.hash;
-            if (hash === `#${this.panelValue}`) {
-                this.parentPanels.forEach(panel => panel.classList.remove("collapsed"));
-                this.element.classList.remove("collapsed");
-                this.scrollToContent();
-            }
-        }, 100);
+        if (this.element.classList.contains("collapsed")) {
+            this.element.setAttribute("aria-expanded", "false");
+        }
+
+        if (this.panelValue) {
+            setTimeout(() => {
+                
+                let hash = window.location.hash;
+                if (hash === `#${this.panelValue}`) {
+                    this.parentPanels.forEach(panel => {
+                        panel.classList.remove("collapsed");
+                        panel.setAttribute("aria-expanded", "true");
+                    });
+
+                    this.element.classList.remove("collapsed");
+                    this.element.setAttribute("aria-expanded", "true");
+
+                    this.scrollToContent();
+                }
+                
+            }, 100);
+        }
     }
 
     toggle(event: ActionEvent) {
         event.preventDefault();
-        this.element.classList.toggle("collapsed");
+        let collapsed = !this.element.classList.contains("collapsed");
+        this.element.classList.toggle("collapsed", collapsed);
+        this.element.setAttribute("aria-expanded", String(!collapsed));
+
     }
 
     scrollToContent() {

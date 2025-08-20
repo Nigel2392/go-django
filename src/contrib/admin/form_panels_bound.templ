@@ -124,7 +124,7 @@ func (p *BoundRowPanel[T]) Render() template.HTML {
 templ (p *BoundRowPanel[T]) Component() {
     {{ var panelId string }}
     if p.LabelFn != nil {
-        {{ panelId = BuildPanelID("panel-row", p.PanelIndex, "panel-row") }}
+        {{ panelId = BuildPanelID("panel-row", p.PanelIndex, "row") }}
     }
 
     <div class={ "panel", "panel-row", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId }>
@@ -138,8 +138,9 @@ templ (p *BoundRowPanel[T]) Component() {
                     </svg>
                 </a>
 
+                {{ var label = p.LabelFn(ctx) }}
                 <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
-                    <label>@templ.Raw(p.LabelFn(ctx))</label>
+                    <label>@templ.Raw(label)</label>
                 </div>
 
             </div>
@@ -180,9 +181,9 @@ func (p *BoundPanelGroup[T]) Render() template.HTML {
 templ (p *BoundPanelGroup[T]) Component() {
     {{ var panelId string }}
     if p.LabelFn != nil {
-        {{ panelId = BuildPanelID("panel-group", p.PanelIndex, "panel-group") }}
+        {{ panelId = BuildPanelID("panel-group", p.PanelIndex, "group") }}
     }
-    
+
     <div class={ "panel", "panel-group", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId }>
         if p.LabelFn != nil {
             <div class="panel__heading" data-panel-target="heading">
@@ -194,8 +195,9 @@ templ (p *BoundPanelGroup[T]) Component() {
                     </svg>
                 </a>
 
+                {{ var label = p.LabelFn(ctx) }}
                 <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
-                    <label>@templ.Raw(p.LabelFn(ctx))</label>
+                    <label>@templ.Raw(label)</label>
                 </div>
 
             </div>
