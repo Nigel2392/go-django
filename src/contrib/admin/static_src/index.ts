@@ -1,7 +1,7 @@
 import { MenuController } from "./controllers/menu";
 import { DropdownController } from "./controllers/dropdown";
 import { TippyController } from "./controllers/tippy";
-import { PanelController } from "./controllers/panel";
+import { PanelController, TitlePanelController } from "./controllers/panel";
 
 import { AdminSite } from "./app/app";
 import { AccordionController } from "./controllers/accordion";
@@ -15,6 +15,7 @@ const app = new AdminSite({
         accordion: AccordionController,
         panel: PanelController,
         tabpanel: TabPanelController,
+        titlepanel: TitlePanelController,
     },
 });
 

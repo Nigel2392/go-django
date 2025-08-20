@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
@@ -81,7 +82,8 @@ func FieldPanel(fieldname string, className ...string) Panel {
 
 type titlePanel struct {
 	Panel
-	classname string
+	classname    string
+	outputFields []string
 }
 
 func (t *titlePanel) Class(classname string) Panel {
@@ -97,6 +99,11 @@ func (t *titlePanel) Fields() []string {
 	return t.Panel.Fields()
 }
 
+func (t *titlePanel) WithOutputFields(fields ...string) Panel {
+	t.outputFields = fields
+	return t
+}
+
 func (f *titlePanel) Validate(r *http.Request, ctx context.Context, form forms.Form, data map[string]any) []error {
 	if v, ok := f.Panel.(ValidatorPanel); ok {
 		return v.Validate(r, ctx, form, data)
@@ -110,15 +117,35 @@ func (t *titlePanel) Bind(r *http.Request, panelCount map[string]int, form forms
 		return nil
 	}
 
+	var outputIds []string
+	for _, field := range t.outputFields {
+		var bf, ok = boundFields[field]
+		if !ok {
+			except.Fail(
+				http.StatusInternalServerError,
+				fmt.Sprintf("Field %s not found in bound fields: %v", field, boundFields),
+			)
+			continue
+		}
+
+		outputIds = append(outputIds, bf.ID())
+	}
+
 	return &BoundTitlePanel[forms.Form, *titlePanel]{
 		Panel:      t,
 		BoundPanel: panel,
 		Context:    ctx,
 		Request:    r,
+		OutputIds:  outputIds,
 	}
 }
 
-func TitlePanel(panel Panel, classname ...string) Panel {
+type OutputtableTitlePanel interface {
+	Panel
+	WithOutputFields(...string) Panel
+}
+
+func TitlePanel(panel Panel, classname ...string) OutputtableTitlePanel {
 	var c string
 	if len(classname) > 0 {
 		c = classname[0]

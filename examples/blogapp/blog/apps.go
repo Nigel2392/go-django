@@ -120,7 +120,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 				return []admin.Panel{
 					admin.TitlePanel(
 						admin.FieldPanel("Title"),
-					),
+					).WithOutputFields("Slug"),
 					admin.RowPanel(
 						admin.FieldPanel("UrlPath"),
 						admin.FieldPanel("Slug"),
@@ -152,7 +152,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 							trans.S("Content"),
 							admin.TitlePanel(
 								admin.FieldPanel("Title"),
-							),
+							).WithOutputFields("Slug"),
 							admin.RowPanel(
 								admin.FieldPanel("UrlPath"),
 								admin.FieldPanel("Slug"),

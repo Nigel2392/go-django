@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"strconv"
 	"github.com/gosimple/slug"
+	"encoding/json"
 )
 
 type BoundFormPanel[T forms.Form, P Panel] struct {
@@ -33,7 +34,7 @@ templ (p *BoundFormPanel[T, P]) Component() {
     {{ var field = p.Field() }}
     {{ var panelId = BuildPanelID("", nil, slug.Make(p.BoundField.Name())) }}
 
-    <div class={ "panel", "panel-default", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId }>
+    <div class={ "panel", "panel-default", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId } data-panel-input-id={ p.BoundField.ID() }>
         if !p.Hidden() {
             <div class="panel__heading" data-panel-target="heading">
 
@@ -77,6 +78,7 @@ templ (p *BoundFormPanel[T, P]) Component() {
 type BoundTitlePanel[T forms.Form, P Panel] struct {
 	BoundPanel
 	Panel   P
+    OutputIds []string
     Context context.Context
     Request *http.Request
 }
@@ -87,13 +89,21 @@ func (p *BoundTitlePanel[T, P]) Render() template.HTML {
     return template.HTML(b.String())
 }
 
+func (p *BoundTitlePanel[T, P]) encodeOutputIDs() string {
+    if len(p.OutputIds) == 0 {
+        return "[]"
+    }
+    var b, _ = json.Marshal(p.OutputIds)
+    return string(b)
+}
+
 templ (p *BoundTitlePanel[T, P]) Component() {
     if p.Hidden() {
         @p.BoundPanel.Component()
         {{ return nil }}
     }
 
-    <div class={ "panel", "panel-title", p.Panel.ClassName() }>
+    <div class={ "panel", "panel-title", p.Panel.ClassName() } data-controller="titlepanel" data-titlepanel-outputids-value={ p.encodeOutputIDs() }>
         <div class="panel__body">
             @p.BoundPanel.Component()
         </div>
