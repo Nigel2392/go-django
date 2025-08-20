@@ -1,11 +1,14 @@
 package admin
 
 import (
+	"context"
 	"fmt"
+	"iter"
 	"net/http"
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/forms"
 )
 
 const PANEL_ID_PREFIX = "panel"
@@ -55,4 +58,26 @@ func BuildPanelID(panelIdx []int, extra ...string) string {
 
 func PanelClass(className string, panel Panel) Panel {
 	return panel.Class(className)
+}
+
+func BindPanels(panels []Panel, r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) iter.Seq2[int, BoundPanel] {
+	return func(yield func(int, BoundPanel) bool) {
+		var idx = 0
+		for _, panel := range panels {
+			var cpy = make([]int, len(panelIdx)+1)
+			copy(cpy, panelIdx)
+			cpy[len(cpy)-1] = idx
+
+			var boundPanel = panel.Bind(r, cpy, form, ctx, boundFields)
+			if boundPanel == nil {
+				continue
+			}
+
+			if !yield(idx, boundPanel) {
+				break
+			}
+
+			idx++
+		}
+	}
 }

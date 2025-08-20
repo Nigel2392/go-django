@@ -17,6 +17,11 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
+var (
+	_ forms.Form                          = (*AdminForm[modelforms.ModelForm[attrs.Definer]])(nil)
+	_ modelforms.ModelForm[attrs.Definer] = (*AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer])(nil)
+)
+
 type AdminForm[T forms.Form] struct {
 	Form    T
 	Panels  []Panel
@@ -108,10 +113,9 @@ func (a *AdminForm[T]) BoundForm() forms.BoundForm {
 	}
 
 	if len(a.Panels) > 0 {
-		for idx, panel := range a.Panels {
-			var boundPanel = panel.Bind(a.Request, []int{idx}, a.Form, boundForm.Context, boundMap)
+		for _, panel := range BindPanels(a.Panels, a.Request, []int{}, a.Form, boundForm.Context, boundMap) {
 			boundForm.BoundPanels = append(
-				boundForm.BoundPanels, boundPanel,
+				boundForm.BoundPanels, panel,
 			)
 		}
 	} else {
@@ -128,6 +132,10 @@ func (a *AdminForm[T]) BoundForm() forms.BoundForm {
 		for idx, field := range fields {
 			var panel = FieldPanel(field.Name())
 			var boundPanel = panel.Bind(a.Request, []int{idx}, a.Form, boundForm.Context, boundMap)
+			if boundPanel == nil {
+				continue
+			}
+
 			boundForm.BoundPanels = append(
 				boundForm.BoundPanels, boundPanel,
 			)
@@ -250,6 +258,23 @@ func (a *AdminModelForm[T1, T2]) Load() {
 		if _, ok := panelFields[fName]; !ok {
 			a.Form.DeleteField(fName)
 		}
+	}
+
+	var validatorPanels = make([]ValidatorPanel, 0, len(a.Panels))
+	for _, panel := range a.Panels {
+		if v, ok := panel.(ValidatorPanel); ok {
+			validatorPanels = append(validatorPanels, v)
+		}
+	}
+
+	if len(validatorPanels) > 0 {
+		a.SetValidators(func(f forms.Form, m map[string]interface{}) []error {
+			var errors = make([]error, 0)
+			for _, v := range validatorPanels {
+				errors = append(errors, v.Validate(a.Request, a.Context(), a, m)...)
+			}
+			return errors
+		})
 	}
 }
 

@@ -7,17 +7,10 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
-	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
-	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/a-h/templ"
-)
-
-var (
-	_ forms.Form                          = (*AdminForm[modelforms.ModelForm[attrs.Definer]])(nil)
-	_ modelforms.ModelForm[attrs.Definer] = (*AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer])(nil)
 )
 
 type Panel interface {
@@ -25,6 +18,11 @@ type Panel interface {
 	ClassName() string
 	Class(classes string) Panel
 	Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel
+}
+
+type ValidatorPanel interface {
+	Panel
+	Validate(r *http.Request, ctx context.Context, form forms.Form, data map[string]any) []error
 }
 
 type BoundPanel interface {
@@ -49,6 +47,10 @@ func (f *fieldPanel) ClassName() string {
 func (f *fieldPanel) Class(classname string) Panel {
 	f.classname = classname
 	return f
+}
+
+func (f *fieldPanel) Validate(r *http.Request, ctx context.Context, form forms.Form, data map[string]any) []error {
+	return nil
 }
 
 func (f *fieldPanel) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
@@ -96,11 +98,23 @@ func (t *titlePanel) Fields() []string {
 	return t.Panel.Fields()
 }
 
+func (f *titlePanel) Validate(r *http.Request, ctx context.Context, form forms.Form, data map[string]any) []error {
+	if v, ok := f.Panel.(ValidatorPanel); ok {
+		return v.Validate(r, ctx, form, data)
+	}
+	return nil
+}
+
 func (t *titlePanel) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
+	var panel = t.Panel.Bind(r, panelIdx, form, ctx, boundFields)
+	if panel == nil {
+		return nil
+	}
+
 	return &BoundTitlePanel[forms.Form, *titlePanel]{
 		Panel:      t,
 		PanelIndex: panelIdx,
-		BoundPanel: t.Panel.Bind(r, panelIdx, form, ctx, boundFields),
+		BoundPanel: panel,
 		Context:    ctx,
 		Request:    r,
 	}
@@ -141,13 +155,20 @@ func (m *rowPanel) Fields() []string {
 	return fields
 }
 
+func (f *rowPanel) Validate(r *http.Request, ctx context.Context, form forms.Form, data map[string]any) []error {
+	var errs []error
+	for _, panel := range f.panels {
+		if v, ok := panel.(ValidatorPanel); ok {
+			errs = append(errs, v.Validate(r, ctx, form, data)...)
+		}
+	}
+	return errs
+}
+
 func (m *rowPanel) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
-	var panels = make([]BoundPanel, 0)
-	for idx, panel := range m.panels {
-		var cpy = make([]int, len(panelIdx)+1)
-		copy(cpy, panelIdx)
-		cpy[len(cpy)-1] = idx
-		panels = append(panels, panel.Bind(r, cpy, form, ctx, boundFields))
+	var panels = make([]BoundPanel, 0, len(m.panels))
+	for _, panel := range BindPanels(m.panels, r, panelIdx, form, ctx, boundFields) {
+		panels = append(panels, panel)
 	}
 	return &BoundRowPanel[forms.Form]{
 		LabelFn:    m.Label,
@@ -209,13 +230,20 @@ func (g *panelGroup) Class(classname string) Panel {
 	return g
 }
 
+func (f *panelGroup) Validate(r *http.Request, ctx context.Context, form forms.Form, data map[string]any) []error {
+	var errs []error
+	for _, panel := range f.panels {
+		if v, ok := panel.(ValidatorPanel); ok {
+			errs = append(errs, v.Validate(r, ctx, form, data)...)
+		}
+	}
+	return errs
+}
+
 func (g *panelGroup) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	var panels = make([]BoundPanel, 0, len(g.panels))
-	for idx, panel := range g.panels {
-		var cpy = make([]int, len(panelIdx)+1)
-		copy(cpy, panelIdx)
-		cpy[len(cpy)-1] = idx
-		panels = append(panels, panel.Bind(r, cpy, form, ctx, boundFields))
+	for _, panel := range BindPanels(g.panels, r, panelIdx, form, ctx, boundFields) {
+		panels = append(panels, panel)
 	}
 	return &BoundPanelGroup[forms.Form]{
 		LabelFn:    g.Label,
@@ -387,18 +415,27 @@ func (t *tabbedPanel) Class(classes string) Panel {
 	return t
 }
 
+func (t *tabbedPanel) Validate(r *http.Request, ctx context.Context, form forms.Form, data map[string]any) []error {
+	var errs []error
+	for _, tab := range t.tabs {
+		for _, panel := range tab.panels {
+			if v, ok := panel.(ValidatorPanel); ok {
+				errs = append(errs, v.Validate(r, ctx, form, data)...)
+			}
+		}
+	}
+	return errs
+}
+
 func (t *tabbedPanel) Bind(r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	var boundTabs = make([]*boundTabPanel, 0, len(t.tabs))
-	for idx, tab := range t.tabs {
-		var cpy = make([]int, len(panelIdx)+1)
-		copy(cpy, panelIdx)
-		cpy[len(cpy)-1] = idx
+	for _, tab := range t.tabs {
+
 		var boundPanels = make([]BoundPanel, 0, len(tab.panels))
-		for _, panel := range tab.panels {
-			boundPanels = append(boundPanels, panel.Bind(
-				r, cpy, form, ctx, boundFields,
-			))
+		for _, panel := range BindPanels(tab.panels, r, panelIdx, form, ctx, boundFields) {
+			boundPanels = append(boundPanels, panel)
 		}
+
 		boundTabs = append(boundTabs, &boundTabPanel{
 			title:  trans.GetTextFunc(tab.title),
 			panels: boundPanels,
