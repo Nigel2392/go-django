@@ -92,8 +92,6 @@ class TitlePanelController extends Controller<HTMLElement> {
     declare outputidsValue: string[];
 
     connect() {
-        super.connect();
-
         if (this.outputidsValue.length === 0) {
             console.error("No output IDs found for title panel controller");
             this.disconnect();
