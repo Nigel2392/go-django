@@ -169,7 +169,11 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 									trans.S("Choosers for media files"),
 									admin.FieldPanel("Image"),
 									admin.FieldPanel("User"),
-									admin.FieldPanel("Document"),
+									admin.LabeledRowPanel(
+										trans.S("Document"),
+										trans.S("Document file associated with this blog post."),
+										admin.FieldPanel("Document"),
+									),
 								),
 								admin.PanelGroup(
 									&admin.AlertPanel{

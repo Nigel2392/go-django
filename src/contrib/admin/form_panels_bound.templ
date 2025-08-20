@@ -9,11 +9,11 @@ import (
     "github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"strconv"
+	"github.com/gosimple/slug"
 )
 
 type BoundFormPanel[T forms.Form, P Panel] struct {
 	forms.BoundField
-    PanelIndex []int
     Context context.Context
     Request *http.Request
     Panel P
@@ -31,7 +31,7 @@ templ (p *BoundFormPanel[T, P]) Component() {
     {{ var errors = p.Errors() }}
     {{ var helpText = p.HelpText() }}
     {{ var field = p.Field() }}
-    {{ var panelId = BuildPanelID(p.PanelIndex, p.BoundField.ID()) }}
+    {{ var panelId = BuildPanelID("", nil, slug.Make(p.BoundField.Name())) }}
 
     <div class={ "panel", "panel-default", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId }>
         if !p.Hidden() {
@@ -77,7 +77,6 @@ templ (p *BoundFormPanel[T, P]) Component() {
 type BoundTitlePanel[T forms.Form, P Panel] struct {
 	BoundPanel
 	Panel   P
-    PanelIndex []int
     Context context.Context
     Request *http.Request
 }
@@ -105,7 +104,7 @@ type BoundRowPanel[T forms.Form] struct {
     LabelFn func(context.Context) string
     HelpTextFn func(context.Context) string
     Panel   *rowPanel
-    PanelIndex []int
+    PanelIndex map[string]int
     Context context.Context
     Request *http.Request
     Panels  []BoundPanel
@@ -123,7 +122,11 @@ func (p *BoundRowPanel[T]) Render() template.HTML {
 }
 
 templ (p *BoundRowPanel[T]) Component() {
-    {{ var panelId = BuildPanelID(p.PanelIndex, "panel-row") }}
+    {{ var panelId string }}
+    if p.LabelFn != nil {
+        {{ panelId = BuildPanelID("panel-row", p.PanelIndex, "panel-row") }}
+    }
+
     <div class={ "panel", "panel-row", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId }>
         if p.LabelFn != nil {
             <div class="panel__heading" data-panel-target="heading">
@@ -159,7 +162,7 @@ templ (p *BoundRowPanel[T]) Component() {
 type BoundPanelGroup[T forms.Form] struct {
     BoundPanel
     Panel   *panelGroup
-    PanelIndex []int
+    PanelIndex map[string]int
     LabelFn func(context.Context) string
     HelpTextFn func(context.Context) string
     Context context.Context
@@ -175,7 +178,11 @@ func (p *BoundPanelGroup[T]) Render() template.HTML {
 }
 
 templ (p *BoundPanelGroup[T]) Component() {
-    {{ var panelId = BuildPanelID(p.PanelIndex, "panel-group") }}
+    {{ var panelId string }}
+    if p.LabelFn != nil {
+        {{ panelId = BuildPanelID("panel-group", p.PanelIndex, "panel-group") }}
+    }
+    
     <div class={ "panel", "panel-group", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId }>
         if p.LabelFn != nil {
             <div class="panel__heading" data-panel-target="heading">
@@ -211,7 +218,6 @@ templ (p *BoundPanelGroup[T]) Component() {
 type BoundAlertPanel[T forms.Form] struct {
     Context context.Context
     Panel   *AlertPanel
-    PanelIndex []int
     Request *http.Request
 	Form    T
 }
@@ -263,7 +269,6 @@ type boundTabPanel struct {
 type boundTabbedPanel struct {
     context  context.Context
     request  *http.Request
-    panelIdx []int
     panels   []*boundTabPanel
 }
 
@@ -283,7 +288,7 @@ templ (p *boundTabbedPanel) Component() {
         <div class="panel__body">
             <div class="tabpanel__controls">
                 for i, tab := range p.panels {
-                    <button class={ "tabpanel__control" } data-action="click->tabpanel#select" data-tabpanel-index-param={ strconv.Itoa(i) }>
+                    <button class={ "tabpanel__control" } data-tabpanel-target="control" data-action="click->tabpanel#select" data-tabpanel-index-param={ strconv.Itoa(i) }>
                         @templ.Raw(tab.title(p.context))
                     </button>
                 }

@@ -2,9 +2,10 @@ package admin
 
 import (
 	"context"
-	"fmt"
 	"iter"
+	"math"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -12,6 +13,24 @@ import (
 )
 
 const PANEL_ID_PREFIX = "panel"
+
+func addToPanelCount(key string, panelCount map[string]int) (nextIdx int) {
+	if panelCount == nil {
+		return 0
+	}
+
+	if _, ok := panelCount[key]; !ok {
+		panelCount[key] = 0
+	}
+	var idx, ok = panelCount[key]
+	if !ok {
+		panelCount[key] = 0
+		return 0
+	}
+
+	panelCount[key] = idx + 1
+	return idx
+}
 
 type PanelContext struct {
 	*ctx.HTTPRequestContext
@@ -27,24 +46,26 @@ func NewPanelContext(r *http.Request, panel Panel, boundPanel BoundPanel) *Panel
 	}
 }
 
-func BuildPanelID(panelIdx []int, extra ...string) string {
+func BuildPanelID(key string, panelCount map[string]int, extra ...string) string {
 	var b = new(strings.Builder)
-	var totalLen = len(PANEL_ID_PREFIX) + 1
+	var totalLen = len(PANEL_ID_PREFIX)
+	var panelIdx = addToPanelCount(key, panelCount)
 
-	totalLen += len(panelIdx) * 2
+	if panelIdx > 0 {
+		totalLen += int(math.Log10(float64(panelIdx))) + 1 // +1 for the hyphen
+	}
 
 	for i := 0; i < len(extra); i++ {
-		totalLen += len(extra[i])
-		totalLen++ // for the dash
+		totalLen += len(extra[i]) + 1 // +1 for the hyphen
 	}
 
 	b.Grow(totalLen)
 
 	b.WriteString(PANEL_ID_PREFIX)
 
-	for _, idx := range panelIdx {
+	if panelIdx > 0 {
 		b.WriteString("-")
-		b.WriteString(fmt.Sprintf("%d", idx))
+		b.WriteString(strconv.Itoa(panelIdx))
 	}
 
 	// Append any extra strings
@@ -60,15 +81,11 @@ func PanelClass(className string, panel Panel) Panel {
 	return panel.Class(className)
 }
 
-func BindPanels(panels []Panel, r *http.Request, panelIdx []int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) iter.Seq2[int, BoundPanel] {
+func BindPanels(panels []Panel, r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) iter.Seq2[int, BoundPanel] {
 	return func(yield func(int, BoundPanel) bool) {
 		var idx = 0
 		for _, panel := range panels {
-			var cpy = make([]int, len(panelIdx)+1)
-			copy(cpy, panelIdx)
-			cpy[len(cpy)-1] = idx
-
-			var boundPanel = panel.Bind(r, cpy, form, ctx, boundFields)
+			var boundPanel = panel.Bind(r, panelCount, form, ctx, boundFields)
 			if boundPanel == nil {
 				continue
 			}

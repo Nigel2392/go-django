@@ -113,7 +113,7 @@ func (a *AdminForm[T]) BoundForm() forms.BoundForm {
 	}
 
 	if len(a.Panels) > 0 {
-		for _, panel := range BindPanels(a.Panels, a.Request, []int{}, a.Form, boundForm.Context, boundMap) {
+		for _, panel := range BindPanels(a.Panels, a.Request, make(map[string]int), a, boundForm.Context, boundMap) {
 			boundForm.BoundPanels = append(
 				boundForm.BoundPanels, panel,
 			)
@@ -129,9 +129,10 @@ func (a *AdminForm[T]) BoundForm() forms.BoundForm {
 			fields = a.Fields()
 		}
 
-		for idx, field := range fields {
+		var idx int
+		for _, field := range fields {
 			var panel = FieldPanel(field.Name())
-			var boundPanel = panel.Bind(a.Request, []int{idx}, a.Form, boundForm.Context, boundMap)
+			var boundPanel = panel.Bind(a.Request, make(map[string]int), a, boundForm.Context, boundMap)
 			if boundPanel == nil {
 				continue
 			}
@@ -139,6 +140,8 @@ func (a *AdminForm[T]) BoundForm() forms.BoundForm {
 			boundForm.BoundPanels = append(
 				boundForm.BoundPanels, boundPanel,
 			)
+
+			idx++
 		}
 	}
 

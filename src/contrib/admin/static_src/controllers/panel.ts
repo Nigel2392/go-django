@@ -35,12 +35,14 @@ class PanelController extends Controller<HTMLElement> {
             );
         }
 
-        let hash = window.location.hash;
-        if (hash === `#${this.panelValue}`) {
-            this.parentPanels.forEach(panel => panel.classList.remove("collapsed"));
-            this.element.classList.remove("collapsed");
-            this.scrollToContent();
-        }
+        setTimeout(() => {
+            let hash = window.location.hash;
+            if (hash === `#${this.panelValue}`) {
+                this.parentPanels.forEach(panel => panel.classList.remove("collapsed"));
+                this.element.classList.remove("collapsed");
+                this.scrollToContent();
+            }
+        }, 100);
     }
 
     toggle(event: ActionEvent) {
@@ -49,7 +51,10 @@ class PanelController extends Controller<HTMLElement> {
     }
 
     scrollToContent() {
-        this.contentTarget.scrollIntoView({ behavior: "smooth" });
+        this.contentTarget.scrollIntoView({
+            behavior: "smooth",
+            block: "start"
+        });
     }
 }
 

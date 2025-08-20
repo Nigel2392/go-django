@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/forms"
+	"github.com/gosimple/slug"
 	"html/template"
 	"net/http"
 	"strconv"
@@ -21,11 +22,10 @@ import (
 
 type BoundFormPanel[T forms.Form, P Panel] struct {
 	forms.BoundField
-	PanelIndex []int
-	Context    context.Context
-	Request    *http.Request
-	Panel      P
-	Form       T
+	Context context.Context
+	Request *http.Request
+	Panel   P
+	Form    T
 }
 
 func (p *BoundFormPanel[T, P]) Render() template.HTML {
@@ -59,7 +59,7 @@ func (p *BoundFormPanel[T, P]) Component() templ.Component {
 		var errors = p.Errors()
 		var helpText = p.HelpText()
 		var field = p.Field()
-		var panelId = BuildPanelID(p.PanelIndex, p.BoundField.ID())
+		var panelId = BuildPanelID("", nil, slug.Make(p.BoundField.Name()))
 		var templ_7745c5c3_Var2 = []any{"panel", "panel-default", "collapsible", p.Panel.ClassName()}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
 		if templ_7745c5c3_Err != nil {
@@ -187,10 +187,9 @@ func (p *BoundFormPanel[T, P]) Component() templ.Component {
 
 type BoundTitlePanel[T forms.Form, P Panel] struct {
 	BoundPanel
-	Panel      P
-	PanelIndex []int
-	Context    context.Context
-	Request    *http.Request
+	Panel   P
+	Context context.Context
+	Request *http.Request
 }
 
 func (p *BoundTitlePanel[T, P]) Render() template.HTML {
@@ -269,7 +268,7 @@ type BoundRowPanel[T forms.Form] struct {
 	LabelFn    func(context.Context) string
 	HelpTextFn func(context.Context) string
 	Panel      *rowPanel
-	PanelIndex []int
+	PanelIndex map[string]int
 	Context    context.Context
 	Request    *http.Request
 	Panels     []BoundPanel
@@ -307,7 +306,10 @@ func (p *BoundRowPanel[T]) Component() templ.Component {
 			templ_7745c5c3_Var10 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var panelId = BuildPanelID(p.PanelIndex, "panel-row")
+		var panelId string
+		if p.LabelFn != nil {
+			panelId = BuildPanelID("panel-row", p.PanelIndex, "panel-row")
+		}
 		var templ_7745c5c3_Var11 = []any{"panel", "panel-row", "collapsible", p.Panel.ClassName()}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var11...)
 		if templ_7745c5c3_Err != nil {
@@ -333,7 +335,7 @@ func (p *BoundRowPanel[T]) Component() templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(panelId)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 127, Col: 132}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 130, Col: 132}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -360,7 +362,7 @@ func (p *BoundRowPanel[T]) Component() templ.Component {
 			var templ_7745c5c3_Var15 string
 			templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(panelId)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 138, Col: 88}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 141, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 			if templ_7745c5c3_Err != nil {
@@ -414,7 +416,7 @@ func (p *BoundRowPanel[T]) Component() templ.Component {
 type BoundPanelGroup[T forms.Form] struct {
 	BoundPanel
 	Panel      *panelGroup
-	PanelIndex []int
+	PanelIndex map[string]int
 	LabelFn    func(context.Context) string
 	HelpTextFn func(context.Context) string
 	Context    context.Context
@@ -450,7 +452,10 @@ func (p *BoundPanelGroup[T]) Component() templ.Component {
 			templ_7745c5c3_Var16 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var panelId = BuildPanelID(p.PanelIndex, "panel-group")
+		var panelId string
+		if p.LabelFn != nil {
+			panelId = BuildPanelID("panel-group", p.PanelIndex, "panel-group")
+		}
 		var templ_7745c5c3_Var17 = []any{"panel", "panel-group", "collapsible", p.Panel.ClassName()}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var17...)
 		if templ_7745c5c3_Err != nil {
@@ -476,7 +481,7 @@ func (p *BoundPanelGroup[T]) Component() templ.Component {
 		var templ_7745c5c3_Var19 string
 		templ_7745c5c3_Var19, templ_7745c5c3_Err = templ.JoinStringErrs(panelId)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 179, Col: 134}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 186, Col: 134}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var19))
 		if templ_7745c5c3_Err != nil {
@@ -503,7 +508,7 @@ func (p *BoundPanelGroup[T]) Component() templ.Component {
 			var templ_7745c5c3_Var21 string
 			templ_7745c5c3_Var21, templ_7745c5c3_Err = templ.JoinStringErrs(panelId)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 190, Col: 88}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 197, Col: 88}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var21))
 			if templ_7745c5c3_Err != nil {
@@ -555,11 +560,10 @@ func (p *BoundPanelGroup[T]) Component() templ.Component {
 }
 
 type BoundAlertPanel[T forms.Form] struct {
-	Context    context.Context
-	Panel      *AlertPanel
-	PanelIndex []int
-	Request    *http.Request
-	Form       T
+	Context context.Context
+	Panel   *AlertPanel
+	Request *http.Request
+	Form    T
 }
 
 func (p *BoundAlertPanel[T]) Hidden() bool {
@@ -690,10 +694,9 @@ type boundTabPanel struct {
 }
 
 type boundTabbedPanel struct {
-	context  context.Context
-	request  *http.Request
-	panelIdx []int
-	panels   []*boundTabPanel
+	context context.Context
+	request *http.Request
+	panels  []*boundTabPanel
 }
 
 func (p *boundTabbedPanel) Render() template.HTML {
@@ -750,14 +753,14 @@ func (p *boundTabbedPanel) Component() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "\" data-action=\"click-&gt;tabpanel#select\" data-tabpanel-index-param=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 52, "\" data-tabpanel-target=\"control\" data-action=\"click-&gt;tabpanel#select\" data-tabpanel-index-param=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var30 string
 			templ_7745c5c3_Var30, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 286, Col: 138}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 291, Col: 169}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var30))
 			if templ_7745c5c3_Err != nil {
@@ -806,7 +809,7 @@ func (p *boundTabbedPanel) Component() templ.Component {
 			var templ_7745c5c3_Var33 string
 			templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 293, Col: 108}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/form_panels_bound.templ`, Line: 298, Col: 108}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 			if templ_7745c5c3_Err != nil {

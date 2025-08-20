@@ -401,10 +401,22 @@ a.danger {
     letter-spacing: 0.05em;
     font-weight: 600;
     padding: 0;
-}
-.tabpanel .tabpanel__controls .tabpanel__control:hover {
     text-decoration: underline;
     text-underline-offset: 0.2em;
+}
+.tabpanel .tabpanel__controls .tabpanel__control.active {
+    font-weight: 700;
+    position: relative;
+    text-decoration: none;
+}
+.tabpanel .tabpanel__controls .tabpanel__control.active::after {
+    content: "";
+    position: absolute;
+    bottom: -0.175rem;
+    left: -0.325rem;
+    right: -0.325rem;
+    height: 2px;
+    background: var(--primary-bg-color);
 }
 .tabpanel .tabpanel__controls .tabpanel__control+.tabpanel__control {
     margin-left: 1em;
