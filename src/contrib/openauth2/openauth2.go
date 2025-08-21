@@ -340,11 +340,11 @@ func NewAppConfig(cnf Config) django.AppConfig {
 						},
 					),
 					"CreatedAt": columns.TimeSinceColumn[attrs.Definer](
-						trans.S("Created At"),
+						trans.S("Created"),
 						"CreatedAt",
 					),
 					"UpdatedAt": columns.TimeSinceColumn[attrs.Definer](
-						trans.S("Updated At"),
+						trans.S("Last Updated"),
 						"UpdatedAt",
 					),
 					"UniqueIdentifier": list.TitleFieldColumn(
@@ -379,6 +379,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 				"ID",
 				"UniqueIdentifier",
 				"Provider",
+				"IsAdministrator",
 				"IsActive",
 				"CreatedAt",
 			},
