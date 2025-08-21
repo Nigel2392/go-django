@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -294,11 +295,11 @@ func NewAppConfig(cnf Config) django.AppConfig {
 					Fields: []string{
 						"ID",
 						"UniqueIdentifier",
-						"ProviderName",
-						"HasRefreshToken",
+						"Provider",
 						"TokenType",
 						"IsAdministrator",
 						"IsActive",
+						"HasRefreshToken",
 						"CreatedAt",
 						"UpdatedAt",
 					},
@@ -309,6 +310,43 @@ func NewAppConfig(cnf Config) django.AppConfig {
 					},
 				},
 				Columns: map[string]list.ListColumn[attrs.Definer]{
+					"Provider": list.FuncColumn[attrs.Definer](
+						trans.S("Provider"),
+						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {
+							var user = row.(*User)
+							var provider, ok = App._cnfs[user.ProviderName]
+							if !ok {
+								return user.ProviderName
+							}
+							return provider.ReadableName()
+						},
+					),
+					"HasRefreshToken": list.BooleanColumn[attrs.Definer](
+						trans.S("Has Refresh Token"),
+						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+							return row.(*User).RefreshToken != ""
+						},
+					),
+					"IsActive": list.BooleanColumn[attrs.Definer](
+						trans.S("Is Active"),
+						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+							return row.(*User).IsActive
+						},
+					),
+					"IsAdministrator": list.BooleanColumn[attrs.Definer](
+						trans.S("Is Admin"),
+						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+							return row.(*User).IsActive
+						},
+					),
+					"CreatedAt": columns.TimeSinceColumn[attrs.Definer](
+						trans.S("Created At"),
+						"CreatedAt",
+					),
+					"UpdatedAt": columns.TimeSinceColumn[attrs.Definer](
+						trans.S("Updated At"),
+						"UpdatedAt",
+					),
 					"UniqueIdentifier": list.TitleFieldColumn(
 						list.FieldColumn[attrs.Definer](
 							trans.S("Unique Identifier"),
@@ -320,13 +358,6 @@ func NewAppConfig(cnf Config) django.AppConfig {
 								"openauth2", "OAuth2User",
 								row.(*User).ID,
 							)
-						},
-					),
-					"HasRefreshToken": list.FuncColumn(
-						trans.S("Has Refresh Token"),
-						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {
-							var u = row.(*User)
-							return u.RefreshToken != ""
 						},
 					),
 				},
@@ -344,6 +375,13 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			return instance.UniqueIdentifier
 		},
 		ListPage: &chooser.ChooserListPage[*User]{
+			Fields: []string{
+				"ID",
+				"UniqueIdentifier",
+				"Provider",
+				"IsActive",
+				"CreatedAt",
+			},
 			SearchFields: []chooser.SearchField[*User]{
 				{
 					Name:   "ID",
