@@ -9,10 +9,12 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -27,6 +29,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
 const (
@@ -333,6 +336,41 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			//	},
 		},
 	)
+
+	chooser.Register(&chooser.ChooserDefinition[*User]{
+		Title: trans.S("User Chooser"),
+		Model: &User{},
+		PreviewString: func(ctx context.Context, instance *User) string {
+			return instance.UniqueIdentifier
+		},
+		ListPage: &chooser.ChooserListPage[*User]{
+			SearchFields: []chooser.SearchField[*User]{
+				{
+					Name:   "ID",
+					Lookup: expr.LOOKUP_EXACT,
+				},
+				{
+					Name:   "UniqueIdentifier",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+				{
+					Name:   "ProviderName",
+					Lookup: expr.LOOKUP_EXACT,
+				},
+				{
+					Name:   "Data",
+					Lookup: expr.LOOKUP_EXACT,
+				},
+			},
+			QuerySet: func(r *http.Request, model *User) *queries.QuerySet[*User] {
+				var currentUser = authentication.Retrieve(r)
+				var user = currentUser.(*User)
+				return queries.GetQuerySet(&User{}).
+					Filter(expr.Q("ID", user.ID).Not(true)).
+					OrderBy("UniqueIdentifier")
+			},
+		},
+	})
 
 	return &migrator.MigratorAppConfig{
 		AppConfig: App,

@@ -11,7 +11,9 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/documents"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
+	_ "github.com/Nigel2392/go-django/src/contrib/editor/features"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features/images"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features/links"
 	"github.com/Nigel2392/go-django/src/contrib/images"
@@ -20,11 +22,13 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/src/contrib/settings"
+	"github.com/Nigel2392/go-django/src/contrib/translations"
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
 
+	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 	"github.com/Nigel2392/go-django/src/core/logger"
 
@@ -60,6 +64,12 @@ func main() {
 	if err != nil {
 		panic(err)
 	}
+
+	var mediaFs = fs.NewBackend(
+		"./.private/openauth2app/media", 5,
+	)
+	mediafiles.RegisterBackend("fs", mediaFs)
+	mediafiles.SetDefault("fs")
 
 	var app = django.App(
 		django.Configure(map[string]interface{}{
@@ -113,33 +123,33 @@ func main() {
 							return googleUser.Email
 						},
 					},
-					{
-						Provider:         "github",
-						ProviderNiceName: "Github",
-						DocumentationURL: "https://docs.github.com/en/apps/oauth-apps",
-						ProviderLogoURL: func() string {
-							return "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
-						},
-						Oauth2: &oauth2.Config{
-							ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
-							ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
-							Scopes: []string{
-								"read:user",
-								"user:email",
-							},
-							Endpoint: github.Endpoint,
-						},
-						DataStructURL: "https://api.github.com/user",
-						DataStructIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
-							var user = dataStruct.(*GitHubUser)
-							return user.Email, nil
-						},
-						DataStruct: &GitHubUser{},
-						UserToString: func(user *openauth2.User, dataStruct interface{}) string {
-							var u = dataStruct.(*GitHubUser)
-							return u.Email
-						},
-					},
+					//	{
+					//		Provider:         "github",
+					//		ProviderNiceName: "Github",
+					//		DocumentationURL: "https://docs.github.com/en/apps/oauth-apps",
+					//		ProviderLogoURL: func() string {
+					//			return "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
+					//		},
+					//		Oauth2: &oauth2.Config{
+					//			ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
+					//			ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+					//			Scopes: []string{
+					//				"read:user",
+					//				"user:email",
+					//			},
+					//			Endpoint: github.Endpoint,
+					//		},
+					//		DataStructURL: "https://api.github.com/user",
+					//		DataStructIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
+					//			var user = dataStruct.(*GitHubUser)
+					//			return user.Email, nil
+					//		},
+					//		DataStruct: &GitHubUser{},
+					//		UserToString: func(user *openauth2.User, dataStruct interface{}) string {
+					//			var u = dataStruct.(*GitHubUser)
+					//			return u.Email
+					//		},
+					//	},
 				},
 				BaseCallbackURL:       "http://127.0.0.1:8080",
 				UserDefaultIsDisabled: false,
@@ -153,16 +163,21 @@ func main() {
 			// auth.NewAppConfig,
 			admin.NewAppConfig,
 			pages.NewAppConfig,
-			editor.NewAppConfig,
 			todos.NewAppConfig,
 			blog.NewAppConfig,
 			reports.NewAppConfig,
 			auditlogs.NewAppConfig,
 			migrator.NewAppConfig,
+			settings.NewAppConfig,
+			editor.NewAppConfig,
+			translations.NewAppConfig,
+			documents.NewAppConfig(&documents.Options{
+				MediaBackend: mediaFs,
+				MediaDir:     "__documents__",
+			}),
 			images.NewAppConfig(&images.Options{
-				MediaBackend: fs.NewBackend(
-					"./.web/__images__", 5,
-				),
+				MediaBackend: mediaFs,
+				MediaDir:     "__images__",
 			}),
 		),
 	)

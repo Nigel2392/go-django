@@ -200,12 +200,14 @@ func (n *Site) Validate(ctx context.Context) error {
 	var validatorContextVal = ctx.Value(queries.ValidationContext{})
 	var validatorCtx, ok = validatorContextVal.(*queries.ValidationContext)
 	if !ok {
-		return errors.TypeMismatch.Wrapf(
-			"expected %T, got %T (%v)",
-			&queries.ValidationContext{},
-			validatorContextVal,
-			validatorContextVal,
-		)
+		return nil
+
+		//	return errors.TypeMismatch.Wrapf(
+		//		"expected %T, got %T (%v)",
+		//		&queries.ValidationContext{},
+		//		validatorContextVal,
+		//		validatorContextVal,
+		//	)
 	}
 
 	val, ok := validatorCtx.Data[DEFAULT_SITE_KEY]

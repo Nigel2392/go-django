@@ -1,14 +1,11 @@
 package blog
 
 import (
-	"context"
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
-	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
-	"github.com/Nigel2392/go-django/src/contrib/auth"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/contrib/documents"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
@@ -20,51 +17,12 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
 var (
 	_ models.SaveableObject   = (*BlogPage)(nil)
 	_ models.DeleteableObject = (*BlogPage)(nil)
 )
-
-func init() {
-	chooser.Register(&chooser.ChooserDefinition[*auth.User]{
-		Title: trans.S("User Chooser"),
-		Model: &auth.User{},
-		PreviewString: func(ctx context.Context, instance *auth.User) string {
-			return instance.Email.Address
-		},
-		ListPage: &chooser.ChooserListPage[*auth.User]{
-			SearchFields: []chooser.SearchField[*auth.User]{
-				{
-					Name:   "Username",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-				{
-					Name:   "Email",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-				{
-					Name:   "FirstName",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-				{
-					Name:   "LastName",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-			},
-			QuerySet: func(r *http.Request, model *auth.User) *queries.QuerySet[*auth.User] {
-				var currentUser = authentication.Retrieve(r)
-				var user = currentUser.(*auth.User)
-				return queries.GetQuerySet(&auth.User{}).
-					Filter(expr.Q("ID", user.ID).Not(true)).
-					OrderBy("Email")
-			},
-		},
-		CreatePage: &chooser.ChooserFormPage[*auth.User]{},
-	})
-}
 
 type BlogContext struct {
 	ctx.ContextWithRequest

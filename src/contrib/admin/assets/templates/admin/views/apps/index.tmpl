@@ -1,6 +1,6 @@
 {{ template "base" . }}
 
-{{ define "title" }}{{ (.Get "app").Label }}{{ end }}
+{{ define "title" }}{{ (.Get "app").Label .Request.Context }}{{ end }}
 
 {{ define "extra_css" }}
     {{ range $css := .Page.Media.CSS }}

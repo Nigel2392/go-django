@@ -269,7 +269,7 @@ func NewAppConfig() django.AppConfig {
 					return html.EscapeString(instance.Title)
 				}
 
-				if !strings.HasPrefix(instance.Path, site.Root.Path) {
+				if site.Root == nil || !strings.HasPrefix(instance.Path, site.Root.Path) {
 					return html.EscapeString(instance.Title)
 				}
 
