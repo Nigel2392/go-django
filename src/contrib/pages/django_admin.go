@@ -135,7 +135,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 						))
 					}
 
-					if !strings.HasPrefix(node.Path, site.Root.Path) {
+					if site.Root == nil || !strings.HasPrefix(node.Path, site.Root.Path) {
 						return template.HTML(fmt.Sprintf(
 							`<span class="badge warning">%s</span>`,
 							node.UrlPath,

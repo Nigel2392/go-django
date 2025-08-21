@@ -4,10 +4,12 @@ import (
 	"context"
 	"html/template"
 	"net/http"
+	"runtime/debug"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/views"
@@ -24,6 +26,19 @@ type AdminPageComponent interface {
 	HTML() template.HTML
 	Ordering() int
 	Media() media.Media
+}
+
+type componentWrapper struct {
+	AdminPageComponent
+}
+
+func (c *componentWrapper) HTML() template.HTML {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("Recovered from panic in AdminPageComponent: %v\n%s", r, debug.Stack())
+		}
+	}()
+	return c.AdminPageComponent.HTML()
 }
 
 func getFuncTyped[T any](text any, request *http.Request, fallBack func(ctx context.Context) T) func(ctx context.Context) T {
@@ -96,13 +111,13 @@ var HomeHandler = &views.BaseView{
 		var breadCrumbs = make([]BreadCrumb, 0)
 		var breadcrumbHooks = goldcrest.Get[RegisterHomePageBreadcrumbHookFunc](RegisterHomePageBreadcrumbHook)
 		for _, hook := range breadcrumbHooks {
-			hook(req, AdminSite, breadCrumbs)
+			breadCrumbs = hook(req, AdminSite, breadCrumbs)
 		}
 
 		var actions = make([]Action, 0)
 		var actionHooks = goldcrest.Get[RegisterHomePageActionHookFunc](RegisterHomePageActionHook)
 		for _, hook := range actionHooks {
-			hook(req, AdminSite, actions)
+			actions = hook(req, AdminSite, actions)
 		}
 
 		// Add custom home page components
@@ -111,7 +126,7 @@ var HomeHandler = &views.BaseView{
 		for _, hook := range componentHooks {
 			var component = hook(req, AdminSite)
 			if component != nil {
-				components = append(components, component)
+				components = append(components, &componentWrapper{component})
 			}
 		}
 		components = sortComponents(components)

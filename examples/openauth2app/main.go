@@ -23,7 +23,6 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/contrib/settings"
-	"github.com/Nigel2392/go-django/src/contrib/translations"
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
@@ -170,7 +169,6 @@ func main() {
 			migrator.NewAppConfig,
 			settings.NewAppConfig,
 			editor.NewAppConfig,
-			translations.NewAppConfig,
 			documents.NewAppConfig(&documents.Options{
 				MediaBackend: mediaFs,
 				MediaDir:     "__documents__",

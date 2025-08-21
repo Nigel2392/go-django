@@ -48,8 +48,8 @@ type (
 	RegisterBreadCrumbHookFunc     = func(r *http.Request, adminSite *AdminApplication) []BreadCrumb
 	RegisterNavActionHookFunc      = func(r *http.Request, adminSite *AdminApplication) []Action
 
-	RegisterHomePageBreadcrumbHookFunc = func(*http.Request, *AdminApplication, []BreadCrumb)
-	RegisterHomePageActionHookFunc     = func(*http.Request, *AdminApplication, []Action)
+	RegisterHomePageBreadcrumbHookFunc = func(*http.Request, *AdminApplication, []BreadCrumb) []BreadCrumb
+	RegisterHomePageActionHookFunc     = func(*http.Request, *AdminApplication, []Action) []Action
 	RegisterHomePageComponentHookFunc  = func(*http.Request, *AdminApplication) AdminPageComponent
 
 	RegisterAdminAppPageComponentHookFunc = func(r *http.Request, adminSite *AdminApplication, app *AppDefinition) AdminPageComponent
