@@ -79,3 +79,7 @@ type Transaction interface {
 	Commit(context.Context) error
 	Rollback(context.Context) error
 }
+
+type dbContextKey struct {
+	v string
+}

@@ -245,9 +245,6 @@ class GoDjangoImagesTool {
 declare global {
     interface Window {
         GoDjangoImagesTool: typeof GoDjangoImagesTool;
-        i18n: {
-            gettext: (key: string, ...args: any) => string;
-        };
     }
 }
 

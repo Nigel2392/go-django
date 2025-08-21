@@ -21,6 +21,13 @@ const app = new AdminSite({
 
 window.AdminSite = app;
 
+if (!window.i18n || (!window.i18n.gettext && !window.i18n.ngettext)) {
+    window.i18n = {
+        gettext: (str: string, ...args: any) => str,
+        ngettext: (singular: string, plural: string, n: any, ...args: any) => n === 1 ? singular : plural,
+    };
+}
+
 app.start();
 
 console.log('Admin app started');

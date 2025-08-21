@@ -12,10 +12,10 @@ var (
 	LOG_SQL_NAMESPACE = "SQL"
 )
 
-type canLogContextKey struct{}
+var canLogContextKey = dbContextKey{"db.canLogSQL"}
 
 func canLogSQL(ctx context.Context) bool {
-	var value = ctx.Value(canLogContextKey{})
+	var value = ctx.Value(canLogContextKey)
 	if value == nil {
 		return LOG_SQL_QUERIES
 	}
@@ -72,7 +72,7 @@ func LogSQL(ctx context.Context, from string, err error, query string, args ...a
 //
 // It allows you to enable or disable SQL query logging for the current context.
 func SetLogSQLContext(ctx context.Context, log bool) context.Context {
-	return context.WithValue(ctx, canLogContextKey{}, log)
+	return context.WithValue(ctx, canLogContextKey, log)
 }
 
 // LogSQLScope takes a context, a bool and a function, and returns a new context
