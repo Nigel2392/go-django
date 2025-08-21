@@ -25,7 +25,19 @@ window.AdminSite = app;
 if (!window.i18n || (!window.i18n.gettext && !window.i18n.ngettext)) {
     window.i18n = {
         gettext: (str: string, ...args: any) => sprintf(str, ...args),
-        ngettext: (singular: string, plural: string, n: any, ...args: any) => sprintf(n === 1 ? singular : plural, ...args),
+        ngettext: (singular: string, plural: string, n: any, ...args: any) => {
+            var nTyp = typeof n;
+            switch (nTyp) {
+                case "number":
+                    return window.sprintf(n === 1 ? singular : plural, ...args);
+                case "object":
+                    if (Array.isArray(n)) {
+                        return window.sprintf(n.length === 1 ? singular : plural, ...args);
+                    }
+                    break;
+            }
+            return window.sprintf(n === 1 ? singular : plural, ...args);
+        },
     };
 }
 
