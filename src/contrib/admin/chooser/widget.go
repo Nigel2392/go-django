@@ -180,7 +180,7 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 			Filter(primDef.Name(), value).
 			Get()
 
-		if err != nil {
+		if err != nil && !errors.Is(err, errors.NoRows) {
 			except.Fail(
 				http.StatusInternalServerError,
 				err,
@@ -188,8 +188,13 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 			return ctx
 		}
 
-		ctx.Set("value", attrs.PrimaryKey(modelRow.Object))
-		ctx.Set("preview", b.Definition.GetPreviewString(c, modelRow.Object))
+		if err == nil {
+			ctx.Set("value", attrs.PrimaryKey(modelRow.Object))
+			ctx.Set("preview", b.Definition.GetPreviewString(c, modelRow.Object))
+		} else {
+			ctx.Set("value", nil)
+			ctx.Set("preview", nil)
+		}
 	}
 
 	return ctx
