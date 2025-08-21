@@ -270,7 +270,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			AppDescription: trans.S(
 				"OpenAuth2 is an authentication backend for Go-Django. It allows you to authenticate users using OAuth2 providers such as Google, Facebook, GitHub, etc.",
 			),
-			MenuLabel: trans.S("Open Auth 2"),
+			MenuLabel: trans.S("OAuth 2"),
 			MenuOrder: 995,
 			MenuIcon: func() string {
 				return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shield-exclamation" viewBox="0 0 16 16">

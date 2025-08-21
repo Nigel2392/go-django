@@ -590,6 +590,9 @@ func (a *Application) Initialize() error {
 			}
 			return template.HTML(buf.String())
 		},
+		"make": func(args ...any) []any {
+			return args
+		},
 		"toString": func(v any) string {
 			return attrs.ToString(v)
 		},

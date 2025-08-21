@@ -99,11 +99,14 @@ func main() {
 						ProviderInfo: openauth2.ConfigInfo{
 							Provider:      "google",
 							ProviderLabel: "Google",
+							ProviderLogoURL: func(r *http.Request) string {
+								return "https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://google.com&size=128"
+							},
 							DocumentationURL: func(r *http.Request) string {
 								return "https://developers.google.com/identity/protocols/oauth2"
 							},
-							ProviderLogoURL: func(r *http.Request) string {
-								return "https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://google.com&size=128"
+							PrivacyPolicyURL: func(r *http.Request) string {
+								return "https://developers.google.com/terms/api-services-user-data-policy"
 							},
 						},
 						Oauth2: &oauth2.Config{
@@ -131,11 +134,14 @@ func main() {
 						ProviderInfo: openauth2.ConfigInfo{
 							Provider:      "github",
 							ProviderLabel: "Github",
+							ProviderLogoURL: func(r *http.Request) string {
+								return "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
+							},
 							DocumentationURL: func(r *http.Request) string {
 								return "https://docs.github.com/en/apps/oauth-apps"
 							},
-							ProviderLogoURL: func(r *http.Request) string {
-								return "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
+							PrivacyPolicyURL: func(r *http.Request) string {
+								return "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
 							},
 						},
 						Oauth2: &oauth2.Config{

@@ -7,11 +7,13 @@
     flex-direction: column;
     gap: 0.5rem;
 }
-.oauth2-provider-wrapper,
-.oauth2-provider {
+.oauth2-row {
     display: flex;
     flex-direction: row;
     align-items: center;
+}
+.oauth2-provider-wrapper,
+.oauth2-provider {
     text-decoration: none;
 }
 .oauth2-provider-wrapper {
@@ -40,4 +42,7 @@
 .oauth2-provider__info__title {
     font-size: 1.5rem;
     font-weight: 600;
+}
+.oauth2-provider__links {
+    gap: 0.5rem;
 }

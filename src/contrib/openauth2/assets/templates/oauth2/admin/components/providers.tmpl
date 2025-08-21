@@ -9,8 +9,8 @@
 
         <div class="oauth2-provider-list-wrapper">
             {{ range $cnf := $providers }}
-                <div class="oauth2-provider-wrapper">
-                    <div class="oauth2-provider">
+                <div class="oauth2-provider-wrapper oauth2-row">
+                    <div class="oauth2-provider oauth2-row">
                         {{ $logo := $cnf.ProviderLogoURL }}
                         {{ if $logo }}
                             <img src="{{ $logo }}" alt="{{ $cnf.Provider }}" class="oauth2-provider__icon">
@@ -22,17 +22,25 @@
                             </span>
 
                             {{ $docURL := $cnf.DocumentationURL }}
-                            {{ if $docURL }}
-                                <a href="{{ $docURL }}" class="oauth2-provider__link" target="_blank" rel="noopener noreferrer">
-                                    {{ T "Documentation" }}
-                                </a>
-                            {{ end }}
-
                             {{ $privURL := $cnf.PrivacyPolicyURL }}
-                            {{ if $privURL }}
-                                <a href="{{ $privURL }}" class="oauth2-provider__link" target="_blank" rel="noopener noreferrer">
-                                    {{ T "Privacy Policy" }}
-                                </a>
+                            {{ if (or $docURL $privURL) }}
+                                <div class="oauth2-provider__links oauth2-row">
+                                    {{ if $docURL }}
+                                        <a href="{{ $docURL }}" class="oauth2-provider__link" target="_blank" rel="noopener noreferrer">
+                                            {{ T "Documentation" }}
+                                        </a>
+                                    {{ end }}
+
+                                    {{ if (and $docURL $privURL) }}
+                                        <span class="oauth2-provider__link-separator">|</span>
+                                    {{ end }}
+
+                                    {{ if $privURL }}
+                                        <a href="{{ $privURL }}" class="oauth2-provider__link" target="_blank" rel="noopener noreferrer">
+                                            {{ T "Privacy Policy" }}
+                                        </a>
+                                    {{ end }}
+                                </div>
                             {{ end }}
                         </div>
                     </div>
