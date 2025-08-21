@@ -1,5 +1,5 @@
 {{ define "providers" }}
-    {{ $providers := .Config.Providers }}
+    {{ $providers := .Data.component.Configs }}
     <div class="oauth2-providers">
         <div class="oauth2-providers__header">
             <h4 class="oauth2-providers__title">
@@ -7,26 +7,37 @@
             </h4>
         </div>
 
-        {{ range $cnf := $providers }}
-            <div class="oauth2-provider">
-                <div class="oauth2-provider">
-                    {{ if $cnf.ProviderLogoURL }}
-                        <img src="{{ call $cnf.ProviderLogoURL }}" alt="{{ $cnf.Provider }}" class="oauth2-provider__icon">
-                    {{ end }}
-
-                    <div class="oauth2-provider__info">
-                        <span class="oauth2-provider__info__title">
-                            {{ $cnf.ReadableName }} ({{ $cnf.Provider }})
-                        </span>
-                    
-                        {{ if $cnf.DocumentationURL }}
-                            <a href="{{ $cnf.DocumentationURL }}" class="oauth2-provider__link" target="_blank" rel="noopener noreferrer">
-                                {{ T "Documentation" }}
-                            </a>
+        <div class="oauth2-provider-list-wrapper">
+            {{ range $cnf := $providers }}
+                <div class="oauth2-provider-wrapper">
+                    <div class="oauth2-provider">
+                        {{ $logo := $cnf.ProviderLogoURL }}
+                        {{ if $logo }}
+                            <img src="{{ $logo }}" alt="{{ $cnf.Provider }}" class="oauth2-provider__icon">
                         {{ end }}
+
+                        <div class="oauth2-provider__info">
+                            <span class="oauth2-provider__info__title">
+                                {{ $cnf.ProviderLabel }} ({{ $cnf.Provider }})
+                            </span>
+
+                            {{ $docURL := $cnf.DocumentationURL }}
+                            {{ if $docURL }}
+                                <a href="{{ $docURL }}" class="oauth2-provider__link" target="_blank" rel="noopener noreferrer">
+                                    {{ T "Documentation" }}
+                                </a>
+                            {{ end }}
+
+                            {{ $privURL := $cnf.PrivacyPolicyURL }}
+                            {{ if $privURL }}
+                                <a href="{{ $privURL }}" class="oauth2-provider__link" target="_blank" rel="noopener noreferrer">
+                                    {{ T "Privacy Policy" }}
+                                </a>
+                            {{ end }}
+                        </div>
                     </div>
                 </div>
-            </div>
-        {{ end }}
+            {{ end }}
+        </div>
     </div>
 {{ end }}

@@ -171,7 +171,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 	App.Ready = func() error {
 
 		for _, c := range App.Config.AuthConfigurations {
-			if c.Provider == "" {
+			if c.ProviderInfo.Provider == "" {
 				continue
 			}
 
@@ -183,11 +183,11 @@ func NewAppConfig(cnf Config) django.AppConfig {
 				c.Oauth2.RedirectURL = fmt.Sprintf(
 					"%s%s",
 					strings.TrimSuffix(App.Config.BaseCallbackURL, "/"),
-					django.Reverse("auth2:provider:callback", c.Provider),
+					django.Reverse("auth2:provider:callback", c.ProviderInfo.Provider),
 				)
 			}
 
-			App._cnfs[c.Provider] = c
+			App._cnfs[c.ProviderInfo.Provider] = c
 		}
 
 		return nil
@@ -326,7 +326,14 @@ func NewAppConfig(cnf Config) django.AppConfig {
 							if !ok {
 								return user.ProviderName
 							}
-							return provider.ReadableName()
+
+							label, ok := trans.GetText(r.Context(), provider.ProviderInfo.ProviderLabel)
+							if ok {
+								return label
+							}
+
+							return provider.ProviderInfo.Provider
+
 						},
 					),
 					"HasRefreshToken": list.BooleanColumn[attrs.Definer](
@@ -363,7 +370,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 							return django.Reverse(
 								"admin:apps:model:edit",
-								"openauth2", "OAuth2User",
+								"openauth2", "users",
 								row.(*User).ID,
 							)
 						},
@@ -440,7 +447,7 @@ func (a *OpenAuth2AppConfig) Check(ctx context.Context, settings django.Settings
 	}
 
 	for _, cnf := range a.Config.AuthConfigurations {
-		if cnf.Provider == "" {
+		if cnf.ProviderInfo.Provider == "" {
 			messages = append(messages, checks.Error(
 				"openauth2.provider_missing",
 				"OpenAuth2: Provider name is missing",
@@ -453,7 +460,7 @@ func (a *OpenAuth2AppConfig) Check(ctx context.Context, settings django.Settings
 			messages = append(messages, checks.Error(
 				"openauth2.oauth2_missing",
 				"OpenAuth2: OAuth2 configuration is missing",
-				cnf.Provider,
+				cnf.ProviderInfo.Provider,
 			))
 			continue
 		}
@@ -462,7 +469,7 @@ func (a *OpenAuth2AppConfig) Check(ctx context.Context, settings django.Settings
 			messages = append(messages, checks.Error(
 				"openauth2.client_id_missing",
 				"OpenAuth2: Client ID is missing",
-				cnf.Provider,
+				cnf.ProviderInfo.Provider,
 			))
 			continue
 		}
@@ -471,7 +478,7 @@ func (a *OpenAuth2AppConfig) Check(ctx context.Context, settings django.Settings
 			messages = append(messages, checks.Error(
 				"openauth2.client_secret_missing",
 				"OpenAuth2: Client Secret is missing for provider",
-				cnf.Provider,
+				cnf.ProviderInfo.Provider,
 			))
 			continue
 		}

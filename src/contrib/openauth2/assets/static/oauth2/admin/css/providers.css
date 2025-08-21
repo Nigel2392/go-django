@@ -1,15 +1,28 @@
 .oauth2-providers {
     display: flex;
     flex-direction: column;
+}
+.oauth2-provider-list-wrapper {
+    display: flex;
+    flex-direction: column;
     gap: 0.5rem;
 }
+.oauth2-provider-wrapper,
 .oauth2-provider {
     display: flex;
     flex-direction: row;
     align-items: center;
     text-decoration: none;
+}
+.oauth2-provider-wrapper {
     padding: 0.75rem 0;
     max-width: 30rem;
+}
+.oauth2-provider-wrapper:first-child {
+    padding-top: 0;
+}
+.oauth2-provider-wrapper:not(:first-child) {
+    border-top: 1px solid var(--border-color);
 }
 .oauth2-provider__icon {
     width: 3.5rem;

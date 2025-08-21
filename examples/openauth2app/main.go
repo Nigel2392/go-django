@@ -25,6 +25,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/settings"
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
@@ -95,11 +96,15 @@ func main() {
 			openauth2.NewAppConfig(openauth2.Config{
 				AuthConfigurations: []openauth2.AuthConfig{
 					{
-						Provider:         "google",
-						ProviderNiceName: "Google",
-						DocumentationURL: "https://developers.google.com/identity/protocols/oauth2",
-						ProviderLogoURL: func() string {
-							return "https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://google.com&size=128"
+						ProviderInfo: openauth2.ConfigInfo{
+							Provider:      "google",
+							ProviderLabel: "Google",
+							DocumentationURL: func(r *http.Request) string {
+								return "https://developers.google.com/identity/protocols/oauth2"
+							},
+							ProviderLogoURL: func(r *http.Request) string {
+								return "https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://google.com&size=128"
+							},
 						},
 						Oauth2: &oauth2.Config{
 							ClientID:     os.Getenv("GOOGLE_CLIENT_ID"),
@@ -122,33 +127,37 @@ func main() {
 							return googleUser.Email
 						},
 					},
-					//	{
-					//		Provider:         "github",
-					//		ProviderNiceName: "Github",
-					//		DocumentationURL: "https://docs.github.com/en/apps/oauth-apps",
-					//		ProviderLogoURL: func() string {
-					//			return "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
-					//		},
-					//		Oauth2: &oauth2.Config{
-					//			ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
-					//			ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
-					//			Scopes: []string{
-					//				"read:user",
-					//				"user:email",
-					//			},
-					//			Endpoint: github.Endpoint,
-					//		},
-					//		DataStructURL: "https://api.github.com/user",
-					//		DataStructIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
-					//			var user = dataStruct.(*GitHubUser)
-					//			return user.Email, nil
-					//		},
-					//		DataStruct: &GitHubUser{},
-					//		UserToString: func(user *openauth2.User, dataStruct interface{}) string {
-					//			var u = dataStruct.(*GitHubUser)
-					//			return u.Email
-					//		},
-					//	},
+					{
+						ProviderInfo: openauth2.ConfigInfo{
+							Provider:      "github",
+							ProviderLabel: "Github",
+							DocumentationURL: func(r *http.Request) string {
+								return "https://docs.github.com/en/apps/oauth-apps"
+							},
+							ProviderLogoURL: func(r *http.Request) string {
+								return "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
+							},
+						},
+						Oauth2: &oauth2.Config{
+							ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
+							ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+							Scopes: []string{
+								"read:user",
+								"user:email",
+							},
+							Endpoint: github.Endpoint,
+						},
+						DataStructURL: "https://api.github.com/user",
+						DataStructIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
+							var user = dataStruct.(*GitHubUser)
+							return user.Email, nil
+						},
+						DataStruct: &GitHubUser{},
+						UserToString: func(user *openauth2.User, dataStruct interface{}) string {
+							var u = dataStruct.(*GitHubUser)
+							return u.Email
+						},
+					},
 				},
 				BaseCallbackURL:       "http://127.0.0.1:8080",
 				UserDefaultIsDisabled: false,

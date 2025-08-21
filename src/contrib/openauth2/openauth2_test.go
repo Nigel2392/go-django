@@ -29,8 +29,10 @@ func init() {
 	var openauth = openauth2.NewAppConfig(openauth2.Config{
 		AuthConfigurations: []openauth2.AuthConfig{
 			{
-				Provider: "test",
-				Oauth2:   &oauth2.Config{},
+				ProviderInfo: openauth2.ConfigInfo{
+					Provider: "test",
+				},
+				Oauth2: &oauth2.Config{},
 				GetTokenSource: func(context context.Context, token *oauth2.Token) oauth2.TokenSource {
 					return &shimTokenSource{
 						tkn:    token,

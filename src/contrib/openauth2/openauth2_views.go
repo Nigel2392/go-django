@@ -168,7 +168,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 	logger.Debugf("Identifier from data struct: %s", identifier)
 
 	// Check if the user already exists in the database
-	user, err := GetUserByIdentifier(r.Context(), a.Provider, identifier)
+	user, err := GetUserByIdentifier(r.Context(), a.ProviderInfo.Provider, identifier)
 	if err != nil && !errors.Is(err, errors.NoRows) {
 		// An error occurred while retrieving the user from the database
 		// Log the error and return a 500 status code
@@ -183,7 +183,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 		// User not found, create a new user in the database
 		user, err = queries.GetQuerySetWithContext(r.Context(), &User{}).Create(&User{
 			UniqueIdentifier: identifier,
-			ProviderName:     a.Provider,
+			ProviderName:     a.ProviderInfo.Provider,
 			Data:             rawData,
 			AccessToken:      drivers.Text(token.AccessToken),
 			RefreshToken:     drivers.Text(token.RefreshToken),

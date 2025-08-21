@@ -5,16 +5,46 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"net/http"
 
 	"github.com/qdm12/reprint"
 	"golang.org/x/oauth2"
 )
+
+type ConfigInfo struct {
+	// The name of the provider, e.g. "google", "github", etc.
+	Provider string
+
+	// A nice name for the provider, e.g. "Google", "GitHub", etc.
+	//
+	// This is used for display purposes only.
+	//
+	// It can be a function of type `func(context.Context) string`
+	// for possible translations.
+	ProviderLabel any
+
+	// An optional URL for the provider's logo.
+	//
+	// This is used for display purposes only.
+	//
+	// It is a function so it can possibly callback to django.Static(path).
+	ProviderLogoURL func(r *http.Request) string
+
+	// The URL of the documentation page for the provider.
+	DocumentationURL func(r *http.Request) string
+
+	// The URL of the privacy policy page for the provider.
+	PrivacyPolicyURL func(r *http.Request) string
+}
 
 type AuthConfig struct {
 	// The base oauth2 config to use.
 	//
 	// Under the hood the `golang.org/x/oauth2` package is used.
 	Oauth2 *oauth2.Config
+
+	// Details about the provider.
+	ProviderInfo ConfigInfo
 
 	// The access type to request from the provider.
 	//
@@ -27,29 +57,9 @@ type AuthConfig struct {
 	// If this is left empty, it will default to "state"
 	State string
 
-	// The name of the provider, e.g. "google", "github", etc.
-	Provider string
-
-	// A nice name for the provider, e.g. "Google", "GitHub", etc.
-	//
-	// This is used for display purposes only.
-	ProviderNiceName string
-
-	// The URL of the documentation for the provider.
-	//
-	// This can be used to link to the provider's documentation.
-	DocumentationURL string
-
 	// ExtraParams are extra parameters to be set on the URL when
 	// generating the url with Oauth2.AuthCodeURL
 	ExtraParams map[string]string
-
-	// An optional URL for the provider's logo.
-	//
-	// This is used for display purposes only.
-	//
-	// It is a function so it can possibly callback to django.Static(path).
-	ProviderLogoURL func() string
 
 	// DataStructURL is the URL which will be used to retrieve the data from the provider.
 	//
@@ -87,13 +97,6 @@ type AuthConfig struct {
 	// The token will be wrapped in a savingTokenSource, which will save the token to the user
 	// when it is refreshed.
 	GetTokenSource func(context context.Context, token *oauth2.Token) oauth2.TokenSource
-}
-
-func (c *AuthConfig) ReadableName() string {
-	if c.ProviderNiceName != "" {
-		return c.ProviderNiceName
-	}
-	return c.Provider
 }
 
 // TokenSource returns a new oauth2.TokenSource for the user.
