@@ -322,3 +322,91 @@ templ (p *boundTabbedPanel) Component() {
 
     </div>
 }
+
+
+type BoundJSONDetailPanel struct {
+    Error       error
+    Panel       JSONDetailPanel
+    Request     *http.Request
+    BoundFields []forms.BoundField
+    BoundField  forms.BoundField
+}
+
+func (p *BoundJSONDetailPanel) Render() template.HTML {
+    var b bytes.Buffer
+    p.Component().Render(p.Request.Context(), &b)
+    return template.HTML(b.String())
+}
+
+func (p *BoundJSONDetailPanel) Hidden() bool {
+    return p.Panel.Classname == "hidden"
+}
+
+templ (p *BoundJSONDetailPanel) Component() {
+    if p.Error != nil {
+        {{ return p.Error }}
+    }
+
+    {{ var fieldName = p.BoundField.Name() }}
+    {{ var label = p.BoundField.Label() }}
+    {{ var helpText = p.BoundField.HelpText() }}
+    {{ var panelId = BuildPanelID(fieldName, nil, slug.Make(fieldName)) }}
+    <div class={ "panel", "panel-default", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId } data-panel-input-id={ p.BoundField.ID() }>
+        if !p.Hidden() {
+            <div class="panel__heading" data-panel-target="heading">
+
+                <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
+                      <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
+                      <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
+                    </svg>
+                </a>
+
+                <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
+                    @templ.Raw(string(label))
+                </div>
+
+            </div>
+        }
+
+        if !p.Hidden() && helpText != "" {
+            <div class="panel__help">
+                @templ.Raw(string(helpText))
+            </div>
+        }
+
+        if !p.Hidden() {
+            <div class="panel__body" data-panel-target="content">
+                for _, boundField := range p.BoundFields {
+                    {{ var label = boundField.Label() }}
+                    {{ var field = boundField.Field() }}
+                    {{ var panelId = BuildPanelID("json-data-panel", nil, slug.Make(boundField.Name())) }}
+                    <div class={ "panel", "panel-default" } data-controller="panel" data-panel-panel-value={ panelId } data-panel-input-id={ boundField.ID() }>
+                        <div class="panel__heading" data-panel-target="heading">
+
+                            <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
+                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
+                                  <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
+                                  <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
+                                </svg>
+                            </a>
+
+                            <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
+                                @templ.Raw(string(label))
+                            </div>
+
+                        </div>
+                        <div class="panel__body" data-panel-target="content">
+                            <div class="form-field-wrapper">
+                                <div class="form-field">
+                                    @templ.Raw(string(field))
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+

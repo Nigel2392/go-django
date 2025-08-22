@@ -2,7 +2,9 @@ package admin
 
 import (
 	"net/http"
+	"net/url"
 	"strconv"
+	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -110,12 +112,22 @@ func (b *BoundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
 	var context = NewContext(req, AdminSite, nil)
 	var searchQuery = req.URL.Query().Get("global-search")
 
-	var columns = make([]list.ListColumn[attrs.Definer], len(b.Model.ListView.Fields))
-	for i, field := range b.Model.ListView.Fields {
-		columns[i] = b.Model.GetColumn(req.Context(), b.Model.ListView, field)
+	var fields = b.Model.ListView.Search.ListFields
+	if len(fields) == 0 {
+		fields = b.Model.ListView.Fields
 	}
 
-	var amount = b.Model.ListView.PerPage
+	var columns = make([]list.ListColumn[attrs.Definer], len(fields))
+	for i, field := range fields {
+		columns[i] = b.Model.GetColumn(
+			req.Context(), b.Model.ListView, field,
+		)
+	}
+
+	var amount = b.Model.ListView.Search.PerPage
+	if amount == 0 {
+		amount = int(b.Model.ListView.PerPage)
+	}
 	if amount == 0 {
 		amount = 25
 	}
@@ -184,6 +196,14 @@ func (b *BoundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
 		results = pageObject.Results()
 	}
 
+	if len(results) > 0 {
+		columns[0] = list.TitleFieldColumn(
+			columns[0], func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				return b.GetEditLink(attrs.PrimaryKey(row))
+			},
+		)
+	}
+
 	listObj, err := b.GetList(b, results, columns)
 	if err != nil {
 		return nil, err
@@ -199,17 +219,47 @@ func (b *BoundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
 		contextPage.MediaFn = m.Media
 	}
 
+	var app = b.Model.App()
+
 	context.SetPage(contextPage)
 	context.Set("view_list", listObj)
 	context.Set("view_page", page)
 	context.Set("view_paginator", paginator)
+	context.Set("view_paginator_object", pageObject)
 
 	context.Set("view", b)
-	context.Set("app", b.Model.App())
+	context.Set("app", app)
 	context.Set("model", b.Model)
 	context.Set("query", searchQuery)
 	context.Set("opts", b.Model.ListView.Search)
 	context.Set("searchable_models", AdminSite.SearchableModels(req))
 
 	return context, nil
+}
+
+func (b *BoundSearchView) GetEditLink(id any) string {
+	var base string
+	if b.Model.ListView.Search.GetEditLink != nil {
+		base = b.Model.ListView.Search.GetEditLink(b.R, id)
+	} else {
+		base = django.Reverse(
+			"admin:apps:model:edit",
+			b.Model.App().Name,
+			b.Model.GetName(),
+			attrs.ToString(id),
+		)
+	}
+
+	var sb = new(strings.Builder)
+	sb.WriteString(base)
+
+	if len(base) > 0 && base[len(base)-1] != '?' {
+		sb.WriteString("?")
+	}
+
+	sb.WriteString("next=")
+	sb.WriteString(url.QueryEscape(django.Reverse("admin:search")))
+	sb.WriteString("%3F")
+	sb.WriteString(url.QueryEscape(b.R.URL.RawQuery))
+	return sb.String()
 }

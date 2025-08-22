@@ -50,7 +50,7 @@
                     </div>
                 {{ end }}
             <div class="title-text">
-                <h1>{{ T "%s List" $model.Label }} ({{if .Data.view_paginator_object}}{{ (.Data.view_paginator_object).Count }}{{else}}0{{end}})</h1>
+                <h1>{{ T "%s List" $model.Label }} ({{if .Data.view_paginator_object}}{{ (.Data.view_paginator).Count }}{{else}}0{{end}})</h1>
             </div>
         </div>
         

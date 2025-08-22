@@ -26,6 +26,7 @@ func (c *SearchComponent) Media() media.Media {
 
 func (c *SearchComponent) Render() string {
 	var context = ctx.RequestContext(c.View.R)
+	context.Set("view", c.View)
 	context.Set("instances", c.Objects)
 	var html, err = tpl.Render(context, "images/image_search_list.tmpl")
 	if err != nil {

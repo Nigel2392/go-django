@@ -2,15 +2,21 @@ package admin
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"html/template"
+	"maps"
 	"net/http"
+	"slices"
+	"sort"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
+	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/a-h/templ"
 )
 
@@ -470,5 +476,109 @@ func (t *tabbedPanel) Bind(r *http.Request, panelCount map[string]int, form form
 		request: r,
 		panels:  boundTabs,
 		context: ctx,
+	}
+}
+
+type JSONDetailPanel struct {
+	FieldName string
+	Classname string
+	Labels    func(r *http.Request, fields map[string]forms.BoundField) map[string]any
+	Widgets   func(r *http.Request, fields map[string]forms.BoundField) map[string]widgets.Widget
+}
+
+func (j JSONDetailPanel) Fields() []string {
+	return []string{j.FieldName}
+}
+
+func (j JSONDetailPanel) ClassName() string {
+	return j.Classname
+}
+
+func (j JSONDetailPanel) Class(classes string) Panel {
+	j.Classname = classes
+	return j
+}
+
+func (j JSONDetailPanel) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFieldsMap map[string]forms.BoundField) BoundPanel {
+	var dataField, ok = boundFieldsMap[j.FieldName]
+	if !ok {
+		assert.Fail(
+			"Field %q not found in bound fields",
+			j.FieldName,
+		)
+		return nil
+	}
+
+	var value = dataField.Value()
+	var jsonData string
+	switch v := value.(type) {
+	case string:
+		jsonData = v
+	case []byte:
+		jsonData = string(v)
+	default:
+		assert.Fail(
+			"Field %q has unsupported type %T",
+			j.FieldName,
+			v,
+		)
+	}
+
+	var data = make(map[string]interface{})
+	var err = json.Unmarshal([]byte(jsonData), &data)
+	if err != nil {
+		return &BoundJSONDetailPanel{
+			Error: err,
+		}
+	}
+
+	var widgetsMap map[string]widgets.Widget
+	if j.Widgets != nil {
+		widgetsMap = j.Widgets(r, boundFieldsMap)
+	}
+
+	var labelsMap map[string]any
+	if j.Labels != nil {
+		labelsMap = j.Labels(r, boundFieldsMap)
+	}
+
+	var boundFields = make([]forms.BoundField, 0, len(data))
+	var keys = slices.Collect(maps.Keys(data))
+	sort.Strings(keys)
+
+	for _, key := range keys {
+		var val = data[key]
+
+		var label, ok = labelsMap[key]
+		if !ok {
+			label = key
+		}
+
+		var field = fields.NewField(
+			fields.Name(key),
+			fields.Label(label),
+			fields.ReadOnly(true),
+		)
+		widget, ok := widgetsMap[key]
+		if !ok {
+			widget = widgets.NewTextInput(nil)
+		}
+
+		widget.SetAttrs(map[string]string{
+			"readonly":   "readonly",
+			"data-field": key,
+		})
+
+		boundFields = append(boundFields, forms.NewBoundFormField(
+			form.Context(), widget, field, fmt.Sprintf("%s__%s", dataField.Name(), key), val, []error{},
+		))
+	}
+
+	return &BoundJSONDetailPanel{
+		Panel:       j,
+		Request:     r,
+		BoundField:  dataField,
+		BoundFields: boundFields,
+		Error:       err,
 	}
 }

@@ -72,6 +72,9 @@ var pageAdminModelOptions = admin.ModelOptions{
 			},
 		},
 		Search: &admin.SearchOptions{
+			GetEditLink: func(req *http.Request, id any) string {
+				return django.Reverse("admin:pages:edit", id)
+			},
 			Fields: []admin.SearchField{
 				{
 					Name:   "Title",

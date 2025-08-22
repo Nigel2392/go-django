@@ -240,6 +240,14 @@ func NewAppConfig() django.AppConfig {
 				// Customize the view / fields for the user models' list view.
 				ListView: admin.ListViewOptions{
 					Search: &admin.SearchOptions{
+						ListFields: []string{
+							"Email",
+							"Username",
+							"IsAdministrator",
+							"IsActive",
+							"CreatedAt",
+							"UpdatedAt",
+						},
 						Fields: []admin.SearchField{
 							{
 								Name:   "Username",
@@ -262,7 +270,7 @@ func NewAppConfig() django.AppConfig {
 					ViewOptions: admin.ViewOptions{
 						Fields: []string{
 							"ID",
-							"Email",
+							"Email__Edit",
 							"IsAdministrator",
 							"IsActive",
 							"CreatedAt",
@@ -270,7 +278,7 @@ func NewAppConfig() django.AppConfig {
 						},
 					},
 					Columns: map[string]list.ListColumn[attrs.Definer]{
-						"Email": list.LinkColumn(
+						"Email__Edit": list.LinkColumn(
 							trans.S("Email"),
 							"Email", func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 								return django.Reverse("admin:apps:model:edit", "auth", "user", defs.Get("ID"))

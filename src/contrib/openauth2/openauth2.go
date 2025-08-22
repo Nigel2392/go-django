@@ -28,6 +28,8 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -197,11 +199,73 @@ func NewAppConfig(cnf Config) django.AppConfig {
 						ViewOptions: admin.ViewOptions{},
 					},
 					EditView: admin.FormViewOptions{
+						Panels: []admin.Panel{
+							admin.TabbedPanel(
+								admin.PanelTab(
+									trans.S("General"),
+									admin.TitlePanel(admin.RowPanel(
+										admin.FieldPanel("ID"),
+										admin.FieldPanel("UniqueIdentifier"),
+									)),
+									admin.FieldPanel("ProviderName"),
+									admin.FieldPanel("CreatedAt"),
+									admin.FieldPanel("UpdatedAt"),
+								),
+								admin.PanelTab(
+									trans.S("Authentication"),
+									admin.FieldPanel("TokenType"),
+									admin.FieldPanel("AccessToken"),
+									admin.FieldPanel("RefreshToken"),
+									admin.FieldPanel("ExpiresAt"),
+								),
+								admin.PanelTab(
+									trans.S("Details"),
+									&admin.AlertPanel{
+										Type:  admin.ALERT_INFO,
+										Label: trans.S("User Data"),
+										HTML:  trans.S("User data retrieved from the OAuth2 provider."),
+									},
+									&admin.JSONDetailPanel{
+										FieldName: "Data",
+										Labels: func(r *http.Request, fields map[string]forms.BoundField) map[string]any {
+											var providerField, _ = fields["ProviderName"]
+											var providerName = providerField.Value()
+											return App.getProviderDataLabels(providerName.(string))
+										},
+										Widgets: func(r *http.Request, fields map[string]forms.BoundField) map[string]widgets.Widget {
+											var providerField, _ = fields["ProviderName"]
+											var providerName = providerField.Value()
+											return App.getProviderDataWidgets(providerName.(string))
+										},
+									},
+								),
+								admin.PanelTab(
+									trans.S("Authorization"),
+									admin.RowPanel(
+										admin.FieldPanel("IsAdministrator"),
+										admin.FieldPanel("IsActive"),
+									),
+									admin.FieldPanel("Groups"),
+									admin.FieldPanel("Permissions"),
+								),
+							),
+						},
 						ViewOptions: admin.ViewOptions{},
 					},
 					ListView: admin.ListViewOptions{
 						PerPage: 20,
 						Search: &admin.SearchOptions{
+							ListFields: []string{
+								"UniqueIdentifier",
+								"Provider",
+								"TokenType",
+								"IsAdministrator",
+								"IsActive",
+								"HasRefreshToken",
+								"CreatedAt",
+								"UpdatedAt",
+							},
+
 							Fields: []admin.SearchField{
 								{
 									Name:   "ID",
@@ -227,7 +291,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 							},
 							Fields: []string{
 								"ID",
-								"UniqueIdentifier",
+								"UniqueIdentifier__Edit",
 								"Provider",
 								"TokenType",
 								"IsAdministrator",
@@ -287,7 +351,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 								trans.S("Last Updated"),
 								"UpdatedAt",
 							),
-							"UniqueIdentifier": list.TitleFieldColumn(
+							"UniqueIdentifier__Edit": list.TitleFieldColumn(
 								list.FieldColumn[attrs.Definer](
 									trans.S("Unique Identifier"),
 									"UniqueIdentifier",
@@ -437,6 +501,34 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			"migrations/openauth2",
 		),
 	}
+}
+
+func (a *OpenAuth2AppConfig) getProviderDataLabels(providerName string) map[string]any {
+	var labels = make(map[string]any)
+	var providerConfig, ok = a._cnfs[providerName]
+	if !ok {
+		return labels
+	}
+
+	if providerConfig.DataLabels != nil {
+		return providerConfig.DataLabels
+	}
+
+	return labels
+}
+
+func (a *OpenAuth2AppConfig) getProviderDataWidgets(providerName string) map[string]widgets.Widget {
+	var widgets = make(map[string]widgets.Widget)
+	var providerConfig, ok = a._cnfs[providerName]
+	if !ok {
+		return widgets
+	}
+
+	if providerConfig.DataWidgets != nil {
+		return providerConfig.DataWidgets
+	}
+
+	return widgets
 }
 
 func (a *OpenAuth2AppConfig) Check(ctx context.Context, settings django.Settings) []checks.Message {

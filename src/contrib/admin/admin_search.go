@@ -10,10 +10,13 @@ import (
 )
 
 type SearchOptions struct {
-	Fields     []SearchField
-	Searchable func(req *http.Request) bool
-	QuerySet   func(req *http.Request) *queries.QuerySet[attrs.Definer]
-	GetList    func(b *BoundSearchView, list []attrs.Definer, columns []list.ListColumn[attrs.Definer]) (StringRenderer, error)
+	PerPage     int
+	Fields      []SearchField
+	ListFields  []string
+	GetEditLink func(req *http.Request, id any) string
+	Searchable  func(req *http.Request) bool
+	QuerySet    func(req *http.Request) *queries.QuerySet[attrs.Definer]
+	GetList     func(b *BoundSearchView, list []attrs.Definer, columns []list.ListColumn[attrs.Definer]) (StringRenderer, error)
 }
 
 func (so *SearchOptions) CanSearch(r *http.Request) bool {

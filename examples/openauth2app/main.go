@@ -23,14 +23,15 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/contrib/settings"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/joho/godotenv"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/github"
 	"golang.org/x/oauth2/google"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 
 	"github.com/Nigel2392/go-django/src/contrib/session"
 
@@ -129,41 +130,65 @@ func main() {
 							var googleUser = dataStruct.(*GoogleUser)
 							return googleUser.Email
 						},
-					},
-					{
-						ProviderInfo: openauth2.ConfigInfo{
-							Provider:      "github",
-							ProviderLabel: "Github",
-							ProviderLogoURL: func(r *http.Request) string {
-								return "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
-							},
-							DocumentationURL: func(r *http.Request) string {
-								return "https://docs.github.com/en/apps/oauth-apps"
-							},
-							PrivacyPolicyURL: func(r *http.Request) string {
-								return "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
-							},
+						DataLabels: map[string]any{
+							"email":          trans.S("Email"),
+							"first_name":     trans.S("First Name"),
+							"last_name":      trans.S("Last Name"),
+							"family_name":    trans.S("Family Name"),
+							"picture":        trans.S("Profile Picture"),
+							"locale":         trans.S("Locale"),
+							"name":           trans.S("Name"),
+							"sub":            trans.S("Subject"),
+							"given_name":     trans.S("Given Name"),
+							"verified_email": trans.S("Verified Email"),
 						},
-						Oauth2: &oauth2.Config{
-							ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
-							ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
-							Scopes: []string{
-								"read:user",
-								"user:email",
-							},
-							Endpoint: github.Endpoint,
-						},
-						DataStructURL: "https://api.github.com/user",
-						DataStructIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
-							var user = dataStruct.(*GitHubUser)
-							return user.Email, nil
-						},
-						DataStruct: &GitHubUser{},
-						UserToString: func(user *openauth2.User, dataStruct interface{}) string {
-							var u = dataStruct.(*GitHubUser)
-							return u.Email
+						DataWidgets: map[string]widgets.Widget{
+							"email":          widgets.NewEmailInput(nil),
+							"first_name":     widgets.NewTextInput(nil),
+							"last_name":      widgets.NewTextInput(nil),
+							"family_name":    widgets.NewTextInput(nil),
+							"picture":        widgets.NewTextInput(nil),
+							"locale":         widgets.NewTextInput(nil),
+							"name":           widgets.NewTextInput(nil),
+							"sub":            widgets.NewNumberInput[int](nil),
+							"given_name":     widgets.NewTextInput(nil),
+							"verified_email": widgets.NewEmailInput(nil),
 						},
 					},
+					//	{
+					//		ProviderInfo: openauth2.ConfigInfo{
+					//			Provider:      "github",
+					//			ProviderLabel: "Github",
+					//			ProviderLogoURL: func(r *http.Request) string {
+					//				return "https://github.githubassets.com/assets/GitHub-Mark-ea2971cee799.png"
+					//			},
+					//			DocumentationURL: func(r *http.Request) string {
+					//				return "https://docs.github.com/en/apps/oauth-apps"
+					//			},
+					//			PrivacyPolicyURL: func(r *http.Request) string {
+					//				return "https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement"
+					//			},
+					//		},
+					//		Oauth2: &oauth2.Config{
+					//			ClientID:     os.Getenv("GITHUB_CLIENT_ID"),
+					//			ClientSecret: os.Getenv("GITHUB_CLIENT_SECRET"),
+					//			Scopes: []string{
+					//				"read:user",
+					//				"user:email",
+					//			},
+					//			Endpoint: github.Endpoint,
+					//		},
+					//		DataStructURL: "https://api.github.com/user",
+					//		DataStructIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
+					//			var user = dataStruct.(*GitHubUser)
+					//			return user.Email, nil
+					//		},
+					//		DataStruct: &GitHubUser{},
+					//		UserToString: func(user *openauth2.User, dataStruct interface{}) string {
+					//			var u = dataStruct.(*GitHubUser)
+					//			return u.Email
+					//		},
+					//	},
 				},
 				BaseCallbackURL:       "http://127.0.0.1:8080",
 				UserDefaultIsDisabled: false,

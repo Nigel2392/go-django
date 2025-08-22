@@ -7,6 +7,7 @@ import (
 	"io"
 	"net/http"
 
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/qdm12/reprint"
 	"golang.org/x/oauth2"
 )
@@ -80,6 +81,12 @@ type AuthConfig struct {
 	// This means that it DOES support unexported fields, though these will
 	// NOT be used for JSON unmarshalling.
 	DataStruct interface{}
+
+	// DataLabels is a map of keys from the JSON response retrieved from the DataStructURL.
+	DataLabels map[string]any
+
+	// DataWidgets is a map of widgets for the JSON response retrieved from the DataStructURL.
+	DataWidgets map[string]widgets.Widget
 
 	// ScanDataStruct is a function that takes an io.Reader and returns a data struct.
 
