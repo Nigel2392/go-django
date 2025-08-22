@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"slices"
 	"sort"
+	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -482,6 +483,7 @@ func (t *tabbedPanel) Bind(r *http.Request, panelCount map[string]int, form form
 type JSONDetailPanel struct {
 	FieldName string
 	Classname string
+	Ordering  func(r *http.Request, fields map[string]forms.BoundField) []string
 	Labels    func(r *http.Request, fields map[string]forms.BoundField) map[string]any
 	Widgets   func(r *http.Request, fields map[string]forms.BoundField) map[string]widgets.Widget
 }
@@ -542,9 +544,32 @@ func (j JSONDetailPanel) Bind(r *http.Request, panelCount map[string]int, form f
 		labelsMap = j.Labels(r, boundFieldsMap)
 	}
 
+	var fieldOrdering []string
+	if j.Ordering != nil {
+		fieldOrdering = j.Ordering(r, boundFieldsMap)
+	}
+
 	var boundFields = make([]forms.BoundField, 0, len(data))
 	var keys = slices.Collect(maps.Keys(data))
 	sort.Strings(keys)
+
+	var ordering = make(map[string]int, len(keys))
+	for i, key := range fieldOrdering {
+		ordering[key] = i
+	}
+
+	slices.SortStableFunc(keys, func(i, j string) int {
+		var orderI, okI = ordering[i]
+		var orderJ, okJ = ordering[j]
+		if okI && okJ {
+			return orderI - orderJ
+		} else if okI {
+			return -1
+		} else if okJ {
+			return 1
+		}
+		return strings.Compare(i, j)
+	})
 
 	for _, key := range keys {
 		var val = data[key]

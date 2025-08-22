@@ -82,10 +82,18 @@ type AuthConfig struct {
 	// NOT be used for JSON unmarshalling.
 	DataStruct interface{}
 
+	// DataFieldOrder is the order in which the fields should be displayed.
+	//
+	// This is used to control the order of the fields in the edit user page.
+	DataFieldOrder []string
+
 	// DataLabels is a map of keys from the JSON response retrieved from the DataStructURL.
+	// These are used for display purposes only, and only in the Edit User page.
 	DataLabels map[string]any
 
 	// DataWidgets is a map of widgets for the JSON response retrieved from the DataStructURL.
+	//
+	// These are used in the edit page of the user model - the widgets will be marked as readonly.
 	DataWidgets map[string]widgets.Widget
 
 	// ScanDataStruct is a function that takes an io.Reader and returns a data struct.

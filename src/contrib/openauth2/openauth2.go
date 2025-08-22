@@ -227,6 +227,11 @@ func NewAppConfig(cnf Config) django.AppConfig {
 									},
 									&admin.JSONDetailPanel{
 										FieldName: "Data",
+										Ordering: func(r *http.Request, fields map[string]forms.BoundField) []string {
+											var providerField, _ = fields["ProviderName"]
+											var providerName = providerField.Value()
+											return App.getProviderDataFieldOrder(providerName.(string))
+										},
 										Labels: func(r *http.Request, fields map[string]forms.BoundField) map[string]any {
 											var providerField, _ = fields["ProviderName"]
 											var providerName = providerField.Value()
@@ -501,6 +506,20 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			"migrations/openauth2",
 		),
 	}
+}
+
+func (a *OpenAuth2AppConfig) getProviderDataFieldOrder(providerName string) []string {
+	var order []string
+	var providerConfig, ok = a._cnfs[providerName]
+	if !ok {
+		return order
+	}
+
+	if providerConfig.DataFieldOrder != nil {
+		return providerConfig.DataFieldOrder
+	}
+
+	return order
 }
 
 func (a *OpenAuth2AppConfig) getProviderDataLabels(providerName string) map[string]any {

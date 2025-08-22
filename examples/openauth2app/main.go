@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/Nigel2392/go-django/examples/blogapp/blog"
 	"github.com/Nigel2392/go-django/examples/todoapp/todos"
@@ -28,6 +31,7 @@ import (
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/google"
 
+	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -54,6 +58,28 @@ type GitHubUser struct {
 	Login     string `json:"login"`
 	AvatarURL string `json:"avatar_url"`
 	Email     string `json:"email"`
+}
+
+type imageWidget struct {
+	widgets.BaseWidget
+}
+
+func (i *imageWidget) Render(ctx context.Context, w io.Writer, id string, name string, value interface{}, attrs map[string]string) error {
+	return i.RenderWithErrors(ctx, w, id, name, value, nil, attrs, nil)
+}
+
+func (i *imageWidget) RenderWithErrors(ctx context.Context, w io.Writer, id string, name string, value interface{}, errors []error, attrs map[string]string, context ctx.Context) error {
+	var attrStr strings.Builder
+	var idx = 0
+	for k, v := range attrs {
+		if idx > 0 {
+			attrStr.WriteString(" ")
+		}
+		fmt.Fprintf(&attrStr, `%s=%q`, k, v)
+		idx++
+	}
+	fmt.Fprintf(w, `<img src="%s" alt="%s" id="%s" name="%s" %s>`, value, name, id, name, attrStr.String())
+	return nil
 }
 
 func main() {
@@ -130,6 +156,18 @@ func main() {
 							var googleUser = dataStruct.(*GoogleUser)
 							return googleUser.Email
 						},
+						DataFieldOrder: []string{
+							"picture",
+							"email",
+							"verified_email",
+							"name",
+							"given_name",
+							"first_name",
+							"last_name",
+							"family_name",
+							"locale",
+							"sub",
+						},
 						DataLabels: map[string]any{
 							"email":          trans.S("Email"),
 							"first_name":     trans.S("First Name"),
@@ -140,14 +178,14 @@ func main() {
 							"name":           trans.S("Name"),
 							"sub":            trans.S("Subject"),
 							"given_name":     trans.S("Given Name"),
-							"verified_email": trans.S("Verified Email"),
+							"verified_email": trans.S("Email (Verified)"),
 						},
 						DataWidgets: map[string]widgets.Widget{
 							"email":          widgets.NewEmailInput(nil),
 							"first_name":     widgets.NewTextInput(nil),
 							"last_name":      widgets.NewTextInput(nil),
 							"family_name":    widgets.NewTextInput(nil),
-							"picture":        widgets.NewTextInput(nil),
+							"picture":        &imageWidget{},
 							"locale":         widgets.NewTextInput(nil),
 							"name":           widgets.NewTextInput(nil),
 							"sub":            widgets.NewNumberInput[int](nil),
