@@ -41,6 +41,15 @@
     font-size: 1rem;
     text-align: center;
 }
+.images-list .image-item .image-title:has(.edit-link) {
+    display: flex;
+    text-align: left;
+    align-items: center;
+    justify-content: space-between;
+}
+.images-list .image-item .image-title .edit-link {
+    color: white;
+}
 .images-list .image-item .form-input {
     padding: 0.5rem;
     width: 16px;

@@ -27,6 +27,7 @@
             <div class="form-field">
                 <input type="text" name="global-search" value="{{ $searchQuery }}" placeholder="{{ T "Search..." }}">
             </div>
+            <input type="hidden" name="content_type" value="{{ $data.model.TypeName }}">
             <button type="submit" class="button secondary">{{ T "Search" }}</button>
         </form>
     

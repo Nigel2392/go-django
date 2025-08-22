@@ -6,12 +6,14 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/views/list"
 )
 
 type SearchOptions struct {
 	Fields     []SearchField
 	Searchable func(req *http.Request) bool
 	QuerySet   func(req *http.Request) *queries.QuerySet[attrs.Definer]
+	GetList    func(b *BoundSearchView, list []attrs.Definer, columns []list.ListColumn[attrs.Definer]) (StringRenderer, error)
 }
 
 func (so *SearchOptions) CanSearch(r *http.Request) bool {

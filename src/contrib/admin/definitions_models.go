@@ -520,6 +520,10 @@ func (o *WrappedModelDefinition) GetName() string {
 	return o.Wrapped.GetName()
 }
 
+func (o *WrappedModelDefinition) TypeName() string {
+	return o.Wrapped.TypeName()
+}
+
 func (o *WrappedModelDefinition) NewInstance() attrs.Definer {
 	return o.Wrapped.NewInstance()
 }

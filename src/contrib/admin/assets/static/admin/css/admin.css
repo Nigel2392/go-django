@@ -767,10 +767,16 @@ a.button, .button a {
     font-size: 1rem;
     padding: 0 1.4em
 }
-
+.messages-wrapper {
+    position: relative;
+}
 .messages {
     display: flex;
     flex-direction: column;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
 }
 .message {
     display: flex;

@@ -265,6 +265,12 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 					},
 				},
 			},
+			Search: &admin.SearchOptions{
+				Fields: []admin.SearchField{
+					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
+					{Name: "Path", Lookup: expr.LOOKUP_ICONTANS},
+				},
+			},
 		},
 	}
 }

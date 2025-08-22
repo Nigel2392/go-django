@@ -9,6 +9,7 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -23,6 +24,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/views"
+	"github.com/Nigel2392/go-django/src/views/list"
 )
 
 var _ = contenttypes.Register(&contenttypes.ContentTypeDefinition{
@@ -225,6 +227,15 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 			},
 		},
 		ListView: admin.ListViewOptions{
+			Search: &admin.SearchOptions{
+				Fields: []admin.SearchField{
+					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
+					{Name: "Path", Lookup: expr.LOOKUP_ICONTANS},
+				},
+				GetList: func(b *admin.BoundSearchView, list []attrs.Definer, _ []list.ListColumn[attrs.Definer]) (admin.StringRenderer, error) {
+					return &SearchComponent{View: b, Objects: list}, nil
+				},
+			},
 			GetHandler: func(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View {
 				const (
 					amountParam = "amount"

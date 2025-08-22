@@ -2,15 +2,17 @@
 
 {{ define "title" }}{{ T "List %s" (.Get "model").PluralLabel }}{{ end }}
 
-{{ if .Data.filter_form }}
-    {{ define "extra_css" }}
+{{ define "extra_css" }}
+    {{ if .Data.filter_form }}
         {{ $Media := .Data.filter_form.Media }}
         {{ range $css := $Media.CSS }}
             {{ $css }}
         {{ end }}
     {{ end }}
+{{ end }}
 
-    {{ define "extra_js" }}
+{{ define "extra_js" }}
+    {{ if .Data.filter_form }}
         {{ $Media := .Data.filter_form.Media }}
         {{ range $js := $Media.JS }}
             {{ $js }}

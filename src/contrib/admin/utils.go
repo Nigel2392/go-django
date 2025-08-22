@@ -12,6 +12,10 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
 
+type StringRenderer interface {
+	Render() string
+}
+
 func sortComponents(components []AdminPageComponent) []AdminPageComponent {
 	slices.SortStableFunc(components, func(i, j AdminPageComponent) int {
 		if i.Ordering() < j.Ordering() {

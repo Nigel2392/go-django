@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/pagination"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 )
@@ -34,7 +35,7 @@ func (s *SearchView) Methods() []string {
 }
 
 func (s *SearchView) Bind(w http.ResponseWriter, req *http.Request) (views.View, error) {
-	var v = &boundSearchView{
+	var v = &BoundSearchView{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet},
 			BaseTemplateKey: BASE_KEY,
@@ -44,14 +45,14 @@ func (s *SearchView) Bind(w http.ResponseWriter, req *http.Request) (views.View,
 	return v, nil
 }
 
-type boundSearchView struct {
+type BoundSearchView struct {
 	views.BaseView
 	W     http.ResponseWriter
 	R     *http.Request
 	Model *ModelDefinition
 }
 
-func (b *boundSearchView) Setup(w http.ResponseWriter, req *http.Request) (http.ResponseWriter, *http.Request) {
+func (b *BoundSearchView) Setup(w http.ResponseWriter, req *http.Request) (http.ResponseWriter, *http.Request) {
 	b.W = w
 	b.R = req
 
@@ -98,7 +99,14 @@ func (b *boundSearchView) Setup(w http.ResponseWriter, req *http.Request) (http.
 	return w, req
 }
 
-func (b *boundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
+func (b *BoundSearchView) GetList(v *BoundSearchView, objects []attrs.Definer, columns []list.ListColumn[attrs.Definer]) (StringRenderer, error) {
+	if b.Model.ListView.Search.GetList != nil {
+		return b.Model.ListView.Search.GetList(b, objects, columns)
+	}
+	return list.NewList(v.R, objects, columns...), nil
+}
+
+func (b *BoundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
 	var context = NewContext(req, AdminSite, nil)
 	var searchQuery = req.URL.Query().Get("global-search")
 
@@ -176,8 +184,22 @@ func (b *boundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
 		results = pageObject.Results()
 	}
 
-	listObj := list.NewList(req, results, columns...)
+	listObj, err := b.GetList(b, results, columns)
+	if err != nil {
+		return nil, err
+	}
 
+	var contextPage = PageOptions{
+		TitleFn: trans.S(
+			"Search %s", b.Model.PluralLabel(req.Context()),
+		),
+	}
+
+	if m, ok := listObj.(media.MediaDefiner); ok {
+		contextPage.MediaFn = m.Media
+	}
+
+	context.SetPage(contextPage)
 	context.Set("view_list", listObj)
 	context.Set("view_page", page)
 	context.Set("view_paginator", paginator)
@@ -188,11 +210,6 @@ func (b *boundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
 	context.Set("query", searchQuery)
 	context.Set("opts", b.Model.ListView.Search)
 	context.Set("searchable_models", AdminSite.SearchableModels(req))
-	context.SetPage(PageOptions{
-		TitleFn: trans.S(
-			"Search %s", b.Model.PluralLabel(req.Context()),
-		),
-	})
 
 	return context, nil
 }
