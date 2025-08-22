@@ -239,6 +239,26 @@ func NewAppConfig() django.AppConfig {
 				},
 				// Customize the view / fields for the user models' list view.
 				ListView: admin.ListViewOptions{
+					Search: &admin.SearchOptions{
+						Fields: []admin.SearchField{
+							{
+								Name:   "Username",
+								Lookup: expr.LOOKUP_ICONTANS,
+							},
+							{
+								Name:   "Email",
+								Lookup: expr.LOOKUP_ICONTANS,
+							},
+							{
+								Name:   "FirstName",
+								Lookup: expr.LOOKUP_ICONTANS,
+							},
+							{
+								Name:   "LastName",
+								Lookup: expr.LOOKUP_ICONTANS,
+							},
+						},
+					},
 					ViewOptions: admin.ViewOptions{
 						Fields: []string{
 							"ID",
@@ -313,7 +333,7 @@ func NewAppConfig() django.AppConfig {
 				return instance.Email.Address
 			},
 			ListPage: &chooser.ChooserListPage[*User]{
-				SearchFields: []chooser.SearchField[*User]{
+				SearchFields: []admin.SearchField{
 					{
 						Name:   "Username",
 						Lookup: expr.LOOKUP_ICONTANS,

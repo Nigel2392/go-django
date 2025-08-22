@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -13,6 +14,23 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/a-h/templ"
 )
+
+type paginationContextKey struct {
+	v string
+}
+
+var contextKeyPaginator = &paginationContextKey{"paginator"}
+var contextKeyPage = &paginationContextKey{"page"}
+
+func PaginatorFromContext[T attrs.Definer](ctx context.Context) pagination.Pagination[T] {
+	paginator, _ := ctx.Value(contextKeyPaginator).(pagination.Pagination[T])
+	return paginator
+}
+
+func PageFromContext[T any](ctx context.Context) pagination.PageObject[T] {
+	page, _ := ctx.Value(contextKeyPage).(pagination.PageObject[T])
+	return page
+}
 
 type ListColumn[T attrs.Definer] interface {
 	Header() templ.Component
@@ -53,16 +71,12 @@ func (v *View[T]) GetQuerySet(r *http.Request) *queries.QuerySet[T] {
 }
 
 func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
-	var base, err = v.BaseView.GetContext(req)
-	if err != nil {
-		return base, err
-	}
-
 	var (
 		amountValue = req.URL.Query().Get(v.AmountParam)
 		pageValue   = req.URL.Query().Get(v.PageParam)
 		amount      uint64
 		page        uint64
+		err         error
 	)
 	if amountValue == "" {
 		amount = v.DefaultAmount
@@ -70,7 +84,7 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 		amount, err = strconv.ParseUint(amountValue, 10, 64)
 	}
 	if err != nil {
-		return base, err
+		return nil, err
 	}
 
 	if pageValue == "" {
@@ -79,7 +93,7 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 		page, err = strconv.ParseUint(pageValue, 10, 64)
 	}
 	if err != nil {
-		return base, err
+		return nil, err
 	}
 
 	var paginator = &pagination.QueryPaginator[T]{
@@ -90,14 +104,28 @@ func (v *View[T]) GetContext(req *http.Request) (ctx.Context, error) {
 		},
 	}
 
+	pageObject, err := paginator.Page(int(page))
+	if err != nil && !errors.Is(err, errors.NoRows) {
+		return nil, err
+	}
+
+	var ctx = context.WithValue(
+		req.Context(), contextKeyPaginator, paginator,
+	)
+	ctx = context.WithValue(
+		ctx, contextKeyPage, pageObject,
+	)
+
+	req = req.WithContext(ctx)
+
+	base, err := v.BaseView.GetContext(req)
+	if err != nil {
+		return nil, err
+	}
+
 	var cols = v.Columns()
 	if v.TitleFieldColumn != nil && len(cols) > 0 {
 		cols[0] = v.TitleFieldColumn(cols[0])
-	}
-
-	pageObject, err := paginator.Page(int(page))
-	if err != nil && !errors.Is(err, errors.NoRows) {
-		return base, err
 	}
 
 	var results []T

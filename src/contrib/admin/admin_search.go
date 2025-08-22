@@ -1,0 +1,55 @@
+package admin
+
+import (
+	"net/http"
+
+	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+)
+
+type SearchOptions struct {
+	Fields     []SearchField
+	Searchable func(req *http.Request) bool
+	QuerySet   func(req *http.Request) *queries.QuerySet[attrs.Definer]
+}
+
+func (so *SearchOptions) CanSearch(r *http.Request) bool {
+	if so == nil {
+		return false
+	}
+	if so.Searchable == nil {
+		return true
+	}
+	return len(so.Fields) > 0 && so.Searchable(r)
+}
+
+type SearchField struct {
+	Name            string
+	Lookup          string // expr.LOOKUP_EXACT is the default.
+	BuildExpression func(req *http.Request, sf SearchField, value any) expr.Expression
+}
+
+func (sf SearchField) FieldName() string {
+	return sf.Name
+}
+
+func (sf SearchField) FilterName() string {
+	if sf.Lookup == "" {
+		return sf.Name
+	}
+	var b = make([]byte, 0, len(sf.Name)+len(sf.Lookup)+2)
+	b = append(b, sf.Name...)
+	b = append(b, '_')
+	b = append(b, '_')
+	b = append(b, sf.Lookup...)
+	return string(b)
+}
+
+func (sf SearchField) AsExpression(req *http.Request, value any) expr.Expression {
+	if sf.BuildExpression != nil {
+		return sf.BuildExpression(req, sf, value)
+	}
+
+	return expr.Q(sf.FilterName(), value)
+}

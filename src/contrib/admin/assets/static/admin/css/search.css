@@ -1,0 +1,37 @@
+.searchable-models {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+.searchable-models__choices {
+    gap: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    flex-direction: row;
+}
+.searchable-models__choices .searchable-models__separator {
+    text-align: center;
+}
+.searchable-models__form {
+    display: flex;
+    flex-direction: row;
+    max-width: fit-content;
+    border-radius: var(--border-radius, .3125rem);
+}
+.searchable-models__form:has(> .form-field > input:focus) {
+    outline: 2px solid var(--color-link);
+}
+.searchable-models__form > .form-field > input {
+    max-width: 20em;
+    border-radius: var(--border-radius, .3125rem) 0 0 var(--border-radius, .3125rem);
+}
+.searchable-models__form > .form-field > input:focus,
+.searchable-models__form > .form-field > input:focus-visible,
+.searchable-models__form > .form-field > input:focus-within {
+    outline: none;
+}
+.searchable-models__form > button[type="submit"] {
+    height: 100%;
+    border-radius: 0 var(--border-radius, .3125rem) var(--border-radius, .3125rem) 0;
+}

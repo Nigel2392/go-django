@@ -163,6 +163,207 @@ func NewAppConfig(cnf Config) django.AppConfig {
 				Bases: admin.AdminSite.TemplateConfig.Bases,
 				Funcs: admin.AdminSite.TemplateConfig.Funcs,
 			})
+
+			admin.RegisterAdminAppPageComponent("openauth2", newProviderComponent(App))
+
+			admin.RegisterApp(
+				"openauth2",
+				admin.AppOptions{
+					RegisterToAdminMenu: true,
+					EnableIndexView:     true,
+					AppLabel:            trans.S("Authentication and Authorization"),
+					AppDescription: trans.S(
+						"OpenAuth2 is an authentication backend for Go-Django. It allows you to authenticate users using OAuth2 providers such as Google, Facebook, GitHub, etc.",
+					),
+					MenuLabel: trans.S("OAuth 2"),
+					MenuOrder: 995,
+					MenuIcon: func() string {
+						return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shield-exclamation" viewBox="0 0 16 16">
+    <!-- The MIT License (MIT) -->
+    <!-- Copyright (c) 2011-2024 The Bootstrap Authors -->
+	<path d="M5.338 1.59a61 61 0 0 0-2.837.856.48.48 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.7 10.7 0 0 0 2.287 2.233c.346.244.652.42.893.533q.18.085.293.118a1 1 0 0 0 .101.025 1 1 0 0 0 .1-.025q.114-.034.294-.118c.24-.113.547-.29.893-.533a10.7 10.7 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.8 11.8 0 0 1-2.517 2.453 7 7 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7 7 0 0 1-1.048-.625 11.8 11.8 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 63 63 0 0 1 5.072.56"/>
+  	<path d="M7.001 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.553.553 0 0 1-1.1 0z"/>
+</svg>`
+					},
+				},
+				admin.ModelOptions{
+					RegisterToAdminMenu: true,
+					Name:                "users",
+					Model:               &User{},
+					MenuLabel:           trans.S("Users"),
+					DisallowCreate:      true,
+					DisallowDelete:      true,
+					AddView: admin.FormViewOptions{
+						ViewOptions: admin.ViewOptions{},
+					},
+					EditView: admin.FormViewOptions{
+						ViewOptions: admin.ViewOptions{},
+					},
+					ListView: admin.ListViewOptions{
+						PerPage: 20,
+						Search: &admin.SearchOptions{
+							Fields: []admin.SearchField{
+								{
+									Name:   "ID",
+									Lookup: expr.LOOKUP_EXACT,
+								},
+								{
+									Name:   "UniqueIdentifier",
+									Lookup: expr.LOOKUP_ICONTANS,
+								},
+								{
+									Name:   "ProviderName",
+									Lookup: expr.LOOKUP_EXACT,
+								},
+								{
+									Name:   "Data",
+									Lookup: expr.LOOKUP_EXACT,
+								},
+							},
+						},
+						ViewOptions: admin.ViewOptions{
+							Labels: map[string]func(context.Context) string{
+								"ProviderName": trans.S("Provider"),
+							},
+							Fields: []string{
+								"ID",
+								"UniqueIdentifier",
+								"Provider",
+								"TokenType",
+								"IsAdministrator",
+								"IsActive",
+								"HasRefreshToken",
+								"CreatedAt",
+								"UpdatedAt",
+							},
+						},
+						Format: map[string]func(v any) any{
+							"TokenType": func(v any) any {
+								return strings.ToUpper(v.(string))
+							},
+						},
+						Columns: map[string]list.ListColumn[attrs.Definer]{
+							"Provider": list.FuncColumn[attrs.Definer](
+								trans.S("Provider"),
+								func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {
+									var user = row.(*User)
+									var provider, ok = App._cnfs[user.ProviderName]
+									if !ok {
+										return user.ProviderName
+									}
+
+									label, ok := trans.GetText(r.Context(), provider.ProviderInfo.ProviderLabel)
+									if ok {
+										return label
+									}
+
+									return provider.ProviderInfo.Provider
+
+								},
+							),
+							"HasRefreshToken": list.BooleanColumn[attrs.Definer](
+								trans.S("Has Refresh Token"),
+								func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+									return row.(*User).RefreshToken != ""
+								},
+							),
+							"IsActive": list.BooleanColumn[attrs.Definer](
+								trans.S("Is Active"),
+								func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+									return row.(*User).IsActive
+								},
+							),
+							"IsAdministrator": list.BooleanColumn[attrs.Definer](
+								trans.S("Is Admin"),
+								func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+									return row.(*User).IsActive
+								},
+							),
+							"CreatedAt": columns.TimeSinceColumn[attrs.Definer](
+								trans.S("Created"),
+								"CreatedAt",
+							),
+							"UpdatedAt": columns.TimeSinceColumn[attrs.Definer](
+								trans.S("Last Updated"),
+								"UpdatedAt",
+							),
+							"UniqueIdentifier": list.TitleFieldColumn(
+								list.FieldColumn[attrs.Definer](
+									trans.S("Unique Identifier"),
+									"UniqueIdentifier",
+								),
+								func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+									return django.Reverse(
+										"admin:apps:model:edit",
+										"openauth2", "users",
+										row.(*User).ID,
+									)
+								},
+							),
+						},
+					},
+					//	DeleteView: admin.DeleteViewOptions{
+					//
+					//	},
+				},
+				admin.ModelOptions{
+					MenuLabel:           trans.S("Groups"),
+					Name:                "groups",
+					Model:               &users.Group{},
+					RegisterToAdminMenu: true,
+					MenuOrder:           2,
+				},
+				admin.ModelOptions{
+					MenuLabel:           trans.S("Permissions"),
+					Name:                "permissions",
+					Model:               &users.Permission{},
+					RegisterToAdminMenu: true,
+					MenuOrder:           3,
+				},
+			)
+
+			chooser.Register(&chooser.ChooserDefinition[*User]{
+				Title: trans.S("User Chooser"),
+				Model: &User{},
+				PreviewString: func(ctx context.Context, instance *User) string {
+					return instance.UniqueIdentifier
+				},
+				ListPage: &chooser.ChooserListPage[*User]{
+					Fields: []string{
+						"ID",
+						"UniqueIdentifier",
+						"Provider",
+						"IsAdministrator",
+						"IsActive",
+						"CreatedAt",
+					},
+					SearchFields: []admin.SearchField{
+						{
+							Name:   "ID",
+							Lookup: expr.LOOKUP_EXACT,
+						},
+						{
+							Name:   "UniqueIdentifier",
+							Lookup: expr.LOOKUP_ICONTANS,
+						},
+						{
+							Name:   "ProviderName",
+							Lookup: expr.LOOKUP_EXACT,
+						},
+						{
+							Name:   "Data",
+							Lookup: expr.LOOKUP_EXACT,
+						},
+					},
+					QuerySet: func(r *http.Request, model *User) *queries.QuerySet[*User] {
+						var currentUser = authentication.Retrieve(r)
+						var user = currentUser.(*User)
+						return queries.GetQuerySet(&User{}).
+							Filter(expr.Q("ID", user.ID).Not(true)).
+							OrderBy("UniqueIdentifier")
+					},
+				},
+			})
 		}
 
 		return nil
@@ -226,217 +427,6 @@ func NewAppConfig(cnf Config) django.AppConfig {
 			}
 
 			return u.String()
-		},
-		GetInstance: func(ctx context.Context, id interface{}) (interface{}, error) {
-			var instance, err = queries.
-				GetQuerySet(&User{}).
-				WithContext(ctx).
-				Filter("ID", id).
-				Get()
-			if err != nil {
-				return nil, err
-			}
-
-			return instance.Object, nil
-		},
-		GetInstances: func(ctx context.Context, amount, offset uint) ([]interface{}, error) {
-			var instances, err = queries.
-				GetQuerySet(&User{}).
-				WithContext(ctx).
-				Limit(int(amount)).
-				Offset(int(offset)).
-				All()
-			if err != nil {
-				return nil, err
-			}
-
-			var result = make([]interface{}, len(instances))
-			for i, instance := range instances {
-				result[i] = instance.Object
-			}
-
-			return result, nil
-		},
-	})
-
-	admin.RegisterAdminAppPageComponent("openauth2", newProviderComponent(App))
-
-	admin.RegisterApp(
-		"openauth2",
-		admin.AppOptions{
-			RegisterToAdminMenu: true,
-			EnableIndexView:     true,
-			AppLabel:            trans.S("Authentication and Authorization"),
-			AppDescription: trans.S(
-				"OpenAuth2 is an authentication backend for Go-Django. It allows you to authenticate users using OAuth2 providers such as Google, Facebook, GitHub, etc.",
-			),
-			MenuLabel: trans.S("OAuth 2"),
-			MenuOrder: 995,
-			MenuIcon: func() string {
-				return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-shield-exclamation" viewBox="0 0 16 16">
-    <!-- The MIT License (MIT) -->
-    <!-- Copyright (c) 2011-2024 The Bootstrap Authors -->
-	<path d="M5.338 1.59a61 61 0 0 0-2.837.856.48.48 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.7 10.7 0 0 0 2.287 2.233c.346.244.652.42.893.533q.18.085.293.118a1 1 0 0 0 .101.025 1 1 0 0 0 .1-.025q.114-.034.294-.118c.24-.113.547-.29.893-.533a10.7 10.7 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.8 11.8 0 0 1-2.517 2.453 7 7 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7 7 0 0 1-1.048-.625 11.8 11.8 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 63 63 0 0 1 5.072.56"/>
-  	<path d="M7.001 11a1 1 0 1 1 2 0 1 1 0 0 1-2 0M7.1 4.995a.905.905 0 1 1 1.8 0l-.35 3.507a.553.553 0 0 1-1.1 0z"/>
-</svg>`
-			},
-		},
-		admin.ModelOptions{
-			RegisterToAdminMenu: true,
-			Name:                "users",
-			Model:               &User{},
-			MenuLabel:           trans.S("Users"),
-			DisallowCreate:      true,
-			DisallowDelete:      true,
-			AddView: admin.FormViewOptions{
-				ViewOptions: admin.ViewOptions{},
-			},
-			EditView: admin.FormViewOptions{
-				ViewOptions: admin.ViewOptions{},
-			},
-			ListView: admin.ListViewOptions{
-				PerPage: 20,
-				ViewOptions: admin.ViewOptions{
-					Labels: map[string]func(context.Context) string{
-						"ProviderName": trans.S("Provider"),
-					},
-					Fields: []string{
-						"ID",
-						"UniqueIdentifier",
-						"Provider",
-						"TokenType",
-						"IsAdministrator",
-						"IsActive",
-						"HasRefreshToken",
-						"CreatedAt",
-						"UpdatedAt",
-					},
-				},
-				Format: map[string]func(v any) any{
-					"TokenType": func(v any) any {
-						return strings.ToUpper(v.(string))
-					},
-				},
-				Columns: map[string]list.ListColumn[attrs.Definer]{
-					"Provider": list.FuncColumn[attrs.Definer](
-						trans.S("Provider"),
-						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {
-							var user = row.(*User)
-							var provider, ok = App._cnfs[user.ProviderName]
-							if !ok {
-								return user.ProviderName
-							}
-
-							label, ok := trans.GetText(r.Context(), provider.ProviderInfo.ProviderLabel)
-							if ok {
-								return label
-							}
-
-							return provider.ProviderInfo.Provider
-
-						},
-					),
-					"HasRefreshToken": list.BooleanColumn[attrs.Definer](
-						trans.S("Has Refresh Token"),
-						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-							return row.(*User).RefreshToken != ""
-						},
-					),
-					"IsActive": list.BooleanColumn[attrs.Definer](
-						trans.S("Is Active"),
-						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-							return row.(*User).IsActive
-						},
-					),
-					"IsAdministrator": list.BooleanColumn[attrs.Definer](
-						trans.S("Is Admin"),
-						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-							return row.(*User).IsActive
-						},
-					),
-					"CreatedAt": columns.TimeSinceColumn[attrs.Definer](
-						trans.S("Created"),
-						"CreatedAt",
-					),
-					"UpdatedAt": columns.TimeSinceColumn[attrs.Definer](
-						trans.S("Last Updated"),
-						"UpdatedAt",
-					),
-					"UniqueIdentifier": list.TitleFieldColumn(
-						list.FieldColumn[attrs.Definer](
-							trans.S("Unique Identifier"),
-							"UniqueIdentifier",
-						),
-						func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-							return django.Reverse(
-								"admin:apps:model:edit",
-								"openauth2", "users",
-								row.(*User).ID,
-							)
-						},
-					),
-				},
-			},
-			//	DeleteView: admin.DeleteViewOptions{
-			//
-			//	},
-		},
-		admin.ModelOptions{
-			MenuLabel:           trans.S("Groups"),
-			Name:                "groups",
-			Model:               &users.Group{},
-			RegisterToAdminMenu: true,
-			MenuOrder:           2,
-		},
-		admin.ModelOptions{
-			MenuLabel:           trans.S("Permissions"),
-			Name:                "permissions",
-			Model:               &users.Permission{},
-			RegisterToAdminMenu: true,
-			MenuOrder:           3,
-		},
-	)
-
-	chooser.Register(&chooser.ChooserDefinition[*User]{
-		Title: trans.S("User Chooser"),
-		Model: &User{},
-		PreviewString: func(ctx context.Context, instance *User) string {
-			return instance.UniqueIdentifier
-		},
-		ListPage: &chooser.ChooserListPage[*User]{
-			Fields: []string{
-				"ID",
-				"UniqueIdentifier",
-				"Provider",
-				"IsAdministrator",
-				"IsActive",
-				"CreatedAt",
-			},
-			SearchFields: []chooser.SearchField[*User]{
-				{
-					Name:   "ID",
-					Lookup: expr.LOOKUP_EXACT,
-				},
-				{
-					Name:   "UniqueIdentifier",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-				{
-					Name:   "ProviderName",
-					Lookup: expr.LOOKUP_EXACT,
-				},
-				{
-					Name:   "Data",
-					Lookup: expr.LOOKUP_EXACT,
-				},
-			},
-			QuerySet: func(r *http.Request, model *User) *queries.QuerySet[*User] {
-				var currentUser = authentication.Retrieve(r)
-				var user = currentUser.(*User)
-				return queries.GetQuerySet(&User{}).
-					Filter(expr.Q("ID", user.ID).Not(true)).
-					OrderBy("UniqueIdentifier")
-			},
 		},
 	})
 

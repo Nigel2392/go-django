@@ -51,7 +51,7 @@ func (v *ChooserFormPage[T]) GetTemplate(req *http.Request) string {
 }
 
 //go:linkname newInstanceView github.com/Nigel2392/go-django/src/contrib/admin.newInstanceView
-func newInstanceView(tpl string, instance attrs.Definer, opts admin.FormViewOptions, app *admin.AppDefinition, model *admin.ModelDefinition, r *http.Request) *views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]
+func newInstanceView(tpl string, instance attrs.Definer, opts admin.FormViewOptions, app *admin.AppDefinition, model *admin.ModelDefinition, r *http.Request, p *admin.PageOptions) *views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]
 
 func (v *ChooserFormPage[T]) Bind(w http.ResponseWriter, req *http.Request) (views.View, error) {
 	var modelObj = attrs.NewObject[T](
@@ -65,6 +65,7 @@ func (v *ChooserFormPage[T]) Bind(w http.ResponseWriter, req *http.Request) (vie
 			v._Definition.AdminApp,
 			v._Definition.AdminModel,
 			req,
+			nil,
 		),
 		View:           v,
 		ResponseWriter: w,

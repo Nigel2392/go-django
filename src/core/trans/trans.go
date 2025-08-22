@@ -44,6 +44,17 @@ func S(v Untranslated, args ...any) func(ctx context.Context) Translation {
 	}
 }
 
+// SP is a shortcut for pluralizing a string with the default backend.
+//
+// It returns a function that can be used in templates to pluralize the string.
+// The function takes a context, singular and plural forms, and a count.
+// It returns a Translation (alias for string) that can be used in templates.
+func SP(singular, plural Untranslated, n any, args ...any) func(ctx context.Context) Translation {
+	return func(ctx context.Context) Translation {
+		return P(ctx, singular, plural, n, args...)
+	}
+}
+
 // T translates a string with the default backend.
 //
 // It returns a Translation (alias for string) that can be used in templates.

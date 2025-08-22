@@ -7,7 +7,10 @@ import (
 	"path/filepath"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
+	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -156,6 +159,7 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 		RegisterToAdminMenu: true,
 		Model:               &Document{},
 		Name:                "document",
+		MenuOrder:           15,
 		MenuLabel:           trans.S("Documents"),
 		MenuIcon: func(ctx context.Context) string {
 			return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-folder2-open" viewBox="0 0 16 16">
@@ -207,7 +211,7 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 			PerPage: 25,
 			ViewOptions: admin.ViewOptions{
 				Fields: []string{
-					"Title", "FileName", "CreatedAt", "Size", "FileHash",
+					"Title", "FileName", "Size", "CreatedAt", "FileHash",
 				},
 			},
 			GetQuerySet: func(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) *queries.QuerySet[attrs.Definer] {
@@ -220,6 +224,10 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 						var doc = row.(*Document)
 						return filepath.Base(doc.Path)
 					},
+				),
+				"CreatedAt": columns.TimeSinceColumn[attrs.Definer](
+					trans.S("Created"),
+					"CreatedAt",
 				),
 				"Size": list.FuncColumn(
 					trans.S("Size"),
@@ -240,6 +248,22 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 						}
 					},
 				),
+			},
+			Filters: []filters.FilterSpec[attrs.Definer]{
+				&filters.BaseFilterSpec[*queries.QuerySet[attrs.Definer]]{
+					SpecName:  "search",
+					FormField: fields.CharField(fields.HelpText(trans.S("Search by title or URL path"))),
+					Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[attrs.Definer]) (*queries.QuerySet[attrs.Definer], error) {
+						if fields.IsZero(value) {
+							return object, nil
+						}
+
+						return object.Filter(expr.Or(
+							expr.Q("Title__icontains", value),
+							expr.Q("Path__icontains", value),
+						)), nil
+					},
+				},
 			},
 		},
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/components"
+	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -30,36 +31,6 @@ var (
 
 type Renderable interface {
 	Render() string
-}
-
-type SearchField[T attrs.Definer] struct {
-	Name            string
-	Lookup          string // expr.LOOKUP_EXACT is the default.
-	BuildExpression func(req *http.Request, sf SearchField[T], value any) expr.Expression
-}
-
-func (sf SearchField[T]) FieldName() string {
-	return sf.Name
-}
-
-func (sf SearchField[T]) FilterName() string {
-	if sf.Lookup == "" {
-		return sf.Name
-	}
-	var b = make([]byte, 0, len(sf.Name)+len(sf.Lookup)+2)
-	b = append(b, sf.Name...)
-	b = append(b, '_')
-	b = append(b, '_')
-	b = append(b, sf.Lookup...)
-	return string(b)
-}
-
-func (sf SearchField[T]) AsExpression(req *http.Request, value any) expr.Expression {
-	if sf.BuildExpression != nil {
-		return sf.BuildExpression(req, sf, value)
-	}
-
-	return expr.Q(sf.FilterName(), value)
 }
 
 type ChooserListPage[T attrs.Definer] struct {
@@ -97,7 +68,7 @@ type ChooserListPage[T attrs.Definer] struct {
 	QuerySet func(r *http.Request, model T) *queries.QuerySet[T]
 
 	// SearchFields are the fields to search in the list view.
-	SearchFields []SearchField[T]
+	SearchFields []admin.SearchField
 
 	// NewList returns a new list object to render in the list view.
 	NewList func(req *http.Request, results []T, def *ChooserDefinition[T]) any

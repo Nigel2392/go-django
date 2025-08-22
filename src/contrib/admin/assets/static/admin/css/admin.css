@@ -145,6 +145,14 @@ h6 {
     margin-top: 0;
     margin-bottom: .5rem;
 }
+.noselect {
+  -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+     -khtml-user-select: none; /* Konqueror HTML */
+       -moz-user-select: none; /* Old versions of Firefox */
+        -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Non-prefixed version, currently supported by Chrome, Edge, Opera and Firefox */
+}
 a {
     color: var(--color-link);
     text-decoration: none;
@@ -381,6 +389,40 @@ a.danger {
     margin-bottom: 1em;
     gap: 0.75em;
 }
+.header {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1em;
+}
+/*
+order is changed above 70em to reverse the title and button elements
+flex-direction is set to row above 70em.
+*/
+.header.header-inline {
+    gap: 0.5em;
+}
+.header__actions {
+    display: flex;
+    flex-direction: row;
+    gap: 0.5em;
+}
+.header__actions__item {
+
+}
+.header__content {
+    display: flex;
+    flex-direction: column;
+}
+.header.header-inline .header__content h1,
+.header.header-inline .header__content h2,
+.header.header-inline .header__content h3,
+.header.header-inline .header__content h4,
+.header.header-inline .header__content h5,
+.header.header-inline .header__content h6 {
+    margin: 0;
+}
+/* .header__content__title */
+/* .header__content__subtitle */
 .buttons {
     display: flex;
     flex-direction: row;
@@ -777,6 +819,22 @@ a.button, .button a {
 @media screen and (min-width: 70em) {
     #main #content-wrapper #content {
         padding: 1.5em 4em;
+    }
+    .header.header-inline {
+        flex-direction: row;
+        flex-wrap: nowrap;
+    }
+    .header.header-inline .header__content,
+    .header.header-inline .header__content .heading__title {
+        overflow: hidden;
+        text-wrap: nowrap;
+        text-overflow: ellipsis;
+    }
+    .header.header-inline > *:first-child {
+        order: 2;
+    }
+    .header.header-inline > *:last-child {
+        order: 1;
     }
 }
 

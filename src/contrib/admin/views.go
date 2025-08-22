@@ -8,7 +8,9 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -97,6 +99,16 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		return
 	}
 
+	if model.DisallowList {
+		messages.Error(r, trans.T(r.Context(), "This model does not allow listing"))
+		autherrors.Fail(
+			http.StatusForbidden,
+			trans.T(r.Context(), "This model does not allow listing"),
+			django.Reverse("admin:home"),
+		)
+		return
+	}
+
 	if model.ListView.GetHandler != nil {
 		var err = views.Invoke(model.ListView.GetHandler(adminSite, app, model), w, r)
 		except.AssertNil(err, 500, err)
@@ -113,6 +125,34 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		amount = 25
 	}
 
+	var qs *queries.QuerySet[attrs.Definer]
+	if model.ListView.GetQuerySet != nil {
+		qs = model.ListView.GetQuerySet(adminSite, app, model)
+	} else {
+		qs = queries.GetQuerySet(model.NewInstance())
+	}
+	if len(model.ListView.Prefetch.SelectRelated) > 0 {
+		qs = qs.SelectRelated(model.ListView.Prefetch.SelectRelated...)
+	}
+	if len(model.ListView.Prefetch.PrefetchRelated) > 0 {
+		qs = qs.Preload(model.ListView.Prefetch.PrefetchRelated...)
+	}
+
+	var filterForm *filters.Filters[attrs.Definer]
+	if len(model.ListView.Filters) > 0 {
+		filterForm = filters.NewFilters[attrs.Definer](r.Context(), "filters")
+		for _, f := range model.ListView.Filters {
+			filterForm.Add(f)
+		}
+
+		var err error
+		qs, err = filterForm.Filter(r, r.URL.Query(), qs)
+		if err != nil {
+			except.AssertNil(err, 500, err)
+			return
+		}
+	}
+
 	var view = &list.View[attrs.Definer]{
 		ListColumns:   columns,
 		DefaultAmount: amount,
@@ -121,25 +161,43 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 			BaseTemplateKey: BASE_KEY,
 			TemplateName:    "admin/views/models/list.tmpl",
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
+
+				var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())
+				var count, err = paginator.Count()
+				if err != nil {
+					return nil, err
+				}
+
 				var context = NewContext(req, adminSite, nil)
+				context.SetPage(PageOptions{
+					TitleFn: trans.S(
+						"%s List (%d)",
+						model.Label(r.Context()),
+						count,
+					),
+					Buttons: []components.ShowableComponent{
+						components.NewShowableComponent(
+							req, func(r *http.Request) bool {
+								return !model.DisallowCreate && permissions.HasObjectPermission(r, model.NewInstance(), "admin:add")
+							},
+							components.Link(components.ButtonConfig{
+								Text: trans.T(req.Context(), "Add"),
+								Type: components.ButtonTypePrimary,
+							}, func() string {
+								return django.Reverse("admin:apps:model:add", app.Name, model.GetName())
+							}),
+						),
+					},
+				})
 				context.Set("app", app)
 				context.Set("model", model)
+				if filterForm != nil {
+					context.Set("filter", filterForm)
+				}
 				return context, nil
 			},
 		},
 		QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
-			var qs *queries.QuerySet[attrs.Definer]
-			if model.ListView.GetQuerySet != nil {
-				qs = model.ListView.GetQuerySet(adminSite, app, model)
-			} else {
-				qs = queries.GetQuerySet(model.NewInstance())
-			}
-			if len(model.ListView.Prefetch.SelectRelated) > 0 {
-				qs = qs.SelectRelated(model.ListView.Prefetch.SelectRelated...)
-			}
-			if len(model.ListView.Prefetch.PrefetchRelated) > 0 {
-				qs = qs.Preload(model.ListView.Prefetch.PrefetchRelated...)
-			}
 			return qs
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
@@ -183,7 +241,10 @@ var ModelAddHandler = func(w http.ResponseWriter, r *http.Request, adminSite *Ad
 		except.AssertNil(err, 500, err)
 		return
 	}
-	var addView = newInstanceView("add", instance, model.AddView, app, model, r)
+
+	var addView = newInstanceView("add", instance, model.AddView, app, model, r, &PageOptions{
+		TitleFn: trans.S("Add %s", model.Label(r.Context())),
+	})
 	views.Invoke(addView, w, r)
 	// if err := views.Invoke(addView, w, r); err != nil {
 	// panic(err)
@@ -212,7 +273,9 @@ var ModelEditHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		return
 	}
 
-	var editView = newInstanceView("edit", instance, model.EditView, app, model, r)
+	var editView = newInstanceView("edit", instance, model.EditView, app, model, r, &PageOptions{
+		TitleFn: trans.S("Edit %s", model.Label(r.Context())),
+	})
 	views.Invoke(editView, w, r)
 	// if err := views.Invoke(editView, w, r); err != nil {
 	// panic(err)
@@ -496,7 +559,7 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 	return form
 }
 
-func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) *views.FormView[*AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]] {
+func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request, page *PageOptions) *views.FormView[*AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]] {
 
 	var definer = instance.FieldDefs()
 	var primary = definer.Primary()
@@ -512,6 +575,10 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				context.Set("model", model)
 				context.Set("instance", instance)
 				context.Set("primaryField", primary)
+
+				if page != nil {
+					context.SetPage(*page)
+				}
 
 				var next = r.URL.Query().Get("next")
 				if next != "" {

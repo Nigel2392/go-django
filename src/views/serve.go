@@ -134,7 +134,7 @@ func Serve(view View) http.Handler {
 
 	assert.True(
 		len(allowedFnMethods) > 0,
-		"View must have at least one Serve method defined, I.E. ServeGET, ServePOST, etc...",
+		"View must have at least one Serve[GET|POST|...] method defined or implement MethodsView",
 	)
 
 	var allowedMethods []string

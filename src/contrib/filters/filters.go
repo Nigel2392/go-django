@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -22,11 +23,11 @@ type FilterSpec[T attrs.Definer] interface {
 	// This is commented out due to it not being required.
 	// Label() string
 
-	// Field returns the field of the filter.
-	Field() fields.Field
+	// Field returns the form field of the filter.
+	Field(r *http.Request) fields.Field
 
 	// Filter filters the object list.
-	Filter(value interface{}, object *queries.QuerySet[T]) (*queries.QuerySet[T], error)
+	Filter(r *http.Request, value interface{}, object *queries.QuerySet[T]) (*queries.QuerySet[T], error)
 }
 
 var _ ctx.Editor = &Filters[attrs.Definer]{}
@@ -75,9 +76,9 @@ func (f *Filters[T]) EditContext(key string, c ctx.Context) {
 	c.Set(fmt.Sprintf("%s_form", key), f.Form())
 }
 
-var FormError = errors.New("form is not valid")
+var ErrForm = errors.New("form is not valid")
 
-func (f *Filters[T]) Filter(data map[string][]string, object *queries.QuerySet[T]) (*queries.QuerySet[T], error) {
+func (f *Filters[T]) Filter(r *http.Request, data map[string][]string, object *queries.QuerySet[T]) (*queries.QuerySet[T], error) {
 	f.form.Reset()
 
 	f.form.FormFields = orderedmap.NewOrderedMap[string, fields.Field]()
@@ -85,7 +86,7 @@ func (f *Filters[T]) Filter(data map[string][]string, object *queries.QuerySet[T
 
 	for front := f.specs.Front(); front != nil; front = front.Next() {
 		var spec = front.Value
-		var field = spec.Field()
+		var field = spec.Field(r)
 		f.form.AddField(spec.Name(), field)
 	}
 
@@ -111,7 +112,7 @@ func (f *Filters[T]) Filter(data map[string][]string, object *queries.QuerySet[T
 
 		errList = append(
 			errList,
-			FormError,
+			ErrForm,
 		)
 
 		return object, errors.Join(errList...)
@@ -126,7 +127,7 @@ func (f *Filters[T]) Filter(data map[string][]string, object *queries.QuerySet[T
 		}
 
 		var err error
-		object, err = spec.Filter(value, object)
+		object, err = spec.Filter(r, value, object)
 		if err != nil {
 			return nil, errors.Join(
 				err,

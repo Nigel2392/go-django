@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
@@ -171,7 +172,7 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*PageNode]]{
 		SpecName:  "search",
 		FormField: fields.CharField(fields.HelpText(trans.S("Search by title or URL path"))),
-		Apply: func(value interface{}, object *queries.QuerySet[*PageNode]) (*queries.QuerySet[*PageNode], error) {
+		Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*PageNode]) (*queries.QuerySet[*PageNode], error) {
 			if fields.IsZero(value) {
 				return object, nil
 			}
@@ -204,7 +205,7 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 				}
 			})),
 		),
-		Apply: func(value interface{}, object *queries.QuerySet[*PageNode]) (*queries.QuerySet[*PageNode], error) {
+		Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*PageNode]) (*queries.QuerySet[*PageNode], error) {
 			if fields.IsZero(value) {
 				return object, nil
 			}
@@ -263,7 +264,7 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 					return opts
 				}, options.IncludeBlank(true)),
 			)),
-		Apply: func(value interface{}, object *queries.QuerySet[*PageNode]) (*queries.QuerySet[*PageNode], error) {
+		Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*PageNode]) (*queries.QuerySet[*PageNode], error) {
 			if fields.IsZero(value) {
 				return object, nil
 			}
@@ -284,8 +285,8 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		return
 	}
 
-	qs, err = filter.Filter(r.URL.Query(), qs)
-	if err != nil && !errors.Is(err, filters.FormError) {
+	qs, err = filter.Filter(r, r.URL.Query(), qs)
+	if err != nil && !errors.Is(err, filters.ErrForm) {
 		except.Fail(http.StatusInternalServerError, err)
 		return
 	}
@@ -418,14 +419,63 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 					contentType.Label(r.Context()),
 				)
 
-				var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
+				var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())
+				var count, err = paginator.Count()
+				if err != nil {
+					return nil, err
+				}
+
+				breadcrumbs, err := getPageBreadcrumbs(r, p, false)
 				if err != nil {
 					return nil, err
 				}
 				context.SetPage(admin.PageOptions{
 					BreadCrumbs: breadcrumbs,
 					Actions:     getPageActions(r, p),
+					TitleFn: trans.SP(
+						"%s %q (%d child)",
+						"%s %q (%d children)",
+						count,
+						contentType.Label(r.Context()),
+						p.Title, count,
+					),
+					Buttons: []components.ShowableComponent{
+						components.NewShowableComponent(
+							req, func(r *http.Request) bool {
+								return permissions.HasObjectPermission(r, p, "pages:add")
+							},
+							components.Link(components.ButtonConfig{
+								Text: trans.T(req.Context(), "Add Child Page"),
+								Type: components.ButtonTypePrimary,
+							}, func() string {
+								return django.Reverse("admin:pages:type", p.PK)
+							}),
+						),
+						components.NewShowableComponent(
+							req, func(r *http.Request) bool {
+								return permissions.HasObjectPermission(r, p, "pages:edit")
+							},
+							components.Link(components.ButtonConfig{
+								Text: trans.T(req.Context(), "Edit Page"),
+								Type: components.ButtonTypePrimary,
+							}, func() string {
+								return django.Reverse("admin:pages:edit", p.PK)
+							}),
+						),
+						components.NewShowableComponent(
+							req, func(r *http.Request) bool {
+								return permissions.HasObjectPermission(r, p, "pages:delete")
+							},
+							components.Link(components.ButtonConfig{
+								Text: trans.T(req.Context(), "Delete Page"),
+								Type: components.ButtonTypeDanger | components.ButtonTypeHollow,
+							}, func() string {
+								return django.Reverse("admin:pages:delete", p.PK)
+							}),
+						),
+					},
 				})
+
 				return context, nil
 			},
 		},

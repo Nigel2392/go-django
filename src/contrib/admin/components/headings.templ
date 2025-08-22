@@ -42,29 +42,37 @@ templ Heading6(text string) {
     @Heading(6, text)
 }
 
-templ Header(lvel int, headingText, subText string, components ...templ.Component) {
+templ Header(lvel int, headingText, subText string, components ...ShowableComponent) {
     {{ subtitleLevel := lvel + 2 }}
     {{ if subtitleLevel > 6 { subtitleLevel = 6 } }}
-    <header class="header">
-        <div class="header-content">
-            @Heading(uint8(lvel), headingText)
+    {{ var className = []string{"header"} }}
+    if subText == "" && len(components) > 0 {
+        {{ className = append(className, "header-inline") }}
+    }
+    <header class={ className }>
+        <div class="header__content">
+            <div class="header__content__title">
+                @Heading(uint8(lvel), headingText)
+            </div>
+
+            if subText != "" {
+                <div class="header__content__subtitle">
+                    @Heading(uint8(subtitleLevel), subText)
+                </div>
+            }
         </div>
 
         if len(components) > 0 {
-            <div class="header-content-row">
-                <div class="header-content">
-                    for _, component := range components {
-                        <div class="header-content__item">
-                            @component
-                        </div>
+            <div class="header__actions">
+                for _, component := range components {
+                    if !component.IsShown() {
+                        {{ continue }}
                     }
-                </div>
-            </div>
-        }
-        
-        if subText != "" {
-            <div class="header-sub-content">
-                @Heading(uint8(subtitleLevel), subText)
+
+                    <div class="header__actions__item">
+                        @component
+                    </div>
+                }
             </div>
         }
     </header>

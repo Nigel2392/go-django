@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms/media"
@@ -33,6 +34,7 @@ type PageOptions struct {
 	MediaFn     func() media.Media
 	BreadCrumbs []BreadCrumb
 	Actions     []Action
+	Buttons     []components.ShowableComponent
 }
 
 func (p *PageOptions) Title() string {

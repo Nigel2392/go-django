@@ -106,7 +106,8 @@ func (a *AppDefinition) Register(opts ModelOptions) *ModelDefinition {
 	)
 	assert.True(
 		cType != nil,
-		"Model must have a registered content type definition",
+		"Model %T must have a registered content type definition",
+		opts.Model,
 	)
 
 	var model = &ModelDefinition{

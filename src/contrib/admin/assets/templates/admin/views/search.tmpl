@@ -1,0 +1,59 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ .Page.Title }}{{ end }}
+
+{{ define "extra_css" }}
+    <link rel="stylesheet" href="{{ static "admin/css/search.css" }}">
+    {{ range $css := .Page.Media.CSS }}
+        {{ $css }}
+    {{ end }}
+{{ end }}
+
+{{ define "extra_js" }}
+    {{ range $js := .Page.Media.JS }}
+        {{ $js }}
+    {{ end }}
+{{ end }}
+
+{{ define "content" }}
+
+    <div class="searchable-models">
+        {{ $searchableModels := (.Get "searchable_models") }}
+        {{ $searchQuery := (.Get "query") }}
+        {{ $data := .Data }}
+        {{ $req := .Request }}
+
+        <form action="{{ url "admin:search" }}" method="get" class="searchable-models__form">
+            <div class="form-field">
+                <input type="text" name="global-search" value="{{ $searchQuery }}" placeholder="{{ T "Search..." }}">
+            </div>
+            <button type="submit" class="button secondary">{{ T "Search" }}</button>
+        </form>
+    
+        <div class="searchable-models__choices">
+            {{ range $i, $model := $searchableModels }}
+                {{ if gt $i 0 }}
+                    <span class="searchable-models__separator noselect">|</span>
+                {{ end }}
+                
+                {{ $isActive := (and (eq $model.GetName $data.model.GetName) (eq $model.App.Name $data.app.Name)) }}
+                <a class="link {{ if $isActive }}secondary{{ else }}warning{{ end }}" href="{{ url "admin:search" }}?global-search={{ $searchQuery|urlquery }}&content_type={{ $model.TypeName|urlquery }}">
+                    {{ $model.PluralLabel $req.Context }}
+                </a>
+            {{ end }}
+        </div>
+    </div>
+
+    <div class="list-root">
+        <div class="list-wrapper">
+
+            {{ $list := (.Get "view_list") }}
+            {{ safe $list.Render }}
+
+            <div class="list-paginator">
+                {{ (.Data.view_paginator_object).HTML "page" 5 .Request.URL.Query }}
+            </div>
+        </div>
+    </div>
+
+{{ end }}

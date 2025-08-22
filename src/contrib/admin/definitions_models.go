@@ -6,6 +6,7 @@ import (
 	"reflect"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/checks"
@@ -130,6 +131,12 @@ type ListViewOptions struct {
 	// would uppercase the value of the "Name" field in the list view.
 	Format map[string]func(v any) any
 
+	// Filters are filters that can be used to filter the results of the ListView
+	Filters []filters.FilterSpec[attrs.Definer]
+
+	// Search are options to configure the search functionality for the list view.
+	Search *SearchOptions
+
 	// GetHandler is a function that returns a views.View for the model.
 	//
 	// This allows you to have full control over the view used for listing the models.
@@ -251,6 +258,11 @@ type ModelOptions struct {
 	// This is used for the model's label in the admin.
 	MenuLabel func(ctx context.Context) string
 
+	// DisallowList is a flag that determines if the model should be disallowed from being listed.
+	//
+	// This is used to prevent the model from being listed in the admin.
+	DisallowList bool
+
 	// DisallowCreate is a flag that determines if the model should be disallowed from being created.
 	//
 	// This is used to prevent the model from being created in the admin.
@@ -348,6 +360,10 @@ func (o *ModelDefinition) Label(ctx context.Context) string {
 
 func (o *ModelDefinition) PluralLabel(ctx context.Context) string {
 	return o._cType.PluralLabel(ctx)
+}
+
+func (o *ModelDefinition) TypeName() string {
+	return o._cType.ContentType().ShortTypeName()
 }
 
 func (o *ModelDefinition) getMenuLabel(ctx context.Context) string {

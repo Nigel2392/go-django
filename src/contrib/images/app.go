@@ -102,6 +102,7 @@ func NewAppConfig(opts *Options) *AppConfig {
 			"images",
 			admin.AppOptions{
 				RegisterToAdminMenu: true,
+				MenuOrder:           10,
 				AppLabel:            trans.S("Images"),
 				MenuLabel:           trans.S("Images"),
 			},
@@ -124,7 +125,7 @@ func NewAppConfig(opts *Options) *AppConfig {
 			},
 			ListPage: &chooser.ChooserListPage[*Image]{
 				Template: "images/images_chooser_list.tmpl",
-				SearchFields: []chooser.SearchField[*Image]{
+				SearchFields: []admin.SearchField{
 					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
 					{Name: "Path", Lookup: expr.LOOKUP_ICONTANS},
 				},

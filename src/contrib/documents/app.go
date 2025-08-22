@@ -108,6 +108,7 @@ func NewAppConfig(opts *Options) *AppConfig {
 			"documents",
 			admin.AppOptions{
 				RegisterToAdminMenu: true,
+				MenuOrder:           15,
 				AppLabel:            trans.S("Documents"),
 				MenuLabel:           trans.S("Documents"),
 			},
@@ -132,7 +133,7 @@ func NewAppConfig(opts *Options) *AppConfig {
 				QuerySet: func(r *http.Request, model *Document) *queries.QuerySet[*Document] {
 					return queries.GetQuerySet(model).OrderBy("-CreatedAt")
 				},
-				SearchFields: []chooser.SearchField[*Document]{
+				SearchFields: []admin.SearchField{
 					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
 					{Name: "Path", Lookup: expr.LOOKUP_ICONTANS},
 				},

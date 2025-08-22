@@ -80,8 +80,8 @@
                             {{ $Title := $Page.Title }}
                             {{ $Subtitle := $Page.Subtitle }}
                 
-                            {{ if (or $Title $Subtitle) }}
-                                {{ component "admin.header" 1 $Title $Subtitle }}
+                            {{ if (and (or $Title $Subtitle)) }}
+                                {{ component "admin.header" 1 $Title $Subtitle $Page.Buttons }}
                             {{ end }}
                         {{ end }}
                     {{ end }}

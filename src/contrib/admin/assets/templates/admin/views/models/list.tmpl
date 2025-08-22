@@ -2,28 +2,65 @@
 
 {{ define "title" }}{{ T "List %s" (.Get "model").PluralLabel }}{{ end }}
 
+{{ if .Data.filter_form }}
+    {{ define "extra_css" }}
+        {{ $Media := .Data.filter_form.Media }}
+        {{ range $css := $Media.CSS }}
+            {{ $css }}
+        {{ end }}
+    {{ end }}
+
+    {{ define "extra_js" }}
+        {{ $Media := .Data.filter_form.Media }}
+        {{ range $js := $Media.JS }}
+            {{ $js }}
+        {{ end }}
+    {{ end }}
+{{ end }}
+
 {{ define "content" }}
-    {{ block "heading" . }}
-        {{ $app := (.Get "app") }}
-        {{ $model := (.Get "model") }}
-        <div class="view-header">
-            {{ if (and (not $model.DisallowCreate) (has_object_perm  $model.NewInstance "admin:add")) }}
-                <div class="buttons">
-                    <a href="{{ url "admin:apps:model:add" $app.Name $model.GetName }}" class="button primary">{{ T "Add" }}</a>
-                </div>
-            {{ end }}
-            <div class="title-text">
-                <h1>{{ T "%s List" $model.Label }} ({{if .Data.view_paginator_object}}{{ (.Data.view_paginator_object).Count }}{{else}}0{{end}})</h1>
+    <div class="list-root">
+
+        <div class="list-wrapper">
+            {{ $list := (.Get "view_list") }}
+            {{ safe $list.Render }}
+
+            <div class="list-paginator">
+                {{ (.Data.view_paginator_object).HTML "page" 5 .Request.URL.Query }}
             </div>
         </div>
-    {{ end }}
-    
-    <div class="list-wrapper">
-        {{ $list := (.Get "view_list") }}
-        {{ safe $list.Render }}
+
+        {{ if .Data.filter_form }}
+            <form method="get" action="{{ printf "%s?page=%d" .Request.URL.Path (.Data.view_paginator_object).PageNum }}" class="form list-filters">
+                {{ $errorList := .Data.filter_form.ErrorList }}
+                {{ if (gt (len $errorList) 0) }}
+                    <ul class="error-list">
+                        {{ range $Error := $errorList }}
+                            <li class="error"><p>{{ $Error }}</p></li>
+                        {{ end }}
+                    </ul>
+                {{ end }}
+                {{ range $Field := .Data.filter_form.Fields }}        
+                    <div class="panel">
+                        <div class="form-field">
+                            {{ $Field.Label }}
+                            {{ if (gt (len $Field.Errors) 0) }}
+                                <ul class="error-list">
+                                    {{ range $Error := $Field.Errors }}
+                                        <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
+                                    {{ end }}
+                                </ul>
+                            {{ end }}
+                            {{ if (ne $Field.HelpText "") }}
+                                <p class="help-text">{{ $Field.HelpText }}</p>
+                            {{ end }}
+                            {{ $Field.Field }}
+                        </div>
+                    </div>
+                {{ end }}
+                <input class="button secondary hollow sm" type="submit" value="{{ T "Submit" }}">
+            </form>
+        {{ end }}
     </div>
-    
-    <div class="list-paginator">
-        {{ (.Data.view_paginator_object).HTML "page" 5 .Request.URL.Query }}
-    </div>
+
 {{ end }}

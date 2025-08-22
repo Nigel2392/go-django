@@ -8,6 +8,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
@@ -56,17 +57,35 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: admin.BASE_KEY,
-			TemplateName:    "pages/admin/admin_list_root.tmpl",
+			TemplateName:    "pages/admin/admin_list.tmpl",
 			GetContextFn: func(req *http.Request) (ctx.Context, error) {
 				var context = admin.NewContext(
 					req, admin.AdminSite, nil,
 				)
 
+				var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())
+				var count, err = paginator.Count()
+				if err != nil {
+					return nil, err
+				}
+
 				context.Set("app", a)
 				context.Set("model", m)
 				context.SetPage(admin.PageOptions{
-					TitleFn:    trans.S("Root Pages"),
-					SubtitleFn: trans.S("View all root pages"),
+					TitleFn: trans.S("Root Pages (%d)", count),
+					Buttons: []components.ShowableComponent{
+						components.NewShowableComponent(
+							req, func(r *http.Request) bool {
+								return permissions.HasObjectPermission(r, m.NewInstance(), "pages:add")
+							},
+							components.Link(components.ButtonConfig{
+								Text: trans.T(req.Context(), "Add Root Page"),
+								Type: components.ButtonTypePrimary,
+							}, func() string {
+								return django.Reverse("admin:pages:root_type")
+							}),
+						),
+					},
 				})
 
 				return context, nil

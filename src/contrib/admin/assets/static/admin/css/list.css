@@ -1,5 +1,21 @@
+.list-root {
+    display: flex;
+    flex-direction: row;
+    gap: 1rem;
+}
 .list-wrapper {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+.list-wrapper__content {
     overflow-x: auto;
+}
+.list-root .list-filters {
+    display: flex;
+    flex-direction: column;
+    min-width: 300px;
+    padding: 1rem;
 }
 table.list {
     border-collapse: collapse;

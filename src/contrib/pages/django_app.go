@@ -229,7 +229,7 @@ func NewAppConfig() django.AppConfig {
 				BaseItem: menu.BaseItem{
 					Label:    trans.T(r.Context(), "Pages"),
 					ItemName: "pages",
-					Ordering: -1000,
+					Ordering: 5,
 					Hidden:   !permissions.HasPermission(r, "pages:list"),
 				},
 			})
@@ -288,7 +288,7 @@ func NewAppConfig() django.AppConfig {
 					"CreatedAt",
 					"UpdatedAt",
 				},
-				SearchFields: []chooser.SearchField[*PageNode]{
+				SearchFields: []admin.SearchField{
 					{
 						Name:   "Title",
 						Lookup: expr.LOOKUP_ICONTANS,

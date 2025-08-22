@@ -122,6 +122,22 @@ var (
 			plural, ok = call.Args[2].(*ast.BasicLit)
 			return singular, plural, errIfNotOk(ok, "expected a string literal for P")
 		},
+		"SP": func(call *ast.CallExpr, currentFunc string) (singular, plural *ast.BasicLit, err error) {
+			if len(call.Args) < 3 {
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"expected at least 3 arguments for SP, got %d", len(call.Args),
+				)
+			}
+			singular, ok := call.Args[0].(*ast.BasicLit)
+			if !ok {
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"expected a string literal for SP, got %s (%s)", reflect.TypeOf(call.Args[1]), stringCall(call),
+				)
+			}
+
+			plural, ok = call.Args[1].(*ast.BasicLit)
+			return singular, plural, errIfNotOk(ok, "expected a string literal for SP")
+		},
 	}
 )
 

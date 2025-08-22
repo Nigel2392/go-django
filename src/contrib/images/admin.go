@@ -174,6 +174,7 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 		RegisterToAdminMenu: true,
 		Model:               &Image{},
 		Name:                "image",
+		MenuOrder:           10,
 		MenuLabel:           trans.S("Images"),
 		MenuIcon: func(ctx context.Context) string {
 			return `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-image" viewBox="0 0 16 16">

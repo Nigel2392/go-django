@@ -209,3 +209,26 @@
 }
 .menu .submenu-menu-item > .menu-item-menu-wrapper .menu-item-menu-content {
 }
+.search-menu-item {
+    background-color: var(--menu-bg-color-hover) !important;
+}
+.search-menu-item .menu-item-search-form {
+    width: 100%;
+    height: 100%;
+}
+.search-menu-item .menu-item-search-input {
+    width: 100%;
+    height: 100%;
+    border: none;
+    padding: 0.5em 1em;
+    color: var(--menu-text-color);
+    font-size: 1em;
+    background-color: var(--menu-bg-color-hover);
+}
+.search-menu-item .menu-item-search-input:hover,
+.search-menu-item .menu-item-search-input:focus,
+.search-menu-item .menu-item-search-input:focus-visible,
+.search-menu-item .menu-item-search-input:focus-within {
+    outline: none;
+    border: none;
+}

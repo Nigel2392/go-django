@@ -32,7 +32,7 @@
             {{ if $BackURL }}
                 <a class="button warning" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
             {{ else }}
-                <a class="button warning" href="{{ url "admin:pages:list" (.Get "page_object").ID }}">{{ T "Back" }}</a>
+                <a class="button warning" href="{{ url "admin:pages:type" (.Get "page_object").ID }}">{{ T "Back" }}</a>
             {{ end }}
         </div>
     </form>

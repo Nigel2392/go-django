@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
@@ -39,8 +40,12 @@ var pageAdminAppOptions = admin.AppOptions{
 }
 
 var pageAdminModelOptions = admin.ModelOptions{
-	Name:  AdminPagesModelPath,
-	Model: &PageNode{},
+	Name:           AdminPagesModelPath,
+	Model:          &PageNode{},
+	DisallowList:   true,
+	DisallowCreate: true,
+	DisallowEdit:   true,
+	DisallowDelete: true,
 	Labels: map[string]func(ctx context.Context) string{
 		"ID":          trans.S("ID"),
 		"Title":       trans.S("Title"),
@@ -64,6 +69,26 @@ var pageAdminModelOptions = admin.ModelOptions{
 				"CreatedAt",
 				"UpdatedAt",
 				"Children",
+			},
+		},
+		Search: &admin.SearchOptions{
+			Fields: []admin.SearchField{
+				{
+					Name:   "Title",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+				{
+					Name:   "Slug",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+				{
+					Name:   "UrlPath",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
+				{
+					Name:   "ContentType",
+					Lookup: expr.LOOKUP_ICONTANS,
+				},
 			},
 		},
 		Columns: map[string]list.ListColumn[attrs.Definer]{

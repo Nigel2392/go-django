@@ -227,7 +227,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
 		SpecName:  "type",
 		FormField: fields.CharField(),
-		Apply: func(value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
+		Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
 			if fields.IsZero(value) {
 				return object, nil
 			}
@@ -239,7 +239,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
 		SpecName:  "object_id",
 		FormField: fields.CharField(),
-		Apply: func(value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
+		Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
 			if fields.IsZero(value) {
 				return object, nil
 			}
@@ -274,7 +274,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 				return opts
 			}, options.IncludeBlank(true)),
 		)),
-		Apply: func(value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
+		Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
 			if fields.IsZero(value) {
 				return object, nil
 			}
@@ -295,7 +295,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 				}
 			}, options.IncludeBlank(true)),
 		)),
-		Apply: func(value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
+		Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
 			if fields.IsZero(value) {
 				return object, nil
 			}
@@ -313,8 +313,8 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		qs  = queries.GetQuerySet(&Entry{})
 	)
 
-	qs, err = filter.Filter(r.URL.Query(), qs)
-	if err != nil && !errors.Is(err, filters.FormError) {
+	qs, err = filter.Filter(r, r.URL.Query(), qs)
+	if err != nil && !errors.Is(err, filters.ErrForm) {
 		logger.Errorf("Failed to filter audit logs: %v", err)
 		except.Fail(
 			http.StatusInternalServerError,

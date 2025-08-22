@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io/fs"
 	"net/http"
+	"slices"
 	"strings"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -92,7 +93,26 @@ func NewAppConfig() django.AppConfig {
 
 		autherrors.OnAuthenticationError(RedirectLoginFailedToAdmin)
 
-		components.Register("admin.header", cmpts.Header)
+		components.Register("admin.header", func(level int, headingText, subText string, extra ...any) templ.Component {
+			var components []cmpts.ShowableComponent
+			for _, c := range extra {
+				switch v := c.(type) {
+				case cmpts.ShowableComponent:
+					components = append(components, v)
+				case []cmpts.ShowableComponent:
+					if components == nil {
+						components = v
+					} else {
+						components = append(components, v...)
+					}
+				default:
+					panic(fmt.Sprintf(
+						"unexpected component type: %T", c,
+					))
+				}
+			}
+			return cmpts.Header(level, headingText, subText, components...)
+		})
 
 		components.Register("admin.heading", cmpts.Heading)
 		components.Register("admin.heading1", cmpts.Heading1)
@@ -108,6 +128,17 @@ func NewAppConfig() django.AppConfig {
 		components.Register("admin.button.success", cmpts.ButtonSuccess)
 		components.Register("admin.button.danger", cmpts.ButtonDanger)
 		components.Register("admin.button.warning", cmpts.ButtonWarning)
+
+		goldcrest.Register(
+			RegisterMenuItemHook, 0,
+			RegisterMenuItemHookFunc(func(r *http.Request, adminSite *AdminApplication, items cmpts.Items[menu.MenuItem]) {
+				items.Append(&SearchMenuItem{
+					Request:     r,
+					Site:        adminSite,
+					Placeholder: trans.T(r.Context(), "Search..."),
+				})
+			}),
+		)
 
 		goldcrest.Register(
 			RegisterFooterMenuItemHook, 0,
@@ -275,6 +306,11 @@ func NewAppConfig() django.AppConfig {
 
 		AdminSite.Route.Get(
 			"", views.Serve(HomeHandler), "home",
+		)
+
+		AdminSite.Route.Get(
+			"search/", views.Serve(&SearchView{}),
+			"search", // admin:search
 		)
 
 		// Initialize authenticated routes
@@ -472,6 +508,25 @@ func (a *AdminApplication) Check(ctx context.Context, settings django.Settings) 
 		}
 	}
 	return messages
+}
+
+func (a *AdminApplication) SearchableModels(r *http.Request) []*ModelDefinition {
+	var models []*ModelDefinition
+	for front := a.Apps.Front(); front != nil; front = front.Next() {
+		var app = front.Value
+		for modelFront := app.Models.Front(); modelFront != nil; modelFront = modelFront.Next() {
+			var model = modelFront.Value
+			if model.ListView.Search != nil && model.ListView.Search.CanSearch(r) {
+				models = append(models, model)
+			}
+		}
+	}
+
+	slices.SortStableFunc(models, func(a, b *ModelDefinition) int {
+		return a.App().Options.MenuOrder - b.App().Options.MenuOrder
+	})
+
+	return models
 }
 
 func newHandler(handler func(w http.ResponseWriter, r *http.Request)) mux.Handler {
