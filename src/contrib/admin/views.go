@@ -201,7 +201,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 			return qs
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
-			return list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {
+			var col = list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {
 				if !permissions.HasObjectPermission(r, instance, "admin:edit") || model.DisallowEdit {
 					return ""
 				}
@@ -212,6 +212,17 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 				}
 				return django.Reverse("admin:apps:model:edit", app.Name, model.GetName(), primaryField.GetValue())
 			})
+			if !model.DisallowDelete {
+				return list.RowSelectColumn(
+					"row-select",
+					nil,
+					func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+						return permissions.HasObjectPermission(r, row, "admin:delete")
+					},
+					col,
+				)
+			}
+			return col
 		},
 	}
 

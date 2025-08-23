@@ -12,6 +12,9 @@ import (
 	"reflect"
 	"strconv"
 	"fmt"
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"strings"
 )
 
 
@@ -270,6 +273,159 @@ func LinkColumn[T attrs.Definer](header func(ctx context.Context) string, fieldN
 	return &linkColumn[T]{
 		fieldColumn: fieldColumn[T]{header, fieldName},
 		getURL:     getURL,
+	}
+}
+
+type rowSelectColumn[T attrs.Definer] struct {
+	formName      string
+	isChecked func(r *http.Request, defs attrs.Definitions, row T) bool
+	hasPermission func(r *http.Request, defs attrs.Definitions, row T) bool
+	ListColumn[T]
+}
+
+func (c *rowSelectColumn[T]) checked(r *http.Request, defs attrs.Definitions, row T) bool {
+	if c.isChecked != nil {
+		return c.isChecked(r, defs, row)
+	}
+
+	return false
+}
+
+func (c *rowSelectColumn[T]) permitted(r *http.Request, defs attrs.Definitions, row T) bool {
+	if c.hasPermission != nil {
+		return c.hasPermission(r, defs, row)
+	}
+
+	return true
+}
+
+templ (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
+	if !c.permitted(r, defs, row) {
+		@c.ListColumn.Component(r, defs, row)
+		{{ return }}
+	}
+	<div class="list-checkbox-wrapper">
+		<div class="list-checkbox">
+			<input type="checkbox" class="list-checkbox__input" name={ c.formName } value={ attrs.ToString(attrs.PrimaryKey(row)) } checked?={ c.checked(r, defs, row) } />
+		</div>
+		<div class="list-checkbox__column">
+			@c.ListColumn.Component(r, defs, row)
+		</div>
+	</div>
+}
+
+type BoundBoolFunc[T attrs.Definer] = func(r *http.Request, defs attrs.Definitions, row T) bool
+
+func RowSelectColumn[T attrs.Definer](formName string, isChecked, hasPermission BoundBoolFunc[T], wraps ListColumn[T]) ListColumn[T] {
+	return &rowSelectColumn[T]{
+		formName:      formName,
+		isChecked: isChecked,
+		hasPermission: hasPermission,
+		ListColumn: wraps,
+	}
+}
+
+type fieldCheckbox[T attrs.Definer] struct {
+	fieldColumn[T]
+	hasPermission BoundBoolFunc[T]
+}
+
+func FieldCheckbox[T attrs.Definer](header func(ctx context.Context) string, fieldName string, hasPermission BoundBoolFunc[T]) ListColumn[T] {
+	return &fieldCheckbox[T]{
+		fieldColumn: fieldColumn[T]{header, fieldName},
+		hasPermission: hasPermission,
+	}
+}
+
+func (c *fieldCheckbox[T]) permitted(r *http.Request, defs attrs.Definitions, row T) bool {
+	if c.hasPermission != nil {
+		return c.hasPermission(r, defs, row)
+	}
+	return true
+}
+
+templ (c *fieldCheckbox[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
+	if !c.permitted(r, defs, row) {
+		@c.fieldColumn.Component(r, defs, row)
+		{{ return }}
+	}
+	<div class="list-checkbox-wrapper">
+		<div class="list-checkbox">
+			<input type="checkbox" class="list-checkbox__input" name={ c.fieldColumn.fieldName } value="1" checked?={ !django_reflect.IsZero(c.fieldColumn.data(r, defs, row)) } />
+		</div>
+	</div>
+}
+
+type listEditableColumn[T attrs.Definer] struct {
+	fieldName     string
+	header        func(ctx context.Context) string
+	hasPermission BoundBoolFunc[T]
+	widget        widgets.Widget
+}
+
+func (c *listEditableColumn[T]) permitted(r *http.Request, defs attrs.Definitions, row T) bool {
+	if c.hasPermission != nil {
+		return c.hasPermission(r, defs, row)
+	}
+	return true
+}
+
+func (c *listEditableColumn[T]) value(r *http.Request, defs attrs.Definitions, row T) interface{} {
+	var field, ok = defs.Field(c.fieldName)
+	assert.True(
+		ok,
+		"Field %q does not exist", c.fieldName,
+	)
+
+	var d = field.GetValue()
+	if attrs.IsZero(d) {
+		d = field.GetDefault()
+	}
+
+	if c.widget != nil {
+		d = c.widget.ValueToForm(d)
+	}
+
+	return d
+}
+
+func (c *listEditableColumn[T]) renderWidget(r *http.Request, defs attrs.Definitions, row T) template.HTML {
+	var value = c.value(r, defs, row)
+	if c.widget == nil {
+		return template.HTML(fmt.Sprintf(
+			"<input type=\"text\" name=\"%s\" value=\"%s\" />", c.fieldName, attrs.ToString(value),
+			))
+	}
+
+	var sb = new(strings.Builder)
+	var context = c.widget.GetContextData(r.Context(), c.fieldName, c.fieldName, value, nil)
+	if err := c.widget.RenderWithErrors(r.Context(), sb, c.fieldName, c.fieldName, value, nil, nil, context); err != nil {
+		assert.Fail("Failed to render widget: %v", err)
+	}
+	return template.HTML(sb.String())
+}
+
+templ (c *listEditableColumn[T]) Header() {
+	{{ assert.False(c.header == nil, "Column header is nil") }}
+	{ c.header(ctx) }
+}
+
+templ (c *listEditableColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
+	if !c.permitted(r, defs, row) {
+		@getComponent(r, defs, row, c.value(r, defs, row))
+		{{ return }}
+	}
+	<div class="list-editable">
+		@templ.Raw(string(c.renderWidget(r, defs, row)))
+	</div>
+}
+
+func ListEditableColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string, hasPermission BoundBoolFunc[T], widget widgets.Widget) ListColumn[T] {
+	return &listEditableColumn[T]{
+		header:        header,
+		fieldName:     fieldName,
+		hasPermission: hasPermission,
+		widget:        widget,
 	}
 }
 

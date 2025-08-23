@@ -11,6 +11,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
@@ -104,24 +105,32 @@ func NewAppConfig() django.AppConfig {
 				},
 				ListView: admin.ListViewOptions{
 					Columns: map[string]list.ListColumn[attrs.Definer]{
-						"Root": list.LinkColumn(
-							trans.S("Root Page"), "Root",
-							func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-								var node = row.(*pages.Site)
-								if node.Root == nil {
-									return ""
-								}
-
-								var page = node.Root
-								if !permissions.HasObjectPermission(r, page, "pages:edit") {
-									return ""
-								}
-
-								return addNextUrl(
-									django.Reverse("admin:pages:edit", page.PK),
-									r.URL.String(),
-								)
+						//	"Root": list.LinkColumn(
+						//		trans.S("Root Page"), "Root",
+						//		func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+						//			var node = row.(*pages.Site)
+						//			if node.Root == nil {
+						//				return ""
+						//			}
+						//
+						//			var page = node.Root
+						//			if !permissions.HasObjectPermission(r, page, "pages:edit") {
+						//				return ""
+						//			}
+						//
+						//			return addNextUrl(
+						//				django.Reverse("admin:pages:edit", page.PK),
+						//				r.URL.String(),
+						//			)
+						//		},
+						//	),
+						"Root": list.ListEditableColumn[attrs.Definer](
+							trans.S("Root Page"),
+							"Root",
+							func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+								return permissions.HasObjectPermission(r, row, "admin:edit")
 							},
+							chooser.NewChooserWidget(&pages.PageNode{}, nil, pages.CHOOSER_ROOT_PAGES_KEY),
 						),
 					},
 					Format: map[string]func(v any) any{

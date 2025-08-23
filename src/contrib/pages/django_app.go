@@ -73,6 +73,8 @@ const (
 	//
 	// This is used in the URL patterns for the pages app, as well as javascript code and queries in URLs.
 	PageIDVariableName = "page_id"
+
+	CHOOSER_ROOT_PAGES_KEY = "pages.nodes.root"
 )
 
 var (
@@ -316,7 +318,7 @@ func NewAppConfig() django.AppConfig {
 		}
 
 		chooser.Register(&chooserDefinitionAllNodes)
-		chooser.Register(&chooserDefinitionRootNodes, "pages.nodes.root")
+		chooser.Register(&chooserDefinitionRootNodes, CHOOSER_ROOT_PAGES_KEY)
 
 		return nil
 	}

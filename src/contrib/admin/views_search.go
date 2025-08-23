@@ -196,7 +196,7 @@ func (b *BoundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
 		results = pageObject.Results()
 	}
 
-	if len(results) > 0 {
+	if !b.Model.DisallowEdit && len(results) > 0 {
 		columns[0] = list.TitleFieldColumn(
 			columns[0], func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				return b.GetEditLink(attrs.PrimaryKey(row))

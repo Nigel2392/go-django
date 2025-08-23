@@ -15,16 +15,24 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"html/template"
 	"net/http"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
 func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row T, value any) templ.Component {
 	var rV = reflect.ValueOf(value)
-	if val, ok := value.(attrs.Definer); ok {
+	switch val := value.(type) {
+	case string:
+		return templ.Raw(val)
+	case template.HTML:
+		return templ.Raw(string(val))
+	case attrs.Definer:
 		return templ.Raw(attrs.ToString(val))
 	}
 
@@ -52,6 +60,22 @@ func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row 
 			return rV.Bool()
 		}}
 		return col.Component(r, defs, row)
+	}
+
+	var rTyp = rV.Type()
+	if (rTyp.Kind() == reflect.Slice || rTyp.Kind() == reflect.Array) && rTyp.Elem().Kind() == reflect.Uint8 {
+		var length = rV.Len()
+		// write byte size
+		if length < 1024 {
+			return templ.Raw(fmt.Sprintf("%d B", length))
+		}
+		if length < 1024*1024 {
+			return templ.Raw(fmt.Sprintf("%.1f KiB", float64(length)/1024))
+		}
+		if length < 1024*1024*1024 {
+			return templ.Raw(fmt.Sprintf("%.1f MiB", float64(length)/1024/1024))
+		}
+		return templ.Raw(fmt.Sprintf("%.1f GiB", float64(length)/1024/1024/1024))
 	}
 
 	return templ.Raw(attrs.ToString(value))
@@ -87,7 +111,7 @@ func (c *booleanColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 60, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 84, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -172,7 +196,7 @@ func (c *dateTimeColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var5 string
 		templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 97, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 121, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 		if templ_7745c5c3_Err != nil {
@@ -207,7 +231,7 @@ func (c *dateTimeColumn[T]) Component(r *http.Request, defs attrs.Definitions, r
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(trans.Time(r.Context(), value, c.fmt))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 102, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 126, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {
@@ -284,7 +308,7 @@ func (c *funcColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var10 string
 		templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 124, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 148, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 		if templ_7745c5c3_Err != nil {
@@ -357,7 +381,7 @@ func (c *fieldColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var13 string
 		templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 142, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 166, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 		if templ_7745c5c3_Err != nil {
@@ -647,6 +671,347 @@ func LinkColumn[T attrs.Definer](header func(ctx context.Context) string, fieldN
 	return &linkColumn[T]{
 		fieldColumn: fieldColumn[T]{header, fieldName},
 		getURL:      getURL,
+	}
+}
+
+type rowSelectColumn[T attrs.Definer] struct {
+	formName      string
+	isChecked     func(r *http.Request, defs attrs.Definitions, row T) bool
+	hasPermission func(r *http.Request, defs attrs.Definitions, row T) bool
+	ListColumn[T]
+}
+
+func (c *rowSelectColumn[T]) checked(r *http.Request, defs attrs.Definitions, row T) bool {
+	if c.isChecked != nil {
+		return c.isChecked(r, defs, row)
+	}
+
+	return false
+}
+
+func (c *rowSelectColumn[T]) permitted(r *http.Request, defs attrs.Definitions, row T) bool {
+	if c.hasPermission != nil {
+		return c.hasPermission(r, defs, row)
+	}
+
+	return true
+}
+
+func (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var21 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var21 == nil {
+			templ_7745c5c3_Var21 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		if !c.permitted(r, defs, row) {
+			templ_7745c5c3_Err = c.ListColumn.Component(r, defs, row).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, " ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			return
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div class=\"list-checkbox-wrapper\"><div class=\"list-checkbox\"><input type=\"checkbox\" class=\"list-checkbox__input\" name=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var22 string
+		templ_7745c5c3_Var22, templ_7745c5c3_Err = templ.JoinStringErrs(c.formName)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 309, Col: 72}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var22))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 15, "\" value=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var23 string
+		templ_7745c5c3_Var23, templ_7745c5c3_Err = templ.JoinStringErrs(attrs.ToString(attrs.PrimaryKey(row)))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 309, Col: 120}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var23))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 16, "\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if c.checked(r, defs, row) {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 17, " checked")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 18, "></div><div class=\"list-checkbox__column\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = c.ListColumn.Component(r, defs, row).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 19, "</div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+type BoundBoolFunc[T attrs.Definer] = func(r *http.Request, defs attrs.Definitions, row T) bool
+
+func RowSelectColumn[T attrs.Definer](formName string, isChecked, hasPermission BoundBoolFunc[T], wraps ListColumn[T]) ListColumn[T] {
+	return &rowSelectColumn[T]{
+		formName:      formName,
+		isChecked:     isChecked,
+		hasPermission: hasPermission,
+		ListColumn:    wraps,
+	}
+}
+
+type fieldCheckbox[T attrs.Definer] struct {
+	fieldColumn[T]
+	hasPermission BoundBoolFunc[T]
+}
+
+func FieldCheckbox[T attrs.Definer](header func(ctx context.Context) string, fieldName string, hasPermission BoundBoolFunc[T]) ListColumn[T] {
+	return &fieldCheckbox[T]{
+		fieldColumn:   fieldColumn[T]{header, fieldName},
+		hasPermission: hasPermission,
+	}
+}
+
+func (c *fieldCheckbox[T]) permitted(r *http.Request, defs attrs.Definitions, row T) bool {
+	if c.hasPermission != nil {
+		return c.hasPermission(r, defs, row)
+	}
+	return true
+}
+
+func (c *fieldCheckbox[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var24 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var24 == nil {
+			templ_7745c5c3_Var24 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		if !c.permitted(r, defs, row) {
+			templ_7745c5c3_Err = c.fieldColumn.Component(r, defs, row).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 20, " ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			return
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 21, "<div class=\"list-checkbox-wrapper\"><div class=\"list-checkbox\"><input type=\"checkbox\" class=\"list-checkbox__input\" name=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var25 string
+		templ_7745c5c3_Var25, templ_7745c5c3_Err = templ.JoinStringErrs(c.fieldColumn.fieldName)
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 354, Col: 85}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var25))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 22, "\" value=\"1\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		if !django_reflect.IsZero(c.fieldColumn.data(r, defs, row)) {
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 23, " checked")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 24, "></div></div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+type listEditableColumn[T attrs.Definer] struct {
+	fieldName     string
+	header        func(ctx context.Context) string
+	hasPermission BoundBoolFunc[T]
+	widget        widgets.Widget
+}
+
+func (c *listEditableColumn[T]) permitted(r *http.Request, defs attrs.Definitions, row T) bool {
+	if c.hasPermission != nil {
+		return c.hasPermission(r, defs, row)
+	}
+	return true
+}
+
+func (c *listEditableColumn[T]) value(r *http.Request, defs attrs.Definitions, row T) interface{} {
+	var field, ok = defs.Field(c.fieldName)
+	assert.True(
+		ok,
+		"Field %q does not exist", c.fieldName,
+	)
+
+	var d = field.GetValue()
+	if attrs.IsZero(d) {
+		d = field.GetDefault()
+	}
+
+	if c.widget != nil {
+		d = c.widget.ValueToForm(d)
+	}
+
+	return d
+}
+
+func (c *listEditableColumn[T]) renderWidget(r *http.Request, defs attrs.Definitions, row T) template.HTML {
+	var value = c.value(r, defs, row)
+	if c.widget == nil {
+		return template.HTML(fmt.Sprintf(
+			"<input type=\"text\" name=\"%s\" value=\"%s\" />", c.fieldName, attrs.ToString(value),
+		))
+	}
+
+	var sb = new(strings.Builder)
+	var context = c.widget.GetContextData(r.Context(), c.fieldName, c.fieldName, value, nil)
+	if err := c.widget.RenderWithErrors(r.Context(), sb, c.fieldName, c.fieldName, value, nil, nil, context); err != nil {
+		assert.Fail("Failed to render widget: %v", err)
+	}
+	return template.HTML(sb.String())
+}
+
+func (c *listEditableColumn[T]) Header() templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var26 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var26 == nil {
+			templ_7745c5c3_Var26 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		assert.False(c.header == nil, "Column header is nil")
+		var templ_7745c5c3_Var27 string
+		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 410, Col: 16}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func (c *listEditableColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var28 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var28 == nil {
+			templ_7745c5c3_Var28 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		if !c.permitted(r, defs, row) {
+			templ_7745c5c3_Err = getComponent(r, defs, row, c.value(r, defs, row)).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 25, " ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			return
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 26, "<div class=\"list-editable\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templ.Raw(string(c.renderWidget(r, defs, row))).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 27, "</div>")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func ListEditableColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string, hasPermission BoundBoolFunc[T], widget widgets.Widget) ListColumn[T] {
+	return &listEditableColumn[T]{
+		header:        header,
+		fieldName:     fieldName,
+		hasPermission: hasPermission,
+		widget:        widget,
 	}
 }
 

@@ -54,9 +54,26 @@ table.list {
     padding-right: 0.25em;
 }
 
-.list-check-yes {
+.list .list-check-yes {
     color: var(--success-bg-color);
 }
-.list-check-no {
+.list .list-check-no {
     color: var(--danger-bg-color);
+}
+
+.list .list-checkbox-wrapper {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    max-width: fit-content;
+}
+.list .list-checkbox-wrapper .list-checkbox {
+    margin-right: 1em;
+}
+.list .list-checkbox-wrapper .list-checkbox__input {
+    width: 1em;
+    height: 1em;
+    vertical-align: middle;
+}
+.list .list-checkbox-wrapper .list-checkbox__column {
 }

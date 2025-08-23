@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"golang.org/x/oauth2"
 )
 
@@ -203,7 +204,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 				Null:     false,
 				Blank:    false,
 				ReadOnly: true,
-				Label:    "ID",
+				Label:    trans.S("ID"),
 				Primary:  true,
 				Column:   "id",
 			},
@@ -213,7 +214,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 				Null:      false,
 				Blank:     false,
 				ReadOnly:  true,
-				Label:     "Unique Identifier",
+				Label:     trans.S("Unique Identifier"),
 				Column:    "unique_identifier",
 				MaxLength: 255,
 			},
@@ -223,7 +224,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 				Null:      false,
 				Blank:     false,
 				ReadOnly:  true,
-				Label:     "Provider Name",
+				Label:     trans.S("Provider Name"),
 				Column:    "provider_name",
 				MaxLength: 255,
 			},
@@ -233,7 +234,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 				Null:     false,
 				Blank:    true,
 				ReadOnly: true,
-				Label:    "Data",
+				Label:    trans.S("Data"),
 				Column:   "data",
 			},
 		),
@@ -242,7 +243,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 				Null:     false,
 				Blank:    true,
 				ReadOnly: true,
-				Label:    "Access Token",
+				Label:    trans.S("Access Token"),
 				Column:   "access_token",
 			},
 		),
@@ -251,7 +252,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 				Null:     false,
 				Blank:    true,
 				ReadOnly: true,
-				Label:    "Refresh Token",
+				Label:    trans.S("Refresh Token"),
 				Column:   "refresh_token",
 			},
 		),
@@ -260,7 +261,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 				Null:      false,
 				Blank:     true,
 				ReadOnly:  true,
-				Label:     "Token Type",
+				Label:     trans.S("Token Type"),
 				Column:    "token_type",
 				MaxLength: 50,
 			},
@@ -271,7 +272,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 				Blank:     true,
 				ReadOnly:  true,
 				MaxLength: 6, // precision for fractional seconds
-				Label:     "Expires At",
+				Label:     trans.S("Expires At"),
 				Column:    "expires_at",
 			},
 		),
@@ -280,7 +281,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 				Null:     false,
 				Blank:    true,
 				ReadOnly: true,
-				Label:    "Created At",
+				Label:    trans.S("Created At"),
 				Column:   "created_at",
 			},
 		),
@@ -289,7 +290,7 @@ func (o *User) Fields(this attrs.Definer) []any {
 				Null:     false,
 				Blank:    true,
 				ReadOnly: true,
-				Label:    "Updated At",
+				Label:    trans.S("Updated At"),
 				Column:   "updated_at",
 			},
 		),

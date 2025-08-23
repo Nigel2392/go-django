@@ -30,6 +30,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -336,16 +337,18 @@ func NewAppConfig(cnf Config) django.AppConfig {
 									return row.(*User).RefreshToken != ""
 								},
 							),
-							"IsActive": list.BooleanColumn[attrs.Definer](
+							"IsActive": list.FieldCheckbox[attrs.Definer](
 								trans.S("Is Active"),
+								"IsActive",
 								func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-									return row.(*User).IsActive
+									return permissions.HasObjectPermission(r, row, "admin:edit")
 								},
 							),
-							"IsAdministrator": list.BooleanColumn[attrs.Definer](
+							"IsAdministrator": list.FieldCheckbox[attrs.Definer](
 								trans.S("Is Admin"),
+								"IsAdministrator",
 								func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-									return row.(*User).IsActive
+									return permissions.HasObjectPermission(r, row, "admin:edit")
 								},
 							),
 							"CreatedAt": columns.TimeSinceColumn[attrs.Definer](
