@@ -110,8 +110,8 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 		"Failed to exchange code for authentication token",
 	)
 
-	if a.DataStructURL == "" {
-		logger.Errorf("DataStructURL was not provided, incomplete Oauth2 flow")
+	if a.DataConfig.DetailsURL == "" {
+		logger.Errorf("DataConfig.DetailsURL was not provided, incomplete Oauth2 flow")
 		except.Fail(
 			http.StatusInternalServerError,
 			"Internal server error",
@@ -121,7 +121,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 
 	// Use the token to get the user's data from the provider
 	client := a.Oauth2.Client(r.Context(), token)
-	resp, err := client.Get(a.DataStructURL)
+	resp, err := client.Get(a.DataConfig.DetailsURL)
 	except.AssertNil(
 		err, http.StatusInternalServerError,
 		"Failed to get data from provider",
@@ -144,7 +144,7 @@ func (oa *OpenAuth2AppConfig) CallbackHandler(w http.ResponseWriter, r *http.Req
 
 	// Retrieve the identifier from the data struct
 	// This is used to identify the user in the database
-	identifier, err := a.DataStructIdentifier(token, data)
+	identifier, err := a.DataConfig.GetUniqueIdentifier(token, data)
 	except.AssertNil(
 		err, http.StatusInternalServerError,
 		"Failed to get identifier from data struct",

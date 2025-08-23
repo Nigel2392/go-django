@@ -39,10 +39,12 @@ func init() {
 						newTkn: shimChan,
 					}
 				},
-				DataStructIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
-					return dataStruct.(*User).Name, nil
+				DataConfig: openauth2.DataConfig{
+					GetUniqueIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
+						return dataStruct.(*User).Name, nil
+					},
+					Object: &User{},
 				},
-				DataStruct: &User{},
 				UserToString: func(user *openauth2.User, dataStruct interface{}) string {
 					var ds = dataStruct.(*User)
 					return fmt.Sprintf("USER[%s/%s]", user.ProviderName, ds.Name)

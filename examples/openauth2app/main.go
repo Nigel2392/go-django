@@ -146,51 +146,53 @@ func main() {
 							},
 							Endpoint: google.Endpoint,
 						},
-						DataStructURL: "https://www.googleapis.com/oauth2/v3/userinfo",
-						DataStructIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
-							var user = dataStruct.(*GoogleUser)
-							return user.Email, nil
+						DataConfig: openauth2.DataConfig{
+							Object:     &GoogleUser{},
+							DetailsURL: "https://www.googleapis.com/oauth2/v3/userinfo",
+							GetUniqueIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
+								var user = dataStruct.(*GoogleUser)
+								return user.Email, nil
+							},
+							EditDisplayOrder: []string{
+								"picture",
+								"email",
+								"verified_email",
+								"name",
+								"given_name",
+								"first_name",
+								"last_name",
+								"family_name",
+								"locale",
+								"sub",
+							},
+							EditDisplayLabels: map[string]any{
+								"email":          trans.S("Email"),
+								"first_name":     trans.S("First Name"),
+								"last_name":      trans.S("Last Name"),
+								"family_name":    trans.S("Family Name"),
+								"picture":        trans.S("Profile Picture"),
+								"locale":         trans.S("Locale"),
+								"name":           trans.S("Name"),
+								"sub":            trans.S("Subject"),
+								"given_name":     trans.S("Given Name"),
+								"verified_email": trans.S("Email (Verified)"),
+							},
+							EditDisplayWidgets: map[string]widgets.Widget{
+								"email":          widgets.NewEmailInput(nil),
+								"first_name":     widgets.NewTextInput(nil),
+								"last_name":      widgets.NewTextInput(nil),
+								"family_name":    widgets.NewTextInput(nil),
+								"picture":        &imageWidget{},
+								"locale":         widgets.NewTextInput(nil),
+								"name":           widgets.NewTextInput(nil),
+								"sub":            widgets.NewNumberInput[int](nil),
+								"given_name":     widgets.NewTextInput(nil),
+								"verified_email": widgets.NewEmailInput(nil),
+							},
 						},
-						DataStruct: &GoogleUser{},
 						UserToString: func(user *openauth2.User, dataStruct interface{}) string {
 							var googleUser = dataStruct.(*GoogleUser)
 							return googleUser.Email
-						},
-						DataFieldOrder: []string{
-							"picture",
-							"email",
-							"verified_email",
-							"name",
-							"given_name",
-							"first_name",
-							"last_name",
-							"family_name",
-							"locale",
-							"sub",
-						},
-						DataLabels: map[string]any{
-							"email":          trans.S("Email"),
-							"first_name":     trans.S("First Name"),
-							"last_name":      trans.S("Last Name"),
-							"family_name":    trans.S("Family Name"),
-							"picture":        trans.S("Profile Picture"),
-							"locale":         trans.S("Locale"),
-							"name":           trans.S("Name"),
-							"sub":            trans.S("Subject"),
-							"given_name":     trans.S("Given Name"),
-							"verified_email": trans.S("Email (Verified)"),
-						},
-						DataWidgets: map[string]widgets.Widget{
-							"email":          widgets.NewEmailInput(nil),
-							"first_name":     widgets.NewTextInput(nil),
-							"last_name":      widgets.NewTextInput(nil),
-							"family_name":    widgets.NewTextInput(nil),
-							"picture":        &imageWidget{},
-							"locale":         widgets.NewTextInput(nil),
-							"name":           widgets.NewTextInput(nil),
-							"sub":            widgets.NewNumberInput[int](nil),
-							"given_name":     widgets.NewTextInput(nil),
-							"verified_email": widgets.NewEmailInput(nil),
 						},
 					},
 					//	{
@@ -216,12 +218,14 @@ func main() {
 					//			},
 					//			Endpoint: github.Endpoint,
 					//		},
-					//		DataStructURL: "https://api.github.com/user",
-					//		DataStructIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
-					//			var user = dataStruct.(*GitHubUser)
-					//			return user.Email, nil
+					// 		DataConfig: openauth2.DataConfig{
+					//			DetailsURL: "https://api.github.com/user",
+					//			GetUniqueIdentifier: func(token *oauth2.Token, dataStruct interface{}) (string, error) {
+					//				var user = dataStruct.(*GitHubUser)
+					//				return user.Email, nil
+					//			},
+					//			Object: &GitHubUser{},
 					//		},
-					//		DataStruct: &GitHubUser{},
 					//		UserToString: func(user *openauth2.User, dataStruct interface{}) string {
 					//			var u = dataStruct.(*GitHubUser)
 					//			return u.Email

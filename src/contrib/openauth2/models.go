@@ -151,6 +151,10 @@ func (u *User) ContentObject() (interface{}, error) {
 }
 
 func (o *User) BeforeCreate(ctx context.Context) error {
+	if o.CreatedAt.Time().IsZero() {
+		o.CreatedAt = drivers.CurrentDateTime()
+	}
+
 	return core.SIGNAL_BEFORE_USER_CREATE.Send(o)
 }
 
@@ -175,9 +179,6 @@ func (o *User) AfterDelete(ctx context.Context) error {
 }
 
 func (o *User) BeforeSave(ctx context.Context) error {
-	if o.CreatedAt.IsZero() {
-		o.CreatedAt = drivers.CurrentDateTime()
-	}
 	o.UpdatedAt = drivers.CurrentDateTime()
 	return nil
 }
@@ -309,7 +310,7 @@ func (o *User) contentObjectFields(this attrs.Definer) []attrs.Field {
 
 		// pre check if it adheres to UserFormDefiner
 		// to avoid unnecessary calls to ContentObject()
-		if _, ok := provider.DataStruct.(UserFormDefiner); ok {
+		if _, ok := provider.DataConfig.Object.(UserFormDefiner); ok {
 			var contentObject, err = o.ContentObject()
 			if err != nil {
 				panic(fmt.Sprintf(

@@ -38,6 +38,42 @@ type ConfigInfo struct {
 	PrivacyPolicyURL func(r *http.Request) string
 }
 
+type DataConfig struct {
+	// DataStructURL is the URL which will be used to retrieve the data from the provider.
+	//
+	// This will then be used to scan the data into the DataStruct fields.
+	// The URL must be a valid URL and must return a JSON object.
+	DetailsURL string
+
+	// GetUniqueIdentifier retrieves the unique identifier from the data struct.
+	//
+	// This is used to identify the user in the database.
+	//
+	// It has to be a function that takes the data struct and returns a string.
+	GetUniqueIdentifier func(token *oauth2.Token, dataStruct interface{}) (string, error)
+
+	// Object is the struct that will be used to store the data returned by the provider.
+	//
+	// It will be copied by means of reflection, using the reprint package.
+	// This means that it DOES support unexported fields, though these will
+	// NOT be used for JSON unmarshalling.
+	Object interface{}
+
+	// DataFieldOrder is the order in which the fields should be displayed.
+	//
+	// This is used to control the order of the fields in the edit user page.
+	EditDisplayOrder []string
+
+	// DataLabels is a map of keys from the JSON response retrieved from the DetailsURL.
+	// These are used for display purposes only, and only in the Edit User page.
+	EditDisplayLabels map[string]any
+
+	// DataWidgets is a map of widgets for the JSON response retrieved from the DetailsURL.
+	//
+	// These are used in the edit page of the user model - the widgets will be marked as readonly.
+	EditDisplayWidgets map[string]widgets.Widget
+}
+
 type AuthConfig struct {
 	// The base oauth2 config to use.
 	//
@@ -46,6 +82,9 @@ type AuthConfig struct {
 
 	// Details about the provider.
 	ProviderInfo ConfigInfo
+
+	// The data configuration for the provider.
+	DataConfig DataConfig
 
 	// The access type to request from the provider.
 	//
@@ -61,40 +100,6 @@ type AuthConfig struct {
 	// ExtraParams are extra parameters to be set on the URL when
 	// generating the url with Oauth2.AuthCodeURL
 	ExtraParams map[string]string
-
-	// DataStructURL is the URL which will be used to retrieve the data from the provider.
-	//
-	// This will then be used to scan the data into the DataStruct fields.
-	// The URL must be a valid URL and must return a JSON object.
-	DataStructURL string
-
-	// DataStructIdentifier retrieves the unique identifier from the data struct.
-	//
-	// This is used to identify the user in the database.
-	//
-	// It has to be a function that takes the data struct and returns a string.
-	DataStructIdentifier func(token *oauth2.Token, dataStruct interface{}) (string, error)
-
-	// DataStruct is the struct that will be used to store the data returned by the provider.
-	//
-	// It will be copied by means of reflection, using the reprint package.
-	// This means that it DOES support unexported fields, though these will
-	// NOT be used for JSON unmarshalling.
-	DataStruct interface{}
-
-	// DataFieldOrder is the order in which the fields should be displayed.
-	//
-	// This is used to control the order of the fields in the edit user page.
-	DataFieldOrder []string
-
-	// DataLabels is a map of keys from the JSON response retrieved from the DataStructURL.
-	// These are used for display purposes only, and only in the Edit User page.
-	DataLabels map[string]any
-
-	// DataWidgets is a map of widgets for the JSON response retrieved from the DataStructURL.
-	//
-	// These are used in the edit page of the user model - the widgets will be marked as readonly.
-	DataWidgets map[string]widgets.Widget
 
 	// ScanDataStruct is a function that takes an io.Reader and returns a data struct.
 
@@ -127,11 +132,11 @@ func (c *AuthConfig) TokenSource(context context.Context, token *oauth2.Token) o
 }
 
 func (c *AuthConfig) ScanContentObject(r io.Reader) (interface{}, error) {
-	if c.DataStruct == nil {
+	if c.DataConfig.Object == nil {
 		return nil, errors.New("DataStruct was not provided")
 	}
 
-	var copy = reprint.This(c.DataStruct)
+	var copy = reprint.This(c.DataConfig.Object)
 	var dec = json.NewDecoder(r)
 	var err = dec.Decode(copy)
 	return copy, err

@@ -515,8 +515,8 @@ func (a *OpenAuth2AppConfig) getProviderDataFieldOrder(providerName string) []st
 		return order
 	}
 
-	if providerConfig.DataFieldOrder != nil {
-		return providerConfig.DataFieldOrder
+	if providerConfig.DataConfig.EditDisplayOrder != nil {
+		return providerConfig.DataConfig.EditDisplayOrder
 	}
 
 	return order
@@ -529,8 +529,8 @@ func (a *OpenAuth2AppConfig) getProviderDataLabels(providerName string) map[stri
 		return labels
 	}
 
-	if providerConfig.DataLabels != nil {
-		return providerConfig.DataLabels
+	if providerConfig.DataConfig.EditDisplayLabels != nil {
+		return providerConfig.DataConfig.EditDisplayLabels
 	}
 
 	return labels
@@ -543,8 +543,8 @@ func (a *OpenAuth2AppConfig) getProviderDataWidgets(providerName string) map[str
 		return widgets
 	}
 
-	if providerConfig.DataWidgets != nil {
-		return providerConfig.DataWidgets
+	if providerConfig.DataConfig.EditDisplayWidgets != nil {
+		return providerConfig.DataConfig.EditDisplayWidgets
 	}
 
 	return widgets

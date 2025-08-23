@@ -248,10 +248,22 @@ func (d *DateWidget) ValueToForm(value interface{}) interface{} {
 			return val.Format("2006-01-02")
 		}
 		return val.Format("2006-01-02T15:04:05")
+	case interface{ Time() time.Time }:
+		var t = val.Time()
+		if d.DateType == DateWidgetTypeDate {
+			return t.Format("2006-01-02")
+		}
+		return t.Format("2006-01-02T15:04:05")
 	case string:
-		var t, err = time.Parse("2006-01-02", val)
+		var t, err = time.Parse(time.RFC3339, val)
 		if err != nil {
-			return val
+			t, err = time.Parse("2006-01-02T15:04:05", val)
+		}
+		if err != nil {
+			t, err = time.Parse("2006-01-02", val)
+		}
+		if err != nil {
+			return ""
 		}
 		if d.DateType == DateWidgetTypeDate {
 			return t.Format("2006-01-02")
