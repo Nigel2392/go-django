@@ -151,10 +151,6 @@ func (u *User) ContentObject() (interface{}, error) {
 }
 
 func (o *User) BeforeCreate(ctx context.Context) error {
-	if o.CreatedAt.Time().IsZero() {
-		o.CreatedAt = drivers.CurrentDateTime()
-	}
-
 	return core.SIGNAL_BEFORE_USER_CREATE.Send(o)
 }
 
@@ -179,6 +175,9 @@ func (o *User) AfterDelete(ctx context.Context) error {
 }
 
 func (o *User) BeforeSave(ctx context.Context) error {
+	if o.CreatedAt.IsZero() {
+		o.CreatedAt = drivers.CurrentDateTime()
+	}
 	o.UpdatedAt = drivers.CurrentDateTime()
 	return nil
 }
