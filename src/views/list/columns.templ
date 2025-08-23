@@ -9,7 +9,67 @@ import (
 	"net/http"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"reflect"
+	"strconv"
+	"fmt"
 )
+
+
+func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row T, value any) templ.Component {
+	var rV = reflect.ValueOf(value)
+	switch val := value.(type) {
+	case string:
+		return templ.Raw(val)
+	case template.HTML:
+		return templ.Raw(string(val))
+	case attrs.Definer:
+		return templ.Raw(attrs.ToString(val))
+	}
+
+	if val, ok := value.(interface{ Time() time.Time }); ok {
+		var t = val.Time()
+		var col = &dateTimeColumn[T]{
+			fmt: trans.SHORT_TIME_FORMAT,
+			data: func(r *http.Request, defs attrs.Definitions, row T) time.Time {
+				return t
+			},
+		}
+		return col.Component(r, defs, row)
+	}
+
+	switch rV.Kind() {
+	case reflect.String:
+		return templ.Raw(rV.String())
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		return templ.Raw(fmt.Sprintf("%d", rV.Interface()))
+	case reflect.Float32, reflect.Float64:
+		return templ.Raw(strconv.FormatFloat(rV.Float(), 'f', -1, 64))
+	case reflect.Bool:
+		var col = &booleanColumn[T]{data: func(r *http.Request, defs attrs.Definitions, row T) bool {
+			return rV.Bool()
+		}}
+		return col.Component(r, defs, row)
+	}
+
+    var rTyp = rV.Type()
+	if (rTyp.Kind() == reflect.Slice || rTyp.Kind() == reflect.Array) && rTyp.Elem().Kind() == reflect.Uint8 {
+		var length = rV.Len()
+		// write byte size
+		if length < 1024 {
+			return templ.Raw(fmt.Sprintf("%d B", length))
+		}
+		if length < 1024*1024 {
+			return templ.Raw(fmt.Sprintf("%.1f KiB", float64(length)/1024))
+		}
+		if length < 1024*1024*1024 {
+			return templ.Raw(fmt.Sprintf("%.1f MiB", float64(length)/1024/1024))
+		}
+		return templ.Raw(fmt.Sprintf("%.1f GiB", float64(length)/1024/1024/1024))
+	}
+
+	return templ.Raw(attrs.ToString(value))
+}
 
 type booleanColumn[T attrs.Definer] struct {
 	header func(ctx context.Context) string
@@ -86,9 +146,7 @@ templ (c *funcColumn[T]) Header() {
 }
 
 templ (c *funcColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
-    { attrs.ToString(
-        c.data(r, defs, row),
-    ) }
+	@getComponent(r, defs, row, c.data(r, defs, row))
 }
 
 func FuncColumn[T attrs.Definer](header func(ctx context.Context) string, data func(r *http.Request, defs attrs.Definitions, row T) interface{}) ListColumn[T] {
@@ -137,9 +195,7 @@ func (c *fieldColumn[T]) data(r *http.Request, defs attrs.Definitions, _ T) inte
 }
 
 templ (c *fieldColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
-    { attrs.ToString(
-        c.data(r, defs, row),
-    ) }
+	@getComponent(r, defs, row, c.data(r, defs, row))
 }
 
 func FieldColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string) ListColumn[T] {
