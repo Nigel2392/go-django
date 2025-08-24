@@ -121,8 +121,9 @@ func (p *PagesAdminHomeComponent) HTML() template.HTML {
 		pagesList[i] = page
 	}
 
-	var listComponent = list.NewList(
+	var listComponent = list.NewList[attrs.Definer](
 		p.Request,
+		&PageNode{},
 		pagesList,
 		cols...,
 	)

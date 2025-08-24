@@ -105,7 +105,7 @@ func (b *BoundSearchView) GetList(v *BoundSearchView, objects []attrs.Definer, c
 	if b.Model.ListView.Search.GetList != nil {
 		return b.Model.ListView.Search.GetList(b, objects, columns)
 	}
-	return list.NewList(v.R, objects, columns...), nil
+	return list.NewList(v.R, b.Model.NewInstance(), objects, columns...), nil
 }
 
 func (b *BoundSearchView) GetContext(req *http.Request) (ctx.Context, error) {

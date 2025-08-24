@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/internal/django_reflect"
@@ -62,7 +63,7 @@ func input(typ string, name string, value any, atts map[string]any) templ.Compon
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(typ)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 22, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 23, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -75,7 +76,7 @@ func input(typ string, name string, value any, atts map[string]any) templ.Compon
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 22, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 23, Col: 44}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -88,7 +89,7 @@ func input(typ string, name string, value any, atts map[string]any) templ.Compon
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(attrs.ToString(value))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 22, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 23, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -188,7 +189,7 @@ func (c *booleanColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 88, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 89, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -273,7 +274,7 @@ func (c *dateTimeColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 125, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 126, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -308,7 +309,7 @@ func (c *dateTimeColumn[T]) Component(r *http.Request, defs attrs.Definitions, r
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(trans.Time(r.Context(), value, c.fmt))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 130, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 131, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -385,7 +386,7 @@ func (c *funcColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 152, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 153, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -458,7 +459,7 @@ func (c *fieldColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 170, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 171, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -836,7 +837,7 @@ func (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, 
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(c.formName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 328, Col: 92}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 329, Col: 92}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
@@ -849,7 +850,7 @@ func (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, 
 		var templ_7745c5c3_Var27 string
 		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(attrs.ToString(attrs.PrimaryKey(row)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 328, Col: 140}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 329, Col: 140}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -960,7 +961,7 @@ func (c *fieldCheckbox[T]) Component(r *http.Request, defs attrs.Definitions, ro
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(c.fieldColumn.fieldName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 375, Col: 105}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 376, Col: 105}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -1021,9 +1022,38 @@ func (c *listEditableColumn[T]) FieldName() string {
 
 func (c *listEditableColumn[T]) Widget(r *http.Request, defs attrs.Definitions, row T) widgets.Widget {
 	if c.config.Widget == nil {
-		return widgets.NewTextInput(nil)
+		var attrField, ok = defs.Field(c.config.FieldName)
+		if !ok {
+			assert.Fail("Field %q does not exist", c.config.FieldName)
+			return nil
+		}
+
+		return attrField.FormField().Widget()
 	}
 	return c.config.Widget
+}
+
+func (c *listEditableColumn[T]) FormField(r *http.Request, row T) fields.Field {
+	var defs = row.FieldDefs()
+	var attrField, ok = defs.Field(c.config.FieldName)
+	if !ok {
+		assert.Fail("Field %q does not exist", c.config.FieldName)
+		return nil
+	}
+
+	var name = fmt.Sprintf("%s%s--%s", c.config.FormPrefix, c.config.FieldName, attrs.ToString(attrs.PrimaryKey(row)))
+	var opts = []func(f fields.Field){
+		fields.Name(name),
+		fields.Label(attrField.Label),
+		fields.HelpText(attrField.HelpText),
+		fields.Widget(c.Widget(r, defs, row)),
+	}
+
+	if !attrField.AllowBlank() {
+		opts = append(opts, fields.Required(true))
+	}
+
+	return fields.NewField(opts...)
 }
 
 func (c *listEditableColumn[T]) renderWidget(r *http.Request, defs attrs.Definitions, row T) templ.Component {
@@ -1040,11 +1070,19 @@ func (c *listEditableColumn[T]) renderWidget(r *http.Request, defs attrs.Definit
 	return templ.Raw(sb.String())
 }
 
-func (c *listEditableColumn[T]) Media() media.Media {
+func (c *listEditableColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
 	if c.config.Widget != nil {
 		return c.config.Widget.Media()
 	}
-	return media.NewMedia()
+
+	var field, ok = defs.Field(c.config.FieldName)
+	if !ok {
+		assert.Fail("Field %q does not exist", c.config.FieldName)
+		return media.NewMedia()
+	}
+
+	var formField = field.FormField()
+	return formField.Widget().Media()
 }
 
 func (c *listEditableColumn[T]) Header() templ.Component {
@@ -1072,7 +1110,7 @@ func (c *listEditableColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 445, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 483, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 		if templ_7745c5c3_Err != nil {

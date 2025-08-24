@@ -16,6 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"strings"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
 templ input(typ string, name string, value any, atts map[string]any) {
@@ -414,9 +415,38 @@ func (c *listEditableColumn[T]) FieldName() string {
 
 func (c *listEditableColumn[T]) Widget(r *http.Request, defs attrs.Definitions, row T) widgets.Widget {
 	if c.config.Widget == nil {
-		return widgets.NewTextInput(nil)
+		var attrField, ok = defs.Field(c.config.FieldName)
+		if !ok {
+			assert.Fail("Field %q does not exist", c.config.FieldName)
+			return nil
+		}
+
+		return attrField.FormField().Widget()
 	}
 	return c.config.Widget
+}
+
+func (c *listEditableColumn[T]) FormField(r *http.Request, row T) fields.Field {
+	var defs = row.FieldDefs()
+	var attrField, ok = defs.Field(c.config.FieldName)
+	if !ok {
+		assert.Fail("Field %q does not exist", c.config.FieldName)
+		return nil
+	}
+	
+	var name = fmt.Sprintf("%s%s--%s", c.config.FormPrefix, c.config.FieldName, attrs.ToString(attrs.PrimaryKey(row)))
+	var opts = []func(f fields.Field) {
+		fields.Name(name),
+		fields.Label(attrField.Label),
+		fields.HelpText(attrField.HelpText),
+		fields.Widget(c.Widget(r, defs, row)),
+	}
+
+	if !attrField.AllowBlank() {
+		opts = append(opts, fields.Required(true))
+	}
+
+	return fields.NewField(opts...)
 }
 
 func (c *listEditableColumn[T]) renderWidget(r *http.Request, defs attrs.Definitions, row T) templ.Component {
@@ -433,11 +463,19 @@ func (c *listEditableColumn[T]) renderWidget(r *http.Request, defs attrs.Definit
 	return templ.Raw(sb.String())
 }
 
-func (c *listEditableColumn[T]) Media() media.Media {
+func (c *listEditableColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
 	if c.config.Widget != nil {
 		return c.config.Widget.Media()
 	}
-	return media.NewMedia()
+
+	var field, ok = defs.Field(c.config.FieldName)
+	if !ok {
+		assert.Fail("Field %q does not exist", c.config.FieldName)
+		return media.NewMedia()
+	}
+
+	var formField = field.FormField()
+	return formField.Widget().Media()
 }
 
 templ (c *listEditableColumn[T]) Header() {

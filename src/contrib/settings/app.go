@@ -11,7 +11,6 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
-	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
@@ -131,7 +130,7 @@ func NewAppConfig() django.AppConfig {
 								HasPermission: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
 									return permissions.HasObjectPermission(r, row, "admin:edit")
 								},
-								Widget: chooser.NewChooserWidget(&pages.PageNode{}, nil, pages.CHOOSER_ROOT_PAGES_KEY),
+								// Widget: chooser.NewChooserWidget(&pages.PageNode{}, nil, pages.CHOOSER_ROOT_PAGES_KEY),
 							},
 						),
 					},

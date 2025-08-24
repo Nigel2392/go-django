@@ -52,6 +52,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 	}
 
 	var view = &list.View[attrs.Definer]{
+		Model:           &PageNode{},
 		ListColumns:     cols,
 		DefaultAmount:   int(amount),
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},

@@ -239,7 +239,7 @@ func (v *ChooserListPage[T]) getList(req *http.Request, results []T) any {
 		return v.NewList(req, results, v._Definition)
 	}
 
-	var listObject = list.NewListWithGroups(req, results, v.GetListColumns(req), func(r *http.Request, obj T, cols []list.ListColumn[T]) list.ColumnGroup[T] {
+	var listObject = list.NewListWithGroups[T](req, v._Definition.AdminModel.NewInstance().(T), results, v.GetListColumns(req), func(r *http.Request, obj T, cols []list.ListColumn[T]) list.ColumnGroup[T] {
 		return &wrappedColumnGroup[T]{
 			ListColumnGroup: list.NewColumnGroup(r, obj, cols),
 			_Definition:     v._Definition,

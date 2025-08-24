@@ -249,6 +249,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 	}
 
 	var view = &list.View[attrs.Definer]{
+		Model:           model.NewInstance(),
 		ListColumns:     columns,
 		DefaultAmount:   int(amount),
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},

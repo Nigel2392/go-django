@@ -292,6 +292,7 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 	}
 
 	var view = &list.View[attrs.Definer]{
+		Model:           &PageNode{},
 		ListColumns:     cols,
 		DefaultAmount:   25,
 		PageParam:       "page",
@@ -388,6 +389,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	var view = &list.View[attrs.Definer]{
 		ListColumns:   cols,
 		DefaultAmount: int(amount),
+		Model:         &PageNode{},
 
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: admin.BASE_KEY,

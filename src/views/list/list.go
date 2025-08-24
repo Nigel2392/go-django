@@ -118,6 +118,7 @@ var (
 )
 
 type View[T attrs.Definer] struct {
+	Model            T
 	AllowedMethods   []string
 	BaseTemplateKey  string
 	TemplateName     string
@@ -187,7 +188,7 @@ func (v *View[T]) GetList(r *http.Request, pageObject pagination.PageObject[T], 
 		if pageObject != nil {
 			results = pageObject.Results()
 		}
-		list = NewList(r, results, columns...)
+		list = NewList(r, v.Model, results, columns...)
 	}
 
 	return list, nil
