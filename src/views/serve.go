@@ -28,6 +28,10 @@ var httpMethods = []string{
 
 type ContextHandlerFunc = func(w http.ResponseWriter, req *http.Request, ctx ctx.Context) error
 
+type HttpContextHandler interface {
+	ServeHTTP(http.ResponseWriter, *http.Request, ctx.Context)
+}
+
 type View interface {
 	// ServeXXX is a method that will never get called.
 	// It is a placeholder for the actual method that will be called.
@@ -39,7 +43,8 @@ type View interface {
 }
 
 type ControlledView interface {
-	TakeControl(w http.ResponseWriter, req *http.Request)
+	View
+	TakeControl(w http.ResponseWriter, req *http.Request, v View)
 }
 
 type MethodsView interface {
@@ -69,8 +74,11 @@ type TemplateView interface {
 	View
 	ContextGetter
 	TemplateGetter
-	// Render renders the template with the given context.
-	Render(w http.ResponseWriter, req *http.Request, templateName string, context ctx.Context) error
+	TemplateRenderer
+}
+type TemplateKeyer interface {
+	// GetBaseKey returns the base key for the template.
+	GetBaseKey() string
 }
 
 type SetupView interface {
@@ -91,6 +99,11 @@ type Renderer interface {
 	Render(w http.ResponseWriter, req *http.Request, context ctx.Context) error
 }
 
+type TemplateRenderer interface {
+	// Render renders the template with the given context.
+	Render(w http.ResponseWriter, req *http.Request, templateName string, context ctx.Context) error
+}
+
 type Checker interface {
 	View
 
@@ -102,10 +115,6 @@ type Checker interface {
 	// Fail is a helper function to fail the request.
 	// This can be used to redirect, etc.
 	Fail(w http.ResponseWriter, req *http.Request, err error)
-}
-type TemplateKeyer interface {
-	// GetBaseKey returns the base key for the template.
-	GetBaseKey() string
 }
 
 type ErrorFunc func(w http.ResponseWriter, req *http.Request, err error, code int)
@@ -157,6 +166,112 @@ func Serve(view View) http.Handler {
 
 func handleErrors(w http.ResponseWriter, req *http.Request, err error, code int) {
 	except.Fail(code, err)
+}
+
+func MethodServe(w http.ResponseWriter, req *http.Request, view any) bool {
+	serveFn, ok := attrs.Method[http.HandlerFunc](
+		view, fmt.Sprintf("Serve%s", req.Method),
+	)
+	if ok {
+		serveFn(w, req)
+		return true
+	}
+	return false
+}
+
+func MethodServeContext(w http.ResponseWriter, req *http.Request, view any, context ctx.Context) bool {
+	serveFnCtx, ok := attrs.Method[ContextHandlerFunc](
+		view, fmt.Sprintf("Serve%s", req.Method),
+	)
+	if ok {
+		// Any matching serve method takes precedence over the fallback.
+		serveFnCtx(w, req, context)
+		return true
+	}
+
+	if server, ok := view.(HttpContextHandler); ok {
+		server.ServeHTTP(w, req, context)
+		return true
+	}
+
+	return false
+}
+
+func GetViewContext(req *http.Request, view any) (context ctx.Context, err error) {
+	// Get the context if the view implements the ContextGetter interface.
+	if contextGetter, ok := view.(ContextGetter); ok {
+		if context, err = contextGetter.GetContext(req); err != nil {
+			return nil, err
+		}
+	}
+
+	// If the context is nil, then create a new context.
+	if context == nil {
+		context = ctx.RequestContext(req)
+	}
+
+	// Set basic context variables.
+	context.Set("Request", req)
+	context.Set("View", view)
+
+	return context, nil
+}
+
+func TryServeTemplateView(w http.ResponseWriter, req *http.Request, view any, context ctx.Context) error {
+	var (
+		err      error
+		baseKey  string
+		template string
+	)
+
+	// Render the template immediately if the view implements the Renderer interface.
+	if renderer, ok := view.(Renderer); ok {
+		return renderer.Render(w, req, context)
+	}
+
+	// Get the template if the view implements the TemplateView interface.
+	if templateView, ok := view.(TemplateGetter); ok {
+		template = templateView.GetTemplate(req)
+	}
+
+	// Get the base key if the view implements the TemplateKeyer interface.
+	// This is to render the proper base template for the sub-template (template inheritance.)
+	if templateKeyer, ok := view.(TemplateKeyer); ok {
+		baseKey = templateKeyer.GetBaseKey()
+	}
+
+	// Render the template if the view implements the TemplateView interface.
+	if templateView, ok := view.(TemplateRenderer); ok {
+		return templateView.Render(w, req, template, context)
+	}
+
+	// Cannot render if there is no template.
+	// Developer error - HARD FAIL.
+	assert.False(
+		template == "" && baseKey == "",
+		"Template and base key cannot be empty",
+	)
+
+	// Render the template.
+	// This has to be a switch statement
+	// because of the way the tpl package is designed.
+	switch {
+	case template != "" && baseKey != "":
+		err = tpl.FRender(w, context, baseKey, template)
+	case template != "":
+		err = tpl.FRender(w, context, template)
+	case baseKey != "":
+		err = tpl.FRender(w, context, baseKey)
+	default:
+		except.Fail(
+			http.StatusInternalServerError,
+			"Cannot render template, misconfiguration for view type: %T",
+			view,
+		)
+		return nil
+	}
+
+	return err
 }
 
 // Invoke invokes the view and appropriately handles the request.
@@ -217,13 +332,36 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 		return err
 	}
 
-	if v, ok := view.(ControlledView); ok {
-		v.TakeControl(w, req)
-		return nil
-	}
+	var err error
+	var original = view
+	// The logic in this for loop is not that straight forward; I will explain:
+	// 1. We check if both the view and bound view implement the Checker interface.
+	// 2. we allow both the view and bound view to setup
+	//
+	// Even though the [Checker] and [SetupView] interfaces are checked before the view is bound
+	// these methods will still be checked for bound views
+	// this is because we only break the forloop if the [BindableView] check fails.
+	for {
+		if checker, ok := view.(Checker); ok {
+			if err = checker.Check(w, req); err != nil {
+				django.App().Log.Error(err)
+				checker.Fail(w, req, err)
+				return err
+			}
+		}
 
-	if v, ok := view.(BindableView); ok {
-		var err error
+		if v, ok := view.(SetupView); ok {
+			w, req = v.Setup(w, req)
+			if w == nil || req == nil {
+				return nil
+			}
+		}
+
+		var v, ok = view.(BindableView)
+		if !ok {
+			break
+		}
+
 		view, err = v.Bind(w, req)
 		if err != nil {
 			django.App().Log.Error(err)
@@ -232,117 +370,33 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 		}
 	}
 
-	var (
-		context  ctx.Context
-		baseKey  string
-		template string
-		err      error
-	)
-
-	if checker, ok := view.(Checker); ok {
-		if err = checker.Check(w, req); err != nil {
-			django.App().Log.Error(err)
-			checker.Fail(w, req, err)
-			return err
-		}
-	}
-
-	if v, ok := view.(SetupView); ok {
-		w, req = v.Setup(w, req)
-		if w == nil || req == nil {
-			return nil
-		}
+	if v, ok := original.(ControlledView); ok {
+		v.TakeControl(w, req, view)
+		return nil
 	}
 
 	// Check if the view has a Serve<XXX> method.
-	var serveFn, ok = attrs.Method[http.HandlerFunc](
-		view, fmt.Sprintf("Serve%s", method),
-	)
-	if ok {
+	if MethodServe(w, req, view) {
 		// Any matching serve method takes precedence over the fallback.
-		serveFn(w, req)
 		return nil
 	}
 
-	// Get the context if the view implements the ContextGetter interface.
-	if contextGetter, ok := view.(ContextGetter); ok {
-		if context, err = contextGetter.GetContext(req); err != nil {
-			django.App().Log.Error(err)
-			errFn(w, req, err, http.StatusInternalServerError)
-			return err
-		}
-	}
-
-	// If the context is nil, then create a new context.
-	if context == nil {
-		context = ctx.RequestContext(req)
-	}
-
-	// Set basic context variables.
-	context.Set("Request", req)
-	context.Set("Template", template)
-	context.Set("View", view)
-
-	serveFnCtx, ok := attrs.Method[ContextHandlerFunc](
-		view, fmt.Sprintf("Serve%s", method),
-	)
-	if ok {
-		// Any matching serve method takes precedence over the fallback.
-		serveFnCtx(w, req, context)
-		return nil
-	}
-
-	// Render the template immediately if the view implements the Renderer interface.
-	if renderer, ok := view.(Renderer); ok {
-		if err = renderer.Render(w, req, context); err != nil {
-			django.App().Log.Error(err)
-			errFn(w, req, err, http.StatusInternalServerError)
-		}
-		return err
-	}
-
-	// Get the template if the view implements the TemplateView interface.
-	if templateView, ok := view.(TemplateView); ok {
-		template = templateView.GetTemplate(req)
-	}
-
-	// Get the base key if the view implements the TemplateKeyer interface.
-	// This is to render the proper base template for the sub-template (template inheritance.)
-	if templateKeyer, ok := view.(TemplateKeyer); ok {
-		baseKey = templateKeyer.GetBaseKey()
-	}
-
-	// Render the template if the view implements the TemplateView interface.
-	if templateView, ok := view.(TemplateView); ok {
-		if err = templateView.Render(w, req, template, context); err != nil {
-			django.App().Log.Error(err)
-			errFn(w, req, err, http.StatusInternalServerError)
-		}
-		return err
-	}
-
-	// Cannot render if there is no template.
-	// Developer error - HARD FAIL.
-	assert.False(
-		template == "" && baseKey == "",
-		"Template and base key cannot be empty",
-	)
-
-	// Render the template.
-	// This has to be a switch statement
-	// because of the way the tpl package is designed.
-	switch {
-	case template != "" && baseKey != "":
-		err = tpl.FRender(w, context, baseKey, template)
-	case template != "":
-		err = tpl.FRender(w, context, template)
-	case baseKey != "":
-		err = tpl.FRender(w, context, baseKey)
-	}
+	context, err := GetViewContext(req, view)
 	if err != nil {
 		django.App().Log.Error(err)
 		errFn(w, req, err, http.StatusInternalServerError)
 		return err
 	}
+
+	if MethodServeContext(w, req, view, context) {
+		return nil
+	}
+
+	if err = TryServeTemplateView(w, req, view, context); err != nil {
+		django.App().Log.Error(err)
+		errFn(w, req, err, http.StatusInternalServerError)
+		return err
+	}
+
 	return nil
 }

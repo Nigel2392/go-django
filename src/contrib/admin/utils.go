@@ -10,11 +10,10 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
+	"github.com/Nigel2392/go-django/src/views/list"
 )
 
-type StringRenderer interface {
-	Render() string
-}
+type StringRenderer = list.StringRenderer
 
 func sortComponents(components []AdminPageComponent) []AdminPageComponent {
 	slices.SortStableFunc(components, func(i, j AdminPageComponent) int {

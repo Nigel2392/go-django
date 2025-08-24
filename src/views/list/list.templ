@@ -6,6 +6,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"strings"
 	"net/http"
+	"github.com/Nigel2392/go-django/src/forms/media"
 )
 
 type List[T attrs.Definer] struct {
@@ -36,6 +37,16 @@ func NewListWithGroups[T attrs.Definer](r *http.Request,list []T, columns []List
 	}
 
 	return l
+}
+
+func (l *List[T]) Media() media.Media {
+	var m media.Media = media.NewMedia()
+	for _, col := range l.Columns {
+		if mc, ok := col.(media.MediaDefiner); ok {
+			m = m.Merge(mc.Media())
+		}
+	}
+	return m
 }
 
 func (l *List[T]) Render() string {

@@ -292,29 +292,27 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 	}
 
 	var view = &list.View[attrs.Definer]{
-		ListColumns:   cols,
-		DefaultAmount: 25,
-		PageParam:     "page",
-		AmountParam:   "amount",
-		BaseView: views.BaseView{
-			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: admin.BASE_KEY,
-			TemplateName:    "pages/admin/admin_outdated_list.tmpl",
-			GetContextFn: func(req *http.Request) (ctx.Context, error) {
-				var context = admin.NewContext(
-					req, admin.AdminSite, nil,
-				)
+		ListColumns:     cols,
+		DefaultAmount:   25,
+		PageParam:       "page",
+		AmountParam:     "amount",
+		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+		BaseTemplateKey: admin.BASE_KEY,
+		TemplateName:    "pages/admin/admin_outdated_list.tmpl",
+		GetContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer]) (ctx.Context, error) {
+			var context = admin.NewContext(
+				req, admin.AdminSite, nil,
+			)
 
-				context.Set("app", a)
-				context.Set("model", m)
-				context.Set("filters", filter)
+			context.Set("app", a)
+			context.Set("model", m)
+			context.Set("filters", filter)
 
-				context.SetPage(admin.PageOptions{
-					TitleFn:    trans.S("(%d) Outdated Pages", count),
-					SubtitleFn: trans.S("List of outdated pages"),
-				})
-				return context, nil
-			},
+			context.SetPage(admin.PageOptions{
+				TitleFn:    trans.S("(%d) Outdated Pages", count),
+				SubtitleFn: trans.S("List of outdated pages"),
+			})
+			return context, nil
 		},
 		QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
 			return queries.ChangeObjectsType[*PageNode, attrs.Definer](
@@ -389,96 +387,96 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 	var view = &list.View[attrs.Definer]{
 		ListColumns:   cols,
-		DefaultAmount: amount,
-		BaseView: views.BaseView{
-			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: admin.BASE_KEY,
-			TemplateName:    "pages/admin/admin_list.tmpl",
-			GetContextFn: func(req *http.Request) (ctx.Context, error) {
-				var context = admin.NewContext(
-					req, admin.AdminSite, nil,
+		DefaultAmount: int(amount),
+
+		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+		BaseTemplateKey: admin.BASE_KEY,
+		TemplateName:    "pages/admin/admin_list.tmpl",
+		GetContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer]) (ctx.Context, error) {
+			var context = admin.NewContext(
+				req, admin.AdminSite, nil,
+			)
+
+			var contentType *contenttypes.ContentTypeDefinition
+			if p.ContentType != "" {
+				contentType = contenttypes.DefinitionForType(
+					p.ContentType,
 				)
+			} else {
+				contentType = contenttypes.DefinitionForObject(
+					p,
+				)
+			}
 
-				var contentType *contenttypes.ContentTypeDefinition
-				if p.ContentType != "" {
-					contentType = contenttypes.DefinitionForType(
-						p.ContentType,
-					)
-				} else {
-					contentType = contenttypes.DefinitionForObject(
-						p,
-					)
-				}
+			context.Set("app", a)
+			context.Set("model", m)
+			context.Set("page_object", p)
+			context.Set("parent_object", parent_object)
+			context.Set(
+				"model_name",
+				contentType.Label(r.Context()),
+			)
 
-				context.Set("app", a)
-				context.Set("model", m)
-				context.Set("page_object", p)
-				context.Set("parent_object", parent_object)
-				context.Set(
-					"model_name",
+			var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())
+			var count, err = paginator.Count()
+			if err != nil {
+				return nil, err
+			}
+
+			breadcrumbs, err := getPageBreadcrumbs(r, p, false)
+			if err != nil {
+				return nil, err
+			}
+			context.SetPage(admin.PageOptions{
+				BreadCrumbs: breadcrumbs,
+				Actions:     getPageActions(r, p),
+				TitleFn: trans.SP(
+					"%s %q (%d child)",
+					"%s %q (%d children)",
+					count,
 					contentType.Label(r.Context()),
-				)
-
-				var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())
-				var count, err = paginator.Count()
-				if err != nil {
-					return nil, err
-				}
-
-				breadcrumbs, err := getPageBreadcrumbs(r, p, false)
-				if err != nil {
-					return nil, err
-				}
-				context.SetPage(admin.PageOptions{
-					BreadCrumbs: breadcrumbs,
-					Actions:     getPageActions(r, p),
-					TitleFn: trans.SP(
-						"%s %q (%d child)",
-						"%s %q (%d children)",
-						count,
-						contentType.Label(r.Context()),
-						p.Title, count,
+					p.Title, count,
+				),
+				Buttons: []components.ShowableComponent{
+					components.NewShowableComponent(
+						req, func(r *http.Request) bool {
+							return permissions.HasObjectPermission(r, p, "pages:add")
+						},
+						components.Link(components.ButtonConfig{
+							Text: trans.S("Add Child Page"),
+							Type: components.ButtonTypePrimary,
+						}, func() string {
+							return django.Reverse("admin:pages:type", p.PK)
+						}),
 					),
-					Buttons: []components.ShowableComponent{
-						components.NewShowableComponent(
-							req, func(r *http.Request) bool {
-								return permissions.HasObjectPermission(r, p, "pages:add")
-							},
-							components.Link(components.ButtonConfig{
-								Text: trans.T(req.Context(), "Add Child Page"),
-								Type: components.ButtonTypePrimary,
-							}, func() string {
-								return django.Reverse("admin:pages:type", p.PK)
-							}),
-						),
-						components.NewShowableComponent(
-							req, func(r *http.Request) bool {
-								return permissions.HasObjectPermission(r, p, "pages:edit")
-							},
-							components.Link(components.ButtonConfig{
-								Text: trans.T(req.Context(), "Edit Page"),
-								Type: components.ButtonTypePrimary,
-							}, func() string {
-								return django.Reverse("admin:pages:edit", p.PK)
-							}),
-						),
-						components.NewShowableComponent(
-							req, func(r *http.Request) bool {
-								return permissions.HasObjectPermission(r, p, "pages:delete")
-							},
-							components.Link(components.ButtonConfig{
-								Text: trans.T(req.Context(), "Delete Page"),
-								Type: components.ButtonTypeDanger | components.ButtonTypeHollow,
-							}, func() string {
-								return django.Reverse("admin:pages:delete", p.PK)
-							}),
-						),
-					},
-				})
+					components.NewShowableComponent(
+						req, func(r *http.Request) bool {
+							return permissions.HasObjectPermission(r, p, "pages:edit")
+						},
+						components.Link(components.ButtonConfig{
+							Text: trans.S("Edit Page"),
+							Type: components.ButtonTypePrimary,
+						}, func() string {
+							return django.Reverse("admin:pages:edit", p.PK)
+						}),
+					),
+					components.NewShowableComponent(
+						req, func(r *http.Request) bool {
+							return permissions.HasObjectPermission(r, p, "pages:delete")
+						},
+						components.Link(components.ButtonConfig{
+							Text: trans.S("Delete Page"),
+							Type: components.ButtonTypeDanger | components.ButtonTypeHollow,
+						}, func() string {
+							return django.Reverse("admin:pages:delete", p.PK)
+						}),
+					),
+				},
+			})
 
-				return context, nil
-			},
+			return context, nil
 		},
+
 		QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
 			return queries.ChangeObjectsType[*PageNode, attrs.Definer](
 				NewPageQuerySet().

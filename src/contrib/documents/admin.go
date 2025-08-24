@@ -214,6 +214,9 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 					"Title", "FileName", "Size", "CreatedAt", "FileHash",
 				},
 			},
+			BulkActions: []admin.BulkAction{
+				admin.BulkActionDelete,
+			},
 			GetQuerySet: func(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) *queries.QuerySet[attrs.Definer] {
 				return queries.GetQuerySet[attrs.Definer](&Document{}).OrderBy("-CreatedAt")
 			},

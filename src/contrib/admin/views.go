@@ -18,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/pagination"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
@@ -109,6 +110,42 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		return
 	}
 
+	var actions = make(map[string]BulkAction)
+	var buttons = []components.ShowableComponent{
+		components.NewShowableComponent(
+			r,
+			func(r *http.Request) bool {
+				return len(actions) > 0
+			},
+			components.Button(components.ButtonConfig{
+				Text: trans.GetTextFunc("Select All"),
+				Type: components.ButtonTypePrimary,
+				Attrs: map[string]any{
+					"type":                     "button",
+					"data-bulk-actions-target": "selectAll",
+				},
+			}),
+		),
+	}
+
+	var hasBulkActionsPerm = permissions.HasPermission(r, "admin:bulk_actions")
+	if len(model.ListView.BulkActions) > 0 && hasBulkActionsPerm {
+		for _, action := range model.ListView.BulkActions {
+			if !action.HasPermission(r, model) {
+				continue
+			}
+
+			actions[action.Name()] = action
+			buttons = append(buttons, components.NewShowableComponent(
+				r,
+				func(r *http.Request) bool {
+					return action.HasPermission(r, model)
+				},
+				action.Button(),
+			))
+		}
+	}
+
 	if model.ListView.GetHandler != nil {
 		var err = views.Invoke(model.ListView.GetHandler(adminSite, app, model), w, r)
 		except.AssertNil(err, 500, err)
@@ -137,6 +174,64 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 	if len(model.ListView.Prefetch.PrefetchRelated) > 0 {
 		qs = qs.Preload(model.ListView.Prefetch.PrefetchRelated...)
 	}
+	if len(model.ListView.Ordering) > 0 {
+		qs = qs.OrderBy(model.ListView.Ordering...)
+	}
+
+	if !model.DisallowEdit && permissions.HasPermission(r, "admin:edit") {
+		r = r.WithContext(list.SetAllowListEdit(r.Context(), true))
+	}
+
+	if len(actions) > 0 && hasBulkActionsPerm {
+		r = r.WithContext(list.SetAllowListRowSelect(r.Context(), true))
+
+		if r.Method == http.MethodPost {
+			r.ParseForm()
+			var listSelected = r.PostForm["list__row_select"]
+			var actionName = r.PostFormValue("list_action")
+			var meta = attrs.GetModelMeta(model.Model)
+			var defs = meta.Definitions()
+			var primaryField = defs.Primary()
+
+			qs = qs.Filter(
+				fmt.Sprintf("%s__in", primaryField.Name()),
+				listSelected,
+			)
+
+			var action, ok = actions[actionName]
+			if !ok {
+				except.Fail(
+					http.StatusBadRequest,
+					trans.T(r.Context(), "Invalid list action"),
+				)
+				return
+			}
+
+			var changed, err = action.Execute(w, r, model, qs)
+			if err != nil {
+				logger.Errorf(
+					"Failed to execute bulk action %s: %v",
+					action.Name(), err,
+				)
+				except.Fail(
+					http.StatusInternalServerError,
+					trans.T(r.Context(), "Failed to apply list action"),
+				)
+				return
+			}
+
+			switch {
+			case changed == 1:
+				messages.Success(r, trans.T(r.Context(), "List action applied successfully to one object"))
+				http.Redirect(w, r, django.Reverse("admin:apps:model", app.Name, model.GetName()), http.StatusSeeOther)
+			case changed > 1:
+				messages.Success(r, trans.T(r.Context(), "List action applied successfully to multiple objects"))
+				http.Redirect(w, r, django.Reverse("admin:apps:model", app.Name, model.GetName()), http.StatusSeeOther)
+			}
+
+			return
+		}
+	}
 
 	var filterForm *filters.Filters[attrs.Definer]
 	if len(model.ListView.Filters) > 0 {
@@ -154,48 +249,55 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 	}
 
 	var view = &list.View[attrs.Definer]{
-		ListColumns:   columns,
-		DefaultAmount: amount,
-		BaseView: views.BaseView{
-			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: BASE_KEY,
-			TemplateName:    "admin/views/models/list.tmpl",
-			GetContextFn: func(req *http.Request) (ctx.Context, error) {
+		ListColumns:     columns,
+		DefaultAmount:   int(amount),
+		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+		BaseTemplateKey: BASE_KEY,
+		TemplateName:    "admin/views/models/list.tmpl",
+		List: func(r *http.Request, po pagination.PageObject[attrs.Definer], lc []list.ListColumn[attrs.Definer], ctx ctx.Context) (list.StringRenderer, error) {
+			if model.ListView.GetList != nil {
+				return model.ListView.GetList(r, adminSite, app, model, po.Results())
+			}
+			return nil, nil
+		},
+		GetContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer]) (ctx.Context, error) {
+			var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())
+			var count, err = paginator.Count()
+			if err != nil {
+				return nil, err
+			}
 
-				var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())
-				var count, err = paginator.Count()
-				if err != nil {
-					return nil, err
-				}
-
-				var context = NewContext(req, adminSite, nil)
-				context.SetPage(PageOptions{
-					TitleFn: trans.S(
-						"%s List (%d)",
-						model.Label(r.Context()),
-						count,
-					),
-					Buttons: []components.ShowableComponent{
+			var context = NewContext(req, adminSite, nil)
+			context.SetPage(PageOptions{
+				TitleFn: trans.S(
+					"%s List (%d)",
+					model.Label(r.Context()),
+					count,
+				),
+				Buttons: append(
+					[]components.ShowableComponent{
 						components.NewShowableComponent(
 							req, func(r *http.Request) bool {
 								return !model.DisallowCreate && permissions.HasObjectPermission(r, model.NewInstance(), "admin:add")
 							},
 							components.Link(components.ButtonConfig{
-								Text: trans.T(req.Context(), "Add"),
+								Text: trans.S("Add"),
 								Type: components.ButtonTypePrimary,
 							}, func() string {
 								return django.Reverse("admin:apps:model:add", app.Name, model.GetName())
 							}),
 						),
 					},
-				})
-				context.Set("app", app)
-				context.Set("model", model)
-				if filterForm != nil {
-					context.Set("filter", filterForm)
-				}
-				return context, nil
-			},
+					buttons...,
+				),
+			})
+			context.Set("app", app)
+			context.Set("model", model)
+			context.Set("actions", actions)
+			if filterForm != nil {
+				context.Set("filter", filterForm)
+			}
+			return context, nil
 		},
 		QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
 			return qs
@@ -212,14 +314,15 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 				}
 				return django.Reverse("admin:apps:model:edit", app.Name, model.GetName(), primaryField.GetValue())
 			})
-			if !model.DisallowDelete {
+			if len(actions) > 0 {
 				return list.RowSelectColumn(
-					"row-select",
+					"list__row_select",
 					nil,
-					func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-						return permissions.HasObjectPermission(r, row, "admin:delete")
-					},
+					nil,
 					col,
+					map[string]any{
+						"data-bulk-actions-target": "checkbox",
+					},
 				)
 			}
 			return col

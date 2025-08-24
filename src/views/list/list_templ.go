@@ -11,6 +11,7 @@ import templruntime "github.com/a-h/templ/runtime"
 import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/forms/media"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -44,6 +45,16 @@ func NewListWithGroups[T attrs.Definer](r *http.Request, list []T, columns []Lis
 	}
 
 	return l
+}
+
+func (l *List[T]) Media() media.Media {
+	var m media.Media = media.NewMedia()
+	for _, col := range l.Columns {
+		if mc, ok := col.(media.MediaDefiner); ok {
+			m = m.Merge(mc.Media())
+		}
+	}
+	return m
 }
 
 func (l *List[T]) Render() string {

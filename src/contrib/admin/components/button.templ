@@ -2,6 +2,8 @@ package components
 
 import (
     "fmt"
+	"github.com/Nigel2392/go-django/src/core/trans"
+	"context"
 )
 
 type ButtonType uint8
@@ -16,13 +18,13 @@ const (
 )
 
 type ButtonConfig struct {
-    Text string
+	Text  func(context.Context) string
     Icon templ.Component
     Type ButtonType
 	Attrs map[string]any
 }
 
-func NewButton(text string, args ...interface{}) templ.Component {
+func NewButton(text any, args ...interface{}) templ.Component {
 
 	var (
 		iconComponent templ.Component
@@ -55,7 +57,7 @@ loop:
 	}
 
 	var cfg = ButtonConfig{
-		Text: text,
+		Text: trans.GetTextFunc(text),
 		Icon: iconComponent,
 		Type: type_,
 		Attrs: attrs,
@@ -140,7 +142,9 @@ templ Button(config ButtonConfig) {
         if config.Icon != nil {
             @config.Icon
         }
-        { config.Text }
+        if config.Text != nil {
+            { config.Text(ctx) }
+        }
     </button>
 }
 
@@ -148,7 +152,7 @@ templ Link(config ButtonConfig, href func() string) {
 	if href == nil {
 		panic("Link requires a href function")
 	}
-	if config.Text == "" && config.Icon == nil {
+	if config.Text == nil && config.Icon == nil {
 		panic("Link requires either Text or Icon to be set")
 	}
 	<a { config.Attrs... } href={ templ.URL(href()) } class={
@@ -163,6 +167,8 @@ templ Link(config ButtonConfig, href func() string) {
 		if config.Icon != nil {
 			@config.Icon
 		}
-		{ config.Text }
+        if config.Text != nil {
+            { config.Text(ctx) }
+        }
 	</a>
 }

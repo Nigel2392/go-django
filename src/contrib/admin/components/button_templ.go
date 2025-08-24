@@ -9,7 +9,9 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"context"
 	"fmt"
+	"github.com/Nigel2392/go-django/src/core/trans"
 )
 
 type ButtonType uint8
@@ -24,13 +26,13 @@ const (
 )
 
 type ButtonConfig struct {
-	Text  string
+	Text  func(context.Context) string
 	Icon  templ.Component
 	Type  ButtonType
 	Attrs map[string]any
 }
 
-func NewButton(text string, args ...interface{}) templ.Component {
+func NewButton(text any, args ...interface{}) templ.Component {
 
 	var (
 		iconComponent templ.Component
@@ -63,7 +65,7 @@ loop:
 	}
 
 	var cfg = ButtonConfig{
-		Text:  text,
+		Text:  trans.GetTextFunc(text),
 		Icon:  iconComponent,
 		Type:  type_,
 		Attrs: attrs,
@@ -197,14 +199,16 @@ func Button(config ButtonConfig) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		var templ_7745c5c3_Var4 string
-		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(config.Text)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 143, Col: 21}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
+		if config.Text != nil {
+			var templ_7745c5c3_Var4 string
+			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(config.Text(ctx))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 146, Col: 30}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 		}
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</button>")
 		if templ_7745c5c3_Err != nil {
@@ -241,7 +245,7 @@ func Link(config ButtonConfig, href func() string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		if config.Text == "" && config.Icon == nil {
+		if config.Text == nil && config.Icon == nil {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "panic(\"Link requires either Text or Icon to be set\") ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -300,14 +304,16 @@ func Link(config ButtonConfig, href func() string) templ.Component {
 				return templ_7745c5c3_Err
 			}
 		}
-		var templ_7745c5c3_Var9 string
-		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(config.Text)
-		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 166, Col: 15}
-		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
+		if config.Text != nil {
+			var templ_7745c5c3_Var9 string
+			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(config.Text(ctx))
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 171, Col: 30}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
 		}
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</a>")
 		if templ_7745c5c3_Err != nil {

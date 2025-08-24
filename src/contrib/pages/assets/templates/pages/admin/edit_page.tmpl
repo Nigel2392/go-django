@@ -40,7 +40,7 @@
             {{ end }}
 
             {{ if (has_perm  "pages:delete") }}
-                <a href="{{ url "admin:pages:delete" .Data.page_object.ID }}?next={{ urlquery (url "admin:pages:edit" .Data.page_object.ID) }}" class="button danger">{{ T "Delete Page" }}</a>
+                <a href="{{ url "admin:pages:delete" .Data.page_object.Reference.ID }}?next={{ urlquery (url "admin:pages:edit" .Data.page_object.Reference.ID) }}" class="button danger">{{ T "Delete Page" }}</a>
             {{ end }}
         </div>
     </form>

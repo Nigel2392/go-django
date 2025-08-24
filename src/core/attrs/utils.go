@@ -41,6 +41,10 @@ func ToString(v any) string {
 		return ""
 	}
 
+	if s, ok := v.(string); ok {
+		return s
+	}
+
 	var r = reflect.ValueOf(v)
 	if r.Kind() == reflect.Ptr {
 		r = r.Elem()

@@ -9,6 +9,13 @@
             {{ $css }}
         {{ end }}
     {{ end }}
+
+    {{ if .Data.view_list.Media }}
+        {{ $Media := .Data.view_list.Media }}
+        {{ range $css := $Media.CSS }}
+            {{ $css }}
+        {{ end }}
+    {{ end }}
 {{ end }}
 
 {{ define "extra_js" }}
@@ -17,6 +24,26 @@
         {{ range $js := $Media.JS }}
             {{ $js }}
         {{ end }}
+    {{ end }}
+    {{ if .Data.view_list.Media }}
+        {{ $Media := .Data.view_list.Media }}
+        {{ range $js := $Media.JS }}
+            {{ $js }}
+        {{ end }}
+    {{ end }}
+{{ end }}
+
+{{ define "content_root" }}
+    {{ if len .Data.actions }}
+        <form action="{{ url "admin:apps:model" .Data.app.Name .Data.model.GetName }}" method="post" data-controller="bulk-actions">
+            {{ csrf_field }}
+
+            {{ template "header" . }}
+            {{ template "content" . }}
+        </form>
+    {{ else }}
+        {{ template "header" . }}
+        {{ template "content" . }}
     {{ end }}
 {{ end }}
 

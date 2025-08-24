@@ -120,6 +120,12 @@ type ListViewOptions struct {
 	// This is used for pagination in the list view.
 	PerPage uint64
 
+	// Ordering is used to define the default ordering of the list view.
+	Ordering []string
+
+	// BulkActions is a list of actions that can be performed in bulk.
+	BulkActions []BulkAction
+
 	// Columns are used to define the columns in the list view.
 	//
 	// This allows for custom rendering logic of the columns in the list view.
@@ -136,6 +142,9 @@ type ListViewOptions struct {
 
 	// Search are options to configure the search functionality for the list view.
 	Search *SearchOptions
+
+	// GetList returns a new StringRenderer which can render the results of the list view.
+	GetList func(r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, results []attrs.Definer) (list.StringRenderer, error)
 
 	// GetHandler is a function that returns a views.View for the model.
 	//
@@ -447,18 +456,6 @@ func (m *ModelDefinition) GetInstance(ctx context.Context, identifier any) (attr
 	return instance.(attrs.Definer), nil
 }
 
-func (m *ModelDefinition) GetListInstances(ctx context.Context, amount, offset uint) ([]attrs.Definer, error) {
-	var instances, err = m._cType.Instances(ctx, amount, offset)
-	if err != nil {
-		return nil, err
-	}
-	var defs = make([]attrs.Definer, len(instances))
-	for i, inst := range instances {
-		defs[i] = inst.(attrs.Definer)
-	}
-	return defs, nil
-}
-
 func (m *ModelDefinition) OnRegister(a *AdminApplication, app *AppDefinition) {
 	m.AddView.SetupDefaults(m.Model, "GetAddPanels")
 	m.EditView.SetupDefaults(m.Model, "GetEditPanels")
@@ -546,4 +543,24 @@ func (o *WrappedModelDefinition) DisallowEdit() bool {
 
 func (o *WrappedModelDefinition) DisallowDelete() bool {
 	return o.Wrapped.ModelOptions.DisallowDelete
+}
+
+func (o *WrappedModelDefinition) DisallowList() bool {
+	return o.Wrapped.ModelOptions.DisallowList
+}
+
+func (o *WrappedModelDefinition) AllowBulkActions() bool {
+	return len(o.Wrapped.ModelOptions.ListView.BulkActions) > 0
+}
+
+func (o *WrappedModelDefinition) BulkActions() []BulkAction {
+	return o.Wrapped.ModelOptions.ListView.BulkActions
+}
+
+func (o *WrappedModelDefinition) MenuLabel() string {
+	return o.Wrapped.MenuLabel(o.Context)
+}
+
+func (o *WrappedModelDefinition) MenuIcon() string {
+	return o.Wrapped.MenuIcon(o.Context)
 }

@@ -52,44 +52,42 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 	}
 
 	var view = &list.View[attrs.Definer]{
-		ListColumns:   cols,
-		DefaultAmount: amount,
-		BaseView: views.BaseView{
-			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
-			BaseTemplateKey: admin.BASE_KEY,
-			TemplateName:    "pages/admin/admin_list.tmpl",
-			GetContextFn: func(req *http.Request) (ctx.Context, error) {
-				var context = admin.NewContext(
-					req, admin.AdminSite, nil,
-				)
+		ListColumns:     cols,
+		DefaultAmount:   int(amount),
+		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
+		BaseTemplateKey: admin.BASE_KEY,
+		TemplateName:    "pages/admin/admin_list.tmpl",
+		GetContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer]) (ctx.Context, error) {
+			var context = admin.NewContext(
+				req, admin.AdminSite, nil,
+			)
 
-				var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())
-				var count, err = paginator.Count()
-				if err != nil {
-					return nil, err
-				}
+			var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())
+			var count, err = paginator.Count()
+			if err != nil {
+				return nil, err
+			}
 
-				context.Set("app", a)
-				context.Set("model", m)
-				context.SetPage(admin.PageOptions{
-					TitleFn: trans.S("Root Pages (%d)", count),
-					Buttons: []components.ShowableComponent{
-						components.NewShowableComponent(
-							req, func(r *http.Request) bool {
-								return permissions.HasObjectPermission(r, m.NewInstance(), "pages:add")
-							},
-							components.Link(components.ButtonConfig{
-								Text: trans.T(req.Context(), "Add Root Page"),
-								Type: components.ButtonTypePrimary,
-							}, func() string {
-								return django.Reverse("admin:pages:root_type")
-							}),
-						),
-					},
-				})
+			context.Set("app", a)
+			context.Set("model", m)
+			context.SetPage(admin.PageOptions{
+				TitleFn: trans.S("Root Pages (%d)", count),
+				Buttons: []components.ShowableComponent{
+					components.NewShowableComponent(
+						req, func(r *http.Request) bool {
+							return permissions.HasObjectPermission(r, m.NewInstance(), "pages:add")
+						},
+						components.Link(components.ButtonConfig{
+							Text: trans.S("Add Root Page"),
+							Type: components.ButtonTypePrimary,
+						}, func() string {
+							return django.Reverse("admin:pages:root_type")
+						}),
+					),
+				},
+			})
 
-				return context, nil
-			},
+			return context, nil
 		},
 		QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
 			return queries.ChangeObjectsType[*PageNode, attrs.Definer](
@@ -118,7 +116,12 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		},
 	}
 
-	views.Invoke(view, w, r)
+	if err := views.Invoke(view, w, r); err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"Error while serving view: %v", err,
+		)
+	}
 }
 
 func chooseRootPageTypeHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition) {

@@ -236,6 +236,10 @@ func AdminImageModelOptions(app *AppConfig) admin.ModelOptions {
 					return &SearchComponent{View: b, Objects: list}, nil
 				},
 			},
+			//Ordering: []string{"-CreatedAt"},
+			//GetList: func(r *http.Request, adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition, results []attrs.Definer) (list.StringRenderer, error) {
+			//	return &ImageListComponent{AdminSite: adminSite, App: app, Model: model, Results: results, R: r}, nil
+			//},
 			GetHandler: func(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View {
 				const (
 					amountParam = "amount"

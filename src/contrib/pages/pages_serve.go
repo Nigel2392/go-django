@@ -9,13 +9,10 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/mux"
 	"github.com/a-h/templ"
-)
-
-var (
-	_ views.ControlledView = (*PageServeView)(nil)
 )
 
 //
@@ -32,11 +29,20 @@ var (
 //	}
 
 func Serve(allowedMethods ...string) http.Handler {
+	var methodsMap = make(map[string]bool)
+	for _, method := range allowedMethods {
+		methodsMap[strings.ToUpper(method)] = true
+	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		var view = &PageServeView{}
-		if err := views.Invoke(view, w, r, allowedMethods...); err != nil {
-			logger.Errorf("Error invoking view: %v", err)
+		if !methodsMap[strings.ToUpper(r.Method)] {
+			except.Fail(
+				http.StatusMethodNotAllowed,
+				trans.T(r.Context(), "Method not allowed: %s", r.Method),
+			)
+			return
 		}
+
+		PageServeView(w, r)
 	})
 }
 
@@ -88,12 +94,7 @@ type PageComponentView interface {
 	Render(req *http.Request, page Page) templ.Component
 }
 
-// Register to the page definition.
-type PageServeView struct{}
-
-func (v *PageServeView) ServeXXX(w http.ResponseWriter, req *http.Request) {}
-
-func (v *PageServeView) TakeControl(w http.ResponseWriter, r *http.Request) {
+func PageServeView(w http.ResponseWriter, r *http.Request) {
 	var pathParts = mux.Vars(r).GetAll("*")
 	var requestContext, site, err = SiteForRequest(r)
 	var req = r.WithContext(requestContext)

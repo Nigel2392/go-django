@@ -239,6 +239,9 @@ func NewAppConfig() django.AppConfig {
 				},
 				// Customize the view / fields for the user models' list view.
 				ListView: admin.ListViewOptions{
+					BulkActions: []admin.BulkAction{
+						admin.BulkActionDelete,
+					},
 					Search: &admin.SearchOptions{
 						ListFields: []string{
 							"Email",

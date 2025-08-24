@@ -769,6 +769,7 @@ a.button, .button a {
 }
 .messages-wrapper {
     position: relative;
+    z-index: 1100;
 }
 .messages {
     display: flex;
