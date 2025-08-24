@@ -1,0 +1,74 @@
+package menu
+
+import "github.com/Nigel2392/go-django/src/forms/media"
+import "github.com/Nigel2392/go-django/src/core/ctx"
+import "github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+import "net/http"
+import "context"
+import "io"
+import "github.com/Nigel2392/go-django/src/core/logger"
+import "runtime/debug"
+
+type BaseSidePanel struct {
+    ID           string
+    Ordering     int
+    TemplateName string
+    Request      *http.Request
+    Hidden       func(p *BaseSidePanel, r *http.Request) bool
+    PanelMedia   func(p *BaseSidePanel, r *http.Request) media.Media
+    PanelButton  func(p *BaseSidePanel, r *http.Request) templ.Component
+    Context      func(p *BaseSidePanel, r *http.Request, c ctx.Context) ctx.Context
+}
+
+func (p *BaseSidePanel) Order() int {
+    return p.Ordering
+}
+
+func (p *BaseSidePanel) Name() string {
+    return p.ID
+}
+
+func (p *BaseSidePanel) IsShown() bool {
+    if p.Hidden == nil {
+        return true
+    }
+    return !p.Hidden(p, p.Request)
+}
+
+func (p *BaseSidePanel) Media() media.Media {
+    if p.PanelMedia == nil {
+        return nil
+    }
+    return p.PanelMedia(p, p.Request)
+}
+
+templ (p *BaseSidePanel) Button() {
+    if p.PanelButton == nil {
+        {{ return nil }}
+    }
+    @p.PanelButton(p, p.Request)
+}
+
+templ (p *BaseSidePanel) Content() {
+    <div class="side-panel" id={ p.ID }>
+        <div class="side-panel__body">
+            @p.panelContent()
+        </div>
+    </div>
+}
+
+func (p *BaseSidePanel) panelContent() templ.Component {
+    return templ.ComponentFunc(func(c context.Context, w io.Writer) error {
+        defer func() {
+            if r := recover(); r != nil {
+                logger.Fatalf(1, "Error rendering side panel %q: %v\n%s", p.ID, r, debug.Stack())
+            }
+        }()
+        var context ctx.Context = ctx.RequestContext(p.Request)
+        context.Set("panel", p)
+        if p.Context != nil {
+            context = p.Context(p, p.Request, context)
+        }
+        return tpl.FRender(w, context, p.TemplateName)
+    })
+}

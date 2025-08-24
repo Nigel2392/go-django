@@ -37,7 +37,7 @@
     {{ if or (len .Data.actions) .Data.view_list_form }}
         <form action="{{ url "admin:apps:model" .Data.app.Name .Data.model.GetName }}" method="post" data-controller="bulk-actions">
             {{ csrf_field }}
-
+        
             {{ template "header" . }}
             {{ template "content" . }}
         </form>
@@ -58,38 +58,6 @@
                 {{ (.Data.view_paginator_object).HTML "page" 5 .Request.URL.Query }}
             </div>
         </div>
-
-        {{ if .Data.filter_form }}
-            <form method="get" action="{{ printf "%s?page=%d" .Request.URL.Path (.Data.view_paginator_object).PageNum }}" class="form list-filters">
-                {{ $errorList := .Data.filter_form.ErrorList }}
-                {{ if (gt (len $errorList) 0) }}
-                    <ul class="error-list">
-                        {{ range $Error := $errorList }}
-                            <li class="error"><p>{{ $Error }}</p></li>
-                        {{ end }}
-                    </ul>
-                {{ end }}
-                {{ range $Field := .Data.filter_form.Fields }}        
-                    <div class="panel">
-                        <div class="form-field">
-                            {{ $Field.Label }}
-                            {{ if (gt (len $Field.Errors) 0) }}
-                                <ul class="error-list">
-                                    {{ range $Error := $Field.Errors }}
-                                        <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
-                                    {{ end }}
-                                </ul>
-                            {{ end }}
-                            {{ if (ne $Field.HelpText "") }}
-                                <p class="help-text">{{ $Field.HelpText }}</p>
-                            {{ end }}
-                            {{ $Field.Field }}
-                        </div>
-                    </div>
-                {{ end }}
-                <input class="button secondary hollow sm" type="submit" value="{{ T "Submit" }}">
-            </form>
-        {{ end }}
     </div>
 
 {{ end }}

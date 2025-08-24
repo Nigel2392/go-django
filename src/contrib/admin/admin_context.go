@@ -5,10 +5,12 @@ import (
 	"net/http"
 
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/a-h/templ"
 	"github.com/justinas/nosurf"
 )
 
@@ -27,6 +29,14 @@ type Action struct {
 	URL    string
 }
 
+type boundSidePanel struct {
+	request *http.Request
+	icon    func(ctx context.Context) string
+	title   func(ctx context.Context) string
+	content templ.Component
+	media   func() media.Media
+}
+
 type PageOptions struct {
 	Request     *http.Request
 	TitleFn     func(ctx context.Context) string
@@ -35,6 +45,7 @@ type PageOptions struct {
 	BreadCrumbs []BreadCrumb
 	Actions     []Action
 	Buttons     []components.ShowableComponent
+	SidePanels  []menu.SidePanel
 }
 
 func (p *PageOptions) Title() string {
@@ -55,6 +66,9 @@ func (p *PageOptions) Media() media.Media {
 	var media media.Media = media.NewMedia()
 	if p.MediaFn != nil {
 		media = media.Merge(p.MediaFn())
+	}
+	for _, panel := range p.GetSidePanels() {
+		media = media.Merge(panel.Media())
 	}
 	return media
 }
@@ -87,6 +101,21 @@ func (p *PageOptions) GetActions() []Action {
 	}
 
 	return actions
+}
+
+func (p *PageOptions) GetSidePanels() []menu.SidePanel {
+	var sidePanels = p.SidePanels
+	if sidePanels == nil {
+		sidePanels = make([]menu.SidePanel, 0)
+	}
+
+	var ret = make([]menu.SidePanel, 0, len(sidePanels))
+	for _, panel := range sidePanels {
+		if panel.IsShown() {
+			ret = append(ret, panel)
+		}
+	}
+	return ret
 }
 
 type adminContext struct {

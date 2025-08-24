@@ -9,6 +9,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
@@ -27,6 +28,7 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/goldcrest"
+	"github.com/a-h/templ"
 )
 
 var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition) {
@@ -252,7 +254,7 @@ continueView:
 			//fmt.Println("list form:", listForm)
 			//return listObj, nil
 		},
-		ChangeContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer], ctx ctx.Context) (ctx.Context, error) {
+		ChangeContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer], baseCtx ctx.Context) (ctx.Context, error) {
 			var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())
 			var count, err = paginator.Count()
 			if err != nil {
@@ -276,7 +278,7 @@ continueView:
 				),
 				components.NewShowableComponent(
 					req, func(r *http.Request) bool {
-						return count > 0 && ctx.Get("view_list_form") != nil && !model.DisallowEdit && permissions.HasObjectPermission(r, model.NewInstance(), "admin:edit")
+						return count > 0 && baseCtx.Get("view_list_form") != nil && !model.DisallowEdit && permissions.HasObjectPermission(r, model.NewInstance(), "admin:edit")
 					},
 					BulkActionButton(
 						trans.S("Change"),
@@ -301,7 +303,7 @@ continueView:
 				}
 			}
 
-			var context = NewContext(req, adminSite, ctx)
+			var context = NewContext(req, adminSite, baseCtx)
 			context.SetPage(PageOptions{
 				TitleFn: trans.S(
 					"%s List (%d)",
@@ -324,6 +326,35 @@ continueView:
 					},
 					buttons...,
 				),
+				SidePanels: []menu.SidePanel{
+					&menu.BaseSidePanel{
+						ID:       "filters",
+						Ordering: 100,
+						Request:  r,
+						Hidden: func(p *menu.BaseSidePanel, r *http.Request) bool {
+							return len(model.ListView.Filters) == 0
+						},
+						TemplateName: "admin/shared/side_panels/filter_panel.tmpl",
+						PanelButton: func(p *menu.BaseSidePanel, r *http.Request) templ.Component {
+							return components.Button(components.ButtonConfig{
+								Text: trans.S("Filters"),
+								Attrs: map[string]any{
+									"type":                      "button",
+									"data-side-panels-target":   "control",
+									"data-side-panels-id-param": p.ID,
+									"data-action":               "click->side-panels#open",
+								},
+							})
+						},
+						Context: func(p *menu.BaseSidePanel, r *http.Request, c ctx.Context) ctx.Context {
+							var dst = c.Data()
+							var src = context.Data()
+							dst["view_paginator_object"] = src["view_paginator_object"]
+							c.Set("filter", filterForm)
+							return c
+						},
+					},
+				},
 			})
 			context.Set("app", app)
 			context.Set("model", model)
@@ -338,14 +369,15 @@ continueView:
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
 			var col = list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {
-				if !permissions.HasObjectPermission(r, instance, "admin:edit") || model.DisallowEdit {
-					return ""
-				}
-
 				var primaryField = defs.Primary()
 				if primaryField == nil {
 					return ""
 				}
+
+				if !permissions.HasObjectPermission(r, instance, "admin:edit") || model.DisallowEdit {
+					return ""
+				}
+
 				return django.Reverse("admin:apps:model:edit", app.Name, model.GetName(), primaryField.GetValue())
 			})
 

@@ -1,6 +1,9 @@
 package menu
 
-import "github.com/a-h/templ"
+import (
+	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/a-h/templ"
+)
 
 type MenuItem interface {
 	// Order is used to sort the menu items
@@ -24,4 +27,13 @@ type MenuItem interface {
 	//
 	// The name should be unique
 	Name() string
+}
+
+type SidePanel interface {
+	Order() int
+	Name() string
+	IsShown() bool
+	Media() media.Media
+	Button() templ.Component
+	Content() templ.Component
 }

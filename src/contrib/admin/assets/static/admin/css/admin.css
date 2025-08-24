@@ -648,6 +648,35 @@ flex-direction is set to row above 70em.
     margin: 0.125rem 0;
 }
 
+
+.side-panels {
+
+}
+.side-panels .side-panels__controls {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+}
+.side-panels .side-panels__controls__control {
+
+}
+.side-panels .side-panels__controls__control+.side-panels__controls__control {
+    margin-inline-start: 0.375rem;
+}
+.side-panels .side-panels__content {
+    display: none;
+    flex-direction: column;
+    min-width: 400px;
+    padding: 1em;
+}
+.side-panels .side-panels__content.active {
+    display: flex;
+}
+.side-panels .side-panels__content__panel {
+
+}
+
 button, input {
     line-height: normal;
 }

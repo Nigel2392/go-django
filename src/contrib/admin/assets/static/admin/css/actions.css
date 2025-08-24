@@ -8,9 +8,16 @@
     font-weight: 600;
 }
 
-.actions__action {
+a.actions__action,
+button.actions__action,
+.actions__action a,
+.actions__action button,
+.actions__action.actions__action:not(:is(a,button),:has(a,button)) {
+    height: fit-content;
     cursor: pointer;
     border: 1px solid var(--secondary-bg-color);
+    background-color: transparent;
+    line-height: 16px;
     padding: 0.125em 0.5em;
     border-radius: 0.125rem;
     text-align: center;
@@ -19,8 +26,11 @@
     display: inline-block;
     vertical-align: middle;
 }
+
 .actions__action a,
-a.actions__action {
+.actions__action button,
+a.actions__action,
+button.actions__action {
     color: var(--secondary-bg-color);
     text-decoration: none;
 }

@@ -48,6 +48,10 @@ func (m *MediaObject) Merge(other Media) Media {
 		return m
 	}
 
+	if m == nil {
+		m = NewMedia()
+	}
+
 	var (
 		otherCss = other.CSSList()
 		otherJs  = other.JSList()

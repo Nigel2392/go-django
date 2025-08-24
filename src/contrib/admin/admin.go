@@ -6,6 +6,7 @@ import (
 	"embed"
 	"fmt"
 	"html/template"
+	"io"
 	"io/fs"
 	"net/http"
 	"slices"
@@ -455,6 +456,21 @@ func NewAppConfig() django.AppConfig {
 			},
 		},
 	}
+
+	tpl.RequestFuncs(func(r *http.Request) template.FuncMap {
+		return template.FuncMap{
+			"templ": func(obj any) (html template.HTML, err error) {
+				var buf = new(bytes.Buffer)
+				switch v := obj.(type) {
+				case components.Component:
+					err = v.Render(r.Context(), buf)
+				case func(ctx context.Context, w io.Writer) error:
+					err = v(r.Context(), buf)
+				}
+				return template.HTML(buf.String()), err
+			},
+		}
+	})
 
 	return AdminSite
 }

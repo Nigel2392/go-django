@@ -33,6 +33,7 @@
                     {{ if .Page }}
                         {{ $breadCrumbs := .Page.GetBreadCrumbs }}
                         {{ $actions := .Page.GetActions }}
+                        {{ $panels := .Page.GetSidePanels }}
 
                         {{ if $breadCrumbs }}
                             {{$last := (len $breadCrumbs | sub 1)}}
@@ -63,7 +64,26 @@
                                 {{ end }}
                             </div>
                         {{ end }}
-                        
+
+                        {{ if $panels }}
+                            <div class="side-panels" data-controller="side-panels">
+                                <div class="side-panels__controls actions">
+                                    {{ range $panel := $panels }}
+                                        <div class="side-panels__controls__control actions__action">
+                                            {{ templ $panel.Button }}
+                                        </div>
+                                    {{ end }}
+                                </div>
+                                <div class="side-panels__content">
+                                    {{ range $panel := $panels }}
+                                        <div class="side-panels__content__panel">
+                                            {{ templ $panel.Content }}
+                                        </div>
+                                    {{ end }}
+                                </div>
+                            </div>
+                        {{ end }}
+
                     {{ end }}
 
                 {{ end }}
