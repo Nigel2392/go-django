@@ -111,22 +111,6 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 	}
 
 	var actions = make(map[string]BulkAction)
-	var buttons = []components.ShowableComponent{
-		components.NewShowableComponent(
-			r,
-			func(r *http.Request) bool {
-				return len(actions) > 0
-			},
-			components.Button(components.ButtonConfig{
-				Text: trans.GetTextFunc("Select All"),
-				Type: components.ButtonTypePrimary,
-				Attrs: map[string]any{
-					"type":                     "button",
-					"data-bulk-actions-target": "selectAll",
-				},
-			}),
-		),
-	}
 
 	var hasBulkActionsPerm = permissions.HasPermission(r, "admin:bulk_actions")
 	if len(model.ListView.BulkActions) > 0 && hasBulkActionsPerm {
@@ -136,13 +120,6 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 			}
 
 			actions[action.Name()] = action
-			buttons = append(buttons, components.NewShowableComponent(
-				r,
-				func(r *http.Request) bool {
-					return action.HasPermission(r, model)
-				},
-				action.Button(),
-			))
 		}
 	}
 
@@ -187,16 +164,25 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 
 		if r.Method == http.MethodPost {
 			r.ParseForm()
+
 			var listSelected = r.PostForm["list__row_select"]
 			var actionName = r.PostFormValue("list_action")
-			var meta = attrs.GetModelMeta(model.Model)
-			var defs = meta.Definitions()
-			var primaryField = defs.Primary()
 
-			qs = qs.Filter(
-				fmt.Sprintf("%s__in", primaryField.Name()),
-				listSelected,
-			)
+			if len(listSelected) > 0 {
+				var meta = attrs.GetModelMeta(model.Model)
+				var defs = meta.Definitions()
+				var primaryField = defs.Primary()
+
+				qs = qs.Filter(
+					fmt.Sprintf("%s__in", primaryField.Name()),
+					listSelected,
+				)
+			}
+
+			// if there is no action passed; we assume update view
+			if actionName == "" {
+				goto continueView
+			}
 
 			var action, ok = actions[actionName]
 			if !ok {
@@ -233,6 +219,7 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		}
 	}
 
+continueView:
 	var filterForm *filters.Filters[attrs.Definer]
 	if len(model.ListView.Filters) > 0 {
 		filterForm = filters.NewFilters[attrs.Definer](r.Context(), "filters")
@@ -260,15 +247,61 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 				return model.ListView.GetList(r, adminSite, app, model, po.Results())
 			}
 			return nil, nil
+			//var listObj = list.NewList(r, model.NewInstance(), po.Results(), lc...)
+			//var listForm = listObj.Form()
+			//fmt.Println("list form:", listForm)
+			//return listObj, nil
 		},
-		GetContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer]) (ctx.Context, error) {
+		ChangeContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer], ctx ctx.Context) (ctx.Context, error) {
 			var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())
 			var count, err = paginator.Count()
 			if err != nil {
 				return nil, err
 			}
 
-			var context = NewContext(req, adminSite, nil)
+			var buttons = []components.ShowableComponent{
+				components.NewShowableComponent(
+					r,
+					func(r *http.Request) bool {
+						return count > 0 && len(actions) > 0
+					},
+					components.Button(components.ButtonConfig{
+						Text: trans.GetTextFunc("Select All"),
+						Type: components.ButtonTypePrimary,
+						Attrs: map[string]any{
+							"type":                     "button",
+							"data-bulk-actions-target": "selectAll",
+						},
+					}),
+				),
+				components.NewShowableComponent(
+					req, func(r *http.Request) bool {
+						return count > 0 && ctx.Get("view_list_form") != nil && !model.DisallowEdit && permissions.HasObjectPermission(r, model.NewInstance(), "admin:edit")
+					},
+					BulkActionButton(
+						trans.S("Change"),
+						components.ButtonTypeWarning|components.ButtonTypeHollow,
+						"",
+						len(actions) > 0,
+					),
+				),
+			}
+
+			if count > 0 && len(model.ListView.BulkActions) > 0 && hasBulkActionsPerm {
+				for _, action := range model.ListView.BulkActions {
+					if !action.HasPermission(r, model) {
+						continue
+					}
+
+					buttons = append(buttons, components.NewShowableComponent(
+						r,
+						func(r *http.Request) bool { return action.HasPermission(r, model) },
+						action.Button(),
+					))
+				}
+			}
+
+			var context = NewContext(req, adminSite, ctx)
 			context.SetPage(PageOptions{
 				TitleFn: trans.S(
 					"%s List (%d)",
@@ -315,18 +348,16 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 				}
 				return django.Reverse("admin:apps:model:edit", app.Name, model.GetName(), primaryField.GetValue())
 			})
-			if len(actions) > 0 {
-				return list.RowSelectColumn(
-					"list__row_select",
-					nil,
-					nil,
-					col,
-					map[string]any{
-						"data-bulk-actions-target": "checkbox",
-					},
-				)
-			}
-			return col
+
+			return list.RowSelectColumn(
+				"list__row_select",
+				nil,
+				nil,
+				col,
+				map[string]any{
+					"data-bulk-actions-target": "checkbox",
+				},
+			)
 		},
 	}
 

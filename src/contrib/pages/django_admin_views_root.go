@@ -58,9 +58,9 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: admin.BASE_KEY,
 		TemplateName:    "pages/admin/admin_list.tmpl",
-		GetContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer]) (ctx.Context, error) {
+		ChangeContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer], viewCtx ctx.Context) (ctx.Context, error) {
 			var context = admin.NewContext(
-				req, admin.AdminSite, nil,
+				req, admin.AdminSite, viewCtx,
 			)
 
 			var paginator = list.PaginatorFromContext[attrs.Definer](req.Context())

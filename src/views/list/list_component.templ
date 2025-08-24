@@ -1,0 +1,22 @@
+package list
+
+templ (l *List[T]) Component() {
+	<table class="list">
+		if !l.HideHeadings {
+			<thead>
+				<tr class="list-header">
+					for _, column := range l.Columns {
+						<th class="list-column-header">
+							@column.Header()
+						</th>
+					}
+				</tr>
+			</thead>
+		}
+		<tbody>
+			for _, group := range l.groups {
+				@group.Component(l.request, l.formObject)
+			}
+		</tbody>
+	</table>
+}

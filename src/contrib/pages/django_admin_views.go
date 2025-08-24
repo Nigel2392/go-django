@@ -300,9 +300,9 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: admin.BASE_KEY,
 		TemplateName:    "pages/admin/admin_outdated_list.tmpl",
-		GetContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer]) (ctx.Context, error) {
+		ChangeContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer], viewCtx ctx.Context) (ctx.Context, error) {
 			var context = admin.NewContext(
-				req, admin.AdminSite, nil,
+				req, admin.AdminSite, viewCtx,
 			)
 
 			context.Set("app", a)
@@ -394,9 +394,9 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: admin.BASE_KEY,
 		TemplateName:    "pages/admin/admin_list.tmpl",
-		GetContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer]) (ctx.Context, error) {
+		ChangeContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer], viewCtx ctx.Context) (ctx.Context, error) {
 			var context = admin.NewContext(
-				req, admin.AdminSite, nil,
+				req, admin.AdminSite, viewCtx,
 			)
 
 			var contentType *contenttypes.ContentTypeDefinition

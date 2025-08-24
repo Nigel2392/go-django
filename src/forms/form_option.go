@@ -5,6 +5,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"sync"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/forms/fields"
@@ -37,22 +38,30 @@ func WithRequestData(method string, r *http.Request) func(Form) {
 		}
 	}
 
-	return func(f Form) {
-		r.ParseForm()
+	var once = new(sync.Once)
+	var data = make(url.Values)
+	var files = make(map[string][]filesystem.FileHeader)
+	var onceFn = func() (url.Values, map[string][]filesystem.FileHeader) {
+		once.Do(func() {
+			r.ParseForm()
 
-		var data = make(url.Values)
-		maps.Copy(data, r.Form)
-		var files = make(map[string][]filesystem.FileHeader)
-		if r.MultipartForm != nil && r.MultipartForm.File != nil {
-			for k, v := range r.MultipartForm.File {
-				var files_ = make([]filesystem.FileHeader, 0, len(v))
-				for _, file := range v {
-					files_ = append(files_, &multipartFileHeader{file})
+			maps.Copy(data, r.Form)
+			if r.MultipartForm != nil && r.MultipartForm.File != nil {
+				for k, v := range r.MultipartForm.File {
+					var files_ = make([]filesystem.FileHeader, 0, len(v))
+					for _, file := range v {
+						files_ = append(files_, &multipartFileHeader{file})
+					}
+					files[k] = files_
 				}
-				files[k] = files_
 			}
-		}
+		})
 
+		return data, files
+	}
+
+	return func(f Form) {
+		data, files := onceFn()
 		f.WithData(data, files, r)
 	}
 }

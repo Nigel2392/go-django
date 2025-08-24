@@ -12,6 +12,8 @@ import "github.com/Nigel2392/go-django/src/views/list"
 import "github.com/Nigel2392/go-django/src/core/attrs"
 import "net/http"
 import "encoding/json"
+import "github.com/Nigel2392/go-django/src/core/except"
+import "github.com/Nigel2392/go-django/src/forms"
 
 type wrappedColumnGroup[T attrs.Definer] struct {
 	*list.ListColumnGroup[T]
@@ -22,7 +24,7 @@ func (c *wrappedColumnGroup[T]) AddColumn(column list.ListColumn[T]) {
 	c.ListColumnGroup.AddColumn(column)
 }
 
-func (c *wrappedColumnGroup[T]) Component(r *http.Request) templ.Component {
+func (c *wrappedColumnGroup[T]) Component(r *http.Request, form *list.ListForm[T]) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -59,7 +61,7 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(attrs.ToString(attrs.PrimaryKey(c.Instance)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 122}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 30, Col: 122}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -72,7 +74,7 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(c._Definition.GetPreviewString(r.Context(), c.Instance))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 203}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 30, Col: 203}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -85,7 +87,7 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(string(dataBytes))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 243}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 30, Col: 243}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -96,20 +98,53 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		for _, column := range c.Columns {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<td class=\"list-column\">")
+			if form == nil || !list.AllowListEdit(ctx) {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, " <td class=\"list-column\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = column.Component(r, c.Definitions, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</td>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				continue
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, " <td class=\"list-column\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = column.Component(r, c.Definitions, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
+			switch col := column.(type) {
+			case list.ListEditableColumn[T]:
+				var rowForm = form.ForInstance(c.Instance)
+				var boundFields = rowForm.BoundFields()
+				var field, ok = boundFields.Get(col.FieldName())
+				if !ok {
+					return except.Fail(http.StatusInternalServerError, "could not find field %s in bound fields", col.FieldName())
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, " ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = col.EditableComponent(r, c.Definitions, c.Instance, rowForm, field.(*forms.BoundFormField)).Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			default:
+				templ_7745c5c3_Err = col.Component(r, c.Definitions, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</td>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</td>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</tr>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</tr>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

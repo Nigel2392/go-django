@@ -34,7 +34,7 @@
 {{ end }}
 
 {{ define "content_root" }}
-    {{ if len .Data.actions }}
+    {{ if or (len .Data.actions) .Data.view_list_form }}
         <form action="{{ url "admin:apps:model" .Data.app.Name .Data.model.GetName }}" method="post" data-controller="bulk-actions">
             {{ csrf_field }}
 

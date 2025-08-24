@@ -10,6 +10,8 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/forms"
 	"net/http"
 )
 
@@ -27,11 +29,40 @@ func NewColumnGroup[T attrs.Definer](r *http.Request, instance T, columns []List
 	}
 }
 
+func (c *ListColumnGroup[T]) Row() T {
+	return c.Instance
+}
+
 func (c *ListColumnGroup[T]) AddColumn(column ListColumn[T]) {
 	c.Columns = append(c.Columns, column)
 }
 
-func (c *ListColumnGroup[T]) Component(r *http.Request) templ.Component {
+func (c *ListColumnGroup[T]) Form(r *http.Request, opts ...func(forms.Form)) forms.Form {
+	var columns = make([]ListEditableColumn[T], 0)
+	for _, column := range c.Columns {
+		if def, ok := column.(ListEditableColumn[T]); ok {
+			columns = append(columns, def)
+		}
+	}
+
+	if len(columns) == 0 {
+		return nil
+	}
+
+	var form = forms.NewBaseForm(r.Context(), opts...)
+	for _, column := range columns {
+		var (
+			fieldName = column.FieldName()
+			field     = column.FormField(r, c.Instance)
+		)
+
+		form.AddField(fieldName, field)
+	}
+
+	return form
+}
+
+func (c *ListColumnGroup[T]) Component(r *http.Request, form *ListForm[T]) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -57,20 +88,53 @@ func (c *ListColumnGroup[T]) Component(r *http.Request) templ.Component {
 			return templ_7745c5c3_Err
 		}
 		for _, column := range c.Columns {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<td class=\"list-column\">")
+			if form == nil || !AllowListEdit(ctx) {
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " <td class=\"list-column\">")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = column.Component(r, c.Definitions, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</td>")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				continue
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, " <td class=\"list-column\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = column.Component(r, c.Definitions, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
+			switch col := column.(type) {
+			case ListEditableColumn[T]:
+				var rowForm = form.ForInstance(c.Instance)
+				var boundFields = rowForm.BoundFields()
+				var field, ok = boundFields.Get(col.FieldName())
+				if !ok {
+					return except.Fail(http.StatusInternalServerError, "could not find field %s in bound fields", col.FieldName())
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, " ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = col.EditableComponent(r, c.Definitions, c.Instance, rowForm, field.(*forms.BoundFormField)).Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+			default:
+				templ_7745c5c3_Err = col.Component(r, c.Definitions, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</td>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</td>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</tr>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</tr>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

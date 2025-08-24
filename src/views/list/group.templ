@@ -2,7 +2,10 @@ package list
 
 import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/forms"
 	"net/http"
+	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/forms"
 )
 
 type ListColumnGroup[T attrs.Definer] struct {
@@ -19,15 +22,64 @@ func NewColumnGroup[T attrs.Definer](r *http.Request, instance T, columns []List
 	}
 }
 
+func (c *ListColumnGroup[T]) Row() T {
+	return c.Instance
+}
+
 func (c *ListColumnGroup[T]) AddColumn(column ListColumn[T]) {
 	c.Columns = append(c.Columns, column)
 }
 
-templ (c *ListColumnGroup[T]) Component(r *http.Request) {
+func (c *ListColumnGroup[T]) Form(r *http.Request, opts ...func(forms.Form)) forms.Form {
+	var columns = make([]ListEditableColumn[T], 0)
+	for _, column := range c.Columns {
+		if def, ok := column.(ListEditableColumn[T]); ok {
+			columns = append(columns, def)
+		}
+	}
+
+	if len(columns) == 0 {
+		return nil
+	}
+
+	var form = forms.NewBaseForm(r.Context(), opts...)
+	for _, column := range columns {
+		var (
+			fieldName = column.FieldName()
+			field     = column.FormField(r, c.Instance)
+		)
+
+		form.AddField(fieldName, field)
+	}
+
+	return form
+}
+
+templ (c *ListColumnGroup[T]) Component(r *http.Request, form *ListForm[T]) {
 	<tr class="column-group">
 		for _, column := range c.Columns {
+			if form == nil || !AllowListEdit(ctx) {
+				// If the user is not allowed to edit the list, render the column as read-only
+				<td class="list-column">
+					@column.Component(r, c.Definitions, c.Instance)
+				</td>
+				{{ continue }}
+			}
+
 			<td class="list-column">
-				@column.Component(r, c.Definitions, c.Instance)
+				switch col := column.(type) {
+				case ListEditableColumn[T]:
+					{{ var rowForm = form.ForInstance(c.Instance) }}
+					{{ var boundFields = rowForm.BoundFields() }}
+					{{ var field, ok = boundFields.Get(col.FieldName()) }}
+					if !ok {
+						{{ return except.Fail(http.StatusInternalServerError, "could not find field %s in bound fields", col.FieldName()) }}
+					}
+
+					@col.EditableComponent(r, c.Definitions, c.Instance, rowForm, field.(*forms.BoundFormField))
+				default:
+					@col.Component(r, c.Definitions, c.Instance)
+				}
 			</td>
 		}
 	</tr>

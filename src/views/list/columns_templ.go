@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
@@ -23,7 +24,6 @@ import (
 	"net/http"
 	"reflect"
 	"strconv"
-	"strings"
 	"time"
 )
 
@@ -1020,54 +1020,16 @@ func (c *listEditableColumn[T]) FieldName() string {
 	return c.config.FieldName
 }
 
-func (c *listEditableColumn[T]) Widget(r *http.Request, defs attrs.Definitions, row T) widgets.Widget {
-	if c.config.Widget == nil {
-		var attrField, ok = defs.Field(c.config.FieldName)
-		if !ok {
-			assert.Fail("Field %q does not exist", c.config.FieldName)
-			return nil
-		}
-
-		return attrField.FormField().Widget()
-	}
-	return c.config.Widget
-}
-
 func (c *listEditableColumn[T]) FormField(r *http.Request, row T) fields.Field {
-	var defs = row.FieldDefs()
+	var meta = attrs.GetModelMeta(row)
+	var defs = meta.Definitions()
 	var attrField, ok = defs.Field(c.config.FieldName)
 	if !ok {
 		assert.Fail("Field %q does not exist", c.config.FieldName)
 		return nil
 	}
 
-	var name = fmt.Sprintf("%s%s--%s", c.config.FormPrefix, c.config.FieldName, attrs.ToString(attrs.PrimaryKey(row)))
-	var opts = []func(f fields.Field){
-		fields.Name(name),
-		fields.Label(attrField.Label),
-		fields.HelpText(attrField.HelpText),
-		fields.Widget(c.Widget(r, defs, row)),
-	}
-
-	if !attrField.AllowBlank() {
-		opts = append(opts, fields.Required(true))
-	}
-
-	return fields.NewField(opts...)
-}
-
-func (c *listEditableColumn[T]) renderWidget(r *http.Request, defs attrs.Definitions, row T) templ.Component {
-	var sb = new(strings.Builder)
-	var value = c.value(r, defs, row)
-	var widget = c.Widget(r, defs, row)
-	var primaryKey = attrs.ToString(attrs.PrimaryKey(row))
-	var formName = fmt.Sprintf("%s%s--%s", c.config.FormPrefix, c.config.FieldName, primaryKey)
-	var formId = fmt.Sprintf("%sid_%s", c.config.FormPrefix, formName)
-	var context = widget.GetContextData(r.Context(), formId, formName, value, c.config.WidgetAttrs)
-	if err := widget.RenderWithErrors(r.Context(), sb, formId, formName, value, nil, c.config.WidgetAttrs, context); err != nil {
-		assert.Fail("Failed to render widget: %v", err)
-	}
-	return templ.Raw(sb.String())
+	return attrField.FormField()
 }
 
 func (c *listEditableColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
@@ -1110,9 +1072,58 @@ func (c *listEditableColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 483, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 445, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		return nil
+	})
+}
+
+func (c *listEditableColumn[T]) EditableComponent(r *http.Request, defs attrs.Definitions, row T, form forms.Form, field *forms.BoundFormField) templ.Component {
+	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
+		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
+		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
+			return templ_7745c5c3_CtxErr
+		}
+		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
+		if !templ_7745c5c3_IsBuffer {
+			defer func() {
+				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
+				if templ_7745c5c3_Err == nil {
+					templ_7745c5c3_Err = templ_7745c5c3_BufErr
+				}
+			}()
+		}
+		ctx = templ.InitializeContext(ctx)
+		templ_7745c5c3_Var32 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var32 == nil {
+			templ_7745c5c3_Var32 = templ.NopComponent
+		}
+		ctx = templ.ClearChildren(ctx)
+		if field == nil || !AllowListEdit(r.Context()) || !c.permitted(r, defs, row) {
+			templ_7745c5c3_Err = getComponent(r, defs, row, c.value(r, defs, row)).Render(ctx, templ_7745c5c3_Buffer)
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, " ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			return
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<div class=\"list-editable\">")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		field.FormValue = c.value(r, defs, row)
+		templ_7745c5c3_Err = templ.Raw(string(field.Field())).Render(ctx, templ_7745c5c3_Buffer)
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1136,31 +1147,12 @@ func (c *listEditableColumn[T]) Component(r *http.Request, defs attrs.Definition
 			}()
 		}
 		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var32 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var32 == nil {
-			templ_7745c5c3_Var32 = templ.NopComponent
+		templ_7745c5c3_Var33 := templ.GetChildren(ctx)
+		if templ_7745c5c3_Var33 == nil {
+			templ_7745c5c3_Var33 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		if !AllowListEdit(r.Context()) || !c.permitted(r, defs, row) {
-			templ_7745c5c3_Err = getComponent(r, defs, row, c.value(r, defs, row)).Render(ctx, templ_7745c5c3_Buffer)
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 32, " ")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			return
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 33, "<div class=\"list-editable\">")
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = c.renderWidget(r, defs, row).Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 34, "</div>")
+		templ_7745c5c3_Err = getComponent(r, defs, row, c.value(r, defs, row)).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1173,7 +1165,6 @@ type EditableColumnConfig struct {
 	Widget        widgets.Widget
 	WidgetAttrs   map[string]string
 	HasPermission BoundBoolFunc[attrs.Definer]
-	FormPrefix    string
 }
 
 func EditableColumn[T attrs.Definer](header func(ctx context.Context) string, config EditableColumnConfig) ListColumn[T] {

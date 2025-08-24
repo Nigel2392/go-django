@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -12,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/utils/mixins"
 )
 
 var httpMethods = []string{
@@ -117,6 +119,11 @@ type Checker interface {
 	Fail(w http.ResponseWriter, req *http.Request, err error)
 }
 
+type ViewMixins interface {
+	View
+	mixins.Definer[View]
+}
+
 type ErrorFunc func(w http.ResponseWriter, req *http.Request, err error, code int)
 
 // Serve serves a view.
@@ -217,7 +224,7 @@ func GetViewContext(req *http.Request, view any) (context ctx.Context, err error
 	return context, nil
 }
 
-func TryServeTemplateView(w http.ResponseWriter, req *http.Request, view any, context ctx.Context) error {
+func TryServeTemplateView(w http.ResponseWriter, req *http.Request, views []View, context ctx.Context) error {
 	var (
 		err      error
 		baseKey  string
@@ -225,24 +232,34 @@ func TryServeTemplateView(w http.ResponseWriter, req *http.Request, view any, co
 	)
 
 	// Render the template immediately if the view implements the Renderer interface.
-	if renderer, ok := view.(Renderer); ok {
-		return renderer.Render(w, req, context)
+	for _, view := range views {
+		if renderer, ok := view.(Renderer); ok {
+			return renderer.Render(w, req, context)
+		}
 	}
 
 	// Get the template if the view implements the TemplateView interface.
-	if templateView, ok := view.(TemplateGetter); ok {
-		template = templateView.GetTemplate(req)
+	for _, view := range views {
+		if templateView, ok := view.(TemplateGetter); ok {
+			template = templateView.GetTemplate(req)
+			break
+		}
 	}
 
 	// Get the base key if the view implements the TemplateKeyer interface.
 	// This is to render the proper base template for the sub-template (template inheritance.)
-	if templateKeyer, ok := view.(TemplateKeyer); ok {
-		baseKey = templateKeyer.GetBaseKey()
+	for _, view := range views {
+		if templateKeyer, ok := view.(TemplateKeyer); ok {
+			baseKey = templateKeyer.GetBaseKey()
+			break
+		}
 	}
 
 	// Render the template if the view implements the TemplateView interface.
-	if templateView, ok := view.(TemplateRenderer); ok {
-		return templateView.Render(w, req, template, context)
+	for _, view := range views {
+		if templateView, ok := view.(TemplateRenderer); ok {
+			return templateView.Render(w, req, template, context)
+		}
 	}
 
 	// Cannot render if there is no template.
@@ -263,10 +280,17 @@ func TryServeTemplateView(w http.ResponseWriter, req *http.Request, view any, co
 	case baseKey != "":
 		err = tpl.FRender(w, context, baseKey)
 	default:
+		var types strings.Builder
+		for i, view := range views {
+			if i > 0 {
+				types.WriteString(", ")
+			}
+			fmt.Fprintf(&types, "%T", view)
+		}
 		except.Fail(
 			http.StatusInternalServerError,
-			"Cannot render template, misconfiguration for view type: %T",
-			view,
+			"Cannot render template, misconfiguration for view types: %s",
+			types.String(),
 		)
 		return nil
 	}
@@ -342,18 +366,20 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 	// these methods will still be checked for bound views
 	// this is because we only break the forloop if the [BindableView] check fails.
 	for {
-		if checker, ok := view.(Checker); ok {
-			if err = checker.Check(w, req); err != nil {
-				django.App().Log.Error(err)
-				checker.Fail(w, req, err)
-				return err
+		for mixin := range mixins.Mixins(view, false) {
+			if checker, ok := mixin.(Checker); ok {
+				if err = checker.Check(w, req); err != nil {
+					django.App().Log.Error(err)
+					checker.Fail(w, req, err)
+					return err
+				}
 			}
-		}
 
-		if v, ok := view.(SetupView); ok {
-			w, req = v.Setup(w, req)
-			if w == nil || req == nil {
-				return nil
+			if v, ok := mixin.(SetupView); ok {
+				w, req = v.Setup(w, req)
+				if w == nil || req == nil {
+					return nil
+				}
 			}
 		}
 
@@ -392,7 +418,7 @@ func Invoke(view View, w http.ResponseWriter, req *http.Request, allowedMethods 
 		return nil
 	}
 
-	if err = TryServeTemplateView(w, req, view, context); err != nil {
+	if err = TryServeTemplateView(w, req, []View{view, original}, context); err != nil {
 		django.App().Log.Error(err)
 		errFn(w, req, err, http.StatusInternalServerError)
 		return err

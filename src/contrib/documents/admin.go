@@ -211,7 +211,7 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 			PerPage: 25,
 			ViewOptions: admin.ViewOptions{
 				Fields: []string{
-					"Title", "FileName", "Size", "CreatedAt", "FileHash",
+					"Title", "Path", "Size", "CreatedAt", "FileHash",
 				},
 			},
 			BulkActions: []admin.BulkAction{
@@ -221,6 +221,12 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 				return queries.GetQuerySet[attrs.Definer](&Document{}).OrderBy("-CreatedAt")
 			},
 			Columns: map[string]list.ListColumn[attrs.Definer]{
+				"Path": list.EditableColumn[attrs.Definer](
+					trans.S("Path"),
+					list.EditableColumnConfig{
+						FieldName: "Path",
+					},
+				),
 				"FileName": list.FuncColumn(
 					trans.S("File Name"),
 					func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {

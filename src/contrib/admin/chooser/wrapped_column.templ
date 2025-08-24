@@ -4,6 +4,8 @@ import "github.com/Nigel2392/go-django/src/views/list"
 import "github.com/Nigel2392/go-django/src/core/attrs"
 import "net/http"
 import "encoding/json"
+import "github.com/Nigel2392/go-django/src/core/except"
+import "github.com/Nigel2392/go-django/src/forms"
 
 type wrappedColumnGroup[T attrs.Definer] struct {
     *list.ListColumnGroup[T]
@@ -14,7 +16,7 @@ func (c *wrappedColumnGroup[T]) AddColumn(column list.ListColumn[T]) {
     c.ListColumnGroup.AddColumn(column)
 }
 
-templ (c *wrappedColumnGroup[T]) Component(r *http.Request) {
+templ (c *wrappedColumnGroup[T]) Component(r *http.Request, form *list.ListForm[T]) {
     {{ var data = c._Definition.GetExtraData(r.Context(), c.Instance) }}
     {{ var dataBytes []byte }}
     {{ var err error }}
@@ -27,8 +29,28 @@ templ (c *wrappedColumnGroup[T]) Component(r *http.Request) {
 
     <tr class="column-group godjango-chooser-list-group" data-chooser-value={ attrs.ToString(attrs.PrimaryKey(c.Instance)) } data-chooser-preview={ c._Definition.GetPreviewString(r.Context(), c.Instance) } data-chooser-data={ string(dataBytes) }>
         for _, column := range c.Columns {
+			if form == nil || !list.AllowListEdit(ctx) {
+				// If the user is not allowed to edit the list, render the column as read-only
+				<td class="list-column">
+					@column.Component(r, c.Definitions, c.Instance)
+				</td>
+				{{ continue }}
+			}
+
             <td class="list-column">
-                @column.Component(r, c.Definitions, c.Instance)
+				switch col := column.(type) {
+				case list.ListEditableColumn[T]:
+					{{ var rowForm = form.ForInstance(c.Instance) }}
+					{{ var boundFields = rowForm.BoundFields() }}
+					{{ var field, ok = boundFields.Get(col.FieldName()) }}
+					if !ok {
+						{{ return except.Fail(http.StatusInternalServerError, "could not find field %s in bound fields", col.FieldName()) }}
+					}
+
+					@col.EditableComponent(r, c.Definitions, c.Instance, rowForm, field.(*forms.BoundFormField))
+				default:
+					@col.Component(r, c.Definitions, c.Instance)
+				}
             </td>
         }
     </tr>
