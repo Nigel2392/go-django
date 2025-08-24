@@ -679,12 +679,51 @@ flex-direction is set to row above 70em.
     flex-direction: column;
     background-color: var(--body-bg-color);
     border-left: 1px solid var(--border-color);
+    position: relative;
     min-width: 400px;
     z-index: 100;
     padding: 1em;
 }
+
 .side-panels .side-panels__content__panel.active {
     display: flex;
+}
+.side-panels .side-panels__content.fullscreen {
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 200;
+}
+.side-panels .side-panels__content__panel .side-panels__content__controls {
+    position: absolute;
+    top: 0;
+    right: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+}
+.side-panels .side-panels__content__panel .side-panels__content__control {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    color: var(--dropdown-text-color);
+    background-color: var(--modal-header-background-color);
+    border: var(--border-color) solid 1px;
+    cursor: pointer;    
+}
+.side-panels .side-panels__content__panel .side-panels__content__control:first-child .side-panels__content__control__icon {
+    fill: var(--secondary-bg-color);
+}
+.side-panels .side-panels__content__panel .side-panels__content__control:last-child .side-panels__content__control__icon {
+    fill: var(--danger-bg-hover);
+}
+.side-panels .side-panels__content__panel .side-panels__content__control__icon {
+    width: 1.5rem;
+    height: 1.5rem;
+    cursor: pointer;
 }
 
 button, input {

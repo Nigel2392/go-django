@@ -2,10 +2,11 @@ import { Controller, ActionEvent } from "@hotwired/stimulus";
 
 class SidePanelsController extends Controller<any> {
 
-    static targets = ["control", "panel"];
+    static targets = ["control", "panel", "panels"];
 
     declare controlTargets: HTMLElement[];
     declare panelTargets: HTMLElement[];
+    declare panelsTarget: HTMLElement;
 
     connect() {
     }
@@ -23,6 +24,18 @@ class SidePanelsController extends Controller<any> {
                 p.classList.remove("active");
             }
         });
+    }
+
+    close(event: ActionEvent) {
+        let panelId = event.params.id;
+        this.panelTargets.forEach(p => {
+            p.classList.remove("active");
+        });
+        this.panelsTarget.classList.remove("fullscreen");
+    }
+
+    fullscreen(event: ActionEvent) {
+        this.panelsTarget.classList.toggle("fullscreen");
     }
 }
 
