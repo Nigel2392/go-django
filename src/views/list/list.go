@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/pagination"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/a-h/templ"
 )
@@ -66,6 +67,12 @@ type ListColumn[T attrs.Definer] interface {
 type ListMediaColumn[T attrs.Definer] interface {
 	ListColumn[T]
 	media.MediaDefiner
+}
+
+type ListEditableColumn[T attrs.Definer] interface {
+	ListColumn[T]
+	FieldName() string
+	Widget(r *http.Request, defs attrs.Definitions, row T) widgets.Widget
 }
 
 type ColumnGroup[T attrs.Definer] interface {

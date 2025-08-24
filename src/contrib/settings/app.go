@@ -124,13 +124,15 @@ func NewAppConfig() django.AppConfig {
 						//			)
 						//		},
 						//	),
-						"Root": list.ListEditableColumn[attrs.Definer](
+						"Root": list.EditableColumn[attrs.Definer](
 							trans.S("Root Page"),
-							"Root",
-							func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-								return permissions.HasObjectPermission(r, row, "admin:edit")
+							list.EditableColumnConfig{
+								FieldName: "Root",
+								HasPermission: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+									return permissions.HasObjectPermission(r, row, "admin:edit")
+								},
+								Widget: chooser.NewChooserWidget(&pages.PageNode{}, nil, pages.CHOOSER_ROOT_PAGES_KEY),
 							},
-							chooser.NewChooserWidget(&pages.PageNode{}, nil, pages.CHOOSER_ROOT_PAGES_KEY),
 						),
 					},
 					Format: map[string]func(v any) any{

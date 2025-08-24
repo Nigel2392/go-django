@@ -985,25 +985,22 @@ func (c *fieldCheckbox[T]) Component(r *http.Request, defs attrs.Definitions, ro
 }
 
 type listEditableColumn[T attrs.Definer] struct {
-	fieldName     string
-	inputAttrs    map[string]any
-	header        func(ctx context.Context) string
-	hasPermission BoundBoolFunc[T]
-	widget        widgets.Widget
+	header func(ctx context.Context) string
+	config EditableColumnConfig
 }
 
 func (c *listEditableColumn[T]) permitted(r *http.Request, defs attrs.Definitions, row T) bool {
-	if c.hasPermission != nil {
-		return c.hasPermission(r, defs, row)
+	if c.config.HasPermission != nil {
+		return c.config.HasPermission(r, defs, row)
 	}
 	return true
 }
 
 func (c *listEditableColumn[T]) value(r *http.Request, defs attrs.Definitions, row T) interface{} {
-	var field, ok = defs.Field(c.fieldName)
+	var field, ok = defs.Field(c.config.FieldName)
 	assert.True(
 		ok,
-		"Field %q does not exist", c.fieldName,
+		"Field %q does not exist", c.config.FieldName,
 	)
 
 	var d = field.GetValue()
@@ -1011,30 +1008,41 @@ func (c *listEditableColumn[T]) value(r *http.Request, defs attrs.Definitions, r
 		d = field.GetDefault()
 	}
 
-	if c.widget != nil {
-		d = c.widget.ValueToForm(d)
+	if c.config.Widget != nil {
+		d = c.config.Widget.ValueToForm(d)
 	}
 
 	return d
 }
 
-func (c *listEditableColumn[T]) renderWidget(r *http.Request, defs attrs.Definitions, row T) templ.Component {
-	var value = c.value(r, defs, row)
-	if c.widget == nil {
-		return input("text", c.fieldName, value, c.inputAttrs)
-	}
+func (c *listEditableColumn[T]) FieldName() string {
+	return c.config.FieldName
+}
 
+func (c *listEditableColumn[T]) Widget(r *http.Request, defs attrs.Definitions, row T) widgets.Widget {
+	if c.config.Widget == nil {
+		return widgets.NewTextInput(nil)
+	}
+	return c.config.Widget
+}
+
+func (c *listEditableColumn[T]) renderWidget(r *http.Request, defs attrs.Definitions, row T) templ.Component {
 	var sb = new(strings.Builder)
-	var context = c.widget.GetContextData(r.Context(), c.fieldName, c.fieldName, value, nil)
-	if err := c.widget.RenderWithErrors(r.Context(), sb, c.fieldName, c.fieldName, value, nil, nil, context); err != nil {
+	var value = c.value(r, defs, row)
+	var widget = c.Widget(r, defs, row)
+	var primaryKey = attrs.ToString(attrs.PrimaryKey(row))
+	var formName = fmt.Sprintf("%s%s--%s", c.config.FormPrefix, c.config.FieldName, primaryKey)
+	var formId = fmt.Sprintf("%sid_%s", c.config.FormPrefix, formName)
+	var context = widget.GetContextData(r.Context(), formId, formName, value, c.config.WidgetAttrs)
+	if err := widget.RenderWithErrors(r.Context(), sb, formId, formName, value, nil, c.config.WidgetAttrs, context); err != nil {
 		assert.Fail("Failed to render widget: %v", err)
 	}
 	return templ.Raw(sb.String())
 }
 
 func (c *listEditableColumn[T]) Media() media.Media {
-	if c.widget != nil {
-		return c.widget.Media()
+	if c.config.Widget != nil {
+		return c.config.Widget.Media()
 	}
 	return media.NewMedia()
 }
@@ -1064,7 +1072,7 @@ func (c *listEditableColumn[T]) Header() templ.Component {
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 437, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 445, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 		if templ_7745c5c3_Err != nil {
@@ -1122,12 +1130,18 @@ func (c *listEditableColumn[T]) Component(r *http.Request, defs attrs.Definition
 	})
 }
 
-func ListEditableColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string, hasPermission BoundBoolFunc[T], widget widgets.Widget) ListColumn[T] {
+type EditableColumnConfig struct {
+	FieldName     string
+	Widget        widgets.Widget
+	WidgetAttrs   map[string]string
+	HasPermission BoundBoolFunc[attrs.Definer]
+	FormPrefix    string
+}
+
+func EditableColumn[T attrs.Definer](header func(ctx context.Context) string, config EditableColumnConfig) ListColumn[T] {
 	return &listEditableColumn[T]{
-		header:        header,
-		fieldName:     fieldName,
-		hasPermission: hasPermission,
-		widget:        widget,
+		header: header,
+		config: config,
 	}
 }
 
