@@ -69,14 +69,17 @@
                             <div class="side-panels" data-controller="side-panels">
                                 <div class="side-panels__controls actions">
                                     {{ range $panel := $panels }}
-                                        <div class="side-panels__controls__control actions__action">
+                                        <div class="side-panels__controls__control actions__action"
+                                        	data-side-panels-target="control"
+									        data-side-panels-id-param="panel__{{ $panel.ID }}"
+									        data-action="click->side-panels#open">
                                             {{ templ $panel.Button }}
                                         </div>
                                     {{ end }}
                                 </div>
                                 <div class="side-panels__content">
                                     {{ range $panel := $panels }}
-                                        <div class="side-panels__content__panel">
+                                        <div class="side-panels__content__panel" data-side-panels-target="panel" id="panel__{{ $panel.ID }}">
                                             {{ templ $panel.Content }}
                                         </div>
                                     {{ end }}

@@ -8,6 +8,7 @@ import { AccordionController } from "./controllers/accordion";
 import { TabPanelController } from "./controllers/panel_tab";
 import sprintf from "./utils/sprintf";
 import BulkActionsController from "./controllers/bulk_actions";
+import SidePanelsController from "./controllers/side_panels";
 
 const app = new AdminSite({
     controllers: {
@@ -19,6 +20,7 @@ const app = new AdminSite({
         tabpanel: TabPanelController,
         titlepanel: TitlePanelController,
         "bulk-actions": BulkActionsController,
+        "side-panels": SidePanelsController,
     },
 });
 

@@ -339,10 +339,7 @@ continueView:
 							return components.Button(components.ButtonConfig{
 								Text: trans.S("Filters"),
 								Attrs: map[string]any{
-									"type":                      "button",
-									"data-side-panels-target":   "control",
-									"data-side-panels-id-param": p.ID,
-									"data-action":               "click->side-panels#open",
+									"type": "button",
 								},
 							})
 						},

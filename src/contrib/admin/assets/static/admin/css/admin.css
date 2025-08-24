@@ -665,16 +665,26 @@ flex-direction is set to row above 70em.
     margin-inline-start: 0.375rem;
 }
 .side-panels .side-panels__content {
-    display: none;
-    flex-direction: column;
-    min-width: 400px;
-    padding: 1em;
 }
-.side-panels .side-panels__content.active {
+.side-panels .side-panels__content {
     display: flex;
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
 }
 .side-panels .side-panels__content__panel {
-
+    flex: 1;
+    display: none;
+    flex-direction: column;
+    background-color: var(--body-bg-color);
+    border-left: 1px solid var(--border-color);
+    min-width: 400px;
+    z-index: 100;
+    padding: 1em;
+}
+.side-panels .side-panels__content__panel.active {
+    display: flex;
 }
 
 button, input {
