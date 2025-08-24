@@ -9,6 +9,51 @@ import "io"
 import "github.com/Nigel2392/go-django/src/core/logger"
 import "runtime/debug"
 
+type SidePanels struct {
+    Panels []SidePanel
+}
+
+templ (p *SidePanels) Component() {
+    <div class="side-panels" data-controller="side-panels">
+        <div class="side-panels__controls actions">
+            for _, panel := range p.Panels {
+                <div class="side-panels__controls__control actions__action"
+                	data-side-panels-target="control"
+			        data-side-panels-id-param={ "panel__" + panel.Name() }
+			        data-action="click->side-panels#open">
+                    @panel.Button()
+                </div>
+            }
+        </div>
+        <div class="side-panels__content" data-side-panels-target="panels">
+            for _, panel := range p.Panels {
+                <div class="side-panels__content__panel" data-side-panels-target="panel" id={ "panel__" + panel.Name() }>
+                    <div class="side-panels__content__controls">
+                        <button class="side-panels__content__control" data-action="click->side-panels#fullscreen">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="side-panels__content__control__icon" viewBox="0 0 16 16">
+	                            {{/* The MIT License (MIT) --> */}}
+	                            {{/* Copyright (c) 2011-2024 The Bootstrap Authors --> */}}
+                                <path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h13A1.5 1.5 0 0 1 16 3.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 0 12.5zM1.5 3a.5.5 0 0 0-.5.5v9a.5.5 0 0 0 .5.5h13a.5.5 0 0 0 .5-.5v-9a.5.5 0 0 0-.5-.5z"/>
+                                <path d="M2 4.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 0 1H3v2.5a.5.5 0 0 1-1 0zm12 7a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1 0-1H13V8.5a.5.5 0 0 1 1 0z"/>
+                            </svg>
+                        </button>
+                        
+                        <button class="side-panels__content__control" data-action="click->side-panels#close" data-side-panels-id-param={ "panel__" + panel.Name() }>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" class="side-panels__content__control__icon" viewBox="0 0 16 16">
+	                            {{/* The MIT License (MIT) --> */}}
+	                            {{/* Copyright (c) 2011-2024 The Bootstrap Authors --> */}}
+                                <path d="M4.646 4.646a.5.5 0 0 1 .708 0L8 7.293l2.646-2.647a.5.5 0 0 1 .708.708L8.707 8l2.647 2.646a.5.5 0 0 1-.708.708L8 8.707l-2.646 2.647a.5.5 0 0 1-.708-.708L7.293 8 4.646 5.354a.5.5 0 0 1 0-.708"/>
+                            </svg>
+                        </button>
+                    </div>
+                    @panel.Content()
+                </div>
+            }
+        </div>
+    </div>
+
+}
+
 type BaseSidePanel struct {
     ID           string
     Ordering     int

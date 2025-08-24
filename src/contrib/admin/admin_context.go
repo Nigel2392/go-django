@@ -67,7 +67,7 @@ func (p *PageOptions) Media() media.Media {
 	if p.MediaFn != nil {
 		media = media.Merge(p.MediaFn())
 	}
-	for _, panel := range p.GetSidePanels() {
+	for _, panel := range p.GetSidePanels().Panels {
 		media = media.Merge(panel.Media())
 	}
 	return media
@@ -103,7 +103,7 @@ func (p *PageOptions) GetActions() []Action {
 	return actions
 }
 
-func (p *PageOptions) GetSidePanels() []menu.SidePanel {
+func (p *PageOptions) GetSidePanels() *menu.SidePanels {
 	var sidePanels = p.SidePanels
 	if sidePanels == nil {
 		sidePanels = make([]menu.SidePanel, 0)
@@ -115,7 +115,10 @@ func (p *PageOptions) GetSidePanels() []menu.SidePanel {
 			ret = append(ret, panel)
 		}
 	}
-	return ret
+
+	return &menu.SidePanels{
+		Panels: ret,
+	}
 }
 
 type adminContext struct {
