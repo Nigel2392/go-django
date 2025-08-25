@@ -102,6 +102,7 @@ func NewAppConfig() django.AppConfig {
 					"Default": trans.S("Is Default Site"),
 					"Root":    trans.S("Root Page"),
 				},
+
 				ListView: admin.ListViewOptions{
 					Columns: map[string]list.ListColumn[attrs.Definer]{
 						//	"Root": list.LinkColumn(

@@ -897,6 +897,17 @@ func (qs *QuerySet[T]) Select(fields ...any) *QuerySet[T] {
 		qs.internals.proxyMap = make(map[string]struct{}, 0)
 	}
 
+	if len(fields) == 1 && fields[0] == nil {
+		qs.internals.Fields = make([]*FieldInfo[attrs.FieldDefinition], 0)
+		qs.internals.Preload = nil
+		qs.internals.Joins = make([]JoinDef, 0)
+		qs.internals.fieldsMap = make(map[string]*FieldInfo[attrs.FieldDefinition], 0)
+		qs.internals.joinsMap = make(map[string]struct{}, 0)
+		qs.internals.proxyMap = make(map[string]struct{}, 0)
+		qs.internals.Annotations = orderedmap.NewOrderedMap[string, attrs.Field]()
+		return qs
+	}
+
 	if len(fields) == 0 {
 		fields = []any{"*"}
 	}
@@ -3934,6 +3945,9 @@ func (qs *QuerySet[T]) updateFields(obj attrs.Definer) (attrs.Definitions, []att
 	if len(qs.internals.Fields) > 0 {
 		fields = make([]attrs.Field, 0, len(qs.internals.Fields))
 		for _, info := range qs.internals.Fields {
+			if len(info.Chain) > 0 {
+				continue
+			}
 			for _, field := range info.Fields {
 				var f, ok = defs.Field(field.Name())
 				if !ok {

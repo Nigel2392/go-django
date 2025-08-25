@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/forms"
@@ -106,6 +107,19 @@ func (m *ListObjectMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 	}
 
 	var cleanedData = form.CleanedData()
+	var includedFields = make([]string, 0, len(cleanedData))
+	for _, col := range listObj.Columns {
+		var editableCol, ok = col.(ListEditableColumn[T])
+		if !ok {
+			continue
+		}
+
+		includedFields = append(
+			includedFields,
+			editableCol.FieldName(),
+		)
+	}
+
 	var models = make([]T, 0, len(forms))
 	for _, group := range listObj.groups {
 		var instance = group.Row()
@@ -152,6 +166,8 @@ func (m *ListObjectMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 	}
 
 	if len(models) > 0 {
+		qs = qs.Select(nil)
+		qs = qs.Select(attrutils.InterfaceList(includedFields)...)
 		updated, err := qs.BulkUpdate(models)
 		if err != nil {
 			if errors.Is(err, errors.ValueError) {
