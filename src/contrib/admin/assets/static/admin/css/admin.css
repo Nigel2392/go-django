@@ -691,7 +691,7 @@ flex-direction is set to row above 70em.
         opacity    0s,
         visibility 0s linear 0.2s; /* hide AFTER slide finishes */
 }
-.side-panels .side-panels__content.side-panels__content.fullscreen {
+.side-panels .side-panels__content.fullscreen {
     min-width: 80%;
     max-width: 100%;
     transition: min-width 0.2s ease-in-out;
@@ -706,8 +706,25 @@ flex-direction is set to row above 70em.
     position: relative;
     width: 100%;
     padding: 1em;
+
+    transform: translateX(100%);
+    opacity: 0;
+    visibility: hidden;
 }
 
+.side-panels .side-panels__content__panel.active {
+    display: flex;
+    transform: translateX(0);
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+
+    /* visibility becomes visible immediately on open */
+    transition:
+      transform 0.2s ease-in-out,
+      opacity   0s,
+      visibility 0s;
+}
 @media (prefers-reduced-motion: reduce) {
   .side-panels .side-panels__content__panel,
   .side-panels .side-panels__content__panel.active {
