@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/views"
 )
@@ -166,9 +167,10 @@ func (m *ListObjectMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 	}
 
 	if len(models) > 0 {
-		qs = qs.Select(nil)
-		qs = qs.Select(attrutils.InterfaceList(includedFields)...)
-		updated, err := qs.BulkUpdate(models)
+		updated, err := qs.
+			Select(nil).
+			Select(attrutils.InterfaceList(includedFields)...).
+			BulkUpdate(models)
 		if err != nil {
 			if errors.Is(err, errors.ValueError) {
 				messages.Error(r, err.Error())
@@ -176,8 +178,10 @@ func (m *ListObjectMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 			}
 			return nil, nil, err
 		}
-		messages.Success(r, fmt.Sprintf("%d items updated successfully", updated))
 
+		messages.Success(r, trans.T(
+			r.Context(), "%d items updated successfully", updated,
+		))
 	}
 
 	http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
