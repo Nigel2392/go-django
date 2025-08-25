@@ -1,6 +1,6 @@
 {{ define "filter_panel" }}
     {{ if .Data.filter_form }}
-        <form method="get" action="{{ printf "%s?page=%d" .Request.URL.Path (.Data.view_paginator_object).PageNum }}" class="form list-filters">
+        <form method="get" action="{{ printf "%s?page=%d" .Request.URL.Path (.Data.view_paginator_object).PageNum }}" class="form filter-form">
             {{ $errorList := .Data.filter_form.ErrorList }}
             {{ if (gt (len $errorList) 0) }}
                 <ul class="error-list">
@@ -10,22 +10,7 @@
                 </ul>
             {{ end }}
             {{ range $Field := .Data.filter_form.Fields }}        
-                <div class="panel">
-                    <div class="form-field">
-                        {{ $Field.Label }}
-                        {{ if (gt (len $Field.Errors) 0) }}
-                            <ul class="error-list">
-                                {{ range $Error := $Field.Errors }}
-                                    <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
-                                {{ end }}
-                            </ul>
-                        {{ end }}
-                        {{ if (ne $Field.HelpText "") }}
-                            <p class="help-text">{{ $Field.HelpText }}</p>
-                        {{ end }}
-                        {{ $Field.Field }}
-                    </div>
-                </div>
+                {{ include . "admin/shared/forms/form_panel.tmpl" }}
             {{ end }}
             <input class="button secondary hollow sm" type="submit" value="{{ T "Submit" }}">
         </form>

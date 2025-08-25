@@ -16,6 +16,7 @@ class SidePanelsController extends Controller<any> {
         this.panelTargets.forEach(p => {
             if (p.id === panelId) {
                 if (p.classList.contains("active")) {
+                    this.panelsTarget.classList.remove("fullscreen");
                     p.classList.remove("active");
                     return;
                 }

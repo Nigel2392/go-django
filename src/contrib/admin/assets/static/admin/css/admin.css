@@ -323,7 +323,6 @@ a.danger {
     display: flex;
     flex-direction: row;
     align-items: center;
-    justify-content: space-between;
     text-wrap: nowrap;
     color: var(--navigation-text-color);
     background-color: var(--navigation-bg-color);
@@ -649,7 +648,7 @@ flex-direction is set to row above 70em.
 }
 
 
-.side-panels {
+.side-panels-wrapper {
 
 }
 .side-panels .side-panels__controls {
@@ -665,35 +664,55 @@ flex-direction is set to row above 70em.
     margin-inline-start: 0.375rem;
 }
 .side-panels .side-panels__content {
-}
-.side-panels .side-panels__content {
     display: flex;
     position: absolute;
+    visibility: hidden;
+    opacity: 0;
     top: 0;
     right: 0;
     bottom: 0;
+    z-index: 200;
+    min-width: 0%;
+    overflow-y: auto;
+    overflow-x: hidden;
+    pointer-events: none;
+    transition:
+        min-width 0.2s ease-in-out,
+        opacity    0s linear 0.2s,
+        visibility 0s linear 0.2s;
 }
+.side-panels .side-panels__content:has(.side-panels__content__panel.active) {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1;
+    min-width: 400px;
+    transition:
+        min-width 0.2s ease-in-out,
+        opacity    0s,
+        visibility 0s linear 0.2s; /* hide AFTER slide finishes */
+}
+.side-panels .side-panels__content.side-panels__content.fullscreen {
+    min-width: 80%;
+    max-width: 100%;
+    transition: min-width 0.2s ease-in-out;
+}
+
 .side-panels .side-panels__content__panel {
     flex: 1;
-    display: none;
+    visibility: hidden;
     flex-direction: column;
     background-color: var(--body-bg-color);
     border-left: 1px solid var(--border-color);
     position: relative;
-    min-width: 400px;
-    z-index: 100;
+    width: 100%;
     padding: 1em;
 }
 
-.side-panels .side-panels__content__panel.active {
-    display: flex;
-}
-.side-panels .side-panels__content.fullscreen {
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    z-index: 200;
+@media (prefers-reduced-motion: reduce) {
+  .side-panels .side-panels__content__panel,
+  .side-panels .side-panels__content__panel.active {
+    transition: none;
+  }
 }
 .side-panels .side-panels__content__panel .side-panels__content__controls {
     position: absolute;

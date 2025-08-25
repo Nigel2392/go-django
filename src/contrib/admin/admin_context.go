@@ -105,7 +105,7 @@ func (p *PageOptions) GetActions() []Action {
 
 func (p *PageOptions) GetSidePanels() *menu.SidePanels {
 	var sidePanels = p.SidePanels
-	if sidePanels == nil {
+	if len(sidePanels) == 0 {
 		sidePanels = make([]menu.SidePanel, 0)
 	}
 
