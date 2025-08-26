@@ -40,6 +40,10 @@ func (l *ListActionsColumn[T]) FieldName() string {
     return ""
 }
 
+func (l *ListActionsColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+    return nil
+}
+
 templ (l *ListActionsColumn[T]) Header(r *http.Request) {
     if l.Heading != nil {
         { l.Heading(ctx) }

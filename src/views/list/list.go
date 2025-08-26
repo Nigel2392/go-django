@@ -58,6 +58,7 @@ type ListColumn[T attrs.Definer] interface {
 	Header(r *http.Request) templ.Component
 	FieldName() string
 	Component(r *http.Request, defs attrs.Definitions, row T) templ.Component
+	Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any
 }
 
 type ListMediaColumn interface {

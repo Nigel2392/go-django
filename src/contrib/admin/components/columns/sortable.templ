@@ -17,6 +17,10 @@ func (s *sortableListColumn[T]) FieldName() string {
     return s.ListColumn.FieldName()
 }
 
+func (b *sortableListColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return b.ListColumn.Attributes(r, defs, row, colIndex, colCount)
+}
+
 func (s *sortableListColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
     if m, ok := s.ListColumn.(media.MediaDefiner); ok {
         return m.Media()

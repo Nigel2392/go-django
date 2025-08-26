@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms"
+	"maps"
 )
 
 templ input(typ string, name string, value any, atts map[string]any) {
@@ -94,6 +95,10 @@ templ (c *booleanColumn[T]) Header(r *http.Request) {
 
 func (c *booleanColumn[T]) FieldName() string {
 	return c.fieldName
+}
+
+func (c *booleanColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return nil
 }
 
 func (c *booleanColumn[T]) getData(r *http.Request, defs attrs.Definitions, row T) bool {
@@ -190,6 +195,10 @@ func DateTimeFieldColumn[T attrs.Definer](fmt string, header func(ctx context.Co
 	}
 }
 
+func (c *dateTimeColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return nil
+}
+
 func (c *dateTimeColumn[T]) FieldName() string {
 	return c.fieldName
 }
@@ -239,6 +248,31 @@ templ (c *dateTimeColumn[T]) Component(r *http.Request, defs attrs.Definitions, 
 
 type wrappedColumn[T1, T2 attrs.Definer] struct {
 	ListColumn[T2]
+	attrs func(r *http.Request, defs attrs.Definitions, row T2) map[string]any
+	fieldName string
+}
+
+func (c *wrappedColumn[T, T2]) FieldName() string {
+	if c.fieldName != "" {
+		return c.fieldName
+	}
+	return c.ListColumn.FieldName()
+}
+
+func (c *wrappedColumn[T, T2]) getAttrs(r *http.Request, defs attrs.Definitions, row T2) map[string]any {
+	if c.attrs != nil {
+		return c.attrs(r, defs, row)
+	}
+	return make(map[string]any)
+}
+
+func (c *wrappedColumn[T, T2]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	var attrs = c.ListColumn.Attributes(r, defs, any(row).(T2), colIndex, colCount)
+	if attrs == nil {
+		attrs = make(map[string]any)
+	}
+	maps.Copy(attrs, c.getAttrs(r, defs, any(row).(T2)))
+	return attrs
 }
 
 func (c *wrappedColumn[T, T2]) FormField(r *http.Request, row T) fields.Field {
@@ -262,8 +296,35 @@ templ (c *wrappedColumn[T1, T2]) Component(r *http.Request, defs attrs.Definitio
 	@c.ListColumn.Component(r, defs, any(row).(T2))
 }
 
-func ChangeColumnType[T1, T2 attrs.Definer](col ListColumn[T2]) ListColumn[T1] {
-	return &wrappedColumn[T1, T2]{col}
+func ChangeColumnType[T1, T2 attrs.Definer](col ListColumn[T2], args ...any) ListColumn[T1] {
+	var (
+		attrMap map[string]any
+		field   string
+	)
+
+	for i, arg := range args {
+		if i > 1 {
+			assert.Fail("Too many arguments provided, expected at most 2: %d", len(args))
+		}
+		switch v := arg.(type) {
+		case map[string]any:
+			maps.Copy(attrMap, v)
+		case string:
+			field = v
+		default:
+			assert.Fail("Unsupported argument type, expected map[string]any or string")
+		}
+	}
+
+	return &wrappedColumn[T1, T2]{
+		ListColumn: col,
+		fieldName: field,
+		attrs: func(r *http.Request, defs attrs.Definitions, row T2) map[string]any {
+			var attrsMap = make(map[string]any)
+			maps.Copy(attrsMap, attrMap)
+			return attrsMap
+		},
+	}
 }
 
 type funcColumn[T attrs.Definer] struct {
@@ -273,6 +334,10 @@ type funcColumn[T attrs.Definer] struct {
 
 func (c *funcColumn[T]) FieldName() string {
 	return ""
+}
+
+func (c *funcColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return nil
 }
 
 templ (c *funcColumn[T]) Header(r *http.Request) {
@@ -296,6 +361,10 @@ type fieldColumn[T attrs.Definer, VAL any] struct {
 
 func (c *fieldColumn[T, VAL]) FieldName() string {
 	return c.fieldName
+}
+
+func (c *fieldColumn[T, VAL]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return nil
 }
 
 templ (c *fieldColumn[T, VAL]) Header(r *http.Request) {
@@ -389,6 +458,10 @@ func ProcessableFieldColumn[T attrs.Definer, VAL any](header func(ctx context.Co
 type titleFieldColumn[T attrs.Definer] struct {
 	wrapped ListColumn[T]
 	getURL  func(r *http.Request, defs attrs.Definitions, row T) string
+}
+
+func (c *titleFieldColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return c.wrapped.Attributes(r, defs, row, colIndex, colCount)
 }
 
 func (c *titleFieldColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
@@ -612,6 +685,10 @@ func (c *listEditableColumn[T]) value(r *http.Request, defs attrs.Definitions, r
 	return d
 }
 
+func (c *listEditableColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return c.config.ColumnAttrs
+}
+
 func (c *listEditableColumn[T]) FieldName() string {
 	return c.config.FieldName
 }
@@ -668,6 +745,7 @@ type EditableColumnConfig struct {
 	Widget        widgets.Widget
 	WidgetAttrs   map[string]string
 	HasPermission BoundBoolFunc[attrs.Definer]
+	ColumnAttrs   map[string]any
 }
 
 func EditableColumn[T attrs.Definer](header func(ctx context.Context) string, config EditableColumnConfig) ListColumn[T] {

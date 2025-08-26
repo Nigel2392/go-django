@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"maps"
 )
 
 type ListColumnGroup[T attrs.Definer] struct {
@@ -68,7 +69,8 @@ func (c *ListColumnGroup[T]) GetAttrs(r *http.Request, definitions attrs.Definit
 }
 
 templ (c *ListColumnGroup[T]) RenderColumns(r *http.Request, form *ListForm[T]) {
-	for _, column := range c.Columns {
+	{{ var colCount = len(c.Columns) }}
+	for colIndex, column := range c.Columns {
 		if form == nil || !AllowListEdit(ctx) {
 			// If the user is not allowed to edit the list, render the column as read-only
 			<td class="list-column">
@@ -77,7 +79,10 @@ templ (c *ListColumnGroup[T]) RenderColumns(r *http.Request, form *ListForm[T]) 
 			{{ continue }}
 		}
 
-		<td class="list-column" { c.GetAttrs(r, c.Definitions, c.Instance)... }>
+		{{ var attrs = c.GetAttrs(r, c.Definitions, c.Instance) }}
+		{{ maps.Copy(attrs, column.Attributes(r, c.Definitions, c.Instance, colIndex, colCount)) }}
+
+		<td class="list-column" { attrs... }>
 			switch col := column.(type) {
 			case ListEditableColumn[T]:
 				{{ var fieldName = col.FieldName() }}

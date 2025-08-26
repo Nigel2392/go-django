@@ -21,6 +21,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"html/template"
+	"maps"
 	"net/http"
 	"reflect"
 	"strconv"
@@ -63,7 +64,7 @@ func input(typ string, name string, value any, atts map[string]any) templ.Compon
 		var templ_7745c5c3_Var2 string
 		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs(typ)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 23, Col: 30}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 24, Col: 30}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 		if templ_7745c5c3_Err != nil {
@@ -76,7 +77,7 @@ func input(typ string, name string, value any, atts map[string]any) templ.Compon
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(name)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 23, Col: 44}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 24, Col: 44}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -89,7 +90,7 @@ func input(typ string, name string, value any, atts map[string]any) templ.Compon
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(attrs.ToString(value))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 23, Col: 76}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 24, Col: 76}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -192,7 +193,7 @@ func (c *booleanColumn[T]) Header(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 92, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 93, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -204,6 +205,10 @@ func (c *booleanColumn[T]) Header(r *http.Request) templ.Component {
 
 func (c *booleanColumn[T]) FieldName() string {
 	return c.fieldName
+}
+
+func (c *booleanColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return nil
 }
 
 func (c *booleanColumn[T]) getData(r *http.Request, defs attrs.Definitions, row T) bool {
@@ -318,6 +323,10 @@ func DateTimeFieldColumn[T attrs.Definer](fmt string, header func(ctx context.Co
 	}
 }
 
+func (c *dateTimeColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return nil
+}
+
 func (c *dateTimeColumn[T]) FieldName() string {
 	return c.fieldName
 }
@@ -380,7 +389,7 @@ func (c *dateTimeColumn[T]) Header(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 232, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 241, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -415,7 +424,7 @@ func (c *dateTimeColumn[T]) Component(r *http.Request, defs attrs.Definitions, r
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(trans.Time(r.Context(), value, c.fmt))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 237, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 246, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -427,6 +436,31 @@ func (c *dateTimeColumn[T]) Component(r *http.Request, defs attrs.Definitions, r
 
 type wrappedColumn[T1, T2 attrs.Definer] struct {
 	ListColumn[T2]
+	attrs     func(r *http.Request, defs attrs.Definitions, row T2) map[string]any
+	fieldName string
+}
+
+func (c *wrappedColumn[T, T2]) FieldName() string {
+	if c.fieldName != "" {
+		return c.fieldName
+	}
+	return c.ListColumn.FieldName()
+}
+
+func (c *wrappedColumn[T, T2]) getAttrs(r *http.Request, defs attrs.Definitions, row T2) map[string]any {
+	if c.attrs != nil {
+		return c.attrs(r, defs, row)
+	}
+	return make(map[string]any)
+}
+
+func (c *wrappedColumn[T, T2]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	var attrs = c.ListColumn.Attributes(r, defs, any(row).(T2), colIndex, colCount)
+	if attrs == nil {
+		attrs = make(map[string]any)
+	}
+	maps.Copy(attrs, c.getAttrs(r, defs, any(row).(T2)))
+	return attrs
 }
 
 func (c *wrappedColumn[T, T2]) FormField(r *http.Request, row T) fields.Field {
@@ -475,8 +509,35 @@ func (c *wrappedColumn[T1, T2]) Component(r *http.Request, defs attrs.Definition
 	})
 }
 
-func ChangeColumnType[T1, T2 attrs.Definer](col ListColumn[T2]) ListColumn[T1] {
-	return &wrappedColumn[T1, T2]{col}
+func ChangeColumnType[T1, T2 attrs.Definer](col ListColumn[T2], args ...any) ListColumn[T1] {
+	var (
+		attrMap map[string]any
+		field   string
+	)
+
+	for i, arg := range args {
+		if i > 1 {
+			assert.Fail("Too many arguments provided, expected at most 2: %d", len(args))
+		}
+		switch v := arg.(type) {
+		case map[string]any:
+			maps.Copy(attrMap, v)
+		case string:
+			field = v
+		default:
+			assert.Fail("Unsupported argument type, expected map[string]any or string")
+		}
+	}
+
+	return &wrappedColumn[T1, T2]{
+		ListColumn: col,
+		fieldName:  field,
+		attrs: func(r *http.Request, defs attrs.Definitions, row T2) map[string]any {
+			var attrsMap = make(map[string]any)
+			maps.Copy(attrsMap, attrMap)
+			return attrsMap
+		},
+	}
 }
 
 type funcColumn[T attrs.Definer] struct {
@@ -486,6 +547,10 @@ type funcColumn[T attrs.Definer] struct {
 
 func (c *funcColumn[T]) FieldName() string {
 	return ""
+}
+
+func (c *funcColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return nil
 }
 
 func (c *funcColumn[T]) Header(r *http.Request) templ.Component {
@@ -513,7 +578,7 @@ func (c *funcColumn[T]) Header(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 280, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 345, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -566,6 +631,10 @@ func (c *fieldColumn[T, VAL]) FieldName() string {
 	return c.fieldName
 }
 
+func (c *fieldColumn[T, VAL]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return nil
+}
+
 func (c *fieldColumn[T, VAL]) Header(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -591,7 +660,7 @@ func (c *fieldColumn[T, VAL]) Header(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 303, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 372, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -712,6 +781,10 @@ func ProcessableFieldColumn[T attrs.Definer, VAL any](header func(ctx context.Co
 type titleFieldColumn[T attrs.Definer] struct {
 	wrapped ListColumn[T]
 	getURL  func(r *http.Request, defs attrs.Definitions, row T) string
+}
+
+func (c *titleFieldColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return c.wrapped.Attributes(r, defs, row, colIndex, colCount)
 }
 
 func (c *titleFieldColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
@@ -1037,7 +1110,7 @@ func (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, 
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(c.formName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 529, Col: 92}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 602, Col: 92}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
@@ -1050,7 +1123,7 @@ func (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, 
 		var templ_7745c5c3_Var27 string
 		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(attrs.ToString(attrs.PrimaryKey(row)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 529, Col: 140}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 602, Col: 140}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -1164,7 +1237,7 @@ func (c *fieldCheckbox[T]) Component(r *http.Request, defs attrs.Definitions, ro
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(c.fieldColumn.fieldName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 579, Col: 105}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 652, Col: 105}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -1217,6 +1290,10 @@ func (c *listEditableColumn[T]) value(r *http.Request, defs attrs.Definitions, r
 	}
 
 	return d
+}
+
+func (c *listEditableColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return c.config.ColumnAttrs
 }
 
 func (c *listEditableColumn[T]) FieldName() string {
@@ -1275,7 +1352,7 @@ func (c *listEditableColumn[T]) Header(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 648, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 725, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 		if templ_7745c5c3_Err != nil {
@@ -1368,6 +1445,7 @@ type EditableColumnConfig struct {
 	Widget        widgets.Widget
 	WidgetAttrs   map[string]string
 	HasPermission BoundBoolFunc[attrs.Definer]
+	ColumnAttrs   map[string]any
 }
 
 func EditableColumn[T attrs.Definer](header func(ctx context.Context) string, config EditableColumnConfig) ListColumn[T] {
