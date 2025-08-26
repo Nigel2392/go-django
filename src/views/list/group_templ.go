@@ -102,8 +102,18 @@ func (c *ListColumnGroup[T]) RenderColumns(r *http.Request, form *ListForm[T]) t
 		ctx = templ.ClearChildren(ctx)
 		var colCount = len(c.Columns)
 		for colIndex, column := range c.Columns {
+			var attrs = c.GetAttrs(r, c.Definitions, c.Instance)
+			maps.Copy(attrs, column.Attributes(r, c.Definitions, c.Instance, colIndex, colCount))
 			if form == nil || !AllowListEdit(ctx) {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <td class=\"list-column\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <td class=\"list-column\"")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, attrs)
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, ">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -111,19 +121,13 @@ func (c *ListColumnGroup[T]) RenderColumns(r *http.Request, form *ListForm[T]) t
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "</td>")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "</td>")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
 				continue
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " ")
-			if templ_7745c5c3_Err != nil {
-				return templ_7745c5c3_Err
-			}
-			var attrs = c.GetAttrs(r, c.Definitions, c.Instance)
-			maps.Copy(attrs, column.Attributes(r, c.Definitions, c.Instance, colIndex, colCount))
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<td class=\"list-column\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, " <td class=\"list-column\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}

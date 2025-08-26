@@ -75,16 +75,16 @@ func (c *ListColumnGroup[T]) GetAttrs(r *http.Request, definitions attrs.Definit
 templ (c *ListColumnGroup[T]) RenderColumns(r *http.Request, form *ListForm[T]) {
 	{{ var colCount = len(c.Columns) }}
 	for colIndex, column := range c.Columns {
+		{{ var attrs = c.GetAttrs(r, c.Definitions, c.Instance) }}
+		{{ maps.Copy(attrs, column.Attributes(r, c.Definitions, c.Instance, colIndex, colCount)) }}
+
 		if form == nil || !AllowListEdit(ctx) {
 			// If the user is not allowed to edit the list, render the column as read-only
-			<td class="list-column">
+			<td class="list-column" { attrs... }>
 				@column.Component(r, c.Definitions, c.Instance)
 			</td>
 			{{ continue }}
 		}
-
-		{{ var attrs = c.GetAttrs(r, c.Definitions, c.Instance) }}
-		{{ maps.Copy(attrs, column.Attributes(r, c.Definitions, c.Instance, colIndex, colCount)) }}
 
 		<td class="list-column" { attrs... }>
 			switch col := column.(type) {
