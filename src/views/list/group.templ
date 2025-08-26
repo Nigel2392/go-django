@@ -62,10 +62,14 @@ func (c *ListColumnGroup[T]) Form(r *http.Request, opts ...func(forms.Form)) for
 }
 
 func (c *ListColumnGroup[T]) GetAttrs(r *http.Request, definitions attrs.Definitions, instance T) map[string]any {
+	var attrs map[string]any
 	if c.Attrs != nil {
-		return c.Attrs(r, definitions, instance)
+		attrs = c.Attrs(r, definitions, instance)
 	}
-	return nil
+	if attrs == nil {
+		attrs = make(map[string]any)
+	}
+	return attrs
 }
 
 templ (c *ListColumnGroup[T]) RenderColumns(r *http.Request, form *ListForm[T]) {
