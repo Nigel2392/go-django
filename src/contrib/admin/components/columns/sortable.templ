@@ -10,6 +10,7 @@ import "strings"
 
 type sortableListColumn[T attrs.Definer] struct {
     list.ListColumn[T]
+    attrs func(r *http.Request) map[string]any
 }
 
 func (s *sortableListColumn[T]) FieldName() string {
@@ -38,6 +39,13 @@ func (s *sortableListColumn[T]) EditableComponent(r *http.Request, defs attrs.De
         return editable.EditableComponent(r, defs, row, form, field)
     }
     return s.Component(r, defs, row)
+}
+
+func (s *sortableListColumn[T]) getAttrs(r *http.Request) map[string]any {
+    if s.attrs != nil {
+        return s.attrs(r)
+    }
+    return nil
 }
 
 templ (s *sortableListColumn[T]) Header(r *http.Request) {
@@ -76,7 +84,7 @@ templ (s *sortableListColumn[T]) Header(r *http.Request) {
 
     {{ q["sort"] = sortList }}
 
-    <a class="sortable-column" href={ templ.URL("?" + q.Encode()) }>
+    <a class="sortable-column" href={ templ.URL("?" + q.Encode()) } { s.getAttrs(r)... }>
         if asc {
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="sortable-column-icon" viewBox="0 0 16 16">
 		    	<!-- The MIT License (MIT) -->
