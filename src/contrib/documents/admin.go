@@ -227,33 +227,32 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 						FieldName: "Path",
 					},
 				),
-				"FileName": list.FuncColumn(
+				"FileName": list.ProcessableFieldColumn(
 					trans.S("File Name"),
-					func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {
-						var doc = row.(*Document)
-						return filepath.Base(doc.Path)
+					"Path",
+					func(r *http.Request, defs attrs.Definitions, row attrs.Definer, path string) interface{} {
+						return filepath.Base(path)
 					},
 				),
 				"CreatedAt": columns.TimeSinceColumn[attrs.Definer](
 					trans.S("Created"),
 					"CreatedAt",
 				),
-				"Size": list.FuncColumn(
+				"Size": list.ProcessableFieldColumn(
 					trans.S("Size"),
-					func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {
-						var doc = row.(*Document)
-						var size = doc.FileSize
+					"FileSize",
+					func(r *http.Request, defs attrs.Definitions, row attrs.Definer, size int64) interface{} {
 						switch {
-						case size.Int32 == 0:
+						case size == 0:
 							return trans.T(r.Context(), "Unknown")
-						case size.Int32 < 1024:
-							return trans.T(r.Context(), "%dB", size.Int32)
-						case size.Int32 < 1024*1024:
-							return trans.T(r.Context(), "%dKB", size.Int32/1024)
-						case size.Int32 < 1024*1024*1024:
-							return trans.T(r.Context(), "%dMB", size.Int32/1024/1024)
+						case size < 1024:
+							return trans.T(r.Context(), "%dB", size)
+						case size < 1024*1024:
+							return trans.T(r.Context(), "%dKB", size/1024)
+						case size < 1024*1024*1024:
+							return trans.T(r.Context(), "%dMB", size/1024/1024)
 						default:
-							return trans.T(r.Context(), "%dGB", size.Int32/1024/1024/1024)
+							return trans.T(r.Context(), "%dGB", size/1024/1024/1024)
 						}
 					},
 				),

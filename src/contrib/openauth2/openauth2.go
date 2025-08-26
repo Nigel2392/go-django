@@ -313,13 +313,13 @@ func NewAppConfig(cnf Config) django.AppConfig {
 							},
 						},
 						Columns: map[string]list.ListColumn[attrs.Definer]{
-							"Provider": list.FuncColumn[attrs.Definer](
+							"Provider": list.ProcessableFieldColumn(
 								trans.S("Provider"),
-								func(r *http.Request, defs attrs.Definitions, row attrs.Definer) interface{} {
-									var user = row.(*User)
-									var provider, ok = App._cnfs[user.ProviderName]
+								"ProviderName",
+								func(r *http.Request, defs attrs.Definitions, row attrs.Definer, providerName string) interface{} {
+									var provider, ok = App._cnfs[providerName]
 									if !ok {
-										return user.ProviderName
+										return providerName
 									}
 
 									label, ok := trans.GetText(r.Context(), provider.ProviderInfo.ProviderLabel)

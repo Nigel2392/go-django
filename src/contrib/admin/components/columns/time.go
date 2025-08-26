@@ -5,10 +5,8 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
-	"reflect"
 	"time"
 
-	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/views/list"
@@ -124,25 +122,10 @@ func TimeSinceColumn[T attrs.Definer](label any, field string, hoverFormat ...st
 		timeFormat = hoverFormat[0]
 	}
 
-	return list.HTMLColumn(
+	return list.ProcessableFieldColumn(
 		trans.GetTextFunc(label),
-		func(r *http.Request, defs attrs.Definitions, row T) template.HTML {
-			var timeField, ok = defs.Field(field)
-			assert.True(
-				ok, "Field %q not found in definitions for %T",
-				field, row,
-			)
-
-			var timeFace, err = timeField.Value()
-			assert.True(
-				err == nil, "Failed to get value for field %q in %T: %v",
-				field, row, err,
-			)
-
-			var timeRval = reflect.ValueOf(timeFace)
-			timeRval = timeRval.Convert(reflect.TypeOf(time.Time{}))
-			timeVal := timeRval.Interface().(time.Time)
-
+		field,
+		func(r *http.Request, defs attrs.Definitions, row T, timeVal time.Time) any {
 			if timeVal.IsZero() {
 				return template.HTML(fmt.Sprintf(
 					`<span class="badge warning">%s</span>`,

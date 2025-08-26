@@ -352,9 +352,12 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		return
 	}
 
+	var sortBuilder = columns.NewSortableColumnBuilder(m.Model)
 	var cols = make([]list.ListColumn[attrs.Definer], len(m.ListView.Fields)+1)
 	for i, field := range m.ListView.Fields {
-		cols[i+1] = m.GetColumn(r.Context(), m.ListView, field)
+		cols[i+1] = sortBuilder.AddColumn(m.GetColumn(
+			r.Context(), m.ListView, field,
+		))
 	}
 
 	var next = django.Reverse(
@@ -480,12 +483,16 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		},
 
 		QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
-			return queries.ChangeObjectsType[*PageNode, attrs.Definer](
+			var qs = queries.ChangeObjectsType[*PageNode, attrs.Definer](
 				NewPageQuerySet().
 					WithContext(r.Context()).
 					ChildrenOf(p).
 					Base(),
 			)
+
+			qs = sortBuilder.Sort(qs, r.URL.Query()["sort"])
+
+			return qs
 		},
 		TitleFieldColumn: func(lc list.ListColumn[attrs.Definer]) list.ListColumn[attrs.Definer] {
 			return list.TitleFieldColumn(lc, func(r *http.Request, defs attrs.Definitions, instance attrs.Definer) string {

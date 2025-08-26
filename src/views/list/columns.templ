@@ -32,6 +32,8 @@ func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row 
 		return templ.Raw(string(val))
 	case attrs.Definer:
 		return templ.Raw(attrs.ToString(val))
+	case templ.Component:
+		return val
 	}
 
 	if val, ok := value.(interface{ Time() time.Time }); ok {
@@ -289,7 +291,7 @@ func FuncColumn[T attrs.Definer](header func(ctx context.Context) string, data f
 type fieldColumn[T attrs.Definer, VAL any] struct {
 	fieldName string
 	header    func(ctx context.Context) string
-	process   func(r *http.Request, defs attrs.Definitions, row T, value VAL) VAL
+	process   func(r *http.Request, defs attrs.Definitions, row T, value VAL) any
 }
 
 func (c *fieldColumn[T, VAL]) FieldName() string {
@@ -376,7 +378,7 @@ func FieldColumn[T attrs.Definer](header func(ctx context.Context) string, field
 	}
 }
 
-func ProcessableFieldColumn[T attrs.Definer, VAL any](header func(ctx context.Context) string, fieldName string, process func(r *http.Request, defs attrs.Definitions, row T, value VAL) VAL) ListColumn[T] {
+func ProcessableFieldColumn[T attrs.Definer, VAL any](header func(ctx context.Context) string, fieldName string, process func(r *http.Request, defs attrs.Definitions, row T, value VAL) any) ListColumn[T] {
 	return &fieldColumn[T, VAL]{
 		fieldName: fieldName,
 		header:    header,

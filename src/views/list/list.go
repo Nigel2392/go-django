@@ -112,3 +112,42 @@ type listView__ColumnGetter[T attrs.Definer] interface {
 type listView__ListGetter[T attrs.Definer] interface {
 	GetList(r *http.Request, pageObject pagination.PageObject[T], columns []ListColumn[T], context ctx.Context) (StringRenderer, error)
 }
+
+var (
+	_ ListEditableColumn[attrs.Definer] = (*renamedColumn[attrs.Definer])(nil)
+	_ ListMediaColumn                   = (*renamedColumn[attrs.Definer])(nil)
+)
+
+type renamedColumn[T attrs.Definer] struct {
+	ListColumn[T]
+	fieldName string
+}
+
+func RenameColumn[T attrs.Definer](column ListColumn[T], fieldName string) *renamedColumn[T] {
+	return &renamedColumn[T]{ListColumn: column, fieldName: fieldName}
+}
+
+func (c *renamedColumn[T]) FieldName() string {
+	return c.fieldName
+}
+
+func (c *renamedColumn[T]) FormField(r *http.Request, row T) fields.Field {
+	if ef, ok := c.ListColumn.(ListEditableColumn[T]); ok {
+		return ef.FormField(r, row)
+	}
+	return nil
+}
+
+func (c *renamedColumn[T]) EditableComponent(r *http.Request, defs attrs.Definitions, row T, form forms.Form, field *forms.BoundFormField) templ.Component {
+	if ef, ok := c.ListColumn.(ListEditableColumn[T]); ok {
+		return ef.EditableComponent(r, defs, row, form, field)
+	}
+	return nil
+}
+
+func (c *renamedColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
+	if mf, ok := c.ListColumn.(ListMediaColumn); ok {
+		return mf.Media(defs)
+	}
+	return nil
+}

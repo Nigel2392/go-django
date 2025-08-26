@@ -95,9 +95,10 @@ var pageAdminModelOptions = admin.ModelOptions{
 			},
 		},
 		Columns: map[string]list.ListColumn[attrs.Definer]{
-			"Children": list.HTMLColumn[attrs.Definer](
+			"Children": list.ProcessableFieldColumn(
 				func(ctx context.Context) string { return "" },
-				func(r *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
+				"Numchild",
+				func(r *http.Request, _ attrs.Definitions, row attrs.Definer, children int64) any {
 					var node = row.(*PageNode)
 					if node.Numchild > 0 {
 						var url = django.Reverse(
@@ -127,11 +128,11 @@ var pageAdminModelOptions = admin.ModelOptions{
 				trans.S("Time since last update"),
 				"UpdatedAt",
 			),
-			"ContentType": list.HTMLColumn(
+			"ContentType": list.ProcessableFieldColumn(
 				trans.S("Content Type"),
-				func(r *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
-					var node = row.(*PageNode)
-					var ctype = DefinitionForType(node.ContentType)
+				"ContentType",
+				func(r *http.Request, _ attrs.Definitions, row attrs.Definer, cType string) any {
+					var ctype = DefinitionForType(cType)
 					var typStr = trans.T(r.Context(), "Unknown")
 					if ctype != nil {
 						typStr = ctype.Label(r.Context())
@@ -143,9 +144,10 @@ var pageAdminModelOptions = admin.ModelOptions{
 					))
 				},
 			),
-			"UrlPath": list.HTMLColumn(
+			"UrlPath": list.ProcessableFieldColumn[attrs.Definer, string](
 				trans.S("URL Path"),
-				func(r *http.Request, _ attrs.Definitions, row attrs.Definer) template.HTML {
+				"UrlPath",
+				func(r *http.Request, _ attrs.Definitions, row attrs.Definer, urlPath string) any {
 					var node = row.(*PageNode)
 
 					if !node.IsPublished() {
