@@ -4,14 +4,15 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms"
 	"net/http"
-	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/forms"
+	"github.com/Nigel2392/go-django/src/core/except"
 )
 
 type ListColumnGroup[T attrs.Definer] struct {
 	Definitions attrs.Definitions
 	Columns    []ListColumn[T]
 	Instance   T
+	Attrs      func(r *http.Request, definitions attrs.Definitions, instance T) map[string]any
 }
 
 func NewColumnGroup[T attrs.Definer](r *http.Request, instance T, columns []ListColumn[T]) *ListColumnGroup[T] {
@@ -59,38 +60,49 @@ func (c *ListColumnGroup[T]) Form(r *http.Request, opts ...func(forms.Form)) for
 	return form
 }
 
+func (c *ListColumnGroup[T]) GetAttrs(r *http.Request, definitions attrs.Definitions, instance T) map[string]any {
+	if c.Attrs != nil {
+		return c.Attrs(r, definitions, instance)
+	}
+	return nil
+}
+
+templ (c *ListColumnGroup[T]) RenderColumns(r *http.Request, form *ListForm[T]) {
+	for _, column := range c.Columns {
+		if form == nil || !AllowListEdit(ctx) {
+			// If the user is not allowed to edit the list, render the column as read-only
+			<td class="list-column">
+				@column.Component(r, c.Definitions, c.Instance)
+			</td>
+			{{ continue }}
+		}
+
+		<td class="list-column" { c.GetAttrs(r, c.Definitions, c.Instance)... }>
+			switch col := column.(type) {
+			case ListEditableColumn[T]:
+				{{ var fieldName = col.FieldName() }}
+				if fieldName == "" || col.FormField(r, c.Instance) == nil {
+					@col.Component(r, c.Definitions, c.Instance)
+					{{ continue }}
+				}
+
+				{{ var rowForm = form.ForInstance(c.Instance) }}
+				{{ var boundFields = rowForm.BoundFields() }}
+				{{ var field, ok = boundFields.Get(fieldName) }}
+				if !ok {
+					{{ return except.Fail(http.StatusInternalServerError, "could not find field %q in bound fields", col.FieldName()) }}
+				}
+
+				@col.EditableComponent(r, c.Definitions, c.Instance, rowForm, field.(*forms.BoundFormField))
+			default:
+				@col.Component(r, c.Definitions, c.Instance)
+			}
+		</td>
+	}
+}
+
 templ (c *ListColumnGroup[T]) Component(r *http.Request, form *ListForm[T]) {
 	<tr class="column-group">
-		for _, column := range c.Columns {
-			if form == nil || !AllowListEdit(ctx) {
-				// If the user is not allowed to edit the list, render the column as read-only
-				<td class="list-column">
-					@column.Component(r, c.Definitions, c.Instance)
-				</td>
-				{{ continue }}
-			}
-
-			<td class="list-column">
-				switch col := column.(type) {
-				case ListEditableColumn[T]:
-					{{ var fieldName = col.FieldName() }}
-					if fieldName == "" {
-						@col.Component(r, c.Definitions, c.Instance)
-						{{ continue }}
-					}
-
-					{{ var rowForm = form.ForInstance(c.Instance) }}
-					{{ var boundFields = rowForm.BoundFields() }}
-					{{ var field, ok = boundFields.Get(fieldName) }}
-					if !ok {
-						{{ return except.Fail(http.StatusInternalServerError, "could not find field %q in bound fields", col.FieldName()) }}
-					}
-
-					@col.EditableComponent(r, c.Definitions, c.Instance, rowForm, field.(*forms.BoundFormField))
-				default:
-					@col.Component(r, c.Definitions, c.Instance)
-				}
-			</td>
-		}
+		@c.RenderColumns(r, form)
 	</tr>
 }

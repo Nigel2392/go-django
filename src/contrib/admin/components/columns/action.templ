@@ -36,6 +36,10 @@ type ListActionsColumn[T attrs.Definer] struct {
     Actions []*ListAction[T]
 }
 
+func (l *ListActionsColumn[T]) FieldName() string {
+    return ""
+}
+
 templ (l *ListActionsColumn[T]) Header(r *http.Request) {
     if l.Heading != nil {
         { l.Heading(ctx) }

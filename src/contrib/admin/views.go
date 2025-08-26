@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
-	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
@@ -133,19 +132,11 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 	}
 
 	var listCols = make([]list.ListColumn[attrs.Definer], len(model.ListView.Fields))
-	var meta = attrs.GetModelMeta(model.Model)
-	var defs = meta.Definitions()
+	var sortBuilder = columns.NewSortableColumnBuilder(model.Model)
 	for i, field := range model.ListView.Fields {
-
-		var col = model.GetColumn(r.Context(), model.ListView, field)
-		if fld, ok := defs.Field(field); ok && fld.Rel() == nil {
-			col = &columns.SortableListColumn[attrs.Definer]{
-				SortField:  field,
-				ListColumn: col,
-			}
-		}
-
-		listCols[i] = col
+		listCols[i] = sortBuilder.AddColumn(model.GetColumn(
+			r.Context(), model.ListView, field,
+		))
 	}
 
 	var amount = model.ListView.PerPage
@@ -249,13 +240,7 @@ continueView:
 		}
 	}
 
-	var sort = r.FormValue("sort")
-	if sort != "" {
-		var fld = strings.TrimPrefix(sort, "-")
-		if fld, ok := defs.Field(fld); ok && fld.Rel() == nil {
-			qs = qs.OrderBy(sort)
-		}
-	}
+	qs = sortBuilder.Sort(qs, r.URL.Query()["sort"])
 
 	var view = &list.View[attrs.Definer]{
 		Model:           model.NewInstance(),

@@ -10,46 +10,45 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import "github.com/Nigel2392/go-django/src/core/attrs"
 import "github.com/Nigel2392/go-django/src/views/list"
-import "net/http"
 import "github.com/Nigel2392/go-django/src/forms"
 import "github.com/Nigel2392/go-django/src/forms/fields"
 import "github.com/Nigel2392/go-django/src/forms/media"
+import "net/http"
 import "strings"
 
-type SortableListColumn[T attrs.Definer] struct {
-	SortField string
+type sortableListColumn[T attrs.Definer] struct {
 	list.ListColumn[T]
 }
 
-func (s *SortableListColumn[T]) FieldName() string {
-	if editable, ok := s.ListColumn.(list.ListEditableColumn[T]); ok {
-		return editable.FieldName()
-	}
-	return ""
+func (s *sortableListColumn[T]) FieldName() string {
+	return s.ListColumn.FieldName()
 }
 
-func (s *SortableListColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
-	if m, ok := s.ListColumn.(list.ListMediaColumn[T]); ok {
+func (s *sortableListColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
+	if m, ok := s.ListColumn.(media.MediaDefiner); ok {
+		return m.Media()
+	}
+	if m, ok := s.ListColumn.(list.ListMediaColumn); ok {
 		return m.Media(defs)
 	}
 	return nil
 }
 
-func (s *SortableListColumn[T]) FormField(r *http.Request, row T) fields.Field {
+func (s *sortableListColumn[T]) FormField(r *http.Request, row T) fields.Field {
 	if editable, ok := s.ListColumn.(list.ListEditableColumn[T]); ok {
 		return editable.FormField(r, row)
 	}
 	return nil
 }
 
-func (s *SortableListColumn[T]) EditableComponent(r *http.Request, defs attrs.Definitions, row T, form forms.Form, field *forms.BoundFormField) templ.Component {
+func (s *sortableListColumn[T]) EditableComponent(r *http.Request, defs attrs.Definitions, row T, form forms.Form, field *forms.BoundFormField) templ.Component {
 	if editable, ok := s.ListColumn.(list.ListEditableColumn[T]); ok {
 		return editable.EditableComponent(r, defs, row, form, field)
 	}
 	return s.Component(r, defs, row)
 }
 
-func (s *SortableListColumn[T]) Header(r *http.Request) templ.Component {
+func (s *sortableListColumn[T]) Header(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -71,20 +70,48 @@ func (s *SortableListColumn[T]) Header(r *http.Request) templ.Component {
 		}
 		ctx = templ.ClearChildren(ctx)
 		var q = r.URL.Query()
-		var sort = q.Get("sort")
 		var asc = true
-		switch {
-		case sort == s.SortField:
-			q.Set("sort", "-"+s.SortField)
-			asc = false
-		case strings.HasPrefix(sort, "-") && strings.TrimPrefix(sort, "-") == s.SortField:
-			q.Set("sort", s.SortField)
-			asc = true
-		default:
-			q.Set("sort", "-"+s.SortField)
+		var found bool
+		var sortList = q["sort"]
+		var fieldName = s.FieldName()
+		for i, sort := range sortList {
+			switch {
+			case sort == fieldName:
+				sortList[i] = "-" + fieldName
+				asc = false
+				found = true
+			case strings.HasPrefix(sort, "-") && strings.HasSuffix(sort, fieldName) && strings.TrimPrefix(sort, "-") == fieldName:
+				sortList[i] = fieldName
+				asc = true
+				found = true
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " ")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			if found {
+				if i > 0 {
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " ")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					var temp = sortList[i]
+					copy(sortList[1:i+1], sortList[0:i])
+					sortList[0] = temp
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, " ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
+				break
+			}
+		}
+		if !found {
+			sortList = append([]string{"-" + fieldName}, sortList...)
 			asc = false
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<a class=\"sortable-column\" href=\"")
+		q["sort"] = sortList
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<a class=\"sortable-column\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -93,22 +120,22 @@ func (s *SortableListColumn[T]) Header(r *http.Request) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		if asc {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"sortable-column-icon\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M3.5 12.5a.5.5 0 0 1-1 0V3.707L1.354 4.854a.5.5 0 1 1-.708-.708l2-1.999.007-.007a.5.5 0 0 1 .7.006l2 2a.5.5 0 1 1-.707.708L3.5 3.707zm3.5-9a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5M7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1z\"></path></svg>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"sortable-column-icon\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M3.5 12.5a.5.5 0 0 1-1 0V3.707L1.354 4.854a.5.5 0 1 1-.708-.708l2-1.999.007-.007a.5.5 0 0 1 .7.006l2 2a.5.5 0 1 1-.707.708L3.5 3.707zm3.5-9a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5M7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1z\"></path></svg>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		} else {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"sortable-column-icon\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L3.5 11.293zm3.5 1a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5M7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1z\"></path></svg>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"sortable-column-icon\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M3.5 2.5a.5.5 0 0 0-1 0v8.793l-1.146-1.147a.5.5 0 0 0-.708.708l2 1.999.007.007a.497.497 0 0 0 .7-.006l2-2a.5.5 0 0 0-.707-.708L3.5 11.293zm3.5 1a.5.5 0 0 1 .5-.5h7a.5.5 0 0 1 0 1h-7a.5.5 0 0 1-.5-.5M7.5 6a.5.5 0 0 0 0 1h5a.5.5 0 0 0 0-1zm0 3a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1zm0 3a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1z\"></path></svg>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<div class=\"sortable-column-header\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div class=\"sortable-column-header\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -116,7 +143,7 @@ func (s *SortableListColumn[T]) Header(r *http.Request) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div></a>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</div></a>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

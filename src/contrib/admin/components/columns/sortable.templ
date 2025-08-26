@@ -2,63 +2,79 @@ package columns
 
 import "github.com/Nigel2392/go-django/src/core/attrs"
 import "github.com/Nigel2392/go-django/src/views/list"
-import "net/http"
 import "github.com/Nigel2392/go-django/src/forms"
 import "github.com/Nigel2392/go-django/src/forms/fields"
 import "github.com/Nigel2392/go-django/src/forms/media"
+import "net/http"
 import "strings"
 
-type SortableListColumn[T attrs.Definer] struct {
-    SortField string
+type sortableListColumn[T attrs.Definer] struct {
     list.ListColumn[T]
 }
 
-func (s *SortableListColumn[T]) FieldName() string {
-    if editable, ok := s.ListColumn.(list.ListEditableColumn[T]); ok {
-        return editable.FieldName()
-    }
-    return ""
+func (s *sortableListColumn[T]) FieldName() string {
+    return s.ListColumn.FieldName()
 }
 
-func (s *SortableListColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
-    if m, ok := s.ListColumn.(list.ListMediaColumn[T]); ok {
+func (s *sortableListColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
+    if m, ok := s.ListColumn.(media.MediaDefiner); ok {
+        return m.Media()
+    }
+    if m, ok := s.ListColumn.(list.ListMediaColumn); ok {
         return m.Media(defs)
     }
     return nil
 }
 
-func (s *SortableListColumn[T]) FormField(r *http.Request, row T) fields.Field {
+func (s *sortableListColumn[T]) FormField(r *http.Request, row T) fields.Field {
     if editable, ok := s.ListColumn.(list.ListEditableColumn[T]); ok {
         return editable.FormField(r, row)
     }
     return nil
 }
 
-func (s *SortableListColumn[T]) EditableComponent(r *http.Request, defs attrs.Definitions, row T, form forms.Form, field *forms.BoundFormField) templ.Component {
+func (s *sortableListColumn[T]) EditableComponent(r *http.Request, defs attrs.Definitions, row T, form forms.Form, field *forms.BoundFormField) templ.Component {
     if editable, ok := s.ListColumn.(list.ListEditableColumn[T]); ok {
         return editable.EditableComponent(r, defs, row, form, field)
     }
     return s.Component(r, defs, row)
 }
 
-templ (s *SortableListColumn[T]) Header(r *http.Request) {
+templ (s *sortableListColumn[T]) Header(r *http.Request) {
     {{ var q = r.URL.Query() }}
-    {{ var sort = q.Get("sort") }}
     {{ var asc = true }}
+    {{ var found bool }}
+    {{ var sortList = q["sort"] }}
+    {{ var fieldName = s.FieldName() }}
+    for i, sort := range sortList {
+        switch {
+        case sort == fieldName:
+            {{ sortList[i] = "-" + fieldName }}
+            {{ asc = false }}
+            {{ found = true }}
+        case strings.HasPrefix(sort, "-")  && strings.HasSuffix(sort, fieldName)  && strings.TrimPrefix(sort, "-") == fieldName:
+            {{ sortList[i] = fieldName }}
+            {{ asc = true }}
+            {{ found = true }}
+        }
 
-    switch {
-    case sort == s.SortField:
-        {{ q.Set("sort", "-" + s.SortField) }}
-        {{ asc = false }}
+        if found {
+            if i > 0 {
+                // Move to front, and shift the rest to back.
+                {{ var temp = sortList[i] }}
+                {{ copy(sortList[1:i+1], sortList[0:i]) }}
+                {{ sortList[0] = temp }}
+            }
+            {{ break }}
+        }
+    }
 
-    case strings.HasPrefix(sort, "-") && strings.TrimPrefix(sort, "-") == s.SortField:
-        {{ q.Set("sort", s.SortField) }}
-        {{ asc = true }}
-
-    default:
-        {{ q.Set("sort", "-" + s.SortField) }}
+    if !found {
+        {{ sortList = append([]string{"-" + fieldName}, sortList...) }}
         {{ asc = false }}
     }
+
+    {{ q["sort"] = sortList }}
 
     <a class="sortable-column" href={ templ.URL("?" + q.Encode()) }>
         if asc {

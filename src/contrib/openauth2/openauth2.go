@@ -331,7 +331,7 @@ func NewAppConfig(cnf Config) django.AppConfig {
 
 								},
 							),
-							"HasRefreshToken": list.BooleanColumn[attrs.Definer](
+							"HasRefreshToken": list.BooleanColumnFunc[attrs.Definer](
 								trans.S("Has Refresh Token"),
 								func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
 									return row.(*User).RefreshToken != ""

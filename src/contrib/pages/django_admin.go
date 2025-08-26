@@ -116,7 +116,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 					return template.HTML("")
 				},
 			),
-			"Live": list.BooleanColumn(
+			"Live": list.BooleanColumnFunc(
 				trans.S("Live"),
 				func(r *http.Request, _ attrs.Definitions, row attrs.Definer) bool {
 					var node = row.(*PageNode)

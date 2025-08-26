@@ -5,7 +5,6 @@ import (
 	"embed"
 	"fmt"
 	"net/http"
-	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -287,35 +286,23 @@ func NewAppConfig() django.AppConfig {
 								return django.Reverse("admin:apps:model:edit", "auth", "user", defs.Get("ID"))
 							},
 						),
-						"IsAdministrator": list.BooleanColumn(
+						"IsAdministrator": list.BooleanFieldColumn[attrs.Definer](
 							trans.S("Admin"),
-							func(r *http.Request, _ attrs.Definitions, row attrs.Definer) bool {
-								var user = row.(*User)
-								return user.IsAdministrator
-							},
+							"IsAdministrator",
 						),
-						"IsActive": list.BooleanColumn(
+						"IsActive": list.BooleanFieldColumn[attrs.Definer](
 							trans.S("Active"),
-							func(r *http.Request, _ attrs.Definitions, row attrs.Definer) bool {
-								var user = row.(*User)
-								return user.IsActive
-							},
+							"IsActive",
 						),
-						"CreatedAt": list.DateTimeColumn(
+						"CreatedAt": list.DateTimeFieldColumn[attrs.Definer](
 							trans.DEFAULT_TIME_FORMAT,
 							trans.S("Created At"),
-							func(r *http.Request, _ attrs.Definitions, row attrs.Definer) time.Time {
-								var user = row.(*User)
-								return user.CreatedAt.Time()
-							},
+							"CreatedAt",
 						),
-						"UpdatedAt": list.DateTimeColumn(
+						"UpdatedAt": list.DateTimeFieldColumn[attrs.Definer](
 							trans.DEFAULT_TIME_FORMAT,
 							trans.S("Updated At"),
-							func(r *http.Request, _ attrs.Definitions, row attrs.Definer) time.Time {
-								var user = row.(*User)
-								return user.UpdatedAt.Time()
-							},
+							"UpdatedAt",
 						),
 					},
 					PerPage: 25,

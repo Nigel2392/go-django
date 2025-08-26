@@ -160,8 +160,9 @@ func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row 
 }
 
 type booleanColumn[T attrs.Definer] struct {
-	header func(ctx context.Context) string
-	data   func(r *http.Request, defs attrs.Definitions, row T) bool
+	header    func(ctx context.Context) string
+	fieldName string
+	data      func(r *http.Request, defs attrs.Definitions, row T) bool
 }
 
 func (c *booleanColumn[T]) Header(r *http.Request) templ.Component {
@@ -189,7 +190,7 @@ func (c *booleanColumn[T]) Header(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var6 string
 		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 89, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 90, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
 		if templ_7745c5c3_Err != nil {
@@ -197,6 +198,49 @@ func (c *booleanColumn[T]) Header(r *http.Request) templ.Component {
 		}
 		return nil
 	})
+}
+
+func (c *booleanColumn[T]) FieldName() string {
+	return c.fieldName
+}
+
+func (c *booleanColumn[T]) getData(r *http.Request, defs attrs.Definitions, row T) bool {
+	if c.fieldName != "" {
+		var field, ok = defs.Field(c.fieldName)
+		assert.True(
+			ok,
+			"Field %q does not exist", c.fieldName,
+		)
+
+		var val, err = field.Value()
+		assert.True(
+			err == nil,
+			"Field %q (%T) Value method has returned an error: %v",
+			c.fieldName, field, err,
+		)
+
+		var rV = reflect.ValueOf(val)
+		switch rV.Kind() {
+		case reflect.Bool:
+			return rV.Bool()
+		case reflect.String:
+			return rV.String() != ""
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			return rV.Int() != 0
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			return rV.Uint() != 0
+		case reflect.Float32, reflect.Float64:
+			return rV.Float() != 0
+		default:
+			return !attrs.IsZero(val)
+		}
+	}
+
+	if c.data != nil {
+		return c.data(r, defs, row)
+	}
+
+	return false
 }
 
 func (c *booleanColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
@@ -220,7 +264,7 @@ func (c *booleanColumn[T]) Component(r *http.Request, defs attrs.Definitions, ro
 			templ_7745c5c3_Var7 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		if c.data(r, defs, row) {
+		if c.getData(r, defs, row) {
 			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"20\" height=\"20\" fill=\"currentColor\" class=\"list-check-yes\" viewBox=\"0 0 16 16\"><!--! The MIT License (MIT) --><!--! Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14m0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16\"></path> <path d=\"m10.97 4.97-.02.022-3.473 4.425-2.093-2.094a.75.75 0 0 0-1.06 1.06L6.97 11.03a.75.75 0 0 0 1.079-.02l3.992-4.99a.75.75 0 0 0-1.071-1.05\"></path></svg>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -235,18 +279,78 @@ func (c *booleanColumn[T]) Component(r *http.Request, defs attrs.Definitions, ro
 	})
 }
 
-func BooleanColumn[T attrs.Definer](header func(ctx context.Context) string, data func(r *http.Request, defs attrs.Definitions, row T) bool) ListColumn[T] {
-	return &booleanColumn[T]{header, data}
+func BooleanColumnFunc[T attrs.Definer](header func(ctx context.Context) string, data func(r *http.Request, defs attrs.Definitions, row T) bool) ListColumn[T] {
+	return &booleanColumn[T]{
+		header: header,
+		data:   data,
+	}
+}
+
+func BooleanFieldColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string) ListColumn[T] {
+	return &booleanColumn[T]{
+		header:    header,
+		fieldName: fieldName,
+	}
 }
 
 type dateTimeColumn[T attrs.Definer] struct {
-	fmt    string
-	header func(ctx context.Context) string
-	data   func(r *http.Request, defs attrs.Definitions, row T) time.Time
+	fmt       string
+	header    func(ctx context.Context) string
+	fieldName string
+	data      func(r *http.Request, defs attrs.Definitions, row T) time.Time
 }
 
-func DateTimeColumn[T attrs.Definer](fmt string, header func(ctx context.Context) string, data func(r *http.Request, defs attrs.Definitions, row T) time.Time) ListColumn[T] {
-	return &dateTimeColumn[T]{fmt, header, data}
+func DateTimeColumnFunc[T attrs.Definer](fmt string, header func(ctx context.Context) string, data func(r *http.Request, defs attrs.Definitions, row T) time.Time) ListColumn[T] {
+	return &dateTimeColumn[T]{
+		fmt:    fmt,
+		header: header,
+		data:   data,
+	}
+}
+
+func DateTimeFieldColumn[T attrs.Definer](fmt string, header func(ctx context.Context) string, fieldName string) ListColumn[T] {
+	return &dateTimeColumn[T]{
+		fmt:       fmt,
+		header:    header,
+		fieldName: fieldName,
+	}
+}
+
+func (c *dateTimeColumn[T]) FieldName() string {
+	return c.fieldName
+}
+
+func (c *dateTimeColumn[T]) getData(r *http.Request, defs attrs.Definitions, row T) time.Time {
+	if c.fieldName != "" {
+		var field, ok = defs.Field(c.fieldName)
+		assert.True(
+			ok,
+			"Field %q does not exist", c.fieldName,
+		)
+
+		var val, err = field.Value()
+		assert.True(
+			err == nil,
+			"Field %q (%T) Value method has returned an error: %v",
+			c.fieldName, field, err,
+		)
+
+		var rV = reflect.ValueOf(val)
+		var timeTyp = reflect.TypeOf(time.Time{})
+		if rV.Type().ConvertibleTo(timeTyp) {
+			return rV.Convert(timeTyp).Interface().(time.Time)
+		}
+
+		if rV.Type() == timeTyp {
+			return rV.Interface().(time.Time)
+		}
+	}
+
+	if c.data != nil {
+		return c.data(r, defs, row)
+	}
+
+	return time.Time{}
 }
 
 func (c *dateTimeColumn[T]) Header(r *http.Request) templ.Component {
@@ -274,7 +378,7 @@ func (c *dateTimeColumn[T]) Header(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var9 string
 		templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 126, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 230, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 		if templ_7745c5c3_Err != nil {
@@ -305,11 +409,11 @@ func (c *dateTimeColumn[T]) Component(r *http.Request, defs attrs.Definitions, r
 			templ_7745c5c3_Var10 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var value = c.data(r, defs, row)
+		var value = c.getData(r, defs, row)
 		var templ_7745c5c3_Var11 string
 		templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(trans.Time(r.Context(), value, c.fmt))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 131, Col: 40}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 235, Col: 40}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 		if templ_7745c5c3_Err != nil {
@@ -321,6 +425,23 @@ func (c *dateTimeColumn[T]) Component(r *http.Request, defs attrs.Definitions, r
 
 type wrappedColumn[T1, T2 attrs.Definer] struct {
 	ListColumn[T2]
+}
+
+func (c *wrappedColumn[T, T2]) FormField(r *http.Request, row T) fields.Field {
+	if editable, ok := c.ListColumn.(ListEditableColumn[T2]); ok {
+		return editable.FormField(r, any(row).(T2))
+	}
+	return nil
+}
+
+func (c *wrappedColumn[T, T2]) Media(defs attrs.StaticDefinitions) media.Media {
+	if m, ok := c.ListColumn.(media.MediaDefiner); ok {
+		return m.Media()
+	}
+	if m, ok := c.ListColumn.(ListMediaColumn); ok {
+		return m.Media(defs)
+	}
+	return nil
 }
 
 func (c *wrappedColumn[T1, T2]) Component(r *http.Request, defs attrs.Definitions, row T1) templ.Component {
@@ -361,6 +482,10 @@ type funcColumn[T attrs.Definer] struct {
 	data   func(r *http.Request, defs attrs.Definitions, row T) interface{}
 }
 
+func (c *funcColumn[T]) FieldName() string {
+	return ""
+}
+
 func (c *funcColumn[T]) Header(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
@@ -386,7 +511,7 @@ func (c *funcColumn[T]) Header(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var14 string
 		templ_7745c5c3_Var14, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 153, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 278, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var14))
 		if templ_7745c5c3_Err != nil {
@@ -429,12 +554,17 @@ func FuncColumn[T attrs.Definer](header func(ctx context.Context) string, data f
 	return &funcColumn[T]{header, data}
 }
 
-type fieldColumn[T attrs.Definer] struct {
-	header    func(ctx context.Context) string
+type fieldColumn[T attrs.Definer, VAL any] struct {
 	fieldName string
+	header    func(ctx context.Context) string
+	process   func(r *http.Request, defs attrs.Definitions, row T, value VAL) VAL
 }
 
-func (c *fieldColumn[T]) Header(r *http.Request) templ.Component {
+func (c *fieldColumn[T, VAL]) FieldName() string {
+	return c.fieldName
+}
+
+func (c *fieldColumn[T, VAL]) Header(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -459,7 +589,7 @@ func (c *fieldColumn[T]) Header(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 171, Col: 19}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 301, Col: 19}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {
@@ -469,24 +599,57 @@ func (c *fieldColumn[T]) Header(r *http.Request) templ.Component {
 	})
 }
 
-func (c *fieldColumn[T]) data(r *http.Request, defs attrs.Definitions, _ T) interface{} {
-	var field, ok = defs.Field(c.fieldName)
+var __reflect_type_any = reflect.TypeOf((*any)(nil)).Elem()
 
+func (c *fieldColumn[T, VAL]) data(r *http.Request, defs attrs.Definitions, row T) interface{} {
+	var field, ok = defs.Field(c.fieldName)
 	assert.False(
 		!ok,
 		"Field %q does not exist", c.fieldName,
 	)
 
 	if field == nil {
+		if c.process != nil {
+			return c.process(r, defs, row, *new(VAL))
+		}
 		return nil
 	}
 
-	var d = field.GetValue()
-	if attrs.IsZero(d) {
-		return field.GetDefault()
+	var fieldValue, err = field.Value()
+	assert.True(
+		err == nil,
+		"Field %q (%T) Value method has returned an error: %v",
+		c.fieldName, field, err,
+	)
+
+	var rV = reflect.ValueOf(fieldValue)
+	var _dst VAL
+	var dstTyp = reflect.TypeOf(_dst)
+
+	if dstTyp == __reflect_type_any || dstTyp == reflect.TypeOf(nil) {
+		goto skipConversionChecks
 	}
 
-	switch f := d.(type) {
+	switch {
+	case rV.Type().ConvertibleTo(dstTyp):
+		fieldValue = rV.Convert(dstTyp).Interface()
+	case rV.Type() == dstTyp:
+		fieldValue = rV.Interface()
+	case dstTyp.Kind() == reflect.Interface && rV.Type().Implements(dstTyp):
+		fieldValue = rV.Interface()
+	default:
+		assert.Fail(
+			"Field %q (%T) has an unsupported type: %v",
+			c.fieldName, field, fieldValue,
+		)
+	}
+
+skipConversionChecks:
+	if c.process != nil {
+		fieldValue = c.process(r, defs, row, fieldValue.(VAL))
+	}
+
+	switch f := fieldValue.(type) {
 	case time.Time:
 		return trans.Time(r.Context(), f, trans.LONG_TIME_FORMAT)
 	case drivers.DateTime:
@@ -497,10 +660,10 @@ func (c *fieldColumn[T]) data(r *http.Request, defs attrs.Definitions, _ T) inte
 		return trans.Time(r.Context(), time.Time(f), trans.SHORT_TIME_FORMAT)
 	}
 
-	return d
+	return fieldValue
 }
 
-func (c *fieldColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
+func (c *fieldColumn[T, VAL]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -530,7 +693,18 @@ func (c *fieldColumn[T]) Component(r *http.Request, defs attrs.Definitions, row 
 }
 
 func FieldColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string) ListColumn[T] {
-	return &fieldColumn[T]{header, fieldName}
+	return &fieldColumn[T, any]{
+		fieldName: fieldName,
+		header:    header,
+	}
+}
+
+func ProcessableFieldColumn[T attrs.Definer, VAL any](header func(ctx context.Context) string, fieldName string, process func(r *http.Request, defs attrs.Definitions, row T, value VAL) VAL) ListColumn[T] {
+	return &fieldColumn[T, VAL]{
+		fieldName: fieldName,
+		header:    header,
+		process:   process,
+	}
 }
 
 type titleFieldColumn[T attrs.Definer] struct {
@@ -538,11 +712,18 @@ type titleFieldColumn[T attrs.Definer] struct {
 	getURL  func(r *http.Request, defs attrs.Definitions, row T) string
 }
 
-func (c *titleFieldColumn[T]) Media() media.Media {
+func (c *titleFieldColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
 	if m, ok := c.wrapped.(media.MediaDefiner); ok {
 		return m.Media()
 	}
+	if f, ok := c.wrapped.(ListMediaColumn); ok {
+		return f.Media(defs)
+	}
 	return nil
+}
+
+func (c *titleFieldColumn[T]) FieldName() string {
+	return c.wrapped.FieldName()
 }
 
 func (c *titleFieldColumn[T]) Header(r *http.Request) templ.Component {
@@ -652,7 +833,7 @@ func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(r *http.
 }
 
 type htmlColumn[T attrs.Definer] struct {
-	fieldColumn[T]
+	*fieldColumn[T, any]
 	getHTML func(r *http.Request, defs attrs.Definitions, row T) template.HTML
 }
 
@@ -688,13 +869,24 @@ func (c *htmlColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T
 
 func HTMLColumn[T attrs.Definer](header func(ctx context.Context) string, getHTML func(r *http.Request, defs attrs.Definitions, row T) template.HTML) ListColumn[T] {
 	return &htmlColumn[T]{
-		fieldColumn: fieldColumn[T]{header: header},
+		fieldColumn: &fieldColumn[T, any]{header: header},
 		getHTML:     getHTML,
 	}
 }
 
+func HTMLFieldColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string) ListColumn[T] {
+	var fc = &fieldColumn[T, any]{header: header, fieldName: fieldName}
+	return &htmlColumn[T]{
+		fieldColumn: fc,
+		getHTML: func(r *http.Request, defs attrs.Definitions, row T) template.HTML {
+			var val = fc.data(r, defs, row)
+			return template.HTML(attrs.ToString(val))
+		},
+	}
+}
+
 type linkColumn[T attrs.Definer] struct {
-	fieldColumn[T]
+	fieldColumn[T, any]
 	getURL func(r *http.Request, defs attrs.Definitions, row T) string
 }
 
@@ -754,8 +946,11 @@ func (c *linkColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T
 
 func LinkColumn[T attrs.Definer](header func(ctx context.Context) string, fieldName string, getURL func(r *http.Request, defs attrs.Definitions, row T) string) ListColumn[T] {
 	return &linkColumn[T]{
-		fieldColumn: fieldColumn[T]{header, fieldName},
-		getURL:      getURL,
+		fieldColumn: fieldColumn[T, any]{
+			header:    header,
+			fieldName: fieldName,
+		},
+		getURL: getURL,
 	}
 }
 
@@ -783,9 +978,12 @@ func (c *rowSelectColumn[T]) permitted(r *http.Request, defs attrs.Definitions, 
 	return true
 }
 
-func (c *rowSelectColumn[T]) Media() media.Media {
+func (c *rowSelectColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
 	if m, ok := c.ListColumn.(media.MediaDefiner); ok {
 		return m.Media()
+	}
+	if f, ok := c.ListColumn.(ListMediaColumn); ok {
+		return f.Media(defs)
 	}
 	return nil
 }
@@ -837,7 +1035,7 @@ func (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, 
 		var templ_7745c5c3_Var26 string
 		templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(c.formName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 329, Col: 92}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 527, Col: 92}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 		if templ_7745c5c3_Err != nil {
@@ -850,7 +1048,7 @@ func (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, 
 		var templ_7745c5c3_Var27 string
 		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(attrs.ToString(attrs.PrimaryKey(row)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 329, Col: 140}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 527, Col: 140}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -895,14 +1093,17 @@ func RowSelectColumn[T attrs.Definer](formName string, isChecked, hasPermission 
 }
 
 type fieldCheckbox[T attrs.Definer] struct {
-	fieldColumn[T]
+	fieldColumn[T, any]
 	inputAttrs    map[string]any
 	hasPermission BoundBoolFunc[T]
 }
 
 func FieldCheckbox[T attrs.Definer](header func(ctx context.Context) string, fieldName string, hasPermission BoundBoolFunc[T]) ListColumn[T] {
 	return &fieldCheckbox[T]{
-		fieldColumn:   fieldColumn[T]{header, fieldName},
+		fieldColumn: fieldColumn[T, any]{
+			header:    header,
+			fieldName: fieldName,
+		},
 		hasPermission: hasPermission,
 	}
 }
@@ -961,7 +1162,7 @@ func (c *fieldCheckbox[T]) Component(r *http.Request, defs attrs.Definitions, ro
 		var templ_7745c5c3_Var29 string
 		templ_7745c5c3_Var29, templ_7745c5c3_Err = templ.JoinStringErrs(c.fieldColumn.fieldName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 376, Col: 105}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 577, Col: 105}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var29))
 		if templ_7745c5c3_Err != nil {
@@ -1072,7 +1273,7 @@ func (c *listEditableColumn[T]) Header(r *http.Request) templ.Component {
 		var templ_7745c5c3_Var31 string
 		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.JoinStringErrs(c.header(ctx))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 445, Col: 16}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 646, Col: 16}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var31))
 		if templ_7745c5c3_Err != nil {
@@ -1179,7 +1380,12 @@ func Column[T attrs.Definer](header func(ctx context.Context) string, getter any
 	case func(r *http.Request, defs attrs.Definitions, row T) interface{}:
 		return &funcColumn[T]{header, g}
 	case string:
-		return &fieldColumn[T]{header, g}
+		return &fieldColumn[T, any]{
+			header:    header,
+			fieldName: g,
+		}
+	case ListColumn[T]:
+		return g
 	default:
 		assert.Fail("Invalid column getter type")
 		return nil

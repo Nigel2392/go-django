@@ -56,17 +56,16 @@ func SetAllowListRowSelect(ctx context.Context, allow bool) context.Context {
 
 type ListColumn[T attrs.Definer] interface {
 	Header(r *http.Request) templ.Component
+	FieldName() string
 	Component(r *http.Request, defs attrs.Definitions, row T) templ.Component
 }
 
-type ListMediaColumn[T attrs.Definer] interface {
-	ListColumn[T]
+type ListMediaColumn interface {
 	Media(defs attrs.StaticDefinitions) media.Media
 }
 
 type ListEditableColumn[T attrs.Definer] interface {
 	ListColumn[T]
-	FieldName() string
 	FormField(r *http.Request, row T) fields.Field
 	EditableComponent(r *http.Request, defs attrs.Definitions, row T, form forms.Form, field *forms.BoundFormField) templ.Component
 }
