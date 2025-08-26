@@ -56,6 +56,10 @@ func (c *ListColumnGroup[T]) Form(r *http.Request, opts ...func(forms.Form)) for
 			field     = column.FormField(r, c.Instance)
 		)
 
+		if fieldName == "" || field == nil {
+			continue
+		}
+
 		form.AddField(fieldName, field)
 	}
 
@@ -109,13 +113,29 @@ func (c *ListColumnGroup[T]) Component(r *http.Request, form *ListForm[T]) templ
 			}
 			switch col := column.(type) {
 			case ListEditableColumn[T]:
+				var fieldName = col.FieldName()
+				if fieldName == "" {
+					templ_7745c5c3_Err = col.Component(r, c.Definitions, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, " ")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					continue
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, " ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 				var rowForm = form.ForInstance(c.Instance)
 				var boundFields = rowForm.BoundFields()
-				var field, ok = boundFields.Get(col.FieldName())
+				var field, ok = boundFields.Get(fieldName)
 				if !ok {
-					return except.Fail(http.StatusInternalServerError, "could not find field %s in bound fields", col.FieldName())
+					return except.Fail(http.StatusInternalServerError, "could not find field %q in bound fields", col.FieldName())
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, " ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, " ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -129,12 +149,12 @@ func (c *ListColumnGroup[T]) Component(r *http.Request, form *ListForm[T]) templ
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</td>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</td>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</tr>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</tr>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

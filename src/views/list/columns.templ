@@ -84,7 +84,7 @@ type booleanColumn[T attrs.Definer] struct {
 	data   func(r *http.Request, defs attrs.Definitions, row T) bool
 }
 
-templ (c *booleanColumn[T]) Header() {
+templ (c *booleanColumn[T]) Header(r *http.Request) {
 	{{ assert.False(c.header == nil, "Column header is nil") }}
 	{ c.header(ctx) }
 }
@@ -121,7 +121,7 @@ func DateTimeColumn[T attrs.Definer](fmt string, header func(ctx context.Context
 	return &dateTimeColumn[T]{fmt, header, data}
 }
 
-templ (c *dateTimeColumn[T]) Header() {
+templ (c *dateTimeColumn[T]) Header(r *http.Request) {
 	{{ assert.False(c.header == nil, "Column header is nil") }}
 	{ c.header(ctx) }
 }
@@ -148,7 +148,7 @@ type funcColumn[T attrs.Definer] struct {
 	data   func(r *http.Request, defs attrs.Definitions, row T) interface{}
 }
 
-templ (c *funcColumn[T]) Header() {
+templ (c *funcColumn[T]) Header(r *http.Request) {
 	{{ assert.False(c.header == nil, "Column header is nil") }}
     { c.header(ctx) }
 }
@@ -166,7 +166,7 @@ type fieldColumn[T attrs.Definer] struct {
 	fieldName string
 }
 
-templ (c *fieldColumn[T]) Header() {
+templ (c *fieldColumn[T]) Header(r *http.Request) {
 	{{ assert.False(c.header == nil, "Column header is nil") }}
     { c.header(ctx) }
 }
@@ -222,9 +222,9 @@ func (c *titleFieldColumn[T]) Media() media.Media {
 	return nil
 }
 
-templ (c *titleFieldColumn[T]) Header() {
+templ (c *titleFieldColumn[T]) Header(r *http.Request) {
 	<div class="list-title">
-		@c.wrapped.Header()
+		@c.wrapped.Header(r)
 	</div>
 }
 
@@ -440,7 +440,7 @@ func (c *listEditableColumn[T]) Media(defs attrs.StaticDefinitions) media.Media 
 	return formField.Widget().Media()
 }
 
-templ (c *listEditableColumn[T]) Header() {
+templ (c *listEditableColumn[T]) Header(r *http.Request) {
 	{{ assert.False(c.header == nil, "Column header is nil") }}
 	{ c.header(ctx) }
 }

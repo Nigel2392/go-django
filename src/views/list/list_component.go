@@ -59,9 +59,7 @@ func (l *List[T]) Media() media.Media {
 			m = m.Merge(mc.Media())
 		}
 		if defs != nil {
-			if mc, ok := col.(interface {
-				Media(defs attrs.StaticDefinitions) media.Media
-			}); ok {
+			if mc, ok := col.(ListMediaColumn[T]); ok {
 				m = m.Merge(mc.Media(defs))
 			}
 		}

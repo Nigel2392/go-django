@@ -7,7 +7,7 @@ templ (l *List[T]) Component() {
 				<tr class="list-header">
 					for _, column := range l.Columns {
 						<th class="list-column-header">
-							@column.Header()
+							@column.Header(l.request)
 						</th>
 					}
 				</tr>

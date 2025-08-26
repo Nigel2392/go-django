@@ -2,31 +2,69 @@ package menu
 
 import "github.com/Nigel2392/go-django/src/forms/media"
 import "github.com/Nigel2392/go-django/src/core/ctx"
+import "github.com/Nigel2392/go-django/src/core/logger"
 import "github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+import "runtime/debug"
 import "net/http"
 import "context"
+import "slices"
 import "io"
-import "github.com/Nigel2392/go-django/src/core/logger"
-import "runtime/debug"
 
 type SidePanels struct {
     Panels []SidePanel
 }
 
+func (p *SidePanels) HasPanels() bool {
+    for _, panel := range p.Panels {
+        if panel.IsShown() {
+            return true
+        }
+    }
+    return false
+}
+
+func (p *SidePanels) sortPanels(a, b SidePanel) int {
+    var aOrder = a.Order()
+    var bOrder = b.Order()
+    if aOrder < bOrder {
+        return -1
+    } else if aOrder > bOrder {
+        return 1
+    }
+    var aName = a.Name()
+    var bName = b.Name()
+    if aName < bName {
+        return -1
+    } else if aName > bName {
+        return 1
+    }
+    return 0
+}
+
 templ (p *SidePanels) Component() {
+    {{ var panels = slices.Clone(p.Panels) }}
+    {{ slices.SortStableFunc(panels, p.sortPanels) }}
+    
+
     <div class="side-panels" data-controller="side-panels">
         <div class="side-panels__controls actions">
-            for _, panel := range p.Panels {
+            for _, panel := range panels {
+                if !panel.IsShown() {
+                    {{ continue }}
+                }
                 <div class="side-panels__controls__control actions__action"
                 	data-side-panels-target="control"
 			        data-side-panels-id-param={ "panel__" + panel.Name() }
 			        data-action="click->side-panels#open">
-                    @panel.Button()
+                    <button type="button">{ panel.Label() }</button>
                 </div>
             }
         </div>
         <div class="side-panels__content" data-side-panels-target="panels">
-            for _, panel := range p.Panels {
+            for _, panel := range panels {
+                if !panel.IsShown() {
+                    {{ continue }}
+                }
                 <div class="side-panels__content__panel" data-side-panels-target="panel" id={ "panel__" + panel.Name() }>
                     <div class="side-panels__content__controls">
                         <button class="side-panels__content__control" data-action="click->side-panels#fullscreen">
@@ -60,8 +98,8 @@ type BaseSidePanel struct {
     TemplateName string
     Request      *http.Request
     Hidden       func(p *BaseSidePanel, r *http.Request) bool
+    PanelLabel   func(ctx context.Context) string
     PanelMedia   func(p *BaseSidePanel, r *http.Request) media.Media
-    PanelButton  func(p *BaseSidePanel, r *http.Request) templ.Component
     Context      func(p *BaseSidePanel, r *http.Request, c ctx.Context) ctx.Context
 }
 
@@ -87,11 +125,11 @@ func (p *BaseSidePanel) Media() media.Media {
     return p.PanelMedia(p, p.Request)
 }
 
-templ (p *BaseSidePanel) Button() {
-    if p.PanelButton == nil {
-        {{ return nil }}
+func (p *BaseSidePanel) Label() string {
+    if p.PanelLabel == nil {
+        return ""
     }
-    @p.PanelButton(p, p.Request)
+    return p.PanelLabel(p.Request.Context())
 }
 
 templ (p *BaseSidePanel) Content() {

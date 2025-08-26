@@ -34,6 +34,6 @@ type SidePanel interface {
 	Name() string
 	IsShown() bool
 	Media() media.Media
-	Button() templ.Component
+	Label() string
 	Content() templ.Component
 }

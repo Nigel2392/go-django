@@ -119,13 +119,29 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request, form *list.ListForm[T
 			}
 			switch col := column.(type) {
 			case list.ListEditableColumn[T]:
+				var fieldName = col.FieldName()
+				if fieldName == "" {
+					templ_7745c5c3_Err = col.Component(r, c.Definitions, c.Instance).Render(ctx, templ_7745c5c3_Buffer)
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, " ")
+					if templ_7745c5c3_Err != nil {
+						return templ_7745c5c3_Err
+					}
+					continue
+				}
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, " ")
+				if templ_7745c5c3_Err != nil {
+					return templ_7745c5c3_Err
+				}
 				var rowForm = form.ForInstance(c.Instance)
 				var boundFields = rowForm.BoundFields()
-				var field, ok = boundFields.Get(col.FieldName())
+				var field, ok = boundFields.Get(fieldName)
 				if !ok {
 					return except.Fail(http.StatusInternalServerError, "could not find field %s in bound fields", col.FieldName())
 				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, " ")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, " ")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -139,12 +155,12 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request, form *list.ListForm[T
 					return templ_7745c5c3_Err
 				}
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</td>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</td>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "</tr>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, "</tr>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

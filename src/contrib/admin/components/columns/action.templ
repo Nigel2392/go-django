@@ -4,6 +4,7 @@ import (
     "github.com/Nigel2392/go-django/src/core/attrs"
     "github.com/Nigel2392/go-django/src/core/assert"
 	"net/http"
+	"context"
 )
 
 type ListAction[T attrs.Definer] struct {
@@ -31,20 +32,20 @@ templ (l *ListAction[T]) Component(r *http.Request, defs attrs.Definitions, row 
 }
 
 type ListActionsColumn[T attrs.Definer] struct {
-	Heading func() string
+	Heading func(c context.Context) string
     Actions []*ListAction[T]
 }
 
-templ (l *ListActionsColumn[T]) Header() {
+templ (l *ListActionsColumn[T]) Header(r *http.Request) {
     if l.Heading != nil {
-        { l.Heading() }
+        { l.Heading(ctx) }
     }
 }
 
 templ (l *ListActionsColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
     {{ var heading string }}
     {{ if l.Heading != nil {
-        heading = l.Heading()
+        heading = l.Heading(ctx)
     } }}
 
     <div data-controller="dropdown" class="dropdown">

@@ -70,6 +70,20 @@ func (v *View[T]) TakeControl(w http.ResponseWriter, r *http.Request, view views
 		}
 	}
 
+	for mixin, depth := range mixins.Mixins(view, false) {
+		if depth == 0 {
+			continue
+		}
+
+		if filterer, ok := mixin.(listView__QuerySetFilterer[T]); ok {
+			qs, err = filterer.FilterQuerySet(r, qs)
+			if err != nil {
+				v.onError(w, r, err)
+				return
+			}
+		}
+	}
+
 	var (
 		paginator  pagination.Pagination[T]
 		pageObject pagination.PageObject[T]
@@ -150,6 +164,9 @@ func (v *View[T]) TakeControl(w http.ResponseWriter, r *http.Request, view views
 				v.onError(w, r, err)
 				return
 			}
+
+			// The mixin has hijacked and written to the response.
+			// No need to keep processing further.
 			if wr == nil || req == nil {
 				return
 			}

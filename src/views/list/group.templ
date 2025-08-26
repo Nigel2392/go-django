@@ -49,6 +49,10 @@ func (c *ListColumnGroup[T]) Form(r *http.Request, opts ...func(forms.Form)) for
 			field     = column.FormField(r, c.Instance)
 		)
 
+		if fieldName == "" || field == nil {
+			continue
+		}
+
 		form.AddField(fieldName, field)
 	}
 
@@ -69,11 +73,17 @@ templ (c *ListColumnGroup[T]) Component(r *http.Request, form *ListForm[T]) {
 			<td class="list-column">
 				switch col := column.(type) {
 				case ListEditableColumn[T]:
+					{{ var fieldName = col.FieldName() }}
+					if fieldName == "" {
+						@col.Component(r, c.Definitions, c.Instance)
+						{{ continue }}
+					}
+
 					{{ var rowForm = form.ForInstance(c.Instance) }}
 					{{ var boundFields = rowForm.BoundFields() }}
-					{{ var field, ok = boundFields.Get(col.FieldName()) }}
+					{{ var field, ok = boundFields.Get(fieldName) }}
 					if !ok {
-						{{ return except.Fail(http.StatusInternalServerError, "could not find field %s in bound fields", col.FieldName()) }}
+						{{ return except.Fail(http.StatusInternalServerError, "could not find field %q in bound fields", col.FieldName()) }}
 					}
 
 					@col.EditableComponent(r, c.Definitions, c.Instance, rowForm, field.(*forms.BoundFormField))

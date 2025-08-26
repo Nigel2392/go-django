@@ -55,13 +55,13 @@ func SetAllowListRowSelect(ctx context.Context, allow bool) context.Context {
 }
 
 type ListColumn[T attrs.Definer] interface {
-	Header() templ.Component
+	Header(r *http.Request) templ.Component
 	Component(r *http.Request, defs attrs.Definitions, row T) templ.Component
 }
 
 type ListMediaColumn[T attrs.Definer] interface {
 	ListColumn[T]
-	media.MediaDefiner
+	Media(defs attrs.StaticDefinitions) media.Media
 }
 
 type ListEditableColumn[T attrs.Definer] interface {

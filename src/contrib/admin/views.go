@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
@@ -28,7 +30,6 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/goldcrest"
-	"github.com/a-h/templ"
 )
 
 var AppHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition) {
@@ -131,9 +132,20 @@ var ModelListHandler = func(w http.ResponseWriter, r *http.Request, adminSite *A
 		return
 	}
 
-	var columns = make([]list.ListColumn[attrs.Definer], len(model.ListView.Fields))
+	var listCols = make([]list.ListColumn[attrs.Definer], len(model.ListView.Fields))
+	var meta = attrs.GetModelMeta(model.Model)
+	var defs = meta.Definitions()
 	for i, field := range model.ListView.Fields {
-		columns[i] = model.GetColumn(r.Context(), model.ListView, field)
+
+		var col = model.GetColumn(r.Context(), model.ListView, field)
+		if fld, ok := defs.Field(field); ok && fld.Rel() == nil {
+			col = &columns.SortableListColumn[attrs.Definer]{
+				SortField:  field,
+				ListColumn: col,
+			}
+		}
+
+		listCols[i] = col
 	}
 
 	var amount = model.ListView.PerPage
@@ -237,9 +249,17 @@ continueView:
 		}
 	}
 
+	var sort = r.FormValue("sort")
+	if sort != "" {
+		var fld = strings.TrimPrefix(sort, "-")
+		if fld, ok := defs.Field(fld); ok && fld.Rel() == nil {
+			qs = qs.OrderBy(sort)
+		}
+	}
+
 	var view = &list.View[attrs.Definer]{
 		Model:           model.NewInstance(),
-		ListColumns:     columns,
+		ListColumns:     listCols,
 		DefaultAmount:   int(amount),
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: BASE_KEY,
@@ -335,14 +355,7 @@ continueView:
 							return len(model.ListView.Filters) == 0
 						},
 						TemplateName: "admin/shared/side_panels/filter_panel.tmpl",
-						PanelButton: func(p *menu.BaseSidePanel, r *http.Request) templ.Component {
-							return components.Button(components.ButtonConfig{
-								Text: trans.S("Filters"),
-								Attrs: map[string]any{
-									"type": "button",
-								},
-							})
-						},
+						PanelLabel:   trans.S("Filters"),
 						Context: func(p *menu.BaseSidePanel, r *http.Request, c ctx.Context) ctx.Context {
 							var dst = c.Data()
 							var src = context.Data()
@@ -378,7 +391,7 @@ continueView:
 				return django.Reverse("admin:apps:model:edit", app.Name, model.GetName(), primaryField.GetValue())
 			})
 
-			return list.RowSelectColumn(
+			col = list.RowSelectColumn(
 				"list__row_select",
 				nil,
 				nil,
@@ -387,6 +400,8 @@ continueView:
 					"data-bulk-actions-target": "checkbox",
 				},
 			)
+
+			return col
 		},
 	}
 

@@ -65,7 +65,7 @@
                             </div>
                         {{ end }}
 
-                        {{ if $panels }}
+                        {{ if and $panels $panels.HasPanels }}
                             <div class="side-panels-wrapper">
                                 {{ templ $panels.Component }}
                             </div>

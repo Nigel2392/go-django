@@ -10,15 +10,43 @@ import templruntime "github.com/a-h/templ/runtime"
 
 import "github.com/Nigel2392/go-django/src/forms/media"
 import "github.com/Nigel2392/go-django/src/core/ctx"
+import "github.com/Nigel2392/go-django/src/core/logger"
 import "github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+import "runtime/debug"
 import "net/http"
 import "context"
+import "slices"
 import "io"
-import "github.com/Nigel2392/go-django/src/core/logger"
-import "runtime/debug"
 
 type SidePanels struct {
 	Panels []SidePanel
+}
+
+func (p *SidePanels) HasPanels() bool {
+	for _, panel := range p.Panels {
+		if panel.IsShown() {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *SidePanels) sortPanels(a, b SidePanel) int {
+	var aOrder = a.Order()
+	var bOrder = b.Order()
+	if aOrder < bOrder {
+		return -1
+	} else if aOrder > bOrder {
+		return 1
+	}
+	var aName = a.Name()
+	var bName = b.Name()
+	if aName < bName {
+		return -1
+	} else if aName > bName {
+		return 1
+	}
+	return 0
 }
 
 func (p *SidePanels) Component() templ.Component {
@@ -42,33 +70,43 @@ func (p *SidePanels) Component() templ.Component {
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
+		var panels = slices.Clone(p.Panels)
+		slices.SortStableFunc(panels, p.sortPanels)
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, "<div class=\"side-panels\" data-controller=\"side-panels\"><div class=\"side-panels__controls actions\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for _, panel := range p.Panels {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, "<div class=\"side-panels__controls__control actions__action\" data-side-panels-target=\"control\" data-side-panels-id-param=\"")
+		for _, panel := range panels {
+			if !panel.IsShown() {
+				continue
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 2, " <div class=\"side-panels__controls__control actions__action\" data-side-panels-target=\"control\" data-side-panels-id-param=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var2 string
 			templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.JoinStringErrs("panel__" + panel.Name())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/sidepanel.templ`, Line: 22, Col: 63}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/sidepanel.templ`, Line: 57, Col: 63}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var2))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" data-action=\"click-&gt;side-panels#open\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\" data-action=\"click-&gt;side-panels#open\"><button type=\"button\">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = panel.Button().Render(ctx, templ_7745c5c3_Buffer)
+			var templ_7745c5c3_Var3 string
+			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(panel.Label())
+			if templ_7745c5c3_Err != nil {
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/sidepanel.templ`, Line: 59, Col: 57}
+			}
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</div>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</button></div>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -77,17 +115,20 @@ func (p *SidePanels) Component() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		for _, panel := range p.Panels {
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<div class=\"side-panels__content__panel\" data-side-panels-target=\"panel\" id=\"")
+		for _, panel := range panels {
+			if !panel.IsShown() {
+				continue
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, " <div class=\"side-panels__content__panel\" data-side-panels-target=\"panel\" id=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var3 string
-			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs("panel__" + panel.Name())
+			var templ_7745c5c3_Var4 string
+			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs("panel__" + panel.Name())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/sidepanel.templ`, Line: 30, Col: 118}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/sidepanel.templ`, Line: 68, Col: 118}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -101,12 +142,12 @@ func (p *SidePanels) Component() templ.Component {
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			var templ_7745c5c3_Var4 string
-			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs("panel__" + panel.Name())
+			var templ_7745c5c3_Var5 string
+			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs("panel__" + panel.Name())
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/sidepanel.templ`, Line: 41, Col: 161}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/sidepanel.templ`, Line: 79, Col: 161}
 			}
-			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
+			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -143,8 +184,8 @@ type BaseSidePanel struct {
 	TemplateName string
 	Request      *http.Request
 	Hidden       func(p *BaseSidePanel, r *http.Request) bool
+	PanelLabel   func(ctx context.Context) string
 	PanelMedia   func(p *BaseSidePanel, r *http.Request) media.Media
-	PanelButton  func(p *BaseSidePanel, r *http.Request) templ.Component
 	Context      func(p *BaseSidePanel, r *http.Request, c ctx.Context) ctx.Context
 }
 
@@ -170,36 +211,11 @@ func (p *BaseSidePanel) Media() media.Media {
 	return p.PanelMedia(p, p.Request)
 }
 
-func (p *BaseSidePanel) Button() templ.Component {
-	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
-		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
-		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
-			return templ_7745c5c3_CtxErr
-		}
-		templ_7745c5c3_Buffer, templ_7745c5c3_IsBuffer := templruntime.GetBuffer(templ_7745c5c3_W)
-		if !templ_7745c5c3_IsBuffer {
-			defer func() {
-				templ_7745c5c3_BufErr := templruntime.ReleaseBuffer(templ_7745c5c3_Buffer)
-				if templ_7745c5c3_Err == nil {
-					templ_7745c5c3_Err = templ_7745c5c3_BufErr
-				}
-			}()
-		}
-		ctx = templ.InitializeContext(ctx)
-		templ_7745c5c3_Var5 := templ.GetChildren(ctx)
-		if templ_7745c5c3_Var5 == nil {
-			templ_7745c5c3_Var5 = templ.NopComponent
-		}
-		ctx = templ.ClearChildren(ctx)
-		if p.PanelButton == nil {
-			return nil
-		}
-		templ_7745c5c3_Err = p.PanelButton(p, p.Request).Render(ctx, templ_7745c5c3_Buffer)
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		return nil
-	})
+func (p *BaseSidePanel) Label() string {
+	if p.PanelLabel == nil {
+		return ""
+	}
+	return p.PanelLabel(p.Request.Context())
 }
 
 func (p *BaseSidePanel) Content() templ.Component {
@@ -230,7 +246,7 @@ func (p *BaseSidePanel) Content() templ.Component {
 		var templ_7745c5c3_Var7 string
 		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(p.ID)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/sidepanel.templ`, Line: 98, Col: 37}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/sidepanel.templ`, Line: 136, Col: 37}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 		if templ_7745c5c3_Err != nil {

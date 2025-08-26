@@ -164,7 +164,7 @@ type booleanColumn[T attrs.Definer] struct {
 	data   func(r *http.Request, defs attrs.Definitions, row T) bool
 }
 
-func (c *booleanColumn[T]) Header() templ.Component {
+func (c *booleanColumn[T]) Header(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -249,7 +249,7 @@ func DateTimeColumn[T attrs.Definer](fmt string, header func(ctx context.Context
 	return &dateTimeColumn[T]{fmt, header, data}
 }
 
-func (c *dateTimeColumn[T]) Header() templ.Component {
+func (c *dateTimeColumn[T]) Header(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -361,7 +361,7 @@ type funcColumn[T attrs.Definer] struct {
 	data   func(r *http.Request, defs attrs.Definitions, row T) interface{}
 }
 
-func (c *funcColumn[T]) Header() templ.Component {
+func (c *funcColumn[T]) Header(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -434,7 +434,7 @@ type fieldColumn[T attrs.Definer] struct {
 	fieldName string
 }
 
-func (c *fieldColumn[T]) Header() templ.Component {
+func (c *fieldColumn[T]) Header(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -545,7 +545,7 @@ func (c *titleFieldColumn[T]) Media() media.Media {
 	return nil
 }
 
-func (c *titleFieldColumn[T]) Header() templ.Component {
+func (c *titleFieldColumn[T]) Header(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -570,7 +570,7 @@ func (c *titleFieldColumn[T]) Header() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = c.wrapped.Header().Render(ctx, templ_7745c5c3_Buffer)
+		templ_7745c5c3_Err = c.wrapped.Header(r).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -1047,7 +1047,7 @@ func (c *listEditableColumn[T]) Media(defs attrs.StaticDefinitions) media.Media 
 	return formField.Widget().Media()
 }
 
-func (c *listEditableColumn[T]) Header() templ.Component {
+func (c *listEditableColumn[T]) Header(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {

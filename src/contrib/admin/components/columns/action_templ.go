@@ -9,6 +9,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"context"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"net/http"
@@ -86,7 +87,7 @@ func (l *ListAction[T]) Component(r *http.Request, defs attrs.Definitions, row T
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(l.Text(r, defs, row))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 27, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 28, Col: 83}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -122,7 +123,7 @@ func (l *ListAction[T]) Component(r *http.Request, defs attrs.Definitions, row T
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(l.Text(r, defs, row))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 29, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 30, Col: 60}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
@@ -138,11 +139,11 @@ func (l *ListAction[T]) Component(r *http.Request, defs attrs.Definitions, row T
 }
 
 type ListActionsColumn[T attrs.Definer] struct {
-	Heading func() string
+	Heading func(c context.Context) string
 	Actions []*ListAction[T]
 }
 
-func (l *ListActionsColumn[T]) Header() templ.Component {
+func (l *ListActionsColumn[T]) Header(r *http.Request) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -165,9 +166,9 @@ func (l *ListActionsColumn[T]) Header() templ.Component {
 		ctx = templ.ClearChildren(ctx)
 		if l.Heading != nil {
 			var templ_7745c5c3_Var10 string
-			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(l.Heading())
+			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(l.Heading(ctx))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 40, Col: 21}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 41, Col: 24}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -201,7 +202,7 @@ func (l *ListActionsColumn[T]) Component(r *http.Request, defs attrs.Definitions
 		ctx = templ.ClearChildren(ctx)
 		var heading string
 		if l.Heading != nil {
-			heading = l.Heading()
+			heading = l.Heading(ctx)
 		}
 		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div data-controller=\"dropdown\" class=\"dropdown\"><button type=\"button\" class=\"dropdown__toggle dropdown__toggle--icon\" data-dropdown-target=\"toggle\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
@@ -210,7 +211,7 @@ func (l *ListActionsColumn[T]) Component(r *http.Request, defs attrs.Definitions
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(heading)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 51, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 52, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {

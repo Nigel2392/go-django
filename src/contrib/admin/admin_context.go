@@ -108,16 +108,8 @@ func (p *PageOptions) GetSidePanels() *menu.SidePanels {
 	if len(sidePanels) == 0 {
 		sidePanels = make([]menu.SidePanel, 0)
 	}
-
-	var ret = make([]menu.SidePanel, 0, len(sidePanels))
-	for _, panel := range sidePanels {
-		if panel.IsShown() {
-			ret = append(ret, panel)
-		}
-	}
-
 	return &menu.SidePanels{
-		Panels: ret,
+		Panels: sidePanels,
 	}
 }
 

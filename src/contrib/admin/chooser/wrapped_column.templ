@@ -40,9 +40,15 @@ templ (c *wrappedColumnGroup[T]) Component(r *http.Request, form *list.ListForm[
             <td class="list-column">
 				switch col := column.(type) {
 				case list.ListEditableColumn[T]:
+					{{ var fieldName = col.FieldName() }}
+					if fieldName == "" {
+						@col.Component(r, c.Definitions, c.Instance)
+						{{ continue }}
+					}
+
 					{{ var rowForm = form.ForInstance(c.Instance) }}
 					{{ var boundFields = rowForm.BoundFields() }}
-					{{ var field, ok = boundFields.Get(col.FieldName()) }}
+					{{ var field, ok = boundFields.Get(fieldName) }}
 					if !ok {
 						{{ return except.Fail(http.StatusInternalServerError, "could not find field %s in bound fields", col.FieldName()) }}
 					}

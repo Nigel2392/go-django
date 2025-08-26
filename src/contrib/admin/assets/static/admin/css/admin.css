@@ -649,7 +649,7 @@ flex-direction is set to row above 70em.
 
 
 .side-panels-wrapper {
-
+    margin-left: auto;
 }
 .side-panels .side-panels__controls {
     display: flex;
@@ -664,7 +664,6 @@ flex-direction is set to row above 70em.
     margin-inline-start: 0.375rem;
 }
 .side-panels .side-panels__content {
-    display: flex;
     position: absolute;
     visibility: hidden;
     opacity: 0;
@@ -673,6 +672,7 @@ flex-direction is set to row above 70em.
     bottom: 0;
     z-index: 200;
     min-width: 0%;
+    display: flex;
     overflow-y: auto;
     overflow-x: hidden;
     pointer-events: none;
@@ -694,39 +694,39 @@ flex-direction is set to row above 70em.
 .side-panels .side-panels__content.side-panels__content.fullscreen {
     min-width: 80%;
     max-width: 100%;
-    transition:
-        min-width 0.2s ease-in-out,
-        opacity    0s,
-        visibility 0s; /* hide AFTER slide finishes */
 }
 
+/* PANEL — base (closed) */
 .side-panels .side-panels__content__panel {
-    flex: 1;
-    visibility: hidden;
-    flex-direction: column;
-    background-color: var(--body-bg-color);
-    border-left: 1px solid var(--border-color);
-    position: relative;
-    width: 100%;
-    padding: 1em;
+  display: flex;                 /* don't toggle this */
+  flex: 1;
+  flex-direction: column;
+  background-color: var(--body-bg-color);
+  border-left: 1px solid var(--border-color);
+  position: relative;
+  width: 100%;
+  padding: 1em;
 
-    transform: translateX(100%);
-    opacity: 0;
-    visibility: hidden;
+  transform: translateX(100%);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+
+  /* animate both directions; hide visibility AFTER slide finishes */
+  transition:
+    transform 0.2s ease-in-out,
+    opacity   0s linear 0.2s,
+    visibility 0s linear 0.2s;
 }
-
 .side-panels .side-panels__content__panel.active {
-    display: flex;
-    transform: translateX(0);
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-
-    /* visibility becomes visible immediately on open */
-    transition:
-      transform 0.2s ease-in-out,
-      opacity   0s,
-      visibility 0s;
+  transform: translateX(0);
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transition:
+    transform 0.2s ease-in-out,
+    opacity   0s linear 0s,
+    visibility 0s linear 0s;
 }
 @media (prefers-reduced-motion: reduce) {
   .side-panels .side-panels__content__panel,
