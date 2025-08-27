@@ -159,6 +159,7 @@ func TestInputEquals(t *testing.T) {
 
 func TestFormRequired(t *testing.T) {
 	var form = forms.NewBaseForm(context.Background())
+	form.WithContext(context.Background())
 	form = forms.Initialize(
 		form,
 		forms.WithFields(
@@ -232,8 +233,16 @@ func TestFormRequired(t *testing.T) {
 			"last_name":  "Lastname",
 		})
 
-		if !form.IsValid() {
+		if !forms.IsValid(form.Context(), form) {
 			t.Error("Empty required field should not be valid.")
+			for head := form.BoundErrors().Front(); head != nil; head = head.Next() {
+				t.Errorf("Unexpected error for %s: %v", head.Key, head.Value)
+			}
+			for _, err := range form.ErrorList() {
+				t.Errorf("Unexpected error: %v", err)
+			}
+			t.FailNow()
+			return
 		}
 
 		var (
@@ -273,7 +282,7 @@ func TestFormRequired(t *testing.T) {
 			"last_name":  "",
 		})
 
-		if form.IsValid() {
+		if forms.IsValid(form.Context(), form) {
 			t.Error("Empty required field should not be valid.")
 		}
 
@@ -335,6 +344,18 @@ func TestFormValidation(t *testing.T) {
 		var b = new(strings.Builder)
 		b.WriteString(title)
 		var errs = form.BoundErrors()
+		if errs == nil || errs.Len() == 0 {
+
+			if form.ErrorList() == nil || len(form.ErrorList()) == 0 {
+				t.Error("No errors found on invalid form.")
+			}
+
+			for _, err := range form.ErrorList() {
+				b.WriteString(err.Error())
+			}
+			t.Error(b.String())
+			return
+		}
 		for head := errs.Front(); head != nil; head = head.Next() {
 			for _, err := range head.Value {
 				b.WriteString(err.Error())
@@ -355,13 +376,13 @@ func TestFormValidation(t *testing.T) {
 	}
 
 	var TestOnValid = func(t *testing.T) {
-		if !form.IsValid() {
+		if !forms.IsValid(form.Context(), form) {
 			raiseInvalid(t, "Form is invalid:")
 		}
 	}
 
 	var TestOnInvalid = func(t *testing.T) {
-		if form.IsValid() {
+		if forms.IsValid(form.Context(), form) {
 			raiseValid(t, "Form is valid:")
 		}
 	}

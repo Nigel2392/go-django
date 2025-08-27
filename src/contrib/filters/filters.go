@@ -94,7 +94,7 @@ func (f *Filters[T]) Filter(r *http.Request, data map[string][]string, object *q
 		data, nil, nil,
 	)
 
-	if !f.form.IsValid() {
+	if !forms.IsValid(f.form.Context(), f.form) {
 		var errs = f.form.Errors
 		var errList = make([]error, 0, errs.Len())
 

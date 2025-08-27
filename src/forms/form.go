@@ -10,7 +10,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -35,7 +34,7 @@ type BaseForm struct {
 	Defaults        map[string]interface{}
 	FormContext     context.Context
 
-	Validators      []func(Form, map[string]interface{}) []error
+	FormValidators  []func(Form, map[string]interface{}) []error
 	OnValidFuncs    []func(Form)
 	OnInvalidFuncs  []func(Form)
 	OnFinalizeFuncs []func(Form)
@@ -117,10 +116,6 @@ func (f *BaseForm) ErrorList() []error {
 }
 
 func (f *BaseForm) BoundErrors() *orderedmap.OrderedMap[string, []error] {
-	if f.Errors == nil && (len(f.Raw) > 0 || len(f.Files) > 0) {
-		f.FullClean()
-	}
-
 	var errs = f.Errors
 	if len(f.ErrorList_) > 0 {
 		if f.Errors == nil {
@@ -129,7 +124,7 @@ func (f *BaseForm) BoundErrors() *orderedmap.OrderedMap[string, []error] {
 		errs = f.Errors.Copy()
 		errs.Set("__all__", f.ErrorList_)
 	}
-	if errs.Len() == 0 {
+	if errs == nil || errs.Len() == 0 {
 		return nil
 	}
 	return errs
@@ -194,6 +189,13 @@ func (f *BaseForm) AddWidget(name string, widget Widget) {
 	f.FormWidgets.Set(name, widget)
 }
 
+func (f *BaseForm) FieldMap() *orderedmap.OrderedMap[string, Field] {
+	if f.FormFields == nil {
+		f.FormFields = orderedmap.NewOrderedMap[string, Field]()
+	}
+	return f.FormFields
+}
+
 func (f *BaseForm) BoundFields() *orderedmap.OrderedMap[string, BoundField] {
 	f.setup()
 
@@ -223,7 +225,7 @@ func (f *BaseForm) BoundFields() *orderedmap.OrderedMap[string, BoundField] {
 			f.FormContext,
 			widget,
 			v,
-			f.prefix(k),
+			f.PrefixName(k),
 			value,
 			errors,
 		))
@@ -330,7 +332,11 @@ func (f *BaseForm) InitialData() map[string]interface{} {
 
 func (f *BaseForm) CleanedData() map[string]interface{} {
 	if f.Errors != nil {
-		except.Assert(f.Errors.Len() == 0, 500, "You cannot access cleaned data if the form is invalid.")
+		except.Assert(
+			f.Errors.Len() == 0, 500,
+			"You cannot access cleaned data if the form is invalid: there are %d errors for fields %v",
+			f.Errors.Len(), f.Errors.Keys(),
+		)
 	}
 	if len(f.ErrorList_) > 0 {
 		except.Assert(len(f.ErrorList_) == 0, 500, "You cannot access cleaned data if the form has errors.")
@@ -352,7 +358,7 @@ func (f *BaseForm) Prefix() string {
 	return f.FormPrefix
 }
 
-func (f *BaseForm) prefix(name string) string {
+func (f *BaseForm) PrefixName(name string) string {
 	var prefix = f.Prefix()
 	if prefix == "" {
 		return name
@@ -379,94 +385,6 @@ func (f *BaseForm) Reset() {
 	f.Defaults = nil
 }
 
-func (f *BaseForm) FullClean() {
-	f.Errors = orderedmap.NewOrderedMap[string, []error]()
-
-	f.setup()
-
-	if f.Cleaned == nil {
-		f.Cleaned = make(map[string]interface{})
-	}
-
-	if f.Defaults == nil {
-		f.Defaults = make(map[string]interface{})
-	}
-
-	var err error
-	for head := f.FormFields.Front(); head != nil; head = head.Next() {
-		var (
-			k       = head.Key
-			v       = head.Value
-			errors  []error
-			initial interface{}
-			data    interface{}
-		)
-
-		if v.ReadOnly() {
-			continue
-		}
-
-		var widget, ok = f.Widget(k)
-		if !ok {
-			widget = v.Widget()
-		}
-
-		if !widget.ValueOmittedFromData(f.FormContext, f.Raw, f.Files, f.prefix(k)) {
-			initial, errors = widget.ValueFromDataDict(f.FormContext, f.Raw, f.Files, f.prefix(k))
-		}
-
-		if len(errors) > 0 {
-			f.AddError(k, errors...)
-			f.InvalidDefaults[k] = initial
-			continue
-		}
-
-		if v.Required() && v.IsEmpty(initial) {
-			f.AddError(k, errs.NewValidationError(k, errs.ErrFieldRequired))
-			f.InvalidDefaults[k] = initial
-			continue
-		}
-
-		data, err = v.ValueToGo(initial)
-		if err != nil {
-			f.AddError(k, err)
-			f.InvalidDefaults[k] = initial
-			continue
-		}
-
-		// Set the initial value again in case the value was modified by ValueToGo.
-		// This is important so we add the right value to the invalid defaults.
-		initial = data
-
-		data, err = v.Clean(f.FormContext, initial)
-		if err != nil {
-			f.AddError(k, err)
-			f.InvalidDefaults[k] = initial
-			continue
-		}
-
-		errors = v.Validate(f.FormContext, data)
-		if len(errors) > 0 {
-			var errList = make([]error, 0, len(errors))
-			for _, err := range errors {
-				switch e := err.(type) {
-				case interface{ Unwrap() []error }:
-					errList = append(errList, e.Unwrap()...)
-				default:
-					errList = append(errList, err)
-				}
-			}
-
-			f.AddError(k, errList...)
-			f.InvalidDefaults[k] = data
-			continue
-		}
-
-		f.Defaults[k] = data
-		f.Cleaned[k] = data
-	}
-}
-
 func (f *BaseForm) Ordering(order []string) {
 	f.fieldOrder = order
 }
@@ -476,13 +394,17 @@ func (f *BaseForm) FieldOrder() []string {
 }
 
 func (f *BaseForm) SetValidators(validators ...func(Form, map[string]interface{}) []error) {
-	if f.Validators == nil {
-		f.Validators = make([]func(Form, map[string]interface{}) []error, 0)
+	if f.FormValidators == nil {
+		f.FormValidators = make([]func(Form, map[string]interface{}) []error, 0)
 	}
-	f.Validators = append(f.Validators, validators...)
+	f.FormValidators = append(f.FormValidators, validators...)
 }
 
 func (f *BaseForm) addErrors(errorList ...error) {
+	if f.ErrorList_ == nil {
+		f.ErrorList_ = make([]error, 0, len(errorList))
+	}
+
 	for _, err := range errorList {
 		switch e := err.(type) {
 		case interface{ Unwrap() []error }:
@@ -490,74 +412,9 @@ func (f *BaseForm) addErrors(errorList ...error) {
 		case errs.ValidationError[string]:
 			f.AddError(e.Name, e.Err)
 		default:
-			f.AddFormError(e)
+			f.ErrorList_ = append(f.ErrorList_, err)
 		}
 	}
-}
-
-func (f *BaseForm) Validate() {
-	if f.Validators == nil {
-		f.Validators = make([]func(Form, map[string]interface{}) []error, 0)
-	}
-
-	for _, validator := range f.Validators {
-		var errors = validator(f, f.Cleaned)
-		if len(errors) > 0 {
-			f.addErrors(errors...)
-		}
-	}
-}
-
-func (f *BaseForm) IsValid() bool {
-	assert.False(f.Raw == nil, "You cannot call IsValid() without setting the data first.")
-
-	if f.Cleaned != nil {
-		return len(f.Cleaned) > 0 && len(f.ErrorList_) == 0 && (f.Errors == nil || f.Errors.Len() == 0)
-	}
-
-	if f.Errors == nil {
-		f.Errors = orderedmap.NewOrderedMap[string, []error]()
-	} else if f.Errors.Len() > 0 {
-		return false
-	}
-
-	if f.ErrorList_ == nil {
-		f.ErrorList_ = make([]error, 0)
-	} else if len(f.ErrorList_) > 0 {
-		return false
-	}
-
-	if f.Cleaned == nil {
-		f.FullClean()
-	}
-
-	if f.Errors.Len() == 0 {
-		f.Validate()
-	}
-
-	var valid bool
-	if (f.Errors.Len() > 0 || len(f.ErrorList_) > 0) && f.Cleaned != nil {
-		f.Cleaned = nil
-		valid = false
-	} else {
-		valid = f.Errors.Len() == 0 && len(f.ErrorList_) == 0
-	}
-
-	if valid {
-		for _, fn := range f.OnValidFuncs {
-			fn(f)
-		}
-	} else {
-		for _, fn := range f.OnInvalidFuncs {
-			fn(f)
-		}
-	}
-
-	for _, fn := range f.OnFinalizeFuncs {
-		fn(f)
-	}
-
-	return valid
 }
 
 func (f *BaseForm) AddFormError(errorList ...error) {
@@ -566,7 +423,7 @@ func (f *BaseForm) AddFormError(errorList ...error) {
 	}
 
 	var newErrs = slices.Clone(errorList)
-	f.ErrorList_ = append(f.ErrorList_, newErrs...)
+	f.addErrors(newErrs...)
 }
 
 func (f *BaseForm) AddError(name string, errorList ...error) {
@@ -609,7 +466,7 @@ func (f *BaseForm) HasChanged() bool {
 		}
 
 		if _, ok := f.Initial[k]; !ok {
-			var omitted = v.ValueOmittedFromData(f.FormContext, f.Raw, f.Files, f.prefix(k))
+			var omitted = v.ValueOmittedFromData(f.FormContext, f.Raw, f.Files, f.PrefixName(k))
 			if !omitted {
 				return true
 			}
@@ -662,4 +519,38 @@ func (f *BaseForm) Save() (map[string]interface{}, error) {
 	}
 
 	return data, nil
+}
+
+func (f *BaseForm) Validators() []func(Form, map[string]interface{}) []error {
+	return f.FormValidators
+}
+
+func (f *BaseForm) CallbackOnValid() []func(Form) {
+	return f.OnValidFuncs
+}
+
+func (f *BaseForm) CallbackOnInvalid() []func(Form) {
+	return f.OnInvalidFuncs
+}
+
+func (f *BaseForm) CallbackOnFinalize() []func(Form) {
+	return f.OnFinalizeFuncs
+}
+
+func (f *BaseForm) BindCleanedData(invalid, defaults, cleaned map[string]interface{}) {
+	f.InvalidDefaults = invalid
+	f.Defaults = defaults
+	f.Cleaned = cleaned
+}
+
+func (f *BaseForm) CleanedDataUnsafe() map[string]interface{} {
+	return f.Cleaned
+}
+
+func (f *BaseForm) Data() (url.Values, map[string][]filesystem.FileHeader) {
+	return f.Raw, f.Files
+}
+
+func (f *BaseForm) WasCleaned() bool {
+	return len(f.Cleaned) > 0 || (f.Errors != nil && f.Errors.Len() > 0) || len(f.ErrorList_) > 0
 }

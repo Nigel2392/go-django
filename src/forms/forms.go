@@ -1,6 +1,12 @@
 package forms
 
-import "github.com/Nigel2392/go-django/src/internal/forms"
+import (
+	"context"
+
+	"github.com/Nigel2392/go-django/src/internal/forms"
+
+	_ "unsafe"
+)
 
 type (
 	FormValuer         = forms.FormValuer
@@ -18,6 +24,9 @@ type (
 	BoundForm          = forms.BoundForm
 	BoundField         = forms.BoundField
 )
+
+//go:linkname IsValid github.com/Nigel2392/go-django/src/internal/forms.IsValid
+func IsValid(ctx context.Context, f Form) bool
 
 type SaveableForm interface {
 	Form

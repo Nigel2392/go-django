@@ -133,7 +133,7 @@ func (lf *ListForm[T]) ForInstance(instance T) forms.Form {
 
 func (lf *ListForm[T]) IsValid() bool {
 	for _, form := range lf.Forms() {
-		if !form.IsValid() {
+		if !forms.IsValid(form.Context(), form) {
 			return false
 		}
 	}

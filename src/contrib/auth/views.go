@@ -76,7 +76,7 @@ func (v *AuthView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 
 	var form = v.getForm(req)
 	if req.Method == http.MethodPost {
-		if form.IsValid() {
+		if forms.IsValid(form.Context(), form) {
 			err = v.onValid(req, form)
 			if err != nil {
 				if v.onInvalid != nil {

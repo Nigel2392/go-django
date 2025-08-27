@@ -331,7 +331,7 @@ func (f *BaseModelForm[T]) Context() context.Context {
 }
 
 func (f *BaseModelForm[T]) IsValid() bool {
-	if !f.BaseForm.IsValid() {
+	if !forms.IsValid(f.Context(), f.BaseForm) {
 		return false
 	}
 

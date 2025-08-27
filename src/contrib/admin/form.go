@@ -166,12 +166,6 @@ func (a *AdminForm[T]) InitialData() map[string]interface{} {
 func (a *AdminForm[T]) CleanedData() map[string]interface{} {
 	return a.Form.CleanedData()
 }
-func (a *AdminForm[T]) FullClean() {
-	a.Form.FullClean()
-}
-func (a *AdminForm[T]) Validate() {
-	a.Form.Validate()
-}
 func (a *AdminForm[T]) HasChanged() bool {
 	var (
 		fields  = make([]string, 0)
@@ -199,8 +193,49 @@ func (a *AdminForm[T]) HasChanged() bool {
 	return false
 
 }
-func (a *AdminForm[T]) IsValid() bool {
-	return a.Form.IsValid()
+func (a *AdminForm[T]) PrefixName(name string) (prefixedName string) {
+	return a.Form.PrefixName(name)
+}
+func (a *AdminForm[T]) FieldMap() *orderedmap.OrderedMap[string, fields.Field] {
+	return a.Form.FieldMap()
+}
+
+func (f *AdminForm[T]) Validators() []func(forms.Form, map[string]interface{}) []error {
+	return f.Validators()
+}
+
+func (f *AdminForm[T]) CallbackOnValid() []func(forms.Form) {
+	return f.CallbackOnValid()
+}
+
+func (f *AdminForm[T]) CallbackOnInvalid() []func(forms.Form) {
+	return f.CallbackOnInvalid()
+}
+
+func (f *AdminForm[T]) CallbackOnFinalize() []func(forms.Form) {
+	return f.CallbackOnFinalize()
+}
+
+func (f *AdminForm[T]) BindCleanedData(invalid, defaults, cleaned map[string]interface{}) {
+	f.Form.BindCleanedData(invalid, defaults, cleaned)
+}
+
+func (f *AdminForm[T]) CleanedDataUnsafe() map[string]interface{} {
+	return f.Form.CleanedDataUnsafe()
+}
+
+func (f *AdminForm[T]) Data() (url.Values, map[string][]filesystem.FileHeader) {
+	return f.Form.Data()
+}
+func (f *AdminForm[T]) WasCleaned() bool {
+	return f.Form.WasCleaned()
+}
+func (a *AdminForm[T]) AddFormError(errorList ...error) {
+	a.Form.AddFormError(errorList...)
+}
+
+func (a *AdminForm[T]) AddError(name string, errorList ...error) {
+	a.Form.AddError(name, errorList...)
 }
 func (a *AdminForm[T]) OnValid(f ...func(forms.Form)) {
 	a.Form.OnValid(f...)
@@ -210,14 +245,6 @@ func (a *AdminForm[T]) OnInvalid(f ...func(forms.Form)) {
 }
 func (a *AdminForm[T]) OnFinalize(f ...func(forms.Form)) {
 	a.Form.OnFinalize(f...)
-}
-
-func (a *AdminForm[T]) AddFormError(errorList ...error) {
-	any(a.Form).(forms.ErrorAdder).AddFormError(errorList...)
-}
-
-func (a *AdminForm[T]) AddError(name string, errorList ...error) {
-	any(a.Form).(forms.ErrorAdder).AddError(name, errorList...)
 }
 
 type AdminModelForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer] struct {

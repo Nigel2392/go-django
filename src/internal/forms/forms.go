@@ -108,6 +108,7 @@ type Field interface {
 }
 
 type Form interface {
+	ErrorAdder
 	AsP() template.HTML
 	AsUL() template.HTML
 	Media() media.Media
@@ -116,11 +117,13 @@ type Form interface {
 	WithContext(ctx context.Context)
 	Prefix() string
 	SetPrefix(prefix string)
+	PrefixName(name string) (prefixedName string)
 	SetInitial(initial map[string]interface{})
 	SetValidators(validators ...func(Form, map[string]interface{}) []error)
 	Ordering([]string)
 	FieldOrder() []string
 
+	FieldMap() *orderedmap.OrderedMap[string, Field]
 	Field(name string) (Field, bool)
 	Widget(name string) (Widget, bool)
 	Fields() []Field
@@ -137,14 +140,19 @@ type Form interface {
 	InitialData() map[string]interface{}
 	CleanedData() map[string]interface{}
 
-	FullClean()
-	Validate()
-	HasChanged() bool
-	IsValid() bool
-
 	OnValid(...func(Form))
 	OnInvalid(...func(Form))
 	OnFinalize(...func(Form))
+
+	WasCleaned() bool
+	Data() (url.Values, map[string][]filesystem.FileHeader)
+	Validators() []func(f Form, cleanedData map[string]interface{}) []error
+	HasChanged() bool
+	CallbackOnValid() []func(f Form)
+	CallbackOnInvalid() []func(f Form)
+	CallbackOnFinalize() []func(f Form)
+	BindCleanedData(invalid, defaults, cleaned map[string]interface{})
+	CleanedDataUnsafe() map[string]interface{}
 }
 
 type BoundForm interface {

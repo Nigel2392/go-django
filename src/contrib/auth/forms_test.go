@@ -10,6 +10,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
@@ -230,7 +231,7 @@ func TestRegisterForm(t *testing.T) {
 
 			form.WithData(formData, nil, req)
 
-			if !form.IsValid() {
+			if !forms.IsValid(form.Context(), form) {
 				if !test.shouldError {
 					for head := form.Errors.Front(); head != nil; head = head.Next() {
 						t.Errorf("Unexpected error for %s: %v", head.Key, head.Value)
