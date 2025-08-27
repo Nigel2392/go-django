@@ -2,7 +2,6 @@ package forms
 
 import (
 	"context"
-	"net/url"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -13,7 +12,80 @@ type IsValidDefiner interface {
 	IsValid() bool
 }
 
-func fullClean(ctx context.Context, f Form, rawData url.Values, files map[string][]filesystem.FileHeader) (invalid_, defaults_, cleaned_ map[string]any) {
+func FullClean(ctx context.Context, f Form) (invalid, defaults, cleaned map[string]any) {
+	var rawData, files = f.Data()
+	return fullClean(ctx, f, rawData, files)
+}
+
+func IsValid(ctx context.Context, f Form) bool {
+	var rawData, files = f.Data()
+
+	assert.False(rawData == nil, "You cannot call IsValid() without setting the data first.")
+
+	if f.WasCleaned() {
+		var errorList = f.ErrorList()
+		if len(errorList) > 0 {
+			return false
+		}
+
+		var boundErrors = f.BoundErrors()
+		if boundErrors != nil && boundErrors.Len() > 0 {
+			return false
+		}
+
+		return f.CleanedDataUnsafe() != nil
+	}
+
+	var (
+		invalid, defaults, cleaned = fullClean(ctx, f, rawData, files)
+		errs                       = f.ErrorList()
+		bndErrs                    = f.BoundErrors()
+	)
+
+	if bndErrs == nil || bndErrs.Len() == 0 {
+		for _, validator := range f.Validators() {
+			var errors = validator(f, cleaned)
+			if len(errors) > 0 {
+				f.AddFormError(errors...)
+			}
+		}
+	}
+
+	errs = f.ErrorList()
+	bndErrs = f.BoundErrors()
+
+	if (bndErrs == nil || bndErrs.Len() == 0) && len(errs) == 0 {
+
+		for _, fn := range f.CallbackOnValid() {
+			fn(f)
+		}
+	} else {
+		f.BindCleanedData(invalid, defaults, nil)
+		for _, fn := range f.CallbackOnInvalid() {
+			fn(f)
+		}
+	}
+
+	for _, fn := range f.CallbackOnFinalize() {
+		fn(f)
+	}
+
+	if bndErrs != nil && bndErrs.Len() > 0 || len(errs) > 0 {
+		f.BindCleanedData(invalid, defaults, nil)
+	}
+
+	errs = f.ErrorList()
+	bndErrs = f.BoundErrors()
+	if (bndErrs == nil || bndErrs.Len() == 0) && len(errs) == 0 {
+		if isValidDef, ok := f.(IsValidDefiner); ok {
+			return isValidDef.IsValid()
+		}
+		return true
+	}
+	return false
+}
+
+func fullClean(ctx context.Context, f Form, rawData map[string][]string, files map[string][]filesystem.FileHeader) (invalid_, defaults_, cleaned_ map[string]any) {
 	var (
 		invalid  = make(map[string]any)
 		defaults = make(map[string]any)
@@ -94,75 +166,7 @@ func fullClean(ctx context.Context, f Form, rawData url.Values, files map[string
 		cleaned[k] = data
 	}
 
-	return invalid, defaults, cleaned
-}
-
-func IsValid(ctx context.Context, f Form) bool {
-	var rawData, files = f.Data()
-
-	assert.False(rawData == nil, "You cannot call IsValid() without setting the data first.")
-
-	if f.WasCleaned() {
-		var errorList = f.ErrorList()
-		if len(errorList) > 0 {
-			return false
-		}
-
-		var boundErrors = f.BoundErrors()
-		if boundErrors != nil && boundErrors.Len() > 0 {
-			return false
-		}
-
-		return f.CleanedDataUnsafe() != nil
-	}
-
-	var (
-		invalid, defaults, cleaned = fullClean(ctx, f, rawData, files)
-		errs                       = f.ErrorList()
-		bndErrs                    = f.BoundErrors()
-	)
-
 	f.BindCleanedData(invalid, defaults, cleaned)
 
-	if bndErrs == nil || bndErrs.Len() == 0 {
-		for _, validator := range f.Validators() {
-			var errors = validator(f, f.CleanedDataUnsafe())
-			if len(errors) > 0 {
-				f.AddFormError(errors...)
-			}
-		}
-	}
-
-	errs = f.ErrorList()
-	bndErrs = f.BoundErrors()
-
-	if (bndErrs == nil || bndErrs.Len() == 0) && len(errs) == 0 {
-
-		for _, fn := range f.CallbackOnValid() {
-			fn(f)
-		}
-	} else {
-		f.BindCleanedData(invalid, defaults, nil)
-		for _, fn := range f.CallbackOnInvalid() {
-			fn(f)
-		}
-	}
-
-	for _, fn := range f.CallbackOnFinalize() {
-		fn(f)
-	}
-
-	if bndErrs != nil && bndErrs.Len() > 0 || len(errs) > 0 {
-		f.BindCleanedData(invalid, defaults, nil)
-	}
-
-	errs = f.ErrorList()
-	bndErrs = f.BoundErrors()
-	if (bndErrs == nil || bndErrs.Len() == 0) && len(errs) == 0 {
-		if isValidDef, ok := f.(IsValidDefiner); ok {
-			return isValidDef.IsValid()
-		}
-		return true
-	}
-	return false
+	return invalid, defaults, cleaned
 }

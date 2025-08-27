@@ -29,6 +29,9 @@ type (
 //go:linkname IsValid github.com/Nigel2392/go-django/src/internal/forms.IsValid
 func IsValid(ctx context.Context, f Form) bool
 
+//go:linkname FullClean github.com/Nigel2392/go-django/src/internal/forms.FullClean
+func FullClean(ctx context.Context, f Form) (invalid, defaults, cleaned map[string]any)
+
 type SaveableForm interface {
 	Form
 	Save() (map[string]interface{}, error)
