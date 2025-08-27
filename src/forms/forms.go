@@ -94,3 +94,8 @@ type SaveableForm interface {
 	Form
 	Save() (map[string]interface{}, error)
 }
+
+func HasErrors(form Form) bool {
+	var errs = form.BoundErrors()
+	return errs != nil && errs.Len() > 0 || len(form.ErrorList()) > 0
+}

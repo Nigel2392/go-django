@@ -726,12 +726,14 @@ templ (c *listEditableColumn[T]) Header(r *http.Request) {
 }
 
 templ (c *listEditableColumn[T]) EditableComponent(r *http.Request, defs attrs.Definitions, row T, form forms.Form, field *forms.BoundFormField) {
-	if field == nil || !AllowListEdit(r.Context()) || !c.permitted(r, defs, row) {
+	if field == nil || form == nil || !AllowListEdit(r.Context()) || !c.permitted(r, defs, row) {
 		@getComponent(r, defs, row, c.value(r, defs, row))
 		{{ return }}
 	}
 	<div class="list-editable">
-		{{ field.FormValue = c.value(r, defs, row) }}
+		if !forms.HasErrors(form) && field.FormValue == nil {
+			{{ field.FormValue = c.value(r, defs, row) }}
+		}
 		@templ.Raw(string(field.Field()))
 	</div>
 }

@@ -1383,7 +1383,7 @@ func (c *listEditableColumn[T]) EditableComponent(r *http.Request, defs attrs.De
 			templ_7745c5c3_Var32 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		if field == nil || !AllowListEdit(r.Context()) || !c.permitted(r, defs, row) {
+		if field == nil || form == nil || !AllowListEdit(r.Context()) || !c.permitted(r, defs, row) {
 			templ_7745c5c3_Err = getComponent(r, defs, row, c.value(r, defs, row)).Render(ctx, templ_7745c5c3_Buffer)
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
@@ -1398,7 +1398,9 @@ func (c *listEditableColumn[T]) EditableComponent(r *http.Request, defs attrs.De
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		field.FormValue = c.value(r, defs, row)
+		if !forms.HasErrors(form) && field.FormValue == nil {
+			field.FormValue = c.value(r, defs, row)
+		}
 		templ_7745c5c3_Err = templ.Raw(string(field.Field())).Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err

@@ -95,6 +95,12 @@ type ListForm[T attrs.Definer] struct {
 	forms map[any]forms.Form
 }
 
+func setPrefix(pk any) func(forms.Form) {
+	return func(f forms.Form) {
+		f.SetPrefix(fmt.Sprintf("%srow--%s", f.Prefix(), attrs.ToString(pk)))
+	}
+}
+
 func NewListForm[T attrs.Definer](l *List[T], opts ...func(forms.Form)) *ListForm[T] {
 	var form = &ListForm[T]{
 		List:  l,
@@ -103,9 +109,7 @@ func NewListForm[T attrs.Definer](l *List[T], opts ...func(forms.Form)) *ListFor
 
 	for _, group := range l.groups {
 		var pk = attrs.PrimaryKey(group.Row())
-		var rowForm = group.Form(l.request, append(opts, func(f forms.Form) {
-			f.SetPrefix(fmt.Sprintf("%srow--%s", f.Prefix(), attrs.ToString(pk)))
-		})...)
+		var rowForm = group.Form(l.request, append([]func(forms.Form){setPrefix(pk)}, opts...)...)
 		if rowForm == nil {
 			continue
 		}
