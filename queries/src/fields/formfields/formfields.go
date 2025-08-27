@@ -222,7 +222,7 @@ func (o *ManyToManyFormField) Widget() widgets.Widget {
 		BaseWidget:   widgets.NewBaseWidget("model-multiple-select", "forms/widgets/model-multiple-select.html", nil),
 		IncludeBlank: o.Field.AllowBlank(),
 		Relation:     o.Relation,
-		Field:        o.Field,
+		FieldDef:     o.Field,
 		BlankLabel:   "--------",
 	}
 

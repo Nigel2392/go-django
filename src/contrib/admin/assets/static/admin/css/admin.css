@@ -578,8 +578,6 @@ flex-direction is set to row above 70em.
     gap: 0.175rem;
 }
 .form-field .multi-widget .multi-widget-field {
-    display: flex;
-    gap: 0.5rem;
 }
 .panel.collapsible.collapsed > .panel__help,
 .panel.collapsible.collapsed > .panel__body {

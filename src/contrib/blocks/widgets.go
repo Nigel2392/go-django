@@ -11,16 +11,26 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/internal/forms"
 )
 
 var _ widgets.Widget = (*BlockWidget)(nil)
 
 type BlockWidget struct {
-	BlockDef Block
+	BlockDef  Block
+	FormField forms.Field
 }
 
 func (bw *BlockWidget) Hide(hidden bool)                 {}
 func (bw *BlockWidget) SetAttrs(attrs map[string]string) {}
+
+func (bw *BlockWidget) BindField(field forms.Field) {
+	bw.FormField = field
+}
+
+func (bw *BlockWidget) Field() forms.Field {
+	return bw.FormField
+}
 
 func NewBlockWidget(blockDef Block) *BlockWidget {
 	var bw = &BlockWidget{

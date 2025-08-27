@@ -185,6 +185,7 @@ func (b *MultiWidget) RenderWithErrors(c context.Context, w io.Writer, id, name 
 		)
 
 		w.Write([]byte(`<div class="multi-widget-field">`))
+		w.Write([]byte(fmt.Sprintf("<label for=\"%s\">%s</label>", id, head.Value.Field().Label(c))))
 		if err := head.Value.RenderWithErrors(c, w, id, name, valMap[head.Key], errors, attrs, widgetContext); err != nil {
 			return err
 		}

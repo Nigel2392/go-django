@@ -6,6 +6,7 @@ import (
 
 type (
 	Widget             = forms.Widget
+	Field              = forms.Field
 	Option             = forms.Option
 	FormValuer         = forms.FormValuer
 	FormValueConverter = forms.FormValueConverter

@@ -139,10 +139,13 @@ func (m *MultiField) Widget() FormWidget {
 
 	var multi = widgets.NewMultiWidget(m.Attrs())
 	for _, field := range m.Fields {
-		multi.AddWidget(field.Name(), field.Widget())
+		var widget = field.Widget()
+		widget.BindField(field)
+		multi.AddWidget(field.Name(), widget)
 	}
 
 	m.FormWidget = multi
+	m.FormWidget.BindField(m)
 
 	return multi
 }

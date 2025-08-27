@@ -64,6 +64,8 @@ type Widget interface {
 	IsHidden() bool
 	Hide(hidden bool)
 	FormType() string
+	Field() Field
+	BindField(field Field)
 	SetAttrs(attrs map[string]string)
 	IdForLabel(id string) string
 	GetContextData(ctx context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context

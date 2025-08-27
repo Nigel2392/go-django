@@ -19,6 +19,7 @@ type BaseWidget struct {
 	TemplateName  string
 	InputIsHidden bool
 	BaseAttrs     map[string]string
+	FormField     Field
 }
 
 func NewBaseWidget(type_ string, templateName string, attrs map[string]string) *BaseWidget {
@@ -41,6 +42,14 @@ func NewBaseWidget(type_ string, templateName string, attrs map[string]string) *
 		InputIsHidden: false,
 		BaseAttrs:     attrs,
 	}
+}
+
+func (b *BaseWidget) BindField(f Field) {
+	b.FormField = f
+}
+
+func (b *BaseWidget) Field() Field {
+	return b.FormField
 }
 
 func (b *BaseWidget) Hide(hidden bool) {

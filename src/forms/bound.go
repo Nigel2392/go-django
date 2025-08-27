@@ -32,6 +32,9 @@ func NewBoundFormField(ctx context.Context, w Widget, f Field, name string, valu
 		attrs = make(map[string]string)
 	}
 
+	// Bind the field to the widget
+	w.BindField(f)
+
 	var bw = &BoundFormField{
 		FormWidget: w,
 		FormField:  f,

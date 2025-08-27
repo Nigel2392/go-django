@@ -136,7 +136,7 @@ type MultiSelectWidget[T attrs.Definer] struct {
 	*widgets.BaseWidget
 	Queryset     func() *queries.QuerySet[T]
 	Relation     attrs.Relation
-	Field        attrs.FieldDefinition
+	FieldDef     attrs.FieldDefinition
 	IncludeBlank bool
 	BlankLabel   string
 }
@@ -192,8 +192,8 @@ func (o *MultiSelectWidget[T]) Choices(ctx context.Context) []widgets.Option {
 
 	var backRef = queries.RelM2M[attrs.Definer, attrs.Definer]{
 		Parent: &queries.ParentInfo{
-			Object: o.Field.Instance(),
-			Field:  o.Field.(attrs.Field),
+			Object: o.FieldDef.Instance(),
+			Field:  o.FieldDef.(attrs.Field),
 		},
 	}
 
