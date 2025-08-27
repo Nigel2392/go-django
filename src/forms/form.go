@@ -228,6 +228,7 @@ func (f *BaseForm) BoundFields() *orderedmap.OrderedMap[string, BoundField] {
 			f.PrefixName(k),
 			value,
 			errors,
+			true,
 		))
 	}
 	return ret

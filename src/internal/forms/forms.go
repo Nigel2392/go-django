@@ -80,6 +80,11 @@ type Widget interface {
 	media.MediaDefiner
 }
 
+type BinderWidget interface {
+	Widget
+	BoundField(ctx context.Context, w Widget, f Field, name string, value interface{}, errors []error) BoundField
+}
+
 type Field interface {
 	FormValueConverter
 	Attrs() map[string]string

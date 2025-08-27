@@ -596,6 +596,7 @@ func (j JSONDetailPanel) Bind(r *http.Request, panelCount map[string]int, form f
 
 		boundFields = append(boundFields, forms.NewBoundFormField(
 			form.Context(), widget, field, fmt.Sprintf("%s__%s", dataField.Name(), key), val, []error{},
+			true,
 		))
 	}
 

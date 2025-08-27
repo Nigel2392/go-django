@@ -21,7 +21,13 @@ type BoundFormField struct {
 	CachedHTML  template.HTML
 }
 
-func NewBoundFormField(ctx context.Context, w Widget, f Field, name string, value interface{}, errors []error) BoundField {
+func NewBoundFormField(ctx context.Context, w Widget, f Field, name string, value interface{}, errors []error, tryWidgetBound bool) BoundField {
+
+	if tryWidgetBound {
+		if bw, ok := w.(BinderWidget); ok {
+			return bw.BoundField(ctx, w, f, name, value, errors)
+		}
+	}
 
 	if errors == nil {
 		errors = make([]error, 0)
