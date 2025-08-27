@@ -52,6 +52,7 @@ func (c *ListColumnGroup[T]) Form(r *http.Request, opts ...func(forms.Form)) for
 	}
 
 	var form = forms.NewBaseForm(r.Context(), opts...)
+	var fieldsAdded bool
 	for _, column := range columns {
 		var (
 			fieldName = column.FieldName()
@@ -63,6 +64,11 @@ func (c *ListColumnGroup[T]) Form(r *http.Request, opts ...func(forms.Form)) for
 		}
 
 		form.AddField(fieldName, field)
+		fieldsAdded = true
+	}
+
+	if !fieldsAdded {
+		return nil
 	}
 
 	return form
