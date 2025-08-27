@@ -9,6 +9,10 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 )
 
+type IsValidDefiner interface {
+	IsValid() bool
+}
+
 func fullClean(ctx context.Context, f Form, rawData url.Values, files map[string][]filesystem.FileHeader) (invalid_, defaults_, cleaned_ map[string]any) {
 	var (
 		invalid  = make(map[string]any)
@@ -16,6 +20,7 @@ func fullClean(ctx context.Context, f Form, rawData url.Values, files map[string
 		cleaned  = make(map[string]any)
 		err      error
 	)
+
 	for head := f.FieldMap().Front(); head != nil; head = head.Next() {
 		var (
 			k       = head.Key
@@ -153,5 +158,11 @@ func IsValid(ctx context.Context, f Form) bool {
 
 	errs = f.ErrorList()
 	bndErrs = f.BoundErrors()
-	return (bndErrs == nil || bndErrs.Len() == 0) && len(errs) == 0
+	if (bndErrs == nil || bndErrs.Len() == 0) && len(errs) == 0 {
+		if isValidDef, ok := f.(IsValidDefiner); ok {
+			return isValidDef.IsValid()
+		}
+		return true
+	}
+	return false
 }

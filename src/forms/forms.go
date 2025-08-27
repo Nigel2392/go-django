@@ -23,6 +23,7 @@ type (
 	Form               = forms.Form
 	BoundForm          = forms.BoundForm
 	BoundField         = forms.BoundField
+	IsValidDefiner     = forms.IsValidDefiner
 )
 
 //go:linkname IsValid github.com/Nigel2392/go-django/src/internal/forms.IsValid

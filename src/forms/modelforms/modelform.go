@@ -331,10 +331,6 @@ func (f *BaseModelForm[T]) Context() context.Context {
 }
 
 func (f *BaseModelForm[T]) IsValid() bool {
-	if !forms.IsValid(f.Context(), f.BaseForm) {
-		return false
-	}
-
 	var cleaned, err = f.BaseForm.Save()
 	if err != nil {
 		f.AddFormError(err)

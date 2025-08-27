@@ -196,24 +196,24 @@ func (a *AdminForm[T]) HasChanged() bool {
 func (a *AdminForm[T]) PrefixName(name string) (prefixedName string) {
 	return a.Form.PrefixName(name)
 }
-func (a *AdminForm[T]) FieldMap() *orderedmap.OrderedMap[string, fields.Field] {
+func (a *AdminForm[T]) FieldMap() *orderedmap.OrderedMap[string, forms.Field] {
 	return a.Form.FieldMap()
 }
 
 func (f *AdminForm[T]) Validators() []func(forms.Form, map[string]interface{}) []error {
-	return f.Validators()
+	return f.Form.Validators()
 }
 
 func (f *AdminForm[T]) CallbackOnValid() []func(forms.Form) {
-	return f.CallbackOnValid()
+	return f.Form.CallbackOnValid()
 }
 
 func (f *AdminForm[T]) CallbackOnInvalid() []func(forms.Form) {
-	return f.CallbackOnInvalid()
+	return f.Form.CallbackOnInvalid()
 }
 
 func (f *AdminForm[T]) CallbackOnFinalize() []func(forms.Form) {
-	return f.CallbackOnFinalize()
+	return f.Form.CallbackOnFinalize()
 }
 
 func (f *AdminForm[T]) BindCleanedData(invalid, defaults, cleaned map[string]interface{}) {
@@ -233,7 +233,6 @@ func (f *AdminForm[T]) WasCleaned() bool {
 func (a *AdminForm[T]) AddFormError(errorList ...error) {
 	a.Form.AddFormError(errorList...)
 }
-
 func (a *AdminForm[T]) AddError(name string, errorList ...error) {
 	a.Form.AddError(name, errorList...)
 }
@@ -245,6 +244,12 @@ func (a *AdminForm[T]) OnInvalid(f ...func(forms.Form)) {
 }
 func (a *AdminForm[T]) OnFinalize(f ...func(forms.Form)) {
 	a.Form.OnFinalize(f...)
+}
+func (a *AdminForm[T]) IsValid() bool {
+	if validDef, ok := any(a.Form).(forms.IsValidDefiner); ok {
+		return validDef.IsValid()
+	}
+	return true
 }
 
 type AdminModelForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer] struct {
