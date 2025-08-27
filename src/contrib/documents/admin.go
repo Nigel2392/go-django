@@ -278,12 +278,16 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 						fields.DateField(
 							widgets.DateWidgetTypeDateTime,
 							fields.Name("start"),
+							fields.Label(trans.S("Start Date")),
 						),
 						fields.DateField(
 							widgets.DateWidgetTypeDateTime,
 							fields.Name("end"),
+							fields.Label(trans.S("End Date")),
 						),
-					}),
+					},
+						fields.Label(trans.S("Date Range")),
+					),
 					Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[attrs.Definer]) (*queries.QuerySet[attrs.Definer], error) {
 						if fields.IsZero(value) {
 							return object, nil

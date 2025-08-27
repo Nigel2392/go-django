@@ -1,61 +1,17 @@
 package widgets
 
 import (
-	"context"
-	"io"
-	"net/url"
-
-	"github.com/Nigel2392/go-django/src/core/ctx"
-	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/internal/forms"
 )
 
-type FormValueConverter interface {
-	// Convert the forms' string value to the appropriate GO type.
-	ValueToGo(value interface{}) (interface{}, error)
-
-	// Convert the GO type to the forms' string value.
-	ValueToForm(value interface{}) interface{}
-}
-
-type FormValueOmitter interface {
-	// Check if the value is omitted from the data provided.
-	ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool
-}
-
-type FormValueGetter interface {
-	// Get the value from the provided data.
-	ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error)
-}
-
-type FormValuer interface {
-	FormValueConverter
-	FormValueOmitter
-	FormValueGetter
-}
-
-type Widget interface {
-	IsHidden() bool
-	Hide(hidden bool)
-	FormType() string
-	SetAttrs(attrs map[string]string)
-	IdForLabel(id string) string
-	GetContextData(ctx context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context
-	RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string, context ctx.Context) error
-
-	// Render is basically the same as RenderWithErrors, except that it does not take a context.
-	// The widget should always be able to generate some sort of context itself based on the provided parameters.
-	Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error
-	Validate(ctx context.Context, value interface{}) []error
-
-	FormValuer
-	media.MediaDefiner
-}
-
-type Option interface {
-	Label() string
-	Value() string
-}
+type (
+	Widget             = forms.Widget
+	Option             = forms.Option
+	FormValuer         = forms.FormValuer
+	FormValueConverter = forms.FormValueConverter
+	FormValueOmitter   = forms.FormValueOmitter
+	FormValueGetter    = forms.FormValueGetter
+)
 
 type FormOption struct {
 	OptLabel string

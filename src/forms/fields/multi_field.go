@@ -132,7 +132,7 @@ func (m *MultiField) HasChanged(initial interface{}, data interface{}) bool {
 	return false
 }
 
-func (m *MultiField) Widget() widgets.Widget {
+func (m *MultiField) Widget() FormWidget {
 	if m.FormWidget != nil {
 		return m.FormWidget
 	}
@@ -141,5 +141,8 @@ func (m *MultiField) Widget() widgets.Widget {
 	for _, field := range m.Fields {
 		multi.AddWidget(field.Name(), field.Widget())
 	}
+
+	m.FormWidget = multi
+
 	return multi
 }

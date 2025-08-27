@@ -17,15 +17,14 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
-	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
 type BaseForm struct {
 	FormPrefix      string
 	fieldOrder      []string
-	FormFields      *orderedmap.OrderedMap[string, fields.Field]
-	FormWidgets     *orderedmap.OrderedMap[string, widgets.Widget]
+	FormFields      *orderedmap.OrderedMap[string, Field]
+	FormWidgets     *orderedmap.OrderedMap[string, Widget]
 	Errors          *orderedmap.OrderedMap[string, []error]
 	ErrorList_      []error
 	Raw             url.Values
@@ -44,8 +43,8 @@ type BaseForm struct {
 
 func NewBaseForm(ctx context.Context, opts ...func(Form)) *BaseForm {
 	var f = &BaseForm{
-		FormFields:      orderedmap.NewOrderedMap[string, fields.Field](),
-		FormWidgets:     orderedmap.NewOrderedMap[string, widgets.Widget](),
+		FormFields:      orderedmap.NewOrderedMap[string, Field](),
+		FormWidgets:     orderedmap.NewOrderedMap[string, Widget](),
 		Initial:         make(map[string]interface{}),
 		InvalidDefaults: make(map[string]interface{}),
 		FormContext:     ctx,
@@ -58,11 +57,11 @@ func NewBaseForm(ctx context.Context, opts ...func(Form)) *BaseForm {
 
 func (f *BaseForm) setup() {
 	if f.FormFields == nil {
-		f.FormFields = orderedmap.NewOrderedMap[string, fields.Field]()
+		f.FormFields = orderedmap.NewOrderedMap[string, Field]()
 	}
 
 	if f.FormWidgets == nil {
-		f.FormWidgets = orderedmap.NewOrderedMap[string, widgets.Widget]()
+		f.FormWidgets = orderedmap.NewOrderedMap[string, Widget]()
 	}
 
 	if f.Errors == nil {
@@ -182,7 +181,7 @@ func (f *BaseForm) EditContext(key string, context ctx.Context) {
 	context.Set(key, f.BoundForm())
 }
 
-func (f *BaseForm) AddField(name string, field fields.Field) {
+func (f *BaseForm) AddField(name string, field Field) {
 	field.SetName(name)
 	f.FormFields.Set(name, field)
 }
@@ -191,7 +190,7 @@ func (f *BaseForm) DeleteField(name string) bool {
 	return f.FormFields.Delete(name)
 }
 
-func (f *BaseForm) AddWidget(name string, widget widgets.Widget) {
+func (f *BaseForm) AddWidget(name string, widget Widget) {
 	f.FormWidgets.Set(name, widget)
 }
 
@@ -274,7 +273,7 @@ func (f *BaseForm) AsUL() template.HTML {
 func (f *BaseForm) Media() media.Media {
 	var m media.Media = media.NewMedia()
 	if f.FormWidgets == nil {
-		f.FormWidgets = orderedmap.NewOrderedMap[string, widgets.Widget]()
+		f.FormWidgets = orderedmap.NewOrderedMap[string, Widget]()
 	}
 
 	for head := f.FormFields.Front(); head != nil; head = head.Next() {
@@ -293,29 +292,29 @@ func (f *BaseForm) Media() media.Media {
 	return m
 }
 
-func (f *BaseForm) Fields() []fields.Field {
-	var inputs = make([]fields.Field, 0, f.FormFields.Len())
+func (f *BaseForm) Fields() []Field {
+	var inputs = make([]Field, 0, f.FormFields.Len())
 	for head := f.FormFields.Front(); head != nil; head = head.Next() {
 		inputs = append(inputs, head.Value)
 	}
 	return inputs
 }
 
-func (f *BaseForm) Widgets() []widgets.Widget {
-	var widgets = make([]widgets.Widget, 0, f.FormWidgets.Len())
+func (f *BaseForm) Widgets() []Widget {
+	var widgets = make([]Widget, 0, f.FormWidgets.Len())
 	for head := f.FormWidgets.Front(); head != nil; head = head.Next() {
 		widgets = append(widgets, head.Value)
 	}
 	return widgets
 }
 
-func (f *BaseForm) Field(name string) (fields.Field, bool) {
+func (f *BaseForm) Field(name string) (Field, bool) {
 	return f.FormFields.Get(name)
 }
 
-func (f *BaseForm) Widget(name string) (widgets.Widget, bool) {
+func (f *BaseForm) Widget(name string) (Widget, bool) {
 	var widget, ok = f.FormWidgets.Get(name)
-	var field fields.Field
+	var field Field
 	if !ok {
 		field, ok = f.FormFields.Get(name)
 		if ok {

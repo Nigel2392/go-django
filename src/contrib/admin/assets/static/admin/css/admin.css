@@ -572,6 +572,15 @@ flex-direction is set to row above 70em.
     color: hsl( 0 100% 50% );
     text-decoration: line-through;
 }
+.form-field .multi-widget {
+    display: flex;
+    flex-direction: row;
+    gap: 0.175rem;
+}
+.form-field .multi-widget .multi-widget-field {
+    display: flex;
+    gap: 0.5rem;
+}
 .panel.collapsible.collapsed > .panel__help,
 .panel.collapsible.collapsed > .panel__body {
     display: none;

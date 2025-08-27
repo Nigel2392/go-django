@@ -7,13 +7,11 @@ import (
 	"html/template"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
-	"github.com/Nigel2392/go-django/src/forms/fields"
-	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
 
 type BoundFormField struct {
-	FormWidget  widgets.Widget
-	FormField   fields.Field
+	FormWidget  Widget
+	FormField   Field
 	FormName    string
 	FormID      string
 	FormAttrs   map[string]string
@@ -23,7 +21,7 @@ type BoundFormField struct {
 	CachedHTML  template.HTML
 }
 
-func NewBoundFormField(ctx context.Context, w widgets.Widget, f fields.Field, name string, value interface{}, errors []error) BoundField {
+func NewBoundFormField(ctx context.Context, w Widget, f Field, name string, value interface{}, errors []error) BoundField {
 
 	if errors == nil {
 		errors = make([]error, 0)
@@ -50,11 +48,11 @@ func NewBoundFormField(ctx context.Context, w widgets.Widget, f fields.Field, na
 	return bw
 }
 
-func (b *BoundFormField) Widget() widgets.Widget {
+func (b *BoundFormField) Widget() Widget {
 	return b.FormWidget
 }
 
-func (b *BoundFormField) Input() fields.Field {
+func (b *BoundFormField) Input() Field {
 	return b.FormField
 }
 

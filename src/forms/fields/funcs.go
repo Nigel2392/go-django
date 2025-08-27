@@ -8,7 +8,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/trans"
-	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
 
 func Label(label any) func(Field) {
@@ -179,7 +178,7 @@ func MaxValue(max int) func(Field) {
 	}
 }
 
-func Widget(w widgets.Widget) func(Field) {
+func Widget(w FormWidget) func(Field) {
 	return func(f Field) {
 		f.SetWidget(w)
 	}

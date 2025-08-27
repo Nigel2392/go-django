@@ -18,7 +18,7 @@ type BaseField struct {
 	Validators   []func(interface{}) error
 	FormLabel    func(ctx context.Context) string
 	FormHelpText func(ctx context.Context) string
-	FormWidget   widgets.Widget
+	FormWidget   FormWidget
 	Caser        *cases.Caser
 }
 
@@ -72,7 +72,7 @@ func (i *BaseField) SetName(name string) {
 	i.FieldName = name
 }
 
-func (i *BaseField) SetWidget(w widgets.Widget) {
+func (i *BaseField) SetWidget(w FormWidget) {
 	i.FormWidget = w
 }
 
@@ -157,7 +157,7 @@ func (i *BaseField) Validate(ctx context.Context, value interface{}) []error {
 	return nil
 }
 
-func (i *BaseField) Widget() widgets.Widget {
+func (i *BaseField) Widget() FormWidget {
 	if i.FormWidget != nil {
 		return i.FormWidget
 	} else {

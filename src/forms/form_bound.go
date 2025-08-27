@@ -20,16 +20,6 @@ func (f *fieldError) Errors() []error {
 	return f.errors
 }
 
-type BoundForm interface {
-	AsP() template.HTML
-	AsUL() template.HTML
-	Media() media.Media
-	Fields() []BoundField
-	ErrorList() []error
-	UnpackErrors() []FieldError
-	Errors() *orderedmap.OrderedMap[string, []error]
-}
-
 type _BoundForm struct {
 	Form       Form
 	Fields_    []BoundField

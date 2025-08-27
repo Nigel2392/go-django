@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/forms/fields"
 )
 
 type multipartFileHeader struct {
@@ -76,7 +75,7 @@ func WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http
 	}
 }
 
-func WithFields(fields ...fields.Field) func(Form) {
+func WithFields(fields ...Field) func(Form) {
 	return func(f Form) {
 		for _, field := range fields {
 			f.AddField(field.Name(), field)

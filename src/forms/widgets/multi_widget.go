@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io"
 	"net/url"
-	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -45,7 +44,8 @@ func (b *MultiWidget) Validate(ctx context.Context, value interface{}) []error {
 	var valMap, ok = value.(map[string]interface{})
 	if !ok {
 		return []error{errors.ValueError.Wrapf(
-			"unexpected value type received when validating, multi-widget only supports map[string]interface{} and nil",
+			"unexpected value type %T received when validating, multi-widget only supports map[string]interface{} and nil",
+			value,
 		)}
 	}
 
@@ -95,7 +95,8 @@ func (b *MultiWidget) ValueToForm(value interface{}) interface{} {
 		}
 	default:
 		assert.Fail(
-			"unexpected value type, multi-widget only supports map[string]interface{} and nil",
+			"unexpected value type %T, multi-widget only supports map[string]interface{} and nil",
+			value,
 		)
 	}
 	return formData
@@ -122,7 +123,8 @@ func (b *MultiWidget) ValueToGo(value interface{}) (interface{}, error) {
 		}
 	default:
 		assert.Fail(
-			"unexpected value type, multi-widget only supports map[string]interface{} and nil",
+			"unexpected value type %T, multi-widget only supports map[string]interface{} and nil",
+			value,
 		)
 	}
 	return result, nil
@@ -131,9 +133,23 @@ func (b *MultiWidget) ValueToGo(value interface{}) (interface{}, error) {
 func (b *MultiWidget) GetContextData(widgetCtx context.Context, id string, name string, value interface{}, attrs map[string]string) ctx.Context {
 	var context = ctx.NewContext(nil)
 	var widgetContext = make(map[string]ctx.Context)
-	for head := b.Widgets.Front(); head != nil; head = head.Next() {
-		widgetContext[head.Key] = head.Value.GetContextData(widgetCtx, id, name, value, attrs)
+	var valMap, ok = value.(map[string]interface{})
+	if !ok && value != nil {
+		assert.Fail(
+			"unexpected value type %T, multi-widget only supports map[string]interface{} and nil",
+			value,
+		)
 	}
+
+	for head := b.Widgets.Front(); head != nil; head = head.Next() {
+		var (
+			name = fmt.Sprintf("%s__%s", name, head.Key)
+			id   = fmt.Sprintf("%s__%s", id, head.Key)
+		)
+
+		widgetContext[head.Key] = head.Value.GetContextData(widgetCtx, id, name, valMap[head.Key], attrs)
+	}
+
 	context.Set("widgets", widgetContext)
 	return context
 }
@@ -143,10 +159,12 @@ func (b *MultiWidget) Render(ctx context.Context, w io.Writer, id, name string, 
 }
 
 func (b *MultiWidget) RenderWithErrors(c context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string, context ctx.Context) error {
-	var sb = new(strings.Builder)
 	var valMap, ok = value.(map[string]interface{})
 	if !ok && value != nil {
-		return fmt.Errorf("unexpected value type, multi-widget only supports map[string]interface{} and nil")
+		return fmt.Errorf(
+			"unexpected value type %T (%v), multi-widget only supports map[string]interface{} and nil",
+			value, value,
+		)
 	}
 
 	widgetContext, ok := context.Get("widgets").(map[string]ctx.Context)
@@ -154,20 +172,25 @@ func (b *MultiWidget) RenderWithErrors(c context.Context, w io.Writer, id, name 
 		return fmt.Errorf("unexpected context type, multi-widget requires widget context map in top-level context")
 	}
 
-	sb.WriteString(`<div class="multi-widget">`)
+	w.Write([]byte(`<div class="multi-widget">`))
 	for head := b.Widgets.Front(); head != nil; head = head.Next() {
 		var widgetContext, ok = widgetContext[head.Key]
 		if !ok {
 			return fmt.Errorf("missing widget context for %q", head.Key)
 		}
 
-		sb.WriteString(`<div class="multi-widget-field">`)
-		if err := head.Value.RenderWithErrors(c, sb, id, name, valMap[head.Key], errors, attrs, widgetContext); err != nil {
+		var (
+			name = fmt.Sprintf("%s__%s", name, head.Key)
+			id   = fmt.Sprintf("%s__%s", id, head.Key)
+		)
+
+		w.Write([]byte(`<div class="multi-widget-field">`))
+		if err := head.Value.RenderWithErrors(c, w, id, name, valMap[head.Key], errors, attrs, widgetContext); err != nil {
 			return err
 		}
-		sb.WriteString(`</div>`)
+		w.Write([]byte(`</div>`))
 	}
-	sb.WriteString(`</div>`)
+	w.Write([]byte(`</div>`))
 
 	return nil
 }

@@ -211,7 +211,7 @@ func (n *NullableSQLField[SQLType]) ValueToGo(value interface{}) (interface{}, e
 	return nil, errs.ErrInvalidType
 }
 
-func (n *NullableSQLField[SQLType]) Widget() widgets.Widget {
+func (n *NullableSQLField[SQLType]) Widget() FormWidget {
 	if n.FormWidget != nil {
 		return n.FormWidget
 	}
@@ -313,7 +313,7 @@ func (f *FileStorageField) Save(value interface{}) (interface{}, error) {
 	return mediafiles.Open(path)
 }
 
-func (f *FileStorageField) Widget() widgets.Widget {
+func (f *FileStorageField) Widget() FormWidget {
 	if f.FormWidget != nil {
 		return f.FormWidget
 	}
