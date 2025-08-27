@@ -9,12 +9,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 )
 
-type (
-	onValidDefiner interface {
-		CheckIsValid(f Form) bool
-	}
-)
-
 func fullClean(ctx context.Context, f Form, rawData url.Values, files map[string][]filesystem.FileHeader) (invalid_, defaults_, cleaned_ map[string]any) {
 	var (
 		invalid  = make(map[string]any)

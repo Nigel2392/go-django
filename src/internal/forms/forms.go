@@ -151,6 +151,7 @@ type Form interface {
 	CallbackOnValid() []func(f Form)
 	CallbackOnInvalid() []func(f Form)
 	CallbackOnFinalize() []func(f Form)
+	// BindCleanedData might be called multiple times for a single IsValid() call
 	BindCleanedData(invalid, defaults, cleaned map[string]interface{})
 	CleanedDataUnsafe() map[string]interface{}
 }
