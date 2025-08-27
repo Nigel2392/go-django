@@ -283,6 +283,7 @@ continueView:
 				),
 				components.NewShowableComponent(
 					req, func(r *http.Request) bool {
+						fmt.Println("count", count, "form", baseCtx.Get("view_list_form"), "disallowedit", model.DisallowEdit, "hasperm", permissions.HasObjectPermission(r, model.NewInstance(), "admin:edit"))
 						return count > 0 && baseCtx.Get("view_list_form") != nil && !model.DisallowEdit && permissions.HasObjectPermission(r, model.NewInstance(), "admin:edit")
 					},
 					BulkActionButton(

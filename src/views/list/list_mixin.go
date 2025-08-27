@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
@@ -172,8 +173,9 @@ func (m *ListObjectMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 			Select(attrutils.InterfaceList(includedFields)...).
 			BulkUpdate(models)
 		if err != nil {
-			if errors.Is(err, errors.ValueError) {
+			if errors.Is(err, errors.ValueError) || errors.Is(err, errs.ErrInvalidValue) {
 				messages.Error(r, err.Error())
+				viewCtx.Set("view_list_form", form)
 				return w, r, nil
 			}
 			return nil, nil, err

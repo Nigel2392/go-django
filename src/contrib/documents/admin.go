@@ -272,6 +272,26 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 						)), nil
 					},
 				},
+				&filters.BaseFilterSpec[*queries.QuerySet[attrs.Definer]]{
+					SpecName: "date_range",
+					FormField: fields.NewMultiField([]fields.Field{
+						fields.DateField(
+							widgets.DateWidgetTypeDateTime,
+							fields.Name("start"),
+						),
+						fields.DateField(
+							widgets.DateWidgetTypeDateTime,
+							fields.Name("end"),
+						),
+					}),
+					Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[attrs.Definer]) (*queries.QuerySet[attrs.Definer], error) {
+						if fields.IsZero(value) {
+							return object, nil
+						}
+
+						return object, nil
+					},
+				},
 			},
 			Search: &admin.SearchOptions{
 				Fields: []admin.SearchField{

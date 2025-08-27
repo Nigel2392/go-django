@@ -11,19 +11,7 @@ type Definer[T any] interface {
 
 func Mixins[T any](obj T, topDown bool) iter.Seq2[T, int] {
 	return func(yield func(T, int) bool) {
-		if topDown && !yield(obj, 0) {
-			return
-		}
-		if mixin, ok := any(obj).(Definer[T]); ok {
-			for _, m := range mixin.Mixins() {
-				if !iterMixins(yield, m, topDown, 1) {
-					return
-				}
-			}
-		}
-		if !topDown && !yield(obj, 0) {
-			return
-		}
+		iterMixins(yield, obj, topDown, 0)
 	}
 }
 

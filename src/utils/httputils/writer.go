@@ -15,6 +15,8 @@ const (
 	FlagCopyAll = FlagCopyHeader | FlagCopyBody | FlagCopyStatus
 )
 
+var _ http.ResponseWriter = (*FakeWriter[io.ReadWriter])(nil)
+
 type FakeWriter[DST io.ReadWriter] struct {
 	WriteTo    DST
 	Headers    http.Header
@@ -70,4 +72,8 @@ func (w *FakeWriter[DST]) CopyTo(wr http.ResponseWriter, flags ...WriterCopyFlag
 	}
 
 	return 0, nil
+}
+
+func (w *FakeWriter[DST]) Unwrap() DST {
+	return w.WriteTo
 }
