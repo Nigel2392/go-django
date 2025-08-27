@@ -730,8 +730,9 @@ templ (c *listEditableColumn[T]) EditableComponent(r *http.Request, defs attrs.D
 		@getComponent(r, defs, row, c.value(r, defs, row))
 		{{ return }}
 	}
-	<div class="list-editable">
-		if !forms.HasErrors(form) && field.FormValue == nil {
+	{{ var hasErrors = forms.HasErrors(form) }}
+	<div class={ "list-editable", templ.KV("list-editable-errors", hasErrors) }>
+		if !hasErrors && field.FormValue == nil {
 			{{ field.FormValue = c.value(r, defs, row) }}
 		}
 		@templ.Raw(string(field.Field()))
