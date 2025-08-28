@@ -127,13 +127,13 @@
 /* } */
 .menu .submenu-menu-item > .menu-item-content .menu-item-toggle-icon,
 .menu .accordion-menu-item > .menu-item-content .menu-item-toggle-icon {
-    width: 1.25rem;
-    height: 1.25rem;
+    width: 1rem;
+    height: 1rem;
+    cursor: pointer;
     vertical-align: middle;
     margin-inline-end: 0.5rem;
     transition: background-color var(--menu-transition-speed),
         transform var(--menu-transition-speed);
-    cursor: pointer;
 }
 .menu .submenu-menu-item.open > .menu-item-content {
     background-color: var(--menu-bg-color-active);
