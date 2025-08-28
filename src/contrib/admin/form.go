@@ -269,13 +269,13 @@ func (a *AdminModelForm[T1, T2]) SetOnLoad(fn func(model T2, initialData map[str
 func (a *AdminModelForm[T1, T2]) Load() {
 	a.Form.Load()
 
-	var fields = a.Fields()
+	var fields = a.FieldMap()
 	if len(a.Panels) == 0 {
-		a.Panels = make([]Panel, 0, len(fields))
-		for _, field := range fields {
+		a.Panels = make([]Panel, 0, fields.Len())
+		for _, key := range fields.Keys() {
 			a.Panels = append(
 				a.Panels,
-				FieldPanel(field.Name()),
+				FieldPanel(key),
 			)
 		}
 		return
@@ -288,10 +288,9 @@ func (a *AdminModelForm[T1, T2]) Load() {
 		}
 	}
 
-	for _, field := range fields {
-		var fName = field.Name()
-		if _, ok := panelFields[fName]; !ok {
-			a.Form.DeleteField(fName)
+	for _, key := range fields.Keys() {
+		if _, ok := panelFields[key]; !ok {
+			a.Form.DeleteField(key)
 		}
 	}
 

@@ -142,8 +142,13 @@ func (m *ListObjectMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 			)
 		}
 
-		for _, field := range rowForm.Fields() {
-			var fieldName = field.Name()
+		var fieldsMap = rowForm.FieldMap()
+		if fieldsMap.Len() == 0 {
+			continue
+		}
+
+		for head := fieldsMap.Front(); head != nil; head = head.Next() {
+			var fieldName = head.Value.Name()
 			var attrField, ok = defs.Field(fieldName)
 			if !ok {
 				except.Fail(
