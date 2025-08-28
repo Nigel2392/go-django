@@ -34,6 +34,7 @@ class MultipleSelectController extends Controller<any> {
         this.removeAllTarget.addEventListener('click', this.removeAllSelectedListener.bind(this));
         this.selectedTarget.addEventListener('dblclick', this.selectedListener.bind(this));
         this.deselectedTarget.addEventListener('dblclick', this.deselectedListener.bind(this));
+        this.selectedTarget.querySelectorAll('option').forEach((option) => option.selected = true);
     }
 
     addSelectedListener() {
@@ -41,6 +42,7 @@ class MultipleSelectController extends Controller<any> {
             this.selectedTarget.appendChild(option);
             option.selected = true;
         });
+        this.selectedTarget.querySelectorAll('option').forEach((option) => option.selected = true);
     }
 
     removeSelectedListener() {
@@ -48,6 +50,7 @@ class MultipleSelectController extends Controller<any> {
             this.deselectedTarget.appendChild(option);
             option.selected = false;
         });
+        this.selectedTarget.querySelectorAll('option').forEach((option) => option.selected = true);
     }
 
     addAllSelectedListener() {
@@ -68,18 +71,22 @@ class MultipleSelectController extends Controller<any> {
         event.preventDefault();
         const option = event.target as HTMLOptionElement;
         if (option.tagName === 'OPTION') {
+            console.debug("Selecting option:", option);
             this.selectedTarget.appendChild(option);
             option.selected = true;
         }
+        this.selectedTarget.querySelectorAll('option').forEach((option) => option.selected = true);
     }
 
     selectedListener(event: Event) {
         event.preventDefault();
         const option = event.target as HTMLOptionElement;
         if (option.tagName === 'OPTION') {
+            console.debug("Deselecting option:", option);
             this.deselectedTarget.appendChild(option);
             option.selected = false;
         }
+        this.selectedTarget.querySelectorAll('option').forEach((option) => option.selected = true);
     }
 }
 

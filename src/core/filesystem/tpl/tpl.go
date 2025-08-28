@@ -8,6 +8,7 @@ import (
 	"maps"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync/atomic"
 
@@ -130,8 +131,30 @@ func NewRenderer() *TemplateRenderer {
 			return template.HTML(s)
 		},
 		"safeAttrs": func(v any) template.HTMLAttr {
-			var attrs = fmt.Sprint(v)
-			return template.HTMLAttr(attrs)
+			var sb = new(strings.Builder)
+			switch v := v.(type) {
+			case string:
+				sb.WriteString(v)
+			case fmt.Stringer:
+				sb.WriteString(v.String())
+			case map[string]string:
+				for k, v := range v {
+					fmt.Fprintf(sb, "%s=%s", k, strconv.Quote(v))
+				}
+			case map[string]any:
+				for k, v := range v {
+					switch v := v.(type) {
+					case string:
+						fmt.Fprintf(sb, "%s=%s", k, strconv.Quote(v))
+					case []string:
+						fmt.Fprintf(sb, "%s=%s", k, strconv.Quote(strings.Join(v, " ")))
+					}
+				}
+			default:
+				fmt.Fprint(sb, v)
+			}
+
+			return template.HTMLAttr(sb.String())
 		},
 		"safeURL": func(v any) template.URL {
 			var url = fmt.Sprint(v)
