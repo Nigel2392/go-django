@@ -30,7 +30,7 @@ templ (s *SearchMenuItem) Component() {
 			</svg>
 		</div>
 		<form method="get" action={ templ.URL(django.Reverse("admin:search")) } class="menu-item-search-form menu-item-label">
-			<input type="text" name="global-search" class="menu-item-search-input" placeholder={ s.Placeholder } aria-label={ s.Placeholder }/>
+			<input type="text" name="global-search" class="menu-item-search-input" placeholder={ s.Placeholder } aria-label={ s.Placeholder } autocomplete="off" />
 		</form>
 	</div>
 }

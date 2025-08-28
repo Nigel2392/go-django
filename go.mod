@@ -3,7 +3,7 @@ module github.com/Nigel2392/go-django
 go 1.24.2
 
 require (
-	github.com/Nigel2392/mux v1.4.4
+	github.com/Nigel2392/mux v1.4.5
 	github.com/elliotchance/orderedmap/v2 v2.2.0
 	github.com/justinas/nosurf v1.1.1
 	github.com/pkg/errors v0.9.1

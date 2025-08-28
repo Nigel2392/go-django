@@ -62,6 +62,7 @@
     --navigation-text-color: var(--secondary-bg-color);
     --navigation-text-color-hover: var(--secondary-bg-hover);
 
+    --max-content-width: 60vw;
     --max-panel-width: 1040px;
 }
 *, *::before, *::after {
@@ -479,8 +480,13 @@ flex-direction is set to row above 70em.
 .tabpanel .tabpanel__content .tabpanel__panel.active {
     display: flex;
 }
+.content-width {
+    --max-width: var(--max-content-width, 60vw);
+    max-width: var(--max-width);
+}
 .panel {
-    max-width: var(--max-panel-width, 1040px);
+    --max-width: var(--max-panel-width, 1040px);
+    max-width: var(--max-width);
 }
 .panel.panel-margin,
 .panel:not(:has(.panel)):has(.panel__heading) {

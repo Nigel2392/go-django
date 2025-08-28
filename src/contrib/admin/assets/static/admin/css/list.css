@@ -85,7 +85,7 @@ table.list {
     width: fit-content;
 }
 .sortable-column-icon {
-    margin-right: 0.5em;
+    margin: 0 0.375em;
 }
 .sortable-column-header {
 

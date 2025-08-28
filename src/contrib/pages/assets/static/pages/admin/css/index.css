@@ -58,8 +58,9 @@
 .pages-menu-item .open-icon,
 .pages-menu-item .close-icon {
     position: absolute;
+    top: 50%;
     right: 0.25rem;
-    width: 2em !important;
+    transform: translateY(-50%);
     vertical-align: middle;
     transition: all 0.2s !important;
 }
@@ -93,7 +94,7 @@
     height: 100%;
     border: none;
     height: 3em;
-    max-width: 3.25em;
+    width: 3.25em;
     color: var(--submenu-text-color);
     border-top: 1px dotted rgba(255, 255, 255, 0.2);
     border-bottom: 1px dotted rgba(255, 255, 255, 0.2);
@@ -111,8 +112,8 @@
 }
 .pages-menu-item .pages-submenu-wrapper .menu-item-logo svg {
     vertical-align: middle;
-    width: 2.5em;
-    height: 2.5em;
+    width: 1.5em;
+    height: 1.5em;
 }
 .pages-menu-item .menu-load-error {
     color: red;

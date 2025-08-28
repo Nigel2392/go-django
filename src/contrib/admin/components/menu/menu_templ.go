@@ -519,7 +519,7 @@ func (s *SubmenuItem) Component() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</div><button class=\"menu-item-toggle\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><path fill-rule=\"evenodd\" d=\"M4 8a.5.5 0 0 1 .5-.5h5.793L8.146 5.354a.5.5 0 1 1 .708-.708l3 3a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708-.708L10.293 8.5H4.5A.5.5 0 0 1 4 8\"></path></svg></button></div><div class=\"menu-item-menu-wrapper\"><div class=\"menu-item-menu\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 31, "</div><button class=\"menu-item-toggle\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path fill-rule=\"evenodd\" d=\"M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708\"></path></svg></button></div><div class=\"menu-item-menu-wrapper\"><div class=\"menu-item-menu\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -552,7 +552,7 @@ func (s *SubmenuItem) Component() templ.Component {
 					var templ_7745c5c3_Var20 string
 					templ_7745c5c3_Var20, templ_7745c5c3_Err = templ.JoinStringErrs(s.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 192, Col: 17}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 194, Col: 17}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var20))
 					if templ_7745c5c3_Err != nil {
@@ -667,7 +667,7 @@ func (s *DropdownItem) Component() templ.Component {
 			var templ_7745c5c3_Var24 string
 			templ_7745c5c3_Var24, templ_7745c5c3_Err = templ.JoinStringErrs(s.MenuID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 236, Col: 159}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 238, Col: 159}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var24))
 			if templ_7745c5c3_Err != nil {

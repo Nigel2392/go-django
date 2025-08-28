@@ -14,6 +14,8 @@ github.com/Nigel2392/goldcrest v1.0.4 h1:Xx+QLht6QjJ3Gg9uksgc6Ye1XjbtzQ1208ClZwo
 github.com/Nigel2392/goldcrest v1.0.4/go.mod h1:UpnPrYJqZY/b7TkoVKdoNNPKTlQtld+fsrZEA98c1c0=
 github.com/Nigel2392/mux v1.4.4 h1:ybQDCbVpU7gi2lklEYxYpa/3TkP76QnObtdOD+xwRRE=
 github.com/Nigel2392/mux v1.4.4/go.mod h1:a0OZuf+39ENmjSVJICsv2uMocJABSZTemfF5utx4mew=
+github.com/Nigel2392/mux v1.4.5 h1:0N23AQdj8g5hdnPbLdOPcLfhTHFipOkRug+8uhueyGc=
+github.com/Nigel2392/mux v1.4.5/go.mod h1:a0OZuf+39ENmjSVJICsv2uMocJABSZTemfF5utx4mew=
 github.com/Nigel2392/tags v1.0.0 h1:KR7VZosoKjksv0uYQDQp03iOo7l04MhCZhCjDeLIChg=
 github.com/Nigel2392/tags v1.0.0/go.mod h1:DDzJGymgpVSw0pjI7F7Qa7trBrGjlXaq1pE7jCCnagg=
 github.com/PuerkitoBio/goquery v1.10.1 h1:Y8JGYUkXWTGRB6Ars3+j3kN0xg1YqqlwvdTV8WTFQcU=

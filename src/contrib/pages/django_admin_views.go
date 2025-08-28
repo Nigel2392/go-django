@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
@@ -312,6 +313,22 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 			context.SetPage(admin.PageOptions{
 				TitleFn:    trans.S("(%d) Outdated Pages", count),
 				SubtitleFn: trans.S("List of outdated pages"),
+				SidePanels: []menu.SidePanel{
+					&menu.BaseSidePanel{
+						ID:           "filters",
+						Ordering:     100,
+						Request:      r,
+						TemplateName: "admin/shared/side_panels/filter_panel.tmpl",
+						PanelLabel:   trans.S("Filters"),
+						Context: func(p *menu.BaseSidePanel, r *http.Request, c ctx.Context) ctx.Context {
+							var dst = c.Data()
+							var src = context.Data()
+							dst["view_paginator_object"] = src["view_paginator_object"]
+							c.Set("filter", filter)
+							return c
+						},
+					},
+				},
 			})
 			return context, nil
 		},

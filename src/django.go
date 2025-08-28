@@ -330,30 +330,14 @@ func (a *Application) Reverse(name string, args ...any) string {
 	var rt, err = a.Mux.Reverse(name, args...)
 
 	if err != nil {
-		panic(fmt.Sprintf("Error reversing URL %s: %s", name, err))
+		assert.Fail("Error reversing URL %s: %s", name, err)
 	}
 
 	if len(rt) == 0 {
-		panic(fmt.Sprintf("Error reversing URL %s: %s", name, err))
+		assert.Fail("Reversed URL is empty for route %q", name)
 	}
 
-	var l = len(rt)
-	if !strings.HasSuffix(rt, "/") {
-		l += 1
-	}
-
-	if l == len(rt) {
-		return rt
-	}
-
-	var buf = make([]byte, l)
-	copy(buf, rt)
-
-	if !strings.HasSuffix(rt, "/") {
-		buf[l-1] = '/'
-	}
-
-	return string(buf)
+	return rt
 }
 
 func (a *Application) staticURL() string {

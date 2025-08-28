@@ -6,8 +6,8 @@
     --menu-header-height: 150px;
     --menu-header-color: #f5f5f5;
 
-    --menu-item-logo-size: 1.25em;
-    --menu-item-height: 2.75em;
+    --menu-item-logo-size: 1em;
+    --menu-item-height: 2.5em;
 
     --submenu-bg-color: #2c2c2c;
     --submenu-text-color: #ebebeb;
@@ -76,6 +76,7 @@
 .menu .menu-item .menu-item-content .menu-item-label {
     vertical-align: middle;
     font-weight: 500;
+    font-size: 0.9em;
 }
 .menu .accordion-menu-item > .menu-item-accordion-content {
     height: 0;
@@ -109,11 +110,11 @@
 .menu .submenu-menu-item > .menu-item-content .menu-item-toggle,
 .menu .accordion-menu-item > .menu-item-content .menu-item-toggle {
     width: auto;
-    height: 100%;
     /* color: var(--menu-toggle-text-color); */
     /* background-color: var(--menu-toggle-bg-color); */
     color: var(--submenu-text-color);
     background-color: transparent;
+    position: relative;
     padding: 0;
     border: none;
     transition: var(--menu-transition);
@@ -126,9 +127,10 @@
 /* } */
 .menu .submenu-menu-item > .menu-item-content .menu-item-toggle-icon,
 .menu .accordion-menu-item > .menu-item-content .menu-item-toggle-icon {
-    height: 100%;
-    width: 2.5em;
+    width: 1.25rem;
+    height: 1.25rem;
     vertical-align: middle;
+    margin-inline-end: 0.5rem;
     transition: background-color var(--menu-transition-speed),
         transform var(--menu-transition-speed);
     cursor: pointer;
@@ -153,16 +155,16 @@
     color: var(--submenu-text-color);
     box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
     background-color: var(--submenu-bg-color);
-    transition: left 0.2s, opacity 0.2s, visibility 0.2s,
-        transform 0.2s;
+    transition: left var(--menu-transition-speed), opacity var(--menu-transition-speed), visibility var(--menu-transition-speed),
+        transform var(--menu-transition-speed);
 }
 .menu .submenu-menu-item.open > .menu-item-menu-wrapper {
     left: var(--menu-width);
     transform: translateX(0);
     pointer-events: auto;
     box-shadow: var(--menu-box-shadow);
-    transition: left 0.2s, opacity 0.2s, visibility 0.2s,
-        transform 0.2s;
+    transition: left var(--menu-transition-speed), opacity var(--menu-transition-speed), visibility var(--menu-transition-speed),
+        transform var(--menu-transition-speed);
 }
 .menu .submenu-menu-item > .menu-item-menu-wrapper .menu-item-menu {
     display: flex;
@@ -209,9 +211,6 @@
 }
 .menu .submenu-menu-item > .menu-item-menu-wrapper .menu-item-menu-content {
 }
-.search-menu-item {
-    background-color: var(--menu-bg-color-hover) !important;
-}
 .search-menu-item .menu-item-search-form {
     width: 100%;
     height: 100%;
@@ -220,10 +219,21 @@
     width: 100%;
     height: 100%;
     border: none;
+    font-size: 1em;
     padding: 0.5em 1em;
     color: var(--menu-text-color);
-    font-size: 1em;
+    background-color: var(--menu-bg-color);
+    transition: background-color var(--menu-transition-speed);
+}
+.search-menu-item:hover .menu-item-search-input {
     background-color: var(--menu-bg-color-hover);
+}
+.search-menu-item:has(
+    .menu-item-search-input:focus,
+    .menu-item-search-input:focus-visible,
+    .menu-item-search-input:focus-within
+) {
+    background-color: var(--menu-bg-color-active);
 }
 .search-menu-item .menu-item-search-input:hover,
 .search-menu-item .menu-item-search-input:focus,
@@ -231,4 +241,5 @@
 .search-menu-item .menu-item-search-input:focus-within {
     outline: none;
     border: none;
+    background-color: var(--menu-bg-color-active);
 }

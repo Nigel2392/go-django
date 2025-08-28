@@ -71,7 +71,6 @@ class MultipleSelectController extends Controller<any> {
         event.preventDefault();
         const option = event.target as HTMLOptionElement;
         if (option.tagName === 'OPTION') {
-            console.debug("Selecting option:", option);
             this.selectedTarget.appendChild(option);
             option.selected = true;
         }
@@ -82,7 +81,6 @@ class MultipleSelectController extends Controller<any> {
         event.preventDefault();
         const option = event.target as HTMLOptionElement;
         if (option.tagName === 'OPTION') {
-            console.debug("Deselecting option:", option);
             this.deselectedTarget.appendChild(option);
             option.selected = false;
         }

@@ -15,47 +15,6 @@
                 {{ (.Data.view_paginator_object).HTML .Data.view_page_param 5 .Request.URL.Query }}
             </div>
         </div>
-
-        <div class="outdated-pages-filters">
-            <form method="get" action="{{ printf "%s?page=%d" .Request.URL.Path (.Data.view_paginator_object).PageNum }}" class="form">
-
-                {{ $errorList := .Data.filters_form.ErrorList }}
-                {{ if (gt (len $errorList) 0) }}
-                    <ul class="error-list">
-                        {{ range $Error := $errorList }}
-                            <li class="error"><p>{{ $Error }}</p></li>
-                        {{ end }}
-                    </ul>
-                {{ end }}
-
-                {{ range $Field := .Data.filters_form.Fields }}        
-                    <div class="panel">
-
-                        <div class="form-field">
-                            {{ $Field.Label }}
-
-                            {{ if (gt (len $Field.Errors) 0) }}
-                                <ul class="error-list">
-                                    {{ range $Error := $Field.Errors }}
-                                        <li class="error"><p>{{ $Field.FormField.Label }}: {{ $Error }}</p></li>
-                                    {{ end }}
-                                </ul>
-                            {{ end }}
-
-                            {{ if (ne $Field.HelpText "") }}
-                                <p class="help-text">{{ $Field.HelpText }}</p>
-                            {{ end }}
-
-                            {{ $Field.Field }}
-                        </div>
-                    </div>
-
-                {{ end }}
-
-
-                <input class="button secondary hollow sm" type="submit" value="{{ T "Submit" }}">
-            </form>
-        </div>
     </div>
 
 {{ end }}
