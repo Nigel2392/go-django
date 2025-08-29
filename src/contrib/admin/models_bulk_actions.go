@@ -59,7 +59,7 @@ func (b *BaseBulkAction) Execute(w http.ResponseWriter, r *http.Request, model *
 	return b.Func(w, r, model, qs)
 }
 
-func BulkActionButton(text any, typ components.ButtonType, actionName string, requiresSelected bool) templ.Component {
+func BulkActionButton(text any, typ components.ClassType, actionName string, requiresSelected bool) templ.Component {
 
 	var attrs = map[string]any{
 		"type":  "submit",
@@ -82,7 +82,7 @@ var (
 	BulkActionDelete = &BaseBulkAction{
 		ID:       "delete",
 		Ordering: 100,
-		Btn:      BulkActionButton(trans.S("Delete"), components.ButtonTypeDanger, "delete", true),
+		Btn:      BulkActionButton(trans.S("Delete"), components.ClassTypeDanger, "delete", true),
 		PermissionsFn: func(r *http.Request, model *ModelDefinition) bool {
 			return !model.DisallowDelete && permissions.HasPermission(r, "admin:delete")
 		},

@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/forms"
+	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"maps"
 	"net/http"
 )
@@ -51,7 +52,7 @@ func (c *ListColumnGroup[T]) Form(r *http.Request, opts ...func(forms.Form)) for
 		return nil
 	}
 
-	var form = forms.NewBaseForm(r.Context(), opts...)
+	var form = modelforms.NewBaseModelForm(r.Context(), c.Instance, opts...)
 	var fieldsAdded bool
 	for _, column := range columns {
 		var (

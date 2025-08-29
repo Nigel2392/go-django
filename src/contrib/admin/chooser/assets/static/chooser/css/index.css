@@ -3,7 +3,7 @@
     --modal-header-background-color: #f8f9fa;
     --modal-footer-background-color: #f8f9fa;
     --modal-text-color: #212529;
-    --border-color: var(--body-dark-bg-color);
+    /* --border-color: var(--border-color, var(--body-dark-bg-color)); */
     --border-radius: 0.3125rem;
 }
 .godjango-modal-wrapper {

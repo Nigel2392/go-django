@@ -1,23 +1,24 @@
 package list
 
 import (
-	"context"
+	"github.com/Nigel2392/go-django/queries/src/drivers"
     "github.com/Nigel2392/go-django/src/core/attrs"
     "github.com/Nigel2392/go-django/src/core/assert"
-	"html/template"
-	"time"
-	"net/http"
 	"github.com/Nigel2392/go-django/src/core/trans"
-	"github.com/Nigel2392/go-django/queries/src/drivers"
-	"reflect"
-	"strconv"
-	"fmt"
-	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms"
+	"html/template"
+	"net/http"
+	"context"
+	"reflect"
+	"strconv"
+	"time"
 	"maps"
+	"fmt"
+
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 )
 
 templ input(typ string, name string, value any, atts map[string]any) {
@@ -678,11 +679,7 @@ func (c *listEditableColumn[T]) value(r *http.Request, defs attrs.Definitions, r
 		d = field.GetDefault()
 	}
 
-	if c.config.Widget != nil {
-		d = c.config.Widget.ValueToForm(d)
-	}
-
-	return d
+	return field.FormField().ValueToForm(d)
 }
 
 func (c *listEditableColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
@@ -731,7 +728,8 @@ templ (c *listEditableColumn[T]) EditableComponent(r *http.Request, defs attrs.D
 		{{ return }}
 	}
 	{{ var hasErrors = forms.HasErrors(form) }}
-	<div class={ "list-editable", templ.KV("list-editable-errors", hasErrors) }>
+	<div class={ "list-editable form-field", templ.KV("list-editable-errors", hasErrors) }>
+		{{ fmt.Println(field.FormValue, c.value(r, defs, row)) }}
 		if !hasErrors && field.FormValue == nil {
 			{{ field.FormValue = c.value(r, defs, row) }}
 		}

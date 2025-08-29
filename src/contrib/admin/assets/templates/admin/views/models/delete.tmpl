@@ -7,17 +7,10 @@
 {{ end }}
 
 {{ define "content" }}
-    <h1>
-        {{ if .Data.instance }}
-            {{ T "Delete %s" (.Get "model").Label }}
-        {{ else }}
-            {{ T "Delete %d %s" (len .Data.pk_list) (.Get "model").PluralLabel }}
-        {{ end }}
-    </h1>
     <form method="post" class="admin-form">
         {{ csrf_field }}
 
-        <div class="alert danger">
+        <div class="alert danger content-width">
             {{ if (gt (len .Data.pk_list) 1) }}
                 <p class="alert-text">{{ T "Are you sure you want to delete objects with ids %v?" .Data.pk_list }}</p>
             {{ else }}

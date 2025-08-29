@@ -20,6 +20,7 @@ var (
 )
 
 type LogEntry interface {
+	attrs.Definer
 	ID() uuid.UUID
 	Type() string
 	Level() logger.LogLevel

@@ -3,10 +3,10 @@
 {{ define "title" }}{{ T "Delete" }}{{ end }}
 
 {{ define "content" }}
-    <div class="view-description">
-        <p>{{ T "This action cannot be reversed." }}</p>
+    <div class="alert danger content-width">
+        <p class="alert-text">{{ T "This action cannot be reversed." }}</p>
         {{ if gt (len .Data.Nodes) 1 }}
-            <p>{{ T "If you delete this page, %d children will also be deleted." (len .Data.Nodes) }}</p>
+            <p class="alert-text">{{ T "If you delete this page, %d children will also be deleted." (len .Data.Nodes) }}</p>
         {{ end }}
     </div>
 

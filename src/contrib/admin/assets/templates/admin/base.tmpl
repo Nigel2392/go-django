@@ -82,23 +82,30 @@
                 </div>
             {{ end }}
 
-            <div id="content">
+            {{ block "content_node" . }}
+                <div id="content">
+                    {{ block "content_root" . }}
+                        <div id="content__header">
+                            {{ block "header_root" . }}
+                                {{ block "header" . }}
+                                    {{ $Page := (.Get "Page") }}
+                                    {{ if $Page }}
+                                        {{ $Title := $Page.Title }}
+                                        {{ $Subtitle := $Page.Subtitle }}
 
-                {{ block "content_root" . }}
-                    {{ block "header" . }}
-                        {{ $Page := (.Get "Page") }}
-                        {{ if $Page }}
-                            {{ $Title := $Page.Title }}
-                            {{ $Subtitle := $Page.Subtitle }}
-                
-                            {{ if (and (or $Title $Subtitle)) }}
-                                {{ component "admin.header" 1 $Title $Subtitle $Page.Buttons }}
+                                        {{ if (and (or $Title $Subtitle)) }}
+                                            {{ component "admin.header" 1 $Title $Subtitle $Page.Buttons }}
+                                        {{ end }}
+                                    {{ end }}
+                                {{ end }}
                             {{ end }}
-                        {{ end }}
+                        </div>
+                        <div id="content__body">
+                            {{ block "content" . }}{{ end }}
+                        </div>
                     {{ end }}
-                    {{ block "content" . }}{{ end }}
-                {{ end }}
-            </div>
+                </div>
+            {{ end }}
 
         </section>
 

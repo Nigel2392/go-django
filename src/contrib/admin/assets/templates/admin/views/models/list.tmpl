@@ -37,13 +37,20 @@
     {{ if or (len .Data.actions) .Data.view_list_form }}
         <form action="{{ url "admin:apps:model" .Data.app.Name .Data.model.GetName }}" method="post" data-controller="bulk-actions">
             {{ csrf_field }}
-        
-            {{ template "header" . }}
-            {{ template "content" . }}
+            <div id="content__header">
+                {{ template "header" . }}
+            </div>
+            <div id="content__body">
+                {{ template "content" . }}
+            </div>
         </form>
     {{ else }}
-        {{ template "header" . }}
-        {{ template "content" . }}
+        <div id="content__header">
+            {{ template "header" . }}
+        </div>
+        <div id="content__body">
+            {{ template "content" . }}
+        </div>
     {{ end }}
 {{ end }}
 

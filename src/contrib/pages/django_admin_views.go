@@ -314,20 +314,9 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 				TitleFn:    trans.S("(%d) Outdated Pages", count),
 				SubtitleFn: trans.S("List of outdated pages"),
 				SidePanels: []menu.SidePanel{
-					&menu.BaseSidePanel{
-						ID:           "filters",
-						Ordering:     100,
-						Request:      r,
-						TemplateName: "admin/shared/side_panels/filter_panel.tmpl",
-						PanelLabel:   trans.S("Filters"),
-						Context: func(p *menu.BaseSidePanel, r *http.Request, c ctx.Context) ctx.Context {
-							var dst = c.Data()
-							var src = context.Data()
-							dst["view_paginator_object"] = src["view_paginator_object"]
-							c.Set("filter", filter)
-							return c
-						},
-					},
+					admin.SidePanelFilters(
+						r, filter, list.PageFromContext[attrs.Definer](req.Context()),
+					),
 				},
 			})
 			return context, nil
@@ -466,7 +455,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 						},
 						components.Link(components.ButtonConfig{
 							Text: trans.S("Add Child Page"),
-							Type: components.ButtonTypePrimary,
+							Type: components.ClassTypePrimary,
 						}, func() string {
 							return django.Reverse("admin:pages:type", p.PK)
 						}),
@@ -477,7 +466,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 						},
 						components.Link(components.ButtonConfig{
 							Text: trans.S("Edit Page"),
-							Type: components.ButtonTypePrimary,
+							Type: components.ClassTypePrimary,
 						}, func() string {
 							return django.Reverse("admin:pages:edit", p.PK)
 						}),
@@ -488,7 +477,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 						},
 						components.Link(components.ButtonConfig{
 							Text: trans.S("Delete Page"),
-							Type: components.ButtonTypeDanger | components.ButtonTypeHollow,
+							Type: components.ClassTypeDanger | components.ClassTypeHollow,
 						}, func() string {
 							return django.Reverse("admin:pages:delete", p.PK)
 						}),

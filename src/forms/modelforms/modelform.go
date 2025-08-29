@@ -154,7 +154,7 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 		}
 		var v = def.GetValue()
 		var n = def.Name()
-		if fields.IsZero(v) {
+		if attrs.IsZero(v) {
 			initial[n] = def.GetDefault()
 		} else {
 			initial[n] = v

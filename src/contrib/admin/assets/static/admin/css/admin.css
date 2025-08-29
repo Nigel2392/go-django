@@ -1,5 +1,7 @@
 :root {
     --sidebar-width: 200px;
+    --max-content-width: 60vw;
+    --max-panel-width: 1040px;
     --border-color: hsl( 0 0% calc( 14.9% + 63.5%) );
     --border-radius: .3125rem;
     --color-link: #00778b;
@@ -10,7 +12,8 @@
 
     --text-color-rgb: 51, 51, 51;
     --body-bg-color-rgb: 248, 249, 250;
-    --body-dark-bg-color-rgb: 221, 221, 221;
+    --body-dark-bg-color-rgb: 238, 239, 240;
+    --nav-bg-color-rgb: 228, 229, 230;
 
     --text-color: rgb(var(--text-color-rgb));
     --body-bg-color: rgb(var(--body-bg-color-rgb));
@@ -18,6 +21,8 @@
 
     --primary-bg-color-rgb: 31, 31, 31;
     --primary-bg-hover-rgb: 49, 49, 49;
+    --primary-bg-color-dark-rgb: 46, 31, 94;
+    --primary-bg-hover-dark-rgb: 40, 27, 78;
     --secondary-bg-color-rgb: 0, 119, 139;
     --secondary-bg-hover-rgb: 0, 108, 128;
     --info-bg-color-rgb: 46, 117, 187;
@@ -38,6 +43,8 @@
 
     --primary-bg-color: rgb(var(--primary-bg-color-rgb));
     --primary-bg-hover: rgb(var(--primary-bg-hover-rgb));
+    --primary-bg-color-dark: rgb(var(--primary-bg-color-dark-rgb));
+    --primary-bg-hover-dark: rgb(var(--primary-bg-hover-dark-rgb));
     --secondary-bg-color: rgb(var(--secondary-bg-color-rgb));
     --secondary-bg-hover: rgb(var(--secondary-bg-hover-rgb));
     --info-bg-color: rgb(var(--info-bg-color-rgb));
@@ -56,14 +63,10 @@
     --warning-text-color: rgb(var(--warning-text-color-rgb));
     --danger-text-color: rgb(var(--danger-text-color-rgb));
 
-
-    --navigation-bg-color: #f8f9fa;
-    --navigation-border-color: #e9ecef;
+    --navigation-bg-color: rgb(var(--nav-bg-color-rgb));
+    --navigation-border-color: var(--border-color);
     --navigation-text-color: var(--secondary-bg-color);
     --navigation-text-color-hover: var(--secondary-bg-hover);
-
-    --max-content-width: 60vw;
-    --max-panel-width: 1040px;
 }
 *, *::before, *::after {
     box-sizing: border-box;
@@ -101,7 +104,7 @@ body {
     & h6 {
         margin-top: 0;
         margin-bottom: .5rem;
-        color: #2e1f5e;
+        color: var(--primary-bg-color-dark);
     }
 }
 hr {
@@ -201,7 +204,6 @@ a.danger {
     color: rgb(var(--alert-color-rgb));
     border: 1px solid var(--alert-border-color);
     border-radius: var(--border-radius);
-    max-width: var(--max-panel-width, 1040px);
     margin: 1rem 0;
     padding: 1rem;
 }
@@ -217,6 +219,7 @@ a.danger {
 .alert p {
     margin-top: 0;
     margin-bottom: 0.325rem;
+    font-size: 0.9rem;
 }
 .alert.primary {
     --alert-color-rgb: var(--text-color-rgb);
@@ -256,7 +259,7 @@ a.danger {
 #main #sidebar-wrapper {
     --menu-width: var(--sidebar-width);
     flex: 0 0 var(--sidebar-width);
-    background-color: #2e1f5e;
+    background-color: var(--primary-bg-color-dark);
     box-shadow: 3px 0 5px rgba(0, 0, 0, 0.4);
     position: sticky;
     top: 0;
@@ -305,11 +308,6 @@ a.danger {
     flex: 1;
     overflow-y: auto;
     position: relative;
-    /* position: absolute; */
-    top: 0;
-    right: 0;
-    bottom: 0;
-    /* left: var(--sidebar-width); */
     z-index: 100;
     display: flex;
     flex-direction: column;
@@ -332,17 +330,34 @@ a.danger {
     flex: 1;
     display: flex;
     flex-direction: column;
+    overflow-y: auto;
+}
+#main #content-wrapper #content__header:has(*) {
+    display: flex;
+    flex-direction: column;
+    background-color: var(--body-dark-bg-color);
+    border-bottom: 1px dashed var(--border-color);
+    padding: 1em 2.25em;
+}
+#main #content-wrapper #content__header .header,
+#main #content-wrapper #content__header .heading__title {
+    margin: 0;
+}
+#main #content-wrapper #content__body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     background-color: var(--body-bg-color);
     padding: 0.5em 2.25em;
 }
-#main #content-wrapper #content .admin-form {
+#main #content-wrapper #content__body .admin-form {
     flex: 1;
     position: relative;
     display: flex;
     flex-direction: column;
 }
 
-#main #content-wrapper #content .admin-form .form-buttons {
+#main #content-wrapper #content__body .admin-form .form-buttons {
     position: sticky;
     z-index: 1000;
     bottom: 0.325rem;
@@ -355,14 +370,14 @@ a.danger {
     max-width: 1040px;
     margin-top: auto;
 }
-#main #content-wrapper #content .admin-form .form-buttons/*.inline*/ {
+#main #content-wrapper #content__body .admin-form .form-buttons/*.inline*/ {
     flex-direction: row;
     padding: 0.5em 1em;
 }
-#main #content-wrapper #content .admin-form .form-buttons:has(.form-buttons__ending) {
+#main #content-wrapper #content__body .admin-form .form-buttons:has(.form-buttons__ending) {
     width: 100%;
 }
-#main #content-wrapper #content .admin-form .form-buttons .form-buttons__ending {
+#main #content-wrapper #content__body .admin-form .form-buttons .form-buttons__ending {
     margin-left: auto;
 }
 /* #main #content-wrapper #content .admin-form .form-buttons:not(.inline) { */
@@ -482,7 +497,7 @@ flex-direction is set to row above 70em.
 }
 .content-width {
     --max-width: var(--max-content-width, 60vw);
-    max-width: var(--max-width);
+    max-width: max(var(--max-width), var(--max-panel-width));
 }
 .panel {
     --max-width: var(--max-panel-width, 1040px);
@@ -509,12 +524,9 @@ flex-direction is set to row above 70em.
     margin: 0;
     margin-bottom: 0.375rem;
 }
-.panel input:not([type="checkbox"], .default-input, [type="radio"], .cdx-search-field__input, .ce-inline-tool-input),
-.panel textarea:not(.default-input),
-.panel select:not(.default-input),
-.form-field input:not([type="checkbox"], .default-input, [type="radio"], .cdx-search-field__input, .ce-inline-tool-input),
-.form-field textarea:not(.default-input),
-.form-field select:not(.default-input) {
+*:is(.form-field, .panel) input:not([type="checkbox"], .default-input, [type="radio"], .cdx-search-field__input, .ce-inline-tool-input),
+*:is(.form-field, .panel) textarea:not(.default-input),
+*:is(.form-field, .panel) select:not(.default-input) {
     -moz-appearance: none;
     appearance: none;
     background-color: hsl(0, 0%, 100%);
@@ -528,23 +540,17 @@ flex-direction is set to row above 70em.
     padding: .375rem 1.25rem;
     width: 100%;
 }
-.panel input:not([type="checkbox"], .default-input, [type="radio"]):disabled,
-.panel input:not([type="checkbox"], .default-input, [type="radio"]):read-only,
-.panel textarea:not(.default-input):disabled,
-.panel textarea:not(.default-input):read-only,
-.form-field input:not([type="checkbox"], .default-input, [type="radio"]):disabled,
-.form-field input:not([type="checkbox"], .default-input, [type="radio"]):read-only,
-.form-field textarea:not(.default-input):disabled,
-.form-field textarea:not(.default-input):read-only {
+*:is(.form-field, .panel) input:not([type="checkbox"], .default-input, [type="radio"]):disabled,
+*:is(.form-field, .panel) input:not([type="checkbox"], .default-input, [type="radio"]):read-only,
+*:is(.form-field, .panel) textarea:not(.default-input):disabled,
+*:is(.form-field, .panel) textarea:not(.default-input):read-only {
     background-color: hsl( 0 0% 98% );
     color: hsl( 0 0% 60% );
 }
-.panel textarea:not(.default-input),
-.form-field textarea:not(.default-input) {
+*:is(.form-field, .panel) textarea:not(.default-input) {
     resize: vertical;
 }
-.panel select:not(.default-input),
-.form-field select:not(.default-input) {
+*:is(.form-field, .panel) select:not(.default-input) {
     -moz-appearance: none;
     appearance: none;
     background-color: var(--w-color-surface-field);
@@ -554,14 +560,11 @@ flex-direction is set to row above 70em.
     background-size: .375rem .375rem,.375rem .375rem;
     padding-inline-end:2.625rem
 }
-.panel select:not(.default-input):hover,
-.form-field select:not(.default-input):hover {
+*:is(.form-field, .panel) select:not(.default-input):hover {
     border-color: var(--border-color);
 }
-.panel select:not(.default-input)[disabled],
-.panel select:not(.default-input)[disabled]:hover,
-.form-field select:not(.default-input)[disabled],
-.form-field select:not(.default-input)[disabled]:hover {
+*:is(.form-field, .panel) select:not(.default-input)[disabled],
+*:is(.form-field, .panel) select:not(.default-input)[disabled]:hover {
     background-color: rgba(0, 0, 0, 0.1);
     border-color: var(--border-color);
     color: var(--text-color);
@@ -677,13 +680,13 @@ flex-direction is set to row above 70em.
     margin-inline-start: 0.375rem;
 }
 .side-panels .side-panels__content {
-    position: absolute;
+    position: fixed;
     visibility: hidden;
     opacity: 0;
     top: 0;
     right: 0;
     bottom: 0;
-    z-index: 200;
+    z-index: 9999;
     min-width: 0%;
     display: flex;
     overflow-y: auto;
@@ -954,11 +957,15 @@ a.button, .button a {
 }
 
 @media screen and (min-width: 70em) {
-    #main #content-wrapper #content {
+    #main #content-wrapper #content__header:has(*) {
+        padding: 2em 3.5em;
+    }
+    #main #content-wrapper #content__body {
         padding: 1.5em 4em;
     }
     .header.header-inline {
         flex-direction: row;
+        align-items: center;
         flex-wrap: nowrap;
     }
     .header.header-inline .header__content,
@@ -1086,4 +1093,23 @@ a.button, .button a {
 }
 .mb-auto {
     margin-bottom: auto;
+}
+
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+/* Track */
+::-webkit-scrollbar-track {
+   box-shadow: inset 0 0 5px rgba(0,0,0,0.5); 
+   background: var(--body-bg-color);
+}
+/* Handle */
+::-webkit-scrollbar-thumb {
+  background: var(--secondary-bg-color);
+  border-radius: 10px;
+}
+/* Handle on hover */
+::-webkit-scrollbar-thumb:hover {
+  background: var(--secondary-bg-hover);
 }

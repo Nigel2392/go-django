@@ -60,7 +60,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		DefaultAmount:   int(amount),
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: admin.BASE_KEY,
-		TemplateName:    "pages/admin/admin_list.tmpl",
+		TemplateName:    "pages/admin/admin_root_list.tmpl",
 		ChangeContextFn: func(req *http.Request, qs *queries.QuerySet[attrs.Definer], viewCtx ctx.Context) (ctx.Context, error) {
 			var context = admin.NewContext(
 				req, admin.AdminSite, viewCtx,
@@ -83,7 +83,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 						},
 						components.Link(components.ButtonConfig{
 							Text: trans.S("Add Root Page"),
-							Type: components.ButtonTypePrimary,
+							Type: components.ClassTypePrimary,
 						}, func() string {
 							return django.Reverse("admin:pages:root_type")
 						}),

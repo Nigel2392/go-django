@@ -14,21 +14,21 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 )
 
-type ButtonType uint8
+type ClassType uint8
 
 const (
-	ButtonTypePrimary ButtonType = 1 << iota
-	ButtonTypeSecondary
-	ButtonTypeSuccess
-	ButtonTypeWarning
-	ButtonTypeDanger
-	ButtonTypeHollow
+	ClassTypePrimary ClassType = 1 << iota
+	ClassTypeSecondary
+	ClassTypeSuccess
+	ClassTypeWarning
+	ClassTypeDanger
+	ClassTypeHollow
 )
 
 type ButtonConfig struct {
 	Text  func(context.Context) string
 	Icon  templ.Component
-	Type  ButtonType
+	Type  ClassType
 	Attrs map[string]any
 }
 
@@ -36,7 +36,7 @@ func NewButton(text any, args ...interface{}) templ.Component {
 
 	var (
 		iconComponent templ.Component
-		type_         ButtonType = 0
+		type_         ClassType = 0
 		attrs         map[string]any
 	)
 loop:
@@ -49,12 +49,12 @@ loop:
 				continue loop
 			}
 			iconComponent = templ.Raw(t)
-		case ButtonType:
+		case ClassType:
 			type_ |= t
 		case int:
-			type_ |= ButtonType(t)
+			type_ |= ClassType(t)
 		case uint:
-			type_ |= ButtonType(t)
+			type_ |= ClassType(t)
 		case map[string]any:
 			attrs = t
 		case nil, any:
@@ -79,9 +79,9 @@ func ButtonPrimary(text string, icon any, hollow ...bool) templ.Component {
 	if len(hollow) > 0 && hollow[0] {
 		h = true
 	}
-	var typ = ButtonTypePrimary
+	var typ = ClassTypePrimary
 	if h {
-		typ |= ButtonTypeHollow
+		typ |= ClassTypeHollow
 	}
 	return NewButton(text, icon, typ)
 }
@@ -91,9 +91,9 @@ func ButtonSecondary(text string, icon any, hollow ...bool) templ.Component {
 	if len(hollow) > 0 && hollow[0] {
 		h = true
 	}
-	var typ = ButtonTypeSecondary
+	var typ = ClassTypeSecondary
 	if h {
-		typ |= ButtonTypeHollow
+		typ |= ClassTypeHollow
 	}
 	return NewButton(text, icon, typ)
 }
@@ -103,9 +103,9 @@ func ButtonSuccess(text string, icon any, hollow ...bool) templ.Component {
 	if len(hollow) > 0 && hollow[0] {
 		h = true
 	}
-	var typ = ButtonTypeSuccess
+	var typ = ClassTypeSuccess
 	if h {
-		typ |= ButtonTypeHollow
+		typ |= ClassTypeHollow
 	}
 	return NewButton(text, icon, typ)
 }
@@ -115,9 +115,9 @@ func ButtonDanger(text string, icon any, hollow ...bool) templ.Component {
 	if len(hollow) > 0 && hollow[0] {
 		h = true
 	}
-	var typ = ButtonTypeDanger
+	var typ = ClassTypeDanger
 	if h {
-		typ |= ButtonTypeHollow
+		typ |= ClassTypeHollow
 	}
 	return NewButton(text, icon, typ)
 }
@@ -127,9 +127,9 @@ func ButtonWarning(text string, icon any, hollow ...bool) templ.Component {
 	if len(hollow) > 0 && hollow[0] {
 		h = true
 	}
-	var typ = ButtonTypeWarning
+	var typ = ClassTypeWarning
 	if h {
-		typ |= ButtonTypeHollow
+		typ |= ClassTypeHollow
 	}
 	return NewButton(text, icon, typ)
 }
@@ -157,12 +157,12 @@ func Button(config ButtonConfig) templ.Component {
 		ctx = templ.ClearChildren(ctx)
 		var templ_7745c5c3_Var2 = []any{
 			"button",
-			templ.KV("primary", config.Type&ButtonTypePrimary != 0),
-			templ.KV("secondary", config.Type&ButtonTypeSecondary != 0),
-			templ.KV("success", config.Type&ButtonTypeSuccess != 0),
-			templ.KV("danger", config.Type&ButtonTypeDanger != 0),
-			templ.KV("warning", config.Type&ButtonTypeWarning != 0),
-			templ.KV("hollow", config.Type&ButtonTypeHollow != 0),
+			templ.KV("primary", config.Type&ClassTypePrimary != 0),
+			templ.KV("secondary", config.Type&ClassTypeSecondary != 0),
+			templ.KV("success", config.Type&ClassTypeSuccess != 0),
+			templ.KV("danger", config.Type&ClassTypeDanger != 0),
+			templ.KV("warning", config.Type&ClassTypeWarning != 0),
+			templ.KV("hollow", config.Type&ClassTypeHollow != 0),
 		}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
 		if templ_7745c5c3_Err != nil {
@@ -203,7 +203,7 @@ func Button(config ButtonConfig) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(config.Text(ctx))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 146, Col: 30}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 145, Col: 30}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -253,12 +253,12 @@ func Link(config ButtonConfig, href func() string) templ.Component {
 		}
 		var templ_7745c5c3_Var6 = []any{
 			"button",
-			templ.KV("primary", config.Type&ButtonTypePrimary != 0),
-			templ.KV("secondary", config.Type&ButtonTypeSecondary != 0),
-			templ.KV("success", config.Type&ButtonTypeSuccess != 0),
-			templ.KV("danger", config.Type&ButtonTypeDanger != 0),
-			templ.KV("warning", config.Type&ButtonTypeWarning != 0),
-			templ.KV("hollow", config.Type&ButtonTypeHollow != 0),
+			templ.KV("primary", config.Type&ClassTypePrimary != 0),
+			templ.KV("secondary", config.Type&ClassTypeSecondary != 0),
+			templ.KV("success", config.Type&ClassTypeSuccess != 0),
+			templ.KV("danger", config.Type&ClassTypeDanger != 0),
+			templ.KV("warning", config.Type&ClassTypeWarning != 0),
+			templ.KV("hollow", config.Type&ClassTypeHollow != 0),
 		}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var6...)
 		if templ_7745c5c3_Err != nil {
@@ -308,7 +308,7 @@ func Link(config ButtonConfig, href func() string) templ.Component {
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(config.Text(ctx))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 171, Col: 30}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 170, Col: 30}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {

@@ -69,6 +69,7 @@
     opacity: 1;
     visibility: visible;
     filter: blur(0);
+    transform: translateY(-50%) !important;
 }
 .pages-menu-item .close-icon,
 .pages-menu-item.open .open-icon {

@@ -135,6 +135,10 @@
     transition: background-color var(--menu-transition-speed),
         transform var(--menu-transition-speed);
 }
+.menu .accordion-menu-item > .menu-item-content .menu-item-toggle-icon {
+    width: 1.4rem;
+    height: 1.4rem;
+}
 .menu .submenu-menu-item.open > .menu-item-content {
     background-color: var(--menu-bg-color-active);
     color: var(--menu-text-color-active);

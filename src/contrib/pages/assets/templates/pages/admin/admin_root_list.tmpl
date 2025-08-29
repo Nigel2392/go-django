@@ -1,0 +1,19 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ .Page.Title }}{{ end }}
+
+{{ define "content" }}
+    <div class="alert info">
+        <p class="alert-text">{{ T "The main level is where you can add new pages to your site. Pages created here will act as a home- page and be available once they have been added to a site." }}</p>
+        <p class="alert-text">{{ T "If you wish to add pages to an existing site, you can do so by adding child pages to the below pages." }}</p>
+    </div>
+
+    <div class="pages-list list-wrapper">
+        {{ $list := (.Get "view_list") }}
+        {{ safe $list.Render }}
+    </div>
+
+    <div class="pages-list-paginator list-paginator">
+        {{ (.Data.view_paginator_object).HTML "page" 5 .Request.URL.Query }}
+    </div>
+{{ end }}

@@ -274,7 +274,7 @@ continueView:
 					},
 					components.Button(components.ButtonConfig{
 						Text: trans.GetTextFunc("Select All"),
-						Type: components.ButtonTypePrimary,
+						Type: components.ClassTypePrimary,
 						Attrs: map[string]any{
 							"type":                     "button",
 							"data-bulk-actions-target": "selectAll",
@@ -287,7 +287,7 @@ continueView:
 					},
 					BulkActionButton(
 						trans.S("Change"),
-						components.ButtonTypeWarning|components.ButtonTypeHollow,
+						components.ClassTypeWarning|components.ClassTypeHollow,
 						"",
 						len(actions) > 0,
 					),
@@ -323,7 +323,7 @@ continueView:
 							},
 							components.Link(components.ButtonConfig{
 								Text: trans.S("Add"),
-								Type: components.ButtonTypePrimary,
+								Type: components.ClassTypePrimary,
 							}, func() string {
 								return django.Reverse("admin:apps:model:add", app.Name, model.GetName())
 							}),
@@ -332,23 +332,11 @@ continueView:
 					buttons...,
 				),
 				SidePanels: []menu.SidePanel{
-					&menu.BaseSidePanel{
-						ID:       "filters",
-						Ordering: 100,
-						Request:  r,
-						Hidden: func(p *menu.BaseSidePanel, r *http.Request) bool {
+					SidePanelFilters(
+						r, filterForm, list.PageFromContext[attrs.Definer](req.Context()), func(p *menu.BaseSidePanel, r *http.Request) bool {
 							return len(model.ListView.Filters) == 0
 						},
-						TemplateName: "admin/shared/side_panels/filter_panel.tmpl",
-						PanelLabel:   trans.S("Filters"),
-						Context: func(p *menu.BaseSidePanel, r *http.Request, c ctx.Context) ctx.Context {
-							var dst = c.Data()
-							var src = context.Data()
-							dst["view_paginator_object"] = src["view_paginator_object"]
-							c.Set("filter", filterForm)
-							return c
-						},
-					},
+					),
 				},
 			})
 			context.Set("app", app)
@@ -575,23 +563,39 @@ func (v *AdminDeleteView) ServePOST(w http.ResponseWriter, r *http.Request) {
 
 func (v *AdminDeleteView) GetContext(req *http.Request) (ctx.Context, error) {
 
-	context := NewContext(req, v.AdminSite, nil)
-	context.Set("app", v.App)
-	context.Set("model", v.Model)
-	context.Set("instances", v.Instances)
-	context.Set("pk_list", v.PKList())
+	c := NewContext(req, v.AdminSite, nil)
+	c.Set("app", v.App)
+	c.Set("model", v.Model)
+	c.Set("instances", v.Instances)
+	c.Set("pk_list", v.PKList())
 
 	if len(v.Instances) == 1 {
-		context.Set("instance", v.Instance())
-		context.Set("primaryField", v.PrimaryField())
+		c.Set("instance", v.Instance())
+		c.Set("primaryField", v.PrimaryField())
 	}
+	//	<h1>
+	//	    {{ if .Data.instance }}
+	//	        {{ T "Delete %s" (.Get "model").Label }}
+	//	    {{ else }}
+	//	        {{ T "Delete %d %s" (len .Data.pk_list) (.Get "model").PluralLabel }}
+	//	    {{ end }}
+	//	</h1>
+
+	c.SetPage(PageOptions{
+		TitleFn: func(ctx context.Context) string {
+			if len(v.Instances) == 1 {
+				return trans.T(ctx, "Delete %s", v.Model.Label(ctx))
+			}
+			return trans.T(ctx, "Delete %d %s", len(v.Instances), v.Model.PluralLabel(ctx))
+		},
+	})
 
 	var next = req.FormValue("next")
 	if next != "" {
-		context.Set("BackURL", next)
+		c.Set("BackURL", next)
 	}
 
-	return context, nil
+	return c, nil
 }
 
 var ModelDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminSite *AdminApplication, app *AppDefinition, model *ModelDefinition, instance attrs.Definer) {

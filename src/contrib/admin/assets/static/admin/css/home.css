@@ -27,7 +27,7 @@
     gap: 0.25em;
 }
 @media (min-width: 768px) {
-    #main #content-wrapper div#content {
+    #main #content-wrapper div#content__body {
         padding-left: 2.5em;
         padding-right: 2.5em;
         padding-top: 2em;
@@ -42,7 +42,7 @@
     }
 }
 @media (min-width: 992px) {
-    #main #content-wrapper div#content {
+    #main #content-wrapper div#content__body {
         padding-left: 4em;
         padding-right: 4em;
         padding-top: 3em;

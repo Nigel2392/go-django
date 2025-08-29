@@ -390,6 +390,9 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	adminCtx.SetPage(admin.PageOptions{
 		TitleFn:    trans.S("Audit Logs"),
 		SubtitleFn: trans.S("View all audit logs"),
+		SidePanels: []menu.SidePanel{
+			admin.SidePanelFilters(r, filter, page),
+		},
 	})
 
 	var v = &views.BaseView{

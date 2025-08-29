@@ -337,18 +337,22 @@ func NewAppConfig(cnf Config) django.AppConfig {
 									return row.(*User).RefreshToken != ""
 								},
 							),
-							"IsActive": list.FieldCheckbox[attrs.Definer](
+							"IsActive": list.EditableColumn[attrs.Definer](
 								trans.S("Is Active"),
-								"IsActive",
-								func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-									return permissions.HasObjectPermission(r, row, "admin:edit")
+								list.EditableColumnConfig{
+									FieldName: "IsActive",
+									HasPermission: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+										return permissions.HasObjectPermission(r, row, "admin:edit")
+									},
 								},
 							),
-							"IsAdministrator": list.FieldCheckbox[attrs.Definer](
+							"IsAdministrator": list.EditableColumn[attrs.Definer](
 								trans.S("Is Admin"),
-								"IsAdministrator",
-								func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-									return permissions.HasObjectPermission(r, row, "admin:edit")
+								list.EditableColumnConfig{
+									FieldName: "IsAdministrator",
+									HasPermission: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+										return permissions.HasObjectPermission(r, row, "admin:edit")
+									},
 								},
 							),
 							"CreatedAt": columns.TimeSinceColumn[attrs.Definer](
