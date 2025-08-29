@@ -232,7 +232,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 				return object, nil
 			}
 
-			return object.Filter("Type", value), nil
+			return object.Filter("Type__istartswith", value), nil
 		},
 	})
 
@@ -308,10 +308,10 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 
-	var (
-		err error
-		qs  = queries.GetQuerySet(&Entry{})
-	)
+	var err error
+	var qs = queries.
+		GetQuerySet(&Entry{}).
+		SelectRelated("User")
 
 	qs, err = filter.Filter(r, r.URL.Query(), qs)
 	if err != nil && !errors.Is(err, filters.ErrForm) {
@@ -390,8 +390,11 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	adminCtx.SetPage(admin.PageOptions{
 		TitleFn:    trans.S("Audit Logs"),
 		SubtitleFn: trans.S("View all audit logs"),
-		SidePanels: []menu.SidePanel{
-			admin.SidePanelFilters(r, filter, page),
+		SidePanels: &menu.SidePanels{
+			ActivePanel: "filters",
+			Panels: []menu.SidePanel{
+				admin.SidePanelFilters(r, filter, page),
+			},
 		},
 	})
 

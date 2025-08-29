@@ -12,7 +12,10 @@
             {{ range $Field := .Data.filter_form.Fields }}        
                 {{ include . "admin/shared/forms/form_panel.tmpl" }}
             {{ end }}
-            <input class="button secondary hollow sm" type="submit" value="{{ T "Submit" }}">
+            <div class="buttons">
+                <input class="button secondary hollow sm" type="submit" value="{{ T "Submit" }}">
+                <a href="{{ .Request.URL.Path }}" class="button danger hollow sm">{{ T "Clear all" }}</a>
+            </div>
         </form>
     {{ end }}
 {{ end }}

@@ -5,8 +5,17 @@
 {{ define "content" }}
 
     <div id="auditlogs">
-        <div class="auditlog-list">
+        <div class="alert info content-width lg">
+            <p class="alert-text">{{ T "Audit logs provide a record of actions and events that have occurred within the system." }}</p>
+            <p class="alert-text">{{ T "They are essential for tracking changes, monitoring user activity, and ensuring compliance with security policies." }}</p>
+            <p class="alert-text">{{ T "Use the filters panel to narrow down the logs based on specific criteria such as date range, log level, or keywords." }}</p>
+        </div>
+
+
+        <div class="auditlog-list content-width">
             {{ $page := (.Get "paginator") }}
+
+            {{ $page.HTML "page" 5 .Request.URL.Query }}
 
             {{ range $log := $page.Results }}
                 <div class="auditlog-list-item auditlog-{{ $log.Level.String }}">
@@ -47,7 +56,13 @@
                                 </div>
                             </div>
                         {{ end }}
-    
+
+                        {{ if $log.User }}
+                            <div class="auditlog-list-item__body__user">
+                                <code>{{ $log.User | toString }}</code>
+                            </div>
+                        {{ end }}
+
                         {{ if $log.Timestamp }}
                             <div class="auditlog-list-item__body__timestamp">
                                 <code>{{ $log.Timestamp.Format "2006-01-02 15:04:05" }}</code>

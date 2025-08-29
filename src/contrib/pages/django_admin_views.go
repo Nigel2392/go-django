@@ -313,10 +313,13 @@ func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 			context.SetPage(admin.PageOptions{
 				TitleFn:    trans.S("(%d) Outdated Pages", count),
 				SubtitleFn: trans.S("List of outdated pages"),
-				SidePanels: []menu.SidePanel{
-					admin.SidePanelFilters(
-						r, filter, list.PageFromContext[attrs.Definer](req.Context()),
-					),
+				SidePanels: &menu.SidePanels{
+					ActivePanel: "filters",
+					Panels: []menu.SidePanel{
+						admin.SidePanelFilters(
+							r, filter, list.PageFromContext[attrs.Definer](req.Context()),
+						),
+					},
 				},
 			})
 			return context, nil
@@ -670,19 +673,19 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			addData["parent"] = p.ID()
 		}
 
-		auditlogs.Log(ctx,
-			"pages:add",
-			logger.INF,
-			page.Reference(),
-			addData,
-		)
-
 		if p != nil && p.ID() > 0 {
 			auditlogs.Log(ctx, "pages:add_child", logger.INF, p, map[string]interface{}{
 				"page_id": ref.ID(),
 				"label":   ref.Title,
 				"cType":   cType.PkgPath(),
 			})
+		} else {
+			auditlogs.Log(ctx,
+				"pages:add",
+				logger.INF,
+				page.Reference(),
+				addData,
+			)
 		}
 
 		if publishPage {

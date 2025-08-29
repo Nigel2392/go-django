@@ -11,7 +11,8 @@ import "slices"
 import "io"
 
 type SidePanels struct {
-    Panels []SidePanel
+    ActivePanel string
+    Panels      []SidePanel
 }
 
 func (p *SidePanels) HasPanels() bool {
@@ -44,9 +45,8 @@ func (p *SidePanels) sortPanels(a, b SidePanel) int {
 templ (p *SidePanels) Component() {
     {{ var panels = slices.Clone(p.Panels) }}
     {{ slices.SortStableFunc(panels, p.sortPanels) }}
-    
 
-    <div class="side-panels" data-controller="side-panels">
+    <div class="side-panels" data-controller="side-panels" if p.ActivePanel != "" { data-side-panels-default-panel-id-value={ "panel__" + p.ActivePanel } }>
         <div class="side-panels__controls actions">
             for _, panel := range panels {
                 if !panel.IsShown() {

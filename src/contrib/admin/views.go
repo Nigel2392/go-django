@@ -331,12 +331,14 @@ continueView:
 					},
 					buttons...,
 				),
-				SidePanels: []menu.SidePanel{
-					SidePanelFilters(
-						r, filterForm, list.PageFromContext[attrs.Definer](req.Context()), func(p *menu.BaseSidePanel, r *http.Request) bool {
-							return len(model.ListView.Filters) == 0
-						},
-					),
+				SidePanels: &menu.SidePanels{
+					Panels: []menu.SidePanel{
+						SidePanelFilters(
+							r, filterForm, list.PageFromContext[attrs.Definer](req.Context()), func(p *menu.BaseSidePanel, r *http.Request) bool {
+								return len(model.ListView.Filters) == 0
+							},
+						),
+					},
 				},
 			})
 			context.Set("app", app)

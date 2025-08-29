@@ -49,4 +49,10 @@ window.sprintf = sprintf;
 
 app.start();
 
+document.addEventListener("DOMContentLoaded", () => {
+    setTimeout(() => {
+        document.body.classList.remove("preloading");
+    }, 100);
+});
+
 console.log('Admin app started');

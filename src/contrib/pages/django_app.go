@@ -511,19 +511,113 @@ func newPageLogDefinition() *pageLogDefinition {
 	}
 }
 
+func (p *pageLogDefinition) GetLabel(r *http.Request, logEntry auditlogs.LogEntry) string {
+	var cTypeName, ok = logEntry.Data()["cType"].(string)
+	var cType *contenttypes.ContentTypeDefinition
+	var unpublishChildren, _ = logEntry.Data()["unpublish_children"].(bool)
+	if ok {
+		cType = contenttypes.DefinitionForType(cTypeName)
+	} else {
+		cTypeName = fmt.Sprintf(
+			"%s.%s",
+			AdminPagesAppName,
+			AdminPagesModelPath,
+		)
+	}
+
+	if cType != nil {
+		cTypeName = cType.Label(r.Context())
+	}
+
+	switch logEntry.Type() {
+	case "pages:add":
+		return trans.T(r.Context(), "%q: Page added",
+			cTypeName,
+		)
+	case "pages:add_child":
+		return trans.T(r.Context(), "%q: Child page added",
+			cTypeName,
+		)
+	case "pages:edit":
+		return trans.T(r.Context(), "%q: Page edited",
+			cTypeName,
+		)
+	case "pages:publish":
+		return trans.T(r.Context(), "%q: Page published",
+			cTypeName,
+		)
+	case "pages:unpublish":
+		if unpublishChildren {
+			return trans.T(r.Context(), "%q: Page and it's children were unpublished",
+				cTypeName,
+			)
+		}
+		return trans.T(r.Context(), "%q: Page unpublished",
+			cTypeName,
+		)
+	}
+	return trans.T(r.Context(), "Unknown page log entry type")
+}
+
 func (p *pageLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []auditlogs.LogEntryAction {
 	var id = l.ObjectID()
 	if id == nil {
 		return nil
 	}
-	return []auditlogs.LogEntryAction{
-		&auditlogs.BaseAction{
+
+	var actions = make([]auditlogs.LogEntryAction, 0)
+	if permissions.HasPermission(r, "pages:edit") {
+		actions = append(actions, &auditlogs.BaseAction{
 			DisplayLabel: trans.T(r.Context(), "Edit Live Page"),
 			ActionURL: fmt.Sprintf("%s?%s=%s",
 				django.Reverse("admin:pages:edit", id),
 				"next",
 				r.URL.Path,
 			),
-		},
+		})
 	}
+
+	return actions
+}
+
+func (p *pageLogDefinition) FormatMessage(r *http.Request, logEntry auditlogs.LogEntry) string {
+	var cTypeName, ok = logEntry.Data()["cType"].(string)
+	var cType *contenttypes.ContentTypeDefinition
+	if ok {
+		cType = contenttypes.DefinitionForType(cTypeName)
+	} else {
+		cTypeName = fmt.Sprintf(
+			"%s.%s",
+			AdminPagesAppName,
+			AdminPagesModelPath,
+		)
+	}
+
+	if cType != nil {
+		cTypeName = cType.Label(r.Context())
+	}
+
+	switch logEntry.Type() {
+	case "pages:add":
+		return trans.T(r.Context(), "Page with id %v and content type %q was added",
+			logEntry.ObjectID(), cTypeName,
+		)
+	case "pages:add_child":
+		return trans.T(r.Context(), "Child page with id %v and content type %q was added under parent with id %v",
+			logEntry.Data()["page_id"], cTypeName, logEntry.ObjectID(),
+		)
+	case "pages:edit":
+		return trans.T(r.Context(), "Page with id %v and content type %q was edited",
+			logEntry.ObjectID(), cTypeName,
+		)
+	case "pages:publish":
+		return trans.T(r.Context(), "Page with id %v and content type %q was published",
+			logEntry.ObjectID(), cTypeName,
+		)
+	case "pages:unpublish":
+		return trans.T(r.Context(), "Page with id %v and content type %q was unpublished",
+			logEntry.ObjectID(), cTypeName,
+		)
+	}
+	return trans.T(r.Context(), "Unknown page log entry type")
 }

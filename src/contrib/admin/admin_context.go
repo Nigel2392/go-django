@@ -45,7 +45,7 @@ type PageOptions struct {
 	BreadCrumbs []BreadCrumb
 	Actions     []Action
 	Buttons     []components.ShowableComponent
-	SidePanels  []menu.SidePanel
+	SidePanels  *menu.SidePanels
 }
 
 func (p *PageOptions) Title() string {
@@ -105,12 +105,12 @@ func (p *PageOptions) GetActions() []Action {
 
 func (p *PageOptions) GetSidePanels() *menu.SidePanels {
 	var sidePanels = p.SidePanels
-	if len(sidePanels) == 0 {
-		sidePanels = make([]menu.SidePanel, 0)
+	if sidePanels == nil {
+		sidePanels = &menu.SidePanels{
+			Panels: make([]menu.SidePanel, 0),
+		}
 	}
-	return &menu.SidePanels{
-		Panels: sidePanels,
-	}
+	return sidePanels
 }
 
 type adminContext struct {

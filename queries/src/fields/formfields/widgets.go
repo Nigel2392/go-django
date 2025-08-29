@@ -144,6 +144,7 @@ type MultiSelectWidget[T attrs.Definer] struct {
 func (o *MultiSelectWidget[T]) ValueToGo(value interface{}) (interface{}, error) {
 	var objects []attrs.Definer
 	if value == nil || fields.IsZero(value) {
+		logger.Warnf("Value is nil or zero, returning nil slice: %v", value)
 		return nil, nil
 	}
 
@@ -164,12 +165,14 @@ func (o *MultiSelectWidget[T]) ValueToGo(value interface{}) (interface{}, error)
 		)
 		rowsCount, rowsIter, err := qs.IterAll()
 		if err != nil {
+			logger.Errorf("error getting queryset for MultiSelectWidget: %s", err)
 			return nil, err
 		}
 
 		objects = make([]attrs.Definer, 0, rowsCount)
 		for row, err := range rowsIter {
 			if err != nil {
+				logger.Errorf("error iterating queryset for MultiSelectWidget: %s", err)
 				return nil, err
 			}
 
@@ -178,11 +181,13 @@ func (o *MultiSelectWidget[T]) ValueToGo(value interface{}) (interface{}, error)
 	case []attrs.Definer:
 		objects = v
 	default:
+		logger.Warnf("Value %v (%T) is not a []string or []attrs.Definer", value, value)
 		return nil, errors.TypeMismatch.Wrapf(
 			"Value %v (%T) is not a []string or []attrs.Definer",
 			value, value,
 		)
 	}
+	logger.Warnf("Returning %d objects for MultiSelectWidget: %v", len(objects), objects)
 	return objects, nil
 }
 
@@ -306,6 +311,10 @@ func (o *MultiSelectWidget[T]) Validate(ctx context.Context, value interface{}) 
 	}
 
 	return errors
+}
+
+func (m *MultiSelectWidget[T]) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
+	return !data.Has(name)
 }
 
 func (m *MultiSelectWidget[T]) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
