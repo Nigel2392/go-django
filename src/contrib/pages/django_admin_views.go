@@ -667,6 +667,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 
 		var addData = map[string]interface{}{
 			"cType": cType.PkgPath(),
+			"label": ref.Title,
 		}
 
 		if p != nil && p.ID() > 0 {
@@ -853,15 +854,18 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			return err
 		}
 
-		auditlogs.Log(ctx, "pages:edit", logger.INF, p, map[string]interface{}{
-			"page_id": page.ID(),
-			"label":   page.Reference().Title,
-		})
-
 		if wasPublished {
 			auditlogs.Log(ctx, "pages:publish", logger.INF, p, map[string]interface{}{
+				"edited":  true,
 				"page_id": page.ID(),
 				"label":   page.Reference().Title,
+				"cType":   p.ContentType,
+			})
+		} else {
+			auditlogs.Log(ctx, "pages:edit", logger.INF, p, map[string]interface{}{
+				"page_id": page.ID(),
+				"label":   page.Reference().Title,
+				"cType":   p.ContentType,
 			})
 		}
 
@@ -869,6 +873,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			auditlogs.Log(ctx, "pages:unpublish", logger.INF, p, map[string]interface{}{
 				"page_id": page.ID(),
 				"label":   page.Reference().Title,
+				"cType":   p.ContentType,
 			})
 		}
 
@@ -979,6 +984,7 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 		auditlogs.Log(r.Context(), "pages:delete", logger.WRN, p, map[string]interface{}{
 			"page_id": p.ID(),
 			"label":   p.Title,
+			"cType":   p.ContentType,
 		})
 
 		messages.Warning(r, "Page deleted successfully")
@@ -1061,6 +1067,7 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 
 		auditlogs.Log(r.Context(), "pages:unpublish", logger.WRN, p, map[string]interface{}{
 			"unpublish_children": unpublishChildren,
+			"cType":              p.ContentType,
 			"page_id":            p.ID(),
 			"label":              p.Title,
 		})

@@ -9,6 +9,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
@@ -16,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
+	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -32,6 +34,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
+	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 
@@ -163,6 +166,18 @@ func NewAppConfig() django.AppConfig {
 		}))
 	}
 
+	core.SIGNAL_LOGIN_FAILED.Listen(func(s signals.Signal[*http.Request], r *http.Request) error {
+		var logData = make(map[string]interface{})
+		logData["data"] = r.Form
+		logData["host"] = mux.GetHost(r)
+		logData["ip"] = django.GetIP(r)
+
+		if _, err := Log(r.Context(), "auth.login_failed", logger.ERR, nil, logData); err != nil {
+			logger.Warn(err)
+		}
+		return nil
+	})
+
 	goldcrest.Register(admin.AdminModelHookDelete, 0, admin.AdminModelDeleteFunc(func(r *http.Request, adminSite *admin.AdminApplication, model *admin.ModelDefinition, instances []attrs.Definer) {
 		for _, instance := range instances {
 			hookFunc(admin.AdminModelHookDelete, r, adminSite, model, instance)
@@ -252,7 +267,11 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		SpecName: "content_type",
 		FormField: fields.CharField(fields.Widget(
 			options.NewSelectInput(nil, func() []widgets.Option {
-				var vals, err = queries.GetQuerySet(&Entry{}).Distinct().ValuesList("ContentType")
+				var vals, err = queries.
+					GetQuerySet(&Entry{}).
+					Distinct().
+					Filter(expr.Q("ContentType", "").Not(true)).
+					ValuesList("ContentType")
 				if err != nil {
 					logger.Errorf("Failed to get content types for audit logs: %v", err)
 					except.Fail(
@@ -311,7 +330,8 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	var err error
 	var qs = queries.
 		GetQuerySet(&Entry{}).
-		SelectRelated("User")
+		SelectRelated("User").
+		OrderBy("-Timestamp")
 
 	qs, err = filter.Filter(r, r.URL.Query(), qs)
 	if err != nil && !errors.Is(err, filters.ErrForm) {

@@ -512,17 +512,18 @@ func newPageLogDefinition() *pageLogDefinition {
 }
 
 func (p *pageLogDefinition) GetLabel(r *http.Request, logEntry auditlogs.LogEntry) string {
-	var cTypeName, ok = logEntry.Data()["cType"].(string)
-	var cType *contenttypes.ContentTypeDefinition
+	var cType *PageDefinition
 	var unpublishChildren, _ = logEntry.Data()["unpublish_children"].(bool)
+	var cTypeName, ok = logEntry.Data()["cType"].(string)
 	if ok {
-		cType = contenttypes.DefinitionForType(cTypeName)
+		cType = DefinitionForType(cTypeName)
 	} else {
 		cTypeName = fmt.Sprintf(
 			"%s.%s",
 			AdminPagesAppName,
 			AdminPagesModelPath,
 		)
+		cType = DefinitionForType(cTypeName)
 	}
 
 	if cType != nil {
@@ -531,28 +532,28 @@ func (p *pageLogDefinition) GetLabel(r *http.Request, logEntry auditlogs.LogEntr
 
 	switch logEntry.Type() {
 	case "pages:add":
-		return trans.T(r.Context(), "%q: Page added",
+		return trans.T(r.Context(), "Page type %q added",
 			cTypeName,
 		)
 	case "pages:add_child":
-		return trans.T(r.Context(), "%q: Child page added",
+		return trans.T(r.Context(), "Child page type %q added",
 			cTypeName,
 		)
 	case "pages:edit":
-		return trans.T(r.Context(), "%q: Page edited",
+		return trans.T(r.Context(), "Page type %q edited",
 			cTypeName,
 		)
 	case "pages:publish":
-		return trans.T(r.Context(), "%q: Page published",
+		return trans.T(r.Context(), "Page type %q saved and published",
 			cTypeName,
 		)
 	case "pages:unpublish":
 		if unpublishChildren {
-			return trans.T(r.Context(), "%q: Page and it's children were unpublished",
+			return trans.T(r.Context(), "Page type %q and it's children were unpublished",
 				cTypeName,
 			)
 		}
-		return trans.T(r.Context(), "%q: Page unpublished",
+		return trans.T(r.Context(), "Page type %q unpublished",
 			cTypeName,
 		)
 	}
@@ -582,6 +583,7 @@ func (p *pageLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []
 
 func (p *pageLogDefinition) FormatMessage(r *http.Request, logEntry auditlogs.LogEntry) string {
 	var cTypeName, ok = logEntry.Data()["cType"].(string)
+	var label, _ = logEntry.Data()["label"].(string)
 	var cType *contenttypes.ContentTypeDefinition
 	if ok {
 		cType = contenttypes.DefinitionForType(cTypeName)
@@ -591,6 +593,7 @@ func (p *pageLogDefinition) FormatMessage(r *http.Request, logEntry auditlogs.Lo
 			AdminPagesAppName,
 			AdminPagesModelPath,
 		)
+		cType = contenttypes.DefinitionForType(cTypeName)
 	}
 
 	if cType != nil {
@@ -599,24 +602,24 @@ func (p *pageLogDefinition) FormatMessage(r *http.Request, logEntry auditlogs.Lo
 
 	switch logEntry.Type() {
 	case "pages:add":
-		return trans.T(r.Context(), "Page with id %v and content type %q was added",
-			logEntry.ObjectID(), cTypeName,
+		return trans.T(r.Context(), "Page %q with id %v and content type %q was added",
+			label, logEntry.ObjectID(), cTypeName,
 		)
 	case "pages:add_child":
-		return trans.T(r.Context(), "Child page with id %v and content type %q was added under parent with id %v",
-			logEntry.Data()["page_id"], cTypeName, logEntry.ObjectID(),
+		return trans.T(r.Context(), "Child page %q with id %v and content type %q was added under parent with id %v",
+			label, logEntry.Data()["page_id"], cTypeName, logEntry.ObjectID(),
 		)
 	case "pages:edit":
-		return trans.T(r.Context(), "Page with id %v and content type %q was edited",
-			logEntry.ObjectID(), cTypeName,
+		return trans.T(r.Context(), "Page %q with id %v and content type %q was edited",
+			label, logEntry.ObjectID(), cTypeName,
 		)
 	case "pages:publish":
-		return trans.T(r.Context(), "Page with id %v and content type %q was published",
-			logEntry.ObjectID(), cTypeName,
+		return trans.T(r.Context(), "Page %q with id %v and content type %q was published",
+			label, logEntry.ObjectID(), cTypeName,
 		)
 	case "pages:unpublish":
-		return trans.T(r.Context(), "Page with id %v and content type %q was unpublished",
-			logEntry.ObjectID(), cTypeName,
+		return trans.T(r.Context(), "Page %q with id %v and content type %q was unpublished",
+			label, logEntry.ObjectID(), cTypeName,
 		)
 	}
 	return trans.T(r.Context(), "Unknown page log entry type")

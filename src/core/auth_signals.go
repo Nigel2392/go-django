@@ -11,7 +11,6 @@ package core
 
 import (
 	"net/http"
-	"net/url"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-signals"
@@ -39,7 +38,7 @@ type UserWithRequest struct {
 //
 // */
 var (
-	url_values_pool  = signals.NewPool[url.Values]()
+	url_values_pool  = signals.NewPool[*http.Request]()
 	user_signal_pool = signals.NewPool[User]()
 	user_req_pool    = signals.NewPool[UserWithRequest]()
 	any_signals      = signals.NewPool[any]()

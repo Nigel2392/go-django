@@ -54,7 +54,7 @@ func UserLoginForm(r *http.Request, formOpts ...func(forms.Form)) *BaseUserForm 
 	}
 
 	f.OnInvalid(func(_ forms.Form) {
-		core.SIGNAL_LOGIN_FAILED.Send(f.Raw)
+		core.SIGNAL_LOGIN_FAILED.Send(r)
 	})
 
 	if Auth.LoginWithEmail {

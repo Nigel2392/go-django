@@ -183,6 +183,16 @@ func GetAppForModel(model attrs.Definer) (AppConfig, bool) {
 	return app, ok
 }
 
+func GetIP(r *http.Request) string {
+	return mux.GetIP(
+		r, ConfigGet(
+			Global.Settings,
+			APPVAR_REQUESTS_PROXIED,
+			false,
+		),
+	)
+}
+
 func App(opts ...Option) *Application {
 	if Global == nil {
 		Global = &Application{

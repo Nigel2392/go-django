@@ -255,13 +255,6 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			"pageId": ref.PageID,
 		}
 
-		auditlogs.Log(ctx,
-			"pages:add",
-			logger.INF,
-			page.Reference(),
-			addData,
-		)
-
 		if publishPage {
 			auditlogs.Log(ctx,
 				"pages:publish",
@@ -271,6 +264,13 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 					"page_id": ref.PageID,
 					"label":   ref.Title,
 				},
+			)
+		} else {
+			auditlogs.Log(ctx,
+				"pages:add",
+				logger.INF,
+				page.Reference(),
+				addData,
 			)
 		}
 

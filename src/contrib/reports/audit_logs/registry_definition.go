@@ -4,10 +4,11 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"slices"
+	"runtime/debug"
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 )
 
@@ -23,14 +24,6 @@ func (bd BoundDefinition) Label() string {
 
 func (bd BoundDefinition) Message() string {
 	return bd.Definition.FormatMessage(bd.Request, bd.LogEntry)
-}
-
-func cloneQuery(query url.Values) url.Values {
-	clone := make(url.Values, len(query))
-	for k, v := range query {
-		clone[k] = slices.Clone(v)
-	}
-	return clone
 }
 
 func (bd BoundDefinition) Actions() []LogEntryAction {
@@ -50,14 +43,14 @@ func (bd BoundDefinition) Actions() []LogEntryAction {
 		ActionURL:    fmt.Sprintf("?filters-type=%s", url.QueryEscape(typ)),
 	})
 
-	if cType != nil {
+	if !attrs.IsZero(cType) {
 		actions = append(actions, &BaseAction{
 			DisplayLabel: trans.T(bd.Request.Context(), "This model type only"),
 			ActionURL:    fmt.Sprintf("?filters-content_type=%s", url.QueryEscape(cType.ShortTypeName())),
 		})
 	}
 
-	if cType != nil && !attrs.IsZero(objId) {
+	if !attrs.IsZero(cType) && !attrs.IsZero(objId) {
 		actions = append(actions, &BaseAction{
 			DisplayLabel: trans.T(bd.Request.Context(), "This object only"),
 			ActionURL: fmt.Sprintf(
@@ -78,6 +71,12 @@ func SimpleDefinition() Definition {
 type simpleDefinition struct{}
 
 func (sd *simpleDefinition) GetLabel(request *http.Request, logEntry LogEntry) string {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("panic in GetLabel for log entry type %q: %v:\n%s", logEntry.Type(), r, debug.Stack())
+		}
+	}()
+
 	var (
 		typ   = logEntry.Type()
 		cType = logEntry.ContentType()
@@ -86,7 +85,7 @@ func (sd *simpleDefinition) GetLabel(request *http.Request, logEntry LogEntry) s
 
 	var b = new(strings.Builder)
 	b.WriteString(typ)
-	if cType != nil {
+	if !attrs.IsZero(cType) {
 		b.WriteString(" (")
 		b.WriteString(cType.ShortTypeName())
 

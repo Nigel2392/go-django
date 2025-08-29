@@ -82,12 +82,18 @@ func ChangeBaseType[OldT, NewT any](c *BaseContentType[OldT]) *BaseContentType[N
 //
 // I.E: "github.com/Nigel2392/auth"
 func (c *BaseContentType[T]) PkgPath() string {
+	if c == nil {
+		return ""
+	}
 	return c.pkgPath
 }
 
 // AppLabel returns the app label of the model.
 // It is the last part of the package path, and is safe to use for short names.
 func (c *BaseContentType[T]) AppLabel() string {
+	if c == nil {
+		return ""
+	}
 	var lastSlash = strings.LastIndex(c.pkgPath, "/")
 	if lastSlash == -1 {
 		// panic(fmt.Sprintf("invalid package path: %s", c.pkgPath))
@@ -98,11 +104,29 @@ func (c *BaseContentType[T]) AppLabel() string {
 
 // Model returns the model name.
 func (c *BaseContentType[T]) Model() string {
+	if c == nil {
+		return ""
+	}
 	return c.modelName
 }
 
 // New returns a new instance of the model.
 func (c *BaseContentType[T]) New() T {
+	if c == nil {
+		var zero T
+		var newOf = reflect.TypeOf(zero)
+		if newOf == nil || newOf.Kind() == reflect.Invalid {
+			panic("BaseContentType is nil")
+		}
+		if newOf.Kind() == reflect.Interface {
+			return reflect.Zero(newOf).Interface().(T)
+		}
+		if newOf.Kind() == reflect.Ptr {
+			return reflect.New(newOf.Elem()).Interface().(T)
+		}
+		var newVal = reflect.New(newOf).Elem()
+		return newVal.Interface().(T)
+	}
 	return reflect.New(c.rTypeElem).Interface().(T)
 }
 
@@ -113,6 +137,10 @@ var ErrInvalidScanType errs.Error = "invalid scan type"
 // It is used to uniquely identify the model.
 // I.E: "github.com/Nigel2392/auth.User"
 func (c *BaseContentType[T]) TypeName() string {
+	if c == nil {
+		return ""
+	}
+
 	var typeName = c.pkgPath
 	var modelName = c.modelName
 	var b = make([]byte, 0, len(typeName)+len(modelName)+1)
@@ -127,6 +155,10 @@ func (c *BaseContentType[T]) TypeName() string {
 // It is used as an alias for the model.
 // I.E: "github.com/Nigel2392/auth.User" -> "auth.User"
 func (c *BaseContentType[T]) ShortTypeName() string {
+	if c == nil {
+		return ""
+	}
+
 	var (
 		typeName  = c.AppLabel()
 		modelName = c.modelName
@@ -142,6 +174,10 @@ func (c *BaseContentType[T]) ShortTypeName() string {
 // It supports scanning a string into a BaseContentType.
 // The string must be a valid type name.
 func (c *BaseContentType[T]) Scan(src interface{}) error {
+	if c == nil {
+		return errors.ValueError.Wrap("BaseContentType is nil")
+	}
+
 	if src == nil {
 		return nil
 	}

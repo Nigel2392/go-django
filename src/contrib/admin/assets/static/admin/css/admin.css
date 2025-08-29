@@ -731,7 +731,7 @@ flex-direction is set to row above 70em.
   border-left: 1px solid var(--border-color);
   position: relative;
   width: 100%;
-  padding: 1em;
+  padding: 1.5em 1em;
 
   transform: translateX(100%);
   opacity: 0;

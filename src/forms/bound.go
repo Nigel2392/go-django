@@ -5,8 +5,10 @@ import (
 	"context"
 	"fmt"
 	"html/template"
+	"runtime/debug"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/logger"
 )
 
 type BoundFormField struct {
@@ -99,6 +101,12 @@ func (b *BoundFormField) Field() template.HTML {
 		if attrs == nil {
 			attrs = make(map[string]string)
 		}
+
+		defer func() {
+			if r := recover(); r != nil {
+				logger.Errorf("panic in template %q: %v\n%s", b.FormField.Name(), r, debug.Stack())
+			}
+		}()
 
 		var widgetCtx = b.FormWidget.GetContextData(b.FormContext, b.FormID, b.FormName, b.FormValue, attrs)
 		if len(b.FormErrors) > 0 {

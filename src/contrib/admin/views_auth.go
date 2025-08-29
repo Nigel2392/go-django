@@ -6,6 +6,7 @@ import (
 
 	django "github.com/Nigel2392/go-django/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
@@ -54,6 +55,10 @@ var LoginHandler = &views.FormView[LoginForm]{
 			req,
 		)
 		return loginForm
+	},
+	InvalidFn: func(req *http.Request, form LoginForm) error {
+		core.SIGNAL_LOGIN_FAILED.Send(req)
+		return nil
 	},
 	ValidFn: func(req *http.Request, form LoginForm) error {
 		form.SetRequest(req)

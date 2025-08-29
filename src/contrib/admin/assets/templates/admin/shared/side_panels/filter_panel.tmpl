@@ -14,7 +14,9 @@
             {{ end }}
             <div class="buttons">
                 <input class="button secondary hollow sm" type="submit" value="{{ T "Submit" }}">
-                <a href="{{ .Request.URL.Path }}" class="button danger hollow sm">{{ T "Clear all" }}</a>
+                {{ if .Request.URL.RawQuery }}
+                    <a href="{{ .Request.URL.Path }}?page={{ .Request.URL.Query.Get "page" }}" class="button danger hollow sm">{{ T "Clear all" }}</a>
+                {{ end }}
             </div>
         </form>
     {{ end }}
