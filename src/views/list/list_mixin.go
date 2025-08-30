@@ -7,6 +7,7 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
@@ -25,7 +26,6 @@ var (
 
 type ListObjectMixin[T attrs.Definer] struct {
 	ListView    *View[T]
-	View        views.View
 	List        StringRenderer
 	FormOptions []func(forms.Form)
 }
@@ -193,4 +193,59 @@ func (m *ListObjectMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 
 	http.Redirect(w, r, r.URL.Path, http.StatusSeeOther)
 	return nil, nil, nil
+}
+
+type ListExportMixin[T attrs.Definer] struct {
+	ListView       *View[T]
+	ExportFields   []string
+	ChangeQuerySet func(r *http.Request, qs *queries.QuerySet[T]) (*queries.QuerySet[T], error)
+	Export         func(w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []attrs.FieldDefinition, values [][]interface{}) error
+}
+
+func (m *ListExportMixin[T]) ServeXXX(w http.ResponseWriter, r *http.Request) {}
+
+func (m *ListExportMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view views.View, qs *queries.QuerySet[T], viewCtx ctx.Context) (http.ResponseWriter, *http.Request, error) {
+	if m.Export == nil || r.Method == http.MethodGet || r.URL.Query().Get("_export") != "1" {
+		return w, r, nil
+	}
+
+	var (
+		err        error
+		valuesList [][]interface{}
+		qsInfo     expr.QueryInformation
+
+		meta       = attrs.GetModelMeta(m.ListView.Model)
+		defs       = meta.Definitions()
+		fieldNames = make([]any, 0, defs.Len())
+	)
+
+	if len(m.ExportFields) > 0 {
+		for _, fieldName := range m.ExportFields {
+			fieldNames = append(fieldNames, fieldName)
+		}
+	} else {
+		for _, field := range defs.Fields() {
+			fieldNames = append(fieldNames, field.Name())
+		}
+	}
+
+	qs = qs.Select(fieldNames...)
+
+	if m.ChangeQuerySet != nil {
+		if qs, err = m.ChangeQuerySet(r, qs); err != nil {
+			return nil, nil, err
+		}
+	}
+
+	qsInfo = qs.Peek()
+
+	valuesList, err = qs.ValuesList()
+	if err != nil {
+		if errors.Is(err, errors.NoRows) {
+			return w, r, nil
+		}
+		return nil, nil, err
+	}
+
+	return nil, nil, m.Export(w, r, m, qs, qsInfo.Select, valuesList)
 }

@@ -221,7 +221,7 @@ func (v *View[T]) Methods() []string {
 
 func (v *View[T]) Bind(w http.ResponseWriter, req *http.Request) (views.View, error) {
 	var mixins []views.View = []views.View{
-		&ListObjectMixin[T]{ListView: v, View: v},
+		&ListObjectMixin[T]{ListView: v},
 	}
 	if v.Mixins != nil {
 		mixins = append(mixins, v.Mixins(req, v)...)
