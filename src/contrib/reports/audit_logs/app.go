@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io/fs"
 	"net/http"
+	"net/url"
+	"slices"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -27,6 +29,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/pagination"
+	"github.com/Nigel2392/go-django/src/core/secrets/safety"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
@@ -168,13 +171,23 @@ func NewAppConfig() django.AppConfig {
 
 	core.SIGNAL_LOGIN_FAILED.Listen(func(s signals.Signal[*http.Request], r *http.Request) error {
 		var logData = make(map[string]interface{})
-		logData["data"] = r.Form
+		var newData = make(url.Values, len(r.Form))
+		for k, v := range r.Form {
+			if safety.IsSecretField(r.Context(), k) {
+				newData[k] = []string{"**********"}
+			} else {
+				newData[k] = slices.Clone(v)
+			}
+		}
+
+		logData["form"] = newData
 		logData["host"] = mux.GetHost(r)
 		logData["ip"] = django.GetIP(r)
 
 		if _, err := Log(r.Context(), "auth.login_failed", logger.ERR, nil, logData); err != nil {
 			logger.Warn(err)
 		}
+
 		return nil
 	})
 

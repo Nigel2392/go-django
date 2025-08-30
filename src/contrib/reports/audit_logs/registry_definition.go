@@ -99,33 +99,38 @@ func (sd *simpleDefinition) GetLabel(request *http.Request, logEntry LogEntry) s
 }
 
 func (sd *simpleDefinition) FormatMessage(request *http.Request, logEntry LogEntry) string {
-	return ""
+	var (
+		cType = logEntry.ContentType()
+		objId = logEntry.ObjectID()
+		src   = logEntry.Data()
+	)
 
-	//var (
-	//	cType = logEntry.ContentType()
-	//	objId = logEntry.ObjectID()
-	//	src   = logEntry.Data()
-	//)
-	//
-	//switch {
-	//case objId != nil && src != nil:
-	//	return fmt.Sprintf(
-	//		"%s(%v) %v",
-	//		cType.TypeName(), objId, src,
-	//	)
-	//case objId != nil:
-	//	return fmt.Sprintf(
-	//		"%s(%v)",
-	//		cType.TypeName(), objId,
-	//	)
-	//case src != nil:
-	//	return fmt.Sprintf(
-	//		"%s %v",
-	//		cType.TypeName(), src,
-	//	)
-	//}
-	//
-	//return cType.TypeName()
+	if attrs.IsZero(cType) && attrs.IsZero(objId) {
+		if src != nil {
+			return fmt.Sprintf("%v", src)
+		}
+		return ""
+	}
+
+	switch {
+	case objId != nil && src != nil:
+		return fmt.Sprintf(
+			"%s(%v) %v",
+			cType.TypeName(), objId, src,
+		)
+	case objId != nil:
+		return fmt.Sprintf(
+			"%s(%v)",
+			cType.TypeName(), objId,
+		)
+	case src != nil:
+		return fmt.Sprintf(
+			"%s %v",
+			cType.TypeName(), src,
+		)
+	}
+
+	return cType.TypeName()
 }
 
 func (sd *simpleDefinition) GetActions(request *http.Request, logEntry LogEntry) []LogEntryAction {

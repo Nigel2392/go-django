@@ -57,7 +57,7 @@
                             </div>
                         {{ end }}
 
-                        {{ if $log.User }}
+                        {{ if and $log.User (pk $log.User) }}
                             <div class="auditlog-list-item__body__user">
                                 <code>{{ $log.User | toString }}</code>
                             </div>

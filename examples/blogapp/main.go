@@ -27,6 +27,8 @@ import (
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/contrib/settings"
 	"github.com/Nigel2392/go-django/src/contrib/translations"
+	"github.com/Nigel2392/go-django/src/core/secrets"
+	_ "github.com/Nigel2392/go-django/src/core/secrets"
 	"github.com/Nigel2392/mux"
 	"github.com/google/uuid"
 
@@ -63,6 +65,7 @@ func main() {
 			django.APPVAR_DATABASE:        db,
 			auth.APPVAR_AUTH_EMAIL_LOGIN:  true,
 			migrator.APPVAR_MIGRATION_DIR: "./.private/blogapp/migrations",
+			"APPVAR_SECRET_KEY":           "a very secret key",
 			// translations.APPVAR_TRANSLATIONS_DEFAULT_LOCALE: language.Dutch,
 
 			django.APPVAR_RECOVERER: false,
@@ -103,6 +106,13 @@ func main() {
 			translations.NewAppConfig,
 		),
 	)
+
+	secretKey := secrets.SECRET_KEY()
+	signed, _ := secretKey.Sign(context.Background(), []byte("hello world"))
+	fmt.Println("Secret key:", secretKey)
+	fmt.Println(signed)
+	unsigned, _ := secretKey.Unsign(context.Background(), signed)
+	fmt.Println(string(unsigned))
 
 	// Blog pages will be served from this route.
 	pages.SetRoutePrefix("/pages")

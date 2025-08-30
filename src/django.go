@@ -590,6 +590,12 @@ func (a *Application) Initialize() error {
 		"toString": func(v any) string {
 			return attrs.ToString(v)
 		},
+		"pk": func(v attrs.Definer) any {
+			return attrs.PrimaryKey(v)
+		},
+		"cType": func(v attrs.Definer) any {
+			return contenttypes.DefinitionForObject(v)
+		},
 		"url": func(name string, args ...any) template.URL {
 			var rt, err = a.Mux.Reverse(name, args...)
 			switch {
