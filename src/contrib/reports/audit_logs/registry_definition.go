@@ -10,6 +10,8 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 type BoundDefinition struct {
@@ -22,7 +24,7 @@ func (bd BoundDefinition) Label() string {
 	return bd.Definition.GetLabel(bd.Request, bd.LogEntry)
 }
 
-func (bd BoundDefinition) Message() string {
+func (bd BoundDefinition) Message() any {
 	return bd.Definition.FormatMessage(bd.Request, bd.LogEntry)
 }
 
@@ -70,6 +72,19 @@ func SimpleDefinition() Definition {
 
 type simpleDefinition struct{}
 
+func (sd *simpleDefinition) TypeLabel(request *http.Request, typeName string) string {
+	// return text.(strings.ReplaceAll(typeName, "_", " "))
+	var labelParts = strings.FieldsFunc(typeName, func(r rune) bool {
+		switch r {
+		case '_', ':', '-':
+			return true
+		}
+		return false
+	})
+	var caser = cases.Title(language.English)
+	return caser.String(strings.Join(labelParts, " "))
+}
+
 func (sd *simpleDefinition) GetLabel(request *http.Request, logEntry LogEntry) string {
 	defer func() {
 		if r := recover(); r != nil {
@@ -98,7 +113,7 @@ func (sd *simpleDefinition) GetLabel(request *http.Request, logEntry LogEntry) s
 	return b.String()
 }
 
-func (sd *simpleDefinition) FormatMessage(request *http.Request, logEntry LogEntry) string {
+func (sd *simpleDefinition) FormatMessage(request *http.Request, logEntry LogEntry) any {
 	var (
 		cType = logEntry.ContentType()
 		objId = logEntry.ObjectID()

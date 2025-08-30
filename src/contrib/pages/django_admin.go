@@ -75,6 +75,13 @@ var pageAdminModelOptions = admin.ModelOptions{
 			GetEditLink: func(req *http.Request, id any) string {
 				return django.Reverse("admin:pages:edit", id)
 			},
+			ListFields: []string{
+				"Title",
+				"Slug",
+				"ContentType",
+				"CreatedAt",
+				"UpdatedAt",
+			},
 			Fields: []admin.SearchField{
 				{
 					Name:   "Title",

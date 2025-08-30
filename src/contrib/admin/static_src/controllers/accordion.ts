@@ -1,11 +1,20 @@
 import { Controller, ActionEvent } from "@hotwired/stimulus";
 
 class AccordionController extends Controller<any> {
-    declare contentTarget: HTMLElement;
+    static values = {
+        cookieName: String
+    }
+
+    declare cookieNameValue: string;
+    declare hasCookieNameValue: boolean;
 
     connect() {
         this.element.accordionController = this;
         this.element.dataset.accordionController = "true";
+
+        if (this.hasCookieNameValue && window.getCookie(this.cookieNameValue) === "open") {
+            this.open();
+        }
     }
 
     toggle(event?: ActionEvent) {
@@ -16,14 +25,18 @@ class AccordionController extends Controller<any> {
         }
     }
 
-    private open(event?: ActionEvent) {
-        this.element.classList.add("open");
-        this.element.setAttribute("aria-expanded", "true");
+    open(event?: ActionEvent) {
+        if (!this.element.classList.contains("open")) {
+            this.element.classList.add("open");
+            this.element.setAttribute("aria-expanded", "true");
+        }
     }
 
-    private close(event?: ActionEvent) {
-        this.element.classList.remove("open");
-        this.element.setAttribute("aria-expanded", "false");
+    close(event?: ActionEvent) {
+        if (this.element.classList.contains("open")) {
+            this.element.classList.remove("open");
+            this.element.setAttribute("aria-expanded", "false");
+        }
     }
 }
 

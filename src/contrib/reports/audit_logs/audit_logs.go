@@ -44,8 +44,9 @@ type LogEntryAction interface {
 }
 
 type Definition interface {
+	TypeLabel(r *http.Request, typeName string) string
 	GetLabel(r *http.Request, logEntry LogEntry) string
-	FormatMessage(r *http.Request, logEntry LogEntry) string
+	FormatMessage(r *http.Request, logEntry LogEntry) any // string | template.HTML
 	GetActions(r *http.Request, logEntry LogEntry) []LogEntryAction
 }
 

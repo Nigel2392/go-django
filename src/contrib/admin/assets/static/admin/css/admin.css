@@ -155,6 +155,16 @@ h6 {
     margin-top: 0;
     margin-bottom: .5rem;
 }
+ul, ol {
+    margin-block-start: 0.225rem;
+    margin-block-end: 0.225rem;
+}
+ul:first-child, ol:first-child {
+    margin-top: 0;
+}
+ul:last-child, ol:last-child {
+    margin-bottom: 0;
+}
 .noselect {
   -webkit-touch-callout: none; /* iOS Safari */
     -webkit-user-select: none; /* Safari */

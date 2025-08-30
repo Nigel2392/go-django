@@ -4,13 +4,12 @@
 
 {{ define "content" }}
 
-    <div id="auditlogs">
+    <div id="auditlogs" data-cookie-name="logs-expanded-{{ pk user }}">
         <div class="alert info content-width lg">
             <p class="alert-text">{{ T "Audit logs provide a record of actions and events that have occurred within the system." }}</p>
             <p class="alert-text">{{ T "They are essential for tracking changes, monitoring user activity, and ensuring compliance with security policies." }}</p>
             <p class="alert-text">{{ T "Use the filters panel to narrow down the logs based on specific criteria such as date range, log level, or keywords." }}</p>
         </div>
-
 
         <div class="auditlog-list content-width">
             {{ $page := (.Get "paginator") }}
@@ -18,15 +17,15 @@
             {{ $page.HTML "page" 5 .Request.URL.Query }}
 
             {{ range $log := $page.Results }}
-                <div class="auditlog-list-item auditlog-{{ $log.Level.String }}">
-                    <div class="auditlog-list-item__header" data-level="{{ $log.Level.String }}">
+                <div class="auditlog-list-item auditlog-{{ $log.Level.String }}" data-controller="accordion" data-accordion-cookie-name-value="logs-expanded-{{ pk user }}">
+                    <div class="auditlog-list-item__header" data-level="{{ $log.Level.String }}" data-action="click->accordion#toggle">
                         {{ $log.Label }}
                     </div>
                     <div class="auditlog-list-item__body">
     
                         {{ if $log.Message }}
                             <div class="auditlog-list-item__body__text">
-                                <p>{{ $log.Message }}</p>
+                                {{ $log.Message }}
                             </div>
                         {{ end }}
     

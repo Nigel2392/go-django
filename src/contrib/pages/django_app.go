@@ -581,7 +581,7 @@ func (p *pageLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []
 	return actions
 }
 
-func (p *pageLogDefinition) FormatMessage(r *http.Request, logEntry auditlogs.LogEntry) string {
+func (p *pageLogDefinition) FormatMessage(r *http.Request, logEntry auditlogs.LogEntry) any {
 	var cTypeName, ok = logEntry.Data()["cType"].(string)
 	var label, _ = logEntry.Data()["label"].(string)
 	var cType *contenttypes.ContentTypeDefinition

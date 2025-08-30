@@ -17,8 +17,22 @@ type Paginator[S ~[]E, E any] struct {
 	cnt        int
 }
 
+func (p *Paginator[S, E]) getCount() (int, error) {
+	if p.GetCount == nil {
+		panic("GetCount function is not set for paginator")
+	}
+	if p.cnt == 0 {
+		var err error
+		p.cnt, err = p.GetCount()
+		if err != nil {
+			return 0, err
+		}
+	}
+	return p.cnt, nil
+}
+
 func (p *Paginator[S, E]) NumPages() (int, error) {
-	count, err := p.GetCount()
+	count, err := p.getCount()
 	if err != nil {
 		return 0, err
 	}
@@ -27,7 +41,7 @@ func (p *Paginator[S, E]) NumPages() (int, error) {
 
 func (p *Paginator[S, E]) Count() (int, error) {
 	if p.cnt == 0 {
-		count, err := p.GetCount()
+		count, err := p.getCount()
 		if err != nil {
 			return 0, err
 		}

@@ -8,6 +8,8 @@ declare global {
     interface Window {
         Stimulus: Application;
         AdminSite: AdminSite;
+        getCookie: (name: string) => string | null;
+        setCookie: (name: string, value: string, days: number) => void;
         sprintf: typeof sprintf;
         i18n: {
             gettext(str: string, ...args: any): string,

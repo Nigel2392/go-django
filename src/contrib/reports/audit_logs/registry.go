@@ -101,3 +101,7 @@ func Define(r *http.Request, l LogEntry) *BoundDefinition {
 		LogEntry:   l,
 	}
 }
+
+func DefinitionForType(typ string) Definition {
+	return registry.definitions[typ]
+}

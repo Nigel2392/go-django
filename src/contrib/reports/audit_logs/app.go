@@ -6,7 +6,9 @@ import (
 	"io/fs"
 	"net/http"
 	"net/url"
+	"reflect"
 	"slices"
+	"strconv"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -17,12 +19,12 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
-	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
@@ -36,7 +38,6 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/Nigel2392/go-django/src/permissions"
-	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -126,6 +127,7 @@ func NewAppConfig() django.AppConfig {
 	admin.RegisterGlobalMedia(func(adminSite *admin.AdminApplication) media.Media {
 		var m = media.NewMedia()
 		m.AddCSS(media.CSS(django.Static("auditlogs/css/auditlogs.css")))
+		m.AddJS(media.JS(django.Static("auditlogs/js/auditlogs.js")))
 		return m
 	})
 
@@ -197,6 +199,8 @@ func NewAppConfig() django.AppConfig {
 		}
 	}))
 
+	RegisterDefinition("auth.login_failed", &loginFailedDefinition{})
+
 	if admin.AdminSite.TemplateConfig != nil {
 		Logs.TemplateConfig = &tpl.Config{
 			AppName: "auditlogs",
@@ -253,14 +257,50 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	)
 
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
-		SpecName:  "type",
-		FormField: fields.CharField(),
+		SpecName: "type",
+		FormField: fields.CharField(fields.Widget(
+			options.NewSelectInput(nil, func() []widgets.Option {
+				var vals, err = queries.
+					GetQuerySet(&Entry{}).
+					Filter("Type__isnull", false).
+					Distinct().
+					ValuesList("Type")
+				if err != nil {
+					logger.Errorf("Failed to get types for audit logs: %v", err)
+					except.Fail(
+						http.StatusInternalServerError,
+						"Failed to get types for audit logs",
+					)
+					return nil
+				}
+
+				var opts = make([]widgets.Option, len(vals))
+				for i, val := range vals {
+					if len(val) == 0 {
+						continue
+					}
+
+					var v = reflect.ValueOf(val[0]).String()
+					var def = DefinitionForType(v)
+					if def == nil {
+						def = SimpleDefinition()
+					}
+
+					opts[i] = &widgets.FormOption{
+						OptValue: v,
+						OptLabel: def.TypeLabel(r, v),
+					}
+				}
+
+				return opts
+			}, options.IncludeBlank(true)),
+		)),
 		Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
 			if fields.IsZero(value) {
 				return object, nil
 			}
 
-			return object.Filter("Type__istartswith", value), nil
+			return object.Filter("Type", value), nil
 		},
 	})
 
@@ -316,6 +356,75 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 	})
 
 	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
+		SpecName: "user",
+		FormField: fields.CharField(fields.Widget(
+			options.NewSelectInput(nil, func() []widgets.Option {
+				var userModelDef = users.GetUserModel()
+				var userModel = userModelDef.
+					ContentType().
+					New().(users.User)
+
+				var meta = attrs.GetModelMeta(userModel)
+				var defs = meta.Definitions()
+				var pkField = defs.Primary()
+
+				var rowCnt, rowIter, err = queries.
+					GetQuerySet(userModel).
+					Filter(
+						fmt.Sprintf("%s__in", pkField.Name()),
+						queries.Objects(&Entry{}).
+							Select("User").
+							Distinct(),
+					).
+					Distinct().
+					IterAll()
+				if err != nil {
+					logger.Errorf("Failed to get users for audit logs: %v", err)
+					except.Fail(
+						http.StatusInternalServerError,
+						"Failed to get users for audit logs",
+					)
+					return nil
+				}
+
+				var idx = 0
+				var opts = make([]widgets.Option, rowCnt)
+				for row, err := range rowIter {
+					if err != nil {
+						logger.Errorf("Failed to iterate users for audit logs: %v", err)
+						except.Fail(
+							http.StatusInternalServerError,
+							"Failed to iterate users for audit logs",
+						)
+						return nil
+					}
+
+					var (
+						pk  = attrs.PrimaryKey(row.Object)
+						str = attrs.ToString(row.Object)
+					)
+
+					opts[idx] = &widgets.FormOption{
+						OptValue: attrs.ToString(pk),
+						OptLabel: str,
+					}
+
+					idx++
+				}
+
+				return opts
+			}, options.IncludeBlank(true)),
+		)),
+		Apply: func(req *http.Request, value interface{}, object *queries.QuerySet[*Entry]) (*queries.QuerySet[*Entry], error) {
+			if fields.IsZero(value) {
+				return object, nil
+			}
+
+			return object.Filter("User", value), nil
+		},
+	})
+
+	filter.Add(&filters.BaseFilterSpec[*queries.QuerySet[*Entry]]{
 		SpecName: "level",
 		FormField: fields.CharField(fields.Widget(
 			options.NewSelectInput(nil, func() []widgets.Option {
@@ -338,6 +447,14 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 			}
 			return object.Filter("Level", logger.LogLevel(level)), nil
 		},
+	})
+
+	filter.Form().Ordering([]string{
+		"type",
+		"level",
+		"user",
+		"content_type",
+		"object_id",
 	})
 
 	var err error
@@ -388,6 +505,13 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		Amount: 15,
 	}
 
+	var amount, _ = strconv.Atoi(r.URL.Query().Get("amount"))
+	if amount < 1 {
+		amount = 15
+	}
+
+	paginator.Amount = amount
+
 	var pageNum = pagination.GetPageNum(
 		r.URL.Query().Get("page"),
 	)
@@ -431,16 +555,8 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		},
 	})
 
-	var v = &views.BaseView{
-		AllowedMethods:  []string{http.MethodGet},
-		BaseTemplateKey: "admin",
-		TemplateName:    "auditlogs/views/logs.tmpl",
-		GetContextFn: func(req *http.Request) (ctx.Context, error) {
-			return adminCtx, nil
-		},
-	}
-
-	if err = views.Invoke(v, w, r); err != nil {
+	if err := tpl.FRender(w, adminCtx, "admin", "auditlogs/views/logs.tmpl"); err != nil {
+		logger.Errorf("Failed to render audit logs template: %v", err)
 		return
 	}
 }

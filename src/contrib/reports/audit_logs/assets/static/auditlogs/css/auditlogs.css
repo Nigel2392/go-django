@@ -16,6 +16,10 @@
     --log-color-text: #111;
 }
 
+#navigation .auditlogs-expand {
+    font-size: 0.875rem;
+}
+
 #auditlogs {
     display: flex;
     flex-direction: column;
@@ -102,6 +106,7 @@
     padding-right: 2.5rem;
     background-color: var(--header-bg, #f0f0f0);
     border-bottom: 1px solid var(--border-color, #e0e0e0);
+    cursor: pointer;
 }
 .auditlog-list-item__header::after {
     content: attr(data-level);
@@ -119,15 +124,20 @@
     transform: translateY(-50%);
 }
 .auditlog-list-item__body {
-    position: relative;
+    display: none;
+    flex-direction: column;
     padding: 0.375rem 0.75rem;
+    position: relative;
+}
+.auditlog-list-item.open .auditlog-list-item__body {
+    display: flex;
 }
 .auditlog-list-item__body__text {
     padding-right: 1rem;
 }
 .auditlog-list-item__body__actions {
     position: absolute;
-    top: 50%;
+    top: 1rem;
     right: 0.5rem;
     transform: translateY(-50%);
     z-index: 1;
