@@ -557,6 +557,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 			components.NewShowableComponent(r, nil, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 				var q = maps.Clone(r.URL.Query())
 				q.Del("page")
+				q.Del("amount")
 
 				w.Write([]byte(`<form method="GET" action="`))
 				w.Write([]byte(django.Reverse("admin:auditlogs")))
