@@ -557,13 +557,23 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 			components.NewShowableComponent(r, nil, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 				var q = maps.Clone(r.URL.Query())
 				q.Del("page")
-				q.Del("amount")
 
 				w.Write([]byte(`<form method="GET" action="`))
 				w.Write([]byte(django.Reverse("admin:auditlogs")))
 				w.Write([]byte("?"))
 				w.Write([]byte(q.Encode()))
 				w.Write([]byte(`" class="auditlogs-amount-form form-field">`))
+
+				for k, v := range q {
+					if len(v) > 0 {
+						w.Write([]byte(`<input type="hidden" name="`))
+						w.Write([]byte(k))
+						w.Write([]byte(`" value="`))
+						w.Write([]byte(v[0]))
+						w.Write([]byte(`">`))
+					}
+				}
+
 				w.Write([]byte(`<select name="amount" onchange="this.form.submit()">`))
 				for _, v := range []int{15, 25, 50, 100} {
 					var selectedText string
