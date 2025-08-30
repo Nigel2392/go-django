@@ -210,26 +210,32 @@ func (m *ListExportMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 	}
 
 	var (
-		err        error
-		valuesList [][]interface{}
-		qsInfo     expr.QueryInformation
-
-		meta       = attrs.GetModelMeta(m.ListView.Model)
-		defs       = meta.Definitions()
-		fieldNames = make([]any, 0, defs.Len())
+		meta      = attrs.GetModelMeta(m.ListView.Model)
+		defs      = meta.Definitions()
+		fieldsLen = len(m.ExportFields)
 	)
+	if fieldsLen == 0 {
+		fieldsLen = defs.Len()
+	}
 
+	var fieldNames = make([]any, fieldsLen)
 	if len(m.ExportFields) > 0 {
-		for _, fieldName := range m.ExportFields {
-			fieldNames = append(fieldNames, fieldName)
+		for i, fieldName := range m.ExportFields {
+			fieldNames[i] = fieldName
 		}
 	} else {
-		for _, field := range defs.Fields() {
-			fieldNames = append(fieldNames, field.Name())
+		for i, field := range defs.Fields() {
+			fieldNames[i] = field.Name()
 		}
 	}
 
 	qs = qs.Select(fieldNames...)
+
+	var (
+		err        error
+		qsInfo     expr.QueryInformation
+		valuesList [][]interface{}
+	)
 
 	if m.ChangeQuerySet != nil {
 		if qs, err = m.ChangeQuerySet(r, qs); err != nil {
