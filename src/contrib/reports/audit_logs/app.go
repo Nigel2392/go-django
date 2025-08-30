@@ -3,7 +3,9 @@ package auditlogs
 import (
 	"context"
 	"fmt"
+	"io"
 	"io/fs"
+	"maps"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -18,6 +20,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
@@ -41,6 +44,7 @@ import (
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
+	"github.com/a-h/templ"
 
 	"embed"
 )
@@ -264,6 +268,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 					GetQuerySet(&Entry{}).
 					Filter("Type__isnull", false).
 					Distinct().
+					OrderBy("Type").
 					ValuesList("Type")
 				if err != nil {
 					logger.Errorf("Failed to get types for audit logs: %v", err)
@@ -399,14 +404,9 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 						return nil
 					}
 
-					var (
-						pk  = attrs.PrimaryKey(row.Object)
-						str = attrs.ToString(row.Object)
-					)
-
 					opts[idx] = &widgets.FormOption{
-						OptValue: attrs.ToString(pk),
-						OptLabel: str,
+						OptValue: attrs.ToString(attrs.PrimaryKey(row.Object)),
+						OptLabel: attrs.ToString(row.Object),
 					}
 
 					idx++
@@ -502,12 +502,12 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 			}
 			return int(count), nil
 		},
-		Amount: 15,
+		Amount: 25,
 	}
 
 	var amount, _ = strconv.Atoi(r.URL.Query().Get("amount"))
 	if amount < 1 {
-		amount = 15
+		amount = 25
 	}
 
 	paginator.Amount = amount
@@ -552,6 +552,31 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 			Panels: []menu.SidePanel{
 				admin.SidePanelFilters(r, filter, page),
 			},
+		},
+		Buttons: []components.ShowableComponent{
+			components.NewShowableComponent(r, nil, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
+				var q = maps.Clone(r.URL.Query())
+				q.Del("page")
+				q.Del("amount")
+
+				w.Write([]byte(`<form method="GET" action="`))
+				w.Write([]byte(django.Reverse("admin:auditlogs")))
+				w.Write([]byte("?"))
+				w.Write([]byte(q.Encode()))
+				w.Write([]byte(`" class="auditlogs-amount-form form-field">`))
+				w.Write([]byte(`<select name="amount" onchange="this.form.submit()">`))
+				for _, v := range []int{15, 25, 50, 100} {
+					var selectedText string
+					if v == amount {
+						selectedText = ` selected`
+					}
+
+					fmt.Fprintf(w, `<option value="%d"%s>%d</option>`, v, selectedText, v)
+				}
+				w.Write([]byte(`</select>`))
+				w.Write([]byte(`</form>`))
+				return nil
+			})),
 		},
 	})
 

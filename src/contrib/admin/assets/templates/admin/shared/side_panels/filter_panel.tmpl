@@ -1,6 +1,14 @@
 {{ define "filter_panel" }}
     {{ if .Data.filter_form }}
-        <form method="get" action="{{ printf "%s?page=%d" .Request.URL.Path (.Data.view_paginator_object).PageNum }}" class="form filter-form">
+        {{ $hasAmountQuery := (not (not (.Request.URL.Query.Get "amount"))) }}
+        <form method="get" action="{{ .Request.URL.Path }}" class="form filter-form">
+
+            <input type="hidden" name="page" value="{{ (.Data.view_paginator_object).PageNum }}">
+            {{ if $hasAmountQuery }}
+                <input type="hidden" name="amount" value="{{ .Request.URL.Query.Get "amount" }}">
+            {{ end }}
+
+
             {{ $errorList := .Data.filter_form.ErrorList }}
             {{ if (gt (len $errorList) 0) }}
                 <ul class="error-list">
@@ -9,13 +17,19 @@
                     {{ end }}
                 </ul>
             {{ end }}
+            
             {{ range $Field := .Data.filter_form.Fields }}        
                 {{ include . "admin/shared/forms/form_panel.tmpl" }}
             {{ end }}
+            
             <div class="buttons">
                 <input class="button secondary hollow sm" type="submit" value="{{ T "Submit" }}">
                 {{ if .Request.URL.RawQuery }}
-                    <a href="{{ .Request.URL.Path }}?page={{ .Request.URL.Query.Get "page" }}" class="button danger hollow sm">{{ T "Clear all" }}</a>
+                    {{ $extra := "" }}
+                    {{ if $hasAmountQuery }}
+                        {{ $extra = printf "&amount=%s" (.Request.URL.Query.Get "amount") }}
+                    {{ end }}
+                    <a href="{{ (printf "%s?page=%d%s" .Request.URL.Path (.Data.view_paginator_object).PageNum $extra) | safe }}" class="button danger hollow sm">{{ T "Clear all" }}</a>
                 {{ end }}
             </div>
         </form>

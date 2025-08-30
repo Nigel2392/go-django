@@ -76,7 +76,7 @@ func (sd *simpleDefinition) TypeLabel(request *http.Request, typeName string) st
 	// return text.(strings.ReplaceAll(typeName, "_", " "))
 	var labelParts = strings.FieldsFunc(typeName, func(r rune) bool {
 		switch r {
-		case '_', ':', '-':
+		case '_', ':', '-', '.', ';', '/':
 			return true
 		}
 		return false
