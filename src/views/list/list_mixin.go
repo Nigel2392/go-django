@@ -1,6 +1,7 @@
 package list
 
 import (
+	"context"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -17,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/views"
@@ -198,11 +200,46 @@ func (m *ListObjectMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 	return nil, nil, nil
 }
 
+type FieldExportColumn[T attrs.Definer] struct {
+	FieldName     string
+	HasPermission func(r *http.Request) bool
+	Header        func(c context.Context) string
+}
+
+func (c *FieldExportColumn[T]) IsExportable(r *http.Request) bool {
+	if c.HasPermission != nil {
+		return c.HasPermission(r)
+	}
+	return true
+}
+
+func (c *FieldExportColumn[T]) FieldNames() []string {
+	return []string{c.FieldName}
+}
+
+func (c *FieldExportColumn[T]) ExportHeader(r *http.Request) string {
+	if c.Header != nil {
+		return c.Header(r.Context())
+	}
+	return c.FieldName
+}
+
+func (c *FieldExportColumn[T]) ExportValue(r *http.Request, obj T) (interface{}, error) {
+	var defs = obj.FieldDefs()
+	var f, ok = defs.Field(c.FieldName)
+	if !ok {
+		return nil, errors.FieldNotFound.Wrapf(
+			"field %q not found in model %T", c.FieldName, obj,
+		)
+	}
+	return f.Value()
+}
+
 type ListExportMixin[T attrs.Definer] struct {
 	ListView       *View[T]
-	ExportFields   []string
+	Columns        []ExportColumn[T]
 	ChangeQuerySet func(r *http.Request, qs *queries.QuerySet[T]) (*queries.QuerySet[T], error)
-	Export         func(w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []attrs.FieldDefinition, values [][]interface{}) error
+	Export         func(w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], headers []string, values [][]interface{}) error
 }
 
 func (m *ListExportMixin[T]) ServeXXX(w http.ResponseWriter, r *http.Request) {}
@@ -212,31 +249,50 @@ func (m *ListExportMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 		return w, r, nil
 	}
 
-	var (
-		meta       = attrs.GetModelMeta(m.ListView.Model)
-		defs       = meta.Definitions()
-		fieldsLen  = len(m.ExportFields)
-		fieldNames []string
-	)
-
-	if len(m.ExportFields) > 0 {
-		fieldNames = slices.Clone(m.ExportFields)
+	var exportCols []ExportColumn[T]
+	if colGetter, ok := view.(listView__ExportColumnGetter[T]); ok && len(m.Columns) == 0 {
+		exportCols = colGetter.ExportColumns()
 	} else {
-		var fields = queries.ForSelectAllFields[attrs.FieldDefinition](defs)
-		fieldNames = make([]string, len(fields))
-		for i, field := range fields {
-			if field.Name() == "" {
-				panic(fmt.Sprintf("empty field name in model %T: %v", m.ListView.Model, fields))
-			}
-			fieldNames[i] = field.Name()
+		exportCols = m.Columns
+	}
+
+	if len(exportCols) == 0 {
+		var meta = attrs.GetModelMeta(m.ListView.Model)
+		var defs = meta.Definitions()
+		for _, field := range queries.ForSelectAllFields[attrs.FieldDefinition](defs) {
+			exportCols = append(exportCols, &FieldExportColumn[T]{
+				FieldName: field.Name(),
+				Header:    field.Label,
+			})
 		}
+	}
+
+	var filteredCols = make([]ExportColumn[T], 0, len(exportCols))
+	for _, col := range exportCols {
+		if !col.IsExportable(r) {
+			continue
+		}
+
+		filteredCols = append(filteredCols, col)
+	}
+
+	if len(filteredCols) == 0 {
+		logger.Warnf("No exportable columns found for model %T in list view", new(T))
+		return w, r, nil
+	}
+
+	var fieldNames = make([]string, 0, len(filteredCols))
+	for _, col := range filteredCols {
+		fieldNames = append(
+			fieldNames, col.FieldNames()...,
+		)
 	}
 
 	qs = qs.Select(
 		attrutils.InterfaceList(fieldNames)...,
 	)
 
-	var selectedFields = make([]attrs.FieldDefinition, 0, fieldsLen)
+	var selectedFields = make([]attrs.FieldDefinition, 0, len(fieldNames))
 	for _, fieldName := range fieldNames {
 		var res, err = qs.WalkField(fieldName)
 		if err != nil {
@@ -255,45 +311,43 @@ func (m *ListExportMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 		}
 	}
 
-	var valuesList [][]interface{}
-	valuesList, err = qs.ValuesList()
+	rowCnt, rowIter, err := qs.IterAll()
 	if err != nil {
-		if errors.Is(err, errors.NoRows) {
-			return w, r, nil
-		}
 		return nil, nil, err
 	}
 
-	return nil, nil, m.Export(w, r, m, qs, selectedFields, valuesList)
+	var headers = make([]string, 0, len(filteredCols))
+	for _, col := range filteredCols {
+		headers = append(headers, col.ExportHeader(r))
+	}
+
+	var values = make([][]interface{}, 0, rowCnt)
+	for row, err := range rowIter {
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var rowValues = make([]interface{}, 0, len(headers))
+		for _, col := range filteredCols {
+			value, err := col.ExportValue(r, row.Object)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			rowValues = append(rowValues, value)
+		}
+		values = append(values, rowValues)
+	}
+
+	return nil, nil, m.Export(w, r, m, qs, headers, values)
 }
 
 type Export struct {
-	Header []attrs.FieldDefinition `json:"header"`
-	Rows   [][]interface{}         `json:"rows"`
+	Header []string        `json:"header"`
+	Rows   [][]interface{} `json:"rows"`
 }
 
-func (h *Export) MarshalJSON() ([]byte, error) {
-	var exportData = struct {
-		Header []string `json:"header"`
-		Rows   [][]any  `json:"rows"`
-	}{
-		Header: make([]string, len(h.Header)),
-		Rows:   make([][]any, len(h.Rows)),
-	}
-
-	for i, field := range h.Header {
-		exportData.Header[i] = field.Name()
-	}
-
-	for i, row := range h.Rows {
-		exportData.Rows[i] = make([]any, len(row))
-		copy(exportData.Rows[i], row)
-	}
-
-	return json.Marshal(exportData)
-}
-
-func ExportJSON[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []attrs.FieldDefinition, values [][]interface{}) error {
+func ExportJSON[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []string, values [][]interface{}) error {
 	w.Header().Set("Content-Disposition", `attachment; filename="export.json"`)
 	w.Header().Set("Content-Type", "application/json")
 
@@ -308,7 +362,7 @@ func ExportJSON[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *List
 	return enc.Encode(exportData)
 }
 
-func ExportCSV[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []attrs.FieldDefinition, values [][]interface{}) error {
+func ExportCSV[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []string, values [][]interface{}) error {
 	w.Header().Set("Content-Disposition", `attachment; filename="export.csv"`)
 	w.Header().Set("Content-Type", "text/csv")
 
@@ -316,11 +370,7 @@ func ExportCSV[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListE
 	defer writer.Flush()
 
 	// Write header
-	var header []string
-	for _, field := range fields {
-		header = append(header, field.Name())
-	}
-	if err := writer.Write(header); err != nil {
+	if err := writer.Write(fields); err != nil {
 		return err
 	}
 
@@ -338,7 +388,7 @@ func ExportCSV[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListE
 	return nil
 }
 
-func ExportText[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []attrs.FieldDefinition, values [][]interface{}) error {
+func ExportText[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []string, values [][]interface{}) error {
 	w.Header().Set("Content-Disposition", `attachment; filename="export.txt"`)
 	w.Header().Set("Content-Type", "text/plain")
 
@@ -347,7 +397,7 @@ func ExportText[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *List
 
 	// Write header
 	for _, field := range fields {
-		if _, err := writer.Write([]byte(field.Name() + "\t")); err != nil {
+		if _, err := writer.Write([]byte(field + "\t")); err != nil {
 			return err
 		}
 	}

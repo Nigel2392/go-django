@@ -1414,7 +1414,6 @@ func (c *listEditableColumn[T]) EditableComponent(r *http.Request, defs attrs.De
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		fmt.Println(field.FormValue, c.value(r, defs, row))
 		if !hasErrors && field.FormValue == nil {
 			field.FormValue = c.value(r, defs, row)
 		}

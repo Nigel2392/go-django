@@ -83,7 +83,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 						},
 						components.Link(components.ButtonConfig{
 							Text: trans.S("Add Root Page"),
-							Type: components.ClassTypePrimary,
+							Type: components.ClassTypeSecondary,
 						}, func() string {
 							return django.Reverse("admin:pages:root_type")
 						}),

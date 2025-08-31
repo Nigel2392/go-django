@@ -50,26 +50,28 @@
                             </div>
                         {{ end }}
 
-                        {{ if $actions }}
-                            <div class="actions">
-                                {{ range $action := $actions }}
-                                    <a class="actions__action" href="{{ $action.URL }}" {{ if $action.Target }}target="{{ $action.Target }}"{{ end }}>
-                                        {{ if $action.Icon }}
-                                            <span class="actions__action--icon">
-                                                {{ icon $action.Icon }}
-                                            </span>
-                                        {{ end }}
-                                        {{ $action.Title }}
-                                    </a>
-                                {{ end }}
-                            </div>
-                        {{ end }}
-
-                        {{ if and $panels $panels.HasPanels }}
-                            <div class="side-panels-wrapper">
-                                {{ templ $panels.Component }}
-                            </div>
-                        {{ end }}
+                        <div id="navigation_right">
+                            {{ if $actions }}
+                                <div class="actions">
+                                    {{ range $action := $actions }}
+                                        <a class="navigation__action" href="{{ $action.URL }}" {{ if $action.Target }}target="{{ $action.Target }}"{{ end }}>
+                                            {{ if $action.Icon }}
+                                                <span class="navigation__action--icon">
+                                                    {{ icon $action.Icon }}
+                                                </span>
+                                            {{ end }}
+                                            {{ $action.Title }}
+                                        </a>
+                                    {{ end }}
+                                </div>
+                            {{ end }}
+                            
+                            {{ if and $panels $panels.HasPanels }}
+                                <div class="side-panels-wrapper">
+                                    {{ templ $panels.Component }}
+                                </div>
+                            {{ end }}
+                        </div>
 
                     {{ end }}
 

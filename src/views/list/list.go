@@ -78,6 +78,13 @@ type ColumnGroup[T attrs.Definer] interface {
 	Component(r *http.Request, form *ListForm[T]) templ.Component
 }
 
+type ExportColumn[T any] interface {
+	FieldNames() []string
+	IsExportable(r *http.Request) bool
+	ExportHeader(r *http.Request) string
+	ExportValue(r *http.Request, object T) (interface{}, error)
+}
+
 type listView__QuerySetGetter[T attrs.Definer] interface {
 	GetQuerySet(r *http.Request) (*queries.QuerySet[T], error)
 }
@@ -108,6 +115,10 @@ type StringRenderer interface {
 
 type listView__ColumnGetter[T attrs.Definer] interface {
 	GetListColumns(r *http.Request) ([]ListColumn[T], error)
+}
+
+type listView__ExportColumnGetter[T attrs.Definer] interface {
+	ExportColumns() []ExportColumn[T]
 }
 
 type listView__ListGetter[T attrs.Definer] interface {

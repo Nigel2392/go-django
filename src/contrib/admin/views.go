@@ -249,14 +249,18 @@ continueView:
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: BASE_KEY,
 		TemplateName:    "admin/views/models/list.tmpl",
-		//	Mixins: func(r *http.Request, v *list.View[attrs.Definer]) []views.View {
-		//		return []views.View{
-		//			&list.ListExportMixin[attrs.Definer]{
-		//				ListView: v,
-		//				Export:   list.ExportText[attrs.Definer],
-		//			},
-		//		}
-		//	},
+		Mixins: func(r *http.Request, v *list.View[attrs.Definer]) []views.View {
+			if !permissions.HasObjectPermission(r, model.NewInstance(), "admin:export") {
+				return nil
+			}
+
+			return []views.View{
+				&list.ListExportMixin[attrs.Definer]{
+					ListView: v,
+					Export:   list.ExportText[attrs.Definer],
+				},
+			}
+		},
 		List: func(r *http.Request, po pagination.PageObject[attrs.Definer], lc []list.ListColumn[attrs.Definer], ctx ctx.Context) (list.StringRenderer, error) {
 			if model.ListView.GetList != nil {
 				return model.ListView.GetList(r, adminSite, app, model, po.Results())
@@ -281,8 +285,8 @@ continueView:
 						return count > 0 && len(actions) > 0
 					},
 					components.Button(components.ButtonConfig{
-						Text: trans.GetTextFunc("Select All"),
-						Type: components.ClassTypePrimary,
+						Text: trans.S("Select All"),
+						Type: components.ClassTypeSecondary | components.ClassTypeHollow,
 						Attrs: map[string]any{
 							"type":                     "button",
 							"data-bulk-actions-target": "selectAll",
@@ -316,6 +320,13 @@ continueView:
 				}
 			}
 
+			var query = req.URL.Query()
+			query.Set("_export", "1")
+			var downloadURL = fmt.Sprintf("%s?%s",
+				django.Reverse("admin:apps:model", app.Name, model.GetName()),
+				query.Encode(),
+			)
+
 			var context = NewContext(req, adminSite, baseCtx)
 			context.SetPage(PageOptions{
 				TitleFn: trans.S(
@@ -331,7 +342,7 @@ continueView:
 							},
 							components.Link(components.ButtonConfig{
 								Text: trans.S("Add"),
-								Type: components.ClassTypePrimary,
+								Type: components.ClassTypeSecondary,
 							}, func() string {
 								return django.Reverse("admin:apps:model:add", app.Name, model.GetName())
 							}),
@@ -339,6 +350,13 @@ continueView:
 					},
 					buttons...,
 				),
+				Actions: []Action{
+					{
+						Icon:  "icon-download",
+						Title: trans.T(r.Context(), "Export %s", model.PluralLabel(r.Context())),
+						URL:   downloadURL,
+					},
+				},
 				SidePanels: &menu.SidePanels{
 					Panels: []menu.SidePanel{
 						SidePanelFilters(

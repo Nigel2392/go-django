@@ -228,7 +228,9 @@ func NewAppConfig() django.AppConfig {
 
 		if err := icons.Register(staticFS,
 			"admin/icons/view.svg",
+			"admin/icons/funnel.svg",
 			"admin/icons/history.svg",
+			"admin/icons/download.svg",
 			"admin/icons/no-view.svg",
 		); err != nil {
 			panic(err)

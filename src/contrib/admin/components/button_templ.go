@@ -20,6 +20,7 @@ const (
 	ClassTypePrimary ClassType = 1 << iota
 	ClassTypeSecondary
 	ClassTypeSuccess
+	ClassTypeInfo
 	ClassTypeWarning
 	ClassTypeDanger
 	ClassTypeHollow
@@ -162,6 +163,7 @@ func Button(config ButtonConfig) templ.Component {
 			templ.KV("success", config.Type&ClassTypeSuccess != 0),
 			templ.KV("danger", config.Type&ClassTypeDanger != 0),
 			templ.KV("warning", config.Type&ClassTypeWarning != 0),
+			templ.KV("info", config.Type&ClassTypeInfo != 0),
 			templ.KV("hollow", config.Type&ClassTypeHollow != 0),
 		}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
@@ -203,7 +205,7 @@ func Button(config ButtonConfig) templ.Component {
 			var templ_7745c5c3_Var4 string
 			templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(config.Text(ctx))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 145, Col: 30}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 147, Col: 30}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 			if templ_7745c5c3_Err != nil {
@@ -258,6 +260,7 @@ func Link(config ButtonConfig, href func() string) templ.Component {
 			templ.KV("success", config.Type&ClassTypeSuccess != 0),
 			templ.KV("danger", config.Type&ClassTypeDanger != 0),
 			templ.KV("warning", config.Type&ClassTypeWarning != 0),
+			templ.KV("info", config.Type&ClassTypeInfo != 0),
 			templ.KV("hollow", config.Type&ClassTypeHollow != 0),
 		}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var6...)
@@ -308,7 +311,7 @@ func Link(config ButtonConfig, href func() string) templ.Component {
 			var templ_7745c5c3_Var9 string
 			templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(config.Text(ctx))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 170, Col: 30}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/button.templ`, Line: 173, Col: 30}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 			if templ_7745c5c3_Err != nil {

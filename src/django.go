@@ -680,6 +680,12 @@ func (a *Application) Initialize() error {
 			"P": func(single, plural string, count int, args ...any) string {
 				return trans.P(req.Context(), single, plural, count, args...)
 			},
+			"component": func(name string, args ...interface{}) template.HTML {
+				var c = components.Render(name, args...)
+				var buf = new(bytes.Buffer)
+				c.Render(req.Context(), buf)
+				return template.HTML(buf.String())
+			},
 		}
 	})
 

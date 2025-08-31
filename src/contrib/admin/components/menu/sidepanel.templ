@@ -42,6 +42,12 @@ func (p *SidePanels) sortPanels(a, b SidePanel) int {
     return 0
 }
 
+templ icon(name string) {
+    <svg class={ "icon", name }>
+    	<use href={ "#" + name }></use>
+    </svg>
+}
+
 templ (p *SidePanels) Component() {
     {{ var panels = slices.Clone(p.Panels) }}
     {{ slices.SortStableFunc(panels, p.sortPanels) }}
@@ -52,11 +58,14 @@ templ (p *SidePanels) Component() {
                 if !panel.IsShown() {
                     {{ continue }}
                 }
-                <div class="side-panels__controls__control actions__action"
+                <div class="side-panels__controls__control navigation__action"
                 	data-side-panels-target="control"
 			        data-side-panels-id-param={ "panel__" + panel.Name() }
 			        data-action="click->side-panels#open">
-                    <button type="button">{ panel.Label() }</button>
+                    <button type="button">
+                        @panel.Icon()
+                        { panel.Label() }
+                    </button>
                 </div>
             }
         </div>
@@ -97,8 +106,9 @@ type BaseSidePanel struct {
     Ordering     int
     TemplateName string
     Request      *http.Request
-    Hidden       func(p *BaseSidePanel, r *http.Request) bool
+	PanelIcon    string
     PanelLabel   func(ctx context.Context) string
+    Hidden       func(p *BaseSidePanel, r *http.Request) bool
     PanelMedia   func(p *BaseSidePanel, r *http.Request) media.Media
     Context      func(p *BaseSidePanel, r *http.Request, c ctx.Context) ctx.Context
 }
@@ -130,6 +140,13 @@ func (p *BaseSidePanel) Label() string {
         return ""
     }
     return p.PanelLabel(p.Request.Context())
+}
+
+templ (p *BaseSidePanel) Icon() {
+    if p.PanelIcon == "" {
+       {{  return nil }}
+    }
+    @icon(p.PanelIcon)
 }
 
 templ (p *BaseSidePanel) Content() {

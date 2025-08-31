@@ -458,7 +458,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 						},
 						components.Link(components.ButtonConfig{
 							Text: trans.S("Add Child Page"),
-							Type: components.ClassTypePrimary,
+							Type: components.ClassTypeSecondary,
 						}, func() string {
 							return django.Reverse("admin:pages:type", p.PK)
 						}),
@@ -469,7 +469,7 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 						},
 						components.Link(components.ButtonConfig{
 							Text: trans.S("Edit Page"),
-							Type: components.ClassTypePrimary,
+							Type: components.ClassTypeSecondary,
 						}, func() string {
 							return django.Reverse("admin:pages:edit", p.PK)
 						}),

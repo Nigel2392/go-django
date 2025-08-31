@@ -30,7 +30,7 @@ table.list {
 }
 
 .list tr.list-header {
-    border-bottom: 1px solid var(--body-dark-bg-color);
+    border-bottom: 1px dashed var(--border-color);
 }
 
 .list tr.list-header th:first-child,
@@ -45,6 +45,7 @@ table.list {
 
 .list tr.column-group {
     height: 3.75em;
+    border-bottom: 1px dashed var(--border-color);
 }
 
 .list td.list-column {

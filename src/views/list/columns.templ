@@ -729,7 +729,6 @@ templ (c *listEditableColumn[T]) EditableComponent(r *http.Request, defs attrs.D
 	}
 	{{ var hasErrors = forms.HasErrors(form) }}
 	<div class={ "list-editable form-field", templ.KV("list-editable-errors", hasErrors) }>
-		{{ fmt.Println(field.FormValue, c.value(r, defs, row)) }}
 		if !hasErrors && field.FormValue == nil {
 			{{ field.FormValue = c.value(r, defs, row) }}
 		}

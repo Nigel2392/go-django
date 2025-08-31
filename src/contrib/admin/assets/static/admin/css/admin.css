@@ -329,7 +329,7 @@ a.danger {
     flex-direction: column;
     flex: 1;
 }
-#main #content-wrapper #navigation:has(*) {
+#main #content-wrapper #navigation:has(*:not(#navigation_right)) {
     padding: 0.375em 1em;
         height: 2.2em;
     border-bottom: 1px solid var(--navigation-border-color);
@@ -343,13 +343,20 @@ a.danger {
     color: var(--navigation-text-color);
     background-color: var(--navigation-bg-color);
 }
+#main #content-wrapper #navigation_right {
+    gap: 0.5em;
+    display: flex;
+    align-items: center;
+    flex-direction: row;
+    margin-left: auto;
+}
 #main #content-wrapper #content {
     flex: 1;
     display: flex;
     flex-direction: column;
     overflow-y: auto;
 }
-#main #content-wrapper #content__header:has(*) {
+#main #content-wrapper #content__header:has(*:not(#navigation_right)) {
     display: flex;
     flex-direction: column;
     background-color: var(--body-dark-bg-color);
@@ -408,6 +415,45 @@ a.danger {
     /* border-bottom: 1px solid var(--primary-bg-hover); */
     /* margin: 0; */
 /* } */
+.actions {
+    gap: 0.5em;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    margin-left: auto;
+    font-size: 0.9em;
+}
+a.navigation__action,
+button.navigation__action,
+.navigation__action a,
+.navigation__action button,
+.navigation__action.navigation__action:not(:is(a,button),:has(a,button)) {
+    height: fit-content;
+    cursor: pointer;
+    border: 1px solid var(--secondary-bg-color);
+    background-color: transparent;
+    line-height: 16px;
+    padding: 0.125em 0.5em;
+    border-radius: 0.125rem;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+    display: inline-block;
+    vertical-align: middle;
+}
+
+.navigation__action a,
+.navigation__action button,
+a.navigation__action,
+button.navigation__action {
+    color: var(--secondary-bg-color);
+    text-decoration: none;
+}
+.navigation__action svg {
+    width: 1rem;
+    height: 1rem;
+    vertical-align: middle;
+}
 .header-sub-content .heading__title {
     text-wrap: balance;
     white-space: pre-line;
@@ -684,9 +730,6 @@ flex-direction is set to row above 70em.
 }
 
 
-.side-panels-wrapper {
-    margin-left: auto;
-}
 .side-panels .side-panels__controls {
     display: flex;
     flex-direction: row;
@@ -977,7 +1020,7 @@ a.button, .button a {
 }
 
 @media screen and (min-width: 70em) {
-    #main #content-wrapper #content__header:has(*) {
+    #main #content-wrapper #content__header:has(*:not(#navigation_right)) {
         padding: 2em 3.5em;
     }
     #main #content-wrapper #content__body {

@@ -12,6 +12,7 @@ const (
     ClassTypePrimary ClassType = 1 << iota
     ClassTypeSecondary
     ClassTypeSuccess
+    ClassTypeInfo
     ClassTypeWarning
     ClassTypeDanger
     ClassTypeHollow
@@ -136,6 +137,7 @@ templ Button(config ButtonConfig) {
         templ.KV("success", config.Type & ClassTypeSuccess != 0),
         templ.KV("danger", config.Type & ClassTypeDanger != 0),
         templ.KV("warning", config.Type & ClassTypeWarning != 0),
+        templ.KV("info", config.Type & ClassTypeInfo != 0),
         templ.KV("hollow", config.Type & ClassTypeHollow != 0),
     }>
         if config.Icon != nil {
@@ -161,6 +163,7 @@ templ Link(config ButtonConfig, href func() string) {
 		templ.KV("success", config.Type & ClassTypeSuccess != 0),
 		templ.KV("danger", config.Type & ClassTypeDanger != 0),
 		templ.KV("warning", config.Type & ClassTypeWarning != 0),
+		templ.KV("info", config.Type & ClassTypeInfo != 0),
 		templ.KV("hollow", config.Type & ClassTypeHollow != 0),
 	}>
 		if config.Icon != nil {

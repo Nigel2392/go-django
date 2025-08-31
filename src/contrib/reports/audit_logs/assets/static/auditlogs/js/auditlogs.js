@@ -31,7 +31,7 @@ function initAuditlogsList() {
     var open = (getCookie(cookieName) === "open");
     var auditLogsExpandButton = document.createElement("button");
     auditLogsExpandButton.type = "button";
-    auditLogsExpandButton.className = "auditlogs-expand actions__action";
+    auditLogsExpandButton.className = "auditlogs-expand navigation__action";
     auditLogsExpandButton.textContent = open ? openedText : closedText;
     auditLogsExpandButton.addEventListener("click", function() {
 

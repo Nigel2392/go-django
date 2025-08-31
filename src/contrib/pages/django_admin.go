@@ -114,7 +114,7 @@ var pageAdminModelOptions = admin.ModelOptions{
 						)
 
 						return template.HTML(fmt.Sprintf(
-							`<a href="%s" class="button primary hollow">%s</a>`,
+							`<a href="%s" class="button secondary hollow">%s</a>`,
 							url, trans.P(
 								r.Context(), "%d child", "%d children",
 								int(node.Numchild), node.Numchild,

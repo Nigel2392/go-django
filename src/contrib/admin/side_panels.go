@@ -14,6 +14,7 @@ func SidePanelFilters(request *http.Request, filters any, pageObject any, hidden
 		Ordering:     100,
 		Request:      request,
 		TemplateName: "admin/shared/side_panels/filter_panel.tmpl",
+		PanelIcon:    "icon-funnel",
 		PanelLabel:   trans.S("Filters"),
 		Hidden: func(p *menu.BaseSidePanel, r *http.Request) bool {
 			for _, fn := range hidden {
