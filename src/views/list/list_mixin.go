@@ -1,13 +1,16 @@
 package list
 
 import (
+	"encoding/csv"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"slices"
+	"strings"
+	"text/tabwriter"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
@@ -205,46 +208,54 @@ type ListExportMixin[T attrs.Definer] struct {
 func (m *ListExportMixin[T]) ServeXXX(w http.ResponseWriter, r *http.Request) {}
 
 func (m *ListExportMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view views.View, qs *queries.QuerySet[T], viewCtx ctx.Context) (http.ResponseWriter, *http.Request, error) {
-	if m.Export == nil || r.Method == http.MethodGet || r.URL.Query().Get("_export") != "1" {
+	if m.Export == nil || r.Method != http.MethodGet || r.URL.Query().Get("_export") != "1" {
 		return w, r, nil
 	}
 
 	var (
-		meta      = attrs.GetModelMeta(m.ListView.Model)
-		defs      = meta.Definitions()
-		fieldsLen = len(m.ExportFields)
+		meta       = attrs.GetModelMeta(m.ListView.Model)
+		defs       = meta.Definitions()
+		fieldsLen  = len(m.ExportFields)
+		fieldNames []string
 	)
-	if fieldsLen == 0 {
-		fieldsLen = defs.Len()
-	}
 
-	var fieldNames = make([]any, fieldsLen)
 	if len(m.ExportFields) > 0 {
-		for i, fieldName := range m.ExportFields {
-			fieldNames[i] = fieldName
-		}
+		fieldNames = slices.Clone(m.ExportFields)
 	} else {
-		for i, field := range defs.Fields() {
+		var fields = queries.ForSelectAllFields[attrs.FieldDefinition](defs)
+		fieldNames = make([]string, len(fields))
+		for i, field := range fields {
+			if field.Name() == "" {
+				panic(fmt.Sprintf("empty field name in model %T: %v", m.ListView.Model, fields))
+			}
 			fieldNames[i] = field.Name()
 		}
 	}
 
-	qs = qs.Select(fieldNames...)
-
-	var (
-		err        error
-		qsInfo     expr.QueryInformation
-		valuesList [][]interface{}
+	qs = qs.Select(
+		attrutils.InterfaceList(fieldNames)...,
 	)
 
+	var selectedFields = make([]attrs.FieldDefinition, 0, fieldsLen)
+	for _, fieldName := range fieldNames {
+		var res, err = qs.WalkField(fieldName)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		for _, inf := range res.Fields {
+			selectedFields = append(selectedFields, inf.Fields...)
+		}
+	}
+
+	var err error
 	if m.ChangeQuerySet != nil {
 		if qs, err = m.ChangeQuerySet(r, qs); err != nil {
 			return nil, nil, err
 		}
 	}
 
-	qsInfo = qs.Peek()
-
+	var valuesList [][]interface{}
 	valuesList, err = qs.ValuesList()
 	if err != nil {
 		if errors.Is(err, errors.NoRows) {
@@ -253,5 +264,107 @@ func (m *ListExportMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 		return nil, nil, err
 	}
 
-	return nil, nil, m.Export(w, r, m, qs, qsInfo.Select, valuesList)
+	return nil, nil, m.Export(w, r, m, qs, selectedFields, valuesList)
+}
+
+type Export struct {
+	Header []attrs.FieldDefinition `json:"header"`
+	Rows   [][]interface{}         `json:"rows"`
+}
+
+func (h *Export) MarshalJSON() ([]byte, error) {
+	var exportData = struct {
+		Header []string `json:"header"`
+		Rows   [][]any  `json:"rows"`
+	}{
+		Header: make([]string, len(h.Header)),
+		Rows:   make([][]any, len(h.Rows)),
+	}
+
+	for i, field := range h.Header {
+		exportData.Header[i] = field.Name()
+	}
+
+	for i, row := range h.Rows {
+		exportData.Rows[i] = make([]any, len(row))
+		copy(exportData.Rows[i], row)
+	}
+
+	return json.Marshal(exportData)
+}
+
+func ExportJSON[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []attrs.FieldDefinition, values [][]interface{}) error {
+	w.Header().Set("Content-Disposition", `attachment; filename="export.json"`)
+	w.Header().Set("Content-Type", "application/json")
+
+	var exportData = &Export{
+		Header: fields,
+		Rows:   values,
+	}
+
+	var enc = json.NewEncoder(w)
+	enc.SetIndent("", "  ")
+
+	return enc.Encode(exportData)
+}
+
+func ExportCSV[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []attrs.FieldDefinition, values [][]interface{}) error {
+	w.Header().Set("Content-Disposition", `attachment; filename="export.csv"`)
+	w.Header().Set("Content-Type", "text/csv")
+
+	var writer = csv.NewWriter(w)
+	defer writer.Flush()
+
+	// Write header
+	var header []string
+	for _, field := range fields {
+		header = append(header, field.Name())
+	}
+	if err := writer.Write(header); err != nil {
+		return err
+	}
+
+	// Write rows
+	for _, row := range values {
+		var record []string
+		for _, value := range row {
+			record = append(record, fmt.Sprintf("%v", value))
+		}
+		if err := writer.Write(record); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func ExportText[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []attrs.FieldDefinition, values [][]interface{}) error {
+	w.Header().Set("Content-Disposition", `attachment; filename="export.txt"`)
+	w.Header().Set("Content-Type", "text/plain")
+
+	var writer = tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
+	defer writer.Flush()
+
+	// Write header
+	for _, field := range fields {
+		if _, err := writer.Write([]byte(field.Name() + "\t")); err != nil {
+			return err
+		}
+	}
+	if _, err := writer.Write([]byte("\n")); err != nil {
+		return err
+	}
+
+	// Write rows
+	for _, row := range values {
+		var record []string
+		for _, value := range row {
+			record = append(record, fmt.Sprintf("%v", value))
+		}
+		if _, err := writer.Write([]byte(strings.Join(record, "\t") + "\n")); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

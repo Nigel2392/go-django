@@ -249,6 +249,14 @@ continueView:
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: BASE_KEY,
 		TemplateName:    "admin/views/models/list.tmpl",
+		//	Mixins: func(r *http.Request, v *list.View[attrs.Definer]) []views.View {
+		//		return []views.View{
+		//			&list.ListExportMixin[attrs.Definer]{
+		//				ListView: v,
+		//				Export:   list.ExportText[attrs.Definer],
+		//			},
+		//		}
+		//	},
 		List: func(r *http.Request, po pagination.PageObject[attrs.Definer], lc []list.ListColumn[attrs.Definer], ctx ctx.Context) (list.StringRenderer, error) {
 			if model.ListView.GetList != nil {
 				return model.ListView.GetList(r, adminSite, app, model, po.Results())
