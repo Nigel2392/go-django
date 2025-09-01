@@ -256,8 +256,8 @@ continueView:
 
 			return []views.View{
 				&list.ListExportMixin[attrs.Definer]{
-					ListView: v,
-					Export:   list.ExportText[attrs.Definer],
+					Model:  model.NewInstance(),
+					Export: list.ExportText[attrs.Definer],
 				},
 			}
 		},
@@ -279,20 +279,6 @@ continueView:
 			}
 
 			var buttons = []components.ShowableComponent{
-				components.NewShowableComponent(
-					r,
-					func(r *http.Request) bool {
-						return count > 0 && len(actions) > 0
-					},
-					components.Button(components.ButtonConfig{
-						Text: trans.S("Select All"),
-						Type: components.ClassTypeSecondary | components.ClassTypeHollow,
-						Attrs: map[string]any{
-							"type":                     "button",
-							"data-bulk-actions-target": "selectAll",
-						},
-					}),
-				),
 				components.NewShowableComponent(
 					req, func(r *http.Request) bool {
 						return count > 0 && baseCtx.Get("view_list_form") != nil && !model.DisallowEdit && permissions.HasObjectPermission(r, model.NewInstance(), "admin:edit")
@@ -397,6 +383,9 @@ continueView:
 				nil,
 				nil,
 				col,
+				map[string]any{
+					"data-bulk-actions-target": "selectAll",
+				},
 				map[string]any{
 					"data-bulk-actions-target": "checkbox",
 				},

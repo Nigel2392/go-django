@@ -2,6 +2,14 @@
 
 {{ define "title" }}{{ T "Audit Logs" }}{{ end }}
 
+{{ define "extra_css" }}
+    <link rel="stylesheet" href="{{ static "auditlogs/css/auditlogs.css" }}">
+{{ end }}
+
+{{ define "extra_js" }}
+    <script src="{{ static "auditlogs/js/auditlogs.js" }}"></script>
+{{ end }}
+
 {{ define "content" }}
 
     <div id="auditlogs" data-cookie-name="logs-expanded-{{ pk user }}">

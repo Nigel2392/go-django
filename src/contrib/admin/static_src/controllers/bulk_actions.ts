@@ -5,7 +5,7 @@ class BulkActionsController extends Controller<any> {
     static targets = ["execute", "checkbox", "selectAll"];
 
     declare hasSelectAllTarget: boolean;
-    declare selectAllTarget: HTMLButtonElement;
+    declare selectAllTarget: HTMLInputElement;
     declare executeTargets: HTMLButtonElement[];
     declare checkboxTargets: HTMLInputElement[];
 
@@ -19,7 +19,7 @@ class BulkActionsController extends Controller<any> {
         }
 
         if (this.hasSelectAllTarget) {
-            this.selectAllTarget.addEventListener("click", (e: Event) => {
+            this.selectAllTarget.addEventListener("change", (e: Event) => {
                 e.preventDefault();
 
                 var amountChecked = this.checkboxTargets.filter(c => c.checked).length;
@@ -55,6 +55,10 @@ class BulkActionsController extends Controller<any> {
             btn.disabled = amount === 0;
             btn.classList.toggle("disabled", amount === 0);
         });
+
+        if (this.hasSelectAllTarget) {
+            this.selectAllTarget.checked = amount === this.checkboxTargets.length;        
+        }
     }
     
 }

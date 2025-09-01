@@ -562,8 +562,9 @@ func LinkColumn[T attrs.Definer](header func(ctx context.Context) string, fieldN
 type rowSelectColumn[T attrs.Definer] struct {
 	formName      string
 	isChecked     func(r *http.Request, defs attrs.Definitions, row T) bool
+	hasPermission func(r *http.Request) bool
+	headerAttrs   map[string]any
 	inputAttrs    map[string]any
-	hasPermission func(r *http.Request, defs attrs.Definitions, row T) bool
 	ListColumn[T]
 }
 
@@ -575,11 +576,10 @@ func (c *rowSelectColumn[T]) checked(r *http.Request, defs attrs.Definitions, ro
 	return false
 }
 
-func (c *rowSelectColumn[T]) permitted(r *http.Request, defs attrs.Definitions, row T) bool {
+func (c *rowSelectColumn[T]) permitted(r *http.Request) bool {
 	if c.hasPermission != nil {
-		return c.hasPermission(r, defs, row)
+		return c.hasPermission(r)
 	}
-
 	return true
 }
 
@@ -593,8 +593,23 @@ func (c *rowSelectColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
 	return nil
 }
 
+templ (c *rowSelectColumn[T]) Header(r *http.Request) {
+	if !AllowListRowSelect(r.Context()) || !c.permitted(r) {
+		@c.ListColumn.Header(r)
+		{{ return }}
+	}
+	<div class="list-checkbox-wrapper">
+		<div class="list-checkbox">
+			<input { c.headerAttrs... } type="checkbox" class="list-checkbox__input list-checkbox__input--select-all" id="list-checkbox-select-all" />
+		</div>
+		<div class="list-checkbox__column">
+			@c.ListColumn.Header(r)
+		</div>
+	</div>
+}
+
 templ (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
-	if !AllowListRowSelect(r.Context()) || !c.permitted(r, defs, row) {
+	if !AllowListRowSelect(r.Context()) || !c.permitted(r) {
 		@c.ListColumn.Component(r, defs, row)
 		{{ return }}
 	}
@@ -610,13 +625,14 @@ templ (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions,
 
 type BoundBoolFunc[T attrs.Definer] = func(r *http.Request, defs attrs.Definitions, row T) bool
 
-func RowSelectColumn[T attrs.Definer](formName string, isChecked, hasPermission BoundBoolFunc[T], wraps ListColumn[T], attrs map[string]any) ListColumn[T] {
+func RowSelectColumn[T attrs.Definer](formName string, isChecked BoundBoolFunc[T], hasPermission func(r *http.Request) bool, wraps ListColumn[T], hdrAttrs, attrs map[string]any) ListColumn[T] {
 	return &rowSelectColumn[T]{
 		formName:      formName,
-		isChecked: isChecked,
+		isChecked:     isChecked,
 		hasPermission: hasPermission,
-		ListColumn: wraps,
-		inputAttrs:  attrs,
+		ListColumn:    wraps,
+		headerAttrs:   hdrAttrs,
+		inputAttrs:    attrs,
 	}
 }
 

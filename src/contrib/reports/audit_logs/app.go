@@ -37,10 +37,10 @@ import (
 	"github.com/Nigel2392/go-django/src/core/secrets/safety"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
-	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/forms/widgets/options"
 	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -127,13 +127,6 @@ func NewAppConfig() django.AppConfig {
 			),
 		),
 	)
-
-	admin.RegisterGlobalMedia(func(adminSite *admin.AdminApplication) media.Media {
-		var m = media.NewMedia()
-		m.AddCSS(media.CSS(django.Static("auditlogs/css/auditlogs.css")))
-		m.AddJS(media.JS(django.Static("auditlogs/js/auditlogs.js")))
-		return m
-	})
 
 	var hookNames = []string{
 		admin.AdminModelHookAdd,
@@ -473,6 +466,25 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	var exportMixin = &list.ListExportMixin[*Entry]{
+		Model:  &Entry{},
+		Export: list.ExportCSV[*Entry],
+	}
+
+	w, r, err = exportMixin.Hijack(w, r, nil, qs, adminCtx)
+	if err != nil {
+		logger.Errorf("Failed to hijack response for audit logs export: %v", err)
+		except.Fail(
+			http.StatusInternalServerError,
+			"Failed to hijack response for audit logs export",
+		)
+		return
+	}
+
+	if w == nil || r == nil {
+		return
+	}
+
 	var paginator = pagination.Paginator[[]LogEntry, LogEntry]{
 		Context: r.Context(),
 		GetObject: func(l LogEntry) LogEntry {
@@ -544,6 +556,13 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 		),
 	)
 
+	var query = r.URL.Query()
+	query.Set("_export", "1")
+	var downloadURL = fmt.Sprintf("%s?%s",
+		django.Reverse("admin:auditlogs"),
+		query.Encode(),
+	)
+
 	adminCtx.SetPage(admin.PageOptions{
 		TitleFn:    trans.S("Audit Logs"),
 		SubtitleFn: trans.S("View all audit logs"),
@@ -551,6 +570,13 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 			ActivePanel: "filters",
 			Panels: []menu.SidePanel{
 				admin.SidePanelFilters(r, filter, page),
+			},
+		},
+		Actions: []admin.Action{
+			{
+				Icon:  "icon-download",
+				Title: trans.T(r.Context(), "Download CSV"),
+				URL:   downloadURL,
 			},
 		},
 		Buttons: []components.ShowableComponent{

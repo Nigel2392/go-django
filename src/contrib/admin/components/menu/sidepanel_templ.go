@@ -5,20 +5,18 @@ package menu
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import (
-	"context"
-	"io"
-	"net/http"
-	"runtime/debug"
-	"slices"
+import "github.com/a-h/templ"
+import templruntime "github.com/a-h/templ/runtime"
 
-	"github.com/Nigel2392/go-django/src/core/ctx"
-	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/forms/media"
-	"github.com/a-h/templ"
-	templruntime "github.com/a-h/templ/runtime"
-)
+import "github.com/Nigel2392/go-django/src/forms/media"
+import "github.com/Nigel2392/go-django/src/core/ctx"
+import "github.com/Nigel2392/go-django/src/core/logger"
+import "github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+import "runtime/debug"
+import "net/http"
+import "context"
+import "slices"
+import "io"
 
 type SidePanels struct {
 	ActivePanel string

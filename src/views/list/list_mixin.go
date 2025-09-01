@@ -236,10 +236,11 @@ func (c *FieldExportColumn[T]) ExportValue(r *http.Request, obj T) (interface{},
 }
 
 type ListExportMixin[T attrs.Definer] struct {
-	ListView       *View[T]
+	Model          T
 	Columns        []ExportColumn[T]
+	GetFileName    func(r *http.Request) string
 	ChangeQuerySet func(r *http.Request, qs *queries.QuerySet[T]) (*queries.QuerySet[T], error)
-	Export         func(w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], headers []string, values [][]interface{}) error
+	Export         func(w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], export *Export) error
 }
 
 func (m *ListExportMixin[T]) ServeXXX(w http.ResponseWriter, r *http.Request) {}
@@ -257,7 +258,7 @@ func (m *ListExportMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 	}
 
 	if len(exportCols) == 0 {
-		var meta = attrs.GetModelMeta(m.ListView.Model)
+		var meta = attrs.GetModelMeta(m.Model)
 		var defs = meta.Definitions()
 		for _, field := range queries.ForSelectAllFields[attrs.FieldDefinition](defs) {
 			exportCols = append(exportCols, &FieldExportColumn[T]{
@@ -339,43 +340,48 @@ func (m *ListExportMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 		values = append(values, rowValues)
 	}
 
-	return nil, nil, m.Export(w, r, m, qs, headers, values)
+	var fileName = "export"
+	if m.GetFileName != nil {
+		fileName = m.GetFileName(r)
+	}
+
+	return nil, nil, m.Export(w, r, m, qs, &Export{
+		Filename: fileName,
+		Header:   headers,
+		Rows:     values,
+	})
 }
 
 type Export struct {
-	Header []string        `json:"header"`
-	Rows   [][]interface{} `json:"rows"`
+	Filename string          `json:"-"`
+	Header   []string        `json:"header"`
+	Rows     [][]interface{} `json:"rows"`
 }
 
-func ExportJSON[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []string, values [][]interface{}) error {
-	w.Header().Set("Content-Disposition", `attachment; filename="export.json"`)
+func ExportJSON[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], export *Export) error {
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.json"`, export.Filename))
 	w.Header().Set("Content-Type", "application/json")
-
-	var exportData = &Export{
-		Header: fields,
-		Rows:   values,
-	}
 
 	var enc = json.NewEncoder(w)
 	enc.SetIndent("", "  ")
 
-	return enc.Encode(exportData)
+	return enc.Encode(export)
 }
 
-func ExportCSV[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []string, values [][]interface{}) error {
-	w.Header().Set("Content-Disposition", `attachment; filename="export.csv"`)
+func ExportCSV[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], export *Export) error {
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.csv"`, export.Filename))
 	w.Header().Set("Content-Type", "text/csv")
 
 	var writer = csv.NewWriter(w)
 	defer writer.Flush()
 
 	// Write header
-	if err := writer.Write(fields); err != nil {
+	if err := writer.Write(export.Header); err != nil {
 		return err
 	}
 
 	// Write rows
-	for _, row := range values {
+	for _, row := range export.Rows {
 		var record []string
 		for _, value := range row {
 			record = append(record, fmt.Sprintf("%v", value))
@@ -388,15 +394,15 @@ func ExportCSV[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListE
 	return nil
 }
 
-func ExportText[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], fields []string, values [][]interface{}) error {
-	w.Header().Set("Content-Disposition", `attachment; filename="export.txt"`)
+func ExportText[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *ListExportMixin[T], qs *queries.QuerySet[T], export *Export) error {
+	w.Header().Set("Content-Disposition", fmt.Sprintf(`attachment; filename="%s.txt"`, export.Filename))
 	w.Header().Set("Content-Type", "text/plain")
 
 	var writer = tabwriter.NewWriter(w, 0, 4, 2, ' ', 0)
 	defer writer.Flush()
 
 	// Write header
-	for _, field := range fields {
+	for _, field := range export.Header {
 		if _, err := writer.Write([]byte(field + "\t")); err != nil {
 			return err
 		}
@@ -406,7 +412,7 @@ func ExportText[T attrs.Definer](w http.ResponseWriter, r *http.Request, m *List
 	}
 
 	// Write rows
-	for _, row := range values {
+	for _, row := range export.Rows {
 		var record []string
 		for _, value := range row {
 			record = append(record, fmt.Sprintf("%v", value))
