@@ -18,7 +18,7 @@
 {{ end }}
 
 {{ define "content_root" }}
-    <form method="post" action="{{ (.Get "PostURL") }}" class="admin-form pages-unpublish-form" enctype="multipart/form-data">
+    <form method="post" action="{{ (.Get "PostURL") }}" class="admin-form pages-form">
         
         {{ $Page := (.Get "Page") }}
         {{ if $Page }}
@@ -31,6 +31,11 @@
         
         {{ csrf_field }}
 
+        {{ $BackURL := (.Get "BackURL") }}
+        {{ if $BackURL }}
+            <input type="hidden" name="next" value="{{ $BackURL }}">
+        {{ end }}
+
         {{ range $field := .Data.form.Fields }}
             {{ include $field "admin/shared/forms/form_panel.tmpl" }}
         {{ end }}
@@ -39,7 +44,6 @@
             <button class="button secondary" type="submit" value="{{ T "Submit" }}">
                 {{ T "Move this page" }}
             </button>
-            {{ $BackURL := (.Get "BackURL") }}
             {{ if $BackURL }}
                 <a class="button warning" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
             {{ else }}

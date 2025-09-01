@@ -210,17 +210,17 @@
 .pages-type-list-item .description {
 
 }
-.pages-unpublish-form {
+.pages-form {
     display: flex;
     flex-direction: column;
     margin-top: 3em;
     margin-left: 3em;
     padding: 1em;
 }
-.pages-unpublish-form .buttons {
+.pages-form .buttons {
     margin-top: 1em;
 }
-.pages-unpublish-form .buttons > button {
+.pages-form .buttons > button {
     margin-right: 1em;
 }
 

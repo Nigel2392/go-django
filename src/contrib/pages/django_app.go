@@ -443,6 +443,16 @@ func NewAppConfig() django.AppConfig {
 			pageHandler(editPageHandler), "edit",
 		)
 
+		// Publish page
+		pagesRoute.Get(
+			fmt.Sprintf("/<<%s>>/publish", PageIDVariableName),
+			pageHandler(publishPageHandler), "publish",
+		)
+		pagesRoute.Post(
+			fmt.Sprintf("/<<%s>>/publish", PageIDVariableName),
+			pageHandler(publishPageHandler), "publish",
+		)
+
 		// Unpublish page
 		pagesRoute.Get(
 			fmt.Sprintf("/<<%s>>/unpublish", PageIDVariableName),

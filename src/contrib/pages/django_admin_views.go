@@ -78,7 +78,7 @@ func getListActions(next string) []*columns.ListAction[attrs.Definer] {
 				return permissions.HasObjectPermission(r, row, "pages:edit")
 			},
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				return trans.T(r.Context(), "Edit Page")
+				return trans.T(r.Context(), "Edit")
 			},
 			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				var primaryField = defs.Primary()
@@ -87,6 +87,27 @@ func getListActions(next string) []*columns.ListAction[attrs.Definer] {
 				}
 				var u = django.Reverse(
 					"admin:pages:edit",
+					primaryField.GetValue(),
+				)
+				return addNextUrl(
+					u, next,
+				)
+			},
+		},
+		{
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+				return row.(*PageNode).Depth > 0 && permissions.HasObjectPermission(r, row, "pages:move")
+			},
+			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				return trans.T(r.Context(), "Move Page")
+			},
+			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				var primaryField = defs.Primary()
+				if primaryField == nil {
+					return ""
+				}
+				var u = django.Reverse(
+					"admin:pages:move",
 					primaryField.GetValue(),
 				)
 				return addNextUrl(
@@ -118,10 +139,52 @@ func getListActions(next string) []*columns.ListAction[attrs.Definer] {
 		},
 		{
 			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+				return !row.(*PageNode).IsPublished() && permissions.HasObjectPermission(r, row, "pages:publish")
+			},
+			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				return trans.T(r.Context(), "Publish")
+			},
+			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				var primaryField = defs.Primary()
+				if primaryField == nil {
+					return ""
+				}
+				var u = django.Reverse(
+					"admin:pages:publish",
+					primaryField.GetValue(),
+				)
+				return addNextUrl(
+					u, next,
+				)
+			},
+		},
+		{
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+				return row.(*PageNode).IsPublished() && permissions.HasObjectPermission(r, row, "pages:unpublish")
+			},
+			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				return trans.T(r.Context(), "Unpublish")
+			},
+			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				var primaryField = defs.Primary()
+				if primaryField == nil {
+					return ""
+				}
+				var u = django.Reverse(
+					"admin:pages:unpublish",
+					primaryField.GetValue(),
+				)
+				return addNextUrl(
+					u, next,
+				)
+			},
+		},
+		{
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
 				return permissions.HasObjectPermission(r, row, "pages:delete")
 			},
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				return trans.T(r.Context(), "Delete Page")
+				return trans.T(r.Context(), "Delete")
 			},
 			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				var primaryField = defs.Primary()
@@ -1081,6 +1144,12 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 		return
 	}
 
+	if !p.IsPublished() {
+		messages.Warning(r, "Page was already not published")
+		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
+		return
+	}
+
 	if r.Method == http.MethodPost {
 		if err := r.ParseForm(); err != nil {
 			except.Fail(500, "Failed to parse form")
@@ -1107,6 +1176,11 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 			messages.Warning(r, "Page unpublished successfully")
 		}
 
+		if next := r.FormValue("next"); next != "" {
+			http.Redirect(w, r, next, http.StatusSeeOther)
+			return
+		}
+
 		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
 		return
 	}
@@ -1130,6 +1204,87 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 			context.SetPage(admin.PageOptions{
 				TitleFn:     trans.S("Unpublish %q", p.Title),
 				SubtitleFn:  trans.S("Unpublishing a page will remove it from the live site\nOptionally, you can unpublish all child pages"),
+				BreadCrumbs: breadcrumbs,
+				Actions:     getPageActions(r, p),
+			})
+
+			return context, nil
+		},
+	}
+
+	if err := views.Invoke(view, w, r); err != nil {
+		except.Fail(500, err)
+		return
+	}
+}
+
+func publishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {
+	if !permissions.HasObjectPermission(r, p, "pages:publish") {
+		admin.ReLogin(w, r, r.URL.Path)
+		return
+	}
+
+	if p.IsPublished() {
+		messages.Warning(r, "Page was already published")
+		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
+		return
+	}
+
+	if r.Method == http.MethodPost {
+		if err := r.ParseForm(); err != nil {
+			except.Fail(500, "Failed to parse form")
+			return
+		}
+
+		var publishNode = r.FormValue("publish-node") == "publish-node"
+		if !publishNode {
+			messages.Warning(r, "No action taken, something has went wrong with the submission.")
+			http.Redirect(w, r, django.Reverse("admin:pages:publish", p.ID()), http.StatusSeeOther)
+			return
+		}
+
+		var qs = NewPageQuerySet().WithContext(r.Context())
+		if err := qs.PublishNode(p); err != nil {
+			except.Fail(500, "Failed to unpublish page: %s", err)
+			return
+		}
+
+		auditlogs.Log(r.Context(), "pages:publish", logger.WRN, p, map[string]interface{}{
+			"cType":   p.ContentType,
+			"page_id": p.ID(),
+			"label":   p.Title,
+		})
+
+		messages.Success(r, "Page published successfully")
+
+		if next := r.FormValue("next"); next != "" {
+			http.Redirect(w, r, next, http.StatusSeeOther)
+			return
+		}
+
+		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
+		return
+	}
+
+	var view = &views.BaseView{
+		AllowedMethods:  []string{http.MethodGet},
+		BaseTemplateKey: admin.BASE_KEY,
+		TemplateName:    "pages/admin/publish_page.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = admin.NewContext(req, admin.AdminSite, nil)
+
+			context.Set("app", a)
+			context.Set("model", m)
+			context.Set("page_object", p)
+
+			var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
+			if err != nil {
+				return nil, err
+			}
+
+			context.SetPage(admin.PageOptions{
+				TitleFn:     trans.S("Publish %q", p.Title),
+				SubtitleFn:  trans.S("Publishing a page will make it live on the site"),
 				BreadCrumbs: breadcrumbs,
 				Actions:     getPageActions(r, p),
 			})
@@ -1181,6 +1336,11 @@ func movePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			goto renderView
 		}
 
+		if next := r.FormValue("next"); next != "" {
+			http.Redirect(w, r, next, http.StatusSeeOther)
+			return
+		}
+
 		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
 		return
 	}
@@ -1197,6 +1357,10 @@ renderView:
 			context.Set("model", m)
 			context.Set("page_object", p)
 			context.Set("form", form)
+
+			if q := req.URL.Query().Get("next"); q != "" {
+				context.Set("BackURL", q)
+			}
 
 			var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
 			if err != nil {

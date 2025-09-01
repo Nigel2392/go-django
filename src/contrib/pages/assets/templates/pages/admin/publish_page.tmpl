@@ -15,18 +15,15 @@
         {{ end }}
         
         {{ csrf_field }}
-        
+
         {{ $BackURL := (.Get "BackURL") }}
         {{ if $BackURL }}
             <input type="hidden" name="next" value="{{ $BackURL }}">
         {{ end }}
 
         <div class="buttons">
-            <button class="button secondary" type="submit" value="{{ T "Submit" }}">
-                {{ T "Unpublish this node" }}
-            </button>
-            <button class="button danger" type="submit" name="unpublish-children" value="unpublish-children">
-                {{ T "Unpublish this node and all its children" }}
+            <button class="button secondary" type="submit" name="publish-node" value="publish-node">
+                {{ T "Publish this node" }}
             </button>
             {{ if $BackURL }}
                 <a class="button warning" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
