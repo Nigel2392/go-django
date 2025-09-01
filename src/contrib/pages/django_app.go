@@ -254,6 +254,7 @@ func NewAppConfig() django.AppConfig {
 		auditlogs.RegisterDefinition("pages:add", newPageLogDefinition())
 		auditlogs.RegisterDefinition("pages:add_child", newPageLogDefinition())
 		auditlogs.RegisterDefinition("pages:edit", newPageLogDefinition())
+		auditlogs.RegisterDefinition("pages:move", newPageLogDefinition())
 		auditlogs.RegisterDefinition("pages:publish", newPageLogDefinition())
 		auditlogs.RegisterDefinition("pages:unpublish", newPageLogDefinition())
 		auditlogs.RegisterDefinition("pages:delete", auditlogs.SimpleDefinition())
@@ -450,6 +451,16 @@ func NewAppConfig() django.AppConfig {
 		pagesRoute.Post(
 			fmt.Sprintf("/<<%s>>/unpublish", PageIDVariableName),
 			pageHandler(unpublishPageHandler), "unpublish",
+		)
+
+		// Move page
+		pagesRoute.Get(
+			fmt.Sprintf("/<<%s>>/move", PageIDVariableName),
+			pageHandler(movePageHandler), "move",
+		)
+		pagesRoute.Post(
+			fmt.Sprintf("/<<%s>>/move", PageIDVariableName),
+			pageHandler(movePageHandler), "move",
 		)
 
 		var pagesAPI = pagesRoute.Get(

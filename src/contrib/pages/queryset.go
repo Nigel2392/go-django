@@ -679,23 +679,23 @@ func (qs *PageQuerySet) Delete(nodes ...*PageNode) (int64, error) {
 func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 
 	if node.Path == "" {
-		return fmt.Errorf("node path must not be empty")
+		return fmt.Errorf("node path must not be empty: %q", node.Title)
 	}
 
 	if newParent.Path == "" {
-		return fmt.Errorf("new parent path must not be empty")
+		return fmt.Errorf("new parent path must not be empty: %q", newParent.Title)
 	}
 
 	if node.Path == newParent.Path {
-		return fmt.Errorf("node and new parent paths must not be the same")
+		return fmt.Errorf("node and new parent paths must not be the same: %q", node.Path)
 	}
 
 	if node.Depth == 0 {
-		return fmt.Errorf("node is a root node")
+		return fmt.Errorf("node %q is a root node", node.Title)
 	}
 
 	if strings.HasPrefix(newParent.Path, node.Path) {
-		return fmt.Errorf("new parent is a descendant of the node")
+		return fmt.Errorf("new parent is a descendant of the node: %q", newParent.Title)
 	}
 
 	var parentDefinition *PageDefinition
@@ -748,9 +748,19 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 		return errors.Wrap(err, "failed to get descendants")
 	}
 
+	var nextPathPart = buildPathPart(int64(newParent.Numchild))
+
 	for _, descendant := range nodes {
-		descendant.Path = newParent.Path + descendant.Path[node.Depth*STEP_LEN:]
+
+		//for i := 0; i < STEP_LEN; i++ {
+		//	descendant.Path[node.Depth*STEP_LEN+int64(i)] = nextPathPart[i]
+		//}
+		//
+		//descendant.Path[node.Depth*STEP_LEN : (node.Depth+1)*STEP_LEN] = nextPathPart
+		// copy(descendant.Path[node.Depth*STEP_LEN:(node.Depth+1)*STEP_LEN], nextPathPart)
+		descendant.Path = newParent.Path + nextPathPart + descendant.Path[(node.Depth+1)*STEP_LEN:]
 		descendant.Depth = (newParent.Depth + descendant.Depth + 1) - node.Depth
+		fmt.Println("Updated descendant:", descendant.Path, "Depth:", descendant.Depth, "nextPathPart:", nextPathPart)
 	}
 
 	updated, err := qs.
@@ -769,9 +779,7 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 
 	// Update url paths of descendants
 	var newPath, oldPath = node.SetUrlPath(newParent)
-	node.Path = newParent.Path + buildPathPart(int64(
-		newParent.Numchild,
-	))
+	node.Path = newParent.Path + nextPathPart
 	node.Depth = newParent.Depth + 1
 
 	if err = qs.updateNode(node); err != nil {

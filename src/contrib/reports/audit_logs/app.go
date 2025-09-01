@@ -579,7 +579,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 				URL:   downloadURL,
 			},
 		},
-		Buttons: []components.ShowableComponent{
+		HeaderActions: []components.ShowableComponent{
 			components.NewShowableComponent(r, nil, templ.ComponentFunc(func(ctx context.Context, w io.Writer) error {
 				var q = maps.Clone(r.URL.Query())
 				q.Del("page")

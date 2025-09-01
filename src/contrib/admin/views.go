@@ -320,7 +320,7 @@ continueView:
 					model.Label(r.Context()),
 					count,
 				),
-				Buttons: append(
+				HeaderActions: append(
 					[]components.ShowableComponent{
 						components.NewShowableComponent(
 							req, func(r *http.Request) bool {

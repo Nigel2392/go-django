@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
+	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
@@ -26,6 +27,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
@@ -451,40 +453,67 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 					contentType.Label(r.Context()),
 					p.Title, count,
 				),
-				Buttons: []components.ShowableComponent{
-					components.NewShowableComponent(
-						req, func(r *http.Request) bool {
-							return permissions.HasObjectPermission(r, p, "pages:add")
+				HeaderActions: []components.ShowableComponent{
+					&menu.Actions{
+						Request:   req,
+						ClassName: "page-actions lg",
+						Actions: []menu.Action{
+							&menu.BaseAction{
+								Text: trans.S("Edit"),
+								Show: func(r *http.Request) bool {
+									return permissions.HasObjectPermission(r, p, "pages:edit")
+								},
+								URL: func(r *http.Request) string {
+									return django.Reverse("admin:pages:edit", p.PK)
+								},
+							},
+							&menu.BaseAction{
+								Text: trans.S("Add Child Page"),
+								Show: func(r *http.Request) bool {
+									return permissions.HasObjectPermission(r, p, "pages:add")
+								},
+								URL: func(r *http.Request) string {
+									return django.Reverse("admin:pages:type", p.PK)
+								},
+							},
+							&menu.BaseAction{
+								Text: trans.S("Move"),
+								Show: func(r *http.Request) bool {
+									return p.Depth > 0 && permissions.HasObjectPermission(r, p, "pages:move")
+								},
+								URL: func(r *http.Request) string {
+									return django.Reverse("admin:pages:move", p.PK)
+								},
+							},
+							&menu.BaseAction{
+								Text: trans.S("Publish"),
+								Show: func(r *http.Request) bool {
+									return !p.IsPublished() && permissions.HasObjectPermission(r, p, "pages:publish")
+								},
+								URL: func(r *http.Request) string {
+									return django.Reverse("admin:pages:publish", p.PK)
+								},
+							},
+							&menu.BaseAction{
+								Text: trans.S("Unpublish"),
+								Show: func(r *http.Request) bool {
+									return p.IsPublished() && permissions.HasObjectPermission(r, p, "pages:unpublish")
+								},
+								URL: func(r *http.Request) string {
+									return django.Reverse("admin:pages:unpublish", p.PK)
+								},
+							},
+							&menu.BaseAction{
+								Text: trans.S("Delete"),
+								Show: func(r *http.Request) bool {
+									return permissions.HasObjectPermission(r, p, "pages:delete")
+								},
+								URL: func(r *http.Request) string {
+									return django.Reverse("admin:pages:delete", p.PK)
+								},
+							},
 						},
-						components.Link(components.ButtonConfig{
-							Text: trans.S("Add Child Page"),
-							Type: components.ClassTypeSecondary,
-						}, func() string {
-							return django.Reverse("admin:pages:type", p.PK)
-						}),
-					),
-					components.NewShowableComponent(
-						req, func(r *http.Request) bool {
-							return permissions.HasObjectPermission(r, p, "pages:edit")
-						},
-						components.Link(components.ButtonConfig{
-							Text: trans.S("Edit Page"),
-							Type: components.ClassTypeSecondary,
-						}, func() string {
-							return django.Reverse("admin:pages:edit", p.PK)
-						}),
-					),
-					components.NewShowableComponent(
-						req, func(r *http.Request) bool {
-							return permissions.HasObjectPermission(r, p, "pages:delete")
-						},
-						components.Link(components.ButtonConfig{
-							Text: trans.S("Delete Page"),
-							Type: components.ClassTypeDanger | components.ClassTypeHollow,
-						}, func() string {
-							return django.Reverse("admin:pages:delete", p.PK)
-						}),
-					),
+					},
 				},
 			})
 
@@ -1101,6 +1130,82 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 			context.SetPage(admin.PageOptions{
 				TitleFn:     trans.S("Unpublish %q", p.Title),
 				SubtitleFn:  trans.S("Unpublishing a page will remove it from the live site\nOptionally, you can unpublish all child pages"),
+				BreadCrumbs: breadcrumbs,
+				Actions:     getPageActions(r, p),
+			})
+
+			return context, nil
+		},
+	}
+
+	if err := views.Invoke(view, w, r); err != nil {
+		except.Fail(500, err)
+		return
+	}
+}
+
+func movePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {
+	if !permissions.HasObjectPermission(r, p, "pages:move") {
+		admin.ReLogin(w, r, r.URL.Path)
+		return
+	}
+
+	var form = forms.NewBaseForm(
+		r.Context(),
+		forms.WithRequestData(http.MethodPost, r),
+		forms.WithFields(fields.CharField(
+			fields.Name("new-parent"),
+			fields.Label(trans.S("New Parent Page")),
+			fields.Required(true),
+			fields.HelpText(trans.S("The new parent page for this page - this cannot be a child of the current page.")),
+			fields.Widget(chooser.NewChooserWidget(
+				&PageNode{}, nil,
+			)),
+		)),
+	)
+
+	if r.Method == http.MethodPost && forms.IsValid(r.Context(), form) {
+
+		var cleanedData = form.CleanedData()
+		fmt.Println(cleanedData)
+
+		var qs = NewPageQuerySet().WithContext(r.Context())
+		var parentRow, err = qs.Filter("PK", cleanedData["new-parent"].(*PageNode).PK).Get()
+		if err != nil {
+			form.AddError("new-parent", err)
+			goto renderView
+		}
+
+		if err := qs.MoveNode(p, parentRow.Object); err != nil {
+			form.AddError("new-parent", err)
+			goto renderView
+		}
+
+		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
+		return
+	}
+
+renderView:
+	var view = &views.BaseView{
+		AllowedMethods:  []string{http.MethodGet},
+		BaseTemplateKey: admin.BASE_KEY,
+		TemplateName:    "pages/admin/move_page.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = admin.NewContext(req, admin.AdminSite, nil)
+
+			context.Set("app", a)
+			context.Set("model", m)
+			context.Set("page_object", p)
+			context.Set("form", form)
+
+			var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
+			if err != nil {
+				return nil, err
+			}
+
+			context.SetPage(admin.PageOptions{
+				TitleFn:     trans.S("Move %q", p.Title),
+				SubtitleFn:  trans.S("Moving a page will change its position in the hierarchy"),
 				BreadCrumbs: breadcrumbs,
 				Actions:     getPageActions(r, p),
 			})

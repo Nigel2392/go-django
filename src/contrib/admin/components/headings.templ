@@ -42,7 +42,7 @@ templ Heading6(text string) {
     @Heading(6, text)
 }
 
-templ Header(lvel int, headingText, subText string, components ...ShowableComponent) {
+templ Header(lvel int, headingText, subText string, components ...templ.Component) {
     {{ subtitleLevel := lvel + 2 }}
     {{ if subtitleLevel > 6 { subtitleLevel = 6 } }}
     {{ var className = []string{"header"} }}
@@ -65,10 +65,6 @@ templ Header(lvel int, headingText, subText string, components ...ShowableCompon
         if len(components) > 0 {
             <div class="header__actions">
                 for _, component := range components {
-                    if !component.IsShown() {
-                        {{ continue }}
-                    }
-
                     <div class="header__actions__item">
                         @component
                     </div>

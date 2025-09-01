@@ -1,0 +1,50 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ T "Unpublish" }}{{ end }}
+
+
+{{ define "extra_css" }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $css := $Media.CSS }}
+        {{ $css }}
+    {{ end }}
+{{ end }}
+
+{{ define "extra_js" }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $js := $Media.JS }}
+        {{ $js }}
+    {{ end }}
+{{ end }}
+
+{{ define "content_root" }}
+    <form method="post" action="{{ (.Get "PostURL") }}" class="admin-form pages-unpublish-form" enctype="multipart/form-data">
+        
+        {{ $Page := (.Get "Page") }}
+        {{ if $Page }}
+            {{ $Title := $Page.Title }}
+            {{ $Subtitle := $Page.Subtitle }}
+            {{ if (or $Title $Subtitle) }}
+                {{ component "admin.header" 1 $Title $Subtitle }}
+            {{ end }}
+        {{ end }}
+        
+        {{ csrf_field }}
+
+        {{ range $field := .Data.form.Fields }}
+            {{ include $field "admin/shared/forms/form_panel.tmpl" }}
+        {{ end }}
+        
+        <div class="buttons">
+            <button class="button secondary" type="submit" value="{{ T "Submit" }}">
+                {{ T "Move this page" }}
+            </button>
+            {{ $BackURL := (.Get "BackURL") }}
+            {{ if $BackURL }}
+                <a class="button warning" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
+            {{ else }}
+                <a class="button warning" href="{{ url "admin:pages:list" (.Get "page_object").Reference.ID }}">{{ T "Back" }}</a>
+            {{ end }}
+        </div>
+    </form>
+{{ end }}

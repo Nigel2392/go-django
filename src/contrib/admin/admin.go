@@ -95,16 +95,16 @@ func NewAppConfig() django.AppConfig {
 		autherrors.OnAuthenticationError(RedirectLoginFailedToAdmin)
 
 		components.Register("admin.header", func(level int, headingText, subText string, extra ...any) templ.Component {
-			var components []cmpts.ShowableComponent
+			var comps []templ.Component
 			for _, c := range extra {
 				switch v := c.(type) {
-				case cmpts.ShowableComponent:
-					components = append(components, v)
-				case []cmpts.ShowableComponent:
-					if components == nil {
-						components = v
+				case templ.Component:
+					comps = append(comps, v)
+				case []templ.Component:
+					if comps == nil {
+						comps = v
 					} else {
-						components = append(components, v...)
+						comps = append(comps, v...)
 					}
 				default:
 					panic(fmt.Sprintf(
@@ -112,7 +112,7 @@ func NewAppConfig() django.AppConfig {
 					))
 				}
 			}
-			return cmpts.Header(level, headingText, subText, components...)
+			return cmpts.Header(level, headingText, subText, comps...)
 		})
 
 		components.Register("admin.heading", cmpts.Heading)

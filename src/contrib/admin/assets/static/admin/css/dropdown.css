@@ -1,8 +1,14 @@
-:root {
-    --dropdown-text-color: var(--primary-text-color);
-}
 .dropdown {
+    --dropdown-bg-color: var(--primary-bg-color);
+    --dropdown-text-color: var(--primary-text-color);
+    --dropdown-icon-size: 1.25em;
     max-width: fit-content;
+}
+.dropdown.lg {
+    --dropdown-icon-size: 1.5em;
+}
+.dropdown.sm {
+    --dropdown-icon-size: 1em;
 }
 .dropdown .dropdown__toggle {
     background-color: transparent;
@@ -10,8 +16,8 @@
     border: none;
 }
 .dropdown .dropdown__toggle-icon {
-    width: 1.25em;
-    height: 1.25em;
+    width: var(--dropdown-icon-size);
+    height: var(--dropdown-icon-size);
     vertical-align: middle;
 }
 .dropdown .dropdown__content {

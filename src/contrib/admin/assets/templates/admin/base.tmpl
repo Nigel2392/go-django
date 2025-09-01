@@ -96,7 +96,7 @@
                                         {{ $Subtitle := $Page.Subtitle }}
 
                                         {{ if (and (or $Title $Subtitle)) }}
-                                            {{ component "admin.header" 1 $Title $Subtitle $Page.Buttons }}
+                                            {{ component "admin.header" 1 $Title $Subtitle $Page.GetHeaderComponents }}
                                         {{ end }}
                                     {{ end }}
                                 {{ end }}

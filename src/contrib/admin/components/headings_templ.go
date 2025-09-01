@@ -235,7 +235,7 @@ func Heading6(text string) templ.Component {
 	})
 }
 
-func Header(lvel int, headingText, subText string, components ...ShowableComponent) templ.Component {
+func Header(lvel int, headingText, subText string, components ...templ.Component) templ.Component {
 	return templruntime.GeneratedTemplate(func(templ_7745c5c3_Input templruntime.GeneratedComponentInput) (templ_7745c5c3_Err error) {
 		templ_7745c5c3_W, ctx := templ_7745c5c3_Input.Writer, templ_7745c5c3_Input.Context
 		if templ_7745c5c3_CtxErr := ctx.Err(); templ_7745c5c3_CtxErr != nil {
@@ -318,10 +318,7 @@ func Header(lvel int, headingText, subText string, components ...ShowableCompone
 				return templ_7745c5c3_Err
 			}
 			for _, component := range components {
-				if !component.IsShown() {
-					continue
-				}
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, " <div class=\"header__actions__item\">")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div class=\"header__actions__item\">")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}

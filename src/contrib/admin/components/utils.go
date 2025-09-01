@@ -87,7 +87,7 @@ type showableComponent struct {
 	templ.Component
 }
 
-func NewShowableComponent(req *http.Request, isShown func(r *http.Request) bool, component templ.Component) ShowableComponent {
+func NewShowableComponent(req *http.Request, isShown func(r *http.Request) bool, component templ.Component) *showableComponent {
 	return &showableComponent{
 		req:       req,
 		isShown:   isShown,

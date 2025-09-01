@@ -38,14 +38,14 @@ type boundSidePanel struct {
 }
 
 type PageOptions struct {
-	Request     *http.Request
-	TitleFn     func(ctx context.Context) string
-	SubtitleFn  func(ctx context.Context) string
-	MediaFn     func() media.Media
-	BreadCrumbs []BreadCrumb
-	Actions     []Action
-	Buttons     []components.ShowableComponent
-	SidePanels  *menu.SidePanels
+	Request       *http.Request
+	TitleFn       func(ctx context.Context) string
+	SubtitleFn    func(ctx context.Context) string
+	MediaFn       func() media.Media
+	BreadCrumbs   []BreadCrumb
+	Actions       []Action
+	HeaderActions []components.ShowableComponent
+	SidePanels    *menu.SidePanels
 }
 
 func (p *PageOptions) Title() string {
@@ -111,6 +111,16 @@ func (p *PageOptions) GetSidePanels() *menu.SidePanels {
 		}
 	}
 	return sidePanels
+}
+
+func (p *PageOptions) GetHeaderComponents() []templ.Component {
+	var comps = make([]templ.Component, 0, len(p.HeaderActions))
+	for _, btn := range p.HeaderActions {
+		if btn.IsShown() {
+			comps = append(comps, btn)
+		}
+	}
+	return comps
 }
 
 type adminContext struct {

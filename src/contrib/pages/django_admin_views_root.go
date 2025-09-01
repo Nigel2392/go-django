@@ -76,7 +76,7 @@ func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 			context.Set("model", m)
 			context.SetPage(admin.PageOptions{
 				TitleFn: trans.S("Root Pages (%d)", count),
-				Buttons: []components.ShowableComponent{
+				HeaderActions: []components.ShowableComponent{
 					components.NewShowableComponent(
 						req, func(r *http.Request) bool {
 							return permissions.HasObjectPermission(r, m.NewInstance(), "pages:add")
