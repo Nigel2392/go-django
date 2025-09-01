@@ -22,11 +22,11 @@
                 <img src="{{ $logo }}" alt="logo" class="homepage-logo">
             </div>
             <div class="text-col">
-                {{ component "admin.header" 1 .Page.Title .Page.Subtitle .Page.Buttons }}
+                {{ component "admin.header" 1 .Page.Title .Page.Subtitle .Page.GetHeaderComponents }}
             </div>
         </div>
     {{ else }}
-        {{ component "admin.header" 1 .Page.Title .Page.Subtitle .Page.Buttons }}
+        {{ component "admin.header" 1 .Page.Title .Page.Subtitle .Page.GetHeaderComponents }}
     {{ end }}
 
 {{ end }}

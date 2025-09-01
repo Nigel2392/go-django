@@ -3,6 +3,7 @@ package openauth2
 import (
 	"net/http"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
 	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/except"
@@ -27,7 +28,14 @@ func Login(r *http.Request, u *User) (*User, error) {
 		Req:  r,
 	})
 
-	return u, nil
+	_, err = queries.GetQuerySet(&User{}).
+		WithContext(r.Context()).
+		ExplicitSave().
+		Select("LastLogin").
+		Filter("ID", u.ID).
+		Update(u)
+
+	return u, err
 }
 
 func Logout(r *http.Request) error {

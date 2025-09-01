@@ -2,6 +2,7 @@ package users
 
 import (
 	"context"
+	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -37,9 +38,10 @@ func GetUserModelString(typeNames ...string) string {
 }
 
 type Base struct {
-	IsAdministrator bool `json:"is_administrator" attrs:"blank"`
-	IsActive        bool `json:"is_active" attrs:"blank;default=true"`
-	IsLoggedIn      bool `json:"is_logged_in"`
+	IsAdministrator bool      `json:"is_administrator" attrs:"blank"`
+	IsActive        bool      `json:"is_active" attrs:"blank;default=true"`
+	IsLoggedIn      bool      `json:"is_logged_in"`
+	LastLogin       time.Time `json:"last_login"`
 
 	Groups      *queries.RelM2M[*Group, *UserGroup]           `json:"-"`
 	Permissions *queries.RelM2M[*Permission, *UserPermission] `json:"-"`
@@ -75,6 +77,13 @@ func (u *Base) Fields(user attrs.Definer) []any {
 			//		APPVAR_USER_ACTIVE_DEFAULT,
 			//		true, // Default to true if not set
 			//	),
+		}),
+		attrs.NewField(user, "LastLogin", &attrs.FieldConfig{
+			Column:   "last_login",
+			Label:    trans.S("Last Login"),
+			HelpText: trans.S("The last time the user logged in."),
+			Blank:    true,
+			ReadOnly: true,
 		}),
 		fields.NewManyToManyField[*queries.RelM2M[*Group, *UserGroup]](
 			user, "Groups", &fields.FieldConfig{
@@ -119,6 +128,10 @@ func (u *Base) Fields(user attrs.Definer) []any {
 
 func (u *Base) IsAuthenticated() bool {
 	return u.IsLoggedIn && u.IsActive
+}
+
+func (u *Base) LastLoggedIn() time.Time {
+	return u.LastLogin
 }
 
 func (u *Base) IsAdmin() bool {

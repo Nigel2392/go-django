@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/Nigel2392/go-django/src/core/secrets/algorithm"
 )
 
 var _ Signer = (*BaseSigner)(nil)
@@ -15,7 +17,7 @@ type BaseSigner struct {
 	salt         []byte
 	algo         string
 	fallbackKeys [][]byte
-	sig          Algorithm
+	sig          algorithm.Algorithm
 }
 
 func NewBaseSigner(key []byte, sep string, salt []byte, algo string, fallbackKeys [][]byte) *BaseSigner {
@@ -52,7 +54,7 @@ func (s *BaseSigner) setup() error {
 	if s.sig == nil {
 
 		var ok bool
-		s.sig, ok = getSignatureAlgo(s.algo)
+		s.sig, ok = algorithm.GetSignatureAlgo(s.algo)
 		if !ok {
 			return ErrUnknownSignatureAlgorithm
 		}
@@ -73,7 +75,7 @@ func (s *BaseSigner) Key() []byte {
 	return s.key
 }
 
-func (s *BaseSigner) Algorithm() Algorithm {
+func (s *BaseSigner) Algorithm() algorithm.Algorithm {
 	if err := s.setup(); err != nil {
 		return nil
 	}
@@ -106,7 +108,7 @@ func (s *BaseSigner) Sign(ctx context.Context, data []byte) (string, error) {
 		"%s%s%s",
 		string(data),
 		s.sep,
-		safeB64Encoding.EncodeToString(signature),
+		algorithm.EncodeToString(signature),
 	)
 
 	return signed, nil
@@ -128,7 +130,7 @@ func (s *BaseSigner) Unsign(ctx context.Context, signedData string) ([]byte, err
 
 	var data = []byte(signedData[:lastIdx])
 	var signatureB64 = signedData[lastIdx+len(s.sep):]
-	var signature, err = safeB64Encoding.DecodeString(signatureB64)
+	var signature, err = algorithm.DecodeString(signatureB64)
 	if err != nil {
 		return nil, ErrBadSignature
 	}

@@ -193,6 +193,7 @@ func NewAppConfig() django.AppConfig {
 					"IsActive":        trans.S("Is active"),
 					"CreatedAt":       trans.S("Created at"),
 					"UpdatedAt":       trans.S("Updated at"),
+					"LastLogin":       trans.S("Last login"),
 				},
 				// Customize the view / fields for the user models' create view.
 				AddView: admin.FormViewOptions{
@@ -232,6 +233,7 @@ func NewAppConfig() django.AppConfig {
 						admin.FieldPanel("PasswordConfirm"),
 						admin.FieldPanel("IsAdministrator"),
 						admin.FieldPanel("IsActive"),
+						admin.FieldPanel("LastLogin"),
 						admin.FieldPanel("Permissions"),
 						admin.FieldPanel("Groups"),
 					},
@@ -247,6 +249,7 @@ func NewAppConfig() django.AppConfig {
 							"Username",
 							"IsAdministrator",
 							"IsActive",
+							"LastLogin",
 							"CreatedAt",
 							"UpdatedAt",
 						},
@@ -275,6 +278,7 @@ func NewAppConfig() django.AppConfig {
 							"Email__Edit",
 							"IsAdministrator",
 							"IsActive",
+							"LastLogin",
 							"CreatedAt",
 							"UpdatedAt",
 						},
@@ -293,6 +297,11 @@ func NewAppConfig() django.AppConfig {
 						"IsActive": list.BooleanFieldColumn[attrs.Definer](
 							trans.S("Active"),
 							"IsActive",
+						),
+						"LastLogin": list.DateTimeFieldColumn[attrs.Definer](
+							trans.DEFAULT_TIME_FORMAT,
+							trans.S("Last Login"),
+							"LastLogin",
 						),
 						"CreatedAt": list.DateTimeFieldColumn[attrs.Definer](
 							trans.DEFAULT_TIME_FORMAT,
