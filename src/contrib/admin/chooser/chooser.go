@@ -53,6 +53,48 @@ type ChooserDefinition[T attrs.Definer] struct {
 	AdminModel *admin.ModelDefinition
 }
 
+type WrappedModel[T attrs.Definer] struct {
+	Model      T
+	Definition *ChooserDefinition[T]
+	Context    context.Context
+}
+
+func WrapModels[T attrs.Definer](ctx context.Context, def *ChooserDefinition[T], models []T) []*WrappedModel[T] {
+	var wrappedModels []*WrappedModel[T]
+	for _, model := range models {
+		var wrappedModel = WrapModel(ctx, def, model)
+		if wrappedModel == nil {
+			continue
+		}
+
+		wrappedModels = append(
+			wrappedModels,
+			wrappedModel,
+		)
+	}
+	return wrappedModels
+}
+
+func WrapModel[T attrs.Definer](ctx context.Context, def *ChooserDefinition[T], model T) *WrappedModel[T] {
+	if reflect.ValueOf(model).IsNil() {
+		return nil
+	}
+
+	return &WrappedModel[T]{
+		Model:      model,
+		Definition: def,
+		Context:    ctx,
+	}
+}
+
+func (w *WrappedModel[T]) PreviewHTML() string {
+	return w.Definition.GetPreviewString(w.Context, w.Model)
+}
+
+func (w *WrappedModel[T]) ExtraData() map[string]any {
+	return w.Definition.GetExtraData(w.Context, w.Model)
+}
+
 func (c *ChooserDefinition[T]) Setup(chooserKey string) error {
 	if c.Title == nil {
 		return errors.ValueError.Wrap("ChooserDefinition.Title cannot be nil")
@@ -242,6 +284,9 @@ func (c *ChooserDefinition[T]) GetContext(req *http.Request, page, bound views.V
 	ctx.Set("chooser", c)
 	ctx.Set("chooser_page", page)
 	ctx.Set("chooser_view", bound)
+	ctx.Set("chooser_key", c.ChooserKey)
+	ctx.Set("app_name", c.AdminApp.Name)
+	ctx.Set("model_name", c.AdminModel.GetName())
 
 	var urlVars = mux.Vars(req)
 	var appName = urlVars.Get("app_name")

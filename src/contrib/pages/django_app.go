@@ -103,6 +103,11 @@ func App() *PageAppConfig {
 	return pageApp
 }
 
+type PageChooserList struct {
+	*chooser.WrappedModel[*PageNode]
+	Models []*chooser.WrappedModel[*PageNode]
+}
+
 // NewAppConfig returns a new pages app config.
 //
 // This is used to initialize the pages app, set up routes, and register the admin application.
@@ -284,7 +289,8 @@ func NewAppConfig() django.AppConfig {
 				)
 			},
 			ListPage: &chooser.ChooserListPage[*PageNode]{
-				PerPage: 20,
+				PerPage:  20,
+				Template: "pages/chooser/list.tmpl",
 				Fields: []string{
 					"Title",
 					"Slug",
@@ -293,48 +299,71 @@ func NewAppConfig() django.AppConfig {
 					"UpdatedAt",
 					// "ChooserChildren",
 				},
-				//	QuerySet: func(r *http.Request, model *PageNode) (*queries.QuerySet[*PageNode], error) {
-				//		var parent = r.URL.Query().Get("parent")
-				//		var depth int64 = 0
-				//		var exprs = make([]expr.Expression, 0, 2)
-				//		if parent != "" {
-				//			var n, err = NewPageQuerySet().
-				//				WithContext(r.Context()).
-				//				Filter("PK", parent).
-				//				Get()
-				//			if err != nil {
-				//				return nil, err
-				//			}
-				//
-				//			exprs = append(
-				//				exprs,
-				//				expr.Q("PK", n.Object.PK),
-				//			)
-				//
-				//			depth = n.Object.Depth + 1
-				//		}
-				//
-				//		exprs = append(
-				//			exprs,
-				//			expr.Q("Depth", depth),
-				//		)
-				//
-				//		var e expr.Expression
-				//		if len(exprs) > 1 {
-				//			e = expr.Or(exprs...)
-				//		} else {
-				//			e = exprs[0]
-				//		}
-				//
-				//		var qs = NewPageQuerySet().
-				//			WithContext(r.Context()).
-				//			Select("*").
-				//			Filter(e).
-				//			OrderBy("Depth").
-				//			Annotate("IsParent", expr.Q("Depth", depth).Not(true)).
-				//			Base()
-				//		return qs, nil
-				//	},
+				QuerySet: func(r *http.Request, model *PageNode) (*queries.QuerySet[*PageNode], error) {
+					var parent = r.URL.Query().Get("parent")
+					var depth int64 = 0
+					var exprs = make([]expr.Expression, 0, 2)
+					if parent != "" {
+						var n, err = NewPageQuerySet().
+							WithContext(r.Context()).
+							Filter("PK", parent).
+							Get()
+						if err != nil {
+							return nil, err
+						}
+
+						if r.URL.Query().Get("back") == "1" {
+							if !n.Object.IsRoot() {
+								n.Object, err = n.Object.Parent(r.Context())
+								if err != nil {
+									return nil, err
+								}
+							} else {
+								goto addDepthExpr
+							}
+						}
+
+						exprs = append(
+							exprs,
+							expr.Q("PK", n.Object.PK),
+						)
+
+						depth = n.Object.Depth + 1
+					}
+
+				addDepthExpr:
+					exprs = append(
+						exprs,
+						expr.Q("Depth", depth),
+					)
+
+					var e expr.Expression
+					if len(exprs) > 1 {
+						e = expr.Or(exprs...)
+					} else {
+						e = exprs[0]
+					}
+
+					var qs = NewPageQuerySet().
+						WithContext(r.Context()).
+						Select("*").
+						Filter(e).
+						OrderBy("Depth").
+						Annotate("IsParent", expr.Q("Depth", depth).Not(true)).
+						Base()
+					return qs, nil
+				},
+				NewList: func(req *http.Request, results []*PageNode, def *chooser.ChooserDefinition[*PageNode]) any {
+					var parentNode *PageNode
+					if len(results) > 0 && !attrs.IsZero(results[0].Annotations["IsParent"]) {
+						parentNode = results[0]
+						results = results[1:]
+					}
+					return &PageChooserList{
+						WrappedModel: chooser.WrapModel(req.Context(), def, parentNode),
+						Models:       chooser.WrapModels(req.Context(), def, results),
+					}
+				},
 				SearchFields: []admin.SearchField{
 					{
 						Name:   "Title",
@@ -358,9 +387,10 @@ func NewAppConfig() django.AppConfig {
 		var chooserDefinitionRootNodes = chooserDefinitionAllNodes
 		var chooserDefinitionRootNodesListPage = *chooserDefinitionAllNodes.ListPage
 		chooserDefinitionRootNodes.ListPage = &chooserDefinitionRootNodesListPage
-		chooserDefinitionRootNodes.ListPage.QuerySet = func(r *http.Request, model *PageNode) (*queries.QuerySet[*PageNode], error) {
-			return NewPageQuerySet().RootPages().Base(), nil
-		}
+		//chooserDefinitionRootNodes.ListPage.Template = ""
+		//chooserDefinitionRootNodes.ListPage.QuerySet = func(r *http.Request, model *PageNode) (*queries.QuerySet[*PageNode], error) {
+		//	return NewPageQuerySet().RootPages().Base(), nil
+		// }
 		chooserDefinitionRootNodes.ListPage.Fields = []string{
 			"Title",
 			"Slug",

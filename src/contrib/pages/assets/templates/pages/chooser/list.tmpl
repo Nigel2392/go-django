@@ -1,0 +1,59 @@
+{{ define "list" }}
+    <div class="godjango-chooser-list">
+        <link rel="stylesheet" href="{{ static "pages/admin/css/chooser.css" }}">
+
+        {{ if or .Data.search.allowed .Data.urls.create }}
+            <div class="godjango-chooser-actions">
+                {{ if .Data.search.allowed }}
+                    <form method="get" class="godjango-chooser-list-form">
+                        <div class="form-field">
+                            <input type="text" name="{{ .Data.search.var }}" value="{{ .Data.search.value }}" placeholder="{{ .Data.search.placeholder }}" class="godjango-chooser-list-search-input">
+                            <button type="submit" class="godjango-chooser-list-search-button button secondary">{{ .Data.search.text }}</button>
+                        </div>
+                    </form>
+                {{ end }}
+            </div>
+        {{ end }}
+
+        <div class="chooser-pages-list list-wrapper">
+            {{ $data := .Data }}
+
+            {{ if and .Data.list.WrappedModel .Data.list.WrappedModel.Model }}
+                <div class="chooser-pages-list__item">
+                    {{ if .Data.list.Model.Numchild }}
+                        <div class="chooser-pages-list__item__children_link">
+                            <a class="chooser-list-link" href="{{ url "admin:apps:model:chooser:list" $data.app_name $data.model_name $data.chooser_key }}?parent={{ .Data.list.Model.PK }}&back=1">
+                                {{ T "Back" }}
+                            </a>
+                        </div>
+                    {{ end }}
+                    <div class="godjango-chooser-list-group default-style" data-chooser-value="{{ .Data.list.Model.ID }}" data-chooser-preview="{{ .Data.list.PreviewHTML }}" data-chooser-data="{{ .Data.list.ExtraData | json }}">
+                        <div class="chooser-pages-list__item__title">
+                            {{ .Data.list.Model.Title }}
+                        </div>
+                    </div>
+                </div>
+            {{ end }}
+
+
+            {{ range $page := .Data.list.Models }}
+                <div class="chooser-pages-list__item">
+                    <div class="godjango-chooser-list-group default-style" data-chooser-value="{{ $page.Model.ID }}" data-chooser-preview="{{ $page.PreviewHTML }}" data-chooser-data="{{ $page.ExtraData | json }}">
+                        <div class="chooser-pages-list__item__title">
+                            {{ $page.Model.Title }}
+                        </div>
+                    </div>
+                    {{ if $page.Model.Numchild }}
+                        <div class="chooser-pages-list__item__children_link">
+                            <a class="chooser-list-link" href="{{ url "admin:apps:model:chooser:list" $data.app_name $data.model_name $data.chooser_key }}?parent={{ $page.Model.PK }}">
+                                {{ T "Children" }}
+                            </a>
+                        </div>
+                    {{ end }}
+                </div>
+            {{ end }}
+        </div>
+
+        {{ (.Data.page_object).HTML "page" 5 .Request.URL.Query }}
+    </div>
+{{ end }}

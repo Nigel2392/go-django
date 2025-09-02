@@ -75,6 +75,28 @@ func getListActions(next string) []*columns.ListAction[attrs.Definer] {
 		},
 		{
 			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+				return django.AppInstalled("auditlogs") && permissions.HasObjectPermission(r, row, "auditlogs:list")
+			},
+			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				return trans.T(r.Context(), "History")
+			},
+			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				var u = django.Reverse(
+					"admin:auditlogs",
+				)
+				var url, err = url.Parse(u)
+				if err != nil {
+					return u
+				}
+				var q = url.Query()
+				q.Set("filters-object_id", strconv.Itoa(int(row.(*PageNode).ID())))
+				q.Set("filters-content_type", contenttypes.NewContentType(row).ShortTypeName())
+				url.RawQuery = q.Encode()
+				return url.String()
+			},
+		},
+		{
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
 				return permissions.HasObjectPermission(r, row, "pages:edit")
 			},
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
@@ -113,28 +135,6 @@ func getListActions(next string) []*columns.ListAction[attrs.Definer] {
 				return addNextUrl(
 					u, next,
 				)
-			},
-		},
-		{
-			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-				return django.AppInstalled("auditlogs") && permissions.HasObjectPermission(r, row, "auditlogs:list")
-			},
-			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				return trans.T(r.Context(), "History")
-			},
-			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				var u = django.Reverse(
-					"admin:auditlogs",
-				)
-				var url, err = url.Parse(u)
-				if err != nil {
-					return u
-				}
-				var q = url.Query()
-				q.Set("filters-object_id", strconv.Itoa(int(row.(*PageNode).ID())))
-				q.Set("filters-content_type", contenttypes.NewContentType(row).ShortTypeName())
-				url.RawQuery = q.Encode()
-				return url.String()
 			},
 		},
 		{
@@ -522,21 +522,21 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 						ClassName: "page-actions lg",
 						Actions: []menu.Action{
 							&menu.BaseAction{
-								Text: trans.S("Edit"),
-								Show: func(r *http.Request) bool {
-									return permissions.HasObjectPermission(r, p, "pages:edit")
-								},
-								URL: func(r *http.Request) string {
-									return django.Reverse("admin:pages:edit", p.PK)
-								},
-							},
-							&menu.BaseAction{
 								Text: trans.S("Add Child Page"),
 								Show: func(r *http.Request) bool {
 									return permissions.HasObjectPermission(r, p, "pages:add")
 								},
 								URL: func(r *http.Request) string {
 									return django.Reverse("admin:pages:type", p.PK)
+								},
+							},
+							&menu.BaseAction{
+								Text: trans.S("Edit"),
+								Show: func(r *http.Request) bool {
+									return permissions.HasObjectPermission(r, p, "pages:edit")
+								},
+								URL: func(r *http.Request) string {
+									return django.Reverse("admin:pages:edit", p.PK)
 								},
 							},
 							&menu.BaseAction{
