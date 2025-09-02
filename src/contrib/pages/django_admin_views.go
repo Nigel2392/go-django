@@ -1196,6 +1196,10 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 			context.Set("model", m)
 			context.Set("page_object", p)
 
+			if q := req.URL.Query().Get("next"); q != "" {
+				context.Set("BackURL", q)
+			}
+
 			var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
 			if err != nil {
 				return nil, err
@@ -1203,7 +1207,7 @@ func unpublishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDe
 
 			context.SetPage(admin.PageOptions{
 				TitleFn:     trans.S("Unpublish %q", p.Title),
-				SubtitleFn:  trans.S("Unpublishing a page will remove it from the live site\nOptionally, you can unpublish all child pages"),
+				SubtitleFn:  trans.S("Unpublishing a page will remove it from the live site"),
 				BreadCrumbs: breadcrumbs,
 				Actions:     getPageActions(r, p),
 			})
@@ -1277,6 +1281,10 @@ func publishPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			context.Set("model", m)
 			context.Set("page_object", p)
 
+			if q := req.URL.Query().Get("next"); q != "" {
+				context.Set("BackURL", q)
+			}
+
 			var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
 			if err != nil {
 				return nil, err
@@ -1322,8 +1330,6 @@ func movePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	if r.Method == http.MethodPost && forms.IsValid(r.Context(), form) {
 
 		var cleanedData = form.CleanedData()
-		fmt.Println(cleanedData)
-
 		var qs = NewPageQuerySet().WithContext(r.Context())
 		var parentRow, err = qs.Filter("PK", cleanedData["new-parent"].(*PageNode).PK).Get()
 		if err != nil {

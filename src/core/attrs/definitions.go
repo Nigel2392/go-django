@@ -64,6 +64,12 @@ func (d *ObjectDefinitions) SignalChange(f Field, value interface{}) {
 	}
 }
 
+func (d *ObjectDefinitions) SignalReset(f Field) {
+	if m, ok := d.Object.(CanSignalChanged); ok {
+		m.SignalReset(f)
+	}
+}
+
 func (d *ObjectDefinitions) TableName() string {
 	if d.Table != "" {
 		return d.Table

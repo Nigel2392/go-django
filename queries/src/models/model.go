@@ -187,11 +187,14 @@ func (m *Model) onChange(s signals.Signal[ModelChangeSignal], ms ModelChangeSign
 	case ms.Flags.True(FlagFieldChanged):
 		m.internals.state.change(ms.Field.Name())
 
-		// fmt.Printf(
-		// 	"Model %T field %s changed to %v\n",
-		// 	m.internals.object.Interface(),
-		// 	ms.Field.Name(), ms.Field.GetValue(),
-		// )
+	// fmt.Printf(
+	// 	"Model %T field %s changed to %v\n",
+	// 	m.internals.object.Interface(),
+	// 	ms.Field.Name(), ms.Field.GetValue(),
+	// )
+
+	case ms.Flags.True(FlagFieldReset):
+		m.internals.state.reset(ms.Field.Name())
 
 	default:
 		// if the signal is not for a field change, we can skip it
@@ -222,6 +225,18 @@ func (m *Model) SignalChange(fa attrs.Field, value interface{}) {
 		Model:  m,
 		Field:  fa,
 		Flags:  FlagFieldChanged,
+		Object: m.internals.object.Interface().(attrs.Definer),
+	})
+}
+
+// SignalReset is called when a field's changed status should be reset.
+func (m *Model) SignalReset(fa attrs.Field) {
+	m.checkValid()
+
+	m.changed.Send(ModelChangeSignal{
+		Model:  m,
+		Field:  fa,
+		Flags:  FlagFieldReset,
 		Object: m.internals.object.Interface().(attrs.Definer),
 	})
 }
@@ -742,7 +757,6 @@ func (m *Model) AfterQuery(ctx context.Context) error {
 // such as setting the initial state of the model and marking it as loaded from the database.
 func (m *Model) AfterSave(ctx context.Context) error {
 	m.checkValid()
-	m.setupInitialState()
 	m.internals.fromDB = true
 	return nil
 }

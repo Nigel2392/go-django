@@ -21,9 +21,6 @@ import (
 	"github.com/Nigel2392/go-signals"
 )
 
-//go:linkname updateNodes github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).updateNodes
-func updateNodes(qs *pages.PageQuerySet, nodes []*pages.PageNode) error
-
 //go:linkname incrementNumChild github.com/Nigel2392/go-django/src/contrib/pages.(*PageQuerySet).incrementNumChild
 func incrementNumChild(qs *pages.PageQuerySet, pk ...int64) error
 
@@ -963,7 +960,12 @@ func TestPageNode(t *testing.T) {
 	}
 
 	t.Run("UpdateNodes", func(t *testing.T) {
-		var err = updateNodes(qs, nodesToUpdate)
+		var _, err = qs.
+			Base().
+			Select("*").
+			ExplicitSave().
+			BulkUpdate(nodesToUpdate)
+
 		if err != nil {
 			t.Fatal(err)
 			return

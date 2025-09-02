@@ -17,18 +17,14 @@
     {{ end }}
 {{ end }}
 
-{{ define "content_root" }}
+{{ define "content" }}
     <form method="post" action="{{ (.Get "PostURL") }}" class="admin-form pages-form">
-        
-        {{ $Page := (.Get "Page") }}
-        {{ if $Page }}
-            {{ $Title := $Page.Title }}
-            {{ $Subtitle := $Page.Subtitle }}
-            {{ if (or $Title $Subtitle) }}
-                {{ component "admin.header" 1 $Title $Subtitle }}
-            {{ end }}
-        {{ end }}
-        
+        <div class="alert info content-width">
+            <p class="alert-text">{{ T "Move pages between different positions in the page- tree hierarchy." }}</p>
+            <p class="alert-text">{{ T "Use the form below to select the new parent page for the target page." }}</p>
+            <p class="alert-text">{{ T "Note that moving a page will also move all its children and change their URL structure." }}</p>
+        </div>
+
         {{ csrf_field }}
 
         {{ $BackURL := (.Get "BackURL") }}

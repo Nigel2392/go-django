@@ -174,7 +174,11 @@ func TestPageMenuHandler(t *testing.T) {
 
 	tree.FixTree()
 
-	err = updateNodes(qs, nodeRefs)
+	_, err = qs.
+		Base().
+		Select("*").
+		ExplicitSave().
+		BulkUpdate(nodeRefs)
 	if err != nil {
 		t.Fatalf("failed to update nodes: %v", err)
 	}

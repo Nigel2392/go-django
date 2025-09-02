@@ -486,6 +486,10 @@ type CanSignalChanged interface {
 	// This is used to notify the model that a field has changed,
 	// so that the model can update its state accordingly.
 	SignalChange(f Field, value interface{})
+
+	// SignalReset is a function that should be called when a field saved, and thus the
+	// changed status should be reset.
+	SignalReset(f Field)
 }
 
 // Definitions is the interface that wraps the methods for a model's field definitions.

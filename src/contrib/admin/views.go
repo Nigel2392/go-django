@@ -306,12 +306,20 @@ continueView:
 				}
 			}
 
-			var query = req.URL.Query()
-			query.Set("_export", "1")
-			var downloadURL = fmt.Sprintf("%s?%s",
-				django.Reverse("admin:apps:model", app.Name, model.GetName()),
-				query.Encode(),
-			)
+			var actions = make([]Action, 0)
+			if permissions.HasObjectPermission(req, model.NewInstance(), "admin:export") {
+				var query = req.URL.Query()
+				query.Set("_export", "1")
+				var downloadURL = fmt.Sprintf("%s?%s",
+					django.Reverse("admin:apps:model", app.Name, model.GetName()),
+					query.Encode(),
+				)
+				actions = append(actions, Action{
+					Icon:  "icon-download",
+					Title: trans.T(r.Context(), "Export %s", model.PluralLabel(r.Context())),
+					URL:   downloadURL,
+				})
+			}
 
 			var context = NewContext(req, adminSite, baseCtx)
 			context.SetPage(PageOptions{
@@ -336,13 +344,7 @@ continueView:
 					},
 					buttons...,
 				),
-				Actions: []Action{
-					{
-						Icon:  "icon-download",
-						Title: trans.T(r.Context(), "Export %s", model.PluralLabel(r.Context())),
-						URL:   downloadURL,
-					},
-				},
+				Actions: actions,
 				SidePanels: &menu.SidePanels{
 					Panels: []menu.SidePanel{
 						SidePanelFilters(

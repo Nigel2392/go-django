@@ -213,17 +213,8 @@
 .pages-form {
     display: flex;
     flex-direction: column;
-    margin-top: 3em;
-    margin-left: 3em;
-    padding: 1em;
+    gap: 0.5em;
 }
-.pages-form .buttons {
-    margin-top: 1em;
-}
-.pages-form .buttons > button {
-    margin-right: 1em;
-}
-
 .model-list-display {
     display: flex;
     flex-direction: column;

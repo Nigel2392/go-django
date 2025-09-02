@@ -2,18 +2,13 @@
 
 {{ define "title" }}{{ T "Unpublish" }}{{ end }}
 
-{{ define "content_root" }}
+{{ define "content" }}
     <form method="post" action="{{ (.Get "PostURL") }}" class="admin-form pages-form">
-        
-        {{ $Page := (.Get "Page") }}
-        {{ if $Page }}
-            {{ $Title := $Page.Title }}
-            {{ $Subtitle := $Page.Subtitle }}
-            {{ if (or $Title $Subtitle) }}
-                {{ component "admin.header" 1 $Title $Subtitle }}
-            {{ end }}
-        {{ end }}
-        
+        <div class="alert info content-width">
+            <p class="alert-text">{{ T "Publishing a page will make it visible on the live site." }}</p>
+            <p class="alert-text">{{ T "It is required to publish a page before it can be viewed by the public." }}</p>
+        </div>
+
         {{ csrf_field }}
 
         {{ $BackURL := (.Get "BackURL") }}

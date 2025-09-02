@@ -3362,6 +3362,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				value = nil
 			}
 
+			defs.SignalReset(field)
 			info.Fields = append(info.Fields, field)
 			info.Values = append(info.Values, value)
 		}
@@ -3683,6 +3684,8 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 					field.Name(), obj,
 				))
 			}
+
+			defs.SignalReset(field)
 
 			info.FieldInfo.Fields = append(info.FieldInfo.Fields, field)
 			info.Values = append(info.Values, value)

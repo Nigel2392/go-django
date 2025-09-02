@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -1002,12 +1003,15 @@ func (qs *PageQuerySet) saveSpecific(node *PageNode, creating bool) error {
 	return refField.Scan(srcVal)
 }
 
-func (qs *PageQuerySet) updateNodes(nodes []*PageNode) error {
+func (qs *PageQuerySet) updateNodes(nodes []*PageNode, exclude ...string) error {
+
+	var fields = []string{"PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt"}
+	fields = attrs.FieldNames(fields, exclude)
 
 	var updated, err = qs.
 		Base().
 		ExplicitSave().
-		Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt").
+		Select(attrutils.InterfaceList(fields)...).
 		BulkUpdate(nodes)
 	if err != nil {
 		return fmt.Errorf("failed to prepare nodes for update: %w", err)

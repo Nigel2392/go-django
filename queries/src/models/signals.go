@@ -24,6 +24,7 @@ const (
 	FlagProxySetup
 	FlagProxyChanged
 	FlagFieldChanged
+	FlagFieldReset
 )
 
 type ModelChangeSignal struct {

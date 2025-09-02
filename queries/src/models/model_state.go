@@ -2,6 +2,8 @@ package models
 
 import (
 	"reflect"
+
+	"github.com/Nigel2392/go-django/src/core/assert"
 )
 
 // ModelState represents the state of a model instance,
@@ -78,6 +80,21 @@ func (m *ModelState) change(fieldName string) {
 		return
 	}
 	m.changed[fieldName] = struct{}{}
+}
+
+// reset marks the given field as unchanged in the model's state.
+func (m *ModelState) reset(fieldName string) {
+	if m == nil {
+		return
+	}
+
+	var field, ok = m.model.internals.defs.Field(fieldName)
+	if !ok {
+		assert.Fail("field %q does not exist in model %T", fieldName, m.model)
+	}
+
+	delete(m.changed, fieldName)
+	m.initial[fieldName] = field.GetValue()
 }
 
 // Mark a field as changed in the model's state.

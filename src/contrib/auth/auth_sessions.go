@@ -4,6 +4,7 @@
 package auth
 
 import (
+	"context"
 	"net/http"
 	"time"
 
@@ -33,12 +34,23 @@ func Login(r *http.Request, u *User) (*User, error) {
 	})
 
 	u.LastLogin = time.Now()
-	_, err = queries.GetQuerySet(&User{}).
-		WithContext(r.Context()).
-		ExplicitSave().
-		Select("LastLogin").
-		Filter("ID", u.ID).
-		Update(u)
+
+	// Add this as a session finalizer
+	// This might allow us to skip an update query, if the caller makes one.
+	session.AddFinalizer(func(r *http.Request, ctx context.Context) (context.Context, error) {
+		if !u.State().Changed(true) {
+			return ctx, nil
+		}
+
+		_, err = queries.GetQuerySet(&User{}).
+			WithContext(ctx).
+			ExplicitSave().
+			Select("LastLogin").
+			Filter("ID", u.ID).
+			Update(u)
+
+		return ctx, err
+	})
 
 	return u, err
 }

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
@@ -16,7 +17,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/views/list"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -273,9 +273,19 @@ func FixTree(ctx context.Context) error {
 
 	var tree = NewNodeTree(allNodes)
 
-	tree.FixTree()
+	var changed = tree.FixTree()
+	if len(changed) == 0 {
+		return errors.NoChanges.Wrapf(
+			"no changes found in tree structure for %d nodes",
+			allNodesCount,
+		)
+	}
 
-	err = qs.updateNodes(allNodes)
+	_, err = qs.
+		Base().
+		ExplicitSave().
+		Select("Path", "Depth", "Numchild", "UrlPath").
+		BulkUpdate(allNodes)
 	if err != nil {
 		return errors.Wrap(err, "failed to update nodes")
 	}

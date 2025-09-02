@@ -34,6 +34,23 @@ func fieldNames(d any, exclude []string) []string {
 		}
 	case []FieldDefinition:
 		fields = d
+
+	case []string: // []string is the only case which itself will return
+
+		if len(excludeMap) == 0 {
+			return d
+		}
+
+		var ret = make([]string, 0, len(d))
+		for _, name := range d {
+			if _, ok := excludeMap[name]; ok {
+				continue
+			}
+
+			ret = append(ret, name)
+		}
+		return ret
+
 	default:
 		panic(fmt.Sprintf(
 			"fieldNames: expected Definer, []Field or []FieldDefinition, got %T",
@@ -64,7 +81,7 @@ func FieldNames(d any, exclude []string) []string {
 	}
 
 	switch d.(type) {
-	case Definer, []Field, []FieldDefinition, Definitions, StaticDefinitions:
+	case Definer, []Field, []FieldDefinition, Definitions, StaticDefinitions, []string:
 		return fieldNames(d, exclude)
 	}
 

@@ -60,36 +60,92 @@ type Node struct {
 	Children *orderedmap.OrderedMap[string, *Node]
 }
 
-func (n *Node) FixTree() {
+func (n *Node) FixTree() []*PageNode {
 	var i int64 = 0
+	var changedList = make([]*PageNode, 0)
+
 	for front := n.Children.Front(); front != nil; front = front.Next() {
 		// Fix all root nodes
 		var node = front.Value
-		node.Ref.Depth = 0
-		node.Ref.UrlPath = path.Join("/", node.Ref.Slug)
-		node.Ref.Numchild = int64(node.Children.Len())
-		node.Ref.Path = buildPathPart(i)
-		i++
+
+		if node.Ref == nil {
+			continue
+		}
+
+		var addToChangedList bool
+		if node.Ref.Depth != 0 {
+			node.Ref.Depth = 0
+			addToChangedList = true
+		}
+
+		var urlPath = path.Join("/", node.Ref.Slug)
+		if urlPath != node.Ref.UrlPath {
+			node.Ref.UrlPath = urlPath
+			addToChangedList = true
+		}
+
+		if node.Ref.Numchild != int64(node.Children.Len()) {
+			node.Ref.Numchild = int64(node.Children.Len())
+			addToChangedList = true
+		}
+
+		var path = buildPathPart(i)
+		if path != node.Ref.Path {
+			node.Ref.Path = buildPathPart(i)
+			addToChangedList = true
+		}
 
 		// Fix all children
-		node.fixChildren(1)
+		if addToChangedList {
+			changedList = append(changedList, node.Ref)
+		}
+
+		changedList = append(changedList, node.fixChildren(1)...)
+		i++
 	}
+
+	return changedList
 }
 
-func (n *Node) fixChildren(depth int64) {
+func (n *Node) fixChildren(depth int64) []*PageNode {
 	var i int64 = 0
+	var changedList = make([]*PageNode, 0)
 	for front := n.Children.Front(); front != nil; front = front.Next() {
 		var node = front.Value
 		if node.Ref == nil {
 			continue
 		}
-		node.Ref.Depth = depth
-		node.Ref.UrlPath = path.Join(n.Ref.UrlPath, node.Ref.Slug)
-		node.Ref.Numchild = int64(node.Children.Len())
-		node.Ref.Path = n.Ref.Path + buildPathPart(i)
-		node.fixChildren(depth + 1)
+
+		var addToChangedList bool
+		if node.Ref.Depth != depth {
+			node.Ref.Depth = depth
+			addToChangedList = true
+		}
+
+		var urlPath = path.Join(n.Ref.UrlPath, node.Ref.Slug)
+		if urlPath != node.Ref.UrlPath {
+			node.Ref.UrlPath = urlPath
+			addToChangedList = true
+		}
+
+		if node.Ref.Numchild != int64(node.Children.Len()) {
+			node.Ref.Numchild = int64(node.Children.Len())
+			addToChangedList = true
+		}
+
+		if node.Ref.Path != n.Ref.Path+buildPathPart(i) {
+			node.Ref.Path = n.Ref.Path + buildPathPart(i)
+			addToChangedList = true
+		}
+
+		if addToChangedList {
+			changedList = append(changedList, node.Ref)
+		}
+
+		changedList = append(changedList, node.fixChildren(depth+1)...)
 		i++
 	}
+	return changedList
 }
 
 func (n *Node) FindNode(path string) *Node {

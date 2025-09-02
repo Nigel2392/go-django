@@ -2,18 +2,16 @@
 
 {{ define "title" }}{{ T "Unpublish" }}{{ end }}
 
-{{ define "content_root" }}
+{{ define "content" }}
     <form method="post" action="{{ (.Get "PostURL") }}" class="admin-form pages-form">
-        
-        {{ $Page := (.Get "Page") }}
-        {{ if $Page }}
-            {{ $Title := $Page.Title }}
-            {{ $Subtitle := $Page.Subtitle }}
-            {{ if (or $Title $Subtitle) }}
-                {{ component "admin.header" 1 $Title $Subtitle }}
+        <div class="alert info content-width">
+            <p class="alert-text">{{ T "Unpublishing a page will remove it from the site, but its content will be preserved." }}</p>
+            <p class="alert-text">{{ T "This means that the page will no longer be accessible to users, but you can still edit its content in the admin interface." }}</p>
+            {{ if gt .Data.page_object.Numchild 0 }}
+                <p class="alert-text">{{ T "Optionally, you can unpublish all child pages along with the current page." }}</p>
             {{ end }}
-        {{ end }}
-        
+        </div>
+
         {{ csrf_field }}
         
         {{ $BackURL := (.Get "BackURL") }}
@@ -25,9 +23,11 @@
             <button class="button secondary" type="submit" value="{{ T "Submit" }}">
                 {{ T "Unpublish this node" }}
             </button>
-            <button class="button danger" type="submit" name="unpublish-children" value="unpublish-children">
-                {{ T "Unpublish this node and all its children" }}
-            </button>
+            {{ if gt .Data.page_object.Numchild 0 }}
+                <button class="button danger" type="submit" name="unpublish-children" value="unpublish-children">
+                    {{ T "Unpublish this node and all its children" }}
+                </button>
+            {{ end }}
             {{ if $BackURL }}
                 <a class="button warning" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
             {{ else }}
