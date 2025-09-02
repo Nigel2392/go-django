@@ -67,6 +67,9 @@ type ChooserListPage[T attrs.Definer] struct {
 	// QuerySet is a function that returns a queries.QuerySet to use for the list view.
 	QuerySet func(r *http.Request, model T) (*queries.QuerySet[T], error)
 
+	// Filter is a function that applies filters to the QuerySet.
+	Filter func(qs *queries.QuerySet[T], req *http.Request, searchValue string) *queries.QuerySet[T]
+
 	// SearchFields are the fields to search in the list view.
 	SearchFields []admin.SearchField
 
@@ -144,6 +147,11 @@ func (v *ChooserListPage[T]) FilterQuerySet(qs *queries.QuerySet[T], req *http.R
 	}
 
 	var searchValue = req.URL.Query().Get(v.SearchVar())
+
+	if v.Filter != nil {
+		qs = v.Filter(qs, req, searchValue)
+	}
+
 	if searchValue == "" {
 		return qs
 	}

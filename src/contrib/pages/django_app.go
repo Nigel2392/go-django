@@ -318,6 +318,7 @@ func NewAppConfig() django.AppConfig {
 						if err != nil {
 							return nil, err
 						}
+
 						parentObj = n.Object
 
 						if r.URL.Query().Get("back") == "1" {
@@ -327,6 +328,7 @@ func NewAppConfig() django.AppConfig {
 									return nil, err
 								}
 							} else {
+								parentObj = nil
 								goto addDepthExpr
 							}
 						}
@@ -341,19 +343,37 @@ func NewAppConfig() django.AppConfig {
 					}
 
 				addDepthExpr:
-					if r.URL.Query().Get("search") == "" {
-						exprs = append(
-							exprs,
-							expr.Q("Depth", depth),
-						)
-					} else if parentObj != nil {
-						exprs = append(
-							exprs,
-							expr.And(
-								expr.Q("Path__istartswith", parentObj.Path),
-								expr.Q("Depth__gt", parentObj.Depth),
-							),
-						)
+					var search = r.URL.Query().Get("search")
+					if parentObj != nil {
+						if search == "" {
+							exprs = append(
+								exprs,
+								expr.And(
+									expr.Q("Path__startswith", parentObj.Path),
+									expr.Q("Depth", parentObj.Depth+1),
+								),
+							)
+						} else {
+							exprs = append(
+								exprs,
+								expr.And(
+									expr.Q("Path__startswith", parentObj.Path),
+									expr.Q("Depth__gte", parentObj.Depth),
+								),
+							)
+						}
+					} else {
+						if search == "" {
+							exprs = append(
+								exprs,
+								expr.Q("Depth", depth),
+							)
+						} else {
+							exprs = append(
+								exprs,
+								expr.Q("Depth__gte", search),
+							)
+						}
 					}
 
 					var e expr.Expression

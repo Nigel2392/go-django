@@ -5,8 +5,8 @@
                 {{ if .Data.search.allowed }}
                     <form method="get" class="godjango-chooser-list-form">
                         <div class="form-field">
-                            {{ if and .Data.list.WrappedModel .Data.list.WrappedModel.Model }}
-                                <input type="hidden" name="parent" value="{{ .Data.list.Model.PK }}">
+                            {{ if .Request.URL.Query.Get "parent" }}
+                                <input type="hidden" name="parent" value="{{ .Request.URL.Query.Get "parent" }}">
                             {{ end }}
                             <input type="text" name="{{ .Data.search.var }}" value="{{ .Data.search.value }}" placeholder="{{ .Data.search.placeholder }}" class="godjango-chooser-list-search-input">
                             <button type="submit" class="godjango-chooser-list-search-button button secondary">{{ .Data.search.text }}</button>
