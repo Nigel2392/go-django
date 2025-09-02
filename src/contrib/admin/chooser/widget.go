@@ -87,11 +87,14 @@ func NewChooserWidget(model attrs.Definer, widgetAttrs map[string]string, choose
 }
 
 func (w *ChooserWidget) Media() media.Media {
-	var m = media.NewMedia()
+	var m media.Media = media.NewMedia()
 	m.AddCSS(media.CSS(django.Static("chooser/css/index.css")))
 	m.AddJS(&media.JSAsset{
 		URL: django.Static("chooser/js/index.js"),
 	})
+	if w.Definition != nil {
+		m = m.Merge(w.Definition.Media())
+	}
 	return m
 }
 

@@ -34,6 +34,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -268,6 +269,11 @@ func NewAppConfig() django.AppConfig {
 		var chooserDefinitionAllNodes = chooser.ChooserDefinition[*PageNode]{
 			Title: trans.S("Page Chooser"),
 			Model: &PageNode{},
+			MediaFn: func() media.Media {
+				var m = media.NewMedia()
+				m.AddCSS(media.CSS(django.Static("pages/admin/css/chooser.css")))
+				return m
+			},
 			PreviewString: func(ctx context.Context, instance *PageNode) string {
 				if !instance.IsPublished() {
 					return html.EscapeString(instance.Title)
@@ -303,6 +309,7 @@ func NewAppConfig() django.AppConfig {
 					var parent = r.URL.Query().Get("parent")
 					var depth int64 = 0
 					var exprs = make([]expr.Expression, 0, 2)
+					var parentObj *PageNode
 					if parent != "" {
 						var n, err = NewPageQuerySet().
 							WithContext(r.Context()).
@@ -311,6 +318,7 @@ func NewAppConfig() django.AppConfig {
 						if err != nil {
 							return nil, err
 						}
+						parentObj = n.Object
 
 						if r.URL.Query().Get("back") == "1" {
 							if !n.Object.IsRoot() {
@@ -329,13 +337,24 @@ func NewAppConfig() django.AppConfig {
 						)
 
 						depth = n.Object.Depth + 1
+						parentObj = n.Object
 					}
 
 				addDepthExpr:
-					exprs = append(
-						exprs,
-						expr.Q("Depth", depth),
-					)
+					if r.URL.Query().Get("search") == "" {
+						exprs = append(
+							exprs,
+							expr.Q("Depth", depth),
+						)
+					} else if parentObj != nil {
+						exprs = append(
+							exprs,
+							expr.And(
+								expr.Q("Path__istartswith", parentObj.Path),
+								expr.Q("Depth__gt", parentObj.Depth),
+							),
+						)
+					}
 
 					var e expr.Expression
 					if len(exprs) > 1 {

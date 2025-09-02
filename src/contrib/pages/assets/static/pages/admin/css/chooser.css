@@ -1,0 +1,41 @@
+.chooser-pages-list {
+    display: flex;
+    flex-direction: column;
+}
+.chooser-pages-list .chooser-pages-list__item {
+    width: 100%;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    border-bottom: 1px dotted var(--secondary-bg-color);
+}
+.chooser-pages-list .chooser-pages-list__item--parent {
+    font-weight: 600;
+    font-size: 1.1em;
+}
+.chooser-pages-list .chooser-pages-list__item .chooser-pages-list__item__parent_link,
+.chooser-pages-list .chooser-pages-list__item .chooser-pages-list__item__children_link {
+    padding: 1em;
+    background-color: var(--secondary-bg-color);
+}
+.chooser-pages-list .chooser-pages-list__item .chooser-pages-list__item__parent_link svg,
+.chooser-pages-list .chooser-pages-list__item .chooser-pages-list__item__children_link svg {
+    width: 1.5em;
+    height: 1.5em;
+    vertical-align: middle;
+    fill: var(--secondary-text-color);
+}
+.chooser-pages-list .chooser-pages-list__item .chooser-pages-list__item__parent_link {
+
+}
+.chooser-pages-list .chooser-pages-list__item .chooser-pages-list__item__children_link {
+    margin-left: auto;
+}
+.chooser-pages-list .chooser-pages-list__item .godjango-chooser-list-group {
+    flex-grow: 1;
+    cursor: pointer;
+    padding: 1em;
+}
+.chooser-pages-list .chooser-pages-list__item .list__item__title {
+    font-size: 1.25em;
+}

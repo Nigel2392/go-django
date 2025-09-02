@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
@@ -35,6 +36,7 @@ type chooser interface {
 
 	ListView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View
 	CreateView(adminSite *admin.AdminApplication, app *admin.AppDefinition, model *admin.ModelDefinition) views.View
+	Media() media.Media
 }
 
 type ChooserDefinition[T attrs.Definer] struct {
@@ -51,6 +53,7 @@ type ChooserDefinition[T attrs.Definer] struct {
 	DjangoApp  django.AppConfig
 	AdminApp   *admin.AppDefinition
 	AdminModel *admin.ModelDefinition
+	MediaFn    func() media.Media
 }
 
 type WrappedModel[T attrs.Definer] struct {
@@ -277,6 +280,13 @@ func (c *ChooserDefinition[T]) CreateView(adminSite *admin.AdminApplication, app
 		c.CreatePage._Definition = c
 	}
 	return c.CreatePage
+}
+
+func (c *ChooserDefinition[T]) Media() media.Media {
+	if c.MediaFn != nil {
+		return c.MediaFn()
+	}
+	return media.NewMedia()
 }
 
 func (c *ChooserDefinition[T]) GetContext(req *http.Request, page, bound views.View) *ModalContext {

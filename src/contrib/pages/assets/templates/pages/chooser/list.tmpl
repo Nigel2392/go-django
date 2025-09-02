@@ -1,12 +1,13 @@
 {{ define "list" }}
     <div class="godjango-chooser-list">
-        <link rel="stylesheet" href="{{ static "pages/admin/css/chooser.css" }}">
-
         {{ if or .Data.search.allowed .Data.urls.create }}
             <div class="godjango-chooser-actions">
                 {{ if .Data.search.allowed }}
                     <form method="get" class="godjango-chooser-list-form">
                         <div class="form-field">
+                            {{ if and .Data.list.WrappedModel .Data.list.WrappedModel.Model }}
+                                <input type="hidden" name="parent" value="{{ .Data.list.Model.PK }}">
+                            {{ end }}
                             <input type="text" name="{{ .Data.search.var }}" value="{{ .Data.search.value }}" placeholder="{{ .Data.search.placeholder }}" class="godjango-chooser-list-search-input">
                             <button type="submit" class="godjango-chooser-list-search-button button secondary">{{ .Data.search.text }}</button>
                         </div>
@@ -20,13 +21,11 @@
 
             {{ if and .Data.list.WrappedModel .Data.list.WrappedModel.Model }}
                 <div class="chooser-pages-list__item chooser-pages-list__item--parent">
-                    {{ if .Data.list.Model.Numchild }}
-                        <div class="chooser-pages-list__item__children_link">
-                            <a class="chooser-list-link" href="{{ url "admin:apps:model:chooser:list" $data.app_name $data.model_name $data.chooser_key }}?parent={{ .Data.list.Model.PK }}&back=1">
-                                {{ T "Back" }}
-                            </a>
-                        </div>
-                    {{ end }}
+                    <a class="chooser-list-link chooser-pages-list__item__parent_link" href="{{ url "admin:apps:model:chooser:list" $data.app_name $data.model_name $data.chooser_key }}?parent={{ .Data.list.Model.PK }}&back=1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="icon" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0"></path>
+                        </svg>
+                    </a>
                     <div class="godjango-chooser-list-group default-style" data-chooser-value="{{ .Data.list.Model.ID }}" data-chooser-preview="{{ .Data.list.PreviewHTML }}" data-chooser-data="{{ .Data.list.ExtraData | json }}">
                         <div class="chooser-pages-list__item__title">
                             {{ .Data.list.Model.Title }}
@@ -44,11 +43,11 @@
                         </div>
                     </div>
                     {{ if $page.Model.Numchild }}
-                        <div class="chooser-pages-list__item__children_link">
-                            <a class="chooser-list-link" href="{{ url "admin:apps:model:chooser:list" $data.app_name $data.model_name $data.chooser_key }}?parent={{ $page.Model.PK }}">
-                                {{ T "Children" }}
-                            </a>
-                        </div>
+                        <a class="chooser-list-link chooser-pages-list__item__children_link" href="{{ url "admin:apps:model:chooser:list" $data.app_name $data.model_name $data.chooser_key }}?parent={{ $page.Model.PK }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" fill="currentColor" viewBox="0 0 16 16">
+                                <path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"></path>
+                            </svg>
+                        </a>
                     {{ end }}
                 </div>
             {{ end }}
