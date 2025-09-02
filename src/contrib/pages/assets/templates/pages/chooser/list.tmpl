@@ -19,7 +19,7 @@
             {{ $data := .Data }}
 
             {{ if and .Data.list.WrappedModel .Data.list.WrappedModel.Model }}
-                <div class="chooser-pages-list__item">
+                <div class="chooser-pages-list__item chooser-pages-list__item--parent">
                     {{ if .Data.list.Model.Numchild }}
                         <div class="chooser-pages-list__item__children_link">
                             <a class="chooser-list-link" href="{{ url "admin:apps:model:chooser:list" $data.app_name $data.model_name $data.chooser_key }}?parent={{ .Data.list.Model.PK }}&back=1">
