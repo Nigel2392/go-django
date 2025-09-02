@@ -1,0 +1,109 @@
+package admin
+
+import "html/template"
+import "net/http"
+import "context"
+import "github.com/Nigel2392/go-django/queries/src"
+import "github.com/Nigel2392/go-django/src/core/attrs"
+import "bytes"
+import "github.com/Nigel2392/go-django/src/core/logger"
+import "runtime/debug"
+import "github.com/Nigel2392/go-django/src/forms/media"
+import "strconv"
+
+
+type DisplayPanel struct {
+	IconName string
+	Title    func(ctx context.Context, count int64) string
+	IsShown  func(r *http.Request) bool
+	QuerySet func(r *http.Request) *queries.QuerySet[attrs.Definer]
+	URL      func(r *http.Request) string
+}
+
+type boundDisplayPanel struct {
+	*DisplayPanel
+	r     *http.Request
+	count int64
+}
+
+func (b *boundDisplayPanel) TitleText() string {
+	if b.DisplayPanel.Title == nil {
+		return ""
+	}
+
+	return b.Title(b.r.Context(), b.count)
+}
+
+func (b *boundDisplayPanel) URL() string {
+	if b.DisplayPanel.URL == nil {
+		return ""
+	}
+
+	return b.DisplayPanel.URL(b.r)
+}
+
+type homePageDisplayPanels struct {
+    panels []*boundDisplayPanel
+    r     *http.Request
+}
+
+func (p *homePageDisplayPanels) Ordering() int {
+	return 0
+}
+
+func (p *homePageDisplayPanels) Media() media.Media {
+	return nil
+}
+
+func (p *homePageDisplayPanels) HTML() template.HTML {
+    var b = new(bytes.Buffer)
+    if err := p.Component().Render(p.r.Context(), b); err != nil {
+        logger.Errorf(
+            "error rendering home page display panels component: %v\n%s", 
+            err, debug.Stack(),
+        )
+    }
+    return template.HTML(b.String())
+}
+
+templ (p *homePageDisplayPanels) Component() {
+    <div class="display-panels">
+        for _, panel := range p.panels {
+            {{ var url = templ.URL(panel.URL()) }}
+            if url != "" {
+                <a href={ url } class="display-panels__panel">
+                    <div class="display-panels__panel__icon">
+                        <svg class={ "icon", panel.IconName }>
+                            <use href={ "#" + panel.IconName } />
+                        </svg>
+                    </div>
+                    <div class="display-panels__panel__content">
+                        <div class="display-panels__panel__count">
+                            { strconv.FormatInt(panel.count, 10) }
+                        </div>
+                        <div class="display-panels__panel__title">
+                            { panel.TitleText() }
+                        </div>
+                    </div>
+                </a>
+            } else {
+                <div class="display-panels__panel">
+                    <div class="display-panels__panel__icon">
+                        <svg class={ "icon", panel.IconName }>
+                            <use href={ "#" + panel.IconName } />
+                        </svg>
+                    </div>
+                    <div class="display-panels__panel__content">
+                        <div class="display-panels__panel__count">
+                            { strconv.FormatInt(panel.count, 10) }
+                        </div>
+                        <div class="display-panels__panel__title">
+                            { panel.TitleText() }
+                        </div>
+                    </div>
+                </div>
+            }
+
+        }
+    </div>
+}

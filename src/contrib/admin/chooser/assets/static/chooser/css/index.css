@@ -200,12 +200,11 @@ dialog.godjango-modal:not([fullscreen]) {
 }
 .godjango-chooser-list-group:hover {
     cursor: pointer;
-
-    & a, .link {
-        color: var(--secondary-text-color) !important;
-        pointer-events: none;
-        cursor: default;
-    }
+}
+.godjango-chooser-list-group:hover *:is(a, .link):not(.chooser-list-link) {
+    color: var(--secondary-text-color) !important;
+    pointer-events: none;
+    cursor: default;
 }
 .godjango-chooser-list-group:not(.default-style):hover {
     background-color: var(--secondary-bg-color) !important;

@@ -124,6 +124,31 @@ var pageAdminModelOptions = admin.ModelOptions{
 					return template.HTML("")
 				},
 			),
+			//	"ChooserChildren": list.ProcessableFieldColumn(
+			//		func(ctx context.Context) string { return "" },
+			//		"Numchild",
+			//		func(r *http.Request, _ attrs.Definitions, row attrs.Definer, children int64) any {
+			//			var node = row.(*PageNode)
+			//			if node.Numchild > 0 {
+			//				var chooserURL = django.Reverse(
+			//					"admin:apps:model:chooser:list",
+			//					AdminPagesAppName, AdminPagesModelPath, chooser.DEFAULT_KEY,
+			//				)
+			//
+			//				var q = make(url.Values)
+			//				q.Set("parent", fmt.Sprintf("%d", node.PK))
+			//
+			//				return template.HTML(fmt.Sprintf(
+			//					`<a href="%s" class="button secondary hollow chooser-list-link">%s</a>`,
+			//					fmt.Sprintf("%s?%s", chooserURL, q.Encode()), trans.P(
+			//						r.Context(), "%d child", "%d children",
+			//						int(node.Numchild), node.Numchild,
+			//					),
+			//				))
+			//			}
+			//			return template.HTML("")
+			//		},
+			//	),
 			"Live": list.BooleanColumnFunc(
 				trans.S("Live"),
 				func(r *http.Request, _ attrs.Definitions, row attrs.Definer) bool {

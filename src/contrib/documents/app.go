@@ -21,6 +21,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 )
 
@@ -130,8 +131,8 @@ func NewAppConfig(opts *Options) *AppConfig {
 				}
 			},
 			ListPage: &chooser.ChooserListPage[*Document]{
-				QuerySet: func(r *http.Request, model *Document) *queries.QuerySet[*Document] {
-					return queries.GetQuerySet(model).OrderBy("-CreatedAt")
+				QuerySet: func(r *http.Request, model *Document) (*queries.QuerySet[*Document], error) {
+					return queries.GetQuerySet(model).OrderBy("-CreatedAt"), nil
 				},
 				SearchFields: []admin.SearchField{
 					{Name: "Title", Lookup: expr.LOOKUP_ICONTANS},
@@ -140,6 +141,18 @@ func NewAppConfig(opts *Options) *AppConfig {
 			},
 			CreatePage: &chooser.ChooserFormPage[*Document]{},
 		})
+
+		goldcrest.Register(admin.RegisterHomePageDisplayPanelHook, 2, admin.RegisterHomePageDisplayPanelHookFunc(func(*http.Request, *admin.AdminApplication) []admin.DisplayPanel {
+			return []admin.DisplayPanel{{
+				IconName: "icon-file-document",
+				Title: func(ctx context.Context, count int64) string {
+					return trans.P(ctx, "Document", "Documents", count)
+				},
+				QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
+					return queries.GetQuerySet[attrs.Definer](&Document{})
+				},
+			}}
+		}))
 
 		if !django.AppInstalled("migrator") {
 			var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
@@ -21,6 +22,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 )
 
@@ -152,6 +154,18 @@ func NewAppConfig(opts *Options) *AppConfig {
 			},
 			CreatePage: &chooser.ChooserFormPage[*Image]{},
 		})
+
+		goldcrest.Register(admin.RegisterHomePageDisplayPanelHook, 1, admin.RegisterHomePageDisplayPanelHookFunc(func(*http.Request, *admin.AdminApplication) []admin.DisplayPanel {
+			return []admin.DisplayPanel{{
+				IconName: "icon-image",
+				Title: func(ctx context.Context, count int64) string {
+					return trans.P(ctx, "Image", "Images", count)
+				},
+				QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
+					return queries.GetQuerySet[attrs.Definer](&Image{})
+				},
+			}}
+		}))
 
 		if !django.AppInstalled("migrator") {
 			var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())

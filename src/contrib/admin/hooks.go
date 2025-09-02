@@ -20,9 +20,10 @@ const (
 	RegisterNavBreadCrumbHook  = "admin:register_breadcrumb"
 	RegisterNavActionHook      = "admin:register_nav_action"
 
-	RegisterHomePageBreadcrumbHook = "admin:home:register_breadcrumb"
-	RegisterHomePageActionHook     = "admin:home:register_action"
-	RegisterHomePageComponentHook  = "admin:home:register_component"
+	RegisterHomePageBreadcrumbHook   = "admin:home:register_breadcrumb"
+	RegisterHomePageActionHook       = "admin:home:register_action"
+	RegisterHomePageComponentHook    = "admin:home:register_component"
+	RegisterHomePageDisplayPanelHook = "admin:home:register_display_panel"
 
 	AdminModelHookAdd           = "admin:model:add"
 	AdminModelHookEdit          = "admin:model:edit"
@@ -48,9 +49,10 @@ type (
 	RegisterBreadCrumbHookFunc     = func(r *http.Request, adminSite *AdminApplication) []BreadCrumb
 	RegisterNavActionHookFunc      = func(r *http.Request, adminSite *AdminApplication) []Action
 
-	RegisterHomePageBreadcrumbHookFunc = func(*http.Request, *AdminApplication, []BreadCrumb) []BreadCrumb
-	RegisterHomePageActionHookFunc     = func(*http.Request, *AdminApplication, []Action) []Action
-	RegisterHomePageComponentHookFunc  = func(*http.Request, *AdminApplication) AdminPageComponent
+	RegisterHomePageBreadcrumbHookFunc   = func(*http.Request, *AdminApplication, []BreadCrumb) []BreadCrumb
+	RegisterHomePageActionHookFunc       = func(*http.Request, *AdminApplication, []Action) []Action
+	RegisterHomePageDisplayPanelHookFunc = func(*http.Request, *AdminApplication) []DisplayPanel
+	RegisterHomePageComponentHookFunc    = func(*http.Request, *AdminApplication) AdminPageComponent
 
 	RegisterAdminAppPageComponentHookFunc = func(r *http.Request, adminSite *AdminApplication, app *AppDefinition) AdminPageComponent
 

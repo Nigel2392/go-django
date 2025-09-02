@@ -148,7 +148,15 @@ class Chooser {
 
         var rows = this.modal.content.querySelectorAll(".godjango-chooser-list-group") as NodeListOf<HTMLElement>;
         rows.forEach((row) => {
-            row.addEventListener("click", () => {
+            row.addEventListener("click", (e: Event) => {
+
+                if ((e.target as HTMLElement).classList.contains("chooser-list-link") || (e.target as HTMLElement).closest(".chooser-list-link")) {
+                    console.debug("Clicked on link inside chooser row, ignoring row click");
+                    return;
+                }
+                
+                e.stopPropagation();
+                e.preventDefault();
                 var value = row.dataset.chooserValue;
                 var previewText = row.dataset.chooserPreview;
                 this.select(value, previewText, JSON.parse(row.dataset.chooserData || "{}"));
@@ -167,7 +175,7 @@ class Chooser {
             });
         }
 
-        var links = this.modal.content.querySelectorAll(".pagination a") as NodeListOf<HTMLAnchorElement>;
+        var links = this.modal.content.querySelectorAll(".pagination a, .chooser-list-link") as NodeListOf<HTMLAnchorElement>;
         links.forEach((link) => {
             link.addEventListener("click", async (event) => {
                 event.preventDefault();

@@ -358,12 +358,12 @@ func NewAppConfig() django.AppConfig {
 						Lookup: expr.LOOKUP_ICONTANS,
 					},
 				},
-				QuerySet: func(r *http.Request, model *User) *queries.QuerySet[*User] {
+				QuerySet: func(r *http.Request, model *User) (*queries.QuerySet[*User], error) {
 					var currentUser = authentication.Retrieve(r)
 					var user = currentUser.(*User)
 					return queries.GetQuerySet(&User{}).
 						Filter(expr.Q("ID", user.ID).Not(true)).
-						OrderBy("Email")
+						OrderBy("Email"), nil
 				},
 			},
 			CreatePage: &chooser.ChooserFormPage[*User]{},

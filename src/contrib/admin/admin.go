@@ -231,6 +231,9 @@ func NewAppConfig() django.AppConfig {
 			"admin/icons/funnel.svg",
 			"admin/icons/history.svg",
 			"admin/icons/download.svg",
+			"admin/icons/image.svg",
+			"admin/icons/file-earmark.svg",
+			"admin/icons/file-document.svg",
 			"admin/icons/no-view.svg",
 		); err != nil {
 			panic(err)

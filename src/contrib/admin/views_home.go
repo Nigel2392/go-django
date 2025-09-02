@@ -59,6 +59,39 @@ func getFuncTyped[T any](text any, request *http.Request, fallBack func(ctx cont
 	return fallBack
 }
 
+func init() {
+	goldcrest.Register(RegisterHomePageComponentHook, 0, RegisterHomePageComponentHookFunc(func(r *http.Request, a *AdminApplication) AdminPageComponent {
+		var panelFuncs = goldcrest.Get[RegisterHomePageDisplayPanelHookFunc](RegisterHomePageDisplayPanelHook)
+		var boundPanels = make([]*boundDisplayPanel, 0, len(panelFuncs))
+		for _, fn := range panelFuncs {
+			var panels = fn(r, a)
+			for i, panel := range panels {
+				var count, err = panel.QuerySet(r).Count()
+				if err != nil {
+					logger.Errorf("Error counting panel items for panel %d: %v", i, err)
+					continue
+				}
+
+				if panel.IsShown != nil && !panel.IsShown(r) {
+					continue
+				}
+
+				boundPanels = append(boundPanels, &boundDisplayPanel{
+					DisplayPanel: &panel,
+					r:            r,
+					count:        count,
+				})
+			}
+		}
+
+		if len(boundPanels) == 0 {
+			return nil
+		}
+
+		return &homePageDisplayPanels{panels: boundPanels, r: r}
+	}))
+}
+
 var HomeHandler = &views.BaseView{
 	AllowedMethods:  []string{http.MethodGet},
 	BaseTemplateKey: BASE_KEY,

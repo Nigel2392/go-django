@@ -35,6 +35,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 )
 
@@ -290,7 +291,50 @@ func NewAppConfig() django.AppConfig {
 					"ContentType",
 					"CreatedAt",
 					"UpdatedAt",
+					// "ChooserChildren",
 				},
+				//	QuerySet: func(r *http.Request, model *PageNode) (*queries.QuerySet[*PageNode], error) {
+				//		var parent = r.URL.Query().Get("parent")
+				//		var depth int64 = 0
+				//		var exprs = make([]expr.Expression, 0, 2)
+				//		if parent != "" {
+				//			var n, err = NewPageQuerySet().
+				//				WithContext(r.Context()).
+				//				Filter("PK", parent).
+				//				Get()
+				//			if err != nil {
+				//				return nil, err
+				//			}
+				//
+				//			exprs = append(
+				//				exprs,
+				//				expr.Q("PK", n.Object.PK),
+				//			)
+				//
+				//			depth = n.Object.Depth + 1
+				//		}
+				//
+				//		exprs = append(
+				//			exprs,
+				//			expr.Q("Depth", depth),
+				//		)
+				//
+				//		var e expr.Expression
+				//		if len(exprs) > 1 {
+				//			e = expr.Or(exprs...)
+				//		} else {
+				//			e = exprs[0]
+				//		}
+				//
+				//		var qs = NewPageQuerySet().
+				//			WithContext(r.Context()).
+				//			Select("*").
+				//			Filter(e).
+				//			OrderBy("Depth").
+				//			Annotate("IsParent", expr.Q("Depth", depth).Not(true)).
+				//			Base()
+				//		return qs, nil
+				//	},
 				SearchFields: []admin.SearchField{
 					{
 						Name:   "Title",
@@ -314,10 +358,16 @@ func NewAppConfig() django.AppConfig {
 		var chooserDefinitionRootNodes = chooserDefinitionAllNodes
 		var chooserDefinitionRootNodesListPage = *chooserDefinitionAllNodes.ListPage
 		chooserDefinitionRootNodes.ListPage = &chooserDefinitionRootNodesListPage
-		chooserDefinitionRootNodes.ListPage.QuerySet = func(r *http.Request, model *PageNode) *queries.QuerySet[*PageNode] {
-			return NewPageQuerySet().RootPages().Base()
+		chooserDefinitionRootNodes.ListPage.QuerySet = func(r *http.Request, model *PageNode) (*queries.QuerySet[*PageNode], error) {
+			return NewPageQuerySet().RootPages().Base(), nil
 		}
-
+		chooserDefinitionRootNodes.ListPage.Fields = []string{
+			"Title",
+			"Slug",
+			"ContentType",
+			"CreatedAt",
+			"UpdatedAt",
+		}
 		chooser.Register(&chooserDefinitionAllNodes)
 		chooser.Register(&chooserDefinitionRootNodes, CHOOSER_ROOT_PAGES_KEY)
 
@@ -345,6 +395,21 @@ func NewAppConfig() django.AppConfig {
 				),
 			),
 		)
+
+		goldcrest.Register(admin.RegisterHomePageDisplayPanelHook, 1, admin.RegisterHomePageDisplayPanelHookFunc(func(*http.Request, *admin.AdminApplication) []admin.DisplayPanel {
+			return []admin.DisplayPanel{{
+				IconName: "icon-file-earmark",
+				Title: func(ctx context.Context, count int64) string {
+					return trans.P(ctx, "Page", "Pages", count)
+				},
+				QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
+					return queries.GetQuerySet[attrs.Definer](&PageNode{})
+				},
+				URL: func(r *http.Request) string {
+					return django.Reverse("admin:pages")
+				},
+			}}
+		}))
 
 		tpl.Funcs(template.FuncMap{
 			"PageURL": URLPath,

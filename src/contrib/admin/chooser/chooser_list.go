@@ -65,7 +65,7 @@ type ChooserListPage[T attrs.Definer] struct {
 	Format map[string]func(v any) any
 
 	// QuerySet is a function that returns a queries.QuerySet to use for the list view.
-	QuerySet func(r *http.Request, model T) *queries.QuerySet[T]
+	QuerySet func(r *http.Request, model T) (*queries.QuerySet[T], error)
 
 	// SearchFields are the fields to search in the list view.
 	SearchFields []admin.SearchField
@@ -119,20 +119,23 @@ func (v *ChooserListPage[T]) GetTemplate(r *http.Request) string {
 	return "chooser/views/list.tmpl"
 }
 
-func (v *ChooserListPage[T]) getQuerySet(req *http.Request) *queries.QuerySet[T] {
+func (v *ChooserListPage[T]) getQuerySet(req *http.Request) (*queries.QuerySet[T], error) {
 	if v.QuerySet != nil {
 		return v.QuerySet(req, v._Definition.Model)
 	}
 	var newObj = attrs.NewObject[T](
 		reflect.TypeOf(v._Definition.Model),
 	)
-	return queries.GetQuerySet(newObj)
+	return queries.GetQuerySet(newObj), nil
 }
 
-func (v *ChooserListPage[T]) GetQuerySet(req *http.Request) *queries.QuerySet[T] {
-	var qs = v.getQuerySet(req)
+func (v *ChooserListPage[T]) GetQuerySet(req *http.Request) (*queries.QuerySet[T], error) {
+	var qs, err = v.getQuerySet(req)
+	if err != nil {
+		return nil, err
+	}
 	qs = qs.WithContext(req.Context())
-	return v.FilterQuerySet(qs, req)
+	return v.FilterQuerySet(qs, req), nil
 }
 
 func (v *ChooserListPage[T]) FilterQuerySet(qs *queries.QuerySet[T], req *http.Request) *queries.QuerySet[T] {
@@ -206,7 +209,11 @@ func (v *ChooserListPage[T]) GetListColumns(req *http.Request) []list.ListColumn
 }
 
 func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (any, pagination.PageObject[T], error) {
-	var querySet = v.GetQuerySet(req)
+	var querySet, err = v.GetQuerySet(req)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	var paginator = &pagination.QueryPaginator[T]{
 		URL:     req.URL.Path,
 		Context: req.Context(),
@@ -216,7 +223,7 @@ func (v *ChooserListPage[T]) GetList(req *http.Request, amount, page int) (any, 
 		},
 	}
 
-	var pageObject, err = paginator.Page(page)
+	pageObject, err := paginator.Page(page)
 	if err != nil && !errors.Is(err, errors.NoRows) {
 		return nil, nil, errors.Wrapf(
 			err, "failed to get page %d objects with amount %d",
