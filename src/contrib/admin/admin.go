@@ -232,6 +232,7 @@ func NewAppConfig() django.AppConfig {
 			"admin/icons/history.svg",
 			"admin/icons/download.svg",
 			"admin/icons/image.svg",
+			"admin/icons/pulse.svg",
 			"admin/icons/file-earmark.svg",
 			"admin/icons/file-document.svg",
 			"admin/icons/no-view.svg",
@@ -425,7 +426,10 @@ func NewAppConfig() django.AppConfig {
 </svg>`, name, attr, name))
 			},
 			"menu": func(r *http.Request) template.HTML {
-				var m = &menu.Menu{}
+				var m = &menu.Menu{
+					ID:          "sidebar-menu",
+					ItemClasses: []string{"sidebar-menu-item"},
+				}
 				var menuItems = cmpts.NewItems[menu.MenuItem]()
 				var hooks = goldcrest.Get[RegisterMenuItemHookFunc](RegisterMenuItemHook)
 				for _, hook := range hooks {

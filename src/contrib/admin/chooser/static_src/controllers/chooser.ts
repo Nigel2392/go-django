@@ -18,15 +18,14 @@ class ChooserController extends Controller<any> {
 
     static targets = ["preview", "input"];
     static values = {
+        title:     { type: String },
         listurl:   { type: String },
         createurl: { type: String },
-        updateurl: { type: String },
-        title:     { type: String },
     };
 
+    declare readonly titleValue:     string;
     declare readonly listurlValue:   string;
     declare readonly createurlValue: string;
-    declare readonly titleValue:     string;
 
     declare readonly previewTarget: HTMLDivElement;
     declare readonly inputTarget:   HTMLInputElement;

@@ -6,10 +6,12 @@
 .list-wrapper {
     display: flex;
     flex-direction: column;
+    margin-bottom: 1rem;
     flex: 1;
 }
 .list-wrapper__content {
     overflow-x: auto;
+    height: 100%;
 }
 #list_page .list-filters {
     display: flex;

@@ -4,9 +4,9 @@
 
 {{ define "content" }}
 
-    <div class="outdated-pages-content">
-        <div class="outdated-pages-list-wrapper">
-            <div class="pages-list list-wrapper">
+    <div class="outdated-pages-list-wrapper">
+        <div class="pages-list list-wrapper">
+            <div class="list-wrapper__content">
                 {{ $list := (.Get "view_list") }}
                 {{ safe $list.Render }}
             </div>

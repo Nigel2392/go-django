@@ -59,9 +59,8 @@ dialog.godjango-modal:not([fullscreen]) {
     justify-content: center;
     width: 2.5rem;
     height: 2.5rem;
-    color: var(--dropdown-text-color);
     background-color: var(--modal-header-background-color);
-    border: var(--border-color) solid 1px;
+    border: var(--secondary-bg-color) dotted 1px;
     cursor: pointer;    
 }
 .godjango-modal-control:first-of-type {
@@ -73,7 +72,7 @@ dialog.godjango-modal:not([fullscreen]) {
 .godjango-modal-control > svg {
     width: 1.5rem;
     height: 1.5rem;
-    fill: var(--modal-text-color);
+    fill: var(--secondary-bg-color);
     cursor: pointer;
 }
 .godjango-modal-controls-modal-size {
@@ -88,7 +87,6 @@ dialog.godjango-modal:not([fullscreen]) {
     align-items: center;
     justify-content: space-between;
     background-color: var(--modal-header-background-color);
-    border-bottom: 1px solid var(--border-color);
 }
 .godjango-modal-errors:has(*) {
     padding: 0.5rem;
@@ -175,7 +173,9 @@ dialog.godjango-modal:not([fullscreen]) {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px dotted var(--secondary-bg-color);
+    margin-bottom: 1rem;
+    padding-bottom: 1.5rem;
 }
 .godjango-chooser-create .godjango-chooser-actions {
     justify-content: flex-start;

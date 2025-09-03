@@ -58,8 +58,10 @@
     <div class="list-root">
 
         <div class="list-wrapper">
-            {{ $list := (.Get "view_list") }}
-            {{ safe $list.Render }}
+            <div class="list-wrapper__content">
+                {{ $list := (.Get "view_list") }}
+                {{ safe $list.Render }}
+            </div>
 
             <div class="list-paginator">
                 {{ (.Data.view_paginator_object).HTML "page" 5 .Request.URL.Query }}

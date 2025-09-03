@@ -1,5 +1,6 @@
 :root {
     --sidebar-width: 200px;
+    --sidebar-menu-width: 200px;
     --max-content-width: 60vw;
     --max-content-width-lg: 70vw;
     --max-panel-width: 1040px;
@@ -273,7 +274,6 @@ a.danger {
     height: 100%;
 }
 #main #sidebar-wrapper {
-    --menu-width: var(--sidebar-width);
     flex: 0 0 var(--sidebar-width);
     background-color: var(--primary-bg-color-dark);
     box-shadow: 3px 0 5px rgba(0, 0, 0, 0.4);
@@ -282,6 +282,7 @@ a.danger {
     z-index: 1000;
 }
 #main #sidebar {
+    --menu-width: var(--sidebar-menu-width);
     display: flex;
     flex-direction: column;
     position: relative;
@@ -315,6 +316,12 @@ a.danger {
     flex: 1;
     flex-direction: column;
     height: 100%;
+}
+#main #sidebar #sidebar-content #sidebar-menu {
+    --menu-width: var(--sidebar-menu-width);
+}
+#main #sidebar #sidebar-content #sidebar-menu .menu-item-label[data-depth="1"] {
+    display: none;
 }
 #main #sidebar #sidebar-footer {
     margin-top: auto;
@@ -373,6 +380,7 @@ a.danger {
     flex-direction: column;
     background-color: var(--body-bg-color);
     padding: 0.5em 2.25em;
+    overflow-x: auto;
 }
 #main #content-wrapper #content__body .admin-form {
     flex: 1;

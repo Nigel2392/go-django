@@ -105,6 +105,24 @@ func NewAppConfig() django.AppConfig {
 			return []menu.MenuItem{auditLogItem}
 		})
 
+		goldcrest.Register(admin.RegisterHomePageDisplayPanelHook, 4, admin.RegisterHomePageDisplayPanelHookFunc(func(*http.Request, *admin.AdminApplication) []admin.DisplayPanel {
+			return []admin.DisplayPanel{{
+				IconName: "icon-pulse",
+				IsShown: func(r *http.Request) bool {
+					return permissions.HasPermission(r, "auditlogs:list")
+				},
+				Title: func(ctx context.Context, count int64) string {
+					return trans.P(ctx, "Event", "Events", count)
+				},
+				QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
+					return queries.GetQuerySet[attrs.Definer](&Entry{})
+				},
+				URL: func(r *http.Request) string {
+					return django.Reverse("admin:auditlogs")
+				},
+			}}
+		}))
+
 		return nil
 	}
 

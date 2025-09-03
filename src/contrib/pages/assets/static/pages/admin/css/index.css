@@ -251,12 +251,6 @@
     color: var(--text-color);
     flex: 1;
 }
-.outdated-pages-content {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap-reverse;
-    gap: 1rem;
-}
 .outdated-pages-list-wrapper {
     flex: 1;
     display: flex;

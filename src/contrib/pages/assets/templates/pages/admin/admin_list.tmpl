@@ -4,11 +4,13 @@
 
 {{ define "content" }}
     <div class="pages-list list-wrapper">
-        {{ $list := (.Get "view_list") }}
-        {{ safe $list.Render }}
-    </div>
+        <div class="list-wrapper__content">
+            {{ $list := (.Get "view_list") }}
+            {{ safe $list.Render }}
+        </div>
 
-    <div class="pages-list-paginator list-paginator">
-        {{ (.Data.view_paginator_object).HTML "page" 5 .Request.URL.Query }}
+        <div class="pages-list-paginator list-paginator">
+            {{ (.Data.view_paginator_object).HTML "page" 5 .Request.URL.Query }}
+        </div>
     </div>
 {{ end }}

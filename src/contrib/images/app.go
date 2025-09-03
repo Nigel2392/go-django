@@ -164,6 +164,9 @@ func NewAppConfig(opts *Options) *AppConfig {
 				QuerySet: func(r *http.Request) *queries.QuerySet[attrs.Definer] {
 					return queries.GetQuerySet[attrs.Definer](&Image{})
 				},
+				URL: func(r *http.Request) string {
+					return django.Reverse("admin:apps:model", "images", "image")
+				},
 			}}
 		}))
 

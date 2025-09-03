@@ -42,6 +42,27 @@ func getListActions(next string) []*columns.ListAction[attrs.Definer] {
 	return []*columns.ListAction[attrs.Definer]{
 		{
 			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+				return permissions.HasObjectPermission(r, row, "pages:edit")
+			},
+			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				return trans.T(r.Context(), "Edit")
+			},
+			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				var primaryField = defs.Primary()
+				if primaryField == nil {
+					return ""
+				}
+				var u = django.Reverse(
+					"admin:pages:edit",
+					primaryField.GetValue(),
+				)
+				return addNextUrl(
+					u, next,
+				)
+			},
+		},
+		{
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
 				return row.(Page).Reference().IsPublished()
 			},
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
@@ -93,27 +114,6 @@ func getListActions(next string) []*columns.ListAction[attrs.Definer] {
 				q.Set("filters-content_type", contenttypes.NewContentType(row).ShortTypeName())
 				url.RawQuery = q.Encode()
 				return url.String()
-			},
-		},
-		{
-			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-				return permissions.HasObjectPermission(r, row, "pages:edit")
-			},
-			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				return trans.T(r.Context(), "Edit")
-			},
-			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				var primaryField = defs.Primary()
-				if primaryField == nil {
-					return ""
-				}
-				var u = django.Reverse(
-					"admin:pages:edit",
-					primaryField.GetValue(),
-				)
-				return addNextUrl(
-					u, next,
-				)
 			},
 		},
 		{
@@ -522,21 +522,21 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 						ClassName: "page-actions lg",
 						Actions: []menu.Action{
 							&menu.BaseAction{
-								Text: trans.S("Add Child Page"),
-								Show: func(r *http.Request) bool {
-									return permissions.HasObjectPermission(r, p, "pages:add")
-								},
-								URL: func(r *http.Request) string {
-									return django.Reverse("admin:pages:type", p.PK)
-								},
-							},
-							&menu.BaseAction{
 								Text: trans.S("Edit"),
 								Show: func(r *http.Request) bool {
 									return permissions.HasObjectPermission(r, p, "pages:edit")
 								},
 								URL: func(r *http.Request) string {
 									return django.Reverse("admin:pages:edit", p.PK)
+								},
+							},
+							&menu.BaseAction{
+								Text: trans.S("Add Child Page"),
+								Show: func(r *http.Request) bool {
+									return permissions.HasObjectPermission(r, p, "pages:add")
+								},
+								URL: func(r *http.Request) string {
+									return django.Reverse("admin:pages:type", p.PK)
 								},
 							},
 							&menu.BaseAction{
@@ -1322,7 +1322,7 @@ func movePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			fields.Required(true),
 			fields.HelpText(trans.S("The new parent page for this page - this cannot be a child of the current page.")),
 			fields.Widget(chooser.NewChooserWidget(
-				&PageNode{}, nil,
+				&PageNode{}, nil, chooser.DEFAULT_KEY,
 			)),
 		)),
 	)
@@ -1349,6 +1349,18 @@ func movePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 		http.Redirect(w, r, django.Reverse("admin:pages:list", p.ID()), http.StatusSeeOther)
 		return
+	}
+
+	if p.Depth > 0 {
+		var parentNode, err = p.Parent(r.Context())
+		if err != nil {
+			except.Fail(500, err)
+			return
+		}
+
+		form.SetInitial(map[string]interface{}{
+			"new-parent": parentNode,
+		})
 	}
 
 renderView:

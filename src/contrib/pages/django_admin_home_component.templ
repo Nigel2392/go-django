@@ -26,7 +26,11 @@ templ (p *PagesAdminHomeComponent) html(upper *list.List[attrs.Definer]) {
         <div class="pages-admin-homepage-component-title">
             <h2>{ trans.T(ctx, "Pages") }</h2>
         </div>
-        @upper.Component()
+        <div class="list-wrapper">
+			<div class="list-wrapper__content">
+				@upper.Component()
+			</div>
+		</div>
     </div>
 }
 

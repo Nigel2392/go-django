@@ -19,7 +19,10 @@
             </div>
         {{ end }}
         
-        {{ safe .Data.list.Render }}
+        <div class="list-wrapper__content">
+            {{ $list := (.Get "list") }}
+            {{ safe $list.Render }}
+        </div>
 
         {{ (.Data.page_object).HTML "page" 5 .Request.URL.Query }}
     </div>
