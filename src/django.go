@@ -532,6 +532,7 @@ func (a *Application) Initialize() error {
 			ConfigGet(a.Settings, APPVAR_ALLOWED_HOSTS, []string{"*"})...,
 		),
 		a.loggerMiddleware,
+		ContextDataStoreMiddleware,
 	)
 
 	var staticUrl = a.staticURL()

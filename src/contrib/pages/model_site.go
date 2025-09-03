@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/models"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/pages/validators"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -60,6 +61,7 @@ func SiteForRequest(requestOrContext any, fn ...func(qs *queries.QuerySet[*Site]
 		ctx  context.Context
 		host string
 	)
+
 	switch v := requestOrContext.(type) {
 	case *http.Request:
 		ctx = v.Context()
@@ -75,12 +77,9 @@ func SiteForRequest(requestOrContext any, fn ...func(qs *queries.QuerySet[*Site]
 		))
 	}
 
-	var siteVal = ctx.Value(siteContextKey{})
-	if siteVal != nil {
-		var site, ok = siteVal.(*Site)
-		if ok {
-			return ctx, site, nil
-		}
+	var siteVal, ok = django.ContextDataStoreGet(ctx, siteContextKey{}).(*Site)
+	if ok {
+		return ctx, siteVal, nil
 	}
 
 	var qs = siteForRequestQuerySet(ctx, host)
@@ -94,7 +93,7 @@ func SiteForRequest(requestOrContext any, fn ...func(qs *queries.QuerySet[*Site]
 	}
 
 	if ctx != nil {
-		ctx = context.WithValue(ctx, siteContextKey{}, row.Object)
+		django.ContextDataStoreSet(ctx, siteContextKey{}, row.Object)
 	}
 
 	return ctx, row.Object, nil

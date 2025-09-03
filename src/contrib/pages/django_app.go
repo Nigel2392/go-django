@@ -426,10 +426,11 @@ func NewAppConfig() django.AppConfig {
 		var chooserDefinitionRootNodes = chooserDefinitionAllNodes
 		var chooserDefinitionRootNodesListPage = *chooserDefinitionAllNodes.ListPage
 		chooserDefinitionRootNodes.ListPage = &chooserDefinitionRootNodesListPage
-		//chooserDefinitionRootNodes.ListPage.Template = ""
-		//chooserDefinitionRootNodes.ListPage.QuerySet = func(r *http.Request, model *PageNode) (*queries.QuerySet[*PageNode], error) {
-		//	return NewPageQuerySet().RootPages().Base(), nil
-		// }
+		chooserDefinitionRootNodes.ListPage.Template = ""
+		chooserDefinitionRootNodes.ListPage.NewList = nil
+		chooserDefinitionRootNodes.ListPage.QuerySet = func(r *http.Request, model *PageNode) (*queries.QuerySet[*PageNode], error) {
+			return NewPageQuerySet().RootPages().Base(), nil
+		}
 		chooserDefinitionRootNodes.ListPage.Fields = []string{
 			"Title",
 			"Slug",
