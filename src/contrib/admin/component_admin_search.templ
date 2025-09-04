@@ -25,14 +25,16 @@ func(s *SearchMenuItem) Name() string {
 }
 
 templ (s *SearchMenuItem) Component() {
-	<form method="get" action={ templ.URL(django.Reverse("admin:search")) } class="menu-item-content search-menu-item">
-		<button type="submit" class="menu-item-logo">
+	{{ var depthStr = strconv.FormatInt(menu.GetMenuDepthValue(ctx), 10) }}
+	<form method="get" action={ templ.URL(django.Reverse("admin:search")) } class="menu-item-content search-menu-item" data-depth={ depthStr }>
+		<button type="submit" class="menu-item-logo menu-button" aria-label={ s.Placeholder }>
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="icon" fill="currentColor" viewBox="0 0 16 16">
 			  	<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
 			</svg>
 		</button>
-		<div class="menu-item-search-form menu-item-label" data-depth={ strconv.FormatInt(menu.GetMenuDepthValue(ctx), 10) }>
+		<div class="menu-item-search-form menu-item-label" data-depth={ depthStr }>
 			<input type="text" name="global-search" class="menu-item-search-input" placeholder={ s.Placeholder } aria-label={ s.Placeholder } autocomplete="off" />
+			<span class="visually-hidden">{ s.Placeholder }</span>
 		</div>
 	</form>
 }

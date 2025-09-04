@@ -1,5 +1,8 @@
 :root {
     --sidebar-width: 200px;
+    --sidebar-width-collapsed: 3.75rem;
+    --sidebar-transition-speed: 0.2s;
+    --sidebar-transition-timing: ease-in-out;
     --sidebar-menu-width: 200px;
     --max-content-width: 60vw;
     --max-content-width-lg: 70vw;
@@ -113,6 +116,22 @@ body.preloading *:not(.must-preload),
 body.preloading *:not(.must-preload)::after,
 body.preloading *:not(.must-preload)::before {
   transition: none !important;
+}
+.hidden {
+    display: none !important;
+}
+.visually-hidden {
+    border: 0 !important;
+    clip: rect(1px, 1px, 1px, 1px) !important;
+    -webkit-clip-path: inset(50%) !important;
+            clip-path: inset(50%) !important;
+    height: 1px !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    position: absolute !important;
+    width: 1px !important;
+    white-space: nowrap !important; /* added line */
 }
 hr {
     border: 0;
@@ -286,33 +305,99 @@ a.danger {
     height: 100%;
     width: var(--sidebar-width);
     background-color: var(--menu-bg-color);
+    transition: width var(--sidebar-transition-speed) var(--sidebar-transition-timing);
 }
 #main #sidebar.collapsed {
-    width: 55px;
+    --sidebar-width: var(--sidebar-width-collapsed, 3.5rem);
+}
+#main #sidebar .menu-item-label[data-depth="0"] {
+  display: inline-block;
+  max-width: 16rem;
+  opacity: 1;
+  visibility: visible;
+  white-space: nowrap;
+  overflow: hidden;
+  transition:
+    max-width var(--sidebar-transition-speed) var(--sidebar-transition-timing),
+    opacity   var(--sidebar-transition-speed) var(--sidebar-transition-timing),
+    visibility 0s;                     
 }
 #main #sidebar.collapsed .menu-item-label[data-depth="0"] {
-    display: none;
+    max-width: 0;
+    opacity: 0;
+    visibility: hidden;
+    margin-left: 0;
+    transition:
+        max-width var(--sidebar-transition-speed) var(--sidebar-transition-timing),
+        opacity   var(--sidebar-transition-speed) var(--sidebar-transition-timing),
+        visibility 0s linear var(--sidebar-transition-speed);
 }
-#main #sidebar #sidebar-logo-wrapper {
-    height: 150px;
+#main #sidebar.collapsed .search-menu-item .menu-button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+    width: 100%;
+    text-align: left;
+    height: 100%;
+}
+#main #sidebar.collapsed #sidebar-controls #sidebar-toggle {
+    right: unset;
+    width: 100%;
+}
+#main #sidebar #sidebar-controls #sidebar-toggle:hover {
+    background-color: var(--menu-bg-color-hover);
+    color: var(--menu-text-color-hover);
+}
+#main #sidebar #sidebar-controls #sidebar-toggle {
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 2.75rem;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: inherit;
+    padding: 0;
+    margin: 0;
+    z-index: 1001;
+    width: var(--sidebar-width-collapsed, 3.5rem);
+    transition: width 0s linear 0s, right var(--sidebar-transition-speed) var(--sidebar-transition-timing);
+}
+#main #sidebar #sidebar-controls #sidebar-toggle svg {
+    width: 1.5rem;
+    height: 1.5rem;
+    vertical-align: middle;
+    fill: var(--menu-text-color);
+    transform: rotate(180deg);
+    transition: width 0s linear var(--sidebar-transition-speed), right var(--sidebar-transition-speed) var(--sidebar-transition-timing);
+}
+#main #sidebar.collapsed #sidebar-controls #sidebar-toggle svg {
+    transform: rotate(0deg);
 }
 #main #sidebar #sidebar-logo {
     display: flex;
     height: 100%;
     align-items: center;
     justify-content: center;
-    margin: 1em 0;
+    margin-top: 1.5em;
+    height: 125px;
     padding: 1em;
+    transition: padding var(--sidebar-transition-speed) var(--sidebar-transition-timing);
+}
+#main #sidebar.collapsed #sidebar-logo {
+    padding: 0.5em;
 }
 #main #sidebar #sidebar-logo svg,
 #main #sidebar #sidebar-logo img {
     max-height: 90%;
     max-width: 90%;
-    width: 100%;
     transition: transform 0.2s ease-in-out;
 }
-#main #sidebar #sidebar-logo svg:hover,
-#main #sidebar #sidebar-logo img:hover {
+#main #sidebar #sidebar-logo:hover svg,
+#main #sidebar #sidebar-logo:hover img {
     transform: scale(1.1);
 }
 #main #sidebar #sidebar-content {

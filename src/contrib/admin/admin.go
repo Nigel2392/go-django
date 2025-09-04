@@ -452,7 +452,9 @@ func NewAppConfig() django.AppConfig {
 				return m
 			},
 			"footer_menu": func(r *http.Request) template.HTML {
-				var m = &menu.Menu{}
+				var m = &menu.Menu{
+					ItemClasses: []string{"footer-menu-item"},
+				}
 				var menuItems = cmpts.NewItems[menu.MenuItem]()
 				var hooks = goldcrest.Get[RegisterFooterMenuItemHookFunc](RegisterFooterMenuItemHook)
 				for _, hook := range hooks {
@@ -468,6 +470,13 @@ func NewAppConfig() django.AppConfig {
 
 	tpl.RequestFuncs(func(r *http.Request) template.FuncMap {
 		return template.FuncMap{
+			"getCookie": func(name string) string {
+				var cookie, err = r.Cookie(name)
+				if err != nil {
+					return ""
+				}
+				return cookie.Value
+			},
 			"templ": func(obj any) (html template.HTML, err error) {
 				var buf = new(bytes.Buffer)
 				switch v := obj.(type) {

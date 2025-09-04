@@ -8,7 +8,15 @@ type sidebarMenuItem = HTMLElement & {
 };
 
 export default class SidebarController extends Controller<HTMLElement> {
+    static values = {
+        cookieName: {
+            type: String,
+            default: "sidebar_collapsed",
+        },
+    }
     private topLevelMenuItems: sidebarMenuItem[] = [];
+    declare cookieNameValue: string;
+
 
     connect() {
         let topLevelMenuItems = Array.from(this.element.querySelectorAll(".sidebar-menu-item")) as sidebarMenuItem[];
@@ -18,47 +26,56 @@ export default class SidebarController extends Controller<HTMLElement> {
             return item.textElement !== null && item.contentElement !== null;
         });
 
-        this.checkTooltips();
+        var isCollapsed = this.isCollapsed();
+        var cookie = window.getCookie(this.cookieNameValue);
+        if (cookie === "true" && isCollapsed) {
+            this.open();
+        } else if (cookie === "false" && !isCollapsed) {
+            this.close();
+        } else {
+            this.checkTooltips();
+        }
     }
 
     toggle(event: Event) {
         event.preventDefault();
+        
         let collapsed = this.isCollapsed();
-        this.element.classList.toggle("collapsed", !collapsed);
-        this.element.setAttribute("aria-expanded", String(!collapsed));
-
-
-        this.checkTooltips(collapsed);
+        if (collapsed) {
+            this.open(true);
+        } else {
+            this.close(true);
+        }
     }
 
-    open() {
-        if (this.isCollapsed()) {
+    open(exec?: boolean) {
+        if (exec || this.isCollapsed()) {
             this.element.classList.remove("collapsed");
             this.element.setAttribute("aria-expanded", "true");
-            this.checkTooltips(false);
+            this.checkTooltips();
         }
+
+        window.setCookie(this.cookieNameValue, "true", 365);
     }
 
-    close() {
-        if (!this.isCollapsed()) {
+    close(exec?: boolean) {
+        if (exec || !this.isCollapsed()) {
             this.element.classList.add("collapsed");
             this.element.setAttribute("aria-expanded", "false");
-            this.checkTooltips(true);
+            this.checkTooltips();
         }
+
+        window.setCookie(this.cookieNameValue, "false", 365);
     }
 
     private isCollapsed(): boolean {
         return this.element.classList.contains("collapsed");
     }
 
-    private checkTooltips(collapsed?: boolean) {
-        if (collapsed === undefined) {
-            collapsed = this.isCollapsed();
-        }
-
+    private checkTooltips() {
+        const collapsed = this.isCollapsed();
         this.topLevelMenuItems.forEach((item) => {
 
-            const tooltipController = this.application.getControllerForElementAndIdentifier(item.contentElement, "tooltip");
             if (collapsed) {
                 if (!item.contentElement.getAttribute("data-controller")?.includes("tooltip")) {
                     item.contentElement.setAttribute("data-controller", (item.contentElement.getAttribute("data-controller") ?? "") + " tooltip");
@@ -78,7 +95,6 @@ export default class SidebarController extends Controller<HTMLElement> {
                     item.contentElement.removeAttribute("data-tooltip-content-value");
                     item.contentElement.removeAttribute("data-tooltip-placement-value");
                     item.contentElement.removeAttribute("data-tooltip-offset-value");
-                    tooltipController?.disconnect();
                 }
             }
         });
