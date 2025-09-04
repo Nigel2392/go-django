@@ -10,6 +10,7 @@ import (
 	"io/fs"
 	"net/http"
 	"slices"
+	"strconv"
 	"strings"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -81,6 +82,37 @@ var (
 	IsReady       = AdminSite.IsReady
 	ConfigureAuth = AdminSite.configureAuth
 )
+
+func Icon(name string, attrs map[string]string) components.Component {
+	var attrString = new(strings.Builder)
+	var className string
+	for k, v := range attrs {
+		if k == "class" {
+			className = v
+			continue
+		}
+
+		fmt.Fprintf(attrString,
+			` %s="%s"`,
+			strconv.Quote(k),
+			template.HTMLEscapeString(v),
+		)
+	}
+
+	if className != "" {
+		className = fmt.Sprintf("icon %s %s", className, name)
+	} else {
+		className = fmt.Sprintf("icon %s", name)
+	}
+
+	return components.FuncComponent(func(ctx context.Context, w io.Writer) error {
+		_, err := fmt.Fprintf(w,
+			`<svg class="%s"%s><use href="#%s"></use></svg>`,
+			className, attrString.String(), name,
+		)
+		return err
+	})
+}
 
 func NewAppConfig() django.AppConfig {
 	// AdminSite.Route.Use(RequiredMiddleware)

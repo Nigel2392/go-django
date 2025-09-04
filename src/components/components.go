@@ -20,6 +20,12 @@ type Component interface {
 	Render(ctx context.Context, w io.Writer) error
 }
 
+type FuncComponent func(ctx context.Context, w io.Writer) error
+
+func (f FuncComponent) Render(ctx context.Context, w io.Writer) error {
+	return f(ctx, w)
+}
+
 type AttributeSetter interface {
 	WithAttrs(attrs map[string]any)
 }
