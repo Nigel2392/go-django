@@ -13,18 +13,17 @@ type ctxKey string
 
 const depthKey ctxKey = "menu-depth"
 
-func getMenuDepth(ctx context.Context, increaseCount bool) (context.Context, int) {
+func GetMenuDepthValue(ctx context.Context) int64 {
 	var depth = ctx.Value(depthKey)
-	var depthInt int = 1
+	var depthInt int64
 	if depth != nil {
-		if increaseCount {
-			depthInt = depth.(int) + 1
-		} else {
-			depthInt = depth.(int)
-		}
+		depthInt = depth.(int64)
 	}
-	ctx = context.WithValue(ctx, depthKey, depthInt)
-	return ctx, depthInt
+	return depthInt
+}
+
+func SetMenuDepth(ctx context.Context, depth int64) context.Context {
+	return context.WithValue(ctx, depthKey, depth)
 }
 
 var (
@@ -116,20 +115,20 @@ func (i *BaseItem) Order() int {
 }
 
 templ (i *BaseItem) Inner() {
-	{{ var _, depthInt = getMenuDepth(ctx, false) }}
+	{{ var depthStr = strconv.FormatInt(GetMenuDepthValue(ctx), 10) }}
 	if i.Logo != nil {
-		<div class="menu-item-logo">
+		<div class="menu-item-logo" data-depth={ depthStr }>
 			@i.Logo
 		</div>
 	}
-	<div class="menu-item-label" data-depth={ strconv.FormatInt(int64(depthInt), 10) }>
+	<div class="menu-item-label" data-depth={ depthStr }>
 		{i.Label}
 	</div>
 }
 
 templ (i *BaseItem) Component() {
 	{{ assert.False(i.Label == "", "menu item must have a label")}}
-	<div class={ strings.Join(append(i.Classes, "menu-item-content"), " ") } if i.ID != "" { id={ i.ID } }>
+	<div class={ strings.Join(append(i.Classes, "menu-item-content"), " ") } if i.ID != "" { id={ i.ID } } data-depth={ strconv.FormatInt(GetMenuDepthValue(ctx), 10) }>
 		@i.Inner()
 	</div>
 }
@@ -163,20 +162,18 @@ func (s *SubmenuItem) IsShown() bool {
 	return !s.Hidden && len(s.Menu.MenuItems()) > 0
 }
 
-css depthCss(i int) {
-	--menu-depth: { strconv.Itoa(-1 * i) };
+css depthCss(i int64) {
+	--menu-depth: { strconv.FormatInt(-1 * i, 10) };
 }
 
 templ (s *SubmenuItem) Component() {
 	{{ assert.False(s.Menu == nil, "submenu item must have a menu")}}
 	{{ if s.MenuClasses == nil { s.MenuClasses = []string{} } }}
 
-	{{ var depthInt int }}
-	{{ ctx, depthInt = getMenuDepth(ctx, true) }}
-
+	{{ var depthInt = GetMenuDepthValue(ctx) }}
 	<div data-controller="menu" class={ strings.Join(s.MenuClasses, " "), "submenu-menu-item menu-item", depthCss(depthInt) } if s.ID != "" { id={ s.MenuID } } aria-expanded="false">
 
-		<div class="menu-item-content" data-action="click->menu#toggle">
+		<div class="menu-item-content" data-action="click->menu#toggle" data-depth={ strconv.FormatInt(depthInt, 10) }>
 			<div class="submenu-item-text">
 				@s.BaseItem.Inner()
 			</div>
@@ -188,6 +185,8 @@ templ (s *SubmenuItem) Component() {
 				</svg>
 			</button>
 		</div>
+
+		{{ ctx = SetMenuDepth(ctx, depthInt + 1) }}
 
 		<div class="menu-item-menu-wrapper">
 			<div class="menu-item-menu">
@@ -244,12 +243,10 @@ templ (s *DropdownItem) Component() {
 	{{ assert.False(s.Menu == nil, "dropdown item must have a menu")}}
 	{{ if s.MenuClasses == nil { s.MenuClasses = []string{} } }}
 
-	{{ var depthInt int }}
-	{{ ctx, depthInt = getMenuDepth(ctx, true) }}
-
+	{{ var depthInt = GetMenuDepthValue(ctx) }}
 	<div data-controller="accordion" class={ strings.Join(s.MenuClasses, " "), "accordion-menu-item menu-item", depthCss(depthInt) } if s.ID != "" { id={ s.MenuID } } aria-expanded="false">
 
-		<div class="menu-item-content" data-action="click->accordion#toggle">
+		<div class="menu-item-content" data-action="click->accordion#toggle click->sidebar#open" data-depth={ strconv.FormatInt(depthInt, 10) }>
 			<div class="accordion-item-text">
 				@s.BaseItem.Inner()
 			</div>
@@ -261,6 +258,7 @@ templ (s *DropdownItem) Component() {
 		</div>
 
 		<div class="menu-item-accordion-content">
+			{{ ctx = SetMenuDepth(ctx, depthInt + 1) }}
 			@s.Menu.Component()
 		</div>
 	</div>

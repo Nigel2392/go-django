@@ -30,13 +30,21 @@
     --menu-toggle-bg-color-hover: #2c2c2c;
 }
 .menu {
-    width: var(--menu-width, 240px);
+    width: 100%;
     display: flex;
     height: 100%;
     flex-direction: column;
 }
 .menu a {
     text-decoration: none;
+}
+.menu button {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: inherit;
+    padding: 0;
+    margin: 0;
 }
 .menu .menu-item .menu-item-content {
     color: var(--menu-text-color);
@@ -150,12 +158,12 @@
 .menu .submenu-menu-item > .menu-item-menu-wrapper {
     position: absolute;
     top: 0;
-    left: var(--menu-width);
-    transform: translateX(-100%);
+    left: 100%;
+    transform: translateX(-200%);
     pointer-events: none;
     width: var(--menu-width);
     height: 100%;
-    z-index: var(--menu-depth);
+    z-index: min(var(--menu-depth), -1);
     color: var(--submenu-text-color);
     box-shadow: 0 0 0 0 rgba(0, 0, 0, 0);
     background-color: var(--submenu-bg-color);
@@ -163,7 +171,8 @@
         transform var(--menu-transition-speed);
 }
 .menu .submenu-menu-item.open > .menu-item-menu-wrapper {
-    left: var(--menu-width);
+    left: 100%;
+    width: var(--menu-width);
     transform: translateX(0);
     pointer-events: auto;
     box-shadow: var(--menu-box-shadow);

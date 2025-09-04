@@ -9,6 +9,7 @@ import { TabPanelController } from "./controllers/panel_tab";
 import sprintf from "./utils/sprintf";
 import BulkActionsController from "./controllers/bulk_actions";
 import SidePanelsController from "./controllers/side_panels";
+import SidebarController from "./controllers/sidebar";
 
 const app = new AdminSite({
     controllers: {
@@ -19,6 +20,7 @@ const app = new AdminSite({
         panel: PanelController,
         tabpanel: TabPanelController,
         titlepanel: TitlePanelController,
+        sidebar: SidebarController,
         "bulk-actions": BulkActionsController,
         "side-panels": SidePanelsController,
     },

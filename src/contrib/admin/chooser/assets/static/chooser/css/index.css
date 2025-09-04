@@ -174,7 +174,6 @@ dialog.godjango-modal:not([fullscreen]) {
     align-items: center;
     justify-content: space-between;
     border-bottom: 1px dotted var(--secondary-bg-color);
-    margin-bottom: 1rem;
     padding-bottom: 1.5rem;
 }
 .godjango-chooser-create .godjango-chooser-actions {

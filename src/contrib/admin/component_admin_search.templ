@@ -2,6 +2,8 @@ package admin
 
 import "net/http"
 import "github.com/Nigel2392/go-django/src"
+import "github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
+import "strconv"
 
 type SearchMenuItem struct {
 	Request *http.Request
@@ -23,14 +25,14 @@ func(s *SearchMenuItem) Name() string {
 }
 
 templ (s *SearchMenuItem) Component() {
-	<div class="menu-item-content search-menu-item">
-		<div class="menu-item-logo">
+	<form method="get" action={ templ.URL(django.Reverse("admin:search")) } class="menu-item-content search-menu-item">
+		<button type="submit" class="menu-item-logo">
 			<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="icon" fill="currentColor" viewBox="0 0 16 16">
 			  	<path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001q.044.06.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1 1 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0"/>
 			</svg>
-		</div>
-		<form method="get" action={ templ.URL(django.Reverse("admin:search")) } class="menu-item-search-form menu-item-label">
+		</button>
+		<div class="menu-item-search-form menu-item-label" data-depth={ strconv.FormatInt(menu.GetMenuDepthValue(ctx), 10) }>
 			<input type="text" name="global-search" class="menu-item-search-input" placeholder={ s.Placeholder } aria-label={ s.Placeholder } autocomplete="off" />
-		</form>
-	</div>
+		</div>
+	</form>
 }

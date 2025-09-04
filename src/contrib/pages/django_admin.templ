@@ -5,6 +5,7 @@ import (
     "github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src"
     "strings"
+	"strconv"
 )
 
 
@@ -20,7 +21,7 @@ templ (p *PagesMenuItem) Component() {
 
 	<div data-controller="pagemenu" data-pagemenu-url-value={ django.Reverse("admin:pages:api:menu") } data-pagemenu-urlquery-value={ PageIDVariableName } class={ strings.Join(p.Classes, " "), "pages-menu-wrapper pages-menu-item submenu-menu-item menu-item" }>
 
-		<div class="menu-item-content" data-action="click->pagemenu#toggle">
+		<div class="menu-item-content" data-action="click->pagemenu#toggle" data-depth={ strconv.FormatInt(menu.GetMenuDepthValue(ctx), 10) }>
 			<div class="submenu-item-text">
 				@p.BaseItem.Inner()
 			</div>
@@ -37,8 +38,14 @@ templ (p *PagesMenuItem) Component() {
 					<path d="M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2m0 13V4a2 2 0 0 0-2-2H5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1M3 4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/>
 				</svg>
 			</button>
+			<button class="menu-item-toggle pages-menu-item-toggle">
+				<svg xmlns="http://www.w3.org/2000/svg" class="menu-item-toggle-icon" fill="currentColor" viewBox="0 0 16 16">
+					<!-- The MIT License (MIT) -->
+					<!-- Copyright (c) 2011-2024 The Bootstrap Authors -->
+					<path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"></path>
+				</svg>
+			</button>
 		</div>
-		
         <div class="pages-submenu-wrapper">
 			<div class="menu-item pages-root-menu-item header-menu-item">
 				<a class="menu-item-content menu-item-link" href={ templ.SafeURL(django.Reverse("admin:pages")) }>

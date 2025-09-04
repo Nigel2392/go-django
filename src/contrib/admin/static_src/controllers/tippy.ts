@@ -25,15 +25,22 @@ class TippyController extends Controller<Element> {
         },
         offset: Array, 
     }
+    declare tippyInstance: any;
 
     connect() {
-        tippy(this.element, {
+        this.tippyInstance = tippy(this.element, {
             content: this.contentValue,
             placement: this.placementValue as any,
             delay: this.delayValue,
             duration: this.durationValue,
             offset: this.offsetValue,
         });
+    }
+
+    disconnect() {
+        if (this.tippyInstance) {
+            this.tippyInstance.destroy();
+        }
     }
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"strconv"
 	"strings"
 )
 
@@ -56,7 +57,7 @@ func (p *PagesMenuItem) Component() templ.Component {
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(django.Reverse("admin:pages:api:menu"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 21, Col: 97}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 22, Col: 97}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 		if templ_7745c5c3_Err != nil {
@@ -69,7 +70,7 @@ func (p *PagesMenuItem) Component() templ.Component {
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.JoinStringErrs(PageIDVariableName)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 21, Col: 149}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 22, Col: 149}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var4))
 		if templ_7745c5c3_Err != nil {
@@ -88,7 +89,20 @@ func (p *PagesMenuItem) Component() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><div class=\"menu-item-content\" data-action=\"click-&gt;pagemenu#toggle\"><div class=\"submenu-item-text\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "\"><div class=\"menu-item-content\" data-action=\"click-&gt;pagemenu#toggle\" data-depth=\"")
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		var templ_7745c5c3_Var6 string
+		templ_7745c5c3_Var6, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.FormatInt(menu.GetMenuDepthValue(ctx), 10))
+		if templ_7745c5c3_Err != nil {
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 24, Col: 133}
+		}
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var6))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "\"><div class=\"submenu-item-text\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -96,38 +110,38 @@ func (p *PagesMenuItem) Component() templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</div><button class=\"menu-item-toggle\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon open-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M6.5 7.5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v.938l.4 1.599a1 1 0 0 1-.416 1.074l-.93.62a1 1 0 0 1-1.109 0l-.93-.62a1 1 0 0 1-.415-1.074l.4-1.599zm2 0h-1v.938a1 1 0 0 1-.03.243l-.4 1.598.93.62.93-.62-.4-1.598a1 1 0 0 1-.03-.243z\"></path> <path d=\"M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm5.5-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9v1H8v1h1v1H8v1h1v1H7.5V5h-1V4h1V3h-1V2h1z\"></path></svg> <svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon close-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2m0 13V4a2 2 0 0 0-2-2H5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1M3 4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z\"></path></svg></button></div><div class=\"pages-submenu-wrapper\"><div class=\"menu-item pages-root-menu-item header-menu-item\"><a class=\"menu-item-content menu-item-link\" href=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "</div><button class=\"menu-item-toggle\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon open-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M6.5 7.5a1 1 0 0 1 1-1h1a1 1 0 0 1 1 1v.938l.4 1.599a1 1 0 0 1-.416 1.074l-.93.62a1 1 0 0 1-1.109 0l-.93-.62a1 1 0 0 1-.415-1.074l.4-1.599zm2 0h-1v.938a1 1 0 0 1-.03.243l-.4 1.598.93.62.93-.62-.4-1.598a1 1 0 0 1-.03-.243z\"></path> <path d=\"M2 2a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2zm5.5-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V2a1 1 0 0 0-1-1H9v1H8v1h1v1H8v1h1v1H7.5V5h-1V4h1V3h-1V2h1z\"></path></svg> <svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon close-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path d=\"M13 0H6a2 2 0 0 0-2 2 2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2 2 2 0 0 0 2-2V2a2 2 0 0 0-2-2m0 13V4a2 2 0 0 0-2-2H5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1M3 4a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z\"></path></svg></button> <button class=\"menu-item-toggle pages-menu-item-toggle\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><!-- The MIT License (MIT) --><!-- Copyright (c) 2011-2024 The Bootstrap Authors --><path fill-rule=\"evenodd\" d=\"M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708\"></path></svg></button></div><div class=\"pages-submenu-wrapper\"><div class=\"menu-item pages-root-menu-item header-menu-item\"><a class=\"menu-item-content menu-item-link\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var6 templ.SafeURL = templ.SafeURL(django.Reverse("admin:pages"))
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var6)))
+		var templ_7745c5c3_Var7 templ.SafeURL = templ.SafeURL(django.Reverse("admin:pages"))
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var7)))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\"><div class=\"menu-item-label\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\"><div class=\"menu-item-label\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var7 string
-		templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, "Root Pages"))
+		var templ_7745c5c3_Var8 string
+		templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, "Root Pages"))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 46, Col: 34}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/pages/django_admin.templ`, Line: 53, Col: 34}
 		}
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
-		if templ_7745c5c3_Err != nil {
-			return templ_7745c5c3_Err
-		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</div></a></div><div class=\"pages-submenu-menu\" data-pagemenu-target=\"submenu\"></div></div><template data-pagemenu-target=\"template\"><div class=\"menu-item\" id=\"__ID__\"><button class=\"menu-item-logo level-up\" data-page-id=\"__PAGE_ID__\" data-action=\"click-&gt;pagemenu#levelUp\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"bi bi-arrow-left-short\" viewBox=\"0 0 16 16\"><path fill-rule=\"evenodd\" d=\"M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0\"></path></svg></button> <a class=\"menu-item-content menu-item-link\" href=\"")
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		var templ_7745c5c3_Var8 templ.SafeURL = editURL
-		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var8)))
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "</div></a></div><div class=\"pages-submenu-menu\" data-pagemenu-target=\"submenu\"></div></div><template data-pagemenu-target=\"template\"><div class=\"menu-item\" id=\"__ID__\"><button class=\"menu-item-logo level-up\" data-page-id=\"__PAGE_ID__\" data-action=\"click-&gt;pagemenu#levelUp\"><svg xmlns=\"http://www.w3.org/2000/svg\" width=\"16\" height=\"16\" fill=\"currentColor\" class=\"bi bi-arrow-left-short\" viewBox=\"0 0 16 16\"><path fill-rule=\"evenodd\" d=\"M11.354 1.646a.5.5 0 0 1 0 .708L5.707 8l5.647 5.646a.5.5 0 0 1-.708.708l-6-6a.5.5 0 0 1 0-.708l6-6a.5.5 0 0 1 .708 0\"></path></svg></button> <a class=\"menu-item-content menu-item-link\" href=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "\"><div class=\"menu-item-label\">__LABEL__</div></a> <button class=\"menu-item-logo level-down\" data-page-id=\"__PAGE_ID__\" data-action=\"click-&gt;pagemenu#levelDown\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><path fill-rule=\"evenodd\" d=\"M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708\"></path></svg></button></div></template></div>")
+		var templ_7745c5c3_Var9 templ.SafeURL = editURL
+		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(string(templ_7745c5c3_Var9)))
+		if templ_7745c5c3_Err != nil {
+			return templ_7745c5c3_Err
+		}
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\"><div class=\"menu-item-label\">__LABEL__</div></a> <button class=\"menu-item-logo level-down\" data-page-id=\"__PAGE_ID__\" data-action=\"click-&gt;pagemenu#levelDown\"><svg xmlns=\"http://www.w3.org/2000/svg\" class=\"menu-item-toggle-icon\" fill=\"currentColor\" viewBox=\"0 0 16 16\"><path fill-rule=\"evenodd\" d=\"M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708\"></path></svg></button></div></template></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
