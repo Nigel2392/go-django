@@ -23,7 +23,7 @@ templ (p *PagesMenuItem) Component() {
 
 		<div class="menu-item-content" data-action="click->pagemenu#toggle" data-depth={ strconv.FormatInt(menu.GetMenuDepthValue(ctx), 10) }>
 			<div class="submenu-item-text">
-				@p.BaseItem.Inner()
+				@p.BaseItem.Inner(true)
 			</div>
 			<button class="menu-item-toggle">
 				<svg xmlns="http://www.w3.org/2000/svg" class="menu-item-toggle-icon open-icon" fill="currentColor" viewBox="0 0 16 16">

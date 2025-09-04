@@ -46,6 +46,18 @@
     padding: 0;
     margin: 0;
 }
+.menu .menu-item .menu-item-content .menu-item-icon--empty.menu-item-icon--empty {
+    width: calc(var(--menu-item-logo-size) * 1.25);
+    height: calc(var(--menu-item-logo-size) * 1.25);
+}
+.menu .menu-item .menu-item-content .menu-item-icon--empty .menu-item-icon--empty-circle {
+    --color: var(--menu-bg-color-hover);
+    fill: var(--color);
+}
+.menu .menu-item .menu-item-content .menu-item-icon--empty .menu-item-icon--empty-text {
+    --color: var(--submenu-text-color);
+    fill: var(--color);
+}
 .menu .menu-item .menu-item-content {
     color: var(--menu-text-color);
     background-color: var(--menu-bg-color);

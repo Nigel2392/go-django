@@ -114,13 +114,36 @@ func (i *BaseItem) Order() int {
 	return i.Ordering
 }
 
-templ (i *BaseItem) Inner() {
-	{{ var depthStr = strconv.FormatInt(GetMenuDepthValue(ctx), 10) }}
-	if i.Logo != nil {
-		<div class="menu-item-logo" data-depth={ depthStr }>
-			@i.Logo
-		</div>
+func (i *BaseItem) firstLogoLetter() string {
+	for _, r := range []string{i.Label, i.ItemName, i.ID} {
+		if r != "" {
+			var runes = []rune(r)
+			return strings.ToUpper(string(runes[0]))
+		}
 	}
+	return "?"
+}
+
+templ (i *BaseItem) getLogo() {
+	if i.Logo != nil {
+		@i.Logo
+		{{ return nil }}
+	}
+	<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" class="icon menu-item-icon--empty" fill="currentColor" viewBox="0 0 16 16">
+	  	<circle cx="8" cy="8" r="8" fill="#6c757d" class="menu-item-icon--empty-circle"/>
+	  	<text x="50%" y="50%" text-anchor="middle" dy=".3em" font-size="12" fill="currentColor" font-family="Arial, sans-serif" class="menu-item-icon--empty-text">
+			{ i.firstLogoLetter() }
+		</text>
+	</svg>
+}
+
+templ (i *BaseItem) Inner(hideLogo bool) {
+	{{ var depthStr = strconv.FormatInt(GetMenuDepthValue(ctx), 10) }}
+	<div class="menu-item-logo" data-depth={ depthStr }>
+		if !hideLogo {
+			@i.getLogo()
+		}
+	</div>
 	<div class="menu-item-label" data-depth={ depthStr }>
 		{i.Label}
 	</div>
@@ -129,7 +152,7 @@ templ (i *BaseItem) Inner() {
 templ (i *BaseItem) Component() {
 	{{ assert.False(i.Label == "", "menu item must have a label")}}
 	<div class={ strings.Join(append(i.Classes, "menu-item-content"), " ") } if i.ID != "" { id={ i.ID } } data-depth={ strconv.FormatInt(GetMenuDepthValue(ctx), 10) }>
-		@i.Inner()
+		@i.Inner(false)
 	</div>
 }
 
@@ -175,7 +198,7 @@ templ (s *SubmenuItem) Component() {
 
 		<div class="menu-item-content" data-action="click->menu#toggle" data-depth={ strconv.FormatInt(depthInt, 10) }>
 			<div class="submenu-item-text">
-				@s.BaseItem.Inner()
+				@s.BaseItem.Inner(false)
 			</div>
 			<button class="menu-item-toggle">
 				<svg xmlns="http://www.w3.org/2000/svg" class="menu-item-toggle-icon" fill="currentColor" viewBox="0 0 16 16">
@@ -248,7 +271,7 @@ templ (s *DropdownItem) Component() {
 
 		<div class="menu-item-content" data-action="click->accordion#toggle click->sidebar#open" data-depth={ strconv.FormatInt(depthInt, 10) }>
 			<div class="accordion-item-text">
-				@s.BaseItem.Inner()
+				@s.BaseItem.Inner(false)
 			</div>
 			<button class="menu-item-toggle">
 				<svg xmlns="http://www.w3.org/2000/svg" class="menu-item-toggle-icon" fill="currentColor" viewBox="0 0 16 16">
