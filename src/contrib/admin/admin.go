@@ -9,8 +9,8 @@ import (
 	"io"
 	"io/fs"
 	"net/http"
+	"runtime/debug"
 	"slices"
-	"strings"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
@@ -402,10 +402,31 @@ func NewAppConfig() django.AppConfig {
 				return iconHTML
 			},
 			"icon": func(name string, attrs ...string) template.HTML {
-				var attr = strings.Join(attrs, " ")
-				return template.HTML(fmt.Sprintf(`<svg class="icon %s" %s>
-	<use href="#%s"></use>
-</svg>`, name, attr, name))
+				if len(attrs)%2 != 0 {
+					except.RaiseInternalServerError(
+						"Invalid attributes for icon %q, attributes must be in pairs",
+						name, attrs,
+					)
+				}
+
+				defer func() {
+					if r := recover(); r != nil {
+						logger.Errorf(
+							"Failed to render icon %q: %v: %s",
+							name, r, debug.Stack(),
+						)
+					}
+				}()
+
+				var m = make(map[string]string)
+				for i := 0; i < len(attrs); i += 2 {
+					m[attrs[i]] = attrs[i+1]
+				}
+
+				var buf = new(bytes.Buffer)
+				var cmp = icons.Icon(name, m)
+				cmp.Render(context.Background(), buf)
+				return template.HTML(buf.String())
 			},
 			"menu": func(r *http.Request) template.HTML {
 				var m = &menu.Menu{

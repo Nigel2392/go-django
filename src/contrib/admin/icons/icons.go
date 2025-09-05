@@ -198,7 +198,7 @@ func (r *iconRegistry) add(path ...string) error {
 
 		var id = matches[0][1]
 		if id != name[:strings.LastIndex(name, ".")] {
-			return fmt.Errorf("icons: icon ID (%s) does not match filename (%s)", id, name)
+			return fmt.Errorf("icons: icon ID (%s) does not match filename (%s), id 'icon-my-example' should match file 'my-example.svg'", id, name)
 		}
 
 		var sourceMatch = iconCommentPattern.FindAllStringSubmatch(s, -1)

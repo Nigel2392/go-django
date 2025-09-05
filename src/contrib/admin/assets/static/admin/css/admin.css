@@ -370,7 +370,7 @@ a.danger {
     width: 1.5rem;
     height: 1.5rem;
     vertical-align: middle;
-    fill: var(--menu-text-color);
+    color: var(--menu-text-color);
     transform: rotate(180deg);
     transition: width 0s linear var(--sidebar-transition-speed), right var(--sidebar-transition-speed) var(--sidebar-transition-timing);
 }

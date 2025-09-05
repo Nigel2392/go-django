@@ -42,6 +42,12 @@ class TippyController extends Controller<Element> {
             this.tippyInstance.destroy();
         }
     }
+
+    contentValueChanged(value: string) {
+        if (this.tippyInstance) {
+            this.tippyInstance.setContent(value);
+        }
+    }
 }
 
 export {

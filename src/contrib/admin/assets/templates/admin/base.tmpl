@@ -8,11 +8,7 @@
             <div id="sidebar"{{ if not (eq (getCookie "admin_sidebar_collapsed") "true") }} class="collapsed"{{ end }} data-controller="sidebar" data-sidebar-cookie-name-value="admin_sidebar_collapsed">
                 <div id="sidebar-controls">
                     <button id="sidebar-toggle" data-action="click->sidebar#toggle" aria-label={{ T "Toggle sidebar" }}>
-				        <svg xmlns="http://www.w3.org/2000/svg" class="menu-item-toggle-icon" fill="currentColor" viewBox="0 0 16 16">
-				        	<!-- The MIT License (MIT) -->
-				        	<!-- Copyright (c) 2011-2024 The Bootstrap Authors -->
-				        	<path fill-rule="evenodd" d="M4.646 1.646a.5.5 0 0 1 .708 0l6 6a.5.5 0 0 1 0 .708l-6 6a.5.5 0 0 1-.708-.708L10.293 8 4.646 2.354a.5.5 0 0 1 0-.708"></path>
-				        </svg>
+                        {{ icon "icon-arrow-right" "class" "menu-item-toggle-icon" }}
                     </button>
                 </div>
                 <div id="sidebar-logo-wrapper">
