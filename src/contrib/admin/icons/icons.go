@@ -10,8 +10,10 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
+	"github.com/Nigel2392/go-django/src/components"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -21,14 +23,14 @@ import (
 
 var (
 	registry = &iconRegistry{
-		icons: orderedmap.NewOrderedMap[string, Icon](),
+		icons: orderedmap.NewOrderedMap[string, IconInterface](),
 		fs:    filesystem.NewMultiFS(),
 	}
 	iconIDPattern      = regexp.MustCompile(`id=["']icon-([a-z0-9-]+)["']`)
 	iconCommentPattern = regexp.MustCompile(`<!--!(.*?)-->`)
 )
 
-type Icon interface {
+type IconInterface interface {
 	Name() string
 	Folder() string
 	Fullpath() string
@@ -45,7 +47,7 @@ type (
 		loaded   template.HTML
 	}
 	iconRegistry struct {
-		icons *orderedmap.OrderedMap[string, Icon]
+		icons *orderedmap.OrderedMap[string, IconInterface]
 		fs    *filesystem.MultiFS
 	}
 )
@@ -88,8 +90,8 @@ func Register(fs fs.FS, path ...string) error {
 	return registry.add(path...)
 }
 
-func Icons() []Icon {
-	var icons = make([]Icon, 0, registry.icons.Len())
+func Icons() []IconInterface {
+	var icons = make([]IconInterface, 0, registry.icons.Len())
 	for front := registry.icons.Front(); front != nil; front = front.Next() {
 		icons = append(icons, front.Value)
 	}
@@ -110,6 +112,59 @@ func Load(name string) template.HTML {
 	}
 
 	return icon.HTML()
+}
+
+func Icon(name string, attrs map[string]string) components.Component {
+	var attrString = new(strings.Builder)
+	var className string
+	for k, v := range attrs {
+		if k == "class" {
+			className = v
+			continue
+		}
+
+		fmt.Fprintf(attrString,
+			` %s="%s"`,
+			strconv.Quote(k),
+			template.HTMLEscapeString(v),
+		)
+	}
+
+	if className != "" {
+		className = fmt.Sprintf("icon %s %s", className, name)
+	} else {
+		className = fmt.Sprintf("icon %s", name)
+	}
+
+	return components.FuncComponent(func(ctx context.Context, w io.Writer) error {
+		_, err := fmt.Fprintf(w,
+			`<svg class="%s"%s><use href="#%s"></use></svg>`,
+			className, attrString.String(), name,
+		)
+		return err
+	})
+}
+
+func DefsHTML() template.HTML {
+	var replacer = strings.NewReplacer(
+		"xmlns=\"http://www.w3.org/2000/svg\"", "",
+		"<svg", "<symbol",
+		"</svg>", "</symbol>",
+	)
+
+	var icons = Icons()
+	var htmlString = make([]string, 0, len(icons))
+	for _, icon := range icons {
+		htmlString = append(htmlString, replacer.Replace(
+			string(icon.HTML()),
+		))
+	}
+	return template.HTML(
+		fmt.Sprintf(
+			`<svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>%s</defs></svg>`,
+			strings.Join(htmlString, ""),
+		),
+	)
 }
 
 func (r *iconRegistry) add(path ...string) error {

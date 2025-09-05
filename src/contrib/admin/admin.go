@@ -10,7 +10,6 @@ import (
 	"io/fs"
 	"net/http"
 	"slices"
-	"strconv"
 	"strings"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -82,37 +81,6 @@ var (
 	IsReady       = AdminSite.IsReady
 	ConfigureAuth = AdminSite.configureAuth
 )
-
-func Icon(name string, attrs map[string]string) components.Component {
-	var attrString = new(strings.Builder)
-	var className string
-	for k, v := range attrs {
-		if k == "class" {
-			className = v
-			continue
-		}
-
-		fmt.Fprintf(attrString,
-			` %s="%s"`,
-			strconv.Quote(k),
-			template.HTMLEscapeString(v),
-		)
-	}
-
-	if className != "" {
-		className = fmt.Sprintf("icon %s %s", className, name)
-	} else {
-		className = fmt.Sprintf("icon %s", name)
-	}
-
-	return components.FuncComponent(func(ctx context.Context, w io.Writer) error {
-		_, err := fmt.Fprintf(w,
-			`<svg class="%s"%s><use href="#%s"></use></svg>`,
-			className, attrString.String(), name,
-		)
-		return err
-	})
-}
 
 func NewAppConfig() django.AppConfig {
 	// AdminSite.Route.Use(RequiredMiddleware)
@@ -265,6 +233,7 @@ func NewAppConfig() django.AppConfig {
 			"admin/icons/download.svg",
 			"admin/icons/image.svg",
 			"admin/icons/pulse.svg",
+			"admin/icons/arrow-right.svg",
 			"admin/icons/file-earmark.svg",
 			"admin/icons/file-document.svg",
 			"admin/icons/no-view.svg",
@@ -272,26 +241,7 @@ func NewAppConfig() django.AppConfig {
 			panic(err)
 		}
 
-		var replacer = strings.NewReplacer(
-			"xmlns=\"http://www.w3.org/2000/svg\"", "",
-			"<svg", "<symbol",
-			"</svg>", "</symbol>",
-		)
-
-		var icons = icons.Icons()
-		var htmlString = make([]string, 0, len(icons))
-		for _, icon := range icons {
-			htmlString = append(htmlString, replacer.Replace(
-				string(icon.HTML()),
-			))
-		}
-		iconHTML = template.HTML(
-			fmt.Sprintf(
-				`<svg xmlns="http://www.w3.org/2000/svg" style="display: none;"><defs>%s</defs></svg>`,
-				strings.Join(htmlString, ""),
-			),
-		)
-
+		iconHTML = icons.DefsHTML()
 		AdminSite.Route.Use(func(next mux.Handler) mux.Handler {
 			return mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
 				var vars = mux.Vars(r)
