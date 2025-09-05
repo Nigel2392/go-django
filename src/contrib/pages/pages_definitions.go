@@ -15,6 +15,9 @@ type PageDefinition struct {
 	// Serve the page with this view instead
 	ServePage func(page Page) PageView
 
+	// Search
+	SearchFields []admin.SearchField
+
 	// Panels for the model when creating a new page
 	//
 	// This contains fields from the custom model, as well as the underlying page node model.

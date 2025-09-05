@@ -18,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/pagination"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 )
@@ -133,11 +134,17 @@ func (b *BoundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
 	}
 
 	var qs *queries.QuerySet[attrs.Definer]
-	if b.Model.ListView.GetQuerySet != nil {
+	switch {
+	case b.Model.ListView.Search.QuerySet != nil:
+		qs = b.Model.ListView.Search.QuerySet(req)
+	case b.Model.ListView.GetQuerySet != nil:
 		qs = b.Model.ListView.GetQuerySet(AdminSite, b.Model.App(), b.Model)
-	} else {
+	default:
 		qs = queries.GetQuerySet(b.Model.NewInstance())
 	}
+
+	qs = qs.WithContext(req.Context())
+
 	if len(b.Model.ListView.Prefetch.SelectRelated) > 0 {
 		qs = qs.SelectRelated(b.Model.ListView.Prefetch.SelectRelated...)
 	}
@@ -145,10 +152,14 @@ func (b *BoundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
 		qs = qs.Preload(b.Model.ListView.Prefetch.PrefetchRelated...)
 	}
 
+	if b.Model.ListView.Search.SearchQuerySet != nil {
+		qs = b.Model.ListView.Search.SearchQuerySet(req, qs, searchQuery)
+	}
+
 	var orExprs = make([]expr.Expression, 0, len(b.Model.ListView.Search.Fields))
 	for _, field := range b.Model.ListView.Search.Fields {
 
-		var expression = field.AsExpression(req, searchQuery)
+		var expression = field.AsExpression(searchQuery)
 		if expression == nil {
 			continue
 		}
@@ -196,7 +207,7 @@ func (b *BoundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
 		results = pageObject.Results()
 	}
 
-	if !b.Model.DisallowEdit && len(results) > 0 {
+	if (!b.Model.DisallowEdit || b.Model.ListView.Search.GetEditLink != nil) && len(results) > 0 && permissions.HasPermission(req, "admin:edit") {
 		columns[0] = list.TitleFieldColumn(
 			columns[0], func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				return b.GetEditLink(attrs.PrimaryKey(row))

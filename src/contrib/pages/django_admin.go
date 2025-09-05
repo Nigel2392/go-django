@@ -9,13 +9,13 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views/list"
 )
 
@@ -72,6 +72,9 @@ var pageAdminModelOptions = admin.ModelOptions{
 			},
 		},
 		Search: &admin.SearchOptions{
+			Searchable: func(req *http.Request) bool {
+				return permissions.HasPermission(req, "pages:list")
+			},
 			GetEditLink: func(req *http.Request, id any) string {
 				return django.Reverse("admin:pages:edit", id)
 			},
@@ -82,23 +85,9 @@ var pageAdminModelOptions = admin.ModelOptions{
 				"CreatedAt",
 				"UpdatedAt",
 			},
-			Fields: []admin.SearchField{
-				{
-					Name:   "Title",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-				{
-					Name:   "Slug",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-				{
-					Name:   "UrlPath",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-				{
-					Name:   "ContentType",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
+			SearchQuerySet: func(req *http.Request, qs *queries.QuerySet[attrs.Definer], query string) *queries.QuerySet[attrs.Definer] {
+				var pageQs = wrapPageQuerySet(queries.ChangeObjectsType[attrs.Definer, *PageNode](qs))
+				return queries.ChangeObjectsType[*PageNode, attrs.Definer](pageQs.Search(query).Base())
 			},
 		},
 		Columns: map[string]list.ListColumn[attrs.Definer]{

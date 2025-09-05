@@ -204,7 +204,7 @@ func getListActions(next string) []*columns.ListAction[attrs.Definer] {
 }
 
 func outdatedPagesHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition) {
-	if !permissions.HasObjectPermission(r, nil, "pages:outdated", "pages:list") {
+	if !permissions.HasPermission(r, "pages:outdated", "pages:list") {
 		admin.ReLogin(w, r, r.URL.Path)
 		return
 	}

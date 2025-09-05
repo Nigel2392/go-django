@@ -23,12 +23,13 @@ type PageQuerySet struct {
 }
 
 func NewPageQuerySet() *PageQuerySet {
-	var pageQuerySet = &PageQuerySet{}
-	pageQuerySet.WrappedQuerySet = queries.WrapQuerySet(
-		queries.GetQuerySet(&PageNode{}),
-		pageQuerySet,
-	)
-	return pageQuerySet
+	return wrapPageQuerySet(queries.GetQuerySet(&PageNode{}))
+}
+
+func wrapPageQuerySet(qs *queries.QuerySet[*PageNode]) *PageQuerySet {
+	var pqs = &PageQuerySet{}
+	pqs.WrappedQuerySet = queries.WrapQuerySet(qs, pqs)
+	return pqs
 }
 
 func (qs *PageQuerySet) CloneQuerySet(wrapped *queries.WrappedQuerySet[*PageNode, *PageQuerySet, *queries.QuerySet[*PageNode]]) *PageQuerySet {
@@ -170,6 +171,76 @@ func (qs *PageQuerySet) ChildrenOf(node *PageNode) *PageQuerySet {
 
 func (qs *PageQuerySet) SiblingsOf(node *PageNode, inclusive ...bool) *PageQuerySet {
 	return qs.Siblings(node.Path, node.Depth, inclusive...)
+}
+
+type searchSet struct {
+	isPageNode  bool
+	querySet    *queries.QuerySet[Page]
+	contentType *contenttypes.BaseContentType[Page]
+}
+
+func (qs *PageQuerySet) Search(query string) *PageQuerySet {
+	var defs = ListDefinitions()
+	var searchableDefs = make([]*PageDefinition, 0, len(defs))
+	for _, def := range defs {
+		if len(def.SearchFields) > 0 {
+			searchableDefs = append(searchableDefs, def)
+		}
+	}
+
+	var searchSets = make([]*searchSet, 0, len(searchableDefs))
+	for _, def := range searchableDefs {
+		var orExprs = make([]expr.Expression, 0, len(def.SearchFields))
+		for _, field := range def.SearchFields {
+			var expr = field.AsExpression(query)
+			if expr == nil {
+				continue
+			}
+
+			orExprs = append(orExprs, expr)
+		}
+
+		if len(orExprs) > 0 {
+			var (
+				modelObj = def.Object().(Page)
+				meta     = attrs.GetModelMeta(modelObj)
+				defs     = meta.Definitions()
+				primary  = defs.Primary()
+			)
+
+			var _, isPageNode = def.Object().(*PageNode)
+			searchSets = append(searchSets, &searchSet{
+				isPageNode:  isPageNode,
+				contentType: contenttypes.NewContentType(modelObj),
+				querySet: queries.
+					GetQuerySet[Page](modelObj).
+					Select(primary.Name()).
+					Filter(expr.Or(orExprs...)),
+			})
+		}
+	}
+
+	var orExprs = make([]expr.Expression, 0, len(searchSets))
+	for _, set := range searchSets {
+
+		var exp expr.Expression
+		if set.isPageNode {
+			exp = expr.Q("PK__in", set.querySet)
+		} else {
+			exp = expr.And(
+				expr.Q("PageID__in", set.querySet),
+				expr.Q("ContentType", set.contentType),
+			)
+		}
+
+		orExprs = append(orExprs, exp)
+	}
+
+	if len(orExprs) > 0 {
+		qs = qs.Filter(expr.Or(orExprs...))
+	}
+
+	return qs
 }
 
 func (qs *PageQuerySet) GetChildNodes(node *PageNode, statusFlags StatusFlag, offset int32, limit int32) ([]*PageNode, error) {

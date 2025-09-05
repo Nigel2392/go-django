@@ -195,9 +195,10 @@ templ (s *SubmenuItem) Component() {
 	{{ if s.MenuClasses == nil { s.MenuClasses = []string{} } }}
 
 	{{ var depthInt = GetMenuDepthValue(ctx) }}
+	{{ var depthStr = strconv.FormatInt(depthInt, 10) }}
 	<div data-controller="menu" class={ strings.Join(s.MenuClasses, " "), "submenu-menu-item menu-item", depthCss(depthInt) } if s.ID != "" { id={ s.MenuID } } aria-expanded="false">
 
-		<div class="menu-item-content" data-action="click->menu#toggle" data-depth={ strconv.FormatInt(depthInt, 10) }>
+		<div class="menu-item-content" data-action="click->menu#toggle" data-depth={ depthStr }>
 			<div class="submenu-item-text">
 				@s.BaseItem.Inner(depthInt > 0)
 			</div>

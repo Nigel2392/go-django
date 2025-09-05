@@ -97,6 +97,12 @@ func (qs *SpecificPageQuerySet) SiblingsOf(node *PageNode, inclusive ...bool) *S
 	return qs
 }
 
+func (qs *SpecificPageQuerySet) Search(query string) *SpecificPageQuerySet {
+	qs = qs.Clone()
+	qs.WrappedQuerySet.BaseQuerySet = qs.WrappedQuerySet.Base().Search(query)
+	return qs
+}
+
 func (qs *SpecificPageQuerySet) All() (queries.Rows[Page], error) {
 	// Use iter method of the base queryset to not have to
 	// iterate over all rows multiple times.

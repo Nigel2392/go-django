@@ -77,6 +77,13 @@ func ChangeBaseType[OldT, NewT any](c *BaseContentType[OldT]) *BaseContentType[N
 	}
 }
 
+func (c *BaseContentType[T]) String() string {
+	if c == nil {
+		return ""
+	}
+	return fmt.Sprintf("%s.%s", c.pkgPath, c.modelName)
+}
+
 // PkgPath returns the package path of the model.
 // It is the full import path of the package that the model is defined in.
 //

@@ -204,7 +204,7 @@ func main() {
 			fmt.Printf(" - %q (ID: %d, %d)\n", page.Page.Title, page.ID(), page.Page.PageID)
 		}
 
-		pages, err := pages.NewPageQuerySet().
+		pageRows, err := pages.NewPageQuerySet().
 			Specific().
 			Types(&blog.BlogPage{}).
 			// Unpublished().
@@ -213,8 +213,8 @@ func main() {
 			panic(fmt.Errorf("failed to get pages: %w", err))
 		}
 
-		fmt.Println("Specific Pages:", len(pages))
-		for specificPage := range pages.Objects() {
+		fmt.Println("Specific Pages:", len(pageRows))
+		for specificPage := range pageRows.Objects() {
 			var page = specificPage.Reference()
 			fmt.Printf(" - %q (ID: %d, %d)\n", page.Title, page.ID(), page.PageID)
 			fmt.Printf("   - PageObject: %+v\n", specificPage.(*blog.BlogPage))

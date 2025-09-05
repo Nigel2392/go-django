@@ -443,20 +443,9 @@ func NewAppConfig() django.AppConfig {
 				m.Component().Render(r.Context(), buf)
 				return template.HTML(buf.String())
 			},
-			"script_hook_output": func() media.Media {
-				var hooks = goldcrest.Get[RegisterMediaHookFunc](RegisterGlobalMediaHook)
-				var m media.Media = media.NewMedia()
-				for _, hook := range hooks {
-					var hook_m = hook(AdminSite)
-					if hook_m != nil {
-						m = m.Merge(hook_m)
-					}
-				}
-				return m
-			},
 			"footer_menu": func(r *http.Request) template.HTML {
 				var m = &menu.Menu{
-					ItemClasses: []string{"footer-menu-item"},
+					ItemClasses: []string{"sidebar-menu-item"},
 				}
 				var menuItems = cmpts.NewItems[menu.MenuItem]()
 				var hooks = goldcrest.Get[RegisterFooterMenuItemHookFunc](RegisterFooterMenuItemHook)
@@ -467,6 +456,17 @@ func NewAppConfig() django.AppConfig {
 				var buf = new(bytes.Buffer)
 				m.Component().Render(r.Context(), buf)
 				return template.HTML(buf.String())
+			},
+			"script_hook_output": func() media.Media {
+				var hooks = goldcrest.Get[RegisterMediaHookFunc](RegisterGlobalMediaHook)
+				var m media.Media = media.NewMedia()
+				for _, hook := range hooks {
+					var hook_m = hook(AdminSite)
+					if hook_m != nil {
+						m = m.Merge(hook_m)
+					}
+				}
+				return m
 			},
 		},
 	}

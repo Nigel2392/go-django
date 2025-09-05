@@ -1762,15 +1762,15 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 		throughSourceField, ok := throughDefs.Field(relThrough.SourceField())
 		if !ok {
 			return nil, nil, fmt.Errorf(
-				"Join: through source field %q not found in %T",
-				relThrough.SourceField(), through) //lint:ignore ST1005 Provides information about the source
+				"Join: through source field %q not found in %T", //lint:ignore ST1005 Provides information about the source
+				relThrough.SourceField(), through)
 		}
 
 		throughTargetField, ok := throughDefs.Field(relThrough.TargetField())
 		if !ok {
 			return nil, nil, fmt.Errorf(
-				"Join: through target field %q not found in %T",
-				relThrough.TargetField(), through) //lint:ignore ST1005 Provides information about the source
+				"Join: through target field %q not found in %T", //lint:ignore ST1005 Provides information about the source
+				relThrough.TargetField(), through)
 		}
 
 		var join1, join2 JoinDef

@@ -159,7 +159,7 @@ func (v *ChooserListPage[T]) FilterQuerySet(qs *queries.QuerySet[T], req *http.R
 	var orExprs = make([]expr.Expression, 0, len(v.SearchFields))
 	for _, field := range v.SearchFields {
 
-		var expression = field.AsExpression(req, searchValue)
+		var expression = field.AsExpression(searchValue)
 		if expression == nil {
 			continue
 		}
