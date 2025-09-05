@@ -720,7 +720,7 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 			return fmt.Errorf("no definition found for node content type %q", node.ContentType)
 		}
 
-		if node.ContentType != "" && !childDefinition.IsValidParentType(node.ContentType) {
+		if newParent.ContentType != "" && !childDefinition.IsValidParentType(newParent.ContentType) {
 			return fmt.Errorf(
 				"node content type %q is not allowed under new parent content type %q",
 				node.ContentType, newParent.ContentType,
@@ -745,23 +745,18 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 	}
 
 	nodes, err := qs.GetDescendants(node.Path, node.Depth-1, StatusFlagNone, 0, 1000)
-	if err != nil {
+	if err != nil && !errors.Is(err, errors.NoRows) {
 		return errors.Wrap(err, "failed to get descendants")
 	}
 
 	var nextPathPart = buildPathPart(int64(newParent.Numchild))
 
 	for _, descendant := range nodes {
-
-		//for i := 0; i < STEP_LEN; i++ {
-		//	descendant.Path[node.Depth*STEP_LEN+int64(i)] = nextPathPart[i]
-		//}
-		//
-		//descendant.Path[node.Depth*STEP_LEN : (node.Depth+1)*STEP_LEN] = nextPathPart
-		// copy(descendant.Path[node.Depth*STEP_LEN:(node.Depth+1)*STEP_LEN], nextPathPart)
+		// Replace the old path part with the new path part
+		// e.g. if the node path is "000100020003" and the new parent path is "00020001"
+		// and the new path part is "0003" (the parent has 2 children), the new path will be "000200010003"
 		descendant.Path = newParent.Path + nextPathPart + descendant.Path[(node.Depth+1)*STEP_LEN:]
 		descendant.Depth = (newParent.Depth + descendant.Depth + 1) - node.Depth
-		fmt.Println("Updated descendant:", descendant.Path, "Depth:", descendant.Depth, "nextPathPart:", nextPathPart)
 	}
 
 	updated, err := qs.
@@ -791,15 +786,22 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 		return errors.Wrap(err, "failed to update descendant paths")
 	}
 
-	err = qs.incrementNumChild(newParent.PK)
-	if err != nil {
-		return errors.Wrap(err, "failed to increment new parent numchild")
-	}
+	// Update numchild of old and new parent
 	newParent.Numchild++
+	oldParent.Numchild--
 
-	err = qs.decrementNumChild(oldParent.PK)
+	n, err := qs.Base().
+		Select("Numchild").
+		ExplicitSave().
+		BulkUpdate([]*PageNode{
+			newParent,
+			oldParent,
+		})
 	if err != nil {
-		return errors.Wrap(err, "failed to decrement old parent numchild")
+		return errors.Wrap(err, "failed to update parent nodes")
+	}
+	if n == 0 {
+		return errors.NoChanges.Wrapf("failed to update parent nodes with PKs %d and %d", newParent.PK, oldParent.PK)
 	}
 
 	if err = tx.Commit(qs.Context()); err != nil {
