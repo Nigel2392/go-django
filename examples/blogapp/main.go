@@ -68,7 +68,7 @@ func main() {
 			"APPVAR_SECRET_KEY":           "a very secret key",
 			// translations.APPVAR_TRANSLATIONS_DEFAULT_LOCALE: language.Dutch,
 
-			django.APPVAR_RECOVERER: false,
+			// django.APPVAR_RECOVERER: false,
 		}),
 		django.AppLogger(&logger.Logger{
 			Level:       logger.DBG,

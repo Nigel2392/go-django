@@ -7,6 +7,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/forms"
 )
 
 func Index(w http.ResponseWriter, r *http.Request) {
@@ -35,7 +36,7 @@ func Contact(w http.ResponseWriter, r *http.Request) {
 	if r.Method == http.MethodPost {
 		fmt.Println()
 
-		if form.IsValid() {
+		if forms.IsValid(r.Context(), form) {
 			var data = form.CleanedData()
 			fmt.Println("Form is valid!")
 			fmt.Printf("Name (%T): %s\n", data["name"], data["name"])
