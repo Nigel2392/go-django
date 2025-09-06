@@ -198,7 +198,7 @@ func NewAppConfig(opts *Options) django.AppConfig {
 	return &migrator.MigratorAppConfig{
 		AppConfig: app,
 		MigrationFS: filesystem.Sub(
-			migrationFS, "migrations/images",
+			migrationFS, "migrations/documents",
 		),
 	}
 }
