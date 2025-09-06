@@ -1,6 +1,6 @@
 {
   "dependencies": [
-    "pages:PageNode:0001_create_table_and_4_more.mig"
+    "pages:PageNode:0001_create_table_and_5_more.mig"
   ],
   "table": {
     "table": "sites",

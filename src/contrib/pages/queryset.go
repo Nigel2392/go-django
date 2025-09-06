@@ -173,6 +173,43 @@ func (qs *PageQuerySet) SiblingsOf(node *PageNode, inclusive ...bool) *PageQuery
 	return qs.Siblings(node.Path, node.Depth, inclusive...)
 }
 
+//
+//	type SearchField interface {
+//		Weight() int8  // higher is more important
+//		Field() string // <fieldname> or <path.to.related.fieldname>
+//		Lookup() expr.LookupFilter
+//	}
+//
+//	type searchField struct {
+//		weight int8
+//		field  string
+//		lookup expr.LookupFilter
+//	}
+//
+//	func NewSearchField(weight int8, field string, lookup expr.LookupFilter) SearchField {
+//		return &searchField{
+//			weight: weight,
+//			field:  field,
+//			lookup: lookup,
+//		}
+//	}
+//
+//	func (f *searchField) Weight() int8 {
+//		return f.weight
+//	}
+//
+//	func (f *searchField) Field() string {
+//		return f.field
+//	}
+//
+//	func (f *searchField) Lookup() expr.LookupFilter {
+//		return f.lookup
+//	}
+//
+//	type SearchDefiner interface {
+//		SearchableFields() []SearchField
+//	}
+
 type searchSet struct {
 	isPageNode  bool
 	querySet    *queries.QuerySet[Page]

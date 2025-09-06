@@ -11,7 +11,7 @@ import (
 
 type BaseLookup struct {
 	AllowedDrivers []driver.Driver
-	Identifier     string
+	Identifier     LookupFilter
 	ArgMin         int
 	ArgMax         int
 	Normalize      func(any) any
@@ -330,7 +330,7 @@ func flattenList(values []any) []any {
 	return inList
 }
 
-func logicalLookup(lookupName string, op LogicalOp, normalize func(any) any, allowedDrivers ...driver.Driver) Lookup {
+func logicalLookup(lookupName LookupFilter, op LogicalOp, normalize func(any) any, allowedDrivers ...driver.Driver) Lookup {
 	return &LogicalLookup{
 		BaseLookup: BaseLookup{
 			ArgMin:         1,

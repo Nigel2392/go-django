@@ -1,7 +1,7 @@
 {
   "table": {
-    "table": "revisions_revision",
-    "model": "github.com/Nigel2392/go-django/src/contrib/revisions.Revision",
+    "table": "image",
+    "model": "github.com/Nigel2392/go-django/src/contrib/images.Image",
     "fields": [
       {
         "name": "ID",
@@ -9,13 +9,13 @@
         "use_in_db": true,
         "primary": true,
         "auto": true,
-        "go_type": "int64",
-        "db_type": "INT",
+        "go_type": "uint32",
+        "db_type": "UINT",
         "default": 0
       },
       {
-        "name": "ObjectID",
-        "column": "object_id",
+        "name": "Title",
+        "column": "title",
         "use_in_db": true,
         "nullable": true,
         "go_type": "string",
@@ -23,17 +23,8 @@
         "default": ""
       },
       {
-        "name": "ContentType",
-        "column": "content_type",
-        "use_in_db": true,
-        "nullable": true,
-        "go_type": "string",
-        "db_type": "STRING",
-        "default": ""
-      },
-      {
-        "name": "Data",
-        "column": "data",
+        "name": "Path",
+        "column": "path",
         "use_in_db": true,
         "nullable": true,
         "go_type": "string",
@@ -44,9 +35,30 @@
         "name": "CreatedAt",
         "column": "created_at",
         "use_in_db": true,
+        "nullable": true,
         "go_type": "time.Time",
         "db_type": "DATETIME",
         "default": "0001-01-01T00:00:00Z"
+      },
+      {
+        "name": "FileSize",
+        "column": "file_size",
+        "use_in_db": true,
+        "go_type": "database/sql.NullInt32",
+        "db_type": "INT",
+        "default": {
+          "Int32": 0,
+          "Valid": false
+        }
+      },
+      {
+        "name": "FileHash",
+        "column": "file_hash",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "string",
+        "db_type": "STRING",
+        "default": ""
       }
     ],
     "indexes": null,

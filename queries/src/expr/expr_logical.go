@@ -8,7 +8,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
-func Q(fieldLookup string, value ...any) *ExprNode {
+func Q(fieldLookup LookupFilter, value ...any) *ExprNode {
 	var (
 		split  = strings.SplitN(fieldLookup, "__", 2)
 		lookup = DEFAULT_LOOKUP

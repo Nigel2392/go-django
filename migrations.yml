@@ -22,6 +22,12 @@ migrate:
     - revisions: 
         dst: src/contrib/revisions/migrations
 
+    - documents: 
+        dst: src/contrib/documents/migrations
+
+    - images: 
+        dst: src/contrib/images/migrations
+
     - auditlogs: 
         dst: src/contrib/reports/audit_logs/migrations
  

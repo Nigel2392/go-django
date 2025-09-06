@@ -100,6 +100,14 @@
         "default": false
       },
       {
+        "name": "LastLogin",
+        "column": "last_login",
+        "use_in_db": true,
+        "go_type": "time.Time",
+        "db_type": "DATETIME",
+        "default": "0001-01-01T00:00:00Z"
+      },
+      {
         "name": "Groups",
         "column": "id",
         "relation": {

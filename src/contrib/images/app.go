@@ -46,6 +46,9 @@ var (
 	//go:embed assets/*
 	assetsFS embed.FS
 
+	//go:embed migrations/*
+	migrationFS embed.FS
+
 	App *AppConfig
 )
 
@@ -55,7 +58,7 @@ type imageResult struct {
 	ExtraData   string
 }
 
-func NewAppConfig(opts *Options) *AppConfig {
+func NewAppConfig(opts *Options) django.AppConfig {
 	if App == nil {
 		App = &AppConfig{
 			DBRequiredAppConfig: apps.NewDBAppConfig(
@@ -204,7 +207,12 @@ func NewAppConfig(opts *Options) *AppConfig {
 		)
 	}
 
-	return App
+	return &migrator.MigratorAppConfig{
+		AppConfig: App,
+		MigrationFS: filesystem.Sub(
+			migrationFS, "migrations/images",
+		),
+	}
 }
 
 func (c *AppConfig) MediaBackend() mediafiles.Backend {

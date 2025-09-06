@@ -131,6 +131,14 @@
         "name": "",
         "type": "",
         "columns": [
+          "UrlPath"
+        ],
+        "unique": true
+      },
+      {
+        "name": "",
+        "type": "",
+        "columns": [
           "PageID"
         ]
       },
@@ -165,6 +173,19 @@
           "type": "",
           "columns": [
             "Path"
+          ],
+          "unique": true
+        }
+      }
+    },
+    {
+      "action": "add_index",
+      "index": {
+        "new": {
+          "name": "",
+          "type": "",
+          "columns": [
+            "UrlPath"
           ],
           "unique": true
         }

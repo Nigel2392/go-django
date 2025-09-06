@@ -15,6 +15,8 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
+	"github.com/Nigel2392/go-django/src/contrib/documents"
+	"github.com/Nigel2392/go-django/src/contrib/images"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
@@ -116,6 +118,12 @@ func main() {
 			pages.NewAppConfig,
 			revisions.NewAppConfig,
 			migrator.NewAppConfig,
+			images.NewAppConfig(&images.Options{
+				MediaDir: "images/blogpages",
+			}),
+			documents.NewAppConfig(&documents.Options{
+				MediaDir: "documents/blogpages",
+			}),
 			reports.NewAppConfig,
 			auditlogs.NewAppConfig,
 			auth.NewAppConfig,

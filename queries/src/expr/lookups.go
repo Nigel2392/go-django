@@ -104,13 +104,15 @@ var (
 	ErrLookupArgsInvalid errors.Error = errors.New("LookupArgsInvalid", "lookup arguments invalid")
 )
 
+type LookupFilter = string
+
 const (
-	LOOKUP_EXACT = "exact"
-	LOOKUP_NOT   = "not"
-	LOOKUP_GT    = "gt"
-	LOOKUP_LT    = "lt"
-	LOOKUP_GTE   = "gte"
-	LOOKUP_LTE   = "lte"
+	LOOKUP_EXACT LookupFilter = "exact"
+	LOOKUP_NOT   LookupFilter = "not"
+	LOOKUP_GT    LookupFilter = "gt"
+	LOOKUP_LT    LookupFilter = "lt"
+	LOOKUP_GTE   LookupFilter = "gte"
+	LOOKUP_LTE   LookupFilter = "lte"
 
 	//	LOOKUP_ADD         = "add"
 	//	LOOKUP_SUB         = "sub"
@@ -118,23 +120,23 @@ const (
 	//	LOOKUP_DIV         = "div"
 	//	LOOKUP_MOD         = "mod"
 
-	LOOKUP_BITAND = "bitand"
-	LOOKUP_BITOR  = "bitor"
-	LOOKUP_BITXOR = "bitxor"
-	LOOKUP_BITLSH = "bitlsh"
-	LOOKUP_BITRSH = "bitrsh"
-	LOOKUP_BITNOT = "bitnot"
+	LOOKUP_BITAND LookupFilter = "bitand"
+	LOOKUP_BITOR  LookupFilter = "bitor"
+	LOOKUP_BITXOR LookupFilter = "bitxor"
+	LOOKUP_BITLSH LookupFilter = "bitlsh"
+	LOOKUP_BITRSH LookupFilter = "bitrsh"
+	LOOKUP_BITNOT LookupFilter = "bitnot"
 
-	LOOKUP_IEXACT      = "iexact"
-	LOOKUP_CONTAINS    = "contains"
-	LOOKUP_ICONTANS    = "icontains"
-	LOOKUP_STARTSWITH  = "startswith"
-	LOOKUP_ISTARTSWITH = "istartswith"
-	LOOKUP_IENDSWITH   = "iendswith"
-	LOOKUP_ENDSWITH    = "endswith"
-	LOOKUP_IN          = "in"
-	LOOKUP_ISNULL      = "isnull"
-	LOOKUP_RANGE       = "range"
+	LOOKUP_IEXACT      LookupFilter = "iexact"
+	LOOKUP_CONTAINS    LookupFilter = "contains"
+	LOOKUP_ICONTANS    LookupFilter = "icontains"
+	LOOKUP_STARTSWITH  LookupFilter = "startswith"
+	LOOKUP_ISTARTSWITH LookupFilter = "istartswith"
+	LOOKUP_IENDSWITH   LookupFilter = "iendswith"
+	LOOKUP_ENDSWITH    LookupFilter = "endswith"
+	LOOKUP_IN          LookupFilter = "in"
+	LOOKUP_ISNULL      LookupFilter = "isnull"
+	LOOKUP_RANGE       LookupFilter = "range"
 
 	DEFAULT_LOOKUP = LOOKUP_EXACT
 
