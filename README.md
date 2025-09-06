@@ -13,6 +13,16 @@ At the core this is meant to be a web framework, but it also includes sub-packag
 Any database logic can be implemented with the [`queries`](./queries/README.md) subpackage, providing an experience similar to
 the Django ORM.
 
+Documentation needs to be updated.
+
+You can run an example blog- application by cloning the repository and executing:
+```bash
+mkdir ./.private/blogapp
+go run ./examples/blogapp makemigrations
+go run ./examples/blogapp migrate
+go run ./examples/blogapp
+```
+
 Latest version: `v1.7.0`
 
 ## Installation
