@@ -20,7 +20,11 @@ You can run an example blog- application by cloning the repository and executing
 mkdir ./.private/blogapp
 go run ./examples/blogapp makemigrations
 go run ./examples/blogapp migrate
+go run ./examples/blogapp createuser -s # -s to make superuser, -i to make inactive user
 go run ./examples/blogapp
+
+# Navigate to: http://127.0.0.1:8080/admin/login
+# Explore!
 ```
 
 Latest version: `v1.7.0`
@@ -102,6 +106,8 @@ But more tests / databases will be added over time.
 
 - [Todo App](./docs/examples/todos.md)
 - [Blog App](./docs/examples/blog.md)
+<!-- - [Forms App](./docs/examples/forms.md) -->
+<!-- - [Openauth2 App](./docs/examples/openauth2.md) -->
 
 ### How to work with models in the database
 
