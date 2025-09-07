@@ -25,12 +25,14 @@ func Q(fieldLookup LookupFilter, value ...any) *ExprNode {
 	return Expr(field, lookup, value...)
 }
 
-func And(exprs ...Expression) *ExprGroup {
-	return &ExprGroup{children: exprs, op: OpAnd, wrap: true}
+func And[T any](exprs ...T) *ExprGroup {
+	var e = expressionFromInterface[Expression](exprs, false)
+	return &ExprGroup{children: e, op: OpAnd, wrap: true}
 }
 
-func Or(exprs ...Expression) *ExprGroup {
-	return &ExprGroup{children: exprs, op: OpOr, wrap: true}
+func Or[T any](exprs ...T) *ExprGroup {
+	var e = expressionFromInterface[Expression](exprs, false)
+	return &ExprGroup{children: e, op: OpOr, wrap: true}
 }
 
 type ExprNode struct {
@@ -167,12 +169,20 @@ func (g *ExprGroup) IsNot() bool {
 	return g.not
 }
 
+func (g *ExprGroup) Operator() ExprOp {
+	return g.op
+}
+
 func (g *ExprGroup) And(exprs ...Expression) ClauseExpression {
 	return &ExprGroup{children: append([]Expression{g}, exprs...), op: OpAnd, wrap: true}
 }
 
 func (g *ExprGroup) Or(exprs ...Expression) ClauseExpression {
 	return &ExprGroup{children: append([]Expression{g}, exprs...), op: OpOr, wrap: true}
+}
+
+func (g *ExprGroup) Unwrap() []Expression {
+	return g.children
 }
 
 func (g *ExprGroup) Clone() Expression {

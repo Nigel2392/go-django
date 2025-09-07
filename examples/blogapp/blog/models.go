@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
@@ -11,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	"github.com/Nigel2392/go-django/src/contrib/images"
 	"github.com/Nigel2392/go-django/src/contrib/pages"
+	"github.com/Nigel2392/go-django/src/contrib/search"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
@@ -88,6 +90,12 @@ func (f *CantSelectField) AllowDBEdit() bool {
 
 func (f *CantSelectField) CanMigrate() bool {
 	return false
+}
+
+func (n *BlogPage) SearchableFields() []search.SearchField {
+	return []search.SearchField{
+		search.NewSearchField(4, "Editor", expr.LOOKUP_ICONTANS),
+	}
 }
 
 func (n *BlogPage) FieldDefs() attrs.Definitions {

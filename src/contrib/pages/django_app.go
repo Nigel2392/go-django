@@ -208,24 +208,6 @@ func NewAppConfig() django.AppConfig {
 					return attrutils.InterfaceList(nodes), err
 				},
 			},
-			SearchFields: []admin.SearchField{
-				{
-					Name:   "Title",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-				{
-					Name:   "Slug",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-				{
-					Name:   "UrlPath",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-				{
-					Name:   "ContentType",
-					Lookup: expr.LOOKUP_ICONTANS,
-				},
-			},
 			GetForID: func(ctx context.Context, ref *PageNode, id int64) (Page, error) {
 				return ref, nil
 			},

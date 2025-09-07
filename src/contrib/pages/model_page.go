@@ -9,9 +9,11 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
+	"github.com/Nigel2392/go-django/src/contrib/search"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/mux"
 	"github.com/gosimple/slug"
@@ -22,6 +24,7 @@ var (
 	_ queries.ActsBeforeCreate = (*PageNode)(nil)
 	_ queries.ActsAfterSave    = (*PageNode)(nil)
 	_ models.CanControlSaving  = (*PageNode)(nil)
+	_ search.SearchableModel   = (*PageNode)(nil)
 )
 
 type PageNode struct {
@@ -205,6 +208,15 @@ func (n *PageNode) FieldDefs() attrs.Definitions {
 			attrs.NewField(n, "UpdatedAt"),
 		}
 	})
+}
+
+func (n *PageNode) SearchableFields() []search.SearchField {
+	return []search.SearchField{
+		search.NewSearchField(5, "Title", expr.LOOKUP_ICONTANS),
+		search.NewSearchField(2, "Slug", expr.LOOKUP_ICONTANS),
+		search.NewSearchField(4, "UrlPath", expr.LOOKUP_ICONTANS),
+		search.NewSearchField(1, "ContentType", expr.LOOKUP_ICONTANS),
+	}
 }
 
 var ErrRouteNotFound = mux.ErrRouteNotFound

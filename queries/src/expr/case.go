@@ -11,7 +11,9 @@ type when struct {
 	then Expression
 }
 
-func When(keyOrExpr interface{}, vals ...any) *when {
+type WhenExpression = *when
+
+func When(keyOrExpr interface{}, vals ...any) WhenExpression {
 	switch v := keyOrExpr.(type) {
 	case string:
 		if len(vals) == 0 {
@@ -57,7 +59,7 @@ func When(keyOrExpr interface{}, vals ...any) *when {
 	}
 }
 
-func (w *when) Then(value any) *when {
+func (w *when) Then(value any) WhenExpression {
 	if w.then != nil {
 		panic("then value is already set, cannot set it again")
 	}
@@ -86,6 +88,8 @@ func Case(cases ...any) *CaseExpression {
 		switch v := c.(type) {
 		case *when:
 			whenClauses = append(whenClauses, v)
+		case []*when:
+			whenClauses = append(whenClauses, v...)
 		case Expression:
 			if dflt != nil {
 				panic("default value already set, cannot add more when clauses")

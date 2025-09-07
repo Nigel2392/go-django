@@ -108,9 +108,6 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 			Prefetch: admin.Prefetch{
 				SelectRelated: []string{"User", "Thumbnail"},
 			},
-			SearchFields: []admin.SearchField{
-				admin.NewSearchField("Editor__icontains"),
-			},
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 				GetLabel:       trans.S("Blog Page"),
 				GetDescription: trans.S("A blog page with a rich text editor."),

@@ -1,6 +1,72 @@
 package django_reflect
 
-import "reflect"
+import (
+	"reflect"
+
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+)
+
+func init() {
+	for k, v := range unsafeKinds {
+		for k2 := range v {
+			if _, ok := unsafeKinds[k2]; !ok {
+				unsafeKinds[k2] = make(map[reflect.Kind]struct{})
+			}
+			unsafeKinds[k2][k] = struct{}{}
+		}
+	}
+}
+
+var unsafeKinds = map[reflect.Kind]map[reflect.Kind]struct{}{
+	reflect.String: {
+		reflect.Int:    {},
+		reflect.Int8:   {},
+		reflect.Int16:  {},
+		reflect.Int32:  {},
+		reflect.Int64:  {},
+		reflect.Uint:   {},
+		reflect.Uint8:  {},
+		reflect.Uint16: {},
+		reflect.Uint32: {},
+		reflect.Uint64: {},
+	},
+}
+
+func isSafeConversion(from, to reflect.Type) bool {
+	if from.Kind() == to.Kind() {
+		return true
+	}
+	if unsafeTo, ok := unsafeKinds[from.Kind()]; ok {
+		if _, ok := unsafeTo[to.Kind()]; ok {
+			return false
+		}
+	}
+	return true
+}
+
+func ConvertToType(value reflect.Value, targetType reflect.Type) (reflect.Value, error) {
+	var assignableToParam = value.Type().AssignableTo(targetType)
+	var convertibleToParam = isSafeConversion(value.Type(), targetType) && value.Type().ConvertibleTo(targetType)
+	if !assignableToParam && !convertibleToParam {
+		return reflect.Value{}, errors.TypeMismatch.Wrapf(
+			"cannot convert type %s to %s",
+			value.Type(), targetType,
+		)
+	}
+
+	if convertibleToParam && !assignableToParam {
+		value = value.Convert(targetType)
+	}
+
+	if !value.Type().AssignableTo(targetType) {
+		return reflect.Value{}, errors.TypeMismatch.Wrapf(
+			"cannot assign type %s to %s",
+			value.Type(), targetType,
+		)
+	}
+
+	return value, nil
+}
 
 // RConvert converts a reflect.Value to a different type.
 //

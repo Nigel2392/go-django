@@ -52,6 +52,10 @@ func (q *queryField) SQL(inf *expr.ExpressionInfo) (string, []any) {
 	return sqlBuilder.String(), args
 }
 
+func (q *queryField) Expression() expr.Expression {
+	return q.expr
+}
+
 // attrs.Field minimal impl
 func (q *queryField) Name() string          { return q.name }
 func (q *queryField) ColumnName() string    { return "" }

@@ -2054,6 +2054,44 @@ func (qs *QuerySet[T]) addSubProxies(info *FieldInfo[attrs.FieldDefinition], nod
 	return infos, joins
 }
 
+type PushClauseExpression interface {
+	Operator() expr.ExprOp
+	Unwrap() expr.ClauseExpression
+}
+
+type pushFilter struct {
+	op     expr.ExprOp
+	clause expr.ClauseExpression
+}
+
+func (p *pushFilter) Operator() expr.ExprOp {
+	return p.op
+}
+
+func (p *pushFilter) Unwrap() expr.ClauseExpression {
+	return p.clause
+}
+
+// PushFilterOR can be used to push an OR clause into the QuerySet's filter conditions.
+//
+// The provided clause will be combined with existing conditions using the OR operator.
+func PushFilterOR(clause expr.ClauseExpression) PushClauseExpression {
+	return &pushFilter{
+		op:     expr.OpOr,
+		clause: clause,
+	}
+}
+
+// PushFilterAND can be used to push an AND clause into the QuerySet's filter conditions.
+//
+// The provided clause will be combined with existing conditions using the AND operator.
+func PushFilterAND(clause expr.ClauseExpression) PushClauseExpression {
+	return &pushFilter{
+		op:     expr.OpAnd,
+		clause: clause,
+	}
+}
+
 // Filter is used to filter the results of a query.
 //
 // It takes a key and a list of values as arguments and returns a new QuerySet with the filtered results.
@@ -2061,10 +2099,36 @@ func (qs *QuerySet[T]) addSubProxies(info *FieldInfo[attrs.FieldDefinition], nod
 // The key can be a field name (string), an expr.Expression (expr.Expression) or a map of field names to values.
 //
 // By default the `__exact` (=) operator is used, each where clause is separated by `AND`.
+//
+// It is also possible to push a complete clause expression using PushClauseExpression,
+// this means that the queryset's existing where clauses will be combined with the provided clause
+// using the operator specified in the PushClauseExpression (AND / OR).
+// When using PushClauseExpression as key, no additional values / expressions should be provided,
 func (qs *QuerySet[T]) Filter(key interface{}, vals ...interface{}) *QuerySet[T] {
 	var nqs = qs.clone()
 
-	nqs.internals.Where = append(qs.internals.Where, expr.Express(key, vals...)...)
+	if origExpr, ok := key.(PushClauseExpression); ok && len(qs.internals.Where) > 0 {
+		if len(vals) != 0 {
+			panic("Filter: when using PushClauseExpression as key, no values / other expressions should be provided")
+		}
+
+		switch origExpr.Operator() {
+		case expr.OpAnd:
+			nqs.internals.Where = append(nqs.internals.Where, origExpr.Unwrap())
+		case expr.OpOr:
+			nqs.internals.Where = append([]expr.ClauseExpression{}, expr.Or[any](
+				expr.And(nqs.internals.Where),
+				origExpr.Unwrap(),
+			))
+		default:
+			panic(fmt.Sprintf(
+				"Filter: when using PushClauseExpression as key, only AND / OR operators are supported, got %s",
+				origExpr.Operator(),
+			))
+		}
+	} else {
+		nqs.internals.Where = append(qs.internals.Where, expr.Express(key, vals...)...)
+	}
 
 	for i := range nqs.internals.Unions {
 		nqs.internals.Unions[i] = nqs.internals.Unions[i].Filter(key, vals...)

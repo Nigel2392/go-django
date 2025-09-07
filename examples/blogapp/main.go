@@ -25,6 +25,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/pages"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+	_ "github.com/Nigel2392/go-django/src/contrib/search/backends/searchqueries"
 	"github.com/Nigel2392/go-django/src/contrib/settings"
 	"github.com/Nigel2392/go-django/src/contrib/translations"
 	"github.com/Nigel2392/go-django/src/core/secrets"
@@ -205,7 +206,9 @@ func main() {
 		}
 
 		pageRows, err := pages.NewPageQuerySet().
+			Select("*").
 			Specific().
+			Search("test").
 			Types(&blog.BlogPage{}).
 			// Unpublished().
 			All()
@@ -214,8 +217,10 @@ func main() {
 		}
 
 		fmt.Println("Specific Pages:", len(pageRows))
-		for specificPage := range pageRows.Objects() {
+		for _, pageRow := range pageRows {
+			var specificPage = pageRow.Object
 			var page = specificPage.Reference()
+			fmt.Println(pageRow.Annotations)
 			fmt.Printf(" - %q (ID: %d, %d)\n", page.Title, page.ID(), page.PageID)
 			fmt.Printf("   - PageObject: %+v\n", specificPage.(*blog.BlogPage))
 			// fmt.Printf("   - PageURL: %s\n", django.Reverse("pages", page.ID()))

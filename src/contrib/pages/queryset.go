@@ -7,6 +7,8 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/contrib/search"
+	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -120,7 +122,7 @@ func (qs *PageQuerySet) Descendants(path string, depth int64, inclusive ...bool)
 	)
 
 	if incl {
-		exp = expr.Or(
+		exp = expr.Or[any](
 			exp,
 			expr.Expr("Path", expr.LOOKUP_EXACT, path),
 		)
@@ -173,108 +175,125 @@ func (qs *PageQuerySet) SiblingsOf(node *PageNode, inclusive ...bool) *PageQuery
 	return qs.Siblings(node.Path, node.Depth, inclusive...)
 }
 
-//
-//	type SearchField interface {
-//		Weight() int8  // higher is more important
-//		Field() string // <fieldname> or <path.to.related.fieldname>
-//		Lookup() expr.LookupFilter
-//	}
-//
-//	type searchField struct {
-//		weight int8
-//		field  string
-//		lookup expr.LookupFilter
-//	}
-//
-//	func NewSearchField(weight int8, field string, lookup expr.LookupFilter) SearchField {
-//		return &searchField{
-//			weight: weight,
-//			field:  field,
-//			lookup: lookup,
-//		}
-//	}
-//
-//	func (f *searchField) Weight() int8 {
-//		return f.weight
-//	}
-//
-//	func (f *searchField) Field() string {
-//		return f.field
-//	}
-//
-//	func (f *searchField) Lookup() expr.LookupFilter {
-//		return f.lookup
-//	}
-//
-//	type SearchDefiner interface {
-//		SearchableFields() []SearchField
-//	}
-
 type searchSet struct {
-	isPageNode  bool
 	querySet    *queries.QuerySet[Page]
 	contentType *contenttypes.BaseContentType[Page]
 }
 
-func (qs *PageQuerySet) Search(query string) *PageQuerySet {
+func (qs *PageQuerySet) BuildSearchQuery(_ []search.BuiltSearchField, query string) (search.Searchable, error) {
 	var defs = ListDefinitions()
 	var searchableDefs = make([]*PageDefinition, 0, len(defs))
 	for _, def := range defs {
-		if len(def.SearchFields) > 0 {
+		if _, ok := def.Object().(search.SearchableModel); ok {
 			searchableDefs = append(searchableDefs, def)
 		}
 	}
 
+	//	relevanceField, err := qs.Base().WalkField("_relevance")
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//
+	//	var relevanceExpr *expr.CaseExpression
+	//	if relevanceField.Annotation != nil {
+	//		var ex = relevanceField.Annotation.(interface{ Expression() expr.Expression }).Expression()
+	//		relevanceExpr = ex.(*expr.CaseExpression)
+	//	}
+
 	var searchSets = make([]*searchSet, 0, len(searchableDefs))
 	for _, def := range searchableDefs {
-		var orExprs = make([]expr.Expression, 0, len(def.SearchFields))
-		for _, field := range def.SearchFields {
-			var expr = field.AsExpression(query)
-			if expr == nil {
-				continue
-			}
+		var (
+			modelObj      = def.Object().(search.SearchableModel)
+			meta          = attrs.GetModelMeta(modelObj)
+			cType         = contenttypes.NewContentType(modelObj.(Page))
+			defs          = meta.Definitions()
+			primary       = defs.Primary()
+			_, isPageNode = def.Object().(*PageNode)
+		)
 
-			orExprs = append(orExprs, expr)
+		if isPageNode {
+			// we already are searching PageNodes, no need to add it again
+			continue
 		}
 
-		if len(orExprs) > 0 {
-			var (
-				modelObj = def.Object().(Page)
-				meta     = attrs.GetModelMeta(modelObj)
-				defs     = meta.Definitions()
-				primary  = defs.Primary()
-			)
-
-			var _, isPageNode = def.Object().(*PageNode)
-			searchSets = append(searchSets, &searchSet{
-				isPageNode:  isPageNode,
-				contentType: contenttypes.NewContentType(modelObj),
-				querySet: queries.
-					GetQuerySet[Page](modelObj).
-					Select(primary.Name()).
-					Filter(expr.Or(orExprs...)),
-			})
+		var nestedQS, err = search.Search(modelObj, query, queries.GetQuerySet(modelObj.(Page)))
+		if err != nil {
+			return nil, err
 		}
+
+		fr, err := nestedQS.WalkField("_relevance")
+		if err != nil {
+			return nil, err
+		}
+
+		if fr.Annotation != nil {
+
+			nestedQS = nestedQS.
+				Select("_relevance").
+				Filter(expr.OuterRef("PageID"), expr.Field(primary.Name())).
+				Filter(expr.OuterRef("ContentType"), cType.TypeName())
+
+			qs = qs.Annotate("_nested_relevance", queries.Subquery(nestedQS.Limit(1)))
+			// qs = qs.Annotate("_nested_relevance", expr.Logical("__nested_relevance").ADD(relevanceExpr))
+			// qs = qs.Annotate("_nested_relevance", queries.Subquery(nestedQS.Select("_relevance").Limit(1)))
+		}
+
+		//if fr.Annotation != nil {
+		//	nestedQS = nestedQS.Select("_relevance").Filter(
+		//		expr.Q(primary.Name(), expr.OuterRef("PageID")),
+		//		expr.Logical(expr.Value(cType.TypeName())).EQ(expr.OuterRef("ContentType")),
+		//	)
+		//	// qs = qs.Annotate("_nested_relevance", queries.Subquery(nestedQS.Limit(1)))
+		//	// qs = qs.Annotate("_nested_relevance", expr.Logical("__nested_relevance").ADD(relevanceExpr))
+		//	// qs = qs.Annotate("_nested_relevance", queries.Subquery(nestedQS.Select("_relevance").Limit(1)))
+		//	qs.BaseQuerySet = qs.Base().Union(queries.ChangeObjectsType[*PageNode, attrs.Definer](
+		//		c.Clone().Annotate("_relevance", queries.Subquery(nestedQS.Limit(1))).Base().
+		//			Filter(expr.And[any](
+		//				expr.Q("PK__in", nestedQS.Select(primary.Name())),
+		//				expr.Q("ContentType", cType.TypeName()),
+		//			)),
+		//	))
+		//}
+
+		searchSets = append(searchSets, &searchSet{
+			contentType: cType,
+			querySet:    nestedQS.Select(primary.Name()),
+		})
 	}
 
-	var orExprs = make([]expr.Expression, 0, len(searchSets))
+	var orExprs = make([]expr.Expression, 0, len(searchSets)) //+1)
 	for _, set := range searchSets {
-
-		var exp expr.Expression
-		if set.isPageNode {
-			exp = expr.Q("PK__in", set.querySet)
-		} else {
-			exp = expr.And(
-				expr.Q("PageID__in", set.querySet),
-				expr.Q("ContentType", set.contentType),
-			)
-		}
-
-		orExprs = append(orExprs, exp)
+		orExprs = append(orExprs, expr.And(
+			expr.Q("PageID__in", set.querySet),
+			expr.Q("ContentType", set.contentType),
+		))
 	}
+
+	//orExprs = append(orExprs, expr.Q(
+	//	"PK__in", qs.Base().Select("PK"),
+	//))
 
 	if len(orExprs) > 0 {
-		qs = qs.Filter(expr.Or(orExprs...))
+		qs = qs.Filter(queries.PushFilterOR(
+			expr.Or(orExprs...),
+		))
+	}
+
+	return qs.OrderBy("-_relevance", "-_nested_relevance"), nil
+}
+
+func (qs *PageQuerySet) Search(query string) *PageQuerySet {
+	if strings.TrimSpace(query) == "" {
+		return qs
+	}
+
+	var err error
+	qs, err = search.Search(&PageNode{}, query, qs)
+	if err != nil {
+		assert.Fail(
+			"PageQuerySet.Search: failed to perform search: %v", err,
+		)
+		return nil
 	}
 
 	return qs
@@ -963,7 +982,7 @@ func (qs *PageQuerySet) UnpublishNode(node *PageNode, unpublishChildren bool) er
 
 	var xp expr.ClauseExpression = expr.Q("PK", node.PK)
 	if unpublishChildren {
-		xp = expr.Or(
+		xp = expr.Or[any](
 			xp,
 			expr.And(
 				expr.Q("StatusFlags__bitand", int64(StatusFlagPublished)),
