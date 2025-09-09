@@ -77,22 +77,20 @@ func Express(key interface{}, vals ...interface{}) []ClauseExpression {
 		var expr = &ExprGroup{children: make([]Expression, 0, len(vals)+1), op: OpAnd}
 		expr.children = append(expr.children, v)
 		for _, val := range vals {
-			var v, ok = val.(Expression)
-			if !ok {
-				panic(fmt.Errorf("value %v is not an Expression", val))
-			}
-			expr.children = append(expr.children, v)
+			expr.children = append(
+				expr.children,
+				expressionFromInterface[Expression](val, true)...,
+			)
 		}
 		return []ClauseExpression{expr}
 	case []Expression:
 		var expr = &ExprGroup{children: make([]Expression, 0, len(vals)+1), op: OpAnd}
 		expr.children = append(expr.children, v...)
 		for _, val := range vals {
-			var v, ok = val.(Expression)
-			if !ok {
-				panic(fmt.Errorf("value %v is not an Expression", val))
-			}
-			expr.children = append(expr.children, v)
+			expr.children = append(
+				expr.children,
+				expressionFromInterface[Expression](val, true)...,
+			)
 		}
 		return []ClauseExpression{expr}
 	case []ClauseExpression:
@@ -101,11 +99,10 @@ func Express(key interface{}, vals ...interface{}) []ClauseExpression {
 			expr.children = append(expr.children, e)
 		}
 		for _, val := range vals {
-			var v, ok = val.(Expression)
-			if !ok {
-				panic(fmt.Errorf("value %v is not an Expression", val))
-			}
-			expr.children = append(expr.children, v)
+			expr.children = append(
+				expr.children,
+				expressionFromInterface[Expression](val, true)...,
+			)
 		}
 		return []ClauseExpression{expr}
 	case map[string]interface{}:
