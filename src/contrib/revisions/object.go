@@ -138,6 +138,9 @@ func GetRevisionData(obj attrs.Definer, opts ...MarshallerOption) (map[string]an
 	if o.SkipProxyFields {
 		goto marshalObject
 	} else {
+		// Add option to skip proxy fields when walking the tree
+		// This is because all proxy fields should already be included
+		// in the below loop - we dont want to do extra work.
 		opts = append(
 			opts, MarshallerSkipProxyFields(true),
 		)
