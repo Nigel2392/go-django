@@ -884,6 +884,11 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			latestRevision, err = revisions.LatestRevision(r.Context(), p)
 		}
 
+		if errors.Is(err, errors.NoRows) {
+			latestRevision = nil
+			err = nil
+		}
+
 		except.Assert(
 			err == nil, http.StatusInternalServerError,
 			"failed to retrieve latest revision for page: %v", err,
@@ -892,9 +897,12 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		if latestRevision != nil {
 			instance, err = (*revisions.TypedRevision[Page])(latestRevision).AsObject(r.Context())
 		}
-	} else {
+	}
+
+	if instance == nil && err == nil {
 		instance, err = Specific(r.Context(), p, false)
 	}
+
 	except.Assert(
 		err == nil, http.StatusInternalServerError,
 		"failed to retrieve specific instance from revision: %v", err,

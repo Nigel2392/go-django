@@ -1,6 +1,8 @@
 package fields
 
 import (
+	"database/sql/driver"
+
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -71,6 +73,10 @@ func NewForeignKeyReverseField[T any](forModel attrs.Definer, name string, conf 
 	f.DataModelField.fieldRef = f // Set the field reference to itself
 	f.DataModelField.setupInitialVal()
 	return f
+}
+
+func (f *ForeignKeyReverseField[T]) Value() (driver.Value, error) {
+	return nil, nil
 }
 
 //
