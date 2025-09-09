@@ -174,12 +174,12 @@ func TestCreateRevision(t *testing.T) {
 	t.Run("TestLatestRevision", func(t *testing.T) {
 		t.Run("Artist", func(t *testing.T) {
 			t.Logf("Retrieving latest revision for artist %d", artist.ID)
-			artistRev, err = revisions.LatestRevision(&artist)
+			artistRev, err = revisions.LatestRevision(context.Background(), &artist)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			artistRevTest, err := artistRev.AsObject()
+			artistRevTest, err := artistRev.AsObject(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -195,12 +195,12 @@ func TestCreateRevision(t *testing.T) {
 
 		t.Run("Laptop", func(t *testing.T) {
 			t.Logf("Retrieving latest revision for laptop %d", laptop.ID)
-			laptopRev, err = revisions.LatestRevision(&laptop)
+			laptopRev, err = revisions.LatestRevision(context.Background(), &laptop)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			laptopRevTest, err := laptopRev.AsObject()
+			laptopRevTest, err := laptopRev.AsObject(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -216,12 +216,12 @@ func TestCreateRevision(t *testing.T) {
 
 		t.Run("Bottle", func(t *testing.T) {
 			t.Logf("Retrieving latest revision for bottle %d", bottle.ID)
-			bottleRev, err = revisions.LatestRevision(&bottle)
+			bottleRev, err = revisions.LatestRevision(context.Background(), &bottle)
 			if err != nil {
 				t.Fatal(err)
 			}
 
-			bottleRevTest, err := bottleRev.AsObject()
+			bottleRevTest, err := bottleRev.AsObject(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -249,7 +249,7 @@ func TestCreateRevision(t *testing.T) {
 			}
 
 			t.Logf("Retrieving latest revision for artist %d", artist.ID)
-			artistRev, err = revisions.LatestRevision(&artist)
+			artistRev, err = revisions.LatestRevision(context.Background(), &artist)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -259,7 +259,7 @@ func TestCreateRevision(t *testing.T) {
 				t.Fatalf("Expected revision ID %d, got %d", revIDCounter, artistRev.ID)
 			}
 
-			artistRevTest, err := artistRev.AsObject()
+			artistRevTest, err := artistRev.AsObject(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -284,7 +284,7 @@ func TestCreateRevision(t *testing.T) {
 			}
 
 			t.Logf("Retrieving latest revision for laptop %d", laptop.ID)
-			laptopRev, err = revisions.LatestRevision(&laptop)
+			laptopRev, err = revisions.LatestRevision(context.Background(), &laptop)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -294,7 +294,7 @@ func TestCreateRevision(t *testing.T) {
 				t.Fatalf("Expected revision ID %d, got %d", revIDCounter, laptopRev.ID)
 			}
 
-			laptopRevTest, err := laptopRev.AsObject()
+			laptopRevTest, err := laptopRev.AsObject(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -319,7 +319,7 @@ func TestCreateRevision(t *testing.T) {
 			}
 
 			t.Logf("Retrieving latest revision for bottle %d", bottle.ID)
-			bottleRev, err = revisions.LatestRevision(&bottle)
+			bottleRev, err = revisions.LatestRevision(context.Background(), &bottle)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -329,7 +329,7 @@ func TestCreateRevision(t *testing.T) {
 				t.Fatalf("Expected revision ID %d, got %d", revIDCounter, bottleRev.ID)
 			}
 
-			bottleRevTest, err := bottleRev.AsObject()
+			bottleRevTest, err := bottleRev.AsObject(context.Background())
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -347,7 +347,7 @@ func TestCreateRevision(t *testing.T) {
 	t.Run("TestGetRevisions", func(t *testing.T) {
 		t.Run("Artist", func(t *testing.T) {
 			t.Logf("Retrieving all revisions for artist %d", artist.ID)
-			artistRevs, err := revisions.GetRevisionsByObject(&artist, 1000, 0)
+			artistRevs, err := revisions.GetRevisionsByObject(context.Background(), &artist, 1000, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -367,7 +367,7 @@ func TestCreateRevision(t *testing.T) {
 
 		t.Run("Laptop", func(t *testing.T) {
 			t.Logf("Retrieving all revisions for laptop %d", laptop.ID)
-			laptopRevs, err := revisions.GetRevisionsByObject(&laptop, 1000, 0)
+			laptopRevs, err := revisions.GetRevisionsByObject(context.Background(), &laptop, 1000, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -387,7 +387,7 @@ func TestCreateRevision(t *testing.T) {
 
 		t.Run("Bottle", func(t *testing.T) {
 			t.Logf("Retrieving all revisions for bottle %d", bottle.ID)
-			bottleRevs, err := revisions.GetRevisionsByObject(&bottle, 1000, 0)
+			bottleRevs, err := revisions.GetRevisionsByObject(context.Background(), &bottle, 1000, 0)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -407,7 +407,7 @@ func TestCreateRevision(t *testing.T) {
 	})
 
 	t.Run("ListRevisions", func(t *testing.T) {
-		var revs, err = revisions.ListRevisions(1000, 0)
+		var revs, err = revisions.ListRevisions(context.Background(), 1000, 0)
 		if err != nil {
 			t.Fatal(err)
 		}

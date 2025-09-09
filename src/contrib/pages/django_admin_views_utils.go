@@ -18,11 +18,6 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
-type pageDefiner interface {
-	attrs.Definer
-	Page
-}
-
 func pageAdminAppHandler(fn func(http.ResponseWriter, *http.Request, *admin.AppDefinition, *admin.ModelDefinition)) mux.Handler {
 	return mux.NewHandler(func(w http.ResponseWriter, req *http.Request) {
 		var app, ok = admin.AdminSite.Apps.Get(AdminPagesAppName)

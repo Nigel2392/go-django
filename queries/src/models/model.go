@@ -1191,7 +1191,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 
 	// If no changes were made and the model was saved,
 	// we return an error indicating that no rows were affected.
-	if (saved || cnf.ForceUpdate) && updated == 0 && !cnf.ForceCreate {
+	if queries.IsCommitContext(ctx) && (saved || cnf.ForceUpdate) && updated == 0 && !cnf.ForceCreate {
 		// sql.ErrNoRows
 		return errors.NoChanges.WithCause(fmt.Errorf(
 			"model %T was not saved: %w",

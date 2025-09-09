@@ -3347,6 +3347,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		Context: qs.context,
 	}
 
+	var isCommitContext = IsCommitContext(qs.context)
 	for _, object := range objects {
 		var err error
 		object, err = setup(object)
@@ -3370,6 +3371,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				"failed to validate object %T before create",
 				object,
 			)
+		}
+
+		if !isCommitContext {
+			continue
 		}
 
 		var defs = object.FieldDefs()
@@ -3436,20 +3441,23 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 	}
 
 	var support = qs.compiler.SupportsReturning()
-	var resultQuery = qs.compiler.BuildCreateQuery(
-		context,
-		ChangeObjectsType[T, attrs.Definer](qs),
-		qs.internals,
-		infos,
-	)
-	qs.latestQuery = resultQuery
+	var results [][]any
+	if isCommitContext {
+		var resultQuery = qs.compiler.BuildCreateQuery(
+			context,
+			ChangeObjectsType[T, attrs.Definer](qs),
+			qs.internals,
+			infos,
+		)
+		qs.latestQuery = resultQuery
 
-	// Set the old values on the new object
+		// Set the old values on the new object
 
-	// Execute the create query
-	results, err := resultQuery.Exec()
-	if err != nil {
-		return nil, err
+		// Execute the create query
+		results, err = resultQuery.Exec()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	// Check results & which returning method to use
@@ -3490,7 +3498,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		// If no results are returned, we cannot set the primary key
 		// warn about this, return the objects and commit the transaction
 		// this is in case the model's primary key is not an auto-incrementing field (uuid, etc.)
-		if len(results) == 0 {
+		if isCommitContext && len(results) == 0 {
 			logger.Warnf(
 				"no results returned after insert, cannot set primary key for %T",
 				qs.internals.Model.Object,
@@ -3498,7 +3506,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			return objects, tx.Commit(context)
 		}
 
-		if len(results) != len(objects) {
+		if isCommitContext && len(results) != len(objects) {
 			return nil, errors.LastInsertId.WithCause(fmt.Errorf(
 				"expected %d results returned after insert, got %d",
 				len(objects), len(results),
@@ -3507,21 +3515,23 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 
 		for i, row := range objects {
 
-			var rowDefs = row.FieldDefs()
-			var prim = rowDefs.Primary()
-			if prim != nil {
-				if len(results[i]) != 1 {
-					return nil, errors.LastInsertId.WithCause(fmt.Errorf(
-						"expected 1 result returned after insert, got %d (%+v)",
-						len(results[i]), results[i],
-					))
-				}
-				var id = results[i][0].(int64)
-				if err := prim.SetValue(id, true); err != nil {
-					return nil, errors.ValueError.WithCause(fmt.Errorf(
-						"failed to set primary key %q in %T: %w: %w",
-						prim.Name(), row, err, errors.LastInsertId,
-					))
+			if isCommitContext {
+				var rowDefs = row.FieldDefs()
+				var prim = rowDefs.Primary()
+				if prim != nil {
+					if len(results[i]) != 1 {
+						return nil, errors.LastInsertId.WithCause(fmt.Errorf(
+							"expected 1 result returned after insert, got %d (%+v)",
+							len(results[i]), results[i],
+						))
+					}
+					var id = results[i][0].(int64)
+					if err := prim.SetValue(id, true); err != nil {
+						return nil, errors.ValueError.WithCause(fmt.Errorf(
+							"failed to set primary key %q in %T: %w: %w",
+							prim.Name(), row, err, errors.LastInsertId,
+						))
+					}
 				}
 			}
 
@@ -3540,7 +3550,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 
 	case support == drivers.SupportsReturningColumns:
 
-		if len(results) != len(objects) {
+		if isCommitContext && len(results) != len(objects) {
 			return nil, errors.LastInsertId.WithCause(fmt.Errorf(
 				"expected %d results returned after insert, got %d (len(results) != len(objects))",
 				len(objects), len(results),
@@ -3548,6 +3558,15 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		}
 
 		for i, row := range objects {
+			if !isCommitContext {
+				if _, err = runActor(context, actsAfterCreate, row); err != nil {
+					return nil, errors.Wrapf(
+						err, "failed to run ActsAfterCreate for %T", row,
+					)
+				}
+				continue
+			}
+
 			var (
 				scannables = getScannableFields([]*FieldInfo[attrs.Field]{&infos[i].FieldInfo}, row)
 				resLen     = len(results[i])
@@ -3630,6 +3649,7 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 	}
 	defer tx.Rollback(qs.context)
 
+	var isCommitContext = IsCommitContext(qs.context)
 	var exprMap = make(map[string]expr.NamedExpression, len(expressions))
 	for _, expression := range expressions {
 		switch e := expression.(type) {
@@ -3702,6 +3722,10 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 			)
 		}
 
+		if !isCommitContext {
+			continue
+		}
+
 		var defs, fields = qs.updateFields(obj)
 		var info = UpdateInfo{
 			FieldInfo: FieldInfo[attrs.Field]{
@@ -3772,20 +3796,23 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 		infos = append(infos, info)
 	}
 
-	var resultQuery = qs.compiler.BuildUpdateQuery(
-		context,
-		ChangeObjectsType[T, attrs.Definer](qs),
-		qs.internals,
-		infos,
-	)
-	qs.latestQuery = resultQuery
+	var res int64
+	if isCommitContext {
+		var resultQuery = qs.compiler.BuildUpdateQuery(
+			context,
+			ChangeObjectsType[T, attrs.Definer](qs),
+			qs.internals,
+			infos,
+		)
+		qs.latestQuery = resultQuery
 
-	res, err := resultQuery.Exec()
-	if err != nil {
-		return 0, err
+		res, err = resultQuery.Exec()
+		if err != nil {
+			return 0, err
+		}
 	}
 
-	if len(objects) > 0 && res == 0 {
+	if isCommitContext && len(objects) > 0 && res == 0 {
 		return 0, errors.NoChanges.WithCause(fmt.Errorf(
 			"no rows updated for %T, expected %d rows",
 			qs.internals.Model.Object, len(objects),
@@ -3926,16 +3953,19 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 		qs.internals.Where = append(qs.internals.Where, where...)
 	}
 
-	var resultQuery = qs.compiler.BuildDeleteQuery(
-		qs.context,
-		ChangeObjectsType[T, attrs.Definer](qs),
-		qs.internals,
-	)
-	qs.latestQuery = resultQuery
+	var res int64
+	if IsCommitContext(qs.context) {
+		var resultQuery = qs.compiler.BuildDeleteQuery(
+			qs.context,
+			ChangeObjectsType[T, attrs.Definer](qs),
+			qs.internals,
+		)
+		qs.latestQuery = resultQuery
 
-	res, err := resultQuery.Exec()
-	if err != nil {
-		return 0, err
+		res, err = resultQuery.Exec()
+		if err != nil {
+			return 0, err
+		}
 	}
 
 	if len(objects) > 0 {

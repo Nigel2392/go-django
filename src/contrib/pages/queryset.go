@@ -491,7 +491,7 @@ func (qs *PageQuerySet) AddChildren(parent *PageNode, children ...*PageNode) err
 		return err
 	}
 
-	if updated == 0 {
+	if queries.IsCommitContext(qs.Context()) && updated == 0 {
 		return fmt.Errorf("failed to update parent node with PK %d", parent.PK)
 	}
 
@@ -609,6 +609,11 @@ func (qs *PageQuerySet) BatchUpdate([]*PageNode, ...any) (int64, error) {
 }
 
 func (qs *PageQuerySet) Delete(nodes ...*PageNode) (int64, error) {
+
+	if !queries.IsCommitContext(qs.Context()) {
+		return 0, nil
+	}
+
 	if qs.Base().HasWhereClause() {
 
 		if len(nodes) > 0 {
@@ -896,7 +901,7 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 		return errors.Wrap(err, "failed to update descendants")
 	}
 
-	if updated == 0 {
+	if queries.IsCommitContext(qs.Context()) && updated == 0 {
 		return errors.NoChanges.Wrapf("failed to update descendants for node with path %s", node.Path)
 	}
 
@@ -927,7 +932,7 @@ func (qs *PageQuerySet) MoveNode(node *PageNode, newParent *PageNode) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to update parent nodes")
 	}
-	if n == 0 {
+	if queries.IsCommitContext(qs.Context()) && n == 0 {
 		return errors.NoChanges.Wrapf("failed to update parent nodes with PKs %d and %d", newParent.PK, oldParent.PK)
 	}
 
@@ -968,6 +973,10 @@ func (qs *PageQuerySet) PublishNode(node *PageNode) error {
 func (qs *PageQuerySet) UnpublishNode(node *PageNode, unpublishChildren bool) error {
 	if node.Path == "" {
 		return fmt.Errorf("node path must not be empty")
+	}
+
+	if !queries.IsCommitContext(qs.Context()) {
+		return nil
 	}
 
 	var transaction, err = qs.GetOrCreateTransaction()
@@ -1145,7 +1154,7 @@ func (qs *PageQuerySet) updateNodes(nodes []*PageNode, exclude ...string) error 
 	if err != nil {
 		return fmt.Errorf("failed to prepare nodes for update: %w", err)
 	}
-	if updated == 0 {
+	if queries.IsCommitContext(qs.Context()) && updated == 0 {
 		return errors.New(errors.CodeNoChanges, "no nodes were updated")
 	}
 	return nil
@@ -1212,7 +1221,7 @@ func (qs *PageQuerySet) incrementNumChild(id ...int64) error {
 	if err != nil {
 		return fmt.Errorf("failed to increment numchild: %w", err)
 	}
-	if ct == 0 {
+	if queries.IsCommitContext(qs.Context()) && ct == 0 {
 		return fmt.Errorf("no nodes were updated for id %d", id)
 	}
 	return nil
@@ -1243,7 +1252,7 @@ func (qs *PageQuerySet) decrementNumChild(id ...int64) error {
 	if err != nil {
 		return fmt.Errorf("failed to decrement numchild: %w", err)
 	}
-	if ct == 0 {
+	if queries.IsCommitContext(qs.Context()) && ct == 0 {
 		return fmt.Errorf("no nodes were updated for id %d", id)
 	}
 	return nil
@@ -1261,7 +1270,7 @@ func (qs *PageQuerySet) updateNode(node *PageNode) error {
 		return err
 	}
 
-	if updated == 0 {
+	if queries.IsCommitContext(qs.Context()) && updated == 0 {
 		// still commit the transaction as opposed to rolling it back
 		// some databases might have issues reporting back the amount of updated rows
 		return errors.NoChanges
@@ -1293,7 +1302,7 @@ func (qs *PageQuerySet) updateNodeStatusFlags(statusFlags int64, iD int64) error
 		return err
 	}
 
-	if updated == 0 {
+	if queries.IsCommitContext(qs.Context()) && updated == 0 {
 		// still commit the transaction as opposed to rolling it back
 		// some databases might have issues reporting back the amount of updated rows
 		return errors.Join(

@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/contrib/search"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/mux"
 	"github.com/gosimple/slug"
 )
@@ -53,6 +54,14 @@ type PageNode struct {
 	// _parent is used to cache the parent node
 	// It is not saved to the database and is only used for performance optimization
 	_parent *PageNode `json:"-" attrs:"-"`
+}
+
+func (n *PageNode) GetRevisionInfo(ctx context.Context) (pk any, contentType string, err error) {
+	if n.ContentType == "" || n.PageID == 0 {
+		var cType = contenttypes.NewContentType(n)
+		return n.PK, cType.TypeName(), nil
+	}
+	return n.PageID, n.ContentType, nil
 }
 
 func (n *PageNode) SetUrlPath(parent *PageNode) (newPath, oldPath string) {

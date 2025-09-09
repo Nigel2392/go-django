@@ -67,6 +67,10 @@ func StartTransaction(ctx context.Context, database ...string) (context.Context,
 		return ctx, &dbSpecificTransaction{&nullTransaction{tx}, databaseName}, nil
 	}
 
+	if !IsCommitContext(ctx) {
+		return ctx, &dbSpecificTransaction{&nullTransaction{nil}, databaseName}, nil
+	}
+
 	// Otherwise, start a new transaction.
 	var compiler = Compiler(databaseName)
 	tx, err = compiler.StartTransaction(ctx)

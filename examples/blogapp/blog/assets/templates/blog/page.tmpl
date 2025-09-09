@@ -17,6 +17,10 @@
         <img src="{{ url "images:serve" .Data.blog_page.Thumbnail.Path }}" alt="{{ .Data.blog_page.Thumbnail.Title }}">
         {{ end }}
 
+        {{ if .Data.blog_page.User }}
+        <p>By {{ .Data.blog_page.User.Email | toString }}</p>
+        {{ end }}
+
         {{ .Page.Editor.MustRender }} 
 
     </div>

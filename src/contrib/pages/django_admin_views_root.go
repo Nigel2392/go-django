@@ -196,7 +196,7 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 
 	var (
 		cType      = cTypeDef.ContentType()
-		page       = attrs.NewObject[pageDefiner](cType)
+		page       = attrs.NewObject[Page](cType)
 		fieldDefs  = page.FieldDefs()
 		definition = DefinitionForObject(page)
 		panels     []admin.Panel

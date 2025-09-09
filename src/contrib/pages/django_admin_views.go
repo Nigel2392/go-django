@@ -20,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -703,7 +704,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 
 	var (
 		cType      = cTypeDef.ContentType()
-		page       = attrs.NewObject[pageDefiner](cType)
+		page       = attrs.NewObject[Page](cType)
 		fieldDefs  = page.FieldDefs()
 		definition = DefinitionForObject(page)
 		panels     []admin.Panel
@@ -789,6 +790,14 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			})
 		}
 
+		if django.AppInstalled("revisions") {
+			_, err = revisions.CreateRevision(ctx, ref)
+			if err != nil {
+				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
+				return err
+			}
+		}
+
 		return nil
 		//return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {
 		//	return FixTree(pageApp.QuerySet(), ctx)
@@ -861,20 +870,38 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		return
 	}
 
-	var instance, err = Specific(r.Context(), p, false)
+	var (
+		instance Page
+		err      error
+	)
+	if django.AppInstalled("revisions") {
+		var (
+			latestRevision *revisions.Revision
+		)
+		if p.LatestRevisionID != 0 {
+			latestRevision, err = revisions.GetRevisionByID(r.Context(), p.LatestRevisionID)
+		} else {
+			latestRevision, err = revisions.LatestRevision(r.Context(), p)
+		}
+
+		except.Assert(
+			err == nil, http.StatusInternalServerError,
+			"failed to retrieve latest revision for page: %v", err,
+		)
+
+		if latestRevision != nil {
+			instance, err = (*revisions.TypedRevision[Page])(latestRevision).AsObject(r.Context())
+		}
+	} else {
+		instance, err = Specific(r.Context(), p, false)
+	}
 	except.Assert(
-		err == nil, 500,
-		err,
+		err == nil, http.StatusInternalServerError,
+		"failed to retrieve specific instance from revision: %v", err,
 	)
 
-	var page, ok = instance.(pageDefiner)
-	if !ok {
-		page = p
-		// logger.Warnf("instance does not adhere to attrs.Definer: %T", instance)
-	}
-
-	var fieldDefs = page.FieldDefs()
-	var definition = DefinitionForObject(page)
+	var fieldDefs = instance.FieldDefs()
+	var definition = DefinitionForObject(instance)
 	var panels []admin.Panel
 	if definition == nil || definition.EditPanels == nil {
 		panels = make([]admin.Panel, 0, fieldDefs.Len())
@@ -887,10 +914,10 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			panels = append(panels, admin.FieldPanel(def.Name()))
 		}
 	} else {
-		panels = definition.EditPanels(r, page)
+		panels = definition.EditPanels(r, instance)
 	}
 
-	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), page)
+	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), instance)
 	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
 	adminForm.Load()
 
@@ -910,7 +937,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
 
 		if !adminForm.HasChanged() && !publishPage && !unpublishPage {
-			logger.Warnf("No changes detected for page: %s", page.Reference().Title)
+			logger.Warnf("No changes detected for page: %s", instance.Reference().Title)
 			return nil
 		}
 
@@ -918,7 +945,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			wasPublished, wasUnpublished bool
 		)
 
-		var ref = page.Reference()
+		var ref = instance.Reference()
 		if publishPage && !ref.StatusFlags.Is(StatusFlagPublished) {
 			ref.StatusFlags |= StatusFlagPublished
 			wasPublished = true
@@ -939,34 +966,45 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		default:
 			return fmt.Errorf("invalid page type: %T", d)
 		}
-		err = NewPageQuerySet().
-			WithContext(ctx).
+
+		var err = NewPageQuerySet().
+			WithContext(queries.CommitContext(
+				ctx, publishPage || unpublishPage,
+			)).
 			UpdateNode(ref)
 		if err != nil {
-			return err
+			return errors.Wrap(err, "failed to update page node")
 		}
 
 		if wasPublished {
 			auditlogs.Log(ctx, "pages:publish", logger.INF, p, map[string]interface{}{
 				"edited":  true,
-				"page_id": page.ID(),
-				"label":   page.Reference().Title,
+				"page_id": instance.ID(),
+				"label":   instance.Reference().Title,
 				"cType":   p.ContentType,
 			})
 		} else {
 			auditlogs.Log(ctx, "pages:edit", logger.INF, p, map[string]interface{}{
-				"page_id": page.ID(),
-				"label":   page.Reference().Title,
+				"page_id": instance.ID(),
+				"label":   instance.Reference().Title,
 				"cType":   p.ContentType,
 			})
 		}
 
 		if wasUnpublished {
 			auditlogs.Log(ctx, "pages:unpublish", logger.INF, p, map[string]interface{}{
-				"page_id": page.ID(),
-				"label":   page.Reference().Title,
+				"page_id": instance.ID(),
+				"label":   instance.Reference().Title,
 				"cType":   p.ContentType,
 			})
+		}
+
+		if django.AppInstalled("revisions") && (!publishPage && !unpublishPage) {
+			_, err := revisions.CreateRevision(ctx, d)
+			if err != nil {
+				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
+				return err
+			}
 		}
 
 		return nil
@@ -985,7 +1023,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 				context.Set("app", a)
 				context.Set("model", m)
-				context.Set("page_object", page)
+				context.Set("page_object", instance)
 				context.Set("is_published", p.StatusFlags.Is(StatusFlagPublished))
 				var backURL string
 				if q := req.URL.Query().Get("next"); q != "" {
@@ -1000,7 +1038,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				}
 
 				context.SetPage(admin.PageOptions{
-					TitleFn:     trans.S("Edit %q", page.Reference().Title),
+					TitleFn:     trans.S("Edit %q", instance.Reference().Title),
 					BreadCrumbs: breadcrumbs,
 					Actions:     getPageActions(r, p),
 				})
@@ -1071,6 +1109,16 @@ func deletePageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefin
 		if _, err := qs.Delete(p); err != nil {
 			except.Fail(500, "Failed to delete page: %s", err)
 			return
+		}
+
+		revisionsDeleted, err := revisions.DeleteRevisionsByObject(r.Context(), p)
+		if err != nil {
+			except.Fail(500, "Failed to delete revisions for page: %s", err)
+			return
+		}
+
+		if revisionsDeleted > 0 {
+			logger.Infof("Deleted %d revisions for page ID %d", revisionsDeleted, p.ID())
 		}
 
 		auditlogs.Log(r.Context(), "pages:delete", logger.WRN, p, map[string]interface{}{

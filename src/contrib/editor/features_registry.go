@@ -50,6 +50,18 @@ func (e *EditorJSBlockData) Value() (driver.Value, error) {
 	return JSONMarshalEditorData(e)
 }
 
+func (e *EditorJSBlockData) MarshalJSON() ([]byte, error) {
+	return JSONMarshalEditorData(
+		e,
+	)
+}
+
+func (e *EditorJSBlockData) UnmarshalJSON(data []byte) error {
+	return _JSONUnmarshalEditorData(
+		e, []string{}, data,
+	)
+}
+
 func (e *EditorJSBlockData) Scan(src interface{}) error {
 	var features = make([]string, len(e.Features))
 	for i, f := range e.Features {
