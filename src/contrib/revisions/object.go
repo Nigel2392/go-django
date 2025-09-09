@@ -15,6 +15,8 @@ import (
 
 type QueryInfoFunc func(ctx context.Context, obj attrs.Definer) (pk any, contentType string, err error)
 
+type MarshallerOption func(*marshallerOption)
+
 type RevisionInfoDefiner interface {
 	GetRevisionInfo(ctx context.Context) (pk any, contentType string, err error)
 }
@@ -25,6 +27,46 @@ type RevisionDataMarshaller interface {
 
 type RevisionDataUnMarshaller interface {
 	UnmarshalRevisionData(data []byte) error
+}
+
+func MarshallerSkipProxyFields(b bool) MarshallerOption {
+	return func(o *marshallerOption) {
+		o.SkipProxyFields = b
+	}
+}
+
+func MarshallerAllowReadOnlyFields(b bool) MarshallerOption {
+	return func(o *marshallerOption) {
+		o.AllowReadOnlyFields = b
+	}
+}
+
+func MarshallerGetFieldValue(fn func(def attrs.Field) (any, error)) MarshallerOption {
+	return func(o *marshallerOption) {
+		o.GetFieldValue = fn
+	}
+}
+
+type marshallerOption struct {
+	SkipProxyFields     bool
+	AllowReadOnlyFields bool
+	GetFieldValue       func(def attrs.Field) (any, error)
+	AllowDataMarshaller bool
+}
+
+func newMarshallerOptions(opts ...MarshallerOption) *marshallerOption {
+	var o = &marshallerOption{}
+	for _, fn := range opts {
+		fn(o)
+	}
+	return o
+}
+
+func (m *marshallerOption) getFieldValue(field attrs.Field) (any, error) {
+	if m.GetFieldValue != nil {
+		return m.GetFieldValue(field)
+	}
+	return field.Value()
 }
 
 func getIdAndContentType(ctx context.Context, obj attrs.Definer, getter ...QueryInfoFunc) (pk string, contentType string, err error) {
@@ -66,14 +108,20 @@ marshalKey:
 	return string(objectID), contentType, nil
 }
 
-func GetRevisionData(obj attrs.Definer) (map[string]any, error) {
-	if m, ok := obj.(RevisionDataMarshaller); ok {
+func GetRevisionData(obj attrs.Definer, opts ...MarshallerOption) (map[string]any, error) {
+	var o = newMarshallerOptions(opts...)
+	if m, ok := obj.(RevisionDataMarshaller); ok && o.AllowDataMarshaller {
 		return m.MarshalRevisionData()
 	}
 
 	var tree = queries.ProxyFields(obj)
 	var seen = make(map[string]struct{})
 	var objMap = make(map[string]any)
+
+	if o.SkipProxyFields {
+		goto marshalObject
+	}
+
 proxyLoop:
 	for obj, err := range tree.WalkObjectProxies(obj, false) {
 		if err != nil {
@@ -89,7 +137,7 @@ proxyLoop:
 		var walkMap = objMap
 		for i, name := range obj.Path {
 			if i == len(obj.Path)-1 {
-				var data, err = GetRevisionData(obj.Value)
+				var data, err = GetRevisionData(obj.Value, opts...)
 				if err != nil {
 					return nil, err
 				}
@@ -114,10 +162,15 @@ proxyLoop:
 		}
 	}
 
+marshalObject:
 	var defs = obj.FieldDefs()
 	for _, def := range defs.Fields() {
 		var name = def.Name()
 		if _, isSeen := seen[name]; isSeen {
+			continue
+		}
+
+		if !o.AllowReadOnlyFields && !def.AllowEdit() {
 			continue
 		}
 
@@ -126,7 +179,7 @@ proxyLoop:
 			continue
 		}
 
-		var value, err = def.Value()
+		var value, err = o.getFieldValue(def)
 		if err != nil {
 			return nil, err
 		}
@@ -137,8 +190,8 @@ proxyLoop:
 	return objMap, nil
 }
 
-func MarshalRevisionData(obj attrs.Definer) ([]byte, error) {
-	var objMap, err = GetRevisionData(obj)
+func MarshalRevisionData(obj attrs.Definer, opts ...MarshallerOption) ([]byte, error) {
+	var objMap, err = GetRevisionData(obj, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -146,7 +199,8 @@ func MarshalRevisionData(obj attrs.Definer) ([]byte, error) {
 	return json.Marshal(objMap)
 }
 
-func UnmarshalRevisionData(obj attrs.Definer, data []byte) error {
+func UnmarshalRevisionData(obj attrs.Definer, data []byte, opts ...MarshallerOption) error {
+	var o = newMarshallerOptions(opts...)
 	if m, ok := obj.(RevisionDataUnMarshaller); ok {
 		return m.UnmarshalRevisionData(data)
 	}
@@ -166,8 +220,12 @@ func UnmarshalRevisionData(obj attrs.Definer, data []byte) error {
 			continue
 		}
 
+		if !o.AllowReadOnlyFields && !def.AllowEdit() {
+			continue
+		}
+
 		proxyField, ok := def.(queries.ProxyField)
-		if ok && proxyField.IsProxy() {
+		if !o.SkipProxyFields && ok && proxyField.IsProxy() {
 			var newObjFace = def.GetValue()
 			var newObj attrs.Definer
 			newObj, ok = newObjFace.(attrs.Definer)

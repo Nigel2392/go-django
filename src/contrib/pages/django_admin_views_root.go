@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -272,6 +273,14 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 				page.Reference(),
 				addData,
 			)
+		}
+
+		if django.AppInstalled("revisions") {
+			_, err = revisions.CreateRevision(ctx, ref)
+			if err != nil {
+				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
+				return err
+			}
 		}
 
 		return nil
