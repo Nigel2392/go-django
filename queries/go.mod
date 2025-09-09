@@ -2,6 +2,8 @@ module github.com/Nigel2392/go-django/queries
 
 go 1.24.2
 
+replace google.golang.org/genproto/googleapis/rpc => google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f
+
 require (
 	github.com/Nigel2392/go-signals v1.1.0
 	github.com/Nigel2392/goldcrest v1.0.4

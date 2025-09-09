@@ -101,7 +101,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, p.linkAttrs)
+			templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, templ.Attributes(p.linkAttrs))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -121,7 +121,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 			var templ_7745c5c3_Var3 string
 			templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, "<<"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 71, Col: 148}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 71, Col: 166}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var3))
 			if templ_7745c5c3_Err != nil {
@@ -131,7 +131,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, p.linkAttrs)
+			templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, templ.Attributes(p.linkAttrs))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -151,7 +151,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, "Previous"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 72, Col: 149}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 72, Col: 167}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
@@ -184,7 +184,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, p.linkAttrs)
+				templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, templ.Attributes(p.linkAttrs))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -204,7 +204,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				var templ_7745c5c3_Var7 string
 				templ_7745c5c3_Var7, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 87, Col: 144}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 87, Col: 162}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var7))
 				if templ_7745c5c3_Err != nil {
@@ -219,7 +219,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, p.linkAttrs)
+				templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, templ.Attributes(p.linkAttrs))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -239,7 +239,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				var templ_7745c5c3_Var9 string
 				templ_7745c5c3_Var9, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.Itoa(i))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 91, Col: 135}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 91, Col: 153}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var9))
 				if templ_7745c5c3_Err != nil {
@@ -260,7 +260,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, p.linkAttrs)
+			templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, templ.Attributes(p.linkAttrs))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -280,7 +280,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 			var templ_7745c5c3_Var11 string
 			templ_7745c5c3_Var11, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, "Next"))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 98, Col: 145}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 98, Col: 163}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var11))
 			if templ_7745c5c3_Err != nil {
@@ -296,7 +296,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
-				templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, p.linkAttrs)
+				templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, templ.Attributes(p.linkAttrs))
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
@@ -316,7 +316,7 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 				var templ_7745c5c3_Var13 string
 				templ_7745c5c3_Var13, templ_7745c5c3_Err = templ.JoinStringErrs(trans.T(ctx, ">>"))
 				if templ_7745c5c3_Err != nil {
-					return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 101, Col: 148}
+					return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/core/pagination/page_object.templ`, Line: 101, Col: 166}
 				}
 				_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var13))
 				if templ_7745c5c3_Err != nil {

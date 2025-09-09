@@ -130,7 +130,7 @@ func ButtonWarning(text string, icon any, hollow ...bool) templ.Component {
 }
 
 templ Button(config ButtonConfig) {
-    <button { config.Attrs... } class={ 
+    <button { templ.Attributes(config.Attrs)... } class={ 
         "button",
         templ.KV("primary", config.Type & ClassTypePrimary != 0),
         templ.KV("secondary", config.Type & ClassTypeSecondary != 0),
@@ -156,7 +156,7 @@ templ Link(config ButtonConfig, href func() string) {
 	if config.Text == nil && config.Icon == nil {
 		panic("Link requires either Text or Icon to be set")
 	}
-	<a { config.Attrs... } href={ templ.URL(href()) } class={
+	<a { templ.Attributes(config.Attrs)... } href={ templ.URL(href()) } class={
 		"button",
 		templ.KV("primary", config.Type & ClassTypePrimary != 0),
 		templ.KV("secondary", config.Type & ClassTypeSecondary != 0),

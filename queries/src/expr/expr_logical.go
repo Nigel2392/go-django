@@ -108,10 +108,18 @@ func (e *ExprNode) IsNot() bool {
 }
 
 func (e *ExprNode) And(exprs ...Expression) ClauseExpression {
+	if e.field == nil && e.lookup == "" && e.model == nil && e.sql == nil {
+		// if this is an empty ExprNode, just return an ExprGroup with the expressions
+		return &ExprGroup{children: exprs, op: OpAnd, wrap: true}
+	}
 	return &ExprGroup{children: append([]Expression{e}, exprs...), op: OpAnd, wrap: true}
 }
 
 func (e *ExprNode) Or(exprs ...Expression) ClauseExpression {
+	if e.field == nil && e.lookup == "" && e.model == nil && e.sql == nil {
+		// if this is an empty ExprNode, just return an ExprGroup with the expressions
+		return &ExprGroup{children: exprs, op: OpOr, wrap: true}
+	}
 	return &ExprGroup{children: append([]Expression{e}, exprs...), op: OpOr, wrap: true}
 }
 
@@ -174,10 +182,16 @@ func (g *ExprGroup) Operator() ExprOp {
 }
 
 func (g *ExprGroup) And(exprs ...Expression) ClauseExpression {
+	if len(g.children) == 0 {
+		return &ExprGroup{children: exprs, op: OpAnd, wrap: true}
+	}
 	return &ExprGroup{children: append([]Expression{g}, exprs...), op: OpAnd, wrap: true}
 }
 
 func (g *ExprGroup) Or(exprs ...Expression) ClauseExpression {
+	if len(g.children) == 0 {
+		return &ExprGroup{children: exprs, op: OpOr, wrap: true}
+	}
 	return &ExprGroup{children: append([]Expression{g}, exprs...), op: OpOr, wrap: true}
 }
 

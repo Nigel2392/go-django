@@ -68,8 +68,8 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryP
 		<section class="pagination--paginator">
 			<div class="prev">
 				if p.HasPrev() {
-					<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.FirstPage(), q)) }>{ trans.T(ctx, "<<") }</a>
-					<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.Prev(), q)) }>{ trans.T(ctx, "Previous") }</a>
+					<a {templ.Attributes(p.linkAttrs)...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.FirstPage(), q)) }>{ trans.T(ctx, "<<") }</a>
+					<a {templ.Attributes(p.linkAttrs)...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.Prev(), q)) }>{ trans.T(ctx, "Previous") }</a>
 				}
 			</div>
 			{{ var start = p.PageNum() - numPageNumbers }}
@@ -84,21 +84,21 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryP
 				for i := start; i <= end; i++ {
 					if i == p.PageNum() {
 						<div class="page-number active">
-							<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, i, q)) } disabled>{ strconv.Itoa(i) }</a>
+							<a {templ.Attributes(p.linkAttrs)...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, i, q)) } disabled>{ strconv.Itoa(i) }</a>
 						</div>
 					} else {
 						<div class="page-number">
-							<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, i, q)) }>{ strconv.Itoa(i) }</a>
+							<a {templ.Attributes(p.linkAttrs)...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, i, q)) }>{ strconv.Itoa(i) }</a>
 						</div>
 					}
 				}
 			</div>
 			<div class="next">
 				if p.HasNext() {
-					<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.Next(), q)) }>{ trans.T(ctx, "Next") }</a>
+					<a {templ.Attributes(p.linkAttrs)...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.Next(), q)) }>{ trans.T(ctx, "Next") }</a>
 					{{ lastPage := p.LastPage() }}
 					if lastPage > 1 {
-						<a {p.linkAttrs...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.LastPage(), q)) }>{ trans.T(ctx, ">>") }</a>
+						<a {templ.Attributes(p.linkAttrs)...} href={ templ.SafeURL(fmt.Sprintf("%s?%s=%d%s", p.paginator.BaseURL(), queryParam, p.LastPage(), q)) }>{ trans.T(ctx, ">>") }</a>
 					}
 				}
 			</div>

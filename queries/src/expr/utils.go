@@ -49,6 +49,9 @@ func expressionFromInterface[T Expression](exprValue interface{}, asValue bool) 
 		} else {
 			exprs = append(exprs, Field(v).(T))
 		}
+	case nil:
+		// ignore nils
+		// do nothing
 	default:
 		var rTyp = reflect.TypeOf(exprValue)
 		var rVal = reflect.ValueOf(exprValue)

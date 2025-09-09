@@ -136,7 +136,7 @@ func (s *sortableListColumn[T]) Header(r *http.Request) templ.Component {
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, s.getAttrs(r))
+		templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, templ.Attributes(s.getAttrs(r)))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

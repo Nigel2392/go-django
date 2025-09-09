@@ -597,6 +597,7 @@ func (s *SubmenuItem) Component() templ.Component {
 			s.MenuClasses = []string{}
 		}
 		var depthInt = GetMenuDepthValue(ctx)
+		var depthStr = strconv.FormatInt(depthInt, 10)
 		var templ_7745c5c3_Var24 = []any{strings.Join(s.MenuClasses, " "), "submenu-menu-item menu-item", depthCss(depthInt)}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var24...)
 		if templ_7745c5c3_Err != nil {
@@ -627,7 +628,7 @@ func (s *SubmenuItem) Component() templ.Component {
 			var templ_7745c5c3_Var26 string
 			templ_7745c5c3_Var26, templ_7745c5c3_Err = templ.JoinStringErrs(s.MenuID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 198, Col: 152}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 199, Col: 152}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var26))
 			if templ_7745c5c3_Err != nil {
@@ -643,9 +644,9 @@ func (s *SubmenuItem) Component() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var27 string
-		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.FormatInt(depthInt, 10))
+		templ_7745c5c3_Var27, templ_7745c5c3_Err = templ.JoinStringErrs(depthStr)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 200, Col: 110}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 201, Col: 87}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var27))
 		if templ_7745c5c3_Err != nil {
@@ -707,7 +708,7 @@ func (s *SubmenuItem) Component() templ.Component {
 					var templ_7745c5c3_Var28 string
 					templ_7745c5c3_Var28, templ_7745c5c3_Err = templ.JoinStringErrs(s.Label)
 					if templ_7745c5c3_Err != nil {
-						return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 229, Col: 17}
+						return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 230, Col: 17}
 					}
 					_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var28))
 					if templ_7745c5c3_Err != nil {
@@ -817,7 +818,7 @@ func (s *DropdownItem) Component() templ.Component {
 			var templ_7745c5c3_Var32 string
 			templ_7745c5c3_Var32, templ_7745c5c3_Err = templ.JoinStringErrs(s.MenuID)
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 269, Col: 159}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 270, Col: 159}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var32))
 			if templ_7745c5c3_Err != nil {
@@ -835,7 +836,7 @@ func (s *DropdownItem) Component() templ.Component {
 		var templ_7745c5c3_Var33 string
 		templ_7745c5c3_Var33, templ_7745c5c3_Err = templ.JoinStringErrs(strconv.FormatInt(depthInt, 10))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 271, Col: 135}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/menu/menu.templ`, Line: 272, Col: 135}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var33))
 		if templ_7745c5c3_Err != nil {

@@ -22,7 +22,7 @@ import (
 )
 
 templ input(typ string, name string, value any, atts map[string]any) {
-	<input { atts... } type={ typ } name={ name } value={ attrs.ToString(value) } />
+	<input { templ.Attributes(atts)... } type={ typ } name={ name } value={ attrs.ToString(value) } />
 }
 
 func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row T, value any) templ.Component {
@@ -600,7 +600,7 @@ templ (c *rowSelectColumn[T]) Header(r *http.Request) {
 	}
 	<div class="list-checkbox-wrapper">
 		<div class="list-checkbox">
-			<input { c.headerAttrs... } type="checkbox" class="list-checkbox__input list-checkbox__input--select-all" id="list-checkbox-select-all" />
+			<input { templ.Attributes(c.headerAttrs)... } type="checkbox" class="list-checkbox__input list-checkbox__input--select-all" id="list-checkbox-select-all" />
 		</div>
 		<div class="list-checkbox__column">
 			@c.ListColumn.Header(r)
@@ -615,7 +615,7 @@ templ (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions,
 	}
 	<div class="list-checkbox-wrapper">
 		<div class="list-checkbox">
-			<input { c.inputAttrs... } type="checkbox" class="list-checkbox__input" name={ c.formName } value={ attrs.ToString(attrs.PrimaryKey(row)) } checked?={ c.checked(r, defs, row) } />
+			<input { templ.Attributes(c.inputAttrs)... } type="checkbox" class="list-checkbox__input" name={ c.formName } value={ attrs.ToString(attrs.PrimaryKey(row)) } checked?={ c.checked(r, defs, row) } />
 		</div>
 		<div class="list-checkbox__column">
 			@c.ListColumn.Component(r, defs, row)
@@ -666,7 +666,7 @@ templ (c *fieldCheckbox[T]) Component(r *http.Request, defs attrs.Definitions, r
 	}
 	<div class="list-checkbox-wrapper">
 		<div class="list-checkbox">
-			<input { c.inputAttrs... } type="checkbox" class="list-checkbox__input" name={ c.fieldColumn.fieldName } value="1" checked?={ !django_reflect.IsZero(c.fieldColumn.data(r, defs, row)) } />
+			<input { templ.Attributes(c.inputAttrs)... } type="checkbox" class="list-checkbox__input" name={ c.fieldColumn.fieldName } value="1" checked?={ !django_reflect.IsZero(c.fieldColumn.data(r, defs, row)) } />
 		</div>
 	</div>
 }
