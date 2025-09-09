@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -179,7 +180,7 @@ func TestCreateRevision(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			artistRevTest, err := artistRev.AsObject(context.Background())
+			artistRevTest, err := artistRev.AsObject(queries.CommitContext(context.Background(), false))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -200,7 +201,7 @@ func TestCreateRevision(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			laptopRevTest, err := laptopRev.AsObject(context.Background())
+			laptopRevTest, err := laptopRev.AsObject(queries.CommitContext(context.Background(), false))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -221,7 +222,7 @@ func TestCreateRevision(t *testing.T) {
 				t.Fatal(err)
 			}
 
-			bottleRevTest, err := bottleRev.AsObject(context.Background())
+			bottleRevTest, err := bottleRev.AsObject(queries.CommitContext(context.Background(), false))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -259,7 +260,7 @@ func TestCreateRevision(t *testing.T) {
 				t.Fatalf("Expected revision ID %d, got %d", revIDCounter, artistRev.ID)
 			}
 
-			artistRevTest, err := artistRev.AsObject(context.Background())
+			artistRevTest, err := artistRev.AsObject(queries.CommitContext(context.Background(), false))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -294,7 +295,7 @@ func TestCreateRevision(t *testing.T) {
 				t.Fatalf("Expected revision ID %d, got %d", revIDCounter, laptopRev.ID)
 			}
 
-			laptopRevTest, err := laptopRev.AsObject(context.Background())
+			laptopRevTest, err := laptopRev.AsObject(queries.CommitContext(context.Background(), false))
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -329,7 +330,7 @@ func TestCreateRevision(t *testing.T) {
 				t.Fatalf("Expected revision ID %d, got %d", revIDCounter, bottleRev.ID)
 			}
 
-			bottleRevTest, err := bottleRev.AsObject(context.Background())
+			bottleRevTest, err := bottleRev.AsObject(queries.CommitContext(context.Background(), false))
 			if err != nil {
 				t.Fatal(err)
 			}
