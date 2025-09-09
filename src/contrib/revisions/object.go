@@ -3,6 +3,7 @@ package revisions
 import (
 	"context"
 	"encoding/json"
+	"maps"
 	"reflect"
 	"slices"
 
@@ -27,6 +28,10 @@ type RevisionDataMarshaller interface {
 
 type RevisionDataUnMarshaller interface {
 	UnmarshalRevisionData(data []byte) error
+}
+
+type RevisionDataFieldExcluder interface {
+	ExcludeFromRevisionData() []string
 }
 
 func MarshallerSkipProxyFields(b bool) MarshallerOption {
@@ -67,6 +72,18 @@ func (m *marshallerOption) getFieldValue(field attrs.Field) (any, error) {
 		return m.GetFieldValue(field)
 	}
 	return field.Value()
+}
+
+func getExcludedFields(obj attrs.Definer) map[string]struct{} {
+	var excludedMap map[string]struct{}
+	if excluder, ok := obj.(RevisionDataFieldExcluder); ok {
+		var excluded = excluder.ExcludeFromRevisionData()
+		excludedMap = make(map[string]struct{}, len(excluded))
+		for _, name := range excluded {
+			excludedMap[name] = struct{}{}
+		}
+	}
+	return excludedMap
 }
 
 func getIdAndContentType(ctx context.Context, obj attrs.Definer, getter ...QueryInfoFunc) (pk string, contentType string, err error) {
@@ -120,6 +137,10 @@ func GetRevisionData(obj attrs.Definer, opts ...MarshallerOption) (map[string]an
 
 	if o.SkipProxyFields {
 		goto marshalObject
+	} else {
+		opts = append(
+			opts, MarshallerSkipProxyFields(true),
+		)
 	}
 
 proxyLoop:
@@ -163,6 +184,11 @@ proxyLoop:
 	}
 
 marshalObject:
+	// Merge seen and excluded maps - they serve the same purpose
+	// from here on.
+	var excluded = getExcludedFields(obj)
+	maps.Copy(seen, excluded)
+
 	var defs = obj.FieldDefs()
 	for _, def := range defs.Fields() {
 		var name = def.Name()
@@ -213,7 +239,12 @@ func UnmarshalRevisionData(obj attrs.Definer, data []byte, opts ...MarshallerOpt
 
 	var defs = obj.FieldDefs()
 	var fields = defs.Fields()
+	var excluded = getExcludedFields(obj)
 	for _, def := range fields {
+		if _, isExcluded := excluded[def.Name()]; isExcluded {
+			continue
+		}
+
 		var name = def.Name()
 		var value, ok = dataMap[name]
 		if !ok {
