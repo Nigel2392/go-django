@@ -84,6 +84,33 @@ func (m modelInfo) OrderBy() []string {
 	return m.Ordering
 }
 
+type BulkUpdateQuerySetParam interface {
+	BuildUpdateInfo() ([]UpdateInfo, error)
+}
+
+type bulkUpdateQuerySetInterface interface {
+	BuildUpdateInfo(params ...any) ([]UpdateInfo, error)
+}
+
+type bulkUpdateQuerySet struct {
+	qs     bulkUpdateQuerySetInterface
+	params []any
+}
+
+func (bqs *bulkUpdateQuerySet) BuildUpdateInfo() ([]UpdateInfo, error) {
+	return bqs.qs.BuildUpdateInfo(bqs.params...)
+}
+
+func BulkUpdateQuerySet(builder bulkUpdateQuerySetInterface, params ...any) BulkUpdateQuerySetParam {
+	if builder == nil {
+		panic("BulkUpdateQuerySet: queryset cannot be nil")
+	}
+	return &bulkUpdateQuerySet{
+		qs:     builder,
+		params: params,
+	}
+}
+
 type PreloadResults struct {
 	rowsRaw Rows[attrs.Definer]
 
@@ -3250,6 +3277,11 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 	}
 	defer tx.Rollback(qs.context)
 
+	var rVal = reflect.ValueOf(value)
+	if !rVal.IsValid() || rVal.IsNil() {
+		goto bulkUpdate
+	}
+
 	if saver, ok := any(value).(models.ContextSaver); ok && len(qs.internals.Where) == 0 && !qs.explicitSave {
 
 		if _, err := setup(value); err != nil {
@@ -3288,7 +3320,8 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 		return 1, tx.Commit(qs.context)
 	}
 
-	c, err := qs.BulkUpdate([]T{value}, expressions...)
+bulkUpdate:
+	c, err := qs.BulkUpdate(append([]any{value}, expressions...)...)
 	if err != nil {
 		return 0, errors.NoChanges.WithCause(errors.Wrapf(
 			err, "failed to update object %T", qs.internals.Model.Object,
@@ -3634,25 +3667,29 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 	return objects, tx.Commit(context)
 }
 
-// BulkUpdate is used to update multiple objects in the database.
-//
-// It takes a list of definer objects as arguments and any possible NamedExpressions.
-// It does not try to call any save methods on the objects.
-//
-// It will run the actor methods of [ActsBeforeUpdate] and [ActsAfterUpdate] for each object,
-// as well as send the [SignalPreModelSave] and [SignalPostModelSave] signals.
-func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error) {
+func (qs *QuerySet[T]) BuildUpdateInfo(params ...any) ([]UpdateInfo, error) {
+	var (
+		typ             reflect.Type
+		isCommitContext = IsCommitContext(qs.context)
+		exprMap         = make(map[string]expr.NamedExpression)
+		usedExprs       = make(map[string]struct{}) // to track unused expressions
+		objects         = make([]T, 0, len(params))
+		infos           = make([]UpdateInfo, 0, len(params))
+		where           = slices.Clone(qs.internals.Where)
+		joins           = slices.Clone(qs.internals.Joins)
+		context         = &ValidationContext{
+			Context: qs.context,
+			Data:    make(map[string]interface{}, len(params)),
+		}
+	)
 
-	var tx, err = qs.GetOrCreateTransaction()
-	if err != nil {
-		return 0, errors.FailedStartTransaction.WithCause(err)
-	}
-	defer tx.Rollback(qs.context)
-
-	var isCommitContext = IsCommitContext(qs.context)
-	var exprMap = make(map[string]expr.NamedExpression, len(expressions))
-	for _, expression := range expressions {
+	for _, expression := range params {
 		switch e := expression.(type) {
+		case T:
+			objects = append(objects, e)
+		case []T:
+			objects = append(objects, e...)
+
 		case expr.NamedExpression:
 			var fieldName = e.FieldName()
 			if fieldName == "" {
@@ -3664,7 +3701,6 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 			}
 
 			exprMap[fieldName] = e
-
 		case map[string]expr.Expression:
 			for fieldName, e := range e {
 				if _, ok := exprMap[fieldName]; ok {
@@ -3677,26 +3713,47 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 					exprMap[fieldName] = expr.As(fieldName, e)
 				}
 			}
+
+		case BulkUpdateQuerySetParam:
+			uinfos, err := e.BuildUpdateInfo()
+			if err != nil {
+				return nil, errors.Wrapf(
+					err, "failed to build update info for %T", e,
+				)
+			}
+			infos = append(infos, uinfos...)
+		case []any:
+			uinfos, err := qs.BuildUpdateInfo(e...)
+			if err != nil {
+				return nil, errors.Wrapf(
+					err, "failed to build update info for []any in %T", e,
+				)
+			}
+			infos = append(infos, uinfos...)
+
+		case UpdateInfo:
+			infos = append(infos, e)
+		case []UpdateInfo:
+			infos = append(infos, e...)
+
+		case []attrs.Definer:
+			for _, obj := range e {
+				if v, ok := obj.(T); ok {
+					objects = append(objects, v)
+				} else {
+					panic(fmt.Errorf("expected object of type %T, got %T", *new(T), obj))
+				}
+			}
+		default:
+			panic(fmt.Errorf("unsupported expression type %T in UpdateClause", e))
 		}
 	}
 
-	var (
-		infos   = make([]UpdateInfo, 0, len(objects))
-		where   = slices.Clone(qs.internals.Where)
-		joins   = slices.Clone(qs.internals.Joins)
-		context = &ValidationContext{
-			Context: qs.context,
-			Data:    make(map[string]interface{}, len(objects)),
-		}
-	)
-
-	var typ reflect.Type
 	for _, obj := range objects {
-
 		var err error
 		obj, err = setup(obj)
 		if err != nil {
-			return 0, errors.Wrapf(
+			return nil, errors.Wrapf(
 				err, "failed to setup object %T", obj,
 			)
 		}
@@ -3711,13 +3768,13 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 		}
 
 		if _, err = runActor(context, actsBeforeUpdate, obj); err != nil {
-			return 0, errors.Wrapf(
+			return nil, errors.Wrapf(
 				err, "failed to run ActsBeforeUpdate for %T", obj,
 			)
 		}
 
 		if err = Validate(context, obj); err != nil {
-			return 0, errors.Wrapf(
+			return nil, errors.Wrapf(
 				err, "failed to validate object %T before update", obj,
 			)
 		}
@@ -3755,19 +3812,20 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 					Field: field,
 					expr:  expr,
 				})
+				usedExprs[fieldName] = struct{}{}
 				continue
 			}
 
 			var value, err = field.Value()
 			if err != nil {
-				return 0, errors.ValueError.WithCause(errors.Wrapf(
+				return nil, errors.ValueError.WithCause(errors.Wrapf(
 					err, "failed to get value for field %q in %T",
 					field.Name(), obj,
 				))
 			}
 
 			if value == nil && !field.AllowNull() {
-				return 0, errors.FieldNull.WithCause(fmt.Errorf(
+				return nil, errors.FieldNull.WithCause(fmt.Errorf(
 					"field %q cannot be null in %T",
 					field.Name(), obj,
 				))
@@ -3783,7 +3841,7 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 			var err error
 			info.Where, err = GenerateObjectsWhereClause(obj)
 			if err != nil {
-				return 0, errors.NoWhereClause.WithCause(err)
+				return nil, errors.NoWhereClause.WithCause(err)
 			}
 		} else {
 			info.Where = where
@@ -3796,49 +3854,84 @@ func (qs *QuerySet[T]) BulkUpdate(objects []T, expressions ...any) (int64, error
 		infos = append(infos, info)
 	}
 
+	if len(usedExprs) != len(exprMap) && len(exprMap) > 0 && isCommitContext {
+		var wholeScopeInfo = UpdateInfo{
+			FieldInfo: FieldInfo[attrs.Field]{
+				Model: qs.internals.Model.Object,
+				Table: Table{
+					Name: qs.internals.Model.Table,
+				},
+				Fields: make([]attrs.Field, 0, len(usedExprs)),
+			},
+			Where: where,
+			Joins: joins,
+		}
+
+		var defs = qs.internals.Model.Object.FieldDefs()
+		var keys = slices.Collect(maps.Keys(exprMap))
+		slices.Sort(keys)
+		for _, fieldName := range keys {
+			if _, ok := usedExprs[fieldName]; ok {
+				continue
+			}
+
+			var field, ok = defs.Field(fieldName)
+			if !ok {
+				panic(errors.FieldNotFound.Wrapf(
+					"field %q not found in model %T",
+					fieldName, qs.internals.Model.Object,
+				))
+			}
+
+			wholeScopeInfo.FieldInfo.Fields = append(wholeScopeInfo.FieldInfo.Fields, &exprField{
+				Field: field,
+				expr:  exprMap[fieldName],
+			})
+		}
+		infos = append(infos, wholeScopeInfo)
+	}
+
+	return infos, nil
+}
+
+// BulkUpdate is used to update multiple objects in the database.
+//
+// It takes a list of definer objects as arguments and any possible NamedExpressions.
+// It does not try to call any save methods on the objects.
+//
+// It will run the actor methods of [ActsBeforeUpdate] and [ActsAfterUpdate] for each object,
+// as well as send the [SignalPreModelSave] and [SignalPostModelSave] signals.
+func (qs *QuerySet[T]) BulkUpdate(params ...any) (int64, error) {
+
+	var tx, err = qs.GetOrCreateTransaction()
+	if err != nil {
+		return 0, errors.FailedStartTransaction.WithCause(err)
+	}
+	defer tx.Rollback(qs.context)
+
+	var isCommitContext = IsCommitContext(qs.context)
+	infos, err := qs.BuildUpdateInfo(params...)
+	if err != nil {
+		return 0, err
+	}
+
 	var res int64
 	if isCommitContext {
 		var resultQuery = qs.compiler.BuildUpdateQuery(
-			context,
+			qs.context,
 			ChangeObjectsType[T, attrs.Definer](qs),
 			qs.internals,
 			infos,
 		)
 		qs.latestQuery = resultQuery
-
 		res, err = resultQuery.Exec()
 		if err != nil {
 			return 0, err
 		}
 	}
 
-	if isCommitContext && len(objects) > 0 && res == 0 {
-		return 0, errors.NoChanges.WithCause(fmt.Errorf(
-			"no rows updated for %T, expected %d rows",
-			qs.internals.Model.Object, len(objects),
-		))
-	}
+	return res, tx.Commit(qs.context)
 
-	var _, canAfterUpdate = qs.internals.Model.Object.(ActsAfterUpdate)
-	var _, actsAfterSave = qs.internals.Model.Object.(ActsAfterSave)
-	if !canAfterUpdate && !actsAfterSave {
-		goto commitTransaction
-	}
-
-	// Must always run the after update actor
-	// even if it was not implemented - the signal must be sent
-	for _, obj := range objects {
-		if _, err = runActor(context, actsAfterUpdate, obj); err != nil {
-			return 0, errors.Wrapf(
-				err,
-				"failed to run ActsAfterUpdate for %T",
-				obj,
-			)
-		}
-	}
-
-commitTransaction:
-	return res, tx.Commit(context)
 }
 
 // BatchCreate is used to create multiple objects in the database.
@@ -3859,7 +3952,7 @@ func (qs *QuerySet[T]) BatchCreate(objects []T) ([]T, error) {
 	defer tx.Rollback(qs.context)
 
 	var createdObjects = make([]T, 0, len(objects))
-	for batchNum, batch := range qs.batch(objects, qs.internals.Limit) {
+	for batchNum, batch := range batch(objects, qs.internals.Limit) {
 		var result, err = qs.BulkCreate(batch)
 		if err != nil {
 			return nil, errors.Wrapf(
@@ -3885,8 +3978,8 @@ func (qs *QuerySet[T]) BatchCreate(objects []T) ([]T, error) {
 // You can specify the batch size to limit the number of objects updated in a single query.
 //
 // The batch size is based on the [Limit] method of the queryset, which defaults to 1000.
-func (qs *QuerySet[T]) BatchUpdate(objects []T, exprs ...any) (int64, error) {
-	if len(objects) == 0 {
+func (qs *QuerySet[T]) BatchUpdate(params ...any) (int64, error) {
+	if len(params) == 0 {
 		return 0, nil // No objects to update
 	}
 
@@ -3897,8 +3990,8 @@ func (qs *QuerySet[T]) BatchUpdate(objects []T, exprs ...any) (int64, error) {
 	defer tx.Rollback(qs.context)
 
 	var updatedObjects int64 = 0
-	for batchNum, batch := range qs.batch(objects, qs.internals.Limit) {
-		var count, err = qs.BulkUpdate(batch, exprs...)
+	for batchNum, batch := range batch(params, qs.internals.Limit) {
+		var count, err = qs.BulkUpdate(batch...)
 		if err != nil {
 			return 0, errors.Wrapf(
 				err, "failed to update batch %d of %d objects", batchNum, len(batch),
@@ -4071,7 +4164,7 @@ func (qs *QuerySet[T]) updateFields(obj attrs.Definer) (attrs.Definitions, []att
 }
 
 // batch is used to batch a list of objects into smaller chunks.
-func (qs *QuerySet[T]) batch(objects []T, size int) iter.Seq2[int, []T] {
+func batch[T any](objects []T, size int) iter.Seq2[int, []T] {
 	if len(objects) == 0 {
 		return func(yield func(int, []T) bool) {}
 	}

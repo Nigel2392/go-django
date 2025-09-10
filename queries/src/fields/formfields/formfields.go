@@ -104,6 +104,21 @@ type ForeignKeyFormField struct {
 	BaseRelationField
 }
 
+func (f *ForeignKeyFormField) HasChanged(initial, data interface{}) bool {
+	var (
+		a, ok1 = initial.(attrs.Definer)
+		b, ok2 = data.(attrs.Definer)
+	)
+
+	if !ok1 || !ok2 {
+		return !reflect.DeepEqual(initial, data)
+	}
+
+	var pkA = attrs.PrimaryKey(a)
+	var pkB = attrs.PrimaryKey(b)
+	return !reflect.DeepEqual(pkA, pkB)
+}
+
 func (f *ForeignKeyFormField) ValueToForm(value interface{}) interface{} {
 	//	if value == nil {
 	//		return nil

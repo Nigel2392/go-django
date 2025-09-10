@@ -630,10 +630,10 @@ type BaseQuerySet[T attrs.Definer, QS any] interface {
 	Create(value T) (T, error)
 	Update(value T, expressions ...any) (int64, error)
 	GetOrCreate(value T) (T, bool, error)
-	BatchCreate(objects []T) ([]T, error)
-	BatchUpdate(objects []T, exprs ...any) (int64, error)
 	BulkCreate(objects []T) ([]T, error)
-	BulkUpdate(objects []T, expressions ...any) (int64, error)
+	BatchCreate(objects []T) ([]T, error)
+	BulkUpdate(params ...any) (int64, error)
+	BatchUpdate(params ...any) (int64, error)
 	Delete(objects ...T) (int64, error)
 
 	// Raw SQL operations

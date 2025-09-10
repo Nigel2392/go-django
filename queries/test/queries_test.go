@@ -3209,6 +3209,80 @@ func TestGetOrCreateInTransaction(t *testing.T) {
 	}
 }
 
+func TestBulkUpdateWithQuerySets(t *testing.T) {
+	var todos, err = queries.GetQuerySet(&Todo{}).BulkCreate([]*Todo{
+		{Title: "BulkUpdateWithQuerySets1", Description: "Description BulkUpdateWithQuerySets", Done: false},
+		{Title: "BulkUpdateWithQuerySets2", Description: "Description BulkUpdateWithQuerySets", Done: true},
+		{Title: "BulkUpdateWithQuerySets3", Description: "Description BulkUpdateWithQuerySets", Done: false},
+		{Title: "BulkUpdateWithQuerySets4", Description: "Description BulkUpdateWithQuerySets", Done: true},
+	})
+
+	if err != nil {
+		t.Fatalf("Failed to bulk create todos: %v", err)
+		return
+	}
+
+	_, err = queries.GetQuerySet(&Todo{}).BulkUpdate(
+		queries.BulkUpdateQuerySet(
+			queries.
+				GetQuerySet(&Todo{}).
+				Filter("ID", todos[0].ID),
+			&Todo{Title: "BulkUpdateWithQuerySets1 Updated"},
+		),
+		queries.BulkUpdateQuerySet(
+			queries.
+				GetQuerySet(&Todo{}).
+				Filter("ID", todos[1].ID),
+			&Todo{Title: "BulkUpdateWithQuerySets2 Updated"},
+		),
+		queries.BulkUpdateQuerySet(
+			queries.
+				GetQuerySet(&Todo{}).
+				Filter("ID", todos[2].ID),
+			&Todo{Title: "BulkUpdateWithQuerySets3 Updated"},
+		),
+	)
+
+	if err != nil {
+		t.Fatalf("Failed to bulk update todos: %v", err)
+		return
+	}
+
+	dbTodos, err := queries.GetQuerySet(&Todo{}).Filter(
+		"ID__in", todos,
+	).All()
+	if err != nil {
+		t.Fatalf("Failed to get todos: %v", err)
+		return
+	}
+	if len(dbTodos) != 4 {
+		t.Fatalf("Expected 4 todos, got %d", len(dbTodos))
+		return
+	}
+	for _, dbTodo := range dbTodos {
+		switch dbTodo.Object.ID {
+		case todos[0].ID:
+			if dbTodo.Object.Title != "BulkUpdateWithQuerySets1 Updated" {
+				t.Errorf("Expected title to be 'BulkUpdateWithQuerySets1 Updated', got %q", dbTodo.Object.Title)
+			}
+		case todos[1].ID:
+			if dbTodo.Object.Title != "BulkUpdateWithQuerySets2 Updated" {
+				t.Errorf("Expected title to be 'BulkUpdateWithQuerySets2 Updated', got %q", dbTodo.Object.Title)
+			}
+		case todos[2].ID:
+			if dbTodo.Object.Title != "BulkUpdateWithQuerySets3 Updated" {
+				t.Errorf("Expected title to be 'BulkUpdateWithQuerySets3 Updated', got %q", dbTodo.Object.Title)
+			}
+		case todos[3].ID:
+			if dbTodo.Object.Title != "BulkUpdateWithQuerySets4" {
+				t.Errorf("Expected title to be 'BulkUpdateWithQuerySets4', got %q", dbTodo.Object.Title)
+			}
+		default:
+			t.Errorf("Unexpected todo ID %d", dbTodo.Object.ID)
+		}
+	}
+}
+
 func TestLogicalExpression(t *testing.T) {
 	//var todo = &Todo{
 	//	Title:       "TestLogicalExpression",
