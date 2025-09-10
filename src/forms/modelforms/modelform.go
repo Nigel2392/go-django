@@ -79,28 +79,6 @@ func NewBaseModelForm[T attrs.Definer](ctx context.Context, model T, opts ...fun
 	return f
 }
 
-// Add InitialData sets the initial data for the form.
-//
-// This is done on the wrapped [ModelForm] and not on the [BaseForm] itself.
-// The [BaseForm] will reset all initial data once the form is loaded with [forms.WithRequestData].
-// This means that any initial data would otherwise be lost.
-func (f *BaseModelForm[T]) SetInitialData(initial map[string]interface{}) {
-	assert.False(
-		f.wasSet(formLoaded),
-		"Initial data cannot be set after the form fields have been loaded",
-	)
-
-	f.initialData = initial
-}
-
-func (f *BaseModelForm[T]) InitialData() map[string]interface{} {
-	if f.initialData == nil {
-		f.initialData = make(map[string]interface{})
-	}
-
-	return f.initialData
-}
-
 func (w *BaseModelForm[T]) SetOnLoad(fn func(model T, initialData map[string]interface{})) {
 	w.OnLoad = fn
 }

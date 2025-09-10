@@ -2,7 +2,9 @@ package fields
 
 import (
 	"context"
+	"database/sql/driver"
 	"maps"
+	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
@@ -122,7 +124,75 @@ func (i *BaseField) HelpText(ctx context.Context) string {
 }
 
 func (i *BaseField) HasChanged(initial, data interface{}) bool {
-	return initial != data
+	if initial == nil && data == nil {
+		return false
+	}
+
+	if valuerA, ok := initial.(driver.Valuer); ok {
+		var valA, err = valuerA.Value()
+		if err != nil {
+			return true
+		}
+		if valuerB, ok := data.(driver.Valuer); ok {
+			var valB, err = valuerB.Value()
+			if err != nil {
+				return true
+			}
+			return !reflect.DeepEqual(valA, valB)
+		}
+	}
+
+	var rA = reflect.ValueOf(initial)
+	var rB = reflect.ValueOf(data)
+	if rA.Kind() == reflect.Ptr {
+		rA = rA.Elem()
+	}
+	if rB.Kind() == reflect.Ptr {
+		rB = rB.Elem()
+	}
+
+	if rA.IsValid() != rB.IsValid() {
+		return true
+	}
+
+	var aType = rA.Type()
+	var bType = rB.Type()
+	if aType != bType && !aType.ConvertibleTo(bType) && !bType.ConvertibleTo(aType) {
+		return true
+	}
+
+	if aType != bType {
+		switch {
+		case aType.ConvertibleTo(bType):
+			rA = rA.Convert(bType)
+		case bType.ConvertibleTo(aType):
+			rB = rB.Convert(aType)
+		}
+	}
+
+	var valuerType = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
+	if rA.Type().Implements(valuerType) && rB.Type().Implements(valuerType) {
+		var vA = rA.Interface().(driver.Valuer)
+		var vB = rB.Interface().(driver.Valuer)
+		var valA, errA = vA.Value()
+		var valB, errB = vB.Value()
+		if errA != nil || errB != nil {
+			return true
+		}
+
+		rA = reflect.ValueOf(valA)
+		rB = reflect.ValueOf(valB)
+
+		if rA.Kind() == reflect.Ptr {
+			rA = rA.Elem()
+		}
+
+		if rB.Kind() == reflect.Ptr {
+			rB = rB.Elem()
+		}
+	}
+
+	return !reflect.DeepEqual(rA.Interface(), rB.Interface())
 }
 
 func (i *BaseField) Clean(ctx context.Context, value interface{}) (interface{}, error) {

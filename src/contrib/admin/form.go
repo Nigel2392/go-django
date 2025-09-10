@@ -170,8 +170,8 @@ func (a *AdminForm[T]) HasChanged() bool {
 	var (
 		fields  = make([]string, 0)
 		fieldsM = make(map[string]struct{})
-		initial = a.Form.InitialData()
-		cleaned = a.Form.CleanedData()
+		initial = a.InitialData()
+		cleaned = a.CleanedData()
 	)
 
 	for _, panel := range a.Panels {
@@ -185,7 +185,11 @@ func (a *AdminForm[T]) HasChanged() bool {
 
 	for _, fieldName := range fields {
 		var f, _ = a.Form.Field(fieldName)
-		if !f.ReadOnly() && f.HasChanged(initial[fieldName], cleaned[fieldName]) {
+		if f.ReadOnly() {
+			continue
+		}
+
+		if f.HasChanged(initial[fieldName], cleaned[fieldName]) {
 			return true
 		}
 	}
