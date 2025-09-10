@@ -92,6 +92,9 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: admin.BASE_KEY,
 		TemplateName:    "pages/admin/revisions/list.tmpl",
+		QuerySet: func(r *http.Request) *queries.QuerySet[*revisions.Revision] {
+			return revisions.NewRevisionQuerySet().ForObjects(p).OrderBy("-CreatedAt").Base()
+		},
 		ChangeContextFn: func(req *http.Request, qs *queries.QuerySet[*revisions.Revision], viewCtx ctx.Context) (ctx.Context, error) {
 			var context = admin.NewContext(
 				req, admin.AdminSite, viewCtx,
