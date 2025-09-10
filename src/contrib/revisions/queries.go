@@ -15,10 +15,8 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-type WrappedQuerySet[T attrs.Definer] = queries.WrappedQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]]
-
 type RevisionQuerySet[T attrs.Definer] struct {
-	*WrappedQuerySet[T]
+	*queries.WrappedQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]]
 }
 
 func newRevisionQuerySet[T attrs.Definer](qs *queries.QuerySet[*Revision]) *RevisionQuerySet[T] {
@@ -45,7 +43,7 @@ func NewRevisionQuerySet[T attrs.Definer]() *RevisionQuerySet[T] {
 	return newRevisionQuerySet[T](queries.GetQuerySet(&Revision{}))
 }
 
-func (qs *RevisionQuerySet[T]) CloneQuerySet(wrapped *WrappedQuerySet[T]) *RevisionQuerySet[T] {
+func (qs *RevisionQuerySet[T]) CloneQuerySet(wrapped *queries.WrappedQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]]) *RevisionQuerySet[T] {
 	return &RevisionQuerySet[T]{
 		WrappedQuerySet: wrapped,
 	}
