@@ -188,6 +188,7 @@ func (qs *SpecificPageQuerySet) All() (queries.Rows[Page], error) {
 		var defs = model.FieldDefs()
 		var primaryField = defs.Primary()
 		var rows, err = queries.GetQuerySet(model).
+			WithContext(qs.Context()).
 			Filter(fmt.Sprintf("%s__in", primaryField.Name()), head.Value.ids).
 			All()
 		if err != nil {

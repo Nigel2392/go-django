@@ -21,11 +21,13 @@ import (
 )
 
 var (
-	_ Page                     = (*PageNode)(nil)
-	_ queries.ActsBeforeCreate = (*PageNode)(nil)
-	_ queries.ActsAfterSave    = (*PageNode)(nil)
-	_ models.CanControlSaving  = (*PageNode)(nil)
-	_ search.SearchableModel   = (*PageNode)(nil)
+	_ Page                                = (*PageNode)(nil)
+	_ queries.ActsBeforeCreate            = (*PageNode)(nil)
+	_ queries.ActsAfterSave               = (*PageNode)(nil)
+	_ models.CanControlSaving             = (*PageNode)(nil)
+	_ search.SearchableModel              = (*PageNode)(nil)
+	_ revisions.RevisionInfoDefiner       = (*PageNode)(nil)
+	_ revisions.RevisionDataFieldExcluder = (*PageNode)(nil)
 )
 
 type PageNode struct {
@@ -62,6 +64,18 @@ func (n *PageNode) GetRevisionInfo(ctx context.Context) (pk any, contentType str
 		return n.PK, cType.TypeName(), nil
 	}
 	return n.PageID, n.ContentType, nil
+}
+
+func (n *PageNode) ExcludeFromRevisionData() []string {
+	return []string{
+		"Path",
+		"Depth",
+		"StatusFlags",
+		"PageID",
+		"ContentType",
+		"LatestRevisionID",
+		"SiteSet",
+	}
 }
 
 func (n *PageNode) SetUrlPath(parent *PageNode) (newPath, oldPath string) {
