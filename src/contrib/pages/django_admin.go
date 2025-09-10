@@ -268,21 +268,20 @@ func saveInstanceFunc(ctx context.Context, d attrs.Definer) error {
 //
 // It scans for errors in the tree structure in the database and fixes them.
 func FixTree(ctx context.Context) error {
-	var querySet = queries.GetQuerySet(&PageNode{}).WithContext(ctx)
-	var transaction, err = querySet.GetOrCreateTransaction()
+	var qs = NewPageQuerySet().WithContext(ctx)
+	var transaction, err = qs.GetOrCreateTransaction()
 	if err != nil {
 		return errors.Wrap(err, "failed to start transaction")
 	}
 	defer transaction.Rollback(ctx)
 
-	var qs = NewPageQuerySet().WithContext(ctx)
 	allNodesCount, err := qs.Count()
 	if err != nil {
 		return errors.Wrap(err, "failed to count nodes")
 	}
 
 	if allNodesCount == 0 {
-		return transaction.Commit(ctx)
+		return transaction.Rollback(ctx)
 	}
 
 	allNodes, err := qs.
