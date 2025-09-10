@@ -15,13 +15,15 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
+type WrappedQuerySet[T attrs.Definer] = queries.WrappedQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]]
+
 type RevisionQuerySet[T attrs.Definer] struct {
-	*queries.WrappedQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]]
+	*WrappedQuerySet[T]
 }
 
 func newRevisionQuerySet[T attrs.Definer](qs *queries.QuerySet[*Revision]) *RevisionQuerySet[T] {
 	var s = &RevisionQuerySet[T]{}
-	s.WrappedQuerySet = queries.WrapQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]](
+	s.WrappedQuerySet = queries.WrapQuerySet[specific.Specific[*Revision, T]](
 		specific.GetSpecificQuerySet(qs, specific.SpecificQuerySetOptions[*Revision, T]{
 			GetSpecificPreloadData: func(obj *Revision) (id any, contentType string, ok bool) {
 				return obj.ObjectID, obj.ContentType, obj.ObjectID != "" && obj.ContentType != ""
@@ -43,7 +45,7 @@ func NewRevisionQuerySet[T attrs.Definer]() *RevisionQuerySet[T] {
 	return newRevisionQuerySet[T](queries.GetQuerySet(&Revision{}))
 }
 
-func (qs *RevisionQuerySet[T]) CloneQuerySet(wrapped *queries.WrappedQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]]) *RevisionQuerySet[T] {
+func (qs *RevisionQuerySet[T]) CloneQuerySet(wrapped *WrappedQuerySet[T]) *RevisionQuerySet[T] {
 	return &RevisionQuerySet[T]{
 		WrappedQuerySet: wrapped,
 	}
