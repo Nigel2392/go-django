@@ -139,8 +139,8 @@ func nodeDiff(a, b *pages.PageNode) map[string]string { // map of name: v != v
 	if a.ContentType != b.ContentType {
 		diff["ContentType"] = fmt.Sprintf("%s != %s", a.ContentType, b.ContentType)
 	}
-	if a.LatestRevisionID != b.LatestRevisionID {
-		diff["LatestRevisionID"] = fmt.Sprintf("%d != %d", a.LatestRevisionID, b.LatestRevisionID)
+	if a.LatestRevisionCreatedAt != b.LatestRevisionCreatedAt {
+		diff["LatestRevisionCreatedAt"] = fmt.Sprintf("%v != %v", a.LatestRevisionCreatedAt, b.LatestRevisionCreatedAt)
 	}
 	if a.CreatedAt != b.CreatedAt {
 		diff["CreatedAt"] = fmt.Sprintf("%s != %s", a.CreatedAt, b.CreatedAt)
@@ -1082,7 +1082,7 @@ func TestPageNode(t *testing.T) {
         ![node.StatusFlags],
         ![node.PageID],
         ![node.ContentType],
-        ![node.LatestRevisionID],
+        ![node.LatestRevisionCreatedAt],
         ![node.CreatedAt],
         ![node.UpdatedAt],
         0 AS level
@@ -1101,7 +1101,7 @@ func TestPageNode(t *testing.T) {
 		![p.StatusFlags],
 		![p.PageID],
 		![p.ContentType],
-		![p.LatestRevisionID],
+		![p.LatestRevisionCreatedAt],
 		![p.CreatedAt],
 		![p.UpdatedAt],
 		pw.level + 1 AS level
@@ -1134,7 +1134,7 @@ ORDER BY level DESC;`
 		for rows.Next() {
 			var node = pages.PageNode{}
 			var level int64
-			if err := rows.Scan(&node.PK, &node.Title, &node.Path, &node.Depth, &node.Numchild, &node.UrlPath, &node.Slug, &node.StatusFlags, &node.PageID, &node.ContentType, &node.LatestRevisionID, &node.CreatedAt, &node.UpdatedAt, &level); err != nil {
+			if err := rows.Scan(&node.PK, &node.Title, &node.Path, &node.Depth, &node.Numchild, &node.UrlPath, &node.Slug, &node.StatusFlags, &node.PageID, &node.ContentType, &node.LatestRevisionCreatedAt, &node.CreatedAt, &node.UpdatedAt, &level); err != nil {
 				t.Fatal(err)
 				return
 			}

@@ -133,8 +133,9 @@ func (n *Node) fixChildren(depth int64) []*PageNode {
 			addToChangedList = true
 		}
 
-		if node.Ref.Path != n.Ref.Path+buildPathPart(i) {
-			node.Ref.Path = n.Ref.Path + buildPathPart(i)
+		var newPath = n.Ref.Path + buildPathPart(i)
+		if node.Ref.Path != newPath {
+			node.Ref.Path = newPath
 			addToChangedList = true
 		}
 

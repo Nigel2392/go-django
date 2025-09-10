@@ -1,0 +1,47 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ T "Edit" }}{{ end }}
+
+{{ define "extra_css" }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $css := $Media.CSS }}
+        {{ $css }}
+    {{ end }}
+{{ end }}
+
+{{ define "content" }}
+    <form method="post" action="{{ .Get ("PostURL") }}" class="admin-form" enctype="multipart/form-data">
+        {{ csrf_field }}
+
+        {{ $Form := (.Get "form") }}
+        {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}
+        {{ include $Form.UnpackErrors "admin/shared/forms/error_unpack.tmpl" }}
+        {{ include $Form "admin/shared/forms/form.tmpl" }}
+
+        <div class="form-buttons">
+            <button class="button secondary" type="submit" value="{{ T "Submit" }}">
+                {{ T "Revert" }}
+            </button>
+
+            {{ if (has_perm  "pages:publish") }}
+                <button class="button secondary" type="submit" name="publish-page" value="publish-page">
+                    {{ T "Revert and Publish" }}
+                </button>
+            {{ end }}
+            
+            {{ $BackURL := (.Get "BackURL") }}
+            {{ if $BackURL }}
+                <a class="button warning form-buttons__ending" href="{{ $BackURL }}">{{ T "Cancel" }}</a>
+            {{ else }}
+                <a class="button warning form-buttons__ending" href="{{ url "admin:pages:list" (.Get "page_object").Reference.ID }}">{{ T "Back" }}</a>
+            {{ end }}
+        </div>
+    </form>
+{{ end }}
+
+{{ define "extra_js" }}
+    {{ $Media := (.Get "form").Media }}
+    {{ range $js := $Media.JS }}
+        {{ $js }}
+    {{ end }}
+{{ end }}

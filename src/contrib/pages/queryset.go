@@ -554,8 +554,8 @@ func (qs *PageQuerySet) UpdateNode(node *PageNode) error {
 			parent = parentNode
 		}
 
-		node.SetUrlPath(parent)
-		err = qs.updateDescendantPaths(oldRecord.UrlPath, node.UrlPath, node.Path, node.PK)
+		newPath, oldPath := node.SetUrlPath(parent)
+		err = qs.updateDescendantPaths(oldPath, newPath, node.Path, node.PK)
 		if err != nil {
 			return errors.Wrapf(err,
 				"failed to update descendant paths for node with path %s and PK %d",
@@ -596,15 +596,15 @@ func (qs *PageQuerySet) BulkCreate([]*PageNode) ([]*PageNode, error) {
 	panic("BulkCreate is not implemented for PageQuerySet, use AddRoots or AddChildren instead or call qs.Base() for advanced usage")
 }
 
-func (qs *PageQuerySet) BulkUpdate([]*PageNode, ...any) (int64, error) {
-	panic("BulkUpdate is not implemented for PageQuerySet, use UpdateNode instead or call qs.Base() for advanced usage")
-}
-
 func (qs *PageQuerySet) BatchCreate([]*PageNode) ([]*PageNode, error) {
 	panic("BatchCreate is not implemented for PageQuerySet, use AddRoots or AddChildren instead or call qs.Base() for advanced usage")
 }
 
-func (qs *PageQuerySet) BatchUpdate([]*PageNode, ...any) (int64, error) {
+func (qs *PageQuerySet) BulkUpdate(...any) (int64, error) {
+	panic("BulkUpdate is not implemented for PageQuerySet, use UpdateNode instead or call qs.Base() for advanced usage")
+}
+
+func (qs *PageQuerySet) BatchUpdate(...any) (int64, error) {
 	panic("BatchUpdate is not implemented for PageQuerySet, use UpdateNode instead or call qs.Base() for advanced usage")
 }
 
@@ -784,8 +784,7 @@ func (qs *PageQuerySet) Delete(nodes ...*PageNode) (int64, error) {
 			Select("Numchild").
 			Filter(filterName, filterValue).
 			ExplicitSave().
-			Update(
-				&PageNode{},
+			BulkUpdate(
 				expr.As("Numchild", expr.Logical("Numchild").SUB(1)),
 			)
 		if err != nil {
@@ -1006,8 +1005,7 @@ func (qs *PageQuerySet) UnpublishNode(node *PageNode, unpublishChildren bool) er
 		ExplicitSave().
 		Select("StatusFlags").
 		Filter(xp).
-		Update(
-			&PageNode{},
+		BulkUpdate(
 			expr.Expr("StatusFlags", expr.LOOKUP_BITAND, ^int64(StatusFlagPublished)),
 		)
 	if err != nil {
@@ -1143,7 +1141,7 @@ func (qs *PageQuerySet) saveSpecific(node *PageNode, creating bool) error {
 
 func (qs *PageQuerySet) updateNodes(nodes []*PageNode, exclude ...string) error {
 
-	var fields = []string{"PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt"}
+	var fields = []string{"PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionCreatedAt", "UpdatedAt"}
 	fields = attrs.FieldNames(fields, exclude)
 
 	var updated, err = qs.
@@ -1168,6 +1166,10 @@ func (qs *PageQuerySet) updateDescendantPaths(oldUrlPath, newUrlPath, pageNodePa
 	//		Filter("Depth__gt", expr.Logical(expr.LENGTH(expr.V(pageNodePath))).ADD(expr.V(1, true)))),
 	//).
 
+	if pageNodePath == "" {
+		return fmt.Errorf("page node path must not be empty")
+	}
+
 	var _, err = qs.
 		Base().
 		Select("UrlPath").
@@ -1176,8 +1178,7 @@ func (qs *PageQuerySet) updateDescendantPaths(oldUrlPath, newUrlPath, pageNodePa
 			expr.Expr("PK", expr.LOOKUP_NOT, id),
 		).
 		ExplicitSave().
-		Update(
-			&PageNode{},
+		BulkUpdate(
 			expr.As(
 				// ![UrlPath] = CONCAT(?, SUBSTRING(![UrlPath], LENGTH(?) + 1))
 				"UrlPath",
@@ -1214,8 +1215,7 @@ func (qs *PageQuerySet) incrementNumChild(id ...int64) error {
 		Select("Numchild").
 		Filter(filterName, filterValue).
 		ExplicitSave().
-		Update(
-			&PageNode{},
+		BulkUpdate(
 			expr.As("Numchild", expr.Logical("Numchild").ADD(1)),
 		)
 	if err != nil {
@@ -1245,8 +1245,7 @@ func (qs *PageQuerySet) decrementNumChild(id ...int64) error {
 		Select("Numchild").
 		Filter(filterName, filterValue).
 		ExplicitSave().
-		Update(
-			&PageNode{},
+		BulkUpdate(
 			expr.As("Numchild", expr.Logical("Numchild").SUB(1)),
 		)
 	if err != nil {
@@ -1260,9 +1259,14 @@ func (qs *PageQuerySet) decrementNumChild(id ...int64) error {
 
 func (qs *PageQuerySet) updateNode(node *PageNode) error {
 
-	updated, err := qs.
-		Base().
-		Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionID", "UpdatedAt").
+	var base = qs.Base()
+	var info = base.Peek()
+
+	if len(info.Select) == 0 {
+		base = base.Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionCreatedAt", "UpdatedAt")
+	}
+
+	updated, err := base.
 		Filter("PK", node.PK).
 		ExplicitSave().
 		Update(node)

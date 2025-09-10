@@ -319,8 +319,6 @@ func NewAppConfig() django.AppConfig {
 							return nil, err
 						}
 
-						parentObj = n.Object
-
 						if r.URL.Query().Get("back") == "1" {
 							if !n.Object.IsRoot() {
 								n.Object, err = n.Object.Parent(r.Context())
@@ -544,6 +542,18 @@ func NewAppConfig() django.AppConfig {
 			pageHandler(listPageHandler), "list",
 		)
 
+		// List page revisions
+		var revisionsRoute = pagesRoute.Get(
+			fmt.Sprintf("/<<%s>>/revisions", PageIDVariableName),
+			pageHandler(listRevisionHandler), "revisions",
+		)
+
+		// Revision detail
+		revisionsRoute.Get(
+			"/<<revision_id>>",
+			pageHandler(revisionDetailHandler), "detail",
+		)
+
 		// Choose page type
 		pagesRoute.Get(
 			fmt.Sprintf("/<<%s>>/type", PageIDVariableName),
@@ -670,6 +680,7 @@ func newPageLogDefinition() *pageLogDefinition {
 func (p *pageLogDefinition) GetLabel(r *http.Request, logEntry auditlogs.LogEntry) string {
 	var cType *PageDefinition
 	var unpublishChildren, _ = logEntry.Data()["unpublish_children"].(bool)
+	var _, hasRevision = logEntry.Data()["revision_id"]
 	var cTypeName, ok = logEntry.Data()["cType"].(string)
 	if ok {
 		cType = DefinitionForType(cTypeName)
@@ -696,11 +707,17 @@ func (p *pageLogDefinition) GetLabel(r *http.Request, logEntry auditlogs.LogEntr
 			cTypeName,
 		)
 	case "pages:edit":
+		if hasRevision {
+			return trans.T(r.Context(), "Page type %q edited (new revision created)", cTypeName)
+		}
 		return trans.T(r.Context(), "Page type %q edited",
 			cTypeName,
 		)
 	case "pages:publish":
-		return trans.T(r.Context(), "Page type %q saved and published",
+		if hasRevision {
+			return trans.T(r.Context(), "Page type %q published (new revision created)", cTypeName)
+		}
+		return trans.T(r.Context(), "Page type %q published",
 			cTypeName,
 		)
 	case "pages:unpublish":
@@ -709,6 +726,11 @@ func (p *pageLogDefinition) GetLabel(r *http.Request, logEntry auditlogs.LogEntr
 				cTypeName,
 			)
 		}
+
+		if hasRevision {
+			return trans.T(r.Context(), "Page type %q unpublished (new revision created)", cTypeName)
+		}
+
 		return trans.T(r.Context(), "Page type %q unpublished",
 			cTypeName,
 		)
@@ -732,6 +754,18 @@ func (p *pageLogDefinition) GetActions(r *http.Request, l auditlogs.LogEntry) []
 				r.URL.Path,
 			),
 		})
+
+		var nextURL = r.URL.String()
+		revId, ok := l.Data()["revision_id"]
+		if ok {
+			actions = append(actions, &auditlogs.BaseAction{
+				DisplayLabel: trans.T(r.Context(), "View Revision"),
+				ActionURL: addNextUrl(
+					django.Reverse("admin:pages:revisions:detail", id, revId),
+					nextURL,
+				),
+			})
+		}
 	}
 
 	return actions

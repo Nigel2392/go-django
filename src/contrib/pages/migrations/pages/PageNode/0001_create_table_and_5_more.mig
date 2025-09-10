@@ -93,13 +93,13 @@
         "default": ""
       },
       {
-        "name": "LatestRevisionID",
-        "column": "latest_revision_id",
+        "name": "LatestRevisionCreatedAt",
+        "column": "latest_revision_created_at",
         "use_in_db": true,
         "nullable": true,
-        "go_type": "int64",
-        "db_type": "INT",
-        "default": 0
+        "go_type": "time.Time",
+        "db_type": "DATETIME",
+        "default": "0001-01-01T00:00:00Z"
       },
       {
         "name": "CreatedAt",

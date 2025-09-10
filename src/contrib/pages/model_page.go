@@ -31,20 +31,20 @@ var (
 )
 
 type PageNode struct {
-	models.Model     `table:"PageNode"`
-	PK               int64      `json:"id" attrs:"primary;readonly;column=id"`
-	Title            string     `json:"title"`
-	Path             string     `json:"path" attrs:"blank"`
-	Depth            int64      `json:"depth" attrs:"blank"`
-	Numchild         int64      `json:"numchild" attrs:"blank"`
-	UrlPath          string     `json:"url_path" attrs:"readonly;blank"`
-	Slug             string     `json:"slug"`
-	StatusFlags      StatusFlag `json:"status_flags" attrs:"null;blank"`
-	PageID           int64      `json:"page_id" attrs:"null;blank"`
-	ContentType      string     `json:"content_type" attrs:"null;blank"`
-	LatestRevisionID int64      `json:"latest_revision_id"`
-	CreatedAt        time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
-	UpdatedAt        time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
+	models.Model            `table:"PageNode"`
+	PK                      int64      `json:"id" attrs:"primary;readonly;column=id"`
+	Title                   string     `json:"title"`
+	Path                    string     `json:"path" attrs:"blank"`
+	Depth                   int64      `json:"depth" attrs:"blank"`
+	Numchild                int64      `json:"numchild" attrs:"blank"`
+	UrlPath                 string     `json:"url_path" attrs:"readonly;blank"`
+	Slug                    string     `json:"slug"`
+	StatusFlags             StatusFlag `json:"status_flags" attrs:"null;blank"`
+	PageID                  int64      `json:"page_id" attrs:"null;blank"`
+	ContentType             string     `json:"content_type" attrs:"null;blank"`
+	LatestRevisionCreatedAt time.Time  `json:"latest_revision_created_at" attrs:"readonly;label=Latest Revision Created At"`
+	CreatedAt               time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
+	UpdatedAt               time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
 
 	// PageObject is the specific page object associated with this node.
 	//
@@ -73,7 +73,7 @@ func (n *PageNode) ExcludeFromRevisionData() []string {
 		"StatusFlags",
 		"PageID",
 		"ContentType",
-		"LatestRevisionID",
+		"LatestRevisionCreatedAt",
 		"SiteSet",
 	}
 }
@@ -221,10 +221,10 @@ func (n *PageNode) FieldDefs() attrs.Definitions {
 			attrs.NewField(n, "StatusFlags"),
 			attrs.NewField(n, "PageID"),
 			attrs.NewField(n, "ContentType"),
-			attrs.NewField(n, "LatestRevisionID", &attrs.FieldConfig{
+			attrs.NewField(n, "LatestRevisionCreatedAt", &attrs.FieldConfig{
 				Null:   true,
 				Blank:  true,
-				Column: "latest_revision_id",
+				Column: "latest_revision_created_at",
 				//	RelForeignKey: relForeignKey,
 			}),
 			attrs.NewField(n, "CreatedAt"),
@@ -423,12 +423,13 @@ func (n *PageNode) CreateRevision(ctx context.Context, save bool) (*revisions.Re
 		return nil, fmt.Errorf("failed to create revision for page node %d: %w", n.PK, err)
 	}
 
+	n.LatestRevisionCreatedAt = time.Now()
+
 	if save {
-		_, err = revisions.CreateRevision(ctx, revision)
+		_, err = revisions.CreateDatedRevision(ctx, revision, n.LatestRevisionCreatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save revision for page node %d: %w", n.PK, err)
 		}
-		n.LatestRevisionID = revision.ID
 	}
 
 	return revision, nil

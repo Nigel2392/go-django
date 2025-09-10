@@ -9,6 +9,7 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/expr"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
@@ -280,13 +281,24 @@ func FixTree(ctx context.Context) error {
 		return errors.Wrap(err, "failed to count nodes")
 	}
 
+	if allNodesCount == 0 {
+		return transaction.Commit(ctx)
+	}
+
 	allNodes, err := qs.Offset(0).Limit(int(allNodesCount)).AllNodes()
 	if err != nil {
 		return errors.Wrap(err, "failed to get all nodes")
 	}
 
-	var tree = NewNodeTree(allNodes)
+	_, err = qs.Base().BulkUpdate(expr.As(
+		"Path",
+		expr.CONCAT(expr.V("~"), expr.Field("Path")),
+	))
+	if err != nil {
+		return errors.Wrap(err, "failed to prefix paths")
+	}
 
+	var tree = NewNodeTree(allNodes)
 	var changed = tree.FixTree()
 	if len(changed) == 0 {
 		return errors.NoChanges.Wrapf(

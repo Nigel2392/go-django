@@ -67,6 +67,27 @@ func getListActions(next string) []*columns.ListAction[attrs.Definer] {
 				return row.(Page).Reference().IsPublished()
 			},
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				return trans.T(r.Context(), "View Revisions")
+			},
+			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
+				var primaryField = defs.Primary()
+				if primaryField == nil {
+					return ""
+				}
+				var u = django.Reverse(
+					"admin:pages:revisions",
+					primaryField.GetValue(),
+				)
+				return addNextUrl(
+					u, next,
+				)
+			},
+		},
+		{
+			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
+				return row.(Page).Reference().IsPublished()
+			},
+			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				return trans.T(r.Context(), "View Live")
 			},
 			URL: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
@@ -532,6 +553,15 @@ func listPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 								},
 							},
 							&menu.BaseAction{
+								Text: trans.S("View Revisions"),
+								Show: func(r *http.Request) bool {
+									return permissions.HasObjectPermission(r, p, "pages:view_revisions")
+								},
+								URL: func(r *http.Request) string {
+									return django.Reverse("admin:pages:revisions", p.PK)
+								},
+							},
+							&menu.BaseAction{
 								Text: trans.S("Add Child Page"),
 								Show: func(r *http.Request) bool {
 									return permissions.HasObjectPermission(r, p, "pages:add")
@@ -878,9 +908,19 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		var (
 			latestRevision *revisions.Revision
 		)
-		if p.LatestRevisionID != 0 {
-			latestRevision, err = revisions.GetRevisionByID(r.Context(), p.LatestRevisionID)
-		} else {
+		if !p.LatestRevisionCreatedAt.IsZero() {
+			var latestRevisionRow *queries.Row[*revisions.ObjectRevision]
+			latestRevisionRow, err = revisions.NewRevisionQuerySet().
+				WithContext(r.Context()).
+				ForObjects(p).
+				Filter("CreatedAt", p.LatestRevisionCreatedAt).
+				First()
+
+			if latestRevisionRow != nil && latestRevisionRow.Object != nil {
+				latestRevision = latestRevisionRow.Object.Revision
+			}
+
+		} else if !p.IsPublished() {
 			latestRevision, err = revisions.LatestRevision(r.Context(), p)
 		}
 
@@ -943,8 +983,8 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	)
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
-
-		if !adminForm.HasChanged() && !publishPage && !unpublishPage {
+		var hasChanged = adminForm.HasChanged()
+		if !hasChanged && !publishPage && !unpublishPage {
 			logger.Warnf("No changes detected for page: %s", instance.Reference().Title)
 			return nil
 		}
@@ -975,45 +1015,52 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			return fmt.Errorf("invalid page type: %T", d)
 		}
 
-		var err = NewPageQuerySet().
-			WithContext(queries.CommitContext(
-				ctx, publishPage || unpublishPage,
-			)).
-			UpdateNode(ref)
+		// Clear latest revision on publish/unpublish to avoid confusion
+		// This ID will only be set by manually reverting a revision.
+		ref.LatestRevisionCreatedAt = time.Now()
+
+		if !publishPage && !unpublishPage {
+			err = NewPageQuerySet().
+				WithContext(ctx).
+				Select("LatestRevisionCreatedAt").
+				updateNode(ref)
+		} else {
+			err = NewPageQuerySet().
+				WithContext(ctx).
+				UpdateNode(ref)
+		}
 		if err != nil {
 			return errors.Wrap(err, "failed to update page node")
 		}
 
-		if wasPublished {
-			auditlogs.Log(ctx, "pages:publish", logger.INF, p, map[string]interface{}{
-				"edited":  true,
-				"page_id": instance.ID(),
-				"label":   instance.Reference().Title,
-				"cType":   p.ContentType,
-			})
-		} else {
-			auditlogs.Log(ctx, "pages:edit", logger.INF, p, map[string]interface{}{
-				"page_id": instance.ID(),
-				"label":   instance.Reference().Title,
-				"cType":   p.ContentType,
-			})
+		var logAction string
+		var dataMap = map[string]interface{}{
+			"page_id": instance.ID(),
+			"label":   ref.Title,
+			"cType":   p.ContentType,
 		}
 
-		if wasUnpublished {
-			auditlogs.Log(ctx, "pages:unpublish", logger.INF, p, map[string]interface{}{
-				"page_id": instance.ID(),
-				"label":   instance.Reference().Title,
-				"cType":   p.ContentType,
-			})
+		switch {
+		case wasPublished:
+			logAction = "pages:publish"
+			dataMap["edited"] = true
+		case wasUnpublished:
+			logAction = "pages:unpublish"
+		default:
+			logAction = "pages:edit"
 		}
 
-		if django.AppInstalled("revisions") && (!publishPage && !unpublishPage) {
-			_, err := revisions.CreateRevision(ctx, d)
+		if hasChanged && django.AppInstalled("revisions") {
+			rev, err := revisions.CreateDatedRevision(ctx, d, ref.LatestRevisionCreatedAt)
 			if err != nil {
 				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
 				return err
 			}
+
+			dataMap["revision_id"] = rev.ID
 		}
+
+		auditlogs.Log(ctx, logAction, logger.INF, p, dataMap)
 
 		return nil
 		//return django.Task("[TRANSACTION] Fixing tree structure upon manual page node save", func(app *django.Application) error {

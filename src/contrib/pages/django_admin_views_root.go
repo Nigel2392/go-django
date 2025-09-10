@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	django "github.com/Nigel2392/go-django/src"
@@ -244,6 +245,8 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			return fmt.Errorf("invalid page type: %T", d)
 		}
 
+		ref.LatestRevisionCreatedAt = time.Now()
+
 		err = NewPageQuerySet().
 			WithContext(ctx).
 			AddRoot(ref)
@@ -276,7 +279,7 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 		}
 
 		if django.AppInstalled("revisions") {
-			_, err = revisions.CreateRevision(ctx, ref)
+			_, err = revisions.CreateDatedRevision(ctx, d, ref.LatestRevisionCreatedAt)
 			if err != nil {
 				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
 				return err
