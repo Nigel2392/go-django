@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -62,6 +61,12 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		list.FuncColumn(
 			trans.S("Title"),
 			pageRevisionData("Title"),
+		),
+		list.FuncColumn(
+			trans.S("Live"),
+			func(r *http.Request, defs attrs.Definitions, rev *revisions.Revision) any {
+				return nil
+			},
 		),
 		list.FuncColumn(
 			trans.S("Slug"),
@@ -209,8 +214,8 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 	)
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
-
-		if !adminForm.HasChanged() && !publishPage {
+		var hasChanged = adminForm.HasChanged()
+		if !hasChanged && !publishPage {
 			logger.Warnf("No changes detected for page: %s", instance.Reference().Title)
 			return nil
 		}
@@ -231,18 +236,24 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 			return fmt.Errorf("invalid page type: %T", d)
 		}
 
-		// Clear latest revision on publish/unpublish to avoid confusion
-		// This ID will only be set by manually reverting a revision.
-		ref.LatestRevisionCreatedAt = time.Time{}
+		ref.LatestRevisionCreatedAt = chosenRevision.CreatedAt
 
-		var qs = NewPageQuerySet().WithContext(ctx)
-		if !publishPage {
-			qs = qs.Select("LatestRevisionCreatedAt")
+		if publishPage {
+			// if publishing, set the published at time to now
+			var err = NewPageQuerySet().
+				WithContext(ctx).
+				UpdateNode(ref)
+			if err != nil {
+				return errors.Wrap(err, "failed to update page node")
+			}
 		}
 
-		var err = qs.UpdateNode(ref)
-		if err != nil {
-			return errors.Wrap(err, "failed to update page node")
+		// create a new revision if there are changes
+		if hasChanged {
+			_, err := revisions.CreateDatedRevision(ctx, ref, ref.LatestRevisionCreatedAt)
+			if err != nil {
+				return errors.Wrap(err, "failed to create new revision")
+			}
 		}
 
 		var logAction string
@@ -278,7 +289,7 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 				context.Set("is_published", p.StatusFlags.Is(StatusFlagPublished))
 
 				var backURL string
-				if q := req.URL.Query().Get("next"); q != "" {
+				if q := req.FormValue("next"); q != "" {
 					backURL = q
 				}
 				context.Set("BackURL", backURL)
@@ -292,7 +303,7 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 				}
 
 				context.SetPage(admin.PageOptions{
-					TitleFn:     trans.S("Edit %q", instance.Reference().Title),
+					TitleFn:     trans.S("Edit revision for %q", instance.Reference().Title),
 					BreadCrumbs: breadcrumbs,
 					Actions:     getPageActions(r, p),
 				})

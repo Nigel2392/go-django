@@ -115,6 +115,20 @@ func (b *Builder[T]) Ref() T {
 	return b.ref
 }
 
+func (b *Builder[T]) Exec(fn func(bld T) (T, error)) (T, error) {
+	if b.err != nil {
+		return b.ref, b.err
+	}
+
+	var newRef, err = fn(b.ref)
+	if err != nil {
+		return b.ref, err
+	}
+
+	b.ref = newRef
+	return b.ref, nil
+}
+
 func (b *Builder[T]) Call(methodName string, args ...any) (T, []any, error) {
 	if b.err != nil {
 		return b.ref, nil, b.err

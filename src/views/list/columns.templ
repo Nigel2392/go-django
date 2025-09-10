@@ -26,7 +26,6 @@ templ input(typ string, name string, value any, atts map[string]any) {
 }
 
 func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row T, value any) templ.Component {
-	var rV = reflect.ValueOf(value)
 	switch val := value.(type) {
 	case string:
 		return templ.Raw(val)
@@ -36,6 +35,11 @@ func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row 
 		return templ.Raw(attrs.ToString(val))
 	case templ.Component:
 		return val
+	}
+
+	var rV = reflect.ValueOf(value)
+	if !rV.IsValid() {
+		return templ.Raw("")
 	}
 
 	if val, ok := value.(interface{ Time() time.Time }); ok {
@@ -50,6 +54,8 @@ func getComponent[T attrs.Definer](r *http.Request, defs attrs.Definitions, row 
 	}
 
 	switch rV.Kind() {
+	case reflect.Invalid:
+		return templ.Raw("")
 	case reflect.String:
 		return templ.Raw(rV.String())
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,

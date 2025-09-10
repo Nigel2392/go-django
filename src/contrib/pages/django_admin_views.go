@@ -781,6 +781,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		default:
 			return fmt.Errorf("invalid page type: %T", d)
 		}
+		ref.LatestRevisionCreatedAt = time.Now()
 		err = qs.AddChildren(
 			p, ref,
 		)
@@ -821,7 +822,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		}
 
 		if django.AppInstalled("revisions") {
-			_, err = revisions.CreateRevision(ctx, ref)
+			_, err = revisions.CreateDatedRevision(ctx, ref, ref.LatestRevisionCreatedAt)
 			if err != nil {
 				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
 				return err
@@ -1017,16 +1018,21 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 		// Clear latest revision on publish/unpublish to avoid confusion
 		// This ID will only be set by manually reverting a revision.
-		ref.LatestRevisionCreatedAt = time.Now()
+		var canCreateRevision = django.AppInstalled("revisions") && (!publishPage || wasUnpublished)
+		if canCreateRevision {
+			ref.LatestRevisionCreatedAt = time.Now()
+		}
 
-		if !publishPage && !unpublishPage {
+		if canCreateRevision {
 			err = NewPageQuerySet().
 				WithContext(ctx).
 				Select("LatestRevisionCreatedAt").
 				updateNode(ref)
 		} else {
 			err = NewPageQuerySet().
-				WithContext(ctx).
+				WithContext(queries.CommitContext(
+					ctx, publishPage || wasUnpublished,
+				)).
 				UpdateNode(ref)
 		}
 		if err != nil {
@@ -1050,7 +1056,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			logAction = "pages:edit"
 		}
 
-		if hasChanged && django.AppInstalled("revisions") {
+		if canCreateRevision {
 			rev, err := revisions.CreateDatedRevision(ctx, d, ref.LatestRevisionCreatedAt)
 			if err != nil {
 				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)

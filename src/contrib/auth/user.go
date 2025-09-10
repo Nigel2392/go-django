@@ -31,7 +31,7 @@ type UserQuerySet struct {
 
 func GetUserQuerySet() *UserQuerySet {
 	userQuerySet := &UserQuerySet{}
-	userQuerySet.WrappedQuerySet = queries.WrapQuerySet(
+	userQuerySet.WrappedQuerySet = queries.WrapQuerySet[*User](
 		queries.GetQuerySet(&User{}),
 		userQuerySet,
 	)

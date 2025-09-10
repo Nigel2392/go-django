@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"iter"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/alias"
@@ -594,11 +595,7 @@ type RebindCompiler interface {
 	Rebind(ctx context.Context, s string) string
 }
 
-// A queryset is a collection of queries that can be executed against a database.
-//
-// It is used to retrieve, create, update, and delete objects from the database.
-// It is also used to filter, order, and annotate the objects in the database.
-type BaseQuerySet[T attrs.Definer, QS any] interface {
+type NullQuerySet[T any, QS any] interface {
 	expr.ExpressionBuilder
 	expr.FieldResolver
 
@@ -615,32 +612,6 @@ type BaseQuerySet[T attrs.Definer, QS any] interface {
 	ExplicitSave() QS
 	Annotate(aliasOrAliasMap interface{}, exprs ...expr.Expression) QS
 
-	// Read operations
-	All() (Rows[T], error)
-	Exists() (bool, error)
-	Count() (int64, error)
-	First() (*Row[T], error)
-	Last() (*Row[T], error)
-	Get() (*Row[T], error)
-	Values(fields ...any) ([]map[string]any, error)
-	ValuesList(fields ...any) ([][]interface{}, error)
-	Aggregate(annotations map[string]expr.Expression) (map[string]any, error)
-
-	// Write, update, and delete operations
-	Create(value T) (T, error)
-	Update(value T, expressions ...any) (int64, error)
-	GetOrCreate(value T) (T, bool, error)
-	BulkCreate(objects []T) ([]T, error)
-	BatchCreate(objects []T) ([]T, error)
-	BulkUpdate(params ...any) (int64, error)
-	BatchUpdate(params ...any) (int64, error)
-	Delete(objects ...T) (int64, error)
-
-	// Raw SQL operations
-	Row(sqlStr string, args ...interface{}) drivers.SQLRow
-	Rows(sqlStr string, args ...interface{}) (drivers.SQLRows, error)
-	Exec(sqlStr string, args ...interface{}) (sql.Result, error)
-
 	// Transactions
 	GetOrCreateTransaction() (tx drivers.Transaction, err error)
 	StartTransaction(ctx context.Context) (drivers.Transaction, error)
@@ -656,10 +627,57 @@ type BaseQuerySet[T attrs.Definer, QS any] interface {
 	LatestQuery() QueryInfo
 	WithContext(ctx context.Context) QS
 
+	// Lazy query methods
+
 	// Lazy methods for retrieving queries
 	QueryAll(fields ...any) CompiledQuery[[][]interface{}]
 	QueryAggregate() CompiledQuery[[][]interface{}]
 	QueryCount() CompiledQuery[int64]
+}
+
+// BaseReadQuerySet is a base interface for read-only querysets.
+type BaseReadQuerySet[T any, QS any] interface {
+	NullQuerySet[T, QS]
+
+	// Read operations
+	All() (Rows[T], error)
+	IterAll() (int, iter.Seq2[*Row[T], error], error)
+	Exists() (bool, error)
+	Count() (int64, error)
+	First() (*Row[T], error)
+	Last() (*Row[T], error)
+	Get() (*Row[T], error)
+	Values(fields ...any) ([]map[string]any, error)
+	ValuesList(fields ...any) ([][]interface{}, error)
+	Aggregate(annotations map[string]expr.Expression) (map[string]any, error)
+}
+
+type BaseWriteQuerySet[T any, QS any] interface {
+	NullQuerySet[T, QS]
+
+	// Write, update, and delete operations
+	Create(value T) (T, error)
+	Update(value T, expressions ...any) (int64, error)
+	GetOrCreate(value T) (T, bool, error)
+	BulkCreate(objects []T) ([]T, error)
+	BatchCreate(objects []T) ([]T, error)
+	BulkUpdate(params ...any) (int64, error)
+	BatchUpdate(params ...any) (int64, error)
+	Delete(objects ...T) (int64, error)
+
+	// Raw SQL operations
+	Row(sqlStr string, args ...interface{}) drivers.SQLRow
+	Rows(sqlStr string, args ...interface{}) (drivers.SQLRows, error)
+	Exec(sqlStr string, args ...interface{}) (sql.Result, error)
+}
+
+// A queryset is a collection of queries that can be executed against a database.
+//
+// It is used to retrieve, create, update, and delete objects from the database.
+// It is also used to filter, order, and annotate the objects in the database.
+type BaseQuerySet[T any, QS any] interface {
+	BaseReadQuerySet[T, QS]
+	BaseWriteQuerySet[T, QS]
 }
 
 var compilerRegistry = make(map[reflect.Type]func(defaultDB string) QueryCompiler)

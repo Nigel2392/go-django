@@ -294,7 +294,7 @@ func (a *Application) ServerError(err error, w http.ResponseWriter, r *http.Requ
 	}
 
 	a.Log.Errorf(
-		"Error serving request (%d: %s) %s\n%s",
+		"Error serving request (%d: %s) %s",
 		serverError.StatusCode(),
 		utils_text.Trunc(r.URL.String(), 75),
 		serverError.UserMessage(),

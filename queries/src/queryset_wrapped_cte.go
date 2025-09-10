@@ -144,7 +144,7 @@ type CTEQuerySet[T attrs.Definer] struct {
 
 func NewCTEQuerySet[T attrs.Definer](base *QuerySet[T]) *CTEQuerySet[T] {
 	var qs = &CTEQuerySet[T]{}
-	qs.WrappedQuerySet = WrapQuerySet(base, qs)
+	qs.WrappedQuerySet = WrapQuerySet[T](base, qs)
 	qs.compiler = &CTEQueryCompiler{
 		QueryCompiler: base.compiler,
 	}

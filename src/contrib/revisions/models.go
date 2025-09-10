@@ -60,6 +60,35 @@ func (r *Revision) OrderBy() []string {
 	return []string{"-CreatedAt"}
 }
 
+func (r *Revision) SetObject(obj attrs.Definer) error {
+	var pk, cType, err = getIdAndContentType(context.Background(), obj)
+	if err != nil {
+		return errors.Wrap(err, "failed to get object ID and content type")
+	}
+
+	if r.ObjectID != pk {
+		return errors.CheckViolation.Wrapf(
+			"object ID mismatch: revision has %q, object has %q",
+			r.ObjectID, pk,
+		)
+	}
+
+	if r.ContentType != cType {
+		return errors.TypeMismatch.Wrapf(
+			"content type mismatch: revision %q does not match object %q",
+			r.ContentType, cType,
+		)
+	}
+
+	data, err := MarshalRevisionData(obj)
+	if err != nil {
+		return errors.Wrap(err, "failed to marshal revision data")
+	}
+
+	r.Data = string(data)
+	return nil
+}
+
 func (r *Revision) FieldDefs() attrs.Definitions {
 	return r.Model.Define(r,
 		attrs.Unbound("ID", &attrs.FieldConfig{

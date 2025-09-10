@@ -13,6 +13,11 @@
     <form method="post" action="{{ .Get ("PostURL") }}" class="admin-form" enctype="multipart/form-data">
         {{ csrf_field }}
 
+        {{ $BackURL := (.Get "BackURL") }}
+        {{ if $BackURL }}
+            <input type="hidden" name="next" value="{{ $BackURL }}">
+        {{ end }}
+
         {{ $Form := (.Get "form") }}
         {{ include $Form.ErrorList "admin/shared/forms/error_list.tmpl" }}
         {{ include $Form.UnpackErrors "admin/shared/forms/error_unpack.tmpl" }}

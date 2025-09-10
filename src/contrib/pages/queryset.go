@@ -30,7 +30,7 @@ func NewPageQuerySet() *PageQuerySet {
 
 func wrapPageQuerySet(qs *queries.QuerySet[*PageNode]) *PageQuerySet {
 	var pqs = &PageQuerySet{}
-	pqs.WrappedQuerySet = queries.WrapQuerySet(qs, pqs)
+	pqs.WrappedQuerySet = queries.WrapQuerySet[*PageNode](qs, pqs)
 	return pqs
 }
 
@@ -1006,7 +1006,10 @@ func (qs *PageQuerySet) UnpublishNode(node *PageNode, unpublishChildren bool) er
 		Select("StatusFlags").
 		Filter(xp).
 		BulkUpdate(
-			expr.Expr("StatusFlags", expr.LOOKUP_BITAND, ^int64(StatusFlagPublished)),
+			expr.As(
+				"StatusFlags",
+				expr.Expr("StatusFlags", expr.LOOKUP_BITAND, ^int64(StatusFlagPublished)),
+			),
 		)
 	if err != nil {
 		return errors.Wrap(err, "failed to update node status flags")

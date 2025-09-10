@@ -140,6 +140,14 @@ func getPageActions(rq *http.Request, p *PageNode) []admin.Action {
 		})
 	}
 
+	if django.AppInstalled("revisions") && permissions.HasPermission(rq, "pages:list_revisions") {
+		actions = append(actions, admin.Action{
+			Icon:  "icon-history",
+			Title: trans.T(rq.Context(), "Revisions"),
+			URL:   django.Reverse("admin:pages:revisions", p.ID()),
+		})
+	}
+
 	if django.AppInstalled("auditlogs") && permissions.HasPermission(rq, "auditlogs:list") {
 		var u = django.Reverse(
 			"admin:auditlogs",
