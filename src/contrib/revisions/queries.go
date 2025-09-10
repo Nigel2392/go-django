@@ -4,41 +4,56 @@ import (
 	"context"
 	"fmt"
 	"slices"
-	"strconv"
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/specific"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
-	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-type RevisionQuerySet struct {
-	*queries.WrappedQuerySet[*Revision, *RevisionQuerySet, *queries.QuerySet[*Revision]]
+type RevisionQuerySet[T attrs.Definer] struct {
+	*queries.WrappedQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]]
 }
 
-func newRevisionQuerySet(qs *queries.QuerySet[*Revision]) *RevisionQuerySet {
-	var specific = &RevisionQuerySet{}
-	specific.WrappedQuerySet = queries.WrapQuerySet[*Revision](
-		qs, specific,
+func newRevisionQuerySet[T attrs.Definer](qs *queries.QuerySet[*Revision]) *RevisionQuerySet[T] {
+	var s = &RevisionQuerySet[T]{}
+	s.WrappedQuerySet = queries.WrapQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]](
+		specific.GetSpecificQuerySet(qs, specific.SpecificQuerySetOptions[*Revision, T]{
+			GetSpecificPreloadData: func(obj *Revision) (id any, contentType string, ok bool) {
+				return obj.ObjectID, obj.ContentType, obj.ObjectID != "" && obj.ContentType != ""
+			},
+			GetSpecificTargetID: func(target T) (id any, ok bool) {
+				id, _, err := getIdAndContentType(context.Background(), target)
+				if err != nil {
+					return nil, false
+				}
+				return id, true
+			},
+		}),
+		s,
 	)
-	return specific
+	return s
 }
 
-func NewRevisionQuerySet() *RevisionQuerySet {
-	return newRevisionQuerySet(queries.GetQuerySet(&Revision{}))
+func NewRevisionQuerySet[T attrs.Definer]() *RevisionQuerySet[T] {
+	return newRevisionQuerySet[T](queries.GetQuerySet(&Revision{}))
 }
 
-func (qs *RevisionQuerySet) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Revision, *RevisionQuerySet, *queries.QuerySet[*Revision]]) *RevisionQuerySet {
-	return &RevisionQuerySet{
+func (qs *RevisionQuerySet[T]) CloneQuerySet(wrapped *queries.WrappedQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]]) *RevisionQuerySet[T] {
+	return &RevisionQuerySet[T]{
 		WrappedQuerySet: wrapped,
 	}
 }
 
-func (qs *RevisionQuerySet) ForObjects(objs ...attrs.Definer) *RevisionQuerySet {
+func (w *RevisionQuerySet[T]) Base() *queries.QuerySet[*Revision] {
+	return w.WrappedQuerySet.Base().Base()
+}
+
+func (qs *RevisionQuerySet[T]) ForObjects(objs ...attrs.Definer) *RevisionQuerySet[T] {
 	var objMapping = orderedmap.NewOrderedMap[string, []string]()
 	for _, obj := range objs {
 		var objKey, cTypeName, err = getIdAndContentType(qs.Context(), obj)
@@ -71,7 +86,7 @@ func (qs *RevisionQuerySet) ForObjects(objs ...attrs.Definer) *RevisionQuerySet 
 	return qs.Filter(expr.Or(filters...))
 }
 
-func (qs *RevisionQuerySet) Types(types ...any) *RevisionQuerySet {
+func (qs *RevisionQuerySet[T]) Types(types ...any) *RevisionQuerySet[T] {
 	if len(types) == 0 {
 		return qs
 	}
@@ -97,198 +112,6 @@ func (qs *RevisionQuerySet) Types(types ...any) *RevisionQuerySet {
 	}
 
 	return qs.Filter("ContentType__in", typeNames)
-}
-
-type specificRevision struct {
-	ids       []string
-	revisions map[string]*queries.Row[*ObjectRevision]
-}
-
-type ObjectRevision struct {
-	Object attrs.Definer
-	*Revision
-}
-
-func (qs *RevisionQuerySet) All() (queries.Rows[*ObjectRevision], error) {
-	// Use iter method of the base queryset to not have to
-	// iterate over all rows multiple times.
-	var rowCount, baseRows, err = qs.WrappedQuerySet.Base().IterAll()
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to get all rows for specific revisions")
-	}
-
-	// Create a new map to hold the specific revision content type and ID-list pairs.
-	var preloadMap = orderedmap.NewOrderedMap[string, *specificRevision]()
-	var rows = make(queries.Rows[*ObjectRevision], rowCount)
-	var rowIdx int
-	for row, err := range baseRows {
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get row %d for specific revisions", rowIdx)
-		}
-
-		var specificRevisionRow = &queries.Row[*ObjectRevision]{
-			ObjectFieldDefs: row.ObjectFieldDefs,
-			Through:         row.Through,
-			Annotations:     row.Annotations,
-
-			// currently we set the object to the node instead of the specific revision,
-			// if a specific revision can be found, it will be properly set to the right object
-			// later in the prefetch loop.
-			Object: &ObjectRevision{
-				Revision: row.Object,
-				Object:   nil,
-			},
-		}
-
-		// If the revision has no content type or object ID, we skip it,
-		// it cannot be preloaded - log a warning.
-		if row.Object.ObjectID == "" || row.Object.ContentType == "" {
-			logger.Warnf("Revision with ID %d has no content type or object ID, skipping preload", row.Object.ID)
-
-			// add the row to the results, increase idx
-			rows[rowIdx] = specificRevisionRow
-			rowIdx++
-			continue
-		}
-
-		// Cache a reference to the specific revision row in
-		// the preload map - this allows us to efficiently
-		// set the revision object later in a single query
-		// for each content type and id list combination.
-		var preload, exists = preloadMap.Get(
-			row.Object.ContentType,
-		)
-		if !exists {
-			preload = &specificRevision{
-				ids:       make([]string, 0, 1),
-				revisions: make(map[string]*queries.Row[*ObjectRevision], 1),
-			}
-		}
-
-		preload.ids = append(preload.ids, row.Object.ObjectID)
-		preload.revisions[row.Object.ObjectID] = specificRevisionRow
-
-		preloadMap.Set(
-			row.Object.ContentType,
-			preload,
-		)
-
-		// add the row to the results, increase idx
-		rows[rowIdx] = specificRevisionRow
-		rowIdx++
-	}
-
-	if preloadMap.Len() == 0 {
-		return rows, err
-	}
-
-	// prefetch all rows for each content type
-	// and set the revision object for each row.
-	for head := preloadMap.Front(); head != nil; head = head.Next() {
-		var definition = contenttypes.DefinitionForType(head.Key)
-		if definition == nil {
-			return rows, errors.New(errors.CodeNoRows, fmt.Sprintf(
-				"no content type definition found for %s",
-				head.Key,
-			))
-		}
-
-		var model = definition.Object().(attrs.Definer)
-		var defs = model.FieldDefs()
-		var primaryField = defs.Primary()
-		var rows, err = queries.GetQuerySet(model).
-			WithContext(qs.Context()).
-			Filter(fmt.Sprintf("%s__in", primaryField.Name()), head.Value.ids).
-			All()
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get rows for content type %s", head.Key)
-		}
-
-		for _, row := range rows {
-			var pkStr, _, err = getIdAndContentType(qs.Context(), row.Object)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to get ID for object %T", row.Object)
-			}
-
-			var pk = attrs.PrimaryKey(row.Object)
-			var revRow, exists = head.Value.revisions[pkStr]
-			if !exists {
-				return nil, errors.NoRows.Wrapf(
-					"no revision found for content type %s with PK %d",
-					head.Key, pk,
-				)
-			}
-
-			revRow.Object.Object = row.Object
-		}
-	}
-
-	return rows, err
-}
-
-func (qs *RevisionQuerySet) Get() (*queries.Row[*ObjectRevision], error) {
-	var nillRow = &queries.Row[*ObjectRevision]{}
-
-	// limit to max_get_results
-	*qs = *qs.Limit(queries.MAX_GET_RESULTS)
-
-	var results, err = qs.All()
-	if err != nil {
-		return nillRow, err
-	}
-
-	var resCnt = len(results)
-	if resCnt == 0 {
-		return nillRow, errors.NoRows.WithCause(fmt.Errorf(
-			"no rows found for %T", qs.Meta().Model(),
-		))
-	}
-
-	if resCnt > 1 {
-		var errResCnt string
-		if queries.MAX_GET_RESULTS == 0 || resCnt < queries.MAX_GET_RESULTS {
-			errResCnt = strconv.Itoa(resCnt)
-		} else {
-			errResCnt = strconv.Itoa(queries.MAX_GET_RESULTS-1) + "+"
-		}
-
-		return nillRow, errors.MultipleRows.WithCause(fmt.Errorf(
-			"multiple rows returned for %T: %s rows",
-			qs.Meta().Model(), errResCnt,
-		))
-	}
-
-	return results[0], nil
-}
-
-// First is used to retrieve the first row from the database.
-//
-// It returns a Query that can be executed to get the result, which is a Row object
-// that contains the model object and a map of annotations.
-func (qs *RevisionQuerySet) First() (*queries.Row[*ObjectRevision], error) {
-	*qs = *qs.Limit(1)
-
-	var results, err = qs.All()
-	if err != nil {
-		return nil, err
-	}
-
-	if len(results) == 0 {
-		return nil, errors.NoRows
-	}
-
-	return results[0], nil
-}
-
-// Last is used to retrieve the last row from the database.
-//
-// It reverses the order of the results and then calls First to get the last row.
-//
-// It returns a Query that can be executed to get the result, which is a Row object
-// that contains the model object and a map of annotations.
-func (qs *RevisionQuerySet) Last() (*queries.Row[*ObjectRevision], error) {
-	*qs = *qs.Reverse()
-	return qs.First()
 }
 
 func ListRevisions(ctx context.Context, limit, offset int) ([]*Revision, error) {

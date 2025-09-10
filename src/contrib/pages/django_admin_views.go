@@ -11,6 +11,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/queries/src/specific"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
@@ -910,15 +911,15 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			latestRevision *revisions.Revision
 		)
 		if !p.LatestRevisionCreatedAt.IsZero() {
-			var latestRevisionRow *queries.Row[*revisions.ObjectRevision]
-			latestRevisionRow, err = revisions.NewRevisionQuerySet().
+			var latestRevisionRow *queries.Row[specific.Specific[*revisions.Revision, Page]]
+			latestRevisionRow, err = revisions.NewRevisionQuerySet[Page]().
 				WithContext(r.Context()).
 				ForObjects(p).
 				Filter("CreatedAt", p.LatestRevisionCreatedAt).
 				First()
 
-			if latestRevisionRow != nil && latestRevisionRow.Object != nil {
-				latestRevision = latestRevisionRow.Object.Revision
+			if latestRevisionRow != nil && latestRevisionRow.Object.Original != nil {
+				latestRevision = latestRevisionRow.Object.Original
 			}
 
 		} else if !p.IsPublished() {

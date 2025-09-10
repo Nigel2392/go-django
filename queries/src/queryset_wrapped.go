@@ -15,12 +15,12 @@ var (
 	_ BaseQuerySet[attrs.Definer, *QuerySet[attrs.Definer]]     = (*WrappedQuerySet[attrs.Definer, *GenericQuerySet, *QuerySet[attrs.Definer]])(nil)
 )
 
-type WrappedQuerySet[T attrs.Definer, CONV any, ORIG NullQuerySet[T, ORIG]] struct {
+type WrappedQuerySet[T any, CONV any, ORIG NullQuerySet[T, ORIG]] struct {
 	NullQuerySet[T, ORIG]
 	embedder CONV
 }
 
-func WrapQuerySet[T attrs.Definer, CONV any, ORIG NullQuerySet[T, ORIG]](qs ORIG, embedder CONV) *WrappedQuerySet[T, CONV, ORIG] {
+func WrapQuerySet[T any, CONV any, ORIG NullQuerySet[T, ORIG]](qs ORIG, embedder CONV) *WrappedQuerySet[T, CONV, ORIG] {
 	if _, ok := any(embedder).(QuerySetCanClone[T, CONV, ORIG]); !ok {
 		panic("embedder must implement QuerySetCanClone[T, CONV, ORIG]")
 	}
@@ -41,7 +41,7 @@ type (
 	QuerySetCanAfterExec interface {
 		AfterExec(res any) error
 	}
-	QuerySetCanClone[T attrs.Definer, CONV any, ORIG NullQuerySet[T, ORIG]] interface {
+	QuerySetCanClone[T any, CONV any, ORIG NullQuerySet[T, ORIG]] interface {
 		CloneQuerySet(*WrappedQuerySet[T, CONV, ORIG]) CONV
 	}
 )
