@@ -285,11 +285,18 @@ func FixTree(ctx context.Context) error {
 		return transaction.Commit(ctx)
 	}
 
-	allNodes, err := qs.Offset(0).Limit(int(allNodesCount)).AllNodes()
+	allNodes, err := qs.
+		Offset(0).
+		Limit(int(allNodesCount)).
+		AllNodes()
 	if err != nil {
 		return errors.Wrap(err, "failed to get all nodes")
 	}
 
+	// This will temporarily prefix all paths with a ~ to avoid unique constraint issues
+	// when fixing the tree structure.
+	// No path should start with ~ so this is safe.
+	// We queried all nodes before this so we have the original paths in memory.
 	_, err = qs.Base().BulkUpdate(expr.As(
 		"Path",
 		expr.CONCAT(expr.V("~"), expr.Field("Path")),
