@@ -65,7 +65,7 @@ func getListActions(next string) []*columns.ListAction[attrs.Definer] {
 		},
 		{
 			Show: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) bool {
-				return row.(Page).Reference().IsPublished()
+				return permissions.HasObjectPermission(r, row, "pages:view_revisions")
 			},
 			Text: func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
 				return trans.T(r.Context(), "View Revisions")
@@ -762,6 +762,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) (err error) {
 
+		var timeNow = time.Now()
 		var publishPage = r.FormValue("publish-page") == "publish-page" && permissions.HasObjectPermission(
 			r, p, "pages:publish",
 		)
@@ -782,7 +783,12 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		default:
 			return fmt.Errorf("invalid page type: %T", d)
 		}
-		ref.LatestRevisionCreatedAt = time.Now()
+
+		if publishPage {
+			ref.PublishedAt = timeNow
+		}
+
+		ref.LatestRevisionCreatedAt = timeNow
 		err = qs.AddChildren(
 			p, ref,
 		)
@@ -823,7 +829,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		}
 
 		if django.AppInstalled("revisions") {
-			_, err = revisions.CreateDatedRevision(ctx, ref, ref.LatestRevisionCreatedAt)
+			_, err = revisions.CreateDatedRevision(ctx, ref, timeNow)
 			if err != nil {
 				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
 				return err
@@ -992,6 +998,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		}
 
 		var (
+			timeNow                      = time.Now()
 			wasPublished, wasUnpublished bool
 		)
 
@@ -1019,15 +1026,21 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 		// Clear latest revision on publish/unpublish to avoid confusion
 		// This ID will only be set by manually reverting a revision.
-		var canCreateRevision = django.AppInstalled("revisions") && (!publishPage || wasUnpublished)
+		var canCreateRevision = django.AppInstalled("revisions")
 		if canCreateRevision {
-			ref.LatestRevisionCreatedAt = time.Now()
+			ref.LatestRevisionCreatedAt = timeNow
 		}
 
-		if canCreateRevision {
+		if publishPage {
+			ref.PublishedAt = timeNow
+		} else if wasUnpublished {
+			ref.PublishedAt = time.Time{}
+		}
+
+		if canCreateRevision && (!publishPage || wasUnpublished) {
 			err = NewPageQuerySet().
 				WithContext(ctx).
-				Select("LatestRevisionCreatedAt").
+				Select("LatestRevisionCreatedAt", "PublishedAt", "StatusFlags").
 				updateNode(ref)
 		} else {
 			err = NewPageQuerySet().
@@ -1058,7 +1071,8 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		}
 
 		if canCreateRevision {
-			rev, err := revisions.CreateDatedRevision(ctx, d, ref.LatestRevisionCreatedAt)
+
+			rev, err := revisions.CreateDatedRevision(ctx, d, timeNow)
 			if err != nil {
 				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
 				return err

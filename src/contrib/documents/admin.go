@@ -34,7 +34,10 @@ var _ = contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		if document.Title != "" {
 			return document.Title
 		}
-		return ""
+		if document.Path != "" {
+			return document.Path
+		}
+		return fmt.Sprintf("Document %d", document.ID)
 	},
 	ContentObject: &Document{},
 })

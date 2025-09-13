@@ -42,6 +42,7 @@ type PageNode struct {
 	StatusFlags             StatusFlag `json:"status_flags" attrs:"null;blank"`
 	PageID                  int64      `json:"page_id" attrs:"null;blank"`
 	ContentType             string     `json:"content_type" attrs:"null;blank"`
+	PublishedAt             time.Time  `json:"published_at" attrs:"null;blank"`
 	LatestRevisionCreatedAt time.Time  `json:"latest_revision_created_at" attrs:"readonly;label=Latest Revision Created At"`
 	CreatedAt               time.Time  `json:"created_at" attrs:"readonly;label=Created At"`
 	UpdatedAt               time.Time  `json:"updated_at" attrs:"readonly;label=Updated At"`
@@ -73,6 +74,7 @@ func (n *PageNode) ExcludeFromRevisionData() []string {
 		"StatusFlags",
 		"PageID",
 		"ContentType",
+		"PublishedAt",
 		"LatestRevisionCreatedAt",
 		"SiteSet",
 	}
@@ -221,11 +223,11 @@ func (n *PageNode) FieldDefs() attrs.Definitions {
 			attrs.NewField(n, "StatusFlags"),
 			attrs.NewField(n, "PageID"),
 			attrs.NewField(n, "ContentType"),
+			attrs.NewField(n, "PublishedAt"),
 			attrs.NewField(n, "LatestRevisionCreatedAt", &attrs.FieldConfig{
 				Null:   true,
 				Blank:  true,
 				Column: "latest_revision_created_at",
-				//	RelForeignKey: relForeignKey,
 			}),
 			attrs.NewField(n, "CreatedAt"),
 			attrs.NewField(n, "UpdatedAt"),

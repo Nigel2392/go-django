@@ -1266,7 +1266,7 @@ func (qs *PageQuerySet) updateNode(node *PageNode) error {
 	var info = base.Peek()
 
 	if len(info.Select) == 0 {
-		base = base.Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "LatestRevisionCreatedAt", "UpdatedAt")
+		base = base.Select("PK", "Title", "Path", "Depth", "Numchild", "UrlPath", "Slug", "StatusFlags", "PageID", "ContentType", "PublishedAt", "LatestRevisionCreatedAt", "UpdatedAt")
 	}
 
 	updated, err := base.

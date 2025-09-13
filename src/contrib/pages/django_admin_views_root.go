@@ -224,7 +224,7 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 	adminForm.Load()
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) (err error) {
-
+		var timeNow = time.Now()
 		var publishPage = r.FormValue("publish-page") == "publish-page" && permissions.HasPermission(
 			r, "pages:publish",
 		)
@@ -245,7 +245,11 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			return fmt.Errorf("invalid page type: %T", d)
 		}
 
-		ref.LatestRevisionCreatedAt = time.Now()
+		if publishPage {
+			ref.PublishedAt = timeNow
+		}
+
+		ref.LatestRevisionCreatedAt = timeNow
 
 		err = NewPageQuerySet().
 			WithContext(ctx).
@@ -279,7 +283,7 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 		}
 
 		if django.AppInstalled("revisions") {
-			_, err = revisions.CreateDatedRevision(ctx, d, ref.LatestRevisionCreatedAt)
+			_, err = revisions.CreateDatedRevision(ctx, d, timeNow)
 			if err != nil {
 				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
 				return err

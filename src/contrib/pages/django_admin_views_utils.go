@@ -110,7 +110,7 @@ func getPageBreadcrumbs(r *http.Request, p *PageNode, urlForLast bool) ([]admin.
 			Title: p.Title,
 		}
 
-		if urlForLast {
+		if urlForLast && p.ID() != 0 {
 			b.URL = django.Reverse("admin:pages:list", p.ID())
 		}
 
@@ -120,6 +120,13 @@ func getPageBreadcrumbs(r *http.Request, p *PageNode, urlForLast bool) ([]admin.
 			Title: trans.T(r.Context(), "Root Pages"),
 			URL:   django.Reverse("admin:pages"),
 		})
+
+		if urlForLast && p.ID() != 0 {
+			breadcrumbs = append(breadcrumbs, admin.BreadCrumb{
+				Title: p.Title,
+				URL:   django.Reverse("admin:pages:list", p.ID()),
+			})
+		}
 	}
 	return breadcrumbs, nil
 }

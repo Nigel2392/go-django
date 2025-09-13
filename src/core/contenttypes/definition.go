@@ -127,7 +127,10 @@ func (p *ContentTypeDefinition) InstanceLabel(instance any) string {
 	}
 
 	if s, ok := instance.(fmt.Stringer); ok {
-		return s.String()
+		var s = s.String()
+		if s != "" {
+			return s
+		}
 	}
 
 	return fmt.Sprintf(

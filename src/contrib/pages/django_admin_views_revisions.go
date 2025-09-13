@@ -66,6 +66,9 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		list.FuncColumn(
 			trans.S("Live"),
 			func(r *http.Request, defs attrs.Definitions, rev *revisions.Revision) any {
+				if rev.CreatedAt.Equal(p.PublishedAt) {
+					return true
+				}
 				return nil
 			},
 		),
@@ -150,7 +153,7 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 				return nil, err
 			}
 
-			breadcrumbs, err := getPageBreadcrumbs(r, p, false)
+			breadcrumbs, err := getPageBreadcrumbs(r, p, true)
 			if err != nil {
 				return nil, err
 			}
@@ -178,6 +181,9 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 			return list.TitleFieldColumn(
 				col,
 				func(r *http.Request, defs attrs.Definitions, row *revisions.Revision) string {
+					if row.CreatedAt.Equal(p.PublishedAt) {
+						return ""
+					}
 					return addNextUrl(django.Reverse(
 						"admin:pages:revisions:detail",
 						p.PK, row.ID),
@@ -330,7 +336,7 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 					"admin:pages:revisions:detail", p.ID(), chosenRevision.ID,
 				))
 
-				var breadcrumbs, err = getPageBreadcrumbs(r, p, false)
+				var breadcrumbs, err = getPageBreadcrumbs(r, p, true)
 				if err != nil {
 					return nil, err
 				}
@@ -412,12 +418,20 @@ func revisionCompareHandler(w http.ResponseWriter, r *http.Request, a *admin.App
 	var newChangedTime time.Time
 	var otherRevisionID = vars.GetInt("other_revision_id")
 	if otherRevisionID == 0 {
-		newInstance, err = p.Specific(r.Context())
+		var latestRevision, err = revisions.LatestRevision(r.Context(), p)
 		except.Assert(
 			err == nil, http.StatusInternalServerError,
-			"failed to retrieve specific instance from page: %v", err,
+			"failed to retrieve latest revision for page: %v", err,
 		)
-		newChangedTime = p.Reference().LatestRevisionCreatedAt
+
+		newInstance, err = (*revisions.TypedRevision[Page])(latestRevision).AsObject(r.Context())
+		except.Assert(
+			err == nil, http.StatusInternalServerError,
+			"failed to retrieve specific instance from latest revision: %v", err,
+		)
+
+		newChangedTime = latestRevision.CreatedAt
+
 	} else {
 		var otherRevision, err = revisions.GetRevisionByID(r.Context(), int64(otherRevisionID))
 		except.Assert(
@@ -482,7 +496,7 @@ func revisionCompareHandler(w http.ResponseWriter, r *http.Request, a *admin.App
 					trans.Time(r.Context(), newChangedTime, trans.LONG_TIME_FORMAT),
 				),
 				BreadCrumbs: func() []admin.BreadCrumb {
-					breadcrumbs, err := getPageBreadcrumbs(r, p, false)
+					breadcrumbs, err := getPageBreadcrumbs(r, p, true)
 					if err != nil {
 						except.Fail(http.StatusInternalServerError, err)
 						return nil

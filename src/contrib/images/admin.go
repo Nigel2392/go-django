@@ -36,7 +36,10 @@ var _ = contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		if image.Title != "" {
 			return image.Title
 		}
-		return ""
+		if image.Path != "" {
+			return image.Path
+		}
+		return fmt.Sprintf("Image %d", image.ID)
 	},
 	ContentObject: &Image{},
 })

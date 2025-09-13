@@ -2,6 +2,7 @@ package compare
 
 import (
 	"fmt"
+	"html"
 	"html/template"
 	"strings"
 
@@ -34,23 +35,24 @@ func (td *TextDiff) HTML() template.HTML {
 		tagname = "span"
 	}
 
-	var html = make([]string, 0, len(td.Changes))
+	var htmlList = make([]string, 0, len(td.Changes))
 	for _, change := range td.Changes {
+
 		switch change.Type {
 		case DIFF_EQUALS:
-			html = append(html, template.HTMLEscapeString(attrs.ToString(change.Value)))
+			htmlList = append(htmlList, html.EscapeString(attrs.ToString(change.Value)))
 		case DIFF_ADDED:
-			html = append(html, fmt.Sprintf(
+			htmlList = append(htmlList, fmt.Sprintf(
 				`<%s class="diff-added">%s</%s>`,
-				tagname, template.HTMLEscapeString(attrs.ToString(change.Value)), tagname,
+				tagname, html.EscapeString(attrs.ToString(change.Value)), tagname,
 			))
 		case DIFF_REMOVED:
-			html = append(html, fmt.Sprintf(
+			htmlList = append(htmlList, fmt.Sprintf(
 				`<%s class="diff-removed">%s</%s>`,
-				tagname, template.HTMLEscapeString(attrs.ToString(change.Value)), tagname,
+				tagname, html.EscapeString(attrs.ToString(change.Value)), tagname,
 			))
 		}
 	}
 
-	return template.HTML(strings.Join(html, td.Separator))
+	return template.HTML(strings.Join(htmlList, td.Separator))
 }

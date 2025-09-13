@@ -93,6 +93,15 @@
         "default": ""
       },
       {
+        "name": "PublishedAt",
+        "column": "published_at",
+        "use_in_db": true,
+        "nullable": true,
+        "go_type": "time.Time",
+        "db_type": "DATETIME",
+        "default": "0001-01-01T00:00:00Z"
+      },
+      {
         "name": "LatestRevisionCreatedAt",
         "column": "latest_revision_created_at",
         "use_in_db": true,
