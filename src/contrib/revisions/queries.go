@@ -9,6 +9,7 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/elliotchance/orderedmap/v2"
@@ -179,13 +180,13 @@ func DeleteRevisionsByObject(ctx context.Context, obj attrs.Definer, getRevInfo 
 		Delete()
 }
 
-func CreateRevision(ctx context.Context, forObj attrs.Definer, getRevInfo ...QueryInfoFunc) (*Revision, error) {
+func CreateRevision(ctx context.Context, forObj attrs.Definer, user users.User, getRevInfo ...QueryInfoFunc) (*Revision, error) {
 	var revision *Revision
 	switch obj := forObj.(type) {
 	case *Revision:
 		revision = obj
 	default:
-		var rev, err = NewRevision(forObj, getRevInfo...)
+		var rev, err = NewRevision(forObj, user, getRevInfo...)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create revision")
 		}
@@ -194,19 +195,29 @@ func CreateRevision(ctx context.Context, forObj attrs.Definer, getRevInfo ...Que
 	return queries.GetQuerySet(&Revision{}).WithContext(ctx).Create(revision)
 }
 
-func CreateDatedRevision(ctx context.Context, forObj attrs.Definer, at time.Time, getRevInfo ...QueryInfoFunc) (*Revision, error) {
+func CreateDatedRevision(ctx context.Context, forObj attrs.Definer, user users.User, at time.Time, getRevInfo ...QueryInfoFunc) (*Revision, error) {
 	var revision *Revision
 	switch obj := forObj.(type) {
 	case *Revision:
 		revision = obj
+
+		if user != nil && revision.User != nil {
+			panic("CreateDatedRevision: Revision provided to CreateDatedRevision already has a user set, cannot override user")
+		}
+
+		if user != nil {
+			revision.User = user
+		}
 	default:
-		var rev, err = NewRevision(forObj, getRevInfo...)
+		var rev, err = NewRevision(forObj, user, getRevInfo...)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to create revision")
 		}
 		revision = rev
 	}
+
 	revision.CreatedAt = at
+
 	return queries.GetQuerySet(&Revision{}).
 		WithContext(ctx).
 		Create(revision)

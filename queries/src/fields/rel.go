@@ -22,6 +22,9 @@ var (
 	_ queries.ProxyThroughField        = (*RelationField[any])(nil)
 	_ queries.ForUseInQueriesField     = (*RelationField[any])(nil)
 	_ attrs.CanRelatedName             = (*RelationField[any])(nil)
+
+	_ attrs.LazyRelation = (*typedRelation)(nil)
+	_ attrs.LazyRelation = (*wrappedRelation)(nil)
 )
 
 type RelationField[T any] struct {
@@ -38,9 +41,29 @@ func (r *typedRelation) Type() attrs.RelationType {
 	return r.typ
 }
 
+func (r *typedRelation) ModelKey() string {
+	if r.Relation == nil {
+		return ""
+	}
+	if lr, ok := r.Relation.(attrs.LazyRelation); ok {
+		return lr.ModelKey()
+	}
+	return ""
+}
+
 type wrappedRelation struct {
 	attrs.Relation
 	from attrs.RelationTarget
+}
+
+func (r *wrappedRelation) ModelKey() string {
+	if r.Relation == nil {
+		return ""
+	}
+	if lr, ok := r.Relation.(attrs.LazyRelation); ok {
+		return lr.ModelKey()
+	}
+	return ""
 }
 
 func (r *wrappedRelation) From() attrs.RelationTarget {
@@ -284,10 +307,32 @@ func (r *RelationField[T]) GetTargetField() attrs.FieldDefinition {
 }
 
 func (r *RelationField[T]) IsReverse() bool {
+	if r.cnf.IsProxy {
+		return false
+	}
+
+	if r.cnf.IsReverse != nil {
+		switch v := r.cnf.IsReverse.(type) {
+		case bool:
+			return v
+		case func() bool:
+			return v()
+		case func(field attrs.Field) bool:
+			return v(r)
+		default:
+			panic(fmt.Sprintf("IsReverse: unsupported type %T for field %q in model %T", v, r.Name(), r.Instance()))
+		}
+	}
+
+	if r.cnf.Rel != nil && r.cnf.Rel.Type() == attrs.RelManyToOne {
+		return false
+	}
+
 	var targetField = r.GetTargetField()
 	if targetField == nil || targetField.IsPrimary() {
 		return false
 	}
+
 	return true
 }
 

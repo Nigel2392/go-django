@@ -450,14 +450,47 @@ func (e *DataModelField[T]) SetValue(v interface{}, force bool) error {
 
 	e.bindVal(rV)
 
+	if rT.ConvertibleTo(e._Type) {
+		rV = rV.Convert(e._Type)
+		rT = rV.Type()
+	}
+
 	if rT != e._Type {
 
 		// check if the value implements the Definer interface
 		// if it is the definer interface itself, the value cannot be created, we skip this.
-		if e._Type.Implements(_DEFINER_TYPE) && e._Type != _DEFINER_TYPE {
+		if e._Type.Implements(_DEFINER_TYPE) && e._Type != _DEFINER_TYPE && e._Type.Kind() != reflect.Interface {
 			var obj = e.GetValue()
 			if obj == nil {
 				obj = attrs.NewObject[attrs.Definer](e._Type)
+				if err := e.SetValue(obj, false); err != nil {
+					return fmt.Errorf("cannot set value %v to %T: %w", v, *new(T), err)
+				}
+			}
+			var defObj = obj.(attrs.Definer)
+			var defs = defObj.FieldDefs()
+			var prim = defs.Primary()
+			return prim.Scan(v)
+		}
+
+		if e._Type.Implements(_DEFINER_TYPE) && e._Type != _DEFINER_TYPE && e._Type.Kind() == reflect.Interface {
+			var meta = attrs.GetModelMeta(e.Model)
+			var metaDefs = meta.Definitions()
+			var field, _ = metaDefs.Field(e.name)
+			var rel = field.Rel()
+			var model = rel.Model()
+			if model == nil {
+				return fmt.Errorf("cannot set value %v to %T: field %s with underlying interface value has no model relation registered", v, *new(T), e.name)
+			}
+
+			var rT = reflect.TypeOf(model)
+			if rT == nil || rT.Kind() == reflect.Interface {
+				return fmt.Errorf("cannot set value %v to %T: field %s with underlying interface value has no concrete model type registered", v, *new(T), e.name)
+			}
+
+			var obj = e.GetValue()
+			if obj == nil {
+				obj = attrs.NewObject[attrs.Definer](model)
 				if err := e.SetValue(obj, false); err != nil {
 					return fmt.Errorf("cannot set value %v to %T: %w", v, *new(T), err)
 				}
@@ -521,6 +554,11 @@ func (e *DataModelField[T]) SetValue(v interface{}, force bool) error {
 			return fmt.Errorf("failed to scan value %v (%T): %w", v, v, err)
 		}
 		e.setQueryValue(scanner)
+		return nil
+	}
+
+	if v == nil {
+		e.setQueryValue(nil)
 		return nil
 	}
 

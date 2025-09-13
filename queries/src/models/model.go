@@ -577,6 +577,7 @@ func (m *Model) Define(def attrs.Definer, flds ...any) *attrs.ObjectDefinitions 
 				ScanTo:      def,
 				ReverseName: key,
 				ColumnName:  fromModelField.ColumnName(),
+				IsReverse:   true,
 				Rel:         value,
 			}
 

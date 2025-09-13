@@ -8,7 +8,9 @@ import (
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -22,14 +24,15 @@ var (
 
 type Revision struct {
 	models.Model `table:"revisions_revision"`
-	ID           int64     `json:"id"`
-	ObjectID     string    `json:"object_id"`
-	ContentType  string    `json:"content_type"`
-	Data         string    `json:"data"`
-	CreatedAt    time.Time `json:"created_at"`
+	ID           int64      `json:"id"`
+	ObjectID     string     `json:"object_id"`
+	ContentType  string     `json:"content_type"`
+	Data         string     `json:"data"`
+	User         users.User `json:"user"`
+	CreatedAt    time.Time  `json:"created_at"`
 }
 
-func NewRevision(forObj attrs.Definer, getRevInfo ...QueryInfoFunc) (*Revision, error) {
+func NewRevision(forObj attrs.Definer, user users.User, getRevInfo ...QueryInfoFunc) (*Revision, error) {
 	var data, err = MarshalRevisionData(forObj)
 	if err != nil {
 		return nil, errors.Wrap(err, "NewRevision")
@@ -43,6 +46,7 @@ func NewRevision(forObj attrs.Definer, getRevInfo ...QueryInfoFunc) (*Revision, 
 	var rev = &Revision{
 		ObjectID:    objKey,
 		ContentType: cType,
+		User:        user,
 		Data:        string(data),
 	}
 
@@ -111,6 +115,21 @@ func (r *Revision) FieldDefs() attrs.Definitions {
 			Column:   "data",
 			Label:    trans.S("Data"),
 			HelpText: trans.S("The data of the revision, this is a snapshot of the object at the time of the revision."),
+		}),
+		fields.ForeignKey[users.User]("User", "user_id", &fields.FieldConfig{
+			ScanTo:      &r.User,
+			AllowEdit:   false,
+			Nullable:    true,
+			ReverseName: "Revisions",
+			Rel: attrs.RelatedDeferred(
+				attrs.RelManyToOne,
+				users.MODEL_KEY,
+				"", nil,
+			),
+			DataModelFieldConfig: fields.DataModelFieldConfig{
+				Label:    trans.S("User"),
+				HelpText: trans.S("The user who created the revision."),
+			},
 		}),
 		attrs.Unbound("CreatedAt", &attrs.FieldConfig{
 			Column:   "created_at",

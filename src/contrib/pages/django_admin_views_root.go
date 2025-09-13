@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
@@ -26,6 +27,7 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
 func listRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition) {
@@ -283,7 +285,7 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 		}
 
 		if django.AppInstalled("revisions") {
-			_, err = revisions.CreateDatedRevision(ctx, d, timeNow)
+			_, err = revisions.CreateDatedRevision(ctx, d, authentication.Retrieve(r).(users.User), timeNow)
 			if err != nil {
 				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
 				return err

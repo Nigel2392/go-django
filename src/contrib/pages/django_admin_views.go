@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/contrib/filters"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
@@ -37,6 +38,7 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/middleware/authentication"
 )
 
 func getListActions(next string) []*columns.ListAction[attrs.Definer] {
@@ -828,7 +830,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 		}
 
 		if django.AppInstalled("revisions") {
-			_, err = revisions.CreateDatedRevision(ctx, ref, timeNow)
+			_, err = revisions.CreateDatedRevision(ctx, ref, authentication.Retrieve(r).(users.User), timeNow)
 			if err != nil {
 				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
 				return err
@@ -916,15 +918,12 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			latestRevision *revisions.Revision
 		)
 		if !p.LatestRevisionCreatedAt.IsZero() {
-			var latestRevisionRow, err = revisions.NewRevisionQuerySet().
+			var latestRevisionRow *queries.Row[*revisions.Revision]
+			latestRevisionRow, err = revisions.NewRevisionQuerySet().
 				WithContext(r.Context()).
 				ForObjects(p).
 				Filter("CreatedAt", p.LatestRevisionCreatedAt).
 				First()
-			except.Assert(
-				err == nil, http.StatusInternalServerError,
-				"failed to retrieve latest revision for page: %v", err,
-			)
 
 			if latestRevisionRow != nil && latestRevisionRow.Object != nil {
 				latestRevision = latestRevisionRow.Object
@@ -1074,7 +1073,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 
 		if canCreateRevision {
 
-			rev, err := revisions.CreateDatedRevision(ctx, d, timeNow)
+			rev, err := revisions.CreateDatedRevision(ctx, d, authentication.Retrieve(r).(users.User), timeNow)
 			if err != nil {
 				logger.Errorf("Failed to create revision for page %d: %v", ref.ID(), err)
 				return err

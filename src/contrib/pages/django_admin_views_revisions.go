@@ -11,6 +11,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/columns"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/contrib/messages"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
@@ -26,6 +27,7 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/middleware/authentication"
 	"github.com/a-h/templ"
 )
 
@@ -76,6 +78,10 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		list.FuncColumn(
 			trans.S("Slug"),
 			pageRevisionData("Slug"),
+		),
+		list.FieldColumn[*revisions.Revision](
+			trans.S("User"),
+			"User",
 		),
 		&columns.ListActionsColumn[*revisions.Revision]{
 			Heading: trans.S("Actions"),
@@ -327,7 +333,7 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 
 		// create a new revision if there are changes
 		if hasChanged {
-			_, err := revisions.CreateDatedRevision(ctx, ref, ref.LatestRevisionCreatedAt)
+			_, err := revisions.CreateDatedRevision(ctx, ref, authentication.Retrieve(r).(users.User), ref.LatestRevisionCreatedAt)
 			if err != nil {
 				return errors.Wrap(err, "failed to create new revision")
 			}

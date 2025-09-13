@@ -13,6 +13,7 @@ type FieldConfig struct {
 	Nullable          bool
 	AllowEdit         bool
 	IsProxy           bool
+	IsReverse         any // bool, func() bool, or func(attrs.Field) bool
 	ReverseName       string
 	NoReverseRelation bool // If true, the field will not create a reverse relation in the model meta.
 	ColumnName        string
@@ -77,7 +78,13 @@ func fieldConstructor[FieldT attrs.Field, T any](name string, fieldFunc func(att
 	}
 
 	if cnf.Rel == nil {
-		var rV = reflect.New(reflect.TypeOf(new(T)).Elem().Elem())
+
+		var nT = reflect.TypeOf(new(T))
+		if nT.Elem().Kind() == reflect.Interface {
+			nT = nT.Elem()
+		}
+
+		var rV = reflect.New(nT).Elem()
 		var newObject = rV.Interface().(attrs.Definer)
 		cnf.Rel = attrs.Relate(
 			newObject,

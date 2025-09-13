@@ -1,4 +1,7 @@
 {
+  "lazy_dependencies": [
+    "users.User"
+  ],
   "table": {
     "table": "revisions_revision",
     "model": "github.com/Nigel2392/go-django/src/contrib/revisions.Revision",
@@ -39,6 +42,22 @@
         "go_type": "string",
         "db_type": "STRING",
         "default": ""
+      },
+      {
+        "name": "User",
+        "column": "user_id",
+        "use_in_db": true,
+        "nullable": true,
+        "relation": {
+          "type": "ManyToOne",
+          "model": {
+            "content_type": null,
+            "lazy_model_key": "users.User"
+          }
+        },
+        "go_type": "uint64",
+        "db_type": "UINT",
+        "default": null
       },
       {
         "name": "CreatedAt",

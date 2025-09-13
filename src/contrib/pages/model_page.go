@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	"github.com/Nigel2392/go-django/queries/src/models"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/contrib/search"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -419,8 +420,8 @@ func (n *PageNode) Unpublish(ctx context.Context, unpublishChildren bool) error 
 		UnpublishNode(n, unpublishChildren)
 }
 
-func (n *PageNode) CreateRevision(ctx context.Context, save bool) (*revisions.Revision, error) {
-	var revision, err = revisions.NewRevision(n)
+func (n *PageNode) CreateRevision(ctx context.Context, user users.User, save bool) (*revisions.Revision, error) {
+	var revision, err = revisions.NewRevision(n, user)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create revision for page node %d: %w", n.PK, err)
 	}
@@ -428,7 +429,7 @@ func (n *PageNode) CreateRevision(ctx context.Context, save bool) (*revisions.Re
 	n.LatestRevisionCreatedAt = time.Now()
 
 	if save {
-		_, err = revisions.CreateDatedRevision(ctx, revision, n.LatestRevisionCreatedAt)
+		_, err = revisions.CreateDatedRevision(ctx, revision, nil, n.LatestRevisionCreatedAt)
 		if err != nil {
 			return nil, fmt.Errorf("failed to save revision for page node %d: %w", n.PK, err)
 		}
