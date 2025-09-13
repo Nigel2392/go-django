@@ -26,6 +26,7 @@ import (
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/mux"
+	"github.com/a-h/templ"
 )
 
 func pageRevisionData(fieldName string) func(*http.Request, attrs.Definitions, *revisions.Revision) any {
@@ -94,6 +95,30 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 						)
 					},
 				},
+				{
+					Text: func(r *http.Request, defs attrs.Definitions, row *revisions.Revision) string {
+						return trans.T(r.Context(), "Compare to")
+					},
+					Attrs: func(r *http.Request, defs attrs.Definitions, row *revisions.Revision) templ.Attributes {
+						var m = make(templ.Attributes)
+						m["data-controller"] = "pages-revision-compare"
+						m["data-pages-revision-compare-list-url-value"] = fmt.Sprintf(
+							"%s?page-id=%d",
+							django.Reverse(
+								"admin:apps:model:chooser:list",
+								"revisions",
+								"revision",
+								CHOOSER_PAGE_REVISIONS_KEY,
+							),
+							p.PK,
+						)
+						m["data-pages-revision-compare-url-value"] = addNextUrl(
+							django.Reverse("admin:pages:revisions:compare_to", p.PK, row.ID, "__ID__"),
+							r.URL.String(),
+						)
+						return m
+					},
+				},
 			},
 		},
 		columns.TimeSinceColumn[*revisions.Revision](
@@ -117,7 +142,7 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 		BaseTemplateKey: admin.BASE_KEY,
 		TemplateName:    "pages/admin/revisions/list.tmpl",
 		QuerySet: func(r *http.Request) *queries.QuerySet[*revisions.Revision] {
-			return revisions.NewRevisionQuerySet[Page]().
+			return revisions.NewRevisionQuerySet().
 				WithContext(r.Context()).
 				ForObjects(p).
 				OrderBy("-CreatedAt").
@@ -431,7 +456,7 @@ func revisionCompareHandler(w http.ResponseWriter, r *http.Request, a *admin.App
 	var newChangedTime time.Time
 	var otherRevisionID = vars.GetInt("other_revision_id")
 	if otherRevisionID == 0 {
-		var latestRevisionRow, err = revisions.NewRevisionQuerySet[Page]().
+		var latestRevisionRow, err = revisions.NewRevisionQuerySet().
 			WithContext(r.Context()).
 			ForObjects(p).
 			Filter("CreatedAt", p.LatestRevisionCreatedAt).

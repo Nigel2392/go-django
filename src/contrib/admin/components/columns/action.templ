@@ -12,6 +12,7 @@ type ListAction[T attrs.Definer] struct {
 	Show func(r *http.Request, defs attrs.Definitions, row T) bool
     Text func(r *http.Request, defs attrs.Definitions, row T) string
     URL func(r *http.Request, defs attrs.Definitions, row T) string
+    Attrs func(r *http.Request, defs attrs.Definitions, row T) templ.Attributes
 }
 
 func (l *ListAction[T]) IsShown(r *http.Request, defs attrs.Definitions, row T) bool {
@@ -21,13 +22,20 @@ func (l *ListAction[T]) IsShown(r *http.Request, defs attrs.Definitions, row T) 
     return true
 }
 
+func (l *ListAction[T]) GetAttrs(r *http.Request, defs attrs.Definitions, row T) templ.Attributes {
+    if l.Attrs != nil {
+        return l.Attrs(r, defs, row)
+    }
+    return nil
+}
+
 templ (l *ListAction[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
     {{ assert.False(l.Text == nil, "Text must not be nil") }}
     if l.URL != nil {
         {{ var url = l.URL(r, defs, row) }}
-        <a href={ templ.SafeURL(url) } class={ l.Classname }>{ l.Text(r, defs, row) }</a>
+        <a href={ templ.SafeURL(url) } class={ l.Classname } { l.GetAttrs(r, defs, row)... }>{ l.Text(r, defs, row) }</a>
     } else {
-        <button class={ l.Classname }>{ l.Text(r, defs, row) }</button>
+        <button class={ l.Classname } { l.GetAttrs(r, defs, row)... }>{ l.Text(r, defs, row) }</button>
     }
 }
 

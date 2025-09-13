@@ -14,33 +14,33 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-type RevisionQuerySet[T attrs.Definer] struct {
-	*queries.WrappedQuerySet[*Revision, *RevisionQuerySet[T], *queries.QuerySet[*Revision]]
+type RevisionQuerySet struct {
+	*queries.WrappedQuerySet[*Revision, *RevisionQuerySet, *queries.QuerySet[*Revision]]
 }
 
-func newRevisionQuerySet[T attrs.Definer](qs *queries.QuerySet[*Revision]) *RevisionQuerySet[T] {
-	var s = &RevisionQuerySet[T]{}
+func newRevisionQuerySet(qs *queries.QuerySet[*Revision]) *RevisionQuerySet {
+	var s = &RevisionQuerySet{}
 	s.WrappedQuerySet = queries.WrapQuerySet[*Revision](
 		qs, s,
 	)
 	return s
 }
 
-func NewRevisionQuerySet[T attrs.Definer]() *RevisionQuerySet[T] {
-	return newRevisionQuerySet[T](queries.GetQuerySet(&Revision{}))
+func NewRevisionQuerySet() *RevisionQuerySet {
+	return newRevisionQuerySet(queries.GetQuerySet(&Revision{}))
 }
 
-func (qs *RevisionQuerySet[T]) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Revision, *RevisionQuerySet[T], *queries.QuerySet[*Revision]]) *RevisionQuerySet[T] {
-	return &RevisionQuerySet[T]{
+func (qs *RevisionQuerySet) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Revision, *RevisionQuerySet, *queries.QuerySet[*Revision]]) *RevisionQuerySet {
+	return &RevisionQuerySet{
 		WrappedQuerySet: wrapped,
 	}
 }
 
-func (w *RevisionQuerySet[T]) Base() *queries.QuerySet[*Revision] {
+func (w *RevisionQuerySet) Base() *queries.QuerySet[*Revision] {
 	return w.WrappedQuerySet.Base()
 }
 
-func (qs *RevisionQuerySet[T]) ForObjects(objs ...attrs.Definer) *RevisionQuerySet[T] {
+func (qs *RevisionQuerySet) ForObjects(objs ...attrs.Definer) *RevisionQuerySet {
 	var objMapping = orderedmap.NewOrderedMap[string, []string]()
 	for _, obj := range objs {
 		var objKey, cTypeName, err = getIdAndContentType(qs.Context(), obj)
@@ -73,7 +73,7 @@ func (qs *RevisionQuerySet[T]) ForObjects(objs ...attrs.Definer) *RevisionQueryS
 	return qs.Filter(expr.Or(filters...))
 }
 
-func (qs *RevisionQuerySet[T]) Types(types ...any) *RevisionQuerySet[T] {
+func (qs *RevisionQuerySet) Types(types ...any) *RevisionQuerySet {
 	if len(types) == 0 {
 		return qs
 	}

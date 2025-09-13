@@ -6,4 +6,4 @@ document.addEventListener('DOMContentLoaded', () => {
     window.Stimulus.register('chooser', ChooserController);
 });
 
-(window as any).Chooser = Chooser;
+window.Chooser = Chooser;

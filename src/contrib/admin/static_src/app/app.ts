@@ -1,4 +1,4 @@
-import { Application, ControllerConstructor, type Controller } from "@hotwired/stimulus";
+import { Application, Controller, ControllerConstructor } from "@hotwired/stimulus";
 
 
 type App = {
@@ -19,6 +19,7 @@ class AdminSite implements App {
         this.controllers = config.controllers || {};
         this.stimulusApp = Application.start();
         window.Stimulus = this.stimulusApp;
+        window.StimulusController = Controller;
     }
 
     registerController(identifier: string, controllerConstructor: ControllerConstructor) {

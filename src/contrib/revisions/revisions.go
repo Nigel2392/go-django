@@ -9,6 +9,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
+	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 )
@@ -59,6 +60,23 @@ func NewAppConfig() django.AppConfig {
 				}
 			}
 		}
+
+		admin.RegisterApp(
+			"revisions",
+			admin.AppOptions{
+				RegisterToAdminMenu: false,
+				EnableIndexView:     false,
+			},
+			admin.ModelOptions{
+				Name:                "revision",
+				Model:               &Revision{},
+				RegisterToAdminMenu: false,
+				DisallowList:        true,
+				DisallowCreate:      true,
+				DisallowEdit:        true,
+				DisallowDelete:      true,
+			},
+		)
 
 		return nil
 	}

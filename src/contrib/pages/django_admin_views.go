@@ -916,7 +916,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			latestRevision *revisions.Revision
 		)
 		if !p.LatestRevisionCreatedAt.IsZero() {
-			var latestRevisionRow, err = revisions.NewRevisionQuerySet[Page]().
+			var latestRevisionRow, err = revisions.NewRevisionQuerySet().
 				WithContext(r.Context()).
 				ForObjects(p).
 				Filter("CreatedAt", p.LatestRevisionCreatedAt).

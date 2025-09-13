@@ -20,6 +20,7 @@ type ListAction[T attrs.Definer] struct {
 	Show      func(r *http.Request, defs attrs.Definitions, row T) bool
 	Text      func(r *http.Request, defs attrs.Definitions, row T) string
 	URL       func(r *http.Request, defs attrs.Definitions, row T) string
+	Attrs     func(r *http.Request, defs attrs.Definitions, row T) templ.Attributes
 }
 
 func (l *ListAction[T]) IsShown(r *http.Request, defs attrs.Definitions, row T) bool {
@@ -27,6 +28,13 @@ func (l *ListAction[T]) IsShown(r *http.Request, defs attrs.Definitions, row T) 
 		return l.Show(r, defs, row)
 	}
 	return true
+}
+
+func (l *ListAction[T]) GetAttrs(r *http.Request, defs attrs.Definitions, row T) templ.Attributes {
+	if l.Attrs != nil {
+		return l.Attrs(r, defs, row)
+	}
+	return nil
 }
 
 func (l *ListAction[T]) Component(r *http.Request, defs attrs.Definitions, row T) templ.Component {
@@ -80,20 +88,28 @@ func (l *ListAction[T]) Component(r *http.Request, defs attrs.Definitions, row T
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 3, "\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, l.GetAttrs(r, defs, row))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, ">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var5 string
 			templ_7745c5c3_Var5, templ_7745c5c3_Err = templ.JoinStringErrs(l.Text(r, defs, row))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 28, Col: 83}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 36, Col: 115}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var5))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 4, "</a>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "</a>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -103,7 +119,7 @@ func (l *ListAction[T]) Component(r *http.Request, defs attrs.Definitions, row T
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 5, "<button class=\"")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "<button class=\"")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -116,20 +132,28 @@ func (l *ListAction[T]) Component(r *http.Request, defs attrs.Definitions, row T
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 6, "\">")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "\"")
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templ.RenderAttributes(ctx, templ_7745c5c3_Buffer, l.GetAttrs(r, defs, row))
+			if templ_7745c5c3_Err != nil {
+				return templ_7745c5c3_Err
+			}
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, ">")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
 			var templ_7745c5c3_Var8 string
 			templ_7745c5c3_Var8, templ_7745c5c3_Err = templ.JoinStringErrs(l.Text(r, defs, row))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 30, Col: 60}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 38, Col: 92}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var8))
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 7, "</button>")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "</button>")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -176,7 +200,7 @@ func (l *ListActionsColumn[T]) Header(r *http.Request) templ.Component {
 			var templ_7745c5c3_Var10 string
 			templ_7745c5c3_Var10, templ_7745c5c3_Err = templ.JoinStringErrs(l.Heading(ctx))
 			if templ_7745c5c3_Err != nil {
-				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 49, Col: 24}
+				return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 57, Col: 24}
 			}
 			_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var10))
 			if templ_7745c5c3_Err != nil {
@@ -212,20 +236,20 @@ func (l *ListActionsColumn[T]) Component(r *http.Request, defs attrs.Definitions
 		if l.Heading != nil {
 			heading = l.Heading(ctx)
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 8, "<div data-controller=\"dropdown\" class=\"dropdown\"><button type=\"button\" class=\"dropdown__toggle dropdown__toggle--icon\" data-dropdown-target=\"toggle\" aria-label=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, "<div data-controller=\"dropdown\" class=\"dropdown\"><button type=\"button\" class=\"dropdown__toggle dropdown__toggle--icon\" data-dropdown-target=\"toggle\" aria-label=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var12 string
 		templ_7745c5c3_Var12, templ_7745c5c3_Err = templ.JoinStringErrs(heading)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 60, Col: 128}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/components/columns/action.templ`, Line: 68, Col: 128}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var12))
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 9, "\" aria-expanded=\"false\"><svg class=\"icon icon-dots-horizontal dropdown__toggle-icon\" viewBox=\"0 0 16 16\"><path d=\"M4.75 8c0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75 0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75Zm5 0c0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75 0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75Zm1.5 0c0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75 0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75Z\"></path></svg></button><div data-dropdown-target=\"content\" class=\"dropdown__content\">")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "\" aria-expanded=\"false\"><svg class=\"icon icon-dots-horizontal dropdown__toggle-icon\" viewBox=\"0 0 16 16\"><path d=\"M4.75 8c0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75 0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75Zm5 0c0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75 0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75Zm1.5 0c0-.938.781-1.75 1.75-1.75.938 0 1.75.813 1.75 1.75 0 .969-.813 1.75-1.75 1.75-.969 0-1.75-.781-1.75-1.75Z\"></path></svg></button><div data-dropdown-target=\"content\" class=\"dropdown__content\">")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
@@ -233,7 +257,7 @@ func (l *ListActionsColumn[T]) Component(r *http.Request, defs attrs.Definitions
 			if !col.IsShown(r, defs, row) {
 				continue
 			}
-			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 10, " ")
+			templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 12, " ")
 			if templ_7745c5c3_Err != nil {
 				return templ_7745c5c3_Err
 			}
@@ -242,7 +266,7 @@ func (l *ListActionsColumn[T]) Component(r *http.Request, defs attrs.Definitions
 				return templ_7745c5c3_Err
 			}
 		}
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 11, "</div></div>")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 13, "</div></div>")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}

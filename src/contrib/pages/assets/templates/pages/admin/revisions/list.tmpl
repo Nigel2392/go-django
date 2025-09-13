@@ -2,6 +2,14 @@
 
 {{ define "title" }}{{ T "List" }}{{ end }}
 
+{{ define "extra_css" }}
+    <link rel="stylesheet" href="{{ static "chooser/css/index.css" }}">
+{{ end }}
+
+{{ define "extra_js" }}
+    <script src="{{ static "chooser/js/index.js" }}"></script>
+{{ end }}
+
 {{ define "content" }}
 
     <div class="revisions-list-wrapper">

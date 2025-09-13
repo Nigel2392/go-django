@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"path"
 	"reflect"
+	"strconv"
 	"strings"
 	"text/template"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/contrib/reports"
 	auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
+	"github.com/Nigel2392/go-django/src/contrib/revisions"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
@@ -33,9 +35,11 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 )
@@ -77,6 +81,8 @@ const (
 	PageIDVariableName = "page_id"
 
 	CHOOSER_ROOT_PAGES_KEY = "pages.nodes.root"
+
+	CHOOSER_PAGE_REVISIONS_KEY = "pages.page.revisions"
 )
 
 var (
@@ -438,6 +444,56 @@ func NewAppConfig() django.AppConfig {
 		}
 		chooser.Register(&chooserDefinitionAllNodes)
 		chooser.Register(&chooserDefinitionRootNodes, CHOOSER_ROOT_PAGES_KEY)
+
+		chooser.Register(
+			&chooser.ChooserDefinition[*revisions.Revision]{
+				Model: &revisions.Revision{},
+				Title: trans.S("Page Revisions"),
+				ListPage: &chooser.ChooserListPage[*revisions.Revision]{
+					PerPage: 20,
+					Fields:  []string{"ID", "Model", "CreatedAt"},
+					QuerySet: func(r *http.Request, model *revisions.Revision) (*queries.QuerySet[*revisions.Revision], error) {
+						var pks = r.URL.Query().Get("page-id")
+						if pks == "" {
+							return nil, fmt.Errorf("missing page-id parameter")
+						}
+
+						var pk, err = strconv.ParseInt(pks, 10, 64)
+						if err != nil {
+							return nil, fmt.Errorf("invalid page-id parameter: %w", err)
+						}
+
+						p, err := NewPageQuerySet().
+							WithContext(r.Context()).
+							Filter("PK", pk).
+							Get()
+						if err != nil {
+							return nil, fmt.Errorf("failed to get page for revision chooser queryset: %w", err)
+						}
+
+						return revisions.NewRevisionQuerySet().
+							WithContext(r.Context()).
+							ForObjects(p.Object).
+							Base(), nil
+
+					},
+					Columns: map[string]list.ListColumn[*revisions.Revision]{
+						"Model": list.FuncColumn(
+							trans.S("Model"),
+							func(r *http.Request, defs attrs.Definitions, row *revisions.Revision) interface{} {
+								var obj, err = row.AsObject(r.Context())
+								if err != nil {
+									logger.Errorf("failed to get revision object: %v", err)
+									return ""
+								}
+								return attrs.ToString(obj)
+							},
+						),
+					},
+				},
+			},
+			CHOOSER_PAGE_REVISIONS_KEY,
+		)
 
 		return nil
 	}

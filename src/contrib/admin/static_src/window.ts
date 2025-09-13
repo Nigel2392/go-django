@@ -1,5 +1,5 @@
 import { AdminSite } from "./app/app";
-import { Application } from "@hotwired/stimulus";
+import { Application, Controller } from "@hotwired/stimulus";
 import sprintf from "./utils/sprintf";
 
 export {};
@@ -7,6 +7,7 @@ export {};
 declare global {
     interface Window {
         Stimulus: Application;
+        StimulusController: typeof Controller;
         AdminSite: AdminSite;
         getCookie: (name: string) => string | null;
         setCookie: (name: string, value: string, days: number) => void;
