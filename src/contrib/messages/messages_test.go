@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/cookiejar"
-	"net/http/httptest"
 	"strconv"
 	"testing"
 
@@ -20,9 +19,9 @@ import (
 )
 
 var (
-	server  *httptest.Server
+	server  *django.HTTPTestServer
 	app     *django.Application
-	client  *http.Client
+	client  *django.HTTPTestClient
 	backend messages.MessageBackend
 )
 

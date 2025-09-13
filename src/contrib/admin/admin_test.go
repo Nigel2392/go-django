@@ -17,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
+	"github.com/Nigel2392/go-django/src/contrib/auth/users"
 	"github.com/Nigel2392/go-django/src/contrib/session"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -474,4 +475,103 @@ func TestAdminHandlers(t *testing.T) {
 			}
 		})
 	}
+}
+
+type TestClient interface {
+	Do(req *http.Request) (*http.Response, error)
+	Authenticate(user users.User)
+}
+
+type testClient struct {
+	baseURL string
+	client  *http.Client
+	user    users.User
+}
+
+func (c *testClient) Do(req *http.Request) (*http.Response, error) {
+
+	if c.user != nil {
+		req = req.WithContext(authentication.ContextWithUser(
+			req.Context(), c.user,
+		))
+	}
+
+	return c.client.Do(req)
+}
+
+func (c *testClient) Authenticate(user users.User) {
+	c.user = user
+}
+
+type ViewTest interface {
+	Name() string
+	Reverse() string
+	Test(t *testing.T, c TestClient, rt *mux.Route) error
+}
+
+type BaseViewTest struct {
+	TestName       string
+	ReverseURL     string
+	ExpectedStatus int
+	Execute        func(t *testing.T, c TestClient, rt *mux.Route) error
+	Validate       func(t *testing.T, c TestClient, rt *mux.Route) bool
+}
+
+func (b *BaseViewTest) Name() string {
+	return b.TestName
+}
+
+func (b *BaseViewTest) Reverse() string {
+	return b.ReverseURL
+}
+
+func (b *BaseViewTest) Test(t *testing.T, c TestClient, rt *mux.Route) error {
+	if b.Execute != nil {
+		if err := b.Execute(t, c, rt); err != nil {
+			t.Error(err)
+		}
+	}
+
+	if b.Validate != nil && !b.Validate(t, c, rt) {
+		return fmt.Errorf("validation failed for test %s", b.TestName)
+	}
+
+	return nil
+}
+
+func ExecuteViewTests(t *testing.T, tests []ViewTest, client *http.Client) {
+	if !runTests {
+		t.Skip("Server failed to start")
+		return
+	}
+
+	var mux = django.Global.Mux
+	for _, test := range tests {
+		var client = &testClient{client: client}
+		var reverseURL = test.Reverse()
+		var rt = mux.Find(reverseURL)
+		if rt == nil {
+			t.Errorf(
+				"Failed to reverse URL for test %s, route is nil for %s",
+				test.Name(), reverseURL,
+			)
+			continue
+		}
+
+		t.Run(test.Name(), func(t *testing.T) {
+			if err := test.Test(t, client, rt); err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}
+
+var ViewTests = []ViewTest{
+	&BaseViewTest{
+		TestName:   "AdminIndex",
+		ReverseURL: "admin:home",
+		Execute: func(t *testing.T, c TestClient, rt *mux.Route) error {
+			return nil
+		},
+	},
 }

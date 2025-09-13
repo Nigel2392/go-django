@@ -11,7 +11,21 @@ import (
 	"github.com/justinas/nosurf"
 )
 
-func (a *Application) TestServe(autoStart bool) (*httptest.Server, error) {
+type HTTPTestClient struct {
+	*http.Client
+	Server *HTTPTestServer
+}
+
+type HTTPTestServer struct {
+	*httptest.Server
+	App *Application
+}
+
+func (s *HTTPTestServer) Client() *HTTPTestClient {
+	return &HTTPTestClient{s.Server.Client(), s}
+}
+
+func (a *Application) TestServe(autoStart bool) (*HTTPTestServer, error) {
 	if !a.initialized.Load() {
 		if err := a.Initialize(); err != nil {
 			return nil, err
@@ -50,5 +64,10 @@ func (a *Application) TestServe(autoStart bool) (*httptest.Server, error) {
 		return nil
 	}
 
-	return server, nil
+	var s = &HTTPTestServer{
+		Server: server,
+		App:    a,
+	}
+
+	return s, nil
 }
