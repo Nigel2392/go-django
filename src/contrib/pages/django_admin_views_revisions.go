@@ -465,6 +465,7 @@ func revisionCompareHandler(w http.ResponseWriter, r *http.Request, a *admin.App
 			context.Set("model", m)
 			context.Set("old_instance", oldInstance)
 			context.Set("new_instance", newInstance)
+			context.Set("page_object", p)
 			context.Set("comparison", comparisonClass)
 
 			var backURL string
