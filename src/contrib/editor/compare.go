@@ -101,9 +101,7 @@ func (fc *editorComparison) HTMLDiff() (template.HTML, error) {
 				out = append(out, nh) // unchanged
 			} else {
 				// Modified: show an inner textual diff of the rendered text
-				ot := extractText(oh)
-				nt := extractText(nh)
-				td := compare.DiffText(ot, nt)
+				td := compare.DiffText(oh, nh)
 				inner := td.HTML()
 				// Wrap with a container so it's visually grouped as a modified block
 				out = append(out, `<div class="diff-modified">`+string(inner)+`</div>`)
@@ -134,7 +132,7 @@ func renderAll(ctx context.Context, blocks []FeatureBlock) []string {
 		s = extractText(s) // strip tags for cleaner diffs
 		s = squeezeSpaces(s)
 		if s == "" {
-			s = fmt.Sprintf("<empty block %d: %v>", i+1, b.Type())
+			s = fmt.Sprintf("&lt;placeholder block %d: %v&gt;<br/>", i+1, b.Type())
 		}
 		out = append(out, s)
 	}
