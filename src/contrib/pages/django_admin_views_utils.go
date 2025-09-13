@@ -100,7 +100,6 @@ func getPageBreadcrumbs(r *http.Request, p *PageNode, urlForLast bool) ([]admin.
 		})
 
 		for _, a := range ancestors {
-			a := a
 			breadcrumbs = append(breadcrumbs, admin.BreadCrumb{
 				Title: a.Title,
 				URL:   django.Reverse("admin:pages:list", a.ID()),

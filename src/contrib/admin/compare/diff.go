@@ -29,6 +29,11 @@ type TextDiff struct {
 }
 
 func (td *TextDiff) HTML() template.HTML {
+	var tagname = td.Tagname
+	if tagname == "" {
+		tagname = "span"
+	}
+
 	var html = make([]string, 0, len(td.Changes))
 	for _, change := range td.Changes {
 		switch change.Type {
@@ -37,12 +42,12 @@ func (td *TextDiff) HTML() template.HTML {
 		case DIFF_ADDED:
 			html = append(html, fmt.Sprintf(
 				`<%s class="diff-added">%s</%s>`,
-				td.Tagname, template.HTMLEscapeString(attrs.ToString(change.Value)), td.Tagname,
+				tagname, template.HTMLEscapeString(attrs.ToString(change.Value)), tagname,
 			))
 		case DIFF_REMOVED:
 			html = append(html, fmt.Sprintf(
 				`<%s class="diff-removed">%s</%s>`,
-				td.Tagname, template.HTMLEscapeString(attrs.ToString(change.Value)), td.Tagname,
+				tagname, template.HTMLEscapeString(attrs.ToString(change.Value)), tagname,
 			))
 		}
 	}

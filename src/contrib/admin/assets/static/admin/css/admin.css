@@ -1082,6 +1082,29 @@ a.button, .button a {
 .message-text {
 
 }
+.comparison {
+
+}
+.comparison .diff-added {
+    background-color: rgba(76, 175, 80, 0.15);
+    width: fit-content;
+}
+.comparison .diff-removed {
+    background-color: rgba(244, 67, 54, 0.15);
+    width: fit-content;
+}
+.comparison dl {
+    margin-bottom: 1em;
+}
+.comparison dt {
+    font-weight: 600;
+    margin-bottom: .5em;
+}
+.comparison dd {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: .5em;
+}
 .spacing {
     --s: var(--spacing, 3em);
     --b: var(--bg, var(--primary-bg-color));

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -72,6 +73,26 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 			trans.S("Slug"),
 			pageRevisionData("Slug"),
 		),
+		&columns.ListActionsColumn[*revisions.Revision]{
+			Heading: trans.S("Actions"),
+			Actions: []*columns.ListAction[*revisions.Revision]{
+				{
+					Text: func(r *http.Request, defs attrs.Definitions, row *revisions.Revision) string {
+						return trans.T(r.Context(), "Compare to current")
+					},
+					URL: func(r *http.Request, defs attrs.Definitions, row *revisions.Revision) string {
+						var next = django.Reverse(
+							"admin:pages:revisions",
+							p.PK,
+						)
+						return addNextUrl(
+							django.Reverse("admin:pages:revisions:compare", p.PK, row.ID),
+							next,
+						)
+					},
+				},
+			},
+		},
 		columns.TimeSinceColumn[*revisions.Revision](
 			trans.S("Created"),
 			"CreatedAt",
@@ -133,6 +154,11 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 			if err != nil {
 				return nil, err
 			}
+
+			breadcrumbs = append(breadcrumbs, admin.BreadCrumb{
+				Title: trans.T(r.Context(), "Revisions"),
+				URL:   "",
+			})
 
 			context.SetPage(admin.PageOptions{
 				BreadCrumbs: breadcrumbs,
@@ -309,6 +335,17 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 					return nil, err
 				}
 
+				breadcrumbs = append(breadcrumbs,
+					admin.BreadCrumb{
+						Title: trans.T(r.Context(), "Revisions"),
+						URL:   django.Reverse("admin:pages:revisions", p.ID()),
+					},
+					admin.BreadCrumb{
+						Title: trans.T(r.Context(), "Edit revision for %q", instance.Reference().Title),
+						URL:   "",
+					},
+				)
+
 				context.SetPage(admin.PageOptions{
 					TitleFn:     trans.S("Edit revision for %q", instance.Reference().Title),
 					BreadCrumbs: breadcrumbs,
@@ -342,6 +379,132 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 
 	if err := views.Invoke(view, w, r); err != nil {
 		except.Fail(500, err)
+		return
+	}
+}
+
+func revisionCompareHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {
+	if !permissions.HasObjectPermission(r, p, "pages:edit") {
+		admin.ReLogin(w, r, r.URL.Path)
+		return
+	}
+
+	var vars = mux.Vars(r)
+	var revisionID = vars.GetInt("revision_id")
+	if revisionID == 0 {
+		except.Fail(http.StatusBadRequest, "invalid revision ID: %v", vars.Get("revision_id"))
+		return
+	}
+
+	var chosenRevision, err = revisions.GetRevisionByID(r.Context(), int64(revisionID))
+	except.Assert(
+		err == nil, http.StatusInternalServerError,
+		"failed to retrieve latest revision for page: %v", err,
+	)
+
+	oldInstance, err := (*revisions.TypedRevision[Page])(chosenRevision).AsObject(r.Context())
+	except.Assert(
+		err == nil, http.StatusInternalServerError,
+		"failed to retrieve specific instance from revision: %v", err,
+	)
+
+	var newInstance Page
+	var newChangedTime time.Time
+	var otherRevisionID = vars.GetInt("other_revision_id")
+	if otherRevisionID == 0 {
+		newInstance, err = p.Specific(r.Context())
+		except.Assert(
+			err == nil, http.StatusInternalServerError,
+			"failed to retrieve specific instance from page: %v", err,
+		)
+		newChangedTime = p.Reference().LatestRevisionCreatedAt
+	} else {
+		var otherRevision, err = revisions.GetRevisionByID(r.Context(), int64(otherRevisionID))
+		except.Assert(
+			err == nil, http.StatusInternalServerError,
+			"failed to retrieve other revision for page: %v", err,
+		)
+		newInstance, err = (*revisions.TypedRevision[Page])(otherRevision).AsObject(r.Context())
+		except.Assert(
+			err == nil, http.StatusInternalServerError,
+			"failed to retrieve specific instance from other revision: %v", err,
+		)
+		newChangedTime = otherRevision.CreatedAt
+	}
+
+	var fieldDefs = oldInstance.FieldDefs()
+	var definition = DefinitionForObject(oldInstance)
+	var panels []admin.Panel
+	if definition == nil || definition.EditPanels == nil {
+		panels = make([]admin.Panel, 0, fieldDefs.Len())
+		for _, def := range fieldDefs.Fields() {
+			var formField = def.FormField()
+			if formField == nil {
+				continue
+			}
+
+			panels = append(panels, admin.FieldPanel(def.Name()))
+		}
+	} else {
+		panels = definition.EditPanels(r, oldInstance)
+	}
+
+	comparisonClass, err := admin.PanelComparison(r.Context(), panels, oldInstance, newInstance, true)
+	except.Assert(
+		err == nil, http.StatusInternalServerError,
+		"failed to create comparison for revision: %v", err,
+	)
+
+	var view = &views.BaseView{
+		AllowedMethods:  []string{http.MethodGet},
+		BaseTemplateKey: admin.BASE_KEY,
+		TemplateName:    "pages/admin/revisions/compare.tmpl",
+		GetContextFn: func(req *http.Request) (ctx.Context, error) {
+			var context = admin.NewContext(req, admin.AdminSite, nil)
+			context.Set("app", a)
+			context.Set("model", m)
+			context.Set("old_instance", oldInstance)
+			context.Set("new_instance", newInstance)
+			context.Set("comparison", comparisonClass)
+
+			var backURL string
+			if q := req.FormValue("next"); q != "" {
+				backURL = q
+			}
+			context.Set("BackURL", backURL)
+
+			context.SetPage(admin.PageOptions{
+				TitleFn: trans.S("Comparing revisions for %q", p.Title),
+				SubtitleFn: trans.S(
+					"Comparing revision from %s to %s",
+					trans.Time(r.Context(), chosenRevision.CreatedAt, trans.LONG_TIME_FORMAT),
+					trans.Time(r.Context(), newChangedTime, trans.LONG_TIME_FORMAT),
+				),
+				BreadCrumbs: func() []admin.BreadCrumb {
+					breadcrumbs, err := getPageBreadcrumbs(r, p, false)
+					if err != nil {
+						except.Fail(http.StatusInternalServerError, err)
+						return nil
+					}
+					return append(breadcrumbs,
+						admin.BreadCrumb{
+							Title: trans.T(r.Context(), "Revisions"),
+							URL:   django.Reverse("admin:pages:revisions", p.PK),
+						},
+						admin.BreadCrumb{
+							Title: trans.T(r.Context(), "Comparing revisions for %q", p.Title),
+							URL:   "",
+						},
+					)
+				}(),
+				Actions: getPageActions(r, p),
+			})
+			return context, nil
+		},
+	}
+
+	if err := views.Invoke(view, w, r); err != nil {
+		except.Fail(http.StatusInternalServerError, err)
 		return
 	}
 }

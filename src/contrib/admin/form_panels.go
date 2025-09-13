@@ -11,7 +11,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/Nigel2392/go-django/src/contrib/admin/compare"
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -25,6 +27,7 @@ type Panel interface {
 	Fields() []string
 	ClassName() string
 	Class(classes string) Panel
+	Comparison(ctx context.Context, oldInstance attrs.Definer, newInstance attrs.Definer) (compare.Comparison, error)
 	Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel
 }
 
@@ -37,6 +40,45 @@ type BoundPanel interface {
 	Hidden() bool
 	Component() templ.Component
 	Render() template.HTML
+}
+
+func PanelComparison(ctx context.Context, panels []Panel, oldInstance attrs.Definer, newInstance attrs.Definer, mustWrap ...bool) (compare.Comparison, error) {
+	var comparisons = make([]compare.Comparison, 0, len(panels))
+	for _, panel := range panels {
+		var comp, err = panel.Comparison(ctx, oldInstance, newInstance)
+		if err != nil {
+			return nil, err
+		}
+
+		if comp == nil {
+			continue
+		}
+
+		changed, err := comp.HasChanged()
+		if err != nil {
+			return nil, err
+		}
+
+		if !changed {
+			continue
+		}
+
+		if unwrapper, ok := comp.(compare.ComparisonWrapper); ok {
+			comparisons = append(comparisons, unwrapper.Unwrap()...)
+		} else {
+			comparisons = append(comparisons, comp)
+		}
+	}
+
+	if len(comparisons) == 1 && (len(mustWrap) == 0 || !mustWrap[0]) {
+		return comparisons[0], nil
+	}
+
+	if len(comparisons) == 0 {
+		return nil, nil
+	}
+
+	return compare.MultipleComparison(ctx, comparisons...), nil
 }
 
 type fieldPanel struct {
@@ -59,6 +101,17 @@ func (f *fieldPanel) Class(classname string) Panel {
 
 func (f *fieldPanel) Validate(r *http.Request, ctx context.Context, form forms.Form, data map[string]any) []error {
 	return nil
+}
+
+func (f *fieldPanel) Comparison(ctx context.Context, oldInstance attrs.Definer, newInstance attrs.Definer) (compare.Comparison, error) {
+	return compare.GetComparison(
+		ctx,
+		nil,
+		nil,
+		f.fieldname,
+		oldInstance,
+		newInstance,
+	)
 }
 
 func (f *fieldPanel) Bind(r *http.Request, _ map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
@@ -214,6 +267,10 @@ func (m *rowPanel) Bind(r *http.Request, panelCount map[string]int, form forms.F
 	}
 }
 
+func (f *rowPanel) Comparison(ctx context.Context, oldInstance attrs.Definer, newInstance attrs.Definer) (compare.Comparison, error) {
+	return PanelComparison(ctx, f.panels, oldInstance, newInstance)
+}
+
 func LabeledRowPanel(label any, helpText any, panels ...Panel) Panel {
 	if pnl, ok := label.(Panel); ok {
 		panels = append([]Panel{pnl}, panels...)
@@ -289,6 +346,10 @@ func (g *panelGroup) Bind(r *http.Request, panelCount map[string]int, form forms
 	}
 }
 
+func (f *panelGroup) Comparison(ctx context.Context, oldInstance attrs.Definer, newInstance attrs.Definer) (compare.Comparison, error) {
+	return PanelComparison(ctx, f.panels, oldInstance, newInstance)
+}
+
 func LabeledPanelGroup(label any, helpText any, panels ...Panel) Panel {
 	if pnl, ok := label.(Panel); ok {
 		panels = append([]Panel{pnl}, panels...)
@@ -341,6 +402,10 @@ func (a *AlertPanel) ClassName() string {
 func (a *AlertPanel) Class(classes string) Panel {
 	a.Classnames = classes
 	return a
+}
+
+func (f *AlertPanel) Comparison(ctx context.Context, oldInstance attrs.Definer, newInstance attrs.Definer) (compare.Comparison, error) {
+	return nil, nil
 }
 
 func (a *AlertPanel) Bind(r *http.Request, _ map[string]int, form forms.Form, ctx context.Context, _ map[string]forms.BoundField) BoundPanel {
@@ -458,6 +523,30 @@ func (t *tabbedPanel) Validate(r *http.Request, ctx context.Context, form forms.
 	return errs
 }
 
+func (t *tabbedPanel) Comparison(ctx context.Context, oldInstance attrs.Definer, newInstance attrs.Definer) (compare.Comparison, error) {
+	var comparisons = make([]compare.Comparison, 0, len(t.tabs))
+	for _, tab := range t.tabs {
+		var tabComparisons, err = PanelComparison(ctx, tab.panels, oldInstance, newInstance)
+		if err != nil {
+			return nil, err
+		}
+
+		if tabComparisons != nil {
+			comparisons = append(comparisons, tabComparisons)
+		}
+	}
+
+	if len(comparisons) == 1 {
+		return comparisons[0], nil
+	}
+
+	if len(comparisons) == 0 {
+		return nil, nil
+	}
+
+	return compare.MultipleComparison(ctx, comparisons...), nil
+}
+
 func (t *tabbedPanel) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
 	var boundTabs = make([]*boundTabPanel, 0, len(t.tabs))
 	for _, tab := range t.tabs {
@@ -499,6 +588,11 @@ func (j JSONDetailPanel) ClassName() string {
 func (j JSONDetailPanel) Class(classes string) Panel {
 	j.Classname = classes
 	return j
+}
+
+// JSONDetailPanel does not support comparisons - it is read-only
+func (f JSONDetailPanel) Comparison(ctx context.Context, oldInstance attrs.Definer, newInstance attrs.Definer) (compare.Comparison, error) {
+	return nil, nil
 }
 
 func (j JSONDetailPanel) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFieldsMap map[string]forms.BoundField) BoundPanel {

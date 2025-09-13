@@ -554,6 +554,18 @@ func NewAppConfig() django.AppConfig {
 			pageHandler(revisionDetailHandler), "detail",
 		)
 
+		// Compare revisions to current page state
+		revisionsRoute.Get(
+			"/<<revision_id>>/compare",
+			pageHandler(revisionCompareHandler), "compare",
+		)
+
+		// Compare two revisions
+		revisionsRoute.Get(
+			"/<<revision_id>>/compare/<<other_revision_id>>",
+			pageHandler(revisionCompareHandler), "compare_to",
+		)
+
 		// Choose page type
 		pagesRoute.Get(
 			fmt.Sprintf("/<<%s>>/type", PageIDVariableName),

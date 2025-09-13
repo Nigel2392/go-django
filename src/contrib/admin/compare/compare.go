@@ -8,9 +8,9 @@ import (
 )
 
 type Comparison interface {
-	Label(ctx context.Context) string
-	HTMLDiff(ctx context.Context) (template.HTML, error)
-	HasChanged(ctx context.Context) (bool, error)
+	Label() string
+	HTMLDiff() (template.HTML, error)
+	HasChanged() (bool, error)
 }
 
 type ComparisonWrapper interface {
@@ -18,4 +18,4 @@ type ComparisonWrapper interface {
 	Unwrap() []Comparison
 }
 
-type ComparisonFactory func(ctx context.Context, fieldname string, old, new attrs.Definer) (Comparison, error)
+type ComparisonFactory func(ctx context.Context, label func(context.Context) string, fieldName string, modelMeta attrs.ModelMeta, old, new attrs.Definer) (Comparison, error)

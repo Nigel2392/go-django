@@ -1,0 +1,34 @@
+{{ template "base" . }}
+
+{{ define "title" }}{{ T "Compare Revision" }}{{ end }}
+
+{{ define "extra_css" }}
+{{ end }}
+
+{{ define "extra_js" }}
+{{ end }}
+
+{{ define "content" }}
+    <div class="revision-compare">
+        {{ $Comparison := .Data.comparison }}
+        {{ if $Comparison }}
+            {{ $html := $Comparison.HTMLDiff }}
+                <div class="revision-compare__diff comparison">
+                    {{ $html }}
+                </div>
+        {{ else }}
+            <div class="notification info">
+                {{ T "No differences found between the selected revisions." }}
+            </div>
+        {{ end }}
+
+        <div class="form-buttons">
+            {{ $BackURL := (.Get "BackURL") }}
+            {{ if $BackURL }}
+                <a class="button warning form-buttons__ending" href="{{ $BackURL }}">{{ T "Back" }}</a>
+            {{ else }}
+                <a class="button warning form-buttons__ending" href="{{ url "admin:pages:list" .Data.page_object.PK }}">{{ T "Back" }}</a>
+            {{ end }}
+        </div>
+    </div>
+{{ end }}

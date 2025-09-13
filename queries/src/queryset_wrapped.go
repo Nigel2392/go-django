@@ -71,6 +71,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) afterReadExec(res any) error {
 }
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) WithContext(ctx context.Context) CONV {
+	w = w.clone()
 	w.NullQuerySet = w.NullQuerySet.WithContext(ctx)
 	return w.embedder
 }
