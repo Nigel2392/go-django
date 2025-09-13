@@ -79,9 +79,14 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 			trans.S("Slug"),
 			pageRevisionData("Slug"),
 		),
-		list.FieldColumn[*revisions.Revision](
+		list.FuncColumn(
 			trans.S("User"),
-			"User",
+			func(r *http.Request, defs attrs.Definitions, row *revisions.Revision) interface{} {
+				if row.User == nil {
+					return nil
+				}
+				return attrs.ToString(row.User)
+			},
 		),
 		&columns.ListActionsColumn[*revisions.Revision]{
 			Heading: trans.S("Actions"),
@@ -152,7 +157,8 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 				WithContext(r.Context()).
 				ForObjects(p).
 				OrderBy("-CreatedAt").
-				Base()
+				Base().
+				SelectRelated("User")
 		},
 		ChangeContextFn: func(req *http.Request, qs *queries.QuerySet[*revisions.Revision], viewCtx ctx.Context) (ctx.Context, error) {
 			var context = admin.NewContext(
