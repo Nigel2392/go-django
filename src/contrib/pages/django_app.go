@@ -549,7 +549,7 @@ func NewAppConfig() django.AppConfig {
 		)
 
 		// Revision detail
-		revisionsRoute.Get(
+		revisionsRoute.Any(
 			"/<<revision_id>>",
 			pageHandler(revisionDetailHandler), "detail",
 		)

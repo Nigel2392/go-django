@@ -109,10 +109,10 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 	)
 
 	var view = &list.View[*revisions.Revision]{
-		ListColumns:   columns,
-		DefaultAmount: 25,
-		Model:         &revisions.Revision{},
-
+		ListColumns:     columns,
+		DefaultAmount:   25,
+		Model:           &revisions.Revision{},
+		PageParam:       "page",
 		AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 		BaseTemplateKey: admin.BASE_KEY,
 		TemplateName:    "pages/admin/revisions/list.tmpl",
@@ -276,6 +276,9 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 		}
 
 		ref.LatestRevisionCreatedAt = chosenRevision.CreatedAt
+		if publishPage {
+			ref.PublishedAt = chosenRevision.CreatedAt
+		}
 
 		if publishPage {
 			// if publishing, set the published at time to now
@@ -284,6 +287,16 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 				UpdateNode(ref)
 			if err != nil {
 				return errors.Wrap(err, "failed to update page node")
+			}
+		} else {
+			// if not publishing, just save the page object without changing the published at time
+			var err = NewPageQuerySet().
+				WithContext(ctx).
+				ExplicitSave().
+				Select("LatestRevisionCreatedAt").
+				updateNode(ref)
+			if err != nil {
+				return errors.Wrap(err, "failed to update page")
 			}
 		}
 
@@ -418,12 +431,18 @@ func revisionCompareHandler(w http.ResponseWriter, r *http.Request, a *admin.App
 	var newChangedTime time.Time
 	var otherRevisionID = vars.GetInt("other_revision_id")
 	if otherRevisionID == 0 {
-		var latestRevision, err = revisions.LatestRevision(r.Context(), p)
+		var latestRevisionRow, err = revisions.NewRevisionQuerySet[Page]().
+			WithContext(r.Context()).
+			ForObjects(p).
+			Filter("CreatedAt", p.LatestRevisionCreatedAt).
+			OrderBy("-CreatedAt").
+			Get()
 		except.Assert(
 			err == nil, http.StatusInternalServerError,
 			"failed to retrieve latest revision for page: %v", err,
 		)
 
+		var latestRevision = latestRevisionRow.Object
 		newInstance, err = (*revisions.TypedRevision[Page])(latestRevision).AsObject(r.Context())
 		except.Assert(
 			err == nil, http.StatusInternalServerError,

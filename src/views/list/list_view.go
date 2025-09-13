@@ -278,7 +278,7 @@ func (v *View[T]) getPaginator(req *http.Request, qs *queries.QuerySet[T]) (pagi
 		page        int
 		err         error
 	)
-	if amountValue == "" {
+	if amountValue == "" || v.AmountParam == "" {
 		amount = v.DefaultAmount
 	} else {
 		amount, err = strconv.Atoi(amountValue)

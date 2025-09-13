@@ -9,32 +9,19 @@ import (
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
-	"github.com/Nigel2392/go-django/queries/src/specific"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
 type RevisionQuerySet[T attrs.Definer] struct {
-	*queries.WrappedQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]]
+	*queries.WrappedQuerySet[*Revision, *RevisionQuerySet[T], *queries.QuerySet[*Revision]]
 }
 
 func newRevisionQuerySet[T attrs.Definer](qs *queries.QuerySet[*Revision]) *RevisionQuerySet[T] {
 	var s = &RevisionQuerySet[T]{}
-	s.WrappedQuerySet = queries.WrapQuerySet[specific.Specific[*Revision, T]](
-		specific.GetSpecificQuerySet(qs, specific.SpecificQuerySetOptions[*Revision, T]{
-			GetSpecificPreloadData: func(obj *Revision) (id any, contentType string, ok bool) {
-				return obj.ObjectID, obj.ContentType, obj.ObjectID != "" && obj.ContentType != ""
-			},
-			GetSpecificTargetID: func(target T) (id any, ok bool) {
-				id, _, err := getIdAndContentType(context.Background(), target)
-				if err != nil {
-					return nil, false
-				}
-				return id, true
-			},
-		}),
-		s,
+	s.WrappedQuerySet = queries.WrapQuerySet[*Revision](
+		qs, s,
 	)
 	return s
 }
@@ -43,14 +30,14 @@ func NewRevisionQuerySet[T attrs.Definer]() *RevisionQuerySet[T] {
 	return newRevisionQuerySet[T](queries.GetQuerySet(&Revision{}))
 }
 
-func (qs *RevisionQuerySet[T]) CloneQuerySet(wrapped *queries.WrappedQuerySet[specific.Specific[*Revision, T], *RevisionQuerySet[T], *specific.SpecificQuerySet[*Revision, T, *queries.QuerySet[*Revision]]]) *RevisionQuerySet[T] {
+func (qs *RevisionQuerySet[T]) CloneQuerySet(wrapped *queries.WrappedQuerySet[*Revision, *RevisionQuerySet[T], *queries.QuerySet[*Revision]]) *RevisionQuerySet[T] {
 	return &RevisionQuerySet[T]{
 		WrappedQuerySet: wrapped,
 	}
 }
 
 func (w *RevisionQuerySet[T]) Base() *queries.QuerySet[*Revision] {
-	return w.WrappedQuerySet.Base().Base()
+	return w.WrappedQuerySet.Base()
 }
 
 func (qs *RevisionQuerySet[T]) ForObjects(objs ...attrs.Definer) *RevisionQuerySet[T] {
