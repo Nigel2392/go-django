@@ -54,15 +54,6 @@ func PanelComparison(ctx context.Context, panels []Panel, oldInstance attrs.Defi
 			continue
 		}
 
-		changed, err := comp.HasChanged()
-		if err != nil {
-			return nil, err
-		}
-
-		if !changed {
-			continue
-		}
-
 		if unwrapper, ok := comp.(compare.ComparisonWrapper); ok {
 			comparisons = append(comparisons, unwrapper.Unwrap()...)
 		} else {
@@ -524,27 +515,11 @@ func (t *tabbedPanel) Validate(r *http.Request, ctx context.Context, form forms.
 }
 
 func (t *tabbedPanel) Comparison(ctx context.Context, oldInstance attrs.Definer, newInstance attrs.Definer) (compare.Comparison, error) {
-	var comparisons = make([]compare.Comparison, 0, len(t.tabs))
+	var allPanels = make([]Panel, 0)
 	for _, tab := range t.tabs {
-		var tabComparisons, err = PanelComparison(ctx, tab.panels, oldInstance, newInstance)
-		if err != nil {
-			return nil, err
-		}
-
-		if tabComparisons != nil {
-			comparisons = append(comparisons, tabComparisons)
-		}
+		allPanels = append(allPanels, tab.panels...)
 	}
-
-	if len(comparisons) == 1 {
-		return comparisons[0], nil
-	}
-
-	if len(comparisons) == 0 {
-		return nil, nil
-	}
-
-	return compare.MultipleComparison(ctx, comparisons...), nil
+	return PanelComparison(ctx, allPanels, oldInstance, newInstance)
 }
 
 func (t *tabbedPanel) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
