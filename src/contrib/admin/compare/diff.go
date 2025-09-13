@@ -26,7 +26,7 @@ type TextDiff struct {
 	Changes   []Differential // list of changes
 	Separator string         // e.g. " ", "\n", etc.
 	Tagname   string         // e.g. "span", "div", etc.
-
+	Unsafe    bool
 }
 
 func (td *TextDiff) HTML() template.HTML {
@@ -38,18 +38,23 @@ func (td *TextDiff) HTML() template.HTML {
 	var htmlList = make([]string, 0, len(td.Changes))
 	for _, change := range td.Changes {
 
+		var stringValue = attrs.ToString(change.Value)
+		if td.Unsafe {
+			stringValue = html.UnescapeString(stringValue)
+		}
+
 		switch change.Type {
 		case DIFF_EQUALS:
-			htmlList = append(htmlList, html.EscapeString(attrs.ToString(change.Value)))
+			htmlList = append(htmlList, stringValue)
 		case DIFF_ADDED:
 			htmlList = append(htmlList, fmt.Sprintf(
 				`<%s class="diff-added">%s</%s>`,
-				tagname, html.EscapeString(attrs.ToString(change.Value)), tagname,
+				tagname, stringValue, tagname,
 			))
 		case DIFF_REMOVED:
 			htmlList = append(htmlList, fmt.Sprintf(
 				`<%s class="diff-removed">%s</%s>`,
-				tagname, html.EscapeString(attrs.ToString(change.Value)), tagname,
+				tagname, stringValue, tagname,
 			))
 		}
 	}

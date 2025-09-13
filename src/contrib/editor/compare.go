@@ -102,6 +102,7 @@ func (fc *editorComparison) HTMLDiff() (template.HTML, error) {
 			} else {
 				// Modified: show an inner textual diff of the rendered text
 				td := compare.DiffText(oh, nh)
+				td.Unsafe = true
 				inner := td.HTML()
 				// Wrap with a container so it's visually grouped as a modified block
 				out = append(out, `<div class="diff-modified">`+string(inner)+`</div>`)
@@ -125,14 +126,17 @@ func (fc *editorComparison) HTMLDiff() (template.HTML, error) {
 // renderAll renders each FeatureBlock to HTML (best-effort; empty string on error).
 func renderAll(ctx context.Context, blocks []FeatureBlock) []string {
 	out := make([]string, 0, len(blocks))
-	for i, b := range blocks {
+	for _, b := range blocks {
 		var buf bytes.Buffer
 		_ = b.Render(ctx, &buf) // best-effort; ignore error to keep diff robust
 		var s = buf.String()
 		s = extractText(s) // strip tags for cleaner diffs
 		s = squeezeSpaces(s)
 		if s == "" {
-			s = fmt.Sprintf("&lt;placeholder block %d: %v&gt;<br/>", i+1, b.Type())
+			s = fmt.Sprintf( // placeholder for empty blocks
+				"&lt;%s:%s&gt;<br/>",
+				b.Type(), b.ID(),
+			)
 		}
 		out = append(out, s)
 	}
@@ -145,7 +149,7 @@ func blockKeys(blocks []FeatureBlock) []string {
 	for i, b := range blocks {
 		id := b.ID()
 		if id == "" {
-			id = b.Type() + "#" + itoa(i)
+			id = fmt.Sprintf("%s#%d", b.Type(), i)
 		}
 		keys[i] = id
 	}

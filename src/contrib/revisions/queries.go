@@ -61,9 +61,17 @@ func (qs *RevisionQuerySet) ForObjects(objs ...attrs.Definer) *RevisionQuerySet 
 	var filters = make([]expr.Expression, 0, objMapping.Len())
 	for head := objMapping.Front(); head != nil; head = head.Next() {
 		var cTypeExpr expr.ClauseExpression = expr.Q("ContentType", head.Key)
-		cTypeExpr = cTypeExpr.And(
-			expr.Q("ObjectID__in", head.Value),
-		)
+
+		if len(head.Value) == 1 {
+			cTypeExpr = cTypeExpr.And(
+				expr.Q("ObjectID", head.Value[0]),
+			)
+		} else {
+			cTypeExpr = cTypeExpr.And(
+				expr.Q("ObjectID__in", head.Value),
+			)
+		}
+
 		filters = append(filters, cTypeExpr)
 	}
 
@@ -100,6 +108,17 @@ func (qs *RevisionQuerySet) Types(types ...any) *RevisionQuerySet {
 	}
 
 	return qs.Filter("ContentType__in", typeNames)
+}
+
+func (qs *RevisionQuerySet) Users(users ...users.User) *RevisionQuerySet {
+	if len(users) == 0 {
+		return qs
+	}
+	return qs.Filter("User__in", users)
+}
+
+func (qs *RevisionQuerySet) Since(t time.Time) *RevisionQuerySet {
+	return qs.Filter("CreatedAt__gte", t)
 }
 
 func ListRevisions(ctx context.Context, limit, offset int) ([]*Revision, error) {
