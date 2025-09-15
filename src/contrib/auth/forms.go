@@ -386,12 +386,18 @@ func (f *BaseUserForm) Login() error {
 		if !errors.Is(err, errors.NoRows) {
 			logger.Errorf("Error getting user: %v", err)
 		}
-		return autherrors.ErrGenericAuthFail
+		return errors.Wrap(
+			autherrors.ErrGenericAuthFail,
+			trans.T(ctx, "Invalid username / password combination"),
+		)
 	}
 
 	var user = userRow.Object
 	if err := CheckPassword(user, string(cleaned["password"].(*Password).Raw)); err != nil {
-		return autherrors.ErrGenericAuthFail
+		return errors.Wrap(
+			autherrors.ErrGenericAuthFail,
+			trans.T(ctx, "Invalid username / password combination"),
+		)
 	}
 
 	if !user.IsActive {

@@ -522,7 +522,7 @@ func (f *BaseForm) Save() (map[string]interface{}, error) {
 	return data, nil
 }
 
-func (f *BaseForm) Validators() []func(Form, map[string]interface{}) []error {
+func (f *BaseForm) Validators() []func(f Form, cleanedData map[string]interface{}) []error {
 	return f.FormValidators
 }
 

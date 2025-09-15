@@ -111,9 +111,12 @@ func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 			if v.ValidFn != nil {
 				err = v.ValidFn(req, form)
 				if err != nil {
+
 					if v.InvalidFn != nil {
+						form.AddFormError(err)
 						err = v.InvalidFn(req, form)
 					}
+
 					goto checkFormErr
 				}
 			}

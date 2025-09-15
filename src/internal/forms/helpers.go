@@ -23,6 +23,7 @@ func IsValid(ctx context.Context, f Form) bool {
 	assert.False(rawData == nil, "You cannot call IsValid() without setting the data first.")
 
 	if f.WasCleaned() {
+
 		var errorList = f.ErrorList()
 		if len(errorList) > 0 {
 			return false
@@ -60,6 +61,7 @@ func IsValid(ctx context.Context, f Form) bool {
 			fn(f)
 		}
 	} else {
+
 		f.BindCleanedData(invalid, defaults, nil)
 		for _, fn := range f.CallbackOnInvalid() {
 			fn(f)

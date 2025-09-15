@@ -126,17 +126,22 @@ func (fc *editorComparison) HTMLDiff() (template.HTML, error) {
 // renderAll renders each FeatureBlock to HTML (best-effort; empty string on error).
 func renderAll(ctx context.Context, blocks []FeatureBlock) []string {
 	out := make([]string, 0, len(blocks))
-	for _, b := range blocks {
+	for i, b := range blocks {
 		var buf bytes.Buffer
 		_ = b.Render(ctx, &buf) // best-effort; ignore error to keep diff robust
 		var s = buf.String()
 		s = extractText(s) // strip tags for cleaner diffs
 		s = squeezeSpaces(s)
 		if s == "" {
+
 			s = fmt.Sprintf( // placeholder for empty blocks
-				"&lt;%s:%s&gt;<br/>",
+				"&lt;%s:%s&gt;",
 				b.Type(), b.ID(),
 			)
+
+			if i > 0 {
+				s = "<br/>" + s
+			}
 		}
 		out = append(out, s)
 	}

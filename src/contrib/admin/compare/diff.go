@@ -39,7 +39,7 @@ func (td *TextDiff) HTML() template.HTML {
 	for _, change := range td.Changes {
 
 		var stringValue = attrs.ToString(change.Value)
-		if td.Unsafe {
+		if !td.Unsafe {
 			stringValue = html.UnescapeString(stringValue)
 		}
 
