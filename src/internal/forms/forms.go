@@ -166,6 +166,7 @@ type BoundForm interface {
 	AsUL() template.HTML
 	Media() media.Media
 	Fields() []BoundField
+	FieldMap() map[string]BoundField // map of field name to BoundField
 	ErrorList() []error
 	UnpackErrors() []FieldError
 	Errors() *orderedmap.OrderedMap[string, []error]

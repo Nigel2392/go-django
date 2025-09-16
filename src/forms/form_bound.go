@@ -23,6 +23,7 @@ func (f *fieldError) Errors() []error {
 type _BoundForm struct {
 	Form       Form
 	Fields_    []BoundField
+	FieldMap_  map[string]BoundField
 	Errors_    *orderedmap.OrderedMap[string, []error]
 	ErrorList_ []error
 	media      media.Media
@@ -38,6 +39,10 @@ func (f *_BoundForm) AsUL() template.HTML {
 
 func (f *_BoundForm) Fields() []BoundField {
 	return f.Fields_
+}
+
+func (f *_BoundForm) FieldMap() map[string]BoundField {
+	return f.FieldMap_
 }
 
 func (f *_BoundForm) Errors() *orderedmap.OrderedMap[string, []error] {

@@ -135,6 +135,7 @@ func (f *BaseForm) BoundForm() BoundForm {
 		fields      = f.BoundFields()
 		errors      = f.BoundErrors()
 		boundFields = make([]BoundField, 0, fields.Len())
+		fieldMap    = make(map[string]BoundField, fields.Len())
 	)
 	//for head := fields.Front(); head != nil; head = head.Next() {
 	//	boundFields = append(boundFields, head.Value)
@@ -144,6 +145,7 @@ func (f *BaseForm) BoundForm() BoundForm {
 		for _, k := range f.fieldOrder {
 			if v, ok := fields.Get(k); ok {
 				boundFields = append(boundFields, v)
+				fieldMap[k] = v
 				had[k] = struct{}{}
 			}
 		}
@@ -155,12 +157,14 @@ func (f *BaseForm) BoundForm() BoundForm {
 				)
 				if _, ok := had[k]; !ok {
 					boundFields = append(boundFields, v)
+					fieldMap[k] = v
 				}
 			}
 		}
 	} else {
 		for head := fields.Front(); head != nil; head = head.Next() {
 			boundFields = append(boundFields, head.Value)
+			fieldMap[head.Key] = head.Value
 		}
 	}
 
@@ -169,6 +173,7 @@ func (f *BaseForm) BoundForm() BoundForm {
 		Fields_:    boundFields,
 		Errors_:    errors,
 		ErrorList_: f.ErrorList_,
+		FieldMap_:  fieldMap,
 	}
 }
 
