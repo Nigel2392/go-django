@@ -160,7 +160,7 @@ func parseGoTemplateTCalls(template string, parseFuncs map[string]func(tokens []
 	blockRegex := regexp.MustCompile(`\{\{((?:.|\n|\r\n|\t)*?)\}\}`)
 	blocks := blockRegex.FindAllStringSubmatchIndex(template, -1)
 
-	tokenRegex := regexp.MustCompile(`[A-Za-z_][A-Za-z0-9_.]*|"(?:\\.|[^"\\])*"|[(){}:=|]`)
+	tokenRegex := regexp.MustCompile(`[A-Za-z_][A-Za-z0-9_.]*|"(?:\\.|[^"\\])*"|` + "`" + `(?:\\.|[^` + "`" + `\\])*` + "`" + `|[(){}:=|]`)
 
 	return func(yield func(int, templateTranslation) bool) {
 		for matchIdx, match := range blocks {
