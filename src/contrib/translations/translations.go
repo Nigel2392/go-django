@@ -24,7 +24,6 @@ import (
 type translationsCommandContext struct {
 	dir  flags.List
 	locs flags.List
-	file string
 }
 
 var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
@@ -33,11 +32,9 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 	FlagFunc: func(m command.Manager, stored *translationsCommandContext, f *flag.FlagSet) error {
 		stored.dir = flags.NewList(django.ConfigGet(django.Global.Settings, APPVAR_TRANSLATIONS_DIR, []string{})...)
 		stored.locs = flags.NewList(django.ConfigGet[[]string](django.Global.Settings, APPVAR_TRANSLATIONS_LOCALES)...)
-		stored.file = django.ConfigGet(django.Global.Settings, APPVAR_TRANSLATIONS_FILE, translationsFile)
 
 		f.Var(&stored.dir, "dir", "The directory to search for translation strings")
 		f.Var(&stored.locs, "locales", "Generate the following locales for the translation strings")
-		f.StringVar(&stored.file, "file", translationsFile, "Output the found translations to a file (default is translations.yml)")
 
 		return nil
 	},
@@ -79,11 +76,6 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 		if len(matches) == 0 {
 			logger.Info("No translation strings found.")
 			return nil
-		}
-
-		var outputFile = stored.file
-		if outputFile == "" {
-			outputFile = translationsFile
 		}
 
 		// Encode the new (or old header) and matches to YAML
@@ -142,7 +134,7 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 			}
 		}
 
-		logger.Infof("Writing translations to: %s", outputFile)
+		logger.Infof("Writing translations to: %s", translationsFile)
 
 		var oldMatchMap = make(map[string]Translation)
 		for _, m := range translatorApp.translationMatches {
@@ -221,7 +213,7 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 		}
 
 		file, err := os.OpenFile(
-			outputFile,
+			translationsFile,
 			os.O_CREATE|os.O_RDWR, 0644,
 		)
 		if err != nil {
@@ -294,7 +286,7 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 		}
 
 		// Success!
-		logger.Infof("Translations written to %s successfully.", outputFile)
+		logger.Infof("Translations written to %s successfully.", translationsFile)
 		return nil
 	},
 }
@@ -307,7 +299,7 @@ func readTranslationsYAML(rd io.Reader, header *FileTranslationsHeader, slice []
 		if err == io.EOF {
 			return slice, nil // No matches found
 		}
-		return nil, fmt.Errorf(
+		return slice, fmt.Errorf(
 			"error decoding translations header: %w", err,
 		)
 	}
@@ -318,10 +310,11 @@ func readTranslationsYAML(rd io.Reader, header *FileTranslationsHeader, slice []
 			if err == io.EOF {
 				break
 			}
-			return nil, fmt.Errorf(
-				"eror decoding Translation: %w", err,
+			return slice, fmt.Errorf(
+				"error decoding Translation: %w", err,
 			)
 		}
+
 		slice = append(slice, m)
 	}
 

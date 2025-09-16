@@ -2,9 +2,9 @@ package translations
 
 import (
 	"context"
+	"embed"
 	"fmt"
 	"io/fs"
-	"os"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -18,6 +18,9 @@ import (
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 )
+
+//go:embed translations.yml
+var translationsFileFS embed.FS
 
 type Finder interface {
 	Find(fSys fs.FS) ([]Translation, error)
@@ -105,25 +108,36 @@ func NewAppConfig() django.AppConfig {
 			}
 		}
 
-		var readTranslationsFrom, ok = django.ConfigGetOK(
-			settings, APPVAR_TRANSLATIONS_FILE, translationsFile,
-		)
-		if !ok {
-			readTranslationsFrom = translationsFile
-		}
-
-		var file, err = os.Open(readTranslationsFrom)
-		if err != nil {
-			return err
-		}
-		defer file.Close()
-
 		var hdr = &FileTranslationsHeader{}
-		cfg.translationMatches, err = readTranslationsYAML(file, hdr, make([]Translation, 0))
-		if err != nil {
-			return err
+		var translationsList []Translation
+		for _, fsys := range append([]fs.FS{translationsFileFS}, cfg.filesystems...) {
+			var f, err = fs.Stat(fsys, translationsFile)
+			if err != nil || f.IsDir() {
+				continue
+			}
+
+			file, err := fsys.Open(translationsFile)
+			if err != nil {
+				return errors.Wrapf(
+					err, "failed to open %s in filesystem", translationsFile,
+				)
+			}
+
+			translationsList, err = readTranslationsYAML(
+				file, hdr, translationsList,
+			)
+			if err != nil {
+				file.Close()
+				return errors.Wrapf(
+					err, "failed to read translations from %s in filesystem",
+					translationsFile,
+				)
+			}
+
+			file.Close()
 		}
 
+		cfg.translationMatches = translationsList
 		cfg.translationHeader = newTranslationHeader(hdr)
 		cfg.translations = mapFromTranslations(cfg.translationMatches)
 

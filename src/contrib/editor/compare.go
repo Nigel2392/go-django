@@ -17,7 +17,10 @@ import (
 )
 
 func init() {
-	compare.RegisterComparisonType(reflect.TypeOf((*EditorJSBlockData)(nil)), EditorComparison)
+	compare.RegisterComparisonType(
+		reflect.TypeOf((*EditorJSBlockData)(nil)),
+		EditorComparison,
+	)
 }
 
 var (
