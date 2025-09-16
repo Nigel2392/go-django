@@ -60,7 +60,7 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 			locales = flags.NewList()
 		}
 
-		for _, fsys := range append(dirFsys, translatorApp.filesystems...) {
+		for _, fsys := range append(append(dirFsys, translationsFileFS), translatorApp.filesystems...) {
 			for _, finder := range translatorApp.finders {
 				var found, err = finder.Find(fsys)
 				if err != nil {
