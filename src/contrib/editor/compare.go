@@ -92,30 +92,42 @@ func (fc *editorComparison) HTMLDiff() (template.HTML, error) {
 	var out []string
 	oi, nj := 0, 0
 	for _, op := range ops {
+		var outBuf = new(strings.Builder)
 		switch op {
 		case "equal":
 			// Same key; check if content changed
 			oh := oldHTML[oi]
 			nh := newHTML[nj]
 			if oh == nh {
-				out = append(out, nh) // unchanged
+				// out = append(out, nh) // unchanged
+				outBuf.WriteString(`<div class="diff-unchanged">`)
+				outBuf.WriteString(nh)
+				outBuf.WriteString(`</div>`)
 			} else {
 				// Modified: show an inner textual diff of the rendered text
 				td := compare.DiffText(oh, nh)
 				td.Unsafe = true
 				inner := td.HTML()
 				// Wrap with a container so it's visually grouped as a modified block
-				out = append(out, `<div class="diff-modified">`+string(inner)+`</div>`)
+				outBuf.WriteString(`<div class="diff-modified">`)
+				outBuf.WriteString(string(inner))
+				outBuf.WriteString(`</div>`)
 			}
 			oi++
 			nj++
 		case "delete":
-			out = append(out, `<div class="diff-removed">`+oldHTML[oi]+`</div>`)
+			outBuf.WriteString(`<div class="diff-removed">`)
+			outBuf.WriteString(oldHTML[oi])
+			outBuf.WriteString(`</div>`)
 			oi++
 		case "insert":
-			out = append(out, `<div class="diff-added">`+newHTML[nj]+`</div>`)
+			outBuf.WriteString(`<div class="diff-added">`)
+			outBuf.WriteString(newHTML[nj])
+			outBuf.WriteString(`</div>`)
 			nj++
 		}
+
+		out = append(out, outBuf.String())
 	}
 
 	return template.HTML(strings.Join(out, "")), nil
@@ -126,22 +138,19 @@ func (fc *editorComparison) HTMLDiff() (template.HTML, error) {
 // renderAll renders each FeatureBlock to HTML (best-effort; empty string on error).
 func renderAll(ctx context.Context, blocks []FeatureBlock) []string {
 	out := make([]string, 0, len(blocks))
-	for i, b := range blocks {
+	for _, b := range blocks {
 		var buf bytes.Buffer
 		_ = b.Render(ctx, &buf) // best-effort; ignore error to keep diff robust
 		var s = buf.String()
 		s = extractText(s) // strip tags for cleaner diffs
 		s = squeezeSpaces(s)
 		if s == "" {
-
 			s = fmt.Sprintf( // placeholder for empty blocks
 				"&lt;%s:%s&gt;",
 				b.Type(), b.ID(),
 			)
-
-			if i > 0 {
-				s = "<br/>" + s
-			}
+		} else {
+			s = html.EscapeString(s) // escape to avoid breaking the diff HTML
 		}
 		out = append(out, s)
 	}
@@ -238,34 +247,4 @@ func squeezeSpaces(s string) string {
 		}
 	}
 	return strings.TrimSpace(b.String())
-}
-
-// tiny int->string without fmt (keeps imports tight)
-func itoa(i int) string {
-	// enough for typical sizes; fallback to fmt if you prefer
-	return strconvItoa(i)
-}
-
-// minimal base-10 int to string
-func strconvItoa(x int) string {
-	// handle zero
-	if x == 0 {
-		return "0"
-	}
-	neg := x < 0
-	if neg {
-		x = -x
-	}
-	var buf [20]byte
-	i := len(buf)
-	for x > 0 {
-		i--
-		buf[i] = byte('0' + x%10)
-		x /= 10
-	}
-	if neg {
-		i--
-		buf[i] = '-'
-	}
-	return string(buf[i:])
 }

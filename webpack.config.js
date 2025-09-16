@@ -112,7 +112,7 @@ module.exports = [
         ]),
     },
     {
-        entry: './src/contrib/pages/assets/static_src/index.ts',
+        entry: './src/contrib/pages/static_src/index.ts',
         output: {
             'path': path.resolve(__dirname, 'src/contrib/pages/assets/static/pages/admin/js/'),
             'filename': 'index.js'

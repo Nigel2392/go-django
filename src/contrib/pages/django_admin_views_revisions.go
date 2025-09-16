@@ -123,8 +123,9 @@ func listRevisionHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDef
 							),
 							p.PK,
 						)
+						m["data-pages-revision-compare-current-id-value"] = row.ID
 						m["data-pages-revision-compare-url-value"] = addNextUrl(
-							django.Reverse("admin:pages:revisions:compare_to", p.PK, row.ID, "__ID__"),
+							django.Reverse("admin:pages:revisions:compare_to", p.PK, "__OLD_ID__", "__NEW_ID__"),
 							r.URL.String(),
 						)
 						return m
