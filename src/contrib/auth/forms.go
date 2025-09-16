@@ -401,12 +401,16 @@ func (f *BaseUserForm) Login() error {
 	}
 
 	if !user.IsActive {
-		return autherrors.ErrIsActive
+		return errors.Wrap(
+			autherrors.ErrIsActive,
+			trans.T(ctx, "User is not active"),
+		)
 	}
 
 	if user, err = Login(f.Request, user); err != nil {
 		return err
 	}
+
 	f.Instance = user
 	return nil
 }

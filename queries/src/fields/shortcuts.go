@@ -79,12 +79,12 @@ func fieldConstructor[FieldT attrs.Field, T any](name string, fieldFunc func(att
 
 	if cnf.Rel == nil {
 
-		var nT = reflect.TypeOf(new(T))
-		if nT.Elem().Kind() == reflect.Interface {
+		var nT = reflect.TypeOf(new(T)).Elem()
+		if nT.Elem().Kind() == reflect.Interface || nT.Kind() == reflect.Ptr {
 			nT = nT.Elem()
 		}
 
-		var rV = reflect.New(nT).Elem()
+		var rV = reflect.New(nT)
 		var newObject = rV.Interface().(attrs.Definer)
 		cnf.Rel = attrs.Relate(
 			newObject,
