@@ -69,7 +69,7 @@ func renderCheckList(fb editor.FeatureBlock, items []checkListItem) templ.Compon
 			templ_7745c5c3_Var1 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		var templ_7745c5c3_Var2 = []any{fb.ClassName()}
+		var templ_7745c5c3_Var2 = []any{"checklist", fb.ClassName()}
 		templ_7745c5c3_Err = templ.RenderCSSItems(ctx, templ_7745c5c3_Buffer, templ_7745c5c3_Var2...)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
