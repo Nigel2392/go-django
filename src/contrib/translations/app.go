@@ -5,6 +5,7 @@ import (
 	"embed"
 	"fmt"
 	"io/fs"
+	"os"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -110,7 +111,19 @@ func NewAppConfig() django.AppConfig {
 
 		var hdr = &FileTranslationsHeader{}
 		var translationsList []Translation
-		for _, fsys := range append([]fs.FS{translationsFileFS}, cfg.filesystems...) {
+
+		var dirs = make([]fs.FS, 0, len(cfg.filesystems)+2)
+		dirs = append(dirs, translationsFileFS)
+		wd, err := os.Getwd()
+		if err == nil {
+			var dirFS = os.DirFS(wd)
+			var f, err = fs.Stat(dirFS, translationsFile)
+			if err == nil && !f.IsDir() {
+				dirs = append(dirs, dirFS)
+			}
+		}
+
+		for _, fsys := range append(dirs, cfg.filesystems...) {
 			var f, err = fs.Stat(fsys, translationsFile)
 			if err != nil || f.IsDir() {
 				continue

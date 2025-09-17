@@ -40,11 +40,12 @@ type Renderer interface {
 }
 
 type Config struct {
-	AppName string
-	FS      fs.FS
-	Bases   []string
-	Matches func(path string) bool
-	Funcs   template.FuncMap
+	AppName      string
+	FS           fs.FS
+	Bases        []string
+	Matches      func(path string) bool
+	Funcs        template.FuncMap
+	RequestFuncs func(*http.Request) template.FuncMap
 }
 
 func MergeConfig(dst, src *Config) *Config {
@@ -348,6 +349,9 @@ func (r *TemplateRenderer) getTemplateForRequest(name string, paths []string, co
 		maps.Copy(funcMap, config.Funcs)
 	}
 	for _, fn := range buildFuncs {
+		maps.Copy(funcMap, fn(req))
+	}
+	for _, fn := range r.reqFuncs {
 		maps.Copy(funcMap, fn(req))
 	}
 
