@@ -205,7 +205,21 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 		definition = DefinitionForObject(page)
 		panels     []admin.Panel
 	)
-	if definition == nil || definition.AddPanels == nil {
+
+	if definition.DisallowRoot {
+		// except.Fail(http.StatusBadRequest, "this page type cannot be a root page")
+		messages.Error(r, trans.T(r.Context(), "This page type cannot be a root page"))
+		http.Redirect(w, r, django.Reverse("admin:pages:root_type"), http.StatusSeeOther)
+		return
+	}
+
+	if definition.DissallowCreate {
+		messages.Error(r, trans.T(r.Context(), "Creation of this page type is disallowed"))
+		http.Redirect(w, r, django.Reverse("admin:pages:root_type"), http.StatusSeeOther)
+		return
+	}
+
+	if definition.AddPanels == nil {
 		panels = make([]admin.Panel, 0, fieldDefs.Len())
 		for _, def := range fieldDefs.Fields() {
 			var formField = def.FormField()

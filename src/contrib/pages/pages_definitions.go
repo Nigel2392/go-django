@@ -41,10 +41,16 @@ type PageDefinition struct {
 	// MaxNum          int
 
 	// Disallow creation of this model through the admin interface
-	DissallowCreate bool
+	DisallowCreate bool
 
 	// Disallow this page type to be a root page (i.e. it must have a parent)
 	DisallowRoot bool
+
+	// IsValidChild checks if the given page type is allowed as a child of this page type
+	IsValidChild func(parent Page) (bool, error)
+
+	// IsValidParent checks if the given page type is allowed as a parent of this page type
+	IsValidParent func(child Page) (bool, error)
 
 	// Allowed parent page types for this model
 	//

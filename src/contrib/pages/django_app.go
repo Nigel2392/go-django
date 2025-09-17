@@ -187,6 +187,7 @@ func NewAppConfig() django.AppConfig {
 		)
 
 		Register(&PageDefinition{
+			DisallowCreate: true,
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 				ContentObject:  &PageNode{},
 				GetLabel:       trans.S("Page"),

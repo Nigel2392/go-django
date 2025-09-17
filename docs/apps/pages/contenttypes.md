@@ -25,7 +25,7 @@ type PageDefinition struct {
     OnReferenceBeforeDelete func(ctx context.Context, ref pages_models.PageNode, id int64) error
 
     // Controls for creation and hierarchy.
-    DissallowCreate bool
+    DisallowCreate bool
     DisallowRoot    bool
     ParentPageTypes []string
     ChildPageTypes  []string
