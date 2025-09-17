@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"reflect"
+	"strings"
 	"sync"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -188,9 +189,15 @@ func renderImage(fb editor.FeatureBlock, c context.Context, w io.Writer) error {
 		serveURL = django.Reverse("images:serve_id", id)
 	}
 
+	var classList = make([]string, 0, 2)
+	classList = append(classList, "image")
+	if cls := fb.ClassName(); cls != "" {
+		classList = append(classList, cls)
+	}
+
 	fmt.Fprintf(w,
-		"<img data-block-id=\"%s\" src=\"%s\" alt=\"%s\" data-id=\"%v\" />",
-		fb.ID(), serveURL, caption, id,
+		"<img data-block-id=\"%s\" src=\"%s\" alt=\"%s\" data-id=\"%v\" class=\"%s\" />",
+		fb.ID(), serveURL, caption, id, strings.Join(classList, " "),
 	)
 
 	return nil
