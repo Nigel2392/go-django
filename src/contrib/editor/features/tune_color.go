@@ -2,6 +2,7 @@ package features
 
 import (
 	"github.com/Nigel2392/go-django/src/contrib/editor"
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 )
 
 func init() {
@@ -46,7 +47,7 @@ var BackgroundColorTune = &BlockTune{
 		},
 	},
 	TuneFunc: colorTune("background-color", func(fb editor.FeatureBlock, data map[string]interface{}) {
-		if a, ok := data["stretched"]; ok {
+		if a, ok := data["stretched"]; ok && !django_reflect.IsZero(a) {
 			fb.Class("background-stretched")
 			fb.Attribute("data-stretched", a)
 		}

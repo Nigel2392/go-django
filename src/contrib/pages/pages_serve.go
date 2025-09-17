@@ -103,11 +103,32 @@ func PageServeView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if len(pathParts) > 0 && pathParts[0] == site.Root.Slug {
+	var rootPage = site.Root
+	if rootPage == nil {
+		var rootQS = NewPageQuerySet().
+			WithContext(r.Context()).
+			RootPages().
+			Published()
+
+		if len(pathParts) > 0 {
+			rootQS = rootQS.Filter("Slug", pathParts[0])
+		}
+
+		var row, err = rootQS.First()
+		if err != nil {
+			err = errors.Wrapf(err, "Error retrieving root page (no site root configured)")
+			pageNotFound(w, req, err, pathParts)
+			return
+		}
+
+		rootPage = row.Object
+	}
+
+	if len(pathParts) > 0 && pathParts[0] == rootPage.Slug {
 		pathParts = pathParts[1:]
 	}
 
-	pageObject, err := site.Root.Route(req, pathParts)
+	pageObject, err := rootPage.Route(req, pathParts)
 	if err != nil {
 		pageNotFound(w, req, err, pathParts)
 		return
