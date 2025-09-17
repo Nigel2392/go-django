@@ -174,17 +174,6 @@ func NewAppConfig() django.AppConfig {
 		}
 
 		pageApp.routePrefix = strings.TrimSuffix(pageApp.routePrefix, "/")
-		var handler = http.StripPrefix(pageApp.routePrefix, Serve(
-			http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
-		))
-		django.Global.Mux.Any(
-			fmt.Sprintf("%s/", pageApp.routePrefix),
-			handler, "page",
-		)
-		django.Global.Mux.Any(
-			fmt.Sprintf("%s/*", pageApp.routePrefix),
-			&pageRouteResolver{handler}, "pages",
-		)
 
 		Register(&PageDefinition{
 			DisallowCreate: true,
@@ -536,8 +525,14 @@ func NewAppConfig() django.AppConfig {
 			}}
 		}))
 
-		tpl.Funcs(template.FuncMap{
-			"PageURL": URLPath,
+		tpl.RequestFuncs(func(r *http.Request) template.FuncMap {
+			return template.FuncMap{
+				"site_for_request": func() (*Site, error) {
+					var _, site, err = SiteForRequest(r.Context())
+					return site, err
+				},
+				"page_url": URLPath,
+			}
 		})
 
 		pageApp.TemplateConfig = tpl.MergeConfig(
@@ -572,6 +567,18 @@ func NewAppConfig() django.AppConfig {
 		if !routePrefixSet {
 			django.Global.Log.Fatal(1, "Route prefix was not set before calling django.App.Initialize().")
 		}
+
+		var handler = http.StripPrefix(pageApp.routePrefix, Serve(
+			http.MethodGet, http.MethodPost, http.MethodPut, http.MethodDelete,
+		))
+		django.Global.Mux.Any(
+			fmt.Sprintf("%s/", pageApp.routePrefix),
+			handler, "page",
+		)
+		django.Global.Mux.Any(
+			fmt.Sprintf("%s/*", pageApp.routePrefix),
+			&pageRouteResolver{handler}, "pages",
+		)
 
 		var pagesRoute = admin.AdminSite.Route.Get(
 			"/pages", pageAdminAppHandler(listRootPageHandler), "pages",
