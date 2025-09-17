@@ -26,7 +26,7 @@ type BaseFeature struct {
 	Extra         map[string]interface{}
 	JSConstructor string
 	JSFiles       []string
-	CSSFles       []string
+	CSSFiles      []string
 	Validate      func(editor.BlockData) error
 	Build         func(*FeatureBlock) *FeatureBlock
 	Register      func(mux.Multiplexer)
@@ -73,7 +73,7 @@ func (b *BaseFeature) Media() media.Media {
 	for _, js := range b.JSFiles {
 		m.AddJS(&media.JSAsset{URL: django.Static(js)})
 	}
-	for _, css := range b.CSSFles {
+	for _, css := range b.CSSFiles {
 		m.AddCSS(media.CSS(
 			django.Static(css),
 		))

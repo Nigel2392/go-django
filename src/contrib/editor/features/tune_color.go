@@ -16,7 +16,7 @@ var TextColorTune = &BlockTune{
 	BaseFeature: BaseFeature{
 		Type:          "text-color",
 		JSConstructor: "TextColorTune",
-		CSSFles: []string{
+		CSSFiles: []string{
 			"editorjs/css/color-tune.css",
 		},
 		JSFiles: []string{
@@ -34,7 +34,7 @@ var BackgroundColorTune = &BlockTune{
 	BaseFeature: BaseFeature{
 		Type:          "background-color",
 		JSConstructor: "BackgroundColorTune",
-		CSSFles: []string{
+		CSSFiles: []string{
 			"editorjs/css/color-tune.css",
 		},
 		JSFiles: []string{

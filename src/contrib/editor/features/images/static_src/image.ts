@@ -66,9 +66,9 @@ class GoDjangoImageTool {
             listurl: this.config.chooserURL,
             onChosen: (value, previewText, data) => {
                 this.data.id = value;
-                this.data.caption = data.title;
+                this.data.caption = data.caption;
                 this.image.src = this.config.serveUrl.replace("<<id>>", value);
-                this.image.alt = data.title;
+                this.image.alt = data.caption;
                 this.image.dataset.id = value;
             },
             onClosed: () => {

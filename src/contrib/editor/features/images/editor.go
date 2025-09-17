@@ -91,7 +91,8 @@ var ImageFeature = &ImageFeatureBlock{
 		BaseFeature: features.BaseFeature{
 			Type:          "image",
 			JSConstructor: "GoDjangoImageTool",
-			CSSFles: []string{
+			CSSFiles: []string{
+				"chooser/css/index.css",
 				"images/editorjs/image.css",
 			},
 			JSFiles: []string{
@@ -200,7 +201,8 @@ var ImagesFeature = &ImageFeatureBlock{
 		BaseFeature: features.BaseFeature{
 			Type:          "images",
 			JSConstructor: "GoDjangoImagesTool",
-			CSSFles: []string{
+			CSSFiles: []string{
+				"chooser/css/index.css",
 				"images/editorjs/image.css",
 			},
 			JSFiles: []string{
