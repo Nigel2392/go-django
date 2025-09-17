@@ -38,7 +38,7 @@ func init() {
 			ContentObject: &TestPageParent1{},
 			GetLabel:      trans.S("TestPageParent1"),
 		},
-		DissallowCreate: true,
+		DisallowCreate:  true,
 		DisallowRoot:    true,
 		ParentPageTypes: []string{},
 		ChildPageTypes: []string{
