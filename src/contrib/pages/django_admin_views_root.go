@@ -213,7 +213,7 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 		return
 	}
 
-	if definition.DissallowCreate {
+	if definition.DisallowCreate {
 		messages.Error(r, trans.T(r.Context(), "Creation of this page type is disallowed"))
 		http.Redirect(w, r, django.Reverse("admin:pages:root_type"), http.StatusSeeOther)
 		return
