@@ -354,9 +354,16 @@ func renderImages(fb editor.FeatureBlock, c context.Context, w io.Writer) error 
 		return errors.New("images data is not a slice")
 	}
 
-	fmt.Fprint(w, "<div class=\"multi-images\" data-block-id=\"")
-	fmt.Fprint(w, fb.ID())
-	fmt.Fprint(w, "\">")
+	var classList = make([]string, 0, 2)
+	classList = append(classList, "multi-images")
+	if cls := fb.ClassName(); cls != "" {
+		classList = append(classList, cls)
+	}
+
+	fmt.Fprintf(w,
+		"<div class=\"%s\" data-block-id=\"%s\" data-block-count=\"%d\">",
+		strings.Join(classList, " "), fb.ID(), rImages.Len(),
+	)
 
 	for i := 0; i < rImages.Len(); i++ {
 		var img = rImages.Index(i).Interface().(string)
@@ -368,10 +375,14 @@ func renderImages(fb editor.FeatureBlock, c context.Context, w io.Writer) error 
 			url = django.Reverse("images:serve_id", img)
 		}
 
+		w.Write([]byte("<div class=\"image-wrapper\">"))
+
 		fmt.Fprintf(
 			w, "<img src=\"%s\" alt=\"editor image %s\" data-index=\"%d\" data-id=\"%v\" />",
 			url, img, i, img,
 		)
+
+		w.Write([]byte("</div>"))
 	}
 
 	fmt.Fprint(w, "</div>")
