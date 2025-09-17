@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "@editorjs/editorjs": "^2.30.8",
+    "@editorjs/editorjs": "^2.31.0",
     "@hotwired/stimulus": "^3.2.2",
     "@hotwired/stimulus-webpack-helpers": "^1.0.1",
     "css-loader": "^7.1.2",
