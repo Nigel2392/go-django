@@ -22,7 +22,6 @@ import (
 
 func init() {
 	editor.Register(PageLinkFeature)
-	editor.Tune("pagelink")
 }
 
 //go:embed static/**/*
