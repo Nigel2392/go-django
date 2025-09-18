@@ -110,7 +110,9 @@ templ renderList(fb editor.FeatureBlock, output *listOutput) {
 			{{ style += ";" }}
 		}
 		{{ style += fmt.Sprintf("--list-counter-type: %s;", output.Meta.CounterType) }}
-		{{ style += fmt.Sprintf("--list-counter-start: %d;", output.Meta.Start) }}
+		if output.Meta.Start > 0 {
+			{{ style += fmt.Sprintf("--list-counter-start: %d;", output.Meta.Start) }}
+		}
 		{{ fb.Attribute("style", style) }}
 		<ol class={ "list list-ordered", fb.ClassName() } data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
 			for _, item := range output.Items {
@@ -135,10 +137,10 @@ templ renderList(fb editor.FeatureBlock, output *listOutput) {
 templ renderListItems(fb editor.FeatureBlock, meta listItemMeta, items []listItem, listType string, depth int) {
 	switch listType {
 	case "ordered":
-		if meta.Start == 0 {
-			{{ meta.Start = 1 }} // IS OK BECAUSE WE DONT HOLD REFERENCE
+		{{ var style string }}
+		if meta.Start > 0 {
+			{{ style = fmt.Sprintf("--list-counter-start: %d;", meta.Start) }}
 		}
-		{{ var style = fmt.Sprintf("--list-counter-start: %d;", meta.Start) }}
 		if meta.CounterType != "" {
 			{{ style += fmt.Sprintf("--list-counter-type: %s;", meta.CounterType) }}
 		}
