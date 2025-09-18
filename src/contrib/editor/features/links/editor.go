@@ -45,6 +45,9 @@ func (i *PageLinkFeatureBlock) Config(widgetContext ctx.Context) map[string]inte
 
 func (i *PageLinkFeatureBlock) Media() media.Media {
 	var m = media.NewMedia()
+	m.AddCSS(
+		media.CSS(django.Static("pages/admin/css/chooser.css")),
+	)
 	m.AddJS(
 		media.JS(django.Static("links/editorjs/index.js")),
 	)
