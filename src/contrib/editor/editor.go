@@ -22,6 +22,8 @@ var editorJS_FS fs.FS
 
 const (
 	ROUTE_PATH = "/__go-editorjs__"
+
+	APPVAR_WRAP_RENDERED_BLOCKS = "APPVAR_WRAP_RENDERED_BLOCKS"
 )
 
 var (

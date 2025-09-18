@@ -1,6 +1,8 @@
 package features
 
 import (
+	"fmt"
+
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 )
@@ -28,7 +30,7 @@ var TextColorTune = &BlockTune{
 			return fb
 		},
 	},
-	TuneFunc: colorTune("text-color", nil),
+	TuneFunc: colorTune("text-color"),
 }
 
 var BackgroundColorTune = &BlockTune{
@@ -46,15 +48,10 @@ var BackgroundColorTune = &BlockTune{
 			return fb
 		},
 	},
-	TuneFunc: colorTune("background-color", func(fb editor.FeatureBlock, data map[string]interface{}) {
-		if a, ok := data["stretched"]; ok && !django_reflect.IsZero(a) {
-			fb.Class("background-stretched")
-			fb.Attribute("data-stretched", a)
-		}
-	}),
+	TuneFunc: colorTune("background-color"),
 }
 
-func colorTune(cssAttr string, extra func(fb editor.FeatureBlock, data map[string]interface{})) func(fb editor.FeatureBlock, data interface{}) editor.FeatureBlock {
+func colorTune(cssAttr string) func(fb editor.FeatureBlock, data interface{}) editor.FeatureBlock {
 	return func(fb editor.FeatureBlock, data interface{}) editor.FeatureBlock {
 		var (
 			d  map[string]interface{}
@@ -64,13 +61,38 @@ func colorTune(cssAttr string, extra func(fb editor.FeatureBlock, data map[strin
 		if d, ok = data.(map[string]interface{}); !ok {
 			return fb
 		}
-		if a, ok = d["color"]; ok {
-			fb.Class(cssAttr)
-			fb.Attribute("data-"+cssAttr, a)
+
+		if a, ok = d["color"]; !ok || django_reflect.IsZero(a) {
+			return fb
 		}
-		if extra != nil {
-			extra(fb, d)
+
+		wrapped, ok := fb.(*AttributeWrapperBlock)
+		if !ok {
+			wrapped = &AttributeWrapperBlock{
+				FeatureBlock: fb,
+				Attrs:        make(map[string]interface{}),
+				Classes:      make([]string, 0, 1),
+			}
 		}
-		return fb
+
+		wrapped.Classes = append(wrapped.Classes, cssAttr)
+
+		if stretched, _ := d["stretched"].(bool); stretched {
+			wrapped.Classes = append(wrapped.Classes, "background-stretched")
+		}
+
+		var atts = wrapped.Attributes()
+		var style string
+		if atts != nil {
+			style, _ = atts["style"].(string)
+		}
+
+		style += fmt.Sprintf(
+			"--%s: %s;", cssAttr, a,
+		)
+
+		wrapped.Attrs["style"] = style
+
+		return wrapped
 	}
 }

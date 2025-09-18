@@ -349,15 +349,21 @@ func renderImages(fb editor.FeatureBlock, c context.Context, w io.Writer) error 
 		imagesData = serveURLs
 	}
 
+	var classList = make([]string, 0, 3)
+	classList = append(classList, "multi-images")
+	var stretched, _ = fb.Data().Data["stretched"].(bool)
+	if stretched {
+		// If the image is stretched, we add a class to the wrapper
+		classList = append(classList, "stretched")
+	}
+
+	if cls := fb.ClassName(); cls != "" {
+		classList = append(classList, cls)
+	}
+
 	var rImages = reflect.ValueOf(imagesData)
 	if rImages.Kind() != reflect.Slice {
 		return errors.New("images data is not a slice")
-	}
-
-	var classList = make([]string, 0, 2)
-	classList = append(classList, "multi-images")
-	if cls := fb.ClassName(); cls != "" {
-		classList = append(classList, cls)
 	}
 
 	fmt.Fprintf(w,

@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/PuerkitoBio/goquery"
@@ -99,6 +100,12 @@ func (e *EditorJSBlockData) Render() (template.HTML, error) {
 		}
 	}
 
+	var wrap_rendered_blocks = django.ConfigGet(
+		django.Global.Settings,
+		APPVAR_WRAP_RENDERED_BLOCKS,
+		true,
+	)
+
 	var dataForPrefetch = make(map[string][]BlockData)
 	var prefetchedData = make(map[string]map[string]BlockData)
 	if len(prefetchableBlocks) > 0 {
@@ -134,9 +141,32 @@ func (e *EditorJSBlockData) Render() (template.HTML, error) {
 			}
 		}
 
+		if wrap_rendered_blocks {
+			b.WriteString("<div class=\"editorjs-block block-")
+			b.WriteString(block.Type())
+			b.WriteString("\" data-block-id=\"")
+			b.WriteString(block.ID())
+			b.WriteString("\">")
+		}
+
 		if err := block.Render(ctx, b); err != nil && RENDER_ERRORS {
 			fmt.Fprintf(b, "Error (%s): %s", block.Type(), err)
 		}
+
+		if wrap_rendered_blocks {
+			b.WriteString("</div>\n")
+		}
+	}
+
+	var inlines = make([]InlineFeature, 0)
+	for _, feature := range e.Features {
+		if inline, ok := feature.(InlineFeature); ok {
+			inlines = append(inlines, inline)
+		}
+	}
+
+	if len(inlines) == 0 {
+		return template.HTML(b.String()), nil
 	}
 
 	var goQueryDocument, err = goquery.NewDocumentFromReader(
@@ -147,13 +177,6 @@ func (e *EditorJSBlockData) Render() (template.HTML, error) {
 	}
 
 	var goQuerySelection = goQueryDocument.Find("body")
-	var inlines = make([]InlineFeature, 0)
-	for _, feature := range e.Features {
-		if inline, ok := feature.(InlineFeature); ok {
-			inlines = append(inlines, inline)
-		}
-	}
-
 	for _, inline := range inlines {
 		err = inline.ParseInlineData(goQuerySelection)
 		if err != nil {

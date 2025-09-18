@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/contrib/editor"
+	"github.com/a-h/templ"
 )
 
 var (
@@ -36,6 +37,56 @@ func (w *WrapperBlock) Render(ctx context.Context, wr io.Writer) error {
 		w.Feature(),
 		ErrRenderNotImplemented,
 	)
+}
+
+type AttributeWrapperBlock struct {
+	editor.FeatureBlock
+	Attrs   map[string]interface{}
+	Classes []string
+}
+
+func (a *AttributeWrapperBlock) Attribute(key string, value interface{}) {
+	if a.Attrs == nil {
+		a.Attrs = make(map[string]interface{})
+	}
+	a.Attrs[key] = value
+}
+
+func (a *AttributeWrapperBlock) Attributes() map[string]interface{} {
+	return a.Attrs
+}
+
+func (a *AttributeWrapperBlock) Render(ctx context.Context, w io.Writer) error {
+	if a.FeatureBlock == nil {
+		return fmt.Errorf("AttributeWrapperBlock has no FeatureBlock")
+	}
+
+	var atts = make(map[string]interface{}, len(a.Attrs)+1)
+	for k, v := range a.Attrs {
+		atts[k] = v
+	}
+	if len(a.Classes) > 0 {
+		var classList = atts["class"]
+		if classListStr, ok := classList.(string); ok && classListStr != "" {
+			classListStr = classListStr + " " + strings.Join(a.Classes, " ")
+			atts["class"] = classListStr
+		} else {
+			atts["class"] = strings.Join(a.Classes, " ")
+		}
+	}
+
+	fmt.Fprintf(w, "<div ")
+	err := templ.RenderAttributes(ctx, w, templ.Attributes(atts))
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(w, ">")
+	err = a.FeatureBlock.Render(ctx, w)
+	if err != nil {
+		return err
+	}
+	fmt.Fprint(w, "</div>")
+	return nil
 }
 
 type FeatureBlock struct {
