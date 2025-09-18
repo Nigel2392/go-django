@@ -523,8 +523,14 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS, isExcluded func(filename string)
 			var fieldMatches = make([]Translation, 0)
 			var fieldDefs = model.FieldDefs()
 			for i, field := range fieldDefs.Fields() {
+
+				var fieldPath = filepath.ToSlash(filepath.Join(".models", app.Name(), cType.Model(), "fields", field.Name()))
+				if isExcluded(fieldPath) {
+					continue
+				}
+
 				var fieldMatch = Translation{
-					Path:    filepath.ToSlash(filepath.Join(".models", app.Name(), cType.Model(), "fields")),
+					Path:    fieldPath,
 					Line:    col,
 					Col:     i,
 					Text:    field.Label(context.Background()),
