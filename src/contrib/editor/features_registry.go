@@ -100,11 +100,14 @@ func (e *EditorJSBlockData) Render() (template.HTML, error) {
 		}
 	}
 
-	var wrap_rendered_blocks = django.ConfigGet(
-		django.Global.Settings,
-		APPVAR_WRAP_RENDERED_BLOCKS,
-		true,
-	)
+	var wrap_rendered_blocks bool
+	if django.Global != nil {
+		wrap_rendered_blocks = django.ConfigGet(
+			django.Global.Settings,
+			APPVAR_WRAP_RENDERED_BLOCKS,
+			true,
+		)
+	}
 
 	var dataForPrefetch = make(map[string][]BlockData)
 	var prefetchedData = make(map[string]map[string]BlockData)
