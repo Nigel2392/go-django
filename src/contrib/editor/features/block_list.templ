@@ -5,36 +5,174 @@ import (
 	"io"
 
 	"github.com/Nigel2392/go-django/src/contrib/editor"
+	"fmt"
 )
 
 func init() {
 	editor.Register(ListBlock)
 }
 
+type listItemMeta struct {
+	Checked     bool   `json:"checked"` 			  // for checklist
+	Start       int    `json:"start,omitempty"`       // for ordered list
+	CounterType string `json:"counterType,omitempty"` // for ordered list, e.g. "decimal", "lower-alpha", "upper-roman"
+}
+
+type listItem struct {
+	Content string       `json:"content"`
+	Meta    listItemMeta `json:"meta"`
+	Items   []listItem   `json:"items"`
+}
+
+type listOutput struct {
+	Style string   `json:"style"`
+	Meta  listItemMeta `json:"meta"`
+	Items []listItem `json:"items"`
+}
+
+func parseItems(data []interface{}) []listItem {
+	var out = make([]listItem, 0, len(data))
+	for _, item := range data {
+		item := item.(map[string]interface{})
+		content, _ := item["content"].(string)
+		var li = listItem{
+			Content: content,
+		}
+		if meta, ok := item["meta"].(map[string]interface{}); ok {
+			li.Meta = listItemMeta{}
+			if checked, ok := meta["checked"].(bool); ok {
+				li.Meta.Checked = checked
+			}
+			if start, ok := meta["start"].(int); ok {
+				li.Meta.Start = start
+			}
+			if counterType, ok := meta["counterType"].(string); ok {
+				li.Meta.CounterType = counterType
+			}
+		}
+		if subItems, ok := item["items"].([]interface{}); ok && len(subItems) > 0 {
+			subList := parseItems(subItems)
+			if subList != nil {
+				li.Items = subList
+			}
+		}
+		out = append(out, li)
+	}
+	return out
+}
+
 var ListBlock = &Block{
 	BaseFeature: BaseFeature{
 		Type:          "list",
-		JSConstructor: "List",
+		JSConstructor: "EditorjsList",
 		JSFiles: []string{
-			"editorjs/js/deps/tools/list.js",
+			"editorjs/js/deps/tools/list@2.js",
 		},
 		Build: func(fb *FeatureBlock) *FeatureBlock {
 			return fb
 		},
 	},
 	RenderFunc: func(b editor.FeatureBlock, c context.Context, w io.Writer) error {
-		var items = make([]string, 0)
-		for _, item := range b.Data().Data["items"].([]interface{}) {
-			items = append(items, item.(string))
+		var data = b.Data().Data
+		var out =  &listOutput{
+			Items: make([]listItem, 0),
 		}
-		return renderList(b, items).Render(c, w)
+
+		style, ok := data["style"].(string)
+		if ok {
+			out.Style = style
+		}
+
+		meta, ok := data["meta"].(map[string]interface{})
+		if ok {
+			start, _ := meta["start"].(int)
+			counterType, _ := meta["counterType"].(string)
+			out.Meta = listItemMeta{
+				Start:       start,
+				CounterType: counterType,
+			}
+		}
+
+		items, ok := data["items"].([]interface{})
+		if ok {
+			out.Items = parseItems(items)
+		}
+
+		return renderList(b, out).Render(c, w)
 	},
 }
 
-templ renderList(fb editor.FeatureBlock, items []string) {
-	<ul class={ "list", fb.ClassName() } data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
-		for _, item := range items {
-			<li>@templ.Raw(item)</li>
+templ renderList(fb editor.FeatureBlock, output *listOutput) {
+	switch output.Style {
+	case "ordered":
+	    {{ style, _ := fb.Attributes()["style"].(string) }}
+		if style != "" && style[len(style)-1] != ';' {
+			{{ style += ";" }}
 		}
-	</ul>
+		{{ style += fmt.Sprintf("--list-counter-type: %s;", output.Meta.CounterType) }}
+		{{ style += fmt.Sprintf("--list-counter-start: %d;", output.Meta.Start) }}
+		{{ fb.Attribute("style", style) }}
+		<ol class={ "list list-ordered", fb.ClassName() } data-block-id={ fb.ID() } { templ.Attributes(fb.Attributes())... }>
+			for _, item := range output.Items {
+				<li>
+					@templ.Raw(item.Content)
+					if len(item.Items) > 0 {
+						@renderListItems(fb, item.Meta, item.Items, output.Style, 1)
+					}
+				</li>
+			}
+		</ol>
+
+	case "unordered":
+		@renderListItems(fb, output.Meta, output.Items, output.Style, 0)
+	case "checklist":
+		@renderListItems(fb, output.Meta, output.Items, output.Style, 0)
+	default:
+		{{ panic("unknown list style: " + output.Style) }}
+	}
+}
+
+templ renderListItems(fb editor.FeatureBlock, meta listItemMeta, items []listItem, listType string, depth int) {
+	switch listType {
+	case "ordered":
+		if meta.Start == 0 {
+			{{ meta.Start = 1 }} // IS OK BECAUSE WE DONT HOLD REFERENCE
+		}
+		{{ var style = fmt.Sprintf("--list-counter-start: %d;", meta.Start) }}
+		if meta.CounterType != "" {
+			{{ style += fmt.Sprintf("--list-counter-type: %s;", meta.CounterType) }}
+		}
+		<ol class={ "list list-ordered", fb.ClassName() } data-block-id={ fb.ID() } style={ style } { templ.Attributes(fb.Attributes())... }>
+			for _, item := range items {
+				<li>
+					@templ.Raw(item.Content)
+					if len(item.Items) > 0 {
+						@renderListItems(fb, item.Meta, item.Items, listType, depth+1)
+					}
+				</li>
+			}
+		</ol>
+	case "unordered":
+		<ul class={ "list list-unordered", fb.ClassName() } if depth == 0 { data-block-id={ fb.ID() } } { templ.Attributes(fb.Attributes())... }>
+			for _, item := range items {
+				<li>
+					@templ.Raw(item.Content)
+					if len(item.Items) > 0 {
+						@renderListItems(fb, item.Meta, item.Items, listType, depth+1)
+					}
+				</li>
+			}
+		</ul>
+	case "checklist":
+		<ul class={ "list list-checklist", fb.ClassName() } if depth == 0 { data-block-id={ fb.ID() } } { templ.Attributes(fb.Attributes())... }>
+			for _, item := range items {
+				<li class={ templ.KV("is-checked", item.Meta.Checked) }>
+					@templ.Raw(item.Content)
+					if len(item.Items) > 0 {
+						@renderListItems(fb, item.Meta, item.Items, listType, depth+1)
+					}
+				</li>
+			}
+		</ul>
+	}
 }
