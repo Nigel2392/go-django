@@ -23,3 +23,6 @@
 .editorjs-widget-container .ce-block *:focus-within {
     outline: unset;
 }
+.cdx-alert [contentEditable=true][data-placeholder]::before {
+    display: none; /* required - the block has an issue where the before pseudo-element blocks user interaction */
+}

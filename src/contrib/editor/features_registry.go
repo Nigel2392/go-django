@@ -268,6 +268,15 @@ func (e *editorRegistry) BuildConfig(widgetContext ctx.Context, features ...stri
 		featuresMap[f.Name()] = f
 	}
 
+	var enableInlineToolbar bool
+	if django.Global != nil {
+		enableInlineToolbar = django.ConfigGet(
+			django.Global.Settings,
+			APPVAR_ENABLE_INLINE_TOOLBAR,
+			true,
+		)
+	}
+
 	var toolsConfig = make(map[string]interface{})
 	for _, f := range featuresList {
 		var featureCfg = f.Config(widgetContext)
@@ -281,6 +290,7 @@ func (e *editorRegistry) BuildConfig(widgetContext ctx.Context, features ...stri
 		if tunes, ok := e.ft_tunes[f.Name()]; ok {
 			fullCfg["tunes"] = tunes
 		}
+		fullCfg["inlineToolbar"] = enableInlineToolbar
 		toolsConfig[f.Name()] = fullCfg
 	}
 
