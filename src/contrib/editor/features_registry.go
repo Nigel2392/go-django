@@ -240,6 +240,11 @@ func (e *editorRegistry) Register(feature BaseFeature) {
 	e.features.Set(feature.Name(), feature)
 }
 
+func (e *editorRegistry) Unregister(featureName string) {
+	e.features.Delete(featureName)
+	delete(e.ft_tunes, featureName)
+}
+
 func (e *editorRegistry) TuneFeature(featureName string, tuneName string) {
 	var tunes, ok = e.ft_tunes[featureName]
 	if !ok {
@@ -410,6 +415,7 @@ var (
 	ValueToGo      = EditorRegistry.ValueToGo
 	Features       = EditorRegistry.Features
 	Register       = EditorRegistry.Register
+	Unregister     = EditorRegistry.Unregister
 	TuneFeature    = EditorRegistry.TuneFeature
 	Tune           = EditorRegistry.Tune
 	buildConfig    = EditorRegistry.BuildConfig
