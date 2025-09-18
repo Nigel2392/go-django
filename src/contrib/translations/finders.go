@@ -209,7 +209,7 @@ type templateTranslationsFinder struct {
 	matches    map[string]func(tokens []string, colIdx, idx int) (string, string, int, int, error)
 }
 
-func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
+func (f *templateTranslationsFinder) Find(fsys fs.FS, isExcluded func(filename string) bool) ([]Translation, error) {
 	var paths []string
 
 	if f.matches == nil {
@@ -246,6 +246,11 @@ func (f *templateTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 	}()
 
 	for _, path := range paths {
+
+		if isExcluded(path) {
+			continue
+		}
+
 		src, err := fs.ReadFile(fsys, path)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read file %s: %w", path, err)
@@ -299,7 +304,7 @@ type goTranslationsFinder struct {
 	functions      map[string]func(call *ast.CallExpr, currentFunc string) (singular, plural *ast.BasicLit, err error)
 }
 
-func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
+func (f *goTranslationsFinder) Find(fsys fs.FS, isExcluded func(filename string) bool) ([]Translation, error) {
 	var matches []Translation
 
 	if f.functions == nil {
@@ -313,6 +318,10 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 			return err
 		}
 		if d.IsDir() || !strings.HasSuffix(path, ".go") {
+			return nil
+		}
+
+		if isExcluded(path) {
 			return nil
 		}
 
@@ -477,7 +486,7 @@ func (f *goTranslationsFinder) Find(fsys fs.FS) ([]Translation, error) {
 type godjangoModelsFinder struct {
 }
 
-func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Translation, error) {
+func (f *godjangoModelsFinder) Find(fsys fs.FS, isExcluded func(filename string) bool) ([]Translation, error) {
 	var apps = django.Global.Apps
 	if apps == nil {
 		return nil, nil
@@ -496,8 +505,13 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS) ([]Translation, error) {
 			col++
 
 			var cType = contenttypes.NewContentType(model)
+			var matchPath = filepath.ToSlash(filepath.Join(".models", app.Name(), cType.Model()))
+			if isExcluded(matchPath) {
+				continue
+			}
+
 			var match = Translation{
-				Path:    filepath.ToSlash(filepath.Join(".models", app.Name(), cType.Model())),
+				Path:    matchPath,
 				Line:    lineNum,
 				Col:     col,
 				Text:    cType.Model(),

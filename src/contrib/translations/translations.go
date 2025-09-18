@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/command/flags"
@@ -22,8 +23,9 @@ import (
 )
 
 type translationsCommandContext struct {
-	dir  flags.List
-	locs flags.List
+	dir     flags.List
+	locs    flags.List
+	exclude flags.List
 }
 
 var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
@@ -35,6 +37,7 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 
 		f.Var(&stored.dir, "dir", "The directory to search for translation strings")
 		f.Var(&stored.locs, "locales", "Generate the following locales for the translation strings")
+		f.Var(&stored.exclude, "e", "Directories or files to exclude from the search")
 
 		return nil
 	},
@@ -60,9 +63,31 @@ var makeTranslationsCommand = &command.Cmd[translationsCommandContext]{
 			locales = flags.NewList()
 		}
 
+		var isExcluded = func(path string) bool {
+			if stored.exclude.Len() == 0 {
+				return false
+			}
+			for _, ex := range stored.exclude.List() {
+				if ex == path {
+					return true
+				}
+				matched, err := filepath.Match(ex, path)
+				if err != nil {
+					panic(errors.Wrapf(
+						err, "invalid exclude pattern: %s", ex,
+					))
+				}
+				if matched {
+					return true
+				}
+			}
+
+			return false
+		}
+
 		for _, fsys := range append(dirFsys, translatorApp.filesystems...) {
 			for _, finder := range translatorApp.finders {
-				var found, err = finder.Find(fsys)
+				var found, err = finder.Find(fsys, isExcluded)
 				if err != nil {
 					return cli.Exit(
 						"Error finding translations: "+err.Error(), 1,

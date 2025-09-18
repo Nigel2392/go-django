@@ -24,7 +24,7 @@ import (
 var translationsFileFS embed.FS
 
 type Finder interface {
-	Find(fSys fs.FS) ([]Translation, error)
+	Find(fSys fs.FS, isExcluded func(filename string) bool) ([]Translation, error)
 }
 
 type TranslationsAppConfig struct {
