@@ -23,10 +23,10 @@ var _ editor.FeatureBlockRenderer = (*BaseFeature)(nil)
 
 type BaseFeature struct {
 	Type          string
-	Extra         map[string]interface{}
 	JSConstructor string
 	JSFiles       []string
 	CSSFiles      []string
+	Extra         func(widgetContext ctx.Context) map[string]interface{}
 	Validate      func(editor.BlockData) error
 	Build         func(*FeatureBlock) *FeatureBlock
 	Register      func(mux.Multiplexer)
@@ -58,7 +58,12 @@ func (b *BaseFeature) OnValidate(data editor.BlockData) error {
 // Config returns the configuration of the feature.
 func (b *BaseFeature) Config(widgetContext ctx.Context) map[string]interface{} {
 	var config = make(map[string]interface{})
-	maps.Copy(config, b.Extra)
+	if b.Extra != nil {
+		maps.Copy(
+			config,
+			b.Extra(widgetContext),
+		)
+	}
 	return config
 }
 

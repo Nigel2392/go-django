@@ -290,7 +290,11 @@ func (e *editorRegistry) BuildConfig(widgetContext ctx.Context, features ...stri
 		if tunes, ok := e.ft_tunes[f.Name()]; ok {
 			fullCfg["tunes"] = tunes
 		}
-		fullCfg["inlineToolbar"] = enableInlineToolbar
+
+		_, isInline := f.(InlineFeature)
+		if !isInline && enableInlineToolbar {
+			fullCfg["inlineToolbar"] = enableInlineToolbar
+		}
 		toolsConfig[f.Name()] = fullCfg
 	}
 
