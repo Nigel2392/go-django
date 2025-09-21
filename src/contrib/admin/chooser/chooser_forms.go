@@ -51,7 +51,7 @@ func (v *ChooserFormPage[T]) GetTemplate(req *http.Request) string {
 }
 
 //go:linkname newInstanceView github.com/Nigel2392/go-django/src/contrib/admin.newInstanceView
-func newInstanceView(tpl string, instance attrs.Definer, opts admin.FormViewOptions, app *admin.AppDefinition, model *admin.ModelDefinition, r *http.Request, p *admin.PageOptions) *views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]
+func newInstanceView(tpl string, instance attrs.Definer, opts admin.FormViewOptions, app *admin.AppDefinition, model *admin.ModelDefinition, r *http.Request, p *admin.PageOptions) *views.FormView[*admin.AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]
 
 func (v *ChooserFormPage[T]) Bind(w http.ResponseWriter, req *http.Request) (views.View, error) {
 	var modelObj = attrs.NewObject[T](
@@ -83,7 +83,7 @@ func (v *ChooserFormPage[T]) GetContext(req *http.Request, bound *BoundChooserFo
 }
 
 type BoundChooserFormPage[T attrs.Definer] struct {
-	*views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]
+	*views.FormView[*admin.AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]
 	View           *ChooserFormPage[T]
 	ResponseWriter http.ResponseWriter
 	Request        *http.Request
@@ -111,7 +111,7 @@ func (v *BoundChooserFormPage[T]) Setup(w http.ResponseWriter, req *http.Request
 func (v *BoundChooserFormPage[T]) Render(w http.ResponseWriter, req *http.Request, context ctx.Context) error {
 	var writer = hut.NewFakeWriter(new(bytes.Buffer))
 
-	v.FormView.SuccessFn = func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]) {
+	v.FormView.SuccessFn = func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]) {
 
 		// Set isValidFlag to true
 		// This function will run inside of v.FormView.Render if the form is

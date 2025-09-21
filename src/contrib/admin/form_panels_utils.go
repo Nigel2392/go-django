@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/forms"
 )
@@ -81,11 +82,11 @@ func PanelClass(className string, panel Panel) Panel {
 	return panel.Class(className)
 }
 
-func BindPanels(panels []Panel, r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) iter.Seq2[int, BoundPanel] {
+func BindPanels(panels []Panel, r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField) iter.Seq2[int, BoundPanel] {
 	return func(yield func(int, BoundPanel) bool) {
 		var idx = 0
 		for _, panel := range panels {
-			var boundPanel = panel.Bind(r, panelCount, form, ctx, boundFields)
+			var boundPanel = panel.Bind(r, panelCount, form, ctx, instance, boundFields)
 			if boundPanel == nil {
 				continue
 			}

@@ -11,7 +11,108 @@ import (
 	"strconv"
 	"github.com/gosimple/slug"
 	"encoding/json"
+	"github.com/Nigel2392/go-django/src/core/attrs"
+	"io"
+	"github.com/Nigel2392/go-django/src/forms/modelforms"
 )
+
+
+type PanelComponent struct {
+    Classname      string
+    PanelId        string
+    Hidden         bool
+    AllowPanelLink bool
+    InputID        string
+    Attrs          templ.Attributes
+    Heading        templ.Component
+    HelpText       templ.Component
+    Body           templ.Component
+    Errors         []error
+}
+
+func (p PanelComponent) Render(ctx context.Context, w io.Writer) error {
+    return p.Component().Render(ctx, w)
+}
+
+templ (p PanelComponent) Component() {
+    <div class={ "panel", "panel-default", p.Classname } data-controller="panel" data-panel-panel-value={ p.PanelId } if p.InputID != "" { data-panel-input-id={ p.InputID } } { p.Attrs... }>
+        if !p.Hidden && p.Heading != nil {
+            <div class="panel__heading" data-panel-target="heading">
+
+                <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", p.PanelId)) }>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
+                      <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
+                      <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
+                    </svg>
+                </a>
+
+                <div class="panel__title" data-action="click->panel#toggle" id={ p.PanelId }>
+                    @p.Heading
+                </div>
+
+            </div>
+        }
+
+        if len(p.Errors) > 0 {
+            <div class="panel__errors">
+                <ul>
+                    for _, err := range p.Errors {
+                        <li class="panel__error">@templ.Raw(string(err.Error()))</li>
+                    }
+                </ul>
+            </div>
+        }
+
+        if !p.Hidden && p.HelpText != nil {
+            <div class="panel__help">
+                @p.HelpText
+            </div>
+        }
+
+        <div class="panel__body" data-panel-target="content">
+            @p.Body
+        </div>
+    </div>
+}
+
+type WidgetPanelComponent struct {
+    BoundField forms.BoundField
+}
+
+func (p WidgetPanelComponent) Render(ctx context.Context, w io.Writer) error {
+    var panelComponent = PanelComponent{
+        Attrs:     nil,
+        Classname: "panel-default collapsible",
+        AllowPanelLink: true,
+        PanelId:   BuildPanelID("", nil, slug.Make(p.BoundField.Name())),
+        Hidden:    p.BoundField.Hidden(),
+        Errors:    p.BoundField.Errors(),
+    }
+    panelComponent.Heading = templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+        _, err = w.Write([]byte(p.BoundField.Label()))
+        return err
+    })
+    var helpText = p.BoundField.HelpText()
+    if panelComponent.HelpText == nil && helpText != "" {
+        panelComponent.HelpText = templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+            _, err = w.Write([]byte(helpText))
+            return err
+        })
+    }
+    panelComponent.Body = templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+        _, err = w.Write([]byte(`<div class="form-field-wrapper"><div class="form-field">`))
+        if err != nil {
+            return err
+        }
+        _, err = w.Write([]byte(p.BoundField.Field()))
+        if err != nil {
+            return err
+        }
+        _, err = w.Write([]byte(`</div></div>`))
+        return err
+    })
+    return panelComponent.Render(ctx, w)
+}
 
 type BoundFormPanel[T forms.Form, P Panel] struct {
 	forms.BoundField
@@ -28,51 +129,7 @@ func (p *BoundFormPanel[T, P]) Render() template.HTML {
 }
 
 templ (p *BoundFormPanel[T, P]) Component() {
-    {{ var label = p.Label() }}
-    {{ var errors = p.Errors() }}
-    {{ var helpText = p.HelpText() }}
-    {{ var field = p.Field() }}
-    {{ var panelId = BuildPanelID("", nil, slug.Make(p.BoundField.Name())) }}
-
-    <div class={ "panel", "panel-default", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId } data-panel-input-id={ p.BoundField.ID() }>
-        if !p.Hidden() {
-            <div class="panel__heading" data-panel-target="heading">
-
-                <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
-                      <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
-                      <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
-                    </svg>
-                </a>
-
-                <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
-                    @templ.Raw(string(label))
-                </div>
-
-            </div>
-        }
-        if len(errors) > 0 {
-            <div class="panel__errors">
-                <ul>
-                    for _, err := range errors {
-                        <li class="panel__error">@templ.Raw(string(err.Error()))</li>
-                    }
-                </ul>
-            </div>
-        }
-        if !p.Hidden() && helpText != "" {
-            <div class="panel__help">
-                @templ.Raw(string(helpText))
-            </div>
-        }
-        <div class="panel__body" data-panel-target="content">
-            <div class="form-field-wrapper">
-                <div class="form-field">
-                    @templ.Raw(string(field))
-                </div>
-            </div>
-        </div>
-    </div>
+    @WidgetPanelComponent{ BoundField: p.BoundField }
 }
 
 type BoundTitlePanel[T forms.Form, P Panel] struct {
@@ -410,3 +467,30 @@ templ (p *BoundJSONDetailPanel) Component() {
     </div>
 }
 
+type BoundModelFormPanel[TARGET attrs.Definer, FORM modelforms.ModelForm[TARGET]] struct {
+	Panel      *ModelFormPanel[TARGET, FORM]
+    SourceModel attrs.Definer
+    SourceField attrs.Field
+    Forms       []FORM
+    Context     context.Context
+    Request     *http.Request
+}
+
+func (p *BoundModelFormPanel[TARGET, FORM]) Hidden() bool {
+    return p.Panel == nil
+}
+
+func (p *BoundModelFormPanel[TARGET, FORM]) Render() template.HTML {
+    var b bytes.Buffer
+    p.Component().Render(p.Context, &b)
+    return template.HTML(b.String())
+}
+
+templ (p *BoundModelFormPanel[TARGET, FORM]) Component() {
+    if p.Panel == nil {
+        {{ return nil }} // No panel to render
+    }
+
+    
+
+}

@@ -142,6 +142,10 @@ func (b *BoundFormField) Value() interface{} {
 	return b.FormValue
 }
 
+func (b *BoundFormField) Context() context.Context {
+	return b.FormContext
+}
+
 func (b *BoundFormField) Errors() []error {
 	return b.FormErrors
 }

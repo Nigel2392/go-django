@@ -25,6 +25,7 @@ type (
 	BoundField         = forms.BoundField
 	IsValidDefiner     = forms.IsValidDefiner
 	BinderWidget       = forms.BinderWidget
+	FormWrapper        = forms.FormWrapper
 )
 
 //go:linkname IsValid github.com/Nigel2392/go-django/src/internal/forms.IsValid

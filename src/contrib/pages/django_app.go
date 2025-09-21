@@ -531,7 +531,7 @@ func NewAppConfig() django.AppConfig {
 					var _, site, err = SiteForRequest(r.Context())
 					return site, err
 				},
-				"page_url": URLPath,
+				"PageURL": URLPath,
 			}
 		})
 

@@ -278,7 +278,7 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), instance)
-	var adminForm = admin.NewAdminModelForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
+	var adminForm = admin.NewAdminForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
 	adminForm.Load()
 
 	if err := r.ParseForm(); err != nil {
@@ -366,7 +366,7 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 		return nil
 	}
 
-	var view = &views.FormView[*admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]{
+	var view = &views.FormView[*admin.AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: admin.BASE_KEY,
@@ -412,7 +412,7 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 				return context, nil
 			},
 		},
-		GetFormFn: func(req *http.Request) *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer] {
+		GetFormFn: func(req *http.Request) *admin.AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer] {
 			return adminForm
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
@@ -422,7 +422,7 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 			}
 			return initial
 		},
-		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]) {
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]) {
 			var instance = form.Instance()
 			assert.False(instance == nil, "instance is nil after form submission")
 			var page = instance.(Page)

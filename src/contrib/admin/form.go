@@ -18,84 +18,84 @@ import (
 )
 
 var (
-	_ forms.Form                          = (*AdminForm[modelforms.ModelForm[attrs.Definer]])(nil)
-	_ modelforms.ModelForm[attrs.Definer] = (*AdminModelForm[modelforms.ModelForm[attrs.Definer], attrs.Definer])(nil)
+	_ forms.Form                          = (*AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer])(nil)
+	_ modelforms.ModelForm[attrs.Definer] = (*AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer])(nil)
 )
 
-type AdminForm[T forms.Form] struct {
-	Form    T
+type AdminForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer] struct {
+	Form    T1
 	Panels  []Panel
 	Request *http.Request
 }
 
-func NewAdminForm[T forms.Form](form T, panels ...Panel) *AdminForm[T] {
-	return &AdminForm[T]{
+func NewAdminForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer](form T1, panels ...Panel) *AdminForm[T1, T2] {
+	return &AdminForm[T1, T2]{
 		Form:   form,
 		Panels: panels,
 	}
 }
 
-func (a *AdminForm[T]) EditContext(key string, context ctx.Context) {
+func (a *AdminForm[T1, T2]) EditContext(key string, context ctx.Context) {
 	context.Set(key, a.BoundForm())
 }
 
-func (a *AdminForm[T]) Context() context.Context {
+func (a *AdminForm[T1, T2]) Context() context.Context {
 	return a.Form.Context()
 }
 
-func (a *AdminForm[T]) WithContext(ctx context.Context) {
+func (a *AdminForm[T1, T2]) WithContext(ctx context.Context) {
 	a.Form.WithContext(ctx)
 }
 
-func (a *AdminForm[T]) AsP() template.HTML {
+func (a *AdminForm[T1, T2]) AsP() template.HTML {
 	return a.Form.AsP()
 }
-func (a *AdminForm[T]) AsUL() template.HTML {
+func (a *AdminForm[T1, T2]) AsUL() template.HTML {
 	return a.Form.AsUL()
 }
-func (a *AdminForm[T]) Media() media.Media {
+func (a *AdminForm[T1, T2]) Media() media.Media {
 	return a.Form.Media()
 }
-func (a *AdminForm[T]) Prefix() string {
+func (a *AdminForm[T1, T2]) Prefix() string {
 	return a.Form.Prefix()
 }
-func (a *AdminForm[T]) SetPrefix(prefix string) {
+func (a *AdminForm[T1, T2]) SetPrefix(prefix string) {
 	a.Form.SetPrefix(prefix)
 }
-func (a *AdminForm[T]) SetInitial(initial map[string]interface{}) {
+func (a *AdminForm[T1, T2]) SetInitial(initial map[string]interface{}) {
 	a.Form.SetInitial(initial)
 }
-func (a *AdminForm[T]) SetValidators(validators ...func(forms.Form, map[string]interface{}) []error) {
+func (a *AdminForm[T1, T2]) SetValidators(validators ...func(forms.Form, map[string]interface{}) []error) {
 	a.Form.SetValidators(validators...)
 }
-func (a *AdminForm[T]) Ordering(o []string) {
+func (a *AdminForm[T1, T2]) Ordering(o []string) {
 	a.Form.Ordering(o)
 }
-func (a *AdminForm[T]) FieldOrder() []string {
+func (a *AdminForm[T1, T2]) FieldOrder() []string {
 	return a.Form.FieldOrder()
 }
-func (a *AdminForm[T]) Field(name string) (fields.Field, bool) {
+func (a *AdminForm[T1, T2]) Field(name string) (fields.Field, bool) {
 	return a.Form.Field(name)
 }
-func (a *AdminForm[T]) Widget(name string) (widgets.Widget, bool) {
+func (a *AdminForm[T1, T2]) Widget(name string) (widgets.Widget, bool) {
 	return a.Form.Widget(name)
 }
-func (a *AdminForm[T]) Fields() []fields.Field {
+func (a *AdminForm[T1, T2]) Fields() []fields.Field {
 	return a.Form.Fields()
 }
-func (a *AdminForm[T]) Widgets() []widgets.Widget {
+func (a *AdminForm[T1, T2]) Widgets() []widgets.Widget {
 	return a.Form.Widgets()
 }
-func (a *AdminForm[T]) AddField(name string, field fields.Field) {
+func (a *AdminForm[T1, T2]) AddField(name string, field fields.Field) {
 	a.Form.AddField(name, field)
 }
-func (a *AdminForm[T]) DeleteField(name string) bool {
+func (a *AdminForm[T1, T2]) DeleteField(name string) bool {
 	return a.Form.DeleteField(name)
 }
-func (a *AdminForm[T]) AddWidget(name string, widget widgets.Widget) {
+func (a *AdminForm[T1, T2]) AddWidget(name string, widget widgets.Widget) {
 	a.Form.AddWidget(name, widget)
 }
-func (a *AdminForm[T]) BoundForm() forms.BoundForm {
+func (a *AdminForm[T1, T2]) BoundForm() forms.BoundForm {
 	var (
 		form      = a.Form.BoundForm()
 		boundForm = &PanelBoundForm{
@@ -113,7 +113,7 @@ func (a *AdminForm[T]) BoundForm() forms.BoundForm {
 	}
 
 	if len(a.Panels) > 0 {
-		for _, panel := range BindPanels(a.Panels, a.Request, make(map[string]int), a, boundForm.Context, boundMap) {
+		for _, panel := range BindPanels(a.Panels, a.Request, make(map[string]int), a, boundForm.Context, a.Form.Instance(), boundMap) {
 			boundForm.BoundPanels = append(
 				boundForm.BoundPanels, panel,
 			)
@@ -132,7 +132,7 @@ func (a *AdminForm[T]) BoundForm() forms.BoundForm {
 		var idx int
 		for _, field := range fields {
 			var panel = FieldPanel(field.Name())
-			var boundPanel = panel.Bind(a.Request, make(map[string]int), a, boundForm.Context, boundMap)
+			var boundPanel = panel.Bind(a.Request, make(map[string]int), a, boundForm.Context, a.Form.Instance(), boundMap)
 			if boundPanel == nil {
 				continue
 			}
@@ -147,26 +147,26 @@ func (a *AdminForm[T]) BoundForm() forms.BoundForm {
 
 	return boundForm
 }
-func (a *AdminForm[T]) BoundFields() *orderedmap.OrderedMap[string, forms.BoundField] {
+func (a *AdminForm[T1, T2]) BoundFields() *orderedmap.OrderedMap[string, forms.BoundField] {
 	return a.Form.BoundFields()
 }
-func (a *AdminForm[T]) BoundErrors() *orderedmap.OrderedMap[string, []error] {
+func (a *AdminForm[T1, T2]) BoundErrors() *orderedmap.OrderedMap[string, []error] {
 	return a.Form.BoundErrors()
 }
-func (a *AdminForm[T]) ErrorList() []error {
+func (a *AdminForm[T1, T2]) ErrorList() []error {
 	return a.Form.ErrorList()
 }
-func (a *AdminForm[T]) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) forms.Form {
+func (a *AdminForm[T1, T2]) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) forms.Form {
 	a.Request = r
 	return a.Form.WithData(data, files, r)
 }
-func (a *AdminForm[T]) InitialData() map[string]interface{} {
+func (a *AdminForm[T1, T2]) InitialData() map[string]interface{} {
 	return a.Form.InitialData()
 }
-func (a *AdminForm[T]) CleanedData() map[string]interface{} {
+func (a *AdminForm[T1, T2]) CleanedData() map[string]interface{} {
 	return a.Form.CleanedData()
 }
-func (a *AdminForm[T]) HasChanged() bool {
+func (a *AdminForm[T1, T2]) HasChanged() bool {
 	var (
 		fields  = make([]string, 0)
 		fieldsM = make(map[string]struct{})
@@ -197,80 +197,70 @@ func (a *AdminForm[T]) HasChanged() bool {
 	return false
 
 }
-func (a *AdminForm[T]) PrefixName(name string) (prefixedName string) {
+func (a *AdminForm[T1, T2]) PrefixName(name string) (prefixedName string) {
 	return a.Form.PrefixName(name)
 }
-func (a *AdminForm[T]) FieldMap() *orderedmap.OrderedMap[string, forms.Field] {
+func (a *AdminForm[T1, T2]) FieldMap() *orderedmap.OrderedMap[string, forms.Field] {
 	return a.Form.FieldMap()
 }
 
-func (f *AdminForm[T]) Validators() []func(forms.Form, map[string]interface{}) []error {
+func (f *AdminForm[T1, T2]) Validators() []func(forms.Form, map[string]interface{}) []error {
 	return f.Form.Validators()
 }
 
-func (f *AdminForm[T]) CallbackOnValid() []func(forms.Form) {
+func (f *AdminForm[T1, T2]) CallbackOnValid() []func(forms.Form) {
 	return f.Form.CallbackOnValid()
 }
 
-func (f *AdminForm[T]) CallbackOnInvalid() []func(forms.Form) {
+func (f *AdminForm[T1, T2]) CallbackOnInvalid() []func(forms.Form) {
 	return f.Form.CallbackOnInvalid()
 }
 
-func (f *AdminForm[T]) CallbackOnFinalize() []func(forms.Form) {
+func (f *AdminForm[T1, T2]) CallbackOnFinalize() []func(forms.Form) {
 	return f.Form.CallbackOnFinalize()
 }
 
-func (f *AdminForm[T]) BindCleanedData(invalid, defaults, cleaned map[string]interface{}) {
+func (f *AdminForm[T1, T2]) BindCleanedData(invalid, defaults, cleaned map[string]interface{}) {
 	f.Form.BindCleanedData(invalid, defaults, cleaned)
 }
 
-func (f *AdminForm[T]) CleanedDataUnsafe() map[string]interface{} {
+func (f *AdminForm[T1, T2]) CleanedDataUnsafe() map[string]interface{} {
 	return f.Form.CleanedDataUnsafe()
 }
 
-func (f *AdminForm[T]) Data() (url.Values, map[string][]filesystem.FileHeader) {
+func (f *AdminForm[T1, T2]) Data() (url.Values, map[string][]filesystem.FileHeader) {
 	return f.Form.Data()
 }
-func (f *AdminForm[T]) WasCleaned() bool {
+func (f *AdminForm[T1, T2]) WasCleaned() bool {
 	return f.Form.WasCleaned()
 }
-func (a *AdminForm[T]) AddFormError(errorList ...error) {
+func (a *AdminForm[T1, T2]) AddFormError(errorList ...error) {
 	a.Form.AddFormError(errorList...)
 }
-func (a *AdminForm[T]) AddError(name string, errorList ...error) {
+func (a *AdminForm[T1, T2]) AddError(name string, errorList ...error) {
 	a.Form.AddError(name, errorList...)
 }
-func (a *AdminForm[T]) OnValid(f ...func(forms.Form)) {
+func (a *AdminForm[T1, T2]) OnValid(f ...func(forms.Form)) {
 	a.Form.OnValid(f...)
 }
-func (a *AdminForm[T]) OnInvalid(f ...func(forms.Form)) {
+func (a *AdminForm[T1, T2]) OnInvalid(f ...func(forms.Form)) {
 	a.Form.OnInvalid(f...)
 }
-func (a *AdminForm[T]) OnFinalize(f ...func(forms.Form)) {
+func (a *AdminForm[T1, T2]) OnFinalize(f ...func(forms.Form)) {
 	a.Form.OnFinalize(f...)
 }
-func (a *AdminForm[T]) IsValid() bool {
+func (a *AdminForm[T1, T2]) IsValid() bool {
 	if validDef, ok := any(a.Form).(forms.IsValidDefiner); ok {
 		return validDef.IsValid()
 	}
 	return true
 }
 
-type AdminModelForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer] struct {
-	*AdminForm[T1]
-}
-
-func NewAdminModelForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer](form T1, panels ...Panel) *AdminModelForm[T1, T2] {
-	return &AdminModelForm[T1, T2]{
-		AdminForm: NewAdminForm(form, panels...),
-	}
-}
-
-func (a *AdminModelForm[T1, T2]) SetOnLoad(fn func(model T2, initialData map[string]interface{})) {
+func (a *AdminForm[T1, T2]) SetOnLoad(fn func(model T2, initialData map[string]interface{})) {
 	a.Form.SetOnLoad(fn)
 }
 
-func (a *AdminModelForm[T1, T2]) Load() {
+func (a *AdminForm[T1, T2]) Load() {
 	a.Form.Load()
 
 	var fields = a.FieldMap()
@@ -316,24 +306,18 @@ func (a *AdminModelForm[T1, T2]) Load() {
 	}
 }
 
-func (a *AdminModelForm[T1, T2]) Save() (map[string]interface{}, error) {
+func (a *AdminForm[T1, T2]) Save() (map[string]interface{}, error) {
 	return a.Form.Save()
 }
-func (a *AdminModelForm[T1, T2]) WithContext(ctx context.Context) {
-	a.Form.WithContext(ctx)
-}
-func (a *AdminModelForm[T1, T2]) Context() context.Context {
-	return a.Form.Context()
-}
-func (a *AdminModelForm[T1, T2]) SetFields(fields ...string) {
+func (a *AdminForm[T1, T2]) SetFields(fields ...string) {
 	a.Form.SetFields(fields...)
 }
-func (a *AdminModelForm[T1, T2]) SetExclude(exclude ...string) {
+func (a *AdminForm[T1, T2]) SetExclude(exclude ...string) {
 	a.Form.SetExclude(exclude...)
 }
-func (a *AdminModelForm[T1, T2]) Instance() attrs.Definer {
+func (a *AdminForm[T1, T2]) Instance() attrs.Definer {
 	return a.Form.Instance()
 }
-func (a *AdminModelForm[T1, T2]) SetInstance(model T2) {
+func (a *AdminForm[T1, T2]) SetInstance(model T2) {
 	a.Form.SetInstance(model)
 }

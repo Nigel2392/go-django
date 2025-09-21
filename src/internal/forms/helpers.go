@@ -12,18 +12,33 @@ type IsValidDefiner interface {
 	IsValid() bool
 }
 
+type FormWrapper interface {
+	Unwrap() []Form
+}
+
 func FullClean(ctx context.Context, f Form) (invalid, defaults, cleaned map[string]any) {
 	var rawData, files = f.Data()
 	return fullClean(ctx, f, rawData, files)
 }
 
 func IsValid(ctx context.Context, f Form) bool {
-	var rawData, files = f.Data()
 
-	assert.False(rawData == nil, "You cannot call IsValid() without setting the data first.")
+	if unwrapper, ok := f.(FormWrapper); ok {
+		var isValid = true
+		for _, form := range unwrapper.Unwrap() {
+			// make sure every form wrapped still gets cleaned and validated
+			isValid = isValid && IsValid(ctx, form)
+		}
+		return isValid
+	}
+
+	var rawData, files = f.Data()
+	assert.False(
+		rawData == nil,
+		"You cannot call IsValid() without setting the data first.",
+	)
 
 	if f.WasCleaned() {
-
 		var errorList = f.ErrorList()
 		if len(errorList) > 0 {
 			return false

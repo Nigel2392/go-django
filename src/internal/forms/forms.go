@@ -182,6 +182,7 @@ type BoundField interface {
 	HelpText() template.HTML
 	Field() template.HTML
 	HTML() template.HTML
+	Context() context.Context
 	Attrs() map[string]string
 	Value() interface{}
 	Errors() []error

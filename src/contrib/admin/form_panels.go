@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin/compare"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -19,6 +20,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/a-h/templ"
 )
@@ -28,12 +30,17 @@ type Panel interface {
 	ClassName() string
 	Class(classes string) Panel
 	Comparison(ctx context.Context, oldInstance attrs.Definer, newInstance attrs.Definer) (compare.Comparison, error)
-	Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel
+	Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField) BoundPanel
 }
 
 type ValidatorPanel interface {
 	Panel
 	Validate(r *http.Request, ctx context.Context, form forms.Form, data map[string]any) []error
+}
+
+type FormPanel interface {
+	Panel
+	Forms() []forms.Form
 }
 
 type BoundPanel interface {
@@ -105,7 +112,7 @@ func (f *fieldPanel) Comparison(ctx context.Context, oldInstance attrs.Definer, 
 	)
 }
 
-func (f *fieldPanel) Bind(r *http.Request, _ map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
+func (f *fieldPanel) Bind(r *http.Request, _ map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField) BoundPanel {
 	var bf, ok = boundFields[f.fieldname]
 	if !ok {
 		panic(fmt.Sprintf("Field %s not found in bound fields: %v", f.fieldname, boundFields))
@@ -162,8 +169,8 @@ func (f *titlePanel) Validate(r *http.Request, ctx context.Context, form forms.F
 	return nil
 }
 
-func (t *titlePanel) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
-	var panel = t.Panel.Bind(r, panelCount, form, ctx, boundFields)
+func (t *titlePanel) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField) BoundPanel {
+	var panel = t.Panel.Bind(r, panelCount, form, ctx, instance, boundFields)
 	if panel == nil {
 		return nil
 	}
@@ -214,6 +221,16 @@ type rowPanel struct {
 	classname string
 }
 
+func (f *rowPanel) Forms() []forms.Form {
+	var formsList []forms.Form
+	for _, panel := range f.panels {
+		if fp, ok := panel.(FormPanel); ok {
+			formsList = append(formsList, fp.Forms()...)
+		}
+	}
+	return formsList
+}
+
 func (m *rowPanel) Class(classname string) Panel {
 	m.classname = classname
 	return m
@@ -241,9 +258,9 @@ func (f *rowPanel) Validate(r *http.Request, ctx context.Context, form forms.For
 	return errs
 }
 
-func (m *rowPanel) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
+func (m *rowPanel) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField) BoundPanel {
 	var panels = make([]BoundPanel, 0, len(m.panels))
-	for _, panel := range BindPanels(m.panels, r, panelCount, form, ctx, boundFields) {
+	for _, panel := range BindPanels(m.panels, r, panelCount, form, ctx, instance, boundFields) {
 		panels = append(panels, panel)
 	}
 	return &BoundRowPanel[forms.Form]{
@@ -293,6 +310,16 @@ type panelGroup struct {
 	classname string
 }
 
+func (f *panelGroup) Forms() []forms.Form {
+	var formsList []forms.Form
+	for _, panel := range f.panels {
+		if fp, ok := panel.(FormPanel); ok {
+			formsList = append(formsList, fp.Forms()...)
+		}
+	}
+	return formsList
+}
+
 func (g *panelGroup) Fields() []string {
 	var fields = make([]string, 0, len(g.panels))
 	for _, panel := range g.panels {
@@ -320,9 +347,9 @@ func (f *panelGroup) Validate(r *http.Request, ctx context.Context, form forms.F
 	return errs
 }
 
-func (g *panelGroup) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
+func (g *panelGroup) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField) BoundPanel {
 	var panels = make([]BoundPanel, 0, len(g.panels))
-	for _, panel := range BindPanels(g.panels, r, panelCount, form, ctx, boundFields) {
+	for _, panel := range BindPanels(g.panels, r, panelCount, form, ctx, instance, boundFields) {
 		panels = append(panels, panel)
 	}
 	return &BoundPanelGroup[forms.Form]{
@@ -399,7 +426,7 @@ func (f *AlertPanel) Comparison(ctx context.Context, oldInstance attrs.Definer, 
 	return nil, nil
 }
 
-func (a *AlertPanel) Bind(r *http.Request, _ map[string]int, form forms.Form, ctx context.Context, _ map[string]forms.BoundField) BoundPanel {
+func (a *AlertPanel) Bind(r *http.Request, _ map[string]int, form forms.Form, ctx context.Context, _ attrs.Definer, _ map[string]forms.BoundField) BoundPanel {
 	return &BoundAlertPanel[forms.Form]{
 		Panel:   a,
 		Form:    form,
@@ -522,12 +549,12 @@ func (t *tabbedPanel) Comparison(ctx context.Context, oldInstance attrs.Definer,
 	return PanelComparison(ctx, allPanels, oldInstance, newInstance)
 }
 
-func (t *tabbedPanel) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFields map[string]forms.BoundField) BoundPanel {
+func (t *tabbedPanel) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField) BoundPanel {
 	var boundTabs = make([]*boundTabPanel, 0, len(t.tabs))
 	for _, tab := range t.tabs {
 
 		var boundPanels = make([]BoundPanel, 0, len(tab.panels))
-		for _, panel := range BindPanels(tab.panels, r, panelCount, form, ctx, boundFields) {
+		for _, panel := range BindPanels(tab.panels, r, panelCount, form, ctx, instance, boundFields) {
 			boundPanels = append(boundPanels, panel)
 		}
 
@@ -541,6 +568,123 @@ func (t *tabbedPanel) Bind(r *http.Request, panelCount map[string]int, form form
 		request: r,
 		panels:  boundTabs,
 		context: ctx,
+	}
+}
+
+type ModelFormPanel[TARGET attrs.Definer, FORM modelforms.ModelForm[TARGET]] struct {
+	Form       func() FORM
+	TargetType TARGET
+	MaxNum     int
+	MinNum     int
+	Extra      int
+	Classname  string
+	FieldName  string
+}
+
+func (m *ModelFormPanel[TARGET, FORM]) Fields() []string {
+	return []string{m.FieldName}
+}
+
+func (m *ModelFormPanel[TARGET, FORM]) ClassName() string {
+	return m.Classname
+}
+
+func (m *ModelFormPanel[TARGET, FORM]) Class(classes string) Panel {
+	m.Classname = classes
+	return m
+}
+
+func (f *ModelFormPanel[TARGET, FORM]) Comparison(ctx context.Context, oldInstance attrs.Definer, newInstance attrs.Definer) (compare.Comparison, error) {
+	return nil, nil
+}
+
+func (p *ModelFormPanel[TARGET, FORM]) GetForms(totalForms int, targetList []TARGET) []FORM {
+	var forms = make([]FORM, 0, totalForms)
+	for i := 0; i < totalForms; i++ {
+		var f = p.Form()
+
+		if i < len(targetList) {
+			f.SetInstance(targetList[i])
+		} else {
+			f.SetInstance(attrs.NewObject[TARGET](p.TargetType))
+		}
+
+		f.Load()
+
+		forms = append(forms, f)
+	}
+	return forms
+}
+
+func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField) BoundPanel {
+	var defs = instance.FieldDefs()
+	field, ok := defs.Field(m.FieldName)
+	if !ok {
+		except.Fail(
+			http.StatusInternalServerError,
+			fmt.Sprintf("Field %q not found in instance of type %T", m.FieldName, instance),
+		)
+	}
+
+	var value = field.GetValue()
+	var targetList = make([]TARGET, 0)
+	switch v := value.(type) {
+	case []TARGET:
+		targetList = v
+	case []attrs.Definer:
+		for _, item := range v {
+			t, ok := item.(TARGET)
+			if !ok {
+				except.Fail(
+					http.StatusInternalServerError,
+					fmt.Sprintf("Item of type %T in field %q is not of expected type %T", item, m.FieldName, m.TargetType),
+				)
+			}
+			targetList = append(targetList, t)
+		}
+	case queries.RelationValue:
+		targetList = []TARGET{v.GetValue().(TARGET)}
+	case queries.ThroughRelationValue:
+		t, _ := v.GetValue()
+		targetList = []TARGET{t.(TARGET)}
+	case queries.MultiRelationValue:
+		for _, item := range v.GetValues() {
+			t, ok := item.(TARGET)
+			if !ok {
+				except.Fail(
+					http.StatusInternalServerError,
+					fmt.Sprintf("Item of type %T in field %q is not of expected type %T", item, m.FieldName, m.TargetType),
+				)
+			}
+			targetList = append(targetList, t)
+		}
+	case queries.MultiThroughRelationValue:
+		for _, item := range v.GetValues() {
+			t := item.Model()
+			targetList = append(targetList, t.(TARGET))
+		}
+	}
+
+	var minNumForms = m.MaxNum
+	var maxNumForms = m.MinNum
+	var totalForms = len(targetList) + m.Extra
+	if minNumForms > 0 && totalForms < minNumForms {
+		totalForms = minNumForms
+	}
+
+	var canAddMore = maxNumForms == 0 || totalForms < maxNumForms
+	var forms = m.GetForms(totalForms, targetList)
+	if !canAddMore && len(forms) > minNumForms {
+		forms = forms[:minNumForms]
+	}
+
+	return &BoundModelFormPanel[TARGET, FORM]{
+		Panel:       m,
+		Forms:       forms,
+		SourceModel: instance,
+		SourceField: field,
+		Context:     ctx,
+		Request:     r,
 	}
 }
 
@@ -570,7 +714,7 @@ func (f JSONDetailPanel) Comparison(ctx context.Context, oldInstance attrs.Defin
 	return nil, nil
 }
 
-func (j JSONDetailPanel) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, boundFieldsMap map[string]forms.BoundField) BoundPanel {
+func (j JSONDetailPanel) Bind(r *http.Request, _ map[string]int, form forms.Form, _ context.Context, _ attrs.Definer, boundFieldsMap map[string]forms.BoundField) BoundPanel {
 	var dataField, ok = boundFieldsMap[j.FieldName]
 	if !ok {
 		assert.Fail(
