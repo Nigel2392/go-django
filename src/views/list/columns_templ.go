@@ -717,8 +717,8 @@ func (c *fieldColumn[T, VAL]) data(r *http.Request, defs attrs.Definitions, row 
 		fieldValue = rV.Interface()
 	default:
 		assert.Fail(
-			"Field %q (%T) has an unsupported type: %v",
-			c.fieldName, field, fieldValue,
+			"Field %q (%T) has an unsupported type: %T %v",
+			c.fieldName, field, fieldValue, fieldValue,
 		)
 	}
 

@@ -302,10 +302,14 @@ func isZero(rval reflect.Value) bool {
 	switch rval.Kind() {
 	case reflect.Ptr, reflect.Interface:
 		return rval.IsNil() || (!rval.IsNil() && isZero(rval.Elem()))
-	case reflect.Array, reflect.Slice:
+	case reflect.Slice:
 		if rval.IsNil() {
 			return true
 		}
+		if rval.Len() == 0 {
+			return true
+		}
+	case reflect.Array:
 		if rval.Len() == 0 {
 			return true
 		}

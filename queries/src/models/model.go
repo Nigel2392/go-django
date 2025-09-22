@@ -1044,7 +1044,12 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	}
 
 	if m.internals.defs == nil || m.internals.defs.ObjectFields == nil {
-		assert.Fail("Model %T is not properly initialized", m.internals.object.Interface())
+		assert.Fail(
+			"Model %T is not properly initialized (%t %t)",
+			m.internals.object.Interface(),
+			m.internals.defs == nil,
+			m.internals.defs != nil && m.internals.defs.ObjectFields == nil,
+		)
 	}
 
 	// Start transaction, if one was already started this is a no-op.

@@ -45,11 +45,11 @@ var startAppCommand = &cli.Command{
 				if os.IsNotExist(err) {
 					goto setupModule
 				}
-
-				projectPath = filepath.Join(
-					projectPath, "src",
-				)
 			}
+
+			projectPath = filepath.Join(
+				projectPath, "src",
+			)
 		}
 
 		// Go-To label for for copying project files
