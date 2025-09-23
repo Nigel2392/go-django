@@ -35,6 +35,19 @@ func NewAdminForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer](form T1, panels
 	}
 }
 
+func (a *AdminForm[T1, T2]) Unwrap() []forms.Form {
+	var formsList = []forms.Form{a.Form}
+	if unwrapper, ok := any(a.Form).(forms.FormWrapper); ok {
+		formsList = append(formsList, unwrapper.Unwrap()...)
+	}
+	for _, panel := range a.Panels {
+		if unwrapper, ok := panel.(FormPanel); ok {
+			formsList = append(formsList, unwrapper.Forms()...)
+		}
+	}
+	return formsList
+}
+
 func (a *AdminForm[T1, T2]) EditContext(key string, context ctx.Context) {
 	context.Set(key, a.BoundForm())
 }

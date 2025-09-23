@@ -37,7 +37,14 @@ func IsValid(ctx context.Context, f Form) bool {
 	var _, hasPtr = ctx.Value(topKey).(struct{})
 	if unwrapper, ok := f.(FormWrapper); ok && !hasPtr {
 		var isValid = true
+		var validatedAny bool
 		for _, form := range unwrapper.Unwrap() {
+
+			if form == nil {
+				continue
+			}
+
+			validatedAny = true
 
 			// create a unique key for every form based on its pointer address
 			// so we don't get stuck in an infinite loop if the same form is included in the unwrap chain
@@ -52,7 +59,8 @@ func IsValid(ctx context.Context, f Form) bool {
 				form,
 			)
 		}
-		return isValid
+
+		return isValid && validatedAny
 	}
 
 	var rawData, files = f.Data()
