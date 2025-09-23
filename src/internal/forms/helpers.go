@@ -2,6 +2,7 @@ package forms
 
 import (
 	"context"
+	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -21,13 +22,35 @@ func FullClean(ctx context.Context, f Form) (invalid, defaults, cleaned map[stri
 	return fullClean(ctx, f, rawData, files)
 }
 
+type pointerContextKey struct {
+	ptr uintptr
+}
+
 func IsValid(ctx context.Context, f Form) bool {
 
-	if unwrapper, ok := f.(FormWrapper); ok {
+	var rv = reflect.ValueOf(f)
+	if rv.Kind() != reflect.Pointer {
+		panic("IsValid() only accepts a pointer to a Form, not a value.")
+	}
+
+	var topKey = pointerContextKey{ptr: rv.Pointer()}
+	var _, hasPtr = ctx.Value(topKey).(struct{})
+	if unwrapper, ok := f.(FormWrapper); ok && !hasPtr {
 		var isValid = true
 		for _, form := range unwrapper.Unwrap() {
+
+			// create a unique key for every form based on its pointer address
+			// so we don't get stuck in an infinite loop if the same form is included in the unwrap chain
+			var wrappedFormKey = pointerContextKey{
+				ptr: reflect.ValueOf(form).Pointer(),
+			}
+
 			// make sure every form wrapped still gets cleaned and validated
-			isValid = isValid && IsValid(ctx, form)
+			// by using the & operator on isValid
+			isValid = isValid && IsValid(
+				context.WithValue(ctx, wrappedFormKey, struct{}{}),
+				form,
+			)
 		}
 		return isValid
 	}
