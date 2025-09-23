@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"slices"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -21,6 +22,19 @@ var (
 	_ forms.Form                          = (*AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer])(nil)
 	_ modelforms.ModelForm[attrs.Definer] = (*AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer])(nil)
 )
+
+type FORM_ORDERING int
+
+const (
+	FORM_ORDERING_PRE  FORM_ORDERING = -1
+	FORM_ORDERING_NONE FORM_ORDERING = 0
+	FORM_ORDERING_POST FORM_ORDERING = 1
+)
+
+type ClusterOrderableForm interface {
+	forms.Form
+	FormOrder() FORM_ORDERING
+}
 
 type AdminForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer] struct {
 	Form    T1
@@ -40,11 +54,26 @@ func (a *AdminForm[T1, T2]) Unwrap() []forms.Form {
 	if unwrapper, ok := any(a.Form).(forms.FormWrapper); ok {
 		formsList = append(formsList, unwrapper.Unwrap()...)
 	}
+
 	for _, panel := range a.Panels {
 		if unwrapper, ok := panel.(FormPanel); ok {
 			formsList = append(formsList, unwrapper.Forms()...)
 		}
 	}
+
+	slices.SortStableFunc(formsList, func(i, j forms.Form) int {
+		var formA, okA = i.(ClusterOrderableForm)
+		var formB, okB = j.(ClusterOrderableForm)
+		if okA && okB {
+			return int(formA.FormOrder()) - int(formB.FormOrder())
+		} else if okA {
+			return int(formA.FormOrder())
+		} else if okB {
+			return -int(formB.FormOrder())
+		}
+		return int(FORM_ORDERING_NONE)
+	})
+
 	return formsList
 }
 
