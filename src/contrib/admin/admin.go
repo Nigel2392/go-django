@@ -65,6 +65,8 @@ func init() {
 
 const BASE_KEY = "admin"
 
+var ADMIN_BASE_URL = "admin/"
+
 var AdminSite *AdminApplication = &AdminApplication{
 	AppConfig: apps.NewAppConfig("admin"),
 	Apps: orderedmap.NewOrderedMap[
@@ -72,7 +74,7 @@ var AdminSite *AdminApplication = &AdminApplication{
 	](),
 	Ordering: make([]string, 0),
 	Route: mux.NewRoute(
-		mux.ANY, "admin/", nil, "admin",
+		mux.ANY, ADMIN_BASE_URL, nil, "admin",
 	),
 }
 

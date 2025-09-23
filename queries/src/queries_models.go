@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"hash/fnv"
 	"net/url"
+	"reflect"
 	"strings"
 	"time"
 
@@ -215,6 +216,15 @@ createKey:
 				"error getting primary key value for object %T: %w: %w",
 				obj, errors.NoUniqueKey, err,
 			))
+		}
+
+		// required to safely handle []byte primary keys
+		// these can otherwise not be used as map keys
+		var rVal = reflect.ValueOf(primaryVal)
+		if (rVal.Kind() == reflect.Array || rVal.Kind() == reflect.Slice) && rVal.Type().Elem().Kind() == reflect.Uint8 {
+			// Convert []byte to string for easier comparison and usage as a key
+			rVal = rVal.Convert(reflect.TypeOf(""))
+			primaryVal = rVal.Interface()
 		}
 
 		if !attrs.IsZero(primaryVal) {
