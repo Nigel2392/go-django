@@ -9,21 +9,35 @@ type Definer[T any] interface {
 	Mixins() []T
 }
 
+func defaultMixinsFn[T any](obj T, depth int) []T {
+	if mixin, ok := any(obj).(Definer[T]); ok {
+		return mixin.Mixins()
+	}
+	return nil
+}
+
 func Mixins[T any](obj T, topDown bool) iter.Seq2[T, int] {
 	return func(yield func(T, int) bool) {
-		iterMixins(yield, obj, topDown, 0)
+		iterMixins(yield, obj, topDown, 0, defaultMixinsFn)
 	}
 }
 
-func iterMixins[T any](yield func(T, int) bool, obj T, topDown bool, depth int) bool {
+func MixinsFunc[T any](obj T, topDown bool, fn func(obj T, depth int) []T) iter.Seq2[T, int] {
+	return func(yield func(T, int) bool) {
+		iterMixins(yield, obj, topDown, 0, fn)
+	}
+}
+
+func iterMixins[T any](yield func(T, int) bool, obj T, topDown bool, depth int, fn func(obj T, depth int) []T) bool {
 	if topDown && !yield(obj, depth) {
 		return false
 	}
-	if mixin, ok := any(obj).(Definer[T]); ok {
-		for _, m := range mixin.Mixins() {
-			if !iterMixins(yield, m, topDown, depth+1) {
-				return false
-			}
+	if fn == nil {
+		panic("cannot get mixins, provided function is nil")
+	}
+	for _, m := range fn(obj, depth) {
+		if !iterMixins(yield, m, topDown, depth+1, fn) {
+			return false
 		}
 	}
 	if !topDown && !yield(obj, depth) {

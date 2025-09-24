@@ -579,6 +579,7 @@ type ModelFormPanel[TARGET attrs.Definer, FORM modelforms.ModelForm[TARGET]] str
 	Extra      int
 	Classname  string
 	FieldName  string
+	Panels     []Panel
 }
 
 func (m *ModelFormPanel[TARGET, FORM]) Fields() []string {
@@ -598,20 +599,71 @@ func (f *ModelFormPanel[TARGET, FORM]) Comparison(ctx context.Context, oldInstan
 	return nil, nil
 }
 
-func (p *ModelFormPanel[TARGET, FORM]) GetForms(totalForms int, targetList []TARGET) []FORM {
-	var forms = make([]FORM, 0, totalForms)
-	for i := 0; i < totalForms; i++ {
-		var f = p.Form()
+func (p *ModelFormPanel[TARGET, FORM]) formPrefix(index int) string {
+	return fmt.Sprintf("%s-%d", p.FieldName, index)
+}
 
+func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Request, source attrs.Definer, totalForms int, targetList []TARGET) []modelforms.ModelForm[TARGET] {
+	var forms = make([]modelforms.ModelForm[TARGET], 0, totalForms)
+	for i := 0; i < totalForms; i++ {
+		var target TARGET
 		if i < len(targetList) {
-			f.SetInstance(targetList[i])
+			target = targetList[i]
 		} else {
-			f.SetInstance(attrs.NewObject[TARGET](p.TargetType))
+			target = attrs.NewObject[TARGET](p.TargetType)
 		}
 
-		f.Load()
+		var form modelforms.ModelForm[TARGET]
+		if p.Form != nil {
+			form = p.Form()
+		} else {
+			var modelDef = FindDefinition(p.TargetType)
+			except.Assert(
+				modelDef != nil,
+				http.StatusInternalServerError,
+				"ModelFormPanel: no model definition found for type %T",
+				p.TargetType,
+			)
 
-		forms = append(forms, f)
+			form = GetAdminForm(
+				target,
+				modelDef.AddView,
+				modelDef._app,
+				modelDef,
+				r,
+			)
+		}
+
+		var meta = attrs.GetModelMeta(source)
+		var defs = meta.Definitions()
+		var field, ok = defs.Field(p.FieldName)
+		except.Assert(
+			ok, http.StatusInternalServerError,
+			"ModelFormPanel: field %q not found in model %T",
+			p.FieldName, source,
+		)
+
+		var revField = field.Rel().Field()
+		var initialData = make(map[string]any)
+		if revField != nil {
+			var fieldName = revField.Name()
+			var pk = attrs.PrimaryKey(source)
+			if !fields.IsZero(pk) {
+				initialData[fieldName] = pk
+			}
+
+		}
+
+		form.SetInstance(target)
+		form.SetPrefix(
+			p.formPrefix(i),
+		)
+
+		form.Load()
+
+		form.SetInitial(initialData)
+
+		forms = append(forms, form)
 	}
 	return forms
 }
@@ -673,7 +725,7 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 	}
 
 	var canAddMore = maxNumForms == 0 || totalForms < maxNumForms
-	var forms = m.GetForms(totalForms, targetList)
+	var forms = m.GetForms(ctx, r, instance, totalForms, targetList)
 	if !canAddMore && len(forms) > minNumForms {
 		forms = forms[:minNumForms]
 	}

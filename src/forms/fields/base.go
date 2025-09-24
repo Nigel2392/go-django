@@ -59,6 +59,12 @@ func (i *BaseField) SetAttrs(attrs map[string]string) {
 }
 
 func (i *BaseField) Hide(hidden bool) {
+	if i.FormWidget != nil {
+		i.FormWidget.Hide(hidden)
+		return
+	}
+
+	i.FormWidget = i.Widget()
 	i.FormWidget.Hide(hidden)
 }
 

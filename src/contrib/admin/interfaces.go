@@ -12,7 +12,7 @@ import (
 // AdminForm is a method that returns a modelform.ModelForm[attrs.Definer] for the admin.
 //
 // This can be used to create a custom form for your models, for the admin site.
-type FormDefiner interface {
+type FormDefiner[T attrs.Definer] interface {
 	attrs.Definer
-	AdminForm(r *http.Request, app *AppDefinition, model *ModelDefinition) modelforms.ModelForm[attrs.Definer]
+	AdminForm(r *http.Request, app *AppDefinition, model *ModelDefinition) modelforms.ModelForm[T]
 }

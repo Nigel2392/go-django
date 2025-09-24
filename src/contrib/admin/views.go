@@ -700,9 +700,9 @@ var ModelBulkDeleteHandler = func(w http.ResponseWriter, r *http.Request, adminS
 	except.AssertNil(err, 500, err)
 }
 
-func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) modelforms.ModelForm[attrs.Definer] {
-	var form modelforms.ModelForm[attrs.Definer]
-	if f, ok := instance.(FormDefiner); ok {
+func GetAdminForm[T attrs.Definer](instance T, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request) modelforms.ModelForm[T] {
+	var form modelforms.ModelForm[T]
+	if f, ok := any(instance).(FormDefiner[T]); ok {
 		form = f.AdminForm(r, app, model)
 	} else {
 		var modelForm = modelforms.NewBaseModelForm(r.Context(), instance)
@@ -734,9 +734,11 @@ func GetAdminForm(instance attrs.Definer, opts FormViewOptions, app *AppDefiniti
 		}
 
 		if opts.SaveInstance != nil {
-			modelForm.SaveInstance = opts.SaveInstance
+			modelForm.SaveInstance = func(ctx context.Context, t T) error {
+				return opts.SaveInstance(ctx, any(t).(T))
+			}
 		} else {
-			modelForm.SaveInstance = func(ctx context.Context, instance attrs.Definer) error {
+			modelForm.SaveInstance = func(ctx context.Context, instance T) error {
 				var saved, err = models.SaveModel(ctx, instance)
 				if err != nil {
 					return err

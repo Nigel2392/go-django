@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -17,6 +19,58 @@ type PanelBoundForm struct {
 	Panels      []Panel
 	Context     context.Context
 	Request     *http.Request
+}
+
+func NewPanelBoundForm(ctx context.Context, request *http.Request, instance attrs.Definer, form forms.Form, boundform forms.BoundForm, panels []Panel) *PanelBoundForm {
+	var (
+		boundForm = &PanelBoundForm{
+			BoundForm:   boundform,
+			Panels:      panels,
+			BoundPanels: make([]BoundPanel, 0),
+			Context:     ctx,
+		}
+		boundFields = boundform.Fields()
+		boundMap    = make(map[string]forms.BoundField)
+	)
+
+	for _, field := range boundFields {
+		boundMap[field.Input().Name()] = field
+	}
+
+	if len(panels) > 0 {
+		for _, panel := range BindPanels(panels, request, make(map[string]int), form, boundForm.Context, instance, boundMap) {
+			boundForm.BoundPanels = append(
+				boundForm.BoundPanels, panel,
+			)
+		}
+	} else {
+		var fields []fields.Field
+		if len(form.FieldOrder()) > 0 {
+			for _, name := range form.FieldOrder() {
+				var f, _ = form.Field(name)
+				fields = append(fields, f)
+			}
+		} else {
+			fields = form.Fields()
+		}
+
+		var idx int
+		for _, field := range fields {
+			var panel = FieldPanel(field.Name())
+			var boundPanel = panel.Bind(request, make(map[string]int), form, boundForm.Context, instance, boundMap)
+			if boundPanel == nil {
+				continue
+			}
+
+			boundForm.BoundPanels = append(
+				boundForm.BoundPanels, boundPanel,
+			)
+
+			idx++
+		}
+	}
+
+	return boundForm
 }
 
 func (b *PanelBoundForm) AsP() template.HTML {

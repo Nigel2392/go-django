@@ -19,6 +19,8 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
+var _ forms.Form = (*BaseUserForm)(nil)
+
 const postMethod = mux.POST
 
 type RegisterFormConfig struct {

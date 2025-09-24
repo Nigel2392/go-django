@@ -112,8 +112,16 @@ type Field interface {
 	IsEmpty(value interface{}) bool
 }
 
+type WithDataDefiner[T any] interface {
+	WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) T
+	Data() (url.Values, map[string][]filesystem.FileHeader)
+}
+
 type Form interface {
+	WithDataDefiner[Form]
+	FullCleanMixin
 	ErrorAdder
+
 	AsP() template.HTML
 	AsUL() template.HTML
 	Media() media.Media
@@ -122,15 +130,13 @@ type Form interface {
 	WithContext(ctx context.Context)
 	Prefix() string
 	SetPrefix(prefix string)
-	PrefixName(name string) (prefixedName string)
 	SetInitial(initial map[string]interface{})
 	SetValidators(validators ...func(Form, map[string]interface{}) []error)
+	Validators() []func(f Form, cleanedData map[string]interface{}) []error
 	Ordering([]string)
 	FieldOrder() []string
 
-	FieldMap() *orderedmap.OrderedMap[string, Field]
 	Field(name string) (Field, bool)
-	Widget(name string) (Widget, bool)
 	Fields() []Field
 	Widgets() []Widget
 	AddField(name string, field Field)
@@ -141,7 +147,6 @@ type Form interface {
 	BoundErrors() *orderedmap.OrderedMap[string, []error]
 	ErrorList() []error
 
-	WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) Form
 	InitialData() map[string]interface{}
 	CleanedData() map[string]interface{}
 
@@ -150,14 +155,10 @@ type Form interface {
 	OnFinalize(...func(Form))
 
 	WasCleaned() bool
-	Data() (url.Values, map[string][]filesystem.FileHeader)
-	Validators() []func(f Form, cleanedData map[string]interface{}) []error
 	HasChanged() bool
 	CallbackOnValid() []func(f Form)
 	CallbackOnInvalid() []func(f Form)
 	CallbackOnFinalize() []func(f Form)
-	// BindCleanedData might be called multiple times for a single IsValid() call
-	BindCleanedData(invalid, defaults, cleaned map[string]interface{})
 	CleanedDataUnsafe() map[string]interface{}
 }
 

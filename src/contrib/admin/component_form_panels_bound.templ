@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"io"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"html"
 )
 
 
@@ -471,26 +472,87 @@ type BoundModelFormPanel[TARGET attrs.Definer, FORM modelforms.ModelForm[TARGET]
 	Panel      *ModelFormPanel[TARGET, FORM]
     SourceModel attrs.Definer
     SourceField attrs.Field
-    Forms       []FORM
+    Forms       []modelforms.ModelForm[TARGET]
     Context     context.Context
     Request     *http.Request
 }
 
+func (p *BoundModelFormPanel[TARGET, FORM]) validate() {
+    if p.SourceModel == nil {
+        panic("BoundModelFormPanel: SourceModel is nil")
+    }
+    if p.SourceField == nil {
+        panic("BoundModelFormPanel: SourceField is nil")
+    }
+    if p.Context == nil {
+        panic("BoundModelFormPanel: Context is nil")
+    }
+    if p.Request == nil {
+        panic("BoundModelFormPanel: Request is nil")
+    }
+}
+
 func (p *BoundModelFormPanel[TARGET, FORM]) Hidden() bool {
+    p.validate()
     return p.Panel == nil
 }
 
 func (p *BoundModelFormPanel[TARGET, FORM]) Render() template.HTML {
+    p.validate()
     var b bytes.Buffer
     p.Component().Render(p.Context, &b)
     return template.HTML(b.String())
+}
+
+templ (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() {
+    if len(p.Forms) == 0 {
+        {{ return nil }} // No forms to render
+    }
+
+    <div class="modelform-panel__forms">
+        for _, form := range p.Forms {
+            {{ var boundForm = form.BoundForm() }}
+            {{ var boundPanelForm = NewPanelBoundForm(p.Context, p.Request, p.SourceModel, form, boundForm, p.Panel.Panels) }}
+            @PanelComponent{
+                Classname:      "panel-default collapsible",
+                PanelId:        BuildPanelID("modelform-instance", nil, slug.Make(form.Prefix())),
+                Heading: templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+                    w.Write([]byte("<label>"))
+                    w.Write([]byte(html.EscapeString(attrs.ToString(form.Instance()))))
+                    w.Write([]byte("</label>"))
+                    return nil
+                }),
+                Body: templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+                    for _, panel := range boundPanelForm.BoundPanels {
+                        err = panel.Component().Render(ctx, w)
+                        if err != nil {
+                            return err
+                        }
+                    }
+                    return nil
+                }),
+            }
+        }
+    </div>
 }
 
 templ (p *BoundModelFormPanel[TARGET, FORM]) Component() {
     if p.Panel == nil {
         {{ return nil }} // No panel to render
     }
+    {{ p.validate() }}
 
-    
-
+    @PanelComponent{
+        Classname:      p.Panel.ClassName(),
+        PanelId:        BuildPanelID("modelform-panel", nil, slug.Make(p.SourceField.Name())),
+        Heading: templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+            _, err = w.Write([]byte(p.SourceField.Label(ctx)))
+            return err
+        }),
+        HelpText: templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+            _, err = w.Write([]byte(p.SourceField.HelpText(ctx)))
+            return err
+        }),
+        Body: p.formsComponent(),
+    }
 }

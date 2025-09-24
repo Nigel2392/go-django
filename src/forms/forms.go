@@ -26,13 +26,17 @@ type (
 	IsValidDefiner     = forms.IsValidDefiner
 	BinderWidget       = forms.BinderWidget
 	FormWrapper        = forms.FormWrapper
+
+	PrevalidatorMixin = forms.PrevalidatorMixin
+	ValidatorMixin    = forms.ValidatorMixin
+	FullCleanMixin    = forms.FullCleanMixin
 )
 
 //go:linkname IsValid github.com/Nigel2392/go-django/src/internal/forms.IsValid
-func IsValid(ctx context.Context, f Form) bool
+func IsValid(ctx context.Context, f any) bool
 
 //go:linkname FullClean github.com/Nigel2392/go-django/src/internal/forms.FullClean
-func FullClean(ctx context.Context, f Form) (invalid, defaults, cleaned map[string]any)
+func FullClean(ctx context.Context, f ErrorAdder) (invalid, defaults, cleaned map[string]any)
 
 type SaveableForm interface {
 	Form

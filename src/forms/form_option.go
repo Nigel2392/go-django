@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/internal/forms"
 )
 
 type multipartFileHeader struct {
@@ -65,12 +66,12 @@ func WithRequestData(method string, r *http.Request) func(Form) {
 	}
 }
 
-func WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) func(Form) {
+func WithData[T forms.WithDataDefiner[T]](data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) func(T) {
 	if files == nil {
 		files = make(map[string][]filesystem.FileHeader)
 	}
 
-	return func(f Form) {
+	return func(f T) {
 		f.WithData(data, files, r)
 	}
 }

@@ -19,6 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/pkg/errors"
 )
 
@@ -61,6 +62,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 
 	appconfig.ModelObjects = []attrs.Definer{
 		&BlogPage{},
+		&BlogImage{},
 	}
 
 	appconfig.Init = func(settings django.Settings, db drivers.Database) error {
@@ -100,10 +102,22 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 			),
 		})
 
+		admin.RegisterApp(
+			"blog",
+			admin.AppOptions{
+				RegisterToAdminMenu: false,
+			},
+			admin.ModelOptions{
+				Name:  "blog_image",
+				Model: &BlogImage{},
+			},
+		)
+
 		return nil
 	}
 
 	appconfig.Ready = func() error {
+
 		pages.Register(&pages.PageDefinition{
 			Prefetch: admin.Prefetch{
 				SelectRelated: []string{"User", "Thumbnail"},
@@ -159,6 +173,12 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 							),
 							admin.FieldPanel("Image"),
 							admin.FieldPanel("Editor"),
+							&admin.ModelFormPanel[*BlogImage, modelforms.ModelForm[*BlogImage]]{
+								TargetType: &BlogImage{},
+								FieldName:  "BlogImageSet",
+								MinNum:     3,
+								MaxNum:     9,
+							},
 						),
 						admin.PanelTab(
 							trans.S("Media"),

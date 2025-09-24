@@ -18,6 +18,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 )
 
@@ -29,6 +30,46 @@ var (
 type BlogContext struct {
 	ctx.ContextWithRequest
 	Page pages.Page
+}
+
+type BlogImage struct {
+	models.Model `table:"blog_images"`
+	Image        *images.Image
+	BlogPage     *BlogPage
+}
+
+func (b *BlogImage) UniqueTogether() [][]string {
+	return [][]string{
+		{"BlogPage", "Image"},
+	}
+}
+
+func (b *BlogImage) FieldDefs() attrs.Definitions {
+	return b.Model.Define(b,
+		attrs.NewField(b, "BlogPage", &attrs.FieldConfig{
+			RelForeignKey: attrs.Relate(
+				&BlogPage{}, "", nil,
+			),
+			Blank: true,
+			FormField: func(opts ...func(fields.Field)) fields.Field {
+				return fields.CharField(
+					fields.Hide(true),
+				)
+			},
+		}),
+		attrs.NewField(b, "Image", &attrs.FieldConfig{
+			RelForeignKey: attrs.Relate(
+				&images.Image{}, "", nil,
+			),
+			FormWidget: func(fc attrs.FieldConfig) widgets.Widget {
+				return chooser.NewChooserWidget(
+					fc.RelForeignKey.Model(), fc.WidgetAttrs,
+				)
+			},
+			Label:    trans.S("Image"),
+			HelpText: trans.S("The image for this blog post."),
+		}),
+	)
 }
 
 type BlogPage struct {

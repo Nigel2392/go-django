@@ -137,57 +137,17 @@ func (a *AdminForm[T1, T2]) DeleteField(name string) bool {
 func (a *AdminForm[T1, T2]) AddWidget(name string, widget widgets.Widget) {
 	a.Form.AddWidget(name, widget)
 }
+
 func (a *AdminForm[T1, T2]) BoundForm() forms.BoundForm {
-	var (
-		form      = a.Form.BoundForm()
-		boundForm = &PanelBoundForm{
-			BoundForm:   form,
-			Panels:      a.Panels,
-			BoundPanels: make([]BoundPanel, 0),
-			Context:     a.Context(),
-		}
-		boundFields = form.Fields()
-		boundMap    = make(map[string]forms.BoundField)
+	var form = a.Form.BoundForm()
+	return NewPanelBoundForm(
+		a.Context(),
+		a.Request,
+		a.Form.Instance(),
+		a.Form,
+		form,
+		a.Panels,
 	)
-
-	for _, field := range boundFields {
-		boundMap[field.Name()] = field
-	}
-
-	if len(a.Panels) > 0 {
-		for _, panel := range BindPanels(a.Panels, a.Request, make(map[string]int), a, boundForm.Context, a.Form.Instance(), boundMap) {
-			boundForm.BoundPanels = append(
-				boundForm.BoundPanels, panel,
-			)
-		}
-	} else {
-		var fields []fields.Field
-		if len(a.FieldOrder()) > 0 {
-			for _, name := range a.FieldOrder() {
-				var f, _ = a.Field(name)
-				fields = append(fields, f)
-			}
-		} else {
-			fields = a.Fields()
-		}
-
-		var idx int
-		for _, field := range fields {
-			var panel = FieldPanel(field.Name())
-			var boundPanel = panel.Bind(a.Request, make(map[string]int), a, boundForm.Context, a.Form.Instance(), boundMap)
-			if boundPanel == nil {
-				continue
-			}
-
-			boundForm.BoundPanels = append(
-				boundForm.BoundPanels, boundPanel,
-			)
-
-			idx++
-		}
-	}
-
-	return boundForm
 }
 func (a *AdminForm[T1, T2]) BoundFields() *orderedmap.OrderedMap[string, forms.BoundField] {
 	return a.Form.BoundFields()
@@ -349,7 +309,11 @@ func (a *AdminForm[T1, T2]) Load() {
 }
 
 func (a *AdminForm[T1, T2]) Save() (map[string]interface{}, error) {
-	return a.Form.Save()
+	var data, err = a.Form.Save()
+	if err != nil {
+		return data, err
+	}
+	return data, nil
 }
 func (a *AdminForm[T1, T2]) SetFields(fields ...string) {
 	a.Form.SetFields(fields...)
