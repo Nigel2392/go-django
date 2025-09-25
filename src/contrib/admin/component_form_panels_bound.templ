@@ -15,6 +15,11 @@ import (
 	"io"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"html"
+	"strings"
+	"maps"
+	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/src/core/trans"
 )
 
 
@@ -35,8 +40,59 @@ func (p PanelComponent) Render(ctx context.Context, w io.Writer) error {
     return p.Component().Render(ctx, w)
 }
 
+func appendAttrs(attrs templ.Attributes, key string, value any) {
+    var values []string
+    switch v := value.(type) {
+    case string:
+        values = []string{v}
+    case []string:
+        values = v
+    default:
+        assert.Fail(errors.TypeMismatch.Wrapf(
+            "expected attribute %s to be string or []string, got %T",
+            key, value,
+        ))
+    }
+
+    existing, ok := attrs[key]
+    if !ok {
+        attrs[key] = strings.Join(values, " ")
+        return
+    }
+
+    switch e := existing.(type) {
+    case string:
+        attrs[key] = strings.Join(append(values, e), " ")
+    case []string:
+        attrs[key] = strings.Join(append(values, e...), " ")
+    default:
+        assert.Fail(errors.TypeMismatch.Wrapf(
+            "expected attribute %s to be string or []string, got %T",
+            key, existing,
+        ))
+    }
+}
+
+func (p PanelComponent) panelAttrs() templ.Attributes {
+    var attrs = make(templ.Attributes)
+    maps.Copy(attrs, p.Attrs)
+    var cls = []string{"panel"}
+    if p.Classname != "" {
+        cls = append(cls, p.Classname)
+    }
+    appendAttrs(attrs, "class", cls)
+    appendAttrs(attrs, "data-controller", "panel")
+    if p.PanelId != "" {
+        attrs["data-panel-panel-value"] = p.PanelId
+    }
+    if p.InputID != "" {
+        attrs["data-panel-input-id"] = p.InputID
+    }
+    return attrs
+}
+
 templ (p PanelComponent) Component() {
-    <div class={ "panel", "panel-default", p.Classname } data-controller="panel" data-panel-panel-value={ p.PanelId } if p.InputID != "" { data-panel-input-id={ p.InputID } } { p.Attrs... }>
+    <div { p.panelAttrs()... }>
         if !p.Hidden && p.Heading != nil {
             <div class="panel__heading" data-panel-target="heading">
 
@@ -475,6 +531,8 @@ type BoundModelFormPanel[TARGET attrs.Definer, FORM modelforms.ModelForm[TARGET]
     Forms       []modelforms.ModelForm[TARGET]
     Context     context.Context
     Request     *http.Request
+
+	emptyForm modelforms.ModelForm[TARGET]
 }
 
 func (p *BoundModelFormPanel[TARGET, FORM]) validate() {
@@ -504,46 +562,77 @@ func (p *BoundModelFormPanel[TARGET, FORM]) Render() template.HTML {
     return template.HTML(b.String())
 }
 
+func (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelforms.ModelForm[TARGET], panelId string) templ.Component {
+    var boundForm = form.BoundForm()
+    var boundPanelForm = NewPanelBoundForm(p.Context, p.Request, p.SourceModel, form, boundForm, p.Panel.Panels)
+    return PanelComponent{
+        Classname:      "panel__forms__form collapsible",
+        PanelId:        BuildPanelID("modelform-instance", nil, panelId),
+        Heading: templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
+            w.Write([]byte("<label>"))
+            w.Write([]byte(html.EscapeString(attrs.ToString(form.Instance()))))
+            w.Write([]byte("</label>"))
+            return nil
+        }),
+        Body: p.renderSingleForm(form, boundPanelForm),
+        Attrs: templ.Attributes{
+            "id": fmt.Sprintf("id_%s", form.Prefix()),
+        },
+    }
+}
+
+templ (p *BoundModelFormPanel[TARGET, FORM]) renderSingleForm(form modelforms.ModelForm[TARGET], boundForm *PanelBoundForm) {
+    {{ var idParam = "id_" + form.Prefix() }}
+    <div class="modelform-panel__form">
+        <div class="modelform-panel__form__body">
+            for _, panel := range boundForm.BoundPanels {
+                @panel.Component()
+            }
+        </div>
+        <div class="modelform-panel__form__controls">
+            <button type="button" class="btn btn-secondary" data-action="click->inline-panel#addFormAction" data-inline-panel-id-param={ idParam }>
+                { trans.T(ctx, "Add") }
+            </button>
+
+            <button type="button" class="btn btn-secondary" data-action="click->inline-panel#removeFormAction" data-inline-panel-id-param={ idParam }>
+                { trans.T(ctx, "Remove") }
+            </button>
+        </div>
+    </div>
+}
+
 templ (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() {
     if len(p.Forms) == 0 {
         {{ return nil }} // No forms to render
     }
-
-    <div class="modelform-panel__forms">
+    
+    if p.emptyForm != nil {
+        <template class="modelform-panel__empty-form" data-inline-panel-target="template">
+            @p.renderSingleFormPanel(p.emptyForm, "__SLUGIFY(__PREFIX__)__")
+        </template>
+    }
+    
+    <div class="modelform-panel__forms" data-inline-panel-target="forms">
         for _, form := range p.Forms {
-            {{ var boundForm = form.BoundForm() }}
-            {{ var boundPanelForm = NewPanelBoundForm(p.Context, p.Request, p.SourceModel, form, boundForm, p.Panel.Panels) }}
-            @PanelComponent{
-                Classname:      "panel-default collapsible",
-                PanelId:        BuildPanelID("modelform-instance", nil, slug.Make(form.Prefix())),
-                Heading: templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
-                    w.Write([]byte("<label>"))
-                    w.Write([]byte(html.EscapeString(attrs.ToString(form.Instance()))))
-                    w.Write([]byte("</label>"))
-                    return nil
-                }),
-                Body: templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
-                    for _, panel := range boundPanelForm.BoundPanels {
-                        err = panel.Component().Render(ctx, w)
-                        if err != nil {
-                            return err
-                        }
-                    }
-                    return nil
-                }),
-            }
+            @p.renderSingleFormPanel(form, slug.Make(form.Prefix()))
         }
     </div>
 }
 
-templ (p *BoundModelFormPanel[TARGET, FORM]) Component() {
+func (p *BoundModelFormPanel[TARGET, FORM]) Component() templ.Component {
     if p.Panel == nil {
-        {{ return nil }} // No panel to render
+        return templ.Raw("") // No panel to render
     }
-    {{ p.validate() }}
+    
+    p.validate()
 
-    @PanelComponent{
-        Classname:      p.Panel.ClassName(),
+    var cls = "panel__forms"
+    if p.Panel.ClassName() != "" {
+        cls = fmt.Sprintf("%s %s", cls, p.Panel.ClassName())
+    }
+
+    return PanelComponent{
+        Classname:      cls,
         PanelId:        BuildPanelID("modelform-panel", nil, slug.Make(p.SourceField.Name())),
         Heading: templ.ComponentFunc(func(ctx context.Context, w io.Writer) (err error) {
             _, err = w.Write([]byte(p.SourceField.Label(ctx)))
@@ -554,5 +643,9 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) Component() {
             return err
         }),
         Body: p.formsComponent(),
+        Attrs: templ.Attributes{
+            "data-controller": "inline-panel",
+            "data-inline-panel-prefix-value": p.Panel.formPrefix("__INDEX__"),
+        },
     }
 }

@@ -599,8 +599,8 @@ func (f *ModelFormPanel[TARGET, FORM]) Comparison(ctx context.Context, oldInstan
 	return nil, nil
 }
 
-func (p *ModelFormPanel[TARGET, FORM]) formPrefix(index int) string {
-	return fmt.Sprintf("%s-%d", p.FieldName, index)
+func (p *ModelFormPanel[TARGET, FORM]) formPrefix(index any) string {
+	return fmt.Sprintf("%s-%v", p.FieldName, index)
 }
 
 func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Request, source attrs.Definer, totalForms int, targetList []TARGET) []modelforms.ModelForm[TARGET] {
@@ -651,7 +651,6 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 			if !fields.IsZero(pk) {
 				initialData[fieldName] = pk
 			}
-
 		}
 
 		form.SetInstance(target)
@@ -666,6 +665,13 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 		forms = append(forms, form)
 	}
 	return forms
+}
+
+func (m *ModelFormPanel[TARGET, FORM]) EmptyForm(ctx context.Context, r *http.Request, source attrs.Definer) modelforms.ModelForm[TARGET] {
+	var forms = m.GetForms(ctx, r, source, 1, nil)
+	var f = forms[0]
+	f.SetPrefix("__PREFIX__")
+	return f
 }
 
 func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField) BoundPanel {
@@ -737,6 +743,7 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 		SourceField: field,
 		Context:     ctx,
 		Request:     r,
+		emptyForm:   m.EmptyForm(ctx, r, instance),
 	}
 }
 

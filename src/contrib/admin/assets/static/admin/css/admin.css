@@ -752,6 +752,9 @@ flex-direction is set to row above 70em.
 .panel.collapsible.collapsed > .panel__body {
     display: none;
 }
+.panel .panel__heading {
+    width: fit-content;
+}
 .panel .panel__heading:has(> .panel__icon+.panel__title) {
     display: flex;
     align-items: center;
@@ -822,7 +825,28 @@ flex-direction is set to row above 70em.
 .error-list .error p {
     margin: 0.125rem 0;
 }
+.panel .modelform-panel__forms {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1rem;
+    gap: 1rem;
+}
+.panel .modelform-panel__forms .panel__body > .modelform-panel__form {
+    margin-inline-start: 0.5rem;
+    margin-top: 0.5rem;
+    border: 2px dashed var(--border-color);
+    padding: 0.75rem 1.75rem;
+    position: relative;
+}
+.modelform-panel__form .modelform-panel__form__controls {
+    position: absolute;
+    display: flex;
+    bottom: -0.5rem;
+    right: 1rem;
+}
+.modelform-panel__form .modelform-panel__form__body {
 
+}
 
 .side-panels .side-panels__controls {
     display: flex;
