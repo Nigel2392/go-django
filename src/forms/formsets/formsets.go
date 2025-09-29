@@ -77,16 +77,23 @@ func NewManagementForm(ctx context.Context, opts ...func(*ManagementForm)) *Mana
 		fields.ReadOnly(true),
 	))
 	m.SetValidators(func(f forms.Form, data map[string]interface{}) []error {
-		if data["TotalFormsValue"].(int) < m.MinNumForms {
-			return []error{errors.ValueError.Wrap(trans.T(
-				f.Context(), "Ensure at least %d forms are submitted (you submitted %d).",
-				m.MinNumForms, data["TotalFormsValue"].(int),
+		var total, ok = data[TOTAL_FORM_COUNT].(int)
+		if !ok {
+			return []error{errors.TypeMismatch.Wrap(trans.T(
+				f.Context(),
+				"management form %s must be an integer", TOTAL_FORM_COUNT,
 			))}
 		}
-		if m.MaxNumForms > 0 && data["TotalFormsValue"].(int) > m.MaxNumForms {
+		if total < m.MinNumForms {
+			return []error{errors.ValueError.Wrap(trans.T(
+				f.Context(), "Ensure at least %d forms are submitted (you submitted %d).",
+				m.MinNumForms, total,
+			))}
+		}
+		if m.MaxNumForms > 0 && total > m.MaxNumForms {
 			return []error{errors.ValueError.Wrap(trans.T(
 				f.Context(), "Ensure at most %d forms are submitted (you submitted %d).",
-				m.MaxNumForms, data["TotalFormsValue"].(int),
+				m.MaxNumForms, total,
 			))}
 		}
 		return nil
@@ -114,6 +121,7 @@ type ListFormSet[T BaseFormSetForm] interface {
 	AddFormError(errorList ...error)
 	HasChanged() bool
 	Media() media.Media
+	Prefix() string
 	SetPrefix(prefix string)
 	PrefixName(fieldName string) string
 	PrefixForm(fld any) string
@@ -137,6 +145,7 @@ type BaseFormSetForm interface {
 	forms.WithDataDefiner
 	AddFormError(errorList ...error)
 	SetPrefix(prefix string)
+	Prefix() string
 	WithContext(ctx context.Context)
 	CleanedData() map[string]any
 	PrefixName(fieldName string) string
@@ -250,24 +259,9 @@ func (b *BaseFormSet[FORM]) PrefixName(fieldName string) string {
 }
 
 func (b *BaseFormSet[FORM]) PrefixForm(fieldName any) string {
-	if b.opts.SkipPrefix {
-		if b.prefix != "" {
-			if s, ok := fieldName.(string); ok {
-				return fmt.Sprintf("%s-%s", b.prefix, s)
-			}
-			return b.prefix
-		} else {
-			if s, ok := fieldName.(string); ok {
-				return s
-			}
-			return ""
-		}
-	}
 	if b.prefix != "" {
-		fmt.Printf("BaseFormSet.PrefixForm: prefix is %s\n", b.prefix)
 		return fmt.Sprintf("%s-%v", b.prefix, fieldName)
 	}
-	fmt.Printf("BaseFormSet.PrefixForm: prefix is empty, fieldName is %v\n", fieldName)
 	return fmt.Sprintf("%v", fieldName)
 }
 
@@ -280,24 +274,16 @@ func (b *BaseFormSet[FORM]) SetPrefix(prefix string) {
 		panic("BaseFormSet.SetPrefix: BaseFormSet is nil")
 	}
 
-	if b.mgmt == nil {
-		panic("BaseFormSet.SetPrefix: ManagementForm is nil")
-	}
-
 	b.prefix = prefix
-	b.mgmt.SetPrefix(fmt.Sprintf("%s-%s", prefix, "management"))
 
-	fmt.Printf("BaseFormSet.SetPrefix: setting prefix to %s for %T\n", b.prefix, b)
-
-	for i := 0; i < 8; i++ {
-		_, file, line, ok := runtime.Caller(i + 1)
-		if ok {
-			fmt.Printf(" - BaseFormSet.SetPrefix: called from %s:%d\n", file, line)
-		}
+	if b.mgmt != nil {
+		b.mgmt.SetPrefix(fmt.Sprintf("%s-%s", prefix, "management"))
 	}
 
-	for i, form := range b.FormList {
-		form.SetPrefix(b.PrefixForm(i))
+	if !b.opts.SkipPrefix {
+		for i, form := range b.FormList {
+			form.SetPrefix(b.PrefixForm(i))
+		}
 	}
 }
 
@@ -340,14 +326,6 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 	managementForm.WithData(data, files, fs.req)
 	managementForm.WithContext(ctx)
 	if !forms.IsValid(ctx, managementForm) {
-		form.AddFormError(managementForm.ErrorList()...)
-		var bnd = managementForm.BoundErrors()
-		if bnd != nil && bnd.Len() > 0 {
-			for head := bnd.Front(); head != nil; head = head.Next() {
-				form.AddFormError(head.Value...)
-			}
-		}
-
 		isValid = false
 		logger.Warnf("Formset: management form is not valid: %v, %T", managementForm.ErrorList(), form)
 	} else {
@@ -385,11 +363,13 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		} else {
 			subForm = formList[i]
 		}
-		subForm.SetPrefix(form.PrefixForm(i))
+
+		if !fs.opts.SkipPrefix {
+			subForm.SetPrefix(form.PrefixForm(i))
+		}
+
 		subForm.WithContext(form.Context())
 		subForm.WithData(data, files, fs.req)
-
-		fmt.Println("BaseFormSet.CheckIsValid: processing form", i)
 
 		if s, ok := any(subForm).(initialSetter); ok {
 			if i < len(defaults) && defaults[i] != nil {
@@ -398,8 +378,6 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 				s.SetInitial(base)
 			}
 		}
-
-		logger.Warnf("Formset: initializing form %d with prefix %s", i, subForm.PrefixName("__PREFIX__"))
 
 		var formObj = formObject[FORM]{
 			f: subForm,
@@ -476,6 +454,11 @@ func (b *BaseFormSet[FORM]) WithData(data url.Values, files map[string][]filesys
 }
 
 func (b *BaseFormSet[FORM]) Load() {
+	if (b.formData != nil && b.req != nil || b.formFiles != nil && b.req != nil) || forms.HasErrors(b) {
+		logger.Warnf("Formset: already loaded, skipping Load()")
+		return
+	}
+
 	_, err := b.Forms()
 	if err != nil {
 		return
@@ -575,7 +558,7 @@ func (b *BaseFormSet[FORM]) ForEach(fn func(form FORM, index int) error) error {
 }
 
 func (b *BaseFormSet[FORM]) SetForms(forms []FORM) {
-	fmt.Printf("BaseFormSet.SetForms: setting %d forms\n", len(forms))
+	fmt.Printf("%T.SetForms: setting %d forms\n", b, len(forms))
 	for i := 0; i < 8; i++ {
 		_, file, line, ok := runtime.Caller(i + 1)
 		if ok {
@@ -586,7 +569,9 @@ func (b *BaseFormSet[FORM]) SetForms(forms []FORM) {
 	b.mgmt.InitialForms = len(forms)
 	b.mgmt.TotalFormsValue = len(forms)
 	for i, form := range b.FormList {
-		form.SetPrefix(b.PrefixForm(i))
+		if !b.opts.SkipPrefix {
+			form.SetPrefix(b.PrefixForm(i))
+		}
 		form.WithContext(b.ctx)
 	}
 }
@@ -624,7 +609,6 @@ func (b *BaseFormSet[FORM]) CleanedDataList() []map[string]any {
 func (b *BaseFormSet[FORM]) ErrorList() []error {
 	var errs = make([]error, 0, len(b.errors)+len(b.FormList))
 	errs = append(errs, b.errors...)
-	errs = append(errs, b.ManagementForm().ErrorList()...)
 	for _, form := range b.FormList {
 		errs = append(errs, form.ErrorList()...)
 	}

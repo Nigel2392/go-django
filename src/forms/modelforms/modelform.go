@@ -119,9 +119,19 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 	f.Definition = model.FieldDefs()
 	f.InstanceFields = f.Definition.Fields()
 
+	var excluded = make(map[string]struct{})
+	for _, n := range f.ModelExclude {
+		excluded[n] = struct{}{}
+	}
+
 	for _, field := range f.InstanceFields {
 		var n = field.Name()
-		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, n) {
+		if _, ok := excluded[n]; ok && f.wasSet(excludeWasSet) {
+			continue
+		}
+
+		var formField = field.FormField()
+		if formField == nil {
 			continue
 		}
 
@@ -130,9 +140,11 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 
 	var initial = make(map[string]interface{})
 	for _, def := range f.InstanceFields {
-		if !def.AllowEdit() {
+		var formField = def.FormField()
+		if formField == nil {
 			continue
 		}
+
 		var v = def.GetValue()
 		var n = def.Name()
 		if attrs.IsZero(v) {
@@ -228,9 +240,14 @@ func (f *BaseModelForm[T]) Load() {
 		model = f.Initial()
 	}
 
+	var excluded = make(map[string]struct{})
+	for _, n := range f.ModelExclude {
+		excluded[n] = struct{}{}
+	}
+
 	for _, name := range f.ModelFields {
 
-		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, name) {
+		if _, ok := excluded[name]; ok && f.wasSet(excludeWasSet) {
 			continue
 		}
 
@@ -259,11 +276,7 @@ func (f *BaseModelForm[T]) Load() {
 	if !f.modelIsNil(model) {
 		for _, def := range f.InstanceFields {
 			var n = def.Name()
-			if !def.AllowEdit() {
-				continue
-			}
-
-			if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, n) {
+			if _, ok := excluded[n]; ok && f.wasSet(excludeWasSet) {
 				continue
 			}
 
@@ -275,11 +288,12 @@ func (f *BaseModelForm[T]) Load() {
 	} else {
 		for _, def := range f.Definition.Fields() {
 			var n = def.Name()
-			if !def.AllowEdit() {
+			if _, ok := excluded[n]; ok && f.wasSet(excludeWasSet) {
 				continue
 			}
 
-			if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, n) {
+			var formField = def.FormField()
+			if formField == nil {
 				continue
 			}
 
@@ -325,6 +339,10 @@ func (f *BaseModelForm[T]) IsValid() bool {
 		var field, ok = f.Definition.Field(fieldname)
 		assert.True(ok, "Field %q not found in %T", fieldname, f.Model)
 
+		if !field.AllowEdit() {
+			continue
+		}
+
 		value, ok := cleaned[fieldname]
 		if !ok {
 			continue
@@ -361,6 +379,10 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 
 		var field, ok = f.Definition.Field(fieldname)
 		assert.True(ok, "Field %q not found in %T", fieldname, f.Model)
+
+		if !field.AllowEdit() {
+			continue
+		}
 
 		value, ok := cleaned[fieldname]
 		if !ok {

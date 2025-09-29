@@ -82,7 +82,7 @@ func (rl *RelFK[T]) GetValue() attrs.Definer {
 type RelRevFK[ModelType attrs.Definer] struct {
 	Parent          *ParentInfo                            // The parent model instance
 	relations       *orderedmap.OrderedMap[any, ModelType] // The related objects
-	relatedQuerySet *RelManyToOneQuerySet[ModelType]       // The query set for this relation
+	relatedQuerySet *RelOneToManyQuerySet[ModelType]       // The query set for this relation
 }
 
 func (rl *RelRevFK[T]) ParentInfo() *ParentInfo {
@@ -100,9 +100,9 @@ func (rl *RelRevFK[T]) BindToModel(parent attrs.Definer, parentField attrs.Field
 	return nil
 }
 
-func (rl *RelRevFK[T]) Objects() *RelManyToOneQuerySet[T] {
+func (rl *RelRevFK[T]) Objects() *RelOneToManyQuerySet[T] {
 	if rl.relatedQuerySet == nil {
-		rl.relatedQuerySet = ManyToOneQuerySet[T](rl)
+		rl.relatedQuerySet = OneToManyQuerySet[T](rl)
 	}
 	return rl.relatedQuerySet
 }

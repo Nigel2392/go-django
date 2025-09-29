@@ -356,14 +356,14 @@ func (t *relatedQuerySet[T, T2]) All() (Rows[T], error) {
 	return t.qs.All()
 }
 
-type RelManyToOneQuerySet[T attrs.Definer] struct {
+type RelOneToManyQuerySet[T attrs.Definer] struct {
 	backRef                                       MultiRelationValue
-	*relatedQuerySet[T, *RelManyToOneQuerySet[T]] // Embedding the relatedQuerySet to inherit its methods
+	*relatedQuerySet[T, *RelOneToManyQuerySet[T]] // Embedding the relatedQuerySet to inherit its methods
 }
 
-func ManyToOneQuerySet[T attrs.Definer](backRef MultiRelationValue) *RelManyToOneQuerySet[T] {
+func OneToManyQuerySet[T attrs.Definer](backRef MultiRelationValue) *RelOneToManyQuerySet[T] {
 	var parentInfo = backRef.ParentInfo()
-	var mQs = &RelManyToOneQuerySet[T]{
+	var mQs = &RelOneToManyQuerySet[T]{
 		backRef: backRef,
 	}
 	mQs.relatedQuerySet = newRelatedQuerySet[T](mQs, parentInfo.Field.Rel(), parentInfo)

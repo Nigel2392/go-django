@@ -3,7 +3,6 @@ package admin
 import (
 	"context"
 	"errors"
-	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
@@ -46,7 +45,7 @@ type AdminForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer] struct {
 	Panels  []Panel
 	Request *http.Request
 
-	forms   []formsets.BaseFormSetForm
+	forms   FormSetMap
 	formset formsets.ListFormSet[formsets.BaseFormSetForm]
 }
 
@@ -145,6 +144,7 @@ func (a *AdminForm[T1, T2]) BoundForm() forms.BoundForm {
 		a.Form,
 		form,
 		a.Panels,
+		a.forms,
 	)
 }
 func (a *AdminForm[T1, T2]) BoundFields() *orderedmap.OrderedMap[string, forms.BoundField] {
@@ -154,8 +154,10 @@ func (a *AdminForm[T1, T2]) BoundErrors() *orderedmap.OrderedMap[string, []error
 	var errs = a.Form.BoundErrors()
 	if a.formset != nil {
 		var fsErrs = a.formset.BoundErrors()
-		for head := fsErrs.Front(); head != nil; head = head.Next() {
-			errs.Set(head.Key, head.Value)
+		if fsErrs != nil {
+			for head := fsErrs.Front(); head != nil; head = head.Next() {
+				errs.Set(head.Key, head.Value)
+			}
 		}
 	}
 	return errs
@@ -165,6 +167,12 @@ func (a *AdminForm[T1, T2]) ErrorList() []error {
 	if a.formset != nil {
 		errList = append(errList, a.formset.ErrorList()...)
 		errList = append(errList, a.formset.ManagementForm().ErrorList()...)
+		var mfErrs = a.formset.ManagementForm().BoundErrors()
+		if mfErrs != nil {
+			for head := mfErrs.Front(); head != nil; head = head.Next() {
+				errList = append(errList, head.Value...)
+			}
+		}
 	}
 	return errList
 }
@@ -370,18 +378,17 @@ func (a *AdminForm[T1, T2]) FormSet() formsets.ListFormSet[formsets.BaseFormSetF
 	}
 
 	// var errs = make([]error, 0)
-	for _, panel := range a.Panels {
+	var formSets FormSetMap = make(map[string]FormSetObject)
+	for i, panel := range a.Panels {
 		if unwrapper, ok := panel.(FormPanel); ok {
-			formList, err := unwrapper.Forms(a.Request, a.Context(), a.Instance())
+			fMap, formList, err := unwrapper.Forms(a.Request, a.Context(), a.Instance())
 			if err != nil {
 				logger.Errorf("could not get forms from panel %T: %v", unwrapper, err)
 				continue
 			}
 
-			formsList = append(
-				formsList,
-				formList...,
-			)
+			formSets[panelPathPart(panel, i)] = fMap
+			formsList = append(formsList, formList...)
 		}
 	}
 
@@ -398,7 +405,7 @@ func (a *AdminForm[T1, T2]) FormSet() formsets.ListFormSet[formsets.BaseFormSetF
 		return int(FORM_ORDERING_NONE)
 	})
 
-	a.forms = formsList
+	a.forms = formSets
 	a.formset = formsets.NewBaseFormSet(
 		a.Context(),
 		formsets.FormsetOptions[formsets.BaseFormSetForm]{
@@ -432,21 +439,21 @@ func (a *AdminForm[T1, T2]) Save() (map[string]interface{}, error) {
 
 func (a *AdminForm[T1, T2]) SaveForms(formList ...forms.Form) (err error) {
 	if len(formList) == 0 && len(a.forms) == 0 {
-		a.forms, err = a.FormSet().Forms()
+		a.FormSet()
+	}
+
+	var flist = make([]formsets.BaseFormSetForm, 0, len(formList))
+	if len(formList) == 0 {
+		flist, err = a.FormSet().Forms()
 		if err != nil {
 			return err
 		}
+	} else {
+		for _, f := range formList {
+			flist = append(flist, f)
+		}
 	}
 
-	var flist = make([]formsets.BaseFormSetForm, len(a.forms), len(formList)+len(a.forms))
-	copy(flist, a.forms)
-	for _, form := range formList {
-		flist = append(flist, form)
-	}
-	fmt.Printf("AdminForm: saving %d forms\n", len(flist))
-	for _, form := range flist {
-		fmt.Printf(" - form: %T\n", form)
-	}
 	for _, form := range flist {
 		var rV = reflect.ValueOf(form)
 		var saveMethod = rV.MethodByName("Save")

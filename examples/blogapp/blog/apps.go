@@ -182,9 +182,9 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 								// SubClassname: "collapsed",
 								MinNum: 3,
 								MaxNum: 9,
-								Panels: []admin.Panel{
-									admin.FieldPanel("Image"),
-								},
+								//Panels: []admin.Panel{
+								//	admin.FieldPanel("Image"),
+								//},
 							},
 						),
 						admin.PanelTab(

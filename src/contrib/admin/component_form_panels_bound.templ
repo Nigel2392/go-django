@@ -25,6 +25,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"runtime/debug"
+	"github.com/Nigel2392/go-django/src/core/except"
 )
 
 func TextComponent(text any) templ.Component {
@@ -615,7 +616,7 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form forms.Fo
     {{ panelId = BuildPanelID("modelform-instance", nil, panelId) }}
 
     {{ var boundForm = form.BoundForm() }}
-    {{ var boundPanelForm = NewPanelBoundForm(p.Context, p.Request, p.SourceModel, form, boundForm, p.Panels) }}
+    {{ var boundPanelForm = NewPanelBoundForm(p.Context, p.Request, p.SourceModel, form, boundForm, p.Panels, nil) }}
     {{ var idParam = "id_" + form.Prefix() }}
     
     <div class={ "panel modelform-panel__forms__panel collapsible", p.Panel.SubClassname } data-controller="panel" data-panel-panel-value={ panelId } id={ idParam }>
@@ -732,7 +733,7 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() {
         </div>
     }
 
-    <div class="modelform-panel__management">
+    <div class="modelform-panel__management" data-inline-panel-target="management">
         {{ var managementForm = p.FormSet.ManagementForm() }}
         {{ var boundForm = managementForm.BoundForm() }}
         for _, boundField := range boundForm.Fields() {
@@ -745,15 +746,17 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() {
         if len(errList) > 0 || bndErrs != nil && bndErrs.Len() > 0 {
             <div class="panel__errors">
                 <ul>
-                    for _, err := range errList {
-                        <li class="panel__error">@TextComponent(err.Error())</li>
-                    }
-
                     for head := bndErrs.Front(); head != nil; head = head.Next() {
-                        {{ var field, _ = managementForm.Field(head.Key) }}
+                        {{ var field, ok = managementForm.Field(head.Key) }}
+                        {{ except.Assert(
+                            ok || head.Key == "__all__", http.StatusInternalServerError, 
+                            "Field %q not found in management form", head.Key) 
+                        }}
                         for _, err := range head.Value {
                             <li class="panel__error">
-                                { field.Label(ctx) }: 
+                                if field != nil {
+                                    { field.Label(ctx) }:
+                                }
                                 @TextComponent(err.Error())
                             </li>
                         }
@@ -788,18 +791,10 @@ func (p *BoundModelFormPanel[TARGET, FORM]) Component() templ.Component {
         cls = fmt.Sprintf("%s %s", cls, p.Panel.ClassName())
     }
 
-    p.FormSet.Load()
-
-	var errList = p.FormSet.ErrorList()
-	var bndErrors = p.FormSet.ManagementForm().BoundErrors()
-	if len(errList) > 0 || bndErrors != nil && bndErrors.Len() > 0 {
-		cls = fmt.Sprintf("%s panel--error", cls)
-	}
-	if bndErrors != nil && bndErrors.Len() > 0 {
-		for head := bndErrors.Front(); head != nil; head = head.Next() {
-			errList = append(errList, head.Value...)
-		}
-	}
+    var data, files = p.FormSet.Data()
+    if !(data != nil || files != nil) {
+        p.FormSet.Load()
+    }
 
     return PanelComponent{
         Classname: cls,
@@ -810,7 +805,8 @@ func (p *BoundModelFormPanel[TARGET, FORM]) Component() templ.Component {
         Errors:    p.FormSet.ErrorList(),
         Attrs:     templ.Attributes{
             "data-controller": "inline-panel",
-            "data-inline-panel-prefix-value": p.Panel.formPrefix("__INDEX__"),
+            "data-inline-panel-prefix-value": p.Panel.formPrefix("__INDEX__"),                         // matches replace stmt in javascript
+            "data-inline-panel-mgmt-prefix-value": p.FormSet.ManagementForm().PrefixName("__FIELD__"), // matches replace stmt in javascript
             "data-inline-panel-min-forms-value": p.Panel.MinNum,
             "data-inline-panel-max-forms-value": p.Panel.MaxNum,
         },

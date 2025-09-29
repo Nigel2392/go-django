@@ -33,6 +33,7 @@ class PanelController extends Controller<PanelElement> {
     declare hasLinkIconTarget: boolean;
 
     declare headingTarget: HTMLElement;
+    declare hasHeadingTarget: boolean;
     declare linkIconTarget: HTMLElement;
     declare contentTarget: HTMLElement;
 
@@ -80,7 +81,9 @@ class PanelController extends Controller<PanelElement> {
             }, 100);
         }
 
-        this.element.panelHeading = this.headingTarget;
+        if (this.hasHeadingTarget) {
+            this.element.panelHeading = this.headingTarget;
+        }
         this.element.panelBody = this.contentTarget;
         this.element.collapse = this.collapse.bind(this);
         this.element.panelCollapsed = () => {

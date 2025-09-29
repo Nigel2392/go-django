@@ -76,9 +76,9 @@
 *, *::before, *::after {
     box-sizing: border-box;
 }
-input:not([type="button"]):focus,
-select:focus,
-textarea:focus {
+input:not([type="button"],:read-only,:disabled):focus,
+select:not(:read-only,:disabled):focus,
+textarea:not(:read-only,:disabled):focus {
    outline: 2px solid var(--color-link);
 }
 html {
@@ -702,8 +702,11 @@ flex-direction is set to row above 70em.
 }
 *:is(.form-field, .panel) input:not([type="checkbox"], .default-input, [type="radio"]):disabled,
 *:is(.form-field, .panel) input:not([type="checkbox"], .default-input, [type="radio"]):read-only,
+*:is(.form-field, .panel) select:not(.default-input):disabled,
+*:is(.form-field, .panel) select:not(.default-input):read-only,
 *:is(.form-field, .panel) textarea:not(.default-input):disabled,
 *:is(.form-field, .panel) textarea:not(.default-input):read-only {
+    cursor: not-allowed;
     background-color: hsl( 0 0% 98% );
     color: hsl( 0 0% 60% );
 }

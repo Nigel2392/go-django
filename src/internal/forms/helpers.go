@@ -2,7 +2,6 @@ package forms
 
 import (
 	"context"
-	"fmt"
 	"net/url"
 	"reflect"
 
@@ -119,8 +118,6 @@ func IsValid[T any](ctx context.Context, formObj T) bool {
 	if rv.Kind() != reflect.Pointer {
 		panic("IsValid() only accepts a pointer to a Form, not a value.")
 	}
-
-	fmt.Printf("forms.IsValid: checking form %T is valid\n", formObj)
 
 	if chk, ok := any(formObj).(wasCleanedChecker); ok {
 		valid, ok := checkWasCleaned(chk, func(formObj wasCleanedChecker) (valid, ok bool) {

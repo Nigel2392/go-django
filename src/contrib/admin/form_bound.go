@@ -21,7 +21,7 @@ type PanelBoundForm struct {
 	Request     *http.Request
 }
 
-func NewPanelBoundForm(ctx context.Context, request *http.Request, instance attrs.Definer, form forms.Form, boundform forms.BoundForm, panels []Panel) *PanelBoundForm {
+func NewPanelBoundForm(ctx context.Context, request *http.Request, instance attrs.Definer, form forms.Form, boundform forms.BoundForm, panels []Panel, formsets FormSetObject) *PanelBoundForm {
 	var (
 		boundForm = &PanelBoundForm{
 			BoundForm:   boundform,
@@ -38,7 +38,7 @@ func NewPanelBoundForm(ctx context.Context, request *http.Request, instance attr
 	}
 
 	if len(panels) > 0 {
-		for _, panel := range BindPanels(panels, request, make(map[string]int), form, boundForm.Context, instance, boundMap) {
+		for _, panel := range BindPanels(panels, request, make(map[string]int), form, boundForm.Context, instance, boundMap, formsets) {
 			boundForm.BoundPanels = append(
 				boundForm.BoundPanels, panel,
 			)
@@ -55,9 +55,14 @@ func NewPanelBoundForm(ctx context.Context, request *http.Request, instance attr
 		}
 
 		var idx int
-		for _, field := range fields {
+		var m, ok = formsets.(FormSetMap)
+		if !ok {
+			m = nil
+		}
+
+		for i, field := range fields {
 			var panel = FieldPanel(field.Name())
-			var boundPanel = panel.Bind(request, make(map[string]int), form, boundForm.Context, instance, boundMap)
+			var boundPanel = panel.Bind(request, make(map[string]int), form, boundForm.Context, instance, boundMap, m[panelPathPart(panel, i)])
 			if boundPanel == nil {
 				continue
 			}

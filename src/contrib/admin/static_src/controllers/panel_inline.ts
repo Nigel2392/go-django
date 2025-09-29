@@ -64,27 +64,68 @@ class openAnimator {
     }
 }
 
+class ManagementFormElement {
+    element: HTMLElement;
+    prefix: string;
+    TotalFormsInput!: HTMLInputElement;
+    InitialFormsInput!: HTMLInputElement;
+    MinNumFormsInput!: HTMLInputElement;
+    MaxNumFormsInput!: HTMLInputElement;
+
+    constructor(prefix: string, element: HTMLElement) {
+        this.element = element;
+        this.prefix = prefix;
+        this.TotalFormsInput = this.element.querySelector(`input[name="${this.prefixName("TOTAL_FORMS")}"]`) as HTMLInputElement;
+        this.InitialFormsInput = this.element.querySelector(`input[name="${this.prefixName("INITIAL_FORMS")}"]`) as HTMLInputElement;
+        this.MinNumFormsInput = this.element.querySelector(`input[name="${this.prefixName("MIN_NUM_FORMS")}"]`) as HTMLInputElement;
+        this.MaxNumFormsInput = this.element.querySelector(`input[name="${this.prefixName("MAX_NUM_FORMS")}"]`) as HTMLInputElement;
+    }
+
+    private prefixName(name: string): string {
+        return this.prefix.replace(/__FIELD__/g, name);
+    }
+
+    get totalForms(): number {
+        return parseInt(this.TotalFormsInput.value, 10);
+    }
+    set totalForms(value: number) {
+        this.TotalFormsInput.value = value.toString();
+    }
+    get initialForms(): number {
+        return parseInt(this.InitialFormsInput.value, 10);
+    }
+    get minNumForms(): number {
+        return parseInt(this.MinNumFormsInput.value, 10);
+    }
+    get maxNumForms(): number {
+        return parseInt(this.MaxNumFormsInput.value, 10);
+    }
+}
 
 class InlinePanelController extends Controller<HTMLElement> {
     static values = {
         prefix: String,
+        mgmtPrefix: String,
         minForms: { type: Number, default: 0 },
         maxForms: { type: Number, default: Infinity },
     }
     static targets = [
-      "template",
-      "forms",
+        "template",
+        "management",
+        "forms",
     ];
 
     declare prefixValue: string;
+    declare mgmtPrefixValue: string;
     declare minFormsValue: number;
     declare maxFormsValue: number;
     declare hasTemplateTarget: boolean;
+    declare managementTarget: HTMLElement;
     declare templateTarget: HTMLElement;
     declare formsTarget: HTMLElement;
-    
+
+    declare managementForm: ManagementFormElement;
     declare lastFormIndex: number;
-    declare formCount: number;
     
     connect() {
         this.lastFormIndex = this.formsTarget.children.length - 1;
@@ -92,7 +133,21 @@ class InlinePanelController extends Controller<HTMLElement> {
             this.lastFormIndex = 0;
         }
 
-        this.formCount = this.formsTarget.children.length;
+        this.managementForm = new ManagementFormElement(this.mgmtPrefixValue, this.managementTarget);
+        console.log("Inline panel connected:", {
+            prefix: this.prefixValue,
+            mgmtPrefix: this.mgmtPrefixValue,
+            mgmtForms: {
+                total: this.managementForm.totalForms,
+                initial: this.managementForm.initialForms,
+                min: this.managementForm.minNumForms,
+                max: this.managementForm.maxNumForms,
+                form: this.managementForm,
+            },
+            minForms: this.minFormsValue,
+            maxForms: this.maxFormsValue,
+            formsCount: this.formsTarget.children.length,
+        });
     }
 
     addFormAction(event: ActionEvent) {
@@ -121,7 +176,7 @@ class InlinePanelController extends Controller<HTMLElement> {
             return;
         }
 
-        if (this.formCount >= this.maxFormsValue) {
+        if (this.managementForm.totalForms >= this.maxFormsValue) {
             console.warn("Maximum number of forms reached, cannot add more.");
             this.flash(this.formsTarget);
             return;
@@ -184,7 +239,7 @@ class InlinePanelController extends Controller<HTMLElement> {
                 break;
             }
 
-            this.formCount++;
+            this.managementForm.totalForms = this.managementForm.totalForms + 1;
         }
         
         animator.start();
@@ -199,7 +254,7 @@ class InlinePanelController extends Controller<HTMLElement> {
             return;
         }
 
-        if (this.formCount <= this.minFormsValue) {
+        if (this.managementForm.totalForms <= this.minFormsValue) {
             console.warn("Minimum number of forms reached, cannot remove more.");
             this.flash(targetedElement.panelBody.firstElementChild);
             return;
@@ -214,7 +269,7 @@ class InlinePanelController extends Controller<HTMLElement> {
 
         deletedInput.value = "true";
         targetedElement.style.display = "none";
-        this.formCount--;
+        this.managementForm.totalForms = this.managementForm.totalForms - 1;
         return;
     }
 
