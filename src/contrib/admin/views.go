@@ -808,8 +808,9 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 			}
 
 			var adminForm = &AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]{
-				Form:   form,
-				Panels: opts.Panels,
+				Form:    form,
+				Panels:  opts.Panels,
+				Request: req,
 			}
 
 			adminForm.Load()

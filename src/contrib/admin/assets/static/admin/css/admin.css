@@ -761,6 +761,7 @@ flex-direction is set to row above 70em.
     flex-direction: row;
     transform: translateX(-1.7rem);
 }
+.panel.collapsible > .panel__heading > .panel__title label,
 .panel .panel__heading:has(> .panel__icon+.panel__title) > .panel__title label {
     cursor: pointer;
 }
@@ -828,8 +829,84 @@ flex-direction is set to row above 70em.
 .panel .modelform-panel__forms {
     display: flex;
     flex-direction: column;
-    margin-bottom: 1rem;
-    gap: 1rem;
+}
+.panel .modelform-panel > .panel__heading > .panel__title {
+    position: relative;
+    font-weight: 600;
+}
+.modelform-panel .modelform-panel__forms__panel,
+.modelform-panel > .panel__body {
+    position: relative;
+}
+.panel .modelform-panel .modelform-panel__forms__controls {
+    position: relative;
+    z-index: 1;
+}
+.panel .modelform-panel .modelform-panel__forms__controls .modelform-panel__form__controls--add {
+    position: absolute;
+    right: 0.5rem;
+}
+.modelform-panel .modelform-panel__forms__panel {
+    margin-bottom: 0.925rem;
+}
+.modelform-panel .modelform-panel__forms__panel.collapsed {
+    margin-bottom: 1.4rem;
+}
+.modelform-panel .modelform-panel__forms__panel .modelform-panel__forms__panel__controls {
+    position: absolute;
+    top: 1.525rem;
+    left: -1.5rem;
+    bottom: -.325rem;
+}
+.modelform-panel .modelform-panel__forms__panel.collapsed .modelform-panel__forms__panel__controls {
+    width: 100%;
+}
+.modelform-panel .modelform-panel__forms__panel .modelform-panel__forms__panel__controls::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    border: 1px dashed var(--border-color);
+}
+.modelform-panel .modelform-panel__forms__panel.collapsed .modelform-panel__forms__panel__controls::after {
+    top: 100%;
+    bottom: unset;
+    height: 2px;
+    width: calc(100% + 1.5rem);
+    transform: none;
+    left: 1rem;
+    right: 0;
+}
+.modelform-panel .modelform-panel__forms__panel .modelform-panel__forms__panel__controls__group {
+    position: relative;
+    gap: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--body-bg-color);
+    z-index: 1;
+}
+.modelform-panel .modelform-panel__forms__panel:not(.collapsed) .modelform-panel__forms__panel__controls__group {
+    position: sticky;
+    top: 5%; 
+}
+.modelform-panel .modelform-panel__forms__panel.collapsed > .modelform-panel__forms__panel__controls > .modelform-panel__forms__panel__controls__group {
+    flex-direction: row-reverse;
+    justify-content: start;
+    width: fit-content;
+}
+.modelform-panel .modelform-panel__forms__panel.collapsed > .modelform-panel__forms__panel__controls > .modelform-panel__forms__panel__controls__group > .modelform-panel__form__controls--add.add--start {
+    display: none;
+}
+.modelform-panel .modelform-panel__button {
+    background-color: transparent;
+    color: var(--secondary-bg-color);
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    margin: 0;
 }
 .panel .modelform-panel__forms .panel__body > .modelform-panel__form {
     margin-inline-start: 0.5rem;
@@ -837,15 +914,6 @@ flex-direction is set to row above 70em.
     border: 2px dashed var(--border-color);
     padding: 0.75rem 1.75rem;
     position: relative;
-}
-.modelform-panel__form .modelform-panel__form__controls {
-    position: absolute;
-    display: flex;
-    bottom: -0.5rem;
-    right: 1rem;
-}
-.modelform-panel__form .modelform-panel__form__body {
-
 }
 
 .side-panels .side-panels__controls {
@@ -1158,6 +1226,18 @@ a.button, .button a {
 .bg-debug {
     background-color: var(--secondary-bg-color);
     color: var(--secondary-text-color);
+}
+
+.icon {
+    width: 1.25rem;
+    height: 1.25rem;
+    vertical-align: middle;
+    fill: currentColor;
+
+}
+.icon--small {
+    width: 1rem;
+    height: 1rem;
 }
 
 @media screen and (min-width: 70em) {

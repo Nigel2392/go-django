@@ -64,10 +64,11 @@ type rows[T attrs.Definer] struct {
 	possibleDuplicates []*scannableField // possible duplicate fields that can be added to the rows
 	hasMultiRelations  bool              // if the rows have multi-valued relations
 
-	seen    map[string]*seenObject // seen is used to deduplicate relations
-	objects *orderedmap.OrderedMap[any, *rootObject]
-	forEach func(attrs.Definer) error
-	qs      *QuerySet[T]
+	rootMapping map[any]any            // rootMapping is used to map root object unique values to their pks
+	seen        map[string]*seenObject // seen is used to deduplicate relations
+	objects     *orderedmap.OrderedMap[any, *rootObject]
+	forEach     func(attrs.Definer) error
+	qs          *QuerySet[T]
 }
 
 type seenObject struct {
@@ -90,6 +91,7 @@ func newRows[T attrs.Definer](qs *QuerySet[T], forEach func(attrs.Definer) error
 	var r = &rows[T]{
 		objects:            orderedmap.NewOrderedMap[any, *rootObject](),
 		possibleDuplicates: make([]*scannableField, 0),
+		rootMapping:        make(map[any]any, 0),
 		hasMultiRelations:  false,
 		forEach:            forEach,
 		seen:               make(map[string]*seenObject, 0),
@@ -155,6 +157,14 @@ func (r *rows[T]) rootRow(scannables []*scannableField) *scannableField {
 	return nil
 }
 
+func (r *rows[T]) useAutoKey(hasObj, hasThrough bool) bool {
+	return !r.hasMultiRelations &&
+		hasObj &&
+		!hasThrough &&
+		r.hasRoot() &&
+		(r.qs.internals.Preload == nil || len(r.qs.internals.Preload.Preloads) == 0)
+}
+
 // addRoot adds a root object to the rows structure.
 //
 // this is used to add the top-level object to the rows,
@@ -172,10 +182,22 @@ func (r *rows[T]) addRoot(uniqueValue any, obj attrs.Definer, through attrs.Defi
 		return root
 	}
 
+	var err error
+	var pk = uniqueValue
 	var defs attrs.Definitions
-	if obj != nil {
+	// if obj != nil { //&& !r.hasMultiRelations {
+	if r.useAutoKey(obj != nil, through != nil) {
 		defs = obj.FieldDefs()
+		prim := defs.Primary()
+		if prim == nil {
+			pk = uniqueValue
+		} else if pk, err = prim.Value(); err != nil {
+			pk = uniqueValue
+		}
+		r.rootMapping[pk] = uniqueValue
 	}
+
+	// pk = attrs.ToString(pk)
 
 	var root = &rootObject{
 		object: &object{
@@ -197,8 +219,8 @@ func (r *rows[T]) addRoot(uniqueValue any, obj attrs.Definer, through attrs.Defi
 		r.seen[""] = seenM
 	}
 
-	seenM.pks = append(seenM.pks, uniqueValue)
-	seenM.objects[uniqueValue] = root.object
+	seenM.pks = append(seenM.pks, pk)
+	seenM.objects[pk] = root.object
 
 	r.objects.Set(uniqueValue, root)
 	return root
@@ -211,9 +233,8 @@ func (r *rows[T]) addRoot(uniqueValue any, obj attrs.Definer, through attrs.Defi
 //
 // the root object has to be added with [addRoot] before this method is called,
 // otherwise it will panic.
-func (r *rows[T]) addRelationChain(scannable *scannableField) {
+func (r *rows[T]) addRelationChain(scannable *scannableField, chain []chainPart) {
 
-	var chain = r.buildChainParts(scannable)
 	var root = chain[0]
 	var obj, ok = r.objects.Get(root.uniqueValue)
 	if !ok {
@@ -485,6 +506,13 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 				)
 			}
 
+			if preload.Path == "" {
+				if sv, ok := r.rootMapping[sourceVal]; ok {
+					sourceVal = sv
+				}
+			}
+			// sourceVal = attrs.ToString(sourceVal)
+
 			if slice, ok := result.rowsMap[sourceVal]; ok {
 				result.rowsMap[sourceVal] = append(slice, row)
 			} else {
@@ -504,6 +532,13 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 					err, "failed to get value for source field %q", sourceField.Name(),
 				)
 			}
+
+			if preload.Path == "" {
+				if sv, ok := r.rootMapping[sourceVal]; ok {
+					sourceVal = sv
+				}
+			}
+			// sourceVal = attrs.ToString(sourceVal)
 
 			var targetField, _ = defs.Field(relThrough.TargetField())
 			primaryVal, err = targetField.Value()

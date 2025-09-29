@@ -758,7 +758,7 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), page)
-	var adminForm = admin.NewAdminForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
+	var adminForm = admin.NewAdminForm[modelforms.ModelForm[attrs.Definer]](r, form, panels...)
 	adminForm.Load()
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) (err error) {
@@ -794,6 +794,10 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 			p, ref,
 		)
 		if err != nil {
+			return err
+		}
+
+		if err := adminForm.SaveForms(); err != nil {
 			return err
 		}
 
@@ -975,7 +979,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), instance)
-	var adminForm = admin.NewAdminForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
+	var adminForm = admin.NewAdminForm[*modelforms.BaseModelForm[attrs.Definer]](r, form, panels...)
 	adminForm.Load()
 
 	if err := r.ParseForm(); err != nil {
@@ -991,7 +995,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		r, p, "pages:publish",
 	)
 
-	form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
+	adminForm.Form.SaveInstance = func(ctx context.Context, d attrs.Definer) error {
 		var hasChanged = adminForm.HasChanged()
 		if !hasChanged && !publishPage && !unpublishPage {
 			logger.Warnf("No changes detected for page: %s", instance.Reference().Title)
@@ -1054,6 +1058,10 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			return errors.Wrap(err, "failed to update page node")
 		}
 
+		if err := adminForm.SaveForms(); err != nil {
+			return err
+		}
+
 		var logAction string
 		var dataMap = map[string]interface{}{
 			"page_id": instance.ID(),
@@ -1090,7 +1098,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		//})
 	}
 
-	var view = &views.FormView[*admin.AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]{
+	var view = &views.FormView[*admin.AdminForm[*modelforms.BaseModelForm[attrs.Definer], attrs.Definer]]{
 		BaseView: views.BaseView{
 			AllowedMethods:  []string{http.MethodGet, http.MethodPost},
 			BaseTemplateKey: admin.BASE_KEY,
@@ -1123,7 +1131,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 				return context, nil
 			},
 		},
-		GetFormFn: func(req *http.Request) *admin.AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer] {
+		GetFormFn: func(req *http.Request) *admin.AdminForm[*modelforms.BaseModelForm[attrs.Definer], attrs.Definer] {
 			return adminForm
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
@@ -1133,7 +1141,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 			}
 			return initial
 		},
-		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]) {
+		SuccessFn: func(w http.ResponseWriter, req *http.Request, form *admin.AdminForm[*modelforms.BaseModelForm[attrs.Definer], attrs.Definer]) {
 			var instance = form.Instance()
 			assert.False(instance == nil, "instance is nil after form submission")
 			var page = instance.(Page)

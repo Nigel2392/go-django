@@ -132,7 +132,7 @@ func (m *MultiField) HasChanged(initial interface{}, data interface{}) bool {
 	return false
 }
 
-func (m *MultiField) Widget() FormWidget {
+func (m *MultiField) Widget() widgets.Widget {
 	if m.FormWidget != nil {
 		return m.FormWidget
 	}

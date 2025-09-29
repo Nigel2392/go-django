@@ -12,6 +12,8 @@ import (
 	"strings"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/queries/src/fields/formfields"
 	"github.com/Nigel2392/go-django/src/contrib/admin/compare"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -20,8 +22,10 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/formsets"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/forms/widgets/chooser"
 	"github.com/a-h/templ"
 )
 
@@ -40,7 +44,7 @@ type ValidatorPanel interface {
 
 type FormPanel interface {
 	Panel
-	Forms() []forms.Form
+	Forms(r *http.Request, ctx context.Context, instance attrs.Definer) ([]formsets.BaseFormSetForm, error)
 }
 
 type BoundPanel interface {
@@ -221,14 +225,19 @@ type rowPanel struct {
 	classname string
 }
 
-func (f *rowPanel) Forms() []forms.Form {
-	var formsList []forms.Form
+func (f *rowPanel) Forms(r *http.Request, ctx context.Context, instance attrs.Definer) ([]formsets.BaseFormSetForm, error) {
+	var formsList []formsets.BaseFormSetForm
 	for _, panel := range f.panels {
 		if fp, ok := panel.(FormPanel); ok {
-			formsList = append(formsList, fp.Forms()...)
+			f, err := fp.Forms(r, ctx, instance)
+			if err != nil {
+				logger.Errorf("rowPanel.Forms: error getting forms from panel: %v", err)
+				continue
+			}
+			formsList = append(formsList, f...)
 		}
 	}
-	return formsList
+	return formsList, nil
 }
 
 func (m *rowPanel) Class(classname string) Panel {
@@ -310,14 +319,18 @@ type panelGroup struct {
 	classname string
 }
 
-func (f *panelGroup) Forms() []forms.Form {
-	var formsList []forms.Form
+func (f *panelGroup) Forms(r *http.Request, ctx context.Context, instance attrs.Definer) ([]formsets.BaseFormSetForm, error) {
+	var formsList []formsets.BaseFormSetForm
 	for _, panel := range f.panels {
 		if fp, ok := panel.(FormPanel); ok {
-			formsList = append(formsList, fp.Forms()...)
+			f, err := fp.Forms(r, ctx, instance)
+			if err != nil {
+				return nil, err
+			}
+			formsList = append(formsList, f...)
 		}
 	}
-	return formsList
+	return formsList, nil
 }
 
 func (g *panelGroup) Fields() []string {
@@ -541,6 +554,22 @@ func (t *tabbedPanel) Validate(r *http.Request, ctx context.Context, form forms.
 	return errs
 }
 
+func (t *tabbedPanel) Forms(r *http.Request, ctx context.Context, instance attrs.Definer) ([]formsets.BaseFormSetForm, error) {
+	var formsList []formsets.BaseFormSetForm
+	for _, tab := range t.tabs {
+		for _, panel := range tab.panels {
+			if fp, ok := panel.(FormPanel); ok {
+				f, err := fp.Forms(r, ctx, instance)
+				if err != nil {
+					return nil, err
+				}
+				formsList = append(formsList, f...)
+			}
+		}
+	}
+	return formsList, nil
+}
+
 func (t *tabbedPanel) Comparison(ctx context.Context, oldInstance attrs.Definer, newInstance attrs.Definer) (compare.Comparison, error) {
 	var allPanels = make([]Panel, 0)
 	for _, tab := range t.tabs {
@@ -571,15 +600,31 @@ func (t *tabbedPanel) Bind(r *http.Request, panelCount map[string]int, form form
 	}
 }
 
+var _ FormPanel = (*ModelFormPanel[attrs.Definer, modelforms.ModelForm[attrs.Definer]])(nil)
+
 type ModelFormPanel[TARGET attrs.Definer, FORM modelforms.ModelForm[TARGET]] struct {
-	Form       func() FORM
-	TargetType TARGET
-	MaxNum     int
-	MinNum     int
-	Extra      int
-	Classname  string
-	FieldName  string
-	Panels     []Panel
+	Form           func() FORM
+	TargetType     TARGET
+	MaxNum         int
+	MinNum         int
+	DisallowAdd    bool
+	DisallowRemove bool
+	Extra          int
+	Classname      string
+	SubClassname   string
+	FieldName      string
+	Panels         []Panel
+}
+
+func ModelPanel[TARGET attrs.Definer, FORM modelforms.ModelForm[TARGET]](fieldName string, targetType TARGET, options ...func(*ModelFormPanel[TARGET, FORM])) *ModelFormPanel[TARGET, FORM] {
+	var panel = &ModelFormPanel[TARGET, FORM]{
+		TargetType: targetType,
+		FieldName:  fieldName,
+	}
+	for _, option := range options {
+		option(panel)
+	}
+	return panel
 }
 
 func (m *ModelFormPanel[TARGET, FORM]) Fields() []string {
@@ -603,11 +648,27 @@ func (p *ModelFormPanel[TARGET, FORM]) formPrefix(index any) string {
 	return fmt.Sprintf("%s-%v", p.FieldName, index)
 }
 
+func (f *ModelFormPanel[TARGET, FORM]) getField(source attrs.Definer) attrs.FieldDefinition {
+	var meta = attrs.GetModelMeta(source)
+	var defs = meta.Definitions()
+	var field, ok = defs.Field(f.FieldName)
+	except.Assert(
+		ok, http.StatusInternalServerError,
+		"ModelFormPanel: field %q not found in model %T",
+		f.FieldName, source,
+	)
+	return field
+}
+
 func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Request, source attrs.Definer, totalForms int, targetList []TARGET) []modelforms.ModelForm[TARGET] {
-	var forms = make([]modelforms.ModelForm[TARGET], 0, totalForms)
+	var formList = make([]modelforms.ModelForm[TARGET], 0, totalForms)
+	var field = p.getField(source)
+	var rel = field.Rel()
+	var revField = rel.Field()
 	for i := 0; i < totalForms; i++ {
 		var target TARGET
-		if i < len(targetList) {
+		var isNew = i >= len(targetList)
+		if !isNew {
 			target = targetList[i]
 		} else {
 			target = attrs.NewObject[TARGET](p.TargetType)
@@ -625,46 +686,75 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 				p.TargetType,
 			)
 
+			var opts FormViewOptions
+			if isNew {
+				opts = modelDef.AddView
+			} else {
+				opts = modelDef.EditView
+			}
+
 			form = GetAdminForm(
 				target,
-				modelDef.AddView,
+				opts,
 				modelDef._app,
 				modelDef,
 				r,
 			)
 		}
 
-		var meta = attrs.GetModelMeta(source)
-		var defs = meta.Definitions()
-		var field, ok = defs.Field(p.FieldName)
-		except.Assert(
-			ok, http.StatusInternalServerError,
-			"ModelFormPanel: field %q not found in model %T",
-			p.FieldName, source,
-		)
-
-		var revField = field.Rel().Field()
 		var initialData = make(map[string]any)
-		if revField != nil {
-			var fieldName = revField.Name()
-			var pk = attrs.PrimaryKey(source)
-			if !fields.IsZero(pk) {
-				initialData[fieldName] = pk
+		switch field.Rel().Type() {
+		case attrs.RelOneToMany:
+			if revField != nil {
+				var fieldName = revField.Name()
+				var pk = attrs.PrimaryKey(source)
+				if !fields.IsZero(pk) {
+					initialData[fieldName] = pk
+				} else {
+					logger.Warnf("ModelFormPanel: source instance has zero primary key; related object may not be saved correctly")
+				}
+
+				form.AddField(fieldName, &formfields.ForeignKeyFormField{
+					BaseRelationField: formfields.BaseRelationField{
+						BaseField: fields.NewField(
+							fields.Widget(formfields.ModelSelectWidget(
+								false, "", chooser.BaseChooserOptions{
+									TargetObject: source,
+									GetPrimaryKey: func(ctx context.Context, i interface{}) interface{} {
+										return attrs.PrimaryKey(i.(attrs.Definer))
+									},
+									Queryset: func(ctx context.Context) ([]interface{}, error) {
+										return []interface{}{source}, nil
+									},
+								},
+								nil,
+							)),
+							fields.Hide(true),
+						),
+						Field:    revField,
+						Relation: revField.Rel(),
+					},
+				})
 			}
+
+		default:
+			// not implemented
+			assert.Fail(
+				"ModelFormPanel: relation type %s not implemented",
+				field.Rel().Type(),
+			)
 		}
 
 		form.SetInstance(target)
-		form.SetPrefix(
-			p.formPrefix(i),
-		)
-
 		form.Load()
 
-		form.SetInitial(initialData)
+		var init = maps.Clone(form.InitialData())
+		maps.Copy(init, initialData)
+		form.SetInitial(init)
 
-		forms = append(forms, form)
+		formList = append(formList, form)
 	}
-	return forms
+	return formList
 }
 
 func (m *ModelFormPanel[TARGET, FORM]) EmptyForm(ctx context.Context, r *http.Request, source attrs.Definer) modelforms.ModelForm[TARGET] {
@@ -674,16 +764,78 @@ func (m *ModelFormPanel[TARGET, FORM]) EmptyForm(ctx context.Context, r *http.Re
 	return f
 }
 
-func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField) BoundPanel {
-	var defs = instance.FieldDefs()
-	field, ok := defs.Field(m.FieldName)
+func (m *ModelFormPanel[TARGET, FORM]) Forms(r *http.Request, ctx context.Context, instance attrs.Definer) ([]formsets.BaseFormSetForm, error) {
+	var formset = m.FormSet(r, ctx, instance)
+	return []formsets.BaseFormSetForm{formset}, nil
+}
+
+func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Context, instance attrs.Definer) formsets.ListFormSet[modelforms.ModelForm[TARGET]] {
+	var f = formsets.NewBaseFormSet(
+		ctx, formsets.FormsetOptions[modelforms.ModelForm[TARGET]]{
+			MinNum:    m.MinNum,
+			MaxNum:    m.MaxNum,
+			Extra:     m.Extra,
+			CanDelete: !m.DisallowRemove,
+			CanAdd:    !m.DisallowAdd,
+			NewForm: func(c context.Context) modelforms.ModelForm[TARGET] {
+				var forms = m.GetForms(ctx, r, instance, 1, nil)
+				return forms[0]
+			},
+			DefaultForms: func(ctx context.Context) ([]modelforms.ModelForm[TARGET], error) {
+				var field, targetList, err = getRelatedList[TARGET](r, ctx, instance, m.FieldName)
+				if err != nil {
+					return nil, err
+				}
+
+				totalForms, _, targetList := m.validate(
+					field.Rel(),
+					len(targetList),
+					targetList,
+				)
+
+				var formList = m.GetForms(ctx, r, instance, totalForms, targetList)
+				return formList, nil
+			},
+		},
+	)
+	f.SetPrefix(m.FieldName)
+	return f
+}
+
+func getRelatedList[TARGET attrs.Definer](r *http.Request, ctx context.Context, source attrs.Definer, fieldName string) (attrs.Field, []TARGET, error) {
+	var defs = source.FieldDefs()
+	field, ok := defs.Field(fieldName)
 	if !ok {
-		except.Fail(
-			http.StatusInternalServerError,
-			fmt.Sprintf("Field %q not found in instance of type %T", m.FieldName, instance),
+		return nil, nil, errors.FieldNotFound.Wrapf(
+			"Field %q not found in instance of type %T", fieldName, source,
 		)
 	}
 
+	var rel = field.Rel()
+	if rel.Type() == attrs.RelOneToMany {
+		var qs = queries.ManyToOneQuerySet[TARGET](&queries.RelRevFK[attrs.Definer]{
+			Parent: &queries.ParentInfo{
+				Object: source,
+				Field:  field,
+			},
+		})
+
+		var rows, err = qs.All()
+		if err != nil {
+			return nil, nil, errors.Wrapf(
+				err, "Error fetching related objects for field %q", fieldName,
+			)
+		}
+
+		var list = make([]TARGET, len(rows))
+		for i, row := range rows {
+			list[i] = row.Object
+		}
+
+		return field, list, nil
+	}
+
+	var _null TARGET
 	var value = field.GetValue()
 	var targetList = make([]TARGET, 0)
 	switch v := value.(type) {
@@ -693,9 +845,9 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 		for _, item := range v {
 			t, ok := item.(TARGET)
 			if !ok {
-				except.Fail(
-					http.StatusInternalServerError,
-					fmt.Sprintf("Item of type %T in field %q is not of expected type %T", item, m.FieldName, m.TargetType),
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"Item of type %T in field %q is not of expected type %T",
+					item, fieldName, _null,
 				)
 			}
 			targetList = append(targetList, t)
@@ -709,9 +861,9 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 		for _, item := range v.GetValues() {
 			t, ok := item.(TARGET)
 			if !ok {
-				except.Fail(
-					http.StatusInternalServerError,
-					fmt.Sprintf("Item of type %T in field %q is not of expected type %T", item, m.FieldName, m.TargetType),
+				return nil, nil, errors.TypeMismatch.Wrapf(
+					"Item of type %T in field %q is not of expected type %T",
+					item, fieldName, _null,
 				)
 			}
 			targetList = append(targetList, t)
@@ -722,23 +874,82 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 			targetList = append(targetList, t.(TARGET))
 		}
 	}
+	return field, targetList, nil
+}
 
-	var minNumForms = m.MaxNum
-	var maxNumForms = m.MinNum
-	var totalForms = len(targetList) + m.Extra
+func (m *ModelFormPanel[TARGET, FORM]) validate(rel attrs.Relation, base int, list []TARGET) (total int, canAdd bool, targets []TARGET) {
+	var minNumForms = m.MinNum
+	var maxNumForms = m.MaxNum
+	var totalForms = min(base+m.Extra, maxNumForms)
 	if minNumForms > 0 && totalForms < minNumForms {
 		totalForms = minNumForms
 	}
 
+	switch rel.Type() {
+	case attrs.RelManyToOne, attrs.RelOneToOne:
+		if m.MinNum > 1 {
+			m.MinNum = 1
+			logger.Warnf("ModelFormPanel.Bind: MinNum > 1 for ManyToOne or OneToOne relation; setting MinNum to 1")
+		}
+
+		if m.MaxNum > 1 {
+			m.MaxNum = 1
+			logger.Warnf("ModelFormPanel.Bind: MaxNum > 1 for ManyToOne or OneToOne relation; setting MaxNum to 1")
+		}
+
+		if m.Extra > 1 {
+			m.Extra = 0
+			logger.Warnf("ModelFormPanel.Bind: Extra > 0 for ManyToOne or OneToOne relation; setting Extra to 0")
+		}
+
+		if len(list) > 1 {
+			logger.Warnf("ModelFormPanel.Bind: more than one related object found for ManyToOne or OneToOne relation; only the first will be used")
+			list = list[:1]
+		}
+	}
+
 	var canAddMore = maxNumForms == 0 || totalForms < maxNumForms
-	var forms = m.GetForms(ctx, r, instance, totalForms, targetList)
-	if !canAddMore && len(forms) > minNumForms {
-		forms = forms[:minNumForms]
+	return totalForms, canAddMore, list
+}
+
+func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[string]int, form forms.Form, ctx context.Context, instance attrs.Definer, boundFields map[string]forms.BoundField) BoundPanel {
+	var field, targetList, err = getRelatedList[TARGET](r, ctx, instance, m.FieldName)
+	if err != nil {
+		except.Fail(
+			http.StatusInternalServerError,
+			"ModelFormPanel.Bind: %v", err,
+		)
+	}
+
+	_, _, targetList = m.validate(
+		field.Rel(),
+		len(targetList),
+		targetList,
+	)
+
+	var formset = m.FormSet(r, ctx, instance)
+	var panels = make([]Panel, 0, len(m.Panels)+1)
+	var seen = make(map[string]struct{})
+	for _, panel := range m.Panels {
+		for _, fname := range panel.Fields() {
+			seen[fname] = struct{}{}
+		}
+		panels = append(panels, panel)
+	}
+
+	var fld = m.getField(instance)
+	var relFld = fld.Rel().Field()
+	if relFld != nil {
+		if _, ok := seen[relFld.Name()]; !ok {
+			panels = append(panels, FieldPanel(relFld.Name()))
+			seen[relFld.Name()] = struct{}{}
+		}
 	}
 
 	return &BoundModelFormPanel[TARGET, FORM]{
 		Panel:       m,
-		Forms:       forms,
+		Panels:      panels,
+		FormSet:     formset,
 		SourceModel: instance,
 		SourceField: field,
 		Context:     ctx,

@@ -13,6 +13,9 @@ import (
 	"github.com/Nigel2392/go-django/src/models"
 )
 
+var _ forms.Form = (*BaseModelForm[attrs.Definer])(nil)
+var _ ModelForm[attrs.Definer] = (*BaseModelForm[attrs.Definer])(nil)
+
 type ModelForm[T any] interface {
 	forms.Form
 	Load()
@@ -206,10 +209,9 @@ func (f *BaseModelForm[T]) Reset() {
 }
 
 func (f *BaseModelForm[T]) Load() {
-	assert.False(
-		f.wasSet(formLoaded),
-		"Form has already been loaded",
-	)
+	if f.wasSet(formLoaded) {
+		return
+	}
 
 	assert.True(
 		f.wasSet(fieldsWasSet) || len(f.ModelFields) > 0,

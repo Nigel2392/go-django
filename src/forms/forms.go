@@ -4,8 +4,6 @@ import (
 	"context"
 
 	"github.com/Nigel2392/go-django/src/internal/forms"
-
-	_ "unsafe"
 )
 
 type (
@@ -25,25 +23,29 @@ type (
 	BoundField         = forms.BoundField
 	IsValidDefiner     = forms.IsValidDefiner
 	BinderWidget       = forms.BinderWidget
-	FormWrapper        = forms.FormWrapper
+	FormWrapper[T any] = forms.FormWrapper[T]
+	WithDataDefiner    = forms.WithDataDefiner
+	ErrorDefiner       = forms.ErrorDefiner
 
 	PrevalidatorMixin = forms.PrevalidatorMixin
 	ValidatorMixin    = forms.ValidatorMixin
 	FullCleanMixin    = forms.FullCleanMixin
 )
 
-//go:linkname IsValid github.com/Nigel2392/go-django/src/internal/forms.IsValid
-func IsValid(ctx context.Context, f any) bool
+func IsValid[T any](ctx context.Context, f T) bool {
+	return forms.IsValid(ctx, f)
+}
 
-//go:linkname FullClean github.com/Nigel2392/go-django/src/internal/forms.FullClean
-func FullClean(ctx context.Context, f ErrorAdder) (invalid, defaults, cleaned map[string]any)
+func FullClean(ctx context.Context, f Form) (invalid, defaults, cleaned map[string]any) {
+	return forms.FullClean(ctx, f)
+}
 
 type SaveableForm interface {
 	Form
 	Save() (map[string]interface{}, error)
 }
 
-func HasErrors(form Form) bool {
+func HasErrors(form ErrorDefiner) bool {
 	var errs = form.BoundErrors()
 	return errs != nil && errs.Len() > 0 || len(form.ErrorList()) > 0
 }

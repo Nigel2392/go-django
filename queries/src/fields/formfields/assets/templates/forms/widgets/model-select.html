@@ -2,14 +2,17 @@
     {{ $choices := (.Get "choices") }}
     {{ $ctx := . }}
 
-    <select data-model-select name="{{ .Get "name" }}" id="{{ .Get "id" }}" {{ safeAttrs (include (.Get "attrs") "forms/widgets/attrs.html") }}>
-        {{ if (.Get "include_blank") }}
-            <option value="">{{ (.Get "blank_label") }}</option>
-        {{ end }}
+    {{ if .Data.widget.IsHidden }}
+        <input type="hidden" name="{{ .Get "name" }}" id="{{ .Get "id" }}" value="{{ .Get "value" }}">
+    {{ else }}
+        <select data-model-select name="{{ .Get "name" }}" id="{{ .Get "id" }}" {{ safeAttrs (include .Data.attrs "forms/widgets/attrs.html") }}>
+            {{ if (.Get "include_blank") }}
+                <option value="">{{ (.Get "blank_label") }}</option>
+            {{ end }}
 
-        {{ range $choice := $choices }}
-            <option data-model-select-option value="{{ $choice.Value }}"{{ if $choice.Selected }} selected{{ end }}>{{ $choice.Label }}</option>
-        {{ end }}
-    </select>
-
+            {{ range $choice := $choices }}
+                <option data-model-select-option value="{{ $choice.Value }}"{{ if $choice.Selected }} selected{{ end }}>{{ $choice.Label }}</option>
+            {{ end }}
+        </select>
+    {{ end }}
 {{ end }}

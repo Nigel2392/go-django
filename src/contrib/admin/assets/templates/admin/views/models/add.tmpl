@@ -10,7 +10,7 @@
 {{ end }}
 
 {{ define "content" }}
-    <form method="post" class="admin-form" enctype="multipart/form-data">
+    <form method="post" class="admin-form" enctype="multipart/form-data" data-controller="form">
         {{ csrf_field }}
         
         {{ $Form := (.Get "form") }}

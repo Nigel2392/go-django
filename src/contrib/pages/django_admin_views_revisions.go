@@ -278,7 +278,7 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), instance)
-	var adminForm = admin.NewAdminForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
+	var adminForm = admin.NewAdminForm[modelforms.ModelForm[attrs.Definer]](r, form, panels...)
 	adminForm.Load()
 
 	if err := r.ParseForm(); err != nil {

@@ -182,7 +182,7 @@ func (r *iconRegistry) add(path ...string) error {
 		var b = new(bytes.Buffer)
 		var f, err = r.fs.Open(p)
 		if err != nil {
-			return err
+			return fmt.Errorf("icons: cannot open %s: %w", p, err)
 		}
 		defer f.Close()
 

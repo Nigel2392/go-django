@@ -236,7 +236,7 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 	}
 
 	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), page)
-	var adminForm = admin.NewAdminForm[modelforms.ModelForm[attrs.Definer]](form, panels...)
+	var adminForm = admin.NewAdminForm[modelforms.ModelForm[attrs.Definer]](r, form, panels...)
 	adminForm.Load()
 
 	form.SaveInstance = func(ctx context.Context, d attrs.Definer) (err error) {
@@ -271,6 +271,10 @@ func addRootPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefi
 			WithContext(ctx).
 			AddRoot(ref)
 		if err != nil {
+			return err
+		}
+
+		if err := adminForm.SaveForms(); err != nil {
 			return err
 		}
 

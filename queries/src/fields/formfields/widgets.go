@@ -16,6 +16,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
@@ -23,6 +24,8 @@ import (
 )
 
 var _ widgets.Widget = &ModelSelect{}
+
+var _ forms.Widget = (*ModelSelect)(nil)
 
 type ModelSelect struct {
 	*chooser.BaseChooser
@@ -130,6 +133,34 @@ func (o *ModelSelect) GetContextData(ctx context.Context, id, name string, value
 
 func (b *ModelSelect) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {
 	return b.RenderWithErrors(ctx, w, id, name, value, nil, attrs, b.GetContextData(ctx, id, name, value, attrs))
+}
+
+func (b *ModelSelect) Validate(ctx context.Context, value interface{}) []error {
+	if value == nil {
+		return nil
+	}
+	var modelInstances, err = b.QuerySet(ctx)
+	if err != nil {
+		return []error{errs.Wrap(err, "error retrieving model instances")}
+	}
+
+	var found bool
+	var pk = b.Opts.GetPrimaryKey(ctx, value)
+	for _, modelInstance := range modelInstances {
+		var chk = b.Opts.GetPrimaryKey(ctx, modelInstance)
+		if chk == pk {
+			found = true
+			break
+		}
+	}
+
+	if !found {
+		return []error{errors.ValueError.Wrapf(
+			"selected value %v is not a valid choice", pk,
+		)}
+	}
+
+	return nil
 }
 
 type MultiSelectWidget[T attrs.Definer] struct {

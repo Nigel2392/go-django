@@ -131,50 +131,7 @@ func (f *BaseForm) BoundErrors() *orderedmap.OrderedMap[string, []error] {
 }
 
 func (f *BaseForm) BoundForm() BoundForm {
-	var (
-		fields      = f.BoundFields()
-		errors      = f.BoundErrors()
-		boundFields = make([]BoundField, 0, fields.Len())
-		fieldMap    = make(map[string]BoundField, fields.Len())
-	)
-	//for head := fields.Front(); head != nil; head = head.Next() {
-	//	boundFields = append(boundFields, head.Value)
-	//}
-	if f.fieldOrder != nil {
-		var had = make(map[string]struct{})
-		for _, k := range f.fieldOrder {
-			if v, ok := fields.Get(k); ok {
-				boundFields = append(boundFields, v)
-				fieldMap[k] = v
-				had[k] = struct{}{}
-			}
-		}
-		if fields.Len() > len(had) {
-			for head := fields.Front(); head != nil; head = head.Next() {
-				var (
-					k = head.Key
-					v = head.Value
-				)
-				if _, ok := had[k]; !ok {
-					boundFields = append(boundFields, v)
-					fieldMap[k] = v
-				}
-			}
-		}
-	} else {
-		for head := fields.Front(); head != nil; head = head.Next() {
-			boundFields = append(boundFields, head.Value)
-			fieldMap[head.Key] = head.Value
-		}
-	}
-
-	return &_BoundForm{
-		Form:       f,
-		Fields_:    boundFields,
-		Errors_:    errors,
-		ErrorList_: f.ErrorList_,
-		FieldMap_:  fieldMap,
-	}
+	return NewBoundForm(f)
 }
 
 func (f *BaseForm) EditContext(key string, context ctx.Context) {
@@ -372,12 +329,11 @@ func (f *BaseForm) PrefixName(name string) string {
 	return fmt.Sprintf("%s-%s", prefix, name)
 }
 
-func (f *BaseForm) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) Form {
+func (f *BaseForm) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) {
 	f.Reset()
 	f.Raw = data
 	f.Files = files
 	f.setup()
-	return f
 }
 
 func (f *BaseForm) Reset() {
@@ -455,7 +411,14 @@ loop:
 
 	head = append(head, newErrs...)
 
-	f.Errors.Set(name, head)
+	if len(head) > 0 {
+		var _, ok = f.Field(name)
+		if ok {
+			f.Errors.Set(name, head)
+		} else {
+			f.ErrorList_ = append(f.ErrorList_, head...)
+		}
+	}
 }
 
 func (f *BaseForm) HasChanged() bool {

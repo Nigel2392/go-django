@@ -103,7 +103,7 @@ func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateN
 
 			if saver, ok := any(form).(forms.SaveableForm); ok {
 				_, err = saver.Save()
-				if err != nil {
+				if err != nil || forms.HasErrors(form) {
 					goto checkFormErr
 				}
 			}

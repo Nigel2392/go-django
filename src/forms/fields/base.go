@@ -20,7 +20,7 @@ type BaseField struct {
 	Validators   []func(interface{}) error
 	FormLabel    func(ctx context.Context) string
 	FormHelpText func(ctx context.Context) string
-	FormWidget   FormWidget
+	FormWidget   widgets.Widget
 	Caser        *cases.Caser
 }
 
@@ -80,7 +80,7 @@ func (i *BaseField) SetName(name string) {
 	i.FieldName = name
 }
 
-func (i *BaseField) SetWidget(w FormWidget) {
+func (i *BaseField) SetWidget(w widgets.Widget) {
 	i.FormWidget = w
 }
 
@@ -118,6 +118,10 @@ func (i *BaseField) Attrs() map[string]string {
 func (i *BaseField) Label(ctx context.Context) string {
 	if i.FormLabel != nil {
 		return i.FormLabel(ctx)
+	}
+	if i.Caser == nil {
+		var titleCaser = cases.Title(language.English)
+		i.Caser = &titleCaser
 	}
 	return i.Caser.String(i.FieldName)
 }
@@ -159,6 +163,10 @@ func (i *BaseField) HasChanged(initial, data interface{}) bool {
 
 	if rA.IsValid() != rB.IsValid() {
 		return true
+	}
+
+	if !rA.IsValid() && !rB.IsValid() {
+		return false
 	}
 
 	var aType = rA.Type()
@@ -233,7 +241,7 @@ func (i *BaseField) Validate(ctx context.Context, value interface{}) []error {
 	return nil
 }
 
-func (i *BaseField) Widget() FormWidget {
+func (i *BaseField) Widget() widgets.Widget {
 	if i.FormWidget != nil {
 		return i.FormWidget
 	} else {

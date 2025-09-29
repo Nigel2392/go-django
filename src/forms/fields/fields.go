@@ -4,10 +4,7 @@ import (
 	"github.com/Nigel2392/go-django/src/internal/forms"
 )
 
-type (
-	Field      = forms.Field
-	FormWidget = forms.Widget
-)
+type Field = forms.Field
 
 type SaveableField interface {
 	Field

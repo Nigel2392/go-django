@@ -2725,12 +2725,13 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 					)
 				}
 			}
-
 		}
 
 		// fake unique value for the root object is OK
-		if uniqueValue == nil {
+		var usingAutoKey bool
+		if uniqueValue == nil || rows.useAutoKey(obj != nil, throughObj != nil) {
 			uniqueValue = resultIndex + 1
+			usingAutoKey = true
 		}
 
 		// add the root object to the rows tree
@@ -2740,7 +2741,13 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 		)
 
 		for _, possibleDuplicate := range rows.possibleDuplicates {
-			rows.addRelationChain(scannables[possibleDuplicate.idx])
+			var scannable = scannables[possibleDuplicate.idx]
+			var chain = rows.buildChainParts(scannable)
+			if usingAutoKey && len(chain) > 0 {
+				chain[0].uniqueValue = uniqueValue
+			}
+
+			rows.addRelationChain(scannable, chain)
 		}
 	}
 

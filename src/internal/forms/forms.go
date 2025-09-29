@@ -55,6 +55,11 @@ type ErrorAdder interface {
 	AddError(name string, errorList ...error)
 }
 
+type ErrorDefiner interface {
+	ErrorList() []error
+	BoundErrors() *orderedmap.OrderedMap[string, []error]
+}
+
 type FieldError interface {
 	Field() string
 	Errors() []error
@@ -112,15 +117,16 @@ type Field interface {
 	IsEmpty(value interface{}) bool
 }
 
-type WithDataDefiner[T any] interface {
-	WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) T
+type WithDataDefiner interface {
+	WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request)
 	Data() (url.Values, map[string][]filesystem.FileHeader)
 }
 
 type Form interface {
-	WithDataDefiner[Form]
+	WithDataDefiner
 	FullCleanMixin
 	ErrorAdder
+	ErrorDefiner
 
 	AsP() template.HTML
 	AsUL() template.HTML
@@ -144,8 +150,6 @@ type Form interface {
 	DeleteField(name string) bool
 	BoundForm() BoundForm
 	BoundFields() *orderedmap.OrderedMap[string, BoundField]
-	BoundErrors() *orderedmap.OrderedMap[string, []error]
-	ErrorList() []error
 
 	InitialData() map[string]interface{}
 	CleanedData() map[string]interface{}

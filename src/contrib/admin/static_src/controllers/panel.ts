@@ -1,9 +1,26 @@
 import { Controller, ActionEvent } from "@hotwired/stimulus";
 import slugify from "../utils/slugify";
 
-class PanelController extends Controller<HTMLElement> {
+type PanelWidget = {
+    id: string
+    label?: string
+    setState: (value: any) => void
+    getState: () => any
+    setValue: (value: any) => void
+    getValue: () => any
+}
+
+type PanelElement = HTMLElement & {
+    panelHeading?: HTMLElement
+    panelBody?: HTMLElement
+    collapse?(b: boolean): void
+    panelCollapsed?: () => boolean
+}
+
+class PanelController extends Controller<PanelElement> {
     static values = {
-        panel: { type: String },
+        panel:      { type: String },
+        widgetData: { type: String },
     }
     static targets = [
       "heading",
@@ -18,6 +35,10 @@ class PanelController extends Controller<HTMLElement> {
     declare headingTarget: HTMLElement;
     declare linkIconTarget: HTMLElement;
     declare contentTarget: HTMLElement;
+
+    declare hasWidgetDataValue: boolean;
+    declare widgetDataValue: string;
+    declare boundWidgets: PanelWidget[];
 
     get parentPanels() {
         var parentPanels = [];
@@ -58,14 +79,23 @@ class PanelController extends Controller<HTMLElement> {
 
             }, 100);
         }
+
+        this.element.panelHeading = this.headingTarget;
+        this.element.panelBody = this.contentTarget;
+        this.element.collapse = this.collapse.bind(this);
+        this.element.panelCollapsed = () => {
+            return this.element.classList.contains("collapsed");
+        }
+
+        if (this.hasWidgetDataValue) {
+        
+        }
     }
 
     toggle(event: ActionEvent) {
         event.preventDefault();
         let collapsed = !this.element.classList.contains("collapsed");
-        this.element.classList.toggle("collapsed", collapsed);
-        this.element.setAttribute("aria-expanded", String(!collapsed));
-
+        this.collapse(collapsed);
     }
 
     scrollToContent() {
@@ -74,6 +104,20 @@ class PanelController extends Controller<HTMLElement> {
             block: "start"
         });
     }
+
+    private collapse(b: boolean) {
+        if (b && !this.element.classList.contains("collapsed")) {
+            this.element.classList.add("collapsed");
+            this.element.setAttribute("aria-expanded", "false");
+            return;
+        }
+        if (!b && this.element.classList.contains("collapsed")) {
+            this.element.classList.remove("collapsed");
+            this.element.setAttribute("aria-expanded", "true");
+            return;
+        }
+    }
+
 }
 
 type TitlePanelControllerValues = {
@@ -154,4 +198,4 @@ class TitlePanelController extends Controller<HTMLElement> {
     }
 }
 
-export { PanelController, TitlePanelController };
+export { PanelElement, PanelController, TitlePanelController };

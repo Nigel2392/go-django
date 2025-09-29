@@ -2,6 +2,8 @@ package forms
 
 import (
 	"context"
+	"fmt"
+	"net/url"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -15,12 +17,16 @@ type IsValidDefiner interface {
 	IsValid() bool
 }
 
-type FormWrapper interface {
-	Unwrap() []Form
+type IsValidChecker[T any] interface {
+	CheckIsValid(ctx context.Context, formObj T) bool
+}
+
+type FormWrapper[T any] interface {
+	Unwrap() []T
 }
 
 type PrevalidatorMixin interface {
-	Prevalidate(ctx context.Context, root Form) []error
+	Prevalidate(ctx context.Context, root any, data url.Values, files map[string][]filesystem.FileHeader) []error
 }
 
 type ValidatorMixin interface {
@@ -45,10 +51,14 @@ type pointerContextKey struct {
 	ptr uintptr
 }
 
-type wasCleanedChecker interface {
-	WasCleaned() bool
+type errorDefiner interface {
 	ErrorList() []error
 	BoundErrors() *orderedmap.OrderedMap[string, []error]
+}
+
+type wasCleanedChecker interface {
+	errorDefiner
+	WasCleaned() bool
 }
 
 func checkWasCleaned(f wasCleanedChecker, finalChk func(formObj wasCleanedChecker) (valid, ok bool)) (valid, ok bool) {
@@ -69,54 +79,84 @@ func checkWasCleaned(f wasCleanedChecker, finalChk func(formObj wasCleanedChecke
 	return finalChk(f)
 }
 
-func IsValid(ctx context.Context, formObj any) bool {
+func checkUnwrappedForms[T any](ctx context.Context, formObj FormWrapper[T]) bool {
+
+	var valid = true
+	for _, form := range formObj.Unwrap() {
+		var rv = reflect.ValueOf(form)
+		if rv.Kind() != reflect.Pointer {
+			panic("IsValid() only accepts a pointer to a Form, not a value.")
+		}
+		if rv.IsNil() {
+			continue
+		}
+
+		// create a unique key for every form based on its pointer address
+		// so we don't get stuck in an infinite loop if the same form is included in the unwrap chain
+		var wrappedFormKey = pointerContextKey{
+			ptr: reflect.ValueOf(form).Pointer(),
+		}
+
+		// make sure every form wrapped still gets cleaned and validated
+		// by using the & operator on isValid
+		valid = valid && IsValid(
+			context.WithValue(ctx, wrappedFormKey, struct{}{}),
+			form,
+		)
+	}
+
+	if definer, ok := any(formObj).(IsValidDefiner); ok && valid {
+		return definer.IsValid()
+	}
+
+	return valid
+
+}
+
+func IsValid[T any](ctx context.Context, formObj T) bool {
 
 	var rv = reflect.ValueOf(formObj)
 	if rv.Kind() != reflect.Pointer {
 		panic("IsValid() only accepts a pointer to a Form, not a value.")
 	}
 
-	valid, ok := checkWasCleaned(formObj.(wasCleanedChecker), func(formObj wasCleanedChecker) (valid, ok bool) {
-		if isValidDef, ok := formObj.(IsValidDefiner); ok {
-			return isValidDef.IsValid(), true
+	fmt.Printf("forms.IsValid: checking form %T is valid\n", formObj)
+
+	if chk, ok := any(formObj).(wasCleanedChecker); ok {
+		valid, ok := checkWasCleaned(chk, func(formObj wasCleanedChecker) (valid, ok bool) {
+			if isValidDef, ok := formObj.(IsValidDefiner); ok {
+				return isValidDef.IsValid(), true
+			}
+			return true, true
+		})
+		if ok {
+			return valid
 		}
-		return true, true
-	})
-	if ok {
-		return valid
 	}
 
 	var topKey = pointerContextKey{ptr: rv.Pointer()}
 	var _, hasPtr = ctx.Value(topKey).(struct{})
-	if unwrapper, ok := formObj.(FormWrapper); ok && !hasPtr {
-		valid = true
-		for _, form := range unwrapper.Unwrap() {
-			if form == nil {
-				continue
-			}
-
-			// create a unique key for every form based on its pointer address
-			// so we don't get stuck in an infinite loop if the same form is included in the unwrap chain
-			var wrappedFormKey = pointerContextKey{
-				ptr: reflect.ValueOf(form).Pointer(),
-			}
-
-			// make sure every form wrapped still gets cleaned and validated
-			// by using the & operator on isValid
-			valid = valid && IsValid(
-				context.WithValue(ctx, wrappedFormKey, struct{}{}),
-				form,
-			)
-		}
-
-		if definer, ok := formObj.(IsValidDefiner); ok && valid {
-			return definer.IsValid()
-		}
-
-		return valid
+	if unwrapper, ok := any(formObj).(FormWrapper[T]); ok && !hasPtr {
+		return checkUnwrappedForms(ctx, unwrapper)
+	}
+	if unwrapper, ok := any(formObj).(FormWrapper[Form]); ok && !hasPtr {
+		return checkUnwrappedForms(ctx, unwrapper)
+	}
+	if unwrapper, ok := any(formObj).(FormWrapper[any]); ok && !hasPtr {
+		return checkUnwrappedForms(ctx, unwrapper)
 	}
 
-	var f = formObj.(Form)
+	f, ok := any(formObj).(Form)
+	if !ok {
+		if chk, ok := any(formObj).(IsValidChecker[T]); ok {
+			return chk.CheckIsValid(ctx, formObj)
+		}
+		if chk, ok := any(formObj).(IsValidChecker[any]); ok {
+			return chk.CheckIsValid(ctx, formObj)
+		}
+		panic("IsValid() only accepts a pointer to a Form, not a " + rv.Type().String())
+	}
+
 	var rawData, files = f.Data()
 	assert.False(
 		rawData == nil,
@@ -125,7 +165,7 @@ func IsValid(ctx context.Context, formObj any) bool {
 
 	for mixin := range mixins.Mixins[any](f, true) {
 		if prevalidator, ok := mixin.(PrevalidatorMixin); ok {
-			var errors = prevalidator.Prevalidate(ctx, f)
+			var errors = prevalidator.Prevalidate(ctx, formObj, rawData, files)
 			if len(errors) > 0 {
 				f.AddFormError(errors...)
 			}
@@ -180,12 +220,10 @@ postValidateErrCheck:
 	bndErrs = f.BoundErrors()
 
 	if (bndErrs == nil || bndErrs.Len() == 0) && len(errs) == 0 {
-
 		for _, fn := range f.CallbackOnValid() {
 			fn(f)
 		}
 	} else {
-
 		f.BindCleanedData(invalid, defaults, nil)
 		for _, fn := range f.CallbackOnInvalid() {
 			fn(f)

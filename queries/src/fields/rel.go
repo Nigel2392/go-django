@@ -276,6 +276,25 @@ func (r *RelationField[T]) Save(ctx context.Context) error {
 			"cannot save relation %s with type %s", r.Name(), r.cnf.Rel.Type(),
 		))
 
+	//	case attrs.RelOneToMany:
+	//		v := val.(*queries.RelRevFK[attrs.Definer])
+	//		var createList = make([]attrs.Definer, 0)
+	//		var updateList = make([]attrs.Definer, 0)
+	//		for _, item := range v.GetValues() {
+	//			if fields.IsZero(attrs.PrimaryKey(item)) {
+	//				createList = append(createList, item)
+	//			} else {
+	//				updateList = append(updateList, item)
+	//			}
+	//		}
+	//		if len(createList) > 0 {
+	//			queries.GetQuerySet(r.cnf.Rel.Model()).WithContext(ctx).BulkCreate(createList)
+	//		}
+	//		if len(updateList) > 0 {
+	//			queries.GetQuerySet(r.cnf.Rel.Model()).WithContext(ctx).BulkUpdate(updateList)
+	//		}
+	//		return nil
+
 	case attrs.RelOneToOne:
 
 		switch v := val.(type) {

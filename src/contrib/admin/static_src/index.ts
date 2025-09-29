@@ -11,6 +11,7 @@ import BulkActionsController from "./controllers/bulk_actions";
 import SidePanelsController from "./controllers/side_panels";
 import SidebarController from "./controllers/sidebar";
 import { InlinePanelController } from "./controllers/panel_inline";
+import { FormController } from "./controllers/form_controller";
 
 const app = new AdminSite({
     controllers: {
@@ -18,6 +19,7 @@ const app = new AdminSite({
         tooltip: TippyController,
         dropdown: DropdownController,
         accordion: AccordionController,
+        form: FormController,
         panel: PanelController,
         tabpanel: TabPanelController,
         titlepanel: TitlePanelController,

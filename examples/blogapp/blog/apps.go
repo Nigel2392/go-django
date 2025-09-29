@@ -173,11 +173,18 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 							),
 							admin.FieldPanel("Image"),
 							admin.FieldPanel("Editor"),
+							// admin.ModelPanel[*BlogImage, modelforms.ModelForm[*BlogImage]](
+							// "BlogImageSet", &BlogImage{},
+							// ),
 							&admin.ModelFormPanel[*BlogImage, modelforms.ModelForm[*BlogImage]]{
 								TargetType: &BlogImage{},
 								FieldName:  "BlogImageSet",
-								MinNum:     3,
-								MaxNum:     9,
+								// SubClassname: "collapsed",
+								MinNum: 3,
+								MaxNum: 9,
+								Panels: []admin.Panel{
+									admin.FieldPanel("Image"),
+								},
 							},
 						),
 						admin.PanelTab(

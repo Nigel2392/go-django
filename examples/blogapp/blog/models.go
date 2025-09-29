@@ -34,6 +34,7 @@ type BlogContext struct {
 
 type BlogImage struct {
 	models.Model `table:"blog_images"`
+	ID           int64
 	Image        *images.Image
 	BlogPage     *BlogPage
 }
@@ -46,6 +47,11 @@ func (b *BlogImage) UniqueTogether() [][]string {
 
 func (b *BlogImage) FieldDefs() attrs.Definitions {
 	return b.Model.Define(b,
+		attrs.NewField(b, "ID", &attrs.FieldConfig{
+			Primary:  true,
+			ReadOnly: true,
+			Column:   "id",
+		}),
 		attrs.NewField(b, "BlogPage", &attrs.FieldConfig{
 			RelForeignKey: attrs.Relate(
 				&BlogPage{}, "", nil,

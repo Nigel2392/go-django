@@ -2,19 +2,25 @@ package admin
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
+	"reflect"
 	"slices"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/formsets"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/models"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -32,7 +38,6 @@ const (
 )
 
 type ClusterOrderableForm interface {
-	forms.Form
 	FormOrder() FORM_ORDERING
 }
 
@@ -40,41 +45,26 @@ type AdminForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer] struct {
 	Form    T1
 	Panels  []Panel
 	Request *http.Request
+
+	forms   []formsets.BaseFormSetForm
+	formset formsets.ListFormSet[formsets.BaseFormSetForm]
 }
 
-func NewAdminForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer](form T1, panels ...Panel) *AdminForm[T1, T2] {
+func NewAdminForm[T1 modelforms.ModelForm[T2], T2 attrs.Definer](r *http.Request, form T1, panels ...Panel) *AdminForm[T1, T2] {
 	return &AdminForm[T1, T2]{
-		Form:   form,
-		Panels: panels,
+		Form:    form,
+		Panels:  panels,
+		Request: r,
 	}
 }
 
-func (a *AdminForm[T1, T2]) Unwrap() []forms.Form {
-	var formsList = []forms.Form{a.Form}
-	if unwrapper, ok := any(a.Form).(forms.FormWrapper); ok {
-		formsList = append(formsList, unwrapper.Unwrap()...)
+func (a *AdminForm[T1, T2]) Unwrap() []formsets.BaseFormSetForm {
+	var fs = a.FormSet()
+	if fs == nil {
+		return []formsets.BaseFormSetForm{a}
 	}
 
-	for _, panel := range a.Panels {
-		if unwrapper, ok := panel.(FormPanel); ok {
-			formsList = append(formsList, unwrapper.Forms()...)
-		}
-	}
-
-	slices.SortStableFunc(formsList, func(i, j forms.Form) int {
-		var formA, okA = i.(ClusterOrderableForm)
-		var formB, okB = j.(ClusterOrderableForm)
-		if okA && okB {
-			return int(formA.FormOrder()) - int(formB.FormOrder())
-		} else if okA {
-			return int(formA.FormOrder())
-		} else if okB {
-			return -int(formB.FormOrder())
-		}
-		return int(FORM_ORDERING_NONE)
-	})
-
-	return formsList
+	return []formsets.BaseFormSetForm{a, fs}
 }
 
 func (a *AdminForm[T1, T2]) EditContext(key string, context ctx.Context) {
@@ -87,6 +77,10 @@ func (a *AdminForm[T1, T2]) Context() context.Context {
 
 func (a *AdminForm[T1, T2]) WithContext(ctx context.Context) {
 	a.Form.WithContext(ctx)
+	var formset = a.FormSet()
+	if formset != nil {
+		formset.WithContext(ctx)
+	}
 }
 
 func (a *AdminForm[T1, T2]) AsP() template.HTML {
@@ -103,6 +97,10 @@ func (a *AdminForm[T1, T2]) Prefix() string {
 }
 func (a *AdminForm[T1, T2]) SetPrefix(prefix string) {
 	a.Form.SetPrefix(prefix)
+
+	if a.FormSet() != nil {
+		a.FormSet().SetPrefix(prefix)
+	}
 }
 func (a *AdminForm[T1, T2]) SetInitial(initial map[string]interface{}) {
 	a.Form.SetInitial(initial)
@@ -153,14 +151,29 @@ func (a *AdminForm[T1, T2]) BoundFields() *orderedmap.OrderedMap[string, forms.B
 	return a.Form.BoundFields()
 }
 func (a *AdminForm[T1, T2]) BoundErrors() *orderedmap.OrderedMap[string, []error] {
-	return a.Form.BoundErrors()
+	var errs = a.Form.BoundErrors()
+	if a.formset != nil {
+		var fsErrs = a.formset.BoundErrors()
+		for head := fsErrs.Front(); head != nil; head = head.Next() {
+			errs.Set(head.Key, head.Value)
+		}
+	}
+	return errs
 }
 func (a *AdminForm[T1, T2]) ErrorList() []error {
-	return a.Form.ErrorList()
+	var errList = a.Form.ErrorList()
+	if a.formset != nil {
+		errList = append(errList, a.formset.ErrorList()...)
+		errList = append(errList, a.formset.ManagementForm().ErrorList()...)
+	}
+	return errList
 }
-func (a *AdminForm[T1, T2]) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) forms.Form {
+func (a *AdminForm[T1, T2]) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) {
 	a.Request = r
-	return a.Form.WithData(data, files, r)
+	a.Form.WithData(data, files, r)
+	if a.formset != nil {
+		a.formset.WithData(data, files, r)
+	}
 }
 func (a *AdminForm[T1, T2]) InitialData() map[string]interface{} {
 	return a.Form.InitialData()
@@ -186,7 +199,11 @@ func (a *AdminForm[T1, T2]) HasChanged() bool {
 	}
 
 	for _, fieldName := range fields {
-		var f, _ = a.Form.Field(fieldName)
+		var f, ok = a.Form.Field(fieldName)
+		if !ok {
+			continue
+		}
+
 		if f.ReadOnly() {
 			continue
 		}
@@ -196,8 +213,11 @@ func (a *AdminForm[T1, T2]) HasChanged() bool {
 		}
 	}
 
-	return false
+	if a.formset != nil && a.formset.HasChanged() {
+		return true
+	}
 
+	return false
 }
 func (a *AdminForm[T1, T2]) PrefixName(name string) (prefixedName string) {
 	return a.Form.PrefixName(name)
@@ -252,8 +272,14 @@ func (a *AdminForm[T1, T2]) OnFinalize(f ...func(forms.Form)) {
 	a.Form.OnFinalize(f...)
 }
 func (a *AdminForm[T1, T2]) IsValid() bool {
-	if validDef, ok := any(a.Form).(forms.IsValidDefiner); ok {
-		return validDef.IsValid()
+	if validDef, ok := any(a.Form).(forms.IsValidDefiner); ok && !validDef.IsValid() {
+		return false
+	}
+	var fs = a.FormSet()
+	if fs != nil {
+		if !forms.IsValid(a.Context(), fs) {
+			return false
+		}
 	}
 	return true
 }
@@ -306,6 +332,93 @@ func (a *AdminForm[T1, T2]) Load() {
 			return errors
 		})
 	}
+
+	if a.FormSet() != nil {
+		a.FormSet().Load()
+	}
+}
+
+func (a *AdminForm[T1, T2]) FormSet() formsets.ListFormSet[formsets.BaseFormSetForm] {
+	if a.formset != nil {
+		return a.formset
+	}
+
+	var formsList = make([]formsets.BaseFormSetForm, 0)
+	if unwrapper, ok := any(a.Form).(forms.FormWrapper[forms.Form]); ok {
+		var f = unwrapper.Unwrap()
+		var nl = make([]formsets.BaseFormSetForm, len(f))
+		for i, v := range f {
+			nl[i] = v.(formsets.BaseFormSetForm)
+		}
+		formsList = append(formsList, nl...)
+	}
+	if unwrapper, ok := any(a.Form).(forms.FormWrapper[any]); ok {
+		var f = unwrapper.Unwrap()
+		var nl = make([]formsets.BaseFormSetForm, len(f))
+		for i, v := range f {
+			nl[i] = v.(formsets.BaseFormSetForm)
+		}
+		formsList = append(formsList, nl...)
+	}
+	if unwrapper, ok := any(a.Form).(forms.FormWrapper[T1]); ok {
+		var f = unwrapper.Unwrap()
+		var nl = make([]formsets.BaseFormSetForm, len(f))
+		for i, v := range f {
+			nl[i] = any(v).(formsets.BaseFormSetForm)
+		}
+		formsList = append(formsList, nl...)
+	}
+
+	// var errs = make([]error, 0)
+	for _, panel := range a.Panels {
+		if unwrapper, ok := panel.(FormPanel); ok {
+			formList, err := unwrapper.Forms(a.Request, a.Context(), a.Instance())
+			if err != nil {
+				logger.Errorf("could not get forms from panel %T: %v", unwrapper, err)
+				continue
+			}
+
+			formsList = append(
+				formsList,
+				formList...,
+			)
+		}
+	}
+
+	slices.SortStableFunc(formsList, func(i, j formsets.BaseFormSetForm) int {
+		var formA, okA = i.(ClusterOrderableForm)
+		var formB, okB = j.(ClusterOrderableForm)
+		if okA && okB {
+			return int(formA.FormOrder()) - int(formB.FormOrder())
+		} else if okA {
+			return int(formA.FormOrder())
+		} else if okB {
+			return -int(formB.FormOrder())
+		}
+		return int(FORM_ORDERING_NONE)
+	})
+
+	a.forms = formsList
+	a.formset = formsets.NewBaseFormSet(
+		a.Context(),
+		formsets.FormsetOptions[formsets.BaseFormSetForm]{
+			MinNum:     len(formsList),
+			MaxNum:     len(formsList),
+			Extra:      0,
+			CanDelete:  false,
+			CanAdd:     false,
+			CanOrder:   false,
+			SkipPrefix: true,
+		},
+	)
+	a.formset.SetForms(formsList)
+	return a.formset
+
+	//if len(errs) > 0 {
+	//	return formsList //, errors.Join(errs...)
+	//}
+	//
+	//return formsList //, nil
 }
 
 func (a *AdminForm[T1, T2]) Save() (map[string]interface{}, error) {
@@ -313,8 +426,106 @@ func (a *AdminForm[T1, T2]) Save() (map[string]interface{}, error) {
 	if err != nil {
 		return data, err
 	}
+
 	return data, nil
 }
+
+func (a *AdminForm[T1, T2]) SaveForms(formList ...forms.Form) (err error) {
+	if len(formList) == 0 && len(a.forms) == 0 {
+		a.forms, err = a.FormSet().Forms()
+		if err != nil {
+			return err
+		}
+	}
+
+	var flist = make([]formsets.BaseFormSetForm, len(a.forms), len(formList)+len(a.forms))
+	copy(flist, a.forms)
+	for _, form := range formList {
+		flist = append(flist, form)
+	}
+	fmt.Printf("AdminForm: saving %d forms\n", len(flist))
+	for _, form := range flist {
+		fmt.Printf(" - form: %T\n", form)
+	}
+	for _, form := range flist {
+		var rV = reflect.ValueOf(form)
+		var saveMethod = rV.MethodByName("Save")
+		if !saveMethod.IsValid() {
+			logger.Warnf("could not save form, no Save method found on %T", form)
+			continue
+		}
+
+		if saveMethod.Type().NumIn() != 0 {
+			logger.Warnf("could not save form, Save method on %T has %d inputs, expected 0", form, saveMethod.Type().NumIn())
+			continue
+		}
+
+		var cleaned = form.CleanedData()
+		var deleted, _ = cleaned["__DELETED__"].(string)
+		if deleted == "true" {
+			var instanceMethod = rV.MethodByName("Instance")
+			if !instanceMethod.IsValid() {
+				// ? maybe do something here, not sure..
+				logger.Warnf("could not delete form, no Instance method found on %T", form)
+				continue
+			}
+
+			if instanceMethod.Type().NumIn() != 0 {
+				// ? maybe do something here, not sure..
+				logger.Warnf("could not delete form, Instance method on %T has %d inputs, expected 0", form, instanceMethod.Type().NumIn())
+				continue
+			}
+
+			if instanceMethod.Type().NumOut() < 1 {
+				// ? maybe do something here, not sure..
+				logger.Warnf("could not delete form, Instance method on %T has %d outputs, expected at least 1", form, instanceMethod.Type().NumOut())
+				continue
+			}
+
+			if !instanceMethod.Type().Out(0).ConvertibleTo(reflect.TypeOf((*attrs.Definer)(nil)).Elem()) {
+				// ? maybe do something here, not sure..
+				logger.Warnf("could not delete form, Instance method on %T does not return an attrs.Definer, got %v", form, instanceMethod.Type().Out(0))
+				continue
+			}
+
+			var vals = instanceMethod.Call([]reflect.Value{})
+			var instanceVal = vals[0].Interface()
+			if instanceVal == nil {
+				// ? maybe do something here, not sure..
+				logger.Warnf("could not delete form, Instance method on %T returned nil", form)
+				continue
+			}
+
+			logger.Debugf("AdminForm: deleting form %T, instance: %v", form, instanceVal)
+			deleted, err := models.DeleteModel(a.Context(), instanceVal.(attrs.Definer))
+			if err != nil {
+				logger.Errorf("could not delete model %T: %v", instanceVal, err)
+				a.Form.AddFormError(err)
+				continue
+			}
+			if !deleted {
+				logger.Warnf("could not delete model %T: unknown error", instanceVal)
+				a.Form.AddFormError(errors.New("could not delete model"))
+			}
+			continue
+		}
+
+		var results = saveMethod.Call([]reflect.Value{})
+		if len(results) > 0 {
+			var last = results[len(results)-1]
+			if !last.Type().Implements(reflect.TypeOf((*error)(nil)).Elem()) || last.IsNil() {
+				continue
+			}
+
+			err = last.Interface().(error)
+		}
+		if err != nil {
+			a.Form.AddFormError(err)
+		}
+	}
+	return nil
+}
+
 func (a *AdminForm[T1, T2]) SetFields(fields ...string) {
 	a.Form.SetFields(fields...)
 }

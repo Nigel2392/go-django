@@ -9,6 +9,10 @@ declare global {
         Stimulus: Application;
         StimulusController: typeof Controller;
         AdminSite: AdminSite;
+        //  telepath: {
+        //      register(name: any, constructor: any): void;
+        //      unpack(objData: any): any;
+        //  };
         getCookie: (name: string) => string | null;
         setCookie: (name: string, value: string, days: number) => void;
         sprintf: typeof sprintf;
