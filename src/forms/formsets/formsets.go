@@ -297,11 +297,7 @@ func (b *BaseFormSet[FORM]) SetPrefix(prefix string) {
 	}
 
 	for i, form := range b.FormList {
-		if b.opts.SkipPrefix {
-			form.SetPrefix(b.PrefixForm(form.PrefixName(strconv.Itoa(i))))
-		} else {
-			form.SetPrefix(b.PrefixForm(i))
-		}
+		form.SetPrefix(b.PrefixForm(i))
 	}
 }
 
@@ -590,11 +586,7 @@ func (b *BaseFormSet[FORM]) SetForms(forms []FORM) {
 	b.mgmt.InitialForms = len(forms)
 	b.mgmt.TotalFormsValue = len(forms)
 	for i, form := range b.FormList {
-		if b.opts.SkipPrefix {
-			form.SetPrefix(b.PrefixForm(form.PrefixName(strconv.Itoa(i))))
-		} else {
-			form.SetPrefix(b.PrefixForm(i))
-		}
+		form.SetPrefix(b.PrefixForm(i))
 		form.WithContext(b.ctx)
 	}
 }
