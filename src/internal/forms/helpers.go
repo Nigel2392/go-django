@@ -261,6 +261,10 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 			f.AddFormError(errList...)
 		}
 
+		if mixin == f {
+			return
+		}
+
 		if add, ok := mixin.(ErrorAdder); ok {
 			add.AddError(field, errList...)
 			return
@@ -322,7 +326,7 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 			}
 
 			if v.Required() && v.IsEmpty(initial) {
-				addError(mixin, depth, k, errs.NewValidationError(k, errs.ErrFieldRequired))
+				addError(mixin, depth, k, errs.ErrFieldRequired)
 				invalid[k] = initial
 				continue
 			}

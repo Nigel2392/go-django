@@ -642,14 +642,20 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form forms.Fo
             <div class="panel__errors">
                 <ul>
                     for _, err := range formErrors {
-                        <li class="panel__error">@TextComponent(err.Error())</li>
+                        <li class="panel__error"> { trans.T(ctx, "Form error:") } @TextComponent(err.Error())</li>
                     }
 
                     for head := boundFormErrors.Front(); head != nil; head = head.Next() {
-                        {{ var field, _ = form.Field(head.Key) }}
+                        {{ var field, ok = form.Field(head.Key) }}
+                        {{ except.Assert(
+                            ok || head.Key == "__all__", http.StatusInternalServerError, 
+                            "Field %q not found in form %q", head.Key, form.Prefix()) 
+                        }}
                         for _, err := range head.Value {
                             <li class="panel__error">
-                                { field.Label(ctx) }: 
+                                if field != nil {
+                                    { field.Label(ctx) }: 
+                                }
                                 @TextComponent(err.Error())
                             </li>
                         }

@@ -3,6 +3,7 @@ package modelforms
 import (
 	"context"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 
@@ -270,7 +271,8 @@ func (f *BaseModelForm[T]) Load() {
 		}
 	}
 
-	var initialData = make(map[string]interface{})
+	var initialData = maps.Clone(f.BaseForm.Initial)
+	maps.Copy(initialData, f.BaseForm.InvalidDefaults)
 	var fieldDefs = model.FieldDefs()
 
 	if !f.modelIsNil(model) {
@@ -307,6 +309,8 @@ func (f *BaseModelForm[T]) Load() {
 	if f.OnLoad != nil {
 		f.OnLoad(model, initialData)
 	}
+
+	fmt.Println("Initial data:", initialData, "\n", f.Defaults, "\n", f.BaseForm.Initial)
 
 	f.SetInitial(initialData)
 	f.setFlag(formLoaded, true)

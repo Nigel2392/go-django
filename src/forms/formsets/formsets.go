@@ -19,6 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/Nigel2392/go-django/src/utils/mixins"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -61,8 +62,9 @@ func NewManagementForm(ctx context.Context, opts ...func(*ManagementForm)) *Mana
 	}
 
 	m.AddField(TOTAL_FORM_COUNT, fields.NumberField[int](
-		fields.Hide(true),
+		fields.Widget(widgets.NewNumberInput[int](nil)),
 		fields.Required(true),
+		fields.Hide(true),
 	))
 	m.AddField(INITIAL_FORM_COUNT, fields.CharField(
 		fields.Hide(true),
@@ -81,7 +83,7 @@ func NewManagementForm(ctx context.Context, opts ...func(*ManagementForm)) *Mana
 		if !ok {
 			return []error{errors.TypeMismatch.Wrap(trans.T(
 				f.Context(),
-				"management form %s must be an integer", TOTAL_FORM_COUNT,
+				"management form %s must be an integer, got %T", TOTAL_FORM_COUNT, data[TOTAL_FORM_COUNT],
 			))}
 		}
 		if total < m.MinNumForms {
@@ -103,7 +105,11 @@ func NewManagementForm(ctx context.Context, opts ...func(*ManagementForm)) *Mana
 }
 
 func (m *ManagementForm) BindCleanedData(invalid, defaults, cleaned map[string]interface{}) {
+	for k, v := range cleaned {
+		fmt.Printf("ManagementForm.BindCleanedData: cleaned[%q] = %v (%T)\n", k, v, v)
+	}
 	m.Form.BindCleanedData(invalid, defaults, cleaned)
+
 	if v, ok := cleaned[TOTAL_FORM_COUNT]; ok {
 		if totalForms, ok := v.(int); ok {
 			m.TotalFormsValue = totalForms
