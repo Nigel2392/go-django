@@ -954,7 +954,9 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 				for _, form := range forms {
 					instances = append(instances, form.Instance())
 				}
-				_, err := queries.GetQuerySet(m.TargetType).Delete(instances...)
+				_, err := queries.GetQuerySet(m.TargetType).
+					WithContext(ctx).
+					Delete(instances...)
 				return err
 			},
 		},
@@ -981,7 +983,7 @@ func getRelatedList[TARGET attrs.Definer](r *http.Request, ctx context.Context, 
 			},
 		})
 
-		var rows, err = qs.All()
+		var rows, err = qs.WithContext(ctx).All()
 		if err != nil {
 			return nil, nil, errors.Wrapf(
 				err, "Error fetching related objects for field %q", fieldName,
