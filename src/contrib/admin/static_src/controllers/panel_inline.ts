@@ -134,8 +134,8 @@ class InlinePanelController extends Controller<HTMLElement> {
             this.lastFormIndex = 0;
         }
 
-        this.totalForms = this.managementForm.totalForms;
         this.managementForm = new ManagementFormElement(this.mgmtPrefixValue, this.managementTarget);
+        this.totalForms = this.managementForm.totalForms;
     }
 
     addFormAction(event: ActionEvent) {
@@ -201,43 +201,39 @@ class InlinePanelController extends Controller<HTMLElement> {
             targetedElement = this.formsTarget.firstChild as PanelElement;
         }
 
-        const childrenCount = newFormElem.children.length;
-        for (let i = 0; i < childrenCount; i++) {
-            animator.addElement(newFormElem.children[i] as HTMLElement);
-            newFormElem.children[i].setAttribute("data-new-form", "true");
-
-            
-
-            switch (where) {
-            case "start":
-                this.formsTarget.insertBefore(
-                    newFormElem.children[i] as HTMLElement,
-                    targetedElement,
-                );
-                targetedElement = newFormElem.children[i] as PanelElement;
-                break;
-            case "end":
-                const targetElementIndex = targetedElement ? Array.from(this.formsTarget.children).indexOf(targetedElement) : -1;
-                if (targetElementIndex !== -1 && targetElementIndex < this.formsTarget.children.length - 1) {
-                    this.formsTarget.insertBefore(
-                        newFormElem.children[i] as HTMLElement,
-                        targetedElement.nextSibling,
-                    );
-                    targetedElement = newFormElem.children[i] as PanelElement;
-                } else {
-                    this.formsTarget.appendChild(newFormElem.children[i] as HTMLElement);
-                    targetedElement = newFormElem.children[i] as PanelElement;
-                }
-                break;
-            }
-            
+        if (newFormElem.children.length > 1) {
+            console.error("Template for inline panel contains multiple root elements, cannot add form.");
+            return;
         }
-        
+
+        var panelElem = newFormElem.children[0] as PanelElement;
+        if (!panelElem || !panelElem.classList.contains("panel")) {
+            console.error("Template for inline panel does not contain a root element with class 'panel', cannot add form.");
+            return;
+        }
+
+        switch (where) {
+        case "start":
+            this.formsTarget.insertBefore(
+                panelElem,
+                targetedElement,
+            );
+            break;
+        case "end":
+            const targetElementIndex = targetedElement ? Array.from(this.formsTarget.children).indexOf(targetedElement) : -1;
+            if (targetElementIndex !== -1 && targetElementIndex < this.formsTarget.children.length - 1) {
+                this.formsTarget.insertBefore(panelElem, targetedElement.nextSibling);
+            } else {
+                this.formsTarget.appendChild(panelElem);
+            }
+            break;
+        }
+
         animator.start();
 
-        this.lastFormIndex++;
-        this.managementForm.totalForms++;
-        this.totalForms++;
+        this.lastFormIndex += 1;
+        this.managementForm.totalForms += 1;
+        this.totalForms += 1;
     }
 
     removeForm(specifier: string | number, nameFmt: string) {
@@ -269,7 +265,7 @@ class InlinePanelController extends Controller<HTMLElement> {
 
         deletedInput.value = "true";
         targetedElement.style.display = "none";
-        this.totalForms--;
+        this.totalForms -= 1;
         return;
     }
 

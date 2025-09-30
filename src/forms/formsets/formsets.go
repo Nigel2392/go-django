@@ -97,9 +97,6 @@ func NewManagementForm(ctx context.Context, opts ...func(*ManagementForm)) *Mana
 }
 
 func (m *ManagementForm) BindCleanedData(invalid, defaults, cleaned map[string]interface{}) {
-	for k, v := range cleaned {
-		fmt.Printf("ManagementForm.BindCleanedData: cleaned[%q] = %v (%T)\n", k, v, v)
-	}
 	m.Form.BindCleanedData(invalid, defaults, cleaned)
 
 	if v, ok := cleaned[TOTAL_FORM_COUNT]; ok {

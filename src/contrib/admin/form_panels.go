@@ -952,7 +952,6 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 			DeleteForms: func(ctx context.Context, forms []modelforms.ModelForm[TARGET]) error {
 				var instances = make([]TARGET, 0, len(forms))
 				for _, form := range forms {
-					fmt.Println(attrs.PrimaryKey(form.Instance()))
 					instances = append(instances, form.Instance())
 				}
 				_, err := queries.GetQuerySet(m.TargetType).Delete(instances...)
