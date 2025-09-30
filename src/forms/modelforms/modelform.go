@@ -3,6 +3,7 @@ package modelforms
 import (
 	"context"
 	"fmt"
+	"maps"
 	"reflect"
 	"slices"
 
@@ -320,6 +321,7 @@ func (f *BaseModelForm[T]) InitialData() map[string]interface{} {
 			data[fieldname] = value
 		}
 	}
+	maps.Copy(data, f.BaseForm.InitialData())
 	return data
 }
 

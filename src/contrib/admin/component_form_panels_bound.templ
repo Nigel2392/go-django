@@ -723,7 +723,7 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() {
     
     <template class="modelform-panel__empty-form" data-inline-panel-target="template">
         {{ var newForm = p.FormSet.NewForm(ctx) }}
-        {{ newForm.SetPrefix(p.FormSet.PrefixName("__PREFIX__")) }}
+        {{ newForm.SetPrefix(p.FormSet.PrefixName("__INDEX__")) }}
         @p.renderSingleFormPanel(newForm, contenttypes.NewContentType(newForm.Instance()).Model(), "__SLUGIFY(__PREFIX__)__")
     </template>
     

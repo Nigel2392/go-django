@@ -440,14 +440,6 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		subForm.WithContext(form.Context())
 		subForm.WithData(data, files, fs.req)
 
-		if s, ok := any(subForm).(initialSetter); ok {
-			if totalAdded < len(defaults) && defaults[totalAdded] != nil {
-				s.SetInitial(defaults[totalAdded])
-			} else if base != nil {
-				s.SetInitial(base)
-			}
-		}
-
 		var formObj = formObject[FORM]{
 			f: subForm,
 			i: totalAdded,
@@ -477,6 +469,14 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		if formObj.d {
 			totalDeleted++
 			continue
+		}
+
+		if s, ok := any(subForm).(initialSetter); ok {
+			if totalAdded < len(defaults) && defaults[totalAdded] != nil {
+				s.SetInitial(defaults[totalAdded])
+			} else if base != nil {
+				s.SetInitial(base)
+			}
 		}
 
 		// Increase the totalAdded count only for non-deleted forms
@@ -511,13 +511,6 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 			continue
 		}
 		finalForms = append(finalForms, formObj.f)
-	}
-
-	if fs.opts.DeleteForms != nil && len(deletedForms) > 0 {
-		if err := fs.opts.DeleteForms(ctx, deletedForms); err != nil {
-			form.AddFormError(err)
-			isValid = false
-		}
 	}
 
 	// set the final forms to the formset
@@ -752,7 +745,6 @@ func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 	var results = make([]any, 0, len(b.FormList))
 	var deleted = make([]FORM, 0, len(b.FormList))
 	var errors = make([]error, 0)
-	logger.Warnf("Formset: saving %d forms", len(b.FormList))
 	for _, form := range b.FormList {
 		var cleaned = form.CleanedData()
 		var isDeleted = false
@@ -764,7 +756,6 @@ func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 			continue
 		}
 
-		logger.Warnf("Formset: saving form %T", form)
 		var rv = reflect.ValueOf(form)
 		var saveMethod = rv.MethodByName("Save")
 		if !saveMethod.IsValid() {
@@ -811,7 +802,7 @@ func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 		}
 	}
 
-	if b.opts.DeleteForms != nil {
+	if b.opts.DeleteForms != nil && len(deleted) > 0 {
 		if err := b.opts.DeleteForms(b.ctx, deleted); err != nil {
 			return nil, err
 		}

@@ -949,6 +949,15 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 
 				return m.GetForms(ctx, r, instance, min, targetList), nil
 			},
+			DeleteForms: func(ctx context.Context, forms []modelforms.ModelForm[TARGET]) error {
+				var instances = make([]TARGET, 0, len(forms))
+				for _, form := range forms {
+					fmt.Println(attrs.PrimaryKey(form.Instance()))
+					instances = append(instances, form.Instance())
+				}
+				_, err := queries.GetQuerySet(m.TargetType).Delete(instances...)
+				return err
+			},
 		},
 	)
 	f.SetPrefix(m.FieldName)

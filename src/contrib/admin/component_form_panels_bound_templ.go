@@ -1705,7 +1705,7 @@ func (p *BoundModelFormPanel[TARGET, FORM]) formsComponent() templ.Component {
 			return templ_7745c5c3_Err
 		}
 		var newForm = p.FormSet.NewForm(ctx)
-		newForm.SetPrefix(p.FormSet.PrefixName("__PREFIX__"))
+		newForm.SetPrefix(p.FormSet.PrefixName("__INDEX__"))
 		templ_7745c5c3_Err = p.renderSingleFormPanel(newForm, contenttypes.NewContentType(newForm.Instance()).Model(), "__SLUGIFY(__PREFIX__)__").Render(ctx, templ_7745c5c3_Buffer)
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
