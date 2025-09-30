@@ -213,8 +213,12 @@ class InlinePanelController extends Controller<HTMLElement> {
             targetedElement = this.formsTarget.firstChild as PanelElement;
         }
 
-        for (let i = 0; i < newFormElem.children.length; i++) {
+        const childrenCount = newFormElem.children.length;
+        for (let i = 0; i < childrenCount; i++) {
             animator.addElement(newFormElem.children[i] as HTMLElement);
+            newFormElem.children[i].setAttribute("data-new-form", "true");
+
+            
 
             switch (where) {
             case "start":
@@ -238,8 +242,8 @@ class InlinePanelController extends Controller<HTMLElement> {
                 }
                 break;
             }
-
-            this.managementForm.totalForms = this.managementForm.totalForms + 1;
+            
+            this.managementForm.totalForms = this.managementForm.totalForms + childrenCount;
         }
         
         animator.start();
@@ -260,16 +264,22 @@ class InlinePanelController extends Controller<HTMLElement> {
             return;
         }
 
-        let name = nameFmt.replace(/__FIELD__/g, "__DELETED__");
-        let deletedInput = targetedElement.querySelector(`input[name="${name}"]`) as HTMLInputElement;
-        if (!deletedInput || deletedInput.value === "true") {
-            console.error("No deleted input found for inline panel, cannot remove form.");
+        let name = nameFmt.replace(/__FIELD__/g, "__DELETE__");
+        let selector = `input[name="${name}"]`;
+        let deletedInput = targetedElement.querySelector(selector) as HTMLInputElement;
+        if (!deletedInput) {
+            console.error(`No deleted input found for inline panel ${specifier} with selector ${selector}, cannot remove form.`);
+            return;
+        }
+
+        if (deletedInput.value === "true" || deletedInput.value === "on" || deletedInput.value === "1") {
+            console.warn(`Form ${specifier} already marked for deletion, cannot remove again.`);
+            this.flash(targetedElement.panelBody.firstElementChild);
             return;
         }
 
         deletedInput.value = "true";
         targetedElement.style.display = "none";
-        this.managementForm.totalForms = this.managementForm.totalForms - 1;
         return;
     }
 

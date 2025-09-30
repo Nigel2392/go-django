@@ -6,9 +6,7 @@ import (
 	"net/http"
 	"net/url"
 	"reflect"
-	"runtime"
 	"slices"
-	"strconv"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -33,16 +31,9 @@ const (
 	INITIAL_FORM_COUNT  = "INITIAL_FORMS"
 	MIN_NUM_FORM_COUNT  = "MIN_NUM_FORMS"
 	MAX_NUM_FORM_COUNT  = "MAX_NUM_FORMS"
-	ORDERING_FIELD_NAME = "ORDER"
-	DELETION_FIELD_NAME = "DELETE"
+	ORDERING_FIELD_NAME = "__ORDER__"
+	DELETION_FIELD_NAME = "__DELETE__"
 )
-
-type ManagementFormReference interface {
-	TotalForms() int
-	InitialForms() int
-	MinNumForms() int
-	MaxNumForms() int
-}
 
 type ManagementForm struct {
 	forms.Form
@@ -64,6 +55,7 @@ func NewManagementForm(ctx context.Context, opts ...func(*ManagementForm)) *Mana
 	m.AddField(TOTAL_FORM_COUNT, fields.NumberField[int](
 		fields.Widget(widgets.NewNumberInput[int](nil)),
 		fields.Required(true),
+		fields.Label("Total Forms"),
 		fields.Hide(true),
 	))
 	m.AddField(INITIAL_FORM_COUNT, fields.CharField(
@@ -131,9 +123,13 @@ type ListFormSet[T BaseFormSetForm] interface {
 	SetPrefix(prefix string)
 	PrefixName(fieldName string) string
 	PrefixForm(fld any) string
+	DeletedForms() []T
 	ManagementForm() *ManagementForm
 	Forms() ([]T, error)
 	SetForms(forms []T)
+	SetDeletedForms(forms []T)
+	Field(name string) (fields.Field, bool)
+	Widget(name string) (widgets.Widget, bool)
 	NewForm(ctx context.Context) T
 	Initial(ctx context.Context, totalForms int) (base map[string]interface{}, list []map[string]interface{})
 	Form(index int) (form T, ok bool)
@@ -152,6 +148,10 @@ type BaseFormSetForm interface {
 	AddFormError(errorList ...error)
 	SetPrefix(prefix string)
 	Prefix() string
+	Field(name string) (fields.Field, bool)
+	Widget(name string) (widgets.Widget, bool)
+	ErrorList() []error
+	BoundErrors() *orderedmap.OrderedMap[string, []error]
 	WithContext(ctx context.Context)
 	CleanedData() map[string]any
 	PrefixName(fieldName string) string
@@ -169,11 +169,14 @@ type initialSetter interface {
 type listFormObject[T any] interface {
 	Data() (url.Values, map[string][]filesystem.FileHeader)
 	SetForms(forms []T)
+	SetDeletedForms(forms []T)
 	Forms() ([]T, error)
 	PrefixForm(fld any) string
 	ManagementForm() *ManagementForm
 	Context() context.Context
 	WithContext(ctx context.Context)
+	ErrorList() []error
+	BoundErrors() *orderedmap.OrderedMap[string, []error]
 	Initial(ctx context.Context, totalForms int) (base map[string]interface{}, list []map[string]interface{})
 	NewForm(ctx context.Context) T
 	AddFormError(errors ...error)
@@ -198,34 +201,36 @@ type FormsetOptions[FORM BaseFormSetForm] struct {
 	CanDelete        bool
 	CanAdd           bool
 	SkipPrefix       bool
-	DefaultForms     func(ctx context.Context) ([]FORM, error)
+	HideDelete       bool
+	DefaultForms     func(ctx context.Context, max, min int) ([]FORM, error)
 	DeleteForms      func(ctx context.Context, forms []FORM) error
 	GetDefaults      func(ctx context.Context, totalForms int) []map[string]interface{}
 	BaseDefaults     func(ctx context.Context) map[string]interface{}
 }
 
 type BaseFormSet[FORM BaseFormSetForm] struct {
-	opts       FormsetOptions[FORM]
-	FormList   []FORM
-	prefix     string
-	ctx        context.Context
-	mgmt       *ManagementForm
-	validators []func(FORM, map[string]any) []error
-	errors     []error
-	req        *http.Request
-	formData   url.Values
-	formFiles  map[string][]filesystem.FileHeader
+	opts             FormsetOptions[FORM]
+	FormList         []FORM
+	DeletedFormsList []FORM
+	prefix           string
+	ctx              context.Context
+	mgmt             *ManagementForm
+	validators       []func(FORM, map[string]any) []error
+	errors           []error
+	req              *http.Request
+	formData         url.Values
+	formFiles        map[string][]filesystem.FileHeader
 }
 
 func NewBaseFormSet[FORM BaseFormSetForm](ctx context.Context, opts FormsetOptions[FORM]) *BaseFormSet[FORM] {
-	if opts.NewForm == nil && opts.CanAdd {
-		panic("FormsetOptions.NewForm cannot be nil when CanAdd is true")
-	}
+	var mgmt *ManagementForm
 
-	var mgmt = NewManagementForm(ctx, func(m *ManagementForm) {
-		m.MinNumForms = opts.MinNum
-		m.MaxNumForms = opts.MaxNum
-	})
+	if !((opts.MinNum+opts.Extra) == opts.MaxNum && opts.MinNum > 0) {
+		mgmt = NewManagementForm(ctx, func(m *ManagementForm) {
+			m.MinNumForms = opts.MinNum
+			m.MaxNumForms = opts.MaxNum
+		})
+	}
 
 	return &BaseFormSet[FORM]{
 		opts: opts,
@@ -252,12 +257,65 @@ func (b *BaseFormSet[FORM]) Initial(ctx context.Context, totalForms int) (baseDe
 	return baseDefaults, defaultsList
 }
 
+func (b *BaseFormSet[FORM]) Field(name string) (fields.Field, bool) {
+	if b.opts.NewForm == nil {
+		return nil, false
+	}
+	var f = b.NewForm(b.ctx)
+	return f.Field(name)
+}
+
+func (b *BaseFormSet[FORM]) Widget(name string) (widgets.Widget, bool) {
+	if b.opts.NewForm == nil {
+		return nil, false
+	}
+	var f = b.NewForm(b.ctx)
+	return f.Widget(name)
+}
+
 func (b *BaseFormSet[FORM]) ManagementForm() *ManagementForm {
 	return b.mgmt
 }
 
+func (b *BaseFormSet[FORM]) setupForm(f FORM) {
+	var fieldAdder, ok = any(f).(interface {
+		AddField(name string, field forms.Field)
+	})
+
+	if b.opts.CanOrder {
+		if !ok {
+			panic("BaseFormSet.setupForm: form does not implement field `AddField(name string, field forms.Field)`")
+		}
+		fieldAdder.AddField(ORDERING_FIELD_NAME, fields.NumberField[int](
+			fields.Required(false),
+			fields.Widget(widgets.NewNumberInput[int](nil)),
+			fields.Hide(true),
+		))
+	}
+
+	if b.opts.CanDelete {
+		if !ok {
+			panic("BaseFormSet.setupForm: form does not implement field `AddField(name string, field forms.Field)`")
+		}
+		fieldAdder.AddField(DELETION_FIELD_NAME, fields.BooleanField(
+			fields.Required(false),
+			fields.Label(trans.S("Delete?")),
+			fields.Widget(widgets.NewBooleanInput(nil)),
+			fields.Hide(b.opts.HideDelete),
+		))
+	}
+
+	f.WithContext(b.ctx)
+}
+
 func (b *BaseFormSet[FORM]) NewForm(ctx context.Context) FORM {
-	return b.opts.NewForm(ctx)
+	if b.opts.NewForm == nil {
+		panic("FormsetOptions.NewForm is required to create a FormSet")
+	}
+
+	var f = b.opts.NewForm(ctx)
+	b.setupForm(f)
+	return f
 }
 
 func (b *BaseFormSet[FORM]) PrefixName(fieldName string) string {
@@ -328,17 +386,18 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		return false
 	}
 
+	var totalForms int
 	var managementForm = form.ManagementForm()
-	managementForm.WithData(data, files, fs.req)
-	managementForm.WithContext(ctx)
-	if !forms.IsValid(ctx, managementForm) {
-		isValid = false
-		logger.Warnf("Formset: management form is not valid: %v, %T", managementForm.ErrorList(), form)
+	if managementForm != nil {
+		managementForm.WithData(data, files, fs.req)
+		managementForm.WithContext(ctx)
+		if !forms.IsValid(ctx, managementForm) {
+			isValid = false
+		}
+		totalForms = managementForm.TotalFormsValue
 	} else {
-		logger.Warnf("Formset: management form is valid: %v", managementForm.ErrorList())
+		totalForms = len(formList)
 	}
-
-	var totalForms = managementForm.TotalFormsValue
 
 	// check if totalforms equals the number of forms
 	if !fs.opts.CanAdd && totalForms > len(formList) {
@@ -354,20 +413,24 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 	}
 
 	var base, defaults = form.Initial(ctx, totalForms)
-	var formObjs = make([]formObject[FORM], len(formList))
 	var loopIters = max(totalForms, fs.opts.MinNum)
 	if fs.opts.CanAdd {
 		loopIters = max(loopIters, len(formList))
 	}
-	if fs.opts.MaxNum > 0 && loopIters > fs.opts.MaxNum {
-		loopIters = fs.opts.MaxNum
-	}
+
+	var totalDeleted int
+	var totalAdded int
+	var formObjs = make([]formObject[FORM], 0, loopIters)
 	for i := 0; i < loopIters; i++ {
+		if totalAdded >= totalForms {
+			break
+		}
+
 		var subForm FORM
-		if fs.opts.CanAdd {
+		if fs.opts.CanAdd && totalAdded >= len(formList) {
 			subForm = form.NewForm(ctx)
 		} else {
-			subForm = formList[i]
+			subForm = formList[totalAdded]
 		}
 
 		if !fs.opts.SkipPrefix {
@@ -378,8 +441,8 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		subForm.WithData(data, files, fs.req)
 
 		if s, ok := any(subForm).(initialSetter); ok {
-			if i < len(defaults) && defaults[i] != nil {
-				s.SetInitial(defaults[i])
+			if totalAdded < len(defaults) && defaults[totalAdded] != nil {
+				s.SetInitial(defaults[totalAdded])
 			} else if base != nil {
 				s.SetInitial(base)
 			}
@@ -387,31 +450,37 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 
 		var formObj = formObject[FORM]{
 			f: subForm,
-			i: i,
+			i: totalAdded,
 			d: false,
 		}
 
-		var orderFld = subForm.PrefixName(ORDERING_FIELD_NAME)
-		var deleteFld = subForm.PrefixName(DELETION_FIELD_NAME)
-		if orders, ok := data[orderFld]; ok && len(orders) > 0 && fs.opts.CanOrder {
-			formObj.i, _ = strconv.Atoi(orders[0])
-		}
-
-		if deletes, ok := data[deleteFld]; ok && len(deletes) > 0 {
-			formObj.d = deletes[0] == "on" || deletes[0] == "true" || deletes[0] == "1"
-			if !fs.opts.CanDelete && formObj.d {
-				form.AddFormError(errors.ValueError.Wrap(
-					trans.T(ctx, "You cannot delete items in this formset."),
-				))
+		if fs.opts.CanOrder {
+			ordering, _, errs := forms.ValueFromDataDict[int](ctx, subForm, ORDERING_FIELD_NAME, data, files)
+			if len(errs) > 0 {
+				subForm.AddFormError(errs...)
 				isValid = false
 			}
+			formObj.i = ordering
 		}
 
+		if fs.opts.CanDelete {
+			deletion, _, errs := forms.ValueFromDataDict[bool](ctx, subForm, DELETION_FIELD_NAME, data, files)
+			if len(errs) > 0 {
+				subForm.AddFormError(errs...)
+				isValid = false
+			}
+			formObj.d = deletion
+		}
+
+		formObjs = append(formObjs, formObj)
+
 		if formObj.d {
+			totalDeleted++
 			continue
 		}
 
-		formObjs[i] = formObj
+		// Increase the totalAdded count only for non-deleted forms
+		totalAdded++
 
 		isValid = forms.IsValid(ctx, formObj.f) && isValid
 
@@ -435,18 +504,30 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 	})
 
 	var finalForms = make([]FORM, 0, len(formObjs))
+	var deletedForms = make([]FORM, 0, totalDeleted)
 	for _, formObj := range formObjs {
 		if formObj.d {
+			deletedForms = append(deletedForms, formObj.f)
 			continue
 		}
 		finalForms = append(finalForms, formObj.f)
+	}
+
+	if fs.opts.DeleteForms != nil && len(deletedForms) > 0 {
+		if err := fs.opts.DeleteForms(ctx, deletedForms); err != nil {
+			form.AddFormError(err)
+			isValid = false
+		}
 	}
 
 	// set the final forms to the formset
 	// after ordering and deletion
 	form.SetForms(finalForms)
 
-	return isValid
+	// set the deleted forms to the formset
+	form.SetDeletedForms(deletedForms)
+
+	return isValid && !forms.HasErrors(form)
 }
 
 func (b *BaseFormSet[FORM]) Data() (url.Values, map[string][]filesystem.FileHeader) {
@@ -507,29 +588,35 @@ func (b *BaseFormSet[FORM]) Media() media.Media {
 	return media.NewMedia()
 }
 
+func (b *BaseFormSet[FORM]) DeletedForms() []FORM {
+	return b.DeletedFormsList
+}
+
 func (b *BaseFormSet[FORM]) Forms() ([]FORM, error) {
 	if b.FormList != nil {
 		return b.FormList, nil
 	}
 
-	var maxNum = min(b.opts.MaxNum, b.opts.MinNum+b.opts.Extra)
+	var maxNum = max(b.opts.MaxNum, b.opts.MinNum+b.opts.Extra)
+	var minNum = min(b.opts.MinNum+b.opts.Extra, maxNum)
 	var forms []FORM
 	var err error
 	if b.opts.DefaultForms != nil {
-		forms, err = b.opts.DefaultForms(b.ctx)
+		forms, err = b.opts.DefaultForms(b.ctx, maxNum, minNum)
 	} else {
-		forms = make([]FORM, 0, maxNum)
+		forms = make([]FORM, 0, minNum)
 	}
 	if err != nil {
 		return nil, err
 	}
 
 	var base, defaults = b.Initial(b.ctx, maxNum)
-	var allForms = make([]FORM, min(maxNum, len(forms)))
-	for i := 0; i < min(maxNum, len(forms)); i++ {
+	var allForms = make([]FORM, max(minNum, len(forms)))
+	for i := 0; i < max(minNum, len(forms)); i++ {
 		var form FORM
 		if i < len(forms) {
 			form = forms[i]
+			b.setupForm(form)
 		} else {
 			form = b.NewForm(b.ctx)
 		}
@@ -563,17 +650,24 @@ func (b *BaseFormSet[FORM]) ForEach(fn func(form FORM, index int) error) error {
 	return nil
 }
 
+func (b *BaseFormSet[FORM]) SetDeletedForms(forms []FORM) {
+	b.DeletedFormsList = forms
+}
+
 func (b *BaseFormSet[FORM]) SetForms(forms []FORM) {
-	fmt.Printf("%T.SetForms: setting %d forms\n", b, len(forms))
-	for i := 0; i < 8; i++ {
-		_, file, line, ok := runtime.Caller(i + 1)
-		if ok {
-			fmt.Printf(" - called from %s:%d\n", file, line)
-		}
-	}
 	b.FormList = forms
-	b.mgmt.InitialForms = len(forms)
-	b.mgmt.TotalFormsValue = len(forms)
+
+	if b.mgmt != nil {
+		b.mgmt.InitialForms = len(forms)
+		b.mgmt.TotalFormsValue = len(forms)
+		b.mgmt.SetInitial(map[string]interface{}{
+			TOTAL_FORM_COUNT:   b.mgmt.TotalFormsValue,
+			INITIAL_FORM_COUNT: b.mgmt.InitialForms,
+			MIN_NUM_FORM_COUNT: b.mgmt.MinNumForms,
+			MAX_NUM_FORM_COUNT: b.mgmt.MaxNumForms,
+		})
+	}
+
 	for i, form := range b.FormList {
 		if !b.opts.SkipPrefix {
 			form.SetPrefix(b.PrefixForm(i))

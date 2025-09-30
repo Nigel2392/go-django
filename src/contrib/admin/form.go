@@ -135,44 +135,45 @@ func (a *AdminForm[T1, T2]) AddWidget(name string, widget widgets.Widget) {
 	a.Form.AddWidget(name, widget)
 }
 
+func (a *AdminForm[T1, T2]) UnpackErrors(bound forms.BoundForm, boundErrors *orderedmap.OrderedMap[string, []error]) []forms.FieldError {
+	var errors = make([]forms.FieldError, 0)
+	errors = append(errors, forms.UnpackErrors(bound, a.Form, boundErrors, func(s string) (forms.Field, bool) {
+		return a.Form.Field(s)
+	})...)
+
+	if a.formset != nil {
+		if mgmt := a.formset.ManagementForm(); mgmt != nil {
+			errors = append(errors, forms.UnpackErrors(bound, mgmt, mgmt.BoundErrors(), func(s string) (forms.Field, bool) {
+				return mgmt.Field(s)
+			})...)
+		}
+	}
+	return errors
+}
+
 func (a *AdminForm[T1, T2]) BoundForm() forms.BoundForm {
-	var form = a.Form.BoundForm()
+	var form = forms.NewBoundForm(a)
+
 	return NewPanelBoundForm(
-		a.Context(),
-		a.Request,
-		a.Form.Instance(),
-		a.Form,
-		form,
-		a.Panels,
-		a.forms,
+		a.Context(), a.Request, a.Form.Instance(),
+		a, form, a.Panels, a.forms,
 	)
 }
+
 func (a *AdminForm[T1, T2]) BoundFields() *orderedmap.OrderedMap[string, forms.BoundField] {
 	return a.Form.BoundFields()
 }
 func (a *AdminForm[T1, T2]) BoundErrors() *orderedmap.OrderedMap[string, []error] {
-	var errs = a.Form.BoundErrors()
-	if a.formset != nil {
-		var fsErrs = a.formset.BoundErrors()
-		if fsErrs != nil {
-			for head := fsErrs.Front(); head != nil; head = head.Next() {
-				errs.Set(head.Key, head.Value)
-			}
-		}
-	}
-	return errs
+	return a.Form.BoundErrors()
 }
 func (a *AdminForm[T1, T2]) ErrorList() []error {
 	var errList = a.Form.ErrorList()
 	if a.formset != nil {
-		errList = append(errList, a.formset.ErrorList()...)
-		errList = append(errList, a.formset.ManagementForm().ErrorList()...)
-		var mfErrs = a.formset.ManagementForm().BoundErrors()
-		if mfErrs != nil {
-			for head := mfErrs.Front(); head != nil; head = head.Next() {
-				errList = append(errList, head.Value...)
-			}
+		var mgmt = a.formset.ManagementForm()
+		if mgmt != nil {
+			errList = append(errList, mgmt.ErrorList()...)
 		}
+		errList = append(errList, a.formset.ErrorList()...)
 	}
 	return errList
 }

@@ -8,6 +8,8 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/models"
@@ -49,7 +51,6 @@ type BaseModelForm[T attrs.Definer] struct {
 	Definition     attrs.Definitions
 	InstanceFields []attrs.Field
 	context        context.Context
-	initialData    map[string]interface{}
 	OnLoad         func(model T, initialData map[string]interface{})
 
 	flags modelFormFlag
@@ -124,6 +125,7 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 		excluded[n] = struct{}{}
 	}
 
+	var initial = make(map[string]interface{})
 	for _, field := range f.InstanceFields {
 		var n = field.Name()
 		if _, ok := excluded[n]; ok && f.wasSet(excludeWasSet) {
@@ -136,19 +138,10 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 		}
 
 		f.ModelFields = append(f.ModelFields, n)
-	}
 
-	var initial = make(map[string]interface{})
-	for _, def := range f.InstanceFields {
-		var formField = def.FormField()
-		if formField == nil {
-			continue
-		}
-
-		var v = def.GetValue()
-		var n = def.Name()
+		var v = field.GetValue()
 		if attrs.IsZero(v) {
-			initial[n] = def.GetDefault()
+			initial[n] = field.GetDefault()
 		} else {
 			initial[n] = v
 		}
@@ -215,7 +208,6 @@ func (f *BaseModelForm[T]) SetExclude(exclude ...string) {
 }
 
 func (f *BaseModelForm[T]) Reset() {
-	f.initialData = nil
 	f.BaseForm.Reset()
 	f.setFlag(formLoaded, false)
 }
@@ -312,6 +304,25 @@ func (f *BaseModelForm[T]) Load() {
 	f.setFlag(formLoaded, true)
 }
 
+func (f *BaseModelForm[T]) InitialData() map[string]interface{} {
+	var data = make(map[string]interface{})
+	for _, fieldname := range f.ModelFields {
+		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, fieldname) {
+			continue
+		}
+		var field, ok = f.Definition.Field(fieldname)
+		assert.True(ok, "Field %q not found in %T", fieldname, f.Model)
+
+		var value = field.GetValue()
+		if attrs.IsZero(value) {
+			data[fieldname] = field.GetDefault()
+		} else {
+			data[fieldname] = value
+		}
+	}
+	return data
+}
+
 func (f *BaseModelForm[T]) WithContext(ctx context.Context) {
 	f.context = ctx
 	f.BaseForm.FormContext = ctx
@@ -324,54 +335,18 @@ func (f *BaseModelForm[T]) Context() context.Context {
 	return f.context
 }
 
-func (f *BaseModelForm[T]) IsValid() bool {
-	var cleaned, err = f.BaseForm.Save()
-	if err != nil {
-		f.AddFormError(err)
-		return false
-	}
-
-	for _, fieldname := range f.ModelFields {
-		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, fieldname) {
-			continue
-		}
-
-		var field, ok = f.Definition.Field(fieldname)
-		assert.True(ok, "Field %q not found in %T", fieldname, f.Model)
-
-		if !field.AllowEdit() {
-			continue
-		}
-
-		value, ok := cleaned[fieldname]
-		if !ok {
-			continue
-		}
-
-		formField, ok := f.Field(fieldname)
-		if !ok {
-			continue
-		}
-
-		if _, ok := formField.(ModelFieldSaver); ok {
-			continue
-		}
-
-		if err := field.SetValue(value, true); err != nil {
-			f.AddError(
-				fieldname,
-				err,
-			)
-		}
-	}
-
-	return len(f.ErrorList_) == 0 && (f.Errors == nil || f.Errors.Len() == 0)
-}
-
 func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
-	var cleaned = f.CleanedData()
-	var ctx = f.Context()
+	if f.Errors != nil && f.Errors.Len() > 0 {
+		return nil, errs.Error("the form cannot be saved because it has errors")
+	}
+
+	if f.Cleaned == nil {
+		except.Assert(f.Cleaned != nil, 500, "You must call forms.IsValid() before saving the form")
+	}
+
 	var err error
+	var ctx = f.Context()
+	var cleaned = f.CleanedData()
 	for _, fieldname := range f.ModelFields {
 		if f.wasSet(excludeWasSet) && slices.Contains(f.ModelExclude, fieldname) {
 			continue
@@ -381,6 +356,7 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 		assert.True(ok, "Field %q not found in %T", fieldname, f.Model)
 
 		if !field.AllowEdit() {
+			cleaned[fieldname] = f.BaseForm.Initial[fieldname]
 			continue
 		}
 
@@ -396,6 +372,14 @@ func (f *BaseModelForm[T]) Save() (map[string]interface{}, error) {
 
 		if saver, ok := formField.(ModelFieldSaver); ok {
 			if err := saver.SaveField(ctx, field, value); err != nil {
+				f.AddError(
+					fieldname,
+					err,
+				)
+				return cleaned, err
+			}
+		} else {
+			if err := field.SetValue(value, true); err != nil {
 				f.AddError(
 					fieldname,
 					err,

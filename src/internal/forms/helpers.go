@@ -2,9 +2,11 @@ package forms
 
 import (
 	"context"
+	"maps"
 	"net/url"
 	"reflect"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -237,13 +239,12 @@ postValidateErrCheck:
 
 	errs = f.ErrorList()
 	bndErrs = f.BoundErrors()
-	if (bndErrs == nil || bndErrs.Len() == 0) && len(errs) == 0 {
-		if isValidDef, ok := f.(IsValidDefiner); ok {
-			return isValidDef.IsValid()
-		}
-		return true
+	var isValid = (bndErrs == nil || bndErrs.Len() == 0) && len(errs) == 0
+	if isValidDef, ok := f.(IsValidDefiner); ok {
+		return isValidDef.IsValid() && isValid
 	}
-	return false
+
+	return isValid
 }
 
 func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, files map[string][]filesystem.FileHeader) (invalid_, defaults_, cleaned_ map[string]any) {
@@ -295,6 +296,17 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 			invalid = make(map[string]any)
 			defaults = make(map[string]any)
 			cleaned = make(map[string]any)
+		}
+
+		if initialGetter, ok := mixin.(interface{ InitialData() map[string]interface{} }); ok {
+			var data = initialGetter.InitialData()
+			maps.Copy(defaults, data)
+		}
+
+		if unsafeGetter, ok := mixin.(interface{ CleanedDataUnsafe() map[string]interface{} }); ok {
+			var data = unsafeGetter.CleanedDataUnsafe()
+			maps.Copy(defaults, data)
+			maps.Copy(cleaned, data)
 		}
 
 		for head := fm.FieldMap().Front(); head != nil; head = head.Next() {
@@ -366,6 +378,18 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 				continue
 			}
 
+			// Check if the field is saveable and call Save() on it.
+			// This might be used to save a relation to the database, among other things.
+			if field, saveable := v.(SaveableField); saveable {
+				data, err = field.Save(data)
+				if err != nil {
+					addError(mixin, depth, k, err)
+					invalid[k] = data
+					continue
+				}
+
+			}
+
 			defaults[k] = data
 			cleaned[k] = data
 		}
@@ -374,4 +398,67 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 	}
 
 	return base_invalid, base_defaults, base_cleaned
+}
+
+func FormValueFromDataDict[T any](ctx context.Context, form FormFieldDefiner, name string, data url.Values, files map[string][]filesystem.FileHeader) (T, bool, []error) {
+	var field, ok = form.Field(name)
+	if !ok {
+		return *new(T), false, []error{errors.FieldNotFound.Wrapf(
+			"field %q not found in form %T", name, form,
+		)}
+	}
+
+	widget, ok := form.Widget(name)
+	if !ok {
+		return *new(T), false, []error{errors.FieldNotFound.Wrapf(
+			"widget %q not found in form %T", name, form,
+		)}
+	}
+
+	if widget == nil {
+		widget = field.Widget()
+	}
+
+	if widget == nil {
+		return *new(T), false, []error{errors.ValueError.Wrapf(
+			"field %q in form %T has no widget", name, form,
+		)}
+	}
+
+	var namePrefixed = form.PrefixName(name)
+	var hasValue = widget.ValueOmittedFromData(ctx, data, files, namePrefixed)
+	if !hasValue {
+		return *new(T), false, nil
+	}
+
+	var value, errs = widget.ValueFromDataDict(ctx, data, files, namePrefixed)
+	if len(errs) > 0 {
+		return *new(T), true, errs
+	}
+
+	value, err := widget.ValueToGo(value)
+	if err != nil {
+		return *new(T), true, []error{err}
+	}
+
+	var _nT T
+	var dstT = reflect.TypeOf(_nT)
+	var rv = reflect.ValueOf(value)
+
+	if rv.Type() == dstT {
+		return rv.Interface().(T), true, nil
+	}
+
+	if rv.Type().ConvertibleTo(dstT) {
+		return rv.Convert(dstT).Interface().(T), true, nil
+	}
+
+	if rv.Type().AssignableTo(dstT) {
+		return rv.Interface().(T), true, nil
+	}
+
+	return *new(T), true, []error{errors.TypeMismatch.Wrapf(
+		"field %q in form %T: value is %T, cannot convert to %T",
+		name, form, value, _nT,
+	)}
 }

@@ -1,13 +1,19 @@
 package forms
 
 import (
+	"context"
 	"html/template"
 
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
+type ErrorUnpacker interface {
+	UnpackErrors(boundForm BoundForm, boundErrors *orderedmap.OrderedMap[string, []error]) []FieldError
+}
+
 type fieldError struct {
+	name   string
 	field  string
 	errors []error
 }
@@ -16,12 +22,16 @@ func (f *fieldError) Field() string {
 	return f.field
 }
 
+func (f *fieldError) Name() string {
+	return f.name
+}
+
 func (f *fieldError) Errors() []error {
 	return f.errors
 }
 
 type BaseBoundForm struct {
-	Form          any
+	Form          FormBinder
 	BoundFields   []BoundField
 	BoundFieldMap map[string]BoundField
 	ErrorMap      *orderedmap.OrderedMap[string, []error]
@@ -31,6 +41,7 @@ type BaseBoundForm struct {
 
 type FormBinder interface {
 	FieldOrder() []string
+	Context() context.Context
 	BoundFields() *orderedmap.OrderedMap[string, BoundField]
 	ErrorDefiner
 }
@@ -109,18 +120,42 @@ func (f *BaseBoundForm) Errors() *orderedmap.OrderedMap[string, []error] {
 	return f.ErrorMap
 }
 
-func (f *BaseBoundForm) UnpackErrors() []FieldError {
-	if f.ErrorMap == nil {
+func UnpackErrors[T interface{ Label(context.Context) string }](bf BoundForm, f FormBinder, errorMap *orderedmap.OrderedMap[string, []error], getLabel func(string) (T, bool)) []FieldError {
+	if unpacker, ok := f.(ErrorUnpacker); ok {
+		return unpacker.UnpackErrors(bf, errorMap)
+	}
+
+	if errorMap == nil {
 		return nil
 	}
-	var ret = make([]FieldError, 0, f.ErrorMap.Len())
-	for head := f.ErrorMap.Front(); head != nil; head = head.Next() {
-		ret = append(ret, &fieldError{
+
+	var ret = make([]FieldError, 0, errorMap.Len())
+	for head := errorMap.Front(); head != nil; head = head.Next() {
+		var err = fieldError{
+			name:   head.Key,
 			field:  head.Key,
 			errors: head.Value,
-		})
+		}
+
+		var field, ok = getLabel(head.Key)
+		if ok {
+			err.field = field.Label(f.Context())
+		}
+
+		ret = append(ret, &err)
 	}
 	return ret
+
+}
+
+func (f *BaseBoundForm) UnpackErrors() []FieldError {
+	return UnpackErrors(f, f.Form, f.ErrorMap, func(s string) (Field, bool) {
+		fld, ok := f.BoundFieldMap[s]
+		if !ok {
+			return nil, false
+		}
+		return fld.Input(), true
+	})
 }
 
 func (f *BaseBoundForm) ErrorList() []error {

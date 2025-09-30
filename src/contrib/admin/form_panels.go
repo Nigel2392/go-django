@@ -729,6 +729,7 @@ var _ FormPanel = (*ModelFormPanel[attrs.Definer, modelforms.ModelForm[attrs.Def
 
 type ModelFormPanel[TARGET attrs.Definer, FORM modelforms.ModelForm[TARGET]] struct {
 	Form           func() FORM
+	SaveInstance   func(ctx context.Context, form FORM, instance TARGET) error
 	TargetType     TARGET
 	MaxNum         int
 	MinNum         int
@@ -785,12 +786,12 @@ func (f *ModelFormPanel[TARGET, FORM]) getField(source attrs.Definer) attrs.Fiel
 	return field
 }
 
-func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Request, source attrs.Definer, totalForms int, targetList []TARGET) []modelforms.ModelForm[TARGET] {
-	var formList = make([]modelforms.ModelForm[TARGET], 0, totalForms)
+func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Request, source attrs.Definer, minNumForms int, targetList []TARGET) []modelforms.ModelForm[TARGET] {
+	var formList = make([]modelforms.ModelForm[TARGET], 0, minNumForms)
 	var field = p.getField(source)
 	var rel = field.Rel()
 	var revField = rel.Field()
-	for i := 0; i < totalForms; i++ {
+	for i := 0; i < max(minNumForms, len(targetList)); i++ {
 		var target TARGET
 		var isNew = i >= len(targetList)
 		if !isNew {
@@ -860,8 +861,21 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 						Relation: revField.Rel(),
 					},
 				})
+			} else {
+				assert.Fail(
+					"ModelFormPanel: reverse field not found for one-to-many relation on field %s",
+					field.Name(),
+				)
 			}
-
+			form = &clusterableForm[TARGET, FORM]{
+				ModelForm:    form,
+				FormOrdering: FORM_ORDERING_POST,
+			}
+		case attrs.RelManyToOne:
+			form = &clusterableForm[TARGET, FORM]{
+				ModelForm:    form,
+				FormOrdering: FORM_ORDERING_PRE,
+			}
 		default:
 			// not implemented
 			assert.Fail(
@@ -882,11 +896,30 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 	return formList
 }
 
-func (m *ModelFormPanel[TARGET, FORM]) EmptyForm(ctx context.Context, r *http.Request, source attrs.Definer) modelforms.ModelForm[TARGET] {
-	var forms = m.GetForms(ctx, r, source, 1, nil)
-	var f = forms[0]
-	f.SetPrefix("__PREFIX__")
-	return f
+var _ ClusterOrderableForm = (*clusterableForm[attrs.Definer, modelforms.ModelForm[attrs.Definer]])(nil)
+
+type clusterableForm[T1 attrs.Definer, T2 modelforms.ModelForm[T1]] struct {
+	modelforms.ModelForm[T1]
+	FormOrdering FORM_ORDERING
+}
+
+func (c *clusterableForm[T1, T2]) FormOrder() FORM_ORDERING {
+	return c.FormOrdering
+}
+
+func (c *clusterableForm[T1, T2]) Unwrap() []any {
+	if unwrapper, ok := c.ModelForm.(forms.FormWrapper[any]); ok {
+		return unwrapper.Unwrap()
+	}
+	if unwrapper, ok := c.ModelForm.(forms.FormWrapper[T1]); ok {
+		var unwrapped = unwrapper.Unwrap()
+		var list = make([]any, len(unwrapped))
+		for i, item := range unwrapped {
+			list[i] = item
+		}
+		return list
+	}
+	return []any{c.ModelForm}
 }
 
 func (m *ModelFormPanel[TARGET, FORM]) Forms(r *http.Request, ctx context.Context, instance attrs.Definer) (FormSetObject, []formsets.BaseFormSetForm, error) {
@@ -897,29 +930,24 @@ func (m *ModelFormPanel[TARGET, FORM]) Forms(r *http.Request, ctx context.Contex
 func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Context, instance attrs.Definer) formsets.ListFormSet[modelforms.ModelForm[TARGET]] {
 	var f = formsets.NewBaseFormSet(
 		ctx, formsets.FormsetOptions[modelforms.ModelForm[TARGET]]{
-			MinNum:    m.MinNum,
-			MaxNum:    m.MaxNum,
-			Extra:     m.Extra,
-			CanDelete: !m.DisallowRemove,
-			CanAdd:    !m.DisallowAdd,
+			MinNum:     m.MinNum,
+			MaxNum:     m.MaxNum,
+			Extra:      m.Extra,
+			CanDelete:  !m.DisallowRemove,
+			CanAdd:     !m.DisallowAdd,
+			CanOrder:   true,
+			HideDelete: true,
 			NewForm: func(c context.Context) modelforms.ModelForm[TARGET] {
 				var forms = m.GetForms(ctx, r, instance, 1, nil)
 				return forms[0]
 			},
-			DefaultForms: func(ctx context.Context) ([]modelforms.ModelForm[TARGET], error) {
-				var field, targetList, err = getRelatedList[TARGET](r, ctx, instance, m.FieldName)
+			DefaultForms: func(ctx context.Context, max, min int) ([]modelforms.ModelForm[TARGET], error) {
+				var _, targetList, err = getRelatedList[TARGET](r, ctx, instance, m.FieldName)
 				if err != nil {
 					return nil, err
 				}
 
-				totalForms, _, targetList := m.validate(
-					field.Rel(),
-					len(targetList),
-					targetList,
-				)
-
-				var formList = m.GetForms(ctx, r, instance, totalForms, targetList)
-				return formList, nil
+				return m.GetForms(ctx, r, instance, min, targetList), nil
 			},
 		},
 	)
@@ -1042,7 +1070,7 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 	if err != nil {
 		except.Fail(
 			http.StatusInternalServerError,
-			"ModelFormPanel.Bind: %v", err,
+			"ModelFormPanel.Bind: %T / %v", instance, err,
 		)
 	}
 
@@ -1070,10 +1098,17 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 		}
 	}
 
+	var formset formsets.ListFormSet[modelforms.ModelForm[TARGET]]
+	if typ, ok := formSets.(formsets.ListFormSet[modelforms.ModelForm[TARGET]]); ok {
+		formset = typ
+	} else {
+		formset = m.FormSet(r, ctx, instance)
+	}
+
 	//	var meta = attrs.GetModelMeta(fld.Rel().Model())
 	//	var defs = meta.Definitions()
 	//	var primary = defs.Primary()
-	var emptyForm = m.EmptyForm(ctx, r, instance)
+	var emptyForm = formset.NewForm(ctx)
 	var fieldMap = emptyForm.BoundFields()
 	var keys = fieldMap.Keys()
 	if len(panels) != len(keys) {
@@ -1086,11 +1121,14 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 		}
 	}
 
-	var formset formsets.ListFormSet[modelforms.ModelForm[TARGET]]
-	if typ, ok := formSets.(formsets.ListFormSet[modelforms.ModelForm[TARGET]]); ok {
-		formset = typ
-	} else {
-		formset = m.FormSet(r, ctx, instance)
+	if _, ok := seen[formsets.DELETION_FIELD_NAME]; !ok && !m.DisallowRemove {
+		panels = append(panels, FieldPanel(formsets.DELETION_FIELD_NAME))
+		seen[formsets.DELETION_FIELD_NAME] = struct{}{}
+	}
+
+	if _, ok := seen[formsets.ORDERING_FIELD_NAME]; !ok && !m.DisallowAdd {
+		panels = append(panels, FieldPanel(formsets.ORDERING_FIELD_NAME))
+		seen[formsets.ORDERING_FIELD_NAME] = struct{}{}
 	}
 
 	return &BoundModelFormPanel[TARGET, FORM]{
@@ -1101,7 +1139,6 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 		SourceField: field,
 		Context:     ctx,
 		Request:     r,
-		emptyForm:   emptyForm,
 	}
 }
 

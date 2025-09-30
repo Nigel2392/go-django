@@ -467,6 +467,7 @@ func (f *BaseForm) Save() (map[string]interface{}, error) {
 		)
 
 		if field.ReadOnly() {
+			data[k] = f.Initial[k]
 			continue
 		}
 

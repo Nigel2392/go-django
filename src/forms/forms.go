@@ -3,6 +3,7 @@ package forms
 import (
 	"context"
 
+	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/internal/forms"
 )
 
@@ -26,6 +27,7 @@ type (
 	FormWrapper[T any] = forms.FormWrapper[T]
 	WithDataDefiner    = forms.WithDataDefiner
 	ErrorDefiner       = forms.ErrorDefiner
+	FormFieldDefiner   = forms.FormFieldDefiner
 
 	PrevalidatorMixin = forms.PrevalidatorMixin
 	ValidatorMixin    = forms.ValidatorMixin
@@ -38,6 +40,10 @@ func IsValid[T any](ctx context.Context, f T) bool {
 
 func FullClean(ctx context.Context, f Form) (invalid, defaults, cleaned map[string]any) {
 	return forms.FullClean(ctx, f)
+}
+
+func ValueFromDataDict[T any](ctx context.Context, form FormFieldDefiner, name string, data map[string][]string, files map[string][]filesystem.FileHeader) (T, bool, []error) {
+	return forms.FormValueFromDataDict[T](ctx, form, name, data, files)
 }
 
 type SaveableForm interface {

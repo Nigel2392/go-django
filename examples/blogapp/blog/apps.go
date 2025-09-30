@@ -111,6 +111,10 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 				Name:  "blog_image",
 				Model: &BlogImage{},
 			},
+			admin.ModelOptions{
+				Name:  "blog_page",
+				Model: &BlogPage{},
+			},
 		)
 
 		return nil
@@ -184,6 +188,16 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 								MaxNum: 9,
 								//Panels: []admin.Panel{
 								//	admin.FieldPanel("Image"),
+								//	&admin.ModelFormPanel[*BlogPage, modelforms.ModelForm[*BlogPage]]{
+								//		TargetType: &BlogPage{},
+								//		FieldName:  "BlogPage",
+								//		// SubClassname: "collapsed",
+								//		MinNum: 1,
+								//		MaxNum: 1,
+								//		//Panels: []admin.Panel{
+								//		//	admin.FieldPanel("Image"),
+								//		//},
+								//	},
 								//},
 							},
 						),

@@ -3,11 +3,13 @@
     {{ if (gt (len $Errors) 0) }}
         <ul class="error-list">
             {{ range $Error := $Errors }}
+                <span class="error-label">{{ $Error.Field }}:</span>
                 <li class="error">
-                    <p class="error-label">{{ $Error.Field }}:</p>
+                    <ul>
                     {{ range $err := $Error.Errors }}
-                        <p class="error-message">{{ $err }}</p>
+                        <li class="error-message">{{ $err }}</li>
                     {{ end }}
+                    </ul>
                 </li>
             {{ end }}
         </ul>

@@ -6,7 +6,4 @@ import (
 
 type Field = forms.Field
 
-type SaveableField interface {
-	Field
-	Save(value interface{}) (interface{}, error)
-}
+type SaveableField = forms.SaveableField

@@ -9,6 +9,7 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-django/src/internal/forms"
 )
 
 var _ (attrs.Definer) = (*TestModel)(nil)
@@ -158,7 +159,7 @@ func TestModelForm(t *testing.T) {
 				"Age":  1,
 			}
 
-			f.IsValid()
+			forms.IsValid(f.Context(), f)
 
 			if _, err := f.Save(); err != nil {
 				t.Errorf("expected %v, got %v", nil, err)
@@ -229,7 +230,7 @@ func TestModelForm(t *testing.T) {
 					"Name": "new name",
 					"Age":  1,
 				}
-				f.IsValid()
+				forms.IsValid(f.Context(), f)
 
 				if _, err := f.Save(); err != nil {
 					t.Errorf("expected (err) %v, got %v", nil, err)
@@ -255,10 +256,16 @@ func TestModelForm(t *testing.T) {
 					"Name": "new name",
 					"Age":  -1,
 				}
-				f.BaseForm.Raw = make(url.Values)
-				f.IsValid()
 
-				if f.Errors.Len() != 1 {
+				f.BaseForm.Raw = make(url.Values)
+
+				forms.IsValid(f.Context(), f)
+
+				if _, err := f.Save(); err == nil {
+					t.Errorf("expected (err), got %v", nil)
+				}
+
+				if f.Errors == nil || f.Errors.Len() != 1 {
 					t.Errorf("expected (err) %v, got %v", errors.New("Age must be greater than 0"), f.ErrorList_)
 				}
 

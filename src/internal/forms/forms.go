@@ -61,6 +61,7 @@ type ErrorDefiner interface {
 }
 
 type FieldError interface {
+	Name() string
 	Field() string
 	Errors() []error
 }
@@ -117,9 +118,20 @@ type Field interface {
 	IsEmpty(value interface{}) bool
 }
 
+type SaveableField interface {
+	Field
+	Save(value interface{}) (interface{}, error)
+}
+
 type WithDataDefiner interface {
 	WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request)
 	Data() (url.Values, map[string][]filesystem.FileHeader)
+}
+
+type FormFieldDefiner interface {
+	Field(name string) (Field, bool)
+	Widget(name string) (Widget, bool)
+	PrefixName(fieldName string) string
 }
 
 type Form interface {
