@@ -437,3 +437,58 @@ func UnpackFieldsFromArgsIter[T1 Definer, T2 any](definer T1, args ...T2) iter.S
 		}
 	}
 }
+
+//
+//func structFieldsMixinFunc[T any](fn func(obj T, depth int, field reflect.StructField, value reflect.Value) []T) func(obj T, depth int) iter.Seq[T] {
+//	return func(obj T, depth int) iter.Seq[T] {
+//		var rVal = reflect.ValueOf(obj)
+//		var rTyp = rVal.Type()
+//		if rTyp.Kind() == reflect.Ptr {
+//			rTyp = rTyp.Elem()
+//			rVal = rVal.Elem()
+//		}
+//		if rTyp.Kind() != reflect.Struct {
+//			return nil
+//		}
+//		return func(yield func(T) bool) {
+//			for i := 0; i < rTyp.NumField(); i++ {
+//				for _, m := range fn(obj, depth, rTyp.Field(i), rVal.Field(i)) {
+//					if !yield(m) {
+//						return
+//					}
+//				}
+//			}
+//		}
+//	}
+//}
+//
+//type mixinDefiner interface {
+//	IsModelMixin()
+//}
+//
+//func DefinerMixins[MIXIN any](obj Definer) iter.Seq2[Definer, int] {
+//	var _mixinT = reflect.TypeOf((*mixinDefiner)(nil)).Elem()
+//	var iter = mixins.MixinsFunc[any](obj, true, structFieldsMixinFunc(func(obj any, depth int, field reflect.StructField, value reflect.Value) []any {
+//		if field.Type.Kind() == reflect.Ptr && value.IsNil() {
+//			return nil
+//		}
+//
+//		if !field.Type.Implements(_mixinT) {
+//			return nil
+//		}
+//
+//		var mixin = value.Interface()
+//		return []any{mixin}
+//	}))
+//
+//	return func(yield func(Definer, int) bool) {
+//		for m, depth := range iter {
+//			if definer, ok := m.(Definer); ok {
+//				if !yield(definer, depth) {
+//					return
+//				}
+//			}
+//		}
+//	}
+//}
+//

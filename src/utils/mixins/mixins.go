@@ -9,9 +9,15 @@ type Definer[T any] interface {
 	Mixins() []T
 }
 
-func defaultMixinsFn[T any](obj T, depth int) []T {
+func defaultMixinsFn[T any](obj T, depth int) iter.Seq[T] {
 	if mixin, ok := any(obj).(Definer[T]); ok {
-		return mixin.Mixins()
+		return func(yield func(T) bool) {
+			for _, m := range mixin.Mixins() {
+				if !yield(m) {
+					return
+				}
+			}
+		}
 	}
 	return nil
 }
@@ -22,20 +28,20 @@ func Mixins[T any](obj T, topDown bool) iter.Seq2[T, int] {
 	}
 }
 
-func MixinsFunc[T any](obj T, topDown bool, fn func(obj T, depth int) []T) iter.Seq2[T, int] {
+func MixinsFunc[T any](obj T, topDown bool, fn func(obj T, depth int) iter.Seq[T]) iter.Seq2[T, int] {
 	return func(yield func(T, int) bool) {
 		iterMixins(yield, obj, topDown, 0, fn)
 	}
 }
 
-func iterMixins[T any](yield func(T, int) bool, obj T, topDown bool, depth int, fn func(obj T, depth int) []T) bool {
+func iterMixins[T any](yield func(T, int) bool, obj T, topDown bool, depth int, fn func(obj T, depth int) iter.Seq[T]) bool {
 	if topDown && !yield(obj, depth) {
 		return false
 	}
 	if fn == nil {
 		panic("cannot get mixins, provided function is nil")
 	}
-	for _, m := range fn(obj, depth) {
+	for m := range fn(obj, depth) {
 		if !iterMixins(yield, m, topDown, depth+1, fn) {
 			return false
 		}
@@ -57,18 +63,18 @@ func BuildMixinTree[T any](obj T) *MixinTree[T] {
 	return BuildMixinTreeFunc(obj, defaultMixinsFn)
 }
 
-func BuildMixinTreeFunc[T any](obj T, fn func(obj T, depth int) []T) *MixinTree[T] {
+func BuildMixinTreeFunc[T any](obj T, fn func(obj T, depth int) iter.Seq[T]) *MixinTree[T] {
 	return buildMixinTreeFunc(obj, 0, fn)
 }
 
-func buildMixinTreeFunc[T any](obj T, depth int, fn func(obj T, depth int) []T) *MixinTree[T] {
+func buildMixinTreeFunc[T any](obj T, depth int, fn func(obj T, depth int) iter.Seq[T]) *MixinTree[T] {
 	var tree = &MixinTree[T]{
 		Root: obj,
 	}
 	if fn != nil {
 		var mixins = fn(obj, depth)
-		tree.Nodes = make([]*MixinTree[T], 0, len(mixins))
-		for _, m := range mixins {
+		tree.Nodes = make([]*MixinTree[T], 0)
+		for m := range mixins {
 			tree.Nodes = append(tree.Nodes, buildMixinTreeFunc(m, depth+1, fn))
 		}
 	}
