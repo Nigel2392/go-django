@@ -183,22 +183,25 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 							&admin.ModelFormPanel[*BlogImage, modelforms.ModelForm[*BlogImage]]{
 								TargetType: &BlogImage{},
 								FieldName:  "BlogImageSet",
+								Classname:  "collapsible",
 								// SubClassname: "collapsed",
 								MinNum: 3,
 								MaxNum: 9,
-								//Panels: []admin.Panel{
-								//	admin.FieldPanel("Image"),
-								//	&admin.ModelFormPanel[*BlogPage, modelforms.ModelForm[*BlogPage]]{
-								//		TargetType: &BlogPage{},
-								//		FieldName:  "BlogPage",
-								//		// SubClassname: "collapsed",
-								//		MinNum: 1,
-								//		MaxNum: 1,
-								//		//Panels: []admin.Panel{
-								//		//	admin.FieldPanel("Image"),
-								//		//},
-								//	},
-								//},
+								// DisallowAdd: true,
+								// DisallowRemove: true,
+								Panels: []admin.Panel{
+									admin.FieldPanel("Image"),
+									//	&admin.ModelFormPanel[*BlogPage, modelforms.ModelForm[*BlogPage]]{
+									//		TargetType: &BlogPage{},
+									//		FieldName:  "BlogPage",
+									//		// SubClassname: "collapsed",
+									//		MinNum: 1,
+									//		MaxNum: 1,
+									//		//Panels: []admin.Panel{
+									//		//	admin.FieldPanel("Image"),
+									//		//},
+									//	},
+								},
 							},
 						),
 						admin.PanelTab(

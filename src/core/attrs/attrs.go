@@ -167,6 +167,16 @@ type Definer interface {
 	FieldDefs() Definitions
 }
 
+// FieldUnpackerMixin is an interface for model mixins that can add fields to a model.
+// These mixins must be embedded in the model struct to retain the information.
+// This is used by the [Define] function to unpack fields from the mixin.
+// To define a model as having mixins, a `Mixin` method must be defined on the model,
+// Mixins can have their own mixins, which will be unpacked recursively.
+// An object with mixins *MUST* always implement the [mixins.MixinDefiner] interface.
+type FieldUnpackerMixin interface {
+	ObjectFields(object Definer, base_fields *FieldsMap) error
+}
+
 var matchFirstCap = regexp.MustCompile("(.)([A-Z][a-z]+)")
 var matchAllCap = regexp.MustCompile("([a-z0-9])([A-Z])")
 var nameMap = make(map[string]string)

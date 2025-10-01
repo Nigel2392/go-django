@@ -46,6 +46,18 @@ func setup[T Definer](obj any) T {
 	return obj.(T)
 }
 
+type objectRegistry struct {
+	types map[reflect.Type]func(any) Definer
+}
+
+var objectFuncRegistry = &objectRegistry{
+	types: make(map[reflect.Type]func(any) Definer),
+}
+
+func RegisterNewObjectFunc(typ reflect.Type, fn func(original any) Definer) {
+	objectFuncRegistry.types[typ] = fn
+}
+
 // Creates a new object from the given Definer type.
 //
 // This function should always be used to create new objects
@@ -82,6 +94,11 @@ func NewObject[T Definer](definer any) T {
 		obj = cTypeDef.Object()
 	default:
 		obj = v
+	}
+
+	var rT = reflect.TypeOf(obj)
+	if fn, ok := objectFuncRegistry.types[rT]; ok {
+		return setup[T](fn(obj))
 	}
 
 	var newObj, ok = createIfIface[T](obj)

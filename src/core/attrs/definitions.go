@@ -4,6 +4,7 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/utils/mixins"
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -11,7 +12,26 @@ type ObjectDefinitions struct {
 	Object       Definer
 	PrimaryField string
 	Table        string
-	ObjectFields *orderedmap.OrderedMap[string, Field]
+	ObjectFields *FieldsMap
+}
+
+type FieldsMap struct {
+	ref *ObjectDefinitions
+	*orderedmap.OrderedMap[string, Field]
+}
+
+func (d *FieldsMap) Set(name string, f Field) (replaced bool) {
+	if binder, ok := f.(UnboundField); ok {
+		var err error
+		f, err = binder.BindField(d.ref.Object)
+		if err != nil {
+			assert.Fail("bind (%T): %v", d, err)
+		}
+	}
+
+	f.BindToDefinitions(d.ref)
+
+	return d.OrderedMap.Set(name, f)
 }
 
 // Define creates a new object definitions.
@@ -26,9 +46,11 @@ func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions
 	var defs = &ObjectDefinitions{
 		Object: d,
 	}
+	defs.ObjectFields = &FieldsMap{
+		ref:        defs,
+		OrderedMap: orderedmap.NewOrderedMap[string, Field](),
+	}
 
-	var primaryField string
-	var m = orderedmap.NewOrderedMap[string, Field]()
 	var fieldsIter = UnpackFieldsFromArgsIter(d, fieldDefinitions...)
 	for f, err := range fieldsIter {
 		if err != nil {
@@ -36,25 +58,33 @@ func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions
 			continue
 		}
 
-		if f.IsPrimary() && primaryField == "" {
-			primaryField = f.Name()
+		if f.IsPrimary() && defs.PrimaryField == "" {
+			defs.PrimaryField = f.Name()
 		}
 
-		if binder, ok := f.(UnboundField); ok {
-			var err error
-			f, err = binder.BindField(d)
-			if err != nil {
-				assert.Fail("bind (%T): %v", d, err)
+		defs.ObjectFields.Set(f.Name(), f)
+	}
+
+	for mixin, depth := range mixins.Mixins[any](d, true) {
+		// Skip the first level, this is the model itself.
+		if depth == 0 {
+			continue
+		}
+
+		binder, ok := mixin.(Embedded)
+		if ok {
+			if err := binder.BindToEmbedder(d); err != nil {
+				assert.Fail("bind embedded (%T): %v", d, err)
 			}
 		}
 
-		f.BindToDefinitions(defs)
-
-		m.Set(f.Name(), f)
+		if unpacker, ok := mixin.(FieldUnpackerMixin); ok {
+			if err := unpacker.ObjectFields(d, defs.ObjectFields); err != nil {
+				assert.Fail("unpack fields (%T): %v", d, err)
+			}
+		}
 	}
 
-	defs.ObjectFields = m
-	defs.PrimaryField = primaryField
 	return defs
 }
 

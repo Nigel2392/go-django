@@ -662,7 +662,7 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelfor
             </div>
         }
 
-        if !(p.Panel.MinNum > 0 && p.Panel.MinNum == p.Panel.MaxNum) && !p.Panel.DisallowAdd && !p.Panel.DisallowRemove {
+        if !(p.Panel.MinNum > 0 && p.Panel.MinNum == p.Panel.MaxNum) && (!p.Panel.DisallowAdd || !p.Panel.DisallowRemove) {
             <div class="modelform-panel__forms__panel__controls">
                 <div class="modelform-panel__forms__panel__controls__group">
                     if !p.Panel.DisallowAdd {

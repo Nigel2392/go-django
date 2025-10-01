@@ -54,14 +54,22 @@ type MixinTree[T any] struct {
 var ErrStopTreeIter = errors.New("stop tree iteration")
 
 func BuildMixinTree[T any](obj T) *MixinTree[T] {
+	return BuildMixinTreeFunc(obj, defaultMixinsFn)
+}
+
+func BuildMixinTreeFunc[T any](obj T, fn func(obj T, depth int) []T) *MixinTree[T] {
+	return buildMixinTreeFunc(obj, 0, fn)
+}
+
+func buildMixinTreeFunc[T any](obj T, depth int, fn func(obj T, depth int) []T) *MixinTree[T] {
 	var tree = &MixinTree[T]{
 		Root: obj,
 	}
-	if mixin, ok := any(obj).(Definer[T]); ok {
-		var mixins = mixin.Mixins()
+	if fn != nil {
+		var mixins = fn(obj, depth)
 		tree.Nodes = make([]*MixinTree[T], 0, len(mixins))
 		for _, m := range mixins {
-			tree.Nodes = append(tree.Nodes, BuildMixinTree(m))
+			tree.Nodes = append(tree.Nodes, buildMixinTreeFunc(m, depth+1, fn))
 		}
 	}
 	return tree

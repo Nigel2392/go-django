@@ -25,6 +25,9 @@ import (
 var (
 	_ models.SaveableObject   = (*BlogPage)(nil)
 	_ models.DeleteableObject = (*BlogPage)(nil)
+
+	_ attrs.Embedded           = (*OrderableMixin[*BlogImage])(nil)
+	_ attrs.FieldUnpackerMixin = (*OrderableMixin[*BlogImage])(nil)
 )
 
 type BlogContext struct {
@@ -32,11 +35,44 @@ type BlogContext struct {
 	Page pages.Page
 }
 
+type OrderableMixin[T attrs.Definer] struct {
+	Reference T
+	Ordering  int
+}
+
+func (m *OrderableMixin[T]) BindToEmbedder(embedder attrs.Definer) error {
+	m.Reference = embedder.(T)
+	return nil
+}
+
+func (m *OrderableMixin[T]) FieldDefs() attrs.Definitions {
+	return nil
+}
+
+func (m *OrderableMixin[T]) ObjectFields(object attrs.Definer, base_fields *attrs.FieldsMap) error {
+	var orderingField, ok = base_fields.Get("Ordering")
+	if !ok {
+		orderingField = attrs.NewField(m, "Ordering", &attrs.FieldConfig{
+			Default: 0,
+			Column:  "ordering",
+		})
+		base_fields.Set("Ordering", orderingField)
+	}
+	return nil
+}
+
 type BlogImage struct {
-	models.Model `table:"blog_images"`
-	ID           int64
-	Image        *images.Image
-	BlogPage     *BlogPage
+	models.Model  `table:"blog_images"`
+	OrderingMixin OrderableMixin[*BlogImage]
+	ID            int64
+	Image         *images.Image
+	BlogPage      *BlogPage
+}
+
+func (b *BlogImage) Mixins() []any {
+	return []any{
+		&b.OrderingMixin,
+	}
 }
 
 func (b *BlogImage) UniqueTogether() [][]string {

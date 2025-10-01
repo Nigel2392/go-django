@@ -1099,15 +1099,6 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 		panels = append(panels, panel)
 	}
 
-	var fld = m.getField(instance)
-	var relFld = fld.Rel().Field()
-	if relFld != nil {
-		if _, ok := seen[relFld.Name()]; !ok {
-			panels = append(panels, FieldPanel(relFld.Name()))
-			seen[relFld.Name()] = struct{}{}
-		}
-	}
-
 	var formset formsets.ListFormSet[modelforms.ModelForm[TARGET]]
 	if typ, ok := formSets.(formsets.ListFormSet[modelforms.ModelForm[TARGET]]); ok {
 		formset = typ
@@ -1115,19 +1106,12 @@ func (m *ModelFormPanel[TARGET, FORM]) Bind(r *http.Request, panelCount map[stri
 		formset = m.FormSet(r, ctx, instance)
 	}
 
-	//	var meta = attrs.GetModelMeta(fld.Rel().Model())
-	//	var defs = meta.Definitions()
-	//	var primary = defs.Primary()
-	var emptyForm = formset.NewForm(ctx)
-	var fieldMap = emptyForm.BoundFields()
-	var keys = fieldMap.Keys()
-	if len(panels) != len(keys) {
-		for _, key := range keys {
-			if _, ok := seen[key]; ok {
-				continue
-			}
-			panels = append(panels, FieldPanel(key))
-			seen[key] = struct{}{}
+	var fld = m.getField(instance)
+	var relFld = fld.Rel().Field()
+	if relFld != nil {
+		if _, ok := seen[relFld.Name()]; !ok {
+			panels = append(panels, FieldPanel(relFld.Name()))
+			seen[relFld.Name()] = struct{}{}
 		}
 	}
 

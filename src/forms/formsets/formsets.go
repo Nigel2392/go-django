@@ -443,23 +443,29 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 			d: false,
 		}
 
+		fmt.Println()
+
 		if fs.opts.CanOrder {
-			ordering, _, errs := forms.ValueFromDataDict[int](ctx, subForm, ORDERING_FIELD_NAME, data, files)
+			ordering, ok, errs := forms.ValueFromDataDict[int](ctx, subForm, ORDERING_FIELD_NAME, data, files)
 			if len(errs) > 0 {
 				subForm.AddFormError(errs...)
 				isValid = false
 			}
 			formObj.i = ordering
+			fmt.Printf("Form %d: index=%d, deleted=%v, ordering=%d, ok=%v\n", i, formObj.i, formObj.d, ordering, ok)
 		}
 
 		if fs.opts.CanDelete {
-			deletion, _, errs := forms.ValueFromDataDict[bool](ctx, subForm, DELETION_FIELD_NAME, data, files)
+			deletion, ok, errs := forms.ValueFromDataDict[bool](ctx, subForm, DELETION_FIELD_NAME, data, files)
 			if len(errs) > 0 {
 				subForm.AddFormError(errs...)
 				isValid = false
 			}
 			formObj.d = deletion
+			fmt.Printf("Form %d: index=%d, deleted=%v, deletion=%v, ok=%v\n", i, formObj.i, formObj.d, deletion, ok)
 		}
+
+		fmt.Println()
 
 		formObjs = append(formObjs, formObj)
 

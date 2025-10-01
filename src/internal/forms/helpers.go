@@ -177,6 +177,20 @@ func IsValid[T any](ctx context.Context, formObj T) bool {
 		bndErrs                    = f.BoundErrors()
 	)
 
+	if bndErrs == nil || bndErrs.Len() == 0 {
+		cleaner, ok := f.(CleanableForm)
+		if ok {
+			var c, validationErrs = cleaner.Clean(ctx, cleaned)
+			if len(validationErrs) > 0 {
+				f.AddFormError(validationErrs...)
+			} else {
+				cleaned = c
+			}
+			errs = f.ErrorList()
+			bndErrs = f.BoundErrors()
+		}
+	}
+
 	var hasErrors bool
 	if bndErrs == nil || bndErrs.Len() == 0 {
 		for _, validator := range f.Validators() {
@@ -409,13 +423,7 @@ func FormValueFromDataDict[T any](ctx context.Context, form FormFieldDefiner, na
 	}
 
 	widget, ok := form.Widget(name)
-	if !ok {
-		return *new(T), false, []error{errors.FieldNotFound.Wrapf(
-			"widget %q not found in form %T", name, form,
-		)}
-	}
-
-	if widget == nil {
+	if !ok || widget == nil {
 		widget = field.Widget()
 	}
 
@@ -426,8 +434,8 @@ func FormValueFromDataDict[T any](ctx context.Context, form FormFieldDefiner, na
 	}
 
 	var namePrefixed = form.PrefixName(name)
-	var hasValue = widget.ValueOmittedFromData(ctx, data, files, namePrefixed)
-	if !hasValue {
+	var omitted = widget.ValueOmittedFromData(ctx, data, files, namePrefixed)
+	if omitted {
 		return *new(T), false, nil
 	}
 

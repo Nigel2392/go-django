@@ -6,9 +6,285 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/pkg/errors"
 )
 
 type Function = interface{} // func(...interface{}) -> Component
+
+var (
+	ErrTypeMismatch = errors.New("type mismatch")
+	ErrNotFunc      = errors.New("fn must be a function")
+	ErrArgCount     = errors.New("argument count mismatch")
+	ErrReturnCount  = errors.New("return count mismatch")
+)
+
+func CastFunc[OUT Function](fn any) (OUT, error) {
+	var nT = new(OUT)
+	var outTyp = reflect.TypeOf(nT).Elem()
+	var rVal, err = RCastFunc(outTyp, fn)
+	if err != nil {
+		return *nT, err
+	}
+	return rVal.Interface().(OUT), nil
+}
+
+func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
+	var fnType = reflect.TypeOf(fn)
+	var fnVal = reflect.ValueOf(fn)
+	if fnType == nil || fnType.Kind() != reflect.Func {
+		return reflect.Value{}, errors.Wrapf(
+			ErrNotFunc, "expected a function, got %T", fn,
+		)
+	}
+	if out == nil || out.Kind() != reflect.Func {
+		return reflect.Value{}, errors.Wrapf(
+			ErrNotFunc, "expected a function, got %T", out,
+		)
+	}
+
+	if fnType == out || fnType.ConvertibleTo(out) {
+		return fnVal.Convert(out), nil
+	}
+
+	var (
+		numInSrc  = fnType.NumIn()
+		numInDst  = out.NumIn()
+		returnsEq = fnType.NumOut() == out.NumOut()
+	)
+
+	switch {
+	case numInSrc > numInDst && !out.IsVariadic():
+		return reflect.Value{}, errors.Wrapf(
+			ErrArgCount, "function must have the same number of arguments as the output function (%v), got %v",
+			numInDst, numInSrc,
+		)
+	case numInSrc < numInDst && !fnType.IsVariadic():
+		return reflect.Value{}, errors.Wrapf(
+			ErrArgCount, "function must have the same number of arguments as the output function (%v), got %v",
+			numInDst, numInSrc,
+		)
+	}
+
+	if !returnsEq {
+		return reflect.Value{}, errors.Wrapf(
+			ErrReturnCount, "function must return the same number of values as the output function (%v), got %v",
+			out.NumOut(), fnType.NumOut(),
+		)
+	}
+
+	var newFunc = reflect.MakeFunc(out, func(in []reflect.Value) []reflect.Value {
+		var callIn = make([]reflect.Value, 0, len(in))
+	argLoop:
+		for i := 0; i < len(in); i++ {
+			switch {
+			case i >= numInSrc && !fnType.IsVariadic() || i >= numInSrc && !out.IsVariadic():
+				assert.Fail(errors.Wrapf(
+					ErrArgCount,
+					"function must have the same number of arguments as the output function (%v), got %v",
+					numInDst, len(in),
+				))
+
+			case fnType.IsVariadic() && i == numInSrc-1:
+				// handle variadic parameters
+				var variadicType = fnType.In(i).Elem()
+				for j := i; j < len(in); j++ {
+					var argTyp = in[j].Type()
+					var argVal, ok = convertType(argTyp, variadicType, in[j])
+					if !ok {
+						assert.Fail(errors.Wrapf(
+							ErrTypeMismatch,
+							"could not convert %T [%d]: (%v) to %v",
+							in[j].Interface(), j, in[j], variadicType,
+						))
+					}
+					callIn = append(callIn, argVal)
+				}
+				return fnVal.Call(callIn)
+
+			case out.IsVariadic() && i >= numInDst-1:
+
+				if i >= numInSrc {
+					assert.Fail(errors.Wrapf(
+						ErrArgCount,
+						"function must have the same number of arguments as the output function (%v), got %v",
+						numInDst, len(callIn),
+					))
+				}
+
+				// handle variadic parameters
+				var argTyp = in[i].Type()
+				var castType = fnType.In(i)
+				switch castType.Kind() {
+				case reflect.Slice:
+					if argTyp.Kind() == reflect.Slice {
+						var conv, ok = convertType(argTyp, castType, in[i])
+						if !ok {
+							assert.Fail(errors.Wrapf(
+								ErrTypeMismatch,
+								"could not convert %T (%v) to %v",
+								in[i].Interface(), in[i], castType,
+							))
+						}
+						callIn = append(callIn, conv)
+						break argLoop
+					}
+
+					var elemType = castType.Elem()
+					var sliceVal = reflect.MakeSlice(castType, 0, 0)
+					for j := i; j < len(in); j++ {
+						var argTyp = in[j].Type()
+						var argVal, ok = convertType(argTyp, elemType, in[j])
+						if !ok {
+							assert.Fail(errors.Wrapf(
+								ErrTypeMismatch,
+								"could not convert %T [%d]: (%v) to %v",
+								in[j].Interface(), j, in[j], elemType,
+							))
+						}
+						sliceVal = reflect.Append(sliceVal, argVal)
+					}
+
+					callIn = append(callIn, sliceVal)
+					break argLoop
+
+				default:
+					if argTyp.Kind() == reflect.Slice {
+						for j := 0; j < in[i].Len(); j++ {
+							var elem = in[i].Index(j)
+							var elemTyp = elem.Type()
+							var argVal, ok = convertType(elemTyp, castType, elem)
+							if !ok {
+								continue argLoop
+							}
+							callIn = append(callIn, argVal)
+						}
+						break argLoop
+					}
+
+					var argVal, ok = convertType(argTyp, castType, in[i])
+					if !ok {
+						assert.Fail(errors.Wrapf(
+							ErrTypeMismatch,
+							"could not convert %T (%v) to %v",
+							in[i].Interface(), in[i], castType,
+						))
+					}
+
+					callIn = append(callIn, argVal)
+				}
+			}
+
+			var typ = fnType.In(i)
+			var argTyp = in[i].Type()
+			var argVal, ok = convertType(argTyp, typ, in[i])
+			if !ok {
+				assert.Fail(errors.Wrapf(
+					ErrTypeMismatch,
+					"could not convert %T (%v) to %v",
+					in[i].Interface(), in[i], typ,
+				))
+			}
+
+			callIn = append(callIn, argVal)
+		}
+
+		if len(callIn) < fnType.NumIn() && !fnType.IsVariadic() || len(callIn) > fnType.NumIn() && !fnType.IsVariadic() {
+			assert.Fail(errors.Wrapf(
+				ErrArgCount,
+				"function must have the same number of arguments as the output function (%v), got %v",
+				numInDst, len(callIn),
+			))
+		}
+
+		var res = fnVal.Call(callIn)
+		if len(res) == 0 {
+			return []reflect.Value{}
+		}
+
+		var results = make([]reflect.Value, len(res))
+		for i, curr := range res {
+			var typ = out.Out(i)
+			var currType = curr.Type()
+
+			var cnvrted, ok = convertType(currType, typ, curr)
+			if !ok {
+				assert.Fail(errors.Wrapf(
+					ErrReturnCount,
+					"function return value %v is not convertible to %v",
+					currType, typ,
+				))
+			}
+
+			results[i] = cnvrted
+		}
+
+		return results
+	})
+
+	return newFunc, nil
+}
+
+func convertType(fromT, toT reflect.Type, fromV reflect.Value) (reflect.Value, bool) {
+	// Exact type match
+	if fromT == toT {
+		return fromV, true
+	}
+
+	// If source is an interface, try unwrapping its dynamic value.
+	if fromT.Kind() == reflect.Interface && !fromV.IsNil() {
+		underlying := fromV.Elem() // dynamic value
+		uType := underlying.Type()
+
+		// Direct match after unwrapping
+		if uType == toT {
+			return underlying, true
+		}
+		// Assignable
+		if uType.AssignableTo(toT) {
+			return underlying, true
+		}
+		// Convertible
+		if uType.ConvertibleTo(toT) {
+			return underlying.Convert(toT), true
+		}
+		// If destination is a broader interface implemented by underlying
+		if toT.Kind() == reflect.Interface && uType.Implements(toT) {
+			return underlying, true
+		}
+	}
+
+	// Assignable (covers pointer/interface assignment cases)
+	if fromT.AssignableTo(toT) {
+		return fromV, true
+	}
+
+	// Direct convertible (numeric, etc.)
+	if fromT.ConvertibleTo(toT) {
+		// If converting to string, check for Stringer or error interface
+		// we check the reverse of ConvertibleTo because integers should not
+		// be converted to strings implicitly.
+		if toT.Kind() == reflect.String && !toT.ConvertibleTo(fromT) {
+			if s, ok := fromV.Interface().(fmt.Stringer); ok {
+				return reflect.ValueOf(s.String()), true
+			}
+
+			if b, ok := fromV.Interface().(error); ok {
+				return reflect.ValueOf(b.Error()), true
+			}
+
+			return reflect.Value{}, false
+		}
+
+		return fromV.Convert(toT), true
+	}
+
+	// Widen to interface
+	if toT.Kind() == reflect.Interface && fromT.Implements(toT) {
+		return fromV, true
+	}
+
+	return reflect.Value{}, false
+}
 
 type Func struct {
 	Fn          Function

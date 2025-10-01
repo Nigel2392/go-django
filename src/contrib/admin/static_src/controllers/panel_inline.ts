@@ -102,7 +102,7 @@ class ManagementFormElement {
     }
 }
 
-class InlinePanelController extends Controller<HTMLElement> {
+class InlinePanelController extends Controller<PanelElement> {
     static values = {
         prefix: String,
         mgmtPrefix: String,
@@ -212,6 +212,8 @@ class InlinePanelController extends Controller<HTMLElement> {
             return;
         }
 
+        animator.addElement(panelElem);
+
         switch (where) {
         case "start":
             this.formsTarget.insertBefore(
@@ -230,6 +232,13 @@ class InlinePanelController extends Controller<HTMLElement> {
         }
 
         animator.start();
+        
+        this.flash(panelElem, {
+            color: 'green',
+            duration: 300,
+            iters: 1,
+            delay: 20,
+        });
 
         this.lastFormIndex += 1;
         this.managementForm.totalForms += 1;
@@ -263,25 +272,33 @@ class InlinePanelController extends Controller<HTMLElement> {
             return;
         }
 
+        this.flash(this.formsTarget, {
+            color: 'orange',
+            duration: 300,
+            iters: 1,
+            delay: 20,
+        });
+
         deletedInput.value = "true";
         targetedElement.style.display = "none";
         this.totalForms -= 1;
         return;
     }
 
-    private flash(element: Element | null) {
+    private flash(element: Element | null, opts: { color?: string; duration?: number; iters?: number; delay?: number; } = { color: 'red', duration: 200, iters: 2, delay: 0 }) {
         if (!element) return;
         element.animate(
             [
-                { boxShadow: '0 0 0px red' },
-                { boxShadow: '0 0 10px red' },
-                { boxShadow: '0 0 0px red' },
+                { boxShadow: `0 0 0px ${opts.color}` },
+                { boxShadow: `0 0 10px ${opts.color}` },
+                { boxShadow: `0 0 0px ${opts.color}` },
             ],
             {
-                duration: 200,
+                duration: opts.duration,
                 easing: "linear",
-                fill: 'none', // don't retain the final numeric height
-                iterations: 2,
+                fill: 'none',
+                iterations: opts.iters,
+                delay: opts.delay,
                 direction: 'alternate',
             }
         );

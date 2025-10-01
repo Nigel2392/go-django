@@ -134,6 +134,10 @@ type FormFieldDefiner interface {
 	PrefixName(fieldName string) string
 }
 
+type CleanableForm interface {
+	Clean(ctx context.Context, cleaned map[string]interface{}) (map[string]interface{}, []error)
+}
+
 type Form interface {
 	WithDataDefiner
 	FullCleanMixin
