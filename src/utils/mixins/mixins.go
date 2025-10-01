@@ -9,6 +9,8 @@ type Definer[T any] interface {
 	Mixins() []T
 }
 
+func NillSeq[K any](yield func(K) bool) {}
+
 func defaultMixinsFn[T any](obj T, depth int) iter.Seq[T] {
 	if mixin, ok := any(obj).(Definer[T]); ok {
 		return func(yield func(T) bool) {
@@ -19,7 +21,7 @@ func defaultMixinsFn[T any](obj T, depth int) iter.Seq[T] {
 			}
 		}
 	}
-	return nil
+	return NillSeq
 }
 
 func Mixins[T any](obj T, topDown bool) iter.Seq2[T, int] {
