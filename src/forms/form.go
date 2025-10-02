@@ -33,6 +33,7 @@ type BaseForm struct {
 	Cleaned         map[string]interface{}
 	Defaults        map[string]interface{}
 	FormContext     context.Context
+	FormRenderer    FormRenderer
 
 	FormValidators  []func(Form, map[string]interface{}) []error
 	OnValidFuncs    []func(Form)
@@ -131,7 +132,14 @@ func (f *BaseForm) BoundErrors() *orderedmap.OrderedMap[string, []error] {
 }
 
 func (f *BaseForm) BoundForm() BoundForm {
-	return NewBoundForm(f)
+	return NewBoundForm(f.FormContext, f, f.FormRenderer)
+}
+
+func (f *BaseForm) Renderer() FormRenderer {
+	if f.FormRenderer == nil {
+		f.FormRenderer = &defaultRenderer{}
+	}
+	return f.FormRenderer
 }
 
 func (f *BaseForm) EditContext(key string, context ctx.Context) {

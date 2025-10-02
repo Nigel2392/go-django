@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"io"
 	"runtime/debug"
+	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -15,42 +16,49 @@ import (
 )
 
 type FormRenderer interface {
-	Render(w io.Writer, ctx context.Context, field BoundField, id string, name string, value interface{}, errors []error, attrs map[string]string)
-	RenderLabel(w io.Writer, ctx context.Context, field BoundField, id string, name string)
-	RenderHelpText(w io.Writer, ctx context.Context, field BoundField, id string, name string)
-	RenderField(w io.Writer, ctx context.Context, field BoundField, id string, name string, value interface{}, attrs map[string]string, errors []error)
+	RenderFieldLabel(w io.Writer, ctx context.Context, field BoundField, id string, name string) error
+	RenderFieldHelpText(w io.Writer, ctx context.Context, field BoundField, id string, name string) error
+	RenderFieldWidget(w io.Writer, ctx context.Context, field BoundField, id string, name string, value interface{}, attrs map[string]string, errors []error, widgetCtx ctx.Context) error
+	RenderField(w io.Writer, ctx context.Context, field BoundField, id string, name string, value interface{}, errors []error, attrs map[string]string, widgetCtx ctx.Context) error
 }
 
 type defaultRenderer struct{}
 
-func (r *defaultRenderer) Render(w io.Writer, c context.Context, field BoundField, id string, name string, value interface{}, errors []error, attrs map[string]string, widgetCtx ctx.Context) {
-	r.RenderLabel(w, c, field, id, name)
-	r.RenderHelpText(w, c, field, id, name)
-	r.RenderField(w, c, field, id, name, value, attrs, errors, widgetCtx)
+func (r *defaultRenderer) RenderField(w io.Writer, c context.Context, field BoundField, id string, name string, value interface{}, errors []error, attrs map[string]string, widgetCtx ctx.Context) (err error) {
+	if err = r.RenderFieldLabel(w, c, field, id, name); err != nil {
+		return err
+	}
+	if err = r.RenderFieldWidget(w, c, field, id, name, value, attrs, errors, widgetCtx); err != nil {
+		return err
+	}
+	if err = r.RenderFieldHelpText(w, c, field, id, name); err != nil {
+		return err
+	}
+	return nil
 }
 
-func (r *defaultRenderer) RenderLabel(w io.Writer, ctx context.Context, field BoundField, id string, name string) {
+func (r *defaultRenderer) RenderFieldLabel(w io.Writer, ctx context.Context, field BoundField, id string, name string) error {
 	var fld = field.Input()
 	var labelText = fld.Label(ctx)
 	fmt.Fprintf(w, "<label for=\"%s\">%s</label>", id, html.EscapeString(labelText))
+	return nil
 }
 
-func (r *defaultRenderer) RenderHelpText(w io.Writer, ctx context.Context, field BoundField, id string, name string) {
+func (r *defaultRenderer) RenderFieldHelpText(w io.Writer, ctx context.Context, field BoundField, id string, name string) error {
 	var fld = field.Input()
 	var helpText = fld.HelpText(ctx)
 	if helpText == "" {
-		return
+		return nil
 	}
 
 	fmt.Fprintf(w, "<small>%s</small>", html.EscapeString(helpText))
+	return nil
 }
 
-func (r *defaultRenderer) RenderField(w io.Writer, c context.Context, field BoundField, id string, name string, value interface{}, attrs map[string]string, errors []error, widgetCtx ctx.Context) {
-	var widget = field.Widget()
-	var err = widget.RenderWithErrors(
+func (r *defaultRenderer) RenderFieldWidget(w io.Writer, c context.Context, field BoundField, id string, name string, value interface{}, attrs map[string]string, errors []error, widgetCtx ctx.Context) error {
+	return field.Widget().RenderWithErrors(
 		c, w, id, name, value, errors, attrs, widgetCtx,
 	)
-	assert.True(err == nil, err)
 }
 
 type BoundFormField struct {
@@ -63,6 +71,7 @@ type BoundFormField struct {
 	FormErrors  []error
 	FormContext context.Context
 	CachedHTML  template.HTML
+	Renderer    FormRenderer
 }
 
 func NewBoundFormField(ctx context.Context, w Widget, f Field, name string, value interface{}, errors []error, tryWidgetBound bool) BoundField {
@@ -96,6 +105,7 @@ func NewBoundFormField(ctx context.Context, w Widget, f Field, name string, valu
 		FormErrors:  errors,
 		FormAttrs:   attrs,
 		FormContext: ctx,
+		Renderer:    &defaultRenderer{},
 	}
 
 	return bw
@@ -118,19 +128,15 @@ func (b *BoundFormField) Hidden() bool {
 }
 
 func (b *BoundFormField) Label() template.HTML {
-	var (
-		labelText = b.FormField.Label(b.FormContext)
-	)
-	return template.HTML(
-		fmt.Sprintf("<label for=\"%s\">%s</label>", b.ID(), labelText),
-	)
+	var s = new(strings.Builder)
+	b.Renderer.RenderFieldLabel(s, b.FormContext, b, b.FormID, b.FormName)
+	return template.HTML(s.String())
 }
 
 func (b *BoundFormField) HelpText() template.HTML {
-	var (
-		helpText = b.FormField.HelpText(b.FormContext)
-	)
-	return template.HTML(helpText)
+	var s = new(strings.Builder)
+	b.Renderer.RenderFieldHelpText(s, b.FormContext, b, b.FormID, b.FormName)
+	return template.HTML(s.String())
 }
 
 func (b *BoundFormField) Field() template.HTML {
@@ -152,9 +158,7 @@ func (b *BoundFormField) Field() template.HTML {
 
 		var err error
 		var buf = new(bytes.Buffer)
-		err = b.FormWidget.RenderWithErrors(
-			b.FormContext, buf, b.FormID, b.FormName, b.FormValue, b.FormErrors, b.FormAttrs, widgetCtx,
-		)
+		err = b.Renderer.RenderFieldWidget(buf, b.FormContext, b, b.FormID, b.FormName, b.FormValue, b.FormAttrs, b.FormErrors, widgetCtx)
 		b.CachedHTML = template.HTML(buf.String())
 		assert.True(err == nil, err)
 	}

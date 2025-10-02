@@ -37,6 +37,8 @@ type BaseBoundForm struct {
 	ErrorMap      *orderedmap.OrderedMap[string, []error]
 	ListErrors    []error
 	media         media.Media
+	renderer      FormRenderer
+	context       context.Context
 }
 
 type FormBinder interface {
@@ -46,13 +48,18 @@ type FormBinder interface {
 	ErrorDefiner
 }
 
-func NewBoundForm(f FormBinder) BoundForm {
+func NewBoundForm(ctx context.Context, f FormBinder, renderer FormRenderer) BoundForm {
 	var (
 		fields      = f.BoundFields()
 		errors      = f.BoundErrors()
 		boundFields = make([]BoundField, 0, fields.Len())
 		fieldMap    = make(map[string]BoundField, fields.Len())
 	)
+
+	if renderer == nil {
+		renderer = &defaultRenderer{}
+	}
+
 	//for head := fields.Front(); head != nil; head = head.Next() {
 	//	boundFields = append(boundFields, head.Value)
 	//}
@@ -91,6 +98,8 @@ func NewBoundForm(f FormBinder) BoundForm {
 		BoundFieldMap: fieldMap,
 		ErrorMap:      errors,
 		ListErrors:    f.ErrorList(),
+		renderer:      renderer,
+		context:       ctx,
 	}
 }
 
