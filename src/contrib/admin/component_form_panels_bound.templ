@@ -28,6 +28,51 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 )
 
+
+templ PanelHeading(panelId string, allowPanelLink bool) {
+    <div class="panel__heading" data-panel-target="heading">
+        if panelId != "" && allowPanelLink {
+            <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
+                  <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
+                  <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
+                </svg>
+            </a>
+        }
+
+        <div class="panel__title" data-action="click->panel#toggle" if panelId != "" { id={ panelId } }>
+            { children... }
+        </div>
+    </div>
+}
+
+templ PanelErrors(errors []error) {
+    if len(errors) > 0 {
+        <div class="panel__errors">
+            <ul>
+                for _, err := range errors {
+                    <li class="panel__error">@TextComponent(err)</li>
+                }
+                { children... }
+            </ul>
+        </div>
+    }
+}
+
+templ PanelHelpText(helpText any) {
+    if helpText != nil {
+        <div class="panel__help">
+            @TextComponent(helpText)
+        </div>
+    }
+}
+
+templ PanelBody() {
+    <div class="panel__body" data-panel-target="content">
+        { children... }
+    </div>
+}
+
 func TextComponent(text any) templ.Component {
     if text == nil {
         return nil
@@ -149,41 +194,20 @@ func (p PanelComponent) panelAttrs() templ.Attributes {
 templ (p PanelComponent) Component() {
     <div { p.panelAttrs()... }>
         if !p.Hidden && p.Heading != nil {
-            <div class="panel__heading" data-panel-target="heading">
-
-                <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", p.PanelId)) }>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
-                      <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
-                      <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
-                    </svg>
-                </a>
-
-                <div class="panel__title" data-action="click->panel#toggle" id={ p.PanelId }>
-                    @p.Heading
-                </div>
-
-            </div>
+            @PanelHeading(p.PanelId, p.AllowPanelLink) {
+                @p.Heading
+            }
         }
 
-        if len(p.Errors) > 0 {
-            <div class="panel__errors">
-                <ul>
-                    for _, err := range p.Errors {
-                        <li class="panel__error">@TextComponent(err.Error())</li>
-                    }
-                </ul>
-            </div>
-        }
+        @PanelErrors(p.Errors)
 
         if !p.Hidden && p.HelpText != nil {
-            <div class="panel__help">
-                @p.HelpText
-            </div>
+            @PanelHelpText(p.HelpText)
         }
 
-        <div class="panel__body" data-panel-target="content">
+        @PanelBody() {
             @p.Body
-        </div>
+        }
     </div>
 }
 
@@ -306,33 +330,18 @@ templ (p *BoundRowPanel[T]) Component() {
 
     <div class={ "panel", "panel-row", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId }>
         if p.LabelFn != nil {
-            <div class="panel__heading" data-panel-target="heading">
-
-                <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
-                      <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
-                      <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
-                    </svg>
-                </a>
-
-                <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
-                    <label>@TextComponent(p.LabelFn)</label>
-                </div>
-
-            </div>
+            @PanelHeading(panelId, true) {
+                <label>@TextComponent(p.LabelFn)</label>
+            }
         }
 
-        if p.HelpTextFn != nil {
-            <div class="panel__help">
-                @TextComponent(p.HelpTextFn)
-            </div>
-        }
+        @PanelHelpText(p.HelpTextFn)
 
-        <div class="panel__body" data-panel-target="content">
+        @PanelBody() {
             for _, panel := range p.Panels {
                 @panel.Component()
             }
-        </div>
+        }
     </div>
 }
 
@@ -364,33 +373,18 @@ templ (p *BoundPanelGroup[T]) Component() {
 
     <div class={ "panel", "panel-group", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId }>
         if p.LabelFn != nil {
-            <div class="panel__heading" data-panel-target="heading">
-
-                <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
-                      <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
-                      <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
-                    </svg>
-                </a>
-
-                <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
-                    <label>@TextComponent(p.LabelFn)</label>
-                </div>
-
-            </div>
+            @PanelHeading(panelId, true) {
+                <label>@TextComponent(p.LabelFn)</label>
+            }
         }
 
-        if p.HelpTextFn != nil {
-            <div class="panel__help">
-                @TextComponent(p.HelpTextFn)
-            </div>
-        }
+        @PanelHelpText(p.HelpTextFn)
 
-        <div class="panel__body">
+        @PanelBody() {
             for _, panel := range p.Panels {
                 @panel.Component()
             }
-        </div>
+        }
     </div>
 }
 
@@ -463,8 +457,7 @@ func (p *boundTabbedPanel) Hidden() bool {
 
 templ (p *boundTabbedPanel) Component() {
     <div class="panel tabpanel" data-controller="tabpanel">
-
-        <div class="panel__body">
+        @PanelBody() {
             <div class="tabpanel__controls">
                 for i, tab := range p.panels {
                     <button class={ "tabpanel__control" } data-tabpanel-target="control" data-action="click->tabpanel#select" data-tabpanel-index-param={ strconv.Itoa(i) }>
@@ -481,8 +474,7 @@ templ (p *boundTabbedPanel) Component() {
                     </div>
                 }
             </div>
-        </div>
-
+        }
     </div>
 }
 
@@ -516,59 +508,37 @@ templ (p *BoundJSONDetailPanel) Component() {
     {{ var panelId = BuildPanelID(fieldName, nil, slug.Make(fieldName)) }}
     <div class={ "panel", "panel-default", "collapsible", p.Panel.ClassName() } data-controller="panel" data-panel-panel-value={ panelId } data-panel-input-id={ p.BoundField.ID() }>
         if !p.Hidden() {
-            <div class="panel__heading" data-panel-target="heading">
-
-                <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
-                      <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
-                      <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
-                    </svg>
-                </a>
-
-                <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
-                    @templ.Raw(string(label))
-                </div>
-
-            </div>
+            @PanelHeading(panelId, true) {
+                @templ.Raw(string(label))
+            }
         }
 
         if !p.Hidden() && helpText != "" {
-            <div class="panel__help">
-                @templ.Raw(string(helpText))
-            </div>
+            @PanelHelpText(helpText)
         }
 
         if !p.Hidden() {
-            <div class="panel__body" data-panel-target="content">
+            @PanelBody() {
                 for _, boundField := range p.BoundFields {
                     {{ var label = boundField.Label() }}
                     {{ var field = boundField.Field() }}
                     {{ var panelId = BuildPanelID("json-data-panel", nil, slug.Make(boundField.Name())) }}
                     <div class={ "panel", "panel-default" } data-controller="panel" data-panel-panel-value={ panelId } data-panel-input-id={ boundField.ID() }>
-                        <div class="panel__heading" data-panel-target="heading">
 
-                            <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
-                                  <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
-                                  <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
-                                </svg>
-                            </a>
+                        @PanelHeading(panelId, true) {
+                            @templ.Raw(string(label))
+                        }
 
-                            <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
-                                @templ.Raw(string(label))
-                            </div>
-
-                        </div>
-                        <div class="panel__body" data-panel-target="content">
+                        @PanelBody() {
                             <div class="form-field-wrapper">
                                 <div class="form-field">
                                     @templ.Raw(string(field))
                                 </div>
                             </div>
-                        </div>
+                        }
                     </div>
                 }
-            </div>
+            }
         }
     </div>
 }
@@ -619,19 +589,9 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelfor
     
     <div class={ "panel modelform-panel__forms__panel collapsible", p.Panel.SubClassname } data-controller="panel" data-panel-panel-value={ panelId } id={ idParam }>
         if label != nil {
-            <div class="panel__heading" data-panel-target="heading">
-    
-                <a class="panel__icon" data-panel-target="linkIcon" href={ templ.SafeURL(fmt.Sprintf("#%s", panelId)) }>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="link-logo" viewBox="0 0 16 16">
-                      <path d="M4.715 6.542 3.343 7.914a3 3 0 1 0 4.243 4.243l1.828-1.829A3 3 0 0 0 8.586 5.5L8 6.086a1 1 0 0 0-.154.199 2 2 0 0 1 .861 3.337L6.88 11.45a2 2 0 1 1-2.83-2.83l.793-.792a4 4 0 0 1-.128-1.287z"/>
-                      <path d="M6.586 4.672A3 3 0 0 0 7.414 9.5l.775-.776a2 2 0 0 1-.896-3.346L9.12 3.55a2 2 0 1 1 2.83 2.83l-.793.792c.112.42.155.855.128 1.287l1.372-1.372a3 3 0 1 0-4.243-4.243z"/>
-                    </svg>
-                </a>
-    
-                <div class="panel__title" data-action="click->panel#toggle" id={ panelId }>
-                    <label>@TextComponent(label)</label>
-                </div>
-            </div>
+            @PanelHeading(panelId, true) {
+                <label>@TextComponent(label)</label>
+            }
         }
 
         {{ var formErrors = form.ErrorList() }}
@@ -692,7 +652,7 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelfor
             </div>
         }
 
-        <div class="panel__body" data-panel-target="content">
+        @PanelBody() {
             <div class="modelform-panel__form">
                 <div class="modelform-panel__form__body">
                     for _, panel := range boundPanelForm.BoundPanels {
@@ -700,7 +660,7 @@ templ (p *BoundModelFormPanel[TARGET, FORM]) renderSingleFormPanel(form modelfor
                     }
                 </div>
             </div>
-        </div>
+        }
     </div>
 }
 

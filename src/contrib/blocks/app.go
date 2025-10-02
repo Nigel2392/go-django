@@ -13,9 +13,44 @@ import (
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/goldcrest"
 )
+
+type SubBlockData struct {
+	Type string      `json:"type"`
+	Data interface{} `json:"data"`
+}
+
+type StreamBlockData struct {
+	Blocks []SubBlockData `json:"blocks"`
+}
+
+func init() {
+	// Assign the BlockField form field to any struct field which is of type <X>BlockData.
+	//
+	// This will then automatically assign the appropriate form widget for the field when used in a form.
+	//
+	// The struct which the field belongs to should define a `Get<FieldName>Block() Block` method,
+	// which will return the block definition for the field.
+	// The form field will not be set up if this method is not found.
+	var getter = func(f attrs.Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
+		var instance = f.Instance()
+		var featureFunc, ok = attrs.Method[func() Block](
+			instance, fmt.Sprintf("Get%sBlock", f.Name()),
+		)
+		if !ok {
+			logger.Warnf("No Get%sBlock() method found on %T, cannot set up BlockField", f.Name(), instance)
+			return nil, false
+		}
+
+		return BlockField(featureFunc(), opts...), true
+	}
+
+	attrs.RegisterFormFieldGetter(&StreamBlockData{}, getter)
+	attrs.RegisterFormFieldGetter([]ListBlockValue{}, getter)
+}
 
 //go:embed assets/static/**
 var _staticFS embed.FS

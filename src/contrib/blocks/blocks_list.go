@@ -287,7 +287,7 @@ func (l *ListBlock) ValueToForm(value interface{}) interface{} {
 	var valueArr []*ListBlockValue
 	var ok bool
 	if valueArr, ok = value.([]*ListBlockValue); !ok {
-		return ""
+		return value
 	}
 
 	var data = make([]*ListBlockValue, 0, len(valueArr))
