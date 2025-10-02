@@ -4,12 +4,54 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"html"
 	"html/template"
+	"io"
 	"runtime/debug"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
+
+type FormRenderer interface {
+	Render(w io.Writer, ctx context.Context, field BoundField, id string, name string, value interface{}, errors []error, attrs map[string]string)
+	RenderLabel(w io.Writer, ctx context.Context, field BoundField, id string, name string)
+	RenderHelpText(w io.Writer, ctx context.Context, field BoundField, id string, name string)
+	RenderField(w io.Writer, ctx context.Context, field BoundField, id string, name string, value interface{}, attrs map[string]string, errors []error)
+}
+
+type defaultRenderer struct{}
+
+func (r *defaultRenderer) Render(w io.Writer, c context.Context, field BoundField, id string, name string, value interface{}, errors []error, attrs map[string]string, widgetCtx ctx.Context) {
+	r.RenderLabel(w, c, field, id, name)
+	r.RenderHelpText(w, c, field, id, name)
+	r.RenderField(w, c, field, id, name, value, attrs, errors, widgetCtx)
+}
+
+func (r *defaultRenderer) RenderLabel(w io.Writer, ctx context.Context, field BoundField, id string, name string) {
+	var fld = field.Input()
+	var labelText = fld.Label(ctx)
+	fmt.Fprintf(w, "<label for=\"%s\">%s</label>", id, html.EscapeString(labelText))
+}
+
+func (r *defaultRenderer) RenderHelpText(w io.Writer, ctx context.Context, field BoundField, id string, name string) {
+	var fld = field.Input()
+	var helpText = fld.HelpText(ctx)
+	if helpText == "" {
+		return
+	}
+
+	fmt.Fprintf(w, "<small>%s</small>", html.EscapeString(helpText))
+}
+
+func (r *defaultRenderer) RenderField(w io.Writer, c context.Context, field BoundField, id string, name string, value interface{}, attrs map[string]string, errors []error, widgetCtx ctx.Context) {
+	var widget = field.Widget()
+	var err = widget.RenderWithErrors(
+		c, w, id, name, value, errors, attrs, widgetCtx,
+	)
+	assert.True(err == nil, err)
+}
 
 type BoundFormField struct {
 	FormWidget  Widget
@@ -97,18 +139,13 @@ func (b *BoundFormField) Field() template.HTML {
 	}
 
 	if b.CachedHTML == "" {
-		var attrs = b.FormField.Attrs()
-		if attrs == nil {
-			attrs = make(map[string]string)
-		}
-
 		defer func() {
 			if r := recover(); r != nil {
 				logger.Errorf("panic in template %q: %v\n%s", b.FormField.Name(), r, debug.Stack())
 			}
 		}()
 
-		var widgetCtx = b.FormWidget.GetContextData(b.FormContext, b.FormID, b.FormName, b.FormValue, attrs)
+		var widgetCtx = b.FormWidget.GetContextData(b.FormContext, b.FormID, b.FormName, b.FormValue, b.FormAttrs)
 		if len(b.FormErrors) > 0 {
 			widgetCtx.Set("errors", b.FormErrors)
 		}
