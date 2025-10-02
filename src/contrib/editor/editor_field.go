@@ -58,7 +58,7 @@ type _etter[T any] struct {
 type Field struct {
 	name     string
 	config   FieldConfig
-	fieldT   reflect.StructField
+	fieldT   *reflect.StructField
 	fieldV   reflect.Value
 	instance attrs.Definer
 	defs     attrs.Definitions

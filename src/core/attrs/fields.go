@@ -68,18 +68,20 @@ type FieldConfig struct {
 
 type FieldDef struct {
 	defs           Definitions
-	attrDef        FieldConfig
+	attrDef        *FieldConfig
 	instance_t_ptr reflect.Type
 	instance_v_ptr reflect.Value
 	instance_t     reflect.Type
 	instance_v     reflect.Value
-	field_t        reflect.StructField
+	field_t        *reflect.StructField
 	field_v        reflect.Value
 	formField      fields.Field
 	fieldName      string
 	wasSet         bool // Whether the field was set at least once
 	// directlyInteractible bool
 }
+
+var _DEFINER = reflect.TypeOf((*Definer)(nil)).Elem()
 
 // NewField creates a new field definition for the given instance.
 //
@@ -98,8 +100,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 	// var directlyInteractible = ok
 	var cnf = &FieldConfig{}
 	if len(conf) == 0 {
-		var c = autoDefinitionStructTag(field_t)
-		cnf = &c
+		cnf = autoDefinitionStructTag(cnf, field_t)
 	}
 	if len(conf) > 0 && conf[0] != nil {
 		cnf = conf[0]
@@ -131,7 +132,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 					newVal = reflect.New(curr_t.Elem())
 				}
 
-				if curr_t.Implements(reflect.TypeOf((*Definer)(nil)).Elem()) {
+				if curr_t.Implements(_DEFINER) {
 					newVal = reflect.ValueOf(
 						NewObject[Definer](curr_t),
 					)
@@ -162,7 +163,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 	assert.True(field_v.IsValid(), "field %q not found in %T", name, instance)
 
 	var f = &FieldDef{
-		attrDef:        *cnf,
+		attrDef:        cnf,
 		instance_t_ptr: instance_t_ptr,
 		instance_v_ptr: instance_v_ptr,
 		instance_t:     instance_t,
@@ -181,10 +182,10 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 
 	if cnf.OnInit != nil {
 		cnf = cnf.OnInit(
-			any(instance).(Definer), f, cnf,
+			instance.(Definer), f, cnf,
 		)
 		if cnf != nil {
-			f.attrDef = *cnf
+			f.attrDef = cnf
 		}
 	}
 
@@ -256,7 +257,7 @@ func (f *FieldDef) Check(ctx context.Context) []checks.Message {
 // model is equal to instance_t
 func (f *FieldDef) OnModelRegister(model Definer) error {
 
-	attrutils.AddStructField(f.instance_t_ptr, f.fieldName, f.field_t)
+	attrutils.AddStructField(f.instance_t, f.fieldName, f.field_t)
 
 	if ALLOW_METHOD_CHECKS {
 		var (
@@ -266,15 +267,15 @@ func (f *FieldDef) OnModelRegister(model Definer) error {
 		)
 
 		if getDefaultMethod, ok := f.instance_t.MethodByName(defaultMethodName); ok {
-			attrutils.AddStructMethod(f.instance_t_ptr, defaultMethodName, getDefaultMethod)
+			attrutils.AddStructMethod(f.instance_t, defaultMethodName, getDefaultMethod)
 		}
 
 		if setValueMethod, ok := f.instance_t.MethodByName(setValueMethodName); ok {
-			attrutils.AddStructMethod(f.instance_t_ptr, setValueMethodName, setValueMethod)
+			attrutils.AddStructMethod(f.instance_t, setValueMethodName, setValueMethod)
 		}
 
 		if getValueMethod, ok := f.instance_t.MethodByName(getValueMethodName); ok {
-			attrutils.AddStructMethod(f.instance_t_ptr, getValueMethodName, getValueMethod)
+			attrutils.AddStructMethod(f.instance_t, getValueMethodName, getValueMethod)
 		}
 	}
 
@@ -427,7 +428,7 @@ func relFromConfig[T FieldDefinition](f T, cnf *FieldConfig) Relation {
 }
 
 func (f *FieldDef) Rel() Relation {
-	return relFromConfig(f, &f.attrDef)
+	return relFromConfig(f, f.attrDef)
 }
 
 func (f *FieldDef) IsPrimary() bool {
@@ -749,7 +750,7 @@ returnField:
 	switch {
 	case f.attrDef.FormWidget != nil:
 		formField.SetWidget(
-			f.attrDef.FormWidget(f.attrDef),
+			f.attrDef.FormWidget(*f.attrDef),
 		)
 	}
 

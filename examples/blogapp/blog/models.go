@@ -40,6 +40,8 @@ type OrderableMixin[T attrs.Definer] struct {
 	Ordering  int
 }
 
+func (m *OrderableMixin[T]) IsModelMixin() {}
+
 func (m *OrderableMixin[T]) BindToEmbedder(embedder attrs.Definer) error {
 	m.Reference = embedder.(T)
 	return nil
@@ -62,17 +64,11 @@ func (m *OrderableMixin[T]) ObjectFields(object attrs.Definer, base_fields *attr
 }
 
 type BlogImage struct {
-	models.Model  `table:"blog_images"`
-	OrderingMixin OrderableMixin[*BlogImage]
-	ID            int64
-	Image         *images.Image
-	BlogPage      *BlogPage
-}
-
-func (b *BlogImage) Mixins() []any {
-	return []any{
-		&b.OrderingMixin,
-	}
+	models.Model `table:"blog_images"`
+	OrderableMixin[*BlogImage]
+	ID       int64
+	Image    *images.Image
+	BlogPage *BlogPage
 }
 
 func (b *BlogImage) UniqueTogether() [][]string {

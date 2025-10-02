@@ -60,23 +60,25 @@ type ComplexModel struct {
 	Joined      *BasicJoinedModel
 }
 
+func (m *ComplexModel) fields(def attrs.Definer) []any {
+	return []any{
+		attrs.NewField(m, "ID"),
+		attrs.NewField(m, "Title"),
+		attrs.NewField(m, "Description"),
+		attrs.NewField(m, "Joined", &attrs.FieldConfig{
+			Null:          true,
+			Column:        "joined_id",
+			RelForeignKey: attrs.Relate(&BasicJoinedModel{}, "", nil),
+		}),
+		fields.Embed("Joined"),
+	}
+}
+
 func (m *ComplexModel) FieldDefs() attrs.Definitions {
 	// using a function here will make sure that the fields dont get allocated
 	// each time, we do not want to allocate fields for each call to FieldDefs when
 	// the result might be cached.
-	return m.Model.Define(m, func(def attrs.Definer) []any {
-		return []any{
-			attrs.NewField(m, "ID"),
-			attrs.NewField(m, "Title"),
-			attrs.NewField(m, "Description"),
-			attrs.NewField(m, "Joined", &attrs.FieldConfig{
-				Null:          true,
-				Column:        "joined_id",
-				RelForeignKey: attrs.Relate(&BasicJoinedModel{}, "", nil),
-			}),
-			fields.Embed("Joined"),
-		}
-	})
+	return m.Model.Define(m, m.fields)
 }
 
 func BenchmarkCreateObjects(b *testing.B) {

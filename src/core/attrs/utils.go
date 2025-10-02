@@ -3,6 +3,9 @@ package attrs
 import (
 	"fmt"
 	"iter"
+	"reflect"
+
+	"github.com/Nigel2392/go-django/src/utils/mixins"
 )
 
 // DefinerList converts a slice of []T where the underlying type is of type Definer to []Definer.
@@ -212,7 +215,140 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 // - string: a field name, which will be converted to a Field with no configuration
 func UnpackFieldsFromArgsIter[T1 Definer, T2 any](definer T1, args ...T2) iter.Seq2[Field, error] {
 	return func(yield func(Field, error) bool) {
-		var yieldMultiple = func(err error, fld []Field) bool {
+		unpackFieldsFromArgsIter(yield, definer, args)
+	}
+}
+
+func yieldIter[T any](yield func(T, error) bool, iterator iter.Seq2[T, error]) bool {
+	for v, err := range iterator {
+		if err != nil {
+			if !yield(v, err) {
+				return false
+			}
+		}
+		if !yield(v, nil) {
+			return false
+		}
+	}
+	return true
+}
+
+func yieldMultiple[T any](yield func(T, error) bool, err error, items []T) bool {
+	if err != nil {
+		if !yield(*new(T), err) {
+			return false
+		}
+		return true
+	}
+	for _, item := range items {
+		if !yield(item, nil) {
+			return false
+		}
+	}
+	return true
+}
+
+func unpackFieldsFromArgsIter[T1 Definer, T2 any](yield func(Field, error) bool, definer T1, args []T2) bool {
+	for _, f := range args {
+		switch v := any(f).(type) {
+		case Field:
+			if !yield(v, nil) {
+				return false
+			}
+		case []Field:
+			if !yieldMultiple(yield, nil, v) {
+				return false
+			}
+
+		case UnboundFieldConstructor:
+			var fld, err = v.BindField(definer)
+			if err != nil {
+				yield(nil, fmt.Errorf(
+					"fieldsFromArgs (%T): %v",
+					definer, err,
+				))
+				return false
+			}
+			if !yield(fld, nil) {
+				return false
+			}
+		case []UnboundFieldConstructor:
+			for _, u := range v {
+				var fld, err = u.BindField(definer)
+				if err != nil {
+					yield(nil, fmt.Errorf(
+						"fieldsFromArgs (%T): %v",
+						definer, err,
+					))
+					return false
+				}
+
+				if !yield(fld, nil) {
+					return false
+				}
+			}
+
+		case []UnboundField:
+			for _, u := range v {
+				var fld, err = u.BindField(definer)
+				if err != nil {
+					yield(nil, fmt.Errorf(
+						"fieldsFromArgs (%T): %v",
+						definer, err,
+					))
+					return false
+				}
+
+				if !yield(fld, nil) {
+					return false
+				}
+			}
+
+		case []any:
+			if !unpackFieldsFromArgsIter(yield, definer, v) {
+				return false
+			}
+
+		case iter.Seq2[Field, error]:
+			if !yieldIter(yield, v) {
+				return false
+			}
+
+		case func() iter.Seq2[Field, error]:
+			if !yieldIter(yield, v()) {
+				return false
+			}
+
+		case func(Definer) iter.Seq2[Field, error]:
+			if !yieldIter(yield, v(definer)) {
+				return false
+			}
+
+		// func() (field, ?error)
+		case func() Field:
+			if !yield(v(), nil) {
+				return false
+			}
+		case func() (Field, error):
+			var fld, err = v()
+			if !yield(fld, err) {
+				return false
+			}
+
+		// func() ([]field, ?error)
+		case func() []any:
+			if !unpackFieldsFromArgsIter(yield, definer, v()) {
+				return false
+			}
+
+		// func(t1) (field, ?error)
+		case func(d T1) Field:
+			if !yield(v(definer), nil) {
+				return false
+			}
+
+		case func(d T1) (Field, error):
+			var fld, err = v(definer)
 			if err != nil {
 				yield(nil, fmt.Errorf(
 					"fieldsFromArgs (%T): %v",
@@ -221,274 +357,170 @@ func UnpackFieldsFromArgsIter[T1 Definer, T2 any](definer T1, args ...T2) iter.S
 				return false
 			}
 
-			for _, f := range fld {
-				if !yield(f, nil) {
-					return false
-				}
+			if !yield(fld, nil) {
+				return false
 			}
-			return true
-		}
 
-		var yieldIter = func(iterator iter.Seq2[Field, error]) bool {
-			for f, err := range iterator {
-				if err != nil {
-					yield(nil, fmt.Errorf(
-						"fieldsFromArgs (%T): %v",
-						definer, err,
-					))
-					return false
-				}
-				if !yield(f, nil) {
-					return false
-				}
+		// func(t1) ([]field, ?error)
+		case func(d T1) []any:
+			if !unpackFieldsFromArgsIter(yield, definer, v(definer)) {
+				return false
 			}
-			return true
-		}
 
-		for _, f := range args {
-			switch v := any(f).(type) {
-			case Field:
-				if !yield(v, nil) {
-					return
-				}
-			case []Field:
-				if !yieldMultiple(nil, v) {
-					return
-				}
+		case func(d T1) []Field:
+			if !yieldMultiple(yield, nil, v(definer)) {
+				return false
+			}
 
-			case UnboundFieldConstructor:
-				var fld, err = v.BindField(definer)
-				if err != nil {
-					yield(nil, fmt.Errorf(
-						"fieldsFromArgs (%T): %v",
-						definer, err,
-					))
-					return
-				}
-				if !yield(fld, nil) {
-					return
-				}
-			case []UnboundFieldConstructor:
-				for _, u := range v {
-					var fld, err = u.BindField(definer)
-					if err != nil {
-						yield(nil, fmt.Errorf(
-							"fieldsFromArgs (%T): %v",
-							definer, err,
-						))
-						return
-					}
+		case func(d T1) ([]Field, error):
+			var flds, err = v(definer)
+			if !yieldMultiple(yield, err, flds) {
+				return false
+			}
 
-					if !yield(fld, nil) {
-						return
-					}
-				}
-
-			case []UnboundField:
-				for _, u := range v {
-					var fld, err = u.BindField(definer)
-					if err != nil {
-						yield(nil, fmt.Errorf(
-							"fieldsFromArgs (%T): %v",
-							definer, err,
-						))
-						return
-					}
-
-					if !yield(fld, nil) {
-						return
-					}
-				}
-
-			case []any:
-				var iterator = UnpackFieldsFromArgsIter(definer, v...)
-				if !yieldIter(iterator) {
-					return
-				}
-
-			case iter.Seq2[Field, error]:
-				if !yieldIter(v) {
-					return
-				}
-
-			case func() iter.Seq2[Field, error]:
-				var iterator = v()
-				if !yieldIter(iterator) {
-					return
-				}
-
-			case func(Definer) iter.Seq2[Field, error]:
-				var iterator = v(definer)
-				if !yieldIter(iterator) {
-					return
-				}
-
-			// func() (field, ?error)
-			case func() Field:
-				if !yield(v(), nil) {
-					return
-				}
-			case func() (Field, error):
-				var fld, err = v()
-				if !yield(fld, err) {
-					return
-				}
-
-			// func() ([]field, ?error)
-			case func() []any:
-				var iterator = UnpackFieldsFromArgsIter(definer, v()...)
-				if !yieldIter(iterator) {
-					return
-				}
-
-			// func(t1) (field, ?error)
-			case func(d T1) Field:
-				if !yield(v(definer), nil) {
-					return
-				}
-
-			case func(d T1) (Field, error):
-				var fld, err = v(definer)
-				if err != nil {
-					yield(nil, fmt.Errorf(
-						"fieldsFromArgs (%T): %v",
-						definer, err,
-					))
-					return
-				}
-
-				if !yield(fld, nil) {
-					return
-				}
-
-			// func(t1) ([]field, ?error)
-			case func(d T1) []any:
-				var iterator = UnpackFieldsFromArgsIter(definer, v(definer)...)
-				if !yieldIter(iterator) {
-					return
-				}
-
-			case func(d T1) []Field:
-				if !yieldMultiple(nil, v(definer)) {
-					return
-				}
-
-			case func(d T1) ([]Field, error):
-				var flds, err = v(definer)
-				if !yieldMultiple(err, flds) {
-					return
-				}
-
-			// func(d Definer) (field, ?error)
-			case func(d Definer) Field:
-				if !yield(v(definer), nil) {
-					return
-				}
-			case func(d Definer) (Field, error):
-				var fld, err = v(definer)
-				if err != nil {
-					yield(nil, fmt.Errorf(
-						"fieldsFromArgs (%T): %v",
-						definer, err,
-					))
-					return
-				}
-				if !yield(fld, nil) {
-					return
-				}
-
-			// func(d Definer) ([]field, ?error)
-			case func(d Definer) []any:
-				var iterator = UnpackFieldsFromArgsIter(definer, v(definer)...)
-				if !yieldIter(iterator) {
-					return
-				}
-
-			case func(d Definer) []Field:
-				if !yieldMultiple(nil, v(definer)) {
-					return
-				}
-
-			case func(d Definer) ([]Field, error):
-				var flds, err = v(definer)
-				if err != nil {
-					yield(nil, fmt.Errorf(
-						"fieldsFromArgs (%T): %v",
-						definer, err,
-					))
-					return
-				}
-				if !yieldMultiple(err, flds) {
-					return
-				}
-
-			case string:
-				if !yield(NewField(definer, v, nil), nil) {
-					return
-				}
-
-			default:
+		// func(d Definer) (field, ?error)
+		case func(d Definer) Field:
+			if !yield(v(definer), nil) {
+				return false
+			}
+		case func(d Definer) (Field, error):
+			var fld, err = v(definer)
+			if err != nil {
 				yield(nil, fmt.Errorf(
-					"fieldsFromArgs (%T): unsupported field type %T",
-					definer, f,
+					"fieldsFromArgs (%T): %v",
+					definer, err,
 				))
-				return
+				return false
+			}
+			if !yield(fld, nil) {
+				return false
+			}
+
+		// func(d Definer) ([]field, ?error)
+		case func(d Definer) []any:
+			if !unpackFieldsFromArgsIter(yield, definer, v(definer)) {
+				return false
+			}
+
+		case func(d Definer) []Field:
+			if !yieldMultiple(yield, nil, v(definer)) {
+				return false
+			}
+
+		case func(d Definer) ([]Field, error):
+			var flds, err = v(definer)
+			if err != nil {
+				yield(nil, fmt.Errorf(
+					"fieldsFromArgs (%T): %v",
+					definer, err,
+				))
+				return false
+			}
+			if !yieldMultiple(yield, err, flds) {
+				return false
+			}
+
+		case string:
+			if !yield(NewField(definer, v, nil), nil) {
+				return false
+			}
+
+		default:
+			yield(nil, fmt.Errorf(
+				"fieldsFromArgs (%T): unsupported field type %T",
+				definer, f,
+			))
+			return false
+		}
+	}
+	return true
+}
+
+func structFieldsMixinFunc[T any](fn func(obj T, depth int, field reflect.StructField, value reflect.Value) (reflect.Value, bool)) func(obj T, depth int) iter.Seq[T] {
+	var _T = reflect.TypeOf((*T)(nil)).Elem()
+	return func(obj T, depth int) iter.Seq[T] {
+		var rVal = reflect.ValueOf(obj)
+		var rTyp = rVal.Type()
+		if rTyp.Kind() == reflect.Ptr {
+			rTyp = rTyp.Elem()
+			rVal = rVal.Elem()
+		}
+		if rTyp.Kind() != reflect.Struct {
+			return mixins.NillSeq
+		}
+		return func(yield func(T) bool) {
+			for i := 0; i < rTyp.NumField(); i++ {
+				var (
+					fieldT = rTyp.Field(i)
+					fieldV = rVal.Field(i)
+				)
+
+				if fieldV.Kind() == reflect.Ptr && fieldV.IsNil() {
+					continue
+				}
+
+				var typ = fieldT.Type
+				switch {
+				case typ == _T:
+				case _T.Kind() == reflect.Interface && typ.Implements(_T):
+				case _T.Kind() == reflect.Interface && fieldV.CanAddr() && fieldV.Addr().Type().Implements(_T):
+					fieldV = fieldV.Addr()
+				default:
+					continue
+				}
+
+				fieldV, ok := fn(obj, depth, fieldT, fieldV)
+				if !ok {
+					continue
+				}
+
+				if mv, ok := fieldV.Interface().(T); ok {
+					if !yield(mv) {
+						return
+					}
+				}
 			}
 		}
 	}
 }
 
-//
-//func structFieldsMixinFunc[T any](fn func(obj T, depth int, field reflect.StructField, value reflect.Value) []T) func(obj T, depth int) iter.Seq[T] {
-//	return func(obj T, depth int) iter.Seq[T] {
-//		var rVal = reflect.ValueOf(obj)
-//		var rTyp = rVal.Type()
-//		if rTyp.Kind() == reflect.Ptr {
-//			rTyp = rTyp.Elem()
-//			rVal = rVal.Elem()
-//		}
-//		if rTyp.Kind() != reflect.Struct {
-//			return nil
-//		}
-//		return func(yield func(T) bool) {
-//			for i := 0; i < rTyp.NumField(); i++ {
-//				for _, m := range fn(obj, depth, rTyp.Field(i), rVal.Field(i)) {
-//					if !yield(m) {
-//						return
-//					}
-//				}
-//			}
-//		}
-//	}
-//}
-//
-//type mixinDefiner interface {
-//	IsModelMixin()
-//}
-//
-//func DefinerMixins[MIXIN any](obj Definer) iter.Seq2[Definer, int] {
-//	var _mixinT = reflect.TypeOf((*mixinDefiner)(nil)).Elem()
-//	var iter = mixins.MixinsFunc[any](obj, true, structFieldsMixinFunc(func(obj any, depth int, field reflect.StructField, value reflect.Value) []any {
-//		if field.Type.Kind() == reflect.Ptr && value.IsNil() {
-//			return nil
-//		}
-//
-//		if !field.Type.Implements(_mixinT) {
-//			return nil
-//		}
-//
-//		var mixin = value.Interface()
-//		return []any{mixin}
-//	}))
-//
-//	return func(yield func(Definer, int) bool) {
-//		for m, depth := range iter {
-//			if definer, ok := m.(Definer); ok {
-//				if !yield(definer, depth) {
-//					return
-//				}
-//			}
-//		}
-//	}
-//}
-//
+type mixinDefiner interface {
+	IsModelMixin()
+}
+
+var _modelMixinT = reflect.TypeOf((*mixinDefiner)(nil)).Elem()
+
+func structFieldsMixinFuncCheck[T any](obj T, depth int, field reflect.StructField, value reflect.Value) (reflect.Value, bool) {
+	if !field.Anonymous {
+		return value, false
+	}
+
+	if !field.IsExported() {
+		return value, false
+	}
+
+	if field.Type.Implements(_modelMixinT) {
+		return value, true
+	}
+
+	if field.Type.Kind() != reflect.Ptr && !(value.CanAddr() || value.Addr().Type().Implements(_modelMixinT)) {
+		return value, false
+	}
+
+	return value.Addr(), true
+}
+
+func ModelMixins(obj Definer, topdown bool) iter.Seq2[any, int] {
+	var iter = mixins.MixinsFunc[any](obj, topdown, structFieldsMixinFunc(structFieldsMixinFuncCheck[any]))
+	return func(yield func(any, int) bool) {
+		for m, depth := range iter {
+			if depth == 0 {
+				continue
+			}
+
+			if !yield(m, depth) {
+				return
+			}
+		}
+	}
+}

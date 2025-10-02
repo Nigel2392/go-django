@@ -1,14 +1,14 @@
 package attrs
 
 import (
+	"iter"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
-	"github.com/Nigel2392/go-django/src/utils/mixins"
-	"github.com/elliotchance/orderedmap/v2"
 )
 
 type ObjectDefinitions struct {
+	objType      reflect.Type
 	Object       Definer
 	PrimaryField string
 	Table        string
@@ -16,8 +16,9 @@ type ObjectDefinitions struct {
 }
 
 type FieldsMap struct {
-	ref *ObjectDefinitions
-	*orderedmap.OrderedMap[string, Field]
+	ref   *ObjectDefinitions
+	keys  []string
+	items map[string]Field
 }
 
 func (d *FieldsMap) Set(name string, f Field) (replaced bool) {
@@ -31,7 +32,33 @@ func (d *FieldsMap) Set(name string, f Field) (replaced bool) {
 
 	f.BindToDefinitions(d.ref)
 
-	return d.OrderedMap.Set(name, f)
+	if _, ok := d.items[name]; ok {
+		replaced = true
+	} else {
+		d.keys = append(d.keys, name)
+	}
+
+	d.items[name] = f
+	return
+}
+
+func (d *FieldsMap) Get(name string) (f Field, ok bool) {
+	f, ok = d.items[name]
+	return f, ok
+}
+
+func (d *FieldsMap) Len() int {
+	return len(d.items)
+}
+
+func (d *FieldsMap) Iter() iter.Seq2[string, Field] {
+	return func(yield func(string, Field) bool) {
+		for _, name := range d.keys {
+			if !yield(name, d.items[name]) {
+				return
+			}
+		}
+	}
 }
 
 // Define creates a new object definitions.
@@ -43,12 +70,16 @@ func (d *FieldsMap) Set(name string, f Field) (replaced bool) {
 // [UnpackFieldsFromArgs] function.
 func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions {
 
+	var rt = reflect.TypeOf(d).Elem()
+	var numField = rt.NumField()
 	var defs = &ObjectDefinitions{
-		Object: d,
+		objType: rt,
+		Object:  d,
 	}
 	defs.ObjectFields = &FieldsMap{
-		ref:        defs,
-		OrderedMap: orderedmap.NewOrderedMap[string, Field](),
+		ref:   defs,
+		items: make(map[string]Field, numField),
+		keys:  make([]string, 0, numField),
 	}
 
 	var fieldsIter = UnpackFieldsFromArgsIter(d, fieldDefinitions...)
@@ -65,25 +96,25 @@ func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions
 		defs.ObjectFields.Set(f.Name(), f)
 	}
 
-	for mixin, depth := range mixins.Mixins[any](d, true) {
-		// Skip the first level, this is the model itself.
-		if depth == 0 {
-			continue
-		}
-
-		binder, ok := mixin.(Embedded)
-		if ok {
-			if err := binder.BindToEmbedder(d); err != nil {
-				assert.Fail("bind embedded (%T): %v", d, err)
-			}
-		}
-
-		if unpacker, ok := mixin.(FieldUnpackerMixin); ok {
-			if err := unpacker.ObjectFields(d, defs.ObjectFields); err != nil {
-				assert.Fail("unpack fields (%T): %v", d, err)
-			}
-		}
-	}
+	//for mixin, depth := range ModelMixins(d, true) {
+	//	// Skip the first level, this is the model itself.
+	//	if depth == 0 {
+	//		continue
+	//	}
+	//
+	//	binder, ok := mixin.(Embedded)
+	//	if ok {
+	//		if err := binder.BindToEmbedder(d); err != nil {
+	//			assert.Fail("bind embedded (%T): %v", d, err)
+	//		}
+	//	}
+	//
+	//	if unpacker, ok := mixin.(FieldUnpackerMixin); ok {
+	//		if err := unpacker.ObjectFields(d, defs.ObjectFields); err != nil {
+	//			assert.Fail("unpack fields (%T): %v", d, err)
+	//		}
+	//	}
+	//}
 
 	return defs
 }
@@ -104,12 +135,7 @@ func (d *ObjectDefinitions) TableName() string {
 	if d.Table != "" {
 		return d.Table
 	}
-	var rTyp = reflect.TypeOf(d.Object)
-	if rTyp.Kind() == reflect.Ptr {
-		rTyp = rTyp.Elem()
-	}
-	var tableName = ColumnName(rTyp.Name())
-	return tableName
+	return ColumnName(d.objType.Name())
 }
 
 func (d *ObjectDefinitions) WithTableName(name string) *ObjectDefinitions {
@@ -142,11 +168,9 @@ func (d *ObjectDefinitions) Field(name string) (f Field, ok bool) {
 }
 
 func (d *ObjectDefinitions) Fields() []Field {
-	var m = make([]Field, d.ObjectFields.Len())
-	var i = 0
-	for head := d.ObjectFields.Front(); head != nil; head = head.Next() {
-		m[i] = head.Value
-		i++
+	var m = make([]Field, len(d.ObjectFields.keys))
+	for i, name := range d.ObjectFields.keys {
+		m[i] = d.ObjectFields.items[name]
 	}
 	return m
 }
@@ -161,8 +185,7 @@ func (d *ObjectDefinitions) Primary() Field {
 
 func (d *ObjectDefinitions) Instance() Definer {
 	if d.Object == nil {
-		var rTyp = reflect.TypeOf(d)
-		if rTyp == nil || rTyp.Kind() == reflect.Invalid {
+		if d.objType == nil || d.objType.Kind() == reflect.Invalid {
 			return nil
 		}
 		return NewObject[Definer](d.Object)

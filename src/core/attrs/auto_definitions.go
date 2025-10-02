@@ -14,11 +14,15 @@ import (
 
 const ATTR_TAG_NAME = "attrs"
 
-func autoDefinitionStructTag(t reflect.StructField) FieldConfig {
-	var (
-		tag  = t.Tag.Get(ATTR_TAG_NAME)
-		data = FieldConfig{}
-	)
+func autoDefinitionStructTag(data *FieldConfig, t *reflect.StructField) *FieldConfig {
+	if t.Tag == "" {
+		return data
+	}
+
+	var tag = t.Tag.Get(ATTR_TAG_NAME)
+	if tag == "" {
+		return data
+	}
 
 	var tagMap = tags.ParseTags(tag)
 	for k, v := range tagMap {
@@ -204,7 +208,7 @@ func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
 			var (
 				field_t = instance_t.Field(i)
 				field_v = instance_v.Field(i)
-				attrs   = autoDefinitionStructTag(field_t)
+				attrs   = autoDefinitionStructTag(&FieldConfig{}, &field_t)
 			)
 
 			var skip = (field_t.Anonymous ||
@@ -221,7 +225,7 @@ func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
 				instance_v_ptr: instance_v_ptr,
 				instance_t:     instance_t,
 				instance_v:     instance_v,
-				field_t:        field_t,
+				field_t:        &field_t,
 				field_v:        field_v,
 				fieldName:      field_t.Name,
 			})
@@ -243,7 +247,7 @@ func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
 			assert.True(ok, "field %q not found in %T", name, instance)
 
 			var (
-				attrs   = autoDefinitionStructTag(field_t)
+				attrs   = autoDefinitionStructTag(&FieldConfig{}, field_t)
 				field_v = instance_v.FieldByIndex(field_t.Index)
 			)
 

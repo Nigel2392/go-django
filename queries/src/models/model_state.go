@@ -54,12 +54,8 @@ func (m *ModelState) checkState() {
 	}
 
 	// if the model's state is not changed, we can skip the update
-	for head := m.model.internals.defs.ObjectFields.Front(); head != nil; head = head.Next() {
-		var (
-			field = head.Value
-			name  = field.Name()
-			value = field.GetValue()
-		)
+	for name, field := range m.model.internals.defs.ObjectFields.Iter() {
+		var value = field.GetValue()
 
 		// if the value is not equal to the initial value,
 		// we need to mark the field as changed
@@ -195,8 +191,8 @@ func (m *ModelState) Reset() {
 	m.initial = make(map[string]interface{})
 
 	if m.model.internals != nil && m.model.internals.defs != nil {
-		for head := m.model.internals.defs.ObjectFields.Front(); head != nil; head = head.Next() {
-			m.initial[head.Value.Name()] = head.Value.GetValue()
+		for name, field := range m.model.internals.defs.ObjectFields.Iter() {
+			m.initial[name] = field.GetValue()
 		}
 	}
 }

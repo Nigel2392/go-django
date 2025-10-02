@@ -1077,35 +1077,35 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		saveBeforeSelf = make([]queries.SaveableField, 0, m.internals.defs.ObjectFields.Len())
 		saveAfterSelf  = make([]queries.SaveableDependantField, 0, m.internals.defs.ObjectFields.Len())
 	)
-	for head := m.internals.defs.ObjectFields.Front(); head != nil; head = head.Next() {
+	for name, field := range m.internals.defs.ObjectFields.Iter() {
 
 		// if there was a list of fields provided and if
 		// the field is not in the list of fields to save, we skip it
 		var mustInclField bool
 		if len(fields) > 0 {
-			if !fields.Contains(head.Value.Name()) && !cnf.Force() && m.internals.fromDB {
+			if !fields.Contains(name) && !cnf.Force() && m.internals.fromDB {
 				continue
 			}
 			mustInclField = true
 		}
 
 		// No changes were made to the field, we can skip it.
-		var hasChanged = m.internals.state.HasChanged(head.Value.Name())
+		var hasChanged = m.internals.state.HasChanged(name)
 		if !hasChanged && !mustInclField && !cnf.Force() && m.internals.fromDB {
 			continue
 		}
 
-		if attrs.IsEmbeddedField(head.Value) {
+		if attrs.IsEmbeddedField(field) {
 			// if the field is an embedded field, we skip it
 			// as it is not a field that can be saved directly
 			// and it will be handled by the parent model.
 			continue
 		}
 
-		if err := head.Value.Validate(); err != nil {
+		if err := field.Validate(); err != nil {
 			return fmt.Errorf(
 				"failed to validate field %s in model %T: %w",
-				head.Value.Name(), cnf.this, err,
+				name, cnf.this, err,
 			)
 		}
 
@@ -1117,11 +1117,11 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		// Check if the field is a Saver or a SaveableField.
 		// If it is a Saver, we need to panic and inform the user
 		// that they need to use a ContextSaver to maintain transaction integrity.
-		switch fld := head.Value.(type) {
+		switch fld := field.(type) {
 		case models.Saver:
 			panic(fmt.Errorf(
 				"model %T field %s is a Saver, which is not supported in Save(), a ContextSaver is required to maintain transaction integrity",
-				cnf.this, head.Value.Name(),
+				cnf.this, name,
 			))
 		case queries.SaveableField:
 			saveBeforeSelf = append(saveBeforeSelf, fld)
@@ -1131,7 +1131,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 
 		// Add the field name to the list of changed fields.
 		// This is used to determine which fields to save in the query set.
-		selectFields = append(selectFields, head.Value.Name())
+		selectFields = append(selectFields, name)
 		anyChanges = true
 	}
 
