@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
 	"github.com/Nigel2392/go-django/src/contrib/auth/users"
+	"github.com/Nigel2392/go-django/src/contrib/blocks"
 	"github.com/Nigel2392/go-django/src/contrib/documents"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	"github.com/Nigel2392/go-django/src/contrib/images"
@@ -69,12 +70,26 @@ type BlogImage struct {
 	ID       int64
 	Image    *images.Image
 	BlogPage *BlogPage
+	Content  blocks.ListBlockData
 }
 
 func (b *BlogImage) UniqueTogether() [][]string {
 	return [][]string{
 		{"BlogPage", "Image"},
 	}
+}
+
+func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
+	return blocks.NewListBlock(
+		blocks.CharBlock(
+			blocks.WithLabel[*blocks.FieldBlock](
+				trans.S("Text"),
+			),
+			blocks.WithHelpText[*blocks.FieldBlock](
+				trans.S("Some text for this image."),
+			),
+		),
+	)
 }
 
 func (b *BlogImage) FieldDefs() attrs.Definitions {
@@ -106,6 +121,10 @@ func (b *BlogImage) FieldDefs() attrs.Definitions {
 			},
 			Label:    trans.S("Image"),
 			HelpText: trans.S("The image for this blog post."),
+		}),
+		attrs.NewField(b, "Content", &attrs.FieldConfig{
+			Null:  true,
+			Blank: true,
 		}),
 	)
 }

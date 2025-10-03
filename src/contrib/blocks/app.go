@@ -87,7 +87,7 @@ func init() {
 			instance, fmt.Sprintf("Get%sBlock", f.Name()),
 		)
 		if !ok {
-			logger.Warnf("No Get%sBlock() method found on %T, cannot set up BlockField", f.Name(), instance)
+			logger.Errorf("No Get%sBlock() method found on %T, cannot set up BlockField", f.Name(), instance)
 			return nil, false
 		}
 

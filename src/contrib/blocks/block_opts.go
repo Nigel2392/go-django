@@ -1,6 +1,11 @@
 package blocks
 
-import "reflect"
+import (
+	"context"
+	"reflect"
+
+	"github.com/Nigel2392/go-django/src/core/trans"
+)
 
 type OptFunc[T any] func(T)
 
@@ -28,14 +33,26 @@ func reflectSetter[T any](t T, fieldName string, value interface{}) {
 	}
 }
 
-func WithLabel[T any](label string) OptFunc[T] {
+func WithLabel[T any](label any) OptFunc[T] {
 	return func(t T) {
-		reflectSetter(t, "LabelFunc", func() string { return label })
+		reflectSetter(t, "LabelFunc", func(ctx context.Context) string {
+			var label, ok = trans.GetText(ctx, label)
+			if !ok {
+				return ""
+			}
+			return label
+		})
 	}
 }
 
-func WithHelpText[T any](text string) OptFunc[T] {
+func WithHelpText[T any](text any) OptFunc[T] {
 	return func(t T) {
-		reflectSetter(t, "HelpFunc", func() string { return text })
+		reflectSetter(t, "HelpFunc", func(ctx context.Context) string {
+			var label, ok = trans.GetText(ctx, text)
+			if !ok {
+				return ""
+			}
+			return label
+		})
 	}
 }

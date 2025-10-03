@@ -423,3 +423,40 @@ func TestStringToByteReturn(t *testing.T) {
 	}
 	t.Logf("got %q and length %d", s, l)
 }
+
+func TestCast_DiscardExtraReturns_ToErrorOnly(t *testing.T) {
+	src := func(s string, n int) (string, int, error) {
+		return s + "!", n * 2, nil
+	}
+
+	out, err := django_reflect.CastFunc[func(string, int) error](src)
+	mustNoErr(t, err)
+
+	e := out("hello", 3)
+	if e != nil {
+		t.Fatalf("unexpected error: %v", e)
+	}
+}
+
+func TestCast_DiscardExtraReturns_ToNoReturn(t *testing.T) {
+	src := func(s string, n int) (string, int, error) {
+		return s + "!", n * 2, nil
+	}
+
+	out, err := django_reflect.CastFunc[func(string, int)](src)
+	mustNoErr(t, err)
+
+	// Just call it; no return values expected
+	out("hi", 5)
+}
+
+func TestCast_DiscardPartialReturn_ToErrorOnlyFromTwoReturns(t *testing.T) {
+	src := func(s string, n int) (string, int) {
+		return s + "!", n * 2
+	}
+
+	out, err := django_reflect.CastFunc[func(string, int) error](src)
+	mustIsErr(t, err, django_reflect.ErrReturnCount)
+
+	_ = out
+}

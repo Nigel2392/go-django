@@ -61,7 +61,8 @@ func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
 	var (
 		numInSrc  = fnType.NumIn()
 		numInDst  = out.NumIn()
-		returnsEq = fnType.NumOut() == out.NumOut()
+		numOutSrc = fnType.NumOut()
+		numOutDst = out.NumOut()
 	)
 
 	switch {
@@ -77,10 +78,17 @@ func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
 		)
 	}
 
-	if !returnsEq {
+	switch {
+	case numOutSrc == numOutDst:
+	// exact match
+	case numOutDst == 1 && isErrType(out.Out(0)) && numOutSrc > 0 && isErrType(fnType.Out(numOutSrc-1)):
+	// last return value is error and only error, ignore other return values
+	case numOutDst == 0:
+	// ignore all return values
+	default:
 		return reflect.Value{}, errors.Wrapf(
 			ErrReturnCount, "function must return the same number of values as the output function (%v), got %v",
-			out.NumOut(), fnType.NumOut(),
+			numOutDst, numOutSrc,
 		)
 	}
 
@@ -214,10 +222,37 @@ func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
 	return newFunc, nil
 }
 
+var _errType = reflect.TypeOf((*error)(nil)).Elem()
+
+func isErrType(t reflect.Type) bool {
+	return t.AssignableTo(_errType) || t == _errType || (t.Kind() == reflect.Interface && t.Implements(_errType))
+}
+
 func callConvertedFunc(dstFnTyp reflect.Type, srcFnVal reflect.Value, convertedArgs []reflect.Value) []reflect.Value {
 	var res = srcFnVal.Call(convertedArgs)
 	if len(res) == 0 {
 		return []reflect.Value{}
+	}
+
+	var (
+		numOutSrc = srcFnVal.Type().NumOut()
+		numOutDst = dstFnTyp.NumOut()
+	)
+
+	switch {
+	case numOutSrc == numOutDst:
+		// exact match
+	case numOutDst == 1 && isErrType(dstFnTyp.Out(0)) && numOutSrc > 0 && isErrType(srcFnVal.Type().Out(numOutSrc-1)):
+		// last return value is error and only error, ignore other return values
+		res = res[numOutSrc-1:]
+	case numOutDst == 0:
+		// ignore all return values
+		return []reflect.Value{}
+	default:
+		assert.Fail(errors.Wrapf(
+			ErrReturnCount, "function must return the same number of values as the output function (%v), got %v",
+			numOutDst, numOutSrc,
+		))
 	}
 
 	var results = make([]reflect.Value, len(res))
