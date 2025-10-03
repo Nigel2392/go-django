@@ -273,10 +273,12 @@ func Get[T any](d any, name string) T {
 	return *(new(T))
 }
 
+type Function interface{}
+
 // Method retrieves a method from an object.
 //
 // The generic type parameter must be the type of the method.
-func Method[T any](obj interface{}, name string) (n T, ok bool) {
+func Method[T Function](obj interface{}, name string) (n T, ok bool) {
 	if obj == nil {
 		return n, false
 	}

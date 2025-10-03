@@ -81,7 +81,7 @@ func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
 	switch {
 	case numOutDst == 0: // func(...)
 	// ignore all return values
-	case numOutSrc == numOutDst: // func(...) ...
+	case numOutSrc == numOutDst && canConvertSimple(fnType.Out(0), out.Out(0)): // func(...) ...
 	// exact match
 	case numOutDst == 1 && isErrType(out.Out(0)) && numOutSrc > 0 && isErrType(fnType.Out(numOutSrc-1)): // func(...) error
 	// last return value is error and only error, ignore other return values
