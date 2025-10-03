@@ -144,10 +144,7 @@ type Form interface {
 	ErrorAdder
 	ErrorDefiner
 
-	AsP() template.HTML
-	AsUL() template.HTML
 	Media() media.Media
-
 	Context() context.Context
 	WithContext(ctx context.Context)
 	Prefix() string
@@ -185,6 +182,7 @@ type Form interface {
 type BoundForm interface {
 	AsP() template.HTML
 	AsUL() template.HTML
+	AsTable() template.HTML
 	Media() media.Media
 	Fields() []BoundField
 	FieldMap() map[string]BoundField // map of field name to BoundField

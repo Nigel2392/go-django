@@ -3,12 +3,10 @@ package forms
 import (
 	"context"
 	"fmt"
-	"html/template"
 	"net/http"
 	"net/url"
 	"reflect"
 	"slices"
-	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
@@ -214,33 +212,6 @@ func (f *BaseForm) OnInvalid(funcs ...func(Form)) {
 
 func (f *BaseForm) OnFinalize(funcs ...func(Form)) {
 	f.OnFinalizeFuncs = append(f.OnFinalizeFuncs, funcs...)
-}
-
-func (f *BaseForm) AsP() template.HTML {
-	var bound = f.BoundFields()
-	var html = make([]string, 0, bound.Len())
-	for head := bound.Front(); head != nil; head = head.Next() {
-		var (
-			label = head.Value.Label()
-			field = head.Value.Field()
-		)
-		html = append(html, fmt.Sprintf("<p>%s %s</p>", label, field))
-	}
-	return template.HTML(strings.Join(html, ""))
-}
-
-func (f *BaseForm) AsUL() template.HTML {
-	var bound = f.BoundFields()
-	var html = make([]string, 0, bound.Len()*2)
-	for head := bound.Front(); head != nil; head = head.Next() {
-		var (
-			label = head.Value.Label()
-			field = head.Value.Field()
-		)
-		html = append(html, fmt.Sprintf("\t<li>%s</li>\n", label))
-		html = append(html, fmt.Sprintf("\t<li>%s</li>\n", field))
-	}
-	return template.HTML(fmt.Sprintf("<ul>\n%s\n</ul>", strings.Join(html, "")))
 }
 
 func (f *BaseForm) Media() media.Media {

@@ -1,6 +1,7 @@
 package forms
 
 import (
+	"bytes"
 	"context"
 	"html/template"
 
@@ -107,14 +108,36 @@ func (f *BaseBoundForm) AsP() template.HTML {
 	if f, ok := f.Form.(interface{ AsP() template.HTML }); ok {
 		return f.AsP()
 	}
-	return template.HTML("")
+	var b = new(bytes.Buffer)
+	err := f.renderer.RenderAsP(b, f.context, f)
+	if err != nil {
+		return template.HTML("")
+	}
+	return template.HTML(b.String())
 }
 
 func (f *BaseBoundForm) AsUL() template.HTML {
 	if f, ok := f.Form.(interface{ AsUL() template.HTML }); ok {
 		return f.AsUL()
 	}
-	return template.HTML("")
+	var b = new(bytes.Buffer)
+	err := f.renderer.RenderAsUL(b, f.context, f)
+	if err != nil {
+		return template.HTML("")
+	}
+	return template.HTML(b.String())
+}
+
+func (f *BaseBoundForm) AsTable() template.HTML {
+	if f, ok := f.Form.(interface{ AsTable() template.HTML }); ok {
+		return f.AsTable()
+	}
+	var b = new(bytes.Buffer)
+	err := f.renderer.RenderAsTable(b, f.context, f)
+	if err != nil {
+		return template.HTML("")
+	}
+	return template.HTML(b.String())
 }
 
 func (f *BaseBoundForm) Fields() []BoundField {

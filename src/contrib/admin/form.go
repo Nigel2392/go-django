@@ -3,7 +3,6 @@ package admin
 import (
 	"context"
 	"errors"
-	"html/template"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -82,12 +81,6 @@ func (a *AdminForm[T1, T2]) WithContext(ctx context.Context) {
 	}
 }
 
-func (a *AdminForm[T1, T2]) AsP() template.HTML {
-	return a.Form.AsP()
-}
-func (a *AdminForm[T1, T2]) AsUL() template.HTML {
-	return a.Form.AsUL()
-}
 func (a *AdminForm[T1, T2]) Media() media.Media {
 	return a.Form.Media()
 }
