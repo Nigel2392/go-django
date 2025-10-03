@@ -1,42 +1,31 @@
-import type { Definition } from '@hotwired/stimulus';
-import { DjangoApplication } from "./app/app";
+import { BlockApp } from "./app";
 import { SortableController } from "./controllers";
 import { BlockController } from "./blocks/controller";
 import { ListBlockDef, ListBlockValue } from "./blocks/impl/list-block";
 import { FieldBlockDef } from "./blocks/impl/field-block";
 import { StructBlockDef } from "./blocks/impl/struct-block";
 
-const controllerDefinitions: Definition[] = [
-    { identifier: 'sortable', controllerConstructor: SortableController},
-    { identifier: 'block', controllerConstructor: BlockController},
-];
+window.telepath.register('django.blocks.FieldBlock', FieldBlockDef);
+window.blocks.registerBlock('django.blocks.field-block', FieldBlockDef);
 
-const app = new DjangoApplication({
-    controllers: {},
-    blocks: {},
-})
+window.telepath.register('django.blocks.ListBlockValue', ListBlockValue);
+window.telepath.register('django.blocks.ListBlock', ListBlockDef);
+window.blocks.registerBlock('django.blocks.list-block', ListBlockDef);
 
+window.telepath.register('django.blocks.StructBlock', StructBlockDef);
+window.blocks.registerBlock('django.blocks.struct-block', StructBlockDef);
 
-window.Django = app;
+window.AdminSite.registerController(
+    "sortable", 
+    SortableController,
+);
+window.AdminSite.registerController(
+    "block",
+    BlockController,
+);
 
-window.Django.registerAdapter('django.blocks.FieldBlock', FieldBlockDef);
-window.Django.registerBlock('django.blocks.field-block', FieldBlockDef);
-
-window.Django.registerAdapter('django.blocks.ListBlockValue', ListBlockValue);
-window.Django.registerAdapter('django.blocks.ListBlock', ListBlockDef);
-window.Django.registerBlock('django.blocks.list-block', ListBlockDef);
-
-window.Django.registerAdapter('django.blocks.StructBlock', StructBlockDef);
-window.Django.registerBlock('django.blocks.struct-block', StructBlockDef);
-
-for (let i = 0; i < controllerDefinitions.length; i++) {
-    const { identifier, controllerConstructor } = controllerDefinitions[i];
-    app.registerController(identifier, controllerConstructor);
-}
-
-app.start();
 
 export {
-    app,
+    BlockApp,
     SortableController,
 };

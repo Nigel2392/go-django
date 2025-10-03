@@ -94,6 +94,12 @@ func (a *AdminForm[T1, T2]) SetPrefix(prefix string) {
 		a.FormSet().SetPrefix(prefix)
 	}
 }
+func (a *AdminForm[T1, T2]) Renderer() forms.FormRenderer {
+	return a.Form.Renderer()
+}
+func (a *AdminForm[T1, T2]) SetRenderer(renderer forms.FormRenderer) {
+	a.Form.SetRenderer(renderer)
+}
 func (a *AdminForm[T1, T2]) SetInitial(initial map[string]interface{}) {
 	a.Form.SetInitial(initial)
 }

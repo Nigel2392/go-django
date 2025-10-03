@@ -32,6 +32,7 @@ import (
 	"github.com/Nigel2392/go-django/src/models"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
+	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
 	"github.com/Nigel2392/mux/middleware/authentication"
@@ -385,6 +386,12 @@ func NewAppConfig() django.AppConfig {
 			filesystem.MatchExt(".ico"),
 		),
 	))
+
+	staticfiles.AddFS(
+		// telepath.TelepathJS,
+		filesystem.Sub(telepath.TelepathJS, "static"),
+		filesystem.MatchPrefix("telepath/"),
+	)
 
 	AdminSite.TemplateConfig = &tpl.Config{
 		AppName: "admin",

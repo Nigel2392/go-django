@@ -23,6 +23,7 @@ func NewContactForm(request *http.Request) forms.Form {
 			fields.ReadOnly(false),
 			fields.Placeholder("Enter your full name"),
 			fields.HelpText("Please enter your full name."),
+			fields.Default("John Doe"),
 		),
 		fields.EmailField(
 			fields.Name("email"),
@@ -33,6 +34,7 @@ func NewContactForm(request *http.Request) forms.Form {
 			fields.HelpText("Please enter a valid email address."),
 			fields.MinLength(5),
 			fields.MaxLength(255),
+			fields.Default("example@example.com"),
 		),
 		fields.CharField(
 			fields.Name("subject"),
@@ -44,6 +46,7 @@ func NewContactForm(request *http.Request) forms.Form {
 			fields.Placeholder("Enter the subject of your message"),
 			fields.HelpText("Please enter the subject of your message."),
 			fields.Attributes(map[string]string{"autocomplete": "off"}),
+			fields.Default("Hello"),
 		),
 		fields.CharField(
 			fields.Name("message"),
@@ -55,6 +58,7 @@ func NewContactForm(request *http.Request) forms.Form {
 			fields.Placeholder("Enter your message"),
 			fields.HelpText("Please enter your message."),
 			fields.Attributes(map[string]string{"autocomplete": "off"}),
+			fields.Default("I would like to get in touch with you."),
 
 			// Pass a custom widget to the field to use a textarea instead of a text input
 			fields.Widget(widgets.NewTextarea(nil)),

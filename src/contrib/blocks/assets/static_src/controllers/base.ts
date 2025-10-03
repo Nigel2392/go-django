@@ -1,10 +1,8 @@
-import { Controller } from "@hotwired/stimulus";
-
 type ClassArgs = {
     [key: string]: any
 }
 
-class ClassCallController<ET extends Element, CT extends any> extends Controller<ET> {
+class ClassCallController<ET extends Element, CT extends any> extends window.StimulusController<ET> {
     declare classArgsValue: string
     declare hasClassArgsValue: boolean
     declare classPathValue: string

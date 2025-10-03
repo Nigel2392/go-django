@@ -4,9 +4,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
-	"html"
 	"html/template"
-	"io"
 	"runtime/debug"
 	"strings"
 
@@ -14,107 +12,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
-
-type FormRenderer interface {
-	RenderAsP(w io.Writer, ctx context.Context, form BoundForm) error
-	RenderAsUL(w io.Writer, ctx context.Context, form BoundForm) error
-	RenderAsTable(w io.Writer, ctx context.Context, form BoundForm) error
-
-	RenderFieldLabel(w io.Writer, ctx context.Context, field BoundField, id string, name string) error
-	RenderFieldHelpText(w io.Writer, ctx context.Context, field BoundField, id string, name string) error
-	RenderFieldWidget(w io.Writer, ctx context.Context, field BoundField, id string, name string, value interface{}, attrs map[string]string, errors []error, widgetCtx ctx.Context) error
-	RenderField(w io.Writer, ctx context.Context, field BoundField, id string, name string, value interface{}, errors []error, attrs map[string]string, widgetCtx ctx.Context) error
-}
-
-type defaultRenderer struct{}
-
-func (r *defaultRenderer) RenderAsP(w io.Writer, c context.Context, form BoundForm) error {
-	for _, field := range form.Fields() {
-		w.Write([]byte("<p>"))
-		w.Write([]byte(field.Label()))
-		w.Write([]byte(field.HelpText()))
-		w.Write([]byte(field.Field()))
-		w.Write([]byte("</p>"))
-	}
-	return nil
-}
-
-func (r *defaultRenderer) RenderAsUL(w io.Writer, c context.Context, form BoundForm) error {
-	w.Write([]byte("<ul>"))
-	for _, field := range form.Fields() {
-		w.Write([]byte("<li>"))
-		w.Write([]byte(field.Label()))
-		w.Write([]byte("</li>"))
-
-		w.Write([]byte("<li>"))
-		w.Write([]byte(field.HelpText()))
-		w.Write([]byte("</li>"))
-
-		w.Write([]byte("<li>"))
-		w.Write([]byte(field.Field()))
-		w.Write([]byte("</li>"))
-
-	}
-	w.Write([]byte("</ul>"))
-	return nil
-}
-
-func (r *defaultRenderer) RenderAsTable(w io.Writer, c context.Context, form BoundForm) error {
-	w.Write([]byte("<table>"))
-	for _, field := range form.Fields() {
-		w.Write([]byte("<tr>"))
-		w.Write([]byte("<td>"))
-		w.Write([]byte(field.Label()))
-		w.Write([]byte("</td>"))
-		w.Write([]byte("<td>"))
-		w.Write([]byte(field.HelpText()))
-		w.Write([]byte(field.Field()))
-		w.Write([]byte("</td>"))
-		w.Write([]byte("</tr>"))
-	}
-	w.Write([]byte("</table>"))
-	return nil
-}
-
-func (r *defaultRenderer) RenderField(w io.Writer, c context.Context, field BoundField, id string, name string, value interface{}, errors []error, attrs map[string]string, widgetCtx ctx.Context) (err error) {
-	if err = r.RenderFieldLabel(w, c, field, id, name); err != nil {
-		return err
-	}
-	if err = r.RenderFieldWidget(w, c, field, id, name, value, attrs, errors, widgetCtx); err != nil {
-		return err
-	}
-	if err = r.RenderFieldHelpText(w, c, field, id, name); err != nil {
-		return err
-	}
-	return nil
-}
-
-func (r *defaultRenderer) RenderFieldLabel(w io.Writer, ctx context.Context, field BoundField, id string, name string) error {
-	var fld = field.Input()
-	var labelText = fld.Label(ctx)
-	fmt.Fprintf(w,
-		"<label for=\"%s\">%s</label>",
-		id, html.EscapeString(labelText),
-	)
-	return nil
-}
-
-func (r *defaultRenderer) RenderFieldHelpText(w io.Writer, ctx context.Context, field BoundField, id string, name string) error {
-	var fld = field.Input()
-	var helpText = fld.HelpText(ctx)
-	if helpText == "" {
-		return nil
-	}
-
-	w.Write([]byte(html.EscapeString(helpText)))
-	return nil
-}
-
-func (r *defaultRenderer) RenderFieldWidget(w io.Writer, c context.Context, field BoundField, id string, name string, value interface{}, attrs map[string]string, errors []error, widgetCtx ctx.Context) error {
-	return field.Widget().RenderWithErrors(
-		c, w, id, name, value, errors, attrs, widgetCtx,
-	)
-}
 
 type BoundFormField struct {
 	FormWidget  Widget
@@ -129,7 +26,7 @@ type BoundFormField struct {
 	Renderer    FormRenderer
 }
 
-func NewBoundFormField(ctx context.Context, w Widget, f Field, name string, value interface{}, errors []error, tryWidgetBound bool) BoundField {
+func NewBoundFormField(ctx context.Context, renderer FormRenderer, w Widget, f Field, name string, value interface{}, errors []error, tryWidgetBound bool) BoundField {
 
 	if tryWidgetBound {
 		if bw, ok := w.(BinderWidget); ok {
@@ -149,6 +46,10 @@ func NewBoundFormField(ctx context.Context, w Widget, f Field, name string, valu
 	// Bind the field to the widget
 	w.BindField(f)
 
+	if renderer == nil {
+		renderer = &defaultRenderer{}
+	}
+
 	var bw = &BoundFormField{
 		FormWidget: w,
 		FormField:  f,
@@ -160,7 +61,7 @@ func NewBoundFormField(ctx context.Context, w Widget, f Field, name string, valu
 		FormErrors:  errors,
 		FormAttrs:   attrs,
 		FormContext: ctx,
-		Renderer:    &defaultRenderer{},
+		Renderer:    renderer,
 	}
 
 	return bw

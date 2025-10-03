@@ -12,6 +12,7 @@ type (
 	FormValueConverter = forms.FormValueConverter
 	FormValueOmitter   = forms.FormValueOmitter
 	FormValueGetter    = forms.FormValueGetter
+	FormRenderer       = forms.FormRenderer
 	Cleaner            = forms.Cleaner
 	Validator          = forms.Validator
 	Option             = forms.Option

@@ -1,11 +1,9 @@
-import type { Application } from "@hotwired/stimulus";
-import { DjangoApplication } from "./app/app";
+import { BlockApp } from "./app";
 
 export {};
 
 declare global {
     interface Window {
-        Stimulus: Application;
-        Django: DjangoApplication;
+        blocks: BlockApp;
     }
 }

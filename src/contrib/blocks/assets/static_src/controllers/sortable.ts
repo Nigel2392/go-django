@@ -1,7 +1,6 @@
-import { Controller } from "@hotwired/stimulus";
 import Sortable from "sortablejs";
 
-class SortableController extends Controller {
+class SortableController extends window.StimulusController {
     declare sortable: Sortable
     declare itemsTarget: HTMLElement
     declare itemTargets: HTMLElement[]
@@ -12,9 +11,6 @@ class SortableController extends Controller {
     }
 
     connect() {
-
-
-
         this.sortable = Sortable.create(this.itemsTarget, {
             handle: ".list-block-field",
             onEnd: (event: Sortable.SortableEvent) => {

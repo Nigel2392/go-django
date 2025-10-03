@@ -12,6 +12,7 @@ import SidePanelsController from "./controllers/side_panels";
 import SidebarController from "./controllers/sidebar";
 import { InlinePanelController } from "./controllers/panel_inline";
 import { FormController } from "./controllers/form_controller";
+import Telepath from "@nigel2392/go-telepath";
 
 const app = new AdminSite({
     controllers: {
@@ -83,6 +84,8 @@ if (!window.i18n || (!window.i18n.gettext && !window.i18n.ngettext)) {
 }
 
 window.sprintf = sprintf;
+
+window.telepath = new Telepath();
 
 app.start();
 

@@ -107,6 +107,11 @@ func (f *BaseForm) FormValue(name string) interface{} {
 		}
 	}
 
+	field, ok := f.FormFields.Get(name)
+	if ok {
+		return field.Default()
+	}
+
 	return nil
 }
 
@@ -138,6 +143,10 @@ func (f *BaseForm) Renderer() FormRenderer {
 		f.FormRenderer = &defaultRenderer{}
 	}
 	return f.FormRenderer
+}
+
+func (f *BaseForm) SetRenderer(renderer FormRenderer) {
+	f.FormRenderer = renderer
 }
 
 func (f *BaseForm) EditContext(key string, context ctx.Context) {
@@ -191,6 +200,7 @@ func (f *BaseForm) BoundFields() *orderedmap.OrderedMap[string, BoundField] {
 
 		ret.Set(k, NewBoundFormField(
 			f.FormContext,
+			f.FormRenderer,
 			widget,
 			v,
 			f.PrefixName(k),

@@ -1,11 +1,14 @@
 package blocks
 
 import (
+	"database/sql/driver"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"reflect"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -27,7 +30,50 @@ type StreamBlockData struct {
 	Blocks []SubBlockData `json:"blocks"`
 }
 
+func (s StreamBlockData) Value() (driver.Value, error) {
+	jsonData, err := json.Marshal(s)
+	return jsonData, err
+}
+
+func (s *StreamBlockData) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, s)
+	case string:
+		return json.Unmarshal([]byte(v), s)
+	case nil:
+		*s = StreamBlockData{}
+		return nil
+	default:
+		return fmt.Errorf("cannot scan %T into StreamBlockData", value)
+	}
+}
+
+type ListBlockData []*ListBlockValue
+
+func (l ListBlockData) Value() (driver.Value, error) {
+	jsonData, err := json.Marshal(l)
+	return jsonData, err
+}
+
+func (l *ListBlockData) Scan(value interface{}) error {
+	switch v := value.(type) {
+	case []byte:
+		return json.Unmarshal(v, l)
+	case string:
+		return json.Unmarshal([]byte(v), l)
+	case nil:
+		*l = ListBlockData{}
+		return nil
+	default:
+		return fmt.Errorf("cannot scan %T into ListBlockData", value)
+	}
+}
+
 func init() {
+	dbtype.Add(&StreamBlockData{}, dbtype.JSON)
+	dbtype.Add(&ListBlockData{}, dbtype.JSON)
+
 	// Assign the BlockField form field to any struct field which is of type <X>BlockData.
 	//
 	// This will then automatically assign the appropriate form widget for the field when used in a form.
@@ -49,7 +95,7 @@ func init() {
 	}
 
 	attrs.RegisterFormFieldGetter(&StreamBlockData{}, getter)
-	attrs.RegisterFormFieldGetter([]ListBlockValue{}, getter)
+	attrs.RegisterFormFieldGetter(ListBlockData{}, getter)
 }
 
 //go:embed assets/static/**

@@ -21,6 +21,7 @@ type BaseField struct {
 	FormLabel    func(ctx context.Context) string
 	FormHelpText func(ctx context.Context) string
 	FormWidget   widgets.Widget
+	GetDefault   func() interface{}
 	Caser        *cases.Caser
 }
 
@@ -70,6 +71,10 @@ func (i *BaseField) Hide(hidden bool) {
 
 func (i *BaseField) SetLabel(label func(ctx context.Context) string) {
 	i.FormLabel = label
+}
+
+func (i *BaseField) SetDefault(defaultValue func() interface{}) {
+	i.GetDefault = defaultValue
 }
 
 func (i *BaseField) SetHelpText(helpText func(ctx context.Context) string) {
@@ -131,6 +136,13 @@ func (i *BaseField) HelpText(ctx context.Context) string {
 		return i.FormHelpText(ctx)
 	}
 	return ""
+}
+
+func (i *BaseField) Default() interface{} {
+	if i.GetDefault != nil {
+		return i.GetDefault()
+	}
+	return nil
 }
 
 func (i *BaseField) HasChanged(initial, data interface{}) bool {

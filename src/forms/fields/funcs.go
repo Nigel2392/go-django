@@ -75,6 +75,19 @@ func Attributes(attrs map[string]string) func(Field) {
 	}
 }
 
+func Default(value interface{}) func(Field) {
+	var defaultFunc func() interface{}
+	switch v := value.(type) {
+	case func() interface{}:
+		defaultFunc = v
+	default:
+		defaultFunc = func() interface{} { return v }
+	}
+	return func(f Field) {
+		f.SetDefault(defaultFunc)
+	}
+}
+
 const (
 	ErrRegexInvalid = errs.Error("regex does not match")
 )

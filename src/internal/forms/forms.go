@@ -101,6 +101,7 @@ type Field interface {
 	SetLabel(label func(ctx context.Context) string)
 	SetHelpText(helpText func(ctx context.Context) string)
 	SetValidators(validators ...func(interface{}) error)
+	SetDefault(defaultValue func() interface{})
 	SetWidget(widget Widget)
 
 	Name() string
@@ -108,6 +109,7 @@ type Field interface {
 	HelpText(ctx context.Context) string
 	Validate(ctx context.Context, value interface{}) []error
 	Widget() Widget
+	Default() interface{}
 	HasChanged(initial, data interface{}) bool
 
 	Clean(ctx context.Context, value interface{}) (interface{}, error)
@@ -138,6 +140,17 @@ type CleanableForm interface {
 	Clean(ctx context.Context, cleaned map[string]interface{}) (map[string]interface{}, []error)
 }
 
+type FormRenderer interface {
+	RenderAsP(w io.Writer, ctx context.Context, form BoundForm) error
+	RenderAsUL(w io.Writer, ctx context.Context, form BoundForm) error
+	RenderAsTable(w io.Writer, ctx context.Context, form BoundForm) error
+
+	RenderFieldLabel(w io.Writer, ctx context.Context, field BoundField, id string, name string) error
+	RenderFieldHelpText(w io.Writer, ctx context.Context, field BoundField, id string, name string) error
+	RenderFieldWidget(w io.Writer, ctx context.Context, field BoundField, id string, name string, value interface{}, attrs map[string]string, errors []error, widgetCtx ctx.Context) error
+	RenderField(w io.Writer, ctx context.Context, field BoundField, id string, name string, value interface{}, errors []error, attrs map[string]string, widgetCtx ctx.Context) error
+}
+
 type Form interface {
 	WithDataDefiner
 	FullCleanMixin
@@ -150,8 +163,11 @@ type Form interface {
 	Prefix() string
 	SetPrefix(prefix string)
 	SetInitial(initial map[string]interface{})
-	SetValidators(validators ...func(Form, map[string]interface{}) []error)
 	Validators() []func(f Form, cleanedData map[string]interface{}) []error
+	SetValidators(validators ...func(Form, map[string]interface{}) []error)
+	Renderer() FormRenderer
+	SetRenderer(renderer FormRenderer)
+
 	Ordering([]string)
 	FieldOrder() []string
 
