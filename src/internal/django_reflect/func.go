@@ -79,15 +79,15 @@ func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
 	}
 
 	switch {
-	case numOutDst == 0:
+	case numOutDst == 0: // func(...)
 	// ignore all return values
-	case numOutSrc == numOutDst:
+	case numOutSrc == numOutDst: // func(...) ...
 	// exact match
-	case numOutDst == 1 && isErrType(out.Out(0)) && numOutSrc > 0 && isErrType(fnType.Out(numOutSrc-1)):
+	case numOutDst == 1 && isErrType(out.Out(0)) && numOutSrc > 0 && isErrType(fnType.Out(numOutSrc-1)): // func(...) error
 	// last return value is error and only error, ignore other return values
-	case numOutDst == 2 && isErrType(out.Out(1)) && numOutSrc > 1 && isErrType(fnType.Out(numOutSrc-1)) && isLiteralAny(out.Out(0)):
+	case numOutDst == 2 && (isLiteralAny(out.Out(0)) || isAnySlice(out.Out(0))) && isErrType(out.Out(1)) && numOutSrc > 1 && isErrType(fnType.Out(numOutSrc-1)): // func(...) (interface{}, error) or func(...) ([]interface{}, error)
 	// if len of res is greater than 2, we can create a slice and return the first value as []interface{} + error
-	case numOutDst == 1 && isLiteralAny(out.Out(0)) && numOutSrc >= 1:
+	case numOutDst == 1 && (isLiteralAny(out.Out(0)) || isAnySlice(out.Out(0))) && numOutSrc >= 1: // func(...) interface{} or func(...) []interface{}
 	// if len of res is greater than 1, we can create a slice and return the first value as []interface{}
 	default:
 		return reflect.Value{}, errors.Wrapf(
@@ -237,6 +237,10 @@ func isLiteralAny(t reflect.Type) bool {
 	return t == _literalAny
 }
 
+func isAnySlice(t reflect.Type) bool {
+	return t.Kind() == reflect.Slice && t.Elem() == _literalAny
+}
+
 func callConvertedFunc(dstFnTyp reflect.Type, srcFnVal reflect.Value, convertedArgs []reflect.Value) []reflect.Value {
 	var res = srcFnVal.Call(convertedArgs)
 	if len(res) == 0 {
@@ -244,28 +248,34 @@ func callConvertedFunc(dstFnTyp reflect.Type, srcFnVal reflect.Value, convertedA
 	}
 
 	var (
-		numOutSrc = srcFnVal.Type().NumOut()
+		srcFnTyp  = srcFnVal.Type()
+		numOutSrc = srcFnTyp.NumOut()
 		numOutDst = dstFnTyp.NumOut()
+		outZero   reflect.Type
 	)
+
+	if numOutDst > 0 {
+		outZero = dstFnTyp.Out(0)
+	}
 
 	switch {
 	case numOutDst == 0: // func(...)
 		// ignore all return values
 		return []reflect.Value{}
-	case numOutSrc == numOutDst:
+	case numOutSrc == numOutDst && canConvertSimple(srcFnTyp.Out(0), dstFnTyp.Out(0)): // func(...) ...
 		// exact match
-	case numOutDst == 1 && isErrType(dstFnTyp.Out(0)) && numOutSrc > 0 && isErrType(srcFnVal.Type().Out(numOutSrc-1)): // func(...) error
+	case numOutDst == 1 && isErrType(outZero) && numOutSrc > 0 && isErrType(srcFnVal.Type().Out(numOutSrc-1)): // func(...) error
 		// last return value is error and only error, ignore other return values
 		res = res[numOutSrc-1:]
 	case numOutDst == 2 && // func(...) (interface{}, error)
 		numOutSrc > 1 &&
 		isErrType(dstFnTyp.Out(1)) &&
 		isErrType(srcFnVal.Type().Out(numOutSrc-1)) &&
-		isLiteralAny(dstFnTyp.Out(0)):
+		(isLiteralAny(outZero) || isAnySlice(outZero)):
 
 		// if len of res is greater than 2, we can create a slice and return the first value as []interface{}
 		// no further conversions are required in this case.
-		if len(res) > 2 {
+		if len(res) > 2 || isAnySlice(outZero) {
 			var slice = reflect.MakeSlice(reflect.SliceOf(_literalAny), 0, len(res)-1)
 			for i := 0; i < len(res)-1; i++ {
 				slice = reflect.Append(slice, res[i])
@@ -274,15 +284,16 @@ func callConvertedFunc(dstFnTyp reflect.Type, srcFnVal reflect.Value, convertedA
 		}
 
 		// continue to convert the results as normal
-	case numOutDst == 1 && isLiteralAny(dstFnTyp.Out(0)) && numOutSrc >= 1: // func(...) interface{}
+	case numOutDst == 1 && (isLiteralAny(outZero) || isAnySlice(outZero)) && numOutSrc >= 1: // func(...) interface{}
 		// if len of res is greater than 1, we can create a slice and return the first value as []interface{}
-		if len(res) > 1 {
+		if len(res) > 1 || isAnySlice(outZero) {
 			var slice = reflect.MakeSlice(reflect.SliceOf(_literalAny), 0, len(res))
 			for i := 0; i < len(res); i++ {
 				slice = reflect.Append(slice, res[i])
 			}
 			return []reflect.Value{slice} // return []interface{}
 		}
+
 		// continue to convert the results as normal
 	default:
 		assert.Fail(errors.Wrapf(
@@ -308,6 +319,22 @@ func callConvertedFunc(dstFnTyp reflect.Type, srcFnVal reflect.Value, convertedA
 		results[i] = cnvrted
 	}
 	return results
+}
+
+func canConvertSimple(from, to reflect.Type) bool {
+	if from == to {
+		return true
+	}
+	if to.Kind() == reflect.Interface && from.Implements(to) {
+		return true
+	}
+	if from.AssignableTo(to) {
+		return true
+	}
+	if from.ConvertibleTo(to) && to.ConvertibleTo(from) {
+		return true
+	}
+	return false
 }
 
 func convertType(fromT, toT reflect.Type, fromV reflect.Value) (reflect.Value, bool) {

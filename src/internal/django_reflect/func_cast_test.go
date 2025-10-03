@@ -499,6 +499,50 @@ func TestCast_AnyErrorReturns(t *testing.T) {
 	}
 }
 
+func TestCast_InterfaceListReturns(t *testing.T) {
+	src := func(s string) (string, error) {
+		return s + "!", nil
+	}
+
+	out, err := django_reflect.CastFunc[func(string) []any](src)
+	mustNoErr(t, err)
+
+	// Just call it; no return values expected
+	v := out("hi")
+	if len(v) != 2 {
+		t.Fatalf("expected 2 values in []any, got %d", len(v))
+	}
+	if v[0] != "hi!" {
+		t.Fatalf("expected 'hi!' as first value, got %v", v[0])
+	}
+	if v[1] != nil {
+		t.Fatalf("expected nil as second value, got %v", v[1])
+	}
+}
+
+func TestCast_InterfaceListErrorReturns(t *testing.T) {
+	src := func(s string) (string, error) {
+		return s + "!", nil
+	}
+
+	out, err := django_reflect.CastFunc[func(string) ([]any, error)](src)
+	mustNoErr(t, err)
+
+	// Just call it; no return values expected
+	v, err := out("hi")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if len(v) != 1 {
+		t.Fatalf("expected 1 value in []any, got %d", len(v))
+	}
+
+	if v[0] != "hi!" {
+		t.Fatalf("expected 'hi!' as first value, got %v", v[0])
+	}
+}
+
 func TestCast_AnyListReturns(t *testing.T) {
 	src := func(s string, n int) (string, int, error) {
 		return s + "!", n * 2, nil
