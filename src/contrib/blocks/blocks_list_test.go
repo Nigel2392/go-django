@@ -38,7 +38,7 @@ var (
 		"test_list_block-1-datetime": {"2021-01-02T00:00:00"},
 	}
 
-	ListBlockDataRawCmp = []*blocks.ListBlockValue{
+	ListBlockDataRawCmp = blocks.ListBlockData{
 		{
 			ID:    uuid.Nil,
 			Order: 0,
@@ -65,7 +65,7 @@ var (
 		},
 	}
 
-	ListBlockDataGo = []*blocks.ListBlockValue{
+	ListBlockDataGo = blocks.ListBlockData{
 		{
 			ID:    uuid.Nil,
 			Order: 0,
@@ -107,7 +107,7 @@ func TestListBlock(t *testing.T) {
 			t.Errorf("Expected data, got nil")
 		}
 
-		var d = data.([]*blocks.ListBlockValue)
+		var d = data.(blocks.ListBlockData)
 
 		for i, v := range d {
 			if !reflect.DeepEqual(*v, *ListBlockDataRawCmp[i]) {
@@ -127,7 +127,7 @@ func TestListBlock(t *testing.T) {
 			t.Errorf("Expected no error, got %v", err)
 		}
 
-		var d = data.([]*blocks.ListBlockValue)
+		var d = data.(blocks.ListBlockData)
 
 		for i, v := range d {
 			if !reflect.DeepEqual(*v, *ListBlockDataGo[i]) {
@@ -139,7 +139,7 @@ func TestListBlock(t *testing.T) {
 	t.Run("ValueToForm", func(t *testing.T) {
 		var (
 			data = b.ValueToForm(ListBlockDataGo)
-			d    = data.([]*blocks.ListBlockValue)
+			d    = data.(blocks.ListBlockData)
 		)
 
 		for i, v := range d {
