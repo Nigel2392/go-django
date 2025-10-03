@@ -79,12 +79,16 @@ func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
 	}
 
 	switch {
+	case numOutDst == 0:
+	// ignore all return values
 	case numOutSrc == numOutDst:
 	// exact match
 	case numOutDst == 1 && isErrType(out.Out(0)) && numOutSrc > 0 && isErrType(fnType.Out(numOutSrc-1)):
 	// last return value is error and only error, ignore other return values
-	case numOutDst == 0:
-	// ignore all return values
+	case numOutDst == 2 && isErrType(out.Out(1)) && numOutSrc > 1 && isErrType(fnType.Out(numOutSrc-1)) && isLiteralAny(out.Out(0)):
+	// if len of res is greater than 2, we can create a slice and return the first value as []interface{} + error
+	case numOutDst == 1 && isLiteralAny(out.Out(0)) && numOutSrc >= 1:
+	// if len of res is greater than 1, we can create a slice and return the first value as []interface{}
 	default:
 		return reflect.Value{}, errors.Wrapf(
 			ErrReturnCount, "function must return the same number of values as the output function (%v), got %v",
@@ -223,9 +227,14 @@ func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
 }
 
 var _errType = reflect.TypeOf((*error)(nil)).Elem()
+var _literalAny = reflect.TypeOf((*interface{})(nil)).Elem()
 
 func isErrType(t reflect.Type) bool {
 	return t.AssignableTo(_errType) || t == _errType || (t.Kind() == reflect.Interface && t.Implements(_errType))
+}
+
+func isLiteralAny(t reflect.Type) bool {
+	return t == _literalAny
 }
 
 func callConvertedFunc(dstFnTyp reflect.Type, srcFnVal reflect.Value, convertedArgs []reflect.Value) []reflect.Value {
@@ -240,14 +249,41 @@ func callConvertedFunc(dstFnTyp reflect.Type, srcFnVal reflect.Value, convertedA
 	)
 
 	switch {
-	case numOutSrc == numOutDst:
-		// exact match
-	case numOutDst == 1 && isErrType(dstFnTyp.Out(0)) && numOutSrc > 0 && isErrType(srcFnVal.Type().Out(numOutSrc-1)):
-		// last return value is error and only error, ignore other return values
-		res = res[numOutSrc-1:]
-	case numOutDst == 0:
+	case numOutDst == 0: // func(...)
 		// ignore all return values
 		return []reflect.Value{}
+	case numOutSrc == numOutDst:
+		// exact match
+	case numOutDst == 1 && isErrType(dstFnTyp.Out(0)) && numOutSrc > 0 && isErrType(srcFnVal.Type().Out(numOutSrc-1)): // func(...) error
+		// last return value is error and only error, ignore other return values
+		res = res[numOutSrc-1:]
+	case numOutDst == 2 && // func(...) (interface{}, error)
+		numOutSrc > 1 &&
+		isErrType(dstFnTyp.Out(1)) &&
+		isErrType(srcFnVal.Type().Out(numOutSrc-1)) &&
+		isLiteralAny(dstFnTyp.Out(0)):
+
+		// if len of res is greater than 2, we can create a slice and return the first value as []interface{}
+		// no further conversions are required in this case.
+		if len(res) > 2 {
+			var slice = reflect.MakeSlice(reflect.SliceOf(_literalAny), 0, len(res)-1)
+			for i := 0; i < len(res)-1; i++ {
+				slice = reflect.Append(slice, res[i])
+			}
+			return []reflect.Value{slice, res[len(res)-1]} // return []interface{}, error
+		}
+
+		// continue to convert the results as normal
+	case numOutDst == 1 && isLiteralAny(dstFnTyp.Out(0)) && numOutSrc >= 1: // func(...) interface{}
+		// if len of res is greater than 1, we can create a slice and return the first value as []interface{}
+		if len(res) > 1 {
+			var slice = reflect.MakeSlice(reflect.SliceOf(_literalAny), 0, len(res))
+			for i := 0; i < len(res); i++ {
+				slice = reflect.Append(slice, res[i])
+			}
+			return []reflect.Value{slice} // return []interface{}
+		}
+		// continue to convert the results as normal
 	default:
 		assert.Fail(errors.Wrapf(
 			ErrReturnCount, "function must return the same number of values as the output function (%v), got %v",
@@ -271,7 +307,6 @@ func callConvertedFunc(dstFnTyp reflect.Type, srcFnVal reflect.Value, convertedA
 
 		results[i] = cnvrted
 	}
-
 	return results
 }
 

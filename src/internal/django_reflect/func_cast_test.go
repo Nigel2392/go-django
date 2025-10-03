@@ -460,3 +460,79 @@ func TestCast_DiscardPartialReturn_ToErrorOnlyFromTwoReturns(t *testing.T) {
 
 	_ = out
 }
+
+func TestCast_AnyReturns(t *testing.T) {
+	src := func(s string) (string, error) {
+		return s + "!", nil
+	}
+
+	out, err := django_reflect.CastFunc[func(string) any](src)
+	mustNoErr(t, err)
+
+	// Just call it; no return values expected
+	v := out("hi")
+	if lst, ok := v.([]any); !ok {
+		t.Fatalf("expected []any return, got %T", v)
+	} else if len(lst) != 2 {
+		t.Fatalf("expected 2 values in []any, got %d", len(lst))
+	}
+}
+
+func TestCast_AnyErrorReturns(t *testing.T) {
+	src := func(s string) (string, error) {
+		return s + "!", nil
+	}
+
+	out, err := django_reflect.CastFunc[func(string) (any, error)](src)
+	mustNoErr(t, err)
+
+	// Just call it; no return values expected
+	v, err := out("hi")
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if res, ok := v.(string); !ok {
+		t.Fatalf("expected string return, got %T", v)
+	} else if res != "hi!" {
+		t.Fatalf("expected 'hi!', got %q", res)
+	}
+}
+
+func TestCast_AnyListReturns(t *testing.T) {
+	src := func(s string, n int) (string, int, error) {
+		return s + "!", n * 2, nil
+	}
+
+	out, err := django_reflect.CastFunc[func(string, int) any](src)
+	mustNoErr(t, err)
+
+	// Just call it; no return values expected
+	v := out("hi", 5)
+	if lst, ok := v.([]any); !ok {
+		t.Fatalf("expected []any return, got %T", v)
+	} else if len(lst) != 3 {
+		t.Fatalf("expected 3 values in []any, got %d", len(lst))
+	}
+}
+
+func TestCast_AnyListErrorReturns(t *testing.T) {
+	src := func(s string, n int) (string, int, error) {
+		return s + "!", n * 2, nil
+	}
+
+	out, err := django_reflect.CastFunc[func(string, int) (any, error)](src)
+	mustNoErr(t, err)
+
+	// Just call it; no return values expected
+	v, err := out("hi", 5)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if lst, ok := v.([]any); !ok {
+		t.Fatalf("expected []any return, got %T", v)
+	} else if len(lst) != 2 {
+		t.Fatalf("expected 2 values in []any, got %d", len(lst))
+	}
+}
