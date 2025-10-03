@@ -619,3 +619,122 @@ func BenchmarkUnpackFieldsFromArgsIterNested(b *testing.B) {
 		}
 	}
 }
+
+type MethodModel struct {
+}
+
+func (m *MethodModel) Method1(a string, b int) (string, error) {
+	return a, nil
+}
+
+func (m *MethodModel) Method2(a, b string, c ...int) (string, int, error) {
+	return a + b, len(c), nil
+}
+
+func (m *MethodModel) Method3() time.Time {
+	return now()
+}
+
+type IsZeroer interface {
+	IsZero() bool
+}
+
+func TestMethod(t *testing.T) {
+	var m = &MethodModel{}
+	t.Run("Method1", func(t *testing.T) {
+		t.Run("exact", func(t *testing.T) {
+			var fn, ok = attrs.Method[func(string, int) (string, error)](m, "Method1")
+			if !ok {
+				t.Fatal("expected to find Method1")
+			}
+
+			var res, err = fn("test", 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if res != "test" {
+				t.Errorf("expected %q, got %q", "test", res)
+			}
+		})
+		t.Run("variant", func(t *testing.T) {
+			var fn, ok = attrs.Method[func([]byte, uint64) ([]byte, error)](m, "Method1")
+			if !ok {
+				t.Fatal("expected to find Method1")
+			}
+
+			var res, err = fn([]byte("test"), 1)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if string(res) != "test" {
+				t.Errorf("expected %q, got %q", "test", string(res))
+			}
+		})
+	})
+
+	t.Run("Method2", func(t *testing.T) {
+		t.Run("exact", func(t *testing.T) {
+			var fn, ok = attrs.Method[func(string, string, ...int) (string, int, error)](m, "Method2")
+			if !ok {
+				t.Fatal("expected to find Method2")
+			}
+
+			var res1, res2, err = fn("test", "test2", 1, 2, 3)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			if res1 != "testtest2" {
+				t.Errorf("expected %q, got %q", "testtest2", res1)
+			}
+			if res2 != 3 {
+				t.Errorf("expected %d, got %d", 3, res2)
+			}
+		})
+
+		t.Run("variant", func(t *testing.T) {
+			var fn, ok = attrs.Method[func(string, []byte, uint, uint, uint) ([]byte, int, error)](m, "Method2")
+			if !ok {
+				t.Fatal("expected to find Method2")
+			}
+			var res1, res2, err = fn("test", []byte("test2"), 1, 2, 3)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(res1) != "testtest2" {
+				t.Errorf("expected %q, got %q", "testtest2", string(res1))
+			}
+			if res2 != 3 {
+				t.Errorf("expected %d, got %d", 3, res2)
+			}
+		})
+	})
+
+	t.Run("Method3", func(t *testing.T) {
+		t.Run("exact", func(t *testing.T) {
+			var fn, ok = attrs.Method[func() time.Time](m, "Method3")
+			if !ok {
+				t.Fatal("expected to find Method3")
+			}
+			var res = fn()
+			if res != now() {
+				t.Errorf("expected %v, got %v", now(), res)
+			}
+		})
+		t.Run("variant", func(t *testing.T) {
+			var fn, ok = attrs.Method[func() IsZeroer](m, "Method3")
+			if !ok {
+				t.Fatal("expected to find Method3")
+			}
+			var res = fn()
+			if res.IsZero() {
+				t.Errorf("expected non-zero time, got %v", res)
+			}
+			if res != now() {
+				t.Errorf("expected %v, got %v", now(), res)
+			}
+		})
+	})
+}

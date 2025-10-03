@@ -5,6 +5,7 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 )
 
 func fieldNames(d any, exclude []string) []string {
@@ -293,16 +294,13 @@ checkValid:
 		return n, false
 	}
 
-	var nT = reflect.TypeOf(n)
-	if !m.Type().AssignableTo(nT) && !m.Type().ConvertibleTo(nT) {
+	var fnT = reflect.TypeOf(n)
+	var converted, err = django_reflect.RCastFunc(fnT, m)
+	if err != nil {
 		return n, false
 	}
 
-	if m.Type().ConvertibleTo(nT) {
-		m = m.Convert(nT)
-	}
-
-	var i = m.Interface()
+	var i = converted.Interface()
 	if i == nil {
 		return n, false
 	}

@@ -29,8 +29,20 @@ func CastFunc[OUT Function](fn any) (OUT, error) {
 }
 
 func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
-	var fnType = reflect.TypeOf(fn)
-	var fnVal = reflect.ValueOf(fn)
+	var (
+		fnType reflect.Type
+		fnVal  reflect.Value
+	)
+
+	switch f := fn.(type) {
+	case reflect.Value:
+		fnType = f.Type()
+		fnVal = f
+	default:
+		fnType = reflect.TypeOf(f)
+		fnVal = reflect.ValueOf(f)
+	}
+
 	if fnType == nil || fnType.Kind() != reflect.Func {
 		return reflect.Value{}, errors.Wrapf(
 			ErrNotFunc, "expected a function, got %T", fn,
@@ -99,7 +111,7 @@ func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
 					}
 					callIn = append(callIn, argVal)
 				}
-				return fnVal.Call(callIn)
+				break argLoop
 
 			case out.IsVariadic() && i >= numInDst-1:
 
@@ -196,32 +208,36 @@ func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
 			))
 		}
 
-		var res = fnVal.Call(callIn)
-		if len(res) == 0 {
-			return []reflect.Value{}
-		}
-
-		var results = make([]reflect.Value, len(res))
-		for i, curr := range res {
-			var typ = out.Out(i)
-			var currType = curr.Type()
-
-			var cnvrted, ok = convertType(currType, typ, curr)
-			if !ok {
-				assert.Fail(errors.Wrapf(
-					ErrReturnCount,
-					"function return value %v is not convertible to %v",
-					currType, typ,
-				))
-			}
-
-			results[i] = cnvrted
-		}
-
-		return results
+		return callConvertedFunc(out, fnVal, callIn)
 	})
 
 	return newFunc, nil
+}
+
+func callConvertedFunc(dstFnTyp reflect.Type, srcFnVal reflect.Value, convertedArgs []reflect.Value) []reflect.Value {
+	var res = srcFnVal.Call(convertedArgs)
+	if len(res) == 0 {
+		return []reflect.Value{}
+	}
+
+	var results = make([]reflect.Value, len(res))
+	for i, curr := range res {
+		var typ = dstFnTyp.Out(i)
+		var currType = curr.Type()
+
+		var cnvrted, ok = convertType(currType, typ, curr)
+		if !ok {
+			assert.Fail(errors.Wrapf(
+				ErrReturnCount,
+				"function return value %v is not convertible to %v",
+				currType, typ,
+			))
+		}
+
+		results[i] = cnvrted
+	}
+
+	return results
 }
 
 func convertType(fromT, toT reflect.Type, fromV reflect.Value) (reflect.Value, bool) {

@@ -385,3 +385,41 @@ func TestCast_FixedSource_ToVariadicTarget_UnwrapInterfaceArgs(t *testing.T) {
 	}
 	mustPanic(t, func() { _ = out(1, 2, 3) }, "same number of arguments")
 }
+
+func TestNonVariadicToVariadicArgs(t *testing.T) {
+	var fn = func(a, b string, c ...int) (string, int, error) {
+		return a + b, len(c), nil
+	}
+	f, err := django_reflect.CastFunc[func(string, []byte, uint, uint, uint) (string, int, error)](fn)
+	mustNoErr(t, err)
+	s, l, e := f("hello ", []byte("world"), 1, 2, 3)
+	mustNoErr(t, e)
+
+	if s != "hello world" {
+		t.Fatalf("expected 'hello world', got %q", s)
+	}
+
+	if l != 3 {
+		t.Fatalf("expected length 3, got %d", l)
+	}
+
+	t.Logf("got %q and length %d", s, l)
+}
+
+func TestStringToByteReturn(t *testing.T) {
+	var fn = func(a, b string, c ...int) (string, int, error) {
+		return a + b, len(c), nil
+	}
+
+	f, err := django_reflect.CastFunc[func(string, string, int, int, int) ([]byte, int, error)](fn)
+	mustNoErr(t, err)
+	s, l, e := f("hello ", "world", 1, 2, 3)
+	mustNoErr(t, e)
+	if string(s) != "hello world" {
+		t.Fatalf("expected 'hello world', got %q", s)
+	}
+	if l != 3 {
+		t.Fatalf("expected length 3, got %d", l)
+	}
+	t.Logf("got %q and length %d", s, l)
+}
