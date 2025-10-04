@@ -10,7 +10,6 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
-	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -18,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"github.com/Nigel2392/go-django/src/utils/mixins"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -571,11 +571,20 @@ func (b *BaseFormSet[FORM]) HasChanged() bool {
 }
 
 func (b *BaseFormSet[FORM]) Media() media.Media {
+	var m media.Media = media.NewMedia()
+	if b.opts.NewForm == nil {
+		for _, f := range b.FormList {
+			if mf, ok := any(f).(media.MediaDefiner); ok {
+				m = m.Merge(mf.Media())
+			}
+		}
+		return m
+	}
 	var f = b.NewForm(b.ctx)
 	if m, ok := any(f).(media.MediaDefiner); ok {
 		return m.Media()
 	}
-	return media.NewMedia()
+	return m
 }
 
 func (b *BaseFormSet[FORM]) DeletedForms() []FORM {
@@ -741,7 +750,7 @@ func (b *BaseFormSet[FORM]) BoundErrorsList() []*orderedmap.OrderedMap[string, [
 func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 	var results = make([]any, 0, len(b.FormList))
 	var deleted = make([]FORM, 0, len(b.FormList))
-	var errors = make([]error, 0)
+	var errs = make([]error, 0)
 	for _, form := range b.FormList {
 		var cleaned = form.CleanedData()
 		var isDeleted = false
@@ -753,49 +762,34 @@ func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 			continue
 		}
 
+		var wrapFn = django_reflect.WrapWithContext(b.ctx)
 		var rv = reflect.ValueOf(form)
 		var saveMethod = rv.MethodByName("Save")
-		if !saveMethod.IsValid() {
-			except.Fail(
-				http.StatusInternalServerError,
-				"form %T does not have a Save method",
-				form,
-			)
-		}
-
-		if saveMethod.Type().NumIn() != 0 {
-			except.Fail(
-				http.StatusInternalServerError,
-				"form %T Save method must not accept any arguments",
-				form,
-			)
-		}
-
-		if saveMethod.Type().NumOut() < 1 || saveMethod.Type().NumOut() > 2 {
-			except.Fail(
-				http.StatusInternalServerError,
-				"form %T Save method must return one or two values",
-				form,
-			)
-		}
-
-		var vals = saveMethod.Call([]reflect.Value{})
-		switch {
-		case len(vals) == 1:
-			if err, ok := vals[0].Interface().(error); ok && err != nil {
-				errors = append(errors, err)
-			} else {
-				results = append(results, vals[0].Interface())
+		switch saveMethod.Type().NumOut() {
+		case 1:
+			var saveMethod, err = django_reflect.Method[func() error](form, "Save", wrapFn)
+			if err != nil {
+				return nil, errors.Wrapf(err, "form %T does not have a Save method", form)
 			}
-		case len(vals) == 2:
-			var errVal = vals[1].Interface()
-			if errVal != nil {
-				if err, ok := errVal.(error); ok && err != nil {
-					errors = append(errors, err)
-				}
+
+			err = saveMethod()
+			if err != nil {
+				errs = append(errs, err)
 				continue
 			}
-			results = append(results, vals[0].Interface())
+		case 2:
+			var saveMethod, err = django_reflect.Method[func() (any, error)](form, "Save", wrapFn)
+			if err != nil {
+				return nil, errors.Wrapf(err, "form %T does not have a Save method", form)
+			}
+			i, err := saveMethod()
+			if err != nil {
+				errs = append(errs, err)
+				continue
+			}
+			results = append(results, i)
+		default:
+			assert.Fail("form %T Save method must return one or two values, got %d", form, saveMethod.Type().NumOut())
 		}
 	}
 

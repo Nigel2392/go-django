@@ -277,24 +277,3 @@ func (m *StructBlock) RenderForm(ctx context.Context, w io.Writer, id, name stri
 		id, name, valueMap, string(bt), errs, ctxData,
 	).Render(ctx, w)
 }
-
-func (m *StructBlock) Adapter(ctx context.Context) telepath.Adapter {
-	return &telepath.ObjectAdapter[*StructBlock]{
-		JSConstructor: "django.blocks.StructBlock",
-		GetJSArgs: func(obj *StructBlock) []interface{} {
-
-			var fields = make(map[string]interface{})
-			for head := obj.Fields.Front(); head != nil; head = head.Next() {
-				fields[head.Key] = head.Value
-			}
-
-			return []interface{}{map[string]interface{}{
-				"name":     obj.Name(),
-				"label":    obj.Label(ctx),
-				"helpText": obj.HelpText(ctx),
-				"required": obj.Field().Required(),
-				"fields":   fields,
-			}}
-		},
-	}
-}

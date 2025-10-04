@@ -157,6 +157,10 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 		opt(config)
 	}
 
+	if err := validateIsFunc(out); err != nil {
+		return reflect.Value{}, err
+	}
+
 	for _, wrap := range config.Wrappers {
 		// validating before wrapping is OK because
 		// we also validate after the loop continues
@@ -169,9 +173,6 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 	}
 
 	if err := validateIsFunc(fnType); err != nil {
-		return reflect.Value{}, err
-	}
-	if err := validateIsFunc(out); err != nil {
 		return reflect.Value{}, err
 	}
 

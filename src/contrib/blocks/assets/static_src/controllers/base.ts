@@ -37,7 +37,6 @@ class ClassCallController<ET extends Element, CT extends any> extends window.Sti
 
             anyElem[`${this.identifier}Class`] = klassInstance
             anyElem[`${this.identifier}Controller`] = this
-
         } else {
             console.error(`Class ${this.classPathValue} not found in registered classes`)
         }

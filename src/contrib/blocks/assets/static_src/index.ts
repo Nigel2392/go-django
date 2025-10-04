@@ -5,6 +5,8 @@ import { ListBlockDef, ListBlockValue } from "./blocks/impl/list-block";
 import { FieldBlockDef } from "./blocks/impl/field-block";
 import { StructBlockDef } from "./blocks/impl/struct-block";
 
+window.blocks = new BlockApp();
+
 window.telepath.register('django.blocks.FieldBlock', FieldBlockDef);
 window.blocks.registerBlock('django.blocks.field-block', FieldBlockDef);
 
@@ -23,9 +25,3 @@ window.AdminSite.registerController(
     "block",
     BlockController,
 );
-
-
-export {
-    BlockApp,
-    SortableController,
-};

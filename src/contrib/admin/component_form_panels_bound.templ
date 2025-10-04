@@ -26,6 +26,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"runtime/debug"
 	"github.com/Nigel2392/go-django/src/core/except"
+	"reflect"
 )
 
 
@@ -60,6 +61,13 @@ templ PanelErrors(errors []error) {
 }
 
 templ PanelHelpText(helpText any) {
+    {{
+        var rV = reflect.ValueOf(helpText)
+        if (rV.Kind() == reflect.Ptr || rV.Kind() == reflect.Interface || rV.Kind() == reflect.Func) && rV.IsNil() {
+            return nil
+        }
+    }}
+
     if helpText != nil {
         <div class="panel__help">
             @TextComponent(helpText)
@@ -75,6 +83,11 @@ templ PanelBody() {
 
 func TextComponent(text any) templ.Component {
     if text == nil {
+        return nil
+    }
+
+    var rV = reflect.ValueOf(text)
+    if (rV.Kind() == reflect.Ptr || rV.Kind() == reflect.Interface || rV.Kind() == reflect.Func) && rV.IsNil() {
         return nil
     }
 

@@ -15,6 +15,8 @@ class AdminSite implements App {
     controllers: Record<string, ControllerConstructor> = {};
     stimulusApp: Application;
 
+    private started: boolean = false;
+
     constructor(config: AppConfig) {
         this.controllers = config.controllers || {};
         this.stimulusApp = Application.start();
@@ -23,10 +25,22 @@ class AdminSite implements App {
     }
 
     registerController(identifier: string, controllerConstructor: ControllerConstructor) {
+        if (this.started) {
+            console.warn("AdminSite already started, registering new controllers to Stimulus application directly");
+            this.stimulusApp.register(identifier, controllerConstructor);
+            return;
+        }
         this.controllers[identifier] = controllerConstructor;
     }
 
     start() {
+        if (this.started) {
+            console.warn("AdminSite already started");
+            return;
+        }
+        
+        this.started = true;
+
         const keys = Object.keys(this.controllers);
         for (let i = 0; i < keys.length; i++) {
             const identifier = keys[i];

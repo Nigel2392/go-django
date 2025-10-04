@@ -24,10 +24,10 @@ class ListBlockDef extends BlockDef {
 
     constructor(element: HTMLElement, config: Config) {
         super(element, config);
-        console.log("ListBlockDef constructor", element, config);
     }
 
     render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): any {
+        console.log("ListBlockDef render", placeholder, prefix, initialState, initialError, this);
         return new ListBlock(this.items);
     }
 

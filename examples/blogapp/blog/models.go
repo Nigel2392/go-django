@@ -80,7 +80,7 @@ func (b *BlogImage) UniqueTogether() [][]string {
 }
 
 func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
-	return blocks.NewListBlock(
+	var block = blocks.NewListBlock(
 		blocks.CharBlock(
 			blocks.WithLabel[*blocks.FieldBlock](
 				trans.S("Text"),
@@ -90,6 +90,11 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 			),
 		),
 	)
+
+	block.Min = 1
+	block.Max = 3
+
+	return block
 }
 
 func (b *BlogImage) FieldDefs() attrs.Definitions {

@@ -26,19 +26,6 @@ type ListBlockValue struct {
 	Data  interface{} `json:"data"`
 }
 
-func (m *ListBlockValue) Adapter() telepath.Adapter {
-	return &telepath.ObjectAdapter[*ListBlockValue]{
-		JSConstructor: "django.blocks.ListBlockValue",
-		GetJSArgs: func(obj *ListBlockValue) []interface{} {
-			return []interface{}{
-				obj.ID,
-				obj.Order,
-				obj.Data,
-			}
-		},
-	}
-}
-
 type ListBlock struct {
 	*BaseBlock
 	Child Block
@@ -377,18 +364,4 @@ func (l *ListBlock) RenderForm(ctx context.Context, w io.Writer, id, name string
 	}
 
 	return l.RenderTempl(id, name, valueArr, string(bt), listBlockErrors, ctxData).Render(ctx, w)
-}
-
-func (m *ListBlock) Adapter(ctx context.Context) telepath.Adapter {
-	return &telepath.ObjectAdapter[*ListBlock]{
-		JSConstructor: "django.blocks.ListBlock",
-		GetJSArgs: func(obj *ListBlock) []interface{} {
-			return []interface{}{map[string]interface{}{
-				"name":     obj.Name(),
-				"label":    obj.Label(ctx),
-				"helpText": obj.HelpText(ctx),
-				"required": obj.Field().Required(),
-			}}
-		},
-	}
 }

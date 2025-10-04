@@ -82,7 +82,9 @@ func (a *AdminForm[T1, T2]) WithContext(ctx context.Context) {
 }
 
 func (a *AdminForm[T1, T2]) Media() media.Media {
-	return a.Form.Media()
+	var m = a.Form.Media()
+	m = m.Merge(a.FormSet().Media())
+	return m
 }
 func (a *AdminForm[T1, T2]) Prefix() string {
 	return a.Form.Prefix()

@@ -40,27 +40,13 @@ func (b *FieldBlock) RenderForm(ctx context.Context, w io.Writer, id, name strin
 	return b.RenderTempl(id, name, value, string(bt), errors, c).Render(ctx, w)
 }
 
-func (b *FieldBlock) Adapter(ctx context.Context) telepath.Adapter {
-	return &telepath.ObjectAdapter[*FieldBlock]{
-		JSConstructor: "django.blocks.FieldBlock",
-		GetJSArgs: func(obj *FieldBlock) []interface{} {
-			return []interface{}{map[string]interface{}{
-				"name":     obj.Name(),
-				"label":    obj.Label(ctx),
-				"helpText": obj.HelpText(ctx),
-				"required": obj.Field().Required(),
-				"html":     obj.RenderHTML(ctx),
-			}}
-		},
-	}
-}
-
 func (b *FieldBlock) RenderHTML(ctx context.Context) string {
 	var w = new(bytes.Buffer)
-	b.FormField.Widget().Render(
+	var widget = b.FormField.Widget()
+	widget.Render(
 		ctx,
 		w,
-		"__ID__",
+		widget.IdForLabel("__PREFIX__"),
 		"__PREFIX__",
 		b.GetDefault(),
 		b.FormField.Attrs(),

@@ -191,6 +191,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 								// DisallowRemove: true,
 								Panels: []admin.Panel{
 									admin.FieldPanel("Image"),
+									admin.FieldPanel("Content"),
 									//	&admin.ModelFormPanel[*BlogPage, modelforms.ModelForm[*BlogPage]]{
 									//		TargetType: &BlogPage{},
 									//		FieldName:  "BlogPage",

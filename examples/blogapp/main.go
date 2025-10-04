@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io/fs"
 	"net/http"
 	"net/mail"
 	"os"
@@ -15,6 +16,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/contrib/admin"
 	"github.com/Nigel2392/go-django/src/contrib/auth"
+	"github.com/Nigel2392/go-django/src/contrib/blocks"
 	"github.com/Nigel2392/go-django/src/contrib/documents"
 	"github.com/Nigel2392/go-django/src/contrib/editor"
 	_ "github.com/Nigel2392/go-django/src/contrib/editor/features"
@@ -40,6 +42,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	mediafs "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
+	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
@@ -94,6 +97,7 @@ func main() {
 			auditlogs.NewAppConfig,
 			reports.NewAppConfig,
 			editor.NewAppConfig,
+			blocks.NewAppConfig,
 			blog.NewAppConfig,
 			images.NewAppConfig(&images.Options{
 				MediaBackend: mediaBackend,
@@ -226,17 +230,18 @@ func main() {
 			// fmt.Printf("   - PageURL: %s\n", django.Reverse("pages", page.ID()))
 		}
 
-		//err = staticfiles.Collect(func(path string, f fs.File) error {
-		//	var stat, err = f.Stat()
-		//	if err != nil {
-		//		return err
-		//	}
-		//	fmt.Println("Collected", path, stat.Size())
-		//	return nil
-		//})
-		//if err != nil {
-		//	panic(err)
-		//}
+	}
+
+	err = staticfiles.Collect(func(path string, f fs.File) error {
+		var stat, err = f.Stat()
+		if err != nil {
+			return err
+		}
+		fmt.Println("Collected", path, stat.Size())
+		return nil
+	})
+	if err != nil {
+		panic(err)
 	}
 
 	if err := app.Serve(); err != nil {

@@ -7,9 +7,15 @@ import "strconv"
 import "context"
 import "fmt"
 
-func renderWithErrors(fn func(w io.Writer, id string, name string, value interface{}, errors []error, attrs map[string]string) error, id string, name string, value interface{}, errors []error, attrs map[string]string) templ.Component {
+
+func renderWidget(widget widgets.Widget, id string, name string, value interface{}, errors []error, attrs map[string]string) templ.Component {
     return templ.ComponentFunc(func(tmplCtx context.Context, tmplW io.Writer) error {
-        return fn(tmplW, id, name, value, errors, attrs)
+        var widgetCtx = widget.GetContextData(tmplCtx, id, name, value, attrs)
+        if len(errors) > 0 {
+            widgetCtx.Set("errors", errors)
+        }
+
+        return widget.RenderWithErrors(tmplCtx, tmplW, id, name, value, errors, attrs, widgetCtx)
     })
 }
 
@@ -32,12 +38,18 @@ func renderBlockWidget(ctx context.Context,w io.Writer, widget *BlockWidget, blo
 }
 
 templ (b *FieldBlock) RenderTempl(id, name string, value interface{}, telepath string, errors []error, tplCtx ctx.Context)  {
-	// {{ var c = tplCtx.(*BlockContext) }}
+	{{ var c = tplCtx.(*BlockContext) }}
+    {{ var widget = b.Field().Widget() }}
+	{{ var widgetCtx = widget.GetContextData(ctx, id, name, value, c.Attrs)
+	if len(errors) > 0 {
+		widgetCtx.Set("errors", errors)
+	} }}
+
     <div data-field-block class="form-field field" data-controller="block" data-block-class-path-value="django.blocks.field-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(errors) }>
 
         @widgets.ErrorListComponent("field-block", errors)
 
-        // @renderWithErrors(b.Field().Widget().RenderWithErrors, id, name, value, errors, c.Attrs)
+        @renderWidget(widget, id, name, value, errors, c.Attrs)
     </div>
 }
 
@@ -65,7 +77,7 @@ templ (b *StructBlock) RenderTempl(id, name string, valueMap map[string]interfac
 }
 
 templ (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, telepath string, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context)  {
-    <div data-list-block data-controller="sortable" class="list-block" data-block-class-path-value="django.blocks.list-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(listBlockErrors) }>
+    <div data-list-block data-controller="sortable block" class="list-block" data-block-class-path-value="django.blocks.list-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(listBlockErrors) }>
 
 		<input data-list-block-add type="hidden" name={ fmt.Sprintf("%s-added", name) } value={ strconv.Itoa(len(valueArr)) }>
 
@@ -88,14 +100,14 @@ templ (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, te
 
                     @widgets.LabelComponent("list-block", l.Child.Label(ctx), id)
 
+                    @widgets.HelpTextComponent(
+                        "list-block", l.Child.HelpText(ctx),
+                    )
+
                     {{ var newErrs = listBlockErrors.Get(i) }}
                     <div data-list-block-field-content>
                         @renderForm(ctx, l.Child, id, key, v.Data, newErrs, tplCtx)
                     </div>
-
-                    @widgets.HelpTextComponent(
-                        "list-block", l.Child.HelpText(ctx),
-                    )
         	    </div>
 	    	}
 		</div>
