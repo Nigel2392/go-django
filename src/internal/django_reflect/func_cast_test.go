@@ -615,3 +615,56 @@ func TestWrapWithContextArg(t *testing.T) {
 		t.Fatalf("expected 10, got %d", v)
 	}
 }
+
+func TestWrapWithContextOnly(t *testing.T) {
+	src := func(ctx context.Context) int {
+		if ctx == nil {
+			t.Fatal("expected non nil context")
+		}
+		return 42
+	}
+
+	out, err := django_reflect.CastFunc[func() int](src, django_reflect.WrapWithContext(context.Background()))
+	mustNoErr(t, err)
+
+	v := out()
+	if v != 42 {
+		t.Fatalf("expected 42, got %d", v)
+	}
+}
+
+type IntSaver interface {
+	Save(context.Context) (int, int, error)
+}
+
+type intSaver struct {
+	value int
+}
+
+func (s *intSaver) Save(ctx context.Context) (int, int, error) {
+	if ctx == nil {
+		panic("expected non-nil context")
+	}
+	return s.value, s.value * 2, nil
+}
+
+func TestWrapWithContextMethod(t *testing.T) {
+	var saver IntSaver = &intSaver{value: 21}
+	out, err := django_reflect.Method[func() (int, int, error)](saver, "Save", django_reflect.WrapWithContext(context.Background()))
+	if err != nil {
+		t.Fatal("expected to find method Save")
+	}
+
+	v1, v2, err := out()
+	mustNoErr(t, err)
+
+	if v1 != 21 {
+		t.Fatalf("expected 21, got %d", v1)
+	}
+
+	if v2 != 42 {
+		t.Fatalf("expected 42, got %d", v2)
+	}
+
+	t.Logf("got %d and %d", v1, v2)
+}

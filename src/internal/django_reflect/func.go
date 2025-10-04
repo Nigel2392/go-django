@@ -13,18 +13,20 @@ import (
 type Function = interface{} // func(...interface{}) -> Component
 
 var (
-	ErrTypeMismatch = errors.New("type mismatch")
-	ErrNotFunc      = errors.New("fn must be a function")
-	ErrArgCount     = errors.New("argument count mismatch")
-	ErrReturnCount  = errors.New("return count mismatch")
+	ErrTypeMismatch   = errors.New("type mismatch")
+	ErrNotFunc        = errors.New("fn must be a function")
+	ErrArgCount       = errors.New("argument count mismatch")
+	ErrReturnCount    = errors.New("return count mismatch")
+	ErrNilObject      = errors.New("object is nil")
+	ErrMethodNotFound = errors.New("method not found")
 )
 
 // Method retrieves a method from an object.
 //
 // The generic type parameter must be the type of the method.
-func Method[T Function](obj interface{}, name string, opts ...func(*FuncConfig)) (n T, ok bool) {
+func Method[T Function](obj interface{}, name string, opts ...func(*FuncConfig)) (n T, err error) {
 	if obj == nil {
-		return n, false
+		return n, ErrNilObject
 	}
 
 	var (
@@ -37,22 +39,37 @@ checkValid:
 			v = v.Elem()
 			goto checkValid
 		}
-		return n, false
+		return n, ErrMethodNotFound
 	}
 
 	var fnT = reflect.TypeOf(n)
-	var converted, err = RCastFunc(fnT, m, opts...)
+	converted, err := RCastFunc(fnT, m, opts...)
 	if err != nil {
-		return n, false
+		return n, errors.Wrapf(
+			err, "method %s on %T is not compatible with %v",
+			name, obj, fnT,
+		)
 	}
 
 	var i = converted.Interface()
 	if i == nil {
-		return n, false
+		return n, errors.Wrapf(
+			ErrTypeMismatch,
+			"method %s on %T is nil, cannot cast to %v",
+			name, obj, fnT,
+		)
 	}
 
-	n, ok = i.(T)
-	return n, ok
+	n, ok := i.(T)
+	if !ok {
+		return n, errors.Wrapf(
+			ErrTypeMismatch,
+			"method %s on %T is not of type %v, got %T",
+			name, obj, fnT, i,
+		)
+	}
+
+	return n, nil
 }
 
 func CastFunc[OUT Function](fn any, opts ...func(*FuncConfig)) (OUT, error) {
@@ -91,13 +108,6 @@ func wrapWithContext(ctx context.Context) func(src reflect.Value, srcTyp reflect
 		if dst.NumIn() != 0 && dst.In(0) == reflect.TypeOf((*context.Context)(nil)).Elem() {
 			return src
 		}
-		// wrap the function to add context as the first parameter
-		var function = func(in []reflect.Value) []reflect.Value {
-			var newIn = make([]reflect.Value, 0, len(in)+1)
-			newIn = append(newIn, reflect.ValueOf(ctx))
-			newIn = append(newIn, in...)
-			return src.Call(newIn)
-		}
 
 		var newFuncInputs = make([]reflect.Type, 0, srcTyp.NumIn()-1)
 		for i := 1; i < srcTyp.NumIn(); i++ {
@@ -109,7 +119,15 @@ func wrapWithContext(ctx context.Context) func(src reflect.Value, srcTyp reflect
 			out = append(out, srcTyp.Out(i))
 		}
 
-		return reflect.MakeFunc(reflect.FuncOf(newFuncInputs, out, srcTyp.IsVariadic()), function)
+		// New function that adds context.Context as the first parameter
+		// The new source function returned has one less input parameter
+		// than the original.
+		return reflect.MakeFunc(reflect.FuncOf(newFuncInputs, out, srcTyp.IsVariadic()), func(in []reflect.Value) []reflect.Value {
+			var newIn = make([]reflect.Value, 0, len(in)+1)
+			newIn = append(newIn, reflect.ValueOf(ctx))
+			newIn = append(newIn, in...)
+			return src.Call(newIn)
+		})
 	}
 }
 

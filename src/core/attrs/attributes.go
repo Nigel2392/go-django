@@ -279,7 +279,8 @@ type Function interface{}
 //
 // The generic type parameter must be the type of the method.
 func Method[T Function](obj interface{}, name string) (n T, ok bool) {
-	return django_reflect.Method[T](obj, name)
+	var m, err = django_reflect.Method[T](obj, name)
+	return m, err == nil
 }
 
 func set(d Definitions, name string, value interface{}, force bool) error {
