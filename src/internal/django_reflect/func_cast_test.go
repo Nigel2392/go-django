@@ -2,6 +2,7 @@ package django_reflect_test
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"io"
 	"reflect"
@@ -578,5 +579,39 @@ func TestCast_AnyListErrorReturns(t *testing.T) {
 		t.Fatalf("expected []any return, got %T", v)
 	} else if len(lst) != 2 {
 		t.Fatalf("expected 2 values in []any, got %d", len(lst))
+	}
+}
+
+func TestWrapWithContext(t *testing.T) {
+	src := func(ctx context.Context, a int) int {
+		if ctx == nil {
+			t.Fatal("expected non-nil context")
+		}
+		return a * 2
+	}
+
+	out, err := django_reflect.CastFunc[func(int) int](src, django_reflect.WrapWithContext(context.Background()))
+	mustNoErr(t, err)
+
+	v := out(5)
+	if v != 10 {
+		t.Fatalf("expected 10, got %d", v)
+	}
+}
+
+func TestWrapWithContextArg(t *testing.T) {
+	src := func(ctx context.Context, a int) int {
+		if ctx != nil {
+			t.Fatal("expected nil context")
+		}
+		return a * 2
+	}
+
+	out, err := django_reflect.CastFunc[func(ctx context.Context, a int) int](src, django_reflect.WrapWithContext(context.Background()))
+	mustNoErr(t, err)
+
+	v := out(nil, 5)
+	if v != 10 {
+		t.Fatalf("expected 10, got %d", v)
 	}
 }

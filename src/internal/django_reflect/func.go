@@ -1,6 +1,7 @@
 package django_reflect
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"strings"
@@ -21,7 +22,7 @@ var (
 // Method retrieves a method from an object.
 //
 // The generic type parameter must be the type of the method.
-func Method[T Function](obj interface{}, name string) (n T, ok bool) {
+func Method[T Function](obj interface{}, name string, opts ...func(*FuncConfig)) (n T, ok bool) {
 	if obj == nil {
 		return n, false
 	}
@@ -40,7 +41,7 @@ checkValid:
 	}
 
 	var fnT = reflect.TypeOf(n)
-	var converted, err = RCastFunc(fnT, m)
+	var converted, err = RCastFunc(fnT, m, opts...)
 	if err != nil {
 		return n, false
 	}
@@ -54,19 +55,71 @@ checkValid:
 	return n, ok
 }
 
-func CastFunc[OUT Function](fn any) (OUT, error) {
+func CastFunc[OUT Function](fn any, opts ...func(*FuncConfig)) (OUT, error) {
 	var nT = new(OUT)
 	var outTyp = reflect.TypeOf(nT).Elem()
-	var rVal, err = RCastFunc(outTyp, fn)
+	var rVal, err = RCastFunc(outTyp, fn, opts...)
 	if err != nil {
 		return *nT, err
 	}
 	return rVal.Interface().(OUT), nil
 }
 
+type FuncConfig struct {
+	// wrappers are applied before any validation occurs
+	// this /could/ be used to set default values for parameters
+	// such as context.Context, http.Request, etc.
+	Wrappers []func(src reflect.Value, srcTyp reflect.Type, dst reflect.Type) (newSrc reflect.Value)
+
+	// decorators are applied after validation occurs
+	// you can use decorators to execute code before and after
+	// the function is called. it is also possible
+	// to modify the input and output parameters.
+	Decorators []func(fn reflectFunc) reflectFunc
+}
+
 type reflectFunc = func([]reflect.Value) []reflect.Value
 
-func RCastFunc(out reflect.Type, fn any, decorators ...func(fn reflectFunc) reflectFunc) (reflect.Value, error) {
+func wrapWithContext(ctx context.Context) func(src reflect.Value, srcTyp reflect.Type, dst reflect.Type) reflect.Value {
+	return func(src reflect.Value, srcTyp reflect.Type, dst reflect.Type) reflect.Value {
+		if srcTyp.NumIn() == 0 {
+			return src
+		}
+		if srcTyp.In(0) != reflect.TypeOf((*context.Context)(nil)).Elem() {
+			return src
+		}
+		if dst.NumIn() != 0 && dst.In(0) == reflect.TypeOf((*context.Context)(nil)).Elem() {
+			return src
+		}
+		// wrap the function to add context as the first parameter
+		var function = func(in []reflect.Value) []reflect.Value {
+			var newIn = make([]reflect.Value, 0, len(in)+1)
+			newIn = append(newIn, reflect.ValueOf(ctx))
+			newIn = append(newIn, in...)
+			return src.Call(newIn)
+		}
+
+		var newFuncInputs = make([]reflect.Type, 0, srcTyp.NumIn()-1)
+		for i := 1; i < srcTyp.NumIn(); i++ {
+			newFuncInputs = append(newFuncInputs, srcTyp.In(i))
+		}
+
+		var out = make([]reflect.Type, 0, srcTyp.NumOut())
+		for i := 0; i < srcTyp.NumOut(); i++ {
+			out = append(out, srcTyp.Out(i))
+		}
+
+		return reflect.MakeFunc(reflect.FuncOf(newFuncInputs, out, srcTyp.IsVariadic()), function)
+	}
+}
+
+func WrapWithContext(ctx context.Context) func(*FuncConfig) {
+	return func(c *FuncConfig) {
+		c.Wrappers = append(c.Wrappers, wrapWithContext(ctx))
+	}
+}
+
+func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Value, error) {
 	var (
 		fnType reflect.Type
 		fnVal  reflect.Value
@@ -81,15 +134,27 @@ func RCastFunc(out reflect.Type, fn any, decorators ...func(fn reflectFunc) refl
 		fnVal = reflect.ValueOf(f)
 	}
 
-	if fnType == nil || fnType.Kind() != reflect.Func {
-		return reflect.Value{}, errors.Wrapf(
-			ErrNotFunc, "expected a function, got %T", fn,
-		)
+	var config = &FuncConfig{}
+	for _, opt := range opts {
+		opt(config)
 	}
-	if out == nil || out.Kind() != reflect.Func {
-		return reflect.Value{}, errors.Wrapf(
-			ErrNotFunc, "expected a function, got %T", out,
-		)
+
+	for _, wrap := range config.Wrappers {
+		// validating before wrapping is OK because
+		// we also validate after the loop continues
+		if err := validateIsFunc(fnType); err != nil {
+			return reflect.Value{}, err
+		}
+
+		fnVal = wrap(fnVal, fnType, out)
+		fnType = fnVal.Type()
+	}
+
+	if err := validateIsFunc(fnType); err != nil {
+		return reflect.Value{}, err
+	}
+	if err := validateIsFunc(out); err != nil {
+		return reflect.Value{}, err
 	}
 
 	if fnType == out || fnType.ConvertibleTo(out) {
@@ -261,11 +326,20 @@ func RCastFunc(out reflect.Type, fn any, decorators ...func(fn reflectFunc) refl
 		return callConvertedFunc(out, fnVal, callIn)
 	}
 
-	for _, dec := range decorators {
+	for _, dec := range config.Decorators {
 		function = dec(function)
 	}
 
 	return reflect.MakeFunc(out, function), nil
+}
+
+func validateIsFunc(fnType reflect.Type) error {
+	if fnType != nil && fnType.Kind() == reflect.Func {
+		return nil
+	}
+	return errors.Wrapf(
+		ErrNotFunc, "expected a function, got %T", fnType,
+	)
 }
 
 var _errType = reflect.TypeOf((*error)(nil)).Elem()
