@@ -18,6 +18,42 @@ var (
 	ErrReturnCount  = errors.New("return count mismatch")
 )
 
+// Method retrieves a method from an object.
+//
+// The generic type parameter must be the type of the method.
+func Method[T Function](obj interface{}, name string) (n T, ok bool) {
+	if obj == nil {
+		return n, false
+	}
+
+	var (
+		v = reflect.ValueOf(obj)
+		m = v.MethodByName(name)
+	)
+checkValid:
+	if !m.IsValid() {
+		if v.Kind() == reflect.Ptr {
+			v = v.Elem()
+			goto checkValid
+		}
+		return n, false
+	}
+
+	var fnT = reflect.TypeOf(n)
+	var converted, err = RCastFunc(fnT, m)
+	if err != nil {
+		return n, false
+	}
+
+	var i = converted.Interface()
+	if i == nil {
+		return n, false
+	}
+
+	n, ok = i.(T)
+	return n, ok
+}
+
 func CastFunc[OUT Function](fn any) (OUT, error) {
 	var nT = new(OUT)
 	var outTyp = reflect.TypeOf(nT).Elem()
@@ -28,7 +64,9 @@ func CastFunc[OUT Function](fn any) (OUT, error) {
 	return rVal.Interface().(OUT), nil
 }
 
-func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
+type reflectFunc = func([]reflect.Value) []reflect.Value
+
+func RCastFunc(out reflect.Type, fn any, decorators ...func(fn reflectFunc) reflectFunc) (reflect.Value, error) {
 	var (
 		fnType reflect.Type
 		fnVal  reflect.Value
@@ -96,7 +134,7 @@ func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
 		)
 	}
 
-	var newFunc = reflect.MakeFunc(out, func(in []reflect.Value) []reflect.Value {
+	var function = func(in []reflect.Value) []reflect.Value {
 		var callIn = make([]reflect.Value, 0, len(in))
 	argLoop:
 		for i := 0; i < len(in); i++ {
@@ -221,9 +259,13 @@ func RCastFunc(out reflect.Type, fn any) (reflect.Value, error) {
 		}
 
 		return callConvertedFunc(out, fnVal, callIn)
-	})
+	}
 
-	return newFunc, nil
+	for _, dec := range decorators {
+		function = dec(function)
+	}
+
+	return reflect.MakeFunc(out, function), nil
 }
 
 var _errType = reflect.TypeOf((*error)(nil)).Elem()

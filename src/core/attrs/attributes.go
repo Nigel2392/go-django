@@ -279,36 +279,7 @@ type Function interface{}
 //
 // The generic type parameter must be the type of the method.
 func Method[T Function](obj interface{}, name string) (n T, ok bool) {
-	if obj == nil {
-		return n, false
-	}
-
-	var (
-		v = reflect.ValueOf(obj)
-		m = v.MethodByName(name)
-	)
-checkValid:
-	if !m.IsValid() {
-		if v.Kind() == reflect.Ptr {
-			v = v.Elem()
-			goto checkValid
-		}
-		return n, false
-	}
-
-	var fnT = reflect.TypeOf(n)
-	var converted, err = django_reflect.RCastFunc(fnT, m)
-	if err != nil {
-		return n, false
-	}
-
-	var i = converted.Interface()
-	if i == nil {
-		return n, false
-	}
-
-	n, ok = i.(T)
-	return n, ok
+	return django_reflect.Method[T](obj, name)
 }
 
 func set(d Definitions, name string, value interface{}, force bool) error {
