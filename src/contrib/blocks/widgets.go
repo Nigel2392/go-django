@@ -78,7 +78,7 @@ func (bw *BlockWidget) FormType() string {
 }
 
 func (bw *BlockWidget) IdForLabel(name string) string {
-	return name
+	return "id_" + name
 }
 
 func (bw *BlockWidget) Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error {

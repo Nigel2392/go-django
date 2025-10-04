@@ -46,7 +46,7 @@ func (b *FieldBlock) RenderHTML(ctx context.Context) string {
 	widget.Render(
 		ctx,
 		w,
-		widget.IdForLabel("__PREFIX__"),
+		"__ID__",
 		"__PREFIX__",
 		b.GetDefault(),
 		b.FormField.Attrs(),

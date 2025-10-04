@@ -1,4 +1,4 @@
-import { Block, BlockDef, Config } from '../base';
+import { Block, BlockDef, Config, ConfigBlock, ConfigElement } from '../base';
 
 class ListBlockValue {
     id: string;
@@ -20,9 +20,23 @@ class ListBlock {
     items: any;
 }
 
-class ListBlockDef extends BlockDef {
+type ListBlockElementConfig = ConfigElement & {
+    minNum?: number;
+    maxNum?: number;
+};
 
-    constructor(element: HTMLElement, config: Config) {
+type ListBlockElement = ConfigBlock & {
+    element: ListBlockElementConfig;
+}
+
+type ListBlockConfig = Config & {
+    childBlock: BlockDef;
+    element: ListBlockElement;
+}
+
+class ListBlockDef extends BlockDef<ListBlockConfig> {
+
+    constructor(element: HTMLElement, config: ListBlockConfig) {
         super(element, config);
     }
 

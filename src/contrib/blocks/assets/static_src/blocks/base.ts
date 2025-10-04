@@ -11,23 +11,33 @@
 //    setError(errors: any): void;
 //}
 
-type Config = {
+type ConfigElement = {
     id: string;
-    type: string;
     name: string;
     label: string;
+    helpText: string;
+    required: boolean;
     html: string;
-    errors: any;
-    value: any;
-    block: {
-        element: {
-            id: string;
-            name: string;
-            label: string;
-            helpText: string;
-            html: string;
-        }
-    };
+}
+
+// Static- ish configuration passed to the frontend
+// 
+// This is based on the block definition, without any of the 
+// dynamic values passed, such as id, name, value, errors, etc.
+type ConfigBlock = {
+    element: ConfigElement;
+}
+
+// Actual bound configuration passed to BlockDef
+type Config = {
+    id: string;
+    type?: string;
+    name: string;
+    label?: string;
+    html?: string;
+    errors?: any;
+    value?: any;
+    block: ConfigBlock;
     [key: string]: any;
 }
 
@@ -61,11 +71,11 @@ class Block {
     }
 }
 
-class BlockDef {
-    config: Config;
+class BlockDef<T = Config> {
+    config: T;
     element: HTMLElement;
 
-    constructor(element: HTMLElement, config: Config) {
+    constructor(element: HTMLElement, config: T) {
         this.element = element;
         this.config = config;
     }
@@ -79,4 +89,6 @@ export {
     Block,
     BlockDef,
     Config,
+    ConfigElement,
+    ConfigBlock,
 };

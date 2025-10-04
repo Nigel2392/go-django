@@ -3,7 +3,6 @@ package forms
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"html/template"
 	"runtime/debug"
 	"strings"
@@ -51,12 +50,10 @@ func NewBoundFormField(ctx context.Context, renderer FormRenderer, w Widget, f F
 	}
 
 	var bw = &BoundFormField{
-		FormWidget: w,
-		FormField:  f,
-		FormName:   name,
-		FormID: fmt.Sprintf(
-			"id_%s", w.IdForLabel(name),
-		),
+		FormWidget:  w,
+		FormField:   f,
+		FormName:    name,
+		FormID:      w.IdForLabel(name),
 		FormValue:   value,
 		FormErrors:  errors,
 		FormAttrs:   attrs,

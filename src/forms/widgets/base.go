@@ -68,7 +68,10 @@ func (b *BaseWidget) IsHidden() bool {
 }
 
 func (b *BaseWidget) IdForLabel(id string) string {
-	return id
+	var buf = make([]byte, 0, len(id)+3)
+	buf = append(buf, "id_"...)
+	buf = append(buf, id...)
+	return string(buf)
 }
 
 func (b *BaseWidget) ValueToGo(value interface{}) (interface{}, error) {
