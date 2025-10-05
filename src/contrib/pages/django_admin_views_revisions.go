@@ -599,18 +599,18 @@ var PagePreviewHandler = &GenericPreviewHandler[Page]{
 	SessionKeyPrefix: "page_preview_",
 	URLKey:           PageIDVariableName,
 	Expiration:       10 * time.Minute,
+	GetFormFunc: func(h *GenericPreviewHandler[Page], r *http.Request, instance Page, oldData url.Values) (forms.Form, error) {
+		return PageEditForm(r, instance), nil
+	},
+	ServePreview: func(h *GenericPreviewHandler[Page], w http.ResponseWriter, original, previewReq *http.Request, instance Page) {
+		servePageView(w, previewReq, instance)
+	},
 	BuildPreviewRequest: func(h *GenericPreviewHandler[Page], r *http.Request, instance Page) (*http.Request, error) {
 		var cloned = r.Clone(context.WithValue(
 			r.Context(), previewContextKey{}, struct{}{},
 		))
 		cloned.URL.Path = URLPath(instance)
 		return cloned, nil
-	},
-	GetFormFunc: func(h *GenericPreviewHandler[Page], r *http.Request, instance Page, oldData url.Values) (forms.Form, error) {
-		return PageEditForm(r, instance), nil
-	},
-	ServePreview: func(h *GenericPreviewHandler[Page], w http.ResponseWriter, original, previewReq *http.Request, instance Page) {
-		servePageView(w, previewReq, instance)
 	},
 	GetObjectFunc: func(h *GenericPreviewHandler[Page], r *http.Request, pk string) (Page, error) {
 		var objRow, err = NewPageQuerySet().

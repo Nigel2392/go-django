@@ -84,15 +84,19 @@ func (b *ListBlock) ValueOmittedFromData(ctx context.Context, data url.Values, f
 		return true
 	}
 
+	/*
+
+		this should be improved in the future, but for now we just loop
+		until we find a missing key, which indicates the end of the list
+
+	*/
 	var omitted = true
-	for i := 0; ; i++ {
+	for i := 0; i < 100; i++ {
 		var key = fmt.Sprintf("%s-%d", name, i)
-		if data.Has(key) {
+		if !b.Child.ValueOmittedFromData(ctx, data, files, key) {
 			omitted = false
 			break
 		}
-
-		//TODO: this can cause an infinite loop
 	}
 	return omitted
 }

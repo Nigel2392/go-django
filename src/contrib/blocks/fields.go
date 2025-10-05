@@ -28,17 +28,21 @@ func BlockField(block Block, opts ...func(fields.Field)) *BlockFormField {
 }
 
 func (bw *BlockFormField) ValueToGo(value interface{}) (interface{}, error) {
-	return bw.Block.ValueToGo(value)
+	var v, err = bw.Block.ValueToGo(value)
+	return v, err
 }
 
 func (bw *BlockFormField) ValueToForm(value interface{}) interface{} {
 	return bw.Block.ValueToForm(value)
+
 }
 
 func (bw *BlockFormField) Validate(ctx context.Context, value interface{}) []error {
-	return bw.Block.Validate(ctx, value)
+	var errs = bw.Block.Validate(ctx, value)
+	return errs
 }
 
 func (bw *BlockFormField) Clean(ctx context.Context, value interface{}) (interface{}, error) {
-	return bw.Block.Clean(ctx, value)
+	var v, err = bw.Block.Clean(ctx, value)
+	return v, err
 }

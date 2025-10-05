@@ -94,11 +94,13 @@ func (bw *BlockWidget) ValueToForm(value interface{}) interface{} {
 }
 
 func (bw *BlockWidget) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
-	return bw.BlockDef.ValueOmittedFromData(ctx, data, files, name)
+	var omitted = bw.BlockDef.ValueOmittedFromData(ctx, data, files, name)
+	return omitted
 }
 
 func (bw *BlockWidget) ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
-	return bw.BlockDef.ValueFromDataDict(ctx, data, files, name)
+	var v, err = bw.BlockDef.ValueFromDataDict(ctx, data, files, name)
+	return v, err
 }
 
 func (bw *BlockWidget) Validate(ctx context.Context, value interface{}) []error {
