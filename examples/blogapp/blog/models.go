@@ -1,6 +1,7 @@
 package blog
 
 import (
+	"fmt"
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -80,16 +81,25 @@ func (b *BlogImage) UniqueTogether() [][]string {
 }
 
 func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
-	var block = blocks.NewListBlock(
-		blocks.CharBlock(
-			blocks.WithLabel[*blocks.FieldBlock](
-				trans.S("Text"),
-			),
-			blocks.WithHelpText[*blocks.FieldBlock](
-				trans.S("Some text for this image."),
-			),
+	var sb = blocks.NewStructBlock()
+	sb.AddField("Caption", blocks.CharBlock(
+		blocks.WithLabel[*blocks.FieldBlock](
+			trans.S("Text"),
 		),
-	)
+		blocks.WithHelpText[*blocks.FieldBlock](
+			trans.S("Some text for this image."),
+		),
+	))
+	sb.AddField("Attribution", blocks.CharBlock(
+		blocks.WithLabel[*blocks.FieldBlock](
+			trans.S("Attribution"),
+		),
+		blocks.WithHelpText[*blocks.FieldBlock](
+			trans.S("Some text for the attribution."),
+		),
+	))
+
+	var block = blocks.NewListBlock(sb)
 
 	block.Min = 1
 	block.Max = 3
@@ -153,6 +163,8 @@ func (b *BlogPage) Reference() *pages.PageNode {
 }
 
 func (b *BlogPage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+
+	fmt.Printf("Serving blog page %q from %s\n", b.Page.Title, r.URL.Path)
 
 	// Create a new RequestContext
 	// Add the page object to the context

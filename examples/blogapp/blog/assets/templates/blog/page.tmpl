@@ -17,7 +17,7 @@
         <img src="{{ url "images:serve" .Data.blog_page.Thumbnail.Path }}" alt="{{ .Data.blog_page.Thumbnail.Title }}">
         {{ end }}
 
-        {{ if .Data.blog_page.User }}
+        {{ if and .Data.blog_page.User .Data.blog_page.User.Email }}
         <p>By {{ .Data.blog_page.User.Email | toString }}</p>
         {{ end }}
 

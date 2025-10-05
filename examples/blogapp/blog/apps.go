@@ -124,7 +124,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 
 		pages.Register(&pages.PageDefinition{
 			Prefetch: admin.Prefetch{
-				SelectRelated: []string{"User", "Thumbnail"},
+				SelectRelated: []string{"User", "Thumbnail", "Document"},
 			},
 			ContentTypeDefinition: &contenttypes.ContentTypeDefinition{
 				GetLabel:       trans.S("Blog Page"),

@@ -39,6 +39,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/permissions"
+	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"
 	"github.com/Nigel2392/goldcrest"
 	"github.com/Nigel2392/mux"
@@ -612,10 +613,30 @@ func NewAppConfig() django.AppConfig {
 			pageHandler(listRevisionHandler), "revisions",
 		)
 
+		// Preview revision
+		revisionsRoute.Get(
+			"/preview",
+			views.Serve(PagePreviewHandler),
+			"preview",
+		)
+
+		// Revision preview
+		revisionsRoute.Get(
+			"/latest/preview",
+			views.Serve(PageRevisionPreviewHandler),
+			"latest_revision_preview",
+		)
+
 		// Revision detail
 		revisionsRoute.Any(
 			"/<<revision_id>>",
 			pageHandler(revisionDetailHandler), "detail",
+		)
+
+		revisionsRoute.Get(
+			"/<<revision_id>>/preview",
+			views.Serve(PageRevisionPreviewHandler),
+			"revision_preview",
 		)
 
 		// Compare revisions to current page state

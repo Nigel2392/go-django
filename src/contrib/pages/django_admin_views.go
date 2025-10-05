@@ -961,25 +961,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		"failed to retrieve specific instance from revision: %v", err,
 	)
 
-	var fieldDefs = instance.FieldDefs()
-	var definition = DefinitionForObject(instance)
-	var panels []admin.Panel
-	if definition == nil || definition.EditPanels == nil {
-		panels = make([]admin.Panel, 0, fieldDefs.Len())
-		for _, def := range fieldDefs.Fields() {
-			var formField = def.FormField()
-			if formField == nil {
-				continue
-			}
-
-			panels = append(panels, admin.FieldPanel(def.Name()))
-		}
-	} else {
-		panels = definition.EditPanels(r, instance)
-	}
-
-	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), instance)
-	var adminForm = admin.NewAdminForm[*modelforms.BaseModelForm[attrs.Definer]](r, form, panels...)
+	var adminForm = PageEditForm(r, instance)
 	adminForm.Load()
 
 	if err := r.ParseForm(); err != nil {
@@ -1136,7 +1118,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
 			var initial = make(map[string]interface{})
-			for _, field := range fieldDefs.Fields() {
+			for _, field := range instance.FieldDefs().Fields() {
 				initial[field.Name()] = field.GetValue()
 			}
 			return initial

@@ -96,6 +96,10 @@ type PageComponentView interface {
 
 func PageServeView(w http.ResponseWriter, r *http.Request) {
 	var pathParts = mux.Vars(r).GetAll("*")
+	if pathParts == nil {
+		pathParts = []string{}
+	}
+
 	var requestContext, site, err = SiteForRequest(r)
 	var req = r.WithContext(requestContext)
 	if err != nil {
@@ -154,10 +158,16 @@ func PageServeView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	servePageView(w, req, specific)
+}
+
+func servePageView(w http.ResponseWriter, req *http.Request, specific Page) {
+	var err error
+	var page = specific.Reference()
 	var definition = DefinitionForType(page.ContentType)
 	if definition == nil {
 		err = errors.NotImplemented.Wrap("No definition found for page")
-		pageNotFound(w, req, err, pathParts)
+		pageNotFound(w, req, err, nil)
 		return
 	}
 
@@ -165,7 +175,7 @@ func PageServeView(w http.ResponseWriter, r *http.Request) {
 	var handler, ok = specific.(http.Handler)
 	if view == nil && !ok {
 		err = errors.NotImplemented.Wrap("No view found for page")
-		pageNotFound(w, req, err, pathParts)
+		pageNotFound(w, req, err, nil)
 		return
 	}
 
@@ -243,6 +253,13 @@ renderView:
 func pageNotFound(_ http.ResponseWriter, _ *http.Request, err error, pathParts []string) {
 	if err != nil {
 		logger.Errorf("Error retrieving page: %v (%v)", err, pathParts)
+	}
+	if pathParts == nil {
+		except.Fail(
+			http.StatusNotFound,
+			"Page not found",
+		)
+		return
 	}
 	except.Fail(
 		http.StatusNotFound,

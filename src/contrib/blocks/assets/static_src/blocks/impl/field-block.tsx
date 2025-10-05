@@ -29,10 +29,6 @@ class FieldBlock extends Block {
            </div>
         )
 
-        this.helpText = (
-              <div class="field-help">{blockDef.config.block.element.helpText}</div>
-          )
-
         const inputHtml = toElement(blockDef.config.block.element.html.replace(
            "__PREFIX__", blockDef.config.name,
         ).replace(
@@ -40,12 +36,8 @@ class FieldBlock extends Block {
         ))
 
         this.input = inputHtml.querySelector('input');
-        placeHolder.appendChild(this.errorList);
         placeHolder.appendChild(this.labelWrapper);
-        placeHolder.appendChild(this.helpText);
-        placeHolder.appendChild(
-           <div class="field-input">{ inputHtml }</div>
-        );
+        placeHolder.appendChild(this.errorList);
 
         if (blockDef.config.block.element.helpText) {
            placeHolder.appendChild(
@@ -53,6 +45,10 @@ class FieldBlock extends Block {
            );
         }
         
+        placeHolder.appendChild(
+           <div class="field-input">{ inputHtml }</div>
+        );
+
         if (blockDef.config.errors && blockDef.config.errors.length) {
            this.setError(blockDef.config.errors);
         }

@@ -14,6 +14,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/Nigel2392/go-django/src/forms/modelforms"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/mux"
 )
@@ -202,4 +203,27 @@ func addNextUrl(current string, next string) string {
 	q.Set("next", next)
 	u.RawQuery = q.Encode()
 	return u.String()
+}
+
+func PageEditForm(r *http.Request, instance Page) *admin.AdminForm[*modelforms.BaseModelForm[attrs.Definer], attrs.Definer] {
+	var fieldDefs = instance.FieldDefs()
+	var definition = DefinitionForObject(instance)
+	var panels []admin.Panel
+	if definition == nil || definition.EditPanels == nil {
+		panels = make([]admin.Panel, 0, fieldDefs.Len())
+		for _, def := range fieldDefs.Fields() {
+			var formField = def.FormField()
+			if formField == nil {
+				continue
+			}
+
+			panels = append(panels, admin.FieldPanel(def.Name()))
+		}
+	} else {
+		panels = definition.EditPanels(r, instance)
+	}
+
+	var form = modelforms.NewBaseModelForm[attrs.Definer](r.Context(), instance)
+	var adminForm = admin.NewAdminForm(r, form, panels...)
+	return adminForm
 }
