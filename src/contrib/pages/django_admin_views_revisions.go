@@ -594,51 +594,18 @@ func IsPreviewContext(ctx context.Context) bool {
 	return ok
 }
 
-func revisionPreviewHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinition, m *admin.ModelDefinition, p *PageNode) {
-	if !permissions.HasObjectPermission(r, p, "pages:edit") {
-		admin.ReLogin(w, r, r.URL.Path)
-		return
-	}
-
-	var latestRevisionRow, err = revisions.NewRevisionQuerySet().
-		WithContext(r.Context()).
-		ForObjects(p).
-		Filter("CreatedAt", p.LatestRevisionCreatedAt).
-		OrderBy("-CreatedAt").
-		Get()
-	except.Assert(
-		err == nil, http.StatusInternalServerError,
-		"failed to retrieve latest revision for page: %v", err,
-	)
-
-	var latestRevision = latestRevisionRow.Object
-	instance, err := (*revisions.TypedRevision[Page])(latestRevision).AsObject(r.Context())
-	except.Assert(
-		err == nil, http.StatusInternalServerError,
-		"failed to retrieve specific instance from latest revision: %v", err,
-	)
-
-	specific, err := Specific(r.Context(), instance.Reference(), true)
-	if err != nil {
-		except.Fail(http.StatusInternalServerError, err)
-		return
-	}
-
-	var newReq = r.Clone(context.WithValue(
-		r.Context(),
-		previewContextKeyInstance,
-		struct{}{},
-	))
-	newReq.URL.Path = URLPath(specific)
-
-	servePageView(w, newReq, specific)
-}
-
 var PagePreviewHandler = &GenericPreviewHandler[Page]{
 	Model:            &PageNode{},
 	SessionKeyPrefix: "page_preview_",
 	URLKey:           PageIDVariableName,
 	Expiration:       10 * time.Minute,
+	BuildPreviewRequest: func(h *GenericPreviewHandler[Page], r *http.Request, instance Page) (*http.Request, error) {
+		var cloned = r.Clone(context.WithValue(
+			r.Context(), previewContextKey{}, struct{}{},
+		))
+		cloned.URL.Path = URLPath(instance)
+		return cloned, nil
+	},
 	GetFormFunc: func(h *GenericPreviewHandler[Page], r *http.Request, instance Page, oldData url.Values) (forms.Form, error) {
 		return PageEditForm(r, instance), nil
 	},
