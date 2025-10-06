@@ -43,12 +43,12 @@ type Config = {
 }
 
 class BoundBlock {
-    blockDef: Block;
-    prefix: String;
+    block: Block;
+    name: String;
 
     constructor(blockDef: Block, prefix: String) {
-        this.blockDef = blockDef;
-        this.prefix = prefix;
+        this.block = blockDef;
+        this.name = prefix;
     }
 
     getLabel(): string {
@@ -81,7 +81,7 @@ class Block<T = Config> {
         this.config = config;
     }
 
-    render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): BoundBlock {
+    render(root: HTMLElement, name: String, initialState: any, initialError: any): BoundBlock {
         throw new Error("Method not implemented.");
     }
 }

@@ -40,7 +40,7 @@ class BlockController extends ClassCallController<BlockElement, BoundBlock> {
         const block: Block = new klass(this.element, definition)
         const bound = block.render(
             this.element,
-            block.config.block.element.name,
+            block.config.name,
             block.config.value,
             block.config.errors,
         )

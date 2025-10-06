@@ -24,16 +24,15 @@ class BoundStructBlock extends BoundBlock {
     wrapper: HTMLElement;
     childBlocks: { [key: string]: BoundBlock };
 
-    constructor(blockDef: Block, placeHolder: HTMLElement, prefix: String, initialState: any, initialError: any) {
-        super(blockDef, prefix);
+    constructor(block: Block, placeHolder: HTMLElement, prefix: String, initialState: any, initialError: any) {
+        super(block, prefix);
 
         this.childBlocks = {};
 
-        for (let i = 0; i <blockDef.config.childBlockDefs.length; i++) {
-            const childBlock = blockDef.config.childBlockDefs[i];
-            const key = this.prefix + '-' + childBlock.name;
+        for (let i = 0; i <block.config.childBlockDefs.length; i++) {
+            const childBlock = block.config.childBlockDefs[i];
+            const key = this.name + '-' + childBlock.name;
 
-            console.log("StructBlock constructor", childBlock, key);
             
             //const childDom = (
             //    <div data-struct-field data-contentpath={ key }>
@@ -59,8 +58,8 @@ class BoundStructBlock extends BoundBlock {
     }
 
     getLabel(): string {
-        for (let i = 0; i < this.blockDef.config.childBlocks.length; i++) {
-            const block = this.blockDef.config.childBlocks[i];
+        for (let i = 0; i < this.block.config.childBlocks.length; i++) {
+            const block = this.block.config.childBlocks[i];
             let label = block.getLabel();
             if (label) {
                 return label;
@@ -102,15 +101,11 @@ class BoundStructBlock extends BoundBlock {
 }
 
 class StructBlock extends Block {
-    render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): any {
-        console.log("StructBlockDef render 1", placeholder);
-        console.log("StructBlockDef render 2", prefix);
-        console.log("StructBlockDef render 3", initialState);
-        console.log("StructBlockDef render 4", initialError);
+    render(root: HTMLElement, name: String, initialState: any, initialError: any): any {
         return new BoundStructBlock(
             this,
-            placeholder,
-            prefix,
+            root,
+            name,
             initialState,
             initialError,
         );

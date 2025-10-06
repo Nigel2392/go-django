@@ -1,7 +1,7 @@
 import { BlockController } from "./blocks/controller";
-import { BlockDef } from "./blocks/base";
+import { Block } from "./blocks/base";
 
-type BlockConstructor = new (...args: any) => BlockDef;
+type BlockConstructor = new (...args: any) => Block;
 
 class BlockApp {
     blocks: Record<string, BlockConstructor> = {};
@@ -15,7 +15,7 @@ class BlockApp {
         this.blocks[identifier] = blockDefinition
     }
 
-    initBlock(...args: any): BlockDef {
+    initBlock(...args: any): Block {
         const blockDef = this.blocks[args.blockType];
         return new blockDef(...args);
     }

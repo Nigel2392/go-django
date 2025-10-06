@@ -14,8 +14,9 @@ class BoundFieldBlock extends BoundBlock {
     inputWrapper: HTMLElement;
     input: HTMLInputElement;
 
-    constructor(blockDef: Block, placeHolder: HTMLElement, prefix: String, initialState: any, initialError: any) {
-        super(blockDef, prefix);
+    constructor(block: Block, placeHolder: HTMLElement, name: String, initialState: any, initialError: any) {
+        console.log("FieldBlock constructor", block, name, initialState, initialError);
+        super(block, name);
 
         this.errorList = (
            <ul class="field-errors"></ul>
@@ -23,23 +24,23 @@ class BoundFieldBlock extends BoundBlock {
 
         this.labelWrapper = (
            <div class="field-label">
-               <label for={blockDef.config.id}>{blockDef.config.block.element.label}</label>
+               <label for={block.config.id}>{block.config.block.element.label}</label>
            </div>
         )
 
-        const inputHtml = toElement(blockDef.config.block.element.html.replace(
-           "__PREFIX__", blockDef.config.name,
+        const inputHtml = toElement(block.config.block.element.html.replace(
+           "__PREFIX__", block.config.name,
         ).replace(
-           "__ID__", blockDef.config.id,
+           "__ID__", block.config.id,
         ))
 
         this.input = inputHtml.querySelector('input');
         placeHolder.appendChild(this.labelWrapper);
         placeHolder.appendChild(this.errorList);
 
-        if (blockDef.config.block.element.helpText) {
+        if (block.config.block.element.helpText) {
            placeHolder.appendChild(
-               <div class="field-help">{blockDef.config.block.element.helpText}</div>
+               <div class="field-help">{block.config.block.element.helpText}</div>
            );
         }
         
@@ -47,8 +48,8 @@ class BoundFieldBlock extends BoundBlock {
            <div class="field-input">{ inputHtml }</div>
         );
 
-        if (blockDef.config.errors && blockDef.config.errors.length) {
-           this.setError(blockDef.config.errors);
+        if (block.config.errors && block.config.errors.length) {
+           this.setError(block.config.errors);
         }
     }
 
@@ -97,11 +98,11 @@ class FieldBlock extends Block {
         // console.log("FieldBlockDef constructor", element, config);
     }
 
-    render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): any {
+    render(root: HTMLElement, name: String, initialState: any, initialError: any): any {
         return new BoundFieldBlock(
             this,
-            placeholder,
-            prefix,
+            root,
+            name,
             initialState,
             initialError,
         );

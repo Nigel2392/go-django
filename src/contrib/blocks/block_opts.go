@@ -56,3 +56,11 @@ func WithHelpText[T any](text any) OptFunc[T] {
 		})
 	}
 }
+
+func WithDefault[T any](def interface{}) OptFunc[T] {
+	return func(t T) {
+		reflectSetter(t, "Default", func() interface{} {
+			return def
+		})
+	}
+}

@@ -89,6 +89,7 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 		blocks.WithHelpText[*blocks.FieldBlock](
 			trans.S("Some text for this image."),
 		),
+		blocks.WithDefault[*blocks.FieldBlock]("Default caption text"),
 	))
 	sb.AddField("Attribution", blocks.CharBlock(
 		blocks.WithLabel[*blocks.FieldBlock](
@@ -97,11 +98,12 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 		blocks.WithHelpText[*blocks.FieldBlock](
 			trans.S("Some text for the attribution."),
 		),
+		blocks.WithDefault[*blocks.FieldBlock]("Default attribution text"),
 	))
 
 	var block = blocks.NewListBlock(sb)
 
-	block.Min = 1
+	block.Min = 2
 	block.Max = 3
 
 	return block

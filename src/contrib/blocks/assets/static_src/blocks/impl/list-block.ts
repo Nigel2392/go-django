@@ -13,8 +13,8 @@ class ListBlockValue {
 }
 
 class BoundListBlock extends BoundBlock {
-    constructor(blockDef: Block, prefix: String, items: any) {
-        super(blockDef, prefix);
+    constructor(block: Block, root: HTMLElement, prefix: String, initialState: any, initialError: any) {
+        super(block, prefix);
     }
 
     items: any;
@@ -35,13 +35,18 @@ type ListBlockConfig = Config & {
 }
 
 class ListBlock extends Block<ListBlockConfig> {
-
     constructor(element: HTMLElement, config: ListBlockConfig) {
         super(element, config);
     }
 
-    render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): any {
-        return new BoundListBlock(this, prefix, initialState);
+    render(root: HTMLElement, name: String, initialState: any, initialError: any): any {
+        return new BoundListBlock(
+            this,
+            root,
+            name,
+            initialState,
+            initialError,
+        );
     }
 
     items: any;
