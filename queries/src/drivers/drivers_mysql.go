@@ -2,7 +2,9 @@ package drivers
 
 import (
 	"context"
+	"fmt"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/go-sql-driver/mysql"
@@ -108,6 +110,53 @@ func mySQLDatabaseError(err error) errors.DatabaseError {
 
 const MYSQL_DRIVER_NAME = "mysql"
 
+func explainMySQL(ctx context.Context, q DB, query string, args []any) (string, error) {
+	var explainQuery = "EXPLAIN " + query
+	var rows, err = q.QueryContext(ctx, explainQuery, args...)
+	if err != nil {
+		return "", err
+	}
+
+	defer rows.Close()
+	var sb strings.Builder
+	var tabwriter = tabwriter.NewWriter(&sb, 4, 4, 2, ' ', 0)
+	columns, err := rows.Columns()
+	if err != nil {
+		return "", err
+	}
+	_, _ = tabwriter.Write([]byte(strings.Join(columns, "\t") + "\n"))
+	var values = make([]any, len(columns))
+	var valuePtrs = make([]any, len(columns))
+	for i := range values {
+		valuePtrs[i] = &values[i]
+	}
+	for rows.Next() {
+		if err := rows.Scan(valuePtrs...); err != nil {
+			return "", err
+		}
+		var strs = make([]string, len(columns))
+		for i, val := range values {
+			if val == nil {
+				strs[i] = "NULL"
+			} else {
+				var s string
+				switch v := val.(type) {
+				case []byte:
+					s = string(v)
+				case string:
+					s = v
+				default:
+					s = fmt.Sprintf("%v", v)
+				}
+				strs[i] = s
+			}
+		}
+		_, _ = tabwriter.Write([]byte(strings.Join(strs, "\t") + "\n"))
+	}
+	tabwriter.Flush()
+	return sb.String(), nil
+}
+
 func init() {
 	Register(MYSQL_DRIVER_NAME, Driver{
 		SupportsReturning: SupportsReturningLastInsertId,
@@ -116,5 +165,8 @@ func init() {
 			return OpenSQL(MYSQL_DRIVER_NAME, drv, dsn, opts...)
 		},
 		BuildDatabaseError: mySQLDatabaseError,
+		ExplainQuery: func(ctx context.Context, q DB, query string, args []any) (string, error) {
+			return explainMySQL(ctx, q, query, args)
+		},
 	})
 }

@@ -65,7 +65,7 @@ func (c *queryWrapperPGX[T]) Unwrap() any {
 }
 
 func (c *queryWrapperPGX[T]) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
-	var rows, err = c.conn.Query(ctx, query, args...)
+	var rows, err = ContextQueryExec(ctx, c.d.Name, query, args, Q_QUERY, c.conn.Query)
 	LogSQL(ctx, fmt.Sprintf("%T", c.conn), err, query, args...)
 	if err != nil {
 		return nil, databaseError(c.d, err)
@@ -74,7 +74,7 @@ func (c *queryWrapperPGX[T]) QueryContext(ctx context.Context, query string, arg
 }
 
 func (c *queryWrapperPGX[T]) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	result, err := c.conn.Exec(ctx, query, args...)
+	result, err := ContextQueryExec(ctx, c.d.Name, query, args, Q_EXEC, c.conn.Exec)
 	LogSQL(ctx, fmt.Sprintf("%T", c.conn), err, query, args...)
 	if err != nil {
 		return nil, databaseError(c.d, err)
@@ -83,12 +83,14 @@ func (c *queryWrapperPGX[T]) ExecContext(ctx context.Context, query string, args
 }
 
 func (c *queryWrapperPGX[T]) QueryRowContext(ctx context.Context, query string, args ...any) SQLRow {
-	var row = c.conn.QueryRow(ctx, query, args...)
-	if canErr, ok := row.(interface{ Err() error }); ok {
-		LogSQL(ctx, fmt.Sprintf("%T", c.conn), canErr.Err(), query, args...)
-	} else {
-		LogSQL(ctx, fmt.Sprintf("%T", c.conn), nil, query, args...)
-	}
+	var row, err = ContextQueryExec(ctx, c.d.Name, query, args, Q_QUERYROW, func(ctx context.Context, query string, args ...any) (pgx.Row, error) {
+		var res = c.conn.QueryRow(ctx, query, args...)
+		if canErr, ok := res.(interface{ Err() error }); ok {
+			return res, canErr.Err()
+		}
+		return res, nil
+	})
+	LogSQL(ctx, fmt.Sprintf("%T", c.conn), err, query, args...)
 	return &pgxRow{Row: row, d: c.d}
 }
 
@@ -102,8 +104,12 @@ func (c *queryWrapperPGX[T]) SendBatch(ctx context.Context, batch *pgx.Batch) pg
 		sb.WriteString(item.SQL)
 		args = append(args, item.Arguments...)
 	}
-	LogSQL(ctx, fmt.Sprintf("%T.SendBatch", c.conn), nil, sb.String(), args...)
-	return c.conn.SendBatch(ctx, batch)
+	var queryStr = sb.String()
+	LogSQL(ctx, fmt.Sprintf("%T.SendBatch", c.conn), nil, queryStr, args...)
+	var results, _ = ContextQueryExec(ctx, c.d.Name, queryStr, args, Q_QUERY|Q_MULTIPLE, func(ctx context.Context, query string, args ...any) (pgx.BatchResults, error) {
+		return c.conn.SendBatch(ctx, batch), nil
+	})
+	return results
 }
 
 type connWrapperPGX[T pgxConn] struct {
@@ -115,7 +121,11 @@ func (c *connWrapperPGX[T]) Close() error {
 }
 
 func (c *connWrapperPGX[T]) Ping(ctx context.Context) error {
-	return databaseError(c.d, c.conn.Ping(ctx))
+	_, err := ContextQueryExec(ctx, c.d.Name, "", nil, Q_PING, func(ctx context.Context, query string, args ...any) (any, error) {
+		return nil, c.conn.Ping(ctx)
+	})
+	LogSQL(ctx, fmt.Sprintf("%T", c.conn), err, "PING")
+	return databaseError(c.d, err)
 }
 
 func (c *connWrapperPGX[T]) Driver() driver.Driver {
@@ -123,7 +133,9 @@ func (c *connWrapperPGX[T]) Driver() driver.Driver {
 }
 
 func (c *connWrapperPGX[T]) Begin(ctx context.Context) (Transaction, error) {
-	var tx, err = c.conn.Begin(ctx)
+	var tx, err = ContextQueryExec(ctx, c.d.Name, "BEGIN", nil, Q_TSTART, func(ctx context.Context, query string, args ...any) (pgx.Tx, error) {
+		return c.conn.Begin(ctx)
+	})
 	LogSQL(ctx, fmt.Sprintf("%T", c.conn), err, "BEGIN")
 	if err != nil {
 		return nil, databaseError(c.d, err)
@@ -166,14 +178,18 @@ func (p *pgxTx) Finished() bool {
 
 func (p *pgxTx) Commit(ctx context.Context) error {
 	defer func() { p.finished = true }()
-	var err = p.conn.Commit(p.ctx)
+	var _, err = ContextQueryExec(ctx, p.d.Name, "COMMIT", nil, Q_TCOMMIT, func(ctx context.Context, query string, args ...any) (any, error) {
+		return nil, p.conn.Commit(ctx)
+	})
 	LogSQL(ctx, fmt.Sprintf("%T", p.conn), err, "COMMIT")
 	return databaseError(p.d, err)
 }
 
 func (p *pgxTx) Rollback(ctx context.Context) error {
 	defer func() { p.finished = true }()
-	var err = p.conn.Rollback(p.ctx)
+	var _, err = ContextQueryExec(ctx, p.d.Name, "ROLLBACK", nil, Q_TROLLBACK, func(ctx context.Context, query string, args ...any) (any, error) {
+		return nil, p.conn.Rollback(ctx)
+	})
 	if err == nil || !errors.Is(err, pgx.ErrTxClosed) {
 		LogSQL(ctx, fmt.Sprintf("%T", p.conn), err, "ROLLBACK")
 	}

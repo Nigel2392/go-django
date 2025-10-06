@@ -51,14 +51,17 @@ func (d *queryWrapper[T]) Unwrap() any {
 }
 
 func (d *queryWrapper[T]) QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error) {
-	var res, err = d.conn.QueryContext(ctx, query, args...)
+	var res, err = ContextQueryExec(ctx, d.d.Name, query, args, Q_QUERY, d.conn.QueryContext)
 	LogSQL(ctx, "sql.DB", err, query, args...)
 	return &sqlRowsWrapper{Rows: res, d: d.d}, databaseError(d.d, err)
 }
 
 func (d *queryWrapper[T]) QueryRowContext(ctx context.Context, query string, args ...any) SQLRow {
-	var res = d.conn.QueryRowContext(ctx, query, args...)
-	LogSQL(ctx, "sql.DB", res.Err(), query, args...)
+	var res, err = ContextQueryExec(ctx, d.d.Name, query, args, Q_QUERYROW, func(ctx context.Context, query string, args ...any) (*sql.Row, error) {
+		r := d.conn.QueryRowContext(ctx, query, args...)
+		return r, r.Err()
+	})
+	LogSQL(ctx, "sql.DB", err, query, args...)
 	return &sqlRowWrapper{
 		Row: res,
 		d:   d.d,
@@ -66,7 +69,7 @@ func (d *queryWrapper[T]) QueryRowContext(ctx context.Context, query string, arg
 }
 
 func (d *queryWrapper[T]) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
-	var res, err = d.conn.ExecContext(ctx, query, args...)
+	var res, err = ContextQueryExec(ctx, d.d.Name, query, args, Q_EXEC, d.conn.ExecContext)
 	LogSQL(ctx, "sql.DB", err, query, args...)
 	return res, databaseError(d.d, err)
 }
@@ -76,7 +79,9 @@ type dbWrapper struct {
 }
 
 func (d *dbWrapper) Begin(ctx context.Context) (Transaction, error) {
-	var tx, err = d.queryWrapper.conn.BeginTx(ctx, nil)
+	var tx, err = ContextQueryExec(ctx, d.d.Name, "BEGIN", nil, Q_TSTART, func(ctx context.Context, query string, args ...any) (*sql.Tx, error) {
+		return d.queryWrapper.conn.BeginTx(ctx, nil)
+	})
 	LogSQL(ctx, "sql.DB", err, "BEGIN")
 	if err != nil {
 		return nil, databaseError(d.d, err)
@@ -87,8 +92,11 @@ func (d *dbWrapper) Begin(ctx context.Context) (Transaction, error) {
 }
 
 func (d *dbWrapper) Ping(ctx context.Context) error {
-	LogSQL(ctx, "sql.DB", nil, "PING")
-	return databaseError(d.d, d.queryWrapper.conn.PingContext(ctx))
+	_, err := ContextQueryExec(ctx, d.d.Name, "PING", nil, Q_PING, func(ctx context.Context, query string, args ...any) (any, error) {
+		return nil, d.queryWrapper.conn.PingContext(ctx)
+	})
+	LogSQL(ctx, "sql.DB", err, "PING")
+	return databaseError(d.d, err)
 }
 
 func (d *dbWrapper) Driver() driver.Driver {
@@ -110,14 +118,18 @@ func (p *txWrapper) Finished() bool {
 
 func (t *txWrapper) Commit(ctx context.Context) error {
 	defer func() { t.finished = true }()
-	var err = t.queryWrapper.conn.Commit()
+	var _, err = ContextQueryExec(ctx, t.d.Name, "COMMIT", nil, Q_TCOMMIT, func(ctx context.Context, query string, args ...any) (any, error) {
+		return nil, t.queryWrapper.conn.Commit()
+	})
 	LogSQL(ctx, "sql.Tx", err, "COMMIT")
 	return databaseError(t.d, err)
 }
 
 func (t *txWrapper) Rollback(ctx context.Context) error {
 	defer func() { t.finished = true }()
-	var err = t.queryWrapper.conn.Rollback()
+	var _, err = ContextQueryExec(ctx, t.d.Name, "ROLLBACK", nil, Q_TROLLBACK, func(ctx context.Context, query string, args ...any) (any, error) {
+		return nil, t.queryWrapper.conn.Rollback()
+	})
 	if err == nil || !errors.Is(err, sql.ErrTxDone) {
 		LogSQL(ctx, "sql.Tx", err, "ROLLBACK")
 	}

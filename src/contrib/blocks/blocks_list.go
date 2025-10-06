@@ -85,7 +85,6 @@ func (b *ListBlock) ValueOmittedFromData(ctx context.Context, data url.Values, f
 	}
 
 	/*
-
 		this should be improved in the future, but for now we just loop
 		until we find a missing key, which indicates the end of the list
 

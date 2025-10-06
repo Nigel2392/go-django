@@ -1,9 +1,14 @@
 import { ClassCallController } from "../controllers"
-import { Block, BlockDef, Config } from './base';
+import { Block, BoundBlock, Config } from './base';
 
+type BlockElement = HTMLElement & {
+    blocks?: {
+        block: Block,
+        bound: BoundBlock,
+    }
+}
 
-
-class BlockController extends ClassCallController<HTMLElement, Block> {
+class BlockController extends ClassCallController<BlockElement, BoundBlock> {
     declare classErrorsValue: string
     declare hasClassErrorsValue: boolean
     declare _classErrors: any[]
@@ -23,7 +28,7 @@ class BlockController extends ClassCallController<HTMLElement, Block> {
         return this._classErrors
     }
 
-    initializeClass(klass: any): Block {
+    initializeClass(klass: any): BoundBlock {
 
         if (this.element.classList.contains('block-initiated')) {
             return null
@@ -32,13 +37,18 @@ class BlockController extends ClassCallController<HTMLElement, Block> {
         this.element.classList.add('block-initiated')
 
         const definition = window.telepath.unpack(this.classArgs)
-        const block: BlockDef = new klass(this.element, definition)
-        return block.render(
+        const block: Block = new klass(this.element, definition)
+        const bound = block.render(
             this.element,
             block.config.block.element.name,
             block.config.value,
             block.config.errors,
         )
+        this.element.blocks = {
+            block: block,
+            bound: bound,
+        }
+        return bound;
     }
 }
 

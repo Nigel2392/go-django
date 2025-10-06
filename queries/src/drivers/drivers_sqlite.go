@@ -20,6 +20,9 @@ func init() {
 		Open: func(ctx context.Context, drv *Driver, dsn string, opts ...OpenOption) (Database, error) {
 			return OpenSQL(SQLITE3_DRIVER_NAME, drv, dsn, opts...)
 		},
+		ExplainQuery: func(ctx context.Context, q DB, query string, args []any) (string, error) {
+			return explainMySQL(ctx, q, query, args) // generic enough for SQLite
+		},
 		BuildDatabaseError: func(err error) errors.DatabaseError {
 			var sqliteErr sqlite3.Error
 			if !errors.As(err, &sqliteErr) {

@@ -1,4 +1,4 @@
-import { Block, BlockDef, Config, ConfigBlock, ConfigElement } from '../base';
+import { Block, BoundBlock, Config, ConfigBlock, ConfigElement } from '../base';
 
 class ListBlockValue {
     id: string;
@@ -12,9 +12,9 @@ class ListBlockValue {
     }
 }
 
-class ListBlock {
-    constructor(items: any) {
-        this.items = items;
+class BoundListBlock extends BoundBlock {
+    constructor(blockDef: Block, prefix: String, items: any) {
+        super(blockDef, prefix);
     }
 
     items: any;
@@ -30,19 +30,18 @@ type ListBlockElement = ConfigBlock & {
 }
 
 type ListBlockConfig = Config & {
-    childBlock: BlockDef;
+    childBlock: Block;
     element: ListBlockElement;
 }
 
-class ListBlockDef extends BlockDef<ListBlockConfig> {
+class ListBlock extends Block<ListBlockConfig> {
 
     constructor(element: HTMLElement, config: ListBlockConfig) {
         super(element, config);
     }
 
     render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): any {
-        console.log("ListBlockDef render", placeholder, prefix, initialState, initialError, this);
-        return new ListBlock(this.items);
+        return new BoundListBlock(this, prefix, initialState);
     }
 
     items: any;
@@ -51,5 +50,5 @@ class ListBlockDef extends BlockDef<ListBlockConfig> {
 export {
     ListBlockValue,
     ListBlock,
-    ListBlockDef,
+    BoundListBlock,
 };

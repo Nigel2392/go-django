@@ -16,6 +16,7 @@ type Driver struct {
 	Driver             driver.Driver
 	Open               func(ctx context.Context, drv *Driver, dsn string, opts ...OpenOption) (Database, error)
 	BuildDatabaseError func(err error) errors.DatabaseError
+	ExplainQuery       func(ctx context.Context, q DB, query string, args []any) (string, error)
 }
 
 type driverRegistry struct {

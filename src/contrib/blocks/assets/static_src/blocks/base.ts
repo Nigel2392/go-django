@@ -11,6 +11,7 @@
 //    setError(errors: any): void;
 //}
 
+// 
 type ConfigElement = {
     id: string;
     name: string;
@@ -41,11 +42,11 @@ type Config = {
     [key: string]: any;
 }
 
-class Block {
-    blockDef: BlockDef;
+class BoundBlock {
+    blockDef: Block;
     prefix: String;
 
-    constructor(blockDef: BlockDef, prefix: String) {
+    constructor(blockDef: Block, prefix: String) {
         this.blockDef = blockDef;
         this.prefix = prefix;
     }
@@ -71,7 +72,7 @@ class Block {
     }
 }
 
-class BlockDef<T = Config> {
+class Block<T = Config> {
     config: T;
     element: HTMLElement;
 
@@ -80,14 +81,14 @@ class BlockDef<T = Config> {
         this.config = config;
     }
 
-    render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): Block {
+    render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): BoundBlock {
         throw new Error("Method not implemented.");
     }
 }
 
 export {
+    BoundBlock,
     Block,
-    BlockDef,
     Config,
     ConfigElement,
     ConfigBlock,

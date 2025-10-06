@@ -1,4 +1,4 @@
-import { Block, BlockDef, Config } from '../base';
+import { BoundBlock, Block, Config } from '../base';
 import { jsx } from '../../../../../editor/features/links/static_src/jsx';
 
 const getElementIfAttr = (parent: HTMLElement, attr: string, value?: string): HTMLElement => {
@@ -16,15 +16,15 @@ const getElementIfAttr = (parent: HTMLElement, attr: string, value?: string): HT
 };  
 
 interface StructBlockMeta {
-    childBlockDefs: Block[];
+    childBlockDefs: BoundBlock[];
 }
 
-class StructBlock extends Block {
+class BoundStructBlock extends BoundBlock {
     meta: StructBlockMeta;
     wrapper: HTMLElement;
-    childBlocks: { [key: string]: Block };
+    childBlocks: { [key: string]: BoundBlock };
 
-    constructor(blockDef: BlockDef, placeHolder: HTMLElement, prefix: String, initialState: any, initialError: any) {
+    constructor(blockDef: Block, placeHolder: HTMLElement, prefix: String, initialState: any, initialError: any) {
         super(blockDef, prefix);
 
         this.childBlocks = {};
@@ -49,7 +49,7 @@ class StructBlock extends Block {
             //    </div>
             //);
 
-            //this.childBlocks[key] = (childBlock as BlockDef).render(
+            //this.childBlocks[key] = (childBlock as Block).render(
             //    placeHolder,
             //    key,
             //    initialState[childBlock.name],
@@ -101,18 +101,13 @@ class StructBlock extends Block {
 
 }
 
-class StructBlockDef extends BlockDef {
-    constructor(element: HTMLElement, config: Config) {
-        super(element, config);
-        console.log("StructBlockDef constructor", element, config);        
-    }
-
+class StructBlock extends Block {
     render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): any {
         console.log("StructBlockDef render 1", placeholder);
         console.log("StructBlockDef render 2", prefix);
         console.log("StructBlockDef render 3", initialState);
         console.log("StructBlockDef render 4", initialError);
-        return new StructBlock(
+        return new BoundStructBlock(
             this,
             placeholder,
             prefix,
@@ -120,11 +115,9 @@ class StructBlockDef extends BlockDef {
             initialError,
         );
     }
-
-    config: Config;
 }
 
 export {
     StructBlock,
-    StructBlockDef,
+    BoundStructBlock,
 };

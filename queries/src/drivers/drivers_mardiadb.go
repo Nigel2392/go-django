@@ -24,6 +24,9 @@ func init() {
 			return OpenSQL(MARIADB_DRIVER_NAME, drv, dsn, opts...)
 		},
 		BuildDatabaseError: mySQLDatabaseError,
+		ExplainQuery: func(ctx context.Context, q DB, query string, args []any) (string, error) {
+			return explainMySQL(ctx, q, query, args)
+		},
 	})
 }
 

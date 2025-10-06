@@ -1,4 +1,4 @@
-import { Block, BlockDef, Config } from '../base';
+import { BoundBlock, Block, Config } from '../base';
 import { jsx } from '../../../../../editor/features/links/static_src/jsx';
 
 function toElement(html: string): HTMLElement {
@@ -7,17 +7,15 @@ function toElement(html: string): HTMLElement {
     return template.content.firstChild as HTMLElement;
 }
 
-class FieldBlock extends Block {
+class BoundFieldBlock extends BoundBlock {
     errorList: HTMLElement;
     labelWrapper: HTMLElement;
     helpText: HTMLElement;
     inputWrapper: HTMLElement;
     input: HTMLInputElement;
 
-    constructor(blockDef: BlockDef, placeHolder: HTMLElement, prefix: String, initialState: any, initialError: any) {
+    constructor(blockDef: Block, placeHolder: HTMLElement, prefix: String, initialState: any, initialError: any) {
         super(blockDef, prefix);
-
-        console.log("FieldBlock constructor", blockDef, prefix);
 
         this.errorList = (
            <ul class="field-errors"></ul>
@@ -93,14 +91,14 @@ class FieldBlock extends Block {
     }
 }
 
-class FieldBlockDef extends BlockDef {
+class FieldBlock extends Block {
     constructor(element: HTMLElement, config: Config) {
         super(element, config);
         // console.log("FieldBlockDef constructor", element, config);
     }
 
     render(placeholder: HTMLElement, prefix: String, initialState: any, initialError: any): any {
-        return new FieldBlock(
+        return new BoundFieldBlock(
             this,
             placeholder,
             prefix,
@@ -114,6 +112,6 @@ class FieldBlockDef extends BlockDef {
 }
 
 export {
+    BoundFieldBlock,
     FieldBlock,
-    FieldBlockDef,
 };

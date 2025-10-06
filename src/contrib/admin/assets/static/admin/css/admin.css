@@ -12,9 +12,6 @@
     --color-link: #00778b;
     --color-link-hover: #006c80;
 
-    --bg-color-button: #007bff;
-    --text-color-button: #fff;
-
     --text-color-rgb: 51, 51, 51;
     --body-bg-color-rgb: 248, 249, 250;
     --body-dark-bg-color-rgb: 238, 239, 240;
@@ -1045,6 +1042,8 @@ a.button, .button a {
     text-decoration: none;
 }
 .button {
+    --bg-color-button: transparent;
+    --text-color-button: var(--text-color);
     -webkit-font-smoothing: auto;
     -moz-appearance: none;
     background-color: var(--bg-color-button);

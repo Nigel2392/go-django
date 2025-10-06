@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/fs"
 	"net/http"
 	"net/mail"
 	"os"
@@ -42,7 +41,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/checks"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	mediafs "github.com/Nigel2392/go-django/src/core/filesystem/mediafiles/fs"
-	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
@@ -175,7 +173,9 @@ func main() {
 	user.IsActive = true
 	user.Password = auth.NewPassword("Administrator123!")
 
-	if user, created, err = queries.GetQuerySet(&auth.User{}).Preload("EntrySet").Filter("Email", e.Address).GetOrCreate(user); err != nil {
+	var ctx, _ = drivers.ContextWithQueryInfo(context.Background())
+
+	if user, created, err = queries.GetQuerySet(&auth.User{}).WithContext(ctx).Preload("EntrySet").Filter("Email", e.Address).GetOrCreate(user); err != nil {
 		panic(fmt.Errorf("failed to create admin user: %w", err))
 	}
 
@@ -200,7 +200,7 @@ func main() {
 	}
 
 	if len(os.Args) == 1 {
-		blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).All()
+		blogPages, err := queries.GetQuerySet(&blog.BlogPage{}).WithContext(ctx).All()
 		if err != nil {
 			panic(fmt.Errorf("failed to get blog pages: %w", err))
 		}
@@ -209,7 +209,7 @@ func main() {
 			fmt.Printf(" - %q (ID: %d, %d)\n", page.Page.Title, page.ID(), page.Page.PageID)
 		}
 
-		pageRows, err := pages.NewPageQuerySet().
+		pageRows, err := pages.NewPageQuerySet().WithContext(ctx).
 			Select("*").
 			Specific().
 			Search("test").
@@ -229,20 +229,26 @@ func main() {
 			fmt.Printf("   - PageObject: %+v\n", specificPage.(*blog.BlogPage))
 			// fmt.Printf("   - PageURL: %s\n", django.Reverse("pages", page.ID()))
 		}
-
 	}
 
-	err = staticfiles.Collect(func(path string, f fs.File) error {
-		var stat, err = f.Stat()
-		if err != nil {
-			return err
-		}
-		fmt.Println("Collected", path, stat.Size())
-		return nil
-	})
-	if err != nil {
-		panic(err)
+	var qf, _ = drivers.ContextQueryInfo(ctx)
+	for _, q := range qf.Queries {
+		fmt.Printf("Query: %s(%s)\n", q.Driver, q.Flags)
 	}
+
+	// fmt.Println(qf.Queries[len(qf.Queries)-1].Explain(ctx, db))
+
+	//err = staticfiles.Collect(func(path string, f fs.File) error {
+	//	var stat, err = f.Stat()
+	//	if err != nil {
+	//		return err
+	//	}
+	//	fmt.Println("Collected", path, stat.Size())
+	//	return nil
+	//})
+	//if err != nil {
+	//	panic(err)
+	//}
 
 	if err := app.Serve(); err != nil {
 		panic(err)
