@@ -1,7 +1,6 @@
 package blocks
 
 import (
-	"bytes"
 	"context"
 	"io"
 
@@ -30,6 +29,7 @@ func (b *FieldBlock) RenderForm(ctx context.Context, w io.Writer, id, name strin
 		"value":  value,
 		"errors": errors,
 		"type":   b.Field().Widget().FormType(),
+		"attrs":  b.Field().Attrs(),
 		"block":  b,
 	}
 	var bt, err = telepath.PackJSON(ctx, JSContext, blockArgs)
@@ -38,20 +38,6 @@ func (b *FieldBlock) RenderForm(ctx context.Context, w io.Writer, id, name strin
 	}
 
 	return b.RenderTempl(id, name, value, string(bt), errors, c).Render(ctx, w)
-}
-
-func (b *FieldBlock) RenderHTML(ctx context.Context) string {
-	var w = new(bytes.Buffer)
-	var widget = b.FormField.Widget()
-	widget.Render(
-		ctx,
-		w,
-		"__ID__",
-		"__PREFIX__",
-		b.GetDefault(),
-		b.FormField.Attrs(),
-	)
-	return w.String()
 }
 
 func CharBlock(opts ...func(*FieldBlock)) *FieldBlock {

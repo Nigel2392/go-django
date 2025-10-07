@@ -47,13 +47,13 @@ templ (b *FieldBlock) RenderTempl(id, name string, value interface{}, telepath s
 
     <div data-field-block class="form-field field" data-controller="block" data-block-class-path-value="django.blocks.field-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(errors) }>
 
-        // @widgets.LabelComponent("field-block", b.Label(ctx), id)
-// 
-        // @widgets.ErrorListComponent("field-block", errors)
-// 
-        // @widgets.HelpTextComponent("field-block", b.HelpText(ctx))
-// 
-        // @renderWidget(widget, id, name, value, errors, c.Attrs)
+        @widgets.LabelComponent("field-block", b.Label(ctx), id)
+
+        @widgets.ErrorListComponent("field-block", errors)
+
+        @widgets.HelpTextComponent("field-block", b.HelpText(ctx))
+
+        @renderWidget(widget, id, name, value, errors, c.Attrs)
     </div>
 }
 
@@ -75,7 +75,7 @@ templ (b *StructBlock) RenderTempl(id, name string, valueMap map[string]interfac
 }
 
 templ (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, telepath string, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context)  {
-    <div data-list-block data-controller="sortable block" class="list-block" data-block-class-path-value="django.blocks.list-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(listBlockErrors) }>
+    <div data-list-block data-controller="sortable" class="list-block">
 
 		<input data-list-block-add type="hidden" name={ fmt.Sprintf("%s-added", name) } value={ strconv.Itoa(len(valueArr)) }>
 

@@ -30,9 +30,12 @@ func (m *StructBlock) Adapter(ctx context.Context) telepath.Adapter {
 		JSConstructor: "django.blocks.StructBlock",
 		GetJSArgs: func(ctx context.Context, obj *StructBlock) []interface{} {
 
-			var fields = make(map[string]interface{})
+			var fields = make([]map[string]interface{}, obj.Fields.Len())
 			for head := obj.Fields.Front(); head != nil; head = head.Next() {
-				fields[head.Key] = head.Value
+				fields = append(fields, map[string]interface{}{
+					"name":  head.Key,
+					"block": head.Value,
+				})
 			}
 
 			return []interface{}{map[string]interface{}{

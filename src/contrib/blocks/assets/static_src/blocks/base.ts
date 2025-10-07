@@ -18,9 +18,10 @@ type Config<T = any> = {
     type?: string;
     name: string;
     label?: string;
-    html?: string;
     errors?: any;
     value?: any;
+    attrs?: { [key: string]: any };
+    helpText?: string;
     block: T;
     [key: string]: any;
 }

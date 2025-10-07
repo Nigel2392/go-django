@@ -1,6 +1,6 @@
 import { BoundBlock, Block, Config } from '../base';
-import { jsx } from '../../../../../editor/features/links/static_src/jsx';
 import { BoundWidget, Widget } from '../../widgets/widget';
+import { jsx } from '../../../../../editor/features/links/static_src/jsx';
 
 class BoundFieldBlock extends BoundBlock<FieldBlock> {
     errorList: HTMLElement;
@@ -18,7 +18,7 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
 
         this.labelWrapper = (
            <div class="field-label">
-               <label for={block.config.id}>{block.config.block.label}</label>
+               <label for={block.id}>{block.label}</label>
            </div>
         )
 
@@ -26,9 +26,9 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
         root.appendChild(this.labelWrapper);
         root.appendChild(this.errorList);
 
-        if (block.config.block.helpText) {
+        if (block.helpText) {
            root.appendChild(
-               <div class="field-help">{block.config.block.helpText}</div>
+               <div class="field-help">{block.helpText}</div>
            );
         }
         
@@ -37,13 +37,27 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
         );
         root.appendChild(widgetPlaceholder);
 
-        this.widget = block.config.block.widget.render(
-           widgetPlaceholder, block.config.name, block.config.id, initialState, 
+        const options = {
+            attributes: this.getAttributes(),
+        };
+
+        this.widget = block.widget.render(
+           widgetPlaceholder, block.name, block.id, initialState, options,
         );
 
-        if (block.config.errors && block.config.errors.length) {
-           this.setError(block.config.errors);
+        if (block.errors && block.errors.length) {
+           this.setError(block.errors);
         }
+    }
+
+    getAttributes(): any {
+        const attrs = this.block.attrs || {};
+
+        if (this.block.meta.required) {
+            attrs['required'] = 'required';
+        }
+
+        return attrs;
     }
 
     getLabel(): string {
@@ -98,16 +112,36 @@ class FieldBlock extends Block<FieldBlock> {
         super(config);
     }
     
+    get id(): string {
+        return this.config.id;
+    }
+
+    get name(): string {
+        return this.config.name;
+    }
+
+    get errors(): any {
+        return this.config.errors;
+    }
+
+    get attrs(): { [key: string]: any } | undefined {
+        return this.config.attrs;
+    }
+
     get widget(): Widget {
-        return this.config.block.config.widget;
+        return this.meta.widget;
     }
 
     get label(): string | undefined {
-        return this.config.block.config.label;
+        return this.meta.label;
     }
 
     get helpText(): string | undefined {
-        return this.config.block.config.helpText;
+        return this.meta.helpText;
+    }
+
+    get meta(): any {
+        return this.config.block.config;
     }
 
     render(root: HTMLElement, name: String, initialState: any, initialError: any): any {
