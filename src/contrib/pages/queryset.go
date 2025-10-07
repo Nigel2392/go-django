@@ -279,7 +279,7 @@ func (qs *PageQuerySet) BuildSearchQuery(_ []search.BuiltSearchField, query stri
 		))
 	}
 
-	return qs.OrderBy("-_relevance", "-_nested_relevance"), nil
+	return qs.Select("*").OrderBy("-_relevance", "-_nested_relevance"), nil
 }
 
 func (qs *PageQuerySet) Search(query string) *PageQuerySet {

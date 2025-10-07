@@ -1,21 +1,15 @@
 import { BoundBlock, Block, Config } from '../base';
 import { jsx } from '../../../../../editor/features/links/static_src/jsx';
+import { BoundWidget, Widget } from '../../widgets/widget';
 
-function toElement(html: string): HTMLElement {
-    const template = document.createElement('template');
-    template.innerHTML = html.trim();
-    return template.content.firstChild as HTMLElement;
-}
-
-class BoundFieldBlock extends BoundBlock {
+class BoundFieldBlock extends BoundBlock<FieldBlock> {
     errorList: HTMLElement;
     labelWrapper: HTMLElement;
     helpText: HTMLElement;
     inputWrapper: HTMLElement;
-    input: HTMLInputElement;
+    widget: BoundWidget;
 
-    constructor(block: Block, placeHolder: HTMLElement, name: String, initialState: any, initialError: any) {
-        console.log("FieldBlock constructor", block, name, initialState, initialError);
+    constructor(block: FieldBlock, root: HTMLElement, name: String, initialState: any, initialError: any) {
         super(block, name);
 
         this.errorList = (
@@ -24,28 +18,27 @@ class BoundFieldBlock extends BoundBlock {
 
         this.labelWrapper = (
            <div class="field-label">
-               <label for={block.config.id}>{block.config.block.element.label}</label>
+               <label for={block.config.id}>{block.config.block.label}</label>
            </div>
         )
 
-        const inputHtml = toElement(block.config.block.element.html.replace(
-           "__PREFIX__", block.config.name,
-        ).replace(
-           "__ID__", block.config.id,
-        ))
 
-        this.input = inputHtml.querySelector('input');
-        placeHolder.appendChild(this.labelWrapper);
-        placeHolder.appendChild(this.errorList);
+        root.appendChild(this.labelWrapper);
+        root.appendChild(this.errorList);
 
-        if (block.config.block.element.helpText) {
-           placeHolder.appendChild(
-               <div class="field-help">{block.config.block.element.helpText}</div>
+        if (block.config.block.helpText) {
+           root.appendChild(
+               <div class="field-help">{block.config.block.helpText}</div>
            );
         }
         
-        placeHolder.appendChild(
-           <div class="field-input">{ inputHtml }</div>
+        const widgetPlaceholder = (
+              <div class="field-widget"></div>
+        );
+        root.appendChild(widgetPlaceholder);
+
+        this.widget = block.config.block.widget.render(
+           widgetPlaceholder, block.config.name, block.config.id, initialState, 
         );
 
         if (block.config.errors && block.config.errors.length) {
@@ -54,15 +47,23 @@ class BoundFieldBlock extends BoundBlock {
     }
 
     getLabel(): string {
-        return this.input.value;
+        return this.widget.getTextLabel();
     }
 
     getState(): any {
-        return this.input.value;
+        return this.widget.getState();
     }
 
     setState(state: any): void {
-        this.input.value = state;
+        this.widget.setState(state);
+    }
+
+    getValue(): any {
+        return this.widget.getValue();
+    }
+
+    setValue(value: any): void {
+        this.widget.setValue(value);
     }
 
     setError(errors: any): void {
@@ -92,10 +93,21 @@ class BoundFieldBlock extends BoundBlock {
     }
 }
 
-class FieldBlock extends Block {
-    constructor(element: HTMLElement, config: Config) {
-        super(element, config);
-        // console.log("FieldBlockDef constructor", element, config);
+class FieldBlock extends Block<FieldBlock> {
+    constructor(config: Config) {
+        super(config);
+    }
+    
+    get widget(): Widget {
+        return this.config.block.config.widget;
+    }
+
+    get label(): string | undefined {
+        return this.config.block.config.label;
+    }
+
+    get helpText(): string | undefined {
+        return this.config.block.config.helpText;
     }
 
     render(root: HTMLElement, name: String, initialState: any, initialError: any): any {
@@ -107,9 +119,6 @@ class FieldBlock extends Block {
             initialError,
         );
     }
-
-    config: Config;
-    element: HTMLElement;
 }
 
 export {

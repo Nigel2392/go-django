@@ -282,11 +282,12 @@ func (l *ListBlock) ValueToForm(value interface{}) interface{} {
 
 	var data = make(ListBlockData, 0, len(valueArr))
 	for i, v := range valueArr {
-		data = append(data, &ListBlockValue{
+		var lv = &ListBlockValue{
 			ID:    v.ID,
 			Order: i,
 			Data:  l.Child.ValueToForm(v.Data),
-		})
+		}
+		data = append(data, lv)
 	}
 
 	return data

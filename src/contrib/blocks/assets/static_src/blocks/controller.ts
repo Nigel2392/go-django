@@ -34,10 +34,10 @@ class BlockController extends ClassCallController<BlockElement, BoundBlock> {
             return null
         }
 
-        this.element.classList.add('block-initiated')
+        this.element.classList.add('block-initiated');
 
-        const definition = window.telepath.unpack(this.classArgs)
-        const block: Block = new klass(this.element, definition)
+        const definition = window.telepath.unpack(this.classArgs);
+        const block: Block = new klass(definition);
         const bound = block.render(
             this.element,
             block.config.name,

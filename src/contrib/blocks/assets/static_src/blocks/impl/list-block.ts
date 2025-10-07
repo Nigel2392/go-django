@@ -1,4 +1,4 @@
-import { Block, BoundBlock, Config, ConfigBlock, ConfigElement } from '../base';
+import { Block, BoundBlock, Config } from '../base';
 
 class ListBlockValue {
     id: string;
@@ -20,23 +20,19 @@ class BoundListBlock extends BoundBlock {
     items: any;
 }
 
-type ListBlockElementConfig = ConfigElement & {
+type ListBlockElementConfig = Config & {
     minNum?: number;
     maxNum?: number;
 };
 
-type ListBlockElement = ConfigBlock & {
+type ListBlockConfig = Config & {
+    childBlock: Block;
     element: ListBlockElementConfig;
 }
 
-type ListBlockConfig = Config & {
-    childBlock: Block;
-    element: ListBlockElement;
-}
-
 class ListBlock extends Block<ListBlockConfig> {
-    constructor(element: HTMLElement, config: ListBlockConfig) {
-        super(element, config);
+    constructor(config: ListBlockConfig) {
+        super(config);
     }
 
     render(root: HTMLElement, name: String, initialState: any, initialError: any): any {

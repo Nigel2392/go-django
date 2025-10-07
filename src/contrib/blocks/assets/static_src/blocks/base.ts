@@ -1,4 +1,4 @@
-
+import { Widget } from "../widgets/widget";
 
 //type Block = {
 //    widget: HTMLElement;
@@ -11,26 +11,9 @@
 //    setError(errors: any): void;
 //}
 
-// 
-type ConfigElement = {
-    id: string;
-    name: string;
-    label: string;
-    helpText: string;
-    required: boolean;
-    html: string;
-}
-
-// Static- ish configuration passed to the frontend
-// 
-// This is based on the block definition, without any of the 
-// dynamic values passed, such as id, name, value, errors, etc.
-type ConfigBlock = {
-    element: ConfigElement;
-}
 
 // Actual bound configuration passed to BlockDef
-type Config = {
+type Config<T = any> = {
     id: string;
     type?: string;
     name: string;
@@ -38,15 +21,15 @@ type Config = {
     html?: string;
     errors?: any;
     value?: any;
-    block: ConfigBlock;
+    block: T;
     [key: string]: any;
 }
 
-class BoundBlock {
-    block: Block;
+class BoundBlock<BLOCK = any> {
+    block: BLOCK;
     name: String;
 
-    constructor(blockDef: Block, prefix: String) {
+    constructor(blockDef: BLOCK, prefix: String) {
         this.block = blockDef;
         this.name = prefix;
     }
@@ -72,12 +55,10 @@ class BoundBlock {
     }
 }
 
-class Block<T = Config> {
-    config: T;
-    element: HTMLElement;
+class Block<BLOCK = any, T1 = Config<BLOCK>> {
+    config: T1;
 
-    constructor(element: HTMLElement, config: T) {
-        this.element = element;
+    constructor(config: T1) {
         this.config = config;
     }
 
@@ -90,6 +71,4 @@ export {
     BoundBlock,
     Block,
     Config,
-    ConfigElement,
-    ConfigBlock,
 };

@@ -13,13 +13,13 @@ var (
 func (b *FieldBlock) Adapter(ctx context.Context) telepath.Adapter {
 	return &telepath.ObjectAdapter[*FieldBlock]{
 		JSConstructor: "django.blocks.FieldBlock",
-		GetJSArgs: func(obj *FieldBlock) []interface{} {
+		GetJSArgs: func(ctx context.Context, obj *FieldBlock) []interface{} {
 			return []interface{}{map[string]interface{}{
 				"name":     obj.Name(),
 				"label":    obj.Label(ctx),
 				"helpText": obj.HelpText(ctx),
 				"required": obj.Field().Required(),
-				"html":     obj.RenderHTML(ctx),
+				"widget":   obj.FormField.Widget(),
 			}}
 		},
 	}
@@ -28,7 +28,7 @@ func (b *FieldBlock) Adapter(ctx context.Context) telepath.Adapter {
 func (m *StructBlock) Adapter(ctx context.Context) telepath.Adapter {
 	return &telepath.ObjectAdapter[*StructBlock]{
 		JSConstructor: "django.blocks.StructBlock",
-		GetJSArgs: func(obj *StructBlock) []interface{} {
+		GetJSArgs: func(ctx context.Context, obj *StructBlock) []interface{} {
 
 			var fields = make(map[string]interface{})
 			for head := obj.Fields.Front(); head != nil; head = head.Next() {
@@ -46,10 +46,10 @@ func (m *StructBlock) Adapter(ctx context.Context) telepath.Adapter {
 	}
 }
 
-func (m *ListBlockValue) Adapter() telepath.Adapter {
+func (m *ListBlockValue) Adapter(ctx context.Context) telepath.Adapter {
 	return &telepath.ObjectAdapter[*ListBlockValue]{
 		JSConstructor: "django.blocks.ListBlockValue",
-		GetJSArgs: func(obj *ListBlockValue) []interface{} {
+		GetJSArgs: func(ctx context.Context, obj *ListBlockValue) []interface{} {
 			return []interface{}{
 				obj.ID,
 				obj.Order,
@@ -62,7 +62,7 @@ func (m *ListBlockValue) Adapter() telepath.Adapter {
 func (m *ListBlock) Adapter(ctx context.Context) telepath.Adapter {
 	return &telepath.ObjectAdapter[*ListBlock]{
 		JSConstructor: "django.blocks.ListBlock",
-		GetJSArgs: func(obj *ListBlock) []interface{} {
+		GetJSArgs: func(ctx context.Context, obj *ListBlock) []interface{} {
 			return []interface{}{map[string]interface{}{
 				"name":     obj.Name(),
 				"label":    obj.Label(ctx),

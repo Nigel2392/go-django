@@ -683,19 +683,17 @@ var PageRevisionPreviewHandler = &GenericPreviewHandler[Page]{
 	},
 }
 
-type (
-	genericPreviewView interface {
-		GetObject(r *http.Request) (attrs.Definer, error)
-		GetForm(r *http.Request, instance attrs.Definer, oldData url.Values) (forms.Form, error)
-		ValidateForm(r *http.Request, form forms.Form) error
-		GetPreviewData(r *http.Request) (url.Values, error)
-		SetPreviewData(r *http.Request, data url.Values) error
-		DeletePreviewData(r *http.Request) error
-		RemoveOldPreviewData(r *http.Request) error
-		BuildPreviewRequest(r *http.Request, instance attrs.Definer) (*http.Request, error)
-		MakePreviewRequest(w http.ResponseWriter, original *http.Request, previewReq *http.Request, instance attrs.Definer)
-	}
-)
+type genericPreviewView interface {
+	GetObject(r *http.Request) (attrs.Definer, error)
+	GetForm(r *http.Request, instance attrs.Definer, oldData url.Values) (forms.Form, error)
+	ValidateForm(r *http.Request, form forms.Form) error
+	GetPreviewData(r *http.Request) (url.Values, error)
+	SetPreviewData(r *http.Request, data url.Values) error
+	DeletePreviewData(r *http.Request) error
+	RemoveOldPreviewData(r *http.Request) error
+	BuildPreviewRequest(r *http.Request, instance attrs.Definer) (*http.Request, error)
+	MakePreviewRequest(w http.ResponseWriter, original *http.Request, previewReq *http.Request, instance attrs.Definer)
+}
 
 var (
 	_ genericPreviewView = &GenericBoundPreview[attrs.Definer]{}
