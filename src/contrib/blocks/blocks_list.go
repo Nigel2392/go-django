@@ -356,13 +356,7 @@ func (l *ListBlock) RenderForm(ctx context.Context, w io.Writer, id, name string
 	}
 
 	var listBlockErrors = NewBlockErrors[int](errors...)
-	var blockArgs = map[string]interface{}{
-		"id":         id,
-		"name":       name,
-		"block":      l,
-		"childBlock": l.Child,
-	}
-	var bt, err = telepath.PackJSON(ctx, JSContext, blockArgs)
+	var bt, err = telepath.PackJSON(ctx, JSContext, l)
 	if err != nil {
 		return err
 	}

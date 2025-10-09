@@ -23,16 +23,7 @@ func NewFieldBlock(opts ...func(*FieldBlock)) *FieldBlock {
 }
 
 func (b *FieldBlock) RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, c ctx.Context) error {
-	var blockArgs = map[string]interface{}{
-		"id":     id,
-		"name":   name,
-		"value":  value,
-		"errors": errors,
-		"type":   b.Field().Widget().FormType(),
-		"attrs":  b.Field().Attrs(),
-		"block":  b,
-	}
-	var bt, err = telepath.PackJSON(ctx, JSContext, blockArgs)
+	var bt, err = telepath.PackJSON(ctx, JSContext, b)
 	if err != nil {
 		return err
 	}

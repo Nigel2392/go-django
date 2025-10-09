@@ -17,12 +17,16 @@ func BlockField(block Block, opts ...func(fields.Field)) *BlockFormField {
 		Block:     block,
 	}
 
+	block.SetLabel(bf.FormLabel)
+	block.SetHelpText(bf.FormHelpText)
+
 	if bf.FormWidget == nil {
 		bf.FormWidget = NewBlockWidget(block)
 	}
 
-	bf.FormLabel = block.Label
-	bf.FormHelpText = block.HelpText
+	//	bf.SetName(block.Name())
+	//	bf.SetLabel(block.Label)
+	//	bf.SetHelpText(block.HelpText)
 
 	return bf
 }
@@ -45,4 +49,14 @@ func (bw *BlockFormField) Validate(ctx context.Context, value interface{}) []err
 func (bw *BlockFormField) Clean(ctx context.Context, value interface{}) (interface{}, error) {
 	var v, err = bw.Block.Clean(ctx, value)
 	return v, err
+}
+
+func (bw *BlockFormField) SetLabel(label func(ctx context.Context) string) {
+	bw.BaseField.SetLabel(label)
+	bw.Block.SetLabel(label)
+}
+
+func (bw *BlockFormField) SetHelpText(helpText func(ctx context.Context) string) {
+	bw.BaseField.SetHelpText(helpText)
+	bw.Block.SetHelpText(helpText)
 }

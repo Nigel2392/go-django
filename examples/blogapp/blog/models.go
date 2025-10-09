@@ -102,10 +102,8 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 	))
 
 	var block = blocks.NewListBlock(sb)
-
 	block.Min = 2
 	block.Max = 3
-
 	return block
 }
 
@@ -140,8 +138,10 @@ func (b *BlogImage) FieldDefs() attrs.Definitions {
 			HelpText: trans.S("The image for this blog post."),
 		}),
 		attrs.NewField(b, "Content", &attrs.FieldConfig{
-			Null:  true,
-			Blank: true,
+			Null:     true,
+			Blank:    true,
+			Label:    trans.S("List Content"),
+			HelpText: trans.S("Some additional content for this image, such as caption and attribution."),
 		}),
 	)
 }

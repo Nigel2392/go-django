@@ -1,0 +1,21 @@
+.list-block-items {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.list-block-field-drag-handle {
+    position: absolute;
+    top: .5rem;
+    right: .75rem;
+    cursor: grab;
+    font-size: 1.25rem;
+    color: var(--text-secondary-color);
+    user-select: none;
+}
+.list-block-field-content {
+    margin-top: 0.425rem;
+    margin-inline-start: 0.5rem;
+    border: 2px dashed var(--border-color);
+    padding: 0.5rem .75rem;
+    position: relative;
+}

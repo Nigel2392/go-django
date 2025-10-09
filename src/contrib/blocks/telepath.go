@@ -14,13 +14,17 @@ func (b *FieldBlock) Adapter(ctx context.Context) telepath.Adapter {
 	return &telepath.ObjectAdapter[*FieldBlock]{
 		JSConstructor: "django.blocks.FieldBlock",
 		GetJSArgs: func(ctx context.Context, obj *FieldBlock) []interface{} {
-			return []interface{}{map[string]interface{}{
-				"name":     obj.Name(),
-				"label":    obj.Label(ctx),
-				"helpText": obj.HelpText(ctx),
-				"required": obj.Field().Required(),
-				"widget":   obj.FormField.Widget(),
-			}}
+			return []interface{}{
+				obj.Name(),
+				obj.FormField.Widget(),
+				map[string]interface{}{
+					"label":    obj.Label(ctx),
+					"helpText": obj.HelpText(ctx),
+					"required": obj.Field().Required(),
+					"attrs":    obj.Field().Attrs(),
+					"default":  obj.GetDefault(),
+				},
+			}
 		},
 	}
 }
@@ -30,33 +34,22 @@ func (m *StructBlock) Adapter(ctx context.Context) telepath.Adapter {
 		JSConstructor: "django.blocks.StructBlock",
 		GetJSArgs: func(ctx context.Context, obj *StructBlock) []interface{} {
 
-			var fields = make([]map[string]interface{}, obj.Fields.Len())
+			var children = make([]map[string]interface{}, 0, obj.Fields.Len())
 			for head := obj.Fields.Front(); head != nil; head = head.Next() {
-				fields = append(fields, map[string]interface{}{
+				children = append(children, map[string]interface{}{
 					"name":  head.Key,
 					"block": head.Value,
 				})
 			}
 
-			return []interface{}{map[string]interface{}{
-				"name":     obj.Name(),
-				"label":    obj.Label(ctx),
-				"helpText": obj.HelpText(ctx),
-				"required": obj.Field().Required(),
-				"fields":   fields,
-			}}
-		},
-	}
-}
-
-func (m *ListBlockValue) Adapter(ctx context.Context) telepath.Adapter {
-	return &telepath.ObjectAdapter[*ListBlockValue]{
-		JSConstructor: "django.blocks.ListBlockValue",
-		GetJSArgs: func(ctx context.Context, obj *ListBlockValue) []interface{} {
 			return []interface{}{
-				obj.ID,
-				obj.Order,
-				obj.Data,
+				obj.Name(),
+				children,
+				map[string]interface{}{
+					"label":    obj.Label(ctx),
+					"helpText": obj.HelpText(ctx),
+					"required": obj.Field().Required(),
+				},
 			}
 		},
 	}
@@ -66,14 +59,17 @@ func (m *ListBlock) Adapter(ctx context.Context) telepath.Adapter {
 	return &telepath.ObjectAdapter[*ListBlock]{
 		JSConstructor: "django.blocks.ListBlock",
 		GetJSArgs: func(ctx context.Context, obj *ListBlock) []interface{} {
-			return []interface{}{map[string]interface{}{
-				"name":     obj.Name(),
-				"label":    obj.Label(ctx),
-				"helpText": obj.HelpText(ctx),
-				"required": obj.Field().Required(),
-				"minNum":   obj.MinNum(),
-				"maxNum":   obj.MaxNum(),
-			}}
+			return []interface{}{
+				obj.Name(),
+				obj.Child,
+				map[string]interface{}{
+					"label":    obj.Label(ctx),
+					"helpText": obj.HelpText(ctx),
+					"required": obj.Field().Required(),
+					"minNum":   obj.MinNum(),
+					"maxNum":   obj.MaxNum(),
+				},
+			}
 		},
 	}
 }

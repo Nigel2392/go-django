@@ -1,4 +1,4 @@
-import { BoundBlock, Block, Config } from '../base';
+import { BoundBlock, Block, BlockMeta } from '../base';
 import { jsx } from '../../../../../editor/features/links/static_src/jsx';
 
 const getElementIfAttr = (parent: HTMLElement, attr: string, value?: string): HTMLElement => {
@@ -15,45 +15,46 @@ const getElementIfAttr = (parent: HTMLElement, attr: string, value?: string): HT
     return null;
 };  
 
-interface StructBlockMeta {
-    childBlockDefs: BoundBlock[];
-}
+type childBlockMap = {
+    name: string;
+    block: Block;
+}[];
 
 class BoundStructBlock extends BoundBlock {
-    meta: StructBlockMeta;
-    wrapper: HTMLElement;
     childBlocks: { [key: string]: BoundBlock };
 
-    constructor(block: Block, placeHolder: HTMLElement, prefix: String, initialState: any, initialError: any) {
-        super(block, prefix);
+    constructor(block: StructBlock, placeHolder: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
+        super(block, name, placeHolder);
+
+        this.element.dataset.structBlock = 'true';
 
         this.childBlocks = {};
 
-        for (let i = 0; i <block.config.childBlockDefs.length; i++) {
-            const childBlock = block.config.childBlockDefs[i];
-            const key = this.name + '-' + childBlock.name;
+        initialState = initialState || {};
+        initialError = initialError || {};
 
-            
-            //const childDom = (
-            //    <div data-struct-field data-contentpath={ key }>
-//
-            //        @widgets.LabelComponent("struct-block", head.Value.Label(), id)
-//
-            //        {{ var newErrs = errors.Get(head.Key) }}
-            //        <div data-struct-field-content>
-            //            @renderForm(head.Value, id, key, valueMap[head.Key], newErrs, tplCtx)
-            //        </div>
-//
-            //        @widgets.HelpTextComponent("struct-block", head.Value.HelpText())
-            //    </div>
-            //);
+        var keys = Object.keys(block.children);
+        for (let i = 0; i < keys.length; i++) {
+            const childBlockName = keys[i];
+            const childBlock = block.children[childBlockName];
+            const key = this.name + '-' + childBlockName;
+            const idKey = id + '-' + childBlockName;
+            const childDom = (
+                <div data-struct-field data-contentpath={ key }>
+                    <div data-struct-field-content>
+                    </div>
+                </div>
+            );
 
-            //this.childBlocks[key] = (childBlock as Block).render(
-            //    placeHolder,
-            //    key,
-            //    initialState[childBlock.name],
-            //    initialError[childBlock.name],
-            //);
+            placeHolder.appendChild(childDom);
+
+            this.childBlocks[key] = (childBlock as Block).render(
+                childDom.firstElementChild as HTMLElement,
+                idKey,
+                key,
+                initialState[childBlockName],
+                initialError[childBlockName],
+            );
         }
     }
 
@@ -94,18 +95,32 @@ class BoundStructBlock extends BoundBlock {
         }
 
         if (errors.nonFieldErrors) {
-            this.wrapper.style.backgroundColor = 'red';
+            this.element.style.backgroundColor = 'red';
         }
     }
 
 }
 
 class StructBlock extends Block {
-    render(root: HTMLElement, name: String, initialState: any, initialError: any): any {
+    name: string;
+    children: { [key: string]: Block };
+
+    constructor(name: string, children: childBlockMap, meta: BlockMeta) {
+        super();
+        this.name = name;
+        this.meta = meta;
+        this.children = {};
+        for (let i = 0; i < children.length; i++) {
+            this.children[children[i].name] = children[i].block;
+        }
+    }
+
+    render(root: HTMLElement, id: string, name: string, initialState: any, initialError: any): any {
         return new BoundStructBlock(
             this,
             root,
             name,
+            id,
             initialState,
             initialError,
         );

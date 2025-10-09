@@ -14,16 +14,9 @@ class TabPanelController extends Controller<HTMLElement> {
         this.controlTargets[0].classList.add("active");
         this.hasParentTab = this.element.parentElement.closest(`[data-controller="${this.identifier}"]`) !== null;
 
-        let selectQuerySelectorTab = true;
         if (!this.hasParentTab && window.location.hash && window.location.hash.startsWith("#tab-")) {
             const index = parseInt(window.location.hash.split("-").pop() || "0", 10);
             this.selectTab(index, false);
-            selectQuerySelectorTab = false;
-        } else {
-            const index = this.tabTargets.findIndex(tab => !!tab.querySelector(window.location.hash));
-            if (index !== -1) {
-                this.selectTab(index, false);
-            }
         }
     }
 

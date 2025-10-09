@@ -2,21 +2,48 @@ import Sortable from "sortablejs";
 
 class SortableController extends window.StimulusController {
     declare sortable: Sortable
+    declare hasItemsTarget: boolean
     declare itemsTarget: HTMLElement
     declare itemTargets: HTMLElement[]
     declare replaceValue: string
+    declare handleValue: string
+    declare draggableValue: string
     static targets = ["item", "items"]
     static values = {
         replace: String,
+        handle: { type: String, default: ".list-block-field-drag-handle" },
+        draggable: { type: String, default: ".list-block-field" },
     }
 
-    connect() {
-        this.sortable = Sortable.create(this.itemsTarget, {
-            handle: ".list-block-field",
+    private get sortableConfig() {
+        return {
+            handle: this.handleValue,
+            animation: 150,
+            swapThreshold: 1,
+            draggable: this.draggableValue,
             onEnd: (event: Sortable.SortableEvent) => {
                 this.reOrderItems();
             },
-        } as any)
+        };
+    }
+
+    connect() {
+        if (!this.hasItemsTarget) {
+            console.error("SortableController: No items target found");
+            return;
+        }
+        this.sortable = Sortable.create(
+            this.itemsTarget, this.sortableConfig,
+        )
+    }
+
+    itemsTargetConnected(elem: HTMLElement) {
+        if (this.sortable) {
+            this.sortable.destroy();
+        }
+        this.sortable = Sortable.create(
+            elem, this.sortableConfig,
+        )
     }
 
     replaceValues() {

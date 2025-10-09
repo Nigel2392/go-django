@@ -11,28 +11,23 @@ import { Widget } from "../widgets/widget";
 //    setError(errors: any): void;
 //}
 
-
-// Actual bound configuration passed to BlockDef
-type Config<T = any> = {
-    id: string;
-    type?: string;
-    name: string;
+type BlockMeta = {
     label?: string;
-    errors?: any;
-    value?: any;
-    attrs?: { [key: string]: any };
     helpText?: string;
-    block: T;
+    required?: boolean;
+    attrs?: { [key: string]: any };
     [key: string]: any;
 }
 
 class BoundBlock<BLOCK = any> {
     block: BLOCK;
     name: String;
+    element: HTMLElement;
 
-    constructor(blockDef: BLOCK, prefix: String) {
+    constructor(blockDef: BLOCK, prefix: String, element: HTMLElement) {
         this.block = blockDef;
         this.name = prefix;
+        this.element = element;
     }
 
     getLabel(): string {
@@ -56,14 +51,10 @@ class BoundBlock<BLOCK = any> {
     }
 }
 
-class Block<BLOCK = any, T1 = Config<BLOCK>> {
-    config: T1;
+class Block {
+    meta: BlockMeta;
 
-    constructor(config: T1) {
-        this.config = config;
-    }
-
-    render(root: HTMLElement, name: String, initialState: any, initialError: any): BoundBlock {
+    render(root: HTMLElement, id: string, ...args: any[]): BoundBlock {
         throw new Error("Method not implemented.");
     }
 }
@@ -71,5 +62,5 @@ class Block<BLOCK = any, T1 = Config<BLOCK>> {
 export {
     BoundBlock,
     Block,
-    Config,
+    BlockMeta,
 };

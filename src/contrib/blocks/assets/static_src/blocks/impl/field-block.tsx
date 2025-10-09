@@ -1,6 +1,6 @@
-import { BoundBlock, Block, Config } from '../base';
+import { BoundBlock, Block, BlockMeta } from '../base';
 import { BoundWidget, Widget } from '../../widgets/widget';
-import { jsx } from '../../../../../editor/features/links/static_src/jsx';
+import { jsx } from '../../../../../admin/static_src/jsx';
 
 class BoundFieldBlock extends BoundBlock<FieldBlock> {
     errorList: HTMLElement;
@@ -8,9 +8,12 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
     helpText: HTMLElement;
     inputWrapper: HTMLElement;
     widget: BoundWidget;
+    attrs: any;
 
-    constructor(block: FieldBlock, root: HTMLElement, name: String, initialState: any, initialError: any) {
-        super(block, name);
+    constructor(block: FieldBlock, root: HTMLElement, name: string, id: string, initialState: any, initialError: any, attrs: any = {}) {
+        super(block, name, root);
+
+        this.attrs = attrs;
 
         this.errorList = (
            <ul class="field-errors"></ul>
@@ -18,17 +21,16 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
 
         this.labelWrapper = (
            <div class="field-label">
-               <label for={block.id}>{block.label}</label>
+               <label for={id}>{block.meta.label}</label>
            </div>
         )
-
 
         root.appendChild(this.labelWrapper);
         root.appendChild(this.errorList);
 
-        if (block.helpText) {
+        if (block.meta.helpText) {
            root.appendChild(
-               <div class="field-help">{block.helpText}</div>
+               <div class="field-help">{block.meta.helpText}</div>
            );
         }
         
@@ -42,16 +44,16 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
         };
 
         this.widget = block.widget.render(
-           widgetPlaceholder, block.name, block.id, initialState, options,
+           widgetPlaceholder, name, id, initialState, options,
         );
 
-        if (block.errors && block.errors.length) {
-           this.setError(block.errors);
+        if (initialError) {
+           this.setError(initialError);
         }
     }
 
     getAttributes(): any {
-        const attrs = this.block.attrs || {};
+        const attrs = this.attrs || {};
 
         if (this.block.meta.required) {
             attrs['required'] = 'required';
@@ -81,10 +83,11 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
     }
 
     setError(errors: any): void {
-        if (!errors) {
+        if (!errors || errors?.length === 0) {
             return;
         }
-        if (errors instanceof Array) {
+
+        if (Array.isArray(errors)) {
             
             if (!errors.length) {
                 this.errorList.innerHTML = "";
@@ -98,6 +101,21 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
                 );
                 this.errorList.appendChild(errorItem);
             });
+        } else if (typeof errors === 'object') {
+            var keys = Object.keys(errors);
+            this.errorList.innerHTML = "";
+            if (!keys.length) {
+                return;
+            }
+            
+            keys.forEach((key: string) => {
+                errors[key].forEach((error: string) => {
+                    const errorItem = (
+                        <li>{error}</li>
+                    );
+                    this.errorList.appendChild(errorItem);
+                });
+            })
         } else {
             this.errorList.innerHTML = "";
             this.errorList.appendChild(
@@ -107,50 +125,26 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
     }
 }
 
-class FieldBlock extends Block<FieldBlock> {
-    constructor(config: Config) {
-        super(config);
+class FieldBlock extends Block {
+    name: string;
+    widget: Widget;
+
+    constructor(name: string, widget: Widget, meta: BlockMeta) {
+        super();
+        this.name = name;
+        this.widget = widget;
+        this.meta = meta;
     }
     
-    get id(): string {
-        return this.config.id;
-    }
-
-    get name(): string {
-        return this.config.name;
-    }
-
-    get errors(): any {
-        return this.config.errors;
-    }
-
-    get attrs(): { [key: string]: any } | undefined {
-        return this.config.attrs;
-    }
-
-    get widget(): Widget {
-        return this.meta.widget;
-    }
-
-    get label(): string | undefined {
-        return this.meta.label;
-    }
-
-    get helpText(): string | undefined {
-        return this.meta.helpText;
-    }
-
-    get meta(): any {
-        return this.config.block.config;
-    }
-
-    render(root: HTMLElement, name: String, initialState: any, initialError: any): any {
+    render(root: HTMLElement, id: string, name: string, initialState: any, initialError: any, attrs: any = {}): BoundFieldBlock {
         return new BoundFieldBlock(
             this,
             root,
             name,
+            id,
             initialState,
             initialError,
+            attrs,
         );
     }
 }

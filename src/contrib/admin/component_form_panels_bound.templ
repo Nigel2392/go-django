@@ -1,32 +1,33 @@
 package admin
 
 import (
+	"io"
     "fmt"
+	"html"
+	"maps"
     "bytes"
+	"strconv"
+	"reflect"
     "context"
 	"net/http"
     "html/template"
+	"encoding/json"
+	"runtime/debug"
+
+	"github.com/gosimple/slug"
+
     "github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"strconv"
-	"github.com/gosimple/slug"
-	"encoding/json"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"io"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
-	"html"
-	"strings"
-	"maps"
+	"github.com/Nigel2392/go-django/src/utils/htmlutil"
 	"github.com/Nigel2392/go-django/src/core/assert"
-	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/contrib/admin/icons"
 	"github.com/Nigel2392/go-django/src/forms/formsets"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"runtime/debug"
 	"github.com/Nigel2392/go-django/src/core/except"
-	"reflect"
 )
 
 
@@ -153,39 +154,6 @@ func (p PanelComponent) Render(ctx context.Context, w io.Writer) error {
     return p.Component().Render(ctx, w)
 }
 
-func appendAttrs(attrs templ.Attributes, key string, value any) {
-    var values []string
-    switch v := value.(type) {
-    case string:
-        values = []string{v}
-    case []string:
-        values = v
-    default:
-        assert.Fail(errors.TypeMismatch.Wrapf(
-            "expected attribute %s to be string or []string, got %T",
-            key, value,
-        ))
-    }
-
-    existing, ok := attrs[key]
-    if !ok {
-        attrs[key] = strings.Join(values, " ")
-        return
-    }
-
-    switch e := existing.(type) {
-    case string:
-        attrs[key] = strings.Join(append(values, e), " ")
-    case []string:
-        attrs[key] = strings.Join(append(values, e...), " ")
-    default:
-        assert.Fail(errors.TypeMismatch.Wrapf(
-            "expected attribute %s to be string or []string, got %T",
-            key, existing,
-        ))
-    }
-}
-
 func (p PanelComponent) panelAttrs() templ.Attributes {
     var attrs = make(templ.Attributes)
     maps.Copy(attrs, p.Attrs)
@@ -193,8 +161,8 @@ func (p PanelComponent) panelAttrs() templ.Attributes {
     if p.Classname != "" {
         cls = append(cls, p.Classname)
     }
-    appendAttrs(attrs, "class", cls)
-    appendAttrs(attrs, "data-controller", "panel")
+    htmlutil.AppendAttrs(attrs, "class", cls)
+    htmlutil.AppendAttrs(attrs, "data-controller", "panel")
     if p.PanelId != "" {
         attrs["data-panel-panel-value"] = p.PanelId
     }

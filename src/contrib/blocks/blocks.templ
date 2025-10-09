@@ -3,9 +3,9 @@ package blocks
 import "io"
 import "github.com/Nigel2392/go-django/src/core/ctx"
 import "github.com/Nigel2392/go-django/src/forms/widgets"
-import "strconv"
+// import "strconv"
 import "context"
-import "fmt"
+// import "fmt"
 
 
 func renderWidget(widget widgets.Widget, id string, name string, value interface{}, errors []error, attrs map[string]string) templ.Component {
@@ -38,69 +38,79 @@ func renderBlockWidget(ctx context.Context,w io.Writer, widget *BlockWidget, blo
 }
 
 templ (b *FieldBlock) RenderTempl(id, name string, value interface{}, telepath string, errors []error, tplCtx ctx.Context)  {
-	{{ var c = tplCtx.(*BlockContext) }}
-    {{ var widget = b.Field().Widget() }}
-	{{ var widgetCtx = widget.GetContextData(ctx, id, name, value, c.Attrs)
-	if len(errors) > 0 {
-		widgetCtx.Set("errors", errors)
-	} }}
+	// {{ var c = tplCtx.(*BlockContext) }}
+    // {{ var widget = b.Field().Widget() }}
+	// {{ var widgetCtx = widget.GetContextData(ctx, id, name, value, c.Attrs)
+	// if len(errors) > 0 {
+		// widgetCtx.Set("errors", errors)
+	// } }}
 
-    <div data-field-block class="form-field field" data-controller="block" data-block-class-path-value="django.blocks.field-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(errors) }>
+    <div data-field-block class="form-field field">// data-controller="block" data-block-class-path-value="django.blocks.field-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, value, errors, c.Attrs}) }>
 
-        @widgets.LabelComponent("field-block", b.Label(ctx), id)
+        //  @widgets.LabelComponent("field-block", b.Label(ctx), id, templ.Attributes{
+        //      "data-block-target": "label",
+        //  })
+        //  
+        //  @widgets.ErrorListComponent("field-block", errors, templ.Attributes{
+        //      "data-block-target": "errors",
+        //  })
+        //  
+        //  @widgets.HelpTextComponent("field-block", b.HelpText(ctx), templ.Attributes{
+        //      "data-block-target": "help",
+        //  })
+        //  
+        //  {{ var attrs = make(map[string]string) }}
+        //  {{ maps.Copy(attrs, c.Attrs) }}
+        //  {{ attrs["data-block-target"] = "input" }}
+        //  @renderWidget(widget, id, name, value, errors, attrs)
 
-        @widgets.ErrorListComponent("field-block", errors)
-
-        @widgets.HelpTextComponent("field-block", b.HelpText(ctx))
-
-        @renderWidget(widget, id, name, value, errors, c.Attrs)
     </div>
 }
 
 templ (b *StructBlock) RenderTempl(id, name string, valueMap map[string]interface{}, telepath string, errors *BaseBlockValidationError[string], tplCtx ctx.Context)  {
-    <div id={ id } data-struct-block data-controller="block" data-block-class-path-value="django.blocks.struct-block" data-block-class-args-value={ telepath } data-block-class-errors-value={ templ.JSONString(errors) }>
-
-	    for head := b.Fields.Front(); head != nil; head = head.Next() {
-	    	{{ var id  = fmt.Sprintf("%s-%s", id, head.Key) }}
-	    	{{ var key = fmt.Sprintf("%s-%s", name, head.Key) }}
-
-           <div data-struct-field data-contentpath={ key }>
-               {{ var newErrs = errors.Get(head.Key) }}
-               <div data-struct-field-content>
-                   @renderForm(ctx, head.Value, id, key, valueMap[head.Key], newErrs, tplCtx)
-               </div>
-           </div>
-	    }
+	// {{ var c = tplCtx.(*BlockContext) }}
+    <div id={ id } data-struct-block>// data-controller="block" data-block-class-path-value="django.blocks.struct-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, valueMap, errors, c.Attrs}) }>
+	   //    for head := b.Fields.Front(); head != nil; head = head.Next() {
+	   //    	{{ var id  = fmt.Sprintf("%s-%s", id, head.Key) }}
+	   //    	{{ var key = fmt.Sprintf("%s-%s", name, head.Key) }}
+//  
+       //       <div data-struct-field data-contentpath={ key }>
+       //           {{ var newErrs = errors.Get(head.Key) }}
+       //           <div data-struct-field-content>
+       //               @renderForm(ctx, head.Value, id, key, valueMap[head.Key], newErrs, tplCtx)
+       //           </div>
+       //       </div>
+	   //    }
     </div>
 }
 
 templ (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, telepath string, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context)  {
-    <div data-list-block data-controller="sortable" class="list-block">
+    <div data-list-block data-controller="sortable block" class="list-block" data-block-class-path-value="django.blocks.list-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, valueArr, listBlockErrors}) }>
 
-		<input data-list-block-add type="hidden" name={ fmt.Sprintf("%s-added", name) } value={ strconv.Itoa(len(valueArr)) }>
-
-		{{ var iStr string }}
-
-		<div data-list-block-items data-sortable-target="items" class="list-block-items">
-			for i, v := range valueArr {
-
-	    		{{ var id  = fmt.Sprintf("%s-%d", id, i) }}
-                {{ var blockId = fmt.Sprintf("%s-id-%d", name, i) }}
-                {{ var orderId = fmt.Sprintf("%s-order-%d", name, i) }}
-	    		{{ var key = fmt.Sprintf("%s-%d", name, i) }}
-
-				{{ iStr = strconv.Itoa(i) }}
-
-        	    <div data-list-block-field data-index={ iStr } data-sortable-target="item" data-replace={ fmt.Sprintf("#%s;[data-index]", orderId) } class="list-block-field">
-
-                    <input type="hidden" id={ blockId } name={ blockId } value={ v.ID.String() }>
-                    <input type="hidden" id={ orderId } name={ orderId } value={ strconv.Itoa(v.Order) }>
-                    {{ var newErrs = listBlockErrors.Get(i) }}
-                    <div data-list-block-field-content>
-                        @renderForm(ctx, l.Child, id, key, v.Data, newErrs, tplCtx)
-                    </div>
-        	    </div>
-	    	}
-		</div>
+		//<input data-list-block-add type="hidden" name={ fmt.Sprintf("%s-added", name) } value={ strconv.Itoa(len(valueArr)) }>
+//
+		//{{ var iStr string }}
+//
+		//<div data-list-block-items data-sortable-target="items" class="list-block-items">
+		//	for i, v := range valueArr {
+//
+	    //		{{ var id  = fmt.Sprintf("%s-%d", id, i) }}
+        //        {{ var blockId = fmt.Sprintf("%s-id-%d", name, i) }}
+        //        {{ var orderId = fmt.Sprintf("%s-order-%d", name, i) }}
+	    //		{{ var key = fmt.Sprintf("%s-%d", name, i) }}
+//
+		//		{{ iStr = strconv.Itoa(i) }}
+//
+        //	    <div data-list-block-field data-index={ iStr } data-sortable-target="item" data-replace={ fmt.Sprintf("#%s;[data-index]", orderId) } class="list-block-field">
+//
+        //            <input type="hidden" id={ blockId } name={ blockId } value={ v.ID.String() }>
+        //            <input type="hidden" id={ orderId } name={ orderId } value={ strconv.Itoa(v.Order) }>
+        //            {{ var newErrs = listBlockErrors.Get(i) }}
+        //            <div data-list-block-field-content>
+        //                @renderForm(ctx, l.Child, id, key, v.Data, newErrs, tplCtx)
+        //            </div>
+        //	    </div>
+	    //	}
+		//</div>
     </div>
 }

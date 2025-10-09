@@ -1,5 +1,5 @@
 import { ClassCallController } from "../controllers"
-import { Block, BoundBlock, Config } from './base';
+import { Block, BoundBlock } from './base';
 
 type BlockElement = HTMLElement & {
     blocks?: {
@@ -9,23 +9,44 @@ type BlockElement = HTMLElement & {
 }
 
 class BlockController extends ClassCallController<BlockElement, BoundBlock> {
-    declare classErrorsValue: string
-    declare hasClassErrorsValue: boolean
-    declare _classErrors: any[]
+    declare idValue: string;
+    declare argumentsValue: any[];
 
     static values = {
         ...ClassCallController.values,
-        classErrors: String,
+        id: String,
+        arguments: Array,
     }
 
-    get classErrors() {
-        if (!this.hasClassErrorsValue) {
-            return []
-        }
-        if (!this._classErrors) {
-            this._classErrors = JSON.parse(this.classErrorsValue)
-        }
-        return this._classErrors
+    constructor(...args: ConstructorParameters<typeof ClassCallController<any, any>>) {
+        super(...args);
+
+        return new Proxy(this, {
+            get: (target, prop: string | symbol, receiver) => {
+                // normal properties/methods first
+                const value = Reflect.get(target, prop, receiver)
+                if (value !== undefined) return value
+            
+                // delegate block* methods
+                if (typeof prop === "string" && prop.startsWith("block")) {
+                    // "blockAdd" -> "add"
+                    const raw = prop.slice(5)
+                    const name = raw.charAt(0).toLowerCase() + raw.slice(1)
+                    return (...args: any[]) => {
+                        const el = target.element as BlockElement
+                        const blocks = el.blocks
+                        const fn = (blocks.bound as any)[name]
+                        if (typeof fn !== "function") {
+                            console.warn(`[BlockController] No block method '${name}' found on`, blocks.bound)
+                            return
+                        }
+                        return fn.apply(blocks.bound, args)
+                    }
+                }
+            
+                return value
+            },
+        })
     }
 
     initializeClass(klass: any): BoundBlock {
@@ -34,18 +55,14 @@ class BlockController extends ClassCallController<BlockElement, BoundBlock> {
             return null
         }
 
-        this.element.classList.add('block-initiated');
+        this.element.classList.add('block-initiated')
 
-        const definition = window.telepath.unpack(this.classArgs);
-        const block: Block = new klass(definition);
-        const bound = block.render(
-            this.element,
-            block.config.name,
-            block.config.value,
-            block.config.errors,
+        const definition: Block = window.telepath.unpack(this.classArgs)
+        const bound = definition.render(
+            this.element, this.idValue, ...this.argumentsValue,
         )
         this.element.blocks = {
-            block: block,
+            block: definition,
             bound: bound,
         }
         return bound;

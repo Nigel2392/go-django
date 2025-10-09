@@ -8,6 +8,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
@@ -18,6 +19,8 @@ import (
 type Block interface {
 	Name() string
 	SetName(name string)
+	SetLabel(label any)
+	SetHelpText(helpText any)
 	Label(ctx context.Context) string
 	HelpText(ctx context.Context) string
 	Field() fields.Field
@@ -57,6 +60,14 @@ func (b *BaseBlock) SetName(name string) {
 func (b *BaseBlock) SetField(field fields.Field) {
 	b.FormField = field
 	field.SetName(b.Name_)
+}
+
+func (b *BaseBlock) SetLabel(label any) {
+	b.LabelFunc = trans.GetTextFunc(label)
+}
+
+func (b *BaseBlock) SetHelpText(helpText any) {
+	b.HelpFunc = trans.GetTextFunc(helpText)
 }
 
 func (b *BaseBlock) Field() fields.Field {

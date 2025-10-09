@@ -116,6 +116,9 @@ func (bw *BlockWidget) Media() media.Media {
 	if m == nil {
 		m = media.NewMedia()
 	}
+	m.AddCSS(media.CSS(
+		django.Static("blocks/css/blocks.css"),
+	))
 	m.AddJS(
 		media.JS(
 			django.Static("blocks/js/index.js"),

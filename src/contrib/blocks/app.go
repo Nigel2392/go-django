@@ -179,7 +179,6 @@ func NewAppConfig() *apps.AppConfig {
 		staticfiles.AddFS(
 			staticFS,
 			filesystem.MatchAnd(
-
 				filesystem.MatchPrefix("blocks"),
 				filesystem.MatchOr(
 					filesystem.MatchSuffix(".css"),

@@ -1,11 +1,19 @@
 package widgets
 
-templ ErrorListComponent(forElem string, errors []error) {
+import "maps"
+import "github.com/Nigel2392/go-django/src/utils/htmlutil"
+
+templ ErrorListComponent(forElem string, errors []error, attrs ...templ.Attributes) {
     if len(errors) > 0 {
-        <ul data-errors-for={ forElem } class="error-list error-wrapper">
+        {{ var atts = make(templ.Attributes) }}
+        if len(attrs) > 0 {
+            {{ maps.Copy(atts, attrs[0]) }}
+        }
+        {{ htmlutil.AppendAttrs(atts, "class", []string{"error-list", "error-wrapper"}) }}
+        <ul data-errors-for={ forElem } { atts... }>
             for _, err := range errors {
                 if err == nil {
-                    continue
+                    {{ continue }}
                 }
                 <li class="error">{ err.Error() }</li>
             }
@@ -13,17 +21,27 @@ templ ErrorListComponent(forElem string, errors []error) {
     }
 }
 
-templ LabelComponent(forElem, label, labelFor string) {
+templ LabelComponent(forElem, label, labelFor string, attrs ...templ.Attributes) {
     if label != "" {
-        <div data-label-for={ forElem } class="label-wrapper">
+        {{ var atts = make(templ.Attributes) }}
+        if len(attrs) > 0 {
+            {{ maps.Copy(atts, attrs[0]) }}
+        }
+        {{ htmlutil.AppendAttrs(atts, "class", []string{"label-wrapper"}) }}
+        <div data-label-for={ forElem } { atts... }>
             <label for={ labelFor }>{ label }</label>
         </div>
     }
 }
 
-templ HelpTextComponent(forElem, helpText string) {
+templ HelpTextComponent(forElem, helpText string, attrs ...templ.Attributes) {
     if helpText != "" {
-        <div data-help-for={ forElem }  class="help-text-wrapper">
+        {{ var atts = make(templ.Attributes) }}
+        if len(attrs) > 0 {
+            {{ maps.Copy(atts, attrs[0]) }}
+        }
+        {{ htmlutil.AppendAttrs(atts, "class", []string{"help-text-wrapper"}) }}
+        <div data-help-for={ forElem } { atts... }>
             <p class="help">{ helpText }</p>
         </div>
     }

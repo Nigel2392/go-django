@@ -107,8 +107,17 @@ func (m *BaseBlockValidationError[T]) MarshalJSON() ([]byte, error) {
 	for i, e := range m.NonBlockErrors {
 		nonBlockErrs[i] = e.Error()
 	}
-	return json.Marshal(map[string]interface{}{
-		"errors":         errs,
-		"nonBlockErrors": nonBlockErrs,
-	})
+
+	var errsMap = make(map[string]any)
+	if len(errs) > 0 {
+		errsMap["errors"] = errs
+	}
+	if len(nonBlockErrs) > 0 {
+		errsMap["nonBlockErrors"] = nonBlockErrs
+	}
+
+	if len(errsMap) == 0 {
+		return []byte("{}"), nil
+	}
+	return json.Marshal(errsMap)
 }
