@@ -43,6 +43,8 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
             attributes: this.getAttributes(),
         };
 
+        initialState = initialState ?? block.meta.default ?? null;
+
         this.widget = block.widget.render(
            widgetPlaceholder, name, id, initialState, options,
         );

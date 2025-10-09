@@ -60,3 +60,10 @@ func (bw *BlockFormField) SetHelpText(helpText func(ctx context.Context) string)
 	bw.BaseField.SetHelpText(helpText)
 	bw.Block.SetHelpText(helpText)
 }
+
+func (bw *BlockFormField) Default() interface{} {
+	if bw.BaseField.GetDefault != nil {
+		return bw.BaseField.Default()
+	}
+	return bw.Block.GetDefault()
+}

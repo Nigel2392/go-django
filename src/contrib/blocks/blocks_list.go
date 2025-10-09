@@ -79,18 +79,27 @@ func (l *ListBlock) makeIndexedError(index int, err ...error) error {
 }
 
 func (b *ListBlock) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
-	var addedKey = fmt.Sprintf("%s-added", name)
-	if !data.Has(addedKey) {
+	var totalKey = fmt.Sprintf("%s--total", name)
+	if !data.Has(totalKey) {
 		return true
 	}
 
-	/*
-		this should be improved in the future, but for now we just loop
-		until we find a missing key, which indicates the end of the list
+	var totalValue, err = strconv.Atoi(strings.TrimSpace(data.Get(totalKey)))
+	if err != nil || totalValue == 0 {
+		return true
+	}
 
-	*/
 	var omitted = true
-	for i := 0; i < 100; i++ {
+	for i := 0; i < totalValue; i++ {
+		var deletedKey = fmt.Sprintf("%s-%d--deleted", name, i)
+		if data.Has(deletedKey) {
+			var deletedValue = strings.TrimSpace(data.Get(deletedKey))
+			if deletedValue == "on" || deletedValue == "true" || deletedValue == "1" {
+				omitted = false // Deleted, so not omitted
+				break
+			}
+		}
+
 		var key = fmt.Sprintf("%s-%d", name, i)
 		if !b.Child.ValueOmittedFromData(ctx, data, files, key) {
 			omitted = false
@@ -111,31 +120,35 @@ func sortListBlocks(a, b *ListBlockValue) int {
 }
 
 func (l *ListBlock) ValueFromDataDict(ctx context.Context, d url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
-	var data = make(ListBlockData, 0)
-
-	var (
-		added    = 0
-		addedKey = fmt.Sprintf("%s-added", name)
-		addedCnt = 0
-	)
-
-	if !d.Has(addedKey) {
-		return nil, []error{fmt.Errorf("Malformed form data, missing key %s", addedKey)} //lint:ignore ST1005 ignore this lint
+	var totalKey = fmt.Sprintf("%s--total", name)
+	if !d.Has(totalKey) {
+		return nil, []error{fmt.Errorf("Malformed form data, missing key %s", totalKey)} //lint:ignore ST1005 ignore this lint
 	}
 
-	var addedValue = strings.TrimSpace(d.Get(addedKey))
-	var err error
-	added, err = strconv.Atoi(addedValue)
+	var totalCount = 0
+	var deletedCount = 0
+	var totalValue = strings.TrimSpace(d.Get(totalKey))
+	var total, err = strconv.Atoi(totalValue)
 	if err != nil {
 		return nil, []error{l.makeError(err)}
 	}
 
 	var errs = NewBlockErrors[int]()
-	var ordered = make(map[int]struct{})
-	for i := 0; ; i++ {
+	// var ordered = make(map[int]struct{})
+	var data = make(ListBlockData, 0, total)
+	for i := 0; i < total; i++ {
+		var deletedKey = fmt.Sprintf("%s-%d--deleted", name, i)
+		if d.Has(deletedKey) {
+			var deletedValue = strings.TrimSpace(d.Get(deletedKey))
+			if deletedValue == "on" || deletedValue == "true" || deletedValue == "1" {
+				deletedCount++
+				continue
+			}
+		}
+
 		var key = fmt.Sprintf("%s-%d", name, i)
 		if l.Child.ValueOmittedFromData(ctx, d, files, key) {
-			break
+			continue
 		}
 
 		var (
@@ -167,10 +180,10 @@ func (l *ListBlock) ValueFromDataDict(ctx context.Context, d url.Values, files m
 			continue
 		}
 
-		if _, ok := ordered[order]; ok {
-			errs.AddError(i, fmt.Errorf("Duplicate order: %d", order)) //lint:ignore ST1005 ignore this lint
-			continue
-		}
+		// if _, ok := ordered[order]; ok {
+		// errs.AddError(i, fmt.Errorf("Duplicate order: %d", order)) //lint:ignore ST1005 ignore this lint
+		// continue
+		// }
 
 		var value, e = l.Child.ValueFromDataDict(ctx, d, files, key)
 		if len(e) != 0 {
@@ -184,10 +197,12 @@ func (l *ListBlock) ValueFromDataDict(ctx context.Context, d url.Values, files m
 			Data:  value,
 		})
 
-		addedCnt++
+		// ordered[order] = struct{}{}
+
+		totalCount++
 	}
 
-	slices.SortFunc(
+	slices.SortStableFunc(
 		data, sortListBlocks,
 	)
 
@@ -207,9 +222,9 @@ func (l *ListBlock) ValueFromDataDict(ctx context.Context, d url.Values, files m
 		)}
 	}
 
-	if addedCnt != added {
+	if totalCount+deletedCount != total {
 		return nil, []error{l.makeError(
-			fmt.Errorf("Invalid number of items, expected %d, got %d", added, addedCnt), //lint:ignore ST1005 ignore this lint
+			fmt.Errorf("Invalid number of items, expected %d, got %d", total, totalCount+deletedCount), //lint:ignore ST1005 ignore this lint
 		)}
 	}
 
@@ -280,8 +295,17 @@ func (l *ListBlock) ValueToForm(value interface{}) interface{} {
 		return value
 	}
 
-	var data = make(ListBlockData, 0, len(valueArr))
-	for i, v := range valueArr {
+	var data = make(ListBlockData, 0, max(len(valueArr), l.Min))
+	for i := 0; i < max(len(valueArr), l.Min); i++ {
+		var v *ListBlockValue
+		if i < len(valueArr) {
+			v = valueArr[i]
+		} else {
+			v = &ListBlockValue{
+				ID:   uuid.New(),
+				Data: l.Child.GetDefault(),
+			}
+		}
 		var lv = &ListBlockValue{
 			ID:    v.ID,
 			Order: i,

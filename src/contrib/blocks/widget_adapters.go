@@ -9,6 +9,8 @@ import (
 	"github.com/Nigel2392/go-telepath/telepath"
 )
 
+type widgetValueContextKey struct{}
+
 func init() {
 	var adapterFunc = func(ctx context.Context, obj widgets.Widget) []interface{} {
 		var (

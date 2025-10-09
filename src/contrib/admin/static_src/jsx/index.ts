@@ -25,6 +25,9 @@ export function jsx(
         element.setAttribute("class", value);
       } else if (key === "style" && typeof value === "object") {
         Object.assign((element as HTMLElement).style, value);
+      } else if (key.startsWith("on") && typeof value === "function") {
+        const eventName = key.slice(2).toLowerCase();
+        element.addEventListener(eventName, value);
       } else if (isSvg) {
         // Use normal setAttribute for standard SVG attributes
         element.setAttribute(key, value);

@@ -1,5 +1,5 @@
 import { Block, BlockMeta, BoundBlock } from '../base';
-import { jsx } from '../../../../../editor/features/links/static_src/jsx';
+import { jsx } from '../../../../../admin/static_src/jsx';
 
 type ListBlockValue = {
     id: string;
@@ -7,40 +7,11 @@ type ListBlockValue = {
     data: any;
 };
 
-        //<div data-list-block data-controller="sortable block" class="list-block" data-block-class-path-value="django.blocks.list-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, valueArr, listBlockErrors}) }>
-        //
-	    //	<input data-list-block-add type="hidden" name={ fmt.Sprintf("%s-added", name) } value={ strconv.Itoa(len(valueArr)) }>
-        //
-	    //	{{ var iStr string }}
-        //
-	    //	<div data-list-block-items data-sortable-target="items" class="list-block-items">
-	    //		for i, v := range valueArr {
-                //
-	    //    		{{ var id  = fmt.Sprintf("%s-%d", id, i) }}
-        //            {{ var blockId = fmt.Sprintf("%s-id-%d", name, i) }}
-        //            {{ var orderId = fmt.Sprintf("%s-order-%d", name, i) }}
-	    //    		{{ var key = fmt.Sprintf("%s-%d", name, i) }}
-                //
-	    //			{{ iStr = strconv.Itoa(i) }}
-                //
-        //    	    <div data-list-block-field data-index={ iStr } data-sortable-target="item" data-replace={ fmt.Sprintf("#%s;[data-index]", orderId) } class="list-block-field">
-                    //
-        //                <input type="hidden" id={ blockId } name={ blockId } value={ v.ID.String() }>
-        //                <input type="hidden" id={ orderId } name={ orderId } value={ strconv.Itoa(v.Order) }>
-        //                {{ var newErrs = listBlockErrors.Get(i) }}
-        //                <div data-list-block-field-content>
-        //                    @renderForm(ctx, l.Child, id, key, v.Data, newErrs, tplCtx)
-        //                </div>
-        //    	    </div>
-	    //    	}
-	    //	</div>
-        //</div>
-
-
 class BoundListBlock extends BoundBlock {
+    id: String;
     items: BoundBlock[];
     itemWrapper: HTMLElement;
-    addedInput: HTMLInputElement;
+    totalInput: HTMLInputElement;
 
     constructor(block: ListBlock, root: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
         initialState = initialState || [];
@@ -48,34 +19,37 @@ class BoundListBlock extends BoundBlock {
 
         super(block, name, root);
         this.items = [];
+        this.id = id;
 
         this.itemWrapper = (
             <div data-list-block-items class="list-block-items" data-sortable-target="items"></div>
         );
 
-        this.addedInput = (
-             <input type="hidden" data-list-block-add name={ `${name}-added` } value={ String(initialState.length) }/>
+        this.totalInput = (
+            <input type="hidden" data-list-block-total name={ `${name}--total` } value={ String(initialState.length) }/>
         ) as HTMLInputElement;
 
-        root.appendChild(this.addedInput);
+        root.appendChild(this.totalInput);
         root.appendChild(this.itemWrapper);
 
         for (let i = 0; i < initialState.length; i++) {
             this._createChild(
-                i, id, name, initialState[i], initialError[i] || null,
+                i, i, id, name, initialState[i], initialError[i] || null,
             )
         }
     }
 
-    _createChild(index: number, id: String, name: String, value: ListBlockValue, error: any) {
-        const itemId = `${id}-${index}`;
-        const itemKey = `${name}-${index}`;
-        const blockId = `${name}-id-${index}`;
-        const orderId = `${name}-order-${index}`;
+    _createChild(suffix: number, sortIndex: number, id: String, name: String, value: ListBlockValue, error: any) {
+        const itemId = `${id}-${suffix}`;
+        const itemKey = `${name}-${suffix}`;
+        const blockId = `${name}-id-${suffix}`;
+        const orderId = `${name}-order-${suffix}`;
+        const deletedKey = `${name}-${suffix}--deleted`;
         const itemDom = (
-            <div data-list-block-field data-index={ String(index) } data-sortable-target="item" data-replace={ `#${orderId};[data-index]` } class="list-block-field">
+            <div data-list-block-field id={ itemKey + "--block" } data-index={ String(sortIndex) } data-sortable-target="item" data-replace={ `#${orderId};[data-index]` } class="list-block-field">
                 <input type="hidden" id={ blockId } name={ blockId } value={ value.id } />
                 <input type="hidden" id={ orderId } name={ orderId } value={ String(value.order) } />
+                <input type="hidden" id={ deletedKey } name={ deletedKey } value=""/>
 
                 <div data-list-block-field-label class="list-block-field-label">
                     { this.block.meta.label ? <label for={ blockId }>{ this.block.meta.label }</label> : null }
@@ -86,6 +60,13 @@ class BoundListBlock extends BoundBlock {
                         &#x2630;
                     </div>
                     <div data-list-block-field-inner></div>
+                </div>
+
+                <div data-list-block-field-delete class="list-block-field-delete">
+                    <button type="button" data-action="delete" class="list-block-field-delete-button" onClick={this._onDeleteClick.bind(this, itemKey)}> - </button>
+                </div>
+                <div data-list-block-field-add class="list-block-field-add">
+                    <button type="button" data-action="add" class="list-block-field-add-button" onClick={this._onAddClick.bind(this, itemKey)}>+</button>
                 </div>
             </div>
         );
@@ -98,6 +79,40 @@ class BoundListBlock extends BoundBlock {
             value.data,
             error,
         ));
+    }
+
+    _onDeleteClick(itemName: string, ev: MouseEvent) {
+        ev.preventDefault();
+        const wrapperId = `#${itemName}--block`;
+        const elem = this.itemWrapper.querySelector(wrapperId) as HTMLElement;
+        if (!elem) {
+            console.warn("Couldn't find item to delete", wrapperId);
+            return;
+        }
+
+        const deletedInput = elem.querySelector(`#${itemName}--deleted`) as HTMLInputElement;
+        if (!deletedInput) {
+            console.warn("Couldn't find deleted input", `#${itemName}--deleted`);
+            return;
+        }
+
+        elem.style.display = 'none';
+        deletedInput.value = '1';
+    }
+
+    _onAddClick(itemName: string, ev: MouseEvent) {
+        ev.preventDefault();
+        itemName = `#${itemName}--block`;
+        const elem = this.itemWrapper.querySelector(itemName) as HTMLElement;
+        if (!elem) {
+            console.warn("Couldn't find item to add", itemName);
+            return;
+        }
+        const index = parseInt(elem.dataset.index || '0', 10) + 1;
+        this._createChild(
+            this.items.length, index, this.id, this.name, { id: '', order: index, data: null }, null,
+        );
+        this.totalInput.value = String(this.items.length);
     }
 }
 

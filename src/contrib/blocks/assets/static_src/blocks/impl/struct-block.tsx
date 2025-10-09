@@ -1,5 +1,5 @@
 import { BoundBlock, Block, BlockMeta } from '../base';
-import { jsx } from '../../../../../editor/features/links/static_src/jsx';
+import { jsx } from '../../../../../admin/static_src/jsx';
 
 const getElementIfAttr = (parent: HTMLElement, attr: string, value?: string): HTMLElement => {
     for (var i = 0; i < parent.children.length; i++) {

@@ -103,7 +103,7 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 
 	var block = blocks.NewListBlock(sb)
 	block.Min = 2
-	block.Max = 3
+	block.Max = 9
 	return block
 }
 

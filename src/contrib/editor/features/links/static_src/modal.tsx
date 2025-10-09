@@ -1,4 +1,4 @@
-import { jsx } from "./jsx";
+import { jsx } from "../../../../admin/static_src/jsx"
 
 
 type PageMenuResponse = {

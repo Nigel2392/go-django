@@ -15,6 +15,7 @@ type BlockMeta = {
     label?: string;
     helpText?: string;
     required?: boolean;
+    default?: any;
     attrs?: { [key: string]: any };
     [key: string]: any;
 }

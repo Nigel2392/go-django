@@ -87,7 +87,8 @@ templ (b *StructBlock) RenderTempl(id, name string, valueMap map[string]interfac
 templ (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, telepath string, listBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context)  {
     <div data-list-block data-controller="sortable block" class="list-block" data-block-class-path-value="django.blocks.list-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, valueArr, listBlockErrors}) }>
 
-		//<input data-list-block-add type="hidden" name={ fmt.Sprintf("%s-added", name) } value={ strconv.Itoa(len(valueArr)) }>
+		//<input data-list-block-add type="hidden" name={ fmt.Sprintf("%s--added", name) }>
+		//<input data-list-block-add type="hidden" name={ fmt.Sprintf("%s--total", name) } value={ strconv.Itoa(len(valueArr)) }>
 //
 		//{{ var iStr string }}
 //
@@ -101,6 +102,7 @@ templ (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, te
 //
 		//		{{ iStr = strconv.Itoa(i) }}
 //
+		//      <input data-list-block-deleted type="hidden" name={ fmt.Sprintf("%s-%d--deleted", name, i) }>
         //	    <div data-list-block-field data-index={ iStr } data-sortable-target="item" data-replace={ fmt.Sprintf("#%s;[data-index]", orderId) } class="list-block-field">
 //
         //            <input type="hidden" id={ blockId } name={ blockId } value={ v.ID.String() }>
