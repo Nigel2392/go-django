@@ -3,6 +3,23 @@
     flex-direction: column;
     gap: 0.5rem;
 }
+.list-block-field {
+    position: relative;
+}
+.list-block-field-heading {
+    display: flex;
+    flex-direction: row;
+}
+.list-block-field-heading .list-block-field-heading-label.list-block-field-heading-label {
+    font-weight: bold;
+    margin-bottom: 0;
+}
+.list-block-field-heading .list-block-field-heading-index {
+    line-height: 1.3;
+    font-weight: bold;
+    margin-inline-start: 0.25rem;
+    color: var(--secondary-bg-color);
+}
 .list-block-field-drag-handle {
     position: absolute;
     top: .5rem;
@@ -18,4 +35,47 @@
     border: 2px dashed var(--border-color);
     padding: 0.5rem .75rem;
     position: relative;
+}
+.list-block-field-actions {
+    position: absolute;
+    top: -0.325rem;
+    bottom: -1.325rem;
+    left: -2.275rem;
+}
+.list-block-field-actions::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 2px;
+    border: 1px dashed var(--border-color);
+}
+.list-block-field-actions-group {
+    top: 5%;
+    position: sticky;
+    gap: 0.25rem;
+    display: flex;
+    flex-direction: column;
+    background-color: var(--body-bg-color);
+    z-index: 1;
+}
+.list-block-field-actions-group button {
+    background: none;
+    border: none;
+    padding: .25rem;
+    cursor: pointer;
+    color: var(--secondary-bg-color);
+    font-size: 1.25rem;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.list-block-field-delete {
+
+}
+.list-block-field-add {
+
 }

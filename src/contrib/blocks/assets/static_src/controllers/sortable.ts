@@ -34,16 +34,24 @@ class SortableController extends window.StimulusController {
         }
         this.sortable = Sortable.create(
             this.itemsTarget, this.sortableConfig,
-        )
+        );
     }
 
     itemsTargetConnected(elem: HTMLElement) {
+        if (elem.dataset.sortable === "connected") {
+            return;
+        }
         if (this.sortable) {
             this.sortable.destroy();
         }
+        elem.dataset.sortable = "connected";
         this.sortable = Sortable.create(
             elem, this.sortableConfig,
         )
+    }
+
+    itemTargetConnected(elem: HTMLElement) {
+        this.reOrderItems();
     }
 
     replaceValues() {
@@ -53,8 +61,9 @@ class SortableController extends window.StimulusController {
 
     reOrderItems() {
         var replace = this.replaceValues();
-        for (var i = 0; i < this.itemTargets.length; i++) {
-            var item = this.itemTargets[i];
+        var totalTargets = this.itemTargets.filter(item => item.style.display !== 'none');
+        for (var i = 0; i < totalTargets.length; i++) {
+            var item = totalTargets[i];
             var replaceStr = item.dataset.replace;
             if (replaceStr) {
                 replace = replaceStr.split(';');
@@ -62,21 +71,27 @@ class SortableController extends window.StimulusController {
 
             for (var j = 0; j < replace.length; j++) {
                 var value = replace[j];
+                var addOne = value.endsWith('+');
+                let index = i;
+                if (addOne) {
+                    value = value.slice(0, -1);
+                    index = i + 1;
+                }
                 if (value.startsWith("[") && value.endsWith("]")) {
                     value = value.slice(1, -1);
                     if (value.startsWith("data-")) {
                         var attribute = value.slice(5);
-                        item.dataset[attribute] = i.toString();
+                        item.dataset[attribute] = index.toString();
                     } else {
-                        item.setAttribute(value, i.toString());
+                        item.setAttribute(value, index.toString());
                     }
                 } else {
                     var element = item.querySelector(value);
                     if (element) {
                         if (element instanceof HTMLInputElement) {
-                            element.value = i.toString();
+                            element.value = index.toString();
                         } else {
-                            element.textContent = i.toString();
+                            element.textContent = index.toString();
                         }
                     } else {
                         console.error("Could not find element with selector", value);

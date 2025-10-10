@@ -52,6 +52,10 @@ class PanelController extends Controller<PanelElement> {
     }
 
     connect() {
+        if (this.element.getAttribute("data-panel-initialized") === "true") {
+            return;
+        }
+
         if (this.hasLinkIconTarget) {
             this.linkIconTarget.addEventListener(
                 "click", this.scrollToContent.bind(this),
@@ -77,7 +81,8 @@ class PanelController extends Controller<PanelElement> {
 
                     this.scrollToContent();
                 }
-
+                
+                this.element.setAttribute("data-panel-initialized", "true");
             }, 100);
         }
 

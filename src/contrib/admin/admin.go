@@ -238,6 +238,7 @@ func NewAppConfig() django.AppConfig {
 			"admin/icons/pulse.svg",
 			"admin/icons/plus.svg",
 			"admin/icons/trash.svg",
+			"admin/icons/link.svg",
 			"admin/icons/arrow-right.svg",
 			"admin/icons/file-earmark.svg",
 			"admin/icons/file-document.svg",

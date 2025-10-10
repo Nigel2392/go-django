@@ -40,6 +40,9 @@ export function jsx(
   }
 
   const appendChildSafely = (child: any) => {
+    if (child == null || child === false || child === true) {
+      return;
+    }
     if (typeof child === "string") {
       element.appendChild(document.createTextNode(child));
     } else if (child instanceof Node) {

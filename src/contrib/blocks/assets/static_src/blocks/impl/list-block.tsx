@@ -1,5 +1,8 @@
 import { Block, BlockMeta, BoundBlock } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
+import Icon from '../../../../../admin/static_src/utils/icon';
+import { getPanelAttrs, PanelComponent, PanelHeading } from '../../../../../admin/static_src/utils/panels';
+import { openAnimator } from '../../../../../admin/static_src/utils/animator';
 
 type ListBlockValue = {
     id: string;
@@ -12,6 +15,7 @@ class BoundListBlock extends BoundBlock {
     items: BoundBlock[];
     itemWrapper: HTMLElement;
     totalInput: HTMLInputElement;
+    activeItems: number;
 
     constructor(block: ListBlock, root: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
         initialState = initialState || [];
@@ -34,44 +38,94 @@ class BoundListBlock extends BoundBlock {
 
         for (let i = 0; i < initialState.length; i++) {
             this._createChild(
-                i, i, id, name, initialState[i], initialError[i] || null,
+                i, i, id, name, initialState[i], initialError[i] || null, false,
             )
         }
+
+        this.activeItems = this.items.length;
     }
 
-    _createChild(suffix: number, sortIndex: number, id: String, name: String, value: ListBlockValue, error: any) {
+    _createChild(suffix: number, sortIndex: number, id: String, name: String, value: ListBlockValue, error: any, animate: boolean = true) {
+        let animator = null;
+        if (animate) {
+            animator = new openAnimator({
+                duration: 300,
+                onAdded: (elem) => {
+                    elem.style.transition = "opacity 300ms ease";
+                },
+                onFinished: (elem) => {
+                    elem.style.transition = "";
+                    if (!elem.style) {
+                        elem.removeAttribute("style");
+                    }
+                },
+                animFrom: { opacity: "0" },
+                animTo: { opacity: "1" },
+            });
+        }
+
         const itemId = `${id}-${suffix}`;
         const itemKey = `${name}-${suffix}`;
         const blockId = `${name}-id-${suffix}`;
         const orderId = `${name}-order-${suffix}`;
         const deletedKey = `${name}-${suffix}--deleted`;
+        const panelId = `${itemKey}--panel`;
+        const headingIndexId = `${itemKey}--heading-index`;
         const itemDom = (
-            <div data-list-block-field id={ itemKey + "--block" } data-index={ String(sortIndex) } data-sortable-target="item" data-replace={ `#${orderId};[data-index]` } class="list-block-field">
+            <div data-list-block-field id={ itemKey + "--block" } data-index={ String(sortIndex) } data-sortable-target="item" data-replace={ `#${orderId};#${headingIndexId}+;[data-index]` } class="list-block-field">
                 <input type="hidden" id={ blockId } name={ blockId } value={ value.id } />
                 <input type="hidden" id={ orderId } name={ orderId } value={ String(value.order) } />
                 <input type="hidden" id={ deletedKey } name={ deletedKey } value=""/>
 
-                <div data-list-block-field-label class="list-block-field-label">
-                    { this.block.meta.label ? <label for={ blockId }>{ this.block.meta.label }</label> : null }
-                </div>
+                {PanelComponent({
+                    panelId: panelId,
+                    heading: (
+                        <div class="list-block-field-heading">
+                            { this.block.meta.label ? <label for={ blockId } class="list-block-field-heading-label">{ this.block.meta.label }:</label> : null }
+                            <span id={ headingIndexId } class="list-block-field-heading-index">{ String(value.order + 1) }</span>
+                        </div>
+                    ),
+                    children: (
+                        <div data-list-block-field-content class="list-block-field-content">
+                            <div data-list-block-field-handle class="list-block-field-drag-handle">
+                                &#x2630;
+                            </div>
 
-                <div data-list-block-field-content class="list-block-field-content">
-                    <div data-list-block-field-handle class="list-block-field-drag-handle">
-                        &#x2630;
-                    </div>
-                    <div data-list-block-field-inner></div>
-                </div>
+                            <div data-list-block-field-inner></div>
 
-                <div data-list-block-field-delete class="list-block-field-delete">
-                    <button type="button" data-action="delete" class="list-block-field-delete-button" onClick={this._onDeleteClick.bind(this, itemKey)}> - </button>
-                </div>
-                <div data-list-block-field-add class="list-block-field-add">
-                    <button type="button" data-action="add" class="list-block-field-add-button" onClick={this._onAddClick.bind(this, itemKey)}>+</button>
-                </div>
+                            <div data-list-block-field-actions class="list-block-field-actions">
+                                <div data-list-block-field-actions-group class="list-block-field-actions-group">
+                                    <div data-list-block-field-delete class="list-block-field-delete">
+                                        <button type="button" data-action="delete" class="list-block-field-delete-button" onClick={this._onDeleteClick.bind(this, itemKey)}>
+                                            { Icon('icon-trash') }
+                                        </button>
+                                    </div>
+                                    <div data-list-block-field-add class="list-block-field-add">
+                                        <button type="button" data-action="add" class="list-block-field-add-button" onClick={this._onAddClick.bind(this, itemKey)}>
+                                            { Icon('icon-plus') }
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
+
             </div>
         );
+        
+        if (animate) {
+            animator.addElement(itemDom);
+        }
 
-        this.itemWrapper.appendChild(itemDom);
+        if (sortIndex === 0) { // append to start
+            this.itemWrapper.prepend(itemDom);
+        } else if (sortIndex >= this.items.length) { // append to end
+            this.itemWrapper.appendChild(itemDom);
+        } else { // insert in middle
+            this.itemWrapper.insertBefore(itemDom, this.itemWrapper.children[sortIndex]);
+        }
+            
         this.items.push(this.block.childBlock.render(
             itemDom.querySelector('[data-list-block-field-inner]'),
             itemId,
@@ -79,10 +133,22 @@ class BoundListBlock extends BoundBlock {
             value.data,
             error,
         ));
+
+        if (animate) {
+            animator.start();
+        }
     }
 
     _onDeleteClick(itemName: string, ev: MouseEvent) {
         ev.preventDefault();
+
+        console.log("DELETE", this.activeItems, this.block.meta);
+
+        if (this.activeItems <= 1 && this.block.meta.required || (this.block.meta.minNum && this.activeItems <= this.block.meta.minNum)) {
+            console.warn("Can't delete item, minimum reached");
+            return;
+        }
+        
         const wrapperId = `#${itemName}--block`;
         const elem = this.itemWrapper.querySelector(wrapperId) as HTMLElement;
         if (!elem) {
@@ -98,10 +164,26 @@ class BoundListBlock extends BoundBlock {
 
         elem.style.display = 'none';
         deletedInput.value = '1';
+        this.activeItems -= 1;
+        
+        const sortable = window.Stimulus.getControllerForElementAndIdentifier(this.element, "sortable");
+        if (sortable) {
+            (sortable as any).reOrderItems();
+        } else {
+            console.warn("Couldn't find sortable controller for list block", this.element);
+        }
     }
 
     _onAddClick(itemName: string, ev: MouseEvent) {
         ev.preventDefault();
+
+        console.log("ADD", this.activeItems, this.block.meta);
+
+        if (this.block.meta.maxNum && this.activeItems >= this.block.meta.maxNum) {
+            console.warn("Can't add item, maximum reached");
+            return;
+        }
+
         itemName = `#${itemName}--block`;
         const elem = this.itemWrapper.querySelector(itemName) as HTMLElement;
         if (!elem) {
@@ -113,6 +195,7 @@ class BoundListBlock extends BoundBlock {
             this.items.length, index, this.id, this.name, { id: '', order: index, data: null }, null,
         );
         this.totalInput.value = String(this.items.length);
+        this.activeItems += 1;
     }
 }
 
@@ -137,8 +220,6 @@ class ListBlock extends Block {
             initialError,
         );
     }
-
-    items: any;
 }
 
 export {
