@@ -23,12 +23,6 @@ type StructBlock struct {
 	ToForm func(interface{}) (map[string]interface{}, error)
 }
 
-func OptAddField(name string, block Block) func(*StructBlock) {
-	return func(i *StructBlock) {
-		i.AddField(name, block)
-	}
-}
-
 func NewStructBlock(opts ...func(*StructBlock)) *StructBlock {
 	var m = &StructBlock{
 		BaseBlock: NewBaseBlock(),

@@ -5,6 +5,7 @@ import { ListBlock } from "./blocks/impl/list-block";
 import { FieldBlock } from "./blocks/impl/field-block";
 import { StructBlock } from "./blocks/impl/struct-block";
 import { CheckboxInput, RadioSelect, Select, Widget } from "./widgets/widget";
+import { StreamBlock } from "./blocks/impl/stream-block";
 
 window.blocks = new BlockApp();
 
@@ -21,6 +22,9 @@ window.blocks.registerBlock('django.blocks.list-block', ListBlock);
 
 window.telepath.register('django.blocks.StructBlock', StructBlock);
 window.blocks.registerBlock('django.blocks.struct-block', StructBlock);
+
+window.telepath.register('django.blocks.StreamBlock', StreamBlock);
+window.blocks.registerBlock('django.blocks.stream-block', StreamBlock);
 
 window.AdminSite.registerController(
     "sortable", 

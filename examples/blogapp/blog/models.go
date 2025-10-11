@@ -82,15 +82,34 @@ func (b *BlogImage) UniqueTogether() [][]string {
 
 func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 	var sb = blocks.NewStructBlock(
-		blocks.OptAddField("Caption", blocks.CharBlock(
+		blocks.WithBlockField[*blocks.StructBlock]("Caption", blocks.CharBlock(
 			blocks.WithLabel[*blocks.FieldBlock](trans.S("Text")),
 			blocks.WithHelpText[*blocks.FieldBlock](trans.S("Some text for this image.")),
 			blocks.WithDefault[*blocks.FieldBlock]("Default caption text"),
 		)),
-		blocks.OptAddField("Attribution", blocks.CharBlock(
+		blocks.WithBlockField[*blocks.StructBlock]("Attribution", blocks.CharBlock(
 			blocks.WithLabel[*blocks.FieldBlock](trans.S("Attribution")),
 			blocks.WithHelpText[*blocks.FieldBlock](trans.S("Some text for the attribution.")),
 			blocks.WithDefault[*blocks.FieldBlock]("Default attribution text"),
+		)),
+		blocks.WithBlockField[*blocks.StructBlock]("Content", blocks.NewStreamBlock(
+			blocks.WithBlockField[*blocks.StreamBlock]("paragraph", blocks.TextBlock(
+				blocks.WithLabel[*blocks.FieldBlock](trans.S("Paragraph")),
+				blocks.WithHelpText[*blocks.FieldBlock](trans.S("A paragraph of text.")),
+				blocks.WithDefault[*blocks.FieldBlock]("Default paragraph text"),
+			)),
+			blocks.WithBlockField[*blocks.StreamBlock]("Data", blocks.NewStructBlock(
+				blocks.WithBlockField[*blocks.StructBlock]("URL", blocks.CharBlock(
+					blocks.WithLabel[*blocks.FieldBlock](trans.S("URL")),
+					blocks.WithHelpText[*blocks.FieldBlock](trans.S("The URL for this link.")),
+					blocks.WithDefault[*blocks.FieldBlock]("https://example.com"),
+				)),
+				blocks.WithBlockField[*blocks.StructBlock]("Text", blocks.CharBlock(
+					blocks.WithLabel[*blocks.FieldBlock](trans.S("Text")),
+					blocks.WithHelpText[*blocks.FieldBlock](trans.S("The text for this link.")),
+					blocks.WithDefault[*blocks.FieldBlock]("Example link"),
+				)),
+			)),
 		)),
 		blocks.WithLabel[*blocks.StructBlock](trans.S("Image Content")),
 	)
