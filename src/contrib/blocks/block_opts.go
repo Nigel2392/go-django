@@ -1,10 +1,7 @@
 package blocks
 
 import (
-	"context"
 	"reflect"
-
-	"github.com/Nigel2392/go-django/src/core/trans"
 )
 
 type OptFunc[T any] func(T)
@@ -26,41 +23,20 @@ func WithValidators[T any](validators ...func(interface{}) error) OptFunc[T] {
 	}
 }
 
-func reflectSetter[T any](t T, fieldName string, value interface{}) {
-	var field = reflect.ValueOf(t).Elem().FieldByName(fieldName)
-	if field.IsValid() {
-		field.Set(reflect.ValueOf(value))
+func WithLabel[T Block](label any) OptFunc[T] {
+	return func(t T) {
+		t.SetLabel(label)
 	}
 }
 
-func WithLabel[T any](label any) OptFunc[T] {
+func WithHelpText[T Block](text any) OptFunc[T] {
 	return func(t T) {
-		reflectSetter(t, "LabelFunc", func(ctx context.Context) string {
-			var label, ok = trans.GetText(ctx, label)
-			if !ok {
-				return ""
-			}
-			return label
-		})
+		t.SetHelpText(text)
 	}
 }
 
-func WithHelpText[T any](text any) OptFunc[T] {
+func WithDefault[T Block](def interface{}) OptFunc[T] {
 	return func(t T) {
-		reflectSetter(t, "HelpFunc", func(ctx context.Context) string {
-			var label, ok = trans.GetText(ctx, text)
-			if !ok {
-				return ""
-			}
-			return label
-		})
-	}
-}
-
-func WithDefault[T any](def interface{}) OptFunc[T] {
-	return func(t T) {
-		reflectSetter(t, "Default", func() interface{} {
-			return def
-		})
+		t.SetDefault(def)
 	}
 }

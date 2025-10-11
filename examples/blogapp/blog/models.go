@@ -81,29 +81,24 @@ func (b *BlogImage) UniqueTogether() [][]string {
 }
 
 func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
-	var sb = blocks.NewStructBlock()
-	sb.AddField("Caption", blocks.CharBlock(
-		blocks.WithLabel[*blocks.FieldBlock](
-			trans.S("Text"),
-		),
-		blocks.WithHelpText[*blocks.FieldBlock](
-			trans.S("Some text for this image."),
-		),
-		blocks.WithDefault[*blocks.FieldBlock]("Default caption text"),
-	))
-	sb.AddField("Attribution", blocks.CharBlock(
-		blocks.WithLabel[*blocks.FieldBlock](
-			trans.S("Attribution"),
-		),
-		blocks.WithHelpText[*blocks.FieldBlock](
-			trans.S("Some text for the attribution."),
-		),
-		blocks.WithDefault[*blocks.FieldBlock]("Default attribution text"),
-	))
+	var sb = blocks.NewStructBlock(
+		blocks.OptAddField("Caption", blocks.CharBlock(
+			blocks.WithLabel[*blocks.FieldBlock](trans.S("Text")),
+			blocks.WithHelpText[*blocks.FieldBlock](trans.S("Some text for this image.")),
+			blocks.WithDefault[*blocks.FieldBlock]("Default caption text"),
+		)),
+		blocks.OptAddField("Attribution", blocks.CharBlock(
+			blocks.WithLabel[*blocks.FieldBlock](trans.S("Attribution")),
+			blocks.WithHelpText[*blocks.FieldBlock](trans.S("Some text for the attribution.")),
+			blocks.WithDefault[*blocks.FieldBlock]("Default attribution text"),
+		)),
+		blocks.WithLabel[*blocks.StructBlock](trans.S("Image Content")),
+	)
 
 	var block = blocks.NewListBlock(sb)
 	block.Min = 2
 	block.Max = 9
+
 	return block
 }
 

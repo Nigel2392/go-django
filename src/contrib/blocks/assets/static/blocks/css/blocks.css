@@ -1,6 +1,10 @@
 .list-block {
     position: relative;
 }
+.sort-selected {
+    box-shadow: 0 0 0 2px var(--secondary-bg-color);
+    border-radius: 4px;
+}
 .list-block .list-block-add-button {
     position: absolute;
     top: 0;

@@ -271,13 +271,19 @@ func (l *ListBlock) ValueToGo(value interface{}) (interface{}, error) {
 
 func (l *ListBlock) GetDefault() interface{} {
 	if l.Min > 0 {
+		var getDefault = l.Child.GetDefault
+		if l.Default != nil {
+			getDefault = l.Default
+		}
+
 		var data = make(ListBlockData, l.Min)
 		for i := 0; i < l.Min; i++ {
 			data[i] = &ListBlockValue{
 				ID:   uuid.New(),
-				Data: l.Child.GetDefault(),
+				Data: getDefault(),
 			}
 		}
+
 		return data
 	}
 	return make(ListBlockData, 0)

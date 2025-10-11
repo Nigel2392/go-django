@@ -1,4 +1,6 @@
-import Sortable from "sortablejs";
+import Sortable, { MultiDrag } from "sortablejs";
+
+Sortable.mount(new MultiDrag());
 
 class SortableController extends window.StimulusController {
     declare sortable: Sortable
@@ -17,6 +19,8 @@ class SortableController extends window.StimulusController {
 
     private get sortableConfig() {
         return {
+            multiDrag: true,
+            selectedClass: 'sort-selected',
             handle: this.handleValue,
             animation: 150,
             swapThreshold: 1,

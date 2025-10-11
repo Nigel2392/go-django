@@ -23,12 +23,21 @@ type StructBlock struct {
 	ToForm func(interface{}) (map[string]interface{}, error)
 }
 
-func NewStructBlock() *StructBlock {
+func OptAddField(name string, block Block) func(*StructBlock) {
+	return func(i *StructBlock) {
+		i.AddField(name, block)
+	}
+}
+
+func NewStructBlock(opts ...func(*StructBlock)) *StructBlock {
 	var m = &StructBlock{
 		BaseBlock: NewBaseBlock(),
 		Fields:    orderedmap.NewOrderedMap[string, Block](),
 	}
 	m.FormField = fields.CharField()
+	for _, opt := range opts {
+		opt(m)
+	}
 	return m
 }
 
@@ -213,6 +222,10 @@ func (m *StructBlock) Validate(ctx context.Context, value interface{}) []error {
 }
 
 func (m *StructBlock) GetDefault() interface{} {
+	if m.Default != nil {
+		return m.Default()
+	}
+
 	var data = make(map[string]interface{})
 	for head := m.Fields.Front(); head != nil; head = head.Next() {
 		data[head.Key] = head.Value.GetDefault()

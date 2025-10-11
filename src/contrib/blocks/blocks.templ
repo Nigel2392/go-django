@@ -38,14 +38,14 @@ func renderBlockWidget(ctx context.Context,w io.Writer, widget *BlockWidget, blo
 }
 
 templ (b *FieldBlock) RenderTempl(id, name string, value interface{}, telepath string, errors []error, tplCtx ctx.Context)  {
-	// {{ var c = tplCtx.(*BlockContext) }}
+	{{ var c = tplCtx.(*BlockContext) }}
     // {{ var widget = b.Field().Widget() }}
 	// {{ var widgetCtx = widget.GetContextData(ctx, id, name, value, c.Attrs)
 	// if len(errors) > 0 {
 		// widgetCtx.Set("errors", errors)
 	// } }}
 
-    <div data-field-block class="form-field field">// data-controller="block" data-block-class-path-value="django.blocks.field-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, value, errors, c.Attrs}) }>
+    <div data-field-block class="form-field field" data-controller="block" data-block-class-path-value="django.blocks.field-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, value, errors, c.Attrs}) }>
 
         //  @widgets.LabelComponent("field-block", b.Label(ctx), id, templ.Attributes{
         //      "data-block-target": "label",
@@ -68,8 +68,8 @@ templ (b *FieldBlock) RenderTempl(id, name string, value interface{}, telepath s
 }
 
 templ (b *StructBlock) RenderTempl(id, name string, valueMap map[string]interface{}, telepath string, errors *BaseBlockValidationError[string], tplCtx ctx.Context)  {
-	// {{ var c = tplCtx.(*BlockContext) }}
-    <div id={ id } data-struct-block>// data-controller="block" data-block-class-path-value="django.blocks.struct-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, valueMap, errors, c.Attrs}) }>
+	{{ var c = tplCtx.(*BlockContext) }}
+    <div id={ id } data-struct-block data-controller="block" data-block-class-path-value="django.blocks.struct-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, valueMap, errors, c.Attrs}) }>
 	   //    for head := b.Fields.Front(); head != nil; head = head.Next() {
 	   //    	{{ var id  = fmt.Sprintf("%s-%s", id, head.Key) }}
 	   //    	{{ var key = fmt.Sprintf("%s-%s", name, head.Key) }}

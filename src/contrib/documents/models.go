@@ -2,10 +2,8 @@ package documents
 
 import (
 	"context"
-	"crypto/sha256"
 	"database/sql"
 	"fmt"
-	"hash"
 	"time"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -20,10 +18,6 @@ var (
 	_ queries.ActsBeforeCreate = (*Document)(nil)
 	_ queries.ContextValidator = (*Document)(nil)
 )
-
-func newDocumentHasher() hash.Hash {
-	return sha256.New()
-}
 
 // readonly:id,created_at
 type Document struct {

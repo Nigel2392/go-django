@@ -14,15 +14,20 @@ func (b *FieldBlock) Adapter(ctx context.Context) telepath.Adapter {
 	return &telepath.ObjectAdapter[*FieldBlock]{
 		JSConstructor: "django.blocks.FieldBlock",
 		GetJSArgs: func(ctx context.Context, obj *FieldBlock) []interface{} {
+			var field = obj.Field()
+			if field == nil {
+				panic("field is nil")
+			}
+
 			return []interface{}{
 				obj.Name(),
 				obj.FormField.Widget(),
 				map[string]interface{}{
 					"label":    obj.Label(ctx),
 					"helpText": obj.HelpText(ctx),
-					"required": obj.Field().Required(),
-					"attrs":    obj.Field().Attrs(),
-					"default":  obj.GetDefault(),
+					"required": field.Required(),
+					"attrs":    field.Attrs(),
+					"default":  field.ValueToForm(obj.GetDefault()),
 				},
 			}
 		},

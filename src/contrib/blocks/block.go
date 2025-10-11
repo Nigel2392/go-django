@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net/url"
+	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -13,14 +14,21 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"github.com/Nigel2392/go-telepath/telepath"
 )
+
+type BoundBlock[DATA any] struct {
+	Block Block
+	Data  DATA
+}
 
 type Block interface {
 	Name() string
 	SetName(name string)
 	SetLabel(label any)
 	SetHelpText(helpText any)
+	SetDefault(def interface{})
 	Label(ctx context.Context) string
 	HelpText(ctx context.Context) string
 	Field() fields.Field
@@ -113,11 +121,26 @@ func (b *BaseBlock) HelpText(ctx context.Context) string {
 	return ""
 }
 
+func (b *BaseBlock) SetDefault(def interface{}) {
+	var rv = reflect.ValueOf(def)
+	if rv.Kind() == reflect.Func {
+		var err error
+		b.Default, err = django_reflect.CastFunc[func() interface{}](rv)
+		if err != nil {
+			panic(err)
+		}
+	} else {
+		b.Default = func() interface{} {
+			return def
+		}
+	}
+}
+
 func (b *BaseBlock) GetDefault() interface{} {
 	if b.Default != nil {
 		return b.Default()
 	}
-	return nil
+	return b.Field().Default()
 }
 
 func (b *BaseBlock) ValueToGo(value interface{}) (interface{}, error) {
