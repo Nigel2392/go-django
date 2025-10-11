@@ -41,12 +41,15 @@ class BoundStreamBlock extends BoundBlock<StreamBlock> {
                 { Icon('icon-plus', { title: window.i18n.gettext("Add %s", this.block.meta.label || window.i18n.gettext('item')) }) }
             </button>
         );
+
         this.totalInput = root.appendChild(
             <input type="hidden" data-stream-block-total name={ `${name}--total` } value={ String(initialState.blocks.length) }/>
         ) as HTMLInputElement;
+
         this.itemWrapper = root.appendChild(
             <div data-stream-block-items class="stream-block-items" data-sortable-target="items"></div>
         ) as HTMLElement;
+
         for (let i = 0; i < initialState.blocks.length; i++) {
             this._createChild(
                 i, i, id, name, initialState.blocks[i], initialError[i] || null, false,
@@ -64,6 +67,101 @@ class BoundStreamBlock extends BoundBlock<StreamBlock> {
         if (!value.data) {
             value.data = this.block.defaults[value.type] || null;
         }
+
+        let animator = null;
+        if (animate) {
+            animator = new openAnimator({
+                duration: 300,
+                onAdded: (elem) => {
+                    elem.style.transition = "opacity 300ms ease";
+                },
+                onFinished: (elem) => {
+                    elem.style.transition = "";
+                    if (!elem.style) {
+                        elem.removeAttribute("style");
+                    }
+                },
+                animFrom: { opacity: "0" },
+                animTo: { opacity: "1" },
+            });
+        }
+
+        const itemId = `${id}-${suffix}`;
+        const itemKey = `${name}-${suffix}`;
+        const blockId = `${name}-id-${suffix}`;
+        const orderId = `${name}-order-${suffix}`;
+        const deletedKey = `${name}-${suffix}--deleted`;
+        const typeKey = `${name}-${suffix}--type`;
+        const panelId = `${itemKey}--panel`;
+        const headingIndexId = `${itemKey}--heading-index`;
+        const itemDom = (
+            <div data-stream-block-field id={ itemKey + "--block" } data-index={ String(sortIndex) } data-sortable-target="item" data-replace={ `#${orderId};#${headingIndexId}+;[data-index]` } class="stream-block-field">
+                <input type="hidden" id={ blockId } name={ blockId } value={ value.id } />
+                <input type="hidden" id={ orderId } name={ orderId } value={ String(value.order) } />
+                <input type="hidden" id={ deletedKey } name={ deletedKey } value=""/>
+                <input type="hidden" id={ typeKey } name={ typeKey } value={ value.type } />
+
+                {PanelComponent({
+                    panelId: panelId,
+                    heading: (
+                        <div class="stream-block-field-heading">
+                            { childBlock.meta.label ? <label for={ blockId } class="stream-block-field-heading-label">{ childBlock.meta.label }:</label> : null }
+                            <span id={ headingIndexId } class="stream-block-field-heading-index">{ String(value.order + 1) }</span>
+                        </div>
+                    ),
+                    children: (
+                        <div data-stream-block-field-content class="stream-block-field-content">
+                            <div data-stream-block-field-handle class="stream-block-field-drag-handle">
+                                &#x2630;
+                            </div>
+
+                            <div data-stream-block-field-inner></div>
+
+                            <div data-stream-block-field-actions class="stream-block-field-actions">
+                                <div data-stream-block-field-actions-group class="stream-block-field-actions-group">
+                                    <div data-stream-block-field-delete class="stream-block-field-delete">
+                                        <button type="button" data-action="delete" class="stream-block-field-delete-button" onClick={this._onDeleteClick.bind(this, itemKey)}>
+                                            { Icon('icon-trash') }
+                                        </button>
+                                    </div>
+                                    <div data-stream-block-field-add class="stream-block-field-add">
+                                        <button type="button" data-action="add" class="stream-block-field-add-button" onClick={this._onAddClick.bind(this, itemKey)}>
+                                            { Icon('icon-plus') }
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                })}
+            </div>
+        );
+        
+        if (animate) {
+            animator.addElement(itemDom);
+        }
+
+        if (sortIndex === 0) { // append to start
+            this.itemWrapper.prepend(itemDom);
+        } else if (sortIndex >= this.items.length) { // append to end
+            this.itemWrapper.appendChild(itemDom);
+        } else { // insert in middle
+            this.itemWrapper.insertBefore(itemDom, this.itemWrapper.children[sortIndex]);
+        }
+            
+        this.items.push(childBlock.render(
+            itemDom.querySelector('[data-stream-block-field-inner]'),
+            itemId,
+            itemKey,
+            value.data,
+            error,
+        ));
+
+        if (animate) {
+            animator.start();
+        }
+
+        return itemDom;
     }
 
     _onDeleteClick(itemName: string, ev: MouseEvent) {
