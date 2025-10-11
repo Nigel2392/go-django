@@ -237,6 +237,41 @@ class BoundStreamBlock extends BoundBlock<StreamBlock> {
             index = parseInt(elem.dataset.index || '0', 10) + 1;
         }
 
+        // let user select type
+        const typeNames = Object.keys(this.block.childBlocks);
+        if (typeNames.length === 0) {
+            console.error("No child blocks defined for StreamBlock", this.block.name);
+            return;
+        }
+        let type = typeNames[0];
+        if (typeNames.length > 1) {
+            type = window.prompt(window.i18n.gettext("Enter block type (%s):", typeNames.join(", ")), type) || type;
+            if (!typeNames.includes(type)) {
+                console.warn("Invalid block type selected", type);
+                flash(this.itemWrapper);
+                return;
+            }
+        }
+        
+        const newValue: StreamBlockData = {
+            id: '',
+            type: type,
+            order: index,
+            data: null,
+        };
+        if (this.block.defaults[type]) {
+            newValue.data = this.block.defaults[type];
+        }
+        flash(this._createChild(
+            this.items.length, index, this.id, this.name, newValue, null,
+        ), {
+            color: 'green',
+            duration: 300,
+            iters: 1,
+            delay: 100,
+        });
+        this.totalInput.value = String(this.items.length);
+        this.activeItems += 1;
     }
 }
 

@@ -118,6 +118,6 @@ templ (l *ListBlock) RenderTempl(id, name string, valueArr []*ListBlockValue, te
 }
 
 templ (s *StreamBlock) RenderTempl(id, name string, valueArr StreamBlockValue, telepath string, streamBlockErrors *BaseBlockValidationError[int], tplCtx ctx.Context) {
-    <div data-stream-block data-controller="block" class="stream-block" data-block-class-path-value="django.blocks.stream-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, valueArr, streamBlockErrors}) }>
+    <div data-stream-block data-controller="sortable block" class="stream-block" data-block-class-path-value="django.blocks.stream-block" data-block-class-args-value={ telepath } data-block-id-value={ id } data-block-arguments-value={ templ.JSONString([]any{name, valueArr, streamBlockErrors}) }>
     </div>
 }
