@@ -19,7 +19,7 @@ func NewListBlock() *blocks.ListBlock {
 
 var (
 	ListBlockDataRaw = map[string][]string{
-		"test_list_block-added":      {"2"},
+		"test_list_block--total":     {"2"},
 		"test_list_block-id-0":       {uuid.Nil.String()},
 		"test_list_block-order-0":    {"0"},
 		"test_list_block-0-name":     {"John Doe"},
