@@ -1,8 +1,9 @@
 import { Block, BlockMeta, BoundBlock } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import Icon from '../../../../../admin/static_src/utils/icon';
-import { getPanelAttrs, PanelComponent, PanelHeading } from '../../../../../admin/static_src/utils/panels';
+import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
 import { openAnimator } from '../../../../../admin/static_src/utils/animator';
+import flash from '../../../../../admin/static_src/utils/flash';
 
 type ListBlockValue = {
     id: string;
@@ -25,16 +26,20 @@ class BoundListBlock extends BoundBlock {
         this.items = [];
         this.id = id;
 
-        this.itemWrapper = (
-            <div data-list-block-items class="list-block-items" data-sortable-target="items"></div>
+        root.appendChild(
+            <button type="button" data-action="add" class="list-block-add-button" onClick={this._onAddClick.bind(this, null)}>
+                { Icon('icon-plus', { title: window.i18n.gettext("Add %s", this.block.meta.label || window.i18n.gettext('item')) }) }
+            </button>
         );
 
-        this.totalInput = (
+        this.totalInput = root.appendChild(
             <input type="hidden" data-list-block-total name={ `${name}--total` } value={ String(initialState.length) }/>
         ) as HTMLInputElement;
 
-        root.appendChild(this.totalInput);
-        root.appendChild(this.itemWrapper);
+        this.itemWrapper = root.appendChild(
+            <div data-list-block-items class="list-block-items" data-sortable-target="items"></div>
+        ) as HTMLElement;
+
 
         for (let i = 0; i < initialState.length; i++) {
             this._createChild(
@@ -137,18 +142,13 @@ class BoundListBlock extends BoundBlock {
         if (animate) {
             animator.start();
         }
+
+        return itemDom;
     }
 
     _onDeleteClick(itemName: string, ev: MouseEvent) {
         ev.preventDefault();
 
-        console.log("DELETE", this.activeItems, this.block.meta);
-
-        if (this.activeItems <= 1 && this.block.meta.required || (this.block.meta.minNum && this.activeItems <= this.block.meta.minNum)) {
-            console.warn("Can't delete item, minimum reached");
-            return;
-        }
-        
         const wrapperId = `#${itemName}--block`;
         const elem = this.itemWrapper.querySelector(wrapperId) as HTMLElement;
         if (!elem) {
@@ -156,6 +156,12 @@ class BoundListBlock extends BoundBlock {
             return;
         }
 
+        if (this.activeItems <= 1 && this.block.meta.required || (this.block.meta.minNum && this.activeItems <= this.block.meta.minNum)) {
+            console.warn("Can't delete item, minimum reached");
+            flash(elem);
+            return;
+        }
+        
         const deletedInput = elem.querySelector(`#${itemName}--deleted`) as HTMLInputElement;
         if (!deletedInput) {
             console.warn("Couldn't find deleted input", `#${itemName}--deleted`);
@@ -165,6 +171,13 @@ class BoundListBlock extends BoundBlock {
         elem.style.display = 'none';
         deletedInput.value = '1';
         this.activeItems -= 1;
+
+        flash(this.itemWrapper, {
+            color: 'orange',
+            duration: 300,
+            iters: 1,
+            delay: 20,
+        });
         
         const sortable = window.Stimulus.getControllerForElementAndIdentifier(this.element, "sortable");
         if (sortable) {
@@ -174,26 +187,35 @@ class BoundListBlock extends BoundBlock {
         }
     }
 
-    _onAddClick(itemName: string, ev: MouseEvent) {
+    _onAddClick(itemName: string | null, ev: MouseEvent) {
         ev.preventDefault();
-
-        console.log("ADD", this.activeItems, this.block.meta);
 
         if (this.block.meta.maxNum && this.activeItems >= this.block.meta.maxNum) {
             console.warn("Can't add item, maximum reached");
+            flash(this.itemWrapper);
             return;
         }
 
-        itemName = `#${itemName}--block`;
-        const elem = this.itemWrapper.querySelector(itemName) as HTMLElement;
-        if (!elem) {
-            console.warn("Couldn't find item to add", itemName);
-            return;
+        let index: number = 0;
+        if (itemName) {
+            itemName = `#${itemName}--block`;
+            const elem = this.itemWrapper.querySelector(itemName) as HTMLElement;
+            if (!elem) {
+                console.warn("Couldn't find item to add", itemName);
+                return;
+            }
+            index = parseInt(elem.dataset.index || '0', 10) + 1;
         }
-        const index = parseInt(elem.dataset.index || '0', 10) + 1;
-        this._createChild(
+
+        flash(this._createChild(
             this.items.length, index, this.id, this.name, { id: '', order: index, data: null }, null,
-        );
+        ), {
+            color: 'green',
+            duration: 300,
+            iters: 1,
+            delay: 100,
+        });
+
         this.totalInput.value = String(this.items.length);
         this.activeItems += 1;
     }

@@ -749,7 +749,6 @@ func (b *BaseFormSet[FORM]) BoundErrorsList() []*orderedmap.OrderedMap[string, [
 
 func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 	var results = make([]any, 0, len(b.FormList))
-	var deleted = make([]FORM, 0, len(b.FormList))
 	var errs = make([]error, 0)
 	for _, form := range b.FormList {
 		var cleaned = form.CleanedData()
@@ -758,7 +757,6 @@ func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 			isDeleted, _ = del.(bool)
 		}
 		if isDeleted {
-			deleted = append(deleted, form)
 			continue
 		}
 
@@ -793,8 +791,8 @@ func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 		}
 	}
 
-	if b.opts.DeleteForms != nil && len(deleted) > 0 {
-		if err := b.opts.DeleteForms(b.ctx, deleted); err != nil {
+	if b.opts.DeleteForms != nil && len(b.DeletedFormsList) > 0 {
+		if err := b.opts.DeleteForms(b.ctx, b.DeletedFormsList); err != nil {
 			return nil, err
 		}
 	}

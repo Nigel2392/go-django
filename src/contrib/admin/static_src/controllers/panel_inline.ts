@@ -2,6 +2,7 @@ import { Controller, ActionEvent } from "@hotwired/stimulus";
 import slugify from "../utils/slugify";
 import { PanelElement } from "./panel";
 import { openAnimator } from "../utils/animator";
+import flash, { FlashOptions } from "../utils/flash";
 
 class ManagementFormElement {
     element: HTMLElement;
@@ -224,23 +225,8 @@ class InlinePanelController extends Controller<PanelElement> {
         return;
     }
 
-    private flash(element: Element | null, opts: { color?: string; duration?: number; iters?: number; delay?: number; } = { color: 'red', duration: 200, iters: 2, delay: 0 }) {
-        if (!element) return;
-        element.animate(
-            [
-                { boxShadow: `0 0 0px ${opts.color}` },
-                { boxShadow: `0 0 10px ${opts.color}` },
-                { boxShadow: `0 0 0px ${opts.color}` },
-            ],
-            {
-                duration: opts.duration,
-                easing: "linear",
-                fill: 'none',
-                iterations: opts.iters,
-                delay: opts.delay,
-                direction: 'alternate',
-            }
-        );
+    private flash(element: Element | null, opts: FlashOptions = { color: 'red', duration: 200, iters: 2, delay: 0 }) {
+        flash(element, opts);
     }
 
     private getTargetElement(specifier: string | number | null): PanelElement | null {

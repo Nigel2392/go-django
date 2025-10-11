@@ -4,8 +4,6 @@ github.com/Nigel2392/go-django/queries v0.0.0-20250909075602-d90535f21ee1 h1:o8Q
 github.com/Nigel2392/go-django/queries v0.0.0-20250909075602-d90535f21ee1/go.mod h1:ALQKwQULtmn1aAvvTjKfk4uSp2OkkIQ2T7dh5++3fPY=
 github.com/Nigel2392/go-signals v1.1.0 h1:DVVOe1Q+oyf+RloEcyW3g+uym83UijAIW8y3oRpYwSs=
 github.com/Nigel2392/go-signals v1.1.0/go.mod h1:Olk7MJlZ9gdGPN8bh+OZSe7iOsBixn7biVI7LqoWEIA=
-github.com/Nigel2392/go-telepath v1.4.0 h1:ERC+LfJnceXDY/6osog9N9Lpge0pTWkoJ8m0qdQvglQ=
-github.com/Nigel2392/go-telepath v1.4.0/go.mod h1:CPUZ6sDIXEWOGq+KzuBoXdJvakSMvuFB+c2SpQfGSAc=
 github.com/Nigel2392/go-telepath v1.4.1 h1:BI4+StrE0OJjN0SremPSZSTnBGPci4Tq8mrdafXqVfc=
 github.com/Nigel2392/go-telepath v1.4.1/go.mod h1:CPUZ6sDIXEWOGq+KzuBoXdJvakSMvuFB+c2SpQfGSAc=
 github.com/Nigel2392/goldcrest v1.0.4 h1:Xx+QLht6QjJ3Gg9uksgc6Ye1XjbtzQ1208ClZwoVWsg=
