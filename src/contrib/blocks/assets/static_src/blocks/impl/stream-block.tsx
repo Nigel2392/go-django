@@ -178,9 +178,65 @@ class BoundStreamBlock extends BoundBlock<StreamBlock> {
 
     _onDeleteClick(itemName: string, ev: MouseEvent) {
         ev.preventDefault();
+
+        const wrapperId = `#${itemName}--block`;
+        const elem = this.itemWrapper.querySelector(wrapperId) as HTMLElement;
+        if (!elem) {
+            console.warn("Couldn't find item to delete", wrapperId);
+            return;
+        }
+
+        if (this.activeItems <= 1 && this.block.meta.required || (this.block.meta.minNum && this.activeItems <= this.block.meta.minNum)) {
+            console.warn("Can't delete item, minimum reached");
+            flash(elem);
+            return;
+        }
+        
+        const deletedInput = elem.querySelector(`#${itemName}--deleted`) as HTMLInputElement;
+        if (!deletedInput) {
+            console.warn("Couldn't find deleted input", `#${itemName}--deleted`);
+            return;
+        }
+
+        elem.style.display = 'none';
+        deletedInput.value = '1';
+        this.activeItems -= 1;
+
+        flash(this.itemWrapper, {
+            color: 'orange',
+            duration: 300,
+            iters: 1,
+            delay: 20,
+        });
+        
+        const sortable = window.Stimulus.getControllerForElementAndIdentifier(this.element, "sortable");
+        if (sortable) {
+            (sortable as any).reOrderItems();
+        } else {
+            console.warn("Couldn't find sortable controller for list block", this.element);
+        }
     }
+
     _onAddClick(itemName: string | null, ev: MouseEvent) {
         ev.preventDefault();
+
+        if (this.block.meta.maxNum && this.activeItems >= this.block.meta.maxNum) {
+            console.warn("Can't add item, maximum reached");
+            flash(this.itemWrapper);
+            return;
+        }
+
+        let index: number = 0;
+        if (itemName) {
+            itemName = `#${itemName}--block`;
+            const elem = this.itemWrapper.querySelector(itemName) as HTMLElement;
+            if (!elem) {
+                console.warn("Couldn't find item to add", itemName);
+                return;
+            }
+            index = parseInt(elem.dataset.index || '0', 10) + 1;
+        }
+
     }
 }
 
