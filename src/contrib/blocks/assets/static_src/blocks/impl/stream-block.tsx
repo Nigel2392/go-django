@@ -22,9 +22,15 @@ type childBlockMap = {
     block: Block;
 }[];
 
+type BoundStreamBlockValue = {
+    id: string;
+    type: string;
+    block: BoundBlock;    
+};
+
 class BoundStreamBlock extends BoundBlock<StreamBlock> {
     id: String;
-    items: BoundBlock[];
+    items: BoundStreamBlockValue[];
     itemWrapper: HTMLElement;
     totalInput: HTMLInputElement;
     activeItems: number;
@@ -148,14 +154,20 @@ class BoundStreamBlock extends BoundBlock<StreamBlock> {
         } else { // insert in middle
             this.itemWrapper.insertBefore(itemDom, this.itemWrapper.children[sortIndex]);
         }
-            
-        this.items.push(childBlock.render(
-            itemDom.querySelector('[data-stream-block-field-inner]'),
-            itemId,
-            itemKey,
-            value.data,
-            error,
-        ));
+
+        const boundValue: BoundStreamBlockValue = {
+            id: value.id,
+            type: value.type,
+            block: childBlock.render(
+                itemDom.querySelector('[data-stream-block-field-inner]'),
+                itemId,
+                itemKey,
+                value.data,
+                error,
+            )
+        };
+        
+        this.items.push(boundValue);
 
         if (animate) {
             animator.start();
@@ -203,4 +215,6 @@ export {
     StreamBlockValue,
     StreamBlock,
     BoundStreamBlock,
+    BoundStreamBlockValue,
+    StreamBlockData,
 };

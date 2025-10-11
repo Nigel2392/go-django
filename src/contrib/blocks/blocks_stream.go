@@ -21,7 +21,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-var _ Block = (*StreamBlock)(nil)
+var (
+	_ Block = (*StreamBlock)(nil)
+)
 
 type StreamBlockData struct {
 	ID    uuid.UUID   `json:"id"`
