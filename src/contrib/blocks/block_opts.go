@@ -1,7 +1,10 @@
 package blocks
 
 import (
+	"fmt"
 	"reflect"
+
+	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
 type OptFunc[T any] func(T)
@@ -38,5 +41,40 @@ func WithHelpText[T Block](text any) OptFunc[T] {
 func WithDefault[T Block](def interface{}) OptFunc[T] {
 	return func(t T) {
 		t.SetDefault(def)
+	}
+}
+
+func reflectSetter[T Block](t T, fieldName string, value interface{}) bool {
+	var field = reflect.ValueOf(t).Elem().FieldByName(fieldName)
+	if field.IsValid() {
+		field.Set(reflect.ValueOf(value))
+		return true
+	}
+	return false
+}
+
+func WithMin[T Block](min int) OptFunc[T] {
+	return func(t T) {
+		if !reflectSetter(t, "Min", min) {
+			panic(fmt.Errorf("Min is not a valid field of %T", t))
+		}
+	}
+}
+
+func WithMax[T Block](max int) OptFunc[T] {
+	return func(t T) {
+		if !reflectSetter(t, "Max", max) {
+			panic(fmt.Errorf("Max is not a valid field of %T", t))
+		}
+	}
+}
+
+func WithBlockField[T Block](name string, block Block) OptFunc[T] {
+	return func(t T) {
+		var method, ok = attrs.Method[func(string, Block)](t, "AddField")
+		if !ok {
+			panic(fmt.Errorf("AddField is not a valid method of %T", t))
+		}
+		method(name, block)
 	}
 }

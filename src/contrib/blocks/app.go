@@ -21,34 +21,6 @@ import (
 	"github.com/Nigel2392/goldcrest"
 )
 
-type SubBlockData struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
-}
-
-type StreamBlockData struct {
-	Blocks []SubBlockData `json:"blocks"`
-}
-
-func (s StreamBlockData) Value() (driver.Value, error) {
-	jsonData, err := json.Marshal(s)
-	return jsonData, err
-}
-
-func (s *StreamBlockData) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case []byte:
-		return json.Unmarshal(v, s)
-	case string:
-		return json.Unmarshal([]byte(v), s)
-	case nil:
-		*s = StreamBlockData{}
-		return nil
-	default:
-		return fmt.Errorf("cannot scan %T into StreamBlockData", value)
-	}
-}
-
 type ListBlockData []*ListBlockValue
 
 func (l ListBlockData) Value() (driver.Value, error) {
@@ -71,7 +43,7 @@ func (l *ListBlockData) Scan(value interface{}) error {
 }
 
 func init() {
-	dbtype.Add(&StreamBlockData{}, dbtype.JSON)
+	dbtype.Add(&StreamBlockValue{}, dbtype.JSON)
 	dbtype.Add(&ListBlockData{}, dbtype.JSON)
 
 	// Assign the BlockField form field to any struct field which is of type <X>BlockData.
@@ -94,7 +66,7 @@ func init() {
 		return BlockField(featureFunc(), opts...), true
 	}
 
-	attrs.RegisterFormFieldGetter(&StreamBlockData{}, getter)
+	attrs.RegisterFormFieldGetter(&StreamBlockValue{}, getter)
 	attrs.RegisterFormFieldGetter(ListBlockData{}, getter)
 }
 
