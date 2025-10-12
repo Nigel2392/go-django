@@ -222,7 +222,7 @@ type BaseFormSet[FORM BaseFormSetForm] struct {
 func NewBaseFormSet[FORM BaseFormSetForm](ctx context.Context, opts FormsetOptions[FORM]) *BaseFormSet[FORM] {
 	var mgmt *ManagementForm
 
-	if !((opts.MinNum+opts.Extra) == opts.MaxNum && opts.MinNum > 0) {
+	if !((opts.MinNum+opts.Extra) == opts.MaxNum && (opts.MinNum > 0 || !opts.CanAdd)) {
 		mgmt = NewManagementForm(ctx, func(m *ManagementForm) {
 			m.MinNumForms = opts.MinNum
 			m.MaxNumForms = opts.MaxNum

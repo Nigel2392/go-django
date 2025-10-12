@@ -46,7 +46,9 @@ class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
             allowPanelLink: !!block.meta.label,
             heading: block.meta.label ?? (
                 <div class="sequence-block-field-heading">
-                    <label for={id} class="sequence-block-field-heading-label">{block.meta.label}:</label>
+                    <label for={id} class="sequence-block-field-heading-label">
+                        {block.meta.label}:
+                    </label>
                 </div>
             ),
             attrs: {
@@ -61,20 +63,30 @@ class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
         this.id = id;
         
         root.body.appendChild(
-            <button type="button" data-action="add" class="sequence-block-add-button" onClick={this._onAddClick.bind(this, null)}>
-                { Icon('icon-plus', { title: window.i18n.gettext("Add %s", this.block.meta.label || window.i18n.gettext('item')) }) }
-            </button>
+            <div data-controller="dropdown" class="sequence-block-add-dropdown dropdown">
+                <button type="button" data-action="add" class="sequence-block-add-button" data-dropdown-target="toggle" aria-label={window.i18n.gettext("Add %s", this.block.meta.label || window.i18n.gettext('item'))} aria-expanded="false">
+                    { Icon('icon-plus', { title: window.i18n.gettext("Add %s", this.block.meta.label || window.i18n.gettext('item')) }) }
+                </button>
+                <div data-dropdown-target="content" class="dropdown__content">
+                    { Object.keys(this.block.childBlocks).map((type) => (
+                        <button type="button" class="sequence-block-add-type-button" onClick={this._onAddClick.bind(this, null, type)} data-block-type={type} data-action="click->dropdown#hide">
+                            { this.block.childBlocks[type].meta.label || type }
+                        </button>
+                    )) }
+                </div>
+            </div>
+
         );
 
         this.totalInput = root.body.appendChild(
-            <input type="hidden" data-sequence-block-total name={ `${name}--total` } value={ String(initialState.blocks.length) }/>
+            <input type="hidden" data-sequence-block-total name={ `${name}--total` } value={ String(initialState?.blocks?.length || 0) }/>
         ) as HTMLInputElement;
 
         this.itemWrapper = root.body.appendChild(
             <div data-sequence-block-items class="sequence-block-items" data-sortable-target="items"></div>
         ) as HTMLElement;
 
-        for (let i = 0; i < initialState.blocks.length; i++) {
+        for (let i = 0; i < (initialState?.blocks?.length || 0); i++) {
             this._createChild(
                 i, i, id, name, initialState.blocks[i], initialError[i] || null, false,
             );
@@ -235,7 +247,7 @@ class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
         }
     }
 
-    _onAddClick(itemName: string | null, ev: MouseEvent) {
+    _onAddClick(itemName: string | null, typeName: string, ev: MouseEvent) {
         ev.preventDefault();
 
         if (this.block.meta.maxNum && this.activeItems >= this.block.meta.maxNum) {
@@ -255,30 +267,14 @@ class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
             index = parseInt(elem.dataset.index || '0', 10) + 1;
         }
 
-        // let user select type
-        const typeNames = Object.keys(this.block.childBlocks);
-        if (typeNames.length === 0) {
-            console.error("No child blocks defined for StreamBlock", this.block.name);
-            return;
-        }
-        let type = typeNames[0];
-        if (typeNames.length > 1) {
-            type = window.prompt(window.i18n.gettext("Enter block type (%s):", typeNames.join(", ")), type) || type;
-            if (!typeNames.includes(type)) {
-                console.warn("Invalid block type selected", type);
-                flash(this.itemWrapper);
-                return;
-            }
-        }
-        
         const newValue: StreamBlockData = {
             id: '',
-            type: type,
+            type: typeName,
             order: index,
             data: null,
         };
-        if (this.block.defaults[type]) {
-            newValue.data = this.block.defaults[type];
+        if (this.block.defaults[typeName]) {
+            newValue.data = this.block.defaults[typeName];
         }
         flash(this._createChild(
             this.items.length, index, this.id, this.name, newValue, null,

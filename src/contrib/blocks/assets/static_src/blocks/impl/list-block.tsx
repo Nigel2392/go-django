@@ -11,6 +11,12 @@ type ListBlockValue = {
     data: any;
 };
 
+const nonCopyDisplayAttrs: { [key: string]: boolean } = {
+    "data-controller": true,
+    "class": true,
+    "style": true,
+}
+
 class BoundListBlock extends BoundBlock<ListBlock, Panel> {
     id: String;
     items: BoundBlock[];
@@ -36,6 +42,18 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
             },
         });
 
+        const attrs: { [key: string]: string } = {};
+        // placeholder attrs copied
+        for (let i = 0; i < placeholder.attributes.length; i++) {
+            if (!root.hasAttribute(placeholder.attributes[i].name) && !nonCopyDisplayAttrs[placeholder.attributes[i].name]) {
+                attrs[placeholder.attributes[i].name] = placeholder.attributes[i].value;
+            }
+        }
+        
+        Object.keys(attrs).forEach((key) => {
+            root.body.setAttribute(key, attrs[key]);
+        });
+
         placeholder.replaceWith(root);
 
         super(block, name, root);
@@ -49,7 +67,7 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
         );
 
         this.totalInput = root.body.appendChild(
-            <input type="hidden" data-sequence-block-total name={ `${name}--total` } value={ String(initialState.length) }/>
+            <input type="hidden" data-sequence-block-total name={ `${name}--total` } value={ String(initialState.length || 0) }/>
         ) as HTMLInputElement;
 
         this.itemWrapper = root.body.appendChild(

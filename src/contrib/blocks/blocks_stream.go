@@ -303,23 +303,23 @@ func (l *StreamBlock) ValueFromDataDict(ctx context.Context, d url.Values, files
 	)
 
 	if errs.HasErrors() {
-		return nil, []error{errs}
+		return data, []error{errs}
 	}
 
 	if l.Min != -1 && len(data.Blocks) < l.Min {
-		return nil, []error{l.makeError(
+		return data, []error{l.makeError(
 			fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data.Blocks)), //lint:ignore ST1005 ignore this lint
 		)}
 	}
 
 	if l.Max != -1 && len(data.Blocks) > l.Max {
-		return nil, []error{l.makeError(
+		return data, []error{l.makeError(
 			fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data.Blocks)), //lint:ignore ST1005 ignore this lint
 		)}
 	}
 
 	if totalCount+deletedCount != total {
-		return nil, []error{l.makeError(
+		return data, []error{l.makeError(
 			fmt.Errorf("Invalid number of items, expected %d, got %d", total, totalCount+deletedCount), //lint:ignore ST1005 ignore this lint
 		)}
 	}
@@ -332,12 +332,12 @@ func (l *StreamBlock) ValueToGo(value interface{}) (interface{}, error) {
 		return "", nil
 	}
 	var (
-		valueArr StreamBlockValue
+		valueArr *StreamBlockValue
 		ok       bool
 	)
 
-	if valueArr, ok = value.(StreamBlockValue); !ok {
-		return nil, fmt.Errorf("value must be of type StreamBlockValue, got %T", value)
+	if valueArr, ok = value.(*StreamBlockValue); !ok {
+		return value, fmt.Errorf("value must be of type StreamBlockValue, got %T", value)
 	}
 
 	var (
@@ -399,9 +399,9 @@ func (l *StreamBlock) ValueToForm(value interface{}) interface{} {
 		value = l.GetDefault()
 	}
 
-	var blockData StreamBlockValue
+	var blockData *StreamBlockValue
 	var ok bool
-	if blockData, ok = value.(StreamBlockValue); !ok {
+	if blockData, ok = value.(*StreamBlockValue); !ok {
 		return value
 	}
 
@@ -424,7 +424,6 @@ func (l *StreamBlock) ValueToForm(value interface{}) interface{} {
 	}
 
 	blockData.Blocks = data
-
 	return blockData
 }
 
@@ -433,9 +432,9 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 		return nil, nil
 	}
 
-	var blockData StreamBlockValue
+	var blockData *StreamBlockValue
 	var ok bool
-	if blockData, ok = value.(StreamBlockValue); !ok {
+	if blockData, ok = value.(*StreamBlockValue); !ok {
 		return value, fmt.Errorf("value must be of type StreamBlockValue, got %T", value)
 	}
 
@@ -448,7 +447,7 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 
 		var v, err = child.Clean(ctx, lbVal.Data)
 		if err != nil {
-			return nil, l.makeIndexedError(i, errors.Wrapf(err, "index %d", i))
+			return value, l.makeIndexedError(i, errors.Wrapf(err, "index %d", i))
 		}
 
 		data = append(data, &StreamBlockData{
@@ -459,7 +458,8 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 		})
 	}
 
-	return data, nil
+	blockData.Blocks = data
+	return blockData, nil
 }
 
 func (l *StreamBlock) Validate(ctx context.Context, value interface{}) []error {
@@ -475,7 +475,7 @@ func (l *StreamBlock) Validate(ctx context.Context, value interface{}) []error {
 	}
 
 	var errors = make([]error, 0)
-	for i, v := range value.(StreamBlockValue).Blocks {
+	for i, v := range value.(*StreamBlockValue).Blocks {
 		var child, ok = l.Children.Get(v.Type)
 		if !ok {
 			continue // this really shouldn't happen
@@ -492,7 +492,7 @@ func (l *StreamBlock) Validate(ctx context.Context, value interface{}) []error {
 func (l *StreamBlock) RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, tplCtx ctx.Context) error {
 	var (
 		ctxData = NewBlockContext(l, tplCtx)
-		val     StreamBlockValue
+		val     *StreamBlockValue
 		ok      bool
 	)
 	ctxData.ID = id
@@ -503,7 +503,7 @@ func (l *StreamBlock) RenderForm(ctx context.Context, w io.Writer, id, name stri
 		value = l.GetDefault()
 	}
 
-	if val, ok = value.(StreamBlockValue); !ok {
+	if val, ok = value.(*StreamBlockValue); !ok {
 		return fmt.Errorf("value must be a []interface{}")
 	}
 

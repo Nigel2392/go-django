@@ -93,19 +93,44 @@ func (m *BaseBlockValidationError[T]) Error() string {
 }
 
 func (m *BaseBlockValidationError[T]) MarshalJSON() ([]byte, error) {
-	var (
-		errs = make(map[T][]string)
-	)
+	var errs = make(map[T][]json.RawMessage)
 	for k, v := range m.Errors {
-		var s = make([]string, len(v))
+		var s = make([]json.RawMessage, len(v))
 		for i, e := range v {
-			s[i] = e.Error()
+			switch e := e.(type) {
+			case json.Marshaler:
+				var j, err = e.MarshalJSON()
+				if err != nil {
+					return nil, err
+				}
+				s[i] = json.RawMessage(j)
+			default:
+				j, err := json.Marshal(e.Error())
+				if err != nil {
+					return nil, err
+				}
+				s[i] = json.RawMessage(j)
+			}
 		}
 		errs[k] = s
 	}
-	var nonBlockErrs = make([]string, len(m.NonBlockErrors))
+
+	var nonBlockErrs = make([]json.RawMessage, len(m.NonBlockErrors))
 	for i, e := range m.NonBlockErrors {
-		nonBlockErrs[i] = e.Error()
+		switch e := e.(type) {
+		case json.Marshaler:
+			var j, err = e.MarshalJSON()
+			if err != nil {
+				return nil, err
+			}
+			nonBlockErrs[i] = json.RawMessage(j)
+		default:
+			j, err := json.Marshal(e.Error())
+			if err != nil {
+				return nil, err
+			}
+			nonBlockErrs[i] = json.RawMessage(j)
+		}
 	}
 
 	var errsMap = make(map[string]any)
@@ -115,7 +140,6 @@ func (m *BaseBlockValidationError[T]) MarshalJSON() ([]byte, error) {
 	if len(nonBlockErrs) > 0 {
 		errsMap["nonBlockErrors"] = nonBlockErrs
 	}
-
 	if len(errsMap) == 0 {
 		return []byte("{}"), nil
 	}

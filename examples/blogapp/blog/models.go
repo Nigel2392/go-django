@@ -92,7 +92,7 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 			blocks.WithHelpText[*blocks.FieldBlock](trans.S("Some text for the attribution.")),
 			blocks.WithDefault[*blocks.FieldBlock]("Default attribution text"),
 		)),
-		blocks.WithBlockField[*blocks.StructBlock]("Content", blocks.NewStreamBlock(
+		blocks.WithBlockField[*blocks.StructBlock]("Stream", blocks.NewStreamBlock(
 			blocks.WithLabel[*blocks.StreamBlock](trans.S("Stream Content")),
 			blocks.WithBlockField[*blocks.StreamBlock]("paragraph", blocks.TextBlock(
 				blocks.WithLabel[*blocks.FieldBlock](trans.S("Paragraph")),

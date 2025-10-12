@@ -103,7 +103,7 @@ func (m *StructBlock) ValueToGo(value interface{}) (interface{}, error) {
 	)
 
 	if valueMap, ok = value.(map[string]interface{}); !ok {
-		return nil, fmt.Errorf("value must be a map[string]interface{}")
+		return value, fmt.Errorf("value must be a map[string]interface{}")
 	}
 	var errors = NewBlockErrors[string]()
 loop:
@@ -118,13 +118,13 @@ loop:
 	}
 
 	if errors.HasErrors() {
-		return nil, errors
+		return value, errors
 	}
 
 	if m.ToGo != nil {
 		var v, err = m.ToGo(data)
 		if err != nil {
-			return nil, err
+			return data, err
 		}
 		return v, nil
 	}
@@ -134,20 +134,19 @@ loop:
 
 func (m *StructBlock) ValueToForm(value interface{}) interface{} {
 	var data = make(map[string]interface{})
-
 	if m.ToForm != nil {
 		var v, _ = m.ToForm(value)
 		maps.Copy(data, v)
 	}
 
 	if value == nil {
-		return data
+		return value
 	}
 
 	var valueMap map[string]interface{}
 	var ok bool
 	if valueMap, ok = value.(map[string]interface{}); !ok {
-		return data
+		return value
 	}
 
 	for head := m.Fields.Front(); head != nil; head = head.Next() {
@@ -159,7 +158,7 @@ func (m *StructBlock) ValueToForm(value interface{}) interface{} {
 
 func (m *StructBlock) Clean(ctx context.Context, value interface{}) (interface{}, error) {
 	if fields.IsZero(value) {
-		return nil, nil
+		return value, nil
 	}
 
 	var data = make(map[string]interface{})
@@ -176,7 +175,7 @@ func (m *StructBlock) Clean(ctx context.Context, value interface{}) (interface{}
 	}
 
 	if errs.HasErrors() {
-		return nil, errs
+		return data, errs
 	}
 
 	return data, nil

@@ -207,23 +207,23 @@ func (l *ListBlock) ValueFromDataDict(ctx context.Context, d url.Values, files m
 	)
 
 	if errs.HasErrors() {
-		return nil, []error{errs}
+		return data, []error{errs}
 	}
 
 	if l.Min != -1 && len(data) < l.Min {
-		return nil, []error{l.makeError(
+		return data, []error{l.makeError(
 			fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data)), //lint:ignore ST1005 ignore this lint
 		)}
 	}
 
 	if l.Max != -1 && len(data) > l.Max {
-		return nil, []error{l.makeError(
+		return data, []error{l.makeError(
 			fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data)), //lint:ignore ST1005 ignore this lint
 		)}
 	}
 
 	if totalCount+deletedCount != total {
-		return nil, []error{l.makeError(
+		return data, []error{l.makeError(
 			fmt.Errorf("Invalid number of items, expected %d, got %d", total, totalCount+deletedCount), //lint:ignore ST1005 ignore this lint
 		)}
 	}
@@ -241,7 +241,7 @@ func (l *ListBlock) ValueToGo(value interface{}) (interface{}, error) {
 	)
 
 	if valueArr, ok = value.(ListBlockData); !ok {
-		return nil, fmt.Errorf("value must be of type ListBlockData, got %T", value)
+		return value, fmt.Errorf("value must be of type ListBlockData, got %T", value)
 	}
 
 	var (
@@ -263,7 +263,7 @@ func (l *ListBlock) ValueToGo(value interface{}) (interface{}, error) {
 	}
 
 	if errs.HasErrors() {
-		return nil, errs
+		return value, errs
 	}
 
 	return newArr, nil
@@ -332,7 +332,7 @@ func (l *ListBlock) Clean(ctx context.Context, value interface{}) (interface{}, 
 	for i, lbVal := range value.(ListBlockData) {
 		var v, err = l.Child.Clean(ctx, lbVal.Data)
 		if err != nil {
-			return nil, l.makeIndexedError(i, errors.Wrapf(err, "index %d", i))
+			return value, l.makeIndexedError(i, errors.Wrapf(err, "index %d", i))
 		}
 
 		data = append(data, &ListBlockValue{

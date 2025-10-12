@@ -53,74 +53,74 @@ class DropdownController extends Controller<HTMLElement> {
    * Default Tippy Options
    */
   get options(): Partial<Props> {
-    // If the dropdown toggle uses an ARIA label, use this as a hover tooltip.
-    const hoverTooltip = this.toggleTarget.getAttribute('aria-label');
-    let hoverTooltipInstance: Instance;
+      // If the dropdown toggle uses an ARIA label, use this as a hover tooltip.
+      const hoverTooltip = this.toggleTarget.getAttribute('aria-label');
+      let hoverTooltipInstance: Instance;
 
-    if (this.hasContentTarget) {
-      this.contentTarget.hidden = false;
-    }
-
-    if (hoverTooltip) {
-      hoverTooltipInstance = tippy(this.toggleTarget, {
-        content: hoverTooltip,
-        placement: 'bottom',
-      });
-    }
-
-    const onCreate = (instance: Instance<Props>) => {
-      if (this.keepMountedValue) {
-        const { popper } = instance;
-        this.element.append(popper);
-        popper.hidden = true;
+      if (this.hasContentTarget) {
+          this.contentTarget.hidden = false;
       }
-    };
 
-    const onShow = (instance: Instance<Props>) => {
-      if (hoverTooltipInstance) {
-        hoverTooltipInstance.disable();
+      if (hoverTooltip) {
+          hoverTooltipInstance = tippy(this.toggleTarget, {
+              content: hoverTooltip,
+              placement: 'bottom',
+          });
       }
-      if (this.keepMountedValue) {
-        const { popper } = instance;
-        popper.hidden = false;
-      }
-    };
 
-    const onShown = () => {
-      this.dispatch('shown');
-    };
+      const onCreate = (instance: Instance<Props>) => {
+          if (this.keepMountedValue) {
+              const { popper } = instance;
+              this.element.append(popper);
+              popper.hidden = true;
+          }
+      };
 
-    const onHide = () => {
-      this.dispatch('hide');
-      if (hoverTooltipInstance) {
-        hoverTooltipInstance.enable();
-      }
-    };
+      const onShow = (instance: Instance<Props>) => {
+          if (hoverTooltipInstance) {
+              hoverTooltipInstance.disable();
+          }
+          if (this.keepMountedValue) {
+              const { popper } = instance;
+              popper.hidden = false;
+          }
+      };
 
-    const onHidden = (instance: Instance<Props>) => {
-      if (this.keepMountedValue) {
-        const { popper } = instance;
-        this.element.append(popper);
-        popper.hidden = true;
-      }
-    };
+      const onShown = () => {
+          this.dispatch('shown');
+      };
 
-    return {
-      ...(this.hasContentTarget
-        ? { content: this.contentTarget as Content }
-        : {}),
-      ...this.themeOptions,
-      trigger: 'click',
-      interactive: true,
-      ...(this.hasOffsetValue && { offset: this.offsetValue }),
-      getReferenceClientRect: () => this.reference.getBoundingClientRect(),
-      theme: this.themeValue,
-      onCreate,
-      onShow,
-      onShown,
-      onHide,
-      onHidden,
-    };
+      const onHide = () => {
+          this.dispatch('hide');
+          if (hoverTooltipInstance) {
+              hoverTooltipInstance.enable();
+          }
+      };
+
+      const onHidden = (instance: Instance<Props>) => {
+          if (this.keepMountedValue) {
+              const { popper } = instance;
+              this.element.append(popper);
+              popper.hidden = true;
+          }
+      };
+
+      return {
+          ...(this.hasContentTarget
+            ? { content: this.contentTarget as Content }
+            : {}),
+          ...this.themeOptions,
+          trigger: 'click',
+          interactive: true,
+          ...(this.hasOffsetValue && { offset: this.offsetValue }),
+          getReferenceClientRect: () => this.reference.getBoundingClientRect(),
+          theme: this.themeValue,
+          onCreate,
+          onShow,
+          onShown,
+          onHide,
+          onHidden,
+      };
   }
 
   get themeOptions() {

@@ -11,6 +11,12 @@ import { Widget } from "../widgets/widget";
 //    setError(errors: any): void;
 //}
 
+type BlockError = {
+    [key: string]: BlockError | string[];
+    errors?: BlockError | string[];
+    nonBlockErrors?: BlockError | string[];
+};
+
 type BlockMeta = {
     label?: string;
     helpText?: string;
@@ -47,7 +53,7 @@ class BoundBlock<BLOCK = any, ELEM = HTMLElement> {
         throw new Error("Method not implemented.");
     }
 
-    setError(errors: any): void {
+    setError(errors: BlockError | string[]): void {
         throw new Error("Method not implemented.");
     }
 }
