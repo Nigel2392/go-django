@@ -286,14 +286,14 @@ func (s *StreamBlock) RenderTempl(id, name string, valueArr StreamBlockValue, te
 			templ_7745c5c3_Var14 = templ.NopComponent
 		}
 		ctx = templ.ClearChildren(ctx)
-		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div data-stream-block data-controller=\"block\" class=\"stream-block\" data-block-class-path-value=\"django.blocks.stream-block\" data-block-class-args-value=\"")
+		templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 14, "<div data-stream-block data-controller=\"sortable block\" class=\"stream-block\" data-block-class-path-value=\"django.blocks.stream-block\" data-block-class-args-value=\"")
 		if templ_7745c5c3_Err != nil {
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var15 string
 		templ_7745c5c3_Var15, templ_7745c5c3_Err = templ.JoinStringErrs(telepath)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/blocks/blocks.templ`, Line: 121, Col: 167}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/blocks/blocks.templ`, Line: 121, Col: 176}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var15))
 		if templ_7745c5c3_Err != nil {
@@ -306,7 +306,7 @@ func (s *StreamBlock) RenderTempl(id, name string, valueArr StreamBlockValue, te
 		var templ_7745c5c3_Var16 string
 		templ_7745c5c3_Var16, templ_7745c5c3_Err = templ.JoinStringErrs(id)
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/blocks/blocks.templ`, Line: 121, Col: 194}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/blocks/blocks.templ`, Line: 121, Col: 203}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var16))
 		if templ_7745c5c3_Err != nil {
@@ -319,7 +319,7 @@ func (s *StreamBlock) RenderTempl(id, name string, valueArr StreamBlockValue, te
 		var templ_7745c5c3_Var17 string
 		templ_7745c5c3_Var17, templ_7745c5c3_Err = templ.JoinStringErrs(templ.JSONString([]any{name, valueArr, streamBlockErrors}))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/blocks/blocks.templ`, Line: 121, Col: 284}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/blocks/blocks.templ`, Line: 121, Col: 293}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ.EscapeString(templ_7745c5c3_Var17))
 		if templ_7745c5c3_Err != nil {

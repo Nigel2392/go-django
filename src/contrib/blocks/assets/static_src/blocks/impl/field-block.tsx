@@ -1,6 +1,7 @@
 import { BoundBlock, Block, BlockMeta } from '../base';
 import { BoundWidget, Widget } from '../../widgets/widget';
 import { jsx } from '../../../../../admin/static_src/jsx';
+import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
 
 class BoundFieldBlock extends BoundBlock<FieldBlock> {
     errorList: HTMLElement;
@@ -10,35 +11,42 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
     widget: BoundWidget;
     attrs: any;
 
-    constructor(block: FieldBlock, root: HTMLElement, name: string, id: string, initialState: any, initialError: any, attrs: any = {}) {
-        super(block, name, root);
+    constructor(block: FieldBlock, placeholder: HTMLElement, name: string, id: string, initialState: any, initialError: any, attrs: any = {}) {
 
-        this.attrs = attrs;
 
-        this.errorList = (
+        const errorList = (
            <ul class="field-errors"></ul>
         )
 
-        this.labelWrapper = (
+        const labelWrapper = (
            <div class="field-label">
                <label for={id}>{block.meta.label}</label>
            </div>
         )
 
-        root.appendChild(this.labelWrapper);
-        root.appendChild(this.errorList);
-
-        if (block.meta.helpText) {
-           root.appendChild(
-               <div class="field-help">{block.meta.helpText}</div>
-           );
-        }
-        
         const widgetPlaceholder = (
-              <div class="field-widget"></div>
+            <div class="field-widget"></div>
         );
-        root.appendChild(widgetPlaceholder);
 
+        const root = PanelComponent({
+            panelId: `${name}--panel`,
+            class: "field-block",
+            allowPanelLink: !!block.meta.label,
+            heading: labelWrapper,
+            helpText: block.meta.helpText ?? (
+                <div class="field-help">{block.meta.helpText}</div>
+            ),
+            errors: errorList,
+            children: widgetPlaceholder,
+        });
+
+        placeholder.replaceWith(root);
+
+        super(block, name, root);
+        this.errorList = errorList;
+        this.labelWrapper = labelWrapper;
+        this.attrs = attrs;
+        
         const options = {
             attributes: this.getAttributes(),
         };

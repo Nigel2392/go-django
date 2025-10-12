@@ -100,8 +100,8 @@ class PanelController extends Controller<PanelElement> {
         }
     }
 
-    toggle(event: ActionEvent) {
-        event.preventDefault();
+    toggle(event?: ActionEvent) {
+        event?.preventDefault();
         let collapsed = !this.element.classList.contains("collapsed");
         this.collapse(collapsed);
     }
@@ -113,7 +113,7 @@ class PanelController extends Controller<PanelElement> {
         });
     }
 
-    private collapse(b: boolean) {
+    collapse(b: boolean) {
         if (b && !this.element.classList.contains("collapsed")) {
             this.element.classList.add("collapsed");
             this.element.setAttribute("aria-expanded", "false");

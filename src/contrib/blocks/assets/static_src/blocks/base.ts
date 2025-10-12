@@ -20,12 +20,12 @@ type BlockMeta = {
     [key: string]: any;
 }
 
-class BoundBlock<BLOCK = any> {
+class BoundBlock<BLOCK = any, ELEM = HTMLElement> {
     block: BLOCK;
     name: String;
-    element: HTMLElement;
+    element: ELEM;
 
-    constructor(blockDef: BLOCK, prefix: String, element: HTMLElement) {
+    constructor(blockDef: BLOCK, prefix: String, element: ELEM) {
         this.block = blockDef;
         this.name = prefix;
         this.element = element;

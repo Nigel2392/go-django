@@ -111,7 +111,11 @@ func (b *BaseBlock) Label(ctx context.Context) string {
 	if b.LabelFunc != nil {
 		return b.LabelFunc(ctx)
 	}
-	return b.Field().Label(ctx)
+	var label = b.Field().Label(ctx)
+	if label == "" {
+		label = b.Name()
+	}
+	return label
 }
 
 func (b *BaseBlock) HelpText(ctx context.Context) string {

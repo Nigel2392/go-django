@@ -1,7 +1,7 @@
 import { Block, BlockMeta, BoundBlock } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import Icon from '../../../../../admin/static_src/utils/icon';
-import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
+import { Panel, PanelComponent } from '../../../../../admin/static_src/utils/panels';
 import { openAnimator } from '../../../../../admin/static_src/utils/animator';
 import flash from '../../../../../admin/static_src/utils/flash';
 
@@ -11,33 +11,49 @@ type ListBlockValue = {
     data: any;
 };
 
-class BoundListBlock extends BoundBlock {
+class BoundListBlock extends BoundBlock<ListBlock, Panel> {
     id: String;
     items: BoundBlock[];
     itemWrapper: HTMLElement;
     totalInput: HTMLInputElement;
     activeItems: number;
 
-    constructor(block: ListBlock, root: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
+    constructor(block: ListBlock, placeholder: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
         initialState = initialState || [];
         initialError = initialError || [];
+
+        const root = PanelComponent({
+            panelId: `${name}--panel`,
+            class: "sequence-block",
+            allowPanelLink: true,
+            heading: block.meta.label ?? (
+                <div class="sequence-block-field-heading">
+                    <label for={id} class="sequence-block-field-heading-label">{block.meta.label}:</label>
+                </div>
+            ),
+            attrs: {
+                "data-controller": "sortable",
+            },
+        });
+
+        placeholder.replaceWith(root);
 
         super(block, name, root);
         this.items = [];
         this.id = id;
 
-        root.appendChild(
-            <button type="button" data-action="add" class="list-block-add-button" onClick={this._onAddClick.bind(this, null)}>
+        root.body.appendChild(
+            <button type="button" data-action="add" class="sequence-block-add-button" onClick={this._onAddClick.bind(this, null)}>
                 { Icon('icon-plus', { title: window.i18n.gettext("Add %s", this.block.meta.label || window.i18n.gettext('item')) }) }
             </button>
         );
 
-        this.totalInput = root.appendChild(
-            <input type="hidden" data-list-block-total name={ `${name}--total` } value={ String(initialState.length) }/>
+        this.totalInput = root.body.appendChild(
+            <input type="hidden" data-sequence-block-total name={ `${name}--total` } value={ String(initialState.length) }/>
         ) as HTMLInputElement;
 
-        this.itemWrapper = root.appendChild(
-            <div data-list-block-items class="list-block-items" data-sortable-target="items"></div>
+        this.itemWrapper = root.body.appendChild(
+            <div data-sequence-block-items class="sequence-block-items" data-sortable-target="items"></div>
         ) as HTMLElement;
 
 
@@ -77,7 +93,7 @@ class BoundListBlock extends BoundBlock {
         const panelId = `${itemKey}--panel`;
         const headingIndexId = `${itemKey}--heading-index`;
         const itemDom = (
-            <div data-list-block-field id={ itemKey + "--block" } data-index={ String(sortIndex) } data-sortable-target="item" data-replace={ `#${orderId};#${headingIndexId}+;[data-index]` } class="list-block-field">
+            <div data-sequence-block-field id={ itemKey + "--block" } data-index={ String(sortIndex) } data-sortable-target="item" data-replace={ `#${orderId};#${headingIndexId}+;[data-index]` } class="sequence-block-field">
                 <input type="hidden" id={ blockId } name={ blockId } value={ value.id } />
                 <input type="hidden" id={ orderId } name={ orderId } value={ String(value.order) } />
                 <input type="hidden" id={ deletedKey } name={ deletedKey } value=""/>
@@ -85,28 +101,28 @@ class BoundListBlock extends BoundBlock {
                 {PanelComponent({
                     panelId: panelId,
                     heading: (
-                        <div class="list-block-field-heading">
-                            { this.block.meta.label ? <label for={ blockId } class="list-block-field-heading-label">{ this.block.meta.label }:</label> : null }
-                            <span id={ headingIndexId } class="list-block-field-heading-index">{ String(value.order + 1) }</span>
+                        <div class="sequence-block-field-heading">
+                            { this.block.meta.label ? <label for={ blockId } class="sequence-block-field-heading-label">{ this.block.meta.label }:</label> : null }
+                            <span id={ headingIndexId } class="sequence-block-field-heading-index">{ String(value.order + 1) }</span>
                         </div>
                     ),
                     children: (
-                        <div data-list-block-field-content class="list-block-field-content">
-                            <div data-list-block-field-handle class="list-block-field-drag-handle">
+                        <div data-sequence-block-field-content class="sequence-block-field-content">
+                            <div data-sequence-block-field-handle class="sequence-block-field-drag-handle">
                                 &#x2630;
                             </div>
 
-                            <div data-list-block-field-inner></div>
+                            <div data-sequence-block-field-placeholder></div>
 
-                            <div data-list-block-field-actions class="list-block-field-actions">
-                                <div data-list-block-field-actions-group class="list-block-field-actions-group">
-                                    <div data-list-block-field-delete class="list-block-field-delete">
-                                        <button type="button" data-action="delete" class="list-block-field-delete-button" onClick={this._onDeleteClick.bind(this, itemKey)}>
+                            <div data-sequence-block-field-actions class="sequence-block-field-actions">
+                                <div data-sequence-block-field-actions-group class="sequence-block-field-actions-group">
+                                    <div data-sequence-block-field-delete class="sequence-block-field-delete">
+                                        <button type="button" data-action="delete" class="sequence-block-field-delete-button" onClick={this._onDeleteClick.bind(this, itemKey)}>
                                             { Icon('icon-trash') }
                                         </button>
                                     </div>
-                                    <div data-list-block-field-add class="list-block-field-add">
-                                        <button type="button" data-action="add" class="list-block-field-add-button" onClick={this._onAddClick.bind(this, itemKey)}>
+                                    <div data-sequence-block-field-add class="sequence-block-field-add">
+                                        <button type="button" data-action="add" class="sequence-block-field-add-button" onClick={this._onAddClick.bind(this, itemKey)}>
                                             { Icon('icon-plus') }
                                         </button>
                                     </div>
@@ -132,7 +148,7 @@ class BoundListBlock extends BoundBlock {
         }
             
         this.items.push(this.block.childBlock.render(
-            itemDom.querySelector('[data-list-block-field-inner]'),
+            itemDom.querySelector('[data-sequence-block-field-placeholder]'),
             itemId,
             itemKey,
             value.data,

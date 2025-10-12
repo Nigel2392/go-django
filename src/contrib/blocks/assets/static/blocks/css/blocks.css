@@ -1,11 +1,11 @@
-.list-block {
+.sequence-block {
     position: relative;
 }
 .sort-selected {
     box-shadow: 0 0 0 2px var(--secondary-bg-color);
     border-radius: 4px;
 }
-.list-block .list-block-add-button {
+.sequence-block .sequence-block-add-button {
     position: absolute;
     top: 0;
     right: 0;
@@ -21,29 +21,29 @@
     justify-content: center;
     transform: translateY(-100%);
 }
-.list-block .list-block-items {
+.sequence-block .sequence-block-items {
     display: flex;
     flex-direction: column;
     gap: 0.5rem;
 }
-.list-block .list-block-field {
+.sequence-block .sequence-block-field {
     position: relative;
 }
-.list-block .list-block-field-heading {
+.sequence-block .sequence-block-field-heading {
     display: flex;
     flex-direction: row;
 }
-.list-block .list-block-field-heading .list-block-field-heading-label.list-block-field-heading-label {
+.sequence-block .sequence-block-field-heading .sequence-block-field-heading-label.sequence-block-field-heading-label {
     font-weight: bold;
     margin-bottom: 0;
 }
-.list-block .list-block-field-heading .list-block-field-heading-index {
+.sequence-block .sequence-block-field-heading .sequence-block-field-heading-index {
     line-height: 1.3;
     font-weight: bold;
     margin-inline-start: 0.25rem;
     color: var(--secondary-bg-color);
 }
-.list-block .list-block-field-drag-handle {
+.sequence-block .sequence-block-field-drag-handle {
     position: absolute;
     top: .5rem;
     right: .75rem;
@@ -52,20 +52,23 @@
     color: var(--text-secondary-color);
     user-select: none;
 }
-.list-block .list-block-field-content {
+.sequence-block .sequence-block-field-content {
     margin-top: 0.425rem;
     margin-inline-start: 0.5rem;
-    border: 2px dashed var(--border-color);
-    padding: 0.5rem .75rem;
     position: relative;
+    border: 2px dashed var(--border-color);
+    padding-top: .75rem;
+    padding-bottom: .75rem;
+    padding-left: 1.75rem;
+    padding-right: .75rem;
 }
-.list-block .list-block-field-actions {
+.sequence-block .sequence-block-field-actions {
     position: absolute;
     top: -0.325rem;
-    bottom: -1.325rem;
-    left: -2.275rem;
+    bottom: -.325rem;
+    left: -1.9rem;
 }
-.list-block .list-block-field-actions::after {
+.sequence-block .sequence-block-field-actions::after {
     content: "";
     position: absolute;
     top: 0;
@@ -75,7 +78,7 @@
     width: 2px;
     border: 1px dashed var(--border-color);
 }
-.list-block .list-block-field-actions-group {
+.sequence-block .sequence-block-field-actions-group {
     top: 5%;
     position: sticky;
     gap: 0.25rem;
@@ -84,10 +87,11 @@
     background-color: var(--body-bg-color);
     z-index: 1;
 }
-.list-block .list-block-field-actions-group button {
+.sequence-block .sequence-block-field-actions-group button {
     background: none;
     border: none;
-    padding: .25rem;
+    padding: 0;
+    margin: 0;
     cursor: pointer;
     color: var(--secondary-bg-color);
     font-size: 1.25rem;
@@ -96,9 +100,9 @@
     align-items: center;
     justify-content: center;
 }
-.list-block .list-block-field-delete {
+.sequence-block .sequence-block-field-delete {
 
 }
-.list-block .list-block-field-add {
+.sequence-block .sequence-block-field-add {
 
 }

@@ -13,8 +13,8 @@ class SortableController extends window.StimulusController {
     static targets = ["item", "items"]
     static values = {
         replace: String,
-        handle: { type: String, default: ".list-block-field-drag-handle" },
-        draggable: { type: String, default: ".list-block-field" },
+        handle: { type: String, default: ".sequence-block-field-drag-handle" },
+        draggable: { type: String, default: ".sequence-block-field" },
     }
 
     private get sortableConfig() {

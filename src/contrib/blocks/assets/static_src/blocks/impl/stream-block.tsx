@@ -5,6 +5,7 @@ import Icon from '../../../../../admin/static_src/utils/icon';
 import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
 import { openAnimator } from '../../../../../admin/static_src/utils/animator';
 import flash from '../../../../../admin/static_src/utils/flash';
+import { PanelElement } from '../../../../../admin/static_src/controllers/panel';
 
 type StreamBlockData = {
     id: string;
@@ -28,32 +29,49 @@ type BoundStreamBlockValue = {
     block: BoundBlock;    
 };
 
-class BoundStreamBlock extends BoundBlock<StreamBlock> {
+class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
     id: String;
     items: BoundStreamBlockValue[];
     itemWrapper: HTMLElement;
     totalInput: HTMLInputElement;
     activeItems: number;
 
-    constructor(block: StreamBlock, root: HTMLElement, name: String, id: String, initialState: StreamBlockValue, initialError: any) {
+    constructor(block: StreamBlock, placeholder: HTMLElement, name: String, id: String, initialState: StreamBlockValue, initialError: any) {
         initialState = (initialState || { blocks: [] });
         initialError = (initialError || []);
+
+        const root = PanelComponent({
+            panelId: `${name}--panel`,
+            class: "sequence-block",
+            allowPanelLink: !!block.meta.label,
+            heading: block.meta.label ?? (
+                <div class="sequence-block-field-heading">
+                    <label for={id} class="sequence-block-field-heading-label">{block.meta.label}:</label>
+                </div>
+            ),
+            attrs: {
+                "data-controller": "sortable",
+            },
+        });
+
+        placeholder.replaceWith(root);
+
         super(block, name, root);
         this.items = [];
         this.id = id;
         
-        root.appendChild(
-            <button type="button" data-action="add" class="stream-block-add-button" onClick={this._onAddClick.bind(this, null)}>
+        root.body.appendChild(
+            <button type="button" data-action="add" class="sequence-block-add-button" onClick={this._onAddClick.bind(this, null)}>
                 { Icon('icon-plus', { title: window.i18n.gettext("Add %s", this.block.meta.label || window.i18n.gettext('item')) }) }
             </button>
         );
 
-        this.totalInput = root.appendChild(
-            <input type="hidden" data-stream-block-total name={ `${name}--total` } value={ String(initialState.blocks.length) }/>
+        this.totalInput = root.body.appendChild(
+            <input type="hidden" data-sequence-block-total name={ `${name}--total` } value={ String(initialState.blocks.length) }/>
         ) as HTMLInputElement;
 
-        this.itemWrapper = root.appendChild(
-            <div data-stream-block-items class="stream-block-items" data-sortable-target="items"></div>
+        this.itemWrapper = root.body.appendChild(
+            <div data-sequence-block-items class="sequence-block-items" data-sortable-target="items"></div>
         ) as HTMLElement;
 
         for (let i = 0; i < initialState.blocks.length; i++) {
@@ -101,7 +119,7 @@ class BoundStreamBlock extends BoundBlock<StreamBlock> {
         const panelId = `${itemKey}--panel`;
         const headingIndexId = `${itemKey}--heading-index`;
         const itemDom = (
-            <div data-stream-block-field id={ itemKey + "--block" } data-index={ String(sortIndex) } data-sortable-target="item" data-replace={ `#${orderId};#${headingIndexId}+;[data-index]` } class="stream-block-field">
+            <div data-sequence-block-field id={ itemKey + "--block" } data-index={ String(sortIndex) } data-sortable-target="item" data-replace={ `#${orderId};#${headingIndexId}+;[data-index]` } class="sequence-block-field">
                 <input type="hidden" id={ blockId } name={ blockId } value={ value.id } />
                 <input type="hidden" id={ orderId } name={ orderId } value={ String(value.order) } />
                 <input type="hidden" id={ deletedKey } name={ deletedKey } value=""/>
@@ -110,28 +128,28 @@ class BoundStreamBlock extends BoundBlock<StreamBlock> {
                 {PanelComponent({
                     panelId: panelId,
                     heading: (
-                        <div class="stream-block-field-heading">
-                            { childBlock.meta.label ? <label for={ blockId } class="stream-block-field-heading-label">{ childBlock.meta.label }:</label> : null }
-                            <span id={ headingIndexId } class="stream-block-field-heading-index">{ String(value.order + 1) }</span>
+                        <div class="sequence-block-field-heading">
+                            { childBlock.meta.label ? <label for={ blockId } class="sequence-block-field-heading-label">{ childBlock.meta.label }:</label> : null }
+                            <span id={ headingIndexId } class="sequence-block-field-heading-index">{ String(value.order + 1) }</span>
                         </div>
                     ),
                     children: (
-                        <div data-stream-block-field-content class="stream-block-field-content">
-                            <div data-stream-block-field-handle class="stream-block-field-drag-handle">
+                        <div data-sequence-block-field-content class="sequence-block-field-content">
+                            <div data-sequence-block-field-handle class="sequence-block-field-drag-handle">
                                 &#x2630;
                             </div>
 
-                            <div data-stream-block-field-inner></div>
+                            <div data-sequence-block-field-placeholder></div>
 
-                            <div data-stream-block-field-actions class="stream-block-field-actions">
-                                <div data-stream-block-field-actions-group class="stream-block-field-actions-group">
-                                    <div data-stream-block-field-delete class="stream-block-field-delete">
-                                        <button type="button" data-action="delete" class="stream-block-field-delete-button" onClick={this._onDeleteClick.bind(this, itemKey)}>
+                            <div data-sequence-block-field-actions class="sequence-block-field-actions">
+                                <div data-sequence-block-field-actions-group class="sequence-block-field-actions-group">
+                                    <div data-sequence-block-field-delete class="sequence-block-field-delete">
+                                        <button type="button" data-action="delete" class="sequence-block-field-delete-button" onClick={this._onDeleteClick.bind(this, itemKey)}>
                                             { Icon('icon-trash') }
                                         </button>
                                     </div>
-                                    <div data-stream-block-field-add class="stream-block-field-add">
-                                        <button type="button" data-action="add" class="stream-block-field-add-button" onClick={this._onAddClick.bind(this, itemKey)}>
+                                    <div data-sequence-block-field-add class="sequence-block-field-add">
+                                        <button type="button" data-action="add" class="sequence-block-field-add-button" onClick={this._onAddClick.bind(this, itemKey)}>
                                             { Icon('icon-plus') }
                                         </button>
                                     </div>
@@ -159,7 +177,7 @@ class BoundStreamBlock extends BoundBlock<StreamBlock> {
             id: value.id,
             type: value.type,
             block: childBlock.render(
-                itemDom.querySelector('[data-stream-block-field-inner]'),
+                itemDom.querySelector('[data-sequence-block-field-placeholder]'),
                 itemId,
                 itemKey,
                 value.data,

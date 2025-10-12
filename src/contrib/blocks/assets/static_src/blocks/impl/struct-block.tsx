@@ -1,5 +1,6 @@
 import { BoundBlock, Block, BlockMeta } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
+import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
 
 const getElementIfAttr = (parent: HTMLElement, attr: string, value?: string): HTMLElement => {
     for (var i = 0; i < parent.children.length; i++) {
@@ -23,8 +24,47 @@ type childBlockMap = {
 class BoundStructBlock extends BoundBlock {
     childBlocks: { [key: string]: BoundBlock };
 
-    constructor(block: StructBlock, placeHolder: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
-        super(block, name, placeHolder);
+    constructor(block: StructBlock, placeholder: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
+        
+        let labelWrapper = null;
+        if (block.meta.label) {
+            labelWrapper = (
+                <div class="field-label">
+                    <label>{block.meta.label}</label>
+                </div>
+            );
+        }
+
+        let errorsList = null;
+        if (initialError && initialError.nonFieldErrors) {
+            errorsList = (
+                <ul class="field-errors">
+                    {initialError.nonFieldErrors.map((err: string) => (
+                        <li class="field-error">{err}</li>
+                    ))}
+                </ul>
+            );
+        }
+
+        const childrenContainer = (
+            <div data-struct-block-children></div>
+        );
+
+        const root = PanelComponent({
+            panelId: `${name}--panel`,
+            class: "field-block",
+            allowPanelLink: !!block.meta.label,
+            heading: labelWrapper,
+            helpText: block.meta.helpText ?? (
+                <div class="field-help">{block.meta.helpText}</div>
+            ),
+            errors: errorsList,
+            children: childrenContainer,
+        });
+
+        placeholder.replaceWith(root);
+
+        super(block, name, root);
 
         this.element.dataset.structBlock = 'true';
 
@@ -42,14 +82,15 @@ class BoundStructBlock extends BoundBlock {
             const childDom = (
                 <div data-struct-field data-contentpath={ key }>
                     <div data-struct-field-content>
+                        <div data-struct-field-content-placeholder></div>
                     </div>
                 </div>
             );
 
-            placeHolder.appendChild(childDom);
+            childrenContainer.appendChild(childDom);
 
             this.childBlocks[key] = (childBlock as Block).render(
-                childDom.firstElementChild as HTMLElement,
+                childDom.firstElementChild.firstElementChild as HTMLElement,
                 idKey,
                 key,
                 initialState[childBlockName],
