@@ -10,12 +10,7 @@ import { PanelElement } from '../../../../../admin/static_src/controllers/panel'
 type StreamBlockData = {
     id: string;
     type: string;
-    order: number;
     data: any;
-};
-
-type StreamBlockValue = {
-    blocks: StreamBlockData[];
 };
 
 type childBlockMap = {
@@ -36,8 +31,8 @@ class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
     totalInput: HTMLInputElement;
     activeItems: number;
 
-    constructor(block: StreamBlock, placeholder: HTMLElement, name: String, id: String, initialState: StreamBlockValue, initialError: any) {
-        initialState = (initialState || { blocks: [] });
+    constructor(block: StreamBlock, placeholder: HTMLElement, name: String, id: String, initialState: StreamBlockData[], initialError: any) {
+        initialState = (initialState || []);
         initialError = (initialError || []);
 
         const root = PanelComponent({
@@ -75,20 +70,19 @@ class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
                     )) }
                 </div>
             </div>
-
         );
 
         this.totalInput = root.body.appendChild(
-            <input type="hidden" data-sequence-block-total name={ `${name}--total` } value={ String(initialState?.blocks?.length || 0) }/>
+            <input type="hidden" data-sequence-block-total name={ `${name}--total` } value={ String(initialState?.length || 0) }/>
         ) as HTMLInputElement;
 
         this.itemWrapper = root.body.appendChild(
             <div data-sequence-block-items class="sequence-block-items" data-sortable-target="items"></div>
         ) as HTMLElement;
 
-        for (let i = 0; i < (initialState?.blocks?.length || 0); i++) {
+        for (let i = 0; i < (initialState?.length || 0); i++) {
             this._createChild(
-                i, i, id, name, initialState.blocks[i], initialError[i] || null, false,
+                i, i, id, name, initialState[i], initialError[i] || null, false,
             );
         }
     }
@@ -133,7 +127,7 @@ class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
         const itemDom = (
             <div data-sequence-block-field id={ itemKey + "--block" } data-index={ String(sortIndex) } data-sortable-target="item" data-replace={ `#${orderId};#${headingIndexId}+;[data-index]` } class="sequence-block-field">
                 <input type="hidden" id={ blockId } name={ blockId } value={ value.id } />
-                <input type="hidden" id={ orderId } name={ orderId } value={ String(value.order) } />
+                <input type="hidden" id={ orderId } name={ orderId } value={ String(sortIndex) } />
                 <input type="hidden" id={ deletedKey } name={ deletedKey } value=""/>
                 <input type="hidden" id={ typeKey } name={ typeKey } value={ value.type } />
 
@@ -142,7 +136,7 @@ class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
                     heading: (
                         <div class="sequence-block-field-heading">
                             { childBlock.meta.label ? <label for={ blockId } class="sequence-block-field-heading-label">{ childBlock.meta.label }:</label> : null }
-                            <span id={ headingIndexId } class="sequence-block-field-heading-index">{ String(value.order + 1) }</span>
+                            <span id={ headingIndexId } class="sequence-block-field-heading-index">{ String(sortIndex + 1) }</span>
                         </div>
                     ),
                     children: (
@@ -270,7 +264,6 @@ class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
         const newValue: StreamBlockData = {
             id: '',
             type: typeName,
-            order: index,
             data: null,
         };
         if (this.block.defaults[typeName]) {
@@ -317,9 +310,8 @@ class StreamBlock extends Block {
     }
 }
 export {
-    StreamBlockValue,
+    StreamBlockData,
     StreamBlock,
     BoundStreamBlock,
     BoundStreamBlockValue,
-    StreamBlockData,
 };
