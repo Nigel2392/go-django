@@ -66,13 +66,14 @@ func (s *StreamBlockValue) BindToModel(model attrs.Definer, field attrs.Field) e
 		)
 	}
 	s.Block = block.(*StreamBlock)
+
 	// s.Blocks = s.Block.DeserializeJSON(s.BlocksJSON)
 	return nil
 }
 
 func (s StreamBlockValue) Value() (driver.Value, error) {
 	jsonData, err := json.Marshal(s)
-	return jsonData, err
+	return string(jsonData), err
 }
 
 func (s *StreamBlockValue) Scan(value interface{}) (err error) {
@@ -133,6 +134,46 @@ func NewStreamBlock(opts ...func(*StreamBlock)) *StreamBlock {
 	}
 
 	return l
+}
+
+func (s *StreamBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
+	var dataList = make([]JSONStreamBlockData, 0)
+	if len(value) == 0 {
+		return nil, nil
+	}
+
+	if err := json.Unmarshal(value, &dataList); err != nil {
+		return nil, err
+	}
+
+	var errors = NewBlockErrors[int]()
+	var data = newStreamBlockValue(s)
+	data.Blocks = make([]*StreamBlockData, 0, len(dataList))
+	for i, item := range dataList {
+		var child, ok = s.Children.Get(item.Type)
+		if !ok {
+			logger.Warnf("Unknown child block type: %s for StreamBlock", item.Type, s.Name())
+			continue
+		}
+
+		var v, err = child.ValueFromDB(item.Data)
+		if err != nil {
+			errors.AddError(i, err)
+			continue
+		}
+
+		data.Blocks = append(data.Blocks, &StreamBlockData{
+			ID:    item.ID,
+			Order: i,
+			Data:  v,
+		})
+	}
+
+	if errors.HasErrors() {
+		return data, errors
+	}
+
+	return data, nil
 }
 
 func (l *StreamBlock) MinNum() int {

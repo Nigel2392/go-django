@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"maps"
@@ -33,6 +34,41 @@ func NewStructBlock(opts ...func(*StructBlock)) *StructBlock {
 		opt(m)
 	}
 	return m
+}
+
+func (s *StructBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
+	var dataMap = make(map[string]json.RawMessage)
+	if len(value) == 0 {
+		return nil, nil
+	}
+	if err := json.Unmarshal(value, &dataMap); err != nil {
+		return nil, err
+	}
+
+	var data = make(map[string]interface{})
+	var errors = NewBlockErrors[string]()
+	for head := s.Fields.Front(); head != nil; head = head.Next() {
+		var v, err = head.Value.ValueFromDB(dataMap[head.Key])
+		if err != nil {
+			errors.AddError(head.Key, err)
+			continue
+		}
+		data[head.Key] = v
+	}
+
+	if errors.HasErrors() {
+		return data, errors
+	}
+
+	if s.ToGo != nil {
+		var v, err = s.ToGo(data)
+		if err != nil {
+			return data, err
+		}
+		return v, nil
+	}
+
+	return data, nil
 }
 
 func (m *StructBlock) AddField(name string, block Block) {

@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -24,6 +25,12 @@ type ListBlockValue struct {
 	ID    uuid.UUID   `json:"id"`
 	Order int         `json:"order"`
 	Data  interface{} `json:"data"`
+}
+
+type JSONListBlockValue struct { // used only for deserialization
+	ID    uuid.UUID       `json:"id"`
+	Order int             `json:"order"`
+	Data  json.RawMessage `json:"data"`
 }
 
 type ListBlock struct {
@@ -69,13 +76,36 @@ func (l *ListBlock) makeError(err error) error {
 	return err
 }
 
-func (l *ListBlock) makeIndexedError(index int, err ...error) error {
-	if len(err) == 0 || len(err) >= 1 && err[0] == nil {
-		return nil
+func (s *ListBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
+	var dataList = make([]JSONListBlockValue, 0)
+	if len(value) == 0 {
+		return nil, nil
 	}
-	var e = NewBlockErrors[int]()
-	e.AddError(index, err...)
-	return e
+
+	if err := json.Unmarshal(value, &dataList); err != nil {
+		return nil, err
+	}
+
+	var data = make(ListBlockData, len(dataList))
+	var errors = NewBlockErrors[int]()
+	for i, item := range dataList {
+		var v, err = s.Child.ValueFromDB(item.Data)
+		if err != nil {
+			errors.AddError(i, err)
+			continue
+		}
+		data[i] = &ListBlockValue{
+			ID:    item.ID,
+			Order: i,
+			Data:  v,
+		}
+	}
+
+	if errors.HasErrors() {
+		return data, errors
+	}
+
+	return data, nil
 }
 
 func (b *ListBlock) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
