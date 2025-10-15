@@ -157,16 +157,15 @@ func (s *StreamBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 		}
 
 		var v, err = child.ValueFromDB(item.Data)
-		if err != nil {
-			errors.AddError(i, err)
-			continue
-		}
-
 		data.Blocks = append(data.Blocks, &StreamBlockData{
 			ID:    item.ID,
 			Order: i,
 			Data:  v,
 		})
+		if err != nil {
+			errors.AddError(i, err)
+			continue
+		}
 	}
 
 	if errors.HasErrors() {

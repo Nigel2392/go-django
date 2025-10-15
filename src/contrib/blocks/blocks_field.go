@@ -78,42 +78,53 @@ func PasswordBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	return base
 }
 
-func DateBlock(opts ...func(*FieldBlock)) *FieldBlock {
+var timeFmts = []string{
+	"2006-01-02",
+	"2006-01-02T15:04:05",
+	"2006-01-02T15:04",
+	time.RFC3339,
+	time.RFC1123,
+	time.RFC1123Z,
+	time.RFC822,
+	time.RFC822Z,
+}
+
+func timeTimeBlock(template string, fmt widgets.DateWidgetType, opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
+	base.DataType = time.Time{}
+	base.Template = template
+	base.SetField(fields.DateField(fmt))
 	base.ValueFromDBFunc = func(b *BaseBlock, j json.RawMessage) (interface{}, error) {
 		if len(j) == 0 {
 			return nil, nil
 		}
+
 		var s string
 		if err := json.Unmarshal(j, &s); err != nil {
 			return nil, err
 		}
-		return time.Parse(widgets.DateWidgetDateFormat, s)
+
+		var varr []error
+		for _, f := range timeFmts {
+			if t, err := time.Parse(f, s); err == nil {
+				return t, nil
+			} else {
+				varr = append(varr, err)
+			}
+		}
+
+		if len(varr) > 0 {
+			return nil, varr[0]
+		}
+		return nil, nil
 	}
-	base.Template = "blocks/templates/date.html"
-	base.SetField(fields.DateField(widgets.DateWidgetTypeDate))
-	// base.Default = func() interface{} {
-	// return time.Time{}
-	// }
 	return base
 }
 
+func DateBlock(opts ...func(*FieldBlock)) *FieldBlock {
+	return timeTimeBlock("blocks/templates/date.html", widgets.DateWidgetTypeDate, opts...)
+}
+
 func DateTimeBlock(opts ...func(*FieldBlock)) *FieldBlock {
-	var base = NewFieldBlock(opts...)
-	base.ValueFromDBFunc = func(b *BaseBlock, j json.RawMessage) (interface{}, error) {
-		if len(j) == 0 {
-			return nil, nil
-		}
-		var s string
-		if err := json.Unmarshal(j, &s); err != nil {
-			return nil, err
-		}
-		return time.Parse(widgets.DateWidgetDateTimeSecFormat, s)
-	}
-	base.Template = "blocks/templates/datetime.html"
-	base.SetField(fields.DateField(widgets.DateWidgetTypeDateTime))
-	// base.Default = func() interface{} {
-	// return time.Time{}
-	// }
-	return base
+	return timeTimeBlock("blocks/templates/datetime.html", widgets.DateWidgetTypeDateTime, opts...)
 }

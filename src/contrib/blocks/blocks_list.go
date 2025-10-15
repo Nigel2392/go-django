@@ -90,14 +90,14 @@ func (s *ListBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 	var errors = NewBlockErrors[int]()
 	for i, item := range dataList {
 		var v, err = s.Child.ValueFromDB(item.Data)
-		if err != nil {
-			errors.AddError(i, err)
-			continue
-		}
 		data[i] = &ListBlockValue{
 			ID:    item.ID,
 			Order: i,
 			Data:  v,
+		}
+		if err != nil {
+			errors.AddError(i, err)
+			continue
 		}
 	}
 
