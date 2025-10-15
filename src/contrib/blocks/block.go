@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/url"
 	"reflect"
@@ -33,6 +34,7 @@ type Block interface {
 	HelpText(ctx context.Context) string
 	Field() fields.Field
 	SetField(field fields.Field)
+	ValueFromDB(value json.RawMessage) (interface{}, error)
 	RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error
 	Render(ctx context.Context, w io.Writer, value interface{}, context ctx.Context) error
 	GetDefault() interface{}
@@ -52,8 +54,10 @@ type BaseBlock struct {
 	Validators []func(context.Context, interface{}) error `json:"-"`
 	Default    func() interface{}                         `json:"-"`
 
-	LabelFunc func(ctx context.Context) string `json:"-"`
-	HelpFunc  func(ctx context.Context) string `json:"-"`
+	DataType        any
+	ValueFromDBFunc func(b *BaseBlock, j json.RawMessage) (interface{}, error) `json:"-"`
+	LabelFunc       func(ctx context.Context) string                           `json:"-"`
+	HelpFunc        func(ctx context.Context) string                           `json:"-"`
 }
 
 func (b *BaseBlock) Name() string {
@@ -68,6 +72,37 @@ func (b *BaseBlock) SetName(name string) {
 func (b *BaseBlock) SetField(field fields.Field) {
 	b.FormField = field
 	field.SetName(b.Name_)
+}
+
+func (b *BaseBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
+	if b.ValueFromDBFunc != nil {
+		return b.ValueFromDBFunc(b, value)
+	}
+
+	if b.DataType != nil {
+		var rT = reflect.TypeOf(b.DataType)
+		var isPtr = rT.Kind() == reflect.Ptr
+		if isPtr {
+			rT = rT.Elem()
+		}
+		var v = reflect.New(rT)
+		if err := json.Unmarshal(value, v.Interface()); err != nil {
+			return nil, err
+		}
+		if isPtr {
+			return v.Interface(), nil
+		}
+		return v.Elem().Interface(), nil
+	}
+
+	if len(value) > 0 {
+		var v interface{}
+		if err := json.Unmarshal(value, &v); err != nil {
+			return nil, err
+		}
+		return v, nil
+	}
+	return nil, nil
 }
 
 func (b *BaseBlock) SetLabel(label any) {

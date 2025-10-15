@@ -66,6 +66,7 @@ func (s *StreamBlockValue) BindToModel(model attrs.Definer, field attrs.Field) e
 		)
 	}
 	s.Block = block.(*StreamBlock)
+	// s.Blocks = s.Block.DeserializeJSON(s.BlocksJSON)
 	return nil
 }
 
@@ -101,8 +102,7 @@ func (s *StreamBlockValue) MarshalJSON() ([]byte, error) {
 
 func (s *StreamBlockValue) UnmarshalJSON(data []byte) error {
 	var jsons = make([]JSONStreamBlockData, 0)
-	err := json.Unmarshal(data, &jsons)
-	if err != nil {
+	if err := json.Unmarshal(data, &jsons); err != nil {
 		return errors.Wrap(err, "unmarshal StreamBlockValue")
 	}
 
