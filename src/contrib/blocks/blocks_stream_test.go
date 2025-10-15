@@ -2,6 +2,7 @@ package blocks_test
 
 import (
 	"context"
+	"encoding/json"
 	"net/mail"
 	"net/url"
 	"reflect"
@@ -12,6 +13,33 @@ import (
 	"github.com/google/uuid"
 )
 
+func jraw(t *testing.T, v any) json.RawMessage {
+	t.Helper()
+	b, err := json.Marshal(v)
+	if err != nil {
+		t.Fatalf("json marshal: %v", err)
+	}
+	return json.RawMessage(b)
+}
+
+func mustDate(t *testing.T, layout, s string) time.Time {
+	t.Helper()
+	tt, err := time.Parse(layout, s)
+	if err != nil {
+		t.Fatalf("parse time %q: %v", s, err)
+	}
+	return tt
+}
+
+func mustAddr(t *testing.T, s string) *mail.Address {
+	t.Helper()
+	a, err := mail.ParseAddress(s)
+	if err != nil {
+		t.Fatalf("parse addr %q: %v", s, err)
+	}
+	return a
+}
+
 func NewStreamPersonBlock() *blocks.StreamBlock {
 	sb := blocks.NewStreamBlock()
 	sb.SetName("test_stream")
@@ -21,22 +49,6 @@ func NewStreamPersonBlock() *blocks.StreamBlock {
 
 func TestStreamBlock(t *testing.T) {
 	t.Helper()
-
-	// Helpers (local to avoid package-level name collisions)
-	mustAddr := func(s string) *mail.Address {
-		a, err := mail.ParseAddress(s)
-		if err != nil {
-			t.Fatalf("parse address %q: %v", s, err)
-		}
-		return a
-	}
-	mustDate := func(layout, s string) time.Time {
-		d, err := time.Parse(layout, s)
-		if err != nil {
-			t.Fatalf("parse time %q: %v", s, err)
-		}
-		return d
-	}
 
 	b := NewStreamPersonBlock()
 
@@ -93,18 +105,18 @@ func TestStreamBlock(t *testing.T) {
 	goItem0 := map[string]interface{}{
 		"name":     "John Doe",
 		"age":      30,
-		"email":    mustAddr("test@localhost"),
+		"email":    mustAddr(t, "test@localhost"),
 		"password": "password",
-		"date":     mustDate("2006-01-02", "2021-01-01"),
-		"datetime": mustDate("2006-01-02T15:04:05", "2021-01-01T00:00:00"),
+		"date":     mustDate(t, "2006-01-02", "2021-01-01"),
+		"datetime": mustDate(t, "2006-01-02T15:04:05", "2021-01-01T00:00:00"),
 	}
 	goItem1 := map[string]interface{}{
 		"name":     "Jane Doe",
 		"age":      25,
-		"email":    mustAddr("test2@localhost"),
+		"email":    mustAddr(t, "test2@localhost"),
 		"password": "password2",
-		"date":     mustDate("2006-01-02", "2021-01-02"),
-		"datetime": mustDate("2006-01-02T15:04:05", "2021-01-02T00:00:00"),
+		"date":     mustDate(t, "2006-01-02", "2021-01-02"),
+		"datetime": mustDate(t, "2006-01-02T15:04:05", "2021-01-02T00:00:00"),
 	}
 	goValueCmp := &blocks.StreamBlockValue{
 		Blocks: []*blocks.StreamBlockData{
@@ -237,21 +249,6 @@ func NewRichStreamBlock() *blocks.StreamBlock {
 func TestStreamBlock_RichChildren(t *testing.T) {
 	t.Helper()
 
-	mustAddr := func(s string) *mail.Address {
-		a, err := mail.ParseAddress(s)
-		if err != nil {
-			t.Fatalf("parse address %q: %v", s, err)
-		}
-		return a
-	}
-	mustTime := func(layout, s string) time.Time {
-		d, err := time.Parse(layout, s)
-		if err != nil {
-			t.Fatalf("parse time %q: %v", s, err)
-		}
-		return d
-	}
-
 	b := NewRichStreamBlock()
 
 	// ----- Raw form (what form posts look like) -----
@@ -325,19 +322,19 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 	goPerson := map[string]interface{}{
 		"name":     "John Doe",
 		"age":      30,
-		"email":    mustAddr("john@localhost"),
+		"email":    mustAddr(t, "john@localhost"),
 		"password": "hunter2",
-		"date":     mustTime("2006-01-02", "2022-02-02"),
-		"datetime": mustTime("2006-01-02T15:04:05", "2022-02-02T10:30:00"),
+		"date":     mustDate(t, "2006-01-02", "2022-02-02"),
+		"datetime": mustDate(t, "2006-01-02T15:04:05", "2022-02-02T10:30:00"),
 	}
 	goCmp := &blocks.StreamBlockValue{
 		Blocks: []*blocks.StreamBlockData{
 			{ID: uuid.Nil, Type: "title", Order: 0, Data: "Hello world"},
 			{ID: uuid.Nil, Type: "person", Order: 1, Data: goPerson},
 			{ID: uuid.Nil, Type: "age", Order: 2, Data: 42},
-			{ID: uuid.Nil, Type: "email", Order: 3, Data: mustAddr("dev@localhost")},
-			{ID: uuid.Nil, Type: "born", Order: 4, Data: mustTime("2006-01-02", "1999-12-31")},
-			{ID: uuid.Nil, Type: "when", Order: 5, Data: mustTime("2006-01-02T15:04:05", "2025-01-15T23:59:59")},
+			{ID: uuid.Nil, Type: "email", Order: 3, Data: mustAddr(t, "dev@localhost")},
+			{ID: uuid.Nil, Type: "born", Order: 4, Data: mustDate(t, "2006-01-02", "1999-12-31")},
+			{ID: uuid.Nil, Type: "when", Order: 5, Data: mustDate(t, "2006-01-02T15:04:05", "2025-01-15T23:59:59")},
 		},
 	}
 

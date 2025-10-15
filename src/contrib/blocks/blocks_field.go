@@ -2,6 +2,7 @@ package blocks
 
 import (
 	"context"
+	"encoding/json"
 	"io"
 	"net/mail"
 	"time"
@@ -79,7 +80,16 @@ func PasswordBlock(opts ...func(*FieldBlock)) *FieldBlock {
 
 func DateBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
-	base.DataType = time.Time{}
+	base.ValueFromDBFunc = func(b *BaseBlock, j json.RawMessage) (interface{}, error) {
+		if len(j) == 0 {
+			return nil, nil
+		}
+		var s string
+		if err := json.Unmarshal(j, &s); err != nil {
+			return nil, err
+		}
+		return time.Parse("2006-01-02", s)
+	}
 	base.Template = "blocks/templates/date.html"
 	base.SetField(fields.DateField(widgets.DateWidgetTypeDate))
 	// base.Default = func() interface{} {
@@ -90,7 +100,16 @@ func DateBlock(opts ...func(*FieldBlock)) *FieldBlock {
 
 func DateTimeBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
-	base.DataType = time.Time{}
+	base.ValueFromDBFunc = func(b *BaseBlock, j json.RawMessage) (interface{}, error) {
+		if len(j) == 0 {
+			return nil, nil
+		}
+		var s string
+		if err := json.Unmarshal(j, &s); err != nil {
+			return nil, err
+		}
+		return time.Parse("2006-01-02T15:04:05", s)
+	}
 	base.Template = "blocks/templates/datetime.html"
 	base.SetField(fields.DateField(widgets.DateWidgetTypeDateTime))
 	// base.Default = func() interface{} {

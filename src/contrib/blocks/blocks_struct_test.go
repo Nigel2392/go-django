@@ -2,6 +2,7 @@ package blocks_test
 
 import (
 	"context"
+	"encoding/json"
 	"maps"
 	"net/mail"
 	"net/url"
@@ -57,6 +58,89 @@ var structBlockDataGo = map[string]interface{}{
 	"password": "password",
 	"date":     must(time.Parse("2006-01-02", "2021-01-01")),
 	"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-01T00:00:00")),
+}
+
+func TestStructBlock_ValueFromDB(t *testing.T) {
+	sb := NewSimpleStructBlock()
+	sb.SetName("person")
+
+	// 1) Empty/null input -> nil, nil
+	t.Run("Empty", func(t *testing.T) {
+		v, err := sb.ValueFromDB(nil)
+		if err != nil {
+			t.Fatalf("expected no error, got %v", err)
+		}
+		if v != nil {
+			t.Fatalf("expected nil, got %T:%v", v, v)
+		}
+	})
+
+	// 2) Valid JSON -> Go-typed map
+	t.Run("OK", func(t *testing.T) {
+		raw := map[string]any{
+			"name":     "John Doe",
+			"age":      30,
+			"email":    mustAddr(t, "john@localhost"),
+			"password": "hunter2",
+			"date":     mustDate(t, "2006-01-02", "2021-01-01"),
+			"datetime": mustDate(t, "2006-01-02T15:04:05", "2021-01-01T00:00:00"),
+		}
+		got, err := sb.ValueFromDB(jraw(t, raw))
+		if err != nil {
+			s, _ := err.(*blocks.BaseBlockValidationError[string]).MarshalJSON()
+			t.Log(string(s))
+			t.Fatalf("unexpected err: %v", err)
+		}
+		m, ok := got.(map[string]interface{})
+		if !ok {
+			t.Fatalf("expected map[string]interface{}, got %T", got)
+		}
+
+		want := map[string]interface{}{
+			"name":     "John Doe",
+			"age":      30,
+			"email":    mustAddr(t, "john@localhost"),
+			"password": "hunter2",
+			"date":     mustDate(t, "2006-01-02", "2021-01-01"),
+			"datetime": mustDate(t, "2006-01-02T15:04:05", "2021-01-01T00:00:00"),
+		}
+		if !reflect.DeepEqual(m, want) {
+			t.Fatalf("mismatch\nwant=%#v\ngot =%#v", want, m)
+		}
+	})
+
+	// 3) Aggregated field errors (invalid email & invalid date), but partial data returned
+	t.Run("AggregatedErrors", func(t *testing.T) {
+		raw := map[string]json.RawMessage{
+			"name":     jraw(t, "Jane Doe"),
+			"age":      jraw(t, 25),
+			"email":    jraw(t, "not-an-email"), // invalid
+			"password": jraw(t, "pw"),
+			"date":     jraw(t, "2021-13-40"), // invalid date
+			"datetime": jraw(t, "2021-01-02T01:02:03"),
+		}
+		got, err := sb.ValueFromDB(jraw(t, raw))
+		if err == nil {
+			t.Fatalf("expected aggregated errors, got nil")
+		}
+		m, ok := got.(map[string]interface{})
+		if !ok {
+			t.Fatalf("expected map[string]interface{}, got %T", got)
+		}
+		// Valid parts should still be typed
+		if m["name"] != "Jane Doe" || m["age"] != 25 || m["password"] != "pw" {
+			t.Fatalf("partial data mismatch: %#v", m)
+		}
+		if _, ok := m["email"]; ok {
+			t.Fatalf("email should not be present on partial success")
+		}
+		if _, ok := m["date"]; ok {
+			t.Fatalf("date should not be present on partial success")
+		}
+		if _, ok := m["datetime"].(time.Time); !ok {
+			t.Fatalf("datetime should be parsed to time.Time: %#v", m["datetime"])
+		}
+	})
 }
 
 func TestStructBlock(t *testing.T) {

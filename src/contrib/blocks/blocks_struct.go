@@ -41,6 +41,7 @@ func (s *StructBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 	if len(value) == 0 {
 		return nil, nil
 	}
+
 	if err := json.Unmarshal(value, &dataMap); err != nil {
 		return nil, err
 	}
