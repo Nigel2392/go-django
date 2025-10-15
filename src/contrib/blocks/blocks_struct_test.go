@@ -2,7 +2,6 @@ package blocks_test
 
 import (
 	"context"
-	"encoding/json"
 	"maps"
 	"net/mail"
 	"net/url"
@@ -82,8 +81,8 @@ func TestStructBlock_ValueFromDB(t *testing.T) {
 			"age":      30,
 			"email":    mustAddr(t, "john@localhost"),
 			"password": "hunter2",
-			"date":     mustDate(t, "2006-01-02", "2021-01-01"),
-			"datetime": mustDate(t, "2006-01-02T15:04:05", "2021-01-01T00:00:00"),
+			"date":     "2021-01-01",
+			"datetime": "2021-01-01T00:00:00",
 		}
 		got, err := sb.ValueFromDB(jraw(t, raw))
 		if err != nil {
@@ -111,13 +110,13 @@ func TestStructBlock_ValueFromDB(t *testing.T) {
 
 	// 3) Aggregated field errors (invalid email & invalid date), but partial data returned
 	t.Run("AggregatedErrors", func(t *testing.T) {
-		raw := map[string]json.RawMessage{
-			"name":     jraw(t, "Jane Doe"),
-			"age":      jraw(t, 25),
-			"email":    jraw(t, "not-an-email"), // invalid
-			"password": jraw(t, "pw"),
-			"date":     jraw(t, "2021-13-40"), // invalid date
-			"datetime": jraw(t, "2021-01-02T01:02:03"),
+		raw := map[string]any{
+			"name":     "Jane Doe",
+			"age":      25,
+			"email":    "not-an-email", // invalid
+			"password": "pw",
+			"date":     "2021-01-00", // invalid date
+			"datetime": "2021-01-01T00:00:00",
 		}
 		got, err := sb.ValueFromDB(jraw(t, raw))
 		if err == nil {
@@ -127,6 +126,7 @@ func TestStructBlock_ValueFromDB(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected map[string]interface{}, got %T", got)
 		}
+
 		// Valid parts should still be typed
 		if m["name"] != "Jane Doe" || m["age"] != 25 || m["password"] != "pw" {
 			t.Fatalf("partial data mismatch: %#v", m)
@@ -139,6 +139,17 @@ func TestStructBlock_ValueFromDB(t *testing.T) {
 		}
 		if _, ok := m["datetime"].(time.Time); !ok {
 			t.Fatalf("datetime should be parsed to time.Time: %#v", m["datetime"])
+		}
+
+		var errs = err.(*blocks.BaseBlockValidationError[string])
+		if len(errs.Errors) != 2 {
+			t.Fatalf("expected 2 errors, got %d: %#v", len(errs.Errors), errs.Errors)
+		}
+		if _, ok := errs.Errors["email"]; !ok {
+			t.Fatalf("expected email error, got: %#v", errs.Errors)
+		}
+		if _, ok := errs.Errors["date"]; !ok {
+			t.Fatalf("expected date error, got: %#v", errs.Errors)
 		}
 	})
 }

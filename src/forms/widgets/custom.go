@@ -187,6 +187,10 @@ type DateWidgetType string
 const (
 	DateWidgetTypeDate     DateWidgetType = "date"
 	DateWidgetTypeDateTime DateWidgetType = "datetime-local"
+
+	DateWidgetDateFormat        = "2006-01-02"
+	DateWidgetDateTimeFormat    = "2006-01-02T15:04"
+	DateWidgetDateTimeSecFormat = "2006-01-02T15:04:05"
 )
 
 type DateWidget struct {
@@ -210,14 +214,14 @@ func (d *DateWidget) ValueToGo(value interface{}) (interface{}, error) {
 		}
 
 		if d.DateType == DateWidgetTypeDate {
-			v, err = time.Parse("2006-01-02", val)
+			v, err = time.Parse(DateWidgetDateFormat, val)
 		} else {
 			var split = strings.Split(val, ":")
 			if len(split) == 2 {
 				// 23233-01-08T23:23
-				v, err = time.Parse("2006-01-02T15:04", val)
+				v, err = time.Parse(DateWidgetDateTimeFormat, val)
 			} else if len(split) == 3 {
-				v, err = time.Parse("2006-01-02T15:04:05", val)
+				v, err = time.Parse(DateWidgetDateTimeSecFormat, val)
 			} else {
 				return "", errors.Wrapf(
 					errs.ErrInvalidSyntax,
@@ -245,30 +249,30 @@ func (d *DateWidget) ValueToForm(value interface{}) interface{} {
 	switch val := value.(type) {
 	case time.Time:
 		if d.DateType == DateWidgetTypeDate {
-			return val.Format("2006-01-02")
+			return val.Format(DateWidgetDateFormat)
 		}
-		return val.Format("2006-01-02T15:04:05")
+		return val.Format(DateWidgetDateTimeSecFormat)
 	case interface{ Time() time.Time }:
 		var t = val.Time()
 		if d.DateType == DateWidgetTypeDate {
-			return t.Format("2006-01-02")
+			return t.Format(DateWidgetDateFormat)
 		}
-		return t.Format("2006-01-02T15:04:05")
+		return t.Format(DateWidgetDateTimeSecFormat)
 	case string:
 		var t, err = time.Parse(time.RFC3339, val)
 		if err != nil {
-			t, err = time.Parse("2006-01-02T15:04:05", val)
+			t, err = time.Parse(DateWidgetDateTimeSecFormat, val)
 		}
 		if err != nil {
-			t, err = time.Parse("2006-01-02", val)
+			t, err = time.Parse(DateWidgetDateFormat, val)
 		}
 		if err != nil {
 			return ""
 		}
 		if d.DateType == DateWidgetTypeDate {
-			return t.Format("2006-01-02")
+			return t.Format(DateWidgetDateFormat)
 		}
-		return t.Format("2006-01-02T15:04:05")
+		return t.Format(DateWidgetDateTimeSecFormat)
 	default:
 		return value
 	}

@@ -88,7 +88,7 @@ func DateBlock(opts ...func(*FieldBlock)) *FieldBlock {
 		if err := json.Unmarshal(j, &s); err != nil {
 			return nil, err
 		}
-		return time.Parse("2006-01-02", s)
+		return time.Parse(widgets.DateWidgetDateFormat, s)
 	}
 	base.Template = "blocks/templates/date.html"
 	base.SetField(fields.DateField(widgets.DateWidgetTypeDate))
@@ -108,7 +108,7 @@ func DateTimeBlock(opts ...func(*FieldBlock)) *FieldBlock {
 		if err := json.Unmarshal(j, &s); err != nil {
 			return nil, err
 		}
-		return time.Parse("2006-01-02T15:04:05", s)
+		return time.Parse(widgets.DateWidgetDateTimeSecFormat, s)
 	}
 	base.Template = "blocks/templates/datetime.html"
 	base.SetField(fields.DateField(widgets.DateWidgetTypeDateTime))
