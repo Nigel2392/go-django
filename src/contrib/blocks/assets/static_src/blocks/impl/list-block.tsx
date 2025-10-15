@@ -26,17 +26,29 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
 
     constructor(block: ListBlock, placeholder: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
         initialState = initialState || [];
-        initialError = initialError || [];
+        initialError = initialError || {};
+
+        let errorsList = null;
+        if (initialError && initialError?.nonBlockErrors) {
+            errorsList = (
+                <ul class="field-errors">
+                    {initialError?.nonBlockErrors?.map((err: string) => (
+                        <li class="field-error">{err}</li>
+                    ))}
+                </ul>
+            );
+        }
 
         const root = PanelComponent({
             panelId: `${name}--panel`,
             class: "sequence-block",
             allowPanelLink: true,
-            heading: block.meta.label ?? (
+            heading: block.meta.label ? (
                 <div class="sequence-block-field-heading">
                     <label for={id} class="sequence-block-field-heading-label">{block.meta.label}:</label>
                 </div>
-            ),
+            ) : null,
+            errors: errorsList,
             attrs: {
                 "data-controller": "sortable",
             },
@@ -49,7 +61,7 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
                 attrs[placeholder.attributes[i].name] = placeholder.attributes[i].value;
             }
         }
-        
+
         Object.keys(attrs).forEach((key) => {
             root.body.setAttribute(key, attrs[key]);
         });
@@ -74,10 +86,9 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
             <div data-sequence-block-items class="sequence-block-items" data-sortable-target="items"></div>
         ) as HTMLElement;
 
-
         for (let i = 0; i < initialState.length; i++) {
             this._createChild(
-                i, i, id, name, initialState[i], initialError[i] || null, false,
+                i, i, id, name, initialState[i], initialError?.errors?.[i]?.[0] || null, false,
             )
         }
 
@@ -135,12 +146,12 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
                             <div data-sequence-block-field-actions class="sequence-block-field-actions">
                                 <div data-sequence-block-field-actions-group class="sequence-block-field-actions-group">
                                     <div data-sequence-block-field-delete class="sequence-block-field-delete">
-                                        <button type="button" data-action="delete" class="sequence-block-field-delete-button" onClick={this._onDeleteClick.bind(this, itemKey)}>
+                                        <button type="button" data-action="delete" class="sequence-block-field-delete-button sequence-block-field-actions-text" onClick={this._onDeleteClick.bind(this, itemKey)}>
                                             { Icon('icon-trash') }
                                         </button>
                                     </div>
                                     <div data-sequence-block-field-add class="sequence-block-field-add">
-                                        <button type="button" data-action="add" class="sequence-block-field-add-button" onClick={this._onAddClick.bind(this, itemKey)}>
+                                        <button type="button" data-action="add" class="sequence-block-field-add-button sequence-block-field-actions-text" onClick={this._onAddClick.bind(this, itemKey)}>
                                             { Icon('icon-plus') }
                                         </button>
                                     </div>

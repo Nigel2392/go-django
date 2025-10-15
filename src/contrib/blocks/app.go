@@ -42,6 +42,16 @@ func (l *ListBlockData) Scan(value interface{}) error {
 	}
 }
 
+func methodGetBlock(model any, fieldName string) (Block, bool) {
+	var methodName = fmt.Sprintf("Get%sBlock", fieldName)
+	method, ok := attrs.Method[func() Block](model, methodName)
+	if !ok {
+		return nil, false
+	}
+	blockDef := method()
+	return blockDef, blockDef != nil
+}
+
 func init() {
 	dbtype.Add(&StreamBlockValue{}, dbtype.JSON)
 	dbtype.Add(&ListBlockData{}, dbtype.JSON)
@@ -55,15 +65,13 @@ func init() {
 	// The form field will not be set up if this method is not found.
 	var getter = func(f attrs.Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
 		var instance = f.Instance()
-		var featureFunc, ok = attrs.Method[func() Block](
-			instance, fmt.Sprintf("Get%sBlock", f.Name()),
-		)
+		block, ok := methodGetBlock(instance, f.Name())
 		if !ok {
 			logger.Errorf("No Get%sBlock() method found on %T, cannot set up BlockField", f.Name(), instance)
 			return nil, false
 		}
 
-		return BlockField(featureFunc(), opts...), true
+		return BlockField(block, opts...), true
 	}
 
 	attrs.RegisterFormFieldGetter(&StreamBlockValue{}, getter)

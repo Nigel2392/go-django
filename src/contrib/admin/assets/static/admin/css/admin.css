@@ -759,7 +759,7 @@ flex-direction is set to row above 70em.
     display: flex;
     align-items: center;
     flex-direction: row;
-    transform: translateX(-1.7rem);
+    transform: translateX(-1.5rem);
 }
 .panel.collapsible > .panel__heading > .panel__title label,
 .panel .panel__heading:has(> .panel__icon+.panel__title) > .panel__title label {
@@ -809,6 +809,9 @@ flex-direction is set to row above 70em.
 }
 .panel .panel__help {
     margin-bottom: 0.35rem;
+}
+.panel .panel__errors {
+    margin-bottom: 0.75rem;
 }
 .panel .panel__errors ul,
 .error-list {

@@ -14,7 +14,7 @@ import { Widget } from "../widgets/widget";
 type BlockError = {
     [key: string]: BlockError | string[];
     errors?: BlockError | string[];
-    nonBlockErrors?: BlockError | string[];
+    nonBlockErrors?: string[];
 };
 
 type BlockMeta = {

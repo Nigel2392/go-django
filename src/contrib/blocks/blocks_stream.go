@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -18,7 +20,6 @@ import (
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 )
 
 var (
@@ -53,6 +54,19 @@ func newStreamBlockValue(block *StreamBlock) *StreamBlockValue {
 
 func (s *StreamBlockValue) addStreamValue(v *StreamBlockData) {
 	s.Blocks = append(s.Blocks, v)
+}
+
+var _ attrs.Binder = (*StreamBlockValue)(nil)
+
+func (s *StreamBlockValue) BindToModel(model attrs.Definer, field attrs.Field) error {
+	block, ok := methodGetBlock(model, field.Name())
+	if !ok {
+		return errors.ValueError.Wrapf(
+			"No Get%sBlock() method found on %T, cannot bind StreamBlockValue", field.Name(), model,
+		)
+	}
+	s.Block = block.(*StreamBlock)
+	return nil
 }
 
 func (s StreamBlockValue) Value() (driver.Value, error) {
@@ -97,10 +111,10 @@ func (s *StreamBlockValue) UnmarshalJSON(data []byte) error {
 }
 
 type StreamBlock struct {
-	*BaseBlock
-	Children *orderedmap.OrderedMap[string, Block]
-	Min      int
-	Max      int
+	*BaseBlock `json:"-"`
+	Children   *orderedmap.OrderedMap[string, Block] `json:"-"`
+	Min        int                                   `json:"-"`
+	Max        int                                   `json:"-"`
 }
 
 func NewStreamBlock(opts ...func(*StreamBlock)) *StreamBlock {
@@ -138,56 +152,8 @@ func (l *StreamBlock) makeError(err error) error {
 	return err
 }
 
-func (l *StreamBlock) makeIndexedError(index int, err ...error) error {
-	if len(err) == 0 || len(err) >= 1 && err[0] == nil {
-		return nil
-	}
-	var e = NewBlockErrors[int]()
-	e.AddError(index, err...)
-	return e
-}
-
 func (b *StreamBlock) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
-	var totalKey = fmt.Sprintf("%s--total", name)
-	if !data.Has(totalKey) {
-		return true
-	}
-
-	var totalValue, err = strconv.Atoi(strings.TrimSpace(data.Get(totalKey)))
-	if err != nil || totalValue == 0 {
-		return true
-	}
-
-	var omitted = true
-	for i := 0; i < totalValue; i++ {
-		var deletedKey = fmt.Sprintf("%s-%d--deleted", name, i)
-		if data.Has(deletedKey) {
-			var deletedValue = strings.TrimSpace(data.Get(deletedKey))
-			if deletedValue == "on" || deletedValue == "true" || deletedValue == "1" {
-				omitted = false // Deleted, so not omitted
-				break
-			}
-		}
-
-		var typeKey = fmt.Sprintf("%s-%d--type", name, i)
-		if !data.Has(typeKey) {
-			logger.Warnf("Missing type key: %s for StreamBlock", typeKey, name)
-			continue
-		}
-
-		var typeValue = strings.TrimSpace(data.Get(typeKey))
-		var child, ok = b.Children.Get(typeValue)
-		if !ok {
-			logger.Warnf("Unknown child block type: %s for StreamBlock", typeValue, name)
-			continue
-		}
-
-		if !child.ValueOmittedFromData(ctx, data, files, fmt.Sprintf("%s-%d", name, i)) {
-			omitted = false
-			break
-		}
-	}
-	return omitted
+	return !data.Has(fmt.Sprintf("%s--total", name))
 }
 
 func sortStreamBlocks(a, b *StreamBlockData) int {
@@ -241,12 +207,8 @@ func (l *StreamBlock) ValueFromDataDict(ctx context.Context, d url.Values, files
 			continue
 		}
 
-		var key = fmt.Sprintf("%s-%d", name, i)
-		if child.ValueOmittedFromData(ctx, d, files, key) {
-			continue
-		}
-
 		var (
+			key      = fmt.Sprintf("%s-%d", name, i)
 			idKey    = fmt.Sprintf("%s-id-%d", name, i)
 			orderKey = fmt.Sprintf("%s-order-%d", name, i)
 			orderStr = d.Get(orderKey)
@@ -307,21 +269,18 @@ func (l *StreamBlock) ValueFromDataDict(ctx context.Context, d url.Values, files
 	}
 
 	if l.Min != -1 && len(data.Blocks) < l.Min {
-		return data, []error{l.makeError(
-			fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data.Blocks)), //lint:ignore ST1005 ignore this lint
-		)}
+		errs.AddNonBlockError(fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data.Blocks))) //lint:ignore ST1005 ignore this lint
+		return data, []error{errs}
 	}
 
 	if l.Max != -1 && len(data.Blocks) > l.Max {
-		return data, []error{l.makeError(
-			fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data.Blocks)), //lint:ignore ST1005 ignore this lint
-		)}
+		errs.AddNonBlockError(fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data.Blocks))) //lint:ignore ST1005 ignore this lint
+		return data, []error{errs}
 	}
 
 	if totalCount+deletedCount != total {
-		return data, []error{l.makeError(
-			fmt.Errorf("Invalid number of items, expected %d, got %d", total, totalCount+deletedCount), //lint:ignore ST1005 ignore this lint
-		)}
+		errs.AddNonBlockError(fmt.Errorf("Invalid number of items, expected %d, got %d", total, totalCount+deletedCount)) //lint:ignore ST1005 ignore this lint
+		return data, []error{errs}
 	}
 
 	return data, nil
@@ -438,6 +397,7 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 		return value, fmt.Errorf("value must be of type StreamBlockValue, got %T", value)
 	}
 
+	var errs = NewBlockErrors[int]()
 	var data = make([]*StreamBlockData, 0, len(blockData.Blocks))
 	for i, lbVal := range blockData.Blocks {
 		var child, ok = l.Children.Get(lbVal.Type)
@@ -447,7 +407,14 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 
 		var v, err = child.Clean(ctx, lbVal.Data)
 		if err != nil {
-			return value, l.makeIndexedError(i, errors.Wrapf(err, "index %d", i))
+			errs.AddError(i, errors.Wrapf(err, "index %d", i))
+			data = append(data, &StreamBlockData{
+				ID:    lbVal.ID,
+				Type:  lbVal.Type,
+				Order: i,
+				Data:  lbVal.Data,
+			})
+			continue
 		}
 
 		data = append(data, &StreamBlockData{
@@ -456,6 +423,10 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 			Order: lbVal.Order,
 			Data:  v,
 		})
+	}
+
+	if errs.HasErrors() {
+		return blockData, errs
 	}
 
 	blockData.Blocks = data
@@ -474,7 +445,7 @@ func (l *StreamBlock) Validate(ctx context.Context, value interface{}) []error {
 		return nil
 	}
 
-	var errors = make([]error, 0)
+	var errs = NewBlockErrors[int]()
 	for i, v := range value.(*StreamBlockValue).Blocks {
 		var child, ok = l.Children.Get(v.Type)
 		if !ok {
@@ -483,10 +454,13 @@ func (l *StreamBlock) Validate(ctx context.Context, value interface{}) []error {
 
 		var e = child.Validate(ctx, v.Data)
 		if len(e) != 0 {
-			errors = append(errors, l.makeIndexedError(i, e...))
+			errs.AddError(i, e...)
 		}
 	}
-	return errors
+	if errs.HasErrors() {
+		return []error{errs}
+	}
+	return nil
 }
 
 func (l *StreamBlock) RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, tplCtx ctx.Context) error {

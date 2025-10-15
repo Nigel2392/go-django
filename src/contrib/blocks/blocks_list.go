@@ -79,34 +79,7 @@ func (l *ListBlock) makeIndexedError(index int, err ...error) error {
 }
 
 func (b *ListBlock) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
-	var totalKey = fmt.Sprintf("%s--total", name)
-	if !data.Has(totalKey) {
-		return true
-	}
-
-	var totalValue, err = strconv.Atoi(strings.TrimSpace(data.Get(totalKey)))
-	if err != nil || totalValue == 0 {
-		return true
-	}
-
-	var omitted = true
-	for i := 0; i < totalValue; i++ {
-		var deletedKey = fmt.Sprintf("%s-%d--deleted", name, i)
-		if data.Has(deletedKey) {
-			var deletedValue = strings.TrimSpace(data.Get(deletedKey))
-			if deletedValue == "on" || deletedValue == "true" || deletedValue == "1" {
-				omitted = false // Deleted, so not omitted
-				break
-			}
-		}
-
-		var key = fmt.Sprintf("%s-%d", name, i)
-		if !b.Child.ValueOmittedFromData(ctx, data, files, key) {
-			omitted = false
-			break
-		}
-	}
-	return omitted
+	return !data.Has(fmt.Sprintf("%s--total", name))
 }
 
 func sortListBlocks(a, b *ListBlockValue) int {
@@ -146,12 +119,8 @@ func (l *ListBlock) ValueFromDataDict(ctx context.Context, d url.Values, files m
 			}
 		}
 
-		var key = fmt.Sprintf("%s-%d", name, i)
-		if l.Child.ValueOmittedFromData(ctx, d, files, key) {
-			continue
-		}
-
 		var (
+			key      = fmt.Sprintf("%s-%d", name, i)
 			idKey    = fmt.Sprintf("%s-id-%d", name, i)
 			orderKey = fmt.Sprintf("%s-order-%d", name, i)
 			orderStr = d.Get(orderKey)
@@ -211,21 +180,18 @@ func (l *ListBlock) ValueFromDataDict(ctx context.Context, d url.Values, files m
 	}
 
 	if l.Min != -1 && len(data) < l.Min {
-		return data, []error{l.makeError(
-			fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data)), //lint:ignore ST1005 ignore this lint
-		)}
+		errs.AddNonBlockError(fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data))) //lint:ignore ST1005 ignore this lint
+		return data, []error{errs}
 	}
 
 	if l.Max != -1 && len(data) > l.Max {
-		return data, []error{l.makeError(
-			fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data)), //lint:ignore ST1005 ignore this lint
-		)}
+		errs.AddNonBlockError(fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data))) //lint:ignore ST1005 ignore this lint
+		return data, []error{errs}
 	}
 
 	if totalCount+deletedCount != total {
-		return data, []error{l.makeError(
-			fmt.Errorf("Invalid number of items, expected %d, got %d", total, totalCount+deletedCount), //lint:ignore ST1005 ignore this lint
-		)}
+		errs.AddNonBlockError(fmt.Errorf("Invalid number of items, expected %d, got %d", total, totalCount+deletedCount)) //lint:ignore ST1005 ignore this lint
+		return data, []error{errs}
 	}
 
 	return data, nil
@@ -328,11 +294,18 @@ func (l *ListBlock) Clean(ctx context.Context, value interface{}) (interface{}, 
 		return nil, nil
 	}
 
+	var errs = NewBlockErrors[int]()
 	var data = make(ListBlockData, 0)
 	for i, lbVal := range value.(ListBlockData) {
 		var v, err = l.Child.Clean(ctx, lbVal.Data)
 		if err != nil {
-			return value, l.makeIndexedError(i, errors.Wrapf(err, "index %d", i))
+			errs.AddError(i, errors.Wrapf(err, "index %d", i))
+			data = append(data, &ListBlockValue{
+				ID:    lbVal.ID,
+				Order: lbVal.Order,
+				Data:  lbVal.Data,
+			})
+			continue
 		}
 
 		data = append(data, &ListBlockValue{
@@ -357,14 +330,17 @@ func (l *ListBlock) Validate(ctx context.Context, value interface{}) []error {
 		return nil
 	}
 
-	var errors = make([]error, 0)
+	var errs = NewBlockErrors[int]()
 	for i, v := range value.(ListBlockData) {
 		var e = l.Child.Validate(ctx, v.Data)
 		if len(e) != 0 {
-			errors = append(errors, l.makeIndexedError(i, e...))
+			errs.AddError(i, e...)
 		}
 	}
-	return errors
+	if errs.HasErrors() {
+		return []error{errs}
+	}
+	return nil
 }
 
 func (l *ListBlock) RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, tplCtx ctx.Context) error {

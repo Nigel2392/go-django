@@ -38,7 +38,7 @@ func Login(r *http.Request, u *User) (*User, error) {
 	// Add this as a session finalizer
 	// This might allow us to skip an update query, if the caller makes one.
 	session.AddFinalizer(func(r *http.Request, ctx context.Context) (context.Context, error) {
-		if !u.State().Changed(true) {
+		if !u.State().Changed(true) { // update was already called
 			return ctx, nil
 		}
 

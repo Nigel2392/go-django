@@ -1,6 +1,7 @@
 package blog
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -86,6 +87,14 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 			blocks.WithLabel[*blocks.FieldBlock](trans.S("Text")),
 			blocks.WithHelpText[*blocks.FieldBlock](trans.S("Some text for this image.")),
 			blocks.WithDefault[*blocks.FieldBlock]("Default caption text"),
+			blocks.WithValidators[*blocks.FieldBlock](func(c context.Context, i interface{}) error {
+				if str, ok := i.(string); ok {
+					if len(str) < 5 {
+						return fmt.Errorf("caption text must be at least 5 characters")
+					}
+				}
+				return nil
+			}),
 		)),
 		blocks.WithBlockField[*blocks.StructBlock]("Attribution", blocks.CharBlock(
 			blocks.WithLabel[*blocks.FieldBlock](trans.S("Attribution")),
@@ -94,10 +103,20 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 		)),
 		blocks.WithBlockField[*blocks.StructBlock]("Stream", blocks.NewStreamBlock(
 			blocks.WithLabel[*blocks.StreamBlock](trans.S("Stream Content")),
+			blocks.WithMin[*blocks.StreamBlock](1),
+			blocks.WithMax[*blocks.StreamBlock](5),
 			blocks.WithBlockField[*blocks.StreamBlock]("paragraph", blocks.TextBlock(
 				blocks.WithLabel[*blocks.FieldBlock](trans.S("Paragraph")),
 				blocks.WithHelpText[*blocks.FieldBlock](trans.S("A paragraph of text.")),
 				blocks.WithDefault[*blocks.FieldBlock]("Default paragraph text"),
+				blocks.WithValidators[*blocks.FieldBlock](func(c context.Context, i interface{}) error {
+					if str, ok := i.(string); ok {
+						if len(str) < 5 {
+							return fmt.Errorf("paragraph text must be at least 5 characters")
+						}
+					}
+					return nil
+				}),
 			)),
 			blocks.WithBlockField[*blocks.StreamBlock]("Data", blocks.NewStructBlock(
 				blocks.WithBlockField[*blocks.StructBlock]("URL", blocks.CharBlock(
@@ -109,6 +128,14 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 					blocks.WithLabel[*blocks.FieldBlock](trans.S("Text")),
 					blocks.WithHelpText[*blocks.FieldBlock](trans.S("The text for this link.")),
 					blocks.WithDefault[*blocks.FieldBlock]("Example link"),
+					blocks.WithValidators[*blocks.FieldBlock](func(c context.Context, i interface{}) error {
+						if str, ok := i.(string); ok {
+							if len(str) < 5 {
+								return fmt.Errorf("link text must be at least 5 characters")
+							}
+						}
+						return nil
+					}),
 				)),
 			)),
 		)),
@@ -166,6 +193,7 @@ type BlogPage struct {
 	Page         *pages.PageNode `proxy:"true"`
 	Image        *mediafiles.SimpleStoredObject
 	Editor       *editor.EditorJSBlockData
+	Content      blocks.StreamBlockValue
 	Thumbnail    *images.Image
 	Document     *documents.Document
 	User         users.User

@@ -1,6 +1,7 @@
 package blocks
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -15,7 +16,7 @@ func runOpts[T1 any, T2 func(T1) | OptFunc[T1]](opts []T2, t T1) {
 	}
 }
 
-func WithValidators[T any](validators ...func(interface{}) error) OptFunc[T] {
+func WithValidators[T any](validators ...func(context.Context, interface{}) error) OptFunc[T] {
 	return func(t T) {
 		var validatorField = reflect.ValueOf(t).Elem().FieldByName("Validators")
 		if validatorField.IsValid() {
@@ -56,7 +57,7 @@ func reflectSetter[T Block](t T, fieldName string, value interface{}) bool {
 func WithMin[T Block](min int) OptFunc[T] {
 	return func(t T) {
 		if !reflectSetter(t, "Min", min) {
-			panic(fmt.Errorf("Min is not a valid field of %T", t))
+			panic(fmt.Errorf("Min is not a valid field of %T", t)) //lint:ignore ST1005 ignore this lint
 		}
 	}
 }
@@ -64,7 +65,7 @@ func WithMin[T Block](min int) OptFunc[T] {
 func WithMax[T Block](max int) OptFunc[T] {
 	return func(t T) {
 		if !reflectSetter(t, "Max", max) {
-			panic(fmt.Errorf("Max is not a valid field of %T", t))
+			panic(fmt.Errorf("Max is not a valid field of %T", t)) //lint:ignore ST1005 ignore this lint
 		}
 	}
 }

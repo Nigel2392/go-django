@@ -25,7 +25,9 @@ class BoundStructBlock extends BoundBlock {
     childBlocks: { [key: string]: BoundBlock };
 
     constructor(block: StructBlock, placeholder: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
-        
+        initialState = initialState || {};
+        initialError = initialError || {};
+
         let labelWrapper = null;
         if (block.meta.label) {
             labelWrapper = (
@@ -36,10 +38,10 @@ class BoundStructBlock extends BoundBlock {
         }
 
         let errorsList = null;
-        if (initialError && initialError.nonFieldErrors) {
+        if (initialError && initialError?.nonBlockErrors) {
             errorsList = (
                 <ul class="field-errors">
-                    {initialError.nonFieldErrors.map((err: string) => (
+                    {initialError?.nonBlockErrors?.map((err: string) => (
                         <li class="field-error">{err}</li>
                     ))}
                 </ul>
@@ -70,9 +72,6 @@ class BoundStructBlock extends BoundBlock {
 
         this.childBlocks = {};
 
-        initialState = initialState || {};
-        initialError = initialError || {};
-
         var keys = Object.keys(block.children);
         for (let i = 0; i < keys.length; i++) {
             const childBlockName = keys[i];
@@ -94,7 +93,7 @@ class BoundStructBlock extends BoundBlock {
                 idKey,
                 key,
                 initialState[childBlockName],
-                initialError[childBlockName],
+                initialError?.errors?.[childBlockName]?.[0],
             );
         }
     }
@@ -135,7 +134,7 @@ class BoundStructBlock extends BoundBlock {
             }
         }
 
-        if (errors.nonFieldErrors) {
+        if (errors?.nonBlockErrors) {
             this.element.style.backgroundColor = 'red';
         }
     }

@@ -12,7 +12,7 @@ export function PanelHeading(panelId?: string, allowPanelLink: boolean = true, .
           ) : null}
 
           <div class="panel__title" data-action="click->panel#toggle" {...(panelId ? { id: panelId } : {})}>
-              { children }
+              { ...children }
           </div>
       </div>
     );
@@ -24,10 +24,7 @@ export function PanelErrors(errors?: any[] | HTMLElement | null, ...children: an
     const errorsContainer = ( <div class="panel__errors"></div>)
     if (errors instanceof HTMLElement) {
         errorsContainer.appendChild(errors);
-        return errorsContainer;
-    }
-
-    if (Array.isArray(errors)) {
+    } else if (Array.isArray(errors)) {
         errors.forEach((error) => {
             const errorItem = (
                 <li class="panel__error">{error instanceof Error ? error.message : String(error)}</li>
@@ -39,6 +36,10 @@ export function PanelErrors(errors?: any[] | HTMLElement | null, ...children: an
             <li class="panel__error">{(errors as any) instanceof Error ? (errors as Error).message : String(errors)}</li>
         );
         errorsContainer.appendChild(errorItem);
+    }
+
+    for (const child of children) {
+        errorsContainer.appendChild(child);
     }
 
     return errorsContainer;

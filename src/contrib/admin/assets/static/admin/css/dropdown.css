@@ -25,7 +25,7 @@
     flex-direction: column;
     gap: 0.375em; 
 }
-.dropdown .dropdown__content > * {
+.dropdown .dropdown__content.dropdown__content > * {
     width: 100%;
     padding: 0.5em 1em;
     color: var(--dropdown-text-color);

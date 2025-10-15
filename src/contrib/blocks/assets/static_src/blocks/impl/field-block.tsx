@@ -13,7 +13,6 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
 
     constructor(block: FieldBlock, placeholder: HTMLElement, name: string, id: string, initialState: any, initialError: any, attrs: any = {}) {
 
-
         const errorList = (
            <ul class="field-errors"></ul>
         )

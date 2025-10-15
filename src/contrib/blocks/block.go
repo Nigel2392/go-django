@@ -46,14 +46,14 @@ type Block interface {
 var _ Block = (*BaseBlock)(nil)
 
 type BaseBlock struct {
-	Name_      string
-	Template   string
-	FormField  fields.Field
-	Validators []func(context.Context, interface{}) error
-	Default    func() interface{}
+	Name_      string                                     `json:"-"`
+	Template   string                                     `json:"-"`
+	FormField  fields.Field                               `json:"-"`
+	Validators []func(context.Context, interface{}) error `json:"-"`
+	Default    func() interface{}                         `json:"-"`
 
-	LabelFunc func(ctx context.Context) string
-	HelpFunc  func(ctx context.Context) string
+	LabelFunc func(ctx context.Context) string `json:"-"`
+	HelpFunc  func(ctx context.Context) string `json:"-"`
 }
 
 func (b *BaseBlock) Name() string {
