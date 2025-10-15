@@ -82,7 +82,7 @@ func TestStreamBlock(t *testing.T) {
 		"date":     "2021-01-02",
 		"datetime": "2021-01-02T00:00:00",
 	}
-	formValueCmp := blocks.StreamBlockValue{
+	formValueCmp := &blocks.StreamBlockValue{
 		Blocks: []*blocks.StreamBlockData{
 			{ID: uuid.Nil, Type: "person", Data: formItem0, Order: 0},
 			{ID: uuid.Nil, Type: "person", Data: formItem1, Order: 1},
@@ -106,7 +106,7 @@ func TestStreamBlock(t *testing.T) {
 		"date":     mustDate("2006-01-02", "2021-01-02"),
 		"datetime": mustDate("2006-01-02T15:04:05", "2021-01-02T00:00:00"),
 	}
-	goValueCmp := blocks.StreamBlockValue{
+	goValueCmp := &blocks.StreamBlockValue{
 		Blocks: []*blocks.StreamBlockData{
 			{ID: uuid.Nil, Type: "person", Data: goItem0, Order: 0},
 			{ID: uuid.Nil, Type: "person", Data: goItem1, Order: 1},
@@ -149,7 +149,7 @@ func TestStreamBlock(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		got, ok := gotAny.(blocks.StreamBlockValue)
+		got, ok := gotAny.(*blocks.StreamBlockValue)
 		if !ok {
 			t.Fatalf("expected StreamBlockValue, got %T", gotAny)
 		}
@@ -173,7 +173,7 @@ func TestStreamBlock(t *testing.T) {
 
 	t.Run("ValueToForm", func(t *testing.T) {
 		gotAny := b.ValueToForm(goValueCmp)
-		got, ok := gotAny.(blocks.StreamBlockValue)
+		got, ok := gotAny.(*blocks.StreamBlockValue)
 		if !ok {
 			t.Fatalf("expected StreamBlockValue, got %T", gotAny)
 		}
@@ -203,7 +203,7 @@ func TestStreamBlock(t *testing.T) {
 		formAgain := b.ValueToForm(goAny)
 
 		// We expect the final form representation to match the original "formValueCmp".
-		got, ok := formAgain.(blocks.StreamBlockValue)
+		got, ok := formAgain.(*blocks.StreamBlockValue)
 		if !ok {
 			t.Fatalf("expected StreamBlockValue, got %T", formAgain)
 		}
@@ -310,7 +310,7 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 		"date":     "2022-02-02",
 		"datetime": "2022-02-02T10:30:00",
 	}
-	formCmp := blocks.StreamBlockValue{
+	formCmp := &blocks.StreamBlockValue{
 		Blocks: []*blocks.StreamBlockData{
 			{ID: uuid.Nil, Type: "title", Order: 0, Data: "Hello world"},
 			{ID: uuid.Nil, Type: "person", Order: 1, Data: formPerson},
@@ -330,7 +330,7 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 		"date":     mustTime("2006-01-02", "2022-02-02"),
 		"datetime": mustTime("2006-01-02T15:04:05", "2022-02-02T10:30:00"),
 	}
-	goCmp := blocks.StreamBlockValue{
+	goCmp := &blocks.StreamBlockValue{
 		Blocks: []*blocks.StreamBlockData{
 			{ID: uuid.Nil, Type: "title", Order: 0, Data: "Hello world"},
 			{ID: uuid.Nil, Type: "person", Order: 1, Data: goPerson},
@@ -371,7 +371,7 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 		if err != nil {
 			t.Fatalf("expected no error, got %v", err)
 		}
-		got, ok := gotAny.(blocks.StreamBlockValue)
+		got, ok := gotAny.(*blocks.StreamBlockValue)
 		if !ok {
 			t.Fatalf("expected StreamBlockValue, got %T", gotAny)
 		}
@@ -393,7 +393,7 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 
 	t.Run("ValueToForm", func(t *testing.T) {
 		gotAny := b.ValueToForm(goCmp)
-		got, ok := gotAny.(blocks.StreamBlockValue)
+		got, ok := gotAny.(*blocks.StreamBlockValue)
 		if !ok {
 			t.Fatalf("expected StreamBlockValue, got %T", gotAny)
 		}
@@ -419,7 +419,7 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 			t.Fatalf("expected no error, got %v", err)
 		}
 		formAgainAny := b.ValueToForm(goAny)
-		formAgain, ok := formAgainAny.(blocks.StreamBlockValue)
+		formAgain, ok := formAgainAny.(*blocks.StreamBlockValue)
 		if !ok {
 			t.Fatalf("expected StreamBlockValue, got %T", formAgainAny)
 		}

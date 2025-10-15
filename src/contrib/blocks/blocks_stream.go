@@ -299,10 +299,10 @@ func (l *StreamBlock) ValueToGo(value interface{}) (interface{}, error) {
 		return value, fmt.Errorf("value must be of type StreamBlockValue, got %T", value)
 	}
 
-	var (
-		newArr = make([]*StreamBlockData, len(valueArr.Blocks))
-		errs   = NewBlockErrors[int]()
-	)
+	var errs = NewBlockErrors[int]()
+	var newData = newStreamBlockValue(l)
+	newData.Blocks = make([]*StreamBlockData, 0, len(valueArr.Blocks))
+	newData.BlocksJSON = valueArr.BlocksJSON
 	for i, lbVal := range valueArr.Blocks {
 		var child, ok = l.Children.Get(lbVal.Type)
 		if !ok {
@@ -315,20 +315,19 @@ func (l *StreamBlock) ValueToGo(value interface{}) (interface{}, error) {
 			continue
 		}
 
-		newArr[i] = &StreamBlockData{
+		newData.Blocks = append(newData.Blocks, &StreamBlockData{
 			ID:    lbVal.ID,
 			Type:  lbVal.Type,
 			Order: lbVal.Order,
 			Data:  childData,
-		}
+		})
 	}
 
-	valueArr.Blocks = newArr
 	if errs.HasErrors() {
-		return valueArr, errs
+		return newData, errs
 	}
 
-	return valueArr, nil
+	return newData, nil
 }
 
 //
@@ -364,7 +363,10 @@ func (l *StreamBlock) ValueToForm(value interface{}) interface{} {
 		return value
 	}
 
-	var data = make([]*StreamBlockData, 0, len(blockData.Blocks))
+	var newData = newStreamBlockValue(l)
+	newData.Blocks = make([]*StreamBlockData, 0, len(blockData.Blocks))
+	newData.BlocksJSON = blockData.BlocksJSON
+
 	for i := 0; i < len(blockData.Blocks); i++ {
 		var v = blockData.Blocks[i]
 		var child, ok = l.Children.Get(v.Type)
@@ -379,11 +381,10 @@ func (l *StreamBlock) ValueToForm(value interface{}) interface{} {
 			Data:  child.ValueToForm(v.Data),
 		}
 
-		data = append(data, lv)
+		newData.Blocks = append(newData.Blocks, lv)
 	}
 
-	blockData.Blocks = data
-	return blockData
+	return newData
 }
 
 func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}, error) {
@@ -398,7 +399,9 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 	}
 
 	var errs = NewBlockErrors[int]()
-	var data = make([]*StreamBlockData, 0, len(blockData.Blocks))
+	var newData = newStreamBlockValue(l)
+	newData.Blocks = make([]*StreamBlockData, 0, len(blockData.Blocks))
+	newData.BlocksJSON = blockData.BlocksJSON
 	for i, lbVal := range blockData.Blocks {
 		var child, ok = l.Children.Get(lbVal.Type)
 		if !ok {
@@ -408,7 +411,7 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 		var v, err = child.Clean(ctx, lbVal.Data)
 		if err != nil {
 			errs.AddError(i, errors.Wrapf(err, "index %d", i))
-			data = append(data, &StreamBlockData{
+			newData.Blocks = append(newData.Blocks, &StreamBlockData{
 				ID:    lbVal.ID,
 				Type:  lbVal.Type,
 				Order: i,
@@ -417,7 +420,7 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 			continue
 		}
 
-		data = append(data, &StreamBlockData{
+		newData.Blocks = append(newData.Blocks, &StreamBlockData{
 			ID:    lbVal.ID,
 			Type:  lbVal.Type,
 			Order: lbVal.Order,
@@ -426,11 +429,10 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 	}
 
 	if errs.HasErrors() {
-		return blockData, errs
+		return newData, errs
 	}
 
-	blockData.Blocks = data
-	return blockData, nil
+	return newData, nil
 }
 
 func (l *StreamBlock) Validate(ctx context.Context, value interface{}) []error {
