@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"maps"
 	"net/url"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
@@ -20,8 +19,6 @@ var _ Block = (*StructBlock)(nil)
 type StructBlock struct {
 	*BaseBlock
 	Fields *orderedmap.OrderedMap[string, Block]
-	ToGo   func(map[string]interface{}) (interface{}, error)
-	ToForm func(interface{}) (map[string]interface{}, error)
 }
 
 func NewStructBlock(opts ...func(*StructBlock)) *StructBlock {
@@ -46,7 +43,7 @@ func (s *StructBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 		return nil, err
 	}
 
-	var data = make(map[string]interface{})
+	var data = newStructBlockValue(s, make(map[string]interface{}, len(dataMap)))
 	var errors = NewBlockErrors[string]()
 	for head := s.Fields.Front(); head != nil; head = head.Next() {
 		var v, err = head.Value.ValueFromDB(dataMap[head.Key])
@@ -54,19 +51,11 @@ func (s *StructBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 			errors.AddError(head.Key, err)
 			continue
 		}
-		data[head.Key] = v
+		data.V[head.Key] = v
 	}
 
 	if errors.HasErrors() {
 		return data, errors
-	}
-
-	if s.ToGo != nil {
-		var v, err = s.ToGo(data)
-		if err != nil {
-			return data, err
-		}
-		return v, nil
 	}
 
 	return data, nil
@@ -106,8 +95,8 @@ func (m *StructBlock) ValueOmittedFromData(ctx context.Context, data url.Values,
 }
 
 func (m *StructBlock) ValueFromDataDict(ctx context.Context, d url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error) {
-	var data = make(map[string]interface{})
 	var errors = NewBlockErrors[string]()
+	var data = newStructBlockValue(m, make(map[string]interface{}, m.Fields.Len()))
 	for head := m.Fields.Front(); head != nil; head = head.Next() {
 		var key = head.Key
 		var block = head.Value
@@ -118,7 +107,7 @@ func (m *StructBlock) ValueFromDataDict(ctx context.Context, d url.Values, files
 			errors.AddError(head.Key, e...)
 			continue
 		}
-		data[key] = value
+		data.V[key] = value
 	}
 
 	if errors.HasErrors() {
@@ -133,61 +122,43 @@ func (m *StructBlock) ValueToGo(value interface{}) (interface{}, error) {
 		return nil, nil
 	}
 
-	var (
-		data     = make(map[string]interface{})
-		valueMap map[string]interface{}
-		ok       bool
-	)
-
-	if valueMap, ok = value.(map[string]interface{}); !ok {
-		return value, fmt.Errorf("value must be a map[string]interface{}")
+	valueMap, ok := value.(*StructBlockValue)
+	if !ok {
+		return value, fmt.Errorf("value must be a *StructBlockValue")
 	}
 	var errors = NewBlockErrors[string]()
+	var data = newStructBlockValue(m, make(map[string]interface{}))
 loop:
 	for head := m.Fields.Front(); head != nil; head = head.Next() {
-		var v, err = head.Value.ValueToGo(valueMap[head.Key])
+		var v, err = head.Value.ValueToGo(valueMap.V[head.Key])
 		if err != nil {
 			errors.AddError(head.Key, err)
 			continue loop
 		}
 
-		data[head.Key] = v
+		data.V[head.Key] = v
 	}
 
 	if errors.HasErrors() {
 		return value, errors
 	}
 
-	if m.ToGo != nil {
-		var v, err = m.ToGo(data)
-		if err != nil {
-			return data, err
-		}
-		return v, nil
-	}
-
 	return data, nil
 }
 
 func (m *StructBlock) ValueToForm(value interface{}) interface{} {
-	var data = make(map[string]interface{})
-	if m.ToForm != nil {
-		var v, _ = m.ToForm(value)
-		maps.Copy(data, v)
-	}
-
 	if value == nil {
 		return value
 	}
 
-	var valueMap map[string]interface{}
-	var ok bool
-	if valueMap, ok = value.(map[string]interface{}); !ok {
+	valueMap, ok := value.(*StructBlockValue)
+	if !ok {
 		return value
 	}
 
+	var data = newStructBlockValue(m, make(map[string]interface{}))
 	for head := m.Fields.Front(); head != nil; head = head.Next() {
-		data[head.Key] = head.Value.ValueToForm(valueMap[head.Key])
+		data.V[head.Key] = head.Value.ValueToForm(valueMap.V[head.Key])
 	}
 
 	return data
@@ -198,17 +169,17 @@ func (m *StructBlock) Clean(ctx context.Context, value interface{}) (interface{}
 		return value, nil
 	}
 
-	var data = make(map[string]interface{})
 	var errs = NewBlockErrors[string]()
-	var valueMap = value.(map[string]interface{})
+	var data = newStructBlockValue(m, make(map[string]interface{}))
+	var valueMap = value.(*StructBlockValue)
 	for head := m.Fields.Front(); head != nil; head = head.Next() {
-		var v, err = head.Value.Clean(ctx, valueMap[head.Key])
+		var v, err = head.Value.Clean(ctx, valueMap.V[head.Key])
 		if err != nil {
 			errs.AddError(head.Key, err)
 			continue
 		}
 
-		data[head.Key] = v
+		data.V[head.Key] = v
 	}
 
 	if errs.HasErrors() {
@@ -230,15 +201,14 @@ func (m *StructBlock) Validate(ctx context.Context, value interface{}) []error {
 		return nil
 	}
 
-	var valueMap map[string]interface{}
-	var ok bool
-	if valueMap, ok = value.(map[string]interface{}); !ok {
-		return []error{fmt.Errorf("value must be a map[string]interface{}")}
+	valueMap, ok := value.(*StructBlockValue)
+	if !ok {
+		return []error{fmt.Errorf("value must be a *StructBlockValue")}
 	}
 
 	var errors = NewBlockErrors[string]()
 	for head := m.Fields.Front(); head != nil; head = head.Next() {
-		var e = head.Value.Validate(ctx, valueMap[head.Key])
+		var e = head.Value.Validate(ctx, valueMap.V[head.Key])
 		if len(e) != 0 {
 			errors.AddError(head.Key, e...)
 		}

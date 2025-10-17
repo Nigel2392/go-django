@@ -2,7 +2,6 @@ package blocks
 
 import (
 	"context"
-	"database/sql/driver"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,7 +11,6 @@ import (
 	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -37,78 +35,6 @@ type JSONStreamBlockData struct {
 	ID   uuid.UUID       `json:"id"`
 	Type string          `json:"type"`
 	Data json.RawMessage `json:"data"`
-}
-
-type StreamBlockValue struct {
-	Block      *StreamBlock
-	BlocksJSON []JSONStreamBlockData
-	Blocks     []*StreamBlockData
-}
-
-func newStreamBlockValue(block *StreamBlock) *StreamBlockValue {
-	return &StreamBlockValue{
-		Block:  block,
-		Blocks: make([]*StreamBlockData, 0),
-	}
-}
-
-func (s *StreamBlockValue) addStreamValue(v *StreamBlockData) {
-	s.Blocks = append(s.Blocks, v)
-}
-
-var _ attrs.Binder = (*StreamBlockValue)(nil)
-
-func (s *StreamBlockValue) BindToModel(model attrs.Definer, field attrs.Field) error {
-	block, ok := methodGetBlock(model, field.Name())
-	if !ok {
-		return errors.ValueError.Wrapf(
-			"No Get%sBlock() method found on %T, cannot bind StreamBlockValue", field.Name(), model,
-		)
-	}
-	s.Block = block.(*StreamBlock)
-
-	// s.Blocks = s.Block.DeserializeJSON(s.BlocksJSON)
-	return nil
-}
-
-func (s StreamBlockValue) Value() (driver.Value, error) {
-	jsonData, err := json.Marshal(s)
-	return string(jsonData), err
-}
-
-func (s *StreamBlockValue) Scan(value interface{}) (err error) {
-	var jsons = make([]JSONStreamBlockData, 0)
-	switch v := value.(type) {
-	case []byte:
-		err = json.Unmarshal(v, &jsons)
-	case string:
-		err = json.Unmarshal([]byte(v), &jsons)
-	case nil:
-		*s = StreamBlockValue{}
-		return nil
-	default:
-		return fmt.Errorf("cannot scan %T into StreamBlockValue", value)
-	}
-	if err != nil {
-		return errors.Wrap(err, "unmarshal StreamBlockValue")
-	}
-
-	s.BlocksJSON = jsons
-	return nil
-}
-
-func (s *StreamBlockValue) MarshalJSON() ([]byte, error) {
-	return json.Marshal(s.Blocks)
-}
-
-func (s *StreamBlockValue) UnmarshalJSON(data []byte) error {
-	var jsons = make([]JSONStreamBlockData, 0)
-	if err := json.Unmarshal(data, &jsons); err != nil {
-		return errors.Wrap(err, "unmarshal StreamBlockValue")
-	}
-
-	s.BlocksJSON = jsons
-	return nil
 }
 
 type StreamBlock struct {
@@ -147,8 +73,7 @@ func (s *StreamBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 	}
 
 	var errors = NewBlockErrors[int]()
-	var data = newStreamBlockValue(s)
-	data.Blocks = make([]*StreamBlockData, 0, len(dataList))
+	var data = newStreamBlockValue(s, make([]*StreamBlockData, 0, len(dataList)))
 	for i, item := range dataList {
 		var child, ok = s.Children.Get(item.Type)
 		if !ok {
@@ -157,8 +82,9 @@ func (s *StreamBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 		}
 
 		var v, err = child.ValueFromDB(item.Data)
-		data.Blocks = append(data.Blocks, &StreamBlockData{
+		data.V = append(data.V, &StreamBlockData{
 			ID:    item.ID,
+			Type:  item.Type,
 			Order: i,
 			Data:  v,
 		})
@@ -222,7 +148,7 @@ func (l *StreamBlock) ValueFromDataDict(ctx context.Context, d url.Values, files
 
 	var errs = NewBlockErrors[int]()
 	// var ordered = make(map[int]struct{})
-	var data = newStreamBlockValue(l)
+	var data = newStreamBlockValue(l, make([]*StreamBlockData, 0, total))
 	for i := 0; i < total; i++ {
 		var deletedKey = fmt.Sprintf("%s-%d--deleted", name, i)
 		if d.Has(deletedKey) {
@@ -288,7 +214,7 @@ func (l *StreamBlock) ValueFromDataDict(ctx context.Context, d url.Values, files
 			continue
 		}
 
-		data.addStreamValue(&StreamBlockData{
+		data.V = append(data.V, &StreamBlockData{
 			ID:    id,
 			Type:  typeValue,
 			Data:  value,
@@ -301,20 +227,20 @@ func (l *StreamBlock) ValueFromDataDict(ctx context.Context, d url.Values, files
 	}
 
 	slices.SortStableFunc(
-		data.Blocks, sortStreamBlocks,
+		data.V, sortStreamBlocks,
 	)
 
 	if errs.HasErrors() {
 		return data, []error{errs}
 	}
 
-	if l.Min != -1 && len(data.Blocks) < l.Min {
-		errs.AddNonBlockError(fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data.Blocks))) //lint:ignore ST1005 ignore this lint
+	if l.Min != -1 && len(data.V) < l.Min {
+		errs.AddNonBlockError(fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data.V))) //lint:ignore ST1005 ignore this lint
 		return data, []error{errs}
 	}
 
-	if l.Max != -1 && len(data.Blocks) > l.Max {
-		errs.AddNonBlockError(fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data.Blocks))) //lint:ignore ST1005 ignore this lint
+	if l.Max != -1 && len(data.V) > l.Max {
+		errs.AddNonBlockError(fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data.V))) //lint:ignore ST1005 ignore this lint
 		return data, []error{errs}
 	}
 
@@ -340,10 +266,8 @@ func (l *StreamBlock) ValueToGo(value interface{}) (interface{}, error) {
 	}
 
 	var errs = NewBlockErrors[int]()
-	var newData = newStreamBlockValue(l)
-	newData.Blocks = make([]*StreamBlockData, 0, len(valueArr.Blocks))
-	newData.BlocksJSON = valueArr.BlocksJSON
-	for i, lbVal := range valueArr.Blocks {
+	var newData = newStreamBlockValue(l, make([]*StreamBlockData, 0, len(valueArr.V)))
+	for i, lbVal := range valueArr.V {
 		var child, ok = l.Children.Get(lbVal.Type)
 		if !ok {
 			continue // this really shouldn't happen
@@ -355,7 +279,7 @@ func (l *StreamBlock) ValueToGo(value interface{}) (interface{}, error) {
 			continue
 		}
 
-		newData.Blocks = append(newData.Blocks, &StreamBlockData{
+		newData.V = append(newData.V, &StreamBlockData{
 			ID:    lbVal.ID,
 			Type:  lbVal.Type,
 			Order: lbVal.Order,
@@ -403,15 +327,12 @@ func (l *StreamBlock) ValueToForm(value interface{}) interface{} {
 		return value
 	}
 
-	var newData = newStreamBlockValue(l)
-	newData.Blocks = make([]*StreamBlockData, 0, len(blockData.Blocks))
-	newData.BlocksJSON = blockData.BlocksJSON
-
-	for i := 0; i < len(blockData.Blocks); i++ {
-		var v = blockData.Blocks[i]
+	var newData = newStreamBlockValue(l, make([]*StreamBlockData, 0, len(blockData.V)))
+	for i := 0; i < len(blockData.V); i++ {
+		var v = blockData.V[i]
 		var child, ok = l.Children.Get(v.Type)
 		if !ok {
-			continue // this really shouldn't happen
+			continue // this really shouldn't happen, but can after a migration that removed a block type
 		}
 
 		var lv = &StreamBlockData{
@@ -421,7 +342,7 @@ func (l *StreamBlock) ValueToForm(value interface{}) interface{} {
 			Data:  child.ValueToForm(v.Data),
 		}
 
-		newData.Blocks = append(newData.Blocks, lv)
+		newData.V = append(newData.V, lv)
 	}
 
 	return newData
@@ -439,10 +360,8 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 	}
 
 	var errs = NewBlockErrors[int]()
-	var newData = newStreamBlockValue(l)
-	newData.Blocks = make([]*StreamBlockData, 0, len(blockData.Blocks))
-	newData.BlocksJSON = blockData.BlocksJSON
-	for i, lbVal := range blockData.Blocks {
+	var newData = newStreamBlockValue(l, make([]*StreamBlockData, 0, len(blockData.V)))
+	for i, lbVal := range blockData.V {
 		var child, ok = l.Children.Get(lbVal.Type)
 		if !ok {
 			continue // this really shouldn't happen
@@ -451,7 +370,7 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 		var v, err = child.Clean(ctx, lbVal.Data)
 		if err != nil {
 			errs.AddError(i, errors.Wrapf(err, "index %d", i))
-			newData.Blocks = append(newData.Blocks, &StreamBlockData{
+			newData.V = append(newData.V, &StreamBlockData{
 				ID:    lbVal.ID,
 				Type:  lbVal.Type,
 				Order: i,
@@ -460,7 +379,7 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 			continue
 		}
 
-		newData.Blocks = append(newData.Blocks, &StreamBlockData{
+		newData.V = append(newData.V, &StreamBlockData{
 			ID:    lbVal.ID,
 			Type:  lbVal.Type,
 			Order: lbVal.Order,
@@ -488,7 +407,7 @@ func (l *StreamBlock) Validate(ctx context.Context, value interface{}) []error {
 	}
 
 	var errs = NewBlockErrors[int]()
-	for i, v := range value.(*StreamBlockValue).Blocks {
+	for i, v := range value.(*StreamBlockValue).V {
 		var child, ok = l.Children.Get(v.Type)
 		if !ok {
 			continue // this really shouldn't happen

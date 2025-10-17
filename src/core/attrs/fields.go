@@ -64,6 +64,7 @@ type FieldConfig struct {
 	Setter               func(Definer, interface{}) error                    // A custom setter for the field
 	Getter               func(Definer) (interface{}, bool)                   // A custom getter for the field
 	OnInit               func(Definer, *FieldDef, *FieldConfig) *FieldConfig // A function that is called when the field is initialized
+
 }
 
 type FieldDef struct {
@@ -77,7 +78,7 @@ type FieldDef struct {
 	field_v        reflect.Value
 	formField      fields.Field
 	fieldName      string
-	wasSet         bool // Whether the field was set at least once
+	bound          uintptr // internal use only, marks whether the value has been bound
 	// directlyInteractible bool
 }
 
@@ -608,6 +609,10 @@ func (f *FieldDef) GetDefault() interface{} {
 		return zeroVal
 	}
 
+	if f.field_v.Kind() == reflect.Pointer && f.field_v.IsNil() {
+		return f.field_v.Interface()
+	}
+
 	var outVal = f.field_v.Interface()
 	assert.Err(BindValueToModel(
 		f.Instance(), f, outVal,
@@ -935,9 +940,13 @@ func (f *FieldDef) Scan(value any) error {
 	}
 
 	defer func() {
+		if f.bound == f.field_v.UnsafeAddr() {
+			return
+		}
 		assert.Err(BindValueToModel(
 			f.Instance(), f, f.field_v.Interface(),
 		))
+		f.bound = f.field_v.UnsafeAddr()
 		f.signalChanges(f.field_v.Interface())
 	}()
 

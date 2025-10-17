@@ -21,13 +21,13 @@ import (
 
 var _ Block = (*ListBlock)(nil)
 
-type ListBlockValue struct {
+type ListBlockData struct {
 	ID    uuid.UUID   `json:"id"`
 	Order int         `json:"order"`
 	Data  interface{} `json:"data"`
 }
 
-type JSONListBlockValue struct { // used only for deserialization
+type JSONListBlockData struct { // used only for deserialization
 	ID    uuid.UUID       `json:"id"`
 	Order int             `json:"order"`
 	Data  json.RawMessage `json:"data"`
@@ -77,7 +77,7 @@ func (l *ListBlock) makeError(err error) error {
 }
 
 func (s *ListBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
-	var dataList = make([]JSONListBlockValue, 0)
+	var dataList = make([]JSONListBlockData, 0)
 	if len(value) == 0 {
 		return nil, nil
 	}
@@ -86,11 +86,11 @@ func (s *ListBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 		return nil, err
 	}
 
-	var data = make(ListBlockData, len(dataList))
+	var data = newListBlockValue(s, make([]*ListBlockData, len(dataList)))
 	var errors = NewBlockErrors[int]()
 	for i, item := range dataList {
 		var v, err = s.Child.ValueFromDB(item.Data)
-		data[i] = &ListBlockValue{
+		data.V[i] = &ListBlockData{
 			ID:    item.ID,
 			Order: i,
 			Data:  v,
@@ -112,7 +112,7 @@ func (b *ListBlock) ValueOmittedFromData(ctx context.Context, data url.Values, f
 	return !data.Has(fmt.Sprintf("%s--total", name))
 }
 
-func sortListBlocks(a, b *ListBlockValue) int {
+func sortListBlocks(a, b *ListBlockData) int {
 	if a.Order < b.Order {
 		return -1
 	}
@@ -137,8 +137,7 @@ func (l *ListBlock) ValueFromDataDict(ctx context.Context, d url.Values, files m
 	}
 
 	var errs = NewBlockErrors[int]()
-	// var ordered = make(map[int]struct{})
-	var data = make(ListBlockData, 0, total)
+	var data = newListBlockValue(l, make([]*ListBlockData, 0, total))
 	for i := 0; i < total; i++ {
 		var deletedKey = fmt.Sprintf("%s-%d--deleted", name, i)
 		if d.Has(deletedKey) {
@@ -190,7 +189,7 @@ func (l *ListBlock) ValueFromDataDict(ctx context.Context, d url.Values, files m
 			continue
 		}
 
-		data = append(data, &ListBlockValue{
+		data.V = append(data.V, &ListBlockData{
 			ID:    id,
 			Order: order,
 			Data:  value,
@@ -202,20 +201,20 @@ func (l *ListBlock) ValueFromDataDict(ctx context.Context, d url.Values, files m
 	}
 
 	slices.SortStableFunc(
-		data, sortListBlocks,
+		data.V, sortListBlocks,
 	)
 
 	if errs.HasErrors() {
 		return data, []error{errs}
 	}
 
-	if l.Min != -1 && len(data) < l.Min {
-		errs.AddNonBlockError(fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data))) //lint:ignore ST1005 ignore this lint
+	if l.Min != -1 && len(data.V) < l.Min {
+		errs.AddNonBlockError(fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data.V))) //lint:ignore ST1005 ignore this lint
 		return data, []error{errs}
 	}
 
-	if l.Max != -1 && len(data) > l.Max {
-		errs.AddNonBlockError(fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data))) //lint:ignore ST1005 ignore this lint
+	if l.Max != -1 && len(data.V) > l.Max {
+		errs.AddNonBlockError(fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data.V))) //lint:ignore ST1005 ignore this lint
 		return data, []error{errs}
 	}
 
@@ -232,26 +231,26 @@ func (l *ListBlock) ValueToGo(value interface{}) (interface{}, error) {
 		return "", nil
 	}
 	var (
-		valueArr ListBlockData
+		valueArr *ListBlockValue
 		ok       bool
 	)
 
-	if valueArr, ok = value.(ListBlockData); !ok {
+	if valueArr, ok = value.(*ListBlockValue); !ok {
 		return value, fmt.Errorf("value must be of type ListBlockData, got %T", value)
 	}
 
 	var (
-		newArr = make(ListBlockData, len(valueArr))
+		newArr = newListBlockValue(l, make([]*ListBlockData, len(valueArr.V)))
 		errs   = NewBlockErrors[int]()
 	)
-	for i, lbVal := range valueArr {
+	for i, lbVal := range valueArr.V {
 		var childData, err = l.Child.ValueToGo(lbVal.Data)
 		if err != nil {
 			errs.AddError(i, err)
 			continue
 		}
 
-		newArr[i] = &ListBlockValue{
+		newArr.V[i] = &ListBlockData{
 			ID:    lbVal.ID,
 			Order: lbVal.Order,
 			Data:  childData,
@@ -272,9 +271,9 @@ func (l *ListBlock) GetDefault() interface{} {
 			getDefault = l.Default
 		}
 
-		var data = make(ListBlockData, l.Min)
+		var data = newListBlockValue(l, make([]*ListBlockData, l.Min))
 		for i := 0; i < l.Min; i++ {
-			data[i] = &ListBlockValue{
+			data.V[i] = &ListBlockData{
 				ID:   uuid.New(),
 				Data: getDefault(),
 			}
@@ -282,38 +281,37 @@ func (l *ListBlock) GetDefault() interface{} {
 
 		return data
 	}
-	return make(ListBlockData, 0)
+	return newListBlockValue(l, make([]*ListBlockData, 0))
 }
 
 func (l *ListBlock) ValueToForm(value interface{}) interface{} {
-
 	if fields.IsZero(value) {
 		value = l.GetDefault()
 	}
 
-	var valueArr ListBlockData
+	var valueArr *ListBlockValue
 	var ok bool
-	if valueArr, ok = value.(ListBlockData); !ok {
+	if valueArr, ok = value.(*ListBlockValue); !ok {
 		return value
 	}
 
-	var data = make(ListBlockData, 0, max(len(valueArr), l.Min))
-	for i := 0; i < max(len(valueArr), l.Min); i++ {
-		var v *ListBlockValue
-		if i < len(valueArr) {
-			v = valueArr[i]
+	var data = newListBlockValue(l, make([]*ListBlockData, 0, max(len(valueArr.V), l.Min)))
+	for i := 0; i < max(len(valueArr.V), l.Min); i++ {
+		var v *ListBlockData
+		if i < len(valueArr.V) {
+			v = valueArr.V[i]
 		} else {
-			v = &ListBlockValue{
+			v = &ListBlockData{
 				ID:   uuid.New(),
 				Data: l.Child.GetDefault(),
 			}
 		}
-		var lv = &ListBlockValue{
+		var lv = &ListBlockData{
 			ID:    v.ID,
 			Order: i,
 			Data:  l.Child.ValueToForm(v.Data),
 		}
-		data = append(data, lv)
+		data.V = append(data.V, lv)
 	}
 
 	return data
@@ -325,12 +323,12 @@ func (l *ListBlock) Clean(ctx context.Context, value interface{}) (interface{}, 
 	}
 
 	var errs = NewBlockErrors[int]()
-	var data = make(ListBlockData, 0)
-	for i, lbVal := range value.(ListBlockData) {
+	var data = newListBlockValue(l, make([]*ListBlockData, 0))
+	for i, lbVal := range value.(*ListBlockValue).V {
 		var v, err = l.Child.Clean(ctx, lbVal.Data)
 		if err != nil {
 			errs.AddError(i, errors.Wrapf(err, "index %d", i))
-			data = append(data, &ListBlockValue{
+			data.V = append(data.V, &ListBlockData{
 				ID:    lbVal.ID,
 				Order: lbVal.Order,
 				Data:  lbVal.Data,
@@ -338,7 +336,7 @@ func (l *ListBlock) Clean(ctx context.Context, value interface{}) (interface{}, 
 			continue
 		}
 
-		data = append(data, &ListBlockValue{
+		data.V = append(data.V, &ListBlockData{
 			ID:    lbVal.ID,
 			Order: lbVal.Order,
 			Data:  v,
@@ -361,7 +359,7 @@ func (l *ListBlock) Validate(ctx context.Context, value interface{}) []error {
 	}
 
 	var errs = NewBlockErrors[int]()
-	for i, v := range value.(ListBlockData) {
+	for i, v := range value.(*ListBlockValue).V {
 		var e = l.Child.Validate(ctx, v.Data)
 		if len(e) != 0 {
 			errs.AddError(i, e...)
@@ -376,7 +374,7 @@ func (l *ListBlock) Validate(ctx context.Context, value interface{}) []error {
 func (l *ListBlock) RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, tplCtx ctx.Context) error {
 	var (
 		ctxData  = NewBlockContext(l, tplCtx)
-		valueArr ListBlockData
+		valueArr *ListBlockValue
 		ok       bool
 	)
 	ctxData.ID = id
@@ -387,7 +385,7 @@ func (l *ListBlock) RenderForm(ctx context.Context, w io.Writer, id, name string
 		value = l.GetDefault()
 	}
 
-	if valueArr, ok = value.(ListBlockData); !ok {
+	if valueArr, ok = value.(*ListBlockValue); !ok {
 		return fmt.Errorf("value must be a []interface{}")
 	}
 

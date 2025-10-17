@@ -1,9 +1,7 @@
 package blocks
 
 import (
-	"database/sql/driver"
 	"embed"
-	"encoding/json"
 	"fmt"
 	"io/fs"
 	"reflect"
@@ -21,27 +19,6 @@ import (
 	"github.com/Nigel2392/goldcrest"
 )
 
-type ListBlockData []*ListBlockValue
-
-func (l ListBlockData) Value() (driver.Value, error) {
-	jsonData, err := json.Marshal(l)
-	return jsonData, err
-}
-
-func (l *ListBlockData) Scan(value interface{}) error {
-	switch v := value.(type) {
-	case []byte:
-		return json.Unmarshal(v, l)
-	case string:
-		return json.Unmarshal([]byte(v), l)
-	case nil:
-		*l = ListBlockData{}
-		return nil
-	default:
-		return fmt.Errorf("cannot scan %T into ListBlockData", value)
-	}
-}
-
 func methodGetBlock(model any, fieldName string) (Block, bool) {
 	var methodName = fmt.Sprintf("Get%sBlock", fieldName)
 	method, ok := attrs.Method[func() Block](model, methodName)
@@ -54,7 +31,7 @@ func methodGetBlock(model any, fieldName string) (Block, bool) {
 
 func init() {
 	dbtype.Add(&StreamBlockValue{}, dbtype.JSON)
-	dbtype.Add(&ListBlockData{}, dbtype.JSON)
+	dbtype.Add(&ListBlockValue{}, dbtype.JSON)
 
 	// Assign the BlockField form field to any struct field which is of type <X>BlockData.
 	//
@@ -75,7 +52,7 @@ func init() {
 	}
 
 	attrs.RegisterFormFieldGetter(&StreamBlockValue{}, getter)
-	attrs.RegisterFormFieldGetter(ListBlockData{}, getter)
+	attrs.RegisterFormFieldGetter(&ListBlockValue{}, getter)
 }
 
 //go:embed assets/static/**

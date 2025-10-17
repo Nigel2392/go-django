@@ -1,15 +1,32 @@
 package blocks_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"net/mail"
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/Nigel2392/go-django/src/contrib/blocks"
 	"github.com/google/uuid"
 )
+
+func encodeJSON(v interface{}) (json.RawMessage, error) {
+	var buf = new(bytes.Buffer)
+	var enc = json.NewEncoder(buf)
+	enc.SetEscapeHTML(false)
+	if err := enc.Encode(v); err != nil {
+		return nil, err
+	}
+	return json.RawMessage(buf.Bytes()), nil
+}
+
+func deepEqual(expected, actual interface{}) bool {
+	exp, _ := encodeJSON(expected)
+	act, _ := encodeJSON(actual)
+	return bytes.Equal(exp, act)
+}
 
 func NewListBlock() *blocks.ListBlock {
 	var b = blocks.NewListBlock(NewSimpleStructBlock())
@@ -38,56 +55,68 @@ var (
 		"test_list_block-1-datetime": {"2021-01-02T00:00:00"},
 	}
 
-	ListBlockDataRawCmp = blocks.ListBlockData{
-		{
-			ID:    uuid.Nil,
-			Order: 0,
-			Data: map[string]interface{}{
-				"name":     "John Doe",
-				"age":      "30",
-				"email":    "test@localhost",
-				"password": "password",
-				"date":     "2021-01-01",
-				"datetime": "2021-01-01T00:00:00",
+	ListBlockDataRawCmp = &blocks.ListBlockValue{
+		V: []*blocks.ListBlockData{
+			{
+				ID:    uuid.Nil,
+				Order: 0,
+				Data: &blocks.StructBlockValue{
+					V: map[string]interface{}{
+						"name":     "John Doe",
+						"age":      "30",
+						"email":    "test@localhost",
+						"password": "password",
+						"date":     "2021-01-01",
+						"datetime": "2021-01-01T00:00:00",
+					},
+				},
 			},
-		},
-		{
-			ID:    uuid.Nil,
-			Order: 1,
-			Data: map[string]interface{}{
-				"name":     "Jane Doe",
-				"age":      "25",
-				"email":    "test2@localhost",
-				"password": "password2",
-				"date":     "2021-01-02",
-				"datetime": "2021-01-02T00:00:00",
+			{
+				ID:    uuid.Nil,
+				Order: 1,
+				Data: &blocks.StructBlockValue{
+					V: map[string]interface{}{
+						"name":     "Jane Doe",
+						"age":      "25",
+						"email":    "test2@localhost",
+						"password": "password2",
+						"date":     "2021-01-02",
+						"datetime": "2021-01-02T00:00:00",
+					},
+				},
 			},
 		},
 	}
 
-	ListBlockDataGo = blocks.ListBlockData{
-		{
-			ID:    uuid.Nil,
-			Order: 0,
-			Data: map[string]interface{}{
-				"name":     "John Doe",
-				"age":      30,
-				"email":    must(mail.ParseAddress("test@localhost")),
-				"password": "password",
-				"date":     must(time.Parse("2006-01-02", "2021-01-01")),
-				"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-01T00:00:00")),
+	ListBlockDataGo = &blocks.ListBlockValue{
+		V: []*blocks.ListBlockData{
+			{
+				ID:    uuid.Nil,
+				Order: 0,
+				Data: &blocks.StructBlockValue{
+					V: map[string]interface{}{
+						"name":     "John Doe",
+						"age":      30,
+						"email":    must(mail.ParseAddress("test@localhost")),
+						"password": "password",
+						"date":     must(time.Parse("2006-01-02", "2021-01-01")),
+						"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-01T00:00:00")),
+					},
+				},
 			},
-		},
-		{
-			ID:    uuid.Nil,
-			Order: 1,
-			Data: map[string]interface{}{
-				"name":     "Jane Doe",
-				"age":      25,
-				"email":    must(mail.ParseAddress("test2@localhost")),
-				"password": "password2",
-				"date":     must(time.Parse("2006-01-02", "2021-01-02")),
-				"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-02T00:00:00")),
+			{
+				ID:    uuid.Nil,
+				Order: 1,
+				Data: &blocks.StructBlockValue{
+					V: map[string]interface{}{
+						"name":     "Jane Doe",
+						"age":      25,
+						"email":    must(mail.ParseAddress("test2@localhost")),
+						"password": "password2",
+						"date":     must(time.Parse("2006-01-02", "2021-01-02")),
+						"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-02T00:00:00")),
+					},
+				},
 			},
 		},
 	}
@@ -107,16 +136,16 @@ func TestListBlock(t *testing.T) {
 			t.Errorf("Expected data, got nil")
 		}
 
-		var d = data.(blocks.ListBlockData)
+		var d = data.(*blocks.ListBlockValue)
 
-		for i, v := range d {
-			if !reflect.DeepEqual(*v, *ListBlockDataRawCmp[i]) {
-				t.Errorf("Expected %v, got %v", *ListBlockDataRawCmp[i], *v)
-			}
+		if len(d.V) != len(ListBlockDataRawCmp.V) {
+			t.Errorf("Expected length %d, got %d", len(ListBlockDataRawCmp.V), len(d.V))
 		}
 
-		if len(d) != len(ListBlockDataRawCmp) {
-			t.Errorf("Expected length %d, got %d", len(ListBlockDataRawCmp), len(d))
+		for i, v := range d.V {
+			if !deepEqual(*v, *ListBlockDataRawCmp.V[i]) {
+				t.Errorf("Expected %v, got %v", *ListBlockDataRawCmp.V[i], *v)
+			}
 		}
 	})
 
@@ -127,11 +156,11 @@ func TestListBlock(t *testing.T) {
 			t.Errorf("Expected no error, got %v", err)
 		}
 
-		var d = data.(blocks.ListBlockData)
+		var d = data.(*blocks.ListBlockValue)
 
-		for i, v := range d {
-			if !reflect.DeepEqual(*v, *ListBlockDataGo[i]) {
-				t.Errorf("Expected %v, got %v", *ListBlockDataGo[i], v)
+		for i, v := range d.V {
+			if !deepEqual(*v, *ListBlockDataGo.V[i]) {
+				t.Errorf("Expected %v, got %v", *ListBlockDataGo.V[i], *v)
 			}
 		}
 	})
@@ -139,12 +168,12 @@ func TestListBlock(t *testing.T) {
 	t.Run("ValueToForm", func(t *testing.T) {
 		var (
 			data = b.ValueToForm(ListBlockDataGo)
-			d    = data.(blocks.ListBlockData)
+			d    = data.(*blocks.ListBlockValue)
 		)
 
-		for i, v := range d {
-			if !reflect.DeepEqual(*v, *ListBlockDataRawCmp[i]) {
-				t.Errorf("Expected %v, got %v", *ListBlockDataRawCmp[i], *v)
+		for i, v := range d.V {
+			if !deepEqual(*v, *ListBlockDataRawCmp.V[i]) {
+				t.Errorf("Expected %v, got %v", *ListBlockDataRawCmp.V[i], *v)
 			}
 		}
 	})
@@ -159,8 +188,8 @@ func TestListBlock(t *testing.T) {
 			t.Errorf("Expected no error, got %v", err)
 		}
 
-		if !reflect.DeepEqual(data2, ListBlockDataRawCmp) {
-			t.Errorf("Expected %v, got %v", ListBlockDataRawCmp, data2)
+		if !deepEqual(data2.(*blocks.ListBlockValue).V, ListBlockDataRawCmp.V) {
+			t.Errorf("Expected %v, got %v", ListBlockDataRawCmp.V, data2.(*blocks.ListBlockValue).V)
 		}
 	})
 }
@@ -181,17 +210,12 @@ func TestListBlock_ValueFromDB(t *testing.T) {
 		}
 	})
 
-	type item struct {
-		ID   uuid.UUID      `json:"id"`
-		Data map[string]any `json:"data"`
-	}
-
 	// 2) OK
 	t.Run("OK", func(t *testing.T) {
 		id0 := uuid.New()
 		id1 := uuid.New()
 
-		data := []blocks.JSONListBlockValue{
+		data := []blocks.JSONStreamBlockData{
 			{
 				ID: id0,
 				// raw child data is JSON that the child block can parse from DB
@@ -224,29 +248,29 @@ func TestListBlock_ValueFromDB(t *testing.T) {
 			t.Fatalf("unexpected error: %s", j)
 		}
 
-		lv, ok := got.(blocks.ListBlockData)
+		lv, ok := got.(*blocks.ListBlockValue)
 		if !ok {
-			t.Fatalf("expected ListBlockData, got %T", got)
+			t.Fatalf("expected *blocks.ListBlockValue, got %T", got)
 		}
 
-		if len(lv) != 2 {
-			t.Fatalf("expected 2 items, got %d", len(lv))
+		if len(lv.V) != 2 {
+			t.Fatalf("expected 2 items, got %d", len(lv.V))
 		}
 
-		if lv[0] == nil || lv[1] == nil {
+		if lv.V[0] == nil || lv.V[1] == nil {
 			t.Fatalf("expected non-nil items, got %#v", lv)
 		}
 
 		// Order is the index in the array
-		if lv[0].ID != id0 || lv[0].Order != 0 {
-			t.Fatalf("item0 meta mismatch: %#v", lv[0])
+		if lv.V[0].ID != id0 || lv.V[0].Order != 0 {
+			t.Fatalf("item0 meta mismatch: %#v", lv.V[0])
 		}
-		if lv[1].ID != id1 || lv[1].Order != 1 {
-			t.Fatalf("item1 meta mismatch: %#v", lv[1])
+		if lv.V[1].ID != id1 || lv.V[1].Order != 1 {
+			t.Fatalf("item1 meta mismatch: %#v", lv.V[1])
 		}
 
 		// Typed data checks (spot-check a few types)
-		m0 := lv[0].Data.(map[string]interface{})
+		m0 := lv.V[0].Data.(*blocks.StructBlockValue).V
 		if m0["age"] != 30 || m0["name"] != "John Doe" {
 			t.Fatalf("item0 data mismatch: %#v", m0)
 		}
@@ -264,7 +288,7 @@ func TestListBlock_ValueFromDB(t *testing.T) {
 	// 3) Aggregated child errors
 	t.Run("AggregatedErrors", func(t *testing.T) {
 		id := uuid.New()
-		data := []blocks.JSONListBlockValue{
+		data := []blocks.JSONStreamBlockData{
 			{
 				ID: id,
 				Data: jraw(t, map[string]any{
@@ -281,17 +305,17 @@ func TestListBlock_ValueFromDB(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected aggregated error, got nil")
 		}
-		lv, ok := got.(blocks.ListBlockData)
-		if !ok || len(lv) != 1 {
+		lv, ok := got.(*blocks.ListBlockValue)
+		if !ok || len(lv.V) != 1 {
 			t.Fatalf("expected ListBlockData with one entry, got %T:%v", got, got)
 		}
 
-		if lv[0] == nil {
+		if lv.V[0] == nil {
 			t.Fatalf("expected non-nil item, got %#v", lv)
 		}
 
 		// Partial success should include only valid typed fields
-		m := lv[0].Data.(map[string]interface{})
+		m := lv.V[0].Data.(*blocks.StructBlockValue).V
 		if m["name"] != "Bad User" || m["age"] != 10 {
 			t.Fatalf("partial data mismatch: %#v", m)
 		}

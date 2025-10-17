@@ -5,7 +5,6 @@ import (
 	"maps"
 	"net/mail"
 	"net/url"
-	"reflect"
 	"testing"
 	"time"
 
@@ -41,22 +40,26 @@ var structBlockDataRaw = url.Values{
 	"test_block-datetime": {"2021-01-01T00:00:00"},
 }
 
-var structBlockstructBlockDataRawCmp = map[string]interface{}{
-	"name":     "John Doe",
-	"age":      "30",
-	"email":    "test@localhost",
-	"password": "password",
-	"date":     "2021-01-01",
-	"datetime": "2021-01-01T00:00:00",
+var structBlockstructBlockDataRawCmp = &blocks.StructBlockValue{
+	V: map[string]interface{}{
+		"name":     "John Doe",
+		"age":      "30",
+		"email":    "test@localhost",
+		"password": "password",
+		"date":     "2021-01-01",
+		"datetime": "2021-01-01T00:00:00",
+	},
 }
 
-var structBlockDataGo = map[string]interface{}{
-	"name":     "John Doe",
-	"age":      30,
-	"email":    must(mail.ParseAddress("test@localhost")),
-	"password": "password",
-	"date":     must(time.Parse("2006-01-02", "2021-01-01")),
-	"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-01T00:00:00")),
+var structBlockDataGo = &blocks.StructBlockValue{
+	V: map[string]interface{}{
+		"name":     "John Doe",
+		"age":      30,
+		"email":    must(mail.ParseAddress("test@localhost")),
+		"password": "password",
+		"date":     must(time.Parse("2006-01-02", "2021-01-01")),
+		"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-01T00:00:00")),
+	},
 }
 
 func TestStructBlock_ValueFromDB(t *testing.T) {
@@ -90,9 +93,9 @@ func TestStructBlock_ValueFromDB(t *testing.T) {
 			t.Log(string(s))
 			t.Fatalf("unexpected err: %v", err)
 		}
-		m, ok := got.(map[string]interface{})
+		m, ok := got.(*blocks.StructBlockValue)
 		if !ok {
-			t.Fatalf("expected map[string]interface{}, got %T", got)
+			t.Fatalf("expected *StructBlockValue, got %T", got)
 		}
 
 		want := map[string]interface{}{
@@ -103,7 +106,7 @@ func TestStructBlock_ValueFromDB(t *testing.T) {
 			"date":     mustDate(t, "2006-01-02", "2021-01-01"),
 			"datetime": mustDate(t, "2006-01-02T15:04:05", "2021-01-01T00:00:00"),
 		}
-		if !reflect.DeepEqual(m, want) {
+		if !deepEqual(m.V, want) {
 			t.Fatalf("mismatch\nwant=%#v\ngot =%#v", want, m)
 		}
 	})
@@ -122,23 +125,23 @@ func TestStructBlock_ValueFromDB(t *testing.T) {
 		if err == nil {
 			t.Fatalf("expected aggregated errors, got nil")
 		}
-		m, ok := got.(map[string]interface{})
+		m, ok := got.(*blocks.StructBlockValue)
 		if !ok {
-			t.Fatalf("expected map[string]interface{}, got %T", got)
+			t.Fatalf("expected *StructBlockValue, got %T", got)
 		}
 
 		// Valid parts should still be typed
-		if m["name"] != "Jane Doe" || m["age"] != 25 || m["password"] != "pw" {
+		if m.V["name"] != "Jane Doe" || m.V["age"] != 25 || m.V["password"] != "pw" {
 			t.Fatalf("partial data mismatch: %#v", m)
 		}
-		if _, ok := m["email"]; ok {
+		if _, ok := m.V["email"]; ok {
 			t.Fatalf("email should not be present on partial success")
 		}
-		if _, ok := m["date"]; ok {
+		if _, ok := m.V["date"]; ok {
 			t.Fatalf("date should not be present on partial success")
 		}
-		if _, ok := m["datetime"].(time.Time); !ok {
-			t.Fatalf("datetime should be parsed to time.Time: %#v", m["datetime"])
+		if _, ok := m.V["datetime"].(time.Time); !ok {
+			t.Fatalf("datetime should be parsed to time.Time: %#v", m.V["datetime"])
 		}
 
 		var errs = err.(*blocks.BaseBlockValidationError[string])
@@ -170,16 +173,16 @@ func TestStructBlock(t *testing.T) {
 			t.Errorf("Expected data, got nil")
 		}
 
-		var d = data.(map[string]interface{})
+		var d = data.(*blocks.StructBlockValue)
 
-		for k, v := range d {
-			if !reflect.DeepEqual(v, structBlockstructBlockDataRawCmp[k]) {
-				t.Errorf("Expected %v, got %v", structBlockstructBlockDataRawCmp[k], v)
+		for k, v := range d.V {
+			if !deepEqual(v, structBlockstructBlockDataRawCmp.V[k]) {
+				t.Errorf("Expected %v, got %v", structBlockstructBlockDataRawCmp.V[k], v)
 			}
 		}
 
-		if len(d) != len(structBlockstructBlockDataRawCmp) {
-			t.Errorf("Expected length %d, got %d", len(structBlockstructBlockDataRawCmp), len(d))
+		if len(d.V) != len(structBlockstructBlockDataRawCmp.V) {
+			t.Errorf("Expected length %d, got %d", len(structBlockstructBlockDataRawCmp.V), len(d.V))
 		}
 	})
 
@@ -190,33 +193,33 @@ func TestStructBlock(t *testing.T) {
 			t.Errorf("Expected no error, got %v", err)
 		}
 
-		var d = data.(map[string]interface{})
+		var d = data.(*blocks.StructBlockValue)
 
-		for k, v := range d {
-			if !reflect.DeepEqual(v, structBlockDataGo[k]) {
-				t.Errorf("Expected %v, got %v", structBlockDataGo[k], v)
+		for k, v := range d.V {
+			if !deepEqual(v, structBlockDataGo.V[k]) {
+				t.Errorf("Expected %v, got %v", structBlockDataGo.V[k], v)
 			}
 		}
 
-		if len(d) != len(structBlockDataGo) {
-			t.Errorf("Expected length %d, got %d", len(structBlockDataGo), len(d))
+		if len(d.V) != len(structBlockDataGo.V) {
+			t.Errorf("Expected length %d, got %d", len(structBlockDataGo.V), len(d.V))
 		}
 	})
 
 	t.Run("ValueToForm", func(t *testing.T) {
 		var (
 			data = b.ValueToForm(structBlockDataGo)
-			d    = data.(map[string]interface{})
+			d    = data.(*blocks.StructBlockValue)
 		)
 
-		for k, v := range d {
-			if !reflect.DeepEqual(v, structBlockstructBlockDataRawCmp[k]) {
-				t.Errorf("Expected %v, got %v", structBlockstructBlockDataRawCmp[k], v)
+		for k, v := range d.V {
+			if !deepEqual(v, structBlockstructBlockDataRawCmp.V[k]) {
+				t.Errorf("Expected %v, got %v", structBlockstructBlockDataRawCmp.V[k], v)
 			}
 		}
 
-		if len(d) != len(structBlockstructBlockDataRawCmp) {
-			t.Errorf("Expected length %d, got %d", len(structBlockstructBlockDataRawCmp), len(d))
+		if len(d.V) != len(structBlockstructBlockDataRawCmp.V) {
+			t.Errorf("Expected length %d, got %d", len(structBlockstructBlockDataRawCmp.V), len(d.V))
 		}
 	})
 
@@ -229,18 +232,18 @@ func TestStructBlock(t *testing.T) {
 
 		var (
 			data2 = b.ValueToForm(data)
-			d1    = data.(map[string]interface{})
-			d2    = data2.(map[string]interface{})
+			d1    = data.(*blocks.StructBlockValue)
+			d2    = data2.(*blocks.StructBlockValue)
 		)
 
-		for k, v := range d2 {
-			if v != structBlockstructBlockDataRawCmp[k] {
-				t.Errorf("Expected %v, got %v", structBlockstructBlockDataRawCmp[k], v)
+		for k, v := range d2.V {
+			if v != structBlockstructBlockDataRawCmp.V[k] {
+				t.Errorf("Expected %v, got %v", structBlockstructBlockDataRawCmp.V[k], v)
 			}
 		}
 
-		if len(d1) != len(d2) {
-			t.Errorf("Expected length %d, got %d", len(d2), len(d1))
+		if len(d1.V) != len(d2.V) {
+			t.Errorf("Expected length %d, got %d", len(d2.V), len(d1.V))
 		}
 	})
 
@@ -248,8 +251,8 @@ func TestStructBlock(t *testing.T) {
 
 	var (
 		nestedStructBlockDataRaw = maps.Clone(structBlockDataRaw)
-		nestedStructBlockDataCmp = maps.Clone(structBlockstructBlockDataRawCmp)
-		nestedStructBlockDataGo  = maps.Clone(structBlockDataGo)
+		nestedStructBlockDataCmp = &blocks.StructBlockValue{V: maps.Clone(structBlockstructBlockDataRawCmp.V)}
+		nestedStructBlockDataGo  = &blocks.StructBlockValue{V: maps.Clone(structBlockDataGo.V)}
 	)
 
 	nestedStructBlockDataRaw.Set("test_block-test_nested-name", "Jane Doe")
@@ -259,22 +262,26 @@ func TestStructBlock(t *testing.T) {
 	nestedStructBlockDataRaw.Set("test_block-test_nested-date", "2021-01-02")
 	nestedStructBlockDataRaw.Set("test_block-test_nested-datetime", "2021-01-02T00:00:00")
 
-	nestedStructBlockDataCmp["test_nested"] = map[string]interface{}{
-		"name":     "Jane Doe",
-		"age":      "25",
-		"email":    "test2@localhost",
-		"password": "password2",
-		"date":     "2021-01-02",
-		"datetime": "2021-01-02T00:00:00",
+	nestedStructBlockDataCmp.V["test_nested"] = &blocks.StructBlockValue{
+		V: map[string]interface{}{
+			"name":     "Jane Doe",
+			"age":      "25",
+			"email":    "test2@localhost",
+			"password": "password2",
+			"date":     "2021-01-02",
+			"datetime": "2021-01-02T00:00:00",
+		},
 	}
 
-	nestedStructBlockDataGo["test_nested"] = map[string]interface{}{
-		"name":     "Jane Doe",
-		"age":      25,
-		"email":    must(mail.ParseAddress("test2@localhost")),
-		"password": "password2",
-		"date":     must(time.Parse("2006-01-02", "2021-01-02")),
-		"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-02T00:00:00")),
+	nestedStructBlockDataGo.V["test_nested"] = &blocks.StructBlockValue{
+		V: map[string]interface{}{
+			"name":     "Jane Doe",
+			"age":      25,
+			"email":    must(mail.ParseAddress("test2@localhost")),
+			"password": "password2",
+			"date":     must(time.Parse("2006-01-02", "2021-01-02")),
+			"datetime": must(time.Parse("2006-01-02T15:04:05", "2021-01-02T00:00:00")),
+		},
 	}
 
 	t.Run("NestedStructBlock", func(t *testing.T) {
@@ -290,16 +297,16 @@ func TestStructBlock(t *testing.T) {
 				t.Errorf("Expected data, got nil")
 			}
 
-			var d = data.(map[string]interface{})
+			var d = data.(*blocks.StructBlockValue)
 
-			for k, v := range d {
-				if !reflect.DeepEqual(v, nestedStructBlockDataCmp[k]) {
-					t.Errorf("Expected %v, got %v", nestedStructBlockDataCmp[k], v)
+			for k, v := range d.V {
+				if !deepEqual(v, nestedStructBlockDataCmp.V[k]) {
+					t.Errorf("Expected %v, got %v", nestedStructBlockDataCmp.V[k], v)
 				}
 			}
 
-			if len(d) != len(nestedStructBlockDataCmp) {
-				t.Errorf("Expected length %d, got %d", len(nestedStructBlockDataCmp), len(d))
+			if len(d.V) != len(nestedStructBlockDataCmp.V) {
+				t.Errorf("Expected length %d, got %d", len(nestedStructBlockDataCmp.V), len(d.V))
 			}
 		})
 
@@ -310,33 +317,33 @@ func TestStructBlock(t *testing.T) {
 				t.Errorf("Expected no error, got %v", err)
 			}
 
-			var d = data.(map[string]interface{})
+			var d = data.(*blocks.StructBlockValue)
 
-			for k, v := range d {
-				if !reflect.DeepEqual(v, nestedStructBlockDataGo[k]) {
-					t.Errorf("Expected %v, got %v", nestedStructBlockDataGo[k], v)
+			for k, v := range d.V {
+				if !deepEqual(v, nestedStructBlockDataGo.V[k]) {
+					t.Errorf("Expected %v, got %v", nestedStructBlockDataGo.V[k], v)
 				}
 			}
 
-			if len(d) != len(nestedStructBlockDataGo) {
-				t.Errorf("Expected length %d, got %d", len(nestedStructBlockDataGo), len(d))
+			if len(d.V) != len(nestedStructBlockDataGo.V) {
+				t.Errorf("Expected length %d, got %d", len(nestedStructBlockDataGo.V), len(d.V))
 			}
 		})
 
 		t.Run("ValueToForm", func(t *testing.T) {
 			var (
 				data = b.ValueToForm(nestedStructBlockDataGo)
-				d    = data.(map[string]interface{})
+				d    = data.(*blocks.StructBlockValue)
 			)
 
-			for k, v := range d {
-				if !reflect.DeepEqual(v, nestedStructBlockDataCmp[k]) {
-					t.Errorf("Expected %v, got %v", nestedStructBlockDataCmp[k], v)
+			for k, v := range d.V {
+				if !deepEqual(v, nestedStructBlockDataCmp.V[k]) {
+					t.Errorf("Expected %v, got %v", nestedStructBlockDataCmp.V[k], v)
 				}
 			}
 
-			if len(d) != len(nestedStructBlockDataCmp) {
-				t.Errorf("Expected length %d, got %d", len(nestedStructBlockDataCmp), len(d))
+			if len(d.V) != len(nestedStructBlockDataCmp.V) {
+				t.Errorf("Expected length %d, got %d", len(nestedStructBlockDataCmp.V), len(d.V))
 			}
 		})
 
@@ -349,18 +356,18 @@ func TestStructBlock(t *testing.T) {
 
 			var (
 				data2 = b.ValueToForm(data)
-				d1    = data.(map[string]interface{})
-				d2    = data2.(map[string]interface{})
+				d1    = data.(*blocks.StructBlockValue)
+				d2    = data2.(*blocks.StructBlockValue)
 			)
 
-			for k, v := range d2 {
-				if !reflect.DeepEqual(v, nestedStructBlockDataCmp[k]) {
-					t.Errorf("Expected %v, got %v", nestedStructBlockDataCmp[k], v)
+			for k, v := range d2.V {
+				if !deepEqual(v, nestedStructBlockDataCmp.V[k]) {
+					t.Errorf("Expected %v, got %v", nestedStructBlockDataCmp.V[k], v)
 				}
 			}
 
-			if len(d1) != len(d2) {
-				t.Errorf("Expected length %d, got %d", len(d2), len(d1))
+			if len(d1.V) != len(d2.V) {
+				t.Errorf("Expected length %d, got %d", len(d2.V), len(d1.V))
 			}
 		})
 	})

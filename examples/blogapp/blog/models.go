@@ -72,7 +72,7 @@ type BlogImage struct {
 	ID       int64
 	Image    *images.Image
 	BlogPage *BlogPage
-	Content  blocks.ListBlockData
+	Content  *blocks.ListBlockValue
 }
 
 func (b *BlogImage) UniqueTogether() [][]string {
@@ -193,7 +193,7 @@ type BlogPage struct {
 	Page         *pages.PageNode `proxy:"true"`
 	Image        *mediafiles.SimpleStoredObject
 	Editor       *editor.EditorJSBlockData
-	Content      blocks.StreamBlockValue
+	Content      *blocks.StreamBlockValue
 	Thumbnail    *images.Image
 	Document     *documents.Document
 	User         users.User

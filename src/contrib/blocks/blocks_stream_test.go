@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/mail"
 	"net/url"
-	"reflect"
 	"testing"
 	"time"
 
@@ -95,9 +94,9 @@ func TestStreamBlock(t *testing.T) {
 		"datetime": "2021-01-02T00:00:00",
 	}
 	formValueCmp := &blocks.StreamBlockValue{
-		Blocks: []*blocks.StreamBlockData{
-			{ID: uuid.Nil, Type: "person", Data: formItem0, Order: 0},
-			{ID: uuid.Nil, Type: "person", Data: formItem1, Order: 1},
+		V: []*blocks.StreamBlockData{
+			{ID: uuid.Nil, Type: "person", Data: &blocks.StructBlockValue{V: formItem0}, Order: 0},
+			{ID: uuid.Nil, Type: "person", Data: &blocks.StructBlockValue{V: formItem1}, Order: 1},
 		},
 	}
 
@@ -119,9 +118,9 @@ func TestStreamBlock(t *testing.T) {
 		"datetime": mustDate(t, "2006-01-02T15:04:05", "2021-01-02T00:00:00"),
 	}
 	goValueCmp := &blocks.StreamBlockValue{
-		Blocks: []*blocks.StreamBlockData{
-			{ID: uuid.Nil, Type: "person", Data: goItem0, Order: 0},
-			{ID: uuid.Nil, Type: "person", Data: goItem1, Order: 1},
+		V: []*blocks.StreamBlockData{
+			{ID: uuid.Nil, Type: "person", Data: &blocks.StructBlockValue{V: goItem0}, Order: 0},
+			{ID: uuid.Nil, Type: "person", Data: &blocks.StructBlockValue{V: goItem1}, Order: 1},
 		},
 	}
 
@@ -139,18 +138,18 @@ func TestStreamBlock(t *testing.T) {
 			t.Fatalf("expected *StreamBlockValue, got %T", data)
 		}
 
-		if len(v.Blocks) != len(formValueCmp.Blocks) {
-			t.Fatalf("expected %d blocks, got %d", len(formValueCmp.Blocks), len(v.Blocks))
+		if len(v.V) != len(formValueCmp.V) {
+			t.Fatalf("expected %d blocks, got %d", len(formValueCmp.V), len(v.V))
 		}
 
-		for i := range v.Blocks {
-			got := v.Blocks[i]
-			exp := formValueCmp.Blocks[i]
+		for i := range v.V {
+			got := v.V[i]
+			exp := formValueCmp.V[i]
 			if got.ID != exp.ID || got.Type != exp.Type || got.Order != exp.Order {
 				t.Errorf("meta mismatch at %d: got (id=%s,type=%s,order=%d) exp (id=%s,type=%s,order=%d)",
 					i, got.ID, got.Type, got.Order, exp.ID, exp.Type, exp.Order)
 			}
-			if !reflect.DeepEqual(got.Data, exp.Data) {
+			if !deepEqual(got.Data, exp.Data) {
 				t.Errorf("data mismatch at %d: exp %v, got %v", i, exp.Data, got.Data)
 			}
 		}
@@ -166,18 +165,18 @@ func TestStreamBlock(t *testing.T) {
 			t.Fatalf("expected StreamBlockValue, got %T", gotAny)
 		}
 
-		if len(got.Blocks) != len(goValueCmp.Blocks) {
-			t.Fatalf("expected %d blocks, got %d", len(goValueCmp.Blocks), len(got.Blocks))
+		if len(got.V) != len(goValueCmp.V) {
+			t.Fatalf("expected %d blocks, got %d", len(goValueCmp.V), len(got.V))
 		}
 
-		for i := range got.Blocks {
-			g := got.Blocks[i]
-			e := goValueCmp.Blocks[i]
+		for i := range got.V {
+			g := got.V[i]
+			e := goValueCmp.V[i]
 			if g.ID != e.ID || g.Type != e.Type || g.Order != e.Order {
 				t.Errorf("meta mismatch at %d: got (id=%s,type=%s,order=%d) exp (id=%s,type=%s,order=%d)",
 					i, g.ID, g.Type, g.Order, e.ID, e.Type, e.Order)
 			}
-			if !reflect.DeepEqual(g.Data, e.Data) {
+			if !deepEqual(g.Data, e.Data) {
 				t.Errorf("data mismatch at %d: exp %v, got %v", i, e.Data, g.Data)
 			}
 		}
@@ -190,18 +189,18 @@ func TestStreamBlock(t *testing.T) {
 			t.Fatalf("expected StreamBlockValue, got %T", gotAny)
 		}
 
-		if len(got.Blocks) != len(formValueCmp.Blocks) {
-			t.Fatalf("expected %d blocks, got %d", len(formValueCmp.Blocks), len(got.Blocks))
+		if len(got.V) != len(formValueCmp.V) {
+			t.Fatalf("expected %d blocks, got %d", len(formValueCmp.V), len(got.V))
 		}
 
-		for i := range got.Blocks {
-			g := got.Blocks[i]
-			e := formValueCmp.Blocks[i]
+		for i := range got.V {
+			g := got.V[i]
+			e := formValueCmp.V[i]
 			if g.ID != e.ID || g.Type != e.Type || g.Order != e.Order {
 				t.Errorf("meta mismatch at %d: got (id=%s,type=%s,order=%d) exp (id=%s,type=%s,order=%d)",
 					i, g.ID, g.Type, g.Order, e.ID, e.Type, e.Order)
 			}
-			if !reflect.DeepEqual(g.Data, e.Data) {
+			if !deepEqual(g.Data, e.Data) {
 				t.Errorf("data mismatch at %d: exp %v, got %v", i, e.Data, g.Data)
 			}
 		}
@@ -219,12 +218,12 @@ func TestStreamBlock(t *testing.T) {
 		if !ok {
 			t.Fatalf("expected StreamBlockValue, got %T", formAgain)
 		}
-		if len(got.Blocks) != len(formValueCmp.Blocks) {
-			t.Fatalf("expected %d blocks, got %d", len(formValueCmp.Blocks), len(got.Blocks))
+		if len(got.V) != len(formValueCmp.V) {
+			t.Fatalf("expected %d blocks, got %d", len(formValueCmp.V), len(got.V))
 		}
-		for i := range got.Blocks {
-			if !reflect.DeepEqual(got.Blocks[i], formValueCmp.Blocks[i]) {
-				t.Errorf("roundtrip mismatch at %d: exp %v, got %v", i, formValueCmp.Blocks[i], got.Blocks[i])
+		for i := range got.V {
+			if !deepEqual(got.V[i], formValueCmp.V[i]) {
+				t.Errorf("roundtrip mismatch at %d: exp %v, got %v", i, formValueCmp.V[i], got.V[i])
 			}
 		}
 	})
@@ -308,9 +307,9 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 		"datetime": "2022-02-02T10:30:00",
 	}
 	formCmp := &blocks.StreamBlockValue{
-		Blocks: []*blocks.StreamBlockData{
+		V: []*blocks.StreamBlockData{
 			{ID: uuid.Nil, Type: "title", Order: 0, Data: "Hello world"},
-			{ID: uuid.Nil, Type: "person", Order: 1, Data: formPerson},
+			{ID: uuid.Nil, Type: "person", Order: 1, Data: &blocks.StructBlockValue{V: formPerson}},
 			{ID: uuid.Nil, Type: "age", Order: 2, Data: "42"},
 			{ID: uuid.Nil, Type: "email", Order: 3, Data: "dev@localhost"},
 			{ID: uuid.Nil, Type: "born", Order: 4, Data: "1999-12-31"},
@@ -328,9 +327,9 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 		"datetime": mustDate(t, "2006-01-02T15:04:05", "2022-02-02T10:30:00"),
 	}
 	goCmp := &blocks.StreamBlockValue{
-		Blocks: []*blocks.StreamBlockData{
+		V: []*blocks.StreamBlockData{
 			{ID: uuid.Nil, Type: "title", Order: 0, Data: "Hello world"},
-			{ID: uuid.Nil, Type: "person", Order: 1, Data: goPerson},
+			{ID: uuid.Nil, Type: "person", Order: 1, Data: &blocks.StructBlockValue{V: goPerson}},
 			{ID: uuid.Nil, Type: "age", Order: 2, Data: 42},
 			{ID: uuid.Nil, Type: "email", Order: 3, Data: mustAddr(t, "dev@localhost")},
 			{ID: uuid.Nil, Type: "born", Order: 4, Data: mustDate(t, "2006-01-02", "1999-12-31")},
@@ -348,16 +347,16 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 			t.Fatalf("expected *StreamBlockValue, got %T", gotAny)
 		}
 
-		if len(got.Blocks) != len(formCmp.Blocks) {
-			t.Fatalf("expected %d blocks, got %d", len(formCmp.Blocks), len(got.Blocks))
+		if len(got.V) != len(formCmp.V) {
+			t.Fatalf("expected %d blocks, got %d", len(formCmp.V), len(got.V))
 		}
-		for i := range got.Blocks {
-			gb, eb := got.Blocks[i], formCmp.Blocks[i]
+		for i := range got.V {
+			gb, eb := got.V[i], formCmp.V[i]
 			if gb.ID != eb.ID || gb.Type != eb.Type || gb.Order != eb.Order {
 				t.Errorf("meta mismatch #%d: got(id=%s,type=%s,order=%d) exp(id=%s,type=%s,order=%d)",
 					i, gb.ID, gb.Type, gb.Order, eb.ID, eb.Type, eb.Order)
 			}
-			if !reflect.DeepEqual(gb.Data, eb.Data) {
+			if !deepEqual(gb.Data, eb.Data) {
 				t.Errorf("data mismatch #%d: exp %v, got %v", i, eb.Data, gb.Data)
 			}
 		}
@@ -373,16 +372,16 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 			t.Fatalf("expected StreamBlockValue, got %T", gotAny)
 		}
 
-		if len(got.Blocks) != len(goCmp.Blocks) {
-			t.Fatalf("expected %d blocks, got %d", len(goCmp.Blocks), len(got.Blocks))
+		if len(got.V) != len(goCmp.V) {
+			t.Fatalf("expected %d blocks, got %d", len(goCmp.V), len(got.V))
 		}
-		for i := range got.Blocks {
-			gb, eb := got.Blocks[i], goCmp.Blocks[i]
+		for i := range got.V {
+			gb, eb := got.V[i], goCmp.V[i]
 			if gb.ID != eb.ID || gb.Type != eb.Type || gb.Order != eb.Order {
 				t.Errorf("meta mismatch #%d: got(id=%s,type=%s,order=%d) exp(id=%s,type=%s,order=%d)",
 					i, gb.ID, gb.Type, gb.Order, eb.ID, eb.Type, eb.Order)
 			}
-			if !reflect.DeepEqual(gb.Data, eb.Data) {
+			if !deepEqual(gb.Data, eb.Data) {
 				t.Errorf("data mismatch #%d: exp %v, got %v", i, eb.Data, gb.Data)
 			}
 		}
@@ -395,17 +394,17 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 			t.Fatalf("expected StreamBlockValue, got %T", gotAny)
 		}
 
-		if len(got.Blocks) != len(formCmp.Blocks) {
-			t.Fatalf("expected %d blocks, got %d", len(formCmp.Blocks), len(got.Blocks))
+		if len(got.V) != len(formCmp.V) {
+			t.Fatalf("expected %d blocks, got %d", len(formCmp.V), len(got.V))
 		}
-		for i := range got.Blocks {
-			gb, eb := got.Blocks[i], formCmp.Blocks[i]
+		for i := range got.V {
+			gb, eb := got.V[i], formCmp.V[i]
 			if gb.ID != eb.ID || gb.Type != eb.Type || gb.Order != eb.Order {
 				t.Errorf("meta mismatch #%d: got(id=%s,type=%s,order=%d) exp(id=%s,type=%s,order=%d)",
 					i, gb.ID, gb.Type, gb.Order, eb.ID, eb.Type, eb.Order)
 			}
-			if !reflect.DeepEqual(gb.Data, eb.Data) {
-				t.Errorf("data mismatch #%d: exp %v, got %v", i, eb.Data, gb.Data)
+			if !deepEqual(gb.Data, eb.Data) {
+				t.Errorf("data mismatch #%d: (%T != %T) exp %v, got %v", i, eb.Data, gb.Data, eb.Data, gb.Data)
 			}
 		}
 	})
@@ -421,12 +420,12 @@ func TestStreamBlock_RichChildren(t *testing.T) {
 			t.Fatalf("expected StreamBlockValue, got %T", formAgainAny)
 		}
 
-		if len(formAgain.Blocks) != len(formCmp.Blocks) {
-			t.Fatalf("expected %d blocks, got %d", len(formCmp.Blocks), len(formAgain.Blocks))
+		if len(formAgain.V) != len(formCmp.V) {
+			t.Fatalf("expected %d blocks, got %d", len(formCmp.V), len(formAgain.V))
 		}
-		for i := range formAgain.Blocks {
-			if !reflect.DeepEqual(formAgain.Blocks[i], formCmp.Blocks[i]) {
-				t.Errorf("roundtrip mismatch #%d: exp %v, got %v", i, formCmp.Blocks[i], formAgain.Blocks[i])
+		for i := range formAgain.V {
+			if !deepEqual(formAgain.V[i], formCmp.V[i]) {
+				t.Errorf("roundtrip mismatch #%d: exp %v, got %v", i, formCmp.V[i], formAgain.V[i])
 			}
 		}
 	})
