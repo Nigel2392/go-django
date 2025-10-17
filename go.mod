@@ -29,6 +29,7 @@ require (
 	github.com/casbin/govaluate v1.10.0
 	github.com/dolthub/go-mysql-server v0.20.0
 	github.com/gertd/go-pluralize v0.2.1
+	github.com/google/go-cmp v0.7.0
 	github.com/google/uuid v1.6.0
 	github.com/gosimple/slug v1.15.0
 	github.com/jordan-wright/email v4.0.1-0.20210109023952-943e75fe5223+incompatible

@@ -1,31 +1,29 @@
 package blocks_test
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
 	"net/mail"
+	"reflect"
 	"testing"
 	"time"
 
 	"github.com/Nigel2392/go-django/src/contrib/blocks"
+	"github.com/google/go-cmp/cmp"
 	"github.com/google/uuid"
 )
 
-func encodeJSON(v interface{}) (json.RawMessage, error) {
-	var buf = new(bytes.Buffer)
-	var enc = json.NewEncoder(buf)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(v); err != nil {
-		return nil, err
-	}
-	return json.RawMessage(buf.Bytes()), nil
-}
+var __BLOCK = reflect.TypeOf((*blocks.Block)(nil)).Elem()
 
 func deepEqual(expected, actual interface{}) bool {
-	exp, _ := encodeJSON(expected)
-	act, _ := encodeJSON(actual)
-	return bytes.Equal(exp, act)
+	return cmp.Equal(expected, actual, cmp.FilterPath(func(p cmp.Path) bool {
+		for i := 0; i < len(p); i++ {
+			var ps = p.Index(i)
+			if ps.Type() == __BLOCK || ps.Type().Implements(__BLOCK) {
+				return true
+			}
+		}
+		return p.Last().String() == "_rawData" || p.Last().String() == "._rawData"
+	}, cmp.Ignore()))
 }
 
 func NewListBlock() *blocks.ListBlock {
