@@ -161,6 +161,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 						),
 					),
 					admin.FieldPanel("Editor"),
+					admin.FieldPanel("Content"),
 				}
 			},
 			EditPanels: func(r *http.Request, page pages.Page) []admin.Panel {
@@ -177,6 +178,7 @@ func NewAppConfig() *apps.DBRequiredAppConfig {
 							),
 							admin.FieldPanel("Image"),
 							admin.FieldPanel("Editor"),
+							admin.FieldPanel("Content"),
 							// admin.ModelPanel[*BlogImage, modelforms.ModelForm[*BlogImage]](
 							// "BlogImageSet", &BlogImage{},
 							// ),

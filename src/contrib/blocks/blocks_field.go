@@ -34,6 +34,13 @@ func (b *FieldBlock) RenderForm(ctx context.Context, w io.Writer, id, name strin
 	return b.RenderTempl(id, name, value, string(bt), errors, c).Render(ctx, w)
 }
 
+func FormFieldBlock(field fields.Field, datatype any, opts ...func(*FieldBlock)) *FieldBlock {
+	var base = NewFieldBlock(opts...)
+	base.DataType = datatype
+	base.SetField(field)
+	return base
+}
+
 func CharBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.DataType = string("")

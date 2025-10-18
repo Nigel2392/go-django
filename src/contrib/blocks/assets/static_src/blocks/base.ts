@@ -1,5 +1,3 @@
-import { Widget } from "../widgets/widget";
-
 //type Block = {
 //    widget: HTMLElement;
 //    blockDef: BlockDef;
@@ -66,8 +64,31 @@ class Block {
     }
 }
 
+
+const nonCopyDisplayAttrs: { [key: string]: boolean } = {
+    "data-controller": true,
+    "class": true,
+    "style": true,
+}
+
+function copyAttrs(from: HTMLElement, has: (name: string) => boolean, setter: (key: string, value: string) => void): void {
+    const attrs: { [key: string]: string } = {};
+    // placeholder attrs copied
+    for (let i = 0; i < from.attributes.length; i++) {
+        if (!has(from.attributes[i].name) && !nonCopyDisplayAttrs[from.attributes[i].name]) {
+            attrs[from.attributes[i].name] = from.attributes[i].value;
+        }
+    }
+
+    Object.keys(attrs).forEach((key) => {
+        setter(key, attrs[key]);
+    });
+
+}
+
 export {
     BoundBlock,
     Block,
     BlockMeta,
+    copyAttrs,
 };

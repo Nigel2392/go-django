@@ -120,9 +120,9 @@ func (bw *BlockWidget) Media() media.Media {
 		django.Static("blocks/css/blocks.css"),
 	))
 	m.AddJS(
-		media.JS(
+		media.AssetWithPriority(media.JS(
 			django.Static("blocks/js/index.js"),
-		),
+		), 100),
 	)
 	return m
 }

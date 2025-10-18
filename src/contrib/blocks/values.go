@@ -28,9 +28,9 @@ func (l *BoundValue[T]) BindToModel(model attrs.Definer, field attrs.Field) erro
 	}
 
 	// fmt.Printf("Binding %T to model %T field %s\n%s\n", l, model, field.Name(), debug.Stack())
-	var b, ok = methodGetBlock(model, field.Name())
-	if !ok {
-		panic(fmt.Sprintf("No Get%sBlock() method found on %T, cannot bind BoundValue", field.Name(), model))
+	var b, err = methodGetBlock(model, field)
+	if err != nil {
+		panic(fmt.Sprintf("blocks: failed to get block for field %s on %T: %v", field.Name(), model, err))
 	}
 	l.Block = b
 	return l.loadData()

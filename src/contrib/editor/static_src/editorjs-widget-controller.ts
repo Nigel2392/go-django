@@ -16,7 +16,14 @@ class EditorJSWidgetController extends Controller<HTMLDivElement> {
     };
 
     connect() {
-        console.log('EditorJSWidgetController connected', this.configValue);
+
+        if (this.element.classList.contains('editorjs-widget--connected')) {
+            console.warn("EditorJSWidgetController already connected");
+            return;
+        }
+
+        this.element.classList.add('editorjs-widget--connected');
+
         let cfg = this.configValue;
         const keys = Object.keys(cfg.tools);
         for (let i = 0; i < keys.length; i++) {
@@ -44,8 +51,8 @@ class EditorJSWidgetController extends Controller<HTMLDivElement> {
     }
 
     disconnect() {
-        this.widget?.disconnect();
-        this.widget = null;
+        // this.widget?.disconnect();
+        // this.widget = null;
     }
 }
 

@@ -1,4 +1,4 @@
-import { Block, BlockMeta, BoundBlock } from '../base';
+import { Block, BlockMeta, BoundBlock, copyAttrs } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import Icon from '../../../../../admin/static_src/utils/icon';
 import { Panel, PanelComponent } from '../../../../../admin/static_src/utils/panels';
@@ -10,12 +10,6 @@ type ListBlockValue = {
     order: number;
     data: any;
 };
-
-const nonCopyDisplayAttrs: { [key: string]: boolean } = {
-    "data-controller": true,
-    "class": true,
-    "style": true,
-}
 
 class BoundListBlock extends BoundBlock<ListBlock, Panel> {
     id: String;
@@ -54,17 +48,11 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
             },
         });
 
-        const attrs: { [key: string]: string } = {};
-        // placeholder attrs copied
-        for (let i = 0; i < placeholder.attributes.length; i++) {
-            if (!root.hasAttribute(placeholder.attributes[i].name) && !nonCopyDisplayAttrs[placeholder.attributes[i].name]) {
-                attrs[placeholder.attributes[i].name] = placeholder.attributes[i].value;
-            }
-        }
-
-        Object.keys(attrs).forEach((key) => {
-            root.body.setAttribute(key, attrs[key]);
-        });
+        copyAttrs(
+            placeholder,
+            root.hasAttribute.bind(root),
+            root.body.setAttribute.bind(root.body),
+        );
 
         placeholder.replaceWith(root);
 

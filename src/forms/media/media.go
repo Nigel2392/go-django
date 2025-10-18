@@ -9,6 +9,11 @@ type Asset interface {
 	Render() template.HTML
 }
 
+type WeightedAsset interface {
+	Asset
+	Priority() int // The higher the priority, the earlier it is included.
+}
+
 type AddableMedia interface {
 	// AddJS adds a JS asset to the media.
 	AddJS(js ...Asset)

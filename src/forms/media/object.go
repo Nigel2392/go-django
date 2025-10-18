@@ -2,6 +2,7 @@ package media
 
 import (
 	"html/template"
+	"slices"
 	"strings"
 
 	"github.com/elliotchance/orderedmap/v2"
@@ -87,14 +88,50 @@ func (m *MediaObject) AddCSS(list ...Asset) {
 }
 
 func (m *MediaObject) JS() []template.HTML {
-	var ret = make([]template.HTML, 0, m.Js.Len())
+	var jsAssets = make([]Asset, 0, m.Js.Len())
 	for head := m.Js.Front(); head != nil; head = head.Next() {
-		ret = append(ret, head.Value.Render())
+		jsAssets = append(jsAssets, head.Value)
+	}
+
+	slices.SortStableFunc(jsAssets, func(a, b Asset) int {
+		aWeighted, aOk := a.(WeightedAsset)
+		bWeighted, bOk := b.(WeightedAsset)
+		if aOk && bOk {
+			return bWeighted.Priority() - aWeighted.Priority()
+		} else if aOk {
+			return aWeighted.Priority() * -1
+		} else if bOk {
+			return bWeighted.Priority()
+		}
+		return 0
+	})
+
+	var ret = make([]template.HTML, 0, len(jsAssets))
+	for _, asset := range jsAssets {
+		ret = append(ret, asset.Render())
 	}
 	return ret
 }
 
 func (m *MediaObject) CSS() []template.HTML {
+	var cssAssets = make([]Asset, 0, m.Css.Len())
+	for head := m.Css.Front(); head != nil; head = head.Next() {
+		cssAssets = append(cssAssets, head.Value)
+	}
+
+	slices.SortStableFunc(cssAssets, func(a, b Asset) int {
+		aWeighted, aOk := a.(WeightedAsset)
+		bWeighted, bOk := b.(WeightedAsset)
+		if aOk && bOk {
+			return bWeighted.Priority() - aWeighted.Priority()
+		} else if aOk {
+			return aWeighted.Priority() * -1
+		} else if bOk {
+			return bWeighted.Priority()
+		}
+		return 0
+	})
+
 	var ret = make([]template.HTML, 0, m.Css.Len())
 	for head := m.Css.Front(); head != nil; head = head.Next() {
 		ret = append(ret, head.Value.Render())

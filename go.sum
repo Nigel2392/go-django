@@ -6,6 +6,10 @@ github.com/Nigel2392/go-signals v1.1.0 h1:DVVOe1Q+oyf+RloEcyW3g+uym83UijAIW8y3oR
 github.com/Nigel2392/go-signals v1.1.0/go.mod h1:Olk7MJlZ9gdGPN8bh+OZSe7iOsBixn7biVI7LqoWEIA=
 github.com/Nigel2392/go-telepath v1.4.1 h1:BI4+StrE0OJjN0SremPSZSTnBGPci4Tq8mrdafXqVfc=
 github.com/Nigel2392/go-telepath v1.4.1/go.mod h1:CPUZ6sDIXEWOGq+KzuBoXdJvakSMvuFB+c2SpQfGSAc=
+github.com/Nigel2392/go-telepath v1.4.2 h1:0Nj+kSoliifZS33zGGF8BpV+Y/oCIudOX3+klksnhR4=
+github.com/Nigel2392/go-telepath v1.4.2/go.mod h1:7cUTcLZe6q9bclCnXTJGLyQkhYoUu/Oy8Qf09pQC4ys=
+github.com/Nigel2392/go-telepath v1.4.3 h1:NHdppY3lJgcnTPBwNQuh8OQ7HMnH3sMHdU3WON81pJA=
+github.com/Nigel2392/go-telepath v1.4.3/go.mod h1:CPUZ6sDIXEWOGq+KzuBoXdJvakSMvuFB+c2SpQfGSAc=
 github.com/Nigel2392/goldcrest v1.0.4 h1:Xx+QLht6QjJ3Gg9uksgc6Ye1XjbtzQ1208ClZwoVWsg=
 github.com/Nigel2392/goldcrest v1.0.4/go.mod h1:UpnPrYJqZY/b7TkoVKdoNNPKTlQtld+fsrZEA98c1c0=
 github.com/Nigel2392/mux v1.5.3 h1:HjMZu11X0dkEbFkL+DZWp1MN0I0/YZwdvNEuJpC0h+I=

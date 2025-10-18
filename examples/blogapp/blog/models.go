@@ -258,6 +258,28 @@ func (n *BlogPage) SearchableFields() []search.SearchField {
 	}
 }
 
+func (b *BlogPage) GetContentBlock() *blocks.StreamBlock {
+	return blocks.NewStreamBlock(
+		blocks.WithBlockField[*blocks.StreamBlock]("heading", blocks.NewStructBlock(
+			blocks.WithLabel[*blocks.StructBlock](trans.S("Heading")),
+			blocks.WithBlockField[*blocks.StructBlock]("title", blocks.CharBlock(
+				blocks.WithLabel[*blocks.FieldBlock](trans.S("Title")),
+				blocks.WithHelpText[*blocks.FieldBlock](trans.S("The title for this heading.")),
+			)),
+			blocks.WithBlockField[*blocks.StructBlock]("subtitle", blocks.CharBlock(
+				blocks.WithLabel[*blocks.FieldBlock](trans.S("Subtitle")),
+				blocks.WithHelpText[*blocks.FieldBlock](trans.S("The subtitle for this heading.")),
+			)),
+		)),
+		blocks.WithBlockField[*blocks.StreamBlock]("text", blocks.FormFieldBlock(
+			editor.EditorJSField(nil),
+			&editor.EditorJSBlockData{},
+			blocks.WithLabel[*blocks.FieldBlock](trans.S("Text")),
+			blocks.WithHelpText[*blocks.FieldBlock](trans.S("A block of text.")),
+		)),
+	)
+}
+
 func (n *BlogPage) FieldDefs() attrs.Definitions {
 	if n.Page == nil {
 		n.Page = &pages.PageNode{}
@@ -325,6 +347,12 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
 			//	"text-align",
 			//	"list",
 			//},
+		}),
+		attrs.NewField(n, "Content", &attrs.FieldConfig{
+			Null:     true,
+			Blank:    true,
+			Label:    trans.S("Content"),
+			HelpText: trans.S("The main content for this blog post."),
 		}),
 		attrs.NewField(n, "User", &attrs.FieldConfig{
 			Label:    trans.S("User"),

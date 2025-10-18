@@ -1,17 +1,22 @@
 package editor
 
 import (
+	"context"
 	"embed"
+	"encoding/json"
 	"fmt"
 	"io/fs"
 	"reflect"
 
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
+	"github.com/Nigel2392/go-django/src/contrib/blocks"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-django/src/forms/widgets"
+	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/Nigel2392/mux"
 )
 
@@ -32,12 +37,42 @@ var (
 	RENDER_ERRORS = true
 )
 
+type JSONTelepathAdapter struct{}
+
+func JSONAdapter() *JSONTelepathAdapter {
+	return &JSONTelepathAdapter{}
+}
+
+func (m *JSONTelepathAdapter) BuildNode(ctx context.Context, value any, c telepath.Context) (telepath.Node, error) {
+	var jb, err = json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	return telepath.NewStringNode(string(jb)), nil
+}
+
 func NewAppConfig() django.AppConfig {
 	var err error
 	editorJS_FS, err = fs.Sub(_editorJS_FS, "static")
 	if err != nil {
 		panic(err)
 	}
+
+	telepath.Register(
+		JSONAdapter(),
+		&EditorJSBlockData{},
+		EditorJSBlockData{},
+		&EditorJSData{},
+		EditorJSData{},
+	)
+
+	telepath.Register(
+		&telepath.ObjectAdapter[widgets.Widget]{
+			JSConstructor: "editor.widgets.EditorJSWidget",
+			GetJSArgs:     blocks.RenderTelepathAdapterHTML,
+		},
+		&EditorJSWidget{},
+	)
 
 	// Assign the editorjs field to the editorjs block data
 	//

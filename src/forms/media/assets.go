@@ -44,3 +44,21 @@ func (j *JSAsset) Render() template.HTML {
 	fmt.Fprintf(b, ` src="%s"></script>`, j.URL)
 	return template.HTML(b.String())
 }
+
+type PriorityAsset struct {
+	Asset
+	Importance int // The higher the priority, the earlier it is included.
+}
+
+var _ WeightedAsset = (*PriorityAsset)(nil)
+
+func AssetWithPriority(asset Asset, priority int) *PriorityAsset {
+	return &PriorityAsset{
+		Asset:      asset,
+		Importance: priority,
+	}
+}
+
+func (p *PriorityAsset) Priority() int {
+	return p.Importance
+}

@@ -107,7 +107,7 @@ type BoundWidgetType = {
 
 class Widget {
     html: string;
-    boundWidgetClass: BoundWidgetType = BoundWidget as BoundWidgetType;
+    boundWidgetClass: any = BoundWidget;
 
     constructor(html: string) {
         this.html = html;
@@ -280,6 +280,18 @@ class BoundSelect extends BoundWidget<HTMLSelectElement> {
 class Select extends Widget {
     boundWidgetClass = BoundSelect as unknown as BoundWidgetType;
 }
+
+(function(window: any) {
+    window.Widget = Widget;
+    window.BoundWidget = BoundWidget;
+    window.InputNotFoundError = InputNotFoundError;
+    window.CheckboxInput = CheckboxInput;
+    window.RadioSelect = RadioSelect;
+    window.Select = Select;
+    window.BoundCheckboxInput = BoundCheckboxInput;
+    window.BoundRadioSelect = BoundRadioSelect;
+    window.BoundSelect = BoundSelect;
+})(window);
 
 export {
     Widget,

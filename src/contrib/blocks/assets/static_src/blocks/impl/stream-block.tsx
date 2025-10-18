@@ -1,5 +1,5 @@
 
-import { Block, BlockMeta, BoundBlock } from '../base';
+import { Block, BlockMeta, BoundBlock, copyAttrs } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import Icon from '../../../../../admin/static_src/utils/icon';
 import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
@@ -64,6 +64,12 @@ class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
                 "data-controller": "sortable",
             },
         });
+
+        copyAttrs(
+            placeholder,
+            root.hasAttribute.bind(root),
+            root.body.setAttribute.bind(root.body),
+        );
 
         placeholder.replaceWith(root);
 

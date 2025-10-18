@@ -1,4 +1,4 @@
-import { BoundBlock, Block, BlockMeta } from '../base';
+import { BoundBlock, Block, BlockMeta, copyAttrs } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
 
@@ -63,6 +63,12 @@ class BoundStructBlock extends BoundBlock {
             errors: errorsList,
             children: childrenContainer,
         });
+
+        copyAttrs(
+            placeholder,
+            root.hasAttribute.bind(root),
+            root.body.setAttribute.bind(root.body),
+        );
 
         placeholder.replaceWith(root);
 

@@ -145,9 +145,25 @@ func (i *BaseField) Default() interface{} {
 	return nil
 }
 
+func isZero(v reflect.Value) bool {
+	switch v.Kind() {
+	case reflect.Array, reflect.Map, reflect.Slice, reflect.Func, reflect.Pointer, reflect.Interface:
+		return v.IsNil()
+	case reflect.Invalid:
+		return true
+	}
+	return v.IsZero()
+}
+
 func (i *BaseField) HasChanged(initial, data interface{}) bool {
-	if initial == nil && data == nil {
+	var rA = reflect.ValueOf(initial)
+	var rB = reflect.ValueOf(data)
+	if isZero(rA) && isZero(rB) {
 		return false
+	}
+
+	if isZero(rA) != isZero(rB) {
+		return true
 	}
 
 	if valuerA, ok := initial.(driver.Valuer); ok {
@@ -164,8 +180,6 @@ func (i *BaseField) HasChanged(initial, data interface{}) bool {
 		}
 	}
 
-	var rA = reflect.ValueOf(initial)
-	var rB = reflect.ValueOf(data)
 	if rA.Kind() == reflect.Ptr {
 		rA = rA.Elem()
 	}

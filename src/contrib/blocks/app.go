@@ -7,6 +7,7 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -19,14 +20,21 @@ import (
 	"github.com/Nigel2392/goldcrest"
 )
 
-func methodGetBlock(model any, fieldName string) (Block, bool) {
-	var methodName = fmt.Sprintf("Get%sBlock", fieldName)
+func methodGetBlock(model any, field attrs.FieldDefinition) (Block, error) {
+	var methodName = fmt.Sprintf("Get%sBlock", field.Name())
 	method, ok := attrs.Method[func() Block](model, methodName)
 	if !ok {
-		return nil, false
+		return nil, errors.FieldNotFound.Wrapf(
+			"no %s method found on %T", methodName, model,
+		)
 	}
 	blockDef := method()
-	return blockDef, blockDef != nil
+	if blockDef == nil {
+		return nil, errors.ValueError.Wrapf(
+			"%s method on %T returned nil", methodName, model,
+		)
+	}
+	return blockDef, nil
 }
 
 func init() {
@@ -42,9 +50,9 @@ func init() {
 	// The form field will not be set up if this method is not found.
 	var getter = func(f attrs.Field, new_field_t_indirected reflect.Type, field_v reflect.Value, opts ...func(fields.Field)) (fields.Field, bool) {
 		var instance = f.Instance()
-		block, ok := methodGetBlock(instance, f.Name())
-		if !ok {
-			logger.Errorf("No Get%sBlock() method found on %T, cannot set up BlockField", f.Name(), instance)
+		block, err := methodGetBlock(instance, f)
+		if err != nil {
+			logger.Error("blocks: failed to get block for field %s on %T: %v", f.Name(), instance, err)
 			return nil, false
 		}
 

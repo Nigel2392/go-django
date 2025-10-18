@@ -438,8 +438,12 @@ func (l *StreamBlock) RenderForm(ctx context.Context, w io.Writer, id, name stri
 		value = l.GetDefault()
 	}
 
+	if value == nil {
+		value = newStreamBlockValue(l, []*StreamBlockData{})
+	}
+
 	if val, ok = value.(*StreamBlockValue); !ok {
-		return fmt.Errorf("value must be a []interface{}")
+		return fmt.Errorf("value must be a *StreamBlockValue, got %T", value)
 	}
 
 	var blockErrs = NewBlockErrors[int](errors...)
