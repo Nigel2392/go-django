@@ -149,13 +149,11 @@ func TestListBlock(t *testing.T) {
 
 	t.Run("ValueToGo", func(t *testing.T) {
 		var data, err = b.ValueToGo(ListBlockDataRawCmp)
-
 		if err != nil {
 			t.Errorf("Expected no error, got %v", err)
 		}
 
 		var d = data.(*blocks.ListBlockValue)
-
 		for i, v := range d.V {
 			if !deepEqual(*v, *ListBlockDataGo.V[i]) {
 				t.Errorf("Expected %v, got %v", *ListBlockDataGo.V[i], *v)
