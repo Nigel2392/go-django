@@ -54,6 +54,29 @@ class SortableController extends window.StimulusController {
         )
     }
 
+    moveItem(item: HTMLElement, direction: 'up' | 'down') {
+        const items = this.itemTargets.filter(i => i.style.display !== 'none');
+        const index = items.indexOf(item);
+        if (index === -1) {
+            console.error("SortableController: Item not found in items target");
+            return;
+        }
+
+        let moved = true;
+        if (direction === 'up' && index > 0) {
+            const prevItem = items[index - 1];
+            this.itemsTarget.insertBefore(item, prevItem);
+        } else if (direction === 'down' && index < items.length - 1) {
+            const nextItem = items[index + 1].nextSibling;
+            this.itemsTarget.insertBefore(item, nextItem);
+        } else {
+            moved = false;
+        }
+        if (moved) {
+            this.reOrderItems();
+        }
+    }
+
     itemTargetConnected(elem: HTMLElement) {
         this.reOrderItems();
     }

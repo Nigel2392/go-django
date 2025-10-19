@@ -1,6 +1,7 @@
-import { BoundBlock, Block, BlockMeta, copyAttrs } from '../base';
+import { BoundBlock, Block, BlockMeta } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
+import { copyAttrs } from '../utils';
 
 const getElementIfAttr = (parent: HTMLElement, attr: string, value?: string): HTMLElement => {
     for (var i = 0; i < parent.children.length; i++) {

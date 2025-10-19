@@ -1,9 +1,10 @@
-import { Block, BlockMeta, BoundBlock, copyAttrs } from '../base';
+import { Block, BlockMeta, BoundBlock } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import Icon from '../../../../../admin/static_src/utils/icon';
 import { Panel, PanelComponent } from '../../../../../admin/static_src/utils/panels';
 import { openAnimator } from '../../../../../admin/static_src/utils/animator';
 import flash from '../../../../../admin/static_src/utils/flash';
+import { copyAttrs } from '../utils';
 
 type ListBlockValue = {
     id: string;
@@ -86,6 +87,23 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
         this.activeItems = this.items.length;
     }
 
+    private move(itemName: string, direction: 'up' | 'down', ev: MouseEvent) {
+        ev?.preventDefault();
+        const wrapperId = `#${itemName}--block`;
+        const elem = this.itemWrapper.querySelector(wrapperId) as HTMLElement;
+        if (!elem) {
+            console.warn("Couldn't find item to move", wrapperId);
+            return;
+        }
+
+        const sortable = window.Stimulus.getControllerForElementAndIdentifier(this.element, "sortable");
+        if (sortable) {
+            (sortable as any).moveItem(elem, direction);
+        } else {
+            console.warn("Couldn't find sortable controller for list block", this.element);
+        }
+    }
+
     _createChild(suffix: number, sortIndex: number, id: String, name: String, value: ListBlockValue, error: any, animate: boolean = true) {
         let animator = null;
         if (animate) {
@@ -128,8 +146,16 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
                     ),
                     children: (
                         <div data-sequence-block-field-content class="sequence-block-field-content">
-                            <div data-sequence-block-field-handle class="sequence-block-field-drag-handle">
-                                &#x2630;
+                            <div data-sequence-block-field-controls class="sequence-block-field-controls">
+                                <button type="button" class="sequence-block-field-move-up-button" aria-label={window.i18n.gettext("Move %s up", this.block.childBlock.meta.label || window.i18n.gettext('item'))} onClick={this.move.bind(this, itemKey, 'up')}>
+                                    { Icon('icon-arrow-up', { title: window.i18n.gettext("Move %s up", this.block.childBlock.meta.label || window.i18n.gettext('item')) }) }
+                                </button>
+                                <button type="button" class="sequence-block-field-move-down-button" aria-label={window.i18n.gettext("Move %s down", this.block.childBlock.meta.label || window.i18n.gettext('item'))} onClick={this.move.bind(this, itemKey, 'down')}>
+                                    { Icon('icon-arrow-down', { title: window.i18n.gettext("Move %s down", this.block.childBlock.meta.label || window.i18n.gettext('item')) }) }
+                                </button>
+                                <button type="button" class="sequence-block-field-drag-handle" aria-label={window.i18n.gettext("Drag %s to reorder", this.block.childBlock.meta.label || window.i18n.gettext('item'))}>
+                                    { Icon('icon-grip-horizontal', { title: window.i18n.gettext("Drag %s to reorder", this.block.childBlock.meta.label || window.i18n.gettext('item')) }) }
+                                </button>
                             </div>
 
                             <div data-sequence-block-field-placeholder></div>

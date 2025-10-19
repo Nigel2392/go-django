@@ -1,7 +1,8 @@
-import { BoundBlock, Block, BlockMeta, copyAttrs } from '../base';
+import { BoundBlock, Block, BlockMeta } from '../base';
 import { BoundWidget, Widget } from '../../widgets/widget';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
+import { copyAttrs } from '../utils';
 
 class BoundFieldBlock extends BoundBlock<FieldBlock> {
     errorList: HTMLElement;
