@@ -59,6 +59,9 @@ class BoundStreamBlock extends BoundBlock<StreamBlock, PanelElement> {
                     </label>
                 </div>
             ) : null,
+            helpText: block.meta.helpText ? (
+                <div class="field-help">{block.meta.helpText}</div>
+            ) : null,
             errors: errorsList,
             attrs: {
                 "data-controller": "sortable",

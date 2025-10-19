@@ -1,4 +1,4 @@
-import { BoundBlock, Block, BlockMeta } from '../base';
+import { BoundBlock, Block, BlockMeta, copyAttrs } from '../base';
 import { BoundWidget, Widget } from '../../widgets/widget';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
@@ -32,12 +32,18 @@ class BoundFieldBlock extends BoundBlock<FieldBlock> {
             class: "field-block",
             allowPanelLink: !!block.meta.label,
             heading: labelWrapper,
-            helpText: block.meta.helpText ?? (
+            helpText: block.meta.helpText ? (
                 <div class="field-help">{block.meta.helpText}</div>
-            ),
+            ) : null,
             errors: errorList,
             children: widgetPlaceholder,
         });
+
+        copyAttrs(
+            placeholder,
+            root.hasAttribute.bind(root),
+            root.body.setAttribute.bind(root.body),
+        );
 
         placeholder.replaceWith(root);
 

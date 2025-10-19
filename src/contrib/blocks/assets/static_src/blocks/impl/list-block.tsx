@@ -42,6 +42,9 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
                     <label for={id} class="sequence-block-field-heading-label">{block.meta.label}:</label>
                 </div>
             ) : null,
+            helpText: block.meta.helpText ? (
+                <div class="field-help">{block.meta.helpText}</div>
+            ) : null,
             errors: errorsList,
             attrs: {
                 "data-controller": "sortable",

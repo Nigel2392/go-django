@@ -204,22 +204,11 @@ func (l *ListBlock) ValueFromDataDict(ctx context.Context, d url.Values, files m
 		data.V, sortListBlocks,
 	)
 
-	if errs.HasErrors() {
-		return data, []error{errs}
-	}
-
-	if l.Min != -1 && len(data.V) < l.Min {
-		errs.AddNonBlockError(fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data.V))) //lint:ignore ST1005 ignore this lint
-		return data, []error{errs}
-	}
-
-	if l.Max != -1 && len(data.V) > l.Max {
-		errs.AddNonBlockError(fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data.V))) //lint:ignore ST1005 ignore this lint
-		return data, []error{errs}
-	}
-
 	if totalCount+deletedCount != total {
 		errs.AddNonBlockError(fmt.Errorf("Invalid number of items, expected %d, got %d", total, totalCount+deletedCount)) //lint:ignore ST1005 ignore this lint
+	}
+
+	if errs.HasErrors() {
 		return data, []error{errs}
 	}
 
@@ -348,26 +337,43 @@ func (l *ListBlock) Clean(ctx context.Context, value interface{}) (interface{}, 
 
 func (l *ListBlock) Validate(ctx context.Context, value interface{}) []error {
 
+	var data, ok = value.(*ListBlockValue)
+	if !ok {
+		return []error{fmt.Errorf("value must be a *ListBlockValue")}
+	}
+
+	var errs = NewBlockErrors[int]()
+	if l.Min != -1 && len(data.V) < l.Min {
+		errs.AddNonBlockError(fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data.V))) //lint:ignore ST1005 ignore this lint
+		return []error{errs}
+	}
+
+	if l.Max != -1 && len(data.V) > l.Max {
+		errs.AddNonBlockError(fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data.V))) //lint:ignore ST1005 ignore this lint
+		return []error{errs}
+	}
+
 	for _, validator := range l.Validators {
 		if err := validator(ctx, value); err != nil {
 			return []error{err}
 		}
 	}
 
-	if fields.IsZero(value) {
+	if data == nil {
 		return nil
 	}
 
-	var errs = NewBlockErrors[int]()
-	for i, v := range value.(*ListBlockValue).V {
+	for i, v := range data.V {
 		var e = l.Child.Validate(ctx, v.Data)
 		if len(e) != 0 {
 			errs.AddError(i, e...)
 		}
 	}
+
 	if errs.HasErrors() {
 		return []error{errs}
 	}
+
 	return nil
 }
 

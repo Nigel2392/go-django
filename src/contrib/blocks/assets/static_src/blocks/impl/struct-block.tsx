@@ -57,9 +57,9 @@ class BoundStructBlock extends BoundBlock {
             class: "field-block",
             allowPanelLink: !!block.meta.label,
             heading: labelWrapper,
-            helpText: block.meta.helpText ?? (
+            helpText: block.meta.helpText ? (
                 <div class="field-help">{block.meta.helpText}</div>
-            ),
+            ) : null,
             errors: errorsList,
             children: childrenContainer,
         });

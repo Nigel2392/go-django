@@ -230,22 +230,11 @@ func (l *StreamBlock) ValueFromDataDict(ctx context.Context, d url.Values, files
 		data.V, sortStreamBlocks,
 	)
 
-	if errs.HasErrors() {
-		return data, []error{errs}
-	}
-
-	if l.Min != -1 && len(data.V) < l.Min {
-		errs.AddNonBlockError(fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data.V))) //lint:ignore ST1005 ignore this lint
-		return data, []error{errs}
-	}
-
-	if l.Max != -1 && len(data.V) > l.Max {
-		errs.AddNonBlockError(fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data.V))) //lint:ignore ST1005 ignore this lint
-		return data, []error{errs}
-	}
-
 	if totalCount+deletedCount != total {
 		errs.AddNonBlockError(fmt.Errorf("Invalid number of items, expected %d, got %d", total, totalCount+deletedCount)) //lint:ignore ST1005 ignore this lint
+	}
+
+	if errs.HasErrors() {
 		return data, []error{errs}
 	}
 
@@ -396,6 +385,22 @@ func (l *StreamBlock) Clean(ctx context.Context, value interface{}) (interface{}
 
 func (l *StreamBlock) Validate(ctx context.Context, value interface{}) []error {
 
+	errs := NewBlockErrors[int]()
+	data, ok := value.(*StreamBlockValue)
+	if !ok {
+		return []error{fmt.Errorf("value must be a *StreamBlockValue")}
+	}
+
+	if l.Min != -1 && len(data.V) < l.Min {
+		errs.AddNonBlockError(fmt.Errorf("Must have at least %d items (has %d)", l.Min, len(data.V))) //lint:ignore ST1005 ignore this lint
+		return []error{errs}
+	}
+
+	if l.Max != -1 && len(data.V) > l.Max {
+		errs.AddNonBlockError(fmt.Errorf("Must have at most %d items (has %d)", l.Max, len(data.V))) //lint:ignore ST1005 ignore this lint
+		return []error{errs}
+	}
+
 	for _, validator := range l.Validators {
 		if err := validator(ctx, value); err != nil {
 			return []error{err}
@@ -406,7 +411,6 @@ func (l *StreamBlock) Validate(ctx context.Context, value interface{}) []error {
 		return nil
 	}
 
-	var errs = NewBlockErrors[int]()
 	for i, v := range value.(*StreamBlockValue).V {
 		var child, ok = l.Children.Get(v.Type)
 		if !ok {
