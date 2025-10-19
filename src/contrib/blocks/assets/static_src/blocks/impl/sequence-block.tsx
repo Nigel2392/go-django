@@ -1,27 +1,30 @@
-import { Block, BlockMeta, BoundBlock } from '../base';
+
+import { Block, BoundBlock } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import Icon from '../../../../../admin/static_src/utils/icon';
-import { Panel, PanelComponent } from '../../../../../admin/static_src/utils/panels';
+import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
 import { openAnimator } from '../../../../../admin/static_src/utils/animator';
 import flash from '../../../../../admin/static_src/utils/flash';
+import { PanelElement } from '../../../../../admin/static_src/controllers/panel';
 import { copyAttrs } from '../utils';
 
-type ListBlockValue = {
+type BoundSequenceBlockValue = {
     id: string;
-    order: number;
-    data: any;
+    block: BoundBlock<Block, HTMLElement>;
+    [key: string]: any;
 };
 
-class BoundListBlock extends BoundBlock<ListBlock, Panel> {
+class BoundSequenceBlock extends BoundBlock<any, PanelElement> {
     id: String;
-    items: BoundBlock[];
+    items: BoundSequenceBlockValue[];
     itemWrapper: HTMLElement;
     totalInput: HTMLInputElement;
     activeItems: number;
+    extra: (id: string, name: string, suffix: string, value: any) => void;
 
-    constructor(block: ListBlock, placeholder: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
-        initialState = initialState || [];
-        initialError = initialError || {};
+    constructor(block: Block, placeholder: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
+        initialState = (initialState || []);
+        initialError = (initialError || {});
 
         let errorsList = null;
         if (initialError && initialError?.nonBlockErrors) {
@@ -37,10 +40,12 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
         const root = PanelComponent({
             panelId: `${name}--panel`,
             class: "sequence-block",
-            allowPanelLink: true,
+            allowPanelLink: !!block.meta.label,
             heading: block.meta.label ? (
                 <div class="sequence-block-field-heading">
-                    <label for={id} class="sequence-block-field-heading-label">{block.meta.label}:</label>
+                    <label for={id} class="sequence-block-field-heading-label">
+                        {block.meta.label}:
+                    </label>
                 </div>
             ) : null,
             helpText: block.meta.helpText ? (
@@ -63,31 +68,29 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
         super(block, name, root);
         this.items = [];
         this.id = id;
-
+        
         root.body.appendChild(
-            <button type="button" data-action="add" class="sequence-block-add-button" onClick={this._onAddClick.bind(this, null)}>
-                { Icon('icon-plus', { title: window.i18n.gettext("Add %s", this.block.meta.label || window.i18n.gettext('item')) }) }
+            <button type="button" class="sequence-block-add-button" aria-label={window.i18n.gettext("Add %s", block.meta.label || window.i18n.gettext('item'))} aria-expanded="false" onClick={this._onAddClick.bind(this, null)}>
+                { Icon('icon-plus', { title: window.i18n.gettext("Add %s", block.meta.label || window.i18n.gettext('item')) }) }
             </button>
         );
 
         this.totalInput = root.body.appendChild(
-            <input type="hidden" data-sequence-block-total name={ `${name}--total` } value={ String(initialState.length || 0) }/>
+            <input type="hidden" data-sequence-block-total name={ `${name}--total` } value={ String(initialState?.length || 0) }/>
         ) as HTMLInputElement;
 
         this.itemWrapper = root.body.appendChild(
             <div data-sequence-block-items class="sequence-block-items" data-sortable-target="items"></div>
         ) as HTMLElement;
 
-        for (let i = 0; i < initialState.length; i++) {
+        for (let i = 0; i < (initialState?.length || 0); i++) {
             this._createChild(
-                i, i, id, name, initialState[i], initialError?.errors?.[i]?.[0] || null, false,
-            )
+                i, i, id, name, initialState[i], initialError?.errors?.[i]?.[0] || null, false, this._getChildBlock(initialState[i])!,
+            );
         }
-
-        this.activeItems = this.items.length;
     }
 
-    private move(itemName: string, direction: 'up' | 'down', ev: MouseEvent) {
+    move(itemName: string, direction: 'up' | 'down', ev: MouseEvent) {
         ev?.preventDefault();
         const wrapperId = `#${itemName}--block`;
         const elem = this.itemWrapper.querySelector(wrapperId) as HTMLElement;
@@ -104,7 +107,27 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
         }
     }
 
-    _createChild(suffix: number, sortIndex: number, id: String, name: String, value: ListBlockValue, error: any, animate: boolean = true) {
+    _getChildBlock(value: any): Block | undefined {
+        throw new Error("Not implemented");
+    }
+
+    _renderBoundBlock(child: Block, placeholder: HTMLElement, id: string, name: string, value: any, error: any): BoundSequenceBlockValue {
+        throw new Error("Not implemented");
+    }
+
+    _defaultChildState(block: Block): any {
+        throw new Error("Not implemented");
+    }
+
+    _getChildInputs(id: String, name: String, suffix: number, value: any): any {
+        return null;
+    }
+
+    _onAddClick(itemName: string | null, ev: MouseEvent) {
+        throw new Error("Not implemented");
+    }
+
+    _createChild(suffix: number, sortIndex: number, id: String, name: String, value: any, error: any, animate: boolean = true, child: Block): HTMLElement | undefined {
         let animator = null;
         if (animate) {
             animator = new openAnimator({
@@ -135,28 +158,30 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
                 <input type="hidden" id={ blockId } name={ blockId } value={ value.id } />
                 <input type="hidden" id={ orderId } name={ orderId } value={ String(sortIndex) } />
                 <input type="hidden" id={ deletedKey } name={ deletedKey } value=""/>
+                { this._getChildInputs(id, name, suffix, value) }
 
                 {PanelComponent({
                     panelId: panelId,
                     heading: (
                         <div class="sequence-block-field-heading">
-                            { this.block.meta.label ? <label for={ blockId } class="sequence-block-field-heading-label">{ this.block.meta.label }:</label> : null }
-                            <span id={ headingIndexId } class="sequence-block-field-heading-index">{ String(value.order + 1) }</span>
+                            { child.meta.label ? <label for={ blockId } class="sequence-block-field-heading-label">{ child.meta.label }:</label> : null }
+                            <span id={ headingIndexId } class="sequence-block-field-heading-index">{ String(sortIndex + 1) }</span>
                         </div>
                     ),
                     children: (
                         <div data-sequence-block-field-content class="sequence-block-field-content">
                             <div data-sequence-block-field-controls class="sequence-block-field-controls">
-                                <button type="button" class="sequence-block-field-move-up-button" aria-label={window.i18n.gettext("Move %s up", this.block.childBlock.meta.label || window.i18n.gettext('item'))} onClick={this.move.bind(this, itemKey, 'up')}>
-                                    { Icon('icon-arrow-up', { title: window.i18n.gettext("Move %s up", this.block.childBlock.meta.label || window.i18n.gettext('item')) }) }
+                                <button type="button" class="sequence-block-field-move-up-button" aria-label={window.i18n.gettext("Move %s up", child.meta.label || window.i18n.gettext('item'))} onClick={this.move.bind(this, itemKey, 'up')}>
+                                    { Icon('icon-arrow-up', { title: window.i18n.gettext("Move %s up", child.meta.label || window.i18n.gettext('item')) }) }
                                 </button>
-                                <button type="button" class="sequence-block-field-move-down-button" aria-label={window.i18n.gettext("Move %s down", this.block.childBlock.meta.label || window.i18n.gettext('item'))} onClick={this.move.bind(this, itemKey, 'down')}>
-                                    { Icon('icon-arrow-down', { title: window.i18n.gettext("Move %s down", this.block.childBlock.meta.label || window.i18n.gettext('item')) }) }
+                                <button type="button" class="sequence-block-field-move-down-button" aria-label={window.i18n.gettext("Move %s down", child.meta.label || window.i18n.gettext('item'))} onClick={this.move.bind(this, itemKey, 'down')}>
+                                    { Icon('icon-arrow-down', { title: window.i18n.gettext("Move %s down", child.meta.label || window.i18n.gettext('item')) }) }
                                 </button>
-                                <button type="button" class="sequence-block-field-drag-handle" aria-label={window.i18n.gettext("Drag %s to reorder", this.block.childBlock.meta.label || window.i18n.gettext('item'))}>
-                                    { Icon('icon-grip-horizontal', { title: window.i18n.gettext("Drag %s to reorder", this.block.childBlock.meta.label || window.i18n.gettext('item')) }) }
+                                <button type="button" class="sequence-block-field-drag-handle" aria-label={window.i18n.gettext("Drag %s to reorder", child.meta.label || window.i18n.gettext('item'))}>
+                                    { Icon('icon-grip-horizontal', { title: window.i18n.gettext("Drag %s to reorder", child.meta.label || window.i18n.gettext('item')) }) }
                                 </button>
                             </div>
+
 
                             <div data-sequence-block-field-placeholder></div>
 
@@ -177,7 +202,6 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
                         </div>
                     )
                 })}
-
             </div>
         );
         
@@ -192,14 +216,17 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
         } else { // insert in middle
             this.itemWrapper.insertBefore(itemDom, this.itemWrapper.children[sortIndex]);
         }
-            
-        this.items.push(this.block.childBlock.render(
+
+        const boundValue: BoundSequenceBlockValue = this._renderBoundBlock(
+            child,
             itemDom.querySelector('[data-sequence-block-field-placeholder]'),
             itemId,
             itemKey,
-            value.data,
+            value,
             error,
-        ));
+        );
+
+        this.items.push(boundValue);
 
         if (animate) {
             animator.start();
@@ -209,7 +236,7 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
     }
 
     _onDeleteClick(itemName: string, ev: MouseEvent) {
-        ev.preventDefault();
+        ev?.preventDefault();
 
         const wrapperId = `#${itemName}--block`;
         const elem = this.itemWrapper.querySelector(wrapperId) as HTMLElement;
@@ -249,8 +276,8 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
         }
     }
 
-    _onAddClick(itemName: string | null, ev: MouseEvent) {
-        ev.preventDefault();
+    _addBlock(itemName: string | null, block: Block, ev: MouseEvent) {
+        ev?.preventDefault();
 
         if (this.block.meta.maxNum && this.activeItems >= this.block.meta.maxNum) {
             console.warn("Can't add item, maximum reached");
@@ -269,45 +296,22 @@ class BoundListBlock extends BoundBlock<ListBlock, Panel> {
             index = parseInt(elem.dataset.index || '0', 10) + 1;
         }
 
+
+        const newValue = this._defaultChildState(block);
         flash(this._createChild(
-            this.items.length, index, this.id, this.name, { id: '', order: index, data: null }, null,
+            this.items.length, index, this.id, this.name, newValue, null, true, block,
         ), {
             color: 'green',
             duration: 300,
             iters: 1,
             delay: 100,
         });
-
         this.totalInput.value = String(this.items.length);
         this.activeItems += 1;
     }
 }
 
-class ListBlock extends Block {
-    name: string;
-    childBlock: Block;
-    
-    constructor(name: string, childBlock: Block, meta: BlockMeta) {
-        super();
-        this.name = name;
-        this.childBlock = childBlock;
-        this.meta = meta;
-    }
-
-    render(root: HTMLElement, id: String, name: String, initialState: any, initialError: any): any {
-        return new BoundListBlock(
-            this,
-            root,
-            name,
-            id,
-            initialState,
-            initialError,
-        );
-    }
-}
-
 export {
-    ListBlockValue,
-    ListBlock,
-    BoundListBlock,
+    BoundSequenceBlockValue,
+    BoundSequenceBlock,
 };
