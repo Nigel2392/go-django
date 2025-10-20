@@ -1,5 +1,5 @@
 
-import { Block, BoundBlock } from '../base';
+import { BlockMeta, BoundBlock } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import Icon from '../../../../../admin/static_src/utils/icon';
 import { PanelComponent } from '../../../../../admin/static_src/utils/panels';
@@ -14,15 +14,18 @@ type BoundSequenceBlockValue = {
     [key: string]: any;
 };
 
-class BoundSequenceBlock extends BoundBlock<any, PanelElement> {
+interface Block {
+    meta: BlockMeta;
+} 
+
+class BoundSequenceBlock<BLOCK extends Block = Block> extends BoundBlock<BLOCK, PanelElement> {
     id: String;
     items: BoundSequenceBlockValue[];
     itemWrapper: HTMLElement;
     totalInput: HTMLInputElement;
-    activeItems: number;
-    extra: (id: string, name: string, suffix: string, value: any) => void;
+    activeItems: number = 0;
 
-    constructor(block: Block, placeholder: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
+    constructor(block: BLOCK, placeholder: HTMLElement, name: String, id: String, initialState: any, initialError: any) {
         initialState = (initialState || []);
         initialError = (initialError || {});
 
@@ -75,6 +78,7 @@ class BoundSequenceBlock extends BoundBlock<any, PanelElement> {
             </button>
         );
 
+        this.activeItems = initialState?.length || 0;
         this.totalInput = root.body.appendChild(
             <input type="hidden" data-sequence-block-total name={ `${name}--total` } value={ String(initialState?.length || 0) }/>
         ) as HTMLInputElement;

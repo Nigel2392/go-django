@@ -4,7 +4,7 @@ import { jsx } from '../../../../../admin/static_src/jsx';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { BoundSequenceBlock, BoundSequenceBlockValue } from './sequence-block';
 
-class BoundStreamBlock extends BoundSequenceBlock {
+class BoundStreamBlock extends BoundSequenceBlock<StreamBlock> {
     dropdown: TippyInstance;
 
     _getChildBlock(value: any): Block | undefined {
