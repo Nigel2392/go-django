@@ -46,6 +46,19 @@ type FieldBlockTest struct {
 //		return nil
 //	}
 
+func TestBaseBlock_ValueAtPath(t *testing.T) {
+	f := blocks.CharBlock() // BaseBlock receiver
+	bound := &blocks.FieldBlockValue{V: "hello"}
+
+	got, err := f.ValueAtPath(bound, []string{"ignored", "still-ignored"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if s, ok := got.(string); !ok || s != "hello" {
+		t.Fatalf("want %q, got %#v", "hello", got)
+	}
+}
+
 func TestFieldBlock(t *testing.T) {
 	var testValueToGo = func(b blocks.Block, value interface{}, expected interface{}, t *testing.T) {
 		var (

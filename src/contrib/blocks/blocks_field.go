@@ -44,7 +44,6 @@ func FormFieldBlock(field fields.Field, datatype any, opts ...func(*FieldBlock))
 func CharBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.DataType = string("")
-	base.Template = "blocks/templates/text.html"
 	base.SetField(fields.CharField())
 	return base
 }
@@ -52,7 +51,6 @@ func CharBlock(opts ...func(*FieldBlock)) *FieldBlock {
 func NumberBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.DataType = int(0)
-	base.Template = "blocks/templates/number.html"
 	base.SetField(fields.NumberField[int]())
 	return base
 }
@@ -60,7 +58,6 @@ func NumberBlock(opts ...func(*FieldBlock)) *FieldBlock {
 func TextBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.DataType = string("")
-	base.Template = "blocks/templates/text.html"
 	base.SetField(fields.CharField(
 		fields.Widget(widgets.NewTextarea(nil)),
 	))
@@ -70,7 +67,6 @@ func TextBlock(opts ...func(*FieldBlock)) *FieldBlock {
 func EmailBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.DataType = &mail.Address{}
-	base.Template = "blocks/templates/email.html"
 	base.SetField(fields.EmailField())
 	return base
 }
@@ -78,7 +74,6 @@ func EmailBlock(opts ...func(*FieldBlock)) *FieldBlock {
 func PasswordBlock(opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.DataType = string("")
-	base.Template = "blocks/templates/password.html"
 	base.SetField(fields.CharField(
 		fields.Widget(widgets.NewPasswordInput(nil)),
 	))
@@ -96,10 +91,9 @@ var timeFmts = []string{
 	time.RFC822Z,
 }
 
-func timeTimeBlock(template string, fmt widgets.DateWidgetType, opts ...func(*FieldBlock)) *FieldBlock {
+func timeTimeBlock(fmt widgets.DateWidgetType, opts ...func(*FieldBlock)) *FieldBlock {
 	var base = NewFieldBlock(opts...)
 	base.DataType = time.Time{}
-	base.Template = template
 	base.SetField(fields.DateField(fmt))
 	base.ValueFromDBFunc = func(b *BaseBlock, j json.RawMessage) (interface{}, error) {
 		if len(j) == 0 {
@@ -129,9 +123,9 @@ func timeTimeBlock(template string, fmt widgets.DateWidgetType, opts ...func(*Fi
 }
 
 func DateBlock(opts ...func(*FieldBlock)) *FieldBlock {
-	return timeTimeBlock("blocks/templates/date.html", widgets.DateWidgetTypeDate, opts...)
+	return timeTimeBlock(widgets.DateWidgetTypeDate, opts...)
 }
 
 func DateTimeBlock(opts ...func(*FieldBlock)) *FieldBlock {
-	return timeTimeBlock("blocks/templates/datetime.html", widgets.DateWidgetTypeDateTime, opts...)
+	return timeTimeBlock(widgets.DateWidgetTypeDateTime, opts...)
 }

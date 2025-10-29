@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-telepath/telepath"
@@ -21,7 +22,8 @@ import (
 )
 
 var (
-	_ Block = (*StreamBlock)(nil)
+	_ Block           = (*StreamBlock)(nil)
+	_ RenderableValue = (*StreamBlockValue)(nil)
 )
 
 type StreamBlockData struct {
@@ -457,4 +459,69 @@ func (l *StreamBlock) RenderForm(ctx context.Context, w io.Writer, id, name stri
 	}
 
 	return l.RenderTempl(id, name, val, string(bt), blockErrs, ctxData).Render(ctx, w)
+}
+
+func (l *StreamBlock) ValueAtPath(bound BoundBlockValue, parts []string) (interface{}, error) {
+	if len(parts) == 0 {
+		return bound.Data(), nil
+	}
+
+	var val, ok = bound.(*StreamBlockValue)
+	if !ok {
+		return nil, errors.TypeMismatch.Wrapf(
+			"[StreamBlock] value must be a *StreamBlockValue, got %T", bound.Data(),
+		)
+	}
+
+	index, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return nil, fmt.Errorf("[StreamBlock] invalid index: %s", parts[0])
+	}
+
+	if index < 0 || index >= len(val.V) {
+		return nil, fmt.Errorf("[StreamBlock] index out of range: %d", index)
+	}
+
+	child, ok := l.Children.Get(val.V[index].Type)
+	if !ok {
+		return nil, errors.FieldNotFound.Wrapf(
+			"[StreamBlock] unknown child block type: %s", val.V[index].Type,
+		)
+	}
+
+	res, err := child.ValueAtPath(
+		val.V[index].Data.(BoundBlockValue),
+		parts[1:],
+	)
+	if err != nil {
+		err = errors.Wrapf(
+			err, "[StreamBlock] index %d", index,
+		)
+	}
+	return res, err
+}
+
+func (b *StreamBlock) Render(ctx context.Context, w io.Writer, value interface{}, context ctx.Context) error {
+	var blockCtx = NewBlockContext(b, context)
+	if b.Template != "" {
+		blockCtx.Value = value
+		return tpl.FRender(w, blockCtx, b.Template)
+
+	}
+
+	var v, ok = value.(*StreamBlockValue)
+	if !ok {
+		return fmt.Errorf("value must be a *StreamBlockValue, got %T", value)
+	}
+	for _, item := range v.V {
+		var child, ok = b.Children.Get(item.Type)
+		if !ok {
+			continue // this can happen after a migration that removed a block type
+		}
+
+		if err := child.Render(ctx, w, item.Data, context); err != nil {
+			return err
+		}
+	}
+	return nil
 }

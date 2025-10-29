@@ -26,6 +26,10 @@ type Template interface {
 	Execute(w io.Writer, data any) error
 }
 
+type ContextBinder interface {
+	BindContext(r *TemplateRenderer) any
+}
+
 type Renderer interface {
 	Add(cfg Config)
 	Processors(funcs ...func(any))
@@ -76,6 +80,19 @@ func MergeConfig(dst, src *Config) *Config {
 	maps.Copy(fm, dst.Funcs)
 	maps.Copy(fm, src.Funcs)
 	dst.Funcs = fm
+
+	var reqFuncs []func(*http.Request) template.FuncMap
+	reqFuncs = append(reqFuncs, dst.RequestFuncs)
+	reqFuncs = append(reqFuncs, src.RequestFuncs)
+	dst.RequestFuncs = func(r *http.Request) template.FuncMap {
+		var fm = make(template.FuncMap)
+		for _, fn := range reqFuncs {
+			if fn != nil {
+				maps.Copy(fm, fn(r))
+			}
+		}
+		return fm
+	}
 
 	return dst
 }
@@ -427,6 +444,10 @@ overrideContext:
 		if err != nil {
 			return context, nil, errors.Wrap(err, "failed to override context")
 		}
+	}
+
+	if binder, ok := context.(ContextBinder); ok {
+		context = binder.BindContext(r)
 	}
 
 	return context, request, nil

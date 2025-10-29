@@ -1,10 +1,15 @@
 package blocks
 
 import (
+	"bytes"
+	"context"
 	"embed"
 	"fmt"
+	"html/template"
 	"io/fs"
+	"net/http"
 	"reflect"
+	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -12,6 +17,7 @@ import (
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/staticfiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
@@ -173,6 +179,57 @@ func NewAppConfig() *apps.AppConfig {
 
 		return nil
 	}
+
+	tpl.Funcs(template.FuncMap{
+		"render_block": func(rc ctx.Context, value RenderableValue) (template.HTML, error) {
+			rctx, ok := rc.(*ctx.HTTPRequestContext)
+			var c context.Context
+			if ok {
+				c = rctx.Request().Context()
+			} else {
+				c = context.Background()
+			}
+			var buf = new(bytes.Buffer)
+			var err = value.Render(c, buf, rc)
+			return template.HTML(buf.String()), err
+		},
+		"block_value": func(value any, path string) (any, error) {
+			var bound BoundBlockValue
+			switch v := value.(type) {
+			case BoundBlockValue:
+				bound = v
+			case *BlockContext:
+				bound, _ = v.Value.(BoundBlockValue)
+			}
+
+			if bound == nil {
+				panic("block_value: value is not a BoundBlockValue")
+			}
+
+			var parts = strings.Split(path, ".")
+			var v, err = bound.Block().ValueAtPath(bound, parts)
+			if err != nil {
+				return nil, err
+			}
+
+			if v, ok := v.(BoundBlockValue); ok {
+				return v.Data(), nil
+			}
+
+			return v, nil
+		},
+	})
+
+	tpl.RequestFuncs(func(r *http.Request) template.FuncMap {
+		return template.FuncMap{
+			"render_block": func(rc ctx.Context, value RenderableValue) (template.HTML, error) {
+				var c = r.Context()
+				var buf = new(bytes.Buffer)
+				var err = value.Render(c, buf, rc)
+				return template.HTML(buf.String()), err
+			},
+		}
+	})
 
 	AppConfig = cfg
 

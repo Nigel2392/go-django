@@ -7,6 +7,8 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 )
 
+// var _ tpl.ContextBinder = (*BlockContext)(nil)
+
 type BlockContext struct {
 	Request_  *http.Request
 	BlockDef  Block

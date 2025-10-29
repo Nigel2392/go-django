@@ -45,6 +45,14 @@ func WithDefault[T Block](def interface{}) OptFunc[T] {
 	}
 }
 
+func WithTemplate[T Block](template string) OptFunc[T] {
+	return func(t T) {
+		if !reflectSetter(t, "Template", template) {
+			panic(fmt.Errorf("Template is not a valid field of %T", t)) //lint:ignore ST1005 ignore this lint
+		}
+	}
+}
+
 func reflectSetter[T Block](t T, fieldName string, value interface{}) bool {
 	var field = reflect.ValueOf(t).Elem().FieldByName(fieldName)
 	if field.IsValid() {

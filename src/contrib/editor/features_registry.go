@@ -200,6 +200,10 @@ func (e *EditorJSBlockData) MustRender() template.HTML {
 	return html
 }
 
+func (e *EditorJSBlockData) HTML() template.HTML {
+	return e.MustRender()
+}
+
 func FeatureNames(f ...BaseFeature) []string {
 	var names = make([]string, 0, len(f))
 	for _, feature := range f {

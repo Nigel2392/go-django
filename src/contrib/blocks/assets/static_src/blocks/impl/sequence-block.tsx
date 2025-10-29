@@ -57,6 +57,8 @@ class BoundSequenceBlock<BLOCK extends Block = Block> extends BoundBlock<BLOCK, 
             errors: errorsList,
             attrs: {
                 "data-controller": "sortable",
+                "data-sortable-draggable-value": ".sequence-block-field",
+                // "data-sortable-handle-value": ".sequence-block-field-drag-handle",
             },
         });
 
@@ -181,11 +183,7 @@ class BoundSequenceBlock<BLOCK extends Block = Block> extends BoundBlock<BLOCK, 
                                 <button type="button" class="sequence-block-field-move-down-button" aria-label={window.i18n.gettext("Move %s down", child.meta.label || window.i18n.gettext('item'))} onClick={this.move.bind(this, itemKey, 'down')}>
                                     { Icon('icon-arrow-down', { title: window.i18n.gettext("Move %s down", child.meta.label || window.i18n.gettext('item')) }) }
                                 </button>
-                                <button type="button" class="sequence-block-field-drag-handle" aria-label={window.i18n.gettext("Drag %s to reorder", child.meta.label || window.i18n.gettext('item'))}>
-                                    { Icon('icon-grip-horizontal', { title: window.i18n.gettext("Drag %s to reorder", child.meta.label || window.i18n.gettext('item')) }) }
-                                </button>
                             </div>
-
 
                             <div data-sequence-block-field-placeholder></div>
 
@@ -249,7 +247,7 @@ class BoundSequenceBlock<BLOCK extends Block = Block> extends BoundBlock<BLOCK, 
             return;
         }
 
-        if (this.activeItems <= 1 && this.block.meta.required || (this.block.meta.minNum && this.activeItems <= this.block.meta.minNum)) {
+        if (this.activeItems <= 1 && this.block.meta.required || (this.block.meta.minNum && this.block.meta.minNum > 0 && this.activeItems <= this.block.meta.minNum)) {
             console.warn("Can't delete item, minimum reached");
             flash(elem);
             return;
@@ -283,8 +281,7 @@ class BoundSequenceBlock<BLOCK extends Block = Block> extends BoundBlock<BLOCK, 
     _addBlock(itemName: string | null, block: Block, ev: MouseEvent) {
         ev?.preventDefault();
 
-        if (this.block.meta.maxNum && this.activeItems >= this.block.meta.maxNum) {
-            console.warn("Can't add item, maximum reached");
+        if (this.block.meta.maxNum && this.block.meta.maxNum > 0 && this.activeItems >= this.block.meta.maxNum) {
             flash(this.itemWrapper);
             return;
         }

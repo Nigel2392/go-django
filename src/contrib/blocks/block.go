@@ -3,9 +3,12 @@ package blocks
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"html/template"
 	"io"
 	"net/url"
 	"reflect"
+	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -19,11 +22,6 @@ import (
 	"github.com/Nigel2392/go-telepath/telepath"
 )
 
-type BoundBlock[DATA any] struct {
-	Block Block
-	Data  DATA
-}
-
 type Block interface {
 	Name() string
 	SetName(name string)
@@ -34,6 +32,7 @@ type Block interface {
 	HelpText(ctx context.Context) string
 	Field() fields.Field
 	SetField(field fields.Field)
+	ValueAtPath(bound BoundBlockValue, parts []string) (interface{}, error)
 	ValueFromDB(value json.RawMessage) (interface{}, error)
 	RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error
 	Render(ctx context.Context, w io.Writer, value interface{}, context ctx.Context) error
@@ -76,7 +75,9 @@ func (b *BaseBlock) SetField(field fields.Field) {
 
 func (b *BaseBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 	if b.ValueFromDBFunc != nil {
-		return b.ValueFromDBFunc(b, value)
+		var v, err = b.ValueFromDBFunc(b, value)
+		return newFieldBlockValue(b, v), err
+		// return v, err
 	}
 
 	if b.DataType != nil {
@@ -89,10 +90,14 @@ func (b *BaseBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 		if err := json.Unmarshal(value, v.Interface()); err != nil {
 			return nil, err
 		}
+		var val any
 		if isPtr {
-			return v.Interface(), nil
+			val = v.Interface()
+		} else {
+			val = v.Elem().Interface()
 		}
-		return v.Elem().Interface(), nil
+		// return val, nil
+		return newFieldBlockValue(b, val), nil
 	}
 
 	if len(value) > 0 {
@@ -103,6 +108,10 @@ func (b *BaseBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 		return v, nil
 	}
 	return nil, nil
+}
+
+func (b *BaseBlock) ValueAtPath(bound BoundBlockValue, parts []string) (interface{}, error) {
+	return bound.Data(), nil
 }
 
 func (b *BaseBlock) SetLabel(label any) {
@@ -136,10 +145,37 @@ func (b *BaseBlock) RenderForm(ctx context.Context, w io.Writer, id, name string
 	)
 }
 
+var htmlEscaper = strings.NewReplacer(
+	`&`, "&amp;",
+	`'`, "&#39;", // "&#39;" is shorter than "&apos;" and apos was not in HTML until HTML5.
+	`<`, "&lt;",
+	`>`, "&gt;",
+	`"`, "&#34;", // "&#34;" is shorter than "&quot;".
+)
+
 func (b *BaseBlock) Render(ctx context.Context, w io.Writer, value interface{}, context ctx.Context) error {
 	var blockCtx = NewBlockContext(b, context)
-	blockCtx.Value = value
-	return tpl.FRender(w, blockCtx, b.Template)
+	if b.Template != "" {
+		blockCtx.Value = value
+		return tpl.FRender(w, blockCtx, b.Template)
+	}
+
+	v, ok := value.(*FieldBlockValue)
+	if !ok {
+		return fmt.Errorf("value must be a *FieldBlockValue")
+	}
+
+	switch val := v.V.(type) {
+	case RenderableValue:
+		return val.Render(ctx, w, context)
+	case interface{ HTML() template.HTML }:
+		_, err := io.WriteString(w, string(val.HTML()))
+		return err
+	default:
+		var str = fmt.Sprintf("%v", val)
+		_, err := io.WriteString(w, htmlEscaper.Replace(str))
+		return err
+	}
 }
 
 func (b *BaseBlock) Label(ctx context.Context) string {
@@ -187,6 +223,9 @@ func (b *BaseBlock) ValueToGo(value interface{}) (interface{}, error) {
 }
 
 func (b *BaseBlock) ValueToForm(value interface{}) interface{} {
+	if b, ok := value.(BoundBlockValue); ok {
+		value = b.Data()
+	}
 	return b.Field().ValueToForm(value)
 }
 

@@ -10,13 +10,14 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/google/uuid"
-	"github.com/pkg/errors"
 )
 
 var _ Block = (*ListBlock)(nil)
@@ -402,4 +403,57 @@ func (l *ListBlock) RenderForm(ctx context.Context, w io.Writer, id, name string
 	}
 
 	return l.RenderTempl(id, name, valueArr, string(bt), listBlockErrors, ctxData).Render(ctx, w)
+}
+
+func (l *ListBlock) ValueAtPath(bound BoundBlockValue, parts []string) (interface{}, error) {
+	if len(parts) == 0 {
+		return bound.Data(), nil
+	}
+
+	var val, ok = bound.(*ListBlockValue)
+	if !ok {
+		return nil, errors.TypeMismatch.Wrapf(
+			"[ListBlock] value must be a *ListBlockValue, got %T", bound.Data(),
+		)
+	}
+
+	index, err := strconv.Atoi(parts[0])
+	if err != nil {
+		return nil, fmt.Errorf("[ListBlock] invalid index: %s", parts[0])
+	}
+
+	if index < 0 || index >= len(val.V) {
+		return nil, fmt.Errorf("[ListBlock] index out of range: %d", index)
+	}
+
+	res, err := l.Child.ValueAtPath(
+		val.V[index].Data.(BoundBlockValue),
+		parts[1:],
+	)
+	if err != nil {
+		err = errors.Wrapf(
+			err, "[ListBlock] index %d", index,
+		)
+	}
+	return res, err
+}
+
+func (b *ListBlock) Render(ctx context.Context, w io.Writer, value interface{}, context ctx.Context) error {
+	var blockCtx = NewBlockContext(b, context)
+	if b.Template != "" {
+		blockCtx.Value = value
+		return tpl.FRender(w, blockCtx, b.Template)
+
+	}
+
+	var v, ok = value.(*ListBlockValue)
+	if !ok {
+		return fmt.Errorf("value must be a *ListBlockValue")
+	}
+	for _, item := range v.V {
+		if err := b.Child.Render(ctx, w, item.Data, context); err != nil {
+			return err
+		}
+	}
+	return nil
 }

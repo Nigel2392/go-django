@@ -7,8 +7,10 @@ import (
 	"io"
 	"net/url"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/elliotchance/orderedmap/v2"
@@ -261,4 +263,65 @@ func (m *StructBlock) RenderForm(ctx context.Context, w io.Writer, id, name stri
 	return m.RenderTempl(
 		id, name, valueMap, string(bt), errs, ctxData,
 	).Render(ctx, w)
+}
+
+func (l *StructBlock) ValueAtPath(bound BoundBlockValue, parts []string) (interface{}, error) {
+	if len(parts) == 0 {
+		return bound.Data(), nil
+	}
+
+	var val, ok = bound.(*StructBlockValue)
+	if !ok {
+		return nil, errors.TypeMismatch.Wrapf(
+			"value must be a *StructBlockValue, got %T", bound.Data(),
+		)
+	}
+
+	child, ok := l.Fields.Get(parts[0])
+	if !ok {
+		return nil, errors.FieldNotFound.Wrapf(
+			"no such field: %q", parts[0],
+		)
+	}
+
+	res, err := child.ValueAtPath(
+		val.V[parts[0]].(BoundBlockValue),
+		parts[1:],
+	)
+	if err != nil {
+		err = errors.Wrapf(
+			err, "[StructBlock] field %q", parts[0],
+		)
+	}
+	return res, err
+}
+
+func (b *StructBlock) Render(ctx context.Context, w io.Writer, value interface{}, context ctx.Context) error {
+	var blockCtx = NewBlockContext(b, context)
+	if b.Template != "" {
+		blockCtx.Value = value
+		return tpl.FRender(w, blockCtx, b.Template)
+
+	}
+
+	var v, ok = value.(*StructBlockValue)
+	if !ok {
+		return fmt.Errorf("value must be a *StructBlockValue, got %T", value)
+	}
+
+	w.Write([]byte("<dl>"))
+	for head := b.Fields.Front(); head != nil; head = head.Next() {
+		w.Write([]byte("<dt>"))
+		w.Write([]byte(head.Value.Label(ctx)))
+		w.Write([]byte("</dt><dd>"))
+
+		var val = v.V[head.Key]
+		if err := head.Value.Render(ctx, w, val, context); err != nil {
+			return err
+		}
+
+		w.Write([]byte("</dd>"))
+	}
+	w.Write([]byte("</dl>"))
+	return nil
 }

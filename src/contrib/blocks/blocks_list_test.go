@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/mail"
 	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -119,6 +120,84 @@ var (
 		},
 	}
 )
+
+func TestListBlock_ValueAtPath(t *testing.T) {
+	// Child is a simple struct
+	child := blocks.NewStructBlock()
+	child.AddField("name", blocks.CharBlock())
+	child.AddField("age", blocks.NumberBlock())
+
+	lb := blocks.NewListBlock(child)
+	lb.SetName("people")
+
+	// Build Bound struct values for list entries.
+	p0, err := child.ValueFromDB(jraw(t, map[string]any{"name": "John", "age": 30}))
+	if err != nil {
+		t.Fatalf("child 0 from DB: %v", err)
+	}
+	p1, err := child.ValueFromDB(jraw(t, map[string]any{"name": "Jane", "age": 25}))
+	if err != nil {
+		t.Fatalf("child 1 from DB: %v", err)
+	}
+
+	bound := &blocks.ListBlockValue{
+		V: []*blocks.ListBlockData{
+			{Data: p0},
+			{Data: p1},
+		},
+	}
+
+	t.Run("OK_IndexOnly", func(t *testing.T) {
+		got, err := lb.ValueAtPath(bound, []string{"0"})
+		if err != nil {
+			t.Fatalf("unexpected: %v", err)
+		}
+		if _, ok := got.(map[string]any); !ok {
+			t.Fatalf("want map[string]any, got %T", got)
+		}
+	})
+
+	t.Run("OK_IndexAndDeepPath", func(t *testing.T) {
+		got, err := lb.ValueAtPath(bound, []string{"1", "name"})
+		if err != nil {
+			t.Fatalf("unexpected: %v", err)
+		}
+		if got.(string) != "Jane" {
+			t.Fatalf("want Jane, got %#v", got)
+		}
+	})
+
+	t.Run("Err_TypeMismatch", func(t *testing.T) {
+		wrong := &blocks.FieldBlockValue{V: "not-a-list"}
+		_, err := lb.ValueAtPath(wrong, []string{"0"})
+		if err == nil {
+			t.Fatalf("expected type mismatch error")
+		}
+		if !strings.Contains(err.Error(), "value must be a *ListBlockValue") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Err_InvalidIndex", func(t *testing.T) {
+		_, err := lb.ValueAtPath(bound, []string{"x"})
+		if err == nil {
+			t.Fatalf("expected invalid index error")
+		}
+		if !strings.Contains(err.Error(), "invalid index") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Err_IndexOutOfRange", func(t *testing.T) {
+		_, err := lb.ValueAtPath(bound, []string{"5"})
+		if err == nil {
+			t.Fatalf("expected out of range error")
+		}
+		if !strings.Contains(err.Error(), "index out of range") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
 
 func TestListBlock(t *testing.T) {
 	var b = NewListBlock()
@@ -267,16 +346,16 @@ func TestListBlock_ValueFromDB(t *testing.T) {
 
 		// Typed data checks (spot-check a few types)
 		m0 := lv.V[0].Data.(*blocks.StructBlockValue).V
-		if m0["age"] != 30 || m0["name"] != "John Doe" {
+		if m0["age"].(blocks.BoundBlockValue).Data() != 30 || m0["name"].(blocks.BoundBlockValue).Data() != "John Doe" {
 			t.Fatalf("item0 data mismatch: %#v", m0)
 		}
-		if _, ok := m0["email"].(*mail.Address); !ok {
+		if _, ok := m0["email"].(blocks.BoundBlockValue).Data().(*mail.Address); !ok {
 			t.Fatalf("item0 email not parsed: %#v", m0["email"])
 		}
-		if _, ok := m0["date"].(time.Time); !ok {
+		if _, ok := m0["date"].(blocks.BoundBlockValue).Data().(time.Time); !ok {
 			t.Fatalf("item0 date not parsed: %#v", m0["date"])
 		}
-		if _, ok := m0["datetime"].(time.Time); !ok {
+		if _, ok := m0["datetime"].(blocks.BoundBlockValue).Data().(time.Time); !ok {
 			t.Fatalf("item0 datetime not parsed: %#v", m0["datetime"])
 		}
 	})
@@ -312,7 +391,7 @@ func TestListBlock_ValueFromDB(t *testing.T) {
 
 		// Partial success should include only valid typed fields
 		m := lv.V[0].Data.(*blocks.StructBlockValue).V
-		if m["name"] != "Bad User" || m["age"] != 10 {
+		if m["name"].(blocks.BoundBlockValue).Data() != "Bad User" || m["age"].(blocks.BoundBlockValue).Data() != 10 {
 			t.Fatalf("partial data mismatch: %#v", m)
 		}
 		if _, ok := m["email"]; ok {

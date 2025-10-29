@@ -7,7 +7,6 @@
 {{ define "content" }}
 
     <div class="blog-wrapper">
-        
 
         <h1>{{ .Data.blog_page.Page.Title }}</h1>
 
@@ -21,8 +20,14 @@
         <p>By {{ .Data.blog_page.User.Email | toString }}</p>
         {{ end }}
 
-        {{ .Page.Editor.MustRender }} 
+        <!-- {{ .Page.Editor.MustRender }}  -->
+
+        {{ render_block . .Data.blog_page.Content }}
+
+        {{ $ctx := . }}
+        {{ range $value := .Data.blog_page.Content.V }}
+            {{ render_block $ctx $value.Data }}
+        {{ end }}
 
     </div>
-
 {{ end }}

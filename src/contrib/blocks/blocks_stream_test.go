@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/mail"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -44,6 +45,88 @@ func NewStreamPersonBlock() *blocks.StreamBlock {
 	sb.SetName("test_stream")
 	sb.AddField("person", NewSimpleStructBlock())
 	return sb
+}
+
+func TestStreamBlock_ValueAtPath(t *testing.T) {
+	// Child: person struct
+	person := blocks.NewStructBlock()
+	person.AddField("name", blocks.CharBlock())
+	person.AddField("age", blocks.NumberBlock())
+
+	// Stream with two children: title (char) and person (struct)
+	sb := blocks.NewStreamBlock()
+	sb.SetName("s")
+	sb.AddField("title", blocks.CharBlock())
+	sb.AddField("person", person)
+
+	// Build Bound values using ValueFromDB so Data fields are BoundBlockValue.
+	titleBound, err := blocks.CharBlock().ValueFromDB(jraw(t, "Hello"))
+	if err != nil {
+		t.Fatalf("title from DB: %v", err)
+	}
+	personBound, err := person.ValueFromDB(jraw(t, map[string]any{"name": "Grace", "age": 99}))
+	if err != nil {
+		t.Fatalf("person from DB: %v", err)
+	}
+
+	bound := &blocks.StreamBlockValue{
+		V: []*blocks.StreamBlockData{
+			{Type: "title", Data: titleBound, Order: 0},
+			{Type: "person", Data: personBound, Order: 1},
+		},
+	}
+
+	t.Run("OK_IndexIntoChild", func(t *testing.T) {
+		got, err := sb.ValueAtPath(bound, []string{"0"})
+		if err != nil {
+			t.Fatalf("unexpected: %v", err)
+		}
+		// BaseBlock returns underlying data; for FieldBlockValue("Hello") it should surface "Hello".
+		if got.(string) != "Hello" {
+			t.Fatalf("want Hello, got %#v", got)
+		}
+	})
+
+	t.Run("OK_IndexAndDeepPath", func(t *testing.T) {
+		got, err := sb.ValueAtPath(bound, []string{"1", "name"})
+		if err != nil {
+			t.Fatalf("unexpected: %v", err)
+		}
+		if got.(string) != "Grace" {
+			t.Fatalf("want Grace, got %#v", got)
+		}
+	})
+
+	t.Run("Err_TypeMismatch", func(t *testing.T) {
+		wrong := &blocks.FieldBlockValue{V: "not-a-stream"}
+		_, err := sb.ValueAtPath(wrong, []string{"0"})
+		if err == nil {
+			t.Fatalf("expected type mismatch error")
+		}
+		if !strings.Contains(err.Error(), "value must be a *StreamBlockValue") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Err_InvalidIndex", func(t *testing.T) {
+		_, err := sb.ValueAtPath(bound, []string{"NaN"})
+		if err == nil {
+			t.Fatalf("expected invalid index error")
+		}
+		if !strings.Contains(err.Error(), "invalid index") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Err_IndexOutOfRange", func(t *testing.T) {
+		_, err := sb.ValueAtPath(bound, []string{"2"})
+		if err == nil {
+			t.Fatalf("expected out of range error")
+		}
+		if !strings.Contains(err.Error(), "index out of range") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
 }
 
 func TestStreamBlock(t *testing.T) {

@@ -9,26 +9,36 @@ class SortableController extends window.StimulusController {
     declare itemTargets: HTMLElement[]
     declare replaceValue: string
     declare handleValue: string
+    declare hasHandleValue: boolean
     declare draggableValue: string
+    declare hasDraggableValue: boolean
     static targets = ["item", "items"]
     static values = {
         replace: String,
-        handle: { type: String, default: ".sequence-block-field-drag-handle" },
-        draggable: { type: String, default: ".sequence-block-field" },
+        handle: { type: String },
+        draggable: { type: String },
     }
 
     private get sortableConfig() {
-        return {
+        var opts = {
             multiDrag: true,
             selectedClass: 'sort-selected',
-            handle: this.handleValue,
             animation: 150,
             swapThreshold: 1,
-            draggable: this.draggableValue,
             onEnd: (event: Sortable.SortableEvent) => {
                 this.reOrderItems();
             },
-        };
+        }
+        
+        if (this.hasDraggableValue) {
+            Object.assign(opts, { draggable: this.draggableValue });
+        }
+
+        if (this.hasHandleValue) {
+            Object.assign(opts, { handle: this.handleValue });
+        }
+
+        return opts;
     }
 
     connect() {
@@ -36,6 +46,12 @@ class SortableController extends window.StimulusController {
             console.error("SortableController: No items target found");
             return;
         }
+
+        if (!this.hasHandleValue) {
+            console.warn("SortableController: No handle value set, not initializing sortable");
+            return;
+        }
+
         this.sortable = Sortable.create(
             this.itemsTarget, this.sortableConfig,
         );
@@ -45,10 +61,18 @@ class SortableController extends window.StimulusController {
         if (elem.dataset.sortable === "connected") {
             return;
         }
+
         if (this.sortable) {
             this.sortable.destroy();
         }
+
         elem.dataset.sortable = "connected";
+        
+        if (!this.hasHandleValue) {
+            console.debug("SortableController: No handle value set, not initializing sortable on connected target");
+            return;
+        }
+        
         this.sortable = Sortable.create(
             elem, this.sortableConfig,
         )
@@ -72,6 +96,7 @@ class SortableController extends window.StimulusController {
         } else {
             moved = false;
         }
+
         if (moved) {
             this.reOrderItems();
         }

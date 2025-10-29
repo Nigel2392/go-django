@@ -9,8 +9,6 @@ import (
 	"github.com/Nigel2392/go-telepath/telepath"
 )
 
-type widgetValueContextKey struct{}
-
 func RenderTelepathAdapterHTML(ctx context.Context, obj widgets.Widget) []interface{} {
 	var (
 		sb   strings.Builder

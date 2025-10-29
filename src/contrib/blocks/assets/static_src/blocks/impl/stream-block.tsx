@@ -1,5 +1,5 @@
 
-import { Block, BlockMeta, BoundBlock } from '../base';
+import { Block, BlockMeta } from '../base';
 import { jsx } from '../../../../../admin/static_src/jsx';
 import tippy, { Instance as TippyInstance } from 'tippy.js';
 import { BoundSequenceBlock, BoundSequenceBlockValue } from './sequence-block';

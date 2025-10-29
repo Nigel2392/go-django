@@ -261,6 +261,7 @@ func (n *BlogPage) SearchableFields() []search.SearchField {
 func (b *BlogPage) GetContentBlock() *blocks.StreamBlock {
 	return blocks.NewStreamBlock(
 		blocks.WithBlockField[*blocks.StreamBlock]("heading", blocks.NewStructBlock(
+			blocks.WithTemplate[*blocks.StructBlock]("blog/blocks/heading.tmpl"),
 			blocks.WithLabel[*blocks.StructBlock](trans.S("Heading")),
 			blocks.WithBlockField[*blocks.StructBlock]("title", blocks.CharBlock(
 				blocks.WithLabel[*blocks.FieldBlock](trans.S("Title")),

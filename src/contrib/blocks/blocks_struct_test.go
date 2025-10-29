@@ -5,6 +5,7 @@ import (
 	"maps"
 	"net/mail"
 	"net/url"
+	"strings"
 	"testing"
 	"time"
 
@@ -62,6 +63,78 @@ var structBlockDataGo = &blocks.StructBlockValue{
 	},
 }
 
+func TestStructBlock_ValueAtPath(t *testing.T) {
+	sb := blocks.NewStructBlock()
+	sb.SetName("person")
+	sb.AddField("name", blocks.CharBlock())
+	sb.AddField("age", blocks.NumberBlock())
+
+	// Build a *StructBlockValue with Bound children by using ValueFromDB.
+	raw := map[string]any{
+		"name": "Ada",
+		"age":  37,
+	}
+	boundAny, err := sb.ValueFromDB(jraw(t, raw))
+	if err != nil {
+		t.Fatalf("ValueFromDB: %v", err)
+	}
+	bound := boundAny.(blocks.BoundBlockValue)
+
+	t.Run("OK_SingleLevel", func(t *testing.T) {
+		got, err := sb.ValueAtPath(bound, []string{"name"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.(string) != "Ada" {
+			t.Fatalf("want Ada, got %#v", got)
+		}
+	})
+
+	t.Run("OK_NestedStruct", func(t *testing.T) {
+		outer := blocks.NewStructBlock()
+		outer.SetName("outer")
+		outer.AddField("person", sb)
+
+		rawNested := map[string]any{
+			"person": raw, // reuse above
+		}
+		bAny, err := outer.ValueFromDB(jraw(t, rawNested))
+		if err != nil {
+			t.Fatalf("ValueFromDB nested: %v", err)
+		}
+
+		got, err := outer.ValueAtPath(bAny.(blocks.BoundBlockValue), []string{"person", "age"})
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if got.(int) != 37 {
+			t.Fatalf("want 37, got %#v", got)
+		}
+	})
+
+	t.Run("Err_TypeMismatch", func(t *testing.T) {
+		// Pass a FieldBlockValue as the "bound" to StructBlock.ValueAtPath.
+		wrong := &blocks.FieldBlockValue{V: "not-a-struct"}
+		_, err := sb.ValueAtPath(wrong, []string{"name"})
+		if err == nil {
+			t.Fatalf("expected type mismatch error")
+		}
+		if !strings.Contains(err.Error(), "TypeMismatch") && !strings.Contains(err.Error(), "value must be a *StructBlockValue") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+
+	t.Run("Err_FieldNotFound", func(t *testing.T) {
+		_, err := sb.ValueAtPath(bound, []string{"nope"})
+		if err == nil {
+			t.Fatalf("expected field not found error")
+		}
+		if !strings.Contains(err.Error(), "no such field") {
+			t.Fatalf("unexpected error: %v", err)
+		}
+	})
+}
+
 func TestStructBlock_ValueFromDB(t *testing.T) {
 	sb := NewSimpleStructBlock()
 	sb.SetName("person")
@@ -99,15 +172,15 @@ func TestStructBlock_ValueFromDB(t *testing.T) {
 		}
 
 		want := map[string]interface{}{
-			"name":     "John Doe",
-			"age":      30,
-			"email":    mustAddr(t, "john@localhost"),
-			"password": "hunter2",
-			"date":     mustDate(t, "2006-01-02", "2021-01-01"),
-			"datetime": mustDate(t, "2006-01-02T15:04:05", "2021-01-01T00:00:00"),
+			"name":     &blocks.FieldBlockValue{V: "John Doe"},
+			"age":      &blocks.FieldBlockValue{V: 30},
+			"email":    &blocks.FieldBlockValue{V: mustAddr(t, "john@localhost")},
+			"password": &blocks.FieldBlockValue{V: "hunter2"},
+			"date":     &blocks.FieldBlockValue{V: mustDate(t, "2006-01-02", "2021-01-01")},
+			"datetime": &blocks.FieldBlockValue{V: mustDate(t, "2006-01-02T15:04:05", "2021-01-01T00:00:00")},
 		}
 		if !deepEqual(m.V, want) {
-			t.Fatalf("mismatch\nwant=%#v\ngot =%#v", want, m)
+			t.Fatalf("mismatch\nwant = %#v\ngot = %#v", want, m)
 		}
 	})
 
@@ -131,7 +204,7 @@ func TestStructBlock_ValueFromDB(t *testing.T) {
 		}
 
 		// Valid parts should still be typed
-		if m.V["name"] != "Jane Doe" || m.V["age"] != 25 || m.V["password"] != "pw" {
+		if m.V["name"].(blocks.BoundBlockValue).Data() != "Jane Doe" || m.V["age"].(blocks.BoundBlockValue).Data() != 25 || m.V["password"].(blocks.BoundBlockValue).Data() != "pw" {
 			t.Fatalf("partial data mismatch: %#v", m)
 		}
 		if _, ok := m.V["email"]; ok {
@@ -140,7 +213,7 @@ func TestStructBlock_ValueFromDB(t *testing.T) {
 		if _, ok := m.V["date"]; ok {
 			t.Fatalf("date should not be present on partial success")
 		}
-		if _, ok := m.V["datetime"].(time.Time); !ok {
+		if _, ok := m.V["datetime"].(blocks.BoundBlockValue).Data().(time.Time); !ok {
 			t.Fatalf("datetime should be parsed to time.Time: %#v", m.V["datetime"])
 		}
 

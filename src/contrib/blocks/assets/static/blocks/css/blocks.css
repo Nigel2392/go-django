@@ -1,10 +1,6 @@
 .sequence-block {
     position: relative;
 }
-.sort-selected {
-    box-shadow: 0 0 0 2px var(--secondary-bg-color);
-    border-radius: 4px;
-}
 .sequence-block .sequence-block-add-button {
     background: none;
     border: none;
