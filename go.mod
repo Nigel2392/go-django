@@ -1,9 +1,9 @@
 module github.com/Nigel2392/go-django
 
-go 1.24.2
+go 1.24.5
 
 require (
-	github.com/Nigel2392/mux v1.5.3
+	github.com/Nigel2392/mux v1.6.1-0.20251030144343-070717da1ff8
 	github.com/elliotchance/orderedmap/v2 v2.7.0
 	github.com/justinas/nosurf v1.2.0
 	github.com/pkg/errors v0.9.1

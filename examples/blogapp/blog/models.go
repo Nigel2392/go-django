@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/contrib/admin/chooser"
@@ -18,6 +19,7 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/search"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
+	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -227,7 +229,13 @@ func (b *BlogPage) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"blog/page.tmpl",
 	)
 	if err != nil {
-		http.Error(w, err.Error(), 500)
+		// http.Error(w, err.Error(), 500)
+		except.Fail(
+			http.StatusInternalServerError,
+			errors.Wrapf(
+				err, "Error during rendering of %q", b.Page.Title,
+			),
+		)
 	}
 }
 

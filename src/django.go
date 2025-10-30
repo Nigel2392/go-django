@@ -880,6 +880,14 @@ func (a *Application) Initialize() error {
 		)
 	}
 
+	a.Mux.Use(middleware.BufferMiddleware(func(w http.ResponseWriter, r *http.Request) http.ResponseWriter {
+		if IsStaticRouteRequest(r) {
+			return w
+		}
+
+		return middleware.NewBufferedWriter(w)
+	}))
+
 	trans.TRANSLATIONS_DEFAULT_LOCALE = ConfigGet(
 		a.Settings,
 		APPVAR_TRANSLATIONS_DEFAULT_LOCALE,
