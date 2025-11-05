@@ -13,9 +13,8 @@ type HttpSignal struct {
 	H mux.Handler
 }
 
-var handlerSignalPool = signals.NewPool[*HttpSignal]()
-
 var (
+	handlerSignalPool     = signals.NewPool[*HttpSignal]()
 	SIGNAL_BEFORE_REQUEST = handlerSignalPool.Get("http.before_request") // -> Send(HttpSignal)
 	SIGNAL_AFTER_REQUEST  = handlerSignalPool.Get("http.after_request")  // -> Send(HttpSignal)
 )

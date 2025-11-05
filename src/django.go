@@ -535,6 +535,20 @@ func (a *Application) Initialize() error {
 		ContextDataStoreMiddleware,
 	)
 
+	if ConfigGet(a.Settings, APPVAR_RECOVERER, true) {
+		a.Mux.Use(
+			middleware.Recoverer(a.ServerError),
+		)
+	}
+
+	a.Mux.Use(middleware.BufferMiddleware(func(w http.ResponseWriter, r *http.Request) http.ResponseWriter {
+		if IsStaticRouteRequest(r) {
+			return w
+		}
+
+		return middleware.NewBufferedWriter(w)
+	}))
+
 	var staticUrl = a.staticURL()
 	if staticUrl != "" {
 		a.Log.Debugf(
@@ -874,20 +888,6 @@ func (a *Application) Initialize() error {
 		}
 	}
 
-	if ConfigGet(a.Settings, APPVAR_RECOVERER, true) {
-		a.Mux.Use(
-			middleware.Recoverer(a.ServerError),
-		)
-	}
-
-	a.Mux.Use(middleware.BufferMiddleware(func(w http.ResponseWriter, r *http.Request) http.ResponseWriter {
-		if IsStaticRouteRequest(r) {
-			return w
-		}
-
-		return middleware.NewBufferedWriter(w)
-	}))
-
 	trans.TRANSLATIONS_DEFAULT_LOCALE = ConfigGet(
 		a.Settings,
 		APPVAR_TRANSLATIONS_DEFAULT_LOCALE,
@@ -910,6 +910,27 @@ func (a *Application) Quit() error {
 	return nil
 }
 
+func (a *Application) middlewareBuiltins() []func(http.Handler) http.Handler {
+	var mw = make([]func(http.Handler) http.Handler, 0)
+
+	mw = append(
+		mw, RequestSignalMiddleware,
+	)
+
+	if !ConfigGet(a.Settings, APPVAR_DISABLE_NOSURF, false) {
+		mw = append(mw, func(h http.Handler) http.Handler {
+			var hnd = nosurf.New(h)
+			var hooks = goldcrest.Get[NosurfSetupHook](HOOK_SETUP_NOSURF)
+			for _, hook := range hooks {
+				hook(a, hnd)
+			}
+			return hnd
+		})
+	}
+
+	return mw
+}
+
 func (a *Application) Serve() error {
 	if !a.initialized.Load() {
 		if err := a.Initialize(); err != nil {
@@ -917,18 +938,9 @@ func (a *Application) Serve() error {
 		}
 	}
 
-	var disableNosurf = ConfigGet(
-		a.Settings, APPVAR_DISABLE_NOSURF, false,
-	)
-
-	var httpHandler http.Handler = RequestSignalMiddleware(a.Mux)
-	if !disableNosurf {
-		var handler = nosurf.New(a.Mux)
-		var hooks = goldcrest.Get[NosurfSetupHook](HOOK_SETUP_NOSURF)
-		for _, hook := range hooks {
-			hook(a, handler)
-		}
-		httpHandler = handler
+	var httpHandler http.Handler = a.Mux
+	for _, mw := range a.middlewareBuiltins() {
+		httpHandler = mw(httpHandler)
 	}
 
 	//	var originalHandler = httpHandler

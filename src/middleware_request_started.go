@@ -9,12 +9,12 @@ import (
 	"github.com/Nigel2392/mux"
 )
 
-// CancelServeError is an error that can be returned from a signal to indicate that the serve should be cancelled.
+// ErrServeCanceled is an error that can be returned from a signal to indicate that the serve should be cancelled.
 //
 // It can be used to hijack the response and return a custom response.
 //
 // This signal will be sent before most middleware has been executed.
-const CancelServeError errs.Error = "Serve cancelled, signal hijacked response"
+const ErrServeCanceled errs.Error = "Serve cancelled, signal hijacked response"
 
 // RequestSignalMiddleware is a middleware that sends signals before and after a request is served.
 //
@@ -28,7 +28,7 @@ func RequestSignalMiddleware(next mux.Handler) mux.Handler {
 		var signal = &core.HttpSignal{W: w, R: r, H: next}
 
 		if err := core.SIGNAL_BEFORE_REQUEST.Send(signal); err != nil {
-			if errors.Is(err, CancelServeError) {
+			if errors.Is(err, ErrServeCanceled) {
 				return
 			}
 		}

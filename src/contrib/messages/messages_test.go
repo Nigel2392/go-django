@@ -6,8 +6,10 @@ package messages_test
 import (
 	"bytes"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/http/cookiejar"
+	"slices"
 	"strconv"
 	"testing"
 
@@ -141,10 +143,11 @@ func TestAddMessages(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Error making request: %v", err)
 			}
+
 			var body = new(bytes.Buffer)
 			if response.Body != nil {
-				defer response.Body.Close()
 				body.ReadFrom(response.Body)
+				response.Body.Close()
 			}
 
 			if response.StatusCode != 200 {
@@ -153,6 +156,22 @@ func TestAddMessages(t *testing.T) {
 
 			if body.String() != "Message added" {
 				t.Fatalf("Expected body to be 'Message added', got %s", body.String())
+			}
+
+			if name == "Cookie" {
+				var cookie = response.Cookies()
+				var cm = make(map[string]*http.Cookie)
+				for _, c := range cookie {
+					cm[c.Name] = c
+				}
+
+				if c, ok := cm["messages.cookieBackendKey"]; !ok {
+					t.Fatal("Expected cookie 'messages.cookieBackendKey' to be set, got keys:", slices.Collect(maps.Keys(cm)))
+				} else {
+					if c.Value == "" {
+						t.Fatal("Expected cookie 'messages.cookieBackendKey' to have a value")
+					}
+				}
 			}
 
 			response, err = client.Get(server.URL + "/test")
