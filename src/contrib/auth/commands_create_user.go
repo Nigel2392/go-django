@@ -33,13 +33,13 @@ var command_create_user = &command.Cmd[createUserStorage]{
 		)
 
 		for !isValid {
-			if email != "" {
+			if email == "" {
 				if email, err = m.Input("Enter email: "); err != nil {
 					continue
 				}
 			}
 
-			if username != "" {
+			if username == "" {
 				if username, err = m.Input("Enter username: "); err != nil {
 					continue
 				}
