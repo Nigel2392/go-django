@@ -6,6 +6,7 @@ import (
 	"net/mail"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/logger"
 )
@@ -83,6 +84,6 @@ var command_create_user = &command.Cmd[createUserStorage]{
 		u.IsActive = !stored.inactive
 
 		var ctx = context.Background()
-		return u.Save(ctx)
+		return models.Setup(u).Save(ctx)
 	},
 }
