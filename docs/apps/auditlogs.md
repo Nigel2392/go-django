@@ -87,3 +87,11 @@ logEntryId, err := auditlogs.Log(
     },
 )
 ```
+
+An important fact to note about the above code is that the user performing the action is taken from the context.
+
+This makes it easy to log actions using just the request's context (`request.Context()`) in web handlers, but
+also means it requires an extra step to set the user in the context when logging outside of web handlers.
+
+The auditlogs also uses the `queries` package to log the actions to the database, meaning any transactions present in the context will be honored.
+
