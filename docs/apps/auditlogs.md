@@ -68,11 +68,12 @@ For example, to log a message of type `example.delete_model`, you would do somet
 ```golang
 import (
     "context"
+    "github.com/Nigel2392/mux/middleware/authentication"
     "github.com/Nigel2392/go-django/src/core/logger"
     auditlogs "github.com/Nigel2392/go-django/src/contrib/reports/audit_logs"
 )
 
-var contextWithUser = authenitcation.ContedxtWithUser(
+var contextWithUser = authentication.ContextWithUser(
     context.Background(),
     myUserInstance,
 )
