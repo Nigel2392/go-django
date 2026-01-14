@@ -82,6 +82,30 @@ django.APPVAR_DATABASE
 // Continue after commands have parsed and been executed
 // If no command was passed, the application will continue to serve
 django.APPVAR_CONTINUE_AFTER_COMMANDS
+
+// Log all routes that are accessed, or disable logging for all routes.
+APPVAR_ROUTE_LOGGING_ENABLED = "ROUTE_LOGGING_ENABLED" // bool
+
+// Log static routes that are accessed, or disable logging for only static routes
+APPVAR_STATIC_ROUTE_LOGGING_ENABLED = "STATIC_ROUTE_LOGGING_ENABLED" // bool
+
+// Wether the webserver is behind a proxy
+// This is so the application knows to use different headers to, for example
+// get the remote address of the client
+APPVAR_REQUESTS_PROXIED = "REQUESTS_PROXIED" // bool
+
+// The session manager for the application
+// 
+// This can be used to overwrite the session manager used.
+APPVAR_SESSION_MANAGER = "SESSION_MANAGER" // *scs.SessionManager
+
+// Disable nosurf middleware for the application
+// If this is true, the nosurf protection middleware will not be included.
+APPVAR_DISABLE_NOSURF = "DISABLE_NOSURF" // bool
+
+// APPVAR_TRANSLATIONS_DEFAULT_LOCALE
+// The defauit language of your application.
+APPVAR_TRANSLATIONS_DEFAULT_LOCALE = "TRANSLATIONS_DEFAULT_LOCALE" // string
 ```
 
 ### Retrieving a value from settings
@@ -125,7 +149,7 @@ Example of a simple app's creation:
 
 ```go
 // Open a new database connection
-var db, err = drivers.Open("sqlite3", "./.private/db.sqlite3")
+var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/db.sqlite3")
 if err != nil {
     panic(err)
 }
@@ -162,6 +186,8 @@ This will set up a few things, (in order):
 
 * Default middleware
 
+* Setup recoverer middleware if enabled
+
 * Static routes
 
 * Custom registered apps initialization (Loop 1)
@@ -186,8 +212,6 @@ This will set up a few things, (in order):
 
   * This is the place to do any final setup of the application
 
-* Setup recoverer middleware if enabled
-
 * Check if any command was passed to the application and execute accordingly
 
 ### Serving the app
@@ -199,6 +223,8 @@ This is done by calling `err := app.Serve()`.
 This will start the server and listen for incoming requests.
 
 We look for the following settings when initializing to serve:
+
+(All identifiers are available as global variables, i.e. "HOST" -> `django.APPVAR_HOST`)
 
 * "HOST" - The host to bind the server to
 * "PORT" - The port to bind the server to
