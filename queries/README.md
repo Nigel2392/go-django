@@ -22,12 +22,12 @@ Databases must always be opened using `drivers.Open(ctx, driverName, dsn)`.
 * [Interfaces](./docs/interfaces.md)
 * [Querying Objects](./docs/querying.md)
   * [QuerySet](./docs/queryset/queryset.md)
-  * [Writing Queries](./docs/queryset/writing_queries.md) (WIP)
-* [Relations & Joins](./docs/relations/relations.md) (WIP)
+  * [Writing Queries](./docs/queryset/writing_queries.md)
+* [Relations & Joins](./docs/relations/relations.md)
 * [Expressions](./docs/expressions/expressions.md)
   * [Lookups](./docs/expressions/lookups.md)
   * [Case Expressions](./docs/expressions/cases.md)
-* [Advanced: Virtual Fields](./docs/virtual_fields.md) (WIP)
+* [Advanced: Virtual Fields](./docs/virtual_fields.md)
 
 ---
 
@@ -55,9 +55,9 @@ Continue with [Getting Started](./docs/getting_started.md)…
 
 We try to support as many features as possible, but some stuff is either not supported, implemented or tested yet.
 
-## TODO:
+### TODO:
 
-* Implement eficient prefetching of multiple- relations
+* Implement efficient prefetching of multiple- relations
 
 ### Tested Databases
 

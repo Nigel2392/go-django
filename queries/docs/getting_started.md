@@ -26,11 +26,11 @@ The following imports will be used throughout the examples:
 
 ```go
 import (
-    "github.com/Nigel2392/go-django/queries/queries"
-    "github.com/Nigel2392/go-django/queries/queries/expr"
-    "github.com/Nigel2392/go-django/queries/queries/fields"
-    "github.com/Nigel2392/go-django/queries/queries/models"
-    "github.com/Nigel2392/go-django/queries/queries/qerr"
+    "github.com/Nigel2392/go-django/queries/src"
+    "github.com/Nigel2392/go-django/queries/src/expr"
+    "github.com/Nigel2392/go-django/queries/src/fields"
+    "github.com/Nigel2392/go-django/queries/src/models"
+    "github.com/Nigel2392/go-django/queries/src/drivers/errors"
     "github.com/Nigel2392/go-django/src/core/attrs"
 )
 ```
@@ -46,7 +46,6 @@ For this example, we will use SQLite, but you can use any database that is suppo
 To setup the database, we need to create a `sql.DB` object, and register it in Go-Django's settings.
 
 ```go
-
 func main() {
     var db, err = drivers.Open("sqlite3", "./db.sqlite3")
     if err != nil {
@@ -55,7 +54,7 @@ func main() {
 
     var app = django.App(
         django.Configure(map[string]interface{}{
-            django.APPVAR_DATABASE:  db,
+            django.APPVAR_DATABASE: db,
             // ...
         }),
         // ...
