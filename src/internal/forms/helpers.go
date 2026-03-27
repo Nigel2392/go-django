@@ -394,6 +394,7 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 
 			// Check if the field is saveable and call Save() on it.
 			// This might be used to save a relation to the database, among other things.
+			// TODO: FIX INTERACTION WITH FileField
 			if field, saveable := v.(SaveableField); saveable {
 				data, err = field.Save(data)
 				if err != nil {
