@@ -1,6 +1,8 @@
 package queries
 
 import (
+	"time"
+
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -21,7 +23,15 @@ func (q *QueryInformation) SQL() string {
 }
 
 func (q *QueryInformation) Args() []any {
-	return q.Params
+	if len(q.Params) == 0 {
+		return q.Params
+	}
+
+	var normalized = make([]any, len(q.Params))
+	for i, arg := range q.Params {
+		normalized[i] = normalizeQueryParam(arg)
+	}
+	return normalized
 }
 
 func (q *QueryInformation) Model() attrs.Definer {
@@ -30,6 +40,20 @@ func (q *QueryInformation) Model() attrs.Definer {
 
 func (q *QueryInformation) Compiler() QueryCompiler {
 	return q.Builder
+}
+
+func normalizeQueryParam(arg any) any {
+	switch t := arg.(type) {
+	case time.Time:
+		if t.IsZero() {
+			return nil
+		}
+	case *time.Time:
+		if t == nil || t.IsZero() {
+			return nil
+		}
+	}
+	return arg
 }
 
 func ErrorQueryObject[T1 any](object attrs.Definer, builder QueryCompiler, possibleError error) *QueryObject[T1] {

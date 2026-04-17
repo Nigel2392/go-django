@@ -82,6 +82,7 @@ func (u *Base) Fields(user attrs.Definer) []any {
 			Column:   "last_login",
 			Label:    trans.S("Last Login"),
 			HelpText: trans.S("The last time the user logged in."),
+			Null:     true,
 			Blank:    true,
 			ReadOnly: true,
 		}),

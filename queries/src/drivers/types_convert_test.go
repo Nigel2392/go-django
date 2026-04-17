@@ -2,6 +2,7 @@ package drivers_test
 
 import (
 	"database/sql"
+	"database/sql/driver"
 	"reflect"
 	"testing"
 	"time"
@@ -177,4 +178,69 @@ func TestRegisteredDBTypeMappings(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDateTimeDriverValuesHandleZeroTime(t *testing.T) {
+	t.Run("Timestamp", func(t *testing.T) {
+		var zero drivers.Timestamp
+		v, err := zero.Value()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if v != nil {
+			t.Fatalf("expected nil for zero value, got %T (%v)", v, v)
+		}
+	})
+
+	t.Run("LocalTime", func(t *testing.T) {
+		var zero drivers.LocalTime
+		v, err := zero.Value()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if v != nil {
+			t.Fatalf("expected nil for zero value, got %T (%v)", v, v)
+		}
+	})
+
+	t.Run("DateTime", func(t *testing.T) {
+		var zero drivers.DateTime
+		v, err := zero.Value()
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if v != nil {
+			t.Fatalf("expected nil for zero value, got %T (%v)", v, v)
+		}
+	})
+
+	t.Run("NonZeroValues", func(t *testing.T) {
+		now := time.Now().UTC().Truncate(time.Second)
+		tests := []struct {
+			name  string
+			value interface {
+				Value() (driver.Value, error)
+				Time() time.Time
+			}
+		}{
+			{name: "Timestamp", value: drivers.Timestamp(now)},
+			{name: "LocalTime", value: drivers.LocalTime(now)},
+			{name: "DateTime", value: drivers.DateTime(now)},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				v, err := tt.value.Value()
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				got, ok := v.(time.Time)
+				if !ok {
+					t.Fatalf("expected time.Time, got %T", v)
+				}
+				if !got.Equal(tt.value.Time()) {
+					t.Fatalf("expected %v, got %v", tt.value.Time(), got)
+				}
+			})
+		}
+	})
 }

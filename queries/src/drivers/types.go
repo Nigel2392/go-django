@@ -444,6 +444,9 @@ func (t Timestamp) Add(d time.Duration) Timestamp {
 func (t Timestamp) Time() time.Time       { return time.Time(t).Truncate(time.Millisecond) }
 func (t *Timestamp) Scan(value any) error { return (*timeType)(t).Scan(value) }
 func (t Timestamp) Value() (driver.Value, error) {
+	if t.IsZero() {
+		return nil, nil
+	}
 	return t.Time(), nil
 }
 func (t Timestamp) MarshalJSON() ([]byte, error) { return (time.Time)(t).MarshalJSON() }
@@ -469,6 +472,9 @@ func (t LocalTime) Add(d time.Duration) LocalTime {
 func (t LocalTime) Time() time.Time       { return time.Time(t).Truncate(time.Second) }
 func (t *LocalTime) Scan(value any) error { return (*timeType)(t).Scan(value) }
 func (t LocalTime) Value() (driver.Value, error) {
+	if t.IsZero() {
+		return nil, nil
+	}
 	return t.Time(), nil
 }
 func (t LocalTime) MarshalJSON() ([]byte, error) {
@@ -496,6 +502,9 @@ func (t DateTime) Add(d time.Duration) DateTime {
 func (t DateTime) Time() time.Time       { return time.Time(t).Truncate(time.Second) }
 func (t *DateTime) Scan(value any) error { return (*timeType)(t).Scan(value) }
 func (t DateTime) Value() (driver.Value, error) {
+	if t.IsZero() {
+		return nil, nil
+	}
 	return t.Time(), nil
 }
 func (t DateTime) MarshalJSON() ([]byte, error) {
