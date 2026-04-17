@@ -83,6 +83,7 @@ func (u *Base) Fields(user attrs.Definer) []any {
 			Label:    trans.S("Last Login"),
 			HelpText: trans.S("The last time the user logged in."),
 			Blank:    true,
+			Null:     true,
 			ReadOnly: true,
 		}),
 		fields.NewManyToManyField[*queries.RelM2M[*Group, *UserGroup]](

@@ -509,6 +509,12 @@ type QueryCompiler interface {
 	// For example, MySQL uses backticks (`) and PostgreSQL uses double quotes (").
 	Quote() (front string, back string)
 
+	// PrepareValue prepares a value for the database.
+	//
+	// It should return the prepared value, which may include
+	// any necessary type conversions or formatting.
+	PrepareValue(field attrs.Field, value any) any
+
 	// Placeholder returns the placeholder used by the database for query parameters.
 	// This is used to format query parameters in the SQL query.
 	// For example, MySQL uses `?` and PostgreSQL uses `$1`, `$2` (but can support `?` as well).

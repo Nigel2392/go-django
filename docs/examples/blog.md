@@ -4,8 +4,6 @@ Go-Django has provided pre-defined page models for MySQL and SQLite databases.
 
 These can then be extended to create your own custom page model with fields for your specific needs.
 
-The backend for both MySQL and SQLite has to specifically be imported for it to automagically work.
-
 ## Introduction
 
 Pages are http-handler- like models, but they have to explicitly be registered to the `pages` application, along with their respective [content type](../../contenttypes.md)
@@ -16,7 +14,7 @@ This allows for the custom admin- area and the rest of the pages application to 
 
 ### Creating a custom page model
 
-As mentioned before, the `*page_models.PageNode` (the model used in the pages app, in a separate package to easily work with multiple databases and prevent import cycles) can be extended to create your own custom page model.
+As mentioned before, the `*pages.PageNode` (the model used in the pages app, in a separate package to easily work with multiple databases and prevent import cycles) can be extended to create your own custom page model.
 
 #### Page model interfaces
 
@@ -28,7 +26,7 @@ type Page interface {
     ID() int64
 
     // Return the reference to the underlying generic page node.
-    Reference() *models.PageNode
+    Reference() *pages.PageNode
 }
 
 type SaveablePage interface {

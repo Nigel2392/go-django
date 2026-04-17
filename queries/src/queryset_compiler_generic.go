@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/Nigel2392/go-django/queries/internal"
@@ -90,6 +91,10 @@ type genericQueryBuilder struct {
 }
 
 func NewGenericQueryBuilder(db string) QueryCompiler {
+	return NewGenericFromQueryCompiler(db, nil)
+}
+
+func NewGenericFromQueryCompiler(db string, from QueryCompiler) QueryCompiler {
 	var q, err = internal.GetQueryInfo(db)
 	if err != nil {
 		panic(err)
@@ -110,6 +115,7 @@ func NewGenericQueryBuilder(db string) QueryCompiler {
 		support:   drivers.SupportsReturning(q.DB),
 		driver:    q.DB.Driver(),
 		queryInfo: q,
+		self:      from,
 	}
 }
 
@@ -201,6 +207,10 @@ func (g *genericQueryBuilder) PrepForLikeQuery(v any) string {
 	default:
 		panic(fmt.Errorf("unknown database driver: %s", internal.SqlxDriverName(g.queryInfo.DB)))
 	}
+}
+
+func (g *genericQueryBuilder) PrepareValue(field attrs.Field, value any) any {
+	return value
 }
 
 func (g *genericQueryBuilder) FormatLookupCol(lookupName string, inner string) string {
@@ -748,7 +758,9 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 			query.WriteString(generic_PLACEHOLDER)
 		}
 		query.WriteString(")")
-		values = append(values, obj.Values...)
+		for i, v := range obj.Values {
+			values = append(values, g.This().PrepareValue(obj.Fields[i], v))
+		}
 		written = true
 	}
 
@@ -940,7 +952,7 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 			if isSQL {
 				args = append(args, a...)
 			} else {
-				args = append(args, info.Values[valuesIdx])
+				args = append(args, g.This().PrepareValue(f, info.Values[valuesIdx]))
 				valuesIdx++
 			}
 		}
@@ -1183,7 +1195,7 @@ func NewPostgresQueryBuilder(db string) QueryCompiler {
 	var pgxCompiler = &postgresQueryBuilder{
 		genericQueryBuilder: inner.(*genericQueryBuilder),
 	}
-
+	pgxCompiler.genericQueryBuilder.self = pgxCompiler
 	return pgxCompiler
 }
 
@@ -1294,9 +1306,11 @@ type mariaDBQueryBuilder struct {
 
 func NewMariaDBQueryBuilder(db string) QueryCompiler {
 	var inner = NewGenericQueryBuilder(db)
-	return &mariaDBQueryBuilder{
+	var qs = &mariaDBQueryBuilder{
 		genericQueryBuilder: inner.(*genericQueryBuilder),
 	}
+	qs.genericQueryBuilder.self = qs
+	return qs
 }
 
 func (g *mariaDBQueryBuilder) BuildUpdateQuery(
@@ -1363,9 +1377,41 @@ type mysqlQueryBuilder struct {
 
 func NewMySQLQueryBuilder(db string) QueryCompiler {
 	var inner = NewMariaDBQueryBuilder(db)
-	return &mysqlQueryBuilder{
+	var qs = &mysqlQueryBuilder{
 		mariaDBQueryBuilder: inner.(*mariaDBQueryBuilder),
 	}
+	qs.genericQueryBuilder.self = qs
+	return qs
+}
+
+func (g *mysqlQueryBuilder) PrepareValue(field attrs.Field, value any) any {
+	if !attrs.IsZero(value) {
+		return value
+	}
+
+	switch v := value.(type) {
+	case time.Time:
+		if v.IsZero() {
+			return nil
+		}
+		return v
+	case drivers.Timestamp:
+		if v.IsZero() {
+			return nil
+		}
+		return v
+	case drivers.LocalTime:
+		if v.IsZero() {
+			return nil
+		}
+		return v
+	case drivers.DateTime:
+		if v.IsZero() {
+			return nil
+		}
+		return v
+	}
+	return value
 }
 
 // mysql does not properly support returning last insert id
@@ -1425,7 +1471,9 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 			query.WriteString(generic_PLACEHOLDER)
 		}
 		query.WriteString(")")
-		values = append(values, object.Values...)
+		for i, v := range object.Values {
+			values = append(values, g.This().PrepareValue(object.Fields[i], v))
+		}
 
 		stmt = append(stmt, query.String())
 	}

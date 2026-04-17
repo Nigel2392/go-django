@@ -129,7 +129,7 @@ func init() {
 
 	var app = django.App(
 		django.AppSettings(settings),
-		django.Apps(revisions.NewAppConfig, session.NewAppConfig, auth.NewAppConfig),
+		django.Apps(session.NewAppConfig, auth.NewAppConfig, revisions.NewAppConfig),
 		django.Flag(django.FlagSkipCmds, django.FlagSkipChecks, django.FlagSkipDepsCheck),
 	)
 

@@ -1,3 +1,2 @@
-github.com/Nigel2392/mux v1.4.3 h1:7f3X+YoeIg4nXOKZEhjb94fhmWpQprJIdZzTcQTw158=
-github.com/mattn/go-sqlite3 v1.14.28 h1:ThEiQrnbtumT+QMknw63Befp/ce/nUPgBPMlRFEum7A=
-github.com/mattn/go-sqlite3 v1.14.28/go.mod h1:Uh1q+B4BYcTPb+yiD3kU8Ct7aC0hY9fxUwlHK0RXw+Y=
+github.com/Nigel2392/mux v1.6.1-0.20251030144343-070717da1ff8 h1:hbHlPZ+cvtbU32mVi6JP3lYQEFHVDjFdMLF7qmgvSGA=
+github.com/mattn/go-sqlite3 v1.14.32 h1:JD12Ag3oLy1zQA+BNn74xRgaBbdhbNIDYvQUEuuErjs=

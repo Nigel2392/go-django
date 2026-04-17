@@ -95,4 +95,3 @@ This makes it easy to log actions using just the request's context (`request.Con
 also means it requires an extra step to set the user in the context when logging outside of web handlers.
 
 The auditlogs also uses the `queries` package to log the actions to the database, meaning any transactions present in the context will be honored.
-

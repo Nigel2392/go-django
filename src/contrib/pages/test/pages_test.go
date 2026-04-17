@@ -2,6 +2,7 @@ package pages_test
 
 import (
 	"context"
+	"database/sql"
 	"fmt"
 	"os"
 	"slices"
@@ -1134,11 +1135,13 @@ ORDER BY level DESC;`
 		for rows.Next() {
 			var node = pages.PageNode{}
 			var level int64
-			if err := rows.Scan(&node.PK, &node.Title, &node.Path, &node.Depth, &node.Numchild, &node.UrlPath, &node.Slug, &node.StatusFlags, &node.PageID, &node.ContentType, &node.LatestRevisionCreatedAt, &node.CreatedAt, &node.UpdatedAt, &level); err != nil {
+			var nullTime sql.NullTime
+			if err := rows.Scan(&node.PK, &node.Title, &node.Path, &node.Depth, &node.Numchild, &node.UrlPath, &node.Slug, &node.StatusFlags, &node.PageID, &node.ContentType, &nullTime, &node.CreatedAt, &node.UpdatedAt, &level); err != nil {
 				t.Fatal(err)
 				return
 			}
 
+			node.LatestRevisionCreatedAt = nullTime.Time
 			node.Annotations = make(map[string]any)
 			node.Annotations["level"] = level
 			nodes = append(nodes, node)

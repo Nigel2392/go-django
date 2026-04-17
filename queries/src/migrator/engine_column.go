@@ -268,11 +268,19 @@ func (c *Column) HasDefault() bool {
 		return false
 	}
 
+	var rv = reflect.ValueOf(c.Default)
+	if rv.Type().Kind() == reflect.Interface && rv.IsNil() {
+		return false
+	}
+
+	if rv.Type().Kind() == reflect.Ptr && rv.IsNil() {
+		return false
+	}
+
 	if isZero, ok := c.Default.(interface{ IsZero() bool }); ok {
 		return !isZero.IsZero()
 	}
 
-	var rv = reflect.ValueOf(c.Default)
 	if rv.Kind() == reflect.Ptr {
 		if !rv.IsValid() || rv.IsNil() {
 			return false

@@ -172,6 +172,14 @@ func IsZero(value interface{}) bool {
 		return true
 	}
 
+	if rv.Kind() == reflect.Interface && rv.IsNil() {
+		return true
+	}
+
+	if rv.Kind() == reflect.Ptr && rv.IsNil() {
+		return true
+	}
+
 	// check if either the pointer to the value or the value itself implements isZeroer
 	if rv.Type().Implements(_isZeroerType) {
 		return rv.Interface().(isZeroer).IsZero()

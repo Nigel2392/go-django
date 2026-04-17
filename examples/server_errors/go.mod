@@ -1,5 +1,5 @@
 module github.com/Nigel2392/go-django/examples/server_errors
 
-go 1.24.2
+go 1.25.0
 
-require github.com/Nigel2392/mux v1.4.3
+require github.com/Nigel2392/mux v1.6.1-0.20251030144343-070717da1ff8
