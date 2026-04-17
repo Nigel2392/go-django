@@ -1447,7 +1447,7 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 		}
 		query.WriteString(")")
 		for i, v := range object.Values {
-			values = append(values, g.PrepareValue(object.Fields[i], v))
+			values = append(values, g.This().PrepareValue(object.Fields[i], v))
 		}
 
 		stmt = append(stmt, query.String())
