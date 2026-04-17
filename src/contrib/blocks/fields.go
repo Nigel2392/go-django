@@ -1,7 +1,9 @@
 package blocks
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 
 	"github.com/Nigel2392/go-django/src/forms/fields"
 )
@@ -44,6 +46,28 @@ func (bw *BlockFormField) ValueToForm(value interface{}) interface{} {
 func (bw *BlockFormField) Validate(ctx context.Context, value interface{}) []error {
 	var errs = bw.Block.Validate(ctx, value)
 	return errs
+}
+
+func (bw *BlockFormField) HasChanged(initial, data interface{}) bool {
+	if fields.IsZero(initial) && fields.IsZero(data) {
+		return false
+	}
+
+	if fields.IsZero(initial) != fields.IsZero(data) {
+		return true
+	}
+
+	oldJSON, err := json.Marshal(initial)
+	if err != nil {
+		return true
+	}
+
+	newJSON, err := json.Marshal(data)
+	if err != nil {
+		return true
+	}
+
+	return !bytes.Equal(oldJSON, newJSON)
 }
 
 func (bw *BlockFormField) Clean(ctx context.Context, value interface{}) (interface{}, error) {
