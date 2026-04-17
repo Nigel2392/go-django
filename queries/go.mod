@@ -5,7 +5,6 @@ go 1.25.0
 replace google.golang.org/genproto/googleapis/rpc => google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f
 
 require (
-	github.com/Nigel2392/go-django v1.7.0
 	github.com/Nigel2392/go-signals v1.1.0
 	github.com/Nigel2392/goldcrest v1.0.4
 	github.com/Nigel2392/mux v1.6.1-0.20251030144343-070717da1ff8
@@ -23,32 +22,26 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
-	github.com/Nigel2392/tags v1.0.0 // indirect
-	github.com/a-h/templ v0.3.833 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dolthub/flatbuffers/v23 v23.3.3-dh.2 // indirect
 	github.com/dolthub/go-icu-regex v0.0.0-20250820171420-f2b78f56ce9f // indirect
 	github.com/dolthub/jsonpath v0.0.2-0.20240227200619-19675ab05c71 // indirect
 	github.com/dolthub/vitess v0.0.0-20250512224608-8fb9c6ea092c // indirect
-	github.com/gertd/go-pluralize v0.2.1 // indirect
 	github.com/go-kit/kit v0.13.0 // indirect
 	github.com/hashicorp/golang-lru v1.0.2 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/justinas/nosurf v1.1.1 // indirect
 	github.com/lestrrat-go/strftime v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/tetratelabs/wazero v1.9.0 // indirect
 	go.opentelemetry.io/otel v1.38.0 // indirect
 	go.opentelemetry.io/otel/trace v1.38.0 // indirect
-	golang.org/x/exp v0.0.0-20240531132922-fd00a4e0eefc // indirect
 	golang.org/x/mod v0.28.0 // indirect
 	golang.org/x/sync v0.17.0 // indirect
 	golang.org/x/sys v0.36.0 // indirect
-	golang.org/x/term v0.27.0 // indirect
 	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
 	google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f // indirect
