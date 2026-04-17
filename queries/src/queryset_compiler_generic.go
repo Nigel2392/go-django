@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 	"unsafe"
 
 	"github.com/Nigel2392/go-django/queries/internal"
@@ -201,6 +202,10 @@ func (g *genericQueryBuilder) PrepForLikeQuery(v any) string {
 	default:
 		panic(fmt.Errorf("unknown database driver: %s", internal.SqlxDriverName(g.queryInfo.DB)))
 	}
+}
+
+func (g *genericQueryBuilder) PrepareValue(field attrs.Field, value any) any {
+	return value
 }
 
 func (g *genericQueryBuilder) FormatLookupCol(lookupName string, inner string) string {
@@ -748,7 +753,9 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 			query.WriteString(generic_PLACEHOLDER)
 		}
 		query.WriteString(")")
-		values = append(values, obj.Values...)
+		for i, v := range obj.Values {
+			values = append(values, g.This().PrepareValue(obj.Fields[i], v))
+		}
 		written = true
 	}
 
@@ -940,7 +947,7 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 			if isSQL {
 				args = append(args, a...)
 			} else {
-				args = append(args, info.Values[valuesIdx])
+				args = append(args, g.This().PrepareValue(f, info.Values[valuesIdx]))
 				valuesIdx++
 			}
 		}
@@ -1299,6 +1306,13 @@ func NewMariaDBQueryBuilder(db string) QueryCompiler {
 	}
 }
 
+func (g *mariaDBQueryBuilder) PrepareValue(field attrs.Field, value any) any {
+	if t, ok := value.(time.Time); ok && t.IsZero() {
+		return nil
+	}
+	return value
+}
+
 func (g *mariaDBQueryBuilder) BuildUpdateQuery(
 	ctx context.Context,
 	qs *GenericQuerySet,
@@ -1368,6 +1382,13 @@ func NewMySQLQueryBuilder(db string) QueryCompiler {
 	}
 }
 
+func (g *mysqlQueryBuilder) PrepareValue(field attrs.Field, value any) any {
+	if t, ok := value.(time.Time); ok && t.IsZero() {
+		return nil
+	}
+	return value
+}
+
 // mysql does not properly support returning last insert id
 // when multiple rows are inserted, so we need to use a different approach.
 // This is a workaround to ensure that we can still return the last inserted ID
@@ -1425,7 +1446,9 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 			query.WriteString(generic_PLACEHOLDER)
 		}
 		query.WriteString(")")
-		values = append(values, object.Values...)
+		for i, v := range object.Values {
+			values = append(values, g.PrepareValue(object.Fields[i], v))
+		}
 
 		stmt = append(stmt, query.String())
 	}

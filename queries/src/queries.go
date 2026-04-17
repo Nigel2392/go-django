@@ -545,6 +545,9 @@ type QueryCompiler interface {
 	// according to the database's LIKE syntax.
 	PrepForLikeQuery(v any) string
 
+	// PrepareValue prepares a value for use in query parameters.
+	PrepareValue(field attrs.Field, value any) any
+
 	// BuildSelectQuery builds a select query with the given parameters.
 	BuildSelectQuery(
 		ctx context.Context,
