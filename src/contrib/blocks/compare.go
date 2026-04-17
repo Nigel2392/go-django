@@ -140,6 +140,7 @@ func (fc *blockComparison) HTMLDiff() (template.HTML, error) {
 	}
 
 	td := compare.DiffText(oldText, newText)
+	// Inputs are HTML-escaped text, so rendering diff output as unsafe is intentional.
 	td.Unsafe = true
 	return template.HTML(`<div class="diff-modified">` + string(td.HTML()) + `</div>`), nil
 }
@@ -178,6 +179,7 @@ func htmlDiffStream(ctx context.Context, oldValue, newValue *StreamBlockValue) t
 				out = append(out, `<div class="diff-unchanged">`+newRendered[nj]+`</div>`)
 			} else {
 				td := compare.DiffText(oldRendered[oi], newRendered[nj])
+				// Inputs are HTML-escaped text, so rendering diff output as unsafe is intentional.
 				td.Unsafe = true
 				out = append(out, `<div class="diff-modified">`+string(td.HTML())+`</div>`)
 			}
@@ -229,6 +231,7 @@ func htmlDiffList(ctx context.Context, oldValue, newValue *ListBlockValue) templ
 				out = append(out, `<div class="diff-unchanged">`+newRendered[nj]+`</div>`)
 			} else {
 				td := compare.DiffText(oldRendered[oi], newRendered[nj])
+				// Inputs are HTML-escaped text, so rendering diff output as unsafe is intentional.
 				td.Unsafe = true
 				out = append(out, `<div class="diff-modified">`+string(td.HTML())+`</div>`)
 			}
@@ -275,6 +278,7 @@ func htmlDiffStruct(ctx context.Context, oldValue, newValue *StructBlockValue) t
 			body = `<div class="diff-unchanged">` + newText + `</div>`
 		default:
 			td := compare.DiffText(oldText, newText)
+			// Inputs are HTML-escaped text, so rendering diff output as unsafe is intentional.
 			td.Unsafe = true
 			body = `<div class="diff-modified">` + string(td.HTML()) + `</div>`
 		}

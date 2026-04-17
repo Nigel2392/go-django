@@ -59,11 +59,13 @@ func (bw *BlockFormField) HasChanged(initial, data interface{}) bool {
 
 	oldJSON, err := json.Marshal(initial)
 	if err != nil {
+		// If values cannot be serialized consistently, prefer treating it as changed.
 		return true
 	}
 
 	newJSON, err := json.Marshal(data)
 	if err != nil {
+		// If values cannot be serialized consistently, prefer treating it as changed.
 		return true
 	}
 
