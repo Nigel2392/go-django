@@ -561,7 +561,13 @@ func (b *BaseFormSet[FORM]) Load() {
 }
 
 func (b *BaseFormSet[FORM]) HasChanged() bool {
-	for _, form := range b.FormList {
+	formList, err := b.Forms()
+	if err != nil {
+		logger.Warnf("Formset: could not determine changes: %v", err)
+		return false
+	}
+
+	for _, form := range formList {
 		if form.HasChanged() {
 			return true
 		}
