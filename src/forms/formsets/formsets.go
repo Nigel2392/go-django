@@ -567,6 +567,12 @@ func (b *BaseFormSet[FORM]) HasChanged() bool {
 		}
 	}
 
+	for _, form := range b.DeletedFormsList {
+		if form.HasChanged() {
+			return true
+		}
+	}
+
 	return false
 }
 
