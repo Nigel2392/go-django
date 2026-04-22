@@ -820,9 +820,12 @@ func TestFormSet_CustomValidator(t *testing.T) {
 	})
 
 	t.Run("ValidatorRejectsAllForms_OnlyFirstFormGetsError", func(t *testing.T) {
-		// Validators are skipped for subsequent forms once isValid becomes false
-		// after the first failure.  Only the first form (form 0) receives the
-		// validator error; forms 1 and 2 never reach the validator check.
+		// Validators run only while isValid is still true.  Once form 0's validator
+		// adds an error and isValid becomes false, forms 1 and 2 skip the validator
+		// entirely—this is the formset's designed short-circuit behaviour.
+		// The test explicitly asserts both that form 0 has an error AND that forms
+		// 1 and 2 do not, so that a future change to the short-circuit logic would
+		// be caught immediately.
 		ctx := context.Background()
 		fs := newThreeFormSet(ctx, formsets.FormsetOptions[forms.Form]{})
 		fs.AddValidator(bannedValidator)
@@ -838,6 +841,13 @@ func TestFormSet_CustomValidator(t *testing.T) {
 		lists := fs.ErrorLists()
 		if len(lists[0]) == 0 {
 			t.Error("form 0 should have the validator error")
+		}
+		// forms 1 and 2 never reach the validator because isValid was already false
+		if len(lists[1]) != 0 {
+			t.Errorf("form 1 should not have validator errors (short-circuit): %v", lists[1])
+		}
+		if len(lists[2]) != 0 {
+			t.Errorf("form 2 should not have validator errors (short-circuit): %v", lists[2])
 		}
 	})
 
@@ -1214,19 +1224,17 @@ func TestFormSet_DeleteFormsCallback(t *testing.T) {
 				return nil
 			},
 		})
-		// Delete all forms so we can safely call Save(), but none submitted as deleted
-		// Actually for safe Save() we need no FormList entries.
-		// To avoid Save() trying to call form.Save() on sub-forms, delete all.
+		// Submit data with no deletion flags.  We verify via DeletedForms() rather
+		// than Save() because BaseForm lacks a Save() method and calling
+		// formset.Save() with non-deleted forms in FormList would panic.
 		fs.WithData(threeFormDeleteNoneData, nil, nil)
 		forms.IsValid(ctx, fs)
 
-		// We cannot safely call Save() here because sub-forms lack a Save() method.
-		// Verify via the DeletedForms list directly instead.
 		if len(fs.DeletedForms()) != 0 {
 			t.Errorf("expected 0 deleted forms, got %d", len(fs.DeletedForms()))
 		}
 		if callbackCalled {
-			t.Error("DeleteForms callback should not have been called")
+			t.Error("DeleteForms callback should not have been called when no form is deleted")
 		}
 	})
 }
