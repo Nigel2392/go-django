@@ -24,7 +24,7 @@ func makeTestForm(ctx context.Context, fieldName, initialValue string) *forms.Ba
 // prefixed accordingly (e.g. "0-title").
 func runFormsetIsValid(fs *BaseFormSet[*forms.BaseForm], postData url.Values) bool {
 	fs.WithData(postData, nil, &http.Request{})
-	return forms.IsValid(context.Background(), fs)
+	return forms.IsValid(fs.Context(), fs)
 }
 
 // TestCheckIsValidPreservesInitialData verifies that initial data set on forms before
