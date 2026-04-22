@@ -42,26 +42,29 @@ var (
 		"Summary": {"Initial summary"},
 	}
 
-	blogPageEditData = url.Values{
+	blogPageEditData = withInlineManagement(url.Values{
 		"Title":   {"Blog entry updated"},
 		"Slug":    {"blog-entry-updated"},
 		"Summary": {"Updated summary"},
-		"TestBlogImageSet-management-TOTAL_FORMS":   {"0"},
-		"TestBlogImageSet-management-INITIAL_FORMS": {"0"},
-		"TestBlogImageSet-management-MIN_NUM_FORMS": {"0"},
-		"TestBlogImageSet-management-MAX_NUM_FORMS": {"0"},
-	}
+	})
 
-	blogPageRevisionEditData = url.Values{
+	blogPageRevisionEditData = withInlineManagement(url.Values{
 		"Title":   {"Blog entry from revision"},
 		"Slug":    {"blog-entry-from-revision"},
 		"Summary": {"Revision summary"},
-		"TestBlogImageSet-management-TOTAL_FORMS":   {"0"},
-		"TestBlogImageSet-management-INITIAL_FORMS": {"0"},
-		"TestBlogImageSet-management-MIN_NUM_FORMS": {"0"},
-		"TestBlogImageSet-management-MAX_NUM_FORMS": {"0"},
-	}
+	})
 )
+
+func withInlineManagement(data url.Values) url.Values {
+	if data == nil {
+		data = url.Values{}
+	}
+	data.Set("TestBlogImageSet-management-TOTAL_FORMS", "0")
+	data.Set("TestBlogImageSet-management-INITIAL_FORMS", "0")
+	data.Set("TestBlogImageSet-management-MIN_NUM_FORMS", "0")
+	data.Set("TestBlogImageSet-management-MAX_NUM_FORMS", "0")
+	return data
+}
 
 func init() {
 	testAdminUser.Email = drivers.MustParseEmail("admin@example.com")
@@ -233,6 +236,7 @@ func TestMain(m *testing.M) {
 	if err := app.Initialize(); err != nil {
 		panic(err)
 	}
+	// Test-only middleware that authenticates every request as an admin user.
 	app.Mux.Use(authentication.AddUserMiddleware(func(r *http.Request) authentication.User {
 		return testAdminUser
 	}))
@@ -340,7 +344,7 @@ func TestPagesAdminEditView(t *testing.T) {
 	}
 }
 
-func TestPagesAdminRevisionAddView(t *testing.T) {
+func TestPagesAdminRevisionAddViewHandlesPost(t *testing.T) {
 	resetPagesAdminData(t)
 	root := createRootNode(t, "Root")
 	child := createChildPageViaAddView(t, root)
@@ -372,7 +376,7 @@ func TestPagesAdminRevisionAddView(t *testing.T) {
 		t.Fatalf("count revisions after revision post: %v", err)
 	}
 	if int(afterCount) < beforeCount {
-		t.Fatalf("expected revision count to stay the same or increase")
+		t.Fatalf("expected revision count to stay the same or increase after revision add-view POST")
 	}
 }
 
