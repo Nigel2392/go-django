@@ -6,62 +6,69 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/Nigel2392/go-django/src/core/filesystem"
+	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
-	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/elliotchance/orderedmap/v2"
 )
 
-type hasChangedStub struct {
-	changed bool
+// makeTestForm creates a BaseForm with a single optional CharField and pre-set initial data,
+// simulating what ModelFormPanel.GetForms() does (Load → SetInitial).
+func makeTestForm(ctx context.Context, fieldName, initialValue string) *forms.BaseForm {
+	f := forms.NewBaseForm(ctx)
+	f.AddField(fieldName, fields.CharField(fields.Required(false)))
+	f.SetInitial(map[string]interface{}{fieldName: initialValue})
+	return f
 }
 
-func (f *hasChangedStub) AddFormError(errorList ...error) {}
-
-func (f *hasChangedStub) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) {
+// runFormsetIsValid simulates the CheckIsValid path: set POST data on the formset then validate.
+// The formset assigns each sub-form the prefix "<index>" (e.g. "0"), so field keys must be
+// prefixed accordingly (e.g. "0-title").
+func runFormsetIsValid(fs *BaseFormSet[*forms.BaseForm], postData url.Values) bool {
+	fs.WithData(postData, nil, &http.Request{})
+	return forms.IsValid(context.Background(), fs)
 }
 
-func (f *hasChangedStub) Data() (url.Values, map[string][]filesystem.FileHeader) {
-	return nil, nil
-}
+// TestCheckIsValidPreservesInitialData verifies that initial data set on forms before
+// CheckIsValid is not permanently lost when WithData resets it, so that HasChanged()
+// returns the correct result afterwards.
+func TestCheckIsValidPreservesInitialData(t *testing.T) {
+	const fieldName = "title"
+	const initialValue = "original"
 
-func (f *hasChangedStub) SetPrefix(prefix string) {}
+	makeFS := func(f *forms.BaseForm) *BaseFormSet[*forms.BaseForm] {
+		return NewBaseFormSet[*forms.BaseForm](context.Background(), FormsetOptions[*forms.BaseForm]{
+			MinNum:    1,
+			MaxNum:    1,
+			CanAdd:    false,
+			CanDelete: false,
+			NewForm: func(ctx context.Context) *forms.BaseForm {
+				return makeTestForm(ctx, fieldName, initialValue)
+			},
+			DefaultForms: func(ctx context.Context, max, min int) ([]*forms.BaseForm, error) {
+				return []*forms.BaseForm{f}, nil
+			},
+		})
+	}
 
-func (f *hasChangedStub) Prefix() string { return "" }
+	t.Run("unchanged submission reports HasChanged=false", func(t *testing.T) {
+		f := makeTestForm(context.Background(), fieldName, initialValue)
+		fs := makeFS(f)
 
-func (f *hasChangedStub) Field(name string) (fields.Field, bool) { return nil, false }
+		// The formset assigns prefix "0" to the first form, so the POST key is "0-title".
+		runFormsetIsValid(fs, url.Values{"0-" + fieldName: {initialValue}})
 
-func (f *hasChangedStub) Widget(name string) (widgets.Widget, bool) { return nil, false }
-
-func (f *hasChangedStub) ErrorList() []error { return nil }
-
-func (f *hasChangedStub) BoundErrors() *orderedmap.OrderedMap[string, []error] {
-	return orderedmap.NewOrderedMap[string, []error]()
-}
-
-func (f *hasChangedStub) WithContext(ctx context.Context) {}
-
-func (f *hasChangedStub) CleanedData() map[string]any { return nil }
-
-func (f *hasChangedStub) PrefixName(fieldName string) string { return fieldName }
-
-func (f *hasChangedStub) HasChanged() bool { return f.changed }
-
-func TestBaseFormSetHasChangedInitializesForms(t *testing.T) {
-	fs := NewBaseFormSet[*hasChangedStub](context.Background(), FormsetOptions[*hasChangedStub]{
-		MinNum:    1,
-		MaxNum:    1,
-		CanAdd:    false,
-		CanDelete: false,
-		NewForm: func(ctx context.Context) *hasChangedStub {
-			return &hasChangedStub{}
-		},
-		DefaultForms: func(ctx context.Context, max, min int) ([]*hasChangedStub, error) {
-			return []*hasChangedStub{{changed: true}}, nil
-		},
+		if fs.HasChanged() {
+			t.Error("HasChanged() should be false when POST data matches initial data")
+		}
 	})
 
-	if !fs.HasChanged() {
-		t.Fatalf("expected formset HasChanged to initialize forms and report changes")
-	}
+	t.Run("changed submission reports HasChanged=true", func(t *testing.T) {
+		f := makeTestForm(context.Background(), fieldName, initialValue)
+		fs := makeFS(f)
+
+		runFormsetIsValid(fs, url.Values{"0-" + fieldName: {"modified"}})
+
+		if !fs.HasChanged() {
+			t.Error("HasChanged() should be true when POST data differs from initial data")
+		}
+	})
 }

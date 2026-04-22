@@ -3,6 +3,7 @@ package formsets
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -161,6 +162,10 @@ type CleanedDataDefiner interface {
 
 type initialSetter interface {
 	SetInitial(initial map[string]interface{})
+}
+
+type initialDataGetter interface {
+	InitialData() map[string]interface{}
 }
 
 type listFormObject[T any] interface {
@@ -435,6 +440,14 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		}
 
 		subForm.WithContext(form.Context())
+
+		// Save the form's initial data before WithData() resets it via BaseForm.Reset().
+		// This preserves initial values set by e.g. ModelFormPanel.GetForms() → form.SetInitial().
+		var savedInitial map[string]interface{}
+		if getter, ok := any(subForm).(initialDataGetter); ok {
+			savedInitial = maps.Clone(getter.InitialData())
+		}
+
 		subForm.WithData(data, files, fs.req)
 
 		var formObj = formObject[FORM]{
@@ -473,6 +486,21 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 				s.SetInitial(defaults[totalAdded])
 			} else if base != nil {
 				s.SetInitial(base)
+			} else if savedInitial != nil {
+				// Restore initial data that was wiped by WithData().
+				// Add defaults for formset infrastructure fields (__ORDER__, __DELETE__)
+				// so that HasChanged() does not treat them as always-changed.
+				if fs.opts.CanOrder {
+					if _, exists := savedInitial[ORDERING_FIELD_NAME]; !exists {
+						savedInitial[ORDERING_FIELD_NAME] = totalAdded
+					}
+				}
+				if fs.opts.CanDelete {
+					if _, exists := savedInitial[DELETION_FIELD_NAME]; !exists {
+						savedInitial[DELETION_FIELD_NAME] = false
+					}
+				}
+				s.SetInitial(savedInitial)
 			}
 		}
 
@@ -561,21 +589,11 @@ func (b *BaseFormSet[FORM]) Load() {
 }
 
 func (b *BaseFormSet[FORM]) HasChanged() bool {
-	formList, err := b.Forms()
-	if err != nil {
-		logger.Warnf(
-			"Formset: failed to initialize forms while checking for changes; treating as unchanged: %v",
-			err,
-		)
-		return false
-	}
-
-	for _, form := range formList {
+	for _, form := range b.FormList {
 		if form.HasChanged() {
 			return true
 		}
 	}
-
 	return false
 }
 
