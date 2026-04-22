@@ -12,52 +12,52 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
-type hasChangedStubForm struct {
+type hasChangedStub struct {
 	changed bool
 }
 
-func (f *hasChangedStubForm) AddFormError(errorList ...error) {}
+func (f *hasChangedStub) AddFormError(errorList ...error) {}
 
-func (f *hasChangedStubForm) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) {
+func (f *hasChangedStub) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) {
 }
 
-func (f *hasChangedStubForm) Data() (url.Values, map[string][]filesystem.FileHeader) {
+func (f *hasChangedStub) Data() (url.Values, map[string][]filesystem.FileHeader) {
 	return nil, nil
 }
 
-func (f *hasChangedStubForm) SetPrefix(prefix string) {}
+func (f *hasChangedStub) SetPrefix(prefix string) {}
 
-func (f *hasChangedStubForm) Prefix() string { return "" }
+func (f *hasChangedStub) Prefix() string { return "" }
 
-func (f *hasChangedStubForm) Field(name string) (fields.Field, bool) { return nil, false }
+func (f *hasChangedStub) Field(name string) (fields.Field, bool) { return nil, false }
 
-func (f *hasChangedStubForm) Widget(name string) (widgets.Widget, bool) { return nil, false }
+func (f *hasChangedStub) Widget(name string) (widgets.Widget, bool) { return nil, false }
 
-func (f *hasChangedStubForm) ErrorList() []error { return nil }
+func (f *hasChangedStub) ErrorList() []error { return nil }
 
-func (f *hasChangedStubForm) BoundErrors() *orderedmap.OrderedMap[string, []error] {
+func (f *hasChangedStub) BoundErrors() *orderedmap.OrderedMap[string, []error] {
 	return orderedmap.NewOrderedMap[string, []error]()
 }
 
-func (f *hasChangedStubForm) WithContext(ctx context.Context) {}
+func (f *hasChangedStub) WithContext(ctx context.Context) {}
 
-func (f *hasChangedStubForm) CleanedData() map[string]any { return nil }
+func (f *hasChangedStub) CleanedData() map[string]any { return nil }
 
-func (f *hasChangedStubForm) PrefixName(fieldName string) string { return fieldName }
+func (f *hasChangedStub) PrefixName(fieldName string) string { return fieldName }
 
-func (f *hasChangedStubForm) HasChanged() bool { return f.changed }
+func (f *hasChangedStub) HasChanged() bool { return f.changed }
 
 func TestBaseFormSetHasChangedInitializesForms(t *testing.T) {
-	fs := NewBaseFormSet[*hasChangedStubForm](context.Background(), FormsetOptions[*hasChangedStubForm]{
+	fs := NewBaseFormSet[*hasChangedStub](context.Background(), FormsetOptions[*hasChangedStub]{
 		MinNum:    1,
 		MaxNum:    1,
 		CanAdd:    false,
 		CanDelete: false,
-		NewForm: func(ctx context.Context) *hasChangedStubForm {
-			return &hasChangedStubForm{}
+		NewForm: func(ctx context.Context) *hasChangedStub {
+			return &hasChangedStub{}
 		},
-		DefaultForms: func(ctx context.Context, max, min int) ([]*hasChangedStubForm, error) {
-			return []*hasChangedStubForm{{changed: true}}, nil
+		DefaultForms: func(ctx context.Context, max, min int) ([]*hasChangedStub, error) {
+			return []*hasChangedStub{{changed: true}}, nil
 		},
 	})
 
