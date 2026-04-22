@@ -440,14 +440,6 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		}
 
 		subForm.WithContext(form.Context())
-
-		// Save the form's initial data before WithData() resets it via BaseForm.Reset().
-		// This preserves initial values set by e.g. ModelFormPanel.GetForms() → form.SetInitial().
-		var savedInitial map[string]interface{}
-		if getter, ok := any(subForm).(initialDataGetter); ok {
-			savedInitial = maps.Clone(getter.InitialData())
-		}
-
 		subForm.WithData(data, files, fs.req)
 
 		var formObj = formObject[FORM]{
@@ -482,25 +474,35 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 		}
 
 		if s, ok := any(subForm).(initialSetter); ok {
+			var initial map[string]interface{}
 			if totalAdded < len(defaults) && defaults[totalAdded] != nil {
-				s.SetInitial(defaults[totalAdded])
+				initial = defaults[totalAdded]
 			} else if base != nil {
-				s.SetInitial(base)
-			} else if savedInitial != nil {
-				// Restore initial data that was wiped by WithData().
-				// Add defaults for formset infrastructure fields (__ORDER__, __DELETE__)
-				// so that HasChanged() does not treat them as always-changed.
-				if fs.opts.CanOrder {
-					if _, exists := savedInitial[ORDERING_FIELD_NAME]; !exists {
-						savedInitial[ORDERING_FIELD_NAME] = totalAdded
+				initial = base
+			} else if getter, ok := any(subForm).(initialDataGetter); ok {
+				// WithData() resets BaseForm.Initial, but forms that read from a
+				// persistent source (e.g. BaseModelForm reads field.GetValue()) still
+				// expose current values via InitialData().  Use that so HasChanged()
+				// can compare POST values against the pre-edit model state.
+				initial = getter.InitialData()
+			}
+			if initial != nil {
+				// Patch in formset infrastructure fields so HasChanged() does not
+				// treat them as always-changed when CanOrder / CanDelete is enabled.
+				if fs.opts.CanOrder || fs.opts.CanDelete {
+					initial = maps.Clone(initial)
+					if fs.opts.CanOrder {
+						if _, exists := initial[ORDERING_FIELD_NAME]; !exists {
+							initial[ORDERING_FIELD_NAME] = totalAdded
+						}
+					}
+					if fs.opts.CanDelete {
+						if _, exists := initial[DELETION_FIELD_NAME]; !exists {
+							initial[DELETION_FIELD_NAME] = false
+						}
 					}
 				}
-				if fs.opts.CanDelete {
-					if _, exists := savedInitial[DELETION_FIELD_NAME]; !exists {
-						savedInitial[DELETION_FIELD_NAME] = false
-					}
-				}
-				s.SetInitial(savedInitial)
+				s.SetInitial(initial)
 			}
 		}
 
