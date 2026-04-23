@@ -2,6 +2,7 @@ package pages
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -540,5 +541,86 @@ func TestPagesAdminPageEditFormIncludesBlogImageParentField(t *testing.T) {
 
 	if !foundParentField {
 		t.Fatalf("expected related blog image admin form to include BlogPage field")
+	}
+}
+
+// withInlineManagementForms is like withInlineManagement but sets
+// TOTAL_FORMS / INITIAL_FORMS to n, for tests that submit real inline data.
+func withInlineManagementForms(data url.Values, n int) url.Values {
+	if data == nil {
+		data = url.Values{}
+	}
+	nStr := fmt.Sprintf("%d", n)
+	data.Set("TestBlogImageSet-management-TOTAL_FORMS", nStr)
+	data.Set("TestBlogImageSet-management-INITIAL_FORMS", nStr)
+	data.Set("TestBlogImageSet-management-MIN_NUM_FORMS", "0")
+	data.Set("TestBlogImageSet-management-MAX_NUM_FORMS", "0")
+	return data
+}
+
+// createBlogImage inserts a TestBlogImage row for the given page node and
+// returns the saved object.
+func createBlogImage(t *testing.T, page *PageNode) *TestBlogImage {
+	t.Helper()
+	specific, err := Specific(context.Background(), page, false)
+	if err != nil {
+		t.Fatalf("createBlogImage: load specific page: %v", err)
+	}
+	blogPage, ok := specific.(*TestBlogPage)
+	if !ok {
+		t.Fatalf("createBlogImage: expected *TestBlogPage, got %T", specific)
+	}
+	img := &TestBlogImage{
+		BlogPage:  blogPage,
+		ImageText: "initial image text",
+	}
+	saved, err := queries.GetQuerySet(&TestBlogImage{}).ExplicitSave().Create(img)
+	if err != nil {
+		t.Fatalf("createBlogImage: %v", err)
+	}
+	return saved
+}
+
+func TestPagesAdminEditFormHasChangedReturnsFalseForUnchangedInlineData(t *testing.T) {
+	resetPagesAdminData(t)
+	root := createRootNode(t, "Root")
+	child := createChildPageViaAddView(t, root)
+	img := createBlogImage(t, child)
+
+	// Re-submit exactly what is stored in the DB (page fields + inline image).
+	data := withInlineManagementForms(url.Values{
+		"Title":   {blogPageAddData.Get("Title")},
+		"Slug":    {blogPageAddData.Get("Slug")},
+		"Summary": {blogPageAddData.Get("Summary")},
+		// Inline form 0: same ImageText and parent FK as was saved
+		"TestBlogImageSet-0-ImageText": {img.ImageText},
+		"TestBlogImageSet-0-BlogPage":  {fmt.Sprintf("%d", child.ID())},
+	}, 1)
+
+	form := buildAndValidateEditForm(t, child, data)
+	if form.HasChanged() {
+		t.Fatalf("expected HasChanged() = false when inline data is identical to DB, got true")
+	}
+}
+
+func TestPagesAdminEditFormHasChangedReturnsTrueWhenInlineImageTextChanged(t *testing.T) {
+	resetPagesAdminData(t)
+	root := createRootNode(t, "Root")
+	child := createChildPageViaAddView(t, root)
+	img := createBlogImage(t, child)
+	_ = img // created so the formset loads one existing image
+
+	// Submit a different ImageText value.
+	data := withInlineManagementForms(url.Values{
+		"Title":   {blogPageAddData.Get("Title")},
+		"Slug":    {blogPageAddData.Get("Slug")},
+		"Summary": {blogPageAddData.Get("Summary")},
+		"TestBlogImageSet-0-ImageText": {"changed image text"},
+		"TestBlogImageSet-0-BlogPage":  {fmt.Sprintf("%d", child.ID())},
+	}, 1)
+
+	form := buildAndValidateEditForm(t, child, data)
+	if !form.HasChanged() {
+		t.Fatalf("expected HasChanged() = true when inline ImageText was changed, got false")
 	}
 }

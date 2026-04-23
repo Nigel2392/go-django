@@ -433,8 +433,26 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 			subForm.SetPrefix(form.PrefixForm(i))
 		}
 
+		// Capture the initial data loaded from the DB before calling WithData.
+		// WithData calls Reset() which sets f.Initial = nil, losing the values
+		// that were populated by Load() and SetInitial().  We restore them
+		// afterwards so that HasChanged() can compare submitted data against
+		// the original database state.
+		var savedInitial map[string]interface{}
+		if initDef, ok := any(subForm).(interface {
+			InitialData() map[string]interface{}
+		}); ok {
+			savedInitial = initDef.InitialData()
+		}
+
 		subForm.WithContext(form.Context())
 		subForm.WithData(data, files, fs.req)
+
+		if savedInitial != nil {
+			if s, ok := any(subForm).(initialSetter); ok {
+				s.SetInitial(savedInitial)
+			}
+		}
 
 		var formObj = formObject[FORM]{
 			f: subForm,
