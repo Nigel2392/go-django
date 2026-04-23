@@ -54,7 +54,6 @@ func NewManagementForm(ctx context.Context, opts ...func(*ManagementForm)) *Mana
 
 	m.AddField(TOTAL_FORM_COUNT, fields.NumberField[int](
 		fields.Widget(widgets.NewNumberInput[int](nil)),
-		fields.Required(true),
 		fields.Label("Total Forms"),
 		fields.Hide(true),
 	))

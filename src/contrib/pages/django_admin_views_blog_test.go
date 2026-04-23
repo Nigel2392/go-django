@@ -422,6 +422,88 @@ func TestPagesAdminPageEditFormBuildsFormSet(t *testing.T) {
 	}
 }
 
+// buildAndValidateEditForm constructs a PageEditForm for the given node,
+// feeds it the supplied POST data, and runs it through IsValid so that
+// CleanedData (and therefore HasChanged) can subsequently be called.
+func buildAndValidateEditForm(t *testing.T, node *PageNode, data url.Values) *admin.AdminForm[*modelforms.BaseModelForm[attrs.Definer], attrs.Definer] {
+	t.Helper()
+
+	specific, err := Specific(context.Background(), node, false)
+	if err != nil {
+		t.Fatalf("load specific page: %v", err)
+	}
+
+	req := httptest.NewRequest(
+		http.MethodPost,
+		django.Reverse("admin:pages:edit", node.ID()),
+		strings.NewReader(data.Encode()),
+	)
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req = req.WithContext(authentication.ContextWithUser(req.Context(), testAdminUser))
+
+	form := PageEditForm(req, specific)
+	form.Load()
+	form.WithData(data, nil, req)
+
+	if !forms.IsValid(req.Context(), form) {
+		t.Fatalf("edit form unexpectedly invalid: %v", form.ErrorList())
+	}
+
+	return form
+}
+
+func TestPagesAdminEditFormHasChangedReturnsFalseForIdenticalData(t *testing.T) {
+	resetPagesAdminData(t)
+	root := createRootNode(t, "Root")
+	child := createChildPageViaAddView(t, root)
+
+	// Submit exactly the same values that were used to create the page.
+	sameData := withInlineManagement(url.Values{
+		"Title":   {blogPageAddData.Get("Title")},
+		"Slug":    {blogPageAddData.Get("Slug")},
+		"Summary": {blogPageAddData.Get("Summary")},
+	})
+
+	form := buildAndValidateEditForm(t, child, sameData)
+	if form.HasChanged() {
+		t.Fatalf("expected HasChanged() = false when submitted data matches the saved page, got true")
+	}
+}
+
+func TestPagesAdminEditFormHasChangedReturnsTrueWhenTitleChanged(t *testing.T) {
+	resetPagesAdminData(t)
+	root := createRootNode(t, "Root")
+	child := createChildPageViaAddView(t, root)
+
+	changedData := withInlineManagement(url.Values{
+		"Title":   {"A different title"},
+		"Slug":    {blogPageAddData.Get("Slug")},
+		"Summary": {blogPageAddData.Get("Summary")},
+	})
+
+	form := buildAndValidateEditForm(t, child, changedData)
+	if !form.HasChanged() {
+		t.Fatalf("expected HasChanged() = true when Title was changed, got false")
+	}
+}
+
+func TestPagesAdminEditFormHasChangedReturnsTrueWhenSummaryChanged(t *testing.T) {
+	resetPagesAdminData(t)
+	root := createRootNode(t, "Root")
+	child := createChildPageViaAddView(t, root)
+
+	changedData := withInlineManagement(url.Values{
+		"Title":   {blogPageAddData.Get("Title")},
+		"Slug":    {blogPageAddData.Get("Slug")},
+		"Summary": {"A different summary"},
+	})
+
+	form := buildAndValidateEditForm(t, child, changedData)
+	if !form.HasChanged() {
+		t.Fatalf("expected HasChanged() = true when Summary was changed, got false")
+	}
+}
+
 func TestPagesAdminPageEditFormIncludesBlogImageParentField(t *testing.T) {
 	resetPagesAdminData(t)
 	root := createRootNode(t, "Root")
