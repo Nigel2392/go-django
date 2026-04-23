@@ -592,9 +592,11 @@ func TestPagesAdminEditFormHasChangedReturnsFalseForUnchangedInlineData(t *testi
 		"Title":   {blogPageAddData.Get("Title")},
 		"Slug":    {blogPageAddData.Get("Slug")},
 		"Summary": {blogPageAddData.Get("Summary")},
-		// Inline form 0: same ImageText and parent FK as was saved
+		// Inline form 0: same ImageText and parent FK as was saved.
+		// child.PageID is the test_blog_pages row-ID that the FK references;
+		// child.ID() is the PageNode PK, which is a different value.
 		"TestBlogImageSet-0-ImageText": {img.ImageText},
-		"TestBlogImageSet-0-BlogPage":  {fmt.Sprintf("%d", child.ID())},
+		"TestBlogImageSet-0-BlogPage":  {fmt.Sprintf("%d", child.PageID)},
 	}, 1)
 
 	form := buildAndValidateEditForm(t, child, data)
@@ -616,7 +618,7 @@ func TestPagesAdminEditFormHasChangedReturnsTrueWhenInlineImageTextChanged(t *te
 		"Slug":    {blogPageAddData.Get("Slug")},
 		"Summary": {blogPageAddData.Get("Summary")},
 		"TestBlogImageSet-0-ImageText": {"changed image text"},
-		"TestBlogImageSet-0-BlogPage":  {fmt.Sprintf("%d", child.ID())},
+		"TestBlogImageSet-0-BlogPage":  {fmt.Sprintf("%d", child.PageID)},
 	}, 1)
 
 	form := buildAndValidateEditForm(t, child, data)

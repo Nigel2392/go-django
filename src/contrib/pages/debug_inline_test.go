@@ -27,7 +27,7 @@ data := withInlineManagementForms(url.Values{
 "Slug":    {blogPageAddData.Get("Slug")},
 "Summary": {blogPageAddData.Get("Summary")},
 "TestBlogImageSet-0-ImageText": {img.ImageText},
-"TestBlogImageSet-0-BlogPage":  {fmt.Sprintf("%d", child.ID())},
+"TestBlogImageSet-0-BlogPage":  {fmt.Sprintf("%d", child.PageID)},
 }, 1)
 
 specific, err := Specific(context.Background(), child, false)

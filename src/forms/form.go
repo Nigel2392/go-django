@@ -430,7 +430,7 @@ func (f *BaseForm) HasChanged() bool {
 			}
 		}
 
-		if f.Initial[k] != f.Cleaned[k] {
+		if field.HasChanged(f.Initial[k], f.Cleaned[k]) {
 			return true
 		}
 	}
