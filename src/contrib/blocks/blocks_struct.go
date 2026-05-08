@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/elliotchance/orderedmap/v2"
@@ -82,6 +83,28 @@ func (m *StructBlock) Field() fields.Field {
 		field.SetName(m.Name_)
 	}
 	return m.FormField
+}
+
+func (m *StructBlock) HasChanged(initial, data interface{}) bool {
+	var initialMap, ok1 = initial.(*StructBlockValue)
+	var dataMap, ok2 = data.(*StructBlockValue)
+	if !ok1 && !ok2 {
+		logger.Warnf("StructBlock HasChanged: both initial and data are not *StructBlockValue (initial: %T, data: %T)", initial, data)
+		return false
+	}
+	if len(initialMap.V) != len(dataMap.V) {
+		return true
+	}
+	for key := range initialMap.V {
+		var block, ok = m.Fields.Get(key)
+		if !ok {
+			continue
+		}
+		if block.HasChanged(initialMap.V[key], dataMap.V[key]) {
+			return true
+		}
+	}
+	return false
 }
 
 func (m *StructBlock) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {

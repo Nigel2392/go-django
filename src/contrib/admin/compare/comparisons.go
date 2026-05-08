@@ -5,10 +5,12 @@ import (
 	"fmt"
 	"html/template"
 	"reflect"
+	"runtime/debug"
 	"unicode"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/utils/text"
 )
@@ -128,6 +130,11 @@ func (mc *multipleComparison) HasChanged() (bool, error) {
 }
 
 func (mc *multipleComparison) HTMLDiff() (template.HTML, error) {
+	defer func() {
+		if r := recover(); r != nil {
+			logger.Errorf("panic in multipleComparison.HTMLDiff: %s", debug.Stack())
+		}
+	}()
 	var argList = make([][]any, 0, len(mc.Comparisons))
 	for _, comp := range mc.Comparisons {
 

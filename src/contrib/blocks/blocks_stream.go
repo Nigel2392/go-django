@@ -120,6 +120,24 @@ func (l *StreamBlock) makeError(err error) error {
 	return err
 }
 
+func (l *StreamBlock) HasChanged(initial, data interface{}) bool {
+	var initialArr, ok1 = initial.(*StreamBlockValue)
+	var dataArr, ok2 = data.(*StreamBlockValue)
+	if !ok1 && !ok2 {
+		logger.Warnf("StreamBlock HasChanged: both initial and data are not *StreamBlockValue (initial: %T, data: %T)", initial, data)
+		return false
+	}
+	if len(initialArr.V) != len(dataArr.V) {
+		return true
+	}
+	for i := range initialArr.V {
+		if initialArr.V[i].ID != dataArr.V[i].ID || initialArr.V[i].Order != dataArr.V[i].Order {
+			return true
+		}
+	}
+	return false
+}
+
 func (b *StreamBlock) ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool {
 	return !data.Has(fmt.Sprintf("%s--total", name))
 }

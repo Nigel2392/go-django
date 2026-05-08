@@ -29,6 +29,10 @@ func (s *SimpleStoredObject) DBType() dbtype.Type {
 }
 
 func (s *SimpleStoredObject) String() string {
+	if s == nil {
+		return ""
+	}
+
 	return s.Filepath
 }
 

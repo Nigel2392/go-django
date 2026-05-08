@@ -73,10 +73,10 @@ func main() {
 			// django.APPVAR_RECOVERER: false,
 		}),
 		django.AppLogger(&logger.Logger{
-			Level:       logger.DBG,
+			Level:       logger.INF,
 			OutputTime:  true,
 			WrapPrefix:  logger.ColoredLogWrapper,
-			OutputDebug: os.Stdout,
+			OutputDebug: nil,
 			OutputInfo:  os.Stdout,
 			OutputWarn:  os.Stdout,
 			OutputError: os.Stdout,

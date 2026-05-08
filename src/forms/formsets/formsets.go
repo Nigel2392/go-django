@@ -130,7 +130,8 @@ type ListFormSet[T BaseFormSetForm] interface {
 	NewForm(ctx context.Context) T
 	Initial(ctx context.Context, totalForms int) (base map[string]interface{}, list []map[string]interface{})
 	Form(index int) (form T, ok bool)
-	CleanedData() map[string]any // this should probably always return nil
+	InitialData() map[string]interface{} // this should always return nil for formsets
+	CleanedData() map[string]any         // this should always return nil for formsets
 	CleanedDataList() []map[string]any
 	ErrorList() []error
 	ErrorLists() [][]error
@@ -149,6 +150,7 @@ type BaseFormSetForm interface {
 	Widget(name string) (widgets.Widget, bool)
 	ErrorList() []error
 	BoundErrors() *orderedmap.OrderedMap[string, []error]
+	InitialData() map[string]interface{}
 	WithContext(ctx context.Context)
 	CleanedData() map[string]any
 	PrefixName(fieldName string) string
@@ -470,8 +472,10 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 
 		if s, ok := any(subForm).(initialSetter); ok {
 			if totalAdded < len(defaults) && defaults[totalAdded] != nil {
+				logger.Warnf("FormSet: Setting initial data for form %d (%T): %v", totalAdded, subForm, defaults[totalAdded])
 				s.SetInitial(defaults[totalAdded])
 			} else if base != nil {
+				logger.Warnf("FormSet: Setting base initial data for form %d (%T): %v", totalAdded, subForm, base)
 				s.SetInitial(base)
 			}
 		}
@@ -517,6 +521,10 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 	// set the deleted forms to the formset
 	form.SetDeletedForms(deletedForms)
 
+	for _, form := range finalForms {
+		logger.Warnf("FormSet: Form with prefix %s has errors: %v and data: %v", form.Prefix(), form.ErrorList(), form.InitialData())
+	}
+
 	return isValid && !forms.HasErrors(form)
 }
 
@@ -561,10 +569,24 @@ func (b *BaseFormSet[FORM]) Load() {
 }
 
 func (b *BaseFormSet[FORM]) HasChanged() bool {
-	for _, form := range b.FormList {
+	formList, err := b.Forms()
+	if err != nil {
+		logger.Warnf(
+			"Formset: failed to initialize forms while checking for changes; treating as unchanged: %v",
+			err,
+		)
+		return false
+	}
+
+	for _, form := range formList {
 		if form.HasChanged() {
+			// fmt.Printf("Form with prefix %s (%T) has changed\n", form.Prefix(), form)
 			return true
 		}
+	}
+
+	if len(b.DeletedFormsList) > 0 {
+		return true
 	}
 
 	return false
@@ -686,6 +708,17 @@ func (b *BaseFormSet[FORM]) Form(i int) (form FORM, ok bool) {
 		return *new(FORM), false
 	}
 	return forms[i], true
+}
+
+func (b *BaseFormSet[FORM]) InitialData() map[string]interface{} {
+	var initial = make(map[string]interface{})
+	for i, form := range b.FormList {
+		var formInitial = form.InitialData()
+		for k, v := range formInitial {
+			initial[fmt.Sprintf("%d-%s", i, k)] = v
+		}
+	}
+	return initial
 }
 
 func (b *BaseFormSet[FORM]) CleanedData() map[string]any { // []map[string]any {

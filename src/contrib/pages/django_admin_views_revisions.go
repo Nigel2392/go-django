@@ -300,6 +300,8 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 			return nil
 		}
 
+		fmt.Println("hasChanged", hasChanged, "publishPage", publishPage)
+
 		var wasPublished bool
 		var ref = instance.Reference()
 		if publishPage && !ref.StatusFlags.Is(StatusFlagPublished) {
@@ -316,9 +318,9 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 			return fmt.Errorf("invalid page type: %T", d)
 		}
 
-		ref.LatestRevisionCreatedAt = chosenRevision.CreatedAt
+		ref.LatestRevisionCreatedAt = time.Now()
 		if publishPage {
-			ref.PublishedAt = chosenRevision.CreatedAt
+			ref.PublishedAt = ref.LatestRevisionCreatedAt
 		}
 
 		if publishPage {

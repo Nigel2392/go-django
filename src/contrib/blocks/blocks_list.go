@@ -15,6 +15,7 @@ import (
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-telepath/telepath"
 	"github.com/google/uuid"
@@ -75,6 +76,24 @@ func (l *ListBlock) MaxNum() int {
 
 func (l *ListBlock) makeError(err error) error {
 	return err
+}
+
+func (l *ListBlock) HasChanged(initial, data interface{}) bool {
+	var initialArr, ok1 = initial.(*ListBlockValue)
+	var dataArr, ok2 = data.(*ListBlockValue)
+	if !ok1 && !ok2 {
+		logger.Warnf("ListBlock HasChanged: both initial and data are not *ListBlockValue (initial: %T, data: %T)", initial, data)
+		return false
+	}
+	if len(initialArr.V) != len(dataArr.V) {
+		return true
+	}
+	for i := range initialArr.V {
+		if initialArr.V[i].ID != dataArr.V[i].ID || initialArr.V[i].Order != dataArr.V[i].Order {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *ListBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {

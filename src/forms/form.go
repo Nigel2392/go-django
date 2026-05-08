@@ -298,6 +298,10 @@ func (f *BaseForm) CleanedData() map[string]interface{} {
 }
 
 func (f *BaseForm) SetInitial(initial map[string]interface{}) {
+	// if f.Initial != nil {
+	// fmt.Println("(SetInitial) ", f.FormPrefix, " Overwriting existing initial data:", f.Initial)
+	// }
+	// fmt.Println("(SetInitial) ", f.FormPrefix, " Setting initial data:", initial, string(debug.Stack())[:2000])
 	f.Initial = initial
 	f.Defaults = initial
 }

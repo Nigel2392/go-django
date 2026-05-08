@@ -31,6 +31,10 @@ func BlockField(block Block, opts ...func(fields.Field)) *BlockFormField {
 	return bf
 }
 
+func (bw *BlockFormField) HasChanged(initial, data interface{}) bool {
+	return bw.Block.HasChanged(initial, data)
+}
+
 func (bw *BlockFormField) ValueToGo(value interface{}) (interface{}, error) {
 	var v, err = bw.Block.ValueToGo(value)
 	return v, err

@@ -199,18 +199,22 @@
 .pages-type-list-item p {
     margin: 0;
 }
-.pages-type-list-item .icon svg {
+.pages-type-list-item .header > .icon {
+    width: 2.5em;
+    height: 2.5em;
+}
+.pages-type-list-item .header > .icon svg {
     width: 2em;
     height: 2em;
     margin-right: 0.5em;
     vertical-align: middle;
     transition: all 0.2s;
 }
-.pages-type-list-item:hover .icon svg {
+.pages-type-list-item:hover .header > .icon svg {
     fill: var(--secondary-bg-color);
     transform: scale(0.95);
 }
-.pages-type-list-item .text {
+.pages-type-list-item .header > .text {
     font-size: 1.25em;
     font-weight: 600;
 }

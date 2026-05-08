@@ -36,6 +36,7 @@ type Block interface {
 	ValueFromDB(value json.RawMessage) (interface{}, error)
 	RenderForm(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, context ctx.Context) error
 	Render(ctx context.Context, w io.Writer, value interface{}, context ctx.Context) error
+	HasChanged(initial, data interface{}) bool
 	GetDefault() interface{}
 	telepath.AdapterGetter
 	media.MediaDefiner
@@ -127,6 +128,10 @@ func (b *BaseBlock) Field() fields.Field {
 		b.SetField(fields.CharField())
 	}
 	return b.FormField
+}
+
+func (b *BaseBlock) HasChanged(initial, data interface{}) bool {
+	return b.Field().HasChanged(initial, data)
 }
 
 func (b *BaseBlock) FormContext(name string, value interface{}, context ctx.Context) *BlockContext {
