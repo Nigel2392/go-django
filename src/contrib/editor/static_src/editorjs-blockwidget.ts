@@ -1,26 +1,33 @@
+var EditorJSBoundWidget: any;
+var EditorJSTelepathWidget: any;
 
-class EditorJSBoundWidget extends window.BoundWidget {
-    setState(state: any): void {
-        // check if json encode required
-        if (typeof state === 'object') {
-            state = JSON.stringify(state);
+if (window.BoundWidget != undefined) {
+    class editorJSBoundWidget extends window.BoundWidget {
+        setState(state: any): void {
+            // check if json encode required
+            if (typeof state === 'object') {
+                state = JSON.stringify(state);
+            }
+
+            this.input!.value = state;
         }
 
-        this.input!.value = state;
-    }
+        setValue(value: any): void {
+            // check if json encode required
+            if (typeof value === 'object') {
+                value = JSON.stringify(value);
+            }
 
-    setValue(value: any): void {
-        // check if json encode required
-        if (typeof value === 'object') {
-            value = JSON.stringify(value);
+            this.input!.value = value;
         }
-
-        this.input!.value = value;
     }
-}
 
-class EditorJSTelepathWidget extends window.Widget {
-    boundWidgetClass = EditorJSBoundWidget;
+    class editorJSTelepathWidget extends window.Widget {
+        boundWidgetClass = EditorJSBoundWidget;
+    }
+
+    EditorJSBoundWidget = editorJSBoundWidget;
+    EditorJSTelepathWidget = editorJSTelepathWidget;
 }
 
 export { EditorJSTelepathWidget, EditorJSBoundWidget };
