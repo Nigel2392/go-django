@@ -3,6 +3,7 @@ package queries
 import (
 	"fmt"
 	"iter"
+	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -194,6 +195,14 @@ func (r *rows[T]) addRoot(uniqueValue any, obj attrs.Definer, through attrs.Defi
 		} else if pk, err = prim.Value(); err != nil {
 			pk = uniqueValue
 		}
+
+		var rVal = reflect.ValueOf(pk)
+		if (rVal.Kind() == reflect.Array || rVal.Kind() == reflect.Slice) && rVal.Type().Elem().Kind() == reflect.Uint8 {
+			// Convert []byte to string for easier comparison and usage as a key
+			rVal = rVal.Convert(reflect.TypeOf(""))
+			pk = rVal.Interface()
+		}
+
 		r.rootMapping[pk] = uniqueValue
 	}
 
