@@ -292,7 +292,7 @@ func TestMemoryCacheTransactionCounters(t *testing.T) {
 	setupTxCache := func() *cache.MemoryCache[any] {
 		c := cache.NewGenericMemoryCache[any]()
 		c.Run(1 * time.Second)
-		_ = c.Set(ctx, "cache.counter.existing_counter", int64(50), 5*time.Minute)
+		_ = c.Set(ctx, "existing_counter", int64(50), 5*time.Minute)
 		return c
 	}
 
@@ -336,12 +336,12 @@ func TestMemoryCacheTransactionCounters(t *testing.T) {
 		}
 
 		// Assert Main Cache Updated Correctly
-		val, _ := c.Get(ctx, "cache.counter.existing_counter")
+		val, _ := c.Get(ctx, "existing_counter")
 		if val.(int64) != 55 {
 			t.Fatalf("expected 55 in main cache, got %v", val)
 		}
 
-		val, _ = c.Get(ctx, "cache.counter.new_tx_counter")
+		val, _ = c.Get(ctx, "new_tx_counter")
 		if val.(int64) != 100 {
 			t.Fatalf("expected 100 in main cache, got %v", val)
 		}
@@ -362,12 +362,12 @@ func TestMemoryCacheTransactionCounters(t *testing.T) {
 		}
 
 		// Assert Main Cache is untouched
-		val, _ := c.Get(ctx, "cache.counter.existing_counter")
+		val, _ := c.Get(ctx, "existing_counter")
 		if val.(int64) != 50 {
 			t.Fatalf("expected existing_counter to remain 50, got %v", val)
 		}
 
-		if c.Has(ctx, "cache.counter.new_rollback_counter") {
+		if c.Has(ctx, "new_rollback_counter") {
 			t.Fatalf("new_rollback_counter should not exist after rollback")
 		}
 	})
@@ -377,7 +377,7 @@ func TestMemoryCacheTransactionCounters(t *testing.T) {
 
 		err := c.RunInTx(ctx, func(ctx context.Context, tx cache.TypedTransaction[any]) error {
 			// Delete the key, marking it as 'deleted: true' in tx.state
-			_ = tx.Delete(ctx, "cache.counter.existing_counter")
+			_ = tx.Delete(ctx, "existing_counter")
 
 			// Incrementing it now should act like a brand new initialization
 			val, err := tx.Increment(ctx, "existing_counter", 10)
@@ -476,7 +476,7 @@ func TestGlobalWrappersWithContextPropagation(t *testing.T) {
 			t.Fatalf("expected 'implicit_val' to be flushed to main cache, got %v", val)
 		}
 
-		counterVal, _ := cache.Get(ctx, "cache.counter.implicit_counter") // Verify prefix logic held up
+		counterVal, _ := cache.Get(ctx, "implicit_counter") // Verify prefix logic held up
 		if counterVal.(int64) != 10 {
 			t.Fatalf("expected counter to equal 10 in main cache, got %v", counterVal)
 		}

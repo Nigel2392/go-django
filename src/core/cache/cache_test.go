@@ -100,7 +100,12 @@ func TestMemoryCache(t *testing.T) {
 func TestMemoryCacheTTLExpiry(t *testing.T) {
 	var c = cache.NewMemoryCache(1 * time.Second)
 	// Test that items expire correctly
-	err := c.Set(context.Background(), "key1", []byte("value1"), 2*time.Second)
+	err := c.Set(context.Background(), "key1", []byte("value1"), 100*time.Second)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	err = c.Expire(context.Background(), "key1", 2*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -180,11 +185,11 @@ func TestMemoryCacheCounters(t *testing.T) {
 	})
 
 	t.Run("Preserves TTL on Increment", func(t *testing.T) {
-		_ = c.Set(ctx, "cache.counter.ttl_counter", int64(100), 10*time.Minute)
+		_ = c.Set(ctx, "ttl_counter", int64(100), 10*time.Minute)
 
-		ttlBefore := c.TTL(ctx, "cache.counter.ttl_counter")
+		ttlBefore := c.TTL(ctx, "ttl_counter")
 		_, _ = c.Increment(ctx, "ttl_counter", 1)
-		ttlAfter := c.TTL(ctx, "cache.counter.ttl_counter")
+		ttlAfter := c.TTL(ctx, "ttl_counter")
 
 		// Ensure the TTL wasn't reset to Infinity or 0
 		if ttlAfter > 10*time.Minute || ttlAfter < 9*time.Minute {
@@ -193,14 +198,11 @@ func TestMemoryCacheCounters(t *testing.T) {
 	})
 
 	t.Run("Errors on Non-Numeric Types", func(t *testing.T) {
-		defer func() {
-			if r := recover(); r == nil {
-				t.Fatal("expected test to raise panic")
-			}
-		}()
+		_ = c.Set(ctx, "string_key", "im_a_string", 0)
 
-		_ = c.Set(ctx, "cache.counter.string_key", "im_a_string", 0)
-
-		c.Increment(ctx, "string_key", 1)
+		_, err := c.Increment(ctx, "string_key", 1)
+		if err == nil {
+			t.Fatalf("expected error when incrementing a string, got nil")
+		}
 	})
 }

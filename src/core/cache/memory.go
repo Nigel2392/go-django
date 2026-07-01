@@ -2,7 +2,6 @@ package cache
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -70,7 +69,6 @@ func (c *MemoryCache[T]) Increment(_ context.Context, key string, amount int64) 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	key = fmt.Sprintf("cache.counter.%s", key)
 	item, ok := c.cache[key]
 
 	if !ok || item.expired() {
@@ -82,7 +80,11 @@ func (c *MemoryCache[T]) Increment(_ context.Context, key string, amount int64) 
 		return amount, nil
 	}
 
-	var currentVal = item.value.(int64)
+	currentVal, ok := item.value.(int64)
+	if !ok {
+		return 0, errs.ErrInvalidType
+	}
+
 	newVal := currentVal + amount
 	item.value = newVal
 
@@ -97,8 +99,6 @@ func (c *MemoryCache[T]) Decrement(ctx context.Context, key string, amount int64
 }
 
 func (c *MemoryCache[T]) CounterValue(ctx context.Context, key string) (int64, error) {
-	key = fmt.Sprintf("cache.counter.%s", key)
-
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -115,11 +115,22 @@ func (c *MemoryCache[T]) CounterValue(ctx context.Context, key string) (int64, e
 	return currentVal, nil
 }
 
-func (c *MemoryCache[T]) Set(_ context.Context, key string, value T, ttl time.Duration) error {
-	if ttl == 0 {
-		ttl = Infinity
+func (c *MemoryCache[T]) Expire(_ context.Context, key string, ttl time.Duration) error {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	item, ok := c.cache[key]
+	if !ok || item.expired() {
+		return ErrItemNotFound
 	}
 
+	ttl = TTL_GetOrDefault(ttl)
+	item.lifeTime = time.Now().Add(ttl)
+	return nil
+}
+
+func (c *MemoryCache[T]) Set(_ context.Context, key string, value T, ttl time.Duration) error {
+	ttl = TTL_GetOrDefault(ttl)
 	var lifeTime = time.Now().Add(ttl)
 	var item *memitem = &memitem{
 		key:      key,
@@ -375,9 +386,21 @@ func (tx *localTx[T]) InTransaction() bool {
 	return tx.inTransaction
 }
 
-func (tx *localTx[T]) Increment(_ context.Context, key string, amount int64) (int64, error) {
-	key = fmt.Sprintf("cache.counter.%s", key)
+func (tx *localTx[T]) Expire(_ context.Context, key string, ttl time.Duration) error {
+	item, ok := tx.state[key]
 
+	if !ok || item.deleted || item.expired() {
+		return ErrItemNotFound
+	}
+
+	ttl = TTL_GetOrDefault(ttl)
+	item.lifeTime = time.Now().Add(ttl)
+	item.updated = true
+
+	return nil
+}
+
+func (tx *localTx[T]) Increment(_ context.Context, key string, amount int64) (int64, error) {
 	item, ok := tx.state[key]
 
 	if !ok || item.deleted || item.expired() {
@@ -393,13 +416,11 @@ func (tx *localTx[T]) Increment(_ context.Context, key string, amount int64) (in
 		return amount, nil
 	}
 
-	// 2. Extract current value safely to avoid panics
-	currentVal, castOk := item.value.(int64)
-	if !castOk {
-		return 0, fmt.Errorf("cannot increment non-int64 type")
+	currentVal, ok := item.value.(int64)
+	if !ok {
+		return 0, errs.ErrInvalidType
 	}
 
-	// 3. Do the math and update state flags
 	newVal := currentVal + amount
 	item.value = newVal
 	item.updated = true
@@ -413,10 +434,8 @@ func (tx *localTx[T]) Decrement(ctx context.Context, key string, amount int64) (
 }
 
 func (tx *localTx[T]) CounterValue(ctx context.Context, key string) (int64, error) {
-	key = fmt.Sprintf("cache.counter.%s", key)
-
 	item, ok := tx.state[key]
-	if !ok || item.expired() {
+	if !ok || item.deleted || item.expired() {
 		return 0, ErrItemNotFound
 	}
 
@@ -429,9 +448,7 @@ func (tx *localTx[T]) CounterValue(ctx context.Context, key string) (int64, erro
 }
 
 func (tx *localTx[T]) Set(_ context.Context, key string, value T, ttl time.Duration) error {
-	if ttl == 0 {
-		ttl = Infinity
-	}
+	ttl = TTL_GetOrDefault(ttl)
 	tx.state[key] = &txItem[T]{
 		memitem: memitem{
 			key:      key,
