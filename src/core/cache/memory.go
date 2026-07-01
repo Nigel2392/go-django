@@ -12,6 +12,9 @@ func init() {
 	)
 }
 
+var _ Cache = (*MemoryCache[any])(nil)
+var _ TransactionalCache = (*MemoryCache[any])(nil)
+
 const Infinity = Duration(1<<63 - 1) // 290 years
 
 type memitem[T any] struct {
@@ -193,4 +196,159 @@ func (c *MemoryCache[T]) work() {
 			return
 		}
 	}
+}
+
+// A local wrapper to track what happens during the transaction
+type txItem[T any] struct {
+	memitem[T]
+	updated bool
+	deleted bool
+}
+
+// localTx implements TypedCache[T] for the duration of the transaction
+type localTx[T any] struct {
+	state   map[string]*txItem[T]
+	cleared bool
+}
+
+func (c *MemoryCache[T]) RunInTx(ctx context.Context, fn func(txCache TypedCache[T]) error) error {
+	// copy the cache, but wrap it in our state tracker.
+	txMap := make(map[string]*txItem[T])
+
+	// this function is not meant for high throughput production environments
+	// or environments with very big caches.
+	c.mu.Lock()
+	for k, v := range c.cache {
+		txMap[k] = &txItem[T]{
+			memitem: *v,
+			updated: false,
+			deleted: false,
+		}
+	}
+	c.mu.Unlock()
+
+	// Execute provided func in transaction
+	tx := &localTx[T]{state: txMap}
+	if err := fn(tx); err != nil {
+		return err // discard the map on error
+	}
+
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+
+	// committing, only applying diffs
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	if tx.cleared {
+		c.cache = make(map[string]*memitem[T])
+	}
+
+	for k, item := range txMap {
+		if tx.cleared && item.updated && !item.deleted {
+			// If cleared, ONLY apply items that were explicitly Set() AFTER the Clear()
+			c.cache[k] = &memitem[T]{
+				key:      k,
+				value:    item.value,
+				lifeTime: item.lifeTime,
+			}
+		} else if !tx.cleared {
+			// Normal diff logic
+			if item.deleted {
+				delete(c.cache, k)
+			} else if item.updated {
+				c.cache[k] = &memitem[T]{
+					key:      k,
+					value:    item.value,
+					lifeTime: item.lifeTime,
+				}
+			}
+		}
+		// If not cleared, deleted or updated, do nothing.
+		// preserves changes made by other goroutines.
+	}
+
+	return nil
+}
+
+func (tx *localTx[T]) Set(ctx context.Context, key string, value T, ttl time.Duration) error {
+	if ttl == 0 {
+		ttl = Infinity
+	}
+	tx.state[key] = &txItem[T]{
+		memitem: memitem[T]{
+			key:      key,
+			value:    value,
+			lifeTime: time.Now().Add(ttl),
+		},
+		updated: true,
+		deleted: false,
+	}
+	return nil
+}
+
+func (tx *localTx[T]) Delete(ctx context.Context, key string) error {
+	if item, ok := tx.state[key]; ok {
+		item.deleted = true
+		item.updated = false
+	} else {
+		tx.state[key] = &txItem[T]{deleted: true}
+	}
+	return nil
+}
+
+func (tx *localTx[T]) Get(ctx context.Context, key string) (value T, err error) {
+	item, ok := tx.state[key]
+	// Now we check .expired() so the Tx respects time!
+	if !ok || item.deleted || item.expired() {
+		return value, ErrItemNotFound
+	}
+	return item.value, nil
+}
+
+func (tx *localTx[T]) Has(ctx context.Context, key string) bool {
+	item, ok := tx.state[key]
+	return ok && !item.deleted && !item.expired()
+}
+
+func (tx *localTx[T]) GetDefault(ctx context.Context, key string, defaultValue T) (T, error) {
+	item, ok := tx.state[key]
+	if !ok || item.deleted || item.expired() {
+		return defaultValue, nil
+	}
+	return item.value, nil
+}
+
+func (tx *localTx[T]) Keys(ctx context.Context) ([]string, error) {
+	var keys = make([]string, 0, len(tx.state))
+	for k, item := range tx.state {
+		// Only return keys that are alive and not deleted
+		if !item.deleted && !item.expired() {
+			keys = append(keys, k)
+		}
+	}
+	return keys, nil
+}
+
+func (tx *localTx[T]) Clear(ctx context.Context) error {
+	tx.cleared = true
+	for _, item := range tx.state {
+		item.deleted = true
+		item.updated = false
+	}
+	return nil
+}
+
+func (tx *localTx[T]) TTL(ctx context.Context, key string) time.Duration {
+	item, ok := tx.state[key]
+	if !ok || item.deleted || item.expired() {
+		return 0
+	}
+	// Dynamically calculate the remaining time based on the exact moment TTL is called
+	return time.Until(item.lifeTime)
+}
+
+func (tx *localTx[T]) Close(ctx context.Context) error {
+	return nil
 }

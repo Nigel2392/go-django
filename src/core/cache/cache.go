@@ -14,20 +14,20 @@ type CacheConnector interface {
 	HasConnected() bool
 }
 
-type Cache interface {
+type TypedCache[T any] interface {
 	// Implementation details of the cache interface are written as comments below.
 
 	// Get retrieves a value from the cache.
 	//
 	// If the key does not exist, Get returns nil and ErrItemNotFound.
-	Get(c context.Context, key string) (interface{}, error)
+	Get(c context.Context, key string) (T, error)
 
 	// GetDefault retrieves a value from the cache.
 	//
 	// If the key does not exist, GetDefault returns the defaultValue.
 	//
 	// It may return an error if the key exists but the cache itself returns an error.
-	GetDefault(c context.Context, key string, defaultValue interface{}) (interface{}, error)
+	GetDefault(c context.Context, key string, defaultValue T) (T, error)
 
 	// Set sets a value in the cache.
 	//
@@ -35,7 +35,7 @@ type Cache interface {
 	// The value will expire after the specified ttl.
 	//
 	// If the TTL is 0, or Infinity, the value will never expire.
-	Set(c context.Context, key string, value interface{}, ttl Duration) error
+	Set(c context.Context, key string, value T, ttl Duration) error
 
 	// TTL returns the time to live for a key.
 	//
@@ -69,6 +69,19 @@ type Cache interface {
 	// If any error occurs, Close should return the error.
 	Close(c context.Context) error
 }
+
+type TypedTransactionalCache[T any] interface {
+	TypedCache[T]
+
+	// RunInTx executes the given function inside a transaction.
+	// The provided txCache should be used for all operations inside the function.
+	RunInTx(ctx context.Context, fn func(txCache TypedCache[T]) error) error
+}
+
+type (
+	Cache              = TypedCache[any]
+	TransactionalCache = TypedCache[any]
+)
 
 type cacheBackend struct {
 	backends map[string]Cache
