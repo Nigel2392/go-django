@@ -272,7 +272,7 @@ func (c *MemoryCache[T]) RunInTx(ctx context.Context, fn func(txCache TypedCache
 	return nil
 }
 
-func (tx *localTx[T]) Set(ctx context.Context, key string, value T, ttl time.Duration) error {
+func (tx *localTx[T]) Set(_ context.Context, key string, value T, ttl time.Duration) error {
 	if ttl == 0 {
 		ttl = Infinity
 	}
@@ -288,7 +288,7 @@ func (tx *localTx[T]) Set(ctx context.Context, key string, value T, ttl time.Dur
 	return nil
 }
 
-func (tx *localTx[T]) Delete(ctx context.Context, key string) error {
+func (tx *localTx[T]) Delete(_ context.Context, key string) error {
 	if item, ok := tx.state[key]; ok {
 		item.deleted = true
 		item.updated = false
@@ -298,7 +298,7 @@ func (tx *localTx[T]) Delete(ctx context.Context, key string) error {
 	return nil
 }
 
-func (tx *localTx[T]) Get(ctx context.Context, key string) (value T, err error) {
+func (tx *localTx[T]) Get(_ context.Context, key string) (value T, err error) {
 	item, ok := tx.state[key]
 	// Now we check .expired() so the Tx respects time!
 	if !ok || item.deleted || item.expired() {
@@ -307,12 +307,12 @@ func (tx *localTx[T]) Get(ctx context.Context, key string) (value T, err error) 
 	return item.value, nil
 }
 
-func (tx *localTx[T]) Has(ctx context.Context, key string) bool {
+func (tx *localTx[T]) Has(_ context.Context, key string) bool {
 	item, ok := tx.state[key]
 	return ok && !item.deleted && !item.expired()
 }
 
-func (tx *localTx[T]) GetDefault(ctx context.Context, key string, defaultValue T) (T, error) {
+func (tx *localTx[T]) GetDefault(_ context.Context, key string, defaultValue T) (T, error) {
 	item, ok := tx.state[key]
 	if !ok || item.deleted || item.expired() {
 		return defaultValue, nil
@@ -320,7 +320,7 @@ func (tx *localTx[T]) GetDefault(ctx context.Context, key string, defaultValue T
 	return item.value, nil
 }
 
-func (tx *localTx[T]) Keys(ctx context.Context) ([]string, error) {
+func (tx *localTx[T]) Keys(_ context.Context) ([]string, error) {
 	var keys = make([]string, 0, len(tx.state))
 	for k, item := range tx.state {
 		// Only return keys that are alive and not deleted
@@ -331,7 +331,7 @@ func (tx *localTx[T]) Keys(ctx context.Context) ([]string, error) {
 	return keys, nil
 }
 
-func (tx *localTx[T]) Clear(ctx context.Context) error {
+func (tx *localTx[T]) Clear(_ context.Context) error {
 	tx.cleared = true
 	for _, item := range tx.state {
 		item.deleted = true
@@ -340,7 +340,7 @@ func (tx *localTx[T]) Clear(ctx context.Context) error {
 	return nil
 }
 
-func (tx *localTx[T]) TTL(ctx context.Context, key string) time.Duration {
+func (tx *localTx[T]) TTL(_ context.Context, key string) time.Duration {
 	item, ok := tx.state[key]
 	if !ok || item.deleted || item.expired() {
 		return 0
@@ -349,6 +349,6 @@ func (tx *localTx[T]) TTL(ctx context.Context, key string) time.Duration {
 	return time.Until(item.lifeTime)
 }
 
-func (tx *localTx[T]) Close(ctx context.Context) error {
+func (tx *localTx[T]) Close(_ context.Context) error {
 	return nil
 }
