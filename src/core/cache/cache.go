@@ -136,7 +136,7 @@ func SetDefault(cache TransactionalCache) {
 // GetDefault retrieves the default cache backend.
 //
 // If the default cache backend does not exist, GetDefault returns nil.
-func Default() Cache {
+func Default() TransactionalCache {
 	return GetCache(DefaultCache)
 }
 
