@@ -1,6 +1,7 @@
 package views_test
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -69,7 +70,7 @@ func TestCacheMiss(t *testing.T) {
 
 	// Check if the response is cached
 	cacheKey := buildRequestCacheKey(req)
-	if !cacheBackend.Has(cacheKey) {
+	if !cacheBackend.Has(context.Background(), cacheKey) {
 		t.Error("Expected response to be cached")
 	}
 
@@ -85,7 +86,7 @@ func TestCacheHit(t *testing.T) {
 		ResponseBody:       []byte("Cached response"),
 	}
 	cacheKey := buildRequestCacheKey(httptest.NewRequest("GET", "http://example.com/foo", nil))
-	cacheBackend.Set(cacheKey, cachedResp, time.Millisecond*50)
+	cacheBackend.Set(context.Background(), cacheKey, cachedResp, time.Millisecond*50)
 
 	handler := views.Cache(mockHandler(http.StatusOK, "Hello, world!"), time.Millisecond*50, "memory")
 
@@ -119,7 +120,7 @@ func TestCacheDifferentMethods(t *testing.T) {
 	handler.ServeHTTP(wGet, reqGet)
 
 	cacheKeyGet := buildRequestCacheKey(reqGet)
-	if !cacheBackend.Has(cacheKeyGet) {
+	if !cacheBackend.Has(context.Background(), cacheKeyGet) {
 		t.Error("Expected GET request to be cached")
 	}
 
@@ -129,7 +130,7 @@ func TestCacheDifferentMethods(t *testing.T) {
 	handler.ServeHTTP(wPost, reqPost)
 
 	cacheKeyPost := buildRequestCacheKey(reqPost)
-	if !cacheBackend.Has(cacheKeyPost) {
+	if !cacheBackend.Has(context.Background(), cacheKeyPost) {
 		t.Error("Expected POST request to be cached")
 	}
 
@@ -152,14 +153,14 @@ func TestCacheExpiration(t *testing.T) {
 	handler.ServeHTTP(w, req)
 
 	cacheKey := buildRequestCacheKey(req)
-	if !cacheBackend.Has(cacheKey) {
+	if !cacheBackend.Has(context.Background(), cacheKey) {
 		t.Error("Expected response to be cached")
 	}
 
 	// Wait for cache to expire
 	time.Sleep(time.Millisecond * 60)
 
-	if cacheBackend.Has(cacheKey) {
+	if cacheBackend.Has(context.Background(), cacheKey) {
 		t.Error("Expected cache to expire")
 	}
 }

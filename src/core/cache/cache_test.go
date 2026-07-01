@@ -1,6 +1,7 @@
 package cache_test
 
 import (
+	"context"
 	"strconv"
 	"testing"
 	"time"
@@ -29,14 +30,14 @@ func TestMemoryCache(t *testing.T) {
 
 	// Test insertion of cache items
 	for _, item := range cacheItems {
-		err := c.Set(item.key, item.value, 5*time.Second)
+		err := c.Set(context.Background(), item.key, item.value, 5*time.Second)
 		if err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	// Test if keys exist
-	keys, err := c.Keys()
+	keys, err := c.Keys(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -55,7 +56,7 @@ func TestMemoryCache(t *testing.T) {
 
 	// Test retrieval of cache items
 	for _, item := range cacheItems {
-		value, err := c.Get(item.key)
+		value, err := c.Get(context.Background(), item.key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -66,7 +67,7 @@ func TestMemoryCache(t *testing.T) {
 
 	// Test TTL (time-to-live).
 	for _, item := range cacheItems {
-		ttl := c.TTL(item.key)
+		ttl := c.TTL(context.Background(), item.key)
 		if ttl <= 0 {
 			t.Fatalf("ttl not positive for key %s %s", item.key, ttl)
 		}
@@ -74,14 +75,14 @@ func TestMemoryCache(t *testing.T) {
 
 	// Test Has function
 	for _, item := range cacheItems {
-		if !c.Has(item.key) {
+		if !c.Has(context.Background(), item.key) {
 			t.Fatalf("item should exist but does not %s", item.key)
 		}
 	}
 
 	// Test deletion of items
 	for _, item := range cacheItems {
-		err := c.Delete(item.key)
+		err := c.Delete(context.Background(), item.key)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -89,7 +90,7 @@ func TestMemoryCache(t *testing.T) {
 
 	// Ensure items are deleted
 	for _, item := range cacheItems {
-		_, err := c.Get(item.key)
+		_, err := c.Get(context.Background(), item.key)
 		if err == nil {
 			t.Fatalf("item should be deleted but found %s", item.key)
 		}
@@ -98,28 +99,27 @@ func TestMemoryCache(t *testing.T) {
 
 func TestMemoryCacheTTLExpiry(t *testing.T) {
 	var c = cache.NewMemoryCache(1 * time.Second)
-
 	// Test that items expire correctly
-	err := c.Set("key1", []byte("value1"), 2*time.Second)
+	err := c.Set(context.Background(), "key1", []byte("value1"), 2*time.Second)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(3 * time.Second)
 
-	_, err = c.Get("key1")
+	_, err = c.Get(context.Background(), "key1")
 	if err == nil {
 		t.Fatalf("key1 should have expired but still exists")
 	}
 
-	err = c.Set("key2", []byte("value2"), 20*time.Millisecond)
+	err = c.Set(context.Background(), "key2", []byte("value2"), 20*time.Millisecond)
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	time.Sleep(30 * time.Millisecond)
 
-	_, err = c.Get("key2")
+	_, err = c.Get(context.Background(), "key2")
 	if err == nil {
 		t.Fatalf("key2 should have expired but still exists")
 	}

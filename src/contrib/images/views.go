@@ -96,7 +96,7 @@ func (a *AppConfig) serveImageByIDView(w http.ResponseWriter, r *http.Request) {
 		var id = vars.Get("id")
 
 		var cacheKey = fmt.Sprintf("contrib:images:%s", id)
-		var cachedObj, err = cache.Get(cacheKey)
+		var cachedObj, err = cache.Get(r.Context(), cacheKey)
 		if err != nil && !errors.Is(err, cache.ErrItemNotFound) {
 			return nil, fmt.Errorf("error retrieving cached image: %w", err)
 		}
@@ -114,7 +114,7 @@ func (a *AppConfig) serveImageByIDView(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// Cache the retrieved image
-		err = cache.Set(cacheKey, imgRow.Object, time.Hour)
+		err = cache.Set(r.Context(), cacheKey, imgRow.Object, time.Hour)
 		if err != nil {
 			return nil, fmt.Errorf("error caching image: %w", err)
 		}

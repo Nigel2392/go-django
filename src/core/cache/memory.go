@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"context"
 	"sync"
 	"time"
 )
@@ -55,7 +56,7 @@ func (c *MemoryCache[T]) Run(interval time.Duration) {
 	go c.work()
 }
 
-func (c *MemoryCache[T]) Set(key string, value T, ttl time.Duration) error {
+func (c *MemoryCache[T]) Set(_ context.Context, key string, value T, ttl time.Duration) error {
 	if ttl == 0 {
 		ttl = Infinity
 	}
@@ -73,7 +74,7 @@ func (c *MemoryCache[T]) Set(key string, value T, ttl time.Duration) error {
 	return nil
 }
 
-func (c *MemoryCache[T]) Get(key string) (value T, err error) {
+func (c *MemoryCache[T]) Get(_ context.Context, key string) (value T, err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var item, ok = c.cache[key]
@@ -87,7 +88,7 @@ func (c *MemoryCache[T]) Get(key string) (value T, err error) {
 	return item.value, nil
 }
 
-func (c *MemoryCache[T]) GetDefault(key string, defaultValue T) (value T, err error) {
+func (c *MemoryCache[T]) GetDefault(_ context.Context, key string, defaultValue T) (value T, err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var item, ok = c.cache[key]
@@ -101,7 +102,7 @@ func (c *MemoryCache[T]) GetDefault(key string, defaultValue T) (value T, err er
 	return item.value, nil
 }
 
-func (c *MemoryCache[T]) Delete(key string) error {
+func (c *MemoryCache[T]) Delete(_ context.Context, key string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var _, ok = c.cache[key]
@@ -112,14 +113,14 @@ func (c *MemoryCache[T]) Delete(key string) error {
 	return nil
 }
 
-func (c *MemoryCache[T]) Clear() (err error) {
+func (c *MemoryCache[T]) Clear(_ context.Context) (err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.cache = make(map[string]*memitem[T])
 	return nil
 }
 
-func (c *MemoryCache[T]) TTL(key string) (ttl time.Duration) {
+func (c *MemoryCache[T]) TTL(_ context.Context, key string) (ttl time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var item, ok = c.cache[key]
@@ -133,7 +134,7 @@ func (c *MemoryCache[T]) TTL(key string) (ttl time.Duration) {
 	return time.Until(item.lifeTime)
 }
 
-func (c *MemoryCache[T]) Keys() ([]string, error) {
+func (c *MemoryCache[T]) Keys(_ context.Context) ([]string, error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var keys = make([]string, 0, len(c.cache))
@@ -147,18 +148,18 @@ func (c *MemoryCache[T]) Keys() ([]string, error) {
 	return keys, nil
 }
 
-func (c *MemoryCache[T]) Close() error {
+func (c *MemoryCache[T]) Close(_ context.Context) error {
 	close(c.closed)
 	return nil
 }
 
-func (c *MemoryCache[T]) Len() int {
+func (c *MemoryCache[T]) Len(_ context.Context) int {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	return len(c.cache)
 }
 
-func (c *MemoryCache[T]) Has(key string) (exists bool) {
+func (c *MemoryCache[T]) Has(_ context.Context, key string) (exists bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	var item, ok = c.cache[key]

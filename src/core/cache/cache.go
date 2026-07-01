@@ -1,6 +1,9 @@
 package cache
 
-import "time"
+import (
+	"context"
+	"time"
+)
 
 const DefaultCache = "default"
 
@@ -17,14 +20,14 @@ type Cache interface {
 	// Get retrieves a value from the cache.
 	//
 	// If the key does not exist, Get returns nil and ErrItemNotFound.
-	Get(key string) (interface{}, error)
+	Get(c context.Context, key string) (interface{}, error)
 
 	// GetDefault retrieves a value from the cache.
 	//
 	// If the key does not exist, GetDefault returns the defaultValue.
 	//
 	// It may return an error if the key exists but the cache itself returns an error.
-	GetDefault(key string, defaultValue interface{}) (interface{}, error)
+	GetDefault(c context.Context, key string, defaultValue interface{}) (interface{}, error)
 
 	// Set sets a value in the cache.
 	//
@@ -32,39 +35,39 @@ type Cache interface {
 	// The value will expire after the specified ttl.
 	//
 	// If the TTL is 0, or Infinity, the value will never expire.
-	Set(key string, value interface{}, ttl Duration) error
+	Set(c context.Context, key string, value interface{}, ttl Duration) error
 
 	// TTL returns the time to live for a key.
 	//
 	// If the key does not exist, TTL returns 0.
 	//
 	// If any error occurs, TTL returns 0.
-	TTL(key string) Duration
+	TTL(c context.Context, key string) Duration
 
 	// Has returns true if the key exists in the cache.
 	//
 	// If any error occurs, Has returns false.
-	Has(key string) bool
+	Has(c context.Context, key string) bool
 
 	// Delete removes a key from the cache.
 	//
 	// If the key does not exist, Delete should return ErrItemNotFound.
-	Delete(key string) error
+	Delete(c context.Context, key string) error
 
 	// Keys returns all keys in the cache.
 	//
 	// If any error occurs, Keys returns an empty slice and the error.
-	Keys() ([]string, error)
+	Keys(c context.Context) ([]string, error)
 
 	// Clear removes all keys from the cache.
 	//
 	// If any error occurs, Clear should return the error.
-	Clear() error
+	Clear(c context.Context) error
 
 	// Close closes the cache.
 	//
 	// If any error occurs, Close should return the error.
-	Close() error
+	Close(c context.Context) error
 }
 
 type cacheBackend struct {
@@ -127,8 +130,8 @@ func Default() Cache {
 // Get retrieves a value from the default cache backend.
 //
 // If the key does not exist, Get returns nil and ErrItemNotFound.
-func Get(key string) (interface{}, error) {
-	return Default().Get(key)
+func Get(ctx context.Context, key string) (interface{}, error) {
+	return Default().Get(ctx, key)
 }
 
 // GetDefault retrieves a value from the default cache backend.
@@ -136,16 +139,16 @@ func Get(key string) (interface{}, error) {
 // If the key does not exist, GetDefault returns the defaultValue.
 //
 // It may return an error if the key exists but the cache itself returns an error.
-func GetDefault(key string, defaultValue interface{}) (interface{}, error) {
-	return Default().GetDefault(key, defaultValue)
+func GetDefault(ctx context.Context, key string, defaultValue interface{}) (interface{}, error) {
+	return Default().GetDefault(ctx, key, defaultValue)
 }
 
 // Set sets a value in the default cache backend.
 //
 // The value is stored in the cache with the specified key.
 // The value will expire after the specified ttl.
-func Set(key string, value interface{}, ttl Duration) error {
-	return Default().Set(key, value, ttl)
+func Set(ctx context.Context, key string, value interface{}, ttl Duration) error {
+	return Default().Set(ctx, key, value, ttl)
 }
 
 // TTL returns the time to live for a key in the default cache backend.
@@ -153,41 +156,41 @@ func Set(key string, value interface{}, ttl Duration) error {
 // If the key does not exist, TTL returns 0.
 //
 // If any error occurs, TTL returns 0.
-func TTL(key string) Duration {
-	return Default().TTL(key)
+func TTL(ctx context.Context, key string) Duration {
+	return Default().TTL(ctx, key)
 }
 
 // Has returns true if the key exists in the default cache backend.
 //
 // If any error occurs, Has returns false.
-func Has(key string) bool {
-	return Default().Has(key)
+func Has(ctx context.Context, key string) bool {
+	return Default().Has(ctx, key)
 }
 
 // Delete removes a key from the default cache backend.
 //
 // If the key does not exist, Delete should return ErrItemNotFound.
-func Delete(key string) error {
-	return Default().Delete(key)
+func Delete(ctx context.Context, key string) error {
+	return Default().Delete(ctx, key)
 }
 
 // Keys returns all keys in the default cache backend.
 //
 // If any error occurs, Keys returns an empty slice and the error.
-func Keys() ([]string, error) {
-	return Default().Keys()
+func Keys(ctx context.Context) ([]string, error) {
+	return Default().Keys(ctx)
 }
 
 // Clear removes all keys from the default cache backend.
 //
 // If any error occurs, Clear should return the error.
-func Clear() error {
-	return Default().Clear()
+func Clear(ctx context.Context) error {
+	return Default().Clear(ctx)
 }
 
 // Close closes the default cache backend.
 //
 // If any error occurs, Close should return the error.
-func Close() error {
-	return Default().Close()
+func Close(ctx context.Context) error {
+	return Default().Close(ctx)
 }

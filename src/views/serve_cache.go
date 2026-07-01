@@ -2,6 +2,7 @@ package views
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"fmt"
 	"hash/fnv"
@@ -80,6 +81,9 @@ func buildRequestCacheKey(req *http.Request) string {
 	return fmt.Sprintf("views.buildRequestCacheKey.%s.%x.%x", req.Method, sum, fnvhash(url))
 }
 
+/*
+	TODO: FIX REQUEST CACHE IMPLEMENTATION
+*/
 // Cache caches the response of a view for a given duration.
 func Cache(view http.Handler, duration cache.Duration, cacheBackends ...string) http.Handler {
 	if duration == 0 {
@@ -90,7 +94,7 @@ func Cache(view http.Handler, duration cache.Duration, cacheBackends ...string) 
 		var cacheKey = buildRequestCacheKey(req)
 		var cacheBackend = cache.GetCache(cacheBackends...)
 
-		if !cacheBackend.Has(cacheKey) {
+		if !cacheBackend.Has(context.Background(), cacheKey) {
 			logger.Debugf(
 				"Key does not exist in cache: %s", cacheKey,
 			)
@@ -110,7 +114,7 @@ func Cache(view http.Handler, duration cache.Duration, cacheBackends ...string) 
 			logger.Debugf(
 				"Caching response: %s", cacheKey,
 			)
-			var err = cacheBackend.Set(cacheKey, cachedResponse, duration)
+			var err = cacheBackend.Set(context.Background(), cacheKey, cachedResponse, duration)
 			if err != nil {
 				logger.Errorf(
 					"Error caching response: %s", err,
@@ -137,7 +141,7 @@ func Cache(view http.Handler, duration cache.Duration, cacheBackends ...string) 
 		logger.Debugf(
 			"Retrieving cached response: %s", cacheKey,
 		)
-		var response, err = cacheBackend.Get(cacheKey)
+		var response, err = cacheBackend.Get(context.Background(), cacheKey)
 		if err != nil {
 			logger.Errorf(
 				"Error getting cached response: %s", err,
