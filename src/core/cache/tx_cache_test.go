@@ -25,7 +25,7 @@ func TestMemoryCacheTransactions(t *testing.T) {
 	t.Run("Rollback on Error", func(t *testing.T) {
 		c := setupCache()
 
-		err := c.RunInTx(ctx, func(tx cache.TypedCache[string]) error {
+		err := c.RunInTx(ctx, func(ctx context.Context, tx cache.TypedTransaction[string]) error {
 			_ = tx.Set(ctx, "existing_key", "new_value", 0)
 			_ = tx.Set(ctx, "new_key", "new_value", 0)
 			_ = tx.Delete(ctx, "to_be_deleted")
@@ -54,7 +54,7 @@ func TestMemoryCacheTransactions(t *testing.T) {
 	t.Run("Successful Commit with Updates and Deletes", func(t *testing.T) {
 		c := setupCache()
 
-		err := c.RunInTx(ctx, func(tx cache.TypedCache[string]) error {
+		err := c.RunInTx(ctx, func(ctx context.Context, tx cache.TypedTransaction[string]) error {
 			// 1. Read isolation
 			val, _ := tx.Get(ctx, "existing_key")
 			if val != "old_value" {
@@ -92,7 +92,7 @@ func TestMemoryCacheTransactions(t *testing.T) {
 	t.Run("No Lost Updates (Concurrent modifications)", func(t *testing.T) {
 		c := setupCache()
 
-		err := c.RunInTx(ctx, func(tx cache.TypedCache[string]) error {
+		err := c.RunInTx(ctx, func(ctx context.Context, tx cache.TypedTransaction[string]) error {
 			// Change something in the tx
 			_ = tx.Set(ctx, "existing_key", "changed_in_tx", 0)
 
@@ -124,7 +124,7 @@ func TestMemoryCacheTransactions(t *testing.T) {
 	t.Run("Clear inside Tx", func(t *testing.T) {
 		c := setupCache()
 
-		err := c.RunInTx(ctx, func(tx cache.TypedCache[string]) error {
+		err := c.RunInTx(ctx, func(ctx context.Context, tx cache.TypedTransaction[string]) error {
 			_ = tx.Clear(ctx)
 			_ = tx.Set(ctx, "post_clear_key", "value", 0)
 			return nil
@@ -153,7 +153,7 @@ func TestMemoryCacheTransactions(t *testing.T) {
 		// Wait for it to expire
 		time.Sleep(60 * time.Millisecond)
 
-		err := c.RunInTx(ctx, func(tx cache.TypedCache[string]) error {
+		err := c.RunInTx(ctx, func(ctx context.Context, tx cache.TypedTransaction[string]) error {
 			// Even though it might have been snapshotted, expired() should catch it
 			_, err := tx.Get(ctx, "fast_expire")
 			if err == nil {
@@ -185,7 +185,7 @@ func TestMemoryCacheTransactionEdgeCases(t *testing.T) {
 	t.Run("Concurrent Clear Bug", func(t *testing.T) {
 		c := setupCache()
 
-		err := c.RunInTx(ctx, func(tx cache.TypedCache[string]) error {
+		err := c.RunInTx(ctx, func(ctx context.Context, tx cache.TypedTransaction[string]) error {
 			// 1. Trigger the nuclear option
 			_ = tx.Clear(ctx)
 
@@ -229,7 +229,7 @@ func TestMemoryCacheTransactionEdgeCases(t *testing.T) {
 		cancelCtx, cancel := context.WithTimeout(ctx, 10*time.Millisecond)
 		defer cancel()
 
-		err := c.RunInTx(cancelCtx, func(tx cache.TypedCache[string]) error {
+		err := c.RunInTx(cancelCtx, func(ctx context.Context, tx cache.TypedTransaction[string]) error {
 			// Change state inside the transaction
 			_ = tx.Set(cancelCtx, "existing_key", "zombie_value", 0)
 
@@ -255,7 +255,7 @@ func TestMemoryCacheTransactionEdgeCases(t *testing.T) {
 	t.Run("Set After Delete Anomaly (State Bouncing)", func(t *testing.T) {
 		c := setupCache()
 
-		err := c.RunInTx(ctx, func(tx cache.TypedCache[string]) error {
+		err := c.RunInTx(ctx, func(ctx context.Context, tx cache.TypedTransaction[string]) error {
 			// Scenario A: Set -> Delete -> Set
 			_ = tx.Set(ctx, "bounce_key", "first_val", 0)
 			_ = tx.Delete(ctx, "bounce_key")
@@ -282,6 +282,273 @@ func TestMemoryCacheTransactionEdgeCases(t *testing.T) {
 		// Assert Scenario B: The final Delete should win.
 		if c.Has(ctx, "existing_key") {
 			t.Fatalf("existing_key should have been ultimately deleted")
+		}
+	})
+}
+
+func TestMemoryCacheTransactionCounters(t *testing.T) {
+	ctx := context.Background()
+
+	setupTxCache := func() *cache.MemoryCache[any] {
+		c := cache.NewGenericMemoryCache[any]()
+		c.Run(1 * time.Second)
+		_ = c.Set(ctx, "cache.counter.existing_counter", int64(50), 5*time.Minute)
+		return c
+	}
+
+	t.Run("Commit Increments and Decrements", func(t *testing.T) {
+		c := setupTxCache()
+
+		err := c.RunInTx(ctx, func(ctx context.Context, tx cache.TypedTransaction[any]) error {
+			if !tx.InTransaction() {
+				t.Fatalf("expected InTransaction() to return true")
+			}
+
+			val, err := tx.Increment(ctx, "existing_counter", 10)
+			if err != nil {
+				return err
+			}
+			if val != 60 {
+				t.Fatalf("expected 60 inside tx, got %v", val)
+			}
+
+			val, err = tx.Decrement(ctx, "existing_counter", 5)
+			if err != nil {
+				return err
+			}
+			if val != 55 {
+				t.Fatalf("expected 55 inside tx, got %v", val)
+			}
+
+			val, err = tx.Increment(ctx, "new_tx_counter", 100)
+			if err != nil {
+				return err
+			}
+			if val != 100 {
+				t.Fatalf("expected 100 inside tx, got %v", val)
+			}
+
+			return nil // Commit
+		})
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// Assert Main Cache Updated Correctly
+		val, _ := c.Get(ctx, "cache.counter.existing_counter")
+		if val.(int64) != 55 {
+			t.Fatalf("expected 55 in main cache, got %v", val)
+		}
+
+		val, _ = c.Get(ctx, "cache.counter.new_tx_counter")
+		if val.(int64) != 100 {
+			t.Fatalf("expected 100 in main cache, got %v", val)
+		}
+	})
+
+	t.Run("Rollback Increments", func(t *testing.T) {
+		c := setupTxCache()
+		errMock := errors.New("mock rollback")
+
+		err := c.RunInTx(ctx, func(ctx context.Context, tx cache.TypedTransaction[any]) error {
+			_, _ = tx.Increment(ctx, "existing_counter", 100)    // Should be 150
+			_, _ = tx.Decrement(ctx, "new_rollback_counter", 50) // Should be -50
+			return errMock                                       // Discard everything
+		})
+
+		if !errors.Is(err, errMock) {
+			t.Fatalf("expected rollback error")
+		}
+
+		// Assert Main Cache is untouched
+		val, _ := c.Get(ctx, "cache.counter.existing_counter")
+		if val.(int64) != 50 {
+			t.Fatalf("expected existing_counter to remain 50, got %v", val)
+		}
+
+		if c.Has(ctx, "cache.counter.new_rollback_counter") {
+			t.Fatalf("new_rollback_counter should not exist after rollback")
+		}
+	})
+
+	t.Run("State Bouncing (Delete then Increment)", func(t *testing.T) {
+		c := setupTxCache()
+
+		err := c.RunInTx(ctx, func(ctx context.Context, tx cache.TypedTransaction[any]) error {
+			// Delete the key, marking it as 'deleted: true' in tx.state
+			_ = tx.Delete(ctx, "cache.counter.existing_counter")
+
+			// Incrementing it now should act like a brand new initialization
+			val, err := tx.Increment(ctx, "existing_counter", 10)
+			if err != nil {
+				return err
+			}
+			if val != 10 {
+				t.Fatalf("expected 10 after delete-then-increment, got %v", val)
+			}
+
+			return nil // Commit
+		})
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		val, _ := c.CounterValue(ctx, "existing_counter")
+		if val != 10 {
+			t.Fatalf("expected state bounce to yield 10, got %v", val)
+		}
+	})
+}
+
+func setupGlobalCache() {
+	// Reset the global default cache to ensure test isolation
+	c := cache.NewMemoryCache(1 * time.Second)
+	cache.SetDefault(c)
+}
+
+func TestContextTransactionHelpers(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Empty Context Returns False", func(t *testing.T) {
+		_, ok := cache.TransactionFromContext(ctx)
+		if ok {
+			t.Fatalf("expected no transaction in empty context")
+		}
+	})
+
+	t.Run("Context With Transaction", func(t *testing.T) {
+		setupGlobalCache()
+
+		// Start a dummy transaction just to get the tx object
+		_ = cache.RunInTx(ctx, func(ctx context.Context, tx cache.Transaction) error {
+			txCtx := cache.ContextWithTransaction(ctx, tx)
+
+			retrievedTx, ok := cache.TransactionFromContext(txCtx)
+			if !ok {
+				t.Fatalf("failed to retrieve transaction from context")
+			}
+
+			if retrievedTx == nil {
+				t.Fatalf("retrieved transaction is nil")
+			}
+			return nil
+		})
+	})
+}
+
+func TestGlobalWrappersWithContextPropagation(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("Successful Commit via Global Wrappers", func(t *testing.T) {
+		setupGlobalCache()
+
+		err := cache.RunInTx(ctx, func(ctx context.Context, tx cache.Transaction) error {
+			// 1. Inject the transaction into a new context
+			txCtx := cache.ContextWithTransaction(ctx, tx)
+
+			// 2. Perform operations using the GLOBAL package methods, passing the injected context
+			_ = cache.Set(txCtx, "implicit_key", "implicit_val", 5*time.Minute)
+			_, _ = cache.Increment(txCtx, "implicit_counter", 10)
+
+			// 3. Verify they exist inside the transaction context
+			if !cache.Has(txCtx, "implicit_key") {
+				t.Fatalf("expected global wrapper to route Set to transaction")
+			}
+
+			// 4. Verify they DO NOT exist in the main cache yet
+			// We test this by using the original 'ctx' which lacks the transaction
+			if cache.Has(ctx, "implicit_key") {
+				t.Fatalf("transaction isolation breached: key found in main cache before commit")
+			}
+
+			return nil // Commit
+		})
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		// 5. Verify data is flushed to main cache after commit
+		val, _ := cache.Get(ctx, "implicit_key")
+		if val != "implicit_val" {
+			t.Fatalf("expected 'implicit_val' to be flushed to main cache, got %v", val)
+		}
+
+		counterVal, _ := cache.Get(ctx, "cache.counter.implicit_counter") // Verify prefix logic held up
+		if counterVal.(int64) != 10 {
+			t.Fatalf("expected counter to equal 10 in main cache, got %v", counterVal)
+		}
+	})
+
+	t.Run("Rollback via Global Wrappers", func(t *testing.T) {
+		setupGlobalCache()
+		errMock := errors.New("abort transaction")
+
+		err := cache.RunInTx(ctx, func(ctx context.Context, tx cache.Transaction) error {
+			txCtx := cache.ContextWithTransaction(ctx, tx)
+
+			_ = cache.Set(txCtx, "rollback_key", "val", 0)
+			_, _ = cache.Decrement(txCtx, "rollback_counter", 50)
+
+			// Verify they exist in the tx state
+			val, _ := cache.Get(txCtx, "rollback_key")
+			if val != "val" {
+				t.Fatalf("expected to read 'val' inside transaction")
+			}
+
+			return errMock // Rollback
+		})
+
+		if !errors.Is(err, errMock) {
+			t.Fatalf("expected errMock")
+		}
+
+		// Verify main cache is untouched
+		if cache.Has(ctx, "rollback_key") {
+			t.Fatalf("rollback failed: key exists in main cache")
+		}
+	})
+
+	t.Run("Clear via Global Wrapper in Tx", func(t *testing.T) {
+		setupGlobalCache()
+		_ = cache.Set(ctx, "pre_existing_key", "keep_me", 0)
+
+		err := cache.RunInTx(ctx, func(ctx context.Context, tx cache.Transaction) error {
+			txCtx := cache.ContextWithTransaction(ctx, tx)
+
+			// Call global clear with transaction context
+			_ = cache.Clear(txCtx)
+
+			// Ensure it reflects in the transaction
+			if cache.Has(txCtx, "pre_existing_key") {
+				t.Fatalf("expected pre_existing_key to be cleared inside tx")
+			}
+
+			return nil // Commit
+		})
+
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+
+		if cache.Has(ctx, "pre_existing_key") {
+			t.Fatalf("expected main cache to be cleared after commit")
+		}
+	})
+
+	t.Run("transactionOrDefault Fallback", func(t *testing.T) {
+		setupGlobalCache()
+
+		// Using a plain context (no transaction injected)
+		// Should route directly to Default() cache without panicking
+		_ = cache.Set(ctx, "direct_key", "direct_val", 0)
+		_, _ = cache.Increment(ctx, "direct_counter", 5)
+
+		val, _ := cache.Get(ctx, "direct_key")
+		if val != "direct_val" {
+			t.Fatalf("expected 'direct_val', got %v", val)
 		}
 	})
 }

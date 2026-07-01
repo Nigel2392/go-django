@@ -4,10 +4,12 @@ type errorType int
 
 const (
 	ErrItemNotFound errorType = iota
+	ErrNotSupported
 )
 
 var errMap = map[errorType]string{
 	ErrItemNotFound: "item not found",
+	ErrNotSupported: "operation not supported by this cache backend",
 }
 
 func (e errorType) Error() string {

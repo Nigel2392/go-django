@@ -124,3 +124,83 @@ func TestMemoryCacheTTLExpiry(t *testing.T) {
 		t.Fatalf("key2 should have expired but still exists")
 	}
 }
+
+func TestMemoryCacheCounters(t *testing.T) {
+	ctx := context.Background()
+	// Using [any] so we can test mixing string keys and integer counters
+	c := cache.NewGenericMemoryCache[any]()
+	c.Run(1 * time.Second)
+
+	t.Run("Initial Increment Creates Key", func(t *testing.T) {
+		val, err := c.Increment(ctx, "counter_inc", 10)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if val != 10 {
+			t.Fatalf("expected 10, got %v", val)
+		}
+	})
+
+	t.Run("Sequential Increment Math", func(t *testing.T) {
+		val, err := c.Increment(ctx, "counter_inc", 5)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if val != 15 {
+			t.Fatalf("expected 15, got %v", val)
+		}
+	})
+
+	t.Run("Initial Decrement Creates Key", func(t *testing.T) {
+		val, err := c.Decrement(ctx, "counter_dec", 5)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if val != -5 {
+			t.Fatalf("expected -5, got %v", val)
+		}
+	})
+
+	t.Run("Sequential Decrement Math", func(t *testing.T) {
+		val, err := c.Decrement(ctx, "counter_dec", 10)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if val != -15 {
+			t.Fatalf("expected -15, got %v", val)
+		}
+
+		val, err = c.CounterValue(ctx, "counter_dec")
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		if val != -15 {
+			t.Fatalf("expected -15, got %v", val)
+		}
+	})
+
+	t.Run("Preserves TTL on Increment", func(t *testing.T) {
+		_ = c.Set(ctx, "cache.counter.ttl_counter", int64(100), 10*time.Minute)
+
+		ttlBefore := c.TTL(ctx, "cache.counter.ttl_counter")
+		_, _ = c.Increment(ctx, "ttl_counter", 1)
+		ttlAfter := c.TTL(ctx, "cache.counter.ttl_counter")
+
+		// Ensure the TTL wasn't reset to Infinity or 0
+		if ttlAfter > 10*time.Minute || ttlAfter < 9*time.Minute {
+			t.Fatalf("TTL was altered! Before: %v, After: %v", ttlBefore, ttlAfter)
+		}
+	})
+
+	t.Run("Errors on Non-Numeric Types", func(t *testing.T) {
+		defer func() {
+			if r := recover(); r == nil {
+				t.Fatal("expected test to raise panic")
+			}
+		}()
+
+		_ = c.Set(ctx, "cache.counter.string_key", "im_a_string", 0)
+
+		c.Increment(ctx, "string_key", 1)
+	})
+}

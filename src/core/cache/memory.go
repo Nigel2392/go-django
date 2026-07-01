@@ -2,8 +2,11 @@ package cache
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
+
+	"github.com/Nigel2392/go-django/src/core/errs"
 )
 
 func init() {
@@ -14,16 +17,17 @@ func init() {
 
 var _ Cache = (*MemoryCache[any])(nil)
 var _ TransactionalCache = (*MemoryCache[any])(nil)
+var _ Transaction = (*localTx[any])(nil)
 
 const Infinity = Duration(1<<63 - 1) // 290 years
 
-type memitem[T any] struct {
+type memitem struct {
 	key      string
-	value    T
+	value    interface{}
 	lifeTime time.Time
 }
 
-func (m *memitem[T]) expired() bool {
+func (m *memitem) expired() bool {
 	return m.lifeTime.Before(time.Now())
 }
 
@@ -31,7 +35,7 @@ func (m *memitem[T]) expired() bool {
 //
 // Look at the interface implementation in cache.go for more information on the methods.
 type MemoryCache[T any] struct {
-	cache           map[string]*memitem[T]
+	cache           map[string]*memitem
 	cleanupInterval time.Duration
 	cleanupTicker   *time.Ticker
 	closed          chan struct{}
@@ -48,7 +52,7 @@ func NewMemoryCache(interval time.Duration) *MemoryCache[interface{}] {
 // Might as well make it generic, right?
 func NewGenericMemoryCache[T any]() *MemoryCache[T] {
 	return &MemoryCache[T]{
-		cache:  make(map[string]*memitem[T]),
+		cache:  make(map[string]*memitem),
 		closed: make(chan struct{}),
 	}
 }
@@ -59,13 +63,65 @@ func (c *MemoryCache[T]) Run(interval time.Duration) {
 	go c.work()
 }
 
+// Increment atomically increments a numeric key by the given amount.
+// If the key does not exist, it initializes it to the amount with an infinite TTL.
+// It does NOT reset the TTL of an existing key.
+func (c *MemoryCache[T]) Increment(_ context.Context, key string, amount int64) (int64, error) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	key = fmt.Sprintf("cache.counter.%s", key)
+	item, ok := c.cache[key]
+
+	if !ok || item.expired() {
+		c.cache[key] = &memitem{
+			key:      key,
+			value:    amount, // Drops in strictly as an int64
+			lifeTime: time.Now().Add(Infinity),
+		}
+		return amount, nil
+	}
+
+	var currentVal = item.value.(int64)
+	newVal := currentVal + amount
+	item.value = newVal
+
+	return newVal, nil
+}
+
+// Decrement atomically decrements a numeric key by the given amount.
+// If the key does not exist, it initializes it to -amount with an infinite TTL.
+// It does NOT reset the TTL of an existing key.
+func (c *MemoryCache[T]) Decrement(ctx context.Context, key string, amount int64) (int64, error) {
+	return c.Increment(ctx, key, -amount)
+}
+
+func (c *MemoryCache[T]) CounterValue(ctx context.Context, key string) (int64, error) {
+	key = fmt.Sprintf("cache.counter.%s", key)
+
+	c.mu.Lock()
+	defer c.mu.Unlock()
+
+	item, ok := c.cache[key]
+	if !ok || item.expired() {
+		return 0, ErrItemNotFound
+	}
+
+	currentVal, ok := item.value.(int64)
+	if !ok {
+		return 0, errs.ErrInvalidType
+	}
+
+	return currentVal, nil
+}
+
 func (c *MemoryCache[T]) Set(_ context.Context, key string, value T, ttl time.Duration) error {
 	if ttl == 0 {
 		ttl = Infinity
 	}
 
 	var lifeTime = time.Now().Add(ttl)
-	var item *memitem[T] = &memitem[T]{
+	var item *memitem = &memitem{
 		key:      key,
 		value:    value,
 		lifeTime: lifeTime,
@@ -88,7 +144,11 @@ func (c *MemoryCache[T]) Get(_ context.Context, key string) (value T, err error)
 		delete(c.cache, key)
 		return value, ErrItemNotFound
 	}
-	return item.value, nil
+	t, ok := item.value.(T)
+	if !ok {
+		return *new(T), errs.ErrInvalidType
+	}
+	return t, nil
 }
 
 func (c *MemoryCache[T]) GetDefault(_ context.Context, key string, defaultValue T) (value T, err error) {
@@ -102,7 +162,11 @@ func (c *MemoryCache[T]) GetDefault(_ context.Context, key string, defaultValue 
 		delete(c.cache, key)
 		return defaultValue, nil
 	}
-	return item.value, nil
+	t, ok := item.value.(T)
+	if !ok {
+		return *new(T), errs.ErrInvalidType
+	}
+	return t, nil
 }
 
 func (c *MemoryCache[T]) Delete(_ context.Context, key string) error {
@@ -119,7 +183,7 @@ func (c *MemoryCache[T]) Delete(_ context.Context, key string) error {
 func (c *MemoryCache[T]) Clear(_ context.Context) (err error) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.cache = make(map[string]*memitem[T])
+	c.cache = make(map[string]*memitem)
 	return nil
 }
 
@@ -233,18 +297,19 @@ func (c *MemoryCache[T]) work() {
 
 // A local wrapper to track what happens during the transaction
 type txItem[T any] struct {
-	memitem[T]
+	memitem
 	updated bool
 	deleted bool
 }
 
 // localTx implements TypedCache[T] for the duration of the transaction
 type localTx[T any] struct {
-	state   map[string]*txItem[T]
-	cleared bool
+	state         map[string]*txItem[T]
+	cleared       bool
+	inTransaction bool
 }
 
-func (c *MemoryCache[T]) RunInTx(ctx context.Context, fn func(txCache TypedCache[T]) error) error {
+func (c *MemoryCache[T]) RunInTx(ctx context.Context, fn func(ctx context.Context, txCache TypedTransaction[T]) error) error {
 	// copy the cache, but wrap it in our state tracker.
 	txMap := make(map[string]*txItem[T])
 
@@ -261,10 +326,11 @@ func (c *MemoryCache[T]) RunInTx(ctx context.Context, fn func(txCache TypedCache
 	c.mu.Unlock()
 
 	// Execute provided func in transaction
-	tx := &localTx[T]{state: txMap}
-	if err := fn(tx); err != nil {
+	tx := &localTx[T]{state: txMap, inTransaction: true}
+	if err := fn(ctx, tx); err != nil {
 		return err // discard the map on error
 	}
+	tx.inTransaction = false
 
 	if err := ctx.Err(); err != nil {
 		return err
@@ -275,13 +341,13 @@ func (c *MemoryCache[T]) RunInTx(ctx context.Context, fn func(txCache TypedCache
 	defer c.mu.Unlock()
 
 	if tx.cleared {
-		c.cache = make(map[string]*memitem[T])
+		c.cache = make(map[string]*memitem)
 	}
 
 	for k, item := range txMap {
 		if tx.cleared && item.updated && !item.deleted {
 			// If cleared, ONLY apply items that were explicitly Set() AFTER the Clear()
-			c.cache[k] = &memitem[T]{
+			c.cache[k] = &memitem{
 				key:      k,
 				value:    item.value,
 				lifeTime: item.lifeTime,
@@ -291,7 +357,7 @@ func (c *MemoryCache[T]) RunInTx(ctx context.Context, fn func(txCache TypedCache
 			if item.deleted {
 				delete(c.cache, k)
 			} else if item.updated {
-				c.cache[k] = &memitem[T]{
+				c.cache[k] = &memitem{
 					key:      k,
 					value:    item.value,
 					lifeTime: item.lifeTime,
@@ -305,12 +371,69 @@ func (c *MemoryCache[T]) RunInTx(ctx context.Context, fn func(txCache TypedCache
 	return nil
 }
 
+func (tx *localTx[T]) InTransaction() bool {
+	return tx.inTransaction
+}
+
+func (tx *localTx[T]) Increment(_ context.Context, key string, amount int64) (int64, error) {
+	key = fmt.Sprintf("cache.counter.%s", key)
+
+	item, ok := tx.state[key]
+
+	if !ok || item.deleted || item.expired() {
+		tx.state[key] = &txItem[T]{
+			memitem: memitem{
+				key:      key,
+				value:    amount,
+				lifeTime: time.Now().Add(Infinity),
+			},
+			updated: true,
+			deleted: false,
+		}
+		return amount, nil
+	}
+
+	// 2. Extract current value safely to avoid panics
+	currentVal, castOk := item.value.(int64)
+	if !castOk {
+		return 0, fmt.Errorf("cannot increment non-int64 type")
+	}
+
+	// 3. Do the math and update state flags
+	newVal := currentVal + amount
+	item.value = newVal
+	item.updated = true
+	item.deleted = false
+
+	return newVal, nil
+}
+
+func (tx *localTx[T]) Decrement(ctx context.Context, key string, amount int64) (int64, error) {
+	return tx.Increment(ctx, key, -amount)
+}
+
+func (tx *localTx[T]) CounterValue(ctx context.Context, key string) (int64, error) {
+	key = fmt.Sprintf("cache.counter.%s", key)
+
+	item, ok := tx.state[key]
+	if !ok || item.expired() {
+		return 0, ErrItemNotFound
+	}
+
+	currentVal, ok := item.value.(int64)
+	if !ok {
+		return 0, errs.ErrInvalidType
+	}
+
+	return currentVal, nil
+}
+
 func (tx *localTx[T]) Set(_ context.Context, key string, value T, ttl time.Duration) error {
 	if ttl == 0 {
 		ttl = Infinity
 	}
 	tx.state[key] = &txItem[T]{
-		memitem: memitem[T]{
+		memitem: memitem{
 			key:      key,
 			value:    value,
 			lifeTime: time.Now().Add(ttl),
@@ -337,7 +460,11 @@ func (tx *localTx[T]) Get(_ context.Context, key string) (value T, err error) {
 	if !ok || item.deleted || item.expired() {
 		return value, ErrItemNotFound
 	}
-	return item.value, nil
+	t, ok := item.value.(T)
+	if !ok {
+		return *new(T), errs.ErrInvalidType
+	}
+	return t, nil
 }
 
 func (tx *localTx[T]) Has(_ context.Context, key string) bool {
@@ -350,7 +477,11 @@ func (tx *localTx[T]) GetDefault(_ context.Context, key string, defaultValue T) 
 	if !ok || item.deleted || item.expired() {
 		return defaultValue, nil
 	}
-	return item.value, nil
+	t, ok := item.value.(T)
+	if !ok {
+		return *new(T), errs.ErrInvalidType
+	}
+	return t, nil
 }
 
 func (tx *localTx[T]) Keys(_ context.Context) ([]string, error) {
