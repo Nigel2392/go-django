@@ -300,8 +300,6 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 			return nil
 		}
 
-		fmt.Println("hasChanged", hasChanged, "publishPage", publishPage)
-
 		var wasPublished bool
 		var ref = instance.Reference()
 		if publishPage && !ref.StatusFlags.Is(StatusFlagPublished) {

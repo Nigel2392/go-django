@@ -176,6 +176,39 @@ func (c *MemoryCache[T]) Has(_ context.Context, key string) (exists bool) {
 	return true
 }
 
+//
+//	func (c *MemoryCache[T]) Scan(ctx context.Context, pattern string) iter.Seq2[string, error] {
+//		return func(yield func(string, error) bool) {
+//			// 1. Gather matches safely
+//			var matched []string
+//
+//			c.mu.Lock()
+//			for k, v := range c.cache {
+//				if v.expired() {
+//					continue
+//				}
+//
+//				// filepath.Match handles redis- like globbing like "user:*" natively
+//				if ok, _ := filepath.Match(pattern, k); ok {
+//					matched = append(matched, k)
+//				}
+//			}
+//			c.mu.Unlock()
+//
+//			for _, k := range matched {
+//				// respect context cancellation
+//				if err := ctx.Err(); err != nil {
+//					yield("", err)
+//					return
+//				}
+//
+//				if !yield(k, nil) {
+//					return
+//				}
+//			}
+//		}
+//	}
+
 // work is a background goroutine that cleans up the cache.
 //
 // It runs every cleanupInterval and removes items that have expired.

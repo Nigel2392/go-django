@@ -80,21 +80,21 @@ type TypedTransactionalCache[T any] interface {
 
 type (
 	Cache              = TypedCache[any]
-	TransactionalCache = TypedCache[any]
+	TransactionalCache = TypedTransactionalCache[any]
 )
 
 type cacheBackend struct {
-	backends map[string]Cache
+	backends map[string]TransactionalCache
 }
 
 var caches = cacheBackend{
-	backends: make(map[string]Cache),
+	backends: make(map[string]TransactionalCache),
 }
 
 // RegisterCache registers a cache backend with a name.
 //
 // This can later be used to retrieve the cache backend using GetCache.
-func RegisterCache(name string, cache Cache) {
+func RegisterCache(name string, cache TransactionalCache) {
 	caches.backends[name] = cache
 }
 
@@ -108,7 +108,7 @@ func RemoveCache(name string) {
 // GetCache retrieves a cache backend by name.
 //
 // If the cache backend does not exist, GetCache returns nil.
-func GetCache(names ...string) Cache {
+func GetCache(names ...string) TransactionalCache {
 	if len(names) == 0 {
 		names = []string{DefaultCache}
 	}
@@ -129,7 +129,7 @@ func GetCache(names ...string) Cache {
 // SetDefault sets the default cache backend.
 //
 // The default cache backend is used by the cache package functions.
-func SetDefault(cache Cache) {
+func SetDefault(cache TransactionalCache) {
 	RegisterCache(DefaultCache, cache)
 }
 
