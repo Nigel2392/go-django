@@ -115,9 +115,11 @@ var _ = checks.Register(checks.TagSettings, func(ctx context.Context, app *Appli
 		_settingsCheckImpl[drivers.Database]{setting: APPVAR_DATABASE},
 		_settingsCheckImpl[bool]{setting: APPVAR_CONTINUE_AFTER_COMMANDS},
 		_settingsCheckImpl[bool]{setting: APPVAR_ROUTE_LOGGING_ENABLED},
+		_settingsCheckImpl[bool]{setting: APPVAR_STATIC_ROUTE_LOGGING_ENABLED},
 		_settingsCheckImpl[bool]{setting: APPVAR_REQUESTS_PROXIED},
 		_settingsCheckImpl[*scs.SessionManager]{setting: APPVAR_SESSION_MANAGER},
 		_settingsCheckImpl[bool]{setting: APPVAR_DISABLE_NOSURF},
+		_settingsCheckImpl[string]{setting: APPVAR_TRANSLATIONS_DEFAULT_LOCALE},
 	}
 
 	for _, check := range settingsChecks {

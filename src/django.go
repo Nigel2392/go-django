@@ -17,6 +17,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	goErrs "errors"
+
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/components"
 	core "github.com/Nigel2392/go-django/src/core"
@@ -65,7 +67,7 @@ func ContextWithApp(ctx context.Context, app AppConfig) context.Context {
 //
 // It can be used to define routes, middleware, templates, and other options / handlers.
 //
-// The implementation of this interface can be found in django/apps/apps.go.
+// The implementation of this interface can be found in [./src/apps/apps.go].
 type AppConfig interface {
 	// The application name.
 	//
@@ -526,13 +528,14 @@ func (a *Application) Initialize() error {
 		a.ServerError(err, w, r)
 	}
 
+	// default middleware
 	a.Mux.Use(
 		// middleware.Recoverer(a.veryBadServerError),
 		middleware.AllowedHosts(
 			ConfigGet(a.Settings, APPVAR_ALLOWED_HOSTS, []string{"*"})...,
 		),
-		a.loggerMiddleware,
-		ContextDataStoreMiddleware,
+		a.loggerMiddleware,         // logs routes when enabled
+		ContextDataStoreMiddleware, // basically attaches a map[string]interface{} to the request.
 	)
 
 	if ConfigGet(a.Settings, APPVAR_RECOVERER, true) {
@@ -541,6 +544,8 @@ func (a *Application) Initialize() error {
 		)
 	}
 
+	// if memory serves me correct, this HAS to be used after the recoverer.
+	// TODO: re-test
 	a.Mux.Use(middleware.BufferMiddleware(func(w http.ResponseWriter, r *http.Request) http.ResponseWriter {
 		if IsStaticRouteRequest(r) {
 			return w
@@ -549,6 +554,7 @@ func (a *Application) Initialize() error {
 		return middleware.NewBufferedWriter(w)
 	}))
 
+	// add a handler for the staticfiles route
 	var staticUrl = a.staticURL()
 	if staticUrl != "" {
 		a.Log.Debugf(
@@ -982,8 +988,9 @@ func (a *Application) Serve() error {
 			err1 = server_http.Shutdown(context.Background())
 		}
 
-		if err1 != nil && listening_https {
+		if err1 != nil {
 			err = errors.Wrap(err1, "Error closing http server")
+			// err1 is now err
 		}
 
 		if listening_http {
@@ -991,12 +998,23 @@ func (a *Application) Serve() error {
 			err2 = server_https.Shutdown(context.Background())
 		}
 
-		if err2 != nil && listening_http {
+		if err2 != nil {
 			// err = errors.Wrap(err2, "Error closing https server")
 			if err != nil {
-				err = errors.Wrap(err, err2.Error())
+				err = goErrs.Join(err, err2)
 			} else {
 				err = err2
+			}
+		}
+
+		for _, hook := range goldcrest.Get[DjangoHook](HOOK_SERVER_SHUTDOWN) {
+			e := hook(a) // func(*Application) error
+			if e != nil {
+				if err != nil {
+					err = goErrs.Join(err, e)
+				} else {
+					err = e
+				}
 			}
 		}
 

@@ -423,6 +423,18 @@ func (app *AuthApplication) Check(ctx context.Context, settings django.Settings)
 		))
 	}
 
+	if _, ok := settings.Get(APPVAR_LOGIN_VIEW_REVERSE_URL); !ok {
+		messages = append(messages, checks.Warningf(
+			"auth.login_reverse_url_not_set",
+			"Login view's reverse URL is not set, using default value %q",
+			nil, fmt.Sprintf("Set the %q setting to change the login redirect URL",
+				APPVAR_LOGIN_VIEW_REVERSE_URL,
+			),
+			Auth.LoginReverseURL,
+		))
+
+	}
+
 	return messages
 }
 

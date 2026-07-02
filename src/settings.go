@@ -72,8 +72,7 @@ func ConfigGetOK[T any](s Settings, key string, default_ ...T) (T, bool) {
 		return *(new(T)), false
 	}
 
-	var t T
-	var rTyp = reflect.TypeOf(t)
+	var rTyp = reflect.TypeFor[T]()
 	if s, ok := value.(string); ok {
 		if s == "" {
 			return default_[0], true
