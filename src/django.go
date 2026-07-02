@@ -760,7 +760,7 @@ func (a *Application) Initialize() error {
 
 	// Send a reset definitions signal to the attrs package
 	// This is to ensure that all static definitions are reset
-	// and all fields are included the next time the static definitions
+	// and all (reverse) fields are included the next time the static definitions
 	// are set up for the model.
 	if err := attrs.ResetDefinitions.Send(nil); err != nil {
 		return errors.Wrap(err, "Error sending ResetDefinitions signal")
