@@ -38,8 +38,9 @@ import (
 // The AuthApplication struct is the main struct used for the auth app.
 type AuthApplication struct {
 	*apps.AppConfig
-	Session        *scs.SessionManager
-	LoginWithEmail bool
+	Session         *scs.SessionManager
+	LoginWithEmail  bool
+	LoginReverseURL string
 }
 
 var Auth *AuthApplication = &AuthApplication{}
@@ -75,8 +76,10 @@ func NewAppConfig() django.AppConfig {
 			g.Handle(mux.GET, "/login", mux.NewHandler(viewUserLogin), "login")
 			g.Handle(mux.POST, "/login", mux.NewHandler(viewUserLogin))
 
-			g.Handle(mux.GET, "/register", mux.NewHandler(viewUserRegister), "register")
-			g.Handle(mux.POST, "/register", mux.NewHandler(viewUserRegister))
+			if django.ConfigGet(django.Global.Settings, APPVAR_ALLOW_USER_REGISTER, true) {
+				g.Handle(mux.GET, "/register", mux.NewHandler(viewUserRegister), "register")
+				g.Handle(mux.POST, "/register", mux.NewHandler(viewUserRegister))
+			}
 
 			g.Handle(mux.POST, "/logout", mux.NewHandler(LogoutView), "logout")
 		}
@@ -86,6 +89,13 @@ func NewAppConfig() django.AppConfig {
 		loginWithEmail, ok := settings.Get(APPVAR_AUTH_EMAIL_LOGIN)
 		if ok {
 			Auth.LoginWithEmail = loginWithEmail.(bool)
+		}
+
+		loginReverseUrl, ok := settings.Get(APPVAR_LOGIN_VIEW_REVERSE_URL)
+		if ok {
+			Auth.LoginReverseURL = loginReverseUrl.(string)
+		} else {
+			Auth.LoginReverseURL = "auth:login"
 		}
 
 		sessInt, ok := settings.Get(django.APPVAR_SESSION_MANAGER)
@@ -134,7 +144,7 @@ func NewAppConfig() django.AppConfig {
 		//
 		// These will intercept the server errors and allow for
 		// custom handling of authentication errors.
-		autherrors.RegisterHook("auth:login")
+		autherrors.RegisterHook(Auth.LoginReverseURL)
 
 		// Configure the admin app for logins and logouts with the appropriate
 		// user model.

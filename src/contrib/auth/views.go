@@ -52,7 +52,7 @@ func (v *AuthView[T]) GetContext(req *http.Request) (ctx.Context, error) {
 		return nil, err
 	}
 
-	var loginURL = django.Reverse("auth:login")
+	var loginURL = django.Reverse(Auth.LoginReverseURL)
 	var nextURL = req.URL.Query().Get("next")
 
 	context.Set("FormURL", loginURL)
@@ -182,7 +182,7 @@ func LogoutView(w http.ResponseWriter, r *http.Request) {
 	)
 	if redirectURL == "" {
 		redirectURL = django.Reverse(
-			"auth:login",
+			Auth.LoginReverseURL,
 		)
 	}
 	var u = authentication.Retrieve(
