@@ -135,7 +135,7 @@ func (a *migratorAppConfig) Check(ctx context.Context, settings django.Settings)
 	if len(cTypes) > MAGIC_AMOUNT_OF_MIGRATIONS {
 		messages = append(messages, checks.Critical(
 			"migrator.engine.too_many_migrations",
-			fmt.Sprintf("Too many migrations need to be made"),
+			"Too many migrations need to be made",
 			len(cTypes),
 			"run `<your.executable> makemigrations` to create new migrations",
 		))
@@ -164,7 +164,7 @@ checkMigrate:
 	if len(needsToMigrate) > MAGIC_AMOUNT_OF_MIGRATIONS {
 		messages = append(messages, checks.Critical(
 			"migrator.engine.too_many_migrations",
-			fmt.Sprintf("Too many migrations to apply"),
+			"Too many migrations to apply",
 			len(needsToMigrate),
 			"run `<your.executable> migrate` to apply the migrations to the database",
 		))
