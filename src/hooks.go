@@ -38,6 +38,7 @@ type (
 
 const (
 	HOOK_SERVER_ERROR    = "django.ServerError" // ran when an exception is caught with err of type [except.ServerError]
+	HOOK_SERVER_STARTUP  = "django.ServerStart" // ran just before django's http(s) server(s) start listening.
 	HOOK_SERVER_SHUTDOWN = "django.ServerQuit"  // ran after django's http(s) server(s) shutdown.
 	HOOK_SETUP_NOSURF    = "django.SetupNosurf" // ran during http server startup, allows for changing CSRF handler options
 )

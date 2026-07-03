@@ -978,6 +978,12 @@ func (a *Application) Serve() error {
 		listening_http  = PORT != "" && PORT != "0"
 	)
 
+	for _, h := range goldcrest.Get[DjangoHook](HOOK_SERVER_STARTUP) {
+		if err := h(a); err != nil {
+			return err
+		}
+	}
+
 	a.quitter = func() (err error) {
 		var (
 			err1, err2 error
