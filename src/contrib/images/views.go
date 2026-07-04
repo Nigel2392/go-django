@@ -10,9 +10,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/cache"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	autherrors "github.com/Nigel2392/go-django/src/contrib/auth/auth_errors"
-	"github.com/Nigel2392/go-django/src/core/cache"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/widgets"

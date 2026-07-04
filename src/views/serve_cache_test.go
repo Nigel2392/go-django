@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Nigel2392/go-django/src/core/cache"
+	"github.com/Nigel2392/cache"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/views"
 

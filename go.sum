@@ -1,5 +1,7 @@
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
 filippo.io/edwards25519 v1.1.0/go.mod h1:BxyFTGdWcka3PhytdK4V28tE5sGfRvvvRV7EaN4VDT4=
+github.com/Nigel2392/cache v1.0.0 h1:Qdvidf0iDqUlBglv0aENll7Mxh/OBIgw83lN0W3Ues4=
+github.com/Nigel2392/cache v1.0.0/go.mod h1:flGI2OAai5vr59kMiVfj+UXdgz9AQ3ZQTcUQ5WCEIJE=
 github.com/Nigel2392/errors v1.0.0 h1:/mtDxh9jTvrj0kZQiTsDPtgUG6Da1R5gSp/FFfo00CQ=
 github.com/Nigel2392/errors v1.0.0/go.mod h1:AV6mIkaeDgEi9vJKMpG9/6ni4fRnSnrqcfXWwjKbGHE=
 github.com/Nigel2392/go-django/queries v0.0.0-20250909075602-d90535f21ee1 h1:o8QuntvaCoDy+OXVBYlkL1nE1AqHk0aPoqoDzNuMMBg=
