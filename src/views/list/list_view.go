@@ -191,8 +191,10 @@ func (v *View[T]) Clone() *View[T] {
 		MaxAmount:        v.MaxAmount,
 		DefaultAmount:    v.DefaultAmount,
 		ListColumns:      slices.Clone(v.ListColumns),
+		Mixins:           v.Mixins,
 		TitleFieldColumn: v.TitleFieldColumn,
 		GetContextFn:     v.GetContextFn,
+		ChangeContextFn:  v.ChangeContextFn,
 		List:             v.List,
 		QuerySet:         v.QuerySet,
 		OnError:          v.OnError,
@@ -242,7 +244,7 @@ func (v *View[T]) GetListColumns(r *http.Request) ([]ListColumn[T], error) {
 		return nil, errors.ValueError.Wrapf("no columns defined for list view")
 	}
 
-	var cols = v.ListColumns
+	var cols = slices.Clone(v.ListColumns)
 	if v.TitleFieldColumn != nil && len(cols) > 0 {
 		cols[0] = v.TitleFieldColumn(cols[0])
 	}

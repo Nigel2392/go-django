@@ -148,6 +148,11 @@ func Serve(view View) http.Handler {
 		}
 	}
 
+	fn, ok := attrs.Method[func() View](view, "Clone")
+	if ok {
+		view = fn()
+	}
+
 	assert.True(
 		len(allowedFnMethods) > 0,
 		"View must have at least one Serve[GET|POST|...] method defined or implement MethodsView",
