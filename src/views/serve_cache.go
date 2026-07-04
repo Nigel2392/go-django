@@ -8,6 +8,7 @@ import (
 	"hash/fnv"
 	"io"
 	"net/http"
+	"time"
 
 	"github.com/Nigel2392/cache"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -85,7 +86,7 @@ func buildRequestCacheKey(req *http.Request) string {
 	TODO: FIX REQUEST CACHE IMPLEMENTATION
 */
 // Cache caches the response of a view for a given duration.
-func Cache(view http.Handler, duration cache.Duration, cacheBackends ...string) http.Handler {
+func Cache(view http.Handler, duration time.Duration, cacheBackends ...string) http.Handler {
 	if duration == 0 {
 		duration = cache.Infinity
 	}

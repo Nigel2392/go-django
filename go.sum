@@ -4,6 +4,8 @@ github.com/Nigel2392/cache v1.0.0 h1:Qdvidf0iDqUlBglv0aENll7Mxh/OBIgw83lN0W3Ues4
 github.com/Nigel2392/cache v1.0.0/go.mod h1:flGI2OAai5vr59kMiVfj+UXdgz9AQ3ZQTcUQ5WCEIJE=
 github.com/Nigel2392/cache v1.0.1 h1:lO+ra0GsUgIXfBBYor9CypByb+M5bwgrj2HmkygQT6M=
 github.com/Nigel2392/cache v1.0.1/go.mod h1:flGI2OAai5vr59kMiVfj+UXdgz9AQ3ZQTcUQ5WCEIJE=
+github.com/Nigel2392/cache v1.0.4 h1:gwH+dS4skvu37trLoOu46HT9Y5hpz/Ciyg/3UfRmQn8=
+github.com/Nigel2392/cache v1.0.4/go.mod h1:flGI2OAai5vr59kMiVfj+UXdgz9AQ3ZQTcUQ5WCEIJE=
 github.com/Nigel2392/errors v1.0.0 h1:/mtDxh9jTvrj0kZQiTsDPtgUG6Da1R5gSp/FFfo00CQ=
 github.com/Nigel2392/errors v1.0.0/go.mod h1:AV6mIkaeDgEi9vJKMpG9/6ni4fRnSnrqcfXWwjKbGHE=
 github.com/Nigel2392/go-django/queries v0.0.0-20250909075602-d90535f21ee1 h1:o8QuntvaCoDy+OXVBYlkL1nE1AqHk0aPoqoDzNuMMBg=
