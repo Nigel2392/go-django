@@ -85,7 +85,7 @@ func AddMessage(r *http.Request, tag MessageTag, message string, extraTags ...Me
 
 	app.Logger().Debugf(
 		"Adding message: %s, level: %d, extraTags: %v",
-		message, tag, extraTags,
+		message, TagLevels[tag], extraTags,
 	)
 
 	return backend.Store(&BaseMessage{

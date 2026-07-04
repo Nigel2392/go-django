@@ -64,7 +64,7 @@ var command_create_user = &command.Cmd[createUserStorage]{
 			m.Logf("Error creating user: %s", err)
 		}
 
-		m.Logf("Successfully created user with ID: %d", u)
+		m.Logf("Successfully created user with ID: %d", u.ID)
 
 		return nil
 	},

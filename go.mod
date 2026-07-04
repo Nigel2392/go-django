@@ -1,6 +1,6 @@
 module github.com/Nigel2392/go-django
 
-go 1.25.8
+go 1.26.3
 
 require (
 	github.com/Nigel2392/mux v1.6.1-0.20251030144343-070717da1ff8
@@ -44,6 +44,7 @@ require (
 
 require (
 	filippo.io/edwards25519 v1.1.0 // indirect
+	github.com/Nigel2392/errors v1.0.0 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect

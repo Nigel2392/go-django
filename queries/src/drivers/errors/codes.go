@@ -1,6 +1,8 @@
 package errors
 
-type GoCode string
+import "github.com/Nigel2392/errors"
+
+type GoCode = errors.GoCode
 
 const (
 	CodeUnknown             GoCode = "Unknown"
