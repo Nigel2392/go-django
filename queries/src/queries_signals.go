@@ -23,6 +23,12 @@ var (
 	// Signal to be executed after inserting / updating a model instance.
 	SignalPostModelSave = signals_saving.Get("queries.model.post_save")
 
+	// Signal to be executed before inserting model instance.
+	SignalPreModelCreate = signals_saving.Get("queries.model.pre_create")
+
+	// Signal to be executed after inserting a model instance.
+	SignalPostModelCreate = signals_saving.Get("queries.model.post_create")
+
 	// Signal to be executed before deleting a model instance.
 	SignalPreModelDelete = signals_deleting.Get("queries.model.pre_delete")
 

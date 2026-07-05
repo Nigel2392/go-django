@@ -187,11 +187,29 @@ func (s *ObjectActor) execute(ctx context.Context, which actorFlag) (context.Con
 		}
 	case actsBeforeCreate:
 		if creator, ok := s.obj.(ActsBeforeCreate); ok {
-			fn = creator.BeforeCreate
+			fn = func(ctx context.Context) error {
+				// we have not yet checked if the actor has been seen, wrap the signal
+				var err = SignalPreModelCreate.Send(SignalSave{
+					Instance: s.obj,
+				})
+				if err != nil {
+					return fmt.Errorf("error running pre-create signal for %T: %w", s.obj, err)
+				}
+				return creator.BeforeCreate(ctx)
+			}
 		}
 	case actsAfterCreate:
 		if creator, ok := s.obj.(ActsAfterCreate); ok {
-			fn = creator.AfterCreate
+			fn = func(ctx context.Context) error {
+				// we have not yet checked if the actor has been seen, wrap the signal
+				var err = SignalPostModelCreate.Send(SignalSave{
+					Instance: s.obj,
+				})
+				if err != nil {
+					return fmt.Errorf("error running post-create signal for %T: %w", s.obj, err)
+				}
+				return creator.AfterCreate(ctx)
+			}
 		}
 	case actsBeforeUpdate:
 		if updater, ok := s.obj.(ActsBeforeUpdate); ok {
@@ -203,11 +221,25 @@ func (s *ObjectActor) execute(ctx context.Context, which actorFlag) (context.Con
 		}
 	case actsBeforeDelete:
 		if deleter, ok := s.obj.(ActsBeforeDelete); ok {
-			fn = deleter.BeforeDelete
+			fn = func(ctx context.Context) error {
+				// we have not yet checked if the actor has been seen, wrap the signal
+				var err = SignalPreModelDelete.Send(s.obj)
+				if err != nil {
+					return fmt.Errorf("error running post-delete signal for %T: %w", s.obj, err)
+				}
+				return deleter.BeforeDelete(ctx)
+			}
 		}
 	case actsAfterDelete:
 		if deleter, ok := s.obj.(ActsAfterDelete); ok {
-			fn = deleter.AfterDelete
+			fn = func(ctx context.Context) error {
+				// we have not yet checked if the actor has been seen, wrap the signal
+				var err = SignalPostModelDelete.Send(s.obj)
+				if err != nil {
+					return fmt.Errorf("error running post-delete signal for %T: %w", s.obj, err)
+				}
+				return deleter.AfterDelete(ctx)
+			}
 		}
 	case actsAfterQuery:
 		if afterQuery, ok := s.obj.(ActsAfterQuery); ok {
