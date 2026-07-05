@@ -160,56 +160,60 @@ func (s *ObjectActor) execute(ctx context.Context, which actorFlag) (context.Con
 	var fn func(ctx context.Context) error
 	switch which {
 	case actsBeforeSave:
-		if saver, ok := s.obj.(ActsBeforeSave); ok {
-			fn = func(ctx context.Context) error {
-				// we have not yet checked if the actor has been seen, wrap the signal
-				var err = SignalPreModelSave.Send(SignalSave{
-					Instance: s.obj,
-				})
-				if err != nil {
-					return fmt.Errorf("error running pre-save signal for %T: %w", s.obj, err)
-				}
+		fn = func(ctx context.Context) error {
+			// we have not yet checked if the actor has been seen, wrap the signal
+			var err = SignalPreModelSave.Send(SignalSave{
+				Instance: s.obj,
+			})
+			if err != nil {
+				return fmt.Errorf("error running pre-save signal for %T: %w", s.obj, err)
+			}
+			if saver, ok := s.obj.(ActsBeforeSave); ok {
 				return saver.BeforeSave(ctx)
 			}
+			return nil
 		}
 	case actsAfterSave:
-		if saver, ok := s.obj.(ActsAfterSave); ok {
-			fn = func(ctx context.Context) error {
-				// we have not yet checked if the actor has been seen, wrap the signal
-				var err = SignalPostModelSave.Send(SignalSave{
-					Instance: s.obj,
-				})
-				if err != nil {
-					return fmt.Errorf("error running post-save signal for %T: %w", s.obj, err)
-				}
+		fn = func(ctx context.Context) error {
+			// we have not yet checked if the actor has been seen, wrap the signal
+			var err = SignalPostModelSave.Send(SignalSave{
+				Instance: s.obj,
+			})
+			if err != nil {
+				return fmt.Errorf("error running post-save signal for %T: %w", s.obj, err)
+			}
+			if saver, ok := s.obj.(ActsAfterSave); ok {
 				return saver.AfterSave(ctx)
 			}
+			return nil
 		}
 	case actsBeforeCreate:
-		if creator, ok := s.obj.(ActsBeforeCreate); ok {
-			fn = func(ctx context.Context) error {
-				// we have not yet checked if the actor has been seen, wrap the signal
-				var err = SignalPreModelCreate.Send(SignalSave{
-					Instance: s.obj,
-				})
-				if err != nil {
-					return fmt.Errorf("error running pre-create signal for %T: %w", s.obj, err)
-				}
+		fn = func(ctx context.Context) error {
+			// we have not yet checked if the actor has been seen, wrap the signal
+			var err = SignalPreModelCreate.Send(SignalSave{
+				Instance: s.obj,
+			})
+			if err != nil {
+				return fmt.Errorf("error running pre-create signal for %T: %w", s.obj, err)
+			}
+			if creator, ok := s.obj.(ActsBeforeCreate); ok {
 				return creator.BeforeCreate(ctx)
 			}
+			return nil
 		}
 	case actsAfterCreate:
-		if creator, ok := s.obj.(ActsAfterCreate); ok {
-			fn = func(ctx context.Context) error {
-				// we have not yet checked if the actor has been seen, wrap the signal
-				var err = SignalPostModelCreate.Send(SignalSave{
-					Instance: s.obj,
-				})
-				if err != nil {
-					return fmt.Errorf("error running post-create signal for %T: %w", s.obj, err)
-				}
+		fn = func(ctx context.Context) error {
+			// we have not yet checked if the actor has been seen, wrap the signal
+			var err = SignalPostModelCreate.Send(SignalSave{
+				Instance: s.obj,
+			})
+			if err != nil {
+				return fmt.Errorf("error running post-create signal for %T: %w", s.obj, err)
+			}
+			if creator, ok := s.obj.(ActsAfterCreate); ok {
 				return creator.AfterCreate(ctx)
 			}
+			return nil
 		}
 	case actsBeforeUpdate:
 		if updater, ok := s.obj.(ActsBeforeUpdate); ok {
@@ -220,26 +224,28 @@ func (s *ObjectActor) execute(ctx context.Context, which actorFlag) (context.Con
 			fn = updater.AfterUpdate
 		}
 	case actsBeforeDelete:
-		if deleter, ok := s.obj.(ActsBeforeDelete); ok {
-			fn = func(ctx context.Context) error {
+		fn = func(ctx context.Context) error {
+			var err = SignalPreModelDelete.Send(s.obj)
+			if err != nil {
+				return fmt.Errorf("error running post-delete signal for %T: %w", s.obj, err)
+			}
+			if deleter, ok := s.obj.(ActsBeforeDelete); ok {
 				// we have not yet checked if the actor has been seen, wrap the signal
-				var err = SignalPreModelDelete.Send(s.obj)
-				if err != nil {
-					return fmt.Errorf("error running post-delete signal for %T: %w", s.obj, err)
-				}
 				return deleter.BeforeDelete(ctx)
 			}
+			return nil
 		}
 	case actsAfterDelete:
-		if deleter, ok := s.obj.(ActsAfterDelete); ok {
-			fn = func(ctx context.Context) error {
+		fn = func(ctx context.Context) error {
+			var err = SignalPostModelDelete.Send(s.obj)
+			if err != nil {
+				return fmt.Errorf("error running post-delete signal for %T: %w", s.obj, err)
+			}
+			if deleter, ok := s.obj.(ActsAfterDelete); ok {
 				// we have not yet checked if the actor has been seen, wrap the signal
-				var err = SignalPostModelDelete.Send(s.obj)
-				if err != nil {
-					return fmt.Errorf("error running post-delete signal for %T: %w", s.obj, err)
-				}
 				return deleter.AfterDelete(ctx)
 			}
+			return nil
 		}
 	case actsAfterQuery:
 		if afterQuery, ok := s.obj.(ActsAfterQuery); ok {

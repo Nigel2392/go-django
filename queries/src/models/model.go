@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"maps"
 	"reflect"
+	"strings"
 
 	"github.com/Nigel2392/go-django/queries/internal"
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -738,6 +739,8 @@ func (m *Model) Saved() bool {
 		return false
 	}
 
+	// TODO: this might not be the best way to determine if the model was saved.
+	// 		 think of stuff like pre-generated IDs
 	return !attrs.IsZero(value)
 }
 
@@ -1018,18 +1021,6 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		cnf.this = m.internals.object.Interface().(attrs.Definer)
 	}
 
-	// Create an actor for the model,
-	// if the model does not implement the
-	// actor interfaces, this is a no-op.
-	var actor = queries.Actor(cnf.this)
-	ctx, err = actor.BeforeSave(ctx)
-	if err != nil {
-		return fmt.Errorf(
-			"failed to run BeforeSave for model %T: %w",
-			cnf.this, err,
-		)
-	}
-
 	// check if anything has changed,
 	var fields = internal.NewSet(cnf.fields()...)
 	if m.internals.state == nil && m.internals.fromDB && !cnf.Force() && len(fields) == 0 {
@@ -1066,6 +1057,34 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		transaction = queries.NullTransaction()
 	}
 	defer transaction.Rollback(ctx)
+
+	// Create an actor for the model,
+	// if the model does not implement the
+	// actor interfaces, this is a no-op.
+	var actor = queries.Actor(cnf.this)
+	var (
+		preFn, postFn func(ctx context.Context) (context.Context, error)
+		actorStr      string
+	)
+	switch {
+	case cnf.ForceCreate || !m.internals.fromDB:
+		preFn, postFn = actor.BeforeCreate, actor.AfterCreate
+		actorStr = "Create"
+	case cnf.ForceUpdate || m.internals.fromDB:
+		preFn, postFn = actor.BeforeUpdate, actor.AfterUpdate
+		actorStr = "Update"
+	default:
+		preFn, postFn = actor.BeforeSave, actor.AfterSave
+		actorStr = "Save"
+	}
+
+	ctx, err = preFn(ctx)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to run Before%s for model %T: %w",
+			actorStr, cnf.this, err,
+		)
+	}
 
 	var (
 		// if the model was not loaded from the database,
@@ -1185,13 +1204,9 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		_, err = querySet.Create(cnf.this)
 	}
 	if err != nil {
-		var s = "create"
-		if saved && !cnf.ForceCreate || cnf.ForceUpdate {
-			s = "update"
-		}
 		return errors.SaveFailed.WithCause(fmt.Errorf(
 			"failed to %s model %T: %w",
-			s, m.internals.object.Interface(), err,
+			strings.ToLower(actorStr), m.internals.object.Interface(), err,
 		))
 	}
 
@@ -1217,6 +1232,14 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	// reset the state after saving
 	m.internals.state.Reset()
 	m.internals.fromDB = true
+
+	ctx, err = postFn(ctx)
+	if err != nil {
+		return fmt.Errorf(
+			"failed to run After%s for model %T: %w",
+			actorStr, cnf.this, err,
+		)
+	}
 
 	return transaction.Commit(ctx)
 }

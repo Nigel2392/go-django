@@ -71,6 +71,6 @@ var command_change_user = &command.Cmd[changeUserStorage]{
 		u.IsAdministrator = stored.super
 		u.IsActive = !stored.inactive
 
-		return u.Save(ctx)
+		return u.Update(ctx)
 	},
 }

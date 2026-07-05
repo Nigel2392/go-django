@@ -71,6 +71,6 @@ var command_set_password = &command.Cmd[interface{}]{
 			break
 		}
 
-		return user.Save(ctx)
+		return user.Update(ctx)
 	},
 }

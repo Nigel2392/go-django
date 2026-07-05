@@ -6,6 +6,7 @@ import (
 	"net/mail"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/command"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -30,8 +31,26 @@ var command_create_user = &command.Cmd[createUserStorage]{
 			isValid             = false
 			email, username     string
 			password, password2 string
+			pwProvided          bool
 			err                 error
 		)
+
+		switch {
+		case len(args) == 1:
+			email = args[0]
+		case len(args) == 2:
+			email = args[0]
+			username = args[1]
+		case len(args) == 3:
+			email = args[0]
+			username = args[1]
+			password = args[2]
+			password2 = args[2]
+			pwProvided = true
+		case len(args) == 0:
+		default:
+			return errors.ValueError.Wrap("too many arguments provided")
+		}
 
 		for !isValid {
 			if email == "" {
@@ -46,11 +65,13 @@ var command_create_user = &command.Cmd[createUserStorage]{
 				}
 			}
 
-			if password, err = m.ProtectedInput("Enter password: "); err != nil {
-				continue
-			}
-			if password2, err = m.ProtectedInput("Re-enter password: "); err != nil {
-				continue
+			if !pwProvided {
+				if password, err = m.ProtectedInput("Enter password: "); err != nil {
+					continue
+				}
+				if password2, err = m.ProtectedInput("Re-enter password: "); err != nil {
+					continue
+				}
 			}
 
 			var e, err = mail.ParseAddress(email)
@@ -84,6 +105,6 @@ var command_create_user = &command.Cmd[createUserStorage]{
 		u.IsActive = !stored.inactive
 
 		var ctx = context.Background()
-		return models.Setup(u).Save(ctx)
+		return models.Setup(u).Create(ctx)
 	},
 }
