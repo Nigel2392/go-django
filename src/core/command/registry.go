@@ -134,6 +134,8 @@ func (r *commandRegistry) ExecCommandOpts(args []string, opts ...func(c *Command
 				)
 			}
 		}
+
+		remaining = flagSet.Args()
 	}
 
 	var err = cmd.Exec(m, remaining)
