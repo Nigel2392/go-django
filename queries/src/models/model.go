@@ -577,6 +577,7 @@ func (m *Model) Define(def attrs.Definer, flds ...any) *attrs.ObjectDefinitions 
 			var conf = &fields.FieldConfig{
 				ScanTo:      def,
 				ReverseName: key,
+				Nullable:    value.Field().AllowNull(), // copy so relationship join type is properly calculated
 				ColumnName:  fromModelField.ColumnName(),
 				IsReverse:   true,
 				Rel:         value,
