@@ -29,6 +29,16 @@ const (
 	actsAfterUpdate
 	actsBeforeDelete
 	actsAfterDelete
+
+	FlagActsAfterQuery   = actsAfterQuery
+	FlagActsBeforeSave   = actsBeforeSave
+	FlagActsAfterSave    = actsAfterSave
+	FlagActsBeforeCreate = actsBeforeCreate
+	FlagActsAfterCreate  = actsAfterCreate
+	FlagActsBeforeUpdate = actsBeforeUpdate
+	FlagActsAfterUpdate  = actsAfterUpdate
+	FlagActsBeforeDelete = actsBeforeDelete
+	FlagActsAfterDelete  = actsAfterDelete
 )
 
 var actorStrings = map[actorFlag]string{

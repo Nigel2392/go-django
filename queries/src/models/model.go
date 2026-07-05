@@ -1192,7 +1192,10 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 
 	// Add the context to the query set.
 	querySet = querySet.
-		WithContext(ctx)
+		WithContext(actor.Fake(ctx,
+			queries.FlagActsAfterCreate,
+			queries.FlagActsAfterUpdate,
+		))
 
 	// Perform the save operation on the model.
 	// If the model is already saved, it will update the model,
