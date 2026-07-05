@@ -10,7 +10,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/models"
-	"github.com/Nigel2392/go-signals"
 )
 
 // CT_GetObject retrieves an object from the database by its identifier.
@@ -176,13 +175,6 @@ func SaveObject[T attrs.Definer](obj T) error {
 	return err
 }
 
-func sendSignal(s signals.Signal[SignalSave], obj attrs.Definer, q QueryCompiler) error {
-	return s.Send(SignalSave{
-		Instance: obj,
-		Using:    q,
-	})
-}
-
 // CreateObject creates a new object in the database and sets its default values.
 //
 // It sends a pre-save signal before saving and a post-save signal after saving.
@@ -212,21 +204,14 @@ func UpdateObject[T attrs.Definer](obj T) (int64, error) {
 	var (
 		qs = GetQuerySet(obj).
 			Filter(primary.Name(), primaryVal)
-		compiler = qs.Compiler()
 	)
 
-	// Send pre model save signal
-	if err := sendSignal(SignalPreModelSave, obj, compiler); err != nil {
-		return 0, err
-	}
-
 	var (
-		ctx   = context.Background()
 		saved bool
 		d     int64
 	)
 
-	if saved, err = models.SaveModel(ctx, obj); err != nil {
+	if saved, err = models.SaveModel(qs.Context(), obj); err != nil {
 		return 0, err
 	} else if saved {
 		return 1, nil
@@ -234,10 +219,6 @@ func UpdateObject[T attrs.Definer](obj T) (int64, error) {
 
 	d, err = qs.Update(obj)
 	if err != nil {
-		return 0, err
-	}
-
-	if err := sendSignal(SignalPostModelSave, obj, compiler); err != nil {
 		return 0, err
 	}
 
@@ -260,10 +241,6 @@ func DeleteObject[T attrs.Definer](obj T) (int64, error) {
 		return 0, err
 	}
 
-	if err := SignalPreModelDelete.Send(obj); err != nil {
-		return 0, err
-	}
-
 	if deleted, err := models.DeleteModel(context.Background(), obj); err != nil {
 		return 0, err
 	} else if deleted {
@@ -275,10 +252,6 @@ func DeleteObject[T attrs.Definer](obj T) (int64, error) {
 		Delete()
 	if err != nil {
 		return 0, err
-	}
-
-	if err := SignalPostModelDelete.Send(obj); err != nil {
-		return d, err
 	}
 
 	return d, nil
