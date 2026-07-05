@@ -1,9 +1,10 @@
 module github.com/Nigel2392/go-django/queries
 
-go 1.25.0
+go 1.26.3
 
 require (
-	github.com/Nigel2392/go-signals v1.1.0
+	github.com/Nigel2392/errors v1.0.0
+	github.com/Nigel2392/go-signals v1.1.1
 	github.com/Nigel2392/goldcrest v1.0.4
 	github.com/Nigel2392/mux v1.6.1-0.20251030144343-070717da1ff8
 	github.com/dolthub/go-mysql-server v0.20.0
@@ -49,4 +50,3 @@ require (
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/src-d/go-errors.v1 v1.0.0 // indirect
 )
-

@@ -1,6 +1,6 @@
 module github.com/Nigel2392/go-django/examples/openauth2app
 
-go 1.25.0
+go 1.26.3
 
 require (
 	github.com/joho/godotenv v1.5.1

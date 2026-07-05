@@ -1,5 +1,6 @@
 filippo.io/edwards25519 v1.1.0 h1:FNf4tywRC1HmFuKW5xopWpigGjJKiJSV0Cqo0cJWDaA=
-github.com/Nigel2392/go-signals v1.1.0 h1:DVVOe1Q+oyf+RloEcyW3g+uym83UijAIW8y3oRpYwSs=
+github.com/Nigel2392/errors v1.0.0 h1:/mtDxh9jTvrj0kZQiTsDPtgUG6Da1R5gSp/FFfo00CQ=
+github.com/Nigel2392/go-signals v1.1.1 h1:B89hgVfJxk6KMigSPKVyUCBIkwBN50w27DoSoJ2rHPs=
 github.com/Nigel2392/goldcrest v1.0.4 h1:Xx+QLht6QjJ3Gg9uksgc6Ye1XjbtzQ1208ClZwoVWsg=
 github.com/Nigel2392/mux v1.6.1-0.20251030144343-070717da1ff8 h1:hbHlPZ+cvtbU32mVi6JP3lYQEFHVDjFdMLF7qmgvSGA=
 github.com/VividCortex/gohistogram v1.0.0 h1:6+hBz+qvs0JOrrNhhmR7lFxo5sINxBCGXrdtl/UvroE=
