@@ -9,7 +9,6 @@ import (
 	"net/http/httptest"
 
 	"github.com/Nigel2392/goldcrest"
-	"github.com/justinas/nosurf"
 )
 
 type HTTPTestClient struct {
@@ -33,18 +32,9 @@ func (a *Application) TestServe(autoStart bool) (*HTTPTestServer, error) {
 		}
 	}
 
-	var disableNosurf = ConfigGet(
-		a.Settings, APPVAR_DISABLE_NOSURF, false,
-	)
-
 	var httpHandler http.Handler = a.Mux
-	if !disableNosurf {
-		var handler = nosurf.New(a.Mux)
-		var hooks = goldcrest.Get[NosurfSetupHook](HOOK_SETUP_NOSURF)
-		for _, hook := range hooks {
-			hook(a, handler)
-		}
-		httpHandler = handler
+	for _, mw := range a.middlewareBuiltins() {
+		httpHandler = mw(httpHandler)
 	}
 
 	var server *httptest.Server
