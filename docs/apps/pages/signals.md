@@ -7,7 +7,7 @@ The Pages app uses a signaling system to notify listeners about lifecycle events
 ## Key Signal Types
 
 - **BaseSignal**  
-  Contains a reference to the `Querier` (for database operations) and a `context.Context`.
+  Contains a `context.Context` used to perform the operation.
 
 - **PageNodeSignal**  
   Extends `BaseSignal` and provides the affected `PageNode` and a corresponding page ID.

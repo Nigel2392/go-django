@@ -156,99 +156,24 @@ These methods are used to save and delete the page from the database, respective
 ```go
 // blog/page.go
 func (b *BlogPage) Save(ctx context.Context) error {
-    var err error
     if b.ID() == 0 {
-        var id int64
-        id, err = createBlogPage(b.Title, b.Editor)
-        b.PageID = id
-    } else {
-        err = updateBlogPage(b.PageNode.PageID, b.Title, b.Editor)
+        var _, err = queries.GetQuerySet(b).WithContext(ctx).ExplicitSave().Create(b)
+        return err
     }
-    if err != nil {
-        logger.Errorf("Error saving blog page: %v\n", err)
-    }
-    return err
-}
-```
-
-We will create a separate file for the SQL queries themselves.
-
-Currently, we will settle for SQLite3 but this is not a requirement, if you wish to use MySQL all queries must be implemented with the required syntax for MySQL.
-
-The attributes of the `page_models.PageNode` should not be added to the SQL queries, as they are handled by the pages app itself, in a separate table.
-
-#### SQLite3 Queries
-
-```go
-// blog/sqlite.go
-package blog
-
-import (
-    "database/sql"
-
-    "github.com/Nigel2392/go-django/src/contrib/editor"
-    "github.com/Nigel2392/go-django/src/contrib/pages/page_models"
-    "github.com/pkg/errors"
-)
-
-const (
-    createTable = `CREATE TABLE IF NOT EXISTS blog_pages (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    title TEXT,
-    editor TEXT
-    )`
-    insertPage = `INSERT INTO blog_pages (title, editor) VALUES (?, ?)`
-    updatePage = `UPDATE blog_pages SET title = ?, editor = ? WHERE id = ?`
-    selectPage = `SELECT id, title, editor FROM blog_pages WHERE id = ?`
-)
-
-func CreateTable(db *sql.DB) error {
-    _, err := db.Exec(createTable)
+    var _, err = queries.GetQuerySet(b).WithContext(ctx).ExplicitSave().Update(b)
     return err
 }
 
-func createBlogPage(title string, richText *editor.EditorJSBlockData) (id int64, err error) {
-    res, err := blog.DB.Exec(insertPage, title, richText)
+func getBlogPage(ctx context.Context, parentNode page_models.PageNode, id int64) (*BlogPage, error) {
+    var qs = queries.GetQuerySet(&BlogPage{}).WithContext(ctx)
+    var page, err = qs.Filter("PageID", id).Get()
     if err != nil {
-        return 0, err
+        return nil, err
     }
-
-    id, err = res.LastInsertId()
-    if err != nil {
-        return 0, err
-    }
-
-    return id, nil
-}
-
-func updateBlogPage(id int64, title string, richText *editor.EditorJSBlockData) error {
-    var _, err = blog.DB.Exec(updatePage, title, richText, id)
-    return err
-}
-
-func getBlogPage(parentNode page_models.PageNode, id int64) (*BlogPage, error) {
-    var page = &BlogPage{
-        PageNode: &parentNode,
-    }
-    if blog.DB == nil {
-        return nil, errors.New("blog.DB is nil")
-    }
-    var row = blog.DB.QueryRow(selectPage, id)
-    var err = row.Err()
-    if err != nil {
-        return nil, errors.Wrapf(
-            err, "Error getting blog page with id %d (%T)", id, id,
-        )
-    }
-
-    err = row.Scan(&page.PageNode.PageID, &page.Title, &page.Editor)
-    if err != nil {
-        return nil, errors.Wrapf(
-            err, "Error scanning blog page with id %d (%T)", id, id,
-        )
-    }
-
-    return page, err
+    
+    // Set the reference to the parent node
+    page.PageNode = &parentNode
+    return page, nil
 }
 ```
 
@@ -266,9 +191,9 @@ package blog
 
 import (
     "context"
-    "database/sql"
     "net/http"
 
+    "github.com/Nigel2392/go-django/queries/src/drivers"
     django "github.com/Nigel2392/go-django/src"
     "github.com/Nigel2392/go-django/src/apps"
     "github.com/Nigel2392/go-django/src/contrib/admin"
@@ -287,8 +212,12 @@ var blog *apps.DBRequiredAppConfig
 
 func NewAppConfig() *apps.DBRequiredAppConfig {
     var appconfig = apps.NewDBAppConfig("blog")
-    appconfig.Init = func(settings django.Settings, db *sql.DB) error {
-        return CreateTable(db)
+    appconfig.Init = func(settings django.Settings, db drivers.Database) error {
+        var schemaEditor, err = migrator.GetSchemaEditor(db.Driver())
+        if err != nil {
+            return err
+        }
+        return schemaEditor.CreateTable(context.Background(), migrator.NewModelTable(&BlogPage{}), true)
     }
     appconfig.Ready = func() error {
         // ...<a href="#registering-the-blog-page-model">Registering the blog page model</a>
@@ -380,7 +309,7 @@ pages.Register(&pages.PageDefinition{
     DisallowRoot: disallowRoot,
     ServePage: servePage,
     GetForID: func(ctx context.Context, ref page_models.PageNode, id int64) (pages.Page, error) {
-        return getBlogPage(ref, id)
+        return getBlogPage(ctx, ref, id)
     },
 })
 ```
@@ -398,9 +327,10 @@ First we will handle all imports.
 package main
 
 import (
-    "database/sql"
+    "context"
 
     "github.com/yourname/yourproject/blog"
+    "github.com/Nigel2392/go-django/queries/src/drivers"
     django "github.com/Nigel2392/go-django/src"
     "github.com/Nigel2392/go-django/src/contrib/admin"
     "github.com/Nigel2392/go-django/src/contrib/auth"
@@ -436,8 +366,8 @@ var app = django.App(
         django.APPVAR_DEBUG:         false,
         django.APPVAR_HOST:          "127.0.0.1",
         django.APPVAR_PORT:          "8080",
-        django.APPVAR_DATABASE: func() *sql.DB {
-            var db, err = drivers.Open("sqlite3", "./.private/db.sqlite3")
+        django.APPVAR_DATABASE: func() drivers.Database {
+            var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/db.sqlite3")
             if err != nil {
                 panic(err)
             }
@@ -521,8 +451,7 @@ github.com/yourname/yourproject
 |   `-- db.sqlite3
 |-- blog
 |   |-- app.go
-|   |-- page.go
-|   `-- sqlite.go
+|   `-- page.go
 |-- main.go
 `-- go.mod
 ```

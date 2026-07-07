@@ -45,7 +45,8 @@ func Index(w http.ResponseWriter, r *http.Request) {
     fmt.Println(session.Get("page_key"))
     session.Set("page_key", "Last visited the index page")
     
-    if err := tpl.FRender(w, ctx, "mycustomapp", "mycustomapp/index.tmpl"); err != nil {
+    var requestContext = ctx.RequestContext(r)
+    if err := tpl.FRender(w, requestContext, "mycustomapp", "mycustomapp/index.tmpl"); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
     }
 }
@@ -64,7 +65,8 @@ func About(w http.ResponseWriter, r *http.Request) {
     fmt.Println(session.Get("page_key"))
     session.Set("page_key", "Last visited the about page")
     
-    if html, err := tpl.Render(ctx, "mycustomapp/about.tmpl"); err != nil {
+    var requestContext = ctx.RequestContext(r)
+    if html, err := tpl.Render(requestContext, "mycustomapp/about.tmpl"); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
     } else {
         w.Write(html)

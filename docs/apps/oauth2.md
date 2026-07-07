@@ -20,7 +20,6 @@ Dependencies for the `openauth2` app are:
   - [Refreshing the access and refresh tokens](#refreshing-the-access-and-refresh-tokens)
   - [Instantiating a new client with the user's tokens](#instantiating-a-new-client-with-the-users-tokens)
 - [Working with the database](#working-with-the-database)
-  - [Registering a custom querier](#registering-a-custom-querier)
 - [Commands](#commands)
   - [Creating a new user](#creating-a-new-user)
   - [Changing a user](#changing-a-user)
@@ -45,7 +44,6 @@ import (
     "github.com/Nigel2392/go-django/src"
     "github.com/Nigel2392/go-django/src/contrib/session"
     "github.com/Nigel2392/go-django/src/contrib/openauth2"
-    openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
 )
 
 
@@ -110,7 +108,7 @@ var ConfigGoogle = openauth2.AuthConfig{
     DataStruct: &GoogleUser{},
 
     // A nice way to represent a user as a string
-    UserToString: func(user *openauth2models.User, dataStruct interface{}) string {
+    UserToString: func(user *openauth2.User, dataStruct interface{}) string {
         var googleUser = dataStruct.(*GoogleUser)
         return googleUser.Email
     },
@@ -160,7 +158,7 @@ var ConfigGithub = openauth2.AuthConfig{
         return user.Email, nil
     },
     DataStruct: &GitHubUser{},
-    UserToString: func(user *openauth2models.User, dataStruct interface{}) string {
+    UserToString: func(user *openauth2.User, dataStruct interface{}) string {
         var u = dataStruct.(*GitHubUser)
         return u.Email
     },
@@ -186,7 +184,7 @@ var OAuth2Config = openauth2.Config{
     // Note:
     //    If this is not set, the default URL will be "/".
     //    A redirect URL might also be stored in a HTTP-only cookie, if present the cookie's URL will be used instead.
-    //  RedirectAfterLogin func(user *openauth2models.User, datastruct interface{}, r *http.Request) string
+    //  RedirectAfterLogin func(user *openauth2.User, datastruct interface{}, r *http.Request) string
 
     // A function to generate the default URL after the user has logged out.
     //  RedirectAfterLogout func(r *http.Request) string
@@ -203,9 +201,9 @@ This function the previously created `openauth2.Config` as an argument, and retu
 package main
 
 import (
-    "database/sql"
+    "context"
 
-    "github.com/Nigel2392/go-django/src"
+    "github.com/Nigel2392/go-django/queries/src/drivers"
     "github.com/Nigel2392/go-django/src/contrib/session"
     "github.com/Nigel2392/go-django/src/contrib/messages"
     "github.com/Nigel2392/go-django/src/contrib/openauth2"
@@ -215,7 +213,7 @@ import (
 )
 
 func main() {
-    var db, err = sql.Open("sqlite3", "example.db")
+    var db, err = drivers.Open(context.Background(), "sqlite3", "example.db")
     if err != nil {
         panic(err)
     }
@@ -225,7 +223,7 @@ func main() {
             django.APPVAR_ALLOWED_HOSTS: []string{"*"},
             django.APPVAR_HOST: "127.0.0.1",
             django.APPVAR_PORT: "8080",
-            django.APPVAR_DATABASE: func() *sql.DB {
+            django.APPVAR_DATABASE: func() drivers.Database {
                 return db
             }(),
         }),
@@ -293,69 +291,22 @@ client, err = openauth2.Client(myUser)
 
 ## Working with the database
 
-The `openauth2.App` variable exposes a `QuerySet()` method, which returns a `openauth2models.Querier` object that can be used to query the database.
+The `openauth2` app uses the standard go-django ORM. The model used is `openauth2.User`.
+You can interact with it using standard querysets or via the provided helper functions in the `openauth2` package:
 
 ```go
-// openauth2models.Querier
-type Querier interface {
-    Close() error
-    WithTx(tx *sql.Tx) Querier
-
-    RetrieveUsers(ctx context.Context, limit int32, offset int32, ordering ...string) ([]*User, error)
-    RetrieveUserByID(ctx context.Context, id uint64) (*User, error)
-    RetrieveUserByIdentifier(ctx context.Context, uniqueIdentifier string, providerName string) (*User, error)
-
-    CreateUser(ctx context.Context, uniqueIdentifier string, providerName string, data json.RawMessage, accessToken string, refreshToken string, tokenType string, expiresAt time.Time, isAdministrator bool, isActive bool) (int64, error)
-    DeleteUser(ctx context.Context, id uint64) error
-    DeleteUsers(ctx context.Context, ids []uint64) error
-    UpdateUser(ctx context.Context, providerName string, data json.RawMessage, accessToken string, refreshToken string, tokenType string, expiresAt time.Time, isAdministrator bool, isActive bool, iD uint64) error
-}
+func CreateUser(ctx context.Context, user *User) (*User, error)
+func GetUserByID(ctx context.Context, id uint64) (*User, error)
+func GetUserByIdentifier(ctx context.Context, provider, identifier string) (*User, error)
 ```
 
-### Registering a custom querier
-
-If you'd like to use a different database engine, i.e. postgres, you can register a custom querier for your database.
-
-A simple way to register a custom querier for your database is to do so with `openauth2models.Register`
+For instance, to retrieve a user by ID:
 
 ```go
-import (
-    "context"
-    "database/sql"
-    openauth2models "github.com/Nigel2392/go-django/src/contrib/openauth2/openauth2_models"
-)
-
-func init() {
-    openauth2models.Register(
-        &MyCustomDriver{}, &dj_models.BaseBackend[openauth2models.Querier]{
-            CreateTableQuery: `CREATE TABLE IF NOT EXISTS oauth2_users (
-    id                    BIGINT UNSIGNED NOT NULL AUTO_INCREMENT                                 COMMENT 'readonly:true',
-    unique_identifier     VARCHAR(255) NOT NULL                                                   COMMENT 'readonly:true',
-    provider_name         VARCHAR(255) NOT NULL                                                   COMMENT 'readonly:true',
-    data                  JSON NOT NULL                                                           COMMENT 'readonly:true',
-    access_token          TEXT NOT NULL                                                           COMMENT 'readonly:true',
-    refresh_token         TEXT NOT NULL                                                           COMMENT 'readonly:true',
-    token_type            VARCHAR(60) NOT NULL                                                    COMMENT 'readonly:true',
-    expires_at            DATETIME NOT NULL                                                       COMMENT 'readonly:true',
-    created_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP                             COMMENT 'readonly:true',
-    updated_at            DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'readonly:true',
-    is_administrator      BOOLEAN NOT NULL,
-    is_active             BOOLEAN NOT NULL,
-    PRIMARY KEY (id)
-);
-
-ALTER TABLE oauth2_users ADD UNIQUE INDEX (unique_identifier(255), provider_name(255));
-ALTER TABLE oauth2_users ADD INDEX (provider_name(255));`,
-            NewQuerier: func(db *sql.DB) (openauth2models.Querier, error) {
-                return MyNewQuerier(db), nil
-            },
-            PreparedQuerier: func(ctx context.Context, db *sql.DB) (openauth2models.Querier, error) {
-                return PrepareMyNewQuerier(ctx, db)
-            },
-        },
-    )
-}
+user, err := openauth2.GetUserByID(context.Background(), 1)
 ```
+
+Because it uses the standard ORM, you can also filter and manage users using the `queries` module.
 
 ## Commands
 

@@ -8,9 +8,10 @@ The `Routing` attribute is a function that takes a `mux.Multiplexer` object as a
 The `mux.Multiplexer` object is used to register routes, the interface is defined as follows:
 
 ```go
-type Mux interface {
+type Multiplexer interface {
     Use(middleware ...mux.Middleware)
     Handle(method string, path string, handler mux.Handler, name ...string) *mux.Route
+    HandleFunc(method string, path string, handler func(w http.ResponseWriter, r *http.Request), name ...string) *mux.Route
     AddRoute(route *mux.Route)
 
     Any(path string, handler mux.Handler, name ...string) *mux.Route
@@ -139,9 +140,7 @@ The `Use` method takes a list of middleware functions that return a `mux.Handler
 The `mux.Handler` interface is defined as follows:
 
 ```go
-type Handler interface {
-    ServeHTTP(w http.ResponseWriter, r *http.Request)
-}
+type Handler = http.Handler
 ```
 
 The `ServeHTTP` method is called with the `http.ResponseWriter` and `*http.Request` objects.

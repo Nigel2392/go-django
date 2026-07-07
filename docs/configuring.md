@@ -57,6 +57,10 @@ django.APPVAR_HOST
 // This is the port the server will listen on
 django.APPVAR_PORT
 
+// The port to bind the server to for TLS
+// This allows serving HTTPS on a specific port.
+django.APPVAR_TLS_PORT
+
 // The URL prefix for static files
 // This is the URL prefix that will be used to serve static files
 django.APPVAR_STATIC_URL
@@ -75,8 +79,9 @@ django.APPVAR_TLS_KEY
 django.APPVAR_TLS_CONFIG
 
 // The database object.
-// This is a *sql.DB, and allows for easily sharing a database connection
-// between multiple packages
+// This is a drivers.Database, and allows for easily sharing a database connection
+// and a common pool of connections between apps.
+// It also comes with querying tools and migration tools.
 django.APPVAR_DATABASE
 
 // Continue after commands have parsed and been executed
@@ -107,6 +112,38 @@ APPVAR_DISABLE_NOSURF = "DISABLE_NOSURF" // bool
 // The defauit language of your application.
 APPVAR_TRANSLATIONS_DEFAULT_LOCALE = "TRANSLATIONS_DEFAULT_LOCALE" // string
 ```
+
+### App-Specific Settings
+
+Contrib apps often define their own `APPVAR_` constants which can be passed to the configuration map.
+
+**Auth Settings (from `github.com/Nigel2392/go-django/src/contrib/auth`)**
+
+* `auth.APPVAR_AUTH_EMAIL_LOGIN`: (bool) Enable login via email.
+* `auth.APPVAR_REGISTER_AUTH_URLS`: (bool) Automatically register auth URLs (login/logout/register).
+* `auth.APPVAR_ALLOW_USER_REGISTER`: (bool) Enable user registration view.
+* `auth.APPVAR_LOGIN_REDIRECT_URL`: (string or `func(*http.Request) string`) URL to redirect to upon successful login.
+* `auth.APPVAR_LOGIN_VIEW_REVERSE_URL`: (string) Reverse URL string for the login view.
+
+**Admin Settings (from `github.com/Nigel2392/go-django/src/contrib/admin`)**
+
+* `admin.APPVAR_HOME_PAGE_TITLE`: (string) The title shown on the admin dashboard.
+* `admin.APPVAR_HOME_PAGE_SUBTITLE`: (string) The subtitle for the admin dashboard.
+* `admin.APPVAR_HOME_PAGE_LOGO_PATH`: (string) Path to the custom logo image for the admin panel.
+
+**Editor Settings (from `github.com/Nigel2392/go-django/src/contrib/editor`)**
+
+* `editor.APPVAR_WRAP_RENDERED_BLOCKS`: (bool) Wrap the rendered editor blocks in wrapping HTML.
+* `editor.APPVAR_ENABLE_INLINE_TOOLBAR`: (bool) Enable the inline toolbar.
+
+**Messages Settings (from `github.com/Nigel2392/go-django/src/contrib/messages`)**
+
+* `messages.APPVAR_COOKIE_KEY`: (`*http.Cookie`) Cookie settings used for the cookie-based messaging backend.
+
+**Pages Settings (from `github.com/Nigel2392/go-django/src/contrib/pages`)**
+
+* `pages.APPVAR_OUTDATED_AFTER_DURATION`: (`time.Duration`) Duration after which a page is considered outdated.
+* `pages.APPVAR_OUTDATED_LIST_DISPLAY`: (`[]string`) Fields to display when listing outdated pages.
 
 ### Retrieving a value from settings
 

@@ -5,8 +5,8 @@ They define the structure of your data and how it interacts with a data store.
 In Go-Django, models are defined as structs define the following methods:
 
 - `FieldDefs()` - Returns a list of [field definitions](./attrs/interfaces.md#definer) for the model.
-- `Save(context.Context) error` - [Saves](./#saving-models) the model instance to the data store.
-- `Delete(context.Context) error` - [Deletes](./#deleting-models) the model instance from the data store.
+- `Save(context.Context) error` or `Save() error` - [Saves](./#saving-models) the model instance to the data store.
+- `Delete(context.Context) error` or `Delete() error` - [Deletes](./#deleting-models) the model instance from the data store.
 
 Go-Django's packages will internally call these methods to save or delete persistent data belonging to the models.
 
@@ -20,7 +20,7 @@ There are 2 helper functions that can be used to interact with models.
 
 The `SaveModel` function can be used to save a model instance.
 
-It will call the `Save()` method on the model instance, if it exists.
+It will call the `Save(context.Context)` or `Save()` method on the model instance, if it exists.
 
 ```go
 SaveModel(context.Context, attrs.Definer) (saved bool, err error)
@@ -34,7 +34,7 @@ These functions must be of type `models.ModelFunc`, the hook that is used to reg
 
 The `DeleteModel` function can be used to delete a model instance.
 
-It will call the `Delete()` method on the model instance, if it exists.
+It will call the `Delete(context.Context)` or `Delete()` method on the model instance, if it exists.
 
 ```go
 DeleteModel(context.Context, attrs.Definer) (deleted bool, err error)
@@ -50,3 +50,26 @@ Models can be defined as structs which implement only the `FieldDefs()` method, 
 be able to properly interact with these models.
 
 It is also always a good idea to register a [`contenttypes.ContentTypeDefinition`](./contenttypes.md#registering-a-content-type) for your model, so that it can be used in other apps like `contrib.admin` and generally makes it easier to work with your models.
+
+---
+
+## Querying Models
+
+To interact with models in the database, Go-Django uses the external [`queries`](https://github.com/Nigel2392/go-django/queries) package to provide a Django-like ORM interface. This package is heavily utilized across `go-django` apps.
+
+Using `queries.GetQuerySet`, you can fluently build and execute queries (e.g. `Filter`, `Exclude`, `Select`, `OrderBy`, etc.).
+
+Example:
+
+```go
+import "github.com/Nigel2392/go-django/queries/src"
+
+func GetActiveUsers() ([]*User, error) {
+    return queries.GetQuerySet(&User{}).
+        Filter("IsActive", true).
+        OrderBy("-CreatedAt").
+        All()
+}
+```
+
+For more details on how to build queries, manage transactions, and handle relations, please refer to the [queries documentation](../queries/README.md).

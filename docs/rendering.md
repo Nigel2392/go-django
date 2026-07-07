@@ -136,12 +136,12 @@ Let's say we're rendering the index page from an HTTP handler.
 ```go
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
     // Create a request context:
-    var ctx = ctx.RequestContext(r)
-    ctx.Set("Title", "My Custom App")
+    var requestContext = ctx.RequestContext(r)
+    requestContext.Set("Title", "My Custom App")
 
     // Render the template:
     // Also adressing the app name will allow for simpler overrides, but is not required.
-    if err := tpl.FRender(w, ctx, "mycustomapp", "mycustomapp/index.tmpl"); err != nil {
+    if err := tpl.FRender(w, requestContext, "mycustomapp", "mycustomapp/index.tmpl"); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
     }
 
@@ -158,11 +158,11 @@ For the about page, we will use the Render function, and a regular ctx.Context o
 func AboutHandler(w http.ResponseWriter, r *http.Request) {
     // Create a context:
     var m = make(map[string]interface{})
-    var ctx = ctx.NewContext(m)
-    ctx.Set("Title", "My Custom App")
+    var genericContext = ctx.NewContext(m)
+    genericContext.Set("Title", "My Custom App")
 
     // Render the template:
-    if html, err := tpl.Render(ctx, "mycustomapp/about.tmpl"); err != nil {
+    if html, err := tpl.Render(genericContext, "mycustomapp/about.tmpl"); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
     } else {
         w.Write(html)

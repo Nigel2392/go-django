@@ -84,13 +84,13 @@ go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.7.1.1
 ### Contrib apps
 
 - [sessions](./docs/apps/sessions.md)
-- [admin](./docs/apps/admin) (WIP)
+- [admin](./docs/apps/admin/app.md) (WIP)
 - [auditlogs](./docs/apps/auditlogs.md) (WIP)
-- [auth](./docs/apps/auth) (WIP)
+- [auth](./docs/apps/auth/app.md) (WIP)
 - [oauth2](./docs/apps/oauth2.md)
 - [messages](./docs/apps/messages.md)
 - [pages](./docs/apps/pages/readme.md)
-- [editorjs](./docs/apps/editor.md) (WIP)
+- [editorjs](./docs/apps/editor/editor.md) (WIP)
 
 ## Tested Databases
 
@@ -113,7 +113,7 @@ But more tests / databases will be added over time.
 
 ### How to work with models in the database
 
-- [go-django-queries](./queries/README.md) - A library to help you create SQL queries specialized (and only useful) for go-django models.
+- [go-django/queries](./queries/README.md) - A library to help you create SQL queries specialized (and only useful) for go-django models.
 
 ## Help Needed
 

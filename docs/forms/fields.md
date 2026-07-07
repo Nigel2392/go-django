@@ -15,31 +15,33 @@ The `Field` interface is defined as follows:
 
 ```go
 type Field interface {
- Attrs() map[string]string
- SetAttrs(attrs map[string]string)
- Hide(hidden bool)
+    Attrs() map[string]string
+    SetAttrs(attrs map[string]string)
+    Hide(hidden bool)
 
- SetName(name string)
- SetLabel(label func() string)
- SetHelpText(helpText func() string)
- SetValidators(validators ...func(interface{}) error)
- SetWidget(widget widgets.Widget)
+    SetName(name string)
+    SetLabel(label func(ctx context.Context) string)
+    SetHelpText(helpText func(ctx context.Context) string)
+    SetValidators(validators ...func(interface{}) error)
+    SetDefault(defaultValue func() interface{})
+    SetWidget(widget Widget)
 
- Name() string
- Label() string
- HelpText() string
- Validate(value interface{}) []error
- Widget() widgets.Widget
- HasChanged(initial, data interface{}) bool
+    Name() string
+    Label(ctx context.Context) string
+    HelpText(ctx context.Context) string
+    Validate(ctx context.Context, value interface{}) []error
+    Widget() Widget
+    Default() interface{}
+    HasChanged(initial, data interface{}) bool
 
- Clean(value interface{}) (interface{}, error)
- ValueToForm(value interface{}) interface{}
- ValueToGo(value interface{}) (interface{}, error)
- Required() bool
- SetRequired(b bool)
- ReadOnly() bool
- SetReadOnly(b bool)
- IsEmpty(value interface{}) bool
+    Clean(ctx context.Context, value interface{}) (interface{}, error)
+    ValueToForm(value interface{}) interface{}
+    ValueToGo(value interface{}) (interface{}, error)
+    Required() bool
+    SetRequired(b bool)
+    ReadOnly() bool
+    SetReadOnly(b bool)
+    IsEmpty(value interface{}) bool
 }
 ```
 

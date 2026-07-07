@@ -41,9 +41,9 @@ Each widget implements the `Widget` interface, which provides methods for render
 - **`Type() string`**: Returns the widget's HTML type (e.g., `text`, `checkbox`, `radio`, etc.).
 - **`SetAttrs(attrs map[string]string)`**: Sets the HTML attributes for the widget.
 - **`IdForLabel(id string) string`**: Generates the `id` attribute for the widget’s label.
-- **`GetContextData(id, name string, value interface{}, attrs map[string]string) ctx.Context`**: Provides context data used to render the widget, including its `id`, `name`, value, and attributes.
-- **`Render(w io.Writer, id, name string, value interface{}, attrs map[string]string) error`**: Renders the widget to the provided `io.Writer`.
-- **`RenderWithErrors(w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string) error`**: Renders the widget along with any validation errors.
+- **`GetContextData(ctx context.Context, id, name string, value interface{}, attrs map[string]string) ctx.Context`**: Provides context data used to render the widget, including its `id`, `name`, value, and attributes.
+- **`Render(ctx context.Context, w io.Writer, id, name string, value interface{}, attrs map[string]string) error`**: Renders the widget to the provided `io.Writer`.
+- **`RenderWithErrors(ctx context.Context, w io.Writer, id, name string, value interface{}, errors []error, attrs map[string]string, widgetCtx ctx.Context) error`**: Renders the widget along with any validation errors.
 
 ### Form Data Handling
 
@@ -51,8 +51,8 @@ Widgets handle form data conversion and extraction. The following methods are re
 
 - **`ValueToGo(value interface{}) (interface{}, error)`**: Converts the form's string value into the appropriate Go type.
 - **`ValueToForm(value interface{}) interface{}`**: Converts a Go value back into its string form for rendering in the form.
-- **`ValueOmittedFromData(data url.Values, files map[string][]filesystem.FileHeader, name string) bool`**: Checks whether the form data omitted a value for this widget.
-- **`ValueFromDataDict(data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error)`**: Retrieves the value from the form data and handles any associated errors.
+- **`ValueOmittedFromData(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) bool`**: Checks whether the form data omitted a value for this widget.
+- **`ValueFromDataDict(ctx context.Context, data url.Values, files map[string][]filesystem.FileHeader, name string) (interface{}, []error)`**: Retrieves the value from the form data and handles any associated errors.
 
 ## Example: Widget Usage
 

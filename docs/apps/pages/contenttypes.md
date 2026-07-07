@@ -18,15 +18,17 @@ type PageDefinition struct {
     EditPanels func(r *http.Request, page Page) []admin.Panel
 
     // Retrieve a page instance for the given ID.
-    GetForID func(ctx context.Context, ref pages_models.PageNode, id int64) (Page, error)
+    GetForID func(ctx context.Context, ref *PageNode, id int64) (Page, error)
 
     // Callbacks for node updates and deletion.
-    OnReferenceUpdate       func(ctx context.Context, ref pages_models.PageNode, id int64) error
-    OnReferenceBeforeDelete func(ctx context.Context, ref pages_models.PageNode, id int64) error
+    OnReferenceUpdate       func(ctx context.Context, ref *PageNode, id int64) error
+    OnReferenceBeforeDelete func(ctx context.Context, ref *PageNode, id int64) error
 
     // Controls for creation and hierarchy.
     DisallowCreate bool
     DisallowRoot    bool
+    IsValidChild    func(parent Page) (bool, error)
+    IsValidParent   func(child Page) (bool, error)
     ParentPageTypes []string
     ChildPageTypes  []string
 

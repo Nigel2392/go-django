@@ -67,7 +67,7 @@ func NewCustomAppConfig() *CustomApp {
     }
 
     // Will be called for the app's initialization
-    myCustomApp.Init = func(settings django.Settings, db *sql.DB) error {
+    myCustomApp.Init = func(settings django.Settings, db drivers.Database) error {
     
     }
 
@@ -172,8 +172,8 @@ Routes and middleware further explained in the [routing](./routing.md#URLs) docu
 ```go
 // Register routes
 myCustomApp.Routing = func(m mux.Multiplexer) {
-    m.Handle(mux.GET, "/", Index, "index"),
-    m.Handle(mux.GET, "/about", About, "about"),
+    m.Handle(mux.GET, "/", mux.NewHandler(Index), "index")
+    m.Handle(mux.GET, "/about", mux.NewHandler(About), "about")
 }
 ```
 

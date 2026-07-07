@@ -26,11 +26,13 @@ The configuration for our todos app will also be referenced, but we will [define
 package main
 
 import (
+    "context"
     "embed"
     "net/http"
-    "database/sql"
+
     _ "github.com/mattn/go-sqlite3"
 
+    "github.com/Nigel2392/go-django/queries/src/drivers"
     "github.com/Nigel2392/go-django/src"
     "github.com/Nigel2392/go-django/src/contrib/admin"
     "github.com/Nigel2392/go-django/src/contrib/auth"
@@ -47,9 +49,8 @@ func main() {
             "DEBUG":         false,
             "HOST":          "127.0.0.1",
             "PORT":          "8080",
-            "DATABASE": func() *sql.DB {
-                // var db, err = drivers.Open("mysql", "root:my-secret-pw@tcp(127.0.0.1:3306)/django-pages-test?parseTime=true&multiStatements=true")
-                var db, err = drivers.Open("sqlite3", "./.private/db.sqlite3")
+            "DATABASE": func() drivers.Database {
+                var db, err = drivers.Open(context.Background(), "sqlite3", "./.private/db.sqlite3")
                 if err != nil {
                     panic(err)
                 }
@@ -110,7 +111,7 @@ type TodosAppConfig struct {
 We will also create a global variable to store the database in.
 
 ```go
-var globalDB *sql.DB
+var globalDB drivers.Database
 ```
 
 Let's now create the `NewAppConfig` function that will return an instance of the `TodosAppConfig` struct.
@@ -131,16 +132,16 @@ func NewAppConfig() *TodosAppConfig {
     }
 
     // Will be called for the app's initialization (before any `OnReady` functions are called)
-    todosApp.Init = func(settings django.Settings, db *sql.DB) error {
+    todosApp.Init = func(settings django.Settings, db drivers.Database) error {
         // ...<a href="#defining-your-templates">Setting up templates</a>
         // ...<a href="#setting-up-static-files">Setting up static files</a>
 
-        // Set the global database
-        globalDB = db
-
-        // Create the todos table
-        _, err := db.Exec(createTable)
-        return err
+        // Create the todos table using the schema editor
+        schemaEditor, err := migrator.GetSchemaEditor(db.Driver())
+        if err != nil {
+            return err
+        }
+        return schemaEditor.CreateTable(context.Background(), migrator.NewModelTable(&Todo{}), true)
     }
 
     // Will be called after all apps have been initialized
@@ -256,36 +257,11 @@ func (m *Todo) FieldDefs() attrs.Definitions {
 }
 ```
 
-### Creating the model's queries
+### Creating the model using queries
 
 Our model will need a few queries to interact with the database.
 
-We will need to define all database logic pertaining to the `Todo` model - Go-Django does not do this and only looks for interface methods.
-
-The following columns should be present in the `todos` table:
-
-* `id` - The unique identifier for the todo.
-* `title` - The title of the todo.
-* `description` - A description of the todo.
-* `done` - A boolean field that indicates whether the todo is done or not.
-
-```go
-const (
-    createTable = `CREATE TABLE IF NOT EXISTS todos (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        title TEXT,
-        description TEXT,
-        done BOOLEAN
-    )`
-    listTodos = `SELECT id, title, description, done FROM todos ORDER BY id DESC LIMIT ? OFFSET ?`
-    insertTodo = `INSERT INTO todos (title, description, done) VALUES (?, ?, ?)`
-    updateTodo = `UPDATE todos SET title = ?, description = ?, done = ? WHERE id = ?`
-    selectTodo = `SELECT id, title, description, done FROM todos WHERE id = ?`
-    countTodos = `SELECT COUNT(id) FROM todos`
-)
-```
-
-Let's set up the methods for our todo model.
+We will use the `go-django/queries` package to define our database logic without writing any raw SQL!
 
 ```go
 // Save is a method that will either insert or update the todo in the database.
@@ -295,71 +271,32 @@ Let's set up the methods for our todo model.
 // This method should exist on all models that need to be saved to the database.
 func (t *Todo) Save(ctx context.Context) error {
     if t.ID == 0 {
-        return t.Insert(ctx)
-    }
-    return t.Update(ctx)
-}
-
-// Not Required
-func (t *Todo) Insert(ctx context.Context) error {
-    var res, err = globalDB.ExecContext(ctx, insertTodo, t.Title, t.Description, t.Done)
-    if err != nil {
+        var _, err = queries.GetQuerySet(t).WithContext(ctx).ExplicitSave().Create(t)
         return err
     }
-    id, err := res.LastInsertId()
-    if err != nil {
-        return err
-    }
-    t.ID = int(id)
-    return nil
-}
-
-// Not Required
-func (t *Todo) Update(ctx context.Context) error {
-    _, err := globalDB.ExecContext(ctx, updateTodo, t.Title, t.Description, t.Done, t.ID)
+    var _, err = queries.GetQuerySet(t).WithContext(ctx).ExplicitSave().Update(t)
     return err
 }
 ```
 
 Let's also define a function to list all todos, or retrieve a single one by it's ID.
 
-We will also define a function to count the number of todos in the database.
-
-This is mainly used for pagination.
+We will also define a function to count the number of todos in the database, which is mainly used for pagination.
 
 ```go
-func ListAllTodos(ctx context.Context, limit, offset int) ([]Todo, error) {
-    var rows, err = globalDB.QueryContext(ctx, listTodos, limit, offset)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
-
-    var todos []Todo
-    for rows.Next() {
-        var todo Todo
-        if err := rows.Scan(&todo.ID, &todo.Title, &todo.Description, &todo.Done); err != nil {
-            return nil, err
-        }
-        todos = append(todos, todo)
-    }
-    return todos, nil
+func ListAllTodos(ctx context.Context, limit, offset int) ([]*Todo, error) {
+    var qs = queries.GetQuerySet(&Todo{}).WithContext(ctx)
+    return qs.Limit(limit).Offset(offset).OrderBy("-ID").All()
 }
 
 func GetTodoByID(ctx context.Context, id int) (*Todo, error) {
-    var todo Todo
-    if err := globalDB.QueryRowContext(ctx, selectTodo, id).Scan(&todo.ID, &todo.Title, &todo.Description, &todo.Done); err != nil {
-        return nil, err
-    }
-    return &todo, nil
+    var qs = queries.GetQuerySet(&Todo{}).WithContext(ctx)
+    return qs.Filter("ID", id).Get()
 }
 
-func CountTodos(ctx context.Context) (int, error) {
-    var count int
-    if err := globalDB.QueryRowContext(ctx, countTodos).Scan(&count); err != nil {
-        return 0, err
-    }
-    return count, nil
+func CountTodos(ctx context.Context) (int64, error) {
+    var qs = queries.GetQuerySet(&Todo{}).WithContext(ctx)
+    return qs.Count()
 }
 ```
 
@@ -386,12 +323,12 @@ func ListTodos(w http.ResponseWriter, r *http.Request) {
         // Set the amount of objects per page
         Amount: 25,
         // Define a function to retrieve a list of objects based on the amount and offset
-        GetObjects: func(amount, offset int) ([]Todo, error) {
+        GetObjects: func(amount, offset int) ([]*Todo, error) {
             return ListAllTodos(
                 r.Context(), amount, offset,
             )
         },
-        GetCount: func() (int, error) {
+        GetCount: func() (int64, error) {
             return CountTodos(r.Context())
         },
     }
@@ -773,10 +710,9 @@ contenttypes.Register(&contenttypes.ContentTypeDefinition{
         if err != nil {
             return nil, err
         }
-        var items = make([]interface{}, 0)
+        var items = make([]interface{}, 0, len(todos))
         for _, u := range todos {
-            var cpy = u
-            items = append(items, &cpy)
+            items = append(items, u)
         }
         return items, nil
     },

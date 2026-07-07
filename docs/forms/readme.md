@@ -14,7 +14,7 @@ A simple interface for cleaning form input values.
 
 ```go
 type Cleaner interface {
-    Clean(value interface{}) (interface{}, error)
+    Clean(ctx context.Context, value interface{}) (interface{}, error)
 }
 ```
 
@@ -29,7 +29,7 @@ An interface for validating a field's value.
 
 ```go
 type Validator interface {
-    Validate(value interface{}) []error
+    Validate(ctx context.Context, value interface{}) []error
 }
 ```
 
@@ -46,12 +46,14 @@ Represents a single form field bound to an instance of a form. A bound field car
 type BoundField interface {
     ID() string
     Name() string
-    Widget() widgets.Widget
-    Input() fields.Field
+    Widget() Widget
+    Hidden() bool
+    Input() Field
     Label() template.HTML
     HelpText() template.HTML
     Field() template.HTML
     HTML() template.HTML
+    Context() context.Context
     Attrs() map[string]string
     Value() interface{}
     Errors() []error
@@ -69,9 +71,17 @@ This interface defines how a form is rendered to HTML.
 
 ```go
 type FormRenderer interface {
+    RenderAsP(w io.Writer, ctx context.Context, form BoundForm) error
+    RenderAsUL(w io.Writer, ctx context.Context, form BoundForm) error
+    RenderAsTable(w io.Writer, ctx context.Context, form BoundForm) error
+}
+
+type BoundForm interface {
     AsP() template.HTML
     AsUL() template.HTML
+    AsTable() template.HTML
     Media() media.Media
+    // ...
 }
 ```
 
@@ -107,39 +117,43 @@ The main interface of the forms package is the **Form** interface. It builds on 
 
 ```go
 type Form interface {
-    FormRenderer
+    WithDataDefiner
+    FullCleanMixin
+    ErrorAdder
+    ErrorDefiner
 
+    Media() media.Media
+    Context() context.Context
+    WithContext(ctx context.Context)
     Prefix() string
     SetPrefix(prefix string)
     SetInitial(initial map[string]interface{})
-    SetValidators(validators ...func(Form) []error)
+    Validators() []func(f Form, cleanedData map[string]interface{}) []error
+    SetValidators(validators ...func(Form, map[string]interface{}) []error)
+    Renderer() FormRenderer
+    SetRenderer(renderer FormRenderer)
+
     Ordering([]string)
     FieldOrder() []string
 
-    Field(name string) (fields.Field, bool)
-    Widget(name string) (widgets.Widget, bool)
-    Fields() []fields.Field
-    Widgets() []widgets.Widget
-    AddField(name string, field fields.Field)
-    AddWidget(name string, widget widgets.Widget)
+    Field(name string) (Field, bool)
+    Fields() []Field
+    Widgets() []Widget
+    AddField(name string, field Field)
+    AddWidget(name string, widget Widget)
     DeleteField(name string) bool
     BoundForm() BoundForm
     BoundFields() *orderedmap.OrderedMap[string, BoundField]
-    BoundErrors() *orderedmap.OrderedMap[string, []error]
-    ErrorList() []error
 
-    WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) Form
     InitialData() map[string]interface{}
     CleanedData() map[string]interface{}
-
-    FullClean()
-    Validate()
-    HasChanged() bool
-    IsValid() bool
 
     OnValid(...func(Form))
     OnInvalid(...func(Form))
     OnFinalize(...func(Form))
+
+    WasCleaned() bool
+    HasChanged() bool
 }
 ```
 
@@ -280,7 +294,7 @@ Typically, you would use the forms package in combination with the fields, widge
    When a POST request is received, the form reads the request data, validates it, and makes the cleaned data available for use (for example, saving to a database).
 
    ```go
-   if r.Method == "POST" && form.IsValid() {
+   if r.Method == "POST" && forms.IsValid(r.Context(), form) {
        validFormData := form.CleanedData()
        // Process or save the cleaned data...
    }

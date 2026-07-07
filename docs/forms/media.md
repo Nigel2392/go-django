@@ -11,7 +11,7 @@ type MyObject struct {
     // ...
 }
 
-func (o *MyObject) Media() *forms.Media {
+func (o *MyObject) Media() media.Media {
     var firstMediaObj = media.NewMedia()
 
     firstMediaObj.AddCSS(
@@ -113,12 +113,6 @@ Media objects can be merged together to create a single media object, as well as
 
 ```go
 type Media interface {
-    // AddJS adds a JS asset to the media.
-    AddJS(js ...media.Asset)
-
-    // AddCSS adds a CSS asset to the media.
-    AddCSS(css ...media.Asset)
-
     // Merge merges the media of the other Media object into this one.
     // It returns the merged Media object - it modifies the receiver.
     Merge(other media.Media) media.Media
@@ -134,5 +128,16 @@ type Media interface {
 
     // The list of raw CSS urls to include.
     CSSList() []media.Asset
+    
+    AddableMedia
+}
+
+type AddableMedia interface {
+    // AddJS adds a JS asset to the media.
+    AddJS(js ...media.Asset)
+
+    // AddCSS adds a CSS asset to the media.
+    AddCSS(css ...media.Asset)
 }
 ```
+

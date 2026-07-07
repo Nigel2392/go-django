@@ -35,6 +35,38 @@ goldcrest.Register(
 )
 ```
 
+### django.ServerStart
+
+*Type Signature: `django.DjangoHook`*
+
+This hook is called just before Django's HTTP(S) server starts listening.
+
+```go
+goldcrest.Register(
+    django.HOOK_SERVER_STARTUP, 0,
+    func(app *django.Application) error {
+        // Run any setup code right before the server listens
+        return nil
+    },
+)
+```
+
+### django.ServerQuit
+
+*Type Signature: `django.DjangoHook`*
+
+This hook is called after Django's HTTP(S) server is shut down.
+
+```go
+goldcrest.Register(
+    django.HOOK_SERVER_SHUTDOWN, 0,
+    func(app *django.Application) error {
+        // Run cleanup code after the server shuts down
+        return nil
+    },
+)
+```
+
 ### django.ServerError
 
 *Type Signature: `django.ServerErrorHook`*

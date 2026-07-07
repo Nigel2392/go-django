@@ -14,7 +14,7 @@ The Pages app provides a framework for managing page content with a hierarchical
 4. [Queries and Database Operations](./queries.md)
 5. [Page Definitions and Registration](./contenttypes.md)
 6. [PageNode Signals](./signals.md)
-7. [`pages_models` Package Reference](./pages_models.md)
+7. [`pages` Package Reference](./model_page.md)
 8. [Example Blog app](../../examples/blog.md)
 
 ---
@@ -32,9 +32,7 @@ The Pages app is configured via a dedicated configuration object:
 ```go
 type PageAppConfig struct {
     *apps.DBRequiredAppConfig
-    backend            dj_models.Backend[models.Querier]
     routePrefix        string
-    useRedirectHandler bool
 }
 ```
 
@@ -47,12 +45,12 @@ type PageAppConfig struct {
 - **QuerySet()**  
   Returns a `models.DBQuerier` to perform database operations related to page nodes.
 
-You can easily retrieve the query set for database operations using the `QuerySet()` method.
+You can easily retrieve the query set for database operations using the `NewPageQuerySet()` method.
 
 Example:
 
 ```go
-q := pages.App().QuerySet()
+q := pages.NewPageQuerySet()
 ```
 
 ## Routing and URL Handling
@@ -61,9 +59,6 @@ The Pages app does not assume a default URL. You must explicitly define the rout
 
 - **SetRoutePrefix(prefix string)**  
   Sets the URL prefix from which the Pages app is served. All page URLs are prefixed with this value.
-
-- **SetUseRedirectHandler(use bool)**  
-  Configures whether to use a redirect handler for cases where only the page ID is known. This handler (registered at `/__pages__/redirect/<page_id>`) avoids an extra database lookup to determine the live URL.
 
 - **URLPath(page Page) string**  
   Constructs and returns the live URL path for a given page. It combines the configured route prefix with the page node’s `UrlPath`.

@@ -15,28 +15,28 @@ package main
 
 import (
     "net/http"
-    "github.com/Nigel2392/go-django/src/core"
-    "github.com/Nigel2392/go-django/src/tpl"
+    "github.com/Nigel2392/go-django/src/core/ctx"
+    "github.com/Nigel2392/go-django/src/core/filesystem/tpl"
 )
 
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
     // Create a request context
-    var ctx = ctx.Context(r)
-    ctx.Set("Title", "Welcome to My Custom App")
+    var context = ctx.RequestContext(r)
+    context.Set("Title", "Welcome to My Custom App")
 
     // Render the index template
-    if err := tpl.FRender(w, ctx, "mycustomapp", "mycustomapp/index.tmpl"); err != nil {
+    if err := tpl.FRender(w, context, "mycustomapp", "mycustomapp/index.tmpl"); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
     }
 }
 
 func AboutHandler(w http.ResponseWriter, r *http.Request) {
     // Create a generic context
-    var ctx = ctx.NewContext(nil)
-    ctx.Set("Title", "About My Custom App")
+    var context = ctx.NewContext(nil)
+    context.Set("Title", "About My Custom App")
 
     // Render the about template
-    if html, err := tpl.Render(ctx, "mycustomapp/about.tmpl"); err != nil {
+    if html, err := tpl.Render(context, "mycustomapp/about.tmpl"); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
     } else {
         w.Write(html)
@@ -62,6 +62,7 @@ package ctx
 type Context interface {
     Setter
     Getter
+    Data() map[string]any
 }
 
 type Setter interface {
@@ -153,14 +154,14 @@ func (u *User) EditContext(key string, context ctx.Context) {
 
 // In your handler
 func IndexHandler(w http.ResponseWriter, r *http.Request) {
-    var ctx = ctx.Context(r)
+    var context = ctx.RequestContext(r)
     var user = &User{Name: "John Doe"}
     
     // This will trigger the EditContext method on the User struct
-    ctx.Set("User", user)
+    context.Set("User", user)
 
-    // Now, ctx will have an additional "UserName" key set by EditContext
-    if err := tpl.FRender(w, ctx, "mycustomapp", "mycustomapp/index.tmpl"); err != nil {
+    // Now, context will have an additional "UserName" key set by EditContext
+    if err := tpl.FRender(w, context, "mycustomapp", "mycustomapp/index.tmpl"); err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
     }
 }
@@ -192,21 +193,21 @@ Example:
 ```go
 package ctx
 
-type RequestContext struct {
-    *ctx.StructContext
+type HTTPRequestContext struct {
+    Context
     HttpRequest *http.Request
     CsrfToken   string
 }
 
-func Context(r *http.Request) *RequestContext {
+func RequestContext(r *http.Request) *HTTPRequestContext {
     // Implementation details...
 }
 
-func (c *RequestContext) Request() *http.Request {
+func (c *HTTPRequestContext) Request() *http.Request {
     return c.HttpRequest
 }
 
-func (c *RequestContext) CSRFToken() string {
+func (c *HTTPRequestContext) CSRFToken() string {
     return c.CsrfToken
 }
 ```

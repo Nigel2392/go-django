@@ -17,16 +17,24 @@ type Command interface {
     // How the command should be called from the command line
     Name() string
 
-    // Add optional flags to the flagset
-    AddFlags(m command.Manager, f *flag.FlagSet) error
-
     // Execute the command
     // Any arguments not consumed by the flags will be passed here
     Exec(m command.Manager, args []string) error
 }
+
+type CommandAdder interface {
+    // Add optional flags to the flagset
+    AddFlags(m command.Manager, f *flag.FlagSet) error
+}
+
+type CommandDescriptor interface {
+    Command
+    Description() string
+}
 ```
 
-Though if your command implements a `Description() string` method, it will be used in the help output.
+Though if your command implements a `Description() string` method, it will be used in the help output (via the `CommandDescriptor` interface).
+And if it implements `AddFlags(m command.Manager, f *flag.FlagSet) error`, it can add flags to the command (via the `CommandAdder` interface).
 
 ## Creating a command
 
