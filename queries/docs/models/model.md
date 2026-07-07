@@ -106,14 +106,58 @@ To save models, you can implement either one of two interfaces,
 but we recommend you implement the `models.SaveableObject` interface, and then call up to the `Model` struct's `SaveObject()` method.
 
 ```go
-func (m *MyModel) SaveObject(ctx context.Context, db *sql.DB) error {
+func (m *MyModel) SaveObject(ctx context.Context, cnf models.SaveConfig) error {
     // Custom save logic here
     m.Name = fmt.Sprintf("[Saved] %s", m.Name)
 
     // Call the Model's SaveObject method to handle the actual saving
-    return m.Model.SaveObject(ctx, db)
+    return m.Model.SaveObject(ctx, cnf)
 }
 ```
+
+---
+
+## Lifecycle Hooks (Actor Interfaces)
+
+The `queries` package defines a set of actor interfaces that your model can implement to hook into the ORM lifecycle. These hooks are called automatically by `QuerySet.Create`, `QuerySet.Update`, and `QuerySet.Delete`.
+
+When `BeforeCreate` or `BeforeUpdate` is called, `BeforeSave` is also triggered. Similarly, `AfterCreate` / `AfterUpdate` also trigger `AfterSave`.
+
+```go
+// Called after every query that returns the model from the database
+func (m *MyModel) AfterQuery(ctx context.Context) error {
+    m.FullName = m.FirstName + " " + m.LastName
+    return m.Model.AfterQuery(ctx)
+}
+
+// Called before any insert
+func (m *MyModel) BeforeCreate(ctx context.Context) error {
+    m.CreatedAt = time.Now()
+    return nil
+}
+
+// Called after a successful insert
+func (m *MyModel) AfterCreate(ctx context.Context) error {
+    // e.g. send a welcome email
+    return nil
+}
+
+// Called before any update
+func (m *MyModel) BeforeUpdate(ctx context.Context) error {
+    m.UpdatedAt = time.Now()
+    return nil
+}
+
+// Called before any delete
+func (m *MyModel) BeforeDelete(ctx context.Context) error {
+    // e.g. check for related records
+    return nil
+}
+```
+
+> **Important:** If your model embeds `models.Model`, make sure to call the corresponding method on the embedded struct (e.g. `m.Model.AfterQuery(ctx)`) to preserve the base model's behaviour.
+
+> **Important:** If you call `QuerySet.Create` or `QuerySet.Update` from inside these hooks (e.g., to save a related model), you **must** use `.ExplicitSave()` on the queryset to prevent infinite recursion. See [ExplicitSave](../queryset/writing_queries.md#explicitsave).
 
 ---
 

@@ -44,11 +44,11 @@ Returns the `QueryCompiler` used by the `QuerySet`.
 
 This is the underlying SQL builder that generates the SQL queries for the `QuerySet`.
 
-### `DB() DB`
+### `DB() drivers.DB`
 
 Returns the database connection used by the `QuerySet`.
 
-If the `Compiler` is in a transaction, that transaction (`*sql.Tx`) will be returned instead.
+If the `Compiler` is in a transaction, that transaction (`drivers.Transaction`) will be returned instead.
 
 ### `StartTransaction(ctx context.Context) (Transaction, error)`
 
@@ -333,21 +333,23 @@ It returns a pointer to a `Row[T]` containing the last result, or an error if th
 
 ### `Exec(sqlStr string, args ...interface{}) (sql.Result, error)`
 
-The `Exec` method executes a raw SQL command against the database.
+The `Exec` method executes a raw SQL command against the database associated with the current QuerySet context.
 
 It takes a SQL string and optional arguments, and returns the result of the execution as an `sql.Result`, or an error if the execution fails.
 
-### `Raw(sqlStr string, args ...interface{}) (*sql.Rows, error)`
+### Using Raw SQL (Rows and Row)
 
-The `Raw` method executes a raw SQL query against the database.
+If you need to execute raw SQL queries and process rows, you should use the database connection directly via the `DB()` method:
 
-It takes a SQL string and optional arguments, and returns a pointer to `sql.Rows` containing the results of the query, or an error if the query fails.
+```go
+var rows, err = qs.DB().QueryContext(ctx, "SELECT * FROM my_table WHERE id = ?", 1)
+```
 
-### `Row(sqlStr string, args ...interface{}) *sql.Row`
+And to query a single row:
 
-The `Row` method executes a raw SQL query and returns a single row.
-
-It takes a SQL string and optional arguments, and returns a pointer to `sql.Row` containing the result of the query.
+```go
+var row = qs.DB().QueryRowContext(ctx, "SELECT * FROM my_table WHERE id = ?", 1)
+```
 
 ### `Values(fields ...any) ([]map[string]any, error)`
 

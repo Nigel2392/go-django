@@ -1,8 +1,8 @@
 # Querying, inserting, updating and deleting objects
 
-Queries are built using the [`queries.Objects`](./querying/queryset.md#queryset) function, which takes a model type as an argument.
+Querysets are built using [`queries.GetQuerySet`](./queryset/queryset.md) which takes a model instance as its argument.
 
-There are also some [helper functions](#helper-functions) for inserting, updating, deleting and counting objects.
+There are also some [helper functions](#helper-functions) for inserting, updating, deleting and counting objects. These helpers internally build a `QuerySet` for you, so they follow the same database selection rules.
 
 We will use the models which are defined in the [models](./models.md) guide.
 
@@ -12,7 +12,7 @@ The database has to [have been setup](./getting_started.md#database-setup) befor
 
 ## Helper functions
 
-There are some helper functions for inserting, updating, deleting and counting objects.
+The following helper functions are defined in the `queries` package (i.e., `github.com/Nigel2392/go-django/queries/src`):
 
 * **`ListObjectsByIDs`**`[T attrs.Definer, T2 any](object T, offset, limit uint64, ids []T2) ([]T, error)`
 * **`ListObjects`**`[T attrs.Definer](object T, offset, limit uint64, ordering ...string) ([]T, error)`
@@ -23,7 +23,9 @@ There are some helper functions for inserting, updating, deleting and counting o
 * **`UpdateObject`**`[T attrs.Definer](obj T) (int64, error)`
 * **`DeleteObject`**`[T attrs.Definer](obj T) (int64, error)`
 
-These functions are defined in the `queries` package, and are simple to use.
+All helpers use the background context (`context.Background()`) unless the model embeds `models.Model` and its `Save()` / `Delete()` hooks supply their own context.
+
+For full control over the context, build a `QuerySet` directly using `queries.GetQuerySet(obj).WithContext(ctx)`.
 
 ### ListObjectsByIDs
 
@@ -62,22 +64,23 @@ var count, err = queries.CountObjects[*Todo](&Todo{})
 
 ### SaveObject
 
-`SaveObject` is a helper function saved the object to the database.  
-It first will check if the primary key is set to a non-zero value.
+`SaveObject` saves the object to the database.  
+It first checks if the primary key is set to a non-zero value.
 
-* **If it is not set**, it creates a new object.
-* **If it is set**, it updates the existing object.
+* **If it is not set**, it calls `CreateObject`.
+* **If it is set**, it calls `UpdateObject`.
+
+If the object implements `models.Saver` (the `Save(context.Context) error` method from `go-django`'s `src/models` package), the `Save` method will be called instead of executing a raw query.
 
 ```go
 var todo = &Todo{
-    ID: 1,
-    Title: "Updated Test Todo",
-    Description: "This is an updated test todo",
-    Done: false,
-    User: user,
+    Title:       "New Todo",
+    Description: "Hello",
 }
+var err = queries.SaveObject(todo) // Calls CreateObject since ID is zero
 
-var err = SaveObject[*Todo](t)
+todo.Title = "Updated Title"
+var err2 = queries.SaveObject(todo) // Calls UpdateObject since ID is set
 ```
 
 ### Inserting Objects
@@ -114,4 +117,6 @@ var deletedCount, err = queries.DeleteObject(todo)
 
 ---
 
-See [Querying Objects](./querying/queryset.md) for more advanced queries and usage…
+See [QuerySet Reference](./queryset/queryset.md) for more advanced queries and usage…
+
+See [Writing Queries](./queryset/writing_queries.md) for practical examples of filtering, pagination, ordering, and more.

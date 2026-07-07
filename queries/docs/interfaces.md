@@ -375,13 +375,16 @@ type CompiledValuesListQuery = CompiledQuery[[][]any]
 
 ### `DB`
 
-Compatible with `*sql.DB`, `*sql.Tx`.
+The base interface for all database interactions within the query system. Implemented by both `drivers.Database` (a live connection) and `drivers.Transaction`.
+
+> **Note:** This is `drivers.DB`, not `*sql.DB`. The interface returns `drivers.SQLRows` and `drivers.SQLRow` instead of `*sql.Rows`/`*sql.Row`.
 
 ```go
 type DB interface {
-    QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error)
+    Unwrap() any
+    QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error)
+    QueryRowContext(ctx context.Context, query string, args ...any) SQLRow
     ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
-    QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
 }
 ```
 
@@ -392,14 +395,15 @@ Transaction wrapper for `DB`.
 ```go
 type Transaction interface {
     DB
-    Commit() error
-    Rollback() error
+    Finished() bool
+    Commit(context.Context) error
+    Rollback(context.Context) error
 }
 ```
 
 ### `DatabaseSpecificTransaction`
 
-Transaction that tracks its DB name.
+Transaction that tracks its DB name. This interface is satisfied by transactions that are aware of which named database they were started on.
 
 ```go
 type DatabaseSpecificTransaction interface {
@@ -407,6 +411,56 @@ type DatabaseSpecificTransaction interface {
     DatabaseName() string
 }
 ```
+
+---
+
+## 🔔 Lifecycle / Actor Interfaces
+
+These interfaces allow models to hook into the ORM's save/query lifecycle.
+
+When `BeforeCreate` or `BeforeUpdate` is called, `BeforeSave` is also automatically invoked. Similarly, `AfterCreate` / `AfterUpdate` also trigger `AfterSave`.
+
+```go
+type ActsAfterQuery interface {
+    AfterQuery(ctx context.Context) error
+}
+
+type ActsBeforeSave interface {
+    BeforeSave(ctx context.Context) error
+}
+
+type ActsAfterSave interface {
+    AfterSave(ctx context.Context) error
+}
+
+type ActsBeforeCreate interface {
+    BeforeCreate(ctx context.Context) error
+}
+
+type ActsAfterCreate interface {
+    AfterCreate(ctx context.Context) error
+}
+
+type ActsBeforeUpdate interface {
+    BeforeUpdate(ctx context.Context) error
+}
+
+type ActsAfterUpdate interface {
+    AfterUpdate(ctx context.Context) error
+}
+
+type ActsBeforeDelete interface {
+    BeforeDelete(ctx context.Context) error
+}
+
+type ActsAfterDelete interface {
+    AfterDelete(ctx context.Context) error
+}
+```
+
+See [Writing Queries – ExplicitSave](./queryset/writing_queries.md#explicitsave) for important notes on using these hooks with `QuerySet.Create` / `QuerySet.Update`.
+
+---
 
 ### `QueryCompiler`
 
@@ -427,13 +481,26 @@ type QueryCompiler interface {
     // DB returns the database connection used by the query compiler.
     //
     // If a transaction was started, it will return the transaction instead of the database connection.
-    DB() DB
+    DB() drivers.DB
+
+    // ExpressionInfo returns a usable [expr.ExpressionInfo] for the compiler.
+    //
+    // This is used to parse raw queries inside of [QuerySet.Rows], [QuerySet.Row] and [QuerySet.Exec].
+    //
+    // Allowing for the use of GO field names in a raw SQL query.
+    ExpressionInfo(qs *QuerySet[attrs.Definer], internals *QuerySetInternals) *expr.ExpressionInfo
 
     // Quote returns the quotes used by the database.
     //
     // This is used to quote table and field names.
     // For example, MySQL uses backticks (`) and PostgreSQL uses double quotes (").
     Quote() (front string, back string)
+
+    // PrepareValue prepares a value for the database.
+    //
+    // It should return the prepared value, which may include
+    // any necessary type conversions or formatting.
+    PrepareValue(field attrs.Field, value any) any
 
     // Placeholder returns the placeholder used by the database for query parameters.
     // This is used to format query parameters in the SQL query.
@@ -443,7 +510,7 @@ type QueryCompiler interface {
     // FormatColumn formats the given field column to be used in a query.
     // It should return the column name with the quotes applied.
     // Expressions should use this method to format the column name.
-    FormatColumn(tableColumn *expr.TableColumn) (string, []any)
+    FormatColumn(aliasGen *alias.Generator, tableColumn *expr.TableColumn) (string, []any)
 
     // SupportsReturning returns the type of returning supported by the database.
     // It can be one of the following:
@@ -453,14 +520,18 @@ type QueryCompiler interface {
     // - SupportsReturningColumns: returning columns supported
     SupportsReturning() drivers.SupportsReturningType
 
+    // SupportsUnionOrderByTableAlias returns true if the database supports
+    // ordering the main union query by a table alias.
+    SupportsUnionOrderByTableAlias() bool
+
     // StartTransaction starts a new transaction.
-    StartTransaction(ctx context.Context) (Transaction, error)
+    StartTransaction(ctx context.Context) (drivers.Transaction, error)
 
     // WithTransaction wraps the transaction and binds it to the compiler.
-    WithTransaction(tx Transaction) (Transaction, error)
+    WithTransaction(tx drivers.Transaction) (drivers.Transaction, error)
 
     // Transaction returns the current transaction if one is active.
-    Transaction() Transaction
+    Transaction() drivers.Transaction
 
     // InTransaction returns true if the current query compiler is in a transaction.
     InTransaction() bool
@@ -474,24 +545,23 @@ type QueryCompiler interface {
     // BuildSelectQuery builds a select query with the given parameters.
     BuildSelectQuery(
         ctx context.Context,
-        qs QuerySet[attrs.Definer],
+        qs *QuerySet[attrs.Definer],
         internals *QuerySetInternals,
     ) CompiledQuery[[][]interface{}]
 
     // BuildCountQuery builds a count query with the given parameters.
     BuildCountQuery(
         ctx context.Context,
-        qs QuerySet[attrs.Definer],
+        qs *QuerySet[attrs.Definer],
         internals *QuerySetInternals,
     ) CompiledQuery[int64]
 
     // BuildCreateQuery builds a create query with the given parameters.
     BuildCreateQuery(
         ctx context.Context,
-        qs QuerySet[attrs.Definer],
+        qs *QuerySet[attrs.Definer],
         internals *QuerySetInternals,
-        objects []*FieldInfo[attrs.Field],
-        values []any,
+        objects []UpdateInfo,
     ) CompiledQuery[[][]interface{}]
 
     BuildUpdateQuery(
@@ -504,7 +574,7 @@ type QueryCompiler interface {
     // BuildUpdateQuery builds an update query with the given parameters.
     BuildDeleteQuery(
         ctx context.Context,
-        qs QuerySet[attrs.Definer],
+        qs *QuerySet[attrs.Definer],
         internals *QuerySetInternals,
     ) CompiledQuery[int64]
 }

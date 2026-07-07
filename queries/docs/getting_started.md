@@ -1,6 +1,6 @@
-# Getting Started with go-django-queries
+# Getting Started with the queries package
 
-This guide will help you get started with the `go-django-queries` package.
+This guide will help you get started with the `queries` package in `go-django`.
 
 ---
 
@@ -26,11 +26,12 @@ The following imports will be used throughout the examples:
 
 ```go
 import (
-    "github.com/Nigel2392/go-django/queries/queries"
-    "github.com/Nigel2392/go-django/queries/queries/expr"
-    "github.com/Nigel2392/go-django/queries/queries/fields"
-    "github.com/Nigel2392/go-django/queries/queries/models"
-    "github.com/Nigel2392/go-django/queries/queries/qerr"
+    "github.com/Nigel2392/go-django/queries/src"
+    "github.com/Nigel2392/go-django/queries/src/expr"
+    "github.com/Nigel2392/go-django/queries/src/fields"
+    "github.com/Nigel2392/go-django/queries/src/models"
+    "github.com/Nigel2392/go-django/queries/src/qerr"
+    "github.com/Nigel2392/go-django/queries/src/drivers"
     "github.com/Nigel2392/go-django/src/core/attrs"
 )
 ```
@@ -41,21 +42,20 @@ import (
 
 Before we can start using the queries package, we need to setup the database.
 
-For this example, we will use SQLite, but you can use any database that is supported by Go-Django.
+For this example, we will use SQLite, but you can use any database that is supported by Go-Django's query system.
 
-To setup the database, we need to create a `sql.DB` object, and register it in Go-Django's settings.
+To setup the database, we need to create a `drivers.Database` object, and register it in Go-Django's settings.
 
 ```go
-
 func main() {
-    var db, err = drivers.Open("sqlite3", "./db.sqlite3")
+    var db, err = drivers.Open(context.Background(), "sqlite3", "./db.sqlite3")
     if err != nil {
         panic(err)
     }
 
     var app = django.App(
         django.Configure(map[string]interface{}{
-            django.APPVAR_DATABASE:  db,
+            django.APPVAR_DATABASE: func() drivers.Database { return db }(),
             // ...
         }),
         // ...
