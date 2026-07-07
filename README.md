@@ -10,7 +10,7 @@ The goal is to provide a similar experience to Django, but with the performance 
 
 At the core this is meant to be a web framework, but it also includes sub-packages to create a CMS-like experience.
 
-Any database logic can be implemented with the [`queries`](./queries/README.md) subpackage, providing an experience similar to
+Any database logic can be implemented with the [`queries`](./queries/docs/README.md) subpackage, providing an experience similar to
 the Django ORM.
 
 Documentation needs to be updated.
@@ -113,7 +113,7 @@ But more tests / databases will be added over time.
 
 ### How to work with models in the database
 
-- [go-django/queries](./queries/README.md) - A library to help you create SQL queries specialized (and only useful) for go-django models.
+- [go-django/queries](./queries/docs/README.md) - A library to help you create SQL queries specialized (and only useful) for go-django models.
 
 ## Help Needed
 

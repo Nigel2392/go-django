@@ -72,4 +72,4 @@ func GetActiveUsers() ([]*User, error) {
 }
 ```
 
-For more details on how to build queries, manage transactions, and handle relations, please refer to the [queries documentation](../queries/README.md).
+For more details on how to build queries, manage transactions, and handle relations, please refer to the [queries documentation](../queries/docs/README.md).
