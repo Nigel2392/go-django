@@ -533,6 +533,10 @@ type QueryCompiler interface {
 	// - SupportsReturningColumns: returning columns supported
 	SupportsReturning() drivers.SupportsReturningType
 
+	// SupportsUnionOrderByTableAlias returns true if the database supports
+	// ordering the main union query by a table alias.
+	SupportsUnionOrderByTableAlias() bool
+
 	// StartTransaction starts a new transaction.
 	StartTransaction(ctx context.Context) (drivers.Transaction, error)
 

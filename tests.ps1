@@ -11,8 +11,8 @@ docker-compose -f "$DOCKER_COMPOSE_FILE" down
 $Databases = @(
     "sqlite",
     "mysql_local",
-    "mysql",
     "mariadb",
+    "mysql",
     "postgres"
 )
 
@@ -95,7 +95,7 @@ if (-not $flags.runTests) {
 # Run tests for each database type
 foreach ($Database in $testsToRun) {
 
-    $cmd = "go test -tags=`"testing_auth test $Database`" --timeout=30s"
+    $cmd = "go test -p=1 -tags=`"testing_auth test $Database`" --timeout=30s"
     if ($flags.verbose) {
         $cmd += " -v"
     }

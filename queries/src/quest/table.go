@@ -5,6 +5,7 @@ import (
 	"database/sql/driver"
 	"fmt"
 	"reflect"
+	"slices"
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
@@ -14,9 +15,10 @@ import (
 )
 
 type DBTables[T testing.TB] struct {
-	tables []*migrator.ModelTable
-	schema migrator.SchemaEditor
-	t      T
+	IfNotExists bool
+	tables      []*migrator.ModelTable
+	schema      migrator.SchemaEditor
+	t           T
 }
 
 func Table[T testing.TB](t T, model ...attrs.Definer) *DBTables[T] {
@@ -90,7 +92,7 @@ func (t *DBTables[T]) Create() {
 			fmt.Printf("Creating table: %s\n", table.TableName())
 		}
 
-		err := t.schema.CreateTable(context.Background(), table, false)
+		err := t.schema.CreateTable(context.Background(), table, t.IfNotExists)
 		if err != nil {
 			t.fatalf("Failed to create table (%s): %v", table.ModelName(), err)
 			return
@@ -105,7 +107,9 @@ func (t *DBTables[T]) Drop() {
 		t.fatal("SchemaEditor is not initialized")
 	}
 
-	for _, table := range t.tables {
+	var revd = append([]*migrator.ModelTable{}, t.tables...)
+	slices.Reverse(revd)
+	for _, table := range revd {
 		err := t.schema.DropTable(context.Background(), table, false)
 		if err != nil {
 			t.fatalf("Failed to drop table (%s): %v", table.ModelName(), err)

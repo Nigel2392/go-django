@@ -1173,8 +1173,9 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 
 	// Save fields which do not depend on the model itself,
 	// these are fields that can be / should be saved before the model itself is saved.
+	// If returned error is NoChanges, all is ok.
 	for _, field := range saveBeforeSelf {
-		if err := saveField(ctx, &cnf, field, saveRegularField); err != nil {
+		if err := saveField(ctx, &cnf, field, saveRegularField); err != nil && !errors.Is(err, errors.NoChanges) {
 			return errors.SaveFailed.WithCause(fmt.Errorf(
 				"failed to save field %q in model %T: %w",
 				field.Name(), cnf.this, err,
@@ -1227,8 +1228,9 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	// Save all fields that depend on the model itself,
 	// these are fields that should be saved after the model itself is saved.
 	// This is useful for fields that depend on the model's primary key or other fields.
+	// If returned error is NoChanges, all is ok.
 	for _, field := range saveAfterSelf {
-		if err := saveField(ctx, &cnf, field, saveDependantField); err != nil {
+		if err := saveField(ctx, &cnf, field, saveDependantField); err != nil && !errors.Is(err, errors.NoChanges) {
 			return err
 		}
 	}

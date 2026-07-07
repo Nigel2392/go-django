@@ -30,7 +30,9 @@ import (
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
+	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/google/uuid"
 )
 
 var (
@@ -227,6 +229,7 @@ func TestMain(m *testing.M) {
 			admin.NewAppConfig,
 			revisions.NewAppConfig,
 			newTestBlogAppConfig,
+			// apps.AppConfig{AppName: "migrator"}, // dud so no indexes get created in the tests
 			pages.NewAppConfig,
 		),
 		django.Flag(
@@ -245,9 +248,44 @@ func TestMain(m *testing.M) {
 	django.Global.Log = log
 	logger.Setup(log)
 
+	// bandaid because i am lazy and do not want to fix my tests to not violate the constraint for the content type field.
+	queries.SignalPreModelCreate.Listen(func(s signals.Signal[queries.ModelSignal], ms queries.ModelSignal) error {
+		p, ok := ms.Instance.(*pages.PageNode)
+		if !ok {
+			return nil
+		}
+
+		if p.ContentType == "" {
+			p.ContentType = uuid.NewString()
+		}
+
+		return nil
+	})
+
 	if err := app.Initialize(); err != nil {
 		panic(err)
 	}
+
+	//	/*
+	//		START OF MIGRATOR
+	//
+	//		we need to incorporate migrator because we added the migrator app dud.
+	//		otherwise tests fail due to constraint violations and im lazy
+	//	*/
+	//	var schemaEditor, err = migrator.GetSchemaEditor(sqlDB.Driver())
+	//	if err != nil {
+	//		panic(fmt.Sprintf("failed to get schema editor: %w", err))
+	//	}
+	//
+	//	var models = make([]attrs.Definer, 0)
+	//	for head := app.Apps.Front(); head != nil; head = head.Next() {
+	//		models = append(models, head.Value.Models()...)
+	//	}
+	//
+	//	/*
+	//		END OF MIGRATOR
+	//	*/
+
 	// Test-only middleware that authenticates every request as an admin user.
 	app.Mux.Use(authentication.AddUserMiddleware(func(r *http.Request) authentication.User {
 		return testAdminUser
@@ -277,7 +315,7 @@ func resetPagesAdminData(t *testing.T) {
 
 func createRootNode(t *testing.T, title string) *pages.PageNode {
 	t.Helper()
-	root := &pages.PageNode{Title: title, Slug: strings.ToLower(title)}
+	root := &pages.PageNode{Title: title, Slug: strings.ToLower(title), ContentType: uuid.New().String()} //ctype is literally useless, it does not matter here
 	if err := pages.NewPageQuerySet().AddRoot(root); err != nil {
 		t.Fatalf("add root: %v", err)
 	}

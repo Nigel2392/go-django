@@ -11,6 +11,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/mux"
 )
@@ -51,6 +52,11 @@ type (
 		Apps         []AppInitFuncOrAppConfig
 		Handlers     []Handler
 		Tests        []Test
+
+		// extra models that do not require an app nescessarily
+		// they will be added to a custom app called 'djester' (if models exist).
+		// so they can be used in queries without too much hassle.
+		ExtraModels []attrs.Definer
 
 		// Private fields to be used by the Tester struct
 		db         drivers.Database
@@ -100,7 +106,7 @@ func (d *Tester) Setup() error {
 		appConfigs = append(appConfigs, app)
 	}
 
-	if len(d.Handlers) > 0 {
+	if len(d.Handlers) > 0 || len(d.ExtraModels) > 0 {
 		var app = apps.NewAppConfig("djester")
 		app.Routing = func(mux mux.Multiplexer) {
 			for _, handler := range d.Handlers {
@@ -111,6 +117,7 @@ func (d *Tester) Setup() error {
 				}
 			}
 		}
+		app.ModelObjects = d.ExtraModels
 		appConfigs = append(appConfigs, app)
 	}
 

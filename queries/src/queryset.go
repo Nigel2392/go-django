@@ -2187,8 +2187,12 @@ func (qs *QuerySet[T]) Having(key interface{}, vals ...interface{}) *QuerySet[T]
 // GroupBy is used to group the results of a query.
 //
 // It takes a list of field names as arguments and returns a new QuerySet with the grouped results.
+//
+// If you wish to order the groupby queryset, it must be done after the GroupBy call,
+// otherwise, the ordering will get reset.
 func (qs *QuerySet[T]) GroupBy(fields ...any) *QuerySet[T] {
 	var nqs = qs.clone()
+	nqs.internals.OrderBy = nil
 	nqs.internals.GroupBy, _ = qs.unpackFields(fields...)
 
 	for i := range nqs.internals.Unions {
@@ -2222,7 +2226,11 @@ func (qs *QuerySet[T]) compileOrderBy(fields ...string) []expr.OrderBy {
 	var orderBy = make([]expr.OrderBy, 0, len(fields))
 
 	if len(fields) == 0 {
-		fields = qs.internals.Model.Ordering
+		if len(qs.internals.Model.Ordering) > 0 {
+			fields = qs.internals.Model.Ordering
+		} else if qs.internals.Model.Primary != nil {
+			fields = []string{qs.internals.Model.Primary.Name()}
+		}
 	}
 
 	for _, field := range fields {
@@ -2415,8 +2423,9 @@ func (qs *QuerySet[T]) Union(other *QuerySet[attrs.Definer]) *QuerySet[T] {
 
 	var nqs = qs.clone()
 	other = other.clone()
-	other.internals.Limit = 0  // no limit for unions
-	other.internals.Offset = 0 // no offset for unions
+	other.internals.OrderBy = nil // no order by for unions
+	other.internals.Limit = 0     // no limit for unions
+	other.internals.Offset = 0    // no offset for unions
 	nqs.internals.Unions = append(nqs.internals.Unions, other)
 	return nqs
 }

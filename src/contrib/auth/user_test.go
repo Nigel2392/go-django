@@ -55,6 +55,7 @@ func TestMain(m *testing.M) {
 		&users.GroupPermission{},
 		&users.UserPermission{},
 	)
+	tables.IfNotExists = true
 	tables.Create()
 	defer tables.Drop()
 
@@ -71,9 +72,9 @@ func TestMain(m *testing.M) {
 
 func TestUserPassword(t *testing.T) {
 	var user = models.Setup(&auth.User{
-		Email:     drivers.MustParseEmail("test@example.com"),
+		Email:     drivers.MustParseEmail("test1@example.com"),
 		Password:  auth.NewPassword("testpassword"),
-		Username:  "testuser",
+		Username:  "testuser1",
 		FirstName: "Test",
 		LastName:  "User",
 		Base: users.Base{
@@ -122,9 +123,9 @@ func TestUserAddGroups(t *testing.T) {
 	}()
 
 	var u = &auth.User{
-		Email:     drivers.MustParseEmail("test@example.com"),
+		Email:     drivers.MustParseEmail("test2@example.com"),
 		Password:  auth.NewPassword("testpassword"),
-		Username:  "testuser",
+		Username:  "testuser2",
 		FirstName: "Test",
 		LastName:  "User",
 		Base: users.Base{
@@ -141,9 +142,9 @@ func TestUserAddGroups(t *testing.T) {
 	var userList = make([]*auth.User, 0, 5)
 	for i := 0; i < 5; i++ {
 		var user = &auth.User{
-			Email:     drivers.MustParseEmail("test" + drivers.Uint(i+1).String() + "@example.com"),
+			Email:     drivers.MustParseEmail("test_" + drivers.Uint(i+1).String() + "@example.com"),
 			Password:  auth.NewPassword("testpassword" + drivers.Uint(i+1).String()),
-			Username:  "testuser" + drivers.Uint(i+1).String(),
+			Username:  "testuser__" + drivers.Uint(i+1).String(),
 			FirstName: "Test" + drivers.Uint(i+1).String(),
 			LastName:  "User" + drivers.Uint(i+1).String(),
 			Base: users.Base{
@@ -380,9 +381,9 @@ func TestUserAddPermissions(t *testing.T) {
 	}()
 
 	var u = &auth.User{
-		Email:     drivers.MustParseEmail("test@example.com"),
+		Email:     drivers.MustParseEmail("test3@example.com"),
 		Password:  auth.NewPassword("testpassword"),
-		Username:  "testuser",
+		Username:  "testuser3",
 		FirstName: "Test",
 		LastName:  "User",
 		Base: users.Base{
@@ -467,9 +468,9 @@ func TestUserHasPermissions(t *testing.T) {
 	}()
 
 	var u = &auth.User{
-		Email:     drivers.MustParseEmail("test@example.com"),
+		Email:     drivers.MustParseEmail("test4@example.com"),
 		Password:  auth.NewPassword("testpassword"),
-		Username:  "testuser",
+		Username:  "testuser4",
 		FirstName: "Test",
 		LastName:  "User",
 		Base: users.Base{

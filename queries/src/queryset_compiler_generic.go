@@ -126,6 +126,10 @@ func (g *genericQueryBuilder) This() QueryCompiler {
 	return g.self
 }
 
+func (g *genericQueryBuilder) SupportsUnionOrderByTableAlias() bool {
+	return true
+}
+
 func (g *genericQueryBuilder) Rebind(ctx context.Context, s string) string {
 	if !expr.IsSubqueryContext(ctx) {
 		return g.queryInfo.DBX(s)
@@ -569,7 +573,13 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 	}
 
 	if !expr.IsSubqueryContext(ctx) {
-		g.writeOrderBy(query, qs.AliasGen, internals.OrderBy)
+		g.writeOrderBy(
+			query, qs.AliasGen, internals.OrderBy,
+
+			// some databases do not support table aliasses on unions
+			// we let the compiler itself decide wether it'll be used.
+			len(internals.Unions) > 0 && !g.This().SupportsUnionOrderByTableAlias(),
+		)
 	}
 
 	args = append(args, g.writeLimitOffset(query, internals.Limit, internals.Offset)...)
@@ -1144,7 +1154,7 @@ func (g *genericQueryBuilder) writeHaving(sb *strings.Builder, inf *expr.Express
 	return args
 }
 
-func (g *genericQueryBuilder) writeOrderBy(sb *strings.Builder, aliasGen *alias.Generator, orderBy []expr.OrderBy) {
+func (g *genericQueryBuilder) writeOrderBy(sb *strings.Builder, aliasGen *alias.Generator, orderBy []expr.OrderBy, stripTableAlias bool) {
 	if len(orderBy) > 0 {
 		sb.WriteString(" ORDER BY ")
 
@@ -1160,7 +1170,16 @@ func (g *genericQueryBuilder) writeOrderBy(sb *strings.Builder, aliasGen *alias.
 				))
 			}
 
-			var sql, _ = g.FormatColumn(aliasGen, &field.Column)
+			// copy the col to keep immutability of qs
+			var col = field.Column
+
+			// STRIP the table prefix if this query has unions and
+			// the database doesn't support it (mysql, mariadb, etc.)
+			if stripTableAlias {
+				col.TableOrAlias = ""
+			}
+
+			var sql, _ = g.FormatColumn(aliasGen, &col)
 			sb.WriteString(sql)
 
 			if field.Desc {
@@ -1197,6 +1216,10 @@ func NewPostgresQueryBuilder(db string) QueryCompiler {
 	}
 	pgxCompiler.genericQueryBuilder.self = pgxCompiler
 	return pgxCompiler
+}
+
+func (g *postgresQueryBuilder) SupportsUnionOrderByTableAlias() bool {
+	return false
 }
 
 // getPostgresType returns the Postgres type for a given Go type and field.
@@ -1313,6 +1336,10 @@ func NewMariaDBQueryBuilder(db string) QueryCompiler {
 	return qs
 }
 
+func (g *mariaDBQueryBuilder) SupportsUnionOrderByTableAlias() bool {
+	return false
+}
+
 func (g *mariaDBQueryBuilder) BuildUpdateQuery(
 	ctx context.Context,
 	qs *GenericQuerySet,
@@ -1382,6 +1409,10 @@ func NewMySQLQueryBuilder(db string) QueryCompiler {
 	}
 	qs.genericQueryBuilder.self = qs
 	return qs
+}
+
+func (g *mysqlQueryBuilder) SupportsUnionOrderByTableAlias() bool {
+	return false
 }
 
 func (g *mysqlQueryBuilder) PrepareValue(field attrs.Field, value any) any {
