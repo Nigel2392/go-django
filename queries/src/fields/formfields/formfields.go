@@ -105,18 +105,32 @@ type ForeignKeyFormField struct {
 }
 
 func (f *ForeignKeyFormField) HasChanged(initial, data interface{}) bool {
+	if initial == nil && data == nil {
+		return false
+	}
+
 	var (
 		a, ok1 = initial.(attrs.Definer)
 		b, ok2 = data.(attrs.Definer)
 	)
 
-	if !ok1 || !ok2 {
-		return !reflect.DeepEqual(initial, data)
+	if ok1 && ok2 {
+		var pkA = attrs.PrimaryKey(a)
+		var pkB = attrs.PrimaryKey(b)
+		return f.BaseField.HasChanged(pkA, pkB)
 	}
 
-	var pkA = attrs.PrimaryKey(a)
-	var pkB = attrs.PrimaryKey(b)
-	return !reflect.DeepEqual(pkA, pkB)
+	if ok1 && !ok2 {
+		var pkA = attrs.PrimaryKey(a)
+		return f.BaseField.HasChanged(pkA, data)
+	}
+
+	if !ok1 && ok2 {
+		var pkB = attrs.PrimaryKey(b)
+		return f.BaseField.HasChanged(initial, pkB)
+	}
+
+	return f.BaseField.HasChanged(initial, data)
 }
 
 func (f *ForeignKeyFormField) ValueToForm(value interface{}) interface{} {

@@ -3,6 +3,7 @@ package formsets
 import (
 	"context"
 	"fmt"
+	"maps"
 	"net/http"
 	"net/url"
 	"reflect"
@@ -436,8 +437,26 @@ func (fs *BaseFormSet[FORM]) CheckIsValid(ctx context.Context, formObj any) (isV
 			subForm.SetPrefix(form.PrefixForm(i))
 		}
 
+		var init = subForm.InitialData()
+		if init == nil {
+			init = make(map[string]interface{})
+		} else {
+			init = maps.Clone(init)
+		}
+
+		if fs.opts.CanOrder {
+			init[ORDERING_FIELD_NAME] = totalAdded
+		}
+		if fs.opts.CanDelete {
+			init[DELETION_FIELD_NAME] = false
+		}
+
 		subForm.WithContext(form.Context())
 		subForm.WithData(data, files, fs.req)
+
+		if s, ok := any(subForm).(initialSetter); ok {
+			s.SetInitial(init)
+		}
 
 		var formObj = formObject[FORM]{
 			f: subForm,
@@ -580,7 +599,6 @@ func (b *BaseFormSet[FORM]) HasChanged() bool {
 
 	for _, form := range formList {
 		if form.HasChanged() {
-			// fmt.Printf("Form with prefix %s (%T) has changed\n", form.Prefix(), form)
 			return true
 		}
 	}
@@ -642,12 +660,31 @@ func (b *BaseFormSet[FORM]) Forms() ([]FORM, error) {
 			form = b.NewForm(b.ctx)
 		}
 
+		var init map[string]interface{}
+		if getter, ok := any(form).(interface{ InitialData() map[string]interface{} }); ok {
+			init = getter.InitialData()
+		}
+		if init == nil {
+			init = make(map[string]interface{})
+		} else {
+			init = maps.Clone(init)
+		}
+
+		if i < len(defaults) && defaults[i] != nil {
+			maps.Copy(init, defaults[i])
+		} else if base != nil {
+			maps.Copy(init, base)
+		}
+
+		if b.opts.CanOrder {
+			init[ORDERING_FIELD_NAME] = i
+		}
+		if b.opts.CanDelete {
+			init[DELETION_FIELD_NAME] = false
+		}
+
 		if s, ok := any(form).(initialSetter); ok {
-			if i < len(defaults) && defaults[i] != nil {
-				s.SetInitial(defaults[i])
-			} else if base != nil {
-				s.SetInitial(base)
-			}
+			s.SetInitial(init)
 		}
 
 		allForms[i] = form
@@ -792,6 +829,13 @@ func (b *BaseFormSet[FORM]) Save() ([]any, error) {
 		if isDeleted {
 			continue
 		}
+
+		//	if !form.HasChanged() {
+		//		logger.Warnf("Not saving, Form[%d](%q) of type %T has NOT changed", idx, form.Prefix(), form)
+		//		continue
+		//	}
+		//
+		//	logger.Warnf("Saving, Form[%d](%q) of type %T has changed", idx, form.Prefix(), form)
 
 		var wrapFn = django_reflect.WrapWithContext(b.ctx)
 		var rv = reflect.ValueOf(form)

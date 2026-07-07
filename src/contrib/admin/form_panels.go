@@ -983,7 +983,7 @@ func getRelatedList[TARGET attrs.Definer](r *http.Request, ctx context.Context, 
 			},
 		})
 
-		var rows, err = qs.WithContext(ctx).All()
+		var rows, err = qs.WithContext(ctx).OrderBy().All()
 		if err != nil {
 			return nil, nil, errors.Wrapf(
 				err, "Error fetching related objects for field %q", fieldName,

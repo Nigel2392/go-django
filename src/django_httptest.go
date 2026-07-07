@@ -4,6 +4,7 @@
 package django
 
 import (
+	goErrs "errors"
 	"net/http"
 	"net/http/httptest"
 
@@ -58,7 +59,25 @@ func (a *Application) TestServe(autoStart bool) (*HTTPTestServer, error) {
 		)
 	}
 
-	a.quitter = func() error {
+	for _, h := range goldcrest.Get[DjangoHook](HOOK_SERVER_STARTUP) {
+		if err := h(a); err != nil {
+			return nil, err
+		}
+	}
+
+	a.quitter = func() (err error) {
+
+		for _, hook := range goldcrest.Get[DjangoHook](HOOK_SERVER_SHUTDOWN) {
+			e := hook(a) // func(*Application) error
+			if e != nil {
+				if err != nil {
+					err = goErrs.Join(err, e)
+				} else {
+					err = e
+				}
+			}
+		}
+
 		server.Close()
 		a.quitter = nil
 		return nil

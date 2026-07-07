@@ -88,13 +88,34 @@ func (l *ListBlock) HasChanged(initial, data interface{}) bool {
 	if len(initialArr.V) != len(dataArr.V) {
 		return true
 	}
+
 	for i := range initialArr.V {
 		if initialArr.V[i].ID != dataArr.V[i].ID || initialArr.V[i].Order != dataArr.V[i].Order {
 			return true
 		}
+
+		if l.Child.HasChanged(initialArr.V[i].Data, dataArr.V[i].Data) {
+			//	logger.Infof("HAS CHANGED LISTBLOCK: %s != %s",
+			//		maplist(initialArr.V, func(l *ListBlockData) string { return fmt.Sprintf("%s[%d]", l.ID.String(), l.Order) }),
+			//		maplist(dataArr.V, func(l *ListBlockData) string { return fmt.Sprintf("%s[%d]", l.ID.String(), l.Order) }),
+			//	)
+			return true
+		}
 	}
+
 	return false
 }
+
+//	func maplist[S ~[]E, E any](l S, m func(E) string) string {
+//		var sb strings.Builder
+//		for i, v := range l {
+//			if i > 0 {
+//				sb.WriteString("|")
+//			}
+//			sb.WriteString(m(v))
+//		}
+//		return sb.String()
+//	}
 
 func (s *ListBlock) ValueFromDB(value json.RawMessage) (interface{}, error) {
 	var dataList = make([]JSONListBlockData, 0)

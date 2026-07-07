@@ -131,7 +131,22 @@ func (b *BaseBlock) Field() fields.Field {
 }
 
 func (b *BaseBlock) HasChanged(initial, data interface{}) bool {
-	return b.Field().HasChanged(initial, data)
+	var aVal, bVal interface{}
+	switch v := initial.(type) {
+	case *FieldBlockValue:
+		aVal = v.V
+	default:
+		aVal = v
+	}
+
+	switch v := data.(type) {
+	case *FieldBlockValue:
+		bVal = v.V
+	default:
+		bVal = v
+	}
+
+	return b.Field().HasChanged(aVal, bVal)
 }
 
 func (b *BaseBlock) FormContext(name string, value interface{}, context ctx.Context) *BlockContext {

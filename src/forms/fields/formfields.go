@@ -98,6 +98,15 @@ func NumberField[T widgets.NumberType](opts ...func(Field)) Field {
 	if f.FormWidget == nil {
 		f.FormWidget = widgets.NewNumberInput[T](nil)
 	}
+	f.IsEmptyFunc = func(value interface{}) bool {
+		if value == nil {
+			return true
+		}
+		if s, ok := value.(string); ok {
+			return s == ""
+		}
+		return false
+	}
 	return f
 }
 

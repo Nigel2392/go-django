@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -130,9 +131,43 @@ func (l *StreamBlock) HasChanged(initial, data interface{}) bool {
 	if len(initialArr.V) != len(dataArr.V) {
 		return true
 	}
+
+	slices.SortFunc(initialArr.V, func(a, b *StreamBlockData) int {
+		aStr, bStr := a.ID.String(), b.ID.String()
+		switch {
+		case aStr > bStr:
+			return 1
+		case bStr > aStr:
+			return -1
+		}
+		return 0
+	})
+	slices.SortFunc(dataArr.V, func(a, b *StreamBlockData) int {
+		aStr, bStr := a.ID.String(), b.ID.String()
+		switch {
+		case aStr > bStr:
+			return 1
+		case bStr > aStr:
+			return -1
+		}
+		return 0
+	})
+
 	for i := range initialArr.V {
 		if initialArr.V[i].ID != dataArr.V[i].ID || initialArr.V[i].Order != dataArr.V[i].Order {
 			return true
+		}
+		var child, ok = l.Children.Get(initialArr.V[i].Type)
+		if ok {
+			if child.HasChanged(initialArr.V[i].Data, dataArr.V[i].Data) {
+				// logger.Warnf("StreamBlock HasChanged: Child %q changed at index %d: %v != %v", initialArr.V[i].Type, i, initialArr.V[i].Data, dataArr.V[i].Data)
+				return true
+			}
+		} else {
+			if !reflect.DeepEqual(initialArr.V[i].Data, dataArr.V[i].Data) {
+				// logger.Warnf("StreamBlock HasChanged: DeepEqual failed for unknown child type %q at index %d", initialArr.V[i].Type, i)
+				return true
+			}
 		}
 	}
 	return false

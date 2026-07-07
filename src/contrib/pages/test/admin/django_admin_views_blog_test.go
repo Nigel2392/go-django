@@ -1,6 +1,3 @@
-//go:build test_pages_admin
-// +build test_pages_admin
-
 package pages_test
 
 import (
@@ -638,8 +635,12 @@ func TestPagesAdminEditFormHasChangedReturnsFalseForUnchangedInlineData(t *testi
 		// Inline form 0: same ImageText and parent FK as was saved.
 		// child.PageID is the test_blog_pages row-ID that the FK references;
 		// child.ID() is the pages.PageNode PK, which is a different value.
-		"TestBlogImageSet-0-ImageText": {img.ImageText},
-		"TestBlogImageSet-0-BlogPage":  {fmt.Sprintf("%d", child.PageID)},
+		"TestBlogImageSet-0-ImageText":      {img.ImageText},
+		"TestBlogImageSet-0-BlogPage":       {fmt.Sprintf("%d", child.PageID)},
+		"TestBlogImageSet-0-ID":             {fmt.Sprintf("%d", img.ID)},
+		"TestBlogImageSet-0-Content--total": {"0"},
+		"TestBlogImageSet-0-__DELETE__":     {"false"},
+		"TestBlogImageSet-0-__ORDER__":      {"0"},
 	}, 1)
 
 	form := buildAndValidateEditForm(t, child, data)
@@ -657,11 +658,15 @@ func TestPagesAdminEditFormHasChangedReturnsTrueWhenInlineImageTextChanged(t *te
 
 	// Submit a different ImageText value.
 	data := withInlineManagementForms(url.Values{
-		"Title":                        {blogPageAddData.Get("Title")},
-		"Slug":                         {blogPageAddData.Get("Slug")},
-		"Summary":                      {blogPageAddData.Get("Summary")},
-		"TestBlogImageSet-0-ImageText": {"changed image text"},
-		"TestBlogImageSet-0-BlogPage":  {fmt.Sprintf("%d", child.PageID)},
+		"Title":                             {blogPageAddData.Get("Title")},
+		"Slug":                              {blogPageAddData.Get("Slug")},
+		"Summary":                           {blogPageAddData.Get("Summary")},
+		"TestBlogImageSet-0-ImageText":      {"changed image text"},
+		"TestBlogImageSet-0-BlogPage":       {fmt.Sprintf("%d", child.PageID)},
+		"TestBlogImageSet-0-ID":             {fmt.Sprintf("%d", img.ID)},
+		"TestBlogImageSet-0-Content--total": {"0"},
+		"TestBlogImageSet-0-__DELETE__":     {"false"},
+		"TestBlogImageSet-0-__ORDER__":      {"0"},
 	}, 1)
 
 	form := buildAndValidateEditForm(t, child, data)

@@ -402,6 +402,10 @@ func Objects[T attrs.Definer](model T, database ...string) *QuerySet[T] {
 		orderBy = ord.OrderBy()
 	}
 
+	if len(orderBy) == 0 && primary != nil {
+		orderBy = []string{primary.Name()}
+	}
+
 	var qs = &QuerySet[T]{
 		AliasGen: alias.NewGenerator(),
 		context:  context.Background(),

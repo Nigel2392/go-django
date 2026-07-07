@@ -26,7 +26,7 @@ require (
 	github.com/Nigel2392/go-telepath v1.4.3
 	github.com/Nigel2392/tags v1.0.0
 	github.com/PuerkitoBio/goquery v1.10.3
-	github.com/a-h/templ v0.3.943
+	github.com/a-h/templ v0.3.1020
 	github.com/casbin/govaluate v1.10.0
 	github.com/dolthub/go-mysql-server v0.20.0
 	github.com/gertd/go-pluralize v0.2.1

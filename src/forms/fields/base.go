@@ -3,6 +3,7 @@ package fields
 import (
 	"context"
 	"database/sql/driver"
+	"fmt"
 	"maps"
 	"reflect"
 
@@ -23,6 +24,7 @@ type BaseField struct {
 	FormWidget   widgets.Widget
 	GetDefault   func() interface{}
 	Caser        *cases.Caser
+	IsEmptyFunc  func(value interface{}) bool
 }
 
 func NewField(opts ...func(Field)) *BaseField {
@@ -113,6 +115,9 @@ func (i *BaseField) ReadOnly() bool {
 }
 
 func (i *BaseField) IsEmpty(value interface{}) bool {
+	if i.IsEmptyFunc != nil {
+		return i.IsEmptyFunc(value)
+	}
 	return IsZero(value)
 }
 
@@ -163,17 +168,20 @@ func (i *BaseField) HasChanged(initial, data interface{}) bool {
 	}
 
 	if isZero(rA) != isZero(rB) {
+		fmt.Println("ZERO VAL MISMATCH")
 		return true
 	}
 
 	if valuerA, ok := initial.(driver.Valuer); ok {
 		var valA, err = valuerA.Value()
 		if err != nil {
+			fmt.Println("DRIVER VALUE ERR")
 			return true
 		}
 		if valuerB, ok := data.(driver.Valuer); ok {
 			var valB, err = valuerB.Value()
 			if err != nil {
+				fmt.Println("DRIVER VALUE ERR")
 				return true
 			}
 			return !reflect.DeepEqual(valA, valB)
@@ -188,16 +196,19 @@ func (i *BaseField) HasChanged(initial, data interface{}) bool {
 	}
 
 	if rA.IsValid() != rB.IsValid() {
+		fmt.Println("NOT ISVALID == ISVALID")
 		return true
 	}
 
 	if !rA.IsValid() && !rB.IsValid() {
+		fmt.Println("BOTH INVALID")
 		return false
 	}
 
 	var aType = rA.Type()
 	var bType = rB.Type()
 	if aType != bType && !aType.ConvertibleTo(bType) && !bType.ConvertibleTo(aType) {
+		fmt.Println("NOT CONVERT", aType, bType)
 		return true
 	}
 
@@ -217,6 +228,7 @@ func (i *BaseField) HasChanged(initial, data interface{}) bool {
 		var valA, errA = vA.Value()
 		var valB, errB = vB.Value()
 		if errA != nil || errB != nil {
+			fmt.Println("DRIVER VALUE ERR 2")
 			return true
 		}
 
@@ -232,6 +244,7 @@ func (i *BaseField) HasChanged(initial, data interface{}) bool {
 		}
 	}
 
+	fmt.Println("DEEPEQUAL", rA.Type(), rB.Type(), rA.Interface() == rB.Interface())
 	return !reflect.DeepEqual(rA.Interface(), rB.Interface())
 }
 

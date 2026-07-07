@@ -422,6 +422,11 @@ func (f *BaseForm) HasChanged() bool {
 			k     = head.Key
 			field = head.Value
 		)
+
+		if field.ReadOnly() {
+			continue
+		}
+
 		var v, ok = f.Widget(k)
 		if !ok {
 			v = field.Widget()
