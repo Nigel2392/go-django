@@ -6,19 +6,23 @@ import (
 	"reflect"
 	"strings"
 
+	dj_errors "github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/pkg/errors"
 )
 
 type Function = interface{} // func(...interface{}) -> Component
 
+const CodeFunctionError dj_errors.GoCode = "FunctionError"
+
 var (
-	ErrTypeMismatch   = errors.New("type mismatch")
-	ErrNotFunc        = errors.New("fn must be a function")
-	ErrArgCount       = errors.New("argument count mismatch")
-	ErrReturnCount    = errors.New("return count mismatch")
-	ErrNilObject      = errors.New("object is nil")
-	ErrMethodNotFound = errors.New("method not found")
+	ErrFunction       = dj_errors.New(CodeFunctionError, "function error")
+	ErrTypeMismatch   = ErrFunction.WithCause(dj_errors.TypeMismatch)
+	ErrNotFunc        = ErrFunction.WithCause(errors.New("fn must be a function"))
+	ErrArgCount       = ErrFunction.WithCause(errors.New("argument count mismatch"))
+	ErrReturnCount    = ErrFunction.WithCause(errors.New("return count mismatch"))
+	ErrNilObject      = ErrFunction.WithCause(errors.New("object is nil"))
+	ErrMethodNotFound = ErrFunction.WithCause(errors.New("method not found"))
 )
 
 // Method retrieves a method from an object.
@@ -53,8 +57,7 @@ checkValid:
 
 	var i = converted.Interface()
 	if i == nil {
-		return n, errors.Wrapf(
-			ErrTypeMismatch,
+		return n, ErrTypeMismatch.Wrapf(
 			"method %s on %T is nil, cannot cast to %v",
 			name, obj, fnT,
 		)
@@ -62,8 +65,7 @@ checkValid:
 
 	n, ok := i.(T)
 	if !ok {
-		return n, errors.Wrapf(
-			ErrTypeMismatch,
+		return n, ErrTypeMismatch.Wrapf(
 			"method %s on %T is not of type %v, got %T",
 			name, obj, fnT, i,
 		)
@@ -152,6 +154,10 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 		fnVal = reflect.ValueOf(f)
 	}
 
+	if !fnVal.IsValid() || fnVal.Kind() != reflect.Func || fnVal.IsNil() {
+		return fnVal, ErrNotFunc
+	}
+
 	var config = &FuncConfig{}
 	for _, opt := range opts {
 		opt(config)
@@ -189,13 +195,13 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 
 	switch {
 	case numInSrc > numInDst && !out.IsVariadic():
-		return reflect.Value{}, errors.Wrapf(
-			ErrArgCount, "function must have the same number of arguments as the output function (%v), got %v",
+		return reflect.Value{}, ErrArgCount.Wrapf(
+			"function must have the same number of arguments as the output function (%v), got %v",
 			numInDst, numInSrc,
 		)
 	case numInSrc < numInDst && !fnType.IsVariadic():
-		return reflect.Value{}, errors.Wrapf(
-			ErrArgCount, "function must have the same number of arguments as the output function (%v), got %v",
+		return reflect.Value{}, ErrArgCount.Wrapf(
+			"function must have the same number of arguments as the output function (%v), got %v",
 			numInDst, numInSrc,
 		)
 	}
@@ -212,8 +218,8 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 	case numOutDst == 1 && (isLiteralAny(out.Out(0)) || isAnySlice(out.Out(0))) && numOutSrc >= 1: // func(...) interface{} or func(...) []interface{}
 	// if len of res is greater than 1, we can create a slice and return the first value as []interface{}
 	default:
-		return reflect.Value{}, errors.Wrapf(
-			ErrReturnCount, "function must return the same number of values as the output function (%v), got %v",
+		return reflect.Value{}, ErrReturnCount.Wrapf(
+			"function must return the same number of values as the output function (%v), got %v",
 			numOutDst, numOutSrc,
 		)
 	}
@@ -224,8 +230,7 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 		for i := 0; i < len(in); i++ {
 			switch {
 			case i >= numInSrc && !fnType.IsVariadic() || i >= numInSrc && !out.IsVariadic():
-				assert.Fail(errors.Wrapf(
-					ErrArgCount,
+				assert.Fail(ErrArgCount.Wrapf(
 					"function must have the same number of arguments as the output function (%v), got %v",
 					numInDst, len(in),
 				))
@@ -237,8 +242,7 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 					var argTyp = in[j].Type()
 					var argVal, ok = convertType(argTyp, variadicType, in[j])
 					if !ok {
-						assert.Fail(errors.Wrapf(
-							ErrTypeMismatch,
+						assert.Fail(ErrTypeMismatch.Wrapf(
 							"could not convert %T [%d]: (%v) to %v",
 							in[j].Interface(), j, in[j], variadicType,
 						))
@@ -250,8 +254,7 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 			case out.IsVariadic() && i >= numInDst-1:
 
 				if i >= numInSrc {
-					assert.Fail(errors.Wrapf(
-						ErrArgCount,
+					assert.Fail(ErrArgCount.Wrapf(
 						"function must have the same number of arguments as the output function (%v), got %v",
 						numInDst, len(callIn),
 					))
@@ -265,8 +268,7 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 					if argTyp.Kind() == reflect.Slice {
 						var conv, ok = convertType(argTyp, castType, in[i])
 						if !ok {
-							assert.Fail(errors.Wrapf(
-								ErrTypeMismatch,
+							assert.Fail(ErrTypeMismatch.Wrapf(
 								"could not convert %T (%v) to %v",
 								in[i].Interface(), in[i], castType,
 							))
@@ -281,8 +283,7 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 						var argTyp = in[j].Type()
 						var argVal, ok = convertType(argTyp, elemType, in[j])
 						if !ok {
-							assert.Fail(errors.Wrapf(
-								ErrTypeMismatch,
+							assert.Fail(ErrTypeMismatch.Wrapf(
 								"could not convert %T [%d]: (%v) to %v",
 								in[j].Interface(), j, in[j], elemType,
 							))
@@ -309,8 +310,7 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 
 					var argVal, ok = convertType(argTyp, castType, in[i])
 					if !ok {
-						assert.Fail(errors.Wrapf(
-							ErrTypeMismatch,
+						assert.Fail(ErrTypeMismatch.Wrapf(
 							"could not convert %T (%v) to %v",
 							in[i].Interface(), in[i], castType,
 						))
@@ -324,8 +324,7 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 			var argTyp = in[i].Type()
 			var argVal, ok = convertType(argTyp, typ, in[i])
 			if !ok {
-				assert.Fail(errors.Wrapf(
-					ErrTypeMismatch,
+				assert.Fail(ErrTypeMismatch.Wrapf(
 					"could not convert %T (%v) to %v",
 					in[i].Interface(), in[i], typ,
 				))
@@ -335,8 +334,7 @@ func RCastFunc(out reflect.Type, fn any, opts ...func(*FuncConfig)) (reflect.Val
 		}
 
 		if len(callIn) < fnType.NumIn() && !fnType.IsVariadic() || len(callIn) > fnType.NumIn() && !fnType.IsVariadic() {
-			assert.Fail(errors.Wrapf(
-				ErrArgCount,
+			assert.Fail(ErrArgCount.Wrapf(
 				"function must have the same number of arguments as the output function (%v), got %v",
 				numInDst, len(callIn),
 			))
@@ -356,8 +354,8 @@ func validateIsFunc(fnType reflect.Type) error {
 	if fnType != nil && fnType.Kind() == reflect.Func {
 		return nil
 	}
-	return errors.Wrapf(
-		ErrNotFunc, "expected a function, got %T", fnType,
+	return ErrNotFunc.Wrapf(
+		"expected a function, got %T", fnType,
 	)
 }
 

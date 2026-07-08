@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"reflect"
 	"runtime"
@@ -11,6 +12,21 @@ import (
 
 	"github.com/Nigel2392/go-django/internal/django_reflect"
 )
+
+type BroadStringer interface {
+	String() string
+	OtherMethod()
+}
+
+type dummyBroadStringer struct {
+	val string
+}
+
+func (d dummyBroadStringer) String() string {
+	return d.val
+}
+
+func (d dummyBroadStringer) OtherMethod() {}
 
 // Helper to check no error
 func mustNoErr(t *testing.T, err error) {
@@ -667,4 +683,92 @@ func TestWrapWithContextMethod(t *testing.T) {
 	}
 
 	t.Logf("got %d and %d", v1, v2)
+}
+
+func TestCast_InterfaceContravariance(t *testing.T) {
+	src := func(s fmt.Stringer) string {
+		if s == nil {
+			return "<nil>"
+		}
+		return s.String()
+	}
+	out, err := django_reflect.CastFunc[func(BroadStringer) string](src)
+	mustNoErr(t, err)
+
+	d := dummyBroadStringer{val: "hello"}
+	res := out(d)
+	if res != "hello" {
+		t.Fatalf("expected 'hello', got %q", res)
+	}
+
+	var dNil BroadStringer
+	resNil := out(dNil)
+	if resNil != "<nil>" {
+		t.Fatalf("expected '<nil>', got %q", resNil)
+	}
+}
+
+type Model1 struct{}
+
+func (m *Model1) Save() error {
+	return nil
+}
+
+type Model2 struct{}
+
+func (m *Model2) Save(ctx context.Context) error {
+	if ctx == nil {
+		return errors.New("expected non-nil context")
+	}
+	return nil
+}
+
+type Model3 struct{}
+
+func (m *Model3) Save(ctx context.Context) (string, error) {
+	if ctx == nil {
+		return "", errors.New("expected non-nil context")
+	}
+	return "saved", nil
+}
+
+type Model4 struct{}
+
+func (m *Model4) Save(ctx context.Context) (int, string, error) {
+	if ctx == nil {
+		return 0, "", errors.New("expected non-nil context")
+	}
+	return 1, "saved", nil
+}
+
+func TestCast_SaveMethodsVariations(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("func() error", func(t *testing.T) {
+		m := &Model1{}
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WrapWithContext(ctx))
+		mustNoErr(t, err)
+		mustNoErr(t, saveFn())
+	})
+
+	t.Run("func(ctx context.Context) error", func(t *testing.T) {
+		m := &Model2{}
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WrapWithContext(ctx))
+		mustNoErr(t, err)
+		mustNoErr(t, saveFn())
+	})
+
+	t.Run("func(ctx context.Context) (..., error) 1 val", func(t *testing.T) {
+		m := &Model3{}
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WrapWithContext(ctx))
+		mustNoErr(t, err)
+		mustNoErr(t, saveFn())
+	})
+
+	t.Run("func(ctx context.Context) (..., error) 2 vals", func(t *testing.T) {
+		m := &Model4{}
+		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WrapWithContext(ctx))
+		mustNoErr(t, err)
+		mustNoErr(t, saveFn())
+	})
 }
