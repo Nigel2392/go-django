@@ -80,7 +80,7 @@ func Change(name string, fn func(driver *Driver)) {
 // - open a database connection using the registered opener
 //
 // If your driver is not one of:
-// - github.com/go-django-queries/src/drivers.DriverMariaDB
+// - github.com/go-django/queries/src/drivers.DriverMariaDB
 // - github.com/go-sql-driver/mysql.MySQLDriver
 // - github.com/mattn/go-sqlite3.SQLiteDriver
 // - github.com/jackc/pgx/v5/stdlib.Driver

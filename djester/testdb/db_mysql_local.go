@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/Nigel2392/go-django-queries/src/quest"
+	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/dolthub/go-mysql-server/server"
 )
