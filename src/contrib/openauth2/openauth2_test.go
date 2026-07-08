@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nigel2392/go-django/djester/testdb"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	django "github.com/Nigel2392/go-django/src"
@@ -15,7 +16,6 @@ import (
 	"github.com/Nigel2392/go-django/src/contrib/openauth2"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"golang.org/x/oauth2"
 )
 

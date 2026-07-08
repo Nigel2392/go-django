@@ -10,14 +10,15 @@ import (
 	"time"
 	"unsafe"
 
-	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/go-sql-driver/mysql"
 	"github.com/jackc/pgx/v5"
+	"github.com/jmoiron/sqlx"
 )
 
 var (
@@ -39,8 +40,55 @@ func init() {
 	RegisterCompiler(&drivers.DriverMySQL{}, NewMySQLQueryBuilder)
 }
 
+type CompilerInformation struct {
+	DatabaseName string // The name of the database connection
+	DB           drivers.Database
+	DBX          func(string) string
+	SqlxDriver   string
+}
+
+func SqlxDriverName(db drivers.Database) string {
+	var driver = reflect.TypeOf(db.Driver())
+	if driver == nil {
+		return ""
+	}
+	if data, ok := drivers.Retrieve(driver); ok {
+		return data.Name
+	}
+	return ""
+}
+
+func GetCompilerInformation(dbKey string) (*CompilerInformation, error) {
+	var db, ok = django.ConfigGetOK[drivers.Database](
+		django.Global.Settings, dbKey,
+	)
+	if !ok {
+		return nil, errors.NoDatabase.WithCause(fmt.Errorf(
+			"no database connection found for key %q", dbKey,
+		))
+	}
+
+	var sqlxDriver = SqlxDriverName(db)
+	if sqlxDriver == "" {
+		return nil, errors.UnknownDriver.WithCause(fmt.Errorf(
+			"unknown driver for database connection %q", dbKey,
+		))
+	}
+
+	var queryInfo = &CompilerInformation{
+		DatabaseName: dbKey,
+		DB:           db,
+		DBX: func(s string) string {
+			return sqlx.Rebind(sqlx.BindType(sqlxDriver), s)
+		},
+		SqlxDriver: sqlxDriver,
+	}
+
+	return queryInfo, nil
+}
+
 func newExpressionInfo(g *genericQueryBuilder, qs *QuerySet[attrs.Definer], i *QuerySetInternals, updating bool) *expr.ExpressionInfo {
-	var dbName = internal.SqlxDriverName(g.queryInfo.DB)
+	var dbName = SqlxDriverName(g.queryInfo.DB)
 	var supportsWhereAlias bool
 	switch dbName {
 	case "mysql", "mariadb":
@@ -83,7 +131,7 @@ const generic_PLACEHOLDER = "?"
 
 type genericQueryBuilder struct {
 	transaction drivers.Transaction
-	queryInfo   *internal.QueryInfo
+	queryInfo   *CompilerInformation
 	support     drivers.SupportsReturningType
 	quote       string
 	driver      driver.Driver
@@ -95,13 +143,13 @@ func NewGenericQueryBuilder(db string) QueryCompiler {
 }
 
 func NewGenericFromQueryCompiler(db string, from QueryCompiler) QueryCompiler {
-	var q, err = internal.GetQueryInfo(db)
+	var q, err = GetCompilerInformation(db)
 	if err != nil {
 		panic(err)
 	}
 
 	var quote = "`"
-	switch internal.SqlxDriverName(q.DB) {
+	switch SqlxDriverName(q.DB) {
 	case "mysql", "mariadb":
 		quote = "`"
 	case "postgres", "pgx":
@@ -159,7 +207,7 @@ func (g *genericQueryBuilder) Placeholder() string {
 func (g *genericQueryBuilder) QuoteString(s string) string {
 	var sb strings.Builder
 	sb.Grow(len(s) + 2)
-	switch internal.SqlxDriverName(g.queryInfo.DB) {
+	switch SqlxDriverName(g.queryInfo.DB) {
 	case "mysql", "mariadb":
 		sb.WriteString("'")
 		sb.WriteString(s)
@@ -189,7 +237,7 @@ func (g *genericQueryBuilder) QuoteIdentifier(s string) string {
 func (g *genericQueryBuilder) PrepForLikeQuery(v any) string {
 	// For LIKE queries, we need to escape the percent and underscore characters.
 	// This is done by replacing them with their escaped versions.
-	switch internal.SqlxDriverName(g.queryInfo.DB) {
+	switch SqlxDriverName(g.queryInfo.DB) {
 	case "mysql", "mariadb":
 		return strings.ReplaceAll(
 			strings.ReplaceAll(fmt.Sprint(v), "%", "\\%"),
@@ -209,7 +257,7 @@ func (g *genericQueryBuilder) PrepForLikeQuery(v any) string {
 		)
 
 	default:
-		panic(fmt.Errorf("unknown database driver: %s", internal.SqlxDriverName(g.queryInfo.DB)))
+		panic(fmt.Errorf("unknown database driver: %s", SqlxDriverName(g.queryInfo.DB)))
 	}
 }
 
@@ -220,7 +268,7 @@ func (g *genericQueryBuilder) PrepareValue(field attrs.Field, value any) any {
 func (g *genericQueryBuilder) FormatLookupCol(lookupName string, inner string) string {
 	switch lookupName {
 	case "iexact", "icontains", "istartswith", "iendswith":
-		switch internal.SqlxDriverName(g.queryInfo.DB) {
+		switch SqlxDriverName(g.queryInfo.DB) {
 		case "mysql", "mariadb":
 			return fmt.Sprintf("LOWER(%s)", inner)
 		case "postgres", "pgx":
@@ -228,7 +276,7 @@ func (g *genericQueryBuilder) FormatLookupCol(lookupName string, inner string) s
 		case "sqlite3":
 			return fmt.Sprintf("LOWER(%s)", inner)
 		default:
-			panic(fmt.Errorf("unknown database driver: %s", internal.SqlxDriverName(g.queryInfo.DB)))
+			panic(fmt.Errorf("unknown database driver: %s", SqlxDriverName(g.queryInfo.DB)))
 		}
 	default:
 		return inner
@@ -275,7 +323,7 @@ func (g *genericQueryBuilder) LogicalOpRHS() map[expr.LogicalOp]func(rhs string,
 }
 
 func (g *genericQueryBuilder) LookupOperatorsRHS() map[string]string {
-	switch internal.SqlxDriverName(g.queryInfo.DB) {
+	switch SqlxDriverName(g.queryInfo.DB) {
 	case "mysql", "mariadb":
 		return map[string]string{
 			"iexact":      "= LOWER(%s)",
@@ -310,11 +358,11 @@ func (g *genericQueryBuilder) LookupOperatorsRHS() map[string]string {
 			"iendswith":   "LIKE %s ESCAPE '\\'",
 		}
 	}
-	panic(fmt.Errorf("unknown database driver: %s", internal.SqlxDriverName(g.queryInfo.DB)))
+	panic(fmt.Errorf("unknown database driver: %s", SqlxDriverName(g.queryInfo.DB)))
 }
 
 func (g *genericQueryBuilder) LookupPatternOperatorsRHS() map[string]string {
-	switch internal.SqlxDriverName(g.queryInfo.DB) {
+	switch SqlxDriverName(g.queryInfo.DB) {
 	case "mysql", "mariadb":
 		return map[string]string{
 			"contains":    "LIKE CONCAT('%%', %s, '%%')",
@@ -343,7 +391,7 @@ func (g *genericQueryBuilder) LookupPatternOperatorsRHS() map[string]string {
 			"iendswith":   "LIKE '%%' || LOWER(%s) ESCAPE '\\'",
 		}
 	}
-	panic(fmt.Errorf("unknown database driver: %s", internal.SqlxDriverName(g.queryInfo.DB)))
+	panic(fmt.Errorf("unknown database driver: %s", SqlxDriverName(g.queryInfo.DB)))
 }
 
 func (g *genericQueryBuilder) ExpressionInfo(

@@ -99,7 +99,6 @@ func (t *DBTables[T]) Create() {
 		}
 
 	}
-	return
 }
 
 func (t *DBTables[T]) Drop() {
@@ -115,5 +114,4 @@ func (t *DBTables[T]) Drop() {
 			t.fatalf("Failed to drop table (%s): %v", table.ModelName(), err)
 		}
 	}
-	return
 }

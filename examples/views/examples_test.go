@@ -8,14 +8,14 @@ import (
 	"testing"
 	"testing/fstest"
 
+	"github.com/Nigel2392/go-django/djester"
+	"github.com/Nigel2392/go-django/djester/quest"
 	"github.com/Nigel2392/go-django/examples/todoapp/todos"
 	"github.com/Nigel2392/go-django/examples/views"
-	"github.com/Nigel2392/go-django/queries/src/quest"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/filesystem/tpl"
-	"github.com/Nigel2392/go-django/src/djester"
 	dj_views "github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/mux"
 )

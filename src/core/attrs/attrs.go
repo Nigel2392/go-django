@@ -11,12 +11,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/filesystem/mediafiles"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/shopspring/decimal"
 

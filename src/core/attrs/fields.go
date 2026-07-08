@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
 	"github.com/Nigel2392/go-django/src/core/checks"
@@ -20,7 +21,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"github.com/Nigel2392/goldcrest"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -32,6 +32,31 @@ var (
 
 	_ Field = (*FieldDef)(nil) // Ensure FieldDef implements the Field interface
 )
+
+func GetFromAttributes[T any](attrMap map[string]any, key string) (T, bool) {
+	var n T
+	if v, ok := attrMap[key]; ok {
+		if t, ok := v.(T); ok {
+			return t, true
+		}
+		var (
+			rT = reflect.TypeOf((*T)(nil)).Elem()
+			vT = reflect.TypeOf(v)
+			vV = reflect.ValueOf(v)
+		)
+
+		if vT.AssignableTo(rT) {
+			return vV.Interface().(T), true
+		}
+
+		if vT.ConvertibleTo(rT) {
+			return vV.Convert(rT).Interface().(T), true
+		}
+
+		return n, false
+	}
+	return n, false
+}
 
 // FieldConfig is a configuration for a field.
 //
@@ -1133,11 +1158,9 @@ func (f *FieldDef) _driverValue(value any) (driver.Value, error) {
 	case reflect.Struct:
 		switch val := f.field_v.Interface().(type) {
 		case driver.Valuer:
-			var valuer = val.(driver.Valuer)
-			return valuer.Value()
+			return val.Value()
 		case Definer:
-			var def = val.(Definer)
-			var pk = PrimaryKey(def)
+			var pk = PrimaryKey(val)
 			return pk, nil
 		}
 	}

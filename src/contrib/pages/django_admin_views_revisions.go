@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
@@ -27,7 +28,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
-	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 	"github.com/Nigel2392/go-django/src/permissions"
 	"github.com/Nigel2392/go-django/src/views"
 	"github.com/Nigel2392/go-django/src/views/list"

@@ -5,9 +5,9 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Nigel2392/go-django/djester/testdb"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/djester/testdb"
 )
 
 func init() {

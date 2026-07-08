@@ -5,13 +5,13 @@ import (
 	"io"
 	"net/url"
 
+	"github.com/Nigel2392/go-django/internal/forms"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/Nigel2392/go-django/src/internal/forms"
 )
 
 var _ widgets.Widget = (*BlockWidget)(nil)

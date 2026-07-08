@@ -6,10 +6,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/Nigel2392/go-django/djester/testdb"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/logger"
-	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/go-sql-driver/mysql"
 	sqlite3 "github.com/mattn/go-sqlite3"
 )

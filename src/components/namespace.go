@@ -1,6 +1,6 @@
 package components
 
-import "github.com/Nigel2392/go-django/src/internal/django_reflect"
+import "github.com/Nigel2392/go-django/internal/django_reflect"
 
 type namespace struct {
 	name string

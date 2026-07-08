@@ -1,12 +1,12 @@
-package internal_test
+package sets_test
 
 import (
 	"testing"
 
-	"github.com/Nigel2392/go-django/queries/internal"
+	"github.com/Nigel2392/go-django/internal/sets"
 )
 
-var _ internal.Set[any] = (*SliceOrderedSet[any])(nil)
+var _ sets.Set[any] = (*SliceOrderedSet[any])(nil)
 
 type SliceOrderedSet[E comparable] struct {
 	items []E
@@ -81,14 +81,14 @@ func genInts(n int) []int {
 func BenchmarkLinkedOrderedSet_Add(b *testing.B) {
 	data := genInts(N)
 	for i := 0; i < b.N; i++ {
-		s := internal.NewOrderedSet[int]()
+		s := sets.NewOrderedSet[int]()
 		s.Add(data...)
 	}
 }
 
 func BenchmarkLinkedOrderedSet_Contains(b *testing.B) {
 	data := genInts(N)
-	s := internal.NewOrderedSet[int](data...)
+	s := sets.NewOrderedSet[int](data...)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = s.Contains(i % N)
@@ -98,7 +98,7 @@ func BenchmarkLinkedOrderedSet_Contains(b *testing.B) {
 func BenchmarkLinkedOrderedSet_Remove(b *testing.B) {
 	data := genInts(N)
 	for i := 0; i < b.N; i++ {
-		s := internal.NewOrderedSet[int](data...)
+		s := sets.NewOrderedSet[int](data...)
 		for _, x := range data {
 			s.Remove(x)
 		}
@@ -107,7 +107,7 @@ func BenchmarkLinkedOrderedSet_Remove(b *testing.B) {
 
 func BenchmarkLinkedOrderedSet_Values(b *testing.B) {
 	data := genInts(N)
-	s := internal.NewOrderedSet[int](data...)
+	s := sets.NewOrderedSet[int](data...)
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		_ = s.Values()

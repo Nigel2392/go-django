@@ -3,8 +3,8 @@ package forms
 import (
 	"context"
 
+	"github.com/Nigel2392/go-django/internal/forms"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
-	"github.com/Nigel2392/go-django/src/internal/forms"
 )
 
 type (

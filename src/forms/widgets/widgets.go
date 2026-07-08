@@ -1,7 +1,7 @@
 package widgets
 
 import (
-	"github.com/Nigel2392/go-django/src/internal/forms"
+	"github.com/Nigel2392/go-django/internal/forms"
 )
 
 type (

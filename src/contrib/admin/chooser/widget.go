@@ -8,6 +8,7 @@ import (
 	"reflect"
 	"runtime/debug"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
@@ -20,7 +21,6 @@ import (
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 )
 
 var _ widgets.Widget = (*ChooserWidget)(nil)

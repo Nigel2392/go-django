@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -56,7 +55,7 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 
 	var atts = field.Attrs()
 
-	attrUseInDB, ok := internal.GetFromAttrs[bool](atts, AttrUseInDBKey)
+	attrUseInDB, ok := attrs.GetFromAttributes[bool](atts, AttrUseInDBKey)
 	if !ok {
 		attrUseInDB = true
 	}
@@ -69,17 +68,17 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 		attrUseInDB = false
 	}
 
-	attrMaxLength, _ := internal.GetFromAttrs[int64](atts, attrs.AttrMaxLengthKey)
-	attrMinLength, _ := internal.GetFromAttrs[int64](atts, attrs.AttrMinLengthKey)
-	attrMinValue, _ := internal.GetFromAttrs[float64](atts, attrs.AttrMinValueKey)
-	attrMaxValue, _ := internal.GetFromAttrs[float64](atts, attrs.AttrMaxValueKey)
-	attrAutoIncrement, _ := internal.GetFromAttrs[bool](atts, attrs.AttrAutoIncrementKey)
-	attrUnique, _ := internal.GetFromAttrs[bool](atts, attrs.AttrUniqueKey)
-	attrReverseAlias, _ := internal.GetFromAttrs[string](atts, attrs.AttrReverseAliasKey)
-	attrPrecision, _ := internal.GetFromAttrs[int64](atts, attrs.AttrPrecisionKey)
-	attrScale, _ := internal.GetFromAttrs[int64](atts, attrs.AttrScaleKey)
-	attrOnDelete, _ := internal.GetFromAttrs[Action](atts, AttrOnDeleteKey)
-	attrOnUpdate, _ := internal.GetFromAttrs[Action](atts, AttrOnUpdateKey)
+	attrMaxLength, _ := attrs.GetFromAttributes[int64](atts, attrs.AttrMaxLengthKey)
+	attrMinLength, _ := attrs.GetFromAttributes[int64](atts, attrs.AttrMinLengthKey)
+	attrMinValue, _ := attrs.GetFromAttributes[float64](atts, attrs.AttrMinValueKey)
+	attrMaxValue, _ := attrs.GetFromAttributes[float64](atts, attrs.AttrMaxValueKey)
+	attrAutoIncrement, _ := attrs.GetFromAttributes[bool](atts, attrs.AttrAutoIncrementKey)
+	attrUnique, _ := attrs.GetFromAttributes[bool](atts, attrs.AttrUniqueKey)
+	attrReverseAlias, _ := attrs.GetFromAttributes[string](atts, attrs.AttrReverseAliasKey)
+	attrPrecision, _ := attrs.GetFromAttributes[int64](atts, attrs.AttrPrecisionKey)
+	attrScale, _ := attrs.GetFromAttributes[int64](atts, attrs.AttrScaleKey)
+	attrOnDelete, _ := attrs.GetFromAttributes[Action](atts, AttrOnDeleteKey)
+	attrOnUpdate, _ := attrs.GetFromAttributes[Action](atts, AttrOnUpdateKey)
 
 	var rel *MigrationRelation
 	var fRel = field.Rel()

@@ -7,9 +7,9 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/Nigel2392/go-django/internal/forms"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/forms/modelforms"
-	"github.com/Nigel2392/go-django/src/internal/forms"
 )
 
 var _ (attrs.Definer) = (*TestModel)(nil)

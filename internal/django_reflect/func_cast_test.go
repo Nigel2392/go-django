@@ -9,7 +9,7 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/Nigel2392/go-django/src/internal/django_reflect"
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 )
 
 // Helper to check no error

@@ -1,9 +1,9 @@
 package quest
 
 import (
+	"reflect"
 	"testing"
 
-	"github.com/Nigel2392/go-django/queries/internal"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
@@ -15,7 +15,8 @@ func CreateObjects[T attrs.Definer](t *testing.T, objects ...T) (created []T, de
 		return nil, nil
 	}
 
-	created, err = queries.GetQuerySet[T](objects[0]).BulkCreate(
+	var objType = reflect.TypeOf(objects[0])
+	created, err = queries.GetQuerySet(objects[0]).BulkCreate(
 		objects,
 	)
 	if err != nil {
@@ -29,7 +30,7 @@ func CreateObjects[T attrs.Definer](t *testing.T, objects ...T) (created []T, de
 	}
 
 	return created, func(alreadyDeleted int) error {
-		var newObj = internal.NewDefiner[T]()
+		var newObj = attrs.NewObject[T](objType)
 		var deleted, err = queries.GetQuerySet(newObj).Delete(
 			created...,
 		)

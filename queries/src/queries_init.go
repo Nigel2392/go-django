@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -148,7 +147,7 @@ func getMetaUniqueFields(modelMeta attrs.ModelMeta) [][]string {
 
 	for _, field := range modelDefs.Fields() {
 		var attributes = field.Attrs()
-		var isUnique, _ = internal.GetFromAttrs[bool](attributes, attrs.AttrUniqueKey)
+		var isUnique, _ = attrs.GetFromAttributes[bool](attributes, attrs.AttrUniqueKey)
 		if isUnique {
 			uniqueFields = append(uniqueFields, []string{field.Name()})
 		}

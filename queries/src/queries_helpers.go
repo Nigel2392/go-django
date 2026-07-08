@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/attrs/attrutils"
@@ -54,7 +53,7 @@ func CT_ListObjectsByIDs(obj attrs.Definer) func(ctx context.Context, i []interf
 func ListObjectsByIDs[T attrs.Definer, T2 any](object T, offset, limit uint64, ids []T2) ([]T, error) {
 
 	var (
-		obj          = internal.NewObjectFromIface(object).(T)
+		obj          = attrs.NewObject[T](object)
 		definitions  = obj.FieldDefs()
 		primaryField = definitions.Primary()
 	)
@@ -88,7 +87,7 @@ func ListObjects[T attrs.Definer](object T, offset, limit uint64, ordering ...st
 		limit = MAX_DEFAULT_RESULTS
 	}
 
-	var obj = internal.NewObjectFromIface(object).(T)
+	var obj = attrs.NewObject[T](object)
 	var d, err = GetQuerySet(obj).
 		OrderBy(ordering...).
 		Limit(int(limit)).
@@ -113,7 +112,7 @@ func ListObjects[T attrs.Definer](object T, offset, limit uint64, ordering ...st
 //
 // The identifier can be any type, but it is expected to be the primary key of the object.
 func GetObject[T attrs.Definer](object T, identifier any) (T, error) {
-	var obj = internal.NewObjectFromIface(object).(T)
+	var obj = attrs.NewObject[T](object)
 	var (
 		defs         = obj.FieldDefs()
 		primaryField = defs.Primary()

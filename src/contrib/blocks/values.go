@@ -7,11 +7,11 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/ctx"
-	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 )
 
 var _ BoundBlockValue = (*BoundValue[interface{}])(nil)

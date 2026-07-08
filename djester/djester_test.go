@@ -13,9 +13,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Nigel2392/go-django/djester"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
-	"github.com/Nigel2392/go-django/src/djester"
 	"github.com/Nigel2392/mux"
 )
 

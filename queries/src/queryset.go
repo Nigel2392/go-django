@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
@@ -2636,7 +2635,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 
 	for resultIndex, row := range results {
 		var (
-			obj        = internal.NewObjectFromIface(qs.internals.Model.Object)
+			obj        = attrs.NewObject[attrs.Definer](qs.internals.Model.Object)
 			scannables = getScannableFields(qs.internals.Fields, obj)
 		)
 
@@ -2851,7 +2850,7 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 	var list = make([]map[string]any, len(results))
 	for i, row := range results {
 		var (
-			obj    = internal.NewObjectFromIface(qs.internals.Model.Object)
+			obj    = attrs.NewObject[attrs.Definer](qs.internals.Model.Object)
 			fields = getScannableFields(qs.internals.Fields, obj)
 			values = make(map[string]any, len(row))
 		)
@@ -2933,7 +2932,7 @@ func (qs *QuerySet[T]) ValuesList(fields ...any) ([][]interface{}, error) {
 
 	var list = make([][]any, len(results))
 	for i, row := range results {
-		var obj = internal.NewObjectFromIface(qs.internals.Model.Object)
+		var obj = attrs.NewObject[attrs.Definer](qs.internals.Model.Object)
 		var fields = getScannableFields(qs.internals.Fields, obj)
 		var values = make([]any, len(fields))
 		for j, field := range fields {
@@ -3000,7 +2999,7 @@ func (qs *QuerySet[T]) Aggregate(annotations map[string]expr.Expression) (map[st
 		out        = make(map[string]any)
 		scannables = getScannableFields(
 			qs.internals.Fields,
-			internal.NewObjectFromIface(qs.internals.Model.Object),
+			attrs.NewObject[attrs.Definer](qs.internals.Model.Object),
 		)
 	)
 
@@ -4302,7 +4301,7 @@ func getScannableFields[T attrs.FieldDefinition](fields []*FieldInfo[T], root at
 		// matches that in [FieldInfo.WriteFields].
 		var throughObj attrs.Definer
 		if info.Through != nil {
-			var newObj = internal.NewObjectFromIface(info.Through.Model)
+			var newObj = attrs.NewObject[attrs.Definer](info.Through.Model)
 			var newDefs = newObj.FieldDefs()
 			throughObj = newObj
 
@@ -4390,9 +4389,9 @@ func getScannableFields[T attrs.FieldDefinition](fields []*FieldInfo[T], root at
 			if _, exists := instances[key]; !exists {
 				var obj attrs.Definer
 				if i == len(info.Chain)-1 {
-					obj = internal.NewObjectFromIface(info.Model)
+					obj = attrs.NewObject[attrs.Definer](info.Model)
 				} else {
-					obj = internal.NewObjectFromIface(rel.Model())
+					obj = attrs.NewObject[attrs.Definer](rel.Model())
 				}
 
 				// only set fk relations - the rest are added later

@@ -5,10 +5,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Nigel2392/go-django/djester/quest"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/queries/src/models"
-	"github.com/Nigel2392/go-django/queries/src/quest"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 

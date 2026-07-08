@@ -5,14 +5,18 @@ use (
 	./cmd/go-django
 	./cmd/go-django-definitions
 	./cmd/migrator
+	./djester
 	./examples/blogapp
 	./examples/chocolaterie
 	./examples/formsapp
 	./examples/openauth2app
 	./examples/server_errors
 	./examples/todoapp
+	./examples/views
 	./pkg/yml
 	./queries
 )
 
 replace google.golang.org/genproto/googleapis/rpc => google.golang.org/genproto v0.0.0-20230110181048-76db0878b65f
+
+// replace github.com/Nigel2392/go-django/djester => ./djester

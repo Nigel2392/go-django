@@ -5,7 +5,6 @@ import (
 	"iter"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -84,7 +83,7 @@ type seenObject struct {
 func newRows[T attrs.Definer](qs *QuerySet[T], forEach func(attrs.Definer) error) (*rows[T], error) {
 	var seen = make(map[string]struct{}, 0)
 	var fields = qs.internals.Fields
-	var model = internal.NewObjectFromIface(qs.internals.Model.Object)
+	var model = attrs.NewObject[T](qs.internals.Model.Object)
 	var scannables = getScannableFields(
 		fields, model,
 	)

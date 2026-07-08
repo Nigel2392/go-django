@@ -8,7 +8,7 @@ import (
 	"reflect"
 	"strings"
 
-	"github.com/Nigel2392/go-django/queries/internal"
+	"github.com/Nigel2392/go-django/internal/sets"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -1023,7 +1023,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	}
 
 	// check if anything has changed,
-	var fields = internal.NewSet(cnf.fields()...)
+	var fields = sets.NewSet(cnf.fields()...)
 	if m.internals.state == nil && m.internals.fromDB && !cnf.Force() && len(fields) == 0 {
 		// if the model was loaded from the database and no fields have changed and the state is nil,
 		// we can skip saving

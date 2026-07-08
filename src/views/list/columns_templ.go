@@ -5,12 +5,17 @@ package list
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
 	"context"
 	"fmt"
+	"html/template"
+	"maps"
+	"net/http"
+	"reflect"
+	"strconv"
+	"time"
+
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -19,14 +24,8 @@ import (
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/Nigel2392/go-django/src/forms/media"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
-	"html/template"
-	"maps"
-	"net/http"
-	"reflect"
-	"strconv"
-	"time"
-
-	"github.com/Nigel2392/go-django/src/internal/django_reflect"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
 )
 
 func input(typ string, name string, value any, atts map[string]any) templ.Component {

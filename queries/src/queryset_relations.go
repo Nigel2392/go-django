@@ -3,8 +3,8 @@ package queries
 import (
 	"context"
 	"fmt"
+	"reflect"
 
-	"github.com/Nigel2392/go-django/queries/internal"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -80,11 +80,11 @@ func (t *relatedQuerySet[T, T2]) setup() {
 	var (
 		condition *JoinDefCondition
 
-		newTargetObj     = internal.NewObjectFromIface(t.rel.Model())
+		newTargetObj     = attrs.NewObject[T](t.rel.Model())
 		newTargetObjDefs = newTargetObj.FieldDefs()
 
 		// probably should not use a queryset from the model's getqueryset method? right?
-		qs           = Objects(newTargetObj.(T))
+		qs           = Objects(newTargetObj)
 		throughModel = t.rel.Through()
 	)
 
@@ -261,7 +261,7 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 			ok          bool
 			sourceField attrs.Field
 			targetField attrs.Field
-			newInstance = internal.NewObjectFromIface(throughObj)
+			newInstance = attrs.NewObject[attrs.Definer](throughObj)
 			fieldDefs   = newInstance.FieldDefs()
 		)
 		if err != nil {
@@ -440,12 +440,28 @@ func (r *RelManyToManyQuerySet[T]) SetTargets(targets []T) (added int64, err err
 	return added, nil
 }
 
+func listUnpack(list ...any) []any {
+	var result = make([]any, 0, len(list))
+	for _, item := range list {
+		var rVal = reflect.ValueOf(item)
+		switch rVal.Kind() {
+		case reflect.Slice, reflect.Array:
+			for j := 0; j < rVal.Len(); j++ {
+				result = append(result, listUnpack(rVal.Index(j).Interface())...)
+			}
+		default:
+			result = append(result, item)
+		}
+	}
+	return result
+}
+
 func (r *RelManyToManyQuerySet[T]) RemoveTargets(targets ...any) (int64, error) {
 	if r.backRef == nil {
 		return 0, fmt.Errorf("back reference is nil, cannot remove targets")
 	}
 
-	targets = internal.ListUnpack(targets)
+	targets = listUnpack(targets)
 
 	var (
 		pkValues = make([]any, 0, len(targets))

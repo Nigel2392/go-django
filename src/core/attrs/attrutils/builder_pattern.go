@@ -3,8 +3,8 @@ package attrutils
 import (
 	"reflect"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
-	"github.com/Nigel2392/go-django/src/internal/django_reflect"
 )
 
 var __error_type = reflect.TypeOf((*error)(nil)).Elem()

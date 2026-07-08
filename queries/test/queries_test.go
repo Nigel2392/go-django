@@ -7,17 +7,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Nigel2392/go-django/queries/internal"
+	"github.com/Nigel2392/go-django/djester/quest"
+	"github.com/Nigel2392/go-django/djester/testdb"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/queries/src/models"
-	"github.com/Nigel2392/go-django/queries/src/quest"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/Nigel2392/go-django/src/djester/testdb"
 	"github.com/Nigel2392/go-django/src/forms/widgets"
 	"github.com/jmoiron/sqlx"
 )
@@ -25,13 +24,13 @@ import (
 func selectTodo(db drivers.Database) string {
 	const query = `SELECT id, title, description, done, user_id FROM %s%s%s WHERE id = ?`
 	var quote = "`"
-	switch internal.SqlxDriverName(db) {
+	switch queries.SqlxDriverName(db) {
 	case "mysql", "mariadb", "sqlite3":
 		quote = "`"
 	case "postgres":
 		quote = "\""
 	}
-	return sqlx.Rebind(sqlx.BindType(internal.SqlxDriverName(db)), fmt.Sprintf(query, quote, "queries-todos", quote))
+	return sqlx.Rebind(sqlx.BindType(queries.SqlxDriverName(db)), fmt.Sprintf(query, quote, "queries-todos", quote))
 }
 
 type Image struct {

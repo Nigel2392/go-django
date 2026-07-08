@@ -1,7 +1,7 @@
 package fields
 
 import (
-	"github.com/Nigel2392/go-django/src/internal/django_reflect"
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 )
 
 // For compatibility purposes this function stays defined here.

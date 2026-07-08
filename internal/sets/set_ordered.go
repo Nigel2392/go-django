@@ -1,4 +1,4 @@
-package internal
+package sets
 
 var _ Set[any] = (*OrderedSet[any])(nil)
 
