@@ -136,8 +136,8 @@ func (b *MultiWidget) GetContextData(widgetCtx context.Context, id string, name 
 	var valMap, ok = value.(map[string]interface{})
 	if !ok && value != nil {
 		assert.Fail(
-			"unexpected value type %T, multi-widget only supports map[string]interface{} and nil",
-			value,
+			"unexpected value type received '%T' %v, multi-widget only supports map[string]interface{} and nil",
+			value, value,
 		)
 	}
 
@@ -162,7 +162,7 @@ func (b *MultiWidget) RenderWithErrors(c context.Context, w io.Writer, id, name 
 	var valMap, ok = value.(map[string]interface{})
 	if !ok && value != nil {
 		return fmt.Errorf(
-			"unexpected value type %T (%v), multi-widget only supports map[string]interface{} and nil",
+			"unexpected value type '%T' (%v), multi-widget only supports map[string]interface{} and nil",
 			value, value,
 		)
 	}
@@ -185,7 +185,12 @@ func (b *MultiWidget) RenderWithErrors(c context.Context, w io.Writer, id, name 
 		)
 
 		w.Write([]byte(`<div class="multi-widget-field">`))
-		w.Write([]byte(fmt.Sprintf("<label for=\"%s\">%s</label>", id, head.Value.Field().Label(c))))
+
+		var field = head.Value.Field()
+		if field != nil {
+			w.Write([]byte(fmt.Sprintf("<label for=\"%s\">%s</label>", id, field.Label(c))))
+		}
+
 		if err := head.Value.RenderWithErrors(c, w, id, name, valMap[head.Key], errors, attrs, widgetContext); err != nil {
 			return err
 		}
