@@ -186,6 +186,10 @@ func (f *BaseForm) BoundFields() *orderedmap.OrderedMap[string, BoundField] {
 		)
 		if !ok {
 			widget = v.Widget()
+		} else {
+			// set the widget in case it was overwritten
+			// otherwise valuetoform might return the wrong widget type.
+			v.SetWidget(widget)
 		}
 
 		var value = f.FormValue(k)
