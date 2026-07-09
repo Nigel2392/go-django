@@ -42,6 +42,17 @@ type (
 		AfterExec(res any) error
 	}
 	QuerySetCanClone[T any, CONV any, ORIG NullQuerySet[T, ORIG]] interface {
+		/*
+			Your custom queryset must implement the following method to preserve immutability across the queryset.
+			this is **REQUIRED**.
+
+			func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) CloneQuerySet(wrapped *queries.WrappedQuerySet[ORIGINAL, *SpecificQuerySet[ORIGINAL, SPECIFIC, QS], QS]) *SpecificQuerySet[ORIGINAL, SPECIFIC, QS] {
+				return &SpecificQuerySet[ORIGINAL, SPECIFIC, QS]{
+					WrappedQuerySet: wrapped,
+					opts:            qs.opts,
+				}
+			}
+		*/
 		CloneQuerySet(*WrappedQuerySet[T, CONV, ORIG]) CONV
 	}
 )

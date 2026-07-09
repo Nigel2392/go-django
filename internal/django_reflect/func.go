@@ -429,8 +429,8 @@ func callConvertedFunc(dstFnTyp reflect.Type, srcFnVal reflect.Value, convertedA
 
 		// continue to convert the results as normal
 	default:
-		assert.Fail(errors.Wrapf(
-			ErrReturnCount, "function must return the same number of values as the output function (%v), got %v",
+		assert.Fail(ErrReturnCount.Wrapf(
+			"function must return the same number of values as the output function (%v), got %v",
 			numOutDst, numOutSrc,
 		))
 	}
@@ -442,8 +442,7 @@ func callConvertedFunc(dstFnTyp reflect.Type, srcFnVal reflect.Value, convertedA
 
 		var cnvrted, ok = convertType(currType, typ, curr)
 		if !ok {
-			assert.Fail(errors.Wrapf(
-				ErrReturnCount,
+			assert.Fail(ErrReturnCount.Wrapf(
 				"function return value %v is not convertible to %v",
 				currType, typ,
 			))

@@ -815,9 +815,16 @@ func (r *rows[T]) buildChainParts(actualField *scannableField) []chainPart {
 				```
 			*/
 
-			panic(fmt.Sprintf(
-				"cannot build chain part for field %s with zero primary key in ManyToMany or OneToMany relation", cur.chainKey,
-			))
+			/*
+				!!!!!!!!!!!!!!
+				this relation is not present. we can safely continue.
+				!!!!!!!!!!!!!!
+			*/
+			// panic(fmt.Sprintf(
+			// "cannot build chain part for field %s with zero primary key in ManyToMany or OneToMany relation", cur.chainKey,
+			// ))
+
+			continue
 		}
 
 		stack = append(stack, chainPart{
