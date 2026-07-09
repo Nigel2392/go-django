@@ -16,10 +16,25 @@ import (
 	"github.com/Nigel2392/go-django/src/core/trans"
 	"github.com/Nigel2392/go-django/src/forms"
 	"github.com/Nigel2392/go-django/src/forms/fields"
+	"github.com/Nigel2392/go-signals"
 	"github.com/Nigel2392/mux"
 )
 
-var _ forms.Form = (*BaseUserForm)(nil)
+type FormSignal struct {
+	Form        forms.Form
+	Request     *http.Request
+	CleanedData map[string]any
+	Config      RegisterFormConfig
+}
+
+var (
+	_formSignalPool = signals.NewPool[*FormSignal]()
+
+	SignalPreValidateLogonField  = _formSignalPool.Get("auth.form.prevalidate")
+	SignalPostValidateLogonField = _formSignalPool.Get("auth.form.postvalidate")
+
+	_ forms.Form = (*BaseUserForm)(nil)
+)
 
 const postMethod = mux.POST
 
@@ -216,6 +231,18 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 	})
 
 	f.SetValidators(func(f forms.Form, cleaned map[string]any) []error {
+
+		var fsig = FormSignal{
+			Form:        f,
+			Request:     r,
+			CleanedData: cleaned,
+			Config:      registerConfig,
+		}
+
+		if err := SignalPreValidateLogonField.Send(&fsig); err != nil {
+			return []error{err}
+		}
+
 		var (
 			ctx      = f.Context()
 			err      error
@@ -261,6 +288,11 @@ func UserRegisterForm(r *http.Request, registerConfig RegisterFormConfig, formOp
 				)}
 			}
 		}
+
+		if err := SignalPostValidateLogonField.Send(&fsig); err != nil {
+			return []error{err}
+		}
+
 		return nil
 	})
 
