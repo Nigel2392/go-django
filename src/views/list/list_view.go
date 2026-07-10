@@ -34,6 +34,8 @@ type View[T attrs.Definer] struct {
 	TemplateName     string
 	AmountParam      string
 	PageParam        string
+	OrderParam       string
+	OrderableColumns []string
 	MaxAmount        int
 	DefaultAmount    int
 	ListColumns      []ListColumn[T]
@@ -81,6 +83,27 @@ func (v *View[T]) TakeControl(w http.ResponseWriter, r *http.Request, view views
 				v.onError(w, r, err)
 				return
 			}
+		}
+	}
+
+	orderParam := v.OrderParam
+	if orderParam == "" {
+		orderParam = "order"
+	}
+	orderValues := r.URL.Query()[orderParam]
+	if len(orderValues) > 0 {
+		var validOrders []string
+		for _, orderValue := range orderValues {
+			var checkVal = orderValue
+			if checkVal != "" && checkVal[0] == '-' {
+				checkVal = checkVal[1:]
+			}
+			if slices.Contains(v.OrderableColumns, checkVal) {
+				validOrders = append(validOrders, orderValue)
+			}
+		}
+		if len(validOrders) > 0 {
+			qs = qs.OrderBy(validOrders...)
 		}
 	}
 
@@ -188,6 +211,8 @@ func (v *View[T]) Clone() *View[T] {
 		TemplateName:     v.TemplateName,
 		AmountParam:      v.AmountParam,
 		PageParam:        v.PageParam,
+		OrderParam:       v.OrderParam,
+		OrderableColumns: slices.Clone(v.OrderableColumns),
 		MaxAmount:        v.MaxAmount,
 		DefaultAmount:    v.DefaultAmount,
 		ListColumns:      slices.Clone(v.ListColumns),
@@ -247,6 +272,17 @@ func (v *View[T]) GetListColumns(r *http.Request) ([]ListColumn[T], error) {
 	var cols = slices.Clone(v.ListColumns)
 	if v.TitleFieldColumn != nil && len(cols) > 0 {
 		cols[0] = v.TitleFieldColumn(cols[0])
+	}
+
+	orderParam := v.OrderParam
+	if orderParam == "" {
+		orderParam = "order"
+	}
+
+	for i, col := range cols {
+		if slices.Contains(v.OrderableColumns, col.FieldName()) {
+			cols[i] = OrderableColumn(col, orderParam)
+		}
 	}
 
 	return cols, nil

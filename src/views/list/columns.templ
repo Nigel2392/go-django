@@ -511,6 +511,97 @@ func TitleFieldColumn[T attrs.Definer](wraps ListColumn[T], getURL func(r *http.
 	}
 }
 
+type orderableColumn[T attrs.Definer] struct {
+	ListColumn[T]
+	orderParam string
+}
+
+templ (c *orderableColumn[T]) Header(r *http.Request) {
+	{{
+		var currentOrders = r.URL.Query()[c.orderParam]
+		var fieldName = c.FieldName()
+		var newOrders []string
+		var currentOrderForField = ""
+		
+		for _, order := range currentOrders {
+			switch order {
+			case fieldName:
+				currentOrderForField = fieldName
+			case "-" + fieldName:
+				currentOrderForField = "-" + fieldName
+			default:
+				newOrders = append(newOrders, order)
+			}
+		}
+		
+		switch currentOrderForField {
+		case "-" + fieldName:
+		case fieldName:
+			newOrders = append(newOrders, "-" + fieldName)
+		default:
+				newOrders = append(newOrders, fieldName)
+		}
+		
+		var q = r.URL.Query()
+		q.Del(c.orderParam)
+		for _, order := range newOrders {
+			q.Add(c.orderParam, order)
+		}
+		
+		var url = r.URL.Path + "?" + q.Encode()
+	}}
+	<a href={ templ.SafeURL(url) } class="list-orderable-header" style="text-decoration: none; color: inherit; cursor: pointer; display: inline-flex; align-items: center; gap: 0.25rem;">
+		@c.ListColumn.Header(r)
+		if currentOrderForField == fieldName {
+			<span class="list-order-icon list-order-icon-asc" style="font-size: 0.7em;">&#9650;</span>
+		} else if currentOrderForField == "-" + fieldName {
+			<span class="list-order-icon list-order-icon-desc" style="font-size: 0.7em;">&#9660;</span>
+		} else {
+			<span class="list-order-icon list-order-icon-none" style="font-size: 0.7em; opacity: 0.3;">&#9650;&#9660;</span>
+		}
+	</a>
+}
+
+func OrderableColumn[T attrs.Definer](wraps ListColumn[T], orderParam string) ListColumn[T] {
+	return &orderableColumn[T]{
+		ListColumn: wraps,
+		orderParam: orderParam,
+	}
+}
+
+func (c *orderableColumn[T]) Attributes(r *http.Request, defs attrs.Definitions, row T, colIndex, colCount int) map[string]any {
+	return c.ListColumn.Attributes(r, defs, row, colIndex, colCount)
+}
+
+func (c *orderableColumn[T]) FieldName() string {
+	return c.ListColumn.FieldName()
+}
+
+func (c *orderableColumn[T]) FormField(r *http.Request, row T) fields.Field {
+	if ef, ok := c.ListColumn.(ListEditableColumn[T]); ok {
+		return ef.FormField(r, row)
+	}
+	return nil
+}
+
+func (c *orderableColumn[T]) EditableComponent(r *http.Request, defs attrs.Definitions, row T, form forms.Form, field *forms.BoundFormField) templ.Component {
+	if ef, ok := c.ListColumn.(ListEditableColumn[T]); ok {
+		return ef.EditableComponent(r, defs, row, form, field)
+	}
+	return nil
+}
+
+func (c *orderableColumn[T]) Media(defs attrs.StaticDefinitions) media.Media {
+	if mf, ok := c.ListColumn.(ListMediaColumn); ok {
+		return mf.Media(defs)
+	}
+	return nil
+}
+
+templ (c *orderableColumn[T]) Component(r *http.Request, defs attrs.Definitions, row T) {
+	@c.ListColumn.Component(r, defs, row)
+}
+
 type htmlColumn[T attrs.Definer] struct {
 	*fieldColumn[T, any]
 	getHTML func(r *http.Request, defs attrs.Definitions, row T) template.HTML
