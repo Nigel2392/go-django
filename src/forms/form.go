@@ -326,8 +326,17 @@ func (f *BaseForm) PrefixName(name string) string {
 	return fmt.Sprintf("%s-%s", prefix, name)
 }
 
+func (f *BaseForm) clearValidationState() {
+	f.Raw = nil
+	f.Errors = nil
+	f.ErrorList_ = nil
+	f.InvalidDefaults = nil
+	f.Files = nil
+	f.Cleaned = nil
+}
+
 func (f *BaseForm) WithData(data url.Values, files map[string][]filesystem.FileHeader, r *http.Request) {
-	f.Reset()
+	f.clearValidationState()
 	f.Raw = data
 	f.Files = files
 	f.setup()
