@@ -6,7 +6,6 @@ package djester
 import (
 	"fmt"
 	"reflect"
-	"testing"
 )
 
 type Assertion interface {
@@ -20,7 +19,7 @@ type Assertion interface {
 }
 
 type assertion struct {
-	t       *testing.T
+	t       TB
 	verbose bool
 }
 

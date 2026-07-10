@@ -6,6 +6,7 @@ package django
 import (
 	goErrs "errors"
 	"net/http"
+	"net/http/cookiejar"
 	"net/http/httptest"
 
 	"github.com/Nigel2392/goldcrest"
@@ -22,7 +23,12 @@ type HTTPTestServer struct {
 }
 
 func (s *HTTPTestServer) Client() *HTTPTestClient {
-	return &HTTPTestClient{s.Server.Client(), s}
+	var cli = &HTTPTestClient{s.Server.Client(), s}
+	if cli.Jar == nil {
+		var jar, _ = cookiejar.New(&cookiejar.Options{})
+		cli.Jar = jar
+	}
+	return cli
 }
 
 func (a *Application) TestServe(autoStart bool) (*HTTPTestServer, error) {

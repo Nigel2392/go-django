@@ -5,15 +5,21 @@ package djester
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"maps"
+	"net/http"
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/apps"
+	"github.com/Nigel2392/go-django/src/core"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/mux"
+	"github.com/Nigel2392/mux/middleware/authentication"
+	"github.com/Nigel2392/mux/middleware/sessions"
 )
 
 /*
@@ -27,8 +33,62 @@ import (
 */
 
 const (
+	USER_SESSION_VAR             = "djester.session.user"
 	ErrNoResponseBody errs.Error = "operation failed: no response body"
 )
+
+type TB interface {
+	Cleanup(f func())
+	Context() context.Context
+	Error(args ...any)
+	Errorf(format string, args ...any)
+	Fail()
+	FailNow()
+	Failed() bool
+	Fatal(args ...any)
+	Fatalf(format string, args ...any)
+	Helper()
+	Log(args ...any)
+	Logf(format string, args ...any)
+	Run(name string, f func(TB)) bool
+	Skip(args ...any)
+	SkipNow()
+	Skipf(format string, args ...any)
+	Skipped() bool
+	TempDir() string
+}
+
+type tWrap struct {
+	*testing.T
+}
+
+func TW(t *testing.T) TB {
+	return &tWrap{t}
+}
+
+func (t *tWrap) Run(name string, f func(TB)) bool {
+	t.Helper()
+	return t.T.Run(name, func(nt *testing.T) {
+		t.Helper()
+		f(&tWrap{nt})
+	})
+}
+
+type bWrap struct {
+	*testing.B
+}
+
+func BW(b *testing.B) TB {
+	return &bWrap{b}
+}
+
+func (t *bWrap) Run(name string, f func(TB)) bool {
+	t.Helper()
+	return t.B.Run(name, func(nt *testing.B) {
+		t.Helper()
+		f(&bWrap{nt})
+	})
+}
 
 type (
 	AppInitFuncOrAppConfig interface{}
@@ -42,10 +102,15 @@ type (
 		Route   string
 		Handler mux.Handler
 	}
+	TesterAuth struct {
+		UnauthenticatedUser func() authentication.User
+		Users               map[string]authentication.User
+	}
 	Tester struct {
 		Verbose      bool
 		BeforeSetup  func(dj *Tester) error
 		Database     Database
+		Auth         *TesterAuth
 		Flags        []django.AppFlag
 		Settings     map[string]any
 		ExtraOptions []django.Option
@@ -63,10 +128,13 @@ type (
 		app        *django.Application
 		testClient *django.HTTPTestClient
 		testServer *django.HTTPTestServer
+		test       TB
 	}
 )
 
-func (d *Tester) Setup() error {
+func (d *Tester) Setup(t TB) error {
+
+	d.test = t
 
 	if d.BeforeSetup != nil {
 		if err := d.BeforeSetup(d); err != nil {
@@ -135,6 +203,20 @@ func (d *Tester) Setup() error {
 		return err
 	}
 
+	if d.Auth != nil {
+		if !django.AppInstalled("session") {
+			t.Fatal("cannot initialize authentication without app 'session'")
+		}
+
+		d.app.Mux.Use(
+			authentication.AddUserMiddleware(d.getUserFromRequest),
+		)
+
+		var djester = d.app.Mux.Get("/djester/auth", nil, "djester")
+		djester.Post("/login/<<map_key>>", mux.NewHandler(d.loginHandler), "login")
+		djester.Post("/logout", mux.NewHandler(d.logoutHandler), "logout")
+	}
+
 	var server, err = d.app.TestServe(true)
 	if err != nil {
 		return err
@@ -142,6 +224,7 @@ func (d *Tester) Setup() error {
 
 	d.testServer = server
 	d.testClient = server.Client()
+
 	return nil
 }
 
@@ -155,6 +238,119 @@ func (d *Tester) Client() *django.HTTPTestClient {
 
 func (d *Tester) DB() drivers.Database {
 	return d.db
+}
+
+func (d *Tester) getUserFromRequest(r *http.Request) authentication.User {
+	var session = sessions.Retrieve(r)
+	var iuserKey = session.Get(USER_SESSION_VAR)
+	if iuserKey == nil {
+		return d.Auth.UnauthenticatedUser()
+	}
+
+	userKey, ok := iuserKey.(string)
+	if !ok {
+		d.test.Fatalf("userKey has wrong type %T", userKey)
+	}
+
+	user, ok := d.Auth.Users[userKey]
+	if !ok {
+		d.test.Fatalf("userKey %q not present in Auth object", userKey)
+	}
+
+	return user
+}
+
+func writeAuthResponse(w http.ResponseWriter, r authResponse) error {
+	var enc = json.NewEncoder(w)
+	return enc.Encode(r)
+}
+
+const (
+	AUTH_SESSION_NIL  = "[djester.auth.missing.session]"
+	AUTH_USER_MISSING = "[djester.auth.missing]"
+	AUTH_ERROR        = "[djester.auth.error]"
+)
+
+func (d *Tester) loginHandler(w http.ResponseWriter, r *http.Request) {
+	var session = sessions.Retrieve(r)
+	if session == nil {
+		writeAuthResponse(w, authResponse{
+			Success: false,
+			Message: AUTH_SESSION_NIL,
+		})
+		return
+	}
+
+	var err = session.RenewToken()
+	if err != nil {
+		writeAuthResponse(w, authResponse{
+			Success: false,
+			Message: fmt.Sprintf("%s: %s", AUTH_ERROR, err.Error()),
+		})
+		return
+	}
+
+	userKey := mux.Vars(r).Get("map_key")
+	u, ok := d.Auth.Users[userKey]
+	if !ok {
+		writeAuthResponse(w, authResponse{
+			Success: false,
+			Message: AUTH_USER_MISSING,
+		})
+		return
+	}
+
+	session.Set(USER_SESSION_VAR, userKey)
+
+	if definer, ok := u.(interface {
+		authentication.User
+		attrs.Definer
+	}); ok {
+		core.SIGNAL_USER_LOGGED_IN.Send(core.UserWithRequest{
+			User: definer,
+			Req:  r,
+		})
+	}
+
+	writeAuthResponse(w, authResponse{
+		Success: true,
+	})
+}
+
+func (d *Tester) logoutHandler(w http.ResponseWriter, r *http.Request) {
+	var session = sessions.Retrieve(r)
+	// except.Assert(session != nil, 500, "session is nil")
+	if session == nil {
+		writeAuthResponse(w, authResponse{
+			Success: false,
+			Message: AUTH_SESSION_NIL,
+		})
+		return
+	}
+
+	if err := session.Destroy(); err != nil {
+		writeAuthResponse(w, authResponse{
+			Success: false,
+			Message: fmt.Sprintf("%s: %s", AUTH_ERROR, err.Error()),
+		})
+		return
+	}
+
+	err := core.SIGNAL_USER_LOGGED_OUT.Send(core.UserWithRequest{
+		User: nil,
+		Req:  r,
+	})
+	if err != nil {
+		writeAuthResponse(w, authResponse{
+			Success: false,
+			Message: fmt.Sprintf("%s: %s", AUTH_ERROR, err.Error()),
+		})
+		return
+	}
+
+	writeAuthResponse(w, authResponse{
+		Success: true,
+	})
 }
 
 func (d *Tester) Close() error {
@@ -174,13 +370,13 @@ func (d *Tester) Close() error {
 	return nil
 }
 
-func (d *Tester) Assert(t *testing.T, verbose bool) Assertion {
-	return &assertion{t: t, verbose: verbose}
+func (d *Tester) Assert(verbose bool) Assertion {
+	return &assertion{t: d.test, verbose: verbose}
 }
 
 func (d *Tester) Test(t *testing.T) {
 	t.Helper()
-	if err := d.Setup(); err != nil {
+	if err := d.Setup(TW(t)); err != nil {
 		t.Errorf("failed to setup djester tests: %v", err)
 		return
 	}
@@ -192,9 +388,10 @@ func (d *Tester) Test(t *testing.T) {
 }
 
 func (d *Tester) Bench(b *testing.B) {
+	b.Helper()
 	b.StopTimer()
 	b.ResetTimer()
-	if err := d.Setup(); err != nil {
+	if err := d.Setup(BW(b)); err != nil {
 		b.Errorf("failed to setup djester tests: %v", err)
 		return
 	}

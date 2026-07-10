@@ -15,6 +15,8 @@ import (
 	url_URL "net/url"
 	"os"
 	"reflect"
+
+	django "github.com/Nigel2392/go-django/src"
 )
 
 func (d *Tester) makeRequest(method string, url string, headers http.Header, params url.Values, body io.Reader, extra func(r *http.Request) error) (*TestResponse, error) {
@@ -23,7 +25,9 @@ func (d *Tester) makeRequest(method string, url string, headers http.Header, par
 		return nil, err
 	}
 	baseURL.Path = url
-	baseURL.RawQuery = params.Encode()
+	if params != nil {
+		baseURL.RawQuery = params.Encode()
+	}
 
 	req, err := http.NewRequest(
 		method, baseURL.String(), body,
@@ -191,4 +195,53 @@ func (d *Tester) PostFile(url string, headers http.Header, params url.Values, fi
 
 func (d *Tester) PostJson(url string, headers http.Header, params url.Values, body any, scanTo any) (*TestResponse, error) {
 	return d.makeJsonRequest(http.MethodPost, url, headers, params, body, scanTo)
+}
+
+type authResponse struct {
+	Success bool   `json:"success"`
+	Message string `json:"message"`
+}
+
+func (d *Tester) Login(userKey string) (*TestResponse, error) {
+	resp, err := d.makeRequest(http.MethodPost, django.Reverse("djester:login", userKey), nil, nil, nil, nil)
+	if err != nil {
+		return resp, err
+	}
+
+	var ar = new(authResponse)
+	err = resp.JSON(ar)
+	if err != nil {
+		return resp, err
+	}
+
+	switch {
+	case !ar.Success && ar.Message != "":
+		return resp, fmt.Errorf("Failed to log in user %q: %s", userKey, ar.Message)
+	case !ar.Success:
+		return resp, fmt.Errorf("Failed to log in user %q", userKey)
+	}
+
+	return resp, nil
+}
+
+func (d *Tester) Logout() (*TestResponse, error) {
+	resp, err := d.makeRequest(http.MethodPost, django.Reverse("djester:logout"), nil, nil, nil, nil)
+	if err != nil {
+		return resp, err
+	}
+
+	var ar = new(authResponse)
+	err = resp.JSON(ar)
+	if err != nil {
+		return resp, err
+	}
+
+	switch {
+	case !ar.Success && ar.Message != "":
+		return resp, fmt.Errorf("Failed to log out user: %s", ar.Message)
+	case !ar.Success:
+		return resp, fmt.Errorf("Failed to log out user: success: %t", ar.Success)
+	}
+
+	return resp, nil
 }

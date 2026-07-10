@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
-	"testing"
 
 	"github.com/PuerkitoBio/goquery"
 )
@@ -34,10 +33,10 @@ func (t *TestResponse) setupBuffer() (err error) {
 	return t.Response.Body.Close()
 }
 
-func (r *TestResponse) Assert(t *testing.T, verbose bool) ResponseAssertion {
+func (r *TestResponse) Assert(verbose bool) ResponseAssertion {
 	return &responseAssertion{
 		assertion: assertion{
-			t:       t,
+			t:       r.t.test,
 			verbose: verbose,
 		},
 		response: r,

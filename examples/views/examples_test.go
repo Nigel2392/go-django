@@ -102,7 +102,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "DetailView",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Get("/detail/1", nil, nil)
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					b, _ := io.ReadAll(resp.Body)
@@ -114,7 +114,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "ListView",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Get("/list", nil, nil)
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					b, _ := io.ReadAll(resp.Body)
@@ -126,7 +126,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "ListViewColumns",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Get("/list_cols", nil, nil)
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					b, _ := io.ReadAll(resp.Body)
@@ -138,7 +138,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "CreateView GET",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Get("/create", nil, nil)
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					b, _ := io.ReadAll(resp.Body)
@@ -150,7 +150,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "CreateView POST",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.PostForm("/create", nil, nil, map[string]interface{}{"title": "New Todo"})
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					assert.Assert(strings.HasSuffix(resp.Request.URL.Path, "/todos"), "expected redirect to /todos, got %s", resp.Request.URL.Path)
@@ -160,7 +160,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "UpdateView GET",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Get("/update/1", nil, nil)
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					b, _ := io.ReadAll(resp.Body)
@@ -172,7 +172,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "UpdateView POST",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.PostForm("/update/1", nil, nil, map[string]interface{}{"title": "Updated Todo"})
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					assert.Assert(strings.HasSuffix(resp.Request.URL.Path, "/todos"), "expected redirect to /todos, got %s", resp.Request.URL.Path)
@@ -182,7 +182,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "DeleteView GET",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Get("/delete/1", nil, nil)
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					b, _ := io.ReadAll(resp.Body)
@@ -194,7 +194,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "DeleteView POST",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Post("/delete/1", nil, nil, strings.NewReader(""))
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					assert.Assert(strings.HasSuffix(resp.Request.URL.Path, "/todos"), "expected redirect to /todos, got %s", resp.Request.URL.Path)
@@ -204,7 +204,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "FormView GET",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Get("/form", nil, nil)
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					b, _ := io.ReadAll(resp.Body)
@@ -216,7 +216,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "FormView POST",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.PostForm("/form", nil, nil, map[string]interface{}{"email": "test@test.com", "message": "hello"})
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					assert.Assert(strings.HasSuffix(resp.Request.URL.Path, "/contact/success"), "expected redirect to /contact/success, got %s", resp.Request.URL.Path)
@@ -226,7 +226,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "TemplateView",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Get("/about", nil, nil)
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					b, _ := io.ReadAll(resp.Body)
@@ -238,7 +238,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "ErrorView",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Get("/trigger_error", nil, nil)
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(500, resp.StatusCode)
 					b, _ := io.ReadAll(resp.Body)
@@ -250,7 +250,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "JSONView",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Get("/json", nil, nil)
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					b, _ := io.ReadAll(resp.Body)
@@ -262,7 +262,7 @@ func TestExampleViews(t *testing.T) {
 				Label: "RedirectView",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Get("/redirect", nil, nil)
-					assert := d.Assert(t, true)
+					assert := d.Assert(true)
 					assert.AssertNil(err)
 					assert.AssertEqual(http.StatusOK, resp.StatusCode)
 					assert.Assert(strings.HasSuffix(resp.Request.URL.Path, "/new-route"), "expected redirect to /new-route, got %s", resp.Request.URL.Path)
