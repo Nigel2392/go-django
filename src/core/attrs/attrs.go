@@ -81,7 +81,7 @@ func init() {
 //   - For pointers it checks if the pointer is nil
 //     or if the value it points to is a zero value.
 func IsZero(value interface{}) bool {
-	var rv = reflect.ValueOf(value)
+	var rv = django_reflect.ReflectValue(value)
 	return django_reflect.IsZero(value) && rv.Kind() != reflect.Bool && rv.Kind() != reflect.String
 }
 

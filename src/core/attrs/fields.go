@@ -31,7 +31,26 @@ var (
 	ALLOW_METHOD_CHECKS = false // Whether to allow method checks for getters and setters
 
 	_ Field = (*FieldDef)(nil) // Ensure FieldDef implements the Field interface
+
+	_modelFields = make(map[reflect.Type]map[string][]func(*FieldConfig))
 )
+
+func RegisterConfigChange(model Definer, field string, change func(*FieldConfig)) {
+	rt := reflect.TypeOf(model)
+	fm, ok := _modelFields[rt]
+	if !ok {
+		fm = make(map[string][]func(*FieldConfig))
+		_modelFields[rt] = fm
+	}
+
+	fs, ok := fm[field]
+	if !ok {
+		fs = make([]func(*FieldConfig), 0)
+	}
+
+	fs = append(fs, change)
+	fm[field] = fs
+}
 
 func GetFromAttributes[T any](attrMap map[string]any, key string) (T, bool) {
 	var n T
@@ -130,6 +149,14 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 	}
 	if len(conf) > 0 && conf[0] != nil {
 		cnf = conf[0]
+	}
+
+	fm, ok := _modelFields[instance_t_ptr]
+	if ok {
+		fs, _ := fm[name]
+		for _, fn := range fs {
+			fn(cnf)
+		}
 	}
 
 	// setupFieldValue:
@@ -1100,7 +1127,6 @@ func (f *FieldDef) Scan(value any) error {
 }
 
 var _DRIVER_VALUE = reflect.TypeOf((*driver.Valuer)(nil)).Elem()
-var maxInt64 uint64 = 1<<63 - 1
 
 func (f *FieldDef) _driverValue(value any) (driver.Value, error) {
 	var v reflect.Value
