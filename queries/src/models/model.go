@@ -780,6 +780,15 @@ func (m *Model) Annotate(annotations map[string]any) {
 		m.Annotations = make(map[string]any)
 	}
 
+	for fieldName, value := range annotations {
+		f, ok := m.Defs().Field(fieldName)
+		if !ok {
+			continue
+		}
+
+		f.SetValue(value, true)
+	}
+
 	maps.Copy(m.Annotations, annotations)
 }
 
@@ -1278,7 +1287,7 @@ func (m *Model) DeleteObject(ctx context.Context) error {
 		)
 	}
 
-	_, err = queries.GetQuerySet(this).
+	_, err = queries.GetQuerySetWithContext(actor.Fake(ctx, queries.FlagActsAfterDelete), this).
 		Filter(where).
 		Delete()
 	if err != nil {
