@@ -146,7 +146,7 @@ func (v *BoundChooserFormPage[T]) Render(w http.ResponseWriter, req *http.Reques
 		)
 	}
 
-	if err := v.FormView.Render(writer, req, v.GetTemplate(req), context); err != nil {
+	if err := v.FormView.Render(writer, req, v.GetTemplates(req), context); err != nil {
 		return err
 	}
 

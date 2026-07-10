@@ -72,12 +72,25 @@ type TemplateGetter interface {
 	GetTemplate(req *http.Request) string
 }
 
+type TemplatesGetter interface {
+	// GetTemplate returns the template that will be rendered.
+	GetTemplates(req *http.Request) []string
+}
+
 type TemplateView interface {
 	View
 	ContextGetter
 	TemplateGetter
 	TemplateRenderer
 }
+
+type TemplatesView interface {
+	View
+	ContextGetter
+	TemplatesGetter
+	TemplatesRenderer
+}
+
 type TemplateKeyer interface {
 	// GetBaseKey returns the base key for the template.
 	GetBaseKey() string
@@ -104,6 +117,11 @@ type Renderer interface {
 type TemplateRenderer interface {
 	// Render renders the template with the given context.
 	Render(w http.ResponseWriter, req *http.Request, templateName string, context ctx.Context) error
+}
+
+type TemplatesRenderer interface {
+	// Render renders the template with the given context.
+	Render(w http.ResponseWriter, req *http.Request, templateName []string, context ctx.Context) error
 }
 
 type Checker interface {
@@ -233,7 +251,7 @@ func TryServeTemplateView(w http.ResponseWriter, req *http.Request, views []View
 	var (
 		err      error
 		baseKey  string
-		template string
+		template []string
 	)
 
 	// Render the template immediately if the view implements the Renderer interface.
@@ -245,8 +263,16 @@ func TryServeTemplateView(w http.ResponseWriter, req *http.Request, views []View
 
 	// Get the template if the view implements the TemplateView interface.
 	for _, view := range views {
+		if templateView, ok := view.(TemplatesGetter); ok {
+			template = templateView.GetTemplates(req)
+			break
+		}
 		if templateView, ok := view.(TemplateGetter); ok {
-			template = templateView.GetTemplate(req)
+			t := templateView.GetTemplate(req)
+			if t == "" {
+				continue
+			}
+			template = []string{t}
 			break
 		}
 	}
@@ -262,15 +288,18 @@ func TryServeTemplateView(w http.ResponseWriter, req *http.Request, views []View
 
 	// Render the template if the view implements the TemplateView interface.
 	for _, view := range views {
-		if templateView, ok := view.(TemplateRenderer); ok {
+		if templateView, ok := view.(TemplatesRenderer); ok {
 			return templateView.Render(w, req, template, context)
+		}
+		if templateView, ok := view.(TemplateRenderer); ok && len(template) == 1 {
+			return templateView.Render(w, req, template[0], context)
 		}
 	}
 
 	// Cannot render if there is no template.
 	// Developer error - HARD FAIL.
 	assert.False(
-		template == "" && baseKey == "",
+		len(template) == 0 && baseKey == "",
 		"Template and base key cannot be empty",
 	)
 
@@ -278,10 +307,12 @@ func TryServeTemplateView(w http.ResponseWriter, req *http.Request, views []View
 	// This has to be a switch statement
 	// because of the way the tpl package is designed.
 	switch {
-	case template != "" && baseKey != "":
-		err = tpl.FRender(w, context, baseKey, template)
-	case template != "":
-		err = tpl.FRender(w, context, template)
+	case len(template) > 0 && baseKey != "":
+		err = tpl.FRender(w, context, baseKey, template...)
+	case len(template) > 1:
+		err = tpl.FRender(w, context, template[0], template[1:]...)
+	case len(template) == 1:
+		err = tpl.FRender(w, context, template[0])
 	case baseKey != "":
 		err = tpl.FRender(w, context, baseKey)
 	default:

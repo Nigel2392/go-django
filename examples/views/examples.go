@@ -212,7 +212,7 @@ func (v *CustomErrorView) HandleError(w http.ResponseWriter, req *http.Request, 
 	c.Set("ErrorCode", code)
 	c.Set("ErrorMessage", err.Error())
 	w.WriteHeader(code)
-	_ = v.Render(w, req, v.TemplateName, c)
+	_ = v.Render(w, req, v.GetTemplates(req), c)
 }
 
 var GlobalErrorView = &CustomErrorView{

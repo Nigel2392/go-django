@@ -5,18 +5,52 @@ import (
 
 	"github.com/Nigel2392/go-django/src/core/ctx"
 	"github.com/Nigel2392/go-django/src/core/errs"
+	"github.com/Nigel2392/go-django/src/core/except"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/mux"
+)
+
+var (
+	_ View = (*BoundDetailView[any])(nil)
+
+	_ ControlledView = (*DetailView[any])(nil)
+	_ BindableView   = (*DetailView[any])(nil)
 )
 
 const (
 	ErrMissingArg errs.Error = "missing url argument or argument is empty"
 )
 
+type detailview__ObjectGetter[T any] interface {
+	GetObject(*http.Request, string) (T, error)
+}
+
+type detailview__ContextBinder[T any] interface {
+	BindContext(ctx.Context, T)
+}
+
+type BoundDetailView[T any] struct {
+	RW      http.ResponseWriter
+	RQ      *http.Request
+	View    DetailView[T]
+	Object  T
+	Context ctx.Context
+}
+
+func (b *BoundDetailView[T]) ServeXXX(http.ResponseWriter, *http.Request) {}
+
+func (b *BoundDetailView[T]) BindContext(c ctx.Context, obj T) {
+	b.Object = obj
+	b.Context = c
+}
+
 type DetailView[T any] struct {
 	BaseView
 	ContextName string
 	URLArgName  string
 	GetObjectFn func(req *http.Request, urlArg string) (T, error)
+	OnError     func(w http.ResponseWriter, r *http.Request, err error)
+	PostMethod  func(d *DetailView[T], w http.ResponseWriter, r *http.Request, bound View) (http.ResponseWriter, *http.Request)
 }
 
 func (d *DetailView[T]) Setup(w http.ResponseWriter, req *http.Request) (http.ResponseWriter, *http.Request) {
@@ -27,6 +61,15 @@ func (d *DetailView[T]) Setup(w http.ResponseWriter, req *http.Request) (http.Re
 		d.URLArgName = "primary"
 	}
 	return w, req
+}
+
+func (d *DetailView[T]) Bind(w http.ResponseWriter, req *http.Request) (View, error) {
+	var bound = &BoundDetailView[T]{
+		View: *d,
+		RW:   w,
+		RQ:   req,
+	}
+	return bound, nil
 }
 
 func (d *DetailView[T]) GetObject(req *http.Request, urlArg string) (v T, err error) {
@@ -45,22 +88,64 @@ func (d *DetailView[T]) GetURLArg(req *http.Request) (string, error) {
 	return urlArg, nil
 }
 
-func (d *DetailView[T]) GetContext(req *http.Request) (ctx.Context, error) {
-	context, err := d.BaseView.GetContext(req)
+func (v *DetailView[T]) TakeControl(w http.ResponseWriter, r *http.Request, view View) {
+	var err error
+errCheck:
 	if err != nil {
-		return nil, err
+		v.onError(w, r, err)
+		return
 	}
 
-	urlArg, err := d.GetURLArg(req)
+	urlArg, err := v.GetURLArg(r)
 	if err != nil {
-		return nil, err
+		goto errCheck
 	}
 
-	obj, err := d.GetObject(req, urlArg)
+	var object T
+	if getter, ok := view.(detailview__ObjectGetter[T]); ok {
+		object, err = getter.GetObject(r, urlArg)
+	} else {
+		object, err = v.GetObject(r, urlArg)
+	}
 	if err != nil {
-		return nil, err
+		goto errCheck
 	}
 
-	context.Set(d.ContextName, obj)
-	return context, nil
+	var viewCtx ctx.Context
+	if getter, ok := view.(ContextGetter); ok {
+		viewCtx, err = getter.GetContext(r)
+	} else {
+		viewCtx, err = v.GetContext(r)
+	}
+
+	viewCtx.Set(v.ContextName, object)
+
+	if binder, ok := view.(detailview__ContextBinder[T]); ok {
+		binder.BindContext(viewCtx, object)
+	}
+
+	if r.Method == http.MethodPost && v.PostMethod != nil {
+		w, r = v.PostMethod(v, w, r, view)
+		if w == nil || r == nil {
+			return
+		}
+	}
+
+	if err = TryServeTemplateView(w, r, []View{view, v}, viewCtx); err != nil {
+		v.onError(w, r, err)
+	}
+}
+
+func (v *DetailView[T]) onError(w http.ResponseWriter, r *http.Request, err error) {
+	logger.Errorf(
+		"Error while serving view: %v", err,
+	)
+	if v.OnError != nil {
+		v.OnError(w, r, err)
+	} else {
+		except.Fail(
+			http.StatusInternalServerError,
+			"Error while serving view: %v", err,
+		)
+	}
 }

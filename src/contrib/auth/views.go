@@ -104,7 +104,7 @@ checkFormErr:
 		any(form).(forms.ErrorAdder).AddFormError(err)
 	}
 	context.Set("Form", form)
-	return v.BaseView.Render(w, req, v.TemplateName, context)
+	return v.BaseView.Render(w, req, v.GetTemplates(req), context)
 
 formSuccess:
 	var nextURL = req.URL.Query().Get("next")

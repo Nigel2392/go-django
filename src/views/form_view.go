@@ -8,7 +8,7 @@ import (
 	"github.com/Nigel2392/go-django/src/forms"
 )
 
-var _ TemplateView = (*FormView[forms.Form])(nil)
+var _ TemplatesView = (*FormView[forms.Form])(nil)
 var _ Checker = (*FormView[forms.Form])(nil)
 
 type FormView[T forms.Form] struct {
@@ -83,7 +83,7 @@ func (v *FormView[T]) GetContext(req *http.Request) (ctx.Context, error) {
 	return context, nil
 }
 
-func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateName string, context ctx.Context) error {
+func (v *FormView[T]) Render(w http.ResponseWriter, req *http.Request, templateName []string, context ctx.Context) error {
 	var form = v.FormFromCtx(context)
 	if isZero(form) {
 		return v.BaseView.Render(w, req, templateName, context)

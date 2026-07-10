@@ -10,7 +10,7 @@ import (
 type BaseView struct {
 	AllowedMethods  []string
 	BaseTemplateKey string
-	TemplateName    string
+	TemplateName    any
 	GetContextFn    func(req *http.Request) (ctx.Context, error)
 }
 
@@ -29,10 +29,16 @@ func (v *BaseView) GetContext(req *http.Request) (ctx.Context, error) {
 	return ctx.RequestContext(req), nil
 }
 
-func (v *BaseView) GetTemplate(req *http.Request) string {
-	return v.TemplateName
+func (v *BaseView) GetTemplates(req *http.Request) []string {
+	switch t := v.TemplateName.(type) {
+	case string:
+		return []string{t}
+	case []string:
+		return t
+	}
+	return []string{}
 }
 
-func (v *BaseView) Render(w http.ResponseWriter, req *http.Request, templateName string, context ctx.Context) error {
-	return tpl.FRender(w, context, v.BaseTemplateKey, templateName)
+func (v *BaseView) Render(w http.ResponseWriter, req *http.Request, templateName []string, context ctx.Context) error {
+	return tpl.FRender(w, context, v.BaseTemplateKey, templateName...)
 }
