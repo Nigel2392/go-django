@@ -4,10 +4,8 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
-	"net/mail"
 	"reflect"
 	"time"
 
@@ -25,52 +23,8 @@ type EmailFormField struct {
 	*BaseField
 }
 
-func (e *EmailFormField) ValueToForm(value interface{}) interface{} {
-	if value == nil {
-		return ""
-	}
-	switch val := value.(type) {
-	case string:
-		return val
-	case *mail.Address:
-		if val == nil {
-			return ""
-		}
-		return val.Address
-	case mail.Address:
-		return val.Address
-	default:
-		return value
-	}
-}
-
-func (e *EmailFormField) ValueToGo(value interface{}) (interface{}, error) {
-	if value == nil {
-		return nil, nil
-	}
-
-	var val, ok = value.(string)
-	if !ok {
-		return nil, errs.ErrInvalidType
-	}
-	if val == "" {
-		return nil, nil
-	}
-
-	var addr, err = mail.ParseAddress(val)
-	if err != nil {
-		return nil, errors.Join(
-			errs.ErrInvalidSyntax,
-			err,
-		)
-	}
-	return addr, nil
-}
-
 func EmailField(opts ...func(Field)) Field {
-	var f = &EmailFormField{
-		BaseField: NewField(opts...),
-	}
+	var f = NewField(opts...)
 	if f.FormWidget == nil {
 		f.FormWidget = widgets.NewEmailInput(nil)
 	}
