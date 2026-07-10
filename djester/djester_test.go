@@ -26,6 +26,32 @@ func newApp() *apps.AppConfig {
 			w.Write([]byte("pong"))
 		}))
 
+		// NEW ROUTE: Serve HTML for our DOM tests
+		m.Handle("GET", "/html", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Content-Type", "text/html; charset=utf-8")
+			htmlBody := `
+			<!DOCTYPE html>
+			<html>
+			<head><title>Test Dashboard</title></head>
+			<body>
+				<nav class="main-menu">
+					<ul>
+						<li>Home</li>
+						<li>About</li>
+						<li>Contact</li>
+					</ul>
+				</nav>
+				<h1 class="page-title" data-custom="title-data">Dashboard</h1>
+				<form id="login-form" method="POST" action="/login">
+					<input type="text" name="user" required>
+					<button type="submit">Login</button>
+				</form>
+			</body>
+			</html>
+			`
+			w.Write([]byte(htmlBody))
+		}))
+
 		m.Handle("POST", "/echo", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
 			b, _ := io.ReadAll(r.Body)
 			defer r.Body.Close()
@@ -109,6 +135,30 @@ func TestDjester(t *testing.T) {
 					defer resp.Body.Close()
 					b, _ := io.ReadAll(resp.Body)
 					assert.AssertEqual("pong", string(b))
+				},
+			},
+			// NEW TEST: HTML Assertions
+			&djester.BasicTest{
+				Label: "HTML assertions work",
+				Function: func(d *djester.Tester, t *testing.T) {
+					// 1. Fetch the HTML
+					resp, err := d.Get("/html", nil, url.Values{})
+					d.Assert(t, true).Assert(err == nil, "GET /html failed: %v", err)
+					defer resp.Body.Close()
+
+					// 2. Get the ResponseAssertion from our TestResponse
+					resAssert := resp.Assert(t, true)
+
+					// 3. Test all the different HTMLAssertFunc options
+					resAssert.AssertHTML(
+						djester.HasElement("nav.main-menu"),
+						djester.DoesNotHaveElement(".error-message"),
+						djester.HasText("h1.page-title", "Dashboard"),
+						djester.HasText("title", "Test Dashboard"),
+						djester.HasAttribute("form#login-form", "method", "POST"),
+						djester.HasAttribute("h1.page-title", "data-custom", "title-data"),
+						djester.HasElementCount("ul > li", 3),
+					)
 				},
 			},
 			&djester.BasicTest{

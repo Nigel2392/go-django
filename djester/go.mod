@@ -4,11 +4,13 @@ go 1.26.3
 
 require (
 	github.com/Nigel2392/mux v1.6.1-0.20251030144343-070717da1ff8
+	github.com/PuerkitoBio/goquery v1.10.3
 	github.com/dolthub/go-mysql-server v0.20.0
 )
 
 require (
 	filippo.io/edwards25519 v1.1.1 // indirect
+	github.com/andybalholm/cascadia v1.3.3 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dolthub/flatbuffers/v23 v23.3.3-dh.2 // indirect
@@ -34,7 +36,6 @@ require (
 	golang.org/x/telemetry v0.0.0-20260508192327-42602be52be6 // indirect
 	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/tools v0.45.0 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260226221140-a57be14db171 // indirect
 	google.golang.org/grpc v1.81.1 // indirect
 	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/src-d/go-errors.v1 v1.0.0 // indirect

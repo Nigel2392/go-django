@@ -17,7 +17,7 @@ import (
 	"reflect"
 )
 
-func (d *Tester) makeRequest(method string, url string, headers http.Header, params url.Values, body io.Reader, extra func(r *http.Request) error) (*http.Response, error) {
+func (d *Tester) makeRequest(method string, url string, headers http.Header, params url.Values, body io.Reader, extra func(r *http.Request) error) (*TestResponse, error) {
 	var baseURL, err = url_URL.Parse(d.testServer.URL)
 	if err != nil {
 		return nil, err
@@ -44,10 +44,20 @@ func (d *Tester) makeRequest(method string, url string, headers http.Header, par
 		}
 	}
 
-	return d.testClient.Do(req)
+	resp, err := d.testClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	testResp := &TestResponse{
+		t:        d,
+		Response: resp,
+	}
+
+	return testResp, nil
 }
 
-func (d *Tester) makeJsonRequest(method string, url string, headers http.Header, params url.Values, body any, scanTo any) (*http.Response, error) {
+func (d *Tester) makeJsonRequest(method string, url string, headers http.Header, params url.Values, body any, scanTo any) (*TestResponse, error) {
 	var (
 		b   *bytes.Buffer = nil
 		err error
@@ -68,7 +78,7 @@ func (d *Tester) makeJsonRequest(method string, url string, headers http.Header,
 		return nil, err
 	}
 
-	var resp *http.Response
+	var resp *TestResponse
 	resp, err = d.makeRequest(method, url, headers, params, b, func(r *http.Request) error {
 		r.Header.Set("Content-Type", "application/json")
 		return nil
@@ -89,7 +99,7 @@ func (d *Tester) makeJsonRequest(method string, url string, headers http.Header,
 	return resp, nil
 }
 
-func (d *Tester) makeFormRequest(url string, headers http.Header, params url.Values, form map[string]interface{}) (*http.Response, error) {
+func (d *Tester) makeFormRequest(url string, headers http.Header, params url.Values, form map[string]interface{}) (*TestResponse, error) {
 	var err error
 	var b = new(bytes.Buffer)
 	var mw = multipart.NewWriter(b)
@@ -159,26 +169,26 @@ func (d *Tester) makeFormRequest(url string, headers http.Header, params url.Val
 	})
 }
 
-func (d *Tester) Get(url string, headers http.Header, params url.Values) (*http.Response, error) {
+func (d *Tester) Get(url string, headers http.Header, params url.Values) (*TestResponse, error) {
 	return d.makeRequest(http.MethodGet, url, headers, params, nil, nil)
 }
 
-func (d *Tester) GetJson(url string, headers http.Header, params url.Values, scanTo any) (*http.Response, error) {
+func (d *Tester) GetJson(url string, headers http.Header, params url.Values, scanTo any) (*TestResponse, error) {
 	return d.makeJsonRequest(http.MethodGet, url, headers, params, nil, scanTo)
 }
 
-func (d *Tester) Post(url string, headers http.Header, params url.Values, body io.Reader) (*http.Response, error) {
+func (d *Tester) Post(url string, headers http.Header, params url.Values, body io.Reader) (*TestResponse, error) {
 	return d.makeRequest(http.MethodPost, url, headers, params, body, nil)
 }
 
-func (d *Tester) PostForm(url string, headers http.Header, params url.Values, form map[string]interface{}) (*http.Response, error) {
+func (d *Tester) PostForm(url string, headers http.Header, params url.Values, form map[string]interface{}) (*TestResponse, error) {
 	return d.makeFormRequest(url, headers, params, form)
 }
 
-func (d *Tester) PostFile(url string, headers http.Header, params url.Values, fileName string, file io.Reader) (*http.Response, error) {
+func (d *Tester) PostFile(url string, headers http.Header, params url.Values, fileName string, file io.Reader) (*TestResponse, error) {
 	return d.makeFormRequest(url, headers, params, map[string]interface{}{fileName: file})
 }
 
-func (d *Tester) PostJson(url string, headers http.Header, params url.Values, body any, scanTo any) (*http.Response, error) {
+func (d *Tester) PostJson(url string, headers http.Header, params url.Values, body any, scanTo any) (*TestResponse, error) {
 	return d.makeJsonRequest(http.MethodPost, url, headers, params, body, scanTo)
 }
