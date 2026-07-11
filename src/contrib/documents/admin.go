@@ -102,32 +102,6 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 					return nil
 				}
 
-				fileObj, ok := fileFace.(*widgets.FileObject)
-				if !ok {
-					if !updating && fields.IsZero(m["Path"]) {
-						// If the path is empty, we require the file to be uploaded
-						return []error{errs.NewValidationError[string](
-							"DocumentFile", "This field is required",
-						)}
-					}
-					return nil
-				}
-
-				if fileObj.File == nil || fileObj.File.Len() == 0 {
-					return []error{errs.NewValidationError[string](
-						"ImageFile", trans.T(form.Context(), "File is empty, please try to upload it again"),
-					)}
-				}
-
-				var err error
-				m["FileSize"] = fileObj.File.Len()
-				fileFace, err = fileField.Save(fileObj)
-				if err != nil {
-					return []error{errs.NewValidationError[string](
-						"DocumentFile", fmt.Sprintf("Failed to save file: %v", err),
-					)}
-				}
-
 				file, ok := fileFace.(mediafiles.StoredObject)
 				if !ok {
 					return []error{errs.NewValidationError[string](
@@ -140,7 +114,7 @@ func AdminDocumentModelOptions(app *AppConfig) admin.ModelOptions {
 				// Base the title on the file name if not set
 				title, ok := m["Title"].(string)
 				if !ok || title == "" {
-					var fName = fileObj.Name
+					var fName = file.Name()
 					var baseName = filepath.Base(fName)
 					var ext = filepath.Ext(baseName)
 					if ext != "" {
