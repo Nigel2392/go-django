@@ -339,6 +339,8 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 			var widget, ok = fm.Widget(k)
 			if !ok {
 				widget = v.Widget()
+			} else {
+				v.SetWidget(widget)
 			}
 
 			if !widget.ValueOmittedFromData(ctx, rawData, files, fm.PrefixName(k)) {

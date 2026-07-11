@@ -15,6 +15,7 @@ import (
 	url_URL "net/url"
 	"os"
 	"reflect"
+	"strings"
 
 	django "github.com/Nigel2392/go-django/src"
 )
@@ -103,7 +104,34 @@ func (d *Tester) makeJsonRequest(method string, url string, headers http.Header,
 	return resp, nil
 }
 
-func (d *Tester) makeFormRequest(url string, headers http.Header, params url.Values, form map[string]interface{}) (*TestResponse, error) {
+func (d *Tester) makeFormRequest(u string, headers http.Header, params url.Values, form map[string]interface{}) (*TestResponse, error) {
+	var hasFiles bool
+	for _, value := range form {
+		switch value.(type) {
+		case *os.File, fs.File, []byte, io.Reader:
+			hasFiles = true
+		}
+	}
+
+	if !hasFiles {
+		var v = url.Values{}
+		for key, value := range form {
+			var str string
+			switch t := value.(type) {
+			case string:
+				str = t
+			default:
+				str = fmt.Sprintf("%v", t)
+			}
+			v.Add(key, str)
+		}
+		var b = strings.NewReader(v.Encode())
+		return d.makeRequest(http.MethodPost, u, headers, params, b, func(r *http.Request) error {
+			r.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+			return nil
+		})
+	}
+
 	var err error
 	var b = new(bytes.Buffer)
 	var mw = multipart.NewWriter(b)
@@ -167,7 +195,7 @@ func (d *Tester) makeFormRequest(url string, headers http.Header, params url.Val
 		return nil, err
 	}
 
-	return d.makeRequest(http.MethodPost, url, headers, params, b, func(r *http.Request) error {
+	return d.makeRequest(http.MethodPost, u, headers, params, b, func(r *http.Request) error {
 		r.Header.Set("Content-Type", mw.FormDataContentType())
 		return nil
 	})

@@ -125,7 +125,7 @@ type (
 
 		// Private fields to be used by the Tester struct
 		db         drivers.Database
-		app        *django.Application
+		App        *django.Application
 		testClient *django.HTTPTestClient
 		testServer *django.HTTPTestServer
 		test       TB
@@ -197,9 +197,9 @@ func (d *Tester) Setup(t TB) error {
 	opts = append(opts, django.Apps(appConfigs...))
 	opts = append(opts, django.Flag(d.Flags...))
 	opts = append(opts, d.ExtraOptions...)
-	d.app = django.App(opts...)
+	d.App = django.App(opts...)
 
-	if err := d.app.Initialize(); err != nil {
+	if err := d.App.Initialize(); err != nil {
 		return err
 	}
 
@@ -208,16 +208,16 @@ func (d *Tester) Setup(t TB) error {
 			t.Fatal("cannot initialize authentication without app 'session'")
 		}
 
-		d.app.Mux.Use(
+		d.App.Mux.Use(
 			authentication.AddUserMiddleware(d.getUserFromRequest),
 		)
 
-		var djester = d.app.Mux.Get("/djester/auth", nil, "djester")
+		var djester = d.App.Mux.Get("/djester/auth", nil, "djester")
 		djester.Post("/login/<<map_key>>", mux.NewHandler(d.loginHandler), "login")
 		djester.Post("/logout", mux.NewHandler(d.logoutHandler), "logout")
 	}
 
-	var server, err = d.app.TestServe(true)
+	var server, err = d.App.TestServe(true)
 	if err != nil {
 		return err
 	}
@@ -362,8 +362,8 @@ func (d *Tester) Close() error {
 	if d.testServer != nil {
 		d.testServer.Close()
 	}
-	if d.app != nil {
-		if err := d.app.Quit(); err != nil {
+	if d.App != nil {
+		if err := d.App.Quit(); err != nil {
 			return err
 		}
 	}
