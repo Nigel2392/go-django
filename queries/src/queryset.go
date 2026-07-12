@@ -2589,6 +2589,12 @@ func (qs *QuerySet[T]) QueryAggregate() CompiledQuery[[][]interface{}] {
 	return query
 }
 
+func (qs *QuerySet[T]) ClearGroupBy() *QuerySet[T] {
+	qs = qs.clone()
+	qs.internals.GroupBy = make([]*FieldInfo[attrs.FieldDefinition], 0)
+	return qs
+}
+
 func (qs *QuerySet[T]) QueryCount() CompiledQuery[int64] {
 	var q = qs.compiler.BuildCountQuery(
 		qs.context,

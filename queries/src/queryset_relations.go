@@ -340,6 +340,14 @@ func (t *relatedQuerySet[T, T2]) Offset(offset int) T2 {
 	return t.embedder
 }
 
+func (t *relatedQuerySet[T, T2]) Exists() (bool, error) {
+	t.setup()
+	if t.qs == nil {
+		panic("QuerySet is nil, cannot call Exists()")
+	}
+	return t.qs.Exists()
+}
+
 func (t *relatedQuerySet[T, T2]) Get() (*Row[T], error) {
 	t.setup()
 	if t.qs == nil {
