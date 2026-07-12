@@ -1,3 +1,6 @@
+//go:build struct_context
+// +build struct_context
+
 package ctx_test
 
 import (

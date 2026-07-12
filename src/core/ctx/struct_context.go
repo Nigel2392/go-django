@@ -1,3 +1,6 @@
+//go:build struct_context
+// +build struct_context
+
 package ctx
 
 import (
@@ -5,6 +8,7 @@ import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	deepcopy "github.com/barkimedes/go-deepcopy"
 )
 
 type StructContext struct {
@@ -93,4 +97,20 @@ func (c *StructContext) Data() map[string]any {
 		data[key] = field.Interface()
 	}
 	return data
+}
+
+func (c *StructContext) Clone(values ...interface{}) (Context, error) {
+	var objCopy, err = deepcopy.Anything(c.obj)
+	if err != nil {
+		return nil, err
+	}
+
+	var copy = NewStructContext(objCopy)
+	other, err := TemplateDictFunc(values...)
+	for k, v := range other {
+		copy.Set(k, v)
+	}
+
+	return copy, err
+
 }

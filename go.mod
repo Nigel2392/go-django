@@ -16,7 +16,6 @@ require (
 	github.com/Nigel2392/goldcrest v1.0.4
 	github.com/alexedwards/scs/v2 v2.9.0
 	github.com/go-sql-driver/mysql v1.9.3
-	github.com/mattn/go-sqlite3 v1.14.32
 	golang.org/x/crypto v0.53.0
 )
 
@@ -45,6 +44,7 @@ require (
 	filippo.io/edwards25519 v1.1.1 // indirect
 	github.com/Nigel2392/errors v1.0.0 // indirect
 	github.com/andybalholm/cascadia v1.3.3 // indirect
+	github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df // indirect
 	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dlclark/regexp2 v1.11.5 // indirect

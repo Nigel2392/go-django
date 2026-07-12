@@ -49,7 +49,7 @@ type DetailView[T any] struct {
 	ContextName string
 	URLArgName  string
 	GetObjectFn func(req *http.Request, urlArg string) (T, error)
-	OnError     func(w http.ResponseWriter, r *http.Request, err error)
+	OnErrorFn   func(w http.ResponseWriter, r *http.Request, err error)
 	PostMethod  func(d *DetailView[T], w http.ResponseWriter, r *http.Request, bound View) (http.ResponseWriter, *http.Request)
 }
 
@@ -92,7 +92,7 @@ func (v *DetailView[T]) TakeControl(w http.ResponseWriter, r *http.Request, view
 	var err error
 errCheck:
 	if err != nil {
-		v.onError(w, r, err)
+		v.OnError(w, r, err)
 		return
 	}
 
@@ -132,16 +132,16 @@ errCheck:
 	}
 
 	if err = TryServeTemplateView(w, r, []View{view, v}, viewCtx); err != nil {
-		v.onError(w, r, err)
+		v.OnError(w, r, err)
 	}
 }
 
-func (v *DetailView[T]) onError(w http.ResponseWriter, r *http.Request, err error) {
+func (v *DetailView[T]) OnError(w http.ResponseWriter, r *http.Request, err error) {
 	logger.Errorf(
 		"Error while serving view: %v", err,
 	)
-	if v.OnError != nil {
-		v.OnError(w, r, err)
+	if v.OnErrorFn != nil {
+		v.OnErrorFn(w, r, err)
 	} else {
 		except.Fail(
 			http.StatusInternalServerError,

@@ -346,7 +346,7 @@ func NewAppConfig() django.AppConfig {
 		baseModelsRoute.Handle(
 			mux.ANY, "delete/",
 			NewModelHandler("app_name", "model_name", ModelBulkDeleteHandler),
-			"bulk_delete", // admin:apps:model:delete
+			"bulk_delete", // admin:apps:model:bulk_delete
 		)
 
 		var hooks = goldcrest.Get[RegisterModelsRouteHookFunc](AdminModelHookRegisterRoute)

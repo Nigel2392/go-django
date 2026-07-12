@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components"
 	"github.com/Nigel2392/go-django/src/contrib/admin/components/menu"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -165,6 +166,7 @@ func (c *adminContext) Set(key string, value interface{}) {
 		v.EditContext(key, c)
 		return
 	}
+
 	switch key {
 	case "site", "Site":
 		c.Site = value.(*AdminApplication)
@@ -198,4 +200,25 @@ func (c *adminContext) Request() *http.Request {
 
 func (c *adminContext) CsrfToken() string {
 	return nosurf.Token(c.request)
+}
+
+func (c *adminContext) Clone(values ...interface{}) (ctx.Context, error) {
+	var subCopy, _ = c.Context.Clone()
+	var copy = &adminContext{
+		Page:    c.Page,
+		Site:    c.Site,
+		request: c.request,
+		Context: subCopy,
+	}
+
+	var other, err = ctx.TemplateDictFunc(values...)
+	if err != nil {
+		return nil, errors.Wrap(err, "adminContext")
+	}
+
+	for k, v := range other {
+		copy.Set(k, v)
+	}
+
+	return copy, nil
 }

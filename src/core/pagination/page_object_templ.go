@@ -5,18 +5,19 @@ package pagination
 
 //lint:file-ignore SA4006 This context is only used if a nested component is present.
 
-import "github.com/a-h/templ"
-import templruntime "github.com/a-h/templ/runtime"
-
 import (
 	"context"
 	"fmt"
-	"github.com/Nigel2392/go-django/src/components"
-	"github.com/Nigel2392/go-django/src/core/trans"
 	"html/template"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"github.com/Nigel2392/go-django/src/components"
+	"github.com/Nigel2392/go-django/src/core/logger"
+	"github.com/Nigel2392/go-django/src/core/trans"
+	"github.com/a-h/templ"
+	templruntime "github.com/a-h/templ/runtime"
 )
 
 var (
@@ -80,9 +81,10 @@ func (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryPa
 		ctx = templ.ClearChildren(ctx)
 		var count, err = p.Paginator().NumPages()
 		if err != nil {
+			logger.Errorf("error while querying numPages: %v", err)
 			count = 1
 		}
-		if count == 1 {
+		if count <= 1 {
 			return nil
 		}
 		var q string

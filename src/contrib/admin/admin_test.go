@@ -229,6 +229,8 @@ func TestAdmin(t *testing.T) {
 					asserter.Assert(err == nil, "GET add failed: %v", err)
 					resp.Assert(true).AssertHTML(
 						djester.HasElement("form"),
+						djester.HasElement("input#id_ID"),
+						djester.HasElement("input#id_Name"),
 					)
 					resp.Body.Close()
 
@@ -255,7 +257,6 @@ func TestAdmin(t *testing.T) {
 					)
 					resp.Body.Close()
 
-					// Verify it was created (should be ID 2 since we seeded ID 1)
 					var row *queries.Row[*TestModel]
 					row, err = queries.GetQuerySet(&TestModel{}).Filter("ID", 2).Get()
 					asserter.Assert(err == nil, "Failed to fetch new object: %v", err)

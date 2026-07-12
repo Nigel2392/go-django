@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"net/http"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/ctx"
 )
 
@@ -127,4 +128,30 @@ func (bc *BlockContext) Data() map[string]interface{} {
 	}
 
 	return data
+}
+
+func (c *BlockContext) Clone(values ...interface{}) (ctx.Context, error) {
+	var subCopy, _ = c.Context.Clone()
+	var copy = &BlockContext{
+		Request_:  c.Request_.Clone(c.Request_.Context()),
+		BlockDef:  c.BlockDef,
+		ID:        c.ID,
+		Name:      c.Name,
+		BlockHTML: c.BlockHTML,
+		Value:     c.Value,
+		Errors:    c.Errors,
+		Attrs:     c.Attrs,
+		Context:   subCopy,
+	}
+
+	var other, err = ctx.TemplateDictFunc(values...)
+	if err != nil {
+		return nil, errors.Wrap(err, "HTTPRequestContext")
+	}
+
+	for k, v := range other {
+		copy.Set(k, v)
+	}
+
+	return copy, nil
 }

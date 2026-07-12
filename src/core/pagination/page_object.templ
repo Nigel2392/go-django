@@ -54,7 +54,7 @@ templ (p *pageObject[T]) Component(queryParam string, numPageNumbers int, queryP
 	if err != nil {
 		{{ count = 1 }}
 	}
-	if count == 1 {
+	if count <= 1 {
 		{{ return nil }}
 	}
 	{{ var q string }}
