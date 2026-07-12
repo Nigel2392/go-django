@@ -9,6 +9,7 @@ import "github.com/a-h/templ"
 import templruntime "github.com/a-h/templ/runtime"
 
 import (
+	"errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/except"
 	"github.com/Nigel2392/go-django/src/forms"
@@ -111,8 +112,23 @@ func (c *ListColumnGroup[T]) RenderColumns(r *http.Request, form *ListForm[T]) t
 		for colIndex, column := range c.Columns {
 			var attrs = c.GetAttrs(r, c.Definitions, c.Instance)
 			maps.Copy(attrs, column.Attributes(r, c.Definitions, c.Instance, colIndex, colCount))
+			class, ok := attrs["class"]
+			if ok {
+				switch c := class.(type) {
+				case string:
+					class = "list-column " + c
+				case []string:
+					class = append([]string{"list-column"}, c...)
+				default:
+					return errors.New("unknown type for class attribute")
+				}
+			} else {
+				class = "list-column"
+			}
+
+			attrs["class"] = class
 			if form == nil || !AllowListEdit(ctx) {
-				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <td class=\"list-column\"")
+				templ_7745c5c3_Err = templruntime.WriteString(templ_7745c5c3_Buffer, 1, " <td")
 				if templ_7745c5c3_Err != nil {
 					return templ_7745c5c3_Err
 				}
