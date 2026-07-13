@@ -156,12 +156,22 @@ func (c *castExpr) Resolve(inf *ExpressionInfo) Expression {
 }
 
 func (c *castExpr) SQL(sb *strings.Builder) []any {
-	var sprintParams = make([]any, 0, c.funcEntry.Arity+1)
 	var colBuilder strings.Builder
 	var args = c.col.SQL(&colBuilder)
+
+	// FormatCount includes the column string itself.
+	// So the extra arguments needed is FormatCount - 1.
+	extraArgsNeeded := c.funcEntry.FmtCnt - 1
+
+	var sprintParams = make([]any, 0, c.funcEntry.FmtCnt)
 	sprintParams = append(sprintParams, colBuilder.String())
-	sprintParams = append(sprintParams, c.args...)
-	sb.WriteString(fmt.Sprintf(c.funcEntry.SQL, sprintParams...))
+
+	// Only append exactly as many extra arguments as the format string expects
+	if extraArgsNeeded > 0 && len(c.args) >= extraArgsNeeded {
+		sprintParams = append(sprintParams, c.args[:extraArgsNeeded]...)
+	}
+
+	fmt.Fprintf(sb, c.funcEntry.SQL, sprintParams...)
 	return args
 }
 
@@ -179,13 +189,17 @@ func Cast(typ CastType, col any, value ...any) NamedExpression {
 }
 
 func registerCastTypeFunc(arity int, castType CastType, sqlText string, d ...driver.Driver) {
+	totalPercents := strings.Count(sqlText, "%")
+	escapedPercents := strings.Count(sqlText, "%%")
+	formatCount := totalPercents - (escapedPercents * 2)
+
 	if len(d) == 0 {
-		RegisterCastType(castType, CastFuncEntry{Arity: arity, SQL: sqlText})
+		RegisterCastType(castType, CastFuncEntry{Arity: arity, SQL: sqlText, FmtCnt: formatCount})
 		return
 	}
 	// RegisterCastType(castType, CastFuncEntry{Arity: arity, SQL: sqlText}, d)
 	for _, drv := range d {
-		RegisterCastType(castType, CastFuncEntry{Arity: arity, SQL: sqlText}, drv)
+		RegisterCastType(castType, CastFuncEntry{Arity: arity, SQL: sqlText, FmtCnt: formatCount}, drv)
 	}
 }
 
@@ -201,8 +215,9 @@ type castRegistry struct {
 }
 
 type CastFuncEntry struct {
-	Arity int
-	SQL   string
+	Arity  int
+	FmtCnt int
+	SQL    string
 }
 
 var casts = &castRegistry{

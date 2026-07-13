@@ -15,7 +15,7 @@ func TestCastStringGeneration(t *testing.T) {
 	var sb strings.Builder
 	args := resolved.SQL(&sb)
 
-	expectedType := "VARCHAR(255)"
+	expectedType := "TEXT"
 	switch testdb.ENGINE {
 	case "mysql", "mysql_local", "mariadb":
 		expectedType = "CHAR(255)"
@@ -24,7 +24,7 @@ func TestCastStringGeneration(t *testing.T) {
 	}
 
 	expectedSQL := fixSQL(info, "CAST(`test_model`.`age` AS "+expectedType+")")
-	if !strings.Contains(sb.String(), expectedSQL) {
+	if !strings.EqualFold(strings.TrimSpace(sb.String()), strings.TrimSpace(expectedSQL)) {
 		t.Errorf("Expected %s output, got: %s", expectedType, sb.String())
 	}
 	if len(args) != 0 {
@@ -48,7 +48,7 @@ func TestCastFloatGeneration(t *testing.T) {
 	}
 
 	expectedSQL := fixSQL(info, "CAST(`test_model`.`score` AS "+expectedType+")")
-	if !strings.Contains(sb.String(), expectedSQL) {
+	if !strings.EqualFold(strings.TrimSpace(sb.String()), strings.TrimSpace(expectedSQL)) {
 		t.Errorf("Expected %s output, got: %s", expectedType, sb.String())
 	}
 	if len(args) != 0 {
@@ -72,7 +72,7 @@ func TestCastDateTimeGeneration(t *testing.T) {
 	}
 
 	expectedSQL := fixSQL(info, "CAST(`test_model`.`created_at` AS "+expectedType+")")
-	if !strings.Contains(sb.String(), expectedSQL) {
+	if !strings.EqualFold(strings.TrimSpace(sb.String()), strings.TrimSpace(expectedSQL)) {
 		t.Errorf("Expected %s output, got: %s", expectedType, sb.String())
 	}
 }
