@@ -588,12 +588,15 @@ func TestTodoUpdate(t *testing.T) {
 		django.APPVAR_DATABASE,
 	)
 
-	var todo = &Todo{
-		ID:          1,
-		Title:       "Updated Todo",
-		Description: "Updated Description",
-		Done:        true,
+	todoRow, err := queries.GetQuerySet(&Todo{}).Filter("Title", "Test Todo 1").Get()
+	if err != nil {
+		t.Fatalf("Failed to query todo: %v", err)
 	}
+
+	todo := todoRow.Object
+	todo.Title = "Updated Todo"
+	todo.Description = "Updated Description"
+	todo.Done = true
 
 	if updated, err := queries.UpdateObject(todo); err != nil {
 		t.Fatalf("Failed to update todo: %v", err)
@@ -621,7 +624,12 @@ func TestTodoGet(t *testing.T) {
 		django.APPVAR_DATABASE,
 	)
 
-	var todo, err = queries.GetObject[*Todo](&Todo{}, 1)
+	todoRow, err := queries.GetQuerySet(&Todo{}).Filter("Title", "Updated Todo").Get()
+	if err != nil {
+		t.Fatalf("Failed to query todo: %v", err)
+	}
+
+	todo, err := queries.GetObject[*Todo](&Todo{}, todoRow.Object.ID)
 	if err != nil {
 		t.Fatalf("Failed to get todo: %v", err)
 	}
@@ -678,8 +686,17 @@ func TestListTodoByIDs(t *testing.T) {
 		django.APPVAR_DATABASE,
 	)
 
-	var ids = []int{1, 2}
-	var todos, err = queries.ListObjectsByIDs[*Todo](&Todo{}, 0, 1000, ids)
+	todoRows, err := queries.GetQuerySet(&Todo{}).Filter("Title__startswith", "Test Todo ").All()
+	if err != nil {
+		t.Fatalf("Failed to get todos by title startswith: %v", err)
+	}
+
+	var ids = make([]int, 0, len(todoRows))
+	for _, r := range todoRows {
+		ids = append(ids, r.Object.ID)
+	}
+
+	todos, err := queries.ListObjectsByIDs[*Todo](&Todo{}, 0, 1000, ids)
 	if err != nil {
 		t.Fatalf("Failed to get todos by IDs: %v", err)
 	}
@@ -711,7 +728,13 @@ func TestTodoDelete(t *testing.T) {
 		django.APPVAR_DATABASE,
 	)
 	var err error
-	var todo = &Todo{ID: 1}
+
+	todoRow, err := queries.GetQuerySet(&Todo{}).Filter("Title__startswith", "Test Todo ").First()
+	if err != nil {
+		t.Fatalf("Failed to get todos by title startswith: %v", err)
+	}
+
+	var todo = todoRow.Object
 	if deleted, err := queries.DeleteObject(todo); err != nil {
 		t.Fatalf("Failed to delete todo: %v", err)
 	} else if deleted == 0 {
