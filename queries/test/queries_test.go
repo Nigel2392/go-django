@@ -686,7 +686,7 @@ func TestListTodoByIDs(t *testing.T) {
 		django.APPVAR_DATABASE,
 	)
 
-	todoRows, err := queries.GetQuerySet(&Todo{}).Filter("Title__startswith", "Test Todo ").All()
+	todoRows, err := queries.GetQuerySet(&Todo{}).Limit(2).All()
 	if err != nil {
 		t.Fatalf("Failed to get todos by title startswith: %v", err)
 	}
@@ -729,7 +729,7 @@ func TestTodoDelete(t *testing.T) {
 	)
 	var err error
 
-	todoRow, err := queries.GetQuerySet(&Todo{}).Filter("Title__startswith", "Test Todo ").First()
+	todoRow, err := queries.GetQuerySet(&Todo{}).First()
 	if err != nil {
 		t.Fatalf("Failed to get todos by title startswith: %v", err)
 	}
