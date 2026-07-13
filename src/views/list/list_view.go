@@ -45,6 +45,7 @@ type View[T attrs.Definer] struct {
 	ChangeContextFn  func(r *http.Request, qs *queries.QuerySet[T], ctx ctx.Context) (ctx.Context, error)
 	List             func(*http.Request, pagination.PageObject[T], []ListColumn[T], ctx.Context) (StringRenderer, error)
 	QuerySet         func(r *http.Request) *queries.QuerySet[T]
+	CountQuerySet    func(*queries.QuerySet[T]) (int64, error)
 	OnError          func(w http.ResponseWriter, r *http.Request, err error)
 }
 
@@ -221,6 +222,7 @@ func (v *View[T]) Clone() *View[T] {
 		GetContextFn:     v.GetContextFn,
 		ChangeContextFn:  v.ChangeContextFn,
 		List:             v.List,
+		CountQuerySet:    v.CountQuerySet,
 		QuerySet:         v.QuerySet,
 		OnError:          v.OnError,
 	}
@@ -335,8 +337,9 @@ func (v *View[T]) getPaginator(req *http.Request, qs *queries.QuerySet[T]) (pagi
 	}
 
 	var paginator = &pagination.QueryPaginator[T]{
-		Context: req.Context(),
-		Amount:  int(amount),
+		Context:  req.Context(),
+		Amount:   int(amount),
+		GetCount: v.CountQuerySet,
 		BaseQuerySet: func() *queries.QuerySet[T] {
 			return qs
 		},
