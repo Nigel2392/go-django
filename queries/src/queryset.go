@@ -2595,6 +2595,12 @@ func (qs *QuerySet[T]) ClearGroupBy() *QuerySet[T] {
 	return qs
 }
 
+func (qs *QuerySet[T]) ClearOrderBy() *QuerySet[T] {
+	qs = qs.clone()
+	qs.internals.OrderBy = make([]expr.OrderBy, 0)
+	return qs
+}
+
 func (qs *QuerySet[T]) QueryCount() CompiledQuery[int64] {
 	var q = qs.compiler.BuildCountQuery(
 		qs.context,
@@ -4099,7 +4105,7 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 	return res, tx.Commit(qs.context)
 }
 
-func (qs *QuerySet[T]) tryParseExprStatement(sqlStr string, args ...interface{}) (string, []interface{}) {
+func (qs *QuerySet[T]) tryParseExprStatement(sqlStr string, args []interface{}) (string, []interface{}) {
 	var (
 		changedQs = ChangeObjectsType[T, attrs.Definer](qs)
 		info      = qs.compiler.ExpressionInfo(changedQs, qs.internals)
@@ -4122,6 +4128,11 @@ func (qs *QuerySet[T]) tryParseExprStatement(sqlStr string, args ...interface{})
 	return sqlStr, args
 }
 
+// ParseExpression provides a public way to generate queries and use the SQL string / args on your own.
+func (qs *QuerySet[T]) ParseExpression(sqlStr string, args ...interface{}) (string, []interface{}) {
+	return qs.tryParseExprStatement(sqlStr, args)
+}
+
 // Rows is used to execute a raw SQL query on the compilers' current database.
 //
 // It returns a [drivers.SQLRows] object that can be used to iterate over the results.
@@ -4129,7 +4140,7 @@ func (qs *QuerySet[T]) tryParseExprStatement(sqlStr string, args ...interface{})
 //
 // It first tries to resolve and parse the SQL statement, see [expr.ParseExprStatement] for more details.
 func (qs *QuerySet[T]) Rows(sqlStr string, args ...interface{}) (drivers.SQLRows, error) {
-	sqlStr, args = qs.tryParseExprStatement(sqlStr, args...)
+	sqlStr, args = qs.tryParseExprStatement(sqlStr, args)
 	return qs.compiler.DB().QueryContext(qs.Context(), sqlStr, args...)
 }
 
@@ -4138,7 +4149,7 @@ func (qs *QuerySet[T]) Rows(sqlStr string, args ...interface{}) (drivers.SQLRows
 //
 // It first tries to resolve and parse the SQL statement, see [expr.ParseExprStatement] for more details.
 func (qs *QuerySet[T]) Row(sqlStr string, args ...interface{}) drivers.SQLRow {
-	sqlStr, args = qs.tryParseExprStatement(sqlStr, args...)
+	sqlStr, args = qs.tryParseExprStatement(sqlStr, args)
 	return qs.compiler.DB().QueryRowContext(qs.Context(), sqlStr, args...)
 }
 
@@ -4148,7 +4159,7 @@ func (qs *QuerySet[T]) Row(sqlStr string, args ...interface{}) drivers.SQLRow {
 //
 // It first tries to resolve and parse the SQL statement, see [expr.ParseExprStatement] for more details.
 func (qs *QuerySet[T]) Exec(sqlStr string, args ...interface{}) (sql.Result, error) {
-	sqlStr, args = qs.tryParseExprStatement(sqlStr, args...)
+	sqlStr, args = qs.tryParseExprStatement(sqlStr, args)
 	return qs.compiler.DB().ExecContext(qs.Context(), sqlStr, args...)
 }
 
