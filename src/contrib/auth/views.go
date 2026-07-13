@@ -149,6 +149,17 @@ func RegisterView(baseView *views.BaseView, cfg RegisterFormConfig, opts ...func
 }
 
 func viewUserLogin(w http.ResponseWriter, r *http.Request) {
+	var u = authentication.Retrieve(r)
+	if u.IsAuthenticated() {
+		var nextURLSetting = django.ConfigGet[interface{}](
+			django.Global.Settings,
+			APPVAR_LOGIN_REDIRECT_URL,
+			DEFAULT_LOGIN_REDIRECT_URL,
+		)
+		http.Redirect(w, r, callOrString(nextURLSetting, r), http.StatusFound)
+		return
+	}
+
 	var v = LoginView(&views.BaseView{
 		BaseTemplateKey: "auth",
 		TemplateName:    "auth/login.tmpl",
