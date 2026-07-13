@@ -136,3 +136,92 @@ func TestQuerySetRawExecution(t *testing.T) {
 		t.Fatalf("Failed to delete objects: %v", err)
 	}
 }
+
+func TestQuerySetRawExec(t *testing.T) {
+	var user = &User{Name: "TestQuerySetRawExec User"}
+	if err := queries.CreateObject(user); err != nil {
+		t.Fatalf("Failed to create *User: %v", err)
+	}
+
+	var todo = &Todo{Title: "Raw Exec Title", Description: "Exec test", User: user, Done: false}
+	if err := queries.CreateObject(todo); err != nil {
+		t.Fatalf("Failed to create *Todo: %v", err)
+	}
+
+	// Exec raw query using expression parser
+	res, err := queries.GetQuerySet(&Todo{}).Exec(
+		`UPDATE TABLE(SELF) SET done = ?[1], title = ?[2] WHERE id = ?[3]`,
+		true, "Updated Raw Exec Title", todo.ID,
+	)
+	if err != nil {
+		t.Fatalf("Failed to Exec raw update: %v", err)
+	}
+
+	rowsAffected, _ := res.RowsAffected()
+	if rowsAffected != 1 {
+		t.Fatalf("Expected 1 row updated, got %d", rowsAffected)
+	}
+
+	// Fetch back and verify
+	updatedTodoWrap, err := queries.GetQuerySet[attrs.Definer](&Todo{}).Filter("ID", todo.ID).First()
+	if err != nil {
+		t.Fatalf("Failed to get updated *Todo: %v", err)
+	}
+
+	updatedTodo := updatedTodoWrap.Object.(*Todo)
+	if !updatedTodo.Done || updatedTodo.Title != "Updated Raw Exec Title" {
+		t.Fatalf("Expected Done=true and Title='Updated Raw Exec Title', got Done=%v, Title='%s'", updatedTodo.Done, updatedTodo.Title)
+	}
+
+	// Clean up
+	queries.GetQuerySet[attrs.Definer](&Todo{}).Filter("ID", todo.ID).Delete()
+	queries.GetQuerySet[attrs.Definer](&User{}).Filter("ID", user.ID).Delete()
+}
+
+func TestQuerySetRawRow(t *testing.T) {
+	var user = &User{Name: "TestQuerySetRawRow User"}
+	if err := queries.CreateObject(user); err != nil {
+		t.Fatalf("Failed to create *User: %v", err)
+	}
+
+	var todos = []*Todo{
+		{Title: "Raw Row 1", Description: "Row test 1", User: user, Done: false},
+		{Title: "Raw Row 2", Description: "Row test 2", User: user, Done: true},
+	}
+	_, err := queries.GetQuerySet(&Todo{}).BulkCreate(todos)
+	if err != nil {
+		t.Fatalf("Failed to bulk create *Todo objects: %v", err)
+	}
+
+	// Raw Row to get count
+	var count int
+	err = queries.GetQuerySet(&Todo{}).Row(
+		`SELECT COUNT(*) FROM TABLE(SELF) WHERE title LIKE ?[1] AND user_id = ?[2]`,
+		"Raw Row%", user.ID,
+	).Scan(&count)
+	if err != nil {
+		t.Fatalf("Failed to Row count: %v", err)
+	}
+
+	if count != 2 {
+		t.Fatalf("Expected count 2, got %d", count)
+	}
+
+	// Raw Row to get specific column of a row
+	var fetchedTitle string
+	err = queries.GetQuerySet(&Todo{}).Row(
+		`SELECT title FROM TABLE(SELF) WHERE id = ?[1]`,
+		todos[1].ID,
+	).Scan(&fetchedTitle)
+	if err != nil {
+		t.Fatalf("Failed to Row title: %v", err)
+	}
+
+	if fetchedTitle != "Raw Row 2" {
+		t.Fatalf("Expected fetched title 'Raw Row 2', got '%s'", fetchedTitle)
+	}
+
+	// Clean up
+	queries.GetQuerySet[attrs.Definer](&Todo{}).Filter("User", user).Delete()
+	queries.GetQuerySet[attrs.Definer](&User{}).Filter("ID", user.ID).Delete()
+}
