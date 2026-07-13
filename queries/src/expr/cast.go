@@ -70,7 +70,7 @@ func init() {
 	registerCastTypeFunc(0, CastTypeNull, "CAST(%s AS NULL)", &drivers.DriverSQLite{})
 	registerCastTypeFunc(0, CastTypeArray, "CAST(%s AS TEXT)", &drivers.DriverSQLite{})
 
-	registerCastTypeFunc(1, CastTypeString, "CAST(%s AS TEXT)", &drivers.DriverPostgres{})
+	registerCastTypeFunc(1, CastTypeString, "CAST(%s AS VARCHAR(%d))", &drivers.DriverPostgres{})
 	registerCastTypeFunc(0, CastTypeText, "CAST(%s AS TEXT)", &drivers.DriverPostgres{})
 	registerCastTypeFunc(0, CastTypeInt, "CAST(%s AS INTEGER)", &drivers.DriverPostgres{})
 	registerCastTypeFunc(2, CastTypeFloat, "CAST(%s AS NUMERIC(%d,%d))", &drivers.DriverPostgres{})
