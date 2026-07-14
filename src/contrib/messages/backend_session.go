@@ -10,8 +10,9 @@ import (
 )
 
 var (
-	_                 MessageBackend = (*SessionBackend)(nil)
-	sessionBackendKey                = "messages.sessionBackendKey"
+	_                      MessageBackend = (*SessionBackend)(nil)
+	sessionBackendKey                     = "messages.sessionBackendKey"
+	sessionBackendLevelKey                = "messages.sessionBackendLevelKey"
 )
 
 type SessionBackend struct {
@@ -27,10 +28,13 @@ func NewSessionBackend(r *http.Request) (MessageBackend, error) {
 		)
 	}
 
-	return &SessionBackend{
+	backend := &SessionBackend{
 		Request:     r,
 		MinTagLevel: TagLevels[DefaultTags.Debug],
-	}, nil
+	}
+
+	backend.MinTagLevel = TagLevels[backend.Level()]
+	return backend, nil
 }
 
 func (b *SessionBackend) Finalize(w http.ResponseWriter, r *http.Request) error {
@@ -38,11 +42,27 @@ func (b *SessionBackend) Finalize(w http.ResponseWriter, r *http.Request) error 
 }
 
 func (b *SessionBackend) Level() MessageTag {
-	return LevelTags[b.MinTagLevel]
+	var session = sessions.Retrieve(b.Request)
+	if session == nil {
+		return LevelTags[b.MinTagLevel]
+	}
+
+	v, ok := session.Get(sessionBackendLevelKey).(uint)
+	if !ok {
+		return LevelTags[b.MinTagLevel]
+	}
+	return LevelTags[v]
 }
 
 func (b *SessionBackend) SetLevel(level MessageTag) error {
-	b.MinTagLevel = TagLevels[level]
+	var session = sessions.Retrieve(b.Request)
+	if session == nil {
+		return nil
+	}
+
+	lvl := TagLevels[level]
+	session.Set(sessionBackendLevelKey, lvl)
+	b.MinTagLevel = lvl
 	return nil
 }
 

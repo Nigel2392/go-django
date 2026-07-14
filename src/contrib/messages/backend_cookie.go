@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/gob"
+	"fmt"
 	"net/http"
 	"slices"
 
@@ -34,6 +35,7 @@ type CookieBackend struct {
 	MinTagLevel    uint
 	used           bool
 	cleared        bool
+	levelSet       bool
 }
 
 func encodeMessages(messages []Message) (string, error) {
@@ -68,7 +70,7 @@ func NewCookieBackend(r *http.Request) (MessageBackend, error) {
 	var key = django.ConfigGet(
 		django.Global.Settings,
 		APPVAR_COOKIE_KEY,
-		&cookieBackendBaseCoookie,
+		cookieBackendBaseCoookie,
 	)
 
 	var cookie, err = r.Cookie(key.Name)
@@ -87,15 +89,44 @@ func NewCookieBackend(r *http.Request) (MessageBackend, error) {
 		}
 	}
 
+	var levelCookie = fmt.Sprintf("%s.level", key.Name)
+	cookie, err = r.Cookie(levelCookie)
+	if err != nil {
+		if err != http.ErrNoCookie {
+			logger.NameSpace(MESSAGES_NAMESPACE).
+				Errorf("Error retrieving cookie %q: %v", levelCookie, err)
+		}
+		cookie = &http.Cookie{}
+	}
+
+	var level, ok = TagLevels[MessageTag(cookie.Value)]
+	if !ok {
+		level = TagLevels[DefaultTags.Debug]
+	}
+
 	return &CookieBackend{
 		Request:        r,
-		MinTagLevel:    TagLevels[DefaultTags.Debug],
-		BaseCookie:     key,
+		MinTagLevel:    level,
+		BaseCookie:     &key,
 		QueuedMessages: messages,
 	}, nil
 }
 
 func (d *CookieBackend) Finalize(w http.ResponseWriter, r *http.Request) error {
+
+	if d.levelSet {
+		http.SetCookie(w, &http.Cookie{
+			Name:     fmt.Sprintf("%s.level", d.BaseCookie.Name),
+			Value:    string(LevelTags[d.MinTagLevel]),
+			Path:     d.BaseCookie.Path,
+			Domain:   d.BaseCookie.Domain,
+			Expires:  d.BaseCookie.Expires,
+			MaxAge:   d.BaseCookie.MaxAge,
+			HttpOnly: d.BaseCookie.HttpOnly,
+			SameSite: d.BaseCookie.SameSite,
+		})
+	}
+
 	if d.cleared {
 		http.SetCookie(w, &http.Cookie{
 			Name:   d.BaseCookie.Name,
@@ -166,6 +197,8 @@ func (d *CookieBackend) Level() MessageTag {
 }
 
 func (d *CookieBackend) SetLevel(level MessageTag) error {
+	d.used = true
+	d.levelSet = true
 	d.MinTagLevel = TagLevels[level]
 	return nil
 }
