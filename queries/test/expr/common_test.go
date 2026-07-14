@@ -87,3 +87,36 @@ func TestNamedValueResolveInvalidField(t *testing.T) {
 	v := expr.As("InvalidField", expr.V(30))
 	v.Resolve(info)
 }
+
+func TestStringCoverage(t *testing.T) {
+	s := expr.String("test")
+	if s.String() != "test" {
+		t.Errorf("Expected test, got %s", s.String())
+	}
+	s2 := s.Clone()
+	if s2.(expr.String) != "test" {
+		t.Errorf("Expected cloned test, got %s", s2)
+	}
+}
+
+func TestValuesCoverage(t *testing.T) {
+	info := getTestInfo()
+	v := expr.Values(1, 2, 3)
+	v2 := v.Clone()
+	
+	resolved := v2.Resolve(info)
+	var sb strings.Builder
+	args := resolved.SQL(&sb)
+	
+	if len(args) != 3 {
+		t.Errorf("Expected 3 args, got %d", len(args))
+	}
+	
+	// Also test unhappy path where values are empty
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Expected panic on empty values")
+		}
+	}()
+	expr.Values()
+}

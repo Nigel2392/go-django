@@ -80,3 +80,22 @@ func TestStatementMissingArgs(t *testing.T) {
 	stmt := expr.ParseExprStatement("![Age] = ?[2]", []any{18}) // Wants arg at index 1 (1-based index 2)
 	stmt.Resolve(info)
 }
+
+func TestStatementData(t *testing.T) {
+	// Test the PARSER.Data method
+	data := expr.PARSER.Data("field", "Age")
+	if data == nil {
+		t.Errorf("Expected Data to return something for valid type 'field'")
+	}
+
+	invalidData := expr.PARSER.Data("invalid_type", "Value")
+	if invalidData != nil {
+		t.Errorf("Expected nil for invalid type")
+	}
+
+	// Test expressionParser.Data (which is triggered for 'expr' type)
+	exprData := expr.PARSER.Data("expr", expr.V(1))
+	if exprData == nil {
+		t.Errorf("Expected Data to return something for expr type")
+	}
+}

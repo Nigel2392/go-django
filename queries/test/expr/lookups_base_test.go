@@ -89,3 +89,49 @@ func TestLookupInInvalidArg(t *testing.T) {
 	q := expr.Q("Age__in") // expects at least one value
 	q.Resolve(info)
 }
+
+func TestBaseLookupResolvePanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Expected panic when ResolveFunc is nil")
+		}
+	}()
+	l := &expr.BaseLookup{Identifier: "test_lookup"}
+	l.Resolve(nil, nil, nil)
+}
+
+func TestRangeLookupCoverage(t *testing.T) {
+	info := getTestInfo()
+	l := &expr.RangeLookup{
+		BaseLookup: expr.BaseLookup{
+			Identifier: "range",
+		},
+	}
+	min, max := l.Arity()
+	if min != 2 || max != 2 {
+		t.Errorf("Expected arity 2,2, got %d,%d", min, max)
+	}
+
+	f1 := expr.Field("Age")
+	r1 := f1.Resolve(info)
+	
+	fn := l.Resolve(info, r1, []any{10, 20})
+	var sb strings.Builder
+	args := fn(&sb)
+	if len(args) != 2 || args[0] != 10 || args[1] != 20 {
+		t.Errorf("Expected 10 and 20 in args")
+	}
+	if !strings.Contains(sb.String(), "BETWEEN ? AND ?") {
+		t.Errorf("Expected BETWEEN ? AND ?, got %s", sb.String())
+	}
+
+	// Test panic
+	defer func() {
+		if r := recover(); r == nil {
+			t.Errorf("Expected panic with bad arg count")
+		}
+	}()
+	fnBad := l.Resolve(info, r1, []any{10})
+	var sb2 strings.Builder
+	fnBad(&sb2)
+}

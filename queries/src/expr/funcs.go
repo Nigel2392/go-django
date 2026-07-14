@@ -257,11 +257,11 @@ func init() {
 
 		switch d.(type) {
 		case *drivers.DriverMySQL, *drivers.DriverMariaDB:
-			return fmt.Sprintf("DATE_FORMAT(%s, %s)", sb.String(), format), args, nil
+			return fmt.Sprintf("DATE_FORMAT(%s, '%s')", sb.String(), format), args, nil
 		case *drivers.DriverPostgres:
-			return fmt.Sprintf("TO_CHAR(%s, %s)", sb.String(), format), args, nil
+			return fmt.Sprintf("TO_CHAR(%s, '%s')", sb.String(), format), args, nil
 		case *drivers.DriverSQLite:
-			return fmt.Sprintf("STRFTIME(%s, %s)", format, sb.String()), args, nil
+			return fmt.Sprintf("STRFTIME('%s', %s)", format, sb.String()), args, nil
 		}
 
 		return "", nil, fmt.Errorf("unsupported driver for DATE_FORMAT: %T", d)

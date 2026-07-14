@@ -3,7 +3,7 @@ package expr_test
 import (
 	"strings"
 	"testing"
-	
+
 	"github.com/Nigel2392/go-django/queries/src/expr"
 )
 
@@ -97,5 +97,22 @@ func TestLookupRegistryUnhappyPath2(t *testing.T) {
 	_, err := expr.GetLookup(info, "non_existent_lookup", "`test_model`.`age`", []any{1})
 	if err == nil {
 		t.Errorf("Expected error when getting non-existent lookup")
+	}
+}
+
+func TestLookupRegistryHasTransform(t *testing.T) {
+	info := getTestInfo()
+
+	// upper is registered by default
+	// Getting a lookup with a transform should succeed and use the transform.
+	_, err := expr.GetLookup(info, "upper__exact", "`test_model`.`age`", []any{1})
+	if err != nil {
+		t.Errorf("Expected upper__exact to be resolved, err: %v", err)
+	}
+
+	// non-existent transform
+	_, err = expr.GetLookup(info, "non_existent_transform_123__exact", "`test_model`.`age`", []any{1})
+	if err == nil {
+		t.Errorf("Expected error for non-existent transform")
 	}
 }

@@ -3,6 +3,7 @@ package expr_test
 import (
 	"strings"
 	"testing"
+
 	"github.com/Nigel2392/go-django/queries/src/expr"
 )
 
@@ -55,5 +56,22 @@ func TestExprOperatorUnhappyPath2(t *testing.T) {
 	bad := expr.LogicalOp("NOT_A_LOGICAL_OP")
 	if string(bad) != "NOT_A_LOGICAL_OP" {
 		t.Errorf("Expected NOT_A_LOGICAL_OP")
+	}
+}
+
+func TestOp(t *testing.T) {
+	op, ok := expr.Op("=")
+	if !ok || string(op) != "=" {
+		t.Errorf("Expected op to be =, got %v", op)
+	}
+
+	op, ok = expr.Op("NOT_A_VALID_OP")
+	if ok {
+		t.Errorf("Expected false for invalid op, got true")
+	}
+
+	op, ok = expr.Op(123)
+	if ok {
+		t.Errorf("Expected false for non-string, got true")
 	}
 }

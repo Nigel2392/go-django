@@ -84,6 +84,10 @@ var funcLookups = &funcLookupsRegistry{
 	d_m: make(map[reflect.Type]map[string]func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error)),
 }
 
+func LookupFunc(inf *ExpressionInfo, lookup string, value []Expression, funcParams []any) (sql string, args []any, err error) {
+	return funcLookups.Lookup(inf, lookup, value, funcParams)
+}
+
 func RegisterFunc(funcName string, fn func(d driver.Driver, value []Expression, funcParams []any) (sql string, args []any, err error), drivers ...driver.Driver) {
 	funcLookups.register(funcName, fn, drivers...)
 }

@@ -123,3 +123,10 @@ func TestSubqueryOuterRefUnknownField(t *testing.T) {
 	ref := expr.OuterRef("UnknownField")
 	ref.Resolve(subInfo)
 }
+
+func TestSubqueryOuterRefFieldName(t *testing.T) {
+	ref := expr.OuterRef("TestField").(expr.NamedExpression)
+	if ref.FieldName() != "TestField" {
+		t.Errorf("Expected TestField, got %s", ref.FieldName())
+	}
+}
