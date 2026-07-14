@@ -1,0 +1,34 @@
+name: Fuzz tests
+on:
+  # Trigger on push to specific branches or all branches
+  push:
+    paths:
+      - 'src/go.mod'
+      - 'src/**/*.go'
+      - 'go.work'
+      - 'go.mod'
+      - '.github/workflows/*'
+
+  pull_request:
+    paths:
+      - '**.go'
+      - 'go.mod'
+      - '.github/workflows/*'
+
+jobs:
+  fuzz:
+    env:
+      # See contrib/admin/middleware.go for more information
+      GITHUB_ACTIONS: 1
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go 1.24
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.24'
+
+    - name: Fuzz Tests for SQLite
+      run: go run github.com/koonix/gofuzz@latest ./src/... -- -tags="testing_auth test sqlite" -fuzztime=30s
