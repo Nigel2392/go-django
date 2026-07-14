@@ -30,7 +30,6 @@ var (
 		"signature expired",
 		ErrBadSignature,
 	)
-
 	ErrUnknownSignatureAlgorithm = errors.New(
 		ErrorSignerAlgorithm,
 		"unknown signature algorithm",
