@@ -1,3 +1,5 @@
+# This file is used mainly for development purposes.
+
 migrate:
   src:
     - ./.private/migrations-django

@@ -2,6 +2,11 @@
 
 ![1719351174099](.github/image/README/1719351174099.png)
 
+[![Build Framework](https://img.shields.io/github/actions/workflow/status/Nigel2392/go-django/test_go.yml?branch=main)](https://github.com/Nigel2392/go-django/actions)
+[![Build ORM](https://img.shields.io/github/actions/workflow/status/Nigel2392/go-django/queries_test_go.yml?branch=main)](https://github.com/Nigel2392/go-django/actions)
+[![License](https://img.shields.io/github/license/Nigel2392/go-django)](https://github.com/Nigel2392/go-django/blob/main/LICENSE)
+[![Go Reference](https://pkg.go.dev/badge/github.com/Nigel2392/go-django.svg)](https://pkg.go.dev/github.com/Nigel2392/go-django)
+
 **Django** rewritten to **Golang**.
 
 This is a rewrite of the Django framework in Golang.
