@@ -6,6 +6,9 @@ package djester
 import (
 	"fmt"
 	"reflect"
+	"strings"
+
+	"github.com/PuerkitoBio/goquery"
 )
 
 type Assertion interface {
@@ -16,6 +19,9 @@ type Assertion interface {
 	AssertNotNil(actual any)
 	AssertContains(haystack, needle any)
 	AssertNotContains(haystack, needle any)
+
+	AssertHTMLString(document string, asserts ...HTMLAssertFunc)
+	AssertHTMLDoc(doc *goquery.Document, asserts ...HTMLAssertFunc)
 }
 
 type assertion struct {
@@ -51,6 +57,32 @@ func (d *assertion) AssertNil(actual any) {
 func (d *assertion) AssertNotNil(actual any) {
 	d.t.Helper()
 	d.Assert(actual != nil, "expected not nil, got %v", actual)
+}
+
+func (r *assertion) AssertHTMLString(document string, asserts ...HTMLAssertFunc) {
+	r.t.Helper()
+
+	html, err := goquery.NewDocumentFromReader(strings.NewReader(document))
+	if err != nil {
+		r.t.Fatalf("Failed to parse document: %v", err)
+	}
+
+	r.AssertHTMLDoc(html, asserts...)
+}
+
+func (r *assertion) AssertHTMLDoc(doc *goquery.Document, asserts ...HTMLAssertFunc) {
+	r.t.Helper()
+
+	for _, assertFn := range asserts {
+		if err := assertFn(doc); err != nil {
+			if r.verbose {
+				var h, _ = doc.Html()
+				r.t.Fatalf("HTML assertion failed: %v:\n%s", err, h)
+			} else {
+				r.t.Fatalf("HTML assertion failed: %v", err)
+			}
+		}
+	}
 }
 
 func contains(sliceVal, itemVal reflect.Value) bool {

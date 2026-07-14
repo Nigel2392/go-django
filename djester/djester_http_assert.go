@@ -30,11 +30,7 @@ func (r *responseAssertion) AssertHTML(asserts ...HTMLAssertFunc) {
 		r.assertion.t.Fatalf("failed to parse HTML DOM: %v", err)
 	}
 
-	for _, assertFn := range asserts {
-		if err := assertFn(doc); err != nil {
-			r.assertion.t.Fatalf("HTML assertion failed: %v", err)
-		}
-	}
+	r.assertion.AssertHTMLDoc(doc, asserts...)
 }
 
 // HasElement ensures at least one element matches the CSS selector.
