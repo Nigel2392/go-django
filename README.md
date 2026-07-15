@@ -101,8 +101,6 @@ go install github.com/Nigel2392/go-django/cmd/go-django-definitions@v1.7.1.1
 
 GO-Django is tested to work on the following databases:
 
-But more tests / databases will be added over time.
-
 - SQLite through [mattn/go-sqlite3](https://github.com/mattn/go-sqlite3)
 - MySQL through [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql)
 - Local MYSQL with [dolthub/go-mysql-server](https://github.com/dolthub/go-mysql-server) through [go-sql-driver/mysql](https://github.com/go-sql-driver/mysql) (used internally for testing)
@@ -113,8 +111,9 @@ But more tests / databases will be added over time.
 
 - [Todo App](./docs/examples/todos.md)
 - [Blog App](./docs/examples/blog.md)
-<!-- - [Forms App](./docs/examples/forms.md) -->
-<!-- - [Openauth2 App](./docs/examples/openauth2.md) -->
+- [Forms App](./docs/examples/formsapp.md)
+- [Openauth2 App](./docs/examples/openauth2app.md)
+- [Handling Server Errors](./docs/examples/server_errors.md)
 
 ### How to work with models in the database
 
