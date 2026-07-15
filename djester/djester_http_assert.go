@@ -18,16 +18,16 @@ type ResponseAssertion interface {
 }
 
 type responseAssertion struct {
-	assertion
+	assertion[baseTB]
 	response *TestResponse
 }
 
 func (r *responseAssertion) AssertHTML(asserts ...HTMLAssertFunc) {
-	r.assertion.t.Helper()
+	r.assertion.test.Helper()
 
 	doc, err := r.response.DOM()
 	if err != nil {
-		r.assertion.t.Fatalf("failed to parse HTML DOM: %v", err)
+		r.assertion.test.Fatalf("failed to parse HTML DOM: %v", err)
 	}
 
 	r.assertion.AssertHTMLDoc(doc, asserts...)

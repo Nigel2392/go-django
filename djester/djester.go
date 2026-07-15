@@ -37,7 +37,7 @@ const (
 	ErrNoResponseBody errs.Error = "operation failed: no response body"
 )
 
-type TB interface {
+type baseTB interface {
 	Cleanup(f func())
 	Context() context.Context
 	Error(args ...any)
@@ -50,12 +50,16 @@ type TB interface {
 	Helper()
 	Log(args ...any)
 	Logf(format string, args ...any)
-	Run(name string, f func(TB)) bool
 	Skip(args ...any)
 	SkipNow()
 	Skipf(format string, args ...any)
 	Skipped() bool
 	TempDir() string
+}
+
+type TB interface {
+	baseTB
+	Run(name string, f func(TB)) bool
 }
 
 type tWrap struct {
@@ -240,6 +244,10 @@ func (d *Tester) DB() drivers.Database {
 	return d.db
 }
 
+func (d *Tester) Assert(t baseTB, verbose bool) Assertion {
+	return &assertion[baseTB]{test: t, verbose: verbose}
+}
+
 func (d *Tester) getUserFromRequest(r *http.Request) authentication.User {
 	var session = sessions.Retrieve(r)
 	var iuserKey = session.Get(USER_SESSION_VAR)
@@ -370,10 +378,6 @@ func (d *Tester) Close() error {
 	return nil
 }
 
-func (d *Tester) Assert(verbose bool) Assertion {
-	return &assertion{t: d.test, verbose: verbose}
-}
-
 func (d *Tester) Test(t *testing.T) {
 	t.Helper()
 	if err := d.Setup(TW(t)); err != nil {
@@ -382,6 +386,7 @@ func (d *Tester) Test(t *testing.T) {
 	}
 	for _, test := range d.Tests {
 		t.Run(test.Name(), func(t *testing.T) {
+			t.Helper()
 			test.Test(d, t)
 		})
 	}

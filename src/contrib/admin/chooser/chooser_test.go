@@ -156,7 +156,7 @@ func TestAdmin(t *testing.T) {
 				Label: "Chooser create",
 				Function: func(dj *djester.Tester, t *testing.T) {
 					_, err := dj.Login("admin_user")
-					asserter := dj.Assert(true)
+					asserter := dj.Assert(t, true)
 					asserter.Assert(err == nil, "Login failed: %v", err)
 
 					_, err = queries.GetQuerySet(&TestModel{}).Delete()
@@ -216,7 +216,7 @@ func TestAdmin(t *testing.T) {
 				Label: "Chooser list",
 				Function: func(d *djester.Tester, t *testing.T) {
 					_, err := d.Login("admin_user")
-					asserter := d.Assert(true)
+					asserter := d.Assert(t, true)
 					asserter.Assert(err == nil, "Login failed: %v", err)
 
 					// Check add page HTML

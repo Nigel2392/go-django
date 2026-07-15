@@ -33,10 +33,10 @@ func (t *TestResponse) setupBuffer() (err error) {
 	return t.Response.Body.Close()
 }
 
-func (r *TestResponse) Assert(verbose bool) ResponseAssertion {
+func (r *TestResponse) Assert(t baseTB, verbose bool) ResponseAssertion {
 	return &responseAssertion{
-		assertion: assertion{
-			t:       r.t.test,
+		assertion: assertion[baseTB]{
+			test:    t,
 			verbose: verbose,
 		},
 		response: r,

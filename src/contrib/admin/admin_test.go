@@ -154,8 +154,8 @@ func TestAdmin(t *testing.T) {
 								t.Fatalf("GET failed: %v", err)
 							}
 							defer resp.Body.Close()
-							d.Assert(true).AssertEqual(http.StatusOK, resp.StatusCode)
-							d.Assert(true).Assert(strings.HasPrefix(resp.Request.URL.Path, "/admin/login/"), "expected redirect to /admin/login/, got %s", resp.Request.URL.Path)
+							djester.Asserter(t, true).AssertEqual(http.StatusOK, resp.StatusCode)
+							djester.Asserter(t, true).Assert(strings.HasPrefix(resp.Request.URL.Path, "/admin/login/"), "expected redirect to /admin/login/, got %s", resp.Request.URL.Path)
 						})
 					}
 				},
@@ -164,7 +164,7 @@ func TestAdmin(t *testing.T) {
 				Label: "Logged in normal user redirects",
 				Function: func(d *djester.Tester, t *testing.T) {
 					_, err := d.Login("valid_user")
-					d.Assert(true).Assert(err == nil, "Login failed: %v", err)
+					djester.Asserter(t, true).Assert(err == nil, "Login failed: %v", err)
 
 					endpoints := []string{
 						"/admin/apps/admin_test",
@@ -181,8 +181,8 @@ func TestAdmin(t *testing.T) {
 								t.Fatalf("GET failed: %v", err)
 							}
 							defer resp.Body.Close()
-							d.Assert(true).AssertEqual(http.StatusOK, resp.StatusCode)
-							d.Assert(true).Assert(strings.HasPrefix(resp.Request.URL.Path, "/admin/relogin/"), "expected redirect to /admin/relogin/, got %s", resp.Request.URL.Path)
+							djester.Asserter(t, true).AssertEqual(http.StatusOK, resp.StatusCode)
+							djester.Asserter(t, true).Assert(strings.HasPrefix(resp.Request.URL.Path, "/admin/relogin/"), "expected redirect to /admin/relogin/, got %s", resp.Request.URL.Path)
 						})
 					}
 
@@ -193,7 +193,7 @@ func TestAdmin(t *testing.T) {
 				Label: "Logged in admin access",
 				Function: func(d *djester.Tester, t *testing.T) {
 					_, err := d.Login("admin_user")
-					d.Assert(true).Assert(err == nil, "Login failed: %v", err)
+					djester.Asserter(t, true).Assert(err == nil, "Login failed: %v", err)
 
 					endpoints := []string{
 						"/admin/apps/admin_test",
@@ -210,7 +210,7 @@ func TestAdmin(t *testing.T) {
 								t.Fatalf("GET failed: %v", err)
 							}
 							defer resp.Body.Close()
-							d.Assert(true).AssertEqual(http.StatusOK, resp.StatusCode)
+							djester.Asserter(t, true).AssertEqual(http.StatusOK, resp.StatusCode)
 						})
 					}
 
@@ -221,13 +221,13 @@ func TestAdmin(t *testing.T) {
 				Label: "Admin create, edit, delete cycle",
 				Function: func(d *djester.Tester, t *testing.T) {
 					_, err := d.Login("admin_user")
-					var asserter = d.Assert(true)
+					var asserter = djester.Asserter(t, true)
 					asserter.Assert(err == nil, "Login failed: %v", err)
 
 					// Check add page HTML
 					resp, err := d.Get("/admin/apps/admin_test/TestModel/add", nil, nil)
 					asserter.Assert(err == nil, "GET add failed: %v", err)
-					resp.Assert(true).AssertHTML(
+					resp.Assert(t, true).AssertHTML(
 						djester.HasElement("form"),
 						djester.HasElement("input#id_ID"),
 						djester.HasElement("input#id_Name"),
@@ -240,7 +240,7 @@ func TestAdmin(t *testing.T) {
 					}
 					resp, err = d.PostForm("/admin/apps/admin_test/TestModel/add", nil, nil, form)
 					asserter.Assert(err == nil, "POST add failed: %v", err)
-					resp.Assert(true).AssertHTML(
+					resp.Assert(t, true).AssertHTML(
 						func(doc *goquery.Document) error {
 							var s = doc.Find(".panel__error")
 							var label = s.Parent().Parent().Parent().Find("label")
@@ -266,7 +266,7 @@ func TestAdmin(t *testing.T) {
 					form["Name"] = "Edited Test Name"
 					resp, err = d.PostForm("/admin/apps/admin_test/TestModel/edit/2", nil, nil, form)
 					asserter.Assert(err == nil, "POST edit failed: %v", err)
-					resp.Assert(true).AssertHTML(
+					resp.Assert(t, true).AssertHTML(
 						func(doc *goquery.Document) error {
 							var s = doc.Find(".panel__error")
 							var label = s.ParentsUntil(".panel").ChildrenFiltered("label")
@@ -291,7 +291,7 @@ func TestAdmin(t *testing.T) {
 					// Delete object
 					resp, err = d.PostForm("/admin/apps/admin_test/TestModel/delete/2", nil, nil, map[string]interface{}{"confirm": "yes"})
 					asserter.Assert(err == nil, "POST delete failed: %v", err)
-					resp.Assert(true).AssertHTML(
+					resp.Assert(t, true).AssertHTML(
 						func(doc *goquery.Document) error {
 							var s = doc.Find(".panel__error")
 							var label = s.ParentsUntil(".panel").ChildrenFiltered("label")

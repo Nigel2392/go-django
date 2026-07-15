@@ -94,7 +94,7 @@ func newApp() *apps.AppConfig {
 		}))
 
 		m.Handle("POST", "/form", mux.NewHandler(func(w http.ResponseWriter, r *http.Request) {
-			if !strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+			if !strings.HasPrefix(r.Header.Get("Content-Type"), "application/x-www-form-urlencoded") {
 				http.Error(w, "Bad Request", http.StatusBadRequest)
 				return
 			}
@@ -152,7 +152,7 @@ func TestDjester(t *testing.T) {
 				Label: "Login with valid user",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Login("valid_user")
-					d.Assert(true).Assert(err == nil, "Login failed: %v", err)
+					d.Assert(t, true).Assert(err == nil, "Login failed: %v", err)
 					defer resp.Body.Close()
 				},
 			},
@@ -160,10 +160,10 @@ func TestDjester(t *testing.T) {
 				Label: "Logout from valid user",
 				Function: func(d *djester.Tester, t *testing.T) {
 					_, err := d.Login("valid_user")
-					d.Assert(true).Assert(err == nil, "Login failed: %v", err)
+					d.Assert(t, true).Assert(err == nil, "Login failed: %v", err)
 
 					resp, err := d.Logout()
-					d.Assert(true).Assert(err == nil, "Logout failed: %v", err)
+					d.Assert(t, true).Assert(err == nil, "Logout failed: %v", err)
 					defer resp.Body.Close()
 				},
 			},
@@ -171,7 +171,7 @@ func TestDjester(t *testing.T) {
 				Label: "Login with admin user",
 				Function: func(d *djester.Tester, t *testing.T) {
 					resp, err := d.Login("admin_user")
-					d.Assert(true).Assert(err == nil, "Login failed: %v", err)
+					d.Assert(t, true).Assert(err == nil, "Login failed: %v", err)
 					defer resp.Body.Close()
 				},
 			},
@@ -179,7 +179,7 @@ func TestDjester(t *testing.T) {
 				Label: "Login with invalid user",
 				Function: func(d *djester.Tester, t *testing.T) {
 					_, err := d.Login("invalid_user")
-					d.Assert(true).Assert(err != nil, "Expected error logging in with invalid user")
+					d.Assert(t, true).Assert(err != nil, "Expected error logging in with invalid user")
 				},
 			},
 			&djester.BasicTest{
@@ -191,7 +191,7 @@ func TestDjester(t *testing.T) {
 			&djester.BasicTest{
 				Label: "Actual flow: unauthenticated access, login, user access, logout",
 				Function: func(d *djester.Tester, t *testing.T) {
-					assert := d.Assert(true)
+					assert := d.Assert(t, true)
 
 					// Unauthenticated access
 					resp, err := d.Get("/me", nil, nil)
@@ -229,7 +229,7 @@ func TestDjester(t *testing.T) {
 			&djester.BasicTest{
 				Label: "Actual flow: login admin, admin access, logout",
 				Function: func(d *djester.Tester, t *testing.T) {
-					assert := d.Assert(true)
+					assert := d.Assert(t, true)
 
 					// Login as admin
 					loginResp, err := d.Login("admin_user")
@@ -255,7 +255,7 @@ func TestDjester(t *testing.T) {
 			&djester.BasicTest{
 				Label: "Assert suite works",
 				Function: func(d *djester.Tester, t *testing.T) {
-					assert := d.Assert(true)
+					assert := d.Assert(t, true)
 					assert.AssertEqual(1, 1)
 					assert.AssertNotEqual("x", "y")
 					assert.AssertNil(nil)
@@ -267,7 +267,7 @@ func TestDjester(t *testing.T) {
 			&djester.BasicTest{
 				Label: "GET request works",
 				Function: func(d *djester.Tester, t *testing.T) {
-					assert := d.Assert(true)
+					assert := d.Assert(t, true)
 					resp, err := d.Get("/ping", nil, url.Values{})
 					assert.Assert(err == nil, "GET failed: %v", err)
 					defer resp.Body.Close()
@@ -281,11 +281,11 @@ func TestDjester(t *testing.T) {
 				Function: func(d *djester.Tester, t *testing.T) {
 					// 1. Fetch the HTML
 					resp, err := d.Get("/html", nil, url.Values{})
-					d.Assert(true).Assert(err == nil, "GET /html failed: %v", err)
+					d.Assert(t, true).Assert(err == nil, "GET /html failed: %v", err)
 					defer resp.Body.Close()
 
 					// 2. Get the ResponseAssertion from our TestResponse
-					resAssert := resp.Assert(true)
+					resAssert := resp.Assert(t, true)
 
 					// 3. Test all the different HTMLAssertFunc options
 					resAssert.AssertHTML(
@@ -302,7 +302,7 @@ func TestDjester(t *testing.T) {
 			&djester.BasicTest{
 				Label: "POST body works",
 				Function: func(d *djester.Tester, t *testing.T) {
-					assert := d.Assert(true)
+					assert := d.Assert(t, true)
 					body := bytes.NewBufferString("hello")
 					resp, err := d.Post("/echo", nil, nil, body)
 					assert.Assert(err == nil, "POST failed: %v", err)
@@ -314,7 +314,7 @@ func TestDjester(t *testing.T) {
 			&djester.BasicTest{
 				Label: "JSON POST works",
 				Function: func(d *djester.Tester, t *testing.T) {
-					assert := d.Assert(true)
+					assert := d.Assert(t, true)
 					payload := map[string]string{"name": "test"}
 					var out map[string]string
 					resp, err := d.PostJson("/json", nil, nil, payload, &out)
@@ -326,7 +326,7 @@ func TestDjester(t *testing.T) {
 			&djester.BasicTest{
 				Label: "Form POST works",
 				Function: func(d *djester.Tester, t *testing.T) {
-					assert := d.Assert(true)
+					assert := d.Assert(t, true)
 					form := map[string]interface{}{"foo": "bar"}
 					resp, err := d.PostForm("/form", nil, nil, form)
 					assert.Assert(err == nil, "Form POST failed: %v", err)
@@ -338,7 +338,7 @@ func TestDjester(t *testing.T) {
 			&djester.BasicTest{
 				Label: "File upload works",
 				Function: func(d *djester.Tester, t *testing.T) {
-					assert := d.Assert(true)
+					assert := d.Assert(t, true)
 					f, err := os.CreateTemp("", "file.txt")
 					assert.Assert(err == nil, "tmp file failed: %v", err)
 					defer os.Remove(f.Name())
