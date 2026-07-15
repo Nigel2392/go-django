@@ -111,7 +111,7 @@ foreach ($Database in $testsToRun) {
 
     # RUN TEST
     $file = "coverage/cover.${Database}.out"
-    $cmd = "go test -p=1 -tags=`"testing_auth test $Database`" -coverpkg=`"github.com/Nigel2392/go-django/...`" ./... ./queries/... -coverprofile=`"$file`" --timeout=30s"
+    $cmd = "go test -p=1 -tags=`"testing_auth test $Database`" -coverpkg=`"github.com/Nigel2392/go-django/...`" ./... ./queries/... ./djester/... -coverprofile=`"$file`" --timeout=30s"
     
     if ($flags.verbose) { $cmd += " -v" }
     if ($flags.failslow -ne $true) { $cmd += " -failfast" }

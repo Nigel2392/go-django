@@ -765,6 +765,13 @@ func TestCast_SaveMethodsVariations(t *testing.T) {
 		mustNoErr(t, saveFn())
 	})
 
+	t.Run("func(ctx context.Context) (..., error) 0 val", func(t *testing.T) {
+		m := &Model3{}
+		saveFn, err := django_reflect.Method[func()](m, "Save", django_reflect.WrapWithContext(ctx))
+		mustNoErr(t, err)
+		saveFn()
+	})
+
 	t.Run("func(ctx context.Context) (..., error) 2 vals", func(t *testing.T) {
 		m := &Model4{}
 		saveFn, err := django_reflect.Method[func() error](m, "Save", django_reflect.WrapWithContext(ctx))

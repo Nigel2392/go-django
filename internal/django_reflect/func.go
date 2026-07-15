@@ -43,7 +43,19 @@ checkValid:
 			v = v.Elem()
 			goto checkValid
 		}
-		return n, ErrMethodNotFound
+
+		// if not struct and invalid, safely return
+		if v.Kind() != reflect.Struct {
+			return n, ErrMethodNotFound
+		}
+
+		// we can try to see if the struct has a field-func
+		// with this name.
+		m = v.FieldByName(name)
+		if m.Kind() != reflect.Func {
+			return n, ErrMethodNotFound
+		}
+
 	}
 
 	var fnT = reflect.TypeOf(n)

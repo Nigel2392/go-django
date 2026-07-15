@@ -202,6 +202,7 @@ class Chooser {
     async showCreate(url: string = this.config.createurl, method: string = "GET", body: any = null) {
         let data = await this.loadModalContent(url, method, body);
         if (data) {
+            // this is the POST path
             this.select(data.pk, data.preview, data.data);
             await this.close();
             return;

@@ -6,7 +6,7 @@ import (
 	"net/url"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
+	errsPkg "github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/errs"
 	"github.com/Nigel2392/go-django/src/core/filesystem"
@@ -377,6 +377,27 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 				continue
 			}
 
+			/*
+
+				this allows for defining form methods to clean field values.
+				i.e. form with field called "email" can implement method:
+
+					CleanField__email(context.Context?, data) (data, error?)
+
+			*/
+			//	cleanField, err := django_reflect.Method[func(data any) (any, error)](
+			//		fm, fmt.Sprintf("CleanField__%s", head.Key),
+			//		django_reflect.WrapWithContext(ctx),
+			//	)
+			//	if err == nil {
+			//		data, err = cleanField(data)
+			//		if err != nil {
+			//			addError(mixin, depth, k, err)
+			//			invalid[k] = initial
+			//			continue
+			//		}
+			//	}
+
 			errors = v.Validate(ctx, data)
 			if len(errors) > 0 {
 				var errList = make([]error, 0, len(errors))
@@ -420,7 +441,7 @@ func fullClean(ctx context.Context, f ErrorAdder, rawData map[string][]string, f
 func FormValueFromDataDict[T any](ctx context.Context, form FormFieldDefiner, name string, data url.Values, files map[string][]filesystem.FileHeader) (T, bool, []error) {
 	var field, ok = form.Field(name)
 	if !ok {
-		return *new(T), false, []error{errors.FieldNotFound.Wrapf(
+		return *new(T), false, []error{errsPkg.FieldNotFound.Wrapf(
 			"field %q not found in form %T", name, form,
 		)}
 	}
@@ -431,7 +452,7 @@ func FormValueFromDataDict[T any](ctx context.Context, form FormFieldDefiner, na
 	}
 
 	if widget == nil {
-		return *new(T), false, []error{errors.ValueError.Wrapf(
+		return *new(T), false, []error{errsPkg.ValueError.Wrapf(
 			"field %q in form %T has no widget", name, form,
 		)}
 	}
@@ -468,7 +489,7 @@ func FormValueFromDataDict[T any](ctx context.Context, form FormFieldDefiner, na
 		return rv.Interface().(T), true, nil
 	}
 
-	return *new(T), true, []error{errors.TypeMismatch.Wrapf(
+	return *new(T), true, []error{errsPkg.TypeMismatch.Wrapf(
 		"field %q in form %T: value is %T, cannot convert to %T",
 		name, form, value, _nT,
 	)}

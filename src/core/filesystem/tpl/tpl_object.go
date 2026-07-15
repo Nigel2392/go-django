@@ -97,7 +97,3 @@ func (t *templateObject) Execute(w io.Writer, data any) error {
 
 	return tmpl.ExecuteTemplate(w, target, context)
 }
-
-const HOOK_FRAGMENT_FOR_REQUEST = "tpl.hook.fragment_for_request"
-
-type FragmentForRequestHook func(r *http.Request, baseTemplate string) (newBaseTemplate string, err error)

@@ -46,11 +46,12 @@ func (b *BoundDetailView[T]) BindContext(c ctx.Context, obj T) {
 
 type DetailView[T any] struct {
 	BaseView
-	ContextName string
-	URLArgName  string
-	GetObjectFn func(req *http.Request, urlArg string) (T, error)
-	OnErrorFn   func(w http.ResponseWriter, r *http.Request, err error)
-	PostMethod  func(d *DetailView[T], w http.ResponseWriter, r *http.Request, bound View) (http.ResponseWriter, *http.Request)
+	ContextName     string
+	URLArgName      string
+	GetObjectFn     func(req *http.Request, urlArg string) (T, error)
+	ChangeContextFn func(req *http.Request, object T, context ctx.ContextWithRequest) ctx.ContextWithRequest
+	OnErrorFn       func(w http.ResponseWriter, r *http.Request, err error)
+	PostMethod      func(d *DetailView[T], w http.ResponseWriter, r *http.Request, bound View) (http.ResponseWriter, *http.Request)
 }
 
 func (d *DetailView[T]) Setup(w http.ResponseWriter, req *http.Request) (http.ResponseWriter, *http.Request) {
@@ -122,6 +123,10 @@ errCheck:
 
 	if binder, ok := view.(detailview__ContextBinder[T]); ok {
 		binder.BindContext(viewCtx, object)
+	}
+
+	if v.ChangeContextFn != nil {
+		viewCtx = v.ChangeContextFn(r, object, viewCtx.(ctx.ContextWithRequest))
 	}
 
 	if r.Method == http.MethodPost && v.PostMethod != nil {
