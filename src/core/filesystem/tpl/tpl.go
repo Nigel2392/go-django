@@ -80,6 +80,20 @@ func MergeConfig(dst, src *Config) *Config {
 		)
 	}
 
+	switch {
+	case dst.TemplateFragmentForRequest == nil:
+		dst.TemplateFragmentForRequest = src.TemplateFragmentForRequest
+	case dst.TemplateFragmentForRequest != nil && src.TemplateFragmentForRequest != nil:
+		var fn = dst.TemplateFragmentForRequest
+		dst.TemplateFragmentForRequest = func(r *http.Request, baseTemplate string) (newBaseTemplate string, err error) {
+			newBaseTemplate, err = fn(r, baseTemplate)
+			if err != nil || newBaseTemplate != baseTemplate {
+				return newBaseTemplate, err
+			}
+			return src.TemplateFragmentForRequest(r, baseTemplate)
+		}
+	}
+
 	var fm = make(template.FuncMap, len(dst.Funcs)+len(src.Funcs))
 	maps.Copy(fm, dst.Funcs)
 	maps.Copy(fm, src.Funcs)
