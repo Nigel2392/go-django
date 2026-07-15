@@ -87,5 +87,17 @@ func (t *templateObject) Execute(w io.Writer, data any) error {
 		)
 	}
 
-	return tmpl.ExecuteTemplate(w, t.baseName, context)
+	var target = t.baseName
+	if request != nil && t.config != nil && t.config.TemplateFragmentForRequest != nil {
+		target, err = t.config.TemplateFragmentForRequest(request, target)
+		if err != nil {
+			return fmt.Errorf("Error while trying to retrieve template fragment for request: %w", err)
+		}
+	}
+
+	return tmpl.ExecuteTemplate(w, target, context)
 }
+
+const HOOK_FRAGMENT_FOR_REQUEST = "tpl.hook.fragment_for_request"
+
+type FragmentForRequestHook func(r *http.Request, baseTemplate string) (newBaseTemplate string, err error)

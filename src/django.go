@@ -859,6 +859,8 @@ func (a *Application) Initialize() error {
 	var groups = make([][]checks.Message, 0, a.Apps.Len())
 	for h := a.Apps.Front(); h != nil; h = h.Next() {
 
+		// This basically ensures that each route in the app (and subroutes)
+		// get assigned a middleware to set up the app- specific request context variables.
 		h.Value.BuildRouting(a.Mux.Namespace(mux.NamespaceOptions{
 			OnRouteServe: func(r *http.Request) *http.Request {
 				return r.WithContext(ContextWithApp(

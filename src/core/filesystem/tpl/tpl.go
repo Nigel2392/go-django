@@ -50,6 +50,10 @@ type Config struct {
 	Matches      func(path string) bool
 	Funcs        template.FuncMap
 	RequestFuncs func(*http.Request) template.FuncMap
+
+	// Override which template which eventually be executed based on a request.
+	// This will only work if the request is not nil.
+	TemplateFragmentForRequest func(r *http.Request, baseTemplate string) (newBaseTemplate string, err error)
 }
 
 func MergeConfig(dst, src *Config) *Config {
