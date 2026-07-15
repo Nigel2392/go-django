@@ -48,7 +48,7 @@ const (
 
 	// Set the maxage on the cache for staticfiles
 	// If 0, no caching headers will be sent.
-	APPVAR_STATIC_ROUTE_CACHING_ENABLED = "STATIC_ROUTE_CACHING_ENABLED" // int
+	APPVAR_STATIC_ROUTE_CACHING_MAXAGE = "STATIC_ROUTE_CACHING_MAXAGE" // int
 
 	// Wether the webserver is behind a proxy
 	// This is so the application knows to use different headers to, for example
