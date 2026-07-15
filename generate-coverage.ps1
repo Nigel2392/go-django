@@ -2,7 +2,6 @@ $dirname = Split-Path -Parent $MyInvocation.MyCommand.Path
 $dirname = Split-Path -Leaf $dirname
 
 $DOCKER_COMPOSE_FILE = "./test-databases.docker-compose.yml"
-$CHECKPOINT_FILE = "./.test_checkpoint"
 
 # Ensure gocovmerge is available for the final merge step
 Write-Host "Ensuring gocovmerge is installed..."
@@ -61,7 +60,6 @@ foreach ($arg in $args) {
             foreach ($db in $DockerDatabases.Keys) {
                 docker volume rm "${dirname}_go-django_${db}_data" -f
             }
-            if (Test-Path $CHECKPOINT_FILE) { Remove-Item $CHECKPOINT_FILE }
             exit 0
         }
         default {
@@ -75,21 +73,22 @@ if ($testsToRun.Count -eq 0) {
     $testsToRun = $Databases
 }
 
-# ---------------------------------------------------------
-# RESUME STATE LOGIC
-# ---------------------------------------------------------
-$skipUntilDb = ""
-$skipUntilRunIndex = -1
+$upString = ""
+foreach ($Database in $testsToRun) {
+    # Check if the argument is a valid Docker database type
+    # if it is, reset the corresponding Docker volume and start the container
+    if ($DockerDatabases.ContainsKey($Database)) {
+        docker volume rm "${dirname}_go-django_${Database}_data"
+        $upString += " $Database"
+    }
+}
 
-if ($flags.resume -and (Test-Path $CHECKPOINT_FILE)) {
-    $checkpoint = Get-Content $CHECKPOINT_FILE
-    $parts = $checkpoint -split ":"
-    $skipUntilDb = $parts[0]
-    $skipUntilRunIndex = [int]$parts[1]
-    Write-Host ">>> RESUMING RUN from Database: $skipUntilDb, Step: $skipUntilRunIndex"
+if ($upString -ne "") {
+    # Start the Docker containers for the specified databases
+    Write-Host "Starting Docker containers for:$upString"
+    Invoke-Expression "docker-compose -f $DOCKER_COMPOSE_FILE up -d$upString"
 } else {
-    # If we aren't resuming, start fresh by taking everything down
-    docker-compose -f $DOCKER_COMPOSE_FILE down
+    Write-Host "No Docker databases specified, skipping container start."
 }
 
 if (-not $flags.runTests) {
@@ -106,76 +105,31 @@ $dirSrc = "./src/..."
 # Run tests for each database type
 foreach ($Database in $testsToRun) {
     
-    # Check if we are fast-forwarding to a checkpointed DB
-    if ($flags.resume -and $skipUntilDb -ne "" -and $skipUntilDb -ne $Database) {
-        Write-Host "Skipping $Database (already passed)..."
-        continue
-    }
-    $skipUntilDb = "" # Clear checkpoint lock once we reach the correct DB
-
     Write-Host "========================================"
-    Write-Host "Running 4-way tests for: $Database"
+    Write-Host "Running tests for: $Database"
     Write-Host "========================================"
 
-    # Array of the 4 manual runs per database
-    $runs = @(
-        @{ name = "Queries -> Queries"; coverpkg = $pkgQueries; target = $dirQueries; out = "cover.$Database.queries.out" },
-        @{ name = "Src -> Src";         coverpkg = $pkgSrc;     target = $dirSrc;     out = "cover.$Database.src.out" },
-        @{ name = "Queries -> Src";     coverpkg = $pkgSrc;     target = $dirQueries; out = "cover.$Database.queries.src.out" },
-        @{ name = "Src -> Queries";     coverpkg = $pkgQueries; target = $dirSrc;     out = "cover.$Database.src.queries.out" }
-    )
+    # RUN TEST
+    $file = "coverage/cover.${Database}.out"
+    $cmd = "go test -p=1 -tags=`"testing_auth test $Database`" -coverpkg=`"github.com/Nigel2392/go-django/...`" ./... ./queries/... -coverprofile=`"$file`" --timeout=30s"
+    
+    if ($flags.verbose) { $cmd += " -v" }
+    if ($flags.failslow -ne $true) { $cmd += " -failfast" }
 
-    for ($i = 0; $i -lt $runs.Count; $i++) {
-        $run = $runs[$i]
-
-        # Check if we are fast-forwarding to a specific test step
-        if ($flags.resume -and $skipUntilRunIndex -gt -1 -and $i -lt $skipUntilRunIndex) {
-            Write-Host "  Skipping step '$($run.name)' (already passed)..."
-            # We still need to track the coverfile since it exists from the previous run
-            $coverFiles += $run.out
-            continue 
-        }
-        $skipUntilRunIndex = -1 # Clear checkpoint lock once we reach the correct step
-
-        # Save Checkpoint
-        "${Database}:$i" | Out-File $CHECKPOINT_FILE
-
-        # WIPE AND RESTART DATABASE (Clean state for every step)
-        if ($DockerDatabases.ContainsKey($Database)) {
-            Write-Host "  --> Wiping volume and restarting $Database container for clean state..."
-            docker-compose -f $DOCKER_COMPOSE_FILE stop $Database 2>&1 | Out-Null
-            docker-compose -f $DOCKER_COMPOSE_FILE rm -f $Database 2>&1 | Out-Null
-            docker volume rm "${dirname}_go-django_${Database}_data" -f 2>&1 | Out-Null
-            docker-compose -f $DOCKER_COMPOSE_FILE up -d $Database 2>&1 | Out-Null
-            
-            # Wait a few seconds for the new database to accept connections
-            Start-Sleep -Seconds 5
-        }
-
-        # RUN TEST
-        $cmd = "go test -p=1 -tags=`"testing_auth test $Database`" -coverpkg=`"$($run.coverpkg)`" $($run.target) -coverprofile=`"$($run.out)`" --timeout=30s"
-        
-        if ($flags.verbose) { $cmd += " -v" }
-        if ($flags.failslow -ne $true) { $cmd += " -failfast" }
-
-        Write-Host "--- $($run.name) ---"
-        Write-Host "Command: $cmd"
-        
-        Invoke-Expression $cmd
-        
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "Tests failed during '$($run.name)' on $Database."
-            Write-Host "You can fix the error and run '.\generate-coverage.ps1 resume' to pick up from this exact spot."
-            exit $LASTEXITCODE
-        }
-        
-        # Save the file name to merge later
-        $coverFiles += $run.out
+    Write-Host "--- $($run.name) ---"
+    Write-Host "Command: $cmd"
+    
+    Invoke-Expression $cmd
+    
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Tests failed during '$($run.name)' on $Database."
+        Write-Host "You can fix the error and run '.\generate-coverage.ps1 resume' to pick up from this exact spot."
+        exit $LASTEXITCODE
     }
+    
+    # Save the file name to merge later
+    $coverFiles += $file
 }
-
-# Clear checkpoint on complete success
-if (Test-Path $CHECKPOINT_FILE) { Remove-Item $CHECKPOINT_FILE }
 
 # ---------------------------------------------------------
 # FINAL REPORT MERGE
@@ -186,12 +140,12 @@ if ($coverFiles.Count -gt 0) {
     
     # cmd.exe is used here to avoid a PowerShell file-encoding bug with the '>' operator
     $filesToMerge = $coverFiles -join " "
-    $mergeCmd = "cmd.exe /c `"gocovmerge $filesToMerge > cover.all.out`""
+    $mergeCmd = "cmd.exe /c `"gocovmerge $filesToMerge > coverage/cover.all.out`""
     Invoke-Expression $mergeCmd
 
     Write-Host "========================================"
     Write-Host "FINAL COMBINED COVERAGE:"
-    go tool cover -func="cover.all.out" | Select-String "total:"
+    go tool cover -func="coverage/cover.all.out" | Select-String "total:"
     Write-Host "========================================"
     
     # # Clean up the individual output files to keep your directory clean
