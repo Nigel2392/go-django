@@ -46,6 +46,10 @@ const (
 	// Log static routes that are accessed
 	APPVAR_STATIC_ROUTE_LOGGING_ENABLED = "STATIC_ROUTE_LOGGING_ENABLED" // bool
 
+	// Set the maxage on the cache for staticfiles
+	// If 0, no caching headers will be sent.
+	APPVAR_STATIC_ROUTE_CACHING_ENABLED = "STATIC_ROUTE_CACHING_ENABLED" // int
+
 	// Wether the webserver is behind a proxy
 	// This is so the application knows to use different headers to, for example
 	// get the remote address of the client

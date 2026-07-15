@@ -562,10 +562,17 @@ func (a *Application) Initialize() error {
 			staticUrl,
 		)
 
+		// yeesh this took me way too long to realise.
+		var handler http.Handler = staticfiles.EntryHandler
+		var maxAge = ConfigGet(a.Settings, APPVAR_STATIC_ROUTE_CACHING_MAXAGE, 3600)
+		if maxAge > 0 {
+			handler = middleware.Cache(maxAge)(handler)
+		}
+
 		var rt = a.Mux.Handle(
 			mux.GET,
 			fmt.Sprintf("%s*", staticUrl),
-			http.StripPrefix(staticUrl, staticfiles.EntryHandler),
+			http.StripPrefix(staticUrl, handler),
 		)
 
 		// middleware will run before any other,
