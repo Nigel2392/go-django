@@ -28,18 +28,34 @@ func (s SecretKey) IsZero() bool {
 	return true
 }
 
-func (s SecretKey) Sign(ctx context.Context, data []byte) (string, error) {
+func Encrypt(ctx context.Context, data []byte) ([]byte, error) {
+	backend, err := ENCRYPTION_BACKEND()
+	if err != nil {
+		return nil, err
+	}
+	return backend.Encrypt(ctx, data)
+}
+
+func Decrypt(ctx context.Context, ciphertext []byte) ([]byte, error) {
+	backend, err := ENCRYPTION_BACKEND()
+	if err != nil {
+		return nil, err
+	}
+	return backend.Decrypt(ctx, ciphertext)
+}
+
+func Sign(ctx context.Context, data []byte) (string, error) {
 	return SIGNER_BACKEND().Sign(ctx, data)
 }
 
-func (s SecretKey) Unsign(ctx context.Context, signed string) ([]byte, error) {
+func Unsign(ctx context.Context, signed string) ([]byte, error) {
 	return SIGNER_BACKEND().Unsign(ctx, signed)
 }
 
-func (s SecretKey) SignObject(ctx context.Context, obj interface{}) (string, error) {
+func SignObject(ctx context.Context, obj interface{}) (string, error) {
 	return signing.SignObject(ctx, SIGNER_BACKEND(), obj)
 }
 
-func (s SecretKey) UnsignObject(ctx context.Context, signed string, obj interface{}) error {
+func UnsignObject(ctx context.Context, signed string, obj interface{}) error {
 	return signing.UnsignObject(ctx, SIGNER_BACKEND(), signed, obj)
 }

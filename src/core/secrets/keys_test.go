@@ -1,7 +1,9 @@
 package secrets
 
 import (
+	"bytes"
 	"context"
+	"crypto/sha256"
 	"testing"
 
 	django "github.com/Nigel2392/go-django/src"
@@ -11,8 +13,10 @@ func setupTestSettings() {
 	if django.Global == nil {
 		django.Global = &django.Application{}
 	}
+	key := "super-secret-test-key"
+	hash := sha256.Sum256([]byte(key))
 	django.Global.Settings = django.Config(map[string]interface{}{
-		APPVAR_SECRET_KEY: "super-secret-test-key",
+		APPVAR_SECRET_KEY: string(hash[:]),
 	})
 }
 
@@ -37,16 +41,15 @@ func TestSecretKeyMethods(t *testing.T) {
 func TestSecretKeySignAndUnsign(t *testing.T) {
 	setupTestSettings()
 
-	var key = SECRET_KEY()
 	var ctx = context.Background()
 	var data = []byte("hello world")
 
-	signed, err := key.Sign(ctx, data)
+	signed, err := Sign(ctx, data)
 	if err != nil {
 		t.Fatalf("Sign error: %v", err)
 	}
 
-	unsigned, err := key.Unsign(ctx, signed)
+	unsigned, err := Unsign(ctx, signed)
 	if err != nil {
 		t.Fatalf("Unsign error: %v", err)
 	}
@@ -59,7 +62,6 @@ func TestSecretKeySignAndUnsign(t *testing.T) {
 func TestSecretKeySignObjectAndUnsignObject(t *testing.T) {
 	setupTestSettings()
 
-	var key = SECRET_KEY()
 	var ctx = context.Background()
 
 	type TestObj struct {
@@ -68,13 +70,13 @@ func TestSecretKeySignObjectAndUnsignObject(t *testing.T) {
 	}
 	var obj = TestObj{Name: "Alice", Age: 30}
 
-	signed, err := key.SignObject(ctx, obj)
+	signed, err := SignObject(ctx, obj)
 	if err != nil {
 		t.Fatalf("SignObject error: %v", err)
 	}
 
 	var decoded TestObj
-	err = key.UnsignObject(ctx, signed, &decoded)
+	err = UnsignObject(ctx, signed, &decoded)
 	if err != nil {
 		t.Fatalf("UnsignObject error: %v", err)
 	}
@@ -84,23 +86,38 @@ func TestSecretKeySignObjectAndUnsignObject(t *testing.T) {
 	}
 }
 
+func TestSecretKeyEncryptDecrypt(t *testing.T) {
+	ctx := context.Background()
+	plaintext := []byte("the quick brown fox jumps over the lazy dog")
+	ciphertext, err := Encrypt(ctx, plaintext)
+	if err != nil {
+		t.Fatalf("encryption failed: %v", err)
+	}
+	decrypted, err := Decrypt(ctx, ciphertext)
+	if err != nil {
+		t.Fatalf("decryption failed: %v", err)
+	}
+	if !bytes.Equal(plaintext, decrypted) {
+		t.Errorf("decrypted text does not match original plaintext")
+	}
+}
+
 func FuzzSecretKeySignAndUnsign(f *testing.F) {
 	setupTestSettings()
 
 	f.Add([]byte("data"))
 	f.Add([]byte("hello world"))
 	f.Add([]byte(""))
-	
+
 	f.Fuzz(func(t *testing.T, data []byte) {
-		var key = SECRET_KEY()
 		var ctx = context.Background()
 
-		signed, err := key.Sign(ctx, data)
+		signed, err := Sign(ctx, data)
 		if err != nil {
 			t.Fatalf("Sign error: %v", err)
 		}
 
-		unsigned, err := key.Unsign(ctx, signed)
+		unsigned, err := Unsign(ctx, signed)
 		if err != nil {
 			t.Fatalf("Unsign error: %v", err)
 		}

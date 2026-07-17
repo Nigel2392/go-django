@@ -6,6 +6,7 @@ import (
 	django "github.com/Nigel2392/go-django/src"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/checks"
+	"github.com/Nigel2392/go-django/src/core/secrets/encryption"
 	"github.com/Nigel2392/go-django/src/core/secrets/signing"
 )
 
@@ -21,7 +22,10 @@ const (
 	APPVAR_SECRET_KEY_FALLBACKS = "APPVAR_SECRET_KEY_FALLBACKS" // []string
 
 	// Signer backend for the application
-	APPVAR_SIGNER_BACKEND = "APPVAR_SIGNER_BACKEND" // internals/signing.Signer
+	APPVAR_SIGNER_BACKEND = "APPVAR_SIGNER_BACKEND" // [signing.Signer]
+
+	// Encryption backend for the application
+	APPVAR_ENCRYPTION_BACKEND = "APPVAR_ENCRYPTION_BACKEND"
 )
 
 var _ = checks.Register(checks.TagSettings, func(ctx context.Context, app any, settings Settings) (messages []checks.Message) {
@@ -71,6 +75,27 @@ func SIGNER_BACKEND() signing.Signer {
 		)
 	}
 	return signer
+}
+
+func ENCRYPTION_BACKEND() (enc encryption.Encryption, err error) {
+	var ok bool
+	enc, ok = django.ConfigGetOK[encryption.Encryption](
+		django.Global.Settings,
+		APPVAR_ENCRYPTION_BACKEND,
+	)
+	if !ok {
+		enc, err = encryption.GetCrypto(
+			encryption.DEFAULT,
+			SECRET_KEY().Bytes(),
+			keyBytes(SECRET_KEY_FALLBACKS()),
+		)
+
+		// probably safe to set the default backend
+		django.Global.Settings.Set(
+			APPVAR_ENCRYPTION_BACKEND, enc,
+		)
+	}
+	return enc, err
 }
 
 func keyBytes(fallbacks []SecretKey) [][]byte {

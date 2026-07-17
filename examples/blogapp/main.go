@@ -110,11 +110,9 @@ func main() {
 		),
 	)
 
-	secretKey := secrets.SECRET_KEY()
-	signed, _ := secretKey.Sign(context.Background(), []byte("hello world"))
-	fmt.Println("Secret key:", secretKey)
+	signed, _ := secrets.Sign(context.Background(), []byte("hello world"))
 	fmt.Println(signed)
-	unsigned, _ := secretKey.Unsign(context.Background(), signed)
+	unsigned, _ := secrets.Unsign(context.Background(), signed)
 	fmt.Println(string(unsigned))
 
 	// Blog pages will be served from this route.
