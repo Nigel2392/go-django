@@ -172,7 +172,7 @@ func (s *TimestampSigner) Sign(ctx context.Context, data []byte) (string, error)
 	return s.Signer.Sign(ctx, dataWithTimestamp)
 }
 
-func (s *TimestampSigner) Unsign(ctx context.Context, signedData string, maxAge time.Duration) ([]byte, error) {
+func (s *TimestampSigner) Unsign(ctx context.Context, signedData string) ([]byte, error) {
 	var dataWithTimestamp, err = s.Signer.Unsign(ctx, signedData)
 	if err != nil {
 		return nil, err
@@ -199,11 +199,11 @@ func (s *TimestampSigner) Unsign(ctx context.Context, signedData string, maxAge 
 	}
 
 	var timestamp = time.Unix(timestampInt, 0)
-	if maxAge > 0 && time.Since(timestamp) > maxAge {
+	if s.MaxAge > 0 && time.Since(timestamp) > s.MaxAge {
 		return nil, ErrSignatureExpired.Wrapf(
 			"signature expired: %s > %s",
 			time.Since(timestamp),
-			maxAge,
+			s.MaxAge,
 		)
 	}
 

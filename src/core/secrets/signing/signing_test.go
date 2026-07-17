@@ -232,7 +232,7 @@ func TestTimestampSigner_BasicAndExpiry(t *testing.T) {
 	ctx := context.Background()
 	value := []byte("hello")
 
-	tsSigner := signing.NewTimestampSigner([]byte("predictable-key"), ":", []byte("salt"), "sha256", nil, 0)
+	tsSigner := signing.NewTimestampSigner([]byte("predictable-key"), ":", []byte("salt"), "sha256", nil, 5*time.Second)
 	baseSigner := signing.NewBaseSigner([]byte("predictable-key"), ":", []byte("salt"), "sha256", nil)
 
 	signedTS, err := tsSigner.Sign(ctx, value)
@@ -250,7 +250,7 @@ func TestTimestampSigner_BasicAndExpiry(t *testing.T) {
 	}
 
 	// Immediately valid when maxAge allows it.
-	out, err := tsSigner.Unsign(ctx, signedTS, 5*time.Second)
+	out, err := tsSigner.Unsign(ctx, signedTS)
 	if err != nil {
 		t.Fatalf("unsign timestamp err: %v", err)
 	}
@@ -259,10 +259,9 @@ func TestTimestampSigner_BasicAndExpiry(t *testing.T) {
 	}
 
 	// Expiry: wait just beyond a very small maxAge.
-	short := 200 * time.Millisecond
-	time.Sleep(short + 100*time.Millisecond)
+	time.Sleep(5 * time.Second)
 
-	_, err = tsSigner.Unsign(ctx, signedTS, short)
+	_, err = tsSigner.Unsign(ctx, signedTS)
 	if !errors.Is(err, signing.ErrSignatureExpired) {
 		t.Fatalf("expected ErrSignatureExpired, got %v", err)
 	}
