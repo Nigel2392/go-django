@@ -562,7 +562,7 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 	ctx context.Context,
 	qs *GenericQuerySet,
 	internals *QuerySetInternals,
-) CompiledQuery[[][]interface{}] {
+) CompiledRowsQuery[[][]interface{}] {
 	var (
 		query = new(strings.Builder)
 		args  []any
@@ -636,20 +636,17 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 		query.WriteString(" FOR UPDATE")
 	}
 
-	return &QueryObject[[][]interface{}]{
+	return &QueryRowsObject[[][]interface{}]{
 		QueryInfo: &QueryInformation{
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Model,
 			Params:  args,
 			Builder: g,
 		},
-		Execute: func(sql string, args ...any) ([][]interface{}, error) {
-
-			rows, err := g.DB().QueryContext(ctx, sql, args...)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to execute query")
-			}
-
+		ExecSQL: func(sql string, args ...any) (drivers.SQLRows, error) {
+			return g.DB().QueryContext(ctx, sql, args...)
+		},
+		Execute: func(rows drivers.SQLRows) ([][]interface{}, error) {
 			defer rows.Close()
 
 			if err := rows.Err(); err != nil {
@@ -665,11 +662,13 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 				amountCols += len(info.Fields)
 			}
 
+			var err error
 			for rows.Next() {
 				var row = make([]interface{}, amountCols)
 				for i := range row {
 					row[i] = new(interface{})
 				}
+
 				err = rows.Scan(row...)
 				if err != nil {
 					return nil, errors.Wrap(err, "failed to scan row")
@@ -693,7 +692,7 @@ func (g *genericQueryBuilder) BuildCountQuery(
 	ctx context.Context,
 	qs *GenericQuerySet,
 	internals *QuerySetInternals,
-) CompiledQuery[int64] {
+) CompiledRowQuery[int64] {
 	var inf = newExpressionInfo(g, qs, internals, false)
 	var query = new(strings.Builder)
 	var args = make([]any, 0)
@@ -734,17 +733,19 @@ func (g *genericQueryBuilder) BuildCountQuery(
 
 	args = append(args, g.writeLimitOffset(query, internals.Limit, internals.Offset)...)
 
-	return &QueryObject[int64]{
+	return &QueryRowObject[int64]{
 		QueryInfo: &QueryInformation{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  inf.Model,
 			Params:  args,
 		},
-
-		Execute: func(query string, args ...any) (int64, error) {
+		ExecSQL: func(sql string, args ...any) (drivers.SQLRow, error) {
+			var row = g.DB().QueryRowContext(ctx, sql, args...)
+			return row, nil
+		},
+		Execute: func(row drivers.SQLRow) (int64, error) {
 			var count int64
-			var row = g.DB().QueryRowContext(ctx, query, args...)
 			if err := row.Scan(&count); err != nil {
 				if errors.Is(err, sql.ErrNoRows) {
 					return 0, nil

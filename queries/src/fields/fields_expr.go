@@ -31,11 +31,13 @@ func (f *ExpressionField[T]) Alias() string {
 	return f.DataModelField.Name()
 }
 
-func (f *ExpressionField[T]) SQL(inf *expr.ExpressionInfo) (string, []any) {
+func (f *ExpressionField[T]) SQL(chain []string, inf *expr.ExpressionInfo) (string, []any) {
 	if f.expr == nil {
 		return "", nil
 	}
-	var expr = f.expr.Resolve(inf)
+
+	// must resolve for chain in case we are querying a related model's virtual field
+	var expr = f.expr.Resolve(inf.ForExpressionChain(chain))
 	var sb strings.Builder
 	var args = expr.SQL(&sb)
 	return sb.String(), args

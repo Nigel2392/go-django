@@ -19,20 +19,27 @@ type Generator struct {
 	Prefix  string
 	counter int
 	mapping map[string]string
+
+	// map of fieldname -> currently used alias
+	// if currently used alias is present with another table,
+	// the currently used alias should be prefixed appropriately.
+	aliasMapping map[string]string
 }
 
 func NewGenerator() *Generator {
 	return &Generator{
-		counter: 0,
-		mapping: make(map[string]string),
+		counter:      0,
+		mapping:      make(map[string]string),
+		aliasMapping: make(map[string]string),
 	}
 }
 
 func (a *Generator) Clone() *Generator {
 	return &Generator{
-		Prefix:  a.Prefix,
-		counter: a.counter,
-		mapping: maps.Clone(a.mapping),
+		Prefix:       a.Prefix,
+		counter:      a.counter,
+		mapping:      maps.Clone(a.mapping),
+		aliasMapping: maps.Clone(a.aliasMapping),
 	}
 }
 
@@ -42,6 +49,17 @@ func (a *Generator) GetFieldAlias(tableAlias, alias string) string {
 	//	return alias
 	//}
 	//return fmt.Sprintf("%s_%s", tableAlias, alias)
+
+	seen, ok := a.aliasMapping[alias]
+	if !ok {
+		a.aliasMapping[alias] = tableAlias
+		return alias
+	}
+
+	if seen == tableAlias {
+		return alias
+	}
+
 	var aliasBuilder strings.Builder
 
 	if tableAlias != "" {

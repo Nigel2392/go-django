@@ -276,6 +276,7 @@ type namedExpression struct {
 	fieldName string
 	forUpdate bool
 	used      bool
+	fmtRhs    func(op LogicalOp, rhs string, values ...any) (string, []any)
 	Expression
 }
 
@@ -306,6 +307,7 @@ func (n *namedExpression) Clone() Expression {
 		field:      n.field,
 		fieldName:  n.fieldName,
 		forUpdate:  n.forUpdate,
+		fmtRhs:     n.fmtRhs,
 		Expression: n.Expression.Clone(),
 	}
 }
@@ -318,6 +320,7 @@ func (n *namedExpression) Resolve(inf *ExpressionInfo) Expression {
 	var nE = n.Clone().(*namedExpression)
 	nE.used = true
 	nE.forUpdate = inf.ForUpdate
+	nE.fmtRhs = inf.Lookups.FormatLogicalOpRHS
 
 	if nE.fieldName != "" && nE.forUpdate {
 		nE.field = inf.ResolveExpressionField(nE.fieldName)
@@ -344,7 +347,15 @@ func (n *namedExpression) SQL(sb *strings.Builder) []any {
 		return n.Expression.SQL(sb)
 	}
 
+	var (
+		exprSb   strings.Builder
+		exprArgs = n.Expression.SQL(&exprSb)
+		opRHS, _ = n.fmtRhs(
+			EQ, exprSb.String(),
+		)
+	)
+
 	sb.WriteString(n.field.SQLText)
-	sb.WriteString(" = ")
-	return n.Expression.SQL(sb)
+	sb.WriteString(opRHS)
+	return exprArgs
 }

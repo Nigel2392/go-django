@@ -10,7 +10,9 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
 
 const SELF_TABLE = "SELF" // the name of the self table, used in expressions
@@ -36,10 +38,12 @@ type StatementParser interface {
 }
 
 type statement struct {
-	Field *statementParser
-	Table *statementParser
-	Value *statementParser
-	Expr  *expressionParser
+	Field      *statementParser
+	ModelField *statementParser
+	Table      *statementParser
+	Value      *statementParser
+	Quotes     *statementParser
+	Expr       *expressionParser
 
 	_map map[string]StatementParser // map of statement parsers by type
 }
@@ -48,6 +52,8 @@ func (s *statement) Data(typ string, v any) any {
 	if s._map == nil {
 		s._map = make(map[string]StatementParser, 4)
 		s._map[s.Field.Type()] = s.Field
+		s._map[s.ModelField.Type()] = s.ModelField
+		s._map[s.Quotes.Type()] = s.Quotes
 		s._map[s.Table.Type()] = s.Table
 		s._map[s.Value.Type()] = s.Value
 		s._map[s.Expr.Type()] = s.Expr
@@ -61,6 +67,7 @@ func (s *statement) Data(typ string, v any) any {
 	return parser.Data(v)
 }
 
+var _isDotPath = func(r rune) bool { return r == '.' }
 var PARSER = &statement{
 	Field: &statementParser{
 		typ:     "field",
@@ -77,45 +84,57 @@ var PARSER = &statement{
 			return resolvedField.SQLText, resolvedField.SQLArgs, nil
 		},
 	},
-	Table: &statementParser{
-		typ:     "table",
-		pattern: `(?:(?i)table)\(([a-zA-Z][a-zA-Z0-9_.-]*)\)`, // table(FieldPath)
+	Quotes: &statementParser{
+		typ:     "quotes",
+		pattern: `'([a-zA-Z][a-zA-Z0-9_.-]*)'`,
 		rawtext: func(in []string) string {
 			return in[1]
 		},
 		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
-			var fieldPath = in[1]
-			if strings.EqualFold(fieldPath, SELF_TABLE) {
-				var meta = attrs.GetModelMeta(info.Model)
-				var defs = meta.Definitions()
-				return info.QuoteIdentifier(defs.TableName()), []any{}, nil
-			}
-
-			var _, field, _, err = info.Resolver.Resolve(fieldPath, info)
-			if err != nil {
-				return "", []any{}, fmt.Errorf(
-					"error when walking fields: %w", err,
-				)
-			}
-
-			var rel = field.Rel()
-			if rel == nil {
-				return "", []any{}, fmt.Errorf(
-					"field %q is not a relation, cannot resolve table name", fieldPath,
-				)
-			}
-
 			var (
-				current        = rel.Model()
-				defs           = current.FieldDefs()
-				tableName      = defs.TableName()
-				lhs_tableName  = info.QuoteIdentifier(tableName)
-				rhs_tableAlias = info.QuoteIdentifier(info.Resolver.Alias().GetTableAlias(
-					defs.TableName(), fieldPath,
-				))
+				sb   strings.Builder
+				flds = strings.Split(in[1], ".")
 			)
 
-			return fmt.Sprintf("%s AS %s", lhs_tableName, rhs_tableAlias), []any{}, nil
+			// for each dot in the path we add 2 quotes
+			sb.Grow(len(in[1]) + (len(flds) * 2))
+
+			for idx, field := range flds {
+				if idx != 0 {
+					sb.WriteRune('.')
+				}
+				sb.WriteString(info.QuoteIdentifier(field))
+			}
+
+			return sb.String(), []any{}, nil
+		},
+	},
+	ModelField: &statementParser{
+		typ:     "modelfield",
+		pattern: `\#\[(([a-z][a-z0-9]*\.|)([a-zA-Z][a-zA-Z0-9_]*)\.([A-Z][a-zA-Z0-9_]*)\.([a-zA-Z][a-zA-Z0-9_.]*))\]`, // #[auth.User.FieldPath] | #[t1.auth.User.FieldPath]
+		rawtext: func(in []string) string {
+			return in[1]
+		},
+		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
+			var (
+				tableAlias = in[2]              // table alias
+				modelPkg   = in[3]              // model pkg
+				modelName  = in[4]              // model name
+				fieldName  = tableAlias + in[5] // if table alias provided, it will be "<alias>.", so we can safely concat
+			)
+
+			contentType := contenttypes.DefinitionForPackage(modelPkg, modelName)
+			if contentType == nil {
+				return "", []any{}, errors.NoTableName.Wrapf(
+					"Could not find content type for %s.%s", modelPkg, modelName,
+				)
+			}
+
+			info = info.CloneForModel(fmt.Sprintf("%s.%s", modelPkg, modelName), contentType.Object().(attrs.Definer))
+			info.SupportsWhereAlias = false
+			info.SupportsAsExpr = false
+			resolvedField := info.ResolveExpressionField(fieldName)
+			return resolvedField.SQLText, resolvedField.SQLArgs, nil
 		},
 	},
 	Value: &statementParser{
@@ -203,6 +222,82 @@ var PARSER = &statement{
 
 				return exprStr.String(), exprParams, nil
 			},
+		},
+	},
+	Table: &statementParser{
+		typ:     "table",
+		pattern: `(?:(?i)table)\(([a-zA-Z][a-zA-Z0-9_.-]*)\)`, // table(FieldPath)
+		rawtext: func(in []string) string {
+			return in[1]
+		},
+		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
+			var fieldPath = in[1]
+			if strings.EqualFold(fieldPath, SELF_TABLE) {
+				var meta = attrs.GetModelMeta(info.Model)
+				var defs = meta.Definitions()
+				return info.QuoteIdentifier(defs.TableName()), []any{}, nil
+			}
+
+			var _, field, _, err = info.Resolver.Resolve(fieldPath, info)
+			if err != nil {
+				var retErr = func(errs ...error) (string, []any, error) {
+					return "", []any{}, fmt.Errorf(
+						"error when walking fields: %w", errors.Join(errs...),
+					)
+				}
+
+				if !errors.Is(err, errors.FieldNotFound) {
+					return retErr(err)
+				}
+
+				var split = strings.Split(fieldPath, ".")
+				if len(split) < 2 {
+					return retErr(err)
+				}
+
+				contentType := contenttypes.DefinitionForPackage(split[0], split[1])
+				if contentType == nil {
+					return retErr(err)
+				}
+
+				var (
+					ref  = contentType.Object()
+					meta = attrs.GetModelMeta(ref)
+					defs = meta.Definitions()
+				)
+
+				if len(split) == 2 {
+					return info.QuoteIdentifier(defs.TableName()), []any{}, nil
+				}
+
+				pathClone := strings.Join(split[2:], ".")
+				_, field, _, err = info.
+					CloneForModel(fmt.Sprintf("%s.%s", split[0], split[1]), ref.(attrs.Definer)).
+					Resolver.Resolve(pathClone, info)
+				fieldPath = pathClone
+				if err != nil {
+					return retErr(err)
+				}
+			}
+
+			var rel = field.Rel()
+			if rel == nil {
+				return "", []any{}, fmt.Errorf(
+					"field %q is not a relation, cannot resolve table name", fieldPath,
+				)
+			}
+
+			var (
+				current        = rel.Model()
+				defs           = current.FieldDefs()
+				tableName      = defs.TableName()
+				lhs_tableName  = info.QuoteIdentifier(tableName)
+				rhs_tableAlias = info.QuoteIdentifier(info.Resolver.Alias().GetTableAlias(
+					defs.TableName(), fieldPath,
+				))
+			)
+
+			return fmt.Sprintf("%s AS %s", lhs_tableName, rhs_tableAlias), []any{}, nil
 		},
 	},
 }
@@ -475,6 +570,8 @@ func (b *statementBuilder) nodes(stmt string) *nodeResolver {
 var stmtBuilder = &statementBuilder{
 	info: []StatementParser{
 		PARSER.Field,
+		PARSER.ModelField,
+		PARSER.Quotes,
 		PARSER.Table,
 		PARSER.Value,
 		PARSER.Expr,

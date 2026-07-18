@@ -143,6 +143,55 @@ type ExpressionInfo struct {
 
 	// Annotations is a map of queryset annotations (fields).
 	Annotations *orderedmap.OrderedMap[string, attrs.Field]
+
+	// keep track of stateKey -> cloned expressioninfo objects
+	clones map[string]*ExpressionInfo
+
+	// keep track of current chain, required for virtual fields
+	chain []string
+}
+
+func (inf *ExpressionInfo) ForExpressionChain(chain []string) *ExpressionInfo {
+	if len(chain) == 0 {
+		return inf
+	}
+
+	return &ExpressionInfo{
+		Driver:             inf.Driver,
+		Model:              inf.Model,
+		Resolver:           inf.Resolver,
+		Placeholder:        inf.Placeholder,
+		FormatField:        inf.FormatField,
+		Quote:              inf.Quote,
+		QuoteIdentifier:    inf.QuoteIdentifier,
+		Lookups:            inf.Lookups,
+		ForUpdate:          inf.ForUpdate,
+		SupportsWhereAlias: inf.SupportsWhereAlias,
+		SupportsAsExpr:     inf.SupportsAsExpr,
+		Annotations:        inf.Annotations,
+		clones:             inf.clones,
+		chain:              chain,
+	}
+}
+
+func (inf *ExpressionInfo) CloneForModel(stateKey string, model attrs.Definer) *ExpressionInfo {
+	if inf.clones == nil {
+		inf.clones = make(map[string]*ExpressionInfo)
+	}
+
+	if stateKey != "" {
+		existing, ok := inf.clones[stateKey]
+		if ok {
+			return existing
+		}
+	}
+
+	newInf := inf.Resolver.ResolverInfoForModel(model)
+	if stateKey != "" {
+		inf.clones[stateKey] = newInf
+	}
+
+	return newInf
 }
 
 func (inf *ExpressionLookupInfo) FormatLogicalOpRHS(op LogicalOp, rhs string, values ...any) (string, []any) {
@@ -217,11 +266,13 @@ func (inf *ExpressionInfo) ResolveExpressionField(fieldName string) *ResolvedFie
 	if firstDot != -1 && strings.ToLower(fieldName[:firstDot]) == fieldName[:firstDot] {
 		alias = fieldName[:firstDot]
 		fieldName = fieldName[firstDot+1:]
+	} else if len(inf.chain) > 0 {
+		fieldName = strings.Join(append(inf.chain, fieldName), ".")
 	}
 
 	var _, field, col, err = inf.Resolver.Resolve(fieldName, inf)
 	if err != nil {
-		panic(fmt.Errorf("failed to resolve field %s: %w", field, err))
+		panic(fmt.Errorf("failed to resolve field %s: %w", fieldName, err))
 	}
 
 	if alias != "" {

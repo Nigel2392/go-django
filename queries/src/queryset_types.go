@@ -133,7 +133,6 @@ func (j *JoinDef) Condition() expr.JoinCondition {
 //
 // It is both used by the QuerySet and by the QueryCompiler.
 type FieldInfo[FieldType attrs.FieldDefinition] struct {
-	Annotating  bool // Whether the field is being annotated
 	SourceField FieldType
 	Model       attrs.Definer
 	RelType     attrs.RelationType
@@ -238,7 +237,7 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 
 	var col = &expr.TableColumn{}
 	if ve, ok := field.(VirtualField); ok && inf.Model != nil {
-		var rawSql, a = ve.SQL(inf)
+		var rawSql, a = ve.SQL(f.Chain, inf)
 		if rawSql == "" {
 			return nil, true, false
 		}
@@ -246,9 +245,11 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 		col.RawSQL = rawSql
 
 		if fieldAlias != "" && !forUpdate && inf.SupportsAsExpr {
+			//  wether to generate an alias for annotations
 			col.FieldAlias = inf.Resolver.Alias().GetFieldAlias(
 				tableAlias, fieldAlias,
 			)
+			// col.FieldAlias = fieldAlias
 		}
 
 		var fmtSql, extra = inf.FormatField(inf.Resolver.Alias(), col)

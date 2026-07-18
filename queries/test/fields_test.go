@@ -1,10 +1,12 @@
 package queries_test
 
 import (
+	"fmt"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/Nigel2392/go-django/djester/quest"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -96,6 +98,163 @@ func (t *TestStructNoObject) FieldDefs() attrs.Definitions {
 		fields.NewVirtualField[string](t, &t.TestNameLower, "TestNameLower", expr.LOWER("Name")),
 		fields.NewVirtualField[string](t, &t.TestNameUpper, "TestNameUpper", expr.UPPER("Name")),
 	).WithTableName("test_struct_no_object")
+}
+
+type OtherTestStruct struct {
+	ID         int64
+	Name       string
+	Text       string
+	TestStruct *TestStructNoObject
+
+	TestNameText  string
+	TestNameLower string
+	TestNameUpper string
+}
+
+func (t *OtherTestStruct) FieldDefs() attrs.Definitions {
+	return attrs.Define[*OtherTestStruct, any](t,
+		attrs.NewField(t, "ID", &attrs.FieldConfig{
+			Column:  "id",
+			Primary: true,
+		}),
+		attrs.NewField(t, "Name", &attrs.FieldConfig{
+			Column: "name",
+		}),
+		attrs.NewField(t, "Text", &attrs.FieldConfig{
+			Column: "text",
+		}),
+		attrs.NewField(t, "TestStruct", &attrs.FieldConfig{
+			Column:        "test_struct_no_obj_id",
+			RelForeignKey: attrs.Relate(&TestStructNoObject{}, "", nil),
+		}),
+		fields.NewVirtualField[string](t, &t.TestNameText, "TestNameText", expr.CONCAT(
+			"Name", expr.Value(" ", true), "Text", expr.Value(" ", true), expr.Value("test"),
+		)),
+		fields.NewVirtualField[string](t, &t.TestNameLower, "TestNameLower", expr.LOWER("Name")),
+		fields.NewVirtualField[string](t, &t.TestNameUpper, "TestNameUpper", expr.UPPER("Name")),
+	).WithTableName("other_test_struct")
+}
+
+type TestStructNoVF struct {
+	ID         int64
+	Title      string
+	Text       string
+	TestStruct *TestStructNoObject
+}
+
+func (t *TestStructNoVF) FieldDefs() attrs.Definitions {
+	return attrs.Define[*TestStructNoVF, any](t,
+		attrs.NewField(t, "ID", &attrs.FieldConfig{
+			Column:  "id",
+			Primary: true,
+		}),
+		attrs.NewField(t, "Title", &attrs.FieldConfig{
+			Column: "title",
+		}),
+		attrs.NewField(t, "Text", &attrs.FieldConfig{
+			Column: "text",
+		}),
+		attrs.NewField(t, "TestStruct", &attrs.FieldConfig{
+			Column:        "test_struct_id",
+			RelForeignKey: attrs.Relate(&TestStructNoObject{}, "", nil),
+		}),
+	).WithTableName("test_struct_no_vf")
+}
+
+type TestStructSubqueryVF struct {
+	ID             int64
+	Title          string
+	Text           string
+	TestStructName string
+	TestStruct     *TestStructNoObject
+}
+
+func (t *TestStructSubqueryVF) FieldDefs() attrs.Definitions {
+	return attrs.Define[*TestStructSubqueryVF, any](t,
+		attrs.NewField(t, "ID", &attrs.FieldConfig{
+			Column:  "id",
+			Primary: true,
+		}),
+		attrs.NewField(t, "Title", &attrs.FieldConfig{
+			Column: "title",
+		}),
+		attrs.NewField(t, "Text", &attrs.FieldConfig{
+			Column: "text",
+		}),
+		attrs.NewField(t, "TestStruct", &attrs.FieldConfig{
+			Column:        "test_struct_id",
+			RelForeignKey: attrs.Relate(&TestStructNoObject{}, "", nil),
+		}),
+		fields.NewVirtualField[string](
+			t, &t.TestStructName, "TestStructName",
+			queries.Subquery(queries.
+				GetQuerySet(&TestStructNoObject{}).
+				Select(expr.UPPER("Name")).
+				Filter("ID", expr.OuterRef("TestStruct.ID")).
+				Limit(1)),
+		),
+	).WithTableName("test_struct_no_vf") // same table is fine, just register the model
+}
+
+type TestStructSubueryVFRelatedRoot struct {
+	ID      int64
+	Name    string
+	Text    string
+	Related *TestStructSubueryVFRelated
+}
+
+func (t *TestStructSubueryVFRelatedRoot) FieldDefs() attrs.Definitions {
+	return attrs.Define[*TestStructSubueryVFRelatedRoot, any](t,
+		attrs.NewField(t, "ID", &attrs.FieldConfig{
+			Column:  "id",
+			Primary: true,
+		}),
+		attrs.NewField(t, "Name", &attrs.FieldConfig{
+			Column: "name",
+		}),
+		attrs.NewField(t, "Text", &attrs.FieldConfig{
+			Column: "text",
+		}),
+		attrs.NewField(t, "Related", &attrs.FieldConfig{
+			Column:        "rel_id",
+			RelForeignKey: attrs.Relate(&TestStructSubueryVFRelated{}, "", nil),
+		}),
+	).WithTableName("ts_subquery_rel_root")
+}
+
+type TestStructSubueryVFRelated struct {
+	ID               int64
+	Name             string
+	Text             string
+	TestStructName   string
+	TargetTestStruct *TestStructNoObject
+}
+
+func (t *TestStructSubueryVFRelated) FieldDefs() attrs.Definitions {
+	return attrs.Define[*TestStructSubueryVFRelated, any](t,
+		attrs.NewField(t, "ID", &attrs.FieldConfig{
+			Column:  "id",
+			Primary: true,
+		}),
+		attrs.NewField(t, "Name", &attrs.FieldConfig{
+			Column: "name",
+		}),
+		attrs.NewField(t, "Text", &attrs.FieldConfig{
+			Column: "text",
+		}),
+		attrs.NewField(t, "TargetTestStruct", &attrs.FieldConfig{
+			Column:        "target_id",
+			RelForeignKey: attrs.Relate(&TestStructNoObject{}, "", nil),
+		}),
+		fields.NewVirtualField[string](
+			t, &t.TestStructName, "TestStructName",
+			queries.Subquery(queries.
+				GetQuerySet(&TestStructNoObject{}).
+				Select(expr.UPPER("Name")).
+				Filter("ID", expr.OuterRef("TargetTestStruct.ID")).
+				Limit(1)),
+		),
+	).WithTableName("ts_subquery_rel")
 }
 
 func TestSetNameTestStruct(t *testing.T) {
@@ -190,6 +349,325 @@ func TestSetNameTestStructNoObject(t *testing.T) {
 	}
 
 	t.Logf("Test: %+v", test)
+}
+
+func TestVirtualFieldsQuerySetFieldNameClash(t *testing.T) {
+
+	var objs = []*TestStructNoObject{
+		{Name: "test1 no object", Text: "[test1 no object text]"},
+		{Name: "test2 no object", Text: "[test2 no object text]"},
+		{Name: "test3 no object", Text: "[test3 no object text]"},
+		{Name: "test4 no object", Text: "[test4 no object text]"},
+	}
+
+	objs, objDelete := quest.CreateObjects(t, objs...)
+
+	var otherObjs = []*OtherTestStruct{
+		{Name: "test1", Text: "[test1 text]", TestStruct: objs[0]},
+		{Name: "test2", Text: "[test2 text]", TestStruct: objs[1]},
+		{Name: "test3", Text: "[test3 text]", TestStruct: objs[2]},
+		{Name: "test4", Text: "[test4 text]", TestStruct: objs[3]},
+	}
+
+	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs...)
+
+	defer objDelete(0)
+	defer otherDelete(0)
+
+	var rows, err = queries.GetQuerySet(&OtherTestStruct{}).Select("*", "TestStruct.*").All()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for idx, row := range rows {
+		var (
+			relName = fmt.Sprintf("test%d no object", idx+1)
+			// relText= fmt.Sprintf("[test%d no object text]", idx+1)
+			name = fmt.Sprintf("test%d", idx+1)
+			// text= fmt.Sprintf("[test%d text]", idx+1)
+		)
+
+		if row.Object.TestNameUpper != strings.ToUpper(name) {
+			t.Fatalf("name mismatch: %q != %q", row.Object.TestNameUpper, strings.ToUpper(name))
+		}
+
+		if row.Object.TestStruct.TestNameUpper != strings.ToUpper(relName) {
+			t.Fatalf("name mismatch: %q != %q", row.Object.TestStruct.TestNameUpper, strings.ToUpper(relName))
+		}
+	}
+}
+
+func TestVirtualFieldsQuerySetRelation(t *testing.T) {
+
+	var otherObjs = []*TestStructNoObject{
+		{Name: "test1", Text: "[test1 text]"},
+		{Name: "test2", Text: "[test2 text]"},
+		{Name: "test3", Text: "[test3 text]"},
+		{Name: "test4", Text: "[test4 text]"},
+	}
+
+	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs...)
+
+	var objs = []*TestStructNoVF{
+		{Title: "test1 no vf", Text: "[test1 no vf]", TestStruct: otherObjs[0]},
+		{Title: "test2 no vf", Text: "[test2 no vf]", TestStruct: otherObjs[1]},
+		{Title: "test3 no vf", Text: "[test3 no vf]", TestStruct: otherObjs[2]},
+		{Title: "test4 no vf", Text: "[test4 no vf]", TestStruct: otherObjs[3]},
+	}
+
+	objs, objDelete := quest.CreateObjects(t, objs...)
+
+	defer otherDelete(0)
+	defer objDelete(0)
+
+	var rows, err = queries.GetQuerySet(&TestStructNoVF{}).Select("*", "TestStruct.*").All()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for idx, row := range rows {
+		var (
+			name    = fmt.Sprintf("test%d no vf", idx+1)
+			relName = fmt.Sprintf("test%d", idx+1)
+		)
+
+		if row.Object.Title != name {
+			t.Fatalf("name mismatch: %q != %q", row.Object.Title, strings.ToUpper(name))
+		}
+
+		if row.Object.TestStruct.TestNameUpper != strings.ToUpper(relName) {
+			t.Fatalf("name mismatch: %q != %q", row.Object.TestStruct.TestNameUpper, strings.ToUpper(relName))
+		}
+	}
+}
+
+func TestVirtualFieldsQuerySetRelationLookupFilter(t *testing.T) {
+
+	var otherObjs = []*TestStructNoObject{
+		{Name: "test1", Text: "[test1 text]"},
+		{Name: "test2", Text: "[test2 text]"},
+		{Name: "test3", Text: "[test3 text]"},
+		{Name: "test4", Text: "[test4 text]"},
+	}
+
+	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs...)
+
+	var objs = []*TestStructNoVF{
+		{Title: "test1 no vf", Text: "[test1 no vf]", TestStruct: otherObjs[0]},
+		{Title: "test2 no vf", Text: "[test2 no vf]", TestStruct: otherObjs[1]},
+		{Title: "test3 no vf", Text: "[test3 no vf]", TestStruct: otherObjs[2]},
+		{Title: "test4 no vf", Text: "[test4 no vf]", TestStruct: otherObjs[3]},
+	}
+
+	objs, objDelete := quest.CreateObjects(t, objs...)
+
+	defer otherDelete(0)
+	defer objDelete(0)
+
+	var rows, err = queries.GetQuerySet(&TestStructNoVF{}).
+		Select("*", "TestStruct.*").
+		Filter("TestStruct.TestNameUpper__in", []string{"TEST1", "TEST2", "TEST3"}).
+		All()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rows) != 3 {
+		t.Fatalf("could not filter all rows, expected %d, got %d", 3, len(rows))
+	}
+
+	for idx, row := range rows {
+		var (
+			name    = fmt.Sprintf("test%d no vf", idx+1)
+			relName = fmt.Sprintf("test%d", idx+1)
+		)
+
+		if row.Object.Title != name {
+			t.Fatalf("name mismatch: %q != %q", row.Object.Title, strings.ToUpper(name))
+		}
+
+		if row.Object.TestStruct.TestNameUpper != strings.ToUpper(relName) {
+			t.Fatalf("name mismatch: %q != %q", row.Object.TestStruct.TestNameUpper, strings.ToUpper(relName))
+		}
+	}
+}
+
+func TestVirtualFieldsQuerySetSubquery(t *testing.T) {
+
+	attrs.RegisterModel(&TestStructSubqueryVF{})
+
+	var otherObjs = []*TestStructNoObject{
+		{Name: "test1", Text: "[test1 text]"},
+		{Name: "test2", Text: "[test2 text]"},
+		{Name: "test3", Text: "[test3 text]"},
+		{Name: "test4", Text: "[test4 text]"},
+	}
+
+	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs...)
+
+	var objs = []*TestStructSubqueryVF{
+		{Title: "test1 no vf", Text: "[test1 no vf]", TestStruct: otherObjs[0]},
+		{Title: "test2 no vf", Text: "[test2 no vf]", TestStruct: otherObjs[1]},
+		{Title: "test3 no vf", Text: "[test3 no vf]", TestStruct: otherObjs[2]},
+		{Title: "test4 no vf", Text: "[test4 no vf]", TestStruct: otherObjs[3]},
+	}
+
+	objs, objDelete := quest.CreateObjects(t, objs...)
+
+	defer otherDelete(0)
+	defer objDelete(0)
+
+	var rows, err = queries.GetQuerySet(&TestStructSubqueryVF{}).
+		Select("*", "TestStruct.*").
+		Filter("TestStruct.TestNameUpper__in", []string{"TEST1", "TEST2", "TEST3"}).
+		All()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rows) != 3 {
+		t.Fatalf("could not filter all rows, expected %d, got %d", 3, len(rows))
+	}
+
+	for idx, row := range rows {
+		var (
+			name    = fmt.Sprintf("test%d no vf", idx+1)
+			relName = fmt.Sprintf("test%d", idx+1)
+		)
+
+		if row.Object.Title != name {
+			t.Fatalf("Title mismatch: %q != %q", row.Object.Title, strings.ToUpper(name))
+		}
+
+		if row.Object.TestStructName != strings.ToUpper(relName) {
+			t.Fatalf("TestStructName mismatch: %q != %q", row.Object.TestStructName, strings.ToUpper(relName))
+		}
+
+		if row.Object.TestStruct.TestNameUpper != strings.ToUpper(relName) {
+			t.Fatalf("TestStruct.TestNameUpper mismatch: %q != %q", row.Object.TestStruct.TestNameUpper, strings.ToUpper(relName))
+		}
+	}
+}
+
+func TestVirtualFieldsQuerySetRelatedSubquery(t *testing.T) {
+
+	var refObjs = []*TestStructNoObject{
+		{Name: "test1 no object", Text: "[test1 no object text]"},
+		{Name: "test2 no object", Text: "[test2 no object text]"},
+		{Name: "test3 no object", Text: "[test3 no object text]"},
+		{Name: "test4 no object", Text: "[test4 no object text]"},
+	}
+
+	var relObjs = []*TestStructSubueryVFRelated{
+		{Name: "test1 rel subquery", Text: "[test1 rel subquery vf]", TargetTestStruct: refObjs[0]},
+		{Name: "test2 rel subquery", Text: "[test2 rel subquery vf]", TargetTestStruct: refObjs[1]},
+		{Name: "test3 rel subquery", Text: "[test3 rel subquery vf]", TargetTestStruct: refObjs[2]},
+		{Name: "test4 rel subquery", Text: "[test4 rel subquery vf]", TargetTestStruct: refObjs[3]},
+	}
+
+	var rootObjs = []*TestStructSubueryVFRelatedRoot{
+		{Name: "test1 subquery", Text: "[test1 subquery vf]", Related: relObjs[0]},
+		{Name: "test2 subquery", Text: "[test2 subquery vf]", Related: relObjs[1]},
+		{Name: "test3 subquery", Text: "[test3 subquery vf]", Related: relObjs[2]},
+		{Name: "test4 subquery", Text: "[test4 subquery vf]", Related: relObjs[3]},
+	}
+
+	_, refDelete := quest.CreateObjects(t, refObjs...)
+	_, relDelete := quest.CreateObjects(t, relObjs...)
+	_, rootDelete := quest.CreateObjects(t, rootObjs...)
+
+	defer refDelete(0)
+	defer relDelete(0)
+	defer rootDelete(0)
+
+	var rows, err = queries.GetQuerySet(&TestStructSubueryVFRelatedRoot{}).
+		Select("*", "Related.*").
+		All()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rows) != len(rootObjs) {
+		t.Fatalf("could not query all rows, expected %d, got %d", len(rootObjs), len(rows))
+	}
+
+	for idx, row := range rows {
+		var (
+			name    = fmt.Sprintf("test%d subquery", idx+1)
+			relName = fmt.Sprintf("test%d no object", idx+1)
+		)
+
+		if row.Object.Name != name {
+			t.Fatalf("Title mismatch: %q != %q", row.Object.Name, strings.ToUpper(name))
+		}
+
+		if row.Object.Related.TestStructName != strings.ToUpper(relName) {
+			t.Fatalf("TestStructName mismatch: %q != %q", row.Object.Related.TestStructName, strings.ToUpper(relName))
+		}
+	}
+}
+
+func TestVirtualFieldsQuerySetRelatedSubqueryLookupFilter(t *testing.T) {
+
+	var refObjs = []*TestStructNoObject{
+		{Name: "test1 no object", Text: "[test1 no object text]"},
+		{Name: "test2 no object", Text: "[test2 no object text]"},
+		{Name: "test3 no object", Text: "[test3 no object text]"},
+		{Name: "test4 no object", Text: "[test4 no object text]"},
+	}
+
+	var relObjs = []*TestStructSubueryVFRelated{
+		{Name: "test1 rel subquery", Text: "[test1 rel subquery vf]", TargetTestStruct: refObjs[0]},
+		{Name: "test2 rel subquery", Text: "[test2 rel subquery vf]", TargetTestStruct: refObjs[1]},
+		{Name: "test3 rel subquery", Text: "[test3 rel subquery vf]", TargetTestStruct: refObjs[2]},
+		{Name: "test4 rel subquery", Text: "[test4 rel subquery vf]", TargetTestStruct: refObjs[3]},
+	}
+
+	var rootObjs = []*TestStructSubueryVFRelatedRoot{
+		{Name: "test1 subquery", Text: "[test1 subquery vf]", Related: relObjs[0]},
+		{Name: "test2 subquery", Text: "[test2 subquery vf]", Related: relObjs[1]},
+		{Name: "test3 subquery", Text: "[test3 subquery vf]", Related: relObjs[2]},
+		{Name: "test4 subquery", Text: "[test4 subquery vf]", Related: relObjs[3]},
+	}
+
+	_, refDelete := quest.CreateObjects(t, refObjs...)
+	_, relDelete := quest.CreateObjects(t, relObjs...)
+	_, rootDelete := quest.CreateObjects(t, rootObjs...)
+
+	defer refDelete(0)
+	defer relDelete(0)
+	defer rootDelete(0)
+
+	var rows, err = queries.GetQuerySet(&TestStructSubueryVFRelatedRoot{}).
+		Select("*", "Related.*").
+		Filter("Related.TestStructName__in", []string{
+			strings.ToUpper(refObjs[0].Name),
+			strings.ToUpper(refObjs[1].Name),
+			strings.ToUpper(refObjs[2].Name),
+		}).
+		All()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if len(rows) != 3 {
+		t.Fatalf("could not filter all rows, expected %d, got %d", 3, len(rows))
+	}
+
+	for idx, row := range rows {
+		var (
+			name    = fmt.Sprintf("test%d subquery", idx+1)
+			relName = fmt.Sprintf("test%d no object", idx+1)
+		)
+
+		if row.Object.Name != name {
+			t.Fatalf("Title mismatch: %q != %q", row.Object.Name, strings.ToUpper(name))
+		}
+
+		if row.Object.Related.TestStructName != strings.ToUpper(relName) {
+			t.Fatalf("TestStructName mismatch: %q != %q", row.Object.Related.TestStructName, strings.ToUpper(relName))
+		}
+	}
 }
 
 func TestVirtualFieldsQuerySetSingleObjectTestStruct(t *testing.T) {
@@ -521,7 +999,7 @@ func Test_Annotated_Values(t *testing.T) {
 	}(t)
 
 	values, err := queries.Objects[attrs.Definer](&TestStruct{}).
-		Annotate("UpperName", expr.UPPER("Name")).
+		Annotate("TestUpper", expr.UPPER("Name")).
 		Filter("Text", "Test_Annotated_Values").
 		OrderBy("ID").
 		Values("*")
@@ -544,8 +1022,8 @@ func Test_Annotated_Values(t *testing.T) {
 			t.Errorf("expected ID = %d, got %v", test.ID, v["ID"])
 		}
 
-		if v["UpperName"] != strings.ToUpper(test.Name) {
-			t.Errorf("expected UpperName = %s, got %v", strings.ToUpper(test.Name), v["UpperName"])
+		if v["TestUpper"] != strings.ToUpper(test.Name) {
+			t.Errorf("expected TestUpper = %s, got %v", strings.ToUpper(test.Name), v["TestUpper"])
 		}
 
 		if v["TestNameUpper"] != strings.ToUpper(test.Name) {

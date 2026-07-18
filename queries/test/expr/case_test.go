@@ -19,13 +19,13 @@ func TestCaseWhenSQL(t *testing.T) {
 	sql := sb.String()
 
 	t.Logf("Generated SQL: %q", sql)
-	
+
 	expectedSQL := "CASE WHEN `test_model`.`age` = ? THEN ? ELSE ? END"
 	if testdb.ENGINE == "postgres" {
-		expectedSQL = "CASE WHEN `test_model`.`age` = ? THEN ?::TEXT ELSE ?::TEXT END"
+		expectedSQL = `CASE WHEN "test_model"."age" = ? THEN ?::TEXT ELSE ?::TEXT END`
 	}
-	if !strings.Contains(sql, fixSQL(info, expectedSQL)) {
-		t.Errorf("Unexpected Case SQL generation: %q", sql)
+	if expected := fixSQL(info, expectedSQL); !strings.Contains(sql, expected) {
+		t.Errorf("Unexpected Case SQL generation: %q, expected: %q", sql, expected)
 	}
 	if len(args) != 3 {
 		t.Errorf("Expected 3 arguments for Case expression, got %d", len(args))
@@ -46,8 +46,8 @@ func TestCaseWhenComplex(t *testing.T) {
 	if testdb.ENGINE == "postgres" {
 		expectedSQL = "CASE WHEN `test_model`.`age` > ? THEN ?::TEXT ELSE ?::TEXT END"
 	}
-	if !strings.Contains(sql, fixSQL(info, expectedSQL)) {
-		t.Errorf("Unexpected Case SQL generation from Q: %s", sql)
+	if expected := fixSQL(info, expectedSQL); !strings.Contains(sql, expected) {
+		t.Errorf("Unexpected Case SQL generation from Q: %s != %s", sql, expected)
 	}
 	if args[0] != 18 || args[1] != "adult" || args[2] != "minor" {
 		t.Errorf("Unexpected args generated: %v", args)

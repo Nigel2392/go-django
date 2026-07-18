@@ -3,6 +3,7 @@ package queries
 import (
 	"context"
 	"fmt"
+	"iter"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -362,6 +363,14 @@ func (t *relatedQuerySet[T, T2]) All() (Rows[T], error) {
 		panic("QuerySet is nil, cannot call All()")
 	}
 	return t.qs.All()
+}
+
+func (t *relatedQuerySet[T, T2]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
+	t.setup()
+	if t.qs == nil {
+		panic("QuerySet is nil, cannot call IterAll()")
+	}
+	return t.qs.IterAll()
 }
 
 type RelOneToManyQuerySet[T attrs.Definer] struct {

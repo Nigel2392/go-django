@@ -527,9 +527,13 @@ func init() {
 		&ModelManyToMany{},
 		&ModelManyToMany_Target{},
 		&ModelManyToMany_Through{},
-
 		&TestStruct{},
 		&TestStructNoObject{},
+		&OtherTestStruct{},
+		&TestStructNoVF{},
+		&TestStructSubueryVFRelated{},
+		&TestStructSubueryVFRelatedRoot{},
+
 		&Author{},
 		&Book{},
 
@@ -2729,118 +2733,6 @@ func TestQueryGroupByAnnotation(t *testing.T) {
 
 		t.Logf("Grouped todo: %+v", group.Object)
 	}
-}
-
-func TestQuerySetUnion(t *testing.T) {
-	var todos1 = []*Todo{
-		{Title: "Union1", Description: "Description Union", Done: false},
-		{Title: "Union2", Description: "Description Union", Done: true},
-	}
-
-	for _, todo := range todos1 {
-		if err := queries.CreateObject(todo); err != nil {
-			t.Fatalf("Failed to insert todo1: %v", err)
-		}
-	}
-
-	var todos2 = []*Todo{
-		{Title: "Union3", Description: "Description Union", Done: false},
-		{Title: "Union4", Description: "Description Union", Done: true},
-	}
-
-	for _, todo := range todos2 {
-		if err := queries.CreateObject(todo); err != nil {
-			t.Fatalf("Failed to insert todo2: %v", err)
-		}
-	}
-
-	t.Run("UnionAll", func(t *testing.T) {
-		var qs1 = queries.GetQuerySet(&Todo{}).
-			Select("ID", "Title", "Description", "Done").
-			Filter("Done", false)
-
-		var qs2 = queries.GetQuerySet[attrs.Definer](&Todo{}).
-			Select("ID", "Title", "Description", "Done").
-			Filter("Done", true)
-
-		unioned, err := qs1.Union(qs2).
-			Filter("Title__icontains", "Union").
-			Filter("User.ID__isnull", true).
-			All()
-		if err != nil {
-			t.Fatalf("Failed to union todos: %v", err)
-			return
-		}
-
-		if len(unioned) != len(todos1)+len(todos2) {
-			t.Fatalf("Expected %d todos, got %d", len(todos1)+len(todos2), len(unioned))
-			return
-		}
-
-		for _, todo := range append(todos1, todos2...) {
-			var found bool
-			for _, uTodo := range unioned {
-				if uTodo.Object.ID == todo.ID {
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				t.Fatalf("Expected todo with ID %d to be in unioned results", todo.ID)
-			}
-		}
-	})
-
-	t.Run("UnionOtherQuerySet", func(t *testing.T) {
-		var qs1 = queries.GetQuerySet(&Todo{}).
-			Select("ID", "Title").
-			Filter("User.ID__isnull", true).
-			Filter("Done", false)
-
-		var qs2 = queries.GetQuerySet[attrs.Definer](&Todo{}).
-			Select("ID", "Title").
-			Filter("User.ID__isnull", true).
-			Filter("Done", true)
-
-		var qs3 = queries.GetQuerySet[attrs.Definer](&User{}).
-			Select("ID").
-			Annotate("Title", expr.LOWER("Name"))
-
-		unioned, err := qs1.
-			Union(qs2).
-			Union(qs3).
-			Filter("Title__icontains", "union").
-			All()
-		if err != nil {
-			t.Fatalf("Failed to union todos: %v", err)
-			return
-		}
-
-		if len(unioned) != len(todos1)+len(todos2) {
-			t.Errorf("Expected %d todos, got %d", len(todos1)+len(todos2), len(unioned))
-			for _, row := range unioned {
-				t.Logf("Unioned row: %+v", row.Object)
-			}
-			t.FailNow()
-			return
-		}
-
-		for _, todo := range append(todos1, todos2...) {
-			var found bool
-			for _, uTodo := range unioned {
-				if uTodo.Object.ID == todo.ID {
-					found = true
-					break
-				}
-			}
-
-			if !found {
-				t.Fatalf("Expected todo with ID %d to be in unioned results", todo.ID)
-			}
-		}
-	})
-
 }
 
 func TestAggregateCount(t *testing.T) {

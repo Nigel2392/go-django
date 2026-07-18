@@ -398,9 +398,9 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Aggregate(annotations map[string]expr.E
 }
 
 // this method is pretty much only used in subquery expressions.
-func (w *WrappedQuerySet[T, CONV, ORIG]) QueryAll(fields ...any) CompiledQuery[[][]interface{}] {
+func (w *WrappedQuerySet[T, CONV, ORIG]) QueryAll(fields ...any) CompiledRowsQuery[[][]interface{}] {
 	if q, ok := w.NullQuerySet.(interface {
-		QueryAll(fields ...any) CompiledQuery[[][]interface{}]
+		QueryAll(fields ...any) CompiledRowsQuery[[][]interface{}]
 	}); ok {
 		return q.QueryAll(fields...)
 	}
@@ -408,9 +408,9 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) QueryAll(fields ...any) CompiledQuery[[
 }
 
 // this method is pretty much only used in subquery expressions.
-func (w *WrappedQuerySet[T, CONV, ORIG]) QueryAggregate() CompiledQuery[[][]interface{}] {
+func (w *WrappedQuerySet[T, CONV, ORIG]) QueryAggregate() CompiledRowsQuery[[][]interface{}] {
 	if q, ok := w.NullQuerySet.(interface {
-		QueryAggregate() CompiledQuery[[][]interface{}]
+		QueryAggregate() CompiledRowsQuery[[][]interface{}]
 	}); ok {
 		return q.QueryAggregate()
 	}
@@ -418,9 +418,9 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) QueryAggregate() CompiledQuery[[][]inte
 }
 
 // this method is pretty much only used in subquery expressions.
-func (w *WrappedQuerySet[T, CONV, ORIG]) QueryCount() CompiledQuery[int64] {
+func (w *WrappedQuerySet[T, CONV, ORIG]) QueryCount() CompiledRowQuery[int64] {
 	if q, ok := w.NullQuerySet.(interface {
-		QueryCount() CompiledQuery[int64]
+		QueryCount() CompiledRowQuery[int64]
 	}); ok {
 		return q.QueryCount()
 	}

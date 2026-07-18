@@ -260,7 +260,7 @@ type AliasField interface {
 // For example: this is used in fields.ExpressionField to render the expression as SQL.
 type VirtualField interface {
 	attrs.FieldDefinition
-	SQL(inf *ExpressionInfo) (string, []any)
+	SQL(chain []string, inf *ExpressionInfo) (string, []any)
 }
 
 // OrderBy represents an order by clause in a query.
@@ -336,5 +336,6 @@ type FieldResolver interface {
 	Alias() *alias.Generator
 	Peek() QueryInformation
 	Context() context.Context
+	ResolverInfoForModel(model attrs.Definer) *ExpressionInfo
 	Resolve(fieldName string, inf *ExpressionInfo) (model attrs.Definer, field attrs.FieldDefinition, col *TableColumn, err error)
 }

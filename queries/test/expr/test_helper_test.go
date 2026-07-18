@@ -18,6 +18,24 @@ func init() {
 	}
 	django.App(django.Configure(settings))
 	attrs.RegisterModel(&TestModel{})
+	attrs.RegisterModel(&OtherTestModel{})
+}
+
+type OtherTestModel struct {
+	models.Model `table:"other_test_model"`
+	ID           int
+	Name         string
+	TestModel    *TestModel
+}
+
+func (m *OtherTestModel) FieldDefs() attrs.Definitions {
+	return m.Model.Define(m,
+		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
+		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
+		attrs.NewField(m, "TestModel", &attrs.FieldConfig{
+			RelForeignKey: attrs.Relate(&TestModel{}, "", nil),
+		}),
+	)
 }
 
 type TestModel struct {
@@ -60,6 +78,13 @@ func getTestInfo() *expr.ExpressionInfo {
 func fixSQL(info *expr.ExpressionInfo, sqlStr string) string {
 	var replacer = strings.NewReplacer(
 		"`test_model`", info.QuoteIdentifier("test_model"),
+		"`T_test_model`", info.QuoteIdentifier("T_test_model"),
+		"`T1_test_model`", info.QuoteIdentifier("T1_test_model"),
+		"`other_test_model`", info.QuoteIdentifier("other_test_model"),
+		"`T_other_test_model`", info.QuoteIdentifier("T_other_test_model"),
+		"`T1_other_test_model`", info.QuoteIdentifier("T1_other_test_model"),
+		"`t1`", info.QuoteIdentifier("t1"),
+		"`id`", info.QuoteIdentifier("id"),
 		"`age`", info.QuoteIdentifier("age"),
 		"`name`", info.QuoteIdentifier("name"),
 		"`score`", info.QuoteIdentifier("score"),

@@ -35,6 +35,115 @@ func TestFExprSQL(t *testing.T) {
 	}
 }
 
+// SQL Generation 3
+func TestModelTableExprSQL(t *testing.T) {
+	info := getTestInfo()
+	f := expr.F("#[expr_test.OtherTestModel.Name] + ?[1] + ![Score]", 3)
+	resolved := f.Resolve(info)
+	var sb strings.Builder
+	args := resolved.SQL(&sb)
+	sql := sb.String()
+	if !strings.Contains(sql, fixSQL(info, "`other_test_model`.`name` + ? + `test_model`.`score`")) {
+		t.Errorf("Unexpected F SQL generation: %s", sql)
+	}
+	if len(args) != 1 || args[0] != 3 {
+		t.Errorf("Expected arg 3, got %v", args)
+	}
+}
+
+// SQL Generation 4
+func TestModelTableAliasExprSQL(t *testing.T) {
+	info := getTestInfo()
+	f := expr.F("#[t1.expr_test.OtherTestModel.Name] + ?[1] + ![Score]", 3)
+	resolved := f.Resolve(info)
+	var sb strings.Builder
+	args := resolved.SQL(&sb)
+	sql := sb.String()
+	if !strings.Contains(sql, fixSQL(info, "`t1`.`name` + ? + `test_model`.`score`")) {
+		t.Errorf("Unexpected F SQL generation: %s", sql)
+	}
+	if len(args) != 1 || args[0] != 3 {
+		t.Errorf("Expected arg 3, got %v", args)
+	}
+}
+
+// SQL Generation 5
+func TestModelTableOtherExprSQL(t *testing.T) {
+	info := getTestInfo()
+	f := expr.F("#[expr_test.OtherTestModel.TestModel.Name] + ?[1] + ![Score]", 3)
+	resolved := f.Resolve(info)
+	var sb strings.Builder
+	args := resolved.SQL(&sb)
+	sql := sb.String()
+	if !strings.Contains(sql, fixSQL(info, "`T_test_model`.`name` + ? + `test_model`.`score`")) {
+		t.Errorf("Unexpected F SQL generation: %s", sql)
+	}
+	if len(args) != 1 || args[0] != 3 {
+		t.Errorf("Expected arg 3, got %v", args)
+	}
+}
+
+// SQL Generation 6
+func TestModelTableOtherBackrefExprSQL(t *testing.T) {
+	info := getTestInfo()
+	f := expr.F("#[expr_test.OtherTestModel.TestModel.OtherTestModelSet.Name] #[t1.expr_test.OtherTestModel.TestModel.OtherTestModelSet.Name] #[t1.expr_test.OtherTestModel.Name] #[t1.expr_test.OtherTestModel.Name] #[t1.expr_test.OtherTestModel.Name] #[t1.expr_test.OtherTestModel.Name] TABLE(expr_test.OtherTestModel) + ?[1] + ![Score]", 3)
+	resolved := f.Resolve(info)
+	var sb strings.Builder
+	args := resolved.SQL(&sb)
+	sql := sb.String()
+	if !strings.Contains(sql, fixSQL(info, "`T1_other_test_model`.`name` `t1`.`name` `t1`.`name` `t1`.`name` `t1`.`name` `t1`.`name` `other_test_model` + ? + `test_model`.`score`")) {
+		t.Errorf("Unexpected F SQL generation: %s", sql)
+	}
+	if len(args) != 1 || args[0] != 3 {
+		t.Errorf("Expected arg 3, got %v", args)
+	}
+}
+
+func TestTableOtherExprSQL(t *testing.T) {
+	info := getTestInfo()
+	f := expr.F("TABLE(expr_test.OtherTestModel) + ?[1] + ![Score]", 3)
+	resolved := f.Resolve(info)
+	var sb strings.Builder
+	args := resolved.SQL(&sb)
+	sql := sb.String()
+	if !strings.Contains(sql, fixSQL(info, "`other_test_model` + ? + `test_model`.`score`")) {
+		t.Errorf("Unexpected F SQL generation: %s", sql)
+	}
+	if len(args) != 1 || args[0] != 3 {
+		t.Errorf("Expected arg 3, got %v", args)
+	}
+}
+
+func TestTableOtherBackrefExprSQL(t *testing.T) {
+	info := getTestInfo()
+	f := expr.F("![OtherTestModelSet.ID] == TABLE(OtherTestModelSet.TestModel) + ?[1] + ![Score]", 3)
+	resolved := f.Resolve(info)
+	var sb strings.Builder
+	args := resolved.SQL(&sb)
+	sql := sb.String()
+	if expected := fixSQL(info, fixSQL(info, "`T_other_test_model`.`id` == `test_model` AS `T1_test_model` + ? + `test_model`.`score`")); !strings.Contains(sql, expected) {
+		t.Errorf("Unexpected F SQL generation: %s != %s", sql, expected)
+	}
+	if len(args) != 1 || args[0] != 3 {
+		t.Errorf("Expected arg 3, got %v", args)
+	}
+}
+
+func TestQuotesExprSQL(t *testing.T) {
+	info := getTestInfo()
+	f := expr.F("'test_model.score' == ![Score] + ?", 3)
+	resolved := f.Resolve(info)
+	var sb strings.Builder
+	args := resolved.SQL(&sb)
+	sql := sb.String()
+	if !strings.Contains(sql, fixSQL(info, "`test_model`.`score` == `test_model`.`score` + ?")) {
+		t.Errorf("Unexpected F SQL generation: %s", sql)
+	}
+	if len(args) != 1 || args[0] != 3 {
+		t.Errorf("Expected arg 3, got %v", args)
+	}
+}
+
 // Happy Path 1
 func TestFExprMultipleArgs(t *testing.T) {
 	info := getTestInfo()

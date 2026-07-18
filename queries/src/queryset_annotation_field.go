@@ -42,10 +42,11 @@ func (q *queryField) FieldDefinitions() attrs.Definitions {
 	return nil
 }
 
-// VirtualField
+// [expr.VirtualField], [expr.AliasField]
 
 func (q *queryField) Alias() string { return q.name }
-func (q *queryField) SQL(inf *expr.ExpressionInfo) (string, []any) {
+func (q *queryField) SQL(_ []string, inf *expr.ExpressionInfo) (string, []any) {
+	// chain is not used as it should already be fully present, used internally in QS.
 	var sqlBuilder = &strings.Builder{}
 	var expr = q.expr.Resolve(inf)
 	var args = expr.SQL(sqlBuilder)
@@ -100,7 +101,8 @@ type exprField struct {
 	expr expr.Expression
 }
 
-func (e *exprField) SQL(inf *expr.ExpressionInfo) (string, []any) {
+func (e *exprField) SQL(_ []string, inf *expr.ExpressionInfo) (string, []any) {
+	// chain is not used as it should already be fully present, used internally in QS.
 	var sqlBuilder = &strings.Builder{}
 	var expr = e.expr.Resolve(inf)
 	var args = expr.SQL(sqlBuilder)

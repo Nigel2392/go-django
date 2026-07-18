@@ -84,7 +84,7 @@ func (c *CTEQueryCompiler) BuildSelectQuery(
 	ctx context.Context,
 	qs *CTEQuerySet[attrs.Definer],
 	internals *QuerySetInternals,
-) CompiledQuery[[][]interface{}] {
+) CompiledRowsQuery[[][]interface{}] {
 
 	if qs.internals.ctes == nil {
 		return c.QueryCompiler.BuildSelectQuery(ctx, qs.Base(), internals)
@@ -125,14 +125,14 @@ func (c *CTEQueryCompiler) BuildSelectQuery(
 	sb.WriteString(query.SQL())
 	args = append(args, query.Args()...)
 
-	return &QueryObject[[][]interface{}]{
+	return &QueryRowsObject[[][]interface{}]{
 		QueryInfo: &QueryInformation{
 			Stmt:    sb.String(),
 			Params:  args,
 			Object:  qs.Base().internals.Model.Object,
 			Builder: c.QueryCompiler,
 		},
-		Execute: query.(*QueryObject[[][]any]).Execute,
+		Execute: query.(*QueryRowsObject[[][]any]).Execute,
 	}
 }
 

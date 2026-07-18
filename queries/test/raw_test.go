@@ -45,12 +45,13 @@ func TestQuerySetRawExecution(t *testing.T) {
 		t.Fatalf("Failed to create *Todo objects: %v", err)
 	}
 
-	var todos_m = make(map[int]*Todo)
-	for _, todo := range todos {
-		todos_m[todo.ID] = todo
-	}
+	t.Run("GENERIC_CATCHALL", func(t *testing.T) {
+		var todos_m = make(map[int]*Todo)
+		for _, todo := range todos {
+			todos_m[todo.ID] = todo
+		}
 
-	var query = `SELECT ![p.ID], EXPR(UpperTitle), ![User.ID], ![UserName], ![User.Profile.ID], ![User.Profile.Name], ![User.Profile.Email]
+		var query = `SELECT ![p.ID], EXPR(UpperTitle), ![User.ID], ![UserName], ![User.Profile.ID], ![User.Profile.Name], ![User.Profile.Email]
 	FROM TABLE(SELF) as p
 	INNER JOIN
 		TABLE(User) ON ![User.ID] = ![p.User]
@@ -65,61 +66,62 @@ func TestQuerySetRawExecution(t *testing.T) {
 	LIMIT ?[2]
 	OFFSET ?[3]`
 
-	rows, err := queries.GetQuerySet(&Todo{}).Annotate("UserName", expr.UPPER("User.Name")).Rows(
-		query,
-		expr.PARSER.Expr.Expressions(map[string]expr.Expression{
-			"UpperTitle": expr.UPPER("p.Title"),
-			"WhereFilter": expr.Q("p.Title__istartswith", "TestQuerySetRow").And(
-				expr.Q("User.ID__in", users),
-			),
-		}),
-		false, 1000, 0,
-	)
-	if err != nil {
-		t.Fatalf("Failed to get rows: %v", err)
-	}
-
-	var count = 0
-	for rows.Next() {
-		var todo = &Todo{
-			User: &User{
-				Profile: &Profile{},
-			},
-		}
-
-		var err = rows.Scan(
-			&todo.ID, &todo.Title,
-			&todo.User.ID, &todo.User.Name,
-			&todo.User.Profile.ID, &todo.User.Profile.Name, &todo.User.Profile.Email,
+		rows, err := queries.GetQuerySet(&Todo{}).Annotate("UserName", expr.UPPER("User.Name")).Rows(
+			query,
+			expr.PARSER.Expr.Expressions(map[string]expr.Expression{
+				"UpperTitle": expr.UPPER("p.Title"),
+				"WhereFilter": expr.Q("p.Title__istartswith", "TestQuerySetRow").And(
+					expr.Q("User.ID__in", users),
+				),
+			}),
+			false, 1000, 0,
 		)
 		if err != nil {
-			t.Fatalf("Failed to scan row: %v", err)
+			t.Fatalf("Failed to get rows: %v", err)
 		}
 
-		var checkTodo, ok = todos_m[todo.ID]
-		if !ok {
-			t.Fatalf("Todo with ID %d not found in created todos", todo.ID)
+		var count = 0
+		for rows.Next() {
+			var todo = &Todo{
+				User: &User{
+					Profile: &Profile{},
+				},
+			}
+
+			var err = rows.Scan(
+				&todo.ID, &todo.Title,
+				&todo.User.ID, &todo.User.Name,
+				&todo.User.Profile.ID, &todo.User.Profile.Name, &todo.User.Profile.Email,
+			)
+			if err != nil {
+				t.Fatalf("Failed to scan row: %v", err)
+			}
+
+			var checkTodo, ok = todos_m[todo.ID]
+			if !ok {
+				t.Fatalf("Todo with ID %d not found in created todos", todo.ID)
+			}
+
+			if strings.ToUpper(checkTodo.Title) != todo.Title {
+				t.Fatalf("Expected Title %q, got %q", strings.ToUpper(checkTodo.Title), todo.Title)
+			}
+
+			if checkTodo.User.ID != todo.User.ID {
+				t.Fatalf("Expected User ID %d, got %d", checkTodo.User.ID, todo.User.ID)
+			}
+
+			if strings.ToUpper(checkTodo.User.Name) != todo.User.Name {
+				t.Fatalf("Expected User Name %q, got %q", strings.ToUpper(checkTodo.User.Name), todo.User.Name)
+			}
+
+			t.Logf("Row %d: %+v", count, todo)
+			count++
 		}
 
-		if strings.ToUpper(checkTodo.Title) != todo.Title {
-			t.Fatalf("Expected Title %q, got %q", strings.ToUpper(checkTodo.Title), todo.Title)
+		if count != 3 {
+			t.Fatalf("Expected 3 rows, got %d", count)
 		}
-
-		if checkTodo.User.ID != todo.User.ID {
-			t.Fatalf("Expected User ID %d, got %d", checkTodo.User.ID, todo.User.ID)
-		}
-
-		if strings.ToUpper(checkTodo.User.Name) != todo.User.Name {
-			t.Fatalf("Expected User Name %q, got %q", strings.ToUpper(checkTodo.User.Name), todo.User.Name)
-		}
-
-		t.Logf("Row %d: %+v", count, todo)
-		count++
-	}
-
-	if count != 3 {
-		t.Fatalf("Expected 3 rows, got %d", count)
-	}
+	})
 
 	_, err = queries.GetQuerySet[attrs.Definer](&Todo{}).Filter("ID__in", todos).Delete()
 	if err != nil {

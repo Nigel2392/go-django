@@ -1,10 +1,11 @@
 package attrs
 
 import (
-	"fmt"
 	"reflect"
 	"slices"
 	"strings"
+
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 )
 
 type PathMetaChain []*pathMeta
@@ -97,7 +98,8 @@ func WalkMetaFieldsFunc(m Definer, path []string, fn WalkFieldsFunc) error {
 			f, ok     = defs.Field(part)
 		)
 		if !ok {
-			return fmt.Errorf("field %q not found in %T (%v)", part, current, FieldNames(defs.Fields(), nil))
+			return errors.FieldNotFound.Wrapf(
+				"field %q not found in %T (%v)", part, current, FieldNames(defs.Fields(), nil))
 		}
 
 		var (
@@ -110,16 +112,17 @@ func WalkMetaFieldsFunc(m Definer, path []string, fn WalkFieldsFunc) error {
 		}
 
 		if rev, ok2 = modelMeta.Reverse(part); ok2 {
-
 			if ok1 {
-				return fmt.Errorf("field %q is both a forward and reverse relation in %T", part, current)
+				return errors.AmbiguousColumn.Wrapf(
+					"field %q is both a forward and reverse relation in %T", part, current)
 			}
 
 			relation = rev
 		}
 
 		if (!ok1 && !ok2) && i != len(path)-1 {
-			return fmt.Errorf("field %q is not a relation in %T, cannot traverse further", part, current)
+			return errors.AmbiguousColumn.Wrapf(
+				"field %q is not a relation in %T, cannot traverse further", part, current)
 		}
 
 		if stop, err := fn(parentRel, modelMeta, current, f, relation, part, path, i); stop || err != nil {

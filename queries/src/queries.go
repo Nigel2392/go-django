@@ -410,6 +410,17 @@ type QuerySetDefiner interface {
 	GetQuerySet() *QuerySet[attrs.Definer]
 }
 
+// A model can adhere to this interface to indicate that the queries package
+// should use the queryset returned by `GetQuerySet()` to execute the query.
+//
+// Calling `queries.Objects()` with a model that implements this interface will
+// return the queryset returned by `GetQuerySet()`.
+type TypedQuerySetDefiner[T attrs.Definer] interface {
+	attrs.Definer
+
+	GetQuerySet() *QuerySet[T]
+}
+
 // QuerySetChanger is an interface that can be implemented by models to indicate
 // that the queryset should be changed when the model is used in a queryset.
 type QuerySetChanger interface {
@@ -464,20 +475,29 @@ type CompiledQuery[T1 any] interface {
 	Exec() (T1, error)
 }
 
-// A compiledQuery which returns the number of rows affected by the query.
-type CompiledCountQuery CompiledQuery[int64]
+type CompiledRowQuery[T1 any] interface {
+	CompiledQuery[T1]
+	drivers.SQLRow
+}
 
-// A compiledQuery which returns a boolean indicating if any rows were affected by the query.
-type CompiledExistsQuery CompiledQuery[bool]
-
-// A compiledQuery which returns a list of values from the query.
-type CompiledValuesListQuery CompiledQuery[[][]any]
+type CompiledRowsQuery[T1 any] interface {
+	CompiledQuery[T1]
+	drivers.SQLRows
+}
 
 type UpdateInfo struct {
 	FieldInfo[attrs.Field]
 	Where  []expr.ClauseExpression
 	Joins  []JoinDef
 	Values []any
+}
+
+func Resolver(ctx context.Context, model attrs.Definer) func(expr.Expression) expr.Expression {
+	other := Objects(model).WithContext(ctx)
+	info := other.compiler.ExpressionInfo(other, other.internals)
+	return func(e expr.Expression) expr.Expression {
+		return e.Resolve(info)
+	}
 }
 
 // A QueryCompiler interface is used to compile a query.
@@ -560,14 +580,14 @@ type QueryCompiler interface {
 		ctx context.Context,
 		qs *QuerySet[attrs.Definer],
 		internals *QuerySetInternals,
-	) CompiledQuery[[][]interface{}]
+	) CompiledRowsQuery[[][]interface{}]
 
 	// BuildCountQuery builds a count query with the given parameters.
 	BuildCountQuery(
 		ctx context.Context,
 		qs *QuerySet[attrs.Definer],
 		internals *QuerySetInternals,
-	) CompiledQuery[int64]
+	) CompiledRowQuery[int64]
 
 	// BuildCreateQuery builds a create query with the given parameters.
 	BuildCreateQuery(
@@ -640,9 +660,9 @@ type NullQuerySet[T any, QS any] interface {
 	// Lazy query methods
 
 	// Lazy methods for retrieving queries
-	QueryAll(fields ...any) CompiledQuery[[][]interface{}]
-	QueryAggregate() CompiledQuery[[][]interface{}]
-	QueryCount() CompiledQuery[int64]
+	QueryAll(fields ...any) CompiledRowsQuery[[][]interface{}]
+	QueryAggregate() CompiledRowsQuery[[][]interface{}]
+	QueryCount() CompiledRowQuery[int64]
 }
 
 // BaseReadQuerySet is a base interface for read-only querysets.

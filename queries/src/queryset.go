@@ -339,6 +339,11 @@ func GetQuerySet[T attrs.Definer](model T) *QuerySet[T] {
 		return ChangeObjectsType[attrs.Definer, T](qs)
 	}
 
+	if t, ok := any(model).(TypedQuerySetDefiner[T]); ok {
+		_ = t.FieldDefs() // ensure the model is initialized
+		return t.GetQuerySet().clone()
+	}
+
 	return Objects(model)
 }
 
@@ -519,6 +524,14 @@ func (qs *QuerySet[T]) LatestQuery() QueryInfo {
 // HasWhereClause returns true if the QuerySet has a WHERE clause.
 func (qs *QuerySet[T]) HasWhereClause() bool {
 	return len(qs.internals.Where) > 0
+}
+
+// ResolverInfoForModel initializes a new [expr.ExpressionInfo] and [expr.FieldResolver] (queryset) object
+func (qs *QuerySet[T]) ResolverInfoForModel(model attrs.Definer) *expr.ExpressionInfo {
+	var other = Objects(model)
+	other.context = qs.context
+	other.AliasGen = qs.AliasGen.Clone()
+	return other.compiler.ExpressionInfo(other, other.internals)
 }
 
 func (qs *QuerySet[T]) Peek() expr.QueryInformation {
@@ -942,8 +955,12 @@ func (qs *QuerySet[T]) Select(fields ...any) *QuerySet[T] {
 		fields = []any{"*"}
 	}
 
-	var selectedFieldsList = make([]string, 0, len(fields))
-	var namedExprs = make(map[string]expr.NamedExpression, 0)
+	var (
+		selectedFieldsList = make([]string, 0, len(fields))
+		namedExprs         = make(map[string]expr.NamedExpression, 0)
+		exprs              = make(map[string]expr.Expression, 0)
+		idx                int
+	)
 	for _, field := range fields {
 		var selectedField string
 		switch v := field.(type) {
@@ -957,6 +974,10 @@ func (qs *QuerySet[T]) Select(fields ...any) *QuerySet[T] {
 			}
 
 			namedExprs[selectedField] = v
+		case expr.Expression:
+			key := fmt.Sprintf("expr-%d", idx)
+			exprs[key] = v
+			selectedField = key
 		case *FieldInfo[attrs.FieldDefinition]:
 			qs.internals.AddField(v)
 			continue
@@ -967,6 +988,8 @@ func (qs *QuerySet[T]) Select(fields ...any) *QuerySet[T] {
 		selectedFieldsList = append(
 			selectedFieldsList, selectedField,
 		)
+
+		idx++
 	}
 
 fieldsLoop:
@@ -1025,6 +1048,14 @@ fieldsLoop:
 			continue fieldsLoop
 		}
 
+		regExpr, ok := exprs[selectedField]
+		if ok {
+			qs.internals.AddField(&FieldInfo[attrs.FieldDefinition]{
+				Fields: []attrs.FieldDefinition{newQueryField("", regExpr)},
+			})
+			continue fieldsLoop
+		}
+
 		var flags = WalkFlagAddJoins | WalkFlagAddProxies
 		if allFields {
 			flags |= WalkFlagAllFields
@@ -1071,7 +1102,7 @@ func (qs *QuerySet[T]) Alias() *alias.Generator {
 func (qs *QuerySet[T]) Resolve(fieldName string, inf *expr.ExpressionInfo) (attrs.Definer, attrs.FieldDefinition, *expr.TableColumn, error) {
 	var res, err = qs.WalkField(fieldName, OptFlags(WalkFlagAddJoins))
 	if err != nil {
-		panic(err)
+		return nil, nil, nil, errors.Wrap(err, "cannot resolve field")
 	}
 
 	for _, join := range res.Joins {
@@ -1081,7 +1112,7 @@ func (qs *QuerySet[T]) Resolve(fieldName string, inf *expr.ExpressionInfo) (attr
 	var field attrs.FieldDefinition = res.Annotation
 	if field == nil {
 		if res.Chain == nil || res.Chain.Final == nil {
-			return nil, nil, nil, fmt.Errorf(
+			return nil, nil, nil, errors.FieldNotFound.Wrapf(
 				"Resolve: field %q not found in model %T", fieldName, inf.Model,
 			)
 		}
@@ -1113,18 +1144,28 @@ func (qs *QuerySet[T]) Resolve(fieldName string, inf *expr.ExpressionInfo) (attr
 			// If the field is a virtual field and the database does not support
 			// WHERE expressions with aliases, we need to use the raw SQL of the
 			// virtual field.
+
+			var chain = make([]string, 0)
+			if res.Chain != nil {
+				chain = res.Chain.Chain
+			}
+
 			var sql string
-			sql, args = s.SQL(inf)
+			sql, args = s.SQL(chain, inf)
 			col.RawSQL = sql
 			col.Values = args
 			goto newField
 		}
 
+		// If the field is an alias field and referencing said alias is supported,
+		// we can skip the above step of generating the SQL, and reference the field directly.
 		if s, ok := field.(AliasField); ok && inf.SupportsAsExpr {
-			// If the field is an alias field, we need to use the alias of the field.
+			// wether to generate an alias for annotations
 			col.FieldAlias = qs.AliasGen.GetFieldAlias(
 				aliasStr, s.Alias(),
 			)
+			//
+			// col.FieldAlias = s.Alias()
 			goto newField
 		}
 
@@ -1229,8 +1270,7 @@ func (qs *QuerySet[T]) WalkField(selectedField string, options ...func(*WalkOpti
 		qs: qs,
 	}
 
-	if annotation, ok := qs.internals.Annotations.Get(selectedField); ok {
-
+	if annotation, aok := qs.internals.Annotations.Get(selectedField); aok {
 		if namedExpr, ok := opts.Expressions[selectedField]; ok {
 			annotation = &exprField{
 				Field: annotation,
@@ -1241,6 +1281,11 @@ func (qs *QuerySet[T]) WalkField(selectedField string, options ...func(*WalkOpti
 		res.Annotation = annotation
 		return res, nil
 	}
+
+	//	if namedExpr, ok := opts.Expressions[selectedField]; ok {
+	//		res.Annotation = newQueryField(selectedField, namedExpr)
+	//		return res, nil
+	//	}
 
 	if qs.internals.fieldsMap == nil {
 		qs.internals.fieldsMap = make(map[string]*FieldInfo[attrs.FieldDefinition], 0)
@@ -1255,7 +1300,7 @@ func (qs *QuerySet[T]) WalkField(selectedField string, options ...func(*WalkOpti
 	}
 
 	fieldPath := strings.Split(selectedField, ".")
-	relatrionChain, err := attrs.WalkRelationChain(
+	relationChain, err := attrs.WalkRelationChain(
 		qs.internals.Model.Object, opts.Flags&WalkFlagAllFields != 0, fieldPath,
 	)
 	if err != nil {
@@ -1263,16 +1308,16 @@ func (qs *QuerySet[T]) WalkField(selectedField string, options ...func(*WalkOpti
 	}
 
 	var partIdx = 0
-	var curr = relatrionChain.Root
+	var curr = relationChain.Root
 
-	res.Chain = relatrionChain
-	res.Aliases = make([]string, 0, len(relatrionChain.Chain))
+	res.Chain = relationChain
+	res.Aliases = make([]string, 0, len(relationChain.Chain))
 
 	for curr != nil {
 		var (
 			meta        = attrs.GetModelMeta(curr.Model)
 			defs        = meta.Definitions()
-			preloadPath = strings.Join(relatrionChain.Chain[:partIdx], ".")
+			preloadPath = strings.Join(relationChain.Chain[:partIdx], ".")
 		)
 
 		var exprKey = curr.Field.Name()
@@ -1374,17 +1419,17 @@ func (qs *QuerySet[T]) SelectRelated(fields ...string) *QuerySet[T] {
 
 	for _, field := range fields {
 		fieldPath := strings.Split(field, ".")
-		relatrionChain, err := attrs.WalkRelationChain(
+		relationChain, err := attrs.WalkRelationChain(
 			qs.internals.Model.Object, true, fieldPath,
 		)
 		if err != nil {
 			panic(fmt.Errorf("SelectRelated: %w", err))
 		}
 
-		var curr = relatrionChain.Root
+		var curr = relationChain.Root
 
 		var partIdx = 0
-		var aliasList = make([]string, 0, len(relatrionChain.Chain))
+		var aliasList = make([]string, 0, len(relationChain.Chain))
 		var currModelMeta = attrs.GetModelMeta(curr.Model)
 		aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
 			currModelMeta.Definitions().TableName(), "",
@@ -1426,7 +1471,7 @@ func (qs *QuerySet[T]) SelectRelated(fields ...string) *QuerySet[T] {
 			var (
 				meta        = attrs.GetModelMeta(curr.Model)
 				defs        = meta.Definitions()
-				preloadPath = strings.Join(relatrionChain.Chain[:partIdx+1], ".")
+				preloadPath = strings.Join(relationChain.Chain[:partIdx+1], ".")
 			)
 
 			if curr.Field == nil {
@@ -1553,18 +1598,18 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 			panic(fmt.Errorf("Preload: invalid field type %T, can be one of [string, Preload]", v))
 		}
 
-		var relatrionChain, err = attrs.WalkRelationChain(
+		var relationChain, err = attrs.WalkRelationChain(
 			qs.internals.Model.Object, true, preload.Chain,
 		)
 		if err != nil {
 			panic(fmt.Errorf("Preload: %w", err))
 		}
 
-		var preloads = make([]*Preload, 0, len(relatrionChain.Chain))
-		var curr = relatrionChain.Root
+		var preloads = make([]*Preload, 0, len(relationChain.Chain))
+		var curr = relationChain.Root
 
 		var partIdx = 0
-		var aliasList = make([]string, 0, len(relatrionChain.Chain))
+		var aliasList = make([]string, 0, len(relationChain.Chain))
 		var currModelMeta = attrs.GetModelMeta(curr.Model)
 		aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
 			currModelMeta.Definitions().TableName(), "",
@@ -1584,9 +1629,9 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 
 			// create a preload path for each part of the relation chain
 
-			var subChain = relatrionChain.Chain[:partIdx+1]
-			var preloadPath = strings.Join(relatrionChain.Chain[:partIdx+1], ".")
-			var parentPath = strings.Join(relatrionChain.Chain[:partIdx], ".")
+			var subChain = relationChain.Chain[:partIdx+1]
+			var preloadPath = strings.Join(relationChain.Chain[:partIdx+1], ".")
+			var parentPath = strings.Join(relationChain.Chain[:partIdx], ".")
 
 			aliasList = append(aliasList, qs.AliasGen.GetTableAlias(
 				defs.TableName(), preloadPath,
@@ -1596,7 +1641,7 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 			if _, ok := qs.internals.Preload.mapping[preloadPath]; !ok {
 
 				var loadDef = &Preload{
-					FieldName:  relatrionChain.Chain[partIdx],
+					FieldName:  relationChain.Chain[partIdx],
 					Path:       preloadPath,
 					ParentPath: parentPath,
 					Chain:      subChain,
@@ -1607,7 +1652,7 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 				}
 
 				// Set the QuerySet for the preload
-				if partIdx == len(relatrionChain.Chain)-1 {
+				if partIdx == len(relationChain.Chain)-1 {
 					loadDef.QuerySet = preload.QuerySet
 				}
 
@@ -2288,9 +2333,11 @@ func (qs *QuerySet[T]) compileOrderBy(fields ...string) []expr.OrderBy {
 
 		var alias string
 		if vF, ok := field.(AliasField); ok {
+			//  wether to generate an alias for annotations
 			alias = res.qs.AliasGen.GetFieldAlias(
 				tableAlias, vF.Alias(),
 			)
+			// alias = vF.Alias()
 		}
 
 		if alias != "" {
@@ -2552,7 +2599,7 @@ func (qs *QuerySet[T]) BuildExpression() expr.Expression {
 	return subquery
 }
 
-func (qs *QuerySet[T]) QueryAll(fields ...any) CompiledQuery[[][]interface{}] {
+func (qs *QuerySet[T]) QueryAll(fields ...any) CompiledRowsQuery[[][]interface{}] {
 	// Select all fields if no fields are provided
 	//
 	// Override the pointer to the original QuerySet with the Select("*") QuerySet
@@ -2574,7 +2621,7 @@ func (qs *QuerySet[T]) QueryAll(fields ...any) CompiledQuery[[][]interface{}] {
 	return query
 }
 
-func (qs *QuerySet[T]) QueryAggregate() CompiledQuery[[][]interface{}] {
+func (qs *QuerySet[T]) QueryAggregate() CompiledRowsQuery[[][]interface{}] {
 	qs.internals.OrderBy = nil     // no order by for aggregates
 	qs.internals.Limit = 0         // no limit for aggregates
 	qs.internals.Offset = 0        // no offset for aggregates
@@ -2601,7 +2648,7 @@ func (qs *QuerySet[T]) ClearOrderBy() *QuerySet[T] {
 	return qs
 }
 
-func (qs *QuerySet[T]) QueryCount() CompiledQuery[int64] {
+func (qs *QuerySet[T]) QueryCount() CompiledRowQuery[int64] {
 	var q = qs.compiler.BuildCountQuery(
 		qs.context,
 		ChangeObjectsType[T, attrs.Definer](qs),

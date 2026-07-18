@@ -221,15 +221,15 @@ func (p *ContentTypeRegistry) DefinitionForObject(object any) *ContentTypeDefini
 //
 // If the type name is an alias, the definition for the actual type name will be returned.
 func (p *ContentTypeRegistry) DefinitionForPackage(toplevelPkgName string, typeName string) *ContentTypeDefinition {
+	var togetherBuf = make([]byte, 0, len(toplevelPkgName)+len(typeName)+1)
+	togetherBuf = append(togetherBuf, toplevelPkgName...)
+	togetherBuf = append(togetherBuf, '.')
+	togetherBuf = append(togetherBuf, typeName...)
+
 	if p.aliasesRev != nil {
-		var togetherBuf = make([]byte, 0, len(toplevelPkgName)+len(typeName)+1)
-		togetherBuf = append(togetherBuf, toplevelPkgName...)
-		togetherBuf = append(togetherBuf, '.')
-		togetherBuf = append(togetherBuf, typeName...)
 		if alias, exists := p.aliasesRev[string(togetherBuf)]; exists {
 			return p.registry[alias]
 		}
-
 	}
 
 	for fullPkgPath, definition := range p.registry {
@@ -245,6 +245,12 @@ func (p *ContentTypeRegistry) DefinitionForPackage(toplevelPkgName string, typeN
 		var pkg = infoParts[0]
 		var typ = infoParts[1]
 		if pkg == toplevelPkgName && typ == typeName {
+			// cache it for later to save this expensive loop from being needed
+			// again for the same string
+			if p.aliasesRev == nil {
+				p.aliasesRev = make(map[string]string)
+			}
+			p.aliasesRev[string(togetherBuf)] = fullPkgPath
 			return definition
 		}
 	}

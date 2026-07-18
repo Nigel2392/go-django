@@ -79,9 +79,14 @@ func (e *outerRef) Resolve(inf *ExpressionInfo) Expression {
 		panic(fmt.Errorf("failed to resolve outer reference %s: no parent subquery context found", nE.fieldName))
 	}
 
+	if len(outer.chain) > 0 {
+		// in case a relatedfield references a subquery
+		nE.fieldName = strings.Join(append(outer.chain, nE.fieldName), ".")
+	}
+
 	var _, field, col, err = outer.Resolver.Resolve(nE.fieldName, outer)
 	if err != nil {
-		panic(fmt.Errorf("failed to resolve field %s: %w", field, err))
+		panic(fmt.Errorf("failed to resolve field %s: %w", nE.fieldName, err))
 	}
 
 	if alias != "" {
