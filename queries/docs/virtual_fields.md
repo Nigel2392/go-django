@@ -82,7 +82,7 @@ type TestStructNoObject struct {
 }
 
 func (t *TestStructNoObject) FieldDefs() attrs.Definitions {
-    return attrs.Define[*TestStructNoObject, any](t,
+    return attrs.Make[*TestStructNoObject, any](t,
         attrs.NewField(t, "ID", &attrs.FieldConfig{Column: "id", Primary: true}),
         attrs.NewField(t, "Name", &attrs.FieldConfig{Column: "name"}),
         attrs.NewField(t, "Text", &attrs.FieldConfig{Column: "text"}),

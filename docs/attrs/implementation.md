@@ -166,7 +166,7 @@ func (m *MyStruct) FieldDefs() attrs.Definitions {
 
 ### Manually defining fields
 
-You can also manually define fields by calling the `attrs.Define` function.
+You can also manually define fields by calling the `attrs.Make` function.
 
 This function takes your struct type as an argument, along with the field definitions.
 

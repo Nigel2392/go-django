@@ -20,7 +20,7 @@ jobs:
     env:
       # See contrib/admin/middleware.go for more information
       GITHUB_ACTIONS: 1
-      GOFLAGS: "-tags='testing_auth test sqlite'"
+      GOFLAGS: "-tags=testing_auth,test,sqlite"
 
     runs-on: ubuntu-latest
     steps:

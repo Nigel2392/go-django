@@ -56,7 +56,7 @@ type MyModel struct {
 }
 
 func (m *MyModel) FieldDefs() attrs.Definitions {
-    // Use the model to define the fields instead of `attrs.Define`
+    // Use the model to define the fields instead of `attrs.Make`
     return m.Model.Define(m,
         attrs.NewField(m, "ID", &attrs.FieldConfig{
             Primary: true,

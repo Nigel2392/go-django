@@ -24,7 +24,7 @@ type Profile struct {
 }
 
 func (m *Profile) FieldDefs() attrs.Definitions {
-    // Use the model to define the fields instead of `attrs.Define`
+    // Use the model to define the fields instead of `attrs.Make`
     return m.Model.Define(m,
         attrs.NewField(m, "ID", &attrs.FieldConfig{
             Primary:  true,
@@ -42,7 +42,7 @@ type User struct {
 }
 
 func (m *User) FieldDefs() attrs.Definitions {
-    // Use the model to define the fields instead of `attrs.Define`
+    // Use the model to define the fields instead of `attrs.Make`
     return m.Model.Define(m,
         attrs.NewField(m, "ID", &attrs.FieldConfig{
             Primary:  true,
