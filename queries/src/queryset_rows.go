@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"context"
 	"iter"
 	"strings"
 
@@ -62,8 +63,11 @@ func (rows Rows[T]) Pluck(pathToField string) iter.Seq2[int, attrs.Field] {
 			return yield(idx, w.field)
 		}
 
+		var ctx, attrCtx = attrs.AttributeContext(context.Background())
+		defer attrCtx.Reset()
+
 		for _, row := range rows {
-			var err = walkFieldValues(any(row.Object).(attrs.Definer).FieldDefs(), fieldNames, &idx, 0, yieldFn)
+			var err = walkFieldValues(ctx, attrs.Define(ctx, any(row.Object).(attrs.Definer)), fieldNames, &idx, 0, yieldFn)
 			if errors.Is(err, errStopIteration) {
 				return // Stop iteration if the yield function returned false
 			}

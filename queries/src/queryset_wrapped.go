@@ -15,12 +15,12 @@ var (
 	_ BaseQuerySet[attrs.Definer, *QuerySet[attrs.Definer]]     = (*WrappedQuerySet[attrs.Definer, *GenericQuerySet, *QuerySet[attrs.Definer]])(nil)
 )
 
-type WrappedQuerySet[T any, CONV any, ORIG NullQuerySet[T, ORIG]] struct {
-	NullQuerySet[T, ORIG]
+type WrappedQuerySet[T any, CONV any, ORIG NullQuerySet[ORIG]] struct {
+	NullQuerySet[ORIG]
 	embedder CONV
 }
 
-func WrapQuerySet[T any, CONV any, ORIG NullQuerySet[T, ORIG]](qs ORIG, embedder CONV) *WrappedQuerySet[T, CONV, ORIG] {
+func WrapQuerySet[T any, CONV any, ORIG NullQuerySet[ORIG]](qs ORIG, embedder CONV) *WrappedQuerySet[T, CONV, ORIG] {
 	if _, ok := any(embedder).(QuerySetCanClone[T, CONV, ORIG]); !ok {
 		panic("embedder must implement QuerySetCanClone[T, CONV, ORIG]")
 	}
@@ -41,7 +41,7 @@ type (
 	QuerySetCanAfterExec interface {
 		AfterExec(res any) error
 	}
-	QuerySetCanClone[T any, CONV any, ORIG NullQuerySet[T, ORIG]] interface {
+	QuerySetCanClone[T any, CONV any, ORIG NullQuerySet[ORIG]] interface {
 		/*
 			Your custom queryset must implement the following method to preserve immutability across the queryset.
 			this is **REQUIRED**.
@@ -63,7 +63,7 @@ func (w *WrappedQuerySet[T, CONV, ORIG]) Base() ORIG {
 
 func (w *WrappedQuerySet[T, CONV, ORIG]) setup() {
 	if canSetup, ok := any(w.embedder).(attrs.CanSetup); ok {
-		canSetup.Setup()
+		canSetup.Setup(w.Context())
 	}
 }
 

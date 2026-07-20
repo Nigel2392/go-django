@@ -90,7 +90,7 @@ func (f *genericForeignKeyField[T]) SetValue(value interface{}, force bool) erro
 		definer            = value.(attrs.Definer)
 		targetCtypeField   = f.ContentTypeField()
 		targetPrimaryField = f.PrimaryField()
-		targetDefs         = definer.FieldDefs()
+		targetDefs         = definer.FieldDefs(f.defs.Context())
 		targetcType        = contenttypes.NewContentType(definer)
 	)
 
@@ -148,7 +148,7 @@ func (f *genericForeignKeyField[T]) setupRelatedFields() {
 		targetCtypeField = targetDefiner.ContentTypeField()
 		targetPrimaryField = targetDefiner.PrimaryField()
 	} else {
-		var objDefs = f.obj.FieldDefs()
+		var objDefs = f.obj.FieldDefs(f.defs.Context())
 		targetCtypeField, ok = objDefs.Field(f.cnf.ContentTypeField)
 		if !ok {
 			panic(fmt.Sprintf(
@@ -207,7 +207,7 @@ func (f *genericForeignKeyField[T]) setupRelatedFields() {
 //	return nil
 //}
 
-func (f *genericForeignKeyField[T]) GenerateTargetClause(qs *queries.QuerySet[attrs.Definer], inter *queries.QuerySetInternals, lhs queries.ClauseTarget, rhs queries.ClauseTarget) queries.JoinDef {
+func (f *genericForeignKeyField[T]) GenerateTargetClause(qs expr.FieldResolver, lhs queries.ClauseTarget, rhs queries.ClauseTarget) queries.JoinDef {
 	if f.cnf == nil || f.cnf.Target == nil {
 		panic("GenericForeignKeyConfig.Target must not be nil")
 	}

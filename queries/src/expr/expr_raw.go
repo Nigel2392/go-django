@@ -120,7 +120,7 @@ func (e *RawNamedExpression) Clone() Expression {
 }
 
 func (e *RawNamedExpression) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil || e.used {
+	if e.used {
 		return e
 	}
 

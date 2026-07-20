@@ -353,7 +353,7 @@ func (o *ModelDefinition) App() *AppDefinition {
 //
 // This works the same as calling `reflect.New` on the model type.
 func (o *ModelDefinition) NewInstance() attrs.Definer {
-	return attrs.NewObject[attrs.Definer](o.rModel())
+	return attrs.NewObject[attrs.Definer](context.Background(), o.rModel())
 }
 
 func (o *ModelDefinition) GetName() string {
@@ -429,8 +429,8 @@ func (o *ModelDefinition) FormatColumn(field string) any {
 	}
 }
 
-func (m *ModelDefinition) ModelFields(opts ViewOptions, instace attrs.Definer) []attrs.Field {
-	var defs = instace.FieldDefs()
+func (m *ModelDefinition) ModelFields(opts ViewOptions, instance attrs.Definer) []attrs.Field {
+	var defs = attrs.Define(context.Background(), instance)
 	if len(opts.Fields) == 0 {
 		return defs.Fields()
 	}

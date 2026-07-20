@@ -1,6 +1,7 @@
 package attrs
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
@@ -54,7 +55,9 @@ func (r *relationTarget) Field() FieldDefinition {
 	}
 
 	if r.defs == nil {
-		r.defs = GetModelMeta(r.model).Model().FieldDefs()
+		r.defs = GetModelMeta(r.model).Model().FieldDefs(ContextWithFlags(
+			context.Background(), CtxFlagNone, true,
+		))
 	}
 
 	if r.fieldStr != "" {
@@ -242,7 +245,9 @@ func (d *deferredRelation) setup() {
 
 	d.mdl = cType.Object().(Definer)
 	if d.targetField != "" {
-		var defs = d.mdl.FieldDefs()
+		var defs = d.mdl.FieldDefs(ContextWithFlags(
+			context.Background(), CtxFlagNone, true,
+		))
 		var f, ok = defs.Field(d.targetField)
 		if !ok {
 			panic(fmt.Errorf("field %q not found in model %T", d.targetField, d.mdl))

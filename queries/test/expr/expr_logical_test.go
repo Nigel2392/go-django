@@ -161,7 +161,7 @@ func TestLogicalOpsMethods(t *testing.T) {
 	v1 := 18
 
 	for _, tc := range ops {
-		chain := expr.Logical("Age").(expr.LogicalExpression)
+		chain := expr.Logical("Age")
 		opExpr := tc.fn(chain, v1)
 		resolved := opExpr.Resolve(info)
 		var sb strings.Builder

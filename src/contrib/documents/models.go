@@ -85,7 +85,7 @@ func (o *Document) File() (mediafiles.StoredObject, error) {
 	return f, nil
 }
 
-func (o *Document) FieldDefs() attrs.Definitions {
+func (o *Document) FieldDefs(ctx context.Context) attrs.Definitions {
 	var fields = make([]attrs.Field, 6)
 	fields[0] = attrs.NewField(
 		o, "ID", &attrs.FieldConfig{
@@ -131,5 +131,5 @@ func (o *Document) FieldDefs() attrs.Definitions {
 			Label:    trans.S("File Hash"),
 		},
 	)
-	return o.Model.Define(o, fields)
+	return o.Model.Define(ctx, o, fields)
 }

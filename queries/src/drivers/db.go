@@ -45,6 +45,7 @@ type SQLRows interface {
 // when calling [github.com/Nigel2392/go-django/queries/src.QuerySet.DB].
 type DB interface {
 	Unwrap() any
+	Driver() driver.Driver
 	QueryContext(ctx context.Context, query string, args ...any) (SQLRows, error)
 	QueryRowContext(ctx context.Context, query string, args ...any) SQLRow
 	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)

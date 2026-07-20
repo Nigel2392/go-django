@@ -25,12 +25,12 @@ type Assertion interface {
 	AssertHTMLDoc(doc *goquery.Document, asserts ...HTMLAssertFunc)
 }
 
-type assertion[GOTEST baseTB] struct {
+type assertion[GOTEST BaseTB] struct {
 	test    GOTEST
 	verbose bool
 }
 
-func Asserter[GOTEST baseTB](t GOTEST, verbose bool) Assertion {
+func Asserter[GOTEST BaseTB](t GOTEST, verbose bool) Assertion {
 	return &assertion[GOTEST]{test: t, verbose: verbose || testing.Verbose()}
 }
 

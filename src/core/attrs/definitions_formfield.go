@@ -1,6 +1,7 @@
 package attrs
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
@@ -31,7 +32,7 @@ func (f *definerField) ValueToForm(value interface{}) interface{} {
 
 	switch v := value.(type) {
 	case Definer:
-		var defs = v.FieldDefs()
+		var defs = v.FieldDefs(ContextWithFlags(context.Background(), CtxFlagNone, true))
 		var prim = defs.Primary()
 		return prim.GetValue()
 	default:
@@ -47,7 +48,7 @@ func (f *definerField) ValueToGo(value interface{}) (interface{}, error) {
 
 	var rV = reflect.New(rT)
 	if definer, ok := rV.Interface().(Definer); ok {
-		var defs = definer.FieldDefs()
+		var defs = definer.FieldDefs(ContextWithFlags(context.Background(), CtxFlagNone, true))
 		var prim = defs.Primary()
 		var err = prim.Scan(value)
 		if err != nil {

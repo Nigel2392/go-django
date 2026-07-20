@@ -71,7 +71,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestUserPassword(t *testing.T) {
-	var user = models.Setup(&auth.User{
+	var user = models.Setup(t.Context(), &auth.User{
 		Email:     drivers.MustParseEmail("test1@example.com"),
 		Password:  auth.NewPassword("testpassword"),
 		Username:  "testuser1",

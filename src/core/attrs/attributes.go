@@ -1,6 +1,7 @@
 package attrs
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -115,8 +116,8 @@ func FieldNames(d any, exclude []string) []string {
 // SetPrimaryKey sets the primary key field of a Definer.
 //
 // If the primary key field is not found, this function will panic.
-func SetPrimaryKey(d Definer, value interface{}) error {
-	var f = d.FieldDefs().Primary()
+func SetPrimaryKey(ctx context.Context, d Definer, value interface{}) error {
+	var f = Define(ctx, d).Primary()
 	if f == nil {
 		assert.Fail(
 			"primary key not found in %T",
@@ -130,8 +131,8 @@ func SetPrimaryKey(d Definer, value interface{}) error {
 // PrimaryKey returns the primary key field of a Definer.
 //
 // If the primary key field is not found, this function will panic.
-func PrimaryKey(d Definer) interface{} {
-	var f = d.FieldDefs().Primary()
+func PrimaryKey(ctx context.Context, d Definer) interface{} {
+	var f = Define(ctx, d).Primary()
 	if f == nil {
 		assert.Fail(
 			"primary key not found in %T",
@@ -171,9 +172,9 @@ func PrimaryKey(d Definer) interface{} {
 // The values parameter is a map where the keys are the names of the fields to set.
 //
 // The values must be of the correct type for the fields.
-func SetMany(d Definer, values map[string]interface{}) error {
+func SetMany(ctx context.Context, d Definer, values map[string]interface{}) error {
 	for name, value := range values {
-		if err := assert.Err(set(d.FieldDefs(), name, value, false)); err != nil {
+		if err := assert.Err(set(Define(ctx, d), name, value, false)); err != nil {
 			return err
 		}
 	}
@@ -185,8 +186,8 @@ func SetMany(d Definer, values map[string]interface{}) error {
 // If the field is not found, the value is not of the correct type or another constraint is violated, this function will panic.
 //
 // If the field is marked as non editable, this function will panic.
-func Set(d Definer, name string, value interface{}) error {
-	return set(d.FieldDefs(), name, value, false)
+func Set(ctx context.Context, d Definer, name string, value interface{}) error {
+	return set(Define(ctx, d), name, value, false)
 }
 
 // ForceSet sets the value of a field on a Definer.
@@ -194,8 +195,8 @@ func Set(d Definer, name string, value interface{}) error {
 // If the field is not found, the value is not of the correct type or another constraint is violated, this function will panic.
 //
 // This function will allow setting the value of a field that is marked as not editable.
-func ForceSet(d Definer, name string, value interface{}) error {
-	return set(d.FieldDefs(), name, value, true)
+func ForceSet(ctx context.Context, d Definer, name string, value interface{}) error {
+	return set(Define(ctx, d), name, value, true)
 }
 
 // Get retrieves the value of a field on a Definer.
@@ -204,12 +205,12 @@ func ForceSet(d Definer, name string, value interface{}) error {
 //
 // Type assertions are used to ensure that the value is of the correct type,
 // as well as providing less work for the caller.
-func Get[T any](d any, name string) T {
+func Get[T any](ctx context.Context, d any, name string) T {
 	var defs Definitions
 
 	switch d := d.(type) {
 	case Definer:
-		defs = d.FieldDefs()
+		defs = Define(ctx, d)
 	case Definitions:
 		defs = d
 	default:

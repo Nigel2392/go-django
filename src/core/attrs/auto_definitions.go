@@ -1,6 +1,7 @@
 package attrs
 
 import (
+	"context"
 	"database/sql"
 	"reflect"
 	"strconv"
@@ -221,10 +222,7 @@ func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
 
 			m = append(m, &FieldDef{
 				attrDef:        attrs,
-				instance_t_ptr: instance_t_ptr,
 				instance_v_ptr: instance_v_ptr,
-				instance_t:     instance_t,
-				instance_v:     instance_v,
 				field_t:        &field_t,
 				field_v:        field_v,
 				fieldName:      field_t.Name,
@@ -261,10 +259,7 @@ func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
 
 			m = append(m, &FieldDef{
 				attrDef:        attrs,
-				instance_t_ptr: instance_t_ptr,
 				instance_v_ptr: instance_v_ptr,
-				instance_t:     instance_t,
-				instance_v:     instance_v,
 				field_t:        field_t,
 				field_v:        field_v,
 				fieldName:      field_t.Name,
@@ -290,6 +285,6 @@ func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
 //
 // If the `include` parameter is provided, it will only generate definitions for
 // the fields that are included.
-func AutoDefinitions[T Definer](instance T, include ...any) Definitions {
-	return Define(instance, AutoFieldList(instance, include...)...)
+func AutoDefinitions[T Definer](ctx context.Context, instance T, include ...any) Definitions {
+	return Make(ctx, instance, AutoFieldList(instance, include...)...)
 }

@@ -169,7 +169,7 @@ func NewAppConfig() django.AppConfig {
 						Link: func() string {
 							return django.Reverse(
 								"admin:apps:model:edit",
-								model.App().Name, model.GetName(), attrs.PrimaryKey(user.(attrs.Definer)),
+								model.App().Name, model.GetName(), attrs.PrimaryKey(r.Context(), user.(attrs.Definer)),
 							)
 						},
 					})

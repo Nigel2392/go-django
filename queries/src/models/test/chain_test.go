@@ -66,19 +66,19 @@ type Page struct {
 }
 
 func (p *Page) TargetContentTypeField() attrs.FieldDefinition {
-	var defs = p.FieldDefs()
+	var defs = attrs.Define(attrs.ContextWithFlags(context.Background(), attrs.CtxFlagRegistering, true), p)
 	var f, _ = defs.Field("PageContentType")
 	return f
 }
 
 func (p *Page) TargetPrimaryField() attrs.FieldDefinition {
-	var defs = p.FieldDefs()
+	var defs = attrs.Define(attrs.ContextWithFlags(context.Background(), attrs.CtxFlagRegistering, true), p)
 	var f, _ = defs.Field("PageID")
 	return f
 }
 
-func (p *Page) FieldDefs() attrs.Definitions {
-	return p.Model.Define(p,
+func (p *Page) FieldDefs(ctx context.Context) attrs.Definitions {
+	return p.Model.Define(ctx, p,
 		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
 		attrs.Unbound("Title"),
 		attrs.Unbound("Description"),
@@ -98,20 +98,20 @@ type BlogPage struct {
 }
 
 func (b *BlogPage) TargetContentTypeField() attrs.FieldDefinition {
-	var defs = b.FieldDefs()
+	var defs = attrs.Define(attrs.ContextWithFlags(context.Background(), attrs.CtxFlagRegistering, true), b)
 	var f, _ = defs.Field("CategoryContentType")
 	return f
 }
 
 func (b *BlogPage) TargetPrimaryField() attrs.FieldDefinition {
-	var defs = b.FieldDefs()
+	var defs = attrs.Define(attrs.ContextWithFlags(context.Background(), attrs.CtxFlagRegistering, true), b)
 	var f, _ = defs.Field("Category")
 	return f
 }
 
-func (b *BlogPage) FieldDefs() attrs.Definitions {
-	return b.Model.Define(b,
-		fields.Embed("Proxy"),
+func (b *BlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
+	return b.Model.Define(ctx, b,
+		fields.Embed(ctx, "Proxy"),
 		attrs.Unbound("PageID", &attrs.FieldConfig{Primary: true}),
 		attrs.Unbound("Author"),
 		attrs.Unbound("Tags"),
@@ -126,9 +126,9 @@ type BlogPageCategory struct {
 	Category string
 }
 
-func (b *BlogPageCategory) FieldDefs() attrs.Definitions {
-	return b.Model.Define(b,
-		fields.Embed("BlogPage"),
+func (b *BlogPageCategory) FieldDefs(ctx context.Context) attrs.Definitions {
+	return b.Model.Define(ctx, b,
+		fields.Embed(context.Background(), "BlogPage"),
 		attrs.Unbound("Category", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -137,13 +137,13 @@ func (b *BlogPageCategory) FieldDefs() attrs.Definitions {
 
 func TestProxyModelFieldDefs(t *testing.T) {
 	var b = &BlogPage{}
-	var defs = b.FieldDefs()
+	var defs = attrs.Define(t.Context(), b)
 	if defs.Len() != 6 {
 		t.Errorf("expected 6 fields, got %d: %v", defs.Len(), attrs.FieldNames(defs.Fields(), nil))
 	}
 
 	b.Proxy = &Page{}
-	defs = b.FieldDefs()
+	defs = attrs.Define(t.Context(), b)
 	if defs.Len() != 10 {
 		t.Errorf("expected 10 fields, got %d: %v", defs.Len(), attrs.FieldNames(defs.Fields(), nil))
 	}
@@ -176,7 +176,7 @@ func TestProxyModelFieldDefs(t *testing.T) {
 
 	b.Proxy = nil
 
-	defs = b.FieldDefs()
+	defs = attrs.Define(t.Context(), b)
 
 	if b.Proxy != nil {
 		t.Errorf("expected Proxy to be nil, got %v", b.Proxy)

@@ -1,6 +1,7 @@
 package expr_test
 
 import (
+	"context"
 	"strings"
 
 	"github.com/Nigel2392/go-django/djester/testdb"
@@ -28,8 +29,8 @@ type OtherTestModel struct {
 	TestModel    *TestModel
 }
 
-func (m *OtherTestModel) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m,
+func (m *OtherTestModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
 		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
 		attrs.NewField(m, "TestModel", &attrs.FieldConfig{
@@ -50,8 +51,8 @@ type TestModel struct {
 	Nickname     string
 }
 
-func (m *TestModel) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m,
+func (m *TestModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{Primary: true}),
 		attrs.NewField(m, "Name", &attrs.FieldConfig{}),
 		attrs.NewField(m, "Age", &attrs.FieldConfig{}),
@@ -67,8 +68,7 @@ func getTestInfo() *expr.ExpressionInfo {
 	qs := queries.GetQuerySet(&TestModel{})
 	var info *expr.ExpressionInfo
 	qs.Scope(func(q *queries.QuerySet[*TestModel], internals *queries.QuerySetInternals) *queries.QuerySet[*TestModel] {
-		genericQs := queries.ChangeObjectsType[*TestModel, attrs.Definer](q)
-		info = q.Compiler().ExpressionInfo(genericQs, internals)
+		info = q.Compiler().ExpressionInfo(q)
 		return q
 	})
 	return info

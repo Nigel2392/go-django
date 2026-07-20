@@ -1,6 +1,7 @@
 package attrs
 
 import (
+	"context"
 	"fmt"
 	"iter"
 	"reflect"
@@ -188,34 +189,66 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 //
 // The fields are passed as variadic arguments, and can be of many types:
 //
+// Base Types:
 // - Field: a field (or any type that implements the Field interface)
 // - []Field: a slice of fields
-// - UnboundFieldConstruuctor: a constructor for a field that needs to be bound
+// - UnboundFieldConstructor: a constructor for a field that needs to be bound
 // - []UnboundFieldConstructor: a slice of unbound field constructors
 // - UnboundField: an unbound field that needs to be bound
 // - []UnboundField: a slice of unbound fields that need to be bound
+// - string: a field name, which will be converted to a Field with no configuration
+//
+// Iterators:
 // - iter.Seq2[Field, error]: iterators to possibly increase performance
 // - func() iter.Seq2[Field, error]: iterators to possibly increase performance
-// - func(Definer) iter.Seq2[Field, error]: iterators to possibly increase performance
+// - func(context.Context) iter.Seq2[Field, error]: context-aware iterators
+// - func(Definer) iter.Seq2[Field, error]: definer-aware iterators
+// - func(context.Context, Definer) iter.Seq2[Field, error]: context and definer-aware iterators
+//
+// Functions (No Arguments):
 // - func() []any: a function of which the result will be recursively unpacked
 // - func() Field: a function that returns a field
 // - func() (Field, error): a function that returns a field and an error
 // - func() []Field: a function that returns a slice of fields
 // - func() ([]Field, error): a function that returns a slice of fields and an error
-// - func(d Definer) []any: a function that takes a Definer and returns a slice of any to be recursively unpacked
-// - func(d Definer) Field: a function that takes a Definer and returns a field
-// - func(d Definer) (Field, error): a function that takes a Definer and returns a field and an error
-// - func(d Definer) []Field: a function that takes a Definer and returns a slice of fields
-// - func(d Definer) ([]Field, error): a function that takes a Definer and returns a slice of fields and an error
+//
+// Functions (Context Only):
+// - func(context.Context) []any: a context-aware function of which the result will be recursively unpacked
+// - func(context.Context) Field: a context-aware function that returns a field
+// - func(context.Context) (Field, error): a context-aware function that returns a field and an error
+// - func(context.Context) []Field: a context-aware function that returns a slice of fields
+// - func(context.Context) ([]Field, error): a context-aware function that returns a slice of fields and an error
+//
+// Functions (Typed Definer):
 // - func(d T1) []any: a function that takes a Definer of type T1 and returns a slice of any to be recursively unpacked
 // - func(d T1) Field: a function that takes a Definer of type T1 and returns a field
 // - func(d T1) (Field, error): a function that takes a Definer of type T1 and returns a field and an error
 // - func(d T1) []Field: a function that takes a Definer of type T1 and returns a slice of fields
 // - func(d T1) ([]Field, error): a function that takes a Definer of type T1 and returns a slice of fields and an error
-// - string: a field name, which will be converted to a Field with no configuration
-func UnpackFieldsFromArgsIter[T1 Definer, T2 any](definer T1, args ...T2) iter.Seq2[Field, error] {
+//
+// Functions (Context + Typed Definer):
+// - func(ctx context.Context, d T1) []any: a context-aware function taking a Definer of type T1
+// - func(ctx context.Context, d T1) Field: a context-aware function taking a Definer of type T1
+// - func(ctx context.Context, d T1) (Field, error): a context-aware function taking a Definer of type T1
+// - func(ctx context.Context, d T1) []Field: a context-aware function taking a Definer of type T1
+// - func(ctx context.Context, d T1) ([]Field, error): a context-aware function taking a Definer of type T1
+//
+// Functions (Generic Definer):
+// - func(d Definer) []any: a function that takes a Definer and returns a slice of any to be recursively unpacked
+// - func(d Definer) Field: a function that takes a Definer and returns a field
+// - func(d Definer) (Field, error): a function that takes a Definer and returns a field and an error
+// - func(d Definer) []Field: a function that takes a Definer and returns a slice of fields
+// - func(d Definer) ([]Field, error): a function that takes a Definer and returns a slice of fields and an error
+//
+// Functions (Context + Generic Definer):
+// - func(ctx context.Context, d Definer) []any: a context-aware function taking a generic Definer
+// - func(ctx context.Context, d Definer) Field: a context-aware function taking a generic Definer
+// - func(ctx context.Context, d Definer) (Field, error): a context-aware function taking a generic Definer
+// - func(ctx context.Context, d Definer) []Field: a context-aware function taking a generic Definer
+// - func(ctx context.Context, d Definer) ([]Field, error): a context-aware function taking a generic Definer
+func UnpackFieldsFromArgsIter[T1 Definer, T2 any](ctx context.Context, definer T1, args ...T2) iter.Seq2[Field, error] {
 	return func(yield func(Field, error) bool) {
-		unpackFieldsFromArgsIter(yield, definer, args)
+		unpackFieldsFromArgsIter(ctx, yield, definer, args)
 	}
 }
 
@@ -248,7 +281,7 @@ func yieldMultiple[T any](yield func(T, error) bool, err error, items []T) bool 
 	return true
 }
 
-func unpackFieldsFromArgsIter[T1 Definer, T2 any](yield func(Field, error) bool, definer T1, args []T2) bool {
+func unpackFieldsFromArgsIter[T1 Definer, T2 any](ctx context.Context, yield func(Field, error) bool, definer T1, args []T2) bool {
 	for _, f := range args {
 		switch v := any(f).(type) {
 		case Field:
@@ -305,7 +338,7 @@ func unpackFieldsFromArgsIter[T1 Definer, T2 any](yield func(Field, error) bool,
 			}
 
 		case []any:
-			if !unpackFieldsFromArgsIter(yield, definer, v) {
+			if !unpackFieldsFromArgsIter(ctx, yield, definer, v) {
 				return false
 			}
 
@@ -337,7 +370,122 @@ func unpackFieldsFromArgsIter[T1 Definer, T2 any](yield func(Field, error) bool,
 
 		// func() ([]field, ?error)
 		case func() []any:
-			if !unpackFieldsFromArgsIter(yield, definer, v()) {
+			if !unpackFieldsFromArgsIter(ctx, yield, definer, v()) {
+				return false
+			}
+
+		case func() []Field:
+			if !unpackFieldsFromArgsIter(ctx, yield, definer, v()) {
+				return false
+			}
+
+			// iterators
+		case func(context.Context) iter.Seq2[Field, error]:
+			if !yieldIter(yield, v(ctx)) {
+				return false
+			}
+
+		case func(context.Context, Definer) iter.Seq2[Field, error]:
+			if !yieldIter(yield, v(ctx, definer)) {
+				return false
+			}
+
+		// func(ctx) (field, ?error)
+		case func(context.Context) Field:
+			if !yield(v(ctx), nil) {
+				return false
+			}
+		case func(context.Context) (Field, error):
+			var fld, err = v(ctx)
+			if !yield(fld, err) {
+				return false
+			}
+
+		// func(ctx) ([]field, ?error)
+		case func(context.Context) []any:
+			if !unpackFieldsFromArgsIter(ctx, yield, definer, v(ctx)) {
+				return false
+			}
+		case func(context.Context) []Field:
+			if !yieldMultiple(yield, nil, v(ctx)) {
+				return false
+			}
+		case func(context.Context) ([]Field, error):
+			var flds, err = v(ctx)
+			if !yieldMultiple(yield, err, flds) {
+				return false
+			}
+
+		// func(ctx, t1) (field, ?error)
+		case func(context.Context, T1) Field:
+			if !yield(v(ctx, definer), nil) {
+				return false
+			}
+		case func(context.Context, T1) (Field, error):
+			var fld, err = v(ctx, definer)
+			if err != nil {
+				yield(nil, fmt.Errorf(
+					"fieldsFromArgs (%T): %v",
+					definer, err,
+				))
+				return false
+			}
+			if !yield(fld, nil) {
+				return false
+			}
+
+		// func(ctx, t1) ([]field, ?error)
+		case func(context.Context, T1) []any:
+			if !unpackFieldsFromArgsIter(ctx, yield, definer, v(ctx, definer)) {
+				return false
+			}
+		case func(context.Context, T1) []Field:
+			if !yieldMultiple(yield, nil, v(ctx, definer)) {
+				return false
+			}
+		case func(context.Context, T1) ([]Field, error):
+			var flds, err = v(ctx, definer)
+			if !yieldMultiple(yield, err, flds) {
+				return false
+			}
+
+		// func(ctx, Definer) (field, ?error)
+		case func(context.Context, Definer) Field:
+			if !yield(v(ctx, definer), nil) {
+				return false
+			}
+		case func(context.Context, Definer) (Field, error):
+			var fld, err = v(ctx, definer)
+			if err != nil {
+				yield(nil, fmt.Errorf(
+					"fieldsFromArgs (%T): %v",
+					definer, err,
+				))
+				return false
+			}
+			if !yield(fld, nil) {
+				return false
+			}
+
+		// func(ctx, Definer) ([]field, ?error)
+		case func(context.Context, Definer) []any:
+			if !unpackFieldsFromArgsIter(ctx, yield, definer, v(ctx, definer)) {
+				return false
+			}
+		case func(context.Context, Definer) []Field:
+			if !yieldMultiple(yield, nil, v(ctx, definer)) {
+				return false
+			}
+		case func(context.Context, Definer) ([]Field, error):
+			var flds, err = v(ctx, definer)
+			if err != nil {
+				yield(nil, fmt.Errorf(
+					"fieldsFromArgs (%T): %v",
+					definer, err,
+				))
+				return false
+			}
+			if !yieldMultiple(yield, err, flds) {
 				return false
 			}
 
@@ -363,7 +511,7 @@ func unpackFieldsFromArgsIter[T1 Definer, T2 any](yield func(Field, error) bool,
 
 		// func(t1) ([]field, ?error)
 		case func(d T1) []any:
-			if !unpackFieldsFromArgsIter(yield, definer, v(definer)) {
+			if !unpackFieldsFromArgsIter(ctx, yield, definer, v(definer)) {
 				return false
 			}
 
@@ -398,7 +546,7 @@ func unpackFieldsFromArgsIter[T1 Definer, T2 any](yield func(Field, error) bool,
 
 		// func(d Definer) ([]field, ?error)
 		case func(d Definer) []any:
-			if !unpackFieldsFromArgsIter(yield, definer, v(definer)) {
+			if !unpackFieldsFromArgsIter(ctx, yield, definer, v(definer)) {
 				return false
 			}
 

@@ -20,10 +20,10 @@ func (m *mockFieldResolver) Context() context.Context {
 // SQL Generation 1
 func TestSubqueryOuterRefSQLGen1(t *testing.T) {
 	parentInfo := getTestInfo()
-	
+
 	// Create a subquery context pointing to parentInfo
 	ctx := expr.AddParentSubqueryContext(context.Background(), parentInfo)
-	
+
 	// Create a subquery info wrapping the parent resolver but with the new context
 	subInfo := getTestInfo()
 	subInfo.Resolver = &mockFieldResolver{
@@ -33,7 +33,7 @@ func TestSubqueryOuterRefSQLGen1(t *testing.T) {
 
 	ref := expr.OuterRef("Age")
 	resolved := ref.Resolve(subInfo)
-	
+
 	var sb strings.Builder
 	args := resolved.SQL(&sb)
 	sql := sb.String()
@@ -59,7 +59,7 @@ func TestSubqueryOuterRefSQLGen2(t *testing.T) {
 	// Alias resolving
 	ref := expr.OuterRef("alias.Name")
 	resolved := ref.Resolve(subInfo)
-	
+
 	var sb strings.Builder
 	resolved.SQL(&sb)
 	sql := sb.String()
@@ -99,10 +99,10 @@ func TestSubqueryOuterRefUnresolved(t *testing.T) {
 		}
 	}()
 	info := getTestInfo()
-	
+
 	// No parent context added to info.Resolver.Context()
 	ref := expr.OuterRef("Age")
-	ref.Resolve(info) 
+	ref.Resolve(info)
 }
 
 // Unhappy Path 2
@@ -125,7 +125,7 @@ func TestSubqueryOuterRefUnknownField(t *testing.T) {
 }
 
 func TestSubqueryOuterRefFieldName(t *testing.T) {
-	ref := expr.OuterRef("TestField").(expr.NamedExpression)
+	ref := expr.OuterRef("TestField")
 	if ref.FieldName() != "TestField" {
 		t.Errorf("Expected TestField, got %s", ref.FieldName())
 	}

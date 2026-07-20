@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"context"
 	"fmt"
 	"iter"
 
@@ -17,8 +18,9 @@ const _PROXY_FIELDS_KEY = "models.embed.proxy.fields"
 // This will create a tree structure that contains all the proxy fields
 // and their respective sub-proxy fields.
 var _, _ = attrs.OnModelRegister.Listen(func(s signals.Signal[attrs.SignalModelMeta], meta attrs.SignalModelMeta) error {
-	var newDefiner = attrs.NewObject[attrs.Definer](meta.Definer)
-	var proxyFields = buildProxyFieldMap(newDefiner)
+	var regCtx = attrs.ContextWithFlags(context.Background(), attrs.CtxFlagRegistering, true)
+	var newDefiner = attrs.NewObject[attrs.Definer](regCtx, meta.Definer)
+	var proxyFields = buildProxyFieldMap(regCtx, newDefiner)
 	attrs.StoreOnMeta(
 		meta.Definer,
 		_PROXY_FIELDS_KEY,
@@ -56,7 +58,7 @@ func (n *proxyTree) walkObjectProxies(instance attrs.Definer, path []string, wal
 			fieldNode = head.Value
 		)
 
-		var defs = instance.FieldDefs()
+		var defs = attrs.Define(context.Background(), instance)
 		var field, ok = defs.Field(fieldName)
 		if !ok {
 			return yield(ProxyFieldObject{}, errors.FieldNotFound.Wrapf(
@@ -80,7 +82,7 @@ func (n *proxyTree) walkObjectProxies(instance attrs.Definer, path []string, wal
 				))
 			}
 		} else {
-			proxyInstance = attrs.NewObject[attrs.Definer](field.Type())
+			proxyInstance = attrs.NewObject[attrs.Definer](context.Background(), field.Type())
 		}
 
 		var obj = ProxyFieldObject{
@@ -143,7 +145,7 @@ func (n *proxyTree) IsProxyField(fld any) bool {
 	}
 }
 
-func buildProxyFieldMap(definer attrs.Definer) *proxyTree {
+func buildProxyFieldMap(regCtx context.Context, definer attrs.Definer) *proxyTree {
 	if attrs.IsModelRegistered(definer) {
 		var (
 			meta     = attrs.GetModelMeta(definer)
@@ -154,10 +156,10 @@ func buildProxyFieldMap(definer attrs.Definer) *proxyTree {
 		}
 	}
 
-	var newDefiner = attrs.NewObject[attrs.Definer](definer)
+	var newDefiner = attrs.NewObject[attrs.Definer](regCtx, definer)
 	var node = &proxyTree{
 		object:  newDefiner,
-		defs:    newDefiner.FieldDefs(),
+		defs:    attrs.Define(regCtx, newDefiner),
 		fields:  orderedmap.NewOrderedMap[string, ProxyField](),
 		proxies: orderedmap.NewOrderedMap[string, *proxyFieldNode](),
 	}
@@ -176,7 +178,7 @@ func buildProxyFieldMap(definer attrs.Definer) *proxyTree {
 		var relType = rel.Type()
 		if relType == attrs.RelOneToOne || relType == attrs.RelManyToOne {
 			var model = rel.Model()
-			var subTree = buildProxyFieldMap(model)
+			var subTree = buildProxyFieldMap(regCtx, model)
 			if !subTree.hasProxies() {
 				continue
 			}

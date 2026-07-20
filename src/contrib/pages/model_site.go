@@ -118,8 +118,8 @@ func (n *Site) URL() string {
 	return sb.String()
 }
 
-func (n *Site) FieldDefs() attrs.Definitions {
-	return n.Model.Define(n, n.Fields)
+func (n *Site) FieldDefs(ctx context.Context) attrs.Definitions {
+	return n.Model.Define(ctx, n, n.Fields)
 }
 
 func (n *Site) DatabaseIndexes(obj attrs.Definer) []migrator.Index {

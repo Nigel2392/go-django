@@ -1,6 +1,7 @@
 package contenttypes_test
 
 import (
+	"context"
 	"os"
 	"reflect"
 	"testing"
@@ -23,8 +24,8 @@ type Letter struct {
 	Author User
 }
 
-func (l *Letter) FieldDefs() attrs.Definitions {
-	return attrs.Define(l,
+func (l *Letter) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, l,
 		attrs.NewField(l, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -119,7 +120,9 @@ func TestSetUser(t *testing.T) {
 		Text: "Hello, World!",
 	}
 
-	var defs = letter.FieldDefs()
+	var defs = letter.FieldDefs(attrs.ContextWithFlags(
+		context.Background(), attrs.CtxFlagNone, true,
+	))
 	defs.Set("Author", user)
 
 	if letter.Author == nil {

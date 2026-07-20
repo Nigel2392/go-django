@@ -1359,9 +1359,9 @@ func (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions, 
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var31 string
-		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(attrs.ToString(attrs.PrimaryKey(row)))
+		templ_7745c5c3_Var31, templ_7745c5c3_Err = templ.ResolveAttributeValue(attrs.ToString(attrs.PrimaryKey(r.Context(), row)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 715, Col: 158}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/views/list/columns.templ`, Line: 715, Col: 171}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var31)
 		if templ_7745c5c3_Err != nil {

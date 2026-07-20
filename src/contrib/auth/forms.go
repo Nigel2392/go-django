@@ -351,10 +351,10 @@ func (f *BaseUserForm) Save() (*User, error) {
 		err     error
 	)
 	if f.Instance == nil {
-		f.Instance = attrs.NewObject[*User](&User{})
+		f.Instance = attrs.NewObject[*User](f.Context(), &User{})
 	}
 
-	f.Instance = models.Setup(f.Instance)
+	f.Instance = models.Setup(f.Context(), f.Instance)
 
 	if f.config == nil {
 		f.config = &RegisterFormConfig{}

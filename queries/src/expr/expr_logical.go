@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"slices"
 	"strings"
-
-	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
 func Q(fieldLookup LookupFilter, value ...any) *ExprNode {
@@ -39,7 +37,6 @@ type ExprNode struct {
 	sql    func(sb *strings.Builder) []any
 	args   []any
 	not    bool
-	model  attrs.Definer
 	field  NamedExpression
 	lookup string
 	used   bool
@@ -61,17 +58,12 @@ func Expr(field any, operation string, value ...any) *ExprNode {
 }
 
 func (e *ExprNode) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil {
-		panic("model is nil")
-	}
-
 	if e.used {
 		return e
 	}
 
 	var nE = e.Clone().(*ExprNode)
 	nE.used = true
-	nE.model = inf.Model
 
 	var err error
 	nE.field = nE.field.Resolve(inf).(NamedExpression)
@@ -108,7 +100,7 @@ func (e *ExprNode) IsNot() bool {
 }
 
 func (e *ExprNode) And(exprs ...Expression) ClauseExpression {
-	if e.field == nil && e.lookup == "" && e.model == nil && e.sql == nil {
+	if e.field == nil && e.lookup == "" && e.sql == nil {
 		// if this is an empty ExprNode, just return an ExprGroup with the expressions
 		return &ExprGroup{children: exprs, op: OpAnd, wrap: true}
 	}
@@ -116,7 +108,7 @@ func (e *ExprNode) And(exprs ...Expression) ClauseExpression {
 }
 
 func (e *ExprNode) Or(exprs ...Expression) ClauseExpression {
-	if e.field == nil && e.lookup == "" && e.model == nil && e.sql == nil {
+	if e.field == nil && e.lookup == "" && e.sql == nil {
 		// if this is an empty ExprNode, just return an ExprGroup with the expressions
 		return &ExprGroup{children: exprs, op: OpOr, wrap: true}
 	}
@@ -130,7 +122,6 @@ func (e *ExprNode) Clone() Expression {
 		not:    e.not,
 		field:  e.field,
 		lookup: e.lookup,
-		model:  e.model,
 		used:   e.used,
 	}
 }
@@ -329,7 +320,7 @@ func (l *logicalChainExpr) Clone() Expression {
 }
 
 func (l *logicalChainExpr) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil || l.used {
+	if l.used {
 		return l
 	}
 	var nE = l.Clone().(*logicalChainExpr)

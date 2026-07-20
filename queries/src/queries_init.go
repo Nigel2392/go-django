@@ -23,7 +23,7 @@ func init() {
 		}
 
 		var (
-			defs         = m.FieldDefs()
+			defs         = attrs.Define(c, m)
 			primaryField = defs.Primary()
 		)
 
@@ -55,7 +55,7 @@ func init() {
 		}
 
 		var (
-			defs         = m.FieldDefs()
+			defs         = attrs.Define(c, m)
 			primaryField = defs.Primary()
 		)
 
@@ -205,7 +205,7 @@ var _, _ = attrs.OnModelRegister.Listen(func(s signals.Signal[attrs.SignalModelM
 		var orExprs = make([]expr.Expression, 0, len(uniqueFields))
 		for _, object := range objects {
 			var (
-				defs    = object.FieldDefs()
+				defs    = attrs.Define(context.Background(), object)
 				objExpr expr.ClauseExpression
 			)
 		uniqueFieldsLoop:
@@ -283,7 +283,7 @@ var _, _ = attrs.OnThroughModelRegister.Listen(func(s signals.Signal[attrs.Signa
 		throughModel   = d.ThroughInfo.Model()
 		sourceFieldStr = d.ThroughInfo.SourceField()
 		targetFieldStr = d.ThroughInfo.TargetField()
-		throughDefs    = throughModel.FieldDefs()
+		throughDefs    = attrs.Define(context.Background(), throughModel)
 	)
 
 	if _, ok := throughDefs.Field(sourceFieldStr); !ok {
@@ -331,7 +331,7 @@ var _, _ = attrs.OnThroughModelRegister.Listen(func(s signals.Signal[attrs.Signa
 					sourceVal, targetVal     any
 					group                    []any
 
-					instDefs = object.FieldDefs()
+					instDefs = attrs.Define(context.Background(), object)
 				)
 
 				// Get the values from the actual model instance

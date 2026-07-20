@@ -1,6 +1,7 @@
 package attrs_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -12,11 +13,21 @@ type TestModelDefinitions struct {
 	Objects []int64
 }
 
-func (f *TestModelDefinitions) FieldDefs() attrs.Definitions {
-	return attrs.Define(f,
+func (f *TestModelDefinitions) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
 		attrs.NewField(f, "ID", nil),
 		attrs.NewField(f, "Name", nil),
 		attrs.NewField(f, "Objects", nil),
+	)
+}
+
+func define(obj attrs.Definer) attrs.Definitions {
+	return obj.FieldDefs(
+		attrs.ContextWithFlags(
+			context.Background(),
+			attrs.CtxFlagNone,
+			true,
+		),
 	)
 }
 
@@ -27,7 +38,7 @@ func TestModelFieldDefinitionsGet(t *testing.T) {
 		Objects: []int64{1, 2, 3},
 	}
 
-	var defs = m.FieldDefs().(*attrs.ObjectDefinitions)
+	var defs = define(m).(*attrs.ObjectDefinitions)
 
 	if m.ID != defs.Get("ID").(int) {
 		t.Errorf("expected %d, got %d", m.ID, defs.Get("ID"))
@@ -49,7 +60,7 @@ func TestModelFieldDefinitionsSet(t *testing.T) {
 		Objects: []int64{1, 2, 3},
 	}
 
-	var defs = m.FieldDefs().(*attrs.ObjectDefinitions)
+	var defs = define(m).(*attrs.ObjectDefinitions)
 
 	defs.Set("ID", 2)
 	defs.Set("Name", "new name")

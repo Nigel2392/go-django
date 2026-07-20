@@ -52,7 +52,7 @@ func (e *field) Clone() Expression {
 }
 
 func (e *field) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil || e.used {
+	if e.used {
 		return e
 	}
 
@@ -141,7 +141,7 @@ func (e *values) Clone() Expression {
 }
 
 func (e *values) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil || e.used {
+	if e.used {
 		return e
 	}
 
@@ -234,7 +234,7 @@ func (e *value) Clone() Expression {
 }
 
 func (e *value) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil || e.used {
+	if e.used {
 		return e
 	}
 
@@ -313,7 +313,7 @@ func (n *namedExpression) Clone() Expression {
 }
 
 func (n *namedExpression) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil || n.used {
+	if n.used {
 		return n
 	}
 

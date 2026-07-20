@@ -1,7 +1,10 @@
 package queries
 
 import (
+	"iter"
+
 	"github.com/Nigel2392/go-django/queries/src/drivers"
+	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
@@ -12,32 +15,32 @@ var (
 	// _ CompiledQuery[[][]interface{}] = (*CombinedQuery[[]interface{}])(nil)
 )
 
-type QueryInformation struct {
+type Query struct {
 	Object  attrs.Definer
 	Params  []any
 	Stmt    string
 	Builder QueryCompiler
 }
 
-func (q *QueryInformation) SQL() string {
+func (q *Query) SQL() string {
 	return q.Stmt
 }
 
-func (q *QueryInformation) Args() []any {
+func (q *Query) Args() []any {
 	return q.Params
 }
 
-func (q *QueryInformation) Model() attrs.Definer {
+func (q *Query) Model() attrs.Definer {
 	return q.Object
 }
 
-func (q *QueryInformation) Compiler() QueryCompiler {
+func (q *Query) Compiler() QueryCompiler {
 	return q.Builder
 }
 
 func ErrorQueryObject[T1 any](object attrs.Definer, builder QueryCompiler, possibleError error) *QueryObject[T1] {
 	return &QueryObject[T1]{
-		QueryInfo: &QueryInformation{
+		QueryInfo: &Query{
 			Object:  object,
 			Builder: builder,
 		},
@@ -160,4 +163,37 @@ func (q *QueryRowsObject[RESULT]) NextResultSet() bool {
 
 func (q *QueryRowsObject[RESULT]) Exec() (result RESULT, err error) {
 	return (*SQLQueryObject[RESULT, drivers.SQLRows])(q).Exec()
+}
+
+type QueryIterRowsObject[RESULT any] struct {
+	QueryRowsObject[[]RESULT]
+	IterExecute func(drivers.SQLRows) iter.Seq2[RESULT, error]
+}
+
+func (q *QueryIterRowsObject[RESULT]) Exec() (result []RESULT, err error) {
+	var s = make([]RESULT, 0)
+	for row, err := range q.Iter() {
+		if err != nil {
+			return nil, err
+		}
+		s = append(s, row)
+	}
+	return s, nil
+}
+
+func (q *QueryIterRowsObject[RESULT]) Iter() iter.Seq2[RESULT, error] {
+
+	assert.Assert(
+		q.IterExecute != nil,
+		"an iterator needs to be provided to %T", q,
+	)
+
+	if err := (*SQLQueryObject[[]RESULT, drivers.SQLRows])(&q.QueryRowsObject).setupExec(); err != nil {
+		return func(yield func(RESULT, error) bool) {
+			var zero RESULT
+			yield(zero, err)
+		}
+	}
+
+	return q.IterExecute(*q.RawResultSQL)
 }

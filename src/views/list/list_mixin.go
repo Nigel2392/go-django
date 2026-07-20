@@ -128,13 +128,15 @@ func (m *ListObjectMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 	}
 
 	var models = make([]T, 0, len(forms))
+	var ctx, attrCtx = attrs.AttributeContext(r.Context())
+
 	for _, group := range listObj.groups {
 		var instance = group.Row()
 
 		models = append(models, instance)
 
-		var defs = instance.FieldDefs()
-		var pk = attrs.PrimaryKey(instance)
+		var defs = instance.FieldDefs(ctx)
+		var pk = attrs.PrimaryKey(ctx, instance)
 		rowForm, ok := forms[pk]
 		if !ok {
 			continue
@@ -176,6 +178,8 @@ func (m *ListObjectMixin[T]) Hijack(w http.ResponseWriter, r *http.Request, view
 			}
 		}
 	}
+
+	attrCtx.Reset()
 
 	if len(models) > 0 {
 		updated, err := qs.
@@ -225,7 +229,7 @@ func (c *FieldExportColumn[T]) ExportHeader(r *http.Request) string {
 }
 
 func (c *FieldExportColumn[T]) ExportValue(r *http.Request, obj T) (interface{}, error) {
-	var defs = obj.FieldDefs()
+	var defs = attrs.Define(r.Context(), obj)
 	var f, ok = defs.Field(c.FieldName)
 	if !ok {
 		return nil, errors.FieldNotFound.Wrapf(

@@ -21,6 +21,7 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -521,7 +522,7 @@ func (f *godjangoModelsFinder) Find(fsys fs.FS, isExcluded func(filename string)
 			matches = append(matches, match)
 
 			var fieldMatches = make([]Translation, 0)
-			var fieldDefs = model.FieldDefs()
+			var fieldDefs = attrs.Define(context.Background(), model)
 			for i, field := range fieldDefs.Fields() {
 
 				var fieldPath = filepath.ToSlash(filepath.Join(".models", app.Name(), cType.Model(), "fields", field.Name()))

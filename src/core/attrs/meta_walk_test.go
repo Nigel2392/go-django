@@ -1,6 +1,7 @@
 package attrs_test
 
 import (
+	"context"
 	"reflect"
 	"strings"
 	"testing"
@@ -26,8 +27,8 @@ type Image struct {
 	Path string
 }
 
-func (m *Image) FieldDefs() attrs.Definitions {
-	return attrs.Define(m,
+func (m *Image) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -43,8 +44,8 @@ type Profile struct {
 	Image *Image
 }
 
-func (m *Profile) FieldDefs() attrs.Definitions {
-	return attrs.Define(m,
+func (m *Profile) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -64,8 +65,8 @@ type User struct {
 	Profile *Profile
 }
 
-func (m *User) FieldDefs() attrs.Definitions {
-	return attrs.Define(m,
+func (m *User) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -86,8 +87,8 @@ type Todo struct {
 	User        *User
 }
 
-func (m *Todo) FieldDefs() attrs.Definitions {
-	return attrs.Define(m,
+func (m *Todo) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Column:   "id", // can be inferred, but explicitly set for clarity
 			Primary:  true,
@@ -116,8 +117,8 @@ type ObjectWithMultipleRelations struct {
 	Obj2 *User
 }
 
-func (m *ObjectWithMultipleRelations) FieldDefs() attrs.Definitions {
-	return attrs.Define(m,
+func (m *ObjectWithMultipleRelations) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -145,8 +146,8 @@ type Category struct {
 	Parent *Category
 }
 
-func (m *Category) FieldDefs() attrs.Definitions {
-	return attrs.Define(m,
+func (m *Category) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -166,8 +167,8 @@ type OneToOneWithThrough struct {
 	User    *User
 }
 
-func (t *OneToOneWithThrough) FieldDefs() attrs.Definitions {
-	return attrs.Define(t,
+func (t *OneToOneWithThrough) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -202,8 +203,8 @@ type OneToOneWithThrough_Through struct {
 	TargetModel *OneToOneWithThrough_Target
 }
 
-func (t *OneToOneWithThrough_Through) FieldDefs() attrs.Definitions {
-	return attrs.Define(t,
+func (t *OneToOneWithThrough_Through) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -225,8 +226,8 @@ type OneToOneWithThrough_Target struct {
 	Age  int
 }
 
-func (t *OneToOneWithThrough_Target) FieldDefs() attrs.Definitions {
-	return attrs.Define(t,
+func (t *OneToOneWithThrough_Target) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -241,7 +242,7 @@ func (t *OneToOneWithThrough_Target) FieldDefs() attrs.Definitions {
 }
 
 func getField(m attrs.Definer, field string) attrs.Field {
-	defs := m.FieldDefs()
+	defs := define(m)
 	f, _ := defs.Field(field)
 	return f
 }
@@ -599,8 +600,8 @@ func TestWalkFieldPaths(t *testing.T) {
 
 					t.Logf(
 						"through relation %T.%s -> %T.%s, %T.%s -> %T.%s",
-						fromModel, fromModel.FieldDefs().Primary().Name(), through.Model(), sourceFieldStr,
-						through.Model(), targetFieldStr, targetModel, targetModel.FieldDefs().Primary().Name(),
+						fromModel, define(fromModel).Primary().Name(), through.Model(), sourceFieldStr,
+						through.Model(), targetFieldStr, targetModel, define(targetModel).Primary().Name(),
 					)
 				} else {
 					t.Logf("relation %T.%s -> %T.%s", fromModel, fromField.Name(), targetModel, targetField.Name())

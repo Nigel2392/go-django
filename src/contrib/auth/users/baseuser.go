@@ -221,7 +221,7 @@ func (u *Base) checkDatabasePermissions(ctx context.Context, _ interface{}, perm
 	}
 
 	var q = make([]expr.Expression, 0, len(perms)*2)
-	var defs = u.backref.FieldDefs()
+	var defs = attrs.Define(ctx, u.backref)
 	var primary = defs.Primary()
 	if primary == nil {
 		panic("Base backref does not have a primary field, cannot check permissions")

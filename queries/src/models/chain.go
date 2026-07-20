@@ -1,6 +1,7 @@
 package models
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -153,7 +154,7 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 
 			if (ctypeFieldName == "" || targetFieldName == "") && field.Type.Implements(reflect.TypeOf((*CanTargetDefiner)(nil)).Elem()) {
 				var newTargetDefiner = reflect.New(field.Type.Elem()).Interface().(CanTargetDefiner)
-				newTargetDefiner = Setup(newTargetDefiner)
+				newTargetDefiner = Setup(attrs.ContextWithFlags(context.Background(), attrs.CtxFlagRegistering, true), newTargetDefiner)
 				ctypeFieldName = newTargetDefiner.TargetContentTypeField().Name()
 				targetFieldName = newTargetDefiner.TargetPrimaryField().Name()
 			}
@@ -232,6 +233,9 @@ func buildModelChain(rTyp reflect.Type) *BaseModelInfo {
 						}
 
 						field.Index = append(field.Index, subField.Index...)
+
+						// editor might complain, but there is no dereference here.
+						// see the assert a few lines back.
 						base.proxies = append(base.proxies, &BaseModelProxy{
 							rootField:       &field,
 							directField:     &subField,

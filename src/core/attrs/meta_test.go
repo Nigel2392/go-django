@@ -1,6 +1,7 @@
 package attrs_test
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"sync"
@@ -20,8 +21,8 @@ type throughModel struct {
 	TargetModel *targetModel
 }
 
-func (f *throughModel) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions(f)
+func (f *throughModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions(ctx, f)
 }
 
 type sourceModel struct {
@@ -32,7 +33,7 @@ type sourceModel struct {
 	FK                *targetModel
 }
 
-func (f *sourceModel) FieldDefs() attrs.Definitions {
+func (f *sourceModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	var (
 		o2o_through = attrs.Relate(&targetModel{}, "", &attrs.ThroughModel{
 			This:   &throughModel{},
@@ -42,7 +43,7 @@ func (f *sourceModel) FieldDefs() attrs.Definitions {
 		o2o = attrs.Relate(&targetModel{}, "", nil)
 		fk  = attrs.Relate(&targetModel{}, "", nil)
 	)
-	return attrs.Define(f,
+	return attrs.Make(ctx, f,
 		attrs.NewField(f, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -73,7 +74,7 @@ type targetModel struct {
 	SourceSet []*sourceModel
 }
 
-func (f *targetModel) FieldDefs() attrs.Definitions {
+func (f *targetModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	//var fk_rev = attrs.ReverseRelation(
 	//	&sourceModel{}, mustGetField((&sourceModel{}).FieldDefs(), "FK"),
 	//	&typedRelation{
@@ -94,7 +95,7 @@ func (f *targetModel) FieldDefs() attrs.Definitions {
 	//	},
 	//)
 
-	return attrs.Define(f,
+	return attrs.Make(ctx, f,
 		attrs.NewField(f, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -190,7 +191,7 @@ func TestO2OWithThrough(t *testing.T) {
 	}
 
 	var (
-		defs  = source.FieldDefs()
+		defs  = define(source)
 		field = mustGetField(defs, "O2OWithThrough")
 		rel   = field.Rel()
 
@@ -270,7 +271,7 @@ func TestO2OWithoutThrough(t *testing.T) {
 	}
 
 	var (
-		defs  = source.FieldDefs()
+		defs  = define(source)
 		field = mustGetField(defs, "O2OWithoutThrough")
 		rel   = field.Rel()
 
@@ -287,7 +288,7 @@ func TestO2OWithoutThrough(t *testing.T) {
 		t.Errorf("expected %T, got %T", &targetModel{}, target)
 	}
 
-	if !fieldEquals[attrs.FieldDefinition](targetField, mustGetField((&targetModel{}).FieldDefs(), "ID")) {
+	if !fieldEquals[attrs.FieldDefinition](targetField, mustGetField(define(&targetModel{}), "ID")) {
 		t.Errorf("expected %q, got %q", "ID", targetField.Name())
 	}
 
@@ -300,7 +301,7 @@ func TestFK(t *testing.T) {
 	}
 
 	var (
-		defs  = source.FieldDefs()
+		defs  = define(source)
 		field = mustGetField(defs, "FK")
 		rel   = field.Rel()
 
@@ -317,7 +318,7 @@ func TestFK(t *testing.T) {
 		t.Errorf("expected %T, got %T", &targetModel{}, target)
 	}
 
-	if !fieldEquals[attrs.FieldDefinition](targetField, mustGetField((&targetModel{}).FieldDefs(), "ID")) {
+	if !fieldEquals[attrs.FieldDefinition](targetField, mustGetField(define(&targetModel{}), "ID")) {
 		t.Errorf("expected %q, got %q", "ID", targetField.Name())
 	}
 }

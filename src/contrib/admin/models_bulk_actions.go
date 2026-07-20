@@ -104,7 +104,7 @@ var (
 					return 0, err
 				}
 
-				var defs = row.Object.FieldDefs()
+				var defs = attrs.Define(qs.Context(), row.Object)
 				var primary = defs.Primary()
 				var val, err = primary.Value()
 				if err != nil {

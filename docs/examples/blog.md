@@ -89,7 +89,7 @@ func (n *BlogPage) FieldDefs() attrs.Definitions {
     if n.PageNode == nil {
         n.PageNode = &page_models.PageNode{}
     }
-    return attrs.Define(n,
+    return attrs.Make(n,
         attrs.NewField(n.PageNode, "PageID", &attrs.FieldConfig{
             Primary:  true,
             ReadOnly: true,

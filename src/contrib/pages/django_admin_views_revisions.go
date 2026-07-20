@@ -55,7 +55,7 @@ func pageRevisionData(fieldName string) func(*http.Request, attrs.Definitions, *
 		}
 
 		ref := p.Reference()
-		defs := ref.FieldDefs()
+		defs := attrs.Define(r.Context(), ref)
 		val := defs.Get(fieldName)
 		return val
 	}
@@ -420,7 +420,7 @@ func revisionDetailHandler(w http.ResponseWriter, r *http.Request, a *admin.AppD
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
 			var initial = make(map[string]interface{})
-			var fieldDefs = instance.FieldDefs()
+			var fieldDefs = attrs.Define(r.Context(), instance)
 			for _, field := range fieldDefs.Fields() {
 				initial[field.Name()] = field.GetValue()
 			}
@@ -507,7 +507,7 @@ func revisionCompareHandler(w http.ResponseWriter, r *http.Request, a *admin.App
 		newChangedTime = otherRevision.CreatedAt
 	}
 
-	var fieldDefs = oldInstance.FieldDefs()
+	var fieldDefs = attrs.Define(r.Context(), oldInstance)
 	var definition = DefinitionForObject(oldInstance)
 	var panels []admin.Panel
 	if definition == nil || definition.EditPanels == nil {
@@ -888,7 +888,7 @@ func (v *GenericPreviewHandler[T]) SessionKey(obj attrs.Definer) string {
 		prefix,
 		cType.AppLabel(),
 		cType.Model(),
-		attrs.PrimaryKey(obj),
+		attrs.PrimaryKey(context.Background(), obj),
 	)
 }
 
@@ -1078,7 +1078,7 @@ func (v *GenericPreviewHandler[T]) TakeControl(w http.ResponseWriter, req *http.
 	// a preview of the current object state.
 	// Log a warning and continue.
 	if previewData == nil {
-		logger.Warnf("no preview data found for object %T with ID %v", instance, attrs.PrimaryKey(instance))
+		logger.Warnf("no preview data found for object %T with ID %v", instance, attrs.PrimaryKey(req.Context(), instance))
 		servePreviewRequest(w, req, v, viewObj, instance)
 		return
 	}

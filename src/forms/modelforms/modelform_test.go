@@ -24,8 +24,8 @@ func (m *TestModel) Save(ctx context.Context) error {
 	return nil
 }
 
-func (m *TestModel) FieldDefs() attrs.Definitions {
-	return attrs.Define(
+func (m *TestModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx,
 		m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{Null: true, Blank: true, ReadOnly: false}),
 		attrs.NewField(m, "Name", &attrs.FieldConfig{Null: true, Blank: true, ReadOnly: false}),

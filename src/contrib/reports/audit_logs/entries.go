@@ -191,6 +191,6 @@ func (l *Entry) Fields(attrs.Definer) []attrs.Field {
 	}
 }
 
-func (l *Entry) FieldDefs() attrs.Definitions {
-	return l.Model.Define(l, l.Fields)
+func (l *Entry) FieldDefs(ctx context.Context) attrs.Definitions {
+	return l.Model.Define(ctx, l, l.Fields)
 }

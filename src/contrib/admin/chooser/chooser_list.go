@@ -107,7 +107,7 @@ func (v *ChooserListPage[T]) Bind(w http.ResponseWriter, req *http.Request) (vie
 		ResponseWriter: w,
 		Request:        req,
 		Model: attrs.NewObject[T](
-			reflect.TypeOf(v._Definition.Model),
+			req.Context(), reflect.TypeOf(v._Definition.Model),
 		),
 	}
 
@@ -127,7 +127,7 @@ func (v *ChooserListPage[T]) getQuerySet(req *http.Request) (*queries.QuerySet[T
 		return v.QuerySet(req, v._Definition.Model)
 	}
 	var newObj = attrs.NewObject[T](
-		reflect.TypeOf(v._Definition.Model),
+		req.Context(), reflect.TypeOf(v._Definition.Model),
 	)
 	return queries.GetQuerySet(newObj), nil
 }

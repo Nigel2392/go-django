@@ -158,7 +158,7 @@ func TestToString(t *testing.T) {
 func TestTokenSource(t *testing.T) {
 	var ctx = context.Background()
 	var timeNow = drivers.CurrentTimestamp()
-	var user = models.Setup(&openauth2.User{
+	var user = models.Setup(t.Context(), &openauth2.User{
 		UniqueIdentifier: "TestTokenSource",
 		ProviderName:     "test",
 		Data:             []byte(`{"name": "Test User"}`),

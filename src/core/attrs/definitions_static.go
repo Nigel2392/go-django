@@ -1,6 +1,8 @@
 package attrs
 
 import (
+	"context"
+
 	"github.com/elliotchance/orderedmap/v2"
 )
 
@@ -54,7 +56,7 @@ func newStaticDefinitions(d Definer) *staticDefinition {
 		object: d,
 	}
 
-	var defs = d.FieldDefs()
+	var defs = d.FieldDefs(ContextWithFlags(context.Background(), CtxFlagRegistering, true))
 	var prim, m = fieldsFromDefs[FieldDefinition](defs)
 	if prim != nil {
 		sDef.PrimaryField = prim.Name()
@@ -97,7 +99,7 @@ func (d *staticDefinition) Primary() FieldDefinition {
 }
 
 func (d *staticDefinition) Instance() Definer {
-	return NewObject[Definer](d.object)
+	return NewObject[Definer](context.Background(), d.object)
 }
 
 func (d *staticDefinition) Len() int {

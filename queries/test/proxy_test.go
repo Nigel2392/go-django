@@ -31,8 +31,8 @@ type ProxyModel struct {
 	Description string
 }
 
-func (b *ProxyModel) FieldDefs() attrs.Definitions {
-	return b.Model.Define(b,
+func (b *ProxyModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return b.Model.Define(ctx, b,
 		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
 		attrs.Unbound("TargetID"),
 		attrs.Unbound("TargetCType"),
@@ -54,8 +54,8 @@ type ProxiedModel struct {
 	UpdatedAt time.Time
 }
 
-func (p *ProxiedModel) FieldDefs() attrs.Definitions {
-	return p.Model.Define(p,
+func (p *ProxiedModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return p.Model.Define(ctx, p,
 		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
 		// 	fields.OneToOne[*ProxyModel]("ProxyModel", &fields.FieldConfig{
 		// 		IsProxy:  true,
@@ -72,8 +72,8 @@ type LinkedToProxiedModel struct {
 	ProxiedModel *ProxiedModel
 }
 
-func (l *LinkedToProxiedModel) FieldDefs() attrs.Definitions {
-	return l.Model.Define(l,
+func (l *LinkedToProxiedModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return l.Model.Define(ctx, l,
 		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
 		fields.ForeignKey[*ProxiedModel]("ProxiedModel", "proxied_model_id"),
 	)
@@ -93,7 +93,7 @@ func mustDeleteAll(t *testing.T, modelTypes ...attrs.Definer) {
 func TestProxyModel(t *testing.T) {
 	attrs.RegisterModel(&ProxyModel{})
 
-	var proxyModel = models.Setup(&ProxiedModel{
+	var proxyModel = models.Setup(t.Context(), &ProxiedModel{
 		ProxyModel: &ProxyModel{
 			Title:       "Test Proxy",
 			Description: "This is a test proxy model",
@@ -148,7 +148,7 @@ func TestProxyModel(t *testing.T) {
 func TestProxyModelFilter(t *testing.T) {
 	attrs.RegisterModel(&ProxyModel{})
 
-	var proxyModel = models.Setup(&ProxiedModel{
+	var proxyModel = models.Setup(t.Context(), &ProxiedModel{
 		ProxyModel: &ProxyModel{
 			Title:       "Test Proxy",
 			Description: "This is a test proxy model",
@@ -202,7 +202,7 @@ func TestProxyModelFilter(t *testing.T) {
 
 func TestLinkedToProxiedModel(t *testing.T) {
 
-	var proxyModel = models.Setup(&ProxiedModel{
+	var proxyModel = models.Setup(t.Context(), &ProxiedModel{
 		ProxyModel: &ProxyModel{
 			Title:       "Test Proxy",
 			Description: "This is a test proxy model",
@@ -216,7 +216,7 @@ func TestLinkedToProxiedModel(t *testing.T) {
 		t.Fatalf("Failed to save proxy model: %v", err)
 	}
 
-	var linkedModel = models.Setup(&LinkedToProxiedModel{
+	var linkedModel = models.Setup(t.Context(), &LinkedToProxiedModel{
 		ProxiedModel: proxyModel,
 	})
 	if err := linkedModel.Save(ctx); err != nil {
@@ -267,7 +267,7 @@ func TestLinkedToProxiedModel(t *testing.T) {
 func TestProxyFields(t *testing.T) {
 	attrs.RegisterModel(&ProxyModel{})
 
-	var proxiedModel = models.Setup(&ProxiedModel{
+	var proxiedModel = models.Setup(t.Context(), &ProxiedModel{
 		ProxyModel: &ProxyModel{
 			Title:       "Test Proxy",
 			Description: "This is a test proxy model",

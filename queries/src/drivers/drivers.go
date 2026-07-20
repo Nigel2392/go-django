@@ -179,7 +179,7 @@ func Value(arg any) (driver.Value, error) {
 		}
 
 	case attrs.Definer:
-		var defs = v.FieldDefs()
+		var defs = attrs.Define(context.Background(), v)
 		var prim = defs.Primary()
 		return Value(prim.GetValue())
 

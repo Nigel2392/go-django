@@ -1,6 +1,7 @@
 package attrs_test
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -23,8 +24,8 @@ type customTestWidget struct {
 	*widgets.BaseWidget
 }
 
-func (f *TestModelFields) FieldDefs() attrs.Definitions {
-	return attrs.Define(f,
+func (f *TestModelFields) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
 		attrs.NewField(f, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -39,8 +40,8 @@ type TestEmbeddedModelFields struct {
 	Test *TestModelFields
 }
 
-func (f *TestEmbeddedModelFields) FieldDefs() attrs.Definitions {
-	return attrs.Define(f,
+func (f *TestEmbeddedModelFields) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
 		attrs.NewField(f, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -256,6 +257,14 @@ func TestModelFieldsScannable(t *testing.T) {
 		defTest     = attrs.NewField(testEmbeddedModelFields, "Test", nil)
 	)
 
+	var defs = &attrs.ObjectDefinitions{
+		InitContext: context.Background(),
+	}
+
+	defTestID.BindToDefinitions(defs)
+	defTestName.BindToDefinitions(defs)
+	defTest.BindToDefinitions(defs)
+
 	defTestID.Scan(uint64(2))
 	defTestName.Scan("new name")
 	defTest.Scan(2)
@@ -300,8 +309,8 @@ func TestEmbeddedFieldsScannable(t *testing.T) {
 	}
 
 	var test = &TestModelFields{ID: 1, Name: "name", Objects: []int64{1, 2, 3}}
-	var mDefs = m.FieldDefs()
-	var testDefs = test.FieldDefs()
+	var mDefs = define(m)
+	var testDefs = define(test)
 
 	var f, _ = mDefs.Field("Test")
 	f.SetValue(test, true)
@@ -334,11 +343,19 @@ func TestModelFieldsValuer(t *testing.T) {
 		Test: &TestModelFields{ID: 1, Name: "name", Objects: []int64{1, 2, 3}},
 	}
 
+	var defs = &attrs.ObjectDefinitions{
+		InitContext: context.Background(),
+	}
+
 	var (
 		defID   = attrs.NewField(m, "ID", nil)
 		defName = attrs.NewField(m, "Name", nil)
 		defTest = attrs.NewField(m, "Test", nil)
 	)
+
+	defID.BindToDefinitions(defs)
+	defName.BindToDefinitions(defs)
+	defTest.BindToDefinitions(defs)
 
 	var v any
 	var err error
@@ -557,8 +574,8 @@ type TestBindableValue struct {
 	Objects *bindable[[]int64]
 }
 
-func (f *TestBindableValue) FieldDefs() attrs.Definitions {
-	return attrs.Define(f,
+func (f *TestBindableValue) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
 		attrs.NewField(f, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -572,7 +589,7 @@ func TestModelFieldsBindable(t *testing.T) {
 		ID: 1,
 	}
 
-	var defs = m.FieldDefs()
+	var defs = define(m)
 
 	if err := defs.Set("Name", "new name"); err != nil {
 		t.Errorf("expected %v, got %v", nil, err)
@@ -599,8 +616,8 @@ type TestUnboundFields struct {
 	Description string
 }
 
-func (f *TestUnboundFields) FieldDefs() attrs.Definitions {
-	return attrs.Define(f,
+func (f *TestUnboundFields) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
 		attrs.Unbound("ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -616,7 +633,7 @@ func TestModelFieldsUnbound(t *testing.T) {
 		Description: "description",
 	}
 
-	var defs = m.FieldDefs()
+	var defs = define(m)
 	if err := defs.Set("ID", 2); err != nil {
 		t.Errorf("expected %v, got %v", nil, err)
 	}
@@ -655,8 +672,8 @@ type TestBenchmarkWithCaching struct {
 	Objects     []int64
 }
 
-func (f *TestBenchmarkWithCaching) FieldDefs() attrs.Definitions {
-	return attrs.Define(f,
+func (f *TestBenchmarkWithCaching) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
 		attrs.NewField(f, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -676,8 +693,8 @@ type TestBenchmarkWithoutCaching struct {
 	Objects     []int64
 }
 
-func (f *TestBenchmarkWithoutCaching) FieldDefs() attrs.Definitions {
-	return attrs.Define(f,
+func (f *TestBenchmarkWithoutCaching) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
 		attrs.NewField(f, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -712,7 +729,7 @@ func BenchmarkFieldsWithCaching(b *testing.B) {
 			Objects:     []int64{1, 2, 3},
 		}
 
-		var defs = m.FieldDefs()
+		var defs = define(m)
 		var (
 			title, _       = defs.Field("Title")
 			description, _ = defs.Field("Description")
@@ -771,7 +788,7 @@ func BenchmarkFieldsWithoutCaching(b *testing.B) {
 			Objects:     []int64{1, 2, 3},
 		}
 
-		var defs = m.FieldDefs()
+		var defs = define(m)
 		var (
 			title, _       = defs.Field("Title")
 			description, _ = defs.Field("Description")

@@ -1,6 +1,7 @@
 package attrs
 
 import (
+	"context"
 	"iter"
 	"reflect"
 
@@ -8,7 +9,8 @@ import (
 )
 
 type ObjectDefinitions struct {
-	objType      reflect.Type
+	InitContext  context.Context
+	ObjType      reflect.Type
 	Object       Definer
 	PrimaryField string
 	Table        string
@@ -19,6 +21,14 @@ type FieldsMap struct {
 	ref   *ObjectDefinitions
 	keys  []string
 	items map[string]Field
+}
+
+func NewFieldsMap(ref *ObjectDefinitions, numField int) *FieldsMap {
+	return &FieldsMap{
+		ref:   ref,
+		items: make(map[string]Field, numField),
+		keys:  make([]string, 0, numField),
+	}
 }
 
 func (d *FieldsMap) Set(name string, f Field) (replaced bool) {
@@ -68,21 +78,22 @@ func (d *FieldsMap) Iter() iter.Seq2[string, Field] {
 //
 // For information about the arguments, see the
 // [UnpackFieldsFromArgs] function.
-func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions {
+func Make[T1 Definer, T2 any](ctx context.Context, d T1, fieldDefinitions ...T2) *ObjectDefinitions {
+
+	if !IsAttributeContext(ctx) {
+		panic("attribute context is required")
+	}
 
 	var rt = reflect.TypeOf(d).Elem()
 	var numField = rt.NumField()
 	var defs = &ObjectDefinitions{
-		objType: rt,
-		Object:  d,
+		InitContext: ctx,
+		ObjType:     rt,
+		Object:      d,
 	}
-	defs.ObjectFields = &FieldsMap{
-		ref:   defs,
-		items: make(map[string]Field, numField),
-		keys:  make([]string, 0, numField),
-	}
+	defs.ObjectFields = NewFieldsMap(defs, numField)
 
-	var fieldsIter = UnpackFieldsFromArgsIter(d, fieldDefinitions...)
+	var fieldsIter = UnpackFieldsFromArgsIter(ctx, d, fieldDefinitions...)
 	for f, err := range fieldsIter {
 		if err != nil {
 			assert.Fail("define (%T): %v", d, err)
@@ -119,13 +130,25 @@ func Define[T1 Definer, T2 any](d T1, fieldDefinitions ...T2) *ObjectDefinitions
 	return defs
 }
 
+func (d *ObjectDefinitions) Context() context.Context {
+	return d.InitContext
+}
+
 func (d *ObjectDefinitions) SignalChange(f Field, value interface{}) {
+	if ContextHasFlag(d.InitContext, CtxFlagDeferSignals) {
+		return
+	}
+
 	if m, ok := d.Object.(CanSignalChanged); ok {
 		m.SignalChange(f, value)
 	}
 }
 
 func (d *ObjectDefinitions) SignalReset(f Field) {
+	if ContextHasFlag(d.InitContext, CtxFlagDeferSignals) {
+		return
+	}
+
 	if m, ok := d.Object.(CanSignalChanged); ok {
 		m.SignalReset(f)
 	}
@@ -135,7 +158,7 @@ func (d *ObjectDefinitions) TableName() string {
 	if d.Table != "" {
 		return d.Table
 	}
-	return ColumnName(d.objType.Name())
+	return ColumnName(d.ObjType.Name())
 }
 
 func (d *ObjectDefinitions) WithTableName(name string) *ObjectDefinitions {
@@ -185,10 +208,10 @@ func (d *ObjectDefinitions) Primary() Field {
 
 func (d *ObjectDefinitions) Instance() Definer {
 	if d.Object == nil {
-		if d.objType == nil || d.objType.Kind() == reflect.Invalid {
+		if d.ObjType == nil || d.ObjType.Kind() == reflect.Invalid {
 			return nil
 		}
-		return NewObject[Definer](d.Object)
+		return NewObject[Definer](d.InitContext, d.Object)
 	}
 	return d.Object
 }

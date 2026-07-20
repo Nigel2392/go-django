@@ -333,8 +333,8 @@ type QueryInformation struct {
 }
 
 type FieldResolver interface {
+	Meta() ModelMeta
 	Alias() *alias.Generator
-	Peek() QueryInformation
 	Context() context.Context
 	ResolverInfoForModel(model attrs.Definer) *ExpressionInfo
 	Resolve(fieldName string, inf *ExpressionInfo) (model attrs.Definer, field attrs.FieldDefinition, col *TableColumn, err error)

@@ -36,6 +36,12 @@ func Table[T testing.TB](t T, model ...attrs.Definer) *DBTables[T] {
 			django.Global.Settings,
 			django.APPVAR_DATABASE,
 		)
+
+		if db == nil {
+			table.fatalf("TestDB not properly initialized: %v", django.Global.Settings)
+			return nil
+		}
+
 	} else {
 		db, err = drivers.Open(context.Background(), "sqlite3", "file:quest_memory?mode=memory")
 		if err != nil {
@@ -92,7 +98,7 @@ func (t *DBTables[T]) Create() {
 			fmt.Printf("Creating table: %s\n", table.TableName())
 		}
 
-		err := t.schema.CreateTable(context.Background(), table, t.IfNotExists)
+		err := t.schema.CreateTable(drivers.SetLogSQLContext(context.Background(), false), table, t.IfNotExists)
 		if err != nil {
 			t.fatalf("Failed to create table (%s): %v", table.ModelName(), err)
 			return

@@ -173,13 +173,13 @@ func (n *PageNode) DatabaseIndexes(obj attrs.Definer) []migrator.Index {
 }
 
 func (n *PageNode) TargetContentTypeField() attrs.FieldDefinition {
-	var defs = n.FieldDefs()
+	var defs = n.FieldDefs(attrs.ContextWithFlags(context.Background(), attrs.CtxFlagRegistering, true))
 	var f, _ = defs.Field("ContentType")
 	return f
 }
 
 func (n *PageNode) TargetPrimaryField() attrs.FieldDefinition {
-	var defs = n.FieldDefs()
+	var defs = n.FieldDefs(attrs.ContextWithFlags(context.Background(), attrs.CtxFlagRegistering, true))
 	var f, _ = defs.Field("PageID")
 	return f
 }
@@ -211,8 +211,8 @@ func (n *PageNode) DeleteObject(ctx context.Context) error {
 	return nil
 }
 
-func (n *PageNode) FieldDefs() attrs.Definitions {
-	return n.Model.Define(n, func(d attrs.Definer) []attrs.Field {
+func (n *PageNode) FieldDefs(ctx context.Context) attrs.Definitions {
+	return n.Model.Define(ctx, n, func(d attrs.Definer) []attrs.Field {
 		return []attrs.Field{
 			attrs.NewField(n, "PK"),
 			attrs.NewField(n, "Title"),

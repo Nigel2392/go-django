@@ -68,7 +68,7 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 	}
 
 	var user = authentication.UserFromContext(ctx).(users.User)
-	var entry = models.Setup(&Entry{
+	var entry = models.Setup(ctx, &Entry{
 		Typ:  drivers.String(entryType),
 		Lvl:  level,
 		Time: drivers.CurrentTimestamp(),
@@ -90,7 +90,7 @@ func Log(ctx context.Context, entryType string, level logger.LogLevel, forObject
 			pkgPath     = contentType.PkgPath()
 			filtersMap  = registry.filtersCtyp[entryType]
 			handlersMap = registry.handlersCtyp[entryType]
-			defs        = forObject.FieldDefs()
+			defs        = attrs.Define(context.Background(), forObject)
 			primary     = defs.Primary()
 		)
 

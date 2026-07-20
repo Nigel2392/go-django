@@ -1,6 +1,7 @@
 package queries_test
 
 import (
+	"context"
 	"fmt"
 	"slices"
 	"strings"
@@ -50,8 +51,8 @@ type TestStruct struct {
 	Text string
 }
 
-func (t *TestStruct) FieldDefs() attrs.Definitions {
-	return t.Model.Define(t,
+func (t *TestStruct) FieldDefs(ctx context.Context) attrs.Definitions {
+	return t.Model.Define(ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -80,8 +81,8 @@ type TestStructNoObject struct {
 	TestNameUpper string
 }
 
-func (t *TestStructNoObject) FieldDefs() attrs.Definitions {
-	return attrs.Define[*TestStructNoObject, any](t,
+func (t *TestStructNoObject) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make[*TestStructNoObject, any](ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -111,8 +112,8 @@ type OtherTestStruct struct {
 	TestNameUpper string
 }
 
-func (t *OtherTestStruct) FieldDefs() attrs.Definitions {
-	return attrs.Define[*OtherTestStruct, any](t,
+func (t *OtherTestStruct) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make[*OtherTestStruct, any](ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -142,8 +143,8 @@ type TestStructNoVF struct {
 	TestStruct *TestStructNoObject
 }
 
-func (t *TestStructNoVF) FieldDefs() attrs.Definitions {
-	return attrs.Define[*TestStructNoVF, any](t,
+func (t *TestStructNoVF) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make[*TestStructNoVF, any](ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -169,8 +170,8 @@ type TestStructSubqueryVF struct {
 	TestStruct     *TestStructNoObject
 }
 
-func (t *TestStructSubqueryVF) FieldDefs() attrs.Definitions {
-	return attrs.Define[*TestStructSubqueryVF, any](t,
+func (t *TestStructSubqueryVF) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make[*TestStructSubqueryVF, any](ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -203,8 +204,8 @@ type TestStructSubueryVFRelatedRoot struct {
 	Related *TestStructSubueryVFRelated
 }
 
-func (t *TestStructSubueryVFRelatedRoot) FieldDefs() attrs.Definitions {
-	return attrs.Define[*TestStructSubueryVFRelatedRoot, any](t,
+func (t *TestStructSubueryVFRelatedRoot) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make[*TestStructSubueryVFRelatedRoot, any](ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -230,8 +231,8 @@ type TestStructSubueryVFRelated struct {
 	TargetTestStruct *TestStructNoObject
 }
 
-func (t *TestStructSubueryVFRelated) FieldDefs() attrs.Definitions {
-	return attrs.Define[*TestStructSubueryVFRelated, any](t,
+func (t *TestStructSubueryVFRelated) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make[*TestStructSubueryVFRelated, any](ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -259,7 +260,7 @@ func (t *TestStructSubueryVFRelated) FieldDefs() attrs.Definitions {
 
 func TestSetNameTestStruct(t *testing.T) {
 	var test = &TestStruct{}
-	var defs = test.FieldDefs()
+	var defs = define(test)
 
 	var (
 		fText, _  = defs.Field("TestNameText")
@@ -306,7 +307,7 @@ func TestSetNameTestStruct(t *testing.T) {
 
 func TestSetNameTestStructNoObject(t *testing.T) {
 	var test = &TestStructNoObject{}
-	var defs = test.FieldDefs()
+	var defs = define(test)
 
 	var (
 		fText, _  = defs.Field("TestNameText")
@@ -1166,8 +1167,8 @@ type Author struct {
 	Name string
 }
 
-func (a *Author) FieldDefs() attrs.Definitions {
-	return attrs.Define(a,
+func (a *Author) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, a,
 		attrs.NewField(a, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),
@@ -1181,8 +1182,8 @@ type Book struct {
 	Author *Author
 }
 
-func (b *Book) FieldDefs() attrs.Definitions {
-	return attrs.Define(b,
+func (b *Book) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, b,
 		attrs.NewField(b, "ID", &attrs.FieldConfig{
 			Primary: true,
 		}),

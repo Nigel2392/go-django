@@ -206,7 +206,7 @@ func addNextUrl(current string, next string) string {
 }
 
 func PageEditForm(r *http.Request, instance Page) *admin.AdminForm[*modelforms.BaseModelForm[attrs.Definer], attrs.Definer] {
-	var fieldDefs = instance.FieldDefs()
+	var fieldDefs = attrs.Define(r.Context(), instance)
 	var definition = DefinitionForObject(instance)
 	var panels []admin.Panel
 	if definition == nil || definition.EditPanels == nil {

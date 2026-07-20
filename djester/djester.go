@@ -37,7 +37,7 @@ const (
 	ErrNoResponseBody errs.Error = "operation failed: no response body"
 )
 
-type baseTB interface {
+type BaseTB interface {
 	Cleanup(f func())
 	Context() context.Context
 	Error(args ...any)
@@ -58,7 +58,7 @@ type baseTB interface {
 }
 
 type TB interface {
-	baseTB
+	BaseTB
 	Run(name string, f func(TB)) bool
 }
 
@@ -244,8 +244,8 @@ func (d *Tester) DB() drivers.Database {
 	return d.db
 }
 
-func (d *Tester) Assert(t baseTB, verbose bool) Assertion {
-	return &assertion[baseTB]{test: t, verbose: verbose}
+func (d *Tester) Assert(t BaseTB, verbose bool) Assertion {
+	return &assertion[BaseTB]{test: t, verbose: verbose}
 }
 
 func (d *Tester) getUserFromRequest(r *http.Request) authentication.User {

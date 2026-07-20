@@ -1,6 +1,7 @@
 package fields
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -21,6 +22,7 @@ type EmbedOptions struct {
 type embedder struct {
 	fieldName any
 	options   EmbedOptions
+	ctx       context.Context
 }
 
 func (e *embedder) bind(d attrs.Definer) []attrs.Field {
@@ -54,7 +56,7 @@ func (e *embedder) bind(d attrs.Definer) []attrs.Field {
 	if fieldval.IsNil() {
 		if e.options.AutoInit {
 			var newVal = reflect.ValueOf(attrs.NewObject[attrs.Definer](
-				fieldval.Type().Elem(),
+				e.ctx, fieldval.Type().Elem(),
 			))
 			fieldval.Set(newVal)
 		} else {
@@ -71,10 +73,10 @@ func (e *embedder) bind(d attrs.Definer) []attrs.Field {
 		return fields
 	}
 
-	return definer.FieldDefs().Fields()
+	return definer.FieldDefs(e.ctx).Fields()
 }
 
-func Embed(nameOrScan any, options ...EmbedOptions) func(d attrs.Definer) []attrs.Field {
+func Embed(ctx context.Context, nameOrScan any, options ...EmbedOptions) func(d attrs.Definer) []attrs.Field {
 	var opts EmbedOptions
 	if len(options) > 0 {
 		opts = options[0]
@@ -83,6 +85,7 @@ func Embed(nameOrScan any, options ...EmbedOptions) func(d attrs.Definer) []attr
 	var e = &embedder{
 		fieldName: nameOrScan,
 		options:   opts,
+		ctx:       ctx,
 	}
 
 	return e.bind

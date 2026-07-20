@@ -619,7 +619,7 @@ func (a *Application) Initialize() error {
 			return attrs.ToString(v)
 		},
 		"pk": func(v attrs.Definer) any {
-			return attrs.PrimaryKey(v)
+			return attrs.PrimaryKey(context.Background(), v)
 		},
 		"cType": func(v attrs.Definer) any {
 			return contenttypes.DefinitionForObject(v)

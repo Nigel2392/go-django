@@ -68,8 +68,8 @@ type User struct {
 	LastName  string `attrs:"label=Last Name"`
 }
 
-func (m *User) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions(m)
+func (m *User) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions(ctx, m)
 }
 
 // Test [models.MODEL_SAVE_HOOK] for the User model registered in ./queries_init.go

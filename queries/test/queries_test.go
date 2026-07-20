@@ -38,8 +38,8 @@ type Image struct {
 	Path string
 }
 
-func (m *Image) FieldDefs() attrs.Definitions {
-	return attrs.Define(m,
+func (m *Image) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -56,8 +56,8 @@ type Profile struct {
 	Image *Image
 }
 
-func (m *Profile) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m,
+func (m *Profile) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -80,8 +80,8 @@ type User struct {
 	ModelManyToManySet *queries.RelRevFK[attrs.Definer]
 }
 
-func (m *User) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m,
+func (m *User) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -120,8 +120,8 @@ type Todo struct {
 	User         *User
 }
 
-func (m *Todo) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m,
+func (m *Todo) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Column:   "id", // can be inferred, but explicitly set for clarity
 			Primary:  true,
@@ -151,8 +151,8 @@ type ObjectWithMultipleRelations struct {
 	Obj2 *User
 }
 
-func (m *ObjectWithMultipleRelations) FieldDefs() attrs.Definitions {
-	return attrs.Define(m,
+func (m *ObjectWithMultipleRelations) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -183,8 +183,8 @@ type Category struct {
 	Parent *Category
 }
 
-func (m *Category) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m,
+func (m *Category) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -206,8 +206,8 @@ type OneToOneWithThrough struct {
 	User    *User
 }
 
-func (t *OneToOneWithThrough) FieldDefs() attrs.Definitions {
-	return t.Model.Define(t,
+func (t *OneToOneWithThrough) FieldDefs(ctx context.Context) attrs.Definitions {
+	return t.Model.Define(ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -250,8 +250,8 @@ type OneToOneWithThrough_Through struct {
 	TargetModel *OneToOneWithThrough_Target
 }
 
-func (t *OneToOneWithThrough_Through) FieldDefs() attrs.Definitions {
-	return t.Model.Define(t,
+func (t *OneToOneWithThrough_Through) FieldDefs(ctx context.Context) attrs.Definitions {
+	return t.Model.Define(ctx, t,
 		attrs.NewField(t, "SourceModel", &attrs.FieldConfig{
 			Column: "source_id",
 			Null:   false,
@@ -270,8 +270,8 @@ type OneToOneWithThrough_Target struct {
 	Age  int
 }
 
-func (t *OneToOneWithThrough_Target) FieldDefs() attrs.Definitions {
-	return t.Model.Define(t,
+func (t *OneToOneWithThrough_Target) FieldDefs(ctx context.Context) attrs.Definitions {
+	return t.Model.Define(ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -311,8 +311,8 @@ type ModelManyToMany struct {
 // 	return sb.String()
 // }
 
-func (t *ModelManyToMany) FieldDefs() attrs.Definitions {
-	return t.Model.Define(t,
+func (t *ModelManyToMany) FieldDefs(ctx context.Context) attrs.Definitions {
+	return t.Model.Define(ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -386,8 +386,8 @@ type ModelManyToMany_Through struct {
 // 	return sb.String()
 // }
 
-func (t *ModelManyToMany_Through) FieldDefs() attrs.Definitions {
-	return t.Model.Define(t,
+func (t *ModelManyToMany_Through) FieldDefs(ctx context.Context) attrs.Definitions {
+	return t.Model.Define(ctx, t,
 		attrs.NewField(t, "SourceModel", &attrs.FieldConfig{
 			Column: "source_id",
 			Null:   false,
@@ -420,8 +420,8 @@ func (t *ModelManyToMany_Target) UniqueTogether() [][]string {
 // 	return fmt.Sprintf("ModelManyToMany_Target(ID=%d, Model=%v)", t.ID, t.Model)
 // }
 
-func (t *ModelManyToMany_Target) FieldDefs() attrs.Definitions {
-	return t.Model.Define(t,
+func (t *ModelManyToMany_Target) FieldDefs(ctx context.Context) attrs.Definitions {
+	return t.Model.Define(ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -441,8 +441,8 @@ type TestTransaction struct {
 	Name string
 }
 
-func (t *TestTransaction) FieldDefs() attrs.Definitions {
-	return t.Model.Define(t,
+func (t *TestTransaction) FieldDefs(ctx context.Context) attrs.Definitions {
+	return t.Model.Define(ctx, t,
 		attrs.NewField(t, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -464,8 +464,8 @@ func (u *UniqueSource) UniqueTogether() [][]string {
 	return [][]string{{"Name"}}
 }
 
-func (u *UniqueSource) FieldDefs() attrs.Definitions {
-	return u.Model.Define(u,
+func (u *UniqueSource) FieldDefs(ctx context.Context) attrs.Definitions {
+	return u.Model.Define(ctx, u,
 		attrs.NewField(u, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -495,8 +495,8 @@ func (u *UniqueTarget) UniqueTogether() [][]string {
 	return [][]string{{"Name"}}
 }
 
-func (u *UniqueTarget) FieldDefs() attrs.Definitions {
-	return u.Model.Define(u,
+func (u *UniqueTarget) FieldDefs(ctx context.Context) attrs.Definitions {
+	return u.Model.Define(ctx, u,
 		attrs.NewField(u, "ID", &attrs.FieldConfig{
 			Column:  "id",
 			Primary: true,
@@ -541,6 +541,9 @@ func init() {
 
 		&UniqueTarget{},
 		&UniqueSource{},
+
+		&BenchmarkAuthor{},
+		&BenchmarkBook{},
 	)
 
 	// Reset the definitions to ensure all models are registered
@@ -2880,10 +2883,10 @@ func TestBulkUpdate(t *testing.T) {
 		todos[2],
 	}
 
-	t.Logf("Todos to update 1: %s, %+v", todos[0].FieldDefs().Get("Title"), todos[0])
-	t.Logf("Todos to update 2: %s, %+v", todos[1].FieldDefs().Get("Title"), todos[1])
-	t.Logf("Todos to update 3: %s, %+v", todos[2].FieldDefs().Get("Title"), todos[2])
-	t.Logf("Todos to update 4: %s, %+v", todos[3].FieldDefs().Get("Title"), todos[3])
+	t.Logf("Todos to update 1: %s, %+v", define(todos[0]).Get("Title"), todos[0])
+	t.Logf("Todos to update 2: %s, %+v", define(todos[1]).Get("Title"), todos[1])
+	t.Logf("Todos to update 3: %s, %+v", define(todos[2]).Get("Title"), todos[2])
+	t.Logf("Todos to update 4: %s, %+v", define(todos[3]).Get("Title"), todos[3])
 
 	_, err = queries.GetQuerySet(&Todo{}).BulkUpdate(
 		toUpdate,
@@ -3266,8 +3269,8 @@ type TestRowsAffected struct {
 	Name string
 }
 
-func (t *TestRowsAffected) FieldDefs() attrs.Definitions {
-	return attrs.Define(t,
+func (t *TestRowsAffected) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, t,
 		attrs.Unbound("ID", &attrs.FieldConfig{
 			Primary: true,
 		}),

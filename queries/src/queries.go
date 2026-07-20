@@ -37,13 +37,13 @@ const (
 // reference to the parent model to be able to set up the relation properly.
 type CanSetup interface {
 	// Setup is called to set up the model with the given value.
-	Setup(value attrs.Definer) error
+	Setup(ctx context.Context, value attrs.Definer) error
 }
 
 // Setup allows a model to be setup properly if it adheres to the CanSetup interface.
-func setup[T attrs.Definer](model T) (T, error) {
+func setup[T attrs.Definer](ctx context.Context, model T) (T, error) {
 	if setupModel, ok := any(model).(CanSetup); ok {
-		if err := setupModel.Setup(model); err != nil {
+		if err := setupModel.Setup(ctx, model); err != nil {
 			return model, fmt.Errorf("error setting up model %T: %w", model, err)
 		}
 	}
@@ -139,11 +139,11 @@ type ThroughClauseTarget struct {
 }
 
 type TargetClauseField interface {
-	GenerateTargetClause(qs *QuerySet[attrs.Definer], internals *QuerySetInternals, lhs ClauseTarget, rhs ClauseTarget) JoinDef
+	GenerateTargetClause(qs expr.FieldResolver, lhs ClauseTarget, rhs ClauseTarget) JoinDef
 }
 
 type TargetClauseThroughField interface {
-	GenerateTargetThroughClause(qs *QuerySet[attrs.Definer], internals *QuerySetInternals, lhs ClauseTarget, through ThroughClauseTarget, rhs ClauseTarget) (JoinDef, JoinDef)
+	GenerateTargetThroughClause(qs expr.FieldResolver, lhs ClauseTarget, through ThroughClauseTarget, rhs ClauseTarget) (JoinDef, JoinDef)
 }
 
 type ProxyField interface {
@@ -248,7 +248,7 @@ func ForSelectAllFields[T any](fields any) []T {
 		}
 		return result
 	case attrs.Definer:
-		var defs = fieldsValue.FieldDefs()
+		var defs = attrs.Define(context.Background(), fieldsValue)
 		var fields = defs.Fields()
 		return ForSelectAllFields[T](fields)
 	case attrs.Definitions:
@@ -485,6 +485,11 @@ type CompiledRowsQuery[T1 any] interface {
 	drivers.SQLRows
 }
 
+type IterableQuery[RESULT any] interface {
+	CompiledQuery[[]RESULT]
+	Iter() iter.Seq2[RESULT, error]
+}
+
 type UpdateInfo struct {
 	FieldInfo[attrs.Field]
 	Where  []expr.ClauseExpression
@@ -494,7 +499,7 @@ type UpdateInfo struct {
 
 func Resolver(ctx context.Context, model attrs.Definer) func(expr.Expression) expr.Expression {
 	other := Objects(model).WithContext(ctx)
-	info := other.compiler.ExpressionInfo(other, other.internals)
+	info := other.compiler.ExpressionInfo(other)
 	return func(e expr.Expression) expr.Expression {
 		return e.Resolve(info)
 	}
@@ -516,12 +521,99 @@ type QueryCompiler interface {
 	// If a transaction was started, it will return the transaction instead of the database connection.
 	DB() drivers.DB
 
+	Driver() driver.Driver
+
+	QuoteString(s string) string
+
+	QuoteIdentifier(s string) string
+
+	// PrepForLikeQuery is a function that prepares the value for a LIKE query.
+	//
+	// It takes any value and returns a string that is properly formatted and
+	// escaped for use in a LIKE query.
+	PrepForLikeQuery(any) string
+
+	// FormatLookupCol is a function that formats the left-hand side and right-hand side of
+	// a lookup operation in the query.
+	//
+	// It takes the operator and the left-hand side value and returns a formatted string.
+	// This is used to format the left-hand side of an operator in the query for iexact, icontains, etc.
+	//
+	// The default compiler has a format function for the following operators:
+	//
+	// - iexact
+	// - icontains
+	// - istartswith
+	// - iendswith
+	FormatLookupCol(string, string) string
+
+	// LogicalOpRHS is a map of logical operators to functions that format the right-hand side of the operator.
+	//
+	// It takes the logical operator and the right-hand side value and returns a formatted string.
+	//
+	// The defualt compiler has logical operators for:
+	//
+	// - EQ
+	// - NE
+	// - GT
+	// - LT
+	// - GTE
+	// - LTE
+	// - ADD
+	// - SUB
+	// - MUL
+	// - DIV
+	// - MOD
+	// - BITAND
+	// - BITOR
+	// - BITXOR
+	// - BITLSH
+	// - BITRSH
+	// - BITNOT
+	LogicalOpRHS() map[expr.LogicalOp]func(rhs string, value []any) (string, []any)
+
+	// Operators is a map of lookup operations to format strings.
+	//
+	// It is used to format the operators in the query.
+	//
+	// Use ExpressionInfo.FormatOp(...) to format the operator.
+	//
+	// The default compiler has operators for:
+	//
+	// - iexact
+	// - contains
+	// - icontains
+	// - regex
+	// - iregex
+	// - startswith
+	// - endswith
+	// - istartswith
+	// - iendswith
+	LookupOperatorsRHS() map[string]string
+
+	// PatternOps is a map of pattern operators to format strings.
+	//
+	// It is used to format operators when the operator is used as
+	// an expression in a pattern match, such as 'contains' or 'icontains'.
+	//
+	// Use ExpressionInfo.PatternOp(...) to format the pattern operator.
+	//
+	// The default compiler supports pattern operators for:
+	//
+	// - contains
+	// - icontains
+	// - startswith
+	// - endswith
+	// - istartswith
+	// - iendswith
+	LookupPatternOperatorsRHS() map[string]string
+
 	// ExpressionInfo returns a usable [expr.ExpressionInfo] for the compiler.
 	//
 	// This is used to parse raw queries inside of [QuerySet.Rows], [QuerySet.Row] and [QuerySet.Exec].
 	//
 	// Allowing for the use of GO field names in a raw SQL query.
-	ExpressionInfo(qs *QuerySet[attrs.Definer], internals *QuerySetInternals) *expr.ExpressionInfo
+	ExpressionInfo(resolver expr.FieldResolver) *expr.ExpressionInfo
 
 	// Quote returns the quotes used by the database.
 	//
@@ -569,37 +661,31 @@ type QueryCompiler interface {
 	// InTransaction returns true if the current query compiler is in a transaction.
 	InTransaction() bool
 
-	// PrepForLikeQuery prepares a value for a LIKE query.
-	//
-	// It should return the value as a string, with values like `%` and `_` escaped
-	// according to the database's LIKE syntax.
-	PrepForLikeQuery(v any) string
-
 	// BuildSelectQuery builds a select query with the given parameters.
 	BuildSelectQuery(
 		ctx context.Context,
-		qs *QuerySet[attrs.Definer],
+		resolver expr.FieldResolver,
 		internals *QuerySetInternals,
 	) CompiledRowsQuery[[][]interface{}]
 
 	// BuildCountQuery builds a count query with the given parameters.
 	BuildCountQuery(
 		ctx context.Context,
-		qs *QuerySet[attrs.Definer],
+		resolver expr.FieldResolver,
 		internals *QuerySetInternals,
 	) CompiledRowQuery[int64]
 
 	// BuildCreateQuery builds a create query with the given parameters.
 	BuildCreateQuery(
 		ctx context.Context,
-		qs *QuerySet[attrs.Definer],
+		resolver expr.FieldResolver,
 		internals *QuerySetInternals,
 		objects []UpdateInfo,
 	) CompiledQuery[[][]interface{}]
 
 	BuildUpdateQuery(
 		ctx context.Context,
-		qs *GenericQuerySet,
+		resolver expr.FieldResolver,
 		internals *QuerySetInternals,
 		objects []UpdateInfo,
 	) CompiledQuery[int64]
@@ -607,7 +693,7 @@ type QueryCompiler interface {
 	// BuildUpdateQuery builds an update query with the given parameters.
 	BuildDeleteQuery(
 		ctx context.Context,
-		qs *QuerySet[attrs.Definer],
+		resolver expr.FieldResolver,
 		internals *QuerySetInternals,
 	) CompiledQuery[int64]
 }
@@ -625,9 +711,10 @@ type RebindCompiler interface {
 	Rebind(ctx context.Context, s string) string
 }
 
-type NullQuerySet[T any, QS any] interface {
+type NullQuerySet[QS any] interface {
 	expr.ExpressionBuilder
 	expr.FieldResolver
+	Peek() expr.QueryInformation
 
 	Clone() QS
 	Distinct() QS
@@ -667,7 +754,7 @@ type NullQuerySet[T any, QS any] interface {
 
 // BaseReadQuerySet is a base interface for read-only querysets.
 type BaseReadQuerySet[T any, QS any] interface {
-	NullQuerySet[T, QS]
+	NullQuerySet[QS]
 
 	// Read operations
 	All() (Rows[T], error)
@@ -683,7 +770,7 @@ type BaseReadQuerySet[T any, QS any] interface {
 }
 
 type BaseWriteQuerySet[T any, QS any] interface {
-	NullQuerySet[T, QS]
+	NullQuerySet[QS]
 
 	// Write, update, and delete operations
 	Create(value T) (T, error)

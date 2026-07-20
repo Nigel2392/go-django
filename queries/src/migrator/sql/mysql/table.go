@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/go-sql-driver/mysql"
 )
@@ -336,10 +337,10 @@ checkRels:
 	if col.Rel != nil {
 		relField := col.Rel.Field()
 		if relField == nil {
-			relField = col.Rel.Model().FieldDefs().Primary()
+			relField = attrs.GetModelMeta(col.Rel.Model()).Definitions().Primary()
 		}
 		w.WriteString(" REFERENCES `")
-		w.WriteString(col.Rel.Model().FieldDefs().TableName())
+		w.WriteString(attrs.GetModelMeta(col.Rel.Model()).Definitions().TableName())
 		w.WriteString("`(`")
 		w.WriteString(relField.ColumnName())
 		w.WriteString("`)")

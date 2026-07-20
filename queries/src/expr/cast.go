@@ -124,7 +124,7 @@ func (c *castExpr) Clone() Expression {
 }
 
 func (c *castExpr) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil || c.used {
+	if c.used {
 		return c
 	}
 	var nE = c.Clone().(*castExpr)

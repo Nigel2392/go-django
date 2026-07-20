@@ -44,8 +44,8 @@ func EditorComparison(ctx context.Context, label func(context.Context) string, f
 		)
 	}
 
-	var oldValue = attrs.Get[*EditorJSBlockData](old, fieldName)
-	var newValue = attrs.Get[*EditorJSBlockData](new, fieldName)
+	var oldValue = attrs.Get[*EditorJSBlockData](ctx, old, fieldName)
+	var newValue = attrs.Get[*EditorJSBlockData](ctx, new, fieldName)
 	var fc = &editorComparison{
 		ctx:       ctx,
 		LabelText: label,

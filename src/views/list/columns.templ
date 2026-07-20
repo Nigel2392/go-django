@@ -712,7 +712,7 @@ templ (c *rowSelectColumn[T]) Component(r *http.Request, defs attrs.Definitions,
 	}
 	<div class="list-checkbox-wrapper">
 		<div class="list-checkbox">
-			<input { templ.Attributes(c.inputAttrs)... } type="checkbox" class="list-checkbox__input" name={ c.formName } value={ attrs.ToString(attrs.PrimaryKey(row)) } checked?={ c.checked(r, defs, row) } />
+			<input { templ.Attributes(c.inputAttrs)... } type="checkbox" class="list-checkbox__input" name={ c.formName } value={ attrs.ToString(attrs.PrimaryKey(r.Context(), row)) } checked?={ c.checked(r, defs, row) } />
 		</div>
 		<div class="list-checkbox__column">
 			@c.ListColumn.Component(r, defs, row)

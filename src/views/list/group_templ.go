@@ -27,7 +27,7 @@ type ListColumnGroup[T attrs.Definer] struct {
 
 func NewColumnGroup[T attrs.Definer](r *http.Request, instance T, columns []ListColumn[T]) *ListColumnGroup[T] {
 	return &ListColumnGroup[T]{
-		Definitions: instance.FieldDefs(),
+		Definitions: attrs.Define(r.Context(), instance),
 		Columns:     columns,
 		Instance:    instance,
 	}

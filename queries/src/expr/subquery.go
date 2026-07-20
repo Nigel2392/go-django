@@ -58,7 +58,7 @@ func (e *outerRef) Clone() Expression {
 }
 
 func (e *outerRef) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil || e.used {
+	if e.used {
 		return e
 	}
 

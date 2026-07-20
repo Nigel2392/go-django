@@ -55,7 +55,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts admin.FormViewOpti
 
 func (v *ChooserFormPage[T]) Bind(w http.ResponseWriter, req *http.Request) (views.View, error) {
 	var modelObj = attrs.NewObject[T](
-		reflect.TypeOf(v._Definition.Model),
+		req.Context(), reflect.TypeOf(v._Definition.Model),
 	)
 	var base = &BoundChooserFormPage[T]{
 		FormView: newInstanceView(
@@ -125,7 +125,7 @@ func (v *BoundChooserFormPage[T]) Render(w http.ResponseWriter, req *http.Reques
 			hook(req, admin.AdminSite, v.View._Definition.AdminModel, instance)
 		}
 
-		var pk = attrs.PrimaryKey(instance)
+		var pk = attrs.PrimaryKey(req.Context(), instance)
 		var err = json.NewEncoder(w).Encode(ChooserResponse{
 			Preview: v.View._Definition.GetPreviewString(
 				req.Context(), instance,

@@ -2,6 +2,7 @@ package migrator
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -130,7 +131,7 @@ func NewModelTable(obj attrs.Definer) *ModelTable {
 	var (
 		newObjV = reflect.New(reflect.TypeOf(obj).Elem())
 		object  = newObjV.Interface().(attrs.Definer)
-		defs    = object.FieldDefs()
+		defs    = attrs.Define(context.Background(), object)
 		fields  = defs.Fields()
 	)
 
@@ -245,7 +246,7 @@ func (t *ModelTable) UnmarshalJSON(data []byte) error {
 		t.Index = append(t.Index, idx)
 	}
 
-	var defs = t.Object.FieldDefs()
+	var defs = attrs.Define(context.Background(), t.Object)
 	for _, col := range s.Fields {
 		col.Table = t
 		var f, ok = defs.Field(col.Name)
@@ -298,7 +299,7 @@ func (t *ModelTable) TableName() string {
 		return t.Table
 	}
 
-	var defs = t.Object.FieldDefs()
+	var defs = attrs.Define(context.Background(), t.Object)
 	return defs.TableName()
 }
 

@@ -251,7 +251,7 @@ type MyStruct struct {
 }
 
 func (m *MyStruct) FieldDefs() attrs.Definitions {
-    return attrs.Define(m,
+    return attrs.Make(m,
         attrs.NewField(m, "ID", &attrs.FieldConfig{
             Primary:  true,
             ReadOnly: true,

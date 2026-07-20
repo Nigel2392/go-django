@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"context"
 	"database/sql/driver"
 	"encoding/base64"
 	"fmt"
@@ -104,7 +105,7 @@ func GenerateObjectsWhereClause[T attrs.Definer](objects ...T) ([]expr.ClauseExp
 
 		if len(objects) == 1 {
 			var obj = objects[0]
-			var defs = obj.FieldDefs()
+			var defs = attrs.Define(context.Background(), obj)
 			var prim = defs.Primary()
 
 			return expr.Express(primaryName, prim.GetValue()), nil
@@ -112,7 +113,7 @@ func GenerateObjectsWhereClause[T attrs.Definer](objects ...T) ([]expr.ClauseExp
 
 		var ids = make([]any, 0, len(objects))
 		for _, object := range objects {
-			var def = object.FieldDefs()
+			var def = attrs.Define(context.Background(), object)
 			var primary = def.Primary()
 			ids = append(ids, primary.GetValue())
 		}
@@ -128,13 +129,19 @@ type keyPart struct {
 	value driver.Value
 }
 
+type _stringer interface {
+	String() string
+}
+
+var _stringerType = reflect.TypeOf((*_stringer)(nil)).Elem()
+
 // Use the model meta to get the unique key for an object.
 //
 // If the model has a primary key defined, it will return the primary key value.
 //
 // If the model does not have a primary key defined, it will return the unique fields
 // or unique together fields as a string of [fieldName]:[fieldValue]:[fieldName]:[fieldValue] pairs.
-func GetUniqueKey(modelObject any) (any, error) {
+func GetUniqueKey(ctx context.Context, modelObject any) (any, error) {
 
 	var (
 		obj     attrs.Definer
@@ -143,7 +150,7 @@ func GetUniqueKey(modelObject any) (any, error) {
 	switch o := modelObject.(type) {
 	case attrs.Definer:
 		obj = o
-		objDefs = o.FieldDefs()
+		objDefs = attrs.Define(ctx, o)
 	case attrs.Definitions:
 		obj = o.Instance()
 		objDefs = o
@@ -165,7 +172,7 @@ func GetUniqueKey(modelObject any) (any, error) {
 			goto createKey
 		}
 
-		objDefs = obj.FieldDefs()
+		objDefs = attrs.Define(ctx, obj)
 
 	default:
 		return nil, errors.TypeMismatch.WithCause(fmt.Errorf(
@@ -225,6 +232,10 @@ createKey:
 			// Convert []byte to string for easier comparison and usage as a key
 			rVal = rVal.Convert(reflect.TypeOf(""))
 			primaryVal = rVal.Interface()
+		}
+
+		if !rVal.Comparable() && rVal.Type().Implements(_stringerType) {
+			primaryVal = rVal.Interface().(_stringer).String()
 		}
 
 		if !attrs.IsZero(primaryVal) {

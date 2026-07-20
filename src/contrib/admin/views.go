@@ -494,7 +494,7 @@ func (v *AdminDeleteView) PrimaryField() attrs.FieldDefinition {
 func (v *AdminDeleteView) PKList() []interface{} {
 	var pks = make([]interface{}, len(v.Instances))
 	for i, instance := range v.Instances {
-		pks[i] = attrs.PrimaryKey(instance)
+		pks[i] = attrs.PrimaryKey(v.Request.Context(), instance)
 	}
 	return pks
 }
@@ -761,7 +761,7 @@ func GetAdminForm[T attrs.Definer](instance T, opts FormViewOptions, app *AppDef
 
 func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, app *AppDefinition, model *ModelDefinition, r *http.Request, page *PageOptions) *views.FormView[*AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]] {
 
-	var definer = instance.FieldDefs()
+	var definer = attrs.Define(r.Context(), instance)
 	var primary = definer.Primary()
 
 	return &views.FormView[*AdminForm[modelforms.ModelForm[attrs.Definer], attrs.Definer]]{
@@ -851,7 +851,7 @@ func newInstanceView(tpl string, instance attrs.Definer, opts FormViewOptions, a
 				trans.T(r.Context(),
 					"Successfully saved %s (%v)",
 					attrs.ToString(instance),
-					attrs.PrimaryKey(instance),
+					attrs.PrimaryKey(r.Context(), instance),
 				),
 			)
 

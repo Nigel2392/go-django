@@ -1,6 +1,7 @@
 package queries_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Nigel2392/go-django/djester/quest"
@@ -21,8 +22,8 @@ func (u *UniqueModel) UniqueTogether() [][]string {
 	}
 }
 
-func (u *UniqueModel) FieldDefs() attrs.Definitions {
-	return attrs.Define(u, attrs.AutoFieldList(u))
+func (u *UniqueModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, u, attrs.AutoFieldList(u))
 }
 
 func TestUniqueModel(t *testing.T) {

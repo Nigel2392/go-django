@@ -33,9 +33,9 @@ func (t *TestResponse) setupBuffer() (err error) {
 	return t.Response.Body.Close()
 }
 
-func (r *TestResponse) Assert(t baseTB, verbose bool) ResponseAssertion {
+func (r *TestResponse) Assert(t BaseTB, verbose bool) ResponseAssertion {
 	return &responseAssertion{
-		assertion: assertion[baseTB]{
+		assertion: assertion[BaseTB]{
 			test:    t,
 			verbose: verbose,
 		},

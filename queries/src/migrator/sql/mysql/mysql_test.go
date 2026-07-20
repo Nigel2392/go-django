@@ -1,6 +1,7 @@
 package mysql_test
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
@@ -21,8 +22,8 @@ type User struct {
 	Name string
 }
 
-func (m *User) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m,
+func (m *User) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -40,9 +41,8 @@ type Todo struct {
 	User        *User
 }
 
-func (m *Todo) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m,
-
+func (m *Todo) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
 		attrs.NewField(m, "ID", &attrs.FieldConfig{
 			Column:   "id", // can be inferred, but explicitly set for clarity
 			Primary:  true,
@@ -76,7 +76,7 @@ type tableTypeTest[T any] struct {
 	Expect      string
 }
 
-func (t *tableTypeTest[T]) FieldDefs() attrs.Definitions {
+func (t *tableTypeTest[T]) FieldDefs(ctx context.Context) attrs.Definitions {
 	return nil
 }
 

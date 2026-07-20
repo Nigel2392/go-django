@@ -138,7 +138,7 @@ func NewAppConfig() *apps.AppConfig {
 
 					var blockDef = method()
 
-					attrs.Set(instance, name, blockDef)
+					attrs.Set(f.FieldDefinitions().Context(), instance, name, blockDef)
 
 					return blockDef, true
 				}

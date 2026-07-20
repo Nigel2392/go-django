@@ -231,7 +231,7 @@ This should be a method called `FieldDefs`.
 
 ```go
 func (m *Todo) FieldDefs() attrs.Definitions {
-  return attrs.Define(m,
+  return attrs.Make(m,
     attrs.NewField(m, "ID", &attrs.FieldConfig{
         Primary:  true,
         ReadOnly: true,

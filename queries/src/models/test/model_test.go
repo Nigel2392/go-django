@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/models"
@@ -17,8 +18,8 @@ type TestModel struct {
 	Description string
 }
 
-func (m *TestModel) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m,
+func (m *TestModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
 		attrs.NewField(m, "Title", nil),
 		attrs.NewField(m, "Description", nil),
 	)
@@ -31,7 +32,7 @@ func TestModelFields(t *testing.T) {
 	}
 
 	var (
-		defs  = m.FieldDefs()
+		defs  = attrs.Define(t.Context(), m)
 		title = defs.Get("Title")
 		desc  = defs.Get("Description")
 	)
@@ -68,7 +69,7 @@ func TestModelFieldsSetValue(t *testing.T) {
 	}
 
 	var (
-		defs  = m.FieldDefs()
+		defs  = attrs.Define(t.Context(), m)
 		title = defs.Get("Title")
 		desc  = defs.Get("Description")
 	)
@@ -82,7 +83,7 @@ func TestModelFieldsSetValue(t *testing.T) {
 	}
 
 	var (
-		defs2         = m.FieldDefs()
+		defs2         = attrs.Define(t.Context(), m)
 		titleField, _ = defs2.Field("Title")
 		descField, _  = defs2.Field("Description")
 	)

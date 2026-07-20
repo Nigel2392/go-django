@@ -236,7 +236,7 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 	}
 
 	var col = &expr.TableColumn{}
-	if ve, ok := field.(VirtualField); ok && inf.Model != nil {
+	if ve, ok := field.(VirtualField); ok {
 		var rawSql, a = ve.SQL(f.Chain, inf)
 		if rawSql == "" {
 			return nil, true, false

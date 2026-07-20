@@ -82,7 +82,7 @@ func (f *proxyField) CanMigrate() bool {
 }
 
 func (f *proxyField) GetSourcePrimary() attrs.FieldDefinition {
-	var primary = f.model.internals.defs.Primary()
+	var primary = f.model.internals.Defs.Primary()
 	if primary == nil {
 		panic(fmt.Errorf(
 			"ProxyFieldConfig.Proxy: %T (%s) does not have a primary field defined (%T)",
@@ -137,7 +137,7 @@ func (f *proxyField) IsProxy() bool {
 	return true
 }
 
-func (f *proxyField) GenerateTargetClause(qs *queries.QuerySet[attrs.Definer], inter *queries.QuerySetInternals, lhs queries.ClauseTarget, rhs queries.ClauseTarget) queries.JoinDef {
+func (f *proxyField) GenerateTargetClause(qs expr.FieldResolver, lhs queries.ClauseTarget, rhs queries.ClauseTarget) queries.JoinDef {
 	if f.cnf == nil || f.cnf.Proxy == nil {
 		panic("ProxyFieldConfig.Proxy must not be nil")
 	}
@@ -199,7 +199,7 @@ func (f *proxyField) Save(ctx context.Context, parent attrs.Definer) error {
 
 	f.setupRelatedFields()
 
-	var proxyDefs = proxy.FieldDefs()
+	var proxyDefs = attrs.Define(ctx, proxy)
 	var (
 		targetIDFieldDef = f.LinkedPrimaryField()
 		targetIDField, _ = proxyDefs.Field(
@@ -211,7 +211,7 @@ func (f *proxyField) Save(ctx context.Context, parent attrs.Definer) error {
 		)
 	)
 
-	var parentDefs = parent.FieldDefs()
+	var parentDefs = attrs.Define(ctx, parent)
 	var parentPrimary = parentDefs.Primary()
 
 	if err := targetIDField.SetValue(parentPrimary.GetValue(), true); err != nil {

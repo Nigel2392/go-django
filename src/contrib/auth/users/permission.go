@@ -1,6 +1,8 @@
 package users
 
 import (
+	"context"
+
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -17,7 +19,7 @@ func (p *Permission) String() string {
 	return p.Name
 }
 
-func (p *Permission) FieldDefs() attrs.Definitions {
+func (p *Permission) FieldDefs(ctx context.Context) attrs.Definitions {
 	var fields = []attrs.Field{
 		attrs.NewField(p, "ID", &attrs.FieldConfig{
 			ReadOnly: true,
@@ -35,5 +37,5 @@ func (p *Permission) FieldDefs() attrs.Definitions {
 			MaxLength: 1024,
 		}),
 	}
-	return p.Model.Define(p, fields)
+	return p.Model.Define(ctx, p, fields)
 }

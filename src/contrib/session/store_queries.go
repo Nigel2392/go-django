@@ -29,8 +29,8 @@ type Session struct {
 	Expiry int64 // Use int64 to store Unix timestamp in nanoseconds
 }
 
-func (s *Session) FieldDefs() attrs.Definitions {
-	return attrs.Define(s,
+func (s *Session) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, s,
 		attrs.Unbound("Token", &attrs.FieldConfig{
 			Primary:   true,
 			Null:      false,

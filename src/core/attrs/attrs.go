@@ -96,7 +96,7 @@ type CanCreateObject[T Definer] interface {
 	// This might be useful for creating new objects
 	// when the embedder needs information from the source model,
 	// such as the content type or other attributes.
-	CreateObject(source T) T
+	CreateObject(ctx context.Context, source T) T
 }
 
 // A model can implement the CanSetup interface
@@ -104,7 +104,7 @@ type CanCreateObject[T Definer] interface {
 //
 // This is called when the model is created with the [NewObject] function.
 type CanSetup interface {
-	Setup()
+	Setup(ctx context.Context)
 }
 
 // Keys of attributes defined with the `Attrs()` method on fields.
@@ -164,7 +164,7 @@ const (
 // FieldDefs retrieves the field definitions for the model.
 type Definer interface {
 	// Retrieves the field definitions for the model.
-	FieldDefs() Definitions
+	FieldDefs(context.Context) Definitions
 }
 
 // FieldUnpackerMixin is an interface for model mixins that can add fields to a model.
@@ -509,6 +509,8 @@ type Definitions interface {
 	staticDefinitions[Field]
 
 	CanSignalChanged
+
+	Context() context.Context
 
 	// Set sets the value of the field with the given name (or panics if not found).
 	Set(name string, value interface{}) error

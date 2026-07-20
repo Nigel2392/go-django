@@ -1,6 +1,7 @@
 package queries_test
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 	"testing"
@@ -67,10 +68,14 @@ var tests = []relationTest{
 	},
 }
 
+func define(obj attrs.Definer) attrs.Definitions {
+	return attrs.Define(context.Background(), obj)
+}
+
 func TestRegisterModelRelations(t *testing.T) {
 
 	for _, test := range tests {
-		test.fieldDefs = test.model.FieldDefs()
+		test.fieldDefs = define(test.model)
 		t.Run(test.name, func(t *testing.T) {
 			attrs.RegisterModel(test.model)
 			meta := attrs.GetModelMeta(test.model)
@@ -191,7 +196,7 @@ func TestReverseRelations(t *testing.T) {
 	}
 
 	var u = &User{}
-	var defs = u.FieldDefs()
+	var defs = define(u)
 	var _, ok = defs.Field("Todo")
 	if !ok {
 		t.Errorf("expected field Todo, got nil")
@@ -224,7 +229,7 @@ func TestReverseRelations(t *testing.T) {
 	}
 
 	// Todo.*
-	todoSet, ok := dbTodo.Object.(*User).FieldDefs().Field("Todo")
+	todoSet, ok := define(dbTodo.Object.(*User)).Field("Todo")
 	if !ok {
 		t.Errorf("expected todoSet field, got nil")
 		return
@@ -301,7 +306,7 @@ func TestReverseRelationsNested(t *testing.T) {
 	}
 
 	var u = &User{}
-	var defs = u.FieldDefs()
+	var defs = define(u)
 	var _, ok = defs.Field("Todo")
 	if !ok {
 		t.Errorf("expected field Todo, got nil")
@@ -339,7 +344,7 @@ func TestReverseRelationsNested(t *testing.T) {
 	}
 
 	// Todo.*
-	todoSet, ok := dbTodo.Object.(*User).FieldDefs().Field("Todo")
+	todoSet, ok := define(dbTodo.Object.(*User)).Field("Todo")
 	if !ok {
 		t.Errorf("expected todoSet field, got nil")
 		return
@@ -393,7 +398,7 @@ func TestReverseRelationsNested(t *testing.T) {
 	}
 
 	// Todo.User.Todo.*
-	todoSet, ok = val.User.FieldDefs().Field("Todo")
+	todoSet, ok = define(val.User).Field("Todo")
 	if !ok {
 		t.Errorf("expected user.todoSet field, got nil")
 		return
@@ -446,7 +451,7 @@ func TestReverseRelationsNested(t *testing.T) {
 		return
 	}
 
-	todoSet, ok = val.User.FieldDefs().Field("Todo")
+	todoSet, ok = define(val.User).Field("Todo")
 	if !ok {
 		t.Errorf("expected user.todoSet field, got nil")
 		return
@@ -559,7 +564,7 @@ func TestOneToOneWithThroughReverse(t *testing.T) {
 		t.Errorf("expected name %q, got %q", target.Name, obj.Name)
 	}
 
-	reverseVal, ok := obj.FieldDefs().Field("TargetReverse")
+	reverseVal, ok := define(obj).Field("TargetReverse")
 	if !ok || reverseVal == nil {
 		t.Fatalf("expected reverse field, got nil")
 	}
@@ -624,7 +629,7 @@ func TestOneToOneWithThroughReverseIntoForward(t *testing.T) {
 		t.Errorf("expected name %q, got %q", target.Name, obj.Name)
 	}
 
-	reverseVal, ok := obj.FieldDefs().Field("TargetReverse")
+	reverseVal, ok := define(obj).Field("TargetReverse")
 	if !ok || reverseVal == nil {
 		t.Fatalf("expected reverse field, got nil")
 	}
@@ -690,7 +695,7 @@ func TestOneToOneWithThroughNested(t *testing.T) {
 
 	obj := result.Object.(*OneToOneWithThrough_Target)
 
-	reverse, ok := obj.FieldDefs().Field("TargetReverse")
+	reverse, ok := define(obj).Field("TargetReverse")
 	if !ok || reverse == nil {
 		t.Fatalf("expected Reverse relation")
 	}
@@ -747,7 +752,7 @@ func TestOneToOneWithThroughDoubleNested(t *testing.T) {
 
 	obj := result.Object.(*OneToOneWithThrough_Target)
 
-	var objDefs = obj.FieldDefs()
+	var objDefs = define(obj)
 	reverse, ok := objDefs.Field("TargetReverse")
 	if !ok || reverse == nil {
 		t.Fatalf("expected Reverse relation")
@@ -763,7 +768,7 @@ func TestOneToOneWithThroughDoubleNested(t *testing.T) {
 		t.Errorf("expected reloaded target ID %d, got %v", target.ID, relatedTarget)
 	}
 
-	relatedReverse, ok := relatedTarget.Object.FieldDefs().Field("TargetReverse")
+	relatedReverse, ok := define(relatedTarget.Object).Field("TargetReverse")
 	if !ok || relatedReverse == nil {
 		t.Fatalf("expected Reverse relation")
 		return

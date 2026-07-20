@@ -31,7 +31,10 @@ func (m *modelMeta) Model() Definer {
 
 func (m *modelMeta) Definitions() StaticDefinitions {
 	if m.definitions == nil {
-		m.definitions = newStaticDefinitions(NewObject[Definer](m.model))
+		var registerContext = ContextWithFlags(
+			context.Background(), CtxFlagRegistering, true,
+		)
+		m.definitions = newStaticDefinitions(NewObject[Definer](registerContext, m.model))
 	}
 	return m.definitions
 }
@@ -55,11 +58,11 @@ func (m *modelMeta) ContentType() contenttypes.ContentType {
 }
 
 func (m *modelMeta) ForwardMap() *orderedmap.OrderedMap[string, Relation] {
-	return m.forward.Copy()
+	return m.forward
 }
 
 func (m *modelMeta) ReverseMap() *orderedmap.OrderedMap[string, Relation] {
-	return m.reverse.Copy()
+	return m.reverse
 }
 
 func (m *modelMeta) Storage(key string) (any, bool) {
@@ -112,6 +115,7 @@ func getRelatedName(f Field, default_ string) string {
 }
 
 func registerReverseRelation(
+	registerCtx context.Context,
 	fromModel Definer,
 	fromField Field,
 	forward Relation,
@@ -121,7 +125,7 @@ func registerReverseRelation(
 	// Create a new instance of the target target model
 	var targetModel = forward.Model()
 	var targetType = reflect.TypeOf(targetModel)
-	targetModel = NewObject[Definer](targetType.Elem())
+	targetModel = NewObject[Definer](registerCtx, targetType.Elem())
 
 	// Step 2: Get or init ModelMeta for the target
 	meta, ok := modelReg[targetType]
@@ -210,15 +214,18 @@ func RegisterModel(model Definer) {
 
 	// set the model in the registry early - reverse relations may need it
 	// if the model is self-referential (e.g. a tree structure)
+	var registerContext = ContextWithFlags(
+		context.Background(), CtxFlagRegistering, true,
+	)
 	var meta = &modelMeta{
-		model:   NewObject[Definer](model),
+		model:   NewObject[Definer](registerContext, model),
 		forward: orderedmap.NewOrderedMap[string, Relation](),
 		reverse: orderedmap.NewOrderedMap[string, Relation](),
 		stored:  orderedmap.NewOrderedMap[string, any](),
 	}
 	modelReg[t] = meta
 
-	var defs = meta.model.FieldDefs()
+	var defs = meta.model.FieldDefs(registerContext)
 	if defs == nil {
 		panic(fmt.Errorf("error getting model definitions: model %T has no field definitions", model))
 	}
@@ -321,7 +328,7 @@ func RegisterModel(model Definer) {
 		var canReverse, ok = field.(CanReverseRelate)
 		if !ok || canReverse.AllowReverseRelation() {
 			registerReverseRelation(
-				model, field, rel,
+				registerContext, model, field, rel,
 			)
 		}
 	}

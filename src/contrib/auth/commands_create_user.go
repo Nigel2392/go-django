@@ -105,6 +105,6 @@ var command_create_user = &command.Cmd[createUserStorage]{
 		u.IsActive = !stored.inactive
 
 		var ctx = context.Background()
-		return models.Setup(u).Create(ctx)
+		return models.Setup(ctx, u).Create(ctx)
 	},
 }

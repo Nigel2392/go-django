@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"context"
 	"fmt"
 	"iter"
 	"reflect"
@@ -83,9 +84,9 @@ type seenObject struct {
 func newRows[T attrs.Definer](qs *QuerySet[T], forEach func(attrs.Definer) error) (*rows[T], error) {
 	var seen = make(map[string]struct{}, 0)
 	var fields = qs.internals.Fields
-	var model = attrs.NewObject[T](qs.internals.Model.Object)
-	var scannables = getScannableFields(
-		fields, model,
+	var model = attrs.NewObject[T](qs.context, qs.internals.Model.Object)
+	var _, scannables = getScannableFields(
+		qs.context, fields, model, nil, nil,
 	)
 
 	var r = &rows[T]{
@@ -173,7 +174,7 @@ func (r *rows[T]) useAutoKey(hasObj, hasThrough bool) bool {
 // it has to be called before any relations are added - technically
 // root objects can be added inside of the [addRelationChain] method,
 // but this would lose any annotations that are associated with the root object.
-func (r *rows[T]) addRoot(uniqueValue any, obj attrs.Definer, through attrs.Definer, annotations map[string]any) *rootObject {
+func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Definer, through attrs.Definer, annotations map[string]any) *rootObject {
 	if uniqueValue == nil {
 		panic("cannot add root object with nil primary key")
 	}
@@ -187,7 +188,7 @@ func (r *rows[T]) addRoot(uniqueValue any, obj attrs.Definer, through attrs.Defi
 	var defs attrs.Definitions
 	// if obj != nil { //&& !r.hasMultiRelations {
 	if r.useAutoKey(obj != nil, through != nil) {
-		defs = obj.FieldDefs()
+		defs = attrs.Define(ctx, obj)
 		prim := defs.Primary()
 		if prim == nil {
 			pk = uniqueValue
@@ -200,6 +201,10 @@ func (r *rows[T]) addRoot(uniqueValue any, obj attrs.Definer, through attrs.Defi
 			// Convert []byte to string for easier comparison and usage as a key
 			rVal = rVal.Convert(reflect.TypeOf(""))
 			pk = rVal.Interface()
+		}
+
+		if !rVal.Comparable() && rVal.Type().Implements(_stringerType) {
+			pk = rVal.Interface().(_stringer).String()
 		}
 
 		r.rootMapping[pk] = uniqueValue
@@ -241,7 +246,7 @@ func (r *rows[T]) addRoot(uniqueValue any, obj attrs.Definer, through attrs.Defi
 //
 // the root object has to be added with [addRoot] before this method is called,
 // otherwise it will panic.
-func (r *rows[T]) addRelationChain(scannable *scannableField, chain []chainPart) {
+func (r *rows[T]) addRelationChain(ctx context.Context, scannable *scannableField, chain []chainPart) {
 
 	var root = chain[0]
 	var obj, ok = r.objects.Get(root.uniqueValue)
@@ -286,7 +291,7 @@ func (r *rows[T]) addRelationChain(scannable *scannableField, chain []chainPart)
 
 			child = &object{
 				uniqueValue: part.uniqueValue,
-				fieldDefs:   part.object.FieldDefs(),
+				fieldDefs:   attrs.Define(ctx, part.object),
 				obj:         part.object,
 				relations:   make(map[string]*objectRelation),
 				through:     through,
@@ -461,7 +466,7 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 
 	subQueryset.internals.Limit = 0 // preload all objects
 	subQueryset.internals.Offset = 0
-	var preloadObjects, err = subQueryset.All()
+	var count, preloadObjects, err = subQueryset.IterAll()
 	if err != nil {
 		return errors.Wrapf(
 			err, "failed to preload %s for %T", preload.Path, r.qs.internals.Model.Object,
@@ -469,8 +474,7 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 	}
 
 	var result = &PreloadResults{
-		rowsRaw: preloadObjects,
-		rowsMap: make(map[any][]*Row[attrs.Definer], len(preloadObjects)),
+		rowsMap: make(map[any][]*Row[attrs.Definer], count),
 	}
 
 	var seenM, ok = r.seen[preload.Path]
@@ -482,9 +486,13 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 		r.seen[preload.Path] = seenM
 	}
 
-	for _, row := range preloadObjects {
+	for row, err := range preloadObjects {
+		if err != nil {
+			return err
+		}
+
 		var (
-			rowDefs    = row.Object.FieldDefs()
+			rowDefs    = attrs.Define(context.Background(), row.Object)
 			parentObj  *object
 			parentOk   bool
 			primaryVal any
@@ -532,7 +540,7 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 			parentObj, parentOk = seenObj.objects[sourceVal]
 
 		default:
-			var defs = row.Through.FieldDefs()
+			var defs = attrs.Define(context.Background(), row.Through)
 			var sourceField, _ = defs.Field(relThrough.SourceField())
 			sourceVal, err = sourceField.Value()
 			if err != nil {
@@ -615,7 +623,7 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 	return nil
 }
 
-func (r *rows[T]) compile() (count int, rowIter iter.Seq2[*Row[T], error], err error) {
+func (r *rows[T]) compile(ctx context.Context) (count int, rowIter iter.Seq2[*Row[T], error], err error) {
 
 	if r.qs.internals.Preload != nil {
 		for _, preload := range r.qs.internals.Preload.Preloads {
@@ -677,7 +685,7 @@ func (r *rows[T]) compile() (count int, rowIter iter.Seq2[*Row[T], error], err e
 			}
 
 			// aways set the related objects on the parent object
-			if err := setRelatedObjects(relName, rel.relTyp, obj.obj, relatedObjects); err != nil {
+			if err := setRelatedObjects(ctx, relName, rel.relTyp, obj.obj, relatedObjects); err != nil {
 				return fmt.Errorf("failed to set related objects for relation %q on object %T: %w", relName, obj.obj, err)
 			}
 		}
@@ -762,13 +770,13 @@ type chainPart struct {
 //
 // The [getScannableFields] function builds this chain of *scannableField objects,
 // which represent the fields that can be scanned from the database.
-func (r *rows[T]) buildChainParts(actualField *scannableField) []chainPart {
+func (r *rows[T]) buildChainParts(ctx context.Context, actualField *scannableField) []chainPart {
 	// Get the stack of fields from target to parent
 	var stack = make([]chainPart, 0)
 	for cur := actualField; cur != nil; cur = cur.srcField {
 		var (
 			inst    = cur.object
-			defs    = inst.FieldDefs()
+			defs    = attrs.Define(ctx, inst)
 			primary = defs.Primary()
 		)
 
@@ -781,7 +789,7 @@ func (r *rows[T]) buildChainParts(actualField *scannableField) []chainPart {
 		}
 		if primaryVal == nil || fields.IsZero(primaryVal) {
 			var err error
-			pk, err = GetUniqueKey(defs)
+			pk, err = GetUniqueKey(ctx, defs)
 			if err != nil && !errors.Is(err, errors.NoUniqueKey) {
 				panic(fmt.Sprintf("error getting unique key for field %s: %v", cur.chainKey, err))
 			}
@@ -848,7 +856,7 @@ func (r *rows[T]) buildChainParts(actualField *scannableField) []chainPart {
 	//
 	// this logic is kept in line in [QuerySet.All] before generating the root row.
 	if len(stack) > 0 && stack[0].through != nil {
-		var uq, err = GetUniqueKey(stack[0].through)
+		var uq, err = GetUniqueKey(ctx, stack[0].through)
 		if err != nil {
 			panic(fmt.Sprintf("error getting unique key for through model %T: %v", stack[0].through, err))
 		}

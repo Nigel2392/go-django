@@ -68,7 +68,7 @@ func (e *Function) Clone() Expression {
 }
 
 func (e *Function) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil || e.used {
+	if e.used {
 		return e
 	}
 

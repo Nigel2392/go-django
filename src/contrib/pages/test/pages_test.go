@@ -80,8 +80,8 @@ func (t *TestPage) ID() int64 {
 	return t.Identifier
 }
 
-func (t *TestPage) FieldDefs() attrs.Definitions {
-	return attrs.Define(t,
+func (t *TestPage) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, t,
 		attrs.Unbound("Identifier", &attrs.FieldConfig{
 			Primary: true,
 			Column:  "id",

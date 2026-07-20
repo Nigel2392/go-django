@@ -187,7 +187,7 @@ func (p *pageRegistry) SpecificInstance(ctx context.Context, node *PageNode, wit
 	}
 
 	if definition.GetForID == nil {
-		var newObject = attrs.NewObject[Page](definition.ContentObject)
+		var newObject = attrs.NewObject[Page](ctx, definition.ContentObject)
 		var meta = attrs.GetModelMeta(newObject)
 		var defs = meta.Definitions()
 		var querySet = queries.GetQuerySet(newObject).

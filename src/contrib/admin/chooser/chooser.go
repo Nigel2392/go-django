@@ -246,7 +246,7 @@ func (c *ChooserDefinition[T]) GetPreviewString(ctx context.Context, instance at
 	if previewString == "" {
 		previewString = fmt.Sprintf(
 			"%T(%v)",
-			instance, attrs.PrimaryKey(instance),
+			instance, attrs.PrimaryKey(ctx, instance),
 		)
 	}
 
@@ -261,7 +261,7 @@ func (c *ChooserDefinition[T]) GetExtraData(ctx context.Context, instance attrs.
 }
 
 func (c *ChooserDefinition[T]) GetModel() attrs.Definer {
-	return attrs.NewObject[attrs.Definer](c.Model)
+	return attrs.NewObject[attrs.Definer](context.Background(), c.Model)
 }
 
 func (c *ChooserDefinition[T]) CanCreate() bool {

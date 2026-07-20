@@ -736,8 +736,8 @@ func addPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefiniti
 
 	var (
 		cType      = cTypeDef.ContentType()
-		page       = attrs.NewObject[Page](cType)
-		fieldDefs  = page.FieldDefs()
+		page       = attrs.NewObject[Page](r.Context(), cType)
+		fieldDefs  = attrs.Define(r.Context(), page)
 		definition = DefinitionForObject(page)
 		panels     []admin.Panel
 	)
@@ -1118,7 +1118,7 @@ func editPageHandler(w http.ResponseWriter, r *http.Request, a *admin.AppDefinit
 		},
 		GetInitialFn: func(req *http.Request) map[string]interface{} {
 			var initial = make(map[string]interface{})
-			for _, field := range instance.FieldDefs().Fields() {
+			for _, field := range attrs.Define(r.Context(), instance).Fields() {
 				initial[field.Name()] = field.GetValue()
 			}
 			return initial

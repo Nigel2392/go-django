@@ -1,6 +1,7 @@
 package attrs_test
 
 import (
+	"context"
 	"reflect"
 	"testing"
 
@@ -15,8 +16,8 @@ type LazyRelationTest struct {
 	Targets []LazyRelationTestTarget
 }
 
-func (l *LazyRelationTest) FieldDefs() attrs.Definitions {
-	return attrs.Define(l,
+func (l *LazyRelationTest) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, l,
 		attrs.Unbound("ID", &attrs.FieldConfig{
 			Primary: true,
 			Column:  "id",
@@ -42,8 +43,8 @@ type LazyRelationTestTarget struct {
 	Name string
 }
 
-func (l *LazyRelationTestTarget) FieldDefs() attrs.Definitions {
-	return attrs.Define(l,
+func (l *LazyRelationTestTarget) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, l,
 		attrs.Unbound("ID", &attrs.FieldConfig{
 			Primary: true,
 			Column:  "id",
@@ -84,7 +85,7 @@ func TestDeferredRelation(t *testing.T) {
 	}
 
 	var test = &LazyRelationTest{}
-	var defs = test.FieldDefs()
+	var defs = define(test)
 	var field, _ = defs.Field("Targets")
 	if field == nil {
 		t.Fatal("Expected field 'Targets' to be defined")

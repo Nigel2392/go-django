@@ -9,6 +9,8 @@ import (
 	"github.com/elliotchance/orderedmap/v2"
 )
 
+var _ QueryCompiler = (*CTEQueryCompiler)(nil)
+
 type JoinOption[T attrs.Definer] func(*CTEQuerySet[T], *JoinDef)
 
 func JoinOptionTargetField[T attrs.Definer](source, target string) JoinOption[T] {
@@ -82,16 +84,18 @@ type CTEQueryCompiler struct {
 // BuildSelectQuery builds a select query with the given parameters.
 func (c *CTEQueryCompiler) BuildSelectQuery(
 	ctx context.Context,
-	qs *CTEQuerySet[attrs.Definer],
+	resolver expr.FieldResolver,
 	internals *QuerySetInternals,
 ) CompiledRowsQuery[[][]interface{}] {
 
+	qs := resolver.(*CTEQuerySet[attrs.Definer])
+
 	if qs.internals.ctes == nil {
-		return c.QueryCompiler.BuildSelectQuery(ctx, qs.Base(), internals)
+		return c.QueryCompiler.BuildSelectQuery(ctx, qs, internals)
 	}
 
 	var (
-		exprInfo = c.QueryCompiler.ExpressionInfo(qs.Base(), internals)
+		exprInfo = c.QueryCompiler.ExpressionInfo(qs)
 		sb       = &strings.Builder{}
 		args     = make([]any, 0, 10)
 	)
@@ -126,7 +130,7 @@ func (c *CTEQueryCompiler) BuildSelectQuery(
 	args = append(args, query.Args()...)
 
 	return &QueryRowsObject[[][]interface{}]{
-		QueryInfo: &QueryInformation{
+		QueryInfo: &Query{
 			Stmt:    sb.String(),
 			Params:  args,
 			Object:  qs.Base().internals.Model.Object,

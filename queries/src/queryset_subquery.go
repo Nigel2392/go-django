@@ -77,7 +77,7 @@ func (s *subqueryExpr[T, QS]) Clone() expr.Expression {
 }
 
 func (s *subqueryExpr[T, QS]) Resolve(inf *expr.ExpressionInfo) expr.Expression {
-	if inf.Model == nil || s.used {
+	if s.used {
 		return s
 	}
 

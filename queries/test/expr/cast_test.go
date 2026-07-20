@@ -79,7 +79,7 @@ func TestCastDateTimeGeneration(t *testing.T) {
 
 func TestCastFieldName(t *testing.T) {
 	c := expr.CastString(expr.Field("Age"), 255)
-	if c.(expr.NamedExpression).FieldName() != "Age" {
-		t.Errorf("Expected Age, got %s", c.(expr.NamedExpression).FieldName())
+	if c.FieldName() != "Age" {
+		t.Errorf("Expected Age, got %s", c.FieldName())
 	}
 }

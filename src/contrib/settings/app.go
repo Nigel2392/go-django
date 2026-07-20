@@ -193,14 +193,14 @@ func NewAppConfig() django.AppConfig {
 				return errors.Wrap(err, "failed to get settings row")
 			}
 
-			var settings = models.Setup(&pages.Site{
+			var settings = models.Setup(qs.Context(), &pages.Site{
 				Name:    "Default Site",
 				Domain:  "localhost",
 				Port:    80,
 				Default: true,
 			})
 
-			return settings.Save(context.Background())
+			return settings.Save(qs.Context())
 		}
 
 		return nil

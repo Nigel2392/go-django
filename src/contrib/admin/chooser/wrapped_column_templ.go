@@ -57,9 +57,9 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request, form *list.ListForm[T
 			return templ_7745c5c3_Err
 		}
 		var templ_7745c5c3_Var2 string
-		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.ResolveAttributeValue(attrs.ToString(attrs.PrimaryKey(c.Instance)))
+		templ_7745c5c3_Var2, templ_7745c5c3_Err = templ.ResolveAttributeValue(attrs.ToString(attrs.PrimaryKey(r.Context(), c.Instance)))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 122}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 135}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var2)
 		if templ_7745c5c3_Err != nil {
@@ -72,7 +72,7 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request, form *list.ListForm[T
 		var templ_7745c5c3_Var3 string
 		templ_7745c5c3_Var3, templ_7745c5c3_Err = templ.ResolveAttributeValue(c._Definition.GetPreviewString(r.Context(), c.Instance))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 203}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 216}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var3)
 		if templ_7745c5c3_Err != nil {
@@ -85,7 +85,7 @@ func (c *wrappedColumnGroup[T]) Component(r *http.Request, form *list.ListForm[T
 		var templ_7745c5c3_Var4 string
 		templ_7745c5c3_Var4, templ_7745c5c3_Err = templ.ResolveAttributeValue(string(dataBytes))
 		if templ_7745c5c3_Err != nil {
-			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 243}
+			return templ.Error{Err: templ_7745c5c3_Err, FileName: `src/contrib/admin/chooser/wrapped_column.templ`, Line: 28, Col: 256}
 		}
 		_, templ_7745c5c3_Err = templ_7745c5c3_Buffer.WriteString(templ_7745c5c3_Var4)
 		if templ_7745c5c3_Err != nil {

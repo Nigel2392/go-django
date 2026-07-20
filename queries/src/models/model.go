@@ -13,6 +13,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/fields"
+	"github.com/Nigel2392/go-django/queries/src/models/state"
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
@@ -38,16 +39,6 @@ var (
 	_ attrs.CanCreateObject[attrs.Definer] = &Model{}
 )
 
-type modelOptions struct {
-	// base model information, used to  extract the model / proxy chain
-	base   *BaseModelInfo
-	object *reflect.Value
-	defs   *attrs.ObjectDefinitions
-	meta   attrs.ModelMeta
-	state  *ModelState
-	fromDB bool
-}
-
 type proxyModel struct {
 	proxy  *BaseModelProxy
 	object *Model
@@ -65,7 +56,7 @@ type Model struct {
 	// internals of the model, used to store
 	// the model's base information, object, definitions, etc.
 	// this is set to nil if the model is not setup yet
-	internals *modelOptions
+	internals *ModelOptions
 
 	// changed is a signal which gets emitted when the
 	// model is changed (e.g. fields are set, saved, etc.)
@@ -100,7 +91,7 @@ type Model struct {
 // as a model, this method should be called to ensure the model is properly initialized.
 //
 // In short, this must be called if the model is not created using [attrs.NewObject].
-func Setup[T attrs.Definer](def T) T {
+func Setup[T attrs.Definer](ctx context.Context, def T) T {
 	var model, err = ExtractModel(def)
 	assert.True(
 		err == nil,
@@ -111,7 +102,7 @@ func Setup[T attrs.Definer](def T) T {
 		"model is nil, cannot setup model for definer %T", def,
 	)
 
-	err = model.Setup(def)
+	err = model.Setup(ctx, def)
 	assert.True(
 		err == nil,
 		"failed to setup model %T: %v", def, err,
@@ -126,22 +117,22 @@ func (m *Model) checkValid() {
 	assert.False(m.internals == nil,
 		fmt.Errorf("model internals are not initialized: %w", ErrModelInitialized),
 	)
-	assert.False(m.internals.base == nil,
+	assert.False(m.internals.Base == nil,
 		fmt.Errorf("model base information is not set: %w", ErrModelInitialized),
 	)
-	assert.False(m.internals.object == nil,
+	assert.False(m.internals.ReflectValue == nil,
 		fmt.Errorf("model object is not set: %w", ErrModelInitialized),
 	)
 }
 
 func (m *Model) setupInitialState() {
-	if m.internals.defs == nil {
+	if m.internals.Defs == nil {
 		// if the model definitions are not set, we cannot setup the state
 		// a nil state assumes that the model is always changed.
 		return
 	}
 
-	m.internals.state = initState(m)
+	m.internals.State = state.New(m.internals.Defs)
 }
 
 // onChange is a callback that is called when the model changes.
@@ -157,13 +148,13 @@ func (m *Model) onChange(s signals.Signal[ModelChangeSignal], ms ModelChangeSign
 		))
 	}
 
-	if m.internals.state == nil {
+	if m.internals.State == nil {
 		m.setupInitialState()
 	}
 
 	// fmt.Printf(
 	// "[onChange] Model %T received signal %s for field %s with flags %v (%v)\n",
-	// m.internals.object.Interface(),
+	// m.internals.ReflectValue.Interface(),
 	// s.Name(), ms.Field.Name(), ms.Flags, ms.Field.GetValue(),
 	// )
 
@@ -173,29 +164,29 @@ func (m *Model) onChange(s signals.Signal[ModelChangeSignal], ms ModelChangeSign
 		m.setupInitialState()
 		// fmt.Printf(
 		// 	"Proxy model %T has been reset or setup, initial state is now set\n",
-		// 	m.internals.object.Interface(),
+		// 	m.internals.ReflectValue.Interface(),
 		// )
 
 	case ms.Flags.True(FlagProxyChanged):
-		m.internals.state.change(ms.StructField.Name)
+		m.internals.State.Mark(ms.StructField.Name)
 
 		// fmt.Printf(
 		// 	"Model %T proxy field %s changed to %v\n",
-		// 	m.internals.object.Interface(),
-		// 	fieldName, ms.Model.internals.object.Interface(),
+		// 	m.internals.ReflectValue.Interface(),
+		// 	fieldName, ms.Model.internals.ReflectValue.Interface(),
 		// )
 
 	case ms.Flags.True(FlagFieldChanged):
-		m.internals.state.change(ms.Field.Name())
+		m.internals.State.Mark(ms.Field.Name())
 
 	// fmt.Printf(
 	// 	"Model %T field %s changed to %v\n",
-	// 	m.internals.object.Interface(),
+	// 	m.internals.ReflectValue.Interface(),
 	// 	ms.Field.Name(), ms.Field.GetValue(),
 	// )
 
 	case ms.Flags.True(FlagFieldReset):
-		m.internals.state.reset(ms.Field.Name())
+		m.internals.State.ResetFieldState(ms.Field.Name())
 
 	default:
 		// if the signal is not for a field change, we can skip it
@@ -218,15 +209,23 @@ func (m *Model) SignalChange(fa attrs.Field, value interface{}) {
 
 	//	fmt.Printf(
 	//		"[SignalChange] Model %T field %s changed to %v\n",
-	//		m.internals.object.Interface(),
+	//		m.internals.ReflectValue.Interface(),
 	//		fa.Name(), value,
 	//	)
+
+	if attrs.ContextHasFlag(m.internals.Defs.Context(), attrs.CtxFlagDeferSignals) {
+		return
+	}
+
+	//	if !m.internals.Flags.Is(flagFromDB) {
+	//		return
+	//	}
 
 	m.changed.Send(ModelChangeSignal{
 		Model:  m,
 		Field:  fa,
 		Flags:  FlagFieldChanged,
-		Object: m.internals.object.Interface().(attrs.Definer),
+		Object: m.internals.ReflectValue.Interface().(attrs.Definer),
 	})
 }
 
@@ -238,7 +237,7 @@ func (m *Model) SignalReset(fa attrs.Field) {
 		Model:  m,
 		Field:  fa,
 		Flags:  FlagFieldReset,
-		Object: m.internals.object.Interface().(attrs.Definer),
+		Object: m.internals.ReflectValue.Interface().(attrs.Definer),
 	})
 }
 
@@ -247,12 +246,12 @@ func (m *Model) SignalReset(fa attrs.Field) {
 // The state is initialized when the model is setup,
 // and it contains the initial values of the model's fields
 // as well as the changed fields.
-func (m *Model) State() *ModelState {
+func (m *Model) State() *state.ModelState {
 	m.checkValid()
-	if m.internals.state == nil {
+	if m.internals.State == nil {
 		m.setupInitialState()
 	}
-	return m.internals.state
+	return m.internals.State
 }
 
 // CreateObject creates a new object of the model type
@@ -266,7 +265,7 @@ func (m *Model) State() *ModelState {
 //
 // This method is automatically called by the
 // [attrs.NewObject] function when a new object is created.
-func (m *Model) CreateObject(object attrs.Definer) attrs.Definer {
+func (m *Model) CreateObject(ctx context.Context, object attrs.Definer) attrs.Definer {
 	if !attrs.IsModelRegistered(object) {
 		return nil
 	}
@@ -292,7 +291,7 @@ func (m *Model) CreateObject(object attrs.Definer) attrs.Definer {
 	)
 
 	var model = modelVal.Addr().Interface().(*Model)
-	if err := model.Setup(newObj.Interface().(attrs.Definer)); err != nil {
+	if err := model.Setup(ctx, newObj.Interface().(attrs.Definer)); err != nil {
 		return nil
 	}
 
@@ -322,7 +321,7 @@ func (m *Model) CreateObject(object attrs.Definer) attrs.Definer {
 	return newDefiner
 }
 
-func (m *Model) Setup(def attrs.Definer) error {
+func (m *Model) Setup(ctx context.Context, def attrs.Definer) error {
 	if def == nil {
 		return ErrObjectInvalid
 	}
@@ -358,6 +357,7 @@ func (m *Model) Setup(def attrs.Definer) error {
 
 	// Handle the model's proxy object if it exists.
 	var changedProxies, err = m.setupProxy(
+		ctx,
 		base,
 		defValue,
 	)
@@ -373,25 +373,25 @@ func (m *Model) Setup(def attrs.Definer) error {
 	// as some fields may be pointing to the old object
 	if len(changedProxies) > 0 && m.internals != nil {
 		sig.SignalInfo.Flags.set(FlagProxySetup)
-		m.internals.object = nil
-		m.internals.defs = nil
+		m.internals.ReflectValue = nil
+		m.internals.Defs = nil
 		m.changed = nil
 	}
 
 	// validate if it is the same object
 	// if not, clear the defs so any old fields pointing to the old
 	// object will be cleared
-	if (m.internals != nil && m.internals.defs != nil) && (m.internals.object != nil && m.internals.object.Pointer() != defValue.Pointer()) {
+	if (m.internals != nil && m.internals.Defs != nil) && (m.internals.ReflectValue != nil && m.internals.ReflectValue.Pointer() != defValue.Pointer()) {
 		sig.SignalInfo.Flags.set(FlagModelReset)
-		sig.SignalInfo.Data["old"] = m.internals.defs.Object
+		sig.SignalInfo.Data["old"] = m.internals.Defs.Object
 		sig.SignalInfo.Data["new"] = def
-		m.internals.defs = nil
-		m.internals.object = nil
+		m.internals.Defs = nil
+		m.internals.ReflectValue = nil
 		m.changed = nil
 	}
 
 	// no changes were made, pointers equal according to above check
-	if len(changedProxies) == 0 && m.internals != nil && m.internals.object != nil {
+	if len(changedProxies) == 0 && m.internals != nil && m.internals.ReflectValue != nil {
 		return nil
 	}
 
@@ -401,11 +401,11 @@ func (m *Model) Setup(def attrs.Definer) error {
 	}
 
 	// if the model is not setup, we need to initialize it
-	if m.internals == nil || m.internals.object == nil {
+	if m.internals == nil || m.internals.ReflectValue == nil {
 		sig.SignalInfo.Flags.set(FlagModelSetup)
-		m.internals = &modelOptions{
-			object: &defValue,
-			base:   base,
+		m.internals = &ModelOptions{
+			ReflectValue: &defValue,
+			Base:         base,
 		}
 	}
 
@@ -426,7 +426,7 @@ func (m *Model) Setup(def attrs.Definer) error {
 // It checks if the proxy field is set, and if so, it extracts the
 // embedded model from the proxy field and calls Setup on it with the
 // provided definer proxy object.
-func (m *Model) setupProxy(base *BaseModelInfo, parent reflect.Value) (changedList []string, err error) {
+func (m *Model) setupProxy(ctx context.Context, base *BaseModelInfo, parent reflect.Value) (changedList []string, err error) {
 	if len(base.proxies) == 0 {
 		return nil, nil
 	}
@@ -458,13 +458,13 @@ func (m *Model) setupProxy(base *BaseModelInfo, parent reflect.Value) (changedLi
 		var (
 			currentProxyIsNil = currentProxy.object == nil
 			nilDiff           = !newValueIsNil && currentProxyIsNil
-			ptrDiff           = (!currentProxyIsNil && currentProxy.object.internals.object.Pointer() != rVal.Pointer())
+			ptrDiff           = (!currentProxyIsNil && currentProxy.object.internals.ReflectValue.Pointer() != rVal.Pointer())
 			changed           = nilDiff || ptrDiff
 		)
 
 		// if the proxy is nil, we need to create a new one when specified
 		if newValueIsNil && (proxy.directField.Tag.Get("auto") == "true" || proxy.rootField.Tag.Get("auto") == "true") {
-			var newObj = attrs.NewObject[attrs.Definer](proxy.rootField.Type)
+			var newObj = attrs.NewObject[attrs.Definer](ctx, proxy.rootField.Type)
 			rVal.Set(reflect.ValueOf(newObj))
 			newValueIsNil = false
 			changed = true
@@ -479,7 +479,7 @@ func (m *Model) setupProxy(base *BaseModelInfo, parent reflect.Value) (changedLi
 		if rVal.IsNil() && changed && !currentProxyIsNil {
 			changed = true
 			currentProxy.object = nil
-			m.internals.defs = nil
+			m.internals.Defs = nil
 			changedList = append(changedList, proxy.rootField.Name)
 			continue
 		}
@@ -504,7 +504,7 @@ func (m *Model) setupProxy(base *BaseModelInfo, parent reflect.Value) (changedLi
 			}
 
 			// setup the proxy object
-			err = currentProxy.object.Setup(proxyObj)
+			err = currentProxy.object.Setup(ctx, proxyObj)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"failed to setup embedded model from proxy field %s: %w",
@@ -536,23 +536,30 @@ func (m *Model) setupProxy(base *BaseModelInfo, parent reflect.Value) (changedLi
 // Normally this would be done with [attrs.Define], the current model method
 // is a convenience method which also handles the setup of the model
 // as well as reverse relation setup.
-func (m *Model) Define(def attrs.Definer, flds ...any) *attrs.ObjectDefinitions {
-	if err := m.Setup(def); err != nil {
+func (m *Model) Define(ctx context.Context, def attrs.Definer, flds ...any) *attrs.ObjectDefinitions {
+	if err := m.Setup(ctx, def); err != nil {
 		panic("failed to setup model: " + err.Error())
 	}
 
 	m.checkValid()
 
-	if m.internals.defs == nil {
+	if m.internals.Defs == nil {
 
-		var tableName = m.internals.base.base.Tag.Get("table")
-		var _fieldsIter = attrs.UnpackFieldsFromArgsIter(def, flds...)
-		var _fields = make([]attrs.Field, 0, 2)
+		var tableName = m.internals.Base.base.Tag.Get("table")
 		var meta = attrs.GetModelMeta(def)
-		for head := meta.ReverseMap().Front(); head != nil; head = head.Next() {
+		var revMap = meta.ReverseMap()
+		var _fields = make([]attrs.Field, 0, revMap.Len()+len(m.internals.Base.proxies))
+		if cap(_fields) == 0 {
+			goto defineNow
+		}
+
+		if revMap.Len() == 0 {
+			goto addProxies
+		}
+
+		for head := revMap.Front(); head != nil; head = head.Next() {
 			var (
 				field attrs.Field
-
 				key   = head.Key
 				value = head.Value
 				typ   = value.Type()
@@ -605,7 +612,8 @@ func (m *Model) Define(def attrs.Definer, flds ...any) *attrs.ObjectDefinitions 
 			}
 		}
 
-		for _, proxy := range m.internals.base.proxies {
+	addProxies:
+		for _, proxy := range m.internals.Base.proxies {
 			var (
 				// create a new plain proxy object to use as target in the relation
 				field        attrs.Field
@@ -653,16 +661,17 @@ func (m *Model) Define(def attrs.Definer, flds ...any) *attrs.ObjectDefinitions 
 			_fields = append(_fields, field)
 		}
 
-		m.internals.defs = attrs.Define[attrs.Definer, any](
-			def, _fieldsIter, _fields,
+	defineNow:
+		m.internals.Defs = attrs.Make[attrs.Definer, any](
+			ctx, def, flds, _fields,
 		)
 
-		if tableName != "" && m.internals.defs.Table == "" {
-			m.internals.defs.Table = tableName
+		if tableName != "" && m.internals.Defs.Table == "" {
+			m.internals.Defs.Table = tableName
 		}
 	}
 
-	return m.internals.defs
+	return m.internals.Defs
 }
 
 // Defs returns the model's definitions.
@@ -670,7 +679,7 @@ func (m *Model) Define(def attrs.Definer, flds ...any) *attrs.ObjectDefinitions 
 // If the model is not properly initialized it will panic.
 func (m *Model) Defs() *attrs.ObjectDefinitions {
 	m.checkValid()
-	return m.internals.defs
+	return m.internals.Defs
 }
 
 // PK returns the primary key field of the model.
@@ -681,11 +690,11 @@ func (m *Model) Defs() *attrs.ObjectDefinitions {
 func (m *Model) PK() attrs.Field {
 	m.checkValid()
 
-	if m.internals.defs == nil {
+	if m.internals.Defs == nil {
 		return nil
 	}
 
-	return m.internals.defs.Primary()
+	return m.internals.Defs.Primary()
 }
 
 // Object returns the object of the model.
@@ -694,16 +703,7 @@ func (m *Model) PK() attrs.Field {
 // if the model is not properly set up, it will panic.
 func (m *Model) Object() attrs.Definer {
 	m.checkValid()
-	return m.internals.object.Interface().(attrs.Definer)
-}
-
-// ModelMeta returns the model's metadata.
-func (m *Model) ModelMeta() attrs.ModelMeta {
-	m.checkValid()
-	if m.internals.meta == nil {
-		m.internals.meta = attrs.GetModelMeta(*m.internals.object)
-	}
-	return m.internals.meta
+	return m.internals.ReflectValue.Interface().(attrs.Definer)
 }
 
 // Saved checks if the model is saved to the database.
@@ -712,17 +712,18 @@ func (m *Model) ModelMeta() attrs.ModelMeta {
 // If the model is initialized, it checks if the model was loaded from the database
 // or if the primary key field is set. If the primary key field is nil, it returns false.
 // If the primary key field has a value, it returns true.
+// Saved does NOT check if the model's *CURRENT* state has been saved to the database.
 func (m *Model) Saved() bool {
 	// if the model is not initialized, it is assumed
 	// that it is not saved, so we return false
 	if m.internals == nil ||
-		m.internals.base == nil ||
-		m.internals.object == nil {
+		m.internals.Base == nil ||
+		m.internals.ReflectValue == nil {
 		return false
 	}
 
 	// if the model was loaded from the database, it is saved
-	if m.internals.fromDB {
+	if m.internals.Flags.Is(flagFromDB) {
 		return true
 	}
 
@@ -752,7 +753,7 @@ func (m *Model) Saved() bool {
 func (m *Model) AfterQuery(ctx context.Context) error {
 	m.checkValid()
 	m.setupInitialState()
-	m.internals.fromDB = true
+	m.internals.Flags = m.internals.Flags.Set(flagFromDB, true)
 	return nil
 }
 
@@ -762,7 +763,7 @@ func (m *Model) AfterQuery(ctx context.Context) error {
 // such as setting the initial state of the model and marking it as loaded from the database.
 func (m *Model) AfterSave(ctx context.Context) error {
 	m.checkValid()
-	m.internals.fromDB = true
+	m.internals.Flags = m.internals.Flags.Set(flagFromDB, true)
 	return nil
 }
 
@@ -820,9 +821,10 @@ func (m *Model) Validate(ctx context.Context) error {
 // The object embedding the model can choose to implement the
 // [canSaveObject] interface to provide a custom save implementation.
 func (m *Model) Save(ctx context.Context) error {
-	if m.internals == nil || m.internals.object == nil {
+	if m.internals == nil || m.internals.ReflectValue == nil {
 		return errors.NotImplemented.WithCause(fmt.Errorf(
-			"cannot save model %w", ErrModelInitialized,
+			"cannot save model %w (internals==nil: %t, object==nil: %t)",
+			ErrModelInitialized, m.internals == nil, m.internals != nil && m.internals.ReflectValue == nil,
 		))
 	}
 
@@ -831,7 +833,7 @@ func (m *Model) Save(ctx context.Context) error {
 		config = cnf
 	}
 
-	var this = m.internals.object.Interface().(attrs.Definer)
+	var this = m.internals.ReflectValue.Interface().(attrs.Definer)
 	config.this = this
 
 	// This should be true, mostly - UNLESS a model
@@ -849,6 +851,7 @@ func (m *Model) Save(ctx context.Context) error {
 		"Model %T does not implement the `SaveableObject` interface, using default save method",
 		this,
 	)
+
 	return m.SaveObject(ctx, config)
 }
 
@@ -857,7 +860,7 @@ func (m *Model) Save(ctx context.Context) error {
 // It checks if the model is properly initialized and if the model's definitions
 // are set up. If the model is not initialized, it returns an error.
 func (m *Model) Create(ctx context.Context) error {
-	if m.internals == nil || m.internals.object == nil {
+	if m.internals == nil || m.internals.ReflectValue == nil {
 		return errors.NotImplemented.WithCause(fmt.Errorf(
 			"cannot save model %w", ErrModelInitialized,
 		))
@@ -868,7 +871,7 @@ func (m *Model) Create(ctx context.Context) error {
 		config = cnf
 	}
 
-	var this = m.internals.object.Interface().(attrs.Definer)
+	var this = m.internals.ReflectValue.Interface().(attrs.Definer)
 	config.this = this
 	config.ForceCreate = true
 
@@ -890,7 +893,7 @@ func (m *Model) Create(ctx context.Context) error {
 // It checks if the model is properly initialized and if the model's definitions
 // are set up. If the model is not initialized, it returns an error.
 func (m *Model) Update(ctx context.Context) error {
-	if m.internals == nil || m.internals.object == nil {
+	if m.internals == nil || m.internals.ReflectValue == nil {
 		return errors.NotImplemented.WithCause(fmt.Errorf(
 			"cannot save model %w", ErrModelInitialized,
 		))
@@ -901,7 +904,7 @@ func (m *Model) Update(ctx context.Context) error {
 		config = cnf
 	}
 
-	var this = m.internals.object.Interface().(attrs.Definer)
+	var this = m.internals.ReflectValue.Interface().(attrs.Definer)
 	config.this = this
 	config.ForceUpdate = true
 
@@ -920,13 +923,13 @@ func (m *Model) Update(ctx context.Context) error {
 
 // Delete deletes the model from the database.
 func (m *Model) Delete(ctx context.Context) error {
-	if m.internals == nil || m.internals.object == nil {
+	if m.internals == nil || m.internals.ReflectValue == nil {
 		return errors.NotImplemented.WithCause(fmt.Errorf(
 			"cannot delete model %w", ErrModelInitialized,
 		))
 	}
 
-	var this = m.internals.object.Interface().(attrs.Definer)
+	var this = m.internals.ReflectValue.Interface().(attrs.Definer)
 
 	// See the comment in [Model.Save] for more information
 	// about a possibly ambiguous method call.
@@ -1013,43 +1016,43 @@ func (cnf SaveConfig) fields() []string {
 // A config struct [SaveConfig] is used to pass the model's object, queryset, fields to save,
 // and a force flag to indicate whether to force the save operation.
 func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
-	if m.internals == nil || m.internals.object == nil {
+	if m.internals == nil || m.internals.ReflectValue == nil {
 		return fmt.Errorf(
 			"cannot save fields for %T: %w",
-			m.internals.object.Interface(),
+			m.internals.ReflectValue.Interface(),
 			ErrModelInitialized,
 		)
 	}
 
-	if m.internals.defs == nil {
-		var obj = m.internals.object.Interface().(attrs.Definer)
-		obj.FieldDefs()
+	if m.internals.Defs == nil {
+		var obj = m.internals.ReflectValue.Interface().(attrs.Definer)
+		attrs.Define(ctx, obj)
 	}
 
 	// Setup the "this" object if not provided.
 	if cnf.this == nil {
-		cnf.this = m.internals.object.Interface().(attrs.Definer)
+		cnf.this = m.internals.ReflectValue.Interface().(attrs.Definer)
 	}
 
 	// check if anything has changed,
 	var fields = sets.NewSet(cnf.fields()...)
-	if m.internals.state == nil && m.internals.fromDB && !cnf.Force() && len(fields) == 0 {
+	if m.internals.State == nil && m.internals.Flags.Is(flagFromDB) && !cnf.Force() && len(fields) == 0 {
 		// if the model was loaded from the database and no fields have changed and the state is nil,
 		// we can skip saving
 		return nil
 	}
 
-	if !m.internals.state.Changed(true) && m.internals.fromDB && !cnf.Force() && len(fields) == 0 {
+	if !m.internals.State.Changed(true) && m.internals.Flags.Is(flagFromDB) && !cnf.Force() && len(fields) == 0 {
 		// if nothing has changed, we can skip saving
 		return nil
 	}
 
-	if m.internals.defs == nil || m.internals.defs.ObjectFields == nil {
+	if m.internals.Defs == nil || m.internals.Defs.ObjectFields == nil {
 		assert.Fail(
 			"Model %T is not properly initialized (%t %t)",
-			m.internals.object.Interface(),
-			m.internals.defs == nil,
-			m.internals.defs != nil && m.internals.defs.ObjectFields == nil,
+			m.internals.ReflectValue.Interface(),
+			m.internals.Defs == nil,
+			m.internals.Defs != nil && m.internals.Defs.ObjectFields == nil,
 		)
 	}
 
@@ -1060,7 +1063,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		if err != nil {
 			return fmt.Errorf(
 				"failed to start transaction for model %T: %w",
-				m.internals.object.Interface(), err,
+				m.internals.ReflectValue.Interface(), err,
 			)
 		}
 	} else {
@@ -1077,10 +1080,10 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		actorStr      string
 	)
 	switch {
-	case cnf.ForceCreate || !m.internals.fromDB:
+	case cnf.ForceCreate || !m.internals.Flags.Is(flagFromDB):
 		preFn, postFn = actor.BeforeCreate, actor.AfterCreate
 		actorStr = "Create"
-	case cnf.ForceUpdate || m.internals.fromDB:
+	case cnf.ForceUpdate || m.internals.Flags.Is(flagFromDB):
 		preFn, postFn = actor.BeforeUpdate, actor.AfterUpdate
 		actorStr = "Update"
 	default:
@@ -1099,28 +1102,28 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	var (
 		// if the model was not loaded from the database,
 		// we automatically assume all changes are to be saved
-		anyChanges = !m.internals.fromDB
+		anyChanges = !m.internals.Flags.Is(flagFromDB)
 
 		// Setup to save fields / select relevant fields to update.
 		selectFields   = make([]interface{}, 0)
-		saveBeforeSelf = make([]queries.SaveableField, 0, m.internals.defs.ObjectFields.Len())
-		saveAfterSelf  = make([]queries.SaveableDependantField, 0, m.internals.defs.ObjectFields.Len())
+		saveBeforeSelf = make([]queries.SaveableField, 0, m.internals.Defs.ObjectFields.Len())
+		saveAfterSelf  = make([]queries.SaveableDependantField, 0, m.internals.Defs.ObjectFields.Len())
 	)
-	for name, field := range m.internals.defs.ObjectFields.Iter() {
+	for name, field := range m.internals.Defs.ObjectFields.Iter() {
 
 		// if there was a list of fields provided and if
 		// the field is not in the list of fields to save, we skip it
 		var mustInclField bool
 		if len(fields) > 0 {
-			if !fields.Contains(name) && !cnf.Force() && m.internals.fromDB {
+			if !fields.Contains(name) && !cnf.Force() && m.internals.Flags.Is(flagFromDB) {
 				continue
 			}
 			mustInclField = true
 		}
 
 		// No changes were made to the field, we can skip it.
-		var hasChanged = m.internals.state.HasChanged(name)
-		if !hasChanged && !mustInclField && !cnf.Force() && m.internals.fromDB {
+		var hasChanged = m.internals.State.FieldChanged(name)
+		if !hasChanged && !mustInclField && !cnf.Force() && m.internals.Flags.Is(flagFromDB) {
 			continue
 		}
 
@@ -1164,7 +1167,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		anyChanges = true
 	}
 
-	validator, ok := m.internals.object.Interface().(queries.ContextValidator)
+	validator, ok := m.internals.ReflectValue.Interface().(queries.ContextValidator)
 	if ok {
 		if err := validator.Validate(ctx); err != nil {
 			return fmt.Errorf(
@@ -1176,7 +1179,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 
 	// if no changes were made and the force flag is not set,
 	// we can skip saving the model
-	if !anyChanges && !cnf.Force() && len(cnf.Fields) == 0 && m.internals.fromDB {
+	if !anyChanges && !cnf.Force() && len(cnf.Fields) == 0 && m.internals.Flags.Is(flagFromDB) {
 		return nil
 	}
 
@@ -1220,7 +1223,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	if err != nil {
 		return errors.SaveFailed.WithCause(fmt.Errorf(
 			"failed to %s model %T: %w",
-			strings.ToLower(actorStr), m.internals.object.Interface(), err,
+			strings.ToLower(actorStr), m.internals.ReflectValue.Interface(), err,
 		))
 	}
 
@@ -1230,7 +1233,7 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 		// sql.ErrNoRows
 		return errors.NoChanges.WithCause(fmt.Errorf(
 			"model %T was not saved: %w",
-			m.internals.object.Interface(), sql.ErrNoRows,
+			m.internals.ReflectValue.Interface(), sql.ErrNoRows,
 		))
 	}
 
@@ -1245,8 +1248,8 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 	}
 
 	// reset the state after saving
-	m.internals.state.Reset()
-	m.internals.fromDB = true
+	m.internals.State.Reset()
+	m.internals.Flags = m.internals.Flags.Set(flagFromDB, true)
 
 	ctx, err = postFn(ctx)
 	if err != nil {
@@ -1260,8 +1263,8 @@ func (m *Model) SaveObject(ctx context.Context, cnf SaveConfig) (err error) {
 }
 
 func (m *Model) DeleteObject(ctx context.Context) error {
-	var this = m.internals.object.Interface().(attrs.Definer)
-	var defs = this.FieldDefs()
+	var this = m.internals.ReflectValue.Interface().(attrs.Definer)
+	var defs = attrs.Define(ctx, this)
 	var prim = defs.Primary()
 	if prim == nil {
 		return fmt.Errorf(
@@ -1298,9 +1301,10 @@ func (m *Model) DeleteObject(ctx context.Context) error {
 	}
 
 	// After the delete operation, we can reset the model's state
-	m.internals.fromDB = false
-	if m.internals.state != nil {
-		m.internals.state.Reset()
+	m.internals.Flags = m.internals.Flags.Set(flagFromDB, false)
+
+	if m.internals.State != nil {
+		m.internals.State.Reset()
 	}
 
 	_, err = actor.AfterDelete(ctx)
@@ -1338,8 +1342,8 @@ func saveField[T attrs.FieldDefinition](ctx context.Context, cnf *SaveConfig, fi
 		}
 
 		logger.Warnf(
-			"field %q in model %T is not saveable, skipping: %v",
-			field.Name(), cnf.this, err,
+			"field %q (%T) in model %T is not saveable, skipping: %v",
+			field.Name(), field, cnf.this, err,
 		)
 	}
 

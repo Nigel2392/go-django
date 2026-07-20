@@ -67,7 +67,6 @@ func (s *statement) Data(typ string, v any) any {
 	return parser.Data(v)
 }
 
-var _isDotPath = func(r rune) bool { return r == '.' }
 var PARSER = &statement{
 	Field: &statementParser{
 		typ:     "field",
@@ -233,9 +232,7 @@ var PARSER = &statement{
 		resolve: func(nodeIndex int, typIndex int, in []string, info *ExpressionInfo, args []any, data any) (string, []any, error) {
 			var fieldPath = in[1]
 			if strings.EqualFold(fieldPath, SELF_TABLE) {
-				var meta = attrs.GetModelMeta(info.Model)
-				var defs = meta.Definitions()
-				return info.QuoteIdentifier(defs.TableName()), []any{}, nil
+				return info.QuoteIdentifier(info.Resolver.Meta().TableName()), []any{}, nil
 			}
 
 			var _, field, _, err = info.Resolver.Resolve(fieldPath, info)
@@ -289,7 +286,7 @@ var PARSER = &statement{
 
 			var (
 				current        = rel.Model()
-				defs           = current.FieldDefs()
+				defs           = attrs.Define(info.Resolver.Context(), current)
 				tableName      = defs.TableName()
 				lhs_tableName  = info.QuoteIdentifier(tableName)
 				rhs_tableAlias = info.QuoteIdentifier(info.Resolver.Alias().GetTableAlias(

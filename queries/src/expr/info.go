@@ -7,7 +7,6 @@ import (
 
 	"github.com/Nigel2392/go-django/queries/src/alias"
 	"github.com/Nigel2392/go-django/src/core/attrs"
-	"github.com/elliotchance/orderedmap/v2"
 )
 
 type ExpressionLookupInfo struct {
@@ -97,9 +96,6 @@ type ExpressionInfo struct {
 	// Driver is the driver used to execute the query.
 	Driver driver.Driver
 
-	// Model is the base model of the queryset.
-	Model attrs.Definer
-
 	// Resolver is the field resolver used to resolve fields in the queryset.
 	Resolver FieldResolver
 
@@ -139,10 +135,8 @@ type ExpressionInfo struct {
 	SupportsWhereAlias bool
 
 	// SupportsAsExpr indicates if the current method of building expressions support aliasing the expression.
+	// i.e. `COUNT('name') AS 'my_name'`
 	SupportsAsExpr bool
-
-	// Annotations is a map of queryset annotations (fields).
-	Annotations *orderedmap.OrderedMap[string, attrs.Field]
 
 	// keep track of stateKey -> cloned expressioninfo objects
 	clones map[string]*ExpressionInfo
@@ -158,7 +152,6 @@ func (inf *ExpressionInfo) ForExpressionChain(chain []string) *ExpressionInfo {
 
 	return &ExpressionInfo{
 		Driver:             inf.Driver,
-		Model:              inf.Model,
 		Resolver:           inf.Resolver,
 		Placeholder:        inf.Placeholder,
 		FormatField:        inf.FormatField,
@@ -168,7 +161,6 @@ func (inf *ExpressionInfo) ForExpressionChain(chain []string) *ExpressionInfo {
 		ForUpdate:          inf.ForUpdate,
 		SupportsWhereAlias: inf.SupportsWhereAlias,
 		SupportsAsExpr:     inf.SupportsAsExpr,
-		Annotations:        inf.Annotations,
 		clones:             inf.clones,
 		chain:              chain,
 	}

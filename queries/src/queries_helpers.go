@@ -53,8 +53,8 @@ func CT_ListObjectsByIDs(obj attrs.Definer) func(ctx context.Context, i []interf
 func ListObjectsByIDs[T attrs.Definer, T2 any](object T, offset, limit uint64, ids []T2) ([]T, error) {
 
 	var (
-		obj          = attrs.NewObject[T](object)
-		definitions  = obj.FieldDefs()
+		obj          = attrs.NewObject[T](context.Background(), object)
+		definitions  = attrs.Define(context.Background(), obj)
 		primaryField = definitions.Primary()
 	)
 
@@ -87,7 +87,7 @@ func ListObjects[T attrs.Definer](object T, offset, limit uint64, ordering ...st
 		limit = MAX_DEFAULT_RESULTS
 	}
 
-	var obj = attrs.NewObject[T](object)
+	var obj = attrs.NewObject[T](context.Background(), object)
 	var d, err = GetQuerySet(obj).
 		OrderBy(ordering...).
 		Limit(int(limit)).
@@ -112,9 +112,9 @@ func ListObjects[T attrs.Definer](object T, offset, limit uint64, ordering ...st
 //
 // The identifier can be any type, but it is expected to be the primary key of the object.
 func GetObject[T attrs.Definer](object T, identifier any) (T, error) {
-	var obj = attrs.NewObject[T](object)
+	var obj = attrs.NewObject[T](context.Background(), object)
 	var (
-		defs         = obj.FieldDefs()
+		defs         = attrs.Define(context.Background(), obj)
 		primaryField = defs.Primary()
 	)
 
@@ -161,7 +161,7 @@ func CountObjects[T attrs.Definer](obj T) (int64, error) {
 //
 // If the object implements the models.Saver interface, it will call the Save method instead of executing a query.
 func SaveObject[T attrs.Definer](obj T) error {
-	var fieldDefs = obj.FieldDefs()
+	var fieldDefs = attrs.Define(context.Background(), obj)
 	var primaryField = fieldDefs.Primary()
 	var primaryValue, err = primaryField.Value()
 	if err != nil {
@@ -191,7 +191,7 @@ func CreateObject[T attrs.Definer](obj T) error {
 // If the object implements the models.Saver interface, it will call the Save method instead of executing a query.
 func UpdateObject[T attrs.Definer](obj T) (int64, error) {
 	var (
-		definitions = obj.FieldDefs()
+		definitions = attrs.Define(context.Background(), obj)
 		primary     = definitions.Primary()
 	)
 
@@ -231,7 +231,7 @@ func UpdateObject[T attrs.Definer](obj T) (int64, error) {
 // If the object implements the models.Deleter interface, it will call the Delete method instead of executing a query.
 func DeleteObject[T attrs.Definer](obj T) (int64, error) {
 	var (
-		definitions = obj.FieldDefs()
+		definitions = attrs.Define(context.Background(), obj)
 		primary     = definitions.Primary()
 	)
 

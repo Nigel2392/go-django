@@ -104,7 +104,7 @@ func getIdAndContentType(ctx context.Context, obj attrs.Definer, getter ...Query
 		fn = getter[0]
 	} else {
 		fn = func(ctx context.Context, obj attrs.Definer) (pk any, contentType string, err error) {
-			objKey := attrs.PrimaryKey(obj)
+			objKey := attrs.PrimaryKey(ctx, obj)
 			cTypeDef := contenttypes.DefinitionForObject(obj)
 			cType := cTypeDef.ContentType()
 			return objKey, cType.TypeName(), nil
@@ -192,7 +192,7 @@ marshalObject:
 	var excluded = getExcludedFields(obj)
 	maps.Copy(seen, excluded)
 
-	var defs = obj.FieldDefs()
+	var defs = attrs.Define(context.Background(), obj)
 	for _, def := range defs.Fields() {
 		var name = def.Name()
 		if _, isSeen := seen[name]; isSeen {
@@ -240,7 +240,7 @@ func UnmarshalRevisionData(obj attrs.Definer, data []byte, opts ...MarshallerOpt
 		return errors.Wrap(err, "unmarshaling revision data")
 	}
 
-	var defs = obj.FieldDefs()
+	var defs = attrs.Define(context.Background(), obj)
 	var fields = defs.Fields()
 	var excluded = getExcludedFields(obj)
 	for _, def := range fields {
@@ -271,7 +271,7 @@ func UnmarshalRevisionData(obj attrs.Definer, data []byte, opts ...MarshallerOpt
 			}
 
 			if attrs.IsZero(newObj) {
-				newObj = attrs.NewObject[attrs.Definer](def.Type())
+				newObj = attrs.NewObject[attrs.Definer](context.Background(), def.Type())
 			}
 
 			if err = UnmarshalRevisionData(newObj, value); err != nil {

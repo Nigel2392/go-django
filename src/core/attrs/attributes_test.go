@@ -1,6 +1,7 @@
 package attrs_test
 
 import (
+	"context"
 	"database/sql"
 	"testing"
 	"time"
@@ -37,8 +38,8 @@ func (f *ModelTest) Identifier() string {
 	return "ModelTest"
 }
 
-func (f *ModelTest) FieldDefs() attrs.Definitions {
-	return attrs.Define(f,
+func (f *ModelTest) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
 		attrs.NewField(f, "S", nil),
 		attrs.NewField(f, "I8", nil),
 		attrs.NewField(f, "I16", nil),
@@ -69,7 +70,12 @@ func now() time.Time {
 	return t
 }
 
+func attrCtx() context.Context {
+	return attrs.ContextWithFlags(context.Background(), attrs.CtxFlagNone, true)
+}
+
 func TestModelGet(t *testing.T) {
+	var ctx, _ = attrs.AttributeContext(t.Context())
 	var m = &ModelTest{
 		S:           "string",
 		I8:          8,
@@ -96,48 +102,48 @@ func TestModelGet(t *testing.T) {
 	}
 
 	var (
-		S           = attrs.Get[string](m, "S")
-		I8          = attrs.Get[int8](m, "I8")
-		I16         = attrs.Get[int16](m, "I16")
-		I32         = attrs.Get[int32](m, "I32")
-		I64         = attrs.Get[int64](m, "I64")
-		U8          = attrs.Get[uint8](m, "U8")
-		U16         = attrs.Get[uint16](m, "U16")
-		U32         = attrs.Get[uint32](m, "U32")
-		U64         = attrs.Get[uint64](m, "U64")
-		F32         = attrs.Get[float32](m, "F32")
-		F64         = attrs.Get[float64](m, "F64")
-		NullBool    = attrs.Get[sql.NullBool](m, "NullBool")
-		NullInt64   = attrs.Get[sql.NullInt64](m, "NullInt64")
-		NullInt32   = attrs.Get[sql.NullInt32](m, "NullInt32")
-		NullInt16   = attrs.Get[sql.NullInt16](m, "NullInt16")
-		NullFloat64 = attrs.Get[sql.NullFloat64](m, "NullFloat64")
-		NullString  = attrs.Get[sql.NullString](m, "NullString")
-		NullTime    = attrs.Get[sql.NullTime](m, "NullTime")
-		B           = attrs.Get[bool](m, "B")
-		M           = attrs.Get[map[string]interface{}](m, "M")
-		A           = attrs.Get[[]interface{}](m, "A")
-		BT          = attrs.Get[[]byte](m, "BT")
+		S           = attrs.Get[string](ctx, m, "S")
+		I8          = attrs.Get[int8](ctx, m, "I8")
+		I16         = attrs.Get[int16](ctx, m, "I16")
+		I32         = attrs.Get[int32](ctx, m, "I32")
+		I64         = attrs.Get[int64](ctx, m, "I64")
+		U8          = attrs.Get[uint8](ctx, m, "U8")
+		U16         = attrs.Get[uint16](ctx, m, "U16")
+		U32         = attrs.Get[uint32](ctx, m, "U32")
+		U64         = attrs.Get[uint64](ctx, m, "U64")
+		F32         = attrs.Get[float32](ctx, m, "F32")
+		F64         = attrs.Get[float64](ctx, m, "F64")
+		NullBool    = attrs.Get[sql.NullBool](ctx, m, "NullBool")
+		NullInt64   = attrs.Get[sql.NullInt64](ctx, m, "NullInt64")
+		NullInt32   = attrs.Get[sql.NullInt32](ctx, m, "NullInt32")
+		NullInt16   = attrs.Get[sql.NullInt16](ctx, m, "NullInt16")
+		NullFloat64 = attrs.Get[sql.NullFloat64](ctx, m, "NullFloat64")
+		NullString  = attrs.Get[sql.NullString](ctx, m, "NullString")
+		NullTime    = attrs.Get[sql.NullTime](ctx, m, "NullTime")
+		B           = attrs.Get[bool](ctx, m, "B")
+		M           = attrs.Get[map[string]interface{}](ctx, m, "M")
+		A           = attrs.Get[[]interface{}](ctx, m, "A")
+		BT          = attrs.Get[[]byte](ctx, m, "BT")
 
-		S_INTERFACE           = attrs.Get[any](m, "S")
-		I8_INTERFACE          = attrs.Get[any](m, "I8")
-		I16_INTERFACE         = attrs.Get[any](m, "I16")
-		I32_INTERFACE         = attrs.Get[any](m, "I32")
-		I64_INTERFACE         = attrs.Get[any](m, "I64")
-		U8_INTERFACE          = attrs.Get[any](m, "U8")
-		U16_INTERFACE         = attrs.Get[any](m, "U16")
-		U32_INTERFACE         = attrs.Get[any](m, "U32")
-		U64_INTERFACE         = attrs.Get[any](m, "U64")
-		F32_INTERFACE         = attrs.Get[any](m, "F32")
-		F64_INTERFACE         = attrs.Get[any](m, "F64")
-		B_INTERFACE           = attrs.Get[any](m, "B")
-		NullBool_INTERFACE    = attrs.Get[any](m, "NullBool")
-		NullInt64_INTERFACE   = attrs.Get[any](m, "NullInt64")
-		NullInt32_INTERFACE   = attrs.Get[any](m, "NullInt32")
-		NullInt16_INTERFACE   = attrs.Get[any](m, "NullInt16")
-		NullFloat64_INTERFACE = attrs.Get[any](m, "NullFloat64")
-		NullString_INTERFACE  = attrs.Get[any](m, "NullString")
-		NullTime_INTERFACE    = attrs.Get[any](m, "NullTime")
+		S_INTERFACE           = attrs.Get[any](ctx, m, "S")
+		I8_INTERFACE          = attrs.Get[any](ctx, m, "I8")
+		I16_INTERFACE         = attrs.Get[any](ctx, m, "I16")
+		I32_INTERFACE         = attrs.Get[any](ctx, m, "I32")
+		I64_INTERFACE         = attrs.Get[any](ctx, m, "I64")
+		U8_INTERFACE          = attrs.Get[any](ctx, m, "U8")
+		U16_INTERFACE         = attrs.Get[any](ctx, m, "U16")
+		U32_INTERFACE         = attrs.Get[any](ctx, m, "U32")
+		U64_INTERFACE         = attrs.Get[any](ctx, m, "U64")
+		F32_INTERFACE         = attrs.Get[any](ctx, m, "F32")
+		F64_INTERFACE         = attrs.Get[any](ctx, m, "F64")
+		B_INTERFACE           = attrs.Get[any](ctx, m, "B")
+		NullBool_INTERFACE    = attrs.Get[any](ctx, m, "NullBool")
+		NullInt64_INTERFACE   = attrs.Get[any](ctx, m, "NullInt64")
+		NullInt32_INTERFACE   = attrs.Get[any](ctx, m, "NullInt32")
+		NullInt16_INTERFACE   = attrs.Get[any](ctx, m, "NullInt16")
+		NullFloat64_INTERFACE = attrs.Get[any](ctx, m, "NullFloat64")
+		NullString_INTERFACE  = attrs.Get[any](ctx, m, "NullString")
+		NullTime_INTERFACE    = attrs.Get[any](ctx, m, "NullTime")
 	)
 
 	if S != S_INTERFACE {
@@ -284,6 +290,7 @@ func TestModelGet(t *testing.T) {
 }
 
 func TestModelSet(t *testing.T) {
+	var ctx, _ = attrs.AttributeContext(t.Context())
 	var m = &ModelTest{
 		S:           "string",
 		I8:          8,
@@ -309,28 +316,28 @@ func TestModelSet(t *testing.T) {
 		BT:          []byte("byte"),
 	}
 
-	attrs.Set(m, "S", "new string")
-	attrs.Set(m, "I8", 88)
-	attrs.Set(m, "I16", 1616)
-	attrs.Set(m, "I32", 3232)
-	attrs.Set(m, "I64", 6464)
-	attrs.Set(m, "U8", 88)
-	attrs.Set(m, "U16", 0)
-	attrs.Set(m, "U32", 3232)
-	attrs.Set(m, "U64", 6464)
-	attrs.Set(m, "F32", 32.3232)
-	attrs.Set(m, "F64", 64.6464)
-	attrs.Set(m, "NullBool", sql.NullBool{Bool: false, Valid: false})
-	attrs.Set(m, "NullInt64", sql.NullInt64{Int64: 6464, Valid: true})
-	attrs.Set(m, "NullInt32", sql.NullInt32{Int32: 3232, Valid: true})
-	attrs.Set(m, "NullInt16", sql.NullInt16{Int16: 1616, Valid: true})
-	attrs.Set(m, "NullFloat64", sql.NullFloat64{Float64: 64.6464, Valid: true})
-	attrs.Set(m, "NullString", sql.NullString{String: "new string", Valid: true})
-	attrs.Set(m, "NullTime", sql.NullTime{Time: now(), Valid: true})
-	attrs.Set(m, "B", false)
-	attrs.Set(m, "M", map[string]interface{}{"new key": "new value"})
-	attrs.Set(m, "A", []interface{}{"x", "y", "z"})
-	attrs.Set(m, "BT", []byte("new byte"))
+	attrs.Set(ctx, m, "S", "new string")
+	attrs.Set(ctx, m, "I8", 88)
+	attrs.Set(ctx, m, "I16", 1616)
+	attrs.Set(ctx, m, "I32", 3232)
+	attrs.Set(ctx, m, "I64", 6464)
+	attrs.Set(ctx, m, "U8", 88)
+	attrs.Set(ctx, m, "U16", 0)
+	attrs.Set(ctx, m, "U32", 3232)
+	attrs.Set(ctx, m, "U64", 6464)
+	attrs.Set(ctx, m, "F32", 32.3232)
+	attrs.Set(ctx, m, "F64", 64.6464)
+	attrs.Set(ctx, m, "NullBool", sql.NullBool{Bool: false, Valid: false})
+	attrs.Set(ctx, m, "NullInt64", sql.NullInt64{Int64: 6464, Valid: true})
+	attrs.Set(ctx, m, "NullInt32", sql.NullInt32{Int32: 3232, Valid: true})
+	attrs.Set(ctx, m, "NullInt16", sql.NullInt16{Int16: 1616, Valid: true})
+	attrs.Set(ctx, m, "NullFloat64", sql.NullFloat64{Float64: 64.6464, Valid: true})
+	attrs.Set(ctx, m, "NullString", sql.NullString{String: "new string", Valid: true})
+	attrs.Set(ctx, m, "NullTime", sql.NullTime{Time: now(), Valid: true})
+	attrs.Set(ctx, m, "B", false)
+	attrs.Set(ctx, m, "M", map[string]interface{}{"new key": "new value"})
+	attrs.Set(ctx, m, "A", []interface{}{"x", "y", "z"})
+	attrs.Set(ctx, m, "BT", []byte("new byte"))
 
 	var assertEqual = func(t *testing.T, a, b interface{}) {
 		if a != b {
@@ -366,8 +373,8 @@ type ModelTestReadOnly struct {
 	Name string
 }
 
-func (f *ModelTestReadOnly) FieldDefs() attrs.Definitions {
-	return attrs.Define(f,
+func (f *ModelTestReadOnly) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, f,
 		attrs.NewField(f, "Name", &attrs.FieldConfig{ReadOnly: true}),
 	)
 }
@@ -387,7 +394,7 @@ func TestModelSetReadOnly(t *testing.T) {
 		}
 	}()
 
-	attrs.Set(m, "Name", "new name")
+	attrs.Set(attrCtx(), m, "Name", "new name")
 }
 
 func TestModelForceSetReadOnly(t *testing.T) {
@@ -395,7 +402,7 @@ func TestModelForceSetReadOnly(t *testing.T) {
 		Name: "name",
 	}
 
-	attrs.ForceSet(m, "Name", "new name")
+	attrs.ForceSet(attrCtx(), m, "Name", "new name")
 
 	if m.Name != "new name" {
 		t.Errorf("expected %q, got %q", "new name", m.Name)
@@ -407,8 +414,8 @@ type TestModelReadonlyStructTag struct {
 	Name string `attrs:"readonly"`
 }
 
-func (f *TestModelReadonlyStructTag) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions(f)
+func (f *TestModelReadonlyStructTag) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions(ctx, f)
 }
 
 func TestModelSetReadOnlyStructTag(t *testing.T) {
@@ -431,8 +438,8 @@ func TestModelSetReadOnlyStructTag(t *testing.T) {
 		}
 	}()
 
-	attrs.Set(m, "ID", 2)
-	attrs.Set(m, "Name", "new name")
+	attrs.Set(attrCtx(), m, "ID", 2)
+	attrs.Set(attrCtx(), m, "Name", "new name")
 }
 
 func TestModelForceSetReadOnlyStructTag(t *testing.T) {
@@ -441,8 +448,8 @@ func TestModelForceSetReadOnlyStructTag(t *testing.T) {
 		Name: "name",
 	}
 
-	attrs.ForceSet(m, "ID", 2)
-	attrs.ForceSet(m, "Name", "new name")
+	attrs.ForceSet(attrCtx(), m, "ID", 2)
+	attrs.ForceSet(attrCtx(), m, "Name", "new name")
 
 	if m.ID != 2 {
 		t.Errorf("expected %d, got %d", 2, m.ID)
@@ -479,7 +486,7 @@ func BenchmarkUnpackFieldsFromArgs(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	var fields = m.FieldDefs().Fields()
+	var fields = define(m).Fields()
 	for i := 0; i < b.N; i++ {
 		var _, err = attrs.UnpackFieldsFromArgs[attrs.Definer, any](m, fields)
 		if err != nil {
@@ -514,9 +521,9 @@ func BenchmarkUnpackFieldsFromArgsIter(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	var fields = m.FieldDefs().Fields()
+	var fields = define(m).Fields()
 	for i := 0; i < b.N; i++ {
-		var iterator = attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](m, fields)
+		var iterator = attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](attrCtx(), m, fields)
 		var slice = make([]any, 0, 22)
 		for field, err := range iterator {
 			if err != nil {
@@ -556,12 +563,12 @@ func BenchmarkUnpackFieldsFromArgsIterFunc(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	var fields = m.FieldDefs().Fields()
+	var fields = define(m).Fields()
 	var fieldsFn = func(attrs.Definer) []attrs.Field {
 		return fields
 	}
 	for i := 0; i < b.N; i++ {
-		var iterator = attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](m, fieldsFn)
+		var iterator = attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](attrCtx(), m, fieldsFn)
 		var slice = make([]any, 0, 22)
 		for field, err := range iterator {
 			if err != nil {
@@ -601,12 +608,12 @@ func BenchmarkUnpackFieldsFromArgsIterNested(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	var fields = m.FieldDefs().Fields()
+	var fields = define(m).Fields()
 	var fieldsFn = func(attrs.Definer) []attrs.Field {
 		return fields
 	}
 	for i := 0; i < b.N; i++ {
-		var iterator = attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](m, attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](m, fieldsFn))
+		var iterator = attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](attrCtx(), m, attrs.UnpackFieldsFromArgsIter[attrs.Definer, any](attrCtx(), m, fieldsFn))
 		var slice = make([]any, 0, 22)
 		for field, err := range iterator {
 			if err != nil {

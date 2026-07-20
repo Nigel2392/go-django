@@ -185,19 +185,22 @@ func (qs *SpecificPageQuerySet) All() (queries.Rows[Page], error) {
 		}
 
 		var model = definition.Object().(Page)
-		var defs = model.FieldDefs()
+		var defs = attrs.Define(qs.Context(), model)
 		var primaryField = defs.Primary()
-		var rows, err = queries.GetQuerySet(model).
+		var _, relRows, err = queries.GetQuerySet(model).
 			WithContext(qs.Context()).
 			Filter(fmt.Sprintf("%s__in", primaryField.Name()), head.Value.ids).
-			All()
+			IterAll()
 		if err != nil {
-			return rows, errors.Wrapf(err, "failed to get rows for content type %s", head.Key)
+			return nil, errors.Wrapf(err, "failed to get rows for content type %s", head.Key)
 		}
 
-		for _, row := range rows {
+		for row, err := range relRows {
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to get rows for content type %s", head.Key)
+			}
 			var primary = row.ObjectFieldDefs.Primary()
-			var pk = attrs.Get[int64](row.ObjectFieldDefs, primary.Name())
+			var pk = attrs.Get[int64](qs.Context(), row.ObjectFieldDefs, primary.Name())
 			var pageRow, exists = head.Value.pages[pk]
 			if !exists {
 				return nil, errors.New(errors.CodeNoRows, fmt.Sprintf(

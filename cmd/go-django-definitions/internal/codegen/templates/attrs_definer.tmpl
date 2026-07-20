@@ -59,6 +59,6 @@ func (o *{{ $struct.Name }}) FieldDefs() attrs.Definitions {
             },{{ end }}
         },
     ){{ end }}
-    return attrs.Define(o, fields...)
+    return attrs.Make(o, fields...)
 }
 {{ end }}

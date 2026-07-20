@@ -720,7 +720,7 @@ func (qs *PageQuerySet) Delete(nodes ...*PageNode) (int64, error) {
 		}
 
 		var model = definition.Object().(Page)
-		var defs = model.FieldDefs()
+		var defs = attrs.Define(qs.Context(), model)
 		var primaryField = defs.Primary()
 
 		var (
@@ -1133,8 +1133,8 @@ func (qs *PageQuerySet) saveSpecific(node *PageNode, creating bool) error {
 	}
 
 	var (
-		srcDefs     = node.PageObject.FieldDefs()
-		dstDefs     = node.FieldDefs()
+		srcDefs     = attrs.Define(qs.Context(), node.PageObject)
+		dstDefs     = attrs.Define(qs.Context(), node)
 		refField, _ = dstDefs.Field("PageID")
 		srcVal, _   = srcDefs.Primary().Value()
 	)

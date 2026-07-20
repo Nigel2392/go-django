@@ -168,7 +168,7 @@ func NewAppConfig() django.AppConfig {
 		}
 
 		data["model_name"] = model.Name
-		data["instance_id"] = attrs.PrimaryKey(instance)
+		data["instance_id"] = attrs.PrimaryKey(r.Context(), instance)
 		var cTypeDef = contenttypes.DefinitionForObject(instance)
 		if cTypeDef != nil {
 			data["content_type"] = cTypeDef.ContentType()
@@ -416,7 +416,7 @@ func auditLogView(w http.ResponseWriter, r *http.Request) {
 					}
 
 					opts[idx] = &widgets.FormOption{
-						OptValue: attrs.ToString(attrs.PrimaryKey(row.Object)),
+						OptValue: attrs.ToString(attrs.PrimaryKey(r.Context(), row.Object)),
 						OptLabel: attrs.ToString(row.Object),
 					}
 

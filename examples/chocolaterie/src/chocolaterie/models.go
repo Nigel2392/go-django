@@ -1,6 +1,7 @@
 package chocolaterie
 
 import (
+	"context"
 	"net/http"
 	"slices"
 
@@ -34,8 +35,8 @@ type Chocolate struct {
 	Ingredients  drivers.Text    `json:"ingredients"`
 }
 
-func (c *Chocolate) FieldDefs() attrs.Definitions {
-	return c.Model.Define(c,
+func (c *Chocolate) FieldDefs(ctx context.Context) attrs.Definitions {
+	return c.Model.Define(ctx, c,
 		attrs.Unbound("ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -74,11 +75,11 @@ func (b *ChocolateListPage) Reference() *pages.PageNode {
 	return b.Page
 }
 
-func (n *ChocolateListPage) FieldDefs() attrs.Definitions {
+func (n *ChocolateListPage) FieldDefs(ctx context.Context) attrs.Definitions {
 	if n.Page == nil {
 		n.Page = &pages.PageNode{}
 	}
-	return n.Model.Define(n,
+	return n.Model.Define(ctx, n,
 		attrs.NewField(n.Page, "PageID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,

@@ -1,6 +1,7 @@
 package migrator
 
 import (
+	"context"
 	"encoding/json"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -160,7 +161,7 @@ func (m *MigrationRelation) UnmarshalJSON(data []byte) error {
 	}
 
 	if rel.TargetField != "" {
-		var defs = obj.FieldDefs()
+		var defs = attrs.Define(context.Background(), obj)
 		var field, ok = defs.Field(rel.TargetField)
 		if !ok {
 			return nil

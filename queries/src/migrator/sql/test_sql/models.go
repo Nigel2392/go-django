@@ -1,6 +1,7 @@
 package testsql
 
 import (
+	"context"
 	"database/sql"
 	"time"
 
@@ -42,8 +43,8 @@ func (m *User) IsAuthenticated() bool {
 	return m.IsActive
 }
 
-func (m *User) FieldDefs() attrs.Definitions {
-	var fieldDefs = attrs.AutoDefinitions(m)
+func (m *User) FieldDefs(ctx context.Context) attrs.Definitions {
+	var fieldDefs = attrs.AutoDefinitions(ctx, m)
 	var fields = fieldDefs.Fields()
 	if ExtendedDefinitions {
 		fields = append(fields, attrs.NewField(m, "FirstName", &attrs.FieldConfig{}))
@@ -53,7 +54,7 @@ func (m *User) FieldDefs() attrs.Definitions {
 		fields = append(fields, attrs.NewField(m, "IsActive", &attrs.FieldConfig{}))
 	}
 	if ExtendedDefinitions || ExtendedDefinitionsUser {
-		fieldDefs = attrs.Define(m, fields...)
+		fieldDefs = attrs.Make(ctx, m, fields...)
 	}
 	return fieldDefs
 }
@@ -66,8 +67,8 @@ type Profile struct {
 	Website   string `attrs:"-"`
 }
 
-func (m *Profile) FieldDefs() attrs.Definitions {
-	var fieldDefs = attrs.AutoDefinitions(m)
+func (m *Profile) FieldDefs(ctx context.Context) attrs.Definitions {
+	var fieldDefs = attrs.AutoDefinitions(ctx, m)
 	var fields = fieldDefs.Fields()
 	if ExtendedDefinitions {
 		fields = append(fields, attrs.NewField(m, "Biography", &attrs.FieldConfig{}))
@@ -77,7 +78,7 @@ func (m *Profile) FieldDefs() attrs.Definitions {
 		fields = append(fields, attrs.NewField(m, "Image", &attrs.FieldConfig{}))
 	}
 	if ExtendedDefinitions || ExtendedDefinitionsProfile {
-		fieldDefs = attrs.Define(m, fields...)
+		fieldDefs = attrs.Make(ctx, m, fields...)
 	}
 	return fieldDefs
 }
@@ -92,8 +93,8 @@ type Todo struct {
 	UpdatedAt   time.Time `attrs:"-"`
 }
 
-func (m *Todo) FieldDefs() attrs.Definitions {
-	var fieldDefs = attrs.AutoDefinitions(m)
+func (m *Todo) FieldDefs(ctx context.Context) attrs.Definitions {
+	var fieldDefs = attrs.AutoDefinitions(ctx, m)
 	var fields = fieldDefs.Fields()
 	if ExtendedDefinitions {
 		fields = append(fields, attrs.NewField(m, "CreatedAt", &attrs.FieldConfig{}))
@@ -103,7 +104,7 @@ func (m *Todo) FieldDefs() attrs.Definitions {
 		fields = append(fields, attrs.NewField(m, "Description", &attrs.FieldConfig{}))
 	}
 	if ExtendedDefinitions || ExtendedDefinitionsTodo {
-		fieldDefs = attrs.Define(m, fields...)
+		fieldDefs = attrs.Make(ctx, m, fields...)
 	}
 	return fieldDefs
 }
@@ -118,14 +119,14 @@ type BlogPost struct {
 	UpdatedAt time.Time `attrs:"-"`
 }
 
-func (m *BlogPost) FieldDefs() attrs.Definitions {
-	var fieldDefs = attrs.AutoDefinitions(m)
+func (m *BlogPost) FieldDefs(ctx context.Context) attrs.Definitions {
+	var fieldDefs = attrs.AutoDefinitions(ctx, m)
 	if ExtendedDefinitions {
 		var fields = fieldDefs.Fields()
 		fields = append(fields, attrs.NewField(m, "Published", &attrs.FieldConfig{}))
 		fields = append(fields, attrs.NewField(m, "CreatedAt", &attrs.FieldConfig{}))
 		fields = append(fields, attrs.NewField(m, "UpdatedAt", &attrs.FieldConfig{}))
-		fieldDefs = attrs.Define(m, fields...)
+		fieldDefs = attrs.Make(ctx, m, fields...)
 	}
 	return fieldDefs
 }
@@ -139,13 +140,13 @@ type BlogComment struct {
 	UpdatedAt time.Time `attrs:"-"`
 }
 
-func (m *BlogComment) FieldDefs() attrs.Definitions {
-	var fieldDefs = attrs.AutoDefinitions(m)
+func (m *BlogComment) FieldDefs(ctx context.Context) attrs.Definitions {
+	var fieldDefs = attrs.AutoDefinitions(ctx, m)
 	if ExtendedDefinitions {
 		var fields = fieldDefs.Fields()
 		fields = append(fields, attrs.NewField(m, "CreatedAt", &attrs.FieldConfig{}))
 		fields = append(fields, attrs.NewField(m, "UpdatedAt", &attrs.FieldConfig{}))
-		fieldDefs = attrs.Define(m, fields...)
+		fieldDefs = attrs.Make(ctx, m, fields...)
 	}
 	return fieldDefs
 }
@@ -424,9 +425,9 @@ func BroadDefaultValues() map[string]any {
 	return defaultValueMap
 }
 
-func (b *Broad) FieldDefs() attrs.Definitions {
+func (b *Broad) FieldDefs(ctx context.Context) attrs.Definitions {
 	vals := BroadDefaultValues()
-	return attrs.Define(b,
+	return attrs.Make(ctx, b,
 		attrs.Unbound("Field_Drivers_Text", &attrs.FieldConfig{
 			Default: vals["Field_Drivers_Text"],
 		}),

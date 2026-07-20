@@ -322,7 +322,7 @@ func (m *MigrationEngine) Migrate(ctx context.Context, apps ...string) error {
 			continue
 		}
 
-		var defs = n.mig.Table.Object.FieldDefs()
+		var defs = attrs.Define(ctx, n.mig.Table.Object)
 
 		if m.Fake {
 			logger.Debugf(

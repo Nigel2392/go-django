@@ -115,18 +115,18 @@ func (f *ForeignKeyFormField) HasChanged(initial, data interface{}) bool {
 	)
 
 	if ok1 && ok2 {
-		var pkA = attrs.PrimaryKey(a)
-		var pkB = attrs.PrimaryKey(b)
+		var pkA = attrs.PrimaryKey(context.Background(), a)
+		var pkB = attrs.PrimaryKey(context.Background(), b)
 		return f.BaseField.HasChanged(pkA, pkB)
 	}
 
 	if ok1 && !ok2 {
-		var pkA = attrs.PrimaryKey(a)
+		var pkA = attrs.PrimaryKey(context.Background(), a)
 		return f.BaseField.HasChanged(pkA, data)
 	}
 
 	if !ok1 && ok2 {
-		var pkB = attrs.PrimaryKey(b)
+		var pkB = attrs.PrimaryKey(context.Background(), b)
 		return f.BaseField.HasChanged(initial, pkB)
 	}
 
@@ -181,12 +181,12 @@ func (f *ForeignKeyFormField) Widget() widgets.Widget {
 		"--------",
 		chooser.BaseChooserOptions{
 			TargetObject: f.Relation.Model(),
-			GetPrimaryKey: func(_ context.Context, i interface{}) interface{} {
+			GetPrimaryKey: func(c context.Context, i interface{}) interface{} {
 				var def, ok = i.(attrs.Definer)
 				if !ok {
 					assert.Fail("object %T is not a Definer", i)
 				}
-				return attrs.PrimaryKey(def)
+				return attrs.PrimaryKey(c, def)
 			},
 		},
 		nil,

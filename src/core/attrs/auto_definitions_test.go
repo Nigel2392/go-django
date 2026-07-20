@@ -1,6 +1,7 @@
 package attrs_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -12,14 +13,14 @@ type TestModelAutoFieldDefs struct {
 	Objects []int64
 }
 
-func (f *TestModelAutoFieldDefs) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions(f)
+func (f *TestModelAutoFieldDefs) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions(ctx, f)
 }
 
 func TestModelAutoFieldDefinitions(t *testing.T) {
 	var m = &TestModelAutoFieldDefs{}
 
-	var fieldDefs = m.FieldDefs().(*attrs.ObjectDefinitions)
+	var fieldDefs = define(m).(*attrs.ObjectDefinitions)
 	if fieldDefs.ObjectFields.Len() != 3 {
 		t.Errorf("expected %d, got %d", 3, fieldDefs.ObjectFields.Len())
 	}
@@ -45,9 +46,9 @@ func TestModelAutoFieldDefinitionsGet(t *testing.T) {
 	}
 
 	var (
-		ID      = attrs.Get[int](m, "ID")
-		Name    = attrs.Get[string](m, "Name")
-		Objects = attrs.Get[[]int64](m, "Objects")
+		ID      = attrs.Get[int](attrCtx(), m, "ID")
+		Name    = attrs.Get[string](attrCtx(), m, "Name")
+		Objects = attrs.Get[[]int64](attrCtx(), m, "Objects")
 	)
 
 	if ID != 1 {
@@ -66,9 +67,9 @@ func TestModelAutoFieldDefinitionsGet(t *testing.T) {
 func TestModelAutoFieldDefinitionsSet(t *testing.T) {
 	var m = &TestModelAutoFieldDefs{}
 
-	attrs.Set(m, "ID", 1)
-	attrs.Set(m, "Name", "name")
-	attrs.Set(m, "Objects", []int64{1, 2, 3})
+	attrs.Set(attrCtx(), m, "ID", 1)
+	attrs.Set(attrCtx(), m, "Name", "name")
+	attrs.Set(attrCtx(), m, "Objects", []int64{1, 2, 3})
 
 	if m.ID != 1 {
 		t.Errorf("expected %d, got %d", 1, m.ID)
@@ -87,14 +88,14 @@ type TestModelAutoFieldDefsInclude struct {
 	TestModelAutoFieldDefs
 }
 
-func (f *TestModelAutoFieldDefsInclude) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions(f, "Name")
+func (f *TestModelAutoFieldDefsInclude) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions(ctx, f, "Name")
 }
 
 func TestModelAutoFieldDefinitionsInclude(t *testing.T) {
 	var m = &TestModelAutoFieldDefsInclude{}
 
-	var fieldDefs = m.FieldDefs().(*attrs.ObjectDefinitions)
+	var fieldDefs = define(m).(*attrs.ObjectDefinitions)
 	if fieldDefs.ObjectFields.Len() != 1 {
 		t.Errorf("expected %d, got %d", 1, fieldDefs.ObjectFields.Len())
 	}
@@ -121,7 +122,7 @@ func TestModelAutoFieldDefinitionsIncludeGet(t *testing.T) {
 		},
 	}
 
-	var Name = attrs.Get[string](m, "Name")
+	var Name = attrs.Get[string](attrCtx(), m, "Name")
 
 	if Name != "name" {
 		t.Errorf("expected %q, got %q", "name", Name)
@@ -143,7 +144,7 @@ func TestModelAutoFieldDefinitionsIncludeGetExcluded(t *testing.T) {
 		}
 	}()
 
-	attrs.Get[string](m, "ID")
+	attrs.Get[string](attrCtx(), m, "ID")
 }
 
 func TestModelAutoFieldDefinitionsIncludeSet(t *testing.T) {
@@ -153,7 +154,7 @@ func TestModelAutoFieldDefinitionsIncludeSet(t *testing.T) {
 		},
 	}
 
-	attrs.Set(m, "Name", "name")
+	attrs.Set(attrCtx(), m, "Name", "name")
 
 	if m.Name != "name" {
 		t.Errorf("expected %q, got %q", "name", m.Name)
@@ -169,7 +170,7 @@ func TestModelAutoFieldDefinitionsIncludeSetExcluded(t *testing.T) {
 		}
 	}()
 
-	attrs.Set(m, "ID", 1)
+	attrs.Set(attrCtx(), m, "ID", 1)
 }
 
 type PrimaryFieldTester struct {
@@ -177,14 +178,14 @@ type PrimaryFieldTester struct {
 	I  int `attrs:"default=1"`
 }
 
-func (f *PrimaryFieldTester) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions(f)
+func (f *PrimaryFieldTester) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions(ctx, f)
 }
 
 func TestModelAutoFieldDefinitionsPrimary(t *testing.T) {
 	var m = &PrimaryFieldTester{}
 
-	var fieldDefs = m.FieldDefs().(*attrs.ObjectDefinitions)
+	var fieldDefs = define(m).(*attrs.ObjectDefinitions)
 	if fieldDefs.ObjectFields.Len() != 2 {
 		t.Errorf("expected %d, got %d", 2, fieldDefs.ObjectFields.Len())
 	}
@@ -230,13 +231,13 @@ type DefaultsTester struct {
 	Float32   float32  `attrs:"default=18.0"`
 }
 
-func (f *DefaultsTester) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions(f)
+func (f *DefaultsTester) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions(ctx, f)
 }
 
 func TestModelAutoFieldDefinitionsDefaults(t *testing.T) {
 	var m = &DefaultsTester{}
-	var fieldDefs = m.FieldDefs().(*attrs.ObjectDefinitions)
+	var fieldDefs = define(m).(*attrs.ObjectDefinitions)
 
 	if fieldDefs.ObjectFields.Len() != 13 {
 		t.Errorf("expected %d, got %d", 13, fieldDefs.ObjectFields.Len())

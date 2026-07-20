@@ -75,7 +75,7 @@ func NewBaseModelForm[T attrs.Definer](ctx context.Context, model T, opts ...fun
 	)
 
 	if f.modelIsNil(model) {
-		rModel = reflect.ValueOf(attrs.NewObject[attrs.Definer](rModelType))
+		rModel = reflect.ValueOf(attrs.NewObject[attrs.Definer](ctx, rModelType))
 		f.Model = rModel.Interface().(T)
 	}
 
@@ -118,7 +118,7 @@ func (f *BaseModelForm[T]) SetInstance(model T) {
 	}
 
 	f.Model = model
-	f.Definition = model.FieldDefs()
+	f.Definition = attrs.Define(f.Context(), model)
 	f.InstanceFields = f.Definition.Fields()
 
 	var excluded = make(map[string]struct{})
@@ -264,7 +264,7 @@ func (f *BaseModelForm[T]) Load() {
 	}
 
 	var initialData = make(map[string]interface{})
-	var fieldDefs = model.FieldDefs()
+	var fieldDefs = attrs.Define(f.Context(), model)
 
 	if !f.modelIsNil(model) {
 		for _, def := range f.InstanceFields {

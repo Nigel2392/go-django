@@ -1,6 +1,7 @@
 package models_test
 
 import (
+	"context"
 	"iter"
 	"testing"
 
@@ -22,8 +23,8 @@ type BasicJoinedModel struct {
 	LastName  string
 }
 
-func (m *BasicJoinedModel) FieldDefs() attrs.Definitions {
-	return attrs.Define(m,
+func (m *BasicJoinedModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, m,
 		attrs.NewField(m, "ID"),
 		attrs.NewField(m, "Age"),
 		attrs.NewField(m, "FirstName"),
@@ -38,8 +39,8 @@ type BasicModel struct {
 	Joined      *BasicJoinedModel
 }
 
-func (m *BasicModel) FieldDefs() attrs.Definitions {
-	return attrs.Define[attrs.Definer, any](m,
+func (m *BasicModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make[attrs.Definer, any](ctx, m,
 		attrs.NewField(m, "ID"),
 		attrs.NewField(m, "Title"),
 		attrs.NewField(m, "Description"),
@@ -48,7 +49,7 @@ func (m *BasicModel) FieldDefs() attrs.Definitions {
 			Column:        "joined_id",
 			RelForeignKey: attrs.Relate(&BasicJoinedModel{}, "", nil),
 		}),
-		fields.Embed("Joined"),
+		fields.Embed(context.Background(), "Joined"),
 	)
 }
 
@@ -60,7 +61,7 @@ type ComplexModel struct {
 	Joined      *BasicJoinedModel
 }
 
-func (m *ComplexModel) fields(def attrs.Definer) []any {
+func (m *ComplexModel) fields(ctx context.Context, def attrs.Definer) []any {
 	return []any{
 		attrs.NewField(m, "ID"),
 		attrs.NewField(m, "Title"),
@@ -70,28 +71,29 @@ func (m *ComplexModel) fields(def attrs.Definer) []any {
 			Column:        "joined_id",
 			RelForeignKey: attrs.Relate(&BasicJoinedModel{}, "", nil),
 		}),
-		fields.Embed("Joined"),
+		fields.Embed(ctx, "Joined"),
 	}
 }
 
-func (m *ComplexModel) FieldDefs() attrs.Definitions {
+func (m *ComplexModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	// using a function here will make sure that the fields dont get allocated
 	// each time, we do not want to allocate fields for each call to FieldDefs when
 	// the result might be cached.
-	return m.Model.Define(m, m.fields)
+	return m.Model.Define(ctx, m, m.fields)
 }
 
 func BenchmarkCreateObjects(b *testing.B) {
+	var ctx = context.Background()
 	b.Run("BasicModel", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			var m = attrs.NewObject[*BasicModel](&BasicModel{})
+			var m = attrs.NewObject[*BasicModel](ctx, &BasicModel{})
 			_ = m
 		}
 	})
 
 	b.Run("ComplexModel", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			var m = attrs.NewObject[*ComplexModel](&ComplexModel{})
+			var m = attrs.NewObject[*ComplexModel](ctx, &ComplexModel{})
 			_ = m
 		}
 	})
@@ -99,6 +101,7 @@ func BenchmarkCreateObjects(b *testing.B) {
 
 func BenchmarkFieldDefs(b *testing.B) {
 
+	var ctx = attrs.ContextWithFlags(context.Background(), attrs.CtxFlagNone, true)
 	b.Run("BasicModel", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			var m = &BasicModel{
@@ -107,7 +110,7 @@ func BenchmarkFieldDefs(b *testing.B) {
 				Description: "Test description",
 			}
 
-			var defs = m.FieldDefs()
+			var defs = m.FieldDefs(ctx)
 			_ = defs
 		}
 	})
@@ -126,7 +129,7 @@ func BenchmarkFieldDefs(b *testing.B) {
 				},
 			}
 
-			var defs = m.FieldDefs()
+			var defs = m.FieldDefs(ctx)
 			_ = defs
 		}
 	})
@@ -144,10 +147,10 @@ func BenchmarkFieldDefs(b *testing.B) {
 			},
 		}
 
-		var defs = m.FieldDefs()
+		var defs = m.FieldDefs(ctx)
 
 		for i := 0; i < b.N; i++ {
-			defs = m.FieldDefs()
+			defs = m.FieldDefs(ctx)
 			_ = defs
 		}
 	})
@@ -160,20 +163,20 @@ func BenchmarkFieldDefs(b *testing.B) {
 				Description: "Test description",
 			}
 
-			var defs = m.FieldDefs()
+			var defs = m.FieldDefs(ctx)
 			_ = defs
 		}
 	})
 
 	b.Run("ComplexModelWithSetup", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			var m = models.Setup(&ComplexModel{
+			var m = models.Setup(ctx, &ComplexModel{
 				ID:          1,
 				Title:       "Test",
 				Description: "Test description",
 			})
 
-			var defs = m.FieldDefs()
+			var defs = m.FieldDefs(ctx)
 			_ = defs
 		}
 	})
@@ -192,14 +195,14 @@ func BenchmarkFieldDefs(b *testing.B) {
 				},
 			}
 
-			var defs = m.FieldDefs()
+			var defs = m.FieldDefs(ctx)
 			_ = defs
 		}
 	})
 
 	b.Run("ComplexModelWithJoinedAndSetup", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			var m = models.Setup(&ComplexModel{
+			var m = models.Setup(ctx, &ComplexModel{
 				ID:          1,
 				Title:       "Test",
 				Description: "Test description",
@@ -210,13 +213,13 @@ func BenchmarkFieldDefs(b *testing.B) {
 					LastName:  "Doe",
 				},
 			})
-			var defs = m.FieldDefs()
+			var defs = m.FieldDefs(ctx)
 			_ = defs
 		}
 	})
 
 	b.Run("ComplexModelWithJoinedAndSetupCached", func(b *testing.B) {
-		var m = models.Setup(&ComplexModel{
+		var m = models.Setup(ctx, &ComplexModel{
 			ID:          1,
 			Title:       "Test",
 			Description: "Test description",
@@ -228,9 +231,9 @@ func BenchmarkFieldDefs(b *testing.B) {
 			},
 		})
 
-		var defs = m.FieldDefs()
+		var defs = m.FieldDefs(ctx)
 		for i := 0; i < b.N; i++ {
-			defs = m.FieldDefs()
+			defs = m.FieldDefs(ctx)
 			_ = defs
 		}
 	})
@@ -261,7 +264,7 @@ var SAMPLE = []Field{
 
 func BenchmarkFlatAppend(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		out := make([]Field, 0, len(SAMPLE))
 		for _, f := range SAMPLE {
 			out = append(out, f)
@@ -281,7 +284,7 @@ func BenchmarkFlatIterator(b *testing.B) {
 
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		out := make([]Field, 0, len(SAMPLE))
 		for f := range iterator {
 			out = append(out, f)
@@ -313,7 +316,7 @@ func BenchmarkNestedIteratorForLoop(b *testing.B) {
 
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		out := make([]Field, 0, len(SAMPLE))
 		for f := range nestedIterator(iterator) {
 			out = append(out, f)
@@ -354,7 +357,7 @@ func BenchmarkNestedIteratorPull(b *testing.B) {
 
 	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		out := make([]Field, 0, len(SAMPLE))
 		for f := range nestedIterator(iterator) {
 			out = append(out, f)

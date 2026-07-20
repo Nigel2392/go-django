@@ -18,7 +18,7 @@ type ResponseAssertion interface {
 }
 
 type responseAssertion struct {
-	assertion[baseTB]
+	assertion[BaseTB]
 	response *TestResponse
 }
 

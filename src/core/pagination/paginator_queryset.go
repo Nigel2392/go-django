@@ -39,7 +39,7 @@ func (p *QueryPaginator[T]) GetQuerySet() *queries.QuerySet[T] {
 	var qs *queries.QuerySet[T]
 	if p.BaseQuerySet == nil {
 		qs = queries.GetQuerySet[T](attrs.NewObject[T](
-			reflect.TypeOf(new(T)).Elem(),
+			qs.Context(), reflect.TypeOf(new(T)).Elem(),
 		))
 	} else {
 		qs = p.BaseQuerySet()

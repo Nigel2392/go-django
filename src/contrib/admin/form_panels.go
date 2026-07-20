@@ -797,7 +797,7 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 		if !isNew {
 			target = targetList[i]
 		} else {
-			target = attrs.NewObject[TARGET](p.TargetType)
+			target = attrs.NewObject[TARGET](ctx, p.TargetType)
 		}
 
 		var form modelforms.ModelForm[TARGET]
@@ -833,7 +833,7 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 		case attrs.RelOneToMany:
 			if revField != nil {
 				var fieldName = revField.Name()
-				var pk = attrs.PrimaryKey(source)
+				var pk = attrs.PrimaryKey(ctx, source)
 				if !fields.IsZero(pk) {
 					initialData[fieldName] = pk
 				} else {
@@ -847,7 +847,7 @@ func (p *ModelFormPanel[TARGET, FORM]) GetForms(ctx context.Context, r *http.Req
 								false, "", chooser.BaseChooserOptions{
 									TargetObject: source,
 									GetPrimaryKey: func(ctx context.Context, i interface{}) interface{} {
-										return attrs.PrimaryKey(i.(attrs.Definer))
+										return attrs.PrimaryKey(ctx, i.(attrs.Definer))
 									},
 									Queryset: func(ctx context.Context) ([]interface{}, error) {
 										return []interface{}{source}, nil
@@ -966,7 +966,7 @@ func (m *ModelFormPanel[TARGET, FORM]) FormSet(r *http.Request, ctx context.Cont
 }
 
 func getRelatedList[TARGET attrs.Definer](r *http.Request, ctx context.Context, source attrs.Definer, fieldName string) (attrs.Field, []TARGET, error) {
-	var defs = source.FieldDefs()
+	var defs = attrs.Define(ctx, source)
 	field, ok := defs.Field(fieldName)
 	if !ok {
 		return nil, nil, errors.FieldNotFound.Wrapf(

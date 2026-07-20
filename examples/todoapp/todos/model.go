@@ -1,6 +1,8 @@
 package todos
 
 import (
+	"context"
+
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/trans"
@@ -15,8 +17,8 @@ type Todo struct {
 	Done         bool
 }
 
-func (m *Todo) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m, func(attrs.Definer) []attrs.Field {
+func (m *Todo) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m, func(attrs.Definer) []attrs.Field {
 		return []attrs.Field{
 			attrs.NewField(m, "ID", &attrs.FieldConfig{
 				Primary:  true, // this field is the primary key

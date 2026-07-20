@@ -52,7 +52,7 @@ func (m *OrderableMixin[T]) BindToEmbedder(embedder attrs.Definer) error {
 	return nil
 }
 
-func (m *OrderableMixin[T]) FieldDefs() attrs.Definitions {
+func (m *OrderableMixin[T]) FieldDefs(ctx context.Context) attrs.Definitions {
 	return nil
 }
 
@@ -151,8 +151,8 @@ func (b *BlogImage) GetContentBlock() *blocks.ListBlock {
 	return block
 }
 
-func (b *BlogImage) FieldDefs() attrs.Definitions {
-	return b.Model.Define(b,
+func (b *BlogImage) FieldDefs(ctx context.Context) attrs.Definitions {
+	return b.Model.Define(ctx, b,
 		attrs.NewField(b, "ID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,
@@ -289,11 +289,11 @@ func (b *BlogPage) GetContentBlock() *blocks.StreamBlock {
 	)
 }
 
-func (n *BlogPage) FieldDefs() attrs.Definitions {
+func (n *BlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
 	if n.Page == nil {
 		n.Page = &pages.PageNode{}
 	}
-	return n.Model.Define(n,
+	return n.Model.Define(ctx, n,
 		attrs.NewField(n.Page, "PageID", &attrs.FieldConfig{
 			Primary:  true,
 			ReadOnly: true,

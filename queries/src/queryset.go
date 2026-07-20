@@ -111,8 +111,6 @@ func BulkUpdateQuerySet(builder bulkUpdateQuerySetInterface, params ...any) Bulk
 }
 
 type PreloadResults struct {
-	rowsRaw Rows[attrs.Definer]
-
 	// RowsMap is a map of primary key to a slice of rows.
 	//
 	// The primary key is the value of the primary key field
@@ -333,14 +331,14 @@ type QuerySet[T attrs.Definer] struct {
 // See [Objects] for more details.
 func GetQuerySet[T attrs.Definer](model T) *QuerySet[T] {
 	if m, ok := any(model).(QuerySetDefiner); ok {
-		_ = m.FieldDefs() // ensure the model is initialized
+		_ = attrs.Define(context.Background(), m) // ensure the model is initialized
 		var qs = m.GetQuerySet()
 		qs = qs.clone()
 		return ChangeObjectsType[attrs.Definer, T](qs)
 	}
 
 	if t, ok := any(model).(TypedQuerySetDefiner[T]); ok {
-		_ = t.FieldDefs() // ensure the model is initialized
+		_ = attrs.Define(context.Background(), t) // ensure the model is initialized
 		return t.GetQuerySet().clone()
 	}
 
@@ -372,9 +370,7 @@ func GetQuerySetWithContext[T attrs.Definer](ctx context.Context, model T) *Quer
 //
 // The model must implement the Definer interface.
 func Objects[T attrs.Definer](model T, database ...string) *QuerySet[T] {
-	model = attrs.NewObject[T](model)
 	var modelV = reflect.ValueOf(model)
-
 	if !modelV.IsValid() {
 		panic("QuerySet: model is not a valid value")
 	}
@@ -531,7 +527,7 @@ func (qs *QuerySet[T]) ResolverInfoForModel(model attrs.Definer) *expr.Expressio
 	var other = Objects(model)
 	other.context = qs.context
 	other.AliasGen = qs.AliasGen.Clone()
-	return other.compiler.ExpressionInfo(other, other.internals)
+	return other.compiler.ExpressionInfo(other)
 }
 
 func (qs *QuerySet[T]) Peek() expr.QueryInformation {
@@ -1113,7 +1109,7 @@ func (qs *QuerySet[T]) Resolve(fieldName string, inf *expr.ExpressionInfo) (attr
 	if field == nil {
 		if res.Chain == nil || res.Chain.Final == nil {
 			return nil, nil, nil, errors.FieldNotFound.Wrapf(
-				"Resolve: field %q not found in model %T", fieldName, inf.Model,
+				"Resolve: field %q not found in model %T", fieldName, qs.internals.Model,
 			)
 		}
 		field = res.Chain.Final.Field
@@ -1771,8 +1767,7 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 			var prevDefs = prevMeta.Definitions()
 
 			join = clause.GenerateTargetClause(
-				ChangeObjectsType[T, attrs.Definer](qs),
-				qs.internals,
+				qs,
 				ClauseTarget{ // LHS
 					Table: Table{
 						Name:  prevDefs.TableName(),
@@ -1853,8 +1848,7 @@ func (qs *QuerySet[T]) addRelationChainPart(prev, curr *attrs.RelationChainPart,
 			var prevMeta = attrs.GetModelMeta(prev.Model)
 			var prevDefs = prevMeta.Definitions()
 			join1, join2 = clause.GenerateTargetThroughClause(
-				ChangeObjectsType[T, attrs.Definer](qs),
-				qs.internals,
+				qs,
 				ClauseTarget{ // LHS
 					Table: Table{
 						Name:  prevDefs.TableName(),
@@ -2016,7 +2010,7 @@ func (qs *QuerySet[T]) addSubProxies(info *FieldInfo[attrs.FieldDefinition], nod
 		var (
 			rel             = head.Value.Rel()
 			targetModel     = rel.Model()
-			targetDefs      = targetModel.FieldDefs()
+			targetDefs      = attrs.Define(qs.Context(), targetModel)
 			targetTableName = targetDefs.TableName()
 			condA_Alias     = sourceTableName
 			condB_Alias     = targetTableName
@@ -2058,9 +2052,7 @@ func (qs *QuerySet[T]) addSubProxies(info *FieldInfo[attrs.FieldDefinition], nod
 			}
 
 			var join = clause.GenerateTargetClause(
-				ChangeObjectsType[T, attrs.Definer](qs),
-				qs.internals,
-				lhs, rhs,
+				qs, lhs, rhs,
 			)
 
 			var info = &FieldInfo[attrs.FieldDefinition]{
@@ -2323,7 +2315,7 @@ func (qs *QuerySet[T]) compileOrderBy(fields ...string) []expr.OrderBy {
 			field = res.Chain.Final.Field
 		}
 
-		var defs = obj.FieldDefs()
+		var defs = attrs.GetModelMeta(obj).Definitions()
 		var tableAlias string
 		if len(res.Aliases) > 0 {
 			tableAlias = res.Aliases[len(res.Aliases)-1]
@@ -2612,9 +2604,7 @@ func (qs *QuerySet[T]) QueryAll(fields ...any) CompiledRowsQuery[[][]interface{}
 	}
 
 	var query = qs.compiler.BuildSelectQuery(
-		qs.context,
-		ChangeObjectsType[T, attrs.Definer](qs),
-		qs.internals,
+		qs.context, qs, qs.internals,
 	)
 	qs.latestQuery = query
 
@@ -2628,9 +2618,7 @@ func (qs *QuerySet[T]) QueryAggregate() CompiledRowsQuery[[][]interface{}] {
 	qs.internals.ForUpdate = false // no for update for aggregates
 	qs.internals.Distinct = false  // no distinct for aggregates
 	var query = qs.compiler.BuildSelectQuery(
-		qs.context,
-		ChangeObjectsType[T, attrs.Definer](qs),
-		qs.internals,
+		qs.context, qs, qs.internals,
 	)
 	qs.latestQuery = query
 	return query
@@ -2650,9 +2638,7 @@ func (qs *QuerySet[T]) ClearOrderBy() *QuerySet[T] {
 
 func (qs *QuerySet[T]) QueryCount() CompiledRowQuery[int64] {
 	var q = qs.compiler.BuildCountQuery(
-		qs.context,
-		ChangeObjectsType[T, attrs.Definer](qs),
-		qs.internals,
+		qs.context, qs, qs.internals,
 	)
 	qs.latestQuery = q
 	return q
@@ -2664,22 +2650,44 @@ func (qs *QuerySet[T]) ForEachRow(rowFunc func(qs *QuerySet[T], row *Row[T]) err
 	return qs
 }
 
+func iterQuery[RESULT any](q CompiledQuery[[]RESULT]) (size int, _range iter.Seq2[RESULT, error]) {
+	var results iter.Seq2[RESULT, error]
+	switch res := q.(type) {
+	case IterableQuery[RESULT]:
+		results = res.Iter()
+	default:
+		rawResults, err := q.Exec()
+		size = len(rawResults)
+		results = func(yield func(RESULT, error) bool) {
+			if err != nil {
+				var zero RESULT
+				yield(zero, err)
+				return
+			}
+
+			for _, result := range rawResults {
+				if !yield(result, nil) {
+					return
+				}
+			}
+		}
+	}
+	return size, results
+}
+
 // IterAll returns an iterator over all rows in the QuerySet, and the amount of rows to iterate over.
 //
 // If [ForEachRow] is set, it will be used to process each row inside of the iterator.
 func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 
 	var resultQuery = qs.QueryAll()
-	var results, err = resultQuery.Exec()
-	if err != nil {
-		return 0, nil, err
-	}
+	var _, results = iterQuery(resultQuery)
 
 	var runActors = func(o attrs.Definer) error {
 		if o == nil {
 			return nil
 		}
-		_, err = runActor(qs.context, actsAfterQuery, o)
+		_, err := runActor(qs.context, actsAfterQuery, o)
 		return err
 	}
 
@@ -2692,13 +2700,28 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 		))
 	}
 
-	for resultIndex, row := range results {
-		var (
-			obj        = attrs.NewObject[attrs.Definer](qs.internals.Model.Object)
-			scannables = getScannableFields(qs.internals.Fields, obj)
-		)
+	var (
+		// manage outside of getScannableFields so we can re-use the maps.
+		_scannable_instances    = make(map[string]attrs.Definer)
+		_scannable_parentFields = make(map[string]*scannableField) // NEW: store parent scannableFields by chain
+		ctx, attrCtx            = attrs.AttributeContext(qs.Context())
+		resultIndex             = 0
+	)
+
+	attrCtx.Flags = attrs.CtxFlagDeferSignals
+
+	defer attrCtx.Reset()
+
+	for row, err := range results {
+		if err != nil {
+			return 0, nil, err
+		}
 
 		var (
+			obj                    = attrs.NewObject[attrs.Definer](ctx, qs.internals.Model.Object)
+			fieldsSize, scannables = getScannableFields(
+				ctx, qs.internals.Fields, obj, _scannable_instances, _scannable_parentFields,
+			)
 			annotator, _ = obj.(DataModel)
 			annotations  = make(map[string]any)
 			datastore    ModelDataStore
@@ -2708,6 +2731,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 			datastore = annotator.DataStore()
 		}
 
+		var fieldsList = make([]*scannableField, 0, fieldsSize)
 		for j, field := range scannables {
 			f := field.field
 			val := row[j]
@@ -2744,7 +2768,11 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 					datastore.SetValue(alias, val)
 				}
 			}
+			fieldsList = append(fieldsList, field)
 		}
+
+		clear(_scannable_instances)
+		clear(_scannable_parentFields)
 
 		var (
 			uniqueValue any
@@ -2753,7 +2781,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 
 		// required in case the root object has a through relation bound to it
 		if rows.hasRoot() {
-			var rootRow = rows.rootRow(scannables)
+			var rootRow = rows.rootRow(fieldsList)
 
 			// if the root object has no through relation
 			// we can use the unique key of the root object
@@ -2762,7 +2790,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 			// otherwise, we should use the through object to
 			// generate the unique value to not clash with other objects
 			if rootRow.through == nil {
-				uniqueValue, err = GetUniqueKey(rootRow.object)
+				uniqueValue, err = GetUniqueKey(ctx, rootRow.object)
 				switch {
 				case err != nil && errors.Is(err, errors.NoUniqueKey) && rows.hasMultiRelations:
 					return 0, nil, errors.Wrapf(
@@ -2788,7 +2816,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 			// this logic is kept in line in [buildChainParts] to ensure
 			// data consistency across the relations.
 			if throughObj != nil {
-				uniqueValue, err = GetUniqueKey(throughObj)
+				uniqueValue, err = GetUniqueKey(ctx, throughObj)
 				if err != nil {
 					return 0, nil, errors.Wrapf(
 						err, "failed to get unique key from through object %T",
@@ -2808,21 +2836,23 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 		// add the root object to the rows tree
 		// this has to be done before adding possible duplicate relations
 		rows.addRoot(
-			uniqueValue, obj, throughObj, annotations,
+			ctx, uniqueValue, obj, throughObj, annotations,
 		)
 
 		for _, possibleDuplicate := range rows.possibleDuplicates {
-			var scannable = scannables[possibleDuplicate.idx]
-			var chain = rows.buildChainParts(scannable)
+			var scannable = fieldsList[possibleDuplicate.idx]
+			var chain = rows.buildChainParts(ctx, scannable)
 			if usingAutoKey && len(chain) > 0 {
 				chain[0].uniqueValue = uniqueValue
 			}
 
-			rows.addRelationChain(scannable, chain)
+			rows.addRelationChain(ctx, scannable, chain)
 		}
+
+		resultIndex++
 	}
 
-	rowCount, rowIter, err := rows.compile()
+	rowCount, rowIter, err := rows.compile(ctx)
 	if err != nil {
 		return 0, nil, errors.Wrapf(
 			err, "failed to compile rows for QuerySet.All",
@@ -2901,18 +2931,23 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 	}
 
 	var resultQuery = qs.QueryAll(fields...)
-	var results, err = resultQuery.Exec()
-	if err != nil {
-		return nil, err
-	}
+	var preAlloc, results = iterQuery(resultQuery)
+	var list = make([]map[string]any, 0, preAlloc)
+	var (
+		_scannable_instances    = make(map[string]attrs.Definer)
+		_scannable_parentFields = make(map[string]*scannableField) // NEW: store parent scannableFields by chain
+	)
+	for row, err := range results {
+		if err != nil {
+			return nil, err
+		}
 
-	var list = make([]map[string]any, len(results))
-	for i, row := range results {
 		var (
-			obj    = attrs.NewObject[attrs.Definer](qs.internals.Model.Object)
-			fields = getScannableFields(qs.internals.Fields, obj)
-			values = make(map[string]any, len(row))
+			obj       = attrs.NewObject[attrs.Definer](qs.context, qs.internals.Model.Object)
+			_, fields = getScannableFields(qs.context, qs.internals.Fields, obj, _scannable_instances, _scannable_parentFields)
+			values    = make(map[string]any, len(row))
 		)
+
 		for j, field := range fields {
 			var f = field.field
 			var val = row[j]
@@ -2965,7 +3000,10 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 			values[key] = value
 		}
 
-		list[i] = values
+		clear(_scannable_instances)
+		clear(_scannable_parentFields)
+
+		list = append(list, values)
 	}
 
 	if qs.useCache {
@@ -2983,17 +3021,24 @@ func (qs *QuerySet[T]) ValuesList(fields ...any) ([][]interface{}, error) {
 		return qs.cached.([][]any), nil
 	}
 
-	var resultQuery = qs.QueryAll(fields...)
-	var results, err = resultQuery.Exec()
-	if err != nil {
-		return nil, err
-	}
+	var (
+		resultQuery             = qs.QueryAll(fields...)
+		preAlloc, results       = iterQuery(resultQuery)
+		list                    = make([][]any, 0, preAlloc)
+		_scannable_instances    = make(map[string]attrs.Definer)
+		_scannable_parentFields = make(map[string]*scannableField) // NEW: store parent scannableFields by chain
+	)
 
-	var list = make([][]any, len(results))
-	for i, row := range results {
-		var obj = attrs.NewObject[attrs.Definer](qs.internals.Model.Object)
-		var fields = getScannableFields(qs.internals.Fields, obj)
-		var values = make([]any, len(fields))
+	for row, err := range results {
+		if err != nil {
+			return nil, err
+		}
+
+		var obj = attrs.NewObject[attrs.Definer](qs.context, qs.internals.Model.Object)
+		var size, fields = getScannableFields(
+			qs.context, qs.internals.Fields, obj, _scannable_instances, _scannable_parentFields,
+		)
+		var values = make([]any, size)
 		for j, field := range fields {
 			var f = field.field
 			var val = row[j]
@@ -3020,7 +3065,10 @@ func (qs *QuerySet[T]) ValuesList(fields ...any) ([][]interface{}, error) {
 			values[j] = v
 		}
 
-		list[i] = values
+		clear(_scannable_instances)
+		clear(_scannable_parentFields)
+
+		list = append(list, values)
 	}
 
 	if qs.useCache {
@@ -3054,11 +3102,12 @@ func (qs *QuerySet[T]) Aggregate(annotations map[string]expr.Expression) (map[st
 	}
 
 	var (
-		row        = results[0]
-		out        = make(map[string]any)
-		scannables = getScannableFields(
-			qs.internals.Fields,
-			attrs.NewObject[attrs.Definer](qs.internals.Model.Object),
+		row           = results[0]
+		out           = make(map[string]any)
+		_, scannables = getScannableFields(
+			qs.context, qs.internals.Fields,
+			attrs.NewObject[attrs.Definer](qs.context, qs.internals.Model.Object),
+			nil, nil,
 		)
 	)
 
@@ -3240,9 +3289,7 @@ func (qs *QuerySet[T]) Exists() (bool, error) {
 	qs.internals.Limit = 1  // limit to 1 row
 	qs.internals.Offset = 0 // no offset for exists
 	var resultQuery = qs.compiler.BuildCountQuery(
-		qs.context,
-		ChangeObjectsType[T, attrs.Definer](qs),
-		qs.internals,
+		qs.context, qs, qs.internals,
 	)
 	qs.latestQuery = resultQuery
 
@@ -3289,7 +3336,7 @@ func (qs *QuerySet[T]) Create(value T) (T, error) {
 	// If it is, we can use the Save method to save the object
 	if saver, ok := any(value).(models.ContextSaver); ok && !qs.explicitSave {
 		var err error
-		value, err = setup(value)
+		value, err = setup(qs.context, value)
 		if err != nil {
 			return *new(T), errors.Wrapf(
 				err, "failed to setup object %T", value,
@@ -3362,7 +3409,7 @@ func (qs *QuerySet[T]) Update(value T, expressions ...any) (int64, error) {
 
 	if saver, ok := any(value).(models.ContextSaver); ok && len(qs.internals.Where) == 0 && !qs.explicitSave {
 
-		if _, err := setup(value); err != nil {
+		if _, err := setup(qs.context, value); err != nil {
 			return 0, errors.Wrapf(
 				err, "failed to setup object %T", value,
 			)
@@ -3454,21 +3501,24 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		primary attrs.Field
 	)
 
-	var context = &ValidationContext{
+	var validatorCtx = &ValidationContext{
 		Context: qs.context,
 	}
+
+	var ctx, attrsContext = attrs.AttributeContext(validatorCtx)
+	defer attrsContext.Reset()
 
 	var isCommitContext = IsCommitContext(qs.context)
 	for _, object := range objects {
 		var err error
-		object, err = setup(object)
+		object, err = setup(ctx, object)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "failed to setup object %T", object,
 			)
 		}
 
-		if _, err = runActor(context, actsBeforeCreate, object); err != nil {
+		if _, err = runActor(ctx, actsBeforeCreate, object); err != nil {
 			return nil, errors.Wrapf(
 				err,
 				"failed to run ActsBeforeCreate for %T",
@@ -3476,7 +3526,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			)
 		}
 
-		if err = Validate(context, object); err != nil {
+		if err = Validate(ctx, object); err != nil {
 			return nil, errors.Wrapf(
 				err,
 				"failed to validate object %T before create",
@@ -3488,7 +3538,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			continue
 		}
 
-		var defs = object.FieldDefs()
+		var defs = attrs.Define(ctx, object)
 		var fields = defs.Fields()
 		var info = UpdateInfo{
 			FieldInfo: FieldInfo[attrs.Field]{
@@ -3555,10 +3605,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 	var results [][]any
 	if isCommitContext {
 		var resultQuery = qs.compiler.BuildCreateQuery(
-			context,
-			ChangeObjectsType[T, attrs.Definer](qs),
-			qs.internals,
-			infos,
+			validatorCtx, qs, qs.internals, infos,
 		)
 		qs.latestQuery = resultQuery
 
@@ -3589,7 +3636,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 
 		for _, row := range objects {
 
-			if _, err = runActor(context, actsAfterCreate, row); err != nil {
+			if _, err = runActor(ctx, actsAfterCreate, row); err != nil {
 				return nil, errors.Wrapf(
 					err,
 					"failed to run ActsAfterCreate for %T",
@@ -3603,7 +3650,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		// No results are returned, we cannot set the primary key
 		// so we can return and commit the transaction
 		if qs.internals.Model.Primary == nil || !migrator.CanAutoIncrement(qs.internals.Model.Primary) {
-			return objects, tx.Commit(context)
+			return objects, tx.Commit(ctx)
 		}
 
 		// If no results are returned, we cannot set the primary key
@@ -3614,7 +3661,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				"no results returned after insert, cannot set primary key for %T",
 				qs.internals.Model.Object,
 			)
-			return objects, tx.Commit(context)
+			return objects, tx.Commit(ctx)
 		}
 
 		if isCommitContext && len(results) != len(objects) {
@@ -3627,7 +3674,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		for i, row := range objects {
 
 			if isCommitContext {
-				var rowDefs = row.FieldDefs()
+				var rowDefs = attrs.Define(ctx, row)
 				var prim = rowDefs.Primary()
 				if prim != nil {
 					if len(results[i]) != 1 {
@@ -3650,7 +3697,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			//		row = Setup[T](row)
 			//	}
 
-			if _, err = runActor(context, actsAfterCreate, row); err != nil {
+			if _, err = runActor(ctx, actsAfterCreate, row); err != nil {
 				return nil, errors.Wrapf(
 					err,
 					"failed to run ActsAfterCreate for %T",
@@ -3668,9 +3715,14 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			))
 		}
 
+		var (
+			_scannable_instances    = make(map[string]attrs.Definer)
+			_scannable_parentFields = make(map[string]*scannableField) // NEW: store parent scannableFields by chain
+		)
+
 		for i, row := range objects {
 			if !isCommitContext {
-				if _, err = runActor(context, actsAfterCreate, row); err != nil {
+				if _, err = runActor(ctx, actsAfterCreate, row); err != nil {
 					return nil, errors.Wrapf(
 						err, "failed to run ActsAfterCreate for %T", row,
 					)
@@ -3679,10 +3731,13 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			}
 
 			var (
-				scannables = getScannableFields([]*FieldInfo[attrs.Field]{&infos[i].FieldInfo}, row)
-				resLen     = len(results[i])
-				newDefs    = row.FieldDefs()
-				prim       = newDefs.Primary()
+				fieldsSize, scannables = getScannableFields(
+					qs.context, []*FieldInfo[attrs.Field]{&infos[i].FieldInfo}, row,
+					_scannable_instances, _scannable_parentFields,
+				)
+				resLen  = len(results[i])
+				newDefs = attrs.Define(ctx, row)
+				prim    = newDefs.Primary()
 			)
 
 			// only decrease the result length if the primary key is not set
@@ -3694,10 +3749,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				resLen--
 			}
 
-			if len(scannables) != resLen {
+			if fieldsSize != resLen {
 				return nil, errors.LastInsertId.WithCause(fmt.Errorf(
 					"expected %d results returned after insert, got %d (len(scannables) != resLen)",
-					len(scannables), resLen,
+					fieldsSize, resLen,
 				))
 			}
 
@@ -3727,7 +3782,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				}
 			}
 
-			if _, err = runActor(context, actsAfterCreate, row); err != nil {
+			clear(_scannable_instances)
+			clear(_scannable_parentFields)
+
+			if _, err = runActor(ctx, actsAfterCreate, row); err != nil {
 				return nil, errors.Wrapf(
 					err,
 					"failed to run ActsAfterCreate for %T",
@@ -3742,7 +3800,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		))
 	}
 
-	return objects, tx.Commit(context)
+	return objects, tx.Commit(ctx)
 }
 
 func (qs *QuerySet[T]) BuildUpdateInfo(params ...any) ([]UpdateInfo, error) {
@@ -3829,7 +3887,7 @@ func (qs *QuerySet[T]) BuildUpdateInfo(params ...any) ([]UpdateInfo, error) {
 
 	for _, obj := range objects {
 		var err error
-		obj, err = setup(obj)
+		obj, err = setup(qs.context, obj)
 		if err != nil {
 			return nil, errors.Wrapf(
 				err, "failed to setup object %T", obj,
@@ -3945,7 +4003,7 @@ func (qs *QuerySet[T]) BuildUpdateInfo(params ...any) ([]UpdateInfo, error) {
 			Joins: joins,
 		}
 
-		var defs = qs.internals.Model.Object.FieldDefs()
+		var defs = attrs.Define(qs.Context(), qs.internals.Model.Object)
 		var keys = slices.Collect(maps.Keys(exprMap))
 		slices.Sort(keys)
 		for _, fieldName := range keys {
@@ -3996,10 +4054,7 @@ func (qs *QuerySet[T]) BulkUpdate(params ...any) (int64, error) {
 	var res int64
 	if isCommitContext {
 		var resultQuery = qs.compiler.BuildUpdateQuery(
-			qs.context,
-			ChangeObjectsType[T, attrs.Definer](qs),
-			qs.internals,
-			infos,
+			qs.context, qs, qs.internals, infos,
 		)
 		qs.latestQuery = resultQuery
 		res, err = resultQuery.Exec()
@@ -4127,9 +4182,7 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 	var res int64
 	if IsCommitContext(qs.context) {
 		var resultQuery = qs.compiler.BuildDeleteQuery(
-			qs.context,
-			ChangeObjectsType[T, attrs.Definer](qs),
-			qs.internals,
+			qs.context, qs, qs.internals,
 		)
 		qs.latestQuery = resultQuery
 
@@ -4154,10 +4207,9 @@ func (qs *QuerySet[T]) Delete(objects ...T) (int64, error) {
 
 func (qs *QuerySet[T]) tryParseExprStatement(sqlStr string, args []interface{}) (string, []interface{}) {
 	var (
-		changedQs = ChangeObjectsType[T, attrs.Definer](qs)
-		info      = qs.compiler.ExpressionInfo(changedQs, qs.internals)
-		stmt      = expr.ParseExprStatement(sqlStr, args)
-		resolved  = stmt.Resolve(info)
+		info     = qs.compiler.ExpressionInfo(qs)
+		stmt     = expr.ParseExprStatement(sqlStr, args)
+		resolved = stmt.Resolve(info)
 	)
 
 	sqlStr, args = resolved.SQL()
@@ -4166,7 +4218,7 @@ func (qs *QuerySet[T]) tryParseExprStatement(sqlStr string, args []interface{}) 
 		sqlStr = rebinder.Rebind(qs.Context(), sqlStr)
 	}
 
-	qs.latestQuery = &QueryInformation{
+	qs.latestQuery = &Query{
 		Stmt:    sqlStr,
 		Params:  args,
 		Builder: qs.compiler,
@@ -4213,7 +4265,7 @@ func (qs *QuerySet[T]) Exec(sqlStr string, args ...interface{}) (sql.Result, err
 // updateFields is used to get the field definitions and fields to be updated for the given object.
 // It returns the field definitions and the fields to be updated based on the current QuerySet selection.
 func (qs *QuerySet[T]) updateFields(obj attrs.Definer) (attrs.Definitions, []attrs.Field) {
-	var defs = obj.FieldDefs()
+	var defs = attrs.Define(qs.Context(), obj)
 	var fields []attrs.Field
 	if len(qs.internals.Fields) > 0 {
 		fields = make([]attrs.Field, 0, len(qs.internals.Fields))
@@ -4344,169 +4396,187 @@ type scannableField struct {
 	chainKey  string        // the chain up to this point, joined by "."
 }
 
-func getScannableFields[T attrs.FieldDefinition](fields []*FieldInfo[T], root attrs.Definer) []*scannableField {
+func getScannableFields[T attrs.FieldDefinition](ctx context.Context, fields []*FieldInfo[T], root attrs.Definer, instances map[string]attrs.Definer, parentFields map[string]*scannableField) (size int, _range iter.Seq2[int, *scannableField]) {
 	var listSize = 0
 	for _, info := range fields {
 		listSize += len(info.Fields)
 	}
 
+	if instances == nil {
+		instances = make(map[string]attrs.Definer)
+	}
+
+	if parentFields == nil {
+		parentFields = make(map[string]*scannableField)
+	}
+
 	var (
-		scannables    = make([]*scannableField, 0, listSize)
-		instances     = make(map[string]attrs.Definer)
-		parentFields  = make(map[string]*scannableField) // NEW: store parent scannableFields by chain
 		rootScannable *scannableField
 		idx           = 0
 	)
 
-	for _, info := range fields {
-		// handle through objects
-		//
-		// this has to be before the final fields are added - the logic
-		// matches that in [FieldInfo.WriteFields].
-		var throughObj attrs.Definer
-		if info.Through != nil {
-			var newObj = attrs.NewObject[attrs.Definer](info.Through.Model)
-			var newDefs = newObj.FieldDefs()
-			throughObj = newObj
+	return listSize, func(yield func(int, *scannableField) bool) {
+		for _, info := range fields {
+			// handle through objects
+			//
+			// this has to be before the final fields are added - the logic
+			// matches that in [FieldInfo.WriteFields].
+			var throughObj attrs.Definer
+			if info.Through != nil {
+				var newObj = attrs.NewObject[attrs.Definer](ctx, info.Through.Model)
+				var newDefs = attrs.Define(ctx, newObj)
+				throughObj = newObj
 
-			for _, f := range info.Through.Fields {
-				var field, ok = newDefs.Field(f.Name())
-				if !ok {
-					panic(fmt.Errorf("field %q not found in %T", f.Name(), newObj))
-				}
-
-				var throughField = &scannableField{
-					isThrough: true,
-					idx:       idx,
-					object:    newObj,
-					field:     field,
-					relType:   info.RelType,
-				}
-
-				scannables = append(scannables, throughField)
-				idx++
-			}
-		}
-
-		// if isNil(reflect.ValueOf(info.SourceField)) {
-		if any(info.SourceField) == any(*(new(T))) {
-			defs := root.FieldDefs()
-			for _, f := range info.Fields {
-				if virt, ok := any(f).(VirtualField); ok && info.Model == nil {
-					var attrField, ok = virt.(attrs.Field)
+				for _, f := range info.Through.Fields {
+					var field, ok = newDefs.Field(f.Name())
 					if !ok {
-						panic(fmt.Errorf("virtual field %q does not implement attrs.Field", f.Name()))
+						panic(fmt.Errorf("field %q not found in %T", f.Name(), newObj))
 					}
 
-					scannables = append(scannables, &scannableField{
-						idx:     idx,
-						field:   attrField,
-						relType: -1,
-					})
+					var throughField = &scannableField{
+						isThrough: true,
+						idx:       idx,
+						object:    newObj,
+						field:     field,
+						relType:   info.RelType,
+					}
+
+					if !yield(idx, throughField) {
+						return
+					}
+
 					idx++
-					continue
 				}
-				field, ok := defs.Field(f.Name())
+			}
+
+			// if isNil(reflect.ValueOf(info.SourceField)) {
+			if any(info.SourceField) == any(*(new(T))) {
+				defs := attrs.Define(ctx, root)
+				for _, f := range info.Fields {
+					if virt, ok := any(f).(VirtualField); ok && info.Model == nil {
+						var attrField, ok = virt.(attrs.Field)
+						if !ok {
+							panic(fmt.Errorf("virtual field %q does not implement attrs.Field", f.Name()))
+						}
+
+						if !yield(idx, &scannableField{
+							idx:     idx,
+							field:   attrField,
+							relType: -1,
+						}) {
+							return
+						}
+						idx++
+						continue
+					}
+					field, ok := defs.Field(f.Name())
+					if !ok {
+						panic(fmt.Errorf("field %q not found in %T", f.Name(), root))
+					}
+
+					var sf = &scannableField{
+						idx:     idx,
+						field:   field,
+						object:  root,
+						through: throughObj,
+						relType: -1,
+					}
+
+					if field.IsPrimary() && rootScannable == nil {
+						rootScannable = sf
+					}
+
+					if !yield(idx, sf) {
+						return
+					}
+
+					idx++
+				}
+				continue
+			}
+
+			instances[""] = root
+			parentFields[""] = rootScannable
+
+			// Walk chain
+			var (
+				parentScannable = rootScannable
+				parentObj       = root
+
+				parentKey string
+			)
+			for i, name := range info.Chain {
+				key := strings.Join(info.Chain[:i+1], ".")
+				parent := instances[parentKey]
+				defs := attrs.Define(ctx, parent)
+				field, ok := defs.Field(name)
 				if !ok {
-					panic(fmt.Errorf("field %q not found in %T", f.Name(), root))
+					panic(fmt.Errorf("field %q not found in %T", name, parent))
 				}
 
-				var sf = &scannableField{
-					idx:     idx,
-					field:   field,
-					object:  root,
-					through: throughObj,
-					relType: -1,
+				var rel = field.Rel()
+				var relType = rel.Type()
+				if _, exists := instances[key]; !exists {
+					var obj attrs.Definer
+					if i == len(info.Chain)-1 {
+						obj = attrs.NewObject[attrs.Definer](ctx, info.Model)
+					} else {
+						obj = attrs.NewObject[attrs.Definer](ctx, rel.Model())
+					}
+
+					// only set fk relations - the rest are added later
+					// in the dedupe rows object.
+					if relType == attrs.RelManyToOne {
+						setRelatedObjects(
+							ctx,
+							name,
+							relType,
+							parent,
+							[]Relation{&baseRelation{object: obj}},
+						)
+					}
+
+					instances[key] = obj
+
+					// Make the scannableField node for this relation link to its parent
+					newParent := &scannableField{
+						relType:   relType,
+						chainPart: name,
+						chainKey:  key,
+						object:    obj,
+						field:     attrs.Define(ctx, obj).Primary(),
+						idx:       -1,                      // Not a leaf
+						srcField:  parentFields[parentKey], // link to parent in the chain
+					}
+					parentFields[key] = newParent
 				}
 
-				if field.IsPrimary() && rootScannable == nil {
-					rootScannable = sf
+				parentScannable = parentFields[key]
+				parentObj = instances[key]
+				parentKey = key
+			}
+
+			var final = parentObj
+			var finalDefs = attrs.Define(ctx, final)
+			for _, f := range info.Fields {
+				field, ok := finalDefs.Field(f.Name())
+				if !ok {
+					panic(fmt.Errorf("field %q not found in %T", f.Name(), final))
 				}
 
-				scannables = append(scannables, sf)
+				var cpy = *parentScannable
+				cpy.idx = idx
+				cpy.object = final
+				cpy.field = field
+				cpy.through = throughObj
+
+				if !yield(idx, &cpy) {
+					return
+				}
+
 				idx++
 			}
-			continue
 		}
 
-		instances[""] = root
-		parentFields[""] = rootScannable
-
-		// Walk chain
-		var (
-			parentScannable = rootScannable
-			parentObj       = root
-
-			parentKey string
-		)
-		for i, name := range info.Chain {
-			key := strings.Join(info.Chain[:i+1], ".")
-			parent := instances[parentKey]
-			defs := parent.FieldDefs()
-			field, ok := defs.Field(name)
-			if !ok {
-				panic(fmt.Errorf("field %q not found in %T", name, parent))
-			}
-
-			var rel = field.Rel()
-			var relType = rel.Type()
-			if _, exists := instances[key]; !exists {
-				var obj attrs.Definer
-				if i == len(info.Chain)-1 {
-					obj = attrs.NewObject[attrs.Definer](info.Model)
-				} else {
-					obj = attrs.NewObject[attrs.Definer](rel.Model())
-				}
-
-				// only set fk relations - the rest are added later
-				// in the dedupe rows object.
-				if relType == attrs.RelManyToOne {
-					setRelatedObjects(
-						name,
-						relType,
-						parent,
-						[]Relation{&baseRelation{object: obj}},
-					)
-				}
-
-				instances[key] = obj
-
-				// Make the scannableField node for this relation link to its parent
-				newParent := &scannableField{
-					relType:   relType,
-					chainPart: name,
-					chainKey:  key,
-					object:    obj,
-					field:     obj.FieldDefs().Primary(),
-					idx:       -1,                      // Not a leaf
-					srcField:  parentFields[parentKey], // link to parent in the chain
-				}
-				parentFields[key] = newParent
-			}
-
-			parentScannable = parentFields[key]
-			parentObj = instances[key]
-			parentKey = key
-		}
-
-		var final = parentObj
-		var finalDefs = final.FieldDefs()
-		for _, f := range info.Fields {
-			field, ok := finalDefs.Field(f.Name())
-			if !ok {
-				panic(fmt.Errorf("field %q not found in %T", f.Name(), final))
-			}
-
-			var cpy = *parentScannable
-			cpy.idx = idx
-			cpy.object = final
-			cpy.field = field
-			cpy.through = throughObj
-			scannables = append(scannables, &cpy)
-
-			idx++
-		}
 	}
-
-	return scannables
 }

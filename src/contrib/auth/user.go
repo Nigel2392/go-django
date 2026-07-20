@@ -167,6 +167,6 @@ func (u *User) Fields() []any {
 	}
 }
 
-func (u *User) FieldDefs() attrs.Definitions {
-	return u.Model.Define(u, u.Fields)
+func (u *User) FieldDefs(ctx context.Context) attrs.Definitions {
+	return u.Model.Define(ctx, u, u.Fields)
 }

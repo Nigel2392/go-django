@@ -1,6 +1,8 @@
 package users
 
 import (
+	"context"
+
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/queries/src/models"
@@ -20,7 +22,7 @@ func (g *Group) String() string {
 	return g.Name
 }
 
-func (g *Group) FieldDefs() attrs.Definitions {
+func (g *Group) FieldDefs(ctx context.Context) attrs.Definitions {
 	var fields = []attrs.Field{
 		attrs.NewField(g, "ID", &attrs.FieldConfig{
 			ReadOnly: true,
@@ -57,5 +59,5 @@ func (g *Group) FieldDefs() attrs.Definitions {
 			},
 		),
 	}
-	return g.Model.Define(g, fields)
+	return g.Model.Define(ctx, g, fields)
 }

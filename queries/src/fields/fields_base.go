@@ -462,13 +462,14 @@ func (e *DataModelField[T]) SetValue(v interface{}, force bool) error {
 		if e._Type.Implements(_DEFINER_TYPE) && e._Type != _DEFINER_TYPE && e._Type.Kind() != reflect.Interface {
 			var obj = e.GetValue()
 			if obj == nil {
-				obj = attrs.NewObject[attrs.Definer](e._Type)
+				obj = attrs.NewObject[attrs.Definer](e.defs.Context(), e._Type)
 				if err := e.SetValue(obj, false); err != nil {
 					return fmt.Errorf("cannot set value %v to %T: %w", v, *new(T), err)
 				}
 			}
+
 			var defObj = obj.(attrs.Definer)
-			var defs = defObj.FieldDefs()
+			var defs = defObj.FieldDefs(e.defs.Context())
 			var prim = defs.Primary()
 			return prim.Scan(v)
 		}
@@ -490,13 +491,13 @@ func (e *DataModelField[T]) SetValue(v interface{}, force bool) error {
 
 			var obj = e.GetValue()
 			if obj == nil {
-				obj = attrs.NewObject[attrs.Definer](model)
+				obj = attrs.NewObject[attrs.Definer](e.defs.Context(), model)
 				if err := e.SetValue(obj, false); err != nil {
 					return fmt.Errorf("cannot set value %v to %T: %w", v, *new(T), err)
 				}
 			}
 			var defObj = obj.(attrs.Definer)
-			var defs = defObj.FieldDefs()
+			var defs = defObj.FieldDefs(e.defs.Context())
 			var prim = defs.Primary()
 			return prim.Scan(v)
 		}
@@ -573,7 +574,7 @@ func (e *DataModelField[T]) Value() (driver.Value, error) {
 
 	switch v := val.(type) {
 	case attrs.Definer:
-		var pk = v.FieldDefs().Primary()
+		var pk = v.FieldDefs(e.defs.Context()).Primary()
 		if pk == nil {
 			return nil, fmt.Errorf("Value: model %T has no primary key", v)
 		}

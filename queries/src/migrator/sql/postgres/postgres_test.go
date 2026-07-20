@@ -1,6 +1,7 @@
 package postgres_test
 
 import (
+	"context"
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
@@ -28,7 +29,7 @@ type tableTypeTest[T any] struct {
 	Expect      string
 }
 
-func (t *tableTypeTest[T]) FieldDefs() attrs.Definitions {
+func (t *tableTypeTest[T]) FieldDefs(ctx context.Context) attrs.Definitions {
 	return nil
 }
 

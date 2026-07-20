@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/elliotchance/orderedmap/v2"
 	"github.com/mattn/go-sqlite3"
 )
@@ -25,7 +26,7 @@ func init() {
 			django.APPVAR_DATABASE,
 		)
 		if !ok {
-			return nil, fmt.Errorf("migrator: mysql: no database connection found")
+			return nil, fmt.Errorf("migrator: sqlite: no database connection found")
 		}
 		return NewSQLiteSchemaEditor(db), nil
 	})
@@ -562,7 +563,7 @@ func (m *SQLiteSchemaEditor) WriteColumn(w *strings.Builder, col migrator.Column
 checkRels:
 	if col.Rel != nil {
 		var (
-			relDefs  = col.Rel.Model().FieldDefs()
+			relDefs  = attrs.GetModelMeta(col.Rel.Model()).Definitions()
 			relField = col.Rel.Field()
 		)
 

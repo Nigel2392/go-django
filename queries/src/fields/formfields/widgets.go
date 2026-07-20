@@ -54,7 +54,7 @@ func (f *ModelSelect) ValueToForm(value interface{}) interface{} {
 
 	switch v := value.(type) {
 	case attrs.Definer:
-		var defs = v.FieldDefs()
+		var defs = attrs.Define(context.Background(), v)
 		var prim = defs.Primary()
 		return prim.GetValue()
 	default:
@@ -68,8 +68,8 @@ func (f *ModelSelect) ValueToGo(value interface{}) (interface{}, error) {
 		return value, nil
 	}
 
-	var newObj = attrs.NewObject[attrs.Definer](f.Opts.TargetObject)
-	var defs = newObj.FieldDefs()
+	var newObj = attrs.NewObject[attrs.Definer](context.Background(), f.Opts.TargetObject)
+	var defs = attrs.Define(context.Background(), newObj)
 	var prim = defs.Primary()
 	var err = prim.Scan(value)
 	if err != nil {
@@ -242,7 +242,7 @@ func (o *MultiSelectWidget[T]) Choices(ctx context.Context) []widgets.Option {
 	}
 
 	for _, row := range selectedRows {
-		var value = attrs.PrimaryKey(row.Object)
+		var value = attrs.PrimaryKey(ctx, row.Object)
 		var labelStr = attrs.ToString(row.Object)
 		var valueStr = fmt.Sprintf("%v", value)
 		chosen = append(chosen, value)
@@ -280,7 +280,7 @@ func (o *MultiSelectWidget[T]) Choices(ctx context.Context) []widgets.Option {
 	}
 
 	for _, row := range unSelected {
-		var value = attrs.PrimaryKey(row.Object)
+		var value = attrs.PrimaryKey(ctx, row.Object)
 		var labelStr = attrs.ToString(row.Object)
 		var valueStr = fmt.Sprintf("%v", value)
 		choices = append(choices, &widgets.WrappedOption{

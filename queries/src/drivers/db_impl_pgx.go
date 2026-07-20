@@ -176,6 +176,10 @@ func (p *pgxTx) Finished() bool {
 	return p.finished
 }
 
+func (p *pgxTx) Driver() driver.Driver {
+	return p.queryWrapperPGX.d.Driver
+}
+
 func (p *pgxTx) Commit(ctx context.Context) error {
 	defer func() { p.finished = true }()
 	var _, err = ContextQueryExec(ctx, p.d.Name, "COMMIT", nil, Q_TCOMMIT, func(ctx context.Context, query string, args ...any) (any, error) {

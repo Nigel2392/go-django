@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"context"
 	"database/sql/driver"
 	"fmt"
 	"reflect"
@@ -355,7 +356,7 @@ func patternLookup(lookupName string, pattern string, allowedDrivers ...driver.D
 
 func normalizeDefinerArg(v any) any {
 	if definer, ok := v.(attrs.Definer); ok {
-		var fieldDefs = definer.FieldDefs()
+		var fieldDefs = attrs.Define(context.Background(), definer)
 		var pk = fieldDefs.Primary()
 		return pk.GetValue()
 	}

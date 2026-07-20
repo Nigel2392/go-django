@@ -107,8 +107,8 @@ func (w *ChooserWidget) ValueToGo(value interface{}) (interface{}, error) {
 		return value, nil
 	}
 
-	var newObj = attrs.NewObject[attrs.Definer](w.Model)
-	var defs = newObj.FieldDefs()
+	var newObj = attrs.NewObject[attrs.Definer](context.Background(), w.Model)
+	var defs = attrs.Define(context.Background(), newObj)
 	var prim = defs.Primary()
 	if err := prim.Scan(value); err != nil {
 		return nil, errors.Wrapf(
@@ -192,7 +192,7 @@ func (b *ChooserWidget) GetContextData(c context.Context, id, name string, value
 		}
 
 		if err == nil {
-			ctx.Set("value", attrs.PrimaryKey(modelRow.Object))
+			ctx.Set("value", attrs.PrimaryKey(c, modelRow.Object))
 			ctx.Set("preview", b.Definition.GetPreviewString(c, modelRow.Object))
 		} else {
 			ctx.Set("value", nil)

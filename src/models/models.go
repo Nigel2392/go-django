@@ -55,8 +55,10 @@ func SaveModel(c context.Context, m attrs.Definer) (saved bool, err error) {
 		return false, nil
 	}
 
-	if canSetup, ok := m.(interface{ Setup(obj attrs.Definer) error }); ok {
-		if err = canSetup.Setup(m); err != nil {
+	if canSetup, ok := m.(interface {
+		Setup(ctx context.Context, obj attrs.Definer) error
+	}); ok {
+		if err = canSetup.Setup(c, m); err != nil {
 			return false, err
 		}
 	}

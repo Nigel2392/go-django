@@ -162,7 +162,7 @@ func (a *AppConfig) Check(ctx context.Context, settings django.Settings) []check
 		))
 
 		var primary attrs.Field
-		var defs = model.FieldDefs()
+		var defs = attrs.Define(ctx, model)
 		for _, field := range defs.Fields() {
 
 			if field.IsPrimary() {

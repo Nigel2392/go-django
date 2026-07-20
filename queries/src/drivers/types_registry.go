@@ -1,6 +1,7 @@
 package drivers
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/dbtype"
@@ -22,7 +23,7 @@ func FieldType(field attrs.FieldDefinition) reflect.Type {
 		var relField = rel.Field()
 
 		if relField == nil {
-			relField = rel.Model().FieldDefs().Primary()
+			relField = attrs.GetModelMeta(rel.Model()).Definitions().Primary()
 		}
 		if relField != nil {
 			field = relField
@@ -32,7 +33,7 @@ func FieldType(field attrs.FieldDefinition) reflect.Type {
 	var fTyp = field.Type()
 	if fTyp.Kind() == reflect.Interface && rel != nil {
 		var modelTyp = rel.Model()
-		var fieldDef = modelTyp.FieldDefs()
+		var fieldDef = attrs.Define(context.Background(), modelTyp)
 		return FieldType(fieldDef.Primary())
 	}
 
@@ -41,7 +42,7 @@ func FieldType(field attrs.FieldDefinition) reflect.Type {
 		var definerType = fTyp.Elem()
 		var newObj = reflect.New(definerType)
 		var definer = newObj.Interface().(attrs.Definer)
-		var fieldDefs = definer.FieldDefs()
+		var fieldDefs = attrs.Define(context.Background(), definer)
 		return FieldType(fieldDefs.Primary())
 	}
 

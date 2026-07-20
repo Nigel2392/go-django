@@ -97,8 +97,8 @@ func (v *ObjectView[T]) GetContext(req *http.Request) (ctx.Context, error) {
 		)
 	}
 
-	var definer = attrs.NewObject[T](v.Object)
-	var defs = definer.FieldDefs()
+	var definer = attrs.NewObject[T](req.Context(), v.Object)
+	var defs = attrs.Define(req.Context(), definer)
 	var primary = defs.Primary()
 	if primary == nil {
 		return nil, errors.FieldNull.Wrapf(

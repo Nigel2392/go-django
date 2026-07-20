@@ -112,6 +112,10 @@ type txWrapper struct {
 	finished bool
 }
 
+func (p *txWrapper) Driver() driver.Driver {
+	return p.queryWrapper.d.Driver
+}
+
 func (p *txWrapper) Finished() bool {
 	return p.finished
 }

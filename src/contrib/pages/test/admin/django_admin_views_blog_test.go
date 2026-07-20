@@ -112,11 +112,11 @@ func (b *TestBlogPage) Save(ctx context.Context) error {
 	return err
 }
 
-func (b *TestBlogPage) FieldDefs() attrs.Definitions {
+func (b *TestBlogPage) FieldDefs(ctx context.Context) attrs.Definitions {
 	if b.Page == nil {
 		b.Page = &pages.PageNode{}
 	}
-	return b.Model.Define(b,
+	return b.Model.Define(ctx, b,
 		attrs.NewField(b.Page, "PageID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
 		attrs.NewField(b.Page, "Title", &attrs.FieldConfig{Embedded: true}),
 		attrs.NewField(b.Page, "Slug", &attrs.FieldConfig{Embedded: true, Blank: true}),
@@ -132,8 +132,8 @@ type TestBlogImage struct {
 	ImageText    string
 }
 
-func (b *TestBlogImage) FieldDefs() attrs.Definitions {
-	return b.Model.Define(b,
+func (b *TestBlogImage) FieldDefs(ctx context.Context) attrs.Definitions {
+	return b.Model.Define(ctx, b,
 		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true, ReadOnly: true, Column: "id"}),
 		attrs.Unbound("BlogPage", &attrs.FieldConfig{
 			RelForeignKey: attrs.Relate(&TestBlogPage{}, "", nil),

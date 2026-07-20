@@ -12,6 +12,7 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
 	django "github.com/Nigel2392/go-django/src"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
 var _ migrator.SchemaEditor = &PostgresSchemaEditor{}
@@ -23,7 +24,7 @@ func init() {
 			django.APPVAR_DATABASE,
 		)
 		if !ok {
-			return nil, fmt.Errorf("migrator: mysql: no database connection found")
+			return nil, fmt.Errorf("migrator: postgres: no database connection found")
 		}
 		return NewPostgresSchemaEditor(db), nil
 	})
@@ -382,13 +383,13 @@ checkRels:
 		// handle foreign keys
 		var relField = col.Rel.Field()
 		if relField == nil {
-			relField = col.Rel.Model().FieldDefs().Primary()
+			relField = attrs.GetModelMeta(col.Rel.Model()).Definitions().Primary()
 		}
 		if relField == nil {
 			panic(fmt.Errorf("missing foreign key target for column %q", col.Name))
 		}
 		w.WriteString(fmt.Sprintf(` REFERENCES "%s"("%s")`,
-			col.Rel.Model().FieldDefs().TableName(),
+			attrs.GetModelMeta(col.Rel.Model()).Definitions().TableName(),
 			relField.ColumnName(),
 		))
 		if col.Rel.OnDelete != 0 {

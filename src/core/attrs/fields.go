@@ -114,10 +114,7 @@ type FieldConfig struct {
 type FieldDef struct {
 	defs           Definitions
 	attrDef        *FieldConfig
-	instance_t_ptr reflect.Type
 	instance_v_ptr reflect.Value
-	instance_t     reflect.Type
-	instance_v     reflect.Value
 	field_t        *reflect.StructField
 	field_v        reflect.Value
 	formField      fields.Field
@@ -135,11 +132,9 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 	var (
 		instance_t_ptr = reflect.TypeOf(instance)
 		instance_v_ptr = reflect.ValueOf(instance)
-		instance_t     = instance_t_ptr.Elem()
-		instance_v     = instance_v_ptr.Elem()
 	)
 
-	var field_t, ok = attrutils.GetStructField(instance_t, name)
+	var field_t, ok = attrutils.GetStructField(instance_t_ptr.Elem(), name)
 	assert.True(ok, "field %q not found in %T", name, instance)
 
 	// var directlyInteractible = ok
@@ -161,7 +156,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 
 	// setupFieldValue:
 	// make sure we can access the field
-	var field_v = instance_v.Field(field_t.Index[0])
+	var field_v = instance_v_ptr.Elem().Field(field_t.Index[0])
 	var curr_t = field_v.Type()
 	for i := 1; i < len(field_t.Index); i++ {
 		var isNil = false
@@ -187,7 +182,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 
 				if curr_t.Implements(_DEFINER) {
 					newVal = reflect.ValueOf(
-						NewObject[Definer](curr_t),
+						NewObject[Definer](context.Background(), curr_t),
 					)
 				}
 
@@ -217,10 +212,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 
 	var f = &FieldDef{
 		attrDef:        cnf,
-		instance_t_ptr: instance_t_ptr,
 		instance_v_ptr: instance_v_ptr,
-		instance_t:     instance_t,
-		instance_v:     instance_v,
 		field_t:        field_t,
 		field_v:        field_v,
 		fieldName:      name,
@@ -310,7 +302,8 @@ func (f *FieldDef) Check(ctx context.Context) []checks.Message {
 // model is equal to instance_t
 func (f *FieldDef) OnModelRegister(model Definer) error {
 
-	attrutils.AddStructField(f.instance_t, f.fieldName, f.field_t)
+	var typElem = f.instance_v_ptr.Type().Elem()
+	attrutils.AddStructField(typElem, f.fieldName, f.field_t)
 
 	if ALLOW_METHOD_CHECKS {
 		var (
@@ -319,16 +312,16 @@ func (f *FieldDef) OnModelRegister(model Definer) error {
 			getValueMethodName = nameGetValue(f)
 		)
 
-		if getDefaultMethod, ok := f.instance_t.MethodByName(defaultMethodName); ok {
-			attrutils.AddStructMethod(f.instance_t, defaultMethodName, getDefaultMethod)
+		if getDefaultMethod, ok := typElem.MethodByName(defaultMethodName); ok {
+			attrutils.AddStructMethod(typElem, defaultMethodName, getDefaultMethod)
 		}
 
-		if setValueMethod, ok := f.instance_t.MethodByName(setValueMethodName); ok {
-			attrutils.AddStructMethod(f.instance_t, setValueMethodName, setValueMethod)
+		if setValueMethod, ok := typElem.MethodByName(setValueMethodName); ok {
+			attrutils.AddStructMethod(typElem, setValueMethodName, setValueMethod)
 		}
 
-		if getValueMethod, ok := f.instance_t.MethodByName(getValueMethodName); ok {
-			attrutils.AddStructMethod(f.instance_t, getValueMethodName, getValueMethod)
+		if getValueMethod, ok := typElem.MethodByName(getValueMethodName); ok {
+			attrutils.AddStructMethod(typElem, getValueMethodName, getValueMethod)
 		}
 	}
 
@@ -342,6 +335,11 @@ func (f *FieldDef) BindToDefinitions(defs Definitions) {
 	//		"Definitions for field %q (%T) are already set, the field was bound to the model multiple times",
 	//		f.field_t.Name, f.field_v.Interface(),
 	//	)
+
+	if f.defs != nil {
+		return
+	}
+
 	f.defs = defs
 }
 
@@ -413,7 +411,7 @@ func (f *FieldDef) Name() string {
 }
 
 func (f *FieldDef) TypeString() string {
-	return fmt.Sprintf("%s.%s", f.instance_t.Name(), f.field_t.Type.Name())
+	return fmt.Sprintf("%s.%s", f.instance_v_ptr.Type().Elem().Name(), f.field_t.Type.Name())
 }
 
 func (f *FieldDef) Tag(name string) string {
@@ -585,11 +583,13 @@ func (f *FieldDef) ToString() string {
 		v = f.GetDefault()
 	}
 
-	var funcName = fmt.Sprintf("%sToString", f.Name())
-	if method, ok := f.instance_t.MethodByName(funcName); ok {
-		var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
-		assert.Gt(out, 0, "Method %q on raw did not return a value", funcName)
-		return out[0].String()
+	if ALLOW_METHOD_CHECKS {
+		var funcName = fmt.Sprintf("%sToString", f.Name())
+		if method, ok := f.instance_v_ptr.Type().Elem().MethodByName(funcName); ok {
+			var out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
+			assert.Gt(out, 0, "Method %q on raw did not return a value", funcName)
+			return out[0].String()
+		}
 	}
 
 	var rv = reflect.ValueOf(v)
@@ -618,15 +618,16 @@ func (f *FieldDef) GetDefault() interface{} {
 	}
 
 	if ALLOW_METHOD_CHECKS {
+		var inst_t_ptr = f.instance_v_ptr.Type()
 		var funcName = nameGetDefault(f)
-		var method, ok = attrutils.GetStructMethod(f.instance_t_ptr, funcName)
+		var method, ok = attrutils.GetStructMethod(inst_t_ptr, funcName)
 		if ok {
 			var out []reflect.Value
 			switch method.Type.In(0) {
-			case f.instance_t_ptr:
+			case inst_t_ptr:
 				out = method.Func.Call([]reflect.Value{f.instance_v_ptr})
-			case f.instance_t:
-				out = method.Func.Call([]reflect.Value{f.instance_v})
+			case inst_t_ptr.Elem():
+				out = method.Func.Call([]reflect.Value{f.instance_v_ptr.Elem()})
 			}
 			assert.Gt(out, 0, "Method %q on raw did not return a value", funcName)
 			var outVal = out[0].Interface()
@@ -831,14 +832,15 @@ func (f *FieldDef) GetValue() interface{} {
 
 	if ALLOW_METHOD_CHECKS {
 		var methodName = nameGetValue(f)
-		var method, ok = attrutils.GetStructMethod(f.instance_t_ptr, methodName)
+		var inst_t_ptr = f.instance_v_ptr.Type()
+		var method, ok = attrutils.GetStructMethod(inst_t_ptr, methodName)
 		if ok {
 			var outVal any
 			switch method.Type.In(0) {
-			case f.instance_t_ptr:
+			case inst_t_ptr:
 				outVal = method.Func.Call([]reflect.Value{f.instance_v_ptr})[0].Interface()
-			case f.instance_t:
-				outVal = method.Func.Call([]reflect.Value{f.instance_v})[0].Interface()
+			case inst_t_ptr.Elem():
+				outVal = method.Func.Call([]reflect.Value{f.instance_v_ptr.Elem()})[0].Interface()
 			}
 			assert.Err(BindValueToModel(
 				f.Instance(), f, outVal,
@@ -880,7 +882,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 	// Try user-defined setter method like Set<FieldName>
 	if ALLOW_METHOD_CHECKS && !force {
 		var setterName = nameSetValue(f)
-		var method, ok = attrutils.GetStructMethod(f.instance_t_ptr, setterName)
+		var method, ok = attrutils.GetStructMethod(f.instance_v_ptr.Type(), setterName)
 		if ok {
 			var arg, ok = django_reflect.RConvert(&rv, method.Type.In(1))
 			assert.True(ok,
@@ -1025,28 +1027,25 @@ func (f *FieldDef) Scan(value any) error {
 	var rel = f.Rel()
 	// Custom handling for definer types - this is required in case field_v is an interface type instead of a concrete type.
 	if f.field_t.Type.Kind() == reflect.Interface && f.field_t.Type.Implements(reflect.TypeOf((*Definer)(nil)).Elem()) && rel != nil && (rel.Type() == RelManyToOne || rel.Type() == RelOneToOne) {
+		var model Definer
 		if f.field_v.IsNil() {
-			var model = NewObject[Definer](rel.Model())
-			var defs = model.FieldDefs()
-			var prim = defs.Primary()
-			if err := prim.Scan(value); err != nil {
-				return fmt.Errorf("failed to scan primary key for %T: %w", rel.Model(), err)
-			}
+			model = NewObject[Definer](f.defs.Context(), rel.Model())
 			f.field_v.Set(reflect.ValueOf(model))
 		} else {
-			var model = f.field_v.Interface().(Definer)
-			var defs = model.FieldDefs()
-			var prim = defs.Primary()
-			if err := prim.Scan(value); err != nil {
-				return fmt.Errorf("failed to scan primary key for %T: %w", rel.Model(), err)
-			}
-			f.field_v.Set(reflect.ValueOf(model))
+			model = f.field_v.Interface().(Definer)
 		}
+
+		var defs = Define(f.defs.Context(), model)
+		var prim = defs.Primary()
+		if err := prim.Scan(value); err != nil {
+			return fmt.Errorf("failed to scan primary key for %T: %w", rel.Model(), err)
+		}
+
 		return nil
 	}
 
 	if definer, ok := f.field_v.Interface().(Definer); ok {
-		return definer.FieldDefs().Primary().Scan(value)
+		return Define(f.defs.Context(), definer).Primary().Scan(value)
 	}
 
 	rvPtr, ok := django_reflect.RConvert(&rv, f.field_t.Type)
@@ -1186,7 +1185,7 @@ func (f *FieldDef) _driverValue(value any) (driver.Value, error) {
 		case driver.Valuer:
 			return val.Value()
 		case Definer:
-			var pk = PrimaryKey(val)
+			var pk = PrimaryKey(f.defs.Context(), val)
 			return pk, nil
 		}
 	}

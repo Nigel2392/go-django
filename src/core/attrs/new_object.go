@@ -1,19 +1,20 @@
 package attrs
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/contenttypes"
 )
 
-func createIfIface[T Definer](v any) (T, bool) {
+func createIfIface[T Definer](ctx context.Context, v any) (T, bool) {
 	var obj T = v.(T)
 	switch v := v.(type) {
 	case CanCreateObject[T]:
-		obj = v.CreateObject(v.(T))
+		obj = v.CreateObject(ctx, v.(T))
 	case CanCreateObject[Definer]:
-		obj = v.CreateObject(v.(Definer)).(T)
+		obj = v.CreateObject(ctx, v.(Definer)).(T)
 	default:
 		var zero T
 		return zero, false
@@ -39,22 +40,29 @@ func createIfIface[T Definer](v any) (T, bool) {
 	return obj, true
 }
 
-func setup[T Definer](obj any) T {
+func setup[T Definer](ctx context.Context, obj any) T {
 	if setupObj, ok := obj.(CanSetup); ok {
-		setupObj.Setup()
+		setupObj.Setup(ctx)
 	}
 	return obj.(T)
 }
 
 type objectRegistry struct {
-	types map[reflect.Type]func(any) Definer
+	types map[reflect.Type]func(context.Context, any) Definer
 }
 
 var objectFuncRegistry = &objectRegistry{
-	types: make(map[reflect.Type]func(any) Definer),
+	types: make(map[reflect.Type]func(context.Context, any) Definer),
 }
 
-func RegisterNewObjectFunc(typ reflect.Type, fn func(original any) Definer) {
+func RegisterNewObjectFunc[T any](fn func(ctx context.Context, original T) Definer) {
+	var t = reflect.TypeFor[T]()
+	objectFuncRegistry.types[t] = func(ctx context.Context, a any) Definer {
+		return fn(ctx, a.(T))
+	}
+}
+
+func RegisterNewObjectFuncReflect(typ reflect.Type, fn func(ctx context.Context, original any) Definer) {
 	objectFuncRegistry.types[typ] = fn
 }
 
@@ -69,7 +77,7 @@ func RegisterNewObjectFunc(typ reflect.Type, fn func(original any) Definer) {
 // - A string which is assumed to be the content type of T
 // - A contenttypes.ContentType from which a T can be derived.
 // - Any other value which can be safely cast to T
-func NewObject[T Definer](definer any) T {
+func NewObject[T Definer](ctx context.Context, definer any) T {
 	var (
 		obj      any
 		definerT reflect.Type
@@ -98,12 +106,12 @@ func NewObject[T Definer](definer any) T {
 
 	var rT = reflect.TypeOf(obj)
 	if fn, ok := objectFuncRegistry.types[rT]; ok {
-		return setup[T](fn(obj))
+		return setup[T](ctx, fn(ctx, obj))
 	}
 
-	var newObj, ok = createIfIface[T](obj)
+	var newObj, ok = createIfIface[T](ctx, obj)
 	if ok {
-		return setup[T](newObj)
+		return setup[T](ctx, newObj)
 	}
 
 	if definerT == nil {
@@ -121,5 +129,5 @@ func NewObject[T Definer](definer any) T {
 
 	definerT = definerT.Elem()
 	var newObjT = reflect.New(definerT)
-	return setup[T](newObjT.Interface())
+	return setup[T](ctx, newObjT.Interface())
 }

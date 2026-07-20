@@ -108,7 +108,7 @@ func NewListForm[T attrs.Definer](l *List[T], opts ...func(forms.Form)) *ListFor
 	}
 
 	for _, group := range l.groups {
-		var pk = attrs.PrimaryKey(group.Row())
+		var pk = attrs.PrimaryKey(l.request.Context(), group.Row())
 		var rowForm = group.Form(l.request, append([]func(forms.Form){setPrefix(pk)}, opts...)...)
 		if rowForm == nil {
 			continue
@@ -128,7 +128,7 @@ func (lf *ListForm[T]) Forms() map[any]forms.Form {
 }
 
 func (lf *ListForm[T]) ForInstance(instance T) forms.Form {
-	return lf.forms[attrs.PrimaryKey(instance)]
+	return lf.forms[attrs.PrimaryKey(lf.List.request.Context(), instance)]
 }
 
 func (lf *ListForm[T]) IsValid() bool {

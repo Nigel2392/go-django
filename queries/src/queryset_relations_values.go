@@ -1,6 +1,7 @@
 package queries
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -132,7 +133,7 @@ func (rl *RelRevFK[T]) SetValues(objects []attrs.Definer) {
 
 		if uniqueKey == nil {
 			var err error
-			uniqueKey, err = GetUniqueKey(obj)
+			uniqueKey, err = GetUniqueKey(context.Background(), obj)
 
 			if err != nil {
 				panic(fmt.Errorf("cannot set related object %T without a generated unique key: %w", obj, err))
@@ -312,7 +313,7 @@ func (rl *RelM2M[T1, T2]) SetValues(rel []Relation) {
 		// from the relation's definitions.
 		if uniqueKey == nil {
 			var err error
-			uniqueKey, err = GetUniqueKey(r.Model())
+			uniqueKey, err = GetUniqueKey(context.Background(), r.Model())
 			if err != nil {
 				panic(fmt.Errorf("cannot set related object %T without a generated unique key: %w", r.Model(), err))
 			}

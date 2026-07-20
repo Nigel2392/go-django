@@ -1,9 +1,10 @@
-package models
+package state
 
 import (
 	"reflect"
 
 	"github.com/Nigel2392/go-django/src/core/assert"
+	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
 // ModelState represents the state of a model instance,
@@ -15,7 +16,7 @@ import (
 type ModelState struct {
 	// model is a pointer back to the model instance
 	// which this state belongs to.
-	model *Model
+	model *attrs.ObjectDefinitions
 
 	// changed fields, used to track which fields have been changed
 	changed map[string]struct{}
@@ -29,7 +30,7 @@ type ModelState struct {
 }
 
 // initState initializes the model state for the given model.
-func initState(model *Model) *ModelState {
+func New(model *attrs.ObjectDefinitions) *ModelState {
 	if model == nil {
 		return nil
 	}
@@ -54,7 +55,7 @@ func (m *ModelState) checkState() {
 	}
 
 	// if the model's state is not changed, we can skip the update
-	for name, field := range m.model.internals.defs.ObjectFields.Iter() {
+	for name, field := range m.model.ObjectFields.Iter() {
 		var value = field.GetValue()
 
 		// if the value is not equal to the initial value,
@@ -70,29 +71,6 @@ func (m *ModelState) checkState() {
 	}
 }
 
-// change marks a field as changed in the model's state.
-func (m *ModelState) change(fieldName string) {
-	if m == nil {
-		return
-	}
-	m.changed[fieldName] = struct{}{}
-}
-
-// reset marks the given field as unchanged in the model's state.
-func (m *ModelState) reset(fieldName string) {
-	if m == nil {
-		return
-	}
-
-	var field, ok = m.model.internals.defs.Field(fieldName)
-	if !ok {
-		assert.Fail("field %q does not exist in model %T", fieldName, m.model)
-	}
-
-	delete(m.changed, fieldName)
-	m.initial[fieldName] = field.GetValue()
-}
-
 // Mark a field as changed in the model's state.
 // It will also check the state to ensure that the changed fields
 // are up to date before marking the field as changed.
@@ -106,7 +84,7 @@ func (m *ModelState) Mark(fieldName string) {
 	}
 
 	// mark the field as changed
-	m.change(fieldName)
+	m.changed[fieldName] = struct{}{}
 }
 
 // Changed returns true if the model's state has changed,
@@ -129,7 +107,7 @@ func (m *ModelState) Changed(checkState bool) bool {
 
 // HasChanged checks if a specific field has been changed
 // in the model's state.
-func (m *ModelState) HasChanged(fieldName string) bool {
+func (m *ModelState) FieldChanged(fieldName string) bool {
 	if m == nil {
 		return true
 	}
@@ -145,7 +123,7 @@ func (m *ModelState) HasChanged(fieldName string) bool {
 	// if the field is not in the changed map,
 	// we need to check if it has an initial value
 	if initialValue, ok := m.initial[fieldName]; ok {
-		var field, ok = m.model.internals.defs.Field(fieldName)
+		var field, ok = m.model.Field(fieldName)
 		if !ok {
 			return false // field does not exist in the model
 		}
@@ -190,9 +168,24 @@ func (m *ModelState) Reset() {
 	m.changed = make(map[string]struct{})
 	m.initial = make(map[string]interface{})
 
-	if m.model.internals != nil && m.model.internals.defs != nil {
-		for name, field := range m.model.internals.defs.ObjectFields.Iter() {
+	if m.model != nil {
+		for name, field := range m.model.ObjectFields.Iter() {
 			m.initial[name] = field.GetValue()
 		}
 	}
+}
+
+// reset marks the given field as unchanged in the model's state.
+func (m *ModelState) ResetFieldState(fieldName string) {
+	if m == nil {
+		return
+	}
+
+	var field, ok = m.model.Field(fieldName)
+	if !ok {
+		assert.Fail("field %q does not exist in model %T", fieldName, m.model)
+	}
+
+	delete(m.changed, fieldName)
+	m.initial[fieldName] = field.GetValue()
 }

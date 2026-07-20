@@ -24,8 +24,8 @@ type PreloadBook struct {
 	Authors      *queries.RelM2M[attrs.Definer, attrs.Definer] `json:"-"`
 }
 
-func (pb *PreloadBook) FieldDefs() attrs.Definitions {
-	return pb.Model.Define(pb,
+func (pb *PreloadBook) FieldDefs(ctx context.Context) attrs.Definitions {
+	return pb.Model.Define(ctx, pb,
 		attrs.Unbound("ID", &attrs.FieldConfig{
 			ReadOnly: true,
 			Primary:  true,
@@ -59,8 +59,8 @@ func (pab *PreloadAuthorBook) TargetField() string {
 	return "Book"
 }
 
-func (pab *PreloadAuthorBook) FieldDefs() attrs.Definitions {
-	return pab.Model.Define(pab,
+func (pab *PreloadAuthorBook) FieldDefs(ctx context.Context) attrs.Definitions {
+	return pab.Model.Define(ctx, pab,
 		attrs.Unbound("Author", &attrs.FieldConfig{
 			ReadOnly: true,
 			Column:   "author_id",
@@ -86,8 +86,8 @@ func (pap *PreloadAuthorProfile) BeforeSave(ctx context.Context) error {
 	return nil
 }
 
-func (pap *PreloadAuthorProfile) FieldDefs() attrs.Definitions {
-	return pap.Model.Define(pap, attrs.AutoFieldList(
+func (pap *PreloadAuthorProfile) FieldDefs(ctx context.Context) attrs.Definitions {
+	return pap.Model.Define(ctx, pap, attrs.AutoFieldList(
 		pap, "*",
 		fields.NewOneToOneField[*PreloadAuthor](pap,
 			"Author", &fields.FieldConfig{
@@ -133,8 +133,8 @@ func (pa *PreloadAuthor) BeforeSave(ctx context.Context) error {
 	return nil
 }
 
-func (pa *PreloadAuthor) FieldDefs() attrs.Definitions {
-	return pa.Model.Define(pa,
+func (pa *PreloadAuthor) FieldDefs(ctx context.Context) attrs.Definitions {
+	return pa.Model.Define(ctx, pa,
 		attrs.Unbound("ID", &attrs.FieldConfig{
 			ReadOnly: true,
 			Primary:  true,

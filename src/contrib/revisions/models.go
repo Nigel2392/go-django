@@ -93,8 +93,8 @@ func (r *Revision) SetObject(obj attrs.Definer) error {
 	return nil
 }
 
-func (r *Revision) FieldDefs() attrs.Definitions {
-	return r.Model.Define(r,
+func (r *Revision) FieldDefs(ctx context.Context) attrs.Definitions {
+	return r.Model.Define(ctx, r,
 		attrs.Unbound("ID", &attrs.FieldConfig{
 			Primary:  true,
 			Column:   "id",
@@ -166,7 +166,7 @@ func (r *Revision) AsObject(ctx context.Context) (definer attrs.Definer, err err
 			return nil, errors.Wrap(err, "getting object from db")
 		}
 	} else {
-		definer = attrs.NewObject[attrs.Definer](newInstance)
+		definer = attrs.NewObject[attrs.Definer](ctx, newInstance)
 	}
 
 	err = UnmarshalRevisionData(definer, []byte(r.Data))
@@ -183,7 +183,7 @@ func (r *Revision) AsObject(ctx context.Context) (definer attrs.Definer, err err
 func (r *Revision) ObjectFromDB(ctx context.Context) (attrs.Definer, error) {
 	var cTypeDef = contenttypes.DefinitionForType(r.ContentType)
 	var primaryKey = attrs.PrimaryKey(
-		cTypeDef.Object().(attrs.Definer),
+		ctx, cTypeDef.Object().(attrs.Definer),
 	)
 	var rPrimaryKeyTyp = reflect.TypeOf(primaryKey)
 	var newPrimaryKey = reflect.New(rPrimaryKeyTyp).Interface()
@@ -243,6 +243,6 @@ func (r *TypedRevision[T]) OrderBy() []string {
 	return (*Revision)(r).OrderBy()
 }
 
-func (r *TypedRevision[T]) FieldDefs() attrs.Definitions {
-	return (*Revision)(r).FieldDefs()
+func (r *TypedRevision[T]) FieldDefs(ctx context.Context) attrs.Definitions {
+	return (*Revision)(r).FieldDefs(ctx)
 }

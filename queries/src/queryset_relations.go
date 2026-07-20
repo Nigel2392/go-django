@@ -26,7 +26,7 @@ func newThroughProxy(throughDefinition attrs.Through) *throughProxy {
 		sourceFieldStr  = throughDefinition.SourceField()
 		targetFieldStr  = throughDefinition.TargetField()
 		throughInstance = throughDefinition.Model()
-		defs            = throughInstance.FieldDefs()
+		defs            = attrs.Define(context.Background(), throughInstance)
 		proxy           = &throughProxy{
 			defs:              defs,
 			object:            throughInstance,
@@ -81,11 +81,11 @@ func (t *relatedQuerySet[T, T2]) setup() {
 	var (
 		condition *JoinDefCondition
 
-		newTargetObj     = attrs.NewObject[T](t.rel.Model())
-		newTargetObjDefs = newTargetObj.FieldDefs()
+		newTargetObj     = attrs.GetModelMeta(t.rel.Model())
+		newTargetObjDefs = newTargetObj.Definitions()
 
 		// probably should not use a queryset from the model's getqueryset method? right?
-		qs           = Objects(newTargetObj)
+		qs           = Objects(newTargetObj.Model().(T))
 		throughModel = t.rel.Through()
 	)
 
@@ -133,8 +133,7 @@ func (t *relatedQuerySet[T, T2]) setup() {
 				FieldColumn:  throughObject.sourceField,
 			},
 			ConditionB: expr.TableColumn{
-				Values: []any{t.source.Object.
-					FieldDefs().
+				Values: []any{attrs.Define(context.Background(), t.source.Object).
 					Primary().
 					GetValue()},
 			},
@@ -162,7 +161,7 @@ func (t *relatedQuerySet[T, T2]) setup() {
 		qs.internals.Where = append(qs.internals.Where, expr.Expr(
 			targetField.Name(),
 			expr.LOOKUP_EXACT,
-			t.source.Object.FieldDefs().Primary().GetValue(),
+			attrs.Define(qs.Context(), t.source.Object).Primary().GetValue(),
 		))
 	}
 
@@ -199,7 +198,7 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 	)
 	for _, target := range targets {
 		var (
-			defs         = target.FieldDefs()
+			defs         = attrs.Define(t.qs.Context(), target)
 			primary      = defs.Primary()
 			pkValue, err = primary.Value()
 		)
@@ -236,7 +235,7 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 		throughSourceFieldStr = throughModel.SourceField()
 		throughTargetFieldStr = throughModel.TargetField()
 
-		sourceObject        = t.source.Object.FieldDefs()
+		sourceObject        = attrs.Define(t.qs.Context(), t.source.Object)
 		sourceObjectPrimary = sourceObject.Primary()
 		sourceObjectPk, err = sourceObjectPrimary.Value()
 
@@ -254,7 +253,7 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 	for _, target := range targets {
 		var (
 			// target related values
-			targetDefs    = target.FieldDefs()
+			targetDefs    = attrs.Define(t.qs.Context(), target)
 			targetPrimary = targetDefs.Primary()
 			targetPk, err = targetPrimary.Value()
 
@@ -262,8 +261,8 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 			ok          bool
 			sourceField attrs.Field
 			targetField attrs.Field
-			newInstance = attrs.NewObject[attrs.Definer](throughObj)
-			fieldDefs   = newInstance.FieldDefs()
+			newInstance = attrs.NewObject[attrs.Definer](t.qs.Context(), throughObj)
+			fieldDefs   = attrs.Define(t.qs.Context(), newInstance)
 		)
 		if err != nil {
 			return nil, created, errors.ValueError.WithCause(fmt.Errorf(
@@ -303,7 +302,7 @@ func (t *relatedQuerySet[T, T2]) createThroughObjects(targets []T) (rels []Relat
 		relations = append(relations, rel)
 	}
 
-	_, err = GetQuerySet(throughObj).WithContext(t.qs.context).BulkCreate(throughModels)
+	_, err = GetQuerySet(throughObj).WithContext(t.qs.Context()).BulkCreate(throughModels)
 	if err != nil {
 		return nil, created, err
 	}
@@ -497,7 +496,7 @@ targetLoop:
 			continue targetLoop
 		}
 
-		var val, err = GetUniqueKey(target)
+		var val, err = GetUniqueKey(r.qs.Context(), target)
 		if err != nil {
 			return 0, errors.ValueError.WithCause(fmt.Errorf(
 				"failed to get unique key for target %T: %w: %w",
@@ -511,11 +510,11 @@ targetLoop:
 
 	var throughModel = newThroughProxy(r.rel.Through())
 	var throughQs = GetQuerySet(throughModel.object).
-		WithContext(r.qs.context).
+		WithContext(r.qs.Context()).
 		Filter(
 			expr.Q(
 				throughModel.sourceField.Name(),
-				r.source.Object.FieldDefs().Primary().GetValue(),
+				attrs.Define(r.qs.Context(), r.source.Object).Primary().GetValue(),
 			),
 			expr.Q(
 				fmt.Sprintf(
@@ -547,7 +546,7 @@ targetLoop:
 	for _, rel := range relList {
 		var (
 			model        = rel.Model()
-			fieldDefs    = model.FieldDefs()
+			fieldDefs    = attrs.Define(r.qs.Context(), model)
 			pkValue, err = fieldDefs.Primary().Value()
 		)
 		if err != nil {
@@ -566,7 +565,7 @@ targetLoop:
 		}
 
 	uniqueKeyCheck:
-		val, err := GetUniqueKey(model)
+		val, err := GetUniqueKey(r.qs.Context(), model)
 		if err != nil {
 			return 0, errors.ValueError.WithCause(fmt.Errorf(
 				"failed to get unique key for relation %T: %w: %w",
@@ -589,7 +588,7 @@ func (r *RelManyToManyQuerySet[T]) ClearTargets() (int64, error) {
 	}
 
 	var throughModel = newThroughProxy(r.rel.Through())
-	var throughIdsResult, err = r.qs.Select(r.qs.Meta().PrimaryKey().Name()).WithContext(r.qs.context).ValuesList()
+	var throughIdsResult, err = r.qs.Select(r.qs.Meta().PrimaryKey().Name()).WithContext(r.qs.Context()).ValuesList()
 	if err != nil {
 		return 0, fmt.Errorf("failed to get through object IDs: %w", err)
 	}
@@ -604,11 +603,11 @@ func (r *RelManyToManyQuerySet[T]) ClearTargets() (int64, error) {
 	}
 
 	var throughQs = GetQuerySet(throughModel.object).
-		WithContext(r.qs.context).
+		WithContext(r.qs.Context()).
 		Filter(
 			expr.Q(
 				throughModel.sourceField.Name(),
-				r.source.Object.FieldDefs().Primary().GetValue(),
+				attrs.Define(r.qs.Context(), r.source.Object).Primary().GetValue(),
 			),
 			expr.Expr(
 				throughModel.targetField.Name(), expr.LOOKUP_IN, throughIds,

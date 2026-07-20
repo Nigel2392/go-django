@@ -210,7 +210,7 @@ func (b *BoundSearchView) GetContext(req *http.Request) (ctx.Context, error) {
 	if (!b.Model.DisallowEdit || b.Model.ListView.Search.GetEditLink != nil) && len(results) > 0 && permissions.HasPermission(req, "admin:edit") {
 		columns[0] = list.TitleFieldColumn(
 			columns[0], func(r *http.Request, defs attrs.Definitions, row attrs.Definer) string {
-				return b.GetEditLink(attrs.PrimaryKey(row))
+				return b.GetEditLink(attrs.PrimaryKey(req.Context(), row))
 			},
 		)
 	}

@@ -1,6 +1,8 @@
 package users
 
 import (
+	"context"
+
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
@@ -10,8 +12,8 @@ type UserGroup struct {
 	GroupID drivers.Uint `json:"group_id" attrs:"primary;readonly"`
 }
 
-func (up *UserGroup) FieldDefs() attrs.Definitions {
-	return attrs.Define(up,
+func (up *UserGroup) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, up,
 		attrs.Unbound("UserID", &attrs.FieldConfig{
 			ReadOnly: true,
 			Column:   "user_id",
@@ -34,8 +36,8 @@ type UserPermission struct {
 	PermissionID drivers.Uint `json:"permission_id" attrs:"primary;readonly"`
 }
 
-func (up *UserPermission) FieldDefs() attrs.Definitions {
-	return attrs.Define(up,
+func (up *UserPermission) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, up,
 		attrs.Unbound("UserID", &attrs.FieldConfig{
 			ReadOnly: true,
 			Column:   "user_id",
@@ -58,8 +60,8 @@ type GroupPermission struct {
 	PermissionID drivers.Uint `json:"permission_id" attrs:"primary;readonly"`
 }
 
-func (gp *GroupPermission) FieldDefs() attrs.Definitions {
-	return attrs.Define(gp,
+func (gp *GroupPermission) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, gp,
 		attrs.Unbound("GroupID", &attrs.FieldConfig{
 			ReadOnly: true,
 			Column:   "group_id",

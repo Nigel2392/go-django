@@ -190,8 +190,8 @@ func (o *User) UniqueTogether() [][]string {
 	}
 }
 
-func (o *User) FieldDefs() attrs.Definitions {
-	return o.Model.Define(o,
+func (o *User) FieldDefs(ctx context.Context) attrs.Definitions {
+	return o.Model.Define(ctx, o,
 		o.Fields,
 		o.contentObjectFields,
 	)

@@ -206,7 +206,7 @@ func (v *View[T]) TakeControl(w http.ResponseWriter, r *http.Request, view views
 
 func (v *View[T]) Clone() *View[T] {
 	return &View[T]{
-		Model:            attrs.NewObject[T](reflect.TypeOf(v.Model)),
+		Model:            attrs.NewObject[T](context.Background(), reflect.TypeOf(v.Model)),
 		AllowedMethods:   slices.Clone(v.AllowedMethods),
 		BaseTemplateKey:  v.BaseTemplateKey,
 		TemplateName:     v.TemplateName,
@@ -294,6 +294,7 @@ func (v *View[T]) GetQuerySet(r *http.Request) (*queries.QuerySet[T], error) {
 	var qs *queries.QuerySet[T]
 	if v.QuerySet == nil {
 		var newObj = attrs.NewObject[T](
+			r.Context(),
 			reflect.TypeOf(new(T)).Elem(),
 		)
 		qs = queries.GetQuerySet(newObj)

@@ -21,8 +21,8 @@ type ImageModel struct {
 	ImageURL   string
 }
 
-func (m *ImageModel) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m,
+func (m *ImageModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
 		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
 		attrs.Unbound("ImageTitle"),
 		attrs.Unbound("ImageURL"),
@@ -65,8 +65,8 @@ type StatefulModel struct {
 	Image     *ImageModel
 }
 
-func (m *StatefulModel) FieldDefs() attrs.Definitions {
-	return m.Model.Define(m,
+func (m *StatefulModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m,
 		attrs.Unbound("ID", &attrs.FieldConfig{Primary: true}),
 		attrs.Unbound("FirstName"),
 		attrs.Unbound("LastName"),
@@ -86,7 +86,7 @@ func TestState(t *testing.T) {
 	tables.Create()
 	defer tables.Drop()
 
-	var model = models.Setup(&StatefulModel{
+	var model = models.Setup(context.Background(), &StatefulModel{
 		FirstName: "John",
 		LastName:  "Doe",
 		Age:       30,
@@ -109,7 +109,7 @@ func TestState(t *testing.T) {
 	})
 
 	t.Run("StateChangedAfterSetFirstName", func(t *testing.T) {
-		var defs = model.FieldDefs()
+		var defs = attrs.Define(t.Context(), model)
 		var state = model.State()
 		if state == nil {
 			t.Error("Expected state to be non-nil after change")
@@ -133,7 +133,7 @@ func TestState(t *testing.T) {
 		})
 
 		t.Run("FirstNameChanged", func(t *testing.T) {
-			if !state.HasChanged("FirstName") {
+			if !state.FieldChanged("FirstName") {
 				t.Error("Expected FirstName to be marked as changed")
 			}
 		})
@@ -163,7 +163,7 @@ func TestState(t *testing.T) {
 	})
 
 	t.Run("StateChangedAfterSetBinData", func(t *testing.T) {
-		var defs = model.FieldDefs()
+		var defs = attrs.Define(t.Context(), model)
 		var state = model.State()
 		if state == nil {
 			t.Error("Expected state to be non-nil after change")
@@ -185,7 +185,7 @@ func TestState(t *testing.T) {
 				t.Error("Expected state to be changed after modifying BinData")
 			}
 
-			if !state.HasChanged("BinData") {
+			if !state.FieldChanged("BinData") {
 				t.Error("Expected BinData to be marked as changed")
 			}
 		})
@@ -194,7 +194,7 @@ func TestState(t *testing.T) {
 	})
 
 	t.Run("StateChangedAfterSetMapData", func(t *testing.T) {
-		var defs = model.FieldDefs()
+		var defs = attrs.Define(t.Context(), model)
 		var state = model.State()
 		if state == nil {
 			t.Error("Expected state to be non-nil after change")
@@ -217,7 +217,7 @@ func TestState(t *testing.T) {
 			if !state.Changed(false) {
 				t.Error("Expected state to be changed after modifying MapData")
 			}
-			if !state.HasChanged("MapData") {
+			if !state.FieldChanged("MapData") {
 				t.Error("Expected MapData to be marked as changed")
 			}
 		})
@@ -226,7 +226,7 @@ func TestState(t *testing.T) {
 	})
 
 	t.Run("StateChangedAfterChangeImage", func(t *testing.T) {
-		var defs = model.FieldDefs()
+		var defs = attrs.Define(t.Context(), model)
 		var state = model.State()
 		if state == nil {
 			t.Error("Expected state to be non-nil after change")
@@ -250,7 +250,7 @@ func TestState(t *testing.T) {
 			if !state.Changed(false) {
 				t.Error("Expected state to be changed without checkState after modifying Image")
 			}
-			if !state.HasChanged("Image") {
+			if !state.FieldChanged("Image") {
 				t.Error("Expected Image to be marked as changed")
 			}
 		})
@@ -350,6 +350,16 @@ func TestState(t *testing.T) {
 
 			if imgRow.Object.ImageURL != model.Image.ImageURL {
 				t.Errorf("Expected ImageModel ImageURL to be '%s', got: '%s'", model.Image.ImageURL, imgRow.Object.ImageURL)
+			}
+
+			if imgRow.Object.State().Changed(true) {
+				t.Error("Expected ImageModel state to be NOT changed")
+			}
+
+			imgRow.Object.ImageTitle = model.Image.ImageTitle + "1"
+
+			if !imgRow.Object.State().Changed(true) {
+				t.Error("Expected ImageModel state to be changed")
 			}
 		})
 

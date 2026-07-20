@@ -51,7 +51,7 @@ func (e *chainExpr) Clone() Expression {
 }
 
 func (e *chainExpr) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil || e.used {
+	if e.used {
 		return e
 	}
 

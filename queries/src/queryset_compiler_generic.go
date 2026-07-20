@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"database/sql/driver"
 	"fmt"
+	"iter"
 	"reflect"
 	"strings"
 	"time"
@@ -47,7 +48,7 @@ type CompilerInformation struct {
 	SqlxDriver   string
 }
 
-func SqlxDriverName(db drivers.Database) string {
+func SqlxDriverName(db drivers.DB) string {
 	var driver = reflect.TypeOf(db.Driver())
 	if driver == nil {
 		return ""
@@ -87,7 +88,36 @@ func GetCompilerInformation(dbKey string) (*CompilerInformation, error) {
 	return queryInfo, nil
 }
 
-func newExpressionInfo(g *genericQueryBuilder, qs *QuerySet[attrs.Definer], i *QuerySetInternals, updating bool) *expr.ExpressionInfo {
+type ExpressionInfoInit struct {
+	Compiler              QueryCompiler
+	Resolver              expr.FieldResolver
+	Updating              bool
+	SupportsWhereAliasses bool
+}
+
+func NewExpressionInfo(i ExpressionInfoInit) *expr.ExpressionInfo {
+	var exprInfo = &expr.ExpressionInfo{
+		Driver:          i.Compiler.Driver(),
+		Quote:           i.Compiler.QuoteString,
+		QuoteIdentifier: i.Compiler.QuoteIdentifier,
+		FormatField:     i.Compiler.FormatColumn,
+		Resolver:        i.Resolver,
+		Placeholder:     generic_PLACEHOLDER,
+		Lookups: expr.ExpressionLookupInfo{
+			PrepForLikeQuery: i.Compiler.PrepForLikeQuery,
+			FormatLookupCol:  i.Compiler.FormatLookupCol,
+			LogicalOpRHS:     i.Compiler.LogicalOpRHS(),
+			OperatorsRHS:     i.Compiler.LookupOperatorsRHS(),
+			PatternOpsRHS:    i.Compiler.LookupPatternOperatorsRHS(),
+		},
+		ForUpdate:          i.Updating,
+		SupportsWhereAlias: i.SupportsWhereAliasses,
+		SupportsAsExpr:     true,
+	}
+	return exprInfo
+}
+
+func newExpressionInfo(g *genericQueryBuilder, qs expr.FieldResolver, updating bool) *expr.ExpressionInfo {
 	var dbName = SqlxDriverName(g.queryInfo.DB)
 	var supportsWhereAlias bool
 	switch dbName {
@@ -101,30 +131,12 @@ func newExpressionInfo(g *genericQueryBuilder, qs *QuerySet[attrs.Definer], i *Q
 		panic(fmt.Errorf("unknown database driver: %s", dbName))
 	}
 
-	var exprInfo = &expr.ExpressionInfo{
-		Driver: g.driver,
-		Model: attrs.NewObject[attrs.Definer](
-			qs.Meta().Model(),
-		),
-		Quote:           g.QuoteString,
-		QuoteIdentifier: g.QuoteIdentifier,
-		FormatField:     g.FormatColumn,
-		Resolver:        qs,
-		Placeholder:     generic_PLACEHOLDER,
-		Lookups: expr.ExpressionLookupInfo{
-			PrepForLikeQuery: g.PrepForLikeQuery,
-			FormatLookupCol:  g.FormatLookupCol,
-			LogicalOpRHS:     g.LogicalOpRHS(),
-			OperatorsRHS:     g.LookupOperatorsRHS(),
-			PatternOpsRHS:    g.LookupPatternOperatorsRHS(),
-		},
-		ForUpdate:          updating,
-		Annotations:        i.Annotations,
-		SupportsWhereAlias: supportsWhereAlias,
-		SupportsAsExpr:     true,
-	}
-
-	return exprInfo
+	return NewExpressionInfo(ExpressionInfoInit{
+		Compiler:              g.This(),
+		Resolver:              qs,
+		Updating:              updating,
+		SupportsWhereAliasses: supportsWhereAlias,
+	})
 }
 
 const generic_PLACEHOLDER = "?"
@@ -172,6 +184,10 @@ func (g *genericQueryBuilder) This() QueryCompiler {
 		return g
 	}
 	return g.self
+}
+
+func (g *genericQueryBuilder) Driver() driver.Driver {
+	return g.driver
 }
 
 func (g *genericQueryBuilder) SupportsUnionOrderByTableAlias() bool {
@@ -394,11 +410,8 @@ func (g *genericQueryBuilder) LookupPatternOperatorsRHS() map[string]string {
 	panic(fmt.Errorf("unknown database driver: %s", SqlxDriverName(g.queryInfo.DB)))
 }
 
-func (g *genericQueryBuilder) ExpressionInfo(
-	qs *GenericQuerySet,
-	internals *QuerySetInternals,
-) *expr.ExpressionInfo {
-	return newExpressionInfo(g, qs, internals, false)
+func (g *genericQueryBuilder) ExpressionInfo(resolver expr.FieldResolver) *expr.ExpressionInfo {
+	return newExpressionInfo(g, resolver, false)
 }
 
 func (g *genericQueryBuilder) FormatColumn(aliasGen *alias.Generator, col *expr.TableColumn) (string, []any) {
@@ -560,13 +573,13 @@ func (g *genericQueryBuilder) SupportsReturning() drivers.SupportsReturningType 
 
 func (g *genericQueryBuilder) BuildSelectQuery(
 	ctx context.Context,
-	qs *GenericQuerySet,
+	resolver expr.FieldResolver,
 	internals *QuerySetInternals,
 ) CompiledRowsQuery[[][]interface{}] {
 	var (
 		query = new(strings.Builder)
 		args  []any
-		inf   = newExpressionInfo(g, qs, internals, false)
+		inf   = newExpressionInfo(g, resolver, false)
 	)
 
 	query.WriteString("SELECT ")
@@ -586,7 +599,7 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 	}
 
 	query.WriteString(" FROM ")
-	g.writeTableName(query, qs.AliasGen, internals)
+	g.writeTableName(query, resolver.Alias(), internals)
 
 	// First we must resolve all where, having clauses & group by clauses.
 	// These might add joins to the queryset, so this
@@ -622,7 +635,7 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 
 	if !expr.IsSubqueryContext(ctx) {
 		g.writeOrderBy(
-			query, qs.AliasGen, internals.OrderBy,
+			query, resolver.Alias(), internals.OrderBy,
 
 			// some databases do not support table aliasses on unions
 			// we let the compiler itself decide wether it'll be used.
@@ -636,24 +649,25 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 		query.WriteString(" FOR UPDATE")
 	}
 
-	return &QueryRowsObject[[][]interface{}]{
-		QueryInfo: &QueryInformation{
-			Stmt:    g.Rebind(ctx, query.String()),
-			Object:  inf.Model,
-			Params:  args,
-			Builder: g,
+	return &QueryIterRowsObject[[]interface{}]{
+		QueryRowsObject: QueryRowsObject[[][]interface{}]{
+			QueryInfo: &Query{
+				Stmt:    g.Rebind(ctx, query.String()),
+				Object:  resolver.Meta().Model(),
+				Params:  args,
+				Builder: g,
+			},
+			ExecSQL: func(sql string, args ...any) (drivers.SQLRows, error) {
+				return g.DB().QueryContext(ctx, sql, args...)
+			},
 		},
-		ExecSQL: func(sql string, args ...any) (drivers.SQLRows, error) {
-			return g.DB().QueryContext(ctx, sql, args...)
-		},
-		Execute: func(rows drivers.SQLRows) ([][]interface{}, error) {
-			defer rows.Close()
-
+		IterExecute: func(rows drivers.SQLRows) iter.Seq2[[]interface{}, error] {
 			if err := rows.Err(); err != nil {
-				return nil, errors.Wrap(err, "failed to iterate rows")
+				return func(yield func([]interface{}, error) bool) {
+					yield(nil, errors.Wrap(err, "failed to iterate rows"))
+				}
 			}
 
-			var results = make([][]interface{}, 0, 8)
 			var amountCols = 0
 			for _, info := range internals.Fields {
 				if info.Through != nil {
@@ -662,42 +676,51 @@ func (g *genericQueryBuilder) BuildSelectQuery(
 				amountCols += len(info.Fields)
 			}
 
-			var err error
-			for rows.Next() {
-				var row = make([]interface{}, amountCols)
-				for i := range row {
-					row[i] = new(interface{})
-				}
+			return func(yield func([]interface{}, error) bool) {
+				var err error
+				defer rows.Close()
+				for rows.Next() {
+					if err := rows.Err(); err != nil {
+						yield(nil, errors.Wrap(err, "failed to iterate rows"))
+						return
+					}
 
-				err = rows.Scan(row...)
-				if err != nil {
-					return nil, errors.Wrap(err, "failed to scan row")
-				}
+					var row = make([]interface{}, amountCols)
+					for i := range row {
+						row[i] = new(interface{})
+					}
 
-				var result = make([]interface{}, amountCols)
-				for i, iface := range row {
-					var field = iface.(*interface{})
-					result[i] = *field
-				}
+					err = rows.Scan(row...)
+					if err != nil {
+						yield(nil, errors.Wrap(err, "failed to scan row"))
+						return
+					}
 
-				results = append(results, result)
+					var result = make([]interface{}, amountCols)
+					for i, iface := range row {
+						var field = iface.(*interface{})
+						result[i] = *field
+					}
+
+					if !yield(result, nil) {
+						return
+					}
+				}
 			}
-
-			return results, rows.Err()
 		},
 	}
 }
 
 func (g *genericQueryBuilder) BuildCountQuery(
 	ctx context.Context,
-	qs *GenericQuerySet,
+	resolver expr.FieldResolver,
 	internals *QuerySetInternals,
 ) CompiledRowQuery[int64] {
-	var inf = newExpressionInfo(g, qs, internals, false)
+	var inf = newExpressionInfo(g, resolver, false)
 	var query = new(strings.Builder)
 	var args = make([]any, 0)
 	query.WriteString("SELECT COUNT(*) FROM ")
-	g.writeTableName(query, qs.AliasGen, internals)
+	g.writeTableName(query, resolver.Alias(), internals)
 
 	// First we must resolve all where clauses & group by clauses.
 	// These might add joins to the queryset, so this
@@ -734,10 +757,10 @@ func (g *genericQueryBuilder) BuildCountQuery(
 	args = append(args, g.writeLimitOffset(query, internals.Limit, internals.Offset)...)
 
 	return &QueryRowObject[int64]{
-		QueryInfo: &QueryInformation{
+		QueryInfo: &Query{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
-			Object:  inf.Model,
+			Object:  resolver.Meta().Model(),
 			Params:  args,
 		},
 		ExecSQL: func(sql string, args ...any) (drivers.SQLRow, error) {
@@ -759,13 +782,13 @@ func (g *genericQueryBuilder) BuildCountQuery(
 
 func (g *genericQueryBuilder) BuildCreateQuery(
 	ctx context.Context,
-	qs *GenericQuerySet,
+	resolver expr.FieldResolver,
 	internals *QuerySetInternals,
 	objects []UpdateInfo,
 	// e.g. for 2 rows of 3 fields: [[1, 2, 4], [2, 3, 5]] -> [1, 2, 4, 2, 3, 5]
 ) CompiledQuery[[][]interface{}] {
 	var (
-		model   = attrs.NewObject[attrs.Definer](qs.Meta().Model())
+		model   = attrs.NewObject[attrs.Definer](resolver.Context(), resolver.Meta().Model())
 		query   = new(strings.Builder)
 		support = drivers.SupportsReturning(
 			g.queryInfo.DB,
@@ -873,7 +896,7 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 	}
 
 	return &QueryObject[[][]interface{}]{
-		QueryInfo: &QueryInformation{
+		QueryInfo: &Query{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
 			Object:  model,
@@ -960,17 +983,12 @@ func (g *genericQueryBuilder) BuildCreateQuery(
 
 func (g *genericQueryBuilder) BuildUpdateQuery(
 	ctx context.Context,
-	qs *GenericQuerySet,
+	resolver expr.FieldResolver,
 	internals *QuerySetInternals,
 	objects []UpdateInfo, // multiple objects can be updated at once
 ) CompiledQuery[int64] {
 	var (
-		inf = newExpressionInfo(
-			g,
-			qs,
-			internals,
-			true,
-		)
+		inf     = newExpressionInfo(g, resolver, true)
 		written bool
 		args    = make([]any, 0)
 		query   = new(strings.Builder)
@@ -1032,10 +1050,10 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 	}
 
 	return &QueryObject[int64]{
-		QueryInfo: &QueryInformation{
+		QueryInfo: &Query{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
-			Object:  inf.Model,
+			Object:  inf.Resolver.Meta().Model(),
 			Params:  args,
 		},
 		Execute: func(sql string, args ...any) (int64, error) {
@@ -1050,10 +1068,10 @@ func (g *genericQueryBuilder) BuildUpdateQuery(
 
 func (g *genericQueryBuilder) BuildDeleteQuery(
 	ctx context.Context,
-	qs *GenericQuerySet,
+	resolver expr.FieldResolver,
 	internals *QuerySetInternals,
 ) CompiledQuery[int64] {
-	var inf = newExpressionInfo(g, qs, internals, false)
+	var inf = newExpressionInfo(g, resolver, false)
 	var query = new(strings.Builder)
 	var args = make([]any, 0)
 	query.WriteString("DELETE FROM ")
@@ -1077,10 +1095,10 @@ func (g *genericQueryBuilder) BuildDeleteQuery(
 	)
 
 	return &QueryObject[int64]{
-		QueryInfo: &QueryInformation{
+		QueryInfo: &Query{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, query.String()),
-			Object:  inf.Model,
+			Object:  inf.Resolver.Meta().Model(),
 			Params:  args,
 		},
 		Execute: func(sql string, args ...any) (int64, error) {
@@ -1174,7 +1192,7 @@ func (g *genericQueryBuilder) writeWhereClause(sb *strings.Builder, inf *expr.Ex
 func (g *genericQueryBuilder) writeGroupBy(sb *strings.Builder, inf *expr.ExpressionInfo, groupBy []*FieldInfo[attrs.FieldDefinition]) []any {
 
 	var infCpy = *inf
-	infCpy.SupportsAsExpr = false // Disable AS expressions in WHERE clauses
+	infCpy.SupportsAsExpr = false // Disable AS expressions in GROUPBY clauses
 
 	var args = make([]any, 0)
 	if len(groupBy) > 0 {
@@ -1287,8 +1305,8 @@ func getPostgresType(rTyp reflect.Type, field attrs.FieldDefinition) string {
 	}
 
 	if rTyp.Implements(reflect.TypeOf((*attrs.Definer)(nil)).Elem()) {
-		var newObj = attrs.NewObject[attrs.Definer](rTyp)
-		var defs = newObj.FieldDefs()
+		var newObj = attrs.GetModelMeta(rTyp)
+		var defs = newObj.Definitions()
 		var primary = defs.Primary()
 		if primary == nil {
 			panic(fmt.Errorf(
@@ -1313,12 +1331,12 @@ func getPostgresType(rTyp reflect.Type, field attrs.FieldDefinition) string {
 // to handle the case where multiple rows are updated at once.
 func (g *postgresQueryBuilder) BuildUpdateQuery(
 	ctx context.Context,
-	qs *GenericQuerySet,
+	resolver expr.FieldResolver,
 	internals *QuerySetInternals,
 	objects []UpdateInfo,
 ) CompiledQuery[int64] {
 	if len(objects) == 0 {
-		return ErrorQueryObject[int64](qs.Meta().Model(), g, nil)
+		return ErrorQueryObject[int64](resolver.Meta().Model(), g, nil)
 	}
 
 	var (
@@ -1330,7 +1348,7 @@ func (g *postgresQueryBuilder) BuildUpdateQuery(
 	for _, obj := range objects {
 
 		var query = g.genericQueryBuilder.BuildUpdateQuery(
-			ctx, qs, internals, []UpdateInfo{obj},
+			ctx, resolver, internals, []UpdateInfo{obj},
 		)
 
 		var (
@@ -1354,11 +1372,11 @@ func (g *postgresQueryBuilder) BuildUpdateQuery(
 	}
 
 	return &QueryObject[int64]{
-		QueryInfo: &QueryInformation{
+		QueryInfo: &Query{
 			Builder: g,
 			Stmt:    strings.Join(stmts, "; "),
 			Params:  args,
-			Object:  qs.Meta().Model(),
+			Object:  resolver.Meta().Model(),
 		},
 		Execute: func(query string, args ...any) (int64, error) {
 			var br = conner.SendBatch(ctx, batch)
@@ -1391,24 +1409,24 @@ func (g *mariaDBQueryBuilder) SupportsUnionOrderByTableAlias() bool {
 
 func (g *mariaDBQueryBuilder) BuildUpdateQuery(
 	ctx context.Context,
-	qs *GenericQuerySet,
+	resolver expr.FieldResolver,
 	internals *QuerySetInternals,
 	objects []UpdateInfo,
 ) CompiledQuery[int64] {
 	if len(objects) == 0 {
-		return ErrorQueryObject[int64](qs.Meta().Model(), g, nil)
+		return ErrorQueryObject[int64](resolver.Meta().Model(), g, nil)
 	}
 
 	var query = g.genericQueryBuilder.BuildUpdateQuery(
-		ctx, qs, internals, objects,
+		ctx, resolver, internals, objects,
 	)
 
 	return &QueryObject[int64]{
-		QueryInfo: &QueryInformation{
+		QueryInfo: &Query{
 			Builder: g,
 			Stmt:    query.SQL(),
 			Params:  query.Args(),
-			Object:  qs.Meta().Model(),
+			Object:  resolver.Meta().Model(),
 		},
 		Execute: func(query string, args ...any) (int64, error) {
 			var res, err = getDriverResult(g.DB().ExecContext(ctx, query, args...))
@@ -1500,13 +1518,13 @@ func (g *mysqlQueryBuilder) PrepareValue(field attrs.Field, value any) any {
 // when using MySQL, by using a separate query to get the last inserted ID.
 func (g *mysqlQueryBuilder) BuildCreateQuery(
 	ctx context.Context,
-	qs *GenericQuerySet,
+	resolver expr.FieldResolver,
 	internals *QuerySetInternals,
 	objects []UpdateInfo,
 ) CompiledQuery[[][]interface{}] {
 
 	if len(objects) == 0 {
-		return ErrorQueryObject[[][]interface{}](qs.Meta().Model(), g, nil)
+		return ErrorQueryObject[[][]interface{}](resolver.Meta().Model(), g, nil)
 	}
 
 	var (
@@ -1517,7 +1535,7 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 
 		if len(object.Fields) != len(object.Values) {
 			return ErrorQueryObject[[][]interface{}](
-				qs.Meta().Model(), g, errors.TypeMismatch.WithCause(fmt.Errorf(
+				resolver.Meta().Model(), g, errors.TypeMismatch.WithCause(fmt.Errorf(
 					"cannot build create query, number of fields (%d) does not match number of values (%d)",
 					len(object.Fields), len(object.Values),
 				)),
@@ -1559,11 +1577,11 @@ func (g *mysqlQueryBuilder) BuildCreateQuery(
 	}
 
 	return &QueryObject[[][]interface{}]{
-		QueryInfo: &QueryInformation{
+		QueryInfo: &Query{
 			Builder: g,
 			Stmt:    g.Rebind(ctx, strings.Join(stmt, "; ")),
 			Params:  values,
-			Object:  attrs.NewObject[attrs.Definer](qs.Meta().Model()),
+			Object:  resolver.Meta().Model(),
 		},
 		Execute: func(query string, args ...any) ([][]interface{}, error) {
 			if internals.Model.Primary != nil {

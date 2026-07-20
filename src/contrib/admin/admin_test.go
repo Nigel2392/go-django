@@ -4,6 +4,7 @@
 package admin_test
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
@@ -34,8 +35,8 @@ func (t *TestModel) String() string {
 	return t.Name
 }
 
-func (t *TestModel) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions[*TestModel](t)
+func (t *TestModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions[*TestModel](ctx, t)
 }
 
 func (t *TestModel) Save() (err error) {
@@ -62,8 +63,8 @@ type User struct {
 	IsAdministrator bool
 }
 
-func (l *User) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions[*User](l)
+func (l *User) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions[*User](ctx, l)
 }
 
 func (l *User) IsAuthenticated() bool {

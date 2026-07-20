@@ -23,6 +23,8 @@ var (
 	_ queries.ForUseInQueriesField     = (*RelationField[any])(nil)
 	_ attrs.CanRelatedName             = (*RelationField[any])(nil)
 
+	_ queries.SaveableField = (*RelationField[any])(nil)
+
 	_ attrs.LazyRelation = (*typedRelation)(nil)
 	_ attrs.LazyRelation = (*wrappedRelation)(nil)
 )
@@ -237,9 +239,6 @@ type (
 		queries.Relation
 		Save(ctx context.Context, parent attrs.Definer) error
 	}
-	canSetup interface {
-		Setup(def attrs.Definer) error
-	}
 )
 
 func (r *RelationField[T]) AllowEdit() bool {
@@ -264,8 +263,8 @@ func (r *RelationField[T]) Save(ctx context.Context) error {
 		return nil
 	}
 
-	if canSetup, ok := val.(canSetup); ok {
-		if err := canSetup.Setup(val.(attrs.Definer)); err != nil {
+	if canSetup, ok := val.(queries.CanSetup); ok {
+		if err := canSetup.Setup(ctx, val.(attrs.Definer)); err != nil {
 			return fmt.Errorf("failed to setup value for relation %s: %w", r.Name(), err)
 		}
 	}
@@ -319,7 +318,7 @@ func (r *RelationField[T]) Save(ctx context.Context) error {
 func (r *RelationField[T]) GetTargetField() attrs.FieldDefinition {
 	var targetField = r.cnf.Rel.Field()
 	if targetField == nil {
-		var defs = r.cnf.Rel.Model().FieldDefs()
+		var defs = attrs.GetModelMeta(r.cnf.Rel.Model()).Definitions()
 		return defs.Primary()
 	}
 	return targetField
@@ -388,7 +387,7 @@ func (r *RelationField[T]) IsProxy() bool {
 	return r.cnf.IsProxy
 }
 
-func (f *RelationField[T]) GenerateTargetClause(qs *queries.QuerySet[attrs.Definer], inter *queries.QuerySetInternals, lhs queries.ClauseTarget, rhs queries.ClauseTarget) queries.JoinDef {
+func (f *RelationField[T]) GenerateTargetClause(qs expr.FieldResolver, lhs queries.ClauseTarget, rhs queries.ClauseTarget) queries.JoinDef {
 
 	var joinType = expr.TypeJoinLeft
 	if !f.cnf.Nullable && !f.hasMany() {
@@ -412,7 +411,7 @@ func (f *RelationField[T]) GenerateTargetClause(qs *queries.QuerySet[attrs.Defin
 	}
 }
 
-func (f *RelationField[T]) GenerateTargetThroughClause(qs *queries.QuerySet[attrs.Definer], inter *queries.QuerySetInternals, lhs queries.ClauseTarget, thru queries.ThroughClauseTarget, rhs queries.ClauseTarget) (queries.JoinDef, queries.JoinDef) {
+func (f *RelationField[T]) GenerateTargetThroughClause(qs expr.FieldResolver, lhs queries.ClauseTarget, thru queries.ThroughClauseTarget, rhs queries.ClauseTarget) (queries.JoinDef, queries.JoinDef) {
 
 	var joinType = expr.TypeJoinLeft
 	if !f.cnf.Nullable && !f.hasMany() {

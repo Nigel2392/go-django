@@ -23,8 +23,8 @@ type Artist struct {
 	Name string
 }
 
-func (a *Artist) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions(a, "ID", "Name")
+func (a *Artist) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions(ctx, a, "ID", "Name")
 }
 
 type Laptop struct {
@@ -32,8 +32,8 @@ type Laptop struct {
 	Resolution string
 }
 
-func (l *Laptop) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions(l, "ID", "Resolution")
+func (l *Laptop) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions(ctx, l, "ID", "Resolution")
 }
 
 type Bottle struct {
@@ -41,8 +41,8 @@ type Bottle struct {
 	Liters float64
 }
 
-func (b *Bottle) FieldDefs() attrs.Definitions {
-	return attrs.AutoDefinitions(b, "ID", "Liters")
+func (b *Bottle) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.AutoDefinitions(ctx, b, "ID", "Liters")
 }
 
 var (

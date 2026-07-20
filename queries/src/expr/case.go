@@ -196,7 +196,7 @@ func (c *CaseExpression) Clone() Expression {
 }
 
 func (c *CaseExpression) Resolve(inf *ExpressionInfo) Expression {
-	if inf.Model == nil || c.used {
+	if c.used {
 		return c
 	}
 

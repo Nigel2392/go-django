@@ -172,7 +172,7 @@ func TestRetrieveForUser(t *testing.T) {
 		if entryRows[0].Object.Usr == nil {
 			t.Fatalf("%d expected user to be set, got nil", i)
 		}
-		if attrs.Get[int64](entryRows[0].Object.Usr, "ID") != int64(i) {
+		if attrs.Get[int64](context.Background(), entryRows[0].Object.Usr, "ID") != int64(i) {
 			t.Fatalf("%d expected user id %v, got %v", i, i, entryRows[0].Object.Usr)
 		}
 	}
@@ -274,8 +274,8 @@ func TestFilter(t *testing.T) {
 					t.Fatalf("%d expected level %d, got %d", i, entry.Object.Level(), fromDB.Object.Level())
 				}
 
-				if attrs.PrimaryKey(fromDB.Object.User()) != attrs.PrimaryKey(entry.Object.User()) {
-					t.Fatalf("%d expected user id %v, got %v", i, attrs.PrimaryKey(entry.Object.User()), attrs.PrimaryKey(fromDB.Object.User()))
+				if attrs.PrimaryKey(t.Context(), fromDB.Object.User()) != attrs.PrimaryKey(t.Context(), entry.Object.User()) {
+					t.Fatalf("%d expected user id %v, got %v", i, attrs.PrimaryKey(t.Context(), entry.Object.User()), attrs.PrimaryKey(t.Context(), fromDB.Object.User()))
 				}
 			} //
 

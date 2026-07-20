@@ -1,6 +1,7 @@
 package migrator
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -148,7 +149,7 @@ func NewTableColumn(table Table, field attrs.Field) Column {
 	var dflt = field.GetDefault()
 	if def, ok := dflt.(attrs.Definer); ok {
 		if !attrs.IsZero(dflt) {
-			var defs = def.FieldDefs()
+			var defs = attrs.Define(context.Background(), def)
 			var prim = defs.Primary()
 			if prim != nil {
 				dflt = prim.GetDefault()

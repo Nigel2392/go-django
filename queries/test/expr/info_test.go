@@ -29,15 +29,6 @@ func TestInfoFormatSQLValue(t *testing.T) {
 	}
 }
 
-// Happy Path 1
-func TestInfoModel(t *testing.T) {
-	info := getTestInfo()
-	if info.Model == nil {
-		t.Errorf("Expected Model to be set on info")
-	}
-}
-
-// Happy Path 2
 func TestInfoDriver(t *testing.T) {
 	info := getTestInfo()
 	if info.Driver == nil {

@@ -50,8 +50,8 @@ func FieldComparison(ctx context.Context, label func(context.Context) string, fi
 		)
 	}
 
-	var oldValue = attrs.Get[any](old, fieldName)
-	var newValue = attrs.Get[any](new, fieldName)
+	var oldValue = attrs.Get[any](ctx, old, fieldName)
+	var newValue = attrs.Get[any](ctx, new, fieldName)
 	var fc = &fieldComparison{
 		ctx:       ctx,
 		LabelText: label,

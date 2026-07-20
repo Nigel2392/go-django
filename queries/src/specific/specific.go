@@ -20,7 +20,7 @@ var (
 	_ queries.BaseWriteQuerySet[attrs.Definer, *SpecificQuerySet[attrs.Definer, attrs.Definer, *queries.QuerySet[attrs.Definer]]]                                  = (*SpecificQuerySet[attrs.Definer, attrs.Definer, *queries.QuerySet[attrs.Definer]])(nil)
 )
 
-type BaseSpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.NullQuerySet[ORIGINAL, QS]] interface {
+type BaseSpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.NullQuerySet[QS]] interface {
 	queries.BaseReadQuerySet[Specific[ORIGINAL, SPECIFIC], *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]]
 	queries.BaseWriteQuerySet[ORIGINAL, *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]]
 }
@@ -41,12 +41,12 @@ type SpecificQuerySetOptions[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer] str
 	GetSpecificTargetID    func(target SPECIFIC) (id any, ok bool)
 }
 
-type SpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.NullQuerySet[ORIGINAL, QS]] struct {
+type SpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.NullQuerySet[QS]] struct {
 	*queries.WrappedQuerySet[ORIGINAL, *SpecificQuerySet[ORIGINAL, SPECIFIC, QS], QS]
 	opts SpecificQuerySetOptions[ORIGINAL, SPECIFIC]
 }
 
-func GetSpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.NullQuerySet[ORIGINAL, QS]](qs QS, opts SpecificQuerySetOptions[ORIGINAL, SPECIFIC]) *SpecificQuerySet[ORIGINAL, SPECIFIC, QS] {
+func GetSpecificQuerySet[ORIGINAL attrs.Definer, SPECIFIC attrs.Definer, QS queries.NullQuerySet[QS]](qs QS, opts SpecificQuerySetOptions[ORIGINAL, SPECIFIC]) *SpecificQuerySet[ORIGINAL, SPECIFIC, QS] {
 	assert.False(
 		opts.GetSpecificPreloadData == nil,
 		"GetSpecificQuerySet: opts.GetSpecificPreloadData must be provided",
@@ -188,7 +188,7 @@ func (qs *SpecificQuerySet[ORIGINAL, SPECIFIC, QS]) All() (queries.Rows[Specific
 
 		var (
 			model        = definition.Object().(SPECIFIC)
-			defs         = model.FieldDefs()
+			defs         = attrs.Define(qs.Context(), model)
 			primaryField = defs.Primary()
 		)
 
