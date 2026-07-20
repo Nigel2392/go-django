@@ -162,7 +162,7 @@ func ContextWithFlags(ctx context.Context, flag ContextFlag, set bool) context.C
 		if set {
 			return context.WithValue(ctx, attrsContextKey{}, flag)
 		}
-		return context.WithValue(ctx, attrsContextKey{}, ContextFlag(0))
+		return context.WithValue(ctx, attrsContextKey{}, CtxFlagNone)
 	}
 
 	switch v := val.(type) {

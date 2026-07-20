@@ -20,6 +20,7 @@ jobs:
     env:
       # See contrib/admin/middleware.go for more information
       GITHUB_ACTIONS: 1
+      GOFLAGS: "-tags='testing_auth test sqlite'"
 
     runs-on: ubuntu-latest
     steps:
@@ -31,4 +32,4 @@ jobs:
         go-version: '1.26.3'
 
     - name: Fuzz Tests for SQLite
-      run: go run github.com/koonix/gofuzz@latest -tags="testing_auth test sqlite" ./src/... -- -fuzztime=30s
+      run: go run github.com/koonix/gofuzz@latest ./src/... -- -fuzztime=30s

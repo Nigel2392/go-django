@@ -49,7 +49,7 @@ func (m *BasicModel) FieldDefs(ctx context.Context) attrs.Definitions {
 			Column:        "joined_id",
 			RelForeignKey: attrs.Relate(&BasicJoinedModel{}, "", nil),
 		}),
-		fields.Embed(context.Background(), "Joined"),
+		fields.Embed(ctx, "Joined"),
 	)
 }
 
