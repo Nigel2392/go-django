@@ -96,10 +96,10 @@ func scannerSetter[T any](f *DataModelField[T], v any) error {
 	}
 
 	var vVal = reflect.ValueOf(v)
-	if !vVal.Type().AssignableTo(f._Type) {
+	if !vVal.Type().AssignableTo(f.val.Type()) {
 		panic(fmt.Errorf(
 			"NewDataModelField: cannot assign %T to %s (%s != %s)",
-			v, typeName(f._Type), typeName(vVal.Type()), typeName(f._Type),
+			v, typeName(f.val.Type()), typeName(vVal.Type()), typeName(f.val.Type()),
 		))
 	}
 
@@ -180,6 +180,25 @@ func NewDataModelField[T any](forModel attrs.Definer, dst any, name string, cnf 
 		getters = make([]func(f *DataModelField[T]) (any, bool), 0, 2)
 	)
 	switch {
+	case Type.Kind() == reflect.Interface && dstT.Elem().Implements(Type):
+
+		dstT = dstT.Elem()
+		dstV = dstV.Elem()
+
+		if !dstV.IsValid() || dstV.Kind() == reflect.Pointer && dstV.IsNil() {
+			if isPointerPointer {
+				var newVal = reflect.New(dstT.Elem())
+				dstV.Set(newVal)
+			} else {
+				var newVal = reflect.New(dstT)
+				dstV.Set(newVal)
+			}
+		}
+
+		getters = append(getters, scannerGetter[T])
+		setters = append(setters, scannerSetter[T])
+		Type = dstT
+
 	case dstT.Kind() == reflect.Pointer && dstT.Elem() == Type:
 		// Scan the value into a pointer to T
 
@@ -356,7 +375,11 @@ func (e *DataModelField[T]) Type() reflect.Type {
 		panic("_Type is nil")
 	}
 
-	return e._Type
+	if e.val.CanAddr() && e.val.Addr().Equal(reflect.ValueOf(e.Model)) {
+		return e._Type
+	}
+
+	return e.val.Type()
 }
 
 func (e *DataModelField[T]) Attrs() map[string]any {
@@ -387,6 +410,11 @@ func (e *DataModelField[T]) GetValue() interface{} {
 	var val, _ = e.getQueryValue()
 	if e._Type.Kind() == reflect.Pointer && (e._Type.Comparable() && any(val) == any(*new(T)) || val == nil) {
 		val = reflect.New(e._Type.Elem()).Interface()
+		assert.Err(e.setQueryValue(val))
+	}
+
+	if e.val.Kind() == reflect.Pointer && e.val.IsNil() {
+		val = reflect.New(e.val.Type().Elem()).Interface()
 		assert.Err(e.setQueryValue(val))
 	}
 

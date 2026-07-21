@@ -124,15 +124,6 @@ func (r *typedRelation) ModelKey() string {
 	return ""
 }
 
-var deferredMap = make(map[string]*deferredRelation)
-
-func deferredMapKey(d *deferredRelation) string {
-	return fmt.Sprintf(
-		"%d:%s:%s",
-		d.typ, d.modelKey, d.targetField,
-	)
-}
-
 func ThroughDeferred(
 	modelKey string,
 	sourceField string,

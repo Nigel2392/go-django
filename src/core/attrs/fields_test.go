@@ -54,6 +54,12 @@ func init() {
 	contenttypes.Register(&contenttypes.ContentTypeDefinition{
 		ContentObject: &TestModelFields{},
 	})
+	attrs.RegisterModel(&TestModelFields{})
+	attrs.RegisterModel(&TestEmbeddedModelFields{})
+	attrs.RegisterModel(&TestBindableValue{})
+	attrs.RegisterModel(&TestUnboundFields{})
+	attrs.RegisterModel(&TestBenchmarkWithCaching{})
+	attrs.RegisterModel(&TestBenchmarkWithoutCaching{})
 
 }
 
@@ -712,7 +718,6 @@ func BenchmarkFieldsWithCaching(b *testing.B) {
 
 	// cache is warmed up only when the model is registered
 	// see [attrs.FieldDef.OnModelRegister]
-	attrs.RegisterModel(&TestBenchmarkWithCaching{})
 
 	b.StartTimer()
 

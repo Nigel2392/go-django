@@ -84,6 +84,11 @@ func (q *SQLQueryObject[RESULT, SQL]) setupExec() error {
 	return nil
 }
 
+func (q *SQLQueryObject[RESULT, SQL]) Reset() {
+	q.Error = nil
+	q.RawResultSQL = nil
+}
+
 func (q *SQLQueryObject[RESULT, SQL]) Exec() (result RESULT, err error) {
 	if err := q.setupExec(); err != nil {
 		return result, err
@@ -95,6 +100,10 @@ func (q *SQLQueryObject[RESULT, SQL]) Exec() (result RESULT, err error) {
 ROW
 */
 type QueryRowObject[RESULT any] SQLQueryObject[RESULT, drivers.SQLRow]
+
+func (q *QueryRowObject[RESULT]) Reset() {
+	(*SQLQueryObject[RESULT, drivers.SQLRow])(q).Reset()
+}
 
 func (q *QueryRowObject[RESULT]) Err() (err error) {
 	if err := (*SQLQueryObject[RESULT, drivers.SQLRow])(q).setupExec(); err != nil {
@@ -118,6 +127,10 @@ func (q *QueryRowObject[RESULT]) Exec() (result RESULT, err error) {
 ROWS
 */
 type QueryRowsObject[RESULT any] SQLQueryObject[RESULT, drivers.SQLRows]
+
+func (q *QueryRowsObject[RESULT]) Reset() {
+	(*SQLQueryObject[RESULT, drivers.SQLRows])(q).Reset()
+}
 
 func (q *QueryRowsObject[RESULT]) Err() (err error) {
 	if err := (*SQLQueryObject[RESULT, drivers.SQLRows])(q).setupExec(); err != nil {

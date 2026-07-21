@@ -107,6 +107,7 @@ func Setup[T attrs.Definer](ctx context.Context, def T) T {
 		err == nil,
 		"failed to setup model %T: %v", def, err,
 	)
+
 	return def
 }
 
@@ -233,6 +234,10 @@ func (m *Model) SignalChange(fa attrs.Field, value interface{}) {
 func (m *Model) SignalReset(fa attrs.Field) {
 	m.checkValid()
 
+	if attrs.ContextHasFlag(m.internals.Defs.Context(), attrs.CtxFlagDeferSignals) {
+		return
+	}
+
 	m.changed.Send(ModelChangeSignal{
 		Model:  m,
 		Field:  fa,
@@ -321,7 +326,7 @@ func (m *Model) CreateObject(ctx context.Context, object attrs.Definer) attrs.De
 	return newDefiner
 }
 
-func (m *Model) Setup(ctx context.Context, def attrs.Definer) error {
+func (m *Model) Setup(ctx context.Context, def attrs.Definer) (err error) {
 	if def == nil {
 		return ErrObjectInvalid
 	}
@@ -355,23 +360,26 @@ func (m *Model) Setup(ctx context.Context, def attrs.Definer) error {
 		Object: def,
 	}
 
-	// Handle the model's proxy object if it exists.
-	var changedProxies, err = m.setupProxy(
-		ctx,
-		base,
-		defValue,
-	)
-	if err != nil {
-		return fmt.Errorf(
-			"failed to setup proxy for model %T: %w",
-			def, err,
+	var changedList []string
+	if len(base.proxies) > 0 {
+		// Handle the model's proxy object if it exists.
+		changedList, err = m.setupProxy(
+			ctx,
+			base,
+			defValue,
 		)
+		if err != nil {
+			return fmt.Errorf(
+				"failed to setup proxy for model %T: %w",
+				def, err,
+			)
+		}
 	}
 
 	// if the proxy was changed it needs
 	// to be reset, we need to clear the internals
 	// as some fields may be pointing to the old object
-	if len(changedProxies) > 0 && m.internals != nil {
+	if len(changedList) > 0 && m.internals != nil {
 		sig.SignalInfo.Flags.set(FlagProxySetup)
 		m.internals.ReflectValue = nil
 		m.internals.Defs = nil
@@ -391,7 +399,7 @@ func (m *Model) Setup(ctx context.Context, def attrs.Definer) error {
 	}
 
 	// no changes were made, pointers equal according to above check
-	if len(changedProxies) == 0 && m.internals != nil && m.internals.ReflectValue != nil {
+	if len(changedList) == 0 && m.internals != nil && m.internals.ReflectValue != nil {
 		return nil
 	}
 

@@ -219,8 +219,9 @@ func TestMain(m *testing.M) {
 
 	app := django.App(
 		django.Configure(map[string]interface{}{
-			django.APPVAR_DATABASE: sqlDB,
-			"ALLOWED_HOSTS":        []string{"*"},
+			django.APPVAR_DATABASE:  sqlDB,
+			django.APPVAR_RECOVERER: false,
+			"ALLOWED_HOSTS":         []string{"*"},
 		}),
 		django.Apps(
 			session.NewAppConfig,

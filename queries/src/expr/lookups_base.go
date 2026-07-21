@@ -237,17 +237,27 @@ func (l *InLookup) NormalizeArgs(inf *ExpressionInfo, values []any) ([]any, erro
 		return []any{v.BuildExpression().Resolve(inf)}, nil
 	}
 
-	return flattenList(values), nil
+	values = flattenList(values)
+	if len(values) == 0 {
+		return nil, fmt.Errorf("lookup %s requires at least one value", l.Identifier)
+	}
+
+	return values, nil
 }
 
 func (l *InLookup) Resolve(inf *ExpressionInfo, resolvedExpression ResolvedExpression, values []any) func(sb *strings.Builder) []any {
 	return func(sb *strings.Builder) []any {
+
 		var lhsExpr strings.Builder
 		var args = resolvedExpression.SQL(&lhsExpr)
 		sb.WriteString(inf.Lookups.FormatLookupCol(
 			l.Identifier, lhsExpr.String(),
 		))
 		sb.WriteString(" IN (")
+
+		if len(values) == 0 {
+			panic(fmt.Sprintf("nil values provided to %T: %v", l, sb.String()))
+		}
 
 		switch v := values[0].(type) {
 		case Expression: // handle expression case (maybe subquery)

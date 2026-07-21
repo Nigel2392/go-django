@@ -361,7 +361,7 @@ func TestVirtualFieldsQuerySetFieldNameClash(t *testing.T) {
 		{Name: "test4 no object", Text: "[test4 no object text]"},
 	}
 
-	objs, objDelete := quest.CreateObjects(t, objs...)
+	objs, objDelete := quest.CreateObjects(t, objs)
 
 	var otherObjs = []*OtherTestStruct{
 		{Name: "test1", Text: "[test1 text]", TestStruct: objs[0]},
@@ -370,7 +370,7 @@ func TestVirtualFieldsQuerySetFieldNameClash(t *testing.T) {
 		{Name: "test4", Text: "[test4 text]", TestStruct: objs[3]},
 	}
 
-	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs...)
+	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs)
 
 	defer objDelete(0)
 	defer otherDelete(0)
@@ -407,7 +407,7 @@ func TestVirtualFieldsQuerySetRelation(t *testing.T) {
 		{Name: "test4", Text: "[test4 text]"},
 	}
 
-	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs...)
+	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs)
 
 	var objs = []*TestStructNoVF{
 		{Title: "test1 no vf", Text: "[test1 no vf]", TestStruct: otherObjs[0]},
@@ -416,7 +416,7 @@ func TestVirtualFieldsQuerySetRelation(t *testing.T) {
 		{Title: "test4 no vf", Text: "[test4 no vf]", TestStruct: otherObjs[3]},
 	}
 
-	objs, objDelete := quest.CreateObjects(t, objs...)
+	objs, objDelete := quest.CreateObjects(t, objs)
 
 	defer otherDelete(0)
 	defer objDelete(0)
@@ -451,7 +451,7 @@ func TestVirtualFieldsQuerySetRelationLookupFilter(t *testing.T) {
 		{Name: "test4", Text: "[test4 text]"},
 	}
 
-	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs...)
+	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs)
 
 	var objs = []*TestStructNoVF{
 		{Title: "test1 no vf", Text: "[test1 no vf]", TestStruct: otherObjs[0]},
@@ -460,7 +460,7 @@ func TestVirtualFieldsQuerySetRelationLookupFilter(t *testing.T) {
 		{Title: "test4 no vf", Text: "[test4 no vf]", TestStruct: otherObjs[3]},
 	}
 
-	objs, objDelete := quest.CreateObjects(t, objs...)
+	objs, objDelete := quest.CreateObjects(t, objs)
 
 	defer otherDelete(0)
 	defer objDelete(0)
@@ -504,7 +504,7 @@ func TestVirtualFieldsQuerySetSubquery(t *testing.T) {
 		{Name: "test4", Text: "[test4 text]"},
 	}
 
-	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs...)
+	otherObjs, otherDelete := quest.CreateObjects(t, otherObjs)
 
 	var objs = []*TestStructSubqueryVF{
 		{Title: "test1 no vf", Text: "[test1 no vf]", TestStruct: otherObjs[0]},
@@ -513,7 +513,7 @@ func TestVirtualFieldsQuerySetSubquery(t *testing.T) {
 		{Title: "test4 no vf", Text: "[test4 no vf]", TestStruct: otherObjs[3]},
 	}
 
-	objs, objDelete := quest.CreateObjects(t, objs...)
+	objs, objDelete := quest.CreateObjects(t, objs)
 
 	defer otherDelete(0)
 	defer objDelete(0)
@@ -573,9 +573,9 @@ func TestVirtualFieldsQuerySetRelatedSubquery(t *testing.T) {
 		{Name: "test4 subquery", Text: "[test4 subquery vf]", Related: relObjs[3]},
 	}
 
-	_, refDelete := quest.CreateObjects(t, refObjs...)
-	_, relDelete := quest.CreateObjects(t, relObjs...)
-	_, rootDelete := quest.CreateObjects(t, rootObjs...)
+	_, refDelete := quest.CreateObjects(t, refObjs)
+	_, relDelete := quest.CreateObjects(t, relObjs)
+	_, rootDelete := quest.CreateObjects(t, rootObjs)
 
 	defer refDelete(0)
 	defer relDelete(0)
@@ -631,9 +631,9 @@ func TestVirtualFieldsQuerySetRelatedSubqueryLookupFilter(t *testing.T) {
 		{Name: "test4 subquery", Text: "[test4 subquery vf]", Related: relObjs[3]},
 	}
 
-	_, refDelete := quest.CreateObjects(t, refObjs...)
-	_, relDelete := quest.CreateObjects(t, relObjs...)
-	_, rootDelete := quest.CreateObjects(t, rootObjs...)
+	_, refDelete := quest.CreateObjects(t, refObjs)
+	_, relDelete := quest.CreateObjects(t, relObjs)
+	_, rootDelete := quest.CreateObjects(t, rootObjs)
 
 	defer refDelete(0)
 	defer relDelete(0)

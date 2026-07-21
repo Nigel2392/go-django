@@ -48,7 +48,7 @@ func DefinerList[T Definer](list []T) []Definer {
 // - func(d T1) []Field: a function that takes a Definer of type T1 and returns a slice of fields
 // - func(d T1) ([]Field, error): a function that takes a Definer of type T1 and returns a slice of fields and an error
 // - string: a field name, which will be converted to a Field with no configuration
-func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, error) {
+func UnpackFieldsFromArgs[T1 Definer, T2 any](ctx context.Context, definer T1, args ...T2) ([]Field, error) {
 	var fields = make([]Field, 0, len(args))
 	for _, f := range args {
 		var (
@@ -64,11 +64,11 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 			flds = v
 
 		case UnboundFieldConstructor:
-			fld, err = v.BindField(definer)
+			fld, err = v.BindField(ctx, definer)
 		case []UnboundFieldConstructor:
 			flds = make([]Field, len(v))
 			for i, u := range v {
-				flds[i], err = u.BindField(definer)
+				flds[i], err = u.BindField(ctx, definer)
 				if err != nil {
 					return nil, fmt.Errorf(
 						"fieldsFromArgs (%T): %v",
@@ -84,7 +84,7 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 			}
 
 		case []any:
-			var unpacked, err = UnpackFieldsFromArgs(definer, v...)
+			var unpacked, err = UnpackFieldsFromArgs(ctx, definer, v...)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"fieldsFromArgs (%T): %v",
@@ -101,7 +101,7 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 
 		// func() ([]field, ?error)
 		case func() []any:
-			var unpacked, err = UnpackFieldsFromArgs(definer, v()...)
+			var unpacked, err = UnpackFieldsFromArgs(ctx, definer, v()...)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"fieldsFromArgs (%T): %v",
@@ -122,7 +122,7 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 
 		// func(t1) ([]field, ?error)
 		case func(d T1) []any:
-			var unpacked, err = UnpackFieldsFromArgs(definer, v(definer)...)
+			var unpacked, err = UnpackFieldsFromArgs(ctx, definer, v(definer)...)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"fieldsFromArgs (%T): %v",
@@ -143,7 +143,7 @@ func UnpackFieldsFromArgs[T1 Definer, T2 any](definer T1, args ...T2) ([]Field, 
 
 		// func(d Definer) ([]field, ?error)
 		case func(d Definer) []any:
-			var unpacked, err = UnpackFieldsFromArgs(definer, v(definer)...)
+			var unpacked, err = UnpackFieldsFromArgs(ctx, definer, v(definer)...)
 			if err != nil {
 				return nil, fmt.Errorf(
 					"fieldsFromArgs (%T): %v",
@@ -294,7 +294,7 @@ func unpackFieldsFromArgsIter[T1 Definer, T2 any](ctx context.Context, yield fun
 			}
 
 		case UnboundFieldConstructor:
-			var fld, err = v.BindField(definer)
+			var fld, err = v.BindField(ctx, definer)
 			if err != nil {
 				yield(nil, fmt.Errorf(
 					"fieldsFromArgs (%T): %v",
@@ -307,7 +307,7 @@ func unpackFieldsFromArgsIter[T1 Definer, T2 any](ctx context.Context, yield fun
 			}
 		case []UnboundFieldConstructor:
 			for _, u := range v {
-				var fld, err = u.BindField(definer)
+				var fld, err = u.BindField(ctx, definer)
 				if err != nil {
 					yield(nil, fmt.Errorf(
 						"fieldsFromArgs (%T): %v",
@@ -323,7 +323,7 @@ func unpackFieldsFromArgsIter[T1 Definer, T2 any](ctx context.Context, yield fun
 
 		case []UnboundField:
 			for _, u := range v {
-				var fld, err = u.BindField(definer)
+				var fld, err = u.BindField(ctx, definer)
 				if err != nil {
 					yield(nil, fmt.Errorf(
 						"fieldsFromArgs (%T): %v",

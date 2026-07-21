@@ -88,7 +88,7 @@ func (pap *PreloadAuthorProfile) BeforeSave(ctx context.Context) error {
 
 func (pap *PreloadAuthorProfile) FieldDefs(ctx context.Context) attrs.Definitions {
 	return pap.Model.Define(ctx, pap, attrs.AutoFieldList(
-		pap, "*",
+		ctx, pap, "*",
 		fields.NewOneToOneField[*PreloadAuthor](pap,
 			"Author", &fields.FieldConfig{
 				AllowEdit:   true,

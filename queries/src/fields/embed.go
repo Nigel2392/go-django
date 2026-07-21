@@ -68,7 +68,7 @@ func (e *embedder) bind(d attrs.Definer) []attrs.Field {
 	assert.True(ok, "field %q in %T must implement attrs.Definer, got %T", e.fieldName, d, fieldval.Interface())
 
 	if len(e.options.EmbedFields) > 0 {
-		var fields, err = attrs.UnpackFieldsFromArgs(definer, e.options.EmbedFields)
+		var fields, err = attrs.UnpackFieldsFromArgs(e.ctx, definer, e.options.EmbedFields)
 		assert.True(err == nil, "failed to unpack fields: %v", err)
 		return fields
 	}

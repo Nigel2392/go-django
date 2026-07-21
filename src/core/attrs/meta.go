@@ -19,10 +19,12 @@ const (
 type modelMeta struct {
 	setup       bool
 	model       Definer
-	definitions StaticDefinitions
+	definitions *staticDefinition
+	primary     FieldDefinition
+	fieldsMap   map[string]*reflect.StructField
 	forward     *orderedmap.OrderedMap[string, Relation] // forward orderedmap
 	reverse     *orderedmap.OrderedMap[string, Relation] // forward orderedmap
-	stored      *orderedmap.OrderedMap[string, any]      // stored (possible configuration) values
+	stored      map[string]any                           // stored (possible configuration) values
 }
 
 func (m *modelMeta) Model() Definer {
@@ -37,6 +39,13 @@ func (m *modelMeta) Definitions() StaticDefinitions {
 		m.definitions = newStaticDefinitions(NewObject[Definer](registerContext, m.model))
 	}
 	return m.definitions
+}
+
+func (m *modelMeta) Primary() FieldDefinition {
+	if m.primary == nil {
+		m.primary = m.Definitions().Primary()
+	}
+	return m.Primary()
 }
 
 func (m *modelMeta) Forward(relField string) (Relation, bool) {
@@ -66,7 +75,8 @@ func (m *modelMeta) ReverseMap() *orderedmap.OrderedMap[string, Relation] {
 }
 
 func (m *modelMeta) Storage(key string) (any, bool) {
-	return m.stored.Get(key)
+	v, ok := m.stored[key]
+	return v, ok
 }
 
 var modelReg = make(map[reflect.Type]*modelMeta)
@@ -158,7 +168,7 @@ func registerReverseRelation(
 		reverseAlias,
 	)
 
-	if _, ok := meta.stored.Get(storageKey); ok {
+	if _, ok := meta.stored[storageKey]; ok {
 		// Cannot register the same reverse relation twice
 		// No need to panic here - since the relation was already registered
 		// we can just skip it
@@ -179,7 +189,7 @@ func registerReverseRelation(
 	}
 
 	meta.reverse.Set(reverseAlias, reversed)
-	meta.stored.Set(storageKey, nil)
+	meta.stored[storageKey] = nil
 
 	modelReg[targetType] = meta
 }
@@ -218,10 +228,11 @@ func RegisterModel(model Definer) {
 		context.Background(), CtxFlagRegistering, true,
 	)
 	var meta = &modelMeta{
-		model:   NewObject[Definer](registerContext, model),
-		forward: orderedmap.NewOrderedMap[string, Relation](),
-		reverse: orderedmap.NewOrderedMap[string, Relation](),
-		stored:  orderedmap.NewOrderedMap[string, any](),
+		model:     NewObject[Definer](registerContext, model),
+		forward:   orderedmap.NewOrderedMap[string, Relation](),
+		reverse:   orderedmap.NewOrderedMap[string, Relation](),
+		stored:    make(map[string]any),
+		fieldsMap: make(map[string]*reflect.StructField),
 	}
 	modelReg[t] = meta
 
@@ -243,7 +254,7 @@ func RegisterModel(model Definer) {
 		// This is used for things like unique_together, ordering, etc.
 		var modelMeta = mInfo.ModelMetaInfo(meta.model)
 		for k, v := range modelMeta {
-			meta.stored.Set(k, v)
+			meta.stored[k] = v
 		}
 	}
 
@@ -268,6 +279,12 @@ func RegisterModel(model Definer) {
 
 		var attrs = field.Attrs()
 		fieldAttrs[name] = attrs
+
+		if sf, ok := field.(StructFieldDefinition); ok {
+			meta.fieldsMap[name] = sf.StructField()
+		} else {
+			meta.fieldsMap[name] = nil
+		}
 
 		var rel = field.Rel()
 		if rel == nil {
@@ -294,22 +311,19 @@ func RegisterModel(model Definer) {
 				throughMeta.ContentType().TypeName(),
 			)
 
-			if _, wasSent := meta.stored.Get(storageKey); wasSent {
+			if _, wasSent := meta.stored[storageKey]; wasSent {
 				goto setRel
 			}
 
-			throughMeta.stored.Set(
-				"through.model", ThroughMeta{
-					IsThroughModel: true,
-					Source:         meta.model,
-					Target:         rel.Model(),
-					SourceField:    through.SourceField(),
-					TargetField:    through.TargetField(),
-				},
-			)
-			meta.stored.Set(
-				storageKey, true,
-			)
+			throughMeta.stored["through.model"] = ThroughMeta{
+				IsThroughModel: true,
+				Source:         meta.model,
+				Target:         rel.Model(),
+				SourceField:    through.SourceField(),
+				TargetField:    through.TargetField(),
+			}
+
+			meta.stored[storageKey] = true
 
 			// Send signal that the through model is being registered
 			OnThroughModelRegister.Send(SignalThroughModelMeta{
@@ -334,7 +348,7 @@ func RegisterModel(model Definer) {
 	}
 
 	// Store the field attributes in the meta
-	meta.stored.Set("fields.attributes", fieldAttrs)
+	meta.stored[MetaStorageKeyAttrs] = fieldAttrs
 
 	// Set the model as setup
 	meta.setup = true
@@ -516,7 +530,7 @@ func GetRelationMeta(m Definer, name string) (Relation, bool) {
 func StoreOnMeta(m Definer, key string, value any) {
 	var rType = reflect.TypeOf(m)
 	if meta, ok := modelReg[rType]; ok {
-		meta.stored.Set(key, value)
+		meta.stored[key] = value
 	} else {
 		panic(fmt.Errorf("model %T not registered with `RegisterModel`, cannot store value %q", m, key))
 	}

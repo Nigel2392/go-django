@@ -34,7 +34,7 @@ func NewFieldsMap(ref *ObjectDefinitions, numField int) *FieldsMap {
 func (d *FieldsMap) Set(name string, f Field) (replaced bool) {
 	if binder, ok := f.(UnboundField); ok {
 		var err error
-		f, err = binder.BindField(d.ref.Object)
+		f, err = binder.BindField(d.ref.InitContext, d.ref.Object)
 		if err != nil {
 			assert.Fail("bind (%T): %v", d, err)
 		}

@@ -1569,7 +1569,12 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 
 	for _, field := range fields {
 		var preload Preload
-		var autoJoin = true
+
+		// setting this to true makes some tests in
+		// queries/test/benchmarks/many_to_many_test.go completely
+		// go insane. I have no idea why.
+		var autoJoin = false
+
 		switch v := field.(type) {
 		case string:
 			preload = Preload{
@@ -1657,19 +1662,19 @@ func (qs *QuerySet[T]) Preload(fields ...any) *QuerySet[T] {
 					preloads, loadDef,
 				)
 
-				var baseInfo, proxyInfo, err = qs.addRelationChainPart(
-					curr.Prev, curr, aliasList, WalkFlagNone,
-				)
-				if err != nil {
-					panic(fmt.Errorf(
-						"Preload: failed to add relation chain part for %q / %q: %w",
-						preloadPath, preload.Path, err,
-					))
-				}
-
-				// proxy joins must always get added to the QuerySet
 				var joins []JoinDef
 				if autoJoin {
+					var baseInfo, proxyInfo, err = qs.addRelationChainPart(
+						curr.Prev, curr, aliasList, WalkFlagNone,
+					)
+					if err != nil {
+						panic(fmt.Errorf(
+							"Preload: failed to add relation chain part for %q / %q: %w",
+							preloadPath, preload.Path, err,
+						))
+					}
+
+					// proxy joins must always get added to the QuerySet
 					joins = append(
 						baseInfo.joins,
 						proxyInfo.joins...,
@@ -2701,16 +2706,15 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 	}
 
 	var (
-		// manage outside of getScannableFields so we can re-use the maps.
-		_scannable_instances    = make(map[string]attrs.Definer)
-		_scannable_parentFields = make(map[string]*scannableField) // NEW: store parent scannableFields by chain
-		ctx, attrCtx            = attrs.AttributeContext(qs.Context())
-		resultIndex             = 0
+		ctx, attrCtx = attrs.AttributeContext(qs.Context())
+		resultIndex  = 0
 	)
 
 	attrCtx.Flags = attrs.CtxFlagDeferSignals
 
 	defer attrCtx.Reset()
+
+	var plan = compileScanPlan(ctx, qs.internals.Fields, qs.internals.Model.Object)
 
 	for row, err := range results {
 		if err != nil {
@@ -2718,21 +2722,19 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 		}
 
 		var (
-			obj                    = attrs.NewObject[attrs.Definer](ctx, qs.internals.Model.Object)
-			fieldsSize, scannables = getScannableFields(
-				ctx, qs.internals.Fields, obj, _scannable_instances, _scannable_parentFields,
-			)
+			obj          = attrs.NewObject[attrs.Definer](ctx, qs.internals.Model.Object)
 			annotator, _ = obj.(DataModel)
 			annotations  = make(map[string]any)
 			datastore    ModelDataStore
 		)
 
+		plan.apply(ctx, obj)
+
 		if annotator != nil {
 			datastore = annotator.DataStore()
 		}
 
-		var fieldsList = make([]*scannableField, 0, fieldsSize)
-		for j, field := range scannables {
+		for j, field := range plan.out {
 			f := field.field
 			val := row[j]
 
@@ -2768,11 +2770,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 					datastore.SetValue(alias, val)
 				}
 			}
-			fieldsList = append(fieldsList, field)
 		}
-
-		clear(_scannable_instances)
-		clear(_scannable_parentFields)
 
 		var (
 			uniqueValue any
@@ -2781,7 +2779,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 
 		// required in case the root object has a through relation bound to it
 		if rows.hasRoot() {
-			var rootRow = rows.rootRow(fieldsList)
+			var rootRow = rows.rootRow(plan.out)
 
 			// if the root object has no through relation
 			// we can use the unique key of the root object
@@ -2840,13 +2838,13 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 		)
 
 		for _, possibleDuplicate := range rows.possibleDuplicates {
-			var scannable = fieldsList[possibleDuplicate.idx]
+			var scannable = plan.out[possibleDuplicate.idx]
 			var chain = rows.buildChainParts(ctx, scannable)
 			if usingAutoKey && len(chain) > 0 {
 				chain[0].uniqueValue = uniqueValue
 			}
 
-			rows.addRelationChain(ctx, scannable, chain)
+			rows.addRelationChain(ctx, chain)
 		}
 
 		resultIndex++
@@ -2925,6 +2923,13 @@ func (qs *QuerySet[T]) All() (Rows[T], error) {
 //
 // Each map contains the field names as keys and the field values as values.
 // If no fields are provided, it selects all fields from the model, see [Select] for more details.
+
+// Values is used to retrieve a list of dictionaries from the database.
+//
+// It takes a list of field names as arguments and returns a list of maps.
+//
+// Each map contains the field names as keys and the field values as values.
+// If no fields are provided, it selects all fields from the model, see [Select] for more details.
 func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 	if qs.cached != nil && qs.useCache {
 		return qs.cached.([]map[string]any), nil
@@ -2932,10 +2937,9 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 
 	var resultQuery = qs.QueryAll(fields...)
 	var preAlloc, results = iterQuery(resultQuery)
-	var list = make([]map[string]any, 0, preAlloc)
 	var (
-		_scannable_instances    = make(map[string]attrs.Definer)
-		_scannable_parentFields = make(map[string]*scannableField) // NEW: store parent scannableFields by chain
+		list = make([]map[string]any, 0, preAlloc)
+		plan = compileScanPlan(qs.context, qs.internals.Fields, qs.internals.Model.Object)
 	)
 	for row, err := range results {
 		if err != nil {
@@ -2943,12 +2947,13 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 		}
 
 		var (
-			obj       = attrs.NewObject[attrs.Definer](qs.context, qs.internals.Model.Object)
-			_, fields = getScannableFields(qs.context, qs.internals.Fields, obj, _scannable_instances, _scannable_parentFields)
-			values    = make(map[string]any, len(row))
+			obj    = attrs.NewObject[attrs.Definer](qs.context, qs.internals.Model.Object)
+			values = make(map[string]any, len(row))
 		)
 
-		for j, field := range fields {
+		plan.apply(qs.context, obj)
+
+		for j, field := range plan.out {
 			var f = field.field
 			var val = row[j]
 
@@ -2999,9 +3004,6 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 
 			values[key] = value
 		}
-
-		clear(_scannable_instances)
-		clear(_scannable_parentFields)
 
 		list = append(list, values)
 	}

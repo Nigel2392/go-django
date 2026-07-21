@@ -157,14 +157,8 @@ func GetUniqueKey(ctx context.Context, modelObject any) (any, error) {
 	case attrs.Field:
 		obj = o.Instance()
 		if o.IsPrimary() {
-			var val, err = o.Value()
-			if err != nil {
-				return nil, errors.ValueError.WithCause(fmt.Errorf(
-					"error getting primary key value for field %q in object %T: %w",
-					o.Name(), obj, err,
-				))
-			}
 
+			var val = attrs.PrimaryKey(ctx, o)
 			if !attrs.IsZero(val) {
 				return val, nil
 			}
@@ -217,26 +211,7 @@ createKey:
 	}
 
 	if primaryField != nil {
-		primaryVal, err = primaryField.Value()
-		if err != nil {
-			return nil, errors.ValueError.WithCause(fmt.Errorf(
-				"error getting primary key value for object %T: %w: %w",
-				obj, errors.NoUniqueKey, err,
-			))
-		}
-
-		// required to safely handle []byte primary keys
-		// these can otherwise not be used as map keys
-		var rVal = reflect.ValueOf(primaryVal)
-		if (rVal.Kind() == reflect.Array || rVal.Kind() == reflect.Slice) && rVal.Type().Elem().Kind() == reflect.Uint8 {
-			// Convert []byte to string for easier comparison and usage as a key
-			rVal = rVal.Convert(reflect.TypeOf(""))
-			primaryVal = rVal.Interface()
-		}
-
-		if !rVal.Comparable() && rVal.Type().Implements(_stringerType) {
-			primaryVal = rVal.Interface().(_stringer).String()
-		}
+		primaryVal = attrs.PrimaryKey(ctx, primaryField)
 
 		if !attrs.IsZero(primaryVal) {
 			return primaryVal, nil

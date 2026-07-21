@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
-	"testing"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/queries/src/migrator"
@@ -17,14 +16,21 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
-type DBTables[T testing.TB] struct {
+type TB interface {
+	Helper()
+	Fatal(...any)
+	Logf(string, ...any)
+	Fatalf(string, ...any)
+}
+
+type DBTables[T TB] struct {
 	IfNotExists bool
 	tables      []*migrator.ModelTable
 	schema      migrator.SchemaEditor
 	t           T
 }
 
-func Table[T testing.TB](t T, model ...attrs.Definer) *DBTables[T] {
+func Table[T TB](t T, model ...attrs.Definer) *DBTables[T] {
 	if len(model) == 0 {
 		panic("No model provided to Table()")
 	}

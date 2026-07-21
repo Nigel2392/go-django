@@ -78,6 +78,10 @@ func init() {
 		bottleMap[b.ID] = b
 	}
 
+	attrs.RegisterModel(&Artist{})
+	attrs.RegisterModel(&Laptop{})
+	attrs.RegisterModel(&Bottle{})
+
 	var contentObjects = []interface{}{&Artist{}, &Laptop{}, &Bottle{}}
 	for _, obj := range contentObjects {
 		var obj = obj

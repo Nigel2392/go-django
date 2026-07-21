@@ -1619,16 +1619,16 @@ func TestManyToMany(t *testing.T) {
 
 	for _, test := range manyToManyTests {
 		t.Run(test.Name, func(t *testing.T) {
-			var profiles, profile_delete = quest.CreateObjects[*Profile](t,
+			var profiles, profile_delete = quest.CreateObjects[*Profile](t, []*Profile{
 				&Profile{
 					Name: "TestManyToManyProfile1",
 				},
 				&Profile{
 					Name: "TestManyToManyProfile2",
 				},
-			)
+			})
 
-			var users, user_delete = quest.CreateObjects[*User](t,
+			var users, user_delete = quest.CreateObjects[*User](t, []*User{
 				&User{
 					Name:    "TestManyToManyUser1",
 					Profile: profiles[0],
@@ -1637,9 +1637,9 @@ func TestManyToMany(t *testing.T) {
 					Name:    "TestManyToManyUser2",
 					Profile: profiles[1],
 				},
-			)
+			})
 
-			var m2m_sources, m2m_source_delete = quest.CreateObjects[*ModelManyToMany](t,
+			var m2m_sources, m2m_source_delete = quest.CreateObjects[*ModelManyToMany](t, []*ModelManyToMany{
 				&ModelManyToMany{
 					Title: "TestManyToMany1",
 					User:  &User{ID: users[0].ID},
@@ -1652,9 +1652,9 @@ func TestManyToMany(t *testing.T) {
 					Title: "TestManyToMany3",
 					User:  &User{ID: users[1].ID},
 				},
-			)
+			})
 
-			var m2m_targets, m2m_target_delete = quest.CreateObjects[*ModelManyToMany_Target](t,
+			var m2m_targets, m2m_target_delete = quest.CreateObjects[*ModelManyToMany_Target](t, []*ModelManyToMany_Target{
 				&ModelManyToMany_Target{
 					Name: "TestManyToMany_Target1",
 					Age:  25,
@@ -1671,9 +1671,9 @@ func TestManyToMany(t *testing.T) {
 					Name: "TestManyToMany_Target4",
 					Age:  30,
 				},
-			)
+			})
 
-			var m2m_throughs, m2m_through_delete = quest.CreateObjects[*ModelManyToMany_Through](t,
+			var m2m_throughs, m2m_through_delete = quest.CreateObjects[*ModelManyToMany_Through](t, []*ModelManyToMany_Through{
 				&ModelManyToMany_Through{
 					SourceModel: &ModelManyToMany{
 						ID: m2m_sources[0].ID,
@@ -1745,7 +1745,7 @@ func TestManyToMany(t *testing.T) {
 					TargetModel: &ModelManyToMany_Target{
 						ID: m2m_targets[3].ID,
 					},
-				})
+				}})
 
 			var p, u, msrc, mthru, mtgt = test.Test(t, profiles, users, m2m_sources, m2m_targets, m2m_throughs)
 
@@ -1763,16 +1763,16 @@ func TestManyToMany(t *testing.T) {
 
 func TestPluckRows(t *testing.T) {
 
-	var profiles, profiles_delete = quest.CreateObjects[*Profile](t,
+	var profiles, profiles_delete = quest.CreateObjects[*Profile](t, []*Profile{
 		&Profile{
 			Name: "TestPluckRowsProfile1",
 		},
 		&Profile{
 			Name: "TestPluckRowsProfile2",
 		},
-	)
+	})
 
-	var users, users_delete = quest.CreateObjects[*User](t,
+	var users, users_delete = quest.CreateObjects[*User](t, []*User{
 		&User{
 			Name:    "TestPluckRowsUser1",
 			Profile: &Profile{ID: int(profiles[0].ID)},
@@ -1781,9 +1781,9 @@ func TestPluckRows(t *testing.T) {
 			Name:    "TestPluckRowsUser2",
 			Profile: &Profile{ID: int(profiles[1].ID)},
 		},
-	)
+	})
 
-	var m2m_sources, m2m_source_delete = quest.CreateObjects[*ModelManyToMany](t,
+	var m2m_sources, m2m_source_delete = quest.CreateObjects[*ModelManyToMany](t, []*ModelManyToMany{
 		&ModelManyToMany{
 			Title: "TestPluckRows1",
 			User:  &User{ID: users[0].ID},
@@ -1792,9 +1792,9 @@ func TestPluckRows(t *testing.T) {
 			Title: "TestPluckRows2",
 			User:  &User{ID: users[1].ID},
 		},
-	)
+	})
 
-	var m2m_targets, m2m_target_delete = quest.CreateObjects[*ModelManyToMany_Target](t,
+	var m2m_targets, m2m_target_delete = quest.CreateObjects[*ModelManyToMany_Target](t, []*ModelManyToMany_Target{
 		&ModelManyToMany_Target{
 			Name: "TestPluckRows_Target1",
 			Age:  25,
@@ -1803,9 +1803,9 @@ func TestPluckRows(t *testing.T) {
 			Name: "TestPluckRows_Target2",
 			Age:  30,
 		},
-	)
+	})
 
-	var _, m2m_through_delete = quest.CreateObjects[*ModelManyToMany_Through](t,
+	var _, m2m_through_delete = quest.CreateObjects[*ModelManyToMany_Through](t, []*ModelManyToMany_Through{
 		&ModelManyToMany_Through{
 			SourceModel: &ModelManyToMany{
 				ID: m2m_sources[0].ID,
@@ -1838,7 +1838,7 @@ func TestPluckRows(t *testing.T) {
 				ID: m2m_targets[1].ID,
 			},
 		},
-	)
+	})
 
 	defer func() {
 		m2m_source_delete(0)  // model_manytomany
@@ -1876,16 +1876,16 @@ func TestPluckRows(t *testing.T) {
 }
 
 func TestPluckManyToManyRows(t *testing.T) {
-	var profiles, profiles_delete = quest.CreateObjects[*Profile](t,
+	var profiles, profiles_delete = quest.CreateObjects[*Profile](t, []*Profile{
 		&Profile{
 			Name: "TestPluckRowsProfile1",
 		},
 		&Profile{
 			Name: "TestPluckRowsProfile2",
 		},
-	)
+	})
 
-	var users, users_delete = quest.CreateObjects[*User](t,
+	var users, users_delete = quest.CreateObjects[*User](t, []*User{
 		&User{
 			Name:    "TestPluckRowsUser1",
 			Profile: &Profile{ID: int(profiles[0].ID)},
@@ -1894,9 +1894,9 @@ func TestPluckManyToManyRows(t *testing.T) {
 			Name:    "TestPluckRowsUser2",
 			Profile: &Profile{ID: int(profiles[1].ID)},
 		},
-	)
+	})
 
-	var m2m_sources, m2m_source_delete = quest.CreateObjects[*ModelManyToMany](t,
+	var m2m_sources, m2m_source_delete = quest.CreateObjects[*ModelManyToMany](t, []*ModelManyToMany{
 		&ModelManyToMany{
 			Title: "TestPluckRows1",
 			User:  &User{ID: users[0].ID},
@@ -1905,9 +1905,9 @@ func TestPluckManyToManyRows(t *testing.T) {
 			Title: "TestPluckRows2",
 			User:  &User{ID: users[1].ID},
 		},
-	)
+	})
 
-	var m2m_targets, m2m_target_delete = quest.CreateObjects[*ModelManyToMany_Target](t,
+	var m2m_targets, m2m_target_delete = quest.CreateObjects[*ModelManyToMany_Target](t, []*ModelManyToMany_Target{
 		&ModelManyToMany_Target{
 			Name: "TestPluckRows_Target1",
 			Age:  25,
@@ -1916,9 +1916,9 @@ func TestPluckManyToManyRows(t *testing.T) {
 			Name: "TestPluckRows_Target2",
 			Age:  30,
 		},
-	)
+	})
 
-	var _, m2m_through_delete = quest.CreateObjects[*ModelManyToMany_Through](t,
+	var _, m2m_through_delete = quest.CreateObjects[*ModelManyToMany_Through](t, []*ModelManyToMany_Through{
 		&ModelManyToMany_Through{
 			SourceModel: &ModelManyToMany{
 				ID: m2m_sources[0].ID,
@@ -1951,7 +1951,7 @@ func TestPluckManyToManyRows(t *testing.T) {
 				ID: m2m_targets[1].ID,
 			},
 		},
-	)
+	})
 
 	defer func() {
 		m2m_source_delete(0)  // model_manytomany

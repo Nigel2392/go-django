@@ -35,6 +35,41 @@ var (
 	_modelFields = make(map[reflect.Type]map[string][]func(*FieldConfig))
 )
 
+func relFromConfig[T FieldDefinition](f T, cnf *FieldConfig) Relation {
+	var (
+		rel Relation
+		typ RelationType
+	)
+
+	switch {
+	case cnf.RelForeignKey != nil:
+		rel = cnf.RelForeignKey
+		typ = RelManyToOne
+	case cnf.RelManyToMany != nil:
+		rel = cnf.RelManyToMany
+		typ = RelManyToMany
+	case cnf.RelOneToOne != nil:
+		rel = cnf.RelOneToOne
+		typ = RelOneToOne
+	case cnf.RelForeignKeyReverse != nil:
+		rel = cnf.RelForeignKeyReverse
+		typ = RelOneToMany
+	}
+
+	if rel != nil {
+		return &typedRelation{
+			typ: typ,
+			from: &relationTarget{
+				model: f.Instance(),
+				field: f,
+			},
+			Relation: rel,
+		}
+	}
+
+	return nil
+}
+
 func RegisterConfigChange(model Definer, field string, change func(*FieldConfig)) {
 	rt := reflect.TypeOf(model)
 	fm, ok := _modelFields[rt]
@@ -105,10 +140,7 @@ type FieldConfig struct {
 	FormField            func(opts ...func(fields.Field)) fields.Field       // The form field for the field
 	WidgetAttrs          map[string]string                                   // The attributes for the widget
 	FormWidget           func(FieldConfig) widgets.Widget                    // The form widget for the field
-	Setter               func(Definer, interface{}) error                    // A custom setter for the field
-	Getter               func(Definer) (interface{}, bool)                   // A custom getter for the field
 	OnInit               func(Definer, *FieldDef, *FieldConfig) *FieldConfig // A function that is called when the field is initialized
-
 }
 
 type FieldDef struct {
@@ -124,6 +156,7 @@ type FieldDef struct {
 }
 
 var _DEFINER = reflect.TypeOf((*Definer)(nil)).Elem()
+var _globalConf = &FieldConfig{}
 
 // NewField creates a new field definition for the given instance.
 //
@@ -135,13 +168,15 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 	)
 
 	var field_t, ok = attrutils.GetStructField(instance_t_ptr.Elem(), name)
-	assert.True(ok, "field %q not found in %T", name, instance)
-
-	// var directlyInteractible = ok
-	var cnf = &FieldConfig{}
-	if len(conf) == 0 {
-		cnf = autoDefinitionStructTag(cnf, field_t)
+	if !ok {
+		panic("field not found")
 	}
+
+	var cnf *FieldConfig
+	if len(conf) == 0 && field_t.Tag != "" {
+		cnf = autoDefinitionStructTag(&FieldConfig{}, field_t)
+	}
+
 	if len(conf) > 0 && conf[0] != nil {
 		cnf = conf[0]
 	}
@@ -149,9 +184,18 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 	fm, ok := _modelFields[instance_t_ptr]
 	if ok {
 		fs, _ := fm[name]
+
+		if len(fs) > 0 && cnf == nil {
+			cnf = &FieldConfig{}
+		}
+
 		for _, fn := range fs {
 			fn(cnf)
 		}
+	}
+
+	if cnf == nil {
+		cnf = _globalConf
 	}
 
 	// setupFieldValue:
@@ -164,7 +208,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 			isNil = field_v.IsNil()
 			if isNil {
 				if !cnf.AutoInit {
-					assert.Fail("field %q is nil (%s) and cannot be accessed", name, curr_t.Elem().Name())
+					panic(fmt.Sprintf("field %q is nil (%s) and cannot be accessed", name, curr_t.Elem().Name()))
 				}
 				isNil = false
 
@@ -208,7 +252,10 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 		field_v = field_v.Field(field_t.Index[i])
 		curr_t = field_v.Type()
 	}
-	assert.True(field_v.IsValid(), "field %q not found in %T", name, instance)
+
+	if !field_v.IsValid() {
+		panic("field not found in type")
+	}
 
 	var f = &FieldDef{
 		attrDef:        cnf,
@@ -221,7 +268,7 @@ func NewField(instance any, name string, conf ...*FieldConfig) *FieldDef {
 
 	if field_v.IsValid() && (field_t.Type.Kind() == reflect.Pointer && !field_v.IsNil()) {
 		if err := BindValueToModel(instance.(Definer), f, field_v); err != nil {
-			assert.Fail("failed to bind value to model: %v", err)
+			panic("failed to bind value to model: " + err.Error())
 		}
 	}
 
@@ -244,7 +291,13 @@ func (f *FieldDef) signalChanges(value interface{}) {
 	f.defs.SignalChange(f, value)
 }
 
-// Check checks if the field is valid and can be used.
+func (f *FieldDef) StructField() *reflect.StructField {
+	if f.instance_v_ptr.Type() != reflect.TypeOf(f.defs.Instance()) {
+		return nil
+	}
+	return f.field_t
+}
+
 func (f *FieldDef) Check(ctx context.Context) []checks.Message {
 	var messages []checks.Message
 
@@ -307,9 +360,9 @@ func (f *FieldDef) OnModelRegister(model Definer) error {
 
 	if ALLOW_METHOD_CHECKS {
 		var (
-			defaultMethodName  = nameGetDefault(f)
-			setValueMethodName = nameSetValue(f)
-			getValueMethodName = nameGetValue(f)
+			defaultMethodName  = nameGetDefault(f.field_t)
+			setValueMethodName = nameSetValue(f.field_t)
+			getValueMethodName = nameGetValue(f.field_t)
 		)
 
 		if getDefaultMethod, ok := typElem.MethodByName(defaultMethodName); ok {
@@ -336,11 +389,9 @@ func (f *FieldDef) BindToDefinitions(defs Definitions) {
 	//		f.field_t.Name, f.field_v.Interface(),
 	//	)
 
-	if f.defs != nil {
-		return
+	if f.defs == nil {
+		f.defs = defs
 	}
-
-	f.defs = defs
 }
 
 func (f *FieldDef) FieldDefinitions() Definitions {
@@ -419,7 +470,36 @@ func (f *FieldDef) Tag(name string) string {
 }
 
 func (f *FieldDef) Attrs() map[string]interface{} {
-	var attrs = f.attrDef.Attributes
+	var attrs map[string]interface{}
+	if f.defs != nil && !ContextHasFlag(f.defs.Context(), CtxFlagRegistering) {
+		var (
+			_attrs   any
+			fldAttrs map[string]map[string]any
+		)
+
+		reg, ok := modelReg[f.instance_v_ptr.Type()]
+		if !ok || reg.stored == nil {
+			goto createAttrs
+		}
+
+		_attrs, ok = reg.stored[MetaStorageKeyAttrs]
+		if !ok {
+			goto createAttrs
+		}
+
+		fldAttrs, ok = _attrs.(map[string]map[string]any)
+		if !ok {
+			goto createAttrs
+		}
+
+		attrs, ok = fldAttrs[f.Name()]
+		if ok {
+			return attrs
+		}
+	}
+
+createAttrs:
+	attrs = f.attrDef.Attributes
 	if attrs == nil {
 		attrs = make(map[string]interface{})
 	}
@@ -443,43 +523,35 @@ func (f *FieldDef) ColumnName() string {
 	return ColumnName(f.fieldName)
 }
 
-func relFromConfig[T FieldDefinition](f T, cnf *FieldConfig) Relation {
-	var (
-		rel Relation
-		typ RelationType
-	)
-
-	switch {
-	case cnf.RelForeignKey != nil:
-		rel = cnf.RelForeignKey
-		typ = RelManyToOne
-	case cnf.RelManyToMany != nil:
-		rel = cnf.RelManyToMany
-		typ = RelManyToMany
-	case cnf.RelOneToOne != nil:
-		rel = cnf.RelOneToOne
-		typ = RelOneToOne
-	case cnf.RelForeignKeyReverse != nil:
-		rel = cnf.RelForeignKeyReverse
-		typ = RelOneToMany
-	}
-
-	if rel != nil {
-		return &typedRelation{
-			typ: typ,
-			from: &relationTarget{
-				model: f.Instance(),
-				field: f,
-			},
-			Relation: rel,
-		}
-	}
-
-	return nil
-}
-
 func (f *FieldDef) Rel() Relation {
-	return relFromConfig(f, f.attrDef)
+
+	if f.attrDef.RelForeignKey == nil &&
+		f.attrDef.RelManyToMany == nil &&
+		f.attrDef.RelOneToOne == nil &&
+		f.attrDef.RelForeignKeyReverse == nil {
+		return nil
+	}
+
+	if f.defs == nil || ContextHasFlag(f.defs.Context(), CtxFlagRegistering) {
+		return relFromConfig(f, f.attrDef)
+	}
+
+	mdl, ok := modelReg[f.instance_v_ptr.Type()]
+	if !ok {
+		return relFromConfig(f, f.attrDef)
+	}
+
+	rel, ok := mdl.forward.Get(f.Name())
+	if ok {
+		return rel
+	}
+
+	rel, ok = mdl.reverse.Get(f.Name())
+	if !ok {
+		return relFromConfig(f, f.attrDef)
+	}
+
+	return rel
 }
 
 func (f *FieldDef) IsPrimary() bool {
@@ -619,7 +691,7 @@ func (f *FieldDef) GetDefault() interface{} {
 
 	if ALLOW_METHOD_CHECKS {
 		var inst_t_ptr = f.instance_v_ptr.Type()
-		var funcName = nameGetDefault(f)
+		var funcName = nameGetDefault(f.field_t)
 		var method, ok = attrutils.GetStructMethod(inst_t_ptr, funcName)
 		if ok {
 			var out []reflect.Value
@@ -818,20 +890,8 @@ returnField:
 
 func (f *FieldDef) GetValue() interface{} {
 
-	if f.attrDef.Getter != nil {
-		var v, ok = f.attrDef.Getter(
-			f.instance_v_ptr.Interface().(Definer),
-		)
-		if ok {
-			assert.Err(BindValueToModel(
-				f.Instance(), f, v,
-			))
-			return v
-		}
-	}
-
 	if ALLOW_METHOD_CHECKS {
-		var methodName = nameGetValue(f)
+		var methodName = nameGetValue(f.field_t)
 		var inst_t_ptr = f.instance_v_ptr.Type()
 		var method, ok = attrutils.GetStructMethod(inst_t_ptr, methodName)
 		if ok {
@@ -857,10 +917,6 @@ func (f *FieldDef) GetValue() interface{} {
 }
 
 func (f *FieldDef) SetValue(v interface{}, force bool) error {
-	if f.attrDef.Setter != nil {
-		return f.attrDef.Setter(f.instance_v_ptr.Interface().(Definer), v)
-	}
-
 	defer func() {
 		assert.Err(BindValueToModel(
 			f.Instance(), f, f.field_v.Interface(),
@@ -881,7 +937,7 @@ func (f *FieldDef) SetValue(v interface{}, force bool) error {
 
 	// Try user-defined setter method like Set<FieldName>
 	if ALLOW_METHOD_CHECKS && !force {
-		var setterName = nameSetValue(f)
+		var setterName = nameSetValue(f.field_t)
 		var method, ok = attrutils.GetStructMethod(f.instance_v_ptr.Type(), setterName)
 		if ok {
 			var arg, ok = django_reflect.RConvert(&rv, method.Type.In(1))
@@ -1242,16 +1298,16 @@ func (f *FieldDef) Value() (driver.Value, error) {
 	return val, nil
 }
 
-func nameGetDefault(f *FieldDef) string {
-	return fmt.Sprintf("GetDefault%s", f.field_t.Name)
+func nameGetDefault(f *reflect.StructField) string {
+	return fmt.Sprintf("GetDefault%s", f.Name)
 }
 
-func nameSetValue(f *FieldDef) string {
-	return fmt.Sprintf("Set%s", f.field_t.Name)
+func nameSetValue(f *reflect.StructField) string {
+	return fmt.Sprintf("Set%s", f.Name)
 }
 
-func nameGetValue(f *FieldDef) string {
-	return fmt.Sprintf("Get%s", f.field_t.Name)
+func nameGetValue(f *reflect.StructField) string {
+	return fmt.Sprintf("Get%s", f.Name)
 }
 
 func typeName(t reflect.Type) string {

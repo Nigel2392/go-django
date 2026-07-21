@@ -390,6 +390,9 @@ type ModelMeta interface {
 	// This is used to retrieve meta information about fields, such as their type,
 	// and other information that is not part of the model itself.
 	Definitions() StaticDefinitions
+
+	// Primary returns the primary field definition for this model.
+	Primary() FieldDefinition
 }
 
 type staticDefinitions[T FieldDefinition] interface {
@@ -484,6 +487,15 @@ type FieldDefinition interface {
 	//
 	// This is used to generate forms for the field.
 	FormField() fields.Field
+}
+
+type StructFieldDefinition interface {
+	FieldDefinition
+
+	// Used in [FastGet]
+	// beware that the struct field may not have the right index list
+	// or belong directly to the Definer it was found on.
+	StructField() *reflect.StructField
 }
 
 // CanSignalChanged is an interface for models so that fields can signal their changes to the model.
@@ -621,7 +633,7 @@ type UnboundFieldConstructor interface {
 	Name() string
 
 	// BindField binds the field to the model.
-	BindField(model Definer) (Field, error)
+	BindField(ctx context.Context, model Definer) (Field, error)
 }
 
 // An UnboundField is a field that is not bound to a model yet.

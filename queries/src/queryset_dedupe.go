@@ -4,11 +4,12 @@ import (
 	"context"
 	"fmt"
 	"iter"
-	"reflect"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
+	"github.com/Nigel2392/go-django/src/core/assert"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
 	"github.com/elliotchance/orderedmap/v2"
 )
@@ -74,7 +75,7 @@ type rows[T attrs.Definer] struct {
 
 type seenObject struct {
 	pks     []any
-	objects map[any]*object
+	objects map[any][]*object
 }
 
 // Initialize a new rows structure for the given model type.
@@ -183,28 +184,19 @@ func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Define
 		return root
 	}
 
-	var err error
 	var pk = uniqueValue
 	var defs attrs.Definitions
-	// if obj != nil { //&& !r.hasMultiRelations {
-	if r.useAutoKey(obj != nil, through != nil) {
+
+	if obj != nil {
 		defs = attrs.Define(ctx, obj)
+	}
+
+	if r.useAutoKey(obj != nil, through != nil) {
 		prim := defs.Primary()
 		if prim == nil {
 			pk = uniqueValue
-		} else if pk, err = prim.Value(); err != nil {
-			pk = uniqueValue
-		}
-
-		var rVal = reflect.ValueOf(pk)
-		if (rVal.Kind() == reflect.Array || rVal.Kind() == reflect.Slice) && rVal.Type().Elem().Kind() == reflect.Uint8 {
-			// Convert []byte to string for easier comparison and usage as a key
-			rVal = rVal.Convert(reflect.TypeOf(""))
-			pk = rVal.Interface()
-		}
-
-		if !rVal.Comparable() && rVal.Type().Implements(_stringerType) {
-			pk = rVal.Interface().(_stringer).String()
+		} else {
+			pk = attrs.PrimaryKey(ctx, prim)
 		}
 
 		r.rootMapping[pk] = uniqueValue
@@ -227,13 +219,13 @@ func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Define
 	if !ok {
 		seenM = &seenObject{
 			pks:     make([]any, 0, 1),
-			objects: make(map[any]*object, 0),
+			objects: make(map[any][]*object, 0),
 		}
 		r.seen[""] = seenM
 	}
 
 	seenM.pks = append(seenM.pks, pk)
-	seenM.objects[pk] = root.object
+	seenM.objects[pk] = append(seenM.objects[pk], root.object)
 
 	r.objects.Set(uniqueValue, root)
 	return root
@@ -246,7 +238,7 @@ func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Define
 //
 // the root object has to be added with [addRoot] before this method is called,
 // otherwise it will panic.
-func (r *rows[T]) addRelationChain(ctx context.Context, scannable *scannableField, chain []chainPart) {
+func (r *rows[T]) addRelationChain(ctx context.Context, chain []chainPart) {
 
 	var root = chain[0]
 	var obj, ok = r.objects.Get(root.uniqueValue)
@@ -303,13 +295,13 @@ func (r *rows[T]) addRelationChain(ctx context.Context, scannable *scannableFiel
 			if !ok {
 				seenM = &seenObject{
 					pks:     make([]any, 0, 1),
-					objects: make(map[any]*object, 0),
+					objects: make(map[any][]*object, 0),
 				}
 				r.seen[part.chain] = seenM
 			}
 
 			seenM.pks = append(seenM.pks, part.uniqueValue)
-			seenM.objects[part.uniqueValue] = child
+			seenM.objects[part.uniqueValue] = append(seenM.objects[part.uniqueValue], child)
 
 			next.objects.Set(part.uniqueValue, child)
 		}
@@ -319,7 +311,7 @@ func (r *rows[T]) addRelationChain(ctx context.Context, scannable *scannableFiel
 	}
 }
 
-func (r *rows[T]) queryPreloads(preload *Preload) error {
+func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 	if len(r.seen) == 0 {
 		return nil
 	}
@@ -422,27 +414,51 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 		// but the primary keys of the parent objects - change the pk list accordingly.
 		if preload.Rel.Type() == attrs.RelManyToOne || preload.Rel.Type() == attrs.RelOneToOne && preload.Rel.Through() == nil {
 			pks = make([]any, 0, len(seenObj.pks))
-			for _, obj := range seenObj.objects {
-				var field, ok = obj.fieldDefs.Field(preload.FieldName)
-				if !ok {
-					return errors.FieldNotFound.Wrapf(
-						"QuerySet.All: preload %q has no field %q in model %T (%#v)",
-						preload.FieldName, preload.Field.Name(), r.qs.internals.Model.Object, preload,
-					)
-				}
 
-				var val, err = field.Value()
-				if err != nil {
-					return errors.Wrapf(
-						err, "failed to get value for field %q (%#v)", field.Name(), preload,
-					)
-				}
+			var zeroCount int
+			for _, objs := range seenObj.objects {
+				for _, obj := range objs {
 
-				if !fields.IsZero(val) {
+					assert.False(
+						obj == nil,
+						"object may not be nil for preloading.",
+					)
+
+					assert.False(
+						obj.fieldDefs == nil,
+						"object fields may not be nil for preloading.",
+					)
+
+					var field, ok = obj.fieldDefs.Field(preload.FieldName)
+					if !ok {
+						return errors.FieldNotFound.Wrapf(
+							"QuerySet.All: preload %q has no field %q in model %T (%#v)",
+							preload.FieldName, preload.Field.Name(), r.qs.internals.Model.Object, preload,
+						)
+					}
+
+					var val = attrs.PrimaryKey(ctx, field)
+					if fields.IsZero(val) {
+						zeroCount++
+						continue
+					}
+
 					pks = append(pks, val)
 				}
 			}
+
+			if zeroCount > 0 {
+				logger.Warnf(
+					"could not retrieve PK of field %T.%q for %d times during preload.",
+					preload.Model, preload.FieldName, zeroCount,
+				)
+			}
 		}
+
+		assert.True(
+			len(pks) > 0,
+			"failed to build preload for preload %v", preload.Chain,
+		)
 
 		subQueryset.internals.Where = append(subQueryset.internals.Where, expr.Expr(
 			targetField.Name(),
@@ -481,7 +497,7 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 	if !ok {
 		seenM = &seenObject{
 			pks:     make([]any, 0, 1),
-			objects: make(map[any]*object, 0),
+			objects: make(map[any][]*object, 0),
 		}
 		r.seen[preload.Path] = seenM
 	}
@@ -492,8 +508,8 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 		}
 
 		var (
-			rowDefs    = attrs.Define(context.Background(), row.Object)
-			parentObj  *object
+			rowDefs    = attrs.Define(ctx, row.Object)
+			parentObjs []*object
 			parentOk   bool
 			primaryVal any
 			sourceVal  any
@@ -515,12 +531,7 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 				)
 			}
 
-			primaryVal, err = rowDefs.Primary().Value()
-			if err != nil {
-				return errors.Wrapf(
-					err, "failed to get value for primary field %q (%#v)", sourceField.Name(), preload,
-				)
-			}
+			primaryVal = attrs.PrimaryKey(ctx, rowDefs.Primary())
 
 			if preload.Path == "" {
 				if sv, ok := r.rootMapping[sourceVal]; ok {
@@ -537,10 +548,10 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 				result.rowsMap[sourceVal] = rows
 			}
 
-			parentObj, parentOk = seenObj.objects[sourceVal]
+			parentObjs, parentOk = seenObj.objects[sourceVal]
 
 		default:
-			var defs = attrs.Define(context.Background(), row.Through)
+			var defs = attrs.Define(ctx, row.Through)
 			var sourceField, _ = defs.Field(relThrough.SourceField())
 			sourceVal, err = sourceField.Value()
 			if err != nil {
@@ -572,7 +583,7 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 				result.rowsMap[sourceVal] = rows
 			}
 
-			parentObj, parentOk = seenObj.objects[sourceVal]
+			parentObjs, parentOk = seenObj.objects[sourceVal]
 		}
 
 		if !parentOk {
@@ -591,18 +602,20 @@ func (r *rows[T]) queryPreloads(preload *Preload) error {
 		}
 
 		seenM.pks = append(seenM.pks, primaryVal)
-		seenM.objects[primaryVal] = obj
+		seenM.objects[primaryVal] = append(seenM.objects[primaryVal], obj)
 
-		relationMap, ok := parentObj.relations[preload.FieldName]
-		if !ok {
-			relationMap = &objectRelation{
-				relTyp:  preload.Rel.Type(),
-				objects: orderedmap.NewOrderedMap[any, *object](),
+		for _, parentObj := range parentObjs {
+			relationMap, ok := parentObj.relations[preload.FieldName]
+			if !ok {
+				relationMap = &objectRelation{
+					relTyp:  preload.Rel.Type(),
+					objects: orderedmap.NewOrderedMap[any, *object](),
+				}
+				parentObj.relations[preload.FieldName] = relationMap
 			}
-			parentObj.relations[preload.FieldName] = relationMap
-		}
 
-		relationMap.objects.Set(primaryVal, obj)
+			relationMap.objects.Set(primaryVal, obj)
+		}
 	}
 
 	//preload.Results = result
@@ -627,7 +640,7 @@ func (r *rows[T]) compile(ctx context.Context) (count int, rowIter iter.Seq2[*Ro
 
 	if r.qs.internals.Preload != nil {
 		for _, preload := range r.qs.internals.Preload.Preloads {
-			if err := r.queryPreloads(preload); err != nil {
+			if err := r.queryPreloads(ctx, preload); err != nil {
 				return 0, nil, fmt.Errorf("failed to query preload %q: %w", preload.FieldName, err)
 			}
 		}
@@ -781,12 +794,10 @@ func (r *rows[T]) buildChainParts(ctx context.Context, actualField *scannableFie
 		)
 
 		var (
-			pk, err    = primary.Value()
+			pk         = attrs.PrimaryKey(ctx, primary)
 			primaryVal = pk
 		)
-		if err != nil {
-			panic(fmt.Sprintf("error getting primary key value for field %s: %v", cur.chainKey, err))
-		}
+
 		if primaryVal == nil || fields.IsZero(primaryVal) {
 			var err error
 			pk, err = GetUniqueKey(ctx, defs)

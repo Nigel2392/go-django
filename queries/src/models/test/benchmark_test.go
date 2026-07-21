@@ -53,6 +53,27 @@ func (m *BasicModel) FieldDefs(ctx context.Context) attrs.Definitions {
 	)
 }
 
+type BasicConstructedModel struct {
+	ID          int
+	Title       string
+	Description string
+	Joined      *BasicJoinedModel
+}
+
+func (m *BasicConstructedModel) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make[attrs.Definer, any](ctx, m,
+		attrs.Unbound("ID", &attrs.FieldConfig{}),
+		attrs.Unbound("Title", &attrs.FieldConfig{}),
+		attrs.Unbound("Description", &attrs.FieldConfig{}),
+		attrs.Unbound("Joined", &attrs.FieldConfig{
+			Null:          true,
+			Column:        "joined_id",
+			RelForeignKey: attrs.Relate(&BasicJoinedModel{}, "", nil),
+		}),
+		fields.Embed(ctx, "Joined"),
+	)
+}
+
 type ComplexModel struct {
 	models.Model
 	ID          int
@@ -105,6 +126,19 @@ func BenchmarkFieldDefs(b *testing.B) {
 	b.Run("BasicModel", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
 			var m = &BasicModel{
+				ID:          1,
+				Title:       "Test",
+				Description: "Test description",
+			}
+
+			var defs = m.FieldDefs(ctx)
+			_ = defs
+		}
+	})
+
+	b.Run("BasicConstructedModel", func(b *testing.B) {
+		for i := 0; i < b.N; i++ {
+			var m = &BasicConstructedModel{
 				ID:          1,
 				Title:       "Test",
 				Description: "Test description",

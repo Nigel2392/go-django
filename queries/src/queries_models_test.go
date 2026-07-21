@@ -23,7 +23,7 @@ func (u *UniqueModel) UniqueTogether() [][]string {
 }
 
 func (u *UniqueModel) FieldDefs(ctx context.Context) attrs.Definitions {
-	return attrs.Make(ctx, u, attrs.AutoFieldList(u))
+	return attrs.Make(ctx, u, attrs.AutoFieldList(ctx, u))
 }
 
 func TestUniqueModel(t *testing.T) {

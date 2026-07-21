@@ -194,7 +194,7 @@ func autoDefinitionStructTag(data *FieldConfig, t *reflect.StructField) *FieldCo
 // It does this by iterating over the fields of the struct and checking for the
 // `attrs` tag. If the tag is present, it will parse the tag and generate the
 // definition.
-func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
+func AutoFieldList[T1 Definer](ctx context.Context, instance T1, include ...any) []Field {
 	var m = make([]Field, 0)
 
 	var (
@@ -237,7 +237,7 @@ func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
 		case string:
 
 			if name == "*" {
-				m = append(m, AutoFieldList(instance)...)
+				m = append(m, AutoFieldList(ctx, instance)...)
 				continue
 			}
 
@@ -267,7 +267,7 @@ func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
 		case Field:
 			m = append(m, name)
 		default:
-			fields, err := UnpackFieldsFromArgs(instance, name)
+			fields, err := UnpackFieldsFromArgs(ctx, instance, name)
 			assert.True(err == nil, "error unpacking fields: %v", err)
 			m = append(m, fields...)
 		}
@@ -286,5 +286,5 @@ func AutoFieldList[T1 Definer](instance T1, include ...any) []Field {
 // If the `include` parameter is provided, it will only generate definitions for
 // the fields that are included.
 func AutoDefinitions[T Definer](ctx context.Context, instance T, include ...any) Definitions {
-	return Make(ctx, instance, AutoFieldList(instance, include...)...)
+	return Make(ctx, instance, AutoFieldList(ctx, instance, include...)...)
 }

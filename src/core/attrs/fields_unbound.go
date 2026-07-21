@@ -1,5 +1,9 @@
 package attrs
 
+import (
+	"context"
+)
+
 type unboundField struct {
 	name string
 	cnf  *FieldConfig
@@ -19,6 +23,6 @@ func (u *unboundField) Name() string {
 	return u.name
 }
 
-func (u *unboundField) BindField(d Definer) (Field, error) {
+func (u *unboundField) BindField(ctx context.Context, d Definer) (Field, error) {
 	return NewField(d, u.name, u.cnf), nil
 }

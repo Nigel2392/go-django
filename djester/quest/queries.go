@@ -7,13 +7,16 @@ import (
 	"context"
 	"reflect"
 
-	"github.com/Nigel2392/go-django/djester"
 	queries "github.com/Nigel2392/go-django/queries/src"
 	"github.com/Nigel2392/go-django/queries/src/drivers"
 	"github.com/Nigel2392/go-django/src/core/attrs"
 )
 
-func CreateObjects[T attrs.Definer](t djester.BaseTB, objects ...T) (created []T, delete func(alreadyDeleted int) error) {
+type LogFatal interface {
+	Fatalf(string, ...any)
+}
+
+func CreateObjects[T attrs.Definer](t LogFatal, objects []T) (created []T, delete func(alreadyDeleted int) error) {
 	var err error
 	if len(objects) == 0 {
 		t.Fatalf("No objects provided for creation")

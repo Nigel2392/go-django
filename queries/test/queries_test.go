@@ -533,7 +533,6 @@ func init() {
 		&TestStructNoVF{},
 		&TestStructSubueryVFRelated{},
 		&TestStructSubueryVFRelatedRoot{},
-
 		&Author{},
 		&Book{},
 
@@ -541,9 +540,6 @@ func init() {
 
 		&UniqueTarget{},
 		&UniqueSource{},
-
-		&BenchmarkAuthor{},
-		&BenchmarkBook{},
 	)
 
 	// Reset the definitions to ensure all models are registered
@@ -3294,7 +3290,7 @@ func TestWorkingRowsAffected(t *testing.T) {
 		{Name: "Test3"},
 	}
 
-	var created, delete = quest.CreateObjects(t, objects...)
+	var created, delete = quest.CreateObjects(t, objects)
 	defer func() {
 		if err := delete(0); err != nil {
 			t.Fatalf("Failed to delete objects: %v", err)

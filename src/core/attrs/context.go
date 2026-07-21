@@ -229,6 +229,7 @@ type eface struct {
 }
 
 func Define(ctx context.Context, model Definer) Definitions {
+
 	var val = ctx.Value(attrsContextKey{})
 	if val == nil {
 		// this prevents panics.

@@ -2,10 +2,12 @@ package attrs
 
 import (
 	"context"
+	"database/sql/driver"
 	"fmt"
 	"reflect"
 
 	"github.com/Nigel2392/go-django/internal/django_reflect"
+	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/src/core/assert"
 )
 
@@ -113,6 +115,85 @@ func FieldNames(d any, exclude []string) []string {
 	return names
 }
 
+const codeErrInitialised errors.GoCode = "notInitialised"
+
+var errInitialised = errors.New(codeErrInitialised, "registry is not properly initialised yet")
+
+// A shortcut to try and get a value without calling and having to set up the [Definitions].
+//
+// The modelInstance should be a pointer to your model.
+//
+// If the field exists, hasField will be true, but the field does not define a StructField
+// suitable for retrieval without instantiating the [Definitions] first.
+//
+// If an empty string is provided as the fieldName, this function will use the primary
+// field instead.
+//
+// The value will not be OK if:
+// 1. The field is not present at all.
+// 2. The structField was not provided.
+// 3. Any path in the structfield index is nil (except for final.)
+// 4. If the value implements the [Binder] interface.
+func FastGet(modelInstance reflect.Value, fieldName string) (val reflect.Value, hasField bool, err error) {
+	t := modelInstance.Type()
+	modelInstance = modelInstance.Elem() // models should ALWAYS be pointers.
+
+	if modelInstance.Kind() != reflect.Struct {
+		panic("expected struct type for *modelMeta.FastGet")
+	}
+
+	m, ok := modelReg[t]
+	if !ok {
+		return val, true, errInitialised
+	}
+
+	if fieldName == "" {
+		if m.definitions == nil {
+			return val, true, errInitialised
+		}
+
+		fieldName = m.definitions.PrimaryField
+	}
+
+	if fieldName == "" {
+		return val, true, errors.FieldNull.Wrap(
+			"Fieldname not provided and could not be inferred",
+		)
+	}
+
+	sf, ok := m.fieldsMap[fieldName]
+	if !ok {
+		return val, false, errors.FieldNotFound.Wrapf(
+			"Field %q was not found in model %T", fieldName,
+			modelInstance.Interface(),
+		)
+	}
+
+	// fast path to know if the field is at least present in the model
+	// fieldName will always be a valid mapkey if a field was defined.
+	// if the field did not provide a structfield or it is nil, that is ok,
+	// but at least now we know that the field exists without any extra work.
+	if sf == nil {
+		return val, true, errors.FieldNull.Wrapf(
+			"Field %q in model %T does not allow for FastGet",
+			fieldName, modelInstance.Interface(),
+		)
+	}
+
+	// if type is binder type we cannot continue.
+	// it requires too much setup, and that is out of scope
+	// for this func.
+	if sf.Type.Implements(_binder) {
+		return val, true, errors.NotImplemented.Wrapf(
+			"value %T for field %q in model %T implements Binder, cannot use FastGet",
+			val.Interface(), fieldName, modelInstance.Interface(),
+		)
+	}
+
+	val, err = modelInstance.FieldByIndexErr(sf.Index)
+	return val, true, err
+}
+
 // SetPrimaryKey sets the primary key field of a Definer.
 //
 // If the primary key field is not found, this function will panic.
@@ -131,25 +212,94 @@ func SetPrimaryKey(ctx context.Context, d Definer, value interface{}) error {
 // PrimaryKey returns the primary key field of a Definer.
 //
 // If the primary key field is not found, this function will panic.
-func PrimaryKey(ctx context.Context, d Definer) interface{} {
-	var f = Define(ctx, d).Primary()
-	if f == nil {
-		assert.Fail(
-			"primary key not found in %T",
-			d,
-		)
-	}
+//
+// This function can operate on the following types:
+//
+// 1. Definer (models)
+// 2. Definitions
+// 3. Fields
+// 4. Any other value of reflect.Kind:
+//   - reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64
+//   - reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64
+//   - reflect.String
+//   - Byte slices will be converted
+//
+// If a value implements [driver.Valuer], it's Value method will be called.
+//
+// If a value implements [fmt.Stringer] and none of the previous kinds matched,
+// we will call the [fmt.Stringer.String] method on said value.
+func PrimaryKey(ctx context.Context, obj any) interface{} {
 	var (
-		v  = f.GetValue()
-		rT = reflect.TypeOf(v)
-		rV = reflect.ValueOf(v)
+		f   Field
+		val any
+		rT  reflect.Type
+		rV  reflect.Value
 	)
 
-	if rT.Kind() == reflect.Ptr {
-		rT = rT.Elem()
-		rV = rV.Elem()
+typeSwitch:
+	switch v := obj.(type) {
+	case Definer:
+
+		if len(modelReg) == 0 {
+			val = Define(ctx, v).Primary().GetValue()
+			break typeSwitch
+		}
+
+		pk, exists, err := FastGet(reflect.ValueOf(obj), "")
+		if !exists {
+			panic("primary field does not exist")
+		}
+
+		if errors.FieldNull.Is(err) || errInitialised.Is(err) {
+			val = Define(ctx, v).Primary().GetValue()
+			break typeSwitch
+		}
+
+		if err != nil {
+			panic("primary field value is not valid or suitable for use with PrimaryKey: " + err.Error())
+		}
+
+		rT = pk.Type()
+		rV = pk
+
+	case Field:
+		f = v
+		val = f.GetValue()
+
+	case Definitions:
+		f = v.Primary()
+		val = f.GetValue()
+
+	default:
+		val = v
 	}
 
+	if rT == nil {
+		rT = reflect.TypeOf(val)
+		rV = reflect.ValueOf(val)
+	}
+
+typeCheck:
+	for rV.IsValid() {
+		switch {
+		case rT.Implements(_DRIVER_VALUE):
+			v, err := rV.Interface().(driver.Valuer).Value()
+			if err != nil {
+				panic("primary field value is not valid or suitable for use with PrimaryKey: " + err.Error())
+			}
+			rV = reflect.ValueOf(v)
+			rT = rV.Type()
+
+		case rT.Kind() == reflect.Pointer || rT.Kind() == reflect.Interface:
+			rT = rT.Elem()
+			rV = rV.Elem()
+
+		default:
+			break typeCheck
+		}
+	}
+
+	// return uint64 for both unsigned and signed integer types.
 	switch rT.Kind() {
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 		return uint64(rV.Int())
@@ -159,12 +309,18 @@ func PrimaryKey(ctx context.Context, d Definer) interface{} {
 		return rV.String()
 	}
 
-	switch v := v.(type) {
+	if rV.Kind() == reflect.Slice && rV.Type().Elem().Kind() == reflect.Uint8 {
+		// Convert []byte to string for easier comparison and usage as a key
+		rV = rV.Convert(reflect.TypeFor[string]())
+		return rV.String()
+	}
+
+	switch v := val.(type) {
 	case fmt.Stringer:
 		return v.String()
 	}
 
-	return v
+	return val
 }
 
 // SetMany sets multiple fields on a Definer.

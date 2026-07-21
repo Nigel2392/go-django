@@ -1,6 +1,7 @@
 package fields
 
 import (
+	"context"
 	"fmt"
 	"reflect"
 
@@ -34,7 +35,7 @@ func (u *unbound[T]) Name() string {
 }
 
 // BindField binds the field to the model.
-func (u *unbound[T]) BindField(model attrs.Definer) (attrs.Field, error) {
+func (u *unbound[T]) BindField(ctx context.Context, model attrs.Definer) (attrs.Field, error) {
 	if u.name == "" {
 		panic(fmt.Sprintf("field name cannot be empty for %T", model))
 	}

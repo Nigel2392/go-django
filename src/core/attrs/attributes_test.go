@@ -488,7 +488,7 @@ func BenchmarkUnpackFieldsFromArgs(b *testing.B) {
 	b.ResetTimer()
 	var fields = define(m).Fields()
 	for i := 0; i < b.N; i++ {
-		var _, err = attrs.UnpackFieldsFromArgs[attrs.Definer, any](m, fields)
+		var _, err = attrs.UnpackFieldsFromArgs[attrs.Definer, any](b.Context(), m, fields)
 		if err != nil {
 			b.Fatal(err)
 		}

@@ -71,7 +71,12 @@ var (
 	// can only be built after all models have been registered.
 	_, _ = ResetDefinitions.Listen(func(s signals.Signal[any], a any) error {
 		for _, meta := range modelReg {
-			meta.definitions = newStaticDefinitions(NewObject[Definer](context.Background(), meta.model))
+			meta.definitions = newStaticDefinitions(
+				NewObject[Definer](
+					ContextWithFlags(context.Background(), CtxFlagRegistering, true),
+					meta.model,
+				),
+			)
 		}
 		return nil
 	})

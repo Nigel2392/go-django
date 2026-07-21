@@ -481,6 +481,7 @@ type CompiledRowQuery[T1 any] interface {
 }
 
 type CompiledRowsQuery[T1 any] interface {
+	Reset()
 	CompiledQuery[T1]
 	drivers.SQLRows
 }
