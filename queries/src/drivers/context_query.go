@@ -8,33 +8,6 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 )
 
-type ObjectQuerier interface {
-	Why() string    // more information about the query
-	By() any        // what executed the query
-	Referring() any // the object(s) the query referenced (created or updated)
-}
-
-type Querier[Q, OBJ any] struct {
-	Reason string
-	Who    Q
-	What   OBJ
-}
-
-// more information about the query
-func (q Querier[Q, O]) Why() string {
-	return q.Reason
-}
-
-// what executed the query
-func (q Querier[Q, O]) By() any {
-	return q.What
-}
-
-// the object(s) the query referenced (created or updated)
-func (q Querier[Q, O]) Referring() any {
-	return q.Who
-}
-
 type Query struct {
 	Context   *QueryInformation
 	Driver    string
@@ -44,7 +17,6 @@ type Query struct {
 	Error     error
 	Start     time.Time
 	TimeTaken time.Duration
-	QueriedBy ObjectQuerier
 }
 
 func (q *Query) Explain(c context.Context, db DB) (string, error) {

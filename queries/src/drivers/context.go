@@ -6,8 +6,7 @@ import (
 )
 
 var (
-	queryContextKey       = dbContextKey{"db.query.context"}
-	queryContextObjectKey = dbContextKey{"db.query.context"}
+	queryContextKey = dbContextKey{"db.query.context"}
 )
 
 func ContextWithQueryInfo(ctx context.Context) (context.Context, *QueryInformation) {
@@ -18,21 +17,14 @@ func ContextWithQueryInfo(ctx context.Context) (context.Context, *QueryInformati
 	return context.WithValue(ctx, queryContextKey, qi), qi
 }
 
-func ContextWithQuerier(ctx context.Context, q ObjectQuerier) context.Context {
-	_, ok := ContextQueryInfo(ctx)
-	if !ok {
-		return ctx
-	}
-
-	return context.WithValue(ctx, queryContextObjectKey, q)
-}
-
 func ContextQueryInfo(ctx context.Context) (*QueryInformation, bool) {
 	var v = ctx.Value(queryContextKey)
 	if v == nil {
 		return nil, false
 	}
-	return v.(*QueryInformation), true
+
+	q, ok := v.(*QueryInformation)
+	return q, ok
 }
 
 func ContextQueryExec[T any](ctx context.Context, driver string, query string, args []any, flags QueryFlag, fn func(ctx context.Context, query string, args ...any) (T, error)) (T, error) {
@@ -43,7 +35,7 @@ func ContextQueryExec[T any](ctx context.Context, driver string, query string, a
 
 	var start = time.Now()
 	var result, err = fn(ctx, query, args...)
-	var ql = &Query{
+	qi.Queries = append(qi.Queries, &Query{
 		Context:   qi,
 		Driver:    driver,
 		Query:     query,
@@ -52,7 +44,6 @@ func ContextQueryExec[T any](ctx context.Context, driver string, query string, a
 		Start:     start,
 		TimeTaken: time.Since(start),
 		Flags:     flags,
-	}
-	qi.Queries = append(qi.Queries, ql)
+	})
 	return result, err
 }
