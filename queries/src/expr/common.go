@@ -301,6 +301,10 @@ func (n *namedExpression) FieldName() string {
 	return n.fieldName
 }
 
+func (n *namedExpression) Annotate() bool {
+	return true
+}
+
 func (n *namedExpression) Clone() Expression {
 	return &namedExpression{
 		used:       n.used,
@@ -338,6 +342,22 @@ func (n *namedExpression) Resolve(inf *ExpressionInfo) Expression {
 	// as it is already handled by the namedExpression itself.
 	var cpy = *inf
 	cpy.ForUpdate = false
+
+	/*
+		set SupportsAsExpr to false in case [n] it gets used in queryset select
+		[namedExpression] can be used to alias existing fields, it can be possible to:
+
+		```
+			queryset.Select(expr.As("ID", "ID"))
+		```
+
+		this could be useful for union querysets.
+		the queryset will then add an annotation (see [namedExpression.Annotate])
+		but there will be an issue: the expression will reference the newly added
+		annotations' alias setting SupportsAsExpr will make sure that any expression
+		that gets resolved will output their full SQL, instead of self-referencing nothing.
+	*/
+	cpy.SupportsAsExpr = false
 	nE.Expression = nE.Expression.Resolve(&cpy)
 	return nE
 }

@@ -67,7 +67,6 @@ func NewManyToManyField[T any](forModel attrs.Definer, name string, conf *FieldC
 		),
 	}
 	f.DataModelField.fieldRef = f // Set the field reference to itself
-	f.DataModelField.setupInitialVal()
 	return f
 }
 

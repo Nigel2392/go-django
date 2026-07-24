@@ -14,6 +14,14 @@ func init() {
 	attrs.RegisterModel(&BasicJoinedModel{})
 	attrs.RegisterModel(&BasicModel{})
 	attrs.RegisterModel(&ComplexModel{})
+
+	//	fastattrs.RegisterModel[*BasicNonReflectModel](func(addField func(string, fastattrs.FieldConfig[T])) {
+	//		addField("ID", fastattrs.FieldConfig[*BasicNonReflectModel]{
+	//			GetValue: func(obj *BasicNonReflectModel) interface{} {
+	//				return obj.ID
+	//			},
+	//		})
+	//	})
 }
 
 type BasicJoinedModel struct {
@@ -31,6 +39,22 @@ func (m *BasicJoinedModel) FieldDefs(ctx context.Context) attrs.Definitions {
 		attrs.NewField(m, "LastName"),
 	)
 }
+
+//	type BasicNonReflectModel struct {
+//		ID        int
+//		Age       int
+//		FirstName string
+//		LastName  string
+//	}
+//
+//	func (m *BasicNonReflectModel) FieldDefs(ctx context.Context) attrs.Definitions {
+//		return attrs.Make(ctx, m,
+//			attrs.NewField(m, "ID"),
+//			attrs.NewField(m, "Age"),
+//			attrs.NewField(m, "FirstName"),
+//			attrs.NewField(m, "LastName"),
+//		)
+//	}
 
 type BasicModel struct {
 	ID          int

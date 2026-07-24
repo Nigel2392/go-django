@@ -174,7 +174,6 @@ func NewRelatedField[T any](forModel attrs.Definer, name string, cnf *FieldConfi
 		cnf:            cnf,
 	}
 	f.DataModelField.fieldRef = f // Set the field reference to itself
-	f.DataModelField.setupInitialVal()
 	return f
 }
 

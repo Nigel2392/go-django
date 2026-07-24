@@ -179,9 +179,7 @@ func Value(arg any) (driver.Value, error) {
 		}
 
 	case attrs.Definer:
-		var defs = attrs.Define(context.Background(), v)
-		var prim = defs.Primary()
-		return Value(prim.GetValue())
+		return Value(attrs.PrimaryKey(context.Background(), v))
 
 	case nil, time.Time, string, []byte, int64, uint64, float64, bool:
 		// these types are already compatible with driver.Value

@@ -366,10 +366,6 @@ func (e *DataModelField[T]) ColumnName() string {
 	return ""
 }
 
-func (e *DataModelField[T]) Tag(string) string {
-	return ""
-}
-
 func (e *DataModelField[T]) Type() reflect.Type {
 	if e._Type == nil {
 		panic("_Type is nil")

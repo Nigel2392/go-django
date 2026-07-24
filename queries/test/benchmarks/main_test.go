@@ -77,6 +77,10 @@ func TestMain(m *testing.M) {
 		&BenchmarkM2MSource{},
 		&BenchmarkM2MThrough{},
 
+		&FastAttrsBenchmarkM2MTarget{},
+		&FastAttrsBenchmarkM2MSource{},
+		&FastAttrsBenchmarkM2MThrough{},
+
 		&BenchmarkO2OTarget{},
 		&BenchmarkO2OMain{},
 		&BenchmarkO2OThrough{},
@@ -146,6 +150,39 @@ func TestMain(m *testing.M) {
 			m2mThroughs[throughIdx] = &BenchmarkM2MThrough{
 				SourceModel: m2mSources[i].ID,
 				TargetModel: m2mTargets[(i+j)%M2M_TARGETS_COUNT].ID,
+			}
+			throughIdx++
+		}
+	}
+
+	var (
+		fast_m2mSources  = make([]*FastAttrsBenchmarkM2MSource, M2M_SOURCES_COUNT)
+		fast_m2mTargets  = make([]*FastAttrsBenchmarkM2MTarget, M2M_TARGETS_COUNT)
+		fast_m2mThroughs = make([]*FastAttrsBenchmarkM2MThrough, TOTAL_M2M_THROUGHS)
+	)
+
+	for i := range M2M_SOURCES_COUNT {
+		fast_m2mSources[i] = &FastAttrsBenchmarkM2MSource{
+			Title: fmt.Sprintf("M2M Source #%d", i),
+		}
+	}
+
+	for i := range M2M_TARGETS_COUNT {
+		fast_m2mTargets[i] = &FastAttrsBenchmarkM2MTarget{
+			Name: fmt.Sprintf("M2M Target #%d", i),
+		}
+	}
+
+	log.Printf("Creating %d M2M sources and %d M2M targets...", M2M_SOURCES_COUNT, M2M_TARGETS_COUNT)
+	_, fast_m2mSourceDelete := quest.CreateObjects(&fatalLogger{}, fast_m2mSources)
+	_, fast_m2mTargetDelete := quest.CreateObjects(&fatalLogger{}, fast_m2mTargets)
+
+	throughIdx = 0
+	for i := range M2M_SOURCES_COUNT {
+		for j := range M2M_TARGETS_PER_SOURCE {
+			fast_m2mThroughs[throughIdx] = &FastAttrsBenchmarkM2MThrough{
+				SourceModel: fast_m2mSources[i].ID,
+				TargetModel: fast_m2mTargets[(i+j)%M2M_TARGETS_COUNT].ID,
 			}
 			throughIdx++
 		}
@@ -221,6 +258,18 @@ func TestMain(m *testing.M) {
 		m2mThroughDeletes = append(m2mThroughDeletes, del)
 	}
 
+	var fast_m2mThroughDeletes = make([]func(int) error, 0, len(fast_m2mThroughs)/1000)
+	for i := 0; i < len(fast_m2mThroughs); i += 1000 {
+		end := i + 1000
+		if end > len(fast_m2mThroughs) {
+			end = len(fast_m2mThroughs)
+		}
+
+		log.Printf("Creating M2M throughs, iteration %d / %d", end/1000, (len(fast_m2mThroughs)/1000)+1)
+		_, del := quest.CreateObjects(&fatalLogger{}, fast_m2mThroughs[i:end])
+		fast_m2mThroughDeletes = append(fast_m2mThroughDeletes, del)
+	}
+
 	log.Printf("Created %d M2M through records", TOTAL_M2M_THROUGHS)
 
 	log.Printf(
@@ -239,6 +288,13 @@ func TestMain(m *testing.M) {
 	}
 	_ = m2mTargetDelete(0)
 	_ = m2mSourceDelete(0)
+
+	for _, del := range fast_m2mThroughDeletes {
+		_ = del(0)
+	}
+
+	_ = fast_m2mTargetDelete(0)
+	_ = fast_m2mSourceDelete(0)
 
 	// O2O Teardowns
 	_ = o2oThroughDel(0)

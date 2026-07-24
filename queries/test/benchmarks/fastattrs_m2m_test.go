@@ -2,6 +2,7 @@ package benchmarks_test
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	queries "github.com/Nigel2392/go-django/queries/src"
@@ -9,101 +10,383 @@ import (
 	"github.com/Nigel2392/go-django/queries/src/fields"
 	"github.com/Nigel2392/go-django/queries/src/models"
 	"github.com/Nigel2392/go-django/src/core/attrs"
+
+	// Assuming fastattrs is importable here based on your structure
+	"github.com/Nigel2392/go-django/src/core/attrs/fastattrs"
 )
 
-func init() {
-	attrs.RegisterModel(&BenchmarkM2MSource{})
-	attrs.RegisterModel(&BenchmarkM2MTarget{})
-	attrs.RegisterModel(&BenchmarkM2MThrough{})
-}
-
-// -------------------------------------------------------------------------
-// MANY-TO-MANY MODELS
-// -------------------------------------------------------------------------
-
-type BenchmarkM2MSource struct {
-	models.Model
-	ID     uint64
-	Title  string
-	Target *queries.RelM2M[*BenchmarkM2MTarget, *BenchmarkM2MThrough]
-}
-
-func (m *BenchmarkM2MSource) Fields() []attrs.Field {
-	return []attrs.Field{
-		attrs.NewField(m, "ID", fldCnfPrimary),
-		attrs.NewField(m, "Title"),
-		fields.NewManyToManyField[*queries.RelM2M[*BenchmarkM2MTarget, *BenchmarkM2MThrough]](m, "Target", &fields.FieldConfig{
-			ScanTo:      &m.Target,
-			ReverseName: "TargetReverse",
-			Rel:         m2mRel,
-		}),
-	}
-}
-
-func (m *BenchmarkM2MSource) FieldDefs(ctx context.Context) attrs.Definitions {
-	return m.Model.Define(ctx, m, m.Fields).WithTableName("m2m_source_bench")
-}
-
-type BenchmarkM2MTarget struct {
-	models.Model
-	ID            uint64
-	Name          string
-	TargetReverse *queries.RelM2M[attrs.Definer, attrs.Definer]
-}
-
 var (
-	fldCnfSrcId = &attrs.FieldConfig{
+	fast_fldCnfPrimary = &attrs.FieldConfig{Primary: true}
+
+	fast_fldCnfSrcId = &attrs.FieldConfig{
 		Column:        "source_id",
-		RelForeignKey: attrs.Relate(&BenchmarkM2MSource{}, "", nil),
+		RelForeignKey: attrs.Relate(&FastAttrsBenchmarkM2MSource{}, "", nil),
 	}
-	fldCnfTargetId = &attrs.FieldConfig{
+	fast_fldCnfTargetId = &attrs.FieldConfig{
 		Column:        "target_id",
-		RelForeignKey: attrs.Relate(&BenchmarkM2MTarget{}, "", nil),
+		RelForeignKey: attrs.Relate(&FastAttrsBenchmarkM2MTarget{}, "", nil),
 	}
 
-	m2mRel = attrs.Relate(
-		&BenchmarkM2MTarget{},
+	fast_m2mRel = attrs.Relate(
+		&FastAttrsBenchmarkM2MTarget{},
 		"", &attrs.ThroughModel{
-			This:   &BenchmarkM2MThrough{},
+			This:   &FastAttrsBenchmarkM2MThrough{},
 			Source: "SourceModel",
 			Target: "TargetModel",
 		},
 	)
 )
 
-func (m *BenchmarkM2MTarget) Fields() []attrs.Field {
-	return []attrs.Field{
-		attrs.NewField(m, "ID", fldCnfPrimary),
-		attrs.NewField(m, "Name"),
-	}
+func init() {
+	// Register Source Model with fastattrs
+	fastattrs.RegisterModel(func(addField func(string, fastattrs.FieldConfig[*FastAttrsBenchmarkM2MSource])) {
+		addField("ID", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MSource]{
+			Config:   *fast_fldCnfPrimary,
+			GetValue: func(obj *FastAttrsBenchmarkM2MSource) interface{} { return obj.ID },
+			SetValue: func(obj *FastAttrsBenchmarkM2MSource, value any) error {
+				switch v := value.(type) {
+				case uint64:
+					obj.ID = v
+				case int64:
+					obj.ID = uint64(v)
+				case int:
+					obj.ID = uint64(v)
+				default:
+					return fmt.Errorf("invalid ID type %T: %v", value, value)
+				}
+				return nil
+			},
+			Default: uint64(0),
+		})
+		addField("Title", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MSource]{
+			GetValue: func(obj *FastAttrsBenchmarkM2MSource) interface{} { return obj.Title },
+			SetValue: func(obj *FastAttrsBenchmarkM2MSource, value any) error {
+				obj.Title = value.(string)
+				return nil
+			},
+			Default: "",
+		})
+	})
+
+	// Register Target Model with fastattrs
+	fastattrs.RegisterModel(func(addField func(string, fastattrs.FieldConfig[*FastAttrsBenchmarkM2MTarget])) {
+		addField("ID", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MTarget]{
+			Config:   *fast_fldCnfPrimary,
+			GetValue: func(obj *FastAttrsBenchmarkM2MTarget) interface{} { return obj.ID },
+			SetValue: func(obj *FastAttrsBenchmarkM2MTarget, value any) error {
+				switch v := value.(type) {
+				case uint64:
+					obj.ID = v
+				case int64:
+					obj.ID = uint64(v)
+				case int:
+					obj.ID = uint64(v)
+				default:
+					return fmt.Errorf("invalid ID type %T: %v", value, value)
+				}
+				return nil
+			},
+			Default: uint64(0),
+		})
+		addField("Name", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MTarget]{
+			GetValue: func(obj *FastAttrsBenchmarkM2MTarget) interface{} { return obj.Name },
+			SetValue: func(obj *FastAttrsBenchmarkM2MTarget, value any) error {
+				obj.Name = value.(string)
+				return nil
+			},
+			Default: "",
+		})
+	})
+
+	// Register Through Model with fastattrs
+	fastattrs.RegisterModel(func(addField func(string, fastattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough])) {
+		addField("ID", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough]{
+			Config:   *fast_fldCnfPrimary,
+			GetValue: func(obj *FastAttrsBenchmarkM2MThrough) interface{} { return obj.ID },
+			SetValue: func(obj *FastAttrsBenchmarkM2MThrough, value any) error {
+				switch v := value.(type) {
+				case uint64:
+					obj.ID = v
+				case int64:
+					obj.ID = uint64(v)
+				case int:
+					obj.ID = uint64(v)
+				}
+				return nil
+			},
+			Default: uint64(0),
+		})
+		addField("SourceModel", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough]{
+			Config:   *fast_fldCnfSrcId,
+			GetValue: func(obj *FastAttrsBenchmarkM2MThrough) interface{} { return obj.SourceModel },
+			SetValue: func(obj *FastAttrsBenchmarkM2MThrough, value any) error {
+				switch v := value.(type) {
+				case uint64:
+					obj.SourceModel = v
+				case int64:
+					obj.SourceModel = uint64(v)
+				case int:
+					obj.SourceModel = uint64(v)
+				}
+				return nil
+			},
+			Default: uint64(0),
+		})
+		addField("TargetModel", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MThrough]{
+			Config:   *fast_fldCnfTargetId,
+			GetValue: func(obj *FastAttrsBenchmarkM2MThrough) interface{} { return obj.TargetModel },
+			SetValue: func(obj *FastAttrsBenchmarkM2MThrough, value any) error {
+				switch v := value.(type) {
+				case uint64:
+					obj.TargetModel = v
+				case int64:
+					obj.TargetModel = uint64(v)
+				case int:
+					obj.TargetModel = uint64(v)
+				}
+				return nil
+			},
+			Default: uint64(0),
+		})
+	})
 }
 
-func (m *BenchmarkM2MTarget) FieldDefs(ctx context.Context) attrs.Definitions {
-	return m.Model.Define(ctx, m, m.Fields).WithTableName("m2m_target_bench")
+// -------------------------------------------------------------------------
+// MANY-TO-MANY MODELS
+// -------------------------------------------------------------------------
+
+type FastAttrsBenchmarkM2MSource struct {
+	models.Model
+	ID     uint64
+	Title  string
+	Target *queries.RelM2M[*FastAttrsBenchmarkM2MTarget, *FastAttrsBenchmarkM2MThrough]
 }
 
-type BenchmarkM2MThrough struct {
+func (m *FastAttrsBenchmarkM2MSource) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m, fastattrs.NewField(m, "ID"),
+		fastattrs.NewField(m, "Title"),
+		fields.NewManyToManyField[*queries.RelM2M[*FastAttrsBenchmarkM2MTarget, *FastAttrsBenchmarkM2MThrough]](m, "Target", &fields.FieldConfig{
+			ScanTo:      &m.Target,
+			ReverseName: "TargetReverse",
+			Rel:         fast_m2mRel,
+		})).WithTableName("fast_m2m_source_bench")
+}
+
+type FastAttrsBenchmarkM2MTarget struct {
+	models.Model
+	ID            uint64
+	Name          string
+	TargetReverse *queries.RelM2M[attrs.Definer, attrs.Definer]
+}
+
+func (m *FastAttrsBenchmarkM2MTarget) FieldDefs(ctx context.Context) attrs.Definitions {
+	return m.Model.Define(ctx, m, fastattrs.NewField(m, "ID"),
+		fastattrs.NewField(m, "Name")).WithTableName("fast_m2m_target_bench")
+}
+
+type FastAttrsBenchmarkM2MThrough struct {
 	ID          uint64
 	SourceModel uint64
 	TargetModel uint64
 }
 
-func (m *BenchmarkM2MThrough) Fields() []attrs.Field {
-	return []attrs.Field{
-		attrs.NewField(m, "ID", fldCnfPrimary),
-		attrs.NewField(m, "SourceModel", fldCnfSrcId),
-		attrs.NewField(m, "TargetModel", fldCnfTargetId),
+func (m *FastAttrsBenchmarkM2MThrough) FieldDefs(ctx context.Context) attrs.Definitions {
+	return attrs.Make(ctx, m, fastattrs.NewField(m, "ID"),
+		fastattrs.NewField(m, "SourceModel"),
+		fastattrs.NewField(m, "TargetModel"),
+	).WithTableName("fast_m2m_through_bench")
+}
+
+// -------------------------------------------------------------------------
+// MANY-TO-MANY BENCHMARKS
+// -------------------------------------------------------------------------
+
+func BenchmarkFastAttrsQuerySetManyToMany__NoPreload(b *testing.B) {
+	b.StopTimer()
+
+	var qs = queries.
+		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
+		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
+		Select("*").
+		Limit(M2M_SOURCES_COUNT * 2)
+
+	b.StartTimer()
+	b.ResetTimer()
+
+	for b.Loop() {
+		var rowLen, _, err = qs.IterAll()
+
+		if err != nil {
+			b.Fatalf("error while querying objects: %v", err)
+		}
+
+		if rowLen != M2M_SOURCES_COUNT {
+			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", M2M_SOURCES_COUNT, rowLen)
+		}
 	}
 }
 
-func (m *BenchmarkM2MThrough) FieldDefs(ctx context.Context) attrs.Definitions {
-	return attrs.Make(ctx, m, m.Fields).WithTableName("m2m_through_bench")
-}
-
-func TestManyToMany__Preload(t *testing.T) {
+func BenchmarkFastAttrsQuerySetManyToMany__Select(b *testing.B) {
+	b.StopTimer()
 
 	var qs = queries.
-		GetQuerySet(&BenchmarkM2MSource{}).
+		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
+		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
+		Select("*", "Target.*").
+		Limit(TOTAL_M2M_THROUGHS)
+
+	b.StartTimer()
+	b.ResetTimer()
+
+	for b.Loop() {
+		var rowLen, rows, err = qs.IterAll()
+
+		if err != nil {
+			b.Fatalf("error while querying objects: %v", err)
+		}
+
+		if rowLen != M2M_SOURCES_COUNT {
+			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", M2M_SOURCES_COUNT, rowLen)
+		}
+
+		var chk *FastAttrsBenchmarkM2MSource
+		for row, err := range rows {
+			if err != nil {
+				b.Fatalf("error while querying objects: %v", err)
+			}
+			chk = row.Object
+			break
+		}
+
+		relLen := len(chk.Target.AsList())
+		if relLen != M2M_TARGETS_PER_SOURCE {
+			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
+		}
+	}
+}
+
+func BenchmarkFastAttrsQuerySetManyToMany__Select__Deep(b *testing.B) {
+	b.StopTimer()
+
+	// Forces the ORM to JOIN through the target and back out to the reverse relation
+	var qs = queries.
+		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
+		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
+		Select("*", "Target.*", "Target.TargetReverse.*").
+		Limit(TOTAL_M2M_THROUGHS * TOTAL_M2M_THROUGHS)
+
+	b.StartTimer()
+	b.ResetTimer()
+
+	for b.Loop() {
+		var rowLen, _, err = qs.IterAll()
+
+		if err != nil {
+			b.Fatalf("error while querying objects: %v", err)
+		}
+
+		if rowLen != M2M_SOURCES_COUNT {
+			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", M2M_SOURCES_COUNT, rowLen)
+		}
+	}
+}
+
+func BenchmarkFastAttrsQuerySetManyToMany__Preload(b *testing.B) {
+	b.StopTimer()
+
+	var qs = queries.
+		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
+		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
+		Select("*").
+		Preload("Target").
+		Limit(M2M_SOURCES_COUNT * 2)
+
+	b.StartTimer()
+	b.ResetTimer()
+
+	for b.Loop() {
+		var rowLen, rows, err = qs.IterAll()
+
+		if err != nil {
+			b.Fatalf("error while querying objects: %v", err)
+		}
+
+		if rowLen != M2M_SOURCES_COUNT {
+			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", M2M_SOURCES_COUNT, rowLen)
+		}
+
+		var chk *FastAttrsBenchmarkM2MSource
+		for row, err := range rows {
+			if err != nil {
+				b.Fatalf("error while querying objects: %v", err)
+			}
+			chk = row.Object
+			break
+		}
+
+		relLen := len(chk.Target.AsList())
+		if relLen != M2M_TARGETS_PER_SOURCE {
+			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
+		}
+	}
+}
+
+func BenchmarkFastAttrsQuerySetManyToMany__Preload__Deep(b *testing.B) {
+	b.StopTimer()
+
+	var qs = queries.
+		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
+		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
+		Select("*").
+		Preload("Target", "Target.TargetReverse").
+		Limit(M2M_SOURCES_COUNT * 2)
+
+	b.StartTimer()
+	b.ResetTimer()
+
+	for b.Loop() {
+		var rowLen, rows, err = qs.IterAll()
+
+		if err != nil {
+			b.Fatalf("error while querying objects: %v", err)
+		}
+
+		if rowLen != M2M_SOURCES_COUNT {
+			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", M2M_SOURCES_COUNT, rowLen)
+		}
+
+		var chk *FastAttrsBenchmarkM2MSource
+		for row, err := range rows {
+			if err != nil {
+				b.Fatalf("error while querying objects: %v", err)
+			}
+			chk = row.Object
+			break
+		}
+
+		lst := chk.Target.AsList()
+		relLen := len(lst)
+		if relLen != M2M_TARGETS_PER_SOURCE {
+			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
+		}
+
+		var chkDst *FastAttrsBenchmarkM2MTarget
+		for _, target := range lst {
+			chkDst = target.Object
+			break
+		}
+
+		relLen = len(chkDst.TargetReverse.AsList())
+		if relLen != M2M_TARGETS_PER_SOURCE {
+			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
+		}
+	}
+}
+
+func TestFastAttrsManyToMany__Preload(t *testing.T) {
+
+	var qs = queries.
+		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
 		// WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		Preload(queries.NoJoins("Target")).
@@ -130,195 +413,9 @@ func TestManyToMany__Preload(t *testing.T) {
 	}
 }
 
-// -------------------------------------------------------------------------
-// MANY-TO-MANY BENCHMARKS
-// -------------------------------------------------------------------------
-
-func BenchmarkQuerySetManyToMany__NoPreload(b *testing.B) {
-	b.StopTimer()
-
+func TestFastAttrsQuerySetManyToMany__NoPreload(t *testing.T) {
 	var qs = queries.
-		GetQuerySet(&BenchmarkM2MSource{}).
-		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
-		Select("*").
-		Limit(M2M_SOURCES_COUNT * 2)
-
-	b.StartTimer()
-	b.ResetTimer()
-
-	for b.Loop() {
-		var rowLen, _, err = qs.IterAll()
-
-		if err != nil {
-			b.Fatalf("error while querying objects: %v", err)
-		}
-
-		if rowLen != M2M_SOURCES_COUNT {
-			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", M2M_SOURCES_COUNT, rowLen)
-		}
-	}
-}
-
-func BenchmarkQuerySetManyToMany__Select(b *testing.B) {
-	b.StopTimer()
-
-	var qs = queries.
-		GetQuerySet(&BenchmarkM2MSource{}).
-		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
-		Select("*", "Target.*").
-		Limit(TOTAL_M2M_THROUGHS * 2)
-
-	b.StartTimer()
-	b.ResetTimer()
-
-	for b.Loop() {
-		var rowLen, rows, err = qs.IterAll()
-
-		if err != nil {
-			b.Fatalf("error while querying objects: %v", err)
-		}
-
-		if rowLen != M2M_SOURCES_COUNT {
-			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", M2M_SOURCES_COUNT, rowLen)
-		}
-
-		var chk *BenchmarkM2MSource
-		for row, err := range rows {
-			if err != nil {
-				b.Fatalf("error while querying objects: %v", err)
-			}
-			chk = row.Object
-			break
-		}
-
-		relLen := len(chk.Target.AsList())
-		if relLen != M2M_TARGETS_PER_SOURCE {
-			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
-		}
-	}
-}
-
-func BenchmarkQuerySetManyToMany__Select__Deep(b *testing.B) {
-	b.StopTimer()
-
-	// Forces the ORM to JOIN through the target and back out to the reverse relation
-	var qs = queries.
-		GetQuerySet(&BenchmarkM2MSource{}).
-		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
-		Select("*", "Target.*", "Target.TargetReverse.*").
-		Limit(TOTAL_M2M_THROUGHS * TOTAL_M2M_THROUGHS)
-
-	b.StartTimer()
-	b.ResetTimer()
-
-	for b.Loop() {
-		var rowLen, _, err = qs.IterAll()
-
-		if err != nil {
-			b.Fatalf("error while querying objects: %v", err)
-		}
-
-		if rowLen != M2M_SOURCES_COUNT {
-			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", M2M_SOURCES_COUNT, rowLen)
-		}
-	}
-}
-
-func BenchmarkQuerySetManyToMany__Preload(b *testing.B) {
-	b.StopTimer()
-
-	var qs = queries.
-		GetQuerySet(&BenchmarkM2MSource{}).
-		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
-		Select("*").
-		Preload("Target").
-		Limit(M2M_SOURCES_COUNT * 2)
-
-	b.StartTimer()
-	b.ResetTimer()
-
-	for b.Loop() {
-		var rowLen, rows, err = qs.IterAll()
-
-		if err != nil {
-			b.Fatalf("error while querying objects: %v", err)
-		}
-
-		if rowLen != M2M_SOURCES_COUNT {
-			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", M2M_SOURCES_COUNT, rowLen)
-		}
-
-		var chk *BenchmarkM2MSource
-		for row, err := range rows {
-			if err != nil {
-				b.Fatalf("error while querying objects: %v", err)
-			}
-			chk = row.Object
-			break
-		}
-
-		relLen := len(chk.Target.AsList())
-		if relLen != M2M_TARGETS_PER_SOURCE {
-			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
-		}
-	}
-}
-
-func BenchmarkQuerySetManyToMany__Preload__Deep(b *testing.B) {
-	b.StopTimer()
-
-	var qs = queries.
-		GetQuerySet(&BenchmarkM2MSource{}).
-		WithContext(drivers.SetLogSQLContext(b.Context(), false)).
-		Select("*").
-		Preload("Target", "Target.TargetReverse").
-		Limit(M2M_SOURCES_COUNT * 2)
-
-	b.StartTimer()
-	b.ResetTimer()
-
-	for b.Loop() {
-		var rowLen, rows, err = qs.IterAll()
-
-		if err != nil {
-			b.Fatalf("error while querying objects: %v", err)
-		}
-
-		if rowLen != M2M_SOURCES_COUNT {
-			b.Fatalf("query returned incorrect number of rows, wanted: %d, got: %d", M2M_SOURCES_COUNT, rowLen)
-		}
-
-		var chk *BenchmarkM2MSource
-		for row, err := range rows {
-			if err != nil {
-				b.Fatalf("error while querying objects: %v", err)
-			}
-			chk = row.Object
-			break
-		}
-
-		lst := chk.Target.AsList()
-		relLen := len(lst)
-		if relLen != M2M_TARGETS_PER_SOURCE {
-			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
-		}
-
-		var chkDst *BenchmarkM2MTarget
-		for _, target := range lst {
-			chkDst = target.Object
-			break
-		}
-
-		relLen = len(chkDst.TargetReverse.AsList())
-		if relLen != M2M_TARGETS_PER_SOURCE {
-			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
-		}
-	}
-}
-
-func TestQuerySetManyToMany__NoPreload(t *testing.T) {
-	var qs = queries.
-		GetQuerySet(&BenchmarkM2MSource{}).
+		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
 		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		Limit(M2M_SOURCES_COUNT * 2)
@@ -334,9 +431,9 @@ func TestQuerySetManyToMany__NoPreload(t *testing.T) {
 	}
 }
 
-func TestQuerySetManyToMany__Select(t *testing.T) {
+func TestFastAttrsQuerySetManyToMany__Select(t *testing.T) {
 	var qs = queries.
-		GetQuerySet(&BenchmarkM2MSource{}).
+		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
 		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*", "Target.*").
 		Limit(TOTAL_M2M_THROUGHS)
@@ -363,9 +460,9 @@ func TestQuerySetManyToMany__Select(t *testing.T) {
 	}
 }
 
-func TestQuerySetManyToMany__Select__Deep(t *testing.T) {
+func TestFastAttrsQuerySetManyToMany__Select__Deep(t *testing.T) {
 	var qs = queries.
-		GetQuerySet(&BenchmarkM2MSource{}).
+		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
 		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*", "Target.*", "Target.TargetReverse.*").
 		Limit(TOTAL_M2M_THROUGHS * TOTAL_M2M_THROUGHS)
@@ -400,9 +497,9 @@ func TestQuerySetManyToMany__Select__Deep(t *testing.T) {
 	}
 }
 
-func TestQuerySetManyToMany__Preload__Deep(t *testing.T) {
+func TestFastAttrsQuerySetManyToMany__Preload__Deep(t *testing.T) {
 	var qs = queries.
-		GetQuerySet(&BenchmarkM2MSource{}).
+		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
 		// WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		Preload(queries.NoJoins("Target")).

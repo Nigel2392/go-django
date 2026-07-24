@@ -93,20 +93,18 @@ type Model struct {
 // In short, this must be called if the model is not created using [attrs.NewObject].
 func Setup[T attrs.Definer](ctx context.Context, def T) T {
 	var model, err = ExtractModel(def)
-	assert.True(
-		err == nil,
-		"failed to extract model from definer %T: %v", def, err,
-	)
-	assert.False(
-		model == nil,
-		"model is nil, cannot setup model for definer %T", def,
-	)
+	if err != nil {
+		panic(fmt.Sprintf("failed to extract model from definer %T: %v", def, err))
+	}
+
+	if model == nil {
+		panic(fmt.Sprintf("model is nil, cannot setup model for definer %T", def))
+	}
 
 	err = model.Setup(ctx, def)
-	assert.True(
-		err == nil,
-		"failed to setup model %T: %v", def, err,
-	)
+	if err != nil {
+		panic(fmt.Sprintf("failed to setup model %T: %v", def, err))
+	}
 
 	return def
 }
@@ -115,15 +113,15 @@ func (m *Model) __Model() private { return private{} }
 
 // checkValid checks if the model is valid and initialized.
 func (m *Model) checkValid() {
-	assert.False(m.internals == nil,
-		fmt.Errorf("model internals are not initialized: %w", ErrModelInitialized),
-	)
-	assert.False(m.internals.Base == nil,
-		fmt.Errorf("model base information is not set: %w", ErrModelInitialized),
-	)
-	assert.False(m.internals.ReflectValue == nil,
-		fmt.Errorf("model object is not set: %w", ErrModelInitialized),
-	)
+	if m.internals == nil {
+		panic(fmt.Errorf("model internals are not initialized: %w", ErrModelInitialized))
+	}
+	if m.internals.Base == nil {
+		panic(fmt.Errorf("model base information is not set: %w", ErrModelInitialized))
+	}
+	if m.internals.ReflectValue == nil {
+		panic(fmt.Errorf("model object is not set: %w", ErrModelInitialized))
+	}
 }
 
 func (m *Model) setupInitialState() {
@@ -553,14 +551,17 @@ func (m *Model) Define(ctx context.Context, def attrs.Definer, flds ...any) *att
 
 	if m.internals.Defs == nil {
 
-		var tableName = m.internals.Base.base.Tag.Get("table")
-		var meta = attrs.GetModelMeta(def)
-		var revMap = meta.ReverseMap()
-		var _fields = make([]attrs.Field, 0, revMap.Len()+len(m.internals.Base.proxies))
-		if cap(_fields) == 0 {
+		var (
+			meta    = attrs.GetModelMeta(def)
+			revMap  = meta.ReverseMap()
+			_fields []attrs.Field
+		)
+
+		if revMap.Len()+len(m.internals.Base.proxies) == 0 {
 			goto defineNow
 		}
 
+		_fields = make([]attrs.Field, 0, revMap.Len()+len(m.internals.Base.proxies))
 		if revMap.Len() == 0 {
 			goto addProxies
 		}
@@ -573,13 +574,6 @@ func (m *Model) Define(ctx context.Context, def attrs.Definer, flds ...any) *att
 				typ   = value.Type()
 				from  = value.From()
 			)
-
-			//	if reflect.TypeOf(value.Model()) == reflect.TypeOf(def) {
-			//		panic(fmt.Errorf(
-			//			"reverse relation %q in model %T is not allowed to point to itself",
-			//			key, def,
-			//		))
-			//	}
 
 			var fromModelField = from.Field()
 			if fromModelField == nil {
@@ -674,6 +668,7 @@ func (m *Model) Define(ctx context.Context, def attrs.Definer, flds ...any) *att
 			ctx, def, flds, _fields,
 		)
 
+		var tableName = m.internals.Base.base.Tag.Get("table")
 		if tableName != "" && m.internals.Defs.Table == "" {
 			m.internals.Defs.Table = tableName
 		}

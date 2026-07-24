@@ -465,10 +465,6 @@ func (f *FieldDef) TypeString() string {
 	return fmt.Sprintf("%s.%s", f.instance_v_ptr.Type().Elem().Name(), f.field_t.Type.Name())
 }
 
-func (f *FieldDef) Tag(name string) string {
-	return f.field_t.Tag.Get(name)
-}
-
 func (f *FieldDef) Attrs() map[string]interface{} {
 	var attrs map[string]interface{}
 	if f.defs != nil && !ContextHasFlag(f.defs.Context(), CtxFlagRegistering) {

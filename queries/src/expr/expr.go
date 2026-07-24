@@ -171,6 +171,16 @@ type Expression interface {
 	Resolve(inf *ExpressionInfo) Expression
 }
 
+type NamedExpression interface {
+	Expression
+	FieldName() string
+}
+
+type AnnotationExpression interface {
+	NamedExpression
+	Annotate() bool
+}
+
 type LogicalExpression interface {
 	Expression
 	Scope(LogicalOp, Expression) LogicalExpression
@@ -199,11 +209,6 @@ type ClauseExpression interface {
 	Not(b bool) ClauseExpression
 	And(...Expression) ClauseExpression
 	Or(...Expression) ClauseExpression
-}
-
-type NamedExpression interface {
-	Expression
-	FieldName() string
 }
 
 var logicalOps = map[string]LogicalOp{

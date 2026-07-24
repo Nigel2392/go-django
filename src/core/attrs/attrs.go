@@ -431,9 +431,6 @@ type FieldDefinition interface {
 	Labeler
 	Helper
 
-	// Tag retrieves the tag value for the field with the given name.
-	Tag(name string) string
-
 	// Retrieves the underlying model instance.
 	//
 	// For a field definition, this is likely not an actual instance of the model,

@@ -60,7 +60,6 @@ func (q *queryField) Expression() expr.Expression {
 // attrs.Field minimal impl
 func (q *queryField) Name() string          { return q.name }
 func (q *queryField) ColumnName() string    { return "" }
-func (q *queryField) Tag(string) string     { return "" }
 func (q *queryField) Type() reflect.Type    { return reflect.TypeOf(new(interface{})).Elem() }
 func (q *queryField) Attrs() map[string]any { return map[string]any{} }
 func (q *queryField) IsPrimary() bool       { return false }
@@ -108,3 +107,10 @@ func (e *exprField) SQL(_ []string, inf *expr.ExpressionInfo) (string, []any) {
 	var args = expr.SQL(sqlBuilder)
 	return sqlBuilder.String(), args
 }
+
+type aliasExprField struct {
+	exprField
+	alias string
+}
+
+func (q *aliasExprField) Alias() string { return q.alias }

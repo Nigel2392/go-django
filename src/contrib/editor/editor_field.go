@@ -229,10 +229,6 @@ func (e *Field) ColumnName() string {
 	return attrs.ColumnName(e.Name())
 }
 
-func (e *Field) Tag(s string) string {
-	return e.fieldT.Tag.Get(s)
-}
-
 func (e *Field) Type() reflect.Type {
 	return _BLOCK_DATA_TYPE_PTR
 }

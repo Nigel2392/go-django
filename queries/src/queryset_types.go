@@ -275,7 +275,7 @@ func (f *FieldInfo[T]) WriteField(sb *strings.Builder, inf *expr.ExpressionInfo,
 func generateFieldInfoKey[FieldType attrs.FieldDefinition](field *FieldInfo[FieldType]) (string, error) {
 	var key string
 	switch {
-	case field.Model == nil:
+	case field.Model == nil && field.Table.Name != "":
 		key = "__annotations__"
 	case len(field.Fields) == 1:
 		var fld = field.Fields[0]

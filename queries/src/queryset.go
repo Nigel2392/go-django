@@ -252,8 +252,10 @@ func (i *QuerySetInternals) AddField(field *FieldInfo[attrs.FieldDefinition]) {
 		i.Fields = append(i.Fields, field)
 	} else {
 
-		if field.Model == nil {
+		if field.Model == nil && (field.Table.Name != "") {
 			// if the field is an annotation, it is safe to update the existing field
+			// annotations still have a table set, but raw value expressions do not.
+			// if it is a raw value expression, do not append it to earlier fields.
 			info.Fields = append(info.Fields, field.Fields...)
 			return
 		}
@@ -269,9 +271,10 @@ func (i *QuerySetInternals) AddField(field *FieldInfo[attrs.FieldDefinition]) {
 			)
 		} else {
 			logger.Warnf(
-				"QuerySetInternals.AddField: field %q already exists in the queryset, skipping: %+v",
+				"QuerySetInternals.AddField: field %q already exists in the queryset, adding again anyways...",
 				key, info,
 			)
+			i.Fields = append(i.Fields, field)
 		}
 	}
 }
@@ -1030,6 +1033,8 @@ fieldsLoop:
 			// on selecting all fields
 			if qs.internals.Annotations.Len() > 0 {
 				var info = &FieldInfo[attrs.FieldDefinition]{
+					// annotations MUST have their tabel set.
+					// this is not the case for raw value references.
 					Table:  Table{Name: qs.internals.Model.Table},
 					Fields: make([]attrs.FieldDefinition, 0, qs.internals.Annotations.Len()),
 				}
@@ -1044,17 +1049,32 @@ fieldsLoop:
 			continue fieldsLoop
 		}
 
+		// handle straight value expressions
+		// these wont have a resolvable field with qs.WalkField
 		regExpr, ok := exprs[selectedField]
 		if ok {
+			// annotations MUST have their tabel set.
+			// this is not the case for raw value references.
 			qs.internals.AddField(&FieldInfo[attrs.FieldDefinition]{
 				Fields: []attrs.FieldDefinition{newQueryField("", regExpr)},
 			})
 			continue fieldsLoop
 		}
 
+		// automatically take in joins and proxy model fields
+		// when walking the fields tree
 		var flags = WalkFlagAddJoins | WalkFlagAddProxies
 		if allFields {
 			flags |= WalkFlagAllFields
+		}
+
+		// auto annotate if expression demands it
+		regExpr, ok = namedExprs[selectedField]
+		if ok {
+			an, ok := regExpr.(expr.AnnotationExpression)
+			if ok && an.Annotate() {
+				flags |= WalkFlagAddAnnotations
+			}
 		}
 
 		var res, err = qs.WalkField(
@@ -1066,9 +1086,13 @@ fieldsLoop:
 			panic(fmt.Errorf("failed to walk field %q: %w", selectedField, err))
 		}
 
+		// annotation was already added
+		// we can safely reference it without adding it to annotations again
 		if res.Annotation != nil {
 			qs.internals.AddField(&FieldInfo[attrs.FieldDefinition]{
 				Table: Table{
+					// annotations MUST have their tabel set.
+					// this is not the case for raw value references.
 					Name: qs.internals.Model.Table,
 				},
 				Fields: []attrs.FieldDefinition{res.Annotation},
@@ -1076,10 +1100,12 @@ fieldsLoop:
 			continue fieldsLoop
 		}
 
+		// add all selected fields
 		for _, info := range res.Fields {
 			qs.internals.AddField(info)
 		}
 
+		// add all required joins
 		for _, join := range res.Joins {
 			qs.internals.AddJoin(join)
 		}
@@ -1191,6 +1217,7 @@ type WalkFlag int
 const (
 	WalkFlagNone      WalkFlag = 0
 	WalkFlagAllFields WalkFlag = 1 << iota
+	WalkFlagAddAnnotations
 	WalkFlagAddJoins
 	WalkFlagSelectSubFields
 	WalkFlagAddProxies
@@ -1266,6 +1293,7 @@ func (qs *QuerySet[T]) WalkField(selectedField string, options ...func(*WalkOpti
 		qs: qs,
 	}
 
+	// selecting annotations
 	if annotation, aok := qs.internals.Annotations.Get(selectedField); aok {
 		if namedExpr, ok := opts.Expressions[selectedField]; ok {
 			annotation = &exprField{
@@ -1278,29 +1306,31 @@ func (qs *QuerySet[T]) WalkField(selectedField string, options ...func(*WalkOpti
 		return res, nil
 	}
 
-	//	if namedExpr, ok := opts.Expressions[selectedField]; ok {
-	//		res.Annotation = newQueryField(selectedField, namedExpr)
-	//		return res, nil
-	//	}
-
-	if qs.internals.fieldsMap == nil {
-		qs.internals.fieldsMap = make(map[string]*FieldInfo[attrs.FieldDefinition], 0)
-	}
-
-	if qs.internals.joinsMap == nil {
-		qs.internals.joinsMap = make(map[string]struct{})
-	}
-
-	if qs.internals.proxyMap == nil {
-		qs.internals.proxyMap = make(map[string]struct{}, 0)
-	}
-
 	fieldPath := strings.Split(selectedField, ".")
 	relationChain, err := attrs.WalkRelationChain(
 		qs.internals.Model.Object, opts.Flags&WalkFlagAllFields != 0, fieldPath,
 	)
-	if err != nil {
+
+	// returns if err != nil
+	// if err is FieldNotFound, it checks if we can add annotations
+	// if we can't, we will still return ErrFieldNotFound
+	if err != nil && (!errors.Is(err, errors.FieldNotFound) || opts.Flags&WalkFlagAddAnnotations == 0) {
 		return nil, err
+	}
+
+	// err is [errors.FieldNotFound], and above checked if we could add annotations
+	if err != nil {
+		namedExpr, ok := opts.Expressions[selectedField]
+		if !ok {
+			return nil, err
+		}
+
+		// this should just be a queryfield, act as if annotating
+		// but skip adding the field to fieldinfo. it is up to caller to
+		// decide on this.
+		res.Annotation = newQueryField(selectedField, namedExpr)
+		qs.internals.Annotations.Set(selectedField, res.Annotation)
+		return res, nil
 	}
 
 	var partIdx = 0
@@ -1322,9 +1352,19 @@ func (qs *QuerySet[T]) WalkField(selectedField string, options ...func(*WalkOpti
 		}
 
 		if namedExpr, ok := opts.Expressions[exprKey]; ok {
-			curr.Field = &exprField{
-				Field: curr.Field.(attrs.Field),
-				expr:  namedExpr,
+			var fld = &aliasExprField{
+				exprField: exprField{
+					Field: curr.Field.(attrs.Field),
+					expr:  namedExpr,
+				},
+				alias: exprKey,
+			}
+			curr.Field = fld
+
+			// i mean, this /should/ always be true (mapentry missing) if
+			// above annotation check failed, it just depends on the walkflag
+			if !qs.internals.Annotations.Has(exprKey) && opts.Flags&WalkFlagAddAnnotations != 0 {
+				qs.internals.Annotations.Set(exprKey, fld)
 			}
 		}
 
@@ -1401,18 +1441,6 @@ func (qs *QuerySet[T]) WalkField(selectedField string, options ...func(*WalkOpti
 }
 
 func (qs *QuerySet[T]) SelectRelated(fields ...string) *QuerySet[T] {
-	if qs.internals.fieldsMap == nil {
-		qs.internals.fieldsMap = make(map[string]*FieldInfo[attrs.FieldDefinition], 0)
-	}
-
-	if qs.internals.joinsMap == nil {
-		qs.internals.joinsMap = make(map[string]struct{})
-	}
-
-	if qs.internals.proxyMap == nil {
-		qs.internals.proxyMap = make(map[string]struct{}, 0)
-	}
-
 	for _, field := range fields {
 		fieldPath := strings.Split(field, ".")
 		relationChain, err := attrs.WalkRelationChain(
@@ -2728,7 +2756,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 			datastore    ModelDataStore
 		)
 
-		plan.apply(ctx, obj)
+		plan.apply(ctx, row, obj)
 
 		if annotator != nil {
 			datastore = annotator.DataStore()
@@ -2740,8 +2768,8 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 
 			if err := f.Scan(val); err != nil {
 				return 0, nil, errors.ValueError.WithCause(errors.Wrapf(
-					err, "failed to scan field %q (%T) in %T",
-					f.Name(), f, f.Instance(),
+					err, "failed to scan field %q (%T) in %T with value %v in row[%d] %v",
+					f.Name(), f, f.Instance(), val, j, row,
 				))
 			}
 
@@ -2951,7 +2979,7 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 			values = make(map[string]any, len(row))
 		)
 
-		plan.apply(qs.context, obj)
+		plan.apply(qs.context, row, obj)
 
 		for j, field := range plan.out {
 			var f = field.field
@@ -3499,7 +3527,9 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 	defer tx.Rollback(qs.context)
 
 	var (
-		infos   = make([]UpdateInfo, 0, len(objects))
+		createInfos = make([]UpdateInfo, 0, len(objects))
+		planInfo    *FieldInfo[attrs.Field]
+
 		primary attrs.Field
 	)
 
@@ -3511,7 +3541,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 	defer attrsContext.Reset()
 
 	var isCommitContext = IsCommitContext(qs.context)
-	for _, object := range objects {
+	for i, object := range objects {
 		var err error
 		object, err = setup(ctx, object)
 		if err != nil {
@@ -3551,6 +3581,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				Chain: make([]string, 0),
 			},
 			Values: make([]any, 0, len(fields)),
+		}
+
+		if i == 0 {
+			planInfo = &info.FieldInfo
 		}
 
 		for _, field := range fields {
@@ -3600,14 +3634,20 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 		}
 
 		// Copy all the fields from the model to the info fields
-		infos = append(infos, info)
+		createInfos = append(createInfos, info)
 	}
+
+	var plan = compileScanPlan(
+		ctx,
+		[]*FieldInfo[attrs.Field]{planInfo},
+		qs.internals.Model.Object,
+	)
 
 	var support = qs.compiler.SupportsReturning()
 	var results [][]any
 	if isCommitContext {
 		var resultQuery = qs.compiler.BuildCreateQuery(
-			validatorCtx, qs, qs.internals, infos,
+			validatorCtx, qs, qs.internals, createInfos,
 		)
 		qs.latestQuery = resultQuery
 
@@ -3717,11 +3757,6 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			))
 		}
 
-		var (
-			_scannable_instances    = make(map[string]attrs.Definer)
-			_scannable_parentFields = make(map[string]*scannableField) // NEW: store parent scannableFields by chain
-		)
-
 		for i, row := range objects {
 			if !isCommitContext {
 				if _, err = runActor(ctx, actsAfterCreate, row); err != nil {
@@ -3733,14 +3768,12 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 			}
 
 			var (
-				fieldsSize, scannables = getScannableFields(
-					qs.context, []*FieldInfo[attrs.Field]{&infos[i].FieldInfo}, row,
-					_scannable_instances, _scannable_parentFields,
-				)
 				resLen  = len(results[i])
 				newDefs = attrs.Define(ctx, row)
 				prim    = newDefs.Primary()
 			)
+
+			plan.apply(qs.context, results[i], row)
 
 			// only decrease the result length if the primary key is not set
 			//
@@ -3751,10 +3784,10 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				resLen--
 			}
 
-			if fieldsSize != resLen {
+			if len(plan.out) != resLen {
 				return nil, errors.LastInsertId.WithCause(fmt.Errorf(
 					"expected %d results returned after insert, got %d (len(scannables) != resLen)",
-					fieldsSize, resLen,
+					len(plan.out), resLen,
 				))
 			}
 
@@ -3772,7 +3805,7 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 				idx++
 			}
 
-			for j, field := range scannables {
+			for j, field := range plan.out {
 				var f = field.field
 				var val = results[i][j+idx]
 
@@ -3783,9 +3816,6 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 					))
 				}
 			}
-
-			clear(_scannable_instances)
-			clear(_scannable_parentFields)
 
 			if _, err = runActor(ctx, actsAfterCreate, row); err != nil {
 				return nil, errors.Wrapf(

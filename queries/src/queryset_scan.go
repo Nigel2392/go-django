@@ -28,6 +28,20 @@ type scanPlanModelSlot struct {
 
 	// setFK indicates whether to call setRelatedObjects on the parent.
 	setFK bool
+
+	// pkRowIndex is the index in the row []any slice corresponding to the primary key, or -1 if unknown.
+	pkRowIndex int
+
+	// tiedSlotIdx is the index of the slot that shares identity with this slot (e.g. ThroughModel is tied to Target)
+	tiedSlotIdx int
+
+	// cache maps ParentPK -> PK -> scanCachedObject to reuse models and avoid attrs.Define overhead
+	cache map[any]map[any]scanCachedObject
+}
+
+type scanCachedObject struct {
+	obj  attrs.Definer
+	defs attrs.Definitions
 }
 
 // scanPlanEntry describes a single field in the pre-compiled scan plan.
@@ -80,6 +94,8 @@ type scanPlan struct {
 	// entry in the entries slice. -1 if no primary key is found.
 	rootPrimaryEntryIdx int
 
+	hasMultiRelations bool
+
 	models []attrs.Definer
 	defs   []attrs.Definitions
 	buf    []scannableField
@@ -95,11 +111,19 @@ func compileScanPlan[T attrs.FieldDefinition](
 	modelObject any,
 ) *scanPlan {
 	sampleRoot := attrs.NewObject[attrs.Definer](ctx, modelObject)
+	rootDefs := attrs.Define(ctx, sampleRoot)
+	var rootPKName string
+	if pk := rootDefs.Primary(); pk != nil {
+		rootPKName = pk.Name()
+	}
+	pkNames := []string{rootPKName}
 
 	plan := &scanPlan{
 		rootPrimaryEntryIdx: -1,
 		modelSlots: []scanPlanModelSlot{{
 			parentSlotIdx: -1,
+			pkRowIndex:    -1,
+			tiedSlotIdx:   -1,
 		}},
 	}
 
@@ -114,7 +138,16 @@ func compileScanPlan[T attrs.FieldDefinition](
 			plan.modelSlots = append(plan.modelSlots, scanPlanModelSlot{
 				creator:       info.Through.Model,
 				parentSlotIdx: -1,
+				pkRowIndex:    -1,
+				tiedSlotIdx:   -1,
 			})
+			throughObj := attrs.NewObject[attrs.Definer](ctx, info.Through.Model)
+			throughDefs := attrs.Define(ctx, throughObj)
+			var throughPKName string
+			if pk := throughDefs.Primary(); pk != nil {
+				throughPKName = pk.Name()
+			}
+			pkNames = append(pkNames, throughPKName)
 			for _, f := range info.Through.Fields {
 				plan.entries = append(plan.entries, scanPlanEntry{
 					fieldName:      f.Name(),
@@ -214,7 +247,19 @@ func compileScanPlan[T attrs.FieldDefinition](
 				fkFieldName:   name,
 				fkRelType:     relType,
 				setFK:         relType == attrs.RelManyToOne,
+				pkRowIndex:    -1,
+				tiedSlotIdx:   -1,
 			})
+			modelObj := attrs.NewObject[attrs.Definer](ctx, modelCreator)
+			modelDefs := attrs.Define(ctx, modelObj)
+			var modelPKName string
+			if pk := modelDefs.Primary(); pk != nil {
+				modelPKName = pk.Name()
+			}
+			pkNames = append(pkNames, modelPKName)
+			if throughSlotIdx != -1 {
+				plan.modelSlots[throughSlotIdx].tiedSlotIdx = slotIdx
+			}
 			chainKeyToSlotIdx[key] = slotIdx
 
 			// Determine srcEntryIdx for this chain node
@@ -255,10 +300,19 @@ func compileScanPlan[T attrs.FieldDefinition](
 		}
 	}
 
-	// Count output fields
+	// Count output fields and assign pkRowIndex
+	outputIdx := 0
 	for _, e := range plan.entries {
 		if !e.isPhantom {
+			if e.fieldName != "" && e.fieldName == pkNames[e.slotIdx] {
+				plan.modelSlots[e.slotIdx].pkRowIndex = outputIdx
+			}
 			plan.totalFields++
+			outputIdx++
+		}
+
+		if e.relType == attrs.RelManyToMany || e.relType == attrs.RelOneToMany {
+			plan.hasMultiRelations = true
 		}
 	}
 
@@ -275,28 +329,80 @@ func compileScanPlan[T attrs.FieldDefinition](
 // value scanning. The root model is provided externally.
 func (plan *scanPlan) apply(
 	ctx context.Context,
+	row []any,
 	root attrs.Definer,
-) {
-	// Create model instances for each slot
+) []*scannableField {
+	// Root slot is pre-defined
 	plan.models[0] = root
+	plan.defs[0] = attrs.Define(ctx, root)
 
 	for i := 1; i < len(plan.modelSlots); i++ {
 		slot := &plan.modelSlots[i]
-		obj := attrs.NewObject[attrs.Definer](ctx, slot.creator)
-		plan.models[i] = obj
+
+		if !plan.hasMultiRelations {
+			plan.models[i] = attrs.NewObject[attrs.Definer](ctx, slot.creator)
+			plan.defs[i] = attrs.Define(ctx, plan.models[i])
+
+			if slot.setFK {
+				setRelatedObjects(
+					ctx, slot.fkFieldName, slot.fkRelType,
+					plan.models[slot.parentSlotIdx],
+					[]Relation{&baseRelation{object: plan.models[i]}},
+				)
+			}
+			continue
+		}
+
+		var parentPK any
+		if slot.parentSlotIdx == -1 {
+			parentPK = 0 // Root slot has no parent
+		} else {
+			pSlot := &plan.modelSlots[slot.parentSlotIdx]
+			if pSlot.pkRowIndex != -1 {
+				parentPK = row[pSlot.pkRowIndex]
+			}
+		}
+
+		var myPK any
+		if slot.pkRowIndex != -1 {
+			myPK = row[slot.pkRowIndex]
+		}
+
+		var cached scanCachedObject
+		var found bool
+
+		if parentPK != nil && myPK != nil {
+			if slot.cache == nil {
+				slot.cache = make(map[any]map[any]scanCachedObject)
+			}
+			if _, ok := slot.cache[parentPK]; !ok {
+				slot.cache[parentPK] = make(map[any]scanCachedObject)
+			}
+			cached, found = slot.cache[parentPK][myPK]
+		}
+
+		if found {
+			plan.models[i] = cached.obj
+			plan.defs[i] = cached.defs
+			continue
+		}
+
+		plan.models[i] = attrs.NewObject[attrs.Definer](ctx, slot.creator)
+		plan.defs[i] = attrs.Define(ctx, plan.models[i])
+
+		if parentPK != nil && myPK != nil {
+			slot.cache[parentPK][myPK] = scanCachedObject{
+				obj:  plan.models[i],
+				defs: plan.defs[i],
+			}
+		}
+
 		if slot.setFK {
 			setRelatedObjects(
 				ctx, slot.fkFieldName, slot.fkRelType,
 				plan.models[slot.parentSlotIdx],
-				[]Relation{&baseRelation{object: obj}},
+				[]Relation{&baseRelation{object: plan.models[i]}},
 			)
-		}
-	}
-
-	// Get definitions for each model (one Define call per unique model)
-	for i, model := range plan.models {
-		if model != nil {
-			plan.defs[i] = attrs.Define(ctx, model)
 		}
 	}
 
@@ -352,4 +458,6 @@ func (plan *scanPlan) apply(
 		plan.out[outputIdx] = sf
 		outputIdx++
 	}
+
+	return plan.out
 }

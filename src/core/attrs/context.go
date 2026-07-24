@@ -246,6 +246,8 @@ func Define(ctx context.Context, model Definer) Definitions {
 
 	if c.fieldsMap == nil {
 		c.fieldsMap = make(map[unsafe.Pointer]Definitions)
+	} else if len(c.fieldsMap) >= 4096 {
+		clear(c.fieldsMap)
 	}
 
 	ptr := (*eface)(unsafe.Pointer(&model)).data
