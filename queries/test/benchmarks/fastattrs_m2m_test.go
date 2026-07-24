@@ -61,7 +61,14 @@ func init() {
 		addField("Title", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MSource]{
 			GetValue: func(obj *FastAttrsBenchmarkM2MSource) interface{} { return obj.Title },
 			SetValue: func(obj *FastAttrsBenchmarkM2MSource, value any) error {
-				obj.Title = value.(string)
+				switch v := value.(type) {
+				case string:
+					obj.Title = v
+				case []byte:
+					obj.Title = string(v)
+				default:
+					return fmt.Errorf("invalid Title type %T: %v", value, value)
+				}
 				return nil
 			},
 			Default: "",
@@ -91,7 +98,14 @@ func init() {
 		addField("Name", fastattrs.FieldConfig[*FastAttrsBenchmarkM2MTarget]{
 			GetValue: func(obj *FastAttrsBenchmarkM2MTarget) interface{} { return obj.Name },
 			SetValue: func(obj *FastAttrsBenchmarkM2MTarget, value any) error {
-				obj.Name = value.(string)
+				switch v := value.(type) {
+				case string:
+					obj.Name = v
+				case []byte:
+					obj.Name = string(v)
+				default:
+					return fmt.Errorf("invalid Name type %T: %v", value, value)
+				}
 				return nil
 			},
 			Default: "",
