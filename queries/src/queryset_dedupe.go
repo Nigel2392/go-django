@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"iter"
+	"strings"
 
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
@@ -11,14 +12,50 @@ import (
 	"github.com/Nigel2392/go-django/src/core/attrs"
 	"github.com/Nigel2392/go-django/src/core/logger"
 	"github.com/Nigel2392/go-django/src/forms/fields"
-	"github.com/elliotchance/orderedmap/v2"
 )
+
+// orderedSet is a lightweight ordered unique collection.
+// It preserves insertion order via a slice and provides
+// O(1) deduplication via a map from key to slice index.
+type orderedSet[V any] struct {
+	entries []V
+	index   map[any]int
+}
+
+func newOrderedSet[V any](cap int) *orderedSet[V] {
+	return &orderedSet[V]{
+		entries: make([]V, 0, cap),
+		index:   make(map[any]int, cap),
+	}
+}
+
+func (s *orderedSet[V]) get(key any) (V, bool) {
+	idx, ok := s.index[key]
+	if !ok {
+		var zero V
+		return zero, false
+	}
+	return s.entries[idx], true
+}
+
+func (s *orderedSet[V]) set(key any, value V) {
+	if idx, ok := s.index[key]; ok {
+		s.entries[idx] = value
+		return
+	}
+	s.index[key] = len(s.entries)
+	s.entries = append(s.entries, value)
+}
+
+func (s *orderedSet[V]) length() int {
+	return len(s.entries)
+}
 
 // objectRelation contains metadata about the list of related objects and
 // the relation type itself.
 type objectRelation struct {
 	relTyp  attrs.RelationType
-	objects *orderedmap.OrderedMap[any, *object]
+	objects *orderedSet[*object]
 }
 
 // An object is a representation of a model instance in the rows structure.
@@ -68,9 +105,10 @@ type rows[T attrs.Definer] struct {
 
 	rootMapping map[any]any            // rootMapping is used to map root object unique values to their pks
 	seen        map[string]*seenObject // seen is used to deduplicate relations
-	objects     *orderedmap.OrderedMap[any, *rootObject]
+	objects     *orderedSet[*rootObject]
 	forEach     func(attrs.Definer) error
 	qs          *QuerySet[T]
+	chainBuf    map[int][]chainPart // reusable buffer for buildChainParts
 }
 
 type seenObject struct {
@@ -91,7 +129,7 @@ func newRows[T attrs.Definer](qs *QuerySet[T], forEach func(attrs.Definer) error
 	)
 
 	var r = &rows[T]{
-		objects:            orderedmap.NewOrderedMap[any, *rootObject](),
+		objects:            newOrderedSet[*rootObject](0),
 		possibleDuplicates: make([]*scannableField, 0),
 		rootMapping:        make(map[any]any, 0),
 		hasMultiRelations:  false,
@@ -138,6 +176,16 @@ func newRows[T attrs.Definer](qs *QuerySet[T], forEach func(attrs.Definer) error
 		)
 	}
 
+	r.chainBuf = make(map[int][]chainPart, len(r.possibleDuplicates))
+	for _, fld := range r.possibleDuplicates {
+		var length int
+		for cur := fld; cur != nil; cur = cur.srcField {
+			length++
+		}
+
+		r.chainBuf[fld.idx] = make([]chainPart, length)
+	}
+
 	return r, nil
 }
 
@@ -180,17 +228,12 @@ func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Define
 		panic("cannot add root object with nil primary key")
 	}
 
-	if root, ok := r.objects.Get(uniqueValue); ok {
+	if root, ok := r.objects.get(uniqueValue); ok {
 		return root
 	}
 
 	var pk = uniqueValue
-	var defs attrs.Definitions
-
-	if obj != nil {
-		defs = attrs.Define(ctx, obj)
-	}
-
+	var defs = attrs.Define(ctx, obj)
 	if r.useAutoKey(obj != nil, through != nil) {
 		prim := defs.Primary()
 		if prim == nil {
@@ -201,8 +244,6 @@ func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Define
 
 		r.rootMapping[pk] = uniqueValue
 	}
-
-	// pk = attrs.ToString(pk)
 
 	var root = &rootObject{
 		object: &object{
@@ -227,7 +268,7 @@ func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Define
 	seenM.pks = append(seenM.pks, pk)
 	seenM.objects[pk] = append(seenM.objects[pk], root.object)
 
-	r.objects.Set(uniqueValue, root)
+	r.objects.set(uniqueValue, root)
 	return root
 }
 
@@ -238,10 +279,10 @@ func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Define
 //
 // the root object has to be added with [addRoot] before this method is called,
 // otherwise it will panic.
-func (r *rows[T]) addRelationChain(ctx context.Context, chain []chainPart) {
+func (r *rows[T]) addRelationChain(chain []chainPart) {
 
 	var root = chain[0]
-	var obj, ok = r.objects.Get(root.uniqueValue)
+	var obj, ok = r.objects.get(root.uniqueValue)
 	if !ok {
 		panic(fmt.Sprintf("root object with primary key %v %T not found in rows, root needs to be added with rows.addRoot", root.uniqueValue, root.uniqueValue))
 	}
@@ -267,12 +308,12 @@ func (r *rows[T]) addRelationChain(ctx context.Context, chain []chainPart) {
 		if !ok {
 			next = &objectRelation{
 				relTyp:  part.relTyp,
-				objects: orderedmap.NewOrderedMap[any, *object](),
+				objects: newOrderedSet[*object](0),
 			}
 			current.relations[part.chain] = next
 		}
 
-		child, ok := next.objects.Get(part.uniqueValue)
+		child, ok := next.objects.get(part.uniqueValue)
 		if !ok {
 			// child does not exist, create and add it
 			var through attrs.Definer
@@ -283,7 +324,6 @@ func (r *rows[T]) addRelationChain(ctx context.Context, chain []chainPart) {
 
 			child = &object{
 				uniqueValue: part.uniqueValue,
-				fieldDefs:   attrs.Define(ctx, part.object),
 				obj:         part.object,
 				relations:   make(map[string]*objectRelation),
 				through:     through,
@@ -303,7 +343,7 @@ func (r *rows[T]) addRelationChain(ctx context.Context, chain []chainPart) {
 			seenM.pks = append(seenM.pks, part.uniqueValue)
 			seenM.objects[part.uniqueValue] = append(seenM.objects[part.uniqueValue], child)
 
-			next.objects.Set(part.uniqueValue, child)
+			next.objects.set(part.uniqueValue, child)
 		}
 
 		current = child
@@ -419,15 +459,13 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 			for _, objs := range seenObj.objects {
 				for _, obj := range objs {
 
-					assert.False(
-						obj == nil,
-						"object may not be nil for preloading.",
-					)
+					if obj == nil {
+						panic("object may not be nil for preloading.")
+					}
 
-					assert.False(
-						obj.fieldDefs == nil,
-						"object fields may not be nil for preloading.",
-					)
+					if obj.fieldDefs == nil {
+						obj.fieldDefs = attrs.Define(ctx, obj.obj)
+					}
 
 					var field, ok = obj.fieldDefs.Field(preload.FieldName)
 					if !ok {
@@ -524,13 +562,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 				)
 			}
 
-			sourceVal, err = sourceField.Value()
-			if err != nil {
-				return errors.Wrapf(
-					err, "failed to get value for source field %q (%#v)", sourceField.Name(), preload,
-				)
-			}
-
+			sourceVal = attrs.PrimaryKey(ctx, sourceField)
 			primaryVal = attrs.PrimaryKey(ctx, rowDefs.Primary())
 
 			if preload.Path == "" {
@@ -553,13 +585,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 		default:
 			var defs = attrs.Define(ctx, row.Through)
 			var sourceField, _ = defs.Field(relThrough.SourceField())
-			sourceVal, err = sourceField.Value()
-			if err != nil {
-				return errors.Wrapf(
-					err, "failed to get value for source field %q", sourceField.Name(),
-				)
-			}
-
+			sourceVal = attrs.PrimaryKey(ctx, sourceField)
 			if preload.Path == "" {
 				if sv, ok := r.rootMapping[sourceVal]; ok {
 					sourceVal = sv
@@ -568,13 +594,7 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 			// sourceVal = attrs.ToString(sourceVal)
 
 			var targetField, _ = defs.Field(relThrough.TargetField())
-			primaryVal, err = targetField.Value()
-			if err != nil {
-				return errors.Wrapf(
-					err, "failed to get value for target field %q", targetField.Name(),
-				)
-			}
-
+			primaryVal = attrs.PrimaryKey(ctx, targetField)
 			if slice, ok := result.rowsMap[sourceVal]; ok {
 				result.rowsMap[sourceVal] = append(slice, row)
 			} else {
@@ -587,9 +607,19 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 		}
 
 		if !parentOk {
+			var pkList strings.Builder
+			var idx int
+			for k := range seenObj.objects {
+				if idx != 0 {
+					pkList.WriteString(", ")
+				}
+				fmt.Fprintf(&pkList, "(%T) %v", k, k)
+				idx++
+			}
+
 			return errors.ValueError.WithCause(fmt.Errorf(
-				"QuerySet.All: no parent object found for preload %q with primary key %v (%T) in %v",
-				preload.FieldName, sourceVal, sourceVal, seenObj.objects,
+				"QuerySet.All: no parent object found for preload %q with primary key %v (%T) in [%s]",
+				preload.FieldName, sourceVal, sourceVal, pkList.String(),
 			))
 		}
 
@@ -609,12 +639,12 @@ func (r *rows[T]) queryPreloads(ctx context.Context, preload *Preload) error {
 			if !ok {
 				relationMap = &objectRelation{
 					relTyp:  preload.Rel.Type(),
-					objects: orderedmap.NewOrderedMap[any, *object](),
+					objects: newOrderedSet[*object](0),
 				}
 				parentObj.relations[preload.FieldName] = relationMap
 			}
 
-			relationMap.objects.Set(primaryVal, obj)
+			relationMap.objects.set(primaryVal, obj)
 		}
 	}
 
@@ -659,9 +689,8 @@ func (r *rows[T]) compile(ctx context.Context) (count int, rowIter iter.Seq2[*Ro
 		}
 
 		for relName, rel := range obj.relations {
-			var relatedObjects = make([]Relation, 0, rel.objects.Len())
-			for relHead := rel.objects.Front(); relHead != nil; relHead = relHead.Next() {
-				var relatedObj = relHead.Value
+			var relatedObjects = make([]Relation, 0, rel.objects.length())
+			for _, relatedObj := range rel.objects.entries {
 				if relatedObj == nil {
 					continue
 				}
@@ -720,10 +749,9 @@ func (r *rows[T]) compile(ctx context.Context) (count int, rowIter iter.Seq2[*Ro
 		return nil
 	}
 
-	return r.objects.Len(), iter.Seq2[*Row[T], error](func(yield func(*Row[T], error) bool) {
+	return r.objects.length(), iter.Seq2[*Row[T], error](func(yield func(*Row[T], error) bool) {
 
-		for head := r.objects.Front(); head != nil; head = head.Next() {
-			var obj = head.Value
+		for _, obj := range r.objects.entries {
 			if obj == nil {
 				continue
 			}
@@ -784,16 +812,25 @@ type chainPart struct {
 // The [getScannableFields] function builds this chain of *scannableField objects,
 // which represent the fields that can be scanned from the database.
 func (r *rows[T]) buildChainParts(ctx context.Context, actualField *scannableField) []chainPart {
-	// Get the stack of fields from target to parent
-	var stack = make([]chainPart, 0)
+	// Reuse the pre-allocated chain buffer
+	var chainBuf, ok = r.chainBuf[actualField.idx]
+	if !ok {
+		panic("expected chainbuf to be pre-allocated")
+	}
+
+	var idx = 0
 	for cur := actualField; cur != nil; cur = cur.srcField {
 		var (
-			inst    = cur.object
-			defs    = attrs.Define(ctx, inst)
-			primary = defs.Primary()
+			inst = cur.object
 		)
 
+		if inst == nil {
+			continue
+		}
+
 		var (
+			defs       = attrs.Define(ctx, inst)
+			primary    = defs.Primary()
 			pk         = attrs.PrimaryKey(ctx, primary)
 			primaryVal = pk
 		)
@@ -843,36 +880,39 @@ func (r *rows[T]) buildChainParts(ctx context.Context, actualField *scannableFie
 			// "cannot build chain part for field %s with zero primary key in ManyToMany or OneToMany relation", cur.chainKey,
 			// ))
 
-			continue
+			// continue
 		}
 
-		stack = append(stack, chainPart{
+		chainBuf[idx] = chainPart{
 			// preload:     preload,
 			relTyp:      cur.relType,
 			chain:       cur.chainPart,
 			uniqueValue: pk,
 			object:      inst,
 			through:     cur.through,
-		})
+		}
+
+		idx++
 	}
 
 	// Reverse the stack to get the fields in the correct order
 	// i.e. parent to target
-	for i, j := 0, len(stack)-1; i < j; i, j = i+1, j-1 {
-		stack[i], stack[j] = stack[j], stack[i]
+	var validChain = chainBuf[:idx]
+	for i, j := 0, len(validChain)-1; i < j; i, j = i+1, j-1 {
+		validChain[i], validChain[j] = validChain[j], validChain[i]
 	}
 
 	// If the root object has a through model, we need to set the unique value
 	// based on said through model.
 	//
 	// this logic is kept in line in [QuerySet.All] before generating the root row.
-	if len(stack) > 0 && stack[0].through != nil {
-		var uq, err = GetUniqueKey(ctx, stack[0].through)
+	if len(validChain) > 0 && validChain[0].through != nil {
+		var uq, err = GetUniqueKey(ctx, validChain[0].through)
 		if err != nil {
-			panic(fmt.Sprintf("error getting unique key for through model %T: %v", stack[0].through, err))
+			panic(fmt.Sprintf("error getting unique key for through model %T: %v", validChain[0].through, err))
 		}
-		stack[0].uniqueValue = uq
+		validChain[0].uniqueValue = uq
 	}
 
-	return stack
+	return validChain
 }

@@ -19,7 +19,7 @@ func init() {
 
 type BenchmarkO2OMain struct {
 	models.Model
-	ID      uint64
+	ID      uint32
 	Title   string
 	Through *queries.RelO2O[*BenchmarkO2OTarget, *BenchmarkO2OThrough]
 }
@@ -50,8 +50,8 @@ func (t *BenchmarkO2OMain) FieldDefs(ctx context.Context) attrs.Definitions {
 
 type BenchmarkO2OThrough struct {
 	ID          uint64
-	SourceModel uint64
-	TargetModel uint64
+	SourceModel uint16
+	TargetModel uint16
 }
 
 func (t *BenchmarkO2OThrough) Fields() []attrs.Field {
@@ -195,7 +195,6 @@ func BenchmarkQuerySetOneToOne__Preload__Reverse(b *testing.B) {
 func TestQuerySetOneToOne__Select(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&BenchmarkO2OMain{}).
-		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*", "Through.*").
 		Limit(COUNT * 2)
 
@@ -223,7 +222,6 @@ func TestQuerySetOneToOne__Select(t *testing.T) {
 func TestQuerySetOneToOne__Preload(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&BenchmarkO2OMain{}).
-		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		SelectRelated("Through").
 		Limit(COUNT * 2)
@@ -252,7 +250,6 @@ func TestQuerySetOneToOne__Preload(t *testing.T) {
 func TestQuerySetOneToOne__Select__Reverse(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&BenchmarkO2OTarget{}).
-		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*", "TargetReverse.*").
 		Limit(COUNT * 2)
 
@@ -280,7 +277,6 @@ func TestQuerySetOneToOne__Select__Reverse(t *testing.T) {
 func TestQuerySetOneToOne__Preload__Reverse(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&BenchmarkO2OTarget{}).
-		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		SelectRelated("TargetReverse").
 		Limit(COUNT * 2)

@@ -148,8 +148,8 @@ func TestMain(m *testing.M) {
 	for i := range M2M_SOURCES_COUNT {
 		for j := range M2M_TARGETS_PER_SOURCE {
 			m2mThroughs[throughIdx] = &BenchmarkM2MThrough{
-				SourceModel: m2mSources[i].ID,
-				TargetModel: m2mTargets[(i+j)%M2M_TARGETS_COUNT].ID,
+				SourceModel: uint64(m2mSources[i].ID),
+				TargetModel: uint64(m2mTargets[(i+j)%M2M_TARGETS_COUNT].ID),
 			}
 			throughIdx++
 		}
@@ -209,8 +209,8 @@ func TestMain(m *testing.M) {
 
 	for i := range COUNT {
 		o2oThroughs[i] = &BenchmarkO2OThrough{
-			SourceModel: o2oMains[i].ID,
-			TargetModel: o2oTargets[i].ID,
+			SourceModel: uint16(o2oMains[i].ID),
+			TargetModel: uint16(o2oTargets[i].ID),
 		}
 	}
 	_, o2oThroughDel := quest.CreateObjects(&fatalLogger{}, o2oThroughs)

@@ -2766,6 +2766,10 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 			f := field.field
 			val := row[j]
 
+			if f == nil {
+				continue
+			}
+
 			if err := f.Scan(val); err != nil {
 				return 0, nil, errors.ValueError.WithCause(errors.Wrapf(
 					err, "failed to scan field %q (%T) in %T with value %v in row[%d] %v",
@@ -2872,7 +2876,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 				chain[0].uniqueValue = uniqueValue
 			}
 
-			rows.addRelationChain(ctx, chain)
+			rows.addRelationChain(chain)
 		}
 
 		resultIndex++

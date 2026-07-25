@@ -636,6 +636,9 @@ func (a *Application) Initialize() error {
 			}
 			return template.URL(rt)
 		},
+		"field": func(obj attrs.Definer, name string) any {
+			return attrs.Define(context.Background(), obj).Get(name)
+		},
 		"has_object_perm": permissions.HasObjectPermission,
 		"has_perm":        permissions.HasPermission,
 		"component": func(name string, args ...interface{}) template.HTML {

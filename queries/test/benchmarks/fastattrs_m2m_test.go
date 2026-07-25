@@ -384,15 +384,17 @@ func BenchmarkFastAttrsQuerySetManyToMany__Preload__Deep(b *testing.B) {
 			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
 		}
 
-		var chkDst *FastAttrsBenchmarkM2MTarget
-		for _, target := range lst {
-			chkDst = target.Object
-			break
-		}
+		if M2M_TARGETS_COUNT > 0 && M2M_TARGETS_PER_SOURCE > 0 {
+			var chkDst *FastAttrsBenchmarkM2MTarget
+			for _, target := range lst {
+				chkDst = target.Object
+				break
+			}
 
-		relLen = len(chkDst.TargetReverse.AsList())
-		if relLen != M2M_TARGETS_PER_SOURCE {
-			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
+			relLen = len(chkDst.TargetReverse.AsList())
+			if relLen != M2M_TARGETS_PER_SOURCE {
+				b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
+			}
 		}
 	}
 }
@@ -401,7 +403,6 @@ func TestFastAttrsManyToMany__Preload(t *testing.T) {
 
 	var qs = queries.
 		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
-		// WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		Preload(queries.NoJoins("Target")).
 		Limit(M2M_SOURCES_COUNT * 2)
@@ -430,7 +431,6 @@ func TestFastAttrsManyToMany__Preload(t *testing.T) {
 func TestFastAttrsQuerySetManyToMany__NoPreload(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
-		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		Limit(M2M_SOURCES_COUNT * 2)
 
@@ -448,7 +448,6 @@ func TestFastAttrsQuerySetManyToMany__NoPreload(t *testing.T) {
 func TestFastAttrsQuerySetManyToMany__Select(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
-		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*", "Target.*").
 		Limit(TOTAL_M2M_THROUGHS)
 
@@ -477,7 +476,6 @@ func TestFastAttrsQuerySetManyToMany__Select(t *testing.T) {
 func TestFastAttrsQuerySetManyToMany__Select__Deep(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
-		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*", "Target.*", "Target.TargetReverse.*").
 		Limit(TOTAL_M2M_THROUGHS * TOTAL_M2M_THROUGHS)
 
@@ -514,7 +512,6 @@ func TestFastAttrsQuerySetManyToMany__Select__Deep(t *testing.T) {
 func TestFastAttrsQuerySetManyToMany__Preload__Deep(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&FastAttrsBenchmarkM2MSource{}).
-		// WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		Preload(queries.NoJoins("Target")).
 		Preload(queries.NoJoins("Target.TargetReverse")).

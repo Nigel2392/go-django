@@ -32,6 +32,9 @@ type scanPlanModelSlot struct {
 	// pkRowIndex is the index in the row []any slice corresponding to the primary key, or -1 if unknown.
 	pkRowIndex int
 
+	// rowIndexes tracks column indexes corresponding to fields in this slot.
+	rowIndexes []int
+
 	// tiedSlotIdx is the index of the slot that shares identity with this slot (e.g. ThroughModel is tied to Target)
 	tiedSlotIdx int
 
@@ -307,6 +310,7 @@ func compileScanPlan[T attrs.FieldDefinition](
 			if e.fieldName != "" && e.fieldName == pkNames[e.slotIdx] {
 				plan.modelSlots[e.slotIdx].pkRowIndex = outputIdx
 			}
+			plan.modelSlots[e.slotIdx].rowIndexes = append(plan.modelSlots[e.slotIdx].rowIndexes, outputIdx)
 			plan.totalFields++
 			outputIdx++
 		}
@@ -338,6 +342,20 @@ func (plan *scanPlan) apply(
 
 	for i := 1; i < len(plan.modelSlots); i++ {
 		slot := &plan.modelSlots[i]
+
+		var allNil = true
+		for _, idx := range slot.rowIndexes {
+			if row[idx] != nil {
+				allNil = false
+				break
+			}
+		}
+
+		if allNil {
+			plan.models[i] = nil
+			plan.defs[i] = nil
+			continue
+		}
 
 		if !plan.hasMultiRelations {
 			plan.models[i] = attrs.NewObject[attrs.Definer](ctx, slot.creator)
@@ -440,18 +458,27 @@ func (plan *scanPlan) apply(
 
 		// Phantom entry: use primary field, not part of output
 		if e.isPhantom {
-			sf.field = plan.defs[e.slotIdx].Primary()
+			if plan.defs[e.slotIdx] != nil {
+				sf.field = plan.defs[e.slotIdx].Primary()
+			} else {
+				sf.field = nil
+			}
 			sf.idx = -1
 			continue
 		}
 
 		// Regular field: look up by name
+		if plan.defs[e.slotIdx] == nil {
+			sf.field = nil
+			sf.idx = outputIdx
+			plan.out[outputIdx] = sf
+			outputIdx++
+			continue
+		}
+
 		field, ok := plan.defs[e.slotIdx].Field(e.fieldName)
 		if !ok {
-			panic(fmt.Errorf(
-				"field %q not found in %T during scan plan apply",
-				e.fieldName, plan.models[e.slotIdx],
-			))
+			panic(fmt.Errorf("field %q not found in %T", e.fieldName, plan.models[e.slotIdx]))
 		}
 		sf.field = field
 		sf.idx = outputIdx

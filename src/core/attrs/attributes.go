@@ -230,7 +230,6 @@ func SetPrimaryKey(ctx context.Context, d Definer, value interface{}) error {
 // we will call the [fmt.Stringer.String] method on said value.
 func PrimaryKey(ctx context.Context, obj any) interface{} {
 	var (
-		f   Field
 		val any
 		rT  reflect.Type
 		rV  reflect.Value
@@ -241,8 +240,8 @@ typeSwitch:
 	case Definer:
 
 		if len(modelReg) == 0 {
-			val = Define(ctx, v).Primary().GetValue()
-			break typeSwitch
+			obj = Define(ctx, v).Primary().GetValue()
+			goto typeSwitch
 		}
 
 		pk, exists, err := FastGet(reflect.ValueOf(obj), "")
@@ -251,24 +250,29 @@ typeSwitch:
 		}
 
 		if errors.FieldNull.Is(err) || errInitialised.Is(err) {
-			val = Define(ctx, v).Primary().GetValue()
-			break typeSwitch
+			obj = Define(ctx, v).Primary().GetValue()
+			goto typeSwitch
 		}
 
 		if err != nil {
 			panic("primary field value is not valid or suitable for use with PrimaryKey: " + err.Error())
 		}
 
-		rT = pk.Type()
-		rV = pk
+		obj = pk
+		goto typeSwitch
 
 	case Field:
-		f = v
-		val = f.GetValue()
+		obj = v.GetValue()
+		goto typeSwitch
 
 	case Definitions:
-		f = v.Primary()
-		val = f.GetValue()
+		obj = v.Primary().GetValue()
+		goto typeSwitch
+
+	case reflect.Value:
+		rT = v.Type()
+		rV = v
+		val = v.Interface()
 
 	default:
 		val = v

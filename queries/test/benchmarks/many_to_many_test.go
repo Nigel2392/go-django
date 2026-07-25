@@ -23,7 +23,7 @@ func init() {
 
 type BenchmarkM2MSource struct {
 	models.Model
-	ID     uint64
+	ID     uint32
 	Title  string
 	Target *queries.RelM2M[*BenchmarkM2MTarget, *BenchmarkM2MThrough]
 }
@@ -46,7 +46,7 @@ func (m *BenchmarkM2MSource) FieldDefs(ctx context.Context) attrs.Definitions {
 
 type BenchmarkM2MTarget struct {
 	models.Model
-	ID            uint64
+	ID            uint16
 	Name          string
 	TargetReverse *queries.RelM2M[attrs.Definer, attrs.Definer]
 }
@@ -303,15 +303,17 @@ func BenchmarkQuerySetManyToMany__Preload__Deep(b *testing.B) {
 			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
 		}
 
-		var chkDst *BenchmarkM2MTarget
-		for _, target := range lst {
-			chkDst = target.Object
-			break
-		}
+		if M2M_TARGETS_COUNT > 0 && M2M_TARGETS_PER_SOURCE > 0 {
+			var chkDst *BenchmarkM2MTarget
+			for _, target := range lst {
+				chkDst = target.Object
+				break
+			}
 
-		relLen = len(chkDst.TargetReverse.AsList())
-		if relLen != M2M_TARGETS_PER_SOURCE {
-			b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
+			relLen = len(chkDst.TargetReverse.AsList())
+			if relLen != M2M_TARGETS_PER_SOURCE {
+				b.Fatalf("query returned incorrect number of related rows, wanted: %d, got: %d", M2M_TARGETS_PER_SOURCE, relLen)
+			}
 		}
 	}
 }
@@ -319,7 +321,6 @@ func BenchmarkQuerySetManyToMany__Preload__Deep(b *testing.B) {
 func TestQuerySetManyToMany__NoPreload(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&BenchmarkM2MSource{}).
-		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		Limit(M2M_SOURCES_COUNT * 2)
 
@@ -337,7 +338,6 @@ func TestQuerySetManyToMany__NoPreload(t *testing.T) {
 func TestQuerySetManyToMany__Select(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&BenchmarkM2MSource{}).
-		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*", "Target.*").
 		Limit(TOTAL_M2M_THROUGHS)
 
@@ -366,7 +366,6 @@ func TestQuerySetManyToMany__Select(t *testing.T) {
 func TestQuerySetManyToMany__Select__Deep(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&BenchmarkM2MSource{}).
-		WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*", "Target.*", "Target.TargetReverse.*").
 		Limit(TOTAL_M2M_THROUGHS * TOTAL_M2M_THROUGHS)
 
@@ -403,7 +402,6 @@ func TestQuerySetManyToMany__Select__Deep(t *testing.T) {
 func TestQuerySetManyToMany__Preload__Deep(t *testing.T) {
 	var qs = queries.
 		GetQuerySet(&BenchmarkM2MSource{}).
-		// WithContext(drivers.SetLogSQLContext(t.Context(), false)).
 		Select("*").
 		Preload(queries.NoJoins("Target")).
 		Preload(queries.NoJoins("Target.TargetReverse")).

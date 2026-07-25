@@ -35,7 +35,7 @@ func (t *BenchmarkO2ONoThroughTarget) FieldDefs(ctx context.Context) attrs.Defin
 
 type BenchmarkO2ONoThroughMain struct {
 	models.Model
-	ID     uint64
+	ID     int32
 	Title  string
 	Target *BenchmarkO2ONoThroughTarget
 }
