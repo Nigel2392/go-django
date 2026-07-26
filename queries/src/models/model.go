@@ -549,137 +549,138 @@ func (m *Model) Define(ctx context.Context, def attrs.Definer, flds ...any) *att
 
 	m.checkValid()
 
-	if m.internals.Defs == nil {
+	if m.internals.Defs != nil {
+		return m.internals.Defs
+	}
+
+	var (
+		meta    = attrs.GetModelMeta(def)
+		revMap  = meta.ReverseMap()
+		_fields []attrs.Field
+	)
+
+	if revMap.Len()+len(m.internals.Base.proxies) == 0 {
+		goto defineNow // skip proxy & reverse field creaion
+	}
+
+	_fields = make([]attrs.Field, 0, revMap.Len()+len(m.internals.Base.proxies))
+	if revMap.Len() == 0 {
+		goto addProxies // skip reverse field creation
+	}
+
+	for head := revMap.Front(); head != nil; head = head.Next() {
+		// skip creating if a forward rel exists
+		// when a forward rel exists, it is safe to assume
+		// a custom field was already provided.
+		_, ok := meta.Forward(head.Key)
+		if ok {
+			continue
+		}
 
 		var (
-			meta    = attrs.GetModelMeta(def)
-			revMap  = meta.ReverseMap()
-			_fields []attrs.Field
+			field attrs.Field
+			key   = head.Key
+			value = head.Value
+			typ   = value.Type()
+			from  = value.From()
 		)
 
-		if revMap.Len()+len(m.internals.Base.proxies) == 0 {
-			goto defineNow
+		var fromModelField = from.Field()
+		if fromModelField == nil {
+			panic(fmt.Errorf(
+				"reverse relation %q in model %T does not have a field defined",
+				key, def,
+			))
 		}
 
-		_fields = make([]attrs.Field, 0, revMap.Len()+len(m.internals.Base.proxies))
-		if revMap.Len() == 0 {
-			goto addProxies
+		var conf = &fields.FieldConfig{
+			ScanTo:      def,
+			ReverseName: key,
+			Nullable:    value.Field().AllowNull(), // copy so relationship join type is properly calculated
+			ColumnName:  fromModelField.ColumnName(),
+			IsReverse:   true,
+			Rel:         value,
 		}
 
-		for head := revMap.Front(); head != nil; head = head.Next() {
-			// skip creating if a forward rel exists
-			// when a forward rel exists, it is safe to assume
-			// a custom field was already provided.
-			_, ok := meta.Forward(head.Key)
-			if ok {
-				continue
+		switch typ {
+		case attrs.RelOneToOne: // OneToOne
+			if head.Value.Through() == nil {
+				field = fields.NewOneToOneReverseField[attrs.Definer](def, key, conf)
+			} else {
+				field = fields.NewOneToOneReverseField[queries.Relation](def, key, conf)
 			}
-
-			var (
-				field attrs.Field
-				key   = head.Key
-				value = head.Value
-				typ   = value.Type()
-				from  = value.From()
-			)
-
-			var fromModelField = from.Field()
-			if fromModelField == nil {
-				panic(fmt.Errorf(
-					"reverse relation %q in model %T does not have a field defined",
-					key, def,
-				))
-			}
-
-			var conf = &fields.FieldConfig{
-				ScanTo:      def,
-				ReverseName: key,
-				Nullable:    value.Field().AllowNull(), // copy so relationship join type is properly calculated
-				ColumnName:  fromModelField.ColumnName(),
-				IsReverse:   true,
-				Rel:         value,
-			}
-
-			switch typ {
-			case attrs.RelOneToOne: // OneToOne
-				if head.Value.Through() == nil {
-					field = fields.NewOneToOneReverseField[attrs.Definer](def, key, conf)
-				} else {
-					field = fields.NewOneToOneReverseField[queries.Relation](def, key, conf)
-				}
-			case attrs.RelManyToOne: // ManyToOne, ForeignKey
-				field = fields.NewForeignKeyField[attrs.Definer](def, key, conf)
-			case attrs.RelOneToMany: // OneToMany, ForeignKeyReverse
-				field = fields.NewForeignKeyReverseField[*queries.RelRevFK[attrs.Definer]](def, key, conf)
-			case attrs.RelManyToMany: // ManyToMany
-				field = fields.NewManyToManyField[*queries.RelM2M[attrs.Definer, attrs.Definer]](def, key, conf)
-			default:
-				panic("unknown relation type: " + typ.String())
-			}
-
-			if field != nil {
-				_fields = append(_fields, field)
-			}
+		case attrs.RelManyToOne: // ManyToOne, ForeignKey
+			field = fields.NewForeignKeyField[attrs.Definer](def, key, conf)
+		case attrs.RelOneToMany: // OneToMany, ForeignKeyReverse
+			field = fields.NewForeignKeyReverseField[*queries.RelRevFK[attrs.Definer]](def, key, conf)
+		case attrs.RelManyToMany: // ManyToMany
+			field = fields.NewManyToManyField[*queries.RelM2M[attrs.Definer, attrs.Definer]](def, key, conf)
+		default:
+			panic("unknown relation type: " + typ.String())
 		}
 
-	addProxies:
-		for _, proxy := range m.internals.Base.proxies {
-			var (
-				// create a new plain proxy object to use as target in the relation
-				field        attrs.Field
-				fieldName    = proxy.rootField.Name
-				rNewProxyObj = reflect.New(proxy.directField.Type.Elem())
-				newProxyObj  = rNewProxyObj.Interface().(attrs.Definer)
-			)
-
-			switch {
-			case proxy.cTypeFieldName == "":
-				// assume target field is set, ctype is not set
-				// use o2o with target field
-				field = fields.NewOneToOneField[attrs.Definer](def, fieldName, &fields.FieldConfig{
-					ScanTo:      def,
-					IsProxy:     true,
-					AllowEdit:   true,
-					TargetField: proxy.targetFieldName,
-					Rel:         attrs.Relate(newProxyObj, proxy.targetFieldName, nil),
-					DataModelFieldConfig: fields.DataModelFieldConfig{
-						ResultType: rNewProxyObj.Type(),
-					},
-				})
-			case proxy.cTypeFieldName != "" && proxy.targetFieldName != "" && !proxy.controlsSaving:
-				field = newProxyField(m, def, proxy.rootField.Name, fieldName, &ProxyFieldConfig{
-					Proxy:            newProxyObj,
-					ContentTypeField: proxy.cTypeFieldName,
-					TargetField:      proxy.targetFieldName,
-					AllowEdit:        true,
-				})
-
-			case proxy.cTypeFieldName != "" && proxy.targetFieldName != "" && proxy.controlsSaving:
-				field = newProxyField(m, def, proxy.rootField.Name, fieldName, &ProxyFieldConfig{
-					Proxy:            newProxyObj,
-					ContentTypeField: proxy.cTypeFieldName,
-					TargetField:      proxy.targetFieldName,
-				})
-			default:
-				panic(fmt.Errorf(
-					"proxy %s in model %T does not have a content type field or target field defined",
-					proxy.rootField.Name, def,
-				))
-			}
-
-			// add the proxy field to the model definitions
+		if field != nil {
 			_fields = append(_fields, field)
 		}
+	}
 
-	defineNow:
-		m.internals.Defs = attrs.Make[attrs.Definer, any](
-			ctx, def, flds, _fields,
+addProxies:
+	for _, proxy := range m.internals.Base.proxies {
+		var (
+			// create a new plain proxy object to use as target in the relation
+			field        attrs.Field
+			fieldName    = proxy.rootField.Name
+			rNewProxyObj = reflect.New(proxy.directField.Type.Elem())
+			newProxyObj  = rNewProxyObj.Interface().(attrs.Definer)
 		)
 
-		var tableName = m.internals.Base.base.Tag.Get("table")
-		if tableName != "" && m.internals.Defs.Table == "" {
-			m.internals.Defs.Table = tableName
+		switch {
+		case proxy.cTypeFieldName == "":
+			// assume target field is set, ctype is not set
+			// use o2o with target field
+			field = fields.NewOneToOneField[attrs.Definer](def, fieldName, &fields.FieldConfig{
+				ScanTo:      def,
+				IsProxy:     true,
+				AllowEdit:   true,
+				TargetField: proxy.targetFieldName,
+				Rel:         attrs.Relate(newProxyObj, proxy.targetFieldName, nil),
+				DataModelFieldConfig: fields.DataModelFieldConfig{
+					ResultType: rNewProxyObj.Type(),
+				},
+			})
+		case proxy.cTypeFieldName != "" && proxy.targetFieldName != "" && !proxy.controlsSaving:
+			field = newProxyField(m, def, proxy.rootField.Name, fieldName, &ProxyFieldConfig{
+				Proxy:            newProxyObj,
+				ContentTypeField: proxy.cTypeFieldName,
+				TargetField:      proxy.targetFieldName,
+				AllowEdit:        true,
+			})
+
+		case proxy.cTypeFieldName != "" && proxy.targetFieldName != "" && proxy.controlsSaving:
+			field = newProxyField(m, def, proxy.rootField.Name, fieldName, &ProxyFieldConfig{
+				Proxy:            newProxyObj,
+				ContentTypeField: proxy.cTypeFieldName,
+				TargetField:      proxy.targetFieldName,
+			})
+		default:
+			panic(fmt.Errorf(
+				"proxy %s in model %T does not have a content type field or target field defined",
+				proxy.rootField.Name, def,
+			))
 		}
+
+		// add the proxy field to the model definitions
+		_fields = append(_fields, field)
+	}
+
+defineNow:
+	m.internals.Defs = attrs.Make[attrs.Definer, any](
+		ctx, def, flds, _fields,
+	)
+
+	var tableName = m.internals.Base.base.Tag.Get("table")
+	if tableName != "" && m.internals.Defs.Table == "" {
+		m.internals.Defs.Table = tableName
 	}
 
 	return m.internals.Defs
