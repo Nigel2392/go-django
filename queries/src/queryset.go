@@ -2697,7 +2697,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 
 	defer attrCtx.Reset()
 
-	var plan = compileScanPlan(ctx, qs.internals.Fields, qs.internals.Model.Object)
+	var plan = compileScanPlan(qs.internals.Fields, qs.internals.Model.Object, true)
 
 	for row, err := range results {
 		if err != nil {
@@ -2705,7 +2705,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 		}
 
 		var (
-			obj          = attrs.NewObject[attrs.Definer](ctx, qs.internals.Model.Object)
+			obj          = reflect.New(reflect.TypeOf(qs.internals.Model.Object).Elem()).Interface().(attrs.Definer)
 			annotator, _ = obj.(DataModel)
 			annotations  = make(map[string]any)
 			datastore    ModelDataStore
@@ -2721,6 +2721,7 @@ func (qs *QuerySet[T]) IterAll() (int, iter.Seq2[*Row[T], error], error) {
 			f := field.field
 			val := row[j]
 
+			// f is nil if all relevant row indexes for related model is nil
 			if f == nil {
 				continue
 			}
@@ -2919,7 +2920,7 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 		resultQuery       = qs.QueryAll(fields...)
 		preAlloc, results = iterQuery(resultQuery)
 		list              = make([]map[string]any, 0, preAlloc)
-		plan              = compileScanPlan(qs.context, qs.internals.Fields, qs.internals.Model.Object)
+		plan              = compileScanPlan(qs.internals.Fields, qs.internals.Model.Object, false)
 	)
 	for row, err := range results {
 		if err != nil {
@@ -2927,7 +2928,7 @@ func (qs *QuerySet[T]) Values(fields ...any) ([]map[string]any, error) {
 		}
 
 		var (
-			obj    = attrs.NewObject[attrs.Definer](qs.context, qs.internals.Model.Object)
+			obj    = reflect.New(reflect.TypeOf(qs.internals.Model.Object).Elem()).Interface().(attrs.Definer)
 			values = make(map[string]any, len(row))
 		)
 
@@ -3014,7 +3015,7 @@ func (qs *QuerySet[T]) IterValuesList(fields ...any) (preAlloc int, loop iter.Se
 	var (
 		resultQuery          = qs.QueryAll(fields...)
 		preallocate, results = iterQuery(resultQuery)
-		plan                 = compileScanPlan(qs.context, qs.internals.Fields, qs.internals.Model.Object)
+		plan                 = compileScanPlan(qs.internals.Fields, qs.internals.Model.Object, false)
 	)
 
 	preAlloc = preallocate
@@ -3026,7 +3027,7 @@ func (qs *QuerySet[T]) IterValuesList(fields ...any) (preAlloc int, loop iter.Se
 				break
 			}
 
-			var obj = attrs.NewObject[attrs.Definer](qs.context, qs.internals.Model.Object)
+			var obj = reflect.New(reflect.TypeOf(qs.internals.Model.Object).Elem()).Interface().(attrs.Definer)
 			var fields = plan.apply(qs.context, row, obj)
 			var values = make([]any, len(fields))
 			for j, field := range fields {
@@ -3618,9 +3619,9 @@ func (qs *QuerySet[T]) BulkCreate(objects []T) ([]T, error) {
 
 	if support == drivers.SupportsReturningColumns {
 		plan = compileScanPlan(
-			ctx,
 			[]*FieldInfo[attrs.Field]{planInfo},
 			qs.internals.Model.Object,
+			false,
 		)
 	}
 

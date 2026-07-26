@@ -45,7 +45,7 @@ func (m *modelMeta) Primary() FieldDefinition {
 	if m.primary == nil {
 		m.primary = m.Definitions().Primary()
 	}
-	return m.Primary()
+	return m.primary
 }
 
 func (m *modelMeta) Forward(relField string) (Relation, bool) {

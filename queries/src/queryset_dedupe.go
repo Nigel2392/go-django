@@ -6,6 +6,7 @@ import (
 	"iter"
 	"strings"
 
+	"github.com/Nigel2392/go-django/internal/django_reflect"
 	"github.com/Nigel2392/go-django/queries/src/drivers/errors"
 	"github.com/Nigel2392/go-django/queries/src/expr"
 	"github.com/Nigel2392/go-django/src/core/assert"
@@ -103,12 +104,13 @@ type rows[T attrs.Definer] struct {
 	possibleDuplicates []*scannableField // possible duplicate fields that can be added to the rows
 	hasMultiRelations  bool              // if the rows have multi-valued relations
 
-	rootMapping map[any]any            // rootMapping is used to map root object unique values to their pks
-	seen        map[string]*seenObject // seen is used to deduplicate relations
-	objects     *orderedSet[*rootObject]
-	forEach     func(attrs.Definer) error
-	qs          *QuerySet[T]
-	chainBuf    map[int][]chainPart // reusable buffer for buildChainParts
+	rootMapping    map[any]any            // rootMapping is used to map root object unique values to their pks
+	seen           map[string]*seenObject // seen is used to deduplicate relations
+	objects        *orderedSet[*rootObject]
+	preloadMapping map[string]struct{}
+	forEach        func(attrs.Definer) error
+	qs             *QuerySet[T]
+	chainBuf       map[int][]chainPart // reusable buffer for buildChainParts
 }
 
 type seenObject struct {
@@ -134,8 +136,15 @@ func newRows[T attrs.Definer](qs *QuerySet[T], forEach func(attrs.Definer) error
 		rootMapping:        make(map[any]any, 0),
 		hasMultiRelations:  false,
 		forEach:            forEach,
+		preloadMapping:     make(map[string]struct{}),
 		seen:               make(map[string]*seenObject, 0),
 		qs:                 qs,
+	}
+
+	if qs.internals.Preload != nil {
+		for _, preload := range qs.internals.Preload.Preloads {
+			r.preloadMapping[preload.ParentPath] = struct{}{}
+		}
 	}
 
 	// add possible duplicate fields to the list
@@ -256,19 +265,22 @@ func (r *rows[T]) addRoot(ctx context.Context, uniqueValue any, obj attrs.Define
 		annotations: annotations,
 	}
 
-	var seenM, ok = r.seen[""]
-	if !ok {
-		seenM = &seenObject{
-			pks:     make([]any, 0, 1),
-			objects: make(map[any][]*object, 0),
+	r.objects.set(uniqueValue, root)
+
+	if _, ok := r.preloadMapping[""]; ok {
+		var seenM, ok = r.seen[""]
+		if !ok {
+			seenM = &seenObject{
+				pks:     make([]any, 0, 1),
+				objects: make(map[any][]*object, 0),
+			}
+			r.seen[""] = seenM
 		}
-		r.seen[""] = seenM
+
+		seenM.pks = append(seenM.pks, pk)
+		seenM.objects[pk] = append(seenM.objects[pk], root.object)
 	}
 
-	seenM.pks = append(seenM.pks, pk)
-	seenM.objects[pk] = append(seenM.objects[pk], root.object)
-
-	r.objects.set(uniqueValue, root)
 	return root
 }
 
@@ -288,6 +300,7 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 	}
 	var current = obj.object
 	var idx = 1
+chainLoop:
 	for idx < len(chain) {
 		var part = chain[idx]
 
@@ -299,9 +312,8 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 		// ManyToOne and OneToOne relations are special cases where the primary key can be zero.
 		//
 		// This also means that any deeper relations cannot be traversed, I.E. we break the loop.
-		var isZeroVal = fields.IsZero(part.uniqueValue)
-		if isZeroVal && !(part.relTyp == attrs.RelManyToOne || part.relTyp == attrs.RelOneToOne) {
-			break
+		if django_reflect.IsZero(part.uniqueValue) && !(part.relTyp == attrs.RelManyToOne || part.relTyp == attrs.RelOneToOne) {
+			break chainLoop
 		}
 
 		var next, ok = current.relations[part.chain]
@@ -316,34 +328,36 @@ func (r *rows[T]) addRelationChain(chain []chainPart) {
 		child, ok := next.objects.get(part.uniqueValue)
 		if !ok {
 			// child does not exist, create and add it
-			var through attrs.Definer
-			if part.through != nil {
-				// If there is a through object, we need to set it
-				through = part.through
-			}
-
 			child = &object{
 				uniqueValue: part.uniqueValue,
 				obj:         part.object,
-				relations:   make(map[string]*objectRelation),
-				through:     through,
 			}
+
+			if idx < len(chain) {
+				child.relations = make(map[string]*objectRelation)
+			}
+
+			if part.through != nil {
+				// If there is a through object, we need to set it
+				child.through = part.through
+			}
+
+			next.objects.set(part.uniqueValue, child)
 
 			// Store seen objects in map - this is later used for prefetching relations
 			// and deduplicating relations.
-			var seenM, ok = r.seen[part.chain]
-			if !ok {
-				seenM = &seenObject{
-					pks:     make([]any, 0, 1),
-					objects: make(map[any][]*object, 0),
+			if _, ok := r.preloadMapping[part.chain]; ok {
+				var seenM, ok = r.seen[part.chain]
+				if !ok {
+					seenM = &seenObject{
+						pks:     make([]any, 0, 1),
+						objects: make(map[any][]*object, 0),
+					}
+					r.seen[part.chain] = seenM
 				}
-				r.seen[part.chain] = seenM
+				seenM.pks = append(seenM.pks, part.uniqueValue)
+				seenM.objects[part.uniqueValue] = append(seenM.objects[part.uniqueValue], child)
 			}
-
-			seenM.pks = append(seenM.pks, part.uniqueValue)
-			seenM.objects[part.uniqueValue] = append(seenM.objects[part.uniqueValue], child)
-
-			next.objects.set(part.uniqueValue, child)
 		}
 
 		current = child

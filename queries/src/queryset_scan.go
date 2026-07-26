@@ -3,6 +3,7 @@ package queries
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
 
 	"github.com/Nigel2392/go-django/src/core/attrs"
@@ -97,6 +98,9 @@ type scanPlan struct {
 	// entry in the entries slice. -1 if no primary key is found.
 	rootPrimaryEntryIdx int
 
+	// check if related fields are nil and yield nil models/fields as a result
+	checkNil bool
+
 	hasMultiRelations bool
 
 	models []attrs.Definer
@@ -109,19 +113,20 @@ type scanPlan struct {
 // This should be called once per query execution, before the row loop.
 // The modelObject parameter is the model prototype (e.g., qs.internals.Model.Object).
 func compileScanPlan[T attrs.FieldDefinition](
-	ctx context.Context,
 	fields []*FieldInfo[T],
 	modelObject any,
+	checkNil bool,
 ) *scanPlan {
-	sampleRoot := attrs.NewObject[attrs.Definer](ctx, modelObject)
-	rootDefs := attrs.Define(ctx, sampleRoot)
+	sampleRoot := attrs.GetModelMeta(modelObject)
+
 	var rootPKName string
-	if pk := rootDefs.Primary(); pk != nil {
+	if pk := sampleRoot.Primary(); pk != nil {
 		rootPKName = pk.Name()
 	}
 	pkNames := []string{rootPKName}
 
 	plan := &scanPlan{
+		checkNil:            checkNil,
 		rootPrimaryEntryIdx: -1,
 		modelSlots: []scanPlanModelSlot{{
 			parentSlotIdx: -1,
@@ -144,10 +149,9 @@ func compileScanPlan[T attrs.FieldDefinition](
 				pkRowIndex:    -1,
 				tiedSlotIdx:   -1,
 			})
-			throughObj := attrs.NewObject[attrs.Definer](ctx, info.Through.Model)
-			throughDefs := attrs.Define(ctx, throughObj)
+			throughObj := attrs.GetModelMeta(info.Through.Model)
 			var throughPKName string
-			if pk := throughDefs.Primary(); pk != nil {
+			if pk := throughObj.Primary(); pk != nil {
 				throughPKName = pk.Name()
 			}
 			pkNames = append(pkNames, throughPKName)
@@ -165,7 +169,7 @@ func compileScanPlan[T attrs.FieldDefinition](
 
 		// --- Root fields (SourceField is zero value) ---
 		if any(info.SourceField) == any(*(new(T))) {
-			rootDefs := attrs.Define(ctx, sampleRoot)
+			rootDefs := sampleRoot.Definitions()
 			for _, f := range info.Fields {
 				// Virtual field check
 				if virt, ok := any(f).(VirtualField); ok && info.Model == nil {
@@ -226,11 +230,12 @@ func compileScanPlan[T attrs.FieldDefinition](
 			} else {
 				parentModel = plan.modelSlots[parentSlotIdx].creator
 			}
-			parentObj := attrs.NewObject[attrs.Definer](ctx, parentModel)
-			parentDefs := attrs.Define(ctx, parentObj)
+
+			modelObj := attrs.GetModelMeta(parentModel)
+			parentDefs := modelObj.Definitions()
 			relField, ok := parentDefs.Field(name)
 			if !ok {
-				panic(fmt.Errorf("field %q not found in %T", name, parentObj))
+				panic(fmt.Errorf("field %q not found in %T", name, parentModel))
 			}
 
 			rel := relField.Rel()
@@ -253,12 +258,13 @@ func compileScanPlan[T attrs.FieldDefinition](
 				pkRowIndex:    -1,
 				tiedSlotIdx:   -1,
 			})
-			modelObj := attrs.NewObject[attrs.Definer](ctx, modelCreator)
-			modelDefs := attrs.Define(ctx, modelObj)
+
+			modelObj = attrs.GetModelMeta(modelCreator)
 			var modelPKName string
-			if pk := modelDefs.Primary(); pk != nil {
+			if pk := modelObj.Primary(); pk != nil {
 				modelPKName = pk.Name()
 			}
+
 			pkNames = append(pkNames, modelPKName)
 			if throughSlotIdx != -1 {
 				plan.modelSlots[throughSlotIdx].tiedSlotIdx = slotIdx
@@ -310,7 +316,9 @@ func compileScanPlan[T attrs.FieldDefinition](
 			if e.fieldName != "" && e.fieldName == pkNames[e.slotIdx] {
 				plan.modelSlots[e.slotIdx].pkRowIndex = outputIdx
 			}
-			plan.modelSlots[e.slotIdx].rowIndexes = append(plan.modelSlots[e.slotIdx].rowIndexes, outputIdx)
+			if plan.checkNil {
+				plan.modelSlots[e.slotIdx].rowIndexes = append(plan.modelSlots[e.slotIdx].rowIndexes, outputIdx)
+			}
 			plan.totalFields++
 			outputIdx++
 		}
@@ -343,22 +351,24 @@ func (plan *scanPlan) apply(
 	for i := 1; i < len(plan.modelSlots); i++ {
 		slot := &plan.modelSlots[i]
 
-		var allNil = true
-		for _, idx := range slot.rowIndexes {
-			if row[idx] != nil {
-				allNil = false
-				break
+		if plan.checkNil {
+			var allNil = true
+			for _, idx := range slot.rowIndexes {
+				if row[idx] != nil {
+					allNil = false
+					break
+				}
+			}
+
+			if allNil {
+				plan.models[i] = nil
+				plan.defs[i] = nil
+				continue
 			}
 		}
 
-		if allNil {
-			plan.models[i] = nil
-			plan.defs[i] = nil
-			continue
-		}
-
 		if !plan.hasMultiRelations {
-			plan.models[i] = attrs.NewObject[attrs.Definer](ctx, slot.creator)
+			plan.models[i] = reflect.New(reflect.TypeOf(slot.creator).Elem()).Interface().(attrs.Definer)
 			plan.defs[i] = attrs.Define(ctx, plan.models[i])
 
 			if slot.setFK {
@@ -405,7 +415,7 @@ func (plan *scanPlan) apply(
 			continue
 		}
 
-		plan.models[i] = attrs.NewObject[attrs.Definer](ctx, slot.creator)
+		plan.models[i] = reflect.New(reflect.TypeOf(slot.creator).Elem()).Interface().(attrs.Definer)
 		plan.defs[i] = attrs.Define(ctx, plan.models[i])
 
 		if parentPK != nil && myPK != nil {
